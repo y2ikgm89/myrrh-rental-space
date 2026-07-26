@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
@@ -25,6 +24,10 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
+import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
+import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
+import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -90,32 +93,13 @@ interface ReservationDetailProps {
    * `/api/receipts/[serialNo]/pdf`) を使う。
    */
   readonly receiptSerialNo: string | null;
+  /** SwitchBot 解錠番号の非秘匿表示状態（平文なし）。 */
+  readonly passcodeRevealState: PasscodeRevealState;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-
-interface DetailRowProps {
-  readonly label: string;
-  readonly children: ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-none sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="shrink-0 text-sm text-muted-foreground sm:w-36">
-        {label}
-      </dt>
-      {/* min-w-0 break-words [overflow-wrap:anywhere]:
-       *  notes / cancellationReason / 長 space 名等の UGC が container を破らないようにする。
-       *  break-words だけでは長英数列が伸びるため anywhere を併用。 */}
-      <dd className="min-w-0 break-words text-sm text-foreground [overflow-wrap:anywhere]">
-        {children}
-      </dd>
-    </div>
-  );
-}
 
 export function ReservationDetail({
   reservation,
@@ -124,6 +108,7 @@ export function ReservationDetail({
   refundPolicyLines,
   paymentEnabled,
   receiptSerialNo,
+  passcodeRevealState,
 }: ReservationDetailProps) {
   const {
     id,
@@ -280,6 +265,8 @@ export function ReservationDetail({
         )}
       </dl>
 
+      <PasscodeReveal reservationId={id} initialState={passcodeRevealState} />
+
       {/* Policy info (active reservations only) */}
       {isActive && deadlineSettings != null && (
         <div className="px-4 sm:px-6 py-4 border-t border-border">
@@ -366,18 +353,10 @@ export function ReservationDetail({
         `<a>` で download 属性を付ける (Link コンポーネントは page 遷移用のため
         API route には使わない)。 */}
       {receiptSerialNo && (
-        <div className="border-t border-border px-4 py-4 sm:px-6">
-          <p className="mb-3 text-sm text-muted-foreground">
-            適格請求書 (領収書) は PDF でダウンロードできます。
-          </p>
-          <a
-            href={`/api/receipts/${receiptSerialNo}/pdf`}
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-            download={`receipt-${receiptSerialNo}.pdf`}
-          >
-            領収書をダウンロード
-          </a>
-        </div>
+        <ReceiptDownloadSection
+          href={`/api/receipts/${receiptSerialNo}/pdf`}
+          downloadFilename={`receipt-${receiptSerialNo}.pdf`}
+        />
       )}
 
       {/* Footer: mobile は full-width tap area / sm+ は両端寄せ */}

@@ -1,16 +1,18 @@
-import { Button, Hr, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import { eventWaitlistOfferedFixture } from "./event-waitlist-offered.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
   SECTION_VARIANT_STYLES,
   buttonPrimary,
+  buttonSecondary,
   buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
+  linkStyle,
   text,
   urlFallbackText,
 } from "./_shared/styles";
@@ -28,6 +30,8 @@ type Props = {
   expiresAtTime: string;
   /** 無料イベントは confirmUrl、有料イベントは Stripe Checkout への checkoutUrl */
   actionUrl: string;
+  /** 申込詳細ハブ（会員 mypage / ゲスト status）。手続き後の再確認用。 */
+  eventRegistrationHubUrl: string;
   isPaid: boolean;
   /** isPaid のときのみ渡される、フォーマット済み金額（例: "¥3,000"） */
   priceDisplay?: string;
@@ -44,6 +48,7 @@ export function EventWaitlistOfferedEmail({
   expiresAtDate,
   expiresAtTime,
   actionUrl,
+  eventRegistrationHubUrl,
   isPaid,
   priceDisplay,
   footer,
@@ -118,6 +123,18 @@ export function EventWaitlistOfferedEmail({
         ボタンが機能しない場合は、以下の URL をブラウザに貼り付けてください:
       </Text>
       <Text style={urlFallbackText}>{actionUrl}</Text>
+
+      <Text style={text}>申込内容の確認は、申込詳細ページからも行えます。</Text>
+      <Section style={buttonSection}>
+        <Button style={buttonSecondary} href={eventRegistrationHubUrl}>
+          申込詳細を確認
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        <Link href={eventRegistrationHubUrl} style={linkStyle}>
+          {eventRegistrationHubUrl}
+        </Link>
+      </Text>
 
       <Hr style={hr} />
 

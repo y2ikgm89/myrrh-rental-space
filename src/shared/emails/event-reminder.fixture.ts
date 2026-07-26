@@ -9,7 +9,8 @@ export const eventReminderFixture = {
   endTime: "17:00",
   location: "本館 2階 ホール",
   quantity: 2,
-  memberEventRegistrationUrl: "https://example.com/mypage/events",
+  eventRegistrationHubUrl:
+    "https://example.com/mypage/events/abcdef-0123-4567-89ab-cdef01234567",
   cancelUrl: "https://example.com/events/cancel?token=DEMO-TOKEN-DO-NOT-USE",
   claimUrl: "https://example.com/claim/event-registration?token=preview-token",
   footer: DEMO_FOOTER,

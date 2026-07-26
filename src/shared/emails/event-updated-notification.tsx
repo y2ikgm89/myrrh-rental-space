@@ -18,8 +18,8 @@ type Props = {
   eventDate: string;
   newEventDate: string;
   location: string | undefined;
-  /** 会員向け: ログイン後のマイページ申込一覧 URL */
-  memberEventRegistrationUrl?: string;
+  /** 申込詳細ハブ（会員 mypage / ゲスト status） */
+  eventRegistrationHubUrl: string;
   footer: EmailFooterData;
 };
 
@@ -29,7 +29,7 @@ export function EventUpdatedNotificationEmail({
   eventDate,
   newEventDate,
   location,
-  memberEventRegistrationUrl,
+  eventRegistrationHubUrl,
   footer,
 }: Props) {
   const warning = SECTION_VARIANT_STYLES.warning;
@@ -77,16 +77,14 @@ export function EventUpdatedNotificationEmail({
         )}
       </Section>
 
-      {memberEventRegistrationUrl && (
-        <Text style={text}>
-          <Link
-            href={memberEventRegistrationUrl}
-            style={{ color: COLOR.link, textDecoration: "underline" }}
-          >
-            マイページで申込を確認する
-          </Link>
-        </Text>
-      )}
+      <Text style={text}>
+        <Link
+          href={eventRegistrationHubUrl}
+          style={{ color: COLOR.link, textDecoration: "underline" }}
+        >
+          申込詳細を確認
+        </Link>
+      </Text>
 
       <Hr style={hr} />
 

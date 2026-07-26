@@ -3058,6 +3058,33 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("reservation email passcode clean-break (booking hub)", () => {
+    // Spec §4.1: confirmation / updated / status-changed メール本文に平文パスコードを
+    // 載せない。再確認の SSoT は予約詳細ハブ（会員 mypage / ゲスト status）。
+    // smartLockPasscodes prop の再導入を grep gate で 0 件強制する。
+    test("confirmation/updated/status-changed templates must not use smartLockPasscodes", () => {
+      const templateFiles = [
+        "reservation-confirmation.tsx",
+        "reservation-updated.tsx",
+        "reservation-status-changed.tsx",
+      ] as const;
+      const violations: string[] = [];
+      for (const name of templateFiles) {
+        const source = readFileSync(
+          join(SRC_ROOT, "shared", "emails", name),
+          "utf8",
+        );
+        if (source.includes("smartLockPasscodes")) {
+          violations.push(name);
+        }
+      }
+      expect(
+        violations,
+        `予約メールテンプレに smartLockPasscodes が残っています: ${violations.join(", ")}. 平文パスコード表示は廃止し bookingHubUrl CTA に置換してください (booking-detail-hub design §4.1)。`,
+      ).toEqual([]);
+    });
+  });
+
   describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () => {
     // `sendEmail` の idempotencyKey は同一予約が短時間に複数回同種イベントを起こす
     // ケース (SUPER_ADMIN restore で CANCELLED→CONFIRMED 巻き戻し、PENDING→CONFIRMED

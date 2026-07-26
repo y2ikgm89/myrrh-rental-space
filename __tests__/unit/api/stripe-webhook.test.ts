@@ -59,6 +59,8 @@ const mockClaimReservationAsPaid = mock<
     startTime: string;
     endTime: string;
     icsSequence: number;
+    status: string;
+    userId: string | null;
     guestEmail?: string | null;
     customer: { email: string; lastName: string; firstName: string };
     space: { name: string; location: { name: string } | null };
@@ -130,6 +132,12 @@ const mockIssueReceiptForReservation = mock<
 const mockIssueReceiptForEventRegistration = mock<
   (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
 >(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
+const mockNotifyReceiptIssuedForReservation = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt" }));
+const mockNotifyReceiptIssuedForEventRegistration = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt_event" }));
 
 // Errors
 const mockLogError = mock<(error: unknown, opts?: unknown) => void>();
@@ -215,6 +223,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: (piId: string) =>
     mockFindEventRegistrationByPaymentIntent(piId),
+  findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: (input: {
     registrationId: string;
     chargeAmount: number;
@@ -287,6 +296,17 @@ mock.module("@/shared/domain/receipts/issue", () => ({
     mockIssueReceiptForEventRegistration(id, options),
 }));
 
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForReservation: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForReservation(input),
+  notifyReceiptIssuedForEventRegistration: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForEventRegistration(input),
+}));
+
 const actualErrors = await import("@/shared/lib/errors/server");
 mock.module("@/shared/lib/errors/server", () => ({
   ...actualErrors,
@@ -346,6 +366,8 @@ const DEFAULT_RESERVATION = {
   notes: null,
   startTime: "2025-01-01T10:00:00.000Z",
   endTime: "2025-01-01T12:00:00.000Z",
+  status: "PENDING" as const,
+  userId: "user-123",
   guestEmail: null,
   customer: {
     email: "test@example.com",
@@ -450,6 +472,10 @@ describe("POST /api/webhooks/stripe", () => {
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
+    mockIssueReceiptForReservation.mockReset();
+    mockIssueReceiptForEventRegistration.mockReset();
+    mockNotifyReceiptIssuedForReservation.mockReset();
+    mockNotifyReceiptIssuedForEventRegistration.mockReset();
     mockLogError.mockReset();
     mockNormalizeError.mockReset();
     mockJsonError.mockReset();
@@ -486,6 +512,22 @@ describe("POST /api/webhooks/stripe", () => {
     mockClaimReservationAsPaid.mockResolvedValue({
       ...DEFAULT_RESERVATION,
       icsSequence: 0,
+    });
+    mockIssueReceiptForReservation.mockResolvedValue({
+      id: "receipt-mock",
+      serialNo: "2026-000001",
+    });
+    mockIssueReceiptForEventRegistration.mockResolvedValue({
+      id: "receipt-event-mock",
+      serialNo: "2026-000002",
+    });
+    mockNotifyReceiptIssuedForReservation.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt",
+    });
+    mockNotifyReceiptIssuedForEventRegistration.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt_event",
     });
     mockSavePaymentIntentId.mockResolvedValue(undefined);
     mockClaimReservationAsFailed.mockResolvedValue(true);
@@ -615,6 +657,55 @@ describe("POST /api/webhooks/stripe", () => {
         customerEmail: "booked-address@example.com",
       }),
     );
+    expect(
+      mockSendReservationConfirmationEmail.mock.calls[0]?.[0],
+    ).not.toHaveProperty("receiptSerialNo");
+    expect(mockNotifyReceiptIssuedForReservation).toHaveBeenCalledWith({
+      receiptId: "receipt-mock",
+      detailUrl: "http://localhost:3000/mypage/reservations/res-123",
+    });
+  });
+
+  test("CONFIRMED 予約でも領収書発行通知は送り、確認メールは skip する", async () => {
+    const event = makeSessionCompletedEvent("paid", "pi-123");
+    mockConstructEvent.mockResolvedValue(event);
+    mockClaimReservationAsPaid.mockResolvedValueOnce({
+      ...DEFAULT_RESERVATION,
+      status: "CONFIRMED",
+      userId: null,
+      guestEmail: "guest@example.com",
+      icsSequence: 0,
+    });
+
+    const response = await POST(makeRequest("body"));
+
+    expect(response.status).toBe(200);
+    expect(mockIssueReceiptForReservation).toHaveBeenCalledWith("res-123", {
+      source: "stripe-webhook",
+    });
+    expect(mockNotifyReceiptIssuedForReservation).toHaveBeenCalledTimes(1);
+    const notifyArg = mockNotifyReceiptIssuedForReservation.mock.calls[0]?.[0];
+    expect(notifyArg?.receiptId).toBe("receipt-mock");
+    expect(notifyArg?.detailUrl).toMatch(
+      /^http:\/\/localhost:3000\/reservation\/status\?token=.+/,
+    );
+    expect(mockSendReservationConfirmationEmail).not.toHaveBeenCalled();
+  });
+
+  test("issueReceipt VALIDATION 失敗時は発行通知を送らない", async () => {
+    const event = makeSessionCompletedEvent("paid", "pi-123");
+    mockConstructEvent.mockResolvedValue(event);
+    const { DomainError } = await import("@/shared/domain/domain-error");
+    mockIssueReceiptForReservation.mockRejectedValueOnce(
+      new DomainError("amount is zero", "VALIDATION"),
+    );
+
+    const response = await POST(makeRequest("body"));
+
+    expect(response.status).toBe(200);
+    expect(mockNotifyReceiptIssuedForReservation).not.toHaveBeenCalled();
+    // PENDING のため確認メール経路は残る（receipt 無し）
+    expect(mockSendReservationConfirmationEmail).toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------

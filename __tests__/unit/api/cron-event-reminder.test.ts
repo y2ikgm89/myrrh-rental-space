@@ -64,6 +64,8 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventReminderEmail: (
     ...args: Parameters<typeof mockSendEventReminderEmail>
   ) => mockSendEventReminderEmail(...args),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/events/registration-commands", () => ({

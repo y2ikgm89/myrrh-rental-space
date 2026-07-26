@@ -242,7 +242,7 @@ function EventRegistrationCard({
         {/* min-w-0 + break-words で長 title の overflow を防止し、
             Link 自体に min-h-11 を付けて 44px タップ標的を担保。 */}
         <Link
-          href={`/events/${registration.event.slug}`}
+          href={`/mypage/events/${registration.id}`}
           className="inline-flex min-h-11 min-w-0 items-center break-words text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-accent"
         >
           {registration.event.title}

@@ -127,6 +127,8 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventUpdatedToAllParticipants: mock(() =>
     Promise.resolve({ success: true }),
   ),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 // fireAndForget は同期的に呼び出すだけのスタブ

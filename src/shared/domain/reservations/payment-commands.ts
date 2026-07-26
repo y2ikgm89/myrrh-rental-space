@@ -28,6 +28,17 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { issueReceiptForReservation } from "@/shared/domain/receipts/issue";
+import { notifyReceiptIssuedForReservation } from "@/shared/domain/receipts/notify-issued";
+import {
+  MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
+  MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
+} from "@/shared/domain/receipts/manual-payment-warnings";
+import {
+  createStatusToken,
+  STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/reservation-status-token";
 
 /**
  * `refundReservationPaymentCommand` の advisory lock namespace。
@@ -356,15 +367,46 @@ export async function createCheckoutSessionCommand(input: {
  * populate されていれば税込合計、未設定なら `totalPrice`）と一致することを要求する。
  * 受領額自体は Reservation 列には保存せず AuditLog metadata にのみ記録する
  * (events の method/note と同型)。
+ *
+ * claim 成功後は `issueReceiptForReservation` を await し、成功時のみ
+ * `notifyReceiptIssuedForReservation` を fire-and-forget する。領収書失敗でも
+ * PAID は維持し、`receiptWarning` で admin UI に部分失敗を返す
+ * （backfill cron が orphan を救済）。
  */
+export type ManualReservationPaymentResult = {
+  reservationId: string;
+  customerId: string;
+  /**
+   * PAID は確定したが領収書発行をスキップ / 延期したときの管理者向け警告。
+   * MutationResult 成功ペイロードとして透過する。
+   */
+  receiptWarning?: string;
+};
+
+function buildReservationReceiptDetailUrl(input: {
+  reservationId: string;
+  userId: string | null;
+}): string {
+  const appUrl = getAppUrl();
+  if (input.userId !== null) {
+    return `${appUrl}/mypage/reservations/${input.reservationId}`;
+  }
+  const token = createStatusToken(
+    input.reservationId,
+    new Date(Date.now() + STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${appUrl}/reservation/status?token=${token}`;
+}
+
 export async function recordManualReservationPaymentCommand(data: {
   reservationId: string;
   amount: number;
-}): Promise<{ reservationId: string; customerId: string }> {
+}): Promise<ManualReservationPaymentResult> {
   const existing = await prisma.reservation.findUnique({
     where: { id: data.reservationId, deletedAt: null },
     select: {
       customerId: true,
+      userId: true,
       paymentStatus: true,
       stripeCheckoutSessionId: true,
       totalPrice: true,
@@ -416,9 +458,60 @@ export async function recordManualReservationPaymentCommand(data: {
     );
   }
 
+  let receiptWarning: string | undefined;
+  try {
+    const receipt = await issueReceiptForReservation(data.reservationId, {
+      source: "manual-payment",
+    });
+    const detailUrl = buildReservationReceiptDetailUrl({
+      reservationId: data.reservationId,
+      userId: existing.userId,
+    });
+    fireAndForget(
+      notifyReceiptIssuedForReservation({
+        receiptId: receipt.id,
+        detailUrl,
+      }),
+      {
+        operation: "notifyReceiptIssuedForReservation",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          reservationId: data.reservationId,
+          receiptId: receipt.id,
+        },
+      },
+    );
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "VALIDATION") {
+      logError(error, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "issueReceiptForReservation",
+          reservationId: data.reservationId,
+          source: "manual-payment",
+        },
+      });
+      receiptWarning = MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING;
+    } else {
+      logError(normalizeError(error), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.CRITICAL,
+        context: {
+          operation: "issueReceiptForReservation",
+          reservationId: data.reservationId,
+          source: "manual-payment",
+        },
+      });
+      receiptWarning = MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING;
+    }
+  }
+
   return {
     reservationId: data.reservationId,
     customerId: existing.customerId,
+    ...(receiptWarning !== undefined ? { receiptWarning } : {}),
   };
 }
 

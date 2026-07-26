@@ -370,6 +370,19 @@ export const cancelByReservationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 予約詳細ハブのパスコード開示（Server Action）— IP 単位（10 / 分）。
+// decrypt コストと連打による平文露出面を抑える。会員は下記 per-user も併用。
+export const passcodeRevealByIpRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 10,
+});
+
+// 同上の会員 userId 単位バケット（20 / 分）。IP 分散での連打を抑える第二防壁。
+export const passcodeRevealByUserRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 20,
+});
+
 // 領収書 PDF DL の「serialNo 単位」の追加バケット（10 attempts / hour / serialNo）。
 // IP-only の apiRateLimiter (100/分) だけだと同一 serialNo への brute force / usedAt
 // 焼き潰し (単発 DL gate を連打で消費させる DoS) が抜けるため、serialNo をキーにした

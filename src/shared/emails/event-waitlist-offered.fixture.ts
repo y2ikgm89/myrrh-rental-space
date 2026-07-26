@@ -12,6 +12,8 @@ export const eventWaitlistOfferedFixture = {
   expiresAtDate: "2026年7月21日 (火)",
   expiresAtTime: "14:00",
   actionUrl: "https://example.com/events/waitlist/confirm?token=preview-token",
+  eventRegistrationHubUrl:
+    "https://example.com/events/registrations/status?token=preview-status",
   isPaid: false,
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventWaitlistOfferedEmail>[0];
@@ -27,6 +29,8 @@ export const eventWaitlistOfferedPaidFixture = {
   expiresAtDate: "2026年7月26日 (日)",
   expiresAtTime: "10:00",
   actionUrl: "https://example.com/events/waitlist/checkout/preview-token",
+  eventRegistrationHubUrl:
+    "https://example.com/mypage/events/reg-preview-paid-1",
   isPaid: true,
   priceDisplay: "¥3,000",
   footer: DEMO_FOOTER,

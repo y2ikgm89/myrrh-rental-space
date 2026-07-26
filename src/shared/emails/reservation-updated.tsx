@@ -1,4 +1,4 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { reservationUpdatedFixture } from "./reservation-updated.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
@@ -7,13 +7,17 @@ import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
   SECTION_VARIANT_STYLES,
+  buttonPrimary,
+  buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
   linkDangerStyle,
+  linkStyle,
   text,
+  urlFallbackText,
 } from "./_shared/styles";
 
 type Props = {
@@ -30,6 +34,11 @@ type Props = {
   cancelUrl?: string;
   /** 会員向け: ログイン後の予約詳細ページ URL（マイページから取消・変更可能） */
   memberReservationUrl?: string;
+  /**
+   * 予約詳細ハブ URL（会員 mypage / ゲスト status）。
+   * 解錠番号の平文は載せず、再確認はこの URL 先で行う。
+   */
+  bookingHubUrl: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
   cancellationDeadlineHours?: number;
   /** 変更受付期限の時間数（予約開始の X 時間前まで）。キャンセルと独立に設定可能 */
@@ -37,14 +46,9 @@ type Props = {
   /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
   cancellationPolicyUrl?: string;
   /**
-   * 予約変更に伴い再発行されたスマートロックの一時パスコード一覧。
-   * spaceId や時間帯の変更で旧コードが失効した場合、新しいコードを
-   * この本文で受け取れるようにする (Codex P1: comment_id=3566998624 対応)。
-   */
-  smartLockPasscodes?: { deviceName: string; passcode: string }[];
-  /**
    * 再発行が失敗した場合の代替入室手段案内フラグ (PR#12 confirmation email と同型)。
    * true のとき「当日運営までお問い合わせください」の fallback セクションを描画。
+   * 番号自体は出さない。
    */
   smartLockIssuanceFailed?: boolean;
   /**
@@ -71,10 +75,10 @@ export function ReservationUpdatedEmail({
   addToCalendarLinks,
   cancelUrl,
   memberReservationUrl,
+  bookingHubUrl,
   cancellationDeadlineHours,
   modificationDeadlineHours,
   cancellationPolicyUrl,
-  smartLockPasscodes,
   smartLockIssuanceFailed,
   smartLockFallbackContact,
   footer,
@@ -127,29 +131,24 @@ export function ReservationUpdatedEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
-      {smartLockPasscodes && smartLockPasscodes.length > 0 && (
-        <Section style={detailsSection}>
-          <Text style={detailsHeading}>
-            スマートロック解錠用の暗証番号（再発行）
-          </Text>
-          <Hr style={hr} />
-          <Text style={text}>
-            ご予約内容の変更に伴い、暗証番号を再発行しました。
-            以前お知らせした番号は無効となりましたので、以下の新しい番号を
-            ご利用ください。
-          </Text>
-          {smartLockPasscodes.map((entry) => (
-            <Text
-              key={`${entry.deviceName}-${entry.passcode}`}
-              style={detailItem}
-            >
-              <strong>{entry.deviceName}:</strong> {entry.passcode}
-            </Text>
-          ))}
-        </Section>
-      )}
+      <Text style={text}>
+        解錠番号や予約内容の詳細は、予約詳細ページからご確認ください。
+        内容変更に伴い解錠番号が更新されている場合があります。
+      </Text>
+      <Section style={buttonSection}>
+        <Button href={bookingHubUrl} style={buttonPrimary}>
+          予約詳細を確認する
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        ボタンが動作しない場合は次の URL をブラウザに貼り付けてください:
+        <br />
+        <Link href={bookingHubUrl} style={linkStyle}>
+          {bookingHubUrl}
+        </Link>
+      </Text>
 
-      {/* スマートロック再発行失敗時の代替入室手段案内 (PR#12 confirmation と同型) */}
+      {/* スマートロック再発行失敗時の代替入室手段案内 (PR#12) — 番号は出さない */}
       {smartLockIssuanceFailed && (
         <Section
           style={{

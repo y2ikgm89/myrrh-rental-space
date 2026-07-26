@@ -292,20 +292,12 @@ export async function updateReservationAction(
         );
 
         // PR#14: 変更前スナップショットと入力を比較し、spaceId or 時刻変更ありなら
-        // SwitchBot passcode の revoke + reissue を実行し (tx 外)、新パスコード
-        // または発行失敗フラグを顧客への変更通知メールに含めて送信する
+        // SwitchBot passcode の revoke + reissue を実行し (tx 外)、発行失敗時のみ
+        // fallback 案内を変更通知メールに載せる。平文はハブ開示
         // (Codex P1 対応 + PR#12 fallback pattern 準拠)。
-        //
-        // side-effects → email を 1 つの fireAndForget で直列化することで、
-        // 発行された新パスコード / 失敗時 fallback 案内が update email に載る動線を
-        // 確保する。何も変更なしなら { passcodes: [], issuanceFailed: false } が返り、
-        // update email は smart-lock セクション無しで通常送信される。
         fireAndForget(
           (async () => {
-            let smartLockResult: {
-              passcodes: { deviceName: string; passcode: string }[];
-              issuanceFailed: boolean;
-            } = { passcodes: [], issuanceFailed: false };
+            let smartLockIssuanceFailed = false;
             if (before) {
               const newStartTime = parseDateTimeLocalAsJst(
                 `${data.date}T${data.startTime}`,
@@ -322,20 +314,14 @@ export async function updateReservationAction(
                 newStartTime,
                 newEndTime,
               });
-              smartLockResult = {
-                passcodes: [...result.passcodes],
-                issuanceFailed: result.issuanceFailed,
-              };
+              smartLockIssuanceFailed = result.issuanceFailed;
             }
 
             const payload = await fetchReservationEmailData(data.reservationId);
             if (!payload) return;
             const payloadData = omitUndefined({
               ...payload,
-              ...(smartLockResult.passcodes.length > 0
-                ? { smartLockPasscodes: smartLockResult.passcodes }
-                : {}),
-              ...(smartLockResult.issuanceFailed
+              ...(smartLockIssuanceFailed
                 ? { smartLockIssuanceFailed: true }
                 : {}),
             });

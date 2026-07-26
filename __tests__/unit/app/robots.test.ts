@@ -33,6 +33,7 @@ describe("app/robots.ts", () => {
     expect(disallow).toContain("/mypage/");
     expect(disallow).toContain("/reservation/complete");
     expect(disallow).toContain("/reservation/cancel");
+    expect(disallow).toContain("/reservation/status");
     expect(disallow).toContain("/events/cancel");
     expect(disallow).toContain("/events/waitlist/");
     expect(disallow).toContain("/events/registrations/");

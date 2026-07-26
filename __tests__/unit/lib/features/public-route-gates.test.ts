@@ -48,6 +48,10 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "reservation",
   },
   {
+    file: "src/app/(public)/reservation/status/page.tsx",
+    module: "reservation",
+  },
+  {
     file: "src/app/(public)/claim/reservation/page.tsx",
     module: "reservation",
   },
@@ -59,6 +63,10 @@ const EXPECTED_GATES: ReadonlyArray<{
   { file: "src/app/(public)/events/page.tsx", module: "events" },
   { file: "src/app/(public)/events/[slug]/page.tsx", module: "events" },
   { file: "src/app/(public)/events/cancel/page.tsx", module: "events" },
+  {
+    file: "src/app/(public)/events/registrations/status/page.tsx",
+    module: "events",
+  },
   {
     file: "src/app/(public)/events/waitlist/checkout/[token]/route.ts",
     module: "events",
@@ -76,6 +84,10 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "events",
   },
   { file: "src/app/(public)/mypage/events/page.tsx", module: "events" },
+  {
+    file: "src/app/(public)/mypage/events/[id]/page.tsx",
+    module: "events",
+  },
   {
     file: "src/app/(public)/claim/event-registration/page.tsx",
     module: "events",

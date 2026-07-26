@@ -220,6 +220,7 @@ describe("EventRegistrationTable", () => {
             total={3}
             currentPage={1}
             perPage={20}
+            paymentEnabled={true}
           />
         </NuqsAdapter>,
       );
@@ -230,5 +231,65 @@ describe("EventRegistrationTable", () => {
     expect(text).toContain("出席済");
     expect(text).toContain("fmt:2026-07-10T01:30:00.000Z");
     expect(text).toContain("未出席");
+  });
+
+  function buttonLabels(): string[] {
+    return [...(container?.querySelectorAll("button") ?? [])].map(
+      (button) => button.textContent ?? "",
+    );
+  }
+
+  async function renderTable(
+    registrations: Registration[],
+    paymentEnabled: boolean,
+  ) {
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      root.render(
+        <NuqsAdapter>
+          <EventRegistrationTable
+            eventId="cm0evt12345678901234567"
+            registrations={registrations}
+            total={registrations.length}
+            currentPage={1}
+            perPage={20}
+            paymentEnabled={paymentEnabled}
+          />
+        </NuqsAdapter>,
+      );
+    });
+  }
+
+  test("payment OFF + UNPAID: Stripe決済非表示、入金記録は表示", async () => {
+    await renderTable([makeRegistration()], false);
+
+    const labels = buttonLabels();
+    expect(labels.some((label) => label.includes("Stripe決済"))).toBe(false);
+    expect(labels.some((label) => label.includes("入金記録"))).toBe(true);
+  });
+
+  test("payment ON + UNPAID: Stripe決済と入金記録を表示", async () => {
+    await renderTable([makeRegistration()], true);
+
+    const labels = buttonLabels();
+    expect(labels.some((label) => label.includes("Stripe決済"))).toBe(true);
+    expect(labels.some((label) => label.includes("入金記録"))).toBe(true);
+  });
+
+  test("payment OFF + Stripe PAID: Stripe 履歴があるとき返金ボタン表示", async () => {
+    await renderTable(
+      [
+        makeRegistration({
+          paymentStatus: "PAID",
+          paidAmount: 5000,
+          stripePaymentIntentId: "pi_test_123",
+        }),
+      ],
+      false,
+    );
+
+    const labels = buttonLabels();
+    expect(labels.some((label) => label.includes("返金"))).toBe(true);
+    expect(labels.some((label) => label.includes("Stripe決済"))).toBe(false);
   });
 });

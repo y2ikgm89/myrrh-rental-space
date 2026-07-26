@@ -694,7 +694,9 @@ export type ManualPaymentInput = z.input<typeof manualPaymentSchema>;
 
 export async function recordManualEventPayment(
   input: ManualPaymentInput,
-): Promise<MutationResult<{ registrationId: string }>> {
+): Promise<
+  MutationResult<{ registrationId: string; receiptWarning?: string }>
+> {
   const parsed = manualPaymentSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 

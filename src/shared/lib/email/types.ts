@@ -26,16 +26,11 @@ export type ReservationEmailData = {
    */
   userId?: string | null;
   /**
-   * 予約確定時に発行されたスマートロックの一時パスコード一覧。
-   * 対象スペースにスマートロックデバイスが無ければ undefined/空配列。
-   */
-  smartLockPasscodes?: { deviceName: string; passcode: string }[];
-  /**
    * スマートロック発行が失敗した際の代替入室手段案内フラグ (PR#12)。
    * true のとき確認メール内で「当日運営までお問い合わせください」の fallback
    * セクションを描画する。設定するのは呼び出し側 (issueSmartLockAndSendConfirmationEmail)
    * で、失敗判定は「issueSmartLockPasscodes が空を返し、かつ SmartLockPasscode 行が
-   * FAILED で存在」の条件。
+   * FAILED で存在」の条件。平文パスコードはメールに載せない（予約詳細ハブで開示）。
    */
   smartLockIssuanceFailed?: boolean;
   /** 発行失敗時に案内する連絡先 (null → sender 情報にフォールバック)。 */
@@ -43,16 +38,6 @@ export type ReservationEmailData = {
     readonly phone?: string | null;
     readonly email?: string | null;
   };
-  /**
-   * PAID 遷移直後に採番された Receipt.serialNo (「YYYY-XXXXXX」形式)。
-   *
-   * ゲスト予約 (userId=null) の確認メールでは、この serialNo から
-   * `createReceiptDownloadToken` 経由の署名 URL を組み立てて
-   * 「領収書 PDF をダウンロード」CTA を描画する (RECEIPT-GUEST-01)。
-   * 会員予約 (userId あり) はマイページ経由でアクセスできるため URL は生成しない。
-   * 未指定なら CTA を非表示 (PAID 前・領収書対象外・admin 手動作成等)。
-   */
-  receiptSerialNo?: string;
 };
 
 export type ContactEmailData = {
@@ -132,6 +117,24 @@ export type WelcomeEmailData = {
   customerName: string;
   customerEmail: string;
   loginUrl: string;
+};
+
+/**
+ * 領収書新規発行通知メール用データ（ゲスト・会員共通）。
+ *
+ * `detailUrl` は呼出側が組み立てる（会員 mypage / ゲスト status token URL 等）。
+ * PDF API 直リンクは表導線にしない。
+ */
+export type ReceiptIssuedEmailData = {
+  recipientEmail: string;
+  serialNo: string;
+  recipientName: string;
+  subject: string;
+  amount: number;
+  taxAmount: number;
+  issuedAt: Date;
+  /** CTA 先（予約/申込詳細）。sender は URL を生成しない。 */
+  detailUrl: string;
 };
 
 export type ReminderEmailData = {
@@ -242,8 +245,6 @@ export type StatusChangeEmailData = {
   icsSequence: number;
   /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
   userId?: string | null;
-  /** CONFIRMEDへの遷移時に発行されたスマートロックの一時パスコード一覧 */
-  smartLockPasscodes?: { deviceName: string; passcode: string }[];
 };
 
 /**

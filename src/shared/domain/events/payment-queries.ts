@@ -98,6 +98,19 @@ export async function saveEventRegistrationPaymentIntentId(
 }
 
 /**
+ * 領収書発行通知の detailUrl 分岐用（会員 mypage / ゲスト status）。
+ * webhook は claim が boolean のみ返すため、notify 直前に customerId を読む。
+ */
+export async function findEventRegistrationForReceiptNotify(
+  registrationId: string,
+): Promise<{ customerId: string | null } | null> {
+  return prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: { customerId: true },
+  });
+}
+
+/**
  * stripePaymentIntentId で EventRegistration を検索
  * (`findReservationByPaymentIntent` の event 対称版)。
  */

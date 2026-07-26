@@ -30,6 +30,7 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "../serialize";
+import { buildEventRegistrationHubUrl } from "./event-emails";
 import { sendEmail } from "./send";
 import type { EmailResult } from "./types";
 
@@ -100,12 +101,6 @@ function buildClaimUrl(
   return `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(registrationId)}`;
 }
 
-/** 会員（customerId あり）向け: マイページ申込一覧 URL。ゲストは undefined。 */
-function buildMemberUrl(customerId: string | null): string | undefined {
-  if (!customerId) return undefined;
-  return `${getAppUrl()}/mypage/events`;
-}
-
 /**
  * FIFO キューにおける 1-indexed の現在順番を計算する。
  *
@@ -173,7 +168,10 @@ export async function sendEventWaitlistRegistered(args: {
           quantity: registration.quantity,
           ticketName: registration.ticketName,
           position,
-          memberEventRegistrationUrl: buildMemberUrl(registration.customerId),
+          eventRegistrationHubUrl: buildEventRegistrationHubUrl(
+            registration.customerId,
+            registration.id,
+          ),
           claimUrl: buildClaimUrl(registration.customerId, registration.id),
           footer,
         }),
@@ -241,6 +239,10 @@ export async function sendEventWaitlistOffered(args: {
           expiresAtDate,
           expiresAtTime,
           actionUrl,
+          eventRegistrationHubUrl: buildEventRegistrationHubUrl(
+            registration.customerId,
+            registration.id,
+          ),
           isPaid,
           priceDisplay,
           footer,

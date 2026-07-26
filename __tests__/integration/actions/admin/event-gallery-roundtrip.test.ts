@@ -113,6 +113,8 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventCancelledToAllParticipants: mock(async () => {}),
   sendEventUpdatedToAllParticipants: mock(async () => {}),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock((_fn: () => unknown) => {}),

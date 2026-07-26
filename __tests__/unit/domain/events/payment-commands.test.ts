@@ -88,6 +88,16 @@ mock.module("@generated/prisma/enums", () => ({
   AuditAction,
   PaymentStatus,
   RegistrationStatus,
+  // payment-commands → receipts/issue → helpers/guards が SocialPlatform を要求する。
+  SocialPlatform: {
+    INSTAGRAM: "INSTAGRAM",
+    FACEBOOK: "FACEBOOK",
+    TWITTER: "TWITTER",
+    YOUTUBE: "YOUTUBE",
+    LINE: "LINE",
+    TIKTOK: "TIKTOK",
+    OTHER: "OTHER",
+  },
 }));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -121,9 +131,24 @@ mock.module("@/shared/lib/errors/server", () => ({
     DATABASE: "DATABASE",
   },
   ErrorSeverity: {
+    CRITICAL: "CRITICAL",
     HIGH: "HIGH",
     MEDIUM: "MEDIUM",
+    LOW: "LOW",
   },
+}));
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: () => undefined,
+}));
+mock.module("@/shared/domain/receipts/issue", () => ({
+  issueReceiptForEventRegistration: () =>
+    Promise.resolve({ id: "receipt-1", serialNo: "2026-000001" }),
+}));
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForEventRegistration: () => Promise.resolve(),
+}));
+mock.module("@/shared/lib/receipt-download-token", () => ({
+  createReceiptDownloadToken: () => "RECEIPT_TOKEN",
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports

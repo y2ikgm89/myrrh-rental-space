@@ -108,6 +108,12 @@ const mockIssueReceiptForReservation = mock<
 const mockIssueReceiptForEventRegistration = mock<
   (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
 >(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
+const mockNotifyReceiptIssuedForReservation = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt" }));
+const mockNotifyReceiptIssuedForEventRegistration = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt_event" }));
 
 // Reservation-side email (fireAndForget 経由でしか呼ばれないので no-op stub)
 const mockSendReservationConfirmationEmail =
@@ -159,6 +165,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   claimEventRegistrationAsFailed: () => Promise.resolve(false),
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
+  findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
 }));
@@ -192,6 +199,8 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
 
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/receipts/issue", () => ({
@@ -199,6 +208,17 @@ mock.module("@/shared/domain/receipts/issue", () => ({
     mockIssueReceiptForReservation(id, options),
   issueReceiptForEventRegistration: (id: string, options?: unknown) =>
     mockIssueReceiptForEventRegistration(id, options),
+}));
+
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForReservation: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForReservation(input),
+  notifyReceiptIssuedForEventRegistration: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForEventRegistration(input),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
@@ -274,6 +294,8 @@ const DEFAULT_RESERVATION = {
   notes: null,
   startTime: "2026-08-01T10:00:00.000Z",
   endTime: "2026-08-01T12:00:00.000Z",
+  status: "PENDING" as const,
+  userId: "user-dedup-1",
   guestEmail: null,
   customer: { email: "test@example.com", lastName: "田中", firstName: "太郎" },
   space: { name: "テストスペース", location: { name: "東京" } },

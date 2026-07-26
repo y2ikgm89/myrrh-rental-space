@@ -19,3 +19,5 @@ export {
   RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
   EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
 } from "./claim-token-cookie-names";
+export { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "./reservation-status-token-cookie-name";
+export { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "./event-registration-status-token-cookie-name";

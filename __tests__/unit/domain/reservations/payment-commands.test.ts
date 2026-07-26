@@ -82,6 +82,25 @@ const mockGetStripeClient = mock(() =>
   }),
 );
 const mockLogError = mock(() => undefined);
+const mockIssueReceiptForReservation = mock(
+  (_reservationId: string, _options?: { source?: string }) =>
+    Promise.resolve({
+      id: "receipt-1",
+      serialNo: "2026-000001",
+    }),
+);
+const mockNotifyReceiptIssuedForReservation = mock(
+  (_input: { receiptId: string; detailUrl: string }) =>
+    Promise.resolve({ ok: true as const, messageId: "msg_1" }),
+);
+const mockFireAndForget = mock(
+  (promise: Promise<unknown>, _options?: unknown) => {
+    void promise.catch(() => undefined);
+  },
+);
+const mockCreateStatusToken = mock(
+  (_reservationId: string, _expiresAt: Date) => "STATUS_TOKEN_TEST",
+);
 
 mock.module("server-only", () => ({}));
 const AuditAction = {
@@ -126,17 +145,37 @@ mock.module("@/shared/lib/errors/server", () => ({
     DATABASE: "DATABASE",
   },
   ErrorSeverity: {
+    CRITICAL: "CRITICAL",
     HIGH: "HIGH",
     MEDIUM: "MEDIUM",
+    LOW: "LOW",
   },
 }));
 mock.module("@/shared/domain/reservations/pending-expiry", () => ({
   PENDING_RESERVATION_EXPIRY_MINUTES: 60,
 }));
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: mockFireAndForget,
+}));
+mock.module("@/shared/domain/receipts/issue", () => ({
+  issueReceiptForReservation: mockIssueReceiptForReservation,
+}));
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForReservation: mockNotifyReceiptIssuedForReservation,
+}));
+mock.module("@/shared/lib/reservation-status-token", () => ({
+  createStatusToken: mockCreateStatusToken,
+  STATUS_TOKEN_LIFETIME_MS: 90 * 24 * 60 * 60 * 1000,
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { createCheckoutSessionCommand, recordManualReservationPaymentCommand } =
   await import("@/shared/domain/reservations/payment-commands");
+// eslint-disable-next-line import-x/first -- mock.module must precede imports
+const {
+  MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
+  MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
+} = await import("@/shared/domain/receipts/manual-payment-warnings");
 // NOTE: `refundReservationPaymentCommand` の挙動は interactive tx + advisory lock +
 // Refund child table 集計 + AuditLog を跨ぐため unit mock では過度に fragile。
 // テストは `__tests__/integration/domain/reservations/refund-command.test.ts` の
@@ -619,6 +658,7 @@ describe("reservations/payment-commands", () => {
     ): Record<string, unknown> {
       return {
         customerId: CUSTOMER_ID,
+        userId: null,
         paymentStatus: PaymentStatus.UNPAID,
         stripeCheckoutSessionId: null,
         totalPrice: 5000,
@@ -626,6 +666,28 @@ describe("reservations/payment-commands", () => {
         ...overrides,
       };
     }
+
+    beforeEach(() => {
+      mockIssueReceiptForReservation.mockReset();
+      mockIssueReceiptForReservation.mockResolvedValue({
+        id: "receipt-1",
+        serialNo: "2026-000001",
+      });
+      mockNotifyReceiptIssuedForReservation.mockReset();
+      mockNotifyReceiptIssuedForReservation.mockResolvedValue({
+        ok: true,
+        messageId: "msg_1",
+      });
+      mockFireAndForget.mockReset();
+      mockFireAndForget.mockImplementation(
+        (promise: Promise<unknown>, _options?: unknown) => {
+          void promise.catch(() => undefined);
+        },
+      );
+      mockCreateStatusToken.mockReset();
+      mockCreateStatusToken.mockReturnValue("STATUS_TOKEN_TEST");
+      mockLogError.mockReset();
+    });
 
     test("marks UNPAID reservation as PAID when amount matches charge base", async () => {
       mockReservationFindUnique.mockResolvedValue(unpaidReservation());
@@ -654,6 +716,75 @@ describe("reservations/payment-commands", () => {
           paidAt: expect.any(Date),
         },
       });
+      expect(mockIssueReceiptForReservation).toHaveBeenCalledWith(
+        RESERVATION_ID,
+        { source: "manual-payment" },
+      );
+      expect(mockFireAndForget).toHaveBeenCalled();
+      expect(mockNotifyReceiptIssuedForReservation).toHaveBeenCalledWith({
+        receiptId: "receipt-1",
+        detailUrl:
+          "https://example.com/reservation/status?token=STATUS_TOKEN_TEST",
+      });
+    });
+
+    test("member detailUrl uses mypage reservation path", async () => {
+      mockReservationFindUnique.mockResolvedValue(
+        unpaidReservation({ userId: "user-member-1" }),
+      );
+      mockReservationUpdateMany.mockResolvedValue({ count: 1 });
+
+      await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      });
+
+      expect(mockNotifyReceiptIssuedForReservation).toHaveBeenCalledWith({
+        receiptId: "receipt-1",
+        detailUrl: `https://example.com/mypage/reservations/${RESERVATION_ID}`,
+      });
+      expect(mockCreateStatusToken).not.toHaveBeenCalled();
+    });
+
+    test("VALIDATION receipt error keeps PAID and returns receiptWarning", async () => {
+      mockReservationFindUnique.mockResolvedValue(unpaidReservation());
+      mockReservationUpdateMany.mockResolvedValue({ count: 1 });
+      mockIssueReceiptForReservation.mockRejectedValue(
+        new DomainError("金額 0 の予約は領収書を発行しません", "VALIDATION"),
+      );
+
+      const result = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      });
+
+      expect(result).toEqual({
+        reservationId: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+        receiptWarning: MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
+      });
+      expect(mockNotifyReceiptIssuedForReservation).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalled();
+    });
+
+    test("unexpected receipt error keeps PAID and returns deferred warning", async () => {
+      mockReservationFindUnique.mockResolvedValue(unpaidReservation());
+      mockReservationUpdateMany.mockResolvedValue({ count: 1 });
+      mockIssueReceiptForReservation.mockRejectedValue(
+        new Error("db unavailable"),
+      );
+
+      const result = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      });
+
+      expect(result).toEqual({
+        reservationId: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+        receiptWarning: MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
+      });
+      expect(mockNotifyReceiptIssuedForReservation).not.toHaveBeenCalled();
     });
 
     test("rejects when stripe checkout session exists", async () => {
@@ -669,6 +800,7 @@ describe("reservations/payment-commands", () => {
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("VALIDATION");
       expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+      expect(mockIssueReceiptForReservation).not.toHaveBeenCalled();
     });
 
     test("rejects when amount does not match charge base", async () => {
@@ -695,6 +827,7 @@ describe("reservations/payment-commands", () => {
 
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockIssueReceiptForReservation).not.toHaveBeenCalled();
     });
   });
 });

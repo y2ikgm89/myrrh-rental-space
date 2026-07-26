@@ -119,6 +119,33 @@ export async function getReservationForGuestCancel(reservationId: string) {
   });
 }
 
+/**
+ * ゲスト向け薄い予約ステータスページ (`/reservation/status`) 用の最小 select。
+ * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ */
+export async function getReservationForGuestStatus(reservationId: string) {
+  return prisma.reservation.findFirst({
+    where: { id: reservationId, deletedAt: null },
+    select: {
+      id: true,
+      status: true,
+      startTime: true,
+      endTime: true,
+      totalPrice: true,
+      paymentStatus: true,
+      customer: { select: { userId: true } },
+      space: {
+        select: {
+          id: true,
+          name: true,
+          location: { select: { address: true } },
+        },
+      },
+      receipt: { select: { serialNo: true } },
+    },
+  });
+}
+
 export async function getReservationForCompletion(reservationId: string) {
   return prisma.reservation.findFirst({
     where: { id: reservationId, deletedAt: null },

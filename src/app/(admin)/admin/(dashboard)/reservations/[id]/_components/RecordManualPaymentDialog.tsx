@@ -91,6 +91,9 @@ export function RecordManualPaymentDialog({
       return;
     }
     toast.success("入金を記録しました");
+    if (result.receiptWarning !== undefined) {
+      toast.warning(result.receiptWarning);
+    }
     onOpenChange(false);
     router.refresh();
   };

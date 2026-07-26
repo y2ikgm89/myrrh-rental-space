@@ -81,6 +81,8 @@ interface EventRegistrationTableProps {
   readonly currentPage: number;
   /** 1 ページあたり件数。 */
   readonly perPage: number;
+  /** Feature Module `payment` が有効か。false 時は Stripe 決済リンク作成を非表示。 */
+  readonly paymentEnabled: boolean;
 }
 
 function AttendanceStatusCell({
@@ -139,6 +141,7 @@ export function EventRegistrationTable({
   total,
   currentPage,
   perPage,
+  paymentEnabled,
 }: EventRegistrationTableProps) {
   const router = useRouter();
   const [isCancelPending, startCancelTransition] = useTransition();
@@ -355,18 +358,20 @@ export function EventRegistrationTable({
                         </Button>
                         {isManuallyPayable(reg) ? (
                           <>
+                            {paymentEnabled ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={anyPending}
+                                onClick={() =>
+                                  handleCreateCheckoutSession(reg.id)
+                                }
+                              >
+                                Stripe決済
+                              </Button>
+                            ) : null}
                             <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={anyPending}
-                              onClick={() =>
-                                handleCreateCheckoutSession(reg.id)
-                              }
-                            >
-                              Stripe決済
-                            </Button>
-                            <Button
-                              variant="outline"
+                              variant={paymentEnabled ? "outline" : "default"}
                               size="sm"
                               disabled={anyPending}
                               onClick={() => setManualPaymentTarget(reg.id)}

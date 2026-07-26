@@ -23,9 +23,7 @@ export const reservationStatusChangedFixture = {
   addToCalendarLinks: sampleCalendarLinks,
   memberReservationUrl:
     "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
-  smartLockPasscodes: [
-    { deviceName: "玄関ドア", passcode: "482913" },
-    { deviceName: "室内ドア", passcode: "017364" },
-  ],
+  bookingHubUrl:
+    "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReservationStatusChangedEmail>[0];

@@ -5,7 +5,10 @@ import {
   RegistrationStatus,
   type PaymentStatus,
 } from "@generated/prisma/enums";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import {
+  formatEventVenue,
+  formatEventVenueDisplay,
+} from "@/shared/domain/events/venue";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
@@ -198,6 +201,67 @@ export async function getEventRegistrationForGuestCancel(
       slot: { select: { startAt: true, endAt: true } },
     },
   });
+}
+
+/**
+ * ゲスト向け薄いイベント申込ステータスページ (`/events/registrations/status`) 用。
+ * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ */
+export async function getEventRegistrationForGuestStatus(
+  registrationId: string,
+) {
+  const registration = await prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      quantity: true,
+      paymentStatus: true,
+      ticket: { select: { price: true, name: true } },
+      slot: { select: { startAt: true, endAt: true } },
+      receipt: { select: { serialNo: true } },
+      event: {
+        select: {
+          title: true,
+          format: true,
+          meetingUrl: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!registration) return null;
+
+  const venueDisplay = formatEventVenueDisplay({
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
+    location: registration.event.location,
+    space: registration.event.space,
+    addressDetail: registration.event.addressDetail,
+  });
+
+  return {
+    id: registration.id,
+    customerId: registration.customerId,
+    status: registration.status,
+    quantity: registration.quantity,
+    paymentStatus: registration.paymentStatus,
+    ticketName: registration.ticket.name,
+    ticketUnitPrice: registration.ticket.price,
+    ticketTotalPrice: registration.ticket.price * registration.quantity,
+    slot: registration.slot,
+    receiptSerialNo: registration.receipt?.serialNo ?? null,
+    event: {
+      title: registration.event.title,
+      format: registration.event.format,
+      meetingUrl: registration.event.meetingUrl,
+      location: venueDisplay.primary,
+      locationSecondary: venueDisplay.secondary,
+    },
+  };
 }
 
 export async function getEventRegistrationDetailsForEmail(
@@ -478,12 +542,36 @@ export async function getCustomerEventRegistrations(
 }
 
 /**
- * イベント申込の .ics 生成に必要なフィールドを取得する。
- *
- * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
- * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
- *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ * 会員マイページのイベント申込詳細 (`/mypage/events/[id]`) 用。
+ * `customerId` 一致を where で強制し、他顧客の申込は null を返す。
  */
+export async function getCustomerEventRegistrationDetail(
+  registrationId: string,
+  customerId: string,
+) {
+  const row = await prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      customerId,
+      event: { deletedAt: null },
+    },
+    select: {
+      ...CUSTOMER_EVENT_REGISTRATION_SELECT,
+      ticket: {
+        select: {
+          price: true,
+          name: true,
+        },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    ...mapCustomerEventRegistration(row),
+    ticketName: row.ticket.name,
+  };
+}
+
 /**
  * イベント前日リマインダー cron 用: 指定日時窓内の CONFIRMED 申込を取得。
  *
@@ -527,6 +615,13 @@ export async function findEventRegistrationsForReminderWindow(
   });
 }
 
+/**
+ * イベント申込の .ics 生成に必要なフィールドを取得する。
+ *
+ * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
+ * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
+ *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ */
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
   customerId?: string | undefined;

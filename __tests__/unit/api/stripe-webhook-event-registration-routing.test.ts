@@ -53,6 +53,8 @@ const mockClaimReservationAsPaid = mock<
     startTime: string;
     endTime: string;
     icsSequence: number;
+    status: string;
+    userId: string | null;
     guestEmail?: string | null;
     customer: { email: string; lastName: string; firstName: string };
     space: { name: string; location: { name: string } | null };
@@ -115,6 +117,9 @@ const mockRefundExpiredWaitlistOfferPaymentCommand = mock<
 const mockFindExpiredPendingWaitlistOfferRegistration = mock<
   (id: string) => Promise<{ id: string } | null>
 >(() => Promise.resolve(null));
+const mockFindEventRegistrationForReceiptNotify = mock<
+  (id: string) => Promise<{ customerId: string | null } | null>
+>(() => Promise.resolve({ customerId: null }));
 const mockGetWaitlistConfirmationEmailDetails = mock<
   (id: string) => Promise<{
     id: string;
@@ -143,11 +148,16 @@ const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
 
 // async-utils — fireAndForget は渡された promise をそのまま握り潰さず、テストから
 // 完了を observe できるよう Promise を保持しておく（await 用）。
+// 実実装と同様に rejection は swallow し、admin 通知などが実 Prisma を叩いても
+// unhandled rejection でテストを落とさない。
 let lastFireAndForgetPromise: Promise<unknown> | null = null;
 const mockFireAndForget = mock<
   (promise: Promise<unknown>, opts?: unknown) => void
 >((promise) => {
   lastFireAndForgetPromise = promise;
+  if (promise != null && typeof promise.catch === "function") {
+    void promise.catch(() => undefined);
+  }
 });
 
 // Errors
@@ -254,6 +264,8 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   // task #6: 新規追加関数 (この test file 内では charge.refunded route を叩かないため
   // no-op stub で十分。import 解決のみを満たす)
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
+  findEventRegistrationForReceiptNotify: (id: string) =>
+    mockFindEventRegistrationForReceiptNotify(id),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
@@ -275,6 +287,8 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: (data: unknown) =>
     mockSendEventRegistrationConfirmation(data),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 // receipt-full-wiring gap PR#2 で webhook が issueReceiptForEventRegistration を await
@@ -286,12 +300,39 @@ const mockIssueReceiptForReservation = mock<
 const mockIssueReceiptForEventRegistration = mock<
   (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
 >(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
+const mockNotifyReceiptIssuedForReservation = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt" }));
+const mockNotifyReceiptIssuedForEventRegistration = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt_event" }));
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>
     mockIssueReceiptForReservation(id, options),
   issueReceiptForEventRegistration: (id: string, options?: unknown) =>
     mockIssueReceiptForEventRegistration(id, options),
 }));
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForReservation: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForReservation(input),
+  notifyReceiptIssuedForEventRegistration: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForEventRegistration(input),
+}));
+
+// waitlist 確定後の admin in-app 通知は実 Prisma を触るため境界差替
+mock.module(
+  "@/shared/domain/events/waitlist-admin-notification-side-effects",
+  () => ({
+    fireEventWaitlistConfirmedAdminNotification: mock(() => undefined),
+    fireEventWaitlistOfferedAdminNotification: mock(() => undefined),
+    notifyEventWaitlistConfirmedForRegistration: mock(() => Promise.resolve()),
+    notifyEventWaitlistOfferedForRegistration: mock(() => Promise.resolve()),
+  }),
+);
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: (
@@ -487,8 +528,13 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockSaveEventRegistrationPaymentIntentId.mockReset();
     mockRefundExpiredWaitlistOfferPaymentCommand.mockReset();
     mockFindExpiredPendingWaitlistOfferRegistration.mockReset();
+    mockFindEventRegistrationForReceiptNotify.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
+    mockIssueReceiptForReservation.mockReset();
+    mockIssueReceiptForEventRegistration.mockReset();
+    mockNotifyReceiptIssuedForReservation.mockReset();
+    mockNotifyReceiptIssuedForEventRegistration.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockLogError.mockReset();
@@ -511,6 +557,9 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockOmitUndefined.mockImplementation((obj) => obj);
     mockFireAndForget.mockImplementation((promise) => {
       lastFireAndForgetPromise = promise;
+      if (promise != null && typeof promise.catch === "function") {
+        void promise.catch(() => undefined);
+      }
     });
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
@@ -544,10 +593,30 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       refundAmount: 1000,
     });
     mockFindExpiredPendingWaitlistOfferRegistration.mockResolvedValue(null);
+    mockFindEventRegistrationForReceiptNotify.mockResolvedValue({
+      customerId: null,
+    });
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
     );
     mockSendEventRegistrationConfirmation.mockResolvedValue({ ok: true });
+    mockSendReservationConfirmationEmail.mockResolvedValue(undefined);
+    mockIssueReceiptForReservation.mockResolvedValue({
+      id: "receipt-mock",
+      serialNo: "2026-000001",
+    });
+    mockIssueReceiptForEventRegistration.mockResolvedValue({
+      id: "receipt-event-mock",
+      serialNo: "2026-000002",
+    });
+    mockNotifyReceiptIssuedForReservation.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt",
+    });
+    mockNotifyReceiptIssuedForEventRegistration.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt_event",
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -565,6 +634,8 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         startTime: "2025-01-01T10:00:00.000Z",
         endTime: "2025-01-01T12:00:00.000Z",
         icsSequence: 0,
+        status: "PENDING",
+        userId: "user-1",
         customer: {
           email: "a@example.com",
           lastName: "田中",
@@ -645,10 +716,17 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         ["events", "event-waitlist"],
         undefined,
       );
-      // 直接購入は登録時点で確認メール送信済みのため、ここでは送らない
+      // 直接購入は登録時点で確認メール送信済みのため、ここでは送らない。
+      // 領収書発行通知は別メールとして必ず送る（確認メール skip と独立）。
       await flushFireAndForget();
       expect(mockGetWaitlistConfirmationEmailDetails).not.toHaveBeenCalled();
       expect(mockSendEventRegistrationConfirmation).not.toHaveBeenCalled();
+      const notifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(notifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(notifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
+      );
     });
 
     test("waitlist offer（source=waitlist-offer）→ confirmWaitlistOfferCommand が claimEventRegistrationAsPaid より先に呼ばれる（CALL ORDER）", async () => {
@@ -696,6 +774,35 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           customerEmail: "waitlist@example.com",
         }),
       );
+      expect(
+        mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
+      ).not.toHaveProperty("receiptSerialNo");
+      const waitlistNotifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(waitlistNotifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(waitlistNotifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
+      );
+    });
+
+    test("会員 (customerId) の領収書通知 detailUrl は /mypage/events/{id}", async () => {
+      mockFindEventRegistrationForReceiptNotify.mockResolvedValueOnce({
+        customerId: "cust-member-1",
+      });
+      const event = makeSessionCompletedEvent({
+        type: "event-registration",
+        registrationId: "reg-member-1",
+      });
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      await flushFireAndForget();
+      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
+        receiptId: "receipt-event-mock",
+        detailUrl: "http://localhost:3000/mypage/events/reg-member-1",
+      });
     });
 
     test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
@@ -939,6 +1046,8 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         startTime: "2025-02-01T10:00:00.000Z",
         endTime: "2025-02-01T12:00:00.000Z",
         icsSequence: 0,
+        status: "PENDING",
+        userId: "user-async-1",
         customer: {
           email: "b@example.com",
           lastName: "佐藤",
@@ -1028,6 +1137,15 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           registrationId: "reg-waitlist-1",
           customerEmail: "waitlist@example.com",
         }),
+      );
+      expect(
+        mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
+      ).not.toHaveProperty("receiptSerialNo");
+      const asyncWaitlistNotifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(asyncWaitlistNotifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(asyncWaitlistNotifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
       );
     });
 
