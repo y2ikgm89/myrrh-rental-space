@@ -30,12 +30,19 @@ const mockFindUnique = mock<
     categoryId: string | null;
   } | null>
 >();
-const mockFindUniqueBySlug = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve(null),
-);
-const mockFindMany = mock<() => Promise<{ slug: string }[]>>(() =>
-  Promise.resolve([]),
-);
+/** ensureUniqueSlug: Space.slug は isActive 部分 unique → findFirst */
+const mockFindFirst = mock<
+  (args: {
+    where: { slug: string; isActive: boolean };
+    select: { id: boolean };
+  }) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
+const mockFindMany = mock<
+  (args: {
+    where: { slug: { startsWith: string }; isActive: boolean };
+    select: { slug: boolean };
+  }) => Promise<{ slug: string }[]>
+>(() => Promise.resolve([]));
 const mockCreate = mock<
   (args: {
     data: Record<string, unknown>;
@@ -52,11 +59,9 @@ mock.module("@/shared/lib/env/server", () => ({
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     space: {
-      findUnique: (args: { where: { id?: string; slug?: string } }) => {
-        if (args.where.slug !== undefined) return mockFindUniqueBySlug();
-        return mockFindUnique();
-      },
-      findMany: () => mockFindMany(),
+      findUnique: () => mockFindUnique(),
+      findFirst: mockFindFirst,
+      findMany: mockFindMany,
       create: (args: {
         data: Record<string, unknown>;
         select: Record<string, boolean>;
@@ -103,8 +108,8 @@ const SOURCE_SPACE = {
 describe("duplicateSpaceCommand", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
-    mockFindUniqueBySlug.mockReset();
-    mockFindUniqueBySlug.mockResolvedValue(null);
+    mockFindFirst.mockReset();
+    mockFindFirst.mockResolvedValue(null);
     mockFindMany.mockReset();
     mockFindMany.mockResolvedValue([]);
     mockCreate.mockReset();
@@ -119,6 +124,10 @@ describe("duplicateSpaceCommand", () => {
     );
 
     expect(result).toEqual({ id: "new-space-id", slug: "test-copy" });
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { slug: "test-copy", isActive: true },
+      select: { id: true },
+    });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -136,7 +145,7 @@ describe("duplicateSpaceCommand", () => {
 
   test("slug 衝突時は -copy-2 / -copy-3 ... の最小未使用番号で採番", async () => {
     mockFindUnique.mockResolvedValueOnce(SOURCE_SPACE);
-    mockFindUniqueBySlug.mockResolvedValueOnce({ id: "conflict-1" });
+    mockFindFirst.mockResolvedValueOnce({ id: "conflict-1" });
     mockFindMany.mockResolvedValueOnce([
       { slug: "test-copy-2" },
       { slug: "test-copy-3" },
@@ -144,6 +153,10 @@ describe("duplicateSpaceCommand", () => {
 
     await duplicateSpaceCommand("00000000-0000-0000-0000-000000000099");
 
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: { slug: { startsWith: "test-copy-" }, isActive: true },
+      select: { slug: true },
+    });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ slug: "test-copy-4" }),
@@ -159,5 +172,6 @@ describe("duplicateSpaceCommand", () => {
     ).rejects.toThrow("スペースが見つかりません");
 
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockFindFirst).not.toHaveBeenCalled();
   });
 });
