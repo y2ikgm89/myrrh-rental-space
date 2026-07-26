@@ -355,15 +355,16 @@ export async function findExpiredWaitlistOfferCandidates(now: Date) {
  *
  * `ticket.price === 0` なら無料イベントの確定 URL（`/events/waitlist/confirm`）、
  * それ以外は有料イベントの Stripe Checkout 起動 URL（`/events/waitlist/checkout/[token]`）
- * を返す。両 URL とも `createWaitlistOfferToken` が発行する HMAC purpose-bound token
- * を埋め込む（token 自体に exp claim は無く、有効期限は `EventRegistration.expiresAt`
- * が正本 — `waitlist-offer-token.ts` の docblock 参照）。
+ * を返す。両 URL とも `createWaitlistOfferToken` が発行する purpose-bound token
+ * を埋め込む（token `exp` は `EventRegistration.expiresAt` に揃え、業務正本の
+ * DB 期限は command 入口で再検証 — `waitlist-offer-token.ts` の docblock 参照）。
  *
  * `createEventCheckoutSessionCommand`（`payment-commands.ts`）と同様、URL 組み立てに
  * `getAppUrl()` をこの domain 層で直接呼ぶ（同ファイル内の既存 precedent）。
  *
- * registrationId に該当する申込が存在しない場合は null を返す（呼び出し側で
- * 「既に処理済み/削除済み」を non-fatal に扱えるようにする）。
+ * registrationId に該当する申込が存在しない場合、または offer window
+ * (`expiresAt`) が未設定の場合は null を返す（呼び出し側で「既に処理済み/削除済み」
+ * を non-fatal に扱えるようにする）。
  */
 export async function getEventWaitlistOfferPaymentContext(
   registrationId: string,
@@ -374,12 +375,19 @@ export async function getEventWaitlistOfferPaymentContext(
 > {
   const registration = await prisma.eventRegistration.findUnique({
     where: { id: registrationId },
-    select: { id: true, ticket: { select: { price: true } } },
+    select: {
+      id: true,
+      expiresAt: true,
+      ticket: { select: { price: true } },
+    },
   });
-  if (!registration) return null;
+  if (!registration?.expiresAt) return null;
 
   const baseUrl = getAppUrl();
-  const token = createWaitlistOfferToken({ registrationId });
+  const token = createWaitlistOfferToken({
+    registrationId,
+    expiresAt: registration.expiresAt,
+  });
 
   if (registration.ticket.price === 0) {
     return {

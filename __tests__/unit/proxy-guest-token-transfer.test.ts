@@ -135,6 +135,14 @@ describe("guest token transfer", () => {
     expect(res.status).not.toBe(307);
   });
 
+  test("token なしの /events/registrations/checkout は素通り（redirect しない）", async () => {
+    const req = new NextRequest(
+      "https://example.com/events/registrations/checkout",
+    );
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
   test("不正形式の token は cookie に書かず ?token だけ外す", async () => {
     const req = new NextRequest(
       "https://example.com/reservation/complete?token=short",

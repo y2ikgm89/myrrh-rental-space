@@ -17,6 +17,7 @@ import {
   CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
   CALENDAR_EVENT_TOKEN_COOKIE_NAME,
 } from "@/shared/lib/constants/calendar-token-cookie-names";
+import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
 
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
@@ -25,6 +26,7 @@ import {
   getClientIp,
   infraEndpointRateLimiter,
 } from "@/shared/lib/rate-limit";
+import { isLoopbackRequestHost } from "@/shared/lib/request-host";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -90,6 +92,9 @@ function getConfiguredMediaSource(): string | null {
  * 適用すると Chrome が HTTPS への redirect を強制し certificate warning page
  * (CHROME_INTERSTITIAL_ERROR) で navigation が fail する（Lighthouse / E2E が
  * 必ず broken になる silent bug）。
+ *
+ * Cookie `Secure` には使わない（spoofed `Host: localhost` で Secure を外さない）。
+ * Cookie 側は {@link shouldSetSecureCookie} を使う。
  */
 function isLocalhostRequest(req: NextRequest): boolean {
   const host = req.headers.get("host") ?? "";
@@ -99,6 +104,17 @@ function isLocalhostRequest(req: NextRequest): boolean {
     host.startsWith("127.0.0.1:") ||
     host === "127.0.0.1"
   );
+}
+
+/**
+ * guest / claim token cookie の `Secure` フラグ。
+ *
+ * `Host: localhost` を信頼しない（本番で spoof されて Secure が外れるのを防ぐ）。
+ * Secure=false は `NODE_ENV === "development"` かつ実 loopback のときだけ。
+ */
+function shouldSetSecureCookie(req: NextRequest): boolean {
+  if (serverEnv.NODE_ENV !== "development") return true;
+  return !isLoopbackRequestHost(req.headers, req.url);
 }
 
 function buildCsp(
@@ -263,6 +279,11 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
   },
   {
+    pathname: "/events/registrations/checkout",
+    cookieName: EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME,
+    cookiePath: "/events/registrations/checkout",
+  },
+  {
     pathname: "/api/calendar/reservation/",
     cookieName: CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
     match: "prefix",
@@ -306,7 +327,7 @@ function handleGuestTokenTransfer(req: NextRequest): NextResponse | null {
       value: token,
       httpOnly: true,
       sameSite: "strict",
-      secure: !isLocalhostRequest(req),
+      secure: shouldSetSecureCookie(req),
       path: route.cookiePath ?? "/",
       maxAge: GUEST_TOKEN_COOKIE_MAX_AGE,
     });
@@ -355,7 +376,7 @@ function handleClaimTokenTransfer(
       // 戻ってくるため、SameSite=Strict だと cookie が送信されず claim が失敗する。
       // Lax は top-level GET navigation では送信されるため往復を生き残る。
       sameSite: "lax",
-      secure: !isLocalhostRequest(req),
+      secure: shouldSetSecureCookie(req),
       path: "/",
       maxAge: CLAIM_TOKEN_COOKIE_MAX_AGE,
     });
