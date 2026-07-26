@@ -11,6 +11,9 @@ import { formatEventVenue } from "@/shared/domain/events/venue";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
+/** delete 失敗時の retry 振り分け用 prefix（reservation 側と同値） */
+export const GCAL_DELETE_FAILED_PREFIX = "gcal_delete_failed:";
+
 export type EventSyncContext = EventSyncData & {
   googleCalendarEventId: string | null;
 };
@@ -104,6 +107,16 @@ export async function getFailedCalendarSyncEventIds(
   return rows.map((r) => r.id);
 }
 
+export async function getEventCalendarSyncError(
+  eventId: string,
+): Promise<string | null> {
+  const event = await prisma.event.findFirst({
+    where: { id: eventId, deletedAt: null },
+    select: { calendarSyncError: true },
+  });
+  return event?.calendarSyncError ?? null;
+}
+
 /**
  * イベント → GCal outbound sync 対象のスロットを取得する。
  *
@@ -172,4 +185,47 @@ export async function getEventSlotsForCalendarSync(
     googleCalendarEventId: slot.googleCalendarEventId,
     meetingProvider: event.meetingProvider,
   }));
+}
+
+/** cancel / delete / unpublish 前に GCal 削除対象 ID を一括取得する */
+export async function getGoogleCalendarEventIdsByEventIds(
+  eventIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  if (eventIds.length === 0) return new Map();
+
+  const slots = await prisma.eventTimeSlot.findMany({
+    where: {
+      eventId: { in: [...eventIds] },
+      googleCalendarEventId: { not: null },
+      event: { deletedAt: null },
+    },
+    select: { eventId: true, googleCalendarEventId: true },
+  });
+
+  const map = new Map<string, string[]>();
+  for (const slot of slots) {
+    if (slot.googleCalendarEventId === null) continue;
+    const existing = map.get(slot.eventId) ?? [];
+    existing.push(slot.googleCalendarEventId);
+    map.set(slot.eventId, existing);
+  }
+  return map;
+}
+
+/** delete retry 用: PUBLISHED 以外のイベントも slot GCal ID を返す */
+export async function getEventGoogleCalendarEventIdsForDelete(
+  eventId: string,
+): Promise<string[]> {
+  const slots = await prisma.eventTimeSlot.findMany({
+    where: {
+      eventId,
+      googleCalendarEventId: { not: null },
+      event: { deletedAt: null },
+    },
+    select: { googleCalendarEventId: true },
+  });
+
+  return slots.flatMap((slot) =>
+    slot.googleCalendarEventId !== null ? [slot.googleCalendarEventId] : [],
+  );
 }

@@ -20,7 +20,10 @@ import {
   updateEventCommand,
 } from "@/shared/domain/events/commands";
 import { getEventById } from "@/shared/domain/events/admin-queries";
-import { getEventSlotsForCalendarSync } from "@/shared/domain/events/calendar-sync";
+import {
+  deleteEventOutbound,
+  syncEventOutbound,
+} from "./event/calendar-outbound";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -43,11 +46,6 @@ function invalidateEventSiteWideCaches(slug?: string | null): void {
     });
   }
 }
-import {
-  syncEventToCalendar,
-  updateEventCalendarSync,
-  deleteEventCalendarSync,
-} from "@/shared/lib/calendar-sync/event-outbound";
 import {
   eventFormSchema,
   type EventFormData,
@@ -89,30 +87,6 @@ function buildEventCommandInput(data: EventFormData) {
     tickets,
     slots,
   });
-}
-
-/** create / duplicate / update / publish 共通 GCal 同期 */
-async function syncEventOutbound(eventId: string): Promise<void> {
-  const contexts = await getEventSlotsForCalendarSync(eventId);
-  await Promise.all(
-    contexts.map((context) =>
-      context.googleCalendarEventId
-        ? updateEventCalendarSync(context, context.googleCalendarEventId)
-        : syncEventToCalendar(context),
-    ),
-  );
-}
-
-/** cancel / delete 用: 既存 GCal ID がある場合のみ削除 */
-async function deleteEventOutbound(
-  eventId: string,
-  gcalEventIds: readonly string[],
-): Promise<void> {
-  await Promise.all(
-    gcalEventIds.map((gcalEventId) =>
-      deleteEventCalendarSync(eventId, gcalEventId),
-    ),
-  );
 }
 
 // =============================================================================

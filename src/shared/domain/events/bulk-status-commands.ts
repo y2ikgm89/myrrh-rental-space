@@ -49,34 +49,22 @@ export async function bulkSetStatusEventsCommand(
     return { count: 0, newStatus, affectedIds: [], rejectedIds };
   }
 
-  // Round-5 audit Finding #5: 旧実装は updateMany の WHERE が id のみで
-  // status を含んでおらず、上の findMany で読んだ後・この書込までの間に
-  // 別 admin が対象イベントのステータスを変更していても無条件に newStatus で
-  // 上書きしていた (TOCTOU)。read 時点の status を WHERE に claim として含め、
-  // read〜write 間に状態が変わった行は自然に更新対象から外れるようにする
-  // (reservation の updateReservationStatusCommand と同型の claim パターン)。
-  const claim = await prisma.event.updateMany({
-    where: {
-      deletedAt: null,
-      OR: allowedTargets.map((t) => ({ id: t.id, status: t.fromStatus })),
-    },
-    data: { status: newStatus },
-  });
+  const affectedIds: string[] = [];
 
-  let affectedIds = allowedTargets.map((t) => t.id);
-
-  if (claim.count < allowedTargets.length) {
-    // 一部が claim に失敗した (他 admin による競合更新)。実際に newStatus へ
-    // 遷移できた id だけを affectedIds として返す (呼び出し元はこれを使って
-    // CANCELLED 通知メールを送るため、競合で実際は変更されていないイベントに
-    // 誤送信しないようにする)。
-    const confirmed = await prisma.event.findMany({
-      where: { id: { in: affectedIds }, status: newStatus },
-      select: { id: true },
+  for (const target of allowedTargets) {
+    const claim = await prisma.event.updateMany({
+      where: {
+        id: target.id,
+        deletedAt: null,
+        status: target.fromStatus,
+      },
+      data: { status: newStatus },
     });
-    const confirmedIds = new Set(confirmed.map((c) => c.id));
-    rejectedIds.push(...affectedIds.filter((id) => !confirmedIds.has(id)));
-    affectedIds = affectedIds.filter((id) => confirmedIds.has(id));
+    if (claim.count === 1) {
+      affectedIds.push(target.id);
+    } else {
+      rejectedIds.push(target.id);
+    }
   }
 
   return {

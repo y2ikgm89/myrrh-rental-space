@@ -15,6 +15,7 @@ import {
   bulkSetStatusEventsCommand,
   type BulkSetStatusEventsResult,
 } from "@/shared/domain/events/bulk-status-commands";
+import { getGoogleCalendarEventIdsByEventIds } from "@/shared/domain/events/calendar-sync";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import {
   AuditAction,
@@ -25,6 +26,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { ErrorCategory } from "@/shared/lib/errors";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { deleteEventOutbound, syncEventOutbound } from "./calendar-outbound";
 
 const eventIdSchema = prismaCuidIdSchema("イベント");
 
@@ -32,6 +34,11 @@ const bulkIdsSchema = z
   .array(eventIdSchema)
   .min(1, { error: "1件以上選択してください" })
   .max(100, { error: "一度に処理できるのは100件までです" });
+
+type OutboundDeleteTarget = {
+  eventId: string;
+  googleCalendarEventIds: string[];
+};
 
 function buildBulkAuditMetadata(args: {
   ip: string | null;
@@ -42,6 +49,56 @@ function buildBulkAuditMetadata(args: {
     ...(args.ip !== null && { ip: args.ip }),
     ...(args.userAgent !== null && { userAgent: args.userAgent }),
   };
+}
+
+function buildOutboundDeleteTargets(
+  gcalMap: Map<string, string[]>,
+  eventIds: readonly string[],
+): OutboundDeleteTarget[] {
+  return eventIds.flatMap((eventId) => {
+    const googleCalendarEventIds = gcalMap.get(eventId);
+    if (
+      googleCalendarEventIds === undefined ||
+      googleCalendarEventIds.length === 0
+    ) {
+      return [];
+    }
+    return [{ eventId, googleCalendarEventIds }];
+  });
+}
+
+function fireBulkOutboundDeletes(targets: OutboundDeleteTarget[]): void {
+  if (targets.length === 0) return;
+
+  fireAndForget(
+    Promise.allSettled(
+      targets.map(({ eventId, googleCalendarEventIds }) =>
+        deleteEventOutbound(eventId, googleCalendarEventIds),
+      ),
+    ).then(() => undefined),
+    {
+      operation: "deleteEventOutbound.bulk",
+      category: ErrorCategory.EXTERNAL_API,
+    },
+  );
+}
+
+function fireBulkOutboundSyncs(eventIds: readonly string[]): void {
+  if (eventIds.length === 0) return;
+
+  fireAndForget(
+    Promise.allSettled(
+      eventIds.map((eventId) => syncEventOutbound(eventId)),
+    ).then(() => undefined),
+    {
+      operation: "syncEventOutbound.bulk",
+      category: ErrorCategory.EXTERNAL_API,
+    },
+  );
+}
+
+function statusRequiresCalendarDelete(status: EventStatus): boolean {
+  return status === EventStatus.CANCELLED || status === EventStatus.ARCHIVED;
 }
 
 export async function bulkPublishEvents(
@@ -56,8 +113,26 @@ export async function bulkPublishEvents(
     action: "publish",
     execute: async (user) => {
       const { ip, userAgent } = await buildAuditRequestContext();
+      const outboundDeleteTargets = publish
+        ? []
+        : buildOutboundDeleteTargets(
+            await getGoogleCalendarEventIdsByEventIds(parsed.data),
+            parsed.data,
+          );
       const result = await bulkPublishEventsCommand(parsed.data, publish);
-      return { ...result, actorUserId: user.id, ip, userAgent };
+      const affectedIdSet = new Set(
+        result.affectedTargets.map((target) => target.id),
+      );
+
+      return {
+        ...result,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+        outboundDeleteTargets: outboundDeleteTargets.filter((target) =>
+          affectedIdSet.has(target.eventId),
+        ),
+      };
     },
     afterSuccess: (outcome) => {
       invalidateEventCaches();
@@ -79,6 +154,13 @@ export async function bulkPublishEvents(
           userAgent: outcome.userAgent,
         }),
       });
+      if (outcome.isPublished) {
+        fireBulkOutboundSyncs(
+          outcome.affectedTargets.map((target) => target.id),
+        );
+      } else {
+        fireBulkOutboundDeletes(outcome.outboundDeleteTargets);
+      }
     },
   });
 }
@@ -94,10 +176,26 @@ export async function bulkSoftDeleteEvents(
     action: "delete",
     execute: async (user) => {
       const { ip, userAgent } = await buildAuditRequestContext();
+      const outboundDeleteTargets = buildOutboundDeleteTargets(
+        await getGoogleCalendarEventIdsByEventIds(parsed.data),
+        parsed.data,
+      );
       const result = await bulkSoftDeleteEventsCommand(parsed.data, {
         id: user.id,
       });
-      return { ...result, actorUserId: user.id, ip, userAgent };
+      const affectedIdSet = new Set(
+        result.affectedTargets.map((target) => target.id),
+      );
+
+      return {
+        ...result,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+        outboundDeleteTargets: outboundDeleteTargets.filter((target) =>
+          affectedIdSet.has(target.eventId),
+        ),
+      };
     },
     afterSuccess: (outcome) => {
       invalidateEventCaches();
@@ -114,6 +212,7 @@ export async function bulkSoftDeleteEvents(
           userAgent: outcome.userAgent,
         }),
       });
+      fireBulkOutboundDeletes(outcome.outboundDeleteTargets);
     },
   });
 }
@@ -138,11 +237,29 @@ export async function bulkSetStatusEvents(
     action: "update",
     execute: async (user) => {
       const { ip, userAgent } = await buildAuditRequestContext();
+      const outboundDeleteTargets = statusRequiresCalendarDelete(
+        parsed.data.newStatus,
+      )
+        ? buildOutboundDeleteTargets(
+            await getGoogleCalendarEventIdsByEventIds(parsed.data.ids),
+            parsed.data.ids,
+          )
+        : [];
       const result = await bulkSetStatusEventsCommand(
         parsed.data.ids,
         parsed.data.newStatus,
       );
-      return { ...result, actorUserId: user.id, ip, userAgent };
+      const affectedIdSet = new Set(result.affectedIds);
+
+      return {
+        ...result,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+        outboundDeleteTargets: outboundDeleteTargets.filter((target) =>
+          affectedIdSet.has(target.eventId),
+        ),
+      };
     },
     afterSuccess: (outcome) => {
       invalidateEventCaches();
@@ -159,6 +276,9 @@ export async function bulkSetStatusEvents(
           userAgent: outcome.userAgent,
         }),
       });
+      if (statusRequiresCalendarDelete(outcome.newStatus)) {
+        fireBulkOutboundDeletes(outcome.outboundDeleteTargets);
+      }
       if (
         outcome.newStatus === EventStatus.CANCELLED &&
         outcome.affectedIds.length > 0

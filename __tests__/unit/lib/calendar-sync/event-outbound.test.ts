@@ -70,6 +70,12 @@ const mockGetFailedEventIds = mock<() => Promise<string[]>>(() =>
 const mockGetForSync = mock<(...args: unknown[]) => Promise<unknown[]>>(() =>
   Promise.resolve([]),
 );
+const mockGetGcalIdsForDelete = mock<(eventId: string) => Promise<string[]>>(
+  () => Promise.resolve([]),
+);
+const mockGetEventCalendarSyncError = mock<
+  (eventId: string) => Promise<string | null>
+>(() => Promise.resolve(null));
 const mockWriteBackMeetingUrl = mock<
   (params: { eventId: string; meetingUrl: string }) => Promise<void>
 >(() => Promise.resolve());
@@ -81,7 +87,10 @@ mock.module("@/shared/domain/events/calendar-sync", () => ({
   markEventCalendarSyncSuccess: mockMarkSuccess,
   getFailedCalendarSyncEventIds: mockGetFailedEventIds,
   getEventSlotsForCalendarSync: mockGetForSync,
+  getEventGoogleCalendarEventIdsForDelete: mockGetGcalIdsForDelete,
+  getEventCalendarSyncError: mockGetEventCalendarSyncError,
   writeBackMeetingUrl: mockWriteBackMeetingUrl,
+  GCAL_DELETE_FAILED_PREFIX: "gcal_delete_failed:",
 }));
 
 // =============================================================================
@@ -501,6 +510,26 @@ describe("deleteEventCalendarSync", () => {
     expect(mockDelete).not.toHaveBeenCalled();
     expect(mockClear).not.toHaveBeenCalled();
   });
+
+  test("deleteCalendarEvent が soft failure の場合 markEventCalendarSyncError を呼ぶ", async () => {
+    mockDelete.mockImplementation(() =>
+      Promise.resolve({ success: false, error: "not found" }),
+    );
+
+    const result = await deleteEventCalendarSync(
+      "event-id-001",
+      "gcal-event-to-delete",
+    );
+
+    expect(result).toEqual({ success: false, error: "not found" });
+    expect(mockMarkError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: "event-id-001",
+        error: "gcal_delete_failed:not found",
+      }),
+    );
+    expect(mockClear).not.toHaveBeenCalled();
+  });
 });
 
 // =============================================================================
@@ -513,6 +542,8 @@ describe("retryFailedEventCalendarSyncs", () => {
     mockIsEnabled.mockResolvedValue(true);
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({ success: true, eventId: "gcal-retry-1" });
+    mockDelete.mockReset();
+    mockDelete.mockResolvedValue({ success: true });
     mockSave.mockReset();
     mockSave.mockResolvedValue(undefined);
     mockMarkError.mockReset();
@@ -520,6 +551,10 @@ describe("retryFailedEventCalendarSyncs", () => {
     mockMarkSuccess.mockResolvedValue(undefined);
     mockGetFailedEventIds.mockReset();
     mockGetForSync.mockReset();
+    mockGetGcalIdsForDelete.mockReset();
+    mockGetGcalIdsForDelete.mockResolvedValue([]);
+    mockGetEventCalendarSyncError.mockReset();
+    mockGetEventCalendarSyncError.mockResolvedValue(null);
   });
 
   test("googleCalendarEventId が null のスロットのみ create を再試行する", async () => {
@@ -586,5 +621,24 @@ describe("retryFailedEventCalendarSyncs", () => {
 
     expect(result).toEqual({ total: 1, succeeded: 0, failed: 1 });
     expect(mockMarkSuccess).not.toHaveBeenCalled();
+  });
+
+  test("delete 失敗 (GCAL_DELETE_FAILED_PREFIX) は delete を再試行する", async () => {
+    mockGetFailedEventIds.mockResolvedValue(["event-delete-1"]);
+    mockGetGcalIdsForDelete
+      .mockResolvedValueOnce(["gcal-stale-1"])
+      .mockResolvedValueOnce([]);
+    mockGetEventCalendarSyncError.mockResolvedValue(
+      "gcal_delete_failed:api error",
+    );
+
+    const result = await retryFailedEventCalendarSyncs();
+
+    expect(mockDelete).toHaveBeenCalledWith("gcal-stale-1", {
+      ignoreEnabledToggle: true,
+    });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+    expect(mockMarkSuccess).toHaveBeenCalledWith("event-delete-1");
   });
 });

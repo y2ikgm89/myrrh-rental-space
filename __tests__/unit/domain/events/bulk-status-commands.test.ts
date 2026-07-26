@@ -21,8 +21,9 @@ const mockFindMany = mock<
 const mockUpdateMany = mock<
   (args: {
     where: {
+      id: string;
       deletedAt: null;
-      OR: { id: string; status: EventStatus }[];
+      status: EventStatus;
     };
     data: { status: EventStatus };
   }) => Promise<{ count: number }>
@@ -60,6 +61,7 @@ describe("bulkSetStatusEventsCommand", () => {
   beforeEach(() => {
     mockFindMany.mockClear();
     mockUpdateMany.mockClear();
+    mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
   });
 
   describe("空配列", () => {
@@ -94,7 +96,6 @@ describe("bulkSetStatusEventsCommand", () => {
     });
 
     test("soft-deleted ID が findMany で返らない場合 count: 0", async () => {
-      // findMany が空を返す = soft-deleted として扱われた
       mockFindMany.mockResolvedValueOnce([]);
 
       const result = await bulkSetStatusEventsCommand(
@@ -131,7 +132,6 @@ describe("bulkSetStatusEventsCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await bulkSetStatusEventsCommand(
         [UUID_A],
@@ -147,7 +147,6 @@ describe("bulkSetStatusEventsCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await bulkSetStatusEventsCommand(
         [UUID_A],
@@ -162,7 +161,6 @@ describe("bulkSetStatusEventsCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.PUBLISHED },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await bulkSetStatusEventsCommand(
         [UUID_A],
@@ -202,15 +200,11 @@ describe("bulkSetStatusEventsCommand", () => {
     });
 
     test("混在（valid + rejected）の場合", async () => {
-      // UUID_A: DRAFT → CANCELLED (valid)
-      // UUID_B: ARCHIVED → CANCELLED (rejected, terminal)
-      // UUID_C: PUBLISHED → CANCELLED (valid)
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
         { id: UUID_B, status: EventStatus.ARCHIVED },
         { id: UUID_C, status: EventStatus.PUBLISHED },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
       const result = await bulkSetStatusEventsCommand(
         [UUID_A, UUID_B, UUID_C],
@@ -223,37 +217,32 @@ describe("bulkSetStatusEventsCommand", () => {
     });
   });
 
-  describe("updateMany への引数", () => {
-    test("updateMany に deletedAt: null と read 時点の status を claim する OR where が渡される", async () => {
-      // Round-5 audit Finding #5: WHERE が id のみだと read〜write 間の競合更新を
-      // 無条件に上書きする TOCTOU になるため、read 時点の status を OR 条件に含めた
-      // claim になっていることを固定する。
+  describe("per-target claim", () => {
+    test("updateMany に read 時点の status を claim する where が渡される", async () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       await bulkSetStatusEventsCommand([UUID_A], EventStatus.CANCELLED);
 
       expect(mockUpdateMany).toHaveBeenCalledWith({
         where: {
+          id: UUID_A,
           deletedAt: null,
-          OR: [{ id: UUID_A, status: EventStatus.DRAFT }],
+          status: EventStatus.DRAFT,
         },
         data: { status: EventStatus.CANCELLED },
       });
     });
 
-    test("claim が一部失敗した場合、確定できた id だけ affectedIds に残り残りは rejectedIds に回る", async () => {
+    test("claim が count===1 の id だけ affectedIds に残る", async () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
         { id: UUID_C, status: EventStatus.PUBLISHED },
       ]);
-      // 2件 claim を試みたが、他 admin との競合で 1 件しか claim できなかった
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
-      // 実際に CANCELLED になっているのは UUID_A のみ (UUID_C は他 admin が先に
-      // 状態を変えていて claim に失敗した想定)
-      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }]);
+      mockUpdateMany
+        .mockImplementationOnce(() => Promise.resolve({ count: 1 }))
+        .mockImplementationOnce(() => Promise.resolve({ count: 0 }));
 
       const result = await bulkSetStatusEventsCommand(
         [UUID_A, UUID_C],
@@ -263,6 +252,24 @@ describe("bulkSetStatusEventsCommand", () => {
       expect(result.count).toBe(1);
       expect(result.affectedIds).toEqual([UUID_A]);
       expect(result.rejectedIds).toEqual([UUID_C]);
+    });
+
+    test("他 admin が先に CANCELLED にした行を affectedIds に含めない", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: EventStatus.DRAFT },
+        { id: UUID_C, status: EventStatus.PUBLISHED },
+      ]);
+      mockUpdateMany
+        .mockImplementationOnce(() => Promise.resolve({ count: 1 }))
+        .mockImplementationOnce(() => Promise.resolve({ count: 0 }));
+
+      const result = await bulkSetStatusEventsCommand(
+        [UUID_A, UUID_C],
+        EventStatus.CANCELLED,
+      );
+
+      expect(result.affectedIds).toEqual([UUID_A]);
+      expect(result.rejectedIds).toContain(UUID_C);
     });
   });
 });

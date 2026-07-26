@@ -111,6 +111,29 @@ mock.module("@/shared/domain/events/bulk-status-commands", () => ({
   bulkSetStatusEventsCommand: mockBulkSetStatusEventsCommand,
 }));
 
+const mockGetGoogleCalendarEventIdsByEventIds = mock<
+  (eventIds: readonly string[]) => Promise<Map<string, string[]>>
+>(() => Promise.resolve(new Map()));
+
+mock.module("@/shared/domain/events/calendar-sync", () => ({
+  getGoogleCalendarEventIdsByEventIds: mockGetGoogleCalendarEventIdsByEventIds,
+}));
+
+const mockSyncEventOutbound = mock<(eventId: string) => Promise<void>>(() =>
+  Promise.resolve(),
+);
+const mockDeleteEventOutbound = mock<
+  (eventId: string, gcalEventIds: readonly string[]) => Promise<void>
+>(() => Promise.resolve());
+
+mock.module(
+  "@/app/(admin)/admin/(dashboard)/_shared/actions/event/calendar-outbound",
+  () => ({
+    syncEventOutbound: mockSyncEventOutbound,
+    deleteEventOutbound: mockDeleteEventOutbound,
+  }),
+);
+
 const mockSendEventCancelledToAllParticipants = mock<
   (eventId: string) => Promise<void>
 >(() => Promise.resolve());
