@@ -9,6 +9,7 @@
  * `src/shared/db/` および `src/shared/domain/` 以外のコード（`src/app/**`,
  * `src/shared/lib/**` 等）は `@generated/prisma/*` を直接 import せず、
  * 必ずこのファイルを経由してください（architecture-boundaries.test.ts で強制）。
+ * `src/shared/domain/` も enum 値は本ファイル経由（`Prisma` 型-only は client 可）。
  *
  * **重要な制約**: 本ゲートウェイは `Prisma.JsonNull` / `DbNull` / `join` /
  * `sql` / `raw` 等の **runtime sentinel 値・raw SQL helper を一切提供しません**。
@@ -30,6 +31,7 @@ export {
   ReservationStatus,
   ReservationSeriesFreq,
   InquiryStatus,
+  InquiryReplyAuthorType,
   CustomerStatus,
   CustomerType,
   PaymentStatus,

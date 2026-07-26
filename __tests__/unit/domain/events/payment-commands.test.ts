@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -93,21 +94,11 @@ const AuditAction = {
   LOGOUT: "LOGOUT",
 } as const;
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction,
   PaymentStatus,
   RegistrationStatus,
-  // payment-commands → receipts/issue → helpers/guards が SocialPlatform を要求する。
-  SocialPlatform: {
-    INSTAGRAM: "INSTAGRAM",
-    FACEBOOK: "FACEBOOK",
-    TWITTER: "TWITTER",
-    YOUTUBE: "YOUTUBE",
-    LINE: "LINE",
-    TIKTOK: "TIKTOK",
-    OTHER: "OTHER",
-  },
-}));
+});
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: {

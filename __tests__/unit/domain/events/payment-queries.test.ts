@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -47,10 +48,7 @@ const mockFireAndForget = mock<
 
 mock.module("server-only", () => ({}));
 
-mock.module("@generated/prisma/enums", () => ({
-  PaymentStatus,
-  RegistrationStatus,
-}));
+await installPrismaEnumsMock({ PaymentStatus, RegistrationStatus });
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: {

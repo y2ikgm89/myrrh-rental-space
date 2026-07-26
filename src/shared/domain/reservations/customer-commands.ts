@@ -1,7 +1,7 @@
 import "server-only";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { applyCancellation } from "./cancel-core";

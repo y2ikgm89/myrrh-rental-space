@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -132,11 +133,11 @@ const AuditAction = {
   LOGOUT: "LOGOUT",
 } as const;
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction,
   PaymentStatus,
   ReservationStatus,
-}));
+});
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {

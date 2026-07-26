@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import type { EventStatus } from "@generated/prisma/enums";
+import type { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EVENT_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 
 export type BulkSetStatusEventsResult = {

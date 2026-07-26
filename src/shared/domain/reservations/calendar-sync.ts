@@ -5,7 +5,7 @@ import {
   CalendarSyncMethod,
   PaymentStatus,
   ReservationStatus,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   ACTIVE_RESERVATION_STATUSES,
   CANCELLED_BY,

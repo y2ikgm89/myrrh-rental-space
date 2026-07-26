@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { CouponType } from "@generated/prisma/enums";
+import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";

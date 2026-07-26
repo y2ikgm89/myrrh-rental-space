@@ -21,8 +21,11 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@generated/prisma/client";
-import type { CustomerType, TaxRateType } from "@generated/prisma/enums";
-import { ReservationStatus } from "@generated/prisma/enums";
+import type {
+  CustomerType,
+  TaxRateType,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { DomainError } from "@/shared/domain/domain-error";

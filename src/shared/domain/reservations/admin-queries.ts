@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { MS_PER_DAY, formatJstDateString } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";

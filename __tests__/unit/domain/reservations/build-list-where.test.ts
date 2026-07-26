@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, mock } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const ReservationStatus = {
   PENDING: "PENDING",
@@ -16,7 +17,7 @@ const ReservationStatus = {
 } as const;
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({ ReservationStatus }));
+await installPrismaEnumsMock();
 mock.module("@/shared/db/prisma", () => ({
   prisma: { reservation: { count: () => 0, findMany: () => [] } },
 }));
