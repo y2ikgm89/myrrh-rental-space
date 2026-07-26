@@ -71,3 +71,6 @@ For human onboarding — setup, common commands, repo layout — see
   FLAGGED (RESOLVED/FLAGGED reopen to IN_PROGRESS); blocked on CLOSED/SPAM.
 - Inquiry attachments must use private R2 + authenticated streaming; the public
   Media CDN must not be reused for inquiry PII.
+- CI service Postgres uses `public.ecr.aws/docker/library/postgres:16` (not Docker
+  Hub `postgres:16`) to avoid hosted-runner Hub timeouts; do not revert the image
+  reference to match GitHub tutorial examples.
