@@ -2,17 +2,20 @@
  * イベント申込 .ics ダウンロード API
  *
  * アクセス権限の判定:
- *   1. クエリ `?token=<署名付きトークン>` がない場合: customer session 必須
- *      (未認証リクエストは path validation より先に 401)
- *   2. token がある場合: HMAC 検証成功で許可
+ *   1. HttpOnly cookie `calendar-event-token` がある場合: HMAC 検証成功で許可
  *      (invalid / expired token は path validation より先に拒否)
  *      (ゲスト = 確認メールの「iCal (.ics)」リンク経路)
+ *      メールリンクは初回のみ `?token=` を含み、proxy が cookie へ転写して
+ *      クエリを除去した URL へ redirect する（URL / アクセスログ残留を遮断）。
+ *   2. cookie がない場合: customer session 必須
+ *      (未認証リクエストは path validation より先に 401)
  *
  * ステータスが CANCELLED の場合は METHOD:CANCEL、それ以外は METHOD:REQUEST。
  *
  * @module app/api/calendar/event/[registrationId]
  */
 
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
@@ -26,6 +29,7 @@ import {
   type EventCalendarParams,
 } from "@/shared/lib/ical";
 import { getAppHost } from "@/shared/lib/constants";
+import { CALENDAR_EVENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/calendar-token-cookie-names";
 import {
   calendarTokenFingerprint,
   verifyCalendarToken,
@@ -47,7 +51,7 @@ const paramSchema = z.object({
 });
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ registrationId: string }> },
 ) {
   try {
@@ -58,9 +62,11 @@ export async function GET(
       return new NextResponse(null, { status: 404 });
     }
 
-    // 1. アクセス権判定: session 経路は path validation より先に fail closed
-    const url = new URL(request.url);
-    const token = url.searchParams.get("token");
+    // 1. アクセス権判定: cookie token / session は path validation より先に fail closed。
+    // クエリ `?token=` は受付しない (proxy が cookie 転写済みである前提の clean-break)。
+    const cookieStore = await cookies();
+    const token =
+      cookieStore.get(CALENDAR_EVENT_TOKEN_COOKIE_NAME)?.value ?? null;
     let lookupCustomerId: string | undefined;
     let verifiedTokenTargetId: string | undefined;
     let verifiedTokenFingerprint: string | undefined;

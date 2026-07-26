@@ -21,3 +21,7 @@ export {
 } from "./claim-token-cookie-names";
 export { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "./reservation-status-token-cookie-name";
 export { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "./event-registration-status-token-cookie-name";
+export {
+  CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+} from "./calendar-token-cookie-names";

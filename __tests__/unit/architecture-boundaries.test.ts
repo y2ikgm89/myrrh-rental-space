@@ -625,6 +625,9 @@ describe("architecture boundaries", () => {
       // ゲスト向け予約 / イベント参加申込 claim page。署名トークン URL 経由で
       // 個別ユーザーの予約詳細にアクセスするため CDN キャッシュ不可 (private route)。
       'source: "/claim/:path*"',
+      // ゲスト決済 token URL / checkout-error / registration status。
+      // /events/:path* の公開キャッシュより後ろで last-match-wins。
+      'source: "/events/registrations/:path*"',
       'source: "/events/waitlist/:path*"',
       'source: "/events/cancel/:path*"',
     ]) {
@@ -871,6 +874,17 @@ describe("architecture boundaries", () => {
     const offenders = collectNonCommentOffenders(
       files,
       /prisma\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("AuditLog は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
+    // AuditLog は hash chain 保護された証跡レコードなので append-only。
+    // TermsAgreement と同型の grep gate で事後改竄経路を塞ぐ。
+    const files = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /prisma\.auditLog\.(update|updateMany|delete|deleteMany|upsert)\b/u,
     );
     expect(offenders).toEqual([]);
   });

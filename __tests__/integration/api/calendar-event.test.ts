@@ -1,8 +1,27 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
 
+import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
+import { CALENDAR_EVENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/calendar-token-cookie-names";
+
+const REGISTRATION_ID = "reg-456";
+
+let mockCookieValue: string | undefined;
+
 describe("GET /api/calendar/event/[registrationId]", () => {
   beforeEach(() => {
     mock.restore();
+    mockCookieValue = undefined;
+    mock.module("next/headers", () => ({
+      cookies: mock(() =>
+        Promise.resolve({
+          get: (name: string) =>
+            name === CALENDAR_EVENT_TOKEN_COOKIE_NAME &&
+            mockCookieValue !== undefined
+              ? { value: mockCookieValue }
+              : undefined,
+        }),
+      ),
+    }));
     // route が冒頭で isFeatureEnabled('events') を呼ぶため (FEAT-3PLANE-04)、
     // features/check を feature ON で mock。個別 test はこの上に上書きできる。
     mock.module("@/shared/lib/features/check", () => ({
@@ -31,15 +50,16 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     const { GET } =
       await import("@/app/api/calendar/event/[registrationId]/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/event/reg-456"),
-      { params: Promise.resolve({ registrationId: "reg-456" }) },
+      new Request(`http://localhost/api/calendar/event/${REGISTRATION_ID}`),
+      { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
     );
     expect(res.status).toBe(401);
     // 匿名リクエストは shared bucket を消費しない (receipt HTTP-03 / Codex #1426 同型)。
     expect(rateLimitCheckSpy).not.toHaveBeenCalled();
   });
 
-  test("rejects an invalid guest token before exposing path validation", async () => {
+  test("rejects an invalid guest cookie token before exposing path validation", async () => {
+    mockCookieValue = "not-a-token";
     mock.module("@/shared/lib/errors/server", () => ({
       ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
       ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
@@ -53,13 +73,72 @@ describe("GET /api/calendar/event/[registrationId]", () => {
       await import("@/app/api/calendar/event/[registrationId]/route");
     const res = await GET(
       new Request(
-        `http://localhost/api/calendar/event/${invalidRegistrationId}?token=not-a-token`,
+        `http://localhost/api/calendar/event/${invalidRegistrationId}`,
       ),
       { params: Promise.resolve({ registrationId: invalidRegistrationId }) },
     );
 
     expect(res.status).toBe(401);
     expect(await res.text()).toBe("Invalid token");
+  });
+
+  test("ignores query token and requires session or cookie (clean-break)", async () => {
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() => Promise.resolve(null)),
+    }));
+    const token = createCalendarToken("event", REGISTRATION_ID);
+    const { GET } =
+      await import("@/app/api/calendar/event/[registrationId]/route");
+    const res = await GET(
+      new Request(
+        `http://localhost/api/calendar/event/${REGISTRATION_ID}?token=${token}`,
+      ),
+      { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  test("accepts a valid guest cookie token without session", async () => {
+    mockCookieValue = createCalendarToken("event", REGISTRATION_ID);
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() => Promise.resolve(null)),
+    }));
+    mock.module("@/shared/domain/events/registration-queries", () => ({
+      getEventRegistrationForCalendar: mock(() =>
+        Promise.resolve({
+          id: REGISTRATION_ID,
+          eventTitle: "ワークショップ",
+          customerName: "山田 太郎",
+          startTime: new Date("2026-05-01T10:00:00+09:00"),
+          endTime: new Date("2026-05-01T12:00:00+09:00"),
+          location: "東京",
+          quantity: 2,
+          icsSequence: 0,
+          status: "CONFIRMED",
+          format: "OFFLINE" as const,
+          meetingUrl: null,
+        }),
+      ),
+    }));
+    mock.module("@/shared/domain/settings/queries/organization", () => ({
+      getIcalOrganizer: mock(() =>
+        Promise.resolve({
+          name: "Myrrh Rental Space",
+          email: "noreply@example.com",
+        }),
+      ),
+    }));
+
+    const { GET } =
+      await import("@/app/api/calendar/event/[registrationId]/route");
+    const res = await GET(
+      new Request(`http://localhost/api/calendar/event/${REGISTRATION_ID}`),
+      { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "text/calendar; charset=utf-8",
+    );
   });
 
   test("returns 400 when registrationId is empty", async () => {
@@ -102,8 +181,8 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     const { GET } =
       await import("@/app/api/calendar/event/[registrationId]/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/event/reg-456"),
-      { params: Promise.resolve({ registrationId: "reg-456" }) },
+      new Request(`http://localhost/api/calendar/event/${REGISTRATION_ID}`),
+      { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
     );
 
     expect(res.status).toBe(429);
@@ -123,7 +202,7 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     mock.module("@/shared/domain/events/registration-queries", () => ({
       getEventRegistrationForCalendar: mock(() =>
         Promise.resolve({
-          id: "reg-456",
+          id: REGISTRATION_ID,
           eventTitle: "ワークショップ",
           customerName: "山田 太郎",
           startTime: new Date("2026-05-01T10:00:00+09:00"),
@@ -149,15 +228,15 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     const { GET } =
       await import("@/app/api/calendar/event/[registrationId]/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/event/reg-456"),
-      { params: Promise.resolve({ registrationId: "reg-456" }) },
+      new Request(`http://localhost/api/calendar/event/${REGISTRATION_ID}`),
+      { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe(
       "text/calendar; charset=utf-8",
     );
     const body = await res.text();
-    expect(body).toContain("UID:event-registration-reg-456@");
+    expect(body).toContain(`UID:event-registration-${REGISTRATION_ID}@`);
     expect(body).toContain("METHOD:REQUEST");
     expect(body).toContain("DTSTART:20260501T010000Z");
     expect(body).toContain("DTEND:20260501T030000Z");
