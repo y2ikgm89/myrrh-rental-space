@@ -43,7 +43,8 @@ describe("proxy probe rate-limit exemptions", () => {
     expect(mockInfraCheck).not.toHaveBeenCalled();
   });
 
-  test("/api/health is rate limited because it performs a database health check", async () => {
+  test("/api/health is rate limited on admin surface (DB health check)", async () => {
+    // Default / local APP_SURFACE is admin; public surface 404s before rate-limit.
     const response = await proxy(
       new NextRequest("https://example.com/api/health"),
     );

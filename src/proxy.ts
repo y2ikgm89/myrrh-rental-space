@@ -49,6 +49,7 @@ const PUBLIC_SURFACE_BLOCKED_PATH_PREFIXES = [
   "/admin",
   "/preview",
   "/api/admin",
+  "/api/health",
   "/api/instagram/oauth",
   "/api/google-business-profile/oauth",
 ] as const;
@@ -395,8 +396,8 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     // getClientIp() が "unknown" を返し全 probe が同一 bucket に合算される。
     // burst 時に apiRateLimiter (100/min) を超過すると 429 → probe 失敗 → コンテナ kill の silent bug。
     // 外部依存に触れない `/api/live` のみ webhook / cron と同様に rate-limit 対象外。
-    // `/api/health` は DB 疎通を含む監視・手動確認用 endpoint なので通常の API
-    // rate-limit を適用する。
+    // `/api/health` は admin surface のみ（public では上の blocklist で 404）。
+    // admin 到達時は DB 疎通を含むため通常の API rate-limit を適用する。
     // `/api/live` は getClientIp も呼ばない（probe が XFF 無しでも bucket を汚さない）。
     const isLiveProbeEndpoint = pathname === "/api/live";
     const isWebhookOrCronEndpoint =

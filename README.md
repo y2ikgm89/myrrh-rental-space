@@ -99,10 +99,10 @@ pre-push hook (type-check + architecture-boundaries) that takes ~80–110s, so
 
 ## Health endpoints
 
-| Path          | Role                                                  |
-| ------------- | ----------------------------------------------------- |
-| `/api/live`   | Liveness — no external deps; used by Cloud Run probes |
-| `/api/health` | Monitoring / manual check — includes DB connectivity  |
+| Path          | Role                                                                   |
+| ------------- | ---------------------------------------------------------------------- |
+| `/api/live`   | Liveness — no external deps; Cloud Run probes; public on both surfaces |
+| `/api/health` | Admin-surface only — DB connectivity check; public returns 404         |
 
 Implementation: `src/app/api/live/route.ts`, `src/app/api/health/route.ts`.
 

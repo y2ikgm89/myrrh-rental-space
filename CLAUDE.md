@@ -64,7 +64,8 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
 - `__tests__/unit` + `__tests__/integration`（bun）/ `e2e/`（Playwright、`*.spec.ts`）
 - path alias: `@/shared/*` → `src/shared/*`、`@/admin/*` → `src/app/(admin)/admin/(dashboard)/_shared/*`、
   `@/public/*` → `src/app/(public)/_shared/*`、`@generated/*` → `generated/*`
-- Ops: `/api/live`（liveness、外部依存なし）/ `/api/health`（DB 含む監視用）—
+- Ops: `/api/live`（liveness、外部依存なし、両 surface）/ `/api/health`
+  （DB 含む監視用、`APP_SURFACE=admin` のみ・public は 404）—
   `src/app/api/live/route.ts` / `src/app/api/health/route.ts`
 
 ## 絶対規約

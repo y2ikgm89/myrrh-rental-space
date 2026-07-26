@@ -56,6 +56,7 @@ paths:
 
 - startup/liveness probe は `/api/live`（**外部依存ゼロ**）。DB チェックを足すと
   DB 一時断でコンテナが kill され連鎖障害になる。DB 疎通は `/api/health` の責務
+  （`APP_SURFACE=admin` のみ。public は 404 で匿名 DB probe を拒否）
 
 ## ローカル環境
 

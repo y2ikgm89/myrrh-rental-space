@@ -12,7 +12,8 @@
  * - Admin surface (`APP_SURFACE=admin`) — 別 Cloud Run サービス。本モジュール対象外
  * - `/api/webhooks/*` — Stripe / SwitchBot / Resend / Google Calendar 等 ops webhook
  * - `/api/cron/*` — 予約期限・リマインダー・データ保持等バッチ
- * - `/api/live`, `/api/health` — 監視プローブ
+ * - `/api/live` — Cloud Run liveness（外部依存なし）。`/api/health` は
+ *   admin surface のみで本ガード対象外
  * - `signOutCustomerAction` — サスペンド顧客のセッション破棄 (cookie 削除のみ)
  * - Better Auth `POST .../sign-out` — 同上
  * - 公開 read-only Server Actions — 空き照会・料金プレビュー (`availability.ts`,
