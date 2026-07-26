@@ -57,8 +57,11 @@ type PostCategoryRecord = {
   createdAt: Date;
   updatedAt: Date;
   _count: {
+    /** アクティブ記事数（表示用。ゴミ箱は含まない） */
     posts: number;
   };
+  /** ゴミ箱含む紐づけ有無（削除可否。categoryId は Restrict） */
+  hasLinkedPostsIncludingTrash: boolean;
 };
 
 type PostTagRecord = {
@@ -72,8 +75,11 @@ type PostTagRecord = {
   createdAt: Date;
   updatedAt: Date;
   _count: {
+    /** アクティブ記事数（表示用。ゴミ箱は含まない） */
     posts: number;
   };
+  /** ゴミ箱含む紐づけ有無（削除可否。復元時のタグ保持のため） */
+  hasLinkedPostsIncludingTrash: boolean;
 };
 
 export type PostData = Serialized<PostRecord>;

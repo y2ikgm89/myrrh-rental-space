@@ -117,7 +117,11 @@ export async function deletePostCategory(id: string): Promise<void> {
     select: {
       id: true,
       _count: {
-        select: { posts: true },
+        select: {
+          // Post.categoryId は onDelete: Restrict。ゴミ箱内の記事も含めて数える
+          // （アクティブ 0 でも trash が残ると FK で失敗する）。
+          posts: true,
+        },
       },
     },
   });
@@ -128,7 +132,7 @@ export async function deletePostCategory(id: string): Promise<void> {
 
   if (category._count.posts > 0) {
     throw new DomainError(
-      "このカテゴリには記事が紐づいているため削除できません",
+      "このカテゴリには記事が紐づいているため削除できません（ゴミ箱内の記事も含みます）",
       "CONFLICT",
     );
   }

@@ -34,6 +34,12 @@ locals {
       description = "FAQ recycle bin 30-day auto-purge (daily 03:00 JST)"
     },
     {
+      name        = "blog-trash-cleanup"
+      schedule    = "0 3 * * *"
+      path        = "/api/cron/blog-trash-cleanup"
+      description = "Blog recycle bin 30-day auto-purge (daily 03:00 JST)"
+    },
+    {
       name        = "faq-stale-check"
       schedule    = "0 9 * * 1"
       path        = "/api/cron/faq-stale-check"
@@ -208,6 +214,7 @@ locals {
     # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "news-scheduled-publish",
     "blog-scheduled-publish",
+    "blog-trash-cleanup",
     # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
     "customer-duplicate-scan",
     "stripe-event-cleanup",

@@ -98,7 +98,12 @@ export async function deletePostTag(id: string): Promise<void> {
     select: {
       id: true,
       _count: {
-        select: { posts: true },
+        select: {
+          // PostTag.posts は中間テーブル PostTagOnPost。
+          // tag 側 onDelete は Cascade だが、ゴミ箱記事から紐づけが消えると
+          // 復元時にタグが失われるため、trash 含む全紐づけでブロックする。
+          posts: true,
+        },
       },
     },
   });
@@ -109,7 +114,7 @@ export async function deletePostTag(id: string): Promise<void> {
 
   if (tag._count.posts > 0) {
     throw new DomainError(
-      "このタグは記事で使用されているため削除できません",
+      "このタグは記事で使用されているため削除できません（ゴミ箱内の記事も含みます）",
       "CONFLICT",
     );
   }

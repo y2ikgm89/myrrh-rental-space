@@ -68,8 +68,8 @@ function resolvePostPublishedAt(
 async function ensurePostExists(
   id: string,
 ): Promise<{ id: string; slug: string }> {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     select: { id: true, slug: true },
   });
 
@@ -187,7 +187,7 @@ export async function updatePostBody(
   const existingPost = await ensurePostExists(id);
 
   await prisma.post.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: omitUndefined({
       contentHtml: input.contentHtml,
       contentJson: parseContentJson(input.contentJson),
@@ -225,7 +225,7 @@ export async function updatePostSettings(
 
   try {
     await prisma.post.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         title: input.title,
         slug: input.slug,
@@ -259,8 +259,8 @@ export async function updatePostSettings(
 
 /** 投稿の現在 status を取得する（設定更新の RBAC 判定用）。見つからなければ null。 */
 export async function getPostStatus(id: string): Promise<PostStatus | null> {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     select: { status: true },
   });
   return post?.status ?? null;
@@ -268,6 +268,71 @@ export async function getPostStatus(id: string): Promise<PostStatus | null> {
 
 export async function deletePost(id: string): Promise<DeletePostResult> {
   const post = await ensurePostExists(id);
+
+  await prisma.post.update({
+    where: { id, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+
+  return {
+    slug: post.slug,
+  };
+}
+
+export async function restorePost(id: string): Promise<DeletePostResult> {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: { id: true, slug: true, deletedAt: true },
+  });
+
+  if (!post) {
+    throw new DomainError("投稿記事が見つかりません", "NOT_FOUND");
+  }
+
+  if (post.deletedAt === null) {
+    throw new DomainError("この投稿は削除されていません", "VALIDATION");
+  }
+
+  const conflict = await prisma.post.findFirst({
+    where: { slug: post.slug, deletedAt: null, id: { not: id } },
+    select: { id: true },
+  });
+  if (conflict) {
+    throw new DomainError(POST_SLUG_CONFLICT_MESSAGE, "CONFLICT");
+  }
+
+  try {
+    await prisma.post.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  } catch (error) {
+    rethrowPostSlugConflict(error);
+  }
+
+  return {
+    slug: post.slug,
+  };
+}
+
+export async function permanentlyDeletePost(
+  id: string,
+): Promise<DeletePostResult> {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: { id: true, slug: true, deletedAt: true },
+  });
+
+  if (!post) {
+    throw new DomainError("投稿記事が見つかりません", "NOT_FOUND");
+  }
+
+  if (post.deletedAt === null) {
+    throw new DomainError(
+      "先にソフトデリートしてから完全削除してください",
+      "CONFLICT",
+    );
+  }
 
   await prisma.post.delete({
     where: { id },
@@ -279,8 +344,8 @@ export async function deletePost(id: string): Promise<DeletePostResult> {
 }
 
 export async function publishPost(id: string): Promise<PublishPostResult> {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     select: { id: true, slug: true, publishedAt: true },
   });
 
@@ -289,7 +354,7 @@ export async function publishPost(id: string): Promise<PublishPostResult> {
   }
 
   await prisma.post.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: {
       status: PostStatus.PUBLISHED,
       publishedAt: post.publishedAt ?? new Date(),
@@ -305,7 +370,7 @@ export async function unpublishPost(id: string): Promise<DeletePostResult> {
   const post = await ensurePostExists(id);
 
   await prisma.post.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: {
       status: PostStatus.DRAFT,
       publishedAt: null,
@@ -321,7 +386,7 @@ export async function archivePost(id: string): Promise<DeletePostResult> {
   const post = await ensurePostExists(id);
 
   await prisma.post.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: {
       status: PostStatus.ARCHIVED,
       publishedAt: null,
