@@ -8,7 +8,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { parseRefundPolicy } from "@/shared/domain/refund/policy";
+import { resolveRefundPolicy } from "@/shared/domain/refund/policy";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import { toPlainObject } from "@/shared/lib/serialize";
 
@@ -35,8 +35,10 @@ export async function getReservationDeadlineSettings() {
 }
 
 /**
- * 公開サイト向けの返金ポリシー。`SettingsCommerce.refundPolicy` を parse し、
- * 未設定 / shape 不正は null（表示なし = キャンセル時は残額全額返金の後方互換）。
+ * 公開サイト向けの返金ポリシー。`SettingsCommerce.refundPolicy` を解決し、
+ * `configured` のときだけ表示用 policy を返す。
+ * `unset` / `invalid` / DB 失敗は null（表示なし）。自動返金の判定は cancel
+ * side-effects 側の `resolveRefundPolicy` が SSoT（invalid は fail-closed）。
  * 秘密情報は含まない。
  */
 export async function getPublicRefundPolicySettings(): Promise<RefundPolicy | null> {
@@ -57,5 +59,6 @@ export async function getPublicRefundPolicySettings(): Promise<RefundPolicy | nu
   });
 
   if (!result) return null;
-  return parseRefundPolicy(result.refundPolicy);
+  const resolution = resolveRefundPolicy(result.refundPolicy);
+  return resolution.status === "configured" ? resolution.policy : null;
 }

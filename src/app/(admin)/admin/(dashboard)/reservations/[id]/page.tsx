@@ -61,17 +61,18 @@ export default async function ReservationDetailPage({ params }: PageProps) {
   }
 
   const refundPolicyData = await getRefundPolicySettings();
-  const refundPolicy = refundPolicyData.policy;
-  const suggestedRefundAmount = refundPolicy
-    ? calculateRefundAmountNow(
-        // Round-5 audit Finding #20 と同じ理由: 返金上限の基準は Stripe への
-        // 実 charge 額 = 税抜 totalPrice。税込を使うと推奨額が実際の
-        // refundableTotal (RefundDialog 側) を超えうる。
-        refundPolicy,
-        Number(reservation.totalPrice ?? 0),
-        new Date(reservation.startTime),
-      )
-    : null;
+  const refundResolution = refundPolicyData.resolution;
+  const suggestedRefundAmount =
+    refundResolution.status === "configured"
+      ? calculateRefundAmountNow(
+          // Round-5 audit Finding #20 と同じ理由: 返金上限の基準は Stripe への
+          // 実 charge 額 = 税抜 totalPrice。税込を使うと推奨額が実際の
+          // refundableTotal (RefundDialog 側) を超えうる。
+          refundResolution.policy,
+          Number(reservation.totalPrice ?? 0),
+          new Date(reservation.startTime),
+        )
+      : null;
 
   const canRestoreStatus = sessionUser.role === Role.SUPER_ADMIN;
   const canUpdate = hasPermission(sessionUser.role, "reservation", "update");

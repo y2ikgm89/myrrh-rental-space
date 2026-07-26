@@ -28,7 +28,7 @@ import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
-import { parseRefundPolicy } from "@/shared/domain/refund/policy";
+import { resolveRefundPolicy } from "@/shared/domain/refund/policy";
 import { serverEnv } from "@/shared/lib/env/server";
 import { isTestKey } from "@/shared/lib/stripe-shared";
 import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/announcement-bar";
@@ -563,17 +563,17 @@ export async function getTaxSettings(): Promise<AdminTaxSettings> {
 }
 
 /**
- * `SettingsCommerce.refundPolicy` を parse して返す。
+ * `SettingsCommerce.refundPolicy` を解決して返す。
  *
- * 未設定 (null) / shape 破損の両方を null に集約する fail-open 動作は
- * `parseRefundPolicy` に集約されている。UI 側は null を「policy 未設定 =
- * cancellation 時は残額全額返金」として表示する。
+ * - `unset` — 意図的未設定（キャンセル時は残額全額の自動返金）
+ * - `invalid` — JSON 破損（自動返金 fail-closed。管理 UI で検知）
+ * - `configured` — 有効な tier policy
  */
 export async function getRefundPolicySettings(): Promise<RefundPolicySettingsData> {
   const settings = await ensureSettingsCommerce();
 
   return {
-    policy: parseRefundPolicy(settings.refundPolicy),
+    resolution: resolveRefundPolicy(settings.refundPolicy),
     commerceUpdatedAt: settings.updatedAt,
   };
 }

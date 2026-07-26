@@ -112,7 +112,7 @@ async function BillingSettingsContent(): Promise<ReactElement> {
       label: "返金ポリシー",
       content: (
         <RefundPolicySection
-          settings={refundPolicySettings.policy}
+          resolution={refundPolicySettings.resolution}
           commerceUpdatedAt={refundPolicySettings.commerceUpdatedAt.toISOString()}
         />
       ),

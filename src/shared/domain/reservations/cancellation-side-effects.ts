@@ -51,8 +51,8 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import { refundReservationPaymentCommand } from "@/shared/domain/reservations/payment-commands";
 import {
   calculateRefundAmount,
-  parseRefundPolicy,
-  type RefundPolicy,
+  resolveRefundPolicy,
+  type RefundPolicyResolution,
 } from "@/shared/domain/refund/policy";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
@@ -138,10 +138,9 @@ export interface CancellationSideEffectInput {
    * Settings.findUnique N+1 を避けるために hoist して渡す。
    *
    * - 省略 (undefined) → 従前どおり per-call で Settings.findUnique を実行
-   * - `RefundPolicy` → その snapshot を使用 (bulk 経路の hoist 値)
-   * - `null` → 「policy 未設定 = 残額全額」を明示 (parseRefundPolicy が返す null を snapshot 化)
+   * - `RefundPolicyResolution` → その snapshot を使用 (bulk 経路の hoist 値)
    */
-  refundPolicySnapshot?: RefundPolicy | null;
+  refundPolicySnapshot?: RefundPolicyResolution;
   /**
    * cron 等で副作用完了を待ってから HTTP を返す必要がある経路向け。
    * true のとき fireAndForget せず await する（デフォルト false = 既存 UX 維持）。
@@ -333,10 +332,10 @@ async function runRefundStep(args: {
   try {
     // PERF-02: bulk 経路が snapshot を渡してきたらそれを使う (N+1 回避)。
     // 単発 caller は snapshot 未指定 → per-call で Settings.findUnique (従前挙動)。
-    const policy: RefundPolicy | null =
+    const resolution: RefundPolicyResolution =
       input.refundPolicySnapshot !== undefined
         ? input.refundPolicySnapshot
-        : parseRefundPolicy(
+        : resolveRefundPolicy(
             (
               await prisma.settingsCommerce.findUnique({
                 where: { id: "singleton" },
@@ -345,17 +344,39 @@ async function runRefundStep(args: {
             )?.refundPolicy,
           );
 
+    if (resolution.status === "invalid") {
+      logError(
+        new Error("Auto refund skipped: refund policy JSON is invalid"),
+        {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "autoRefundOnCancel",
+            reservationId: input.reservationId,
+            reason: "policyInvalid",
+            parseReason: resolution.reason,
+          },
+        },
+      );
+      return {
+        status: "skipped",
+        reason: "policyInvalid",
+        detail: { parseReason: resolution.reason },
+      };
+    }
+
     let refundAmount: number | undefined;
     const chargeBase =
       reservation.totalPriceWithTax ?? reservation.totalPrice ?? null;
-    if (policy !== null && chargeBase !== null) {
+    if (resolution.status === "configured" && chargeBase !== null) {
       refundAmount = calculateRefundAmount(
-        policy,
+        resolution.policy,
         Number(chargeBase),
         reservation.startTime,
         new Date(),
       );
     }
+    // status === "unset" → refundAmount 未指定のまま残額全額自動返金
 
     if (refundAmount !== undefined && refundAmount <= 0) {
       // Policy による refundRate=0% → 返金 skip。運用側の「要返金確認」通知タイトル
@@ -804,18 +825,18 @@ export async function applyBulkCancellationSideEffects(
   // 呼び出しは Cloud Run→Neon RTT を N-1 回積み上げる無駄なラウンドトリップだった
   // (52 instance で ~500ms-1.5s の空 latency)。Step 1 前段の 1 fetch にまとめる。
   //
-  // fetch 成功時: RefundPolicy | null (null = 「policy 未設定 = 残額全額返金」を明示)。
+  // fetch 成功時: RefundPolicyResolution（unset / configured / invalid）。
   // fetch 失敗時: undefined のまま catch を抜け、受け手 (applyCancellationSideEffects)
   //   の `!== undefined` 判定で per-instance の再 fetch にフォールバックさせる。
-  //   ここで null を残すと「全額返金」として受け取られ、Stripe 全額返金を招く
+  //   ここで unset を誤って渡すと「全額返金」として受け取られ、Stripe 全額返金を招く
   //   （PERF-02-FIX、audit 2026-07-18）。
-  let refundPolicySnapshot: RefundPolicy | null | undefined = undefined;
+  let refundPolicySnapshot: RefundPolicyResolution | undefined = undefined;
   try {
     const settings = await prisma.settingsCommerce.findUnique({
       where: { id: "singleton" },
       select: { refundPolicy: true },
     });
-    refundPolicySnapshot = parseRefundPolicy(settings?.refundPolicy);
+    refundPolicySnapshot = resolveRefundPolicy(settings?.refundPolicy);
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,

@@ -14,7 +14,7 @@ import type {
   BusinessHoursDay,
   BusinessTimeSlot,
 } from "@/shared/lib/json-validators";
-import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import type { RefundPolicyResolution } from "@/shared/domain/refund/policy";
 import type {
   DurationDiscountRule,
   TaxSettings,
@@ -201,7 +201,8 @@ export type AdminTaxSettings = TaxSettings & {
 
 /** 管理画面の返金ポリシー設定 */
 export type RefundPolicySettingsData = {
-  policy: RefundPolicy | null;
+  /** unset / configured / invalid を区別した解決結果 */
+  resolution: RefundPolicyResolution;
   /** SettingsCommerce.updatedAt — 返金ポリシーの optimistic concurrency 用 */
   commerceUpdatedAt: Date;
 };

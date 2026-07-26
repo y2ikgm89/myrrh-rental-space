@@ -8,7 +8,7 @@
  * - tier 配列 (`refundPolicyTiers`): 各 tier に `hoursBefore` (>=0) + `refundRate` (0-100)
  * - 既定返金率 (`refundPolicyDefaultRefundRate`): 0-100
  *
- * ## `parseRefundPolicy` (domain) の受入境界との整合
+ * ## `resolveRefundPolicy` (domain) の受入境界との整合
  * - `hoursBefore >= 0 && Number.isFinite`
  * - `refundRate >= 0 && refundRate <= 100 && Number.isFinite`
  * - `defaultRefundRate >= 0 && defaultRefundRate <= 100 && Number.isFinite`
