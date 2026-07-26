@@ -48,6 +48,38 @@ const mockGetEventWaitlistOfferPaymentContext = mock<
   }),
 );
 
+const mockGetWaitlistEmailRegistration = mock<
+  (registrationId: string) => Promise<{
+    id: string;
+    name: string;
+    customerId: string | null;
+    slotId: string;
+    ticketId: string;
+    quantity: number;
+    waitlistedAt: Date | null;
+    eventTitle: string;
+    eventSlug: string;
+    slotStartAt: Date;
+    slotEndAt: Date;
+    ticketName: string;
+  } | null>
+>((registrationId) =>
+  Promise.resolve({
+    id: registrationId,
+    name: "山田 太郎",
+    customerId: null,
+    slotId: "slot-1",
+    ticketId: "ticket-1",
+    quantity: 1,
+    waitlistedAt: new Date("2026-07-13T00:00:00Z"),
+    eventTitle: "テストイベント",
+    eventSlug: "test-event",
+    slotStartAt: new Date("2026-07-20T10:00:00Z"),
+    slotEndAt: new Date("2026-07-20T12:00:00Z"),
+    ticketName: "一般",
+  }),
+);
+
 const mockSendEventWaitlistExpired = mock<
   (args: { registrationId: string; to: string }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
@@ -114,6 +146,9 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getEventWaitlistOfferPaymentContext: (
     ...args: Parameters<typeof mockGetEventWaitlistOfferPaymentContext>
   ) => mockGetEventWaitlistOfferPaymentContext(...args),
+  getWaitlistEmailRegistration: (
+    ...args: Parameters<typeof mockGetWaitlistEmailRegistration>
+  ) => mockGetWaitlistEmailRegistration(...args),
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
@@ -214,6 +249,7 @@ describe("GET /api/cron/waitlist-expire", () => {
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
     mockGetEventWaitlistOfferPaymentContext.mockReset();
+    mockGetWaitlistEmailRegistration.mockReset();
     mockSendEventWaitlistExpired.mockReset();
     mockSendEventWaitlistOffered.mockReset();
     firedPromises.length = 0;
@@ -235,6 +271,22 @@ describe("GET /api/cron/waitlist-expire", () => {
       kind: "free",
       confirmUrl: "https://example.com/events/waitlist/confirm?token=t",
     });
+    mockGetWaitlistEmailRegistration.mockImplementation((registrationId) =>
+      Promise.resolve({
+        id: registrationId,
+        name: "山田 太郎",
+        customerId: null,
+        slotId: "slot-1",
+        ticketId: "ticket-1",
+        quantity: 1,
+        waitlistedAt: new Date("2026-07-13T00:00:00Z"),
+        eventTitle: "テストイベント",
+        eventSlug: "test-event",
+        slotStartAt: new Date("2026-07-20T10:00:00Z"),
+        slotEndAt: new Date("2026-07-20T12:00:00Z"),
+        ticketName: "一般",
+      }),
+    );
     mockSendEventWaitlistExpired.mockResolvedValue({ ok: true });
     mockSendEventWaitlistOffered.mockResolvedValue({ ok: true });
   });
@@ -319,16 +371,18 @@ describe("GET /api/cron/waitlist-expire", () => {
     // （旧実装は TODO(task-6) スタブのままで一切送信していなかった）。
     expect(mockSendEventWaitlistExpired).toHaveBeenCalledTimes(1);
     expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith({
-      registrationId: "reg-1",
+      registration: expect.objectContaining({ id: "reg-1" }),
       to: "customer@example.com",
     });
 
     expect(mockGetEventWaitlistOfferPaymentContext).toHaveBeenCalledWith(
       "reg-2",
     );
+    expect(mockGetWaitlistEmailRegistration).toHaveBeenCalledWith("reg-1");
+    expect(mockGetWaitlistEmailRegistration).toHaveBeenCalledWith("reg-2");
     expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
     expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith({
-      registrationId: "reg-2",
+      registration: expect.objectContaining({ id: "reg-2" }),
       to: "next@example.com",
       expiresAt: offeredExpiresAt,
       paymentContext: {
