@@ -3,6 +3,7 @@ import {
   SITE_WIDE_CDN_TAGS,
   SIDEBAR_CDN_TAGS,
   CDN_CACHE_TAGS,
+  EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
   joinCacheTags,
   type CdnTagValue,
 } from "./src/shared/lib/constants/cdn-cache-tags";
@@ -275,7 +276,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Tag", value: NEWS_CACHE_TAG }],
       },
       {
-        source: "/events/:path*",
+        source: "/events",
+        headers: [{ key: "Cache-Tag", value: EVENTS_CACHE_TAG }],
+      },
+      {
+        source: EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
         headers: [{ key: "Cache-Tag", value: EVENTS_CACHE_TAG }],
       },
       {
@@ -341,17 +346,14 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        // ゲスト決済 token URL / checkout-error。/events/:path* の公開キャッシュより
-        // 後ろで last-match-wins。302 に Stripe session URL が載るため CDN 保存禁止。
+        // ゲスト決済 token URL / checkout-error。公開 EVENT Cache-Tag ソース
+        // （`/events` / EVENT_PUBLIC_DETAIL_HEADER_SOURCE）より後ろで last-match-wins。
+        // Cache-Tag は emit しない（PRIVATE_NO_TAG_PREFIXES / architecture test で固定）。
         source: "/events/registrations/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        // イベント参加のキャンセル / キャンセル待ち確認ページ。/events/:path* の
-        // 公開キャッシュ（EVENTS_CACHE_TAG）より後ろに定義し last-match-wins で
-        // Cache-Control のみ no-store に上書きする。EVENTS_CACHE_TAG ヘッダー自体は
-        // 引き続き emit されるが no-store により CDN に何も保存されないため purge 対象は
-        // 存在せず実害はない。
+        // イベント参加のキャンセル / キャンセル待ち確認ページ。同上。
         source: "/events/waitlist/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },

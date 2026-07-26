@@ -204,6 +204,17 @@ export const NEXTJS_TAGS_WITHOUT_CDN_MAPPING = [
   CACHE_TAGS.SUPPRESSED_EMAILS,
 ] as const;
 
+/** Filesystem-reserved first segments under `/events` (not DB event slugs). */
+export const EVENT_PRIVATE_FIRST_SEGMENTS = [
+  "registrations",
+  "waitlist",
+  "cancel",
+] as const;
+
+/** Public event detail pages — excludes {@link EVENT_PRIVATE_FIRST_SEGMENTS}. */
+export const EVENT_PUBLIC_DETAIL_HEADER_SOURCE =
+  `/events/:slug((?!${EVENT_PRIVATE_FIRST_SEGMENTS.join("|")})[^/]+)` as const;
+
 export const PRIVATE_NO_TAG_PREFIXES = [
   "/admin",
   "/reservation",
@@ -212,6 +223,9 @@ export const PRIVATE_NO_TAG_PREFIXES = [
   "/preview",
   "/contact",
   "/api",
+  ...EVENT_PRIVATE_FIRST_SEGMENTS.map(
+    (segment) => `/events/${segment}` as const,
+  ),
 ] as const;
 
 /**
