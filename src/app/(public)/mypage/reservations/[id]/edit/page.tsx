@@ -13,19 +13,14 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
-import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
-import { EditReservationForm } from "./_components/edit-reservation-form";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const EDITABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
+import { EditReservationForm } from "@/app/(public)/_shared/components/edit-reservation-form";
+import { updateReservationAction } from "../../../_shared/actions/reservation";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -63,33 +58,22 @@ export default async function ReservationEditPage({
     notFound();
   }
 
-  // ステータスチェック
-  if (!EDITABLE_STATUSES.has(reservation.status)) {
-    redirect(`/mypage/reservations/${id}?reason=status`);
-  }
+  const now = reservationDeadlineNow();
+  const eligibility = isReservationEditableForCustomerSelfServe({
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    discountAmounts: {
+      couponDiscountAmount: reservation.couponDiscountAmount,
+      durationDiscountAmount: reservation.durationDiscountAmount,
+      spaceDiscountAmount: reservation.spaceDiscountAmount,
+    },
+    startTime: reservation.startTime,
+    modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
+    now,
+  });
 
-  // 変更期限チェック
-  if (
-    !isWithinDeadline(
-      reservation.startTime,
-      deadlineSettings.modificationDeadlineHours,
-      reservationDeadlineNow(),
-    )
-  ) {
-    redirect(`/mypage/reservations/${id}?reason=deadline`);
-  }
-
-  // 手動割引チェック
-  const hasManualDiscount =
-    (reservation.couponDiscountAmount != null &&
-      reservation.couponDiscountAmount > 0) ||
-    (reservation.durationDiscountAmount != null &&
-      reservation.durationDiscountAmount > 0) ||
-    (reservation.spaceDiscountAmount != null &&
-      reservation.spaceDiscountAmount > 0);
-
-  if (hasManualDiscount) {
-    redirect(`/mypage/reservations/${id}?reason=discount`);
+  if (!eligibility.ok) {
+    redirect(`/mypage/reservations/${id}?reason=${eligibility.reason}`);
   }
 
   // 同じロケーションのスペース一覧を取得
@@ -137,6 +121,10 @@ export default async function ReservationEditPage({
           endTime: endTimeStr,
         }}
         turnstileSiteKey={turnstileSiteKey}
+        action={updateReservationAction}
+        cancelHref={`/mypage/reservations/${reservation.id}`}
+        successHref={`/mypage/reservations/${reservation.id}`}
+        turnstileAction={TURNSTILE_ACTIONS.mypage_reservation_edit}
       />
     </div>
   );

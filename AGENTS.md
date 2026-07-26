@@ -45,6 +45,9 @@ For human onboarding — setup, common commands, repo layout — see
 - SwitchBot passcode automation is Settings-gated (`switchbotEnabled`), not a
   Feature Module; `keyId` comes from Device List `keyList` (not Device Status);
   createKey/deleteKey are webhook-primary and asynchronous.
+- SwitchBot `timeLimit` passcodes bake `startTime`/`endTime` at create (no
+  updateKey for the validity window), so same-space reservation datetime changes
+  still require deleteKey → createKey reissue for guests and members alike.
 - Admin smart-lock UI shows lock/door/battery state; remote lock/unlock and admin
   push notifications are intentionally out of scope.
 - Stripe payments are optional; ON/OFF is Feature Module `payment` (credentials live
@@ -53,6 +56,9 @@ For human onboarding — setup, common commands, repo layout — see
 - Receipts: email on payment success (manual admin record or Stripe); download from
   booking detail hub (guest token status / member mypage). Hub is also the SSoT for
   SwitchBot passcode reveal and email CTAs (plaintext passcodes are not emailed).
+- Guests edit on the status hub via the existing status token with the same gates
+  as mypage (`UNPAID`, no discounts, modification deadline, availability). Claim
+  into mypage remains optional for list management.
 - Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
   distributed rate-limit backends are intentionally out of scope.
 - Site Settings are split into domain singleton tables (`SettingsNotification`,

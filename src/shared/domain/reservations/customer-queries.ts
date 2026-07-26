@@ -120,6 +120,36 @@ export async function getReservationForGuestCancel(reservationId: string) {
 }
 
 /**
+ * ゲスト edit ページ (`/reservation/status/edit`) 用 select。
+ * status token 検証後にのみ呼ぶ。
+ */
+export async function getReservationForGuestEdit(reservationId: string) {
+  return prisma.reservation.findFirst({
+    where: { id: reservationId, deletedAt: null },
+    select: {
+      id: true,
+      status: true,
+      startTime: true,
+      endTime: true,
+      paymentStatus: true,
+      version: true,
+      spaceId: true,
+      couponDiscountAmount: true,
+      durationDiscountAmount: true,
+      spaceDiscountAmount: true,
+      customerId: true,
+      space: {
+        select: {
+          id: true,
+          name: true,
+          locationId: true,
+        },
+      },
+    },
+  });
+}
+
+/**
  * ゲスト向け薄い予約ステータスページ (`/reservation/status`) 用の最小 select。
  * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
  */
@@ -133,6 +163,9 @@ export async function getReservationForGuestStatus(reservationId: string) {
       endTime: true,
       totalPrice: true,
       paymentStatus: true,
+      couponDiscountAmount: true,
+      durationDiscountAmount: true,
+      spaceDiscountAmount: true,
       customer: { select: { userId: true } },
       space: {
         select: {

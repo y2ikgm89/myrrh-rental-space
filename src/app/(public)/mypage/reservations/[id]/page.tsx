@@ -26,6 +26,7 @@ import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
+import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { toPlainObject } from "@/shared/lib/serialize";
@@ -50,7 +51,7 @@ import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-pass
 
 const CANCELLABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
 
-const REDIRECT_REASONS = ["status", "deadline", "discount"] as const;
+const REDIRECT_REASONS = ["status", "deadline", "discount", "payment"] as const;
 type RedirectReason = (typeof REDIRECT_REASONS)[number];
 const REDIRECT_REASON_SET = new Set<string>(REDIRECT_REASONS);
 function isRedirectReason(value: string): value is RedirectReason {
@@ -134,23 +135,20 @@ export default async function ReservationDetailPage({
       now,
     );
 
-  const hasManualDiscount =
-    (reservation.couponDiscountAmount != null &&
-      reservation.couponDiscountAmount > 0) ||
-    (reservation.durationDiscountAmount != null &&
-      reservation.durationDiscountAmount > 0) ||
-    (reservation.spaceDiscountAmount != null &&
-      reservation.spaceDiscountAmount > 0);
-
   const canEdit =
     reservationFeatureEnabled &&
-    isCancellableStatus &&
-    !hasManualDiscount &&
-    isWithinDeadline(
-      reservation.startTime,
-      deadlineSettings.modificationDeadlineHours,
+    isReservationEditableForCustomerSelfServe({
+      status: reservation.status,
+      paymentStatus: reservation.paymentStatus,
+      discountAmounts: {
+        couponDiscountAmount: reservation.couponDiscountAmount,
+        durationDiscountAmount: reservation.durationDiscountAmount,
+        spaceDiscountAmount: reservation.spaceDiscountAmount,
+      },
+      startTime: reservation.startTime,
+      modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
       now,
-    );
+    }).ok;
 
   const isCompleted = reservation.status === ReservationStatus.COMPLETED;
 
@@ -219,6 +217,8 @@ export default async function ReservationDetailPage({
                 。
               </>
             )}
+            {reason === "payment" &&
+              "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。"}
           </p>
         </div>
       )}

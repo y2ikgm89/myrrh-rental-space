@@ -32,8 +32,36 @@ export async function getReservationSnapshotForEdit(
   readonly startTime: Date;
   readonly endTime: Date;
 } | null> {
+  return getReservationSnapshotForEditById(reservationId, {
+    customerId,
+  });
+}
+
+/** status token 経路: ownership は token 検証側が担保するため customerId フィルタなし。 */
+export async function getReservationSnapshotForGuestEdit(
+  reservationId: string,
+): Promise<{
+  readonly spaceId: string;
+  readonly startTime: Date;
+  readonly endTime: Date;
+} | null> {
+  return getReservationSnapshotForEditById(reservationId);
+}
+
+async function getReservationSnapshotForEditById(
+  reservationId: string,
+  ownership?: { customerId: string },
+): Promise<{
+  readonly spaceId: string;
+  readonly startTime: Date;
+  readonly endTime: Date;
+} | null> {
   const reservation = await prisma.reservation.findFirst({
-    where: { id: reservationId, customerId, deletedAt: null },
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      ...(ownership ? { customerId: ownership.customerId } : {}),
+    },
     select: { spaceId: true, startTime: true, endTime: true },
   });
   return reservation ?? null;
