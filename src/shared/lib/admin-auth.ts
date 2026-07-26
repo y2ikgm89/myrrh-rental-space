@@ -16,8 +16,9 @@ import {
 } from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
-import { isLocalProductionE2ERuntime } from "./e2e-runtime";
+import { isLocalProductionE2EEnv } from "./e2e-runtime";
 import { serverEnv } from "./env/server";
+import { isLoopbackRequestHost } from "./request-host";
 import { isRecord } from "./serialize";
 
 export type AdminUser = {
@@ -44,9 +45,12 @@ async function resolveRequestHeaders(
   return requestHeaders ?? (await headers());
 }
 
-function getTestIapEmail(): string | null {
+function getTestIapEmail(requestHeaders: Headers): string | null {
+  // 非 production も含め、Host が loopback でない限り test-IAP は使わない
+  // （staging preview 等で ADMIN_TEST_IAP_EMAIL が効くのを防ぐ）。
+  if (!isLoopbackRequestHost(requestHeaders)) return null;
   const isProductionRuntime = serverEnv.NODE_ENV === "production";
-  if (isProductionRuntime && !isLocalProductionE2ERuntime()) return null;
+  if (isProductionRuntime && !isLocalProductionE2EEnv()) return null;
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 
@@ -80,7 +84,7 @@ async function resolveAdminEmail(requestHeaders?: Headers): Promise<{
     return null;
   }
 
-  const testEmail = getTestIapEmail();
+  const testEmail = getTestIapEmail(requestHeaderList);
   if (!testEmail) return null;
   return {
     identity: {

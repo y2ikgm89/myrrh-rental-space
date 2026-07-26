@@ -19,14 +19,14 @@ import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
 export async function devCustomerLoginAction(): Promise<{
   error: string;
 } | void> {
+  const reqHeaders = await headers();
+
   if (
     process.env["NODE_ENV"] === "production" &&
-    !isCustomerE2ELoginEnabled()
+    !isCustomerE2ELoginEnabled(reqHeaders)
   ) {
     return { error: "本番環境では利用できません" };
   }
-
-  const reqHeaders = await headers();
 
   // 1. テストユーザーの存在確認 + 作成（idempotent）
   try {

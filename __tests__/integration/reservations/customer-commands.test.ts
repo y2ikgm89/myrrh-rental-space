@@ -74,6 +74,52 @@ type SpaceFixture = {
   cleanup: () => Promise<void>;
 };
 
+async function createSpaceFixtureWithCapacity(
+  capacity: number,
+  hourlyPrice = 1000,
+): Promise<SpaceFixture> {
+  const suffix = crypto.randomUUID();
+
+  const location = await prisma.location.create({
+    data: {
+      slug: `customer-cap-loc-${suffix}`,
+      name: `Customer Cap Loc ${suffix}`,
+      address: "東京都テスト区1-2-3",
+      imageUrl: "https://example.com/loc.jpg",
+      sortOrder: nextFixtureLocationSortOrder++,
+    },
+    select: { id: true },
+  });
+
+  const space = await prisma.space.create({
+    data: {
+      slug: `customer-cap-space-${suffix}`,
+      name: `Customer Cap Space ${suffix}`,
+      descriptionJson: { type: "doc" },
+      descriptionHtml: "<p>test</p>",
+      descriptionPlainText: "test",
+      capacity,
+      hourlyPrice,
+      mainImageUrl: "https://example.com/space.jpg",
+      locationId: location.id,
+      isPublished: true,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  return {
+    spaceId: space.id,
+    hourlyPrice,
+    cleanup: async () => {
+      await prisma.reservation.deleteMany({ where: { spaceId: space.id } });
+      await prisma.spaceRatePlan.deleteMany({ where: { spaceId: space.id } });
+      await prisma.space.deleteMany({ where: { id: space.id } });
+      await prisma.location.deleteMany({ where: { id: location.id } });
+    },
+  };
+}
+
 /** Location → Space を 1 件ずつ作る最小 fixture。 */
 async function createSpaceFixture(hourlyPrice = 1000): Promise<SpaceFixture> {
   const suffix = crypto.randomUUID();
@@ -243,6 +289,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          numberOfGuests: 1,
           version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
@@ -307,6 +354,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:00",
           endTime: "12:00",
+          numberOfGuests: 1,
           version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
@@ -375,6 +423,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          numberOfGuests: 1,
           version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
@@ -428,6 +477,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:30",
           endTime: "12:30",
+          numberOfGuests: 1,
           version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
@@ -465,6 +515,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
             date: fixture.date,
             startTime: "10:00",
             endTime: "11:00",
+            numberOfGuests: 1,
             version: 0,
           },
           MODIFICATION_DEADLINE_HOURS,
@@ -492,6 +543,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
               date: fixture.date,
               startTime: "10:00",
               endTime: "11:00",
+              numberOfGuests: 1,
               version: 0,
             },
             MODIFICATION_DEADLINE_HOURS,
@@ -504,6 +556,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
               date: fixture.date,
               startTime: "14:00",
               endTime: "15:00",
+              numberOfGuests: 1,
               version: 0,
             },
             MODIFICATION_DEADLINE_HOURS,
@@ -534,6 +587,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
             date: fixture.date,
             startTime: "10:00",
             endTime: "11:00",
+            numberOfGuests: 1,
             version: 0,
           },
           MODIFICATION_DEADLINE_HOURS,
@@ -549,6 +603,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
             date: fixture.date,
             startTime: "14:00",
             endTime: "15:00",
+            numberOfGuests: 1,
             version: 0,
           },
           MODIFICATION_DEADLINE_HOURS,
@@ -564,6 +619,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
             date: fixture.date,
             startTime: "14:00",
             endTime: "15:00",
+            numberOfGuests: 1,
             version: 1,
           },
           MODIFICATION_DEADLINE_HOURS,
@@ -588,6 +644,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
             date: fixture.date,
             startTime: "10:00",
             endTime: "11:00",
+            numberOfGuests: 1,
             version: 0,
           },
           MODIFICATION_DEADLINE_HOURS,
@@ -642,5 +699,52 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
         await fixture.cleanup();
       }
     });
+  });
+
+  test("利用人数が変更先スペースの定員を超える場合は拒否する", async () => {
+    const largeSpace = await createSpaceFixtureWithCapacity(10);
+    const smallSpace = await createSpaceFixtureWithCapacity(2);
+    try {
+      const { reservationId, customerId } = await createInitialReservation(
+        largeSpace.spaceId,
+        FRIDAY_DATE,
+      );
+
+      const overCapacity = await updateCustomerReservation(
+        reservationId,
+        customerId,
+        {
+          spaceId: smallSpace.spaceId,
+          date: FRIDAY_DATE,
+          startTime: "14:00",
+          endTime: "16:00",
+          numberOfGuests: 5,
+          version: 0,
+        },
+        MODIFICATION_DEADLINE_HOURS,
+      );
+      expect(overCapacity).toEqual({
+        success: false,
+        error: "利用人数がスペースの定員（2名）を超えています",
+      });
+
+      const withinCapacity = await updateCustomerReservation(
+        reservationId,
+        customerId,
+        {
+          spaceId: smallSpace.spaceId,
+          date: FRIDAY_DATE,
+          startTime: "14:00",
+          endTime: "16:00",
+          numberOfGuests: 2,
+          version: 0,
+        },
+        MODIFICATION_DEADLINE_HOURS,
+      );
+      expect(withinCapacity.success).toBe(true);
+    } finally {
+      await largeSpace.cleanup();
+      await smallSpace.cleanup();
+    }
   });
 });

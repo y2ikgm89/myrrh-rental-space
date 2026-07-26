@@ -29,6 +29,7 @@ import {
   incrementCustomerReservationStats,
   buildPayload,
   claimCouponUsage,
+  guestCountCapacityError,
   validateCoupon,
 } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
@@ -115,15 +116,12 @@ export async function createPublicReservationCommand(
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
   }
 
-  // 利用人数が渡された場合のみ定員 gate（validate-only。永続化は別タスク）。
-  if (
-    input.numberOfGuests !== undefined &&
-    input.numberOfGuests > space.capacity
-  ) {
-    throw new DomainError(
-      `利用人数がスペースの定員（${String(space.capacity)}名）を超えています`,
-      "VALIDATION",
-    );
+  const capacityError = guestCountCapacityError(
+    input.numberOfGuests,
+    space.capacity,
+  );
+  if (capacityError) {
+    throw new DomainError(capacityError, "VALIDATION");
   }
 
   // 営業時間（公開スロット生成と同じ Settings.businessHours SSoT）

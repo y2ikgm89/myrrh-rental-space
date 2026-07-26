@@ -105,10 +105,34 @@ describe("devCustomerLoginAction", () => {
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["BETTER_AUTH_URL"] = "http://localhost:3000";
     mockServerEnv["ADMIN_APP_URL"] = "http://localhost:3000";
+    mockHeaders.mockImplementation(
+      () => new Headers({ host: "localhost:3000" }),
+    );
 
     await expect(devCustomerLoginAction()).rejects.toThrow("redirect:/mypage");
 
     expect(mockSignUpEmail).toHaveBeenCalled();
     expect(mockSignInEmail).toHaveBeenCalled();
+  });
+
+  test("E2E env でも Host が非 loopback なら production で拒否する", async () => {
+    setProcessEnv("NODE_ENV", "production");
+    setProcessEnv("NEXT_PUBLIC_ENABLE_E2E_LOGIN", "1");
+    setProcessEnv("NEXT_PUBLIC_APP_URL", "http://localhost:3000");
+    setProcessEnv("NEXT_PUBLIC_BASE_URL", "http://localhost:3000");
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["BETTER_AUTH_URL"] = "http://localhost:3000";
+    mockServerEnv["ADMIN_APP_URL"] = "http://localhost:3000";
+    mockHeaders.mockImplementation(
+      () => new Headers({ host: "preview.example.com" }),
+    );
+
+    await expect(devCustomerLoginAction()).resolves.toEqual({
+      error: "本番環境では利用できません",
+    });
+
+    expect(mockSignUpEmail).not.toHaveBeenCalled();
+    expect(mockSignInEmail).not.toHaveBeenCalled();
   });
 });

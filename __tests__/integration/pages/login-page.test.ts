@@ -30,6 +30,10 @@ mock.module("next/navigation", () => ({
   redirect: mockRedirect,
 }));
 
+mock.module("next/headers", () => ({
+  headers: mock(() => new Headers({ host: "localhost:3000" })),
+}));
+
 mock.module("next/server", () => ({
   connection: mock((): Promise<void> => Promise.resolve()),
 }));
@@ -58,7 +62,9 @@ mock.module("@/shared/data/turnstile", () => ({
 
 mock.module("@/shared/lib/e2e-runtime", () => ({
   isCustomerE2ELoginEnabled: () => false,
-  isLocalProductionE2ERuntime: () => false,
+  isCustomerE2ELoginEnvEnabled: () => false,
+  isLocalProductionE2EEnv: () => false,
+  isE2ESecurityBypassAllowed: () => false,
 }));
 
 // LoginHero は StandardHeroSection 経由で GSAP を import する (client subtree)。

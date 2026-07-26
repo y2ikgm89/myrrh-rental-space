@@ -76,8 +76,10 @@ paths:
 - cron route は Cloud Scheduler の OIDC Bearer token を検証
   （CRON_SERVICE_ACCOUNT_EMAIL / CRON_OIDC_AUDIENCE、config 欠損は fail-closed 500）
 - E2E バイパス（`E2E_RUNTIME` / `NEXT_PUBLIC_ENABLE_E2E_LOGIN` / `ADMIN_TEST_IAP_EMAIL`）は
-  localhost 限定 AND 条件。`validateProductionEnv()` が本番で throw する。
-  **`CI=true` をバイパス条件にしない**
+  localhost env URL **かつ** リクエスト Host（`Host` / 任意の `X-Forwarded-Host`）が
+  loopback（localhost / 127.0.0.1 / ::1）である AND 条件。非 production の
+  `ADMIN_TEST_IAP_EMAIL` も Host loopback 必須。`validateProductionEnv()` が本番で
+  throw する。**`CI=true` をバイパス条件にしない**
 - 暗号化は kid 一致必須（ENCRYPTION_KEY_ID 変更で旧データ復号 throw）。
   本番必須シークレット検証は instrumentation `register()` 起動時実行が契約
   （module load 時に移すとローカル build が壊れる）

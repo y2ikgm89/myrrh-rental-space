@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 const cacheLifeMock = mock(() => {});
 const cacheTagMock = mock(() => {});
@@ -25,7 +24,7 @@ interface SafeFetchOpts<T> {
   readonly fetch: () => Promise<T>;
   readonly fallback: T;
 }
-await installErrorsServerMock({
+mock.module("@/shared/lib/errors/server", () => ({
   safeFetch: async <T>(opts: SafeFetchOpts<T>): Promise<T> => {
     try {
       return await opts.fetch();
@@ -33,7 +32,10 @@ await installErrorsServerMock({
       return opts.fallback;
     }
   },
-});
+  criticalFetch: async <T>(opts: SafeFetchOpts<T>): Promise<T> => opts.fetch(),
+  ErrorCategory: { DATABASE: "DATABASE" },
+  ErrorSeverity: { LOW: "LOW" },
+}));
 
 const { getShowcaseSpaces } = await import("@/shared/domain/sections/queries");
 

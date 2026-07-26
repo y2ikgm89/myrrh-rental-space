@@ -284,13 +284,65 @@ describe("admin auth IAP boundary", () => {
     mockResolveIapIdentity.mockResolvedValue(null);
     mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
-    const user = await getCurrentAdminUser(new Headers());
+    const user = await getCurrentAdminUser(
+      new Headers({ host: "localhost:3000" }),
+    );
 
     expect(user?.email).toBe("admin@example.com");
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { email: "admin@example.com" },
       select: AUTH_USER_SELECT,
     });
+  });
+
+  test("非 production でも Host が非 loopback なら ADMIN_TEST_IAP_EMAIL を使わない", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({ host: "preview.example.com" }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("非 production で Host が loopback なら ADMIN_TEST_IAP_EMAIL を使う", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({ host: "127.0.0.1:3000" }),
+    );
+
+    expect(user?.email).toBe("admin@example.com");
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "admin@example.com" },
+      select: AUTH_USER_SELECT,
+    });
+  });
+
+  test("production E2E env でも Host が非 loopback なら ADMIN_TEST_IAP_EMAIL を使わない", async () => {
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockServerEnv["ADMIN_APP_URL"] = "http://localhost:3000";
+    mockServerEnv["BETTER_AUTH_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({ host: "admin.example.com" }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
   test("real production URL では E2E_RUNTIME=1 でも ADMIN_TEST_IAP_EMAIL を使わない", async () => {
@@ -322,7 +374,9 @@ describe("admin auth IAP boundary", () => {
     mockResolveIapIdentity.mockResolvedValue(null);
     mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
-    const user = await getCurrentAdminUser(new Headers());
+    const user = await getCurrentAdminUser(
+      new Headers({ host: "localhost:3000" }),
+    );
 
     expect(user?.email).toBe("admin@example.com");
     expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();

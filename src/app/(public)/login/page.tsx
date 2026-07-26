@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
@@ -51,6 +52,7 @@ export default async function LoginPage({
   await connection();
 
   const params = await searchParams;
+  const requestHeaders = await headers();
   const errorType =
     typeof params["error"] === "string" ? params["error"] : null;
   const rawRedirect =
@@ -114,7 +116,9 @@ export default async function LoginPage({
                 {...(callbackURL !== undefined ? { callbackURL } : {})}
               />
               {(process.env["NODE_ENV"] !== "production" ||
-                isCustomerE2ELoginEnabled()) && <DevLoginButton />}
+                isCustomerE2ELoginEnabled(requestHeaders)) && (
+                <DevLoginButton />
+              )}
             </>
           )}
         </Stack>

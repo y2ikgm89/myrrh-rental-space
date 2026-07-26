@@ -94,12 +94,13 @@ const mockCheckSpaceOverlap = mock<() => Promise<{ hasOverlap: boolean }>>(() =>
 );
 
 const mockSpaceFindUniqueOuter = mock<() => Promise<unknown>>(() =>
-  Promise.resolve({ locationId: "loc-1" }),
+  Promise.resolve({ locationId: "loc-1", capacity: 10 }),
 );
 const mockSpaceFindUniqueTx = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     id: "space-1",
     locationId: "loc-1",
+    capacity: 10,
     hourlyPrice: 1000,
     discountType: "none",
     discountValue: null,
@@ -241,6 +242,7 @@ const futureUpdateInput = {
   date: "2026-12-15",
   startTime: "10:00",
   endTime: "12:00",
+  numberOfGuests: 1,
   version: 0,
 };
 
@@ -340,11 +342,15 @@ describe("public booking gates — updateCustomerReservation", () => {
     mockGetSpaceRatePlans.mockResolvedValue([]);
     mockCheckSpaceOverlap.mockClear();
     mockSpaceFindUniqueOuter.mockClear();
-    mockSpaceFindUniqueOuter.mockResolvedValue({ locationId: "loc-1" });
+    mockSpaceFindUniqueOuter.mockResolvedValue({
+      locationId: "loc-1",
+      capacity: 10,
+    });
     mockSpaceFindUniqueTx.mockClear();
     mockSpaceFindUniqueTx.mockResolvedValue({
       id: "space-1",
       locationId: "loc-1",
+      capacity: 10,
       hourlyPrice: 1000,
       discountType: "none",
       discountValue: null,
@@ -455,6 +461,25 @@ describe("public booking gates — updateCustomerReservation", () => {
         "割引が適用された予約は変更できません。お問い合わせください。",
       );
     }
+    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("利用人数が定員を超える変更は早期 return する", async () => {
+    const result = await updateCustomerReservation(
+      "res-1",
+      "cust-1",
+      {
+        ...futureUpdateInput,
+        numberOfGuests: 11,
+      },
+      24,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: "利用人数がスペースの定員（10名）を超えています",
+    });
+    expect(mockTxReservationFindFirst).not.toHaveBeenCalled();
     expect(mockReservationUpdateMany).not.toHaveBeenCalled();
   });
 });
