@@ -15,6 +15,7 @@ import {
   CUSTOMER_SELECT,
   buildPricingSettings,
   getReservationSettings,
+  guestCountCapacityError,
   validateCoupon,
   ensureNoOverlap,
   incrementCustomerReservationStats,
@@ -32,6 +33,7 @@ const SPACE_SELECT = {
   id: true,
   name: true,
   addressDetail: true,
+  capacity: true,
   hourlyPrice: true,
   discountType: true,
   discountValue: true,
@@ -276,6 +278,8 @@ export async function updateAdminReservationCommand(
     guestPhone?: string | undefined;
     guestCompanyName?: string | undefined;
     guestCustomerType?: CustomerType | undefined;
+    /** 利用人数。未指定時は定員 gate をスキップ (admin UI に guest 入力が無い既存契約)。 */
+    numberOfGuests?: number | undefined;
   },
 ) {
   const startDateTime = parseDateTimeLocalAsJst(
@@ -317,6 +321,14 @@ export async function updateAdminReservationCommand(
   }
   if (!space) {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  const capacityError = guestCountCapacityError(
+    input.numberOfGuests,
+    space.capacity,
+  );
+  if (capacityError) {
+    throw new DomainError(capacityError, "VALIDATION");
   }
 
   // CANCELLED/COMPLETED/NO_SHOW への遷移は返金・キャンセルメール等の副作用チェーン

@@ -168,12 +168,13 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
 
     // reset space mocks to default
     mockSpaceFindUniqueOuter.mockImplementation(() =>
-      Promise.resolve({ locationId: "loc-1" }),
+      Promise.resolve({ locationId: "loc-1", capacity: 10 }),
     );
     mockSpaceFindUniqueTx.mockImplementation(() =>
       Promise.resolve({
         id: "space-1",
         locationId: "loc-1",
+        capacity: 10,
         hourlyPrice: 1000,
         discountType: "none",
         discountValue: null,
@@ -209,6 +210,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     date: "2026-12-15",
     startTime: "10:00",
     endTime: "12:00",
+    numberOfGuests: 1,
     version: 0,
   };
 
@@ -339,6 +341,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       date: "2020-01-01",
       startTime: "10:00",
       endTime: "12:00",
+      numberOfGuests: 1,
       version: 0,
     };
 

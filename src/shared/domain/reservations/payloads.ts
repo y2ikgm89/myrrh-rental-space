@@ -25,6 +25,17 @@ type ValidatedCoupon = {
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
+/** create / edit 共通の定員 gate 文言。numberOfGuests 未指定時は検査しない (create と同契約)。 */
+export function guestCountCapacityError(
+  numberOfGuests: number | undefined,
+  capacity: number,
+): string | null {
+  if (numberOfGuests !== undefined && numberOfGuests > capacity) {
+    return `利用人数がスペースの定員（${String(capacity)}名）を超えています`;
+  }
+  return null;
+}
+
 export type ReservationPayload = {
   reservationId: string;
   customerEmail: string;
