@@ -61,7 +61,7 @@ mock.module("@/shared/lib/slug-validation", () => ({
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));
 
-mock.module("@/shared/lib/section-defaults", () => ({
+mock.module("@/shared/domain/pages/system-pages-commands", () => ({
   ensurePageSections: mockEnsurePageSections,
 }));
 

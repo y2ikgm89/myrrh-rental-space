@@ -1086,21 +1086,14 @@ describe("architecture boundaries", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
     const ALLOWLIST = new Set(
       [
-        join(SRC_ROOT, "shared", "lib", "calendar-sync", "event-inbound.ts"),
-        join(
-          SRC_ROOT,
-          "shared",
-          "lib",
-          "google-business-profile",
-          "location-sync.ts",
-        ),
+        join(SRC_ROOT, "shared", "lib", "email", "event-emails.ts"),
+        join(SRC_ROOT, "shared", "lib", "email", "event-waitlist-emails.ts"),
+        join(SRC_ROOT, "shared", "lib", "email", "inquiry-emails.ts"),
       ].map((file) => relative(ROOT, file)),
     );
     const importsPrisma = (source: string) =>
       /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
     // `prisma.<model>.<method>` のみを「DB 呼出」とみなす。
-    // prisma を delegate として下層 command に渡すだけのファイル（bootstrap / section-defaults）は
-    // 二段目のドット参照を持たないため自然に除外される。
     const containsPrismaModelCall = (source: string) =>
       /\bprisma\.\w+\.\w+/u.test(source);
 
@@ -1131,7 +1124,6 @@ describe("architecture boundaries", () => {
         "admin-auth.ts",
         "admin-resource-access.ts",
         "analytics/config.ts",
-        "bootstrap.ts",
         "calendar-sync/event-inbound.ts",
         "calendar-sync/event-outbound.ts",
         "calendar-sync/inbound.ts",
@@ -1151,7 +1143,6 @@ describe("architecture boundaries", () => {
         "features/check.ts",
         "google-business-profile/client.ts",
         "google-business-profile/index.ts",
-        "google-business-profile/location-sync.ts",
         "google-calendar/events.ts",
         "google-calendar/service-account.ts",
         "google-calendar/settings.ts",
@@ -1164,7 +1155,6 @@ describe("architecture boundaries", () => {
         "pages/require-published.ts",
         "reservation/overlap-check.ts",
         "reservation/time-slots.ts",
-        "section-defaults.ts",
         "slug-validation.ts",
         "terms-consent-gate.ts",
         "turnstile.ts",

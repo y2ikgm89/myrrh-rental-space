@@ -1,3 +1,6 @@
+import "server-only";
+
+import { prisma } from "@/shared/db/prisma";
 import type { AppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
@@ -70,6 +73,17 @@ export async function ensurePageSectionsCommand(
   } catch {
     return 0;
   }
+}
+
+export async function ensurePageSections(
+  pageId: string,
+  slug: string,
+): Promise<number> {
+  return ensurePageSectionsCommand(prisma, pageId, slug);
+}
+
+export async function bootstrapSystemPages(): Promise<void> {
+  await bootstrapSystemPagesCommand(prisma);
 }
 
 export async function bootstrapSystemPagesCommand(
