@@ -625,8 +625,8 @@ describe("architecture boundaries", () => {
       // ゲスト向け予約 / イベント参加申込 claim page。署名トークン URL 経由で
       // 個別ユーザーの予約詳細にアクセスするため CDN キャッシュ不可 (private route)。
       'source: "/claim/:path*"',
-      // ゲスト決済 token URL / checkout-error / registration status。
-      // /events/:path* の公開キャッシュより後ろで last-match-wins。
+      // ゲスト決済 / キャンセル / キャンセル待ち PII 経路。公開 EVENT Cache-Tag ソース
+      // より後ろで last-match-wins（Cache-Tag は emit しない）。
       'source: "/events/registrations/:path*"',
       'source: "/events/waitlist/:path*"',
       'source: "/events/cancel/:path*"',

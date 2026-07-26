@@ -21,6 +21,7 @@ import nextConfig from "../../../next.config";
 import {
   SITE_WIDE_CDN_TAGS,
   PRIVATE_NO_TAG_PREFIXES,
+  EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
 } from "@/shared/lib/constants/cdn-cache-tags";
 
 type HeaderEntry = { key: string; value: string };
@@ -70,7 +71,8 @@ describe("next.config Cache-Tag emission contract", () => {
       "/tag/:path*",
       "/spaces/:path*",
       "/news/:path*",
-      "/events/:path*",
+      "/events",
+      EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
       "/faq/:path*",
       "/terms/:path*",
     ];
