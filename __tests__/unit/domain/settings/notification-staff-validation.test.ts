@@ -9,26 +9,17 @@ import { DomainError } from "@/shared/domain/domain-error";
 const STAFF_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const STALE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
-type UserCountArgs = {
-  where?: {
-    id?: { in?: string[] };
-    role?: { in?: Role[] };
-  };
-};
-
 type UserFindManyArgs = {
   where?: {
     id?: { in?: string[] };
+    dashboardEnabled?: boolean;
     role?: { in?: Role[] };
   };
-  select?: { email?: boolean };
+  select?: { email?: boolean; id?: boolean };
 };
 
-const mockUserCount = mock<(args: UserCountArgs) => Promise<number>>(() =>
-  Promise.resolve(0),
-);
 const mockUserFindMany = mock<
-  (args: UserFindManyArgs) => Promise<{ email: string }[]>
+  (args: UserFindManyArgs) => Promise<{ email?: string; id?: string }[]>
 >(() => Promise.resolve([]));
 const mockSettingsNotificationFindUnique = mock(() =>
   Promise.resolve({
@@ -51,7 +42,6 @@ mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     user: {
-      count: mockUserCount,
       findMany: mockUserFindMany,
     },
     settingsOrganization: {
@@ -102,41 +92,45 @@ const EMAIL_INPUT = {
 
 describe("updateEmailSettings notificationStaffIds", () => {
   beforeEach(() => {
-    mockUserCount.mockClear();
+    mockUserFindMany.mockClear();
     mockSettingsOrganizationUpsert.mockClear();
     mockSettingsReservationUpsert.mockClear();
     mockSettingsNotificationUpsert.mockClear();
   });
 
-  test("空配列は upsert を通し、User.count を呼ばない", async () => {
+  test("空配列は upsert を通し、User.findMany を呼ばない", async () => {
     await updateEmailSettings({
       ...EMAIL_INPUT,
       notificationStaffIds: [],
     });
 
-    expect(mockUserCount).not.toHaveBeenCalled();
+    expect(mockUserFindMany).not.toHaveBeenCalled();
     expect(mockSettingsNotificationUpsert).toHaveBeenCalledTimes(1);
   });
 
   test("管理ロールのスタッフのみなら保存する", async () => {
-    mockUserCount.mockImplementationOnce(() => Promise.resolve(1));
+    mockUserFindMany.mockImplementationOnce(() =>
+      Promise.resolve([{ id: STAFF_ID }]),
+    );
 
     await updateEmailSettings({
       ...EMAIL_INPUT,
       notificationStaffIds: [STAFF_ID],
     });
 
-    expect(mockUserCount).toHaveBeenCalledWith({
+    expect(mockUserFindMany).toHaveBeenCalledWith({
       where: {
         id: { in: [STAFF_ID] },
+        dashboardEnabled: true,
         role: { in: [...DASHBOARD_ROLES] },
       },
+      select: { id: true },
     });
     expect(mockSettingsNotificationUpsert).toHaveBeenCalledTimes(1);
   });
 
   test("非スタッフ / 欠損 ID は DomainError VALIDATION", async () => {
-    mockUserCount.mockImplementationOnce(() => Promise.resolve(0));
+    mockUserFindMany.mockImplementationOnce(() => Promise.resolve([]));
 
     let error: unknown;
     try {
