@@ -16,10 +16,16 @@ import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { getAppUrl } from "@/shared/lib/constants";
 import {
-  expireCheckoutSessionWithClientBestEffort,
   expireOpenCheckoutSessionBestEffort,
   retrieveCheckoutSessionStatus,
 } from "@/shared/domain/payment/checkout-session-expiry";
+import {
+  handleCheckoutSessionCreateFailure,
+  rejectCheckoutSessionSettle,
+  revertCheckoutPendingToUnpaid,
+  settleCheckoutSessionWrite,
+} from "@/shared/domain/payment/checkout-session-write-orchestration";
+import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
 import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
@@ -206,7 +212,7 @@ export async function createCheckoutSessionCommand(input: {
       // 再決済許容: UNPAID (未着手) と FAILED (前回失敗) の両方から PENDING に
       // 遷移する。上段の gate と対称化して claim の race を防ぐ。
       paymentStatus: {
-        in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+        in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT],
       },
       // Codex P1 (PR #1022): 初期 findUnique と claim の間で並行 cancel が
       // 走ったケースを DB レベルで塞ぐ。status が active でなければ count=0 → CONFLICT。
@@ -246,10 +252,10 @@ export async function createCheckoutSessionCommand(input: {
     authoritative.totalPriceWithTax <= 0
   ) {
     // 「claim 済みだが金額が消えた」異常状態。UNPAID に revert して stuck state を解消。
-    await prisma.reservation.updateMany({
-      where: { id: reservationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.reservation.updateMany(args),
+      { entityId: reservationId, extraWhere: { deletedAt: null } },
+    );
     throw new DomainError(
       "料金が設定されていない予約は決済できません",
       "VALIDATION",
@@ -314,48 +320,22 @@ export async function createCheckoutSessionCommand(input: {
     // 巻き戻して session URL 経由の決済を成立させる (session-specific webhook 分岐は
     // 別 issue で対応予定)。PAID/REFUNDED (異常に速い webhook / manual admin refund) は
     // 上書きしない — count === 0 になるが session URL は返す (webhook 側の冪等性に委任)。
-    const settled = await prisma.reservation.updateMany({
-      where: {
-        id: reservationId,
-        deletedAt: null,
-        paymentStatus: {
-          notIn: [
-            PaymentStatus.PAID,
-            PaymentStatus.PARTIALLY_REFUNDED,
-            PaymentStatus.REFUNDED,
-          ],
-        },
+    const { settled } = await settleCheckoutSessionWrite(
+      (args) => prisma.reservation.updateMany(args),
+      {
+        entityId: reservationId,
+        sessionId: session.id,
+        extraWhere: { deletedAt: null },
       },
-      data: {
-        paymentStatus: PaymentStatus.PENDING,
-        stripeCheckoutSessionId: session.id,
-      },
-    });
-    if (settled.count === 0) {
-      // PAID / PARTIALLY_REFUNDED / REFUNDED が claim 後に確定 (異常に速い webhook /
-      // manual admin refund)。orphan session を best-effort で expire し、session URL は
-      // 返さない (二重決済・会計 mismatch を fail-closed で防ぐ)。
-      logError(
-        new Error(
-          "createCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
-        ),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "createCheckoutSession",
-            reservationId,
-            sessionId: session.id,
-          },
-        },
-      );
-      await expireCheckoutSessionWithClientBestEffort({
+    );
+    if (!settled) {
+      await rejectCheckoutSessionSettle({
         client,
         sessionId: session.id,
-        operation: "createCheckoutSessionExpire",
-        context: { reservationId, sessionId: session.id },
+        operation: "createCheckoutSessionCommand",
+        logContext: { reservationId },
+        conflictMessage: "この予約は既に決済が完了しています",
       });
-      throw new DomainError("この予約は既に決済が完了しています", "CONFLICT");
     }
 
     return {
@@ -367,25 +347,20 @@ export async function createCheckoutSessionCommand(input: {
     if (error instanceof DomainError) {
       throw error;
     }
-    if (createdSessionId) {
-      await expireOpenCheckoutSessionBestEffort({
-        sessionId: createdSessionId,
-        context: { reservationId },
-      });
-    }
-    // Stripe session 作成 or session id 書込が失敗した。UNPAID に revert して顧客が
-    // 再試行できる状態に戻す。既に session が作られていても metadata.reservationId が
-    // 分かるので webhook 側で orphan session を identify できる (最悪ケース: session だけ
-    // 残るが webhook で reservation を PAID にできる。逆に reservation は UNPAID のまま
-    // なので新たな checkout も可能で、その場合 webhook 側で二重確定を防ぐ既存契約に委ねる)。
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "createCheckoutSession", reservationId },
     });
-    await prisma.reservation.updateMany({
-      where: { id: reservationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
+    await handleCheckoutSessionCreateFailure({
+      createdSessionId,
+      expireOpenCheckoutSessionBestEffort,
+      revertPending: () =>
+        revertCheckoutPendingToUnpaid(
+          (args) => prisma.reservation.updateMany(args),
+          { entityId: reservationId, extraWhere: { deletedAt: null } },
+        ),
+      expireContext: { reservationId },
     });
     throw new DomainError(
       "決済セッションの作成に失敗しました。しばらく経ってからお試しください。",

@@ -610,10 +610,9 @@ describe("reservations/payment-commands", () => {
       expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith(
         expect.objectContaining({
           sessionId: "cs_test_123",
-          operation: "createCheckoutSessionExpire",
+          operation: "createCheckoutSessionCommandExpire",
           context: {
             reservationId: RESERVATION_ID,
-            sessionId: "cs_test_123",
           },
         }),
       );
