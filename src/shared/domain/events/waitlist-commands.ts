@@ -357,6 +357,27 @@ export async function confirmWaitlistOfferCommand(data: {
       // 通常申込 (createEventRegistrationCommand) と同じ event / slot ゲートを
       // offer 確定時にも再検証する。offer 発行後に下書き化・受付停止・締切超過・
       // スロット削除が起きても、ここで黙って CONFIRMED 化しない。
+      //
+      // 履行不能ゲート（受付停止・締切超過・イベント非公開/削除・スロット欠落）は
+      // capacity race と同型で WAITLISTED_OFFERED → EXPIRED に原子遷移し、
+      // `{ status: "EXPIRED" }` を返す。DomainError を投げると Stripe webhook が
+      // claim に fall through して自動返金が走らず money captured のまま残る。
+      // true concurrency conflict（claim count===0）だけ DomainError(CONFLICT) を投げる。
+      const expireUnfulfillableOffer = async () => {
+        const claim = await tx.eventRegistration.updateMany({
+          where: {
+            id: target.id,
+            status: RegistrationStatus.WAITLISTED_OFFERED,
+          },
+          data: { status: RegistrationStatus.EXPIRED },
+        });
+        if (claim.count === 0)
+          throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+        return {
+          registration: { id: target.id, status: "EXPIRED" as const },
+        };
+      };
+
       const event = await tx.event.findFirst({
         where: {
           id: target.eventId,
@@ -369,13 +390,8 @@ export async function confirmWaitlistOfferCommand(data: {
           registrationDeadline: true,
         },
       });
-      if (!event)
-        throw new DomainError("イベントが見つかりません", "NOT_FOUND");
-      if (!event.registrationOpen)
-        throw new DomainError(
-          "このイベントは申込受付を終了しています",
-          "VALIDATION",
-        );
+      if (!event) return expireUnfulfillableOffer();
+      if (!event.registrationOpen) return expireUnfulfillableOffer();
 
       const slot = await tx.eventTimeSlot.findUnique({
         where: { id: target.slotId },
@@ -386,17 +402,11 @@ export async function confirmWaitlistOfferCommand(data: {
         },
       });
       if (!slot || slot.eventId !== target.eventId)
-        throw new DomainError(
-          "指定されたタイムスロットが見つかりません",
-          "NOT_FOUND",
-        );
+        return expireUnfulfillableOffer();
 
       const deadline = event.registrationDeadline ?? slot.startAt;
       if (data.now.getTime() > deadline.getTime())
-        throw new DomainError(
-          "申込締切を過ぎたため受け付けできません",
-          "VALIDATION",
-        );
+        return expireUnfulfillableOffer();
 
       // Capacity 再判定 (offer 中に別の CONFIRMED が入っていないか)
 

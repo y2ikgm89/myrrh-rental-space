@@ -839,6 +839,37 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(mockClaimEventRegistrationAsFailed).not.toHaveBeenCalled();
     });
 
+    test("受付停止/締切超過など post-payment gate 失敗で EXPIRED → 自動返金（capacity race と同経路）", async () => {
+      // confirmWaitlistOfferCommand が DomainError を投げると claim fall-through
+      // で返金されない。履行不能ゲートは EXPIRED を返す clean-break 契約。
+      mockConfirmWaitlistOfferCommand.mockResolvedValueOnce({
+        registration: { id: "reg-gate-closed", status: "EXPIRED" },
+      });
+      mockRefundExpiredWaitlistOfferPaymentCommand.mockResolvedValueOnce({
+        outcome: "refunded",
+        refundId: "re_gate",
+        refundAmount: 3000,
+      });
+
+      const event = makeSessionCompletedEvent({
+        type: "event-registration",
+        registrationId: "reg-gate-closed",
+        source: "waitlist-offer",
+      });
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
+      expect(mockRefundExpiredWaitlistOfferPaymentCommand).toHaveBeenCalledWith(
+        {
+          registrationId: "reg-gate-closed",
+          stripePaymentIntentId: "pi-123",
+        },
+      );
+    });
+
     test("STRIPE-01 fix: confirmWaitlistOfferCommand が DomainError(NOT_FOUND) を投げても claim にフォールスルーして idempotent recovery する (初回 confirm 成功後の claim 失敗 → Stripe retry で NOT_FOUND シナリオ)", async () => {
       // STRIPE-01 (HIGH): 以前は DomainError catch 時に early return していたため、
       // 初回 confirm 成功 → 直後 claim 失敗 (DB 障害等) → Stripe retry → 再度 confirm →
