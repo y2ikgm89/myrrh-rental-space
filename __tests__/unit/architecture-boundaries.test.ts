@@ -3049,6 +3049,20 @@ describe("architecture boundaries", () => {
         }
       }
     });
+
+    test("public-queries は meetingUrl を公開 select/map に載せない", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/public-queries.ts"),
+        "utf8",
+      );
+      expect(
+        content,
+        "公開キャッシュ DTO に meetingUrl を select しない（'use cache' 経由で漏れる）",
+      ).not.toMatch(/meetingUrl\s*:\s*true/);
+      expect(content, "公開 map で meetingUrl を再付与しない").not.toMatch(
+        /meetingUrl\s*[:=]/,
+      );
+    });
   });
 
   describe("meetingUrl query SSoT (fail-closed)", () => {
