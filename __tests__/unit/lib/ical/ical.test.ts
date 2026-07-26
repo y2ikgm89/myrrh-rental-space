@@ -185,7 +185,7 @@ describe("buildOutlookWebUrl", () => {
 });
 
 describe("buildAddToCalendarUrls", () => {
-  test("returns all 3 provider URLs", () => {
+  test("returns all 3 provider URLs when icsDownloadUrl is provided", () => {
     const urls = buildAddToCalendarUrls({
       summary: "Test",
       description: "desc",
@@ -198,5 +198,18 @@ describe("buildAddToCalendarUrls", () => {
     expect(urls.ics).toBe(
       "https://example.com/api/calendar/reservation/abc-123",
     );
+  });
+
+  test("omits ics when icsDownloadUrl is not provided", () => {
+    const urls = buildAddToCalendarUrls({
+      summary: "Test",
+      description: "desc",
+      startTime: new Date("2026-05-01T10:00:00Z"),
+      endTime: new Date("2026-05-01T12:00:00Z"),
+    });
+    expect(urls.google).toContain("calendar.google.com");
+    expect(urls.outlookWeb).toContain("outlook.live.com");
+    expect(urls.ics).toBeUndefined();
+    expect("ics" in urls).toBe(false);
   });
 });

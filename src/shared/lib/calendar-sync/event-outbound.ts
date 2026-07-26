@@ -41,6 +41,17 @@ import { MEETING_PROVIDER } from "@/shared/lib/validations/enums/prisma-types";
 import { OUTBOUND_EVENT_MARKER } from "./loop-prevention";
 import type { EventSyncData, SyncResult } from "./types";
 
+/** Meet URL write-back のみの失敗 (GCal event は作成済み — update retry では解消しない) */
+const MEET_URL_NOT_RETURNED_ERROR =
+  "Meet URL was not returned by the Google Calendar API response";
+
+function isMeetOnlyCalendarSyncError(error: string): boolean {
+  return (
+    error.startsWith("Meet URL write-back failed:") ||
+    error === MEET_URL_NOT_RETURNED_ERROR
+  );
+}
+
 // =============================================================================
 // Calendar Event Formatting
 // =============================================================================
@@ -66,7 +77,6 @@ function formatEventCalendarEvent(data: EventSyncData): CalendarEventParams {
     location: data.location ?? undefined,
     startTime: data.startTime,
     endTime: data.endTime,
-    // attendeeEmail は未設定（attendees 無し方針）
   });
 }
 
@@ -168,8 +178,7 @@ export async function syncEventToCalendar(
           } else {
             await markEventCalendarSyncError({
               eventId: data.eventId,
-              error:
-                "Meet URL was not returned by the Google Calendar API response",
+              error: MEET_URL_NOT_RETURNED_ERROR,
             });
           }
         } catch (error) {
@@ -306,7 +315,8 @@ export async function deleteEventCalendarSync(
  * - slot の `googleCalendarEventId` が null → create (`syncEventToCalendar`)
  * - slot の `googleCalendarEventId` 有り + `GCAL_DELETE_FAILED_PREFIX` エラー
  *   → delete (`deleteEventCalendarSync`)。CANCELLED 等で GCal 上に残っている状態。
- * - 上記以外の event-level エラー（Meet write-back 失敗等）は自動 retry 対象外。
+ * - slot の `googleCalendarEventId` 有り + Meet write-back のみのエラー → 自動 retry 対象外
+ * - slot の `googleCalendarEventId` 有り + それ以外のエラー → update (`updateEventCalendarSync`)
  */
 export async function retryFailedEventCalendarSyncs(): Promise<{
   total: number;
@@ -320,9 +330,9 @@ export async function retryFailedEventCalendarSyncs(): Promise<{
   let failed = 0;
 
   for (const eventId of eventIds) {
+    const syncError = await getEventCalendarSyncError(eventId);
     const gcalIdsForDelete =
       await getEventGoogleCalendarEventIdsForDelete(eventId);
-    const syncError = await getEventCalendarSyncError(eventId);
     const isDeleteRetry =
       gcalIdsForDelete.length > 0 &&
       syncError?.startsWith(GCAL_DELETE_FAILED_PREFIX) === true;
@@ -360,17 +370,46 @@ export async function retryFailedEventCalendarSyncs(): Promise<{
       }
     }
 
-    if (pendingSlots.length === 0) {
-      // 対象 slot が無い（Meet URL write-back 失敗等、機械的な再試行では解消しない
-      // event-level エラー）は自動 retry 対象外。calendarSyncError を残したまま
-      // admin dashboard 側の可視化に委ねる（silent clear しない — GCAL-AUDIT-04）。
+    if (pendingSlots.length > 0) {
+      const refreshed = await getEventSlotsForCalendarSync(eventId);
+      if (refreshed.every((slot) => slot.googleCalendarEventId !== null)) {
+        await markEventCalendarSyncSuccess(eventId);
+      }
       continue;
     }
 
-    const refreshed = await getEventSlotsForCalendarSync(eventId);
-    if (refreshed.every((slot) => slot.googleCalendarEventId !== null)) {
-      await markEventCalendarSyncSuccess(eventId);
+    const isUpdateRetry =
+      syncError !== null &&
+      syncError.startsWith(GCAL_DELETE_FAILED_PREFIX) !== true &&
+      !isMeetOnlyCalendarSyncError(syncError);
+
+    if (isUpdateRetry) {
+      let allUpdateSucceeded = true;
+      for (const slot of slots) {
+        const gcalEventId = slot.googleCalendarEventId;
+        if (gcalEventId === null) continue;
+
+        total++;
+        const result = await updateEventCalendarSync(slot, gcalEventId);
+        if (result.success) {
+          succeeded++;
+        } else {
+          failed++;
+          allUpdateSucceeded = false;
+        }
+      }
+
+      if (
+        allUpdateSucceeded &&
+        slots.some((slot) => slot.googleCalendarEventId !== null)
+      ) {
+        await markEventCalendarSyncSuccess(eventId);
+      }
+      continue;
     }
+
+    // Meet write-back のみ等、機械的な再試行では解消しない event-level エラーは
+    // calendarSyncError を残したまま admin dashboard 側の可視化に委ねる。
   }
 
   return { total, succeeded, failed };

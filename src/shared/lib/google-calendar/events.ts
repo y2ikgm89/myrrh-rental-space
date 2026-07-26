@@ -52,7 +52,7 @@ function toReminders(
 export function buildEventBody(
   params: CalendarEventParams,
   settings: GoogleCalendarSettingsData,
-  options: { includeAttendee?: boolean; withMeet?: boolean },
+  options: { withMeet?: boolean },
 ): calendar_v3.Schema$Event {
   const withMeet = options.withMeet === true && params.startTime;
   const conferenceRequestId = withMeet
@@ -71,10 +71,6 @@ export function buildEventBody(
       dateTime: params.endTime.toISOString(),
       timeZone: "Asia/Tokyo",
     },
-    attendees:
-      options.includeAttendee && params.attendeeEmail
-        ? [{ email: params.attendeeEmail }]
-        : undefined,
     // Phase B.2 task 16: recurrence 指定時は master event として recurring event を作成
     // (Google Calendar API 契約、`RRULE:` prefix 込みの完全形で渡す)。空配列時は omit。
     recurrence:
@@ -116,10 +112,7 @@ export async function createCalendarEvent(
 
   try {
     const withMeet = options?.withMeet === true;
-    const requestBody = buildEventBody(params, settings, {
-      includeAttendee: true,
-      withMeet,
-    });
+    const requestBody = buildEventBody(params, settings, { withMeet });
     const response = await withGoogleApiRetry(() =>
       client.events.insert({
         calendarId,
@@ -149,7 +142,16 @@ export async function createCalendarEvent(
 }
 
 /**
- * カレンダーイベントを更新
+ * カレンダーイベントを部分更新 (予約・イベントの通常 update 経路)。
+ *
+ * 公式推奨: `events.update` (full replace) より `events.patch` (partial update)
+ * を使い、conferenceData 等の未送信 field を GCal 側で保持する。
+ * https://developers.google.com/calendar/api/v3/reference/events/patch
+ *
+ * 送信 field: summary / description / location / start / end / reminders /
+ * recurrence (指定時のみ)。attendees / conferenceData は送らない。
+ *
+ * recurrence のみの狭い patch は `patchCalendarEvent` を使う。
  */
 export async function updateCalendarEvent(
   eventId: string,
@@ -169,7 +171,7 @@ export async function updateCalendarEvent(
   try {
     const requestBody = buildEventBody(params, settings, { withMeet: false });
     const response = await withGoogleApiRetry(() =>
-      client.events.update({
+      client.events.patch({
         calendarId,
         eventId,
         requestBody,
@@ -196,10 +198,11 @@ export async function updateCalendarEvent(
 }
 
 /**
- * カレンダーイベントを部分更新 (Phase B.2.1 non-goal Task C)。
+ * カレンダーイベントを明示的な部分 patch (Phase B.2.1 non-goal Task C)。
  *
- * 公式推奨: recurrence だけを更新する場合は `events.update` (full replace) より
- * `events.patch` (partial update) を使う (他の event body field を保護できる)。
+ * 予約・イベントの通常 field 更新は `updateCalendarEvent` を使う。
+ * 本関数は caller が patch body を直接指定する狭い経路 (series master の
+ * RRULE UNTIL 注入等) 専用。
  * https://developers.google.com/calendar/api/v3/reference/events/patch
  *
  * Task C 主用途: series の this-and-following scope キャンセルで master recurring

@@ -13,7 +13,6 @@ export interface CalendarEventParams {
   location?: string;
   startTime: Date;
   endTime: Date;
-  attendeeEmail?: string;
   /**
    * RFC 5545 recurrence rules (e.g. `["RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10"]`)。
    * 指定時、Google Calendar 側に recurring event として master を作成し、
@@ -93,6 +92,7 @@ export interface WebhookSetupResult {
   channelId?: string;
   resourceId?: string;
   expiration?: Date;
+  token?: string;
   error?: string;
 }
 

@@ -37,6 +37,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { calendarDownloadByRegistrationIdRateLimiter } from "@/shared/lib/rate-limit";
 
 const paramSchema = z.object({
   registrationId: z
@@ -121,6 +122,15 @@ export async function GET(
         });
         return new NextResponse("Invalid token", { status: 401 });
       }
+    }
+
+    // Per-registrationId rate limit (10/hour)。session または有効 token 通過後・
+    // DB fetch / ICS 生成より前。匿名スパムが shared bucket を焼き潰せないよう、
+    // 認可ゲートより後に置く (receipt PDF DL の HTTP-03 と同型)。
+    const rateLimit =
+      await calendarDownloadByRegistrationIdRateLimiter.check(registrationId);
+    if (!rateLimit.success) {
+      return new NextResponse("Too many requests", { status: 429 });
     }
 
     // 3. 申込取得

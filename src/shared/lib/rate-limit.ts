@@ -401,6 +401,23 @@ export const receiptDownloadBySerialNoRateLimiter = createRateLimiter({
   maxRequests: 10,
 });
 
+// 予約 .ics DL の「reservationId 単位」の追加バケット（10 attempts / hour /
+// reservationId）。apiRateLimiter (100/分/IP) だけだと同一予約への連打で ICS 生成
+// (ical-generator) × DB read コストが抜けるため、resource 単位の第二防壁を貼る
+// (`receiptDownloadBySerialNoRateLimiter` と同型)。session / 有効 token 通過後にのみ
+// check し、匿名スパムで正規ユーザーのバケットを焼き潰せないようにする。
+export const calendarDownloadByReservationIdRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 10,
+});
+
+// イベント申込 .ics DL の「registrationId 単位」の追加バケット（10 attempts / hour /
+// registrationId）。calendarDownloadByReservationIdRateLimiter と同型。
+export const calendarDownloadByRegistrationIdRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 10,
+});
+
 // ゲストイベント参加キャンセル「申込 ID 単位」の追加バケット（3 attempts / hour /
 // registration）。cancelByReservationRateLimiter と同じ設計判断（IP-only では
 // Cloud Run multi-instance × XFF spoof で単一申込への分散攻撃が抜ける）。

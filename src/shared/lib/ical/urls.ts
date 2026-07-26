@@ -45,7 +45,8 @@ export function buildOutlookWebUrl(event: CalendarEventInput): string {
 }
 
 export type BuildAddToCalendarUrlsParams = CalendarEventInput & {
-  readonly icsDownloadUrl: string;
+  /** 省略時は `ics` を返さない（公開ページの public variant 向け） */
+  readonly icsDownloadUrl?: string;
 };
 
 export function buildAddToCalendarUrls(
@@ -54,7 +55,9 @@ export function buildAddToCalendarUrls(
   return {
     google: buildGoogleCalendarUrl(params),
     outlookWeb: buildOutlookWebUrl(params),
-    ics: params.icsDownloadUrl,
+    ...(params.icsDownloadUrl !== undefined
+      ? { ics: params.icsDownloadUrl }
+      : {}),
   };
 }
 

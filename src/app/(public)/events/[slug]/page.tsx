@@ -224,7 +224,6 @@ export default async function EventDetailPage({
     startTime: new Date(event.startTime),
     endTime: new Date(event.endTime),
     ...(venueName !== null ? { location: venueName } : {}),
-    icsDownloadUrl: "",
   });
 
   return (
