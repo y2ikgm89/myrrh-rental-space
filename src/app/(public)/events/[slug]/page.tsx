@@ -13,7 +13,7 @@ import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
-import { getSlotRegistrationCounts } from "@/shared/domain/events/slot-queries";
+import { getEventPublicRegistrationInventory } from "@/shared/domain/events/slot-queries";
 import {
   buildCurrentPublicEventSlotOptions,
   derivePublicEventRegistrationState,
@@ -112,24 +112,36 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const [slotInventory, turnstileSiteKey, requiredTerms, user, seoSettings] =
-    await Promise.all([
-      getSlotRegistrationCounts(event.id),
-      getTurnstileSiteKey(),
-      getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
-      getCurrentCustomerUser(),
-      getSeoSettings(),
-    ]);
+  const [
+    registrationInventory,
+    turnstileSiteKey,
+    requiredTerms,
+    user,
+    seoSettings,
+  ] = await Promise.all([
+    getEventPublicRegistrationInventory(event.id),
+    getTurnstileSiteKey(),
+    getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
+    getCurrentCustomerUser(),
+    getSeoSettings(),
+  ]);
   const { siteName } = resolveSiteBranding(seoSettings);
 
+  const ticketInventories = event.tickets.map((ticket) => ({
+    id: ticket.id,
+    capacity: ticket.capacity,
+  }));
+
   const slotOptions = buildCurrentPublicEventSlotOptions({
-    slots: slotInventory,
+    slots: registrationInventory.slots,
     registrationDeadline: event.registrationDeadline,
   });
   const registration = derivePublicEventRegistrationState({
     eventStatus: event.status,
     registrationOpen: event.registrationOpen,
     slots: slotOptions,
+    tickets: ticketInventories,
+    ticketSlotCounts: registrationInventory.ticketSlotCounts,
   });
   const canRegister =
     registration.kind === "open" || registration.kind === "waitlist-available";
@@ -329,7 +341,9 @@ export default async function EventDetailPage({
                   name: t.name,
                   price: t.price,
                   unitSize: t.unitSize,
+                  capacity: t.capacity,
                 }))}
+                ticketSlotCounts={registrationInventory.ticketSlotCounts}
                 requiredTerms={requiredTerms.map((t) => ({
                   id: t.id,
                   slug: t.slug,

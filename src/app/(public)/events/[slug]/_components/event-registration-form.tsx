@@ -32,9 +32,14 @@ import {
 } from "@/public/lib/format-event-date";
 import type { EventTicketOption } from "@/shared/domain/events/ticket-types";
 import {
+  findFirstJoinablePublicTicketSlot,
+  getTicketSlotConfirmedCount,
+  getTicketSlotRemaining,
+  isPublicTicketSlotWaitlistOnly,
   shouldExposePublicEventSlotSelector,
   type PublicEventScheduleMode,
   type PublicEventSlotOption,
+  type PublicEventTicketSlotCount,
 } from "@/shared/domain/events/public-slot-options";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -47,16 +52,18 @@ interface EventRegistrationFormProps {
   readonly turnstileSiteKey: string | null;
   readonly scheduleMode: PublicEventScheduleMode;
   readonly slots: readonly PublicEventSlotOption[];
-  readonly tickets: readonly EventTicketOption[];
+  readonly tickets: readonly (EventTicketOption & {
+    readonly capacity: number | null;
+  })[];
+  readonly ticketSlotCounts: readonly PublicEventTicketSlotCount[];
   readonly requiredTerms?: readonly ConsentTerm[];
   readonly isLoggedIn: boolean;
   readonly slug: string;
   /**
-   * "register" = 通常の空き枠への申込 (registerForEvent)。
-   * "waitlist" = 満員時のキャンセル待ち登録 (registerForEventWaitlist)。
-   * action / Turnstile action / 送信文言 / 完了メッセージがこれで分岐する。
-   * 入力フィールド自体は publicEventRegistrationSchema /
-   * publicEventWaitlistRegistrationSchema が同一形状のため共通。
+   * "register" = ページ全体として空き枠への申込が可能。
+   * "waitlist" = ページ全体が満員のためキャンセル待ちのみ。
+   * いずれの場合も、選択中の (slot, ticket) が満席なら effectiveMode が
+   * waitlist に切り替わる（ticket-level 満席ケース）。
    */
   readonly mode: "register" | "waitlist";
 }
@@ -67,25 +74,34 @@ export function EventRegistrationForm({
   scheduleMode,
   slots,
   tickets,
+  ticketSlotCounts,
   requiredTerms = [],
   isLoggedIn,
   slug,
   mode,
 }: EventRegistrationFormProps): ReactElement {
-  // waitlist モードでは定義上すべてのスロットが "available" ではない
-  // (derivePublicEventRegistrationState が "waitlist-available" を返すのは
-  // 登録期間内の全スロットが "sold-out" の場合のみ)。そのため選択可能な
-  // status を mode で分岐する: register は "available"、waitlist は
-  // "sold-out"（締切済みスロットへの登録待ちは受け付けない）。
+  const ticketInventories = tickets.map((ticket) => ({
+    id: ticket.id,
+    capacity: ticket.capacity,
+  }));
+  const firstJoinable =
+    mode === "register"
+      ? findFirstJoinablePublicTicketSlot({
+          slots,
+          tickets: ticketInventories,
+          ticketSlotCounts,
+        })
+      : null;
   const joinableSlotStatus = mode === "waitlist" ? "sold-out" : "available";
   const firstAvailableSlot = slots.find(
     (slot) => slot.status === joinableSlotStatus,
   );
-  const initialSlotId = firstAvailableSlot?.id ?? slots[0]?.id ?? "";
+  const initialSlotId =
+    firstJoinable?.slotId ?? firstAvailableSlot?.id ?? slots[0]?.id ?? "";
+  const initialTicketId = firstJoinable?.ticketId ?? tickets[0]?.id ?? "";
   const [selectedSlotId, setSelectedSlotId] = useState<string>(initialSlotId);
-  const [selectedTicketId, setSelectedTicketId] = useState<string>(
-    tickets[0]?.id ?? "",
-  );
+  const [selectedTicketId, setSelectedTicketId] =
+    useState<string>(initialTicketId);
   const [submitted, setSubmitted] = useState(false);
   // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
   // Server Action側で送信までの経過時間が短すぎないか検証する。
@@ -104,8 +120,43 @@ export function EventRegistrationForm({
     );
   };
 
+  const selectedSlot =
+    slots.find((slot) => slot.id === selectedSlotId) ?? firstAvailableSlot;
+  const selectedTicket =
+    tickets.find((ticket) => ticket.id === selectedTicketId) ?? tickets[0];
+  const selectedTicketInventory = selectedTicket
+    ? { id: selectedTicket.id, capacity: selectedTicket.capacity }
+    : null;
+  const selectedTicketConfirmedCount =
+    selectedSlot && selectedTicketInventory
+      ? getTicketSlotConfirmedCount(
+          ticketSlotCounts,
+          selectedSlot.id,
+          selectedTicketInventory.id,
+        )
+      : 0;
+  const selectedComboRemaining =
+    selectedSlot && selectedTicketInventory
+      ? getTicketSlotRemaining({
+          slot: selectedSlot,
+          ticket: selectedTicketInventory,
+          confirmedCount: selectedTicketConfirmedCount,
+        })
+      : 0;
+  const effectiveMode =
+    mode === "waitlist" ||
+    (selectedSlot &&
+      selectedTicketInventory &&
+      isPublicTicketSlotWaitlistOnly({
+        slot: selectedSlot,
+        ticket: selectedTicketInventory,
+        confirmedCount: selectedTicketConfirmedCount,
+      }))
+      ? "waitlist"
+      : "register";
+
   const [lastResult, formAction, isPending] = useActionState(
-    mode === "waitlist" ? registerForEventWaitlist : registerForEvent,
+    effectiveMode === "waitlist" ? registerForEventWaitlist : registerForEvent,
     undefined,
   );
 
@@ -123,7 +174,7 @@ export function EventRegistrationForm({
       defaultValue: {
         eventId,
         slotId: initialSlotId,
-        ticketId: tickets[0]?.id ?? "",
+        ticketId: initialTicketId,
         quantity: 1,
       },
       onValidate({ formData }) {
@@ -170,12 +221,12 @@ export function EventRegistrationForm({
           aria-hidden
         />
         <Heading level={3} className="mt-4">
-          {mode === "waitlist"
+          {effectiveMode === "waitlist"
             ? "キャンセル待ちに登録しました"
             : "お申し込みを受け付けました"}
         </Heading>
         <p className="mt-3 text-muted-foreground">
-          {mode === "waitlist"
+          {effectiveMode === "waitlist"
             ? "順番が来ましたらメールでご連絡します。"
             : "確認メールをお送りしましたのでご確認ください。"}
         </p>
@@ -190,20 +241,18 @@ export function EventRegistrationForm({
 
   const formErrorMessage =
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
-  const selectedSlot =
-    slots.find((slot) => slot.id === selectedSlotId) ?? firstAvailableSlot;
-  const selectedRemainingCapacity = selectedSlot?.remaining ?? null;
   const showSlotSelector = shouldExposePublicEventSlotSelector({
     scheduleMode,
     slots,
   });
-  // waitlist は定員という概念が無い (誰でも並べる) ため、"残り枠" (常に 0) では
-  // なく固定上限のみで quantity をキャップする。register は従来通り残枠でキャップ。
   const quantityMax =
-    mode === "register" && selectedRemainingCapacity !== null
-      ? Math.max(1, Math.min(selectedRemainingCapacity, 10))
+    effectiveMode === "register"
+      ? Math.max(1, Math.min(selectedComboRemaining, 10))
       : 10;
-  const canSubmitSelectedSlot = selectedSlot?.status === joinableSlotStatus;
+  const canSubmitSelectedCombo =
+    effectiveMode === "waitlist"
+      ? selectedSlot?.status !== "deadline-passed"
+      : selectedComboRemaining > 0;
 
   return (
     <section aria-label="参加申込" className="space-y-4">
@@ -221,14 +270,18 @@ export function EventRegistrationForm({
       )}
       <div className="space-y-1">
         <Heading level={2}>
-          {mode === "waitlist" ? "キャンセル待ち登録" : "参加申込"}
+          {effectiveMode === "waitlist" ? "キャンセル待ち登録" : "参加申込"}
         </Heading>
-        {mode === "register" && selectedRemainingCapacity !== null ? (
+        {effectiveMode === "register" ? (
           <p className="text-sm text-muted-foreground">
             {showSlotSelector ? "選択中の残り枠" : "残り枠"}:{" "}
             <span className="font-medium text-foreground">
-              {String(selectedRemainingCapacity)} 名
+              {String(selectedComboRemaining)} 名
             </span>
+          </p>
+        ) : mode === "register" ? (
+          <p className="text-sm text-muted-foreground">
+            選択中のチケットは満席です。キャンセル待ちにご登録いただけます。
           </p>
         ) : null}
       </div>
@@ -346,6 +399,21 @@ export function EventRegistrationForm({
               {tickets.map((ticket) => {
                 const id = `ticket-option-${ticket.id}`;
                 const isSelected = selectedTicketId === ticket.id;
+                const ticketConfirmedCount =
+                  selectedSlot != null
+                    ? getTicketSlotConfirmedCount(
+                        ticketSlotCounts,
+                        selectedSlot.id,
+                        ticket.id,
+                      )
+                    : 0;
+                const ticketWaitlistOnly =
+                  selectedSlot != null &&
+                  isPublicTicketSlotWaitlistOnly({
+                    slot: selectedSlot,
+                    ticket: { id: ticket.id, capacity: ticket.capacity },
+                    confirmedCount: ticketConfirmedCount,
+                  });
                 return (
                   <label
                     key={ticket.id}
@@ -371,13 +439,20 @@ export function EventRegistrationForm({
                         {ticket.name}
                       </span>
                     </span>
-                    <span className="text-sm text-accent">
-                      {formatEventPrice(ticket.price)}
-                      {ticket.unitSize > 1 && (
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          / {String(ticket.unitSize)}名
+                    <span className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="text-sm text-accent">
+                        {formatEventPrice(ticket.price)}
+                        {ticket.unitSize > 1 && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            / {String(ticket.unitSize)}名
+                          </span>
+                        )}
+                      </span>
+                      {ticketWaitlistOnly ? (
+                        <span className="text-xs text-muted-foreground">
+                          満席
                         </span>
-                      )}
+                      ) : null}
                     </span>
                   </label>
                 );
@@ -455,7 +530,7 @@ export function EventRegistrationForm({
           ref={turnstileRef}
           siteKey={turnstileSiteKey}
           action={
-            mode === "waitlist"
+            effectiveMode === "waitlist"
               ? TURNSTILE_ACTIONS.event_waitlist_register
               : TURNSTILE_ACTIONS.event_registration
           }
@@ -487,12 +562,12 @@ export function EventRegistrationForm({
 
         <Button
           type="submit"
-          disabled={isPending || !allTermsAgreed || !canSubmitSelectedSlot}
+          disabled={isPending || !allTermsAgreed || !canSubmitSelectedCombo}
           className="w-full sm:w-auto"
         >
           {isPending
             ? "送信中..."
-            : mode === "waitlist"
+            : effectiveMode === "waitlist"
               ? "キャンセル待ちに登録する"
               : "申し込む"}
         </Button>

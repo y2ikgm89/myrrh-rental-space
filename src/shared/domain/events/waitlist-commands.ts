@@ -354,13 +354,51 @@ export async function confirmWaitlistOfferCommand(data: {
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${target.eventId}))`;
 
-      // Capacity 再判定 (offer 中に別の CONFIRMED が入っていないか)
+      // 通常申込 (createEventRegistrationCommand) と同じ event / slot ゲートを
+      // offer 確定時にも再検証する。offer 発行後に下書き化・受付停止・締切超過・
+      // スロット削除が起きても、ここで黙って CONFIRMED 化しない。
+      const event = await tx.event.findFirst({
+        where: {
+          id: target.eventId,
+          deletedAt: null,
+          status: EventStatus.PUBLISHED,
+        },
+        select: {
+          id: true,
+          registrationOpen: true,
+          registrationDeadline: true,
+        },
+      });
+      if (!event)
+        throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+      if (!event.registrationOpen)
+        throw new DomainError(
+          "このイベントは申込受付を終了しています",
+          "VALIDATION",
+        );
+
       const slot = await tx.eventTimeSlot.findUnique({
         where: { id: target.slotId },
-        select: { capacity: true },
+        select: {
+          capacity: true,
+          eventId: true,
+          startAt: true,
+        },
       });
-      if (!slot)
-        throw new DomainError("タイムスロットが見つかりません", "NOT_FOUND");
+      if (!slot || slot.eventId !== target.eventId)
+        throw new DomainError(
+          "指定されたタイムスロットが見つかりません",
+          "NOT_FOUND",
+        );
+
+      const deadline = event.registrationDeadline ?? slot.startAt;
+      if (data.now.getTime() > deadline.getTime())
+        throw new DomainError(
+          "申込締切を過ぎたため受け付けできません",
+          "VALIDATION",
+        );
+
+      // Capacity 再判定 (offer 中に別の CONFIRMED が入っていないか)
 
       const confirmedSum = await tx.eventRegistration.aggregate({
         where: { slotId: target.slotId, status: RegistrationStatus.CONFIRMED },

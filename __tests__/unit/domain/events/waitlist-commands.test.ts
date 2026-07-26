@@ -35,7 +35,18 @@ const mockRegistrationAggregate = mock<
   ) => Promise<{ _sum: { quantity: number | null } }>
 >(() => Promise.resolve({ _sum: { quantity: null } }));
 const mockSlotFindUnique = mock<
-  (args: Record<string, unknown>) => Promise<{ capacity: number } | null>
+  (args: Record<string, unknown>) => Promise<{
+    capacity: number;
+    eventId: string;
+    startAt: Date;
+  } | null>
+>(() => Promise.resolve(null));
+const mockEventFindFirst = mock<
+  (args: Record<string, unknown>) => Promise<{
+    id: string;
+    registrationOpen: boolean;
+    registrationDeadline: Date | null;
+  } | null>
 >(() => Promise.resolve(null));
 // 本番コードは advisory xact lock を tx.$executeRaw で取得する。戻り値（影響行数）は
 // 使わないため 0 を返すだけのスタブで足りる（registration-commands.test.ts と同型）。
@@ -52,6 +63,9 @@ const txStub = {
   },
   eventTimeSlot: {
     findUnique: mockSlotFindUnique,
+  },
+  event: {
+    findFirst: mockEventFindFirst,
   },
 };
 
@@ -174,14 +188,133 @@ describe("offerNextWaitlistEntryCommand", () => {
 describe("confirmWaitlistOfferCommand", () => {
   const NOW = new Date("2026-07-13T10:00:00Z");
   const FUTURE_EXPIRES = new Date("2026-07-13T12:00:00Z");
+  const SLOT_START = new Date("2026-07-20T10:00:00Z");
+
+  function mockOpenEventGates() {
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: true,
+      registrationDeadline: null,
+    });
+    mockSlotFindUnique.mockResolvedValueOnce({
+      capacity: 100,
+      eventId: "event-1",
+      startAt: SLOT_START,
+    });
+  }
 
   beforeEach(() => {
     mockRegistrationFindFirst.mockReset();
     mockRegistrationUpdateMany.mockReset();
     mockRegistrationAggregate.mockReset();
     mockSlotFindUnique.mockReset();
+    mockEventFindFirst.mockReset();
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
+  });
+
+  test("registrationOpen=false → DomainError(VALIDATION)", async () => {
+    mockRegistrationFindFirst.mockResolvedValueOnce({
+      id: "reg-gate",
+      eventId: "event-1",
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      quantity: 1,
+      expiresAt: FUTURE_EXPIRES,
+      ticket: { capacity: null },
+    });
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: false,
+      registrationDeadline: null,
+    });
+
+    await expect(
+      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: "このイベントは申込受付を終了しています",
+    });
+
+    expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("event not published / deleted → DomainError(NOT_FOUND)", async () => {
+    mockRegistrationFindFirst.mockResolvedValueOnce({
+      id: "reg-gate",
+      eventId: "event-1",
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      quantity: 1,
+      expiresAt: FUTURE_EXPIRES,
+      ticket: { capacity: null },
+    });
+    mockEventFindFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "イベントが見つかりません",
+    });
+  });
+
+  test("past registration deadline → DomainError(VALIDATION)", async () => {
+    mockRegistrationFindFirst.mockResolvedValueOnce({
+      id: "reg-gate",
+      eventId: "event-1",
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      quantity: 1,
+      expiresAt: FUTURE_EXPIRES,
+      ticket: { capacity: null },
+    });
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: true,
+      registrationDeadline: new Date("2026-07-01T00:00:00Z"),
+    });
+    mockSlotFindUnique.mockResolvedValueOnce({
+      capacity: 100,
+      eventId: "event-1",
+      startAt: SLOT_START,
+    });
+
+    await expect(
+      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: "申込締切を過ぎたため受け付けできません",
+    });
+  });
+
+  test("slot missing or wrong event → DomainError(NOT_FOUND)", async () => {
+    mockRegistrationFindFirst.mockResolvedValueOnce({
+      id: "reg-gate",
+      eventId: "event-1",
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      quantity: 1,
+      expiresAt: FUTURE_EXPIRES,
+      ticket: { capacity: null },
+    });
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: true,
+      registrationDeadline: null,
+    });
+    mockSlotFindUnique.mockResolvedValueOnce({
+      capacity: 100,
+      eventId: "event-other",
+      startAt: SLOT_START,
+    });
+
+    await expect(
+      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "指定されたタイムスロットが見つかりません",
+    });
   });
 
   test("ticket.capacity != null かつ満員 → EXPIRED に遷移し CONFIRMED claim は呼ばれない", async () => {
@@ -194,8 +327,8 @@ describe("confirmWaitlistOfferCommand", () => {
       expiresAt: FUTURE_EXPIRES,
       ticket: { capacity: 5 },
     });
+    mockOpenEventGates();
     // スロット全体には空きがある（100 capacity - 10 confirmed = 90 remaining）。
-    mockSlotFindUnique.mockResolvedValueOnce({ capacity: 100 });
     mockRegistrationAggregate.mockResolvedValueOnce({
       _sum: { quantity: 10 },
     }); // 1回目 = スロット全体の confirmedSum
@@ -242,7 +375,7 @@ describe("confirmWaitlistOfferCommand", () => {
       expiresAt: FUTURE_EXPIRES,
       ticket: { capacity: 5 },
     });
-    mockSlotFindUnique.mockResolvedValueOnce({ capacity: 100 });
+    mockOpenEventGates();
     mockRegistrationAggregate.mockResolvedValueOnce({
       _sum: { quantity: 10 },
     }); // スロット
@@ -277,7 +410,7 @@ describe("confirmWaitlistOfferCommand", () => {
       expiresAt: FUTURE_EXPIRES,
       ticket: { capacity: null },
     });
-    mockSlotFindUnique.mockResolvedValueOnce({ capacity: 100 });
+    mockOpenEventGates();
     mockRegistrationAggregate.mockResolvedValueOnce({
       _sum: { quantity: 10 },
     }); // スロットのみ
@@ -303,7 +436,16 @@ describe("confirmWaitlistOfferCommand", () => {
       expiresAt: FUTURE_EXPIRES,
       ticket: { capacity: 5 },
     });
-    mockSlotFindUnique.mockResolvedValueOnce({ capacity: 10 });
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: true,
+      registrationDeadline: null,
+    });
+    mockSlotFindUnique.mockResolvedValueOnce({
+      capacity: 10,
+      eventId: "event-1",
+      startAt: SLOT_START,
+    });
     mockRegistrationAggregate.mockResolvedValueOnce({
       _sum: { quantity: 10 },
     }); // スロット満員 (remaining 0)
