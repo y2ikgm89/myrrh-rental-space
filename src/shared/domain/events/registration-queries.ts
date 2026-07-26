@@ -206,6 +206,9 @@ export async function getEventRegistrationForGuestCancel(
 /**
  * ゲスト向け薄いイベント申込ステータスページ (`/events/registrations/status`) 用。
  * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ *
+ * `meetingUrl` は `status === CONFIRMED` のときのみ返す（calendar クエリと同型の
+ * fail-closed）。WAITLISTED / CANCELLED 等へ参加 URL を漏らさない。
  */
 export async function getEventRegistrationForGuestStatus(
   registrationId: string,
@@ -237,7 +240,6 @@ export async function getEventRegistrationForGuestStatus(
 
   const venueDisplay = formatEventVenueDisplay({
     format: registration.event.format,
-    meetingUrl: registration.event.meetingUrl,
     location: registration.event.location,
     space: registration.event.space,
     addressDetail: registration.event.addressDetail,
@@ -257,7 +259,10 @@ export async function getEventRegistrationForGuestStatus(
     event: {
       title: registration.event.title,
       format: registration.event.format,
-      meetingUrl: registration.event.meetingUrl,
+      meetingUrl:
+        registration.status === RegistrationStatus.CONFIRMED
+          ? registration.event.meetingUrl
+          : null,
       location: venueDisplay.primary,
       locationSecondary: venueDisplay.secondary,
     },
@@ -336,35 +341,26 @@ export async function getEventRegistrationDetailsForEmail(
 /**
  * `/claim/event-registration` の要約表示用の軽量クエリ。
  *
- * `getEventRegistrationDetailsForEmail` は `{startTime, endTime, location,
- * capacity, confirmedCount}` のみを返し `event.title` を含まないため、
- * claim ページ用に専用のクエリを設ける（イベント名表示が必須のため）。
+ * claim UI はイベント名・開催日のみ表示する。参加 URL (`meetingUrl`) は
+ * claim 経路では開示しない（会員 mypage / ゲスト status の CONFIRMED 経路へ）。
  */
 export async function getEventRegistrationForClaim(
   registrationId: string,
 ): Promise<{
   readonly eventTitle: string;
   readonly startTime: Date;
-  // Phase B.1: claim ページ (会員紐付け後の /mypage/events 遷移前に一瞬表示)
-  // でもオンライン開催の参加 URL 案内を出せるよう select しておく
-  // （meetingProvider は表示判定に不要なため含めない — isEventVirtualAccessible
-  // は format のみで判定できる）。
-  readonly format: EventFormatValue;
-  readonly meetingUrl: string | null;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
     where: { id: registrationId, event: { deletedAt: null } },
     select: {
       slot: { select: { startAt: true } },
-      event: { select: { title: true, format: true, meetingUrl: true } },
+      event: { select: { title: true } },
     },
   });
   if (!registration) return null;
   return {
     eventTitle: registration.event.title,
     startTime: registration.slot.startAt,
-    format: registration.event.format,
-    meetingUrl: registration.event.meetingUrl,
   };
 }
 

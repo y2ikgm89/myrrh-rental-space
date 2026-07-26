@@ -3051,6 +3051,67 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("meetingUrl query SSoT (fail-closed)", () => {
+    test("getEventRegistrationForClaim は meetingUrl を select/return しない", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/registration-queries.ts"),
+        "utf8",
+      );
+      const start = content.indexOf(
+        "export async function getEventRegistrationForClaim",
+      );
+      const end = content.indexOf(
+        "const CUSTOMER_EVENT_REGISTRATION_SELECT",
+        start,
+      );
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      const fn = content.slice(start, end);
+      expect(
+        fn,
+        "claim クエリは参加 URL を開示しない（eventTitle/startTime のみ）",
+      ).not.toMatch(/meetingUrl/);
+    });
+
+    test("getEventRegistrationForGuestStatus は CONFIRMED のときのみ meetingUrl を返す", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/registration-queries.ts"),
+        "utf8",
+      );
+      const start = content.indexOf(
+        "export async function getEventRegistrationForGuestStatus",
+      );
+      const end = content.indexOf(
+        "export async function getEventRegistrationDetailsForEmail",
+        start,
+      );
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      const fn = content.slice(start, end);
+      expect(fn).toMatch(
+        /registration\.status === RegistrationStatus\.CONFIRMED/,
+      );
+      expect(fn).toMatch(
+        /registration\.status === RegistrationStatus\.CONFIRMED\s*\?\s*registration\.event\.meetingUrl\s*:\s*null/,
+      );
+    });
+
+    test("public-queries は meetingUrl/meetingProvider を公開 select に載せない", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/public-queries.ts"),
+        "utf8",
+      );
+      expect(
+        content,
+        "公開キャッシュ DTO に meetingUrl を select しない",
+      ).not.toMatch(/meetingUrl:\s*true/);
+      expect(
+        content,
+        "公開キャッシュ DTO に meetingProvider を select しない",
+      ).not.toMatch(/meetingProvider:\s*true/);
+    });
+  });
+
   describe("Phase B.2: rrule package import restriction", () => {
     test("rrule import は domain layer + admin form utils のみ許可", async () => {
       const files = collectSourceFiles(SRC_ROOT);

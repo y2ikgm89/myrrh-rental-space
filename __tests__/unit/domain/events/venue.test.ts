@@ -8,7 +8,6 @@ describe("formatEventVenueDisplay", () => {
   test("OFFLINE: primary = 物理会場、secondary = null", () => {
     const result = formatEventVenueDisplay({
       format: "OFFLINE",
-      meetingUrl: null,
       location: { name: "渋谷 A" },
       space: { name: "301 号室" },
       addressDetail: null,
@@ -20,7 +19,6 @@ describe("formatEventVenueDisplay", () => {
   test("ONLINE: primary = 'オンライン開催'、secondary = null", () => {
     const result = formatEventVenueDisplay({
       format: "ONLINE",
-      meetingUrl: "https://meet.google.com/x",
       location: null,
       space: null,
       addressDetail: null,
@@ -32,7 +30,6 @@ describe("formatEventVenueDisplay", () => {
   test("HYBRID: primary = 物理会場、secondary = 'オンラインでも参加可'", () => {
     const result = formatEventVenueDisplay({
       format: "HYBRID",
-      meetingUrl: "https://meet.google.com/x",
       location: { name: "渋谷 A" },
       space: { name: "301 号室" },
       addressDetail: null,
