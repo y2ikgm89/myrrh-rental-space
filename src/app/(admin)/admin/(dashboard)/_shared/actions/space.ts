@@ -11,6 +11,7 @@ import {
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
@@ -124,6 +125,7 @@ export async function createSpaceAction(
         resource: "space",
         action: "create",
         execute: async () => {
+          await assertAdminFeatureCreateAllowed("spaces");
           const commandInput = buildSpaceCommandInput(data);
           return createSpaceCommand(commandInput);
         },
@@ -244,7 +246,10 @@ export async function duplicateSpace(
   return executeAdminMutationResult({
     resource: "space",
     action: "create",
-    execute: async () => duplicateSpaceCommand(validated.data),
+    execute: async () => {
+      await assertAdminFeatureCreateAllowed("spaces");
+      return duplicateSpaceCommand(validated.data);
+    },
     afterSuccess: (data) => {
       revalidateSpaces([{ id: data.id, slug: data.slug }]);
     },

@@ -178,6 +178,7 @@ function toSettingsData(
     layoutUpdatedAt: layout.updatedAt,
     sidebarUpdatedAt: sidebar.updatedAt,
     notificationUpdatedAt: notification.updatedAt,
+    featuresUpdatedAt: features.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,
@@ -606,7 +607,16 @@ export async function getEventImportSettings(): Promise<{
   return { eventImportEnabled: settings.eventImportEnabled };
 }
 
-export async function getDataRetentionSettings(): Promise<DataRetentionConfig> {
+export type DataRetentionSettingsData = {
+  config: DataRetentionConfig;
+  /** SettingsDataRetention.updatedAt — 保持月数設定の optimistic concurrency 用 */
+  dataRetentionUpdatedAt: Date;
+};
+
+export async function getDataRetentionSettings(): Promise<DataRetentionSettingsData> {
   const row = await ensureSettingsDataRetention();
-  return parseDataRetentionConfig(row.dataRetention);
+  return {
+    config: parseDataRetentionConfig(row.dataRetention),
+    dataRetentionUpdatedAt: row.updatedAt,
+  };
 }

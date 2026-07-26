@@ -5,6 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import {
   apiRateLimiter,
@@ -96,6 +97,7 @@ export async function createReservationAction(
         resource: "reservation",
         action: "create",
         execute: async (user) => {
+          await assertAdminFeatureCreateAllowed("reservation");
           mutationPayload = await createAdminReservationCommand(
             omitUndefined({
               spaceId: data.spaceId,

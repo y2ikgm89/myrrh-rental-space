@@ -3,6 +3,7 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import {
   postCategorySchema,
   postTagSchema,
@@ -56,8 +57,10 @@ export async function createPostCategory(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () =>
-      categoryCommands.createPostCategory(omitUndefined(parsed.data)),
+    execute: async () => {
+      await assertAdminFeatureCreateAllowed("posts");
+      return categoryCommands.createPostCategory(omitUndefined(parsed.data));
+    },
     afterSuccess: async () => {
       await invalidatePostCategoryCaches();
       await purgePostArchive();
@@ -120,7 +123,10 @@ export async function createPostTag(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => tagCommands.createPostTag(omitUndefined(parsed.data)),
+    execute: async () => {
+      await assertAdminFeatureCreateAllowed("posts");
+      return tagCommands.createPostTag(omitUndefined(parsed.data));
+    },
     afterSuccess: async () => {
       await invalidatePostTagCaches();
     },
@@ -170,15 +176,17 @@ export async function createPostCategoryAction(
     const result = await executeAdminMutationResult({
       resource: "post",
       action: "create",
-      execute: async () =>
-        categoryCommands.createPostCategory({
+      execute: async () => {
+        await assertAdminFeatureCreateAllowed("posts");
+        return categoryCommands.createPostCategory({
           name: data.name,
           slug: data.slug,
           description: data.description ? data.description : null,
           metaTitle: data.metaTitle ? data.metaTitle : null,
           metaDescription: data.metaDescription ? data.metaDescription : null,
           ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
-        }),
+        });
+      },
       afterSuccess: async () => {
         await invalidatePostCategoryCaches();
         await purgePostArchive();
@@ -205,15 +213,17 @@ export async function createPostTagAction(
     const result = await executeAdminMutationResult({
       resource: "post",
       action: "create",
-      execute: async () =>
-        tagCommands.createPostTag({
+      execute: async () => {
+        await assertAdminFeatureCreateAllowed("posts");
+        return tagCommands.createPostTag({
           name: data.name,
           slug: data.slug,
           description: data.description ? data.description : null,
           metaTitle: data.metaTitle ? data.metaTitle : null,
           metaDescription: data.metaDescription ? data.metaDescription : null,
           ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
-        }),
+        });
+      },
       afterSuccess: async () => {
         await invalidatePostTagCaches();
       },

@@ -8,12 +8,14 @@ import {
 } from "@/shared/lib/errors/server";
 import {
   isLinkCardContentType,
+  filterEnabledLinkCardContentTypes,
   type LinkCardContentType,
 } from "@/shared/domain/link-cards/content-types";
 import {
   resolveLinkCardsByType,
   type ResolvedLinkCard,
 } from "@/shared/domain/link-cards/resolve-queries";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
 
 /**
  * Lexical 本文中の内部リンクカードプレースホルダーを公開描画時に解決する SSoT。
@@ -91,10 +93,16 @@ export async function resolveInternalLinkCards(html: string): Promise<string> {
       return html.replace(PLACEHOLDER_RE, "");
     }
 
-    // 2. 種別ごとにバッチ解決
+    const enabledFeatures = await getEnabledFeatures();
+    const enabledTypes = new Set(
+      filterEnabledLinkCardContentTypes(enabledFeatures),
+    );
+
+    // 2. 種別ごとにバッチ解決（Feature Module OFF の種別は DB fetch 前に skip）
     const resolved = new Map<string, ResolvedLinkCard>();
     await Promise.all(
       Array.from(byType, async ([contentType, idSet]) => {
+        if (!enabledTypes.has(contentType)) return;
         const cards = await resolveLinkCardsByType(
           contentType,
           Array.from(idSet),

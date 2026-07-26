@@ -3,9 +3,11 @@
  *
  * Sanity / Stripe Capabilities 流の declarative composition pattern。
  * 11 module の ON/OFF を切り替えると公開ページ 404 / 公開ナビ prune /
- * sitemap prune / SectionRenderer skip / cron 早期 return に伝播する。
- * 管理画面サイドバー・コマンドパレットは prune せず、OFF 時は「非公開」badge +
- * tooltip で公開 404 であることを示す。既存データの確認・編集は可、新規作成は不可。
+ * sitemap prune / SectionRenderer skip / 機能紐づき cron の早期 return に伝播する。
+ * 決済・予約まわりの一部 cron（pending-reservation-expire、receipt-backfill 等）は
+ * 引き続き実行される場合がある。管理画面サイドバー・コマンドパレットは prune
+ * せず、OFF 時は「非公開」badge + tooltip で公開 404 であることを示す。
+ * 既存データの一覧・編集は可、新規作成はページとアクションでブロック。
  */
 
 import type { Metadata } from "next";
@@ -73,8 +75,12 @@ export default async function FeaturesSettingsPage() {
       <FeatureModulesForm
         initialValues={initialValues}
         moduleDefs={moduleDefs}
+        featuresUpdatedAt={settings.featuresUpdatedAt}
       />
-      <DataRetentionSettingsForm initialValues={dataRetention} />
+      <DataRetentionSettingsForm
+        initialValues={dataRetention.config}
+        dataRetentionUpdatedAt={dataRetention.dataRetentionUpdatedAt}
+      />
     </SettingsLayout>
   );
 }

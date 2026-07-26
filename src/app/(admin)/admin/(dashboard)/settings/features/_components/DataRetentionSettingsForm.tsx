@@ -66,10 +66,14 @@ const RETENTION_FIELDS = [
 
 interface DataRetentionSettingsFormProps {
   readonly initialValues: DataRetentionConfig;
+  readonly dataRetentionUpdatedAt: string | Date;
 }
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 export function DataRetentionSettingsForm({
   initialValues,
+  dataRetentionUpdatedAt,
 }: DataRetentionSettingsFormProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
@@ -85,15 +89,29 @@ export function DataRetentionSettingsForm({
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
-    defaultValue: Object.fromEntries(
-      RETENTION_FIELDS.map(({ key }) => [key, String(initialValues[key])]),
-    ),
+    defaultValue: {
+      ...Object.fromEntries(
+        RETENTION_FIELDS.map(({ key }) => [key, String(initialValues[key])]),
+      ),
+      expectedUpdatedAt: dataRetentionUpdatedAt,
+    },
   });
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("データ保持ポリシーを保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -113,6 +131,9 @@ export function DataRetentionSettingsForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <input
+            {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+          />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {RETENTION_FIELDS.map(({ key, label, hint }) => {
               const field = fields[key] as FieldMetadata<string> | undefined;

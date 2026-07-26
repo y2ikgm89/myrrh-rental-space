@@ -5,7 +5,7 @@
  *
  * Sanity / Stripe Capabilities 流の declarative composition pattern。
  * 11 module の boolean を一括 PATCH。`requires` 依存元が OFF の module は
- * Switch を disabled 化（保存値は実 UI 入力を保持し、runtime 解決で fail-closed）。
+ * Switch を disabled 化し、実行時 OFF として送信する（保存値が true でも UI は OFF 表示）。
  *
  * clean break 移行。11 module の boolean Switch は `useInputControl` + hidden
  * input で "on" / "" sync、`z.boolean()` で `parseWithZod` 自動 coerce。
@@ -14,7 +14,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { FieldMetadata } from "@conform-to/react";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { updateFeatureModulesSettings } from "@/admin/actions/settings";
@@ -25,9 +25,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import type { FeatureModule } from "@/shared/lib/features/registry";
 
 interface ModuleDef {
@@ -41,13 +43,18 @@ interface ModuleDef {
 interface FeatureModulesFormProps {
   readonly initialValues: Record<FeatureModule, boolean>;
   readonly moduleDefs: readonly ModuleDef[];
+  readonly featuresUpdatedAt: string | Date;
 }
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 export function FeatureModulesForm({
   initialValues,
   moduleDefs,
+  featuresUpdatedAt,
 }: FeatureModulesFormProps) {
   const router = useRouter();
+  const initialDataRetentionEnabled = initialValues["data-retention"] === true;
   const [lastResult, action, isPending] = useActionState(
     updateFeatureModulesSettings,
     undefined,
@@ -61,18 +68,33 @@ export function FeatureModulesForm({
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
-    defaultValue: Object.fromEntries(
-      moduleDefs.map((mod): [string, string] => [
-        mod.id,
-        initialValues[mod.id] ? "on" : "",
-      ]),
-    ),
+    defaultValue: {
+      ...Object.fromEntries(
+        moduleDefs.map((mod): [string, string] => [
+          mod.id,
+          initialValues[mod.id] ? "on" : "",
+        ]),
+      ),
+      confirmDataRetentionEnable: "",
+      expectedUpdatedAt: featuresUpdatedAt,
+    },
   });
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("機能モジュールを保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -85,18 +107,23 @@ export function FeatureModulesForm({
           <CardTitle>機能モジュール ON/OFF</CardTitle>
           <CardDescription>
             OFF にした機能は公開ページが 404
-            になり、公開サイトのナビゲーション・サイトマップ・関連 cron
-            ジョブから自動除外されます。管理画面のサイドバー・コマンドパレットは
-            残り、「非公開」badge と tooltip で公開面 OFF
-            を示します（確認・編集は可、新規作成は不可）。
-            データベース上の既存データは保持されます。
+            になり、公開サイトのナビゲーション・サイトマップ・セクションから除外されます。機能に紐づく
+            cron はスキップされますが、決済・予約まわりの一部 cron（例:
+            pending-reservation-expire、receipt-backfill）は引き続き実行される場合があります。管理画面のサイドバー・コマンドパレットは残り、「非公開」badge
+            と tooltip で公開面 OFF
+            を示します（一覧・編集は可、新規作成はページとアクションでブロック）。データベース上の既存データは保持されます。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <input
+            {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+          />
           {moduleDefs.map((mod) => {
             const field = fields[mod.id];
             if (!field) return null;
-            const depsMet = areModuleDepsMet(mod.requires, fields);
+            const depsMet = mod.requires.every(
+              (req) => fields[req]?.value === "on",
+            );
             return (
               <ModuleSwitchRow
                 key={mod.id}
@@ -108,6 +135,14 @@ export function FeatureModulesForm({
               />
             );
           })}
+          {fields["data-retention"] && fields.confirmDataRetentionEnable && (
+            <DataRetentionEnableConfirmSection
+              dataRetentionField={fields["data-retention"]}
+              confirmField={fields.confirmDataRetentionEnable}
+              initialDataRetentionEnabled={initialDataRetentionEnabled}
+              isPending={isPending}
+            />
+          )}
           {formErrors && formErrors.length > 0 && (
             <div
               id={form.errorId}
@@ -131,17 +166,77 @@ export function FeatureModulesForm({
 }
 
 /**
+ * data-retention OFF→ON 時の確認 UI（FM-RET-01）。
+ */
+function DataRetentionEnableConfirmSection({
+  dataRetentionField,
+  confirmField,
+  initialDataRetentionEnabled,
+  isPending,
+}: {
+  readonly dataRetentionField: FieldMetadata<unknown>;
+  readonly confirmField: FieldMetadata<unknown>;
+  readonly initialDataRetentionEnabled: boolean;
+  readonly isPending: boolean;
+}) {
+  const dataRetentionControl = useTypedInputControl(dataRetentionField);
+  const confirmControl = useTypedInputControl(confirmField);
+  const requiresConfirm =
+    !initialDataRetentionEnabled && dataRetentionControl.value === "on";
+
+  if (!requiresConfirm) {
+    return null;
+  }
+
+  return (
+    <div
+      role="alert"
+      className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3"
+    >
+      <p className="text-sm font-medium text-destructive">
+        データ保持ポリシーの自動適用を有効にしようとしています
+      </p>
+      <p className="text-sm text-muted-foreground">
+        次回以降の毎日 cron 実行で、保持月数設定を過ぎた Session / 認証トークン
+        / ログイン試行記録 / 予約ゲスト情報 / 問い合わせ /
+        非アクティブ顧客の個人情報が不可逆的に削除または匿名化される可能性があります。業務ルールと保持月数を確認してから有効化してください。
+      </p>
+      <label
+        htmlFor={confirmField.id}
+        className="flex cursor-pointer items-start gap-2 text-sm"
+      >
+        <Checkbox
+          id={confirmField.id}
+          checked={confirmControl.value === "on"}
+          onCheckedChange={(checked) =>
+            confirmControl.change(checked ? "on" : "")
+          }
+          onBlur={confirmControl.blur}
+          disabled={isPending}
+        />
+        <span>
+          上記のリスクを理解し、データ保持ポリシーの自動適用を有効にすることに同意します
+        </span>
+      </label>
+      <input
+        type="hidden"
+        name={confirmField.name}
+        value={confirmControl.value ?? ""}
+      />
+      {confirmField.errors && confirmField.errors.length > 0 && (
+        <p id={confirmField.errorId} className="text-xs text-destructive">
+          {confirmField.errors.join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
  * 1 module 分の Switch 行 — `useInputControl` で per-module state を持つ。
  * useInputControl は Hook のため map() 内で直接呼べず、sub-component に
  * 切り出して各行で個別に呼ぶ canonical pattern。
  */
-function areModuleDepsMet(
-  requires: readonly FeatureModule[],
-  fields: Record<string, FieldMetadata<string> | undefined>,
-): boolean {
-  return requires.every((req) => fields[req]?.value === "on");
-}
-
 function ModuleSwitchRow({
   mod,
   moduleDefs,
@@ -151,14 +246,16 @@ function ModuleSwitchRow({
 }: {
   readonly mod: ModuleDef;
   readonly moduleDefs: readonly ModuleDef[];
-  readonly field: FieldMetadata<string>;
+  readonly field: FieldMetadata<unknown>;
   readonly isPending: boolean;
   readonly depsMet: boolean;
 }) {
-  const control = useInputControl(field);
+  const control = useTypedInputControl(field);
   const isOn = control.value === "on";
   const disabledDueToDeps = !depsMet;
   const switchDisabled = isPending || disabledDueToDeps;
+  const effectiveOn = depsMet && isOn;
+  const submittedValue = depsMet ? (control.value ?? "") : "";
 
   return (
     <div className="flex items-start justify-between rounded-lg border p-4">
@@ -184,9 +281,8 @@ function ModuleSwitchRow({
         )}
         {disabledDueToDeps && (
           <p className="text-xs text-muted-foreground">
-            依存機能が OFF
-            のため操作できません。表示は保存値のままですが、実行時は OFF
-            として扱われます。
+            依存機能が OFF のため操作できません。保存値が ON のままでも実行時は
+            OFF として扱われ、保存時も OFF として送信されます。
           </p>
         )}
         {field.errors && (
@@ -197,12 +293,12 @@ function ModuleSwitchRow({
       </div>
       <Switch
         id={field.id}
-        checked={isOn}
+        checked={effectiveOn}
         onCheckedChange={(checked) => control.change(checked ? "on" : "")}
         onBlur={control.blur}
         disabled={switchDisabled}
       />
-      <input type="hidden" name={field.name} value={control.value ?? ""} />
+      <input type="hidden" name={field.name} value={submittedValue} />
     </div>
   );
 }

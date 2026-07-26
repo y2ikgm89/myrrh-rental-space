@@ -3,6 +3,7 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { isMutationError } from "@/shared/lib/mutation-result";
 // CACHE-INVALIDATE-04: SPACES は CDN `space-v1` にマップされ /spaces / /spaces/[slug]
 // に emit されるため、raw updateTag では edge の stale HTML が残る。
@@ -47,8 +48,10 @@ export async function createSpaceBlockedDate(
         resource: "space",
         action: "update",
         resourceId: spaceId,
-        execute: async (user) =>
-          createBlockedDateCommand(input, { id: user.id }),
+        execute: async (user) => {
+          await assertAdminFeatureCreateAllowed("spaces");
+          return createBlockedDateCommand(input, { id: user.id });
+        },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },

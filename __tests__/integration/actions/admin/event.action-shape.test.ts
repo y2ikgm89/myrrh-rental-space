@@ -19,6 +19,21 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mock(() => Promise.resolve(true)),
+  requireFeatureEnabled: mock(() => Promise.resolve()),
+  assertAdminFeatureCreateAllowed: mock(() => Promise.resolve()),
+  ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE:
+    "この機能は公開面で無効のため新規作成できません",
+}));
+
+mock.module("next/cache", () => ({
+  updateTag: mock(() => {}),
+  revalidateTag: mock(() => {}),
+  cacheLife: mock(() => {}),
+  cacheTag: mock(() => {}),
+}));
+
 const mockDeleteEventCommand = mock<(id: string) => Promise<void>>(() =>
   Promise.resolve(),
 );

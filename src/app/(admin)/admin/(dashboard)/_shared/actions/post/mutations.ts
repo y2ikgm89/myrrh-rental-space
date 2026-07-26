@@ -2,6 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import {
   createPostSchema,
   updatePostBodySchema,
@@ -48,6 +49,7 @@ export async function createPost(
     resource: "post",
     action: "create",
     execute: async (user) => {
+      await assertAdminFeatureCreateAllowed("posts");
       const result = await postCommands.createPost(
         omitUndefined({
           ...parsed.data,

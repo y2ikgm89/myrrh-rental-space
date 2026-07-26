@@ -4,7 +4,6 @@ import { expireStalePendingReservationsCommand } from "@/shared/domain/reservati
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import {
   logError,
@@ -25,7 +24,9 @@ import {
  *
  * 実際の判定・状態遷移・監査ログ書込は
  * `expireStalePendingReservationsCommand` に集約 (server-only ドメイン層)。
- * cron 経路自体は auth / feature gate / cache invalidation / エラーハンドリングのみ。
+ * cron 経路自体は auth / cache invalidation / エラーハンドリングのみ。
+ * reservation Feature Module OFF でも実行する (fail-safe settlement — payment の
+ * receipt-backfill と同型。PENDING 占有は inventory 枯渇を招くため feature gate しない)。
  */
 export async function GET(request: Request) {
   try {
@@ -37,10 +38,6 @@ export async function GET(request: Request) {
     });
     if (authorizationResult) {
       return authorizationResult;
-    }
-
-    if (!(await isFeatureEnabled("reservation"))) {
-      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
     }
 
     const result = await expireStalePendingReservationsCommand();

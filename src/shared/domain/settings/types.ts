@@ -59,6 +59,8 @@ export type SettingsData = {
   sidebarUpdatedAt: Date;
   /** SettingsNotification.updatedAt — メール/通知設定の optimistic concurrency 用 */
   notificationUpdatedAt: Date;
+  /** SettingsFeatures.updatedAt — Feature Modules の optimistic concurrency 用 */
+  featuresUpdatedAt: Date;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;

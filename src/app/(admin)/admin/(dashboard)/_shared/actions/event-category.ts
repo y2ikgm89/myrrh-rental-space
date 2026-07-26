@@ -4,6 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -49,7 +50,10 @@ export async function createEventCategory(
       const result = await executeAdminMutationResult({
         resource: "eventCategory",
         action: "create",
-        execute: async () => createEventCategoryCommand(data),
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("events");
+          return createEventCategoryCommand(data);
+        },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
         },

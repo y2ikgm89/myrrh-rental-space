@@ -24,6 +24,14 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 const { resolveLinkCardsByType } =
   await import("@/shared/domain/link-cards/resolve-queries");
 
@@ -33,6 +41,8 @@ describe("resolveLinkCardsByType", () => {
     mockNewsFindMany.mockReset();
     mockSpaceFindMany.mockReset();
     mockEventFindMany.mockReset();
+    mockIsFeatureEnabled.mockReset();
+    mockIsFeatureEnabled.mockResolvedValue(true);
     mockPostFindMany.mockResolvedValue([]);
     mockNewsFindMany.mockResolvedValue([]);
     mockSpaceFindMany.mockResolvedValue([]);
@@ -43,6 +53,15 @@ describe("resolveLinkCardsByType", () => {
     const map = await resolveLinkCardsByType("post", []);
     expect(map.size).toBe(0);
     expect(mockPostFindMany).not.toHaveBeenCalled();
+    expect(mockIsFeatureEnabled).not.toHaveBeenCalled();
+  });
+
+  test("対応 Feature Module が OFF なら DB を叩かず空 Map を返す", async () => {
+    mockIsFeatureEnabled.mockResolvedValueOnce(false);
+    const map = await resolveLinkCardsByType("event", ["e1"]);
+    expect(map.size).toBe(0);
+    expect(mockIsFeatureEnabled).toHaveBeenCalledWith("events");
+    expect(mockEventFindMany).not.toHaveBeenCalled();
   });
 
   test("post: publicPostsWhere フィルタ + permalink で href を構築", async () => {

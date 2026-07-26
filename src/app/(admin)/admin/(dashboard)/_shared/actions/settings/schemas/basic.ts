@@ -187,6 +187,13 @@ export const featureModulesSettingsSchema = z.object({
   reviews: switchBoolean(),
   payment: switchBoolean(),
   "data-retention": switchBoolean(),
+  /** OFF→ON 時のみ server が必須とする（UI は data-retention ON 時に表示） */
+  confirmDataRetentionEnable: switchBoolean(),
+  expectedUpdatedAt: z.iso
+    .datetime({
+      error: "更新バージョンが不正です。ページを再読み込みしてください",
+    })
+    .or(z.date()),
 });
 
 export type FeatureModulesSettingsInput = z.infer<
@@ -210,6 +217,11 @@ export const dataRetentionSettingsSchema = z.object({
   reservationGuestMonths: retentionMonthsField("予約ゲスト情報保持月数"),
   inquiryMonths: retentionMonthsField("問い合わせ保持月数"),
   customerInactiveMonths: retentionMonthsField("非アクティブ顧客保持月数"),
+  expectedUpdatedAt: z.iso
+    .datetime({
+      error: "更新バージョンが不正です。ページを再読み込みしてください",
+    })
+    .or(z.date()),
 });
 
 export type DataRetentionSettingsInput = z.infer<

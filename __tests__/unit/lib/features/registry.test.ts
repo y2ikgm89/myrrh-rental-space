@@ -11,6 +11,7 @@ import {
   parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
+import { featureModulesSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 
 describe("FEATURE_MODULES_LIST", () => {
@@ -28,6 +29,16 @@ describe("FEATURE_MODULES_LIST", () => {
     const moduleKeys: string[] = Object.keys(FEATURE_MODULES);
     const listValues: string[] = [...FEATURE_MODULES_LIST];
     expect(moduleKeys.sort()).toEqual(listValues.sort());
+  });
+
+  test("featureModulesSettingsSchema の module keys が FEATURE_MODULES_LIST と完全一致", () => {
+    const schemaModuleKeys = Object.keys(featureModulesSettingsSchema.shape)
+      .filter(
+        (key) =>
+          key !== "confirmDataRetentionEnable" && key !== "expectedUpdatedAt",
+      )
+      .sort();
+    expect(schemaModuleKeys).toEqual([...FEATURE_MODULES_LIST].sort());
   });
 });
 

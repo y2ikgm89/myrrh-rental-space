@@ -51,7 +51,13 @@ export interface FeatureModuleDef {
   readonly pageSlugs: readonly string[];
   /** AddSectionDialog から除外する section type */
   readonly sectionTypes: readonly string[];
-  /** PAGE_TEMPLATES から除外する template id */
+  /**
+   * PAGE_TEMPLATES から除外する template id（metadata-only）。
+   * 現状 Add Page ダイアログは registry.templates を参照せず、admin UI 側で
+   * ハードコード selector を持つ。runtime filter / getFeatureFilterContext には
+   * 含めない (check.ts WIRE-04)。将来 PAGE_TEMPLATES selector を registry 駆動に
+   * する際の予約フィールド。
+   */
   readonly templates: readonly string[];
   /** 早期 return 対象の cron route path */
   readonly cronPaths: readonly string[];
@@ -78,10 +84,9 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["reservation"],
     sectionTypes: ["reservation-form"],
     templates: ["reservation"],
-    cronPaths: [
-      "/api/cron/reservation-reminder",
-      "/api/cron/pending-reservation-expire",
-    ],
+    // pending-reservation-expire は fail-safe settlement (PENDING 在庫占有防止) のため
+    // feature OFF でも実行。cronPaths には載せない (payment receipt-backfill と同型)。
+    cronPaths: ["/api/cron/reservation-reminder"],
   },
   events: {
     id: "events",
@@ -175,8 +180,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: [],
     sectionTypes: [],
     templates: [],
-    // receipt-backfill は credentials gate（feature OFF でも orphan reconcile 継続）のため
-    // cronPaths には載せない。feature-gated cron のみここに列挙する。
+    // receipt-backfill (`/api/cron/receipt-backfill`) は credentials gate（feature OFF でも
+    // orphan reconcile 継続）のため cronPaths には載せない。feature-gated cron のみここに列挙する。
+    // admin nav badge: command palette `settings-billing` は featureModule: "payment" で
+    // payment OFF 時に「非公開」表示（Stripe credentials 設定は admin から継続可）。
     cronPaths: [],
   },
   "data-retention": {

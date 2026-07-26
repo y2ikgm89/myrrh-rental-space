@@ -12,6 +12,11 @@ const mockSendEventAdminNotification = mock(
 );
 const mockCreateNotificationCommand = mock(async () => undefined);
 const mockInvalidateEventCaches = mock(() => undefined);
+// createAdminProxyRegistration は assertAdminFeatureCreateAllowed("events") を呼ぶ
+// （feature-modules clean-break の admin create gate）。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 
 mock.module("next/cache", () => ({
   cacheLife: mock(() => undefined),
@@ -25,6 +30,11 @@ mock.module("next/headers", () => ({
 }));
 
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+  assertAdminFeatureCreateAllowed: mock(async () => undefined),
+}));
 
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: (
@@ -124,6 +134,8 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
     mockCreateNotificationCommand.mockReset();
     mockCreateNotificationCommand.mockResolvedValue(undefined);
     mockInvalidateEventCaches.mockReset();
+    mockIsFeatureEnabled.mockReset();
+    mockIsFeatureEnabled.mockResolvedValue(true);
     firedPromises.length = 0;
   });
 

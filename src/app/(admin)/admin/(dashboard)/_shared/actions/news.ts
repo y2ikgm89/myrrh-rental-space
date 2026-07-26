@@ -2,6 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import {
   createNews as createNewsCommand,
   deleteNews as deleteNewsCommand,
@@ -73,6 +74,7 @@ export async function createNews(
     resource: "news",
     action: "create",
     execute: async () => {
+      await assertAdminFeatureCreateAllowed("news");
       const result = await createNewsCommand(
         omitUndefined({
           ...parsed.data,

@@ -16,6 +16,14 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mock(() => Promise.resolve(true)),
+  requireFeatureEnabled: mock(() => Promise.resolve()),
+  assertAdminFeatureCreateAllowed: mock(() => Promise.resolve()),
+  ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE:
+    "この機能は公開面で無効のため新規作成できません",
+}));
+
 const mockCreateLocation = mock<
   (data: unknown) => Promise<{ id: string; slug: string }>
 >(() => Promise.resolve({ id: "loc-new", slug: "honkan" }));

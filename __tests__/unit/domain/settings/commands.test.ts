@@ -9,6 +9,19 @@ type UpdateManyArgs = {
 const mockSettingsFeaturesUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsFeaturesFindUnique = mock<
+  () => Promise<{ featureModules: unknown } | null>
+>(() =>
+  Promise.resolve({
+    featureModules: { "data-retention": false, spaces: true },
+  }),
+);
+const mockSettingsFeaturesCreate = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsFeaturesUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsSeoUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -63,6 +76,15 @@ const mockAssertAllowlistedNotificationStaffIds = mock<
 const mockSettingsDataRetentionUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsDataRetentionFindUnique = mock<
+  () => Promise<{ id: string } | null>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsDataRetentionCreate = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsDataRetentionUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 
 const txClient = {
   settingsOrganization: {
@@ -89,6 +111,12 @@ const txClient = {
   settingsSidebar: {
     updateMany: mockSettingsSidebarUpdateMany,
   },
+  settingsFeatures: {
+    updateMany: mockSettingsFeaturesUpdateMany,
+  },
+  settingsDataRetention: {
+    updateMany: mockSettingsDataRetentionUpdateMany,
+  },
 };
 
 const mockTransaction = mock(
@@ -114,6 +142,9 @@ mock.module("@/shared/db/prisma", () => ({
     $transaction: mockTransaction,
     settingsFeatures: {
       upsert: mockSettingsFeaturesUpsert,
+      findUnique: mockSettingsFeaturesFindUnique,
+      create: mockSettingsFeaturesCreate,
+      updateMany: mockSettingsFeaturesUpdateMany,
     },
     settingsSeo: {
       upsert: mockSettingsSeoUpsert,
@@ -144,6 +175,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsDataRetention: {
       upsert: mockSettingsDataRetentionUpsert,
+      findUnique: mockSettingsDataRetentionFindUnique,
+      create: mockSettingsDataRetentionCreate,
+      updateMany: mockSettingsDataRetentionUpdateMany,
     },
     settingsSidebar: {
       updateMany: mockSettingsSidebarUpdateMany,
@@ -200,6 +234,8 @@ import {
   updateLayoutSettings,
   updateContactInfo,
   updateDataRetentionSettings,
+  updateFeatureModulesCommand,
+  DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,
   SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
 } from "@/shared/domain/settings/commands";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -1100,16 +1136,110 @@ describe("updateNotificationSettings", () => {
 });
 
 // =============================================================================
+// updateFeatureModulesCommand
+// =============================================================================
+
+const ALL_MODULES_ON = {
+  spaces: true,
+  reservation: true,
+  events: true,
+  posts: true,
+  news: true,
+  faq: true,
+  access: true,
+  contact: true,
+  reviews: true,
+  payment: true,
+  "data-retention": true,
+  confirmDataRetentionEnable: true,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
+} as const;
+
+describe("updateFeatureModulesCommand", () => {
+  beforeEach(() => {
+    mockTransaction.mockClear();
+    mockSettingsFeaturesFindUnique.mockReset();
+    mockSettingsFeaturesFindUnique.mockResolvedValue({
+      featureModules: { "data-retention": false, spaces: true },
+    });
+    mockSettingsFeaturesCreate.mockReset();
+    mockSettingsFeaturesCreate.mockResolvedValue({ id: "singleton" });
+    mockSettingsFeaturesUpdateMany.mockReset();
+    mockSettingsFeaturesUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  test("data-retention OFF→ON で confirm なしは VALIDATION", async () => {
+    await expect(
+      updateFeatureModulesCommand({
+        ...ALL_MODULES_ON,
+        confirmDataRetentionEnable: false,
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,
+    });
+    expect(mockSettingsFeaturesUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("data-retention OFF→ON で confirm ありは CAS updateMany 成功", async () => {
+    await updateFeatureModulesCommand(ALL_MODULES_ON);
+
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockSettingsFeaturesUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+        data: expect.objectContaining({
+          featureModules: expect.objectContaining({
+            "data-retention": true,
+          }),
+        }),
+      }),
+    );
+  });
+
+  test("data-retention が stored ON のままなら confirm 不要", async () => {
+    mockSettingsFeaturesFindUnique.mockResolvedValueOnce({
+      featureModules: { "data-retention": true, spaces: true },
+    });
+
+    await updateFeatureModulesCommand({
+      ...ALL_MODULES_ON,
+      confirmDataRetentionEnable: false,
+    });
+
+    expect(mockSettingsFeaturesUpdateMany).toHaveBeenCalledTimes(1);
+  });
+
+  test("updateMany count=0 なら DomainError CONFLICT", async () => {
+    mockSettingsFeaturesUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      updateFeatureModulesCommand(ALL_MODULES_ON),
+    ).rejects.toMatchObject({
+      message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+      code: "CONFLICT",
+    });
+  });
+});
+
+// =============================================================================
 // updateDataRetentionSettings
 // =============================================================================
 
 describe("updateDataRetentionSettings", () => {
   beforeEach(() => {
+    mockTransaction.mockClear();
+    mockSettingsDataRetentionFindUnique.mockReset();
+    mockSettingsDataRetentionFindUnique.mockResolvedValue({ id: "singleton" });
+    mockSettingsDataRetentionCreate.mockReset();
+    mockSettingsDataRetentionCreate.mockResolvedValue({ id: "singleton" });
+    mockSettingsDataRetentionUpdateMany.mockReset();
+    mockSettingsDataRetentionUpdateMany.mockResolvedValue({ count: 1 });
     mockSettingsDataRetentionUpsert.mockReset();
     mockSettingsDataRetentionUpsert.mockResolvedValue({ id: "singleton" });
   });
 
-  test("保持月数 config を settingsDataRetention に upsert する", async () => {
+  test("保持月数 config を CAS updateMany で保存する", async () => {
     const config = {
       sessionMonths: 6,
       verificationMonths: 6,
@@ -1117,18 +1247,45 @@ describe("updateDataRetentionSettings", () => {
       reservationGuestMonths: 12,
       inquiryMonths: 36,
       customerInactiveMonths: 84,
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     };
 
     await updateDataRetentionSettings(config);
 
-    expect(mockSettingsDataRetentionUpsert).toHaveBeenCalledTimes(1);
-    expect(mockSettingsDataRetentionUpsert).toHaveBeenCalledWith(
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockSettingsDataRetentionUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "singleton" },
-        update: expect.objectContaining({
-          dataRetention: config,
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+        data: expect.objectContaining({
+          dataRetention: {
+            sessionMonths: 6,
+            verificationMonths: 6,
+            loginAttemptMonths: 6,
+            reservationGuestMonths: 12,
+            inquiryMonths: 36,
+            customerInactiveMonths: 84,
+          },
         }),
       }),
     );
+  });
+
+  test("updateMany count=0 なら DomainError CONFLICT", async () => {
+    mockSettingsDataRetentionUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      updateDataRetentionSettings({
+        sessionMonths: 6,
+        verificationMonths: 6,
+        loginAttemptMonths: 6,
+        reservationGuestMonths: 12,
+        inquiryMonths: 36,
+        customerInactiveMonths: 84,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
+    ).rejects.toMatchObject({
+      message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+      code: "CONFLICT",
+    });
   });
 });

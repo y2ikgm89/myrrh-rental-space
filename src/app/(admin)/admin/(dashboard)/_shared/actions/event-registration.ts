@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import {
   adminCancelEventRegistrationCommand,
   createAdminProxyRegistrationCommand,
@@ -364,7 +365,7 @@ export async function createWalkInRegistration(
     action: "update",
     resourceId: parsed.data.eventId,
     execute: async () => {
-      // DomainError は executeAdminMutationResult が外側で MutationError に変換する
+      await assertAdminFeatureCreateAllowed("events");
       const result = await createWalkInRegistrationCommand({
         eventId: parsed.data.eventId,
         slotId: parsed.data.slotId,
@@ -455,7 +456,7 @@ export async function createAdminProxyRegistration(
     action: "update",
     resourceId: parsed.data.eventId,
     execute: async () => {
-      // DomainError は executeAdminMutationResult が外側で MutationError に変換する
+      await assertAdminFeatureCreateAllowed("events");
       const result = await createAdminProxyRegistrationCommand({
         eventId: parsed.data.eventId,
         slotId: parsed.data.slotId,

@@ -22,6 +22,8 @@ const {
   getEnabledFeatures,
   isFeatureEnabled,
   requireFeatureEnabled,
+  assertAdminFeatureCreateAllowed,
+  ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE,
   isUrlDisabled,
 } = await import("@/shared/lib/features/check");
 
@@ -180,6 +182,37 @@ describe("requireFeatureEnabled", () => {
     await expect(requireFeatureEnabled("reservation")).rejects.toThrow(
       "notFound called",
     );
+  });
+});
+
+describe("assertAdminFeatureCreateAllowed", () => {
+  test("有効 module では何もしない", async () => {
+    setStored({ posts: true });
+    await assertAdminFeatureCreateAllowed("posts");
+  });
+
+  test("無効 module では FORBIDDEN DomainError を throw する", async () => {
+    setStored({ posts: false });
+    await expect(
+      assertAdminFeatureCreateAllowed("posts"),
+    ).rejects.toMatchObject({
+      name: "DomainError",
+      code: "FORBIDDEN",
+      message: ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE,
+    });
+  });
+
+  test("依存先が OFF の場合も FORBIDDEN を throw する", async () => {
+    setStored({
+      spaces: false,
+      reservation: true,
+    });
+    await expect(
+      assertAdminFeatureCreateAllowed("reservation"),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE,
+    });
   });
 });
 
