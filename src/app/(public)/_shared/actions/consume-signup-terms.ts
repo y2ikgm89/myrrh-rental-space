@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { hasTermsAgreementRecorded } from "@/shared/domain/terms/queries";
 import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
@@ -62,6 +63,7 @@ export async function consumeSignupTermsAction(_input: {
   // 現在のセッションから customer を再解決（client 入力は信用しない）
   const { user } = await verifyCustomerSession();
   const { customer } = await ensureCustomerLinked(user);
+  await assertCustomerActive(customer.id);
 
   // Idempotency: 同じ customer + LOGIN_SIGNUP scope + 要求 termsIds がすべて
   // 揃って記録済みなら cookie は「消費済みだが削除が persist しなかった

@@ -45,7 +45,34 @@ mock.module("@/shared/lib/async-utils", () => ({
     mockFireAndForget(...args),
 }));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    ADMIN_APP_URL: "http://localhost:3000",
+    BETTER_AUTH_URL: undefined,
+  },
+}));
+
+mock.module("@/shared/lib/constants/urls", () => ({
+  getAppUrl: () => "http://localhost:3000",
+}));
+
 const { GET, POST } = await import("@/app/(admin)/admin/api/media/route");
+
+const ADMIN_ORIGIN = "http://localhost:3000";
+
+function adminMediaPostRequest(
+  url: string,
+  init?: Omit<RequestInit, "method">,
+): Request {
+  return new Request(url, {
+    ...init,
+    method: "POST",
+    headers: {
+      origin: ADMIN_ORIGIN,
+      ...(init?.headers ?? {}),
+    },
+  });
+}
 
 describe("admin media route", () => {
   beforeEach(() => {
@@ -109,8 +136,7 @@ describe("admin media route", () => {
     formData.append("tags", JSON.stringify(["hero"]));
 
     const response = await POST(
-      new Request("http://localhost/admin/api/media", {
-        method: "POST",
+      adminMediaPostRequest("http://localhost/admin/api/media", {
         body: formData,
       }),
     );
@@ -147,8 +173,7 @@ describe("admin media route", () => {
     );
 
     const response = await POST(
-      new Request("http://localhost/admin/api/media", {
-        method: "POST",
+      adminMediaPostRequest("http://localhost/admin/api/media", {
         body: formData,
       }),
     );
@@ -159,6 +184,21 @@ describe("admin media route", () => {
     expect(mockFinalizeMediaMutation).not.toHaveBeenCalled();
   });
 
+  test("POST は same-origin 不一致を 403 で拒否する", async () => {
+    const response = await POST(
+      new Request("http://localhost/admin/api/media", {
+        method: "POST",
+        headers: { origin: "https://evil.example.com" },
+        body: new FormData(),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({ error: "Forbidden" });
+    expect(mockCheckPermission).not.toHaveBeenCalled();
+  });
+
   test("POST の権限エラーは { error } で返す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: false,
@@ -166,8 +206,7 @@ describe("admin media route", () => {
     });
 
     const response = await POST(
-      new Request("http://localhost/admin/api/media", {
-        method: "POST",
+      adminMediaPostRequest("http://localhost/admin/api/media", {
         body: new FormData(),
       }),
     );

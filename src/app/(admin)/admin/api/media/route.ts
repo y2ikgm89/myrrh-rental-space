@@ -36,6 +36,7 @@ import {
   jsonValidationError,
 } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { isSameAdminOrigin } from "@/shared/lib/http/assert-same-origin";
 
 function domainErrorStatus(code: DomainErrorCode): number | null {
   switch (code) {
@@ -105,6 +106,10 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    if (!isSameAdminOrigin(request.headers)) {
+      return jsonError("Forbidden", 403);
+    }
+
     const auth = await checkPermission("media", "create", request.headers);
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));

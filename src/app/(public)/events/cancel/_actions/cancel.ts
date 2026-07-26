@@ -31,6 +31,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
+import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 
 const EVENT_CANCEL_TOKEN_COOKIE_NAME = "event-cancel-token";
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
@@ -62,6 +63,9 @@ export async function cancelGuestEventRegistrationAction(
   expectedRegistrationId: string,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) {
     logError(new Error("Guest event cancel rate-limit hit (form/IP)"), {
