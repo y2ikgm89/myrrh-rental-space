@@ -97,13 +97,17 @@ const GUEST_INQUIRY: InquiryRow = {
   customer: null,
 };
 
-const mockFindMany = mock<() => Promise<InquiryRow[]>>(() =>
-  Promise.resolve([MEMBER_INQUIRY, GUEST_INQUIRY]),
-);
-mock.module("@/shared/db/prisma", () => ({
-  prisma: { inquiry: { findMany: mockFindMany } },
-  basePrisma: {},
-}));
+function toStatusNotificationData(row: InquiryRow) {
+  return {
+    id: row.id,
+    receiptNumber: row.receiptNumber,
+    name: row.name,
+    email: row.email,
+    subject: row.subject,
+    updatedAt: row.updatedAt,
+    customerUserId: row.customer?.userId ?? undefined,
+  };
+}
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
@@ -128,10 +132,6 @@ beforeEach(() => {
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockInquiryReplyEmail.mockClear();
   mockInquiryStatusNotificationEmail.mockClear();
-  mockFindMany.mockReset();
-  mockFindMany.mockImplementation(() =>
-    Promise.resolve([MEMBER_INQUIRY, GUEST_INQUIRY]),
-  );
 });
 
 describe("sendInquiryReplyEmail() の memberInquiryUrl 出し分け", () => {
@@ -155,7 +155,10 @@ describe("sendInquiryReplyEmail() の memberInquiryUrl 出し分け", () => {
 describe("sendInquiryStatusNotificationToAll() の memberInquiryUrl 出し分け", () => {
   test("customer.userId ありの問い合わせだけ memberInquiryUrl を含める", async () => {
     await sendInquiryStatusNotificationToAll(
-      ["inquiry-member-01", "inquiry-guest-01"],
+      [
+        toStatusNotificationData(MEMBER_INQUIRY),
+        toStatusNotificationData(GUEST_INQUIRY),
+      ],
       "RESOLVED",
     );
 

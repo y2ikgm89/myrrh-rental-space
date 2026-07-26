@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockExecuteAdminMutationResult = mock();
 const mockSendEventBroadcast = mock();
+const mockGetEventBroadcastPayload = mock();
 const mockCheckActionRateLimit = mock();
 const mockRateLimiterCheck = mock();
 
@@ -29,6 +30,12 @@ mock.module("@/shared/lib/email/event-emails", () => ({
     mockSendEventBroadcast(...args),
   buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
   buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
+}));
+
+mock.module("@/shared/domain/events/email-queries", () => ({
+  getEventBroadcastPayload: (
+    ...args: Parameters<typeof mockGetEventBroadcastPayload>
+  ) => mockGetEventBroadcastPayload(...args),
 }));
 
 mock.module("@/shared/lib/action-helpers", () => ({
@@ -110,8 +117,18 @@ describe("broadcastEventAction", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockReset();
     mockSendEventBroadcast.mockReset();
+    mockGetEventBroadcastPayload.mockReset();
     mockCheckActionRateLimit.mockReset();
     mockRateLimiterCheck.mockReset();
+
+    mockGetEventBroadcastPayload.mockResolvedValue({
+      eventId: VALID_EVENT_ID,
+      title: "Test Event",
+      slug: "test-event",
+      recipients: [],
+      skipped: 0,
+      customerIdByEmail: new Map(),
+    });
 
     // Default: rate limit passes.
     mockCheckActionRateLimit.mockResolvedValue({ success: true });
@@ -183,7 +200,7 @@ describe("broadcastEventAction", () => {
     );
 
     expect(mockSendEventBroadcast).toHaveBeenCalledWith(
-      VALID_EVENT_ID,
+      expect.objectContaining({ eventId: VALID_EVENT_ID }),
       expect.objectContaining({
         subject: "件名",
         body: "本文",

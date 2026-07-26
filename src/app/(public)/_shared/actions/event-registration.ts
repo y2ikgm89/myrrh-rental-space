@@ -36,6 +36,10 @@ import {
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
 import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
+import {
+  computeWaitlistPositionForRegistration,
+  getWaitlistEmailRegistration,
+} from "@/shared/domain/events/waitlist-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -403,13 +407,19 @@ export async function registerForEventWaitlist(
             // 追加漏れを compile-time に検知させる。eventTitle / capacity /
             // confirmedCount は getEventRegistrationDetailsForEmail 経由で load
             // (registerForEvent path と対称)。
-            const event = await getEventRegistrationDetailsForEmail(
-              result.registration.id,
-            );
+            const [event, registration] = await Promise.all([
+              getEventRegistrationDetailsForEmail(result.registration.id),
+              getWaitlistEmailRegistration(result.registration.id),
+            ]);
+            if (!registration) return;
+
+            const position =
+              await computeWaitlistPositionForRegistration(registration);
 
             await Promise.all([
               sendEventWaitlistRegistered({
-                registrationId: result.registration.id,
+                registration,
+                position,
                 to: data.email,
               }),
               event

@@ -10,6 +10,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { eventBroadcastRateLimiter } from "@/shared/lib/rate-limit";
 import { sendEventBroadcast } from "@/shared/lib/email/event-emails";
+import { getEventBroadcastPayload } from "@/shared/domain/events/email-queries";
 import { DomainError } from "@/shared/domain/domain-error";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 
@@ -99,16 +100,15 @@ export async function broadcastEventAction(
         resourceId: validId,
         execute: async () => {
           const broadcastNonce = randomUUID();
-          const sendResult = await sendEventBroadcast(validId, {
+          const payload = await getEventBroadcastPayload(validId);
+          if (!payload) {
+            throw new DomainError("対象イベントが見つかりません", "NOT_FOUND");
+          }
+          const sendResult = await sendEventBroadcast(payload, {
             subject: data.subject,
             body: data.body,
             broadcastNonce,
           });
-          if (!sendResult.ok) {
-            // event が見つからない (deletedAt など) 場合は DomainError で NOT_FOUND 相当。
-            // executeAdminMutationResult が MutationError に変換する。
-            throw new DomainError("対象イベントが見つかりません", "NOT_FOUND");
-          }
           return {
             sent: sendResult.sent,
             skipped: sendResult.skipped,

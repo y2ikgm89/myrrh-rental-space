@@ -13,7 +13,6 @@
  * → CANCEL ICS は元々 REQUEST ICS を発行済みの CONFIRMED のみに添付する。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
@@ -76,45 +75,6 @@ const mockGetCalendarEmailSettings = mock<
   }),
 );
 
-type EventRow = {
-  title: string;
-  format: EventFormatValue;
-  meetingUrl: string | null;
-  updatedAt: Date;
-  addressDetail: string | null;
-  location: { name: string } | null;
-  space: { name: string } | null;
-  registrations: {
-    id: string;
-    name: string;
-    email: string | null;
-    quantity: number;
-    icsSequence: number;
-    customerId: string | null;
-    status: (typeof RegistrationStatus)[keyof typeof RegistrationStatus];
-    slot: { startAt: Date; endAt: Date };
-  }[];
-};
-
-// findFirst の第 1 引数 (Prisma FindFirstArgs 相当) を型付きで捕捉し、
-// M10 の where.status.in の中身を検証できるようにする。
-type FindFirstArgs = {
-  where?: unknown;
-  select?: {
-    registrations?: {
-      where?: {
-        status?: {
-          in?: (typeof RegistrationStatus)[keyof typeof RegistrationStatus][];
-        };
-      };
-    };
-  };
-};
-
-const mockFindFirst = mock<(args: FindFirstArgs) => Promise<EventRow | null>>(
-  () => Promise.resolve(null),
-);
-
 mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
@@ -127,10 +87,6 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
 mock.module("@/shared/domain/settings/queries/organization", () => ({
   getIcalOrganizer: () =>
     Promise.resolve({ name: "Org", email: "org@example.com" }),
-}));
-mock.module("@/shared/db/prisma", () => ({
-  prisma: { event: { findFirst: mockFindFirst } },
-  basePrisma: {},
 }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
@@ -192,7 +148,6 @@ beforeEach(() => {
     icalAttachmentEnabled: true,
     addToCalendarLinksEnabled: false,
   });
-  mockFindFirst.mockReset();
 });
 
 // ===========================================================================
@@ -234,87 +189,58 @@ describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
 // CONFIRMED のみに添付
 // ===========================================================================
 describe("M10: sendEventCancelledToAllParticipants() の waitlist 網羅と ICS 出し分け", () => {
-  test("recipients query は CONFIRMED / WAITLISTED_OFFERED / WAITLISTED を含む", async () => {
-    mockFindFirst.mockImplementation(() =>
-      Promise.resolve({
-        title: "夏祭りワークショップ",
-        format: EventFormat.OFFLINE,
-        meetingUrl: null,
-        updatedAt: new Date("2099-01-01T00:00:00Z"),
-        addressDetail: null,
-        location: null,
-        space: { name: "本館ホール" },
-        registrations: [],
-      }),
-    );
-
-    await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
-
-    const findFirstArgs = mockFindFirst.mock.calls.at(-1)?.[0];
-    const statusIn = findFirstArgs?.select?.registrations?.where?.status?.in;
-    expect(statusIn).toBeDefined();
-    expect(statusIn).toContain(RegistrationStatus.CONFIRMED);
-    expect(statusIn).toContain(RegistrationStatus.WAITLISTED_OFFERED);
-    expect(statusIn).toContain(RegistrationStatus.WAITLISTED);
-    expect(statusIn).not.toContain(RegistrationStatus.CANCELLED);
-    expect(statusIn).not.toContain(RegistrationStatus.EXPIRED);
-  });
-
   test("CANCEL ICS 添付は CONFIRMED のみ。WAITLISTED / WAITLISTED_OFFERED には無添付", async () => {
-    mockFindFirst.mockImplementation(() =>
-      Promise.resolve({
-        title: "夏祭りワークショップ",
-        format: EventFormat.OFFLINE,
-        meetingUrl: null,
-        updatedAt: new Date("2099-01-01T00:00:00Z"),
-        addressDetail: null,
-        location: null,
-        space: { name: "本館ホール" },
-        registrations: [
-          {
-            id: "reg-confirmed",
-            name: "確定 太郎",
-            email: "confirmed@example.com",
-            quantity: 1,
-            icsSequence: 0,
-            customerId: null,
-            status: RegistrationStatus.CONFIRMED,
-            slot: {
-              startAt: new Date("2099-01-01T01:00:00Z"),
-              endAt: new Date("2099-01-01T03:00:00Z"),
-            },
+    const payload = {
+      eventId: "evt-1",
+      title: "夏祭りワークショップ",
+      format: EventFormat.OFFLINE,
+      meetingUrl: null,
+      updatedAt: new Date("2099-01-01T00:00:00Z"),
+      venueDisplay: "本館ホール",
+      registrations: [
+        {
+          id: "reg-confirmed",
+          name: "確定 太郎",
+          email: "confirmed@example.com",
+          quantity: 1,
+          icsSequence: 0,
+          customerId: null,
+          status: RegistrationStatus.CONFIRMED,
+          slot: {
+            startAt: new Date("2099-01-01T01:00:00Z"),
+            endAt: new Date("2099-01-01T03:00:00Z"),
           },
-          {
-            id: "reg-offered",
-            name: "オファー中 花子",
-            email: "offered@example.com",
-            quantity: 1,
-            icsSequence: 0,
-            customerId: null,
-            status: RegistrationStatus.WAITLISTED_OFFERED,
-            slot: {
-              startAt: new Date("2099-01-01T01:00:00Z"),
-              endAt: new Date("2099-01-01T03:00:00Z"),
-            },
+        },
+        {
+          id: "reg-offered",
+          name: "オファー中 花子",
+          email: "offered@example.com",
+          quantity: 1,
+          icsSequence: 0,
+          customerId: null,
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+          slot: {
+            startAt: new Date("2099-01-01T01:00:00Z"),
+            endAt: new Date("2099-01-01T03:00:00Z"),
           },
-          {
-            id: "reg-waitlisted",
-            name: "待機 次郎",
-            email: "waitlisted@example.com",
-            quantity: 1,
-            icsSequence: 0,
-            customerId: null,
-            status: RegistrationStatus.WAITLISTED,
-            slot: {
-              startAt: new Date("2099-01-01T01:00:00Z"),
-              endAt: new Date("2099-01-01T03:00:00Z"),
-            },
+        },
+        {
+          id: "reg-waitlisted",
+          name: "待機 次郎",
+          email: "waitlisted@example.com",
+          quantity: 1,
+          icsSequence: 0,
+          customerId: null,
+          status: RegistrationStatus.WAITLISTED,
+          slot: {
+            startAt: new Date("2099-01-01T01:00:00Z"),
+            endAt: new Date("2099-01-01T03:00:00Z"),
           },
-        ],
-      }),
-    );
+        },
+      ],
+    };
 
-    await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
+    await sendEventCancelledToAllParticipants(payload, "講師都合のため中止");
 
     const calls = mockSendEmail.mock.calls.map((c) => c[0]);
     expect(calls.length).toBe(3);
