@@ -205,7 +205,7 @@ export async function getEventRegistrationForGuestCancel(
 
 /**
  * ゲスト向け薄いイベント申込ステータスページ (`/events/registrations/status`) 用。
- * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ * status token 検証後にのみ呼ぶ。member-ownership は page.tsx 側で強制する。
  *
  * `meetingUrl` は `status === CONFIRMED` のときのみ返す（calendar クエリと同型の
  * fail-closed）。WAITLISTED / CANCELLED 等へ参加 URL を漏らさない。

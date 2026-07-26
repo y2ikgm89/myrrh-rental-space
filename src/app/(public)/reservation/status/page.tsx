@@ -19,7 +19,12 @@ import {
   shouldShowGuestClaimLink,
 } from "@/shared/domain/reservations/guest-status-view";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import {
+  checkGuestStatusMemberOwnership,
+  GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
+} from "@/shared/lib/guest-status-member-ownership";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -37,6 +42,7 @@ import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calen
 import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
 import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
 import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
+import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
 import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import {
   publicQueryRateLimiter,
@@ -103,6 +109,20 @@ export default async function GuestReservationStatusPage({
 
   if (!reservation) {
     return <InvalidLinkView />;
+  }
+
+  const sessionCustomer = user ? await getCustomerByUserId(user.id) : null;
+  const ownership = checkGuestStatusMemberOwnership({
+    sessionCustomerId: sessionCustomer?.id ?? null,
+    resourceCustomerId: reservation.customerId,
+  });
+  if (ownership.kind === "mismatch") {
+    return (
+      <GuestStatusMemberOwnershipMismatchView
+        message={GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE}
+        mypageHref="/mypage"
+      />
+    );
   }
 
   const now = reservationDeadlineNow();
