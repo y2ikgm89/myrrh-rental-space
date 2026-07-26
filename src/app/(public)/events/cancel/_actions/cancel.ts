@@ -7,7 +7,7 @@ import { cancelEventRegistrationByToken } from "@/shared/domain/events/registrat
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import {
   createMutationError,
@@ -65,35 +65,47 @@ export async function cancelGuestEventRegistrationAction(
     perEntityRateLimitError:
       "この申込に対するキャンセル試行が多すぎます。しばらく時間をおいてから再度お試しください",
     guardMemberOwnership: async (entityId, sessionUserId) => {
+      // EventRegistration.customerId は nullable（未 claim のゲスト申込は null）。
+      // null の間は ownership mismatch を適用しない。
       const registration = await getEventRegistrationForGuestCancel(entityId);
       if (!registration) {
         return { ok: false, error: "申込が見つかりません" };
       }
-      const customer = await getCustomerByUserId(sessionUserId);
-      if (
-        customer &&
-        registration.customerId !== null &&
-        customer.id !== registration.customerId
-      ) {
-        return {
-          ok: false,
-          error:
-            "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
-        };
-      }
-      if (customer) {
-        try {
-          await assertCustomerActive(customer.id);
-        } catch (error) {
-          if (error instanceof DomainError) {
-            return { ok: false, error: error.message };
-          }
-          throw error;
+
+      let expectedCustomerId: string | null | undefined;
+      let sessionCustomerId: string | null = null;
+      if (sessionUserId) {
+        const customer = await getCustomerByUserId(sessionUserId);
+        if (
+          customer &&
+          registration.customerId !== null &&
+          customer.id !== registration.customerId
+        ) {
+          return {
+            ok: false,
+            error:
+              "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
+          };
         }
+        sessionCustomerId = customer?.id ?? null;
+        expectedCustomerId = registration.customerId;
       }
+
+      try {
+        await assertGuestTokenCustomerGates({
+          resourceCustomerId: registration.customerId,
+          sessionCustomerId,
+        });
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+
       return {
         ok: true,
-        memberContext: { expectedCustomerId: registration.customerId },
+        memberContext: { expectedCustomerId },
       };
     },
     execute: async ({ entityId, token, sessionUserId, memberContext }) => {

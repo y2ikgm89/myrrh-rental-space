@@ -78,6 +78,9 @@ mock.module("@/shared/domain/customers/queries", () => ({
 mock.module("@/shared/domain/customers/guard", () => ({
   assertCustomerActive: mock(() => Promise.resolve(undefined)),
 }));
+mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+  assertGuestTokenCustomerGates: mock(() => Promise.resolve(undefined)),
+}));
 
 const mockGetCustomerSession = mock<
   () => Promise<{ user: { id: string } } | null>
@@ -141,7 +144,8 @@ describe("revealReservationPasscodesAction", () => {
       { kind: "status-token", reservationId: VALID_UUID },
       expect.objectContaining({ reveal: true }),
     );
-    expect(mockGetReservationCustomerId).not.toHaveBeenCalled();
+    // 純ゲストでも紐付き customerId の active/BLACKLIST gate のため解決する
+    expect(mockGetReservationCustomerId).toHaveBeenCalledWith(VALID_UUID);
     expect(mockReservationRateLimitCheck).toHaveBeenCalledWith(VALID_UUID);
   });
 

@@ -9,7 +9,7 @@ import { cancelReservationByToken } from "@/shared/domain/reservations/customer-
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import {
@@ -90,24 +90,32 @@ export async function cancelGuestReservationAction(
       if (!reservation) {
         return { ok: false, error: "予約が見つかりません" };
       }
-      const customer = await getCustomerByUserId(sessionUserId);
-      if (customer && customer.id !== reservation.customerId) {
-        return {
-          ok: false,
-          error:
-            "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
-        };
-      }
-      if (customer) {
-        try {
-          await assertCustomerActive(customer.id);
-        } catch (error) {
-          if (error instanceof DomainError) {
-            return { ok: false, error: error.message };
-          }
-          throw error;
+
+      let sessionCustomerId: string | null = null;
+      if (sessionUserId) {
+        const customer = await getCustomerByUserId(sessionUserId);
+        if (customer && customer.id !== reservation.customerId) {
+          return {
+            ok: false,
+            error:
+              "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
+          };
         }
+        sessionCustomerId = customer?.id ?? null;
       }
+
+      try {
+        await assertGuestTokenCustomerGates({
+          resourceCustomerId: reservation.customerId,
+          sessionCustomerId,
+        });
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+
       return { ok: true, memberContext: undefined };
     },
     execute: async ({ entityId, token, sessionUserId }) => {

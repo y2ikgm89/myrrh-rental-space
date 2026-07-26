@@ -14,8 +14,9 @@ services — the public storefront and the admin dashboard — split by the
   (git-ignored)
 - **Better Auth** (customers) / **Cloud Run IAP** (admin only)
 - Tests: **`bun test`** through `scripts/run-tests.ts` + **Playwright**
-- Deploy: **Cloud Build → Artifact Registry → Cloud Run**, `git push main` →
-  production
+- Deploy: **Cloud Build → Artifact Registry → Cloud Run**, manual only via
+  `workflow_dispatch` on `.github/workflows/deploy-production.yml`
+  (`main` merge does **not** deploy Cloud Run)
 
 ## Getting started
 

@@ -57,9 +57,13 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
   afterEntityIdMatch?: (
     entityId: string,
   ) => Promise<MutationResult<null> | undefined>;
+  /**
+   * member-ownership + linked-customer gates。
+   * session の有無に関わらず呼ぶ（resource 側 active/BLACKLIST は常時強制）。
+   */
   guardMemberOwnership?: (
     entityId: string,
-    sessionUserId: string,
+    sessionUserId: string | null,
   ) => Promise<GuestTokenMemberGuardResult<TMemberContext>>;
   execute: (input: {
     entityId: string;
@@ -80,7 +84,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
  *  5. entity id 形式検証 + 表示中 entity との突合（stale-tab 対策）
  *  6. optional afterEntityIdMatch（理由など）
  *  7. per-entity rate-limit
- *  8. optional member-ownership（inject）
+ *  8. optional member-ownership / guest-token customer gates（inject）
  *  9. execute() — domain mutation + side effects
  */
 export async function runGuestTokenMutation<TMemberContext = void>(
@@ -168,17 +172,6 @@ export async function runGuestTokenMutation<TMemberContext = void>(
   const sessionUserId = session?.user.id ?? null;
   let memberContext = undefined as TMemberContext;
 
-  const runMemberGuard = async (): Promise<MutationResult<null> | null> => {
-    if (!sessionUserId || !config.guardMemberOwnership) return null;
-    const guard = await config.guardMemberOwnership(
-      parsedId.data,
-      sessionUserId,
-    );
-    if (!guard.ok) return createMutationError(guard.error);
-    memberContext = guard.memberContext;
-    return null;
-  };
-
   const runPerEntityRateLimit =
     async (): Promise<MutationResult<null> | null> => {
       const perEntity = await config.perEntityRateLimiter.check(parsedId.data);
@@ -204,8 +197,14 @@ export async function runGuestTokenMutation<TMemberContext = void>(
   const perEntityError = await runPerEntityRateLimit();
   if (perEntityError) return perEntityError;
 
-  const memberError = await runMemberGuard();
-  if (memberError) return memberError;
+  if (config.guardMemberOwnership) {
+    const guard = await config.guardMemberOwnership(
+      parsedId.data,
+      sessionUserId,
+    );
+    if (!guard.ok) return createMutationError(guard.error);
+    memberContext = guard.memberContext;
+  }
 
   return config.execute({
     entityId: parsedId.data,
