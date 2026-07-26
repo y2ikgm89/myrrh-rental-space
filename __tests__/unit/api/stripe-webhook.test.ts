@@ -86,7 +86,7 @@ const mockClaimReservationAsPaid = mock<
   } | null>
 >();
 const mockSavePaymentIntentId =
-  mock<(id: string, piId: string) => Promise<void>>();
+  mock<(id: string, piId: string, sessionId: string) => Promise<void>>();
 const mockClaimReservationAsFailed =
   mock<(id: string, sessionId: string) => Promise<boolean>>();
 const mockFindReservationByPaymentIntent =
@@ -227,8 +227,8 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     id: string,
     data: { stripePaymentIntentId: string | null },
   ) => mockClaimReservationAsPaid(id, data),
-  savePaymentIntentId: (id: string, piId: string) =>
-    mockSavePaymentIntentId(id, piId),
+  savePaymentIntentId: (id: string, piId: string, sessionId: string) =>
+    mockSavePaymentIntentId(id, piId, sessionId),
   claimReservationAsFailed: (id: string, sessionId: string) =>
     mockClaimReservationAsFailed(id, sessionId),
   findReservationByPaymentIntent: (piId: string) =>
@@ -873,7 +873,11 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.received).toBe(true);
 
     // PI IDのみ保存
-    expect(mockSavePaymentIntentId).toHaveBeenCalledWith("res-123", "pi-456");
+    expect(mockSavePaymentIntentId).toHaveBeenCalledWith(
+      "res-123",
+      "pi-456",
+      "cs_test_123",
+    );
 
     // fulfill は呼ばれない
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
