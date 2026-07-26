@@ -33,12 +33,7 @@ await installErrorsServerMock({
       return opts.fallback;
     }
   },
-  // architecture gate: partial errors/server mock must export criticalFetch
-  criticalFetch: async <T>(opts: { fetch: () => Promise<T> }): Promise<T> =>
-    opts.fetch(),
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW" },
-}));
+});
 
 const { getShowcaseSpaces } = await import("@/shared/domain/sections/queries");
 
