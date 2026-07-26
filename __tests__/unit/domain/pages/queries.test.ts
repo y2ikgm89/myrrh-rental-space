@@ -8,6 +8,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 mock.module("next/cache", () => ({
   cacheLife: mock(() => {}),
@@ -32,7 +33,7 @@ interface SafeFetchOpts<T> {
   readonly fetch: () => Promise<T>;
   readonly fallback: T;
 }
-mock.module("@/shared/lib/errors/server", () => ({
+await installErrorsServerMock({
   safeFetch: async <T>(opts: SafeFetchOpts<T>): Promise<T> => {
     try {
       return await opts.fetch();
@@ -40,9 +41,7 @@ mock.module("@/shared/lib/errors/server", () => ({
       return opts.fallback;
     }
   },
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW" },
-}));
+});
 
 const { isPublicPageUnpublished } =
   await import("@/shared/domain/pages/queries");

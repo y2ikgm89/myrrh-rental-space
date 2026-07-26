@@ -3,6 +3,7 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 const STAFF_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const STALE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -38,9 +39,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/errors/server", () => ({
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW" },
+await installErrorsServerMock({
   safeFetch: async <T>({
     fetch,
     fallback,
@@ -54,7 +53,7 @@ mock.module("@/shared/lib/errors/server", () => ({
       return fallback;
     }
   },
-}));
+});
 
 const { getNotificationEmailAddresses } =
   await import("@/shared/domain/settings/queries/notification");
