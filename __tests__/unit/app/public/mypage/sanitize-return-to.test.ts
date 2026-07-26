@@ -32,6 +32,11 @@ describe("sanitizeReturnTo", () => {
     expect(sanitizeReturnTo("//example.com/mypage")).toBe("/mypage");
   });
 
+  test("backslash open-redirect bypass は拒否", () => {
+    expect(sanitizeReturnTo("/\\evil.example.com")).toBe("/mypage");
+    expect(sanitizeReturnTo("/%5Cevil.example.com/mypage")).toBe("/mypage");
+  });
+
   test("フルスキーマの URL は拒否", () => {
     expect(sanitizeReturnTo("https://evil.example.com/mypage")).toBe("/mypage");
     expect(sanitizeReturnTo("http://localhost/mypage")).toBe("/mypage");

@@ -7,6 +7,8 @@ describe("typed-routes", () => {
     expect(isAppRoute("/spaces?page=2")).toBe(true);
     expect(isAppRoute("https://example.com/spaces")).toBe(false);
     expect(isAppRoute("//example.com/spaces")).toBe(false);
+    expect(isAppRoute("/\\example.com/spaces")).toBe(false);
+    expect(isAppRoute("/%5Cexample.com/spaces")).toBe(false);
   });
 
   test("外部 URL を Route に変換しない", () => {

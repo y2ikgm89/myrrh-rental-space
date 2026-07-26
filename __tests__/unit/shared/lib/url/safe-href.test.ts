@@ -18,6 +18,8 @@ describe("isSafePublicHref", () => {
 
   test("rejects protocol-relative and dangerous schemes", () => {
     expect(isSafePublicHref("//evil.example")).toBe(false);
+    expect(isSafePublicHref("/\\evil.example")).toBe(false);
+    expect(isSafePublicHref("/%5Cevil.example")).toBe(false);
     expect(isSafePublicHref("javascript:alert(1)")).toBe(false);
     expect(isSafePublicHref("data:text/html,hi")).toBe(false);
     expect(isSafePublicHref("vbscript:x")).toBe(false);
