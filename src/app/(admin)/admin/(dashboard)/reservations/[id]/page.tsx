@@ -60,7 +60,8 @@ export default async function ReservationDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const refundPolicy = await getRefundPolicySettings();
+  const refundPolicyData = await getRefundPolicySettings();
+  const refundPolicy = refundPolicyData.policy;
   const suggestedRefundAmount = refundPolicy
     ? calculateRefundAmountNow(
         // Round-5 audit Finding #20 と同じ理由: 返金上限の基準は Stripe への

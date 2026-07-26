@@ -4,10 +4,15 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import type { CalendarSyncMethod } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+  toExpectedUpdatedAt,
+} from "@/shared/domain/settings/commands";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { encrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
+import { keysHaveMatchingMode } from "@/shared/lib/stripe-shared";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // ---------------------------------------------------------------------------
@@ -20,6 +25,8 @@ export type StripeSettingsInput = {
   stripeWebhookSecret?: string | null | undefined;
   stripeCurrency: string;
   stripePaymentMethodTypes: readonly string[];
+  /** 楽観的 concurrency: 読み込み時の SettingsStripe.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type GoogleCalendarSettingsInput = {
@@ -58,6 +65,36 @@ function normalizeNullableString(value: string | null): string | null {
 export async function updateStripeSettings(
   data: StripeSettingsInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+
+  const existing = await prisma.settingsStripe.findUnique({
+    where: { id: "singleton" },
+    select: {
+      stripePublishableKey: true,
+      stripeSecretKey: true,
+    },
+  });
+
+  const existingSecretDecrypted = existing?.stripeSecretKey
+    ? safeDecryptToString(existing.stripeSecretKey, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
+      })
+    : null;
+
+  const finalPublishableKey =
+    data.stripePublishableKey ?? existing?.stripePublishableKey ?? null;
+  const finalSecretKey =
+    data.stripeSecretKey ?? existingSecretDecrypted ?? null;
+
+  if (finalPublishableKey && finalSecretKey) {
+    if (!keysHaveMatchingMode(finalPublishableKey, finalSecretKey)) {
+      throw new DomainError(
+        "公開可能キーとシークレットキーのモード（test/live）が一致していません",
+        "VALIDATION",
+      );
+    }
+  }
+
   const updateData: Omit<Prisma.SettingsStripeCreateInput, "id"> = {
     stripeCurrency: data.stripeCurrency,
     stripePaymentMethodTypes: Array.from(data.stripePaymentMethodTypes),
@@ -93,10 +130,19 @@ export async function updateStripeSettings(
     }
   }
 
-  await prisma.settingsStripe.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    await tx.settingsStripe.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    });
+    const result = await tx.settingsStripe.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 

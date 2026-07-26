@@ -158,6 +158,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   claimReservationAsFailed: () => Promise.resolve(false),
   findReservationByPaymentIntent: () => Promise.resolve(null),
   applyChargeRefundIdempotent: () => Promise.resolve(),
+  getReservationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-queries", () => ({
@@ -168,6 +169,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({

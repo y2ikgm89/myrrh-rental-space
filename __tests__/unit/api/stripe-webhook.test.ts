@@ -82,6 +82,9 @@ const mockApplyChargeRefundIdempotent = mock<
     latestRefund: { id: string; amount: number } | null;
   }) => Promise<void>
 >(() => Promise.resolve());
+const mockGetReservationCheckoutExpectedAmount = mock<
+  (id: string) => Promise<number | null>
+>(() => Promise.resolve(5000));
 // task #6: event registration 経路 mock
 const mockFindEventRegistrationByPaymentIntent = mock<
   (piId: string) => Promise<{
@@ -203,6 +206,8 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
+  getReservationCheckoutExpectedAmount: (id: string) =>
+    mockGetReservationCheckoutExpectedAmount(id),
 }));
 
 // STRIPE-DEDUP-A: route.ts が signature verification 直後に呼ぶ chokepoint
@@ -232,6 +237,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
@@ -384,7 +390,9 @@ const DEFAULT_RESERVATION = {
 function makeSessionCompletedEvent(
   paymentStatus: "paid" | "unpaid" = "paid",
   paymentIntent: string | null = "pi-123",
+  options: { amountTotal?: number; currency?: string } = {},
 ): StripeWebhookEvent {
+  const { amountTotal = 5000, currency = "jpy" } = options;
   return {
     type: "checkout.session.completed",
     data: {
@@ -392,6 +400,8 @@ function makeSessionCompletedEvent(
         id: "cs_test_123",
         payment_status: paymentStatus,
         payment_intent: paymentIntent,
+        amount_total: amountTotal,
+        currency,
         metadata: { reservationId: "res-123" },
       },
     },
@@ -461,6 +471,10 @@ describe("POST /api/webhooks/stripe", () => {
     mockFindReservationByPaymentIntent.mockReset();
     mockApplyChargeRefundIdempotent.mockReset();
     mockApplyChargeRefundIdempotent.mockImplementation(() => Promise.resolve());
+    mockGetReservationCheckoutExpectedAmount.mockReset();
+    mockGetReservationCheckoutExpectedAmount.mockImplementation(() =>
+      Promise.resolve(5000),
+    );
     mockFindEventRegistrationByPaymentIntent.mockReset();
     mockFindEventRegistrationByPaymentIntent.mockImplementation(() =>
       Promise.resolve(null),
@@ -634,6 +648,32 @@ describe("POST /api/webhooks/stripe", () => {
 
     // メール送信が fireAndForget で呼ばれた
     expect(mockFireAndForget).toHaveBeenCalled();
+  });
+
+  test("checkout.session.completed (paid) で amount_total mismatch → fulfill skip + 200 + HIGH log", async () => {
+    mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(5000);
+    const event = makeSessionCompletedEvent("paid", "pi-123", {
+      amountTotal: 9999,
+    });
+    mockConstructEvent.mockResolvedValue(event);
+
+    const response = await POST(makeRequest("body"));
+    const body = await response.json();
+    expectReceivedResult(body);
+
+    expect(response.status).toBe(200);
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        severity: "HIGH",
+        context: expect.objectContaining({
+          operation: "stripeWebhookCheckoutCompleted",
+          sessionAmountTotal: 9999,
+          expectedUnit: 5000,
+        }),
+      }),
+    );
   });
 
   test("checkout.session.completed (paid) は予約時メールを確認メールに使う", async () => {

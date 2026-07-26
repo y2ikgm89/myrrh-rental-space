@@ -214,7 +214,7 @@ export type ReservationRefundEmailData = {
    */
   cumulativeRefundAmount: number;
   /**
-   * 予約の元請求額 (円、totalPrice)。
+   * 予約の元請求額 (円)。`totalPriceWithTax` を優先 (Stripe charge SSoT)。
    * "累計 X 円 / 元 Y 円" 表示のため fetchReservationEmailData 経由で流す。
    */
   originalTotal: number;

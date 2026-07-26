@@ -39,15 +39,22 @@ import {
   updateDiscountSettings,
   type DiscountSettingsData,
 } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { discountFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidDiscountCombinationMode } from "@/shared/lib/validations/enums/guards";
 
 interface DiscountSectionProps {
-  settings: DiscountSettingsData;
+  settings: Serialized<DiscountSettingsData>;
+  maxReservationHours: number;
 }
 
-export function DiscountSection({ settings }: DiscountSectionProps) {
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
+export function DiscountSection({
+  settings,
+  maxReservationHours,
+}: DiscountSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateDiscountSettings,
@@ -70,6 +77,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
       })),
       discountCombinationMode: settings.discountCombinationMode,
       showOriginalPrice: settings.showOriginalPrice ? "on" : "",
+      expectedUpdatedAt: settings.commerceUpdatedAt,
     },
   });
 
@@ -92,6 +100,17 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("割引設定を更新しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -111,6 +130,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
+      <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
       <input
         type="hidden"
         name={fields.durationDiscountEnabled.name}
@@ -132,7 +152,9 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
         <CardHeader>
           <CardTitle>長時間割引</CardTitle>
           <CardDescription>
-            指定時間以上の予約に自動で割引を適用します
+            指定時間以上の予約利用時間に自動で割引を適用します。時間数は予約の
+            利用時間（時間単位）です。最大予約時間（{maxReservationHours}
+            時間）を超える tier は適用されません。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -169,7 +191,9 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                     form.insert({
                       name: fields.durationDiscountRules.name,
                       defaultValue: {
-                        hours: String(maxHours + 2),
+                        hours: String(
+                          Math.min(maxHours + 2, maxReservationHours),
+                        ),
                         discountRate: "5",
                       },
                     })
@@ -197,7 +221,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                                 type: "number",
                               })}
                               min={1}
-                              max={24}
+                              max={maxReservationHours}
                               className="w-20"
                               disabled={isPending}
                               aria-label={`ルール ${index + 1} 時間`}
@@ -266,7 +290,8 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
               )}
 
               <p className="text-xs text-muted-foreground">
-                複数のルールがある場合、最も長い時間のルールが優先されます
+                複数のルールがある場合、最も長い時間のルールが優先されます。予約設定の最大予約時間（
+                {maxReservationHours} 時間）より長い tier は割引対象外です。
               </p>
             </div>
           )}

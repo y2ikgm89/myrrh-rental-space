@@ -5,33 +5,51 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // =============================================================================
 
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
+type UpdateManyArgs = {
+  where?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+};
+const mockSettingsStripeFindUnique = mock<
+  () => Promise<{
+    stripePublishableKey: string | null;
+    stripeSecretKey: string | null;
+  } | null>
+>(() => Promise.resolve(null));
 const mockSettingsStripeUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsStripeUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsGoogleCalendarUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
-const mockTransactionFn =
-  mock<
-    (
-      fn: (tx: {
-        account: { deleteMany: ReturnType<typeof mock> };
-        settings: { upsert: ReturnType<typeof mock> };
-      }) => Promise<void>,
-    ) => Promise<void>
-  >();
+
+const stripeTxClient = {
+  settingsStripe: {
+    upsert: mockSettingsStripeUpsert,
+    updateMany: mockSettingsStripeUpdateMany,
+  },
+};
+
+const mockStripeTransaction = mock(
+  async (fn: (tx: typeof stripeTxClient) => Promise<unknown>) =>
+    fn(stripeTxClient),
+);
 
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settingsStripe: {
+      findUnique: mockSettingsStripeFindUnique,
       upsert: mockSettingsStripeUpsert,
+      updateMany: mockSettingsStripeUpdateMany,
     },
     settingsGoogleCalendar: {
       upsert: mockSettingsGoogleCalendarUpsert,
     },
-    $transaction: mockTransactionFn,
+    $transaction: mockStripeTransaction,
   },
 }));
 
@@ -57,9 +75,9 @@ mock.module("@/shared/lib/env/encryption", () => ({
   },
 }));
 
-function lastStripeUpdate(): Record<string, unknown> {
-  const lastCall = mockSettingsStripeUpsert.mock.calls.at(-1);
-  return lastCall?.[0]?.update ?? {};
+function lastStripeUpdateData(): Record<string, unknown> {
+  const lastCall = mockSettingsStripeUpdateMany.mock.calls.at(-1);
+  return lastCall?.[0]?.data ?? {};
 }
 
 function lastGoogleCalendarUpdate(): Record<string, unknown> {
@@ -90,6 +108,17 @@ import {
   clearGoogleCalendarWebhook,
 } from "@/shared/domain/settings/integration-commands";
 import { DomainError } from "@/shared/domain/domain-error";
+import { encrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
+import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands";
+
+const STRIPE_EXPECTED_UPDATED_AT = new Date("2026-01-15T00:00:00.000Z");
+
+const STRIPE_BASE_INPUT = {
+  stripeCurrency: "jpy" as const,
+  stripePaymentMethodTypes: ["card"] as const,
+  expectedUpdatedAt: STRIPE_EXPECTED_UPDATED_AT,
+};
 
 // =============================================================================
 // テスト用定数
@@ -113,44 +142,49 @@ const INVALID_SERVICE_ACCOUNT_JSON = JSON.stringify({
 
 describe("updateStripeSettings", () => {
   beforeEach(() => {
+    mockSettingsStripeFindUnique.mockReset();
+    mockSettingsStripeFindUnique.mockResolvedValue(null);
     mockSettingsStripeUpsert.mockReset();
     mockSettingsStripeUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsStripeUpdateMany.mockReset();
+    mockSettingsStripeUpdateMany.mockResolvedValue({ count: 1 });
+    mockStripeTransaction.mockReset();
+    mockStripeTransaction.mockImplementation(async (fn) => fn(stripeTxClient));
   });
 
   describe("正常系", () => {
     test("キーなしで基本設定を保存できる", async () => {
-      await updateStripeSettings({
-        stripeCurrency: "jpy",
-        stripePaymentMethodTypes: ["card"],
-      });
+      await updateStripeSettings(STRIPE_BASE_INPUT);
 
+      expect(mockStripeTransaction).toHaveBeenCalledTimes(1);
       expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "singleton" },
+          where: {
+            id: "singleton",
+            updatedAt: STRIPE_EXPECTED_UPDATED_AT,
+          },
         }),
       );
     });
 
     test("stripeSecretKey を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
+        ...STRIPE_BASE_INPUT,
         stripeSecretKey: "sk_test_abc123",
-        stripeCurrency: "jpy",
-        stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      // 暗号化されているため元のキーと一致しない
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             stripeSecretKey: expect.not.stringContaining("sk_test_abc123"),
           }),
         }),
       );
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             stripeSecretKey: expect.any(String),
           }),
         }),
@@ -159,68 +193,99 @@ describe("updateStripeSettings", () => {
 
     test("stripeWebhookSecret を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
+        ...STRIPE_BASE_INPUT,
         stripeWebhookSecret: "whsec_test123",
-        stripeCurrency: "jpy",
-        stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             stripeWebhookSecret: expect.not.stringContaining("whsec_test123"),
-          }),
-        }),
-      );
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            stripeWebhookSecret: expect.any(String),
           }),
         }),
       );
     });
 
     test("通貨変更のみを保存できる", async () => {
-      // stripeEnabled トグルは廃止 (Feature Module `payment` が SSoT)。
-      // credentials 命令の副次的な設定変更 (通貨等) がキー投入なしで通ることを固定する。
       await updateStripeSettings({
+        ...STRIPE_BASE_INPUT,
         stripeCurrency: "usd",
-        stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             stripeCurrency: "usd",
           }),
         }),
       );
-      // stripeEnabled 列は schema から削除済み — update に混入していないことを固定。
-      expect(Object.keys(lastStripeUpdate())).not.toContain("stripeEnabled");
+      expect(Object.keys(lastStripeUpdateData())).not.toContain(
+        "stripeEnabled",
+      );
     });
 
     test("stripePublishableKey が null の場合は既存値を維持する（update に含めない）", async () => {
-      // 公開可能キーはロック中の保存で空送信になるため、null（空）は「既存維持」。
-      // クリアは clearStripeKeys 経由で行う（[[lockable-integration-key-fields]]）。
       await updateStripeSettings({
+        ...STRIPE_BASE_INPUT,
         stripePublishableKey: null,
-        stripeCurrency: "jpy",
-        stripePaymentMethodTypes: ["card"],
       });
 
-      expect(Object.keys(lastStripeUpdate())).not.toContain(
+      expect(Object.keys(lastStripeUpdateData())).not.toContain(
         "stripePublishableKey",
       );
     });
 
     test("戻り値が void（undefined）", async () => {
-      const result = await updateStripeSettings({
-        stripeCurrency: "jpy",
-        stripePaymentMethodTypes: ["card"],
-      });
+      const result = await updateStripeSettings(STRIPE_BASE_INPUT);
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("部分更新時のモード整合", () => {
+    test("既存 test sk + 新規 live pk の部分更新は VALIDATION エラー", async () => {
+      mockSettingsStripeFindUnique.mockResolvedValueOnce({
+        stripePublishableKey: "pk_test_existing123456",
+        stripeSecretKey: encrypt("sk_test_existing123456", {
+          purpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
+        }),
+      });
+
+      await expect(
+        updateStripeSettings({
+          ...STRIPE_BASE_INPUT,
+          stripePublishableKey: "pk_live_newkey1234567890",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining(
+          "モード（test/live）が一致していません",
+        ),
+      });
+
+      expect(mockStripeTransaction).not.toHaveBeenCalled();
+    });
+
+    test("既存 live pk + 新規 test sk の部分更新は VALIDATION エラー", async () => {
+      mockSettingsStripeFindUnique.mockResolvedValueOnce({
+        stripePublishableKey: "pk_live_existing1234567890",
+        stripeSecretKey: null,
+      });
+
+      await expect(
+        updateStripeSettings({
+          ...STRIPE_BASE_INPUT,
+          stripeSecretKey: "sk_test_newsecret123456",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining(
+          "モード（test/live）が一致していません",
+        ),
+      });
+
+      expect(mockStripeTransaction).not.toHaveBeenCalled();
     });
   });
 
@@ -232,9 +297,8 @@ describe("updateStripeSettings", () => {
 
       await expect(
         updateStripeSettings({
+          ...STRIPE_BASE_INPUT,
           stripeSecretKey: "sk_test_abc",
-          stripeCurrency: "jpy",
-          stripePaymentMethodTypes: ["card"],
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
@@ -249,13 +313,23 @@ describe("updateStripeSettings", () => {
 
       await expect(
         updateStripeSettings({
+          ...STRIPE_BASE_INPUT,
           stripeWebhookSecret: "whsec_test",
-          stripeCurrency: "jpy",
-          stripePaymentMethodTypes: ["card"],
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
         message: expect.stringContaining("暗号化に失敗しました"),
+      });
+    });
+
+    test("expectedUpdatedAt 不一致時は CONFLICT エラー", async () => {
+      mockSettingsStripeUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateStripeSettings(STRIPE_BASE_INPUT),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
       });
     });
   });

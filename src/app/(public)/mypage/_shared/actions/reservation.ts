@@ -7,6 +7,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import {
   cancelCustomerReservation,
   updateCustomerReservation,
@@ -91,6 +92,14 @@ export async function startCheckoutSessionAction(
   try {
     await assertCustomerActive(customer.id);
     await assertLoginSignupReagreed(customer.id);
+
+    if (!(await isFeatureEnabled("payment"))) {
+      return createMutationError(
+        "オンライン決済は現在利用できません。管理者にお問い合わせください。",
+      );
+    }
+    await assertOnlinePaymentAvailable();
+
     const result = await createCheckoutSessionCommand({
       reservationId: parsedId.data,
       actorCustomerId: customer.id,

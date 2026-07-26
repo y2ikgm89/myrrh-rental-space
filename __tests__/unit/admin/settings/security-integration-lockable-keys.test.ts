@@ -20,6 +20,8 @@ import {
   googleCalendarFormSchema,
 } from "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-security-integrations";
 
+const EXPECTED_UPDATED_AT = "2026-01-15T00:00:00.000Z";
+
 function fd(entries: Record<string, string>): FormData {
   const f = new FormData();
   for (const [k, v] of Object.entries(entries)) f.append(k, v);
@@ -69,6 +71,7 @@ describe("security-integration forms: ロック中保存の受理", () => {
           stripeSecretKey: "",
           stripeWebhookSecret: "",
           stripeCurrency: "jpy",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
         { schema: stripeFormSchema },
       );
@@ -82,6 +85,7 @@ describe("security-integration forms: ロック中保存の受理", () => {
           stripeSecretKey: "",
           stripeWebhookSecret: "",
           stripeCurrency: "jpy",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
         { schema: stripeFormSchema },
       );

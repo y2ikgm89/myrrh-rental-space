@@ -90,3 +90,16 @@ export function filterCompatiblePaymentMethods(
 ): StripePaymentMethodType[] {
   return methods.filter((m) => isPaymentMethodAllowedForCurrency(m, currency));
 }
+
+/**
+ * 指定 currency と非互換な method を返す (checkout 作成前の domain 検証用)。
+ * 空配列 = 全 method が互換。
+ */
+export function findPaymentMethodsIncompatibleWithCurrency(
+  methods: readonly StripePaymentMethodType[],
+  currency: string,
+): StripePaymentMethodType[] {
+  return methods.filter(
+    (method) => !isPaymentMethodAllowedForCurrency(method, currency),
+  );
+}

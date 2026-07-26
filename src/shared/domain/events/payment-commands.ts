@@ -15,7 +15,10 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
-import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
+import {
+  findPaymentMethodsIncompatibleWithCurrency,
+  isStripePaymentMethodType,
+} from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
 import {
   REFUNDED_BY_TYPE,
@@ -48,6 +51,13 @@ const EVENT_REFUND_LOCK_NAMESPACE = 728356;
 
 /**
  * EventRegistration の Stripe Checkout Session を作成する (PR#10)。
+ *
+ * ## イベントチケットの税
+ *
+ * チケット `price` は**税込固定** (Settings の税率設定は予約スペース料金に適用。
+ * イベント申込は ticket.price をそのまま Stripe / paidAmount / 領収書 SSoT に使う)。
+ * 領収書発行 (`issueReceiptForEventRegistration`) は paidAmount から **10% 内税固定**
+ * で税額を逆算する (Reservation の rateBreakdown とは別経路)。
  *
  * Reservation 側の createCheckoutSessionCommand と同型の設計:
  * - actor assertion (IDOR 防止)
@@ -144,6 +154,17 @@ export async function createEventCheckoutSessionCommand(input: {
   if (paymentMethodTypes.length === 0) {
     throw new DomainError(
       "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
+  const incompatibleMethods = findPaymentMethodsIncompatibleWithCurrency(
+    paymentMethodTypes,
+    currency,
+  );
+  if (incompatibleMethods.length > 0) {
+    throw new DomainError(
+      "選択された決済方法は現在の通貨設定と互換性がありません。管理者にお問い合わせください。",
       "VALIDATION",
     );
   }
@@ -351,6 +372,15 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
   if (paymentMethodTypes.length === 0) {
     throw new DomainError(
       "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
+  const waitlistIncompatibleMethods =
+    findPaymentMethodsIncompatibleWithCurrency(paymentMethodTypes, currency);
+  if (waitlistIncompatibleMethods.length > 0) {
+    throw new DomainError(
+      "選択された決済方法は現在の通貨設定と互換性がありません。管理者にお問い合わせください。",
       "VALIDATION",
     );
   }

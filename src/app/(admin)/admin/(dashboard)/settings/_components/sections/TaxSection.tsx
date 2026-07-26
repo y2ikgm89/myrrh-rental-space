@@ -31,13 +31,17 @@ import {
   SelectValue,
   SubmitButton,
 } from "@/admin/components/ui";
-import { updateTaxSettings, type TaxSettings } from "@/admin/actions/settings";
+import { updateTaxSettings } from "@/admin/actions/settings";
+import type { AdminTaxSettings } from "@/shared/domain/settings/types";
+import type { Serialized } from "@/shared/lib/serialize";
 import { taxSettingsSchema } from "@/admin/actions/settings/schemas/discount";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 
 interface TaxSectionProps {
-  settings: TaxSettings;
+  settings: Serialized<AdminTaxSettings>;
 }
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 type DisplayModeSelectProps = {
   field: FieldMetadata<string>;
@@ -109,6 +113,7 @@ export function TaxSection({ settings }: TaxSectionProps) {
       taxStandardRate: String(settings.standardRate),
       taxReducedRate: String(settings.reducedRate),
       taxDisplayModePublic: settings.displayModePublic,
+      expectedUpdatedAt: settings.commerceUpdatedAt,
     },
   });
 
@@ -116,6 +121,17 @@ export function TaxSection({ settings }: TaxSectionProps) {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("消費税設定を更新しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -123,10 +139,14 @@ export function TaxSection({ settings }: TaxSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
+      <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
       <Card>
         <CardHeader>
           <CardTitle>税率設定</CardTitle>
-          <CardDescription>標準税率と軽減税率を設定します</CardDescription>
+          <CardDescription>
+            標準税率と軽減税率を設定します。イベントチケット料金は本設定の対象外で、
+            チケット価格は税込固定・領収書は 10% 内税として逆算されます。
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2">

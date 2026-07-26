@@ -48,7 +48,13 @@ export async function updateDiscountSettings(
           discountCombinationMode: data.discountCombinationMode,
           showOriginalPrice: data.showOriginalPrice,
         };
-        await settingsCommands.updateDiscountSettings(newValue);
+        await settingsCommands.updateDiscountSettings({
+          durationDiscountEnabled: data.durationDiscountEnabled,
+          durationDiscountRules: data.durationDiscountRules,
+          discountCombinationMode: data.discountCombinationMode,
+          showOriginalPrice: data.showOriginalPrice,
+          expectedUpdatedAt: data.expectedUpdatedAt,
+        });
         const { ip, userAgent } = await buildAuditRequestContext();
         return { previous, newValue, actorUserId: user.id, ip, userAgent };
       },

@@ -18,7 +18,10 @@
  */
 
 import { z } from "zod";
-import { switchBoolean } from "./form-schema-helpers";
+import {
+  switchBoolean,
+  settingsExpectedUpdatedAtSchema,
+} from "./form-schema-helpers";
 
 export const refundPolicyFormSchema = z
   .object({
@@ -42,6 +45,7 @@ export const refundPolicyFormSchema = z
     // OFF=null 保存経路が UI から到達不能になるため、既定値 0 で吸収する
     // (OFF 時は server action が payload を捨てるので保存値には影響しない)。
     refundPolicyDefaultRefundRate: z.coerce.number().min(0).max(100).default(0),
+    expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
   })
   .refine(
     (data) => !data.refundPolicyEnabled || data.refundPolicyTiers.length >= 1,

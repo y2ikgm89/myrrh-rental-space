@@ -221,6 +221,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
+  getReservationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
@@ -269,6 +270,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
+  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({

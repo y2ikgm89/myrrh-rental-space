@@ -76,6 +76,10 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "events",
   },
   {
+    file: "src/app/(public)/events/waitlist/checkout/[token]/route.ts",
+    module: "payment",
+  },
+  {
     file: "src/app/(public)/events/waitlist/checkout-error/page.tsx",
     module: "events",
   },

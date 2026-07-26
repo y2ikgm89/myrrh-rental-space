@@ -35,6 +35,8 @@ export type ReservationPayload = {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
+  /** 税込合計 (Stripe charge / refund 上限 SSoT)。未設定なら省略。 */
+  totalPriceWithTax?: number | null;
   notes?: string | undefined;
   location?: string | undefined;
   icsSequence: number;
@@ -310,6 +312,7 @@ export function buildPayload(params: {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
+  totalPriceWithTax?: number | null;
   notes?: string | null | undefined;
   guestName?: string | null;
   icsSequence: number;
@@ -325,6 +328,9 @@ export function buildPayload(params: {
     startTime: params.startTime,
     endTime: params.endTime,
     totalPrice: params.totalPrice,
+    ...(params.totalPriceWithTax != null
+      ? { totalPriceWithTax: params.totalPriceWithTax }
+      : {}),
     notes: params.notes ?? undefined,
     location: formatSpaceLineAddress(
       params.space.location.address,
@@ -351,6 +357,7 @@ export async function fetchReservationEmailData(
       startTime: true,
       endTime: true,
       totalPrice: true,
+      totalPriceWithTax: true,
       notes: true,
       icsSequence: true,
       userId: true,
@@ -382,6 +389,7 @@ export async function fetchReservationEmailData(
     startTime: reservation.startTime,
     endTime: reservation.endTime,
     totalPrice: reservation.totalPrice,
+    totalPriceWithTax: reservation.totalPriceWithTax,
     notes: reservation.notes,
     guestName: guestNameDiff,
     icsSequence: reservation.icsSequence,

@@ -345,7 +345,7 @@ export async function getIntegrationHealthSummary(): Promise<{
       }),
       prisma.settingsStripe.findUnique({
         where: { id: "singleton" },
-        select: { stripeSecretKey: true },
+        select: { stripeSecretKey: true, stripeWebhookSecret: true },
       }),
       prisma.settingsGoogleCalendar.findUnique({
         where: { id: "singleton" },
@@ -378,9 +378,11 @@ export async function getIntegrationHealthSummary(): Promise<{
       }) || serverEnv.RESEND_API_KEY,
     ),
     stripe: Boolean(
-      safeDecryptToString(stripe?.stripeSecretKey, {
+      (safeDecryptToString(stripe?.stripeSecretKey, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
-      }) || serverEnv.STRIPE_SECRET_KEY,
+      }) ||
+        serverEnv.STRIPE_SECRET_KEY) &&
+      stripe?.stripeWebhookSecret,
     ),
     googleCalendar: Boolean(
       googleCalendar?.googleCalendarEnabled &&

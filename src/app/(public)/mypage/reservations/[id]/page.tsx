@@ -24,6 +24,7 @@ import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-re
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
@@ -166,7 +167,7 @@ export default async function ReservationDetailPage({
       : Promise.resolve(null),
     getTurnstileSiteKey(),
     isFeatureEnabled("reviews"),
-    isFeatureEnabled("payment"),
+    isOnlinePaymentAvailable(),
     getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
     findReceiptSerialNoByReservationId(reservation.id),
     getPasscodeRevealState(

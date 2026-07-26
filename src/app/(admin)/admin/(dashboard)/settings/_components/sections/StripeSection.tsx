@@ -62,7 +62,7 @@ import {
 import { Checkbox } from "@/admin/components/ui";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCopy } from "@tabler/icons-react";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -71,9 +71,17 @@ const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
 
 interface StripeSectionProps {
   settings: Serialized<SettingsData>;
+  stripeWebhookUrl: string;
+  stripeEnvSecretActive: boolean;
 }
 
-export function StripeSection({ settings }: StripeSectionProps) {
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
+export function StripeSection({
+  settings,
+  stripeWebhookUrl,
+  stripeEnvSecretActive,
+}: StripeSectionProps) {
   const router = useRouter();
   const confirmDialog = useConfirm();
   const [testPending, startTestTransition] = useTransition();
@@ -111,6 +119,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
           .length > 0
           ? settings.stripePaymentMethodTypes.filter(isStripePaymentMethodType)
           : ["card"],
+      expectedUpdatedAt: settings.stripeUpdatedAt,
     },
   });
 
@@ -196,6 +205,17 @@ export function StripeSection({ settings }: StripeSectionProps) {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("Stripe設定を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -257,6 +277,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
+      <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
       <input type="hidden" name={fields.stripeCurrency.name} value={currency} />
       {/* 多値 checkbox の POST 経路: 選択した method を全て個別 hidden input で出力
         (conform は同名 name の複数値を FormData.getAll() で拾える)。名前は Zod schema の
@@ -296,25 +317,44 @@ export function StripeSection({ settings }: StripeSectionProps) {
             」の「オンライン決済」で切り替えます（OFF でも credentials
             が設定されていれば webhook による決済確定・返金反映は継続します。OFF
             で止まるのは新規 checkout のみ）。
+            <br />
+            イベントチケットは ticket 価格を税込固定で Stripe に送り、領収書は
+            10% 内税として税額を逆算します（予約スペースの税率設定とは別経路）。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Alert variant="info">
             <IconAlertTriangle aria-hidden="true" />
-            <AlertTitle>決済機能 OFF 時の Webhook について</AlertTitle>
+            <AlertTitle>決済機能 OFF と Webhook の関係</AlertTitle>
             <AlertDescription>
-              「
+              オンライン決済は二層で制御されます。（1）「
               <Link
                 href="/admin/settings/features"
                 className="underline underline-offset-4 hover:text-foreground"
               >
                 機能モジュール
               </Link>
-              」で「オンライン決済」を OFF にすると、Stripe Webhook
-              は意図的に拒否されます（503 /
-              DomainError）。処理中の決済が更新されない場合があります（fail-closed）。
+              」の「オンライン決済」OFF では新規 checkout
+              のみ停止します。（2）Stripe credentials（シークレットキー +
+              Webhook 署名秘密）が設定されていれば、Webhook
+              による決済確定・返金反映・精算処理は決済機能 OFF でも継続します。
             </AlertDescription>
           </Alert>
+
+          {stripeEnvSecretActive && (
+            <Alert>
+              <IconAlertTriangle aria-hidden="true" />
+              <AlertTitle>
+                環境変数の Stripe シークレットキーが使用中
+              </AlertTitle>
+              <AlertDescription>
+                DB にシークレットキーが保存されていませんが、環境変数{" "}
+                <span className="font-mono">STRIPE_SECRET_KEY</span> により決済
+                API が動作しています。管理画面からキーを保存すると DB
+                が正本になり、環境変数への依存を解消できます。
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* 動作モード（APIキーから自動判定・読み取り専用） */}
           <div className="flex items-center justify-between rounded-lg border p-4">
@@ -445,10 +485,48 @@ export function StripeSection({ settings }: StripeSectionProps) {
               )}
             </div>
 
+            {/* Webhook エンドポイント URL */}
+            <div className="space-y-2">
+              <Label htmlFor="stripe-webhook-endpoint-url">
+                Webhook エンドポイント URL
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="stripe-webhook-endpoint-url"
+                  type="text"
+                  value={stripeWebhookUrl}
+                  readOnly
+                  disabled
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(stripeWebhookUrl);
+                      toast.success("Webhook URL をコピーしました");
+                    } catch {
+                      toast.error("コピーに失敗しました");
+                    }
+                  }}
+                  aria-label="Webhook URL をコピー"
+                >
+                  <IconCopy className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Stripe Dashboard → Developers → Webhooks → Add endpoint に上記
+                URL（<span className="font-mono">/api/webhooks/stripe</span>
+                ）を登録してください。
+              </p>
+            </div>
+
             {/* Webhookシークレット */}
             <div className="space-y-2">
               <Label htmlFor={fields.stripeWebhookSecret.id}>
-                Webhookシークレット（任意）
+                Webhook 署名秘密
               </Label>
               {settings.stripeWebhookSecretMasked && !showWebhookSecretInput ? (
                 <div className="flex items-center gap-2">
@@ -481,7 +559,10 @@ export function StripeSection({ settings }: StripeSectionProps) {
                 />
               )}
               <p className="text-xs text-muted-foreground">
-                Webhook署名の検証に使用します（将来の機能用）
+                Stripe Dashboard → Developers → Webhooks → Signing secret
+                （whsec_...）を貼り付けます。暗号化して DB に保存され、上記
+                エンドポイントへの POST の署名検証に使用します。checkout
+                可用性の判定と Webhook 処理の両方に必須です。
               </p>
               {fields.stripeWebhookSecret.errors && (
                 <p
@@ -612,12 +693,16 @@ export function StripeSection({ settings }: StripeSectionProps) {
             <StatusBanner
               success={settings.stripeConnectionStatus === "connected"}
             >
+              <p className="text-xs text-muted-foreground mb-2">
+                保存済み credentials に基づく接続状態です（接続テストは DB
+                を更新しません）。
+              </p>
               <div className="flex items-center gap-2">
                 {settings.stripeConnectionStatus === "connected" ? (
                   <>
                     <span className="h-2 w-2 rounded-full bg-success" />
                     <span className="text-sm font-medium text-success">
-                      接続済み
+                      接続確認済み（保存済み）
                     </span>
                   </>
                 ) : (
@@ -693,6 +778,13 @@ export function StripeSection({ settings }: StripeSectionProps) {
               >
                 {testPending ? "テスト中..." : "接続テスト"}
               </Button>
+            )}
+            {secretKeyValue && (
+              <p className="w-full text-right text-xs text-muted-foreground">
+                入力中のシークレットキーで API
+                接続を検証します。結果はこの画面のみに表示され、DB
+                の接続状態は更新されません。
+              </p>
             )}
             <SubmitButton
               isPending={isPending}

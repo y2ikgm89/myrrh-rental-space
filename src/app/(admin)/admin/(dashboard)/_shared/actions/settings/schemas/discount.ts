@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
+import { settingsExpectedUpdatedAtSchema } from "./form-schema-helpers";
 
 // =============================================================================
 // Tax Schemas
@@ -19,6 +20,7 @@ export const taxSettingsSchema = z.object({
   taxStandardRate: z.coerce.number().min(0).max(100),
   taxReducedRate: z.coerce.number().min(0).max(100),
   taxDisplayModePublic: taxDisplayModeSchema,
+  expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
 });
 
 export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>;

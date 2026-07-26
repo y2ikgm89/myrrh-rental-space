@@ -119,7 +119,10 @@ mock.module("@/shared/lib/stripe", () => ({
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
 }));
+const actualStripePaymentMethods =
+  await import("@/shared/lib/stripe-payment-methods");
 mock.module("@/shared/lib/stripe-payment-methods", () => ({
+  ...actualStripePaymentMethods,
   isStripePaymentMethodType: (v: string) => v === "card",
 }));
 mock.module("@/shared/lib/errors/server", () => ({
