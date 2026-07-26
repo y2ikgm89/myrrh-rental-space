@@ -19,6 +19,7 @@ import {
   saveCalendarSyncToken,
 } from "@/shared/domain/reservations/calendar-sync";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
+import { applyReservationEditSideEffects } from "@/shared/domain/reservations/edit-side-effects";
 import {
   logError,
   ErrorCategory,
@@ -238,6 +239,9 @@ async function processCalendarChange(
         return { action: "skipped", reservationId: reservation.id };
       }
 
+      const oldStartTime = reservation.startTime;
+      const oldEndTime = reservation.endTime;
+
       const transactionResult = await applyCalendarTimeChange({
         reservationId: reservation.id,
         spaceId: reservation.spaceId,
@@ -349,6 +353,16 @@ async function processCalendarChange(
 
         return { action: "skipped", reservationId: reservation.id };
       }
+
+      await applyReservationEditSideEffects({
+        reservationId: reservation.id,
+        oldSpaceId: reservation.spaceId,
+        oldStartTime,
+        oldEndTime,
+        newSpaceId: reservation.spaceId,
+        newStartTime: change.startTime,
+        newEndTime: change.endTime,
+      });
 
       return { action: "updated", reservationId: reservation.id };
     }

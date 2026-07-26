@@ -64,6 +64,12 @@ const mockApplyCancellationSideEffects = mock<
   (...args: unknown[]) => Promise<void>
 >(() => Promise.resolve());
 
+const mockApplyReservationEditSideEffects = mock<
+  (
+    ...args: unknown[]
+  ) => Promise<{ passcodes: unknown[]; issuanceFailed: boolean }>
+>(() => Promise.resolve({ passcodes: [], issuanceFailed: false }));
+
 const mockGetReservationByCalendarEventId = mock<
   (...args: unknown[]) => Promise<unknown>
 >(() => Promise.resolve(null));
@@ -117,6 +123,11 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
 mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
   applyCancellationSideEffects: (...args: unknown[]) =>
     mockApplyCancellationSideEffects(...args),
+}));
+
+mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
+  applyReservationEditSideEffects: (...args: unknown[]) =>
+    mockApplyReservationEditSideEffects(...args),
 }));
 
 mock.module("@/shared/lib/google-calendar", () => ({
@@ -176,6 +187,7 @@ describe("syncFromCalendar — sync token 保存契約", () => {
     mockGetReservationByCalendarEventId.mockReset();
     mockCancelReservationFromCalendar.mockReset();
     mockApplyCancellationSideEffects.mockReset();
+    mockApplyReservationEditSideEffects.mockReset();
     mockLogError.mockReset();
 
     // デフォルト: 直前同期なし・2way 有効・前回 token あり
@@ -394,6 +406,7 @@ describe("syncFromCalendar — 決済確定/保留中の予約は時間変更を
     mockFetchCalendarChanges.mockReset();
     mockGetReservationByCalendarEventId.mockReset();
     mockApplyCalendarTimeChange.mockReset();
+    mockApplyReservationEditSideEffects.mockReset();
     mockSendCalendarSyncRejectionEmail.mockReset();
     mockLogError.mockReset();
 
@@ -466,6 +479,43 @@ describe("syncFromCalendar — 決済確定/保留中の予約は時間変更を
     expect(mockApplyCalendarTimeChange).toHaveBeenCalledTimes(1);
     expect(mockSendCalendarSyncRejectionEmail).not.toHaveBeenCalled();
     expect(result.updated).toBe(1);
+  });
+
+  test("applyCalendarTimeChange 成功後に applyReservationEditSideEffects を呼ぶ", async () => {
+    const reservation = reservationWith("UNPAID");
+    mockGetReservationByCalendarEventId.mockResolvedValue(reservation);
+
+    await syncFromCalendar();
+
+    expect(mockApplyReservationEditSideEffects).toHaveBeenCalledTimes(1);
+    expect(mockApplyReservationEditSideEffects).toHaveBeenCalledWith({
+      reservationId: reservation.id,
+      oldSpaceId: reservation.spaceId,
+      oldStartTime: reservation.startTime,
+      oldEndTime: reservation.endTime,
+      newSpaceId: reservation.spaceId,
+      newStartTime: new Date("2027-02-01T10:00:00Z"),
+      newEndTime: new Date("2027-02-01T12:00:00Z"),
+    });
+  });
+
+  test("applyCalendarTimeChange 失敗時は applyReservationEditSideEffects を呼ばない", async () => {
+    mockGetReservationByCalendarEventId.mockResolvedValue(
+      reservationWith("UNPAID"),
+    );
+    mockApplyCalendarTimeChange.mockResolvedValue({
+      success: false,
+      reason: "overlap",
+      conflictingReservation: {
+        id: "conflict-1",
+        startTime: new Date("2027-02-01T10:00:00Z"),
+        endTime: new Date("2027-02-01T12:00:00Z"),
+      },
+    });
+
+    await syncFromCalendar();
+
+    expect(mockApplyReservationEditSideEffects).not.toHaveBeenCalled();
   });
 
   test("applyCalendarTimeChange が payment_race を返したとき拒否メールを送る", async () => {

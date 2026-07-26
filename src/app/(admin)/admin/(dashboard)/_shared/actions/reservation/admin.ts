@@ -37,6 +37,7 @@ import {
   sendReservationUpdatedEmail,
 } from "@/shared/lib/email/reservation-emails";
 import { issueSmartLockAndSendConfirmationEmail } from "./mutations";
+import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -124,11 +125,10 @@ export async function createReservationAction(
 
           const payloadData = omitUndefined(mutationPayload.payload);
           const calendarData: ReservationSyncData = payloadData;
-          if (data.sendEmail) {
-            const isConfirmedCreate =
-              data.status === ReservationStatus.CONFIRMED;
+          const isConfirmedCreate = data.status === ReservationStatus.CONFIRMED;
 
-            if (isConfirmedCreate) {
+          if (isConfirmedCreate) {
+            if (data.sendEmail) {
               fireAndForget(
                 issueSmartLockAndSendConfirmationEmail(
                   payloadData,
@@ -153,39 +153,44 @@ export async function createReservationAction(
               );
             } else {
               fireAndForget(
-                Promise.all([
-                  sendReservationConfirmationEmail(payloadData),
-                  sendReservationAdminNotification(payloadData, "new"),
-                ]),
+                issueSmartLockPasscodes({
+                  reservationId: payloadData.reservationId,
+                  spaceId: data.spaceId,
+                  startTime: payloadData.startTime,
+                  endTime: payloadData.endTime,
+                }),
                 {
-                  operation: "createReservationActionSendConfirmationEmails",
+                  operation: "createReservationActionIssuePasscodes",
                   category: ErrorCategory.EXTERNAL_API,
                   severity: ErrorSeverity.MEDIUM,
                   context: { reservationId: mutationPayload.id },
                 },
               );
             }
-
-            fireAndForget(syncReservationToCalendar(calendarData), {
-              operation: "syncReservationToCalendar",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-              context: {
-                reservationId: mutationPayload.id,
-                trigger: "createReservationAction",
+          } else if (data.sendEmail) {
+            fireAndForget(
+              Promise.all([
+                sendReservationConfirmationEmail(payloadData),
+                sendReservationAdminNotification(payloadData, "new"),
+              ]),
+              {
+                operation: "createReservationActionSendConfirmationEmails",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: mutationPayload.id },
               },
-            });
-          } else {
-            fireAndForget(syncReservationToCalendar(calendarData), {
-              operation: "syncReservationToCalendar",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-              context: {
-                reservationId: mutationPayload.id,
-                trigger: "createReservationAction",
-              },
-            });
+            );
           }
+
+          fireAndForget(syncReservationToCalendar(calendarData), {
+            operation: "syncReservationToCalendar",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: {
+              reservationId: mutationPayload.id,
+              trigger: "createReservationAction",
+            },
+          });
 
           fireAndForget(
             createNotificationCommand({
