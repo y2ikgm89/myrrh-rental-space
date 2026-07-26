@@ -19,7 +19,7 @@ import type { TurnstileAction } from "./turnstile-actions";
 import { serverEnv } from "./env/server";
 import { getClientIpFromHeaders } from "./rate-limit";
 import { normalizeEmailForIdentity } from "./email/normalize-email";
-import { isLocalProductionE2ERuntime } from "./e2e-runtime";
+import { isE2ESecurityBypassAllowedFromHeaders } from "./e2e-runtime";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
@@ -90,12 +90,13 @@ export type ValidateTurnstileParams = {
 export async function validateTurnstile(
   params: ValidateTurnstileParams,
 ): Promise<TurnstileResult> {
-  // E2E bypass: localhost + E2E_RUNTIME=1 + production build の AND のみ許可
-  // (isLocalProductionE2ERuntime、`security-auth.md` rule 準拠)。
+  // E2E bypass: localhost env URLs + E2E_RUNTIME=1 + production build +
+  // リクエスト Host が loopback の AND のみ許可
+  // (`isE2ESecurityBypassAllowed`、`security-auth.md` rule 準拠)。
   // E2E webServer は next start (production build) で起動し、Turnstile 秘密鍵は
   // env / DB 未設定のため、bypass しないと production の fail-closed 分岐に落ちて
   // 全 form action が「セキュリティ検証が必要」エラーで通らない。
-  if (isLocalProductionE2ERuntime()) {
+  if (await isE2ESecurityBypassAllowedFromHeaders()) {
     return { success: true };
   }
 

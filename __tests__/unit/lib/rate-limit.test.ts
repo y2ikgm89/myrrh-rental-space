@@ -243,11 +243,16 @@ describe("checkRateLimit", () => {
 
 describe("publicQueryRateLimiter E2E bypass", () => {
   // mock.module は全 export を差し替えるため、e2e-runtime 全 export を必ず宣言する
-  // (isCustomerE2ELoginEnabled が undefined になると他 code path が壊れる保険)。
+  // (他 code path が undefined export で壊れない保険)。
   test("bypass 非適用時は 30/分の制限が有効（31 回目で拒否）", async () => {
+    mock.module("next/headers", () => ({
+      headers: () => new Headers({ host: "localhost:3000" }),
+    }));
     mock.module("@/shared/lib/e2e-runtime", () => ({
-      isLocalProductionE2ERuntime: () => false,
+      isE2ESecurityBypassAllowed: () => false,
+      isLocalProductionE2EEnv: () => false,
       isCustomerE2ELoginEnabled: () => false,
+      isCustomerE2ELoginEnvEnabled: () => false,
     }));
 
     const { publicQueryRateLimiter } = await import("@/shared/lib/rate-limit");
@@ -263,9 +268,14 @@ describe("publicQueryRateLimiter E2E bypass", () => {
   });
 
   test("bypass 適用時は 30 回超えても success を返し続ける", async () => {
+    mock.module("next/headers", () => ({
+      headers: () => new Headers({ host: "localhost:3000" }),
+    }));
     mock.module("@/shared/lib/e2e-runtime", () => ({
-      isLocalProductionE2ERuntime: () => true,
+      isE2ESecurityBypassAllowed: () => true,
+      isLocalProductionE2EEnv: () => true,
       isCustomerE2ELoginEnabled: () => false,
+      isCustomerE2ELoginEnvEnabled: () => false,
     }));
 
     const { publicQueryRateLimiter } = await import("@/shared/lib/rate-limit");

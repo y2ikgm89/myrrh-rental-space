@@ -24,7 +24,7 @@ import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 import { SESSION_CONFIG, CACHE_TAGS, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
 import { isDashboardRole } from "./admin-roles";
-import { isCustomerE2ELoginEnabled } from "./e2e-runtime";
+import { isCustomerE2ELoginEnvEnabled } from "./e2e-runtime";
 import { serverEnv } from "./env/server";
 
 // ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ function createCustomerAuth() {
   // session 確立失敗 → /mypage navigation timeout の silent UX bug を引き起こす。
   // `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` の opt-in 環境でのみ secure cookie を無効化する
   // （staging / production には build env 不在のため絶対伝播しない）。
-  const isE2EOptIn = isCustomerE2ELoginEnabled();
+  const isE2EOptIn = isCustomerE2ELoginEnvEnabled();
 
   return betterAuth({
     baseURL: appUrl,
