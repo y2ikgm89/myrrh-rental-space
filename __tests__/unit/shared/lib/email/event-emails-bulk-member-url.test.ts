@@ -6,6 +6,7 @@
  * mypage 詳細、ゲストは status token URL を eventRegistrationHubUrl として渡す。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -73,13 +74,43 @@ function makeEventRow(): EventRow {
   };
 }
 
-const mockFindFirst = mock<() => Promise<EventRow | null>>(() =>
-  Promise.resolve(makeEventRow()),
-);
-mock.module("@/shared/db/prisma", () => ({
-  prisma: { event: { findFirst: mockFindFirst } },
-  basePrisma: {},
-}));
+function makeCancelledPayload() {
+  const row = makeEventRow();
+  return {
+    eventId: "evt-1",
+    title: row.title,
+    format: row.format,
+    meetingUrl: row.meetingUrl,
+    updatedAt: row.updatedAt,
+    venueDisplay: row.space?.name ?? null,
+    registrations: row.registrations.map((registration) => ({
+      ...registration,
+      status: RegistrationStatus.CONFIRMED,
+    })),
+  };
+}
+
+function makeUpdatedPayload() {
+  const row = makeEventRow();
+  return {
+    eventId: "evt-1",
+    title: row.title,
+    format: row.format,
+    meetingUrl: row.meetingUrl,
+    updatedAt: row.updatedAt,
+    venueDisplay: row.space?.name ?? null,
+    registrations: row.registrations.map((registration) => ({
+      id: registration.id,
+      name: registration.name,
+      email: registration.email,
+      quantity: registration.quantity,
+      icsSequence: registration.icsSequence,
+      slotId: registration.slotId ?? "slot-1",
+      customerId: registration.customerId,
+      slot: registration.slot,
+    })),
+  };
+}
 
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
@@ -144,8 +175,6 @@ const GUEST_HUB_URL_PATTERN =
   /\/events\/registrations\/status\?token=[A-Za-z0-9_-]+$/;
 
 beforeEach(() => {
-  mockFindFirst.mockReset();
-  mockFindFirst.mockImplementation(() => Promise.resolve(makeEventRow()));
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockEventCancelledNotificationEmail.mockClear();
@@ -154,7 +183,10 @@ beforeEach(() => {
 
 describe("sendEventCancelledToAllParticipants() の eventRegistrationHubUrl 出し分け", () => {
   test("会員は mypage 詳細、ゲストは status token URL を渡す", async () => {
-    await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
+    await sendEventCancelledToAllParticipants(
+      makeCancelledPayload(),
+      "講師都合のため中止",
+    );
 
     const calls = mockEventCancelledNotificationEmail.mock.calls;
     const memberProps = calls.find((c) =>
@@ -177,7 +209,7 @@ describe("sendEventCancelledToAllParticipants() の eventRegistrationHubUrl 出�
 describe("sendEventUpdatedToAllParticipants() の eventRegistrationHubUrl 出し分け", () => {
   test("会員は mypage 詳細、ゲストは status token URL を渡す", async () => {
     await sendEventUpdatedToAllParticipants(
-      "evt-1",
+      makeUpdatedPayload(),
       new Map([["slot-1", new Date("2098-12-25T01:00:00Z")]]),
     );
 

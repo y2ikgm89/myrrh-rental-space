@@ -22,12 +22,8 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
-import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
-import {
-  sendReservationAdminNotification,
-  sendReservationConfirmationEmail,
-} from "@/shared/lib/email/reservation-emails";
-import type { ReservationEmailData } from "@/shared/lib/email/types";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
+import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -62,35 +58,6 @@ import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
 
 const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
-
-/**
- * 予約確定メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
- * 一時パスコードを発行する。平文はメールに載せずハブで開示し、発行失敗時のみ
- * fallback 案内フラグを付ける。
- * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
- * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（DBクエリ1回分のみ）。
- * デバイスが設定されているスペースでは SwitchBot 側の確定待ちで最大45秒程度
- * ブロックし得るが、意図した設計。
- */
-async function issueSmartLockAndSendConfirmationEmail(
-  payload: ReservationEmailData,
-  spaceId: string,
-): Promise<void> {
-  const result = await issueSmartLockPasscodes({
-    reservationId: payload.reservationId,
-    spaceId,
-    startTime: payload.startTime,
-    endTime: payload.endTime,
-  });
-
-  // 平文パスコードはメールに載せない（予約詳細ハブで開示）。発行失敗時のみ
-  // 連絡先 fallback をメールに残す。
-  await sendReservationConfirmationEmail(
-    result.issuanceFailed
-      ? { ...payload, smartLockIssuanceFailed: true }
-      : payload,
-  );
-}
 
 export async function submitReservation(
   _prev: SubmissionResult | undefined,
@@ -212,9 +179,13 @@ export async function submitReservation(
         });
 
         fireAndForget(
-          issueSmartLockAndSendConfirmationEmail(payload, data.spaceId),
+          applyConfirmationSideEffects({
+            payload,
+            spaceId: data.spaceId,
+            channel: "customer",
+          }),
           {
-            operation: "sendReservationConfirmationEmail",
+            operation: "applyConfirmationSideEffects",
             category: ErrorCategory.EXTERNAL_API,
           },
         );

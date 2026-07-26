@@ -36,8 +36,7 @@ import {
   sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import { issueSmartLockAndSendConfirmationEmail } from "./mutations";
-import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -130,13 +129,14 @@ export async function createReservationAction(
           if (isConfirmedCreate) {
             if (data.sendEmail) {
               fireAndForget(
-                issueSmartLockAndSendConfirmationEmail(
-                  payloadData,
-                  data.spaceId,
-                ),
+                applyConfirmationSideEffects({
+                  payload: payloadData,
+                  spaceId: data.spaceId,
+                  channel: "admin",
+                }),
                 {
                   operation:
-                    "createReservationActionIssuePasscodesAndSendConfirmation",
+                    "createReservationActionApplyConfirmationSideEffects",
                   category: ErrorCategory.EXTERNAL_API,
                   severity: ErrorSeverity.MEDIUM,
                   context: { reservationId: mutationPayload.id },
@@ -153,14 +153,15 @@ export async function createReservationAction(
               );
             } else {
               fireAndForget(
-                issueSmartLockPasscodes({
-                  reservationId: payloadData.reservationId,
+                applyConfirmationSideEffects({
+                  payload: payloadData,
                   spaceId: data.spaceId,
-                  startTime: payloadData.startTime,
-                  endTime: payloadData.endTime,
+                  channel: "admin",
+                  sendCustomerEmail: false,
                 }),
                 {
-                  operation: "createReservationActionIssuePasscodes",
+                  operation:
+                    "createReservationActionApplyConfirmationSideEffects",
                   category: ErrorCategory.EXTERNAL_API,
                   severity: ErrorSeverity.MEDIUM,
                   context: { reservationId: mutationPayload.id },
@@ -375,13 +376,14 @@ export async function updateReservationAction(
 
           if (statusFlipToConfirmed) {
             fireAndForget(
-              issueSmartLockAndSendConfirmationEmail(
-                payloadData,
-                mutationPayload.spaceId,
-              ),
+              applyConfirmationSideEffects({
+                payload: payloadData,
+                spaceId: mutationPayload.spaceId,
+                channel: "admin",
+              }),
               {
                 operation:
-                  "updateReservationActionIssuePasscodesAndSendConfirmation",
+                  "updateReservationActionApplyConfirmationSideEffects",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.MEDIUM,
                 context: { reservationId: parsedId.data },

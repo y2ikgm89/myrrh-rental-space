@@ -28,8 +28,8 @@ export type ReservationEmailData = {
   /**
    * スマートロック発行が失敗した際の代替入室手段案内フラグ (PR#12)。
    * true のとき確認メール内で「当日運営までお問い合わせください」の fallback
-   * セクションを描画する。設定するのは呼び出し側 (issueSmartLockAndSendConfirmationEmail)
-   * で、失敗判定は「issueSmartLockPasscodes が空を返し、かつ SmartLockPasscode 行が
+   * セクションを描画する。設定するのは `confirmation-side-effects.ts`
+   * （`applyConfirmationSideEffects`）で、失敗判定は「issueSmartLockPasscodes が空を返し、かつ SmartLockPasscode 行が
    * FAILED で存在」の条件。平文パスコードはメールに載せない（予約詳細ハブで開示）。
    */
   smartLockIssuanceFailed?: boolean;

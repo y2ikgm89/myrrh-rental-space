@@ -24,6 +24,7 @@ import {
   sendInquiryReplyEmail,
   sendInquiryStatusNotificationToAll,
 } from "@/shared/lib/email/inquiry-emails";
+import { getInquiriesForStatusNotification } from "@/shared/domain/inquiries/email-queries";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import {
   AuditAction,
@@ -77,10 +78,11 @@ export async function updateInquiryStatus(
         parsed.data.status === InquiryStatus.RESOLVED ||
         parsed.data.status === InquiryStatus.CLOSED
       ) {
+        const notifyStatus = parsed.data.status;
         fireAndForget(
-          sendInquiryStatusNotificationToAll(
-            [parsed.data.id],
-            parsed.data.status,
+          getInquiriesForStatusNotification([parsed.data.id]).then(
+            (inquiries) =>
+              sendInquiryStatusNotificationToAll(inquiries, notifyStatus),
           ),
           {
             operation: "updateInquiryStatus.notify",

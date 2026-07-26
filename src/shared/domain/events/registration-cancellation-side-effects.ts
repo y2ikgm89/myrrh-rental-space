@@ -63,8 +63,11 @@ import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
-import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
 import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
+import {
+  getEventWaitlistOfferPaymentContext,
+  getWaitlistEmailRegistration,
+} from "@/shared/domain/events/waitlist-queries";
 import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
 import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { type RefundPolicyResolution } from "@/shared/domain/refund/policy";
@@ -421,10 +424,11 @@ async function runWaitlistOfferStep(
   }
 
   try {
-    const paymentContext = await getEventWaitlistOfferPaymentContext(
-      promotedRegistrationId,
-    );
-    if (!paymentContext) {
+    const [registration, paymentContext] = await Promise.all([
+      getWaitlistEmailRegistration(promotedRegistrationId),
+      getEventWaitlistOfferPaymentContext(promotedRegistrationId),
+    ]);
+    if (!registration || !paymentContext) {
       // 昇格させた行が直後の別操作（管理者の手動 expire 等）で消えた極端な race。
       // 状態遷移自体（昇格）は既に成功しているためロールバックせず、メール送信のみ
       // 諦めて非致命的にログする。
@@ -445,7 +449,7 @@ async function runWaitlistOfferStep(
     }
 
     const result = await sendEventWaitlistOffered({
-      registrationId: promotedRegistrationId,
+      registration,
       to: promotedEmail,
       expiresAt: promotedExpiresAt,
       paymentContext,
@@ -477,13 +481,6 @@ async function runWaitlistOfferStep(
       return {
         status: "skipped",
         reason: "disabled_or_suppressed",
-        detail: { promotedRegistrationId },
-      };
-    }
-    if (result.reason === "not_found") {
-      return {
-        status: "skipped",
-        reason: "not_found",
         detail: { promotedRegistrationId },
       };
     }

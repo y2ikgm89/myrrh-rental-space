@@ -19,6 +19,7 @@ import {
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/lifecycle-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
 import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
@@ -32,10 +33,8 @@ import {
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
-  sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import type { ReservationEmailData } from "@/shared/lib/email/types";
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 
@@ -54,34 +53,6 @@ const restoreStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
   targetStatus: z.enum(ReservationStatus),
 });
-
-/**
- * 確認メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
- * 一時パスコードを発行し、確認メールを送る。平文はメールに載せずハブで開示する。
- * 発行失敗時のみ fallback 案内フラグをペイロードに付ける。
- * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
- * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（意図した設計、
- * 詳細は `src/shared/domain/smart-lock/issue-passcode.ts`）。
- */
-export async function issueSmartLockAndSendConfirmationEmail(
-  payloadData: ReservationEmailData,
-  spaceId: string,
-) {
-  const result = await issueSmartLockPasscodes({
-    reservationId: payloadData.reservationId,
-    spaceId,
-    startTime: payloadData.startTime,
-    endTime: payloadData.endTime,
-  });
-
-  // 平文パスコードはメールに載せない（予約詳細ハブで開示）。発行失敗時のみ
-  // 連絡先 fallback をメールに残す。
-  return sendReservationConfirmationEmail(
-    result.issuanceFailed
-      ? { ...payloadData, smartLockIssuanceFailed: true }
-      : payloadData,
-  );
-}
 
 export const updateReservationStatus = async (
   id: string,
@@ -142,9 +113,13 @@ export const updateReservationStatus = async (
         // 個別にfireAndForgetする（Promise.allで束ねると片方の失敗で
         // after()の実行時間延長がもう片方の送信完了を待たずに解除されうる）。
         fireAndForget(
-          issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
+          applyConfirmationSideEffects({
+            payload: payloadData,
+            spaceId: result.spaceId,
+            channel: "admin",
+          }),
           {
-            operation: "sendConfirmationEmails",
+            operation: "applyConfirmationSideEffects",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.MEDIUM,
             context: { reservationId: id },

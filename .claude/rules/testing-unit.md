@@ -36,8 +36,11 @@ paths:
 
 ## 実 DB 統合テスト（要 Postgres）
 
-- 新規の実 DB テストは `scripts/test-db-runner-env.ts` の SERIAL_DB_TESTS に
-  **フルパス登録必須**（未登録だと parallel bucket に入り共有 DB で競合する）
+- 新規の実 DB テストは `process.env["TEST_DATABASE_URL"]` または
+  `process.env["DATABASE_URL"] = process.env["TEST_DATABASE_URL"] …` を
+  ファイル先頭付近に書けば `scripts/serial-db-test-detection.ts` が serial bucket に
+  **自動検出**する（`mock.module("@/shared/db/prisma")` するファイルは除外）。
+  マーカーが効かない edge case のみ `SERIAL_DB_TEST_FORCE_INCLUDE` に opt-in 登録
 - preload が DATABASE_URL をダミーに固定するため、prisma gateway を
   **動的 import する前に** `process.env.DATABASE_URL` を TEST_DATABASE_URL で上書きする
   （gateway は module load 時 snapshot を読む）

@@ -1,69 +1,30 @@
+import {
+  buildSerialDbTestSet,
+  isSerialDbTestPath,
+} from "./serial-db-test-detection";
 import { resolveTestDatabaseUrl } from "./test-db-url";
 
-export const SERIAL_DB_TESTS = new Set<string>([
-  "__tests__/integration/domain/reservations/cancel-by-token-roundtrip.test.ts",
-  "__tests__/integration/domain/reservations/cancellation-with-refund-policy.test.ts",
-  "__tests__/integration/domain/reservations/db-invariants.test.ts",
-  "__tests__/integration/domain/reservations/refund-command.test.ts",
-  "__tests__/integration/domain/reservations/reminder-idempotency.test.ts",
-  "__tests__/integration/domain/reservations/series-advisory-lock.test.ts",
-  "__tests__/integration/domain/reservations/series-cancel-scopes.test.ts",
-  "__tests__/integration/domain/reservations/series-overlap.test.ts",
-  "__tests__/integration/domain/reservations/space-overlap-concurrency.test.ts",
-  "__tests__/integration/domain/reservations/guest-status-query.test.ts",
-  "__tests__/integration/domain/coupons/coupon-status-filter.test.ts",
-  "__tests__/integration/domain/reservations/coupon-claim-validity.test.ts",
-  "__tests__/integration/domain/events/registration-overbooking.test.ts",
-  "__tests__/integration/domain/faq/category-delete-race.test.ts",
-  "__tests__/integration/domain/events/cancel-by-token-roundtrip.test.ts",
-  "__tests__/integration/domain/events/online-format.test.ts",
-  "__tests__/integration/domain/events/refund-command.test.ts",
-  "__tests__/integration/domain/events/update-registration-command.test.ts",
-  "__tests__/integration/domain/events/registration-search-filter.test.ts",
-  "__tests__/integration/domain/events/export-queries-cross-event.test.ts",
-  "__tests__/integration/domain/events/manual-payment.test.ts",
-  "__tests__/integration/domain/event-categories/commands.test.ts",
-  "__tests__/integration/lib/calendar-sync/meet-writeback.test.ts",
-  "__tests__/integration/lib/calendar-sync/series-outbound.test.ts",
-  "__tests__/integration/actions/public/event-waitlist-register.test.ts",
-  "__tests__/integration/actions/public/event-cancel-promotes-waitlist.test.ts",
-  "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
-  "__tests__/integration/reservations/claim-commands.test.ts",
-  "__tests__/integration/reservations/public-commands.test.ts",
-  "__tests__/integration/reservations/admin-commands.test.ts",
-  "__tests__/integration/reservations/customer-commands.test.ts",
-  "__tests__/integration/events/claim-commands.test.ts",
-  "__tests__/integration/api/cron-waitlist-expire.test.ts",
-  "__tests__/integration/spaces/rate-plan-commands.test.ts",
-  "__tests__/integration/spaces/resolve-space-card-embed-data.test.ts",
-  "__tests__/integration/domain/reservations/blacklist-guard.test.ts",
-  "__tests__/integration/domain/reservations/reservation-detail-guest-fields.test.ts",
-  "__tests__/integration/domain/customers/risk-detection.test.ts",
-  "__tests__/integration/domain/customers/anonymize-command.test.ts",
-  "__tests__/integration/domain/customers/duplicate-detection.test.ts",
-  "__tests__/integration/domain/customers/ghost-inquiry-linking.test.ts",
-  "__tests__/integration/domain/customers/queries.test.ts",
-  "__tests__/integration/domain/receipts/single-use-download.test.ts",
-  "__tests__/integration/domain/receipts/issue-audit-log.test.ts",
-  "__tests__/integration/domain/receipts/customer-list-query.test.ts",
-  "__tests__/integration/domain/space-categories/commands.test.ts",
-  "__tests__/integration/domain/locations/order-commands.test.ts",
-  "__tests__/integration/domain/terms/reorder-commands.test.ts",
-  "__tests__/integration/domain/sections/reorder-commands.test.ts",
-  "__tests__/integration/domain/posts/category-order-commands.test.ts",
-  "__tests__/integration/domain/navigation/order-commands.test.ts",
-  "__tests__/integration/domain/faq/category-reorder.test.ts",
-  "__tests__/integration/domain/faq/item-reorder.test.ts",
-  "__tests__/integration/domain/settings/announcement-bar-reorder.test.ts",
-  "__tests__/integration/domain/events/ticket-reorder.test.ts",
-]);
+export {
+  buildSerialDbTestSet,
+  fileContentNeedsSerialDbExecution,
+  normalizePosixPath,
+  SERIAL_DB_TEST_FORCE_EXCLUDE,
+  SERIAL_DB_TEST_FORCE_INCLUDE,
+} from "./serial-db-test-detection";
+
+/** Auto-detected at module load from integration test content markers. */
+export const SERIAL_DB_TESTS = buildSerialDbTestSet();
+
+export function isSerialDbTest(file: string): boolean {
+  return isSerialDbTestPath(file, SERIAL_DB_TESTS);
+}
 
 type TestDatabaseUrlCheckResult =
   | { ok: true; url?: string; source?: "env" | "default-local" }
   | { ok: false; message: string };
 
 export function findSelectedSerialDbTests(files: readonly string[]): string[] {
-  return files.filter((file) => SERIAL_DB_TESTS.has(file));
+  return files.filter((file) => isSerialDbTest(file));
 }
 
 export function assertRequiredTestDatabaseUrl({
