@@ -487,6 +487,7 @@ describe("architecture boundaries", () => {
     expect(source).not.toMatch(/shared\/domain\/.*\/commands/u);
   });
 
+  // shared 全体の fs traverse + regex。pre-push 並列負荷下で 5s default を超え得るため 30s。
   test("src/shared/ は @/admin・@/public を import しない（依存方向の保護）", () => {
     // shared は admin / public の双方から参照される下層。逆 import は
     // 依存方向の逆転（特に値 import は実行時依存）になり shared の再利用性を
@@ -497,7 +498,7 @@ describe("architecture boundaries", () => {
     );
 
     expect(offenders).toEqual([]);
-  });
+  }, 30000);
 
   test("shared/domain は bare な Date.toLocale* を使わず date-format SSoT を経由する", () => {
     // Cloud Run のプロセス TZ は UTC。timeZone 指定なしの toLocale*String は JST 想定の
@@ -1169,6 +1170,31 @@ describe("architecture boundaries", () => {
     const source = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
 
     expect(source).toContain("NuqsAdapter");
+  });
+
+  test("public root layout は認証 chrome を HTML に埋め込まず client hydrate 後に解決する", () => {
+    const layoutSource = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
+    // CDN blanket public (s-maxage) + Cookie vary 不在で login/mypage が漏洩しないよう、
+    // layout / HeaderWithData 経路では session を読まない。
+    expect(layoutSource).not.toContain("getCurrentCustomerUser");
+    expect(layoutSource).not.toContain("resolvePublicAuthKind");
+    expect(layoutSource).not.toContain("authSlot=");
+    expect(layoutSource).not.toContain("authKind=");
+    expect(layoutSource).toContain("<MobileNav />");
+
+    const authKindRoute = join(
+      SRC_ROOT,
+      "app",
+      "api",
+      "customer",
+      "auth-kind",
+      "route.ts",
+    );
+    expect(existsSync(authKindRoute)).toBe(true);
+    const routeSource = readFileSync(authKindRoute, "utf8");
+    expect(routeSource).toContain("getCurrentCustomerUser");
+    expect(routeSource).toContain("resolvePublicAuthKind");
+    expect(routeSource).toContain("private, no-store");
   });
 
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {

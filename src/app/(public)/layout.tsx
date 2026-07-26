@@ -20,10 +20,7 @@ import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { connection } from "next/server";
-import {
-  Header,
-  type HeaderAuthSlot,
-} from "@/public/components/layouts/site-header";
+import { Header } from "@/public/components/layouts/site-header";
 import { Footer } from "@/public/components/layouts/site-footer";
 import {
   AnalyticsProvider,
@@ -43,8 +40,6 @@ import {
   getHeaderNavigation,
   getMobileHeaderNavigation,
 } from "@/shared/domain/navigation/queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
-import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getHeaderSettings,
   getFooterSettings,
@@ -264,22 +259,7 @@ async function StructuredDataContent(): Promise<ReactElement> {
 }
 
 /**
- * 公開ページで共有する認証状態
- * - CUSTOMER / USER ロール → mypage
- * - 未認証 → login
- * - 管理ロール → null（モバイルナビ・ヘッダーでは非表示）
- */
-type PublicAuthKind = "mypage" | "login" | null;
-
-async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
-  const user = await getCurrentCustomerUser();
-  if (!user) return "login";
-  if (user.role === Role.CUSTOMER || user.role === Role.USER) return "mypage";
-  return null;
-}
-
-/**
- * Header ラッパー: DB からヘッダー設定 + ナビゲーション + 認証状態を取得
+ * Header ラッパー: DB からヘッダー設定 + ナビゲーションを取得
  *
  * 設計上の重要事項（build-time prerender 汚染の構造的回避）:
  * - `getHeaderSettings()` を **この Suspense 内 SC で fetch する**（layout 本体から
@@ -287,29 +267,19 @@ async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
  *   DATABASE_URL で接続失敗→safeFetch fallback の null が brand に焼かれる問題を回避する。
  * - `await connection()` で runtime 動的レンダリングを保証（`'use cache'` 関数だけだと
  *   Next.js が build prerender に焼き込んでしまうため）。
+ * - auth chrome（login / mypage）はここへ埋め込まない。CDN blanket `public,s-maxage`
+ *   が Cookie vary なしで HTML を共有するため、個人化 UI は Client Component が
+ *   `/api/customer/auth-kind`（private, no-store）で hydrate 後に解決する。
  * - canonical: HeaderWithData / Footer / AnnouncementBarWrapper を Suspense + connection()
  *   で対称化することで、PPR の static shell は skeleton のみ、実データは runtime resume。
  */
 async function HeaderWithData(): Promise<ReactElement> {
   await connection();
-  const [headerSettings, navItems, mobileNavItems, authKind] =
-    await Promise.all([
-      getHeaderSettings(),
-      getHeaderNavigation(),
-      getMobileHeaderNavigation(),
-      resolvePublicAuthKind(),
-    ]);
-
-  const authSlot: HeaderAuthSlot | null =
-    authKind === "mypage"
-      ? {
-          variant: "authenticated",
-          mypageHref: "/mypage",
-          mypageLabel: "マイページ",
-        }
-      : authKind === "login"
-        ? { variant: "guest", loginHref: "/login", loginLabel: "ログイン" }
-        : null;
+  const [headerSettings, navItems, mobileNavItems] = await Promise.all([
+    getHeaderSettings(),
+    getHeaderNavigation(),
+    getMobileHeaderNavigation(),
+  ]);
 
   return (
     <Header
@@ -318,19 +288,8 @@ async function HeaderWithData(): Promise<ReactElement> {
       mobileNavItems={mobileNavItems}
       scrollBehavior={headerSettings.scrollBehavior}
       backgroundMode={headerSettings.backgroundMode}
-      authSlot={authSlot}
     />
   );
-}
-
-/**
- * MobileNav ラッパー: 認証状態を取得して Client Component に渡す
- * `<Suspense>` 内で呼び出すこと。`getCurrentCustomerUser()` は request 単位で
- * `cache()` メモ化されているため HeaderWithData との重複 DB アクセスは発生しない。
- */
-async function MobileNavWithAuth(): Promise<ReactElement> {
-  const authKind = await resolvePublicAuthKind();
-  return <MobileNav authKind={authKind} />;
 }
 
 /**
@@ -525,9 +484,8 @@ export default async function PublicRootLayout({
                 >
                   <Footer />
                 </Suspense>
-                <Suspense fallback={null}>
-                  <MobileNavWithAuth />
-                </Suspense>
+                {/* Auth kind は MobileNav 内で hydrate 後 fetch（CDN HTML に埋め込まない） */}
+                <MobileNav />
 
                 {/* 動的コンテンツ - リクエスト時にストリーミング */}
                 <Suspense fallback={null}>
