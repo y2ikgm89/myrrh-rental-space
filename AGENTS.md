@@ -51,8 +51,8 @@ For human onboarding — setup, common commands, repo layout — see
   in Settings billing). Public and admin must work fully when payment is OFF
   (manual payment remains available).
 - Receipts: email on payment success (manual admin record or Stripe); download from
-  booking detail (guest token-backed detail / member mypage). A fuller booking-detail
-  hub (e.g. SwitchBot passcode on the same page) is the intended longer-term surface.
+  booking detail hub (guest token status / member mypage). Hub is also the SSoT for
+  SwitchBot passcode reveal and email CTAs (plaintext passcodes are not emailed).
 - Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
   distributed rate-limit backends are intentionally out of scope.
 - Site Settings are split into domain singleton tables (`SettingsNotification`,

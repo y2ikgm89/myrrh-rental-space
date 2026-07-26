@@ -42,9 +42,13 @@ mock.module("next/headers", () => ({
 }));
 
 // next/cache モック
+// 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
+// partial mock は cacheTag/cacheLife 等を欠落させ、'use cache' 経路
+// (getSuppressedEmailSet 等) を SyntaxError 化する。
 const mockUpdateTag = mock(() => undefined);
-
+const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
+  ...actualNextCache,
   updateTag: mockUpdateTag,
   cacheTag: mock(() => undefined),
   cacheLife: mock(() => undefined),
@@ -145,8 +149,15 @@ const mockGetCustomerByUserId = mock(
     }),
 );
 
+// 公式 Bun re-export pattern: payment-commands → notify-issued → send.ts が
+// getSuppressedEmailSet を named import するため、partial mock だと
+// 「Export named 'getSuppressedEmailSet' not found」でモジュール解決が落ちる。
+const actualCustomersQueries =
+  await import("@/shared/domain/customers/queries");
 mock.module("@/shared/domain/customers/queries", () => ({
+  ...actualCustomersQueries,
   getCustomerByUserId: mockGetCustomerByUserId,
+  getSuppressedEmailSet: mock(() => Promise.resolve(new Set<string>())),
 }));
 
 // OAUTH-BETTER-AUTH-01: Server Action は assertCustomerActive を通す。

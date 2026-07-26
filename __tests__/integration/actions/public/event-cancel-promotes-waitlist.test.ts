@@ -84,8 +84,15 @@ mock.module("@/shared/lib/customer-auth", () => ({
 const mockGetCustomerByUserId = mock<
   (userId: string) => Promise<{ id: string } | null>
 >(() => Promise.resolve(null));
+// 公式 Bun re-export pattern: cancellation-side-effects → payment-commands →
+// notify-issued → send.ts が getSuppressedEmailSet を named import するため、
+// partial mock だとモジュール解決が SyntaxError で落ちる。
+const actualCustomersQueries =
+  await import("@/shared/domain/customers/queries");
 mock.module("@/shared/domain/customers/queries", () => ({
+  ...actualCustomersQueries,
   getCustomerByUserId: mockGetCustomerByUserId,
+  getSuppressedEmailSet: mock(() => Promise.resolve(new Set<string>())),
 }));
 
 // OAUTH-BETTER-AUTH-01: session-authenticated Customer は assertCustomerActive を通す。
@@ -114,6 +121,9 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   // registerForEvent（同一ファイル、本テストでは未使用）が top-level import する。
   sendEventRegistrationConfirmation: () =>
     Promise.reject(new Error("not used in this test")),
+  // event-waitlist-emails 実体が hub URL 組み立てで参照する（mock 漏れ防止）。
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 // 繰り上げ当選メール（本テストの主たる検証対象）。
@@ -184,7 +194,10 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: () => undefined,
 }));
 
+// 公式 Bun re-export pattern（partial mock は 'use cache' 経路を壊す）。
+const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
+  ...actualNextCache,
   updateTag: () => undefined,
   cacheTag: () => undefined,
   cacheLife: () => undefined,
