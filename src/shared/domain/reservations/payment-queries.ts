@@ -317,15 +317,28 @@ export async function findReservationByPaymentIntent(paymentIntentId: string) {
 }
 
 /**
- * 非同期決済の PaymentIntent ID のみ保存（paymentStatus は PENDING のまま）
- * checkout.session.completed で payment_status === "unpaid" の場合に使用
+ * 非同期決済の PaymentIntent ID のみ保存（paymentStatus は PENDING のまま）。
+ * `checkout.session.completed` で `payment_status !== "paid"` の場合に使用。
+ *
+ * Event の `saveEventRegistrationPaymentIntentId` と同型の `updateMany` guard:
+ * - `paymentStatus` が UNPAID / PENDING の行のみ更新（PAID 等への stale webhook 上書き防止）
+ * - `stripeCheckoutSessionId` 一致必須（`claimReservationAsFailed` と同型。OLD session の
+ *   `checkout.session.completed` が NEW session へ PI を書き込む race を封殺）
+ *
+ * 該当行なし（race / 既処理 / session 不一致）は count=0 の no-op。webhook 全体を 500 化しない。
  */
 export async function savePaymentIntentId(
   reservationId: string,
   paymentIntentId: string,
-) {
-  return prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+  sessionId: string,
+): Promise<void> {
+  await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      stripeCheckoutSessionId: sessionId,
+      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
+    },
     data: { stripePaymentIntentId: paymentIntentId },
   });
 }

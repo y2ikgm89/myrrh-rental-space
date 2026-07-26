@@ -1066,7 +1066,7 @@ async function handleCheckoutSessionCompleted(
           : null;
 
       if (paymentIntentId) {
-        await savePaymentIntentId(reservationId, paymentIntentId);
+        await savePaymentIntentId(reservationId, paymentIntentId, session.id);
       }
 
       invalidateReservationCache(reservationId);
