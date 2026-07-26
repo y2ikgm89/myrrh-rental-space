@@ -200,10 +200,14 @@ const mockTxReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
 const mockTxReservationFindUniqueOrThrow = mock<() => Promise<unknown>>(() =>
   Promise.resolve({ icsSequence: 1 }),
 );
+const mockTxReservationFindUnique = mock<
+  () => Promise<{ paymentStatus: string } | null>
+>(() => Promise.resolve(null));
 
 const txClient = {
   reservation: {
     findFirst: mockTxReservationFindFirst,
+    findUnique: mockTxReservationFindUnique,
     create: mockReservationCreate,
     update: mockReservationUpdate,
     updateMany: mockTxReservationUpdateMany,
@@ -321,6 +325,7 @@ import {
   updateReservationNotesCommand,
   deleteReservationCommand,
   restoreReservationCommand,
+  restoreReservationStatusCommand,
 } from "@/shared/domain/reservations/lifecycle-commands";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { validateStatusTransition } from "@/shared/domain/reservations/status";
@@ -370,6 +375,8 @@ function resetAllMocks() {
   mockTxReservationFindUniqueOrThrow.mockImplementation(() =>
     Promise.resolve({ icsSequence: 1 }),
   );
+  mockTxReservationFindUnique.mockClear();
+  mockTxReservationFindUnique.mockResolvedValue(null);
   mockGetSpaceRatePlans.mockClear();
   mockGetSpaceRatePlans.mockResolvedValue([]);
 
@@ -1605,11 +1612,52 @@ describe("updateReservationStatusCommand", () => {
           where: expect.objectContaining({
             id: "res-1",
             status: ReservationStatus.CONFIRMED,
+            paymentStatus: { not: PaymentStatus.PENDING },
           }),
           data: expect.objectContaining({
             status: ReservationStatus.CANCELLED,
             cancelledAt: expect.any(Date),
             cancelledByType: "ADMIN",
+          }),
+        }),
+      );
+    });
+
+    test("CONFIRMED → CANCELLED は paymentStatus=PENDING を updateMany WHERE で除外する", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.UNPAID,
+          googleCalendarEventId: null,
+          couponId: null,
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.CANCELLED,
+      );
+
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: { not: PaymentStatus.PENDING },
           }),
         }),
       );
@@ -1968,6 +2016,158 @@ describe("updateReservationStatusCommand", () => {
       expect(result.previousStatus).toBe(ReservationStatus.CONFIRMED);
       expect(mockTxReservationUpdateMany).toHaveBeenCalled();
     });
+
+    test("paymentStatus=PENDING の予約は admin キャンセルを VALIDATION で拒否する", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PENDING,
+          googleCalendarEventId: null,
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await expect(
+        updateReservationStatusCommand("res-1", ReservationStatus.CANCELLED),
+      ).rejects.toMatchObject({
+        message:
+          expect.stringContaining("決済処理中のためキャンセルできません"),
+        code: "VALIDATION",
+      });
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("claim count=0 かつ paymentStatus=PENDING なら VALIDATION を返す", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.UNPAID,
+          googleCalendarEventId: null,
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+      mockTxReservationUpdateMany.mockImplementation(() =>
+        Promise.resolve({ count: 0 }),
+      );
+      mockTxReservationFindUnique.mockResolvedValue({
+        paymentStatus: PaymentStatus.PENDING,
+      });
+
+      await expect(
+        updateReservationStatusCommand("res-1", ReservationStatus.CANCELLED),
+      ).rejects.toMatchObject({
+        message:
+          expect.stringContaining("決済処理中のためキャンセルできません"),
+        code: "VALIDATION",
+      });
+    });
+  });
+});
+
+describe("restoreReservationStatusCommand", () => {
+  beforeEach(() => {
+    resetAllMocks();
+    mockTxReservationFindUniqueOrThrow.mockImplementation(() =>
+      Promise.resolve({ icsSequence: 2 }),
+    );
+  });
+
+  function cancelledReservation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "res-1",
+      status: ReservationStatus.CANCELLED,
+      paymentStatus: PaymentStatus.UNPAID,
+      spaceId: "space-1",
+      googleCalendarEventId: null,
+      couponId: null,
+      basePrice: 2000,
+      startTime: new Date("2024-06-15T10:00:00+09:00"),
+      endTime: new Date("2024-06-15T12:00:00+09:00"),
+      totalPrice: 2000,
+      notes: null,
+      space: {
+        name: "テストスペース",
+        addressDetail: null,
+        location: { address: "東京都渋谷区1-1-1" },
+      },
+      customer: {
+        firstName: "太郎",
+        lastName: "山田",
+        companyName: null,
+        email: "taro@example.com",
+      },
+      ...overrides,
+    };
+  }
+
+  test("CANCELLED + UNPAID は CONFIRMED へ復元できる", async () => {
+    mockReservationFindUnique.mockResolvedValue(cancelledReservation());
+
+    const result = await restoreReservationStatusCommand(
+      "res-1",
+      ReservationStatus.CONFIRMED,
+    );
+
+    expect(result.targetStatus).toBe(ReservationStatus.CONFIRMED);
+    expect(mockTxReservationUpdateMany).toHaveBeenCalled();
+  });
+
+  test("CANCELLED + FAILED は PENDING へ復元できる", async () => {
+    mockReservationFindUnique.mockResolvedValue(
+      cancelledReservation({ paymentStatus: PaymentStatus.FAILED }),
+    );
+
+    await restoreReservationStatusCommand("res-1", ReservationStatus.PENDING);
+
+    expect(mockTxReservationUpdateMany).toHaveBeenCalled();
+  });
+
+  test.each([
+    PaymentStatus.PAID,
+    PaymentStatus.REFUNDED,
+    PaymentStatus.PARTIALLY_REFUNDED,
+  ])("CANCELLED + %s は復元を VALIDATION で拒否する", async (paymentStatus) => {
+    mockReservationFindUnique.mockResolvedValue(
+      cancelledReservation({ paymentStatus }),
+    );
+
+    await expect(
+      restoreReservationStatusCommand("res-1", ReservationStatus.CONFIRMED),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("新規予約を作成"),
+      code: "VALIDATION",
+    });
+    expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
   });
 });
 

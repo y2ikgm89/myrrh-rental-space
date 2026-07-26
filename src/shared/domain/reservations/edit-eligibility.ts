@@ -29,7 +29,10 @@ export function isReservationEditableForCustomerSelfServe(input: {
     return { ok: false, reason: "status" };
   }
 
-  if (input.paymentStatus !== PaymentStatus.UNPAID) {
+  if (
+    input.paymentStatus !== PaymentStatus.UNPAID &&
+    input.paymentStatus !== PaymentStatus.FAILED
+  ) {
     return { ok: false, reason: "payment" };
   }
 

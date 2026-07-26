@@ -11,7 +11,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
-import { expireOpenCheckoutSessionBestEffort } from "./checkout-session-expiry";
 
 /**
  * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
@@ -48,9 +47,9 @@ interface ExpirePendingReservationsResult {
  * CANCELLED に遷移させて空き枠（DB EXCLUDE 制約）を解放する。
  *
  * claim 成功後の副作用（SSoT = `applyCancellationSideEffects`）:
- * - クーポン usageCount の戻し
- * - Stripe Checkout Session の expire（open な session からの後追い課金を防ぐ）
+ * - クーポン usageCount の戻し（tx 内で完了済み）
  * - GCal / メール / 通知 / SmartLock / 集約 AuditLog
+ * - Stripe Checkout Session の expire（`applyCancellationSideEffects` 内）
  *
  * `applyCancellation` は PENDING を拒否するため使わない。本 cron が PENDING を
  * CANCELLED に claim した直後に副作用を発火する。
@@ -80,7 +79,6 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       spaceId: true,
       paymentInitiatedAt: true,
       couponId: true,
-      stripeCheckoutSessionId: true,
     },
   });
 
@@ -88,7 +86,6 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     return { expired: [], total: 0 };
   }
 
-  const candidateById = new Map(candidates.map((r) => [r.id, r]));
   const expiredLogs: ExpiredReservationLog[] = [];
 
   // 2) 予約ごとに atomic claim + coupon decrement を同一 tx で実行する。
@@ -145,18 +142,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   }
 
   // 3) claim 成功分の副作用。クーポン戻しは上記 tx 内で完了済み。
-  //    Stripe session expire + cancellation side effects を予約単位で発火する。
   for (const log of expiredLogs) {
-    const candidate = candidateById.get(log.id);
-    if (!candidate) continue;
-
-    if (candidate.stripeCheckoutSessionId) {
-      await expireOpenCheckoutSessionBestEffort({
-        reservationId: log.id,
-        sessionId: candidate.stripeCheckoutSessionId,
-      });
-    }
-
     try {
       await applyCancellationSideEffects({
         reservationId: log.id,

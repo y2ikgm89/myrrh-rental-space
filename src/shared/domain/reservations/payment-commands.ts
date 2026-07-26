@@ -20,7 +20,10 @@ import {
   findPaymentMethodsIncompatibleWithCurrency,
   isStripePaymentMethodType,
 } from "@/shared/lib/stripe-payment-methods";
-import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/reservations/checkout-session-expiry";
+import {
+  expireOpenCheckoutSessionBestEffort,
+  retrieveCheckoutSessionStatus,
+} from "@/shared/domain/reservations/checkout-session-expiry";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import {
   REFUNDED_BY_TYPE,
@@ -401,8 +404,9 @@ export async function createCheckoutSessionCommand(input: {
 /**
  * 管理者による手動入金記録。UNPAID → PAID の遷移を、Stripe を経由しない支払い
  * （現金・銀行振込等）について事後記録する。`createCheckoutSessionCommand` と同じ
- * updateMany WHERE claim パターンで二重確定を防ぐ。`stripeCheckoutSessionId` が
- * 非 null（Stripe 決済が進行中/完了）の予約は対象外とする。
+ * updateMany WHERE claim パターンで二重確定を防ぐ。`paymentStatus` が UNPAID / FAILED
+ * かつ Stripe Checkout が進行中 (session status=open) でない予約のみ対象。
+ * session id が残っていても expired / complete なら手動入金可（claim 時に session id を null 化）。
  *
  * claim は `status in [PENDING, CONFIRMED]` も要求する (cancel 経路は paymentStatus
  * を触らず status のみ CANCELLED に遷移させるため、paymentStatus だけで claim すると
@@ -443,6 +447,25 @@ function buildReservationReceiptDetailUrl(input: {
   return `${appUrl}/reservation/status?token=${token}`;
 }
 
+async function assertManualPaymentNotBlockedByOpenCheckout(input: {
+  reservationId: string;
+  sessionId: string;
+}): Promise<void> {
+  const sessionStatus = await retrieveCheckoutSessionStatus(input.sessionId);
+  if (sessionStatus === null) {
+    throw new DomainError(
+      "Stripe の設定が正しくありません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+  if (sessionStatus === "open") {
+    throw new DomainError(
+      "Stripe決済が進行中のため、手動入金記録できません",
+      "VALIDATION",
+    );
+  }
+}
+
 export async function recordManualReservationPaymentCommand(data: {
   reservationId: string;
   amount: number;
@@ -461,11 +484,20 @@ export async function recordManualReservationPaymentCommand(data: {
   if (!existing) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
-  if (existing.stripeCheckoutSessionId !== null) {
+  if (
+    existing.paymentStatus !== PaymentStatus.UNPAID &&
+    existing.paymentStatus !== PaymentStatus.FAILED
+  ) {
     throw new DomainError(
-      "この予約はStripe決済が進行中または完了しているため、手動入金記録できません",
+      "この予約はキャンセル済み、既に入金記録済み、または決済処理中のため記録できません",
       "VALIDATION",
     );
+  }
+  if (existing.stripeCheckoutSessionId !== null) {
+    await assertManualPaymentNotBlockedByOpenCheckout({
+      reservationId: data.reservationId,
+      sessionId: existing.stripeCheckoutSessionId,
+    });
   }
 
   const chargeBase = existing.totalPriceWithTax ?? existing.totalPrice;
@@ -489,11 +521,14 @@ export async function recordManualReservationPaymentCommand(data: {
       status: {
         in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
-      paymentStatus: PaymentStatus.UNPAID,
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+      },
     },
     data: {
       paymentStatus: PaymentStatus.PAID,
       paidAt: new Date(),
+      stripeCheckoutSessionId: null,
     },
   });
   if (claimed.count === 0) {
