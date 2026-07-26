@@ -117,11 +117,11 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "payment",
   },
   {
-    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/registrations/checkout/route.ts",
     module: "events",
   },
   {
-    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/registrations/checkout/route.ts",
     module: "payment",
   },
   // posts

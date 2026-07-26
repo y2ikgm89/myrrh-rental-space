@@ -3,9 +3,11 @@ import {
   createEventRegistrationPaymentToken,
   verifyEventRegistrationPaymentToken,
   buildEventRegistrationPaymentCheckoutUrl,
+  EVENT_REGISTRATION_PAYMENT_TOKEN_TTL_MS,
 } from "@/shared/lib/tokens/event-registration-payment-token";
 
 const REGISTRATION_ID = "reg_event_payment_test";
+const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
 
 describe("createEventRegistrationPaymentToken / verifyEventRegistrationPaymentToken", () => {
   test("往復で registrationId を復元できる", () => {
@@ -46,6 +48,7 @@ describe("createEventRegistrationPaymentToken / verifyEventRegistrationPaymentTo
       await import("@/shared/lib/tokens/waitlist-offer-token");
     const foreignToken = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt: FUTURE,
     });
     expect(verifyEventRegistrationPaymentToken(foreignToken)).toBeNull();
   });
@@ -67,18 +70,42 @@ describe("createEventRegistrationPaymentToken / verifyEventRegistrationPaymentTo
       registrationId: REGISTRATION_ID,
     });
   });
+
+  test("exp 経過後は null（期限切れ拒否）", () => {
+    const mintedAt = new Date("2020-01-01T00:00:00.000Z");
+    const token = createEventRegistrationPaymentToken({
+      registrationId: REGISTRATION_ID,
+      now: mintedAt,
+    });
+    const afterExpiry = new Date(
+      mintedAt.getTime() + EVENT_REGISTRATION_PAYMENT_TOKEN_TTL_MS + 1,
+    );
+    expect(verifyEventRegistrationPaymentToken(token, afterExpiry)).toBeNull();
+  });
+
+  test("TTL 内なら有効", () => {
+    const mintedAt = new Date("2020-01-01T00:00:00.000Z");
+    const token = createEventRegistrationPaymentToken({
+      registrationId: REGISTRATION_ID,
+      now: mintedAt,
+    });
+    const beforeExpiry = new Date(
+      mintedAt.getTime() + EVENT_REGISTRATION_PAYMENT_TOKEN_TTL_MS - 1,
+    );
+    expect(verifyEventRegistrationPaymentToken(token, beforeExpiry)).toEqual({
+      registrationId: REGISTRATION_ID,
+    });
+  });
 });
 
 describe("buildEventRegistrationPaymentCheckoutUrl", () => {
-  test("token を埋め込んだ checkout URL を返す", () => {
+  test("?token= を埋め込んだ checkout URL を返す（proxy 転写前提）", () => {
     const url = buildEventRegistrationPaymentCheckoutUrl(REGISTRATION_ID);
-    // URL は /events/registrations/checkout/<token> の形式
-    expect(url).toMatch(/\/events\/registrations\/checkout\//u);
-    // token 部分は base64url 文字のみ
-    const token = url.split("/events/registrations/checkout/")[1];
+    expect(url).toMatch(/\/events\/registrations\/checkout\?token=/u);
+    const parsed = new URL(url);
+    const token = parsed.searchParams.get("token");
     expect(token).toBeTruthy();
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/u);
-    // token を verify すると元の registrationId が復元できる
     expect(verifyEventRegistrationPaymentToken(token as string)).toEqual({
       registrationId: REGISTRATION_ID,
     });

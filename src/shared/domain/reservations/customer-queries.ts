@@ -165,13 +165,14 @@ export async function getReservationForGuestEdit(reservationId: string) {
 
 /**
  * ゲスト向け薄い予約ステータスページ (`/reservation/status`) 用の最小 select。
- * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ * status token 検証後にのみ呼ぶ。member-ownership は page.tsx 側で強制する。
  */
 export async function getReservationForGuestStatus(reservationId: string) {
   return prisma.reservation.findFirst({
     where: { id: reservationId, deletedAt: null },
     select: {
       id: true,
+      customerId: true,
       status: true,
       startTime: true,
       endTime: true,

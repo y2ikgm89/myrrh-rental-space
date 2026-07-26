@@ -18,7 +18,12 @@ import {
   shouldShowGuestClaimLink,
 } from "@/shared/domain/events/guest-status-view";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import {
+  checkGuestStatusMemberOwnership,
+  GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
+} from "@/shared/lib/guest-status-member-ownership";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -35,6 +40,7 @@ import {
 import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
 import { EventMeetingUrlRow } from "@/app/(public)/_shared/components/event-meeting-url-row";
 import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
+import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（cancel と同方針）。
 // robots.ts は `/events/registrations/` でまとめて disallow 済み。
@@ -78,6 +84,22 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
 
   if (!registration) {
     return <InvalidLinkView />;
+  }
+
+  const sessionCustomer = user ? await getCustomerByUserId(user.id) : null;
+  const ownership = checkGuestStatusMemberOwnership({
+    sessionCustomerId: sessionCustomer?.id ?? null,
+    resourceCustomerId: registration.customerId,
+  });
+  if (ownership.kind === "mismatch") {
+    return (
+      <GuestStatusMemberOwnershipMismatchView
+        message={
+          GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE
+        }
+        mypageHref="/mypage/events"
+      />
+    );
   }
 
   const paymentStatus = getValidPaymentStatus(registration.paymentStatus);

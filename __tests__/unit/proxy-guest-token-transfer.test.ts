@@ -137,9 +137,18 @@ describe("guest token transfer", () => {
     expect(res.status).not.toBe(307);
   });
 
+  test("token なしの /events/registrations/checkout は素通り（redirect しない）", async () => {
+    const req = new NextRequest(
+      "https://example.com/events/registrations/checkout",
+    );
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
   test("/events/waitlist/checkout の ?token= を HttpOnly cookie に転写し URL から外す", async () => {
     const token = createWaitlistOfferToken({
       registrationId: "reg_abcdef123456",
+      expiresAt: FUTURE,
     });
     const req = new NextRequest(
       `https://example.com/events/waitlist/checkout?token=${token}`,

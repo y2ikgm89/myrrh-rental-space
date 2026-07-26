@@ -22,11 +22,9 @@ import {
   passcodeRevealByReservationRateLimiter,
   passcodeRevealByUserRateLimiter,
 } from "@/shared/lib/rate-limit";
+import { GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
-
-const MEMBER_OWNERSHIP_MISMATCH_MESSAGE =
-  "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください";
 
 export type RevealReservationPasscodesData = {
   readonly status: "visible" | "pending" | "outside_window" | "unavailable";
@@ -91,7 +89,9 @@ export async function revealReservationPasscodesAction(
           return createMutationError("予約が見つかりません");
         }
         if (customer.id !== reservationCustomerId) {
-          return createMutationError(MEMBER_OWNERSHIP_MISMATCH_MESSAGE);
+          return createMutationError(
+            GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
+          );
         }
         try {
           await assertCustomerActive(customer.id);
