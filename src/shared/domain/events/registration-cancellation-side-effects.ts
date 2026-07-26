@@ -64,13 +64,10 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
+import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
 import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
 import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
-import {
-  calculateRefundAmount,
-  resolveRefundPolicy,
-  type RefundPolicyResolution,
-} from "@/shared/domain/refund/policy";
+import { type RefundPolicyResolution } from "@/shared/domain/refund/policy";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -240,113 +237,34 @@ type RegistrationEmailDetails = NonNullable<
 async function runRefundStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
+  wasPaid: boolean;
+  requiresRefund: boolean;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration } = args;
-  const wasPaid =
-    registration.paymentStatus === PaymentStatus.PAID ||
-    registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
-  const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
+  const { input, registration, wasPaid, requiresRefund } = args;
 
-  if (!requiresRefund) {
-    return {
-      status: "skipped",
-      reason: wasPaid ? "no_stripe_payment_intent" : "not_paid",
-    };
-  }
-
-  try {
-    const resolution: RefundPolicyResolution =
-      input.refundPolicySnapshot !== undefined
-        ? input.refundPolicySnapshot
-        : resolveRefundPolicy(
-            (
-              await prisma.settingsCommerce.findUnique({
-                where: { id: "singleton" },
-                select: { refundPolicy: true },
-              })
-            )?.refundPolicy,
-          );
-
-    if (resolution.status === "invalid") {
-      logError(
-        new Error("Auto refund skipped: refund policy JSON is invalid"),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "autoRefundEventRegistrationOnCancel",
-            registrationId: input.registrationId,
-            reason: "policy_invalid",
-            parseReason: resolution.reason,
-          },
-        },
-      );
-      return {
-        status: "skipped",
-        reason: "policy_invalid",
-        detail: { parseReason: resolution.reason },
-      };
-    }
-
-    let refundAmount: number | undefined;
-    if (
-      resolution.status === "configured" &&
-      registration.paidAmount !== null
-    ) {
-      refundAmount = calculateRefundAmount(
-        resolution.policy,
-        registration.paidAmount,
-        registration.slot.startAt,
-        new Date(),
-      );
-    }
-    // status === "unset" → refundAmount 未指定のまま残額全額自動返金
-
-    if (refundAmount !== undefined && refundAmount === 0) {
-      // Policy による refundRate=0% → 返金 skip。
-      // Notification 側の「要返金確認」タイトル (requiresRefund=true 分岐) は
-      // そのまま昇格させて admin 側で手動対応を明示的に促す。
-      return {
-        status: "skipped",
-        reason: "policy_refund_rate_zero",
-        detail: { policyRefundAmount: 0 },
-      };
-    }
-
-    await refundEventRegistrationPaymentCommand({
-      registrationId: input.registrationId,
-      actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-      // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
-      // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる
-      // (Reservation 側と同型)。
-      request: {
-        ip: input.request.ip,
-        userAgent: input.request.userAgent,
-      },
-      ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
-    });
-
-    return {
-      status: "ok",
-      detail: {
-        ...(refundAmount !== undefined
-          ? { refundAmount }
-          : { refundAmount: "full_remaining" }),
-      },
-    };
-  } catch (err) {
-    const normalized = normalizeError(err);
-    logError(normalized, {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.HIGH,
-      context: {
-        operation: "autoRefundEventRegistrationOnCancel",
+  return runAutoRefundOnCancel({
+    entityId: input.registrationId,
+    operation: "autoRefundEventRegistrationOnCancel",
+    channel: input.channel,
+    wasPaid,
+    requiresRefund,
+    chargeBase: registration.paidAmount,
+    startTime: registration.slot.startAt,
+    ...(input.refundPolicySnapshot !== undefined
+      ? { refundPolicySnapshot: input.refundPolicySnapshot }
+      : {}),
+    request: {
+      ip: input.request.ip,
+      userAgent: input.request.userAgent,
+    },
+    executeRefund: async ({ amount, request }) =>
+      refundEventRegistrationPaymentCommand({
         registrationId: input.registrationId,
-        channel: input.channel,
-      },
-    });
-    return { status: "error", reason: normalized.message };
-  }
+        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+        request,
+        ...(amount !== undefined ? { amount } : {}),
+      }),
+  });
 }
 
 async function runCustomerEmailStep(args: {
@@ -639,7 +557,12 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
     registration.paymentStatus === PaymentStatus.PAID ||
     registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
-  const refund = await runRefundStep({ input, registration });
+  const refund = await runRefundStep({
+    input,
+    registration,
+    wasPaid,
+    requiresRefund,
+  });
 
   const [
     checkoutSessionExpire,

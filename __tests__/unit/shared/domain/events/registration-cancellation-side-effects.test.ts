@@ -384,7 +384,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
     });
     expect(auditArg.metadata.sideEffects.refund).toMatchObject({
       status: "skipped",
-      reason: "policy_refund_rate_zero",
+      reason: "policyRefundRateZero",
     });
   });
 
