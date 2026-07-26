@@ -64,7 +64,6 @@ export function formatEventAddress(parts: VenueAddressParts): string | null {
  */
 type EventVenueDisplayInput = {
   readonly format: EventFormatValue;
-  readonly meetingUrl: string | null;
   readonly location?: { readonly name: string } | null;
   readonly space?: { readonly name: string } | null;
   readonly addressDetail?: string | null;
