@@ -430,12 +430,38 @@ describe("setEventRegistrationCheckInCommand", () => {
         registrationId,
         attended: true,
       }),
-    ).rejects.toThrow("キャンセル済の申込は出席登録できません");
+    ).rejects.toThrow("確定済みの申込のみ出席登録できます");
 
     expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("CONFIRMED & attendedAt=null で attended=true → updateMany + status guard で claim", async () => {
+  test("WAITLISTED は VALIDATION で拒否し updateMany を呼ばない", async () => {
+    const eventId = "cm0event1234567890123456";
+    const registrationId = "cm0reg12345678901234567";
+
+    mockRegistrationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: registrationId,
+        eventId,
+        attendedAt: null,
+        status: RegistrationStatus.WAITLISTED,
+      }),
+    );
+
+    await expect(
+      setEventRegistrationCheckInCommand({
+        eventId,
+        registrationId,
+        attended: true,
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: "確定済みの申込のみ出席登録できます",
+    });
+    expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("CONFIRMED & attendedAt=null で attended=true → updateMany + CONFIRMED guard で claim", async () => {
     const eventId = "cm0event1234567890123456";
     const registrationId = "cm0reg12345678901234567";
 
@@ -459,13 +485,13 @@ describe("setEventRegistrationCheckInCommand", () => {
     expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
       where: {
         id: registrationId,
-        status: { not: RegistrationStatus.CANCELLED },
+        status: RegistrationStatus.CONFIRMED,
       },
       data: { attendedAt: expect.any(Date) },
     });
   });
 
-  test("TOCTOU: findFirst 後に別 tx で CANCELLED 遷移 → updateMany count=0 → VALIDATION throw", async () => {
+  test("TOCTOU: findFirst 後に別 tx で非 CONFIRMED 遷移 → updateMany count=0 → VALIDATION throw", async () => {
     const eventId = "cm0event1234567890123456";
     const registrationId = "cm0reg12345678901234567";
 
@@ -487,7 +513,7 @@ describe("setEventRegistrationCheckInCommand", () => {
         registrationId,
         attended: true,
       }),
-    ).rejects.toThrow("キャンセル済の申込は出席登録できません");
+    ).rejects.toThrow("確定済みの申込のみ出席登録できます");
   });
 });
 

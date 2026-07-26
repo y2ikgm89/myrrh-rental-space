@@ -29,9 +29,11 @@ import {
   EventScheduleMode,
   EventStatus,
   MeetingProvider,
+  RegistrationStatus,
   EVENT_FORMAT_VALUES,
   MEETING_PROVIDER_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { EVENT_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 import {
   gallerySchema,
   type GalleryItem,
@@ -47,6 +49,7 @@ import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -175,6 +178,28 @@ function parseOptionalDeadline(value: string | null | undefined): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getAggregateQuantitySum(aggregate: object): number {
+  if (!isRecord(aggregate)) return 0;
+  const sum = aggregate["_sum"];
+  if (!isRecord(sum)) return 0;
+  const quantity = sum["quantity"];
+  return typeof quantity === "number" ? quantity : 0;
+}
+
+function assertEventStatusTransition(
+  from: (typeof EventStatus)[keyof typeof EventStatus],
+  to: (typeof EventStatus)[keyof typeof EventStatus],
+): void {
+  if (from === to) return;
+  const allowed = EVENT_STATUS_TRANSITIONS[from];
+  if (!allowed.includes(to)) {
+    throw new DomainError(
+      `イベントのステータスを ${from} から ${to} へ変更することはできません`,
+      "VALIDATION",
+    );
+  }
 }
 
 function assertEventScheduleInvariant(data: EventCommandInput): void {
@@ -410,6 +435,8 @@ export async function updateEventCommand(
   });
   if (!existing) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
+  assertEventStatusTransition(existing.status, data.status);
+
   // Codex PR #1149 P1 fix: GOOGLE_MEET provider を維持したまま無関係な field を編集すると
   // form が meetingUrl 入力欄を unmount して送らないため `data.meetingUrl` が undefined/empty で
   // 届き、`?? null` で既存 Meet URL を消去してしまう。update sync は Meet 再発行しないため
@@ -579,6 +606,25 @@ export async function updateEventCommand(
         const ticket = incoming[index];
         if (!ticket) continue;
         if (ticket.id) {
+          // null capacity = 無制限。有限定員へ下げるときだけ CONFIRMED 合計で floor を検証。
+          if (ticket.capacity != null) {
+            const confirmedAggregate = await tx.eventRegistration.aggregate({
+              where: {
+                ticketId: ticket.id,
+                eventId: id,
+                status: RegistrationStatus.CONFIRMED,
+              },
+              _sum: { quantity: true },
+            });
+            const confirmedQuantity =
+              getAggregateQuantitySum(confirmedAggregate);
+            if (ticket.capacity < confirmedQuantity) {
+              throw new DomainError(
+                `定員を確定済み申込人数（${confirmedQuantity}名）未満にはできません`,
+                "VALIDATION",
+              );
+            }
+          }
           await tx.eventTicket.update({
             where: { id: ticket.id },
             data: buildTicketWriteData(ticket, index),
@@ -869,6 +915,38 @@ export async function upsertEventFromCalendar(data: {
   });
 
   if (existingSlot) {
+    // 公開済み、またはキャンセル以外の申込があるイベントは inbound で
+    // title/description/times/venue を黙って上書きしない（clean-break skip）。
+    const existingEvent = await prisma.event.findFirst({
+      where: { id: existingSlot.eventId, deletedAt: null },
+      select: {
+        id: true,
+        status: true,
+        registrations: {
+          where: { status: { not: RegistrationStatus.CANCELLED } },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+    if (!existingEvent) {
+      throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+    }
+    if (existingEvent.status === EventStatus.PUBLISHED) {
+      return {
+        id: existingEvent.id,
+        action: "skipped" as const,
+        reason: "published_event_protected",
+      };
+    }
+    if (existingEvent.registrations.length > 0) {
+      return {
+        id: existingEvent.id,
+        action: "skipped" as const,
+        reason: "has_active_registrations",
+      };
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.event.update({
         where: { id: existingSlot.eventId, deletedAt: null },

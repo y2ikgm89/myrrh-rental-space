@@ -88,6 +88,7 @@ export async function GET(request: Request) {
     return jsonSuccess({
       imported: result.imported,
       updated: result.updated,
+      skipped: result.skipped,
       errors: result.errors,
       timestamp: new Date().toISOString(),
     });

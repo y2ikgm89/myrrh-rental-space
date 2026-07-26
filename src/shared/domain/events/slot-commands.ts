@@ -101,10 +101,19 @@ export async function syncEventTimeSlotsCommand(
       registrations: { select: { id: true }, take: 1 },
     },
   });
+  const existingSlotIds = new Set(existingSlots.map((slot) => slot.id));
 
   const incomingIds = new Set(
     inputs.flatMap((s) => (s.id != null ? [s.id] : [])),
   );
+
+  // 所有権: updateEventCommand のチケット ownership と同型。
+  // eventId スコープ外 / 未知の slot.id は update 前に拒否する。
+  for (const slot of inputs) {
+    if (slot.id != null && !existingSlotIds.has(slot.id)) {
+      throw new DomainError("スロットが見つかりません", "NOT_FOUND");
+    }
+  }
 
   // 削除対象: 既存スロットのうち incoming に含まれないもの
   const removedGoogleCalendarEventIds: string[] = [];
