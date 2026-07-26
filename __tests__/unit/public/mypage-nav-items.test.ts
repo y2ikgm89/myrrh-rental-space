@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import {
-  getMypageNavMobileGridClass,
+  getMypageNavGridClass,
   getVisibleMypageNavItems,
   MYPAGE_NAV_ITEMS,
 } from "@/app/(public)/mypage/_components/mypage-nav-items";
@@ -8,14 +8,14 @@ import {
 describe("getVisibleMypageNavItems", () => {
   test("events / contact とも ON のとき 5 項目を返す", () => {
     expect(
-      getVisibleMypageNavItems({ showEvents: true, showContact: true }),
+      getVisibleMypageNavItems({ eventsEnabled: true, contactEnabled: true }),
     ).toHaveLength(5);
   });
 
   test("events OFF のときイベントリンクを除外する", () => {
     const items = getVisibleMypageNavItems({
-      showEvents: false,
-      showContact: true,
+      eventsEnabled: false,
+      contactEnabled: true,
     });
 
     expect(items).toHaveLength(4);
@@ -25,8 +25,8 @@ describe("getVisibleMypageNavItems", () => {
 
   test("contact OFF のときお問い合わせリンクを除外する", () => {
     const items = getVisibleMypageNavItems({
-      showEvents: true,
-      showContact: false,
+      eventsEnabled: true,
+      contactEnabled: false,
     });
 
     expect(items).toHaveLength(4);
@@ -36,8 +36,8 @@ describe("getVisibleMypageNavItems", () => {
 
   test("events / contact とも OFF のとき 3 項目を返す", () => {
     const items = getVisibleMypageNavItems({
-      showEvents: false,
-      showContact: false,
+      eventsEnabled: false,
+      contactEnabled: false,
     });
 
     expect(items).toHaveLength(3);
@@ -50,8 +50,8 @@ describe("getVisibleMypageNavItems", () => {
 
   test("ベース項目は MYPAGE_NAV_ITEMS の部分集合", () => {
     const items = getVisibleMypageNavItems({
-      showEvents: false,
-      showContact: false,
+      eventsEnabled: false,
+      contactEnabled: false,
     });
 
     for (const item of items) {
@@ -60,10 +60,16 @@ describe("getVisibleMypageNavItems", () => {
   });
 });
 
-describe("getMypageNavMobileGridClass", () => {
+describe("getMypageNavGridClass", () => {
   test("表示件数に応じた grid-cols クラスを返す", () => {
-    expect(getMypageNavMobileGridClass(3)).toBe("grid-cols-3");
-    expect(getMypageNavMobileGridClass(4)).toBe("grid-cols-4");
-    expect(getMypageNavMobileGridClass(5)).toBe("grid-cols-5");
+    expect(getMypageNavGridClass(1)).toBe("grid-cols-1");
+    expect(getMypageNavGridClass(3)).toBe("grid-cols-3");
+    expect(getMypageNavGridClass(4)).toBe("grid-cols-4");
+    expect(getMypageNavGridClass(5)).toBe("grid-cols-5");
+  });
+
+  test("想定外件数は 1 列にフォールバックする", () => {
+    expect(getMypageNavGridClass(0)).toBe("grid-cols-1");
+    expect(getMypageNavGridClass(6)).toBe("grid-cols-1");
   });
 });
