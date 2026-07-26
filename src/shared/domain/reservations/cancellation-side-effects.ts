@@ -49,11 +49,11 @@ import { AuditAction } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
 import { refundReservationPaymentCommand } from "@/shared/domain/reservations/payment-commands";
 import {
-  calculateRefundAmount,
-  resolveRefundPolicy,
   type RefundPolicyResolution,
+  resolveRefundPolicy,
 } from "@/shared/domain/refund/policy";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
@@ -327,109 +327,29 @@ async function runRefundStep(args: {
 }): Promise<CancellationEffectOutcome> {
   const { input, reservation, requiresRefund, wasPaid } = args;
 
-  if (!requiresRefund) {
-    return {
-      status: "skipped",
-      reason: wasPaid ? "noPaymentIntent" : "notPaid",
-    };
-  }
-
-  try {
-    // PERF-02: bulk 経路が snapshot を渡してきたらそれを使う (N+1 回避)。
-    // 単発 caller は snapshot 未指定 → per-call で Settings.findUnique (従前挙動)。
-    const resolution: RefundPolicyResolution =
-      input.refundPolicySnapshot !== undefined
-        ? input.refundPolicySnapshot
-        : resolveRefundPolicy(
-            (
-              await prisma.settingsCommerce.findUnique({
-                where: { id: "singleton" },
-                select: { refundPolicy: true },
-              })
-            )?.refundPolicy,
-          );
-
-    if (resolution.status === "invalid") {
-      logError(
-        new Error("Auto refund skipped: refund policy JSON is invalid"),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "autoRefundOnCancel",
-            reservationId: input.reservationId,
-            reason: "policyInvalid",
-            parseReason: resolution.reason,
-          },
-        },
-      );
-      return {
-        status: "skipped",
-        reason: "policyInvalid",
-        detail: { parseReason: resolution.reason },
-      };
-    }
-
-    let refundAmount: number | undefined;
-    const chargeBase =
-      reservation.totalPriceWithTax ?? reservation.totalPrice ?? null;
-    if (resolution.status === "configured" && chargeBase !== null) {
-      refundAmount = calculateRefundAmount(
-        resolution.policy,
-        Number(chargeBase),
-        reservation.startTime,
-        new Date(),
-      );
-    }
-    // status === "unset" → refundAmount 未指定のまま残額全額自動返金
-
-    if (refundAmount !== undefined && refundAmount <= 0) {
-      // Policy による refundRate=0% → 返金 skip。運用側の「要返金確認」通知タイトル
-      // (下段の requiresRefund 分岐) はそのまま昇格させて、admin 側で手動対応を明示的に促す。
-      logError(new Error("Auto refund skipped: policy refund rate is 0%"), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.LOW,
-        context: {
-          operation: "autoRefundOnCancel",
-          reservationId: input.reservationId,
-          reason: "policyRefundRateZero",
-        },
-      });
-      return { status: "skipped", reason: "policyRefundRateZero" };
-    }
-
-    const result = await refundReservationPaymentCommand({
-      reservationId: input.reservationId,
-      actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-      // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
-      // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる。
-      request: {
-        ip: input.request.ip,
-        userAgent: input.request.userAgent,
-      },
-      ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
-    });
-    return {
-      status: "ok",
-      detail: {
-        refundAmount: result.refundAmount,
-        cumulativeAmount: result.cumulativeAmount,
-        newPaymentStatus: result.newPaymentStatus,
-      },
-    };
-  } catch (err) {
-    const normalized = normalizeError(err);
-    logError(normalized, {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.HIGH,
-      context: {
-        operation: "autoRefundOnCancel",
+  return runAutoRefundOnCancel({
+    entityId: input.reservationId,
+    operation: "autoRefundOnCancel",
+    channel: input.channel,
+    wasPaid,
+    requiresRefund,
+    chargeBase: reservation.totalPriceWithTax ?? reservation.totalPrice ?? null,
+    startTime: reservation.startTime,
+    ...(input.refundPolicySnapshot !== undefined
+      ? { refundPolicySnapshot: input.refundPolicySnapshot }
+      : {}),
+    request: {
+      ip: input.request.ip,
+      userAgent: input.request.userAgent,
+    },
+    executeRefund: async ({ amount, request }) =>
+      refundReservationPaymentCommand({
         reservationId: input.reservationId,
-        channel: input.channel,
-      },
-    });
-    return { status: "error", reason: normalized.message };
-  }
+        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+        request,
+        ...(amount !== undefined ? { amount } : {}),
+      }),
+  });
 }
 
 async function runGcalStep(args: {
