@@ -14,6 +14,81 @@ import { formatEventVenue } from "./venue";
 
 export const WAITLIST_QUEUE_PER_PAGE = 20;
 
+export type WaitlistEmailRegistration = {
+  readonly id: string;
+  readonly name: string;
+  readonly customerId: string | null;
+  readonly slotId: string;
+  readonly ticketId: string;
+  readonly quantity: number;
+  readonly waitlistedAt: Date | null;
+  readonly eventTitle: string;
+  readonly eventSlug: string;
+  readonly slotStartAt: Date;
+  readonly slotEndAt: Date;
+  readonly ticketName: string;
+};
+
+/**
+ * waitlist 系メール sender 向けの最小 registration payload。
+ */
+export async function getWaitlistEmailRegistration(
+  registrationId: string,
+): Promise<WaitlistEmailRegistration | null> {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      id: true,
+      name: true,
+      customerId: true,
+      slotId: true,
+      ticketId: true,
+      quantity: true,
+      waitlistedAt: true,
+      event: { select: { title: true, slug: true } },
+      slot: { select: { startAt: true, endAt: true } },
+      ticket: { select: { name: true } },
+    },
+  });
+  if (!registration) return null;
+  return {
+    id: registration.id,
+    name: registration.name,
+    customerId: registration.customerId,
+    slotId: registration.slotId,
+    ticketId: registration.ticketId,
+    quantity: registration.quantity,
+    waitlistedAt: registration.waitlistedAt,
+    eventTitle: registration.event.title,
+    eventSlug: registration.event.slug,
+    slotStartAt: registration.slot.startAt,
+    slotEndAt: registration.slot.endAt,
+    ticketName: registration.ticket.name,
+  };
+}
+
+/**
+ * 単一 registration の FIFO 1-indexed 順位（waitlist メール用）。
+ * `getWaitlistPositionMapForRegistrations` と同 SSoT。
+ */
+export async function computeWaitlistPositionForRegistration(
+  registration: Pick<
+    WaitlistEmailRegistration,
+    "id" | "slotId" | "ticketId" | "waitlistedAt"
+  >,
+): Promise<number> {
+  if (!registration.waitlistedAt) return 1;
+  const positions = await getWaitlistPositionMapForRegistrations([
+    {
+      id: registration.id,
+      slotId: registration.slotId,
+      ticketId: registration.ticketId,
+      waitlistedAt: registration.waitlistedAt,
+    },
+  ]);
+  return positions.get(registration.id) ?? 1;
+}
+
 /**
  * mypage 一覧用の bulk 順位取得。
  *

@@ -118,25 +118,24 @@ export async function bulkDeleteSpacesCommand(
     }
 
     const spaceIds = targets.map((t) => t.id);
-    const [reservationSpaces, eventSpaces] = await Promise.all([
-      tx.reservation.findMany({
-        where: {
-          spaceId: { in: spaceIds },
-          status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-        },
-        select: { spaceId: true },
-        distinct: ["spaceId"],
-      }),
-      tx.event.findMany({
-        where: {
-          spaceId: { in: spaceIds },
-          deletedAt: null,
-          status: { in: [...ACTIVE_EVENT_STATUSES] },
-        },
-        select: { spaceId: true },
-        distinct: ["spaceId"],
-      }),
-    ]);
+    // interactive tx は単一コネクション。Promise.all での並行発行は禁止。
+    const reservationSpaces = await tx.reservation.findMany({
+      where: {
+        spaceId: { in: spaceIds },
+        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      },
+      select: { spaceId: true },
+      distinct: ["spaceId"],
+    });
+    const eventSpaces = await tx.event.findMany({
+      where: {
+        spaceId: { in: spaceIds },
+        deletedAt: null,
+        status: { in: [...ACTIVE_EVENT_STATUSES] },
+      },
+      select: { spaceId: true },
+      distinct: ["spaceId"],
+    });
 
     const blockedIds = new Set<string>();
     for (const row of reservationSpaces) {

@@ -7,6 +7,7 @@ const mockAdminPromoteWaitlistEntryCommand = mock();
 const mockExpireWaitlistOfferCommand = mock();
 const mockCreateAuditLogRecord = mock(async () => undefined);
 const mockGetEventWaitlistOfferPaymentContext = mock();
+const mockGetWaitlistEmailRegistration = mock();
 const mockSendEventWaitlistOffered = mock(async () => ({ ok: true }) as const);
 const mockSendEventWaitlistExpired = mock(async () => ({ ok: true }) as const);
 
@@ -31,6 +32,9 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getEventWaitlistOfferPaymentContext: (
     ...args: Parameters<typeof mockGetEventWaitlistOfferPaymentContext>
   ) => mockGetEventWaitlistOfferPaymentContext(...args),
+  getWaitlistEmailRegistration: (
+    ...args: Parameters<typeof mockGetWaitlistEmailRegistration>
+  ) => mockGetWaitlistEmailRegistration(...args),
 }));
 
 mock.module("@/shared/domain/audit-log/commands", () => ({
@@ -72,6 +76,21 @@ const registrationId = "cm0reg12345678901234567";
 const now = new Date("2026-07-14T00:00:00.000Z");
 const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
+const waitlistEmailRegistration = {
+  id: registrationId,
+  name: "山田太郎",
+  customerId: null,
+  slotId: "slot-1",
+  ticketId: "ticket-1",
+  quantity: 1,
+  waitlistedAt: now,
+  eventTitle: "テストイベント",
+  eventSlug: "test-event",
+  slotStartAt: now,
+  slotEndAt: expiresAt,
+  ticketName: "一般",
+};
+
 describe("admin event waitlist actions", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockReset();
@@ -80,6 +99,10 @@ describe("admin event waitlist actions", () => {
     mockCreateAuditLogRecord.mockReset();
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
     mockGetEventWaitlistOfferPaymentContext.mockReset();
+    mockGetWaitlistEmailRegistration.mockReset();
+    mockGetWaitlistEmailRegistration.mockResolvedValue(
+      waitlistEmailRegistration,
+    );
     mockSendEventWaitlistOffered.mockReset();
     mockSendEventWaitlistOffered.mockResolvedValue({ ok: true });
     mockSendEventWaitlistExpired.mockReset();
@@ -141,7 +164,7 @@ describe("admin event waitlist actions", () => {
     // 繰り上げ当選メールが送信される
     expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
       expect.objectContaining({
-        registrationId,
+        registration: waitlistEmailRegistration,
         to: "waiting@example.com",
         expiresAt,
       }),
@@ -247,7 +270,7 @@ describe("admin event waitlist actions", () => {
 
     expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith(
       expect.objectContaining({
-        registrationId,
+        registration: waitlistEmailRegistration,
         to: "waiting@example.com",
       }),
     );

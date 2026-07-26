@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import {
   findExpiredWaitlistOfferCandidates,
   getEventWaitlistOfferPaymentContext,
+  getWaitlistEmailRegistration,
 } from "@/shared/domain/events/waitlist-queries";
 import { expireAndPromoteWaitlistForEventCommand } from "@/shared/domain/events/waitlist-commands";
 import {
@@ -90,10 +91,16 @@ export async function GET(request: Request) {
           if (!expiredEntry.email) continue;
           const email = expiredEntry.email;
           fireAndForget(
-            sendEventWaitlistExpired({
-              registrationId: expiredEntry.id,
-              to: email,
-            }),
+            (async () => {
+              const registration = await getWaitlistEmailRegistration(
+                expiredEntry.id,
+              );
+              if (!registration) return;
+              await sendEventWaitlistExpired({
+                registration,
+                to: email,
+              });
+            })(),
             {
               operation: "sendEventWaitlistExpiredFromCron",
               category: ErrorCategory.EXTERNAL_API,
@@ -112,28 +119,31 @@ export async function GET(request: Request) {
           const email = offeredEntry.email;
           fireAndForget(
             (async () => {
-              const paymentContext = await getEventWaitlistOfferPaymentContext(
-                offeredEntry.id,
-              );
-              if (!paymentContext) {
-                logError(
-                  new Error(
-                    `Waitlist offer payment context not found after cron promote: registration ${offeredEntry.id}`,
-                  ),
-                  {
-                    category: ErrorCategory.DATABASE,
-                    severity: ErrorSeverity.LOW,
-                    context: {
-                      operation: "waitlistExpireCron",
-                      registrationId: offeredEntry.id,
-                      eventId,
+              const [registration, paymentContext] = await Promise.all([
+                getWaitlistEmailRegistration(offeredEntry.id),
+                getEventWaitlistOfferPaymentContext(offeredEntry.id),
+              ]);
+              if (!registration || !paymentContext) {
+                if (!paymentContext) {
+                  logError(
+                    new Error(
+                      `Waitlist offer payment context not found after cron promote: registration ${offeredEntry.id}`,
+                    ),
+                    {
+                      category: ErrorCategory.DATABASE,
+                      severity: ErrorSeverity.LOW,
+                      context: {
+                        operation: "waitlistExpireCron",
+                        registrationId: offeredEntry.id,
+                        eventId,
+                      },
                     },
-                  },
-                );
+                  );
+                }
                 return;
               }
               await sendEventWaitlistOffered({
-                registrationId: offeredEntry.id,
+                registration,
                 to: email,
                 expiresAt: offeredEntry.expiresAt,
                 paymentContext,
