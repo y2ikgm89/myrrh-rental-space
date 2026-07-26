@@ -39,13 +39,32 @@ const mockConstructEvent =
   mock<
     (body: string, sig: string, secret: string) => Promise<StripeWebhookEvent>
   >();
+const mockRetrieveCheckoutSession =
+  mock<
+    (
+      sessionId: string,
+      params?: unknown,
+    ) => Promise<{ payment_intent: unknown }>
+  >();
 const mockGetStripeClient = mock<
   () => Promise<{
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
+      checkout: { sessions: { retrieve: typeof mockRetrieveCheckoutSession } };
     } | null;
   }>
 >();
+const mockRefundCheckoutAmountMismatchForReservation = mock<
+  (input: {
+    reservationId: string;
+    stripePaymentIntentId: string;
+    capturedAppAmount: number;
+  }) => Promise<{
+    outcome: string;
+    refundId?: string;
+    refundAmount?: number;
+  }>
+>(() => Promise.resolve({ outcome: "refunded" }));
 
 // Payment Queries (atomic claim API)
 const mockClaimReservationAsPaid = mock<
@@ -166,7 +185,10 @@ const mockOmitUndefined = mock<
 // 2. mock.module() — import より前に宣言
 // =============================================================================
 
+const actualPaymentAvailability =
+  await import("@/shared/domain/payment/availability");
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualPaymentAvailability,
   assertStripeCredentialsConfigured: () =>
     mockAssertStripeCredentialsConfigured(),
 }));
@@ -186,6 +208,18 @@ mock.module("@/shared/lib/crypto", () => ({
 
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
+}));
+
+mock.module("@/shared/domain/reservations/payment-commands", () => ({
+  refundCheckoutAmountMismatchForReservation: (input: {
+    reservationId: string;
+    stripePaymentIntentId: string;
+    capturedAppAmount: number;
+  }) => mockRefundCheckoutAmountMismatchForReservation(input),
+}));
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: () => Promise.resolve({ id: "notif-1" }),
 }));
 
 mock.module("@/shared/domain/reservations/payment-queries", () => ({
@@ -237,11 +271,16 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  findWaitlistOfferRegistrationNeedingRefundAfterPaidSession: () =>
+    Promise.resolve(null),
+  expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
+  refundCheckoutAmountMismatchForEventRegistration: () =>
     Promise.resolve({ outcome: "not_applicable" }),
 }));
 
@@ -468,6 +507,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
+    mockRetrieveCheckoutSession.mockReset();
+    mockRefundCheckoutAmountMismatchForReservation.mockReset();
     mockClaimReservationAsPaid.mockReset();
     mockSavePaymentIntentId.mockReset();
     mockClaimReservationAsFailed.mockReset();
@@ -524,7 +565,17 @@ describe("POST /api/webhooks/stripe", () => {
         webhooks: {
           constructEventAsync: mockConstructEvent,
         },
+        checkout: {
+          sessions: {
+            retrieve: mockRetrieveCheckoutSession,
+          },
+        },
       },
+    });
+    mockRefundCheckoutAmountMismatchForReservation.mockResolvedValue({
+      outcome: "refunded",
+      refundId: "re_mismatch",
+      refundAmount: 9999,
     });
     mockClaimReservationAsPaid.mockResolvedValue({
       ...DEFAULT_RESERVATION,
@@ -653,7 +704,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockFireAndForget).toHaveBeenCalled();
   });
 
-  test("checkout.session.completed (paid) で amount_total mismatch → fulfill skip + 200 + HIGH log", async () => {
+  test("checkout.session.completed (paid) で amount_total mismatch → fulfill skip + auto-refund + 200", async () => {
     mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(5000);
     const event = makeSessionCompletedEvent("paid", "pi-123", {
       amountTotal: 9999,
@@ -666,6 +717,13 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+    expect(mockRefundCheckoutAmountMismatchForReservation).toHaveBeenCalledWith(
+      {
+        reservationId: "res-123",
+        stripePaymentIntentId: "pi-123",
+        capturedAppAmount: 9999,
+      },
+    );
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
@@ -1267,6 +1325,11 @@ describe("POST /api/webhooks/stripe", () => {
       mockGetStripeClient.mockResolvedValue({
         client: {
           webhooks: { constructEventAsync: mockConstructEvent },
+          checkout: {
+            sessions: {
+              retrieve: mockRetrieveCheckoutSession,
+            },
+          },
         },
       });
     }

@@ -35,6 +35,14 @@ const mockGetStripeClient = mock<
   () => Promise<{
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
+      checkout: {
+        sessions: {
+          retrieve: (
+            sessionId: string,
+            params?: unknown,
+          ) => Promise<{ payment_intent: unknown }>;
+        };
+      };
     } | null;
   }>
 >();
@@ -184,7 +192,10 @@ const mockOmitUndefined = mock<
 // 2. mock.module() — import より前に宣言
 // =============================================================================
 
+const actualPaymentAvailability =
+  await import("@/shared/domain/payment/availability");
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualPaymentAvailability,
   assertStripeCredentialsConfigured: () =>
     mockAssertStripeCredentialsConfigured(),
 }));
@@ -270,6 +281,9 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
+  findWaitlistOfferRegistrationNeedingRefundAfterPaidSession: () =>
+    Promise.resolve(null),
+  expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
@@ -279,6 +293,8 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
     stripePaymentIntentId: string;
     reason?: string;
   }) => mockRefundExpiredWaitlistOfferPaymentCommand(input),
+  refundCheckoutAmountMismatchForEventRegistration: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
 }));
 
 mock.module("@/shared/domain/events/waitlist-queries", () => ({
@@ -576,6 +592,11 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockGetStripeClient.mockResolvedValue({
       client: {
         webhooks: { constructEventAsync: mockConstructEvent },
+        checkout: {
+          sessions: {
+            retrieve: () => Promise.resolve({ payment_intent: "pi-123" }),
+          },
+        },
       },
     });
 
