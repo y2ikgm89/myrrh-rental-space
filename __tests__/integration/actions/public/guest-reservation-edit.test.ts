@@ -130,6 +130,9 @@ mock.module("@/shared/domain/customers/queries", () => ({
 mock.module("@/shared/domain/customers/guard", () => ({
   assertCustomerActive: mock(() => Promise.resolve(undefined)),
 }));
+mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+  assertGuestTokenCustomerGates: mock(() => Promise.resolve(undefined)),
+}));
 
 const mockGetCustomerSession = mock<
   () => Promise<{ user: { id: string } } | null>

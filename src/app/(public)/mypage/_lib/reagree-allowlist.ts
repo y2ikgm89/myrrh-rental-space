@@ -26,7 +26,9 @@ export const REAGREE_ALLOWLIST_PREFIXES: readonly string[] = [
  * pathname が再同意 gate の allowlist に該当するかを判定する。
  *
  * prefix 前方一致で比較する (`/mypage/reservations/[id]/edit` のような入れ子も対象)。
- * Phase 2 で edit/cancel 系 Server Action 側に curl-bypass gate を追加する前提。
+ * UI redirect 専用。guest-token / mypage の mutation Server Action は
+ * `assertGuestTokenCustomerGates` / `assertLoginSignupReagreed` で curl-bypass を塞ぐ
+ * （本 allowlist を mutation 防衛線に使わない）。
  */
 export function isReagreeAllowlisted(pathname: string): boolean {
   return REAGREE_ALLOWLIST_PREFIXES.some((prefix) =>

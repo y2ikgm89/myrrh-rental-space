@@ -9,7 +9,7 @@ import { cancelReservationByToken } from "@/shared/domain/reservations/customer-
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import {
@@ -173,33 +173,39 @@ export async function cancelGuestReservationAction(
     );
   }
 
-  // 4. member-ownership ガード: ログイン中ユーザーが「別人の予約」をキャンセル
-  //    しようとしている場合は拒否。ゲスト本人（session 無し）はそのまま通す。
+  // member-ownership + linked-customer gates:
+  // - ログイン中は別人の予約への誤操作を拒否
+  // - 予約に紐付く customerId は session の有無に関わらず active/BLACKLIST を強制
+  //   （純ゲストトークンでも停止/BLACKLIST 顧客のセルフサービスを通さない）
+  // - session があるときは LOGIN_SIGNUP 再同意も mypage と同型に強制
+  const reservation = await getReservationForGuestCancel(parsedId.data);
+  if (!reservation) {
+    return createMutationError("予約が見つかりません");
+  }
+
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;
+  let sessionCustomerId: string | null = null;
   if (sessionUserId) {
-    const reservation = await getReservationForGuestCancel(parsedId.data);
-    if (!reservation) {
-      return createMutationError("予約が見つかりません");
-    }
     const customer = await getCustomerByUserId(sessionUserId);
     if (customer && customer.id !== reservation.customerId) {
       return createMutationError(
         "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
       );
     }
-    // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
-    // isActive / status BLACKLIST を強制する（ownership 一致でも停止アカウントは拒否）。
-    if (customer) {
-      try {
-        await assertCustomerActive(customer.id);
-      } catch (error) {
-        if (error instanceof DomainError) {
-          return createMutationError(error.message);
-        }
-        throw error;
-      }
+    sessionCustomerId = customer?.id ?? null;
+  }
+
+  try {
+    await assertGuestTokenCustomerGates({
+      resourceCustomerId: reservation.customerId,
+      sessionCustomerId,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
     }
+    throw error;
   }
 
   try {
