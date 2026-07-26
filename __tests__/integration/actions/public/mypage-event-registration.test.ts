@@ -110,6 +110,8 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventAdminNotification: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 // cancelEventRegistration は使わないが、同一ファイルの registerForEventWaitlist が

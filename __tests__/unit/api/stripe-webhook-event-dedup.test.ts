@@ -199,6 +199,8 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
 
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/receipts/issue", () => ({

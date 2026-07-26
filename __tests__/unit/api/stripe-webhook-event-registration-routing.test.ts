@@ -287,6 +287,8 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: (data: unknown) =>
     mockSendEventRegistrationConfirmation(data),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 // receipt-full-wiring gap PR#2 で webhook が issueReceiptForEventRegistration を await

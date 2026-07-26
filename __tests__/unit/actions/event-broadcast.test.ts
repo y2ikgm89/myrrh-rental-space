@@ -27,6 +27,8 @@ mock.module("@/admin/lib/admin-action", () => ({
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventBroadcast: (...args: Parameters<typeof mockSendEventBroadcast>) =>
     mockSendEventBroadcast(...args),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/lib/action-helpers", () => ({

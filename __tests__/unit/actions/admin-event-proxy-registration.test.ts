@@ -61,6 +61,9 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventReminderEmail: mock(async () => ({ ok: true }) as const),
   sendEventCancelledToAllParticipants: mock(async () => undefined),
   sendEventUpdatedToAllParticipants: mock(async () => undefined),
+  sendEventBroadcast: mock(async () => undefined),
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/notifications/commands", () => ({

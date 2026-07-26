@@ -112,6 +112,8 @@ const mockSendAdminNotification = mock<
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationCancelled: mockSendCancelledEmail,
   sendEventAdminNotification: mockSendAdminNotification,
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/lib/email/event-waitlist-emails", () => ({

@@ -198,6 +198,8 @@ mock.module("@/shared/lib/async-utils", () => ({
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventUpdatedToAllParticipants: mockSendEventUpdated,
   sendEventCancelledToAllParticipants: mockSendEventCancelled,
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@generated/prisma/enums", () => ({
