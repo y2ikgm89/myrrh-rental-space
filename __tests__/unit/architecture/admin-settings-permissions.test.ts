@@ -32,7 +32,8 @@ describe("admin settings permission boundaries", () => {
 
     for (const pagePath of manageOnlyPages) {
       const source = readAdminFile(...pagePath);
-      expect(source).toContain('requireAdminPermission("settings", "manage")');
+      expect(source).toContain('requireAdminSettingsPage("manage")');
+      expect(source).toContain("@/admin/helpers/page-auth");
     }
   });
 

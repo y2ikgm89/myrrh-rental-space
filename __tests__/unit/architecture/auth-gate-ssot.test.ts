@@ -56,7 +56,6 @@ const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set([
   "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx",
   "src/app/(admin)/admin/(dashboard)/page.tsx",
   "src/app/(admin)/admin/(dashboard)/reservations/calendar/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/settings/system/page.tsx",
   "src/app/(admin)/admin/(dashboard)/staff/[id]/edit/page.tsx",
   "src/app/(admin)/admin/(dashboard)/staff/[id]/page.tsx",
   "src/app/(admin)/admin/(dashboard)/staff/new/page.tsx",
