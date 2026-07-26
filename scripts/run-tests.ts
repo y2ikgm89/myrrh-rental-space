@@ -167,7 +167,15 @@ async function runOne(file: string): Promise<FileResult> {
   //   テストのみで、内部実装の dev assertion / 詳細 stack に依存しない。
   // - 本番ランタイムは Next.js build 経由で同 `production` 条件が解決されるため、
   //   テストと本番のバイナリは整合 (`.prod.mjs` を共通参照)。
-  const proc = Bun.spawn(["bun", "test", "--conditions", "production", file], {
+  // TEST_TIMEOUT: bun test の per-test default（既定 5000ms）。Windows worktree や
+  // type-check 直後の FS 走査 gate では 5s を超えやすいため、pre-push 等で延長する。
+  const timeoutMs = process.env["TEST_TIMEOUT"]?.trim();
+  const bunTestArgs = ["bun", "test", "--conditions", "production"];
+  if (timeoutMs && Number.parseInt(timeoutMs, 10) > 0) {
+    bunTestArgs.push("--timeout", timeoutMs);
+  }
+  bunTestArgs.push(file);
+  const proc = Bun.spawn(bunTestArgs, {
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env },
