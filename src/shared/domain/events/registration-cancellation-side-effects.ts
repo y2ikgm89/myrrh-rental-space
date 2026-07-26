@@ -58,7 +58,10 @@
 
 import "server-only";
 
-import { AuditAction, PaymentStatus } from "@generated/prisma/enums";
+import {
+  AuditAction,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";

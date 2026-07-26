@@ -1,6 +1,9 @@
 import "server-only";
 
-import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { offerNextWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";

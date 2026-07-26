@@ -1,6 +1,9 @@
 import "server-only";
 
-import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   CANCELLABLE_REGISTRATION_STATUSES,
   type CancelledByType,

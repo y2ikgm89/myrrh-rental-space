@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   safeFetch,

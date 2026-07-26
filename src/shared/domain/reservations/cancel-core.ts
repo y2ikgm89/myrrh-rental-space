@@ -1,6 +1,9 @@
 import "server-only";
 
-import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
+import {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
 

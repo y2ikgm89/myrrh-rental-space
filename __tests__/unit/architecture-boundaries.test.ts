@@ -710,6 +710,83 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("shared/domain は @generated/prisma/enums を直接 import しない（prisma-types SSoT）", () => {
+    // Prisma enum 値は `@/shared/lib/validations/enums/prisma-types` 経由が SSoT。
+    // `Prisma` 名前空間の型-only import は `@generated/prisma/client` から許可
+    // （上記「generated Prisma import」テストで shared/domain は client 直接 import 可）。
+    // 凍結 allowlist は ratchet 用 — 解消 PR では当該ファイルを削除すること。
+    const DOMAIN_ENUM_IMPORT_ALLOWLIST = new Set(
+      [
+        "src/shared/domain/audit-log/commands.ts",
+        "src/shared/domain/audit-log/hash-chain-core.ts",
+        "src/shared/domain/audit-log/queries.ts",
+        "src/shared/domain/coupons/types.ts",
+        "src/shared/domain/customers/bulk-status-commands.ts",
+        "src/shared/domain/customers/commands.ts",
+        "src/shared/domain/customers/queries.ts",
+        "src/shared/domain/customers/risk-detection.ts",
+        "src/shared/domain/customers/types.ts",
+        "src/shared/domain/dashboard/queries.ts",
+        "src/shared/domain/editor-comments/queries.ts",
+        "src/shared/domain/editor-comments/types.ts",
+        "src/shared/domain/inquiries/bulk-status-commands.ts",
+        "src/shared/domain/inquiries/commands.ts",
+        "src/shared/domain/inquiries/ops-commands.ts",
+        "src/shared/domain/inquiries/queries.ts",
+        "src/shared/domain/inquiries/types.ts",
+        "src/shared/domain/instagram/commands.ts",
+        "src/shared/domain/link-cards/resolve-queries.ts",
+        "src/shared/domain/link-cards/search-queries.ts",
+        "src/shared/domain/media/commands.ts",
+        "src/shared/domain/media/queries.ts",
+        "src/shared/domain/navigation/commands.ts",
+        "src/shared/domain/navigation/queries.ts",
+        "src/shared/domain/news/admin-queries.ts",
+        "src/shared/domain/news/types.ts",
+        "src/shared/domain/posts/analytics-commands.ts",
+        "src/shared/domain/posts/bulk-commands.ts",
+        "src/shared/domain/posts/post-commands.ts",
+        "src/shared/domain/posts/queries.ts",
+        "src/shared/domain/posts/scheduled-publish.ts",
+        "src/shared/domain/posts/types.ts",
+        "src/shared/domain/reviews/commands.ts",
+        "src/shared/domain/settings/admin-queries.ts",
+        "src/shared/domain/settings/announcement-bar.ts",
+        "src/shared/domain/settings/commands.ts",
+        "src/shared/domain/settings/integration-commands.ts",
+        "src/shared/domain/settings/queries/display.ts",
+        "src/shared/domain/settings/queries/site.ts",
+        "src/shared/domain/settings/queries/tax.ts",
+        "src/shared/domain/settings/types.ts",
+        "src/shared/domain/sidebar/queries.ts",
+        "src/shared/domain/sitemap/queries.ts",
+        "src/shared/domain/smart-lock/commands.ts",
+        "src/shared/domain/smart-lock/device-inventory.ts",
+        "src/shared/domain/smart-lock/queries.ts",
+        "src/shared/domain/smart-lock/types.ts",
+        "src/shared/domain/spaces/commands.ts",
+        "src/shared/domain/spaces/queries.ts",
+        "src/shared/domain/user-page-assignments/commands.ts",
+        "src/shared/domain/users/queries.ts",
+        "src/shared/domain/users/types.ts",
+      ].map((p) => p.replace(/\\/g, "/")),
+    );
+
+    const domainFiles = collectSourceFiles(SHARED_DOMAIN_ROOT).filter(
+      (file) => {
+        const rel = relative(ROOT, file).replace(/\\/g, "/");
+        return !DOMAIN_ENUM_IMPORT_ALLOWLIST.has(rel);
+      },
+    );
+
+    const offenders = collectNonCommentOffenders(
+      domainFiles,
+      /@generated\/prisma\/enums/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("enums gateway は @generated/prisma/client を import しない（参照同一性フットガン排除）", () => {
     // gateway は client-safe である必要があるため、server-only な
     // `@generated/prisma/client` から値を re-export してはならない。

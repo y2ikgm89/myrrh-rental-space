@@ -1,7 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { CustomerType, ReservationStatus } from "@generated/prisma/enums";
+import {
+  CustomerType,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
