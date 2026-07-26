@@ -172,6 +172,46 @@ export async function findExpiredPendingWaitlistOfferRegistration(
 }
 
 /**
+ * Paid Checkout Session 到達後に fulfill できず返金が必要な waitlist offer を拾う。
+ * confirm の CONFLICT / 再読込 race 後の webhook retry 用。
+ */
+export async function findWaitlistOfferRegistrationNeedingRefundAfterPaidSession(
+  registrationId: string,
+): Promise<{ id: string; status: RegistrationStatus } | null> {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      status: {
+        in: [RegistrationStatus.EXPIRED, RegistrationStatus.WAITLISTED_OFFERED],
+      },
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+      },
+      event: { deletedAt: null },
+    },
+    select: { id: true, status: true },
+  });
+}
+
+/**
+ * 返金コマンド前提の EXPIRED 化。WAITLISTED_OFFERED + unpaid/pending のみ対象。
+ */
+export async function expireWaitlistOfferForRefundIfNeeded(
+  registrationId: string,
+): Promise<void> {
+  await prisma.eventRegistration.updateMany({
+    where: {
+      id: registrationId,
+      status: RegistrationStatus.WAITLISTED_OFFERED,
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+      },
+    },
+    data: { status: RegistrationStatus.EXPIRED },
+  });
+}
+
+/**
  * `charge.refunded` webhook から呼ぶ event registration 版の idempotent refund 反映。
  *
  * Reservation 側 `applyChargeRefundIdempotent` (payment-queries.ts) の対称版:
