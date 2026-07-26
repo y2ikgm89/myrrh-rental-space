@@ -93,9 +93,10 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   })
     ? `/claim/event-registration?token=${createEventRegistrationClaimToken(registration.id)}`
     : null;
-  const showMeetingUrl =
+  const isVirtual = isEventVirtualAccessible(registration.event);
+  const showConfirmedMeetingUrl =
     registration.status === RegistrationStatus.CONFIRMED &&
-    isEventVirtualAccessible(registration.event) &&
+    isVirtual &&
     registration.event.meetingUrl != null;
 
   return (
@@ -115,11 +116,6 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
           <Heading level={2} className="!text-xl">
             {registration.event.title}
           </Heading>
-          {registration.event.location && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {registration.event.location}
-            </p>
-          )}
         </div>
 
         <dl className="px-4 sm:px-6">
@@ -142,7 +138,16 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
               minute: "2-digit",
             })}
           </DetailRow>
-          <DetailRow label="枚数">{registration.quantity}枚</DetailRow>
+          {registration.event.location && (
+            <DetailRow label="場所">{registration.event.location}</DetailRow>
+          )}
+          {registration.event.locationSecondary && (
+            <DetailRow label="開催形態">
+              {registration.event.locationSecondary}
+            </DetailRow>
+          )}
+          <DetailRow label="チケット">{registration.ticketName}</DetailRow>
+          <DetailRow label="参加人数">{registration.quantity}名</DetailRow>
           <DetailRow label="合計金額">
             {formatPrice(registration.ticketTotalPrice, "無料")}
           </DetailRow>
@@ -152,18 +157,21 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
           <DetailRow label="お支払い">
             {PAYMENT_STATUS_LABELS[paymentStatus]}
           </DetailRow>
-          {showMeetingUrl && registration.event.meetingUrl && (
-            <DetailRow label="参加 URL">
-              <a
-                href={registration.event.meetingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all underline underline-offset-4 hover:text-foreground"
-              >
-                {registration.event.meetingUrl}
-              </a>
-            </DetailRow>
-          )}
+          {isVirtual &&
+            (showConfirmedMeetingUrl && registration.event.meetingUrl ? (
+              <DetailRow label="参加 URL">
+                <a
+                  href={registration.event.meetingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all underline underline-offset-4 hover:text-foreground"
+                >
+                  {registration.event.meetingUrl}
+                </a>
+              </DetailRow>
+            ) : (
+              <DetailRow label="参加 URL">参加確定後に表示されます</DetailRow>
+            ))}
         </dl>
 
         {receiptDownloadHref && (

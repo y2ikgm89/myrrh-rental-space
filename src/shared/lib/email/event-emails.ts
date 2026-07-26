@@ -34,6 +34,10 @@ import {
 } from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
+import {
+  createEventRegistrationStatusToken,
+  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/event-registration-status-token";
 import { createMarketingUnsubscribeArtifacts } from "@/shared/lib/tokens/marketing-unsubscribe-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
@@ -59,15 +63,34 @@ import type { EmailResult } from "./types";
 // =============================================================================
 
 /**
- * 会員向けマイページのイベント申込一覧 URL を組み立てる。
+ * 会員向けマイページのイベント申込詳細 URL を組み立てる。
  * customerId が無い（ゲスト申込）場合は undefined を返す。
- * イベントには予約の [id] 詳細ページに相当するものが無いため一覧ページを指す。
+ * waitlist / reminder 等からも参照される SSoT のため export する。
  */
-function buildMemberEventRegistrationUrl(
+export function buildMemberEventRegistrationUrl(
   customerId: string | null | undefined,
+  registrationId: string,
 ): string | undefined {
   if (!customerId) return undefined;
-  return `${getAppUrl()}/mypage/events`;
+  return `${getAppUrl()}/mypage/events/${registrationId}`;
+}
+
+/**
+ * イベント申込詳細ハブ URL（メール本文の再確認 SSoT）。
+ * 会員はマイページ詳細、ゲストは status token 付き薄い詳細ページ。
+ * `buildBookingHubUrl`（予約）と対称。
+ */
+export function buildEventRegistrationHubUrl(
+  customerId: string | null | undefined,
+  registrationId: string,
+): string {
+  const memberUrl = buildMemberEventRegistrationUrl(customerId, registrationId);
+  if (memberUrl) return memberUrl;
+  const token = createEventRegistrationStatusToken(
+    registrationId,
+    new Date(Date.now() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${getAppUrl()}/events/registrations/status?token=${token}`;
 }
 
 type EventRegistrationConfirmationData = {
@@ -135,8 +158,9 @@ export async function sendEventRegistrationConfirmation(
   const claimUrl = data.customerId
     ? undefined
     : `${appUrl}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
-  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+  const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
     data.customerId,
+    data.registrationId,
   );
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
@@ -205,7 +229,7 @@ export async function sendEventRegistrationConfirmation(
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
-          memberEventRegistrationUrl,
+          eventRegistrationHubUrl,
           claimUrl,
           cancelUrl,
           paymentCheckoutUrl: data.paymentCheckoutUrl,
@@ -264,8 +288,9 @@ export async function sendEventReminderEmail(
   const claimUrl = data.customerId
     ? undefined
     : `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
-  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+  const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
     data.customerId,
+    data.registrationId,
   );
 
   const calendarParams = omitUndefined({
@@ -329,7 +354,7 @@ export async function sendEventReminderEmail(
           endTime,
           location: data.location,
           quantity: data.quantity,
-          memberEventRegistrationUrl,
+          eventRegistrationHubUrl,
           claimUrl,
           cancelUrl,
           footer,
@@ -591,8 +616,9 @@ export async function sendEventCancelledToAllParticipants(
       const startTime = registration.slot.startAt;
       const endTime = registration.slot.endAt;
       const eventDate = formatDateWithWeekday(startTime);
-      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+      const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
         registration.customerId,
+        registration.id,
       );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       // CANCEL ICS は CONFIRMED (元々 REQUEST ICS を送っていた) 参加者のみに
@@ -641,7 +667,7 @@ export async function sendEventCancelledToAllParticipants(
               eventTitle: event.title,
               eventDate,
               reason,
-              memberEventRegistrationUrl,
+              eventRegistrationHubUrl,
               footer,
             }),
           ),
@@ -751,8 +777,9 @@ export async function sendEventUpdatedToAllParticipants(
       const oldStartTimestamp = oldStartTime.getTime();
       const newEventDate = `${formatDateWithWeekday(newStartTime)} ${formatTimeShort(newStartTime)}`;
       const newEndTime = formatTimeShort(newEndTimeDate);
-      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+      const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
         registration.customerId,
+        registration.id,
       );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
@@ -795,9 +822,7 @@ export async function sendEventUpdatedToAllParticipants(
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
             location: venueDisplay ?? undefined,
-            ...(memberEventRegistrationUrl !== undefined
-              ? { memberEventRegistrationUrl }
-              : {}),
+            eventRegistrationHubUrl,
             footer,
           }),
           attachments,

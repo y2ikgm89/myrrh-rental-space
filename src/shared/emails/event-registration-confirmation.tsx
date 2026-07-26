@@ -1,4 +1,4 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
@@ -9,6 +9,8 @@ import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
   SECTION_VARIANT_STYLES,
+  buttonPrimary,
+  buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
@@ -17,6 +19,7 @@ import {
   linkDangerStyle,
   linkStyle,
   text,
+  urlFallbackText,
 } from "./_shared/styles";
 
 type Props = {
@@ -33,8 +36,8 @@ type Props = {
   quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
-  /** 会員向け: ログイン後のマイページ申込一覧 URL（キャンセル・確認が可能） */
-  memberEventRegistrationUrl?: string;
+  /** 申込詳細ハブ（会員 mypage / ゲスト status）。再確認の SSoT。 */
+  eventRegistrationHubUrl: string;
   /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
   /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
@@ -56,7 +59,7 @@ export function EventRegistrationConfirmationEmail({
   quantity,
   registrationId,
   addToCalendarLinks,
-  memberEventRegistrationUrl,
+  eventRegistrationHubUrl,
   claimUrl,
   cancelUrl,
   paymentCheckoutUrl,
@@ -141,34 +144,21 @@ export function EventRegistrationConfirmationEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
-      {memberEventRegistrationUrl && (
-        <Section
-          style={{
-            backgroundColor: SECTION_VARIANT_STYLES.info.background,
-            borderRadius: "8px",
-            padding: "16px 20px",
-            margin: "24px 0",
-          }}
-        >
-          <Text
-            style={{
-              fontSize: "14px",
-              color: COLOR.textMuted,
-              marginBottom: "8px",
-            }}
-          >
-            会員のお客様は、マイページから申込内容の確認・キャンセルが行えます。
-          </Text>
-          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
-            <Link
-              href={memberEventRegistrationUrl}
-              style={{ color: COLOR.link, textDecoration: "underline" }}
-            >
-              マイページで申込を確認する
-            </Link>
-          </Text>
-        </Section>
-      )}
+      <Text style={text}>
+        申込内容の詳細は、申込詳細ページからご確認ください。
+      </Text>
+      <Section style={buttonSection}>
+        <Button href={eventRegistrationHubUrl} style={buttonPrimary}>
+          申込詳細を確認
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        ボタンが動作しない場合は次の URL をブラウザに貼り付けてください:
+        <br />
+        <Link href={eventRegistrationHubUrl} style={linkStyle}>
+          {eventRegistrationHubUrl}
+        </Link>
+      </Text>
 
       {paymentCheckoutUrl && (
         <Section

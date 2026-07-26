@@ -10,7 +10,7 @@ export const reservationReminderFixture = {
   notes: "プロジェクター利用予定",
   cancelUrl:
     "https://example.com/reservation/cancel?token=DEMO-TOKEN-DO-NOT-USE",
-  memberReservationUrl:
+  bookingHubUrl:
     "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   claimUrl: "https://example.com/claim/reservation?token=preview-token",
   cancellationDeadlineHours: 24,

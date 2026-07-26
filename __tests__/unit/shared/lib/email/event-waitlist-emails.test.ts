@@ -87,7 +87,7 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
 
 type RegisteredProps = {
   position: number;
-  memberEventRegistrationUrl?: string;
+  eventRegistrationHubUrl?: string;
   claimUrl?: string;
 };
 type OfferedProps = {
@@ -189,7 +189,7 @@ describe("sendEventWaitlistRegistered", () => {
     );
   });
 
-  test("ゲスト（customerId なし）は claimUrl を発行し memberEventRegistrationUrl は発行しない", async () => {
+  test("ゲスト（customerId なし）は claimUrl と status hub URL を発行する", async () => {
     mockFindUnique.mockImplementation(() =>
       Promise.resolve(GUEST_REGISTRATION),
     );
@@ -202,10 +202,12 @@ describe("sendEventWaitlistRegistered", () => {
     expect(props?.claimUrl).toMatch(
       /\/claim\/event-registration\?token=[A-Za-z0-9_-]+$/,
     );
-    expect(props?.memberEventRegistrationUrl).toBeUndefined();
+    expect(props?.eventRegistrationHubUrl).toMatch(
+      /\/events\/registrations\/status\?token=[A-Za-z0-9_-]+$/,
+    );
   });
 
-  test("会員（customerId あり）は memberEventRegistrationUrl を発行し claimUrl は発行しない", async () => {
+  test("会員（customerId あり）は mypage hub URL を発行し claimUrl は発行しない", async () => {
     mockFindUnique.mockImplementation(() =>
       Promise.resolve(MEMBER_REGISTRATION),
     );
@@ -215,7 +217,7 @@ describe("sendEventWaitlistRegistered", () => {
     });
 
     const props = mockEventWaitlistRegisteredEmail.mock.calls.at(-1)?.[0];
-    expect(props?.memberEventRegistrationUrl).toMatch(/\/mypage\/events$/);
+    expect(props?.eventRegistrationHubUrl).toMatch(/\/mypage\/events\/reg-2$/);
     expect(props?.claimUrl).toBeUndefined();
   });
 

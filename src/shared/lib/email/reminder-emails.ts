@@ -6,7 +6,7 @@ import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notif
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
-import { buildMemberReservationUrl } from "./reservation-emails";
+import { buildBookingHubUrl } from "./reservation-emails";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -51,10 +51,7 @@ export async function sendReservationReminderEmail(
       ? `${appUrl}/reservation/cancel?token=${createCancelToken(data.reservationId, cancelDeadline)}`
       : undefined;
 
-  const memberReservationUrl = buildMemberReservationUrl(
-    data.userId,
-    data.reservationId,
-  );
+  const bookingHubUrl = buildBookingHubUrl(data.userId, data.reservationId);
 
   // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
   const claimUrl = data.userId
@@ -111,7 +108,7 @@ export async function sendReservationReminderEmail(
           location: data.location,
           notes: data.notes,
           cancelUrl,
-          memberReservationUrl,
+          bookingHubUrl,
           claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           footer,

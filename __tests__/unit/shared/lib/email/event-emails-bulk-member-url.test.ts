@@ -1,11 +1,9 @@
 /**
- * イベント一括通知メール（中止・内容変更）の memberEventRegistrationUrl 出し分けテスト
+ * イベント一括通知メール（中止・内容変更）の eventRegistrationHubUrl 出し分けテスト
  *
  * sendEventCancelledToAllParticipants() / sendEventUpdatedToAllParticipants() は
- * イベント単位で全参加者（会員・ゲスト混在）をループして送信する。会員申込
- * （customerId あり）だけ「マイページで申込を確認する」memberEventRegistrationUrl
- * を本文に含める。この customerId は元々 Prisma select に含まれておらず、会員に
- * も一律リンクが欠落していた回帰 — select 漏れは型チェック・lint では検出できない。
+ * イベント単位で全参加者（会員・ゲスト混在）をループして送信する。会員は
+ * mypage 詳細、ゲストは status token URL を eventRegistrationHubUrl として渡す。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -13,6 +11,8 @@ mock.module("server-only", () => ({}));
 
 type EventRow = {
   title: string;
+  format: "OFFLINE" | "ONLINE" | "HYBRID";
+  meetingUrl: string | null;
   updatedAt: Date;
   addressDetail: string | null;
   location: { name: string } | null;
@@ -24,6 +24,7 @@ type EventRow = {
     quantity: number;
     icsSequence: number;
     customerId: string | null;
+    status?: string;
     slotId?: string;
     slot: { startAt: Date; endAt: Date };
   }[];
@@ -36,6 +37,7 @@ const MEMBER_REGISTRATION = {
   quantity: 1,
   icsSequence: 0,
   customerId: "customer-1",
+  status: "CONFIRMED",
   slotId: "slot-1",
   slot: {
     startAt: new Date("2099-01-01T01:00:00Z"),
@@ -50,6 +52,7 @@ const GUEST_REGISTRATION = {
   quantity: 1,
   icsSequence: 0,
   customerId: null,
+  status: "CONFIRMED",
   slotId: "slot-1",
   slot: {
     startAt: new Date("2099-01-01T01:00:00Z"),
@@ -60,6 +63,8 @@ const GUEST_REGISTRATION = {
 function makeEventRow(): EventRow {
   return {
     title: "夏祭りワークショップ",
+    format: "OFFLINE",
+    meetingUrl: null,
     updatedAt: new Date("2099-01-01T00:00:00Z"),
     addressDetail: null,
     location: null,
@@ -118,13 +123,9 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
 }));
 
-type MemberUrlProps = { memberEventRegistrationUrl?: string };
-const mockEventCancelledNotificationEmail = mock(
-  (props: MemberUrlProps) => props,
-);
-const mockEventUpdatedNotificationEmail = mock(
-  (props: MemberUrlProps) => props,
-);
+type HubUrlProps = { eventRegistrationHubUrl?: string };
+const mockEventCancelledNotificationEmail = mock((props: HubUrlProps) => props);
+const mockEventUpdatedNotificationEmail = mock((props: HubUrlProps) => props);
 mock.module("@/shared/emails/event-cancelled-notification", () => ({
   EventCancelledNotificationEmail: mockEventCancelledNotificationEmail,
 }));
@@ -138,7 +139,9 @@ import {
   sendEventUpdatedToAllParticipants,
 } from "@/shared/lib/email/event-emails";
 
-const MEMBER_URL_PATTERN = /\/mypage\/events$/;
+const MEMBER_HUB_URL_PATTERN = /\/mypage\/events\/reg-member$/;
+const GUEST_HUB_URL_PATTERN =
+  /\/events\/registrations\/status\?token=[A-Za-z0-9_-]+$/;
 
 beforeEach(() => {
   mockFindFirst.mockReset();
@@ -149,26 +152,30 @@ beforeEach(() => {
   mockEventUpdatedNotificationEmail.mockClear();
 });
 
-describe("sendEventCancelledToAllParticipants() の memberEventRegistrationUrl 出し分け", () => {
-  test("会員申込には memberEventRegistrationUrl を含め、ゲスト申込には含めない", async () => {
+describe("sendEventCancelledToAllParticipants() の eventRegistrationHubUrl 出し分け", () => {
+  test("会員は mypage 詳細、ゲストは status token URL を渡す", async () => {
     await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
 
     const calls = mockEventCancelledNotificationEmail.mock.calls;
     const memberProps = calls.find((c) =>
-      c[0]?.memberEventRegistrationUrl?.includes("/mypage/events"),
+      c[0]?.eventRegistrationHubUrl?.includes("/mypage/events/"),
     )?.[0];
-    const guestProps = calls
-      .map((c) => c[0])
-      .find((p) => p?.memberEventRegistrationUrl === undefined);
+    const guestProps = calls.find((c) =>
+      c[0]?.eventRegistrationHubUrl?.includes(
+        "/events/registrations/status?token=",
+      ),
+    )?.[0];
 
-    expect(memberProps?.memberEventRegistrationUrl).toMatch(MEMBER_URL_PATTERN);
-    expect(guestProps?.memberEventRegistrationUrl).toBeUndefined();
+    expect(memberProps?.eventRegistrationHubUrl).toMatch(
+      MEMBER_HUB_URL_PATTERN,
+    );
+    expect(guestProps?.eventRegistrationHubUrl).toMatch(GUEST_HUB_URL_PATTERN);
     expect(calls.length).toBe(2);
   });
 });
 
-describe("sendEventUpdatedToAllParticipants() の memberEventRegistrationUrl 出し分け", () => {
-  test("会員申込には memberEventRegistrationUrl を含め、ゲスト申込には含めない", async () => {
+describe("sendEventUpdatedToAllParticipants() の eventRegistrationHubUrl 出し分け", () => {
+  test("会員は mypage 詳細、ゲストは status token URL を渡す", async () => {
     await sendEventUpdatedToAllParticipants(
       "evt-1",
       new Map([["slot-1", new Date("2098-12-25T01:00:00Z")]]),
@@ -176,14 +183,18 @@ describe("sendEventUpdatedToAllParticipants() の memberEventRegistrationUrl 出
 
     const calls = mockEventUpdatedNotificationEmail.mock.calls;
     const memberProps = calls.find((c) =>
-      c[0]?.memberEventRegistrationUrl?.includes("/mypage/events"),
+      c[0]?.eventRegistrationHubUrl?.includes("/mypage/events/"),
     )?.[0];
-    const guestProps = calls
-      .map((c) => c[0])
-      .find((p) => p?.memberEventRegistrationUrl === undefined);
+    const guestProps = calls.find((c) =>
+      c[0]?.eventRegistrationHubUrl?.includes(
+        "/events/registrations/status?token=",
+      ),
+    )?.[0];
 
-    expect(memberProps?.memberEventRegistrationUrl).toMatch(MEMBER_URL_PATTERN);
-    expect(guestProps?.memberEventRegistrationUrl).toBeUndefined();
+    expect(memberProps?.eventRegistrationHubUrl).toMatch(
+      MEMBER_HUB_URL_PATTERN,
+    );
+    expect(guestProps?.eventRegistrationHubUrl).toMatch(GUEST_HUB_URL_PATTERN);
     expect(calls.length).toBe(2);
   });
 });

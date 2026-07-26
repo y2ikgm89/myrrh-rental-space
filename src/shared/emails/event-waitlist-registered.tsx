@@ -23,8 +23,8 @@ type Props = {
   ticketName: string;
   /** FIFO キューにおける現在の順番（1 = 次に繰り上がる） */
   position: number;
-  /** 会員向け: ログイン後のマイページ申込一覧 URL */
-  memberEventRegistrationUrl?: string;
+  /** 申込詳細ハブ（会員 mypage / ゲスト status） */
+  eventRegistrationHubUrl: string;
   /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
   footer: EmailFooterData;
@@ -39,7 +39,7 @@ export function EventWaitlistRegisteredEmail({
   quantity,
   ticketName,
   position,
-  memberEventRegistrationUrl,
+  eventRegistrationHubUrl,
   claimUrl,
   footer,
 }: Props) {
@@ -96,34 +96,32 @@ export function EventWaitlistRegisteredEmail({
         </Text>
       </Section>
 
-      {memberEventRegistrationUrl && (
-        <Section
+      <Section
+        style={{
+          backgroundColor: SECTION_VARIANT_STYLES.info.background,
+          borderRadius: "8px",
+          padding: "16px 20px",
+          margin: "24px 0",
+        }}
+      >
+        <Text
           style={{
-            backgroundColor: SECTION_VARIANT_STYLES.info.background,
-            borderRadius: "8px",
-            padding: "16px 20px",
-            margin: "24px 0",
+            fontSize: "14px",
+            color: COLOR.textMuted,
+            marginBottom: "8px",
           }}
         >
-          <Text
-            style={{
-              fontSize: "14px",
-              color: COLOR.textMuted,
-              marginBottom: "8px",
-            }}
+          キャンセル待ちの状況確認・取消は、申込詳細ページから行えます。
+        </Text>
+        <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+          <Link
+            href={eventRegistrationHubUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
           >
-            会員のお客様は、マイページからキャンセル待ちの状況確認・取消が行えます。
-          </Text>
-          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
-            <Link
-              href={memberEventRegistrationUrl}
-              style={{ color: COLOR.link, textDecoration: "underline" }}
-            >
-              マイページで確認する
-            </Link>
-          </Text>
-        </Section>
-      )}
+            申込詳細を確認
+          </Link>
+        </Text>
+      </Section>
 
       {claimUrl && (
         <Section

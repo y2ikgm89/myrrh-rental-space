@@ -5,7 +5,10 @@ import {
   RegistrationStatus,
   type PaymentStatus,
 } from "@generated/prisma/enums";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import {
+  formatEventVenue,
+  formatEventVenueDisplay,
+} from "@/shared/domain/events/venue";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
@@ -215,7 +218,7 @@ export async function getEventRegistrationForGuestStatus(
       status: true,
       quantity: true,
       paymentStatus: true,
-      ticket: { select: { price: true } },
+      ticket: { select: { price: true, name: true } },
       slot: { select: { startAt: true, endAt: true } },
       receipt: { select: { serialNo: true } },
       event: {
@@ -232,12 +235,21 @@ export async function getEventRegistrationForGuestStatus(
   });
   if (!registration) return null;
 
+  const venueDisplay = formatEventVenueDisplay({
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
+    location: registration.event.location,
+    space: registration.event.space,
+    addressDetail: registration.event.addressDetail,
+  });
+
   return {
     id: registration.id,
     customerId: registration.customerId,
     status: registration.status,
     quantity: registration.quantity,
     paymentStatus: registration.paymentStatus,
+    ticketName: registration.ticket.name,
     ticketUnitPrice: registration.ticket.price,
     ticketTotalPrice: registration.ticket.price * registration.quantity,
     slot: registration.slot,
@@ -246,11 +258,8 @@ export async function getEventRegistrationForGuestStatus(
       title: registration.event.title,
       format: registration.event.format,
       meetingUrl: registration.event.meetingUrl,
-      location: formatEventVenue({
-        location: registration.event.location,
-        space: registration.event.space,
-        addressDetail: registration.event.addressDetail,
-      }),
+      location: venueDisplay.primary,
+      locationSecondary: venueDisplay.secondary,
     },
   };
 }

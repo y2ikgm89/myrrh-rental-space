@@ -1,4 +1,4 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import {
   formatDateWithWeekday,
   formatTimeShort,
@@ -9,14 +9,18 @@ import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
   SECTION_VARIANT_STYLES,
+  buttonPrimary,
+  buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
   linkDangerStyle,
+  linkStyle,
   messageText,
   text,
+  urlFallbackText,
 } from "./_shared/styles";
 
 type Props = {
@@ -28,8 +32,8 @@ type Props = {
   notes?: string;
   /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
   cancelUrl?: string;
-  /** 会員向け: マイページの予約詳細 URL */
-  memberReservationUrl?: string;
+  /** 予約詳細ハブ（会員 mypage / ゲスト status）。再確認の SSoT。 */
+  bookingHubUrl: string;
   /** ゲスト向け: マイページに予約を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
@@ -45,7 +49,7 @@ export function ReservationReminderEmail({
   location,
   notes,
   cancelUrl,
-  memberReservationUrl,
+  bookingHubUrl,
   claimUrl,
   cancellationDeadlineHours,
   footer,
@@ -104,34 +108,21 @@ export function ReservationReminderEmail({
         ) : null}
       </Section>
 
-      {memberReservationUrl && (
-        <Section
-          style={{
-            backgroundColor: info.background,
-            borderRadius: "8px",
-            padding: "16px 20px",
-            margin: "24px 0",
-          }}
-        >
-          <Text
-            style={{
-              fontSize: "14px",
-              color: COLOR.textMuted,
-              marginBottom: "8px",
-            }}
-          >
-            会員のお客様は、マイページから予約内容のご確認・変更が可能です。
-          </Text>
-          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
-            <Link
-              href={memberReservationUrl}
-              style={{ color: COLOR.link, textDecoration: "underline" }}
-            >
-              マイページで予約を確認する
-            </Link>
-          </Text>
-        </Section>
-      )}
+      <Text style={text}>
+        解錠番号や予約内容の詳細は、予約詳細ページからご確認ください。
+      </Text>
+      <Section style={buttonSection}>
+        <Button href={bookingHubUrl} style={buttonPrimary}>
+          予約詳細を確認
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        ボタンが動作しない場合は次の URL をブラウザに貼り付けてください:
+        <br />
+        <Link href={bookingHubUrl} style={linkStyle}>
+          {bookingHubUrl}
+        </Link>
+      </Text>
 
       {claimUrl && (
         <Section
