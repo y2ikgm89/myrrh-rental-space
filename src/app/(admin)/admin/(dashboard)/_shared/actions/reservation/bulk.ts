@@ -29,7 +29,7 @@ import {
   updateCalendarSync,
 } from "@/shared/lib/calendar-sync/outbound";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
-import { issueSmartLockAndSendConfirmationEmail } from "./mutations";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
@@ -102,9 +102,13 @@ function handleConfirmAfterSuccess(
   }
 
   fireAndForget(
-    issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
+    applyConfirmationSideEffects({
+      payload: payloadData,
+      spaceId: result.spaceId,
+      channel: "admin",
+    }),
     {
-      operation: "bulkConfirm:issuePasscodesAndSendConfirmationEmail",
+      operation: "bulkConfirm:applyConfirmationSideEffects",
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: { reservationId: id },

@@ -54,7 +54,7 @@ const mockIssueSmartLockPasscodes = mock(async () => ({
   passcodes: [],
   issuanceFailed: false,
 }));
-const mockIssueSmartLockAndSendConfirmationEmail = mock(async () => {});
+const mockApplyConfirmationSideEffects = mock(async () => {});
 const mockSendReservationConfirmationEmail = mock(async () => {});
 const mockSendReservationAdminNotification = mock(async () => {});
 const mockSyncReservationToCalendar = mock(async () => {});
@@ -126,13 +126,9 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mockIssueSmartLockPasscodes,
 }));
 
-mock.module(
-  "@/app/(admin)/admin/(dashboard)/_shared/actions/reservation/mutations",
-  () => ({
-    issueSmartLockAndSendConfirmationEmail:
-      mockIssueSmartLockAndSendConfirmationEmail,
-  }),
-);
+mock.module("@/shared/domain/reservations/confirmation-side-effects", () => ({
+  applyConfirmationSideEffects: mockApplyConfirmationSideEffects,
+}));
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock(
@@ -188,7 +184,7 @@ describe("createReservationAction — smart-lock on CONFIRMED create", () => {
     mockExecute.mockClear();
     mockCreateAdminReservationCommand.mockClear();
     mockIssueSmartLockPasscodes.mockClear();
-    mockIssueSmartLockAndSendConfirmationEmail.mockClear();
+    mockApplyConfirmationSideEffects.mockClear();
     mockSendReservationConfirmationEmail.mockClear();
     mockSendReservationAdminNotification.mockClear();
     mockSyncReservationToCalendar.mockClear();
@@ -206,16 +202,11 @@ describe("createReservationAction — smart-lock on CONFIRMED create", () => {
 
     expect(
       fireAndForgetCalls.some(
-        (call) => call.operation === "createReservationActionIssuePasscodes",
-      ),
-    ).toBe(true);
-    expect(
-      fireAndForgetCalls.some(
         (call) =>
           call.operation ===
-          "createReservationActionIssuePasscodesAndSendConfirmation",
+          "createReservationActionApplyConfirmationSideEffects",
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       fireAndForgetCalls.some(
         (call) =>
@@ -240,14 +231,9 @@ describe("createReservationAction — smart-lock on CONFIRMED create", () => {
       fireAndForgetCalls.some(
         (call) =>
           call.operation ===
-          "createReservationActionIssuePasscodesAndSendConfirmation",
+          "createReservationActionApplyConfirmationSideEffects",
       ),
     ).toBe(true);
-    expect(
-      fireAndForgetCalls.some(
-        (call) => call.operation === "createReservationActionIssuePasscodes",
-      ),
-    ).toBe(false);
     expect(
       fireAndForgetCalls.some(
         (call) =>
@@ -265,14 +251,9 @@ describe("createReservationAction — smart-lock on CONFIRMED create", () => {
 
     expect(
       fireAndForgetCalls.some(
-        (call) => call.operation === "createReservationActionIssuePasscodes",
-      ),
-    ).toBe(false);
-    expect(
-      fireAndForgetCalls.some(
         (call) =>
           call.operation ===
-          "createReservationActionIssuePasscodesAndSendConfirmation",
+          "createReservationActionApplyConfirmationSideEffects",
       ),
     ).toBe(false);
     expect(
