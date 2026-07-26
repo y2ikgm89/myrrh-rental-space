@@ -79,8 +79,8 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
  *  4. cookie → 暗号検証
  *  5. entity id 形式検証 + 表示中 entity との突合（stale-tab 対策）
  *  6. optional afterEntityIdMatch（理由など）
- *  7. optional member-ownership（inject）
- *  8. per-entity rate-limit
+ *  7. per-entity rate-limit
+ *  8. optional member-ownership（inject）
  *  9. execute() — domain mutation + side effects
  */
 export async function runGuestTokenMutation<TMemberContext = void>(
