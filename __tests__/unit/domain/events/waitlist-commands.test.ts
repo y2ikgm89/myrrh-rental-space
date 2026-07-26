@@ -213,7 +213,7 @@ describe("confirmWaitlistOfferCommand", () => {
     mockExecuteRaw.mockResolvedValue(0);
   });
 
-  test("registrationOpen=false → DomainError(VALIDATION)", async () => {
+  test("registrationOpen=false → EXPIRED（capacity race と同型・自動返金経路）", async () => {
     mockRegistrationFindFirst.mockResolvedValueOnce({
       id: "reg-gate",
       eventId: "event-1",
@@ -228,18 +228,28 @@ describe("confirmWaitlistOfferCommand", () => {
       registrationOpen: false,
       registrationDeadline: null,
     });
+    mockRegistrationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
-    await expect(
-      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
-    ).rejects.toMatchObject({
-      code: "VALIDATION",
-      message: "このイベントは申込受付を終了しています",
+    const result = await confirmWaitlistOfferCommand({
+      registrationId: "reg-gate",
+      now: NOW,
     });
 
-    expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
+    expect(result.registration).toEqual({ id: "reg-gate", status: "EXPIRED" });
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "reg-gate",
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+        }),
+        data: { status: RegistrationStatus.EXPIRED },
+      }),
+    );
+    // スロット/容量判定には到達しない
+    expect(mockSlotFindUnique).not.toHaveBeenCalled();
   });
 
-  test("event not published / deleted → DomainError(NOT_FOUND)", async () => {
+  test("event not published / deleted → EXPIRED", async () => {
     mockRegistrationFindFirst.mockResolvedValueOnce({
       id: "reg-gate",
       eventId: "event-1",
@@ -250,16 +260,22 @@ describe("confirmWaitlistOfferCommand", () => {
       ticket: { capacity: null },
     });
     mockEventFindFirst.mockResolvedValueOnce(null);
+    mockRegistrationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
-    await expect(
-      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
-    ).rejects.toMatchObject({
-      code: "NOT_FOUND",
-      message: "イベントが見つかりません",
+    const result = await confirmWaitlistOfferCommand({
+      registrationId: "reg-gate",
+      now: NOW,
     });
+
+    expect(result.registration).toEqual({ id: "reg-gate", status: "EXPIRED" });
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: RegistrationStatus.EXPIRED },
+      }),
+    );
   });
 
-  test("past registration deadline → DomainError(VALIDATION)", async () => {
+  test("past registration deadline → EXPIRED", async () => {
     mockRegistrationFindFirst.mockResolvedValueOnce({
       id: "reg-gate",
       eventId: "event-1",
@@ -279,16 +295,27 @@ describe("confirmWaitlistOfferCommand", () => {
       eventId: "event-1",
       startAt: SLOT_START,
     });
+    mockRegistrationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
-    await expect(
-      confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
-    ).rejects.toMatchObject({
-      code: "VALIDATION",
-      message: "申込締切を過ぎたため受け付けできません",
+    const result = await confirmWaitlistOfferCommand({
+      registrationId: "reg-gate",
+      now: NOW,
     });
+
+    expect(result.registration).toEqual({ id: "reg-gate", status: "EXPIRED" });
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "reg-gate",
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+        }),
+        data: { status: RegistrationStatus.EXPIRED },
+      }),
+    );
+    expect(mockRegistrationAggregate).not.toHaveBeenCalled();
   });
 
-  test("slot missing or wrong event → DomainError(NOT_FOUND)", async () => {
+  test("slot missing or wrong event → EXPIRED", async () => {
     mockRegistrationFindFirst.mockResolvedValueOnce({
       id: "reg-gate",
       eventId: "event-1",
@@ -308,12 +335,43 @@ describe("confirmWaitlistOfferCommand", () => {
       eventId: "event-other",
       startAt: SLOT_START,
     });
+    mockRegistrationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+    const result = await confirmWaitlistOfferCommand({
+      registrationId: "reg-gate",
+      now: NOW,
+    });
+
+    expect(result.registration).toEqual({ id: "reg-gate", status: "EXPIRED" });
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: RegistrationStatus.EXPIRED },
+      }),
+    );
+  });
+
+  test("履行不能ゲートで EXPIRED claim が race 負け → DomainError(CONFLICT)", async () => {
+    mockRegistrationFindFirst.mockResolvedValueOnce({
+      id: "reg-gate",
+      eventId: "event-1",
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      quantity: 1,
+      expiresAt: FUTURE_EXPIRES,
+      ticket: { capacity: null },
+    });
+    mockEventFindFirst.mockResolvedValueOnce({
+      id: "event-1",
+      registrationOpen: false,
+      registrationDeadline: null,
+    });
+    mockRegistrationUpdateMany.mockResolvedValueOnce({ count: 0 });
 
     await expect(
       confirmWaitlistOfferCommand({ registrationId: "reg-gate", now: NOW }),
     ).rejects.toMatchObject({
-      code: "NOT_FOUND",
-      message: "指定されたタイムスロットが見つかりません",
+      code: "CONFLICT",
+      message: "既に他の処理が完了しています",
     });
   });
 

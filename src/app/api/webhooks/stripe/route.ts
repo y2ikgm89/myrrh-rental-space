@@ -574,8 +574,8 @@ function invalidateEventRegistrationCache(): void {
  * 見つからない」で常に DomainError(NOT_FOUND) になり、5xx→Stripe 再送の
  * 無限リトライを引き起こす。
  *
- * capacity race（`confirmWaitlistOfferCommand` が `status: "EXPIRED"` を返す =
- * 決済は成功したが容量再チェックで枠を失った）は
+ * 履行不能（`confirmWaitlistOfferCommand` が `status: "EXPIRED"` を返す =
+ * capacity race / 受付停止 / 締切超過 / イベント非公開・削除 / スロット欠落）は
  * `refundExpiredWaitlistOfferPaymentCommand` で PENDING → REFUNDED に閉じる
  * （Stripe refund + Refund 行 + AuditLog。失敗時は throw して Stripe retry）。
  */
