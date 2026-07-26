@@ -50,50 +50,36 @@ describe("seed-safety DATABASE_URL helpers", () => {
   });
 });
 
+const baseLocalEnv = {
+  databaseUrl: LOCAL_URL,
+  nodeEnv: "development" as string | undefined,
+  appSurface: undefined as string | undefined,
+  e2eRuntime: undefined as string | undefined,
+  ci: undefined as string | undefined,
+};
+
 describe("evaluateSeedSafety", () => {
   test("allows --dev/--reset only against safe local DATABASE_URL", () => {
     expect(
       evaluateSeedSafety({
         argv: [],
-        env: {
-          databaseUrl: LOCAL_URL,
-          nodeEnv: "development",
-          appSurface: undefined,
-        },
+        env: baseLocalEnv,
       }),
     ).toEqual({ ok: true, mode: "dev" });
 
     expect(
       evaluateSeedSafety({
         argv: ["--reset"],
-        env: {
-          databaseUrl: LOCAL_URL,
-          nodeEnv: undefined,
-          appSurface: undefined,
-        },
+        env: { ...baseLocalEnv, nodeEnv: undefined },
       }),
     ).toEqual({ ok: true, mode: "reset" });
   });
 
-  test("refuses --dev/--reset when NODE_ENV=production or APP_SURFACE is set", () => {
-    const nodeEnvRefuse = evaluateSeedSafety({
-      argv: ["--dev"],
-      env: {
-        databaseUrl: LOCAL_URL,
-        nodeEnv: "production",
-        appSurface: undefined,
-      },
-    });
-    expect(nodeEnvRefuse.ok).toBe(false);
-    if (!nodeEnvRefuse.ok) {
-      expect(nodeEnvRefuse.error).toContain("NODE_ENV=production");
-    }
-
+  test("refuses --dev/--reset when APP_SURFACE is set without E2E_RUNTIME/CI", () => {
     const surfaceRefuse = evaluateSeedSafety({
       argv: ["--reset"],
       env: {
-        databaseUrl: LOCAL_URL,
-        nodeEnv: "development",
+        ...baseLocalEnv,
         appSurface: "public",
       },
     });
@@ -103,14 +89,41 @@ describe("evaluateSeedSafety", () => {
     }
   });
 
+  test("allows localhost --dev when APP_SURFACE is set with E2E_RUNTIME=1 (Playwright)", () => {
+    expect(
+      evaluateSeedSafety({
+        argv: ["--dev"],
+        env: {
+          ...baseLocalEnv,
+          appSurface: "public",
+          e2eRuntime: "1",
+        },
+      }),
+    ).toEqual({ ok: true, mode: "dev" });
+  });
+
+  test("allows localhost --dev when APP_SURFACE is set with CI=true", () => {
+    expect(
+      evaluateSeedSafety({
+        argv: ["--dev"],
+        env: {
+          ...baseLocalEnv,
+          nodeEnv: "production",
+          appSurface: "admin",
+          ci: "true",
+        },
+      }),
+    ).toEqual({ ok: true, mode: "dev" });
+  });
+
   test("refuses --dev/--reset against Neon / Cloud SQL DATABASE_URL", () => {
     const neonRefuse = evaluateSeedSafety({
       argv: [],
       env: {
+        ...baseLocalEnv,
         databaseUrl:
           "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
-        nodeEnv: "development",
-        appSurface: undefined,
+        e2eRuntime: "1",
       },
     });
     expect(neonRefuse.ok).toBe(false);
@@ -124,6 +137,7 @@ describe("evaluateSeedSafety", () => {
       evaluateSeedSafety({
         argv: ["--production", "owner@example.com", "Owner"],
         env: {
+          ...baseLocalEnv,
           databaseUrl:
             "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
           nodeEnv: "production",
@@ -137,6 +151,7 @@ describe("evaluateSeedSafety", () => {
     const mixed = evaluateSeedSafety({
       argv: ["--production", "--reset", "owner@example.com"],
       env: {
+        ...baseLocalEnv,
         databaseUrl:
           "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
         nodeEnv: "production",

@@ -5347,6 +5347,8 @@ async function main() {
       databaseUrl: process.env["DATABASE_URL"],
       nodeEnv: process.env["NODE_ENV"],
       appSurface: process.env["APP_SURFACE"],
+      e2eRuntime: process.env["E2E_RUNTIME"],
+      ci: process.env["CI"],
     },
   });
   if (!safety.ok) {

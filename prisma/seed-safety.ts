@@ -13,6 +13,13 @@ export type SeedSafetyEnv = {
   readonly databaseUrl: string | undefined;
   readonly nodeEnv: string | undefined;
   readonly appSurface: string | undefined;
+  /**
+   * Playwright webServer / local E2E sets `E2E_RUNTIME=1` with localhost DB.
+   * Deployed Cloud Run never sets this (and must not).
+   */
+  readonly e2eRuntime: string | undefined;
+  /** GitHub Actions / CI runners (`CI=true`). */
+  readonly ci: string | undefined;
 };
 
 export type SeedSafetyResult =
@@ -109,23 +116,6 @@ export function evaluateSeedSafety(input: {
     return { ok: true, mode };
   }
 
-  // --dev / --reset: refuse deployed runtime and production-looking DBs.
-  if (env.nodeEnv === "production") {
-    return {
-      ok: false,
-      error:
-        "Refusing seed --dev/--reset: NODE_ENV=production. Use --production for intentional prod bootstrap, or unset NODE_ENV for local/dev.",
-    };
-  }
-
-  if (env.appSurface?.trim()) {
-    return {
-      ok: false,
-      error:
-        "Refusing seed --dev/--reset: APP_SURFACE is set (deployed Cloud Run surface). Use --production for intentional prod bootstrap, or unset APP_SURFACE for local/dev.",
-    };
-  }
-
   const databaseUrl = env.databaseUrl?.trim();
   if (!databaseUrl) {
     return {
@@ -134,12 +124,33 @@ export function evaluateSeedSafety(input: {
     };
   }
 
+  // Primary gate: never --dev/--reset against prod-looking DATABASE_URL
+  // (including cloud-sql-proxy on loopback via /cloudsql/ query + prod markers).
   if (looksLikeProductionDatabaseUrl(databaseUrl)) {
     return {
       ok: false,
       error:
         "Refusing seed --dev/--reset: DATABASE_URL looks like a production database (Cloud SQL / Neon / non-localhost / prod marker). Point DATABASE_URL at localhost, or use --production for intentional prod bootstrap.",
     };
+  }
+
+  // Secondary gate: APP_SURFACE / NODE_ENV=production usually mean a deployed
+  // process. Allow only when DB is loopback AND (E2E_RUNTIME=1 or CI=true),
+  // which is how Playwright smoke / GitHub Actions seed local Postgres while
+  // setting APP_SURFACE=public|admin. Cloud Run never sets E2E_RUNTIME.
+  const deployedRuntimeMarker =
+    env.nodeEnv === "production" || Boolean(env.appSurface?.trim());
+  if (deployedRuntimeMarker) {
+    const localE2eOrCi =
+      isLocalhostDatabaseUrl(databaseUrl) &&
+      (env.e2eRuntime === "1" || env.ci === "true");
+    if (!localE2eOrCi) {
+      return {
+        ok: false,
+        error:
+          "Refusing seed --dev/--reset: NODE_ENV=production or APP_SURFACE is set outside local E2E/CI. Use --production for intentional prod bootstrap, or unset those env vars for local/dev (or set E2E_RUNTIME=1 against localhost).",
+      };
+    }
   }
 
   return { ok: true, mode };
