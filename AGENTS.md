@@ -59,6 +59,8 @@ For human onboarding — setup, common commands, repo layout — see
 - Guests edit on the status hub via the existing status token with the same gates
   as mypage (`UNPAID`, no discounts, modification deadline, availability). Claim
   into mypage remains optional for list management.
+- Passcode reveal on the status hub enforces member-ownership when a logged-in
+  customer session coexists with a status-token cookie (mirrors guest edit/cancel).
 - Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
   distributed rate-limit backends are intentionally out of scope.
 - Site Settings are split into domain singleton tables (`SettingsNotification`,

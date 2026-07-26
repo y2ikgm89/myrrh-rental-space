@@ -7,7 +7,14 @@ import {
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 
 export function buildReservationListItems<
-  T extends { readonly status: string; readonly startTime: Date },
+  T extends {
+    readonly status: string;
+    readonly startTime: Date;
+    readonly paymentStatus: string;
+    readonly couponDiscountAmount?: number | null;
+    readonly durationDiscountAmount?: number | null;
+    readonly spaceDiscountAmount?: number | null;
+  },
 >(
   reservations: readonly T[],
   deadlineSettings: ReservationDeadlineSettingsInput,

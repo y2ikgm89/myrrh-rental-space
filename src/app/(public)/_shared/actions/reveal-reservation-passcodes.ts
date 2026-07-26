@@ -6,6 +6,7 @@ import { getCustomerVisibleSmartLockPasscodesForReservation } from "@/shared/dom
 import type { CustomerVisiblePasscode } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { getReservationCustomerId } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { DomainError } from "@/shared/domain/domain-error";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
@@ -23,6 +24,9 @@ import {
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 
+const MEMBER_OWNERSHIP_MISMATCH_MESSAGE =
+  "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください";
+
 export type RevealReservationPasscodesData = {
   readonly status: "visible" | "pending" | "outside_window" | "unavailable";
   readonly passcodes: readonly CustomerVisiblePasscode[];
@@ -33,6 +37,7 @@ export type RevealReservationPasscodesData = {
  *
  * - 会員: Better Auth session + reservation.customerId ownership
  * - ゲスト: cookie の reservation-status token の rid 一致
+ * - ログイン中でも status token 経路では member-ownership を強制（別会員の cookie 誤操作を遮断）
  * - 平文は本 action の戻り値のみ（RSC 初期 props には載せない）
  */
 export async function revealReservationPasscodesAction(
@@ -56,19 +61,57 @@ export async function revealReservationPasscodesAction(
     ? verifyStatusToken(statusToken, now)
     : { valid: false as const };
 
-  // ゲスト status ハブは cookie が正本。ログイン中でも rid 一致 token があれば優先する。
   let auth:
     | { kind: "customer"; customerId: string }
     | { kind: "status-token"; reservationId: string };
 
+  const session = await getCustomerSession();
+  const sessionUser = session?.user ?? null;
+
   if (verifiedToken.valid && verifiedToken.reservationId === parsedId.data) {
-    auth = {
-      kind: "status-token",
-      reservationId: verifiedToken.reservationId,
-    };
+    if (sessionUser) {
+      const userLimit = await passcodeRevealByUserRateLimiter.check(
+        sessionUser.id,
+      );
+      if (!userLimit.success) {
+        return createMutationError(
+          "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+        );
+      }
+
+      const customer = await getCustomerByUserId(sessionUser.id);
+      if (customer) {
+        const reservationCustomerId = await getReservationCustomerId(
+          parsedId.data,
+        );
+        if (!reservationCustomerId) {
+          return createMutationError("予約が見つかりません");
+        }
+        if (customer.id !== reservationCustomerId) {
+          return createMutationError(MEMBER_OWNERSHIP_MISMATCH_MESSAGE);
+        }
+        try {
+          await assertCustomerActive(customer.id);
+        } catch (error) {
+          if (error instanceof DomainError) {
+            return createMutationError(error.message);
+          }
+          throw error;
+        }
+        auth = { kind: "customer", customerId: customer.id };
+      } else {
+        auth = {
+          kind: "status-token",
+          reservationId: verifiedToken.reservationId,
+        };
+      }
+    } else {
+      auth = {
+        kind: "status-token",
+        reservationId: verifiedToken.reservationId,
+      };
+    }
   } else {
-    const session = await getCustomerSession();
-    const sessionUser = session?.user;
     if (!sessionUser) {
       if (statusToken && !verifiedToken.valid) {
         return createMutationError("リンクが無効または期限切れです");

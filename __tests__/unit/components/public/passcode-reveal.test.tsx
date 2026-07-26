@@ -167,7 +167,10 @@ describe("PasscodeReveal", () => {
     });
 
     expect(textContent()).toContain("解錠番号を発行しています");
-    expect(container?.querySelector("button")).toBeNull();
+    expect(textContent()).toContain("再表示");
+    const retryButton = container?.querySelector("button");
+    expect(retryButton).not.toBeNull();
+    expect(retryButton?.textContent).toContain("再表示");
   });
 
   test("action が outside_window を返したら期間外メッセージに切り替わる", async () => {

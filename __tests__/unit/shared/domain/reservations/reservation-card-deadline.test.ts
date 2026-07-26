@@ -6,12 +6,20 @@ const SETTINGS = {
   cancellationDeadlineHours: 24,
 } as const;
 
+const BASE_RESERVATION = {
+  status: "PENDING",
+  startTime: new Date("2026-04-01T10:00:00Z"),
+  paymentStatus: "UNPAID",
+  couponDiscountAmount: 0,
+  durationDiscountAmount: 0,
+  spaceDiscountAmount: 0,
+} as const;
+
 describe("getReservationCardDeadlineState", () => {
   test("PENDING かつ変更・キャンセル期限内なら両方 true", () => {
-    const startTime = new Date("2026-04-01T10:00:00Z");
     const now = new Date("2026-03-30T10:00:00Z");
     const result = getReservationCardDeadlineState(
-      { status: "PENDING", startTime },
+      BASE_RESERVATION,
       SETTINGS,
       now,
     );
@@ -21,10 +29,9 @@ describe("getReservationCardDeadlineState", () => {
   });
 
   test("期限外なら変更・キャンセル不可・メッセージ表示", () => {
-    const startTime = new Date("2026-04-01T10:00:00Z");
     const now = new Date("2026-04-01T09:00:00Z");
     const result = getReservationCardDeadlineState(
-      { status: "CONFIRMED", startTime },
+      { ...BASE_RESERVATION, status: "CONFIRMED" },
       SETTINGS,
       now,
     );
@@ -34,15 +41,40 @@ describe("getReservationCardDeadlineState", () => {
   });
 
   test("COMPLETED ならすべて false", () => {
-    const startTime = new Date("2026-04-10T10:00:00Z");
     const now = new Date("2026-03-01T10:00:00Z");
     const result = getReservationCardDeadlineState(
-      { status: "COMPLETED", startTime },
+      { ...BASE_RESERVATION, status: "COMPLETED" },
       SETTINGS,
       now,
     );
     expect(result.canModify).toBe(false);
     expect(result.canCancel).toBe(false);
     expect(result.showPastDeadlineMessage).toBe(false);
+  });
+
+  test("UNPAID 以外は canModify false（canCancel は期限内なら true）", () => {
+    const now = new Date("2026-03-30T10:00:00Z");
+    const result = getReservationCardDeadlineState(
+      { ...BASE_RESERVATION, paymentStatus: "PAID" },
+      SETTINGS,
+      now,
+    );
+    expect(result.canModify).toBe(false);
+    expect(result.canCancel).toBe(true);
+    expect(result.showPastDeadlineMessage).toBe(false);
+  });
+
+  test("割引ありは canModify false", () => {
+    const now = new Date("2026-03-30T10:00:00Z");
+    const result = getReservationCardDeadlineState(
+      {
+        ...BASE_RESERVATION,
+        couponDiscountAmount: 500,
+      },
+      SETTINGS,
+      now,
+    );
+    expect(result.canModify).toBe(false);
+    expect(result.canCancel).toBe(true);
   });
 });

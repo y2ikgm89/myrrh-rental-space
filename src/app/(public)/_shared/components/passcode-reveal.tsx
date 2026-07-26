@@ -20,7 +20,8 @@ const STATUS_MESSAGES: Record<
   Exclude<PasscodeRevealState["status"], "unavailable" | "visible">,
   string
 > = {
-  pending: "解錠番号を発行しています。しばらくしてから再度お試しください。",
+  pending:
+    "解錠番号を発行しています。しばらくしてから「再表示」を押して再度お試しください。",
   outside_window: "この予約の解錠番号の表示期間外です。",
 };
 
@@ -34,11 +35,10 @@ export function PasscodeReveal({
 
   if (initialState.status === "pending") {
     return (
-      <PasscodeRevealSection>
-        <p className="text-sm text-muted-foreground">
-          {STATUS_MESSAGES.pending}
-        </p>
-      </PasscodeRevealSection>
+      <PasscodeRevealInteractive
+        reservationId={reservationId}
+        initialResolvedStatus="pending"
+      />
     );
   }
 
@@ -57,8 +57,10 @@ export function PasscodeReveal({
 
 function PasscodeRevealInteractive({
   reservationId,
+  initialResolvedStatus = "idle",
 }: {
   readonly reservationId: string;
+  readonly initialResolvedStatus?: "idle" | "pending";
 }): ReactElement | null {
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,7 +69,7 @@ function PasscodeRevealInteractive({
   >(null);
   const [resolvedStatus, setResolvedStatus] = useState<
     "idle" | "pending" | "outside_window" | "unavailable"
-  >("idle");
+  >(initialResolvedStatus);
 
   function handleReveal(): void {
     setErrorMessage(null);
@@ -81,6 +83,7 @@ function PasscodeRevealInteractive({
       switch (result.status) {
         case "visible":
           setPasscodes(result.passcodes);
+          setResolvedStatus("idle");
           break;
         case "pending":
           setResolvedStatus("pending");
@@ -109,6 +112,19 @@ function PasscodeRevealInteractive({
         <p className="text-sm text-muted-foreground">
           {STATUS_MESSAGES.pending}
         </p>
+        <Button
+          type="button"
+          onClick={handleReveal}
+          disabled={isPending}
+          className="mt-3 w-full sm:w-auto"
+        >
+          {isPending ? "取得中..." : "再表示"}
+        </Button>
+        {errorMessage !== null && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {errorMessage}
+          </p>
+        )}
       </PasscodeRevealSection>
     );
   }
