@@ -57,12 +57,27 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { MEDIUM: "MEDIUM", HIGH: "HIGH", LOW: "LOW" },
 }));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    ADMIN_APP_URL: "http://localhost:3000",
+    BETTER_AUTH_URL: undefined,
+  },
+}));
+
+mock.module("@/shared/lib/constants/urls", () => ({
+  getAppUrl: () => "http://localhost:3000",
+}));
+
 import { POST } from "@/app/(admin)/admin/api/ogp/route";
 
-function createOgpRequest(url: string): Request {
+function createOgpRequest(url: string, headers?: HeadersInit): Request {
   return new Request("https://app.example.test/admin/api/ogp", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      origin: "http://localhost:3000",
+      ...headers,
+    },
     body: JSON.stringify({ url }),
   });
 }
@@ -90,6 +105,20 @@ describe("POST /admin/api/ogp", () => {
 
     expect(mockCheckAdminAuth).toHaveBeenCalledWith(expect.any(Headers));
     expect(mockCheckPermission).not.toHaveBeenCalled();
+  });
+
+  test("same-origin 不一致は 403 で拒否する", async () => {
+    const response = await POST(
+      createOgpRequest("https://example.com/article", {
+        origin: "https://evil.example.com",
+      }),
+    );
+    const body = await response.json();
+    expectErrorResult(body);
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("Forbidden");
+    expect(mockCheckAdminAuth).not.toHaveBeenCalled();
   });
 
   test("リダイレクト先 URL も pinned SSRF-safe fetch で検証する", async () => {

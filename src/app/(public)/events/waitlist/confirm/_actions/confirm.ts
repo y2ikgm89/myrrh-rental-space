@@ -27,6 +27,7 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 
 /**
  * イベント waitlist 繰り上げ当選の確定（無料チケット、公開フォーム）。
@@ -47,6 +48,11 @@ export async function confirmWaitlistOfferAction(
     formData,
     publicEventWaitlistConfirmSchema,
     async (data) => {
+      const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+      if (maintenanceBlock) {
+        return { ok: false, error: maintenanceBlock.error };
+      }
+
       const rateLimit = await checkActionRateLimit(
         eventWaitlistConfirmRateLimiter,
       );

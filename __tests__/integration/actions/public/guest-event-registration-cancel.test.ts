@@ -31,6 +31,10 @@ mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockPerRegistrationCheck = mock(() =>
   Promise.resolve({ success: true, remaining: 3, reset: Date.now() + 3600000 }),
 );

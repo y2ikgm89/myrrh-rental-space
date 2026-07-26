@@ -102,6 +102,10 @@ mock.module("@/shared/domain/customers/link", () => ({
   ensureCustomerLinked: mockEnsureCustomerLinked,
 }));
 
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+}));
+
 // recordTermsAgreementsCommand モック — 成否をテスト毎に制御
 const mockRecordTermsAgreementsCommand = mock((): Promise<{ count: number }> =>
   Promise.resolve({ count: 1 }),
