@@ -79,29 +79,56 @@ export type InquiryAttachmentResult = {
  *
  * 処理順序:
  * 1. inquiry 存在確認（soft-deleted / anonymized 済みは拒否）
- * 2. replyId 指定時は同一 inquiry に属するか確認
- * 3. aggregate size 事前ガード → magic-byte で MIME 確定 → per-type size 上限
- * 4. private bucket へ PutObject（`buildPublicUrl` は一切呼ばない）
- * 5. DB 行作成。失敗時は R2 orphan を削除（uploadMediaCommand と同型の補償）
+ * 2. CUSTOMER uploader は inquiry.customerId 一致を強制（IDOR 防止）
+ * 3. replyId 指定時は同一 inquiry に属するか確認。CUSTOMER は自 reply のみ可
+ * 4. aggregate size 事前ガード → magic-byte で MIME 確定 → per-type size 上限
+ * 5. private bucket へ PutObject（`buildPublicUrl` は一切呼ばない）
+ * 6. DB 行作成。失敗時は R2 orphan を削除（uploadMediaCommand と同型の補償）
+ *
+ * STAFF の RBAC は action 層。domain では STAFF に ownership 制約を課さない。
  */
 export async function uploadInquiryAttachmentCommand(
   input: UploadInquiryAttachmentInput,
 ): Promise<InquiryAttachmentResult> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id: input.inquiryId },
-    select: { id: true, deletedAt: true, anonymizedAt: true },
+    select: {
+      id: true,
+      customerId: true,
+      deletedAt: true,
+      anonymizedAt: true,
+    },
   });
   if (!inquiry || inquiry.deletedAt !== null || inquiry.anonymizedAt !== null) {
     throw new DomainError("お問い合わせが見つかりません", "NOT_FOUND");
   }
 
+  if (
+    input.uploader.type === "CUSTOMER" &&
+    inquiry.customerId !== input.uploader.customerId
+  ) {
+    throw new DomainError(
+      "このお問い合わせに添付をアップロードする権限がありません",
+      "FORBIDDEN",
+    );
+  }
+
   if (input.replyId) {
     const reply = await prisma.inquiryReply.findUnique({
       where: { id: input.replyId },
-      select: { id: true, inquiryId: true },
+      select: { id: true, inquiryId: true, authorCustomerId: true },
     });
     if (!reply || reply.inquiryId !== input.inquiryId) {
       throw new DomainError("返信が見つかりません", "NOT_FOUND");
+    }
+    if (
+      input.uploader.type === "CUSTOMER" &&
+      reply.authorCustomerId !== input.uploader.customerId
+    ) {
+      throw new DomainError(
+        "この返信に添付をアップロードする権限がありません",
+        "FORBIDDEN",
+      );
     }
   }
 
