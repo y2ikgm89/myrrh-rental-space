@@ -656,6 +656,31 @@ describe("events/payment-commands", () => {
       });
     });
 
+    test("Stripe session に expires_at (cron cutoff と同期) が指定される", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      const before = Math.floor(Date.now() / 1000);
+      await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+      const after = Math.floor(Date.now() / 1000);
+
+      const sessionArgs = mockCheckoutSessionCreate.mock.calls[0]?.[0] as
+        { expires_at?: number } | undefined;
+      expect(sessionArgs?.expires_at).toEqual(expect.any(Number));
+      const expected = before + 60 * 60;
+      const expectedMax = after + 60 * 60;
+      expect(sessionArgs?.expires_at).toBeGreaterThanOrEqual(expected);
+      expect(sessionArgs?.expires_at).toBeLessThanOrEqual(expectedMax);
+    });
+
     test("Stripe 失敗 → PENDING → UNPAID revert + DomainError(UNEXPECTED) + logError 呼出", async () => {
       mockRegFindUnique
         .mockResolvedValueOnce(checkoutInitialRead())

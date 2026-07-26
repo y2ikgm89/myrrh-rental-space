@@ -127,6 +127,12 @@ locals {
       description = "Event waitlist offer expiration (hourly). Expires WAITLISTED_OFFERED past 24h TTL and FIFO-promotes the next WAITLISTED per (slotId, ticketId). Feature-gated by events module."
     },
     {
+      name        = "unpaid-event-registration-expire"
+      schedule    = "*/15 * * * *"
+      path        = "/api/cron/unpaid-event-registration-expire"
+      description = "Auto-cancel CONFIRMED paid-ticket event registrations stuck UNPAID/PENDING/FAILED past the fail-safe window to release capacity (every 15 min, feature-gated by events module)."
+    },
+    {
       name        = "receipt-backfill"
       schedule    = "15 * * * *"
       path        = "/api/cron/receipt-backfill"

@@ -91,7 +91,8 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
-export type EventCancelChannel = "admin" | "customer-mypage" | "customer-token";
+export type EventCancelChannel =
+  "admin" | "customer-mypage" | "customer-token" | "system";
 
 export interface EventCancellationSideEffectInput {
   registrationId: string;
@@ -148,6 +149,7 @@ const CHANNEL_TO_CANCELLED_BY: Record<EventCancelChannel, CancelledByType> = {
   admin: CANCELLED_BY.ADMIN,
   "customer-mypage": CANCELLED_BY.CUSTOMER_MYPAGE,
   "customer-token": CANCELLED_BY.CUSTOMER_TOKEN,
+  system: CANCELLED_BY.SYSTEM,
 };
 
 interface SideEffectRegistration {
@@ -195,6 +197,8 @@ function channelLabel(channel: EventCancelChannel): string {
       return "顧客（マイページ）";
     case "customer-token":
       return "顧客（メールリンク）";
+    case "system":
+      return "システム（自動）";
   }
 }
 
