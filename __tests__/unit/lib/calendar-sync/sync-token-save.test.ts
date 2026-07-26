@@ -42,7 +42,18 @@ const mockSaveCalendarSyncToken = mock<(token: string) => Promise<void>>(() =>
 
 // spread 呼び出しに対応するため (...args: unknown[]) で型付け
 const mockApplyCalendarTimeChange = mock<
-  (...args: unknown[]) => Promise<{ success: boolean }>
+  (...args: unknown[]) => Promise<
+    | { success: true }
+    | {
+        success: false;
+        reason: string;
+        conflictingReservation?: {
+          id: string;
+          startTime: Date;
+          endTime: Date;
+        };
+      }
+  >
 >(() => Promise.resolve({ success: true }));
 
 const mockCancelReservationFromCalendar = mock<
@@ -427,7 +438,7 @@ describe("syncFromCalendar — 決済確定/保留中の予約は時間変更を
     };
   }
 
-  test.each(["PAID", "PARTIALLY_REFUNDED", "PENDING"])(
+  test.each(["PAID", "PARTIALLY_REFUNDED", "PENDING", "REFUNDED", "FAILED"])(
     "paymentStatus=%s は applyCalendarTimeChange を呼ばず拒否メールを送る",
     async (paymentStatus) => {
       mockGetReservationByCalendarEventId.mockResolvedValue(
@@ -455,5 +466,21 @@ describe("syncFromCalendar — 決済確定/保留中の予約は時間変更を
     expect(mockApplyCalendarTimeChange).toHaveBeenCalledTimes(1);
     expect(mockSendCalendarSyncRejectionEmail).not.toHaveBeenCalled();
     expect(result.updated).toBe(1);
+  });
+
+  test("applyCalendarTimeChange が payment_race を返したとき拒否メールを送る", async () => {
+    mockGetReservationByCalendarEventId.mockResolvedValue(
+      reservationWith("UNPAID"),
+    );
+    mockApplyCalendarTimeChange.mockResolvedValue({
+      success: false,
+      reason: "payment_race",
+    });
+
+    const result = await syncFromCalendar();
+
+    expect(mockApplyCalendarTimeChange).toHaveBeenCalledTimes(1);
+    expect(mockSendCalendarSyncRejectionEmail).toHaveBeenCalledTimes(1);
+    expect(result.updated).toBe(0);
   });
 });

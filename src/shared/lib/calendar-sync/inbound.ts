@@ -38,12 +38,14 @@ import type { TwoWaySyncResult } from "./types";
  * 時間変更を silent に適用してはいけない決済状態（GCAL-AUDIT-11）。
  * 決済が確定 / 保留中の予約は金額・返金判断を伴うため、GCal 側の時間変更を
  * 重複と同様に拒否し、管理者にメール通知して手動対応を促す。UNPAID のみ
- * `applyCalendarTimeChange` 経由で即時反映を許可する。
+ * `applyCalendarTimeChange` 経由で料金再計算付き即時反映を許可する。
  */
 const PAYMENT_STATUSES_BLOCKING_TIME_CHANGE: readonly PaymentStatus[] = [
   PaymentStatus.PAID,
   PaymentStatus.PARTIALLY_REFUNDED,
   PaymentStatus.PENDING,
+  PaymentStatus.REFUNDED,
+  PaymentStatus.FAILED,
 ];
 
 // 同期の最小間隔（秒）- 連続呼び出しを防ぐ
@@ -245,44 +247,105 @@ async function processCalendarChange(
       });
 
       if (!transactionResult.success) {
-        logError(new Error("Calendar time change rejected due to overlap"), {
-          category: ErrorCategory.VALIDATION,
-          severity: ErrorSeverity.LOW,
-          context: {
-            operation: "processCalendarChange",
-            reservationId: reservation.id,
-            attemptedStartTime: change.startTime.toISOString(),
-            attemptedEndTime: change.endTime.toISOString(),
-            conflictingReservationId:
-              transactionResult.conflictingReservation.id,
-          },
-        });
-
-        // 管理者にメール通知（非同期、トランザクション外）
         const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-        fireAndForget(
-          sendCalendarSyncRejectionEmail({
-            reservationId: reservation.id,
-            spaceName: reservation.space.name,
-            customerName,
-            customerEmail: reservation.guestEmail ?? reservation.customer.email,
-            attemptedStartTime: change.startTime,
-            attemptedEndTime: change.endTime,
-            currentStartTime: reservation.startTime,
-            currentEndTime: reservation.endTime,
-            conflictingReservation: {
-              id: transactionResult.conflictingReservation.id,
-              startTime: transactionResult.conflictingReservation.startTime,
-              endTime: transactionResult.conflictingReservation.endTime,
-            },
-          }),
-          {
-            operation: "sendCalendarSyncRejectionEmail",
-            category: ErrorCategory.EXTERNAL_API,
+        const emailBase = {
+          reservationId: reservation.id,
+          spaceName: reservation.space.name,
+          customerName,
+          customerEmail: reservation.guestEmail ?? reservation.customer.email,
+          attemptedStartTime: change.startTime,
+          attemptedEndTime: change.endTime,
+          currentStartTime: reservation.startTime,
+          currentEndTime: reservation.endTime,
+        };
+
+        if (transactionResult.reason === "overlap") {
+          logError(new Error("Calendar time change rejected due to overlap"), {
+            category: ErrorCategory.VALIDATION,
             severity: ErrorSeverity.LOW,
-            context: { reservationId: reservation.id },
-          },
-        );
+            context: {
+              operation: "processCalendarChange",
+              reservationId: reservation.id,
+              attemptedStartTime: change.startTime.toISOString(),
+              attemptedEndTime: change.endTime.toISOString(),
+              conflictingReservationId:
+                transactionResult.conflictingReservation.id,
+            },
+          });
+
+          fireAndForget(
+            sendCalendarSyncRejectionEmail({
+              ...emailBase,
+              conflictingReservation: {
+                id: transactionResult.conflictingReservation.id,
+                startTime: transactionResult.conflictingReservation.startTime,
+                endTime: transactionResult.conflictingReservation.endTime,
+              },
+            }),
+            {
+              operation: "sendCalendarSyncRejectionEmail",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+              context: { reservationId: reservation.id },
+            },
+          );
+        } else if (transactionResult.reason === "payment_race") {
+          logError(
+            new Error(
+              "Calendar time change rejected due to concurrent checkout",
+            ),
+            {
+              category: ErrorCategory.VALIDATION,
+              severity: ErrorSeverity.LOW,
+              context: {
+                operation: "processCalendarChange",
+                reservationId: reservation.id,
+                paymentStatus: reservation.paymentStatus,
+              },
+            },
+          );
+
+          fireAndForget(
+            sendCalendarSyncRejectionEmail({
+              ...emailBase,
+              rejectionReason:
+                "決済処理が開始されたため、時間変更を反映できませんでした。",
+            }),
+            {
+              operation: "sendCalendarSyncRejectionEmail",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+              context: { reservationId: reservation.id },
+            },
+          );
+        } else {
+          logError(
+            new Error("Calendar time change rejected due to pricing failure"),
+            {
+              category: ErrorCategory.VALIDATION,
+              severity: ErrorSeverity.LOW,
+              context: {
+                operation: "processCalendarChange",
+                reservationId: reservation.id,
+                reason: transactionResult.reason,
+              },
+            },
+          );
+
+          fireAndForget(
+            sendCalendarSyncRejectionEmail({
+              ...emailBase,
+              rejectionReason:
+                "料金を再計算できないため、時間のみの変更は反映しませんでした。",
+            }),
+            {
+              operation: "sendCalendarSyncRejectionEmail",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+              context: { reservationId: reservation.id },
+            },
+          );
+        }
 
         return { action: "skipped", reservationId: reservation.id };
       }
