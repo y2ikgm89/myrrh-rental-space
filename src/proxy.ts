@@ -20,7 +20,11 @@ import {
 
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
-import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
+import {
+  checkRateLimit,
+  getClientIp,
+  infraEndpointRateLimiter,
+} from "@/shared/lib/rate-limit";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -393,30 +397,52 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     // 外部依存に触れない `/api/live` のみ webhook / cron と同様に rate-limit 対象外。
     // `/api/health` は DB 疎通を含む監視・手動確認用 endpoint なので通常の API
     // rate-limit を適用する。
-    const isProbeOrInfraEndpoint = pathname === "/api/live";
+    // `/api/live` は getClientIp も呼ばない（probe が XFF 無しでも bucket を汚さない）。
+    const isLiveProbeEndpoint = pathname === "/api/live";
+    const isWebhookOrCronEndpoint =
+      pathname.startsWith("/api/webhooks") || pathname.startsWith("/api/cron");
 
-    if (
-      !pathname.startsWith("/api/webhooks") &&
-      !pathname.startsWith("/api/cron") &&
-      !isProbeOrInfraEndpoint
-    ) {
+    if (!isLiveProbeEndpoint) {
       const clientIp = getClientIp(req);
-      const rateLimitResult = await checkRateLimit(pathname, clientIp);
 
-      if (!rateLimitResult.success) {
-        return NextResponse.json(
-          { error: "Too many requests" },
-          {
-            status: 429,
-            headers: {
-              "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": String(rateLimitResult.reset),
-              "Retry-After": String(
-                Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
-              ),
-            },
-          },
+      if (isWebhookOrCronEndpoint) {
+        const rateLimitResult = await infraEndpointRateLimiter.check(
+          `${clientIp}:${pathname.split("/").slice(0, 4).join("/")}`,
         );
+
+        if (!rateLimitResult.success) {
+          return NextResponse.json(
+            { error: "Too many requests" },
+            {
+              status: 429,
+              headers: {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": String(rateLimitResult.reset),
+                "Retry-After": String(
+                  Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+                ),
+              },
+            },
+          );
+        }
+      } else {
+        const rateLimitResult = await checkRateLimit(pathname, clientIp);
+
+        if (!rateLimitResult.success) {
+          return NextResponse.json(
+            { error: "Too many requests" },
+            {
+              status: 429,
+              headers: {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": String(rateLimitResult.reset),
+                "Retry-After": String(
+                  Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+                ),
+              },
+            },
+          );
+        }
       }
     }
 

@@ -238,6 +238,15 @@ export const apiRateLimiter = createRateLimiter({
   maxRequests: 100,
 });
 
+// Webhook / cron 用の coarse volume protection（300 リクエスト/分/IP）。
+// 認証は各 route handler が fail-closed で行う。ここは invalid traffic の
+// DB 到達前の cheap IP/path 上限のみ（Stripe / SwitchBot burst / cron OIDC を
+// 通常 API より緩く保つ）。
+export const infraEndpointRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 300,
+});
+
 // 認証 mutation 用（sign-in/sign-up/sign-out 等）— ブルートフォース対策（20リクエスト/15分/IP）
 export const authMutationRateLimiter = createRateLimiter({
   interval: 15 * 60 * 1000, // 15分
