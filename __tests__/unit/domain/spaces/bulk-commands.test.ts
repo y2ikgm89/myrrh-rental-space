@@ -8,11 +8,45 @@ const mockUpdateMany = mock<(_args?: unknown) => Promise<{ count: number }>>(
   () => Promise.resolve({ count: 0 }),
 );
 
+const mockReservationFindMany = mock<
+  (_args?: unknown) => Promise<Array<{ spaceId: string }>>
+>(() => Promise.resolve([]));
+
+const mockEventFindMany = mock<
+  (_args?: unknown) => Promise<Array<{ spaceId: string | null }>>
+>(() => Promise.resolve([]));
+
 const mockDelete = mock<(args: { where: { id: string } }) => Promise<unknown>>(
   () => Promise.resolve({}),
 );
 
+const mockExecuteRaw = mock(() => Promise.resolve(0));
+
+const mockTransaction = mock(
+  async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> =>
+    fn({
+      space: {
+        updateMany: (args: unknown) => mockUpdateMany(args),
+      },
+      reservation: {
+        findMany: (args: unknown) => mockReservationFindMany(args),
+      },
+      event: {
+        findMany: (args: unknown) => mockEventFindMany(args),
+      },
+      $executeRaw: mockExecuteRaw,
+    }),
+);
+
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/validations/enums/helpers", () => ({
+  ACTIVE_RESERVATION_STATUSES: ["PENDING", "CONFIRMED"],
+}));
+
+mock.module("@/shared/domain/spaces/overlap", () => ({
+  ACTIVE_EVENT_STATUSES: ["DRAFT", "PUBLISHED"],
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -21,6 +55,13 @@ mock.module("@/shared/db/prisma", () => ({
       updateMany: (args: unknown) => mockUpdateMany(args),
       delete: (args: { where: { id: string } }) => mockDelete(args),
     },
+    reservation: {
+      findMany: (args: unknown) => mockReservationFindMany(args),
+    },
+    event: {
+      findMany: (args: unknown) => mockEventFindMany(args),
+    },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -68,6 +109,7 @@ describe("bulkTogglePublishedSpacesCommand", () => {
     test("複数件 publish 成功で count と affected を返す", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
       mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+      mockUpdateMany.mockResolvedValueOnce({ count: 0 });
 
       const result = await bulkTogglePublishedSpacesCommand(
         [SPACE_A.id, SPACE_B.id],
@@ -80,12 +122,13 @@ describe("bulkTogglePublishedSpacesCommand", () => {
         affected: [SPACE_A, SPACE_B],
       });
       expect(mockFindMany).toHaveBeenCalledTimes(1);
-      expect(mockUpdateMany).toHaveBeenCalledTimes(1);
+      expect(mockUpdateMany).toHaveBeenCalledTimes(2);
     });
 
     test("publish 対象は active なスペースだけに限定する", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A]);
       mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateMany.mockResolvedValueOnce({ count: 0 });
 
       await bulkTogglePublishedSpacesCommand([SPACE_A.id], true);
 
@@ -96,7 +139,38 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       );
       expect(mockUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: { in: [SPACE_A.id] }, isActive: true },
+          where: {
+            id: { in: [SPACE_A.id] },
+            isActive: true,
+            publishedAt: null,
+          },
+        }),
+      );
+    });
+
+    test("初回公開と再公開で publishedAt の扱いを分ける", async () => {
+      mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      await bulkTogglePublishedSpacesCommand([SPACE_A.id, SPACE_B.id], true);
+
+      expect(mockUpdateMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+            publishedAt: expect.any(Date),
+          }),
+        }),
+      );
+      expect(mockUpdateMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            publishedAt: { not: null },
+          }),
+          data: { isPublished: true },
         }),
       );
     });
@@ -113,6 +187,11 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       expect(result.isPublished).toBe(false);
       expect(result.count).toBe(1);
       expect(result.affected).toEqual([SPACE_A]);
+      expect(mockUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { isPublished: false, publishedAt: null },
+        }),
+      );
     });
 
     test("対象が見つからない場合は count: 0 を返し updateMany を呼ばない", async () => {
@@ -133,7 +212,15 @@ describe("bulkTogglePublishedSpacesCommand", () => {
 describe("bulkDeleteSpacesCommand", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
+    mockUpdateMany.mockReset();
+    mockReservationFindMany.mockReset();
+    mockEventFindMany.mockReset();
     mockDelete.mockReset();
+    mockExecuteRaw.mockReset();
+    mockTransaction.mockClear();
+    mockReservationFindMany.mockResolvedValue([]);
+    mockEventFindMany.mockResolvedValue([]);
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
@@ -142,13 +229,15 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result).toEqual({
         count: 0,
+        skipped: 0,
+        skippedIds: [],
         affected: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockDelete).not.toHaveBeenCalled();
     });
 
-    test("複数件削除成功で count と affected を返す", async () => {
+    test("複数件削除成功で count / skipped / affected を返す", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
       mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
@@ -156,6 +245,8 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result).toEqual({
         count: 2,
+        skipped: 0,
+        skippedIds: [],
         affected: [SPACE_A, SPACE_B],
       });
       expect(mockUpdateMany).toHaveBeenCalledWith(
@@ -167,6 +258,36 @@ describe("bulkDeleteSpacesCommand", () => {
       expect(mockDelete).not.toHaveBeenCalled();
     });
 
+    test("有効な予約があるスペースはスキップする", async () => {
+      mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
+      mockReservationFindMany.mockResolvedValueOnce([{ spaceId: SPACE_A.id }]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkDeleteSpacesCommand([SPACE_A.id, SPACE_B.id]);
+
+      expect(result).toEqual({
+        count: 1,
+        skipped: 1,
+        skippedIds: [SPACE_A.id],
+        affected: [SPACE_B],
+      });
+    });
+
+    test("占有中イベントがあるスペースはスキップする", async () => {
+      mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
+      mockEventFindMany.mockResolvedValueOnce([{ spaceId: SPACE_B.id }]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkDeleteSpacesCommand([SPACE_A.id, SPACE_B.id]);
+
+      expect(result).toEqual({
+        count: 1,
+        skipped: 1,
+        skippedIds: [SPACE_B.id],
+        affected: [SPACE_A],
+      });
+    });
+
     test("対象が見つからない場合は count: 0 を返し delete を呼ばない", async () => {
       mockFindMany.mockResolvedValueOnce([]);
 
@@ -174,9 +295,26 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result).toEqual({
         count: 0,
+        skipped: 0,
+        skippedIds: [],
         affected: [],
       });
       expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    test("全件スキップ時は updateMany を呼ばない", async () => {
+      mockFindMany.mockResolvedValueOnce([SPACE_A]);
+      mockReservationFindMany.mockResolvedValueOnce([{ spaceId: SPACE_A.id }]);
+
+      const result = await bulkDeleteSpacesCommand([SPACE_A.id]);
+
+      expect(result).toEqual({
+        count: 0,
+        skipped: 1,
+        skippedIds: [SPACE_A.id],
+        affected: [],
+      });
+      expect(mockUpdateMany).not.toHaveBeenCalled();
     });
   });
 

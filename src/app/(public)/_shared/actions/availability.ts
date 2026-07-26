@@ -7,6 +7,7 @@ import {
   getBlockedDateRangesForSpace,
   type BlockedDateRange,
 } from "@/shared/domain/reservations/availability";
+import { isPublicSpaceAccessible } from "@/shared/domain/spaces/public-queries";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { publicQueryRateLimiter } from "@/shared/lib/rate-limit";
 
@@ -36,6 +37,10 @@ export async function fetchAvailableSlots(
   const parsed = fetchSlotsSchema.safeParse({ spaceId, date });
   if (!parsed.success) return { ok: false, reason: "invalid" };
 
+  if (!(await isPublicSpaceAccessible(parsed.data.spaceId))) {
+    return { ok: false, reason: "invalid" };
+  }
+
   const slots = await getAvailableTimeSlots(
     parsed.data.spaceId,
     parsed.data.date,
@@ -55,6 +60,8 @@ export async function fetchSpaceBlockedDates(
 
   const parsed = spaceIdSchema.safeParse(spaceId);
   if (!parsed.success) return [];
+
+  if (!(await isPublicSpaceAccessible(parsed.data))) return [];
 
   return getBlockedDateRangesForSpace(parsed.data);
 }

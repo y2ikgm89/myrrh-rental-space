@@ -13,6 +13,7 @@ import {
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import {
   getBlockedDateRangesForSpace,
@@ -25,6 +26,7 @@ import {
 } from "@/shared/lib/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { resolvePublicDisplayPrice } from "@/shared/lib/pricing/tax";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
   generateArticleMetadata,
@@ -105,6 +107,7 @@ export default async function SpaceDetailPage({
     contactEnabled,
     reviewsFeatureEnabled,
     onlinePaymentAvailable,
+    taxSettings,
   ] = await Promise.all([
     space.reviewsEnabled
       ? getSpaceReviewStats(space.id)
@@ -117,12 +120,17 @@ export default async function SpaceDetailPage({
     isFeatureEnabled("contact"),
     isFeatureEnabled("reviews"),
     isOnlinePaymentAvailable(),
+    getPublicTaxSettings(),
   ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
     : undefined;
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
+  const jsonLdHourlyPrice = resolvePublicDisplayPrice(
+    Number(space.hourlyPrice),
+    taxSettings,
+  );
 
   return (
     <>
@@ -139,7 +147,7 @@ export default async function SpaceDetailPage({
         image={space.mainImageUrl}
         url={spaceUrl}
         offers={{
-          price: space.hourlyPrice,
+          price: jsonLdHourlyPrice,
           priceCurrency: "JPY",
         }}
         {...(reviewStats.totalCount > 0 && {

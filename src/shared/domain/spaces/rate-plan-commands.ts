@@ -57,10 +57,22 @@ async function ensureSpaceRatePlanExists(id: string): Promise<void> {
   }
 }
 
+async function ensureActiveSpaceExists(spaceId: string): Promise<void> {
+  const space = await prisma.space.findFirst({
+    where: { id: spaceId, isActive: true },
+    select: { id: true },
+  });
+  if (!space) {
+    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+  }
+}
+
 /** SpaceRatePlan を新規作成し、対象 Space の rate plan キャッシュを無効化する。 */
 export async function createSpaceRatePlan(
   input: CreateSpaceRatePlanInput,
 ): Promise<SpaceRatePlan> {
+  await ensureActiveSpaceExists(input.spaceId);
+
   const plan = await prisma.spaceRatePlan.create({
     data: input,
   });

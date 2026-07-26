@@ -51,7 +51,7 @@ describe("findSlugConflict", () => {
       mockPostFindFirst,
       mockNewsFindUnique,
       mockPageFindUnique,
-      mockSpaceFindUnique,
+      mockSpaceFindFirst,
     ]) {
       m.mockResolvedValue(null);
     }
@@ -82,11 +82,28 @@ describe("findSlugConflict", () => {
     mockPostFindFirst.mockResolvedValueOnce({ id: "p1" });
     mockNewsFindUnique.mockResolvedValueOnce({ id: "n1" });
     mockPageFindUnique.mockResolvedValueOnce({ id: "pg1" });
-    mockSpaceFindUnique.mockResolvedValueOnce({ id: "s1" });
+    mockSpaceFindFirst.mockResolvedValueOnce({ id: "s1" });
 
     const result = await findSlugConflict("popular-slug", "page");
 
     expect(result?.contentType).toBe("post");
+  });
+
+  test("space は findFirst + isActive:true で検索し findUnique は使わない", async () => {
+    mockSpaceFindFirst.mockResolvedValueOnce({ id: "s1" });
+
+    const result = await findSlugConflict("studio-a", "news");
+
+    expect(result).toEqual({ contentType: "space", id: "s1" });
+    expect(mockSpaceFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slug: "studio-a",
+          isActive: true,
+        }),
+      }),
+    );
+    expect(mockSpaceFindUnique).not.toHaveBeenCalled();
   });
 
   test("slug は lower-case 化され、post は findFirst + deletedAt:null で検索される", async () => {
@@ -118,7 +135,15 @@ describe("findSlugConflict", () => {
     expect(mockPostFindUnique).not.toHaveBeenCalled();
     expect(mockNewsFindUnique).toHaveBeenCalled();
     expect(mockPageFindUnique).toHaveBeenCalled();
-    expect(mockSpaceFindUnique).toHaveBeenCalled();
+    expect(mockSpaceFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slug: "my-slug",
+          isActive: true,
+        }),
+      }),
+    );
+    expect(mockSpaceFindUnique).not.toHaveBeenCalled();
   });
 
   test("currentId なしでも post は findFirst（partial unique のため findUnique 不可）", async () => {

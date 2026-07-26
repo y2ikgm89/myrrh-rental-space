@@ -61,3 +61,25 @@ export function calculateTaxAmount(
 ): number {
   return Math.round(taxExcludedPrice * (taxRate / 100));
 }
+
+/**
+ * 公開ページの税表示モードに合わせた structured data / 数値価格。
+ * DB の税抜 hourlyPrice から UI（SpaceCard 等）と同じ基準の金額を返す。
+ */
+export function resolvePublicDisplayPrice(
+  taxExcludedPrice: number,
+  settings: TaxSettings = DEFAULT_TAX_SETTINGS,
+): number {
+  const taxRate = getTaxRate(TaxRateType.standard, settings);
+  switch (settings.displayModePublic) {
+    case TaxDisplayMode.tax_excluded:
+      return taxExcludedPrice;
+    case TaxDisplayMode.tax_included:
+    case TaxDisplayMode.both:
+      return calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
+    default: {
+      const _exhaustive: never = settings.displayModePublic;
+      return _exhaustive;
+    }
+  }
+}

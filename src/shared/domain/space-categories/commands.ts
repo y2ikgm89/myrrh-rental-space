@@ -14,6 +14,11 @@ type SpaceCategoryOrderInput = {
   sortOrder: number;
 };
 
+/** 削除/非アクティブ化ブロック判定用: 有効なスペースのみ数える。 */
+const ACTIVE_SPACE_COUNT_SELECT = {
+  spaces: { where: { isActive: true } },
+} as const;
+
 /**
  * Round-5 audit Finding #18: name の一意性は DB 側で isActive: true な行の間
  * でのみ強制される partial unique index に変更済み（無効化したカテゴリーの
@@ -159,7 +164,7 @@ export async function deleteSpaceCategory(id: string): Promise<{ id: string }> {
     where: { id },
     include: {
       _count: {
-        select: { spaces: true },
+        select: ACTIVE_SPACE_COUNT_SELECT,
       },
     },
   });
@@ -191,7 +196,7 @@ export async function updateSpaceCategoryActive(
     where: { id },
     include: {
       _count: {
-        select: { spaces: true },
+        select: ACTIVE_SPACE_COUNT_SELECT,
       },
     },
   });

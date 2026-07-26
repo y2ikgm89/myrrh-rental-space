@@ -47,15 +47,18 @@ export async function findSlugConflict(
           where: { slug: normalizedSlug },
           select: { id: true },
         }),
-    currentType === "space" && currentId
-      ? prisma.space.findFirst({
-          where: { slug: normalizedSlug, id: { not: currentId } },
-          select: { id: true },
-        })
-      : prisma.space.findUnique({
-          where: { slug: normalizedSlug },
-          select: { id: true },
-        }),
+    // Space.slug は partial unique (isActive = true) のため findUnique 不可。
+    // soft-delete 済みの slug は衝突とみなさない。
+    prisma.space.findFirst({
+      where: {
+        slug: normalizedSlug,
+        isActive: true,
+        ...(currentType === "space" && currentId
+          ? { id: { not: currentId } }
+          : {}),
+      },
+      select: { id: true },
+    }),
   ]);
 
   if (post) {

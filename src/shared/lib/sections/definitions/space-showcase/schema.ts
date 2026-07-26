@@ -17,10 +17,6 @@ export const spaceShowcaseConfigSchema = z.object({
     suffix: "件",
     group: "advanced",
   }),
-  showOnlyPublished: field.boolean("公開済みスペースのみ表示する", {
-    default: true,
-    group: "advanced",
-  }),
   displayLayout: field.select("レイアウト", {
     options: displayLayouts,
     default: "grid",

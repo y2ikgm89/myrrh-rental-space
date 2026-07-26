@@ -46,6 +46,7 @@ import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
 import { createSpaceAction, updateSpaceAction } from "@/admin/actions/space";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import { SpaceRatePlanList } from "./SpaceRatePlanList";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
 import {
@@ -268,37 +269,6 @@ export function SpaceEditForm({
     space?.ogpImageUrl ?? "",
   );
 
-  // 未保存の変更がある場合にブラウザ離脱警告を表示する（PostEditor/NewsEditor/
-  // TermsInlineEditor は InlineEditorShell 経由で自動的に付いているが、
-  // このフォームは独自の conform + useActionState 構成のため個別に付与する）。
-  const dirtySnapshot = JSON.stringify({
-    name,
-    slug,
-    descriptionJson,
-    addressDetail,
-    capacity,
-    area,
-    locationId,
-    hourlyPrice,
-    discountType,
-    discountValue,
-    durationDiscountOverride,
-    taxRateType,
-    mainImageUrl,
-    categoryId,
-    facilities,
-    isPublished,
-    reviewsEnabled,
-    metaDescription,
-    metaKeywords,
-    ogpTitle,
-    ogpDescription,
-    ogpImageUrl,
-  });
-  const [initialSnapshot] = useState(dirtySnapshot);
-  const isDirty = dirtySnapshot !== initialSnapshot;
-  useBeforeUnload({ isDirty });
-
   // Server Action は `(prev, formData) => SubmissionResult` signature。
   // edit mode では id を `bind` で部分適用。
   const boundAction =
@@ -327,7 +297,45 @@ export function SpaceEditForm({
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
+    // gallery のみ Conform list field（GalleryField が insert/reorder/remove）。
+    // 他フィールドは controlled state + hidden input のため defaultValue 不要。
+    defaultValue: {
+      gallery: parseGallery(space?.gallery),
+    },
   });
+
+  // 未保存の変更がある場合にブラウザ離脱警告を表示する（PostEditor/NewsEditor/
+  // TermsInlineEditor は InlineEditorShell 経由で自動的に付いているが、
+  // このフォームは独自の conform + useActionState 構成のため個別に付与する）。
+  // gallery は Conform 管理のため useForm 後に snapshot へ含める。
+  const dirtySnapshot = JSON.stringify({
+    name,
+    slug,
+    descriptionJson,
+    addressDetail,
+    capacity,
+    area,
+    locationId,
+    hourlyPrice,
+    discountType,
+    discountValue,
+    durationDiscountOverride,
+    taxRateType,
+    mainImageUrl,
+    gallery: fields.gallery.value ?? [],
+    categoryId,
+    facilities,
+    isPublished,
+    reviewsEnabled,
+    metaDescription,
+    metaKeywords,
+    ogpTitle,
+    ogpDescription,
+    ogpImageUrl,
+  });
+  const [initialSnapshot] = useState(dirtySnapshot);
+  const isDirty = dirtySnapshot !== initialSnapshot;
+  useBeforeUnload({ isDirty });
 
   // 設備配列
   const addFacility = () => {

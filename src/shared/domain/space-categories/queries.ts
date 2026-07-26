@@ -48,7 +48,7 @@ export async function getSpaceCategories(options: {
       take,
       include: {
         _count: {
-          select: { spaces: true },
+          select: { spaces: { where: { isActive: true } } },
         },
       },
     }),
@@ -88,7 +88,7 @@ export async function getSpaceCategoryById(
     where: { id },
     include: {
       _count: {
-        select: { spaces: true },
+        select: { spaces: { where: { isActive: true } } },
       },
     },
   });

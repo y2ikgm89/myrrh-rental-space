@@ -24,10 +24,20 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
  * （`src/shared/lib/validations/blocked-date.ts` の startDate/endDate と同じ規約。
  * Task 6 の command input 型が `Date | null` を要求するため、ここで変換まで
  * 完結させる）。
+ *
+ * FormData は「終日」「無期限」を空文字で送るため、optional 時刻・日付は
+ * `emptyToNull` で null に正規化する（`space.ts` と同パターン）。
  */
 
 const timePattern = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
-const endTimePattern = /^([01][0-9]|2[0-3]|24):[0-5][0-9]$/;
+/** 通常の HH:MM（00-23）または半開終端センチネル `24:00` のみ。`24:01`–`24:59` は拒否。 */
+const endTimePattern = /^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$/;
+
+const emptyToNull = (value: unknown) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  return value;
+};
 
 function toEffectiveDate(value: string | null): Date | null {
   return value === null ? null : parseJstDateOnly(value);
@@ -47,30 +57,42 @@ export const spaceRatePlanFormSchema = z
       .max(1_000_000, { error: "時間料金が上限を超えています" }),
     daysOfWeek: z.array(z.enum(DayOfWeek)).default([]),
     holidayMode: z.enum(HolidayMode).default(HolidayMode.any),
-    startTime: z
-      .string()
-      .regex(timePattern, {
-        error: "開始時刻は HH:MM 形式で入力してください",
-      })
-      .nullable()
-      .default(null),
-    endTime: z
-      .string()
-      .regex(endTimePattern, {
-        error: "終了時刻は HH:MM 形式で入力してください",
-      })
-      .nullable()
-      .default(null),
-    effectiveFrom: z.iso
-      .date({ error: "有効開始日を正しく入力してください" })
-      .nullable()
-      .default(null)
-      .transform(toEffectiveDate),
-    effectiveTo: z.iso
-      .date({ error: "有効終了日を正しく入力してください" })
-      .nullable()
-      .default(null)
-      .transform(toEffectiveDate),
+    startTime: z.preprocess(
+      emptyToNull,
+      z
+        .string()
+        .regex(timePattern, {
+          error: "開始時刻は HH:MM 形式で入力してください",
+        })
+        .nullable()
+        .default(null),
+    ),
+    endTime: z.preprocess(
+      emptyToNull,
+      z
+        .string()
+        .regex(endTimePattern, {
+          error: "終了時刻は HH:MM 形式で入力してください",
+        })
+        .nullable()
+        .default(null),
+    ),
+    effectiveFrom: z.preprocess(
+      emptyToNull,
+      z.iso
+        .date({ error: "有効開始日を正しく入力してください" })
+        .nullable()
+        .default(null)
+        .transform(toEffectiveDate),
+    ),
+    effectiveTo: z.preprocess(
+      emptyToNull,
+      z.iso
+        .date({ error: "有効終了日を正しく入力してください" })
+        .nullable()
+        .default(null)
+        .transform(toEffectiveDate),
+    ),
   })
   .refine(
     (data) => !data.startTime || !data.endTime || data.startTime < data.endTime,

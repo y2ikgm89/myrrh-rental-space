@@ -5,6 +5,7 @@ import { DayPicker } from "@daypicker/react";
 import { ja } from "@daypicker/react/locale";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import {
   getWeekdayKey,
   formatDateString,
@@ -18,17 +19,18 @@ interface CalendarPickerProps {
   readonly blockedRanges?: readonly BlockedDateRange[];
 }
 
+/**
+ * 予約フォーム用 DayPicker。過去日・定休・臨時休業の grey-out は
+ * スロット生成と同じ JST / DEFAULT_BUSINESS_HOURS_WEEK フォールバックを使う。
+ */
 export function CalendarPicker({
   selectedDate,
   onSelect,
   businessHours,
   blockedRanges = [],
 }: CalendarPickerProps): ReactElement {
-  const [minDate] = useState(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
+  const [todayJst] = useState(() => formatDateString(new Date()));
+  const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
 
   const isBlockedDay = (date: Date): boolean => {
     if (blockedRanges.length === 0) return false;
@@ -39,13 +41,14 @@ export function CalendarPicker({
   };
 
   const isDisabledDay = (date: Date): boolean => {
-    if (date < minDate) return true;
+    const dateStr = formatDateString(date);
+    if (dateStr < todayJst) return true;
     if (isBlockedDay(date)) return true;
-    if (!businessHours) return false;
-    // 毎月の繰り返し定休（第N曜日）
-    if (isMonthlyClosureDate(date, businessHours.monthlyClosures)) return true;
+    if (isMonthlyClosureDate(dateStr, effectiveHours.monthlyClosures)) {
+      return true;
+    }
     const weekday = getWeekdayKey(date);
-    const daySettings = businessHours[weekday];
+    const daySettings = effectiveHours[weekday];
     return !daySettings.isOpen || daySettings.slots.length === 0;
   };
 

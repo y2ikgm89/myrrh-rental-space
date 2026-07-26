@@ -3,6 +3,9 @@
  *
  * このファイルの関数はServer-onlyな依存を持たず、
  * Client Componentからも安全にインポートできます。
+ *
+ * 日付・曜日・毎月定休は Asia/Tokyo 固定（`@/shared/lib/date-format`）。
+ * ブラウザ local TZ / Cloud Run UTC に依存しない。
  */
 
 import type {
@@ -10,6 +13,11 @@ import type {
   MonthlyClosure,
 } from "@/shared/lib/json-validators";
 import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
+import {
+  formatJstDateString,
+  getJstCalendarDayOfWeek,
+  getJstMonthLastDay,
+} from "@/shared/lib/date-format";
 import type { TimeSlot } from "./types";
 
 /** スロットの時間間隔（分） */
@@ -34,34 +42,47 @@ const WEEKDAY_KEYS: readonly WeekdayKey[] = [
   "saturday",
 ];
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * 日付から曜日キーを取得
+ * JST カレンダー日付 (`"YYYY-MM-DD"`) から曜日キーを取得する。
+ * ホスト tz に依存しない（`getJstCalendarDayOfWeek` SSoT）。
+ */
+export function getWeekdayKeyFromDateOnly(dateOnly: string): WeekdayKey {
+  return WEEKDAY_KEYS[getJstCalendarDayOfWeek(dateOnly)] ?? "sunday";
+}
+
+/**
+ * 任意の datetime を JST カレンダー日に落として曜日キーを返す。
  */
 export function getWeekdayKey(date: Date): WeekdayKey {
-  return WEEKDAY_KEYS[date.getDay()] ?? "sunday";
+  return getWeekdayKeyFromDateOnly(formatJstDateString(date));
 }
 
 /**
  * 指定日が「毎月の繰り返し定休（第N曜日）」に該当するか判定する純粋関数。
  * 例: `{ weekday: "monday", week: "third" }` は毎月第3月曜に該当。
- * `week: "last"` はその曜日の月内最終出現。ローカル日付ベース（getDay/getDate）。
+ * `week: "last"` はその曜日の月内最終出現。
+ *
+ * `date` は JST カレンダー日付 `"YYYY-MM-DD"`、または任意の datetime
+ * （後者は `formatJstDateString` で JST 日に正規化）。
  */
 export function isMonthlyClosureDate(
-  date: Date,
+  date: Date | string,
   closures: readonly MonthlyClosure[] | undefined,
 ): boolean {
   if (!closures || closures.length === 0) return false;
 
-  const weekday = getWeekdayKey(date);
-  const dayOfMonth = date.getDate();
+  const dateStr = typeof date === "string" ? date : formatJstDateString(date);
+  if (!DATE_ONLY_REGEX.test(dateStr)) return false;
+
+  const weekday = getWeekdayKeyFromDateOnly(dateStr);
+  const dayOfMonth = Number.parseInt(dateStr.slice(8, 10), 10);
+  const year = Number.parseInt(dateStr.slice(0, 4), 10);
+  const month = Number.parseInt(dateStr.slice(5, 7), 10);
   // 同曜日の月内 N 回目（1-5）
   const nthOccurrence = Math.floor((dayOfMonth - 1) / 7) + 1;
-  // 月の日数（翌月 0 日 = 当月末日）
-  const daysInMonth = new Date(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    0,
-  ).getDate();
+  const daysInMonth = getJstMonthLastDay(year, month);
   // 同曜日の月内最終出現か（7 日後が月をはみ出す）
   const isLastOccurrence = dayOfMonth + 7 > daysInMonth;
 
@@ -81,14 +102,11 @@ export function isMonthlyClosureDate(
 }
 
 /**
- * カレンダー上の Date を表示上の暦日 `"YYYY-MM-DD"` に変換する（ローカル日付ベース）。
- * 予約スロット取得・blocked date 判定で共通利用する SSoT。
+ * 任意の datetime を JST カレンダー日付 `"YYYY-MM-DD"` に変換する。
+ * 予約スロット取得・blocked date 判定・カレンダー grey-out の SSoT。
  */
 export function formatDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return formatJstDateString(date);
 }
 
 /**
@@ -103,7 +121,7 @@ export function parseTime(time: string): { hour: number; minute: number } {
  * 営業時間設定から時間枠を生成
  *
  * @param businessHours - 営業時間設定
- * @param date - 日付（YYYY-MM-DD形式）
+ * @param date - 日付（YYYY-MM-DD形式、JST カレンダー日付）
  * @returns 営業時間内の時間枠（30分刻み）
  */
 export function generateSlotsFromBusinessHours(
@@ -112,11 +130,10 @@ export function generateSlotsFromBusinessHours(
   slotIntervalMinutes: number = SLOT_INTERVAL_MINUTES,
 ): TimeSlot[] {
   const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
-  const targetDate = new Date(`${date}T00:00:00`);
-  const weekday = getWeekdayKey(targetDate);
+  const weekday = getWeekdayKeyFromDateOnly(date);
 
   // 毎月の繰り返し定休（第N曜日）に該当する場合は空配列
-  if (isMonthlyClosureDate(targetDate, effectiveHours.monthlyClosures)) {
+  if (isMonthlyClosureDate(date, effectiveHours.monthlyClosures)) {
     return [];
   }
 
@@ -203,7 +220,7 @@ function toMinutes(time: string): number {
 /**
  * 指定した date（YYYY-MM-DD）＋ startTime〜endTime（HH:MM）の窓が、営業時間内に
  * 完全に収まるかを判定する純粋関数。`generateSlotsFromBusinessHours` と同じ
- * 曜日・毎月定休判定（`getWeekdayKey`/`isMonthlyClosureDate`）を共有し、営業時間
+ * 曜日・毎月定休判定（`getWeekdayKeyFromDateOnly`/`isMonthlyClosureDate`）を共有し、営業時間
  * ルールの二重実装を避ける。スロット刻みに依存しないため、任意の分単位の
  * startTime/endTime でも正しく判定できる（スロット列挙による整合チェックは
  * 刻みに合わない入力を誤判定しうるため採用しない）。
@@ -222,12 +239,11 @@ export function isWithinBusinessHours(
   const endMinutes = toMinutes(endTime);
   if (startMinutes >= endMinutes) return false;
 
-  const targetDate = new Date(`${date}T00:00:00`);
-  if (isMonthlyClosureDate(targetDate, effectiveHours.monthlyClosures)) {
+  if (isMonthlyClosureDate(date, effectiveHours.monthlyClosures)) {
     return false;
   }
 
-  const daySettings = effectiveHours[getWeekdayKey(targetDate)];
+  const daySettings = effectiveHours[getWeekdayKeyFromDateOnly(date)];
   if (!daySettings.isOpen) return false;
 
   return daySettings.slots.some((slot) => {

@@ -26,11 +26,15 @@ const mockBulkTogglePublishedSpacesCommand = mock<
 const mockBulkDeleteSpacesCommand = mock<
   (ids: string[]) => Promise<{
     count: number;
+    skipped: number;
+    skippedIds: ReadonlyArray<string>;
     affected: ReadonlyArray<AffectedSpace>;
   }>
 >(() =>
   Promise.resolve({
     count: 0,
+    skipped: 0,
+    skippedIds: [],
     affected: [],
   }),
 );
@@ -317,6 +321,8 @@ describe("bulkDeleteSpaces", () => {
     test("executeAdminMutationResult が resource: space, action: delete で呼ばれる", async () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
         count: 2,
+        skipped: 0,
+        skippedIds: [],
         affected: [
           { id: VALID_UUID_A, slug: "space-a" },
           { id: VALID_UUID_B, slug: "space-b" },
@@ -339,23 +345,28 @@ describe("bulkDeleteSpaces", () => {
       expect(result).toMatchObject({ count: 2 });
     });
 
-    test("物理削除用の skipped は返さない", async () => {
+    test("skipped 件数を返す", async () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
-        count: 2,
-        affected: [
-          { id: VALID_UUID_A, slug: "space-a" },
-          { id: VALID_UUID_B, slug: "space-b" },
-        ],
+        count: 1,
+        skipped: 1,
+        skippedIds: [VALID_UUID_B],
+        affected: [{ id: VALID_UUID_A, slug: "space-a" }],
       });
 
       const result = await bulkDeleteSpaces([VALID_UUID_A, VALID_UUID_B]);
 
-      expect(result).not.toHaveProperty("skipped");
+      expect(result).toMatchObject({
+        count: 1,
+        skipped: 1,
+        skippedIds: [VALID_UUID_B],
+      });
     });
 
     test("afterSuccess で削除成功 slug 分が CF detail URL purge に渡る", async () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
         count: 1,
+        skipped: 0,
+        skippedIds: [],
         affected: [{ id: VALID_UUID_A, slug: "space-a" }],
       });
 
