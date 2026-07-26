@@ -59,6 +59,7 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
+import { GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 
@@ -168,8 +169,7 @@ export async function updateGuestReservationAction(
         if (customer && customer.id !== reservation.customerId) {
           return {
             ok: false,
-            error:
-              "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
+            error: GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
           };
         }
         if (customer) {
