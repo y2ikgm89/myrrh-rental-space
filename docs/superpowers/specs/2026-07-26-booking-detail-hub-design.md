@@ -13,30 +13,32 @@
 
 ## 2. 非目標
 
-- ゲストによる予約日時変更フォーム（会員 edit のまま）
 - SwitchBot リモート lock/unlock・admin 通知（既存方針どおりアプリ側）
 - イベントへのスマートロック
 - オフライン振込案内マスタの厚塗り
+
+> **注（2026-07 更新）:** ゲスト予約変更は `#1524` guest-edit-parity により
+> status token 経路で許可済み。以下 §3 の表は現行仕様を反映する。
 
 ## 3. 予約ハブ
 
 ### 3.1 共有して載せるもの
 
-| 要素                                | ゲスト status                                        | 会員 mypage 詳細        |
-| ----------------------------------- | ---------------------------------------------------- | ----------------------- |
-| スペース・日時・金額・支払/予約状態 | ✅                                                   | ✅（既存＋状態明示）    |
-| 領収書 DL                           | ✅（既存）                                           | ✅（既存）              |
-| カレンダー追加                      | ✅（新規、非 CANCELLED）                             | ✅（既存）              |
-| キャンセル導線                      | ✅ → 既存 `/reservation/cancel`（cancel token 発行） | ✅（既存）              |
-| 変更                                | ❌（claim 後 mypage）                                | ✅（既存）              |
-| Checkout                            | ❌（ゲストはメール/管理）                            | ✅（payment ON 時既存） |
-| 暗証番号                            | ✅（§4）                                             | ✅（§4）                |
-| Claim                               | ✅（既存）                                           | —                       |
+| 要素                                | ゲスト status                                                          | 会員 mypage 詳細        |
+| ----------------------------------- | ---------------------------------------------------------------------- | ----------------------- |
+| スペース・日時・金額・支払/予約状態 | ✅                                                                     | ✅（既存＋状態明示）    |
+| 領収書 DL                           | ✅（既存）                                                             | ✅（既存）              |
+| カレンダー追加                      | ✅（新規、非 CANCELLED）                                               | ✅（既存）              |
+| キャンセル導線                      | ✅ → 既存 `/reservation/cancel`（cancel token 発行）                   | ✅（既存）              |
+| 変更                                | ✅ → `/reservation/status/edit`（status token、会員 edit と同一 gate） | ✅（既存）              |
+| Checkout                            | ❌（ゲストはメール/管理）                                              | ✅（payment ON 時既存） |
+| 暗証番号                            | ✅（§4）                                                               | ✅（§4）                |
+| Claim                               | ✅（既存）                                                             | —                       |
 
 ### 3.2 UI
 
 - ゲスト・会員で可能な範囲、presentational 部品を共有（copy / 状態ラベル / PasscodeReveal）
-- ゲスト編集は載せない（clean-break: 「マイページに追加してから変更」）
+- ゲスト編集は status token 経路（`UNPAID`・割引なし・変更期限内・空きあり）。Claim は任意
 
 ## 4. 暗証番号 Web（clean-break）
 
@@ -60,6 +62,7 @@
 - Auth:
   - 会員: Better Auth session + reservation.customerId ownership
   - ゲスト: 有効な `reservation-status` token（rid 一致）
+  - ログイン中でも status token 経路では member-ownership を強制（別会員の cookie 誤操作を遮断）
 - 平文は **Server Action の開示要求時のみ** decrypt（初回 HTML に埋め込まない）
 - purpose 既存 `switchbot-guest-passcode` を流用
 - rate-limit: 開示 action に per-IP（＋会員なら per-user）制限

@@ -10,6 +10,9 @@ const CUSTOMER_RESERVATION_SELECT = {
   status: true,
   totalPrice: true,
   paymentStatus: true,
+  couponDiscountAmount: true,
+  durationDiscountAmount: true,
+  spaceDiscountAmount: true,
   notes: true,
   createdAt: true,
   space: { select: { id: true, name: true, slug: true } },
@@ -99,6 +102,17 @@ export async function getCustomerReservationSeriesInfo(
     deletedAt: row.series.deletedAt,
     recurrenceInstanceIndex: row.recurrenceInstanceIndex,
   };
+}
+
+/** passcode 開示等の member-ownership ガード用（customerId のみ）。 */
+export async function getReservationCustomerId(
+  reservationId: string,
+): Promise<string | null> {
+  const row = await prisma.reservation.findFirst({
+    where: { id: reservationId, deletedAt: null },
+    select: { customerId: true },
+  });
+  return row?.customerId ?? null;
 }
 
 export async function getReservationForGuestCancel(reservationId: string) {

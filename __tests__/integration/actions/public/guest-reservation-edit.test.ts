@@ -35,8 +35,12 @@ mock.module("@/shared/lib/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
 
+const mockPerReservationCheck = mock(() =>
+  Promise.resolve({ success: true, remaining: 3, reset: Date.now() + 3600000 }),
+);
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
+  editByReservationRateLimiter: { check: mockPerReservationCheck },
   getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
 }));
 
@@ -106,25 +110,32 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
   ),
 }));
 
+const mockGetReservationForGuestEdit = mock(() =>
+  Promise.resolve({
+    id: VALID_UUID,
+    customerId: "cust-victim",
+  }),
+);
 mock.module("@/shared/domain/reservations/customer-queries", () => ({
-  getReservationForGuestEdit: mock(() =>
-    Promise.resolve({
-      id: VALID_UUID,
-      customerId: "cust-001",
-    }),
-  ),
+  getReservationForGuestEdit: mockGetReservationForGuestEdit,
 }));
 
+const mockGetCustomerByUserId = mock<
+  () => Promise<{ id: string; userId: string } | null>
+>(() => Promise.resolve(null));
 mock.module("@/shared/domain/customers/queries", () => ({
-  getCustomerByUserId: mock(() => Promise.resolve(null)),
+  getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
 mock.module("@/shared/domain/customers/guard", () => ({
   assertCustomerActive: mock(() => Promise.resolve(undefined)),
 }));
 
+const mockGetCustomerSession = mock<
+  () => Promise<{ user: { id: string } } | null>
+>(() => Promise.resolve(null));
 mock.module("@/shared/lib/customer-auth", () => ({
-  getCustomerSession: mock(() => Promise.resolve(null)),
+  getCustomerSession: mockGetCustomerSession,
 }));
 
 mock.module("@/shared/lib/features/check", () => ({
@@ -157,8 +168,9 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mock(() => Promise.resolve()),
 }));
 
+const mockFireAndForget = mock(() => undefined);
 mock.module("@/shared/lib/async-utils", () => ({
-  fireAndForget: mock(() => undefined),
+  fireAndForget: mockFireAndForget,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -166,7 +178,7 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: (e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
   ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW", HIGH: "HIGH" },
+  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH" },
 }));
 
 const IMPORT_PATH = "@/app/(public)/reservation/status/edit/_actions/update";
@@ -194,6 +206,11 @@ describe("updateGuestReservationAction", () => {
     mockVerifyStatusToken.mockReset();
     mockUpdateGuest.mockReset();
     mockCookieGet.mockReset();
+    mockPerReservationCheck.mockReset();
+    mockGetCustomerSession.mockReset();
+    mockGetCustomerByUserId.mockReset();
+    mockGetReservationForGuestEdit.mockReset();
+    mockFireAndForget.mockReset();
     mockCheckActionRateLimit.mockResolvedValue({ success: true });
     mockValidateTurnstile.mockResolvedValue({ success: true });
     mockVerifyStatusToken.mockReturnValue({
@@ -203,6 +220,17 @@ describe("updateGuestReservationAction", () => {
     mockUpdateGuest.mockResolvedValue({
       success: true,
       payload: { reservationId: VALID_UUID, googleCalendarEventId: null },
+    });
+    mockPerReservationCheck.mockResolvedValue({
+      success: true,
+      remaining: 3,
+      reset: Date.now() + 3600000,
+    });
+    mockGetCustomerSession.mockResolvedValue(null);
+    mockGetCustomerByUserId.mockResolvedValue(null);
+    mockGetReservationForGuestEdit.mockResolvedValue({
+      id: VALID_UUID,
+      customerId: "cust-victim",
     });
     mockCookieGet.mockImplementation((name) =>
       name === "status-token" ? { value: "valid-status-token" } : undefined,
@@ -217,6 +245,55 @@ describe("updateGuestReservationAction", () => {
     );
     expect(result.initialValue).toBeNull();
     expect(mockUpdateGuest).toHaveBeenCalledTimes(1);
+    expect(mockFireAndForget).toHaveBeenCalled();
+  });
+
+  test("無効 status token はエラー", async () => {
+    mockVerifyStatusToken.mockReturnValue({ valid: false });
+    const { updateGuestReservationAction } = await import(IMPORT_PATH);
+    const result = await updateGuestReservationAction(
+      undefined,
+      buildFormData(),
+    );
+    expect(result.status).toBe("error");
+    expect(mockUpdateGuest).not.toHaveBeenCalled();
+  });
+
+  test("ログイン会員 B + 別人予約 token は ownership で拒否", async () => {
+    mockGetCustomerSession.mockResolvedValue({
+      user: { id: "user-attacker" },
+    });
+    mockGetCustomerByUserId.mockResolvedValue({
+      id: "cust-attacker",
+      userId: "user-attacker",
+    });
+    mockGetReservationForGuestEdit.mockResolvedValue({
+      id: VALID_UUID,
+      customerId: "cust-victim",
+    });
+
+    const { updateGuestReservationAction } = await import(IMPORT_PATH);
+    const result = await updateGuestReservationAction(
+      undefined,
+      buildFormData(),
+    );
+    expect(result.status).toBe("error");
+    expect(mockUpdateGuest).not.toHaveBeenCalled();
+  });
+
+  test("per-reservation rate-limit 超過時はドメインを呼ばない", async () => {
+    mockPerReservationCheck.mockResolvedValueOnce({
+      success: false,
+      remaining: 0,
+      reset: Date.now() + 3600000,
+    });
+    const { updateGuestReservationAction } = await import(IMPORT_PATH);
+    const result = await updateGuestReservationAction(
+      undefined,
+      buildFormData(),
+    );
+    expect(result.status).toBe("error");
+    expect(mockUpdateGuest).not.toHaveBeenCalled();
   });
 
   test("cookie に status token が無いとエラー", async () => {

@@ -370,6 +370,13 @@ export const cancelByReservationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// ゲスト予約変更「予約 ID 単位」の追加バケット（3 attempts / hour / reservation）。
+// cancelByReservationRateLimiter と同型の第二防壁。
+export const editByReservationRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
 // 予約詳細ハブのパスコード開示（Server Action）— IP 単位（10 / 分）。
 // decrypt コストと連打による平文露出面を抑える。会員は下記 per-user も併用。
 export const passcodeRevealByIpRateLimiter = createRateLimiter({

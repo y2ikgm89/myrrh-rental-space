@@ -34,6 +34,7 @@ import {
 } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
+  editByReservationRateLimiter,
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
@@ -132,6 +133,27 @@ export async function updateGuestReservationAction(
           ok: false,
           error:
             "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+        };
+      }
+
+      const perReservation = await editByReservationRateLimiter.check(
+        parsedId.data,
+      );
+      if (!perReservation.success) {
+        logError(new Error("Guest edit rate-limit hit (per-reservation)"), {
+          category: ErrorCategory.AUTHORIZATION,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "updateGuestReservationAction",
+            limiter: "perReservation",
+            reservationId: parsedId.data,
+            ip: await getClientIpFromHeaders(),
+          },
+        });
+        return {
+          ok: false,
+          error:
+            "この予約に対する変更試行が多すぎます。しばらく時間をおいてからお試しください",
         };
       }
 
