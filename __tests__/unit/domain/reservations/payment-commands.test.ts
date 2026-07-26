@@ -76,6 +76,9 @@ const mockCheckoutSessionCreate = mock<
 const mockCheckoutSessionExpire = mock<
   (sessionId: string) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "cs_test_123" }));
+const mockExpireOpenCheckoutSessionBestEffort = mock<
+  (input: { reservationId: string; sessionId: string }) => Promise<void>
+>(() => Promise.resolve());
 const mockGetStripeClient = mock(() =>
   Promise.resolve({
     client: {
@@ -162,6 +165,9 @@ mock.module("@/shared/lib/errors/server", () => ({
 mock.module("@/shared/domain/reservations/pending-expiry", () => ({
   PENDING_RESERVATION_EXPIRY_MINUTES: 60,
 }));
+mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
+  expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
+}));
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
@@ -215,6 +221,7 @@ describe("reservations/payment-commands", () => {
     mockRefundCreate.mockReset();
     mockCheckoutSessionCreate.mockReset();
     mockCheckoutSessionExpire.mockReset();
+    mockExpireOpenCheckoutSessionBestEffort.mockReset();
     mockLogError.mockReset();
 
     mockReservationFindUnique.mockResolvedValue(paidReservation());
@@ -256,6 +263,7 @@ describe("reservations/payment-commands", () => {
       url: "https://stripe.example/checkout",
     });
     mockCheckoutSessionExpire.mockResolvedValue({ id: "cs_test_123" });
+    mockExpireOpenCheckoutSessionBestEffort.mockResolvedValue(undefined);
     mockLogError.mockImplementation(() => undefined);
   });
 
@@ -473,6 +481,26 @@ describe("reservations/payment-commands", () => {
         data: expect.objectContaining({
           paymentStatus: PaymentStatus.UNPAID,
         }),
+      });
+    });
+
+    test("Session 確定書込失敗時は作成済み Stripe session を best-effort expire する", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+      mockReservationUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockRejectedValueOnce(new Error("DB write failed"));
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("UNEXPECTED");
+      expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith({
+        reservationId: RESERVATION_ID,
+        sessionId: "cs_test_123",
       });
     });
 

@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { AuditAction } from "@generated/prisma/enums";
 import type { Prisma } from "@generated/prisma/client";
+import { jstDayStartInstant } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 
@@ -247,8 +248,7 @@ export async function getAuditLogsForExport(
 }
 
 export async function getAuditLogStats(): Promise<AuditLogStats> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayStart = jstDayStartInstant(new Date());
 
   const securityActions = [
     AuditAction.LOGIN_SUCCESS,
@@ -266,7 +266,7 @@ export async function getAuditLogStats(): Promise<AuditLogStats> {
   const [total, todayCount, securityEvents, actionCounts] = await Promise.all([
     prisma.auditLog.count(),
     prisma.auditLog.count({
-      where: { createdAt: { gte: today } },
+      where: { createdAt: { gte: todayStart } },
     }),
     prisma.auditLog.count({
       where: { action: { in: securityActions } },
