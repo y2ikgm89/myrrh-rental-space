@@ -59,7 +59,11 @@ const mockRefundCheckoutAmountMismatchForReservation = mock<
     reservationId: string;
     stripePaymentIntentId: string;
     capturedAppAmount: number;
-  }) => Promise<{ outcome: string }>
+  }) => Promise<{
+    outcome: string;
+    refundId?: string;
+    refundAmount?: number;
+  }>
 >(() => Promise.resolve({ outcome: "refunded" }));
 
 // Payment Queries (atomic claim API)
@@ -1321,6 +1325,11 @@ describe("POST /api/webhooks/stripe", () => {
       mockGetStripeClient.mockResolvedValue({
         client: {
           webhooks: { constructEventAsync: mockConstructEvent },
+          checkout: {
+            sessions: {
+              retrieve: mockRetrieveCheckoutSession,
+            },
+          },
         },
       });
     }

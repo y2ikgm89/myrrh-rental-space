@@ -115,7 +115,7 @@ import {
   createEventRegistrationStatusToken,
   EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
 } from "@/shared/lib/event-registration-status-token";
-import { getStripeClient } from "@/shared/lib/stripe";
+import { getStripeClient, type AsyncOnlyStripe } from "@/shared/lib/stripe";
 import {
   fromStripeUnitAmount,
   toStripeUnitAmount,
@@ -377,7 +377,7 @@ function extractPaymentSubject(
  */
 async function resolveCheckoutSessionPaymentIntent(
   session: Stripe.Checkout.Session,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ): Promise<string> {
   const inline =
     typeof session.payment_intent === "string" ? session.payment_intent : null;
@@ -460,7 +460,7 @@ async function orchestrateCheckoutAmountMismatchRefund(
   subject: PaymentSubject,
   expectedAppAmount: number | null,
   operation: string,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ): Promise<void> {
   const subjectKey =
     subject.kind === "reservation" ? "reservationId" : "registrationId";
@@ -552,7 +552,9 @@ async function orchestrateCheckoutAmountMismatchRefund(
     await notifyAmountMismatchAutoRefund({
       subject,
       refundAmount: refundResult.refundAmount ?? capturedAppAmount,
-      refundId: refundResult.refundId,
+      ...(refundResult.refundId !== undefined
+        ? { refundId: refundResult.refundId }
+        : {}),
     });
   }
 }
@@ -564,7 +566,7 @@ async function orchestrateCheckoutAmountMismatchRefund(
 async function refundWaitlistOfferPaymentIfNeeded(
   registrationId: string,
   session: Stripe.Checkout.Session,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ): Promise<boolean> {
   const paymentIntentId = await resolveCheckoutSessionPaymentIntent(
     session,
@@ -823,7 +825,7 @@ function invalidateEventRegistrationCache(): void {
 async function fulfillEventRegistrationPaymentAtomically(
   registrationId: string,
   session: Stripe.Checkout.Session,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ): Promise<void> {
   const paymentIntentId =
     typeof session.payment_intent === "string" ? session.payment_intent : null;
@@ -1022,7 +1024,7 @@ async function fulfillEventRegistrationPaymentAtomically(
  */
 async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ) {
   const subject = extractPaymentSubject(
     session,
@@ -1138,7 +1140,7 @@ async function handleCheckoutSessionCompleted(
  */
 async function handleAsyncPaymentSucceeded(
   session: Stripe.Checkout.Session,
-  stripeClient: Stripe,
+  stripeClient: AsyncOnlyStripe,
 ) {
   const subject = extractPaymentSubject(
     session,
