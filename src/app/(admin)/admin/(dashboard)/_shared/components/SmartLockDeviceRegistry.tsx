@@ -395,13 +395,11 @@ export function SmartLockDeviceRegistry({
           if (!open && !isDeleting) setDevicePendingDelete(null);
         }}
         {...(devicePendingDelete
-          ? { itemName: devicePendingDelete.deviceName }
+          ? {
+              itemName: devicePendingDelete.deviceName,
+              description: `「${devicePendingDelete.deviceName}」を削除します。有効なパスコードがある場合は先に失効を試みます。この操作は取り消せません。`,
+            }
           : {})}
-        description={
-          devicePendingDelete
-            ? `「${devicePendingDelete.deviceName}」を削除します。有効なパスコードがある場合は先に失効を試みます。この操作は取り消せません。`
-            : undefined
-        }
         onConfirm={handleConfirmDelete}
         isPending={isDeleting}
       />

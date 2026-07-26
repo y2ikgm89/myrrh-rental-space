@@ -26,6 +26,8 @@ const mockFindManyPasscodes = mock<
   (...args: unknown[]) => Promise<
     {
       id: string;
+      reservationId: string;
+      deviceId: string;
       status: string;
       switchbotKeyId: string | null;
       device: { deviceId: string };

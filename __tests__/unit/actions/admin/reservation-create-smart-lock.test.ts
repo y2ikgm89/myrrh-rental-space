@@ -63,8 +63,7 @@ const mockCreateNotificationCommand = mock(async () => {});
 const fireAndForgetCalls: Array<{ operation: string }> = [];
 
 mock.module("@/shared/domain/reservations/admin-commands", () => ({
-  createAdminReservationCommand: (...args: unknown[]) =>
-    mockCreateAdminReservationCommand(...args),
+  createAdminReservationCommand: mockCreateAdminReservationCommand,
   updateAdminReservationCommand: mock(async () => {
     throw new Error("unexpected update");
   }),
@@ -75,8 +74,7 @@ mock.module("@/shared/domain/reservations/pricing-preview", () => ({
 }));
 
 mock.module("@/shared/domain/notifications/commands", () => ({
-  createNotificationCommand: (...args: unknown[]) =>
-    mockCreateNotificationCommand(...args),
+  createNotificationCommand: mockCreateNotificationCommand,
   markAsReadCommand: mock(async () => {}),
   markAllAsReadCommand: mock(async () => {}),
   deleteNotificationCommand: mock(async () => {}),
@@ -104,17 +102,14 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
 }));
 
 mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: (...args: unknown[]) =>
-    mockSyncReservationToCalendar(...args),
+  syncReservationToCalendar: mockSyncReservationToCalendar,
   updateCalendarSync: mock(async () => {}),
   deleteCalendarSync: mock(async () => {}),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationAdminNotification: (...args: unknown[]) =>
-    mockSendReservationAdminNotification(...args),
-  sendReservationConfirmationEmail: (...args: unknown[]) =>
-    mockSendReservationConfirmationEmail(...args),
+  sendReservationAdminNotification: mockSendReservationAdminNotification,
+  sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
   sendReservationStatusChangedEmail: mock(async () => {}),
   sendReservationUpdatedEmail: mock(async () => {}),
   sendBulkReservationCancelledEmail: mock(async () => ({
@@ -128,15 +123,14 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
 }));
 
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
-  issueSmartLockPasscodes: (...args: unknown[]) =>
-    mockIssueSmartLockPasscodes(...args),
+  issueSmartLockPasscodes: mockIssueSmartLockPasscodes,
 }));
 
 mock.module(
   "@/app/(admin)/admin/(dashboard)/_shared/actions/reservation/mutations",
   () => ({
-    issueSmartLockAndSendConfirmationEmail: (...args: unknown[]) =>
-      mockIssueSmartLockAndSendConfirmationEmail(...args),
+    issueSmartLockAndSendConfirmationEmail:
+      mockIssueSmartLockAndSendConfirmationEmail,
   }),
 );
 
