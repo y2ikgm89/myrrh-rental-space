@@ -38,13 +38,18 @@ const mockFindKeyByIdInDeviceList = mock<
   >
 >(() => Promise.resolve({ ok: true, body: { id: "still-present" } }));
 
-const mockGetDecryptedSwitchBotCredentials = mock<
-  () => Promise<{
-    openToken: string;
-    secretKey: string;
-    passcodeBufferMinutes: number;
-  } | null>
+const mockGetDecryptedSwitchBotCredentialsForRevocation = mock<
+  () => Promise<{ openToken: string; secretKey: string } | null>
 >(() => Promise.resolve(null));
+
+const mockFindKeyInDeviceList = mock<
+  (
+    ...args: unknown[]
+  ) => Promise<
+    | { ok: true; body: { id: string } | null }
+    | { ok: false; statusCode: number; message: string }
+  >
+>(() => Promise.resolve({ ok: true, body: null }));
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 const mockCreateNotification = mock<(args: unknown) => Promise<unknown>>(() =>
@@ -61,14 +66,20 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  getDecryptedSwitchBotCredentials: () =>
-    mockGetDecryptedSwitchBotCredentials(),
+  getDecryptedSwitchBotCredentialsForRevocation: () =>
+    mockGetDecryptedSwitchBotCredentialsForRevocation(),
+}));
+
+mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
+  buildPasscodeName: (reservationId: string, deviceId: string) =>
+    `res-${reservationId}-${deviceId}`,
 }));
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   deletePasscode: (...args: unknown[]) => mockDeletePasscode(...args),
   findKeyByIdInDeviceList: (...args: unknown[]) =>
     mockFindKeyByIdInDeviceList(...args),
+  findKeyInDeviceList: (...args: unknown[]) => mockFindKeyInDeviceList(...args),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -130,6 +141,8 @@ const {
   revokeExpiredSmartLockPasscodes,
   confirmRevokeByKeyAbsence,
   expireStaleRevokePendingSmartLockPasscodes,
+  expireStalePendingSmartLockPasscodes,
+  recoverPendingPasscodeViaDeviceList,
   STALE_PENDING_THRESHOLD_MINUTES,
 } = await import("@/shared/domain/smart-lock/revoke-passcode");
 
@@ -190,7 +203,10 @@ describe("revokeOne", () => {
     expect(result).toBe(true);
     expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "pcode-3", status: "CONFIRMED" },
+        where: {
+          id: "pcode-3",
+          status: { in: ["CONFIRMED", "PENDING"] },
+        },
         data: expect.objectContaining({
           status: "REVOKE_PENDING",
           switchbotDeleteCommandId: "del-cmd-1",
@@ -314,7 +330,7 @@ describe("expireStaleRevokePendingSmartLockPasscodes", () => {
 describe("revokeSmartLockPasscodesForReservation", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
-    mockGetDecryptedSwitchBotCredentials.mockReset();
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockReset();
     mockDeletePasscode.mockReset();
     mockUpdateMany.mockReset();
     mockLogError.mockReset();
@@ -325,7 +341,9 @@ describe("revokeSmartLockPasscodesForReservation", () => {
   test("CONFIRMED パスコードが 0 件の場合は credentials 取得も API 呼出もしない", async () => {
     mockFindMany.mockResolvedValue([]);
     await revokeSmartLockPasscodesForReservation("res-1");
-    expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
+    expect(
+      mockGetDecryptedSwitchBotCredentialsForRevocation,
+    ).not.toHaveBeenCalled();
     expect(mockDeletePasscode).not.toHaveBeenCalled();
   });
 });
@@ -333,7 +351,7 @@ describe("revokeSmartLockPasscodesForReservation", () => {
 describe("revokeExpiredSmartLockPasscodes", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
-    mockGetDecryptedSwitchBotCredentials.mockReset();
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockReset();
     mockDeletePasscode.mockReset();
     mockUpdateMany.mockReset();
     mockDeletePasscode.mockResolvedValue({ ok: true, body: {} });
@@ -351,10 +369,9 @@ describe("revokeExpiredSmartLockPasscodes", () => {
       { id: "p1", switchbotKeyId: "key-1", device: DEVICE },
       { id: "p2", switchbotKeyId: "key-2", device: DEVICE },
     ]);
-    mockGetDecryptedSwitchBotCredentials.mockResolvedValue({
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue({
       openToken: "open-token",
       secretKey: "secret-key",
-      passcodeBufferMinutes: 15,
     });
     const result = await revokeExpiredSmartLockPasscodes(new Date());
     expect(result).toEqual({ revoked: 2, failed: 0 });

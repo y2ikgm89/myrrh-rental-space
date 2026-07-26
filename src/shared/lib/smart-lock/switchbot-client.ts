@@ -196,6 +196,34 @@ function findDeviceInList(
 }
 
 /**
+ * SwitchBot Device List / webhook の `deviceType` 文字列から pad / lock 家族を判定する。
+ * Device List は "Keypad" / "Smart Lock Pro"、webhook は "WoKeypad" / "WoLockPro" など表記が揺れる。
+ */
+export function resolveSwitchBotDeviceFamily(
+  switchBotDeviceType: string,
+): "pad" | "lock" | null {
+  const normalized = switchBotDeviceType.trim().toLowerCase();
+  if (normalized.includes("keypad")) return "pad";
+  if (normalized.includes("lock")) return "lock";
+  return null;
+}
+
+/**
+ * Device List から `deviceId` の 1 件を取得する（登録時の存在確認用）。
+ */
+export async function findDeviceInDeviceList(
+  credentials: SwitchBotCredentials,
+  deviceId: string,
+): Promise<SwitchBotApiResult<SwitchBotDeviceListItem | null>> {
+  const listResult = await getDeviceListCached(credentials);
+  if (!listResult.ok) {
+    return listResult;
+  }
+  const device = findDeviceInList(listResult.body.deviceList, deviceId);
+  return { ok: true, body: device ?? null };
+}
+
+/**
  * Device List から `name` でパスコードを突合する。keyId 解決の SSoT。
  */
 export async function findKeyInDeviceList(

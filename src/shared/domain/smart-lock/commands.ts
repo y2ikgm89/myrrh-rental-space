@@ -4,8 +4,14 @@ import { Prisma } from "@generated/prisma/client";
 import type { SmartLockDeviceType } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
-import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  getDecryptedSwitchBotCredentials,
+  getDecryptedSwitchBotCredentialsForRevocation,
+} from "@/shared/domain/settings/api-key-queries";
+import {
+  awaitDeviceRevokeConfirmation,
+  revokeOne,
+} from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   getDeviceListCached,
   getLockDeviceStatus,
@@ -352,10 +358,9 @@ export async function refreshLockDeviceStateCommand(
 }
 
 /**
- * デバイス削除前に、このデバイスに紐づく生きたパスコード（CONFIRMED/REVOKE_PENDING）を
- * 失効させる。`SmartLockPasscode.device`はonDelete: Cascadeのため、これをせずに
- * 削除すると、まだ物理ドアで有効なパスコードのkeyId/deviceId対応が失われ、
- * 二度とdeleteKeyできなくなる（ゲストの暗証番号が失効不能なまま残る）。
+ * デバイス削除前に、このデバイスに紐づく生きたパスコードを失効させ、
+ * key 消失が確認できてから削除する。`SmartLockPasscode.device`はonDelete: Cascade
+ * のため、REVOKE_PENDING のまま cascade すると物理 key の deleteKey 追跡が失われる。
  */
 export async function deleteSmartLockDeviceCommand(
   id: string,
@@ -370,6 +375,9 @@ export async function deleteSmartLockDeviceCommand(
       "NOT_FOUND",
     );
   }
+
+  const revocationCredentials =
+    await getDecryptedSwitchBotCredentialsForRevocation();
 
   const pendingPasscodes = await prisma.smartLockPasscode.findMany({
     where: {
@@ -403,18 +411,26 @@ export async function deleteSmartLockDeviceCommand(
       (p) => p.status === SmartLockPasscodeStatus.REVOKE_PENDING,
     )
   ) {
-    throw new DomainError(
-      "失効処理中のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
-      "VALIDATION",
-    );
+    if (!revocationCredentials) {
+      throw new DomainError(
+        "失効処理中のパスコードが残っているため削除できません。SwitchBot連携が無効/未設定のため失効確認できません",
+        "VALIDATION",
+      );
+    }
+    const confirmed = await awaitDeviceRevokeConfirmation(id);
+    if (!confirmed) {
+      throw new DomainError(
+        "失効処理が完了していないため削除できません。しばらく待ってから再試行してください",
+        "VALIDATION",
+      );
+    }
   }
 
   const confirmedPasscodes = livePasscodes.filter(
     (p) => p.status === SmartLockPasscodeStatus.CONFIRMED,
   );
   if (confirmedPasscodes.length > 0) {
-    const credentials = await getDecryptedSwitchBotCredentials();
-    if (!credentials) {
+    if (!revocationCredentials) {
       throw new DomainError(
         "有効なパスコードが残っているため削除できません（SwitchBot連携が無効/未設定のため失効できません）",
         "VALIDATION",
@@ -423,7 +439,7 @@ export async function deleteSmartLockDeviceCommand(
 
     const results = await Promise.all(
       confirmedPasscodes.map((passcode) =>
-        revokeOne(credentials, {
+        revokeOne(revocationCredentials, {
           id: passcode.id,
           switchbotKeyId: passcode.switchbotKeyId,
           device: { deviceId: device.deviceId },
@@ -436,6 +452,33 @@ export async function deleteSmartLockDeviceCommand(
         "VALIDATION",
       );
     }
+
+    const allRevoked = await awaitDeviceRevokeConfirmation(id);
+    if (!allRevoked) {
+      throw new DomainError(
+        "失効処理が完了していないため削除できません。しばらく待ってから再試行してください",
+        "VALIDATION",
+      );
+    }
+  }
+
+  const remainingLive = await prisma.smartLockPasscode.count({
+    where: {
+      deviceId: id,
+      status: {
+        in: [
+          SmartLockPasscodeStatus.CONFIRMED,
+          SmartLockPasscodeStatus.PENDING,
+          SmartLockPasscodeStatus.REVOKE_PENDING,
+        ],
+      },
+    },
+  });
+  if (remainingLive > 0) {
+    throw new DomainError(
+      "未解決のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
+      "VALIDATION",
+    );
   }
 
   await prisma.smartLockDevice.delete({ where: { id } });

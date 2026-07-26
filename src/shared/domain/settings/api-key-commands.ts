@@ -9,9 +9,14 @@ import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getDecryptedSwitchBotCredentials,
+  getDecryptedSwitchBotCredentialsForRevocation,
   getSwitchBotWebhookAuth,
 } from "@/shared/domain/settings/api-key-queries";
-import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  awaitDeviceRevokeConfirmation,
+  recoverPendingPasscodeViaDeviceList,
+  revokeOne,
+} from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   deleteWebhook,
   setupWebhook,
@@ -246,10 +251,31 @@ export async function recordSwitchBotConnectionStatus(
  * deleteKeyできなくなる（物理ドアのパスコードが失効不能なまま残る）ため。
  */
 export async function clearSwitchBotSettings(): Promise<void> {
-  const credentials = await getDecryptedSwitchBotCredentials();
-  // 資格情報が既に復号できない（無効化済み・未設定等）場合はこれ以上できることが
-  // 無いため、そのままクリアを許可する。
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
+  // 資格情報が既に復号できない（未設定等）場合はこれ以上 revoke できないため
+  // そのままクリアを許可する。
   if (credentials) {
+    const unresolvedRevokePending = await prisma.smartLockPasscode.count({
+      where: { status: SmartLockPasscodeStatus.REVOKE_PENDING },
+    });
+    if (unresolvedRevokePending > 0) {
+      const allDevicesCleared = await Promise.all(
+        (
+          await prisma.smartLockPasscode.findMany({
+            where: { status: SmartLockPasscodeStatus.REVOKE_PENDING },
+            select: { deviceId: true },
+            distinct: ["deviceId"],
+          })
+        ).map((row) => awaitDeviceRevokeConfirmation(row.deviceId)),
+      );
+      if (!allDevicesCleared.every(Boolean)) {
+        throw new DomainError(
+          "失効処理中のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
+          "VALIDATION",
+        );
+      }
+    }
+
     const livePasscodes = await prisma.smartLockPasscode.findMany({
       where: {
         status: {
@@ -261,19 +287,47 @@ export async function clearSwitchBotSettings(): Promise<void> {
       },
       select: {
         id: true,
+        reservationId: true,
+        deviceId: true,
         status: true,
         switchbotKeyId: true,
         device: { select: { deviceId: true } },
       },
     });
 
-    if (
-      livePasscodes.some((p) => p.status === SmartLockPasscodeStatus.PENDING)
-    ) {
-      throw new DomainError(
-        "発行処理中のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
-        "VALIDATION",
+    const pendingPasscodes = livePasscodes.filter(
+      (p) => p.status === SmartLockPasscodeStatus.PENDING,
+    );
+    if (pendingPasscodes.length > 0) {
+      await Promise.all(
+        pendingPasscodes.map((p) =>
+          recoverPendingPasscodeViaDeviceList(credentials, p),
+        ),
       );
+      const stillPending = await prisma.smartLockPasscode.count({
+        where: { status: SmartLockPasscodeStatus.PENDING },
+      });
+      if (stillPending > 0) {
+        throw new DomainError(
+          "発行処理中のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
+          "VALIDATION",
+        );
+      }
+
+      const deviceIdsFromPending = Array.from(
+        new Set(pendingPasscodes.map((p) => p.deviceId)),
+      );
+      const pendingRevokeConfirmed = await Promise.all(
+        deviceIdsFromPending.map((deviceId) =>
+          awaitDeviceRevokeConfirmation(deviceId),
+        ),
+      );
+      if (!pendingRevokeConfirmed.every(Boolean)) {
+        throw new DomainError(
+          "失効処理が完了していないため連携をクリアできません。しばらく待ってから再試行してください",
+          "VALIDATION",
+        );
+      }
     }
 
     const confirmedPasscodes = livePasscodes.filter(
@@ -295,6 +349,37 @@ export async function clearSwitchBotSettings(): Promise<void> {
           "VALIDATION",
         );
       }
+
+      const deviceIds = Array.from(
+        new Set(confirmedPasscodes.map((p) => p.deviceId)),
+      );
+      const allRevoked = await Promise.all(
+        deviceIds.map((deviceId) => awaitDeviceRevokeConfirmation(deviceId)),
+      );
+      if (!allRevoked.every(Boolean)) {
+        throw new DomainError(
+          "失効処理が完了していないため連携をクリアできません。しばらく待ってから再試行してください",
+          "VALIDATION",
+        );
+      }
+    }
+
+    const remainingLive = await prisma.smartLockPasscode.count({
+      where: {
+        status: {
+          in: [
+            SmartLockPasscodeStatus.PENDING,
+            SmartLockPasscodeStatus.CONFIRMED,
+            SmartLockPasscodeStatus.REVOKE_PENDING,
+          ],
+        },
+      },
+    });
+    if (remainingLive > 0) {
+      throw new DomainError(
+        "未解決のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
+        "VALIDATION",
+      );
     }
 
     // 資格情報が失われた後は二度とdeleteWebhookできず、SwitchBot側に古いwebhook登録が

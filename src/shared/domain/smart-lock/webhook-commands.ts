@@ -8,15 +8,19 @@
 
 import "server-only";
 import { prisma } from "@/shared/db/prisma";
-import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
+import {
+  getDecryptedSwitchBotCredentials,
+  getDecryptedSwitchBotCredentialsForRevocation,
+} from "@/shared/domain/settings/api-key-queries";
 import { findKeyInDeviceList } from "@/shared/lib/smart-lock/switchbot-client";
 import {
+  ReservationStatus,
   SmartLockDeviceType,
   SmartLockPasscodeStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isSmartLockBodyDeviceType } from "@/shared/lib/validations/enums/helpers";
 import { buildPasscodeName } from "./issue-passcode";
-import { confirmRevokeByKeyAbsence } from "./revoke-passcode";
+import { confirmRevokeByKeyAbsence, revokeOne } from "./revoke-passcode";
 
 export type SwitchBotWebhookCommandResult = "success" | "failed" | "timeout";
 
@@ -197,7 +201,27 @@ async function processCreateKeyChangeReport(
       confirmedAt: new Date(),
     },
   });
-  return updated.count > 0;
+  if (updated.count === 0) {
+    return false;
+  }
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: passcodeRow.reservationId },
+    select: { status: true },
+  });
+  if (!reservation || reservation.status !== ReservationStatus.CONFIRMED) {
+    const revokeCredentials =
+      await getDecryptedSwitchBotCredentialsForRevocation();
+    if (revokeCredentials) {
+      await revokeOne(revokeCredentials, {
+        id: passcodeRow.id,
+        switchbotKeyId: match.id,
+        device: { deviceId: device.deviceId },
+      });
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -230,7 +254,7 @@ export async function processSwitchBotLockStateReport(
 ): Promise<boolean> {
   const device = await prisma.smartLockDevice.findUnique({
     where: { deviceId: payload.deviceMac },
-    select: { id: true, deviceType: true },
+    select: { id: true, deviceType: true, lastStateAt: true },
   });
   if (!device) return false;
 
@@ -243,8 +267,20 @@ export async function processSwitchBotLockStateReport(
       ? new Date(payload.timeOfSample * 1000)
       : new Date();
 
+  // 古い timeOfSample は捨てる（webhook 再送・順序逆転の単調性）。
+  if (
+    payload.timeOfSample !== undefined &&
+    device.lastStateAt !== null &&
+    lastStateAt.getTime() < device.lastStateAt.getTime()
+  ) {
+    return false;
+  }
+
   const updated = await prisma.smartLockDevice.updateMany({
-    where: { deviceId: payload.deviceMac },
+    where: {
+      deviceId: payload.deviceMac,
+      OR: [{ lastStateAt: null }, { lastStateAt: { lte: lastStateAt } }],
+    },
     data: {
       ...(payload.lockState !== undefined && {
         lastLockState: payload.lockState,
@@ -268,7 +304,7 @@ export async function confirmRevokeFromWebhookSuccess(input: {
   readonly passcodeId: string;
   readonly switchbotKeyId: string;
 }): Promise<boolean> {
-  const credentials = await getDecryptedSwitchBotCredentials();
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
   if (!credentials) return false;
 
   return confirmRevokeByKeyAbsence(credentials, {

@@ -47,6 +47,7 @@ import {
   DialogTitle,
   SubmitButton,
 } from "@/admin/components/ui";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import {
   isMutationError,
   type MutationResult,
@@ -217,6 +218,8 @@ export function SmartLockDeviceRegistry({
 }: SmartLockDeviceRegistryProps) {
   const router = useRouter();
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
+  const [devicePendingDelete, setDevicePendingDelete] =
+    useState<SmartLockDeviceWithLocation | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
   const [refreshingDeviceId, setRefreshingDeviceId] = useState<string | null>(
     null,
@@ -224,14 +227,18 @@ export function SmartLockDeviceRegistry({
 
   const deviceById = buildDeviceLookup(devices);
 
-  const handleDelete = (device: SmartLockDeviceWithLocation): void => {
+  const handleConfirmDelete = (): void => {
+    const device = devicePendingDelete;
+    if (!device) return;
     startDeleteTransition(async () => {
       const result = await deleteSmartLockDevice(device.id);
       if (isMutationError(result)) {
         toast.error(result.error);
+        setDevicePendingDelete(null);
         return;
       }
       toast.success("スマートロックデバイスを削除しました");
+      setDevicePendingDelete(null);
       router.refresh();
     });
   };
@@ -369,7 +376,7 @@ export function SmartLockDeviceRegistry({
                         size="icon"
                         aria-label={`${device.deviceName} を削除`}
                         disabled={isDeleting}
-                        onClick={() => handleDelete(device)}
+                        onClick={() => setDevicePendingDelete(device)}
                       >
                         <IconTrash className="h-4 w-4" />
                       </Button>
@@ -381,6 +388,21 @@ export function SmartLockDeviceRegistry({
           ))}
         </div>
       )}
+
+      <DeleteConfirmDialog
+        open={devicePendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDevicePendingDelete(null);
+        }}
+        {...(devicePendingDelete
+          ? {
+              itemName: devicePendingDelete.deviceName,
+              description: `「${devicePendingDelete.deviceName}」を削除します。有効なパスコードがある場合は先に失効を試みます。この操作は取り消せません。`,
+            }
+          : {})}
+        onConfirm={handleConfirmDelete}
+        isPending={isDeleting}
+      />
 
       {dialogState && (
         <SmartLockDeviceDialog
