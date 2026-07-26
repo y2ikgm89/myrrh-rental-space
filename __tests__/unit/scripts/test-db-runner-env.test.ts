@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import {
   assertRequiredTestDatabaseUrl,
+  buildSerialDbTestSet,
+  fileContentNeedsSerialDbExecution,
   findSelectedSerialDbTests,
+  isSerialDbTest,
+  SERIAL_DB_TESTS,
 } from "../../../scripts/test-db-runner-env";
 
 describe("test DB runner env", () => {
@@ -57,5 +61,62 @@ describe("test DB runner env", () => {
       url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       source: "env",
     });
+  });
+});
+
+describe("serial DB test auto-detection", () => {
+  test("excludes prisma mock.module integration tests", () => {
+    expect(
+      fileContentNeedsSerialDbExecution(`
+        mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+        const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+      `),
+    ).toBe(false);
+  });
+
+  test("detects TEST_DATABASE_URL env reads", () => {
+    expect(
+      fileContentNeedsSerialDbExecution(
+        'const TEST_DB_URL = process.env["TEST_DATABASE_URL"];',
+      ),
+    ).toBe(true);
+  });
+
+  test("detects DATABASE_URL override from TEST_DATABASE_URL", () => {
+    expect(
+      fileContentNeedsSerialDbExecution(`
+        process.env["DATABASE_URL"] =
+          process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+      `),
+    ).toBe(true);
+  });
+
+  test("auto-detected set covers describeMaybe integration tests", async () => {
+    const describeMaybePattern =
+      /const\s+describeMaybe\s*=\s*TEST_DB_URL\s*\?\s*describe\s*:\s*describe\.skip/;
+    const glob = new Bun.Glob("**/*.test.ts");
+    const missing: string[] = [];
+
+    for (const rel of glob.scanSync({
+      cwd: "__tests__/integration",
+    })) {
+      const path = `__tests__/integration/${rel.replaceAll("\\", "/")}`;
+      const content = await Bun.file(path).text();
+      if (!describeMaybePattern.test(content)) continue;
+      if (!isSerialDbTest(path)) {
+        missing.push(path);
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
+
+  test("buildSerialDbTestSet matches module-load SERIAL_DB_TESTS", () => {
+    const rebuilt = buildSerialDbTestSet();
+    expect([...rebuilt].sort()).toEqual([...SERIAL_DB_TESTS].sort());
+  });
+
+  test("detects at least 50 integration DB tests", () => {
+    expect(SERIAL_DB_TESTS.size).toBeGreaterThanOrEqual(50);
   });
 });
