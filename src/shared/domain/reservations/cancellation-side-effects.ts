@@ -33,6 +33,7 @@
  *   5. 管理者向け in-app 通知（reason 含む）
  *   6. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes）
  *   7. SwitchBot スマートロックの発行済みパスコード失効
+ *   8. Stripe Checkout Session の expire（open session からの後追い課金を防ぐ）
  *
  * 呼び出し条件:
  *   `applyCancellation` が `success: true` を返した後にだけ呼ぶ。本関数は予約データの
@@ -80,6 +81,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/reservations/checkout-session-expiry";
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
@@ -170,6 +172,7 @@ export type CancellationEffectOutcome = {
 /** 全副作用の outcome を並べた集約構造。AuditLog metadata.sideEffects に格納される。 */
 export type CancellationSideEffectOutcomes = {
   refund: CancellationEffectOutcome;
+  checkoutSessionExpire: CancellationEffectOutcome;
   gcal: CancellationEffectOutcome;
   customerEmail: CancellationEffectOutcome;
   adminEmail: CancellationEffectOutcome;
@@ -194,6 +197,7 @@ interface SideEffectReservation {
   icsSequence: number;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
+  stripeCheckoutSessionId: string | null;
   googleCalendarEventId: string | null;
   guestLastName: string | null;
   guestFirstName: string | null;
@@ -226,6 +230,7 @@ async function fetchReservationForSideEffects(
       icsSequence: true,
       paymentStatus: true,
       stripePaymentIntentId: true,
+      stripeCheckoutSessionId: true,
       googleCalendarEventId: true,
       guestLastName: true,
       guestFirstName: true,
@@ -562,6 +567,35 @@ async function runNotificationStep(args: {
   }
 }
 
+async function runCheckoutSessionExpireStep(args: {
+  reservationId: string;
+  sessionId: string | null;
+}): Promise<CancellationEffectOutcome> {
+  if (!args.sessionId) {
+    return { status: "skipped", reason: "noCheckoutSession" };
+  }
+
+  try {
+    await expireOpenCheckoutSessionBestEffort({
+      reservationId: args.reservationId,
+      sessionId: args.sessionId,
+    });
+    return { status: "ok", detail: { sessionId: args.sessionId } };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "expireCheckoutSessionOnCancel",
+        reservationId: args.reservationId,
+        sessionId: args.sessionId,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
 async function runSmartLockStep(
   input: CancellationSideEffectInput,
 ): Promise<CancellationEffectOutcome> {
@@ -598,18 +632,30 @@ async function runCancellationSideEffectsAndFlushAudit(args: {
   const { input, reservation, payload, wasPaid, requiresRefund } = args;
 
   // 副作用は互いに独立。並列で発火し、それぞれ独立に outcome 化する。
-  const [refund, gcal, customerEmail, adminEmail, notification, smartLock] =
-    await Promise.all([
-      runRefundStep({ input, reservation, requiresRefund, wasPaid }),
-      runGcalStep({ input, reservation }),
-      runCustomerEmailStep({ input, payload }),
-      runAdminEmailStep({ input, payload }),
-      runNotificationStep({ input, requiresRefund }),
-      runSmartLockStep(input),
-    ]);
+  const [
+    refund,
+    checkoutSessionExpire,
+    gcal,
+    customerEmail,
+    adminEmail,
+    notification,
+    smartLock,
+  ] = await Promise.all([
+    runRefundStep({ input, reservation, requiresRefund, wasPaid }),
+    runCheckoutSessionExpireStep({
+      reservationId: reservation.id,
+      sessionId: reservation.stripeCheckoutSessionId,
+    }),
+    runGcalStep({ input, reservation }),
+    runCustomerEmailStep({ input, payload }),
+    runAdminEmailStep({ input, payload }),
+    runNotificationStep({ input, requiresRefund }),
+    runSmartLockStep(input),
+  ]);
 
   const outcomes: CancellationSideEffectOutcomes = {
     refund,
+    checkoutSessionExpire,
     gcal,
     customerEmail,
     adminEmail,

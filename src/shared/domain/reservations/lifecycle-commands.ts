@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   CANCELLED_BY,
@@ -15,6 +15,15 @@ import { lockSpaceForTransaction } from "./space-locks";
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
   TERMINAL_RESERVATION_STATUSES,
 );
+
+/** 終端から PENDING / CONFIRMED へ復元可能な paymentStatus（決済済みは新規予約を要求）。 */
+const RESTORABLE_PAYMENT_STATUSES = new Set<PaymentStatus>([
+  PaymentStatus.UNPAID,
+  PaymentStatus.FAILED,
+]);
+
+const CHECKOUT_PENDING_CANCEL_MESSAGE =
+  "決済処理中のためキャンセルできません。決済完了後にキャンセルするか、しばらく経ってから再度お試しください。";
 
 // ---------------------------------------------------------------------------
 // Admin: Status update
@@ -62,6 +71,10 @@ export async function updateReservationStatusCommand(
     status === ReservationStatus.CANCELLED &&
     previousStatus !== ReservationStatus.CANCELLED;
 
+  if (isCancellation && reservation.paymentStatus === PaymentStatus.PENDING) {
+    throw new DomainError(CHECKOUT_PENDING_CANCEL_MESSAGE, "VALIDATION");
+  }
+
   // 全書込を interactive tx に包む。旧実装は updateMany と coupon 復元が
   // 別 tx で走っており、更新側 commit 後 coupon 復元前に process crash が
   // 起きると Coupon.usageCount が予約分だけ残る silent inconsistency に
@@ -77,7 +90,14 @@ export async function updateReservationStatusCommand(
   // 到達して正当な顧客の申込みまで拒否される。
   const current = await prisma.$transaction(async (tx) => {
     const updated = await tx.reservation.updateMany({
-      where: { id, deletedAt: null, status: previousStatus },
+      where: {
+        id,
+        deletedAt: null,
+        status: previousStatus,
+        ...(isCancellation
+          ? { paymentStatus: { not: PaymentStatus.PENDING } }
+          : {}),
+      },
       data: {
         status,
         icsSequence: { increment: 1 },
@@ -95,6 +115,15 @@ export async function updateReservationStatusCommand(
     });
 
     if (updated.count === 0) {
+      if (isCancellation) {
+        const currentPayment = await tx.reservation.findUnique({
+          where: { id },
+          select: { paymentStatus: true },
+        });
+        if (currentPayment?.paymentStatus === PaymentStatus.PENDING) {
+          throw new DomainError(CHECKOUT_PENDING_CANCEL_MESSAGE, "VALIDATION");
+        }
+      }
       throw new DomainError(
         "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
         "CONFLICT",
@@ -208,6 +237,17 @@ export async function restoreReservationStatusCommand(
 
   const previousStatus = reservation.status;
   const wasCancelled = previousStatus === ReservationStatus.CANCELLED;
+
+  if (
+    (targetStatus === ReservationStatus.PENDING ||
+      targetStatus === ReservationStatus.CONFIRMED) &&
+    !RESTORABLE_PAYMENT_STATUSES.has(reservation.paymentStatus)
+  ) {
+    throw new DomainError(
+      "決済済み・返金済みの予約は復元できません。必要な場合は新規予約を作成してください。",
+      "VALIDATION",
+    );
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     if (targetStatus === ReservationStatus.CONFIRMED) {

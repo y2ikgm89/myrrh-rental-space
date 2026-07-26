@@ -46,6 +46,24 @@ describe("isReservationEditableForCustomerSelfServe", () => {
     ).toEqual({ ok: false, reason: "payment" });
   });
 
+  test("FAILED は UNPAID と同様に編集可", () => {
+    expect(
+      isReservationEditableForCustomerSelfServe({
+        ...baseInput,
+        paymentStatus: PaymentStatus.FAILED,
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  test("PENDING は payment", () => {
+    expect(
+      isReservationEditableForCustomerSelfServe({
+        ...baseInput,
+        paymentStatus: PaymentStatus.PENDING,
+      }),
+    ).toEqual({ ok: false, reason: "payment" });
+  });
+
   test("クーポン割引ありは discount", () => {
     expect(
       isReservationEditableForCustomerSelfServe({

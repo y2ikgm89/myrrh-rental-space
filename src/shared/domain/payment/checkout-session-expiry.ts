@@ -32,3 +32,16 @@ export async function expireOpenCheckoutSessionBestEffort(input: {
     });
   }
 }
+
+/** Stripe Checkout Session の status を取得する（manual payment gate 等）。 */
+export async function retrieveCheckoutSessionStatus(
+  sessionId: string,
+): Promise<string | null> {
+  const stripeSettings = await assertStripeCredentialsConfigured();
+  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  if (!client) {
+    return null;
+  }
+  const session = await client.checkout.sessions.retrieve(sessionId);
+  return session.status ?? null;
+}
