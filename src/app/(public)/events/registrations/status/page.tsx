@@ -4,8 +4,9 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { Heading } from "@/public/components/design-system/heading";
-import { Stack } from "@/public/components/design-system/stack";
-import { PageLayout } from "@/public/components/design-system/page-layout";
+import { StatusHubInvalidLinkView } from "@/app/(public)/_shared/components/status-hub/status-hub-invalid-link-view";
+import { StatusHubShell } from "@/app/(public)/_shared/components/status-hub/status-hub-shell";
+import { StatusHubTooManyRequestsView } from "@/app/(public)/_shared/components/status-hub/status-hub-too-many-requests-view";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
@@ -70,11 +71,16 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   });
 
   if (access.kind === "rate_limited") {
-    return <TooManyRequestsView />;
+    return <StatusHubTooManyRequestsView />;
   }
 
   if (access.kind === "invalid") {
-    return <InvalidLinkView />;
+    return (
+      <StatusHubInvalidLinkView
+        mypageHref="/mypage/events"
+        memberResourceLabel="申込"
+      />
+    );
   }
 
   const [registration, user] = await Promise.all([
@@ -83,7 +89,12 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   ]);
 
   if (!registration) {
-    return <InvalidLinkView />;
+    return (
+      <StatusHubInvalidLinkView
+        mypageHref="/mypage/events"
+        memberResourceLabel="申込"
+      />
+    );
   }
 
   const sessionCustomer = user ? await getCustomerByUserId(user.id) : null;
@@ -122,7 +133,7 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   const isConfirmed = registration.status === RegistrationStatus.CONFIRMED;
 
   return (
-    <Layout>
+    <StatusHubShell>
       <div className="text-center">
         <p className="mb-3 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
           Event registration
@@ -251,70 +262,6 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
           </li>
         </ul>
       </div>
-    </Layout>
-  );
-}
-
-function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <PageLayout variant="form">
-      <Stack gap="lg" className="mx-auto max-w-2xl">
-        {children}
-      </Stack>
-    </PageLayout>
-  );
-}
-
-function InvalidLinkView(): ReactElement {
-  return (
-    <Layout>
-      <div className="border border-destructive/30 bg-destructive/5 p-6 text-center">
-        <p className="text-base font-medium text-foreground">
-          リンクが無効または期限切れです
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          リンクが正しくないか、有効期限が切れている可能性があります。
-        </p>
-        <Stack gap="sm" className="mt-4 text-sm text-muted-foreground">
-          <p>
-            会員の方は
-            <Link
-              href={toAppRoute("/mypage/events")}
-              className="underline underline-offset-4 hover:text-foreground"
-              rel="noreferrer"
-            >
-              マイページ
-            </Link>
-            から申込を確認できます。
-          </p>
-          <p>
-            会員でない方は
-            <Link
-              href={toAppRoute("/contact")}
-              className="underline underline-offset-4 hover:text-foreground"
-              rel="noreferrer"
-            >
-              お問い合わせ
-            </Link>
-            よりご連絡ください。
-          </p>
-        </Stack>
-      </div>
-    </Layout>
-  );
-}
-
-function TooManyRequestsView(): ReactElement {
-  return (
-    <Layout>
-      <div className="border border-destructive/30 bg-destructive/5 p-6 text-center">
-        <p className="text-base font-medium text-foreground">
-          リクエストが多すぎます
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          しばらく時間をおいてから再度お試しください。
-        </p>
-      </div>
-    </Layout>
+    </StatusHubShell>
   );
 }
