@@ -151,7 +151,7 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
   }),
 }));
 
-mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
+mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
 }));
 
@@ -306,8 +306,8 @@ describe("cancelReservationFromCalendar (PENDING checkout expire)", () => {
 
     expect(result).toEqual({ cancelled: true });
     expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith({
-      reservationId: "res-pending",
       sessionId: "cs_test_123",
+      context: { reservationId: "res-pending" },
     });
   });
 

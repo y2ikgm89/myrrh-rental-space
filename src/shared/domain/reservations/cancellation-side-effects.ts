@@ -81,7 +81,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
-import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/reservations/checkout-session-expiry";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
@@ -577,8 +577,8 @@ async function runCheckoutSessionExpireStep(args: {
 
   try {
     await expireOpenCheckoutSessionBestEffort({
-      reservationId: args.reservationId,
       sessionId: args.sessionId,
+      context: { reservationId: args.reservationId },
     });
     return { status: "ok", detail: { sessionId: args.sessionId } };
   } catch (err) {

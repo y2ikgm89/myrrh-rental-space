@@ -13,9 +13,17 @@ import {
 } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
-import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
+import {
+  expireCheckoutSessionWithClientBestEffort,
+  expireOpenCheckoutSessionBestEffort,
+} from "@/shared/domain/payment/checkout-session-expiry";
+import {
+  acquirePaymentRefundAdvisoryLock,
+  createRefundRecordIdempotent,
+  createStripeRefundOrThrow,
+  PAYMENT_REFUND_TRANSACTION_OPTIONS,
+} from "@/shared/domain/payment/stripe-refund-orchestration";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
-import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import {
   findPaymentMethodsIncompatibleWithCurrency,
   isStripePaymentMethodType,
@@ -43,13 +51,6 @@ import {
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
 } from "@/shared/domain/receipts/manual-payment-warnings";
 import { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } from "@/shared/domain/events/payment-expiry-constants";
-
-/**
- * `refundEventRegistrationPaymentCommand` の advisory lock namespace。
- * `.claude/rules/db-domain.md` の registry と一致
- * (Reservation の 728355 と同型、event registration 単位で serialize)。
- */
-const EVENT_REFUND_LOCK_NAMESPACE = 728356;
 
 /**
  * EventRegistration の Stripe Checkout Session を作成する (PR#10)。
@@ -296,19 +297,12 @@ export async function createEventCheckoutSessionCommand(input: {
           },
         },
       );
-      try {
-        await client.checkout.sessions.expire(session.id);
-      } catch (expireError) {
-        logError(normalizeError(expireError), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: {
-            operation: "createEventCheckoutSessionExpire",
-            registrationId,
-            sessionId: session.id,
-          },
-        });
-      }
+      await expireCheckoutSessionWithClientBestEffort({
+        client,
+        sessionId: session.id,
+        operation: "createEventCheckoutSessionExpire",
+        context: { registrationId, sessionId: session.id },
+      });
       throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
@@ -594,19 +588,12 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
           },
         },
       );
-      try {
-        await client.checkout.sessions.expire(session.id);
-      } catch (expireError) {
-        logError(normalizeError(expireError), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: {
-            operation: "createWaitlistOfferCheckoutSessionExpire",
-            registrationId,
-            sessionId: session.id,
-          },
-        });
-      }
+      await expireCheckoutSessionWithClientBestEffort({
+        client,
+        sessionId: session.id,
+        operation: "createWaitlistOfferCheckoutSessionExpire",
+        context: { registrationId, sessionId: session.id },
+      });
       throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
@@ -884,168 +871,134 @@ export async function refundEventRegistrationPaymentCommand(
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(
-    async (tx) => {
-      // 申込単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+  const result = await prisma.$transaction(async (tx) => {
+    // 申込単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
-      const registration = await tx.eventRegistration.findFirst({
-        where: { id: registrationId, event: { deletedAt: null } },
-        select: {
-          id: true,
-          paymentStatus: true,
-          stripePaymentIntentId: true,
-          paidAmount: true,
+    const registration = await tx.eventRegistration.findFirst({
+      where: { id: registrationId, event: { deletedAt: null } },
+      select: {
+        id: true,
+        paymentStatus: true,
+        stripePaymentIntentId: true,
+        paidAmount: true,
+      },
+    });
+
+    if (!registration) {
+      throw new DomainError("イベント申込が見つかりません", "NOT_FOUND");
+    }
+
+    // PAID + PARTIALLY_REFUNDED の両方から返金可能
+    if (
+      registration.paymentStatus !== PaymentStatus.PAID &&
+      registration.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+    ) {
+      throw new DomainError(
+        "決済確定・一部返金済みのイベント申込のみ返金できます",
+        "VALIDATION",
+      );
+    }
+
+    if (!registration.stripePaymentIntentId) {
+      throw new DomainError("Stripe の決済情報が見つかりません", "VALIDATION");
+    }
+
+    if (registration.paidAmount === null || registration.paidAmount <= 0) {
+      throw new DomainError(
+        "受領額が記録されていないイベント申込は返金できません",
+        "VALIDATION",
+      );
+    }
+
+    // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
+    const aggregate = await tx.refund.aggregate({
+      where: { eventRegistrationId: registrationId },
+      _sum: { amount: true },
+    });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    const remaining = registration.paidAmount - cumulativeSoFar;
+
+    if (remaining <= 0) {
+      throw new DomainError(
+        "このイベント申込は既に全額返金済みです",
+        "VALIDATION",
+      );
+    }
+
+    const amount = requestedAmount ?? remaining;
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new DomainError(
+        "返金額は 1 円以上の整数で指定してください",
+        "VALIDATION",
+      );
+    }
+    if (amount > remaining) {
+      throw new DomainError(
+        `返金額が残額を超えています (残額: ${remaining} 円)`,
+        "VALIDATION",
+      );
+    }
+
+    const newCumulative = cumulativeSoFar + amount;
+    const willBeFullyRefunded = newCumulative === registration.paidAmount;
+
+    const refund = await createStripeRefundOrThrow({
+      client,
+      paymentIntentId: registration.stripePaymentIntentId,
+      amount,
+      stripeCurrency,
+      metadata: {
+        initiator: actorType,
+        ...(reason ? { reason } : {}),
+      },
+      idempotencyKey: `event-registration-refund-${registrationId}-${newCumulative}`,
+      operation: "refundEventRegistrationPayment",
+      logContext: { registrationId },
+      userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
+    });
+
+    // Belt-and-suspenders: Reservation 側 (`refundReservationPaymentCommand`) と同型。
+    // Codex PR #1146 追加指摘 (P2、Prisma upsert issue #20229): tx 内で単一 create +
+    // savepoint + catch(P2002) の真 atomic pattern に統一 (詳細は Reservation 側 comment 参照)。
+    await createRefundRecordIdempotent(tx, "refund_create_event", {
+      eventRegistrationId: registrationId,
+      amount,
+      ...(reason ? { reason } : {}),
+      stripeRefundId: refund.id,
+      refundedByType: actorType,
+    });
+
+    // paymentStatus 遷移 (updateMany で status guard)
+    await tx.eventRegistration.updateMany({
+      where: {
+        id: registrationId,
+        paymentStatus: {
+          in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
         },
-      });
-
-      if (!registration) {
-        throw new DomainError("イベント申込が見つかりません", "NOT_FOUND");
-      }
-
-      // PAID + PARTIALLY_REFUNDED の両方から返金可能
-      if (
-        registration.paymentStatus !== PaymentStatus.PAID &&
-        registration.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
-      ) {
-        throw new DomainError(
-          "決済確定・一部返金済みのイベント申込のみ返金できます",
-          "VALIDATION",
-        );
-      }
-
-      if (!registration.stripePaymentIntentId) {
-        throw new DomainError(
-          "Stripe の決済情報が見つかりません",
-          "VALIDATION",
-        );
-      }
-
-      if (registration.paidAmount === null || registration.paidAmount <= 0) {
-        throw new DomainError(
-          "受領額が記録されていないイベント申込は返金できません",
-          "VALIDATION",
-        );
-      }
-
-      // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
-      const aggregate = await tx.refund.aggregate({
-        where: { eventRegistrationId: registrationId },
-        _sum: { amount: true },
-      });
-      const cumulativeSoFar = aggregate._sum.amount ?? 0;
-      const remaining = registration.paidAmount - cumulativeSoFar;
-
-      if (remaining <= 0) {
-        throw new DomainError(
-          "このイベント申込は既に全額返金済みです",
-          "VALIDATION",
-        );
-      }
-
-      const amount = requestedAmount ?? remaining;
-
-      if (!Number.isInteger(amount) || amount <= 0) {
-        throw new DomainError(
-          "返金額は 1 円以上の整数で指定してください",
-          "VALIDATION",
-        );
-      }
-      if (amount > remaining) {
-        throw new DomainError(
-          `返金額が残額を超えています (残額: ${remaining} 円)`,
-          "VALIDATION",
-        );
-      }
-
-      const newCumulative = cumulativeSoFar + amount;
-      const willBeFullyRefunded = newCumulative === registration.paidAmount;
-
-      // Stripe refund (idempotent、tx 内で lock 保持しつつ実行)
-      let refund;
-      try {
-        refund = await client.refunds.create(
-          {
-            payment_intent: registration.stripePaymentIntentId,
-            amount: toStripeUnitAmount(amount, stripeCurrency),
-            // metadata.initiator: charge.refunded webhook がこの refund を Stripe
-            // から受信したとき、正しい attribution (ADMIN / AUTO_ON_CANCEL) を
-            // 復元するための hint (Reservation 側と同型)。
-            metadata: {
-              initiator: actorType,
-              ...(reason ? { reason } : {}),
-            },
-          },
-          {
-            idempotencyKey: `event-registration-refund-${registrationId}-${newCumulative}`,
-          },
-        );
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "refundEventRegistrationPayment",
-            registrationId,
-          },
-        });
-        throw new DomainError(
-          "返金処理に失敗しました。しばらく経ってからお試しください。",
-          "UNEXPECTED",
-        );
-      }
-
-      // Belt-and-suspenders: Reservation 側 (`refundReservationPaymentCommand`) と同型。
-      // Codex PR #1146 追加指摘 (P2、Prisma upsert issue #20229): tx 内で単一 create +
-      // savepoint + catch(P2002) の真 atomic pattern に統一 (詳細は Reservation 側 comment 参照)。
-      try {
-        await tx.$executeRaw`SAVEPOINT refund_create_event`;
-        await tx.refund.create({
-          data: {
-            eventRegistrationId: registrationId,
-            amount,
-            ...(reason ? { reason } : {}),
-            stripeRefundId: refund.id,
-            refundedByType: actorType,
-          },
-        });
-        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_event`;
-      } catch (error) {
-        if (!isPrismaUniqueConstraintError(error, "stripeRefundId"))
-          throw error;
-        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_event`;
-      }
-
-      // paymentStatus 遷移 (updateMany で status guard)
-      await tx.eventRegistration.updateMany({
-        where: {
-          id: registrationId,
-          paymentStatus: {
-            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-          },
-        },
-        data: {
-          paymentStatus: willBeFullyRefunded
-            ? PaymentStatus.REFUNDED
-            : PaymentStatus.PARTIALLY_REFUNDED,
-        },
-      });
-
-      return {
-        refundId: refund.id,
-        status: refund.status,
-        newPaymentStatus: willBeFullyRefunded
+      },
+      data: {
+        paymentStatus: willBeFullyRefunded
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED,
-        cumulativeAmount: newCumulative,
-        refundAmount: amount,
-      } satisfies RefundEventRegistrationResult;
-    },
-    {
-      timeout: 30_000,
-      maxWait: 30_000,
-    },
-  );
+      },
+    });
+
+    return {
+      refundId: refund.id,
+      status: refund.status,
+      newPaymentStatus: willBeFullyRefunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED,
+      cumulativeAmount: newCumulative,
+      refundAmount: amount,
+    } satisfies RefundEventRegistrationResult;
+  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
 
   // AuditLog (tx 外)
   await createAuditLogRecord({
@@ -1107,117 +1060,55 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
-      const registration = await tx.eventRegistration.findFirst({
-        where: { id: registrationId, event: { deletedAt: null } },
-        select: {
-          status: true,
-          paymentStatus: true,
-          paidAmount: true,
-          quantity: true,
-          ticket: { select: { price: true } },
-        },
-      });
+    const registration = await tx.eventRegistration.findFirst({
+      where: { id: registrationId, event: { deletedAt: null } },
+      select: {
+        status: true,
+        paymentStatus: true,
+        paidAmount: true,
+        quantity: true,
+        ticket: { select: { price: true } },
+      },
+    });
 
-      if (!registration) {
-        return { outcome: "not_applicable" as const };
-      }
+    if (!registration) {
+      return { outcome: "not_applicable" as const };
+    }
 
-      if (registration.paymentStatus === PaymentStatus.REFUNDED) {
-        return { outcome: "already_refunded" as const };
-      }
+    if (registration.paymentStatus === PaymentStatus.REFUNDED) {
+      return { outcome: "already_refunded" as const };
+    }
 
-      if (registration.status !== RegistrationStatus.CANCELLED) {
-        return { outcome: "not_applicable" as const };
-      }
+    if (registration.status !== RegistrationStatus.CANCELLED) {
+      return { outcome: "not_applicable" as const };
+    }
 
-      const expectedAmount =
-        registration.paidAmount != null && registration.paidAmount > 0
-          ? registration.paidAmount
-          : registration.ticket.price * registration.quantity;
+    const expectedAmount =
+      registration.paidAmount != null && registration.paidAmount > 0
+        ? registration.paidAmount
+        : registration.ticket.price * registration.quantity;
 
-      if (expectedAmount <= 0) {
-        return { outcome: "not_applicable" as const };
-      }
+    if (expectedAmount <= 0) {
+      return { outcome: "not_applicable" as const };
+    }
 
-      const paymentIntentId = stripePaymentIntentId;
+    const paymentIntentId = stripePaymentIntentId;
 
-      const aggregate = await tx.refund.aggregate({
-        where: { eventRegistrationId: registrationId },
-        _sum: { amount: true },
-      });
-      const cumulativeSoFar = aggregate._sum.amount ?? 0;
-      const remaining = expectedAmount - cumulativeSoFar;
+    const aggregate = await tx.refund.aggregate({
+      where: { eventRegistrationId: registrationId },
+      _sum: { amount: true },
+    });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    const remaining = expectedAmount - cumulativeSoFar;
 
-      if (remaining <= 0) {
-        await tx.eventRegistration.updateMany({
-          where: {
-            id: registrationId,
-            status: RegistrationStatus.CANCELLED,
-            paymentStatus: { not: PaymentStatus.REFUNDED },
-          },
-          data: {
-            paymentStatus: PaymentStatus.REFUNDED,
-            stripePaymentIntentId: paymentIntentId,
-          },
-        });
-        return { outcome: "already_refunded" as const };
-      }
-
-      let refund;
-      try {
-        refund = await client.refunds.create(
-          {
-            payment_intent: paymentIntentId,
-            amount: toStripeUnitAmount(remaining, stripeCurrency),
-            metadata: {
-              initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-              reason,
-            },
-          },
-          {
-            idempotencyKey: `event-registration-cancel-orphan-refund-${registrationId}-${expectedAmount}`,
-          },
-        );
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.CRITICAL,
-          context: {
-            operation:
-              "refundOrphanedStripePaymentForCancelledEventRegistration",
-            registrationId,
-            stripePaymentIntentId: paymentIntentId,
-          },
-        });
-        throw new DomainError(
-          "キャンセル後の自動返金に失敗しました",
-          "UNEXPECTED",
-        );
-      }
-
-      try {
-        await tx.$executeRaw`SAVEPOINT refund_create_event_auto_on_cancel`;
-        await tx.refund.create({
-          data: {
-            eventRegistrationId: registrationId,
-            amount: remaining,
-            reason,
-            stripeRefundId: refund.id,
-            refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-          },
-        });
-        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_event_auto_on_cancel`;
-      } catch (error) {
-        if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) {
-          throw error;
-        }
-        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_event_auto_on_cancel`;
-      }
-
+    if (remaining <= 0) {
       await tx.eventRegistration.updateMany({
         where: {
           id: registrationId,
@@ -1227,18 +1118,61 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
         data: {
           paymentStatus: PaymentStatus.REFUNDED,
           stripePaymentIntentId: paymentIntentId,
-          paidAt: new Date(),
         },
       });
+      return { outcome: "already_refunded" as const };
+    }
 
-      return {
-        outcome: "refunded" as const,
-        refundId: refund.id,
-        refundAmount: remaining,
-      };
-    },
-    { maxWait: 30_000, timeout: 30_000 },
-  );
+    const refund = await createStripeRefundOrThrow({
+      client,
+      paymentIntentId: paymentIntentId,
+      amount: remaining,
+      stripeCurrency,
+      metadata: {
+        initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+        reason,
+      },
+      idempotencyKey: `event-registration-cancel-orphan-refund-${registrationId}-${expectedAmount}`,
+      operation: "refundOrphanedStripePaymentForCancelledEventRegistration",
+      logContext: {
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+      },
+      userMessage: "キャンセル後の自動返金に失敗しました",
+      severity: ErrorSeverity.CRITICAL,
+    });
+
+    await createRefundRecordIdempotent(
+      tx,
+      "refund_create_event_auto_on_cancel",
+      {
+        eventRegistrationId: registrationId,
+        amount: remaining,
+        reason,
+        stripeRefundId: refund.id,
+        refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      },
+    );
+
+    await tx.eventRegistration.updateMany({
+      where: {
+        id: registrationId,
+        status: RegistrationStatus.CANCELLED,
+        paymentStatus: { not: PaymentStatus.REFUNDED },
+      },
+      data: {
+        paymentStatus: PaymentStatus.REFUNDED,
+        stripePaymentIntentId: paymentIntentId,
+        paidAt: new Date(),
+      },
+    });
+
+    return {
+      outcome: "refunded" as const,
+      refundId: refund.id,
+      refundAmount: remaining,
+    };
+  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({
@@ -1291,109 +1225,85 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
-      const registration = await tx.eventRegistration.findFirst({
-        where: { id: registrationId, event: { deletedAt: null } },
-        select: {
-          id: true,
-          status: true,
-          paymentStatus: true,
-          paidAmount: true,
-          stripePaymentIntentId: true,
-        },
-      });
+    const registration = await tx.eventRegistration.findFirst({
+      where: { id: registrationId, event: { deletedAt: null } },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        paidAmount: true,
+        stripePaymentIntentId: true,
+      },
+    });
 
-      if (!registration) {
-        return { outcome: "not_applicable" as const };
-      }
+    if (!registration) {
+      return { outcome: "not_applicable" as const };
+    }
 
-      if (registration.paymentStatus === PaymentStatus.REFUNDED) {
-        return { outcome: "already_refunded" as const };
-      }
+    if (registration.paymentStatus === PaymentStatus.REFUNDED) {
+      return { outcome: "already_refunded" as const };
+    }
 
-      if (
-        registration.status !== RegistrationStatus.EXPIRED ||
-        registration.paymentStatus !== PaymentStatus.PENDING ||
-        registration.paidAmount === null ||
-        registration.paidAmount <= 0
-      ) {
-        return { outcome: "not_applicable" as const };
-      }
+    if (
+      registration.status !== RegistrationStatus.EXPIRED ||
+      registration.paymentStatus !== PaymentStatus.PENDING ||
+      registration.paidAmount === null ||
+      registration.paidAmount <= 0
+    ) {
+      return { outcome: "not_applicable" as const };
+    }
 
-      const amount = registration.paidAmount;
+    const amount = registration.paidAmount;
 
-      let refund;
-      try {
-        refund = await client.refunds.create(
-          {
-            payment_intent: stripePaymentIntentId,
-            amount: toStripeUnitAmount(amount, stripeCurrency),
-            metadata: {
-              initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
-              reason,
-            },
-          },
-          {
-            idempotencyKey: `event-registration-capacity-race-refund-${registrationId}`,
-          },
-        );
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.CRITICAL,
-          context: {
-            operation: "refundExpiredWaitlistOfferPayment",
-            registrationId,
-          },
-        });
-        throw new DomainError(
-          "容量レース後の自動返金に失敗しました",
-          "UNEXPECTED",
-        );
-      }
+    const refund = await createStripeRefundOrThrow({
+      client,
+      paymentIntentId: stripePaymentIntentId,
+      amount,
+      stripeCurrency,
+      metadata: {
+        initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+        reason,
+      },
+      idempotencyKey: `event-registration-capacity-race-refund-${registrationId}`,
+      operation: "refundExpiredWaitlistOfferPayment",
+      logContext: { registrationId },
+      userMessage: "容量レース後の自動返金に失敗しました",
+      severity: ErrorSeverity.CRITICAL,
+    });
 
-      try {
-        await tx.$executeRaw`SAVEPOINT refund_create_capacity_race`;
-        await tx.refund.create({
-          data: {
-            eventRegistrationId: registrationId,
-            amount,
-            reason,
-            stripeRefundId: refund.id,
-            refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
-          },
-        });
-        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_capacity_race`;
-      } catch (error) {
-        if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) {
-          throw error;
-        }
-        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_capacity_race`;
-      }
+    await createRefundRecordIdempotent(tx, "refund_create_capacity_race", {
+      eventRegistrationId: registrationId,
+      amount,
+      reason,
+      stripeRefundId: refund.id,
+      refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+    });
 
-      await tx.eventRegistration.updateMany({
-        where: {
-          id: registrationId,
-          status: RegistrationStatus.EXPIRED,
-          paymentStatus: PaymentStatus.PENDING,
-        },
-        data: {
-          paymentStatus: PaymentStatus.REFUNDED,
-          stripePaymentIntentId,
-        },
-      });
+    await tx.eventRegistration.updateMany({
+      where: {
+        id: registrationId,
+        status: RegistrationStatus.EXPIRED,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+      data: {
+        paymentStatus: PaymentStatus.REFUNDED,
+        stripePaymentIntentId,
+      },
+    });
 
-      return {
-        outcome: "refunded" as const,
-        refundId: refund.id,
-        refundAmount: amount,
-      };
-    },
-    { maxWait: 30_000, timeout: 30_000 },
-  );
+    return {
+      outcome: "refunded" as const,
+      refundId: refund.id,
+      refundAmount: amount,
+    };
+  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({
@@ -1449,119 +1359,95 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
-      const registration = await tx.eventRegistration.findFirst({
-        where: { id: registrationId, event: { deletedAt: null } },
-        select: {
-          id: true,
-          status: true,
-          paymentStatus: true,
+    const registration = await tx.eventRegistration.findFirst({
+      where: { id: registrationId, event: { deletedAt: null } },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+      },
+    });
+
+    if (!registration) {
+      return { outcome: "not_applicable" as const };
+    }
+
+    if (registration.paymentStatus === PaymentStatus.REFUNDED) {
+      return { outcome: "already_refunded" as const };
+    }
+
+    if (
+      registration.status !== RegistrationStatus.CONFIRMED &&
+      registration.status !== RegistrationStatus.WAITLISTED_OFFERED &&
+      registration.status !== RegistrationStatus.EXPIRED
+    ) {
+      return { outcome: "not_applicable" as const };
+    }
+
+    if (
+      registration.paymentStatus !== PaymentStatus.UNPAID &&
+      registration.paymentStatus !== PaymentStatus.PENDING
+    ) {
+      return { outcome: "not_applicable" as const };
+    }
+
+    const refund = await createStripeRefundOrThrow({
+      client,
+      paymentIntentId: stripePaymentIntentId,
+      amount: capturedAppAmount,
+      stripeCurrency,
+      metadata: {
+        initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+        reason,
+      },
+      idempotencyKey: `event-registration-amount-mismatch-refund-${registrationId}`,
+      operation: "refundCheckoutAmountMismatchForEventRegistration",
+      logContext: { registrationId },
+      userMessage: "金額不一致の自動返金に失敗しました",
+      severity: ErrorSeverity.CRITICAL,
+    });
+
+    await createRefundRecordIdempotent(tx, "refund_create_amount_mismatch", {
+      eventRegistrationId: registrationId,
+      amount: capturedAppAmount,
+      reason,
+      stripeRefundId: refund.id,
+      refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+    });
+
+    await tx.eventRegistration.updateMany({
+      where: {
+        id: registrationId,
+        status: {
+          in: [
+            RegistrationStatus.CONFIRMED,
+            RegistrationStatus.WAITLISTED_OFFERED,
+            RegistrationStatus.EXPIRED,
+          ],
         },
-      });
-
-      if (!registration) {
-        return { outcome: "not_applicable" as const };
-      }
-
-      if (registration.paymentStatus === PaymentStatus.REFUNDED) {
-        return { outcome: "already_refunded" as const };
-      }
-
-      if (
-        registration.status !== RegistrationStatus.CONFIRMED &&
-        registration.status !== RegistrationStatus.WAITLISTED_OFFERED &&
-        registration.status !== RegistrationStatus.EXPIRED
-      ) {
-        return { outcome: "not_applicable" as const };
-      }
-
-      if (
-        registration.paymentStatus !== PaymentStatus.UNPAID &&
-        registration.paymentStatus !== PaymentStatus.PENDING
-      ) {
-        return { outcome: "not_applicable" as const };
-      }
-
-      let refund;
-      try {
-        refund = await client.refunds.create(
-          {
-            payment_intent: stripePaymentIntentId,
-            amount: toStripeUnitAmount(capturedAppAmount, stripeCurrency),
-            metadata: {
-              initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-              reason,
-            },
-          },
-          {
-            idempotencyKey: `event-registration-amount-mismatch-refund-${registrationId}`,
-          },
-        );
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.CRITICAL,
-          context: {
-            operation: "refundCheckoutAmountMismatchForEventRegistration",
-            registrationId,
-          },
-        });
-        throw new DomainError(
-          "金額不一致の自動返金に失敗しました",
-          "UNEXPECTED",
-        );
-      }
-
-      try {
-        await tx.$executeRaw`SAVEPOINT refund_create_amount_mismatch`;
-        await tx.refund.create({
-          data: {
-            eventRegistrationId: registrationId,
-            amount: capturedAppAmount,
-            reason,
-            stripeRefundId: refund.id,
-            refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-          },
-        });
-        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_amount_mismatch`;
-      } catch (error) {
-        if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) {
-          throw error;
-        }
-        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_amount_mismatch`;
-      }
-
-      await tx.eventRegistration.updateMany({
-        where: {
-          id: registrationId,
-          status: {
-            in: [
-              RegistrationStatus.CONFIRMED,
-              RegistrationStatus.WAITLISTED_OFFERED,
-              RegistrationStatus.EXPIRED,
-            ],
-          },
-          paymentStatus: {
-            in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
-          },
+        paymentStatus: {
+          in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
         },
-        data: {
-          paymentStatus: PaymentStatus.REFUNDED,
-          stripePaymentIntentId,
-        },
-      });
+      },
+      data: {
+        paymentStatus: PaymentStatus.REFUNDED,
+        stripePaymentIntentId,
+      },
+    });
 
-      return {
-        outcome: "refunded" as const,
-        refundId: refund.id,
-        refundAmount: capturedAppAmount,
-      };
-    },
-    { maxWait: 30_000, timeout: 30_000 },
-  );
+    return {
+      outcome: "refunded" as const,
+      refundId: refund.id,
+      refundAmount: capturedAppAmount,
+    };
+  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({

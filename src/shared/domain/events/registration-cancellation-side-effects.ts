@@ -37,12 +37,13 @@
  *      invalid は自動返金しない（fail-closed）。0 円なら refund 全 skip。
  *      MYPAGE-EVENT-02: 予約キャンセル (`reservations/cancellation-side-effects.ts`)
  *      と対称の挙動を保証する（従来はイベント側のみ手動対応必須で顧客誤解の原因）。
- *   2. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
- *   3. 管理者向け管理者通知メール
- *   4. 管理者向け in-app 通知（channel 含む、PAID 自動返金時は要確認タイトルへ昇格）
- *   5. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes +
+ *   2. Stripe Checkout Session の expire（open session からの後追い課金を防ぐ）
+ *   3. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
+ *   4. 管理者向け管理者通知メール
+ *   5. 管理者向け in-app 通知（channel 含む、PAID 自動返金時は要確認タイトルへ昇格）
+ *   6. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes +
  *      requiresRefund / wasPaid を記録）
- *   6. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
+ *   7. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
  *      `applyEventRegistrationCancellation` が同一 tx 内で
  *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED または WAITLISTED_OFFERED
  *      由来のキャンセルで空いた枠に次の WAITLISTED を昇格させた場合に送る。
@@ -64,6 +65,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
 import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import {
   calculateRefundAmount,
   resolveRefundPolicy,
@@ -139,6 +141,7 @@ export type EventCancellationEffectOutcome = {
 /** 全副作用の outcome を並べた集約構造。AuditLog metadata.sideEffects に格納される。 */
 export type EventCancellationSideEffectOutcomes = {
   refund: EventCancellationEffectOutcome;
+  checkoutSessionExpire: EventCancellationEffectOutcome;
   customerEmail: EventCancellationEffectOutcome;
   adminEmail: EventCancellationEffectOutcome;
   notification: EventCancellationEffectOutcome;
@@ -161,6 +164,7 @@ interface SideEffectRegistration {
   icsSequence: number;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
+  stripeCheckoutSessionId: string | null;
   paidAmount: number | null;
   event: { title: string };
   slot: { startAt: Date };
@@ -182,6 +186,7 @@ async function fetchRegistrationForSideEffects(
       // policy tier 計算 (slot.startAt = イベント開始時刻) に必要なフィールドを追加。
       paymentStatus: true,
       stripePaymentIntentId: true,
+      stripeCheckoutSessionId: true,
       paidAmount: true,
       event: { select: { title: true } },
       slot: { select: { startAt: true } },
@@ -589,6 +594,35 @@ async function runWaitlistOfferStep(
   }
 }
 
+async function runCheckoutSessionExpireStep(args: {
+  registrationId: string;
+  sessionId: string | null;
+}): Promise<EventCancellationEffectOutcome> {
+  if (!args.sessionId) {
+    return { status: "skipped", reason: "noCheckoutSession" };
+  }
+
+  try {
+    await expireOpenCheckoutSessionBestEffort({
+      sessionId: args.sessionId,
+      context: { registrationId: args.registrationId },
+    });
+    return { status: "ok", detail: { sessionId: args.sessionId } };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "expireCheckoutSessionOnEventCancel",
+        registrationId: args.registrationId,
+        sessionId: args.sessionId,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
 async function runEventCancellationSideEffectsAndFlushAudit(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
@@ -607,16 +641,26 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
   const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
   const refund = await runRefundStep({ input, registration });
 
-  const [customerEmail, adminEmail, notification, waitlistOffer] =
-    await Promise.all([
-      runCustomerEmailStep({ input, registration, details }),
-      runAdminEmailStep({ input, registration, details }),
-      runNotificationStep({ input, registration, requiresRefund }),
-      runWaitlistOfferStep(input),
-    ]);
+  const [
+    checkoutSessionExpire,
+    customerEmail,
+    adminEmail,
+    notification,
+    waitlistOffer,
+  ] = await Promise.all([
+    runCheckoutSessionExpireStep({
+      registrationId: registration.id,
+      sessionId: registration.stripeCheckoutSessionId,
+    }),
+    runCustomerEmailStep({ input, registration, details }),
+    runAdminEmailStep({ input, registration, details }),
+    runNotificationStep({ input, registration, requiresRefund }),
+    runWaitlistOfferStep(input),
+  ]);
 
   const outcomes: EventCancellationSideEffectOutcomes = {
     refund,
+    checkoutSessionExpire,
     customerEmail,
     adminEmail,
     notification,

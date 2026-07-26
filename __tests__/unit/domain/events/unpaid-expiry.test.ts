@@ -77,7 +77,7 @@ mock.module(
       mockApplyEventRegistrationCancellationSideEffects,
   }),
 );
-mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
+mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
@@ -216,8 +216,8 @@ describe("expireStaleUnpaidEventRegistrationsCommand", () => {
     await expireStaleUnpaidEventRegistrationsCommand();
 
     expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith({
-      reservationId: REGISTRATION_ID,
       sessionId: "cs_test_pending",
+      context: { registrationId: REGISTRATION_ID },
     });
   });
 });
