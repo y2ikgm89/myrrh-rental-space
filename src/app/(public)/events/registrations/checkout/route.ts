@@ -4,10 +4,14 @@
  * ゲスト申込 (customerId=null) 向け。確認メールの `?token=` URL は `proxy.ts` が
  * HttpOnly cookie に転写してから本 route に到達する。`createEventCheckoutSessionCommand`
  * を actorCustomerId=null で呼び出す。
+ *
+ * 冒頭 `await connection()` で build prerender を skip する（静的 path のため
+ * `[token]` 時代と違い params だけでは動的化されない。`requireFeatureEnabled` の
+ * DB 読取を build 時に走らせない）。
  */
 
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
 import { verifyEventRegistrationPaymentToken } from "@/shared/lib/tokens/event-registration-payment-token";
@@ -23,6 +27,7 @@ import {
 const CHECKOUT_ERROR_PATH = "/events/registrations/checkout-error";
 
 export async function GET(request: Request): Promise<NextResponse> {
+  await connection();
   await requireFeatureEnabled("events");
   await requireFeatureEnabled("payment");
 
