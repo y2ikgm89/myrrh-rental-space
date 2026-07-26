@@ -69,7 +69,19 @@ async function seedCoupons(): Promise<void> {
         isActive: true,
       },
       {
-        // どちらの条件も満たさない（無効化済み）
+        // limitReached 条件を満たす（上限到達）。isActive=false でもフィルタ対象。
+        code: `${SCOPE}-limit-inactive`.toUpperCase(),
+        name: `${SCOPE} limit inactive`,
+        type: CouponType.FIXED_AMOUNT,
+        discountValue: 300,
+        validFrom: PAST,
+        validUntil: null,
+        usageLimit: 3,
+        usageCount: 3,
+        isActive: false,
+      },
+      {
+        // どちらの条件も満たさない（無効化済み・上限未到達）
         code: `${SCOPE}-inactive`.toUpperCase(),
         name: `${SCOPE} inactive`,
         type: CouponType.PERCENTAGE,
@@ -125,16 +137,20 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
     expect(active.maxDiscountAmount).toBeNull();
   });
 
-  test("status=limitReached は raw SQL を例外なく実行し、上限到達クーポンのみ返す", async () => {
+  test("status=limitReached は raw SQL を例外なく実行し、上限到達クーポンのみ返す（isActive 無関係）", async () => {
     const result = await getCoupons({ status: "limitReached", search: SCOPE });
 
-    expect(result.total).toBe(1);
-    expect(result.coupons.map((c) => c.code)).toEqual([
-      `${SCOPE}-limit`.toUpperCase(),
-    ]);
+    expect(result.total).toBe(2);
+    expect(result.coupons.map((c) => c.code).sort()).toEqual(
+      [
+        `${SCOPE}-limit`.toUpperCase(),
+        `${SCOPE}-limit-inactive`.toUpperCase(),
+      ].sort(),
+    );
 
-    // Decimal→number 正規化の回帰防止（FIXED_AMOUNT 値も number で揃える）。
-    const limit = result.coupons[0];
+    const limit = result.coupons.find(
+      (c) => c.code === `${SCOPE}-limit`.toUpperCase(),
+    );
     expect(limit).toBeDefined();
     if (limit === undefined) {
       throw new Error("limit reached coupon must exist");

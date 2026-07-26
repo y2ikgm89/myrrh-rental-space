@@ -291,8 +291,8 @@ export function ReservationForm({
   // 料金プレビューはサーバー側 createPublicReservationCommand と同じ
   // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
   // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
-  // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンは公開フォームでは
-  // 送信時にサーバー側で検証・適用されるため preview には含めない。
+  // スペース・日時が揃うたびにサーバーへ問い合わせる。
+  const couponCode = fields.couponCode.value?.trim() ?? "";
   // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
   // stale-response race を防ぐ（レビュー指摘）。
   useEffect(() => {
@@ -304,6 +304,7 @@ export function ReservationForm({
         spaceId,
         startIso,
         endIso,
+        couponCode !== "" ? couponCode : undefined,
       );
       if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
@@ -311,7 +312,12 @@ export function ReservationForm({
     // pricingWindow 自体は render のたびに再生成される新規オブジェクトのため
     // deps に入れると setPricePreview 完了 → 再 render → 新 pricingWindow →
     // 再実行の無限ループになる（Codex P1 #1105）。プリミティブ値のみを deps にする。
-  }, [pricingWindow?.spaceId, pricingWindow?.startIso, pricingWindow?.endIso]);
+  }, [
+    pricingWindow?.spaceId,
+    pricingWindow?.startIso,
+    pricingWindow?.endIso,
+    couponCode,
+  ]);
 
   const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
   const price = pricingWindow ? (pricePreview?.totalPrice ?? null) : null;

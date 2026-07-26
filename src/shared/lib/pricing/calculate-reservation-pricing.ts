@@ -60,6 +60,8 @@ export type ReservationPricingResult = {
   spaceDiscountAmount: number;
   durationDiscountAmount: number;
   couponDiscountAmount: number;
+  /** 併用モード best 等でクーポンが落とされた場合は null */
+  appliedCoupon: { id: string; code: string; name: string } | null;
   totalPrice: number;
   taxRateType: TaxRateType;
   taxRate: number;
@@ -108,12 +110,21 @@ export function calculateReservationPricing(
   const taxAmount = calculateTaxAmount(pricing.totalPrice, taxRate);
   const totalPriceWithTax = pricing.totalPrice + taxAmount;
 
+  const appliedCoupon = pricing.appliedCoupon
+    ? {
+        id: pricing.appliedCoupon.id,
+        code: pricing.appliedCoupon.code,
+        name: pricing.appliedCoupon.name,
+      }
+    : null;
+
   return {
     rateBreakdown,
     basePrice,
     spaceDiscountAmount: pricing.spaceDiscount,
     durationDiscountAmount: pricing.durationDiscount,
     couponDiscountAmount: pricing.couponDiscount,
+    appliedCoupon,
     totalPrice: pricing.totalPrice,
     taxRateType: input.space.taxRateType,
     taxRate,

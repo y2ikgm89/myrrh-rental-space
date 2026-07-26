@@ -270,6 +270,7 @@ export function createRecurringReservationFormSchema(opts: {
       date: dateStringSchema,
       startTime: timeStringSchema,
       endTime: timeStringSchema,
+      couponCode: couponCodeSchema,
       freq: freqEnum,
       interval: z.coerce
         .number({ error: "インターバルは数値で入力してください" })

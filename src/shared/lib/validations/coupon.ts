@@ -94,8 +94,15 @@ export const couponFormBaseSchema = z.object({
     .positive({ error: "利用回数上限は1以上で入力してください" })
     .optional()
     .nullable(),
-  isActive: z.boolean().default(true),
-  canCombineWithDurationDiscount: z.boolean().default(true),
+  // FormData / checkbox 経路: 未送信・空文字・"off" は false。Switch ON は UI の defaultValue で "on" を渡す。
+  isActive: z.preprocess(
+    (value) => value === "on" || value === true,
+    z.boolean(),
+  ),
+  canCombineWithDurationDiscount: z.preprocess(
+    (value) => value === "on" || value === true,
+    z.boolean(),
+  ),
 });
 
 /**

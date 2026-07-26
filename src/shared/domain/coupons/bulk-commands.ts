@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { DomainError } from "@/shared/domain/domain-error";
 
 export type BulkToggleActiveCouponsResult = {
   count: number;
@@ -33,7 +34,7 @@ export async function bulkToggleActiveCouponsCommand(
     select: { id: true },
   });
   if (targets.length === 0) {
-    return { count: 0, isActive, affectedIds: [] };
+    throw new DomainError("対象のクーポンが見つかりません", "NOT_FOUND");
   }
   const result = await prisma.coupon.updateMany({
     where: { id: { in: targets.map((t) => t.id) } },
@@ -63,7 +64,7 @@ export async function bulkDeleteCouponsCommand(
     select: { id: true, code: true, name: true },
   });
   if (targets.length === 0) {
-    return { count: 0, affectedIds: [], deleted: [] };
+    throw new DomainError("対象のクーポンが見つかりません", "NOT_FOUND");
   }
   const result = await prisma.coupon.deleteMany({
     where: { id: { in: targets.map((t) => t.id) } },

@@ -425,7 +425,7 @@ describe("couponFormSchema", () => {
     }
   });
 
-  test("isActive がデフォルトで true になる", () => {
+  test("isActive: 省略時は false（FormData で Switch OFF 相当）", () => {
     const data = {
       code: "SAVE20",
       name: "割引クーポン",
@@ -437,11 +437,11 @@ describe("couponFormSchema", () => {
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.isActive).toBe(true);
+      expect(result.data.isActive).toBe(false);
     }
   });
 
-  test("canCombineWithDurationDiscount がデフォルトで true になる", () => {
+  test("canCombineWithDurationDiscount: 省略時は false", () => {
     const data = {
       code: "SAVE20",
       name: "割引クーポン",
@@ -453,8 +453,38 @@ describe("couponFormSchema", () => {
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.canCombineWithDurationDiscount).toBe(true);
+      expect(result.data.canCombineWithDurationDiscount).toBe(false);
     }
+  });
+
+  describe("boolean preprocess (FormData / Switch)", () => {
+    const baseData = {
+      code: "SAVE20",
+      name: "割引クーポン",
+      type: CouponType.PERCENTAGE,
+      discountValue: 20,
+      validFrom: VALID_FROM,
+    };
+
+    test.each([
+      ["isActive", "on", true],
+      ["isActive", "", false],
+      ["isActive", true, true],
+      ["isActive", false, false],
+      ["canCombineWithDurationDiscount", "on", true],
+      ["canCombineWithDurationDiscount", "", false],
+      ["canCombineWithDurationDiscount", true, true],
+      ["canCombineWithDurationDiscount", false, false],
+    ] as const)("%s: %s → %s", (field, value, expected) => {
+      const result = couponFormSchema.safeParse({
+        ...baseData,
+        [field]: value,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data[field]).toBe(expected);
+      }
+    });
   });
 });
 

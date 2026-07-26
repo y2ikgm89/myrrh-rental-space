@@ -181,7 +181,7 @@ export async function createAdminReservationCommand(input: {
         taxAmount: finalTaxAmount,
         totalPriceWithTax: finalTotalPriceWithTax,
         priceOverriddenBy,
-        couponId: validatedCoupon?.id ?? null,
+        couponId: pricing.appliedCoupon?.id ?? null,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
         spaceDiscountAmount: pricing.spaceDiscountAmount,
@@ -203,7 +203,8 @@ export async function createAdminReservationCommand(input: {
       include: { customer: { select: CUSTOMER_SELECT } },
     });
 
-    if (validatedCoupon) {
+    const appliedCouponId = pricing.appliedCoupon?.id ?? null;
+    if (appliedCouponId) {
       // atomic claim: public-commands.ts と同型の $executeRaw で
       // `usageLimit IS NULL OR usageCount < usageLimit` を WHERE 条件で強制する。
       // 素の `update` では pre-tx validateCoupon 通過後の race で 2 admin が
@@ -212,7 +213,7 @@ export async function createAdminReservationCommand(input: {
       const claimed = await tx.$executeRaw`
         UPDATE "coupons"
         SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${validatedCoupon.id}::uuid
+        WHERE "id" = ${appliedCouponId}::uuid
           AND "isActive" = true
           AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
       `;
@@ -373,7 +374,7 @@ export async function updateAdminReservationCommand(
     holidayJudge: isJapaneseHoliday,
   });
 
-  const newCouponId = validatedCoupon?.id ?? null;
+  const newCouponId = pricing.appliedCoupon?.id ?? null;
   const oldCouponId = currentReservation.couponId;
   const couponChanged = oldCouponId !== newCouponId;
 

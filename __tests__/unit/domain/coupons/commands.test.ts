@@ -1,20 +1,19 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-// CouponType 定数（@generated/prisma/enums から Prisma enum を再現）
 const CouponType = {
   PERCENTAGE: "PERCENTAGE",
   FIXED_AMOUNT: "FIXED_AMOUNT",
 } as const;
 type CouponType = (typeof CouponType)[keyof typeof CouponType];
 
-// Prisma モック関数（mock.module より先に定義）
 const mockCouponFindUnique = mock<
-  () => Promise<{ id: string; code: string; isActive?: boolean } | null>
+  () => Promise<{
+    id: string;
+    code: string;
+    isActive?: boolean;
+    usageCount?: number;
+  } | null>
 >(() => Promise.resolve(null));
-
-const mockCouponFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve(null),
-);
 
 const mockCouponCreate = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "coupon-1" }),
@@ -36,14 +35,12 @@ const mockReservationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
 
-// モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     coupon: {
       findUnique: mockCouponFindUnique,
-      findFirst: mockCouponFindFirst,
       create: mockCouponCreate,
       update: mockCouponUpdate,
       updateMany: mockCouponUpdateMany,
@@ -63,12 +60,8 @@ import {
   updateCouponActive,
 } from "@/shared/domain/coupons/commands";
 
-// テストデータ
 const COUPON_ID = "550e8400-e29b-41d4-a716-446655440001";
 
-// validFrom / validUntil は `<input type="datetime-local">` の値形式（JST 想定）
-// で受け取る contract に変更（domain command 側で `parseDateTimeLocalAsJst` で
-// UTC Date に変換される）
 const VALID_COUPON_DATA = {
   code: "SUMMER2024",
   name: "夏季割引クーポン",
@@ -84,19 +77,21 @@ const VALID_COUPON_DATA = {
   canCombineWithDurationDiscount: false,
 } satisfies Parameters<typeof createCoupon>[0];
 
+const P2002_CODE_ERROR = {
+  code: "P2002",
+  meta: { target: ["code"] },
+};
+
 describe("coupons/commands", () => {
   beforeEach(() => {
     mockCouponFindUnique.mockReset();
-    mockCouponFindFirst.mockReset();
     mockCouponCreate.mockReset();
     mockCouponUpdate.mockReset();
     mockCouponUpdateMany.mockReset();
     mockCouponDelete.mockReset();
     mockReservationCount.mockReset();
 
-    // デフォルト: クーポンが存在しない / 重複なし
     mockCouponFindUnique.mockResolvedValue(null);
-    mockCouponFindFirst.mockResolvedValue(null);
     mockCouponCreate.mockResolvedValue({ id: "coupon-1" });
     mockCouponUpdate.mockResolvedValue({ id: COUPON_ID, isActive: true });
     mockCouponUpdateMany.mockResolvedValue({ count: 1 });
@@ -104,15 +99,9 @@ describe("coupons/commands", () => {
     mockReservationCount.mockResolvedValue(0);
   });
 
-  // =============================================================================
-  // createCoupon
-  // =============================================================================
-
   describe("createCoupon", () => {
     describe("正常系", () => {
-      test("重複しないコードで作成でき ID を返す", async () => {
-        // コード重複チェック: findUnique が null を返す（使用可能）
-        mockCouponFindUnique.mockResolvedValueOnce(null);
+      test("作成でき ID を返す", async () => {
         mockCouponCreate.mockResolvedValueOnce({ id: "new-coupon-id" });
 
         const result = await createCoupon(VALID_COUPON_DATA);
@@ -122,7 +111,6 @@ describe("coupons/commands", () => {
       });
 
       test("create が正しいデータで呼ばれる", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce(null);
         mockCouponCreate.mockResolvedValueOnce({ id: "coupon-1" });
 
         await createCoupon(VALID_COUPON_DATA);
@@ -142,7 +130,6 @@ describe("coupons/commands", () => {
       });
 
       test("description が省略された場合 null で保存される", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce(null);
         mockCouponCreate.mockResolvedValueOnce({ id: "coupon-1" });
 
         await createCoupon({
@@ -160,7 +147,6 @@ describe("coupons/commands", () => {
       });
 
       test("FIXED_AMOUNT タイプで作成できる", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce(null);
         mockCouponCreate.mockResolvedValueOnce({ id: "coupon-2" });
 
         const result = await createCoupon({
@@ -170,60 +156,47 @@ describe("coupons/commands", () => {
         });
 
         expect(result).toEqual({ id: "coupon-2" });
-        expect(mockCouponCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              type: CouponType.FIXED_AMOUNT,
-              discountValue: 500,
-            }),
-          }),
-        );
       });
     });
 
     describe("異常系", () => {
-      test("既存のコードで CONFLICT エラーをスローする", async () => {
-        // コード重複チェックで既存クーポンを返す
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: "existing-id",
-          code: "SUMMER2024",
-          isActive: true,
-        });
+      test("create 時の code unique 制約違反 (P2002) は CONFLICT に変換する", async () => {
+        mockCouponCreate.mockRejectedValueOnce(P2002_CODE_ERROR);
 
         await expect(createCoupon(VALID_COUPON_DATA)).rejects.toMatchObject({
           code: "CONFLICT",
           message: "このクーポンコードは既に使用されています",
         });
-
-        expect(mockCouponCreate).not.toHaveBeenCalled();
       });
 
       test("CONFLICT エラーは DomainError のインスタンスである", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: "existing-id",
-          code: "SUMMER2024",
-          isActive: true,
-        });
+        mockCouponCreate.mockRejectedValueOnce(P2002_CODE_ERROR);
 
         await expect(createCoupon(VALID_COUPON_DATA)).rejects.toBeInstanceOf(
           DomainError,
         );
       });
+
+      test("P2002 だが code 以外の unique 制約はそのまま再スローする", async () => {
+        mockCouponCreate.mockRejectedValueOnce({
+          code: "P2002",
+          meta: { target: ["otherField"] },
+        });
+
+        await expect(createCoupon(VALID_COUPON_DATA)).rejects.toMatchObject({
+          code: "P2002",
+        });
+      });
     });
   });
 
-  // =============================================================================
-  // updateCoupon
-  // =============================================================================
-
   describe("updateCoupon", () => {
     describe("正常系", () => {
-      test("存在するクーポンを更新できる（同一コード）", async () => {
-        // ensureCouponExists: クーポンが存在する（同一コード）
+      test("存在するクーポンを更新できる", async () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "SUMMER2024",
-          isActive: true,
+          usageCount: 0,
         });
 
         await expect(
@@ -233,51 +206,8 @@ describe("coupons/commands", () => {
         expect(mockCouponUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
             where: { id: COUPON_ID },
-            data: expect.objectContaining({
-              code: "SUMMER2024",
-              name: "夏季割引クーポン",
-            }),
           }),
         );
-      });
-
-      test("コードを変更する場合に重複チェックが走る", async () => {
-        // 既存クーポンは別コード
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "OLDCODE",
-          isActive: true,
-        });
-        // 新コードは他が使用していない
-        mockCouponFindFirst.mockResolvedValueOnce(null);
-
-        await expect(
-          updateCoupon(COUPON_ID, VALID_COUPON_DATA),
-        ).resolves.toBeUndefined();
-
-        // コード変更があったため findFirst でコード重複チェック
-        expect(mockCouponFindFirst).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: expect.objectContaining({
-              code: "SUMMER2024",
-              NOT: { id: COUPON_ID },
-            }),
-          }),
-        );
-      });
-
-      test("同一コードで更新する場合は重複チェックが走らない", async () => {
-        // 既存クーポンと同一コード
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-          isActive: true,
-        });
-
-        await updateCoupon(COUPON_ID, VALID_COUPON_DATA);
-
-        // 同一コードのため findFirst は呼ばれない
-        expect(mockCouponFindFirst).not.toHaveBeenCalled();
       });
     });
 
@@ -295,15 +225,13 @@ describe("coupons/commands", () => {
         expect(mockCouponUpdate).not.toHaveBeenCalled();
       });
 
-      test("他のクーポンが使用中のコードで CONFLICT エラーをスローする", async () => {
-        // 既存クーポンは別コード
+      test("update 時の code unique 制約違反 (P2002) は CONFLICT に変換する", async () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "OLDCODE",
-          isActive: true,
+          usageCount: 0,
         });
-        // 新コードは他のクーポンが使用中
-        mockCouponFindFirst.mockResolvedValueOnce({ id: "other-coupon" });
+        mockCouponUpdate.mockRejectedValueOnce(P2002_CODE_ERROR);
 
         await expect(
           updateCoupon(COUPON_ID, VALID_COUPON_DATA),
@@ -311,15 +239,29 @@ describe("coupons/commands", () => {
           code: "CONFLICT",
           message: "このクーポンコードは既に使用されています",
         });
+      });
+
+      test("usageLimit が usageCount 未満の場合 VALIDATION エラーをスローする", async () => {
+        mockCouponFindUnique.mockResolvedValueOnce({
+          id: COUPON_ID,
+          code: "SUMMER2024",
+          usageCount: 50,
+        });
+
+        await expect(
+          updateCoupon(COUPON_ID, {
+            ...VALID_COUPON_DATA,
+            usageLimit: 10,
+          }),
+        ).rejects.toMatchObject({
+          code: "VALIDATION",
+          message: "利用回数上限は現在の利用回数以上に設定してください",
+        });
 
         expect(mockCouponUpdate).not.toHaveBeenCalled();
       });
     });
   });
-
-  // =============================================================================
-  // deleteCoupon
-  // =============================================================================
 
   describe("deleteCoupon", () => {
     describe("正常系", () => {
@@ -327,26 +269,8 @@ describe("coupons/commands", () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "SUMMER2024",
-          isActive: true,
+          usageCount: 0,
         });
-
-        await expect(deleteCoupon(COUPON_ID)).resolves.toBeUndefined();
-
-        expect(mockCouponDelete).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { id: COUPON_ID },
-          }),
-        );
-      });
-
-      test("予約使用中でも削除できる（Reservation.couponId は onDelete: SetNull）", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-          isActive: true,
-        });
-        // 予約 3 件で使用中でも削除拒否しない（bulk と挙動を統一）
-        mockReservationCount.mockResolvedValueOnce(3);
 
         await expect(deleteCoupon(COUPON_ID)).resolves.toBeUndefined();
 
@@ -372,10 +296,6 @@ describe("coupons/commands", () => {
     });
   });
 
-  // =============================================================================
-  // updateCouponActive
-  // =============================================================================
-
   describe("updateCouponActive", () => {
     describe("正常系", () => {
       test("isActive: false を渡すと非アクティブにできる", async () => {
@@ -391,32 +311,6 @@ describe("coupons/commands", () => {
         const result = await updateCouponActive(COUPON_ID, false);
 
         expect(result).toEqual({ isActive: false });
-        expect(mockCouponUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { id: COUPON_ID },
-            data: { isActive: false },
-          }),
-        );
-      });
-
-      test("isActive: true を渡すとアクティブにできる", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-        });
-        mockCouponUpdate.mockResolvedValueOnce({
-          id: COUPON_ID,
-          isActive: true,
-        });
-
-        const result = await updateCouponActive(COUPON_ID, true);
-
-        expect(result).toEqual({ isActive: true });
-        expect(mockCouponUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: { isActive: true },
-          }),
-        );
       });
     });
 

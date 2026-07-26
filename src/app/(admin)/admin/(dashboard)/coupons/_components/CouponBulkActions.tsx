@@ -39,6 +39,11 @@ export function CouponBulkActions({
         return;
       }
 
+      if (result.count === 0) {
+        toast.error("対象のクーポンが見つかりません");
+        return;
+      }
+
       toast.success(
         result.isActive
           ? `${result.count}件のクーポンを有効化しました`
@@ -54,6 +59,12 @@ export function CouponBulkActions({
       const result = await bulkDeleteCoupons(selectedIds);
       if (isMutationError(result)) {
         toast.error(result.error);
+        setDeleteOpen(false);
+        return;
+      }
+
+      if (result.count === 0) {
+        toast.error("対象のクーポンが見つかりません");
         setDeleteOpen(false);
         return;
       }

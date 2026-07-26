@@ -3,44 +3,36 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import type { CouponFormOutput } from "@/shared/lib/validations/coupon";
 
-async function ensureCouponExists(id: string): Promise<{ code: string }> {
+async function ensureCouponExists(
+  id: string,
+): Promise<{ code: string; usageCount: number }> {
   const coupon = await prisma.coupon.findUnique({
     where: { id },
-    select: { id: true, code: true },
+    select: { id: true, code: true, usageCount: true },
   });
 
   if (!coupon) {
     throw new DomainError("クーポンが見つかりません", "NOT_FOUND");
   }
 
-  return { code: coupon.code };
+  return { code: coupon.code, usageCount: coupon.usageCount };
 }
 
-async function ensureCouponCodeAvailable(
-  code: string,
-  currentId?: string,
-): Promise<void> {
-  const existing = currentId
-    ? await prisma.coupon.findFirst({
-        where: {
-          code,
-          NOT: { id: currentId },
-        },
-        select: { id: true },
-      })
-    : await prisma.coupon.findUnique({
-        where: { code },
-        select: { id: true },
-      });
-
-  if (existing) {
+/** code の unique 制約違反 (P2002) を DomainError(CONFLICT) に変換する。
+ *
+ * 事前 findUnique チェックは TOCTOU race を防げないため使わない。
+ */
+function rethrowAsCouponCodeConflict(error: unknown): never {
+  if (isPrismaUniqueConstraintError(error, "code")) {
     throw new DomainError(
       "このクーポンコードは既に使用されています",
       "CONFLICT",
     );
   }
+  throw error;
 }
 
 /**
@@ -73,13 +65,15 @@ function toCouponData(data: CouponFormOutput) {
 export async function createCoupon(
   data: CouponFormOutput,
 ): Promise<{ id: string }> {
-  await ensureCouponCodeAvailable(data.code);
+  try {
+    const coupon = await prisma.coupon.create({
+      data: toCouponData(data),
+    });
 
-  const coupon = await prisma.coupon.create({
-    data: toCouponData(data),
-  });
-
-  return { id: coupon.id };
+    return { id: coupon.id };
+  } catch (error) {
+    rethrowAsCouponCodeConflict(error);
+  }
 }
 
 export async function updateCoupon(
@@ -88,14 +82,21 @@ export async function updateCoupon(
 ): Promise<void> {
   const coupon = await ensureCouponExists(id);
 
-  if (coupon.code !== data.code) {
-    await ensureCouponCodeAvailable(data.code, id);
+  if (data.usageLimit != null && data.usageLimit < coupon.usageCount) {
+    throw new DomainError(
+      "利用回数上限は現在の利用回数以上に設定してください",
+      "VALIDATION",
+    );
   }
 
-  await prisma.coupon.update({
-    where: { id },
-    data: toCouponData(data),
-  });
+  try {
+    await prisma.coupon.update({
+      where: { id },
+      data: toCouponData(data),
+    });
+  } catch (error) {
+    rethrowAsCouponCodeConflict(error);
+  }
 }
 
 /**

@@ -180,7 +180,6 @@ export async function createPublicReservationCommand(
     input.couponCode,
     rateBreakdownForCoupon.totalBasePrice,
   );
-  const couponId = validatedCoupon?.id ?? null;
 
   const pricing = calculateReservationPricing({
     startDateTime,
@@ -197,6 +196,8 @@ export async function createPublicReservationCommand(
     coupon: validatedCoupon,
     holidayJudge: isJapaneseHoliday,
   });
+
+  const couponId = pricing.appliedCoupon?.id ?? null;
 
   const reservation = await prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);

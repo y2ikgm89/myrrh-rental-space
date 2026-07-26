@@ -70,6 +70,9 @@ export async function createRecurringReservationAction(
         spaceId: data.spaceId,
         startDateTime: dtstart,
         endDateTime: endTime,
+        ...(data.couponCode && data.couponCode !== ""
+          ? { couponCode: data.couponCode }
+          : {}),
       },
       { requirePublished: false },
     );
@@ -102,6 +105,7 @@ export async function createRecurringReservationAction(
         const series = await createReservationSeriesCommand({
           spaceId: data.spaceId,
           customerId: data.customerId,
+          couponId: preview.appliedCoupon?.id ?? null,
           rrule,
           dtstart,
           duration,

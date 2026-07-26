@@ -141,6 +141,7 @@ export function RecurringReservationForm({
   const [date, setDate] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
+  const [couponCode, setCouponCode] = useState<string>("");
   const [recurrence, setRecurrence] =
     useState<RecurrenceState>(INITIAL_RECURRENCE);
 
@@ -180,6 +181,7 @@ export function RecurringReservationForm({
         value={String(recurrence.count)}
       />
       <input type="hidden" name={fields.until.name} value={recurrence.until} />
+      <input type="hidden" name={fields.couponCode.name} value={couponCode} />
 
       {form.errors && form.errors.length > 0 && (
         <div
@@ -256,6 +258,32 @@ export function RecurringReservationForm({
                   className="text-sm text-destructive"
                 >
                   {fields.date.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={fields.couponCode.id}>クーポンコード</Label>
+              <Input
+                id={fields.couponCode.id}
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                disabled={isPending}
+                placeholder="任意"
+                aria-invalid={fields.couponCode.errors ? true : undefined}
+                aria-describedby={
+                  fields.couponCode.errors
+                    ? fields.couponCode.errorId
+                    : undefined
+                }
+              />
+              {fields.couponCode.errors && (
+                <p
+                  id={fields.couponCode.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.couponCode.errors.join(", ")}
                 </p>
               )}
             </div>

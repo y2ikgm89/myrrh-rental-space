@@ -47,16 +47,26 @@ const mockGetStripeClient = mock<
 );
 const mockLogError = mock(() => undefined);
 
+const txClient = {
+  reservation: {
+    updateMany: mockReservationUpdateMany,
+  },
+  coupon: {
+    updateMany: mockCouponUpdateMany,
+  },
+};
+
+const mockTransaction = mock<
+  (fn: (tx: typeof txClient) => Promise<unknown>) => Promise<unknown>
+>((fn) => fn(txClient));
+
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {
       findMany: mockReservationFindMany,
-      updateMany: mockReservationUpdateMany,
     },
-    coupon: {
-      updateMany: mockCouponUpdateMany,
-    },
+    $transaction: mockTransaction,
   },
 }));
 mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
@@ -92,6 +102,8 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockSessionsExpire.mockReset();
     mockGetStripeClient.mockReset();
     mockLogError.mockReset();
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((fn) => fn(txClient));
 
     mockReservationFindMany.mockResolvedValue([]);
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
@@ -123,36 +135,36 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     );
   });
 
-  test("空の候補セットなら early return: updateMany / side effects とも未呼出", async () => {
+  test("空の候補セットなら early return: transaction / side effects とも未呼出", async () => {
     mockReservationFindMany.mockResolvedValueOnce([]);
     const result = await expireStalePendingReservationsCommand();
 
     expect(result.total).toBe(0);
     expect(result.expired).toEqual([]);
-    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
     expect(mockApplyCancellationSideEffects).not.toHaveBeenCalled();
   });
 
-  test("claim data: status=CANCELLED + cancelledByType=SYSTEM + icsSequence increment", async () => {
-    mockReservationFindMany
-      .mockResolvedValueOnce([
-        {
-          id: "res-1",
-          customerId: "cust-1",
-          spaceId: "space-1",
-          paymentInitiatedAt: new Date(0),
-          couponId: null,
-          stripeCheckoutSessionId: null,
-        },
-      ])
-      .mockResolvedValueOnce([]); // settled findMany
+  test("claim tx: status=CANCELLED + cancelledByType=SYSTEM + icsSequence increment", async () => {
+    mockReservationFindMany.mockResolvedValueOnce([
+      {
+        id: "res-1",
+        customerId: "cust-1",
+        spaceId: "space-1",
+        paymentInitiatedAt: new Date(0),
+        couponId: null,
+        stripeCheckoutSessionId: null,
+      },
+    ]);
     mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
     await expireStalePendingReservationsCommand();
 
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
     expect(mockReservationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          id: "res-1",
           status: {
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           },
@@ -168,28 +180,25 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     );
   });
 
-  test("claim 成功後: coupon decrement + session expire + system side effects", async () => {
+  test("claim 成功後: coupon decrement は claim と同一 tx、session expire + side effects は tx 外", async () => {
     const now = Date.now();
     const paymentInitiatedAt = new Date(now - 90 * 60 * 1000);
-    mockReservationFindMany
-      .mockResolvedValueOnce([
-        {
-          id: "res-1",
-          customerId: "cust-1",
-          spaceId: "space-1",
-          paymentInitiatedAt,
-          couponId: "coupon-1",
-          stripeCheckoutSessionId: "cs_test_1",
-        },
-      ])
-      .mockResolvedValueOnce([
-        { id: "res-1", customerId: "cust-1", spaceId: "space-1" },
-      ]);
+    mockReservationFindMany.mockResolvedValueOnce([
+      {
+        id: "res-1",
+        customerId: "cust-1",
+        spaceId: "space-1",
+        paymentInitiatedAt,
+        couponId: "coupon-1",
+        stripeCheckoutSessionId: "cs_test_1",
+      },
+    ]);
     mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
     const result = await expireStalePendingReservationsCommand();
 
     expect(result.total).toBe(1);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
     expect(mockCouponUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "coupon-1", usageCount: { gt: 0 } },
@@ -210,20 +219,16 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
   test("ageMinutes は paymentInitiatedAt から計算される (createdAt ではない)", async () => {
     const now = Date.now();
     const paymentInitiatedAt = new Date(now - 90 * 60 * 1000);
-    mockReservationFindMany
-      .mockResolvedValueOnce([
-        {
-          id: "res-1",
-          customerId: "cust-1",
-          spaceId: "space-1",
-          paymentInitiatedAt,
-          couponId: null,
-          stripeCheckoutSessionId: null,
-        },
-      ])
-      .mockResolvedValueOnce([
-        { id: "res-1", customerId: "cust-1", spaceId: "space-1" },
-      ]);
+    mockReservationFindMany.mockResolvedValueOnce([
+      {
+        id: "res-1",
+        customerId: "cust-1",
+        spaceId: "space-1",
+        paymentInitiatedAt,
+        couponId: null,
+        stripeCheckoutSessionId: null,
+      },
+    ]);
     mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
     const result = await expireStalePendingReservationsCommand();

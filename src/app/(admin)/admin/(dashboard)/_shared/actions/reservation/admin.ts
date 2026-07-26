@@ -497,6 +497,7 @@ const previewPricingSchema = z.object({
   spaceId: z.uuid(),
   startDateTime: z.iso.datetime(),
   endDateTime: z.iso.datetime(),
+  couponCode: z.string().max(20).optional(),
 });
 
 /**
@@ -515,11 +516,13 @@ export async function previewReservationPricingAction(
   spaceId: string,
   startDateTime: string,
   endDateTime: string,
+  couponCode?: string | null,
 ): Promise<ReservationPricingResult | null> {
   const parsed = previewPricingSchema.safeParse({
     spaceId,
     startDateTime,
     endDateTime,
+    ...(couponCode ? { couponCode } : {}),
   });
   if (!parsed.success) return null;
 
@@ -536,6 +539,7 @@ export async function previewReservationPricingAction(
       spaceId: parsed.data.spaceId,
       startDateTime: new Date(parsed.data.startDateTime),
       endDateTime: new Date(parsed.data.endDateTime),
+      ...(parsed.data.couponCode ? { couponCode: parsed.data.couponCode } : {}),
     },
     { requirePublished: false },
   );

@@ -304,14 +304,15 @@ const pricingPreviewSchema = z.object({
   spaceId: z.uuid(),
   startDateTime: z.iso.datetime(),
   endDateTime: z.iso.datetime(),
+  couponCode: z.string().max(20).optional(),
 });
 
 /**
  * 公開予約フォームの料金プレビュー。rate plan・スペース固有割引・長時間割引・税額の
  * 確定値は `calculateReservationPricing`（Task 7 SSoT）だけが知っている。client
  * component は Prisma に触れられないため、日時とスペース ID を渡すだけの Server
- * Action として公開する。`createPublicReservationCommand` と同じ方針で、クーポンは
- * 未検証のままプレビューに含めない（適用可否は送信時にサーバー側で確定する）。
+ * Action として公開する。無効なクーポンコードはプレビューから除外し、適用可否は
+ * 送信時にサーバー側で確定する。
  *
  * 無効な入力・レート制限超過・対象スペースなしはすべて `null` を返す
  * （フォーム側は「まだ計算できない」として扱えばよく、専用のエラー UI は持たない）。
@@ -320,6 +321,7 @@ export async function fetchReservationPricingPreview(
   spaceId: string,
   startDateTime: string,
   endDateTime: string,
+  couponCode?: string | null,
 ): Promise<ReservationPricingResult | null> {
   const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
   if (!rateLimit.success) return null;
@@ -328,6 +330,7 @@ export async function fetchReservationPricingPreview(
     spaceId,
     startDateTime,
     endDateTime,
+    ...(couponCode ? { couponCode } : {}),
   });
   if (!parsed.success) return null;
 
@@ -336,6 +339,7 @@ export async function fetchReservationPricingPreview(
       spaceId: parsed.data.spaceId,
       startDateTime: new Date(parsed.data.startDateTime),
       endDateTime: new Date(parsed.data.endDateTime),
+      ...(parsed.data.couponCode ? { couponCode: parsed.data.couponCode } : {}),
     },
     { requirePublished: true },
   );
