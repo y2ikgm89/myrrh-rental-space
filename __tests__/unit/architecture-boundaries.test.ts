@@ -3122,7 +3122,7 @@ describe("architecture boundaries", () => {
       );
     });
 
-    test("public-queries は meetingUrl/meetingProvider を公開 select に載せない", () => {
+    test("public-queries は meetingUrl/meetingProvider を公開 select/map に載せない", () => {
       const content = readFileSync(
         join(ROOT, "src/shared/domain/events/public-queries.ts"),
         "utf8",
@@ -3135,6 +3135,10 @@ describe("architecture boundaries", () => {
         content,
         "公開キャッシュ DTO に meetingProvider を select しない",
       ).not.toMatch(/meetingProvider:\s*true/);
+      expect(
+        content,
+        "公開 map で meetingUrl を再付与しない（'use cache' 経由で漏れる）",
+      ).not.toMatch(/meetingUrl\s*[:=]/);
     });
   });
 
