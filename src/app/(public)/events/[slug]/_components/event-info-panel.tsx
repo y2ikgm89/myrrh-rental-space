@@ -54,7 +54,11 @@ interface EventInfoPanelProps {
   readonly registration: PublicEventRegistrationState;
   /** Anchor ID rendered on the registration form section (e.g. "event-register"). */
   readonly registerAnchorId: string;
+  /** false のとき受付 badge / 残席 / CTA を出さない（CDN シェル fallback 用）。 */
+  readonly showInventory?: boolean;
 }
+
+export type { EventInfoPanelProps };
 
 /**
  * EventInfoPanel — イベント詳細ページの情報サマリー + CTA パネル
@@ -85,6 +89,7 @@ export function EventInfoPanel({
   tickets,
   registration,
   registerAnchorId,
+  showInventory = true,
 }: EventInfoPanelProps): ReactElement {
   const isSidebar = variant === "sidebar";
   const showSlotSelector = shouldExposePublicEventSlotSelector({
@@ -101,7 +106,9 @@ export function EventInfoPanel({
         — Event —
       </p>
       <div className="px-8 pb-5 pt-4 sm:px-10">
-        <RegistrationBadgeRow registration={registration} />
+        {showInventory ? (
+          <RegistrationBadgeRow registration={registration} />
+        ) : null}
       </div>
       {tickets.length > 0 ? (
         <div className="px-8 pb-5 sm:px-10">
@@ -120,7 +127,7 @@ export function EventInfoPanel({
           label={showSlotSelector ? "開催枠" : "開催日時"}
         >
           {slots.length > 0 ? (
-            <SlotSummaryList slots={slots} />
+            <SlotSummaryList slots={slots} showInventory={showInventory} />
           ) : (
             <span className="flex flex-col gap-0.5">
               <span>{formatEventDate(startTime)}</span>
@@ -151,8 +158,9 @@ export function EventInfoPanel({
           </DetailRow>
         ) : null}
       </dl>
-      {registration.kind === "open" ||
-      registration.kind === "waitlist-available" ? (
+      {showInventory &&
+      (registration.kind === "open" ||
+        registration.kind === "waitlist-available") ? (
         <div className="px-8 pb-7 sm:px-10">
           <Link
             href={`#${registerAnchorId}`}
@@ -306,8 +314,10 @@ function DetailRow({
 
 function SlotSummaryList({
   slots,
+  showInventory,
 }: {
   readonly slots: readonly PublicEventSlotOption[];
+  readonly showInventory: boolean;
 }): ReactElement {
   return (
     <ul className="space-y-3">
@@ -324,7 +334,7 @@ function SlotSummaryList({
                 {slot.capacity} 名
               </span>
             </span>
-            <SlotStatusText slot={slot} />
+            {showInventory ? <SlotStatusText slot={slot} /> : null}
           </span>
         </li>
       ))}
