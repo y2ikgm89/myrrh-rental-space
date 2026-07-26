@@ -302,6 +302,43 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
 }
 
 /**
+ * revoke / clear / cleanup 専用の SwitchBot 資格情報復号。
+ *
+ * `getDecryptedSwitchBotCredentials` は createKey（issue）経路用で
+ * `switchbotEnabled=true` を要求する。連携 OFF 後も物理 key の deleteKey には
+ * 暗号化済み資格情報が必要なため、本関数は `switchbotEnabled` を見ず、
+ * 暗号文が残っていれば復号する。issue / webhook createKey 確定には使わないこと。
+ */
+export async function getDecryptedSwitchBotCredentialsForRevocation(): Promise<{
+  openToken: string;
+  secretKey: string;
+} | null> {
+  const settings = await prisma.settingsSwitchbot.findUnique({
+    where: { id: "singleton" },
+    select: {
+      switchbotOpenToken: true,
+      switchbotSecretKey: true,
+    },
+  });
+
+  if (!settings?.switchbotOpenToken || !settings.switchbotSecretKey) {
+    return null;
+  }
+
+  const openToken = safeDecryptToString(settings.switchbotOpenToken, {
+    expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
+  });
+  const secretKey = safeDecryptToString(settings.switchbotSecretKey, {
+    expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
+  });
+  if (!openToken || !secretKey) {
+    return null;
+  }
+
+  return { openToken, secretKey };
+}
+
+/**
  * Webhook URL難読化用トークンと連携の有効状態を返す（webhook route の認可用）。
  * `switchbotEnabled: false` の間は、正しいトークンでも常に無効として扱う
  * （設定画面のトグルOFFがwebhook経路も含めた実効的なkill switchになるように）。

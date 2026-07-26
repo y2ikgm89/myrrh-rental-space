@@ -424,15 +424,21 @@ export async function issueSmartLockPasscodes(
       }
       if (existing.status === SmartLockPasscodeStatus.REVOKE_PENDING) {
         // deleteKey 受理後の失効待ち。reissue path は edit-side-effects が
-        // createKey 前に行を DELETE するが、ここに到達 = 新 key 未発行。
+        // createKey 前に revoke 完了を待つが、ここに到達 = 新 key 未発行。
         // silent no-op (issuanceFailed:false) は禁止 — fallback を出す。
         return { passcodes: [], issuanceFailed: true };
       }
-      // PENDING = createKey 進行中。FAILED = 前回失敗確定。
-      return {
-        passcodes: [],
-        issuanceFailed: existing.status === SmartLockPasscodeStatus.FAILED,
-      };
+      if (existing.status === SmartLockPasscodeStatus.FAILED) {
+        await prisma.smartLockPasscode.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        // PENDING = createKey 進行中。
+        return {
+          passcodes: [],
+          issuanceFailed: false,
+        };
+      }
     }
 
     const issued = await issueForDevice(

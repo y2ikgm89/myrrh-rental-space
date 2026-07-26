@@ -18,6 +18,10 @@ const mockSettingsSwitchbotUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 
+const mockCountPasscodes = mock<(...args: unknown[]) => Promise<number>>(() =>
+  Promise.resolve(0),
+);
+
 const mockFindManyPasscodes = mock<
   (...args: unknown[]) => Promise<
     {
@@ -29,13 +33,17 @@ const mockFindManyPasscodes = mock<
   >
 >(() => Promise.resolve([]));
 
-const mockGetDecryptedSwitchBotCredentials = mock<
-  () => Promise<{
-    openToken: string;
-    secretKey: string;
-    passcodeBufferMinutes: number;
-  } | null>
+const mockGetDecryptedSwitchBotCredentialsForRevocation = mock<
+  () => Promise<{ openToken: string; secretKey: string } | null>
 >(() => Promise.resolve(null));
+
+const mockAwaitDeviceRevokeConfirmation = mock<
+  (...args: unknown[]) => Promise<boolean>
+>(() => Promise.resolve(true));
+
+const mockRecoverPendingPasscodeViaDeviceList = mock<
+  (...args: unknown[]) => Promise<boolean>
+>(() => Promise.resolve(true));
 
 const mockRevokeOne = mock<(...args: unknown[]) => Promise<boolean>>(() =>
   Promise.resolve(true),
@@ -70,6 +78,7 @@ mock.module("@/shared/db/prisma", () => ({
     settingsSwitchbot: { upsert: mockSettingsSwitchbotUpsert },
     smartLockPasscode: {
       findMany: (...args: unknown[]) => mockFindManyPasscodes(...args),
+      count: (...args: unknown[]) => mockCountPasscodes(...args),
     },
   },
 }));
@@ -80,11 +89,19 @@ mock.module("@/shared/lib/crypto", () => ({
 }));
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getDecryptedSwitchBotCredentials: () =>
-    mockGetDecryptedSwitchBotCredentials(),
+    mockGetDecryptedSwitchBotCredentialsForRevocation().then((c) =>
+      c ? { ...c, passcodeBufferMinutes: 15 } : null,
+    ),
+  getDecryptedSwitchBotCredentialsForRevocation: () =>
+    mockGetDecryptedSwitchBotCredentialsForRevocation(),
   getSwitchBotWebhookAuth: () => mockGetSwitchBotWebhookAuth(),
 }));
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeOne: (...args: unknown[]) => mockRevokeOne(...args),
+  recoverPendingPasscodeViaDeviceList: (...args: unknown[]) =>
+    mockRecoverPendingPasscodeViaDeviceList(...args),
+  awaitDeviceRevokeConfirmation: (...args: unknown[]) =>
+    mockAwaitDeviceRevokeConfirmation(...args),
 }));
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
@@ -125,16 +142,25 @@ beforeEach(() => {
   mockSettingsTurnstileUpsert.mockClear();
   mockSettingsSwitchbotUpsert.mockClear();
   mockFindManyPasscodes.mockReset();
-  mockGetDecryptedSwitchBotCredentials.mockReset();
+  mockCountPasscodes.mockReset();
+  mockGetDecryptedSwitchBotCredentialsForRevocation.mockReset();
   mockRevokeOne.mockReset();
+  mockRecoverPendingPasscodeViaDeviceList.mockReset();
+  mockAwaitDeviceRevokeConfirmation.mockReset();
   mockGetSwitchBotWebhookAuth.mockReset();
   mockDeleteWebhook.mockReset();
   mockSetupWebhook.mockReset();
   mockLogError.mockReset();
 
   mockFindManyPasscodes.mockResolvedValue([]);
-  mockGetDecryptedSwitchBotCredentials.mockResolvedValue(CREDENTIALS);
+  mockCountPasscodes.mockResolvedValue(0);
+  mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue({
+    openToken: "token",
+    secretKey: "secret",
+  });
   mockRevokeOne.mockResolvedValue(true);
+  mockRecoverPendingPasscodeViaDeviceList.mockResolvedValue(true);
+  mockAwaitDeviceRevokeConfirmation.mockResolvedValue(true);
   mockGetSwitchBotWebhookAuth.mockResolvedValue({
     enabled: true,
     pathToken: "path-token-123",
@@ -187,7 +213,7 @@ describe("clearSwitchBotSettings", () => {
     expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
     expect(mockRevokeOne).not.toHaveBeenCalled();
     expect(mockDeleteWebhook).toHaveBeenCalledWith(
-      CREDENTIALS,
+      { openToken: "token", secretKey: "secret" },
       "https://example.com/api/webhooks/switchbot/path-token-123",
     );
   });
@@ -219,7 +245,7 @@ describe("clearSwitchBotSettings", () => {
   });
 
   test("資格情報が既に復号できない場合はチェックをスキップしてクリアを許可する", async () => {
-    mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue(null);
 
     await clearSwitchBotSettings();
 
@@ -229,26 +255,32 @@ describe("clearSwitchBotSettings", () => {
     expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
-  test("PENDINGのパスコードが残っている場合はクリアできない", async () => {
+  test("PENDINGのパスコードはDevice List回収を試み、未解決ならクリアできない", async () => {
     mockFindManyPasscodes.mockResolvedValue([
       {
         id: "p1",
+        reservationId: "res-1",
+        deviceId: "dev-1",
         status: "PENDING",
         switchbotKeyId: null,
         device: { deviceId: "AA:BB" },
       },
     ]);
+    mockRecoverPendingPasscodeViaDeviceList.mockResolvedValue(false);
+    mockCountPasscodes.mockResolvedValue(1);
 
     await expect(clearSwitchBotSettings()).rejects.toThrow(
       "発行処理中のパスコードが残っているため連携をクリアできません",
     );
-    expect(mockRevokeOne).not.toHaveBeenCalled();
+    expect(mockRecoverPendingPasscodeViaDeviceList).toHaveBeenCalled();
   });
 
   test("CONFIRMEDのパスコードは失効させてからクリアする", async () => {
     mockFindManyPasscodes.mockResolvedValue([
       {
         id: "p1",
+        reservationId: "res-1",
+        deviceId: "dev-1",
         status: "CONFIRMED",
         switchbotKeyId: "key-1",
         device: { deviceId: "AA:BB" },
@@ -259,7 +291,7 @@ describe("clearSwitchBotSettings", () => {
     await clearSwitchBotSettings();
 
     expect(mockRevokeOne).toHaveBeenCalledWith(
-      CREDENTIALS,
+      { openToken: "token", secretKey: "secret" },
       expect.objectContaining({
         id: "p1",
         switchbotKeyId: "key-1",
@@ -274,6 +306,8 @@ describe("clearSwitchBotSettings", () => {
     mockFindManyPasscodes.mockResolvedValue([
       {
         id: "p1",
+        reservationId: "res-1",
+        deviceId: "dev-1",
         status: "CONFIRMED",
         switchbotKeyId: "key-1",
         device: { deviceId: "AA:BB" },
@@ -289,7 +323,7 @@ describe("clearSwitchBotSettings", () => {
 
 describe("rotateSwitchBotWebhookPathToken", () => {
   test("資格情報が無い場合はローテーションできない", async () => {
-    mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue(null);
 
     await expect(rotateSwitchBotWebhookPathToken()).rejects.toThrow(
       "SwitchBot連携が未設定です",
