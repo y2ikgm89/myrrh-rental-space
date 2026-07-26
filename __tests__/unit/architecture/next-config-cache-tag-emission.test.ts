@@ -101,6 +101,11 @@ describe("next.config Cache-Tag emission contract", () => {
     }
   });
 
+  test("PRIVATE_NO_TAG_PREFIXES includes guest token PII paths /receipts and /claim", () => {
+    expect(PRIVATE_NO_TAG_PREFIXES).toContain("/receipts");
+    expect(PRIVATE_NO_TAG_PREFIXES).toContain("/claim");
+  });
+
   test("private blocklist sources NEVER emit Cache-Tag", async () => {
     const headers = await getHeaders();
     for (const prefix of PRIVATE_NO_TAG_PREFIXES) {
