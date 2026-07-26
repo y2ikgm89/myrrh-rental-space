@@ -31,7 +31,7 @@ import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import type { RateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
-import { ensureNoOverlap } from "./payloads";
+import { claimCouponUsage, ensureNoOverlap } from "./payloads";
 import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import {
   applyBulkCancellationSideEffects,
@@ -214,25 +214,14 @@ export async function createReservationSeriesCommand(
       }));
     }
 
-    // coupon usage increment（series 全体で 1 usage、既存単発予約と同じ pattern）。
-    // atomic claim: public-commands.ts と同型の $executeRaw で
-    // `usageLimit IS NULL OR usageCount < usageLimit` を WHERE 条件で強制する。
-    // 素の `updateMany` では pre-tx validateCoupon 通過後の race で usageLimit
-    // 超過を許すため、business-domain rule の「updateMany の WHERE で claim」パターンで統一。
+    // coupon usage increment（series 全体で 1 usage）。validity / min amount /
+    // usageLimit を同一 UPDATE WHERE で強制する。
     if (input.couponId) {
-      const claimed = await tx.$executeRaw`
-        UPDATE "coupons"
-        SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${input.couponId}::uuid
-          AND "isActive" = true
-          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      `;
-      if (claimed === 0) {
-        throw new DomainError(
-          "クーポンが利用できません（利用上限に達した可能性があります）",
-          "CONFLICT",
-        );
-      }
+      await claimCouponUsage(tx, {
+        couponId: input.couponId,
+        basePrice: input.templateData.basePrice,
+        now: input.now,
+      });
     }
 
     const series = await tx.reservationSeries.create({

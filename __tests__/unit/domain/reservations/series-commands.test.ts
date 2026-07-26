@@ -307,7 +307,7 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(String(seriesLockCall?.[1])).not.toContain(":");
   });
 
-  test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit ガード)", async () => {
+  test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit + validity)", async () => {
     await createReservationSeriesCommand(
       baseCreateInput({ couponId: "coupon-1" }),
     );
@@ -319,6 +319,9 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(couponSql).toContain("usageCount");
     expect(couponSql).toContain("usageLimit");
     expect(couponSql).toContain("isActive");
+    expect(couponSql).toContain("validFrom");
+    expect(couponSql).toContain("validUntil");
+    expect(couponSql).toContain("minReservationAmount");
     // updateMany 経路には呼ばれない ($executeRaw に統一済)
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });

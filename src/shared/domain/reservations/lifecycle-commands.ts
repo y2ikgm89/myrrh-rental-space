@@ -9,7 +9,7 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { validateStatusTransition } from "./status";
-import { CUSTOMER_SELECT, buildPayload } from "./payloads";
+import { CUSTOMER_SELECT, buildPayload, claimCouponUsage } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
@@ -267,19 +267,12 @@ export async function restoreReservationStatusCommand(
 
     // キャンセル時に decrement した usageCount を、非終端へ戻すときに再 claim。
     if (wasCancelled && reservation.couponId !== null) {
-      const claimed = await tx.$executeRaw`
-        UPDATE "coupons"
-        SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${reservation.couponId}::uuid
-          AND "isActive" = true
-          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      `;
-      if (claimed === 0) {
-        throw new DomainError(
-          "クーポンが利用できません（利用上限に達した可能性があります）。復元を中止しました。",
-          "CONFLICT",
-        );
-      }
+      await claimCouponUsage(tx, {
+        couponId: reservation.couponId,
+        basePrice: Number(reservation.basePrice),
+        conflictMessage:
+          "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）。復元を中止しました。",
+      });
     }
 
     return tx.reservation.findUniqueOrThrow({
@@ -410,6 +403,7 @@ export async function restoreReservationCommand(id: string) {
       deletedAt: true,
       couponId: true,
       customerId: true,
+      basePrice: true,
     },
   });
 
@@ -478,23 +472,12 @@ export async function restoreReservationCommand(id: string) {
     });
 
     if (isActiveReservation && reservation.couponId) {
-      // atomic claim: createAdminReservationCommand / updateAdminReservationCommand と
-      // 同型の $executeRaw で usageLimit cap を強制する。素の increment だと、
-      // 削除中に別経路で usageLimit まで消費された coupon を復元時に silently
-      // over-limit に押し上げる (Round-3 audit Finding #10 / medium)。
-      const claimed = await tx.$executeRaw`
-        UPDATE "coupons"
-        SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${reservation.couponId}::uuid
-          AND "isActive" = true
-          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      `;
-      if (claimed === 0) {
-        throw new DomainError(
-          "クーポンが利用できません（無効化されたか、利用上限に達した可能性があります）",
-          "CONFLICT",
-        );
-      }
+      await claimCouponUsage(tx, {
+        couponId: reservation.couponId,
+        basePrice: Number(reservation.basePrice),
+        conflictMessage:
+          "クーポンが利用できません（無効化されたか、利用上限・有効期限・最低利用額を満たさない可能性があります）",
+      });
     }
   });
 
