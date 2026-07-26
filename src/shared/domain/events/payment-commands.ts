@@ -13,6 +13,7 @@ import {
 } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import {
@@ -64,7 +65,9 @@ const EVENT_REFUND_LOCK_NAMESPACE = 728356;
  * - claim-first (Stripe API 呼出の前に UNPAID → PENDING を atomic に確定)
  * - claim 直後に authoritative な ticket.price / 顧客情報を再読み込み
  * - Stripe 失敗時は PENDING → UNPAID revert
- * - session settle は WHERE notIn [PAID, REFUNDED] + PENDING 再 assert
+ * - session settle は WHERE notIn [PAID, PARTIALLY_REFUNDED, REFUNDED] + PENDING 再 assert
+ * - settle count=0 (異常に速い webhook / manual refund) は session expire + CONFLICT
+ * - create/write 失敗時は orphan session を best-effort expire して UNPAID revert
  *
  * `actorCustomerId`:
  * - `null` = admin 経路 (本人性検証 bypass)
@@ -214,6 +217,8 @@ export async function createEventCheckoutSessionCommand(input: {
   const authoritativeTotal =
     authoritative.ticket.price * authoritative.quantity;
 
+  let createdSessionId: string | null = null;
+
   try {
     const session = await client.checkout.sessions.create({
       mode: "payment",
@@ -248,12 +253,17 @@ export async function createEventCheckoutSessionCommand(input: {
       success_url: `${appUrl}/events/registrations/payment-result?payment=success&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
       cancel_url: `${appUrl}/events/registrations/payment-result?payment=cancelled&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
     });
+    createdSessionId = session.id;
 
     const settled = await prisma.eventRegistration.updateMany({
       where: {
         id: registrationId,
         paymentStatus: {
-          notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+          notIn: [
+            PaymentStatus.PAID,
+            PaymentStatus.PARTIALLY_REFUNDED,
+            PaymentStatus.REFUNDED,
+          ],
         },
       },
       data: {
@@ -263,20 +273,36 @@ export async function createEventCheckoutSessionCommand(input: {
       },
     });
     if (settled.count === 0) {
-      // PAID/REFUNDED race — session URL は返す (webhook 冪等性に委任)
+      // PAID / PARTIALLY_REFUNDED / REFUNDED が claim 後に確定。orphan session を
+      // best-effort expire し session URL は返さない (二重決済・会計 mismatch 防止)。
       logError(
         new Error(
-          "createEventCheckoutSessionCommand: session settled skipped (already PAID/REFUNDED)",
+          "createEventCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
         ),
         {
           category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.MEDIUM,
+          severity: ErrorSeverity.HIGH,
           context: {
             operation: "createEventCheckoutSession",
             registrationId,
+            sessionId: session.id,
           },
         },
       );
+      try {
+        await client.checkout.sessions.expire(session.id);
+      } catch (expireError) {
+        logError(normalizeError(expireError), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "createEventCheckoutSessionExpire",
+            registrationId,
+            sessionId: session.id,
+          },
+        });
+      }
+      throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
     return {
@@ -285,7 +311,15 @@ export async function createEventCheckoutSessionCommand(input: {
       customerId: registration.customerId,
     };
   } catch (error) {
-    // Stripe 失敗時は PENDING → UNPAID revert (再試行可能に戻す)
+    if (error instanceof DomainError) {
+      throw error;
+    }
+    if (createdSessionId) {
+      await expireOpenCheckoutSessionBestEffort({
+        sessionId: createdSessionId,
+        context: { registrationId },
+      });
+    }
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
@@ -477,6 +511,8 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
   const authoritativeTotal =
     authoritative.ticket.price * authoritative.quantity;
 
+  let createdSessionId: string | null = null;
+
   try {
     // Codex review Critical #1: Stripe Checkout Session の有効期限を offer 自身の
     // expiresAt（24h 期限）に揃える。Reservation 側 createCheckoutSessionCommand の
@@ -517,12 +553,17 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
       success_url: `${appUrl}/events/waitlist/confirm?token=${offerToken}`,
       cancel_url: `${appUrl}/events/${authoritative.event.slug}`,
     });
+    createdSessionId = session.id;
 
     const settled = await prisma.eventRegistration.updateMany({
       where: {
         id: registrationId,
         paymentStatus: {
-          notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+          notIn: [
+            PaymentStatus.PAID,
+            PaymentStatus.PARTIALLY_REFUNDED,
+            PaymentStatus.REFUNDED,
+          ],
         },
       },
       data: {
@@ -532,20 +573,34 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
       },
     });
     if (settled.count === 0) {
-      // PAID/REFUNDED race — session URL は返す (webhook 冪等性に委任)
       logError(
         new Error(
-          "createWaitlistOfferCheckoutSessionCommand: session settled skipped (already PAID/REFUNDED)",
+          "createWaitlistOfferCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
         ),
         {
           category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.MEDIUM,
+          severity: ErrorSeverity.HIGH,
           context: {
             operation: "createWaitlistOfferCheckoutSession",
             registrationId,
+            sessionId: session.id,
           },
         },
       );
+      try {
+        await client.checkout.sessions.expire(session.id);
+      } catch (expireError) {
+        logError(normalizeError(expireError), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "createWaitlistOfferCheckoutSessionExpire",
+            registrationId,
+            sessionId: session.id,
+          },
+        });
+      }
+      throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
     if (!session.url) {
@@ -558,7 +613,15 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
 
     return { url: session.url, sessionId: session.id };
   } catch (error) {
-    // Stripe 失敗時は PENDING → UNPAID revert (再試行可能に戻す)
+    if (error instanceof DomainError) {
+      throw error;
+    }
+    if (createdSessionId) {
+      await expireOpenCheckoutSessionBestEffort({
+        sessionId: createdSessionId,
+        context: { registrationId },
+      });
+    }
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
