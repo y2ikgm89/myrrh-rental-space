@@ -487,6 +487,7 @@ describe("architecture boundaries", () => {
     expect(source).not.toMatch(/shared\/domain\/.*\/commands/u);
   });
 
+  // shared 全体の fs traverse + regex。pre-push 並列負荷下で 5s default を超え得るため 30s。
   test("src/shared/ は @/admin・@/public を import しない（依存方向の保護）", () => {
     // shared は admin / public の双方から参照される下層。逆 import は
     // 依存方向の逆転（特に値 import は実行時依存）になり shared の再利用性を
@@ -497,7 +498,7 @@ describe("architecture boundaries", () => {
     );
 
     expect(offenders).toEqual([]);
-  });
+  }, 30000);
 
   test("shared/domain は bare な Date.toLocale* を使わず date-format SSoT を経由する", () => {
     // Cloud Run のプロセス TZ は UTC。timeZone 指定なしの toLocale*String は JST 想定の

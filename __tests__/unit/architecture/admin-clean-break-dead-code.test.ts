@@ -170,6 +170,7 @@ describe("admin clean-break dead code boundaries", () => {
     }
   });
 
+  // admin app 全体の fs traverse + regex。pre-push 負荷下で 5s default を超え得るため 30s。
   test("media picker callers declare accept explicitly instead of relying on image compatibility defaults", () => {
     const hookSource = read(
       "src/app/(admin)/admin/(dashboard)/_shared/hooks/use-media-picker.tsx",
@@ -221,7 +222,7 @@ describe("admin clean-break dead code boundaries", () => {
 
     expect(offenders).toEqual([]);
     expect(dialogOffenders).toEqual([]);
-  });
+  }, 30000);
 
   test("admin Input does not keep direct-return compatibility path for inputs without adornments", () => {
     const source = read(
