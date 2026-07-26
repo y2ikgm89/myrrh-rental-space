@@ -96,7 +96,10 @@ mock.module("@/shared/domain/payment/availability", () => ({
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => Promise.resolve({ client: null }),
 }));
+const actualStripePaymentMethods =
+  await import("@/shared/lib/stripe-payment-methods");
 mock.module("@/shared/lib/stripe-payment-methods", () => ({
+  ...actualStripePaymentMethods,
   isStripePaymentMethodType: () => true,
 }));
 mock.module("@/shared/domain/audit-log/commands", () => ({
