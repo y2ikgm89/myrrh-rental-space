@@ -45,7 +45,7 @@ describe("resolveLinkCardsByType", () => {
     expect(mockPostFindMany).not.toHaveBeenCalled();
   });
 
-  test("post: PUBLISHED フィルタ + permalink で href を構築", async () => {
+  test("post: publicPostsWhere フィルタ + permalink で href を構築", async () => {
     mockPostFindMany.mockResolvedValueOnce([
       {
         id: "p1",
@@ -62,7 +62,9 @@ describe("resolveLinkCardsByType", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           id: { in: ["p1"] },
+          deletedAt: null,
           status: "PUBLISHED",
+          publishedAt: { lte: expect.any(Date) },
         }),
       }),
     );
@@ -72,14 +74,17 @@ describe("resolveLinkCardsByType", () => {
     expect(card?.href).toBe("/blog/a-b");
   });
 
-  test("news: isPublished フィルタ + href は /news/<slug>", async () => {
+  test("news: publicNewsWhere フィルタ + href は /news/<slug>", async () => {
     mockNewsFindMany.mockResolvedValueOnce([
       { id: "n1", slug: "info", title: "お知らせ" },
     ]);
     const map = await resolveLinkCardsByType("news", ["n1"]);
     expect(mockNewsFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ isPublished: true }),
+        where: expect.objectContaining({
+          isPublished: true,
+          publishedAt: { lte: expect.any(Date) },
+        }),
       }),
     );
     expect(map.get("n1")?.href).toBe("/news/info");

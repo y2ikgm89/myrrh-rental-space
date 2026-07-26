@@ -196,6 +196,7 @@ describe("isValidNewsStatusFilter", () => {
   test("有効なニュースステータスフィルターの場合 true を返す", () => {
     expect(isValidNewsStatusFilter("ALL")).toBe(true);
     expect(isValidNewsStatusFilter("PUBLISHED")).toBe(true);
+    expect(isValidNewsStatusFilter("SCHEDULED")).toBe(true);
     expect(isValidNewsStatusFilter("DRAFT")).toBe(true);
   });
 
@@ -306,6 +307,7 @@ describe("parseReservationStatusFilter", () => {
 describe("parseNewsStatusFilter", () => {
   test("有効なフィルターの場合そのフィルターを返す", () => {
     expect(parseNewsStatusFilter("PUBLISHED")).toBe("PUBLISHED");
+    expect(parseNewsStatusFilter("SCHEDULED")).toBe("SCHEDULED");
     expect(parseNewsStatusFilter("DRAFT")).toBe("DRAFT");
   });
 

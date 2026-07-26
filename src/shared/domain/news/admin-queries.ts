@@ -14,11 +14,24 @@ import type {
   NewsPagination,
 } from "@/shared/domain/news/types";
 
-function buildNewsWhere(filters: NewsFilters): NewsWhereInput {
+/**
+ * 管理一覧の status フィルター where。公開サイトの `publicNewsWhere()` と揃え、
+ * PUBLISHED = 現在ライブ（`isPublished` かつ `publishedAt <= now`）。
+ * `publishedAt: null` は SQL 上 lte/gt にマッチしないため PUBLISHED / SCHEDULED
+ * のいずれにも入らない。
+ */
+export function buildNewsWhere(
+  filters: NewsFilters,
+  now: Date = new Date(),
+): NewsWhereInput {
   const where: NewsWhereInput = {};
 
   if (filters.status === "PUBLISHED") {
     where.isPublished = true;
+    where.publishedAt = { lte: now };
+  } else if (filters.status === "SCHEDULED") {
+    where.isPublished = true;
+    where.publishedAt = { gt: now };
   } else if (filters.status === "DRAFT") {
     where.isPublished = false;
   }

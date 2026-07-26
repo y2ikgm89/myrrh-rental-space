@@ -4,9 +4,9 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 const mockNewsFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
-const mockNewsCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "news-1", slug: "test-news" }),
-);
+const mockNewsCreate = mock<
+  (args: { data: Record<string, unknown> }) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "news-1", slug: "test-news" }));
 const mockNewsUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "news-1" }),
 );
@@ -96,6 +96,8 @@ const VALID_CREATE_INPUT = {
   title: "テストお知らせ",
   contentJson: '{"root":{"children":[]}}',
   contentHtml: "<p>テストコンテンツ</p>",
+  isPublished: false,
+  publishedAt: null,
   contentWidth: null,
   contentWidthCustom: null,
   metaDescription: null,
@@ -144,16 +146,54 @@ describe("createNews", () => {
       expect(mockNewsCreate).toHaveBeenCalledTimes(1);
     });
 
-    test("create が isPublished: false で呼ばれる", async () => {
+    test("create が isPublished: false で呼ばれる（下書き作成）", async () => {
       await createNews(VALID_CREATE_INPUT);
 
       expect(mockNewsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             isPublished: false,
+            publishedAt: null,
           }),
         }),
       );
+    });
+
+    test("公開指定で作成すると isPublished と publishedAt が永続化される", async () => {
+      const publishedAt = new Date("2026-01-02T03:04:00.000Z");
+
+      await createNews({
+        ...VALID_CREATE_INPUT,
+        isPublished: true,
+        publishedAt,
+      });
+
+      expect(mockNewsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+            publishedAt,
+          }),
+        }),
+      );
+    });
+
+    test("公開指定で publishedAt 省略時は resolveNewsPublishedAt が現在時刻をセットする", async () => {
+      const before = Date.now();
+      await createNews({
+        ...VALID_CREATE_INPUT,
+        isPublished: true,
+        publishedAt: null,
+      });
+      const after = Date.now();
+
+      const call = mockNewsCreate.mock.calls[0]?.[0];
+      expect(call).toBeDefined();
+      const publishedAt = call?.data["publishedAt"];
+      expect(publishedAt).toBeInstanceOf(Date);
+      const publishedAtMs = (publishedAt as Date).getTime();
+      expect(publishedAtMs).toBeGreaterThanOrEqual(before);
+      expect(publishedAtMs).toBeLessThanOrEqual(after);
     });
 
     test("作成時にレイアウトと SEO/OGP 設定も保存される", async () => {

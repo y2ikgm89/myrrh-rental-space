@@ -100,7 +100,8 @@ export async function createNews(
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
       ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-      isPublished: false,
+      isPublished: input.isPublished,
+      publishedAt: resolveNewsPublishedAt(input.isPublished, input.publishedAt),
     }),
     select: {
       id: true,

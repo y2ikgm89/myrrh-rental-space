@@ -1,7 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus, PostStatus } from "@generated/prisma/enums";
+import { publicNewsWhere } from "@/shared/domain/news/queries";
+import { publicPostsWhere } from "@/shared/domain/posts/queries";
+import { EventStatus } from "@generated/prisma/enums";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
@@ -24,8 +26,8 @@ const SEARCH_LIMIT_MAX = 30;
  * 公開済みのものを種別 + タイトル部分一致で検索する。
  *
  * 公開フィルタは各 public-queries と同条件:
- * - post:  status = PUBLISHED
- * - news:  isPublished = true
+ * - post:  publicPostsWhere()（status = PUBLISHED かつ publishedAt <= now）
+ * - news:  publicNewsWhere()（isPublished = true かつ publishedAt <= now）
  * - space: isPublished = true かつ isActive = true（詳細ページの可視条件に合わせる）
  * - event: status = PUBLISHED
  */
@@ -46,8 +48,7 @@ export async function searchLinkCardCandidates(params: {
     case "post": {
       const rows = await prisma.post.findMany({
         where: {
-          deletedAt: null,
-          status: PostStatus.PUBLISHED,
+          ...publicPostsWhere(),
           ...(titleContains && { title: titleContains }),
         },
         select: { id: true, title: true, thumbnailUrl: true },
@@ -67,7 +68,7 @@ export async function searchLinkCardCandidates(params: {
     case "news": {
       const rows = await prisma.news.findMany({
         where: {
-          isPublished: true,
+          ...publicNewsWhere(),
           ...(titleContains && { title: titleContains }),
         },
         select: { id: true, title: true },

@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { getNewsById } from "@/admin/queries/news";
 import { NewsEditor } from "../_components/NewsEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
@@ -35,6 +36,7 @@ export async function generateMetadata({
 
 export default async function EditNewsPage({ params }: PageProps) {
   await connection();
+  await requireFeatureEnabled("news");
 
   const { id } = await params;
 

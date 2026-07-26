@@ -66,19 +66,19 @@ describe("getSitemapContentData", () => {
     mockPostFindMany.mockResolvedValue([]);
     mockPostCategoryFindMany.mockResolvedValue([]);
     mockPostTagFindMany.mockResolvedValue([]);
-    // customPages + systemPageLastModified の 2 回呼ばれる
+    // customPages + systemPageLastModified + publishedCollectionPageSlugs の 3 回呼ばれる
     mockPageFindMany.mockResolvedValue([]);
     mockEventFindMany.mockResolvedValue([]);
     mockTermsFindMany.mockResolvedValue([]);
   });
 
-  test("8 collection + systemPageLastModified が空でも空 shape を返す", async () => {
+  test("8 collection + systemPageLastModified + publishedCollectionPageSlugs が空でも空 shape を返す", async () => {
     mockSpaceFindMany.mockResolvedValueOnce([]);
     mockNewsFindMany.mockResolvedValueOnce([]);
     mockPostFindMany.mockResolvedValueOnce([]);
     mockPostCategoryFindMany.mockResolvedValueOnce([]);
     mockPostTagFindMany.mockResolvedValueOnce([]);
-    // customPages + systemPageLastModified の 2 回呼ばれる
+    // customPages + systemPageLastModified + publishedCollectionPageSlugs の 3 回呼ばれる
     mockPageFindMany.mockResolvedValue([]);
     mockEventFindMany.mockResolvedValueOnce([]);
     mockTermsFindMany.mockResolvedValueOnce([]);
@@ -95,6 +95,7 @@ describe("getSitemapContentData", () => {
       events: [],
       terms: [],
       systemPageLastModified: new Map(),
+      publishedCollectionPageSlugs: new Set(),
     });
   });
 
@@ -105,6 +106,43 @@ describe("getSitemapContentData", () => {
       expect.objectContaining({
         where: { isPublished: true, isActive: true },
         orderBy: { updatedAt: "desc" },
+      }),
+    );
+  });
+
+  test("news は publicNewsWhere（isPublished + publishedAt <= now）", async () => {
+    await getSitemapContentData();
+
+    expect(mockNewsFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          isPublished: true,
+          publishedAt: { lte: expect.any(Date) },
+        }),
+        orderBy: { updatedAt: "desc" },
+      }),
+    );
+  });
+
+  test("publishedCollectionPageSlugs は news/blog の公開 system page slug を返す", async () => {
+    mockPageFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ slug: "news" }, { slug: "blog" }]);
+
+    const result = await getSitemapContentData();
+
+    expect(result.publishedCollectionPageSlugs).toEqual(
+      new Set(["news", "blog"]),
+    );
+    expect(mockPageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          slug: { in: ["news", "blog"] },
+          isSystemPage: true,
+          isPublished: true,
+        },
+        select: { slug: true },
       }),
     );
   });
@@ -215,18 +253,22 @@ describe("getSitemapContentData", () => {
     const sectionUpdated = new Date("2026-06-15T00:00:00Z");
     // 1 回目 = customPages (isSystemPage: false) → []
     // 2 回目 = system page (isSystemPage: true) → 2 row
-    mockPageFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        slug: "home",
-        updatedAt: pageUpdated,
-        sections: [{ updatedAt: sectionUpdated }],
-      },
-      {
-        slug: "about",
-        updatedAt: pageUpdated,
-        sections: [],
-      },
-    ]);
+    // 3 回目 = publishedCollectionPageSlugs → []
+    mockPageFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          slug: "home",
+          updatedAt: pageUpdated,
+          sections: [{ updatedAt: sectionUpdated }],
+        },
+        {
+          slug: "about",
+          updatedAt: pageUpdated,
+          sections: [],
+        },
+      ])
+      .mockResolvedValueOnce([]);
 
     const result = await getSitemapContentData();
     expect(result.systemPageLastModified.get("home")).toEqual(sectionUpdated);

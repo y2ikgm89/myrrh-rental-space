@@ -16,7 +16,6 @@ import {
   EVENT_STATUS_LABELS,
   INQUIRY_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
-  POST_STATUS_LABELS,
   PUBLISH_LABELS,
   REGISTRATION_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
@@ -25,6 +24,11 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { ROLE_LABELS } from "@/shared/lib/admin-roles";
+import {
+  getNewsPublishVisibility,
+  NEWS_PUBLISH_VISIBILITY_LABELS,
+  type NewsPublishVisibility,
+} from "@/shared/lib/news-publish-visibility";
 
 // =============================================================================
 // Types
@@ -119,11 +123,25 @@ const REGISTRATION_BADGE_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
   EXPIRED: "outline",
 };
 
-// News はisPublished (boolean) 方式に移行
+// News は isPublished + publishedAt。公開サイトの publicNewsWhere と揃え
+// draft / scheduled（未来）/ published（ライブ）の 3 態。
 const newsPublishConfig = {
-  published: { label: POST_STATUS_LABELS.PUBLISHED, variant: "success" },
-  draft: { label: POST_STATUS_LABELS.DRAFT, variant: "secondary" },
-} satisfies Record<string, { label: string; variant: BadgeVariant }>;
+  published: {
+    label: NEWS_PUBLISH_VISIBILITY_LABELS.published,
+    variant: "success",
+  },
+  scheduled: {
+    label: NEWS_PUBLISH_VISIBILITY_LABELS.scheduled,
+    variant: "info",
+  },
+  draft: {
+    label: NEWS_PUBLISH_VISIBILITY_LABELS.draft,
+    variant: "secondary",
+  },
+} satisfies Record<
+  NewsPublishVisibility,
+  { label: string; variant: BadgeVariant }
+>;
 
 // =============================================================================
 // Components
@@ -196,10 +214,15 @@ export function RegistrationStatusBadge({
   );
 }
 
-export function NewsStatusBadge({ isPublished }: { isPublished: boolean }) {
-  const config = isPublished
-    ? newsPublishConfig.published
-    : newsPublishConfig.draft;
+export function NewsStatusBadge({
+  isPublished,
+  publishedAt,
+}: {
+  isPublished: boolean;
+  publishedAt: string | null;
+}) {
+  const visibility = getNewsPublishVisibility(isPublished, publishedAt);
+  const config = newsPublishConfig[visibility];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

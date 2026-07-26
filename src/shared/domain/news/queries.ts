@@ -29,7 +29,7 @@ import { slugParamSchema } from "@/shared/lib/validations/params";
  * 新規 query 追加時の publish gate 漏れを構造的に防ぐため、公開 query は必ず
  * この helper 経由で where を組み立てる。
  */
-function publicNewsWhere(now: Date = new Date()): Prisma.NewsWhereInput {
+export function publicNewsWhere(now: Date = new Date()): Prisma.NewsWhereInput {
   return {
     isPublished: true,
     publishedAt: { lte: now },

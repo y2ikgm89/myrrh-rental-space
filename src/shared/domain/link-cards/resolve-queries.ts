@@ -1,7 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus, PostStatus } from "@generated/prisma/enums";
+import { publicNewsWhere } from "@/shared/domain/news/queries";
+import { publicPostsWhere } from "@/shared/domain/posts/queries";
+import { EventStatus } from "@generated/prisma/enums";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
@@ -49,7 +51,7 @@ async function resolvePostCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   const rows = await prisma.post.findMany({
-    where: { id: { in: ids }, status: PostStatus.PUBLISHED, deletedAt: null },
+    where: { id: { in: ids }, ...publicPostsWhere() },
     select: {
       id: true,
       slug: true,
@@ -83,7 +85,7 @@ async function resolveNewsCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   const rows = await prisma.news.findMany({
-    where: { id: { in: ids }, isPublished: true },
+    where: { id: { in: ids }, ...publicNewsWhere() },
     select: { id: true, slug: true, title: true },
   });
 

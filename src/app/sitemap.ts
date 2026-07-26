@@ -141,6 +141,7 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
     events,
     terms,
     systemPageLastModified,
+    publishedCollectionPageSlugs,
   } = content;
   const { enabled, disabledRoutes, disabledPageSlugs } = featureCtx;
 
@@ -170,10 +171,18 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: latestSpaceUpdate,
     });
   }
-  if (enabled.has("news") && latestNewsUpdate) {
+  if (
+    enabled.has("news") &&
+    publishedCollectionPageSlugs.has("news") &&
+    latestNewsUpdate
+  ) {
     entries.push({ url: `${baseUrl}/news`, lastModified: latestNewsUpdate });
   }
-  if (enabled.has("posts") && latestPostUpdate) {
+  if (
+    enabled.has("posts") &&
+    publishedCollectionPageSlugs.has("blog") &&
+    latestPostUpdate
+  ) {
     entries.push({ url: `${baseUrl}/blog`, lastModified: latestPostUpdate });
   }
   if (enabled.has("events") && latestEventUpdate) {

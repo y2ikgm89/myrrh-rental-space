@@ -14,7 +14,7 @@
  * この cron は直近で `publishedAt` を迎えたニュース
  * （`findRecentlyDueScheduledNewsSlugs`）を検出し、該当があれば NEWS 系
  * キャッシュタグを明示的に revalidate することで、公開日時ちょうどでの
- * 露出精度を cron 間隔単位（`terraform/cloud_scheduler.tf` 既定 5 分）まで
+ * 露出精度を cron 間隔単位（`terraform/cloud_scheduler.tf` 既定 10 分）まで
  * 保証する。
  *
  * 認証: Cloud Scheduler OIDC token
