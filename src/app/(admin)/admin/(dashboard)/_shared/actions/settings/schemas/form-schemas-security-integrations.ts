@@ -26,6 +26,7 @@ import {
   switchBoolean,
   settingsExpectedUpdatedAtSchema,
 } from "./form-schema-helpers";
+import { isValidCalendarId } from "@/shared/lib/google-calendar/calendar-id";
 
 // =============================================================================
 // Site > Security > Turnstile
@@ -182,7 +183,20 @@ export type ResendFormInput = z.infer<typeof resendFormSchema>;
 
 export const googleCalendarFormSchema = z.object({
   googleCalendarEnabled: switchBoolean(),
-  googleCalendarId: z.string().optional(),
+  googleCalendarId: z
+    .string()
+    .optional()
+    .superRefine((value, ctx) => {
+      if (value === undefined) return;
+      const trimmed = value.trim();
+      if (trimmed === "") return;
+      if (!isValidCalendarId(trimmed)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "カレンダーIDの形式が無効です",
+        });
+      }
+    }),
   serviceAccountJson: z.string().optional(),
   icalAttachmentEnabled: switchBoolean(),
   addToCalendarLinksEnabled: switchBoolean(),

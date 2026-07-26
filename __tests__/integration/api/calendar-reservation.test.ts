@@ -1,5 +1,7 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
 
+const RESERVATION_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+
 describe("GET /api/calendar/reservation/[id]", () => {
   beforeEach(() => {
     mock.restore();
@@ -8,24 +10,38 @@ describe("GET /api/calendar/reservation/[id]", () => {
     mock.module("@/shared/lib/features/check", () => ({
       isFeatureEnabled: () => Promise.resolve(true),
     }));
+    // per-reservationId rate limiter は既定で success（429 は個別 test）。
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByReservationIdRateLimiter: {
+        check: () => Promise.resolve({ success: true, remaining: 9, reset: 0 }),
+      },
+    }));
   });
 
   test("returns 401 when customer is not authenticated", async () => {
+    const rateLimitCheckSpy = mock(() =>
+      Promise.resolve({ success: true, remaining: 9, reset: 0 }),
+    );
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByReservationIdRateLimiter: { check: rateLimitCheckSpy },
+    }));
     mock.module("@/shared/lib/customer-auth", () => ({
       getCustomerSession: mock(() => Promise.resolve(null)),
     }));
     const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
     const res = await GET(
       new Request(
-        "http://localhost/api/calendar/reservation/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        `http://localhost/api/calendar/reservation/${RESERVATION_ID}`,
       ),
       {
         params: Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
         }),
       },
     );
     expect(res.status).toBe(401);
+    // 匿名リクエストは shared bucket を消費しない (receipt HTTP-03 / Codex #1426 同型)。
+    expect(rateLimitCheckSpy).not.toHaveBeenCalled();
   });
 
   test("rejects an invalid guest token before exposing path validation", async () => {
@@ -81,15 +97,49 @@ describe("GET /api/calendar/reservation/[id]", () => {
     const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
     const res = await GET(
       new Request(
-        "http://localhost/api/calendar/reservation/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        `http://localhost/api/calendar/reservation/${RESERVATION_ID}`,
       ),
       {
         params: Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
         }),
       },
     );
     expect(res.status).toBe(404);
+  });
+
+  test("returns 429 when per-reservationId rate limit is exceeded", async () => {
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByReservationIdRateLimiter: {
+        check: () =>
+          Promise.resolve({ success: false, remaining: 0, reset: Date.now() }),
+      },
+    }));
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() =>
+        Promise.resolve({ user: { id: "user-1" } }),
+      ),
+    }));
+    mock.module("@/shared/domain/customers/queries", () => ({
+      getCustomerByUserId: mock(() => Promise.resolve({ id: "cust-1" })),
+    }));
+    const getReservationForCalendar = mock(() => Promise.resolve(null));
+    mock.module("@/shared/domain/reservations/customer-queries", () => ({
+      getReservationForCalendar,
+    }));
+
+    const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
+    const res = await GET(
+      new Request(
+        `http://localhost/api/calendar/reservation/${RESERVATION_ID}`,
+      ),
+      { params: Promise.resolve({ id: RESERVATION_ID }) },
+    );
+
+    expect(res.status).toBe(429);
+    expect(await res.text()).toBe("Too many requests");
+    // rate limit 超過時は DB fetch に進まない
+    expect(getReservationForCalendar).not.toHaveBeenCalled();
   });
 
   test("returns 200 text/calendar with METHOD:REQUEST when reservation is CONFIRMED", async () => {
@@ -104,7 +154,7 @@ describe("GET /api/calendar/reservation/[id]", () => {
     mock.module("@/shared/domain/reservations/customer-queries", () => ({
       getReservationForCalendar: mock(() =>
         Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
           spaceName: "Studio A",
           customerName: "山田 太郎",
           startTime: new Date("2026-05-01T10:00:00+09:00"),
@@ -127,11 +177,11 @@ describe("GET /api/calendar/reservation/[id]", () => {
     const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
     const res = await GET(
       new Request(
-        "http://localhost/api/calendar/reservation/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        `http://localhost/api/calendar/reservation/${RESERVATION_ID}`,
       ),
       {
         params: Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
         }),
       },
     );
@@ -140,9 +190,7 @@ describe("GET /api/calendar/reservation/[id]", () => {
       "text/calendar; charset=utf-8",
     );
     const body = await res.text();
-    expect(body).toContain(
-      "UID:reservation-a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11@",
-    );
+    expect(body).toContain(`UID:reservation-${RESERVATION_ID}@`);
     expect(body).toContain("METHOD:REQUEST");
     expect(body).toContain("DTSTART:20260501T010000Z");
     expect(body).toContain("DTEND:20260501T030000Z");
@@ -162,7 +210,7 @@ describe("GET /api/calendar/reservation/[id]", () => {
     mock.module("@/shared/domain/reservations/customer-queries", () => ({
       getReservationForCalendar: mock(() =>
         Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
           spaceName: "Studio A",
           customerName: "山田 太郎",
           startTime: new Date("2026-05-01T10:00:00+09:00"),
@@ -185,11 +233,11 @@ describe("GET /api/calendar/reservation/[id]", () => {
     const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
     const res = await GET(
       new Request(
-        "http://localhost/api/calendar/reservation/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        `http://localhost/api/calendar/reservation/${RESERVATION_ID}`,
       ),
       {
         params: Promise.resolve({
-          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          id: RESERVATION_ID,
         }),
       },
     );

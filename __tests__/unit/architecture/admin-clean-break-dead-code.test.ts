@@ -277,8 +277,8 @@ describe("admin clean-break dead code boundaries", () => {
       "@/shared/domain/settings/commands",
     );
     expect(webhookCommandsImport).not.toContain("saveGoogleCalendarWebhook");
-    expect(webhookCommandsImport).not.toContain(
-      "saveGoogleCalendarWebhookToken",
-    );
+    // setup 経路は token+channel を原子 save するため、token-only helper は廃止済み。
+    // 回帰で復活させないよう、旧シンボル名の残存も禁止する。
+    expect(calendarWebhook).not.toContain("saveGoogleCalendarWebhookToken");
   });
 });

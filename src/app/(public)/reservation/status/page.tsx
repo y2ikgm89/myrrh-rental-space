@@ -22,7 +22,6 @@ import { createReservationClaimToken } from "@/shared/lib/reservation-claim-toke
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   getValidPaymentStatus,
@@ -153,7 +152,6 @@ export default async function GuestReservationStatusPage({
           startTime: reservation.startTime,
           endTime: reservation.endTime,
           ...(address ? { location: address } : {}),
-          icsDownloadUrl: `${getAppUrl()}/api/calendar/reservation/${reservation.id}`,
         })
       : null;
   const passcodeRevealState = await getPasscodeRevealState(

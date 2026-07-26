@@ -6,14 +6,17 @@
 
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 
-/** Add to Calendar ボタン用の 3 プロバイダ URL */
+/** Add to Calendar ボタン用のプロバイダ URL */
 export type AddToCalendarUrls = {
   /** Google Calendar 追加リンク（`calendar.google.com/calendar/render`） */
   readonly google: string;
   /** Outlook Web 追加リンク（`outlook.live.com/calendar/0/deeplink/compose`） */
   readonly outlookWeb: string;
-  /** .ics ダウンロード URL（Apple Calendar / Outlook デスクトップ / その他） */
-  readonly ics: string;
+  /**
+   * .ics ダウンロード URL（Apple Calendar / Outlook デスクトップ / その他）。
+   * 認証済みマイページ・メール経路のみ。公開ページ (public variant) では省略する。
+   */
+  readonly ics?: string;
 };
 
 /** ICS 生成の共通入力 */

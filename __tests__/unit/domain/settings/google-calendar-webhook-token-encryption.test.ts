@@ -4,7 +4,7 @@
  * `googleCalendarWebhookToken` を SwitchBot webhook path token と同じ encrypt-at-rest
  * 姿勢で扱うことを固定する:
  *
- * 1. `saveGoogleCalendarWebhookToken` は平文をDBに送らず、
+ * 1. `saveGoogleCalendarWebhook` は平文をDBに送らず、
  *    `SETTINGS_CRYPTO_PURPOSES.googleCalendarWebhookToken` で暗号化した ciphertext を書く
  * 2. `getGoogleCalendarWebhookState` は同じ purpose の期待値で復号し平文を返す
  *    （書込→読出 round-trip が成立する）
@@ -91,7 +91,7 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
 
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { saveGoogleCalendarWebhookToken } from "@/shared/domain/settings/integration-commands";
+import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/integration-commands";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 
 // -----------------------------------------------------------------------------
@@ -119,7 +119,12 @@ describe("WEBHOOK-01: googleCalendarWebhookToken encrypt-at-rest", () => {
   test("save → read round-trip で平文が戻る（encrypt-at-rest 契約）", async () => {
     const plaintext = "gcal-webhook-token-plaintext-xyz";
 
-    await saveGoogleCalendarWebhookToken(plaintext);
+    await saveGoogleCalendarWebhook({
+      channelId: "channel-1",
+      resourceId: "resource-1",
+      expiration: undefined,
+      token: plaintext,
+    });
 
     // DB に書かれた値は暗号化 ciphertext（v2:kid:purpose:iv:tag:ct 形式）
     const stored = settingsRow.googleCalendarWebhookToken;

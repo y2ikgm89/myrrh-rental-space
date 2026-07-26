@@ -218,7 +218,12 @@ export async function setupCalendarWebhook(): Promise<
       const webhookUrl = `${normalizedBaseUrl}/api/webhooks/google-calendar`;
 
       const result = await setupWebhookWatch(webhookUrl);
-      if (!result.success || !result.channelId || !result.resourceId) {
+      if (
+        !result.success ||
+        !result.channelId ||
+        !result.resourceId ||
+        !result.token
+      ) {
         throw new DomainError(
           result.error ?? "Webhook設定に失敗しました",
           "VALIDATION",
@@ -229,6 +234,7 @@ export async function setupCalendarWebhook(): Promise<
         channelId: result.channelId,
         resourceId: result.resourceId,
         expiration: result.expiration,
+        token: result.token,
       });
 
       return { expiration: result.expiration };

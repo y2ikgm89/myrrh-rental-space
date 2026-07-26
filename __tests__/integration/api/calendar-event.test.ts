@@ -8,9 +8,23 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     mock.module("@/shared/lib/features/check", () => ({
       isFeatureEnabled: () => Promise.resolve(true),
     }));
+    // per-registrationId rate limiter は既定で success（429 は個別 test）。
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByRegistrationIdRateLimiter: {
+        check: () => Promise.resolve({ success: true, remaining: 9, reset: 0 }),
+      },
+    }));
   });
 
   test("returns 401 when not authenticated", async () => {
+    const rateLimitCheckSpy = mock(() =>
+      Promise.resolve({ success: true, remaining: 9, reset: 0 }),
+    );
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByRegistrationIdRateLimiter: {
+        check: rateLimitCheckSpy,
+      },
+    }));
     mock.module("@/shared/lib/customer-auth", () => ({
       getCustomerSession: mock(() => Promise.resolve(null)),
     }));
@@ -21,6 +35,8 @@ describe("GET /api/calendar/event/[registrationId]", () => {
       { params: Promise.resolve({ registrationId: "reg-456" }) },
     );
     expect(res.status).toBe(401);
+    // 匿名リクエストは shared bucket を消費しない (receipt HTTP-03 / Codex #1426 同型)。
+    expect(rateLimitCheckSpy).not.toHaveBeenCalled();
   });
 
   test("rejects an invalid guest token before exposing path validation", async () => {
@@ -61,6 +77,38 @@ describe("GET /api/calendar/event/[registrationId]", () => {
       params: Promise.resolve({ registrationId: "" }),
     });
     expect(res.status).toBe(400);
+  });
+
+  test("returns 429 when per-registrationId rate limit is exceeded", async () => {
+    mock.module("@/shared/lib/rate-limit", () => ({
+      calendarDownloadByRegistrationIdRateLimiter: {
+        check: () =>
+          Promise.resolve({ success: false, remaining: 0, reset: Date.now() }),
+      },
+    }));
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() =>
+        Promise.resolve({ user: { id: "user-1" } }),
+      ),
+    }));
+    mock.module("@/shared/domain/customers/queries", () => ({
+      getCustomerByUserId: mock(() => Promise.resolve({ id: "cust-1" })),
+    }));
+    const getEventRegistrationForCalendar = mock(() => Promise.resolve(null));
+    mock.module("@/shared/domain/events/registration-queries", () => ({
+      getEventRegistrationForCalendar,
+    }));
+
+    const { GET } =
+      await import("@/app/api/calendar/event/[registrationId]/route");
+    const res = await GET(
+      new Request("http://localhost/api/calendar/event/reg-456"),
+      { params: Promise.resolve({ registrationId: "reg-456" }) },
+    );
+
+    expect(res.status).toBe(429);
+    expect(await res.text()).toBe("Too many requests");
+    expect(getEventRegistrationForCalendar).not.toHaveBeenCalled();
   });
 
   test("returns 200 with METHOD:REQUEST when CONFIRMED", async () => {

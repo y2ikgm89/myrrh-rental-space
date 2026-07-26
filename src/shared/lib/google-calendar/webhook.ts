@@ -10,11 +10,7 @@ import {
   getGoogleCalendarWebhookState,
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
-import {
-  clearGoogleCalendarWebhook,
-  saveGoogleCalendarWebhook,
-  saveGoogleCalendarWebhookToken,
-} from "@/shared/domain/settings/integration-commands";
+import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/integration-commands";
 import { getAppUrl } from "@/shared/lib/constants";
 import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -43,6 +39,21 @@ export async function setupWebhookWatch(
   }
 
   try {
+    if (settings.channelId && settings.resourceId) {
+      await stopWebhookWatch(settings.channelId, settings.resourceId).catch(
+        (err: unknown) => {
+          logError(normalizeError(err), {
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: {
+              operation: "setupWebhookWatch",
+              note: "old webhook stop failed (will expire automatically)",
+            },
+          });
+        },
+      );
+    }
+
     const channelId = crypto.randomUUID();
     const webhookToken = crypto.randomUUID(); // 認証用トークン
     const expiration = new Date();
@@ -71,8 +82,6 @@ export async function setupWebhookWatch(
       };
     }
 
-    await saveGoogleCalendarWebhookToken(webhookToken);
-
     return omitUndefined({
       success: true,
       channelId: registeredChannelId,
@@ -80,6 +89,7 @@ export async function setupWebhookWatch(
       expiration: response.data.expiration
         ? new Date(parseInt(response.data.expiration))
         : undefined,
+      token: webhookToken,
     });
   } catch (error) {
     logError(normalizeError(error), {
@@ -176,32 +186,9 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
   }
 
   try {
-    // 既存Webhookを停止（エラーは無視 - Google側で自動期限切れになる）
-    if (webhookState.channelId && webhookState.resourceId) {
-      await stopWebhookWatch(
-        webhookState.channelId,
-        webhookState.resourceId,
-      ).catch((err: unknown) => {
-        logError(normalizeError(err), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.LOW,
-          context: {
-            operation: "renewWebhookIfNeeded",
-            note: "old webhook stop failed (will expire automatically)",
-          },
-        });
-      });
-    }
-
-    // トークン復号失敗による強制再登録では、setupWebhookWatch が新チャネルを
-    // 登録する前に古いレコードをクリアする。これは saveGoogleCalendarWebhookToken
-    // 直後に setupWebhookWatch が Google 側 channel を作るまで一瞬 token / channel が
-    // 不整合になる時間帯を作らないため。
-    if (tokenNeedsReregistration) {
-      await clearGoogleCalendarWebhook();
-    }
-
-    // 新しいWebhookを設定（getAppUrl は production で env 未設定なら throw）
+    // 旧 channel 停止は `setupWebhookWatch` 内に集約（best-effort）。
+    // token 復号失敗の強制再登録も、watch 成功後の原子 save で
+    // token+channel+expiration を一括置換する（事前 clear は不要）。
     const baseUrl = getAppUrl();
     const webhookUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`;
     const result = await setupWebhookWatch(webhookUrl);
@@ -214,7 +201,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       });
     }
 
-    if (!result.channelId || !result.resourceId) {
+    if (!result.channelId || !result.resourceId || !result.token) {
       return {
         success: false,
         renewed: false,
@@ -226,6 +213,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       channelId: result.channelId,
       resourceId: result.resourceId,
       expiration: result.expiration,
+      token: result.token,
     });
 
     return omitUndefined({

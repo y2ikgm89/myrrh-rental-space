@@ -222,7 +222,7 @@ describe("syncEventToCalendar", () => {
     );
   });
 
-  test("formatCalendarEvent が attendeeEmail を含まない（attendees 未使用）", async () => {
+  test("formatCalendarEvent が attendees を含まない", async () => {
     mockIsEnabled.mockImplementation(() => Promise.resolve(true));
     mockCreate.mockImplementation(() =>
       Promise.resolve({ success: true, eventId: "gcal-event-xyz" }),
@@ -230,11 +230,10 @@ describe("syncEventToCalendar", () => {
 
     await syncEventToCalendar(baseEventData);
 
-    // attendeeEmail は omitUndefined により存在しない（undefined プロパティは除去される）
-    expect(mockCreate).not.toHaveBeenCalledWith(
-      expect.objectContaining({ attendeeEmail: expect.anything() }),
-      expect.any(Object),
-    );
+    const call = mockCreate.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    expect(call).not.toHaveProperty("attendees");
+    expect(call).not.toHaveProperty("attendeeEmail");
   });
 
   // ===========================================================================
@@ -542,6 +541,8 @@ describe("retryFailedEventCalendarSyncs", () => {
     mockIsEnabled.mockResolvedValue(true);
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({ success: true, eventId: "gcal-retry-1" });
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue({ success: true });
     mockDelete.mockReset();
     mockDelete.mockResolvedValue({ success: true });
     mockSave.mockReset();
@@ -593,8 +594,11 @@ describe("retryFailedEventCalendarSyncs", () => {
     expect(mockMarkSuccess).toHaveBeenCalledWith("event-1");
   });
 
-  test("対象 slot が無い event-level エラーは自動 retry も自動 clear もしない", async () => {
+  test("対象 slot が無い Meet-only エラーは自動 retry も自動 clear もしない", async () => {
     mockGetFailedEventIds.mockResolvedValue(["event-2"]);
+    mockGetEventCalendarSyncError.mockResolvedValue(
+      "Meet URL write-back failed: DB unavailable",
+    );
     mockGetForSync.mockResolvedValue([
       {
         ...baseEventData,
@@ -606,8 +610,51 @@ describe("retryFailedEventCalendarSyncs", () => {
     const result = await retryFailedEventCalendarSyncs();
 
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockMarkSuccess).not.toHaveBeenCalled();
     expect(result).toEqual({ total: 0, succeeded: 0, failed: 0 });
+  });
+
+  test("googleCalendarEventId 有り + 通常 update 失敗 → update を再試行する", async () => {
+    mockGetFailedEventIds.mockResolvedValue(["event-update-1"]);
+    mockGetEventCalendarSyncError.mockResolvedValue(
+      "Update failed: network error",
+    );
+    mockGetForSync.mockResolvedValue([
+      {
+        ...baseEventData,
+        slotId: "slot-u1",
+        googleCalendarEventId: "gcal-existing-1",
+      },
+    ]);
+
+    const result = await retryFailedEventCalendarSyncs();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "gcal-existing-1",
+      expect.objectContaining({ summary: baseEventData.title }),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockMarkSuccess).toHaveBeenCalledWith("event-update-1");
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("update 再試行が失敗した場合は failed に計上し markEventCalendarSyncSuccess を呼ばない", async () => {
+    mockGetFailedEventIds.mockResolvedValue(["event-update-2"]);
+    mockGetEventCalendarSyncError.mockResolvedValue("Update failed: quota");
+    mockUpdate.mockResolvedValue({ success: false, error: "quota exceeded" });
+    mockGetForSync.mockResolvedValue([
+      {
+        ...baseEventData,
+        slotId: "slot-u2",
+        googleCalendarEventId: "gcal-existing-2",
+      },
+    ]);
+
+    const result = await retryFailedEventCalendarSyncs();
+
+    expect(result).toEqual({ total: 1, succeeded: 0, failed: 1 });
+    expect(mockMarkSuccess).not.toHaveBeenCalled();
   });
 
   test("create 失敗時は failed に計上し markEventCalendarSyncSuccess を呼ばない", async () => {

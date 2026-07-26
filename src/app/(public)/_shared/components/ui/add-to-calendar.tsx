@@ -9,19 +9,19 @@ type Props = {
   readonly urls: AddToCalendarUrls;
   readonly label?: string;
   /**
-   * public: Google / Outlook Web のみ（未認証向け、ICS ダウンロード URL は未使用可）
-   * authenticated: 3 プロバイダすべて（マイページ・メール経由）
+   * public: Google / Outlook Web のみ（未認証向け、`urls.ics` は不要）
+   * authenticated: Google / Outlook Web + `urls.ics` があるときのみ iCal
    */
   readonly variant?: Variant;
   readonly className?: string;
 };
 
 /**
- * Add to Calendar 3 択ボタン（Server Component、JS 不要）
+ * Add to Calendar ボタン（Server Component、JS 不要）
  *
  * - Google Calendar: template URL で新規タブ
  * - Outlook Web: deeplink URL で新規タブ
- * - iCal (.ics): `authenticated` variant のみ — route handler URL からダウンロード
+ * - iCal (.ics): `authenticated` variant かつ `urls.ics` 定義時のみ
  */
 export function AddToCalendar({
   urls,
@@ -29,8 +29,6 @@ export function AddToCalendar({
   variant = "authenticated",
   className,
 }: Props) {
-  const showIcs = variant === "authenticated";
-
   return (
     <section
       aria-labelledby="add-to-calendar-label"
@@ -68,7 +66,7 @@ export function AddToCalendar({
             <span>Outlook</span>
           </a>
         </li>
-        {showIcs && (
+        {variant === "authenticated" && urls.ics !== undefined ? (
           <li className="w-full sm:w-auto">
             <a
               href={urls.ics}
@@ -79,7 +77,7 @@ export function AddToCalendar({
               <span>iCal / Apple (.ics)</span>
             </a>
           </li>
-        )}
+        ) : null}
       </ul>
     </section>
   );

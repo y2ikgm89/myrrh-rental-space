@@ -20,7 +20,6 @@ import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -97,8 +96,6 @@ export default async function ReservationCompletePage(): Promise<ReactElement> {
           startTime: reservation.startTime,
           endTime: reservation.endTime,
           ...(address ? { location: address } : {}),
-          // public variant では .ics は非表示。URL 自体は未使用だが型のため渡す。
-          icsDownloadUrl: `${getAppUrl()}/api/calendar/reservation/${reservation.id}`,
         })
       : null;
 

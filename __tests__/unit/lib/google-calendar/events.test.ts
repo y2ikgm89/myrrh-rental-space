@@ -37,9 +37,7 @@ describe("buildEventBody (Phase B.1 task 7)", () => {
   });
 
   test("withMeet 未指定 → conferenceData 出さない（デフォルト false 相当）", () => {
-    const result = buildEventBody(baseParams, baseSettings, {
-      includeAttendee: true,
-    });
+    const result = buildEventBody(baseParams, baseSettings, {});
     expect(result.conferenceData).toBeUndefined();
   });
 
@@ -89,12 +87,10 @@ describe("buildEventBody (Phase B.1 task 7)", () => {
     });
   });
 
-  test("includeAttendee: true + attendeeEmail あり → attendees に含める", () => {
-    const result = buildEventBody(
-      { ...baseParams, attendeeEmail: "guest@example.com" },
-      baseSettings,
-      { includeAttendee: true, withMeet: false },
-    );
-    expect(result.attendees).toEqual([{ email: "guest@example.com" }]);
+  test("attendees は常に含めない（サービスアカウントは attendee 設定不可）", () => {
+    const result = buildEventBody(baseParams, baseSettings, {
+      withMeet: false,
+    });
+    expect(result.attendees).toBeUndefined();
   });
 });

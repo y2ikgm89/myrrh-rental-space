@@ -10,7 +10,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { googleCalendarConnectionTestSchema } from "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas";
+import { googleCalendarFormSchema } from "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-security-integrations";
 
 const validServiceAccountJson = JSON.stringify({
   type: "service_account",
@@ -43,6 +45,52 @@ describe("Google Calendar Settings Admin Action Integration", () => {
       expect(result.error.issues[0]?.message).toBe(
         "サービスアカウントJSONの形式が無効です",
       );
+    });
+  });
+
+  describe("googleCalendarFormSchema バリデーション", () => {
+    test("空欄 googleCalendarId は許容する", () => {
+      const fd = new FormData();
+      fd.set("googleCalendarEnabled", "on");
+      fd.set("googleCalendarId", "");
+      fd.set("icalAttachmentEnabled", "");
+      fd.set("addToCalendarLinksEnabled", "");
+
+      const result = parseWithZod(fd, { schema: googleCalendarFormSchema });
+      expect(result.status).toBe("success");
+    });
+
+    test("primary は有効な googleCalendarId", () => {
+      const fd = new FormData();
+      fd.set("googleCalendarEnabled", "on");
+      fd.set("googleCalendarId", "primary");
+      fd.set("icalAttachmentEnabled", "");
+      fd.set("addToCalendarLinksEnabled", "");
+
+      const result = parseWithZod(fd, { schema: googleCalendarFormSchema });
+      expect(result.status).toBe("success");
+    });
+
+    test("メール形式の googleCalendarId は許容する", () => {
+      const fd = new FormData();
+      fd.set("googleCalendarEnabled", "on");
+      fd.set("googleCalendarId", "cal@group.calendar.google.com");
+      fd.set("icalAttachmentEnabled", "");
+      fd.set("addToCalendarLinksEnabled", "");
+
+      const result = parseWithZod(fd, { schema: googleCalendarFormSchema });
+      expect(result.status).toBe("success");
+    });
+
+    test("無効な googleCalendarId は拒否する", () => {
+      const fd = new FormData();
+      fd.set("googleCalendarEnabled", "on");
+      fd.set("googleCalendarId", "not-a-valid-id");
+      fd.set("icalAttachmentEnabled", "");
+      fd.set("addToCalendarLinksEnabled", "");
+
+      const result = parseWithZod(fd, { schema: googleCalendarFormSchema });
+      expect(result.status).toBe("error");
     });
   });
 });

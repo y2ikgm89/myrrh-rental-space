@@ -12,6 +12,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
+import { isValidCalendarId } from "@/shared/lib/google-calendar/settings";
 import { keysHaveMatchingMode } from "@/shared/lib/stripe-shared";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
@@ -48,15 +49,12 @@ export type GoogleCalendarWebhookInput = {
   channelId: string;
   resourceId: string;
   expiration: Date | undefined;
+  token: string;
 };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function normalizeNullableString(value: string | null): string | null {
-  return value || null;
-}
 
 // ---------------------------------------------------------------------------
 // Stripe commands
@@ -203,9 +201,13 @@ export async function updateGoogleCalendarSettings(
   };
 
   if (data.googleCalendarId) {
-    updateData.googleCalendarId = normalizeNullableString(
-      data.googleCalendarId,
-    );
+    const trimmedCalendarId = data.googleCalendarId.trim();
+    if (trimmedCalendarId !== "") {
+      if (!isValidCalendarId(trimmedCalendarId)) {
+        throw new DomainError("カレンダーIDの形式が無効です", "VALIDATION");
+      }
+      updateData.googleCalendarId = trimmedCalendarId;
+    }
   }
 
   if (data.serviceAccountJson) {
@@ -298,12 +300,12 @@ export async function updateTwoWaySyncSettings(
   });
 }
 
-export async function saveGoogleCalendarWebhookToken(
-  token: string,
+export async function saveGoogleCalendarWebhook(
+  data: GoogleCalendarWebhookInput,
 ): Promise<void> {
   let encryptedToken: string;
   try {
-    encryptedToken = encrypt(token, {
+    encryptedToken = encrypt(data.token, {
       purpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarWebhookToken,
     });
   } catch {
@@ -315,25 +317,17 @@ export async function saveGoogleCalendarWebhookToken(
 
   await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", googleCalendarWebhookToken: encryptedToken },
-    update: { googleCalendarWebhookToken: encryptedToken },
-  });
-}
-
-export async function saveGoogleCalendarWebhook(
-  data: GoogleCalendarWebhookInput,
-): Promise<void> {
-  await prisma.settingsGoogleCalendar.upsert({
-    where: { id: "singleton" },
     create: {
       id: "singleton",
       googleCalendarWebhookChannelId: data.channelId,
       googleCalendarWebhookResourceId: data.resourceId,
+      googleCalendarWebhookToken: encryptedToken,
       googleCalendarWebhookExpiration: data.expiration ?? null,
     },
     update: {
       googleCalendarWebhookChannelId: data.channelId,
       googleCalendarWebhookResourceId: data.resourceId,
+      googleCalendarWebhookToken: encryptedToken,
       googleCalendarWebhookExpiration: data.expiration ?? null,
     },
   });

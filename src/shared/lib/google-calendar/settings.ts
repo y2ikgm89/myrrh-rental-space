@@ -17,6 +17,9 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
+import { isValidCalendarId } from "./calendar-id";
+
+export { isValidCalendarId };
 
 /**
  * サービスアカウントの接続テスト
@@ -119,14 +122,4 @@ export async function isTwoWaySyncEnabled(): Promise<boolean> {
     calendarSettings.connectionStatus === "connected" &&
     twoWaySyncSettings.enabled
   );
-}
-
-/**
- * カレンダーIDのバリデーション
- */
-export function isValidCalendarId(calendarId: string): boolean {
-  if (!calendarId) return false;
-  // カレンダーIDはメールアドレス形式または "primary"
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return calendarId === "primary" || emailRegex.test(calendarId);
 }

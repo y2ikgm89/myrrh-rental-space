@@ -50,13 +50,17 @@ export function CalendarLinks({ links }: Props) {
         >
           Outlook
         </Link>
-        {" | "}
-        <Link
-          href={links.ics}
-          style={{ color: COLOR.link, textDecoration: "underline" }}
-        >
-          iCal (.ics)
-        </Link>
+        {links.ics !== undefined ? (
+          <>
+            {" | "}
+            <Link
+              href={links.ics}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              iCal (.ics)
+            </Link>
+          </>
+        ) : null}
       </Text>
     </Section>
   );

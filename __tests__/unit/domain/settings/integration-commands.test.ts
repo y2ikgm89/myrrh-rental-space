@@ -103,7 +103,6 @@ import {
   recordGoogleCalendarConnectionError,
   clearGoogleCalendarServiceAccount,
   updateTwoWaySyncSettings,
-  saveGoogleCalendarWebhookToken,
   saveGoogleCalendarWebhook,
   clearGoogleCalendarWebhook,
 } from "@/shared/domain/settings/integration-commands";
@@ -522,6 +521,44 @@ describe("updateGoogleCalendarSettings", () => {
       );
     });
 
+    test("primary は有効な googleCalendarId として保存できる", async () => {
+      await updateGoogleCalendarSettings({
+        googleCalendarEnabled: true,
+        googleCalendarId: "primary",
+        serviceAccountJson: null,
+        icalAttachmentEnabled: false,
+        addToCalendarLinksEnabled: false,
+        googleCalendarReminderMinutes: null,
+      });
+
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            googleCalendarId: "primary",
+          }),
+        }),
+      );
+    });
+
+    test("前後空白は trim して保存される", async () => {
+      await updateGoogleCalendarSettings({
+        googleCalendarEnabled: true,
+        googleCalendarId: "  calendar@group.calendar.google.com  ",
+        serviceAccountJson: null,
+        icalAttachmentEnabled: false,
+        addToCalendarLinksEnabled: false,
+        googleCalendarReminderMinutes: null,
+      });
+
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            googleCalendarId: "calendar@group.calendar.google.com",
+          }),
+        }),
+      );
+    });
+
     test("戻り値が void（undefined）", async () => {
       const result = await updateGoogleCalendarSettings({
         googleCalendarEnabled: false,
@@ -536,6 +573,24 @@ describe("updateGoogleCalendarSettings", () => {
   });
 
   describe("異常系", () => {
+    test("無効な googleCalendarId で VALIDATION エラーをスローする", async () => {
+      await expect(
+        updateGoogleCalendarSettings({
+          googleCalendarEnabled: true,
+          googleCalendarId: "not-a-valid-id",
+          serviceAccountJson: null,
+          icalAttachmentEnabled: false,
+          addToCalendarLinksEnabled: false,
+          googleCalendarReminderMinutes: null,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "カレンダーIDの形式が無効です",
+      });
+
+      expect(mockSettingsGoogleCalendarUpsert).not.toHaveBeenCalled();
+    });
+
     test("無効なサービスアカウントJSONで VALIDATION エラーをスローする", async () => {
       await expect(
         updateGoogleCalendarSettings({
@@ -749,27 +804,33 @@ describe("updateTwoWaySyncSettings", () => {
 });
 
 // =============================================================================
-// saveGoogleCalendarWebhookToken
+// saveGoogleCalendarWebhook
 // =============================================================================
 
-describe("saveGoogleCalendarWebhookToken", () => {
+describe("saveGoogleCalendarWebhook", () => {
   beforeEach(() => {
     mockSettingsGoogleCalendarUpsert.mockReset();
     mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
-    test("Webhook トークンを暗号化して保存する（平文はDBに送らない）", async () => {
-      // WEBHOOK-01: googleCalendarWebhookToken は SwitchBot webhook path token と同じ
-      // encrypt-at-rest posture (HKDF purpose "google-calendar-webhook-token")。
-      // DB dump / snapshot 経由での漏洩から webhook 認証トークンを守る。
-      await saveGoogleCalendarWebhookToken("token-xyz-123");
+    test("Webhook 情報（channelId, resourceId, expiration, token）を原子保存する", async () => {
+      const expiration = new Date("2025-12-31T23:59:59Z");
+      await saveGoogleCalendarWebhook({
+        channelId: "channel-001",
+        resourceId: "resource-001",
+        expiration,
+        token: "token-xyz-123",
+      });
 
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
-      // 暗号化されているため元のトークン文字列と一致してはいけない
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: { id: "singleton" },
           update: expect.objectContaining({
+            googleCalendarWebhookChannelId: "channel-001",
+            googleCalendarWebhookResourceId: "resource-001",
+            googleCalendarWebhookExpiration: expiration,
             googleCalendarWebhookToken:
               expect.not.stringContaining("token-xyz-123"),
           }),
@@ -784,65 +845,12 @@ describe("saveGoogleCalendarWebhookToken", () => {
       );
     });
 
-    test("戻り値が void（undefined）", async () => {
-      const result = await saveGoogleCalendarWebhookToken("some-token");
-      expect(result).toBeUndefined();
-    });
-  });
-
-  describe("異常系", () => {
-    test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする", async () => {
-      mockGetPrimaryOverride.mockImplementationOnce(() => {
-        throw new Error("ENCRYPTION_KEY is not set");
-      });
-
-      await expect(
-        saveGoogleCalendarWebhookToken("token-xyz-123"),
-      ).rejects.toMatchObject({
-        code: "VALIDATION",
-        message: expect.stringContaining("暗号化に失敗しました"),
-      });
-    });
-  });
-});
-
-// =============================================================================
-// saveGoogleCalendarWebhook
-// =============================================================================
-
-describe("saveGoogleCalendarWebhook", () => {
-  beforeEach(() => {
-    mockSettingsGoogleCalendarUpsert.mockReset();
-    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
-  });
-
-  describe("正常系", () => {
-    test("Webhook 情報（channelId, resourceId, expiration）を保存できる", async () => {
-      const expiration = new Date("2025-12-31T23:59:59Z");
-      await saveGoogleCalendarWebhook({
-        channelId: "channel-001",
-        resourceId: "resource-001",
-        expiration,
-      });
-
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "singleton" },
-          update: expect.objectContaining({
-            googleCalendarWebhookChannelId: "channel-001",
-            googleCalendarWebhookResourceId: "resource-001",
-            googleCalendarWebhookExpiration: expiration,
-          }),
-        }),
-      );
-    });
-
     test("expiration が undefined の場合 null として保存される", async () => {
       await saveGoogleCalendarWebhook({
         channelId: "channel-002",
         resourceId: "resource-002",
         expiration: undefined,
+        token: "some-token",
       });
 
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
@@ -859,8 +867,29 @@ describe("saveGoogleCalendarWebhook", () => {
         channelId: "ch",
         resourceId: "res",
         expiration: undefined,
+        token: "token",
       });
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("異常系", () => {
+    test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする", async () => {
+      mockGetPrimaryOverride.mockImplementationOnce(() => {
+        throw new Error("ENCRYPTION_KEY is not set");
+      });
+
+      await expect(
+        saveGoogleCalendarWebhook({
+          channelId: "channel-001",
+          resourceId: "resource-001",
+          expiration: undefined,
+          token: "token-xyz-123",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining("暗号化に失敗しました"),
+      });
     });
   });
 });

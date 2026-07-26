@@ -86,7 +86,6 @@ function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
     location: data.location,
     startTime: data.startTime,
     endTime: data.endTime,
-    attendeeEmail: data.customerEmail,
   });
 }
 
@@ -732,7 +731,6 @@ export async function syncReservationSeriesToCalendar(
       location: lineAddress,
       startTime: series.dtstart,
       endTime,
-      attendeeEmail: series.customerEmail,
       // Google Calendar API は `RRULE:` prefix 込みの完全形を要求する。
       recurrence: [`RRULE:${series.rrule}`],
     });
