@@ -221,7 +221,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
-  getReservationCheckoutExpectedAmount: () => Promise.resolve(null),
+  getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
@@ -270,7 +270,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
-  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
+  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
@@ -431,6 +431,8 @@ function makeSessionCompletedEvent(
         id: sessionId,
         payment_status: paymentStatus,
         payment_intent: paymentIntent,
+        amount_total: 5000,
+        currency: "jpy",
         metadata,
       },
     },
@@ -483,6 +485,8 @@ function makeAsyncPaymentSucceededEvent(
         id: sessionId,
         payment_status: "paid",
         payment_intent: paymentIntent,
+        amount_total: 5000,
+        currency: "jpy",
         metadata,
       },
     },

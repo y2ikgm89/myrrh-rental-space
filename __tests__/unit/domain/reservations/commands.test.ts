@@ -12,6 +12,15 @@ const ReservationStatus = {
   NO_SHOW: "NO_SHOW",
 } as const;
 
+const PaymentStatus = {
+  UNPAID: "UNPAID",
+  PENDING: "PENDING",
+  PAID: "PAID",
+  PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
+  REFUNDED: "REFUNDED",
+  FAILED: "FAILED",
+} as const;
+
 const CouponType = {
   PERCENTAGE: "PERCENTAGE",
   FIXED_AMOUNT: "FIXED_AMOUNT",
@@ -837,6 +846,7 @@ describe("updateAdminReservationCommand", () => {
       Promise.resolve({
         id: "res-1",
         status: ReservationStatus.PENDING,
+        paymentStatus: PaymentStatus.UNPAID,
         spaceId: "space-1",
         startTime: new Date("2024-06-15T09:00:00+09:00"),
         endTime: new Date("2024-06-15T10:00:00+09:00"),
@@ -844,6 +854,7 @@ describe("updateAdminReservationCommand", () => {
         couponId: null,
         customerId: "cust-1",
         googleCalendarEventId: null,
+        taxRate: 10,
         customer: {
           firstName: "太郎",
           lastName: "山田",
@@ -1060,7 +1071,28 @@ describe("updateAdminReservationCommand", () => {
     });
 
     test("税額 recalc: taxRate が null (税なし予約) なら taxAmount=0 / totalPriceWithTax=totalPrice", async () => {
-      // beforeEach の fixture は taxRate 未指定 = null 相当
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          paymentStatus: PaymentStatus.UNPAID,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T09:00:00+09:00"),
+          endTime: new Date("2024-06-15T10:00:00+09:00"),
+          totalPrice: 1000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          taxRate: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
       await updateAdminReservationCommand("res-1", validInput);
 
       // hourlyPrice=1000 × 2h → totalPrice=2000、tax=0、withTax=2000
@@ -1289,6 +1321,125 @@ describe("updateAdminReservationCommand", () => {
       });
 
       expect(mockQueryRaw).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("payment gates (charge-affecting edits)", () => {
+    test("PENDING paymentStatus + 日時変更 → VALIDATION", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PENDING,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T09:00:00+09:00"),
+          endTime: new Date("2024-06-15T10:00:00+09:00"),
+          totalPrice: 1000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          taxRate: 10,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      const error = await updateAdminReservationCommand(
+        "res-1",
+        validInput,
+      ).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("決済処理中");
+      expect(mockTransaction).not.toHaveBeenCalled();
+    });
+
+    test("PAID paymentStatus + 日時変更 → VALIDATION", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PAID,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T09:00:00+09:00"),
+          endTime: new Date("2024-06-15T10:00:00+09:00"),
+          totalPrice: 1000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          taxRate: 10,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      const error = await updateAdminReservationCommand(
+        "res-1",
+        validInput,
+      ).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("決済済み");
+    });
+
+    test("PAID paymentStatus + notes のみ変更 → 成功", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PAID,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          taxRate: 10,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await updateAdminReservationCommand("res-1", {
+        ...validInput,
+        notes: "管理者メモ更新",
+      });
+
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            paymentStatus: expect.anything(),
+          }),
+        }),
+      );
+    });
+
+    test("UNPAID + 課金要素変更時 updateMany WHERE に paymentStatus IN [UNPAID, FAILED]", async () => {
+      await updateAdminReservationCommand("res-1", validInput);
+
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+            },
+          }),
+        }),
+      );
     });
   });
 });

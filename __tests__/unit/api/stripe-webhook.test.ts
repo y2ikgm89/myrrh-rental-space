@@ -390,7 +390,10 @@ const DEFAULT_RESERVATION = {
 function makeSessionCompletedEvent(
   paymentStatus: "paid" | "unpaid" = "paid",
   paymentIntent: string | null = "pi-123",
-  options: { amountTotal?: number; currency?: string } = {},
+  options: {
+    amountTotal?: number | null;
+    currency?: string;
+  } = {},
 ): StripeWebhookEvent {
   const { amountTotal = 5000, currency = "jpy" } = options;
   return {
@@ -676,6 +679,54 @@ describe("POST /api/webhooks/stripe", () => {
     );
   });
 
+  test("checkout.session.completed (paid) で amount_total が null → fulfill skip + 200 + HIGH log (fail-closed)", async () => {
+    mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(5000);
+    const event = makeSessionCompletedEvent("paid", "pi-123", {
+      amountTotal: null,
+    });
+    mockConstructEvent.mockResolvedValue(event);
+
+    const response = await POST(makeRequest("body"));
+    const body = await response.json();
+    expectReceivedResult(body);
+
+    expect(response.status).toBe(200);
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        severity: "HIGH",
+        context: expect.objectContaining({
+          operation: "stripeWebhookCheckoutCompleted",
+          sessionAmountTotal: null,
+          expectedAppAmount: 5000,
+        }),
+      }),
+    );
+  });
+
+  test("checkout.session.completed (paid) で expected amount が null → fulfill skip + 200 + HIGH log (fail-closed)", async () => {
+    mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(null);
+    const event = makeSessionCompletedEvent("paid", "pi-123");
+    mockConstructEvent.mockResolvedValue(event);
+
+    const response = await POST(makeRequest("body"));
+    const body = await response.json();
+    expectReceivedResult(body);
+
+    expect(response.status).toBe(200);
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        severity: "HIGH",
+        context: expect.objectContaining({
+          expectedAppAmount: null,
+        }),
+      }),
+    );
+  });
+
   test("checkout.session.completed (paid) は予約時メールを確認メールに使う", async () => {
     const event = makeSessionCompletedEvent("paid", "pi-123");
     mockConstructEvent.mockResolvedValue(event);
@@ -814,11 +865,14 @@ describe("POST /api/webhooks/stripe", () => {
           id: "cs_test_456",
           payment_status: "paid",
           payment_intent: "pi-789",
+          amount_total: 5000,
+          currency: "jpy",
           metadata: { reservationId: "res-456" },
         },
       },
     };
     mockConstructEvent.mockResolvedValue(event);
+    mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(5000);
     mockClaimReservationAsPaid.mockResolvedValueOnce({
       ...DEFAULT_RESERVATION,
       id: "res-456",

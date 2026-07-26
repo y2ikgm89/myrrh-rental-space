@@ -158,7 +158,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   claimReservationAsFailed: () => Promise.resolve(false),
   findReservationByPaymentIntent: () => Promise.resolve(null),
   applyChargeRefundIdempotent: () => Promise.resolve(),
-  getReservationCheckoutExpectedAmount: () => Promise.resolve(null),
+  getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
 mock.module("@/shared/domain/events/payment-queries", () => ({
@@ -169,7 +169,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
-  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
+  getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
@@ -312,6 +312,8 @@ function makeCheckoutCompletedEvent(eventId: string): StripeWebhookEvent {
         id: "cs_test_dedup",
         payment_status: "paid",
         payment_intent: "pi-dedup-1",
+        amount_total: 5000,
+        currency: "jpy",
         metadata: { reservationId: "res-dedup-1" },
       },
     },
