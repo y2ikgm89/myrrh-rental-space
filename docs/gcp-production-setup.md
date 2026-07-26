@@ -127,7 +127,8 @@ Keep these public even in production:
 - `/api/customer-auth/*`
 - `/api/webhooks/*`
 - `/api/cron/*` (still protected by app-level cron auth)
-- `/api/live`, `/api/health`
+- `/api/live` (liveness; both surfaces). `/api/health` is admin-surface-only
+  (public returns 404)
 - `/sitemap.xml`, `/robots.txt`, `/feed.xml`, `/llms.txt`
 
 ## Required variables
@@ -993,8 +994,10 @@ gcloud run services describe "$ADMIN_SERVICE_NAME" \
 ```
 
 Keep `/api/live` as the startup and liveness probe path. It is intentionally DB
-independent. Use `/api/health` only for manual or uptime checks that are allowed
-to touch dependencies.
+independent and public on both Cloud Run surfaces. Use `/api/health` only on the
+admin surface (`APP_SURFACE=admin`) for manual or authenticated uptime checks
+that are allowed to touch the database — public `/api/health` returns 404 to
+block anonymous DB probing.
 
 ## Admin load balancer and DNS
 
@@ -1277,7 +1280,7 @@ gcloud run services describe "$ADMIN_SERVICE_NAME" \
 gcloud run jobs execute prisma-migrate --region="$REGION" --wait
 
 curl -fsS "${PUBLIC_DOMAIN}/api/live"
-curl -fsS "${PUBLIC_DOMAIN}/api/health"
+curl -I "${PUBLIC_DOMAIN}/api/health"
 curl -I "${PUBLIC_DOMAIN}/admin"
 curl -I "${ADMIN_DOMAIN}/"
 curl -I "${ADMIN_DOMAIN}/admin"
@@ -1326,7 +1329,8 @@ If `gcloud` is installed but not on `PATH`, set `GCLOUD_BIN` to the gcloud execu
 Expected results:
 
 - `/api/live` returns 200;
-- `/api/health` returns 200 only when DB and dependencies are healthy;
+- `${PUBLIC_DOMAIN}/api/health` returns 404 (`APP_SURFACE=public`; DB health is
+  admin-surface-only, typically behind IAP on `${ADMIN_DOMAIN}`);
 - `${PUBLIC_DOMAIN}/admin` returns 404 from `APP_SURFACE=public`;
 - `${ADMIN_DOMAIN}/` redirects unauthenticated visitors to Google/IAP;
 - `${ADMIN_DOMAIN}/admin` redirects unauthenticated visitors to Google/IAP;
@@ -1408,7 +1412,7 @@ Expected results:
 
 - `bun run gcp:audit-production-iap` passes. The audit check
   `production HTTP domains are canonical HTTPS URLs` verifies URL shape before
-  checking `/api/live`, `/api/health`, public `/admin` hiding,
+  checking `/api/live`, public `/api/health` hiding, public `/admin` hiding,
   `admin root redirects unauthenticated visitors to Google/IAP`, and
   `admin /admin redirects unauthenticated visitors to Google/IAP`. The audit
   reads Cloud Run IAP access through the official IAP REST API resource

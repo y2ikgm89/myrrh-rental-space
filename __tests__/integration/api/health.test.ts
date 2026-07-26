@@ -3,7 +3,7 @@
  *
  * /api/health の behavioral テスト。
  * runDatabaseHealthCheck を mock して GET を実呼び出しし、status / JSON body /
- * Cache-Control header / 内部インフラ情報の非露出を検証する。
+ * Cache-Control header / 内部インフラ情報の非露出 / admin-surface gate を検証する。
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -13,12 +13,26 @@ const mockRunDatabaseHealthCheck = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 const mockLogError = mock<() => void>(() => {});
+const serverEnvState = {
+  APP_SURFACE: "admin" as "public" | "admin",
+};
+
+function MockNextResponse(
+  body?: BodyInit | null,
+  init?: ResponseInit,
+): Response {
+  return new Response(body, init);
+}
+MockNextResponse.json = (body: unknown, init?: ResponseInit) =>
+  Response.json(body, init);
 
 mock.module("next/server", () => ({
   connection: mockConnection,
-  NextResponse: {
-    json: (body: unknown, init?: ResponseInit) => Response.json(body, init),
-  },
+  NextResponse: MockNextResponse,
+}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: serverEnvState,
 }));
 
 mock.module("@/shared/domain/system/queries", () => ({
@@ -53,9 +67,27 @@ const { GET } = await import("@/app/api/health/route");
 
 describe("GET /api/health", () => {
   beforeEach(() => {
+    serverEnvState.APP_SURFACE = "admin";
     mockConnection.mockClear();
     mockRunDatabaseHealthCheck.mockReset();
     mockLogError.mockReset();
+  });
+
+  describe("surface gate", () => {
+    test("public surface では DB に触れず 404 を返す", async () => {
+      serverEnvState.APP_SURFACE = "public";
+
+      const response = await GET();
+
+      expect(mockConnection).toHaveBeenCalledTimes(1);
+      expect(mockRunDatabaseHealthCheck).not.toHaveBeenCalled();
+      expect(mockLogError).not.toHaveBeenCalled();
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe("");
+      expect(response.headers.get("Cache-Control")).toBe(
+        "no-cache, no-store, must-revalidate",
+      );
+    });
   });
 
   describe("正常系", () => {

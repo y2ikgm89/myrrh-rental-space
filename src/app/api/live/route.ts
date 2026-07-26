@@ -7,8 +7,8 @@
  * - プロセスがイベントループ応答可能であることだけを示す
  *
  * 役割分担:
- * - `/api/live`（本ファイル）: liveness-probe（kill 判定）
- * - `/api/health`: 監視・手動確認用（DB 疎通を含む詳細ヘルスチェック）
+ * - `/api/live`（本ファイル）: liveness-probe（kill 判定）。両 surface で公開
+ * - `/api/health`: admin surface のみ。DB 疎通を含む詳細ヘルスチェック
  * - startup-probe: `/api/live` を HTTP GET（Cloud Run 公式推奨）
  *
  * @see https://cloud.google.com/run/docs/configuring/healthchecks

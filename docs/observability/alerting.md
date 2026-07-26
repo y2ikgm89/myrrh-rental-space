@@ -8,13 +8,13 @@ either has no upstream signal today or is monitored by another surface
 
 ## Signals
 
-| Signal                      | Config file                                                 | Threshold    | Rationale                                                          |
-| --------------------------- | ----------------------------------------------------------- | ------------ | ------------------------------------------------------------------ |
-| ReportedErrorEvent burst    | `infra/monitoring/alert-policies/reported-error-burst.yaml` | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state |
-| Log severity CRITICAL       | `infra/monitoring/alert-policies/severity-critical.yaml`    | any 1 log    | Reserved for irrecoverable domain-level failures; page immediately |
-| `/api/health` 5xx           | `infra/monitoring/alert-policies/health-probe-5xx.yaml`     | any 1 log    | Health checks DB + Cloudflare + R2; a 5xx is always meaningful     |
-| Cron OIDC / config failure  | `infra/monitoring/alert-policies/cron-oidc-failure.yaml`    | > 3 / 15 min | Cloud Scheduler retries silently — this is the only signal         |
-| Prisma pool acquire-timeout | `infra/monitoring/alert-policies/prisma-pool-timeout.yaml`  | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load    |
+| Signal                      | Config file                                                 | Threshold    | Rationale                                                                     |
+| --------------------------- | ----------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------- |
+| ReportedErrorEvent burst    | `infra/monitoring/alert-policies/reported-error-burst.yaml` | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state            |
+| Log severity CRITICAL       | `infra/monitoring/alert-policies/severity-critical.yaml`    | any 1 log    | Reserved for irrecoverable domain-level failures; page immediately            |
+| `/api/health` 5xx           | `infra/monitoring/alert-policies/health-probe-5xx.yaml`     | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404 |
+| Cron OIDC / config failure  | `infra/monitoring/alert-policies/cron-oidc-failure.yaml`    | > 3 / 15 min | Cloud Scheduler retries silently — this is the only signal                    |
+| Prisma pool acquire-timeout | `infra/monitoring/alert-policies/prisma-pool-timeout.yaml`  | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load               |
 
 `/api/live` is intentionally excluded — it is the Cloud Run startup / liveness
 probe and is contracted to be DB-free. Alerting on it would create a feedback

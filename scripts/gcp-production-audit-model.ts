@@ -1348,9 +1348,9 @@ export function getProductionHttpAuditTargets(
       expectedStatus: 200,
     },
     {
-      name: "public /api/health returns 200",
+      name: "public /api/health is hidden",
       url: `${config.publicDomain}/api/health`,
-      expectedStatus: 200,
+      expectedStatus: 404,
     },
     {
       name: "public /admin is hidden",

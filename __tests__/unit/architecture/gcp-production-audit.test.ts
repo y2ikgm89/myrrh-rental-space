@@ -682,9 +682,9 @@ describe("GCP production audit model", () => {
         expectedStatus: 200,
       },
       {
-        name: "public /api/health returns 200",
+        name: "public /api/health is hidden",
         url: "https://rental-space.myrrh-jp.com/api/health",
-        expectedStatus: 200,
+        expectedStatus: 404,
       },
       {
         name: "public /admin is hidden",

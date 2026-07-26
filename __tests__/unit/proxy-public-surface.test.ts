@@ -22,6 +22,7 @@ describe("proxy public surface routing", () => {
     "/admin/login",
     "/preview/pages/about",
     "/api/admin/export/customers",
+    "/api/health",
     "/api/instagram/oauth/authorize",
     "/api/google-business-profile/oauth/callback",
   ])("public service returns 404 for admin-only path %s", async (pathname) => {
@@ -38,7 +39,6 @@ describe("proxy public surface routing", () => {
     "/api/auth/sign-in/email",
     "/api/customer-auth/get-session",
     "/api/live",
-    "/api/health",
   ])("public service allows public path %s", async (pathname) => {
     const response = await proxy(
       new NextRequest(`https://example.com${pathname}`),

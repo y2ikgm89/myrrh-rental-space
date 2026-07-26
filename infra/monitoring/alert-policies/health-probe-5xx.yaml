@@ -1,6 +1,7 @@
-# Alert on /api/health returning 5xx. /api/live is the startup + liveness
-# probe (DB-free, always returns 200 by design), so we specifically watch
-# /api/health, which does exercise DB and downstream integrations.
+# Alert on /api/health returning 5xx on the admin Cloud Run service.
+# /api/live is the startup + liveness probe (DB-free, always returns 200 by
+# design). /api/health is admin-surface-only (public returns 404) and exercises
+# DB; watch the admin service so public enumeration noise cannot fire this.
 #
 # Cloud Run request logs already have httpRequest.status without extra log
 # metrics, so we use conditionMatchedLog directly.
@@ -12,14 +13,16 @@ notificationChannels:
   # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
 documentation:
   content: |-
-    /api/health is returning 5xx. This endpoint exercises DB round-trip and the
-    critical downstream integrations (Cloudflare tag purge probe, R2 credential
-    probe). A single 5xx from it means either the database is unreachable, a
-    credential is missing, or the runtime is in a bad state.
+    Admin-surface `/api/health` is returning 5xx. This endpoint is gated to
+    `APP_SURFACE=admin` (public returns 404) and exercises DB round-trip. A
+    single 5xx means either the database is unreachable, a credential is
+    missing, or the admin runtime is in a bad state. Unauthenticated public
+    probes are not a signal — use `/api/live` + Prisma pool / CRITICAL alerts
+    for anonymous uptime.
 
     Investigation order:
-    1. Cloud Run revision — is the freshly deployed revision serving? Recent
-       migrate-execute failure?
+    1. Cloud Run revision (myrrh-rental-space-admin) — is the freshly deployed
+       revision serving? Recent migrate-execute failure?
     2. Prisma pool timeout alert — running at the same time?
     3. Cloudflare / R2 credential rotation — startup probe (`assertCloudflareCredentials`)
        fails visibly on cold-start when either is missing.
@@ -32,7 +35,7 @@ conditions:
     conditionMatchedLog:
       filter: |-
         resource.type="cloud_run_revision"
-        resource.labels.service_name="myrrh-rental-space"
+        resource.labels.service_name="myrrh-rental-space-admin"
         httpRequest.requestUrl=~"/api/health($|\\?)"
         httpRequest.status>=500
 
