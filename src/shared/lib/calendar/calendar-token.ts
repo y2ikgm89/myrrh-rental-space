@@ -15,7 +15,8 @@ import { isRecord } from "@/shared/lib/serialize";
  *
  * - 改ざんは GCM の authTag で検知 → invalid
  * - 有効期限切れは `exp` で検知 → expired
- * - URL 安全な base64url で運ぶ
+ * - URL 安全な base64url で運ぶ（メール初回リンクの交換用。proxy が HttpOnly cookie
+ *   へ転写し `?token` を URL から除去したうえで Route Handler が cookie を検証する）
  * - `kind` で予約 / イベントを分離し、reservation-cancel-token 等の他用途トークン流用を防ぐ
  *
  * **設計上の前提**: メール内 `.ics` リンクのライフタイム上限は **30 日**。
@@ -23,6 +24,7 @@ import { isRecord } from "@/shared/lib/serialize";
  * 30 日を超える先の予約の場合でも、予約・申込 ID の slice prefix を保持したファイル
  * 名 (`reservation-XXXXXXXX.ics`) として既にメールに添付されているか、最新の確認メール /
  * リマインダで新トークンが再発行されるため、ユーザー体験は劣化しない。
+ * cookie の maxAge は 30 分で、メール再クリック時に都度再転写する。
  *
  * cron による掃除は不要 (ステートレスで DB 行を持たない)。
  */

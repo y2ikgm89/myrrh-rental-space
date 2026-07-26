@@ -13,6 +13,10 @@ import {
 } from "@/shared/lib/constants/claim-token-cookie-names";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/reservation-status-token-cookie-name";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-status-token-cookie-name";
+import {
+  CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+} from "@/shared/lib/constants/calendar-token-cookie-names";
 
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
@@ -213,14 +217,19 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
  *   - 長さ 32〜1024 字（典型 100〜300）
  * 暗号学的な verify は Node ランタイムの page/action で実施する。
  *
- * 予約キャンセル・イベント参加申込キャンセル・予約完了・予約ステータスの
- * 4 経路が同じ転写方式を共有する。cookie 名をドメイン別に分けることで、一方の
- * ページ滞在中にもう一方のトークンが誤って読まれる（cross-contamination）ことを防ぐ。
+ * 予約キャンセル・イベント参加申込キャンセル・予約完了・予約ステータス・
+ * カレンダー .ics DL の経路が同じ転写方式を共有する。cookie 名をドメイン別に
+ * 分けることで、一方のページ滞在中にもう一方のトークンが誤って読まれる
+ * （cross-contamination）ことを防ぐ。
  *
  * cookie の maxAge はトークン自体の暗号学的な有効期限より意図的に短い（例:
- * キャンセルトークンは最大 7 日、ステータストークンは mint から 90 日有効だが
- * cookie は一律 30 分）。URL 経由の再訪問（メールリンクの再クリック等）では
- * その都度新しい cookie に転写されるため、通常の利用フローは損なわれない。
+ * キャンセルトークンは最大 7 日、ステータストークンは mint から 90 日、
+ * カレンダートークンは 30 日有効だが cookie は一律 30 分）。URL 経由の再訪問
+ * （メールリンクの再クリック等）ではその都度新しい cookie に転写されるため、
+ * 通常の利用フローは損なわれない。
+ *
+ * カレンダー .ics は動的 ID 付き path（`/api/calendar/reservation/:id` 等）のため
+ * prefix match を使う。cookie Path も API 配下に絞り、他ページへ送らない。
  */
 const GUEST_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
 const GUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
@@ -228,6 +237,10 @@ const GUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
   pathname: string;
   cookieName: string;
+  /** 省略時は exact。カレンダー API は動的 ID 付きのため prefix */
+  match?: "exact" | "prefix";
+  /** 省略時は `/`。カレンダー cookie は API path にスコープする */
+  cookiePath?: string;
 }> = [
   { pathname: "/reservation/cancel", cookieName: "cancel-token" },
   { pathname: "/events/cancel", cookieName: "event-cancel-token" },
@@ -244,12 +257,34 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     pathname: "/events/registrations/status",
     cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
   },
+  {
+    pathname: "/api/calendar/reservation/",
+    cookieName: CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+    match: "prefix",
+    cookiePath: "/api/calendar/reservation",
+  },
+  {
+    pathname: "/api/calendar/event/",
+    cookieName: CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+    match: "prefix",
+    cookiePath: "/api/calendar/event",
+  },
 ];
+
+function matchesGuestTokenTransferRoute(
+  pathname: string,
+  route: (typeof GUEST_TOKEN_TRANSFER_ROUTES)[number],
+): boolean {
+  if (route.match === "prefix") {
+    return pathname.startsWith(route.pathname);
+  }
+  return pathname === route.pathname;
+}
 
 function handleGuestTokenTransfer(req: NextRequest): NextResponse | null {
   const { pathname, searchParams } = req.nextUrl;
-  const route = GUEST_TOKEN_TRANSFER_ROUTES.find(
-    (r) => r.pathname === pathname,
+  const route = GUEST_TOKEN_TRANSFER_ROUTES.find((r) =>
+    matchesGuestTokenTransferRoute(pathname, r),
   );
   if (!route) return null;
   const token = searchParams.get("token");
@@ -267,7 +302,7 @@ function handleGuestTokenTransfer(req: NextRequest): NextResponse | null {
       httpOnly: true,
       sameSite: "strict",
       secure: !isLocalhostRequest(req),
-      path: "/",
+      path: route.cookiePath ?? "/",
       maxAge: GUEST_TOKEN_COOKIE_MAX_AGE,
     });
   }

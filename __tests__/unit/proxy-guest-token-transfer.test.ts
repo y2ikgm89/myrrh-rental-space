@@ -8,6 +8,11 @@ import { createStatusToken } from "@/shared/lib/reservation-status-token";
 import { createEventRegistrationStatusToken } from "@/shared/lib/event-registration-status-token";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/reservation-status-token-cookie-name";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-status-token-cookie-name";
+import {
+  CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+} from "@/shared/lib/constants/calendar-token-cookie-names";
+import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -148,6 +153,51 @@ describe("guest token transfer", () => {
 
   test("token なしの /reservation/cancel は素通り（redirect しない）", async () => {
     const req = new NextRequest("https://example.com/reservation/cancel");
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
+  test("/api/calendar/reservation/:id の ?token= を HttpOnly cookie に転写し URL から外す", async () => {
+    const reservationId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+    const token = createCalendarToken("reservation", reservationId);
+    const req = new NextRequest(
+      `https://example.com/api/calendar/reservation/${reservationId}?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe(
+      `/api/calendar/reservation/${reservationId}`,
+    );
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(CALENDAR_RESERVATION_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.path).toBe("/api/calendar/reservation");
+  });
+
+  test("/api/calendar/event/:id の ?token= を HttpOnly cookie に転写する", async () => {
+    const registrationId = "clxxxxxxxxxxxxxxxxxxxxxxxxx";
+    const token = createCalendarToken("event", registrationId);
+    const req = new NextRequest(
+      `https://example.com/api/calendar/event/${registrationId}?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(CALENDAR_EVENT_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.path).toBe("/api/calendar/event");
+  });
+
+  test("token なしの /api/calendar/reservation/:id は素通り（redirect しない）", async () => {
+    const req = new NextRequest(
+      "https://example.com/api/calendar/reservation/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    );
     const res = await proxy(req);
     expect(res.status).not.toBe(307);
   });
