@@ -9,7 +9,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   getCustomerReservationDetail,
@@ -90,7 +90,7 @@ export default async function ReservationDetailPage({
   const reason: RedirectReason | null =
     reasonRaw && isRedirectReason(reasonRaw) ? reasonRaw : null;
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

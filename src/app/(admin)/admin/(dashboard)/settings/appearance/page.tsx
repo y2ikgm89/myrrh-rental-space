@@ -15,7 +15,7 @@ import { getSettings } from "@/admin/queries/settings";
 import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
 import { getAnnouncementBars } from "@/admin/queries/announcement-bar";
 import { getAnnouncementBarCarouselSettings } from "@/admin/queries/settings";
-import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -30,7 +30,7 @@ import type { ReactElement } from "react";
 async function AppearanceSettingsContent(): Promise<ReactElement> {
   await connection();
 
-  const user = await requireAdminPermission("settings", "read");
+  const user = await requireAdminSettingsPage();
   const canUpdateSettings = hasPermission(user.role, "settings", "update");
   const canUpdateNavigation = hasPermission(user.role, "navigation", "update");
   const canUpdateAnnouncementBar = hasPermission(
@@ -142,7 +142,7 @@ function AppearanceSettingsLoading(): ReactElement {
 
 export default async function AppearanceSettingsPage(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminPermission("settings", "read");
+  const user = await requireAdminSettingsPage();
   const canUpdateAnyAppearanceSection =
     hasPermission(user.role, "settings", "update") ||
     hasPermission(user.role, "navigation", "update") ||
