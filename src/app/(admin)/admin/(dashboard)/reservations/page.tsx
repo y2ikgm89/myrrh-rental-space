@@ -6,7 +6,7 @@ import {
   getReservations,
   getSpacesForReservation,
 } from "@/admin/queries/reservation";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
 import { ReservationTabs } from "./_components/ReservationTabs";
@@ -76,7 +76,7 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canExportReservations = hasPermission(
     user.role,
     "reservation",

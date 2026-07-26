@@ -21,7 +21,7 @@ import {
 } from "@/shared/domain/reservations/guest-status-view";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import {
   checkGuestStatusMemberOwnership,
   GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
@@ -108,7 +108,7 @@ export default async function GuestReservationStatusPage({
   const [reservation, user, calendarSettings, deadlineSettings] =
     await Promise.all([
       getReservationForGuestStatus(access.reservationId),
-      getCurrentCustomerUser(),
+      resolveOptionalCustomerSession(),
       getCalendarEmailSettings(),
       getReservationDeadlineSettings(),
     ]);

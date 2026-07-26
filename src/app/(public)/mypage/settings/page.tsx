@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getAccountLinksAction } from "../_shared/actions/account";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
@@ -31,7 +31,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const requireEmailParam = params["require_email"] === "true";
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

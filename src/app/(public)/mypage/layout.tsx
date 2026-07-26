@@ -1,7 +1,7 @@
 /**
  * /mypage — マイページレイアウト（認証必須）
  *
- * - verifyCustomerSession() で認証チェック
+ * - requireMypageSession() で認証チェック
  * - ensureCustomerLinked() で Customer 紐づけ
  * - 新規顧客の場合、signup terms cookie を消費して同意記録（SignupTermsConsumer に隔離）
  * - メール未登録時は /mypage/settings にリダイレクト（LINE ログインで email なしの場合）
@@ -14,7 +14,7 @@
  *   `requireFeatureEnabled("reservation")` で 404。`/mypage/events` のみ events gate あり。
  *
  * 設計（rule .claude/rules/caching.md「build prerender の焼き込み防止」canonical）:
- * - 認証 + Prisma 直呼び出し (verifyCustomerSession / ensureCustomerLinked) + headers
+ * - 認証 + Prisma 直呼び出し (requireMypageSession / ensureCustomerLinked) + headers
  *   等の dynamic API 処理は **MypageAuthGate async SC に隔離**し、冒頭で `await connection()`
  *   を呼んで build prerender skip を保証する。
  * - layout body は `<Suspense fallback={null}><MypageAuthGate>{children}</MypageAuthGate></Suspense>`
@@ -34,7 +34,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
@@ -67,7 +67,7 @@ async function MypageAuthGate({
   readonly children: ReactNode;
 }): Promise<ReactElement> {
   await connection();
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const { customer, isNew } = await ensureCustomerLinked(user);
 
   // 停止・BLACKLIST 顧客は mypage アクセス不可（read + write の判定基準を

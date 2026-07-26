@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getCustomers } from "@/admin/queries/customer";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -58,7 +58,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canExportCustomers = hasPermission(user.role, "customer", "manage");
 
   return (
