@@ -39,6 +39,15 @@ const mockSettingsReservationUpdateMany = mock<
 const mockSettingsDataRetentionUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsNotificationUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockUserFindMany = mock<
+  (args: {
+    where?: Record<string, unknown>;
+    select?: Record<string, unknown>;
+  }) => Promise<Array<{ id: string }>>
+>(() => Promise.resolve([]));
 
 const txClient = {
   settingsOrganization: {
@@ -97,8 +106,14 @@ mock.module("@/shared/db/prisma", () => ({
     settingsDataRetention: {
       upsert: mockSettingsDataRetentionUpsert,
     },
+    settingsNotification: {
+      upsert: mockSettingsNotificationUpsert,
+    },
     settingsSidebar: {
       updateMany: mockSettingsSidebarUpdateMany,
+    },
+    user: {
+      findMany: mockUserFindMany,
     },
   },
   Prisma: {
@@ -143,6 +158,7 @@ import {
   updateBasicInfo,
   updateBusinessInfo,
   updateBusinessHoursSettings,
+  updateEmailSettings,
   updateReservationSettings,
   updateDiscountSettings,
   updateTaxSettings,
@@ -962,5 +978,108 @@ describe("updateDataRetentionSettings", () => {
         }),
       }),
     );
+  });
+});
+
+// =============================================================================
+// updateEmailSettings — notificationStaffIds validation
+// =============================================================================
+
+const STAFF_ID_A = "11111111-1111-4111-8111-111111111111";
+const STAFF_ID_B = "22222222-2222-4222-8222-222222222222";
+
+const EMAIL_SETTINGS_BASE = {
+  senderEmail: "noreply@example.com",
+  senderName: "Myrrh",
+  replyToEmail: null as string | null,
+  sendReservationConfirmationEmail: true,
+  notifyEventReminder: false,
+  notificationEmailAddresses: [] as string[],
+};
+
+describe("updateEmailSettings notificationStaffIds", () => {
+  beforeEach(() => {
+    mockSettingsOrganizationUpsert.mockReset();
+    mockSettingsReservationUpsert.mockReset();
+    mockSettingsNotificationUpsert.mockReset();
+    mockUserFindMany.mockReset();
+    mockSettingsOrganizationUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsReservationUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsNotificationUpsert.mockResolvedValue({ id: "singleton" });
+    mockUserFindMany.mockResolvedValue([]);
+  });
+
+  test("有効なダッシュボードスタッフ ID は重複除去して保存する", async () => {
+    mockUserFindMany.mockResolvedValue([
+      { id: STAFF_ID_A },
+      { id: STAFF_ID_B },
+    ]);
+
+    await updateEmailSettings({
+      ...EMAIL_SETTINGS_BASE,
+      notificationStaffIds: [STAFF_ID_A, STAFF_ID_B, STAFF_ID_A],
+    });
+
+    expect(mockUserFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: [STAFF_ID_A, STAFF_ID_B] },
+          dashboardEnabled: true,
+          role: { in: ["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] },
+        }),
+      }),
+    );
+    expect(mockSettingsNotificationUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          notificationStaffIds: [STAFF_ID_A, STAFF_ID_B],
+        }),
+      }),
+    );
+  });
+
+  test("空配列はユーザー照会なしで保存する", async () => {
+    await updateEmailSettings({
+      ...EMAIL_SETTINGS_BASE,
+      notificationStaffIds: [],
+    });
+
+    expect(mockUserFindMany).not.toHaveBeenCalled();
+    expect(mockSettingsNotificationUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          notificationStaffIds: [],
+        }),
+      }),
+    );
+  });
+
+  test("無効な notificationStaffIds は DomainError(VALIDATION) で拒否する", async () => {
+    mockUserFindMany.mockResolvedValue([{ id: STAFF_ID_A }]);
+
+    await expect(
+      updateEmailSettings({
+        ...EMAIL_SETTINGS_BASE,
+        notificationStaffIds: [STAFF_ID_A, STAFF_ID_B],
+      }),
+    ).rejects.toMatchObject({
+      name: "DomainError",
+      code: "VALIDATION",
+    });
+
+    expect(mockSettingsNotificationUpsert).not.toHaveBeenCalled();
+  });
+
+  test("dashboardEnabled / ロール不一致で 0 件なら拒否する", async () => {
+    mockUserFindMany.mockResolvedValue([]);
+
+    await expect(
+      updateEmailSettings({
+        ...EMAIL_SETTINGS_BASE,
+        notificationStaffIds: [STAFF_ID_A],
+      }),
+    ).rejects.toBeInstanceOf(DomainError);
+
+    expect(mockSettingsNotificationUpsert).not.toHaveBeenCalled();
   });
 });

@@ -12,9 +12,11 @@ import {
   getPageForEdit,
   getPageWithSections,
 } from "@/admin/queries/page-section";
+import { ensureSystemPageCommand } from "@/shared/domain/pages/commands";
 import { getSectionDynamicOptions } from "@/shared/domain/sections/dynamic-options";
 import { getFeatureFilterContext } from "@/shared/lib/features/check";
 import { getSeoSettings } from "@/shared/domain/settings/queries/site";
+import { isSystemPageSlug } from "@/shared/lib/validations/page";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { PageEditor } from "./_components/PageEditor";
@@ -35,6 +37,9 @@ export async function generateMetadata({
   await connection();
 
   const { slug } = await params;
+  if (isSystemPageSlug(slug)) {
+    await ensureSystemPageCommand(slug);
+  }
   const page = await getPageWithSections(slug);
 
   return {
@@ -48,6 +53,9 @@ export default async function EditPagePage({
   await connection();
 
   const { slug } = await params;
+  if (isSystemPageSlug(slug)) {
+    await ensureSystemPageCommand(slug);
+  }
 
   const page = await getPageForEdit(slug);
 

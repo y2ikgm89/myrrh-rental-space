@@ -35,10 +35,22 @@ export async function findAdminAuthUserByEmail(
       image: true,
       role: true,
       emailVerified: true,
+      dashboardEnabled: true,
     },
   });
 
-  return user;
+  if (!user || !user.dashboardEnabled) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    image: user.image,
+    role: user.role,
+    emailVerified: user.emailVerified,
+  };
 }
 
 export async function findOrSyncAdminAuthUserByEmail(

@@ -76,6 +76,7 @@ function makeUser(overrides: Partial<TestUser> = {}): TestUser {
     name: "Staff User",
     role: "ADMIN",
     emailVerified: true,
+    dashboardEnabled: true,
     image: null,
     createdAt: "2026-07-01T00:00:00.000Z",
     updatedAt: "2026-07-01T00:00:00.000Z",

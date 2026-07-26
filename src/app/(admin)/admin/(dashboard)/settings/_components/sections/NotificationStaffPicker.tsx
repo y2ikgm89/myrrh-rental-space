@@ -33,7 +33,9 @@ export function NotificationStaffPicker({
   if (staff.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        スタッフが登録されていません（スタッフ管理から追加できます）。
+        {
+          "スタッフは Google Workspace グループ同期後に表示されます。表示されない場合は Google Admin に確認してください。"
+        }
       </p>
     );
   }

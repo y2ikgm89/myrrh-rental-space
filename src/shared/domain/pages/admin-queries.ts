@@ -4,9 +4,11 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import type { PageData, PageListResult } from "./types";
+import type { PageAssignmentOption, PageData, PageListResult } from "./types";
 
 const PAGES_MANAGED_ELSEWHERE = ["posts", "news", "terms"];
+
+export type { PageAssignmentOption };
 
 export type PageListQueryParams = {
   query?: string | undefined;
@@ -151,6 +153,22 @@ export async function getDeletedPagesListQuery(
   });
 
   return toPlainArray(pages);
+}
+
+/** EDITOR へのページ割り当て UI 用。削除済み（isActive=false）を除く有効ページのみ。 */
+export async function getActivePagesForAssignmentPickerQuery(): Promise<
+  PageAssignmentOption[]
+> {
+  const pages = await prisma.page.findMany({
+    where: {
+      isActive: true,
+      slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
+    },
+    select: { id: true, title: true, slug: true },
+    orderBy: { title: "asc" },
+  });
+
+  return pages;
 }
 
 export async function getSystemPagesListQuery(

@@ -9,7 +9,13 @@ const mockRedirect = mock((path: string): never => {
 const mockFindUnique = mock();
 const mockUserCreate = mock();
 const mockUserUpdate = mock();
+const mockUserCount = mock(() => Promise.resolve(1));
 const mockAuditLogFindFirst = mock();
+const mockAuditLogCount = mock(() => Promise.resolve(0));
+const mockAdminNotificationFindFirst = mock(() => Promise.resolve(null));
+const mockAdminNotificationCreate = mock(() =>
+  Promise.resolve({ id: "notification-1" }),
+);
 const mockResolveIapIdentity = mock();
 const mockBetterAuthGetSession = mock(() => null);
 const mockIsGoogleWorkspaceGroupMember = mock();
@@ -38,9 +44,15 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockFindUnique,
       create: mockUserCreate,
       update: mockUserUpdate,
+      count: mockUserCount,
     },
     auditLog: {
       findFirst: mockAuditLogFindFirst,
+      count: mockAuditLogCount,
+    },
+    adminNotification: {
+      findFirst: mockAdminNotificationFindFirst,
+      create: mockAdminNotificationCreate,
     },
   },
 }));
@@ -96,6 +108,39 @@ mock.module("@/shared/lib/action-helpers", () => ({
 const { getAdminSession, getCurrentAdminUser, verifyAdminSession } =
   await import("@/shared/lib/admin-auth");
 
+const AUTH_USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  image: true,
+  role: true,
+  emailVerified: true,
+  dashboardEnabled: true,
+} as const;
+
+function dashboardStaffUser(
+  overrides: {
+    id?: string;
+    email?: string;
+    name?: string;
+    image?: string | null;
+    role?: string;
+    emailVerified?: boolean;
+    dashboardEnabled?: boolean;
+  } = {},
+) {
+  return {
+    id: "user-1",
+    email: "admin@example.com",
+    name: "Admin",
+    image: null,
+    role: "ADMIN",
+    emailVerified: true,
+    dashboardEnabled: true,
+    ...overrides,
+  };
+}
+
 function enableRoleGroupSyncEnv(): void {
   mockServerEnv["ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"] =
     "myrrh-super-admins@example.com";
@@ -114,8 +159,20 @@ beforeEach(() => {
   mockFindUnique.mockReset();
   mockUserCreate.mockReset();
   mockUserUpdate.mockReset();
+  mockUserCount.mockReset();
+  mockUserCount.mockImplementation(() => Promise.resolve(1));
   mockAuditLogFindFirst.mockReset();
   mockAuditLogFindFirst.mockResolvedValue(null);
+  mockAuditLogCount.mockReset();
+  mockAuditLogCount.mockImplementation(() => Promise.resolve(0));
+  mockAdminNotificationFindFirst.mockReset();
+  mockAdminNotificationFindFirst.mockImplementation(() =>
+    Promise.resolve(null),
+  );
+  mockAdminNotificationCreate.mockReset();
+  mockAdminNotificationCreate.mockImplementation(() =>
+    Promise.resolve({ id: "notification-1" }),
+  );
   mockResolveIapIdentity.mockReset();
   mockIsGoogleWorkspaceGroupMember.mockReset();
   mockCreateAuditLogRecord.mockReset();
@@ -149,14 +206,7 @@ describe("admin auth IAP boundary", () => {
       email: "admin@example.com",
       subject: "subject-1",
     });
-    mockFindUnique.mockResolvedValue({
-      id: "user-1",
-      email: "admin@example.com",
-      name: "Admin",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
     const user = await getCurrentAdminUser(new Headers());
 
@@ -170,14 +220,7 @@ describe("admin auth IAP boundary", () => {
     });
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { email: "admin@example.com" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: AUTH_USER_SELECT,
     });
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -200,14 +243,7 @@ describe("admin auth IAP boundary", () => {
       email: "admin@example.com",
       subject: "subject-1",
     });
-    mockFindUnique.mockResolvedValue({
-      id: "user-1",
-      email: "admin@example.com",
-      name: "Admin",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
     await expect(getAdminSession(new Headers())).resolves.toEqual({
       user: {
@@ -227,14 +263,7 @@ describe("admin auth IAP boundary", () => {
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
     enableRoleGroupSyncEnv();
     mockResolveIapIdentity.mockResolvedValue(null);
-    mockFindUnique.mockResolvedValue({
-      id: "user-1",
-      email: "admin@example.com",
-      name: "Admin",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
     const user = await getCurrentAdminUser(new Headers());
 
@@ -253,28 +282,14 @@ describe("admin auth IAP boundary", () => {
     process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
     process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
     mockResolveIapIdentity.mockResolvedValue(null);
-    mockFindUnique.mockResolvedValue({
-      id: "user-1",
-      email: "admin@example.com",
-      name: "Admin",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
     const user = await getCurrentAdminUser(new Headers());
 
     expect(user?.email).toBe("admin@example.com");
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { email: "admin@example.com" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: AUTH_USER_SELECT,
     });
   });
 
@@ -305,14 +320,7 @@ describe("admin auth IAP boundary", () => {
     process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
     process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
     mockResolveIapIdentity.mockResolvedValue(null);
-    mockFindUnique.mockResolvedValue({
-      id: "user-1",
-      email: "admin@example.com",
-      name: "Admin",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
 
     const user = await getCurrentAdminUser(new Headers());
 
@@ -320,14 +328,7 @@ describe("admin auth IAP boundary", () => {
     expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { email: "admin@example.com" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: AUTH_USER_SELECT,
     });
   });
 
@@ -406,6 +407,7 @@ describe("admin auth IAP boundary", () => {
       image: null,
       role: "ADMIN",
       emailVerified: true,
+      dashboardEnabled: true,
     });
 
     const user = await getCurrentAdminUser(new Headers());
@@ -424,15 +426,9 @@ describe("admin auth IAP boundary", () => {
         name: "new-admin",
         role: "ADMIN",
         emailVerified: true,
+        dashboardEnabled: true,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: AUTH_USER_SELECT,
     });
   });
 
@@ -446,14 +442,14 @@ describe("admin auth IAP boundary", () => {
       ({ groupEmail }: { groupEmail: string }) =>
         Promise.resolve(groupEmail === "myrrh-editors@example.com"),
     );
-    mockFindUnique.mockResolvedValue({
-      id: "user-4",
-      email: "staff@example.com",
-      name: "Staff",
-      image: null,
-      role: "ADMIN",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(
+      dashboardStaffUser({
+        id: "user-4",
+        email: "staff@example.com",
+        name: "Staff",
+        role: "ADMIN",
+      }),
+    );
     mockUserUpdate.mockResolvedValue({
       id: "user-4",
       email: "staff@example.com",
@@ -461,6 +457,7 @@ describe("admin auth IAP boundary", () => {
       image: null,
       role: "EDITOR",
       emailVerified: true,
+      dashboardEnabled: true,
     });
 
     const user = await getCurrentAdminUser(new Headers());
@@ -471,16 +468,10 @@ describe("admin auth IAP boundary", () => {
       data: {
         role: "EDITOR",
         emailVerified: true,
+        dashboardEnabled: true,
         name: "Staff",
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
+      select: AUTH_USER_SELECT,
     });
   });
 
@@ -498,10 +489,15 @@ describe("admin auth IAP boundary", () => {
         ),
     );
 
+    mockFindUnique.mockResolvedValue(null);
+
     await expect(verifyAdminSession(new Headers())).rejects.toThrow(
       "redirect:/admin/access-denied",
     );
-    expect(mockFindUnique).not.toHaveBeenCalled();
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "conflicting@example.com" },
+      select: AUTH_USER_SELECT,
+    });
     expect(mockUserCreate).not.toHaveBeenCalled();
     expect(mockUserUpdate).not.toHaveBeenCalled();
   });
@@ -511,14 +507,14 @@ describe("admin auth IAP boundary", () => {
       email: "customer@example.com",
       subject: "subject-1",
     });
-    mockFindUnique.mockResolvedValue({
-      id: "user-2",
-      email: "customer@example.com",
-      name: "Customer",
-      image: null,
-      role: "CUSTOMER",
-      emailVerified: true,
-    });
+    mockFindUnique.mockResolvedValue(
+      dashboardStaffUser({
+        id: "user-2",
+        email: "customer@example.com",
+        name: "Customer",
+        role: "CUSTOMER",
+      }),
+    );
 
     await expect(verifyAdminSession(new Headers())).rejects.toThrow(
       "redirect:/admin/access-denied",

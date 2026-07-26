@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableRow } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
+import { Badge } from "@/admin/components/ui/badge";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { UserActions } from "./UserActions";
 import { StaffTableHeader } from "./StaffTableHeader";
@@ -34,7 +35,12 @@ export function StaffTable({ users }: StaffTableProps) {
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell className="whitespace-nowrap">
-                  <RoleBadge role={user.role} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <RoleBadge role={user.role} />
+                    {!user.dashboardEnabled ? (
+                      <Badge variant="secondary">無効</Badge>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {user._count.reservations}
