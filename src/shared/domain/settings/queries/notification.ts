@@ -10,7 +10,6 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { mergeRecipients } from "@/shared/lib/email/recipients";
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 
 /**
  * 通知先（スタッフ＋カスタム）を解決した実メールアドレス一覧を返す。
