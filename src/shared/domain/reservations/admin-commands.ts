@@ -607,6 +607,9 @@ export async function updateAdminReservationCommand(
     // ステータス変更, unchanged=汎用 update) に分岐できるようにする。
     previousStatus: currentReservation.status,
     newStatus: input.status,
+    previousSpaceId: currentReservation.spaceId,
+    previousStartTime: currentReservation.startTime,
+    previousEndTime: currentReservation.endTime,
     spaceId: input.spaceId,
     payload: buildPayload({
       reservationId: id,

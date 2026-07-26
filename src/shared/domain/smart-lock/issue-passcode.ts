@@ -422,7 +422,13 @@ export async function issueSmartLockPasscodes(
           ? { passcodes: [resolved], issuanceFailed: false }
           : { passcodes: [], issuanceFailed: true };
       }
-      // PENDING/FAILED を発見 = すでに前回試行で失敗中の可能性が高いため failed 扱い
+      if (existing.status === SmartLockPasscodeStatus.REVOKE_PENDING) {
+        // deleteKey 受理後の失効待ち。reissue path は edit-side-effects が
+        // createKey 前に行を DELETE するが、ここに到達 = 新 key 未発行。
+        // silent no-op (issuanceFailed:false) は禁止 — fallback を出す。
+        return { passcodes: [], issuanceFailed: true };
+      }
+      // PENDING = createKey 進行中。FAILED = 前回失敗確定。
       return {
         passcodes: [],
         issuanceFailed: existing.status === SmartLockPasscodeStatus.FAILED,

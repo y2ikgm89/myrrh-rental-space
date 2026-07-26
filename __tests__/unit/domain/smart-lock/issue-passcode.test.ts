@@ -524,9 +524,26 @@ describe("issueSmartLockPasscodes", () => {
     const result = await issueSmartLockPasscodes(makeInput());
 
     expect(result.passcodes).toEqual([]);
+    expect(result.issuanceFailed).toBe(false);
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
+  });
+
+  test("既存レコードがREVOKE_PENDINGの場合はsilent no-opせずissuanceFailed=trueを返す", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue({
+      id: "passcode-existing",
+      status: "REVOKE_PENDING",
+      passcodeCiphertext: "irrelevant",
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result.passcodes).toEqual([]);
+    expect(result.issuanceFailed).toBe(true);
+    expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
+    expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
   });
 
   test("createでの一意制約違反(P2002)は既存の先勝ちCONFIRMED行を読み直して返す(例外を投げない)", async () => {
