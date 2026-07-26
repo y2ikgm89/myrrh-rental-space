@@ -182,6 +182,52 @@ export async function validateCoupon(
   };
 }
 
+/**
+ * Coupon.usageCount の atomic claim。
+ *
+ * pre-tx の `validateCoupon` 通過後でも、tx 内で isActive / usageLimit /
+ * validFrom / validUntil / minReservationAmount を同一 UPDATE の WHERE で
+ * 再強制する。claim count=0 は fail-closed（DomainError CONFLICT、予約は
+ * rollback）。Prisma updateMany では column-to-column 比較不可のため
+ * `$executeRaw` を使う。
+ */
+/** Interactive tx client または prisma gateway（$executeRaw のみ使用）。 */
+type CouponClaimClient = Pick<Tx, "$executeRaw">;
+
+export async function claimCouponUsage(
+  tx: CouponClaimClient,
+  args: {
+    couponId: string;
+    /** rate plan 適用後の basePrice（minReservationAmount 判定用） */
+    basePrice: number;
+    now?: Date;
+    conflictMessage?: string;
+  },
+): Promise<void> {
+  const now = args.now ?? new Date();
+  const claimed = await tx.$executeRaw`
+    UPDATE "coupons"
+    SET "usageCount" = "usageCount" + 1
+    WHERE "id" = ${args.couponId}::uuid
+      AND "isActive" = true
+      AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      AND "validFrom" <= ${now}
+      AND ("validUntil" IS NULL OR "validUntil" >= ${now})
+      AND (
+        "minReservationAmount" IS NULL
+        OR "minReservationAmount" <= ${args.basePrice}
+      )
+  `;
+  // driver によっては BigInt で返るため Number で正規化する。
+  if (Number(claimed) === 0) {
+    throw new DomainError(
+      args.conflictMessage ??
+        "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）",
+      "CONFLICT",
+    );
+  }
+}
+
 export async function ensureNoOverlap(
   params: {
     spaceId: string;

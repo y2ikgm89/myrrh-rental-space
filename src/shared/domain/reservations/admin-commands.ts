@@ -16,6 +16,7 @@ import {
   buildPricingSettings,
   getReservationSettings,
   validateCoupon,
+  claimCouponUsage,
   ensureNoOverlap,
   incrementCustomerReservationStats,
   recomputeCustomerReservationStats,
@@ -205,24 +206,10 @@ export async function createAdminReservationCommand(input: {
 
     const appliedCouponId = pricing.appliedCoupon?.id ?? null;
     if (appliedCouponId) {
-      // atomic claim: public-commands.ts と同型の $executeRaw で
-      // `usageLimit IS NULL OR usageCount < usageLimit` を WHERE 条件で強制する。
-      // 素の `update` では pre-tx validateCoupon 通過後の race で 2 admin が
-      // 同時に claim すると usageCount > usageLimit の over-use を許してしまう
-      // (business-domain rule: 「updateMany の WHERE で claim」パターン)。
-      const claimed = await tx.$executeRaw`
-        UPDATE "coupons"
-        SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${appliedCouponId}::uuid
-          AND "isActive" = true
-          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      `;
-      if (claimed === 0) {
-        throw new DomainError(
-          "クーポンが利用できません（利用上限に達した可能性があります）",
-          "CONFLICT",
-        );
-      }
+      await claimCouponUsage(tx, {
+        couponId: appliedCouponId,
+        basePrice: rateBreakdownForCoupon.totalBasePrice,
+      });
     }
 
     await incrementCustomerReservationStats(tx, resolvedCustomerId);
@@ -547,24 +534,10 @@ export async function updateAdminReservationCommand(
         });
       }
       if (newCouponId) {
-        // atomic claim: createAdminReservationCommand と同型の $executeRaw で
-        // usageLimit cap を強制する。素の increment だと、pre-tx の
-        // validateCoupon 後に別 admin が同じ coupon を limit まで使い切った
-        // race で 2 admin が同時に claim したときに usageCount > usageLimit の
-        // over-use を許してしまう (Round-3 audit Finding #9 / medium)。
-        const claimed = await tx.$executeRaw`
-          UPDATE "coupons"
-          SET "usageCount" = "usageCount" + 1
-          WHERE "id" = ${newCouponId}::uuid
-            AND "isActive" = true
-            AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-        `;
-        if (claimed === 0) {
-          throw new DomainError(
-            "クーポンが利用できません（利用上限に達した可能性があります）",
-            "CONFLICT",
-          );
-        }
+        await claimCouponUsage(tx, {
+          couponId: newCouponId,
+          basePrice: rateBreakdownForCoupon.totalBasePrice,
+        });
       }
     }
 

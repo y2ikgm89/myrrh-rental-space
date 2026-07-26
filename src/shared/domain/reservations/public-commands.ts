@@ -28,6 +28,7 @@ import {
   getReservationSettings,
   incrementCustomerReservationStats,
   buildPayload,
+  claimCouponUsage,
   validateCoupon,
 } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
@@ -262,26 +263,13 @@ export async function createPublicReservationCommand(
       include: { customer: { select: CUSTOMER_SELECT } },
     });
 
-    // Coupon usage の atomic claim (usageLimit null OR usageCount < usageLimit 条件で
-    // increment、race で claim 失敗なら CONFLICT を throw して tx rollback)。
-    // pre-tx validateCoupon で validity は確認済みだが、usageLimit の race を封じるために
-    // ここで conditional UPDATE を実行する (business-domain rule: 「updateMany の WHERE
-    // で claim」パターン; Prisma updateMany では column-to-column 比較不可のため
-    // $executeRaw を使う)。
+    // Coupon usage の atomic claim（validity window / min amount / usageLimit を
+    // 同一 UPDATE WHERE で強制。claim 失敗は CONFLICT で tx rollback）。
     if (couponId) {
-      const claimed = await tx.$executeRaw`
-        UPDATE "coupons"
-        SET "usageCount" = "usageCount" + 1
-        WHERE "id" = ${couponId}::uuid
-          AND "isActive" = true
-          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      `;
-      if (claimed === 0) {
-        throw new DomainError(
-          "クーポンが利用できません（利用上限に達した可能性があります）",
-          "CONFLICT",
-        );
-      }
+      await claimCouponUsage(tx, {
+        couponId,
+        basePrice: rateBreakdownForCoupon.totalBasePrice,
+      });
     }
 
     await incrementCustomerReservationStats(tx, customerId);

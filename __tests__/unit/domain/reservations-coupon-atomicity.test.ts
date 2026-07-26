@@ -12,10 +12,11 @@
  *
  * # 許可パターン
  *
- *   $executeRaw`UPDATE "coupons" SET ... WHERE ... AND (usageLimit IS NULL OR usageCount < usageLimit)`
+ *   claimCouponUsage(tx, { couponId, basePrice })  // payloads.ts
+ *     → $executeRaw UPDATE ... WHERE isActive + usageLimit + validFrom/Until + minAmount
  *   tx.coupon.updateMany({ where: { id, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } })
  *
- * increment は $executeRaw で cap を強制、decrement は updateMany + gt:0 guard。
+ * increment は claimCouponUsage（validity 込み）で強制、decrement は updateMany + gt:0 guard。
  *
  * # gate 対象
  *
@@ -64,7 +65,7 @@ describe("reservation domain: Coupon.usageCount writes are atomic-claim", () => 
         const snippet = source.slice(start, end).replace(/\s+/g, " ").trim();
         throw new Error(
           `${rel}: naive coupon.update({ usageCount: { increment/decrement } }) is banned. ` +
-            `Use $executeRaw with usageLimit cap for increment, or updateMany({ where: { usageCount: { gt: 0 } } }) for decrement. ` +
+            `Use claimCouponUsage (validity + usageLimit) for increment, or updateMany({ where: { usageCount: { gt: 0 } } }) for decrement. ` +
             `Context: …${snippet}…`,
         );
       }
