@@ -35,7 +35,6 @@ import {
   sendReservationAdminNotification,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 
 const updateStatusSchema = z.object({
@@ -326,20 +325,14 @@ export const restoreReservationStatus = async (
       };
 
       if (result.targetStatus === ReservationStatus.CONFIRMED) {
-        // CONFIRMED への復元はスマートロック対象スペースであればアクセス権限
-        // （一時パスコード）も再発行する。平文はメールに同梱せずハブで開示する
-        // （対象デバイス無しなら issueSmartLockPasscodes が即座に空配列を返す no-op）。
         fireAndForget(
-          issueSmartLockPasscodes({
-            reservationId: payloadData.reservationId,
+          applyConfirmationSideEffects({
+            payload: payloadData,
             spaceId: result.spaceId,
-            startTime: payloadData.startTime,
-            endTime: payloadData.endTime,
-          }).then(() =>
-            sendReservationStatusChangedEmail(statusChangedEmailData),
-          ),
+            channel: "admin",
+          }),
           {
-            operation: "restoreIssuePasscodesAndSendStatusChangedEmail",
+            operation: "restoreApplyConfirmationSideEffects",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.MEDIUM,
             context: { reservationId: id },

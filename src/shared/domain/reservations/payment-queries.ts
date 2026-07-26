@@ -24,6 +24,7 @@ import {
 
 const PAYMENT_EMAIL_SELECT = {
   id: true,
+  spaceId: true,
   startTime: true,
   endTime: true,
   totalPrice: true,

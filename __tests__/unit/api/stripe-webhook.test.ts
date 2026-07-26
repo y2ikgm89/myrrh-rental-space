@@ -73,6 +73,7 @@ const mockClaimReservationAsPaid = mock<
     data: { stripePaymentIntentId: string | null },
   ) => Promise<{
     id: string;
+    spaceId: string;
     totalPrice: number;
     notes: string | null;
     startTime: string;
@@ -144,6 +145,9 @@ const mockFireAndForget =
 // Email
 const mockSendReservationConfirmationEmail =
   mock<(data: unknown) => Promise<void>>();
+const mockIssueSmartLockPasscodes = mock<
+  () => Promise<{ passcodes: unknown[]; issuanceFailed: boolean }>
+>(() => Promise.resolve({ passcodes: [], issuanceFailed: false }));
 
 // Receipts (issueReceiptForReservation / issueReceiptForEventRegistration は
 // fulfill*PaymentAtomically 内で await される。receipt-full-wiring gap PR#1/#2 で配線
@@ -317,6 +321,10 @@ mock.module("@/shared/lib/async-utils", () => ({
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
+mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
+  issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
+}));
+
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
@@ -407,6 +415,7 @@ const DEFAULT_SETTINGS: MockCredentials = {
 
 const DEFAULT_RESERVATION = {
   id: "res-123",
+  spaceId: "space-123",
   totalPrice: 5000,
   notes: null,
   startTime: "2025-01-01T10:00:00.000Z",
@@ -530,6 +539,10 @@ describe("POST /api/webhooks/stripe", () => {
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
+    mockIssueSmartLockPasscodes.mockReset();
+    mockIssueSmartLockPasscodes.mockImplementation(() =>
+      Promise.resolve({ passcodes: [], issuanceFailed: false }),
+    );
     mockIssueReceiptForReservation.mockReset();
     mockIssueReceiptForEventRegistration.mockReset();
     mockNotifyReceiptIssuedForReservation.mockReset();
@@ -801,6 +814,7 @@ describe("POST /api/webhooks/stripe", () => {
     const response = await POST(makeRequest("body"));
 
     expect(response.status).toBe(200);
+    expect(mockIssueSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockSendReservationConfirmationEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         customerEmail: "booked-address@example.com",
@@ -839,6 +853,7 @@ describe("POST /api/webhooks/stripe", () => {
       /^http:\/\/localhost:3000\/reservation\/status\?token=.+/,
     );
     expect(mockSendReservationConfirmationEmail).not.toHaveBeenCalled();
+    expect(mockIssueSmartLockPasscodes).not.toHaveBeenCalled();
   });
 
   test("issueReceipt VALIDATION 失敗時は発行通知を送らない", async () => {
