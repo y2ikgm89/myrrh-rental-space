@@ -23,6 +23,9 @@ const mockExpireStalePendingSmartLockPasscodes = mock<
 const mockExpireStaleRevokePendingSmartLockPasscodes = mock<
   (now: Date) => Promise<number>
 >(() => Promise.resolve(0));
+const mockProcessPendingSmartLockReissues = mock<
+  (now: Date) => Promise<number>
+>(() => Promise.resolve(0));
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -56,6 +59,11 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
     mockExpireStalePendingSmartLockPasscodes(now),
   expireStaleRevokePendingSmartLockPasscodes: (now: Date) =>
     mockExpireStaleRevokePendingSmartLockPasscodes(now),
+}));
+
+mock.module("@/shared/domain/smart-lock/reissue-passcode", () => ({
+  processPendingSmartLockReissues: (now: Date) =>
+    mockProcessPendingSmartLockReissues(now),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -98,6 +106,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     mockFindStuckSmartLockPasscodesWhenIntegrationDisabled.mockReset();
     mockExpireStalePendingSmartLockPasscodes.mockReset();
     mockExpireStaleRevokePendingSmartLockPasscodes.mockReset();
+    mockProcessPendingSmartLockReissues.mockReset();
     mockLogError.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
@@ -114,6 +123,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     );
     mockExpireStalePendingSmartLockPasscodes.mockResolvedValue(0);
     mockExpireStaleRevokePendingSmartLockPasscodes.mockResolvedValue(0);
+    mockProcessPendingSmartLockReissues.mockResolvedValue(0);
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -167,6 +177,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       failed: 0,
       stalePendingExpired: 0,
       staleRevokePendingReverted: 4,
+      pendingReissues: 0,
     });
   });
 
