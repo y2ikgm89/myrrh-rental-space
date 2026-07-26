@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // =============================================================================
@@ -33,6 +34,9 @@ const mockUpdate = mock<() => Promise<{ id: string; slug: string }>>(() =>
 const mockDelete = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "deleted-id" }),
 );
+const mockAgreementFindMany = mock<
+  () => Promise<Array<{ termsId: string; contentHash: string }>>
+>(() => Promise.resolve([]));
 const mockAgreementCreateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
@@ -86,6 +90,7 @@ mock.module("@/shared/db/prisma", () => ({
       aggregate: mockAggregate,
     },
     termsAgreement: {
+      findMany: mockAgreementFindMany,
       createMany: mockAgreementCreateMany,
     },
     $transaction: mockTransaction,
@@ -694,7 +699,9 @@ describe("updateTermsPublishedCommand — last published scope guard / empty bod
 describe("recordTermsAgreementsCommand", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
+    mockAgreementFindMany.mockReset();
     mockAgreementCreateMany.mockReset();
+    mockAgreementFindMany.mockResolvedValue([]);
     mockAgreementCreateMany.mockResolvedValue({ count: 0 });
   });
 
@@ -706,6 +713,7 @@ describe("recordTermsAgreementsCommand", () => {
 
     expect(result).toEqual({ count: 0 });
     expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockAgreementFindMany).not.toHaveBeenCalled();
     expect(mockAgreementCreateMany).not.toHaveBeenCalled();
   });
 
@@ -811,6 +819,99 @@ describe("recordTermsAgreementsCommand", () => {
         data: expect.arrayContaining([
           expect.not.objectContaining({ guestEmail: expect.anything() }),
         ]),
+      }),
+    );
+  });
+
+  test("同一 identity+scope+termsId+contentHash+resourceId が既存なら createMany を skip", async () => {
+    const contentHtml = "<p>再同意</p>";
+    const contentHash = createHash("sha256").update(contentHtml).digest("hex");
+    mockFindMany.mockResolvedValueOnce([{ id: "t1", contentHtml }]);
+    mockAgreementFindMany.mockResolvedValueOnce([
+      { termsId: "t1", contentHash },
+    ]);
+
+    const result = await recordTermsAgreementsCommand({
+      termsIds: ["t1"],
+      scope: "LOGIN_SIGNUP" as const,
+      customerId: "cust-1",
+    });
+
+    expect(result).toEqual({ count: 0 });
+    expect(mockAgreementFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          customerId: "cust-1",
+          scope: "LOGIN_SIGNUP",
+          termsId: { in: ["t1"] },
+          contentHash: { in: [contentHash] },
+          resourceId: null,
+        }),
+      }),
+    );
+    expect(mockAgreementCreateMany).not.toHaveBeenCalled();
+  });
+
+  test("既存と contentHash が異なれば新規 insert（規約改訂後の再同意）", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "t1", contentHtml: "<p>改訂版</p>" },
+    ]);
+    mockAgreementFindMany.mockResolvedValueOnce([
+      {
+        termsId: "t1",
+        contentHash: "0".repeat(64),
+      },
+    ]);
+    mockAgreementCreateMany.mockResolvedValueOnce({ count: 1 });
+
+    const result = await recordTermsAgreementsCommand({
+      termsIds: ["t1"],
+      scope: "LOGIN_SIGNUP" as const,
+      customerId: "cust-1",
+    });
+
+    expect(result.count).toBe(1);
+    expect(mockAgreementCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            termsId: "t1",
+            customerId: "cust-1",
+            contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+          }),
+        ],
+      }),
+    );
+  });
+
+  test("部分重複時は未記録 termsId のみ createMany する", async () => {
+    const html1 = "<p>1</p>";
+    const html2 = "<p>2</p>";
+    const hash1 = createHash("sha256").update(html1).digest("hex");
+    mockFindMany.mockResolvedValueOnce([
+      { id: "t1", contentHtml: html1 },
+      { id: "t2", contentHtml: html2 },
+    ]);
+    mockAgreementFindMany.mockResolvedValueOnce([
+      { termsId: "t1", contentHash: hash1 },
+    ]);
+    mockAgreementCreateMany.mockResolvedValueOnce({ count: 1 });
+
+    const result = await recordTermsAgreementsCommand({
+      termsIds: ["t1", "t2"],
+      scope: "LOGIN_SIGNUP" as const,
+      customerId: "cust-1",
+    });
+
+    expect(result.count).toBe(1);
+    expect(mockAgreementCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            termsId: "t2",
+            customerId: "cust-1",
+          }),
+        ],
       }),
     );
   });

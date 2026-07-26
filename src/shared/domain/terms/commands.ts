@@ -463,6 +463,47 @@ export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
 }
 
 /**
+ * TermsAgreement 冪等キー（append-only のまま retry 重複を抑止）。
+ *
+ * identity (customerId XOR guestEmail) + scope + termsId + contentHash +
+ * resourceId。contentHash を含むので規約改訂後の再同意は新規行になる。
+ * resourceId を含むので同一顧客の別予約/問い合わせ証跡は独立に残る。
+ *
+ * DB unique は dual-identity nullable 列と既存重複の掃除が要るため、まず
+ * application-level findMany → createMany で硬化する（race は residual）。
+ */
+function termsAgreementDedupeKey(row: {
+  termsId: string;
+  contentHash: string;
+}): string {
+  return `${row.termsId}\0${row.contentHash}`;
+}
+
+function buildTermsAgreementIdentityWhere(input: {
+  scope: TermsScope | TermsScopeValue;
+  termsIds: readonly string[];
+  contentHashes: readonly string[];
+  customerId?: string | null | undefined;
+  guestEmail?: string | null | undefined;
+  resourceId?: string | null | undefined;
+}): Prisma.TermsAgreementWhereInput {
+  const identityWhere: Prisma.TermsAgreementWhereInput =
+    input.customerId != null && input.customerId !== ""
+      ? { customerId: input.customerId }
+      : input.guestEmail != null && input.guestEmail !== ""
+        ? { guestEmail: input.guestEmail }
+        : {};
+
+  return {
+    scope: input.scope,
+    termsId: { in: [...input.termsIds] },
+    contentHash: { in: [...input.contentHashes] },
+    resourceId: input.resourceId ?? null,
+    ...identityWhere,
+  };
+}
+
+/**
  * 同意記録の作成（公開フォーム送信時に呼ぶ）
  *
  * 旧 `context: string` を `scope: TermsScope` enum に置換 (schema 変更)。
@@ -472,6 +513,9 @@ export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
  *
  * fail-closed: 要求 ID はすべて `scopes: { has: scope }` かつ公開・非削除で
  * 解決できなければ DomainError（silent skip / 部分記録なし）。
+ *
+ * Idempotent: 同一 identity+scope+termsId+contentHash+resourceId の既存行は
+ * skip（append-only — upsert しない）。mypage reagree / signup retry 両対応。
  *
  * @param termsIds 同意した規約 ID 配列
  * @param scope   "RESERVATION"/"INQUIRY"/"LOGIN_SIGNUP"/"EVENT_REGISTRATION"
@@ -523,7 +567,25 @@ export async function recordTermsAgreementsCommand(input: {
       input.userAgent !== null && { userAgent: input.userAgent }),
   }));
 
-  const result = await prisma.termsAgreement.createMany({ data });
+  const existing = await prisma.termsAgreement.findMany({
+    where: buildTermsAgreementIdentityWhere({
+      scope: input.scope,
+      termsIds: uniqueIds,
+      contentHashes: data.map((row) => row.contentHash),
+      customerId: input.customerId,
+      guestEmail: input.guestEmail,
+      resourceId: input.resourceId,
+    }),
+    select: { termsId: true, contentHash: true },
+  });
+  const existingKeys = new Set(existing.map(termsAgreementDedupeKey));
+  const toInsert = data.filter(
+    (row) => !existingKeys.has(termsAgreementDedupeKey(row)),
+  );
+
+  if (toInsert.length === 0) return { count: 0 };
+
+  const result = await prisma.termsAgreement.createMany({ data: toInsert });
   return { count: result.count };
 }
 
@@ -540,6 +602,12 @@ type TermsAgreementWriteClient = {
     }) => Promise<{ id: string; contentHtml: string }[]>;
   };
   termsAgreement: {
+    findMany: (args: {
+      where: Prisma.TermsAgreementWhereInput;
+      select?: Prisma.TermsAgreementSelect;
+    }) => Promise<
+      Array<Pick<TermsAgreement, "id" | "termsId" | "contentHash" | "agreedAt">>
+    >;
     createMany: (args: {
       data: Prisma.TermsAgreementCreateManyInput[];
     }) => Promise<{ count: number }>;
@@ -571,6 +639,9 @@ export type RecordTermsAgreementsInput = {
  * 使う想定のため、`count` ではなく作成行そのものを返す。`termsAgreement.createMany`
  * は作成行を返さないので、id/agreedAt を呼出前に生成し、その同一オブジェクトを
  * createMany の data と戻り値の双方に使う（挿入内容と返却値が必ず一致する）。
+ *
+ * Idempotent: 同一 identity+scope+termsId+contentHash+resourceId の既存行は
+ * skip し、戻り値には既存行を載せる（snapshot 構築が retry でも成立する）。
  *
  * fail-closed: 要求 ID はすべて `scopes: { has: scope }` かつ公開・非削除で
  * 解決できなければ DomainError（silent skip / 部分記録なし）。tx 対応は維持。
@@ -615,7 +686,40 @@ export async function recordTermsAgreements(
     userAgent: input.userAgent ?? null,
   }));
 
-  await client.termsAgreement.createMany({ data: records });
+  const existing = await client.termsAgreement.findMany({
+    where: buildTermsAgreementIdentityWhere({
+      scope: input.scope,
+      termsIds: uniqueIds,
+      contentHashes: records.map((row) => row.contentHash),
+      customerId: input.customerId,
+      guestEmail: input.guestEmail,
+      resourceId: input.resourceId,
+    }),
+    select: { id: true, termsId: true, contentHash: true, agreedAt: true },
+  });
+  const existingByKey = new Map(
+    existing.map((row) => [termsAgreementDedupeKey(row), row]),
+  );
 
-  return records;
+  const toInsert: TermsAgreement[] = [];
+  const result: TermsAgreement[] = [];
+  for (const record of records) {
+    const prior = existingByKey.get(termsAgreementDedupeKey(record));
+    if (prior) {
+      result.push({
+        ...record,
+        id: prior.id,
+        agreedAt: prior.agreedAt,
+      });
+      continue;
+    }
+    toInsert.push(record);
+    result.push(record);
+  }
+
+  if (toInsert.length > 0) {
+    await client.termsAgreement.createMany({ data: toInsert });
+  }
+
+  return result;
 }
