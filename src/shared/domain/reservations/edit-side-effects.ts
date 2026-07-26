@@ -166,10 +166,18 @@ export async function applyReservationEditSideEffects(input: {
     await revokeSmartLockPasscodesForReservation(reservationId);
 
     // 3. @@unique([reservationId, deviceId]) 制約対策 (Codex P2 対応):
-    //    device id が変わらないなら REVOKED/FAILED 行を DELETE して issue 側の
-    //    一意制約を通過させる。spaceId が違っても同一デバイスを共有する運用
-    //    (Space.smartLockDeviceId が同じ) は多いため、spaceId ではなく
-    //    実 device id で判定する必要がある。
+    //    revoke 直後は CONFIRMED → REVOKE_PENDING になる。同一 physical device
+    //    への再発行では REVOKE_PENDING / PENDING 行が残ると issue 側が
+    //    「既存行あり」で silent no-op になるため、createKey 前に terminal /
+    //    in-flight 行を DELETE する。
+    //
+    //    SwitchBot timeLimit key は update 不可 (deleteKey → createKey 必須)。
+    //    再発行 state machine:
+    //      CONFIRMED --deleteKey--> REVOKE_PENDING --(webhook/keyList)--> REVOKED
+    //      reissue path: revoke 要求後、同一 device なら REVOKE_PENDING 等を
+    //      ローカル DELETE → createKey で新 key を必ず発行する。
+    //    別 device へ space 変更した場合は old device の REVOKE_PENDING を残し
+    //    (失効は webhook 側で完走)、new device は別 unique slot なので触らない。
     const deviceSame = await isSameSmartLockDevice(oldSpaceId, newSpaceId);
     if (deviceSame) {
       await prisma.smartLockPasscode.deleteMany({
@@ -177,6 +185,8 @@ export async function applyReservationEditSideEffects(input: {
           reservationId,
           status: {
             in: [
+              SmartLockPasscodeStatus.REVOKE_PENDING,
+              SmartLockPasscodeStatus.PENDING,
               SmartLockPasscodeStatus.REVOKED,
               SmartLockPasscodeStatus.FAILED,
             ],

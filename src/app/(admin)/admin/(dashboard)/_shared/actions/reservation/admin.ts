@@ -44,6 +44,7 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
+import { applyReservationEditSideEffects } from "@/shared/domain/reservations/edit-side-effects";
 import {
   createReservationFormSchema,
   updateReservationFormSchema,
@@ -437,12 +438,28 @@ export async function updateReservationAction(
               );
             }
           } else if (mutationPayload.customerVisibleChanged) {
-            // status 不変で日時/スペース/料金のみ変更 (既存の汎用 update 通知)
+            // status 不変で日時/スペース/料金のみ変更 (既存の汎用 update 通知)。
+            // CONFIRMED + 日時/スペース変更時は public/mypage と同型で
+            // SwitchBot passcode revoke → reissue を走らせる (edit-side-effects SSoT)。
             fireAndForget(
-              Promise.all([
-                sendReservationUpdatedEmail(payloadData),
-                sendReservationAdminNotification(payloadData, "update"),
-              ]),
+              (async () => {
+                const sideEffectResult = await applyReservationEditSideEffects({
+                  reservationId: parsedId.data,
+                  oldSpaceId: mutationPayload.previousSpaceId,
+                  oldStartTime: mutationPayload.previousStartTime,
+                  oldEndTime: mutationPayload.previousEndTime,
+                  newSpaceId: mutationPayload.spaceId,
+                  newStartTime: payloadData.startTime,
+                  newEndTime: payloadData.endTime,
+                });
+                const emailPayload = sideEffectResult.issuanceFailed
+                  ? { ...payloadData, smartLockIssuanceFailed: true }
+                  : payloadData;
+                await Promise.all([
+                  sendReservationUpdatedEmail(emailPayload),
+                  sendReservationAdminNotification(emailPayload, "update"),
+                ]);
+              })(),
               {
                 operation: "sendReservationUpdateNotification",
                 category: ErrorCategory.EXTERNAL_API,
