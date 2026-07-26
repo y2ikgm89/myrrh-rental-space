@@ -18,6 +18,7 @@ import {
   findStuckSmartLockPasscodesWhenIntegrationDisabled,
   revokeExpiredSmartLockPasscodes,
 } from "@/shared/domain/smart-lock/revoke-passcode";
+import { processPendingSmartLockReissues } from "@/shared/domain/smart-lock/reissue-passcode";
 import {
   logError,
   normalizeError,
@@ -81,6 +82,8 @@ export async function GET(request: Request) {
 
     const { revoked, failed } = await revokeExpiredSmartLockPasscodes(now);
 
+    const pendingReissues = await processPendingSmartLockReissues(now);
+
     if (failed > 0) {
       logError(new Error("Some SwitchBot passcodes failed to revoke"), {
         category: ErrorCategory.EXTERNAL_API,
@@ -100,6 +103,7 @@ export async function GET(request: Request) {
       failed,
       stalePendingExpired,
       staleRevokePendingReverted,
+      pendingReissues,
     });
   } catch (error) {
     unstable_rethrow(error);

@@ -19,7 +19,10 @@ import {
   SmartLockPasscodeStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isSmartLockBodyDeviceType } from "@/shared/lib/validations/enums/helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 import { buildPasscodeName } from "./issue-passcode";
+import { completePendingSmartLockReissue } from "./reissue-passcode";
 import { confirmRevokeByKeyAbsence, revokeOne } from "./revoke-passcode";
 
 export type SwitchBotWebhookCommandResult = "success" | "failed" | "timeout";
@@ -146,7 +149,16 @@ async function processDeleteKeyChangeReport(
       revokedAt: new Date(),
     },
   });
-  return updated.count > 0;
+  if (updated.count === 0) {
+    return false;
+  }
+
+  fireAndForget(completePendingSmartLockReissue(passcodeRow.reservationId), {
+    operation: "completePendingSmartLockReissueFromWebhook",
+    category: ErrorCategory.EXTERNAL_API,
+  });
+
+  return true;
 }
 
 async function processCreateKeyChangeReport(
