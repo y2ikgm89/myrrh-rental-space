@@ -869,12 +869,13 @@ describe("architecture boundaries", () => {
   test("TermsAgreement は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
     // TermsAgreement は法務証跡なので append-only。事後改竄を ESLint/test 双方で
     // 物理的に塞ぐ。Prisma の update / updateMany / delete / deleteMany / upsert /
-    // deleteMany を src/ 配下から grep gate する。restore など意図的な再有効化は
-    // 別 model (TermsDocument) の操作で行うので本 gate は terms_agreement のみ。
+    // を src/ 配下から grep gate する。tx.termsAgreement.* も同型で塞ぐ
+    // （interactive transaction 経由の改竄経路）。restore など意図的な再有効化は
+    // 別 model (TermsDocument) の操作で行うので本 gate は termsAgreement のみ。
     const files = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
       files,
-      /prisma\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+      /\b(?:prisma|tx)\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
     );
     expect(offenders).toEqual([]);
   });
