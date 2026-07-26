@@ -89,8 +89,8 @@ describe("bulkPublishEventsCommand", () => {
           { id: VALID_UUID_2, slug: "event-2" },
         ]),
       );
-      mockEventUpdateMany.mockImplementationOnce(() =>
-        Promise.resolve({ count: 2 }),
+      mockEventUpdateMany.mockImplementation(() =>
+        Promise.resolve({ count: 1 }),
       );
 
       const result = await bulkPublishEventsCommand(
@@ -117,9 +117,14 @@ describe("bulkPublishEventsCommand", () => {
           select: { id: true, slug: true },
         }),
       );
+      expect(mockEventUpdateMany).toHaveBeenCalledTimes(2);
       expect(mockEventUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: { in: [VALID_UUID_1, VALID_UUID_2] } },
+          where: {
+            id: VALID_UUID_1,
+            deletedAt: null,
+            status: { in: [EventStatus.DRAFT] },
+          },
           data: expect.objectContaining({
             status: EventStatus.PUBLISHED,
           }),
@@ -149,6 +154,11 @@ describe("bulkPublishEventsCommand", () => {
       );
       expect(mockEventUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: {
+            id: VALID_UUID_1,
+            deletedAt: null,
+            status: { in: [EventStatus.PUBLISHED] },
+          },
           data: expect.objectContaining({
             status: EventStatus.DRAFT,
             publishedAt: null,
@@ -181,7 +191,6 @@ describe("bulkPublishEventsCommand", () => {
 
   describe("status filter（遷移制約）", () => {
     test("CANCELLED のイベントは publish 対象外（findMany でフィルタ）", async () => {
-      // DRAFT と CANCELLED の混在を想定: findMany が DRAFT のみ返す
       mockEventFindMany.mockImplementationOnce(() =>
         Promise.resolve([{ id: VALID_UUID_1, slug: "draft-event" }]),
       );
@@ -211,6 +220,31 @@ describe("bulkPublishEventsCommand", () => {
       expect(result.skipped).toBe(2);
       expect(result.affectedSlugs).toEqual([]);
       expect(mockEventUpdateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("TOCTOU claim", () => {
+    test("claim に失敗した行は affectedTargets に含めない", async () => {
+      mockEventFindMany.mockImplementationOnce(() =>
+        Promise.resolve([
+          { id: VALID_UUID_1, slug: "event-1" },
+          { id: VALID_UUID_2, slug: "event-2" },
+        ]),
+      );
+      mockEventUpdateMany
+        .mockImplementationOnce(() => Promise.resolve({ count: 1 }))
+        .mockImplementationOnce(() => Promise.resolve({ count: 0 }));
+
+      const result = await bulkPublishEventsCommand(
+        [VALID_UUID_1, VALID_UUID_2],
+        true,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.skipped).toBe(1);
+      expect(result.affectedTargets).toEqual([
+        { id: VALID_UUID_1, slug: "event-1" },
+      ]);
     });
   });
 });
@@ -276,7 +310,6 @@ describe("bulkSoftDeleteEventsCommand", () => {
     });
 
     test("既に削除済みのイベントはフィルタされる", async () => {
-      // findMany が deletedAt: null フィルタで 1 件のみ返す（残りは既削除）
       mockEventFindMany.mockImplementationOnce(() =>
         Promise.resolve([{ id: VALID_UUID_1, slug: "event-1" }]),
       );

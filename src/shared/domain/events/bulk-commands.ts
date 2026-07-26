@@ -52,24 +52,31 @@ export async function bulkPublishEventsCommand(
     select: { id: true, slug: true },
   });
 
-  const targetIds = targets.map((t) => t.id);
-  const result =
-    targetIds.length === 0
-      ? { count: 0 }
-      : await prisma.event.updateMany({
-          where: { id: { in: targetIds } },
-          data: {
-            status: publish ? EventStatus.PUBLISHED : EventStatus.DRAFT,
-            publishedAt: publish ? now : null,
-          },
-        });
+  const affectedTargets: BulkEventTarget[] = [];
+
+  for (const target of targets) {
+    const claim = await prisma.event.updateMany({
+      where: {
+        id: target.id,
+        deletedAt: null,
+        status: { in: [...allowedStatuses] },
+      },
+      data: {
+        status: publish ? EventStatus.PUBLISHED : EventStatus.DRAFT,
+        publishedAt: publish ? now : null,
+      },
+    });
+    if (claim.count === 1) {
+      affectedTargets.push(target);
+    }
+  }
 
   return {
-    count: result.count,
-    skipped: ids.length - result.count,
+    count: affectedTargets.length,
+    skipped: ids.length - affectedTargets.length,
     isPublished: publish,
-    affectedSlugs: targets.map((t) => t.slug),
-    affectedTargets: targets,
+    affectedSlugs: affectedTargets.map((t) => t.slug),
+    affectedTargets,
   };
 }
 

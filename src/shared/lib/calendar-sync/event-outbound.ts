@@ -26,7 +26,10 @@ import {
 } from "@/shared/lib/google-calendar";
 import {
   clearEventGoogleCalendarEventId,
+  GCAL_DELETE_FAILED_PREFIX,
+  getEventGoogleCalendarEventIdsForDelete,
   getEventSlotsForCalendarSync,
+  getEventCalendarSyncError,
   getFailedCalendarSyncEventIds,
   markEventCalendarSyncError,
   markEventCalendarSyncSuccess,
@@ -275,6 +278,11 @@ export async function deleteEventCalendarSync(
       return { success: true };
     }
 
+    await markEventCalendarSyncError({
+      eventId,
+      error: `${GCAL_DELETE_FAILED_PREFIX}${result.error ?? "Delete failed"}`,
+    });
+
     return omitUndefined({ success: false, error: result.error });
   } catch (error) {
     // markEventCalendarSyncError が内部で logError を呼ぶため重複呼び出し禁止
@@ -282,7 +290,7 @@ export async function deleteEventCalendarSync(
       error instanceof Error ? error.message : normalizeError(error).message;
     await markEventCalendarSyncError({
       eventId,
-      error: message,
+      error: `${GCAL_DELETE_FAILED_PREFIX}${message}`,
     });
     return { success: false, error: message };
   }
@@ -293,14 +301,12 @@ export async function deleteEventCalendarSync(
 // =============================================================================
 
 /**
- * `Event.calendarSyncError` が残っているイベントのうち、`googleCalendarEventId`
- * が未設定のスロットを対象に create を再試行する。
+ * `Event.calendarSyncError` が残っているイベントを再試行する。
  *
- * update / delete 失敗（slot は既に `googleCalendarEventId` を持つ）はここでは
- * 拾わない — event 単位の再送で slot 側 GCal event を都度作り直すと孤児 event を
- * 生むため対象外（reservation 側の update/delete retry と非対称、GCAL-AUDIT-04 の
- * スコープは「failed slots with null googleCalendarEventId + event.calendarSyncError」）。
- * 全 slot が同期済みになったら event 側の `calendarSyncError` を解消する。
+ * - slot の `googleCalendarEventId` が null → create (`syncEventToCalendar`)
+ * - slot の `googleCalendarEventId` 有り + `GCAL_DELETE_FAILED_PREFIX` エラー
+ *   → delete (`deleteEventCalendarSync`)。CANCELLED 等で GCal 上に残っている状態。
+ * - 上記以外の event-level エラー（Meet write-back 失敗等）は自動 retry 対象外。
  */
 export async function retryFailedEventCalendarSyncs(): Promise<{
   total: number;
@@ -314,6 +320,31 @@ export async function retryFailedEventCalendarSyncs(): Promise<{
   let failed = 0;
 
   for (const eventId of eventIds) {
+    const gcalIdsForDelete =
+      await getEventGoogleCalendarEventIdsForDelete(eventId);
+    const syncError = await getEventCalendarSyncError(eventId);
+    const isDeleteRetry =
+      gcalIdsForDelete.length > 0 &&
+      syncError?.startsWith(GCAL_DELETE_FAILED_PREFIX) === true;
+
+    if (isDeleteRetry) {
+      for (const gcalEventId of gcalIdsForDelete) {
+        total++;
+        const result = await deleteEventCalendarSync(eventId, gcalEventId);
+        if (result.success) {
+          succeeded++;
+        } else {
+          failed++;
+        }
+      }
+
+      const remaining = await getEventGoogleCalendarEventIdsForDelete(eventId);
+      if (remaining.length === 0) {
+        await markEventCalendarSyncSuccess(eventId);
+      }
+      continue;
+    }
+
     const slots = await getEventSlotsForCalendarSync(eventId);
     const pendingSlots = slots.filter(
       (slot) => slot.googleCalendarEventId === null,
