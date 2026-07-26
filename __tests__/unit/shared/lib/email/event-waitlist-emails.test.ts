@@ -92,6 +92,7 @@ type RegisteredProps = {
 };
 type OfferedProps = {
   actionUrl: string;
+  eventRegistrationHubUrl: string;
   isPaid: boolean;
   priceDisplay?: string;
 };
@@ -279,6 +280,9 @@ describe("sendEventWaitlistOffered", () => {
       "https://example.com/events/waitlist/confirm?token=tok",
     );
     expect(props?.priceDisplay).toBeUndefined();
+    expect(props?.eventRegistrationHubUrl).toContain(
+      "/events/registrations/status?token=",
+    );
   });
 
   test("paid branch: actionUrl は checkoutUrl、priceDisplay は円表示", async () => {
@@ -299,6 +303,24 @@ describe("sendEventWaitlistOffered", () => {
       "https://example.com/events/waitlist/checkout/tok",
     );
     expect(props?.priceDisplay).toContain("3,000");
+  });
+
+  test("会員向け hub URL は /mypage/events/{id}", async () => {
+    mockFindUnique.mockImplementation(() =>
+      Promise.resolve(MEMBER_REGISTRATION),
+    );
+    await sendEventWaitlistOffered({
+      registrationId: "reg-2",
+      to: "member@example.com",
+      expiresAt: new Date("2099-01-02T00:00:00Z"),
+      paymentContext: {
+        kind: "free",
+        confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
+      },
+    });
+
+    const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
+    expect(props?.eventRegistrationHubUrl).toContain("/mypage/events/reg-2");
   });
 
   test("idempotencyKey は registrationId と expiresAt.getTime() の両方を含む", async () => {

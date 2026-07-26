@@ -26,7 +26,7 @@ export function ClaimConfirmForm() {
         setError(result.error);
         return;
       }
-      router.push("/mypage/events");
+      router.push(`/mypage/events/${result.eventRegistrationId}`);
     });
   };
 

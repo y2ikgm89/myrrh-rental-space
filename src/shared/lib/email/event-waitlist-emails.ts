@@ -239,6 +239,10 @@ export async function sendEventWaitlistOffered(args: {
           expiresAtDate,
           expiresAtTime,
           actionUrl,
+          eventRegistrationHubUrl: buildEventRegistrationHubUrl(
+            registration.customerId,
+            registration.id,
+          ),
           isPaid,
           priceDisplay,
           footer,

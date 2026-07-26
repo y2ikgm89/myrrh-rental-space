@@ -157,13 +157,12 @@ export function EventRegistrationDetail({
         <DetailRow label="お支払い">
           {PAYMENT_STATUS_LABELS[paymentStatus]}
         </DetailRow>
-        {isEventVirtualAccessible(registration.event) &&
-          registration.event.meetingUrl && (
-            <EventMeetingUrlRow
-              meetingUrl={registration.event.meetingUrl}
-              isConfirmed={status === RegistrationStatus.CONFIRMED}
-            />
-          )}
+        {isEventVirtualAccessible(registration.event) && (
+          <EventMeetingUrlRow
+            meetingUrl={registration.event.meetingUrl}
+            isConfirmed={status === RegistrationStatus.CONFIRMED}
+          />
+        )}
       </dl>
 
       {registration.status === RegistrationStatus.WAITLISTED && (
