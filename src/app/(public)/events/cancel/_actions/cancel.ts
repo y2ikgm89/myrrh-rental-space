@@ -7,7 +7,7 @@ import { cancelEventRegistrationByToken } from "@/shared/domain/events/registrat
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import {
   createMutationError,
@@ -165,31 +165,24 @@ export async function cancelGuestEventRegistrationAction(
     );
   }
 
-  // 6. member-ownership ガード: ログイン中ユーザーが「別人（既に会員紐付け済み）の
-  //    申込」をキャンセルしようとしている場合は拒否。ゲスト本人（session 無し）は
-  //    そのまま通す。
-  //
-  //    EventRegistration.customerId は nullable（未 claim のゲスト申込は null）。
-  //    Reservation.customerId は非 null（ゲスト予約でも ad-hoc customer が必ず
-  //    紐付く）ため同じガードで問題ないが、イベントでは null のままトークンだけが
-  //    本人性の証明になっているケースがあるため、`registration.customerId` が
-  //    null の間はこのガードを適用しない（さもないと、申込者本人がメール受信後に
-  //    別件で会員登録済みだった場合、正規のトークンリンクなのに「別のお客様」誤判定
-  //    でキャンセルできなくなる）。
+  // member-ownership + linked-customer gates:
+  // EventRegistration.customerId は nullable（未 claim のゲスト申込は null）。
+  // null の間は ownership mismatch を適用しない（申込者本人がメール受信後に別件で
+  // 会員登録済みでも、正規トークンを「別のお客様」誤判定で拒否しないため）。
+  // 紐付きがある場合は session の有無に関わらず active/BLACKLIST を強制し、
+  // session があるときは LOGIN_SIGNUP 再同意も mypage と同型に強制する。
+  const registration = await getEventRegistrationForGuestCancel(parsedId.data);
+  if (!registration) {
+    return createMutationError("申込が見つかりません");
+  }
+
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;
   // 事前読取りした customerId（ログイン中のみ意味を持つ）。実際の状態変更 UPDATE の
-  // WHERE 句にも渡し、この後の claim との TOCTOU race を DB レベルで再検証する
-  // （このガードの直後に別の claim が customerId を書き換えても、実際の cancel
-  // 書込は count=0 で安全に失敗する）。
+  // WHERE 句にも渡し、この後の claim との TOCTOU race を DB レベルで再検証する。
   let expectedCustomerId: string | null | undefined;
+  let sessionCustomerId: string | null = null;
   if (sessionUserId) {
-    const registration = await getEventRegistrationForGuestCancel(
-      parsedId.data,
-    );
-    if (!registration) {
-      return createMutationError("申込が見つかりません");
-    }
     const customer = await getCustomerByUserId(sessionUserId);
     if (
       customer &&
@@ -200,19 +193,20 @@ export async function cancelGuestEventRegistrationAction(
         "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
       );
     }
-    // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
-    // isActive / status BLACKLIST を強制する（ownership 一致でも停止アカウントは拒否）。
-    if (customer) {
-      try {
-        await assertCustomerActive(customer.id);
-      } catch (error) {
-        if (error instanceof DomainError) {
-          return createMutationError(error.message);
-        }
-        throw error;
-      }
-    }
+    sessionCustomerId = customer?.id ?? null;
     expectedCustomerId = registration.customerId;
+  }
+
+  try {
+    await assertGuestTokenCustomerGates({
+      resourceCustomerId: registration.customerId,
+      sessionCustomerId,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
   }
 
   try {

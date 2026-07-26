@@ -57,6 +57,11 @@ describe("HEAD/OPTIONS /api/receipts/[serialNo]/pdf — 405 method allowlist", (
       assertCustomerActive: mock(() => Promise.resolve()),
       ensureCustomerNotBlacklisted: mock(() => Promise.resolve()),
     }));
+    // route が guest-token-gates を import するため、欠落 mock だと
+    // terms-consent-gate → errors/server の safeFetch re-export 解決で落ちる。
+    mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+      assertGuestTokenCustomerGates: mock(() => Promise.resolve()),
+    }));
     mock.module("@/shared/lib/receipt-download-token", () => ({
       verifyReceiptDownloadToken: mock(() => ({ valid: false })),
     }));
@@ -70,6 +75,8 @@ describe("HEAD/OPTIONS /api/receipts/[serialNo]/pdf — 405 method allowlist", (
       logError: mock(() => undefined),
       normalizeError: (error: unknown) =>
         error instanceof Error ? error : new Error(String(error)),
+      safeFetch: mock(() => Promise.resolve(null)),
+      criticalFetch: mock(() => Promise.resolve(null)),
     }));
   });
 

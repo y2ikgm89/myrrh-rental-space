@@ -3333,7 +3333,7 @@ describe("architecture boundaries", () => {
     // 呼ばない限り、停止/BLACKLIST 顧客の書込を通してしまう。
     // 各 Server Action で customer.id 解決直後に assertCustomerActive を呼ぶこと
     // を drift gate として強制する。
-    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive も呼ぶ", () => {
+    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive 系 gate も呼ぶ", () => {
       const targets = collectSourceFiles(PUBLIC_APP_ROOT).filter((file) => {
         // Server Action = `"use server"` directive を含むファイル。
         if (!/(?:^|[\\/])[^\\/]+\.ts$/u.test(file)) return false;
@@ -3349,13 +3349,17 @@ describe("architecture boundaries", () => {
       const offenders = targets
         .filter((file) => {
           const source = readFileSync(file, "utf8");
-          return !/\bassertCustomerActive\b/u.test(source);
+          // guest-token 経路は assertGuestTokenCustomerGates が active (+ 任意で再同意) を内包。
+          return (
+            !/\bassertCustomerActive\b/u.test(source) &&
+            !/\bassertGuestTokenCustomerGates\b/u.test(source)
+          );
         })
         .map((file) => relative(ROOT, file));
 
       expect(
         offenders,
-        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive も呼ぶこと。src/shared/domain/customers/guard.ts の helper を import して customer.id 解決直後に呼び出す (OAUTH-BETTER-AUTH-01)。`,
+        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive または assertGuestTokenCustomerGates を呼ぶこと (OAUTH-BETTER-AUTH-01)。`,
       ).toEqual([]);
     });
 

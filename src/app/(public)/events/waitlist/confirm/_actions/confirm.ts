@@ -26,7 +26,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 
 /**
@@ -74,21 +74,21 @@ export async function confirmWaitlistOfferAction(
       }
       const { registrationId } = verified;
 
-      // ログイン中は「別のお客様の申込」誤操作を防ぐ mismatch ガードを行う
-      // (events/cancel の cancelGuestEventRegistrationAction と同型パターン —
-      // confirmWaitlistOfferCommand の JSDoc が同関数との「symmetry」を明示的に
-      // 予告している)。token 保持自体が一次認可のため、非ログイン時は
-      // customerId フィルタを掛けずに通す（別デバイス・別ブラウザでの確定を
-      // 妨げない）。
+      // member-ownership + linked-customer gates（events/cancel と同型）。
+      // token 保持が一次認可のため、非ログイン時は expectedCustomerId フィルタを
+      // 掛けない（別デバイス確定を妨げない）。紐付き customerId がある場合は
+      // session の有無に関わらず active/BLACKLIST を強制し、session があるときは
+      // LOGIN_SIGNUP 再同意も mypage と同型に強制する。
+      const registration = await getEventRegistrationForConfirm(registrationId);
+      if (!registration) {
+        return { ok: false, error: "対象の申込が見つかりません" };
+      }
+
       const session = await getCustomerSession();
       const sessionUserId = session?.user.id ?? null;
       let expectedCustomerId: string | null | undefined;
+      let sessionCustomerId: string | null = null;
       if (sessionUserId) {
-        const registration =
-          await getEventRegistrationForConfirm(registrationId);
-        if (!registration) {
-          return { ok: false, error: "対象の申込が見つかりません" };
-        }
         const customer = await getCustomerByUserId(sessionUserId);
         if (
           customer &&
@@ -101,19 +101,20 @@ export async function confirmWaitlistOfferAction(
               "このリンクは別のお客様の繰り上げ当選です。マイページからご確認ください",
           };
         }
-        // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
-        // isActive / status BLACKLIST を強制する。
-        if (customer) {
-          try {
-            await assertCustomerActive(customer.id);
-          } catch (error) {
-            if (error instanceof DomainError) {
-              return { ok: false, error: error.message };
-            }
-            throw error;
-          }
-        }
+        sessionCustomerId = customer?.id ?? null;
         expectedCustomerId = registration.customerId;
+      }
+
+      try {
+        await assertGuestTokenCustomerGates({
+          resourceCustomerId: registration.customerId,
+          sessionCustomerId,
+        });
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
       }
 
       try {
