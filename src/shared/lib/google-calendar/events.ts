@@ -311,6 +311,65 @@ export async function deleteCalendarEvent(
 }
 
 /**
+ * 既存 GCal event に Google Meet conference を付与する (Meet URL retry 用)。
+ *
+ * `events.patch` + `conferenceDataVersion: 1` で `conferenceData.createRequest` を
+ * 送る。conference 生成は非同期のため、応答に URL が無い場合は caller が
+ * `getCalendarEvent` で再取得する (公式 guide の create-on-existing-event パターン)。
+ */
+export async function addMeetConferenceToCalendarEvent(
+  eventId: string,
+): Promise<CalendarEventResult> {
+  const client = await getServiceAccountClient();
+  if (!client) {
+    return { success: false, error: "Google Calendar is not configured" };
+  }
+
+  const settings = await getGoogleCalendarSettings();
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
+    return { success: false, error: "Calendar ID is not configured" };
+  }
+
+  try {
+    const requestBody: calendar_v3.Schema$Event = {
+      conferenceData: {
+        createRequest: {
+          requestId: `myrrh-retry-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
+      },
+    };
+    const response = await withGoogleApiRetry(() =>
+      client.events.patch({
+        calendarId,
+        eventId,
+        requestBody,
+        sendUpdates: "none",
+        conferenceDataVersion: 1,
+      }),
+    );
+
+    return omitUndefined({
+      success: true,
+      eventId: response.data.id ?? undefined,
+      eventUrl: response.data.htmlLink ?? undefined,
+      event: response.data,
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "addMeetConferenceToCalendarEvent", eventId },
+    });
+    return {
+      success: false,
+      error: formatGoogleApiError(error),
+    };
+  }
+}
+
+/**
  * 特定のイベントを取得
  */
 export async function getCalendarEvent(eventId: string): Promise<{
