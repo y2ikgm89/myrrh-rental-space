@@ -11,7 +11,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { invalidateReservationCache } from "./cache-invalidation";
@@ -103,24 +103,28 @@ export async function fulfillReservationPaymentAtomically(
 
   if (skipConfirmationEmail) return;
 
+  const confirmationPayload = omitUndefined({
+    reservationId: reservation.id,
+    customerEmail: reservation.guestEmail ?? reservation.customer.email,
+    customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
+    spaceName: reservation.space.name,
+    startTime: reservation.startTime,
+    endTime: reservation.endTime,
+    totalPrice: reservation.totalPrice,
+    location: reservation.space.location?.name,
+    notes: reservation.notes ?? undefined,
+    icsSequence: reservation.icsSequence,
+    userId: reservation.userId,
+  });
+
   fireAndForget(
-    sendReservationConfirmationEmail(
-      omitUndefined({
-        reservationId: reservation.id,
-        customerEmail: reservation.guestEmail ?? reservation.customer.email,
-        customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
-        spaceName: reservation.space.name,
-        startTime: reservation.startTime,
-        endTime: reservation.endTime,
-        totalPrice: reservation.totalPrice,
-        location: reservation.space.location?.name,
-        notes: reservation.notes ?? undefined,
-        icsSequence: reservation.icsSequence,
-        userId: reservation.userId,
-      }),
-    ),
+    applyConfirmationSideEffects({
+      payload: confirmationPayload,
+      spaceId: reservation.spaceId,
+      channel: "customer",
+    }),
     {
-      operation: "sendPaymentConfirmationEmail",
+      operation: "applyConfirmationSideEffects",
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: { reservationId },

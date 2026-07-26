@@ -164,6 +164,7 @@ const SESSION_ID = "cs_test_session_9876543210";
 
 const FULFILL_DATA = {
   id: RESERVATION_ID,
+  spaceId: "space-550e8400-e29b-41d4-a716-446655440001",
   startTime: new Date("2024-03-01T10:00:00Z"),
   endTime: new Date("2024-03-01T12:00:00Z"),
   totalPrice: 5000,
