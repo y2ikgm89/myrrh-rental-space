@@ -36,6 +36,11 @@ permissions:
   contents: read
 
 env:
+  # service postgres image は Docker Hub (`postgres:16`) ではなく
+  # `public.ecr.aws/docker/library/postgres:16` を使う。
+  # Docker Hub 匿名 pull は hosted runner で timeout / rate-limit flake が出るため
+  # （認証不要の AWS Public ECR Official Images ミラー）。
+  # https://gallery.ecr.aws/docker/library/postgres
   # GitHub-hosted runner の Node デフォルト heap (~2GB) は大規模 monorepo の
   # `tsc --noEmit` や `next build` (TypeScript フェーズ) で不足する。
   # ubuntu-latest は 16 GB RAM 確保されているため 4 GB 割当で確実に賄える。
@@ -249,7 +254,7 @@ jobs:
     needs: [changes]
     services:
       postgres:
-        image: postgres:16
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -290,7 +295,7 @@ jobs:
     # branch protection required status checks に含める。
     services:
       postgres:
-        image: postgres:16
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -414,7 +419,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
-        image: postgres:16
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -657,7 +662,7 @@ jobs:
        (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
     services:
       postgres:
-        image: postgres:16
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -723,7 +728,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
-        image: postgres:16
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
