@@ -1171,6 +1171,31 @@ describe("architecture boundaries", () => {
     expect(source).toContain("NuqsAdapter");
   });
 
+  test("public root layout は認証 chrome を HTML に埋め込まず client hydrate 後に解決する", () => {
+    const layoutSource = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
+    // CDN blanket public (s-maxage) + Cookie vary 不在で login/mypage が漏洩しないよう、
+    // layout / HeaderWithData 経路では session を読まない。
+    expect(layoutSource).not.toContain("getCurrentCustomerUser");
+    expect(layoutSource).not.toContain("resolvePublicAuthKind");
+    expect(layoutSource).not.toContain("authSlot=");
+    expect(layoutSource).not.toContain("authKind=");
+    expect(layoutSource).toContain("<MobileNav />");
+
+    const authKindRoute = join(
+      SRC_ROOT,
+      "app",
+      "api",
+      "customer",
+      "auth-kind",
+      "route.ts",
+    );
+    expect(existsSync(authKindRoute)).toBe(true);
+    const routeSource = readFileSync(authKindRoute, "utf8");
+    expect(routeSource).toContain("getCurrentCustomerUser");
+    expect(routeSource).toContain("resolvePublicAuthKind");
+    expect(routeSource).toContain("private, no-store");
+  });
+
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
     const source = readFileSync(
       join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
