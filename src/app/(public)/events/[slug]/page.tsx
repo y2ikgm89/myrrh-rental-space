@@ -18,13 +18,13 @@ import {
 } from "@/shared/domain/events/venue";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import {
   generateArticleMetadata,
   getSeoSettings,
   resolveSiteBranding,
 } from "@/public/lib/seo/metadata-factory";
+import { EventDetailFeatureGate } from "./_components/event-detail-feature-gate";
 import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure";
 import {
   EventInfoPanelInventory,
@@ -90,8 +90,6 @@ export async function generateMetadata({
 export default async function EventDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
-  await requireFeatureEnabled("events");
-
   const { slug } = await params;
   const [event, seoSettings] = await Promise.all([
     getPublishedEventBySlug(slug),
@@ -158,6 +156,9 @@ export default async function EventDetailPage({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <EventDetailFeatureGate />
+      </Suspense>
       <ArticleLayout
         jsonLd={
           <EventJsonLd

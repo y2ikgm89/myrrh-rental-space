@@ -16,6 +16,15 @@ describe("event inventory dynamic boundary", () => {
     expect(page).not.toContain("buildCurrentPublicEventSlotOptions");
   });
 
+  test("event detail page shell does not call feature settings", () => {
+    const page = read("src/app/(public)/events/[slug]/page.tsx");
+    const pageBlock = page.slice(page.indexOf("export default"));
+
+    expect(pageBlock).not.toContain("requireFeatureEnabled");
+    expect(pageBlock).not.toContain("isFeatureEnabled");
+    expect(pageBlock).not.toContain("getFeatureModulesSettings");
+  });
+
   test("event detail page isolates inventory UI in Suspense children", () => {
     const page = read("src/app/(public)/events/[slug]/page.tsx");
     expect(page).toContain("Suspense");
@@ -53,6 +62,14 @@ describe("event inventory dynamic boundary", () => {
     );
     expect(contextSource).toContain("await connection()");
     expect(contextSource).toContain("getEventPublicRegistrationInventory");
+  });
+
+  test("event detail feature gate isolates connection before requireFeatureEnabled", () => {
+    const source = read(
+      "src/app/(public)/events/[slug]/_components/event-detail-feature-gate.tsx",
+    );
+    expect(source).toContain("await connection()");
+    expect(source).toContain('requireFeatureEnabled("events")');
   });
 
   test("inventory UI components consume loadEventRegistrationContext", () => {
