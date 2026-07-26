@@ -13,6 +13,10 @@ import {
   sendEventCancelledToAllParticipants,
   sendEventUpdatedToAllParticipants,
 } from "@/shared/lib/email/event-emails";
+import {
+  getEventCancelledNotificationPayload,
+  getEventUpdatedNotificationPayload,
+} from "@/shared/domain/events/email-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -670,10 +674,17 @@ export async function updateEventCommand(
     const oldSlotStartTimes = new Map(
       existing.slots.map((slot) => [slot.id, slot.startAt]),
     );
-    fireAndForget(sendEventUpdatedToAllParticipants(id, oldSlotStartTimes), {
-      operation: "sendEventUpdatedToAllParticipants",
-      category: ErrorCategory.EXTERNAL_API,
-    });
+    fireAndForget(
+      getEventUpdatedNotificationPayload(id).then((payload) => {
+        if (payload) {
+          return sendEventUpdatedToAllParticipants(payload, oldSlotStartTimes);
+        }
+      }),
+      {
+        operation: "sendEventUpdatedToAllParticipants",
+        category: ErrorCategory.EXTERNAL_API,
+      },
+    );
   }
 
   return { removedGoogleCalendarEventIds };
@@ -742,10 +753,17 @@ export async function cancelEventCommand(id: string) {
     return;
   }
 
-  fireAndForget(sendEventCancelledToAllParticipants(id), {
-    operation: "sendEventCancelledToAllParticipants",
-    category: ErrorCategory.EXTERNAL_API,
-  });
+  fireAndForget(
+    getEventCancelledNotificationPayload(id).then((payload) => {
+      if (payload) {
+        return sendEventCancelledToAllParticipants(payload);
+      }
+    }),
+    {
+      operation: "sendEventCancelledToAllParticipants",
+      category: ErrorCategory.EXTERNAL_API,
+    },
+  );
 }
 
 /**

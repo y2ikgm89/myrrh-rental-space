@@ -7,7 +7,6 @@ import {
   getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
-import { prisma } from "@/shared/db/prisma";
 import { getAdminUrl } from "../admin-urls";
 import { buildMemberInquiryUrl } from "./contact-emails";
 import { hashForKey, sendEmail } from "./send";
@@ -22,6 +21,16 @@ import type {
   InquiryCustomerReplyAdminEmailData,
   InquiryReplyEmailData,
 } from "./types";
+
+export type InquiryStatusNotificationData = {
+  readonly id: string;
+  readonly receiptNumber: string;
+  readonly name: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly updatedAt: Date;
+  readonly customerUserId: string | undefined;
+};
 
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
@@ -98,24 +107,9 @@ export async function sendInquiryCustomerReplyAdminEmail(
  * - Promise.allSettled で並列送信し、失敗は logError で個別記録（bulk 全体は成功扱い）
  */
 export async function sendInquiryStatusNotificationToAll(
-  inquiryIds: string[],
+  inquiries: InquiryStatusNotificationData[],
   newStatus: "RESOLVED" | "CLOSED",
 ): Promise<void> {
-  if (inquiryIds.length === 0) return;
-
-  const inquiries = await prisma.inquiry.findMany({
-    where: { id: { in: inquiryIds } },
-    select: {
-      id: true,
-      receiptNumber: true,
-      name: true,
-      email: true,
-      subject: true,
-      updatedAt: true,
-      customer: { select: { userId: true } },
-    },
-  });
-
   if (inquiries.length === 0) return;
 
   const footer = await getEmailFooterData();
@@ -124,7 +118,7 @@ export async function sendInquiryStatusNotificationToAll(
   const results = await Promise.allSettled(
     inquiries.map((inquiry) => {
       const memberInquiryUrl = buildMemberInquiryUrl(
-        inquiry.customer?.userId,
+        inquiry.customerUserId,
         inquiry.id,
       );
       return sendEmail({

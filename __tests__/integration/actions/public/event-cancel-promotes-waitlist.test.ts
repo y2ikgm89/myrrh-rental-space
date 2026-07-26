@@ -135,7 +135,7 @@ mock.module("@/shared/lib/email/event-emails", () => ({
 // 繰り上げ当選メール（本テストの主たる検証対象）。
 const mockSendEventWaitlistOffered = mock<
   (args: {
-    registrationId: string;
+    registration: { id: string };
     to: string;
     expiresAt: Date;
     paymentContext:
@@ -415,7 +415,7 @@ describeMaybe(
         expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
         expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
           expect.objectContaining({
-            registrationId: waitlisted.id,
+            registration: expect.objectContaining({ id: waitlisted.id }),
             to: waitlistEmail,
             expiresAt: updatedWaitlisted.expiresAt,
             paymentContext: expect.objectContaining({ kind: "free" }),
@@ -521,7 +521,7 @@ describeMaybe(
         expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
         expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
           expect.objectContaining({
-            registrationId: nextWaiter.id,
+            registration: expect.objectContaining({ id: nextWaiter.id }),
             to: nextWaiterEmail,
             expiresAt: updatedNext.expiresAt,
             paymentContext: expect.objectContaining({ kind: "free" }),
