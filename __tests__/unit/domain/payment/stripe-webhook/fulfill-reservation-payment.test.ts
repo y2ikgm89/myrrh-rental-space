@@ -18,15 +18,19 @@ const mockClaimReservationAsPaid = mock<
     data: { stripePaymentIntentId: string | null },
   ) => Promise<Record<string, unknown> | null>
 >(async () => null);
-const mockInvalidateReservationCache = mock(() => {});
+const mockInvalidateReservationCache = mock<(id: string) => void>(() => {});
 const mockIssueReceiptForReservation = mock<
   (
     id: string,
     options?: { source?: string },
   ) => Promise<{ id: string; serialNo: string } | undefined>
 >(async () => ({ id: "receipt-1", serialNo: "2027-000001" }));
-const mockNotifyReceiptIssuedForReservation = mock(async () => ({ ok: true }));
-const mockApplyConfirmationSideEffects = mock(async () => undefined);
+const mockNotifyReceiptIssuedForReservation = mock<
+  (input: unknown) => Promise<{ ok: boolean }>
+>(async () => ({ ok: true }));
+const mockApplyConfirmationSideEffects = mock<
+  (input: unknown) => Promise<void>
+>(async () => undefined);
 const mockFireAndForget = mock((promise: Promise<unknown>) => promise);
 const mockLogError = mock(() => {});
 
