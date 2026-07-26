@@ -42,6 +42,7 @@ import {
   MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
 } from "@/shared/domain/receipts/manual-payment-warnings";
+import { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } from "@/shared/domain/events/payment-expiry-constants";
 
 /**
  * `refundEventRegistrationPaymentCommand` の advisory lock namespace。
@@ -176,6 +177,7 @@ export async function createEventCheckoutSessionCommand(input: {
   // FAILED 再試行との race を封鎖)。`status: CONFIRMED` も WHERE で assert する
   // (Codex P1 #1026, comment 3567019751): pre-check と claim の間で並行 cancel が
   // 走ったケースを DB レベルで塞ぐ。
+  const claimedAt = new Date();
   const claimed = await prisma.eventRegistration.updateMany({
     where: {
       id: registrationId,
@@ -220,6 +222,10 @@ export async function createEventCheckoutSessionCommand(input: {
   let createdSessionId: string | null = null;
 
   try {
+    const expiresAt =
+      Math.floor(claimedAt.getTime() / 1000) +
+      UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES * 60;
+
     const session = await client.checkout.sessions.create({
       mode: "payment",
       payment_method_types: paymentMethodTypes,
@@ -246,6 +252,7 @@ export async function createEventCheckoutSessionCommand(input: {
         registrationId,
       },
       ...(authoritative.email ? { customer_email: authoritative.email } : {}),
+      expires_at: expiresAt,
       // Codex P1 (PR#1026, comment 3567019753): 旧実装の `/events/registrations/{id}`
       // は存在しないルートで Stripe returnee が 404 していた。既存の公開イベント詳細
       // `/events/[slug]` にリダイレクトし、`registration` クエリで status バナー用に

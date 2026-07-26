@@ -100,6 +100,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
       "/api/cron/event-import",
       "/api/cron/event-reminder",
       "/api/cron/waitlist-expire",
+      "/api/cron/unpaid-event-registration-expire",
     ],
   },
   posts: {
