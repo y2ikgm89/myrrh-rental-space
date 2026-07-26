@@ -555,6 +555,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         durationDiscountEnabled: "",
         discountCombinationMode: DISCOUNT_MODE,
         showOriginalPrice: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       "discount",
     );
@@ -566,6 +567,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       form({
         refundPolicyEnabled: "",
         refundPolicyDefaultRefundRate: "0",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       "refundPolicy",
     );
@@ -579,6 +581,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       refundPolicyFormSchema,
       form({
         refundPolicyEnabled: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
         // refundPolicyDefaultRefundRate は UI で隠されて送信されない状態を再現
       }),
       "refundPolicy: OFF from UI",
@@ -604,6 +607,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         stripeSecretKey: "",
         stripeWebhookSecret: "",
         stripeCurrency: CURRENCY,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       "stripe",
     );
