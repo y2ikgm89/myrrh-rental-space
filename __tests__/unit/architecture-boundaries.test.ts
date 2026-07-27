@@ -1059,8 +1059,6 @@ describe("architecture boundaries", () => {
       [
         "admin-auth.ts",
         "admin-resource-access.ts",
-        "calendar-sync/inbound.ts",
-        "calendar-sync/outbound.ts",
         // Better Auth deleteUser.beforeDelete → Customer anonymize adapter
         "customer-auth.ts",
         "email/client.ts",
@@ -1070,8 +1068,6 @@ describe("architecture boundaries", () => {
         "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
-        "google-calendar/events.ts",
-        "google-calendar/sync.ts",
         "ical/index.ts",
         "lexical/resolve-internal-link-cards.ts",
         "lexical/resolve-space-card-embeds.ts",

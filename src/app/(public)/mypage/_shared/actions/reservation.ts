@@ -22,7 +22,7 @@ import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads
 import {
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {

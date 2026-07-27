@@ -112,11 +112,14 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
 }));
 
 const mockDeleteCalendarSync = mock(async () => ({ success: true }) as const);
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mock(async () => {}),
-  updateCalendarSync: mock(async () => {}),
-  deleteCalendarSync: mockDeleteCalendarSync,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mock(async () => {}),
+    updateCalendarSync: mock(async () => {}),
+    deleteCalendarSync: mockDeleteCalendarSync,
+  }),
+);
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mock(async () => {}),

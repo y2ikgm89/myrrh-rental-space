@@ -33,7 +33,7 @@ import {
   createReservationSeriesCommand,
 } from "@/shared/domain/reservations/series-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
-import { syncReservationSeriesToCalendar } from "@/shared/lib/calendar-sync/outbound";
+import { syncReservationSeriesToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { z } from "zod";

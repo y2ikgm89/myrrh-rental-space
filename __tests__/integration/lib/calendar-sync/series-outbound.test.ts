@@ -91,23 +91,21 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
   renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar-api", () => ({
   createCalendarEvent: mockCreate,
   fetchEventInstances: mockFetchInstances,
   patchCalendarEvent: mockPatch,
-  // outbound.ts が barrel から import する残りの export は本テストで未使用、
+  // outbound が import する残りの export は本テストで未使用、
   // モジュール全体差し替えのため無害スタブを置く。
   updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
   deleteCalendarEvent: mock(() => Promise.resolve({ success: true })),
   getCalendarEvent: mock(() => Promise.resolve({ success: false })),
-  encryptServiceAccountJson: mock(() => ""),
-  extractServiceAccountEmail: mock(() => null),
-  fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
-  setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
-  stopWebhookWatch: mock(() => Promise.resolve()),
-  testServiceAccountConnection: mock(() => Promise.resolve({ success: false })),
-  isValidCalendarId: mock(() => false),
-  formatGoogleApiError: mock((e: unknown) => String(e)),
+  addMeetConferenceToCalendarEvent: mock(() =>
+    Promise.resolve({ success: false, error: "unused" }),
+  ),
+  resolveGoogleCalendarWriteContext: mock(() =>
+    Promise.resolve({ ok: false, error: "mocked" }),
+  ),
 }));
 
 // -----------------------------------------------------------------------------
@@ -115,7 +113,8 @@ mock.module("@/shared/lib/google-calendar", () => ({
 // -----------------------------------------------------------------------------
 
 type PrismaModule = typeof import("@/shared/db/prisma");
-type OutboundModule = typeof import("@/shared/lib/calendar-sync/outbound");
+type OutboundModule =
+  typeof import("@/shared/domain/reservations/reservation-calendar-outbound");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
@@ -251,7 +250,8 @@ describeMaybe(
       ({
         syncReservationSeriesToCalendar,
         writeBackInstanceGoogleCalendarEventIds,
-      } = await import("@/shared/lib/calendar-sync/outbound"));
+      } =
+        await import("@/shared/domain/reservations/reservation-calendar-outbound"));
       await prisma.$queryRaw`SELECT 1`;
     });
 

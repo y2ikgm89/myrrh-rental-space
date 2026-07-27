@@ -50,10 +50,13 @@ const mockDeleteCalendarSync = mock<
     eventId: string,
   ) => Promise<{ success: true } | { success: false; error: string }>
 >(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: (rId: string, eId: string) =>
-    mockDeleteCalendarSync(rId, eId),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: (rId: string, eId: string) =>
+      mockDeleteCalendarSync(rId, eId),
+  }),
+);
 
 // bulk 系 (series-outbound) は per-test で触らないが、mock.module の live binding
 // 汚染を避けるため空 stub を置く。

@@ -153,10 +153,13 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
   fetchReservationEmailData: mock(() => Promise.resolve(null)),
 }));
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mock(() => Promise.resolve({ success: true })),
-  updateCalendarSync: mock(() => Promise.resolve({ success: true })),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mock(() => Promise.resolve({ success: true })),
+    updateCalendarSync: mock(() => Promise.resolve({ success: true })),
+  }),
+);
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: mock(() => Promise.resolve()),

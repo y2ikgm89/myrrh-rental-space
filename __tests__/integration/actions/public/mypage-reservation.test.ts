@@ -268,10 +268,13 @@ const mockSyncReservationToCalendar = mock(() =>
   Promise.resolve({ success: true }),
 );
 const mockUpdateCalendarSync = mock(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mockSyncReservationToCalendar,
-  updateCalendarSync: mockUpdateCalendarSync,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mockSyncReservationToCalendar,
+    updateCalendarSync: mockUpdateCalendarSync,
+  }),
+);
 
 // 設定クエリモック
 const mockGetReservationDeadlineSettings = mock(
