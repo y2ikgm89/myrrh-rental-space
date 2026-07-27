@@ -7,7 +7,7 @@ import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
 import { MEDIA_VALIDATION, uploadFile } from "@/shared/lib/r2/upload";
 import { deriveMediaTypeFromMime } from "@/shared/lib/r2/media-type-derivation";
 import { deleteFile } from "@/shared/lib/r2/delete";
-import type { MediaUsage } from "@generated/prisma/enums";
+import type { MediaUsage } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function uploadMediaCommand(input: {
   file: File;

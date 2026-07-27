@@ -2,7 +2,10 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { ReservationStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  ReservationStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   RISK_FLAG_REASON,
   type RiskFlagReason,

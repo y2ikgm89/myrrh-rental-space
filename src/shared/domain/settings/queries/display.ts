@@ -5,7 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const Role = {
   SUPER_ADMIN: "SUPER_ADMIN",
@@ -134,12 +135,10 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: mockCreateAuditLogRecord,
 }));
 
-const actualEnums = await import("@generated/prisma/enums");
-mock.module("@generated/prisma/enums", () => ({
-  ...actualEnums,
+await installPrismaEnumsMock({
   Role,
   AuditAction,
-}));
+});
 
 // -----------------------------------------------------------------------------
 // Target import

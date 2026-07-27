@@ -4,7 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -21,7 +21,7 @@ import { sanitizeReturnTo } from "./_lib/sanitize-return-to";
  * LOGIN_SIGNUP scope の再同意 Server Action。
  *
  * client 入力は信用せず、handler 内で:
- *   1. session を再検証 (`verifyCustomerSession` + `ensureCustomerLinked`)
+ *   1. session を再検証 (`requireMypageSession` + `ensureCustomerLinked`)
  *   2. `getReagreeRequiredTermsForCustomer` で pending を再導出
  *   3. client の agreedTermsIds ⊇ pending termsIds を強制 (curl bypass 防止)
  *   4. `recordTermsAgreementsCommand(scope: LOGIN_SIGNUP)` で append-only insert
@@ -35,7 +35,7 @@ export async function reagreeAction(
   formData: FormData,
 ): Promise<SubmissionResult> {
   return executeConformMutation(formData, reagreeFormSchema, async (input) => {
-    const { user } = await verifyCustomerSession();
+    const { user } = await requireMypageSession();
     const { customer } = await ensureCustomerLinked(user);
 
     try {

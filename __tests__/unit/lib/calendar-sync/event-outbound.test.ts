@@ -26,6 +26,21 @@ const mockUpdate = mock<
 const mockDelete = mock<() => Promise<{ success: boolean; error?: string }>>(
   () => Promise.resolve({ success: true }),
 );
+const mockGetCalendarEvent = mock<
+  (eventId: string) => Promise<{
+    success: boolean;
+    event?: calendar_v3.Schema$Event;
+    error?: string;
+  }>
+>(() => Promise.resolve({ success: false, error: "not found" }));
+const mockAddMeetConference = mock<
+  (eventId: string) => Promise<{
+    success: boolean;
+    eventId?: string;
+    error?: string;
+    event?: calendar_v3.Schema$Event;
+  }>
+>(() => Promise.resolve({ success: false, error: "patch failed" }));
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
@@ -33,8 +48,8 @@ mock.module("@/shared/lib/google-calendar", () => ({
   createCalendarEvent: mockCreate,
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
-  // 他の export もスタブで返す（テスト汚染防止）
-  getCalendarEvent: mock(() => Promise.resolve(null)),
+  getCalendarEvent: mockGetCalendarEvent,
+  addMeetConferenceToCalendarEvent: mockAddMeetConference,
   // Phase B.2 task 16 で追加された fetchEventInstances。outbound.ts が
   // syncReservationSeriesToCalendar 経由で import するため mock stub 必須
   // (未追加時に SyntaxError: Export named 'fetchEventInstances' not found)。
@@ -102,6 +117,8 @@ import {
   updateEventCalendarSync,
   deleteEventCalendarSync,
   retryFailedEventCalendarSyncs,
+  retryEventMeetUrlWriteBack,
+  MEET_URL_NOT_RETURNED_ERROR,
 } from "@/shared/lib/calendar-sync/event-outbound";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
@@ -556,6 +573,18 @@ describe("retryFailedEventCalendarSyncs", () => {
     mockGetGcalIdsForDelete.mockResolvedValue([]);
     mockGetEventCalendarSyncError.mockReset();
     mockGetEventCalendarSyncError.mockResolvedValue(null);
+    mockGetCalendarEvent.mockReset();
+    mockGetCalendarEvent.mockResolvedValue({
+      success: false,
+      error: "not found",
+    });
+    mockAddMeetConference.mockReset();
+    mockAddMeetConference.mockResolvedValue({
+      success: false,
+      error: "patch failed",
+    });
+    mockWriteBackMeetingUrl.mockReset();
+    mockWriteBackMeetingUrl.mockResolvedValue(undefined);
   });
 
   test("googleCalendarEventId が null のスロットのみ create を再試行する", async () => {
@@ -594,7 +623,7 @@ describe("retryFailedEventCalendarSyncs", () => {
     expect(mockMarkSuccess).toHaveBeenCalledWith("event-1");
   });
 
-  test("対象 slot が無い Meet-only エラーは自動 retry も自動 clear もしない", async () => {
+  test("Meet-only エラー + 同期済み slot → GCal 再取得で Meet URL を write-back し calendarSyncError をクリア", async () => {
     mockGetFailedEventIds.mockResolvedValue(["event-2"]);
     mockGetEventCalendarSyncError.mockResolvedValue(
       "Meet URL write-back failed: DB unavailable",
@@ -603,16 +632,93 @@ describe("retryFailedEventCalendarSyncs", () => {
       {
         ...baseEventData,
         slotId: "slot-c",
-        googleCalendarEventId: "already-synced",
+        meetingProvider: "GOOGLE_MEET",
+        googleCalendarEventId: "gcal-already-synced",
       },
     ]);
+    mockGetCalendarEvent.mockResolvedValue({
+      success: true,
+      event: { hangoutLink: "https://meet.google.com/recovered-link" },
+    });
 
     const result = await retryFailedEventCalendarSyncs();
 
+    expect(mockGetCalendarEvent).toHaveBeenCalledWith("gcal-already-synced");
+    expect(mockAddMeetConference).not.toHaveBeenCalled();
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: "event-2",
+      meetingUrl: "https://meet.google.com/recovered-link",
+    });
+    expect(mockMarkSuccess).toHaveBeenCalledWith("event-2");
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("Meet-only エラーで GCal に URL が無い → conferenceData patch を試行", async () => {
+    mockGetFailedEventIds.mockResolvedValue(["event-meet-patch"]);
+    mockGetEventCalendarSyncError.mockResolvedValue(
+      MEET_URL_NOT_RETURNED_ERROR,
+    );
+    mockGetForSync.mockResolvedValue([
+      {
+        ...baseEventData,
+        eventId: "event-meet-patch",
+        slotId: "slot-patch",
+        meetingProvider: "GOOGLE_MEET",
+        googleCalendarEventId: "gcal-needs-meet",
+      },
+    ]);
+    mockGetCalendarEvent
+      .mockResolvedValueOnce({ success: true, event: {} })
+      .mockResolvedValueOnce({
+        success: true,
+        event: { hangoutLink: "https://meet.google.com/patched-link" },
+      });
+    mockAddMeetConference.mockResolvedValue({
+      success: true,
+      eventId: "gcal-needs-meet",
+      event: {},
+    });
+
+    const result = await retryFailedEventCalendarSyncs();
+
+    expect(mockAddMeetConference).toHaveBeenCalledWith("gcal-needs-meet");
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: "event-meet-patch",
+      meetingUrl: "https://meet.google.com/patched-link",
+    });
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("Meet URL retry が失敗した場合は failed に計上し calendarSyncError を更新", async () => {
+    mockGetFailedEventIds.mockResolvedValue(["event-meet-fail"]);
+    mockGetEventCalendarSyncError.mockResolvedValue(
+      MEET_URL_NOT_RETURNED_ERROR,
+    );
+    mockGetForSync.mockResolvedValue([
+      {
+        ...baseEventData,
+        eventId: "event-meet-fail",
+        slotId: "slot-fail",
+        meetingProvider: "GOOGLE_MEET",
+        googleCalendarEventId: "gcal-still-no-meet",
+      },
+    ]);
+    mockGetCalendarEvent.mockResolvedValue({ success: true, event: {} });
+    mockAddMeetConference.mockResolvedValue({
+      success: true,
+      event: {},
+    });
+
+    const result = await retryFailedEventCalendarSyncs();
+
+    expect(result).toEqual({ total: 1, succeeded: 0, failed: 1 });
     expect(mockMarkSuccess).not.toHaveBeenCalled();
-    expect(result).toEqual({ total: 0, succeeded: 0, failed: 0 });
+    expect(mockMarkError).toHaveBeenCalledWith({
+      eventId: "event-meet-fail",
+      error: MEET_URL_NOT_RETURNED_ERROR,
+    });
   });
 
   test("googleCalendarEventId 有り + 通常 update 失敗 → update を再試行する", async () => {
@@ -687,5 +793,79 @@ describe("retryFailedEventCalendarSyncs", () => {
     expect(mockCreate).not.toHaveBeenCalled();
     expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
     expect(mockMarkSuccess).toHaveBeenCalledWith("event-delete-1");
+  });
+});
+
+describe("retryEventMeetUrlWriteBack", () => {
+  beforeEach(() => {
+    mockIsEnabled.mockReset();
+    mockIsEnabled.mockResolvedValue(true);
+    mockGetCalendarEvent.mockReset();
+    mockAddMeetConference.mockReset();
+    mockWriteBackMeetingUrl.mockReset();
+    mockWriteBackMeetingUrl.mockResolvedValue(undefined);
+  });
+
+  test("GCal get で hangoutLink が取れれば write-back して success", async () => {
+    mockGetCalendarEvent.mockResolvedValue({
+      success: true,
+      event: { hangoutLink: "https://meet.google.com/direct-get" },
+    });
+
+    const result = await retryEventMeetUrlWriteBack({
+      eventId: "evt-1",
+      googleCalendarEventId: "gcal-1",
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(mockAddMeetConference).not.toHaveBeenCalled();
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: "evt-1",
+      meetingUrl: "https://meet.google.com/direct-get",
+    });
+  });
+
+  test("get に URL が無ければ patch → refetch で URL を取得", async () => {
+    mockGetCalendarEvent
+      .mockResolvedValueOnce({ success: true, event: {} })
+      .mockResolvedValueOnce({
+        success: true,
+        event: {
+          conferenceData: {
+            entryPoints: [
+              {
+                entryPointType: "video",
+                uri: "https://meet.google.com/after-refetch",
+              },
+            ],
+          },
+        },
+      });
+    mockAddMeetConference.mockResolvedValue({ success: true, event: {} });
+
+    const result = await retryEventMeetUrlWriteBack({
+      eventId: "evt-2",
+      googleCalendarEventId: "gcal-2",
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(mockAddMeetConference).toHaveBeenCalledWith("gcal-2");
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: "evt-2",
+      meetingUrl: "https://meet.google.com/after-refetch",
+    });
+  });
+
+  test("MANUAL provider は retry 対象外", async () => {
+    const result = await retryEventMeetUrlWriteBack({
+      eventId: "evt-manual",
+      googleCalendarEventId: "gcal-manual",
+      meetingProvider: "MANUAL",
+    });
+
+    expect(result.success).toBe(false);
+    expect(mockGetCalendarEvent).not.toHaveBeenCalled();
   });
 });

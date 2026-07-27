@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
 import { MS_PER_DAY } from "@/shared/lib/date-format";

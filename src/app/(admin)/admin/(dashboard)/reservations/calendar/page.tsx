@@ -6,7 +6,7 @@ import {
   getReservationsForCalendar,
   getSpacesForCalendar,
 } from "@/admin/queries/reservation";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import {
   getCalendarDateRange,
   getValidCalendarView,
@@ -71,7 +71,7 @@ async function CalendarData({
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canMutate = hasPermission(user.role, "reservation", "update");
   // Pattern A: searchParam が server fetch を gate する → page 側で resolve し
   // Suspense key として注入することで、soft navigation (nuqs push) でも

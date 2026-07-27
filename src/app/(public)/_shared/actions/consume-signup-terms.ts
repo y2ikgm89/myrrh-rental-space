@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
@@ -61,7 +61,7 @@ export async function consumeSignupTermsAction(_input: {
   }
 
   // 現在のセッションから customer を再解決（client 入力は信用しない）
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const { customer } = await ensureCustomerLinked(user);
   await assertCustomerActive(customer.id);
 

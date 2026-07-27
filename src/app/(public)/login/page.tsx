@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
@@ -44,7 +44,7 @@ export default async function LoginPage({
     ? rawRedirect
     : undefined;
 
-  const user = await getCurrentCustomerUser();
+  const user = await resolveOptionalCustomerSession();
 
   // MYPAGE-AUTH-01: MypageAuthGate が Customer.isActive=false を検知した際、
   // Server Component からは Better Auth session cookie を破棄できないため、

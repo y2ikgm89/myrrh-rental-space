@@ -5,7 +5,7 @@ import {
   CalendarSyncMethod,
   DiscountCombinationMode,
   TaxDisplayMode,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import type {
   AdminTaxSettings,
   DiscountSettingsData,

@@ -20,6 +20,8 @@ import {
   createCalendarEvent,
   deleteCalendarEvent,
   updateCalendarEvent,
+  getCalendarEvent,
+  addMeetConferenceToCalendarEvent,
   isGoogleCalendarEnabled,
   isGoogleCalendarConfigured,
   type CalendarEventParams,
@@ -42,12 +44,14 @@ import { OUTBOUND_EVENT_MARKER } from "./loop-prevention";
 import type { EventSyncData, SyncResult } from "./types";
 
 /** Meet URL write-back のみの失敗 (GCal event は作成済み — update retry では解消しない) */
-const MEET_URL_NOT_RETURNED_ERROR =
+export const MEET_URL_NOT_RETURNED_ERROR =
   "Meet URL was not returned by the Google Calendar API response";
+
+const MEET_URL_WRITE_BACK_FAILED_PREFIX = "Meet URL write-back failed:";
 
 function isMeetOnlyCalendarSyncError(error: string): boolean {
   return (
-    error.startsWith("Meet URL write-back failed:") ||
+    error.startsWith(MEET_URL_WRITE_BACK_FAILED_PREFIX) ||
     error === MEET_URL_NOT_RETURNED_ERROR
   );
 }
@@ -188,9 +192,9 @@ export async function syncEventToCalendar(
               : normalizeError(error).message;
           await markEventCalendarSyncError({
             eventId: data.eventId,
-            error: `Meet URL write-back failed: ${message}`,
+            error: `${MEET_URL_WRITE_BACK_FAILED_PREFIX} ${message}`,
           });
-          // Note: この時点で meetingUrl は null のまま。follow-up で別タスク化予定
+          // Meet URL retry は `retryFailedEventCalendarSyncs` / calendar-sync-retry cron が担う。
         }
       }
 
@@ -306,6 +310,89 @@ export async function deleteEventCalendarSync(
 }
 
 // =============================================================================
+// Meet URL Write-back Retry
+// =============================================================================
+
+/**
+ * GCal event から Meet URL を取得し `Event.meetingUrl` に write-back する。
+ *
+ * 1. `getCalendarEvent` で hangoutLink / conferenceData.entryPoints を確認
+ * 2. 無ければ `addMeetConferenceToCalendarEvent` (patch + createRequest) を試行
+ * 3. patch 応答に URL が無ければ get で再取得 (conference 生成は非同期)
+ *
+ * **Residual risk**: サービスアカウントが Meet 発行権限を持たない、または
+ * conferenceData.status が `pending` のまま完了しない場合は URL 取得不可。
+ * その場合 `calendarSyncError` を残し admin dashboard で可視化を継続する。
+ */
+export async function retryEventMeetUrlWriteBack(params: {
+  eventId: string;
+  googleCalendarEventId: string;
+  meetingProvider: EventSyncData["meetingProvider"];
+}): Promise<{ success: boolean; error?: string }> {
+  if (params.meetingProvider !== MEETING_PROVIDER.GOOGLE_MEET) {
+    return {
+      success: false,
+      error: "Meet URL retry applies only to GOOGLE_MEET events",
+    };
+  }
+
+  const isEnabled = await isGoogleCalendarEnabled();
+  if (!isEnabled) {
+    return { success: true };
+  }
+
+  const fetchResult = await getCalendarEvent(params.googleCalendarEventId);
+  if (!fetchResult.success) {
+    return {
+      success: false,
+      error: `Meet URL retry fetch failed: ${fetchResult.error ?? "Unknown error"}`,
+    };
+  }
+
+  let meetingUrl = extractMeetingUrl(fetchResult.event);
+  if (!meetingUrl) {
+    const patchResult = await addMeetConferenceToCalendarEvent(
+      params.googleCalendarEventId,
+    );
+    if (!patchResult.success) {
+      return {
+        success: false,
+        error: `Meet URL retry conference patch failed: ${patchResult.error ?? "Unknown error"}`,
+      };
+    }
+
+    meetingUrl = extractMeetingUrl(patchResult.event);
+    if (!meetingUrl) {
+      const refetchResult = await getCalendarEvent(
+        params.googleCalendarEventId,
+      );
+      if (refetchResult.success) {
+        meetingUrl = extractMeetingUrl(refetchResult.event);
+      }
+    }
+  }
+
+  if (!meetingUrl) {
+    return { success: false, error: MEET_URL_NOT_RETURNED_ERROR };
+  }
+
+  try {
+    await writeBackMeetingUrl({
+      eventId: params.eventId,
+      meetingUrl,
+    });
+    return { success: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : normalizeError(error).message;
+    return {
+      success: false,
+      error: `${MEET_URL_WRITE_BACK_FAILED_PREFIX} ${message}`,
+    };
+  }
+}
+
+// =============================================================================
 // Batch Operations (GCAL-AUDIT-04)
 // =============================================================================
 
@@ -315,7 +402,8 @@ export async function deleteEventCalendarSync(
  * - slot の `googleCalendarEventId` が null → create (`syncEventToCalendar`)
  * - slot の `googleCalendarEventId` 有り + `GCAL_DELETE_FAILED_PREFIX` エラー
  *   → delete (`deleteEventCalendarSync`)。CANCELLED 等で GCal 上に残っている状態。
- * - slot の `googleCalendarEventId` 有り + Meet write-back のみのエラー → 自動 retry 対象外
+ * - slot の `googleCalendarEventId` 有り + Meet write-back のみのエラー → Meet URL retry
+ *   (`retryEventMeetUrlWriteBack`: GCal 再取得 / conferenceData patch)
  * - slot の `googleCalendarEventId` 有り + それ以外のエラー → update (`updateEventCalendarSync`)
  */
 export async function retryFailedEventCalendarSyncs(): Promise<{
@@ -408,8 +496,40 @@ export async function retryFailedEventCalendarSyncs(): Promise<{
       continue;
     }
 
-    // Meet write-back のみ等、機械的な再試行では解消しない event-level エラーは
-    // calendarSyncError を残したまま admin dashboard 側の可視化に委ねる。
+    if (
+      syncError !== null &&
+      isMeetOnlyCalendarSyncError(syncError) &&
+      slots.some((slot) => slot.googleCalendarEventId !== null)
+    ) {
+      const slotWithGcal = slots.find(
+        (slot) => slot.googleCalendarEventId !== null,
+      );
+      const gcalEventId = slotWithGcal?.googleCalendarEventId;
+      if (
+        slotWithGcal !== undefined &&
+        gcalEventId !== null &&
+        gcalEventId !== undefined
+      ) {
+        total++;
+        const result = await retryEventMeetUrlWriteBack({
+          eventId,
+          googleCalendarEventId: gcalEventId,
+          meetingProvider: slotWithGcal.meetingProvider,
+        });
+        if (result.success) {
+          succeeded++;
+          await markEventCalendarSyncSuccess(eventId);
+        } else {
+          failed++;
+          if (result.error) {
+            await markEventCalendarSyncError({ eventId, error: result.error });
+          }
+        }
+      }
+      continue;
+    }
+
+    // 上記いずれにも該当しない event-level エラーは admin dashboard 側の可視化に委ねる。
   }
 
   return { total, succeeded, failed };

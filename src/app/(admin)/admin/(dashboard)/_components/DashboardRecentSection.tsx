@@ -12,7 +12,7 @@ import {
   type RecentInquiry,
   type RecentReservation,
 } from "@/admin/queries/dashboard";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import {
   Card,
@@ -43,7 +43,7 @@ export async function DashboardRecentSection() {
   await connection();
 
   const result = await settleDashboardLoad(async () => {
-    const user = await requireAdminDashboardAccess();
+    const user = await requireAdminDashboardPage();
     const canReservation = hasPermission(user.role, "reservation", "read");
     const canInquiry = hasPermission(user.role, "inquiry", "read");
 

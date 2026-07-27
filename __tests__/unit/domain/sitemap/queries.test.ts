@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const mockSpaceFindMany = mock<() => Promise<unknown[]>>(() =>
   Promise.resolve([]),
@@ -38,14 +39,14 @@ mock.module("@/shared/db/prisma", () => ({
     termsDocument: { findMany: mockTermsFindMany },
   },
 }));
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PostStatus: { PUBLISHED: "PUBLISHED", DRAFT: "DRAFT" },
   EventStatus: {
     PUBLISHED: "PUBLISHED",
     DRAFT: "DRAFT",
     CANCELLED: "CANCELLED",
   },
-}));
+});
 
 const { getSitemapContentData } =
   await import("@/shared/domain/sitemap/queries");

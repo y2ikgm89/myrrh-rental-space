@@ -32,35 +32,10 @@ const ADMIN_LEGACY_PAGE_AUTH_IMPORT =
   /import\s*\{[^}]*\b(?:requireAdminDashboardAccess|requireAdminPermission|requireAdminResourcePermission|verifyAdminSession)\b[^}]*\}\s*from\s*["']@\/admin\/queries\/_helpers["']/u;
 
 /** Frozen allowlist: legacy direct customer session imports under `(public)`. */
-const CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST = new Set([
-  "src/app/(public)/claim/event-registration/page.tsx",
-  "src/app/(public)/claim/reservation/page.tsx",
-  "src/app/(public)/events/[slug]/_components/event-registration-context.ts",
-  "src/app/(public)/events/registrations/status/page.tsx",
-  "src/app/(public)/login/page.tsx",
-  "src/app/(public)/mypage/inquiries/[id]/page.tsx",
-  "src/app/(public)/mypage/reservations/[id]/edit/page.tsx",
-  "src/app/(public)/mypage/terms/reagree/_actions.ts",
-  "src/app/(public)/mypage/terms/reagree/page.tsx",
-  "src/app/(public)/reservation/complete/page.tsx",
-  "src/app/(public)/reservation/status/edit/page.tsx",
-  "src/app/(public)/_shared/actions/consume-signup-terms.ts",
-  "src/app/(public)/_shared/actions/reservation.ts",
-]);
+const CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST = new Set<string>();
 
 /** Frozen allowlist: legacy admin page auth imports in dashboard shell files. */
-const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set([
-  "src/app/(admin)/admin/(dashboard)/_components/DashboardRecentSection.tsx",
-  "src/app/(admin)/admin/(dashboard)/_components/DashboardStatsSection.tsx",
-  "src/app/(admin)/admin/(dashboard)/coupons/new/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx",
-  "src/app/(admin)/admin/(dashboard)/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/reservations/calendar/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/staff/[id]/edit/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/staff/[id]/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/staff/new/page.tsx",
-  "src/app/(admin)/admin/(dashboard)/terms/agreements/page.tsx",
-]);
+const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set<string>();
 
 function normalizeRelPath(filePath: string): string {
   return relative(ROOT, filePath).replaceAll("\\", "/");

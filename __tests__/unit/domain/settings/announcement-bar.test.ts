@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import { createSpan } from "@/shared/lib/portable-text";
 
 const mockAnnouncementBarFindMany = mock<() => Promise<Array<{ id: string }>>>(
@@ -77,7 +78,7 @@ mock.module("@generated/prisma/client", () => {
   };
 });
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AnnouncementBarAnimation: {
     fade: "fade",
     slide: "slide",
@@ -89,7 +90,7 @@ mock.module("@generated/prisma/enums", () => ({
     glass: "glass",
     stripe: "stripe",
   },
-}));
+});
 
 const announcementBarCommands =
   (await import("@/shared/domain/settings/announcement-bar")) as unknown as {

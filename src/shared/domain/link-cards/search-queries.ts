@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { publicNewsWhere } from "@/shared/domain/news/queries";
 import { publicPostsWhere } from "@/shared/domain/posts/queries";
-import { EventStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";

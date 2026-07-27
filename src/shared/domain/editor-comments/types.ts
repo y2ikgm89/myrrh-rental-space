@@ -1,5 +1,5 @@
-import type { EditorCommentStatus } from "@generated/prisma/enums";
-export type { EditorCommentStatus } from "@generated/prisma/enums";
+import type { EditorCommentStatus } from "@/shared/lib/validations/enums/prisma-types";
+export type { EditorCommentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 type DateLike = Date | string;
 

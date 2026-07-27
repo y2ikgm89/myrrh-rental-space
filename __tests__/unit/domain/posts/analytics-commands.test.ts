@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const mockPostUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
@@ -10,9 +11,9 @@ mock.module("@/shared/db/prisma", () => ({
     post: { updateMany: mockPostUpdateMany },
   },
 }));
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PostStatus: { PUBLISHED: "PUBLISHED", DRAFT: "DRAFT" },
-}));
+});
 
 const { incrementPostViewCount } =
   await import("@/shared/domain/posts/analytics-commands");

@@ -2,7 +2,10 @@ import "server-only";
 
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { InquiryStatus, ReservationStatus } from "@generated/prisma/enums";
+import {
+  InquiryStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { formatJstDateString, MS_PER_DAY } from "@/shared/lib/date-format";
 
 export type DashboardStats = {
