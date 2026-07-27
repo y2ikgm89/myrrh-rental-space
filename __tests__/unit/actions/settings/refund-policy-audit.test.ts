@@ -53,7 +53,7 @@ const mockUpdateRefundPolicyCommand = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 
-mock.module("@/shared/domain/settings/commands", () => ({
+mock.module("@/shared/domain/settings/commands/commerce", () => ({
   updateRefundPolicy: (
     ...args: Parameters<typeof mockUpdateRefundPolicyCommand>
   ) => mockUpdateRefundPolicyCommand(...args),

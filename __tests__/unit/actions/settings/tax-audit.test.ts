@@ -52,7 +52,7 @@ const mockUpdateTaxSettingsCommand = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 
-mock.module("@/shared/domain/settings/commands", () => ({
+mock.module("@/shared/domain/settings/commands/commerce", () => ({
   updateTaxSettings: (
     ...args: Parameters<typeof mockUpdateTaxSettingsCommand>
   ) => mockUpdateTaxSettingsCommand(...args),

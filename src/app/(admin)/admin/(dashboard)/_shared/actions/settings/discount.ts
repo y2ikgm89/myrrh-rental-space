@@ -16,7 +16,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import * as settingsCommands from "@/shared/domain/settings/commands";
+import { updateDiscountSettings as updateDiscountSettingsCommand } from "@/shared/domain/settings/commands/commerce";
 import { getDiscountSettings } from "@/shared/domain/settings/admin-queries";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -48,7 +48,7 @@ export async function updateDiscountSettings(
           discountCombinationMode: data.discountCombinationMode,
           showOriginalPrice: data.showOriginalPrice,
         };
-        await settingsCommands.updateDiscountSettings({
+        await updateDiscountSettingsCommand({
           durationDiscountEnabled: data.durationDiscountEnabled,
           durationDiscountRules: data.durationDiscountRules,
           discountCombinationMode: data.discountCombinationMode,
