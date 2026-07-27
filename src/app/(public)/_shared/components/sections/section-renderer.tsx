@@ -58,7 +58,7 @@ import {
   type PublicEventCardSource,
 } from "@/shared/domain/events/public-queries";
 import { getActiveEventCategories } from "@/shared/domain/event-categories/queries";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 import {

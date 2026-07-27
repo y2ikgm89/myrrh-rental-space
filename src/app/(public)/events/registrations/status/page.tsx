@@ -11,7 +11,7 @@ import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForGuestStatus } from "@/shared/domain/events/registration-queries";
-import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
+import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import {
   buildGuestCancelHref,
   buildGuestReceiptDownloadHref,

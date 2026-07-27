@@ -10,7 +10,7 @@ import { isEmailEnabled } from "@/shared/lib/email/client";
 import { sendEventReminderEmail } from "@/shared/lib/email/event-emails";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import {
   logError,
   ErrorCategory,

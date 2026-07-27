@@ -27,7 +27,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
+import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
