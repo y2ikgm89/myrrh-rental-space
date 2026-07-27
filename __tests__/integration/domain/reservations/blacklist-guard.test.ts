@@ -24,7 +24,7 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 // この real-DB テストは Settings の feature module シーディングとは無関係な
 // ガード検証が目的のため、registration-overbooking.test.ts と同じ mock
 // パターンで gate 自体をバイパスする。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 

@@ -12,7 +12,7 @@ if (TEST_DB_URL) {
 }
 
 // isFeatureEnabled を mock する（他の real-DB テストと同じパターン）
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 

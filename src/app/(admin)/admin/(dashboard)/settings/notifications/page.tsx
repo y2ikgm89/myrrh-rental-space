@@ -20,7 +20,7 @@ import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { isEmailEnabled } from "@/shared/lib/email/client";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {

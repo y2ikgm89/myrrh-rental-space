@@ -14,7 +14,7 @@ const mockGetEnabledFeatures = mock(() =>
   Promise.resolve(new Set(["posts", "news", "spaces", "events"] as const)),
 );
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   getEnabledFeatures: mockGetEnabledFeatures,
 }));
 

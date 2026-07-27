@@ -5,7 +5,7 @@ import { getTaxSettings } from "@/admin/queries/settings";
 import {
   isFeatureEnabled,
   requireFeatureEnabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";

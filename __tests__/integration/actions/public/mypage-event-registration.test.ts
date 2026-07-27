@@ -196,7 +196,7 @@ mock.module("@/shared/domain/terms/consent-gate", () => ({
 }));
 
 const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
