@@ -2,38 +2,21 @@ import "server-only";
 
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
-import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  buildOrderScopeLockSql,
-  buildTextOrderSqlFragments,
-} from "@/shared/domain/order-sql";
-import {
-  sendEventCancelledToAllParticipants,
-  sendEventUpdatedToAllParticipants,
-} from "@/shared/lib/email/event-emails";
-import {
-  getEventCancelledNotificationPayload,
-  getEventUpdatedNotificationPayload,
-} from "@/shared/domain/events/email-queries";
+import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
-import { generateSlug } from "@/shared/lib/slug";
 import { isAllowedManagedImageSrc } from "@/shared/lib/media/next-image-src";
 import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
-import {
-  buildParagraphEditorStateJson,
-  buildParagraphHtml,
-} from "@/shared/lib/lexical/description-defaults";
-import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
   EventFormat,
   EventScheduleMode,
   EventStatus,
   MeetingProvider,
-  RegistrationStatus,
   EVENT_FORMAT_VALUES,
   MEETING_PROVIDER_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
@@ -42,18 +25,20 @@ import {
   gallerySchema,
   type GalleryItem,
 } from "@/shared/lib/validations/gallery";
-import type {
-  EventTicketInput,
-  EventTicketWritableFields,
-} from "./ticket-types";
+import type { EventTicketInput } from "./ticket-types";
 import type { SlotInput } from "./slot-commands";
 import { syncEventTimeSlotsCommand } from "./slot-commands";
+import {
+  buildTicketWriteData,
+  notifyEventVenueOrSlotChanged,
+  syncEventSlotsAndTicketsCommand,
+} from "./event-slot-sync-commands";
+import { ensureUniqueSlug } from "./event-slug";
 import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
 import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
-import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -156,25 +141,6 @@ function normalizeRegistrationOpen(
 }
 
 /**
- * EventTicket の create / update に共通する書き込みフィールドを抽出する。
- * `id` を除いた永続フィールドのみを返す（`eventId` は create 時に呼び出し側で付与）。
- */
-function buildTicketWriteData(
-  ticket: EventTicketInput,
-  sortOrder: number,
-): EventTicketWritableFields {
-  return {
-    name: ticket.name,
-    description: ticket.description,
-    price: ticket.price,
-    capacity: ticket.capacity,
-    unitSize: ticket.unitSize,
-    sortOrder,
-    isAvailable: ticket.isAvailable,
-  };
-}
-
-/**
  * registrationDeadline 文字列を Date に変換する。
  * 空文字 / undefined / null → null。
  */
@@ -182,14 +148,6 @@ function parseOptionalDeadline(value: string | null | undefined): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function getAggregateQuantitySum(aggregate: object): number {
-  if (!isRecord(aggregate)) return 0;
-  const sum = aggregate["_sum"];
-  if (!isRecord(sum)) return 0;
-  const quantity = sum["quantity"];
-  return typeof quantity === "number" ? quantity : 0;
 }
 
 function assertEventStatusTransition(
@@ -547,145 +505,23 @@ export async function updateEventCommand(
       },
     });
 
-    // スロット差分同期
-    ({ removedGoogleCalendarEventIds } = await syncEventTimeSlotsCommand(
+    ({ removedGoogleCalendarEventIds } = await syncEventSlotsAndTicketsCommand(
       tx,
       id,
       data.slots,
+      data.tickets,
     ));
-
-    if (data.tickets !== undefined) {
-      await tx.$executeRaw(buildOrderScopeLockSql(`event_tickets:${id}`));
-
-      const incoming = data.tickets;
-      const incomingExistingTickets = incoming.filter(
-        (ticket): ticket is EventTicketInput & { id: string } =>
-          typeof ticket.id === "string",
-      );
-      const incomingIds = new Set(incomingExistingTickets.map((t) => t.id));
-      if (incomingIds.size !== incomingExistingTickets.length) {
-        throw new DomainError(
-          "同じチケットIDを複数指定することはできません",
-          "VALIDATION",
-        );
-      }
-
-      const existingTickets = await tx.eventTicket.findMany({
-        where: { eventId: id },
-        select: { id: true },
-      });
-      const existingTicketIds = new Set(
-        existingTickets.map((ticket) => ticket.id),
-      );
-
-      for (const ticketId of incomingIds) {
-        if (!existingTicketIds.has(ticketId)) {
-          throw new DomainError("チケットが見つかりません", "NOT_FOUND");
-        }
-      }
-
-      const toDelete = existingTickets
-        .map((e) => e.id)
-        .filter((existingId) => !incomingIds.has(existingId));
-      if (toDelete.length > 0) {
-        await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
-      }
-
-      if (incomingExistingTickets.length > 0) {
-        const { ids, tempCases } = buildTextOrderSqlFragments(
-          incomingExistingTickets,
-          (ticket) => ticket.id,
-          (_ticket, index) => index,
-        );
-        await tx.$executeRaw`
-          UPDATE "event_tickets"
-          SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
-          WHERE "id" IN (${Prisma.join(ids)})
-            AND "eventId" = ${id}
-        `;
-      }
-
-      const toCreate: Prisma.EventTicketCreateManyInput[] = [];
-      for (let index = 0; index < incoming.length; index += 1) {
-        const ticket = incoming[index];
-        if (!ticket) continue;
-        if (ticket.id) {
-          // null capacity = 無制限。有限定員へ下げるときだけ CONFIRMED 合計で floor を検証。
-          if (ticket.capacity != null) {
-            const confirmedAggregate = await tx.eventRegistration.aggregate({
-              where: {
-                ticketId: ticket.id,
-                eventId: id,
-                status: RegistrationStatus.CONFIRMED,
-              },
-              _sum: { quantity: true },
-            });
-            const confirmedQuantity =
-              getAggregateQuantitySum(confirmedAggregate);
-            if (ticket.capacity < confirmedQuantity) {
-              throw new DomainError(
-                `定員を確定済み申込人数（${confirmedQuantity}名）未満にはできません`,
-                "VALIDATION",
-              );
-            }
-          }
-          await tx.eventTicket.update({
-            where: { id: ticket.id },
-            data: buildTicketWriteData(ticket, index),
-          });
-        } else {
-          toCreate.push({
-            eventId: id,
-            ...buildTicketWriteData(ticket, index),
-          });
-        }
-      }
-      if (toCreate.length > 0) {
-        await tx.eventTicket.createMany({ data: toCreate });
-      }
-    }
   });
 
-  const venueChanged =
-    (existing.locationId ?? null) !== (data.locationId ?? null) ||
-    (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
-    (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
-
-  // 新規スロット追加だけでなく、既存スロット（id あり）の startAt/endAt/capacity
-  // 変更も検知する。id なしで参照される既存スロットは想定外だが安全側で変更扱いにする。
-  const existingSlotMap = new Map(
-    existing.slots.map((slot) => [slot.id, slot]),
-  );
-  const slotChanged = data.slots.some((slot) => {
-    if (!slot.id) return true;
-    const prev = existingSlotMap.get(slot.id);
-    if (!prev) return true;
-    return (
-      prev.startAt.getTime() !== slot.startAt.getTime() ||
-      prev.endAt.getTime() !== slot.endAt.getTime() ||
-      prev.capacity !== slot.capacity
-    );
+  notifyEventVenueOrSlotChanged({
+    eventId: id,
+    status: data.status,
+    existing,
+    locationId: data.locationId ?? null,
+    spaceId: data.spaceId ?? null,
+    addressDetail: data.addressDetail ?? null,
+    slots: data.slots,
   });
-
-  // スロット変更は sendEventUpdatedToAllParticipants で通知。
-  // 参加者ごとに「自分が申し込んだスロットの変更前日時」を正しく表示できるよう、
-  // 全スロットの変更前 startAt を id 付きで渡す（単一の代表値を全員に使い回さない）。
-  if ((slotChanged || venueChanged) && data.status === EventStatus.PUBLISHED) {
-    const oldSlotStartTimes = new Map(
-      existing.slots.map((slot) => [slot.id, slot.startAt]),
-    );
-    fireAndForget(
-      getEventUpdatedNotificationPayload(id).then((payload) => {
-        if (payload) {
-          return sendEventUpdatedToAllParticipants(payload, oldSlotStartTimes);
-        }
-      }),
-      {
-        operation: "sendEventUpdatedToAllParticipants",
-        category: ErrorCategory.EXTERNAL_API,
-      },
-    );
-  }
 
   return { removedGoogleCalendarEventIds };
 }
@@ -908,221 +744,4 @@ export async function duplicateEventCommand(id: string) {
   });
 
   return created;
-}
-
-export async function upsertEventFromCalendar(data: {
-  googleCalendarEventId: string;
-  title: string;
-  description?: string | null;
-  startTime: Date;
-  endTime: Date;
-  /** Google Calendar の location 文字列。外部会場名として addressDetail に格納 */
-  location?: string | null;
-}) {
-  const plain = (data.description ?? "").trim();
-  const descriptionJson = parsePrismaInputJson(
-    buildParagraphEditorStateJson(plain),
-    "descriptionJson が不正です",
-  );
-  const descriptionHtml = buildParagraphHtml(plain);
-  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
-
-  const existingSlot = await prisma.eventTimeSlot.findFirst({
-    where: { googleCalendarEventId: data.googleCalendarEventId },
-    select: { id: true, eventId: true },
-  });
-
-  if (existingSlot) {
-    // 公開済み、またはキャンセル以外の申込があるイベントは inbound で
-    // title/description/times/venue を黙って上書きしない（clean-break skip）。
-    const existingEvent = await prisma.event.findFirst({
-      where: { id: existingSlot.eventId, deletedAt: null },
-      select: {
-        id: true,
-        status: true,
-        registrations: {
-          where: { status: { not: RegistrationStatus.CANCELLED } },
-          select: { id: true },
-          take: 1,
-        },
-      },
-    });
-    if (!existingEvent) {
-      throw new DomainError("イベントが見つかりません", "NOT_FOUND");
-    }
-    if (existingEvent.status === EventStatus.PUBLISHED) {
-      return {
-        id: existingEvent.id,
-        action: "skipped" as const,
-        reason: "published_event_protected",
-      };
-    }
-    if (existingEvent.registrations.length > 0) {
-      return {
-        id: existingEvent.id,
-        action: "skipped" as const,
-        reason: "has_active_registrations",
-      };
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.event.update({
-        where: { id: existingSlot.eventId, deletedAt: null },
-        data: {
-          title: data.title,
-          descriptionJson,
-          descriptionHtml,
-          descriptionPlainText,
-          addressDetail: data.location ?? null,
-        },
-      });
-      await tx.eventTimeSlot.update({
-        where: { id: existingSlot.id },
-        data: {
-          startAt: data.startTime,
-          endAt: data.endTime,
-        },
-      });
-      // firstSlotStartAt / lastSlotEndAt 非正規化列を MIN/MAX 集約で再計算
-      const aggregate = await tx.eventTimeSlot.aggregate({
-        where: { eventId: existingSlot.eventId },
-        _min: { startAt: true },
-        _max: { endAt: true },
-      });
-      await tx.event.update({
-        where: { id: existingSlot.eventId },
-        data: {
-          firstSlotStartAt: aggregate._min.startAt ?? null,
-          lastSlotEndAt: aggregate._max.endAt ?? null,
-        },
-      });
-    });
-    return { id: existingSlot.eventId, action: "updated" as const };
-  }
-
-  const slug = await ensureUniqueSlug(generateSlug(data.title, "event"));
-  // Google Calendar 由来のイベントはカテゴリー情報を持たないため、
-  // 必須化された categoryId には「未分類」カテゴリーをフォールバックとして
-  // 割り当てる（管理者は後でイベント編集画面から変更できる）。「未分類」は
-  // EventCategory 追加 migration が既存イベントの backfill 先として作成する
-  // 固定名のカテゴリーであり（prisma/migrations/20260722235352_add_event_category
-  // 参照）、任意の isActive カテゴリー（例: sortOrder 最小）を機械的に選ぶより、
-  // 「カテゴリー不明」という意味を持つ名前固定の行を明示参照する方が、将来
-  // カテゴリーの並び順や追加が変わっても挙動が変わらず安全。「未分類」が
-  // 存在しない（削除・改名された）場合は運用上の設定不備として明示的に失敗させる。
-  const fallbackCategory = await prisma.eventCategory.findFirst({
-    where: { name: "未分類", isActive: true },
-    select: { id: true },
-  });
-  if (!fallbackCategory) {
-    throw new DomainError(
-      "「未分類」カテゴリーが見つからないため、カレンダー由来イベントを作成できません",
-      "VALIDATION",
-    );
-  }
-  const event = await prisma.$transaction(async (tx) => {
-    const created = await tx.event.create({
-      data: {
-        title: data.title,
-        slug,
-        descriptionJson,
-        descriptionHtml,
-        descriptionPlainText,
-        addressDetail: data.location ?? null,
-        categoryId: fallbackCategory.id,
-        status: EventStatus.DRAFT,
-        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
-        firstSlotStartAt: data.startTime,
-        lastSlotEndAt: data.endTime,
-      },
-      select: { id: true },
-    });
-    await tx.eventTimeSlot.create({
-      data: {
-        eventId: created.id,
-        startAt: data.startTime,
-        endAt: data.endTime,
-        capacity: 1,
-        googleCalendarEventId: data.googleCalendarEventId,
-      },
-    });
-    return created;
-  });
-  return { id: event.id, action: "created" as const };
-}
-
-/**
- * Google Calendar 上でカレンダー由来（`upsertEventFromCalendar` が import した）
- * イベントが cancelled になったことを検知した際、対応する Event を CANCELLED に
- * 遷移させる（GCAL-AUDIT-10）。
- *
- * `googleCalendarEventId` を持つ `EventTimeSlot` から親 Event を逆引きする
- * （import 経路は 1 event = 1 slot 固定、`upsertEventFromCalendar` 参照）。
- * 管理者操作 (`cancelEventCommand`) と異なり、GCal 側が既に削除済みのイベントに
- * 対する反映のため、参加者通知・outbound GCal delete は発火しない（source of
- * truth が GCal 側であり、二重送信・無意味な API 呼び出しを避ける）。
- */
-export async function cancelImportedEventFromCalendar(
-  googleCalendarEventId: string,
-): Promise<{ cancelled: boolean }> {
-  const slot = await prisma.eventTimeSlot.findFirst({
-    where: { googleCalendarEventId },
-    select: { eventId: true },
-  });
-  if (!slot) return { cancelled: false };
-
-  const claim = await prisma.event.updateMany({
-    where: {
-      id: slot.eventId,
-      deletedAt: null,
-      status: { not: EventStatus.CANCELLED },
-    },
-    data: { status: EventStatus.CANCELLED },
-  });
-
-  return { cancelled: claim.count > 0 };
-}
-
-/**
- * `slug` が空いていればそのまま返し、衝突したら `${slug}-2`, `${slug}-3` ...
- * の最小未使用番号を返す（WordPress / Ghost / Notion 互換のインクリメンタル方式）。
- *
- * deterministic な番号付けにより、複製イベントの URL が「（コピー）」「（コピー）-2」
- * のように人間に予測可能な並びになる。
- */
-async function ensureUniqueSlug(
-  slug: string,
-  excludeId?: string,
-): Promise<string> {
-  const existing = await prisma.event.findFirst({
-    where: {
-      slug,
-      deletedAt: null,
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-    },
-    select: { id: true },
-  });
-
-  if (!existing) return slug;
-
-  const siblings = await prisma.event.findMany({
-    where: {
-      slug: { startsWith: `${slug}-` },
-      deletedAt: null,
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-    },
-    select: { slug: true },
-  });
-
-  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`^${escaped}-(\\d+)$`);
-  const used = new Set<number>();
-  for (const s of siblings) {
-    const match = s.slug.match(pattern);
-    if (match?.[1]) used.add(Number(match[1]));
-  }
-
-  let n = 2;
-  while (used.has(n)) n++;
-  return `${slug}-${n}`;
 }
