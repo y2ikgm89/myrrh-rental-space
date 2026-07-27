@@ -70,9 +70,12 @@ mock.module("@/shared/domain/reservations/payment-commands", () => ({
 const mockDeleteCalendarSync = mock<
   (reservationId: string, eventId: string) => Promise<void>
 >(() => Promise.resolve());
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: mockDeleteCalendarSync,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: mockDeleteCalendarSync,
+  }),
+);
 
 const mockGetSeriesGcalMasterEventId = mock<
   (seriesId: string) => Promise<string | null>

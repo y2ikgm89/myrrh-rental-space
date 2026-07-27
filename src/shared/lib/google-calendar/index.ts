@@ -3,6 +3,8 @@ export type {
   CalendarEventParams,
   CalendarEventResult,
   CalendarConnectionTestResult,
+  GoogleCalendarClientContext,
+  GoogleCalendarEventWriteContext,
   GoogleCalendarSettings,
   CalendarChange,
   SyncChangesResult,
@@ -29,6 +31,7 @@ export {
 } from "./events";
 
 export { fetchCalendarChanges } from "./sync";
+export type { FetchCalendarChangesOptions } from "./sync";
 
 export { setupWebhookWatch, stopWebhookWatch } from "./webhook";
 

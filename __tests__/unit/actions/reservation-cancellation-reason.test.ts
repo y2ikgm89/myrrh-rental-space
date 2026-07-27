@@ -46,11 +46,14 @@ mock.module("@/shared/domain/customers/commands", () => ({
 mock.module("@/shared/lib/rate-limit", () => ({
   getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
 }));
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mock(async () => undefined),
-  updateCalendarSync: mock(async () => undefined),
-  deleteCalendarSync: mock(async () => ({ success: true })),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mock(async () => undefined),
+    updateCalendarSync: mock(async () => undefined),
+    deleteCalendarSync: mock(async () => ({ success: true })),
+  }),
+);
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mock(async () => undefined),
   sendReservationConfirmationEmail: mock(async () => undefined),

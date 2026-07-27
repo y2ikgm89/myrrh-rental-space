@@ -1,11 +1,10 @@
 /**
- * カレンダー→予約（双方向同期）
+ * カレンダー→予約（双方向同期）orchestration。
  *
- * カレンダー側での変更を予約システムに反映。
- * ポーリングまたはWebhookで変更検知。
- * 競合時は既存予約を優先（変更拒否）。
+ * GCal 変更取得は `@/shared/lib/google-calendar`、予約 R-W は
+ * `calendar-sync` commands。競合時は既存予約を優先（変更拒否）。
  *
- * @module shared/lib/calendar-sync/inbound
+ * @module shared/domain/reservations/reservation-calendar-inbound
  */
 
 import "server-only";
@@ -27,13 +26,11 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import {
-  fetchCalendarChanges,
-  type CalendarChange,
-} from "@/shared/lib/google-calendar";
+import { fetchCalendarChanges } from "@/shared/domain/reservations/calendar-sync-fetch";
+import type { CalendarChange } from "@/shared/lib/google-calendar";
 import { sendCalendarSyncRejectionEmail } from "@/shared/domain/email/dispatch";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
-import type { TwoWaySyncResult } from "./types";
+import type { TwoWaySyncResult } from "@/shared/lib/calendar-sync/types";
 
 /**
  * 時間変更を silent に適用してはいけない決済状態（GCAL-AUDIT-11）。

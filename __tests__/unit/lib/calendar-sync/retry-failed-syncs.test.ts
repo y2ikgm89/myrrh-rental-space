@@ -47,21 +47,16 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
   renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar-api", () => ({
   createCalendarEvent: mockCreate,
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
   fetchEventInstances: mockFetchInstances,
   getCalendarEvent: mock(() => Promise.resolve(null)),
-  encryptServiceAccountJson: mock(() => Promise.resolve("")),
-  extractServiceAccountEmail: mock(() => ""),
-  fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
-  setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
-  stopWebhookWatch: mock(() => Promise.resolve()),
-  testServiceAccountConnection: mock(() => Promise.resolve({ success: false })),
-  isValidCalendarId: mock(() => Promise.resolve(false)),
-  formatGoogleApiError: mock((e: unknown) => String(e)),
   patchCalendarEvent: mock(() => Promise.resolve({ success: true })),
+  resolveGoogleCalendarWriteContext: mock(() =>
+    Promise.resolve({ ok: false, error: "mocked" }),
+  ),
 }));
 
 // --- domain mocks ---
@@ -184,7 +179,7 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 const { retryFailedSyncs } =
-  await import("@/shared/lib/calendar-sync/outbound");
+  await import("@/shared/domain/reservations/reservation-calendar-outbound");
 
 function baseReservation(
   overrides: Partial<FailedReservation> = {},

@@ -130,7 +130,7 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
     mockApplyReservationEditSideEffects(...args),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/reservations/calendar-sync-fetch", () => ({
   fetchCalendarChanges: () => mockFetchCalendarChanges(),
 }));
 
@@ -172,7 +172,8 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: () => undefined,
 }));
 
-const { syncFromCalendar } = await import("@/shared/lib/calendar-sync/inbound");
+const { syncFromCalendar } =
+  await import("@/shared/domain/reservations/reservation-calendar-inbound");
 
 // -----------------------------------------------------------------------
 // Suite

@@ -1,8 +1,8 @@
 /**
  * 繰返し予約（ReservationSeries）→ Google Calendar の master event 操作。
  *
- * 単発予約の lib `outbound.ts` が instance 単位の同期を担うのに対し、本モジュールは
- * series 全体を表す 1 つの recurring master event に対する操作を担う
+ * 単発予約の `reservation-calendar-outbound` が instance 単位の同期を担うのに対し、
+ * 本モジュールは series 全体を表す 1 つの recurring master event に対する操作を担う
  * （`applyBulkCancellationSideEffects` の scope 別 1 回操作から呼ばれる）。
  *
  * Phase B.2.1 Task 5 で ReservationSeries.googleCalendarMasterEventId が追加され、
@@ -15,10 +15,6 @@
 
 import "server-only";
 import {
-  deleteCalendarEvent,
-  patchCalendarEvent,
-} from "@/shared/lib/google-calendar";
-import {
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
   GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX,
   getSeriesForCalendarSync,
@@ -27,6 +23,10 @@ import {
   getSeriesMasterOperationFailureInstances,
   markReservationCalendarSyncUpdated,
 } from "@/shared/domain/reservations/calendar-sync";
+import {
+  deleteCalendarEvent,
+  patchCalendarEvent,
+} from "@/shared/domain/settings/google-calendar-api";
 import { isGoogleCalendarConfigured } from "@/shared/domain/settings/google-calendar";
 import { rebuildRruleWithUntil } from "@/shared/domain/reservations/series-rrule";
 import {
@@ -124,7 +124,7 @@ export async function patchGcalMasterUntil(input: {
  *
  * recurring event の master を削除すれば Google Calendar 側で全 occurrence が
  * 連動して消える標準挙動のため、series 専用の API は不要。既存の単発予約と同じ
- * `deleteCalendarEvent`（`@/shared/lib/google-calendar`）をそのまま再利用する。
+ * `deleteCalendarEvent`（domain google-calendar-api）をそのまま再利用する。
  *
  * GCAL-OUTBOUND-05 / 07: `isGoogleCalendarConfigured()` gate + `{success, error?}`
  * 返却は `patchGcalMasterUntil` と同じ設計（上記 JSDoc 参照）。

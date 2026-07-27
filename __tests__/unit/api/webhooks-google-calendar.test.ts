@@ -78,9 +78,12 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getTwoWaySyncSettings: () => mockGetTwoWaySyncSettings(),
 }));
 
-mock.module("@/shared/lib/calendar-sync/inbound", () => ({
-  syncFromCalendar: () => mockSyncFromCalendar(),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-inbound",
+  () => ({
+    syncFromCalendar: () => mockSyncFromCalendar(),
+  }),
+);
 
 mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: () => mockIsTwoWaySyncEnabled(),

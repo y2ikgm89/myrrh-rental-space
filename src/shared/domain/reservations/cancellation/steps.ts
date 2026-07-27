@@ -14,7 +14,7 @@ import type {
   CancellationSideEffectInput,
   SideEffectReservation,
 } from "@/shared/domain/reservations/cancellation/types";
-import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
+import { deleteCalendarSync } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import {
   sendReservationAdminNotification,
   sendReservationCancelledEmail,
