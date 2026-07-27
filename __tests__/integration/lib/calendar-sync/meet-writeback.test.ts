@@ -74,6 +74,11 @@ mock.module("@/shared/lib/google-calendar", () => ({
   updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
   deleteCalendarEvent: mock(() => Promise.resolve({ success: true })),
   patchCalendarEvent: mock(() => Promise.resolve({ success: true })),
+  // Meet URL retry 経路が import する。未 stub だと beforeAll の dynamic import が
+  // SyntaxError で落ち、afterAll が testCategoryId 未設定のまま走り FK 汚染する。
+  addMeetConferenceToCalendarEvent: mock(() =>
+    Promise.resolve({ success: false, error: "not used in this suite" }),
+  ),
   // Phase B.2 task 16 で追加された fetchEventInstances。outbound.ts が
   // syncReservationSeriesToCalendar 経由で import するため mock stub 必須
   // (未追加時に SyntaxError: Export named 'fetchEventInstances' not found)。
@@ -116,19 +121,22 @@ let EVENT_FORMAT: PrismaTypesModule["EVENT_FORMAT"];
 let MEETING_PROVIDER: PrismaTypesModule["MEETING_PROVIDER"];
 let EventScheduleMode: PrismaTypesModule["EventScheduleMode"];
 let EventStatus: PrismaTypesModule["EventStatus"];
-let testCategoryId: string;
+/** beforeAll 失敗時は未設定のまま。afterAll は必ずガードする（Prisma は undefined where を無視して全件 DELETE する）。 */
+let testCategoryId: string | undefined;
 
 // =============================================================================
 // Fixture helpers
 // =============================================================================
-
-const createdEventIds: string[] = [];
 
 async function createEventWithSlot(overrides: {
   format: EventFormatValue;
   meetingProvider: MeetingProviderValue;
   meetingUrl: string | null;
 }): Promise<{ eventId: string; slotId: string }> {
+  if (!testCategoryId) {
+    throw new Error("testCategoryId is not initialized");
+  }
+  const categoryId = testCategoryId;
   const suffix = crypto.randomUUID();
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
@@ -145,7 +153,7 @@ async function createEventWithSlot(overrides: {
         format: overrides.format,
         meetingProvider: overrides.meetingProvider,
         meetingUrl: overrides.meetingUrl,
-        categoryId: testCategoryId,
+        categoryId,
         // GCAL-OUTBOUND-08: getEventSlotsForCalendarSync は status:PUBLISHED の
         // イベントのみを対象にする (DRAFT event outbound policy)。デフォルト
         // (DRAFT) のままだと本テストの対象取得が空配列になる。
@@ -160,7 +168,6 @@ async function createEventWithSlot(overrides: {
     return { eventId: event.id, slotId: slot.id };
   });
 
-  createdEventIds.push(result.eventId);
   return result;
 }
 
@@ -278,13 +285,35 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
   });
 
   afterAll(async () => {
-    // EventRegistration → EventTicket → Event の順。本テストはどちらも作らないため
-    // Event.deleteMany のみで良い（EventTimeSlot は onDelete: Cascade で追従）。
-    if (createdEventIds.length > 0) {
-      await prisma.event.deleteMany({ where: { id: { in: createdEventIds } } });
+    // beforeAll が途中で失敗すると prisma / testCategoryId が未設定のままここへ来る。
+    // Prisma は where の undefined を無視するため `{ id: undefined }` は WHERE 1=1 になり、
+    // 他テストの Event が参照する category まで消そうとして FK で落ちる。
+    if (!prisma || !testCategoryId) {
+      if (basePrisma) {
+        await basePrisma.$disconnect();
+      }
+      return;
     }
-    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
-    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
+
+    // categoryId スコープで Event を先に消す（ID 追跡漏れでも安全）。
+    // EventRegistration → EventTicket → Event の順（online-format と同型）。
+    // EventTimeSlot は Event onDelete: Cascade で追従。
+    const categoryId = testCategoryId;
+    const events = await prisma.event.findMany({
+      where: { categoryId },
+      select: { id: true },
+    });
+    const eventIds = events.map((row) => row.id);
+    if (eventIds.length > 0) {
+      await prisma.eventRegistration.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
+      await prisma.eventTicket.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
+      await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
+    }
+    await prisma.eventCategory.deleteMany({ where: { id: categoryId } });
     await basePrisma.$disconnect();
   });
 

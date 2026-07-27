@@ -23,6 +23,7 @@ export {
   updateCalendarEvent,
   patchCalendarEvent,
   deleteCalendarEvent,
+  addMeetConferenceToCalendarEvent,
   fetchEventInstances,
   getCalendarEvent,
 } from "./events";
