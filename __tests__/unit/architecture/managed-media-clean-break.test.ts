@@ -28,12 +28,21 @@ describe("managed media clean-break boundary", () => {
   });
 
   test("space media pickers do not expose arbitrary URL entry", () => {
-    const spaceForm = read(
-      "src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceEditForm.tsx",
-    );
+    const spaceMediaFiles = [
+      "src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/SpaceEditMediaTab.tsx",
+      "src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/SpaceEditPublishTab.tsx",
+    ];
 
-    expect(spaceForm).toContain("showUrlTab: false");
-    expect(spaceForm).toContain("showUrlTab={false}");
+    for (const file of spaceMediaFiles) {
+      const source = read(file);
+      expect(source).toContain("showUrlTab: false");
+    }
+
+    expect(
+      read(
+        "src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/SpaceEditMediaTab.tsx",
+      ),
+    ).toContain("showUrlTab={false}");
   });
 
   test("Lexical media controls do not re-enable arbitrary URL entry", () => {
