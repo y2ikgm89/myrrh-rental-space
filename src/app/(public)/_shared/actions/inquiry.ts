@@ -35,7 +35,7 @@ import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,

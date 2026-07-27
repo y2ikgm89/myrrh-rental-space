@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 
 export async function getEventRegistrationsForExport(eventId?: string) {
   const rows = await prisma.eventRegistration.findMany({

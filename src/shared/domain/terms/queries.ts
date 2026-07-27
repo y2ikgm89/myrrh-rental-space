@@ -345,7 +345,7 @@ export type AssertAllRequiredTermsAgreedInput = {
 /**
  * 指定 scope の必須規約に全て同意済みかを server-side で強制する gate（tx 対応版）。
  *
- * `src/shared/lib/terms-consent-gate.ts` の同名関数（`agreedTermsIds: string[]`
+ * `src/shared/domain/terms/consent-gate.ts` の同名関数（`agreedTermsIds: string[]`
  * ベース・"use cache" な `getRequiredTermsByScope` 経由・tx 非対応・
  * `Promise<{matchedTermsIds}>` 返却）とは別物。公開 4 経路
  * (signup/reservation/inquiry/event-registration) の既存 consumer は

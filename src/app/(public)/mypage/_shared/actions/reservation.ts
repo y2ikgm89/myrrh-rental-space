@@ -6,7 +6,7 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import {

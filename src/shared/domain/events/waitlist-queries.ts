@@ -10,7 +10,7 @@ import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers
 import { getAppUrl } from "@/shared/lib/constants";
 import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
-import { formatEventVenue } from "./venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 
 export const WAITLIST_QUEUE_PER_PAGE = 20;
 

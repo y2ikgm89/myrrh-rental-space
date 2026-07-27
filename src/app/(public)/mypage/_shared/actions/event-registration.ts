@@ -3,7 +3,7 @@
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { createEventCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
