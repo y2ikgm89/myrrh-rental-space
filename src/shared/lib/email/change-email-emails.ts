@@ -2,7 +2,11 @@ import "server-only";
 import { ChangeEmailVerificationEmail } from "@/shared/emails/change-email-verification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { hashForKey, sendEmail } from "./send";
-import type { ChangeEmailVerificationEmailData, EmailResult } from "./types";
+import type {
+  ChangeEmailVerificationEmailData,
+  EmailResult,
+  EmailSendContext,
+} from "./types";
 
 /**
  * マイページからの初回メールアドレス登録の本人確認 URL をお客様へ送信。
@@ -13,27 +17,31 @@ import type { ChangeEmailVerificationEmailData, EmailResult } from "./types";
  */
 export async function sendChangeEmailVerificationEmail(
   data: ChangeEmailVerificationEmailData,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
 
-  return sendEmail({
-    payload: {
-      to: data.email,
-      subject: `【メールアドレスの確認】${footer.siteName}`,
-      react: ChangeEmailVerificationEmail({
-        name: data.name,
-        newEmail: data.newEmail,
-        verificationUrl: data.verificationUrl,
-        siteName: footer.siteName,
-        footer,
-      }),
+  return sendEmail(
+    {
+      payload: {
+        to: data.email,
+        subject: `【メールアドレスの確認】${footer.siteName}`,
+        react: ChangeEmailVerificationEmail({
+          name: data.name,
+          newEmail: data.newEmail,
+          verificationUrl: data.verificationUrl,
+          siteName: footer.siteName,
+          footer,
+        }),
+      },
+      // verificationUrl はトークンを含む一意な URL。同一トークンでの再送信のみ
+      // dedupe される。トークンが変わればキーも変わるため、再発行時は新規送信扱い。
+      idempotencyKey: `change-email-verification/${hashForKey(data.verificationUrl)}`,
+      operation: "sendChangeEmailVerificationEmail",
+      context: {
+        email: data.email,
+      },
     },
-    // verificationUrl はトークンを含む一意な URL。同一トークンでの再送信のみ
-    // dedupe される。トークンが変わればキーも変わるため、再発行時は新規送信扱い。
-    idempotencyKey: `change-email-verification/${hashForKey(data.verificationUrl)}`,
-    operation: "sendChangeEmailVerificationEmail",
-    context: {
-      email: data.email,
-    },
-  });
+    sendContext,
+  );
 }

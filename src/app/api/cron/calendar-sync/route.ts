@@ -50,7 +50,7 @@ import {
   renewWebhookIfNeeded,
 } from "@/shared/domain/settings/google-calendar";
 import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
-import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
+import { sendWebhookRenewalNotification } from "@/shared/domain/email/dispatch";
 import {
   logError,
   ErrorCategory,

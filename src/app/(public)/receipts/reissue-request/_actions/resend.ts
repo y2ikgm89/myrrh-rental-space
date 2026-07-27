@@ -3,7 +3,7 @@
 import { z } from "zod";
 
 import { requestReceiptResendByEmail } from "@/shared/domain/receipts/resend";
-import { sendReceiptResendEmail } from "@/shared/lib/email/receipt-emails";
+import { sendReceiptResendEmail } from "@/shared/domain/email/lib-dispatch";
 import {
   createMutationError,
   type MutationResult,

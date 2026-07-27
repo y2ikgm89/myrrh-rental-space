@@ -31,7 +31,7 @@ import {
   fetchCalendarChanges,
   type CalendarChange,
 } from "@/shared/lib/google-calendar";
-import { sendCalendarSyncRejectionEmail } from "@/shared/lib/email/system-emails";
+import { sendCalendarSyncRejectionEmail } from "@/shared/domain/email/dispatch";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { TwoWaySyncResult } from "./types";
 

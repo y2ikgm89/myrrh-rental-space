@@ -29,7 +29,7 @@ import {
 import {
   sendBulkAdminNotification,
   sendBulkReservationCancelledEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import type { BulkReservationCancelledEmailData } from "@/shared/lib/email/types";
 import {
   ErrorCategory,

@@ -21,7 +21,7 @@ import {
 } from "@/shared/domain/inquiries/bulk-status-commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendInquiryStatusNotificationToAll } from "@/shared/lib/email/inquiry-emails";
+import { sendInquiryStatusNotificationToAll } from "@/shared/domain/email/lib-dispatch";
 import { getInquiriesForStatusNotification } from "@/shared/domain/inquiries/email-queries";
 import { ErrorCategory } from "@/shared/lib/errors";
 

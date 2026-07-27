@@ -109,6 +109,12 @@ function toStatusNotificationData(row: InquiryRow) {
   };
 }
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendInquiryReplyEmail,
@@ -136,7 +142,10 @@ beforeEach(() => {
 
 describe("sendInquiryReplyEmail() の memberInquiryUrl 出し分け", () => {
   test("customerUserId ありなら memberInquiryUrl を発行する", async () => {
-    await sendInquiryReplyEmail({ ...REPLY_DATA, customerUserId: "user-1" });
+    await sendInquiryReplyEmail(
+      { ...REPLY_DATA, customerUserId: "user-1" },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockInquiryReplyEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toMatch(
@@ -145,7 +154,10 @@ describe("sendInquiryReplyEmail() の memberInquiryUrl 出し分け", () => {
   });
 
   test("customerUserId が null（ゲスト shell 含む）なら memberInquiryUrl を発行しない", async () => {
-    await sendInquiryReplyEmail({ ...REPLY_DATA, customerUserId: null });
+    await sendInquiryReplyEmail(
+      { ...REPLY_DATA, customerUserId: null },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockInquiryReplyEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toBeUndefined();
@@ -160,6 +172,7 @@ describe("sendInquiryStatusNotificationToAll() の memberInquiryUrl 出し分け
         toStatusNotificationData(GUEST_INQUIRY),
       ],
       "RESOLVED",
+      EMAIL_SEND_CONTEXT,
     );
 
     const calls = mockInquiryStatusNotificationEmail.mock.calls;

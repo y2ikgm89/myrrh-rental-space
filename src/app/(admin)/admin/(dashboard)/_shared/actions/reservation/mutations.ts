@@ -34,7 +34,7 @@ import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
   sendReservationStatusChangedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 
 const updateStatusSchema = z.object({

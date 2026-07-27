@@ -20,10 +20,9 @@ const mockResendSend = mock<
   }>
 >();
 
-const mockIsEmailEnabled = mock<() => boolean>(() => true);
-const mockGetResendClient = mock<
-  () => { emails: { send: typeof mockResendSend } } | null
->(() => ({ emails: { send: mockResendSend } }));
+const mockGetResendClientForApiKey = mock(() => ({
+  emails: { send: mockResendSend },
+}));
 
 const MISCONFIG_MESSAGE =
   "Email sender address is not configured. Set env EMAIL_FROM " +
@@ -46,29 +45,9 @@ const mockNormalizeError = mock<(e: unknown) => Error>((e: unknown) =>
   e instanceof Error ? e : new Error(String(e)),
 );
 
-const DELIVERY_DEFAULTS = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  senderEmail: null as string | null,
-  senderName: null as string | null,
-  replyToEmail: null as string | null,
-};
-
-const mockGetEmailDeliverySettings = mock(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-
 mock.module("@/shared/lib/email/client", () => ({
-  isEmailEnabled: mockIsEmailEnabled,
-  getResendClient: mockGetResendClient,
+  getResendClientForApiKey: mockGetResendClientForApiKey,
   getFromAddress: mockGetFromAddress,
-}));
-
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -78,16 +57,7 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: mockNormalizeError,
 }));
 
-const actualCustomersQueries =
-  await import("@/shared/domain/customers/queries");
-const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
-  Promise.resolve(new Set()),
-);
-mock.module("@/shared/domain/customers/queries", () => ({
-  ...actualCustomersQueries,
-  getSuppressedEmailSet: mockGetSuppressedEmailSet,
-}));
-
+import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendEmail } from "@/shared/lib/email/send";
 
@@ -105,15 +75,12 @@ const BASE_PARAMS = {
 describe("sendEmail — unresolvable sender fallback guard (M11)", () => {
   beforeEach(() => {
     mockResendSend.mockReset();
-    mockIsEmailEnabled.mockReset();
-    mockGetResendClient.mockReset();
+    mockGetResendClientForApiKey.mockReset();
     mockLogError.mockReset();
     mockNormalizeError.mockReset();
-    mockGetSuppressedEmailSet.mockReset();
-    mockGetSuppressedEmailSet.mockResolvedValue(new Set());
-
-    mockIsEmailEnabled.mockReturnValue(true);
-    mockGetResendClient.mockReturnValue({ emails: { send: mockResendSend } });
+    mockGetResendClientForApiKey.mockReturnValue({
+      emails: { send: mockResendSend },
+    });
     mockNormalizeError.mockImplementation((e: unknown) =>
       e instanceof Error ? e : new Error(String(e)),
     );
@@ -126,7 +93,7 @@ describe("sendEmail — unresolvable sender fallback guard (M11)", () => {
   });
 
   test("getFromAddress が throw すると { ok: false, reason: 'error' } を返す", async () => {
-    const result = await sendEmail(BASE_PARAMS);
+    const result = await sendEmail(BASE_PARAMS, EMAIL_SEND_CONTEXT);
 
     expect(result).toEqual({
       ok: false,
@@ -136,13 +103,13 @@ describe("sendEmail — unresolvable sender fallback guard (M11)", () => {
   });
 
   test("getFromAddress が throw した場合は Resend SDK を呼ばない", async () => {
-    await sendEmail(BASE_PARAMS);
+    await sendEmail(BASE_PARAMS, EMAIL_SEND_CONTEXT);
 
     expect(mockResendSend).not.toHaveBeenCalled();
   });
 
   test("logError が remediation メッセージ付きで呼ばれる（audit log 経路）", async () => {
-    await sendEmail(BASE_PARAMS);
+    await sendEmail(BASE_PARAMS, EMAIL_SEND_CONTEXT);
 
     expect(mockLogError).toHaveBeenCalledTimes(1);
     const [errorArg, contextArg] = mockLogError.mock.calls[0] ?? [];
@@ -171,7 +138,7 @@ describe("sendEmail — unresolvable sender fallback guard (M11)", () => {
       error: null,
     });
 
-    const result = await sendEmail(BASE_PARAMS);
+    const result = await sendEmail(BASE_PARAMS, EMAIL_SEND_CONTEXT);
 
     expect(result).toEqual({ ok: true, messageId: "msg_ok" });
     expect(mockResendSend).toHaveBeenCalledTimes(1);

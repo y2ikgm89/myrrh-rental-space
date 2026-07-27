@@ -10,55 +10,36 @@ const mockResendSend = mock<
   }>
 >(() => Promise.resolve({ data: { id: "re_default" }, error: null }));
 
-const mockIsEmailEnabled = mock(() => Promise.resolve(true));
-const mockGetResendClient = mock(() =>
-  Promise.resolve({ emails: { send: mockResendSend } }),
-);
+const mockGetResendClientForApiKey = mock(() => ({
+  emails: { send: mockResendSend },
+}));
 const mockGetFromAddress = mock(() => "Test <test@example.com>");
-const mockGetEmailDeliverySettings = mock(() =>
-  Promise.resolve({
-    senderEmail: "from@x.com",
-    senderName: "X",
-    replyToEmail: null,
-  }),
-);
 
 mock.module("@/shared/lib/email/client", () => ({
-  isEmailEnabled: mockIsEmailEnabled,
-  getResendClient: mockGetResendClient,
+  getResendClientForApiKey: mockGetResendClientForApiKey,
   getFromAddress: mockGetFromAddress,
 }));
 
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-}));
-
-// Resend webhook suppression check (bulk fetch) を素通しさせる:
-// Bun 公式 re-export pattern で他の export を保ち `getSuppressedEmailSet` のみ
-// module-level mock に差し替える。デフォルトは空 Set (= 送信許可)。
-// 引数なし版 (PII cache leak fix)。
-const actualCustomersQueries =
-  await import("@/shared/domain/customers/queries");
-const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
-  Promise.resolve(new Set()),
-);
-mock.module("@/shared/domain/customers/queries", () => ({
-  ...actualCustomersQueries,
-  getSuppressedEmailSet: mockGetSuppressedEmailSet,
-}));
-
+// eslint-disable-next-line import-x/first -- mock.module must precede imports
+import { EMAIL_SEND_CONTEXT } from "../shared/lib/email/_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { sendEmail } = await import("@/shared/lib/email/send");
+
+const ENABLED_CONTEXT = EMAIL_SEND_CONTEXT;
+
+const DISABLED_CONTEXT = {
+  ...EMAIL_SEND_CONTEXT,
+  transport: { resendApiKey: null },
+};
 
 describe("sendEmail return shape (new EmailResult)", () => {
   beforeEach(() => {
     mockResendSend.mockClear();
-    mockIsEmailEnabled.mockClear();
-    mockGetResendClient.mockClear();
+    mockGetResendClientForApiKey.mockClear();
     mockGetFromAddress.mockClear();
-    mockGetEmailDeliverySettings.mockClear();
-    mockGetSuppressedEmailSet.mockReset();
-    mockGetSuppressedEmailSet.mockResolvedValue(new Set());
+    mockGetResendClientForApiKey.mockReturnValue({
+      emails: { send: mockResendSend },
+    });
   });
 
   test("happy path returns ok:true with messageId from Resend response", async () => {
@@ -66,19 +47,24 @@ describe("sendEmail return shape (new EmailResult)", () => {
       data: { id: "re_abc123" },
       error: null,
     });
-    const result = await sendEmail({
-      payload: { to: "x@y.com", subject: "s", text: "t" },
-      operation: "test",
-    });
+    const result = await sendEmail(
+      {
+        payload: { to: "x@y.com", subject: "s", text: "t" },
+        operation: "test",
+      },
+      ENABLED_CONTEXT,
+    );
     expect(result).toEqual({ ok: true, messageId: "re_abc123" });
   });
 
   test("disabled state returns ok:false reason:disabled (no API key)", async () => {
-    mockIsEmailEnabled.mockResolvedValueOnce(false);
-    const result = await sendEmail({
-      payload: { to: "x@y.com", subject: "s", text: "t" },
-      operation: "test",
-    });
+    const result = await sendEmail(
+      {
+        payload: { to: "x@y.com", subject: "s", text: "t" },
+        operation: "test",
+      },
+      DISABLED_CONTEXT,
+    );
     expect(result).toEqual({ ok: false, reason: "disabled" });
   });
 
@@ -87,11 +73,14 @@ describe("sendEmail return shape (new EmailResult)", () => {
       data: null,
       error: { name: "validation_error", message: "Invalid recipient" },
     });
-    const result = await sendEmail({
-      payload: { to: "x@y.com", subject: "s", text: "t" },
-      operation: "test",
-      maxRetries: 0,
-    });
+    const result = await sendEmail(
+      {
+        payload: { to: "x@y.com", subject: "s", text: "t" },
+        operation: "test",
+        maxRetries: 0,
+      },
+      ENABLED_CONTEXT,
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toBe("error");

@@ -89,7 +89,7 @@ import { testEmailFixture } from "@/shared/emails/test-email.fixture";
 import { WelcomeEmail } from "@/shared/emails/welcome";
 import { welcomeFixture } from "@/shared/emails/welcome.fixture";
 
-import { sendEmail } from "@/shared/lib/email/send";
+import { sendEmail } from "@/shared/domain/settings/queries/email-render-context";
 import type { EmailResult } from "@/shared/lib/email/types";
 
 import { EMAIL_TEMPLATE_INDEX, type TemplateKey } from "./data";

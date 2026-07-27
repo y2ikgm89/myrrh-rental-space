@@ -18,7 +18,7 @@ import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
 import {
   sendReservationAdminNotification,
   sendReservationCancelledEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
 import {
   ErrorCategory,

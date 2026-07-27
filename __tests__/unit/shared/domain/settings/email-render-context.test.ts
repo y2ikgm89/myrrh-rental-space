@@ -47,13 +47,36 @@ mock.module("@/shared/domain/settings/queries/organization", () => ({
   getIcalOrganizer: () =>
     Promise.resolve({ name: "Org", email: "org@example.com" }),
 }));
+mock.module("@/shared/domain/settings/public-queries", () => ({
+  getReservationDeadlineSettings: () =>
+    Promise.resolve({
+      cancellationDeadlineHours: 24,
+      modificationDeadlineHours: 24,
+    }),
+}));
+mock.module("@/shared/domain/settings/api-key-queries", () => ({
+  getDecryptedResendApiKey: () => Promise.resolve("re_test_key"),
+}));
+mock.module("@/shared/domain/terms/queries", () => ({
+  getPublishedTermsByType: () => Promise.resolve(null),
+}));
+mock.module("@/shared/domain/customers/queries", () => ({
+  getSuppressedEmailSet: () => Promise.resolve(new Set<string>()),
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   getEventEmailRenderContext,
+  getReminderEmailRenderContext,
+  isEmailEnabled,
   isEventAdminNotificationEnabled,
+  resolveContactAdminNotificationDelivery,
+  resolveContactConfirmationRenderContext,
+  resolveEmailSendContext,
+  resolveEmailTransportContext,
   resolveEventAdminNotificationDelivery,
   resolveInquiryCustomerReplyAdminDelivery,
+  resolveSystemNotificationDelivery,
 } from "@/shared/domain/settings/queries/email-render-context";
 
 beforeEach(() => {
@@ -170,5 +193,64 @@ describe("resolveInquiryCustomerReplyAdminDelivery()", () => {
 
     expect(result.enabled).toBe(true);
     expect(result.notificationEmails).toEqual(["admin@example.com"]);
+  });
+});
+
+describe("resolveEmailTransportContext()", () => {
+  test("resendApiKey を返す", async () => {
+    const transport = await resolveEmailTransportContext();
+    expect(transport.resendApiKey).toBeTruthy();
+  });
+});
+
+describe("resolveEmailSendContext()", () => {
+  test("transport / delivery / suppression をまとめて返す", async () => {
+    const context = await resolveEmailSendContext();
+    expect(context).not.toBeNull();
+    expect(context?.transport.resendApiKey).toBeTruthy();
+    expect(context?.delivery).toBeDefined();
+    expect(context?.suppressedEmailHashes).toBeInstanceOf(Set);
+  });
+});
+
+describe("resolveContactAdminNotificationDelivery()", () => {
+  test("notifyNewInquiry=false なら enabled=false", async () => {
+    mockGetEmailDeliverySettings.mockResolvedValue({
+      ...DELIVERY_DEFAULTS,
+      notifyNewInquiry: false,
+    });
+    const result = await resolveContactAdminNotificationDelivery();
+    expect(result.enabled).toBe(false);
+  });
+});
+
+describe("resolveSystemNotificationDelivery()", () => {
+  test("通知先アドレスを返す", async () => {
+    const result = await resolveSystemNotificationDelivery();
+    expect(result.notificationEmails).toEqual(["admin@example.com"]);
+  });
+});
+
+describe("getReminderEmailRenderContext()", () => {
+  test("calendar / deadline / organizer を返す", async () => {
+    const context = await getReminderEmailRenderContext();
+    expect(context.calendarSettings).toBeDefined();
+    expect(context.deadlineSettings.cancellationDeadlineHours).toBeTypeOf(
+      "number",
+    );
+    expect(context.organizer.email).toBeTruthy();
+  });
+});
+
+describe("resolveContactConfirmationRenderContext()", () => {
+  test("privacyPolicyUrl は undefined でも返る", async () => {
+    const context = await resolveContactConfirmationRenderContext();
+    expect(context).toBeDefined();
+  });
+});
+
+describe("isEmailEnabled()", () => {
+  test("transport 解決結果に追随する", async () => {
+    expect(await isEmailEnabled()).toBe(true);
   });
 });

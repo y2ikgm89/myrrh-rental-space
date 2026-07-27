@@ -11,37 +11,40 @@ import {
   formatDateWithWeekday,
   formatTimeShort,
 } from "@/shared/lib/date-format";
-import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
 import { sendEmail } from "./send";
-import type { EmailResult } from "./types";
+import type {
+  EmailResult,
+  EmailSendContext,
+  SystemNotificationDelivery,
+} from "./types";
 
 /**
  * カレンダー同期による時間変更拒否の管理者通知メールを送信
  */
-export async function sendCalendarSyncRejectionEmail(data: {
-  reservationId: string;
-  spaceName: string;
-  customerName: string;
-  customerEmail: string;
-  attemptedStartTime: Date;
-  attemptedEndTime: Date;
-  currentStartTime: Date;
-  currentEndTime: Date;
-  /** 重複予約による拒否のとき指定する。`rejectionReason` と排他。 */
-  conflictingReservation?: {
-    id: string;
-    startTime: Date;
-    endTime: Date;
-  };
-  /**
-   * 重複以外の拒否理由（決済確定済み等、GCAL-AUDIT-11）。
-   * `conflictingReservation` 省略時にこちらを本文に使う。
-   */
-  rejectionReason?: string;
-}): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+export async function sendCalendarSyncRejectionEmail(
+  data: {
+    reservationId: string;
+    spaceName: string;
+    customerName: string;
+    customerEmail: string;
+    attemptedStartTime: Date;
+    attemptedEndTime: Date;
+    currentStartTime: Date;
+    currentEndTime: Date;
+    conflictingReservation?: {
+      id: string;
+      startTime: Date;
+      endTime: Date;
+    };
+    rejectionReason?: string;
+  },
+  delivery: SystemNotificationDelivery,
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const currentDate = formatDateWithWeekday(data.currentStartTime);
   const currentStart = formatTimeShort(data.currentStartTime);
@@ -79,35 +82,38 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 ※ Google Calendarでの変更は反映されていません。予約は元の時間のままです。
     `.trim();
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject: `【カレンダー同期エラー】時間変更拒否 - ${data.spaceName}`,
-      text: textContent,
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject: `【カレンダー同期エラー】時間変更拒否 - ${data.spaceName}`,
+        text: textContent,
+      },
+      idempotencyKey: `calendar-sync-rejection/${data.reservationId}/${data.attemptedStartTime.getTime()}`,
+      operation: "sendCalendarSyncRejectionEmail",
+      context: {
+        reservationId: data.reservationId,
+      },
     },
-    idempotencyKey: `calendar-sync-rejection/${data.reservationId}/${data.attemptedStartTime.getTime()}`,
-    operation: "sendCalendarSyncRejectionEmail",
-    context: {
-      reservationId: data.reservationId,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**
  * Webhook更新通知メールを送信
- *
- * Resend の自動 retry でも重複しないよう `<event-type>/<entity-id>` 形式の
- * idempotencyKey を付与する（他 sendEmail 呼び出しと対称化）。webhook renewal は
- * 単一エンティティを持たないため「結果 (ok/err) + 時間バケット (hour)」を entity id
- * として使う — 同一結果を同一 1 時間内に再送しない = 24h 内のノイズを抑える。
  */
-export async function sendWebhookRenewalNotification(data: {
-  success: boolean;
-  newExpiration?: Date;
-  error?: string;
-}): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+export async function sendWebhookRenewalNotification(
+  data: {
+    success: boolean;
+    newExpiration?: Date;
+    error?: string;
+  },
+  delivery: SystemNotificationDelivery,
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const subject = data.success
     ? "【Google Calendar】Webhook自動更新完了"
@@ -143,20 +149,19 @@ ${getAdminUrl("/settings")}
       `.trim();
   }
 
-  // 時間バケット (hourly): 同じ結果 (ok/err) は 1 時間に 1 通に集約する。
-  // 24h 保持の Resend idempotency 窓の範囲内でノイズを抑え、renewal が数分間隔で
-  // 何度も trigger されるケース (webhook 更新 cron の race や手動リトライ) でも
-  // 管理者受信箱を溢れさせない。
   const hourBucket = new Date().toISOString().slice(0, 13);
   const outcomeKey = data.success ? "ok" : "err";
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject,
-      text: textContent,
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject,
+        text: textContent,
+      },
+      idempotencyKey: `webhook-renewal/${outcomeKey}/${hourBucket}`,
+      operation: "sendWebhookRenewalNotification",
     },
-    idempotencyKey: `webhook-renewal/${outcomeKey}/${hourBucket}`,
-    operation: "sendWebhookRenewalNotification",
-  });
+    sendContext,
+  );
 }

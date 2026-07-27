@@ -137,6 +137,10 @@ mock.module("@/shared/emails/reservation-status-changed", () => ({
   ReservationStatusChangedEmail: mockReservationStatusChangedEmail,
 }));
 
+import {
+  EMAIL_SEND_CONTEXT,
+  REMINDER_RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationConfirmationEmail,
@@ -214,20 +218,26 @@ beforeEach(() => {
 
 describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
   test("ゲスト予約（userId なし）は claimUrl を発行する", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toMatch(CLAIM_URL_PATTERN);
   });
 
   test("会員予約（userId あり）は claimUrl を発行しない", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: "user-1",
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
@@ -237,20 +247,26 @@ describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
 // 領収書 DL は発行通知メール (`sendReceiptIssuedEmail`) に集約。確認メールには載せない。
 describe("sendReservationConfirmationEmail() は receiptDownloadUrl を載せない", () => {
   test("ゲスト予約でも receiptDownloadUrl を渡さない", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 
   test("会員予約でも receiptDownloadUrl を渡さない", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: "user-1",
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props).not.toHaveProperty("receiptDownloadUrl");
@@ -259,20 +275,28 @@ describe("sendReservationConfirmationEmail() は receiptDownloadUrl を載せな
 
 describe("sendReservationReminderEmail() の claimUrl 出し分け", () => {
   test("ゲスト予約（userId なし）は claimUrl を発行する", async () => {
-    await sendReservationReminderEmail({
-      ...REMINDER_DATA,
-      userId: null,
-    });
+    await sendReservationReminderEmail(
+      {
+        ...REMINDER_DATA,
+        userId: null,
+      },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toMatch(CLAIM_URL_PATTERN);
   });
 
   test("会員予約（userId あり）は claimUrl を発行しない", async () => {
-    await sendReservationReminderEmail({
-      ...REMINDER_DATA,
-      userId: "user-1",
-    });
+    await sendReservationReminderEmail(
+      {
+        ...REMINDER_DATA,
+        userId: "user-1",
+      },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
@@ -281,20 +305,26 @@ describe("sendReservationReminderEmail() の claimUrl 出し分け", () => {
 
 describe("sendReservationCancelledEmail() の memberReservationUrl 出し分け", () => {
   test("会員予約（userId あり）は memberReservationUrl を発行する", async () => {
-    await sendReservationCancelledEmail({
-      ...CONFIRMATION_DATA,
-      userId: "user-1",
-    });
+    await sendReservationCancelledEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberReservationUrl).toMatch(MEMBER_URL_PATTERN);
   });
 
   test("ゲスト予約（userId なし）は memberReservationUrl を発行しない", async () => {
-    await sendReservationCancelledEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
+    await sendReservationCancelledEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberReservationUrl).toBeUndefined();
@@ -303,7 +333,10 @@ describe("sendReservationCancelledEmail() の memberReservationUrl 出し分け"
 
 describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポリシー文書の有無）", () => {
   test("sendReservationConfirmationEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
-    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+    await sendReservationConfirmationEmail(
+      CONFIRMATION_DATA,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toMatch(
@@ -314,14 +347,17 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
   test("sendReservationConfirmationEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
     mockGetPublishedTermsByType.mockResolvedValueOnce(null);
 
-    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+    await sendReservationConfirmationEmail(
+      CONFIRMATION_DATA,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toBeUndefined();
   });
 
   test("sendReservationUpdatedEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
-    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
 
     const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toMatch(
@@ -332,14 +368,14 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
   test("sendReservationUpdatedEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
     mockGetPublishedTermsByType.mockResolvedValueOnce(null);
 
-    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
 
     const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toBeUndefined();
   });
 
   test("sendReservationCancelledEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
-    await sendReservationCancelledEmail(CONFIRMATION_DATA);
+    await sendReservationCancelledEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toMatch(
@@ -350,7 +386,7 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
   test("sendReservationCancelledEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
     mockGetPublishedTermsByType.mockResolvedValueOnce(null);
 
-    await sendReservationCancelledEmail(CONFIRMATION_DATA);
+    await sendReservationCancelledEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toBeUndefined();
@@ -359,54 +395,72 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
 
 describe("bookingHubUrl の出し分け（会員 mypage / ゲスト status）", () => {
   test("confirmation: 会員は mypage、ゲストは status token URL", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: "user-1",
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationConfirmationEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(MEMBER_URL_PATTERN);
 
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
+    await sendReservationConfirmationEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationConfirmationEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(GUEST_STATUS_URL_PATTERN);
   });
 
   test("updated: 会員は mypage、ゲストは status token URL", async () => {
-    await sendReservationUpdatedEmail({
-      ...CONFIRMATION_DATA,
-      userId: "user-1",
-    });
+    await sendReservationUpdatedEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationUpdatedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(MEMBER_URL_PATTERN);
 
-    await sendReservationUpdatedEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
+    await sendReservationUpdatedEmail(
+      {
+        ...CONFIRMATION_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationUpdatedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(GUEST_STATUS_URL_PATTERN);
   });
 
   test("status-changed: 会員は mypage、ゲストは status token URL", async () => {
-    await sendReservationStatusChangedEmail({
-      ...STATUS_CHANGED_DATA,
-      userId: "user-1",
-    });
+    await sendReservationStatusChangedEmail(
+      {
+        ...STATUS_CHANGED_DATA,
+        userId: "user-1",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationStatusChangedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(MEMBER_URL_PATTERN);
 
-    await sendReservationStatusChangedEmail({
-      ...STATUS_CHANGED_DATA,
-      userId: null,
-    });
+    await sendReservationStatusChangedEmail(
+      {
+        ...STATUS_CHANGED_DATA,
+        userId: null,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     expect(
       mockReservationStatusChangedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
     ).toMatch(GUEST_STATUS_URL_PATTERN);
@@ -415,9 +469,15 @@ describe("bookingHubUrl の出し分け（会員 mypage / ゲスト status）", 
 
 describe("confirmation/updated/status-changed は smartLockPasscodes を渡さない", () => {
   test("confirmation / updated / status-changed いずれも smartLockPasscodes を持たない", async () => {
-    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
-    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
-    await sendReservationStatusChangedEmail(STATUS_CHANGED_DATA);
+    await sendReservationConfirmationEmail(
+      CONFIRMATION_DATA,
+      EMAIL_SEND_CONTEXT,
+    );
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
+    await sendReservationStatusChangedEmail(
+      STATUS_CHANGED_DATA,
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(
       mockReservationConfirmationEmail.mock.calls.at(-1)?.[0],
@@ -438,7 +498,10 @@ describe("modificationDeadlineHours の配線（キャンセル期限と独立�
       modificationDeadlineHours: 6,
     });
 
-    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+    await sendReservationConfirmationEmail(
+      CONFIRMATION_DATA,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationDeadlineHours).toBe(24);
@@ -451,7 +514,7 @@ describe("modificationDeadlineHours の配線（キャンセル期限と独立�
       modificationDeadlineHours: 6,
     });
 
-    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA, EMAIL_SEND_CONTEXT);
 
     const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationDeadlineHours).toBe(24);

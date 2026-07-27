@@ -23,7 +23,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import { sendEventCancelledToAllParticipants } from "@/shared/domain/email/lib-dispatch";
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { ErrorCategory } from "@/shared/lib/errors";

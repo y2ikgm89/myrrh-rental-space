@@ -48,6 +48,12 @@ mock.module("@/shared/emails/receipt-resend", () => ({
   ReceiptResendEmail: mockReceiptResendEmail,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendReceiptResendEmail } from "@/shared/lib/email/receipt-emails";
 
@@ -77,7 +83,7 @@ beforeEach(() => {
 
 describe("sendReceiptResendEmail() の receiptDownloadUrl", () => {
   test("guest 用 confirm-page パス `/receipts/[serialNo]/download?token=...` を指す (HTTP-02)", async () => {
-    await sendReceiptResendEmail(INPUT);
+    await sendReceiptResendEmail(INPUT, EMAIL_SEND_CONTEXT);
 
     const url = lastCallProps()?.receiptDownloadUrl;
     expect(url).toBeDefined();
@@ -85,7 +91,7 @@ describe("sendReceiptResendEmail() の receiptDownloadUrl", () => {
   });
 
   test("deprecated な GET エンドポイント `/api/receipts/[serialNo]/pdf` を指さない", async () => {
-    await sendReceiptResendEmail(INPUT);
+    await sendReceiptResendEmail(INPUT, EMAIL_SEND_CONTEXT);
 
     const url = lastCallProps()?.receiptDownloadUrl;
     expect(url).toBeDefined();
@@ -96,13 +102,13 @@ describe("sendReceiptResendEmail() の receiptDownloadUrl", () => {
 
 describe("sendReceiptResendEmail() の idempotencyKey", () => {
   test("同一 serialNo + 同一 issuedAt でも呼び出しごとに異なるキー (Date.now bucket)", async () => {
-    await sendReceiptResendEmail(INPUT);
+    await sendReceiptResendEmail(INPUT, EMAIL_SEND_CONTEXT);
     const firstKey = lastIdempotencyKey();
 
     // Date.now() は同一 tick では衝突しうるので、実時間を少しだけ進めてから再呼出
     await new Promise((resolve) => setTimeout(resolve, 5));
 
-    await sendReceiptResendEmail(INPUT);
+    await sendReceiptResendEmail(INPUT, EMAIL_SEND_CONTEXT);
     const secondKey = lastIdempotencyKey();
 
     expect(firstKey).toBeDefined();
@@ -111,7 +117,7 @@ describe("sendReceiptResendEmail() の idempotencyKey", () => {
   });
 
   test("キーは `receipt-resend/<serialNo>/<issuedAtEpoch>/<nowEpoch>` 形式", async () => {
-    await sendReceiptResendEmail(INPUT);
+    await sendReceiptResendEmail(INPUT, EMAIL_SEND_CONTEXT);
 
     const key = lastIdempotencyKey();
     const expectedIssuedAtEpoch = INPUT.issuedAt.getTime();

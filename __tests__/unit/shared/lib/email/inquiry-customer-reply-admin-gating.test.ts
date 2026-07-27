@@ -3,7 +3,6 @@
  * （宛先空 = disabled）テスト。toggle 解決は domain が担う。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { INQUIRY_ADMIN_DELIVERY } from "./_email-test-fixtures";
 
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
@@ -26,6 +25,12 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
 import type { InquiryCustomerReplyAdminEmailData } from "@/shared/lib/email/types";
@@ -45,16 +50,22 @@ beforeEach(() => {
 
 describe("sendInquiryCustomerReplyAdminEmail() の宛先ゲート", () => {
   test("通知先アドレスが空なら sendEmail を呼ばず disabled を返す", async () => {
-    const result = await sendInquiryCustomerReplyAdminEmail(DATA, {
-      notificationEmails: [],
-    });
+    const result = await sendInquiryCustomerReplyAdminEmail(
+      DATA,
+      { notificationEmails: [] },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
   test("宛先ありなら sendEmail を呼ぶ", async () => {
-    await sendInquiryCustomerReplyAdminEmail(DATA, INQUIRY_ADMIN_DELIVERY);
+    await sendInquiryCustomerReplyAdminEmail(
+      DATA,
+      INQUIRY_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
   });
