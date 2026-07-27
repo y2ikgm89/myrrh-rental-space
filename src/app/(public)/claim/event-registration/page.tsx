@@ -8,7 +8,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForClaim } from "@/shared/domain/events/registration-queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
@@ -74,7 +74,7 @@ export default async function ClaimEventRegistrationPage(): Promise<ReactElement
   }
 
   const [user, turnstileSiteKey, requiredTerms] = await Promise.all([
-    getCurrentCustomerUser(),
+    resolveOptionalCustomerSession(),
     getTurnstileSiteKey(),
     getRequiredTermsByScope(TermsScope.LOGIN_SIGNUP),
   ]);

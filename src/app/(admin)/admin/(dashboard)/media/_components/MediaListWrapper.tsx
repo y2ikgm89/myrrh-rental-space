@@ -4,7 +4,7 @@
 
 import { connection } from "next/server";
 import { getMediaList } from "@/admin/queries/media";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { MediaGrid } from "./MediaGrid";
 import { MediaTable } from "./MediaTable";
@@ -30,7 +30,7 @@ type Props = {
 
 export async function MediaListWrapper({ searchParams }: Props) {
   await connection();
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canDelete = hasPermission(user.role, "media", "delete");
 
   const filters: MediaFilters = {

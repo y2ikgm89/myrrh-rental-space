@@ -16,7 +16,7 @@ import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notif
 import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
 import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
@@ -62,7 +62,7 @@ export default async function ReservationCompletePage(): Promise<ReactElement> {
 
   const [user, reservation, calendarSettings, refundPolicy] = await Promise.all(
     [
-      getCurrentCustomerUser(),
+      resolveOptionalCustomerSession(),
       verified.valid
         ? getReservationForCompletion(verified.reservationId)
         : Promise.resolve(null),

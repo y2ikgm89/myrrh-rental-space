@@ -12,7 +12,7 @@ import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { hasPermission } from "@/shared/lib/admin-permissions";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { DashboardHeader } from "./_components/DashboardHeader";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardNotificationsSection } from "./_components/DashboardNotificationsSection";
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 
 export default async function AdminDashboard(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
 
   const canReadReservation = hasPermission(user.role, "reservation", "read");
   const canReadInquiry = hasPermission(user.role, "inquiry", "read");

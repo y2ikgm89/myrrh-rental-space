@@ -2,7 +2,7 @@
  * /mypage/terms/reagree — LOGIN_SIGNUP scope の必須規約が更新された・未同意の場合の再同意ページ
  *
  * MypageAuthGate は「pending が存在する」ことを検出して本ページに redirect する。
- * ここでは verifyCustomerSession → ensureCustomerLinked → pending 再導出を行い、
+ * ここでは requireMypageSession → ensureCustomerLinked → pending 再導出を行い、
  * 0 件なら returnTo (allowlist 経由でサニタイズ) にリダイレクト、それ以外は
  * ReagreeForm を出す。
  *
@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
 import { Heading } from "@/public/components/design-system/heading";
@@ -36,7 +36,7 @@ export default async function TermsReagreePage({
 }): Promise<ReactElement> {
   await connection();
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const { customer } = await ensureCustomerLinked(user);
 
   const params = await searchParams;
