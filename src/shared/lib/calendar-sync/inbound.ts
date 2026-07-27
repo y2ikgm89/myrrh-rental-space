@@ -27,10 +27,8 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import {
-  fetchCalendarChanges,
-  type CalendarChange,
-} from "@/shared/lib/google-calendar";
+import { fetchCalendarChanges } from "@/shared/domain/reservations/calendar-sync-fetch";
+import type { CalendarChange } from "@/shared/lib/google-calendar";
 import { sendCalendarSyncRejectionEmail } from "@/shared/lib/email/system-emails";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { TwoWaySyncResult } from "./types";

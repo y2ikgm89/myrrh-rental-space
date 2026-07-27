@@ -130,7 +130,7 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
     mockApplyReservationEditSideEffects(...args),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/reservations/calendar-sync-fetch", () => ({
   fetchCalendarChanges: () => mockFetchCalendarChanges(),
 }));
 

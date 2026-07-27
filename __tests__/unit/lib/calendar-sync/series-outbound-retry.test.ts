@@ -21,9 +21,12 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarConfigured: mockIsConfigured,
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar-api", () => ({
   patchCalendarEvent: mockPatchCalendarEvent,
   deleteCalendarEvent: mockDeleteCalendarEvent,
+  resolveGoogleCalendarWriteContext: mock(() =>
+    Promise.resolve({ ok: false, error: "mocked" }),
+  ),
 }));
 
 type SeriesForCalendarSync = {

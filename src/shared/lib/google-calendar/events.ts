@@ -7,13 +7,11 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
-import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
-import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
 import type {
   CalendarEventInstance,
   CalendarEventParams,
   CalendarEventResult,
+  GoogleCalendarEventWriteContext,
 } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
@@ -40,7 +38,7 @@ function toReminders(
 /**
  * Asia/Tokyo タイムゾーンのカレンダーイベント構築ヘルパー。
  *
- * - `reminders` は Settings の `reminderMinutes` を反映（null=default, 0=無効, N=N分前メール）
+ * - `reminders` は注入された `reminderMinutes` を反映（null=default, 0=無効, N=N分前メール）
  * - `conferenceData` は `options.withMeet === true` のときのみ付与（per-event 判定。
  *   site-wide の `settings.meetEnabled` トグルは Phase B.1 で廃止済み — 呼出元が
  *   `Event.meetingProvider === "GOOGLE_MEET"` 等イベント単位の条件で判定する）
@@ -51,7 +49,7 @@ function toReminders(
  */
 export function buildEventBody(
   params: CalendarEventParams,
-  settings: GoogleCalendarSettingsData,
+  reminderMinutes: number | null,
   options: { withMeet?: boolean },
 ): calendar_v3.Schema$Event {
   const withMeet = options.withMeet === true && params.startTime;
@@ -77,7 +75,7 @@ export function buildEventBody(
       params.recurrence !== undefined && params.recurrence.length > 0
         ? params.recurrence
         : undefined,
-    reminders: toReminders(settings.reminderMinutes),
+    reminders: toReminders(reminderMinutes),
     conferenceData: withMeet
       ? {
           createRequest: {
@@ -90,32 +88,24 @@ export function buildEventBody(
 }
 
 /**
- * カレンダーにイベントを作成
+ * カレンダーにイベントを作成（純粋 API 層。Settings I/O なし）。
  *
  * `options.withMeet` は呼出元がイベント単位で指定する（例: `Event.meetingProvider ===
- * "GOOGLE_MEET"`）。未指定時は `false` 扱い（backward compat — Meet を発行しない）。
+ * "GOOGLE_MEET"`）。未指定時は `false` 扱い（Meet を発行しない）。
  */
 export async function createCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
   params: CalendarEventParams,
   options?: { withMeet?: boolean },
 ): Promise<CalendarEventResult> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     const withMeet = options?.withMeet === true;
-    const requestBody = buildEventBody(params, settings, { withMeet });
+    const requestBody = buildEventBody(params, ctx.reminderMinutes, {
+      withMeet,
+    });
     const response = await withGoogleApiRetry(() =>
-      client.events.insert({
-        calendarId,
+      ctx.client.events.insert({
+        calendarId: ctx.calendarId,
         requestBody,
         sendUpdates: "none",
         ...(withMeet ? { conferenceDataVersion: 1 } : {}),
@@ -154,25 +144,17 @@ export async function createCalendarEvent(
  * recurrence のみの狭い patch は `patchCalendarEvent` を使う。
  */
 export async function updateCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
   eventId: string,
   params: CalendarEventParams,
 ): Promise<CalendarEventResult> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
-    const requestBody = buildEventBody(params, settings, { withMeet: false });
+    const requestBody = buildEventBody(params, ctx.reminderMinutes, {
+      withMeet: false,
+    });
     const response = await withGoogleApiRetry(() =>
-      client.events.patch({
-        calendarId,
+      ctx.client.events.patch({
+        calendarId: ctx.calendarId,
         eventId,
         requestBody,
         sendUpdates: "none",
@@ -207,12 +189,9 @@ export async function updateCalendarEvent(
  *
  * Task C 主用途: series の this-and-following scope キャンセルで master recurring
  * event の RRULE に UNTIL を注入して打ち切る (`recurrence: [rebuiltRrule]`)。
- *
- * `options.ignoreEnabledToggle` (GCAL-OUTBOUND-05): series の this-and-following
- * キャンセルは打ち切り (実質 delete 相当) のため、`googleCalendarEnabled` トグル
- * OFF でも実行できるようにする呼出し元 (`patchGcalMasterUntil`) 向け。
  */
 export async function patchCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
   eventId: string,
   patch: Partial<
     Pick<
@@ -220,24 +199,12 @@ export async function patchCalendarEvent(
       "summary" | "description" | "location" | "recurrence"
     >
   >,
-  options?: { ignoreEnabledToggle?: boolean },
 ): Promise<CalendarEventResult> {
-  const client = await getServiceAccountClient(options);
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     const requestBody = omitUndefined(patch);
     const response = await withGoogleApiRetry(() =>
-      client.events.patch({
-        calendarId,
+      ctx.client.events.patch({
+        calendarId: ctx.calendarId,
         eventId,
         requestBody,
         sendUpdates: "none",
@@ -263,34 +230,19 @@ export async function patchCalendarEvent(
 }
 
 /**
- * カレンダーイベントを削除
+ * カレンダーイベントを削除（純粋 API 層）。
  *
- * `options.ignoreEnabledToggle` (GCAL-OUTBOUND-05): true のとき
- * `googleCalendarEnabled` トグル OFF でも削除を実行する。呼出し元
- * (`deleteCalendarSync` / `deleteEventCalendarSync` / `deleteGcalMaster`)
- * が cancel/delete 系フローから `{ ignoreEnabledToggle: true }` を渡し、
- * トグルを切った瞬間に以降のキャンセルが GCal 側の孤児 event を
- * クリーンアップできなくなる事故を防ぐ。
+ * `ignoreEnabledToggle` 等の semantic gate は呼び出し側（domain）が
+ * client 解決時に担当する。
  */
 export async function deleteCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
   eventId: string,
-  options?: { ignoreEnabledToggle?: boolean },
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const client = await getServiceAccountClient(options);
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     await withGoogleApiRetry(() =>
-      client.events.delete({
-        calendarId,
+      ctx.client.events.delete({
+        calendarId: ctx.calendarId,
         eventId,
         sendUpdates: "none",
       }),
@@ -318,19 +270,9 @@ export async function deleteCalendarEvent(
  * `getCalendarEvent` で再取得する (公式 guide の create-on-existing-event パターン)。
  */
 export async function addMeetConferenceToCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
   eventId: string,
 ): Promise<CalendarEventResult> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     const requestBody: calendar_v3.Schema$Event = {
       conferenceData: {
@@ -341,8 +283,8 @@ export async function addMeetConferenceToCalendarEvent(
       },
     };
     const response = await withGoogleApiRetry(() =>
-      client.events.patch({
-        calendarId,
+      ctx.client.events.patch({
+        calendarId: ctx.calendarId,
         eventId,
         requestBody,
         sendUpdates: "none",
@@ -370,28 +312,20 @@ export async function addMeetConferenceToCalendarEvent(
 }
 
 /**
- * 特定のイベントを取得
+ * 特定のイベントを取得（純粋 API 層）。
  */
-export async function getCalendarEvent(eventId: string): Promise<{
+export async function getCalendarEvent(
+  ctx: GoogleCalendarEventWriteContext,
+  eventId: string,
+): Promise<{
   success: boolean;
   event?: calendar_v3.Schema$Event;
   error?: string;
 }> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     const response = await withGoogleApiRetry(() =>
-      client.events.get({
-        calendarId,
+      ctx.client.events.get({
+        calendarId: ctx.calendarId,
         eventId,
       }),
     );
@@ -413,40 +347,32 @@ export async function getCalendarEvent(eventId: string): Promise<{
  *
  * Google Calendar API `events.instances(masterId)` の wrapper。RRULE から展開された
  * 各 occurrence の child event ID (`{masterId}_{yyyymmddTHHMMSSZ}` 形式) と
- * 開始時刻を返し、呼出側 (calendar-sync/outbound.ts の write-back 経路) が
+ * 開始時刻を返し、呼出側 (reservation / calendar-sync outbound の write-back 経路) が
  * Reservation.googleCalendarEventId に紐付ける。`showDeleted: false` で
  * キャンセル済 occurrence は除外。
  *
  * GCAL-AUDIT-06: `nextPageToken` を追ってページネーションする（`fetchCalendarChanges`
- * / `fetchEventChanges` と同型）。旧実装は 1 ページ (最大 250 件) で打ち切っており、
+ * と同型）。旧実装は 1 ページ (最大 250 件) で打ち切っており、
  * 250 件超の occurrence を持つ長期 series は後半 instance が write-back されず
  * `Reservation.googleCalendarEventId` が null のまま残っていた。
  */
-export async function fetchEventInstances(masterEventId: string): Promise<{
+export async function fetchEventInstances(
+  ctx: GoogleCalendarEventWriteContext,
+  masterEventId: string,
+): Promise<{
   success: boolean;
   instances?: CalendarEventInstance[];
   error?: string;
 }> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return { success: false, error: "Google Calendar is not configured" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-  const calendarId = settings.calendarId;
-  if (!calendarId) {
-    return { success: false, error: "Calendar ID is not configured" };
-  }
-
   try {
     const instances: CalendarEventInstance[] = [];
     let pageToken: string | undefined;
 
     do {
       const response = await withGoogleApiRetry(() =>
-        client.events.instances(
+        ctx.client.events.instances(
           omitUndefined({
-            calendarId,
+            calendarId: ctx.calendarId,
             eventId: masterEventId,
             showDeleted: false,
             maxResults: 250,

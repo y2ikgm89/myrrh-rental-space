@@ -7,44 +7,38 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
-import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
-import { clearCalendarSyncToken } from "@/shared/domain/reservations/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
-import type { CalendarChange, SyncChangesResult } from "./types";
+import type {
+  CalendarChange,
+  GoogleCalendarClientContext,
+  SyncChangesResult,
+} from "./types";
 import { formatGoogleApiError } from "./helpers";
 import {
   isGoogleCalendarFullSyncRequired,
   withGoogleApiRetry,
 } from "@/shared/lib/google-api/retry";
 
+export type FetchCalendarChangesOptions = {
+  /**
+   * syncToken が期限切れ（410 Gone / reason: fullSyncRequired）のとき、
+   * 永続化済み token のクリア等を呼出側（domain）が行うための hook。
+   * 指定時は hook 完了後に `syncToken=null` でフルシンクを再実行する。
+   */
+  onFullSyncRequired?: () => Promise<void>;
+};
+
 /**
- * カレンダーの変更を取得（増分同期）
+ * カレンダーの変更を取得（増分同期。純粋 API 層）。
  *
- * syncTokenを使用して前回同期以降の変更のみを取得
+ * syncToken を使用して前回同期以降の変更のみを取得する。
+ * Settings / syncToken 永続化は呼び出し側（domain）が担当する。
  */
 export async function fetchCalendarChanges(
+  ctx: GoogleCalendarClientContext,
   syncToken?: string | null,
+  options?: FetchCalendarChangesOptions,
 ): Promise<SyncChangesResult> {
-  const client = await getServiceAccountClient();
-  if (!client) {
-    return {
-      success: false,
-      changes: [],
-      error: "Google Calendar is not configured",
-    };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-
-  if (!settings.calendarId) {
-    return {
-      success: false,
-      changes: [],
-      error: "Calendar ID is not configured",
-    };
-  }
-
   try {
     const changes: CalendarChange[] = [];
     let pageToken: string | undefined;
@@ -59,7 +53,7 @@ export async function fetchCalendarChanges(
 
     do {
       const params: calendar_v3.Params$Resource$Events$List = {
-        calendarId: settings.calendarId,
+        calendarId: ctx.calendarId,
         maxResults: 250,
         singleEvents: true,
         showDeleted: true, // 削除されたイベントも取得
@@ -79,7 +73,7 @@ export async function fetchCalendarChanges(
       }
 
       const response = await withGoogleApiRetry(() =>
-        client.events.list(params),
+        ctx.client.events.list(params),
       );
 
       for (const event of response.data.items ?? []) {
@@ -122,11 +116,14 @@ export async function fetchCalendarChanges(
     });
   } catch (error) {
     // syncToken が期限切れ（410 Gone / reason: fullSyncRequired）の場合は
-    // 永続化済み token をクリアしてからフルシンクをやり直す（公式仕様: 期限切れ
-    // token を握り続けると次回以降も同じ 410 を繰り返す）。
-    if (isGoogleCalendarFullSyncRequired(error)) {
-      await clearCalendarSyncToken();
-      return fetchCalendarChanges(null);
+    // 呼出側 hook で永続化済み token をクリアしてからフルシンクをやり直す
+    // （公式仕様: 期限切れ token を握り続けると次回以降も同じ 410 を繰り返す）。
+    if (
+      isGoogleCalendarFullSyncRequired(error) &&
+      options?.onFullSyncRequired
+    ) {
+      await options.onFullSyncRequired();
+      return fetchCalendarChanges(ctx, null);
     }
 
     logError(normalizeError(error), {

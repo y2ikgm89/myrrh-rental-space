@@ -40,9 +40,11 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent,
   fetchEventInstances,
-  type CalendarEventInstance,
-  type CalendarEventParams,
-  type CalendarEventResult,
+} from "@/shared/domain/settings/google-calendar-api";
+import type {
+  CalendarEventInstance,
+  CalendarEventParams,
+  CalendarEventResult,
 } from "@/shared/lib/google-calendar";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
