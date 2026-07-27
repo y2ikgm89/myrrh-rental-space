@@ -53,7 +53,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkEmailRateLimit: mockCheckEmailRateLimit,
 }));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
