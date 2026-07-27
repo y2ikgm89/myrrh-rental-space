@@ -25,7 +25,7 @@ export const PAYMENT_REFUND_LOCK_NAMESPACE = {
 export type PaymentRefundEntityKind =
   keyof typeof PAYMENT_REFUND_LOCK_NAMESPACE;
 
-/** Stripe refund tx: advisory lock 保持中に API + DB 書込を行うため長め。 */
+/** Payment refund interactive tx: advisory lock + plan/finalize 用。Stripe API は tx 外。 */
 export const PAYMENT_REFUND_TRANSACTION_OPTIONS = {
   timeout: 30_000,
   maxWait: 30_000,
