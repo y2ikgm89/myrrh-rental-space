@@ -46,13 +46,13 @@ import {
 } from "@/shared/domain/settings/queries/display";
 import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-types";
 import {
+  getAnalyticsConfig,
   getCookieConsentSettings,
   getSiteLayoutSettings,
   FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
-import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
   getSeoSettings,
