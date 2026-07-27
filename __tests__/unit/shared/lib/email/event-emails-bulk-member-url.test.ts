@@ -7,6 +7,7 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { RENDER_CONTEXT } from "./_email-test-fixtures";
 
 mock.module("server-only", () => ({}));
 
@@ -119,20 +120,6 @@ mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
 }));
-
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getCalendarEmailSettings: mock(() =>
-    Promise.resolve({
-      icalAttachmentEnabled: false,
-      addToCalendarLinksEnabled: false,
-    }),
-  ),
-}));
-mock.module("@/shared/domain/settings/queries/organization", () => ({
-  getIcalOrganizer: mock(() =>
-    Promise.resolve({ name: "Org", email: "org@example.com" }),
-  ),
-}));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({
@@ -185,6 +172,7 @@ describe("sendEventCancelledToAllParticipants() の eventRegistrationHubUrl 出�
   test("会員は mypage 詳細、ゲストは status token URL を渡す", async () => {
     await sendEventCancelledToAllParticipants(
       makeCancelledPayload(),
+      RENDER_CONTEXT,
       "講師都合のため中止",
     );
 
@@ -211,6 +199,7 @@ describe("sendEventUpdatedToAllParticipants() の eventRegistrationHubUrl 出し
     await sendEventUpdatedToAllParticipants(
       makeUpdatedPayload(),
       new Map([["slot-1", new Date("2098-12-25T01:00:00Z")]]),
+      RENDER_CONTEXT,
     );
 
     const calls = mockEventUpdatedNotificationEmail.mock.calls;

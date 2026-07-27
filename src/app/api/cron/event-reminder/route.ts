@@ -8,6 +8,7 @@ import {
 } from "@/shared/domain/events/registration-commands";
 import { isEmailEnabled } from "@/shared/lib/email/client";
 import { sendEventReminderEmail } from "@/shared/lib/email/event-emails";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import {
@@ -66,6 +67,8 @@ export async function GET(request: Request) {
     let skipped = 0;
     let disabledCount = 0;
 
+    const renderContext = await getEventEmailRenderContext();
+
     for (const registration of registrations) {
       const email = registration.email;
       if (!email) {
@@ -89,20 +92,23 @@ export async function GET(request: Request) {
           addressDetail: registration.event.addressDetail,
         });
 
-        const result = await sendEventReminderEmail({
-          registrationId: registration.id,
-          customerName: registration.name,
-          customerEmail: email,
-          eventTitle: registration.event.title,
-          eventStartTime: registration.slot.startAt,
-          eventEndTime: registration.slot.endAt,
-          location: location ?? undefined,
-          quantity: registration.quantity,
-          icsSequence: registration.icsSequence,
-          customerId: registration.customerId,
-          format: registration.event.format,
-          meetingUrl: registration.event.meetingUrl,
-        });
+        const result = await sendEventReminderEmail(
+          {
+            registrationId: registration.id,
+            customerName: registration.name,
+            customerEmail: email,
+            eventTitle: registration.event.title,
+            eventStartTime: registration.slot.startAt,
+            eventEndTime: registration.slot.endAt,
+            location: location ?? undefined,
+            quantity: registration.quantity,
+            icsSequence: registration.icsSequence,
+            customerId: registration.customerId,
+            format: registration.event.format,
+            meetingUrl: registration.event.meetingUrl,
+          },
+          renderContext,
+        );
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。
         // グローバルな email disabled は claim 前の isEmailEnabled() 早期 return が主経路。

@@ -24,6 +24,10 @@ import {
   sendEventRegistrationCancelled,
 } from "@/shared/lib/email/event-emails";
 import { sendEventWaitlistOffered } from "@/shared/lib/email/event-waitlist-emails";
+import type {
+  EventAdminNotificationDelivery,
+  EventEmailRenderContext,
+} from "@/shared/lib/email/types";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -80,22 +84,26 @@ export async function runCustomerEmailStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
   details: RegistrationEmailDetails;
+  renderContext: EventEmailRenderContext;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration, details } = args;
+  const { input, registration, details, renderContext } = args;
   try {
-    const result = await sendEventRegistrationCancelled({
-      registrationId: registration.id,
-      customerName: registration.name,
-      customerEmail: registration.email,
-      eventTitle: registration.event.title,
-      eventStartTime: details.startTime,
-      eventEndTime: details.endTime,
-      location: details.location ?? undefined,
-      quantity: registration.quantity,
-      icsSequence: registration.icsSequence,
-      format: details.format,
-      meetingUrl: details.meetingUrl,
-    });
+    const result = await sendEventRegistrationCancelled(
+      {
+        registrationId: registration.id,
+        customerName: registration.name,
+        customerEmail: registration.email,
+        eventTitle: registration.event.title,
+        eventStartTime: details.startTime,
+        eventEndTime: details.endTime,
+        location: details.location ?? undefined,
+        quantity: registration.quantity,
+        icsSequence: registration.icsSequence,
+        format: details.format,
+        meetingUrl: details.meetingUrl,
+      },
+      renderContext,
+    );
     return mapEmailResultToOutcome(result);
   } catch (err) {
     const normalized = normalizeError(err);
@@ -117,8 +125,12 @@ export async function runAdminEmailStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
   details: RegistrationEmailDetails;
+  adminDelivery: EventAdminNotificationDelivery & { enabled: boolean };
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration, details } = args;
+  const { input, registration, details, adminDelivery } = args;
+  if (!adminDelivery.enabled) {
+    return { status: "skipped", reason: "disabled" };
+  }
   try {
     const result = await sendEventAdminNotification(
       {
@@ -133,6 +145,7 @@ export async function runAdminEmailStep(args: {
         capacity: details.capacity,
       },
       "cancellation",
+      adminDelivery,
     );
     return mapEmailResultToOutcome(result);
   } catch (err) {

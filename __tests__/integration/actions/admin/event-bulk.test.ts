@@ -135,8 +135,33 @@ mock.module(
 );
 
 const mockSendEventCancelledToAllParticipants = mock<
-  (eventId: string) => Promise<void>
+  (payload: unknown, renderContext: unknown) => Promise<void>
 >(() => Promise.resolve());
+
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
+
+const mockGetEventEmailRenderContext = mock(() =>
+  Promise.resolve(EVENT_EMAIL_RENDER_CONTEXT),
+);
+
+const mockGetEventCancelledNotificationPayload = mock(() =>
+  Promise.resolve(null),
+);
+
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: mockGetEventEmailRenderContext,
+}));
+
+mock.module("@/shared/domain/events/email-queries", () => ({
+  getEventCancelledNotificationPayload:
+    mockGetEventCancelledNotificationPayload,
+}));
 
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: mock(() =>

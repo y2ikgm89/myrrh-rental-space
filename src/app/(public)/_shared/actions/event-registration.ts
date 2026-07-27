@@ -35,6 +35,10 @@ import {
   sendEventRegistrationConfirmation,
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
+import {
+  getEventEmailRenderContext,
+  resolveEventAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
 import {
   computeWaitlistPositionForRegistration,
@@ -197,38 +201,49 @@ export async function registerForEvent(
                   )
                 : undefined;
 
+            const [renderContext, adminDelivery] = await Promise.all([
+              getEventEmailRenderContext(),
+              resolveEventAdminNotificationDelivery("registration"),
+            ]);
+
             await Promise.all([
-              sendEventRegistrationConfirmation({
-                registrationId: result.registration.id,
-                customerName: result.registration.name,
-                customerEmail: result.registration.email,
-                eventTitle: result.event.title,
-                eventStartTime: event.startTime,
-                eventEndTime: event.endTime,
-                location: event.location ?? undefined,
-                quantity: result.registration.quantity,
-                icsSequence: result.registration.icsSequence,
-                customerId,
-                format: event.format,
-                meetingUrl: event.meetingUrl,
-                ...(paymentCheckoutUrl !== undefined
-                  ? { paymentCheckoutUrl }
-                  : {}),
-              }),
-              sendEventAdminNotification(
+              sendEventRegistrationConfirmation(
                 {
                   registrationId: result.registration.id,
-                  eventId: result.registration.eventId,
-                  participantName: result.registration.name,
-                  participantEmail: result.registration.email,
+                  customerName: result.registration.name,
+                  customerEmail: result.registration.email,
                   eventTitle: result.event.title,
                   eventStartTime: event.startTime,
+                  eventEndTime: event.endTime,
+                  location: event.location ?? undefined,
                   quantity: result.registration.quantity,
-                  currentRegistrations: event.confirmedCount,
-                  capacity: event.capacity,
+                  icsSequence: result.registration.icsSequence,
+                  customerId,
+                  format: event.format,
+                  meetingUrl: event.meetingUrl,
+                  ...(paymentCheckoutUrl !== undefined
+                    ? { paymentCheckoutUrl }
+                    : {}),
                 },
-                "registration",
+                renderContext,
               ),
+              adminDelivery.enabled
+                ? sendEventAdminNotification(
+                    {
+                      registrationId: result.registration.id,
+                      eventId: result.registration.eventId,
+                      participantName: result.registration.name,
+                      participantEmail: result.registration.email,
+                      eventTitle: result.event.title,
+                      eventStartTime: event.startTime,
+                      quantity: result.registration.quantity,
+                      currentRegistrations: event.confirmedCount,
+                      capacity: event.capacity,
+                    },
+                    "registration",
+                    adminDelivery,
+                  )
+                : Promise.resolve({ ok: false, reason: "disabled" } as const),
             ]);
           })(),
           {
@@ -416,13 +431,17 @@ export async function registerForEventWaitlist(
             const position =
               await computeWaitlistPositionForRegistration(registration);
 
+            const adminDelivery = await resolveEventAdminNotificationDelivery(
+              "waitlist_registration",
+            );
+
             await Promise.all([
               sendEventWaitlistRegistered({
                 registration,
                 position,
                 to: data.email,
               }),
-              event
+              event && adminDelivery.enabled
                 ? sendEventAdminNotification(
                     {
                       registrationId: result.registration.id,
@@ -436,6 +455,7 @@ export async function registerForEventWaitlist(
                       capacity: event.capacity,
                     },
                     "waitlist_registration",
+                    adminDelivery,
                   )
                 : Promise.resolve(),
             ]);
