@@ -9,7 +9,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   getClientIpFromHeaders,
@@ -19,6 +18,7 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";

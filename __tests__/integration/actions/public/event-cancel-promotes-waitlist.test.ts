@@ -58,9 +58,11 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: () => Promise.resolve({ success: true as const }),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: () => Promise.resolve({ success: true as const }),
-  validateTurnstile: () => Promise.resolve({ success: true as const }),
   checkBotHeuristics: () => ({ success: true as const }),
   checkEmailRateLimit: () => Promise.resolve({ success: true as const }),
 }));

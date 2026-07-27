@@ -2,14 +2,12 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { publicEventWaitlistConfirmSchema } from "@/shared/lib/validations/event-registration";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { eventWaitlistConfirmRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { confirmWaitlistOfferCommand } from "@/shared/domain/events/waitlist-commands";
 import {
   getEventRegistrationForConfirm,

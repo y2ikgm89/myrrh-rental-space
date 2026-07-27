@@ -2,13 +2,11 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { spaceReviewSchema } from "@/shared/lib/validations/review";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createReviewCommand } from "@/shared/domain/reviews/commands";
 import { invalidateReviewCaches } from "@/shared/lib/cache/review-cache";
 import { DomainError } from "@/shared/domain/domain-error";

@@ -47,8 +47,8 @@ Resend / Stripe / Turnstile secret / Google Maps は全て **DB優先** →
 env はフォールバック（PR #878 で確定した「Settings is canonical」に統一、2026-07-06）。
 env 側は `cloudbuild.yaml` に配線されておらず本番では常に undefined
 （ローカル開発の利便性のためのフォールバックとしてのみ機能する）。
-新しい統合キーを追加する際もこのパターンに従うこと（`turnstile.ts` の
-`getTurnstileSecretKey()` をお手本にする）。
+新しい統合キーを追加する際もこのパターンに従うこと（`domain/settings/turnstile.ts` の
+`resolveTurnstileVerifyContext()` をお手本にする）。
 
 Webhook 署名秘密 (`stripeWebhookSecret` / `resendWebhookSecret`) も同様に Tier 2
 (DB 暗号化 + admin UI からの rotate/test) で管理する。route handler は

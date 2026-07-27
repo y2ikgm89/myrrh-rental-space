@@ -20,6 +20,7 @@ import { z } from "zod";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { createMutationError } from "@/shared/lib/mutation-result";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
@@ -27,10 +28,7 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { DomainError } from "@/shared/domain/domain-error";
 import { cancelCustomerReservationSeries } from "@/shared/domain/reservations/customer-commands";
 import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/payloads";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";

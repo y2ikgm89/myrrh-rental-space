@@ -1076,7 +1076,6 @@ describe("architecture boundaries", () => {
         "reservation/time-slots.ts",
         "slug-validation.ts",
         "terms-consent-gate.ts",
-        "turnstile.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",

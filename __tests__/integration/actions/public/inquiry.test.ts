@@ -14,7 +14,7 @@
  * - `createInquiryCommand` の戻り値 payload に receiptNumber / phoneNumber が加わる
  *
  * モック方針:
- * - validateTurnstile: action-helpers をモック(常に成功を返す)
+ * - validateTurnstile: domain/settings/turnstile をモック(常に成功を返す)
  * - createInquiryCommand: domain コマンドをモック
  * - email 送信: email-service をモック
  * - updateTag: next/cache をモック
@@ -43,8 +43,10 @@ const mockCheckBotHeuristics = mock(
   (): { success: boolean; error?: string } => ({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
+}));
+mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
 }));

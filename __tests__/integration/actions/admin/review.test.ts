@@ -19,6 +19,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 // =============================================================================
 
 // createValidationMutationError モック
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mock(() => Promise.resolve({ success: true })),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
@@ -27,7 +31,6 @@ mock.module("@/shared/lib/action-helpers", () => ({
     ),
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 
 // executeAdminMutationResult モック（認証をバイパスし execute を直接呼び出す）

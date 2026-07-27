@@ -12,7 +12,7 @@
  *     / DomainError): `reply({ formErrors })`
  *
  * モック方針:
- * - validateTurnstile / checkActionRateLimit: action-helpers をモック
+ * - validateTurnstile: domain/settings/turnstile をモック / checkActionRateLimit: action-helpers をモック
  * - verifySpaceBelongsToLocation: スペース所属確認を DB なしで成功に固定
  * - createPublicReservationCommand: domain コマンドをモック
  * - sendReservationAdminNotification: email-service をモック
@@ -46,8 +46,10 @@ const mockCheckEmailRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
+}));
+mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
   checkEmailRateLimit: mockCheckEmailRateLimit,
