@@ -7,7 +7,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import {
   SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
   toExpectedUpdatedAt,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/optimistic";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
