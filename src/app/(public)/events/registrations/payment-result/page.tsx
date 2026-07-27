@@ -14,7 +14,7 @@ import {
   getEventRegistrationPaymentBannerContext,
   resolveEventPaymentBannerMessage,
 } from "@/shared/domain/events/payment-banner";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EventStatusNotice } from "@/app/(public)/events/[slug]/_components/event-status-notice";
 
 export const metadata: Metadata = {

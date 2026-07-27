@@ -24,7 +24,7 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     }));
     // route が冒頭で isFeatureEnabled('events') を呼ぶため (FEAT-3PLANE-04)、
     // features/check を feature ON で mock。個別 test はこの上に上書きできる。
-    mock.module("@/shared/lib/features/check", () => ({
+    mock.module("@/shared/domain/features/check", () => ({
       isFeatureEnabled: () => Promise.resolve(true),
     }));
     // per-registrationId rate limiter は既定で success（429 は個別 test）。

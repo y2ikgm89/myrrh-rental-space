@@ -14,7 +14,7 @@ import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { getRefundPolicySettings } from "@/shared/domain/settings/admin-queries";

@@ -21,7 +21,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { getEventRegistrationForCalendar } from "@/shared/domain/events/registration-queries";
 import {
   buildEventCalendar,

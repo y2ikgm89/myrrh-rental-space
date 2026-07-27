@@ -1,7 +1,7 @@
 import "server-only";
 
 import { connection } from "next/server";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 
 /**
  * events Feature Module の 404 ガード（動的スコープ専用）。

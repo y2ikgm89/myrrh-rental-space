@@ -13,7 +13,7 @@ import { SpaceTabContent } from "./_components/SpaceTabContent";
 import { LocationTabContent } from "./_components/LocationTabContent";
 import { CategoryTabContent } from "./_components/CategoryTabContent";
 import { ReviewTabContent } from "./_components/ReviewTabContent";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 
 export const metadata: Metadata = {

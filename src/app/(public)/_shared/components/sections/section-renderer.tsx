@@ -11,7 +11,7 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { SectionType } from "@/shared/lib/validations/section";
-import { getFeatureFilterContext } from "@/shared/lib/features/check";
+import { getFeatureFilterContext } from "@/shared/domain/features/check";
 import {
   getHeroConfig,
   getHeroParallaxConfig,

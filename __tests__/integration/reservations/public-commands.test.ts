@@ -36,7 +36,7 @@ mock.module("next/cache", () => ({
 
 // createPublicReservationCommand は isFeatureEnabled("reservation") を直接呼ぶ。
 // CI seed で reservation feature が OFF の可能性を封じる。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 

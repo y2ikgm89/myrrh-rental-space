@@ -38,7 +38,7 @@ mock.module("@/shared/domain/settings/queries/integration", () => ({
   getStripeCredentialCiphertext: () => mockGetStripeCredentialCiphertext(),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (feature: string) => mockIsFeatureEnabled(feature),
 }));
 

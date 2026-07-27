@@ -25,7 +25,7 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
 import { hasPermission } from "@/shared/lib/admin-permissions";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import { RegisterParticipantButton } from "./_components/RegisterParticipantButton";
 import type { Metadata } from "next";

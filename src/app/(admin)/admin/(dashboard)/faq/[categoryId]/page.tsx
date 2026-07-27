@@ -25,7 +25,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { Pagination } from "@/admin/components/ui";
 import { loadAdminFaqCategoryDetailSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import { FaqCategoryDetailView } from "../_components/FaqCategoryDetailView";
 

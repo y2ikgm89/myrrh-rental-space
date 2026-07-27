@@ -14,7 +14,7 @@ import {
 } from "@/admin/queries/page-section";
 import { ensureSystemPageCommand } from "@/shared/domain/pages/commands";
 import { getSectionDynamicOptions } from "@/shared/domain/sections/dynamic-options";
-import { getFeatureFilterContext } from "@/shared/lib/features/check";
+import { getFeatureFilterContext } from "@/shared/domain/features/check";
 import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { isSystemPageSlug } from "@/shared/lib/validations/page";
 import { Button, Badge } from "@/admin/components/ui";
