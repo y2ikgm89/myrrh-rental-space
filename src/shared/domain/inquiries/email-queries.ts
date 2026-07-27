@@ -1,16 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import type { InquiryStatusNotificationData } from "@/shared/lib/email/types";
 
-export type InquiryStatusNotificationRow = {
-  readonly id: string;
-  readonly receiptNumber: string;
-  readonly name: string;
-  readonly email: string;
-  readonly subject: string;
-  readonly updatedAt: Date;
-  readonly customerUserId: string | undefined;
-};
+export type { InquiryStatusNotificationData } from "@/shared/lib/email/types";
 
 /**
  * お問い合わせステータス変更通知メール
@@ -18,7 +11,7 @@ export type InquiryStatusNotificationRow = {
  */
 export async function getInquiriesForStatusNotification(
   inquiryIds: string[],
-): Promise<InquiryStatusNotificationRow[]> {
+): Promise<InquiryStatusNotificationData[]> {
   if (inquiryIds.length === 0) return [];
 
   const inquiries = await prisma.inquiry.findMany({

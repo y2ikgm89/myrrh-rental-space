@@ -15,6 +15,10 @@ import {
   sendEventAdminNotification,
   sendEventRegistrationConfirmation,
 } from "@/shared/lib/email/event-emails";
+import {
+  getEventEmailRenderContext,
+  resolveEventAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import {
   recordManualEventPaymentCommand,
@@ -493,36 +497,50 @@ export async function createAdminProxyRegistration(
           );
           if (!details) return;
 
-          await Promise.all([
-            sendEventRegistrationConfirmation({
-              registrationId: data.registrationId,
-              customerName: data.name,
-              customerEmail: data.email,
-              eventTitle: details.eventTitle,
-              eventStartTime: details.startTime,
-              eventEndTime: details.endTime,
-              location: details.location ?? undefined,
-              quantity: data.quantity,
-              icsSequence: data.icsSequence,
-              customerId: null,
-              format: details.format,
-              meetingUrl: details.meetingUrl,
-            }),
-            sendEventAdminNotification(
+          const [renderContext, adminDelivery] = await Promise.all([
+            getEventEmailRenderContext(),
+            resolveEventAdminNotificationDelivery("registration"),
+          ]);
+
+          const sends = [
+            sendEventRegistrationConfirmation(
               {
                 registrationId: data.registrationId,
-                eventId: data.eventId,
-                participantName: data.name,
-                participantEmail: data.email,
+                customerName: data.name,
+                customerEmail: data.email,
                 eventTitle: details.eventTitle,
                 eventStartTime: details.startTime,
+                eventEndTime: details.endTime,
+                location: details.location ?? undefined,
                 quantity: data.quantity,
-                currentRegistrations: details.confirmedCount,
-                capacity: details.capacity,
+                icsSequence: data.icsSequence,
+                customerId: null,
+                format: details.format,
+                meetingUrl: details.meetingUrl,
               },
-              "registration",
+              renderContext,
             ),
-          ]);
+          ];
+          if (adminDelivery.enabled) {
+            sends.push(
+              sendEventAdminNotification(
+                {
+                  registrationId: data.registrationId,
+                  eventId: data.eventId,
+                  participantName: data.name,
+                  participantEmail: data.email,
+                  eventTitle: details.eventTitle,
+                  eventStartTime: details.startTime,
+                  quantity: data.quantity,
+                  currentRegistrations: details.confirmedCount,
+                  capacity: details.capacity,
+                },
+                "registration",
+                adminDelivery,
+              ),
+            );
+          }
+          await Promise.all(sends);
         })(),
         {
           operation: "sendAdminProxyRegistrationEmails",

@@ -18,6 +18,7 @@
  * - `sendWebhookRenewalNotification`: idempotencyKey が付与され `<event-type>/...` 形式で始まる
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { RENDER_CONTEXT } from "./_email-test-fixtures";
 
 type DeliverySettings = {
   sendReservationConfirmationEmail: boolean;
@@ -248,10 +249,16 @@ describe("sendEventRegistrationCancelled() の idempotencyKey にも icsSequence
   };
 
   test("同一 registrationId + 異なる icsSequence → 異なるキー", async () => {
-    await sendEventRegistrationCancelled({ ...eventBase, icsSequence: 0 });
+    await sendEventRegistrationCancelled(
+      { ...eventBase, icsSequence: 0 },
+      RENDER_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendEventRegistrationCancelled({ ...eventBase, icsSequence: 1 });
+    await sendEventRegistrationCancelled(
+      { ...eventBase, icsSequence: 1 },
+      RENDER_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -260,7 +267,10 @@ describe("sendEventRegistrationCancelled() の idempotencyKey にも icsSequence
   });
 
   test("キーは `event-reg-cancel/<id>/<sequence>` 形式", async () => {
-    await sendEventRegistrationCancelled({ ...eventBase, icsSequence: 5 });
+    await sendEventRegistrationCancelled(
+      { ...eventBase, icsSequence: 5 },
+      RENDER_CONTEXT,
+    );
     expect(lastKey()).toBe(`event-reg-cancel/${eventBase.registrationId}/5`);
   });
 });

@@ -80,6 +80,10 @@ import {
   sendEventAdminNotification,
   sendEventRegistrationCancelled,
 } from "@/shared/lib/email/event-emails";
+import {
+  getEventEmailRenderContext,
+  resolveEventAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { notifyEventWaitlistOfferedForRegistration } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { sendEventWaitlistOffered } from "@/shared/lib/email/event-waitlist-emails";
 import type { EmailResult } from "@/shared/lib/email/types";
@@ -277,22 +281,26 @@ async function runCustomerEmailStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
   details: RegistrationEmailDetails;
+  renderContext: Awaited<ReturnType<typeof getEventEmailRenderContext>>;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration, details } = args;
+  const { input, registration, details, renderContext } = args;
   try {
-    const result = await sendEventRegistrationCancelled({
-      registrationId: registration.id,
-      customerName: registration.name,
-      customerEmail: registration.email,
-      eventTitle: registration.event.title,
-      eventStartTime: details.startTime,
-      eventEndTime: details.endTime,
-      location: details.location ?? undefined,
-      quantity: registration.quantity,
-      icsSequence: registration.icsSequence,
-      format: details.format,
-      meetingUrl: details.meetingUrl,
-    });
+    const result = await sendEventRegistrationCancelled(
+      {
+        registrationId: registration.id,
+        customerName: registration.name,
+        customerEmail: registration.email,
+        eventTitle: registration.event.title,
+        eventStartTime: details.startTime,
+        eventEndTime: details.endTime,
+        location: details.location ?? undefined,
+        quantity: registration.quantity,
+        icsSequence: registration.icsSequence,
+        format: details.format,
+        meetingUrl: details.meetingUrl,
+      },
+      renderContext,
+    );
     return mapEmailResultToOutcome(result);
   } catch (err) {
     const normalized = normalizeError(err);
@@ -314,8 +322,14 @@ async function runAdminEmailStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
   details: RegistrationEmailDetails;
+  adminDelivery: Awaited<
+    ReturnType<typeof resolveEventAdminNotificationDelivery>
+  >;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration, details } = args;
+  const { input, registration, details, adminDelivery } = args;
+  if (!adminDelivery.enabled) {
+    return { status: "skipped", reason: "disabled" };
+  }
   try {
     const result = await sendEventAdminNotification(
       {
@@ -330,6 +344,7 @@ async function runAdminEmailStep(args: {
         capacity: details.capacity,
       },
       "cancellation",
+      adminDelivery,
     );
     return mapEmailResultToOutcome(result);
   } catch (err) {
@@ -564,6 +579,11 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
     requiresRefund,
   });
 
+  const [renderContext, adminDelivery] = await Promise.all([
+    getEventEmailRenderContext(),
+    resolveEventAdminNotificationDelivery("cancellation"),
+  ]);
+
   const [
     checkoutSessionExpire,
     customerEmail,
@@ -575,8 +595,8 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
       registrationId: registration.id,
       sessionId: registration.stripeCheckoutSessionId,
     }),
-    runCustomerEmailStep({ input, registration, details }),
-    runAdminEmailStep({ input, registration, details }),
+    runCustomerEmailStep({ input, registration, details, renderContext }),
+    runAdminEmailStep({ input, registration, details, adminDelivery }),
     runNotificationStep({ input, registration, requiresRefund }),
     runWaitlistOfferStep(input),
   ]);

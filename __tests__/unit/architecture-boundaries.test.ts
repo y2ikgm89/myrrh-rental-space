@@ -1026,13 +1026,7 @@ describe("architecture boundaries", () => {
     // 実際に DB 呼出をしているファイルは原則 domain/db 配下に限る。
     // ALLOWLIST: domain/db に切り出すと過剰な抽象になる正当な lib 境界の例外のみ列挙する。
     const SHARED_ROOT = join(SRC_ROOT, "shared");
-    const ALLOWLIST = new Set(
-      [
-        join(SRC_ROOT, "shared", "lib", "email", "event-emails.ts"),
-        join(SRC_ROOT, "shared", "lib", "email", "event-waitlist-emails.ts"),
-        join(SRC_ROOT, "shared", "lib", "email", "inquiry-emails.ts"),
-      ].map((file) => relative(ROOT, file)),
-    );
+    const ALLOWLIST = new Set<string>();
     const importsPrisma = (source: string) =>
       /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
     // `prisma.<model>.<method>` のみを「DB 呼出」とみなす。
@@ -1076,8 +1070,6 @@ describe("architecture boundaries", () => {
         "email/client.ts",
         "email/contact-emails.ts",
         "email/customer-emails.ts",
-        "email/event-emails.ts",
-        "email/inquiry-emails.ts",
         "email/reminder-emails.ts",
         "email/reservation-emails.ts",
         "email/send.ts",

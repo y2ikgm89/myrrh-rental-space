@@ -4,7 +4,100 @@
  * @module shared/lib/email/types
  */
 
-import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  EventFormatValue,
+  RegistrationStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+
+/** iCal 添付・「カレンダーに追加」リンクの Settings 由来フラグ（lib 側 DTO）。 */
+export type CalendarEmailSettings = {
+  readonly icalAttachmentEnabled: boolean;
+  readonly addToCalendarLinksEnabled: boolean;
+};
+
+/** iCal ORGANIZER 行用の Settings 由来データ（lib 側 DTO）。 */
+export type IcalOrganizerSettings = {
+  readonly name: string;
+  readonly email: string;
+};
+
+/** イベント系メールの render 時に必要な Settings DTO（domain が fetch して lib に渡す）。 */
+export type EventEmailRenderContext = {
+  readonly calendarSettings: CalendarEmailSettings;
+  readonly organizer: IcalOrganizerSettings;
+};
+
+/** 管理者向けイベント通知メールの宛先（domain が resolve して lib に渡す）。 */
+export type EventAdminNotificationDelivery = {
+  readonly notificationEmails: readonly string[];
+};
+
+export type EventCancelledNotificationPayload = {
+  readonly eventId: string;
+  readonly title: string;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
+  readonly updatedAt: Date;
+  readonly venueDisplay: string | null;
+  readonly registrations: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly email: string | null;
+    readonly quantity: number;
+    readonly icsSequence: number;
+    readonly customerId: string | null;
+    readonly status: RegistrationStatus;
+    readonly slot: { readonly startAt: Date; readonly endAt: Date };
+  }>;
+};
+
+export type EventUpdatedNotificationPayload = {
+  readonly eventId: string;
+  readonly title: string;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
+  readonly updatedAt: Date;
+  readonly venueDisplay: string | null;
+  readonly registrations: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly email: string | null;
+    readonly quantity: number;
+    readonly icsSequence: number;
+    readonly slotId: string;
+    readonly customerId: string | null;
+    readonly slot: { readonly startAt: Date; readonly endAt: Date };
+  }>;
+};
+
+export type EventBroadcastPayload = {
+  readonly eventId: string;
+  readonly title: string;
+  readonly slug: string;
+  readonly recipients: ReadonlyArray<{
+    readonly id: string;
+    readonly email: string;
+    readonly customerId: string | null;
+  }>;
+  readonly skipped: number;
+  readonly customerIdByEmail: ReadonlyMap<string, string>;
+};
+
+export type InquiryStatusNotificationData = {
+  readonly id: string;
+  readonly receiptNumber: string;
+  readonly name: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly updatedAt: Date;
+  readonly customerUserId: string | undefined;
+};
+
+/** お問い合わせ続報の管理者通知メール宛先（domain が resolve して lib に渡す）。 */
+export type InquiryAdminNotificationDelivery = {
+  readonly notificationEmails: readonly string[];
+};
 
 export type ReservationEmailData = {
   reservationId: string;

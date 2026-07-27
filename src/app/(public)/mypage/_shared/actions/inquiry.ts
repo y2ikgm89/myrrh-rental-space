@@ -9,6 +9,7 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { replyToInquiryAsCustomerCommand } from "@/shared/domain/inquiries/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
+import { resolveInquiryCustomerReplyAdminDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { customerInquiryReplySchema } from "@/shared/lib/validations/inquiry";
 import {
   checkActionRateLimit,
@@ -99,13 +100,20 @@ export async function replyToInquiryAction(
     );
 
     fireAndForget(
-      sendInquiryCustomerReplyAdminEmail({
-        inquiryId: result.inquiryId,
-        receiptNumber: emailContext.receiptNumber,
-        customerName: emailContext.name,
-        subject: emailContext.subject,
-        replyMessage: emailContext.replyBody,
-      }),
+      (async () => {
+        const delivery = await resolveInquiryCustomerReplyAdminDelivery();
+        if (!delivery.enabled) return;
+        return sendInquiryCustomerReplyAdminEmail(
+          {
+            inquiryId: result.inquiryId,
+            receiptNumber: emailContext.receiptNumber,
+            customerName: emailContext.name,
+            subject: emailContext.subject,
+            replyMessage: emailContext.replyBody,
+          },
+          delivery,
+        );
+      })(),
       {
         operation: "sendInquiryCustomerReplyAdminEmail",
         category: ErrorCategory.EXTERNAL_API,

@@ -7,6 +7,7 @@ import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -590,11 +591,15 @@ export async function cancelEventCommand(id: string) {
   }
 
   fireAndForget(
-    getEventCancelledNotificationPayload(id).then((payload) => {
+    (async () => {
+      const [payload, renderContext] = await Promise.all([
+        getEventCancelledNotificationPayload(id),
+        getEventEmailRenderContext(),
+      ]);
       if (payload) {
-        return sendEventCancelledToAllParticipants(payload);
+        await sendEventCancelledToAllParticipants(payload, renderContext);
       }
-    }),
+    })(),
     {
       operation: "sendEventCancelledToAllParticipants",
       category: ErrorCategory.EXTERNAL_API,
