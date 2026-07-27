@@ -7,11 +7,6 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import {
-  getGoogleCalendarServiceAccountConfig,
-  getGoogleCalendarSettings,
-  getTwoWaySyncSettings,
-} from "@/shared/domain/settings/admin-queries";
 import type { CalendarConnectionTestResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
@@ -22,7 +17,7 @@ import { isValidCalendarId } from "./calendar-id";
 export { isValidCalendarId };
 
 /**
- * サービスアカウントの接続テスト
+ * サービスアカウントの接続テスト（純粋 API 層。Settings I/O なし）。
  */
 export async function testServiceAccountConnection(params: {
   serviceAccountJson: string;
@@ -69,57 +64,4 @@ export async function testServiceAccountConnection(params: {
       error: formatGoogleApiError(error),
     };
   }
-}
-
-/**
- * Google Calendar 連携が稼働可能な状態か判定する（semantic helper）。
- *
- * `enabled` フラグ ON かつ接続テスト通過済みの場合のみ true。
- */
-export async function isGoogleCalendarEnabled(): Promise<boolean> {
-  const settings = await getGoogleCalendarSettings();
-  return settings.enabled && settings.connectionStatus === "connected";
-}
-
-/**
- * Google Calendar への書込み (mutate) が技術的に可能かどうかを判定する
- * (GCAL-OUTBOUND-05)。
- *
- * `isGoogleCalendarEnabled` と異なり `googleCalendarEnabled` トグルを見ない
- * — サービスアカウント JSON とカレンダー ID さえ設定されていれば true を返す。
- *
- * 用途: create/update は `isGoogleCalendarEnabled()` でユーザーが意図的に
- * OFF にした間は一切書き込まない（既存契約）。一方 delete はトグル OFF でも
- * 実行できないと、無効化した瞬間に以降のキャンセル/削除が GCal 側の孤児
- * event をクリーンアップできなくなる（disable した瞬間に事故る設計は禁止）。
- * `deleteCalendarSync` / `deleteEventCalendarSync` / `deleteGcalMaster` /
- * `patchGcalMasterUntil` はこちらを gate に使う。
- */
-export async function isGoogleCalendarConfigured(): Promise<boolean> {
-  const [serviceAccountConfig, settings] = await Promise.all([
-    getGoogleCalendarServiceAccountConfig(),
-    getGoogleCalendarSettings(),
-  ]);
-  return (
-    serviceAccountConfig.encryptedServiceAccountJson !== null &&
-    settings.calendarId !== null
-  );
-}
-
-/**
- * 双方向同期が稼働可能な状態か判定する（semantic helper）。
- *
- * Calendar 自体が enabled + 接続 OK で、かつ two-way sync toggle が ON の場合のみ true。
- * 2 クエリを Promise.all で並行実行する（webhook route の hot path のため）。
- */
-export async function isTwoWaySyncEnabled(): Promise<boolean> {
-  const [calendarSettings, twoWaySyncSettings] = await Promise.all([
-    getGoogleCalendarSettings(),
-    getTwoWaySyncSettings(),
-  ]);
-  return (
-    calendarSettings.enabled &&
-    calendarSettings.connectionStatus === "connected" &&
-    twoWaySyncSettings.enabled
-  );
 }

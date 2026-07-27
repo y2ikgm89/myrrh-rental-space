@@ -21,7 +21,7 @@ import {
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
-import { isTwoWaySyncEnabled } from "@/shared/lib/google-calendar";
+import { isTwoWaySyncEnabled } from "@/shared/domain/settings/google-calendar";
 import {
   releaseCalendarSyncLock,
   tryAcquireCalendarSyncLock,

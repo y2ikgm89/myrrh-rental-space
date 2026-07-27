@@ -17,7 +17,6 @@ import "server-only";
 import {
   deleteCalendarEvent,
   patchCalendarEvent,
-  isGoogleCalendarConfigured,
 } from "@/shared/lib/google-calendar";
 import {
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
@@ -28,6 +27,7 @@ import {
   getSeriesMasterOperationFailureInstances,
   markReservationCalendarSyncUpdated,
 } from "@/shared/domain/reservations/calendar-sync";
+import { isGoogleCalendarConfigured } from "@/shared/domain/settings/google-calendar";
 import { rebuildRruleWithUntil } from "@/shared/domain/reservations/series-rrule";
 import {
   ErrorCategory,

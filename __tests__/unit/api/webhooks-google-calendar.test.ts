@@ -82,7 +82,7 @@ mock.module("@/shared/lib/calendar-sync/inbound", () => ({
   syncFromCalendar: () => mockSyncFromCalendar(),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: () => mockIsTwoWaySyncEnabled(),
 }));
 

@@ -7,6 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
 import type {
@@ -17,7 +18,6 @@ import type {
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
-import { getServiceAccountClient } from "./service-account";
 
 /**
  * `reminderMinutes` を Google Calendar `reminders` オブジェクトに変換する。
