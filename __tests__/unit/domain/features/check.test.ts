@@ -25,7 +25,7 @@ const {
   assertAdminFeatureCreateAllowed,
   ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE,
   isUrlDisabled,
-} = await import("@/shared/lib/features/check");
+} = await import("@/shared/domain/features/check");
 
 const setStored = (stored: FeatureModulesMap): void => {
   mockGetFeatureModulesSettings.mockImplementation(() =>

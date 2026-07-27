@@ -31,7 +31,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
 

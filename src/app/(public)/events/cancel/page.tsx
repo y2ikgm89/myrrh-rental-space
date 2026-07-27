@@ -8,7 +8,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyCancelToken } from "@/shared/lib/event-registration-cancel-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";

@@ -11,7 +11,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { getCustomerInquiryById } from "../../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Badge } from "@/public/components/design-system/badge";

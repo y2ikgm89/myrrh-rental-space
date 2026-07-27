@@ -11,7 +11,7 @@ import { getEventRegistrationForClaim } from "@/shared/domain/events/registratio
 import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import {

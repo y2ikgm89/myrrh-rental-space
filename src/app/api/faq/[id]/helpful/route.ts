@@ -14,7 +14,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 

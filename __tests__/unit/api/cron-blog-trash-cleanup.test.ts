@@ -66,7 +66,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (...args: Parameters<typeof mockIsFeatureEnabled>) =>
     mockIsFeatureEnabled(...args),
 }));

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getSpacesForReservation } from "@/admin/queries/reservation";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { ReservationForm } from "../_components/ReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Button } from "@/admin/components/ui";

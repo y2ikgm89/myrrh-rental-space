@@ -35,13 +35,13 @@ import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function submitInquiry(
   _prev: SubmissionResult | undefined,

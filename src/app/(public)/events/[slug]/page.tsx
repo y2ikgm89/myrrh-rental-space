@@ -15,7 +15,7 @@ import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import {
   formatEventAddress,
   formatEventVenue,
-} from "@/shared/domain/events/venue";
+} from "@/shared/lib/events/venue";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";

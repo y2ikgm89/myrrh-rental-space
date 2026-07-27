@@ -15,7 +15,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { hasPermission } from "@/shared/lib/admin-permissions";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 

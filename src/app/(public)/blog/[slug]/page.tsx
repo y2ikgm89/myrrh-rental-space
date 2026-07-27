@@ -8,7 +8,7 @@ import {
 } from "../_components/post-detail-page-content";
 import { PostViewTracker } from "../_components/post-view-tracker";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 
 type PageProps = {

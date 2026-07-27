@@ -1068,12 +1068,12 @@ describe("architecture boundaries", () => {
         "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
-        "features/check.ts",
-        "ical/index.ts",
-        "maintenance-guard.ts",
+        "email/system-emails.ts",
         "reservation/time-slots.ts",
         "slug-validation.ts",
-        "terms-consent-gate.ts",
+        "turnstile.ts",
+        "reservation/time-slots.ts",
+        "slug-validation.ts",
         "turnstile.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(

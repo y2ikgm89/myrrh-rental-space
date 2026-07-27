@@ -9,7 +9,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 import { INQUIRY_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";

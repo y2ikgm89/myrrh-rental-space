@@ -4,7 +4,7 @@ import {
   getSpacesForEvent,
   getCategoriesForEvent,
 } from "@/admin/queries/event";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
 import type { Metadata } from "next";
