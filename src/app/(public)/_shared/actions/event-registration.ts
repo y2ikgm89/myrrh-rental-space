@@ -64,7 +64,7 @@ import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/regi
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,

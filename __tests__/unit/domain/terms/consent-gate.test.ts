@@ -28,7 +28,7 @@ mock.module("@/shared/domain/terms/queries", () => ({
 mock.module("server-only", () => ({}));
 
 const { assertAllRequiredTermsAgreed, assertLoginSignupReagreed } =
-  await import("@/shared/lib/terms-consent-gate");
+  await import("@/shared/domain/terms/consent-gate");
 
 afterEach(() => {
   getRequiredTermsByScopeMock.mockReset();

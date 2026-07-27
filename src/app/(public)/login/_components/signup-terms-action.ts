@@ -13,7 +13,7 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { assertAllRequiredTermsAgreed } from "@/shared/domain/terms/consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_MAX_AGE_SECONDS,
