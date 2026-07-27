@@ -183,7 +183,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 // 遅延 import: mock.module 適用後に SUT を読み込む
 const { anonymizeCustomerCommand, mergeCustomerCommand } =
-  await import("@/shared/domain/customers/commands");
+  await import("@/shared/domain/customers/customer-lifecycle-commands");
 const { hashSuppressedEmailCandidate } =
   await import("@/shared/domain/customers/queries");
 

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { anonymizeCustomerCommand } from "@/shared/domain/customers/commands";
+import { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";

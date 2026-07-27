@@ -35,7 +35,7 @@ const SRC = resolve(
   "shared",
   "domain",
   "customers",
-  "commands.ts",
+  "customer-lifecycle-commands.ts",
 );
 
 describe("mergeCustomerCommand transfers all cascade relations before delete", () => {

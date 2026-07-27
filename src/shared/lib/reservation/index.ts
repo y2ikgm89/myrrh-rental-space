@@ -7,7 +7,6 @@
  * ```typescript
  * import {
  *   DEFAULT_BUSINESS_HOURS,
- *   checkReservationOverlap,
  *   getAvailableTimeSlots,
  *   type TimeSlot,
  * } from '@/shared/lib/reservation'
@@ -27,7 +26,6 @@ export type {
 } from "./types";
 
 // Functions
-export { checkReservationOverlap } from "./overlap-check";
 export { getAvailableTimeSlots, getBusinessHoursSettings } from "./time-slots";
 
 // Client-safe utilities

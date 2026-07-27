@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { buttonVariants } from "./ui/button";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 type AnonymizeCustomerConfirmDialogProps = {
   open: boolean;

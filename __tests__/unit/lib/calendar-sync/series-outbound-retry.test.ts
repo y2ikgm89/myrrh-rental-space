@@ -80,7 +80,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 }));
 
 const { retryFailedSeriesMasterOperations } =
-  await import("@/shared/lib/calendar-sync/series-outbound");
+  await import("@/shared/domain/reservations/series-calendar-outbound");
 
 describe("retryFailedSeriesMasterOperations (GCAL-OUTBOUND-07)", () => {
   beforeEach(() => {

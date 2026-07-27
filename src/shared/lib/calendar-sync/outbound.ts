@@ -49,7 +49,7 @@ import {
 } from "@/shared/lib/date-format";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
-import { retryFailedSeriesMasterOperations } from "./series-outbound";
+import { retryFailedSeriesMasterOperations } from "@/shared/domain/reservations/series-calendar-outbound";
 import type { ReservationSyncData, SyncResult } from "./types";
 
 // =============================================================================

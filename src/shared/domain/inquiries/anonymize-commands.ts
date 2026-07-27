@@ -14,7 +14,7 @@ import {
 /**
  * Inquiry Overhaul Phase 6: お問い合わせ PII 匿名化 (anonymize) command。
  *
- * `anonymizeCustomerCommand`（`@/shared/domain/customers/commands`）と同型の
+ * `anonymizeCustomerCommand`（`@/shared/domain/customers/customer-lifecycle-commands`）と同型の
  * 契約: 物理削除ではなく PII を placeholder に置換し `anonymizedAt` /
  * `anonymizedReason` を刻印する append-only 証跡アプローチ。Inquiry は
  * Customer と独立した匿名化対象 — Customer.anonymize 時に inquiry を自動で
