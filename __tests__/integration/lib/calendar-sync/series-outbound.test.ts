@@ -374,7 +374,7 @@ describeMaybe(
 
         // series-outbound.ts の getSeriesGcalMasterEventId が正しく永続値を返す
         const { getSeriesGcalMasterEventId } =
-          await import("@/shared/lib/calendar-sync/series-outbound");
+          await import("@/shared/domain/reservations/series-calendar-outbound");
         const fetched = await getSeriesGcalMasterEventId(fixture.seriesId);
         expect(fetched).toBe("master-persist-only");
 
@@ -574,7 +574,7 @@ describeMaybe(
       const fixture = await createSeriesFixture();
       try {
         const { patchGcalMasterUntil } =
-          await import("@/shared/lib/calendar-sync/series-outbound");
+          await import("@/shared/domain/reservations/series-calendar-outbound");
         // fixture の series は "FREQ=WEEKLY;BYDAY=TU;COUNT=3" / dtstart=2028-01-04
         // until を 2 番目 instance 直後 (2028-01-11 10:00Z) にセット → COUNT 消える
         const until = new Date("2028-01-11T10:00:00.000Z");
@@ -606,7 +606,7 @@ describeMaybe(
 
     test("patchGcalMasterUntil: series が見つからなければ patch を呼ばず失敗を返す", async () => {
       const { patchGcalMasterUntil } =
-        await import("@/shared/lib/calendar-sync/series-outbound");
+        await import("@/shared/domain/reservations/series-calendar-outbound");
       const bogusId = "00000000-0000-0000-0000-000000000000";
       const result = await patchGcalMasterUntil({
         masterEventId: "master-ghost",
@@ -621,7 +621,7 @@ describeMaybe(
     // isGoogleCalendarConfigured を gate にする。
     test("patchGcalMasterUntil / deleteGcalMaster: 未 configured なら API を呼ばず no-op success", async () => {
       const { patchGcalMasterUntil, deleteGcalMaster } =
-        await import("@/shared/lib/calendar-sync/series-outbound");
+        await import("@/shared/domain/reservations/series-calendar-outbound");
       mockIsConfigured.mockImplementation(() => Promise.resolve(false));
 
       const patchResult = await patchGcalMasterUntil({
@@ -638,7 +638,7 @@ describeMaybe(
 
     test("deleteGcalMaster: 成功時 {success:true} を返す", async () => {
       const { deleteGcalMaster } =
-        await import("@/shared/lib/calendar-sync/series-outbound");
+        await import("@/shared/domain/reservations/series-calendar-outbound");
 
       const result = await deleteGcalMaster("master-to-delete");
 

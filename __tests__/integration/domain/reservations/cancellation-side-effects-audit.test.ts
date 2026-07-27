@@ -57,7 +57,7 @@ mock.module("@/shared/lib/calendar-sync/outbound", () => ({
 
 // bulk 系 (series-outbound) は per-test で触らないが、mock.module の live binding
 // 汚染を避けるため空 stub を置く。
-mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
+mock.module("@/shared/domain/reservations/series-calendar-outbound", () => ({
   deleteGcalMaster: () => Promise.resolve(),
   getSeriesGcalMasterEventId: () => Promise.resolve(null),
   patchGcalMasterUntil: () => Promise.resolve(),

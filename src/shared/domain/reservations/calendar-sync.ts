@@ -813,7 +813,7 @@ export async function markSeriesInstanceCalendarSyncSuccess(input: {
  * scope 別操作 (`this-and-following` → UNTIL 更新、`series-all` → 削除) を
  * 発火するかどうかの gate として使う。null なら master GCal 操作は no-op。
  *
- * 呼出は `shared/lib/calendar-sync/series-outbound.ts` 経由 (placement gate)。
+ * 呼出は `shared/domain/reservations/series-calendar-outbound.ts` 経由 (placement gate)。
  */
 export async function getSeriesGcalMasterEventId(
   seriesId: string,

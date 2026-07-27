@@ -72,7 +72,7 @@ async function drainSideEffects(): Promise<void> {
 // GCal series-outbound は本 test では触らないが、mock.module の live binding が
 // 他 test file の実 import に干渉するのを避けるため空 stub を置く
 // (feedback_stale-branch-name-reuse-and-mock-module-coverage)。
-mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
+mock.module("@/shared/domain/reservations/series-calendar-outbound", () => ({
   deleteGcalMaster: () => Promise.resolve(),
   getSeriesGcalMasterEventId: () => Promise.resolve(null),
   patchGcalMasterUntil: () => Promise.resolve(),

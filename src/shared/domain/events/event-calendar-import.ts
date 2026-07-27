@@ -55,7 +55,7 @@ export interface EventImportResult {
  *
  * 以下の GCal イベントはスキップし、残りを Event モデルに upsert する:
  * - description に "予約ID:" を含むイベント（outbound.ts が書き込んだ予約）
- * - description に "イベントID:" を含むイベント（event-outbound.ts が書き込んだ本アプリのイベント — ループ防止）
+ * - description に "イベントID:" を含むイベント（event-calendar-outbound が書き込んだ本アプリのイベント — ループ防止）
  */
 export async function importCalendarEvents(): Promise<EventImportResult> {
   const result: EventImportResult = {

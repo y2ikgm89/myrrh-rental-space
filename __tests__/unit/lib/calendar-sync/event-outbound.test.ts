@@ -119,7 +119,7 @@ import {
   retryFailedEventCalendarSyncs,
   retryEventMeetUrlWriteBack,
   MEET_URL_NOT_RETURNED_ERROR,
-} from "@/shared/lib/calendar-sync/event-outbound";
+} from "@/shared/domain/events/event-calendar-outbound";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
 // =============================================================================

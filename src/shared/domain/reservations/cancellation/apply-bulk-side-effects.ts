@@ -25,7 +25,7 @@ import {
   deleteGcalMaster,
   getSeriesGcalMasterEventId,
   patchGcalMasterUntil,
-} from "@/shared/lib/calendar-sync/series-outbound";
+} from "@/shared/domain/reservations/series-calendar-outbound";
 import {
   sendBulkAdminNotification,
   sendBulkReservationCancelledEmail,
