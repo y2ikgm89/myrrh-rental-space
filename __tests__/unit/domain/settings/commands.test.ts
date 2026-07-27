@@ -232,6 +232,9 @@ await installPrismaEnumsMock({
 
 import {
   updateBasicInfo,
+  updateLayoutSettings,
+} from "@/shared/domain/settings/commands/site-chrome";
+import {
   updateBusinessInfo,
   updateBusinessHoursSettings,
   updateEmailSettings,
@@ -240,7 +243,6 @@ import {
   updateDiscountSettings,
   updateTaxSettings,
   updateHeaderSettings,
-  updateLayoutSettings,
   updateContactInfo,
   updateDataRetentionSettings,
   updateFeatureModulesCommand,

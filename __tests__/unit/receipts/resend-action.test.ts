@@ -89,10 +89,12 @@ beforeEach(() => {
     sendReceiptResendEmail: sendReceiptResendEmailSpy,
   }));
 
+  mock.module("@/shared/domain/settings/turnstile", () => ({
+    validateTurnstile: turnstileSpy,
+  }));
   mock.module("@/shared/lib/action-helpers", () => ({
     checkActionRateLimit: ipCheckSpy,
     checkEmailRateLimit: emailCheckSpy,
-    validateTurnstile: turnstileSpy,
     checkBotHeuristics: botHeuristicsSpy,
   }));
 

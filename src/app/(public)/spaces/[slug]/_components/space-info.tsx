@@ -1,8 +1,8 @@
 import { IconMapPin } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { parseFacilities } from "@/shared/lib/json-validators";
-import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
-import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
+import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 
 interface SpaceInfoProps {
   readonly space: {

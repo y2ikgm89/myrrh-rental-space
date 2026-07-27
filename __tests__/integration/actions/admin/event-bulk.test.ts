@@ -20,6 +20,9 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mock(() => Promise.resolve({ success: true })),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
@@ -28,7 +31,6 @@ mock.module("@/shared/lib/action-helpers", () => ({
     ),
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 
 const MOCK_ADMIN_USER = { id: "admin-user-001", email: "admin@example.com" };

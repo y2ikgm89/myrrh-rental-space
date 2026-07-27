@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { requestReceiptResendByEmail } from "@/shared/domain/receipts/resend";
 import { sendReceiptResendEmail } from "@/shared/lib/email/receipt-emails";
 import {
@@ -12,7 +13,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   receiptResendByEmailRateLimiter,

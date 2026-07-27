@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
@@ -19,10 +20,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { revokeOAuthGrantForProvider } from "@/shared/lib/oauth-revoke";

@@ -101,10 +101,6 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   ) => mockCreateAuditLogRecord(...args),
 }));
 
-mock.module("@/shared/lib/action-helpers", () => ({
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
-}));
-
 const { getAdminSession, getCurrentAdminUser, verifyAdminSession } =
   await import("@/shared/lib/admin-auth");
 

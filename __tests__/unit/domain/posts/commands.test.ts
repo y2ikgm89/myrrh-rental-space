@@ -200,7 +200,7 @@ const mockGetSlugErrorMessage = mock<
   return "このスラッグは既に投稿で使用されています";
 });
 
-mock.module("@/shared/lib/slug-validation", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));

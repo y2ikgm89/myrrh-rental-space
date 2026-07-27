@@ -24,7 +24,7 @@ mock.module("@/shared/domain/settings/queries/tax", () => ({
 }));
 
 const { resolveSpaceCardEmbeds } =
-  await import("@/shared/lib/lexical/resolve-space-card-embeds");
+  await import("@/shared/domain/spaces/resolve-space-card-embeds");
 
 const PLACEHOLDER = (id: string, name = "") =>
   `<a data-space-card-embed="true" data-space-id="${id}" data-space-name="${name}" href="#"></a>`;

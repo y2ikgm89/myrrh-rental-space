@@ -121,6 +121,8 @@ Actions UI での Deploy Production は、ユーザーが明示したとき、�
 **PR 粒度**: 1 PR = 1 logical change、soft limit 300 行 / 10 file。同一 file の fix-of-fix で対象 PR が
 まだ未 merge なら新規 PR を作らず同 branch に追加 commit（push 前に `gh pr view <N> --json state` で
 OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 domain は別 PR。
+`architecture-boundaries` の ratchet allowlist（`LIB_TO_DOMAIN` 等）を触る PR は
+**同時 OPEN 1 本まで**（詳細は `.claude/rules/architecture-allowlist.md`）。
 
 **停止例外**（該当時はユーザーに確認する）:
 
