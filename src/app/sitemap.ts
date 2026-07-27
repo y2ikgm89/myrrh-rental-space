@@ -28,7 +28,7 @@ import {
 import {
   getFeatureFilterContext,
   isUrlDisabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { isReservedPath } from "@/shared/lib/slug-validation";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors/server";

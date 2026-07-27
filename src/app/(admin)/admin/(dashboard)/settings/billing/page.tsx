@@ -29,7 +29,7 @@ import {
 } from "../_components/sections";
 import { Alert, AlertDescription, AlertTitle } from "@/admin/components/ui";
 import { getAppUrl } from "@/shared/lib/constants";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {

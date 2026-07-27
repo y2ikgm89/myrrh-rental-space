@@ -13,7 +13,7 @@ import type { FeatureModule } from "@/shared/lib/features/registry";
 
 let enabledFixture: ReadonlySet<FeatureModule> = new Set();
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (module: FeatureModule) =>
     Promise.resolve(enabledFixture.has(module)),
 }));

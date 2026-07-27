@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";

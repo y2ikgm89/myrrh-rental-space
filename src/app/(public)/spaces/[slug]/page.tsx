@@ -23,7 +23,7 @@ import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import {
   requireFeatureEnabled,
   isFeatureEnabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { resolvePublicDisplayPrice } from "@/shared/lib/pricing/tax";

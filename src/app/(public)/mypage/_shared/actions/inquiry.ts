@@ -6,7 +6,7 @@ import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { replyToInquiryAsCustomerCommand } from "@/shared/domain/inquiries/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";

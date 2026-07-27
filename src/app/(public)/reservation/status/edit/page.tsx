@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";

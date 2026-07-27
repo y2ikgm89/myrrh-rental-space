@@ -15,7 +15,7 @@ import { EventTabs } from "./_components/EventTabs";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { hasPermission } from "@/shared/lib/admin-permissions";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 

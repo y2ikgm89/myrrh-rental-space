@@ -21,7 +21,7 @@ import {
   encodeSignupTermsCookie,
 } from "@/shared/lib/signup-terms-cookie";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 
 const inputSchema = z.object({
   termsIds: z

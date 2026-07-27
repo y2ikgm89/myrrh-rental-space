@@ -26,7 +26,7 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
-import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 
 /**
  * イベント waitlist 繰り上げ当選の確定（無料チケット、公開フォーム）。

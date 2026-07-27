@@ -33,7 +33,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
 }));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
@@ -144,7 +144,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   getCustomerSession: mockGetCustomerSession,
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
 }));
 

@@ -3,7 +3,7 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { isMutationError } from "@/shared/lib/mutation-result";
 // CACHE-INVALIDATE-04: SPACES は CDN `space-v1` にマップされ /spaces / /spaces/[slug]
 // に emit されるため、raw updateTag では edge の stale HTML が残る。

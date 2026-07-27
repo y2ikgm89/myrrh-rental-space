@@ -23,7 +23,7 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function submitReview(
   _prev: SubmissionResult | undefined,

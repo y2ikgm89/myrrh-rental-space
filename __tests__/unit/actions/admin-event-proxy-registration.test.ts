@@ -47,7 +47,7 @@ mock.module("next/headers", () => ({
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
   assertAdminFeatureCreateAllowed: mock(async () => undefined),
 }));

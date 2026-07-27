@@ -34,7 +34,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
 }));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
 

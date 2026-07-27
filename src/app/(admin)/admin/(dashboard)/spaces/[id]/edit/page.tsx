@@ -10,7 +10,7 @@ import { getTaxSettings } from "@/admin/queries/settings";
 import { getBlockedDatesForSpace } from "@/shared/domain/blocked-dates/queries";
 import { getSmartLockDevicesForLocation } from "@/shared/domain/smart-lock/queries";
 import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";

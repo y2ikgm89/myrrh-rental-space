@@ -6,7 +6,7 @@ import {
   getStripeSettings,
 } from "@/shared/domain/settings/queries/integration";
 import { serverEnv } from "@/shared/lib/env/server";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 
 /**
  * オンライン決済（Stripe）の gate を「業務判断」と「技術状態」で分離する

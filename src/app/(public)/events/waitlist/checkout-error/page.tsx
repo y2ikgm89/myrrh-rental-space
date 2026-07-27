@@ -7,7 +7,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getBusinessInfo } from "@/public/data/business";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 
 // トークンゲート系ページの兄弟（expired/confirm と同方針）。検索結果に出さない。
 export const metadata: Metadata = {

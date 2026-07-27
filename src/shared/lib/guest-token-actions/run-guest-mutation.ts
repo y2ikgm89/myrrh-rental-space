@@ -7,9 +7,9 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
-import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 import {
   createMutationError,
+  type MutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
 import {
@@ -39,6 +39,8 @@ type GuestTurnstileResult =
 export interface GuestTokenMutationConfig<TMemberContext = void> {
   /** logError context.operation */
   operation: string;
+  /** maintenance ON / DB 不明時の fail-closed block（app 層から domain helper を注入） */
+  getMaintenanceBlock: () => Promise<MutationError | null>;
   cookieName: string;
   turnstileAction: TurnstileAction;
   turnstileToken?: string | undefined;
@@ -99,7 +101,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
 export async function runGuestTokenMutation<TMemberContext = void>(
   config: GuestTokenMutationConfig<TMemberContext>,
 ): Promise<MutationResult<null>> {
-  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  const maintenanceBlock = await config.getMaintenanceBlock();
   if (maintenanceBlock) return maintenanceBlock;
 
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);

@@ -7,7 +7,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { StatusHubInvalidLinkView } from "@/app/(public)/_shared/components/status-hub/status-hub-invalid-link-view";
 import { StatusHubShell } from "@/app/(public)/_shared/components/status-hub/status-hub-shell";
 import { StatusHubTooManyRequestsView } from "@/app/(public)/_shared/components/status-hub/status-hub-too-many-requests-view";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForGuestStatus } from "@/shared/domain/events/registration-queries";

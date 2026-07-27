@@ -105,7 +105,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 
 // cancelEventRegistration は isFeatureEnabled("events") を直接呼ぶ
 // (event-waitlist-register.test.ts / registration-overbooking.test.ts と同型)。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 

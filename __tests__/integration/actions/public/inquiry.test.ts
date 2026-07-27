@@ -51,7 +51,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkBotHeuristics: mockCheckBotHeuristics,
 }));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));

@@ -4,7 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { emitBulkAuditRecords } from "@/admin/lib/audit";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import type { BulkFaqItemResult } from "@/shared/domain/faq/types";
