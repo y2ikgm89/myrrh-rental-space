@@ -14,7 +14,7 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { permanentlyDeleteExpiredPostTrash } from "@/shared/domain/posts/trash-commands";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import {
   ErrorCategory,
   ErrorSeverity,

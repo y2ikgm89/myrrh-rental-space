@@ -21,7 +21,7 @@ import {
   parseStringArray,
 } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_EVENT_STATUSES } from "@/shared/domain/spaces/overlap";

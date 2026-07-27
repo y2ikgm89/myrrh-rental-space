@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import {
   createNews as createNewsCommand,
   deleteNews as deleteNewsCommand,

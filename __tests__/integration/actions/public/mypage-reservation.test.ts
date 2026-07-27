@@ -180,7 +180,7 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
 // Codex #1433: cancelReservationAction / updateReservationAction が
 // reservation feature の独立 fail-closed gate を持つようになったため mock 必須。
 const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

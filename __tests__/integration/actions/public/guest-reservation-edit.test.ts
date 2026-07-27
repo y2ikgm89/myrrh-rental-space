@@ -141,7 +141,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   getCustomerSession: mockGetCustomerSession,
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
 }));
 
