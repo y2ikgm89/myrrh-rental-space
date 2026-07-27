@@ -112,7 +112,8 @@ mock.module("@/shared/lib/google-calendar", () => ({
 // -----------------------------------------------------------------------------
 
 type PrismaModule = typeof import("@/shared/db/prisma");
-type OutboundModule = typeof import("@/shared/lib/calendar-sync/outbound");
+type OutboundModule =
+  typeof import("@/shared/domain/reservations/reservation-calendar-outbound");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
@@ -248,7 +249,8 @@ describeMaybe(
       ({
         syncReservationSeriesToCalendar,
         writeBackInstanceGoogleCalendarEventIds,
-      } = await import("@/shared/lib/calendar-sync/outbound"));
+      } =
+        await import("@/shared/domain/reservations/reservation-calendar-outbound"));
       await prisma.$queryRaw`SELECT 1`;
     });
 

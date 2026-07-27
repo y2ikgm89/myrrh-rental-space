@@ -20,7 +20,7 @@ import {
   getGoogleCalendarWebhookState,
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import { isTwoWaySyncEnabled } from "@/shared/lib/google-calendar";
 import {
   releaseCalendarSyncLock,

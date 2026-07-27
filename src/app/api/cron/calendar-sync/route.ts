@@ -44,7 +44,7 @@ import {
   releaseCalendarSyncLock,
   tryAcquireCalendarSyncLock,
 } from "@/shared/domain/calendar-sync/locks";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import {
   isTwoWaySyncEnabled,
   renewWebhookIfNeeded,

@@ -1,8 +1,8 @@
 /**
  * 繰返し予約（ReservationSeries）→ Google Calendar の master event 操作。
  *
- * 単発予約の lib `outbound.ts` が instance 単位の同期を担うのに対し、本モジュールは
- * series 全体を表す 1 つの recurring master event に対する操作を担う
+ * 単発予約の `reservation-calendar-outbound` が instance 単位の同期を担うのに対し、
+ * 本モジュールは series 全体を表す 1 つの recurring master event に対する操作を担う
  * （`applyBulkCancellationSideEffects` の scope 別 1 回操作から呼ばれる）。
  *
  * Phase B.2.1 Task 5 で ReservationSeries.googleCalendarMasterEventId が追加され、

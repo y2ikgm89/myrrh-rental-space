@@ -1,10 +1,10 @@
 /**
- * 予約→カレンダー（単方向同期）
+ * 予約→カレンダー（単方向同期）orchestration。
  *
- * 予約作成・更新・キャンセル時にGoogle Calendarと同期するサービス。
- * サービスアカウントまたはOAuth経由で連携します。
+ * GCal API 呼び出しは `@/shared/lib/google-calendar`、Reservation R-W は
+ * `calendar-sync` commands。ループ防止マーカーは lib `loop-prevention`。
  *
- * @module shared/lib/calendar-sync/outbound
+ * @module shared/domain/reservations/reservation-calendar-outbound
  */
 
 import "server-only";
@@ -48,9 +48,12 @@ import {
   formatTimeShort,
 } from "@/shared/lib/date-format";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
-import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
+import { OUTBOUND_RESERVATION_MARKER } from "@/shared/lib/calendar-sync/loop-prevention";
 import { retryFailedSeriesMasterOperations } from "@/shared/domain/reservations/series-calendar-outbound";
-import type { ReservationSyncData, SyncResult } from "./types";
+import type {
+  ReservationSyncData,
+  SyncResult,
+} from "@/shared/lib/calendar-sync/types";
 
 // =============================================================================
 // Calendar Event Formatting

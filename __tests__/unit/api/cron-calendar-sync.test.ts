@@ -83,9 +83,12 @@ mock.module("@/shared/domain/calendar-sync/locks", () => ({
   releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
 }));
 
-mock.module("@/shared/lib/calendar-sync/inbound", () => ({
-  syncFromCalendar: () => mockSyncFromCalendar(),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-inbound",
+  () => ({
+    syncFromCalendar: () => mockSyncFromCalendar(),
+  }),
+);
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isTwoWaySyncEnabled: () => mockIsTwoWaySyncEnabled(),

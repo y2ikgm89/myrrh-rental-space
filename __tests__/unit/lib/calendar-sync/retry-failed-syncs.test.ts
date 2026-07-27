@@ -181,7 +181,7 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 const { retryFailedSyncs } =
-  await import("@/shared/lib/calendar-sync/outbound");
+  await import("@/shared/domain/reservations/reservation-calendar-outbound");
 
 function baseReservation(
   overrides: Partial<FailedReservation> = {},

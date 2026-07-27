@@ -41,7 +41,7 @@ import {
   stopWebhookWatch,
   testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";

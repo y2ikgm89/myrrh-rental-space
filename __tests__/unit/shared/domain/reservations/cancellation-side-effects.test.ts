@@ -117,9 +117,12 @@ const mockDeleteCalendarSync = mock<
     eventId: string,
   ) => Promise<{ success: true } | { success: false; error: string }>
 >(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: mockDeleteCalendarSync,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: mockDeleteCalendarSync,
+  }),
+);
 
 const mockSendCancelledEmail = mock<
   (data: Record<string, unknown>) => Promise<unknown>

@@ -80,9 +80,12 @@ mock.module("@/shared/lib/google-calendar", () => ({
   ),
 }));
 
-mock.module("@/shared/lib/calendar-sync/inbound", () => ({
-  syncFromCalendar: mockSyncFromCalendar,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-inbound",
+  () => ({
+    syncFromCalendar: mockSyncFromCalendar,
+  }),
+);
 
 // GCAL-AUDIT-08: webhook route が cron と同じ advisory lock を取得する。
 // 未 mock だと実 DB の pg_try_advisory_lock が走り、外 catch が

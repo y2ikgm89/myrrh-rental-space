@@ -44,10 +44,13 @@ mock.module("next/navigation", () => ({
   unstable_rethrow: (error: unknown) => mockUnstableRethrow(error),
 }));
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  retryFailedSyncs: (...args: Parameters<typeof mockRetryFailedSyncs>) =>
-    mockRetryFailedSyncs(...args),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    retryFailedSyncs: (...args: Parameters<typeof mockRetryFailedSyncs>) =>
+      mockRetryFailedSyncs(...args),
+  }),
+);
 
 mock.module("@/shared/domain/events/event-calendar-outbound", () => ({
   retryFailedEventCalendarSyncs: (
