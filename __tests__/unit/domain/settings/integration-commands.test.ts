@@ -110,7 +110,7 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands";
+import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands/optimistic";
 
 const STRIPE_EXPECTED_UPDATED_AT = new Date("2026-01-15T00:00:00.000Z");
 

@@ -10,7 +10,7 @@ import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-ima
 import {
   SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
   toExpectedUpdatedAt,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/optimistic";
 
 export type BasicInfoInput = {
   siteName: string | null;

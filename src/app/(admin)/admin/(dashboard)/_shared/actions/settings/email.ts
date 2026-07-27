@@ -16,7 +16,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   updateEmailSettings as updateEmailSettingsCommand,
   updateNotificationSettings as updateNotificationSettingsCommand,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/organization";
 import { DomainError } from "@/shared/domain/domain-error";
 
 import { emptyToNull } from "./schemas/form-schema-helpers";
