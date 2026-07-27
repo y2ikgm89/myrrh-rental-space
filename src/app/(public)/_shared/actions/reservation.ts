@@ -25,7 +25,7 @@ import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-re
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { resolveReservationAdminNotificationDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
-import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
+import { syncReservationToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {

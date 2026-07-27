@@ -18,7 +18,7 @@ import {
   getReservationEmailRenderContext,
   resolveReservationAdminNotificationDelivery,
 } from "@/shared/domain/settings/queries/email-render-context";
-import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
+import { deleteCalendarSync } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import {
   sendReservationAdminNotification,
   sendReservationCancelledEmail,

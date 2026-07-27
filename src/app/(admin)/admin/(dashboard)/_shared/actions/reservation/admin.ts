@@ -28,7 +28,7 @@ import {
   deleteCalendarSync,
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   getReservationEmailRenderContext,
