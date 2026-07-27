@@ -1,7 +1,7 @@
 import "server-only";
 
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 
 /**
  * ゲストトークン経路向けの customer gate（active/BLACKLIST + 任意で再同意）。

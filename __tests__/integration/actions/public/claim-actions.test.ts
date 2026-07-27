@@ -87,7 +87,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 }));
 
 const mockAssertLoginSignupReagreed = mock(() => Promise.resolve(undefined));
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertLoginSignupReagreed: mockAssertLoginSignupReagreed,
 }));
 

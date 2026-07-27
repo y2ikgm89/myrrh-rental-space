@@ -12,7 +12,7 @@ import { parseFeatureModules } from "@/shared/lib/json-validators";
  * - DB 取得成功時: `{}` / 不正形式 / 欠落 key → 空オブジェクト（欠落 key は fail-closed OFF）
  * - DB 取得失敗時: `criticalFetch` が throw → Data Cache に失敗結果を書かない
  *   （旧 `safeFetch({ fallback: null })` は blip を `{}` = 全 OFF として days キャッシュしていた）
- * - 完全な module 一覧 + デフォルト解決は `@/shared/lib/features/check.ts` の責務
+ * - 完全な module 一覧 + デフォルト解決は `@/shared/domain/features/check.ts` の責務
  */
 export type FeatureModulesMap = Record<string, boolean>;
 

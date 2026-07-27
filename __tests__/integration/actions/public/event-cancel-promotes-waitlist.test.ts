@@ -103,7 +103,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 
 // cancelEventRegistration は isFeatureEnabled("events") を直接呼ぶ
 // (event-waitlist-register.test.ts / registration-overbooking.test.ts と同型)。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 
@@ -111,7 +111,7 @@ mock.module("@/shared/lib/features/check", () => ({
 // を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
 // assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
 // (未 mock だと undefined 化で参照側 TypeError になる)。
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),

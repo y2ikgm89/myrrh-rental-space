@@ -14,7 +14,7 @@ import { EventTableHeader } from "./EventTableHeader";
 import { EventBulkActions } from "./EventBulkActions";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { getEvents } from "@/shared/domain/events/admin-queries";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 
 type EventListItem = Awaited<ReturnType<typeof getEvents>>["events"][number];

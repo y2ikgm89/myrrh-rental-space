@@ -48,7 +48,7 @@ import { CommandPalette } from "./_shared/components/command-palette/CommandPale
 import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
 import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
 import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 
 async function DashboardChromeResolved({
   children,

@@ -49,7 +49,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
 // 経由するが、この real-DB テストは advisory lock / FIFO promote の実 Postgres
 // 挙動検証が目的でテスト DB の Settings シーディングとは無関係なため、
 // registration-overbooking.test.ts と同じ mock パターンで gate 自体をバイパスする。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 

@@ -38,7 +38,7 @@ import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";

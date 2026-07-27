@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   formatEventVenueDisplay,
   isEventVirtualAccessible,
-} from "@/shared/domain/events/venue";
+} from "@/shared/lib/events/venue";
 
 describe("formatEventVenueDisplay", () => {
   test("OFFLINE: primary = 物理会場、secondary = null", () => {

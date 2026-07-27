@@ -15,7 +15,7 @@
 
 import { cookies } from "next/headers";
 import { connection, NextResponse } from "next/server";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlist-offer-token-cookie-name";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";

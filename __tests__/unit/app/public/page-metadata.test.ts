@@ -39,7 +39,7 @@ const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (module: string) => mockIsFeatureEnabled(module),
 }));
 
