@@ -3,7 +3,7 @@
  *
  * Outbound 同期（outbound.ts / event-outbound.ts）が GCal に書き込むイベントは
  * description 先頭に識別マーカーを含む。
- * Inbound 同期（inbound.ts / event-inbound.ts）がこれらのマーカーを検出した
+ * Inbound 同期（inbound.ts / event-inbound-fetch.ts）がこれらのマーカーを検出した
  * イベントをスキップすることで、アプリ側 DB に自アプリ由来イベントが
  * 再取り込みされるループを防ぐ。
  *

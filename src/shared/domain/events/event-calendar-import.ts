@@ -1,15 +1,14 @@
 /**
- * Google Calendar -> Event モデル（イベントインポート）
+ * Google Calendar → Event モデル（イベントインポート）orchestration。
  *
- * カレンダー上の非予約イベントを Event モデルに取り込む。
- * syncToken ベースの差分同期で効率的に変更を検知。
+ * GCal API fetch は lib (`event-inbound-fetch`)、Settings / Event R-W は
+ * 本モジュール + `event-calendar-import-commands` / `calendar-sync` が担当する。
  *
- * @module shared/lib/calendar-sync/event-inbound
+ * @module shared/domain/events/event-calendar-import
  */
 
 import "server-only";
 
-import { type calendar_v3 } from "googleapis";
 import {
   cancelImportedEventFromCalendar,
   upsertEventFromCalendar,
@@ -19,7 +18,13 @@ import {
   getEventImportSyncToken,
   saveEventImportSyncToken,
 } from "@/shared/domain/events/calendar-sync";
-import { isAppGeneratedCalendarEvent } from "./loop-prevention";
+import {
+  getGoogleCalendarServiceAccountConfig,
+  getGoogleCalendarSettings,
+} from "@/shared/domain/settings/admin-queries";
+import { fetchEventImportChanges } from "@/shared/lib/calendar-sync/event-inbound-fetch";
+import { safeDecryptToString } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
   logError,
   ErrorCategory,
@@ -27,13 +32,9 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
-import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-account";
+import { isGoogleCalendarFullSyncRequired } from "@/shared/lib/google-api/retry";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
-import {
-  isGoogleCalendarFullSyncRequired,
-  withGoogleApiRetry,
-} from "@/shared/lib/google-api/retry";
+import { createCalendarClientFromServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
 
 export interface EventImportResult {
   success: boolean;
@@ -66,7 +67,33 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     errors: [],
   };
 
-  const client = await getServiceAccountClient();
+  const serviceAccount = await getGoogleCalendarServiceAccountConfig();
+  if (!serviceAccount.enabled || !serviceAccount.encryptedServiceAccountJson) {
+    return {
+      ...result,
+      success: false,
+      errors: ["Google Calendar is not configured"],
+    };
+  }
+
+  const decryptedJson = safeDecryptToString(
+    serviceAccount.encryptedServiceAccountJson,
+    {
+      expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
+    },
+  );
+  if (!decryptedJson) {
+    return {
+      ...result,
+      success: false,
+      errors: ["Google Calendar is not configured"],
+    };
+  }
+
+  const client = createCalendarClientFromServiceAccountJson(
+    decryptedJson,
+    "importCalendarEvents",
+  );
   if (!client) {
     return {
       ...result,
@@ -87,13 +114,12 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
   const eventImportSyncToken = await getEventImportSyncToken();
 
   try {
-    const fetchResult = await fetchEventChanges(
+    const fetchResult = await fetchEventImportChanges(
       client,
       calendarSettings.calendarId,
       eventImportSyncToken,
     );
 
-    // 各イベントを処理
     for (const event of fetchResult.events) {
       try {
         const upsertResult = await upsertEventFromCalendar({
@@ -175,100 +201,4 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
       errors: [formatGoogleApiError(error)],
     };
   }
-}
-
-// ---------------------------------------------------------------------------
-// Internal
-// ---------------------------------------------------------------------------
-
-interface ParsedCalendarEvent {
-  id: string;
-  title: string;
-  description: string | null;
-  startTime: Date;
-  endTime: Date;
-  location: string | null;
-}
-
-interface FetchEventChangesResult {
-  events: ParsedCalendarEvent[];
-  /** GCal 上で cancelled になったイベントの googleCalendarEventId 一覧 */
-  cancelledEventIds: string[];
-  newSyncToken: string | undefined;
-}
-
-/**
- * カレンダーからイベント変更を取得（syncToken / ページネーション対応）
- */
-async function fetchEventChanges(
-  client: calendar_v3.Calendar,
-  calendarId: string,
-  syncToken: string | null | undefined,
-): Promise<FetchEventChangesResult> {
-  const events: ParsedCalendarEvent[] = [];
-  const cancelledEventIds: string[] = [];
-  let pageToken: string | undefined;
-  let newSyncToken: string | undefined;
-
-  // 初回同期: 過去1ヶ月〜将来3ヶ月
-  const now = new Date();
-  const timeMin = new Date(now);
-  timeMin.setMonth(timeMin.getMonth() - 1);
-  const timeMax = new Date(now);
-  timeMax.setMonth(timeMax.getMonth() + 3);
-
-  do {
-    const params: calendar_v3.Params$Resource$Events$List = {
-      calendarId,
-      maxResults: 250,
-      singleEvents: true,
-      showDeleted: true,
-    };
-
-    if (syncToken) {
-      params.syncToken = syncToken;
-    } else {
-      params.timeMin = timeMin.toISOString();
-      params.timeMax = timeMax.toISOString();
-      params.orderBy = "startTime";
-    }
-
-    if (pageToken) {
-      params.pageToken = pageToken;
-    }
-
-    const response = await withGoogleApiRetry(() => client.events.list(params));
-
-    for (const event of response.data.items ?? []) {
-      if (!event.id) continue;
-
-      // アプリ側 outbound 由来のイベントはスキップ（ループ防止 SSoT: loop-prevention.ts）
-      if (isAppGeneratedCalendarEvent(event.description)) continue;
-
-      // GCAL-AUDIT-10: キャンセルされたイベントは import 対象からは除外しつつ、
-      // 既に import 済みなら呼出側で Event.status を CANCELLED に遷移させる
-      // (旧実装は cancelled イベントを黙って skip するのみだった)。
-      if (event.status === "cancelled") {
-        cancelledEventIds.push(event.id);
-        continue;
-      }
-
-      // dateTime が無いイベント（終日イベント等）はスキップ
-      if (!event.start?.dateTime || !event.end?.dateTime) continue;
-
-      events.push({
-        id: event.id,
-        title: event.summary ?? "無題のイベント",
-        description: event.description ?? null,
-        startTime: new Date(event.start.dateTime),
-        endTime: new Date(event.end.dateTime),
-        location: event.location ?? null,
-      });
-    }
-
-    pageToken = response.data.nextPageToken ?? undefined;
-    newSyncToken = response.data.nextSyncToken ?? undefined;
-  } while (pageToken);
-
-  return { events, cancelledEventIds, newSyncToken };
 }
