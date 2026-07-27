@@ -776,7 +776,7 @@ export async function getSeriesForCalendarSync(
 
 /**
  * Series の未削除 instance の `Reservation.startTime` を読み取り、呼出側
- * (calendar-sync/outbound.ts) が GCal child ID との突合を行う際の入力にする。
+ * (reservation-calendar-outbound) が GCal child ID との突合を行う際の入力にする。
  */
 export async function getSeriesInstanceStartTimes(
   seriesId: string,
@@ -789,7 +789,7 @@ export async function getSeriesInstanceStartTimes(
 
 /**
  * GCal child ID を各 Reservation.googleCalendarEventId に write-back する。
- * calendar-sync/outbound.ts から呼ばれる placement gate 対応の domain helper。
+ * reservation-calendar-outbound から呼ばれる placement gate 対応の domain helper。
  */
 export async function markSeriesInstanceCalendarSyncSuccess(input: {
   reservationId: string;

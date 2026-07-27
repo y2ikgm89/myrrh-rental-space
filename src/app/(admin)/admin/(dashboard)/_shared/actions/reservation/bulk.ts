@@ -27,7 +27,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";

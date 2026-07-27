@@ -101,11 +101,14 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
   invalidateReservationCaches: mock(() => {}),
 }));
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mockSyncReservationToCalendar,
-  updateCalendarSync: mock(async () => {}),
-  deleteCalendarSync: mock(async () => {}),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mockSyncReservationToCalendar,
+    updateCalendarSync: mock(async () => {}),
+    deleteCalendarSync: mock(async () => {}),
+  }),
+);
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
