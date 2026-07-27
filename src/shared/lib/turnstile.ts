@@ -1,5 +1,5 @@
 /**
- * Cloudflare Turnstile サーバーサイド検証
+ * Cloudflare Turnstile サーバーサイド検証（純粋 siteverify）
  *
  * 公式ベストプラクティスに準拠した siteverify 呼び出し:
  * - `remoteip` を送信（ボットスコア精度向上）
@@ -7,12 +7,7 @@
  * - `expectedAction` を応答の `action` と突き合わせ（token 盗用時の被害範囲限定）
  * - timeout 10 秒（公式推奨値）
  *
- * ## キー取得元
- * - Site Key: DB の `Settings`、なければ `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
- * - Secret Key: DB の `Settings`、なければ Secret Manager/env の `TURNSTILE_SECRET_KEY`
- *
- * ## 開発環境
- * シークレットキーが本番で未設定の場合は拒否、開発では検証をスキップする。
+ * Secret / enabled 判定は呼び出し側（domain）が `TurnstileVerifyContext` として注入する。
  *
  * @see https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  * @see https://developers.cloudflare.com/turnstile/reference/testing/
@@ -21,11 +16,6 @@
 
 import "server-only";
 import { z } from "zod";
-import {
-  getDecryptedTurnstileSecretKey,
-  getTurnstileConfig,
-} from "@/shared/domain/settings/api-key-queries";
-import { clientEnv } from "./env/client";
 import { serverEnv } from "./env/server";
 import {
   logError,
@@ -40,6 +30,16 @@ const SITEVERIFY_URL =
 
 /** 公式推奨値 */
 const SITEVERIFY_TIMEOUT_MS = 10_000;
+
+/**
+ * Turnstile 検証に必要な設定（Settings/env 解決済み）。
+ * domain が prefetch し、本モジュールは siteverify のみ担う。
+ */
+export type TurnstileVerifyContext = {
+  readonly secretKey: string | null;
+  /** site key + secret の両方が解決できるとき true */
+  readonly enabled: boolean;
+};
 
 export type VerifyTurnstileParams = {
   readonly token: string;
@@ -73,12 +73,11 @@ type TurnstileSiteverifyResponse = z.infer<
   typeof turnstileSiteverifyResponseSchema
 >;
 
-async function getTurnstileSecretKey(): Promise<string | null> {
-  return (
-    (await getDecryptedTurnstileSecretKey()) ??
-    serverEnv.TURNSTILE_SECRET_KEY ??
-    null
-  );
+/**
+ * Turnstile が有効かどうか（注入済み context の判定）
+ */
+export function isTurnstileEnabled(context: TurnstileVerifyContext): boolean {
+  return context.enabled;
 }
 
 /**
@@ -89,9 +88,10 @@ async function getTurnstileSecretKey(): Promise<string | null> {
  * - 開発: 検証スキップ（test secret key を使えばスキップ不要）
  */
 export async function verifyTurnstileToken(
+  context: TurnstileVerifyContext,
   params: VerifyTurnstileParams,
 ): Promise<VerifyTurnstileResult> {
-  const secretKey = await getTurnstileSecretKey();
+  const secretKey = context.secretKey;
 
   if (!secretKey) {
     if (serverEnv.NODE_ENV === "production") {
@@ -204,15 +204,4 @@ export async function verifyTurnstileToken(
     });
     return { success: false, errorCodes: ["network-error"] };
   }
-}
-
-/**
- * Turnstile が有効かどうか（DB ベース、site key + secret key の両方が必要）
- */
-export async function isTurnstileEnabled(): Promise<boolean> {
-  const config = await getTurnstileConfig();
-  return Boolean(
-    (config.siteKey || clientEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY) &&
-    (config.secretKeyMasked || serverEnv.TURNSTILE_SECRET_KEY),
-  );
 }

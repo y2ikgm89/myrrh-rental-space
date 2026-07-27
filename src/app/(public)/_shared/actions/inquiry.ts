@@ -7,7 +7,6 @@ import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import {
   checkActionRateLimit,
   checkBotHeuristics,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
@@ -15,6 +14,7 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createInquiryCommand } from "@/shared/domain/inquiries/commands";
 import {
   sendContactConfirmationEmail,

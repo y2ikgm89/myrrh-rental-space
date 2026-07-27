@@ -406,7 +406,7 @@ export async function getIntegrationHealthSummary(): Promise<{
     ]);
 
   return {
-    // 送信経路（client.ts / stripe.ts / turnstile.ts）と同じ DB-OR-env ソースで判定する。
+    // 送信経路（client.ts / stripe.ts / domain/settings/turnstile.ts）と同じ DB-OR-env ソースで判定する。
     // DB キーが正本のため、DB のみ設定／env のみ設定のどちらでも「接続済み」を
     // 正しく反映する（health が嘘をつかない）。
     resend: Boolean(

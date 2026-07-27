@@ -10,7 +10,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   eventRegistrationByEmailRateLimiter,
@@ -29,6 +28,7 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { registerWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {

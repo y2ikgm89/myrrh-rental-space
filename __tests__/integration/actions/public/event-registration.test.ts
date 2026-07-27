@@ -32,8 +32,10 @@ const mockCheckEmailRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
+}));
+mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
   checkEmailRateLimit: mockCheckEmailRateLimit,

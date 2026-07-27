@@ -1072,7 +1072,6 @@ describe("architecture boundaries", () => {
         "lexical/resolve-space-card-embeds.ts",
         "reservation/time-slots.ts",
         "slug-validation.ts",
-        "turnstile.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",
