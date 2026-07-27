@@ -12,7 +12,7 @@ import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { validateCustomerEmailChangeTokenCommand } from "@/shared/domain/customers/commands";
+import { validateCustomerEmailChangeTokenCommand } from "@/shared/domain/customers/customer-email-change-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   getClientIpFromHeaders,

@@ -24,7 +24,8 @@ if (TEST_DB_URL) {
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
 type PrismaModule = typeof import("@/shared/db/prisma");
-type CommandsModule = typeof import("@/shared/domain/customers/commands");
+type CommandsModule =
+  typeof import("@/shared/domain/customers/customer-lifecycle-commands");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
@@ -153,7 +154,7 @@ describeMaybe("anonymizeCustomerCommand — Receipt FK safety (STATE-03)", () =>
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ anonymizeCustomerCommand } =
-      await import("@/shared/domain/customers/commands"));
+      await import("@/shared/domain/customers/customer-lifecycle-commands"));
     // pool warmup (cold start 対策)
     await prisma.$queryRaw`SELECT 1`;
   });

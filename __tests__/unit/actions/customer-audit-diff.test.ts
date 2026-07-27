@@ -127,9 +127,6 @@ mock.module("@/shared/domain/customers/commands", () => ({
   ) => mockUpdateCustomerStatusCommand(...args),
   updateCustomer: (...args: Parameters<typeof mockUpdateCustomerCommand>) =>
     mockUpdateCustomerCommand(...args),
-  anonymizeCustomerCommand: (
-    ...args: Parameters<typeof mockAnonymizeCustomerCommand>
-  ) => mockAnonymizeCustomerCommand(...args),
   createCustomer: (...args: Parameters<typeof mockCreateCustomerCommand>) =>
     mockCreateCustomerCommand(...args),
   updateCustomerNotes: (
@@ -138,6 +135,10 @@ mock.module("@/shared/domain/customers/commands", () => ({
   toggleCustomerActive: (
     ...args: Parameters<typeof mockToggleCustomerActiveCommand>
   ) => mockToggleCustomerActiveCommand(...args),
+  anonymizeCustomerCommand: (
+    ...args: Parameters<typeof mockAnonymizeCustomerCommand>
+  ) => mockAnonymizeCustomerCommand(...args),
+  // customer.ts は lifecycle を commands facade 経由で import する。
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
       transferredReservations: 0,
@@ -156,6 +157,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
 
 mock.module("@/shared/domain/customers/queries", () => ({
   searchCustomers: mock(() => Promise.resolve([])),
+  hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
+  isSuppressedDeliveryStatus: (status: string) =>
+    status === "HARD_BOUNCED" || status === "COMPLAINED",
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
