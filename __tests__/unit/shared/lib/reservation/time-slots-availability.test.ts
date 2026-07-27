@@ -76,8 +76,11 @@ const BUSINESS_HOURS: BusinessHours = {
   },
 };
 
-const MONDAY = "2026-07-27"; // 月曜
-const TUESDAY = "2026-07-28"; // 火曜
+// 固定の未来日を使うこと。`date === JST today` のとき production は
+// 現在時刻より前のスロットを unavailable にする（time-slots.ts）ため、
+// 「今日」を fixture にすると昼以降の CI で cross-midnight 期待が壊れる。
+const MONDAY = "2030-01-07"; // 月曜
+const TUESDAY = "2030-01-08"; // 火曜
 
 function slotAvailability(
   slots: Array<{ time: string; available: boolean }>,
@@ -109,8 +112,8 @@ describe("getAvailableTimeSlots cross-midnight occupancy", () => {
   test("前日開始・当日午前終了: 当日 09:00 スロットが unavailable", async () => {
     mockGetReservationsForDateQuery.mockResolvedValue([
       {
-        startTime: new Date("2026-07-26T22:00:00+09:00"),
-        endTime: new Date("2026-07-27T10:00:00+09:00"),
+        startTime: new Date("2030-01-06T22:00:00+09:00"),
+        endTime: new Date("2030-01-07T10:00:00+09:00"),
       },
     ]);
 
@@ -124,8 +127,8 @@ describe("getAvailableTimeSlots cross-midnight occupancy", () => {
   test("当日夜開始・翌日早朝終了: 当日 22:00 スロットが unavailable", async () => {
     mockGetReservationsForDateQuery.mockResolvedValue([
       {
-        startTime: new Date("2026-07-27T22:00:00+09:00"),
-        endTime: new Date("2026-07-28T02:00:00+09:00"),
+        startTime: new Date("2030-01-07T22:00:00+09:00"),
+        endTime: new Date("2030-01-08T02:00:00+09:00"),
       },
     ]);
 
@@ -139,8 +142,8 @@ describe("getAvailableTimeSlots cross-midnight occupancy", () => {
   test("翌日側: 前日開始・当日午前終了の tail が unavailable", async () => {
     mockGetReservationsForDateQuery.mockResolvedValue([
       {
-        startTime: new Date("2026-07-27T22:00:00+09:00"),
-        endTime: new Date("2026-07-28T10:00:00+09:00"),
+        startTime: new Date("2030-01-07T22:00:00+09:00"),
+        endTime: new Date("2030-01-08T10:00:00+09:00"),
       },
     ]);
 
@@ -155,8 +158,8 @@ describe("getAvailableTimeSlots cross-midnight occupancy", () => {
   test("当日完結の予約は従来どおり start/end 内スロットのみ unavailable", async () => {
     mockGetReservationsForDateQuery.mockResolvedValue([
       {
-        startTime: new Date("2026-07-27T14:00:00+09:00"),
-        endTime: new Date("2026-07-27T16:00:00+09:00"),
+        startTime: new Date("2030-01-07T14:00:00+09:00"),
+        endTime: new Date("2030-01-07T16:00:00+09:00"),
       },
     ]);
 
