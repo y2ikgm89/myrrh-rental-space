@@ -461,6 +461,20 @@ export function hashSuppressedEmailCandidate(canonicalEmail: string): string {
   return createHash("sha256").update(canonicalEmail).digest("hex");
 }
 
+/**
+ * RESEND-AUDIT M7: `emailDeliveryStatus` が suppression 対象
+ * (HARD_BOUNCED / COMPLAINED) かを判定する SSoT。anonymize / merge / email
+ * 変更で `suppressedEmailHash` に元の emailCanonical の hash を保存すべきかを決める。
+ */
+export function isSuppressedDeliveryStatus(
+  status: EmailDeliveryStatus,
+): boolean {
+  return (
+    status === EmailDeliveryStatus.HARD_BOUNCED ||
+    status === EmailDeliveryStatus.COMPLAINED
+  );
+}
+
 export async function getCustomerByUserId(userId: string) {
   return prisma.customer.findUnique({
     where: { userId },

@@ -73,6 +73,9 @@ const mockRequestCustomerEmailChangeCommand = mock(
 );
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerProfileByUserId: mockUpdateCustomerProfileByUserId,
+}));
+
+mock.module("@/shared/domain/customers/customer-email-change-commands", () => ({
   requestCustomerEmailChangeCommand: mockRequestCustomerEmailChangeCommand,
 }));
 

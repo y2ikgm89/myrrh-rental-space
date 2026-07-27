@@ -30,7 +30,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { keysOf } from "@/shared/lib/serialize";
 import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 interface CustomerBulkActionsProps {
   selectedIds: string[];

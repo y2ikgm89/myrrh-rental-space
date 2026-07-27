@@ -9,8 +9,8 @@ const mockUpdateMany = mock<() => Promise<{ count: number }>>(() =>
 );
 
 // bulk-commands は anonymizeCustomerCommand を呼び出す実装のため、
-// commands.ts の該当 command を mock 化して bulk 側のロジック
-// (ループ / skip 判定 / 集計) だけを検証する。
+// customer-lifecycle-commands の該当 command を mock 化して bulk 側の
+// ロジック (ループ / skip 判定 / 集計) だけを検証する。
 const mockAnonymizeCustomerCommand = mock<
   (input: { customerId: string; reason: string }) => Promise<{
     customerId: string;
@@ -49,7 +49,7 @@ class MockDomainError extends Error {
   }
 }
 
-mock.module("@/shared/domain/customers/commands", () => ({
+mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
   anonymizeCustomerCommand: mockAnonymizeCustomerCommand,
 }));
 
