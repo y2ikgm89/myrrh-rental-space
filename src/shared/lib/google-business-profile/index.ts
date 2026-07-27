@@ -7,7 +7,6 @@
 
 import "server-only";
 
-export { syncLocationToGbp } from "./location-sync";
 export {
   getGbpAuthState,
   saveGbpAuthState,

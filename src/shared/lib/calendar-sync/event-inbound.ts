@@ -10,7 +10,16 @@
 import "server-only";
 
 import { type calendar_v3 } from "googleapis";
-import { prisma } from "@/shared/db/prisma";
+import {
+  cancelImportedEventFromCalendar,
+  upsertEventFromCalendar,
+} from "@/shared/domain/events/event-calendar-import-commands";
+import {
+  clearEventImportSyncToken,
+  getEventImportSyncToken,
+  saveEventImportSyncToken,
+} from "@/shared/domain/events/calendar-sync";
+import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 import {
   logError,
   ErrorCategory,
@@ -25,11 +34,6 @@ import {
   isGoogleCalendarFullSyncRequired,
   withGoogleApiRetry,
 } from "@/shared/lib/google-api/retry";
-import {
-  cancelImportedEventFromCalendar,
-  upsertEventFromCalendar,
-} from "@/shared/domain/events/event-calendar-import-commands";
-import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 
 export interface EventImportResult {
   success: boolean;
@@ -80,17 +84,13 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     };
   }
 
-  // 現在の syncToken を取得
-  const settings = await prisma.settingsGoogleCalendar.findFirstOrThrow({
-    where: { id: "singleton" },
-    select: { eventImportSyncToken: true },
-  });
+  const eventImportSyncToken = await getEventImportSyncToken();
 
   try {
     const fetchResult = await fetchEventChanges(
       client,
       calendarSettings.calendarId,
-      settings.eventImportSyncToken,
+      eventImportSyncToken,
     );
 
     // 各イベントを処理
@@ -143,10 +143,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
 
     // syncToken は全イベント upsert が成功したときのみ保存する (inbound.ts と同型)。
     if (result.errors.length === 0 && fetchResult.newSyncToken) {
-      await prisma.settingsGoogleCalendar.update({
-        where: { id: "singleton" },
-        data: { eventImportSyncToken: fetchResult.newSyncToken },
-      });
+      await saveEventImportSyncToken(fetchResult.newSyncToken);
     }
 
     result.success = result.errors.length === 0;
@@ -163,10 +160,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     // 410 Gone / reason: fullSyncRequired — syncToken が期限切れ、リセットしてフルシンク
     if (isGoogleCalendarFullSyncRequired(error)) {
       logger.info("Event import syncToken expired, performing full sync");
-      await prisma.settingsGoogleCalendar.update({
-        where: { id: "singleton" },
-        data: { eventImportSyncToken: null },
-      });
+      await clearEventImportSyncToken();
       return importCalendarEvents();
     }
 

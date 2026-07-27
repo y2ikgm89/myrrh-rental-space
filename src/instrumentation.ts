@@ -19,7 +19,8 @@ export async function register(): Promise<void> {
     const { validateProductionEnv } = await import("@/shared/lib/env/server");
     validateProductionEnv();
 
-    const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
+    const { bootstrapSystemPages } =
+      await import("@/shared/domain/pages/system-pages-server");
     await bootstrapSystemPages();
 
     // Cloudflare credentials + tag purge startup probe (production only).
