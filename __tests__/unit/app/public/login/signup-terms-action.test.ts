@@ -48,7 +48,7 @@ const TERMS_ID_A = "11111111-1111-4111-8111-111111111111";
 const mockAssertAllRequiredTermsAgreed = mock(() =>
   Promise.resolve({ matchedTermsIds: [TERMS_ID_A] }),
 );
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mockAssertAllRequiredTermsAgreed,
   assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));

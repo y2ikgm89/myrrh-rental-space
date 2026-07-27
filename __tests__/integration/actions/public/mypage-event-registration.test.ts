@@ -185,7 +185,7 @@ mock.module("@/shared/domain/terms/commands", () => ({
   ),
 }));
 
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
