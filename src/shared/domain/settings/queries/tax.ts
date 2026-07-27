@@ -11,7 +11,7 @@ import {
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
-import { TaxDisplayMode } from "@generated/prisma/enums";
+import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidTaxDisplayMode } from "@/shared/lib/validations/enums/guards";
 
 function parseTaxDisplayMode(value: string): TaxDisplayMode {

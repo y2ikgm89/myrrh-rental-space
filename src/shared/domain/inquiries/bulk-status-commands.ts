@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import type { InquiryStatus } from "@generated/prisma/enums";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { INQUIRY_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 
 export type BulkSetStatusInquiriesResult = {

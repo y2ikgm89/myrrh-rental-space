@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 const mockFindMany = mock(() => Promise.resolve([]));
 const mockFindFirst = mock(() => Promise.resolve(null));

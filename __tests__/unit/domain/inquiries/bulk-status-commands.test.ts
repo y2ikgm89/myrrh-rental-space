@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // =============================================================================
 // Enum stub (FLAGGED / SPAM 追加後の 6 値)
@@ -82,10 +83,10 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   ...actualEnums,
   InquiryStatus,
-}));
+});
 
 // =============================================================================
 // Import target after mocks

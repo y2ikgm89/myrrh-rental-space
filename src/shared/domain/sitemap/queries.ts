@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { publicNewsWhere } from "@/shared/domain/news/queries";
 import { publicPostsWhere } from "@/shared/domain/posts/queries";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { EventStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Sitemap 用ドメイン query。

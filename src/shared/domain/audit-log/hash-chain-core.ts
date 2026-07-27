@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import type { AuditAction } from "@generated/prisma/enums";
+import type { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { isRecord } from "@/shared/lib/serialize";
 
 export const AUDIT_LOG_CHAIN_VERSION = 1;

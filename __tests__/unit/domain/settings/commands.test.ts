@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
@@ -196,7 +197,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   HeaderScrollBehavior: {
     auto_hide: "auto_hide",
     always_visible: "always_visible",
@@ -227,7 +228,7 @@ mock.module("@generated/prisma/enums", () => ({
     FULL: "FULL",
     CUSTOM: "CUSTOM",
   },
-}));
+});
 
 import {
   updateBasicInfo,

@@ -2,7 +2,10 @@ import "server-only";
 
 import { createHash, createHmac } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
-import { CustomerStatus, EmailDeliveryStatus } from "@generated/prisma/enums";
+import {
+  CustomerStatus,
+  EmailDeliveryStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { serverEnv } from "@/shared/lib/env/server";
 import type {

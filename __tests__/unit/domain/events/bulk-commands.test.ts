@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import { expectRecord } from "../../../helpers/type-assertions";
 
 // ---------------------------------------------------------------------------
@@ -42,9 +43,9 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   EventStatus,
-}));
+});
 
 // ---------------------------------------------------------------------------
 // テスト対象のインポート（モック設定後）

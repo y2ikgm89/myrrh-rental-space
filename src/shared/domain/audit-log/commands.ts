@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
-import type { AuditAction } from "@generated/prisma/enums";
+import type { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import { isRecord, omitUndefined } from "@/shared/lib/serialize";
 import {
