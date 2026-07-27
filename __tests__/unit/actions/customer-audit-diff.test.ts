@@ -135,18 +135,10 @@ mock.module("@/shared/domain/customers/commands", () => ({
   toggleCustomerActive: (
     ...args: Parameters<typeof mockToggleCustomerActiveCommand>
   ) => mockToggleCustomerActiveCommand(...args),
-  resetCustomerEmailDeliveryStatusCommand: mock(() =>
-    Promise.resolve({ previous: "OK" }),
-  ),
-  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
-  // このファイル自体は対象外テストでもモック必須(Phase 4)。
-  recomputeCustomerStatsCommand: mock(() => Promise.resolve(undefined)),
-}));
-
-mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
   anonymizeCustomerCommand: (
     ...args: Parameters<typeof mockAnonymizeCustomerCommand>
   ) => mockAnonymizeCustomerCommand(...args),
+  // customer.ts は lifecycle を commands facade 経由で import する。
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
       transferredReservations: 0,
@@ -155,10 +147,19 @@ mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
       transferredRegistrations: 0,
     }),
   ),
+  resetCustomerEmailDeliveryStatusCommand: mock(() =>
+    Promise.resolve({ previous: "OK" }),
+  ),
+  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
+  // このファイル自体は対象外テストでもモック必須(Phase 4)。
+  recomputeCustomerStatsCommand: mock(() => Promise.resolve(undefined)),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({
   searchCustomers: mock(() => Promise.resolve([])),
+  hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
+  isSuppressedDeliveryStatus: (status: string) =>
+    status === "HARD_BOUNCED" || status === "COMPLAINED",
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({

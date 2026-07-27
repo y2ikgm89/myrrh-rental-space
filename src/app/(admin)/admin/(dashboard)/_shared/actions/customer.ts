@@ -26,19 +26,17 @@ import {
   updateCustomerStatusSchema,
 } from "@/shared/lib/validations/customer";
 import {
+  anonymizeCustomerCommand,
   createCustomer as createCustomerCommand,
+  mergeCustomerCommand,
   recomputeCustomerStatsCommand,
   resetCustomerEmailDeliveryStatusCommand,
   toggleCustomerActive as toggleCustomerActiveCommand,
   updateCustomer as updateCustomerCommand,
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
-} from "@/shared/domain/customers/commands";
-import {
-  anonymizeCustomerCommand,
-  mergeCustomerCommand,
   type AnonymizeCustomerReason,
-} from "@/shared/domain/customers/customer-lifecycle-commands";
+} from "@/shared/domain/customers/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";

@@ -54,6 +54,8 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerNotes: mockUpdateNotes,
   toggleCustomerActive: mockToggleActive,
   updateCustomerFromGuestData: mock(async () => {}),
+  anonymizeCustomerCommand: mockAnonymizeCustomer,
+  mergeCustomerCommand: mockMerge,
   resetCustomerEmailDeliveryStatusCommand: mock(async () => ({
     previous: "OK",
   })),
@@ -62,13 +64,11 @@ mock.module("@/shared/domain/customers/commands", () => ({
   recomputeCustomerStatsCommand: mock(async () => undefined),
 }));
 
-mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
-  anonymizeCustomerCommand: mockAnonymizeCustomer,
-  mergeCustomerCommand: mockMerge,
-}));
-
 mock.module("@/shared/domain/customers/queries", () => ({
   searchCustomers: mock(async () => []),
+  hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
+  isSuppressedDeliveryStatus: (status: string) =>
+    status === "HARD_BOUNCED" || status === "COMPLAINED",
 }));
 
 mock.module("@/admin/lib/action-auth", () => ({
