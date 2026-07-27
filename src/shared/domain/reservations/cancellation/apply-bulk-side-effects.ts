@@ -12,11 +12,11 @@ import {
 } from "@/shared/domain/reservations/cancellation/bulk-fetch";
 import type { BulkCancellationSideEffectInput } from "@/shared/domain/reservations/cancellation/bulk-types";
 import { channelLabel } from "@/shared/domain/reservations/cancellation/helpers";
+import { markReservationCalendarSyncError } from "@/shared/domain/reservations/calendar-sync";
 import {
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
   GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX,
-  markReservationCalendarSyncError,
-} from "@/shared/domain/reservations/calendar-sync";
+} from "@/shared/domain/reservations/calendar-sync-series";
 import {
   resolveRefundPolicy,
   type RefundPolicyResolution,

@@ -124,12 +124,6 @@ const mockGetSeriesMasterOperationFailureInstances = mock<
 
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
   GCAL_DELETE_FAILED_PREFIX: "gcal_delete_failed:",
-  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
-  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
-  getSeriesIdsWithMasterOperationFailure:
-    mockGetSeriesIdsWithMasterOperationFailure,
-  getSeriesMasterOperationFailureInstances:
-    mockGetSeriesMasterOperationFailureInstances,
   clearReservationCalendarEvent: mockClearReservationCalendarEvent,
   getCalendarSyncRuntimeState: mock(() =>
     Promise.resolve({
@@ -142,13 +136,22 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
     }),
   ),
   getFailedCalendarSyncReservations: mockGetFailedReservations,
+  markReservationCalendarSyncError: mockMarkError,
+  markReservationCalendarSyncSuccess: mockMarkSuccess,
+  markReservationCalendarSyncUpdated: mockMarkUpdated,
+}));
+
+mock.module("@/shared/domain/reservations/calendar-sync-series", () => ({
+  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
+  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
+  getSeriesIdsWithMasterOperationFailure:
+    mockGetSeriesIdsWithMasterOperationFailure,
+  getSeriesMasterOperationFailureInstances:
+    mockGetSeriesMasterOperationFailureInstances,
   getFailedCalendarSyncSeriesIds: mockGetFailedSeriesIds,
   getSeriesForCalendarSync: mockGetSeriesForCalendarSync,
   getSeriesGcalMasterEventId: mockGetSeriesMaster,
   getSeriesInstanceStartTimes: mockGetSeriesInstances,
-  markReservationCalendarSyncError: mockMarkError,
-  markReservationCalendarSyncSuccess: mockMarkSuccess,
-  markReservationCalendarSyncUpdated: mockMarkUpdated,
   markSeriesInstanceCalendarSyncSuccess: mockMarkSeriesInstanceSuccess,
   markSeriesMasterEventCreated: mockMarkSeriesMasterEventCreated,
 }));
