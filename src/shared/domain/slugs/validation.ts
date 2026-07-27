@@ -3,8 +3,10 @@
  *
  * 全コンテンツタイプで統一されたスラッグ衝突チェックを提供
  *
- * @module shared/lib/slug-validation
+ * @module shared/domain/slugs/validation
  */
+
+import "server-only";
 
 import { findSlugConflict } from "@/shared/domain/slugs/queries";
 

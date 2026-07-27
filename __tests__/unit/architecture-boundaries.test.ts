@@ -1070,7 +1070,6 @@ describe("architecture boundaries", () => {
         "email/system-emails.ts",
         "email/system-emails.ts",
         "reservation/time-slots.ts",
-        "slug-validation.ts",
         "turnstile.ts",
         "reservation/time-slots.ts",
         "slug-validation.ts",
