@@ -51,7 +51,7 @@ const mockUpdateDiscountSettingsCommand = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 
-mock.module("@/shared/domain/settings/commands", () => ({
+mock.module("@/shared/domain/settings/commands/commerce", () => ({
   updateDiscountSettings: (
     ...args: Parameters<typeof mockUpdateDiscountSettingsCommand>
   ) => mockUpdateDiscountSettingsCommand(...args),

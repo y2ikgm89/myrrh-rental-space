@@ -15,7 +15,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import * as settingsCommands from "@/shared/domain/settings/commands";
+import { updateTaxSettings as updateTaxSettingsCommand } from "@/shared/domain/settings/commands/commerce";
 import { getTaxSettings } from "@/shared/domain/settings/admin-queries";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -40,7 +40,7 @@ export async function updateTaxSettings(
       action: "manage",
       execute: async (user) => {
         const previous = await getTaxSettings();
-        await settingsCommands.updateTaxSettings(data);
+        await updateTaxSettingsCommand(data);
         const { ip, userAgent } = await buildAuditRequestContext();
         return { previous, data, actorUserId: user.id, ip, userAgent };
       },
