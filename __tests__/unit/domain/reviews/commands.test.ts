@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック（import より前に定義）
 const mockReservationFindUnique = mock<
@@ -42,7 +43,7 @@ mock.module("@/shared/lib/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   ReservationStatus: {
     PENDING: "PENDING",
     CONFIRMED: "CONFIRMED",
@@ -50,7 +51,7 @@ mock.module("@generated/prisma/enums", () => ({
     CANCELLED: "CANCELLED",
     NO_SHOW: "NO_SHOW",
   },
-}));
+});
 
 import {
   createReviewCommand,

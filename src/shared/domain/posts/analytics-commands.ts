@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { PostStatus } from "@generated/prisma/enums";
+import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function incrementPostViewCount(
   id: string,

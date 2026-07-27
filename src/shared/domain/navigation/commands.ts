@@ -4,7 +4,10 @@ import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { isPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import { Prisma } from "@generated/prisma/client";
-import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
+import {
+  NavigationType,
+  SocialPlatform,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   buildOrderScopeLockSql,

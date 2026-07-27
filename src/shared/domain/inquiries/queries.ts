@@ -1,6 +1,9 @@
 import "server-only";
 
-import { InquiryReplyAuthorType, InquiryStatus } from "@generated/prisma/enums";
+import {
+  InquiryReplyAuthorType,
+  InquiryStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { ADMIN_OR_HIGHER_ROLES } from "@/shared/lib/admin-roles";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";

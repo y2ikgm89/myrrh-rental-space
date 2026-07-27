@@ -6,7 +6,7 @@ import {
   CustomerType,
   InquiryReplyAuthorType,
   InquiryStatus,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isFeatureEnabled } from "@/shared/lib/features/check";

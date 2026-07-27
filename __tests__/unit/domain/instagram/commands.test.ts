@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // =============================================================================
 // Prisma モック関数（import より前に定義 — TDZ 回避）
@@ -86,14 +87,13 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// enums モック
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   InstagramMediaType: {
     IMAGE: "IMAGE",
     VIDEO: "VIDEO",
     CAROUSEL_ALBUM: "CAROUSEL_ALBUM",
   },
-}));
+});
 
 // encrypt モック
 mock.module("@/shared/lib/crypto", () => ({

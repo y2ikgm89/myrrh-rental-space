@@ -1,10 +1,10 @@
 import "server-only";
 
-import type { Role } from "@generated/prisma/enums";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { isAdminOrHigherRole } from "@/shared/lib/admin-roles";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
-import { AuditAction } from "@generated/prisma/enums";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { InquiryInternalNoteItem } from "@/shared/domain/inquiries/types";
 

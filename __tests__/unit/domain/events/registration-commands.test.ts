@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import {
   CustomerStatus,
   EventStatus,
@@ -117,11 +118,11 @@ mock.module("@/shared/db/prisma", () => {
   };
 });
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CustomerStatus,
   EventStatus,
   RegistrationStatus,
-}));
+});
 
 import {
   createEventRegistrationCommand,

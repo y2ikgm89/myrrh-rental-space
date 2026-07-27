@@ -1,4 +1,4 @@
-import type { SmartLockDeviceType } from "@generated/prisma/enums";
+import type { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * スマートロックデバイス（SmartLockDevice）の表示用データ。
