@@ -23,6 +23,7 @@ import { createPublicReservationCommand } from "@/shared/domain/reservations/pub
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
+import { resolveReservationAdminNotificationDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -173,10 +174,18 @@ export async function submitReservation(
         });
 
         const payload = omitUndefined(result.payload);
-        fireAndForget(sendReservationAdminNotification(payload, "new"), {
-          operation: "sendReservationAdminNotification",
-          category: ErrorCategory.EXTERNAL_API,
-        });
+        fireAndForget(
+          (async () => {
+            const delivery =
+              await resolveReservationAdminNotificationDelivery("new");
+            if (!delivery.enabled) return;
+            await sendReservationAdminNotification(payload, "new", delivery);
+          })(),
+          {
+            operation: "sendReservationAdminNotification",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
 
         fireAndForget(
           applyConfirmationSideEffects({

@@ -32,6 +32,10 @@ import {
 } from "@/shared/lib/calendar-sync/outbound";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
+  getReservationEmailRenderContext,
+  resolveReservationAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
+import {
   sendReservationAdminNotification,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
@@ -125,12 +129,20 @@ export const updateReservationStatus = async (
           },
         );
         fireAndForget(
-          sendReservationAdminNotification(
-            payloadData,
-            result.previousStatus === ReservationStatus.PENDING
-              ? "new"
-              : "update",
-          ),
+          (async () => {
+            const action =
+              result.previousStatus === ReservationStatus.PENDING
+                ? "new"
+                : "update";
+            const delivery =
+              await resolveReservationAdminNotificationDelivery(action);
+            if (!delivery.enabled) return;
+            await sendReservationAdminNotification(
+              payloadData,
+              action,
+              delivery,
+            );
+          })(),
           {
             operation: "sendConfirmationEmails",
             category: ErrorCategory.EXTERNAL_API,
@@ -210,21 +222,27 @@ export const updateReservationStatus = async (
         status !== ReservationStatus.CANCELLED
       ) {
         fireAndForget(
-          sendReservationStatusChangedEmail({
-            reservationId: payloadData.reservationId,
-            customerEmail: payloadData.customerEmail,
-            customerName: payloadData.customerName,
-            spaceName: payloadData.spaceName,
-            startTime: payloadData.startTime,
-            endTime: payloadData.endTime,
-            totalPrice: payloadData.totalPrice,
-            oldStatus: result.previousStatus,
-            newStatus: status,
-            icsSequence: payloadData.icsSequence,
-            ...(payloadData.location != null
-              ? { location: payloadData.location }
-              : {}),
-          }),
+          (async () => {
+            const renderContext = await getReservationEmailRenderContext();
+            await sendReservationStatusChangedEmail(
+              {
+                reservationId: payloadData.reservationId,
+                customerEmail: payloadData.customerEmail,
+                customerName: payloadData.customerName,
+                spaceName: payloadData.spaceName,
+                startTime: payloadData.startTime,
+                endTime: payloadData.endTime,
+                totalPrice: payloadData.totalPrice,
+                oldStatus: result.previousStatus,
+                newStatus: status,
+                icsSequence: payloadData.icsSequence,
+                ...(payloadData.location != null
+                  ? { location: payloadData.location }
+                  : {}),
+              },
+              renderContext,
+            );
+          })(),
           {
             operation: "sendReservationStatusChangedEmail",
             category: ErrorCategory.EXTERNAL_API,
@@ -340,7 +358,13 @@ export const restoreReservationStatus = async (
         );
       } else {
         fireAndForget(
-          sendReservationStatusChangedEmail(statusChangedEmailData),
+          (async () => {
+            const renderContext = await getReservationEmailRenderContext();
+            await sendReservationStatusChangedEmail(
+              statusChangedEmailData,
+              renderContext,
+            );
+          })(),
           {
             operation: "restoreSendStatusChangedEmail",
             category: ErrorCategory.EXTERNAL_API,

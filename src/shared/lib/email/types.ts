@@ -28,8 +28,30 @@ export type EventEmailRenderContext = {
   readonly organizer: IcalOrganizerSettings;
 };
 
+/** 予約メールのキャンセル/変更期限（SettingsReservation 由来）。 */
+export type ReservationDeadlineSettings = {
+  readonly cancellationDeadlineHours: number;
+  readonly modificationDeadlineHours: number;
+};
+
+/**
+ * 予約系メールの render 時に必要な Settings / terms DTO
+ * （domain が fetch して lib に渡す）。
+ */
+export type ReservationEmailRenderContext = {
+  readonly calendarSettings: CalendarEmailSettings;
+  readonly organizer: IcalOrganizerSettings;
+  readonly deadlineSettings: ReservationDeadlineSettings;
+  readonly cancellationPolicyUrl: string | undefined;
+};
+
 /** 管理者向けイベント通知メールの宛先（domain が resolve して lib に渡す）。 */
 export type EventAdminNotificationDelivery = {
+  readonly notificationEmails: readonly string[];
+};
+
+/** 管理者向け予約通知メールの宛先（domain が resolve して lib に渡す）。 */
+export type ReservationAdminNotificationDelivery = {
   readonly notificationEmails: readonly string[];
 };
 

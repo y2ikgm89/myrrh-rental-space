@@ -18,75 +18,41 @@
  * - `sendWebhookRenewalNotification`: idempotencyKey が付与され `<event-type>/...` 形式で始まる
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { RENDER_CONTEXT } from "./_email-test-fixtures";
-
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  notifyEventRegistration: boolean;
-  notifyEventCancellation: boolean;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  notifyEventRegistration: true,
-  notifyEventCancellation: true,
-  replyToEmail: null,
-};
+import {
+  RENDER_CONTEXT,
+  RESERVATION_ADMIN_DELIVERY,
+  RESERVATION_RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = { idempotencyKey?: string };
 
 const mockSendEmail = mock<
   (params: CapturedSendEmailParams) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
-  Promise.resolve(["admin@example.com"]),
-);
-const mockGetCalendarEmailSettings = mock<
-  () => Promise<{
-    icalAttachmentEnabled: boolean;
-    addToCalendarLinksEnabled: boolean;
-  }>
->(() =>
-  Promise.resolve({
-    icalAttachmentEnabled: false,
-    addToCalendarLinksEnabled: false,
-  }),
-);
 
 mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
 }));
+// system-emails (webhook-renewal) はまだ domain を直接読む。p3 並列作業の対象外。
 mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
-  getCalendarEmailSettings: mockGetCalendarEmailSettings,
-}));
-mock.module("@/shared/domain/settings/queries/organization", () => ({
-  getIcalOrganizer: () =>
-    Promise.resolve({ name: "Org", email: "org@example.com" }),
-}));
-mock.module("@/shared/domain/settings/public-queries", () => ({
-  getReservationDeadlineSettings: () =>
+  getEmailDeliverySettings: () =>
     Promise.resolve({
-      cancellationDeadlineHours: 24,
-      modificationDeadlineHours: 24,
+      sendReservationConfirmationEmail: true,
+      notifyNewReservation: true,
+      notifyReservationChange: true,
+      notifyReservationCancel: true,
+      notifyNewInquiry: true,
+      notifyEventRegistration: true,
+      notifyEventCancellation: true,
+      replyToEmail: null,
     }),
-}));
-mock.module("@/shared/domain/terms/queries", () => ({
-  getPublishedTermsByType: () => Promise.resolve(null),
+  getNotificationEmailAddresses: () => Promise.resolve(["admin@example.com"]),
+  getCalendarEmailSettings: () =>
+    Promise.resolve({
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    }),
 }));
 mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
@@ -134,24 +100,20 @@ function lastKey(): string | undefined {
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
-  mockGetNotificationEmailAddresses.mockReset();
-  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
 });
 
 describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が入る", () => {
   test("同一 reservationId + 異なる icsSequence → 異なるキー（restore 後 re-cancel シナリオ）", async () => {
-    await sendReservationCancelledEmail({
-      ...RESERVATION_BASE,
-      icsSequence: 0,
-    });
+    await sendReservationCancelledEmail(
+      { ...RESERVATION_BASE, icsSequence: 0 },
+      RESERVATION_RENDER_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendReservationCancelledEmail({
-      ...RESERVATION_BASE,
-      icsSequence: 1,
-    });
+    await sendReservationCancelledEmail(
+      { ...RESERVATION_BASE, icsSequence: 1 },
+      RESERVATION_RENDER_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -160,16 +122,16 @@ describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が
   });
 
   test("同一 reservationId + 同一 icsSequence → 同一キー（Resend retry 冪等性）", async () => {
-    await sendReservationCancelledEmail({
-      ...RESERVATION_BASE,
-      icsSequence: 3,
-    });
+    await sendReservationCancelledEmail(
+      { ...RESERVATION_BASE, icsSequence: 3 },
+      RESERVATION_RENDER_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendReservationCancelledEmail({
-      ...RESERVATION_BASE,
-      icsSequence: 3,
-    });
+    await sendReservationCancelledEmail(
+      { ...RESERVATION_BASE, icsSequence: 3 },
+      RESERVATION_RENDER_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -177,10 +139,10 @@ describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が
   });
 
   test("キーは `<event-type>/<entity-id>/<sequence>` 形式（icsSequence が末尾）", async () => {
-    await sendReservationCancelledEmail({
-      ...RESERVATION_BASE,
-      icsSequence: 7,
-    });
+    await sendReservationCancelledEmail(
+      { ...RESERVATION_BASE, icsSequence: 7 },
+      RESERVATION_RENDER_CONTEXT,
+    );
     expect(lastKey()).toBe(
       `reservation-cancel/${RESERVATION_BASE.reservationId}/7`,
     );
@@ -192,12 +154,14 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
     await sendReservationAdminNotification(
       { ...RESERVATION_BASE, icsSequence: 0 },
       "cancel",
+      RESERVATION_ADMIN_DELIVERY,
     );
     const firstKey = lastKey();
 
     await sendReservationAdminNotification(
       { ...RESERVATION_BASE, icsSequence: 1 },
       "cancel",
+      RESERVATION_ADMIN_DELIVERY,
     );
     const secondKey = lastKey();
 
@@ -210,12 +174,14 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
     await sendReservationAdminNotification(
       { ...RESERVATION_BASE, icsSequence: 2 },
       "cancel",
+      RESERVATION_ADMIN_DELIVERY,
     );
     const firstKey = lastKey();
 
     await sendReservationAdminNotification(
       { ...RESERVATION_BASE, icsSequence: 2 },
       "cancel",
+      RESERVATION_ADMIN_DELIVERY,
     );
     const secondKey = lastKey();
 
@@ -227,6 +193,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
     await sendReservationAdminNotification(
       { ...RESERVATION_BASE, icsSequence: 4 },
       "cancel",
+      RESERVATION_ADMIN_DELIVERY,
     );
     expect(lastKey()).toBe(
       `reservation-admin/${RESERVATION_BASE.reservationId}/cancel/4`,

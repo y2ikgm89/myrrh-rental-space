@@ -28,6 +28,7 @@ import {
   syncReservationToCalendar,
   updateCalendarSync,
 } from "@/shared/lib/calendar-sync/outbound";
+import { resolveReservationAdminNotificationDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -115,10 +116,14 @@ function handleConfirmAfterSuccess(
     },
   );
   fireAndForget(
-    sendReservationAdminNotification(
-      payloadData,
-      result.previousStatus === ReservationStatus.PENDING ? "new" : "update",
-    ),
+    (async () => {
+      const action =
+        result.previousStatus === ReservationStatus.PENDING ? "new" : "update";
+      const delivery =
+        await resolveReservationAdminNotificationDelivery(action);
+      if (!delivery.enabled) return;
+      await sendReservationAdminNotification(payloadData, action, delivery);
+    })(),
     {
       operation: "bulkConfirm:sendAdminNotification",
       category: ErrorCategory.EXTERNAL_API,

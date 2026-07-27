@@ -26,6 +26,7 @@ import {
   getSeriesGcalMasterEventId,
   patchGcalMasterUntil,
 } from "@/shared/domain/reservations/series-calendar-outbound";
+import { resolveReservationAdminNotificationDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import {
   sendBulkAdminNotification,
   sendBulkReservationCancelledEmail,
@@ -179,7 +180,11 @@ export async function applyBulkCancellationSideEffects(
       };
 
       await sendBulkReservationCancelledEmail(emailData);
-      await sendBulkAdminNotification(emailData);
+      const adminDelivery =
+        await resolveReservationAdminNotificationDelivery("cancel");
+      if (adminDelivery.enabled) {
+        await sendBulkAdminNotification(emailData, adminDelivery);
+      }
     }
   } catch (error) {
     logError(normalizeError(error), {

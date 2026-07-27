@@ -37,6 +37,20 @@ const mockGetCalendarEmailSettings = mock<
     addToCalendarLinksEnabled: false,
   }),
 );
+const mockGetReservationDeadlineSettings = mock<
+  () => Promise<{
+    cancellationDeadlineHours: number;
+    modificationDeadlineHours: number;
+  }>
+>(() =>
+  Promise.resolve({
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 6,
+  }),
+);
+const mockGetPublishedTermsByType = mock<
+  () => Promise<{ slug: string } | null>
+>(() => Promise.resolve({ slug: "cancellation-policy" }));
 
 mock.module("@/shared/domain/settings/queries/notification", () => ({
   getEmailDeliverySettings: mockGetEmailDeliverySettings,
@@ -47,13 +61,26 @@ mock.module("@/shared/domain/settings/queries/organization", () => ({
   getIcalOrganizer: () =>
     Promise.resolve({ name: "Org", email: "org@example.com" }),
 }));
+mock.module("@/shared/domain/settings/public-queries", () => ({
+  getReservationDeadlineSettings: mockGetReservationDeadlineSettings,
+}));
+mock.module("@/shared/domain/terms/queries", () => ({
+  getPublishedTermsByType: mockGetPublishedTermsByType,
+}));
+mock.module("@/shared/lib/constants", () => ({
+  getAppUrl: () => "https://example.com",
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   getEventEmailRenderContext,
+  getReservationEmailRenderContext,
   isEventAdminNotificationEnabled,
+  isReservationAdminNotificationEnabled,
+  isReservationConfirmationEmailEnabled,
   resolveEventAdminNotificationDelivery,
   resolveInquiryCustomerReplyAdminDelivery,
+  resolveReservationAdminNotificationDelivery,
 } from "@/shared/domain/settings/queries/email-render-context";
 
 beforeEach(() => {
@@ -61,6 +88,15 @@ beforeEach(() => {
   mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
   mockGetNotificationEmailAddresses.mockReset();
   mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
+  mockGetReservationDeadlineSettings.mockReset();
+  mockGetReservationDeadlineSettings.mockResolvedValue({
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 6,
+  });
+  mockGetPublishedTermsByType.mockReset();
+  mockGetPublishedTermsByType.mockResolvedValue({
+    slug: "cancellation-policy",
+  });
 });
 
 describe("getEventEmailRenderContext()", () => {
@@ -74,6 +110,104 @@ describe("getEventEmailRenderContext()", () => {
       },
       organizer: { name: "Org", email: "org@example.com" },
     });
+  });
+});
+
+describe("getReservationEmailRenderContext()", () => {
+  test("calendar / organizer / deadline / cancellationPolicyUrl をまとめて返す", async () => {
+    const context = await getReservationEmailRenderContext();
+
+    expect(context).toEqual({
+      calendarSettings: {
+        icalAttachmentEnabled: false,
+        addToCalendarLinksEnabled: false,
+      },
+      organizer: { name: "Org", email: "org@example.com" },
+      deadlineSettings: {
+        cancellationDeadlineHours: 24,
+        modificationDeadlineHours: 6,
+      },
+      cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
+    });
+  });
+
+  test("公開キャンセルポリシーが無ければ cancellationPolicyUrl は undefined", async () => {
+    mockGetPublishedTermsByType.mockResolvedValue(null);
+
+    const context = await getReservationEmailRenderContext();
+
+    expect(context.cancellationPolicyUrl).toBeUndefined();
+  });
+});
+
+describe("isReservationConfirmationEmailEnabled()", () => {
+  test("sendReservationConfirmationEmail=false なら false", async () => {
+    mockGetEmailDeliverySettings.mockResolvedValue({
+      ...DELIVERY_DEFAULTS,
+      sendReservationConfirmationEmail: false,
+    });
+
+    await expect(isReservationConfirmationEmailEnabled()).resolves.toBe(false);
+  });
+
+  test("sendReservationConfirmationEmail=true なら true", async () => {
+    await expect(isReservationConfirmationEmailEnabled()).resolves.toBe(true);
+  });
+});
+
+describe("isReservationAdminNotificationEnabled()", () => {
+  test("action new, notifyNewReservation=false なら false", () => {
+    expect(
+      isReservationAdminNotificationEnabled("new", {
+        ...DELIVERY_DEFAULTS,
+        notifyNewReservation: false,
+      }),
+    ).toBe(false);
+  });
+
+  test("action cancel, notifyReservationCancel=false なら false（誤配線検出）", () => {
+    expect(
+      isReservationAdminNotificationEnabled("cancel", {
+        ...DELIVERY_DEFAULTS,
+        notifyReservationCancel: false,
+      }),
+    ).toBe(false);
+  });
+
+  test("action update, notifyReservationChange=true なら true", () => {
+    expect(
+      isReservationAdminNotificationEnabled("update", DELIVERY_DEFAULTS),
+    ).toBe(true);
+  });
+});
+
+describe("resolveReservationAdminNotificationDelivery()", () => {
+  test("action new, notifyNewReservation=false なら enabled=false", async () => {
+    mockGetEmailDeliverySettings.mockResolvedValue({
+      ...DELIVERY_DEFAULTS,
+      notifyNewReservation: false,
+    });
+
+    const result = await resolveReservationAdminNotificationDelivery("new");
+
+    expect(result.enabled).toBe(false);
+    expect(result.notificationEmails).toEqual(["admin@example.com"]);
+  });
+
+  test("toggle true かつ宛先ありなら enabled=true", async () => {
+    const result = await resolveReservationAdminNotificationDelivery("update");
+
+    expect(result.enabled).toBe(true);
+    expect(result.notificationEmails).toEqual(["admin@example.com"]);
+  });
+
+  test("通知先アドレスが空なら enabled=false", async () => {
+    mockGetNotificationEmailAddresses.mockResolvedValue([]);
+
+    const result = await resolveReservationAdminNotificationDelivery("cancel");
+
+    expect(result.enabled).toBe(false);
+    expect(result.notificationEmails).toEqual([]);
   });
 });
 

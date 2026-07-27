@@ -1067,7 +1067,6 @@ describe("architecture boundaries", () => {
         "email/contact-emails.ts",
         "email/customer-emails.ts",
         "email/reminder-emails.ts",
-        "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
         "features/check.ts",

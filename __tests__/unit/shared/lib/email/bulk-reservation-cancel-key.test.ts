@@ -27,67 +27,17 @@
  * `sendEventBroadcast` の broadcastNonce と同型のパターン。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  notifyEventRegistration: boolean;
-  notifyEventCancellation: boolean;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  notifyEventRegistration: true,
-  notifyEventCancellation: true,
-  replyToEmail: null,
-};
+import { RESERVATION_ADMIN_DELIVERY } from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = { idempotencyKey?: string; operation: string };
 
 const mockSendEmail = mock<
   (params: CapturedSendEmailParams) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
-  Promise.resolve(["admin@example.com"]),
-);
 
 mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
-}));
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
-  getCalendarEmailSettings: () =>
-    Promise.resolve({
-      icalAttachmentEnabled: false,
-      addToCalendarLinksEnabled: false,
-    }),
-}));
-mock.module("@/shared/domain/settings/queries/organization", () => ({
-  getIcalOrganizer: () =>
-    Promise.resolve({ name: "Org", email: "org@example.com" }),
-}));
-mock.module("@/shared/domain/settings/public-queries", () => ({
-  getReservationDeadlineSettings: () =>
-    Promise.resolve({
-      cancellationDeadlineHours: 24,
-      modificationDeadlineHours: 24,
-    }),
-}));
-mock.module("@/shared/domain/terms/queries", () => ({
-  getPublishedTermsByType: () => Promise.resolve(null),
 }));
 mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
@@ -145,10 +95,6 @@ function keyForOperation(operation: string): string | undefined {
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
-  mockGetNotificationEmailAddresses.mockReset();
-  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
 });
 
 describe("sendBulkReservationCancelledEmail() の idempotencyKey に batchNonce が入る (L6)", () => {
@@ -183,10 +129,16 @@ describe("sendBulkReservationCancelledEmail() の idempotencyKey に batchNonce 
 
 describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が入る (L6)", () => {
   test("同一 seriesId + 異なる batchNonce → 異なるキー", async () => {
-    await sendBulkAdminNotification(baseData({ batchNonce: NONCE_A }));
+    await sendBulkAdminNotification(
+      baseData({ batchNonce: NONCE_A }),
+      RESERVATION_ADMIN_DELIVERY,
+    );
     const firstKey = lastKey();
 
-    await sendBulkAdminNotification(baseData({ batchNonce: NONCE_B }));
+    await sendBulkAdminNotification(
+      baseData({ batchNonce: NONCE_B }),
+      RESERVATION_ADMIN_DELIVERY,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -195,10 +147,16 @@ describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が�
   });
 
   test("同一 seriesId + 同一 batchNonce → 同一キー", async () => {
-    await sendBulkAdminNotification(baseData({ batchNonce: NONCE_A }));
+    await sendBulkAdminNotification(
+      baseData({ batchNonce: NONCE_A }),
+      RESERVATION_ADMIN_DELIVERY,
+    );
     const firstKey = lastKey();
 
-    await sendBulkAdminNotification(baseData({ batchNonce: NONCE_A }));
+    await sendBulkAdminNotification(
+      baseData({ batchNonce: NONCE_A }),
+      RESERVATION_ADMIN_DELIVERY,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -206,7 +164,10 @@ describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が�
   });
 
   test("キーは `bulk-reservation-cancel-admin/<seriesId>/<batchNonce>` 形式", async () => {
-    await sendBulkAdminNotification(baseData({ batchNonce: NONCE_A }));
+    await sendBulkAdminNotification(
+      baseData({ batchNonce: NONCE_A }),
+      RESERVATION_ADMIN_DELIVERY,
+    );
     expect(lastKey()).toBe(
       `bulk-reservation-cancel-admin/${SERIES_ID}/${NONCE_A}`,
     );
@@ -218,7 +179,7 @@ describe("顧客向け + 管理者向け 2 送信は同一 batch では同じ no
     const data = baseData({ batchNonce: NONCE_A });
 
     await sendBulkReservationCancelledEmail(data);
-    await sendBulkAdminNotification(data);
+    await sendBulkAdminNotification(data, RESERVATION_ADMIN_DELIVERY);
 
     const customerKey = keyForOperation("sendBulkReservationCancelledEmail");
     const adminKey = keyForOperation("sendBulkAdminNotification");
