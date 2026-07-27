@@ -24,8 +24,11 @@ import {
   parseDateTimeLocalAsJst,
 } from "@/shared/lib/date-format";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import type { TimeSlot } from "./types";
-import { parseTime, generateSlotsFromBusinessHours } from "./time-slots-utils";
+import type { TimeSlot } from "@/shared/lib/reservation/types";
+import {
+  parseTime,
+  generateSlotsFromBusinessHours,
+} from "@/shared/lib/reservation/time-slots-utils";
 
 /**
  * DBから営業時間設定を取得
