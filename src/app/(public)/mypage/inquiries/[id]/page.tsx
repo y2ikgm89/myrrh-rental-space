@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import Link from "next/link";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerInquiryById } from "../../_lib/inquiry-queries";
@@ -43,7 +43,7 @@ export default async function MypageInquiryDetailPage({
 
   const { id } = await params;
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

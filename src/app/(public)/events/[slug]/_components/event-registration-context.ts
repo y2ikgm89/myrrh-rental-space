@@ -12,7 +12,7 @@ import {
   type PublicEventTicketSlotCount,
 } from "@/shared/domain/events/public-slot-options";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -47,7 +47,7 @@ export const loadEventRegistrationContext = cache(
         getEventPublicRegistrationInventory(event.id),
         getTurnstileSiteKey(),
         getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
-        getCurrentCustomerUser(),
+        resolveOptionalCustomerSession(),
       ]);
 
     const slotOptions = buildCurrentPublicEventSlotOptions({

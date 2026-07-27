@@ -50,7 +50,7 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
@@ -132,7 +132,7 @@ export async function submitReservation(
         };
       }
 
-      const user = await getCurrentCustomerUser();
+      const user = await resolveOptionalCustomerSession();
 
       // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
       // isActive / status BLACKLIST を Server Action 側で強制する

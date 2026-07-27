@@ -13,7 +13,7 @@ import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getReservationForGuestEdit } from "@/shared/domain/reservations/customer-queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import {
   checkGuestStatusMemberOwnership,
   GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
@@ -64,7 +64,7 @@ export default async function GuestReservationEditPage(): Promise<ReactElement> 
 
   const [reservation, user, deadlineSettings] = await Promise.all([
     getReservationForGuestEdit(access.reservationId),
-    getCurrentCustomerUser(),
+    resolveOptionalCustomerSession(),
     getReservationDeadlineSettings(),
   ]);
 

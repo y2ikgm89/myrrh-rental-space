@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { requireAdminListPage } from "@/admin/helpers/page-auth";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 
 export default async function NewStaffPage() {
   await connection();
-  await requireAdminPermission("user", "read");
+  await requireAdminListPage("user");
   redirect("/admin/staff");
 }
