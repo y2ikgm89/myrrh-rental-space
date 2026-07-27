@@ -4,7 +4,7 @@
  * src/shared/domain/spaces/public-queries.ts の resolveSpaceCardEmbedData を検証する。
  * 関数内の PUBLIC_WHERE (isPublished: true, isActive: true) gate が実際に機能し、
  * 非公開・非アクティブなスペースが結果から除外されることを確認する。
- * 既存の unit test (`__tests__/unit/lib/lexical/resolve-space-card-embeds.test.ts`) は
+ * 既存の unit test (`__tests__/unit/domain/spaces/resolve-space-card-embeds.test.ts`) は
  * 関数全体を mock しているため、実 DB 実行による gate 検証は本ファイルで行う。
  *
  * fixture 作成・cleanup は describe 直下の beforeEach/afterEach ではなく
