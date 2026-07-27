@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import type { SidebarWidget } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
@@ -31,9 +32,9 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PostStatus: { PUBLISHED: "PUBLISHED", DRAFT: "DRAFT" },
-}));
+});
 
 // 公開 URL 生成ヘルパー
 mock.module("@/shared/domain/posts/routing", () => ({

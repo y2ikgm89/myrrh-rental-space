@@ -10,7 +10,7 @@ import type {
   HeaderScrollBehavior,
   LayoutWidth,
   TaxDisplayMode,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllowlistedNotificationStaffIds } from "@/shared/domain/settings/notification-staff";
 import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";

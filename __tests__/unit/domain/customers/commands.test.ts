@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // CustomerStatus 定数（@generated/prisma/enums から Prisma enum を再現）
 const CustomerStatus = {
@@ -150,11 +151,11 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CustomerStatus,
   CustomerType,
   EmailDeliveryStatus,
-}));
+});
 
 mock.module("@/shared/domain/customers/queries", () => ({
   hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,

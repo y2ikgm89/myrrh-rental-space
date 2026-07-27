@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /** PAID claim (`claim*AsPaid`) が受け付ける paymentStatus。 */
 export const PAYMENT_STATUSES_CLAIMABLE_FOR_PAID = [
