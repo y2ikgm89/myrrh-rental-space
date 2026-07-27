@@ -1068,7 +1068,6 @@ describe("architecture boundaries", () => {
         "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
-        "reservation/time-slots.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",

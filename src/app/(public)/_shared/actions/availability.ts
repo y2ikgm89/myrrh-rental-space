@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
-import { getAvailableTimeSlots } from "@/shared/lib/reservation/time-slots";
+import { getAvailableTimeSlots } from "@/shared/domain/reservations/time-slots";
 import {
   getBlockedDateRangesForSpace,
   type BlockedDateRange,

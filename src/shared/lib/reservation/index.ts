@@ -7,7 +7,6 @@
  * ```typescript
  * import {
  *   DEFAULT_BUSINESS_HOURS,
- *   getAvailableTimeSlots,
  *   type TimeSlot,
  * } from '@/shared/lib/reservation'
  * ```
@@ -24,9 +23,6 @@ export type {
   OverlapCheckResult,
   PrismaTransactionClient,
 } from "./types";
-
-// Functions
-export { getAvailableTimeSlots, getBusinessHoursSettings } from "./time-slots";
 
 // Client-safe utilities
 export {
