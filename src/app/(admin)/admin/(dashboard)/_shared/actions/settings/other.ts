@@ -21,6 +21,10 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
 import * as settingsCommands from "@/shared/domain/settings/commands";
+import {
+  updateCookieConsentSettings as updateCookieConsentSettingsCommand,
+  updateMaintenanceSettings as updateMaintenanceSettingsCommand,
+} from "@/shared/domain/settings/commands/site-chrome";
 
 import {
   sidebarSettingsSchema,
@@ -59,7 +63,7 @@ export async function updateMaintenanceSettings(
         resource: "settings",
         action: "manage",
         execute: async () => {
-          await settingsCommands.updateMaintenanceSettings({
+          await updateMaintenanceSettingsCommand({
             maintenanceMode: data.maintenanceMode,
             maintenanceMessage: emptyToNull(data.maintenanceMessage),
           });
@@ -94,7 +98,7 @@ export async function updateCookieConsentSettings(
         resource: "settings",
         action: "manage",
         execute: async () => {
-          await settingsCommands.updateCookieConsentSettings({
+          await updateCookieConsentSettingsCommand({
             cookieConsentEnabled: data.cookieConsentEnabled,
             cookieConsentMessage: emptyToNull(data.cookieConsentMessage),
             cookieConsentAcceptText: emptyToNull(data.cookieConsentAcceptText),
