@@ -26,7 +26,7 @@ import {
   createNoindexMetadata,
 } from "@/public/lib/seo/feature-gated-metadata";
 import { getFeatureModuleForPageSlug } from "@/shared/lib/features/registry";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,

@@ -6,7 +6,7 @@ import {
   buildNewsMetadata,
 } from "../_components/news-detail-page-content";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 
 interface PageProps {

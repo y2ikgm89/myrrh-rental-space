@@ -2,7 +2,7 @@ import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { filterEnabledLinkCardContentTypes } from "@/shared/domain/link-cards/content-types";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import {
   logError,
   ErrorCategory,

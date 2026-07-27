@@ -3,7 +3,7 @@ import {
   getOrganizationSettings,
   getSocialLinkUrls,
 } from "@/shared/domain/settings/queries/organization";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { LocationForm } from "../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";

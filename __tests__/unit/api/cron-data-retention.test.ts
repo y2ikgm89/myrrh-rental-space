@@ -59,7 +59,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
   authorizeCronRequest: () => mockAuthorizeCronRequest(),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => mockIsFeatureEnabled(),
 }));
 

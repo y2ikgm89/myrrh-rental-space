@@ -7,7 +7,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { applyEventRegistrationCancellation } from "./registration-cancel-core";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";

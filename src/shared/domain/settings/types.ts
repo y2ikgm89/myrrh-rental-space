@@ -176,7 +176,7 @@ export type SettingsData = {
    * 形式: `Record<FeatureModule, boolean>` — 11 module（spaces / reservation / events /
    * posts / news / faq / access / contact / reviews / payment / data-retention）。
    * SSoT: `@/shared/lib/features/registry`。解決ロジック（依存伝播含む）は
-   * `@/shared/lib/features/check.ts`。
+   * `@/shared/domain/features/check.ts`。
    */
   featureModules: Record<string, boolean>;
   themeColor: string;

@@ -11,7 +11,7 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 import { getInquiryDefaultsForCurrentCustomer } from "@/shared/domain/inquiries/customer-defaults";
 

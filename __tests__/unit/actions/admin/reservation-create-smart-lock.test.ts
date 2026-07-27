@@ -93,7 +93,7 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: mock(async () => {}),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   assertAdminFeatureCreateAllowed: mock(async () => {}),
 }));
 

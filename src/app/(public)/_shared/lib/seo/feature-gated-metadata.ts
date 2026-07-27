@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Metadata } from "next";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import type { FeatureModule } from "@/shared/lib/features/registry";
 
 /** Next.js Metadata API の noindex（Google soft-404 / 一時障害時の fail-closed）。 */

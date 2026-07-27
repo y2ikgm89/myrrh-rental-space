@@ -1070,7 +1070,6 @@ describe("architecture boundaries", () => {
         "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
-        "features/check.ts",
         "google-calendar/events.ts",
         "google-calendar/sync.ts",
         "ical/index.ts",

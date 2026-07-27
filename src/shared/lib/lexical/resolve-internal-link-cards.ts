@@ -15,7 +15,7 @@ import {
   resolveLinkCardsByType,
   type ResolvedLinkCard,
 } from "@/shared/domain/link-cards/resolve-queries";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 
 /**
  * Lexical 本文中の内部リンクカードプレースホルダーを公開描画時に解決する SSoT。
