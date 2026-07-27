@@ -921,6 +921,17 @@ describe("display order surfaces clean-break contract", () => {
       "_components",
       "LocationForm.tsx",
     );
+    const locationFormSortable = readRepoFile(
+      "src",
+      "app",
+      "(admin)",
+      "admin",
+      "(dashboard)",
+      "locations",
+      "_components",
+      "location-form",
+      "sortable-list-items.tsx",
+    );
     const sharedSortable = readRepoFile(
       "src",
       "app",
@@ -938,7 +949,9 @@ describe("display order surfaces clean-break contract", () => {
     expect(galleryField).toContain("disabled={isDisabled}");
     expect(galleryItemRow).toContain("disabled={disabled}");
     expect(locationForm).toContain("if (isPending) return;");
-    expect(locationForm).toContain("<DragHandle disabled={disabled} />");
+    expect(locationFormSortable).toContain(
+      "<DragHandle disabled={disabled} />",
+    );
     expect(sharedSortable).toContain("if (disabled) return;");
   });
 });
