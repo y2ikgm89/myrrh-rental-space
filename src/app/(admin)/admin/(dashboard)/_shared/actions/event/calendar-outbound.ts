@@ -5,7 +5,7 @@ import {
   syncEventToCalendar,
   updateEventCalendarSync,
   deleteEventCalendarSync,
-} from "@/shared/lib/calendar-sync/event-outbound";
+} from "@/shared/domain/events/event-calendar-outbound";
 
 /** create / duplicate / update / publish 共通 GCal 同期 */
 export async function syncEventOutbound(eventId: string): Promise<void> {

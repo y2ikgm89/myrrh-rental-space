@@ -1,10 +1,10 @@
 /**
- * イベント→カレンダー（単方向同期）
+ * イベント→カレンダー（単方向同期）orchestration。
  *
- * イベント作成・更新・キャンセル時にGoogle Calendarと同期するサービス。
- * サービスアカウント経由でスケジュール管理カレンダーに連携します。
+ * GCal API 呼び出しは `@/shared/lib/google-calendar`、Event R-W は
+ * `calendar-sync` commands。ループ防止マーカーは lib `loop-prevention`。
  *
- * @module shared/lib/calendar-sync/event-outbound
+ * @module shared/domain/events/event-calendar-outbound
  */
 
 import "server-only";
@@ -40,8 +40,11 @@ import {
 } from "@/shared/domain/events/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { MEETING_PROVIDER } from "@/shared/lib/validations/enums/prisma-types";
-import { OUTBOUND_EVENT_MARKER } from "./loop-prevention";
-import type { EventSyncData, SyncResult } from "./types";
+import { OUTBOUND_EVENT_MARKER } from "@/shared/lib/calendar-sync/loop-prevention";
+import type {
+  EventSyncData,
+  SyncResult,
+} from "@/shared/lib/calendar-sync/types";
 
 /** Meet URL write-back のみの失敗 (GCal event は作成済み — update retry では解消しない) */
 export const MEET_URL_NOT_RETURNED_ERROR =

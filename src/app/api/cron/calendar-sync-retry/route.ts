@@ -31,7 +31,7 @@ import { connection } from "next/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { retryFailedSyncs } from "@/shared/lib/calendar-sync/outbound";
-import { retryFailedEventCalendarSyncs } from "@/shared/lib/calendar-sync/event-outbound";
+import { retryFailedEventCalendarSyncs } from "@/shared/domain/events/event-calendar-outbound";
 import { isGoogleCalendarConfigured } from "@/shared/lib/google-calendar";
 import {
   logError,

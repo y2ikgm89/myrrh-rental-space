@@ -49,7 +49,7 @@ mock.module("@/shared/lib/calendar-sync/outbound", () => ({
     mockRetryFailedSyncs(...args),
 }));
 
-mock.module("@/shared/lib/calendar-sync/event-outbound", () => ({
+mock.module("@/shared/domain/events/event-calendar-outbound", () => ({
   retryFailedEventCalendarSyncs: (
     ...args: Parameters<typeof mockRetryFailedEventCalendarSyncs>
   ) => mockRetryFailedEventCalendarSyncs(...args),

@@ -1,7 +1,7 @@
 /**
  * 繰返し予約（ReservationSeries）→ Google Calendar の master event 操作。
  *
- * 単発予約の `outbound.ts` が instance 単位の同期を担うのに対し、本モジュールは
+ * 単発予約の lib `outbound.ts` が instance 単位の同期を担うのに対し、本モジュールは
  * series 全体を表す 1 つの recurring master event に対する操作を担う
  * （`applyBulkCancellationSideEffects` の scope 別 1 回操作から呼ばれる）。
  *
@@ -10,7 +10,7 @@
  * 返すようになった。Phase B.2.1 Task C で `patchGcalMasterUntil` の stub を
  * 実装差替 (RRULE 再構築 + events.patch)。
  *
- * @module shared/lib/calendar-sync/series-outbound
+ * @module shared/domain/reservations/series-calendar-outbound
  */
 
 import "server-only";
@@ -40,8 +40,8 @@ import { omitUndefined } from "@/shared/lib/serialize";
 /**
  * ReservationSeries に紐づく Google Calendar master event の ID を取得する。
  *
- * DB 永続化列 `ReservationSeries.googleCalendarMasterEventId` を返す薄い wrapper。
- * placement gate 上、`shared/lib` からは直接 Prisma を触れないため domain 層に委譲する。
+ * DB 永続化列 `ReservationSeries.googleCalendarMasterEventId` を返す薄い wrapper
+ * （`calendar-sync.getSeriesGcalMasterEventId` への委譲）。
  * null は「未同期 or Google Calendar 無効」を表し、呼出側は master GCal 操作を skip する。
  */
 export async function getSeriesGcalMasterEventId(
