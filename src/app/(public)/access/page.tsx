@@ -20,7 +20,7 @@ import {
 import { getAllPublishedLocationsJsonLdData } from "@/public/lib/seo";
 import { LocationsLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
+import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 import { SectionType } from "@/shared/lib/validations/section";
 import { getLocationListConfig } from "@/shared/lib/validations/section-defaults";
 

@@ -29,7 +29,7 @@ mock.module("@/shared/domain/pages/queries", () => ({
 }));
 
 const { requireSystemPagePublished } =
-  await import("@/shared/lib/pages/require-published");
+  await import("@/shared/domain/pages/require-published-server");
 
 describe("requireSystemPagePublished", () => {
   beforeEach(() => {

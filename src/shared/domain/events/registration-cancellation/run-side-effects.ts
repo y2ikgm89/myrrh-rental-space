@@ -21,6 +21,10 @@ import {
   type SideEffectRegistration,
 } from "@/shared/domain/events/registration-cancellation/types";
 import {
+  getEventEmailRenderContext,
+  resolveEventAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
+import {
   ErrorCategory,
   ErrorSeverity,
   logError,
@@ -57,6 +61,11 @@ export async function runEventCancellationSideEffectsAndFlushAudit(args: {
     requiresRefund,
   });
 
+  const [renderContext, adminDelivery] = await Promise.all([
+    getEventEmailRenderContext(),
+    resolveEventAdminNotificationDelivery("cancellation"),
+  ]);
+
   const [
     checkoutSessionExpire,
     customerEmail,
@@ -68,8 +77,8 @@ export async function runEventCancellationSideEffectsAndFlushAudit(args: {
       registrationId: registration.id,
       sessionId: registration.stripeCheckoutSessionId,
     }),
-    runCustomerEmailStep({ input, registration, details }),
-    runAdminEmailStep({ input, registration, details }),
+    runCustomerEmailStep({ input, registration, details, renderContext }),
+    runAdminEmailStep({ input, registration, details, adminDelivery }),
     runNotificationStep({ input, registration, requiresRefund }),
     runWaitlistOfferStep(input),
   ]);

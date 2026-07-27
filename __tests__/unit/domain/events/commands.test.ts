@@ -53,7 +53,18 @@ const mockEventUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
 
-const mockFireAndForget = mock<() => void>(() => undefined);
+const pendingFireAndForget: Promise<unknown>[] = [];
+const mockFireAndForget = mock<(promise: Promise<unknown>) => void>(
+  (promise) => {
+    pendingFireAndForget.push(promise.catch(() => undefined));
+  },
+);
+async function flushFireAndForget(): Promise<void> {
+  while (pendingFireAndForget.length > 0) {
+    const batch = pendingFireAndForget.splice(0, pendingFireAndForget.length);
+    await Promise.all(batch);
+  }
+}
 
 const eventUpdatedNotificationPayload = {
   eventId: "event-1",
@@ -65,20 +76,36 @@ const eventUpdatedNotificationPayload = {
   registrations: [],
 };
 
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
+
 const mockGetEventUpdatedNotificationPayload = mock<
   (eventId: string) => Promise<typeof eventUpdatedNotificationPayload | null>
 >(() => Promise.resolve(eventUpdatedNotificationPayload));
+
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<typeof EVENT_EMAIL_RENDER_CONTEXT>
+>(() => Promise.resolve(EVENT_EMAIL_RENDER_CONTEXT));
 
 const mockSendEventUpdated = mock<
   (
     payload: typeof eventUpdatedNotificationPayload,
     oldSlotStartTimes: ReadonlyMap<string, Date>,
+    renderContext: typeof EVENT_EMAIL_RENDER_CONTEXT,
   ) => Promise<void>
 >(() => Promise.resolve());
 
-const mockSendEventCancelled = mock<() => Promise<void>>(() =>
-  Promise.resolve(),
-);
+const mockSendEventCancelled = mock<
+  (
+    payload: typeof eventUpdatedNotificationPayload,
+    renderContext: typeof EVENT_EMAIL_RENDER_CONTEXT,
+  ) => Promise<void>
+>(() => Promise.resolve());
 
 // ---------------------------------------------------------------------------
 // mock.module（import より前）
@@ -222,6 +249,12 @@ mock.module("@/shared/domain/events/email-queries", () => ({
   getEventUpdatedNotificationPayload: (
     ...args: Parameters<typeof mockGetEventUpdatedNotificationPayload>
   ) => mockGetEventUpdatedNotificationPayload(...args),
+}));
+
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
 }));
 
 mock.module("@/shared/lib/email/event-emails", () => ({
@@ -740,8 +773,13 @@ describe("updateEventCommand", () => {
     mockExecuteRaw.mockClear();
     mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
+    pendingFireAndForget.length = 0;
     mockSendEventUpdated.mockClear();
     mockGetEventUpdatedNotificationPayload.mockClear();
+    mockGetEventEmailRenderContext.mockClear();
+    mockGetEventEmailRenderContext.mockResolvedValue(
+      EVENT_EMAIL_RENDER_CONTEXT,
+    );
     mockGetEventUpdatedNotificationPayload.mockResolvedValue(
       eventUpdatedNotificationPayload,
     );
@@ -975,11 +1013,13 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      await flushFireAndForget();
       // 変更前の日時は「変更されたスロット自身」の旧 startAt であるべき
       // （他スロットの値や新しい値を誤って渡していないこと）
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
         eventUpdatedNotificationPayload,
         new Map([["slot-1", new Date("2024-06-15T10:00:00Z")]]),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
     });
 
@@ -1047,6 +1087,7 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      await flushFireAndForget();
       // slot-1・slot-2 双方の「変更前」日時が個別に渡され、単一の代表値
       // （例えば slot-1 の値）を全参加者に使い回していないことを確認する
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
@@ -1055,6 +1096,7 @@ describe("updateEventCommand", () => {
           ["slot-1", new Date("2024-06-15T10:00:00Z")],
           ["slot-2", new Date("2024-06-16T10:00:00Z")],
         ]),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
     });
 
@@ -1572,6 +1614,7 @@ describe("cancelEventCommand", () => {
     mockEventUpdate.mockClear();
     mockEventUpdateMany.mockClear();
     mockFireAndForget.mockClear();
+    pendingFireAndForget.length = 0;
     // default: claim wins ⇒ real transition
     mockEventUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
   });

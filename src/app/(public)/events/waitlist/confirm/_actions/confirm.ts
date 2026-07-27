@@ -17,6 +17,7 @@ import {
 } from "@/shared/domain/events/waitlist-queries";
 import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -162,20 +163,24 @@ export async function confirmWaitlistOfferAction(
               result.registration.id,
             );
             if (!details) return;
-            await sendEventRegistrationConfirmation({
-              registrationId: details.id,
-              customerName: details.name,
-              customerEmail: details.email,
-              eventTitle: details.eventTitle,
-              eventStartTime: details.startTime,
-              eventEndTime: details.endTime,
-              location: details.location ?? undefined,
-              quantity: details.quantity,
-              icsSequence: details.icsSequence,
-              customerId: details.customerId,
-              format: details.format,
-              meetingUrl: details.meetingUrl,
-            });
+            const renderContext = await getEventEmailRenderContext();
+            await sendEventRegistrationConfirmation(
+              {
+                registrationId: details.id,
+                customerName: details.name,
+                customerEmail: details.email,
+                eventTitle: details.eventTitle,
+                eventStartTime: details.startTime,
+                eventEndTime: details.endTime,
+                location: details.location ?? undefined,
+                quantity: details.quantity,
+                icsSequence: details.icsSequence,
+                customerId: details.customerId,
+                format: details.format,
+                meetingUrl: details.meetingUrl,
+              },
+              renderContext,
+            );
           })(),
           {
             operation: "sendWaitlistConfirmationEmail",

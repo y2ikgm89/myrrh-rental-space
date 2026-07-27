@@ -10,6 +10,7 @@ import { getEventUpdatedNotificationPayload } from "@/shared/domain/events/email
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { sendEventUpdatedToAllParticipants } from "@/shared/lib/email/event-emails";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import {
   EventStatus,
   RegistrationStatus,
@@ -256,11 +257,19 @@ export function notifyEventVenueOrSlotChanged(params: {
       existing.slots.map((slot) => [slot.id, slot.startAt]),
     );
     fireAndForget(
-      getEventUpdatedNotificationPayload(eventId).then((payload) => {
+      (async () => {
+        const [payload, renderContext] = await Promise.all([
+          getEventUpdatedNotificationPayload(eventId),
+          getEventEmailRenderContext(),
+        ]);
         if (payload) {
-          return sendEventUpdatedToAllParticipants(payload, oldSlotStartTimes);
+          await sendEventUpdatedToAllParticipants(
+            payload,
+            oldSlotStartTimes,
+            renderContext,
+          );
         }
-      }),
+      })(),
       {
         operation: "sendEventUpdatedToAllParticipants",
         category: ErrorCategory.EXTERNAL_API,

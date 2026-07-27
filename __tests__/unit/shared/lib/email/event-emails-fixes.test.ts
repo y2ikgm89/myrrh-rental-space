@@ -14,34 +14,10 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
-
-// ---------------------------------------------------------------------------
-// Shared mocks (used by both H2 and M10 test suites)
-// ---------------------------------------------------------------------------
-
-mock.module("server-only", () => ({}));
-
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  notifyEventRegistration: boolean;
-  notifyEventCancellation: boolean;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  notifyEventRegistration: true,
-  notifyEventCancellation: true,
-  replyToEmail: null,
-};
+import {
+  RENDER_CONTEXT,
+  RENDER_CONTEXT_WITH_ICAL,
+} from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = {
   idempotencyKey?: string;
@@ -55,38 +31,11 @@ const mockSendEmail = mock<
   (params: CapturedSendEmailParams) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
 
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
-  Promise.resolve(["admin@example.com"]),
-);
-// icalAttachmentEnabled: true にすることで CANCEL ICS 添付ロジックを起動させ、
-// M10 の per-status 出し分けを検証できる。
-const mockGetCalendarEmailSettings = mock<
-  () => Promise<{
-    icalAttachmentEnabled: boolean;
-    addToCalendarLinksEnabled: boolean;
-  }>
->(() =>
-  Promise.resolve({
-    icalAttachmentEnabled: true,
-    addToCalendarLinksEnabled: false,
-  }),
-);
+mock.module("server-only", () => ({}));
 
 mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
-}));
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
-  getCalendarEmailSettings: mockGetCalendarEmailSettings,
-}));
-mock.module("@/shared/domain/settings/queries/organization", () => ({
-  getIcalOrganizer: () =>
-    Promise.resolve({ name: "Org", email: "org@example.com" }),
 }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
@@ -139,15 +88,6 @@ function lastKey(): string | undefined {
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
-  mockGetNotificationEmailAddresses.mockReset();
-  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
-  mockGetCalendarEmailSettings.mockReset();
-  mockGetCalendarEmailSettings.mockResolvedValue({
-    icalAttachmentEnabled: true,
-    addToCalendarLinksEnabled: false,
-  });
 });
 
 // ===========================================================================
@@ -155,13 +95,13 @@ beforeEach(() => {
 // ===========================================================================
 describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
   test("同一 registrationId の 2 回連続呼び出しで異なる idempotencyKey を発行する", async () => {
-    await sendEventReminderEmail({ ...REMINDER_DATA });
+    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
     const firstKey = lastKey();
 
     // 別 tick を挟むことで Date.now() の増分を保証する
     await new Promise((r) => setTimeout(r, 2));
 
-    await sendEventReminderEmail({ ...REMINDER_DATA });
+    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -170,7 +110,7 @@ describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
   });
 
   test("キーは `event-reminder/<registrationId>/<timestamp>` 形式で始まる", async () => {
-    await sendEventReminderEmail({ ...REMINDER_DATA });
+    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
 
     const key = lastKey();
     expect(key).toBeDefined();
@@ -240,7 +180,11 @@ describe("M10: sendEventCancelledToAllParticipants() の waitlist 網羅と ICS 
       ],
     };
 
-    await sendEventCancelledToAllParticipants(payload, "講師都合のため中止");
+    await sendEventCancelledToAllParticipants(
+      payload,
+      RENDER_CONTEXT_WITH_ICAL,
+      "講師都合のため中止",
+    );
 
     const calls = mockSendEmail.mock.calls.map((c) => c[0]);
     expect(calls.length).toBe(3);

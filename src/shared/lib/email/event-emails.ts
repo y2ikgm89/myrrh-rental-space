@@ -21,17 +21,6 @@ import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-regist
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
-  getCalendarEmailSettings,
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
-import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import type {
-  EventBroadcastPayload,
-  EventCancelledNotificationPayload,
-  EventUpdatedNotificationPayload,
-} from "@/shared/domain/events/email-queries";
-import {
   computeCancelTokenExpiresAt as computeEventCancelTokenExpiresAt,
   createCancelToken as createEventCancelToken,
 } from "@/shared/lib/event-registration-cancel-token";
@@ -59,7 +48,14 @@ import { omitUndefined } from "../serialize";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
-import type { EmailResult } from "./types";
+import type {
+  EmailResult,
+  EventAdminNotificationDelivery,
+  EventBroadcastPayload,
+  EventCancelledNotificationPayload,
+  EventEmailRenderContext,
+  EventUpdatedNotificationPayload,
+} from "./types";
 
 // =============================================================================
 // Event Registration Emails
@@ -122,6 +118,7 @@ type EventRegistrationConfirmationData = {
  */
 export async function sendEventRegistrationConfirmation(
   data: EventRegistrationConfirmationData,
+  renderContext: EventEmailRenderContext,
 ): Promise<EmailResult> {
   if (!data.customerEmail) return { ok: false, reason: "disabled" };
   const customerEmail = data.customerEmail;
@@ -130,11 +127,8 @@ export async function sendEventRegistrationConfirmation(
   const startTime = formatTimeShort(data.eventStartTime);
   const endTime = formatTimeShort(data.eventEndTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -274,16 +268,14 @@ type EventReminderEmailData = {
  */
 export async function sendEventReminderEmail(
   data: EventReminderEmailData,
+  renderContext: EventEmailRenderContext,
 ): Promise<EmailResult> {
   const eventDate = formatDateWithWeekday(data.eventStartTime);
   const startTime = formatTimeShort(data.eventStartTime);
   const endTime = formatTimeShort(data.eventEndTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
   const appUrl = getAppUrl();
 
@@ -399,17 +391,15 @@ type EventRegistrationCancelledData = {
  */
 export async function sendEventRegistrationCancelled(
   data: EventRegistrationCancelledData,
+  renderContext: EventEmailRenderContext,
 ): Promise<EmailResult> {
   if (!data.customerEmail) return { ok: false, reason: "disabled" };
   const customerEmail = data.customerEmail;
 
   const eventDate = formatDateWithWeekday(data.eventStartTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   const calendarParams = omitUndefined({
@@ -494,18 +484,11 @@ type EventAdminNotificationData = {
 export async function sendEventAdminNotification(
   data: EventAdminNotificationData,
   type: "registration" | "waitlist_registration" | "cancellation",
+  delivery: EventAdminNotificationDelivery,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  // Record 網羅で type 追加漏れを compile-time に検知させる。
-  const enabledByType: boolean = {
-    registration: toggles.notifyEventRegistration,
-    waitlist_registration: toggles.notifyEventWaitlistRegistration,
-    cancellation: toggles.notifyEventCancellation,
-  }[type];
-  if (!enabledByType) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
@@ -519,7 +502,7 @@ export async function sendEventAdminNotification(
 
   return sendEmail({
     payload: {
-      to: notificationEmails,
+      to: [...delivery.notificationEmails],
       subject: `【${actionText}】${data.eventTitle} - ${data.participantName}様`,
       react: EventAdminNotificationEmail({
         type,
@@ -548,15 +531,13 @@ export async function sendEventAdminNotification(
  */
 export async function sendEventCancelledToAllParticipants(
   payload: EventCancelledNotificationPayload,
+  renderContext: EventEmailRenderContext,
   reason?: string,
 ): Promise<void> {
   const eventUpdatedAt = payload.updatedAt.getTime();
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外
@@ -667,14 +648,12 @@ export async function sendEventCancelledToAllParticipants(
 export async function sendEventUpdatedToAllParticipants(
   payload: EventUpdatedNotificationPayload,
   oldSlotStartTimes: ReadonlyMap<string, Date>,
+  renderContext: EventEmailRenderContext,
 ): Promise<void> {
   const eventUpdatedAt = payload.updatedAt.getTime();
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外

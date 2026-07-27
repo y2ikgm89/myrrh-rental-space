@@ -3,10 +3,6 @@ import { InquiryCustomerReplyAdminEmail } from "@/shared/emails/inquiry-customer
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import {
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
 import { buildMemberInquiryUrl } from "./contact-emails";
 import { hashForKey, sendEmail } from "./send";
@@ -18,19 +14,13 @@ import {
 } from "../errors/server";
 import type {
   EmailResult,
+  InquiryAdminNotificationDelivery,
   InquiryCustomerReplyAdminEmailData,
   InquiryReplyEmailData,
+  InquiryStatusNotificationData,
 } from "./types";
 
-export type InquiryStatusNotificationData = {
-  readonly id: string;
-  readonly receiptNumber: string;
-  readonly name: string;
-  readonly email: string;
-  readonly subject: string;
-  readonly updatedAt: Date;
-  readonly customerUserId: string | undefined;
-};
+export type { InquiryStatusNotificationData } from "./types";
 
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
@@ -70,18 +60,17 @@ export async function sendInquiryReplyEmail(
  */
 export async function sendInquiryCustomerReplyAdminEmail(
   data: InquiryCustomerReplyAdminEmailData,
+  delivery: InquiryAdminNotificationDelivery,
 ): Promise<EmailResult> {
-  const { notifyInquiryCustomerReply } = await getEmailDeliverySettings();
-  if (!notifyInquiryCustomerReply) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
   return sendEmail({
     payload: {
-      to: notificationEmails,
+      to: [...delivery.notificationEmails],
       subject: `【お問い合わせ続報】${data.subject} [${data.receiptNumber}]`,
       react: InquiryCustomerReplyAdminEmail({
         customerName: data.customerName,

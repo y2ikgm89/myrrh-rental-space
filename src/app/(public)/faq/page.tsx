@@ -12,7 +12,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
+import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
