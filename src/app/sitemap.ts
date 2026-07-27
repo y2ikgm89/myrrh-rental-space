@@ -29,7 +29,7 @@ import {
   getFeatureFilterContext,
   isUrlDisabled,
 } from "@/shared/lib/features/check";
-import { isReservedPath } from "@/shared/lib/slug-validation";
+import { isReservedPath } from "@/shared/domain/slugs/validation";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors/server";
 
@@ -248,7 +248,7 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
   // ==========================================================================
   for (const page of customPages) {
     if (disabledPageSlugs.has(page.slug)) continue;
-    if (isReservedPath(page.slug)) continue; // 過去 data 防御（slug-validation 緩和時の保険）
+    if (isReservedPath(page.slug)) continue; // 過去 data 防御（予約パス緩和時の保険）
     entries.push({
       url: `${baseUrl}/${encodeURIComponent(page.slug)}`,
       lastModified: page.updatedAt,

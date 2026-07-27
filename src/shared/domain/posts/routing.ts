@@ -8,7 +8,7 @@ export function buildPostCanonicalPath(post: PostUrlData): string {
  * カテゴリ別アーカイブの正規パス。
  *
  * 記事詳細が `/blog/{slug}` 固定なのに対し、分類アーカイブはトップレベルの
- * `/category/{slug}` に置く（予約スラッグの SSoT は slug-validation.ts の
+ * `/category/{slug}` に置く（予約スラッグの SSoT は domain/slugs/validation.ts の
  * `RESERVED_PATHS`）。
  */
 export function buildCategoryPath(slug: string): string {
