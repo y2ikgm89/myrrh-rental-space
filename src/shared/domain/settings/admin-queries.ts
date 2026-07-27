@@ -47,7 +47,7 @@ import {
   ensureSettingsSidebar,
   ensureSettingsStripe,
   ensureSettingsSystem,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/ensure-commands";
 const DEFAULT_DISCOUNT_SETTINGS = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
