@@ -1,9 +1,9 @@
 /**
  * カレンダー同期ループ防止
  *
- * Outbound 同期（outbound.ts / event-outbound.ts）が GCal に書き込むイベントは
+ * Outbound 同期（outbound.ts / event-calendar-outbound.ts）が GCal に書き込むイベントは
  * description 先頭に識別マーカーを含む。
- * Inbound 同期（inbound.ts / event-inbound.ts）がこれらのマーカーを検出した
+ * Inbound 同期（inbound.ts / event-inbound-fetch.ts）がこれらのマーカーを検出した
  * イベントをスキップすることで、アプリ側 DB に自アプリ由来イベントが
  * 再取り込みされるループを防ぐ。
  *
@@ -21,7 +21,7 @@ export const OUTBOUND_RESERVATION_MARKER = "予約ID:";
 
 /**
  * Event outbound sync が description 先頭に挿入するマーカー。
- * @see src/shared/lib/calendar-sync/event-outbound.ts formatEventCalendarEvent
+ * @see src/shared/domain/events/event-calendar-outbound.ts formatEventCalendarEvent
  */
 export const OUTBOUND_EVENT_MARKER = "イベントID:";
 

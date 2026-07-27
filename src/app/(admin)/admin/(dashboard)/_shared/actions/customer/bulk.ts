@@ -23,7 +23,7 @@ import {
   type BulkToggleActiveCustomersResult,
   type BulkAnonymizeCustomersResult,
 } from "@/shared/domain/customers/bulk-commands";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/customer-lifecycle-commands";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   bulkSetStatusCustomersCommand,

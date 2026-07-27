@@ -87,7 +87,7 @@ const mockPatchGcalMasterUntil = mock<
 const mockDeleteGcalMaster = mock<
   (masterEventId: string) => Promise<{ success: boolean; error?: string }>
 >(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
+mock.module("@/shared/domain/reservations/series-calendar-outbound", () => ({
   getSeriesGcalMasterEventId: mockGetSeriesGcalMasterEventId,
   patchGcalMasterUntil: mockPatchGcalMasterUntil,
   deleteGcalMaster: mockDeleteGcalMaster,

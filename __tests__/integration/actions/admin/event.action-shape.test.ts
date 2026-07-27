@@ -79,7 +79,7 @@ mock.module("@/shared/domain/events/calendar-sync", () => ({
   getEventSlotsForCalendarSync: mock(async () => []),
 }));
 
-mock.module("@/shared/lib/calendar-sync/event-outbound", () => ({
+mock.module("@/shared/domain/events/event-calendar-outbound", () => ({
   syncEventToCalendar: mock(async () => {}),
   updateEventCalendarSync: mock(async () => {}),
   deleteEventCalendarSync: mock(async () => {}),

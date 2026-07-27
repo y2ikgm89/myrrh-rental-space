@@ -26,7 +26,10 @@ import { LocationSchema } from "@/shared/lib/google-business-profile/schemas";
 import { syncLocationStub } from "@/shared/lib/google-business-profile/stub";
 import type { GbpSyncResult } from "@/shared/lib/google-business-profile/types";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
-import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
+import {
+  getGbpAuthState,
+  saveGbpAuthState,
+} from "@/shared/domain/google-business-profile/settings";
 import { ensureLocationExists } from "@/shared/domain/locations/commands";
 
 const GBP_NOT_CONFIGURED_MESSAGE = "GBP 連携未設定";
@@ -85,7 +88,7 @@ export async function syncLocationToGbpCommand(
   }
 
   try {
-    const client = await getGbpClient(auth);
+    const client = await getGbpClient(auth, { onTokens: saveGbpAuthState });
     const payload = buildLocationPayload({
       name: location.name,
       postalCode: location.postalCode,

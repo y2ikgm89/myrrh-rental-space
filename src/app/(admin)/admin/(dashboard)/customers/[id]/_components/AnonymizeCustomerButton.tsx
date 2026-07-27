@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/admin/components/ui/button";
 import { anonymizeCustomer } from "@/admin/actions/customer";
 import { AnonymizeCustomerConfirmDialog } from "@/admin/components/AnonymizeCustomerConfirmDialog";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/customer-lifecycle-commands";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 

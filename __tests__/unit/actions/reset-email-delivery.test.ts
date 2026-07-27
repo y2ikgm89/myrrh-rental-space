@@ -70,6 +70,11 @@ mock.module("@/shared/domain/customers/risk-detection", () => ({
 
 mock.module("@/shared/domain/customers/queries", () => ({
   searchCustomers: mock(async () => []),
+  // suppression helpers は queries が SSoT。commands / lifecycle が named import
+  // するため、mock でも export を欠かさない（Bun ESM は欠落で SyntaxError）。
+  hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
+  isSuppressedDeliveryStatus: (status: string) =>
+    status === "HARD_BOUNCED" || status === "COMPLAINED",
 }));
 
 mock.module("@/shared/domain/audit-log/commands", () => ({
