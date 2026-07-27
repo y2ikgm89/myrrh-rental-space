@@ -48,9 +48,17 @@ describe("refunds append-only boundary", () => {
       .filter((name) => name.endsWith(".ts"))
       .map((name) => `src/shared/domain/events/payment/${name}`);
 
+    const reservationPaymentDir = join(
+      process.cwd(),
+      "src/shared/domain/reservations/payment",
+    );
+    const reservationPaymentModules = readdirSync(reservationPaymentDir)
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => `src/shared/domain/reservations/payment/${name}`);
+
     const files = [
       ...eventPaymentModules,
-      "src/shared/domain/reservations/payment-commands.ts",
+      ...reservationPaymentModules,
       "src/shared/domain/reservations/payment-queries.ts",
     ];
 
