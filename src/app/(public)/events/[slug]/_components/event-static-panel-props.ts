@@ -6,7 +6,7 @@ import {
 import {
   formatEventVenueDisplay,
   isEventVirtualAccessible,
-} from "@/shared/domain/events/venue";
+} from "@/shared/lib/events/venue";
 import { EVENT_FORMAT } from "@/shared/lib/validations/enums/prisma-types";
 import { EventInfoPanel, type EventInfoPanelVenue } from "./event-info-panel";
 import type { PublishedEventDetail } from "./event-registration-context";

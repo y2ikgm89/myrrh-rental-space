@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { getAppUrl } from "@/shared/lib/constants/urls";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 

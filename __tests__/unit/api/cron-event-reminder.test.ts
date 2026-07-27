@@ -111,7 +111,7 @@ mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
   ) => mockGetEventEmailRenderContext(...args),
 }));
 
-mock.module("@/shared/domain/events/venue", () => ({
+mock.module("@/shared/lib/events/venue", () => ({
   formatEventVenue: (params: {
     location: { name: string } | null;
     space: { name: string } | null;

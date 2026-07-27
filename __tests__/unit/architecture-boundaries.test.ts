@@ -1069,7 +1069,6 @@ describe("architecture boundaries", () => {
         "email/send.ts",
         "email/system-emails.ts",
         "features/check.ts",
-        "ical/index.ts",
         "lexical/resolve-internal-link-cards.ts",
         "lexical/resolve-space-card-embeds.ts",
         "maintenance-guard.ts",
