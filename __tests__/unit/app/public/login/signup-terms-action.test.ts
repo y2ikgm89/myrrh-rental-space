@@ -67,7 +67,7 @@ const mockGetPublicMaintenanceBlockMutation = mock(
   (): Promise<MutationError | null> => Promise.resolve(null),
 );
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mockGetPublicMaintenanceBlockMutation,
 }));
 
