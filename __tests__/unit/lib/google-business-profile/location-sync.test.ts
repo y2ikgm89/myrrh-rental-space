@@ -74,8 +74,12 @@ mock.module("@/shared/lib/google-api/retry", () => ({
 const mockGetGbpAuthState = mock<() => Promise<unknown | null>>(() =>
   Promise.resolve(null),
 );
+const mockSaveGbpAuthState = mock<(state: unknown) => Promise<void>>(() =>
+  Promise.resolve(),
+);
 mock.module("@/shared/domain/google-business-profile/settings", () => ({
   getGbpAuthState: () => mockGetGbpAuthState(),
+  saveGbpAuthState: (state: unknown) => mockSaveGbpAuthState(state),
 }));
 
 const mockSyncLocationStub = mock(async (input: { locationId: string }) => ({
