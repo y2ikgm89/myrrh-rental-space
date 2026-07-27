@@ -47,10 +47,8 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: mockPrisma,
 }));
 
-import {
-  bootstrapSystemPages,
-  bootstrapSystemPagesCommand,
-} from "@/shared/domain/pages/system-pages-commands";
+import { bootstrapSystemPagesCommand } from "@/shared/domain/pages/system-pages-commands";
+import { bootstrapSystemPages } from "@/shared/domain/pages/system-pages-server";
 
 describe("bootstrapSystemPagesCommand", () => {
   beforeEach(() => {

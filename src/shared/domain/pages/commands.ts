@@ -8,7 +8,7 @@ import {
   checkSlugAvailability,
   getSlugErrorMessage,
 } from "@/shared/lib/slug-validation";
-import { ensurePageSections } from "@/shared/domain/pages/system-pages-commands";
+import { ensurePageSections } from "@/shared/domain/pages/system-pages-server";
 import {
   getSystemPageDefinition,
   isSystemPageSlug,

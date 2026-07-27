@@ -20,7 +20,7 @@ export async function register(): Promise<void> {
     validateProductionEnv();
 
     const { bootstrapSystemPages } =
-      await import("@/shared/domain/pages/system-pages-commands");
+      await import("@/shared/domain/pages/system-pages-server");
     await bootstrapSystemPages();
 
     // Cloudflare credentials + tag purge startup probe (production only).
