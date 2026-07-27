@@ -17,8 +17,11 @@ const mockDeleteCalendarEvent = mock<
   (...args: unknown[]) => Promise<{ success: boolean; error?: string }>
 >(() => Promise.resolve({ success: true }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarConfigured: mockIsConfigured,
+}));
+
+mock.module("@/shared/lib/google-calendar", () => ({
   patchCalendarEvent: mockPatchCalendarEvent,
   deleteCalendarEvent: mockDeleteCalendarEvent,
 }));

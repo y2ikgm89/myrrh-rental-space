@@ -83,9 +83,15 @@ const mockIsConfigured = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
   isGoogleCalendarConfigured: mockIsConfigured,
+  getServiceAccountClient: mock(() => Promise.resolve(null)),
+  isTwoWaySyncEnabled: mock(() => Promise.resolve(false)),
+  renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
+}));
+
+mock.module("@/shared/lib/google-calendar", () => ({
   createCalendarEvent: mockCreate,
   fetchEventInstances: mockFetchInstances,
   patchCalendarEvent: mockPatch,
@@ -94,15 +100,12 @@ mock.module("@/shared/lib/google-calendar", () => ({
   updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
   deleteCalendarEvent: mock(() => Promise.resolve({ success: true })),
   getCalendarEvent: mock(() => Promise.resolve({ success: false })),
-  getServiceAccountClient: mock(() => Promise.resolve(null)),
   encryptServiceAccountJson: mock(() => ""),
   extractServiceAccountEmail: mock(() => null),
   fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
   setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
   stopWebhookWatch: mock(() => Promise.resolve()),
-  renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
   testServiceAccountConnection: mock(() => Promise.resolve({ success: false })),
-  isTwoWaySyncEnabled: mock(() => Promise.resolve(false)),
   isValidCalendarId: mock(() => false),
   formatGoogleApiError: mock((e: unknown) => String(e)),
 }));

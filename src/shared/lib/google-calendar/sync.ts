@@ -7,6 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import { clearCalendarSyncToken } from "@/shared/domain/reservations/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -16,7 +17,6 @@ import {
   isGoogleCalendarFullSyncRequired,
   withGoogleApiRetry,
 } from "@/shared/lib/google-api/retry";
-import { getServiceAccountClient } from "./service-account";
 
 /**
  * カレンダーの変更を取得（増分同期）

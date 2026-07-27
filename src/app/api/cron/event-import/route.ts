@@ -12,7 +12,7 @@ import { connection } from "next/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { importCalendarEvents } from "@/shared/domain/events/event-calendar-import";
-import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
+import { isGoogleCalendarEnabled } from "@/shared/domain/settings/google-calendar";
 import { getEventImportSettings } from "@/shared/domain/settings/admin-queries";
 import {
   logError,

@@ -110,10 +110,8 @@ const mockGetSettings = mock<
   () => Promise<{ calendarId: string | null; enabled: boolean }>
 >(() => Promise.resolve({ calendarId: "test-calendar", enabled: true }));
 
-mock.module("@/shared/lib/google-calendar/service-account", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   getServiceAccountClient: mockGetServiceAccountClient,
-  encryptServiceAccountJson: mock(() => ""),
-  extractServiceAccountEmail: mock(() => null),
 }));
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({

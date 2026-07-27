@@ -69,12 +69,15 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getTwoWaySyncSettings: mockGetTwoWaySyncSettings,
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: mockIsTwoWaySyncEnabled,
-  // Phase B.2 task 16 で追加された fetchEventInstances。本 test では未使用だが、
-  // mock.module の process-global live binding が他 test file の実 import に
-  // 干渉して SyntaxError を起こすため必須
-  // ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+}));
+
+// Phase B.2 task 16 で追加された fetchEventInstances。本 test では未使用だが、
+// mock.module の process-global live binding が他 test file の実 import に
+// 干渉して SyntaxError を起こすため必須
+// ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+mock.module("@/shared/lib/google-calendar", () => ({
   fetchEventInstances: mock(() =>
     Promise.resolve({ success: true, instances: [] }),
   ),
