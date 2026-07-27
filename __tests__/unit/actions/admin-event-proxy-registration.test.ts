@@ -12,6 +12,22 @@ const mockSendEventAdminNotification = mock(
 );
 const mockCreateNotificationCommand = mock(async () => undefined);
 const mockInvalidateEventCaches = mock(() => undefined);
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
+const mockGetEventEmailRenderContext = mock(() =>
+  Promise.resolve(EVENT_EMAIL_RENDER_CONTEXT),
+);
+const mockResolveEventAdminNotificationDelivery = mock(() =>
+  Promise.resolve({
+    enabled: true,
+    notificationEmails: ["admin@example.com"],
+  }),
+);
 // createAdminProxyRegistration は assertAdminFeatureCreateAllowed("events") を呼ぶ
 // （feature-modules clean-break の admin create gate）。
 const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
@@ -56,6 +72,15 @@ mock.module("@/shared/domain/events/registration-queries", () => ({
   getEventRegistrationDetailsForEmail: (
     ...args: Parameters<typeof mockGetEventRegistrationDetailsForEmail>
   ) => mockGetEventRegistrationDetailsForEmail(...args),
+}));
+
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+  resolveEventAdminNotificationDelivery: (
+    ...args: Parameters<typeof mockResolveEventAdminNotificationDelivery>
+  ) => mockResolveEventAdminNotificationDelivery(...args),
 }));
 
 mock.module("@/shared/lib/email/event-emails", () => ({
@@ -134,6 +159,15 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
     mockCreateNotificationCommand.mockReset();
     mockCreateNotificationCommand.mockResolvedValue(undefined);
     mockInvalidateEventCaches.mockReset();
+    mockGetEventEmailRenderContext.mockReset();
+    mockGetEventEmailRenderContext.mockResolvedValue(
+      EVENT_EMAIL_RENDER_CONTEXT,
+    );
+    mockResolveEventAdminNotificationDelivery.mockReset();
+    mockResolveEventAdminNotificationDelivery.mockResolvedValue({
+      enabled: true,
+      notificationEmails: ["admin@example.com"],
+    });
     mockIsFeatureEnabled.mockReset();
     mockIsFeatureEnabled.mockResolvedValue(true);
     firedPromises.length = 0;
@@ -281,6 +315,7 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         icsSequence: 3,
         customerId: null,
       }),
+      EVENT_EMAIL_RENDER_CONTEXT,
     );
 
     // admin 通知送信
@@ -296,6 +331,9 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         capacity: 20,
       }),
       "registration",
+      expect.objectContaining({
+        notificationEmails: ["admin@example.com"],
+      }),
     );
 
     // 通知 (in-app notification) も fire-and-forget

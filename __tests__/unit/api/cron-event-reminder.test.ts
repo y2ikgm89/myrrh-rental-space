@@ -27,6 +27,24 @@ const mockGetEmailDeliverySettings = mock<
   () => Promise<{ notifyEventReminder: boolean }>
 >(() => Promise.resolve({ notifyEventReminder: true }));
 
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<{
+    calendarSettings: {
+      icalAttachmentEnabled: boolean;
+      addToCalendarLinksEnabled: boolean;
+    };
+    organizer: { name: string; email: string };
+  }>
+>(() =>
+  Promise.resolve({
+    calendarSettings: {
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    },
+    organizer: { name: "Test Org", email: "org@example.com" },
+  }),
+);
+
 const mockLogError = mock<() => void>(() => undefined);
 
 const mockAuthorizeCronRequest = mock<() => Promise<Response | null>>(() =>
@@ -87,6 +105,12 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   ) => mockGetEmailDeliverySettings(...args),
 }));
 
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+}));
+
 mock.module("@/shared/domain/events/venue", () => ({
   formatEventVenue: (params: {
     location: { name: string } | null;
@@ -106,6 +130,14 @@ mock.module("@/shared/lib/errors/server", () => ({
     error instanceof Error ? error : new Error(String(error)),
   getErrorMessage: (error: unknown) =>
     error instanceof Error ? error.message : String(error),
+  safeFetch: mock(async (opts: { fetch: () => unknown; fallback: unknown }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  }),
+  criticalFetch: mock(async (opts: { fetch: () => unknown }) => opts.fetch()),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",
@@ -171,6 +203,8 @@ function makeRegistration(overrides: Record<string, unknown> = {}) {
       addressDetail: null,
       location: { name: "テスト会場" },
       space: null,
+      format: "OFFLINE",
+      meetingUrl: null,
     },
     ...overrides,
   };
@@ -183,6 +217,7 @@ describe("GET /api/cron/event-reminder", () => {
     mockClaimEventRegistrationReminder.mockReset();
     mockReleaseEventRegistrationReminderClaim.mockReset();
     mockGetEmailDeliverySettings.mockReset();
+    mockGetEventEmailRenderContext.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
     mockIsFeatureEnabled.mockReset();
@@ -196,6 +231,13 @@ describe("GET /api/cron/event-reminder", () => {
     mockIsEmailEnabled.mockResolvedValue(true);
     mockGetEmailDeliverySettings.mockResolvedValue({
       notifyEventReminder: true,
+    });
+    mockGetEventEmailRenderContext.mockResolvedValue({
+      calendarSettings: {
+        icalAttachmentEnabled: false,
+        addToCalendarLinksEnabled: false,
+      },
+      organizer: { name: "Test Org", email: "org@example.com" },
     });
     mockFindEventRegistrationsForReminderWindow.mockResolvedValue([]);
     mockClaimEventRegistrationReminder.mockResolvedValue(true);
@@ -286,6 +328,13 @@ describe("GET /api/cron/event-reminder", () => {
         eventTitle: "テストイベント",
         quantity: 2,
       }),
+      {
+        calendarSettings: {
+          icalAttachmentEnabled: false,
+          addToCalendarLinksEnabled: false,
+        },
+        organizer: { name: "Test Org", email: "org@example.com" },
+      },
     );
     expect(mockReleaseEventRegistrationReminderClaim).not.toHaveBeenCalled();
   });

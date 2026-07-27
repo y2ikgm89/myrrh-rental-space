@@ -143,7 +143,25 @@ const mockGetWaitlistConfirmationEmailDetails = mock<
   } | null>
 >();
 const mockSendEventRegistrationConfirmation =
-  mock<(data: unknown) => Promise<unknown>>();
+  mock<(data: unknown, renderContext: unknown) => Promise<unknown>>();
+
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<{
+    calendarSettings: {
+      icalAttachmentEnabled: boolean;
+      addToCalendarLinksEnabled: boolean;
+    };
+    organizer: { name: string; email: string };
+  }>
+>(() =>
+  Promise.resolve({
+    calendarSettings: {
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    },
+    organizer: { name: "Test Org", email: "org@example.com" },
+  }),
+);
 
 // Site-wide cache invalidation (Route Handler variant)
 const mockInvalidateSiteWideCacheFromRouteHandler =
@@ -302,9 +320,15 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
     mockGetWaitlistConfirmationEmailDetails(id),
 }));
 
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+}));
+
 mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: (data: unknown) =>
-    mockSendEventRegistrationConfirmation(data),
+  sendEventRegistrationConfirmation: (data: unknown, renderContext: unknown) =>
+    mockSendEventRegistrationConfirmation(data, renderContext),
   buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
   buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
@@ -432,7 +456,17 @@ const DEFAULT_WAITLIST_DETAILS = {
   startTime: new Date("2026-08-01T10:00:00.000Z"),
   endTime: new Date("2026-08-01T12:00:00.000Z"),
   location: "東京会場",
+  format: "OFFLINE" as const,
+  meetingUrl: null,
 };
+
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
 
 function makeSessionCompletedEvent(
   metadata: Record<string, string>,
@@ -553,6 +587,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockFindEventRegistrationForReceiptNotify.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
+    mockGetEventEmailRenderContext.mockReset();
     mockIssueReceiptForReservation.mockReset();
     mockIssueReceiptForEventRegistration.mockReset();
     mockNotifyReceiptIssuedForReservation.mockReset();
@@ -625,6 +660,9 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     });
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
+    );
+    mockGetEventEmailRenderContext.mockResolvedValue(
+      EVENT_EMAIL_RENDER_CONTEXT,
     );
     mockSendEventRegistrationConfirmation.mockResolvedValue({ ok: true });
     mockSendReservationConfirmationEmail.mockResolvedValue(undefined);
@@ -800,6 +838,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           registrationId: "reg-waitlist-1",
           customerEmail: "waitlist@example.com",
         }),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
@@ -1195,6 +1234,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           registrationId: "reg-waitlist-1",
           customerEmail: "waitlist@example.com",
         }),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
