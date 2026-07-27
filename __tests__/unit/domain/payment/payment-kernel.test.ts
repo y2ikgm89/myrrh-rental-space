@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -10,7 +11,16 @@ const PaymentStatus = {
 } as const;
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({ PaymentStatus }));
+await installPrismaEnumsMock({ PaymentStatus });
+mock.module("@/shared/db/prisma", () => ({
+  prisma: {
+    $transaction: async () => {
+      throw new Error(
+        "prisma.$transaction should not run in kernel unit tests",
+      );
+    },
+  },
+}));
 
 const {
   buildCheckoutSettleUpdateData,
@@ -22,6 +32,11 @@ const {
 } = await import("@/shared/domain/payment/payment-status-guards");
 const { buildChargeRefundPaymentStatusWhere } =
   await import("@/shared/domain/payment/payment-claim-orchestration");
+const {
+  computeAdminRefundAmount,
+  buildAdminRefundPaymentStatusWhere,
+  resolveAdminRefundPaymentStatus,
+} = await import("@/shared/domain/payment/refund-command-orchestration");
 
 describe("payment/payment-status-guards", () => {
   test("buildPaidClaimUpdateData sets PAID and paidAt", () => {
@@ -87,5 +102,44 @@ describe("payment/payment-status-guards", () => {
         in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
       },
     });
+  });
+});
+
+describe("payment/refund-command-orchestration", () => {
+  test("computeAdminRefundAmount defaults to remaining balance", () => {
+    expect(
+      computeAdminRefundAmount({
+        requestedAmount: undefined,
+        chargeTotal: 5000,
+        cumulativeSoFar: 2000,
+        fullyRefundedMessage: "done",
+      }),
+    ).toEqual({
+      amount: 3000,
+      cumulativeSoFar: 2000,
+      newCumulative: 5000,
+      willBeFullyRefunded: true,
+    });
+  });
+
+  test("computeAdminRefundAmount rejects over-refund", () => {
+    expect(() =>
+      computeAdminRefundAmount({
+        requestedAmount: 4000,
+        chargeTotal: 5000,
+        cumulativeSoFar: 2000,
+        fullyRefundedMessage: "done",
+      }),
+    ).toThrow("返金額が残額を超えています");
+  });
+
+  test("admin refund status helpers align with charge webhook guards", () => {
+    expect(buildAdminRefundPaymentStatusWhere()).toEqual(
+      buildChargeRefundPaymentStatusWhere(),
+    );
+    expect(resolveAdminRefundPaymentStatus(true)).toBe(PaymentStatus.REFUNDED);
+    expect(resolveAdminRefundPaymentStatus(false)).toBe(
+      PaymentStatus.PARTIALLY_REFUNDED,
+    );
   });
 });

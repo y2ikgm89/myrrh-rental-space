@@ -7,35 +7,35 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  assertOnlinePaymentAvailable,
-  assertStripeCredentialsConfigured,
-} from "@/shared/domain/payment/availability";
+import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { getAppUrl } from "@/shared/lib/constants";
+import { retrieveCheckoutSessionStatus } from "@/shared/domain/payment/checkout-session-expiry";
 import {
-  expireOpenCheckoutSessionBestEffort,
-  retrieveCheckoutSessionStatus,
-} from "@/shared/domain/payment/checkout-session-expiry";
+  buildRevertCheckoutPendingAdapter,
+  orchestrateCheckoutSessionCreate,
+  resolveCheckoutStripeContext,
+} from "@/shared/domain/payment/checkout-session-create-orchestration";
 import {
-  handleCheckoutSessionCreateFailure,
-  rejectCheckoutSessionSettle,
   revertCheckoutPendingToUnpaid,
   settleCheckoutSessionWrite,
 } from "@/shared/domain/payment/checkout-session-write-orchestration";
 import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
+import {
+  buildAdminRefundPaymentStatusWhere,
+  computeAdminRefundAmount,
+  orchestrateAdminRefundCommand,
+  resolveAdminRefundPaymentStatus,
+  resolveRefundStripeContext,
+} from "@/shared/domain/payment/refund-command-orchestration";
 import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
   PAYMENT_REFUND_TRANSACTION_OPTIONS,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
-import {
-  findPaymentMethodsIncompatibleWithCurrency,
-  isStripePaymentMethodType,
-} from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import {
   REFUNDED_BY_TYPE,
@@ -145,42 +145,8 @@ export async function createCheckoutSessionCommand(input: {
     );
   }
 
-  const stripeSettings = await assertOnlinePaymentAvailable();
-
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
-  if (!client) {
-    throw new DomainError(
-      "Stripe の設定が正しくありません。管理者にお問い合わせください。",
-      "VALIDATION",
-    );
-  }
-
-  const currency = stripeSettings.stripeCurrency;
-  const appUrl = getAppUrl();
-
-  // Settings で許可された payment_method_types のみ Stripe に渡す。
-  // ハードコード `["card"]` fallback は禁止 — 空配列 / 全て invalid はドメインエラー。
-  // claim より前で validate することで PENDING に遷移させたまま stuck を残さない。
-  const paymentMethodTypes = stripeSettings.stripePaymentMethodTypes.filter(
-    isStripePaymentMethodType,
-  );
-  if (paymentMethodTypes.length === 0) {
-    throw new DomainError(
-      "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
-      "VALIDATION",
-    );
-  }
-
-  const incompatibleMethods = findPaymentMethodsIncompatibleWithCurrency(
-    paymentMethodTypes,
-    currency,
-  );
-  if (incompatibleMethods.length > 0) {
-    throw new DomainError(
-      "選択された決済方法は現在の通貨設定と互換性がありません。管理者にお問い合わせください。",
-      "VALIDATION",
-    );
-  }
+  const stripeContext = await resolveCheckoutStripeContext();
+  const { currency, paymentMethodTypes, appUrl } = stripeContext;
 
   // Race-free claim: 「Stripe session を作る前」に UNPAID → PENDING を atomic に確定する。
   //
@@ -262,22 +228,20 @@ export async function createCheckoutSessionCommand(input: {
     );
   }
 
-  let createdSessionId: string | null = null;
+  const authoritativeTotalPriceWithTax = authoritative.totalPriceWithTax;
 
-  try {
-    // Stripe session の `expires_at` を fail-safe cron の cutoff (PENDING_RESERVATION_EXPIRY_MINUTES)
-    // と揃える (Codex P1: PR#1042 の silent orphan 予防)。
-    // Stripe 側で session が expired になると `checkout.session.expired` webhook が
-    // 発火し `claimReservationAsFailed` が PENDING → FAILED に遷移させる。cron 側は
-    // `paymentInitiatedAt < cutoff` で拾って CANCELLED にする。両者が同時刻付近に
-    // fire しても updateMany の WHERE claim が排他化するため副作用は 1 回限り。
-    // Stripe API 制約: expires_at は 30 分 ~ 24 時間の範囲、Unix seconds。
-    const expiresAt =
-      Math.floor(claimedAt.getTime() / 1000) +
-      PENDING_RESERVATION_EXPIRY_MINUTES * 60;
-
-    const session = await client.checkout.sessions.create({
-      mode: "payment",
+  return orchestrateCheckoutSessionCreate({
+    operation: "createCheckoutSessionCommand",
+    stripeContext,
+    expireContext: { reservationId },
+    conflictMessage: "この予約は既に決済が完了しています",
+    revertPending: buildRevertCheckoutPendingAdapter(
+      (args) => prisma.reservation.updateMany(args),
+      reservationId,
+      { deletedAt: null },
+    ),
+    buildSessionParams: () => ({
+      mode: "payment" as const,
       payment_method_types: paymentMethodTypes,
       line_items: [
         {
@@ -287,7 +251,7 @@ export async function createCheckoutSessionCommand(input: {
               name: `予約: ${authoritative.space.name}`,
             },
             unit_amount: toStripeUnitAmount(
-              authoritative.totalPriceWithTax,
+              authoritativeTotalPriceWithTax,
               currency,
             ),
           },
@@ -298,75 +262,27 @@ export async function createCheckoutSessionCommand(input: {
         reservationId,
       },
       customer_email: authoritative.guestEmail ?? authoritative.customer.email,
-      expires_at: expiresAt,
+      expires_at:
+        Math.floor(claimedAt.getTime() / 1000) +
+        PENDING_RESERVATION_EXPIRY_MINUTES * 60,
       success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
-    });
-    createdSessionId = session.id;
-
-    // session id を確定書込 + paymentStatus: PENDING を再 assert する。
-    //
-    // Codex Cloud Review P1 (PR#1017): claim (UNPAID→PENDING) から本 write の間に、
-    // 古い/orphan の checkout.session.expired webhook が届くと `claimReservationAsFailed`
-    // が PENDING → FAILED に flip し、その後の本 write が stripeCheckoutSessionId だけ
-    // 書いて paymentStatus は FAILED のまま残す silent bug が発生する。結果:
-    //   - コマンドは live session URL を返す
-    //   - 顧客が Stripe で決済完了 → webhook checkout.session.completed 発火
-    //   - `claimReservationAsPaid` は UNPAID/PENDING のみ受け付ける (FAILED は拒否)
-    //   → 決済されたのに reservation が FAILED のまま滞留する会計 mismatch
-    //
-    // 修正: `updateMany` + WHERE `paymentStatus NOT IN [PAID, REFUNDED]` で
-    // 「終端に達していなければ PENDING を再 assert」する。FAILED も PENDING に
-    // 巻き戻して session URL 経由の決済を成立させる (session-specific webhook 分岐は
-    // 別 issue で対応予定)。PAID/REFUNDED (異常に速い webhook / manual admin refund) は
-    // 上書きしない — count === 0 になるが session URL は返す (webhook 側の冪等性に委任)。
-    const { settled } = await settleCheckoutSessionWrite(
-      (args) => prisma.reservation.updateMany(args),
-      {
-        entityId: reservationId,
-        sessionId: session.id,
-        extraWhere: { deletedAt: null },
-      },
-    );
-    if (!settled) {
-      await rejectCheckoutSessionSettle({
-        client,
-        sessionId: session.id,
-        operation: "createCheckoutSessionCommand",
-        logContext: { reservationId },
-        conflictMessage: "この予約は既に決済が完了しています",
-      });
-    }
-
-    return {
+    }),
+    settleSession: (sessionId) =>
+      settleCheckoutSessionWrite(
+        (args) => prisma.reservation.updateMany(args),
+        {
+          entityId: reservationId,
+          sessionId,
+          extraWhere: { deletedAt: null },
+        },
+      ),
+    buildSuccessResult: (session) => ({
       sessionId: session.id,
       sessionUrl: session.url,
       customerId: reservation.customerId,
-    };
-  } catch (error) {
-    if (error instanceof DomainError) {
-      throw error;
-    }
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: "createCheckoutSession", reservationId },
-    });
-    await handleCheckoutSessionCreateFailure({
-      createdSessionId,
-      expireOpenCheckoutSessionBestEffort,
-      revertPending: () =>
-        revertCheckoutPendingToUnpaid(
-          (args) => prisma.reservation.updateMany(args),
-          { entityId: reservationId, extraWhere: { deletedAt: null } },
-        ),
-      expireContext: { reservationId },
-    });
-    throw new DomainError(
-      "決済セッションの作成に失敗しました。しばらく経ってからお試しください。",
-      "UNEXPECTED",
-    );
-  }
+    }),
+  });
 }
 
 /**
@@ -620,11 +536,9 @@ export interface RefundReservationResult {
  *   同一 amount + 同一 newCumulative で idempotent (safe)
  *
  * ## 並行制御
- * - interactive tx 冒頭で `pg_advisory_xact_lock(REFUND_LOCK_NAMESPACE, hashtext(reservationId))`
- *   を取得し、同一予約への concurrent refund を直列化する (over-refund 防止)
- * - Stripe API 呼び出しは tx 内で行う (advisory lock 保持中)。Prisma docs は「tx 内で
- *   長時間 network 操作を避けよ」とするが、tx を 2 分割すると advisory lock を跨いだ
- *   race で over-refund が発生するため、正確性を優先。timeout: 30_000ms で bounded。
+ * - Phase 1 / 3 の interactive tx 冒頭で `pg_advisory_xact_lock` を取得し、
+ *   同一予約への concurrent refund を直列化する (over-refund 防止)
+ * - Stripe API 呼び出しは advisory lock tx の外で行う (checkout create と同型)
  *
  * ## Belt-and-suspenders
  * - Stripe refund 成功後、`Refund.stripeRefundId @unique` により二重 insert は DB 側で reject。
@@ -644,157 +558,114 @@ export async function refundReservationPaymentCommand(
     request,
   } = input;
 
-  const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
-  if (!client) {
-    throw new DomainError(
-      "Stripe の設定が正しくありません。管理者にお問い合わせください。",
-      "VALIDATION",
-    );
-  }
+  const stripeContext = await resolveRefundStripeContext();
 
-  const stripeCurrency = stripeSettings.stripeCurrency;
+  const result = await orchestrateAdminRefundCommand<
+    RefundReservationResult,
+    { customerId: string }
+  >({
+    entityKind: "reservation",
+    entityId: reservationId,
+    requestedAmount,
+    reason,
+    actorType,
+    idempotencyKeyPrefix: `reservation-refund-${reservationId}`,
+    operation: "refundReservationPayment",
+    savepointName: "refund_create_reservation",
+    stripeContext,
+    stripeLogContext: { reservationId },
+    planInTx: async (tx) => {
+      const reservation = await tx.reservation.findUnique({
+        where: { id: reservationId, deletedAt: null },
+        select: {
+          id: true,
+          customerId: true,
+          paymentStatus: true,
+          stripePaymentIntentId: true,
+          totalPriceWithTax: true,
+        },
+      });
 
-  const result = await prisma.$transaction(async (tx) => {
-    // 予約単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
-    await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
+      if (!reservation) {
+        throw new DomainError("予約が見つかりません", "NOT_FOUND");
+      }
 
-    const reservation = await tx.reservation.findUnique({
-      where: { id: reservationId, deletedAt: null },
-      select: {
-        id: true,
-        customerId: true,
-        paymentStatus: true,
-        stripePaymentIntentId: true,
-        // Checkout は `totalPriceWithTax`（税込）を Stripe に送るため、実 charge
-        // 額と refund 上限・領収書 (Receipt.amount) は `totalPriceWithTax` を
-        // 単一 SSoT とする。
-        totalPriceWithTax: true,
-      },
-    });
+      if (
+        reservation.paymentStatus !== PaymentStatus.PAID &&
+        reservation.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+      ) {
+        throw new DomainError(
+          "支払い済み・一部返金済みの予約のみ返金できます",
+          "VALIDATION",
+        );
+      }
 
-    if (!reservation) {
-      throw new DomainError("予約が見つかりません", "NOT_FOUND");
-    }
+      if (!reservation.stripePaymentIntentId) {
+        throw new DomainError(
+          "Stripe の決済情報が見つかりません",
+          "VALIDATION",
+        );
+      }
 
-    // PAID + PARTIALLY_REFUNDED の両方から返金可能
-    if (
-      reservation.paymentStatus !== PaymentStatus.PAID &&
-      reservation.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
-    ) {
-      throw new DomainError(
-        "支払い済み・一部返金済みの予約のみ返金できます",
-        "VALIDATION",
-      );
-    }
+      if (
+        reservation.totalPriceWithTax === null ||
+        reservation.totalPriceWithTax <= 0
+      ) {
+        throw new DomainError(
+          "料金が設定されていない予約は返金できません",
+          "VALIDATION",
+        );
+      }
 
-    if (!reservation.stripePaymentIntentId) {
-      throw new DomainError("Stripe の決済情報が見つかりません", "VALIDATION");
-    }
+      const aggregate = await tx.refund.aggregate({
+        where: { reservationId },
+        _sum: { amount: true },
+      });
+      const cumulativeSoFar = aggregate._sum.amount ?? 0;
+      const amountPlan = computeAdminRefundAmount({
+        requestedAmount,
+        chargeTotal: reservation.totalPriceWithTax,
+        cumulativeSoFar,
+        fullyRefundedMessage: "この予約は既に全額返金済みです",
+      });
 
-    if (
-      reservation.totalPriceWithTax === null ||
-      reservation.totalPriceWithTax <= 0
-    ) {
-      throw new DomainError(
-        "料金が設定されていない予約は返金できません",
-        "VALIDATION",
-      );
-    }
-
-    // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
-    const aggregate = await tx.refund.aggregate({
-      where: { reservationId },
-      _sum: { amount: true },
-    });
-    const cumulativeSoFar = aggregate._sum.amount ?? 0;
-    const remaining = reservation.totalPriceWithTax - cumulativeSoFar;
-
-    if (remaining <= 0) {
-      // paymentStatus が PARTIALLY_REFUNDED のまま累積が charge 額に
-      // 到達している異常状態 (paymentStatus 側の flip が失敗)。次回 admin refund で顕在化する。
-      throw new DomainError("この予約は既に全額返金済みです", "VALIDATION");
-    }
-
-    const amount = requestedAmount ?? remaining;
-
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new DomainError(
-        "返金額は 1 円以上の整数で指定してください",
-        "VALIDATION",
-      );
-    }
-    if (amount > remaining) {
-      throw new DomainError(
-        `返金額が残額を超えています (残額: ${remaining} 円)`,
-        "VALIDATION",
-      );
-    }
-
-    const newCumulative = cumulativeSoFar + amount;
-    const willBeFullyRefunded = newCumulative === reservation.totalPriceWithTax;
-
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: reservation.stripePaymentIntentId,
-      amount,
-      stripeCurrency,
-      metadata: {
-        initiator: actorType,
-        ...(reason ? { reason } : {}),
-      },
-      idempotencyKey: `reservation-refund-${reservationId}-${newCumulative}`,
-      operation: "refundReservationPayment",
-      logContext: { reservationId },
-      userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
-    });
-
-    // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
-    // Refund を書いていた場合の idempotent 処理。
-    //
-    // Codex PR #1146 追加指摘 (P2): Prisma の `upsert({where, create, update: {}})` は
-    // SELECT+INSERT に compile されるため並行 create で `refunds_stripeRefundId_key`
-    // 一意制約違反が依然発生する (Prisma issue #20229)。単一 `create` + `catch (P2002)` が
-    // 真 atomic pattern だが、interactive tx 内で query fail すると tx 全体が abort 状態
-    // になる (PostgreSQL の semantics)。そのため PostgreSQL SAVEPOINT で局所 rollback を
-    // 挟んで tx 全体を保護する。
-    //
-    // savepoint 名は tx 内で unique であれば良い (call site 単位で衝突しない)。
-    await createRefundRecordIdempotent(tx, "refund_create_reservation", {
+      return {
+        ...amountPlan,
+        paymentIntentId: reservation.stripePaymentIntentId,
+        chargeTotal: reservation.totalPriceWithTax,
+        entityPayload: { customerId: reservation.customerId },
+      };
+    },
+    buildRefundRecord: ({ amount, stripeRefundId, reason: refundReason }) => ({
       reservationId,
       amount,
-      ...(reason ? { reason } : {}),
-      stripeRefundId: refund.id,
+      ...(refundReason ? { reason: refundReason } : {}),
+      stripeRefundId,
       refundedByType: actorType,
-    });
-
-    // paymentStatus 遷移 (updateMany で status guard)
-    await tx.reservation.updateMany({
-      where: {
-        id: reservationId,
-        deletedAt: null,
-        paymentStatus: {
-          in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+    }),
+    updatePaymentStatusInTx: async (tx, willBeFullyRefunded) => {
+      await tx.reservation.updateMany({
+        where: {
+          id: reservationId,
+          deletedAt: null,
+          ...buildAdminRefundPaymentStatusWhere(),
         },
-      },
-      data: {
-        paymentStatus: willBeFullyRefunded
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIALLY_REFUNDED,
-      },
-    });
-
-    return {
-      refundId: refund.id,
-      status: refund.status,
-      customerId: reservation.customerId,
-      newPaymentStatus: willBeFullyRefunded
-        ? PaymentStatus.REFUNDED
-        : PaymentStatus.PARTIALLY_REFUNDED,
-      cumulativeAmount: newCumulative,
-      refundAmount: amount,
-    } satisfies RefundReservationResult;
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+        data: {
+          paymentStatus: resolveAdminRefundPaymentStatus(willBeFullyRefunded),
+        },
+      });
+    },
+    buildResult: ({ refundId, status, plan, entityPayload }) => ({
+      refundId,
+      status,
+      customerId: entityPayload.customerId,
+      newPaymentStatus: resolveAdminRefundPaymentStatus(
+        plan.willBeFullyRefunded,
+      ),
+      cumulativeAmount: plan.newCumulative,
+      refundAmount: plan.amount,
+    }),
+  });
 
   // AuditLog (tx 外、hash-chain の write は独立)
   await createAuditLogRecord({
