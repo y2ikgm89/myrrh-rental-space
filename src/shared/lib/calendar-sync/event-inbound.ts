@@ -13,7 +13,7 @@ import { type calendar_v3 } from "googleapis";
 import {
   cancelImportedEventFromCalendar,
   upsertEventFromCalendar,
-} from "@/shared/domain/events/commands";
+} from "@/shared/domain/events/event-calendar-import-commands";
 import {
   clearEventImportSyncToken,
   getEventImportSyncToken,
