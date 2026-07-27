@@ -418,7 +418,13 @@ describe("display order surfaces clean-break contract", () => {
       readRepoFile("src", "shared", "domain", "posts", "category-commands.ts"),
       readRepoFile("src", "shared", "domain", "navigation", "commands.ts"),
       readRepoFile("src", "shared", "domain", "sections", "commands.ts"),
-      readRepoFile("src", "shared", "domain", "events", "commands.ts"),
+      readRepoFile(
+        "src",
+        "shared",
+        "domain",
+        "events",
+        "event-slot-sync-commands.ts",
+      ),
       readRepoFile("src", "shared", "domain", "instagram", "commands.ts"),
     ].join("\n");
 

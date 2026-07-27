@@ -28,7 +28,7 @@ import {
 import {
   cancelImportedEventFromCalendar,
   upsertEventFromCalendar,
-} from "@/shared/domain/events/commands";
+} from "@/shared/domain/events/event-calendar-import-commands";
 import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 
 export interface EventImportResult {
