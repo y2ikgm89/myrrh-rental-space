@@ -10,7 +10,7 @@ import {
   LINK_CARD_CONTENT_TYPE_FEATURE_MODULE,
   type LinkCardContentType,
 } from "@/shared/domain/link-cards/content-types";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 
 /**
  * 公開描画時に解決された内部リンクカードの表示データ。

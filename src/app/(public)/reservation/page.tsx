@@ -14,7 +14,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 
 export async function generateMetadata(): Promise<Metadata> {

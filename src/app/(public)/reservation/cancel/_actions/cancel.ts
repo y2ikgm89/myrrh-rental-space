@@ -22,6 +22,7 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
 
 const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
@@ -49,6 +50,7 @@ export async function cancelGuestReservationAction(
 
   return runGuestTokenMutation({
     operation: "guestCancelAction",
+    getMaintenanceBlock: getPublicMaintenanceBlockMutation,
     cookieName: CANCEL_TOKEN_COOKIE_NAME,
     turnstileAction: TURNSTILE_ACTIONS.guest_reservation_cancel,
     turnstileToken,

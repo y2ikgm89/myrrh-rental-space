@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 
 // トークンゲート系ページの兄弟。404 ではなく informational landing のため noindex のみ。
 export const metadata: Metadata = {

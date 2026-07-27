@@ -14,7 +14,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   isFeatureEnabled,
   requireFeatureEnabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { getCustomerEventRegistrationDetail } from "@/shared/domain/events/registration-queries";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { findReceiptSerialNoByEventRegistrationId } from "@/shared/domain/receipts/queries";

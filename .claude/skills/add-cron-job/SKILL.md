@@ -81,7 +81,7 @@ rate limit の追加作業は不要 — `src/proxy.ts` が `/api/cron` prefix �
 ジョブが feature module (reservation / events / faq 等) に属するなら:
 
 1. route 冒頭 (認可の直後) で `isFeatureEnabled("<module>")`
-   (`src/shared/lib/features/check.ts`) を確認し早期 return する
+   (`src/shared/domain/features/check.ts`) を確認し早期 return する
    (スニペットは rules の `app-structure` 参照)
 2. `src/shared/lib/features/registry.ts` の該当 module の `cronPaths` に
    `"/api/cron/<job-name>"` を追記する (disabled 集合 `disabledCronPaths` の SSoT)

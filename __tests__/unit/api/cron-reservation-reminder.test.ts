@@ -143,7 +143,7 @@ mock.module("@/shared/lib/route-responses", () => ({
 
 // `isFeatureEnabled` 内部の `'use cache'` chain（getFeatureModulesSettings → cacheLife）
 // は test 環境で `cacheComponents` config 不在のため throw する。常時 true で mock。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
   requireFeatureEnabled: () => Promise.resolve(),
   getEnabledFeatures: () => Promise.resolve(new Set(["spaces", "reservation"])),

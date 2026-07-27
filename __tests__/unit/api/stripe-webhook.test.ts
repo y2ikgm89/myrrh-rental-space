@@ -301,7 +301,7 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
 
 // 実際の next/navigation を re-export し、unstable_rethrow のみオーバーライド。
 // Task 9 で route.ts が event-registration 経路
-// （`@/shared/domain/events/waitlist-commands` 経由で `@/shared/lib/features/check`
+// （`@/shared/domain/events/waitlist-commands` 経由で `@/shared/domain/features/check`
 // を import し、同ファイルが `notFound` を使う）を追加した結果、このモジュールを
 // 完全に差し替える旧実装（`unstable_rethrow` のみ）だと named import 解決に失敗する
 // （`SyntaxError: Export named 'notFound' not found`）。他の mock（crypto/serialize/

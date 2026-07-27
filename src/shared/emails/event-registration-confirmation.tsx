@@ -1,7 +1,7 @@
 import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
-import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
+import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";

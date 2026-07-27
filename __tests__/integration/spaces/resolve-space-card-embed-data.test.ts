@@ -47,7 +47,7 @@ mock.module("next/cache", () => ({
 // resolveSpaceCardEmbedData が isFeatureEnabled("spaces") を呼ぶため、feature module
 // gate を mock で常に ON にする（registration-overbooking.test.ts と同じパターン）。
 // Settings singleton との競合回避。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
 }));
 
