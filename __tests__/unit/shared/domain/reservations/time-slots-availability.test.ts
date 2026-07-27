@@ -54,7 +54,7 @@ mock.module("@/shared/domain/reservations/availability", () => ({
 }));
 
 const { getAvailableTimeSlots } =
-  await import("@/shared/lib/reservation/time-slots");
+  await import("@/shared/domain/reservations/time-slots");
 
 /** 月曜 9:00–23:00（日跨ぎテスト用に 23 時まで延長） */
 const BUSINESS_HOURS: BusinessHours = {

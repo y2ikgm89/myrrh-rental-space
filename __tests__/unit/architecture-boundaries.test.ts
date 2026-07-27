@@ -1073,7 +1073,6 @@ describe("architecture boundaries", () => {
         "lexical/resolve-internal-link-cards.ts",
         "lexical/resolve-space-card-embeds.ts",
         "maintenance-guard.ts",
-        "reservation/time-slots.ts",
         "slug-validation.ts",
         "terms-consent-gate.ts",
         "turnstile.ts",

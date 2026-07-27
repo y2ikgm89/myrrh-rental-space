@@ -38,7 +38,7 @@ const mockGetAvailableTimeSlots = mock(() =>
   ]),
 );
 
-mock.module("@/shared/lib/reservation/time-slots", () => ({
+mock.module("@/shared/domain/reservations/time-slots", () => ({
   getAvailableTimeSlots: mockGetAvailableTimeSlots,
 }));
 
