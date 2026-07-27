@@ -11,137 +11,53 @@
  * 「custom」セクションタイプのみ Lexical エディタを先頭に表示する。
  */
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
-import {
-  getFormProps,
-  getInputProps,
-  getTextareaProps,
-  useForm,
-  parse,
-  type FieldMetadata,
-  type FormMetadata,
-} from "@conform-to/react";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
-import dynamic from "next/dynamic";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { getFormProps, parse, useForm } from "@conform-to/react";
 import { z } from "zod";
 import { IconLink, IconPhotoVideo, IconTypography } from "@tabler/icons-react";
 import {
-  Input,
-  Label,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  Textarea,
 } from "@/admin/components/ui";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
-// IconPickerField は Tabler 100+ icons + IconPickerDialog を含む heavy chain (~300+ KB)。
-const IconPickerField = dynamic(
-  () =>
-    import("@/admin/components/icon-picker/IconPickerField").then((mod) => ({
-      default: mod.IconPickerField,
-    })),
-  { ssr: false },
-);
-const PortableTextInlineEditor = dynamic(
-  () =>
-    import("@/admin/components/portable-text/inline-editor/PortableTextInlineEditor").then(
-      (mod) => ({ default: mod.PortableTextInlineEditor }),
-    ),
-  { ssr: false },
-);
-const PortableTextBlockEditor = dynamic(
-  () =>
-    import("@/admin/components/portable-text/block-editor/PortableTextBlockEditor").then(
-      (mod) => ({ default: mod.PortableTextBlockEditor }),
-    ),
-  { ssr: false },
-);
-import {
-  createBlockArraySchema,
-  createSpanArraySchema,
-} from "@/shared/lib/portable-text/schema";
-import type {
-  PortableTextBlock,
-  PortableTextSpan,
-} from "@/shared/lib/portable-text";
+import type { DynamicCategoryOption } from "@/shared/domain/sections/dynamic-options";
+import { isRecord } from "@/shared/lib/serialize";
+
+import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
+import { AutoSelectField } from "./auto-fields/AutoSelectField";
+import { AutoArrayField } from "./auto-fields/AutoArrayField";
+import { AutoGroupField } from "./auto-fields/AutoGroupField";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
 import {
   extractDiscriminatedUnionInfo,
   extractSchemaFields,
 } from "./zod-introspection";
-import type { FieldInfo, ArrayItemFieldInfo } from "./zod-introspection";
-import type { FieldType, MediaAcceptType } from "@/shared/lib/sections/types";
+import type { FieldInfo } from "./zod-introspection";
+import { AutoColorField } from "./auto-section-form/AutoColorField";
+import { AutoIconField } from "./auto-section-form/AutoIconField";
+import { AutoImageFieldControlled } from "./auto-section-form/AutoImageFieldControlled";
+import { AutoMediaFieldControlled } from "./auto-section-form/AutoMediaFieldControlled";
+import {
+  AutoNumberField,
+  AutoTextField,
+  AutoTextareaField,
+  AutoUrlField,
+} from "./auto-section-form/AutoPrimitiveFields";
+import { AutoRichBlocksField } from "./auto-section-form/AutoRichBlocksField";
+import { AutoRichLabelField } from "./auto-section-form/AutoRichLabelField";
+import {
+  formatZodFieldErrors,
+  toDynamicConfigForm,
+} from "./auto-section-form/helpers";
 import type {
-  DynamicCategoryOption,
-  DynamicSectionOptions,
-} from "@/shared/domain/sections/dynamic-options";
-import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
-import { AutoSelectField } from "./auto-fields/AutoSelectField";
-import { AutoArrayField } from "./auto-fields/AutoArrayField";
-import { AutoGroupField } from "./auto-fields/AutoGroupField";
-import { AutoImageField } from "./auto-fields/AutoImageField";
-import { AutoMediaField } from "./auto-fields/AutoMediaField";
-import { isRecord } from "@/shared/lib/serialize";
-
-type DynamicConfigValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | DynamicConfigValue[]
-  | { readonly [key: string]: DynamicConfigValue };
-
-type DynamicConfigForm = Record<string, DynamicConfigValue>;
-
-function isDynamicConfigValue(value: unknown): value is DynamicConfigValue {
-  if (
-    value === null ||
-    value === undefined ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-  if (Array.isArray(value)) {
-    return value.every(isDynamicConfigValue);
-  }
-  if (isRecord(value)) {
-    return Object.values(value).every(isDynamicConfigValue);
-  }
-  return false;
-}
-
-function toDynamicConfigForm(
-  record: Record<string, unknown>,
-): DynamicConfigForm {
-  const result: DynamicConfigForm = {};
-  for (const [key, value] of Object.entries(record)) {
-    if (isDynamicConfigValue(value)) {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-
-function formatZodFieldErrors(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join(".");
-    const current = errors[key];
-    errors[key] =
-      current === undefined ? [issue.message] : [...current, issue.message];
-  }
-  return errors;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────────────────────────
+  AutoFieldByTypeProps,
+  AutoFieldProps,
+  DynamicConfigForm,
+} from "./auto-section-form/types";
 
 export function AutoSectionForm({
   section,
@@ -152,14 +68,12 @@ export function AutoSectionForm({
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
 
-  // デフォルト config を取得（スキーマ .parse({}) でデフォルト値を生成）
   const defaultConfig = definition
     ? (() => {
         const result = definition.configSchema.safeParse(section.config);
         if (result.success && isRecord(result.data)) {
           return result.data;
         }
-        // config のパースに失敗した場合、空オブジェクトでデフォルト生成
         const fallback = definition.configSchema.safeParse({});
         if (fallback.success && isRecord(fallback.data)) {
           return fallback.data;
@@ -169,18 +83,10 @@ export function AutoSectionForm({
     : {};
 
   const schema = definition?.configSchema;
-
-  // Discriminated union 判定（page-hero 等）— variant 切替時の form 値置換に使用
   const duInfo = schema ? extractDiscriminatedUnionInfo(schema) : undefined;
 
-  // conform useForm: callback-based form（onSave 起動）
-  // 動的 schema のため defaultValue / onValidate の戻り値 / form.update に境界変換が必要
-  // (conform generic invariance 境界対応。方針: .claude/rules/type-safety.md)
   const [form, fields] = useForm<DynamicConfigForm>({
     id: `auto-section-${section.id}`,
-    // defaultValue: 内部的に boolean/number/array/object を含むが、conform は runtime で
-    // FormData string にシリアライズするため実害なし
-    // (typed-input-control SSoT helper 経由。方針: .claude/rules/type-safety.md)
     defaultValue: toDynamicConfigForm(defaultConfig),
     onValidate({ formData }) {
       const activeSchema = schema ?? z.record(z.string(), z.unknown());
@@ -208,15 +114,12 @@ export function AutoSectionForm({
     shouldRevalidate: "onInput",
   });
 
-  // Discriminator field の current value を監視（conform fields.X.value は reactive）
   const discriminatorKey = duInfo?.discriminator;
   const watchedDiscriminator =
     discriminatorKey !== undefined
       ? fields[discriminatorKey]?.value
       : undefined;
 
-  // 直前に reset / 初期化した variant 値を ref で記憶し、無限ループを防ぐ
-  // discriminator キー名は schema 定義依存（page-hero では "variant" だが固定しない）
   const lastVariantRef = useRef<string | undefined>(
     discriminatorKey !== undefined &&
       isRecord(defaultConfig) &&
@@ -225,7 +128,6 @@ export function AutoSectionForm({
       : undefined,
   );
 
-  // Variant 切替時に form.update でフォーム値を新 variant のデフォルトに置換
   const applyVariantReset = useEffectEvent((nextVariant: string) => {
     if (!duInfo || !schema) return;
     const validValues = new Set(duInfo.options.map((o) => o.value));
@@ -261,8 +163,6 @@ export function AutoSectionForm({
     );
   }
 
-  // Group 別にフィールドを分離（content / design / advanced の 3 段階固定）。
-  // content=「内容」タブ、design + advanced=「デザイン」タブに振り分ける。
   const contentFields = fieldsList.filter((f) => f.meta.group === "content");
   const designFields = fieldsList.filter((f) => f.meta.group === "design");
   const advancedFields = fieldsList.filter((f) => f.meta.group === "advanced");
@@ -284,7 +184,6 @@ export function AutoSectionForm({
     );
   };
 
-  // subGroup 別に content フィールドを分類
   const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
   const mediaFields = contentFields.filter((f) => f.meta.subGroup === "media");
   const buttonFields = contentFields.filter(
@@ -294,7 +193,6 @@ export function AutoSectionForm({
     (f) => f.meta.subGroup === undefined || f.meta.subGroup === "other",
   );
 
-  // 「内容」タブの中身（テキスト / メディア / ボタン / その他）
   const contentBlock = (
     <div className="space-y-6">
       {textFields.length > 0 && (
@@ -324,9 +222,6 @@ export function AutoSectionForm({
   return (
     <form {...getFormProps(form)} className="space-y-4">
       {hasDesignTab ? (
-        // WordPress ブロックインスペクタ準拠の「内容 / デザイン」タブ。
-        // forceMount + data-[state=inactive]:hidden で非アクティブタブも DOM 保持し、
-        // Lexical / PortableText 等のクライアント状態と FormData を切替で失わない。
         <Tabs defaultValue="content">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="content">内容</TabsTrigger>
@@ -358,19 +253,6 @@ export function AutoSectionForm({
       />
     </form>
   );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Field Renderer
-// ─────────────────────────────────────────────────────────────
-
-interface AutoFieldProps<TForm extends Record<string, unknown>> {
-  readonly fieldInfo: FieldInfo | ArrayItemFieldInfo;
-  readonly field: FieldMetadata<unknown, TForm>;
-  readonly form: FormMetadata<TForm>;
-  readonly isPending: boolean;
-  readonly defaultValue: unknown;
-  readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
 function AutoField<TForm extends Record<string, unknown>>({
@@ -409,26 +291,6 @@ function AutoField<TForm extends Record<string, unknown>>({
   );
 }
 
-interface AutoFieldByTypeProps<TForm extends Record<string, unknown>> {
-  readonly fieldType: FieldType;
-  readonly fieldKey: string;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly placeholder: string | undefined;
-  readonly helpText: string | undefined;
-  readonly suffix: string | undefined;
-  readonly leadingIcon: string | undefined;
-  readonly trailingIcon: string | undefined;
-  readonly mediaAccept: MediaAcceptType | undefined;
-  readonly schema: z.ZodType;
-  readonly field: FieldMetadata<unknown, TForm>;
-  readonly form: FormMetadata<TForm>;
-  readonly isPending: boolean;
-  readonly defaultValue: unknown;
-  readonly error: string | undefined;
-  readonly dynamicOptions: DynamicSectionOptions | undefined;
-}
-
 function AutoFieldByType<TForm extends Record<string, unknown>>(
   props: AutoFieldByTypeProps<TForm>,
 ) {
@@ -454,30 +316,17 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
   switch (fieldType) {
     case "text":
       return (
-        <div className="space-y-2">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            {...getInputProps(field, { type: "text" })}
-            id={fieldId}
-            placeholder={placeholder}
-            disabled={isPending}
-            {...(leadingIcon !== undefined && { leadingIcon })}
-            {...(trailingIcon !== undefined && { trailingIcon })}
-            // conform getInputProps が defaultValue / key を渡すため value 制御不要
-          />
-          {helpText && (
-            <p className="text-xs text-muted-foreground">{helpText}</p>
-          )}
-          {error && (
-            <p
-              id={field.errorId}
-              role="alert"
-              className="text-sm text-destructive"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+        <AutoTextField
+          field={field}
+          fieldId={fieldId}
+          label={label}
+          placeholder={placeholder}
+          helpText={helpText}
+          leadingIcon={leadingIcon}
+          trailingIcon={trailingIcon}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "icon":
@@ -518,61 +367,30 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
 
     case "textarea":
       return (
-        <div className="space-y-2">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Textarea
-            {...getTextareaProps(field)}
-            id={fieldId}
-            placeholder={placeholder}
-            rows={3}
-            disabled={isPending}
-          />
-          {helpText && (
-            <p className="text-xs text-muted-foreground">{helpText}</p>
-          )}
-          {error && (
-            <p
-              id={field.errorId}
-              role="alert"
-              className="text-sm text-destructive"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+        <AutoTextareaField
+          field={field}
+          fieldId={fieldId}
+          label={label}
+          placeholder={placeholder}
+          helpText={helpText}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "number":
       return (
-        <div className="space-y-2">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              {...getInputProps(field, { type: "number" })}
-              id={fieldId}
-              disabled={isPending}
-              {...(leadingIcon !== undefined && { leadingIcon })}
-              {...(trailingIcon !== undefined && { trailingIcon })}
-            />
-            {suffix && (
-              <span className="text-sm text-muted-foreground shrink-0">
-                {suffix}
-              </span>
-            )}
-          </div>
-          {helpText && (
-            <p className="text-xs text-muted-foreground">{helpText}</p>
-          )}
-          {error && (
-            <p
-              id={field.errorId}
-              role="alert"
-              className="text-sm text-destructive"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+        <AutoNumberField
+          field={field}
+          fieldId={fieldId}
+          label={label}
+          suffix={suffix}
+          helpText={helpText}
+          leadingIcon={leadingIcon}
+          trailingIcon={trailingIcon}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "boolean":
@@ -652,29 +470,17 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
 
     case "url":
       return (
-        <div className="space-y-2">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            {...getInputProps(field, { type: "url" })}
-            id={fieldId}
-            placeholder={placeholder ?? "https://..."}
-            disabled={isPending}
-            {...(leadingIcon !== undefined && { leadingIcon })}
-            {...(trailingIcon !== undefined && { trailingIcon })}
-          />
-          {helpText && (
-            <p className="text-xs text-muted-foreground">{helpText}</p>
-          )}
-          {error && (
-            <p
-              id={field.errorId}
-              role="alert"
-              className="text-sm text-destructive"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+        <AutoUrlField
+          field={field}
+          fieldId={fieldId}
+          label={label}
+          placeholder={placeholder}
+          helpText={helpText}
+          leadingIcon={leadingIcon}
+          trailingIcon={trailingIcon}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "array":
@@ -731,327 +537,9 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
         />
       );
 
-    default:
-      return null;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Specialized field components (useTypedInputControl ベース)
-// ─────────────────────────────────────────────────────────────
-
-function AutoImageFieldControlled({
-  field,
-  fieldId,
-  label,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const control = useTypedInputControl(field);
-  const currentValue = typeof control.value === "string" ? control.value : "";
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={currentValue} />
-      <AutoImageField
-        fieldId={fieldId}
-        label={label}
-        value={currentValue.length > 0 ? currentValue : undefined}
-        onSelect={(url) => control.change(url)}
-        {...(helpText !== undefined && { helpText })}
-        {...(isPending && { disabled: true })}
-      />
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function AutoMediaFieldControlled({
-  field,
-  fieldId,
-  label,
-  accept,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly accept: MediaAcceptType;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const control = useTypedInputControl(field);
-  const currentValue = typeof control.value === "string" ? control.value : "";
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={currentValue} />
-      <AutoMediaField
-        fieldId={fieldId}
-        label={label}
-        accept={accept}
-        value={currentValue.length > 0 ? currentValue : undefined}
-        onSelect={(url) => control.change(url)}
-        {...(helpText !== undefined && { helpText })}
-        {...(isPending && { disabled: true })}
-      />
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function AutoColorField({
-  field,
-  fieldId,
-  label,
-  placeholder,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly placeholder: string | undefined;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const control = useTypedInputControl(field);
-  const colorValue =
-    typeof control.value === "string" && control.value.length > 0
-      ? control.value
-      : "";
-  const swatchValue = colorValue || "#000000";
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={colorValue} />
-      <Label htmlFor={fieldId}>{label}</Label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          id={`${fieldId}-picker`}
-          className="h-9 w-12 cursor-pointer rounded border p-1"
-          value={swatchValue}
-          onChange={(e) => control.change(e.target.value)}
-          disabled={isPending}
-          aria-label={`${label} カラーピッカー`}
-        />
-        <Input
-          id={fieldId}
-          value={colorValue}
-          onChange={(e) => control.change(e.target.value)}
-          onBlur={control.blur}
-          placeholder={placeholder ?? "#000000"}
-          disabled={isPending}
-          className="flex-1"
-        />
-      </div>
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function AutoIconField({
-  field,
-  fieldId,
-  label,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const control = useTypedInputControl(field);
-  const value = typeof control.value === "string" ? control.value : "";
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={value} />
-      <Label htmlFor={fieldId}>{label}</Label>
-      <IconPickerField
-        id={fieldId}
-        value={value}
-        onChange={(name) => control.change(name)}
-        disabled={isPending}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// PortableText fields は `useInputControl` を使わず local state + hidden input transit
-// (BarDialog / NavigationDialog canonical pattern と同型)。
-//
-// `useInputControl<string>` は内部 sync useEffect で `change(field.value)` を呼ぶが、
-// conform `defaultValue` に `PortableTextSpan[]` / `PortableTextBlock[]` (array of objects)
-// を渡すと `normalizeStringValues` が "Expected string or string[]" を throw する。
-// hidden input 経由で JSON 文字列を FormData に乗せ、schema 側 preprocess で復号する
-// (`createSpanArraySchema` / `createBlockArraySchema` の `decodePortableTextInput`)。
-//
-// variant 切替時の `form.update` 等で field.value が外部要因により変化した場合に同期できる
-// よう、React 公式「Adjusting State Directly During Render」パターンを採用。
-function AutoRichLabelField({
-  field,
-  fieldId,
-  label,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const fieldValue = field.value;
-  const [spans, setSpans] = useState<PortableTextSpan[]>(() =>
-    parsePortableTextSpans(fieldValue),
-  );
-  const [previousFieldValue, setPreviousFieldValue] = useState(fieldValue);
-  if (fieldValue !== previousFieldValue) {
-    setPreviousFieldValue(fieldValue);
-    setSpans(parsePortableTextSpans(fieldValue));
-  }
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={JSON.stringify(spans)} />
-      <Label htmlFor={fieldId}>{label}</Label>
-      <PortableTextInlineEditor
-        id={fieldId}
-        value={spans}
-        onChange={setSpans}
-        disabled={isPending}
-        aria-label={label}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function AutoRichBlocksField({
-  field,
-  fieldId,
-  label,
-  helpText,
-  isPending,
-  error,
-}: {
-  readonly field: FieldMetadata<unknown>;
-  readonly fieldId: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly isPending: boolean;
-  readonly error: string | undefined;
-}) {
-  const fieldValue = field.value;
-  const [blocks, setBlocks] = useState<PortableTextBlock[]>(() =>
-    parsePortableTextBlocks(fieldValue),
-  );
-  const [previousFieldValue, setPreviousFieldValue] = useState(fieldValue);
-  if (fieldValue !== previousFieldValue) {
-    setPreviousFieldValue(fieldValue);
-    setBlocks(parsePortableTextBlocks(fieldValue));
-  }
-
-  return (
-    <div className="space-y-2">
-      <input type="hidden" name={field.name} value={JSON.stringify(blocks)} />
-      <Label htmlFor={fieldId}>{label}</Label>
-      <PortableTextBlockEditor
-        id={fieldId}
-        value={blocks}
-        onChange={setBlocks}
-        disabled={isPending}
-        aria-label={label}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {error && (
-        <p id={field.errorId} role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Portable Text JSON transit helpers
-// ─────────────────────────────────────────────────────────────
-
-function parsePortableTextSpans(value: unknown): PortableTextSpan[] {
-  if (Array.isArray(value)) {
-    const result = createSpanArraySchema().safeParse(value);
-    return result.success ? result.data : [];
-  }
-  if (typeof value === "string" && value.length > 0) {
-    try {
-      const parsed: unknown = JSON.parse(value);
-      const result = createSpanArraySchema().safeParse(parsed);
-      return result.success ? result.data : [];
-    } catch {
-      return [];
+    default: {
+      const _exhaustive: never = fieldType;
+      return _exhaustive;
     }
   }
-  return [];
-}
-
-function parsePortableTextBlocks(value: unknown): PortableTextBlock[] {
-  if (Array.isArray(value)) {
-    const result = createBlockArraySchema().safeParse(value);
-    return result.success ? result.data : [];
-  }
-  if (typeof value === "string" && value.length > 0) {
-    try {
-      const parsed: unknown = JSON.parse(value);
-      const result = createBlockArraySchema().safeParse(parsed);
-      return result.success ? result.data : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
 }
