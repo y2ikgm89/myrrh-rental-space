@@ -26,7 +26,7 @@ describe("maintenance-guard", () => {
 
   test("isPublicSiteInMaintenance returns false when maintenance OFF", async () => {
     const { isPublicSiteInMaintenance } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(isPublicSiteInMaintenance()).resolves.toBe(false);
   });
@@ -40,7 +40,7 @@ describe("maintenance-guard", () => {
     );
 
     const { isPublicSiteInMaintenance } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(isPublicSiteInMaintenance()).resolves.toBe(true);
   });
@@ -51,7 +51,7 @@ describe("maintenance-guard", () => {
     );
 
     const { assertPublicSiteWritable, PUBLIC_MAINTENANCE_BLOCKED_MESSAGE } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(assertPublicSiteWritable()).rejects.toEqual(
       new DomainError(PUBLIC_MAINTENANCE_BLOCKED_MESSAGE, "FORBIDDEN"),
@@ -64,7 +64,7 @@ describe("maintenance-guard", () => {
     );
 
     const { checkPublicSiteWritable, PUBLIC_MAINTENANCE_BLOCKED_MESSAGE } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(checkPublicSiteWritable()).resolves.toEqual({
       ok: false,
@@ -80,7 +80,7 @@ describe("maintenance-guard", () => {
     const {
       getPublicMaintenanceBlockMutation,
       PUBLIC_MAINTENANCE_BLOCKED_MESSAGE,
-    } = await import("@/shared/lib/maintenance-guard");
+    } = await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(getPublicMaintenanceBlockMutation()).resolves.toEqual({
       error: PUBLIC_MAINTENANCE_BLOCKED_MESSAGE,
@@ -94,14 +94,14 @@ describe("maintenance-guard", () => {
     );
 
     const { isPublicSiteInMaintenance } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     await expect(isPublicSiteInMaintenance()).resolves.toBe(true);
   });
 
   test("isCustomerAuthSignOutPath matches sign-out only", async () => {
     const { isCustomerAuthSignOutPath } =
-      await import("@/shared/lib/maintenance-guard");
+      await import("@/shared/domain/settings/maintenance-guard");
 
     expect(isCustomerAuthSignOutPath("/api/customer-auth/sign-out")).toBe(true);
     expect(isCustomerAuthSignOutPath("/api/customer-auth/sign-out/")).toBe(
@@ -114,7 +114,7 @@ describe("maintenance-guard", () => {
     const {
       publicMaintenanceJsonResponse,
       PUBLIC_MAINTENANCE_BLOCKED_MESSAGE,
-    } = await import("@/shared/lib/maintenance-guard");
+    } = await import("@/shared/domain/settings/maintenance-guard");
 
     const response = await publicMaintenanceJsonResponse();
 

@@ -12,7 +12,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   isFeatureEnabled,
   requireFeatureEnabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { findReceiptSerialNoMapByEventRegistrationIds } from "@/shared/domain/receipts/queries";
 import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";

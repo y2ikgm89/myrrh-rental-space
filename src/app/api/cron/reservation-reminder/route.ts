@@ -15,7 +15,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {

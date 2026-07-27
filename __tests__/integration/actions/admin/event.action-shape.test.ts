@@ -19,7 +19,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
   requireFeatureEnabled: mock(() => Promise.resolve()),
   assertAdminFeatureCreateAllowed: mock(() => Promise.resolve()),

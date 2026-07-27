@@ -137,7 +137,7 @@ mock.module("@/shared/domain/terms/queries", () => ({
 const mockAssertAllRequiredTermsAgreed = mock(() =>
   Promise.resolve({ matchedTermsIds: [] as string[] }),
 );
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mockAssertAllRequiredTermsAgreed,
   assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));

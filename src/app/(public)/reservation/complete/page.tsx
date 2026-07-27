@@ -7,7 +7,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { verifyCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";

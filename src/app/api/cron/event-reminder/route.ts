@@ -13,14 +13,14 @@ import {
 } from "@/shared/domain/settings/queries/email-render-context";
 import { sendEventReminderEmail } from "@/shared/lib/email/event-emails";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import {
   logError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {

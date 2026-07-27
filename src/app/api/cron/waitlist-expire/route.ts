@@ -15,7 +15,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import {
   logError,

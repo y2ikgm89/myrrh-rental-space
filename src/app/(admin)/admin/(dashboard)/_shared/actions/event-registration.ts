@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import {
   adminCancelEventRegistrationCommand,
   createAdminProxyRegistrationCommand,

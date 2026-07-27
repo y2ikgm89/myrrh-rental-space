@@ -14,7 +14,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getFaqCategories, getFaqHealthSummary } from "@/admin/queries/faq";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import { FaqCategoryListView } from "./_components/FaqCategoryListView";
 

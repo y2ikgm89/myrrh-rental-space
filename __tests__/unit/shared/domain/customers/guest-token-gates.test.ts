@@ -23,7 +23,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
   assertCustomerActive: mockAssertCustomerActive,
 }));
 
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertLoginSignupReagreed: mockAssertLoginSignupReagreed,
 }));
 

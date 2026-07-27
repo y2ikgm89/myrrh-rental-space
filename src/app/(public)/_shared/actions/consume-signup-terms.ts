@@ -6,7 +6,7 @@ import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { hasTermsAgreementRecorded } from "@/shared/domain/terms/queries";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { assertAllRequiredTermsAgreed } from "@/shared/domain/terms/consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_NAME,

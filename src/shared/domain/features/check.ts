@@ -7,7 +7,7 @@ import {
   FEATURE_MODULES,
   FEATURE_MODULES_LIST,
   type FeatureModule,
-} from "./registry";
+} from "@/shared/lib/features/registry";
 
 /**
  * 有効化されている feature module 集合を解決する。
