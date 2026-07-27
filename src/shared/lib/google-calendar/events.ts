@@ -347,7 +347,7 @@ export async function getCalendarEvent(
  *
  * Google Calendar API `events.instances(masterId)` の wrapper。RRULE から展開された
  * 各 occurrence の child event ID (`{masterId}_{yyyymmddTHHMMSSZ}` 形式) と
- * 開始時刻を返し、呼出側 (reservation / calendar-sync outbound の write-back 経路) が
+ * 開始時刻を返し、呼出側 (reservation-calendar-outbound の write-back 経路) が
  * Reservation.googleCalendarEventId に紐付ける。`showDeleted: false` で
  * キャンセル済 occurrence は除外。
  *

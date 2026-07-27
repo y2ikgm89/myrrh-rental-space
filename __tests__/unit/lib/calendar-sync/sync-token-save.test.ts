@@ -172,7 +172,8 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: () => undefined,
 }));
 
-const { syncFromCalendar } = await import("@/shared/lib/calendar-sync/inbound");
+const { syncFromCalendar } =
+  await import("@/shared/domain/reservations/reservation-calendar-inbound");
 
 // -----------------------------------------------------------------------
 // Suite

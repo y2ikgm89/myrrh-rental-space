@@ -127,10 +127,13 @@ mock.module("@/shared/domain/notifications/commands", () => ({
 const mockDeleteCalendarSync = mock<
   (reservationId: string, eventId: string) => Promise<void>
 >(() => Promise.resolve());
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: (rId: string, eId: string) =>
-    mockDeleteCalendarSync(rId, eId),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: (rId: string, eId: string) =>
+      mockDeleteCalendarSync(rId, eId),
+  }),
+);
 
 // メール送信 (顧客 + 管理者) は外部 SMTP を叩くため mock。
 const mockSendCancelled = mock<

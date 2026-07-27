@@ -120,9 +120,12 @@ const mockSyncReservationToCalendar = mock(() =>
   Promise.resolve({ success: true }),
 );
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mockSyncReservationToCalendar,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mockSyncReservationToCalendar,
+  }),
+);
 
 const mockUpdateTag = mock(() => undefined);
 

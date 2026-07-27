@@ -104,7 +104,8 @@ mock.module("@/shared/domain/settings/google-calendar-api", () => ({
 type PrismaModule = typeof import("@/shared/db/prisma");
 type EventOutboundModule =
   typeof import("@/shared/domain/events/event-calendar-outbound");
-type OutboundModule = typeof import("@/shared/lib/calendar-sync/outbound");
+type OutboundModule =
+  typeof import("@/shared/domain/reservations/reservation-calendar-outbound");
 type EventsCalendarSyncModule =
   typeof import("@/shared/domain/events/calendar-sync");
 type PrismaTypesModule =
@@ -253,7 +254,7 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     ({ syncEventToCalendar } =
       await import("@/shared/domain/events/event-calendar-outbound"));
     ({ syncReservationToCalendar } =
-      await import("@/shared/lib/calendar-sync/outbound"));
+      await import("@/shared/domain/reservations/reservation-calendar-outbound"));
     ({ getEventSlotsForCalendarSync } =
       await import("@/shared/domain/events/calendar-sync"));
     ({ EVENT_FORMAT, MEETING_PROVIDER, EventScheduleMode, EventStatus } =
