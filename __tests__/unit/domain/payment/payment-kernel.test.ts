@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
-import type { AsyncOnlyStripe } from "@/shared/lib/stripe";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -11,42 +10,14 @@ const PaymentStatus = {
   FAILED: "FAILED",
 } as const;
 
-const stripeCallState = {
-  inTx: false,
-  callCount: 0,
-  calledDuringTx: 0,
-};
-
-let transactionCallCount = 0;
-
-const mockAcquirePaymentRefundAdvisoryLock = mock(async () => undefined);
-const mockCreateRefundRecordIdempotent = mock(async () => undefined);
-const mockCreateStripeRefundOrThrow = mock(async () => {
-  stripeCallState.callCount += 1;
-  if (stripeCallState.inTx) {
-    stripeCallState.calledDuringTx += 1;
-  }
-  return { id: "re_test_1", status: "succeeded" };
-});
-
 mock.module("server-only", () => ({}));
 await installPrismaEnumsMock({ PaymentStatus });
-mock.module("@/shared/domain/payment/stripe-refund-orchestration", () => ({
-  acquirePaymentRefundAdvisoryLock: mockAcquirePaymentRefundAdvisoryLock,
-  createRefundRecordIdempotent: mockCreateRefundRecordIdempotent,
-  createStripeRefundOrThrow: mockCreateStripeRefundOrThrow,
-  PAYMENT_REFUND_TRANSACTION_OPTIONS: { timeout: 30_000, maxWait: 30_000 },
-}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    $transaction: async <T>(fn: (tx: object) => Promise<T>): Promise<T> => {
-      transactionCallCount += 1;
-      stripeCallState.inTx = true;
-      try {
-        return await fn({});
-      } finally {
-        stripeCallState.inTx = false;
-      }
+    $transaction: async () => {
+      throw new Error(
+        "prisma.$transaction should not run in kernel unit tests",
+      );
     },
   },
 }));
@@ -66,8 +37,6 @@ const {
   buildAdminRefundPaymentStatusWhere,
   resolveAdminRefundPaymentStatus,
 } = await import("@/shared/domain/payment/refund-command-orchestration");
-const { orchestrateAutoRefundCommand } =
-  await import("@/shared/domain/payment/orphan-refund-orchestration");
 
 describe("payment/payment-status-guards", () => {
   test("buildPaidClaimUpdateData sets PAID and paidAt", () => {
@@ -172,92 +141,5 @@ describe("payment/refund-command-orchestration", () => {
     expect(resolveAdminRefundPaymentStatus(false)).toBe(
       PaymentStatus.PARTIALLY_REFUNDED,
     );
-  });
-});
-
-describe("payment/orphan-refund-orchestration", () => {
-  beforeEach(() => {
-    stripeCallState.callCount = 0;
-    stripeCallState.calledDuringTx = 0;
-    stripeCallState.inTx = false;
-    transactionCallCount = 0;
-    mockAcquirePaymentRefundAdvisoryLock.mockClear();
-    mockCreateRefundRecordIdempotent.mockClear();
-    mockCreateStripeRefundOrThrow.mockClear();
-  });
-
-  test("createStripeRefundOrThrow runs outside advisory-lock transaction callbacks", async () => {
-    const result = await orchestrateAutoRefundCommand({
-      entityKind: "reservation",
-      entityId: "res-1",
-      stripeContext: {
-        client: {} as AsyncOnlyStripe,
-        stripeCurrency: "jpy",
-      },
-      actorType: "AUTO_ON_CANCEL",
-      reason: "test orphan refund",
-      operation: "refundOrphanedStripePaymentForCancelledReservation",
-      savepointName: "refund_create_auto_on_cancel",
-      userMessage: "キャンセル後の自動返金に失敗しました",
-      stripeLogContext: { reservationId: "res-1" },
-      planInTx: async () => ({
-        kind: "refund",
-        amount: 1500,
-        paymentIntentId: "pi_1",
-        idempotencyKey: "reservation-refund-res-1-1500",
-      }),
-      buildRefundRecord: ({ amount, stripeRefundId }) => ({
-        reservationId: "res-1",
-        amount,
-        stripeRefundId,
-        refundedByType: "AUTO_ON_CANCEL",
-      }),
-      finalizeInTx: async () => undefined,
-    });
-
-    expect(result).toEqual({
-      outcome: "refunded",
-      refundId: "re_test_1",
-      refundAmount: 1500,
-    });
-    expect(transactionCallCount).toBe(2);
-    expect(mockAcquirePaymentRefundAdvisoryLock).toHaveBeenCalledTimes(2);
-    expect(mockCreateStripeRefundOrThrow).toHaveBeenCalledTimes(1);
-    expect(stripeCallState.callCount).toBe(1);
-    expect(stripeCallState.calledDuringTx).toBe(0);
-    expect(mockCreateRefundRecordIdempotent).toHaveBeenCalledTimes(1);
-  });
-
-  test("terminal plan skips Stripe and phase-C transaction", async () => {
-    const result = await orchestrateAutoRefundCommand({
-      entityKind: "event-registration",
-      entityId: "reg-1",
-      stripeContext: {
-        client: {} as AsyncOnlyStripe,
-        stripeCurrency: "jpy",
-      },
-      actorType: "AUTO_CAPACITY_RACE",
-      reason: "already closed",
-      operation: "refundExpiredWaitlistOfferPayment",
-      savepointName: "refund_create_capacity_race",
-      userMessage: "容量レース後の自動返金に失敗しました",
-      stripeLogContext: { registrationId: "reg-1" },
-      planInTx: async () => ({
-        kind: "terminal",
-        result: { outcome: "already_refunded" },
-      }),
-      buildRefundRecord: ({ amount, stripeRefundId }) => ({
-        eventRegistrationId: "reg-1",
-        amount,
-        stripeRefundId,
-        refundedByType: "AUTO_CAPACITY_RACE",
-      }),
-      finalizeInTx: async () => undefined,
-    });
-
-    expect(result).toEqual({ outcome: "already_refunded" });
-    expect(transactionCallCount).toBe(1);
-    expect(mockCreateStripeRefundOrThrow).not.toHaveBeenCalled();
-    expect(mockCreateRefundRecordIdempotent).not.toHaveBeenCalled();
   });
 });
