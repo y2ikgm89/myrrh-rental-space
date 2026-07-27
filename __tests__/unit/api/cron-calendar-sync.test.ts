@@ -99,7 +99,7 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getTwoWaySyncSettings: () => mockGetTwoWaySyncSettings(),
 }));
 
-mock.module("@/shared/lib/email/system-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendWebhookRenewalNotification: (...args: unknown[]) =>
     mockSendWebhookRenewalNotification(...args),
 }));

@@ -110,7 +110,7 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
   sendReservationStatusChangedEmail: mock(async () => {}),

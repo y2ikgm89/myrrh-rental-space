@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 
 // --- モック関数の定義（mock.module() より前）---
 const mockFindReservationsForReminderWindow = mock<
@@ -56,7 +57,7 @@ mock.module("@/shared/domain/reservations/admin-queries", () => ({
   ) => mockFindReservationsForReminderWindow(...args),
 }));
 
-mock.module("@/shared/lib/email/reminder-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendReservationReminderEmail: (
     ...args: Parameters<typeof mockSendReservationReminderEmail>
   ) => mockSendReservationReminderEmail(...args),
@@ -121,10 +122,10 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
-mock.module("@/shared/lib/email/client", () => ({
+installEmailRenderContextMock({
   isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
     mockIsEmailEnabled(...args),
-}));
+});
 
 mock.module("@/shared/lib/route-responses", () => ({
   getRouteErrorStatus: (message: string) => {

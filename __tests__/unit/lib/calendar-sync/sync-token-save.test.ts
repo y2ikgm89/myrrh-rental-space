@@ -134,7 +134,7 @@ mock.module("@/shared/domain/reservations/calendar-sync-fetch", () => ({
   fetchCalendarChanges: () => mockFetchCalendarChanges(),
 }));
 
-mock.module("@/shared/lib/email/system-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendCalendarSyncRejectionEmail: (...args: unknown[]) =>
     mockSendCalendarSyncRejectionEmail(...args),
 }));

@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Enums（Prisma import チェーンを避けるために再宣言）
@@ -251,17 +252,15 @@ mock.module("@/shared/domain/events/email-queries", () => ({
   ) => mockGetEventUpdatedNotificationPayload(...args),
 }));
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: (
     ...args: Parameters<typeof mockGetEventEmailRenderContext>
   ) => mockGetEventEmailRenderContext(...args),
-}));
+});
 
-mock.module("@/shared/lib/email/event-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendEventUpdatedToAllParticipants: mockSendEventUpdated,
   sendEventCancelledToAllParticipants: mockSendEventCancelled,
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 await installPrismaEnumsMock({

@@ -85,7 +85,7 @@ beforeEach(() => {
     requestReceiptResendByEmail: domainSpy,
   }));
 
-  mock.module("@/shared/lib/email/receipt-emails", () => ({
+  mock.module("@/shared/domain/email/lib-dispatch", () => ({
     sendReceiptResendEmail: sendReceiptResendEmailSpy,
   }));
 

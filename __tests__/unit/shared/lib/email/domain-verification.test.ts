@@ -13,11 +13,11 @@ type ListResult = {
 };
 
 const mockDomainsList = mock<() => Promise<ListResult>>();
-const mockGetResendClient =
-  mock<() => { domains: { list: typeof mockDomainsList } } | null>();
+const mockGetResendClientForApiKey =
+  mock<() => { domains: { list: typeof mockDomainsList } }>();
 
 mock.module("@/shared/lib/email/client", () => ({
-  getResendClient: mockGetResendClient,
+  getResendClientForApiKey: mockGetResendClientForApiKey,
 }));
 
 const EMAIL_TRANSPORT_CONTEXT = { resendApiKey: "re_test_key" } as const;
@@ -40,8 +40,10 @@ function listOf(domains: DomainEntry[]): ListResult {
 
 beforeEach(() => {
   mockDomainsList.mockReset();
-  mockGetResendClient.mockReset();
-  mockGetResendClient.mockReturnValue({ domains: { list: mockDomainsList } });
+  mockGetResendClientForApiKey.mockReset();
+  mockGetResendClientForApiKey.mockReturnValue({
+    domains: { list: mockDomainsList },
+  });
 });
 
 describe("validateSenderDomain()", () => {
@@ -116,13 +118,11 @@ describe("validateSenderDomain()", () => {
     });
   });
 
-  test("APIキー未設定（client が null）は fail-closed", async () => {
-    mockGetResendClient.mockReturnValue(null);
+  test("APIキー未設定は fail-closed", async () => {
     expect(
-      await validateSenderDomain(
-        "noreply@example.com",
-        EMAIL_TRANSPORT_CONTEXT,
-      ),
+      await validateSenderDomain("noreply@example.com", {
+        resendApiKey: null,
+      }),
     ).toEqual({
       ok: false,
       verifiedDomains: [],

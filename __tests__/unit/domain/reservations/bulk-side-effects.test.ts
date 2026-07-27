@@ -120,7 +120,7 @@ const mockSendBulkReservationCancelledEmail = mock<
 const mockSendBulkAdminNotification = mock<
   (data: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
   sendBulkReservationCancelledEmail: mockSendBulkReservationCancelledEmail,

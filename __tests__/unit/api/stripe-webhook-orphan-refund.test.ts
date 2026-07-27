@@ -251,17 +251,12 @@ mock.module("@/shared/lib/route-responses", () => ({
     mockJsonError(error.issues[0]?.message ?? "validation", 400),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationConfirmationEmail: () => Promise.resolve(),
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
+  sendReservationConfirmationEmail: () => Promise.resolve({ ok: true }),
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
+  sendEventRegistrationConfirmation: () => Promise.resolve({ ok: true }),
 }));
 
 mock.module("@/shared/domain/receipts/issue", () => ({
@@ -278,12 +273,6 @@ mock.module("@/shared/domain/receipts/notify-issued", () => ({
 
 mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getWaitlistConfirmationEmailDetails: () => Promise.resolve(null),
-}));
-
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: () => Promise.resolve({ ok: true }),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module(
