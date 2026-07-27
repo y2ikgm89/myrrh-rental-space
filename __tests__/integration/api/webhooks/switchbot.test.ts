@@ -238,6 +238,33 @@ describe("POST /api/webhooks/switchbot/[token]", () => {
       });
     });
 
+    test("optional keyName を domain に渡す", async () => {
+      mockIsKnownSmartLockDevice.mockResolvedValue(true);
+      mockProcessSwitchBotChangeReport.mockResolvedValue(true);
+
+      const keyName = "res-aaaaaaaaaaaaaaaa-deviceeeeeeeeeee";
+      const response = await post(
+        switchbotRequest({
+          eventType: "changeReport",
+          context: {
+            ...VALID_COMMAND_CONTEXT,
+            eventName: "deleteKey",
+            keyName,
+          },
+        }),
+        EXPECTED_TOKEN,
+      );
+
+      expect(response.status).toBe(200);
+      expect(mockProcessSwitchBotChangeReport).toHaveBeenCalledWith({
+        deviceMac: VALID_COMMAND_CONTEXT.deviceMac,
+        eventName: "deleteKey",
+        commandId: VALID_COMMAND_CONTEXT.commandId,
+        keyName,
+        result: VALID_COMMAND_CONTEXT.result,
+      });
+    });
+
     test("eventNameの前後空白はtrimしてdomainに渡す", async () => {
       mockIsKnownSmartLockDevice.mockResolvedValue(true);
       mockProcessSwitchBotChangeReport.mockResolvedValue(true);

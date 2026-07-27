@@ -26,6 +26,9 @@ import {
 const mockRegistrationFindFirst = mock<
   (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
+const mockRegistrationFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
 const mockRegistrationUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
@@ -58,6 +61,7 @@ const txStub = {
   $executeRaw: mockExecuteRaw,
   eventRegistration: {
     findFirst: mockRegistrationFindFirst,
+    findUnique: mockRegistrationFindUnique,
     updateMany: mockRegistrationUpdateMany,
     aggregate: mockRegistrationAggregate,
   },
@@ -205,12 +209,15 @@ describe("confirmWaitlistOfferCommand", () => {
 
   beforeEach(() => {
     mockRegistrationFindFirst.mockReset();
+    mockRegistrationFindUnique.mockReset();
     mockRegistrationUpdateMany.mockReset();
     mockRegistrationAggregate.mockReset();
     mockSlotFindUnique.mockReset();
     mockEventFindFirst.mockReset();
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
+    // claim race 後の再読込で EXPIRED/CONFIRMED 以外（null）→ CONFLICT
+    mockRegistrationFindUnique.mockResolvedValue(null);
   });
 
   test("registrationOpen=false → EXPIRED（capacity race と同型・自動返金経路）", async () => {

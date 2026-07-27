@@ -26,11 +26,21 @@ const mockIssueSmartLockPasscodes = mock<
 >(() => Promise.resolve({ passcodes: [], issuanceFailed: false }));
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
+const mockUpdateManyReservation = mock<
+  (...args: unknown[]) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockMarkSmartLockReissuePending = mock<
+  (...args: unknown[]) => Promise<void>
+>(() => Promise.resolve());
+const mockClearSmartLockReissuePending = mock<
+  (...args: unknown[]) => Promise<void>
+>(() => Promise.resolve());
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {
       findUnique: (...args: unknown[]) => mockFindUniqueReservation(...args),
+      updateMany: (...args: unknown[]) => mockUpdateManyReservation(...args),
     },
     space: {
       findUnique: (...args: unknown[]) => mockFindUniqueSpace(...args),
@@ -41,14 +51,27 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
+const mockAwaitReservationRevokeConfirmation = mock<
+  (...args: unknown[]) => Promise<boolean>
+>(() => Promise.resolve(true));
+
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: (...args: unknown[]) =>
     mockRevokeSmartLockPasscodesForReservation(...args),
+  awaitReservationRevokeConfirmation: (...args: unknown[]) =>
+    mockAwaitReservationRevokeConfirmation(...args),
 }));
 
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: (...args: unknown[]) =>
     mockIssueSmartLockPasscodes(...args),
+}));
+
+mock.module("@/shared/domain/smart-lock/reissue-passcode", () => ({
+  markSmartLockReissuePending: (...args: unknown[]) =>
+    mockMarkSmartLockReissuePending(...args),
+  clearSmartLockReissuePending: (...args: unknown[]) =>
+    mockClearSmartLockReissuePending(...args),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -92,8 +115,12 @@ beforeEach(() => {
   mockFindUniqueSpace.mockReset();
   mockDeleteManyPasscode.mockReset();
   mockRevokeSmartLockPasscodesForReservation.mockReset();
+  mockAwaitReservationRevokeConfirmation.mockReset();
   mockIssueSmartLockPasscodes.mockReset();
   mockLogError.mockReset();
+  mockUpdateManyReservation.mockReset();
+  mockMarkSmartLockReissuePending.mockReset();
+  mockClearSmartLockReissuePending.mockReset();
 
   mockFindUniqueReservation.mockResolvedValue({
     status: "CONFIRMED",
@@ -107,6 +134,7 @@ beforeEach(() => {
         spaceId === OLD_SPACE_ID || spaceId === NEW_SPACE_ID ? DEVICE_ID : null,
     });
   });
+  mockAwaitReservationRevokeConfirmation.mockResolvedValue(true);
   mockIssueSmartLockPasscodes.mockResolvedValue({
     passcodes: [{ deviceName: "玄関", passcode: "123456" }],
     issuanceFailed: false,
@@ -132,10 +160,13 @@ describe("applyReservationEditSideEffects", () => {
     expect(mockIssueSmartLockPasscodes).not.toHaveBeenCalled();
   });
 
-  test("同一 device への再発行は revoke 後 REVOKE_PENDING 等を DELETE して issue する", async () => {
+  test("同一 device への再発行は revoke 確認後に terminal 行を DELETE して issue する", async () => {
     const result = await applyReservationEditSideEffects(makeInput());
 
     expect(mockRevokeSmartLockPasscodesForReservation).toHaveBeenCalledWith(
+      RESERVATION_ID,
+    );
+    expect(mockAwaitReservationRevokeConfirmation).toHaveBeenCalledWith(
       RESERVATION_ID,
     );
     expect(mockDeleteManyPasscode).toHaveBeenCalledWith(
@@ -143,13 +174,34 @@ describe("applyReservationEditSideEffects", () => {
         where: expect.objectContaining({
           reservationId: RESERVATION_ID,
           status: {
-            in: ["REVOKE_PENDING", "PENDING", "REVOKED", "FAILED"],
+            in: ["REVOKED", "FAILED", "PENDING"],
           },
         }),
       }),
     );
     expect(mockIssueSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(result.passcodes).toHaveLength(1);
+  });
+
+  test("revoke 未確認の場合は pending を立て issuanceFailed を返し DELETE/issue しない", async () => {
+    mockAwaitReservationRevokeConfirmation.mockResolvedValue(false);
+
+    const result = await applyReservationEditSideEffects(makeInput());
+
+    expect(mockMarkSmartLockReissuePending).toHaveBeenCalledWith(
+      RESERVATION_ID,
+    );
+    expect(result).toEqual({ passcodes: [], issuanceFailed: true });
+    expect(mockDeleteManyPasscode).not.toHaveBeenCalled();
+    expect(mockIssueSmartLockPasscodes).not.toHaveBeenCalled();
+  });
+
+  test("revoke 確認後は pending フラグをクリアしてから issue する", async () => {
+    await applyReservationEditSideEffects(makeInput());
+
+    expect(mockClearSmartLockReissuePending).toHaveBeenCalledWith(
+      RESERVATION_ID,
+    );
   });
 
   test("別 device への space 変更は REVOKE_PENDING 行を DELETE しない", async () => {

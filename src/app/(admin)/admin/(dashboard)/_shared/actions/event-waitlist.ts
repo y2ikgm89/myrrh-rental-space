@@ -5,7 +5,10 @@ import {
   adminPromoteWaitlistEntryCommand,
   expireWaitlistOfferCommand,
 } from "@/shared/domain/events/waitlist-commands";
-import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
+import {
+  getEventWaitlistOfferPaymentContext,
+  getWaitlistEmailRegistration,
+} from "@/shared/domain/events/waitlist-queries";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   sendEventWaitlistOffered,
@@ -153,12 +156,13 @@ export async function adminPromoteWaitlistEntryAction(
 
       fireAndForget(
         (async () => {
-          const paymentContext = await getEventWaitlistOfferPaymentContext(
-            data.registrationId,
-          );
-          if (!paymentContext) return;
+          const [registration, paymentContext] = await Promise.all([
+            getWaitlistEmailRegistration(data.registrationId),
+            getEventWaitlistOfferPaymentContext(data.registrationId),
+          ]);
+          if (!registration || !paymentContext) return;
           await sendEventWaitlistOffered({
-            registrationId: data.registrationId,
+            registration,
             to: email,
             expiresAt: data.expiresAt,
             paymentContext,
@@ -277,10 +281,16 @@ export async function adminExpireWaitlistOfferAction(
       const email = data.email;
 
       fireAndForget(
-        sendEventWaitlistExpired({
-          registrationId: data.registrationId,
-          to: email,
-        }),
+        (async () => {
+          const registration = await getWaitlistEmailRegistration(
+            data.registrationId,
+          );
+          if (!registration) return;
+          await sendEventWaitlistExpired({
+            registration,
+            to: email,
+          });
+        })(),
         {
           operation: "sendEventWaitlistExpired",
           category: ErrorCategory.EXTERNAL_API,

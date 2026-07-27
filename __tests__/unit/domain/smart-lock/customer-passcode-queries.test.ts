@@ -1,5 +1,7 @@
 /**
  * getCustomerVisibleSmartLockPasscodesForReservation の表示条件マトリクス + auth 拒否
+ *
+ * 表示窓は SmartLockPasscode.startTime/endTime（発行時焼き込み）を正本とする。
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -12,18 +14,20 @@ const CUSTOMER_ID = "cccccccc-dddd-eeee-ffff-000000000001";
 const OTHER_CUSTOMER_ID = "cccccccc-dddd-eeee-ffff-000000000002";
 const DEVICE_ID = "11111111-2222-3333-4444-555555555555";
 
-const START_TIME = new Date("2026-08-01T01:00:00.000Z");
-const END_TIME = new Date("2026-08-01T03:00:00.000Z");
-/** buffer 15min → window [00:45, 03:15] UTC */
+const RESERVATION_END = new Date("2026-08-01T03:00:00.000Z");
+/** 発行時 buffer 15min 焼き込み → window [00:45, 03:15] UTC */
+const PASSCODE_START = new Date("2026-08-01T00:45:00.000Z");
+const PASSCODE_END = new Date("2026-08-01T03:15:00.000Z");
 const NOW_IN_WINDOW = new Date("2026-08-01T02:00:00.000Z");
 const NOW_BEFORE_WINDOW = new Date("2026-08-01T00:30:00.000Z");
 const NOW_AFTER_WINDOW = new Date("2026-08-01T03:30:00.000Z");
+/** 予約終了後だが焼き込み endTime 内（旧 buffer 再計算と分岐する境界） */
+const NOW_IN_STORED_BUFFER_ONLY = new Date("2026-08-01T03:10:00.000Z");
 
 type ReservationRow = {
   id: string;
   customerId: string;
   status: string;
-  startTime: Date;
   endTime: Date;
   space: {
     smartLockDevice: {
@@ -38,6 +42,8 @@ type ReservationRow = {
 type PasscodeRow = {
   id: string;
   status: string;
+  startTime: Date;
+  endTime: Date;
   passcodeCiphertext: string;
   device: { id: string; deviceName: string };
 };
@@ -53,7 +59,6 @@ const mockFindManyPasscodes = mock<
 const mockFindUniqueSwitchbot = mock<
   (...args: unknown[]) => Promise<{
     switchbotEnabled: boolean;
-    switchbotPasscodeBufferMinutes: number;
   } | null>
 >(() => Promise.resolve(null));
 
@@ -95,8 +100,7 @@ function confirmedReservation(
     id: RESERVATION_ID,
     customerId: CUSTOMER_ID,
     status: "CONFIRMED",
-    startTime: START_TIME,
-    endTime: END_TIME,
+    endTime: RESERVATION_END,
     space: {
       smartLockDevice: {
         id: DEVICE_ID,
@@ -109,14 +113,20 @@ function confirmedReservation(
   };
 }
 
-function confirmedPasscode(passcode = "123456"): PasscodeRow {
+function confirmedPasscode(
+  passcode = "123456",
+  overrides: Partial<PasscodeRow> = {},
+): PasscodeRow {
   return {
     id: "passcode-row-1",
     status: "CONFIRMED",
+    startTime: PASSCODE_START,
+    endTime: PASSCODE_END,
     passcodeCiphertext: encrypt(passcode, {
       purpose: PASSCODE_CRYPTO_PURPOSE,
     }),
     device: { id: DEVICE_ID, deviceName: "玄関ドア" },
+    ...overrides,
   };
 }
 
@@ -128,7 +138,6 @@ beforeEach(() => {
 
   mockFindUniqueSwitchbot.mockResolvedValue({
     switchbotEnabled: true,
-    switchbotPasscodeBufferMinutes: 15,
   });
   mockFindUniqueReservation.mockResolvedValue(confirmedReservation());
   mockFindManyPasscodes.mockResolvedValue([confirmedPasscode()]);
@@ -170,7 +179,6 @@ describe("getCustomerVisibleSmartLockPasscodesForReservation — visibility", ()
   test("switchbotEnabled=false は unavailable", async () => {
     mockFindUniqueSwitchbot.mockResolvedValue({
       switchbotEnabled: false,
-      switchbotPasscodeBufferMinutes: 15,
     });
     const result = await getCustomerVisibleSmartLockPasscodesForReservation(
       RESERVATION_ID,
@@ -234,7 +242,7 @@ describe("getCustomerVisibleSmartLockPasscodesForReservation — visibility", ()
     expect(result).toEqual({ status: "pending" });
   });
 
-  test("窓前は outside_window（平文なし）", async () => {
+  test("焼き込み窓前は outside_window（平文なし）", async () => {
     const result = await getCustomerVisibleSmartLockPasscodesForReservation(
       RESERVATION_ID,
       { kind: "customer", customerId: CUSTOMER_ID },
@@ -243,7 +251,7 @@ describe("getCustomerVisibleSmartLockPasscodesForReservation — visibility", ()
     expect(result).toEqual({ status: "outside_window" });
   });
 
-  test("窓後は outside_window（平文なし）", async () => {
+  test("焼き込み窓後は outside_window（平文なし）", async () => {
     const result = await getCustomerVisibleSmartLockPasscodesForReservation(
       RESERVATION_ID,
       { kind: "customer", customerId: CUSTOMER_ID },
@@ -252,14 +260,27 @@ describe("getCustomerVisibleSmartLockPasscodesForReservation — visibility", ()
     expect(result).toEqual({ status: "outside_window" });
   });
 
-  test("ゲスト status-token: 窓後は認可 TTL 切れで unauthorized", async () => {
+  test("Settings buffer を再計算せず焼き込み endTime 内なら visible", async () => {
+    // 現在 Settings が buffer=0 でも、発行時に焼いた endTime が効く
+    const result = await getCustomerVisibleSmartLockPasscodesForReservation(
+      RESERVATION_ID,
+      { kind: "customer", customerId: CUSTOMER_ID },
+      { now: NOW_IN_STORED_BUFFER_ONLY, reveal: true },
+    );
+    expect(result).toEqual({
+      status: "visible",
+      revealed: true,
+      passcodes: [{ deviceName: "玄関ドア", passcode: "123456" }],
+    });
+  });
+
+  test("ゲスト status-token: 焼き込み endTime 超過は認可 TTL 切れで unauthorized", async () => {
     const result = await getCustomerVisibleSmartLockPasscodesForReservation(
       RESERVATION_ID,
       { kind: "status-token", reservationId: RESERVATION_ID },
       { now: NOW_AFTER_WINDOW, reveal: true },
     );
     expect(result).toEqual({ status: "unauthorized" });
-    expect(mockFindManyPasscodes).not.toHaveBeenCalled();
   });
 
   test("全条件充足 + reveal で平文を返す", async () => {

@@ -1,4 +1,4 @@
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isWithinDeadline } from "./deadline";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -29,7 +29,10 @@ export function isReservationEditableForCustomerSelfServe(input: {
     return { ok: false, reason: "status" };
   }
 
-  if (input.paymentStatus !== PaymentStatus.UNPAID) {
+  if (
+    input.paymentStatus !== PaymentStatus.UNPAID &&
+    input.paymentStatus !== PaymentStatus.FAILED
+  ) {
     return { ok: false, reason: "payment" };
   }
 

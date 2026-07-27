@@ -27,13 +27,20 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  getDecryptedSwitchBotCredentials: () => Promise.resolve(null),
+  getDecryptedSwitchBotCredentialsForRevocation: () => Promise.resolve(null),
+}));
+
+mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
+  buildPasscodeName: (reservationId: string, deviceId: string) =>
+    `res-${reservationId}-${deviceId}`,
 }));
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   deletePasscode: () => Promise.resolve({ ok: true, body: {} }),
   findKeyByIdInDeviceList: () =>
     Promise.resolve({ ok: true, body: { id: "present" } }),
+  findKeyInDeviceList: () => Promise.resolve({ ok: true, body: null }),
+  createPasscode: () => Promise.resolve({ ok: true, body: { commandId: "x" } }),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({

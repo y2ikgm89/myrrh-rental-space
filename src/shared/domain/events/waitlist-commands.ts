@@ -309,6 +309,29 @@ export async function confirmWaitlistOfferCommand(data: {
 }> {
   return prisma.$transaction(
     async (tx) => {
+      const resolveConcurrentWaitlistOfferOutcome = async (
+        registrationId: string,
+      ): Promise<{
+        registration: { id: string; status: "CONFIRMED" | "EXPIRED" };
+      } | null> => {
+        const current = await tx.eventRegistration.findUnique({
+          where: { id: registrationId },
+          select: { status: true },
+        });
+        if (!current) return null;
+        if (current.status === RegistrationStatus.EXPIRED) {
+          return {
+            registration: { id: registrationId, status: "EXPIRED" as const },
+          };
+        }
+        if (current.status === RegistrationStatus.CONFIRMED) {
+          return {
+            registration: { id: registrationId, status: "CONFIRMED" as const },
+          };
+        }
+        return null;
+      };
+
       const target = await tx.eventRegistration.findFirst({
         where: {
           id: data.registrationId,
@@ -347,8 +370,13 @@ export async function confirmWaitlistOfferCommand(data: {
             status: RegistrationStatus.EXPIRED,
           },
         });
-        if (expiredClaim.count === 0)
+        if (expiredClaim.count === 0) {
+          const resolved = await resolveConcurrentWaitlistOfferOutcome(
+            target.id,
+          );
+          if (resolved) return resolved;
           throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+        }
         return { registration: { id: target.id, status: "EXPIRED" as const } };
       }
 
@@ -362,7 +390,8 @@ export async function confirmWaitlistOfferCommand(data: {
       // capacity race と同型で WAITLISTED_OFFERED → EXPIRED に原子遷移し、
       // `{ status: "EXPIRED" }` を返す。DomainError を投げると Stripe webhook が
       // claim に fall through して自動返金が走らず money captured のまま残る。
-      // true concurrency conflict（claim count===0）だけ DomainError(CONFLICT) を投げる。
+      // claim count===0 は同時処理で既に EXPIRED/CONFIRMED 化済みの可能性が高いため
+      // 再読込して structured result を返す（真の不整合だけ CONFLICT）。
       const expireUnfulfillableOffer = async () => {
         const claim = await tx.eventRegistration.updateMany({
           where: {
@@ -371,8 +400,13 @@ export async function confirmWaitlistOfferCommand(data: {
           },
           data: { status: RegistrationStatus.EXPIRED },
         });
-        if (claim.count === 0)
+        if (claim.count === 0) {
+          const resolved = await resolveConcurrentWaitlistOfferOutcome(
+            target.id,
+          );
+          if (resolved) return resolved;
           throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+        }
         return {
           registration: { id: target.id, status: "EXPIRED" as const },
         };
@@ -424,8 +458,13 @@ export async function confirmWaitlistOfferCommand(data: {
           },
           data: { status: RegistrationStatus.EXPIRED },
         });
-        if (claim.count === 0)
+        if (claim.count === 0) {
+          const resolved = await resolveConcurrentWaitlistOfferOutcome(
+            target.id,
+          );
+          if (resolved) return resolved;
           throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+        }
         return { registration: { id: target.id, status: "EXPIRED" as const } };
       }
 
@@ -456,8 +495,13 @@ export async function confirmWaitlistOfferCommand(data: {
             },
             data: { status: RegistrationStatus.EXPIRED },
           });
-          if (claim.count === 0)
+          if (claim.count === 0) {
+            const resolved = await resolveConcurrentWaitlistOfferOutcome(
+              target.id,
+            );
+            if (resolved) return resolved;
             throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+          }
           return {
             registration: { id: target.id, status: "EXPIRED" as const },
           };
@@ -473,8 +517,11 @@ export async function confirmWaitlistOfferCommand(data: {
           status: RegistrationStatus.CONFIRMED,
         },
       });
-      if (claim.count === 0)
+      if (claim.count === 0) {
+        const resolved = await resolveConcurrentWaitlistOfferOutcome(target.id);
+        if (resolved) return resolved;
         throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+      }
 
       return { registration: { id: target.id, status: "CONFIRMED" as const } };
     },

@@ -1,13 +1,26 @@
 import "server-only";
 
-import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
-import { prisma } from "@/shared/db/prisma";
-import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
-import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import {
-  REFUNDED_BY_TYPE,
-  isValidRefundedByType,
-} from "@/shared/lib/validations/enums/refund-attribution";
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { prisma } from "@/shared/db/prisma";
+import {
+  applyStripeChargeRefundIdempotent,
+  buildChargeRefundPaymentStatusWhere,
+  handlePaidClaimMissWithOrphanRefund,
+} from "@/shared/domain/payment/payment-claim-orchestration";
+import {
+  buildFailedClaimUpdateData,
+  buildPaidClaimUpdateData,
+  PAYMENT_STATUSES_CLAIMABLE_FOR_PAID,
+  PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_EVENT,
+} from "@/shared/domain/payment/payment-status-guards";
+import { refundOrphanedStripePaymentForCancelledEventRegistration } from "@/shared/domain/events/payment-commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 /**
  * EventRegistration の Stripe webhook から呼ばれる atomic PAID 遷移。
@@ -28,15 +41,74 @@ export async function claimEventRegistrationAsPaid(
     where: {
       id: registrationId,
       status: RegistrationStatus.CONFIRMED,
-      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
+      paymentStatus: { in: [...PAYMENT_STATUSES_CLAIMABLE_FOR_PAID] },
     },
-    data: {
-      paymentStatus: PaymentStatus.PAID,
+    data: buildPaidClaimUpdateData({
       stripePaymentIntentId: data.stripePaymentIntentId,
-      paidAt: new Date(),
+    }),
+  });
+
+  if (result.count > 0) {
+    return true;
+  }
+
+  const current = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      status: true,
+      paymentStatus: true,
+      stripePaymentIntentId: true,
     },
   });
-  return result.count > 0;
+
+  await handlePaidClaimMissWithOrphanRefund({
+    entityId: registrationId,
+    webhookPaymentIntentId: data.stripePaymentIntentId,
+    current,
+    cancelledStatus: RegistrationStatus.CANCELLED,
+    operation: "claimEventRegistrationAsPaid",
+    refundOrphan: ({ stripePaymentIntentId }) =>
+      refundOrphanedStripePaymentForCancelledEventRegistration({
+        registrationId,
+        stripePaymentIntentId,
+      }),
+    notifications: {
+      missingPaymentIntent: {
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+        title:
+          NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
+        message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
+        resourceType: "event-registration",
+        resourceId: registrationId,
+      },
+      refunded: (refundAmount) => ({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+        title:
+          NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
+        message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refundAmount} 円）`,
+        resourceType: "event-registration",
+        resourceId: registrationId,
+      }),
+      refundFailed: (paymentIntentId) => ({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+        title:
+          NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
+        message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
+        resourceType: "event-registration",
+        resourceId: registrationId,
+      }),
+    },
+    notifyContext: {
+      missingPaymentIntentOperation:
+        "notifyEventRegistrationAutoRefundFailedMissingPaymentIntentId",
+      refundedOperation: "notifyEventRegistrationAutoRefundedAfterCancel",
+      refundFailedOperation:
+        "notifyEventRegistrationAutoRefundFailedAfterCancel",
+    },
+    rethrowRefundFailure: false,
+  });
+
+  return false;
 }
 
 /**
@@ -60,14 +132,10 @@ export async function claimEventRegistrationAsFailed(
       id: registrationId,
       stripeCheckoutSessionId: sessionId,
       paymentStatus: {
-        notIn: [
-          PaymentStatus.PAID,
-          PaymentStatus.REFUNDED,
-          PaymentStatus.FAILED,
-        ],
+        notIn: [...PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_EVENT],
       },
     },
-    data: { paymentStatus: PaymentStatus.FAILED },
+    data: buildFailedClaimUpdateData(),
   });
   return result.count > 0;
 }
@@ -172,6 +240,46 @@ export async function findExpiredPendingWaitlistOfferRegistration(
 }
 
 /**
+ * Paid Checkout Session 到達後に fulfill できず返金が必要な waitlist offer を拾う。
+ * confirm の CONFLICT / 再読込 race 後の webhook retry 用。
+ */
+export async function findWaitlistOfferRegistrationNeedingRefundAfterPaidSession(
+  registrationId: string,
+): Promise<{ id: string; status: RegistrationStatus } | null> {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      status: {
+        in: [RegistrationStatus.EXPIRED, RegistrationStatus.WAITLISTED_OFFERED],
+      },
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+      },
+      event: { deletedAt: null },
+    },
+    select: { id: true, status: true },
+  });
+}
+
+/**
+ * 返金コマンド前提の EXPIRED 化。WAITLISTED_OFFERED + unpaid/pending のみ対象。
+ */
+export async function expireWaitlistOfferForRefundIfNeeded(
+  registrationId: string,
+): Promise<void> {
+  await prisma.eventRegistration.updateMany({
+    where: {
+      id: registrationId,
+      status: RegistrationStatus.WAITLISTED_OFFERED,
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+      },
+    },
+    data: { status: RegistrationStatus.EXPIRED },
+  });
+}
+
+/**
  * `charge.refunded` webhook から呼ぶ event registration 版の idempotent refund 反映。
  *
  * Reservation 側 `applyChargeRefundIdempotent` (payment-queries.ts) の対称版:
@@ -202,43 +310,27 @@ export async function applyEventChargeRefundIdempotent(input: {
     latestRefund,
   } = input;
 
-  if (latestRefund) {
-    // Reservation 側と同型: 単一 create + catch(P2002) で真 atomic idempotent (PR #1146
-    // Codex P2 追加対応、Prisma upsert issue #20229 回避)。Stripe unit_amount からアプリ
-    // 単位への逆変換 (PR #1130 P2、PR #1126 P1 と同型) も継続。
-    // Reservation 側 payment-queries と同型: Stripe refund.metadata.initiator が
-    // 既知の RefundedByType なら attribution を復元、無い / 未知なら
-    // "STRIPE_DASHBOARD" fallback (webhook 先着 race の mislabel を防ぐ)。
-    const initiatorMeta = latestRefund.metadata?.["initiator"];
-    const refundedByType = isValidRefundedByType(initiatorMeta)
-      ? initiatorMeta
-      : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
-    try {
+  await applyStripeChargeRefundIdempotent({
+    chargeAmount,
+    amountRefunded,
+    currency,
+    latestRefund,
+    createRefundRecord: async (refundData) => {
       await prisma.refund.create({
         data: {
           eventRegistrationId: registrationId,
-          amount: fromStripeUnitAmount(latestRefund.amount, currency),
-          stripeRefundId: latestRefund.id,
-          refundedByType,
+          ...refundData,
         },
       });
-    } catch (error) {
-      if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) throw error;
-    }
-  }
-
-  const isFullRefund = amountRefunded >= chargeAmount;
-  const newStatus = isFullRefund
-    ? PaymentStatus.REFUNDED
-    : PaymentStatus.PARTIALLY_REFUNDED;
-
-  await prisma.eventRegistration.updateMany({
-    where: {
-      id: registrationId,
-      paymentStatus: {
-        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-      },
     },
-    data: { paymentStatus: newStatus },
+    updatePaymentStatus: async (newStatus) => {
+      await prisma.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          ...buildChargeRefundPaymentStatusWhere(),
+        },
+        data: { paymentStatus: newStatus },
+      });
+    },
   });
 }

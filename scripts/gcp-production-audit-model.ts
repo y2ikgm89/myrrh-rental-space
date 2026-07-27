@@ -179,6 +179,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "smart-lock-cleanup",
   "stripe-event-cleanup",
   "waitlist-expire",
+  "unpaid-event-registration-expire",
 ] as const;
 
 export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [

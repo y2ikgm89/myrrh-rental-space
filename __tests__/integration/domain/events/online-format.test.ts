@@ -8,15 +8,10 @@
  *    20260716084951_add_event_online_format）: `format = 'OFFLINE' OR
  *    meetingProvider = 'GOOGLE_MEET' OR meetingUrl IS NOT NULL` を
  *    `prisma.event.create` の生 round-trip で検証する。
- * 2. Task 5 で拡張した select 群（`publicEventSelect` は type-check 経由、
- *    `adminEventSelect` 相当の `eventDetailSelect` / registration-queries の
- *    2 関数は実クエリ経由）が実際に format/meetingUrl を返すこと。brief 記載の
- *    4 ケースは `prisma.event.create` を直接叩くのみで select 層を一切通らない
- *    ため、select 拡張自体の regression は検知できない。「queries select 拡張」
- *    という Task 5 の主目的を実際に守るため、admin/customer/guest-claim の
- *    3 経路を追加で検証する（publicEventSelect は "use cache" producer のため
- *    Next.js request scope 外のプロセスから直接呼ぶ前例が本リポジトリに無く、
- *    ここでは対象外 — type-check の Prisma 型検証に委ねる）。
+ * 2. Task 5 で拡張した select 群（`adminEventSelect` 相当の `eventDetailSelect` /
+ *    customer registration-queries）が実際に format/meetingUrl を返すこと。
+ *    claim クエリは参加 URL を開示しない（eventTitle/startTime のみ）。
+ *    publicEventSelect は meetingUrl/meetingProvider を公開 DTO に載せない。
  *
  * ## なぜ「保存成功」ケースは $transaction 越しに EventTimeSlot も作るか
  *
@@ -309,12 +304,12 @@ describeMaybe("Event online format (integration)", () => {
       );
     });
 
-    test("getEventRegistrationForClaim の返却に format/meetingUrl を含む", async () => {
+    test("getEventRegistrationForClaim は eventTitle/startTime のみ返し meetingUrl を含めない", async () => {
       const { eventId, slotId, ticketId } = await createEventWithSlotAndTicket({
         ...baseEventData("claim-select"),
         format: EVENT_FORMAT.ONLINE,
-        meetingProvider: MEETING_PROVIDER.GOOGLE_MEET,
-        meetingUrl: null,
+        meetingProvider: MEETING_PROVIDER.MANUAL,
+        meetingUrl: "https://meet.google.com/claim-must-not-leak",
       });
       createdEventIds.push(eventId);
 
@@ -331,10 +326,10 @@ describeMaybe("Event online format (integration)", () => {
       });
 
       const claimDetail = await getEventRegistrationForClaim(registration.id);
-      expect(claimDetail?.format).toBe("ONLINE");
-      // GOOGLE_MEET write-back 待ち状態（CHECK 制約が許容する null）もそのまま
-      // 素通しで返ることを確認する。
-      expect(claimDetail?.meetingUrl).toBeNull();
+      expect(claimDetail?.eventTitle).toContain("Online format test");
+      expect(claimDetail?.startTime).toBeInstanceOf(Date);
+      expect(claimDetail).not.toHaveProperty("meetingUrl");
+      expect(claimDetail).not.toHaveProperty("format");
     });
   });
 

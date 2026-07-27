@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus, IconSettings } from "@tabler/icons-react";
 import { getEvents } from "@/admin/queries/event";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import {
   EVENT_STATUS_FILTER_ALL,
   loadAdminEventSearchParams,
@@ -70,7 +70,7 @@ async function EventList({
 }
 
 export default async function EventsPage({ searchParams }: PageProps) {
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canExportEventRegistrations = hasPermission(
     user.role,
     "event",

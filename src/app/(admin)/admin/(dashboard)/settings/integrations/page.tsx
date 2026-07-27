@@ -14,7 +14,7 @@ import {
   getSwitchBotConfig,
   getGoogleMapsConfig,
 } from "@/admin/queries/api-keys";
-import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
 import { getGbpAuthState } from "@/shared/lib/google-business-profile";
@@ -180,7 +180,7 @@ function IntegrationsSettingsLoading(): ReactElement {
 export default async function IntegrationsSettingsPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  await requireAdminPermission("settings", "manage");
+  await requireAdminSettingsPage("manage");
   const canonicalUrl = getGbpCanonicalUrl(await searchParams);
   if (canonicalUrl) redirect(toAppRoute(canonicalUrl));
 

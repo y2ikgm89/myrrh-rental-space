@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
-import { CustomerType } from "@generated/prisma/enums";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 // ---------------------------------------------------------------------------

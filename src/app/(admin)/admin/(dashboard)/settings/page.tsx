@@ -24,7 +24,7 @@ import {
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
 import { IntegrationHealthAlert } from "../_components/IntegrationHealthAlert";
-import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 
@@ -147,7 +147,7 @@ function toSettingsCardProps(category: SettingsCategory): SettingsCardProps {
 export default async function SettingsPage() {
   await connection();
 
-  const currentUser = await requireAdminPermission("settings", "read");
+  const currentUser = await requireAdminSettingsPage("read");
   const canManageSettings = hasPermission(
     currentUser.role,
     "settings",

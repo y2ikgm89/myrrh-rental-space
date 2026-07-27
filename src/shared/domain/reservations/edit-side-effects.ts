@@ -9,7 +9,14 @@ import {
   issueSmartLockPasscodes,
   type IssueSmartLockPasscodesResult,
 } from "@/shared/domain/smart-lock/issue-passcode";
-import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  awaitReservationRevokeConfirmation,
+  revokeSmartLockPasscodesForReservation,
+} from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  clearSmartLockReissuePending,
+  markSmartLockReissuePending,
+} from "@/shared/domain/smart-lock/reissue-passcode";
 import {
   logError,
   normalizeError,
@@ -161,34 +168,32 @@ export async function applyReservationEditSideEffects(input: {
       return { passcodes: [], issuanceFailed: false };
     }
 
-    // 2. 既発行の CONFIRMED パスコードを SwitchBot deleteKey で失効
-    //    失効に失敗しても cleanup cron が retry するので issue は続行する。
+    // 2. 既発行の CONFIRMED / PENDING パスコードを SwitchBot deleteKey で失効
     await revokeSmartLockPasscodesForReservation(reservationId);
 
     // 3. @@unique([reservationId, deviceId]) 制約対策 (Codex P2 対応):
-    //    revoke 直後は CONFIRMED → REVOKE_PENDING になる。同一 physical device
-    //    への再発行では REVOKE_PENDING / PENDING 行が残ると issue 側が
-    //    「既存行あり」で silent no-op になるため、createKey 前に terminal /
-    //    in-flight 行を DELETE する。
-    //
-    //    SwitchBot timeLimit key は update 不可 (deleteKey → createKey 必須)。
-    //    再発行 state machine:
-    //      CONFIRMED --deleteKey--> REVOKE_PENDING --(webhook/keyList)--> REVOKED
-    //      reissue path: revoke 要求後、同一 device なら REVOKE_PENDING 等を
-    //      ローカル DELETE → createKey で新 key を必ず発行する。
-    //    別 device へ space 変更した場合は old device の REVOKE_PENDING を残し
-    //    (失効は webhook 側で完走)、new device は別 unique slot なので触らない。
+    //    revoke 直後は CONFIRMED → REVOKE_PENDING。同一 physical device への再発行では
+    //    key 消失を待ってから terminal 行を DELETE し createKey する。
+    //    失効未確認の REVOKE_PENDING を DELETE すると orphan になるため禁止。
     const deviceSame = await isSameSmartLockDevice(oldSpaceId, newSpaceId);
     if (deviceSame) {
+      const revokeConfirmed =
+        await awaitReservationRevokeConfirmation(reservationId);
+      if (!revokeConfirmed) {
+        await markSmartLockReissuePending(reservationId);
+        return { passcodes: [], issuanceFailed: true };
+      }
+
+      await clearSmartLockReissuePending(reservationId);
+
       await prisma.smartLockPasscode.deleteMany({
         where: {
           reservationId,
           status: {
             in: [
-              SmartLockPasscodeStatus.REVOKE_PENDING,
-              SmartLockPasscodeStatus.PENDING,
               SmartLockPasscodeStatus.REVOKED,
               SmartLockPasscodeStatus.FAILED,
+              SmartLockPasscodeStatus.PENDING,
             ],
           },
         },

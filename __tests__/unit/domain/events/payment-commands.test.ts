@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
   PENDING: "PENDING",
   PAID: "PAID",
+  PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
   REFUNDED: "REFUNDED",
   FAILED: "FAILED",
 } as const;
@@ -66,10 +68,18 @@ const mockCheckoutSessionCreate = mock<
     url: "https://stripe.example/waitlist-checkout",
   }),
 );
+const mockCheckoutSessionExpire = mock<
+  (sessionId: string) => Promise<{ id: string }>
+>(() => Promise.resolve({ id: "cs_test_waitlist" }));
 const mockGetStripeClient = mock(() =>
   Promise.resolve({
     client: {
-      checkout: { sessions: { create: mockCheckoutSessionCreate } },
+      checkout: {
+        sessions: {
+          create: mockCheckoutSessionCreate,
+          expire: mockCheckoutSessionExpire,
+        },
+      },
     },
   }),
 );
@@ -84,21 +94,11 @@ const AuditAction = {
   LOGOUT: "LOGOUT",
 } as const;
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction,
   PaymentStatus,
   RegistrationStatus,
-  // payment-commands → receipts/issue → helpers/guards が SocialPlatform を要求する。
-  SocialPlatform: {
-    INSTAGRAM: "INSTAGRAM",
-    FACEBOOK: "FACEBOOK",
-    TWITTER: "TWITTER",
-    YOUTUBE: "YOUTUBE",
-    LINE: "LINE",
-    TIKTOK: "TIKTOK",
-    OTHER: "OTHER",
-  },
-}));
+});
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: {
@@ -158,6 +158,7 @@ mock.module("@/shared/lib/receipt-download-token", () => ({
 const {
   createEventCheckoutSessionCommand,
   createWaitlistOfferCheckoutSessionCommand,
+  recordManualEventPaymentCommand,
 } = await import("@/shared/domain/events/payment-commands");
 
 const REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440101";
@@ -240,6 +241,7 @@ describe("events/payment-commands", () => {
     mockAssertStripeCredentialsConfigured.mockReset();
     mockGetStripeClient.mockReset();
     mockCheckoutSessionCreate.mockReset();
+    mockCheckoutSessionExpire.mockReset();
     mockLogError.mockReset();
 
     mockRegFindUnique.mockResolvedValue(initialRead());
@@ -263,13 +265,19 @@ describe("events/payment-commands", () => {
     });
     mockGetStripeClient.mockResolvedValue({
       client: {
-        checkout: { sessions: { create: mockCheckoutSessionCreate } },
+        checkout: {
+          sessions: {
+            create: mockCheckoutSessionCreate,
+            expire: mockCheckoutSessionExpire,
+          },
+        },
       },
     });
     mockCheckoutSessionCreate.mockResolvedValue({
       id: SESSION_ID,
       url: SESSION_URL,
     });
+    mockCheckoutSessionExpire.mockResolvedValue({ id: SESSION_ID });
     mockLogError.mockImplementation(() => undefined);
   });
 
@@ -287,13 +295,17 @@ describe("events/payment-commands", () => {
       const calls = mockRegUpdateMany.mock.calls;
       expect(calls.length).toBe(2);
 
-      // 2 回目: session 確定書込 (updateMany + notIn [PAID, REFUNDED] +
+      // 2 回目: session 確定書込 (updateMany + notIn [PAID, PARTIALLY_REFUNDED, REFUNDED] +
       // PENDING 再 assert + stripeCheckoutSessionId + paidAmount)
       expect(calls[1]?.[0]).toMatchObject({
         where: expect.objectContaining({
           id: REGISTRATION_ID,
           paymentStatus: expect.objectContaining({
-            notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+            notIn: [
+              PaymentStatus.PAID,
+              PaymentStatus.PARTIALLY_REFUNDED,
+              PaymentStatus.REFUNDED,
+            ],
           }),
         }),
         data: expect.objectContaining({
@@ -418,6 +430,53 @@ describe("events/payment-commands", () => {
 
       expect(stripeBeforeClaim).toBe(false);
       expect(mockCheckoutSessionCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("Session settle が PAID/REFUNDED race で count=0 → session expire + CONFLICT (session URL 返却しない)", async () => {
+      mockRegUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const error = await createWaitlistOfferCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        offerToken: OFFER_TOKEN,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith(SESSION_ID);
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          severity: "HIGH",
+        }),
+      );
+    });
+
+    test("Session 作成後 settle 書込失敗 → best-effort expire + PENDING→UNPAID revert", async () => {
+      mockRegUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockRejectedValueOnce(new Error("DB write failed"));
+
+      const error = await createWaitlistOfferCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        offerToken: OFFER_TOKEN,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("UNEXPECTED");
+      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith(SESSION_ID);
+
+      const calls = mockRegUpdateMany.mock.calls;
+      expect(calls.length).toBe(3);
+      expect(calls[2]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
     });
   });
 
@@ -574,7 +633,11 @@ describe("events/payment-commands", () => {
         where: expect.objectContaining({
           id: REGISTRATION_ID,
           paymentStatus: expect.objectContaining({
-            notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+            notIn: [
+              PaymentStatus.PAID,
+              PaymentStatus.PARTIALLY_REFUNDED,
+              PaymentStatus.REFUNDED,
+            ],
           }),
         }),
         data: expect.objectContaining({
@@ -583,6 +646,31 @@ describe("events/payment-commands", () => {
           paidAmount: 5000,
         }),
       });
+    });
+
+    test("Stripe session に expires_at (cron cutoff と同期) が指定される", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      const before = Math.floor(Date.now() / 1000);
+      await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+      const after = Math.floor(Date.now() / 1000);
+
+      const sessionArgs = mockCheckoutSessionCreate.mock.calls[0]?.[0] as
+        { expires_at?: number } | undefined;
+      expect(sessionArgs?.expires_at).toEqual(expect.any(Number));
+      const expected = before + 60 * 60;
+      const expectedMax = after + 60 * 60;
+      expect(sessionArgs?.expires_at).toBeGreaterThanOrEqual(expected);
+      expect(sessionArgs?.expires_at).toBeLessThanOrEqual(expectedMax);
     });
 
     test("Stripe 失敗 → PENDING → UNPAID revert + DomainError(UNEXPECTED) + logError 呼出", async () => {
@@ -616,6 +704,71 @@ describe("events/payment-commands", () => {
       expect(mockLogError).toHaveBeenCalled();
     });
 
+    test("Session settle が PAID/REFUNDED race で count=0 → session expire + CONFLICT (session URL 返却しない)", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+      mockRegUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith(
+        CHECKOUT_SESSION_ID,
+      );
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          severity: "HIGH",
+        }),
+      );
+    });
+
+    test("Session 作成後 settle 書込失敗 → best-effort expire + PENDING→UNPAID revert", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+      mockRegUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockRejectedValueOnce(new Error("DB write failed"));
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("UNEXPECTED");
+      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith(
+        CHECKOUT_SESSION_ID,
+      );
+
+      const calls = mockRegUpdateMany.mock.calls;
+      expect(calls.length).toBe(3);
+      expect(calls[2]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
+    });
+
     test("claim race (別 request が先に PENDING を確保) → DomainError(CONFLICT) & Stripe 未呼出", async () => {
       mockRegFindUnique.mockResolvedValueOnce(checkoutInitialRead());
       mockRegUpdateMany.mockResolvedValueOnce({ count: 0 });
@@ -630,6 +783,73 @@ describe("events/payment-commands", () => {
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
       // authoritative 再読み込みも走らない
       expect(mockRegFindUnique).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("recordManualEventPaymentCommand", () => {
+    function unpaidRegistration(overrides: Record<string, unknown> = {}) {
+      return {
+        paymentStatus: PaymentStatus.UNPAID,
+        stripeCheckoutSessionId: null,
+        customerId: CUSTOMER_ID,
+        quantity: 1,
+        ticket: { price: 5000 },
+        ...overrides,
+      };
+    }
+
+    test("amount が ticket.price × quantity と一致すれば PAID に claim する", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(unpaidRegistration());
+      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 5000,
+      });
+
+      expect(result.registrationId).toBe(REGISTRATION_ID);
+      expect(mockRegUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: REGISTRATION_ID,
+            status: RegistrationStatus.CONFIRMED,
+            paymentStatus: PaymentStatus.UNPAID,
+          }),
+          data: expect.objectContaining({
+            paymentStatus: PaymentStatus.PAID,
+            paidAmount: 5000,
+          }),
+        }),
+      );
+    });
+
+    test("amount が charge base と不一致なら VALIDATION で拒否", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(unpaidRegistration());
+
+      const error = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 4000,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("5000");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("無料チケット (price × quantity <= 0) は VALIDATION で拒否", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        unpaidRegistration({ ticket: { price: 0 } }),
+      );
+
+      const error = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 0,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,6 +3,7 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -44,11 +45,11 @@ const mockCreateEventRegistrationStatusToken = mock(
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction: { UPDATE: "UPDATE" },
   PaymentStatus,
   RegistrationStatus,
-}));
+});
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: {
@@ -128,6 +129,8 @@ function unpaidRegistration(
     paymentStatus: PaymentStatus.UNPAID,
     stripeCheckoutSessionId: null,
     customerId: null,
+    quantity: 1,
+    ticket: { price: 1000 },
     ...overrides,
   };
 }

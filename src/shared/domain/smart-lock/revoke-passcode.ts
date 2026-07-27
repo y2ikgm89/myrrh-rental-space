@@ -9,10 +9,12 @@
 
 import "server-only";
 import { prisma } from "@/shared/db/prisma";
-import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
+import { getDecryptedSwitchBotCredentialsForRevocation } from "@/shared/domain/settings/api-key-queries";
+import { buildPasscodeName } from "@/shared/domain/smart-lock/issue-passcode";
 import {
   deletePasscode,
   findKeyByIdInDeviceList,
+  findKeyInDeviceList,
 } from "@/shared/lib/smart-lock/switchbot-client";
 import {
   ReservationStatus,
@@ -36,9 +38,20 @@ export type RevocablePasscode = {
   readonly device: { readonly deviceId: string };
 };
 
+export type PendingRecoverablePasscode = RevocablePasscode & {
+  readonly reservationId: string;
+  readonly deviceId: string;
+};
+
 /** Device List で key 消失を確認する疎 poll（秒: 0 / 5 / 15 / 30 / 45）。 */
 const REVOKE_CONFIRM_POLL_DELAYS_MS = [
   0, 5_000, 15_000, 30_000, 45_000,
+] as const;
+
+const LIVE_PASSCODE_STATUSES = [
+  SmartLockPasscodeStatus.PENDING,
+  SmartLockPasscodeStatus.CONFIRMED,
+  SmartLockPasscodeStatus.REVOKE_PENDING,
 ] as const;
 
 function sleep(ms: number): Promise<void> {
@@ -81,7 +94,7 @@ export async function confirmRevokeByKeyAbsence(
   return updated.count > 0;
 }
 
-async function pollRevokeConfirmationByKeyAbsence(
+export async function pollRevokeConfirmationByKeyAbsence(
   credentials: { openToken: string; secretKey: string },
   passcode: RevocablePasscode,
 ): Promise<boolean> {
@@ -100,28 +113,61 @@ async function pollRevokeConfirmationByKeyAbsence(
 }
 
 /**
+ * PENDING 行について Device List の name 突合で live key を見つけ deleteKey する。
+ * key が無ければ false（物理 orphan なし）。
+ */
+export async function recoverPendingPasscodeViaDeviceList(
+  credentials: { openToken: string; secretKey: string },
+  passcode: PendingRecoverablePasscode,
+): Promise<boolean> {
+  let keyId = passcode.switchbotKeyId;
+  if (!keyId) {
+    const name = buildPasscodeName(passcode.reservationId, passcode.deviceId);
+    const keyResult = await findKeyInDeviceList(
+      credentials,
+      passcode.device.deviceId,
+      name,
+    );
+    if (!keyResult.ok || keyResult.body === null) {
+      return false;
+    }
+    keyId = keyResult.body.id;
+    await prisma.smartLockPasscode.updateMany({
+      where: {
+        id: passcode.id,
+        status: SmartLockPasscodeStatus.PENDING,
+      },
+      data: { switchbotKeyId: keyId },
+    });
+  }
+
+  return revokeOne(credentials, {
+    id: passcode.id,
+    switchbotKeyId: keyId,
+    device: passcode.device,
+  });
+}
+
+/**
  * 1件のパスコードを deleteKey で失効させる。
  *
  * API 受理後は REVOKE_PENDING（`switchbotDeleteCommandId` / `revokeRequestedAt`）。
  * 即 REVOKED にはしない。Device List 疎 poll で key 消失が確認できれば REVOKED。
- * deleteKey API 失敗時は CONFIRMED のまま（cron が再試行可能）。
+ * deleteKey API 失敗時は CONFIRMED / PENDING のまま（cron が再試行可能）。
  */
 export async function revokeOne(
   credentials: { openToken: string; secretKey: string },
   passcode: RevocablePasscode,
 ): Promise<boolean> {
   if (!passcode.switchbotKeyId) {
-    logError(
-      new Error("CONFIRMEDなのにswitchbotKeyId未確定のパスコードをスキップ"),
-      {
-        category: ErrorCategory.DATABASE,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          operation: "revokeSmartLockPasscode",
-          passcodeId: passcode.id,
-        },
+    logError(new Error("switchbotKeyId未確定のパスコードを失効スキップ"), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "revokeSmartLockPasscode",
+        passcodeId: passcode.id,
       },
-    );
+    });
     return false;
   }
 
@@ -148,7 +194,15 @@ export async function revokeOne(
   const commandId = result.body.commandId;
 
   const updated = await prisma.smartLockPasscode.updateMany({
-    where: { id: passcode.id, status: SmartLockPasscodeStatus.CONFIRMED },
+    where: {
+      id: passcode.id,
+      status: {
+        in: [
+          SmartLockPasscodeStatus.CONFIRMED,
+          SmartLockPasscodeStatus.PENDING,
+        ],
+      },
+    },
     data: {
       status: SmartLockPasscodeStatus.REVOKE_PENDING,
       revokeRequestedAt: now,
@@ -168,27 +222,165 @@ export async function revokeOne(
   return true;
 }
 
-/**
- * 指定予約に紐づく発行済み（CONFIRMED）パスコードを全て失効させる。
- */
-export async function revokeSmartLockPasscodesForReservation(
+async function countLivePasscodesForReservation(
   reservationId: string,
-): Promise<void> {
-  const passcodes = await prisma.smartLockPasscode.findMany({
-    where: { reservationId, status: SmartLockPasscodeStatus.CONFIRMED },
+): Promise<number> {
+  return prisma.smartLockPasscode.count({
+    where: {
+      reservationId,
+      status: { in: [...LIVE_PASSCODE_STATUSES] },
+    },
+  });
+}
+
+/**
+ * 予約に紐づく REVOKE_PENDING を Device List key 消失まで待つ。
+ * CONFIRMED / PENDING が残る場合も false。
+ */
+export async function awaitReservationRevokeConfirmation(
+  reservationId: string,
+): Promise<boolean> {
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
+  if (!credentials) {
+    return (await countLivePasscodesForReservation(reservationId)) === 0;
+  }
+
+  const pendingRecoverable = await prisma.smartLockPasscode.findMany({
+    where: { reservationId, status: SmartLockPasscodeStatus.PENDING },
+    select: {
+      id: true,
+      reservationId: true,
+      deviceId: true,
+      switchbotKeyId: true,
+      device: { select: { deviceId: true } },
+    },
+  });
+  await Promise.all(
+    pendingRecoverable.map((passcode) =>
+      recoverPendingPasscodeViaDeviceList(credentials, passcode),
+    ),
+  );
+
+  const revokePending = await prisma.smartLockPasscode.findMany({
+    where: { reservationId, status: SmartLockPasscodeStatus.REVOKE_PENDING },
     select: {
       id: true,
       switchbotKeyId: true,
       device: { select: { deviceId: true } },
     },
   });
+
+  for (const passcode of revokePending) {
+    const confirmed = await pollRevokeConfirmationByKeyAbsence(
+      credentials,
+      passcode,
+    );
+    if (!confirmed) {
+      return false;
+    }
+  }
+
+  return (await countLivePasscodesForReservation(reservationId)) === 0;
+}
+
+/**
+ * デバイスに紐づく REVOKE_PENDING を key 消失まで待つ。未解決なら false。
+ */
+export async function awaitDeviceRevokeConfirmation(
+  deviceRowId: string,
+): Promise<boolean> {
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
+  if (!credentials) {
+    return (
+      (await prisma.smartLockPasscode.count({
+        where: {
+          deviceId: deviceRowId,
+          status: { in: [...LIVE_PASSCODE_STATUSES] },
+        },
+      })) === 0
+    );
+  }
+
+  const pendingRecoverable = await prisma.smartLockPasscode.findMany({
+    where: { deviceId: deviceRowId, status: SmartLockPasscodeStatus.PENDING },
+    select: {
+      id: true,
+      reservationId: true,
+      deviceId: true,
+      switchbotKeyId: true,
+      device: { select: { deviceId: true } },
+    },
+  });
+  await Promise.all(
+    pendingRecoverable.map((passcode) =>
+      recoverPendingPasscodeViaDeviceList(credentials, passcode),
+    ),
+  );
+
+  const revokePending = await prisma.smartLockPasscode.findMany({
+    where: {
+      deviceId: deviceRowId,
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+    },
+    select: {
+      id: true,
+      switchbotKeyId: true,
+      device: { select: { deviceId: true } },
+    },
+  });
+
+  for (const passcode of revokePending) {
+    const confirmed = await pollRevokeConfirmationByKeyAbsence(
+      credentials,
+      passcode,
+    );
+    if (!confirmed) {
+      return false;
+    }
+  }
+
+  return (
+    (await prisma.smartLockPasscode.count({
+      where: {
+        deviceId: deviceRowId,
+        status: { in: [...LIVE_PASSCODE_STATUSES] },
+      },
+    })) === 0
+  );
+}
+
+/**
+ * 指定予約に紐づく発行済み（CONFIRMED）および PENDING orphan を失効させる。
+ */
+export async function revokeSmartLockPasscodesForReservation(
+  reservationId: string,
+): Promise<void> {
+  const passcodes = await prisma.smartLockPasscode.findMany({
+    where: {
+      reservationId,
+      status: {
+        in: [
+          SmartLockPasscodeStatus.CONFIRMED,
+          SmartLockPasscodeStatus.PENDING,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      reservationId: true,
+      deviceId: true,
+      switchbotKeyId: true,
+      status: true,
+      device: { select: { deviceId: true } },
+    },
+  });
   if (passcodes.length === 0) return;
 
-  const credentials = await getDecryptedSwitchBotCredentials();
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
   if (!credentials) {
     logError(
       new Error(
-        "SwitchBot連携が無効/未設定のためパスコード失効をスキップしました（cleanup cronの対象外）",
+        "SwitchBot資格情報が復号できないためパスコード失効をスキップしました",
       ),
       {
         category: ErrorCategory.VALIDATION,
@@ -203,7 +395,12 @@ export async function revokeSmartLockPasscodesForReservation(
   }
 
   await Promise.all(
-    passcodes.map((passcode) => revokeOne(credentials, passcode)),
+    passcodes.map((passcode) => {
+      if (passcode.status === SmartLockPasscodeStatus.PENDING) {
+        return recoverPendingPasscodeViaDeviceList(credentials, passcode);
+      }
+      return revokeOne(credentials, passcode);
+    }),
   );
 }
 
@@ -263,7 +460,7 @@ export async function revokeExpiredSmartLockPasscodes(
   const candidates = await findRevocableSmartLockPasscodes(now);
   if (candidates.length === 0) return { revoked: 0, failed: 0 };
 
-  const credentials = await getDecryptedSwitchBotCredentials();
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
   if (!credentials) {
     return { revoked: 0, failed: candidates.length };
   }
@@ -288,36 +485,58 @@ export async function expireStalePendingSmartLockPasscodes(
       status: SmartLockPasscodeStatus.PENDING,
       createdAt: { lt: cutoff },
     },
-    select: { id: true, reservationId: true },
+    select: {
+      id: true,
+      reservationId: true,
+      deviceId: true,
+      switchbotKeyId: true,
+      device: { select: { deviceId: true } },
+    },
   });
   if (stale.length === 0) return 0;
 
-  const result = await prisma.smartLockPasscode.updateMany({
-    where: {
-      status: SmartLockPasscodeStatus.PENDING,
-      createdAt: { lt: cutoff },
-    },
-    data: {
-      status: SmartLockPasscodeStatus.FAILED,
-      failureReason: `Webhook から createKey 完了通知が ${STALE_PENDING_THRESHOLD_MINUTES} 分以内に届かなかったため失敗確定`,
-    },
-  });
+  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
+  let failedCount = 0;
+  const failedReservationIds = new Set<string>();
 
-  const failedRows =
-    result.count === stale.length
-      ? stale
-      : await prisma.smartLockPasscode.findMany({
-          where: {
-            id: { in: stale.map((p) => p.id) },
-            status: SmartLockPasscodeStatus.FAILED,
-          },
-          select: { reservationId: true },
-        });
+  for (const passcode of stale) {
+    if (credentials) {
+      const recovered = await recoverPendingPasscodeViaDeviceList(
+        credentials,
+        passcode,
+      );
+      if (recovered) {
+        continue;
+      }
 
-  const reservationIds = Array.from(
-    new Set(failedRows.map((p) => p.reservationId)),
-  );
-  for (const reservationId of reservationIds) {
+      const name = buildPasscodeName(passcode.reservationId, passcode.deviceId);
+      const keyResult = await findKeyInDeviceList(
+        credentials,
+        passcode.device.deviceId,
+        name,
+      );
+      if (keyResult.ok && keyResult.body !== null) {
+        continue;
+      }
+    }
+
+    const updated = await prisma.smartLockPasscode.updateMany({
+      where: {
+        id: passcode.id,
+        status: SmartLockPasscodeStatus.PENDING,
+      },
+      data: {
+        status: SmartLockPasscodeStatus.FAILED,
+        failureReason: `Webhook から createKey 完了通知が ${STALE_PENDING_THRESHOLD_MINUTES} 分以内に届かなかったため失敗確定`,
+      },
+    });
+    if (updated.count > 0) {
+      failedCount += 1;
+      failedReservationIds.add(passcode.reservationId);
+    }
+  }
+
+  for (const reservationId of failedReservationIds) {
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED,
@@ -335,7 +554,7 @@ export async function expireStalePendingSmartLockPasscodes(
       },
     );
   }
-  return result.count;
+  return failedCount;
 }
 
 /**

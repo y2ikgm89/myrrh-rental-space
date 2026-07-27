@@ -34,7 +34,7 @@ import { getPublicDiscountSettings } from "@/shared/domain/settings/queries/disc
 import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
 import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
@@ -78,7 +78,7 @@ export async function ReservationFormSection({
     getPublishedLocationsWithSpaces(),
     getBusinessHoursSettingsQuery(),
     getTurnstileSiteKey(),
-    getCurrentCustomerUser(),
+    resolveOptionalCustomerSession(),
     getRequiredTermsByScope(TermsScope.RESERVATION),
     getReservationRuleSettings(),
     getPublicDiscountSettings(),

@@ -6,6 +6,7 @@ const mockInquiryFindUnique = mock<
 >(() =>
   Promise.resolve({
     id: "inquiry-1",
+    customerId: "cust-1",
     deletedAt: null,
     anonymizedAt: null,
   }),
@@ -111,7 +112,12 @@ function makeFile(
 beforeEach(() => {
   mockInquiryFindUnique.mockClear();
   mockInquiryFindUnique.mockImplementation(() =>
-    Promise.resolve({ id: "inquiry-1", deletedAt: null, anonymizedAt: null }),
+    Promise.resolve({
+      id: "inquiry-1",
+      customerId: "cust-1",
+      deletedAt: null,
+      anonymizedAt: null,
+    }),
   );
   mockInquiryReplyFindUnique.mockClear();
   mockInquiryReplyFindUnique.mockImplementation(() => Promise.resolve(null));
@@ -184,6 +190,116 @@ describe("uploadInquiryAttachmentCommand", () => {
     expect(createArgs?.data["uploadedById"]).toBeNull();
   });
 
+  test("IDOR 防止: CUSTOMER が他人の inquiry へ upload → FORBIDDEN、R2 は呼ばれない", async () => {
+    const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+
+    const error = await uploadInquiryAttachmentCommand({
+      file,
+      inquiryId: "inquiry-1",
+      uploader: { type: "CUSTOMER", customerId: "cust-other" },
+    }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect((error as DomainError).code).toBe("FORBIDDEN");
+    expect(mockPutPrivateObject).not.toHaveBeenCalled();
+    expect(mockAttachmentCreate).not.toHaveBeenCalled();
+  });
+
+  test("IDOR 防止: guest inquiry (customerId=null) への CUSTOMER upload → FORBIDDEN", async () => {
+    mockInquiryFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "inquiry-1",
+        customerId: null,
+        deletedAt: null,
+        anonymizedAt: null,
+      }),
+    );
+    const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+
+    const error = await uploadInquiryAttachmentCommand({
+      file,
+      inquiryId: "inquiry-1",
+      uploader: { type: "CUSTOMER", customerId: "cust-1" },
+    }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect((error as DomainError).code).toBe("FORBIDDEN");
+    expect(mockPutPrivateObject).not.toHaveBeenCalled();
+  });
+
+  test("CUSTOMER は自 reply への添付 upload に成功する", async () => {
+    mockInquiryReplyFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "reply-1",
+        inquiryId: "inquiry-1",
+        authorCustomerId: "cust-1",
+      }),
+    );
+    const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+
+    await uploadInquiryAttachmentCommand({
+      file,
+      inquiryId: "inquiry-1",
+      replyId: "reply-1",
+      uploader: { type: "CUSTOMER", customerId: "cust-1" },
+    });
+
+    expect(mockPutPrivateObject).toHaveBeenCalledTimes(1);
+    expect(mockAttachmentCreate).toHaveBeenCalledTimes(1);
+  });
+
+  test("IDOR 防止: CUSTOMER が他人の reply へ upload → FORBIDDEN、R2 は呼ばれない", async () => {
+    mockInquiryReplyFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "reply-1",
+        inquiryId: "inquiry-1",
+        authorCustomerId: "cust-other",
+      }),
+    );
+    const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+
+    const error = await uploadInquiryAttachmentCommand({
+      file,
+      inquiryId: "inquiry-1",
+      replyId: "reply-1",
+      uploader: { type: "CUSTOMER", customerId: "cust-1" },
+    }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect((error as DomainError).code).toBe("FORBIDDEN");
+    expect(mockPutPrivateObject).not.toHaveBeenCalled();
+    expect(mockAttachmentCreate).not.toHaveBeenCalled();
+  });
+
+  test("STAFF は他人 inquiry / 他人 reply でも ownership 制約なく upload できる", async () => {
+    mockInquiryFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "inquiry-1",
+        customerId: "cust-other",
+        deletedAt: null,
+        anonymizedAt: null,
+      }),
+    );
+    mockInquiryReplyFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "reply-1",
+        inquiryId: "inquiry-1",
+        authorCustomerId: "cust-other",
+      }),
+    );
+    const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+
+    await uploadInquiryAttachmentCommand({
+      file,
+      inquiryId: "inquiry-1",
+      replyId: "reply-1",
+      uploader: { type: "STAFF", userId: "user-1" },
+    });
+
+    expect(mockPutPrivateObject).toHaveBeenCalledTimes(1);
+    expect(mockAttachmentCreate).toHaveBeenCalledTimes(1);
+  });
+
   test("PDF は成功する（許可 MIME）", async () => {
     const file = makeFile("quote.pdf", "application/pdf", PDF_HEADER, 2048);
     mockAttachmentCreate.mockImplementationOnce(() =>
@@ -222,6 +338,7 @@ describe("uploadInquiryAttachmentCommand", () => {
     mockInquiryFindUnique.mockImplementationOnce(() =>
       Promise.resolve({
         id: "inquiry-1",
+        customerId: "cust-1",
         deletedAt: null,
         anonymizedAt: new Date(),
       }),
@@ -239,7 +356,11 @@ describe("uploadInquiryAttachmentCommand", () => {
 
   test("replyId 指定時に別 inquiry の reply → NOT_FOUND", async () => {
     mockInquiryReplyFindUnique.mockImplementationOnce(() =>
-      Promise.resolve({ id: "reply-1", inquiryId: "other-inquiry" }),
+      Promise.resolve({
+        id: "reply-1",
+        inquiryId: "other-inquiry",
+        authorCustomerId: null,
+      }),
     );
     const file = makeFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
 

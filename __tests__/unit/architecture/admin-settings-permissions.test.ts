@@ -32,7 +32,8 @@ describe("admin settings permission boundaries", () => {
 
     for (const pagePath of manageOnlyPages) {
       const source = readAdminFile(...pagePath);
-      expect(source).toContain('requireAdminPermission("settings", "manage")');
+      expect(source).toContain('requireAdminSettingsPage("manage")');
+      expect(source).toContain("@/admin/helpers/page-auth");
     }
   });
 
@@ -40,8 +41,9 @@ describe("admin settings permission boundaries", () => {
     const source = readAdminFile("settings", "page.tsx");
 
     expect(source).toContain(
-      'const currentUser = await requireAdminPermission("settings", "read");',
+      'const currentUser = await requireAdminSettingsPage("read");',
     );
+    expect(source).toContain("@/admin/helpers/page-auth");
     expect(
       source.match(
         /requiredPermission:\s*\{\s*resource:\s*"settings",\s*action:\s*"manage"\s*\}/gu,

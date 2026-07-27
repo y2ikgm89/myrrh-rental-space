@@ -29,15 +29,20 @@ import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
 import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 import { Button } from "@/public/components/design-system/button";
 import { LogoutButton } from "@/public/components/ui/logout-button";
+import { usePublicAuthKind } from "@/public/hooks/use-public-auth-kind";
+import type { PublicAuthKind } from "@/shared/lib/public-auth-kind";
 import { SiteBrand } from "./site-brand";
 
 /**
  * 顧客認証状態に応じたヘッダー右端のスロット。
  * - `authenticated`: マイページリンク + ログアウトボタンを並置
  * - `guest`: ログインリンクのみ
- * - `null`: 認証導線自体を出さない（特殊ページ向け）
+ * - `null`: 認証導線自体を出さない（管理ロール等）
+ *
+ * kind は server HTML に埋め込まず client hydrate 後に解決する
+ * （CDN blanket public キャッシュでの cross-user 漏洩防止）。
  */
-export type HeaderAuthSlot =
+type HeaderAuthSlot =
   | {
       readonly variant: "authenticated";
       readonly mypageHref: string;
@@ -55,7 +60,30 @@ interface HeaderProps {
   readonly mobileNavItems: readonly PublicNavItem[];
   readonly scrollBehavior: HeaderScrollBehavior;
   readonly backgroundMode: HeaderBackgroundMode;
-  readonly authSlot: HeaderAuthSlot | null;
+}
+
+function authSlotFromKind(kind: PublicAuthKind): HeaderAuthSlot | null {
+  if (kind === "mypage") {
+    return {
+      variant: "authenticated",
+      mypageHref: "/mypage",
+      mypageLabel: "マイページ",
+    };
+  }
+  if (kind === "login") {
+    return { variant: "guest", loginHref: "/login", loginLabel: "ログイン" };
+  }
+  return null;
+}
+
+function AuthChromeSkeleton(): ReactElement {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-3 w-14 animate-pulse bg-surface"
+      data-auth-chrome="skeleton"
+    />
+  );
 }
 
 /** Scroll offset (px) where header background becomes opaque */
@@ -236,7 +264,6 @@ export function Header({
   mobileNavItems,
   scrollBehavior,
   backgroundMode,
-  authSlot,
 }: HeaderProps): ReactElement {
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
@@ -248,6 +275,9 @@ export function Header({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { status: authStatus, kind: authKind } = usePublicAuthKind();
+  const authSlot =
+    authStatus === "ready" ? authSlotFromKind(authKind) : undefined;
   const closeMenu = () => setMenuOpen(false);
 
   function focusMobileMenuInitialElement() {
@@ -458,6 +488,7 @@ export function Header({
 
         {/* Desktop Auth + CTA — 右列（lg:justify-self-end で cell 内右端 / 認証内部 gap-5 / CTA 間 gap-8 で暗黙分離） */}
         <div className="hidden items-center gap-8 lg:col-start-3 lg:flex lg:justify-self-end">
+          {authSlot === undefined && <AuthChromeSkeleton />}
           {authSlot?.variant === "authenticated" && (
             <div className="flex items-center gap-5">
               <Link
@@ -554,6 +585,15 @@ export function Header({
                       onNavigate={closeMenu}
                     />
                   ))}
+                  {authSlot === undefined && (
+                    <>
+                      <div
+                        aria-hidden="true"
+                        className="h-px w-16 bg-border/60"
+                      />
+                      <AuthChromeSkeleton />
+                    </>
+                  )}
                   {authSlot && (
                     <div
                       aria-hidden="true"

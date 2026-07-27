@@ -7,6 +7,7 @@
  * `assertAllRequiredTermsAgreed` / `recordTermsAgreementsCommand`）とは別物で、
  * 既存 consumer は非破壊（そちらを使い続ける）。
  */
+import { createHash } from "node:crypto";
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // =============================================================================
@@ -18,6 +19,16 @@ type TermsDocRow = { id: string; contentHtml?: string };
 const mockTermsDocumentFindMany = mock<() => Promise<TermsDocRow[]>>(() =>
   Promise.resolve([]),
 );
+const mockTermsAgreementFindMany = mock<
+  () => Promise<
+    Array<{
+      id: string;
+      termsId: string;
+      contentHash: string;
+      agreedAt: Date;
+    }>
+  >
+>(() => Promise.resolve([]));
 const mockTermsAgreementCreateMany = mock<() => Promise<{ count: number }>>(
   () => Promise.resolve({ count: 0 }),
 );
@@ -74,7 +85,10 @@ mock.module("@generated/prisma/client", () => {
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     termsDocument: { findMany: mockTermsDocumentFindMany },
-    termsAgreement: { createMany: mockTermsAgreementCreateMany },
+    termsAgreement: {
+      findMany: mockTermsAgreementFindMany,
+      createMany: mockTermsAgreementCreateMany,
+    },
   },
 }));
 
@@ -87,7 +101,9 @@ const { recordTermsAgreements } =
 
 beforeEach(() => {
   mockTermsDocumentFindMany.mockReset();
+  mockTermsAgreementFindMany.mockReset();
   mockTermsAgreementCreateMany.mockReset();
+  mockTermsAgreementFindMany.mockResolvedValue([]);
   mockTermsAgreementCreateMany.mockResolvedValue({ count: 0 });
 });
 
@@ -183,5 +199,60 @@ describe("Terms RESERVATION_SERIES scope (Phase B.2 task 10)", () => {
       }),
     ).rejects.toThrow("この同意 scope の対象ではありません");
     expect(mockTermsAgreementCreateMany).not.toHaveBeenCalled();
+  });
+
+  test("recordTermsAgreements: 既存行は skip し戻り値に既存 id を載せる", async () => {
+    const html1 = "<p>第1条</p>";
+    const html2 = "<p>第2条</p>";
+    const hash1 = createHash("sha256").update(html1).digest("hex");
+    const priorAgreedAt = new Date("2026-01-01T00:00:00.000Z");
+    mockTermsDocumentFindMany.mockImplementation(() =>
+      Promise.resolve([
+        { id: "doc-1", contentHtml: html1 },
+        { id: "doc-2", contentHtml: html2 },
+      ]),
+    );
+    mockTermsAgreementFindMany.mockResolvedValueOnce([
+      {
+        id: "existing-1",
+        termsId: "doc-1",
+        contentHash: hash1,
+        agreedAt: priorAgreedAt,
+      },
+    ]);
+    mockTermsAgreementCreateMany.mockResolvedValueOnce({ count: 1 });
+
+    const result = await recordTermsAgreements({
+      scope: "RESERVATION_SERIES",
+      customerId: "cust-1",
+      resourceId: "series-abc",
+      agreements: [{ termsId: "doc-1" }, { termsId: "doc-2" }],
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        id: "existing-1",
+        termsId: "doc-1",
+        agreedAt: priorAgreedAt,
+      }),
+    );
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        termsId: "doc-2",
+        resourceId: "series-abc",
+      }),
+    );
+    expect(mockTermsAgreementCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            termsId: "doc-2",
+            customerId: "cust-1",
+            resourceId: "series-abc",
+          }),
+        ],
+      }),
+    );
   });
 });

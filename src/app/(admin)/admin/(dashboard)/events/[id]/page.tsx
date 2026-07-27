@@ -12,7 +12,7 @@ import {
   getEventRegistrations,
   getWaitlistQueueCount,
 } from "@/admin/queries/event";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { deleteEvent } from "@/admin/actions/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
@@ -61,7 +61,7 @@ export default async function EventDetailPage({
 }: PageProps) {
   await connection();
 
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canExportEventRegistrations = hasPermission(
     user.role,
     "event",

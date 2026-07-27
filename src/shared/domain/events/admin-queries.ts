@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
-import { EventStatus } from "@generated/prisma/client";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EventTabFilter } from "@/shared/lib/nuqs";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 

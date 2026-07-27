@@ -12,6 +12,7 @@ import {
   resolveUrl,
 } from "@/admin/lib/ogp-parser";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import { isSameAdminOrigin } from "@/shared/lib/http/assert-same-origin";
 import {
   logError,
   ErrorCategory,
@@ -156,6 +157,10 @@ async function fetchOgpPage(
 }
 
 export async function POST(request: Request) {
+  if (!isSameAdminOrigin(request.headers)) {
+    return jsonError("Forbidden", 403);
+  }
+
   const auth = await checkAdminAuth(request.headers);
   if (!auth.success) {
     return jsonError(auth.error.error, 401);

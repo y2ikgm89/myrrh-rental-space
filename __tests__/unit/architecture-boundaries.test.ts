@@ -487,6 +487,7 @@ describe("architecture boundaries", () => {
     expect(source).not.toMatch(/shared\/domain\/.*\/commands/u);
   });
 
+  // shared 全体の fs traverse + regex。pre-push 並列負荷下で 5s default を超え得るため 30s。
   test("src/shared/ は @/admin・@/public を import しない（依存方向の保護）", () => {
     // shared は admin / public の双方から参照される下層。逆 import は
     // 依存方向の逆転（特に値 import は実行時依存）になり shared の再利用性を
@@ -497,7 +498,7 @@ describe("architecture boundaries", () => {
     );
 
     expect(offenders).toEqual([]);
-  });
+  }, 30000);
 
   test("shared/domain は bare な Date.toLocale* を使わず date-format SSoT を経由する", () => {
     // Cloud Run のプロセス TZ は UTC。timeZone 指定なしの toLocale*String は JST 想定の
@@ -709,6 +710,86 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("shared/domain は @generated/prisma/enums を直接 import しない（prisma-types SSoT）", () => {
+    // Prisma enum 値は `@/shared/lib/validations/enums/prisma-types` 経由が SSoT。
+    // `Prisma` 名前空間の型-only import は `@generated/prisma/client` から許可
+    // （上記「generated Prisma import」テストで shared/domain は client 直接 import 可）。
+    // 凍結 allowlist は ratchet 用 — 解消 PR では当該ファイルを削除すること。
+    const DOMAIN_ENUM_IMPORT_ALLOWLIST = new Set(
+      [
+        "src/shared/domain/audit-log/commands.ts",
+        "src/shared/domain/audit-log/hash-chain-core.ts",
+        "src/shared/domain/audit-log/queries.ts",
+        "src/shared/domain/coupons/types.ts",
+        "src/shared/domain/customers/bulk-status-commands.ts",
+        "src/shared/domain/customers/commands.ts",
+        "src/shared/domain/customers/queries.ts",
+        "src/shared/domain/customers/risk-detection.ts",
+        "src/shared/domain/customers/types.ts",
+        "src/shared/domain/dashboard/queries.ts",
+        "src/shared/domain/editor-comments/queries.ts",
+        "src/shared/domain/editor-comments/types.ts",
+        "src/shared/domain/inquiries/bulk-status-commands.ts",
+        "src/shared/domain/inquiries/commands.ts",
+        "src/shared/domain/inquiries/ops-commands.ts",
+        "src/shared/domain/inquiries/queries.ts",
+        "src/shared/domain/inquiries/types.ts",
+        "src/shared/domain/instagram/commands.ts",
+        "src/shared/domain/link-cards/resolve-queries.ts",
+        "src/shared/domain/link-cards/search-queries.ts",
+        "src/shared/domain/media/commands.ts",
+        "src/shared/domain/media/queries.ts",
+        "src/shared/domain/navigation/commands.ts",
+        "src/shared/domain/navigation/queries.ts",
+        "src/shared/domain/payment/checkout-session-write-orchestration.ts",
+        "src/shared/domain/payment/payment-claim-orchestration.ts",
+        "src/shared/domain/payment/payment-status-guards.ts",
+        "src/shared/domain/news/admin-queries.ts",
+        "src/shared/domain/news/types.ts",
+        "src/shared/domain/posts/analytics-commands.ts",
+        "src/shared/domain/posts/bulk-commands.ts",
+        "src/shared/domain/posts/post-commands.ts",
+        "src/shared/domain/posts/queries.ts",
+        "src/shared/domain/posts/scheduled-publish.ts",
+        "src/shared/domain/posts/types.ts",
+        "src/shared/domain/reviews/commands.ts",
+        "src/shared/domain/settings/admin-queries.ts",
+        "src/shared/domain/settings/announcement-bar.ts",
+        "src/shared/domain/settings/commands.ts",
+        "src/shared/domain/settings/integration-commands.ts",
+        "src/shared/domain/settings/queries/display.ts",
+        "src/shared/domain/settings/queries/site.ts",
+        "src/shared/domain/settings/queries/tax.ts",
+        "src/shared/domain/settings/types.ts",
+        "src/shared/domain/sidebar/queries.ts",
+        "src/shared/domain/sitemap/queries.ts",
+        "src/shared/domain/smart-lock/commands.ts",
+        "src/shared/domain/smart-lock/device-inventory.ts",
+        "src/shared/domain/smart-lock/queries.ts",
+        "src/shared/domain/smart-lock/types.ts",
+        "src/shared/domain/spaces/commands.ts",
+        "src/shared/domain/spaces/queries.ts",
+        "src/shared/domain/user-page-assignments/commands.ts",
+        "src/shared/domain/users/queries.ts",
+        "src/shared/domain/users/types.ts",
+      ].map((p) => p.replace(/\\/g, "/")),
+    );
+
+    const domainFiles = collectSourceFiles(SHARED_DOMAIN_ROOT).filter(
+      (file) => {
+        const rel = relative(ROOT, file).replace(/\\/g, "/");
+        return !DOMAIN_ENUM_IMPORT_ALLOWLIST.has(rel);
+      },
+    );
+
+    const offenders = collectNonCommentOffenders(
+      domainFiles,
+      /@generated\/prisma\/enums/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("enums gateway は @generated/prisma/client を import しない（参照同一性フットガン排除）", () => {
     // gateway は client-safe である必要があるため、server-only な
     // `@generated/prisma/client` から値を re-export してはならない。
@@ -868,12 +949,13 @@ describe("architecture boundaries", () => {
   test("TermsAgreement は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
     // TermsAgreement は法務証跡なので append-only。事後改竄を ESLint/test 双方で
     // 物理的に塞ぐ。Prisma の update / updateMany / delete / deleteMany / upsert /
-    // deleteMany を src/ 配下から grep gate する。restore など意図的な再有効化は
-    // 別 model (TermsDocument) の操作で行うので本 gate は terms_agreement のみ。
+    // を src/ 配下から grep gate する。tx.termsAgreement.* も同型で塞ぐ
+    // （interactive transaction 経由の改竄経路）。restore など意図的な再有効化は
+    // 別 model (TermsDocument) の操作で行うので本 gate は termsAgreement のみ。
     const files = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
       files,
-      /prisma\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+      /\b(?:prisma|tx)\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
     );
     expect(offenders).toEqual([]);
   });
@@ -1005,9 +1087,6 @@ describe("architecture boundaries", () => {
     const ALLOWLIST = new Set(
       [
         join(SRC_ROOT, "shared", "lib", "calendar-sync", "event-inbound.ts"),
-        join(SRC_ROOT, "shared", "lib", "email", "event-emails.ts"),
-        join(SRC_ROOT, "shared", "lib", "email", "event-waitlist-emails.ts"),
-        join(SRC_ROOT, "shared", "lib", "email", "inquiry-emails.ts"),
         join(
           SRC_ROOT,
           "shared",
@@ -1169,6 +1248,31 @@ describe("architecture boundaries", () => {
     const source = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
 
     expect(source).toContain("NuqsAdapter");
+  });
+
+  test("public root layout は認証 chrome を HTML に埋め込まず client hydrate 後に解決する", () => {
+    const layoutSource = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
+    // CDN blanket public (s-maxage) + Cookie vary 不在で login/mypage が漏洩しないよう、
+    // layout / HeaderWithData 経路では session を読まない。
+    expect(layoutSource).not.toContain("getCurrentCustomerUser");
+    expect(layoutSource).not.toContain("resolvePublicAuthKind");
+    expect(layoutSource).not.toContain("authSlot=");
+    expect(layoutSource).not.toContain("authKind=");
+    expect(layoutSource).toContain("<MobileNav />");
+
+    const authKindRoute = join(
+      SRC_ROOT,
+      "app",
+      "api",
+      "customer",
+      "auth-kind",
+      "route.ts",
+    );
+    expect(existsSync(authKindRoute)).toBe(true);
+    const routeSource = readFileSync(authKindRoute, "utf8");
+    expect(routeSource).toContain("getCurrentCustomerUser");
+    expect(routeSource).toContain("resolvePublicAuthKind");
+    expect(routeSource).toContain("private, no-store");
   });
 
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
@@ -3051,6 +3155,71 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("meetingUrl query SSoT (fail-closed)", () => {
+    test("getEventRegistrationForClaim は meetingUrl を select/return しない", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/registration-queries.ts"),
+        "utf8",
+      );
+      const start = content.indexOf(
+        "export async function getEventRegistrationForClaim",
+      );
+      const end = content.indexOf(
+        "const CUSTOMER_EVENT_REGISTRATION_SELECT",
+        start,
+      );
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      const fn = content.slice(start, end);
+      expect(
+        fn,
+        "claim クエリは参加 URL を開示しない（eventTitle/startTime のみ）",
+      ).not.toMatch(/meetingUrl/);
+    });
+
+    test("getEventRegistrationForGuestStatus は CONFIRMED のときのみ meetingUrl を返す", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/registration-queries.ts"),
+        "utf8",
+      );
+      const start = content.indexOf(
+        "export async function getEventRegistrationForGuestStatus",
+      );
+      const end = content.indexOf(
+        "export async function getEventRegistrationDetailsForEmail",
+        start,
+      );
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      const fn = content.slice(start, end);
+      expect(fn).toMatch(
+        /registration\.status === RegistrationStatus\.CONFIRMED/,
+      );
+      expect(fn).toMatch(
+        /registration\.status === RegistrationStatus\.CONFIRMED\s*\?\s*registration\.event\.meetingUrl\s*:\s*null/,
+      );
+    });
+
+    test("public-queries は meetingUrl/meetingProvider を公開 select/map に載せない", () => {
+      const content = readFileSync(
+        join(ROOT, "src/shared/domain/events/public-queries.ts"),
+        "utf8",
+      );
+      expect(
+        content,
+        "公開キャッシュ DTO に meetingUrl を select しない",
+      ).not.toMatch(/meetingUrl:\s*true/);
+      expect(
+        content,
+        "公開キャッシュ DTO に meetingProvider を select しない",
+      ).not.toMatch(/meetingProvider:\s*true/);
+      expect(
+        content,
+        "公開 map で meetingUrl を再付与しない（'use cache' 経由で漏れる）",
+      ).not.toMatch(/meetingUrl\s*[:=]/);
+    });
+  });
+
   describe("Phase B.2: rrule package import restriction", () => {
     test("rrule import は domain layer + admin form utils のみ許可", async () => {
       const files = collectSourceFiles(SRC_ROOT);
@@ -3241,7 +3410,7 @@ describe("architecture boundaries", () => {
     // 呼ばない限り、停止/BLACKLIST 顧客の書込を通してしまう。
     // 各 Server Action で customer.id 解決直後に assertCustomerActive を呼ぶこと
     // を drift gate として強制する。
-    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive も呼ぶ", () => {
+    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive 系 gate も呼ぶ", () => {
       const targets = collectSourceFiles(PUBLIC_APP_ROOT).filter((file) => {
         // Server Action = `"use server"` directive を含むファイル。
         if (!/(?:^|[\\/])[^\\/]+\.ts$/u.test(file)) return false;
@@ -3257,13 +3426,17 @@ describe("architecture boundaries", () => {
       const offenders = targets
         .filter((file) => {
           const source = readFileSync(file, "utf8");
-          return !/\bassertCustomerActive\b/u.test(source);
+          // guest-token 経路は assertGuestTokenCustomerGates が active (+ 任意で再同意) を内包。
+          return (
+            !/\bassertCustomerActive\b/u.test(source) &&
+            !/\bassertGuestTokenCustomerGates\b/u.test(source)
+          );
         })
         .map((file) => relative(ROOT, file));
 
       expect(
         offenders,
-        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive も呼ぶこと。src/shared/domain/customers/guard.ts の helper を import して customer.id 解決直後に呼び出す (OAUTH-BETTER-AUTH-01)。`,
+        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive または assertGuestTokenCustomerGates を呼ぶこと (OAUTH-BETTER-AUTH-01)。`,
       ).toEqual([]);
     });
 
@@ -3330,18 +3503,19 @@ describe("architecture boundaries", () => {
     });
   });
 
-  describe("実 DB integration テストの SERIAL_DB_TESTS 登録 (TEST-01 再発防止)", () => {
+  describe("実 DB integration テストの serial bucket 自動検出 (TEST-01 再発防止)", () => {
     // `.claude/rules/testing-unit.md` の SSoT 契約:「新規の実 DB テストは
-    // SERIAL_DB_TESTS にフルパス登録必須（未登録だと parallel bucket に入り共有 DB で
-    // 競合する）」。__tests__/integration 配下で
+    // TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを持てば serial bucket に
+    // 自動入る（未検出だと parallel bucket に入り共有 DB で競合する）」。
+    // __tests__/integration 配下で
     // `const describeMaybe = TEST_DB_URL ? describe : describe.skip;` パターンを使う
-    // ファイルは scripts/test-db-runner-env.ts の SERIAL_DB_TESTS Set に登録漏れが
-    // あると: (a) 単発ターゲット実行時に TEST_DATABASE_URL 未注入 = silent skip
+    // ファイルは scripts/serial-db-test-detection.ts が内容走査で拾う。
+    // 検出漏れがあると: (a) 単発ターゲット実行時に TEST_DATABASE_URL 未注入 = silent skip
     // (security-critical assertion が 0 test passed で緑判定)、(b) 全域実行時は
     // parallel bucket に入り共有 test-db を他 parallel テストと同時書込みで race。
     // 過去に BLACKLIST 予約拒否・rate-plan CRUD・不審検知の 3 本で発生 (TEST-01)。
-    test("describeMaybe pattern を使う integration テストは SERIAL_DB_TESTS に登録済", async () => {
-      const { SERIAL_DB_TESTS } =
+    test("describeMaybe pattern を使う integration テストは serial bucket 対象", async () => {
+      const { isSerialDbTest } =
         await import("../../scripts/test-db-runner-env");
       const INTEGRATION_ROOT = join(ROOT, "__tests__", "integration");
       const PATTERN =
@@ -3366,14 +3540,14 @@ describe("architecture boundaries", () => {
         const content = readFileSync(file, "utf-8");
         if (!PATTERN.test(content)) continue;
         const rel = relative(ROOT, file).replace(/\\/g, "/");
-        if (!SERIAL_DB_TESTS.has(rel)) {
+        if (!isSerialDbTest(rel)) {
           unregistered.push(rel);
         }
       }
 
       expect(
         unregistered,
-        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが SERIAL_DB_TESTS に未登録。scripts/test-db-runner-env.ts の Set に以下 file をフルパスで追加してください (未登録だと silent skip + parallel race)。詳細は .claude/rules/testing-unit.md`,
+        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが serial bucket 自動検出対象外。TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを追加するか scripts/serial-db-test-detection.ts の FORCE_INCLUDE に登録してください (未検出だと silent skip + parallel race)。詳細は .claude/rules/testing-unit.md`,
       ).toEqual([]);
     });
   });

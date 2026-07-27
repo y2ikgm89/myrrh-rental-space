@@ -23,6 +23,11 @@ export const REFUNDED_BY_TYPE = {
    * 自動返金 (`refundExpiredWaitlistOfferPaymentCommand`)。
    */
   AUTO_CAPACITY_RACE: "AUTO_CAPACITY_RACE",
+  /**
+   * Checkout Session の amount_total が DB 期待額と不一致のため webhook が
+   * fulfill せず自動返金したケース。
+   */
+  AUTO_AMOUNT_MISMATCH: "AUTO_AMOUNT_MISMATCH",
   /** Stripe Dashboard 経由の手動返金 (webhook 経由で back-fill) */
   STRIPE_DASHBOARD: "STRIPE_DASHBOARD",
 } as const;
@@ -34,6 +39,7 @@ export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
   [REFUNDED_BY_TYPE.ADMIN]: "管理者",
   [REFUNDED_BY_TYPE.AUTO_ON_CANCEL]: "自動（キャンセル）",
   [REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE]: "自動（容量レース）",
+  [REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH]: "自動（金額不一致）",
   [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
 };
 

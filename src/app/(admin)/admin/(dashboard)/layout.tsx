@@ -30,7 +30,7 @@ import { SkipToMainContentLink } from "./_components/SkipToMainContentLink";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import type { ReactElement, ReactNode } from "react";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import {
   filterSidebarGroupsByPermission,
   SIDEBAR_GROUPS,
@@ -57,7 +57,7 @@ async function DashboardChromeResolved({
 }): Promise<ReactElement> {
   await connection();
 
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const enabledFeatures = await getEnabledFeatures();
   const sidebarGroups = filterSidebarGroupsByPermission(
     SIDEBAR_GROUPS,

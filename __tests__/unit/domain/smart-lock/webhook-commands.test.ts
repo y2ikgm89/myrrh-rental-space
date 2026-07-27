@@ -4,7 +4,12 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-type DeviceRow = { id: string; deviceId: string; deviceType: string };
+type DeviceRow = {
+  id: string;
+  deviceId: string;
+  deviceType: string;
+  lastStateAt?: Date | null;
+};
 type PasscodeRow = {
   id: string;
   reservationId: string;
@@ -24,16 +29,20 @@ const mockFindManyPasscode = mock<
   (...args: unknown[]) => Promise<PasscodeRow[]>
 >(() => Promise.resolve([]));
 
-const mockGetDecryptedSwitchBotCredentials = mock<
-  () => Promise<{
-    openToken: string;
-    secretKey: string;
-    passcodeBufferMinutes: number;
-  } | null>
->(() => Promise.resolve(null));
+const mockGetDecryptedSwitchBotCredentialsForRevocation = mock<
+  () => Promise<{ openToken: string; secretKey: string } | null>
+>(() => Promise.resolve({ openToken: "open-token", secretKey: "secret-key" }));
+
+const mockFindUniqueReservation = mock<
+  (...args: unknown[]) => Promise<{ status: string } | null>
+>(() => Promise.resolve({ status: "CONFIRMED" }));
 
 const mockCreatePasscodeApi = mock<(...args: unknown[]) => Promise<unknown>>(
   () => Promise.resolve({ ok: true, body: { commandId: "unused" } }),
+);
+
+const mockRevokeOne = mock<(...args: unknown[]) => Promise<boolean>>(() =>
+  Promise.resolve(true),
 );
 
 const mockFindKeyInDeviceList = mock<
@@ -69,12 +78,19 @@ mock.module("@/shared/db/prisma", () => ({
       findFirst: (...args: unknown[]) => mockFindFirstPasscode(...args),
       findMany: (...args: unknown[]) => mockFindManyPasscode(...args),
     },
+    reservation: {
+      findUnique: (...args: unknown[]) => mockFindUniqueReservation(...args),
+    },
   },
 }));
 
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getDecryptedSwitchBotCredentials: () =>
-    mockGetDecryptedSwitchBotCredentials(),
+    mockGetDecryptedSwitchBotCredentialsForRevocation().then((c) =>
+      c ? { ...c, passcodeBufferMinutes: 15 } : null,
+    ),
+  getDecryptedSwitchBotCredentialsForRevocation: () =>
+    mockGetDecryptedSwitchBotCredentialsForRevocation(),
 }));
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
@@ -86,6 +102,11 @@ mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
 
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   confirmRevokeByKeyAbsence: mock(() => Promise.resolve(false)),
+  revokeOne: (...args: unknown[]) => mockRevokeOne(...args),
+}));
+
+mock.module("@/shared/domain/smart-lock/reissue-passcode", () => ({
+  completePendingSmartLockReissue: mock(() => Promise.resolve(undefined)),
 }));
 
 const {
@@ -100,6 +121,7 @@ const DEVICE: DeviceRow = {
   id: "device-row-1",
   deviceId: "AA:BB:CC:DD:EE:FF",
   deviceType: "LOCK_PRO",
+  lastStateAt: null,
 };
 const RESERVATION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 const PASSCODE_ROW: PasscodeRow = {
@@ -114,7 +136,9 @@ beforeEach(() => {
   mockFindFirstPasscode.mockReset();
   mockFindManyPasscode.mockReset();
   mockUpdateManyDevice.mockReset();
-  mockGetDecryptedSwitchBotCredentials.mockReset();
+  mockGetDecryptedSwitchBotCredentialsForRevocation.mockReset();
+  mockFindUniqueReservation.mockReset();
+  mockRevokeOne.mockReset();
   mockCreatePasscodeApi.mockReset();
   mockFindKeyInDeviceList.mockReset();
 
@@ -123,11 +147,12 @@ beforeEach(() => {
   mockFindFirstPasscode.mockResolvedValue(null);
   mockFindManyPasscode.mockResolvedValue([]);
   mockUpdateManyDevice.mockResolvedValue({ count: 0 });
-  mockGetDecryptedSwitchBotCredentials.mockResolvedValue({
+  mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue({
     openToken: "open-token",
     secretKey: "secret-key",
-    passcodeBufferMinutes: 15,
   });
+  mockFindUniqueReservation.mockResolvedValue({ status: "CONFIRMED" });
+  mockRevokeOne.mockResolvedValue(true);
   mockFindKeyInDeviceList.mockResolvedValue({ ok: true, body: null });
 });
 
@@ -140,7 +165,10 @@ describe("isKnownSmartLockDevice", () => {
 
 describe("processSwitchBotLockStateReport", () => {
   test("錠デバイスの lockState を lastLockState に反映する", async () => {
-    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindUniqueDevice.mockResolvedValue({
+      ...DEVICE,
+      lastStateAt: null,
+    });
     mockUpdateManyDevice.mockResolvedValue({ count: 1 });
 
     const result = await processSwitchBotLockStateReport({
@@ -153,13 +181,29 @@ describe("processSwitchBotLockStateReport", () => {
     expect(result).toBe(true);
     expect(mockUpdateManyDevice).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { deviceId: DEVICE.deviceId },
+        where: expect.objectContaining({ deviceId: DEVICE.deviceId }),
         data: expect.objectContaining({
           lastLockState: "LOCKED",
           lastBattery: 90,
         }),
       }),
     );
+  });
+
+  test("stored lastStateAt より古い timeOfSample は無視する", async () => {
+    mockFindUniqueDevice.mockResolvedValue({
+      ...DEVICE,
+      lastStateAt: new Date(1_700_000_100 * 1000),
+    });
+
+    const result = await processSwitchBotLockStateReport({
+      deviceMac: DEVICE.deviceId,
+      lockState: "UNLOCKED",
+      timeOfSample: 1_700_000_000,
+    });
+
+    expect(result).toBe(false);
+    expect(mockUpdateManyDevice).not.toHaveBeenCalled();
   });
 });
 
@@ -195,6 +239,46 @@ describe("processSwitchBotChangeReport createKey", () => {
 
     expect(result).toBe(true);
     expect(mockFindKeyInDeviceList).toHaveBeenCalled();
+  });
+
+  test("createKey success 後に予約が CANCELLED なら即 deleteKey を開始する", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindFirstPasscode.mockResolvedValue({
+      id: PASSCODE_ROW.id,
+      reservationId: PASSCODE_ROW.reservationId,
+      switchbotKeyId: null,
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: {
+        id: "key-orphan",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1,
+      },
+    });
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+    mockFindUniqueReservation.mockResolvedValue({ status: "CANCELLED" });
+
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "createKey",
+      commandId: "cmd-cancelled",
+      result: "success",
+    });
+
+    expect(result).toBe(true);
+    expect(mockRevokeOne).toHaveBeenCalledWith(
+      { openToken: "open-token", secretKey: "secret-key" },
+      expect.objectContaining({
+        id: PASSCODE_ROW.id,
+        switchbotKeyId: "key-orphan",
+      }),
+    );
   });
 
   test("createKey failed は PENDING を FAILED に倒す", async () => {

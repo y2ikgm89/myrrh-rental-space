@@ -24,6 +24,7 @@ import {
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 import { ErrorCategory } from "@/shared/lib/errors";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import { deleteEventOutbound, syncEventOutbound } from "./calendar-outbound";
@@ -285,9 +286,13 @@ export async function bulkSetStatusEvents(
       ) {
         fireAndForget(
           Promise.allSettled(
-            outcome.affectedIds.map((eventId) =>
-              sendEventCancelledToAllParticipants(eventId),
-            ),
+            outcome.affectedIds.map(async (eventId) => {
+              const payload =
+                await getEventCancelledNotificationPayload(eventId);
+              if (payload) {
+                await sendEventCancelledToAllParticipants(payload);
+              }
+            }),
           ).then(() => undefined),
           {
             operation: "bulkSetStatusEvents.cancel",

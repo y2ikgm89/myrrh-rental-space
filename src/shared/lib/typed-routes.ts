@@ -1,7 +1,8 @@
 import type { Route } from "next";
+import { isSafeInternalRedirectPath } from "@/shared/lib/url/safe-internal-redirect";
 
 export function isAppRoute(href: string): href is Route {
-  return href.startsWith("/") && !href.startsWith("//");
+  return isSafeInternalRedirectPath(href);
 }
 
 export function toAppRoute(href: string): Route {

@@ -36,7 +36,7 @@ import {
   sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import { issueSmartLockAndSendConfirmationEmail } from "./mutations";
+import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -124,19 +124,19 @@ export async function createReservationAction(
 
           const payloadData = omitUndefined(mutationPayload.payload);
           const calendarData: ReservationSyncData = payloadData;
-          if (data.sendEmail) {
-            const isConfirmedCreate =
-              data.status === ReservationStatus.CONFIRMED;
+          const isConfirmedCreate = data.status === ReservationStatus.CONFIRMED;
 
-            if (isConfirmedCreate) {
+          if (isConfirmedCreate) {
+            if (data.sendEmail) {
               fireAndForget(
-                issueSmartLockAndSendConfirmationEmail(
-                  payloadData,
-                  data.spaceId,
-                ),
+                applyConfirmationSideEffects({
+                  payload: payloadData,
+                  spaceId: data.spaceId,
+                  channel: "admin",
+                }),
                 {
                   operation:
-                    "createReservationActionIssuePasscodesAndSendConfirmation",
+                    "createReservationActionApplyConfirmationSideEffects",
                   category: ErrorCategory.EXTERNAL_API,
                   severity: ErrorSeverity.MEDIUM,
                   context: { reservationId: mutationPayload.id },
@@ -153,39 +153,45 @@ export async function createReservationAction(
               );
             } else {
               fireAndForget(
-                Promise.all([
-                  sendReservationConfirmationEmail(payloadData),
-                  sendReservationAdminNotification(payloadData, "new"),
-                ]),
+                applyConfirmationSideEffects({
+                  payload: payloadData,
+                  spaceId: data.spaceId,
+                  channel: "admin",
+                  sendCustomerEmail: false,
+                }),
                 {
-                  operation: "createReservationActionSendConfirmationEmails",
+                  operation:
+                    "createReservationActionApplyConfirmationSideEffects",
                   category: ErrorCategory.EXTERNAL_API,
                   severity: ErrorSeverity.MEDIUM,
                   context: { reservationId: mutationPayload.id },
                 },
               );
             }
-
-            fireAndForget(syncReservationToCalendar(calendarData), {
-              operation: "syncReservationToCalendar",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-              context: {
-                reservationId: mutationPayload.id,
-                trigger: "createReservationAction",
+          } else if (data.sendEmail) {
+            fireAndForget(
+              Promise.all([
+                sendReservationConfirmationEmail(payloadData),
+                sendReservationAdminNotification(payloadData, "new"),
+              ]),
+              {
+                operation: "createReservationActionSendConfirmationEmails",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: mutationPayload.id },
               },
-            });
-          } else {
-            fireAndForget(syncReservationToCalendar(calendarData), {
-              operation: "syncReservationToCalendar",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-              context: {
-                reservationId: mutationPayload.id,
-                trigger: "createReservationAction",
-              },
-            });
+            );
           }
+
+          fireAndForget(syncReservationToCalendar(calendarData), {
+            operation: "syncReservationToCalendar",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: {
+              reservationId: mutationPayload.id,
+              trigger: "createReservationAction",
+            },
+          });
 
           fireAndForget(
             createNotificationCommand({
@@ -370,13 +376,14 @@ export async function updateReservationAction(
 
           if (statusFlipToConfirmed) {
             fireAndForget(
-              issueSmartLockAndSendConfirmationEmail(
-                payloadData,
-                mutationPayload.spaceId,
-              ),
+              applyConfirmationSideEffects({
+                payload: payloadData,
+                spaceId: mutationPayload.spaceId,
+                channel: "admin",
+              }),
               {
                 operation:
-                  "updateReservationActionIssuePasscodesAndSendConfirmation",
+                  "updateReservationActionApplyConfirmationSideEffects",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.MEDIUM,
                 context: { reservationId: parsedId.data },

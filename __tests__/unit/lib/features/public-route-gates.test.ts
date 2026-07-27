@@ -1,10 +1,10 @@
 /**
  * Public route ↔ requireFeatureEnabled drift gate
  *
- * `src/app/(public)` 配下で feature module に紐づく page.tsx / route.ts は
- * 冒頭で `await requireFeatureEnabled("<module>")` を呼ぶ契約になっている
- * (feature OFF 時に 404 fail-closed)。この enforcement は grep gate でのみ
- * 検出可能 — ESLint も lint も検出しない。
+ * `src/app/(public)` 配下で feature module に紐づく page.tsx / route.ts、および
+ * request-time に移した `*-feature-gate.tsx` は `await requireFeatureEnabled("<module>")`
+ * を呼ぶ契約になっている (feature OFF 時に 404 fail-closed)。この enforcement は
+ * grep gate でのみ検出可能 — ESLint も lint も検出しない。
  *
  * FEAT-3PLANE-02/-04: sibling gate 原則の対称化漏れが本 test が守る不変条件。
  * 過去に mypage/inquiries × 2 (contact)・reservation/complete (reservation)・
@@ -24,8 +24,8 @@ import {
 } from "@/shared/lib/features/registry";
 
 /**
- * feature module gate が必要な公開経路 (page.tsx / route.ts の相対パス) ↔
- * 期待される module id の SSoT。
+ * feature module gate が必要な公開経路
+ * (page.tsx / route.ts / `*-feature-gate.tsx` の相対パス) ↔ 期待される module id の SSoT。
  *
  * 新規経路追加時はここに登録。register 漏れ / module id 変更 / 呼び忘れは
  * 本 test が fail する。
@@ -65,18 +65,22 @@ const EXPECTED_GATES: ReadonlyArray<{
   },
   // events
   { file: "src/app/(public)/events/page.tsx", module: "events" },
-  { file: "src/app/(public)/events/[slug]/page.tsx", module: "events" },
+  // PPR/CDN: page shell は静的、gate は Suspense 内 `*-feature-gate.tsx` + connection()
+  {
+    file: "src/app/(public)/events/[slug]/_components/event-detail-feature-gate.tsx",
+    module: "events",
+  },
   { file: "src/app/(public)/events/cancel/page.tsx", module: "events" },
   {
     file: "src/app/(public)/events/registrations/status/page.tsx",
     module: "events",
   },
   {
-    file: "src/app/(public)/events/waitlist/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/waitlist/checkout/route.ts",
     module: "events",
   },
   {
-    file: "src/app/(public)/events/waitlist/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/waitlist/checkout/route.ts",
     module: "payment",
   },
   {
@@ -113,11 +117,11 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "payment",
   },
   {
-    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/registrations/checkout/route.ts",
     module: "events",
   },
   {
-    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    file: "src/app/(public)/events/registrations/checkout/route.ts",
     module: "payment",
   },
   // posts
@@ -156,7 +160,11 @@ function collectPublicGateFiles(): string[] {
         walk(abs);
         continue;
       }
-      if (entry === "page.tsx" || entry === "route.ts") {
+      if (
+        entry === "page.tsx" ||
+        entry === "route.ts" ||
+        entry.endsWith("-feature-gate.tsx")
+      ) {
         files.push(abs.replace(/\\/g, "/"));
       }
     }
@@ -200,7 +208,7 @@ describe("public route ↔ requireFeatureEnabled drift gate", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  test("src/app/(public) の page.tsx / route.ts の requireFeatureEnabled と EXPECTED_GATES が一致する", () => {
+  test("src/app/(public) の page.tsx / route.ts / *-feature-gate.tsx の requireFeatureEnabled と EXPECTED_GATES が一致する", () => {
     const expected = new Set(
       EXPECTED_GATES.map((e) => gateKey(e.file, e.module)),
     );

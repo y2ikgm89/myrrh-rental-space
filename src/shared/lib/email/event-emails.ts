@@ -20,14 +20,17 @@ import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registrat
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import { prisma } from "@/shared/db/prisma";
 import {
   getCalendarEmailSettings,
   getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import type {
+  EventBroadcastPayload,
+  EventCancelledNotificationPayload,
+  EventUpdatedNotificationPayload,
+} from "@/shared/domain/events/email-queries";
 import {
   computeCancelTokenExpiresAt as computeEventCancelTokenExpiresAt,
   createCancelToken as createEventCancelToken,
@@ -544,60 +547,10 @@ export async function sendEventAdminNotification(
  * イベント中止時に全参加者へ通知メールを送信（CANCEL ICS 添付）
  */
 export async function sendEventCancelledToAllParticipants(
-  eventId: string,
+  payload: EventCancelledNotificationPayload,
   reason?: string,
 ): Promise<void> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, deletedAt: null },
-    select: {
-      title: true,
-      format: true,
-      meetingUrl: true,
-      updatedAt: true,
-      addressDetail: true,
-      location: { select: { name: true } },
-      space: { select: { name: true } },
-      registrations: {
-        // CONFIRMED だけでなく WAITLISTED_OFFERED (24h の pay-now offer 保持中の
-        // 参加者) と WAITLISTED (待機中) にも中止通知を届ける。イベントが中止
-        // されれば offer は決済しても意味が無く、待機順も消えるため送信すべき。
-        // CANCELLED / EXPIRED は元々連絡不要なので除外する。
-        where: {
-          status: {
-            in: [
-              RegistrationStatus.CONFIRMED,
-              RegistrationStatus.WAITLISTED_OFFERED,
-              RegistrationStatus.WAITLISTED,
-            ],
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          quantity: true,
-          icsSequence: true,
-          customerId: true,
-          status: true,
-          slot: {
-            select: { startAt: true, endAt: true },
-          },
-        },
-      },
-    },
-  });
-
-  if (!event) return;
-
-  const venueDisplay = formatEventVenue({
-    location: event.location,
-    space: event.space,
-    addressDetail: event.addressDetail,
-  });
-
-  // event の updatedAt を idempotency key に混ぜることで、24h 内に同一イベントを
-  // 再キャンセル相当の更新があっても payload 差異で Resend が silent drop しない。
-  const eventUpdatedAt = event.updatedAt.getTime();
+  const eventUpdatedAt = payload.updatedAt.getTime();
 
   const [calendarSettings, organizer, footer] = await Promise.all([
     getCalendarEmailSettings(),
@@ -607,7 +560,7 @@ export async function sendEventCancelledToAllParticipants(
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外
-  const recipients = event.registrations.filter(
+  const recipients = payload.registrations.filter(
     (r): r is typeof r & { email: string } => r.email !== null,
   );
 
@@ -631,17 +584,19 @@ export async function sendEventCancelledToAllParticipants(
         try {
           const calendarParams = omitUndefined({
             registrationId: registration.id,
-            eventTitle: event.title,
+            eventTitle: payload.title,
             customerName: registration.name,
             startTime,
             endTime,
-            ...(venueDisplay !== null ? { location: venueDisplay } : {}),
+            ...(payload.venueDisplay !== null
+              ? { location: payload.venueDisplay }
+              : {}),
             quantity: registration.quantity,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,
-            format: event.format,
-            meetingUrl: event.meetingUrl,
+            format: payload.format,
+            meetingUrl: payload.meetingUrl,
           });
           attachments = [
             {
@@ -660,11 +615,11 @@ export async function sendEventCancelledToAllParticipants(
       return sendEmail({
         payload: omitUndefined({
           to: registration.email,
-          subject: `【イベント中止のお知らせ】${event.title}`,
+          subject: `【イベント中止のお知らせ】${payload.title}`,
           react: EventCancelledNotificationEmail(
             omitUndefined({
               customerName: registration.name,
-              eventTitle: event.title,
+              eventTitle: payload.title,
               eventDate,
               reason,
               eventRegistrationHubUrl,
@@ -673,10 +628,10 @@ export async function sendEventCancelledToAllParticipants(
           ),
           attachments,
         }),
-        idempotencyKey: `event-cancelled/${eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
+        idempotencyKey: `event-cancelled/${payload.eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
         operation: "sendEventCancelledToAllParticipants",
         context: {
-          eventId,
+          eventId: payload.eventId,
           participantEmail: registration.email,
         },
       });
@@ -692,7 +647,7 @@ export async function sendEventCancelledToAllParticipants(
           severity: ErrorSeverity.MEDIUM,
           context: {
             operation: "sendEventCancelledToAllParticipants",
-            eventId,
+            eventId: payload.eventId,
             participantEmail: registration.email,
           },
         });
@@ -710,48 +665,10 @@ export async function sendEventCancelledToAllParticipants(
  * 代表値（例: 最初のスロット）を全員に使い回さずスロット単位で解決する。
  */
 export async function sendEventUpdatedToAllParticipants(
-  eventId: string,
+  payload: EventUpdatedNotificationPayload,
   oldSlotStartTimes: ReadonlyMap<string, Date>,
 ): Promise<void> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, deletedAt: null },
-    select: {
-      title: true,
-      format: true,
-      meetingUrl: true,
-      updatedAt: true,
-      addressDetail: true,
-      location: { select: { name: true } },
-      space: { select: { name: true } },
-      registrations: {
-        where: { status: RegistrationStatus.CONFIRMED },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          quantity: true,
-          icsSequence: true,
-          slotId: true,
-          customerId: true,
-          slot: {
-            select: { startAt: true, endAt: true },
-          },
-        },
-      },
-    },
-  });
-
-  if (!event) return;
-
-  const venueDisplay = formatEventVenue({
-    location: event.location,
-    space: event.space,
-    addressDetail: event.addressDetail,
-  });
-
-  // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
-  // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
-  const eventUpdatedAt = event.updatedAt.getTime();
+  const eventUpdatedAt = payload.updatedAt.getTime();
 
   const [calendarSettings, organizer, footer] = await Promise.all([
     getCalendarEmailSettings(),
@@ -761,7 +678,7 @@ export async function sendEventUpdatedToAllParticipants(
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外
-  const recipients = event.registrations.filter(
+  const recipients = payload.registrations.filter(
     (r): r is typeof r & { email: string } => r.email !== null,
   );
 
@@ -786,17 +703,19 @@ export async function sendEventUpdatedToAllParticipants(
         try {
           const calendarParams = omitUndefined({
             registrationId: registration.id,
-            eventTitle: event.title,
+            eventTitle: payload.title,
             customerName: registration.name,
             startTime: newStartTime,
             endTime: newEndTimeDate,
-            ...(venueDisplay !== null ? { location: venueDisplay } : {}),
+            ...(payload.venueDisplay !== null
+              ? { location: payload.venueDisplay }
+              : {}),
             quantity: registration.quantity,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,
-            format: event.format,
-            meetingUrl: event.meetingUrl,
+            format: payload.format,
+            meetingUrl: payload.meetingUrl,
           });
           attachments = [
             {
@@ -815,22 +734,22 @@ export async function sendEventUpdatedToAllParticipants(
       return sendEmail({
         payload: omitUndefined({
           to: registration.email,
-          subject: `【イベント内容変更のお知らせ】${event.title}`,
+          subject: `【イベント内容変更のお知らせ】${payload.title}`,
           react: EventUpdatedNotificationEmail({
             customerName: registration.name,
-            eventTitle: event.title,
+            eventTitle: payload.title,
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
-            location: venueDisplay ?? undefined,
+            location: payload.venueDisplay ?? undefined,
             eventRegistrationHubUrl,
             footer,
           }),
           attachments,
         }),
-        idempotencyKey: `event-updated/${eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
+        idempotencyKey: `event-updated/${payload.eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
         operation: "sendEventUpdatedToAllParticipants",
         context: {
-          eventId,
+          eventId: payload.eventId,
           participantEmail: registration.email,
         },
       });
@@ -846,7 +765,7 @@ export async function sendEventUpdatedToAllParticipants(
           severity: ErrorSeverity.MEDIUM,
           context: {
             operation: "sendEventUpdatedToAllParticipants",
-            eventId,
+            eventId: payload.eventId,
             participantEmail: registration.email,
           },
         });
@@ -887,72 +806,28 @@ export type EventBroadcastResult = {
  *   使う。イベント自体が存在しない場合は `{ok: false, sent: 0, skipped: 0}`。
  */
 export async function sendEventBroadcast(
-  eventId: string,
+  payload: EventBroadcastPayload,
   params: {
     subject: string;
     body: string;
     broadcastNonce: string;
   },
 ): Promise<EventBroadcastResult> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, deletedAt: null },
-    select: {
-      title: true,
-      slug: true,
-      registrations: {
-        where: { status: RegistrationStatus.CONFIRMED },
-        select: {
-          id: true,
-          email: true,
-          customerId: true,
-        },
-      },
-    },
-  });
-
-  if (!event) return { ok: false, sent: 0, skipped: 0 };
-
-  const totalRegistrations = event.registrations.length;
-  // walk-in 由来 (email=null) は宛先が無いため除外し skipped にカウント
-  const recipients = event.registrations.filter(
-    (r): r is typeof r & { email: string } => r.email !== null,
-  );
-  const skipped = totalRegistrations - recipients.length;
-
-  if (recipients.length === 0) {
-    // 送信対象 0 でも ok は true とする (UI 表示は sent=0 で reflect される)
-    return { ok: true, sent: 0, skipped };
+  if (payload.recipients.length === 0) {
+    return { ok: true, sent: 0, skipped: payload.skipped };
   }
-
-  // List-Unsubscribe 用に Customer を解決する。registration.customerId が
-  // 無いゲスト宛は emailCanonical で lookup（解決できない宛先はヘッダ省略）。
-  const unresolvedEmails = [
-    ...new Set(
-      recipients
-        .filter((r) => r.customerId === null)
-        .map((r) => normalizeEmailForIdentity(r.email)),
-    ),
-  ];
-  const customersByEmail =
-    unresolvedEmails.length > 0
-      ? await prisma.customer.findMany({
-          where: { emailCanonical: { in: unresolvedEmails } },
-          select: { id: true, emailCanonical: true },
-        })
-      : [];
-  const customerIdByEmail = new Map(
-    customersByEmail.map((c) => [c.emailCanonical, c.id]),
-  );
 
   const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
-  const eventUrl = `${appUrl}/events/${event.slug}`;
+  const eventUrl = `${appUrl}/events/${payload.slug}`;
 
   const results = await Promise.allSettled(
-    recipients.map((registration) => {
+    payload.recipients.map((registration) => {
       const customerId =
         registration.customerId ??
-        customerIdByEmail.get(normalizeEmailForIdentity(registration.email)) ??
+        payload.customerIdByEmail.get(
+          normalizeEmailForIdentity(registration.email),
+        ) ??
         null;
       const unsubscribe =
         customerId !== null
@@ -965,7 +840,7 @@ export async function sendEventBroadcast(
           subject: params.subject,
           ...(unsubscribe !== null ? { headers: unsubscribe.headers } : {}),
           react: EventBroadcastEmail({
-            eventTitle: event.title,
+            eventTitle: payload.title,
             eventUrl,
             subject: params.subject,
             bodyText: params.body,
@@ -975,10 +850,10 @@ export async function sendEventBroadcast(
             footer,
           }),
         },
-        idempotencyKey: `event-broadcast/${eventId}/${hashForKey(registration.email)}/${params.broadcastNonce}`,
+        idempotencyKey: `event-broadcast/${payload.eventId}/${hashForKey(registration.email)}/${params.broadcastNonce}`,
         operation: "sendEventBroadcast",
         context: {
-          eventId,
+          eventId: payload.eventId,
           participantEmail: registration.email,
         },
       });
@@ -990,14 +865,14 @@ export async function sendEventBroadcast(
     if (result.status === "fulfilled" && result.value.ok) {
       sent += 1;
     } else if (result.status === "rejected") {
-      const registration = recipients[i];
+      const registration = payload.recipients[i];
       if (registration) {
         logError(normalizeError(result.reason), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.MEDIUM,
           context: {
             operation: "sendEventBroadcast",
-            eventId,
+            eventId: payload.eventId,
             participantEmail: registration.email,
           },
         });
@@ -1005,5 +880,5 @@ export async function sendEventBroadcast(
     }
   }
 
-  return { ok: true, sent, skipped };
+  return { ok: true, sent, skipped: payload.skipped };
 }

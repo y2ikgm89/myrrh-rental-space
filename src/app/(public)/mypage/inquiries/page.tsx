@@ -7,7 +7,7 @@
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
@@ -24,7 +24,7 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
   // 見られてしまい、feature module の可視性契約が破れる。
   await requireFeatureEnabled("contact");
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

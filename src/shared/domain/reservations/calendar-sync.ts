@@ -5,7 +5,7 @@ import {
   CalendarSyncMethod,
   PaymentStatus,
   ReservationStatus,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   ACTIVE_RESERVATION_STATUSES,
   CANCELLED_BY,
@@ -18,7 +18,7 @@ import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { buildPricingSettings, getReservationSettings } from "./payloads";
-import { expireOpenCheckoutSessionBestEffort } from "./checkout-session-expiry";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { lockSpaceForTransaction } from "./space-locks";
 
 /**
@@ -512,8 +512,8 @@ export async function cancelReservationFromCalendar(input: {
     preClaim.stripeCheckoutSessionId
   ) {
     await expireOpenCheckoutSessionBestEffort({
-      reservationId: input.reservationId,
       sessionId: preClaim.stripeCheckoutSessionId,
+      context: { reservationId: input.reservationId },
     });
   }
 

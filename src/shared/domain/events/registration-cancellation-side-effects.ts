@@ -37,12 +37,13 @@
  *      invalid は自動返金しない（fail-closed）。0 円なら refund 全 skip。
  *      MYPAGE-EVENT-02: 予約キャンセル (`reservations/cancellation-side-effects.ts`)
  *      と対称の挙動を保証する（従来はイベント側のみ手動対応必須で顧客誤解の原因）。
- *   2. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
- *   3. 管理者向け管理者通知メール
- *   4. 管理者向け in-app 通知（channel 含む、PAID 自動返金時は要確認タイトルへ昇格）
- *   5. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes +
+ *   2. Stripe Checkout Session の expire（open session からの後追い課金を防ぐ）
+ *   3. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
+ *   4. 管理者向け管理者通知メール
+ *   5. 管理者向け in-app 通知（channel 含む、PAID 自動返金時は要確認タイトルへ昇格）
+ *   6. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes +
  *      requiresRefund / wasPaid を記録）
- *   6. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
+ *   7. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
  *      `applyEventRegistrationCancellation` が同一 tx 内で
  *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED または WAITLISTED_OFFERED
  *      由来のキャンセルで空いた枠に次の WAITLISTED を昇格させた場合に送る。
@@ -57,18 +58,22 @@
 
 import "server-only";
 
-import { AuditAction, PaymentStatus } from "@generated/prisma/enums";
+import {
+  AuditAction,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
-import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
-import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
+import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
 import {
-  calculateRefundAmount,
-  resolveRefundPolicy,
-  type RefundPolicyResolution,
-} from "@/shared/domain/refund/policy";
+  getEventWaitlistOfferPaymentContext,
+  getWaitlistEmailRegistration,
+} from "@/shared/domain/events/waitlist-queries";
+import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
+import { type RefundPolicyResolution } from "@/shared/domain/refund/policy";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -91,7 +96,8 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
-export type EventCancelChannel = "admin" | "customer-mypage" | "customer-token";
+export type EventCancelChannel =
+  "admin" | "customer-mypage" | "customer-token" | "system";
 
 export interface EventCancellationSideEffectInput {
   registrationId: string;
@@ -138,6 +144,7 @@ export type EventCancellationEffectOutcome = {
 /** 全副作用の outcome を並べた集約構造。AuditLog metadata.sideEffects に格納される。 */
 export type EventCancellationSideEffectOutcomes = {
   refund: EventCancellationEffectOutcome;
+  checkoutSessionExpire: EventCancellationEffectOutcome;
   customerEmail: EventCancellationEffectOutcome;
   adminEmail: EventCancellationEffectOutcome;
   notification: EventCancellationEffectOutcome;
@@ -148,6 +155,7 @@ const CHANNEL_TO_CANCELLED_BY: Record<EventCancelChannel, CancelledByType> = {
   admin: CANCELLED_BY.ADMIN,
   "customer-mypage": CANCELLED_BY.CUSTOMER_MYPAGE,
   "customer-token": CANCELLED_BY.CUSTOMER_TOKEN,
+  system: CANCELLED_BY.SYSTEM,
 };
 
 interface SideEffectRegistration {
@@ -159,6 +167,7 @@ interface SideEffectRegistration {
   icsSequence: number;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
+  stripeCheckoutSessionId: string | null;
   paidAmount: number | null;
   event: { title: string };
   slot: { startAt: Date };
@@ -180,6 +189,7 @@ async function fetchRegistrationForSideEffects(
       // policy tier 計算 (slot.startAt = イベント開始時刻) に必要なフィールドを追加。
       paymentStatus: true,
       stripePaymentIntentId: true,
+      stripeCheckoutSessionId: true,
       paidAmount: true,
       event: { select: { title: true } },
       slot: { select: { startAt: true } },
@@ -195,6 +205,8 @@ function channelLabel(channel: EventCancelChannel): string {
       return "顧客（マイページ）";
     case "customer-token":
       return "顧客（メールリンク）";
+    case "system":
+      return "システム（自動）";
   }
 }
 
@@ -231,113 +243,34 @@ type RegistrationEmailDetails = NonNullable<
 async function runRefundStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
+  wasPaid: boolean;
+  requiresRefund: boolean;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration } = args;
-  const wasPaid =
-    registration.paymentStatus === PaymentStatus.PAID ||
-    registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
-  const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
+  const { input, registration, wasPaid, requiresRefund } = args;
 
-  if (!requiresRefund) {
-    return {
-      status: "skipped",
-      reason: wasPaid ? "no_stripe_payment_intent" : "not_paid",
-    };
-  }
-
-  try {
-    const resolution: RefundPolicyResolution =
-      input.refundPolicySnapshot !== undefined
-        ? input.refundPolicySnapshot
-        : resolveRefundPolicy(
-            (
-              await prisma.settingsCommerce.findUnique({
-                where: { id: "singleton" },
-                select: { refundPolicy: true },
-              })
-            )?.refundPolicy,
-          );
-
-    if (resolution.status === "invalid") {
-      logError(
-        new Error("Auto refund skipped: refund policy JSON is invalid"),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "autoRefundEventRegistrationOnCancel",
-            registrationId: input.registrationId,
-            reason: "policy_invalid",
-            parseReason: resolution.reason,
-          },
-        },
-      );
-      return {
-        status: "skipped",
-        reason: "policy_invalid",
-        detail: { parseReason: resolution.reason },
-      };
-    }
-
-    let refundAmount: number | undefined;
-    if (
-      resolution.status === "configured" &&
-      registration.paidAmount !== null
-    ) {
-      refundAmount = calculateRefundAmount(
-        resolution.policy,
-        registration.paidAmount,
-        registration.slot.startAt,
-        new Date(),
-      );
-    }
-    // status === "unset" → refundAmount 未指定のまま残額全額自動返金
-
-    if (refundAmount !== undefined && refundAmount === 0) {
-      // Policy による refundRate=0% → 返金 skip。
-      // Notification 側の「要返金確認」タイトル (requiresRefund=true 分岐) は
-      // そのまま昇格させて admin 側で手動対応を明示的に促す。
-      return {
-        status: "skipped",
-        reason: "policy_refund_rate_zero",
-        detail: { policyRefundAmount: 0 },
-      };
-    }
-
-    await refundEventRegistrationPaymentCommand({
-      registrationId: input.registrationId,
-      actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-      // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
-      // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる
-      // (Reservation 側と同型)。
-      request: {
-        ip: input.request.ip,
-        userAgent: input.request.userAgent,
-      },
-      ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
-    });
-
-    return {
-      status: "ok",
-      detail: {
-        ...(refundAmount !== undefined
-          ? { refundAmount }
-          : { refundAmount: "full_remaining" }),
-      },
-    };
-  } catch (err) {
-    const normalized = normalizeError(err);
-    logError(normalized, {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.HIGH,
-      context: {
-        operation: "autoRefundEventRegistrationOnCancel",
+  return runAutoRefundOnCancel({
+    entityId: input.registrationId,
+    operation: "autoRefundEventRegistrationOnCancel",
+    channel: input.channel,
+    wasPaid,
+    requiresRefund,
+    chargeBase: registration.paidAmount,
+    startTime: registration.slot.startAt,
+    ...(input.refundPolicySnapshot !== undefined
+      ? { refundPolicySnapshot: input.refundPolicySnapshot }
+      : {}),
+    request: {
+      ip: input.request.ip,
+      userAgent: input.request.userAgent,
+    },
+    executeRefund: async ({ amount, request }) =>
+      refundEventRegistrationPaymentCommand({
         registrationId: input.registrationId,
-        channel: input.channel,
-      },
-    });
-    return { status: "error", reason: normalized.message };
-  }
+        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+        request,
+        ...(amount !== undefined ? { amount } : {}),
+      }),
+  });
 }
 
 async function runCustomerEmailStep(args: {
@@ -494,10 +427,11 @@ async function runWaitlistOfferStep(
   }
 
   try {
-    const paymentContext = await getEventWaitlistOfferPaymentContext(
-      promotedRegistrationId,
-    );
-    if (!paymentContext) {
+    const [registration, paymentContext] = await Promise.all([
+      getWaitlistEmailRegistration(promotedRegistrationId),
+      getEventWaitlistOfferPaymentContext(promotedRegistrationId),
+    ]);
+    if (!registration || !paymentContext) {
       // 昇格させた行が直後の別操作（管理者の手動 expire 等）で消えた極端な race。
       // 状態遷移自体（昇格）は既に成功しているためロールバックせず、メール送信のみ
       // 諦めて非致命的にログする。
@@ -518,7 +452,7 @@ async function runWaitlistOfferStep(
     }
 
     const result = await sendEventWaitlistOffered({
-      registrationId: promotedRegistrationId,
+      registration,
       to: promotedEmail,
       expiresAt: promotedExpiresAt,
       paymentContext,
@@ -553,13 +487,6 @@ async function runWaitlistOfferStep(
         detail: { promotedRegistrationId },
       };
     }
-    if (result.reason === "not_found") {
-      return {
-        status: "skipped",
-        reason: "not_found",
-        detail: { promotedRegistrationId },
-      };
-    }
     return {
       status: "error",
       reason: result.error,
@@ -585,6 +512,35 @@ async function runWaitlistOfferStep(
   }
 }
 
+async function runCheckoutSessionExpireStep(args: {
+  registrationId: string;
+  sessionId: string | null;
+}): Promise<EventCancellationEffectOutcome> {
+  if (!args.sessionId) {
+    return { status: "skipped", reason: "noCheckoutSession" };
+  }
+
+  try {
+    await expireOpenCheckoutSessionBestEffort({
+      sessionId: args.sessionId,
+      context: { registrationId: args.registrationId },
+    });
+    return { status: "ok", detail: { sessionId: args.sessionId } };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "expireCheckoutSessionOnEventCancel",
+        registrationId: args.registrationId,
+        sessionId: args.sessionId,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
 async function runEventCancellationSideEffectsAndFlushAudit(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
@@ -601,18 +557,33 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
     registration.paymentStatus === PaymentStatus.PAID ||
     registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
-  const refund = await runRefundStep({ input, registration });
+  const refund = await runRefundStep({
+    input,
+    registration,
+    wasPaid,
+    requiresRefund,
+  });
 
-  const [customerEmail, adminEmail, notification, waitlistOffer] =
-    await Promise.all([
-      runCustomerEmailStep({ input, registration, details }),
-      runAdminEmailStep({ input, registration, details }),
-      runNotificationStep({ input, registration, requiresRefund }),
-      runWaitlistOfferStep(input),
-    ]);
+  const [
+    checkoutSessionExpire,
+    customerEmail,
+    adminEmail,
+    notification,
+    waitlistOffer,
+  ] = await Promise.all([
+    runCheckoutSessionExpireStep({
+      registrationId: registration.id,
+      sessionId: registration.stripeCheckoutSessionId,
+    }),
+    runCustomerEmailStep({ input, registration, details }),
+    runAdminEmailStep({ input, registration, details }),
+    runNotificationStep({ input, registration, requiresRefund }),
+    runWaitlistOfferStep(input),
+  ]);
 
   const outcomes: EventCancellationSideEffectOutcomes = {
     refund,
+    checkoutSessionExpire,
     customerEmail,
     adminEmail,
     notification,

@@ -11,7 +11,13 @@ import { connection } from "next/server";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getReservationForGuestEdit } from "@/shared/domain/reservations/customer-queries";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import {
+  checkGuestStatusMemberOwnership,
+  GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
+} from "@/shared/lib/guest-status-member-ownership";
 import { resolveGuestStatusAccess } from "@/shared/domain/reservations/guest-status-view";
 import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
@@ -21,6 +27,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { Stack } from "@/public/components/design-system/stack";
 import { EditReservationForm } from "@/app/(public)/_shared/components/edit-reservation-form";
+import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
 import { updateGuestReservationAction } from "./_actions/update";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
@@ -55,13 +62,28 @@ export default async function GuestReservationEditPage(): Promise<ReactElement> 
     return <InvalidLinkView />;
   }
 
-  const [reservation, deadlineSettings] = await Promise.all([
+  const [reservation, user, deadlineSettings] = await Promise.all([
     getReservationForGuestEdit(access.reservationId),
+    getCurrentCustomerUser(),
     getReservationDeadlineSettings(),
   ]);
 
   if (!reservation) {
     return <InvalidLinkView />;
+  }
+
+  const sessionCustomer = user ? await getCustomerByUserId(user.id) : null;
+  const ownership = checkGuestStatusMemberOwnership({
+    sessionCustomerId: sessionCustomer?.id ?? null,
+    resourceCustomerId: reservation.customerId,
+  });
+  if (ownership.kind === "mismatch") {
+    return (
+      <GuestStatusMemberOwnershipMismatchView
+        message={GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE}
+        mypageHref="/mypage"
+      />
+    );
   }
 
   const now = reservationDeadlineNow();

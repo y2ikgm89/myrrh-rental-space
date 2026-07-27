@@ -39,13 +39,32 @@ const mockConstructEvent =
   mock<
     (body: string, sig: string, secret: string) => Promise<StripeWebhookEvent>
   >();
+const mockRetrieveCheckoutSession =
+  mock<
+    (
+      sessionId: string,
+      params?: unknown,
+    ) => Promise<{ payment_intent: unknown }>
+  >();
 const mockGetStripeClient = mock<
   () => Promise<{
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
+      checkout: { sessions: { retrieve: typeof mockRetrieveCheckoutSession } };
     } | null;
   }>
 >();
+const mockRefundCheckoutAmountMismatchForReservation = mock<
+  (input: {
+    reservationId: string;
+    stripePaymentIntentId: string;
+    capturedAppAmount: number;
+  }) => Promise<{
+    outcome: string;
+    refundId?: string;
+    refundAmount?: number;
+  }>
+>(() => Promise.resolve({ outcome: "refunded" }));
 
 // Payment Queries (atomic claim API)
 const mockClaimReservationAsPaid = mock<
@@ -54,6 +73,7 @@ const mockClaimReservationAsPaid = mock<
     data: { stripePaymentIntentId: string | null },
   ) => Promise<{
     id: string;
+    spaceId: string;
     totalPrice: number;
     notes: string | null;
     startTime: string;
@@ -67,7 +87,7 @@ const mockClaimReservationAsPaid = mock<
   } | null>
 >();
 const mockSavePaymentIntentId =
-  mock<(id: string, piId: string) => Promise<void>>();
+  mock<(id: string, piId: string, sessionId: string) => Promise<void>>();
 const mockClaimReservationAsFailed =
   mock<(id: string, sessionId: string) => Promise<boolean>>();
 const mockFindReservationByPaymentIntent =
@@ -125,6 +145,9 @@ const mockFireAndForget =
 // Email
 const mockSendReservationConfirmationEmail =
   mock<(data: unknown) => Promise<void>>();
+const mockIssueSmartLockPasscodes = mock<
+  () => Promise<{ passcodes: unknown[]; issuanceFailed: boolean }>
+>(() => Promise.resolve({ passcodes: [], issuanceFailed: false }));
 
 // Receipts (issueReceiptForReservation / issueReceiptForEventRegistration は
 // fulfill*PaymentAtomically 内で await される。receipt-full-wiring gap PR#1/#2 で配線
@@ -166,7 +189,10 @@ const mockOmitUndefined = mock<
 // 2. mock.module() — import より前に宣言
 // =============================================================================
 
+const actualPaymentAvailability =
+  await import("@/shared/domain/payment/availability");
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualPaymentAvailability,
   assertStripeCredentialsConfigured: () =>
     mockAssertStripeCredentialsConfigured(),
 }));
@@ -188,13 +214,25 @@ mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
 }));
 
+mock.module("@/shared/domain/reservations/payment-commands", () => ({
+  refundCheckoutAmountMismatchForReservation: (input: {
+    reservationId: string;
+    stripePaymentIntentId: string;
+    capturedAppAmount: number;
+  }) => mockRefundCheckoutAmountMismatchForReservation(input),
+}));
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: () => Promise.resolve({ id: "notif-1" }),
+}));
+
 mock.module("@/shared/domain/reservations/payment-queries", () => ({
   claimReservationAsPaid: (
     id: string,
     data: { stripePaymentIntentId: string | null },
   ) => mockClaimReservationAsPaid(id, data),
-  savePaymentIntentId: (id: string, piId: string) =>
-    mockSavePaymentIntentId(id, piId),
+  savePaymentIntentId: (id: string, piId: string, sessionId: string) =>
+    mockSavePaymentIntentId(id, piId, sessionId),
   claimReservationAsFailed: (id: string, sessionId: string) =>
     mockClaimReservationAsFailed(id, sessionId),
   findReservationByPaymentIntent: (piId: string) =>
@@ -237,11 +275,16 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  findWaitlistOfferRegistrationNeedingRefundAfterPaidSession: () =>
+    Promise.resolve(null),
+  expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
+  refundCheckoutAmountMismatchForEventRegistration: () =>
     Promise.resolve({ outcome: "not_applicable" }),
 }));
 
@@ -276,6 +319,10 @@ mock.module("@/shared/lib/async-utils", () => ({
     Promise.allSettled(promises),
   withTimeout: <T>(promise: Promise<T>) => promise,
   withRetry: <T>(fn: () => Promise<T>) => fn(),
+}));
+
+mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
+  issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
@@ -368,6 +415,7 @@ const DEFAULT_SETTINGS: MockCredentials = {
 
 const DEFAULT_RESERVATION = {
   id: "res-123",
+  spaceId: "space-123",
   totalPrice: 5000,
   notes: null,
   startTime: "2025-01-01T10:00:00.000Z",
@@ -468,6 +516,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
+    mockRetrieveCheckoutSession.mockReset();
+    mockRefundCheckoutAmountMismatchForReservation.mockReset();
     mockClaimReservationAsPaid.mockReset();
     mockSavePaymentIntentId.mockReset();
     mockClaimReservationAsFailed.mockReset();
@@ -489,6 +539,10 @@ describe("POST /api/webhooks/stripe", () => {
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
+    mockIssueSmartLockPasscodes.mockReset();
+    mockIssueSmartLockPasscodes.mockImplementation(() =>
+      Promise.resolve({ passcodes: [], issuanceFailed: false }),
+    );
     mockIssueReceiptForReservation.mockReset();
     mockIssueReceiptForEventRegistration.mockReset();
     mockNotifyReceiptIssuedForReservation.mockReset();
@@ -524,7 +578,17 @@ describe("POST /api/webhooks/stripe", () => {
         webhooks: {
           constructEventAsync: mockConstructEvent,
         },
+        checkout: {
+          sessions: {
+            retrieve: mockRetrieveCheckoutSession,
+          },
+        },
       },
+    });
+    mockRefundCheckoutAmountMismatchForReservation.mockResolvedValue({
+      outcome: "refunded",
+      refundId: "re_mismatch",
+      refundAmount: 9999,
     });
     mockClaimReservationAsPaid.mockResolvedValue({
       ...DEFAULT_RESERVATION,
@@ -653,7 +717,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockFireAndForget).toHaveBeenCalled();
   });
 
-  test("checkout.session.completed (paid) で amount_total mismatch → fulfill skip + 200 + HIGH log", async () => {
+  test("checkout.session.completed (paid) で amount_total mismatch → fulfill skip + auto-refund + 200", async () => {
     mockGetReservationCheckoutExpectedAmount.mockResolvedValueOnce(5000);
     const event = makeSessionCompletedEvent("paid", "pi-123", {
       amountTotal: 9999,
@@ -666,6 +730,13 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+    expect(mockRefundCheckoutAmountMismatchForReservation).toHaveBeenCalledWith(
+      {
+        reservationId: "res-123",
+        stripePaymentIntentId: "pi-123",
+        capturedAppAmount: 9999,
+      },
+    );
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
@@ -743,6 +814,7 @@ describe("POST /api/webhooks/stripe", () => {
     const response = await POST(makeRequest("body"));
 
     expect(response.status).toBe(200);
+    expect(mockIssueSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockSendReservationConfirmationEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         customerEmail: "booked-address@example.com",
@@ -781,6 +853,7 @@ describe("POST /api/webhooks/stripe", () => {
       /^http:\/\/localhost:3000\/reservation\/status\?token=.+/,
     );
     expect(mockSendReservationConfirmationEmail).not.toHaveBeenCalled();
+    expect(mockIssueSmartLockPasscodes).not.toHaveBeenCalled();
   });
 
   test("issueReceipt VALIDATION 失敗時は発行通知を送らない", async () => {
@@ -815,7 +888,11 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.received).toBe(true);
 
     // PI IDのみ保存
-    expect(mockSavePaymentIntentId).toHaveBeenCalledWith("res-123", "pi-456");
+    expect(mockSavePaymentIntentId).toHaveBeenCalledWith(
+      "res-123",
+      "pi-456",
+      "cs_test_123",
+    );
 
     // fulfill は呼ばれない
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
@@ -1267,6 +1344,11 @@ describe("POST /api/webhooks/stripe", () => {
       mockGetStripeClient.mockResolvedValue({
         client: {
           webhooks: { constructEventAsync: mockConstructEvent },
+          checkout: {
+            sessions: {
+              retrieve: mockRetrieveCheckoutSession,
+            },
+          },
         },
       });
     }

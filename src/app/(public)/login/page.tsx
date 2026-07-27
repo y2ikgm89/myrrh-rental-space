@@ -13,30 +13,13 @@ import { isCustomerE2ELoginEnabled } from "@/shared/lib/e2e-runtime";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
+import { isSafeInternalRedirect } from "@/shared/lib/url/safe-internal-redirect";
 import { SuspendedNotice } from "./_components/suspended-notice";
 
 export const metadata: Metadata = {
   title: "ログイン",
   robots: { index: false, follow: false },
 };
-
-/**
- * `redirect` クエリパラメータが同一オリジン内の相対パスであることを確認する。
- * open redirect 防止のため `//`（protocol-relative）・`scheme://`・`..` セグメントを拒否する。
- */
-function isSafeInternalRedirect(path: string | null): path is string {
-  if (path === null) return false;
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
-    return false;
-  }
-  try {
-    const decoded = decodeURIComponent(path);
-    if (decoded.split("/").includes("..")) return false;
-  } catch {
-    return false;
-  }
-  return true;
-}
 
 const ERROR_MESSAGES: Record<string, string> = {
   account_suspended:

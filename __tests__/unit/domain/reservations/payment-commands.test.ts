@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -76,9 +77,18 @@ const mockCheckoutSessionCreate = mock<
 const mockCheckoutSessionExpire = mock<
   (sessionId: string) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "cs_test_123" }));
+const mockCheckoutSessionRetrieve = mock<
+  (sessionId: string) => Promise<{ status: string }>
+>(() => Promise.resolve({ status: "expired" }));
 const mockExpireOpenCheckoutSessionBestEffort = mock<
-  (input: { reservationId: string; sessionId: string }) => Promise<void>
+  (input: {
+    sessionId: string;
+    context?: Record<string, string>;
+  }) => Promise<void>
 >(() => Promise.resolve());
+const mockRetrieveCheckoutSessionStatus = mock<
+  (sessionId: string) => Promise<string | null>
+>(() => Promise.resolve("expired"));
 const mockGetStripeClient = mock(() =>
   Promise.resolve({
     client: {
@@ -86,6 +96,7 @@ const mockGetStripeClient = mock(() =>
         sessions: {
           create: mockCheckoutSessionCreate,
           expire: mockCheckoutSessionExpire,
+          retrieve: mockCheckoutSessionRetrieve,
         },
       },
       refunds: { create: mockRefundCreate },
@@ -122,11 +133,11 @@ const AuditAction = {
   LOGOUT: "LOGOUT",
 } as const;
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction,
   PaymentStatus,
   ReservationStatus,
-}));
+});
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {
@@ -165,8 +176,11 @@ mock.module("@/shared/lib/errors/server", () => ({
 mock.module("@/shared/domain/reservations/pending-expiry", () => ({
   PENDING_RESERVATION_EXPIRY_MINUTES: 60,
 }));
-mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
+mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
+  expireCheckoutSessionWithClientBestEffort:
+    mockExpireOpenCheckoutSessionBestEffort,
+  retrieveCheckoutSessionStatus: mockRetrieveCheckoutSessionStatus,
 }));
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
@@ -249,6 +263,7 @@ describe("reservations/payment-commands", () => {
           sessions: {
             create: mockCheckoutSessionCreate,
             expire: mockCheckoutSessionExpire,
+            retrieve: mockCheckoutSessionRetrieve,
           },
         },
         refunds: { create: mockRefundCreate },
@@ -499,8 +514,8 @@ describe("reservations/payment-commands", () => {
 
       expect((error as DomainError).code).toBe("UNEXPECTED");
       expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith({
-        reservationId: RESERVATION_ID,
         sessionId: "cs_test_123",
+        context: { reservationId: RESERVATION_ID },
       });
     });
 
@@ -593,7 +608,15 @@ describe("reservations/payment-commands", () => {
 
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("CONFLICT");
-      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith("cs_test_123");
+      expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: "cs_test_123",
+          operation: "createCheckoutSessionCommandExpire",
+          context: {
+            reservationId: RESERVATION_ID,
+          },
+        }),
+      );
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
@@ -738,6 +761,10 @@ describe("reservations/payment-commands", () => {
 
     beforeEach(() => {
       mockIssueReceiptForReservation.mockReset();
+      mockCheckoutSessionRetrieve.mockReset();
+      mockCheckoutSessionRetrieve.mockResolvedValue({ status: "expired" });
+      mockRetrieveCheckoutSessionStatus.mockReset();
+      mockRetrieveCheckoutSessionStatus.mockResolvedValue("expired");
       mockIssueReceiptForReservation.mockResolvedValue({
         id: "receipt-1",
         serialNo: "2026-000001",
@@ -778,11 +805,14 @@ describe("reservations/payment-commands", () => {
           status: {
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           },
-          paymentStatus: PaymentStatus.UNPAID,
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+          },
         },
         data: {
           paymentStatus: PaymentStatus.PAID,
           paidAt: expect.any(Date),
+          stripeCheckoutSessionId: null,
         },
       });
       expect(mockIssueReceiptForReservation).toHaveBeenCalledWith(
@@ -856,10 +886,11 @@ describe("reservations/payment-commands", () => {
       expect(mockNotifyReceiptIssuedForReservation).not.toHaveBeenCalled();
     });
 
-    test("rejects when stripe checkout session exists", async () => {
+    test("rejects when stripe checkout session is still open", async () => {
       mockReservationFindUnique.mockResolvedValue(
         unpaidReservation({ stripeCheckoutSessionId: "cs_test_123" }),
       );
+      mockRetrieveCheckoutSessionStatus.mockResolvedValue("open");
 
       const error = await recordManualReservationPaymentCommand({
         reservationId: RESERVATION_ID,
@@ -868,8 +899,42 @@ describe("reservations/payment-commands", () => {
 
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("進行中");
       expect(mockReservationUpdateMany).not.toHaveBeenCalled();
       expect(mockIssueReceiptForReservation).not.toHaveBeenCalled();
+    });
+
+    test("allows FAILED reservation when checkout session is expired", async () => {
+      mockReservationFindUnique.mockResolvedValue(
+        unpaidReservation({
+          paymentStatus: PaymentStatus.FAILED,
+          stripeCheckoutSessionId: "cs_test_expired",
+        }),
+      );
+      mockRetrieveCheckoutSessionStatus.mockResolvedValue("expired");
+      mockReservationUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      });
+
+      expect(result.reservationId).toBe(RESERVATION_ID);
+      expect(mockRetrieveCheckoutSessionStatus).toHaveBeenCalledWith(
+        "cs_test_expired",
+      );
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+            },
+          }),
+          data: expect.objectContaining({
+            stripeCheckoutSessionId: null,
+          }),
+        }),
+      );
     });
 
     test("rejects when amount does not match charge base", async () => {

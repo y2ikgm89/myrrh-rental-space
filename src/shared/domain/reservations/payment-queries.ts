@@ -1,29 +1,34 @@
 import "server-only";
 
-import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
+import {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
-import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
-import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import {
+  applyStripeChargeRefundIdempotent,
+  buildChargeRefundPaymentStatusWhere,
+  handlePaidClaimMissWithOrphanRefund,
+} from "@/shared/domain/payment/payment-claim-orchestration";
+import {
+  buildFailedClaimUpdateData,
+  buildPaidClaimUpdateData,
+  PAYMENT_STATUSES_CLAIMABLE_FOR_PAID,
+  PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_RESERVATION,
+  PAYMENT_STATUSES_SAVE_PAYMENT_INTENT,
+} from "@/shared/domain/payment/payment-status-guards";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { refundOrphanedStripePaymentForCancelledReservation } from "@/shared/domain/reservations/payment-commands";
-import {
-  logError,
-  normalizeError,
-  ErrorCategory,
-  ErrorSeverity,
-} from "@/shared/lib/errors/server";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
-import {
-  REFUNDED_BY_TYPE,
-  isValidRefundedByType,
-} from "@/shared/lib/validations/enums/refund-attribution";
 
 const PAYMENT_EMAIL_SELECT = {
   id: true,
+  spaceId: true,
   startTime: true,
   endTime: true,
   totalPrice: true,
@@ -83,20 +88,14 @@ export async function claimReservationAsPaid(
       id: reservationId,
       deletedAt: null,
       status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
-      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
+      paymentStatus: { in: [...PAYMENT_STATUSES_CLAIMABLE_FOR_PAID] },
     },
-    data: {
-      paymentStatus: PaymentStatus.PAID,
+    data: buildPaidClaimUpdateData({
       stripePaymentIntentId: data.stripePaymentIntentId,
-      paidAt: new Date(),
-    },
+    }),
   });
 
   if (result.count === 0) {
-    // count=0 の大半は無害 (重複 webhook 配信・既に PAID 等の想定内 no-op) だが、
-    // status=CANCELLED での不一致だけは「Stripe 側は課金成功したのに DB は
-    // キャンセル済みのまま」という money-in-flight を意味し自動返金導線が無い。
-    // clean-break: 自動返金で即時収束させ、運用が追えるよう通知を残す。
     const current = await prisma.reservation.findUnique({
       where: { id: reservationId },
       select: {
@@ -105,103 +104,48 @@ export async function claimReservationAsPaid(
         stripePaymentIntentId: true,
       },
     });
-    if (current?.status === ReservationStatus.CANCELLED) {
-      const paymentIntentId =
-        data.stripePaymentIntentId ?? current.stripePaymentIntentId;
-
-      if (!paymentIntentId) {
-        logError(
-          new Error(
-            "claimReservationAsPaid: missing stripePaymentIntentId for a cancelled reservation",
-          ),
-          {
-            category: ErrorCategory.VALIDATION,
-            severity: ErrorSeverity.CRITICAL,
-            context: {
-              operation: "claimReservationAsPaid",
-              reservationId,
-              currentPaymentStatus: current.paymentStatus,
-            },
-          },
-        );
-        fireAndForget(
-          createNotificationCommand({
-            type: NOTIFICATION_TYPE.RESERVATION_REFUND,
-            title:
-              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
-            message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
-            resourceType: "reservation",
-            resourceId: reservationId,
-          }),
-          {
-            operation:
-              "notifyReservationAutoRefundFailedMissingPaymentIntentId",
-            category: ErrorCategory.VALIDATION,
-            severity: ErrorSeverity.HIGH,
-            context: { reservationId },
-          },
-        );
-        return null;
-      }
-
-      try {
-        const refunded =
-          await refundOrphanedStripePaymentForCancelledReservation({
-            reservationId,
-            stripePaymentIntentId: paymentIntentId,
-          });
-        if (refunded.outcome === "refunded") {
-          fireAndForget(
-            createNotificationCommand({
-              type: NOTIFICATION_TYPE.RESERVATION_REFUND,
-              title:
-                NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
-              message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refunded.refundAmount ?? 0} 円）`,
-              resourceType: "reservation",
-              resourceId: reservationId,
-            }),
-            {
-              operation: "notifyReservationAutoRefundedAfterCancel",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.MEDIUM,
-              context: {
-                reservationId,
-                stripePaymentIntentId: paymentIntentId,
-                refundId: refunded.refundId,
-              },
-            },
-          );
-        }
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.CRITICAL,
-          context: {
-            operation: "refundOrphanedStripePaymentForCancelledReservation",
-            reservationId,
-            stripePaymentIntentId: paymentIntentId,
-            currentPaymentStatus: current.paymentStatus,
-          },
-        });
-        fireAndForget(
-          createNotificationCommand({
-            type: NOTIFICATION_TYPE.RESERVATION_REFUND,
-            title:
-              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
-            message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
-            resourceType: "reservation",
-            resourceId: reservationId,
-          }),
-          {
-            operation: "notifyReservationAutoRefundFailedAfterCancel",
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.CRITICAL,
-            context: { reservationId, stripePaymentIntentId: paymentIntentId },
-          },
-        );
-        throw error;
-      }
-    }
+    await handlePaidClaimMissWithOrphanRefund({
+      entityId: reservationId,
+      webhookPaymentIntentId: data.stripePaymentIntentId,
+      current,
+      cancelledStatus: ReservationStatus.CANCELLED,
+      operation: "claimReservationAsPaid",
+      refundOrphan: ({ stripePaymentIntentId }) =>
+        refundOrphanedStripePaymentForCancelledReservation({
+          reservationId,
+          stripePaymentIntentId,
+        }),
+      notifications: {
+        missingPaymentIntent: {
+          type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+          message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
+          resourceType: "reservation",
+          resourceId: reservationId,
+        },
+        refunded: (refundAmount) => ({
+          type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+          message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refundAmount} 円）`,
+          resourceType: "reservation",
+          resourceId: reservationId,
+        }),
+        refundFailed: (paymentIntentId) => ({
+          type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+          message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
+          resourceType: "reservation",
+          resourceId: reservationId,
+        }),
+      },
+      notifyContext: {
+        missingPaymentIntentOperation:
+          "notifyReservationAutoRefundFailedMissingPaymentIntentId",
+        refundedOperation: "notifyReservationAutoRefundedAfterCancel",
+        refundFailedOperation: "notifyReservationAutoRefundFailedAfterCancel",
+      },
+      rethrowRefundFailure: true,
+    });
     return null;
   }
 
@@ -268,15 +212,10 @@ export async function claimReservationAsFailed(
       // FAILED に巻き込むのを防ぐ (Codex PR #1043 P1)。
       stripeCheckoutSessionId: sessionId,
       paymentStatus: {
-        notIn: [
-          PaymentStatus.PAID,
-          PaymentStatus.PARTIALLY_REFUNDED,
-          PaymentStatus.REFUNDED,
-          PaymentStatus.FAILED,
-        ],
+        notIn: [...PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_RESERVATION],
       },
     },
-    data: { paymentStatus: PaymentStatus.FAILED },
+    data: buildFailedClaimUpdateData(),
   });
 
   if (result.count > 0) {
@@ -317,15 +256,28 @@ export async function findReservationByPaymentIntent(paymentIntentId: string) {
 }
 
 /**
- * 非同期決済の PaymentIntent ID のみ保存（paymentStatus は PENDING のまま）
- * checkout.session.completed で payment_status === "unpaid" の場合に使用
+ * 非同期決済の PaymentIntent ID のみ保存（paymentStatus は PENDING のまま）。
+ * `checkout.session.completed` で `payment_status !== "paid"` の場合に使用。
+ *
+ * Event の `saveEventRegistrationPaymentIntentId` と同型の `updateMany` guard:
+ * - `paymentStatus` が UNPAID / PENDING の行のみ更新（PAID 等への stale webhook 上書き防止）
+ * - `stripeCheckoutSessionId` 一致必須（`claimReservationAsFailed` と同型。OLD session の
+ *   `checkout.session.completed` が NEW session へ PI を書き込む race を封殺）
+ *
+ * 該当行なし（race / 既処理 / session 不一致）は count=0 の no-op。webhook 全体を 500 化しない。
  */
 export async function savePaymentIntentId(
   reservationId: string,
   paymentIntentId: string,
-) {
-  return prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+  sessionId: string,
+): Promise<void> {
+  await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      stripeCheckoutSessionId: sessionId,
+      paymentStatus: { in: [...PAYMENT_STATUSES_SAVE_PAYMENT_INTENT] },
+    },
     data: { stripePaymentIntentId: paymentIntentId },
   });
 }
@@ -394,56 +346,28 @@ export async function applyChargeRefundIdempotent(input: {
     latestRefund,
   } = input;
 
-  if (latestRefund) {
-    // Refund child への真 atomic な idempotent write (PR #1146 Codex P2 追加対応):
-    // Prisma の `upsert({where, create, update: {}})` は SELECT+INSERT に compile される
-    // ため並行 create で `refunds_stripeRefundId_key` 一意制約違反が依然発生する
-    // (Prisma issue #20229)。 単一 `create` + `catch (P2002)` で idempotent success 化する
-    // (INSERT statement 自体は PostgreSQL レベルで atomic なので race window なし)。
-    // 既存 = command 経由で先書きされているケース。silent skip で書込主体・金額を保持する
-    // belt-and-suspenders 契約は不変。
-    //
-    // `Refund.amount` は app 単位 (JPY 円 / USD ドル) 保存 (PR #1126 P1 対応)。JPY
-    // (zero-decimal) では偶然一致するが、USD/EUR 等では 100 倍で保存されて後続の refund
-    // 集計・残額判定が壊れるため Stripe unit_amount からの逆変換が必須。
-    try {
-      // Stripe refund.metadata.initiator に app 側が仕込んだ attribution が
-      // あればそれを使う (webhook が command 側の書込より先着した race で
-      // AUTO_ON_CANCEL / ADMIN の refund が "STRIPE_DASHBOARD" と mislabel
-      // されるのを防ぐ)。metadata が空 / 未知値なら真の Stripe Dashboard 発行として扱う。
-      const initiatorMeta = latestRefund.metadata?.["initiator"];
-      const refundedByType = isValidRefundedByType(initiatorMeta)
-        ? initiatorMeta
-        : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
+  await applyStripeChargeRefundIdempotent({
+    chargeAmount,
+    amountRefunded,
+    currency,
+    latestRefund,
+    createRefundRecord: async (refundData) => {
       await prisma.refund.create({
         data: {
           reservationId,
-          amount: fromStripeUnitAmount(latestRefund.amount, currency),
-          stripeRefundId: latestRefund.id,
-          refundedByType,
+          ...refundData,
         },
       });
-    } catch (error) {
-      if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) throw error;
-      // P2002 on stripeRefundId = 別経路 (command / 並行 webhook) が先着書込済 = idempotent success
-    }
-  }
-
-  const isFullRefund = amountRefunded >= chargeAmount;
-  const newStatus = isFullRefund
-    ? PaymentStatus.REFUNDED
-    : PaymentStatus.PARTIALLY_REFUNDED;
-
-  // paymentStatus 遷移 (updateMany の WHERE で status guard、REFUNDED を PARTIALLY_REFUNDED に
-  // 巻き戻すことは絶対にしない)。
-  await prisma.reservation.updateMany({
-    where: {
-      id: reservationId,
-      deletedAt: null,
-      paymentStatus: {
-        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-      },
     },
-    data: { paymentStatus: newStatus },
+    updatePaymentStatus: async (newStatus) => {
+      await prisma.reservation.updateMany({
+        where: {
+          id: reservationId,
+          deletedAt: null,
+          ...buildChargeRefundPaymentStatusWhere(),
+        },
+        data: { paymentStatus: newStatus },
+      });
+    },
   });
 }

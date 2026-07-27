@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservations } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
@@ -36,7 +36,7 @@ export default async function MypagePage({
   const justCancelledSingle = cancelledParam === "ok";
   const justCancelledSeries = cancelledParam === "series";
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

@@ -3,8 +3,9 @@
 /**
  * Mobile Bottom Navigation — モバイルのみ表示される固定ナビゲーション
  *
- * 認証状態は layout.tsx で Server Component として解決済みの値を props で受け取る
- * （`useSession` を使わず Better Auth クライアントを全公開ページから除去）。
+ * 認証 kind は hydrate 後に `/api/customer/auth-kind` で解決する
+ * （`useSession` を使わず Better Auth クライアントを全公開ページから除去し、
+ * かつ CDN キャッシュ HTML に login/mypage を埋め込まない）。
  */
 
 import Link from "next/link";
@@ -20,12 +21,8 @@ import {
 import type { Route } from "next";
 import { cn } from "@/shared/lib/cn";
 import { normalizePreviewPathname } from "@/shared/lib/preview-routes";
-
-export type MobileNavAuthKind = "mypage" | "login" | null;
-
-interface MobileNavProps {
-  readonly authKind: MobileNavAuthKind;
-}
+import { usePublicAuthKind } from "@/public/hooks/use-public-auth-kind";
+import type { PublicAuthKind } from "@/shared/lib/public-auth-kind";
 
 interface NavItem {
   readonly href: Route;
@@ -44,17 +41,20 @@ const STATIC_NAV_ITEMS: readonly NavItem[] = [
 const AUTH_NAV_ITEMS = {
   mypage: { href: "/mypage", icon: IconUser, label: "マイページ" },
   login: { href: "/login", icon: IconLogin, label: "ログイン" },
-} as const satisfies Record<Exclude<MobileNavAuthKind, null>, NavItem>;
+} as const satisfies Record<Exclude<PublicAuthKind, null>, NavItem>;
 
 function isActive(pathname: string, item: NavItem): boolean {
   return item.exact ? pathname === item.href : pathname.startsWith(item.href);
 }
 
-export function MobileNav({ authKind }: MobileNavProps) {
+export function MobileNav() {
   // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/blog` 等) に正規化して
   // active 判定する。preview と本番で同じタブが選択状態として表示される。
   const pathname = normalizePreviewPathname(usePathname());
-  const authItem = authKind ? AUTH_NAV_ITEMS[authKind] : null;
+  const { status: authStatus, kind: authKind } = usePublicAuthKind();
+  const authItem =
+    authStatus === "ready" && authKind ? AUTH_NAV_ITEMS[authKind] : null;
+  const showAuthSkeleton = authStatus === "loading";
   const items: readonly NavItem[] = authItem
     ? [...STATIC_NAV_ITEMS, authItem]
     : STATIC_NAV_ITEMS;
@@ -85,6 +85,14 @@ export function MobileNav({ authKind }: MobileNavProps) {
             </li>
           );
         })}
+        {showAuthSkeleton && (
+          <li aria-hidden="true" data-auth-chrome="skeleton">
+            <div className="flex min-h-11 flex-col items-center justify-center gap-0.5 px-3 py-1">
+              <div className="h-5 w-5 animate-pulse rounded-sm bg-surface" />
+              <div className="h-3 w-10 animate-pulse bg-surface" />
+            </div>
+          </li>
+        )}
       </ul>
     </nav>
   );

@@ -271,7 +271,6 @@ export function buildEventCalendar(
   // LOCATION: use formatEventVenueDisplay to determine primary location
   const venueDisplay = formatEventVenueDisplay({
     format: params.format,
-    meetingUrl: params.meetingUrl,
     location: params.location ? { name: params.location } : null,
   });
   if (venueDisplay.primary !== null) {
@@ -315,7 +314,6 @@ export function buildEventCancelCalendar(
   // LOCATION: use formatEventVenueDisplay to determine primary location
   const venueDisplay = formatEventVenueDisplay({
     format: params.format,
-    meetingUrl: params.meetingUrl,
     location: params.location ? { name: params.location } : null,
   });
   if (venueDisplay.primary !== null) {

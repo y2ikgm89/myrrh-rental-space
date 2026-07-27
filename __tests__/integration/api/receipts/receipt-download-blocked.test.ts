@@ -116,6 +116,14 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
       logError: mock(() => undefined),
       normalizeError: (error: unknown) =>
         error instanceof Error ? error : new Error(String(error)),
+      safeFetch: mock(() => Promise.resolve(null)),
+      criticalFetch: mock(() => Promise.resolve(null)),
+    }));
+
+    // route が guest-token-gates を import するため、依存解決で terms-consent-gate
+    // → errors/server.safeFetch を辿らないよう stub する（GET session 経路は未使用）。
+    mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+      assertGuestTokenCustomerGates: mock(() => Promise.resolve()),
     }));
   });
 

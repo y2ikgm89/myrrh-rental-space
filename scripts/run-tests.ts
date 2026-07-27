@@ -13,10 +13,11 @@
  *   `min(navigator.hardwareConcurrency, 8)` の `p-limit` プール。CI の 4 上限は
  *   GitHub Actions の 2-4 vCPU と OOM 余裕を優先し、ローカルは実測に基づいて
  *   待ち時間を短縮する。`TEST_PARALLEL` 環境変数で上書き可能。
- * - **実 DB 接続テストは serial bucket に隔離**。`TEST_DATABASE_URL` を読み
- *   共有 Postgres を操作する 5 ファイル (cancel-by-token-roundtrip /
- *   reminder-idempotency / coupon-status-filter / registration-overbooking /
- *   scope-check-constraint) は順次実行で並列書込み競合を避ける。
+ * - **実 DB 接続テストは serial bucket に隔離**。`scripts/serial-db-test-detection.ts`
+ *   が `__tests__/integration/**` を走査し、`TEST_DATABASE_URL` / `DATABASE_URL`
+ *   上書きパターンを持つファイルを自動検出して順次実行する（並列書込み競合回避）。
+ *   prisma を `mock.module` するファイルは除外。例外は FORCE_INCLUDE / FORCE_EXCLUDE。
+ *   検出結果は `scripts/test-db-runner-env.ts` の `SERIAL_DB_TESTS` に module load 時集約。
  * - serial bucket と parallel bucket は **並列** に動かす (互いに DB 共有なし)。
  *
  * ## 出力順序保持
@@ -48,7 +49,7 @@ import { resolveTestConcurrency } from "./test-runner-concurrency";
 import {
   assertRequiredTestDatabaseUrl,
   findSelectedSerialDbTests,
-  SERIAL_DB_TESTS,
+  isSerialDbTest,
 } from "./test-db-runner-env";
 
 interface FileResult {
@@ -119,7 +120,7 @@ if (testDatabaseUrlCheck.url !== undefined) {
   }
 }
 
-const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
+const parallelFiles = files.filter((f) => !isSerialDbTest(f));
 const serialFiles = selectedSerialDbTests;
 
 const concurrency = resolveTestConcurrency({
@@ -167,7 +168,15 @@ async function runOne(file: string): Promise<FileResult> {
   //   テストのみで、内部実装の dev assertion / 詳細 stack に依存しない。
   // - 本番ランタイムは Next.js build 経由で同 `production` 条件が解決されるため、
   //   テストと本番のバイナリは整合 (`.prod.mjs` を共通参照)。
-  const proc = Bun.spawn(["bun", "test", "--conditions", "production", file], {
+  // TEST_TIMEOUT: bun test の per-test default（既定 5000ms）。Windows worktree や
+  // type-check 直後の FS 走査 gate では 5s を超えやすいため、pre-push 等で延長する。
+  const timeoutMs = process.env["TEST_TIMEOUT"]?.trim();
+  const bunTestArgs = ["bun", "test", "--conditions", "production"];
+  if (timeoutMs && Number.parseInt(timeoutMs, 10) > 0) {
+    bunTestArgs.push("--timeout", timeoutMs);
+  }
+  bunTestArgs.push(file);
+  const proc = Bun.spawn(bunTestArgs, {
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env },

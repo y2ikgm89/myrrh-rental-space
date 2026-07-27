@@ -29,14 +29,18 @@ paths:
 - `mock.module()` を先に宣言し、テスト対象は宣言後に `await import(...)` で
   動的 import する（静的 import は mock 適用前に評価される）
 - preload（`__tests__/setup.ts`）が server-only の no-op 化・DATABASE_URL のダミー固定・
-  暗号化キー mock を行う。`__tests__/mocks/` の共有 mock は現在未使用で、
-  ファイルローカル mock が現行スタイル
+  暗号化キー mock を行う。共有ヘルパーは `__tests__/mocks/`（例:
+  `errors-server` の `installErrorsServerMock`）。それ以外はファイルローカルの
+  `mock.module()` が現行スタイル
 - JSDOM が必要なテストは `installJSDOMForTests()` を beforeEach で再適用できる
 
 ## 実 DB 統合テスト（要 Postgres）
 
-- 新規の実 DB テストは `scripts/test-db-runner-env.ts` の SERIAL_DB_TESTS に
-  **フルパス登録必須**（未登録だと parallel bucket に入り共有 DB で競合する）
+- 新規の実 DB テストは `process.env["TEST_DATABASE_URL"]` または
+  `process.env["DATABASE_URL"] = process.env["TEST_DATABASE_URL"] …` を
+  ファイル先頭付近に書けば `scripts/serial-db-test-detection.ts` が serial bucket に
+  **自動検出**する（`mock.module("@/shared/db/prisma")` するファイルは除外）。
+  マーカーが効かない edge case のみ `SERIAL_DB_TEST_FORCE_INCLUDE` に opt-in 登録
 - preload が DATABASE_URL をダミーに固定するため、prisma gateway を
   **動的 import する前に** `process.env.DATABASE_URL` を TEST_DATABASE_URL で上書きする
   （gateway は module load 時 snapshot を読む）

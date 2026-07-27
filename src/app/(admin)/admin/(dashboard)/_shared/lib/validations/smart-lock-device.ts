@@ -8,6 +8,9 @@
  * `locationId` は作成時に必須（デバイスは Location に属する FK 必須）。更新時も
  * フォームには含まれるが、`updateSmartLockDeviceCommand` は locationId の変更を
  * サポートしないため値は無視される（拠点は作成時のみ確定、以後は変更不可）。
+ *
+ * SwitchBot 連携 ON 時の Device List 突合（deviceId 存在・pad/lock 家族一致）は
+ * admin action 経由の `assertDeviceMatchesSwitchBotInventory` で fail closed。
  */
 
 import { z } from "zod";

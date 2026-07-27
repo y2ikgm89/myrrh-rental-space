@@ -6,6 +6,7 @@ import { getCustomerVisibleSmartLockPasscodesForReservation } from "@/shared/dom
 import type { CustomerVisiblePasscode } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { getReservationCustomerId } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -22,11 +23,9 @@ import {
   passcodeRevealByReservationRateLimiter,
   passcodeRevealByUserRateLimiter,
 } from "@/shared/lib/rate-limit";
+import { GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
-
-const MEMBER_OWNERSHIP_MISMATCH_MESSAGE =
-  "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください";
 
 export type RevealReservationPasscodesData = {
   readonly status: "visible" | "pending" | "outside_window" | "unavailable";
@@ -72,6 +71,8 @@ export async function revealReservationPasscodesAction(
   const sessionUser = session?.user ?? null;
 
   if (verifiedToken.valid && verifiedToken.reservationId === parsedId.data) {
+    const reservationCustomerId = await getReservationCustomerId(parsedId.data);
+
     if (sessionUser) {
       const userLimit = await passcodeRevealByUserRateLimiter.check(
         sessionUser.id,
@@ -84,17 +85,22 @@ export async function revealReservationPasscodesAction(
 
       const customer = await getCustomerByUserId(sessionUser.id);
       if (customer) {
-        const reservationCustomerId = await getReservationCustomerId(
-          parsedId.data,
-        );
         if (!reservationCustomerId) {
           return createMutationError("予約が見つかりません");
         }
         if (customer.id !== reservationCustomerId) {
-          return createMutationError(MEMBER_OWNERSHIP_MISMATCH_MESSAGE);
+          return createMutationError(
+            GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
+          );
         }
+        // 暗証番号開示は mypage 予約詳細と同型の証跡寄り read。再同意は免除
+        // （reagree-allowlist の /mypage/reservations 方針に揃える）。
         try {
-          await assertCustomerActive(customer.id);
+          await assertGuestTokenCustomerGates({
+            resourceCustomerId: reservationCustomerId,
+            sessionCustomerId: customer.id,
+            requireReagreeWhenSession: false,
+          });
         } catch (error) {
           if (error instanceof DomainError) {
             return createMutationError(error.message);
@@ -103,12 +109,35 @@ export async function revealReservationPasscodesAction(
         }
         auth = { kind: "customer", customerId: customer.id };
       } else {
+        try {
+          await assertGuestTokenCustomerGates({
+            resourceCustomerId: reservationCustomerId,
+            requireReagreeWhenSession: false,
+          });
+        } catch (error) {
+          if (error instanceof DomainError) {
+            return createMutationError(error.message);
+          }
+          throw error;
+        }
         auth = {
           kind: "status-token",
           reservationId: verifiedToken.reservationId,
         };
       }
     } else {
+      // 純ゲスト status-token: 紐付き customer が停止/BLACKLIST なら開示拒否
+      try {
+        await assertGuestTokenCustomerGates({
+          resourceCustomerId: reservationCustomerId,
+          requireReagreeWhenSession: false,
+        });
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return createMutationError(error.message);
+        }
+        throw error;
+      }
       auth = {
         kind: "status-token",
         reservationId: verifiedToken.reservationId,

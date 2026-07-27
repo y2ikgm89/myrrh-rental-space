@@ -54,9 +54,23 @@ const mockEventUpdateMany = mock<() => Promise<{ count: number }>>(() =>
 
 const mockFireAndForget = mock<() => void>(() => undefined);
 
+const eventUpdatedNotificationPayload = {
+  eventId: "event-1",
+  title: "テストイベント",
+  format: "OFFLINE" as const,
+  meetingUrl: null,
+  updatedAt: new Date("2024-06-15T09:00:00Z"),
+  venueDisplay: "東京都渋谷区",
+  registrations: [],
+};
+
+const mockGetEventUpdatedNotificationPayload = mock<
+  (eventId: string) => Promise<typeof eventUpdatedNotificationPayload | null>
+>(() => Promise.resolve(eventUpdatedNotificationPayload));
+
 const mockSendEventUpdated = mock<
   (
-    eventId: string,
+    payload: typeof eventUpdatedNotificationPayload,
     oldSlotStartTimes: ReadonlyMap<string, Date>,
   ) => Promise<void>
 >(() => Promise.resolve());
@@ -201,6 +215,12 @@ mock.module("@/shared/db/prisma", () => ({
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
+}));
+
+mock.module("@/shared/domain/events/email-queries", () => ({
+  getEventUpdatedNotificationPayload: (
+    ...args: Parameters<typeof mockGetEventUpdatedNotificationPayload>
+  ) => mockGetEventUpdatedNotificationPayload(...args),
 }));
 
 mock.module("@/shared/lib/email/event-emails", () => ({
@@ -720,6 +740,11 @@ describe("updateEventCommand", () => {
     mockExecuteRaw.mockClear();
     mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
+    mockSendEventUpdated.mockClear();
+    mockGetEventUpdatedNotificationPayload.mockClear();
+    mockGetEventUpdatedNotificationPayload.mockResolvedValue(
+      eventUpdatedNotificationPayload,
+    );
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
   });
 
@@ -953,7 +978,7 @@ describe("updateEventCommand", () => {
       // 変更前の日時は「変更されたスロット自身」の旧 startAt であるべき
       // （他スロットの値や新しい値を誤って渡していないこと）
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
-        "event-1",
+        eventUpdatedNotificationPayload,
         new Map([["slot-1", new Date("2024-06-15T10:00:00Z")]]),
       );
     });
@@ -1025,7 +1050,7 @@ describe("updateEventCommand", () => {
       // slot-1・slot-2 双方の「変更前」日時が個別に渡され、単一の代表値
       // （例えば slot-1 の値）を全参加者に使い回していないことを確認する
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
-        "event-1",
+        eventUpdatedNotificationPayload,
         new Map([
           ["slot-1", new Date("2024-06-15T10:00:00Z")],
           ["slot-2", new Date("2024-06-16T10:00:00Z")],

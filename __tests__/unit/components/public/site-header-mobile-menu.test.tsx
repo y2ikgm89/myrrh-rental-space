@@ -130,6 +130,10 @@ mock.module("@/public/lib/gsap-config", () => ({
   },
 }));
 
+mock.module("@/public/hooks/use-public-auth-kind", () => ({
+  usePublicAuthKind: () => ({ status: "ready", kind: null }),
+}));
+
 const { Header } = await import("@/public/components/layouts/site-header");
 const { HeaderBackgroundMode, HeaderScrollBehavior } =
   await import("@/shared/lib/validations/enums/prisma-types");
@@ -158,7 +162,6 @@ function renderHeader(
       mobileNavItems={mobileNavItems}
       scrollBehavior={HeaderScrollBehavior.always_visible}
       backgroundMode={HeaderBackgroundMode.transparent}
-      authSlot={null}
     />,
   );
 }

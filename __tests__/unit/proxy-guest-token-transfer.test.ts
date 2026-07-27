@@ -12,7 +12,9 @@ import {
   CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
   CALENDAR_EVENT_TOKEN_COOKIE_NAME,
 } from "@/shared/lib/constants/calendar-token-cookie-names";
+import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlist-offer-token-cookie-name";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
+import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -131,6 +133,40 @@ describe("guest token transfer", () => {
     const req = new NextRequest(
       "https://example.com/events/registrations/status",
     );
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
+  test("token なしの /events/registrations/checkout は素通り（redirect しない）", async () => {
+    const req = new NextRequest(
+      "https://example.com/events/registrations/checkout",
+    );
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
+  test("/events/waitlist/checkout の ?token= を HttpOnly cookie に転写し URL から外す", async () => {
+    const token = createWaitlistOfferToken({
+      registrationId: "reg_abcdef123456",
+      expiresAt: FUTURE,
+    });
+    const req = new NextRequest(
+      `https://example.com/events/waitlist/checkout?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/events/waitlist/checkout");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(WAITLIST_OFFER_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.path).toBe("/events/waitlist/checkout");
+  });
+
+  test("token なしの /events/waitlist/checkout は素通り（redirect しない）", async () => {
+    const req = new NextRequest("https://example.com/events/waitlist/checkout");
     const res = await proxy(req);
     expect(res.status).not.toBe(307);
   });

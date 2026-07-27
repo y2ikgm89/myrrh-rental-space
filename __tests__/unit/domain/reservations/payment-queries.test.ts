@@ -164,6 +164,7 @@ const SESSION_ID = "cs_test_session_9876543210";
 
 const FULFILL_DATA = {
   id: RESERVATION_ID,
+  spaceId: "space-550e8400-e29b-41d4-a716-446655440001",
   startTime: new Date("2024-03-01T10:00:00Z"),
   endTime: new Date("2024-03-01T12:00:00Z"),
   totalPrice: 5000,
@@ -535,17 +536,42 @@ describe("reservations/payment-queries", () => {
   // =============================================================================
 
   describe("savePaymentIntentId", () => {
-    test("stripePaymentIntentId のみを更新（paymentStatus は変更しない）", async () => {
-      mockReservationUpdate.mockResolvedValueOnce({ id: RESERVATION_ID });
+    test("未払い/決済待ちかつ session 一致の行のみ stripePaymentIntentId を更新", async () => {
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
-      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID);
+      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID, SESSION_ID);
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: RESERVATION_ID, deletedAt: null },
+          where: {
+            id: RESERVATION_ID,
+            deletedAt: null,
+            stripeCheckoutSessionId: SESSION_ID,
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+            },
+          },
           data: { stripePaymentIntentId: PAYMENT_INTENT_ID },
         }),
       );
+      expect(mockReservationUpdate).not.toHaveBeenCalled();
+    });
+
+    test("PAID 等の終端状態は updateMany guard で no-op（stale webhook 上書き防止）", async () => {
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID, SESSION_ID);
+
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+            },
+          }),
+        }),
+      );
+      expect(mockReservationUpdate).not.toHaveBeenCalled();
     });
   });
 

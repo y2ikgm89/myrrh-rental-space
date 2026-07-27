@@ -86,11 +86,14 @@ mock.module("@/shared/lib/errors/server", () => ({
 // final review I1: cron の EXPIRED 遷移・繰り上げ当選それぞれで送られる通知
 // メールを spy 化する（実 Resend 送信は避けつつ、呼び出し自体を検証する）。
 const mockSendEventWaitlistExpired = mock<
-  (args: { registrationId: string; to: string }) => Promise<{ ok: boolean }>
+  (args: {
+    registration: { id: string };
+    to: string;
+  }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
 const mockSendEventWaitlistOffered = mock<
   (args: {
-    registrationId: string;
+    registration: { id: string };
     to: string;
     expiresAt: Date;
     paymentContext: unknown;
@@ -304,13 +307,13 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
       // かった）。
       expect(mockSendEventWaitlistExpired).toHaveBeenCalledTimes(1);
       expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith({
-        registrationId: offered.id,
+        registration: expect.objectContaining({ id: offered.id }),
         to: expect.stringContaining("offered-"),
       });
       expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
       expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
         expect.objectContaining({
-          registrationId: waiting.id,
+          registration: expect.objectContaining({ id: waiting.id }),
           to: expect.stringContaining("waiting-"),
           expiresAt: updatedWaiting.expiresAt,
         }),

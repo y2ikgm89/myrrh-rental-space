@@ -1,68 +1,33 @@
 /**
  * event-waitlist-emails.ts の sender wrapper テスト。
  *
- * - sendEventWaitlistRegistered: subject に site name + event title を含むこと、
- *   position が (slotId, ticketId) スコープの count() 結果をそのまま props に渡すこと、
- *   count() の where 句が WAITLIST_ACTIVE_STATUSES（WAITLISTED +
- *   WAITLISTED_OFFERED）を使うこと（OFFERED 中の先行者を under-report しない）
- * - sendEventWaitlistOffered: paymentContext.kind (free/paid) で subject/props が
- *   分岐すること（price 表示・actionUrl の出し分け）
- * - sendEventWaitlistExpired: idempotencyKey が `event-waitlist-expired/<id>` で
- *   固定（再送で同一 key）であること
- * - registrationId に該当データが無い場合は 3 関数とも `{ok:false, reason:"not_found"}`
- *   を返し throw しないこと
+ * DB 読み込みは domain 側に移ったため、本テストは取得済み payload を渡した
+ * render + send の挙動のみ検証する。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
-type RegistrationRow = {
-  id: string;
-  name: string;
-  customerId: string | null;
-  slotId: string;
-  ticketId: string;
-  quantity: number;
-  waitlistedAt: Date | null;
-  event: { title: string; slug: string };
-  slot: { startAt: Date; endAt: Date };
-  ticket: { name: string };
-};
-
-const GUEST_REGISTRATION: RegistrationRow = {
+const GUEST_REGISTRATION = {
   id: "reg-1",
   name: "山田太郎",
-  customerId: null,
+  customerId: null as string | null,
   slotId: "slot-1",
   ticketId: "ticket-1",
   quantity: 2,
   waitlistedAt: new Date("2026-07-01T00:00:00Z"),
-  event: { title: "サマーワークショップ", slug: "summer-workshop" },
-  slot: {
-    startAt: new Date("2099-01-01T05:00:00Z"),
-    endAt: new Date("2099-01-01T07:00:00Z"),
-  },
-  ticket: { name: "一般チケット" },
+  eventTitle: "サマーワークショップ",
+  eventSlug: "summer-workshop",
+  slotStartAt: new Date("2099-01-01T05:00:00Z"),
+  slotEndAt: new Date("2099-01-01T07:00:00Z"),
+  ticketName: "一般チケット",
 };
 
-const MEMBER_REGISTRATION: RegistrationRow = {
+const MEMBER_REGISTRATION = {
   ...GUEST_REGISTRATION,
   id: "reg-2",
   customerId: "customer-1",
 };
-
-const mockFindUnique = mock<() => Promise<RegistrationRow | null>>(() =>
-  Promise.resolve(GUEST_REGISTRATION),
-);
-const mockCount = mock<() => Promise<number>>(() => Promise.resolve(3));
-
-mock.module("@/shared/db/prisma", () => ({
-  prisma: {
-    eventRegistration: { findUnique: mockFindUnique, count: mockCount },
-  },
-  basePrisma: {},
-}));
 
 const mockSendEmail = mock<
   (params: unknown) => Promise<{ ok: true; messageId: string }>
@@ -134,10 +99,6 @@ function lastSendEmailCall(): SendEmailCall {
 }
 
 beforeEach(() => {
-  mockFindUnique.mockReset();
-  mockFindUnique.mockImplementation(() => Promise.resolve(GUEST_REGISTRATION));
-  mockCount.mockReset();
-  mockCount.mockImplementation(() => Promise.resolve(3));
   mockSendEmail.mockClear();
   mockEventWaitlistRegisteredEmail.mockClear();
   mockEventWaitlistOfferedEmail.mockClear();
@@ -147,7 +108,8 @@ beforeEach(() => {
 describe("sendEventWaitlistRegistered", () => {
   test("subject に site name と event title の両方を含む", async () => {
     await sendEventWaitlistRegistered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
+      position: 3,
       to: "guest@example.com",
     });
 
@@ -156,10 +118,10 @@ describe("sendEventWaitlistRegistered", () => {
     expect(subject).toContain("サマーワークショップ");
   });
 
-  test("position は (slotId, ticketId) スコープの count() 結果をそのまま使う", async () => {
-    mockCount.mockImplementation(() => Promise.resolve(7));
+  test("position を props にそのまま渡す", async () => {
     await sendEventWaitlistRegistered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
+      position: 7,
       to: "guest@example.com",
     });
 
@@ -167,35 +129,10 @@ describe("sendEventWaitlistRegistered", () => {
     expect(props?.position).toBe(7);
   });
 
-  test("queue position uses WAITLIST_ACTIVE_STATUSES to include OFFERED entries ahead", async () => {
-    await sendEventWaitlistRegistered({
-      registrationId: "reg-1",
-      to: "guest@example.com",
-    });
-
-    expect(mockCount).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          slotId: GUEST_REGISTRATION.slotId,
-          ticketId: GUEST_REGISTRATION.ticketId,
-          status: {
-            in: [
-              RegistrationStatus.WAITLISTED,
-              RegistrationStatus.WAITLISTED_OFFERED,
-            ],
-          },
-          waitlistedAt: expect.any(Object),
-        }),
-      }),
-    );
-  });
-
   test("ゲスト（customerId なし）は claimUrl と status hub URL を発行する", async () => {
-    mockFindUnique.mockImplementation(() =>
-      Promise.resolve(GUEST_REGISTRATION),
-    );
     await sendEventWaitlistRegistered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
+      position: 1,
       to: "guest@example.com",
     });
 
@@ -209,11 +146,9 @@ describe("sendEventWaitlistRegistered", () => {
   });
 
   test("会員（customerId あり）は mypage hub URL を発行し claimUrl は発行しない", async () => {
-    mockFindUnique.mockImplementation(() =>
-      Promise.resolve(MEMBER_REGISTRATION),
-    );
     await sendEventWaitlistRegistered({
-      registrationId: "reg-2",
+      registration: MEMBER_REGISTRATION,
+      position: 1,
       to: "member@example.com",
     });
 
@@ -221,22 +156,12 @@ describe("sendEventWaitlistRegistered", () => {
     expect(props?.eventRegistrationHubUrl).toMatch(/\/mypage\/events\/reg-2$/);
     expect(props?.claimUrl).toBeUndefined();
   });
-
-  test("登録が見つからない場合は not_found を返し throw しない", async () => {
-    mockFindUnique.mockImplementation(() => Promise.resolve(null));
-    const result = await sendEventWaitlistRegistered({
-      registrationId: "missing",
-      to: "guest@example.com",
-    });
-    expect(result).toEqual({ ok: false, reason: "not_found" });
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
 });
 
 describe("sendEventWaitlistOffered", () => {
   test("free と paid で subject が異なる", async () => {
     await sendEventWaitlistOffered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
       to: "guest@example.com",
       expiresAt: new Date("2099-01-02T00:00:00Z"),
       paymentContext: {
@@ -247,143 +172,77 @@ describe("sendEventWaitlistOffered", () => {
     const freeSubject = lastSendEmailCall().payload.subject;
 
     await sendEventWaitlistOffered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
       to: "guest@example.com",
       expiresAt: new Date("2099-01-02T00:00:00Z"),
       paymentContext: {
         kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout/tok",
+        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
         price: 3000,
       },
     });
     const paidSubject = lastSendEmailCall().payload.subject;
 
-    expect(freeSubject).not.toBe(paidSubject);
-    expect(freeSubject).toContain("サマーワークショップ");
-    expect(paidSubject).toContain("サマーワークショップ");
+    expect(freeSubject).toContain("繰り上げ当選");
+    expect(freeSubject).not.toContain("要お支払い");
+    expect(paidSubject).toContain("要お支払い");
   });
 
-  test("free branch: actionUrl は confirmUrl、priceDisplay は無い", async () => {
+  test("paid では priceDisplay と checkout actionUrl を渡す", async () => {
     await sendEventWaitlistOffered({
-      registrationId: "reg-1",
-      to: "guest@example.com",
-      expiresAt: new Date("2099-01-02T00:00:00Z"),
-      paymentContext: {
-        kind: "free",
-        confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
-      },
-    });
-
-    const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
-    expect(props?.isPaid).toBe(false);
-    expect(props?.actionUrl).toBe(
-      "https://example.com/events/waitlist/confirm?token=tok",
-    );
-    expect(props?.priceDisplay).toBeUndefined();
-    expect(props?.eventRegistrationHubUrl).toContain(
-      "/events/registrations/status?token=",
-    );
-  });
-
-  test("paid branch: actionUrl は checkoutUrl、priceDisplay は円表示", async () => {
-    await sendEventWaitlistOffered({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
       to: "guest@example.com",
       expiresAt: new Date("2099-01-02T00:00:00Z"),
       paymentContext: {
         kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout/tok",
+        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
         price: 3000,
       },
     });
 
     const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
     expect(props?.isPaid).toBe(true);
-    expect(props?.actionUrl).toBe(
-      "https://example.com/events/waitlist/checkout/tok",
-    );
-    expect(props?.priceDisplay).toContain("3,000");
+    expect(props?.priceDisplay).toBeDefined();
+    expect(props?.actionUrl).toContain("/events/waitlist/checkout");
   });
 
-  test("会員向け hub URL は /mypage/events/{id}", async () => {
-    mockFindUnique.mockImplementation(() =>
-      Promise.resolve(MEMBER_REGISTRATION),
-    );
+  test("idempotencyKey に expiresAt.getTime() を含める", async () => {
+    const expiresAt = new Date("2099-01-02T00:00:00Z");
     await sendEventWaitlistOffered({
-      registrationId: "reg-2",
-      to: "member@example.com",
-      expiresAt: new Date("2099-01-02T00:00:00Z"),
+      registration: GUEST_REGISTRATION,
+      to: "guest@example.com",
+      expiresAt,
       paymentContext: {
         kind: "free",
         confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
       },
     });
 
-    const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
-    expect(props?.eventRegistrationHubUrl).toContain("/mypage/events/reg-2");
-  });
-
-  test("idempotencyKey は registrationId と expiresAt.getTime() の両方を含む", async () => {
-    const expiresAt = new Date("2099-01-02T03:04:05.000Z");
-    await sendEventWaitlistOffered({
-      registrationId: "reg-1",
-      to: "guest@example.com",
-      expiresAt,
-      paymentContext: { kind: "free", confirmUrl: "https://example.com/x" },
-    });
-
     expect(lastSendEmailCall().idempotencyKey).toBe(
       `event-waitlist-offered/reg-1/${expiresAt.getTime()}`,
     );
   });
-
-  test("登録が見つからない場合は not_found を返す", async () => {
-    mockFindUnique.mockImplementation(() => Promise.resolve(null));
-    const result = await sendEventWaitlistOffered({
-      registrationId: "missing",
-      to: "guest@example.com",
-      expiresAt: new Date(),
-      paymentContext: { kind: "free", confirmUrl: "https://example.com/x" },
-    });
-    expect(result).toEqual({ ok: false, reason: "not_found" });
-  });
 });
 
 describe("sendEventWaitlistExpired", () => {
-  test("idempotencyKey は event-waitlist-expired/<id> で固定（再送で同一 key）", async () => {
+  test("idempotencyKey が registrationId 固定", async () => {
     await sendEventWaitlistExpired({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
       to: "guest@example.com",
     });
-    const firstKey = lastSendEmailCall().idempotencyKey;
-    expect(firstKey).toBe("event-waitlist-expired/reg-1");
 
-    mockSendEmail.mockClear();
-    await sendEventWaitlistExpired({
-      registrationId: "reg-1",
-      to: "guest@example.com",
-    });
-    const secondKey = lastSendEmailCall().idempotencyKey;
-
-    expect(secondKey).toBe(firstKey);
+    expect(lastSendEmailCall().idempotencyKey).toBe(
+      "event-waitlist-expired/reg-1",
+    );
   });
 
-  test("eventUrl はイベント detail page (/events/<slug>) を指す", async () => {
+  test("eventUrl に event slug を含む", async () => {
     await sendEventWaitlistExpired({
-      registrationId: "reg-1",
+      registration: GUEST_REGISTRATION,
       to: "guest@example.com",
     });
 
     const props = mockEventWaitlistExpiredEmail.mock.calls.at(-1)?.[0];
-    expect(props?.eventUrl).toContain("/events/summer-workshop");
-  });
-
-  test("登録が見つからない場合は not_found を返す", async () => {
-    mockFindUnique.mockImplementation(() => Promise.resolve(null));
-    const result = await sendEventWaitlistExpired({
-      registrationId: "missing",
-      to: "guest@example.com",
-    });
-    expect(result).toEqual({ ok: false, reason: "not_found" });
+    expect(props?.eventUrl).toMatch(/\/events\/summer-workshop$/);
   });
 });

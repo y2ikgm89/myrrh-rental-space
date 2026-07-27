@@ -31,6 +31,10 @@ mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockPerRegistrationCheck = mock(() =>
   Promise.resolve({ success: true, remaining: 3, reset: Date.now() + 3600000 }),
 );
@@ -109,11 +113,14 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
-// OAUTH-BETTER-AUTH-01: session 経由の Customer は Server Action 側で
-// assertCustomerActive を通す。テストでは常時素通りに固定する。
+// OAUTH-BETTER-AUTH-01 / guest-token gates: 本 file は cookie/token 契約が主眼。
+// active/再同意は unit (guest-token-gates.test.ts) で証明し、ここでは素通り固定。
 mock.module("@/shared/domain/customers/guard", () => ({
   assertCustomerActive: mock(() => Promise.resolve(undefined)),
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+  assertGuestTokenCustomerGates: mock(() => Promise.resolve(undefined)),
 }));
 
 const mockGetCustomerSession = mock<

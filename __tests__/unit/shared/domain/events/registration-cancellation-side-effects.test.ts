@@ -120,6 +120,16 @@ mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
   sendEventWaitlistOffered: mock(() => Promise.resolve({ ok: true })),
 }));
 
+const mockExpireOpenCheckoutSessionBestEffort = mock<
+  (input: {
+    sessionId: string;
+    context?: Record<string, string>;
+  }) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
+  expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
+}));
+
 const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
   () => {},
 );
@@ -167,6 +177,7 @@ type RegistrationFixture = {
   icsSequence: number;
   paymentStatus: "UNPAID" | "PAID" | "PARTIALLY_REFUNDED";
   stripePaymentIntentId: string | null;
+  stripeCheckoutSessionId: string | null;
   paidAmount: number | null;
   event: { title: string };
   slot: { startAt: Date };
@@ -181,6 +192,7 @@ const baseRegistration: RegistrationFixture = {
   icsSequence: 2,
   paymentStatus: "UNPAID",
   stripePaymentIntentId: null,
+  stripeCheckoutSessionId: null,
   paidAmount: null,
   event: { title: "Test Event" },
   // 十分先の未来 (policy tier 100% 該当帯) にして「policy 未設定なら残額全額返金」
@@ -372,7 +384,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
     });
     expect(auditArg.metadata.sideEffects.refund).toMatchObject({
       status: "skipped",
-      reason: "policy_refund_rate_zero",
+      reason: "policyRefundRateZero",
     });
   });
 

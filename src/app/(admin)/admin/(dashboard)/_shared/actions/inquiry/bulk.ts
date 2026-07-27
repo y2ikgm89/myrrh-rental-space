@@ -22,6 +22,7 @@ import {
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendInquiryStatusNotificationToAll } from "@/shared/lib/email/inquiry-emails";
+import { getInquiriesForStatusNotification } from "@/shared/domain/inquiries/email-queries";
 import { ErrorCategory } from "@/shared/lib/errors";
 
 const bulkInputSchema = z.object({
@@ -128,10 +129,11 @@ export async function bulkSetStatusInquiries(
         (outcome.newStatus === InquiryStatus.RESOLVED ||
           outcome.newStatus === InquiryStatus.CLOSED)
       ) {
+        const notifyStatus = outcome.newStatus;
         fireAndForget(
-          sendInquiryStatusNotificationToAll(
-            outcome.affectedIds,
-            outcome.newStatus,
+          getInquiriesForStatusNotification(outcome.affectedIds).then(
+            (inquiries) =>
+              sendInquiryStatusNotificationToAll(inquiries, notifyStatus),
           ),
           {
             operation: "bulkSetStatusInquiries.notify",
