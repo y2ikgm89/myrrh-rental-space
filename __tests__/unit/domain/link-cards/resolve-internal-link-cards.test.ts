@@ -19,7 +19,7 @@ mock.module("@/shared/domain/features/check", () => ({
 }));
 
 const { resolveInternalLinkCards } =
-  await import("@/shared/lib/lexical/resolve-internal-link-cards");
+  await import("@/shared/domain/link-cards/resolve-internal-link-cards");
 
 const PLACEHOLDER = (type: string, id: string) =>
   `<a data-internal-link-card="true" data-content-type="${type}" data-content-id="${id}" href="#"></a>`;

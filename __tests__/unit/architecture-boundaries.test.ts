@@ -1068,8 +1068,10 @@ describe("architecture boundaries", () => {
         "email/reservation-emails.ts",
         "email/send.ts",
         "email/system-emails.ts",
-        "lexical/resolve-internal-link-cards.ts",
-        "lexical/resolve-space-card-embeds.ts",
+        "email/system-emails.ts",
+        "reservation/time-slots.ts",
+        "slug-validation.ts",
+        "turnstile.ts",
         "reservation/time-slots.ts",
         "slug-validation.ts",
       ].map((rel) =>

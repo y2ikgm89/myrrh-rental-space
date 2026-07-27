@@ -7,7 +7,7 @@
  * 外部リンクカード（{@link BookmarkNode}）が OGP スナップショットをノードに保存するのに対し、
  * 本ノードは参照 `{ contentType, contentId }` のみを保存する。`exportDOM` は空の
  * プレースホルダー `<a data-internal-link-card>` を出力し、公開描画時に
- * `resolveInternalLinkCards`（`@/shared/lib/lexical/resolve-internal-link-cards`）が
+ * `resolveInternalLinkCards`（`@/shared/domain/link-cards/resolve-internal-link-cards`）が
  * DB から最新のタイトル / サムネ / URL を解決してカード本体へ差し替える。
  * 参照先が削除 / 非公開なら自動で非表示になる（404 カードを防ぐ）。
  */
