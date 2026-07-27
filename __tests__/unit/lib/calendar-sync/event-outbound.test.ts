@@ -50,26 +50,21 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
   renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar-api", () => ({
   createCalendarEvent: mockCreate,
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
   getCalendarEvent: mockGetCalendarEvent,
   addMeetConferenceToCalendarEvent: mockAddMeetConference,
-  // Phase B.2 task 16 で追加された fetchEventInstances。outbound.ts が
+  // Phase B.2 task 16 で追加された fetchEventInstances。outbound が
   // syncReservationSeriesToCalendar 経由で import するため mock stub 必須
   // (未追加時に SyntaxError: Export named 'fetchEventInstances' not found)。
   fetchEventInstances: mock(() =>
     Promise.resolve({ success: true, instances: [] }),
   ),
-  encryptServiceAccountJson: mock(() => Promise.resolve("")),
-  extractServiceAccountEmail: mock(() => ""),
-  fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
-  setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
-  stopWebhookWatch: mock(() => Promise.resolve()),
-  testServiceAccountConnection: mock(() => Promise.resolve({ success: false })),
-  isValidCalendarId: mock(() => Promise.resolve(false)),
-  formatGoogleApiError: mock((e: unknown) => String(e)),
+  resolveGoogleCalendarWriteContext: mock(() =>
+    Promise.resolve({ ok: false, error: "mocked" }),
+  ),
 }));
 
 const mockSave = mock<(...args: unknown[]) => Promise<void>>(() =>

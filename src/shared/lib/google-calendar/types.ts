@@ -7,6 +7,23 @@ import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-t
 // Calendar Event Types
 // =============================================================================
 
+/**
+ * Google Calendar API 呼び出しに必要なクライアント文脈（Settings I/O なし）。
+ * 呼び出し側（domain）が credentials / calendarId を解決して注入する。
+ */
+export type GoogleCalendarClientContext = {
+  client: calendar_v3.Calendar;
+  calendarId: string;
+};
+
+/**
+ * イベント作成・更新に必要な文脈。`reminderMinutes` は Settings 由来。
+ */
+export type GoogleCalendarEventWriteContext = GoogleCalendarClientContext & {
+  /** null = Google Calendar 既定, 0 = 通知なし, N = N分前にメール通知 */
+  reminderMinutes: number | null;
+};
+
 export interface CalendarEventParams {
   summary: string;
   description: string;
