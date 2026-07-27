@@ -1,4 +1,7 @@
-import type { LayoutWidth, PostStatus } from "@generated/prisma/enums";
+import type {
+  LayoutWidth,
+  PostStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // ---------------------------------------------------------------------------
 // Enums（Prisma import チェーンを避けるために再宣言）
@@ -230,10 +231,10 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   EventStatus,
   RegistrationStatus,
-}));
+});
 
 mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },

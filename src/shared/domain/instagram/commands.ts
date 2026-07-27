@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { InstagramMediaType } from "@generated/prisma/enums";
+import { InstagramMediaType } from "@/shared/lib/validations/enums/prisma-types";
 import { encrypt } from "@/shared/lib/crypto";
 import { DomainError } from "@/shared/domain/domain-error";
 import { buildOrderScopeLockSql } from "@/shared/domain/order-sql";

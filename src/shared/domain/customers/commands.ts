@@ -5,7 +5,7 @@ import {
   CustomerStatus,
   CustomerType,
   EmailDeliveryStatus,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";

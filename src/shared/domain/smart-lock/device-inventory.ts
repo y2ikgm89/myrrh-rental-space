@@ -6,7 +6,7 @@
 
 import "server-only";
 
-import type { SmartLockDeviceType } from "@generated/prisma/enums";
+import type { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import {

@@ -12,7 +12,7 @@ import {
   getValidDiscountType,
   getValidDurationDiscountOverride,
 } from "@/shared/lib/validations/enums/helpers";
-import type { TaxRateType } from "@generated/prisma/enums";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 function formatSpaceToPlain(s: {

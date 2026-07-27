@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
-import type { LayoutWidth } from "@generated/prisma/enums";
+import type { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 
 type NewsWhereInput = Prisma.NewsWhereInput;

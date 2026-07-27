@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // =============================================================================
 // Prisma モック関数（import より前に定義 — TDZ 回避）
@@ -55,7 +56,7 @@ mock.module("@/shared/lib/env/server", () => ({
 }));
 
 // AuditAction enum モック
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction: {
     CREATE: "CREATE",
     UPDATE: "UPDATE",
@@ -63,7 +64,7 @@ mock.module("@generated/prisma/enums", () => ({
     PUBLISH: "PUBLISH",
     LOGIN: "LOGIN",
   },
-}));
+});
 
 // omitUndefined モック（実際の実装を使いたいが server-only 依存回避のため）
 mock.module("@/shared/lib/serialize", () => ({

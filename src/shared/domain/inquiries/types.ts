@@ -2,7 +2,7 @@ import type {
   CustomerType,
   InquiryReplyAuthorType,
   InquiryStatus,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { PaginationInput } from "@/shared/lib/pagination";
 
 export type InquiryReplyItem = {

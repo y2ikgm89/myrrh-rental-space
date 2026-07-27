@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const cacheLifeMock = mock(() => {});
 const cacheTagMock = mock(() => {});
@@ -11,9 +12,9 @@ mock.module("server-only", () => ({}));
 
 // site.ts が LayoutWidth を top-level import するため、generated client 未生成でも
 // このファイル単体で動くよう stub する。
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   LayoutWidth: { LG: "LG", MD: "MD", SM: "SM", XL: "XL", FULL: "FULL" },
-}));
+});
 
 const findUnique = mock<(_args?: unknown) => Promise<unknown>>(() =>
   Promise.resolve(null),

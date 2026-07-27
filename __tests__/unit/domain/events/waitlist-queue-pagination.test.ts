@@ -8,6 +8,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const RegistrationStatus = {
   PENDING: "PENDING",
@@ -19,14 +20,10 @@ const RegistrationStatus = {
 } as const;
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PaymentStatus: { UNPAID: "UNPAID", PAID: "PAID" },
   RegistrationStatus,
-}));
-mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
-  PaymentStatus: { UNPAID: "UNPAID", PAID: "PAID" },
-  RegistrationStatus,
-}));
+});
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
   WAITLIST_ACTIVE_STATUSES: [
     RegistrationStatus.WAITLISTED,

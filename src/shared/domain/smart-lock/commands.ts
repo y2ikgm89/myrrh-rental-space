@@ -1,7 +1,7 @@
 import "server-only";
 
 import { Prisma } from "@generated/prisma/client";
-import type { SmartLockDeviceType } from "@generated/prisma/enums";
+import type { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
