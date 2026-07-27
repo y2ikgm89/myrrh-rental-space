@@ -18,7 +18,7 @@ import {
   updateMetaSettings as updateMetaSettingsCommand,
   updateAnalyticsSettings as updateAnalyticsSettingsCommand,
   updateSearchVerification as updateSearchVerificationCommand,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/site-chrome";
 
 import { basicInfoFormSchema } from "./schemas/form-schemas-brand-contact";
 import { layoutFormSchema } from "./schemas/form-schemas-privacy-appearance";
