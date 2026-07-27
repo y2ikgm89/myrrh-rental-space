@@ -90,7 +90,7 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: () => mockIsTwoWaySyncEnabled(),
   renewWebhookIfNeeded: () => mockRenewWebhookIfNeeded(),
 }));

@@ -65,9 +65,15 @@ const mockCreate = mock<
   ) => Promise<MockCreateResult>
 >(() => Promise.resolve({ success: true, eventId: "gcal-default" }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
   isGoogleCalendarConfigured: mockIsConfigured,
+  getServiceAccountClient: mock(() => Promise.resolve(null)),
+  isTwoWaySyncEnabled: mock(() => Promise.resolve(false)),
+  renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
+}));
+
+mock.module("@/shared/lib/google-calendar", () => ({
   createCalendarEvent: mockCreate,
   // event-outbound.ts / outbound.ts が barrel から import する残りの export は
   // 本テストで未使用だが、モジュール全体差し替えのためテスト汚染防止に無害スタブを置く。
@@ -86,15 +92,12 @@ mock.module("@/shared/lib/google-calendar", () => ({
     Promise.resolve({ success: true, instances: [] }),
   ),
   getCalendarEvent: mock(() => Promise.resolve({ success: false })),
-  getServiceAccountClient: mock(() => Promise.resolve(null)),
   encryptServiceAccountJson: mock(() => ""),
   extractServiceAccountEmail: mock(() => null),
   fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
   setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
   stopWebhookWatch: mock(() => Promise.resolve()),
-  renewWebhookIfNeeded: mock(() => Promise.resolve({ renewed: false })),
   testServiceAccountConnection: mock(() => Promise.resolve({ success: false })),
-  isTwoWaySyncEnabled: mock(() => Promise.resolve(false)),
   isValidCalendarId: mock(() => false),
   formatGoogleApiError: mock((e: unknown) => String(e)),
 }));

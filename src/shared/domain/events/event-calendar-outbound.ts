@@ -22,8 +22,6 @@ import {
   updateCalendarEvent,
   getCalendarEvent,
   addMeetConferenceToCalendarEvent,
-  isGoogleCalendarEnabled,
-  isGoogleCalendarConfigured,
   type CalendarEventParams,
 } from "@/shared/lib/google-calendar";
 import {
@@ -38,6 +36,10 @@ import {
   saveEventGoogleCalendarEventId,
   writeBackMeetingUrl,
 } from "@/shared/domain/events/calendar-sync";
+import {
+  isGoogleCalendarConfigured,
+  isGoogleCalendarEnabled,
+} from "@/shared/domain/settings/google-calendar";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { MEETING_PROVIDER } from "@/shared/lib/validations/enums/prisma-types";
 import { OUTBOUND_EVENT_MARKER } from "@/shared/lib/calendar-sync/loop-prevention";

@@ -14,7 +14,7 @@ export type {
 export { formatGoogleApiError } from "./helpers";
 
 export {
-  getServiceAccountClient,
+  createCalendarClientFromServiceAccountJson,
   encryptServiceAccountJson,
 } from "./service-account";
 
@@ -30,16 +30,6 @@ export {
 
 export { fetchCalendarChanges } from "./sync";
 
-export {
-  setupWebhookWatch,
-  stopWebhookWatch,
-  renewWebhookIfNeeded,
-} from "./webhook";
+export { setupWebhookWatch, stopWebhookWatch } from "./webhook";
 
-export {
-  testServiceAccountConnection,
-  isGoogleCalendarEnabled,
-  isGoogleCalendarConfigured,
-  isTwoWaySyncEnabled,
-  isValidCalendarId,
-} from "./settings";
+export { testServiceAccountConnection, isValidCalendarId } from "./settings";

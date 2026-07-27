@@ -58,7 +58,7 @@ mock.module("@/shared/domain/events/event-calendar-outbound", () => ({
   ) => mockRetryFailedEventCalendarSyncs(...args),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarConfigured: (
     ...args: Parameters<typeof mockIsGoogleCalendarConfigured>
   ) => mockIsGoogleCalendarConfigured(...args),

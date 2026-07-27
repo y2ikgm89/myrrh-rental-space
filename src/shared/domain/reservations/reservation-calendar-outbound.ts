@@ -25,6 +25,10 @@ import {
   markSeriesMasterEventCreated,
 } from "@/shared/domain/reservations/calendar-sync";
 import {
+  isGoogleCalendarConfigured,
+  isGoogleCalendarEnabled,
+} from "@/shared/domain/settings/google-calendar";
+import {
   logError,
   ErrorCategory,
   ErrorSeverity,
@@ -36,8 +40,6 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent,
   fetchEventInstances,
-  isGoogleCalendarEnabled,
-  isGoogleCalendarConfigured,
   type CalendarEventInstance,
   type CalendarEventParams,
   type CalendarEventResult,

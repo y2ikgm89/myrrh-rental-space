@@ -32,7 +32,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { retryFailedSyncs } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { retryFailedEventCalendarSyncs } from "@/shared/domain/events/event-calendar-outbound";
-import { isGoogleCalendarConfigured } from "@/shared/lib/google-calendar";
+import { isGoogleCalendarConfigured } from "@/shared/domain/settings/google-calendar";
 import {
   logError,
   ErrorCategory,

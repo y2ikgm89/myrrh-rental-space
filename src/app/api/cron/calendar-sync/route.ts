@@ -48,7 +48,7 @@ import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calen
 import {
   isTwoWaySyncEnabled,
   renewWebhookIfNeeded,
-} from "@/shared/lib/google-calendar";
+} from "@/shared/domain/settings/google-calendar";
 import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
 import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
 import {

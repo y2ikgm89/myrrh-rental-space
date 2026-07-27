@@ -269,17 +269,25 @@ describe("admin clean-break dead code boundaries", () => {
       expect(commandsImport).not.toContain(integrationCommand);
     }
 
-    const calendarWebhook = read("src/shared/lib/google-calendar/webhook.ts");
-    expect(calendarWebhook).toContain(
+    // webhook persistence orchestration は domain 側。lib webhook は API client のみ。
+    const calendarWebhookDomain = read(
+      "src/shared/domain/settings/google-calendar.ts",
+    );
+    expect(calendarWebhookDomain).toContain(
       "@/shared/domain/settings/integration-commands",
     );
-    const webhookCommandsImport = namedImportBlock(
-      calendarWebhook,
-      "@/shared/domain/settings/commands",
+    expect(calendarWebhookDomain).toContain("saveGoogleCalendarWebhook");
+    const calendarWebhookLib = read(
+      "src/shared/lib/google-calendar/webhook.ts",
     );
-    expect(webhookCommandsImport).not.toContain("saveGoogleCalendarWebhook");
+    expect(calendarWebhookLib).not.toContain(
+      "@/shared/domain/settings/integration-commands",
+    );
     // setup 経路は token+channel を原子 save するため、token-only helper は廃止済み。
     // 回帰で復活させないよう、旧シンボル名の残存も禁止する。
-    expect(calendarWebhook).not.toContain("saveGoogleCalendarWebhookToken");
+    expect(calendarWebhookDomain).not.toContain(
+      "saveGoogleCalendarWebhookToken",
+    );
+    expect(calendarWebhookLib).not.toContain("saveGoogleCalendarWebhookToken");
   });
 });
