@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { consumeCustomerEmailChangeCommand } from "@/shared/domain/customers/commands";
+import { consumeCustomerEmailChangeCommand } from "@/shared/domain/customers/customer-email-change-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   emailVerificationConfirmRateLimiter,

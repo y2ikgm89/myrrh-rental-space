@@ -53,8 +53,6 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: mockUpdateStatus,
   updateCustomerNotes: mockUpdateNotes,
   toggleCustomerActive: mockToggleActive,
-  anonymizeCustomerCommand: mockAnonymizeCustomer,
-  mergeCustomerCommand: mockMerge,
   updateCustomerFromGuestData: mock(async () => {}),
   resetCustomerEmailDeliveryStatusCommand: mock(async () => ({
     previous: "OK",
@@ -62,6 +60,11 @@ mock.module("@/shared/domain/customers/commands", () => ({
   // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
   // このファイル自体は対象外テストでもモック必須(Phase 4)。
   recomputeCustomerStatsCommand: mock(async () => undefined),
+}));
+
+mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
+  anonymizeCustomerCommand: mockAnonymizeCustomer,
+  mergeCustomerCommand: mockMerge,
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({

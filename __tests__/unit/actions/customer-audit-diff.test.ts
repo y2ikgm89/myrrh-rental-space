@@ -127,9 +127,6 @@ mock.module("@/shared/domain/customers/commands", () => ({
   ) => mockUpdateCustomerStatusCommand(...args),
   updateCustomer: (...args: Parameters<typeof mockUpdateCustomerCommand>) =>
     mockUpdateCustomerCommand(...args),
-  anonymizeCustomerCommand: (
-    ...args: Parameters<typeof mockAnonymizeCustomerCommand>
-  ) => mockAnonymizeCustomerCommand(...args),
   createCustomer: (...args: Parameters<typeof mockCreateCustomerCommand>) =>
     mockCreateCustomerCommand(...args),
   updateCustomerNotes: (
@@ -138,6 +135,18 @@ mock.module("@/shared/domain/customers/commands", () => ({
   toggleCustomerActive: (
     ...args: Parameters<typeof mockToggleCustomerActiveCommand>
   ) => mockToggleCustomerActiveCommand(...args),
+  resetCustomerEmailDeliveryStatusCommand: mock(() =>
+    Promise.resolve({ previous: "OK" }),
+  ),
+  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
+  // このファイル自体は対象外テストでもモック必須(Phase 4)。
+  recomputeCustomerStatsCommand: mock(() => Promise.resolve(undefined)),
+}));
+
+mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
+  anonymizeCustomerCommand: (
+    ...args: Parameters<typeof mockAnonymizeCustomerCommand>
+  ) => mockAnonymizeCustomerCommand(...args),
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
       transferredReservations: 0,
@@ -146,12 +155,6 @@ mock.module("@/shared/domain/customers/commands", () => ({
       transferredRegistrations: 0,
     }),
   ),
-  resetCustomerEmailDeliveryStatusCommand: mock(() =>
-    Promise.resolve({ previous: "OK" }),
-  ),
-  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
-  // このファイル自体は対象外テストでもモック必須(Phase 4)。
-  recomputeCustomerStatsCommand: mock(() => Promise.resolve(undefined)),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({

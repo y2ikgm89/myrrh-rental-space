@@ -159,20 +159,24 @@ await installPrismaEnumsMock({
 
 mock.module("@/shared/domain/customers/queries", () => ({
   hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
+  isSuppressedDeliveryStatus: (status: string) =>
+    status === "HARD_BOUNCED" || status === "COMPLAINED",
 }));
 
 import { DomainError } from "@/shared/domain/domain-error";
 import {
-  anonymizeCustomerCommand,
-  consumeCustomerEmailChangeCommand,
   createCustomer,
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
   updateCustomer,
   updateCustomerProfileByUserId,
-  requestCustomerEmailChangeCommand,
 } from "@/shared/domain/customers/commands";
+import {
+  consumeCustomerEmailChangeCommand,
+  requestCustomerEmailChangeCommand,
+} from "@/shared/domain/customers/customer-email-change-commands";
+import { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 // テストデータ
 const CUSTOMER_ID = "550e8400-e29b-41d4-a716-446655440000";
