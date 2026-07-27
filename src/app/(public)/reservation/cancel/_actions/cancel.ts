@@ -22,6 +22,7 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
 
@@ -54,6 +55,7 @@ export async function cancelGuestReservationAction(
     cookieName: CANCEL_TOKEN_COOKIE_NAME,
     turnstileAction: TURNSTILE_ACTIONS.guest_reservation_cancel,
     turnstileToken,
+    validateTurnstile,
     expectedEntityId: expectedReservationId,
     verifyNow: reservationDeadlineNow,
     verifyToken: (token, now) => {

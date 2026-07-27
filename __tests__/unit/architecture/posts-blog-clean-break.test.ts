@@ -41,8 +41,9 @@ describe("posts public URL clean break", () => {
     const slugValidation = readRepoFile(
       "src",
       "shared",
-      "lib",
-      "slug-validation.ts",
+      "domain",
+      "slugs",
+      "validation.ts",
     );
 
     expect(registry).not.toContain("/posts");

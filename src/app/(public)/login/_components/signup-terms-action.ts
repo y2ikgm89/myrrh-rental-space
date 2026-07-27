@@ -5,9 +5,9 @@ import { z } from "zod";
 import {
   checkActionRateLimit,
   createValidationMutationError,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   createMutationError,

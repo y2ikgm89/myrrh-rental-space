@@ -5,6 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { updateGuestReservationByToken } from "@/shared/domain/reservations/customer-commands";
 import {
@@ -28,10 +29,7 @@ import {
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
   editByReservationRateLimiter,

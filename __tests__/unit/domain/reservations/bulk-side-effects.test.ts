@@ -100,9 +100,12 @@ const mockMarkReservationCalendarSyncError = mock<
   (input: { reservationId: string; error: string }) => Promise<void>
 >(() => Promise.resolve());
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
+  markReservationCalendarSyncError: mockMarkReservationCalendarSyncError,
+}));
+
+mock.module("@/shared/domain/reservations/calendar-sync-series", () => ({
   GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
-  markReservationCalendarSyncError: mockMarkReservationCalendarSyncError,
 }));
 
 const mockSendCancelledEmail = mock<

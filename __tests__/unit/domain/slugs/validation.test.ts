@@ -23,7 +23,7 @@ import {
   checkSlugAvailability,
   type ContentType,
   type SlugUnavailableReason,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/validation";
 
 // =============================================================================
 // isReservedPath

@@ -18,7 +18,7 @@
  * - getCustomerByUserId: domain クエリをモック
  * - cancelCustomerReservation / updateCustomerReservation: domain コマンドをモック
  * - getReservationDeadlineSettings: domain 設定クエリをモック
- * - checkActionRateLimit / validateTurnstile: action-helpers をモック
+ * - checkActionRateLimit: action-helpers をモック / validateTurnstile: domain をモック
  * - updateTag: next/cache をモック
  */
 
@@ -66,9 +66,11 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
   // このファイルのテスト対象は使わないが、同一ファイルの submitReservation が
   // import するため、モジュール解決を通すために固定成功スタブを提供する。
   checkBotHeuristics: () => ({ success: true as const }),

@@ -1,10 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -35,6 +32,10 @@ export type VerifyGuestTokenResult =
 export type GuestTokenMemberGuardResult<TMemberContext = void> =
   { ok: true; memberContext: TMemberContext } | { ok: false; error: string };
 
+type GuestTurnstileResult =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
 export interface GuestTokenMutationConfig<TMemberContext = void> {
   /** logError context.operation */
   operation: string;
@@ -43,6 +44,14 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
   cookieName: string;
   turnstileAction: TurnstileAction;
   turnstileToken?: string | undefined;
+  /**
+   * domain `validateTurnstile` を呼び出し側から注入する。
+   * lib→domain 依存を避けるため、本モジュールは Settings を解決しない。
+   */
+  validateTurnstile: (params: {
+    readonly token: string | undefined;
+    readonly expectedAction: TurnstileAction;
+  }) => Promise<GuestTurnstileResult>;
   expectedEntityId: string;
   verifyToken: (token: string, now: Date) => VerifyGuestTokenResult;
   verifyNow: () => Date;
@@ -108,7 +117,7 @@ export async function runGuestTokenMutation<TMemberContext = void>(
     return createMutationError("リクエストが多すぎます");
   }
 
-  const turnstile = await validateTurnstile({
+  const turnstile = await config.validateTurnstile({
     token: config.turnstileToken,
     expectedAction: config.turnstileAction,
   });

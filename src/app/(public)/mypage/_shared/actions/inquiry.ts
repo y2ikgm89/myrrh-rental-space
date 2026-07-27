@@ -2,6 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
@@ -11,10 +12,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/domain/email/lib-dispatch";
 import { resolveInquiryCustomerReplyAdminDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { customerInquiryReplySchema } from "@/shared/lib/validations/inquiry";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {

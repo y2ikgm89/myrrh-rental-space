@@ -4,6 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { requestCustomerEmailChangeCommand } from "@/shared/domain/customers/customer-email-change-commands";
 import { updateCustomerProfileByUserId } from "@/shared/domain/customers/commands";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -16,7 +17,6 @@ import { CACHE_TAGS, getAppUrl, getCacheTag } from "@/shared/lib/constants";
 import {
   checkActionRateLimit,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   emailVerificationByEmailRateLimiter,

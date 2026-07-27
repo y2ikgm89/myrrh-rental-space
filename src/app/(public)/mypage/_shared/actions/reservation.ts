@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import type { SubmissionResult } from "@conform-to/react";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
@@ -36,10 +37,7 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
   getClientIpFromHeaders,
