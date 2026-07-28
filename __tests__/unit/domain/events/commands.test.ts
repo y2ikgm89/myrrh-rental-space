@@ -1212,7 +1212,7 @@ describe("updateEventCommand", () => {
         ],
       });
 
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
       expect(mockEventTicketUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventTicketCreateMany).not.toHaveBeenCalled();
     });
@@ -1343,7 +1343,7 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockEventTicketUpdate).not.toHaveBeenCalled();
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
     });
 
     test("EVENT_STATUS_TRANSITIONS 外の遷移 (CANCELLED → PUBLISHED) は VALIDATION", async () => {

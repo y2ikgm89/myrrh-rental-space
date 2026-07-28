@@ -27,11 +27,36 @@ const mockLocationFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve({ id: "location-1" }));
 
+const mockTxExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>
+>(() => Promise.resolve(undefined));
+
+const mockTxSpaceFindMany = mock<() => Promise<{ id: string }[]>>(() =>
+  Promise.resolve([{ id: "space-1" }]),
+);
+
+const mockTx = {
+  $executeRaw: mockTxExecuteRaw,
+  blockedDate: {
+    create: mockBlockedDateCreate,
+    update: mockBlockedDateUpdate,
+    delete: mockBlockedDateDelete,
+  },
+  space: {
+    findMany: mockTxSpaceFindMany,
+  },
+};
+
+const mockTransaction = mock<
+  (callback: (tx: typeof mockTx) => Promise<unknown>) => Promise<unknown>
+>((callback) => callback(mockTx));
+
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
+    $transaction: mockTransaction,
     blockedDate: {
       findUnique: mockBlockedDateFindUnique,
       create: mockBlockedDateCreate,
@@ -90,6 +115,9 @@ beforeEach(() => {
   mockBlockedDateDelete.mockReset();
   mockSpaceFindUnique.mockReset();
   mockLocationFindUnique.mockReset();
+  mockTxExecuteRaw.mockReset();
+  mockTxSpaceFindMany.mockReset();
+  mockTransaction.mockReset();
 
   mockBlockedDateFindUnique.mockResolvedValue({ id: "blocked-1" });
   mockBlockedDateCreate.mockResolvedValue({ id: "blocked-1" });
@@ -97,6 +125,9 @@ beforeEach(() => {
   mockBlockedDateDelete.mockResolvedValue({ id: "blocked-1" });
   mockSpaceFindUnique.mockResolvedValue({ id: "space-1" });
   mockLocationFindUnique.mockResolvedValue({ id: "location-1" });
+  mockTxExecuteRaw.mockResolvedValue(undefined);
+  mockTxSpaceFindMany.mockResolvedValue([{ id: "space-1" }]);
+  mockTransaction.mockImplementation((callback) => callback(mockTx));
 });
 
 describe("createBlockedDateCommand", () => {

@@ -158,6 +158,15 @@ mock.module("@/shared/lib/stripe", () => ({
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
 }));
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: () => Promise.resolve(),
+}));
+mock.module("next/cache", () => ({
+  updateTag: mock(() => undefined),
+  revalidateTag: mock(() => undefined),
+  cacheTag: mock(() => undefined),
+  cacheLife: mock(() => undefined),
+}));
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
   normalizeError: (e: unknown) =>

@@ -69,6 +69,10 @@ mock.module("next/cache", () => ({
   cacheLife: mock(() => undefined),
 }));
 
+mock.module("next/headers", () => ({
+  headers: mock(() => Promise.resolve(new Headers())),
+}));
+
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCache: mock(() => undefined),
 }));
