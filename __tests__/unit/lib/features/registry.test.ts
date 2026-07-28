@@ -11,7 +11,7 @@ import {
   parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
-import { isPageTemplateDisabled } from "@/shared/lib/features/check";
+import { isPageTemplateDisabled } from "@/shared/domain/features/check";
 import { featureModulesSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 

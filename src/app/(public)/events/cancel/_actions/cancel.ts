@@ -22,7 +22,7 @@ import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import { DomainError } from "@/shared/domain/domain-error";
 import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
-import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
+import { runGuestTokenMutation } from "@/shared/domain/guest-token-actions/run-guest-mutation";
 
 const EVENT_CANCEL_TOKEN_COOKIE_NAME = "event-cancel-token";
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
