@@ -9,13 +9,13 @@ import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
-import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
+import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import {
   formatEventAddress,
   formatEventVenue,
-} from "@/shared/domain/events/venue";
+} from "@/shared/lib/events/venue";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";

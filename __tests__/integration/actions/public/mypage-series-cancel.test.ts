@@ -54,9 +54,11 @@ const mockValidateTurnstile = mock<
   () => Promise<{ success: boolean; error?: string }>
 >(() => Promise.resolve({ success: true }));
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
   checkBotHeuristics: () => ({ success: true as const }),
   checkEmailRateLimit: () => Promise.resolve({ success: true as const }),
 }));
@@ -103,7 +105,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 // を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
 // assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
 // (未 mock だと undefined 化で参照側 TypeError になる)。
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),
@@ -149,7 +151,7 @@ const mockGetCustomerCanCancelSeriesInFull = mock<() => Promise<boolean>>(() =>
 const mockIsFeatureEnabled = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

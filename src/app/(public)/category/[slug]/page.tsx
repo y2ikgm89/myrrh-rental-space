@@ -14,7 +14,7 @@ import {
   getPublishedPostsList,
 } from "@/shared/domain/posts/queries";
 import { buildCategoryPath } from "@/shared/domain/posts/routing";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { TaxonomyArchiveView } from "../../_components/post-list/taxonomy-archive-view";
 

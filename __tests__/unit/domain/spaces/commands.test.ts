@@ -99,7 +99,7 @@ const mockCheckSlugAvailability = mock<
 >(() => Promise.resolve({ available: true }));
 const mockGetSlugErrorMessage = mock<() => string>(() => "スラッグエラー");
 
-mock.module("@/shared/lib/slug-validation", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));

@@ -8,6 +8,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -42,10 +43,13 @@ const mockCheckEmailRateLimit = mock(
   (): Promise<{ success: boolean; error?: string }> =>
     Promise.resolve({ success: true }),
 );
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkEmailRateLimit: mockCheckEmailRateLimit,
-  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
@@ -180,18 +184,12 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 // profile.ts は `sendChangeEmailVerificationEmail` を top-level import する。
-// 真の実装は shared/lib/email/send.ts → shared/domain/customers/queries.ts の
-// `getSuppressedEmailSet` を辿るが、上で customers/queries を getCustomerByUserId
-// のみに mock 上書きしているため、そのままだと send.ts の named import が
-// 「SyntaxError: Export named 'getSuppressedEmailSet' not found」で落ちる。
-// sibling の mypage-profile.test.ts と同じく sender ラッパを直接 mock 化して
-// email pipeline 全体を短絡する (audit テストは email verification 分岐を
-// 触らないため sender の返り値は成功固定でよい)。
-mock.module("@/shared/lib/email/change-email-emails", () => ({
+// lib-dispatch へ完全 stub + override で email pipeline を短絡する。
+installEmailLibDispatchMock({
   sendChangeEmailVerificationEmail: mock(() =>
     Promise.resolve({ ok: true as const, id: "message-1" }),
   ),
-}));
+});
 
 // =============================================================================
 // テスト本体

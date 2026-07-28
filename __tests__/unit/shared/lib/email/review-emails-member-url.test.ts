@@ -33,6 +33,12 @@ mock.module("@/shared/emails/review-reply", () => ({
   ReviewReplyEmail: mockReviewReplyEmail,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
 import type { ReviewReplyEmailData } from "@/shared/lib/email/types";
@@ -60,14 +66,20 @@ beforeEach(() => {
 
 describe("sendReviewReplyEmail() の memberReservationUrl 出し分け", () => {
   test("customerUserId ありなら memberReservationUrl を発行する", async () => {
-    await sendReviewReplyEmail({ ...DATA, customerUserId: "user-1" });
+    await sendReviewReplyEmail(
+      { ...DATA, customerUserId: "user-1" },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReviewReplyEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberReservationUrl).toMatch(MEMBER_URL_PATTERN);
   });
 
   test("customerUserId が null（アカウント削除後含む）なら memberReservationUrl を発行しない", async () => {
-    await sendReviewReplyEmail({ ...DATA, customerUserId: null });
+    await sendReviewReplyEmail(
+      { ...DATA, customerUserId: null },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockReviewReplyEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberReservationUrl).toBeUndefined();

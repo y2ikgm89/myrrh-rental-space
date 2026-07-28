@@ -7,7 +7,7 @@ import { toPlainObject } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/validation";
 import { ensurePageSections } from "@/shared/domain/pages/system-pages-server";
 import {
   getSystemPageDefinition,

@@ -31,7 +31,7 @@ import {
   getFeatureFilterContext,
   isFeatureEnabled,
   isUrlDisabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 
 interface LlmsLink {
   readonly path: string;

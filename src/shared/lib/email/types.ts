@@ -22,6 +22,53 @@ export type IcalOrganizerSettings = {
   readonly email: string;
 };
 
+/** send.ts / domain-verification が Resend API を叩くための transport DTO。 */
+export type EmailTransportContext = {
+  readonly resendApiKey: string | null;
+};
+
+/** From / Reply-To 解決用の delivery DTO（toggle 群は含めない）。 */
+export type EmailDeliveryContext = {
+  readonly senderEmail: string | null;
+  readonly senderName: string | null;
+  readonly replyToEmail: string | null;
+};
+
+/** domain が prefetch して lib `sendEmail` に渡す送信コンテキスト。 */
+export type EmailSendContext = {
+  readonly transport: EmailTransportContext;
+  readonly delivery: EmailDeliveryContext;
+  readonly suppressedEmailHashes: ReadonlySet<string>;
+};
+
+/** お問い合わせ管理者通知の宛先 + toggle（domain が resolve して lib に渡す）。 */
+export type ContactAdminNotificationDelivery = {
+  readonly notificationEmails: readonly string[];
+};
+
+/** お問い合わせ確認メール render 用（domain が resolve して lib に渡す）。 */
+export type ContactConfirmationRenderContext = {
+  readonly privacyPolicyUrl?: string;
+};
+
+/** 予約リマインダ render 用 Settings DTO（domain が fetch して lib に渡す）。 */
+export type ReminderEmailRenderContext = {
+  readonly calendarSettings: CalendarEmailSettings;
+  readonly deadlineSettings: { readonly cancellationDeadlineHours: number };
+  readonly organizer: IcalOrganizerSettings;
+};
+
+/** システム通知メールの宛先（domain が resolve して lib に渡す）。 */
+export type SystemNotificationDelivery = {
+  readonly notificationEmails: readonly string[];
+};
+
+/** 顧客一斉配信の送信先（domain が fetch して lib に渡す）。 */
+export type CustomerBroadcastRecipient = {
+  readonly id: string;
+  readonly email: string;
+};
+
 /** イベント系メールの render 時に必要な Settings DTO（domain が fetch して lib に渡す）。 */
 export type EventEmailRenderContext = {
   readonly calendarSettings: CalendarEmailSettings;

@@ -16,8 +16,8 @@ import {
 } from "@/public/lib/seo/metadata-factory";
 import { getOrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
-import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
+import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";

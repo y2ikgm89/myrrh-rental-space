@@ -13,6 +13,8 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -20,6 +22,9 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mock(() => Promise.resolve({ success: true })),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
@@ -28,7 +33,6 @@ mock.module("@/shared/lib/action-helpers", () => ({
     ),
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 
 const MOCK_ADMIN_USER = { id: "admin-user-001", email: "admin@example.com" };
@@ -154,30 +158,22 @@ const mockGetEventCancelledNotificationPayload = mock(() =>
   Promise.resolve(null),
 );
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: mockGetEventEmailRenderContext,
-}));
+});
 
 mock.module("@/shared/domain/events/email-queries", () => ({
   getEventCancelledNotificationPayload:
     mockGetEventCancelledNotificationPayload,
 }));
 
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: mock(() =>
-    Promise.resolve({ success: true }),
-  ),
-  sendEventRegistrationCancelled: mock(() =>
-    Promise.resolve({ success: true }),
-  ),
-  sendEventAdminNotification: mock(() => Promise.resolve({ success: true })),
+installEmailLibDispatchMock({
+  sendEventRegistrationConfirmation: mock(() => Promise.resolve({ ok: true })),
+  sendEventRegistrationCancelled: mock(() => Promise.resolve({ ok: true })),
+  sendEventAdminNotification: mock(() => Promise.resolve({ ok: true })),
   sendEventCancelledToAllParticipants: mockSendEventCancelledToAllParticipants,
-  sendEventUpdatedToAllParticipants: mock(() =>
-    Promise.resolve({ success: true }),
-  ),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+  sendEventUpdatedToAllParticipants: mock(() => Promise.resolve({ ok: true })),
+});
 
 // fireAndForget は同期的に呼び出すだけのスタブ
 const mockFireAndForget = mock<(p: Promise<unknown>) => void>(() => {

@@ -14,16 +14,18 @@ import {
   GCAL_DELETE_FAILED_PREFIX,
   getCalendarSyncRuntimeState,
   getFailedCalendarSyncReservations,
+  markReservationCalendarSyncError,
+  markReservationCalendarSyncSuccess,
+  markReservationCalendarSyncUpdated,
+} from "@/shared/domain/reservations/calendar-sync";
+import {
   getFailedCalendarSyncSeriesIds,
   getSeriesForCalendarSync,
   getSeriesGcalMasterEventId,
   getSeriesInstanceStartTimes,
-  markReservationCalendarSyncError,
-  markReservationCalendarSyncSuccess,
-  markReservationCalendarSyncUpdated,
   markSeriesInstanceCalendarSyncSuccess,
   markSeriesMasterEventCreated,
-} from "@/shared/domain/reservations/calendar-sync";
+} from "@/shared/domain/reservations/calendar-sync-series";
 import {
   isGoogleCalendarConfigured,
   isGoogleCalendarEnabled,
@@ -40,9 +42,11 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent,
   fetchEventInstances,
-  type CalendarEventInstance,
-  type CalendarEventParams,
-  type CalendarEventResult,
+} from "@/shared/domain/settings/google-calendar-api";
+import type {
+  CalendarEventInstance,
+  CalendarEventParams,
+  CalendarEventResult,
 } from "@/shared/lib/google-calendar";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {

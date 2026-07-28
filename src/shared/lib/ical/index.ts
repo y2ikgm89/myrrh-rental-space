@@ -23,7 +23,7 @@ import ical, {
   type ICalCalendar,
 } from "ical-generator";
 import { formatJstYmd, formatTimeShort } from "@/shared/lib/date-format";
-import { formatEventVenueDisplay } from "@/shared/domain/events/venue";
+import { formatEventVenueDisplay } from "@/shared/lib/events/venue";
 import {
   buildEventRegistrationUid,
   buildReservationSeriesUid,

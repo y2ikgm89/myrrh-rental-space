@@ -6,6 +6,11 @@
  * executeAdminMutationResult は薄いモックに差し替え、RBAC/cache invalidationは検証しない。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
+
+installEmailLibDispatchMock();
+installEmailRenderContextMock();
 
 mock.module("server-only", () => ({}));
 
@@ -53,13 +58,6 @@ mock.module("@/shared/domain/events/registration-commands", () => ({
   updateEventRegistrationCommand: (
     ...args: Parameters<typeof mockUpdateEventRegistrationCommand>
   ) => mockUpdateEventRegistrationCommand(...args),
-}));
-
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventAdminNotification: mock(async () => undefined),
-  sendEventRegistrationConfirmation: mock(async () => undefined),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/events/registration-queries", () => ({

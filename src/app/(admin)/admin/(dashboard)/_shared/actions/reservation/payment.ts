@@ -21,7 +21,7 @@ import {
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import { sendReservationRefundEmail } from "@/shared/lib/email/reservation-emails";
+import { sendReservationRefundEmail } from "@/shared/domain/email/lib-dispatch";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,

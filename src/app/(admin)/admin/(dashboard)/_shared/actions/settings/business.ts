@@ -18,7 +18,7 @@ import {
   updateBusinessHoursSettings as updateBusinessHoursSettingsCommand,
   updateBusinessInfo as updateBusinessInfoCommand,
   updateContactInfo as updateContactInfoCommand,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/organization";
 
 import {
   businessHoursSettingsSchema,

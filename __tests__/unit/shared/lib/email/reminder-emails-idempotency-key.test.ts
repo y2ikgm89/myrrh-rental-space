@@ -81,6 +81,10 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
+import {
+  EMAIL_SEND_CONTEXT,
+  REMINDER_RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
@@ -110,14 +114,22 @@ beforeEach(() => {
 
 describe("sendReservationReminderEmail() の idempotencyKey は呼び出し毎に fresh になる", () => {
   test("同一 data を連続で 2 回送っても異なるキー（cron re-pick で 409 silent drop を回避）", async () => {
-    await sendReservationReminderEmail({ ...REMINDER_BASE });
+    await sendReservationReminderEmail(
+      { ...REMINDER_BASE },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
     // Date.now() の bucket が確実に切り替わるよう少し待つ
     // （bun test 環境の setTimeout は fake ではないので実時間で待つ）
     await new Promise((resolve) => setTimeout(resolve, 2));
 
-    await sendReservationReminderEmail({ ...REMINDER_BASE });
+    await sendReservationReminderEmail(
+      { ...REMINDER_BASE },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -126,7 +138,11 @@ describe("sendReservationReminderEmail() の idempotencyKey は呼び出し毎�
   });
 
   test("キーは `reservation-reminder/<reservationId>/<timestamp>` 形式で timestamp は数字", async () => {
-    await sendReservationReminderEmail({ ...REMINDER_BASE });
+    await sendReservationReminderEmail(
+      { ...REMINDER_BASE },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
     const key = lastKey();
 
     expect(key).toBeDefined();

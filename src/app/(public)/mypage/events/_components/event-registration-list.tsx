@@ -27,7 +27,7 @@ import {
   RegistrationStatus,
   type EventFormatValue,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
+import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";

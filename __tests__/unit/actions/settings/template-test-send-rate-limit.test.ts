@@ -17,6 +17,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
+
+installEmailRenderContextMock();
 
 type AdminUserLike = {
   id: string;
@@ -88,6 +91,10 @@ mock.module("@/shared/lib/email/domain-verification", () => ({
 mock.module("@/shared/lib/email/client", () => ({
   resolveSenderEmailAddress: (input: string | null) =>
     input ?? "noreply@example.com",
+  resolveTransportApiKey: (key: string | null | undefined) =>
+    key ?? "re_test_key",
+  isEmailTransportEnabled: () => true,
+  getFromAddress: () => "Test <noreply@example.com>",
 }));
 
 mock.module("@/shared/emails/_shared/footer-data", () => ({

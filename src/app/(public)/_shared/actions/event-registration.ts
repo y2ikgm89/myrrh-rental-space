@@ -10,7 +10,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   eventRegistrationByEmailRateLimiter,
@@ -29,17 +28,18 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { registerWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {
   sendEventRegistrationConfirmation,
   sendEventAdminNotification,
-} from "@/shared/lib/email/event-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import {
   getEventEmailRenderContext,
   resolveEventAdminNotificationDelivery,
 } from "@/shared/domain/settings/queries/email-render-context";
-import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
+import { sendEventWaitlistRegistered } from "@/shared/domain/email/lib-dispatch";
 import {
   computeWaitlistPositionForRegistration,
   getWaitlistEmailRegistration,
@@ -48,7 +48,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { buildEventRegistrationPaymentCheckoutUrl } from "@/shared/lib/tokens/event-registration-payment-token";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
@@ -64,7 +64,7 @@ import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/regi
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
@@ -76,7 +76,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   checkPublicSiteWritable,
   getPublicMaintenanceBlockMutation,
-} from "@/shared/lib/maintenance-guard";
+} from "@/shared/domain/settings/maintenance-guard";
 
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 

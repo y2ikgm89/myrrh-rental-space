@@ -9,7 +9,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   getClientIpFromHeaders,
@@ -19,11 +18,15 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
-import { resolveReservationAdminNotificationDelivery } from "@/shared/domain/settings/queries/email-render-context";
+import {
+  resolveReservationAdminNotificationDelivery,
+  resolveEmailSendContext,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { syncReservationToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -39,7 +42,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
@@ -56,7 +59,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
 
@@ -176,10 +179,17 @@ export async function submitReservation(
         const payload = omitUndefined(result.payload);
         fireAndForget(
           (async () => {
-            const delivery =
-              await resolveReservationAdminNotificationDelivery("new");
-            if (!delivery.enabled) return;
-            await sendReservationAdminNotification(payload, "new", delivery);
+            const [delivery, sendContext] = await Promise.all([
+              resolveReservationAdminNotificationDelivery("new"),
+              resolveEmailSendContext(),
+            ]);
+            if (!delivery.enabled || !sendContext) return;
+            await sendReservationAdminNotification(
+              payload,
+              "new",
+              delivery,
+              sendContext,
+            );
           })(),
           {
             operation: "sendReservationAdminNotification",

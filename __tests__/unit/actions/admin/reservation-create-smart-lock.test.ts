@@ -96,7 +96,7 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: mock(async () => {}),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   assertAdminFeatureCreateAllowed: mock(async () => {}),
 }));
 
@@ -113,7 +113,7 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
   sendReservationStatusChangedEmail: mock(async () => {}),

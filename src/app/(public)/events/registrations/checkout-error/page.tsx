@@ -6,7 +6,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getBusinessInfo } from "@/public/data/business";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 
 export const metadata: Metadata = {
   title: "イベント申込のお支払いについて",

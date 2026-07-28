@@ -15,7 +15,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { sendReceiptIssuedEmail } from "@/shared/lib/email/receipt-emails";
+import { sendReceiptIssuedEmail } from "@/shared/domain/email/lib-dispatch";
 import type { EmailResult } from "@/shared/lib/email/types";
 
 export type NotifyReceiptIssuedResult =

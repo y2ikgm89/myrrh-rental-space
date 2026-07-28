@@ -81,7 +81,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/slug-validation", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));

@@ -76,7 +76,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/email/welcome-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendWelcomeEmail: mockSendWelcomeEmail,
 }));
 

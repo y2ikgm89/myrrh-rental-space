@@ -9,7 +9,8 @@
  */
 import "server-only";
 
-import { getResendClient } from "./client";
+import type { EmailTransportContext } from "./types";
+import { getResendClientForApiKey } from "./client";
 
 /** Resend で送信可能とみなすドメインステータス（DKIM 検証済みで送信できる状態）。 */
 const SENDABLE_STATUSES: ReadonlySet<string> = new Set([
@@ -28,21 +29,21 @@ export type SenderDomainCheck =
 /**
  * 送信元アドレスのドメインが Resend で送信可能かを確認する。
  *
- * - 送信可能ドメインに含まれれば `{ ok: true }`。
- * - 未検証ドメインは `{ ok: false, reason: "domain_unverified" }`。
- * - Resend 未設定 / API エラー / 例外時は fail-closed（保存をブロック）。
+ * transport は呼び出し側（domain / admin action）が prefetch する。
  */
 export async function validateSenderDomain(
   senderEmail: string,
+  transport: EmailTransportContext,
 ): Promise<SenderDomainCheck> {
   const domain = senderEmail.split("@")[1]?.toLowerCase();
-  // 形式は呼び出し側の Zod で検証済み。ドメインが取れなければ判定不能なので通す。
   if (!domain) return { ok: true };
 
-  const resend = await getResendClient();
-  if (!resend) {
+  const apiKey = transport.resendApiKey;
+  if (!apiKey) {
     return { ok: false, verifiedDomains: [], reason: "resend_unavailable" };
   }
+
+  const resend = getResendClientForApiKey(apiKey);
 
   try {
     const { data, error } = await resend.domains.list();

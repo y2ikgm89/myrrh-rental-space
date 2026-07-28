@@ -1,11 +1,5 @@
 /**
- * お問い合わせ確認メールの memberInquiryUrl 出し分けテスト
- *
- * sendContactConfirmationEmail() は ContactEmailData.customerId（送信時点で
- * ログインしていた場合の Customer.id、submitInquiry action がセッションから
- * 解決した値のみを渡す）があるときだけ「マイページで確認する」リンクを含める。
- * resolveOrCreateGuestInquiryCustomer が事後に発行するゲスト shell の
- * customerId とは異なる値であることに注意（ここでは常にログイン起因のみ）。
+ * お問い合わせ確認メールの memberInquiryUrl / privacyPolicyUrl 出し分けテスト
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -13,15 +7,6 @@ const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
 mock.module("@/shared/lib/email/send", () => ({ sendEmail: mockSendEmail }));
-
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mock(() =>
-    Promise.resolve({ notifyNewInquiry: true }),
-  ),
-  getNotificationEmailAddresses: mock(() =>
-    Promise.resolve(["admin@example.com"]),
-  ),
-}));
 
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
@@ -36,15 +21,6 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-const mockGetPublishedTermsByType = mock<
-  () => Promise<{ slug: string; title: string } | null>
->(() =>
-  Promise.resolve({ slug: "privacy-policy", title: "プライバシーポリシー" }),
-);
-mock.module("@/shared/domain/terms/queries", () => ({
-  getPublishedTermsByType: mockGetPublishedTermsByType,
-}));
-
 type MemberUrlProps = {
   memberInquiryUrl?: string;
   privacyPolicyUrl?: string;
@@ -54,6 +30,7 @@ mock.module("@/shared/emails/contact-confirmation", () => ({
   ContactConfirmationEmail: mockContactConfirmationEmail,
 }));
 
+import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendContactConfirmationEmail } from "@/shared/lib/email/contact-emails";
 import type { ContactEmailData } from "@/shared/lib/email/types";
@@ -68,36 +45,39 @@ const DATA: ContactEmailData = {
 };
 
 const MEMBER_URL_PATTERN = /\/mypage\/inquiries\/inquiry-abcdef123456$/;
-const PRIVACY_POLICY_URL_PATTERN = /\/terms\/privacy-policy$/;
+const PRIVACY_POLICY_URL = "https://example.com/terms/privacy-policy";
 
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockContactConfirmationEmail.mockClear();
-  mockGetPublishedTermsByType.mockReset();
-  mockGetPublishedTermsByType.mockResolvedValue({
-    slug: "privacy-policy",
-    title: "プライバシーポリシー",
-  });
 });
 
 describe("sendContactConfirmationEmail() の memberInquiryUrl 出し分け", () => {
   test("ログイン中の送信（customerId あり）は memberInquiryUrl を発行する", async () => {
-    await sendContactConfirmationEmail({ ...DATA, customerId: "customer-1" });
+    await sendContactConfirmationEmail(
+      { ...DATA, customerId: "customer-1" },
+      {},
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toMatch(MEMBER_URL_PATTERN);
   });
 
   test("ゲスト送信（customerId なし）は memberInquiryUrl を発行しない", async () => {
-    await sendContactConfirmationEmail({ ...DATA, customerId: null });
+    await sendContactConfirmationEmail(
+      { ...DATA, customerId: null },
+      {},
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toBeUndefined();
   });
 
   test("customerId 未指定でも memberInquiryUrl を発行しない", async () => {
-    await sendContactConfirmationEmail(DATA);
+    await sendContactConfirmationEmail(DATA, {}, EMAIL_SEND_CONTEXT);
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toBeUndefined();
@@ -105,17 +85,19 @@ describe("sendContactConfirmationEmail() の memberInquiryUrl 出し分け", () 
 });
 
 describe("sendContactConfirmationEmail() の privacyPolicyUrl 出し分け", () => {
-  test("プライバシーポリシー文書が公開中なら privacyPolicyUrl を発行する", async () => {
-    await sendContactConfirmationEmail(DATA);
+  test("privacyPolicyUrl が renderContext にあれば本文に含める", async () => {
+    await sendContactConfirmationEmail(
+      DATA,
+      { privacyPolicyUrl: PRIVACY_POLICY_URL },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.privacyPolicyUrl).toMatch(PRIVACY_POLICY_URL_PATTERN);
+    expect(props?.privacyPolicyUrl).toBe(PRIVACY_POLICY_URL);
   });
 
-  test("プライバシーポリシー文書が無ければ privacyPolicyUrl を発行しない", async () => {
-    mockGetPublishedTermsByType.mockResolvedValueOnce(null);
-
-    await sendContactConfirmationEmail(DATA);
+  test("privacyPolicyUrl が無ければ本文に含めない", async () => {
+    await sendContactConfirmationEmail(DATA, {}, EMAIL_SEND_CONTEXT);
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.privacyPolicyUrl).toBeUndefined();

@@ -3,6 +3,8 @@ import {
   expectErrorResult,
   expectReceivedResult,
 } from "../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -253,22 +255,20 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
+installEmailRenderContextMock();
+
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+}));
+
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
+  sendEventRegistrationConfirmation: (data: unknown, renderContext: unknown) =>
+    mockSendEventRegistrationConfirmation(data, renderContext),
+});
 
 // STRIPE-DEDUP-A: route.ts が signature verification 直後に chokepoint を呼ぶため
 // stub。default では "claimed" を返して既存テストの流れを維持する。
@@ -320,18 +320,11 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
     mockGetWaitlistConfirmationEmailDetails(id),
 }));
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: (
     ...args: Parameters<typeof mockGetEventEmailRenderContext>
   ) => mockGetEventEmailRenderContext(...args),
-}));
-
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: (data: unknown, renderContext: unknown) =>
-    mockSendEventRegistrationConfirmation(data, renderContext),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+});
 
 // receipt-full-wiring gap PR#2 で webhook が issueReceiptForEventRegistration を await
 // 呼出するようになったため、実 DB を叩かないよう境界差替 (default で成功を返す stub)。

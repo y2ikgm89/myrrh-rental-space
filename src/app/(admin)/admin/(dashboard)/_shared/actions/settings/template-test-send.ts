@@ -28,6 +28,7 @@ import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
+import { resolveEmailTransportContext } from "@/shared/domain/settings/queries/email-render-context";
 import { type MutationResult } from "@/shared/lib/mutation-result";
 import { templateTestSendRateLimiter } from "@/shared/lib/rate-limit";
 
@@ -106,7 +107,8 @@ export async function sendTemplateTestAction(
           "VALIDATION",
         );
       }
-      const check = await validateSenderDomain(effectiveSenderEmail);
+      const transport = await resolveEmailTransportContext();
+      const check = await validateSenderDomain(effectiveSenderEmail, transport);
       if (!check.ok) {
         const list =
           check.verifiedDomains.length > 0

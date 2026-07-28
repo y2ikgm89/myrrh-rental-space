@@ -23,7 +23,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   sendInquiryReplyEmail,
   sendInquiryStatusNotificationToAll,
-} from "@/shared/lib/email/inquiry-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { getInquiriesForStatusNotification } from "@/shared/domain/inquiries/email-queries";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import {

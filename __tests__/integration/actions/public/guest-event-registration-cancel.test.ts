@@ -26,12 +26,15 @@ const mockValidateTurnstile = mock(
   (): Promise<{ success: boolean; error?: string }> =>
     Promise.resolve({ success: true }),
 );
-mock.module("@/shared/lib/action-helpers", () => ({
-  checkActionRateLimit: mockCheckActionRateLimit,
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
+mock.module("@/shared/lib/action-helpers", () => ({
+  checkActionRateLimit: mockCheckActionRateLimit,
+}));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
 

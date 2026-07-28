@@ -5,7 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import {
   apiRateLimiter,
@@ -40,7 +40,7 @@ import {
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {

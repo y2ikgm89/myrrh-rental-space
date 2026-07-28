@@ -17,6 +17,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -56,10 +57,12 @@ const mockCheckEmailRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkEmailRateLimit: mockCheckEmailRateLimit,
-  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
@@ -112,9 +115,9 @@ const mockSendChangeEmailVerificationEmail = mock(() =>
   Promise.resolve({ ok: true as const, id: "message-1" }),
 );
 
-mock.module("@/shared/lib/email/change-email-emails", () => ({
+installEmailLibDispatchMock({
   sendChangeEmailVerificationEmail: mockSendChangeEmailVerificationEmail,
-}));
+});
 
 // URL 組み立て用に getAppUrl を明示 mock (constants を丸ごと mock しない)。
 mock.module("@/shared/lib/constants", () => ({

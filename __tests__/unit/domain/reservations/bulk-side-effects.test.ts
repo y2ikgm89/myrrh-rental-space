@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -100,10 +101,15 @@ const mockMarkReservationCalendarSyncError = mock<
   (input: { reservationId: string; error: string }) => Promise<void>
 >(() => Promise.resolve());
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
-  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
-  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
   markReservationCalendarSyncError: mockMarkReservationCalendarSyncError,
 }));
+
+mock.module("@/shared/domain/reservations/calendar-sync-series", () => ({
+  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
+  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
+}));
+
+installEmailRenderContextMock();
 
 const mockSendCancelledEmail = mock<
   (data: Record<string, unknown>) => Promise<unknown>
@@ -117,7 +123,7 @@ const mockSendBulkReservationCancelledEmail = mock<
 const mockSendBulkAdminNotification = mock<
   (data: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
   sendBulkReservationCancelledEmail: mockSendBulkReservationCancelledEmail,

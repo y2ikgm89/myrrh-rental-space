@@ -22,9 +22,11 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
   createValidationMutationError: (error: unknown) => ({
     ok: false as const,
     error: String(error),
@@ -48,7 +50,7 @@ const TERMS_ID_A = "11111111-1111-4111-8111-111111111111";
 const mockAssertAllRequiredTermsAgreed = mock(() =>
   Promise.resolve({ matchedTermsIds: [TERMS_ID_A] }),
 );
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mockAssertAllRequiredTermsAgreed,
   assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));
@@ -67,7 +69,7 @@ const mockGetPublicMaintenanceBlockMutation = mock(
   (): Promise<MutationError | null> => Promise.resolve(null),
 );
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   getPublicMaintenanceBlockMutation: mockGetPublicMaintenanceBlockMutation,
 }));
 

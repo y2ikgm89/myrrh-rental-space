@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,8 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: () => Promise.resolve(),
 }));
 
+installEmailRenderContextMock();
+
 const mockCreateAuditLog = mock<
   (input: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
@@ -130,18 +133,9 @@ const mockSendCancelledEmail = mock<
 const mockSendAdminNotification = mock<
   (data: Record<string, unknown>, action: string) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
 }));
 
 const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
@@ -421,6 +415,10 @@ describe("applyCancellationSideEffects", () => {
     expect(mockSendAdminNotification).toHaveBeenCalledWith(
       expect.any(Object),
       "cancel",
+      expect.objectContaining({
+        enabled: true,
+        notificationEmails: ["admin@example.com"],
+      }),
     );
     // payload に customer 情報 + 整形済 location（base + detail）が含まれる
     const payload = mockSendCancelledEmail.mock.calls[0]?.[0];

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 
 export interface FeedAlternates {
   readonly types: {

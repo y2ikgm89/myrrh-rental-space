@@ -1061,23 +1061,6 @@ describe("architecture boundaries", () => {
         "admin-resource-access.ts",
         // Better Auth deleteUser.beforeDelete → Customer anonymize adapter
         "customer-auth.ts",
-        "email/client.ts",
-        "email/contact-emails.ts",
-        "email/customer-emails.ts",
-        "email/reminder-emails.ts",
-        "email/send.ts",
-        "email/system-emails.ts",
-        "features/check.ts",
-        "google-calendar/events.ts",
-        "google-calendar/sync.ts",
-        "ical/index.ts",
-        "lexical/resolve-internal-link-cards.ts",
-        "lexical/resolve-space-card-embeds.ts",
-        "maintenance-guard.ts",
-        "reservation/time-slots.ts",
-        "slug-validation.ts",
-        "terms-consent-gate.ts",
-        "turnstile.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",

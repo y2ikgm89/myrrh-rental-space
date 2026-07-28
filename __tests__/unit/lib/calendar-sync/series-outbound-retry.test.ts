@@ -21,9 +21,12 @@ mock.module("@/shared/domain/settings/google-calendar", () => ({
   isGoogleCalendarConfigured: mockIsConfigured,
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar-api", () => ({
   patchCalendarEvent: mockPatchCalendarEvent,
   deleteCalendarEvent: mockDeleteCalendarEvent,
+  resolveGoogleCalendarWriteContext: mock(() =>
+    Promise.resolve({ ok: false, error: "mocked" }),
+  ),
 }));
 
 type SeriesForCalendarSync = {
@@ -56,6 +59,10 @@ const mockMarkReservationCalendarSyncUpdated = mock<
 >(() => Promise.resolve());
 
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
+  markReservationCalendarSyncUpdated: mockMarkReservationCalendarSyncUpdated,
+}));
+
+mock.module("@/shared/domain/reservations/calendar-sync-series", () => ({
   GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
   getSeriesForCalendarSync: mockGetSeriesForCalendarSync,
@@ -64,7 +71,6 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
     mockGetSeriesIdsWithMasterOperationFailure,
   getSeriesMasterOperationFailureInstances:
     mockGetSeriesMasterOperationFailureInstances,
-  markReservationCalendarSyncUpdated: mockMarkReservationCalendarSyncUpdated,
 }));
 
 mock.module("@/shared/domain/reservations/series-rrule", () => ({

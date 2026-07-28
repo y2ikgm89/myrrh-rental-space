@@ -36,12 +36,14 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
-  checkActionRateLimit: mockCheckActionRateLimit,
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
+mock.module("@/shared/lib/action-helpers", () => ({
+  checkActionRateLimit: mockCheckActionRateLimit,
+}));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
@@ -100,7 +102,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 
 const mockAssertLoginSignupReagreed = mock(() => Promise.resolve(undefined));
 
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),

@@ -1,72 +1,20 @@
 /**
- * Turnstile 検証テスト
+ * Turnstile 検証テスト（純粋 lib: context 注入）
  *
  * 公式推奨シグネチャ（remoteip / idempotency_key / expectedAction）に準拠
  */
 
 import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import type { TurnstileVerifyContext } from "@/shared/lib/turnstile";
 
-// モック用prismaクライアント（mock.module より前に定義してTDZを回避）
-const mockPrismaClient = {
-  settingsTurnstile: {
-    findUnique: mock<() => Promise<Record<string, string | null> | null>>(() =>
-      Promise.resolve(null),
-    ),
-  },
-};
 const mockServerEnv: Record<string, string | undefined> = {
   NODE_ENV: "test",
   TURNSTILE_SECRET_KEY: undefined,
 };
-const mockClientEnv: Record<string, string | undefined> = {
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: undefined,
-};
-
-mock.module("@/shared/db/prisma", () => ({
-  prisma: mockPrismaClient,
-}));
 
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
-}));
-
-mock.module("@/shared/lib/env/client", () => ({
-  clientEnv: mockClientEnv,
-}));
-
-mock.module("@/shared/lib/crypto", () => ({
-  encrypt: (value: string) => `v1:generic:iv:${value}:tag`,
-  decrypt: (value: string) => value,
-  isEncrypted: (_value: string) => true,
-  safeEncrypt: (value: string) => `v1:generic:iv:${value}:tag`,
-  safeDecrypt: (value: string) => value,
-  safeDecryptToString: (value: string | null | undefined) => value ?? null,
-}));
-
-// getTurnstileConfig が 'use cache' (Next.js 16 公式 cache layer) 化されたため、
-// prisma の mockResolvedValueOnce は cache hit で素通しされ test 間切替が効かない。
-// 公式 Bun re-export pattern で domain query 自体を mock し、cache 層ごと bypass。
-const actualApiKeyQueries =
-  await import("@/shared/domain/settings/api-key-queries");
-const mockGetTurnstileConfig = mock<
-  () => Promise<{
-    siteKey: string | null;
-    secretKeyMasked: string | null;
-    lastTestedAt: Date | null;
-    connectionStatus: string | null;
-  }>
->(() =>
-  Promise.resolve({
-    siteKey: null,
-    secretKeyMasked: null,
-    lastTestedAt: null,
-    connectionStatus: null,
-  }),
-);
-mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  ...actualApiKeyQueries,
-  getTurnstileConfig: mockGetTurnstileConfig,
 }));
 
 const originalFetch = globalThis.fetch;
@@ -80,10 +28,8 @@ const mockFetch = Object.assign(mock(fetchImpl), {
 });
 beforeEach(() => {
   globalThis.fetch = mockFetch;
-  mockPrismaClient.settingsTurnstile.findUnique.mockClear();
   mockServerEnv["NODE_ENV"] = "test";
   mockServerEnv["TURNSTILE_SECRET_KEY"] = undefined;
-  mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = undefined;
 });
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -95,40 +41,34 @@ const DEFAULT_PARAMS = {
   expectedAction: TURNSTILE_ACTIONS.inquiry,
 } as const;
 
+function ctx(
+  partial: Partial<TurnstileVerifyContext> = {},
+): TurnstileVerifyContext {
+  return {
+    secretKey: partial.secretKey ?? null,
+    enabled: partial.enabled ?? Boolean(partial.secretKey),
+  };
+}
+
 describe("turnstile", () => {
   describe("verifyTurnstileToken", () => {
     test("シークレットキーが未設定の場合は dev で success: true を返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce(null);
-
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
-
-      expect(result.success).toBe(true);
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    test("シークレットキーが空の場合は dev で success: true を返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: null,
-      });
-
-      const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(ctx(), DEFAULT_PARAMS);
 
       expect(result.success).toBe(true);
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
     test("トークンが空の場合は missing-input-response エラーを返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken({
-        ...DEFAULT_PARAMS,
-        token: "",
-      });
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key" }),
+        {
+          ...DEFAULT_PARAMS,
+          token: "",
+        },
+      );
 
       expect(result).toEqual({
         success: false,
@@ -136,11 +76,7 @@ describe("turnstile", () => {
       });
     });
 
-    test("DB secret が未設定でも env TURNSTILE_SECRET_KEY で siteverify を実行する", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: null,
-      });
-      mockServerEnv["TURNSTILE_SECRET_KEY"] = "env-secret-key";
+    test("注入 secret で siteverify を実行する", async () => {
       mockFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({ success: true, action: TURNSTILE_ACTIONS.inquiry }),
@@ -149,7 +85,10 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "env-secret-key", enabled: true }),
+        DEFAULT_PARAMS,
+      );
 
       expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -161,10 +100,6 @@ describe("turnstile", () => {
     });
 
     test("検証成功時は success: true + action/hostname を返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -180,10 +115,13 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken({
-        ...DEFAULT_PARAMS,
-        remoteip: "203.0.113.1",
-      });
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        {
+          ...DEFAULT_PARAMS,
+          remoteip: "203.0.113.1",
+        },
+      );
 
       expect(result).toMatchObject({
         success: true,
@@ -200,10 +138,6 @@ describe("turnstile", () => {
     });
 
     test("action が一致しない場合は action-mismatch エラーを返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -215,7 +149,10 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        DEFAULT_PARAMS,
+      );
 
       expect(result).toEqual({
         success: false,
@@ -224,10 +161,6 @@ describe("turnstile", () => {
     });
 
     test("検証失敗時は error-codes をそのまま返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -242,10 +175,13 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken({
-        ...DEFAULT_PARAMS,
-        token: "invalid-token",
-      });
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        {
+          ...DEFAULT_PARAMS,
+          token: "invalid-token",
+        },
+      );
 
       expect(result).toEqual({
         success: false,
@@ -254,25 +190,20 @@ describe("turnstile", () => {
     });
 
     test("API エラー時は http-<status> を errorCodes に含める", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response("Internal Server Error", { status: 500 }),
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        DEFAULT_PARAMS,
+      );
 
       expect(result).toEqual({ success: false, errorCodes: ["http-500"] });
     });
 
     test("レスポンス形式が不正な場合は invalid-response を返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
@@ -281,7 +212,10 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        DEFAULT_PARAMS,
+      );
 
       expect(result).toEqual({
         success: false,
@@ -290,23 +224,18 @@ describe("turnstile", () => {
     });
 
     test("ネットワークエラー時は network-error を返す", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+      const result = await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        DEFAULT_PARAMS,
+      );
 
       expect(result).toEqual({ success: false, errorCodes: ["network-error"] });
     });
 
     test("remoteip と idempotency_key が siteverify body に含まれる", async () => {
-      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
-        turnstileSecretKey: "test-secret-key",
-      });
-
       mockFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({ success: true, action: TURNSTILE_ACTIONS.inquiry }),
@@ -315,11 +244,14 @@ describe("turnstile", () => {
       );
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
-      await verifyTurnstileToken({
-        ...DEFAULT_PARAMS,
-        remoteip: "203.0.113.1",
-        idempotencyKey: "test-idempotency-key",
-      });
+      await verifyTurnstileToken(
+        ctx({ secretKey: "test-secret-key", enabled: true }),
+        {
+          ...DEFAULT_PARAMS,
+          remoteip: "203.0.113.1",
+          idempotencyKey: "test-idempotency-key",
+        },
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -338,79 +270,16 @@ describe("turnstile", () => {
   });
 
   describe("isTurnstileEnabled", () => {
-    // getTurnstileConfig が 'use cache' 化されたため、isTurnstileEnabled は cache layer 経由で
-    // config を取得する。prisma mock では cache hit を制御できないため domain query 自体を
-    // mockGetTurnstileConfig 経由で切替える (前章の `mock.module` 参照)。
-    test("両方のキーが設定されている場合はtrueを返す", async () => {
-      mockGetTurnstileConfig.mockResolvedValueOnce({
-        siteKey: "site-key",
-        secretKeyMasked: "***",
-        lastTestedAt: null,
-        connectionStatus: null,
-      });
-
+    test("enabled: true の context では true を返す", async () => {
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
-      const result = await isTurnstileEnabled();
-
-      expect(result).toBe(true);
+      expect(isTurnstileEnabled(ctx({ enabled: true, secretKey: "x" }))).toBe(
+        true,
+      );
     });
 
-    test("env site key と env secret key が設定されている場合はtrueを返す", async () => {
-      mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = "site-key";
-      mockServerEnv["TURNSTILE_SECRET_KEY"] = "secret-key";
-      mockGetTurnstileConfig.mockResolvedValueOnce({
-        siteKey: null,
-        secretKeyMasked: null,
-        lastTestedAt: null,
-        connectionStatus: null,
-      });
-
+    test("enabled: false の context では false を返す", async () => {
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
-      const result = await isTurnstileEnabled();
-
-      expect(result).toBe(true);
-    });
-
-    test("設定が存在しない場合はfalseを返す", async () => {
-      mockGetTurnstileConfig.mockResolvedValueOnce({
-        siteKey: null,
-        secretKeyMasked: null,
-        lastTestedAt: null,
-        connectionStatus: null,
-      });
-
-      const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
-      const result = await isTurnstileEnabled();
-
-      expect(result).toBe(false);
-    });
-
-    test("サイトキーが未設定の場合はfalseを返す", async () => {
-      mockGetTurnstileConfig.mockResolvedValueOnce({
-        siteKey: null,
-        secretKeyMasked: "***",
-        lastTestedAt: null,
-        connectionStatus: null,
-      });
-
-      const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
-      const result = await isTurnstileEnabled();
-
-      expect(result).toBe(false);
-    });
-
-    test("シークレットキーが未設定の場合はfalseを返す", async () => {
-      mockGetTurnstileConfig.mockResolvedValueOnce({
-        siteKey: "site-key",
-        secretKeyMasked: null,
-        lastTestedAt: null,
-        connectionStatus: null,
-      });
-
-      const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
-      const result = await isTurnstileEnabled();
-
-      expect(result).toBe(false);
+      expect(isTurnstileEnabled(ctx({ enabled: false }))).toBe(false);
     });
   });
 });

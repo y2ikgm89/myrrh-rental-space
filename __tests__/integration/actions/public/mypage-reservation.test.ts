@@ -18,7 +18,7 @@
  * - getCustomerByUserId: domain クエリをモック
  * - cancelCustomerReservation / updateCustomerReservation: domain コマンドをモック
  * - getReservationDeadlineSettings: domain 設定クエリをモック
- * - checkActionRateLimit / validateTurnstile: action-helpers をモック
+ * - checkActionRateLimit: action-helpers をモック / validateTurnstile: domain をモック
  * - updateTag: next/cache をモック
  */
 
@@ -28,6 +28,7 @@ import {
   expectErrorResult,
 } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -66,9 +67,11 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
   // このファイルのテスト対象は使わないが、同一ファイルの submitReservation が
   // import するため、モジュール解決を通すために固定成功スタブを提供する。
   checkBotHeuristics: () => ({ success: true as const }),
@@ -92,24 +95,20 @@ mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
 }));
 
 // 新規: updateReservationAction が変更通知メール送信に直接呼ぶ関数を no-op モック
-// （実体は send.ts → customers/queries.ts の getSuppressedEmailSet まで連鎖するため）
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationAdminNotification: mock(() =>
     Promise.resolve({ ok: true, messageId: "msg_test" }),
   ),
   sendReservationUpdatedEmail: mock(() =>
     Promise.resolve({ ok: true, messageId: "msg_test" }),
   ),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
   sendBulkReservationCancelledEmail: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
   sendBulkAdminNotification: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
-}));
+});
 
 // auth モック
 const mockGetSession = mock(
@@ -170,7 +169,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 // を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
 // assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
 // (未 mock だと undefined 化で参照側 TypeError になる)。
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),
@@ -180,7 +179,7 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
 // Codex #1433: cancelReservationAction / updateReservationAction が
 // reservation feature の独立 fail-closed gate を持つようになったため mock 必須。
 const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

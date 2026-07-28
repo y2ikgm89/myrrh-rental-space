@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 
 function escapeXml(str: string): string {
   return str

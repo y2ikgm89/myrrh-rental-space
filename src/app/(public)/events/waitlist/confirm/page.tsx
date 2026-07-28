@@ -11,7 +11,7 @@ import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-tok
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getBusinessInfo } from "@/public/data/business";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import {
   PaymentStatus,
   RegistrationStatus,

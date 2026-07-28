@@ -15,7 +15,7 @@ import {
 import {
   getFeatureFilterContext,
   isUrlDisabled,
-} from "@/shared/lib/features/check";
+} from "@/shared/domain/features/check";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";

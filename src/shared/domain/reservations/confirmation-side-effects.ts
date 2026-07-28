@@ -20,6 +20,7 @@ import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passco
 import {
   getReservationEmailRenderContext,
   isReservationConfirmationEmailEnabled,
+  resolveEmailSendContext,
 } from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
@@ -72,11 +73,12 @@ export async function applyConfirmationSideEffects(
       return;
     }
 
-    const [enabled, renderContext] = await Promise.all([
+    const [enabled, renderContext, sendContext] = await Promise.all([
       isReservationConfirmationEmailEnabled(),
       getReservationEmailRenderContext(),
+      resolveEmailSendContext(),
     ]);
-    if (!enabled) {
+    if (!enabled || !sendContext) {
       return;
     }
 
@@ -85,6 +87,7 @@ export async function applyConfirmationSideEffects(
         ? { ...input.payload, smartLockIssuanceFailed: true }
         : input.payload,
       renderContext,
+      sendContext,
     );
   } catch (error) {
     logError(normalizeError(error), {

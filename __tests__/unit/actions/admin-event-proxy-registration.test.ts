@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 const mockExecuteAdminMutationResult = mock();
 const mockCreateAdminProxyRegistrationCommand = mock();
@@ -47,7 +49,7 @@ mock.module("next/headers", () => ({
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
   assertAdminFeatureCreateAllowed: mock(async () => undefined),
 }));
@@ -74,32 +76,23 @@ mock.module("@/shared/domain/events/registration-queries", () => ({
   ) => mockGetEventRegistrationDetailsForEmail(...args),
 }));
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: (
     ...args: Parameters<typeof mockGetEventEmailRenderContext>
   ) => mockGetEventEmailRenderContext(...args),
   resolveEventAdminNotificationDelivery: (
     ...args: Parameters<typeof mockResolveEventAdminNotificationDelivery>
   ) => mockResolveEventAdminNotificationDelivery(...args),
-}));
+});
 
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailLibDispatchMock({
   sendEventRegistrationConfirmation: (
     ...args: Parameters<typeof mockSendEventRegistrationConfirmation>
   ) => mockSendEventRegistrationConfirmation(...args),
   sendEventAdminNotification: (
     ...args: Parameters<typeof mockSendEventAdminNotification>
   ) => mockSendEventAdminNotification(...args),
-  // 他の action / side-effect が同じ event-emails module から transitively import
-  // する関数群も mock 化しないと ESM の named export 解決で SyntaxError になる。
-  sendEventRegistrationCancelled: mock(async () => ({ ok: true }) as const),
-  sendEventReminderEmail: mock(async () => ({ ok: true }) as const),
-  sendEventCancelledToAllParticipants: mock(async () => undefined),
-  sendEventUpdatedToAllParticipants: mock(async () => undefined),
-  sendEventBroadcast: mock(async () => undefined),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+});
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: (

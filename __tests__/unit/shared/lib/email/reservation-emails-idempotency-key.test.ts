@@ -19,9 +19,11 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import {
+  EMAIL_SEND_CONTEXT,
   RENDER_CONTEXT,
   RESERVATION_ADMIN_DELIVERY,
   RESERVATION_RENDER_CONTEXT,
+  SYSTEM_NOTIFICATION_DELIVERY,
 } from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = { idempotencyKey?: string };
@@ -107,12 +109,14 @@ describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が
     await sendReservationCancelledEmail(
       { ...RESERVATION_BASE, icsSequence: 0 },
       RESERVATION_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
     await sendReservationCancelledEmail(
       { ...RESERVATION_BASE, icsSequence: 1 },
       RESERVATION_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -125,12 +129,14 @@ describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が
     await sendReservationCancelledEmail(
       { ...RESERVATION_BASE, icsSequence: 3 },
       RESERVATION_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
     await sendReservationCancelledEmail(
       { ...RESERVATION_BASE, icsSequence: 3 },
       RESERVATION_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -142,6 +148,7 @@ describe("sendReservationCancelledEmail() の idempotencyKey に icsSequence が
     await sendReservationCancelledEmail(
       { ...RESERVATION_BASE, icsSequence: 7 },
       RESERVATION_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     expect(lastKey()).toBe(
       `reservation-cancel/${RESERVATION_BASE.reservationId}/7`,
@@ -155,6 +162,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
       { ...RESERVATION_BASE, icsSequence: 0 },
       "cancel",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
@@ -162,6 +170,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
       { ...RESERVATION_BASE, icsSequence: 1 },
       "cancel",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -175,6 +184,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
       { ...RESERVATION_BASE, icsSequence: 2 },
       "cancel",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
@@ -182,6 +192,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
       { ...RESERVATION_BASE, icsSequence: 2 },
       "cancel",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -194,6 +205,7 @@ describe("sendReservationAdminNotification() の idempotencyKey にも icsSequen
       { ...RESERVATION_BASE, icsSequence: 4 },
       "cancel",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     expect(lastKey()).toBe(
       `reservation-admin/${RESERVATION_BASE.reservationId}/cancel/4`,
@@ -219,12 +231,14 @@ describe("sendEventRegistrationCancelled() の idempotencyKey にも icsSequence
     await sendEventRegistrationCancelled(
       { ...eventBase, icsSequence: 0 },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
     await sendEventRegistrationCancelled(
       { ...eventBase, icsSequence: 1 },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -237,6 +251,7 @@ describe("sendEventRegistrationCancelled() の idempotencyKey にも icsSequence
     await sendEventRegistrationCancelled(
       { ...eventBase, icsSequence: 5 },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
     expect(lastKey()).toBe(`event-reg-cancel/${eventBase.registrationId}/5`);
   });
@@ -244,10 +259,14 @@ describe("sendEventRegistrationCancelled() の idempotencyKey にも icsSequence
 
 describe("sendWebhookRenewalNotification() は idempotencyKey が付与される", () => {
   test("成功通知は `webhook-renewal/ok/<hour>` 形式", async () => {
-    await sendWebhookRenewalNotification({
-      success: true,
-      newExpiration: new Date("2099-01-01T00:00:00Z"),
-    });
+    await sendWebhookRenewalNotification(
+      {
+        success: true,
+        newExpiration: new Date("2099-01-01T00:00:00Z"),
+      },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const key = lastKey();
     expect(key).toBeDefined();
@@ -255,10 +274,14 @@ describe("sendWebhookRenewalNotification() は idempotencyKey が付与される
   });
 
   test("失敗通知は `webhook-renewal/err/<hour>` 形式", async () => {
-    await sendWebhookRenewalNotification({
-      success: false,
-      error: "test",
-    });
+    await sendWebhookRenewalNotification(
+      {
+        success: false,
+        error: "test",
+      },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const key = lastKey();
     expect(key).toBeDefined();
@@ -266,10 +289,18 @@ describe("sendWebhookRenewalNotification() は idempotencyKey が付与される
   });
 
   test("同じ hour bucket 内の同結果は同一キー（Resend retry 冪等性）", async () => {
-    await sendWebhookRenewalNotification({ success: true });
+    await sendWebhookRenewalNotification(
+      { success: true },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendWebhookRenewalNotification({ success: true });
+    await sendWebhookRenewalNotification(
+      { success: true },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -277,10 +308,18 @@ describe("sendWebhookRenewalNotification() は idempotencyKey が付与される
   });
 
   test("成功と失敗は別キー（同一 hour bucket でも衝突しない）", async () => {
-    await sendWebhookRenewalNotification({ success: true });
+    await sendWebhookRenewalNotification(
+      { success: true },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
     const okKey = lastKey();
 
-    await sendWebhookRenewalNotification({ success: false, error: "test" });
+    await sendWebhookRenewalNotification(
+      { success: false, error: "test" },
+      SYSTEM_NOTIFICATION_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
     const errKey = lastKey();
 
     expect(okKey).not.toBe(errKey);

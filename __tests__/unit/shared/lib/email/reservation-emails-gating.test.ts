@@ -4,7 +4,10 @@
  * 顧客確認メールの Settings トグルも domain 側（isReservationConfirmationEmailEnabled）。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { RESERVATION_ADMIN_DELIVERY } from "./_email-test-fixtures";
+import {
+  EMAIL_SEND_CONTEXT,
+  RESERVATION_ADMIN_DELIVERY,
+} from "./_email-test-fixtures";
 
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
@@ -46,9 +49,14 @@ beforeEach(() => {
 
 describe("sendReservationAdminNotification() の宛先ゲート", () => {
   test("通知先アドレスが空なら送信しない", async () => {
-    const result = await sendReservationAdminNotification(DATA, "new", {
-      notificationEmails: [],
-    });
+    const result = await sendReservationAdminNotification(
+      DATA,
+      "new",
+      {
+        notificationEmails: [],
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
@@ -59,6 +67,7 @@ describe("sendReservationAdminNotification() の宛先ゲート", () => {
       DATA,
       "update",
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1);

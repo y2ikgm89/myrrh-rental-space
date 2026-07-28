@@ -232,21 +232,27 @@ await installPrismaEnumsMock({
 
 import {
   updateBasicInfo,
+  updateLayoutSettings,
+} from "@/shared/domain/settings/commands/site-chrome";
+import {
   updateBusinessInfo,
   updateBusinessHoursSettings,
   updateEmailSettings,
-  updateReservationSettings,
   updateNotificationSettings,
+  updateContactInfo,
+} from "@/shared/domain/settings/commands/organization";
+import {
   updateDiscountSettings,
   updateTaxSettings,
-  updateHeaderSettings,
-  updateLayoutSettings,
-  updateContactInfo,
+} from "@/shared/domain/settings/commands/commerce";
+import {
+  updateReservationSettings,
   updateDataRetentionSettings,
   updateFeatureModulesCommand,
   DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,
-  SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
 } from "@/shared/domain/settings/commands";
+import { updateHeaderSettings } from "@/shared/domain/settings/commands/layout";
+import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands/optimistic";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 

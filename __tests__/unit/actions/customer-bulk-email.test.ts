@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installNextCacheMock } from "../../support/next-cache-mock";
+
+installNextCacheMock();
 
 type RateLimitCheckResult =
   { success: true } | { success: false; error: string };
@@ -14,9 +17,6 @@ const mockCheckActionRateLimit = mock<() => Promise<RateLimitCheckResult>>(
 // これらを呼ばないが、同一ファイル内の他 export の import が module load 時に
 // 評価されるため、実 DB / next request context に依存するモジュールは全て
 // スタブ化する)。
-mock.module("next/cache", () => ({
-  updateTag: mock(() => undefined),
-}));
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: (
     ...args: Parameters<typeof mockExecuteAdminMutationResult>
@@ -49,7 +49,7 @@ mock.module("@/shared/domain/customers/bulk-commands", () => ({
 mock.module("@/shared/domain/customers/bulk-status-commands", () => ({
   bulkSetStatusCustomersCommand: mock(),
 }));
-mock.module("@/shared/lib/email/customer-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendCustomerBroadcast: (
     ...args: Parameters<typeof mockSendCustomerBroadcast>
   ) => mockSendCustomerBroadcast(...args),

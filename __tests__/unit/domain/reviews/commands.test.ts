@@ -39,7 +39,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

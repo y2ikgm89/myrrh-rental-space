@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -25,12 +26,15 @@ const mockValidateTurnstile = mock(
   (): Promise<{ success: boolean; error?: string }> =>
     Promise.resolve({ success: true }),
 );
-mock.module("@/shared/lib/action-helpers", () => ({
-  checkActionRateLimit: mockCheckActionRateLimit,
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
+mock.module("@/shared/lib/action-helpers", () => ({
+  checkActionRateLimit: mockCheckActionRateLimit,
+}));
 
-mock.module("@/shared/lib/maintenance-guard", () => ({
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
   checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
   getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
 }));
@@ -141,7 +145,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   getCustomerSession: mockGetCustomerSession,
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
 }));
 
@@ -169,10 +173,10 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: mock(() => Promise.resolve()),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationUpdatedEmail: mock(() => Promise.resolve()),
-  sendReservationAdminNotification: mock(() => Promise.resolve()),
-}));
+installEmailLibDispatchMock({
+  sendReservationUpdatedEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationAdminNotification: mock(() => Promise.resolve({ ok: true })),
+});
 
 const mockFireAndForget = mock(() => undefined);
 mock.module("@/shared/lib/async-utils", () => ({

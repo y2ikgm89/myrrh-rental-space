@@ -3,7 +3,7 @@
  *
  * @description スペースの実データ（写真・料金・定員・予約ボタン）を記事本文に埋め込む
  * DecoratorNode。`exportDOM` は空のプレースホルダー `<a data-space-card-embed>` を
- * 出力し、公開描画時に `resolveSpaceCardEmbeds`（`@/shared/lib/lexical/resolve-space-card-embeds`）
+ * 出力し、公開描画時に `resolveSpaceCardEmbeds`（`@/shared/domain/spaces/resolve-space-card-embeds`）
  * が DB から最新のスペースデータを解決してカード本体へ差し替える。参照先が削除/非公開なら
  * 自動で非表示になる（404 カードを防ぐ、`InternalLinkCardNode` と同じ方針）。
  *

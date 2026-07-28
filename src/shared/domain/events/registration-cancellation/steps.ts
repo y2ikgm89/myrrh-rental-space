@@ -22,8 +22,8 @@ import type {
 import {
   sendEventAdminNotification,
   sendEventRegistrationCancelled,
-} from "@/shared/lib/email/event-emails";
-import { sendEventWaitlistOffered } from "@/shared/lib/email/event-waitlist-emails";
+} from "@/shared/domain/email/lib-dispatch";
+import { sendEventWaitlistOffered } from "@/shared/domain/email/lib-dispatch";
 import type {
   EventAdminNotificationDelivery,
   EventEmailRenderContext,

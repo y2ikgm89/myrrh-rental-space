@@ -21,7 +21,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
-import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { getEnabledFeatures } from "@/shared/domain/features/check";
 import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 export const metadata: Metadata = {

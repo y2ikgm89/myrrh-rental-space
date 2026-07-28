@@ -24,7 +24,7 @@ import { createEventRegistrationClaimToken } from "@/shared/lib/event-registrati
 import { omitUndefined } from "../serialize";
 import { buildEventRegistrationHubUrl } from "./event-emails";
 import { sendEmail } from "./send";
-import type { EmailResult } from "./types";
+import type { EmailResult, EmailSendContext } from "./types";
 
 export type WaitlistEmailRegistrationData = {
   readonly id: string;
@@ -53,11 +53,14 @@ function buildClaimUrl(
 /**
  * キャンセル待ち登録完了メールを送信。
  */
-export async function sendEventWaitlistRegistered(args: {
-  registration: WaitlistEmailRegistrationData;
-  position: number;
-  to: string;
-}): Promise<EmailResult> {
+export async function sendEventWaitlistRegistered(
+  args: {
+    registration: WaitlistEmailRegistrationData;
+    position: number;
+    to: string;
+  },
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
   const { registration } = args;
   const footer = await getEmailFooterData();
 
@@ -65,33 +68,36 @@ export async function sendEventWaitlistRegistered(args: {
   const startTime = formatTimeShort(registration.slotStartAt);
   const endTime = formatTimeShort(registration.slotEndAt);
 
-  return sendEmail({
-    payload: {
-      to: args.to,
-      subject: `【${footer.siteName}】キャンセル待ちに登録しました - ${registration.eventTitle}`,
-      react: EventWaitlistRegisteredEmail(
-        omitUndefined({
-          customerName: registration.name,
-          eventTitle: registration.eventTitle,
-          eventDate,
-          startTime,
-          endTime,
-          quantity: registration.quantity,
-          ticketName: registration.ticketName,
-          position: args.position,
-          eventRegistrationHubUrl: buildEventRegistrationHubUrl(
-            registration.customerId,
-            registration.id,
-          ),
-          claimUrl: buildClaimUrl(registration.customerId, registration.id),
-          footer,
-        }),
-      ),
+  return sendEmail(
+    {
+      payload: {
+        to: args.to,
+        subject: `【${footer.siteName}】キャンセル待ちに登録しました - ${registration.eventTitle}`,
+        react: EventWaitlistRegisteredEmail(
+          omitUndefined({
+            customerName: registration.name,
+            eventTitle: registration.eventTitle,
+            eventDate,
+            startTime,
+            endTime,
+            quantity: registration.quantity,
+            ticketName: registration.ticketName,
+            position: args.position,
+            eventRegistrationHubUrl: buildEventRegistrationHubUrl(
+              registration.customerId,
+              registration.id,
+            ),
+            claimUrl: buildClaimUrl(registration.customerId, registration.id),
+            footer,
+          }),
+        ),
+      },
+      idempotencyKey: `event-waitlist-registered/${registration.id}`,
+      operation: "sendEventWaitlistRegistered",
+      context: { registrationId: registration.id },
     },
-    idempotencyKey: `event-waitlist-registered/${registration.id}`,
-    operation: "sendEventWaitlistRegistered",
-    context: { registrationId: registration.id },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -101,14 +107,17 @@ export async function sendEventWaitlistRegistered(args: {
  * 一意な送信になる（同一 registrationId が再度 waitlist → 再 offer された場合、
  * 前回と異なる key になり Resend の idempotency で誤って抑止されない）。
  */
-export async function sendEventWaitlistOffered(args: {
-  registration: WaitlistEmailRegistrationData;
-  to: string;
-  expiresAt: Date;
-  paymentContext:
-    | { kind: "free"; confirmUrl: string }
-    | { kind: "paid"; checkoutUrl: string; price: number };
-}): Promise<EmailResult> {
+export async function sendEventWaitlistOffered(
+  args: {
+    registration: WaitlistEmailRegistrationData;
+    to: string;
+    expiresAt: Date;
+    paymentContext:
+      | { kind: "free"; confirmUrl: string }
+      | { kind: "paid"; checkoutUrl: string; price: number };
+  },
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
   const { registration } = args;
   const footer = await getEmailFooterData();
   const eventDate = formatDateWithWeekday(registration.slotStartAt);
@@ -131,61 +140,70 @@ export async function sendEventWaitlistOffered(args: {
     ? `【${footer.siteName}】繰り上げ当選のお知らせ（要お支払い） - ${registration.eventTitle}`
     : `【${footer.siteName}】繰り上げ当選のお知らせ - ${registration.eventTitle}`;
 
-  return sendEmail({
-    payload: {
-      to: args.to,
-      subject,
-      react: EventWaitlistOfferedEmail(
-        omitUndefined({
-          customerName: registration.name,
-          eventTitle: registration.eventTitle,
-          eventDate,
-          startTime,
-          endTime,
-          quantity: registration.quantity,
-          expiresAtDate,
-          expiresAtTime,
-          actionUrl,
-          eventRegistrationHubUrl: buildEventRegistrationHubUrl(
-            registration.customerId,
-            registration.id,
-          ),
-          isPaid,
-          priceDisplay,
-          footer,
-        }),
-      ),
+  return sendEmail(
+    {
+      payload: {
+        to: args.to,
+        subject,
+        react: EventWaitlistOfferedEmail(
+          omitUndefined({
+            customerName: registration.name,
+            eventTitle: registration.eventTitle,
+            eventDate,
+            startTime,
+            endTime,
+            quantity: registration.quantity,
+            expiresAtDate,
+            expiresAtTime,
+            actionUrl,
+            eventRegistrationHubUrl: buildEventRegistrationHubUrl(
+              registration.customerId,
+              registration.id,
+            ),
+            isPaid,
+            priceDisplay,
+            footer,
+          }),
+        ),
+      },
+      idempotencyKey: `event-waitlist-offered/${registration.id}/${args.expiresAt.getTime()}`,
+      operation: "sendEventWaitlistOffered",
+      context: { registrationId: registration.id },
     },
-    idempotencyKey: `event-waitlist-offered/${registration.id}/${args.expiresAt.getTime()}`,
-    operation: "sendEventWaitlistOffered",
-    context: { registrationId: registration.id },
-  });
+    sendContext,
+  );
 }
 
 /**
  * 繰り上げ当選の期限切れ通知メールを送信。
  */
-export async function sendEventWaitlistExpired(args: {
-  registration: WaitlistEmailRegistrationData;
-  to: string;
-}): Promise<EmailResult> {
+export async function sendEventWaitlistExpired(
+  args: {
+    registration: WaitlistEmailRegistrationData;
+    to: string;
+  },
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
   const { registration } = args;
   const footer = await getEmailFooterData();
   const eventUrl = `${getAppUrl()}/events/${registration.eventSlug}`;
 
-  return sendEmail({
-    payload: {
-      to: args.to,
-      subject: `【${footer.siteName}】繰り上げ当選の期限切れ - ${registration.eventTitle}`,
-      react: EventWaitlistExpiredEmail({
-        customerName: registration.name,
-        eventTitle: registration.eventTitle,
-        eventUrl,
-        footer,
-      }),
+  return sendEmail(
+    {
+      payload: {
+        to: args.to,
+        subject: `【${footer.siteName}】繰り上げ当選の期限切れ - ${registration.eventTitle}`,
+        react: EventWaitlistExpiredEmail({
+          customerName: registration.name,
+          eventTitle: registration.eventTitle,
+          eventUrl,
+          footer,
+        }),
+      },
+      idempotencyKey: `event-waitlist-expired/${registration.id}`,
+      operation: "sendEventWaitlistExpired",
+      context: { registrationId: registration.id },
     },
-    idempotencyKey: `event-waitlist-expired/${registration.id}`,
-    operation: "sendEventWaitlistExpired",
-    context: { registrationId: registration.id },
-  });
+    sendContext,
+  );
 }

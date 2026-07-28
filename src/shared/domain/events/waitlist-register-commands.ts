@@ -8,7 +8,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { WAITLIST_OFFER_TTL_MS } from "./waitlist-offer-constants";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";

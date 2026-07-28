@@ -1,12 +1,19 @@
 import { mock } from "bun:test";
 
-export const DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT = {
+export const DEFAULT_EVENT_EMAIL_RENDER_CONTEXT = {
   calendarSettings: {
     icalAttachmentEnabled: false,
     addToCalendarLinksEnabled: false,
   },
   organizer: { name: "Test Org", email: "org@example.com" },
-  deadlineSettings: { cancellationDeadlineHours: 24 },
+} as const;
+
+export const DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT = {
+  ...DEFAULT_EVENT_EMAIL_RENDER_CONTEXT,
+  deadlineSettings: {
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 6,
+  },
   cancellationPolicyUrl: undefined,
 } as const;
 
@@ -15,11 +22,23 @@ export function createEmailRenderContextMockModule(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
-    getEventEmailRenderContext: mock(async () => ({
-      calendarSettings:
-        DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT.calendarSettings,
-      organizer: DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT.organizer,
+    resolveEmailTransportContext: mock(async () => ({
+      resendApiKey: "re_test_key",
     })),
+    isEmailEnabled: mock(async () => true),
+    resolveEmailSendContext: mock(async () => ({
+      transport: { resendApiKey: "re_test_key" },
+      delivery: {
+        senderEmail: "noreply@example.com",
+        senderName: "Test",
+        replyToEmail: null,
+      },
+      suppressedEmailHashes: new Set<string>(),
+    })),
+    sendEmail: mock(async () => ({ ok: true })),
+    getEventEmailRenderContext: mock(
+      async () => DEFAULT_EVENT_EMAIL_RENDER_CONTEXT,
+    ),
     getReservationEmailRenderContext: mock(
       async () => DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT,
     ),
@@ -36,6 +55,19 @@ export function createEmailRenderContextMockModule(
     })),
     resolveInquiryCustomerReplyAdminDelivery: mock(async () => ({
       enabled: true,
+      notificationEmails: ["admin@example.com"],
+    })),
+    resolveContactAdminNotificationDelivery: mock(async () => ({
+      enabled: true,
+      notificationEmails: ["admin@example.com"],
+    })),
+    resolveContactConfirmationRenderContext: mock(async () => ({})),
+    getReminderEmailRenderContext: mock(async () => ({
+      calendarSettings: DEFAULT_EVENT_EMAIL_RENDER_CONTEXT.calendarSettings,
+      deadlineSettings: { cancellationDeadlineHours: 24 },
+      organizer: DEFAULT_EVENT_EMAIL_RENDER_CONTEXT.organizer,
+    })),
+    resolveSystemNotificationDelivery: mock(async () => ({
       notificationEmails: ["admin@example.com"],
     })),
     ...overrides,

@@ -6,18 +6,21 @@ import {
   claimEventRegistrationReminder,
   releaseEventRegistrationReminderClaim,
 } from "@/shared/domain/events/registration-commands";
-import { isEmailEnabled } from "@/shared/lib/email/client";
+import {
+  getEventEmailRenderContext,
+  isEmailEnabled,
+  resolveEmailSendContext,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { sendEventReminderEmail } from "@/shared/lib/email/event-emails";
-import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import {
   logError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {
@@ -67,7 +70,13 @@ export async function GET(request: Request) {
     let skipped = 0;
     let disabledCount = 0;
 
-    const renderContext = await getEventEmailRenderContext();
+    const [renderContext, sendContext] = await Promise.all([
+      getEventEmailRenderContext(),
+      resolveEmailSendContext(),
+    ]);
+    if (!sendContext) {
+      return jsonSuccess({ skipped: true, reason: "email_disabled" });
+    }
 
     for (const registration of registrations) {
       const email = registration.email;
@@ -108,6 +117,7 @@ export async function GET(request: Request) {
             meetingUrl: registration.event.meetingUrl,
           },
           renderContext,
+          sendContext,
         );
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。

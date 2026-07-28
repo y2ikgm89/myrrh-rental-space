@@ -41,6 +41,7 @@ import {
   EventStatus,
   RegistrationStatus,
 } from "@generated/prisma/enums";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -58,9 +59,11 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: () => Promise.resolve({ success: true as const }),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: () => Promise.resolve({ success: true as const }),
-  validateTurnstile: () => Promise.resolve({ success: true as const }),
   checkBotHeuristics: () => ({ success: true as const }),
   checkEmailRateLimit: () => Promise.resolve({ success: true as const }),
 }));
@@ -103,7 +106,7 @@ mock.module("@/shared/domain/customers/guard", () => ({
 
 // cancelEventRegistration は isFeatureEnabled("events") を直接呼ぶ
 // (event-waitlist-register.test.ts / registration-overbooking.test.ts と同型)。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 
@@ -111,7 +114,7 @@ mock.module("@/shared/lib/features/check", () => ({
 // を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
 // assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
 // (未 mock だと undefined 化で参照側 TypeError になる)。
-mock.module("@/shared/lib/terms-consent-gate", () => ({
+mock.module("@/shared/domain/terms/consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),
@@ -121,17 +124,6 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
 // 既存 3 種の副作用（キャンセル確認メール・管理者通知メール）は実
 // registration-cancellation-side-effects.ts から実際に呼ばれるが、本テストの
 // 対象ではないため no-op 化する（Resend への実送信を避ける）。
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationCancelled: () => Promise.resolve({ ok: true }),
-  sendEventAdminNotification: () => Promise.resolve({ ok: true }),
-  // registerForEvent（同一ファイル、本テストでは未使用）が top-level import する。
-  sendEventRegistrationConfirmation: () =>
-    Promise.reject(new Error("not used in this test")),
-  // event-waitlist-emails 実体が hub URL 組み立てで参照する（mock 漏れ防止）。
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
-
 // 繰り上げ当選メール（本テストの主たる検証対象）。
 const mockSendEventWaitlistOffered = mock<
   (args: {
@@ -143,13 +135,16 @@ const mockSendEventWaitlistOffered = mock<
       | { kind: "paid"; checkoutUrl: string; price: number };
   }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+
+installEmailLibDispatchMock({
+  sendEventRegistrationCancelled: () => Promise.resolve({ ok: true }),
+  sendEventAdminNotification: () => Promise.resolve({ ok: true }),
+  sendEventRegistrationConfirmation: () =>
+    Promise.reject(new Error("not used in this test")),
   sendEventWaitlistOffered: mockSendEventWaitlistOffered,
-  // registerForEventWaitlist（同一ファイル、本テストでは未使用）が
-  // top-level import する。
   sendEventWaitlistRegistered: () =>
     Promise.reject(new Error("not used in this test")),
-}));
+});
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: () => Promise.resolve(),

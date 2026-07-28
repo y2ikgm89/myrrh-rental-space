@@ -7,7 +7,6 @@ import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import {
   checkActionRateLimit,
   checkBotHeuristics,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
@@ -15,11 +14,12 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createInquiryCommand } from "@/shared/domain/inquiries/commands";
 import {
   sendContactConfirmationEmail,
   sendContactAdminNotification,
-} from "@/shared/lib/email/contact-emails";
+} from "@/shared/domain/email/dispatch";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -35,13 +35,13 @@ import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function submitInquiry(
   _prev: SubmissionResult | undefined,

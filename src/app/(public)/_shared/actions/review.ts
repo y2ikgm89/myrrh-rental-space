@@ -2,20 +2,18 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { spaceReviewSchema } from "@/shared/lib/validations/review";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createReviewCommand } from "@/shared/domain/reviews/commands";
 import { invalidateReviewCaches } from "@/shared/lib/cache/review-cache";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -25,7 +23,7 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function submitReview(
   _prev: SubmissionResult | undefined,

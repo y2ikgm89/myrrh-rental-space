@@ -157,7 +157,7 @@ mock.module("@/shared/domain/events/waitlist-commands", () => ({
   ) => mockExpireAndPromoteWaitlistForEventCommand(...args),
 }));
 
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),
@@ -200,7 +200,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (...args: Parameters<typeof mockIsFeatureEnabled>) =>
     mockIsFeatureEnabled(...args),
 }));

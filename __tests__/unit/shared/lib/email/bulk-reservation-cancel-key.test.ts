@@ -27,7 +27,10 @@
  * `sendEventBroadcast` の broadcastNonce と同型のパターン。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { RESERVATION_ADMIN_DELIVERY } from "./_email-test-fixtures";
+import {
+  EMAIL_SEND_CONTEXT,
+  RESERVATION_ADMIN_DELIVERY,
+} from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = { idempotencyKey?: string; operation: string };
 
@@ -99,10 +102,16 @@ beforeEach(() => {
 
 describe("sendBulkReservationCancelledEmail() の idempotencyKey に batchNonce が入る (L6)", () => {
   test("同一 seriesId + 異なる batchNonce → 異なるキー (24h 内 partial re-cancel の silent drop 防止)", async () => {
-    await sendBulkReservationCancelledEmail(baseData({ batchNonce: NONCE_A }));
+    await sendBulkReservationCancelledEmail(
+      baseData({ batchNonce: NONCE_A }),
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendBulkReservationCancelledEmail(baseData({ batchNonce: NONCE_B }));
+    await sendBulkReservationCancelledEmail(
+      baseData({ batchNonce: NONCE_B }),
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -111,10 +120,16 @@ describe("sendBulkReservationCancelledEmail() の idempotencyKey に batchNonce 
   });
 
   test("同一 seriesId + 同一 batchNonce → 同一キー (Resend retry 冪等性)", async () => {
-    await sendBulkReservationCancelledEmail(baseData({ batchNonce: NONCE_A }));
+    await sendBulkReservationCancelledEmail(
+      baseData({ batchNonce: NONCE_A }),
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
-    await sendBulkReservationCancelledEmail(baseData({ batchNonce: NONCE_A }));
+    await sendBulkReservationCancelledEmail(
+      baseData({ batchNonce: NONCE_A }),
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -122,7 +137,10 @@ describe("sendBulkReservationCancelledEmail() の idempotencyKey に batchNonce 
   });
 
   test("キーは `bulk-reservation-cancel/<seriesId>/<batchNonce>` 形式", async () => {
-    await sendBulkReservationCancelledEmail(baseData({ batchNonce: NONCE_A }));
+    await sendBulkReservationCancelledEmail(
+      baseData({ batchNonce: NONCE_A }),
+      EMAIL_SEND_CONTEXT,
+    );
     expect(lastKey()).toBe(`bulk-reservation-cancel/${SERIES_ID}/${NONCE_A}`);
   });
 });
@@ -132,12 +150,14 @@ describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が�
     await sendBulkAdminNotification(
       baseData({ batchNonce: NONCE_A }),
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
     await sendBulkAdminNotification(
       baseData({ batchNonce: NONCE_B }),
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -150,12 +170,14 @@ describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が�
     await sendBulkAdminNotification(
       baseData({ batchNonce: NONCE_A }),
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
 
     await sendBulkAdminNotification(
       baseData({ batchNonce: NONCE_A }),
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     const secondKey = lastKey();
 
@@ -167,6 +189,7 @@ describe("sendBulkAdminNotification() の idempotencyKey にも batchNonce が�
     await sendBulkAdminNotification(
       baseData({ batchNonce: NONCE_A }),
       RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
     );
     expect(lastKey()).toBe(
       `bulk-reservation-cancel-admin/${SERIES_ID}/${NONCE_A}`,
@@ -178,8 +201,12 @@ describe("顧客向け + 管理者向け 2 送信は同一 batch では同じ no
   test("同一 batchNonce で customer / admin 両送信 → prefix 違いのみで nonce は共通", async () => {
     const data = baseData({ batchNonce: NONCE_A });
 
-    await sendBulkReservationCancelledEmail(data);
-    await sendBulkAdminNotification(data, RESERVATION_ADMIN_DELIVERY);
+    await sendBulkReservationCancelledEmail(data, EMAIL_SEND_CONTEXT);
+    await sendBulkAdminNotification(
+      data,
+      RESERVATION_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const customerKey = keyForOperation("sendBulkReservationCancelledEmail");
     const adminKey = keyForOperation("sendBulkAdminNotification");

@@ -50,6 +50,12 @@ mock.module("@/shared/emails/welcome", () => ({
   WelcomeEmail: () => null,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
 
@@ -71,7 +77,7 @@ beforeEach(() => {
 describe("sendWelcomeEmail() の idempotencyKey は customerId ベース", () => {
   test("キーは `welcome/<customerId>` 形式で email hash を含まない", async () => {
     const customerId = "cust_abcdef123456";
-    await sendWelcomeEmail({ ...BASE, customerId });
+    await sendWelcomeEmail({ ...BASE, customerId }, EMAIL_SEND_CONTEXT);
 
     const key = lastKey();
     expect(key).toBe(`welcome/${customerId}`);
@@ -84,11 +90,17 @@ describe("sendWelcomeEmail() の idempotencyKey は customerId ベース", () =>
 
   test("同一メールアドレス・異なる customerId → 異なるキー（delete-account → re-signup シナリオ）", async () => {
     // delete-account 前の旧 Customer
-    await sendWelcomeEmail({ ...BASE, customerId: "cust_old" });
+    await sendWelcomeEmail(
+      { ...BASE, customerId: "cust_old" },
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
     // 同じ email で 24h 内に再登録された新 Customer
-    await sendWelcomeEmail({ ...BASE, customerId: "cust_new" });
+    await sendWelcomeEmail(
+      { ...BASE, customerId: "cust_new" },
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -98,10 +110,10 @@ describe("sendWelcomeEmail() の idempotencyKey は customerId ベース", () =>
 
   test("同一 customerId → 同一キー（Resend retry 冪等性）", async () => {
     const customerId = "cust_retry_same";
-    await sendWelcomeEmail({ ...BASE, customerId });
+    await sendWelcomeEmail({ ...BASE, customerId }, EMAIL_SEND_CONTEXT);
     const firstKey = lastKey();
 
-    await sendWelcomeEmail({ ...BASE, customerId });
+    await sendWelcomeEmail({ ...BASE, customerId }, EMAIL_SEND_CONTEXT);
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();

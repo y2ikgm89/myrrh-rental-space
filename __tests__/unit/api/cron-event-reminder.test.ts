@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 
 // --- モック関数の定義（mock.module() より前）---
 const mockFindEventRegistrationsForReminderWindow = mock<
@@ -105,13 +106,24 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   ) => mockGetEmailDeliverySettings(...args),
 }));
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: (
     ...args: Parameters<typeof mockGetEventEmailRenderContext>
   ) => mockGetEventEmailRenderContext(...args),
-}));
+  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
+    mockIsEmailEnabled(...args),
+  resolveEmailSendContext: mock(async () => ({
+    transport: { resendApiKey: "re_test_key" },
+    delivery: {
+      senderEmail: "noreply@example.com",
+      senderName: "Test",
+      replyToEmail: null,
+    },
+    suppressedEmailHashes: new Set<string>(),
+  })),
+});
 
-mock.module("@/shared/domain/events/venue", () => ({
+mock.module("@/shared/lib/events/venue", () => ({
   formatEventVenue: (params: {
     location: { name: string } | null;
     space: { name: string } | null;
@@ -160,14 +172,9 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (...args: Parameters<typeof mockIsFeatureEnabled>) =>
     mockIsFeatureEnabled(...args),
-}));
-
-mock.module("@/shared/lib/email/client", () => ({
-  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
-    mockIsEmailEnabled(...args),
 }));
 
 mock.module("@/shared/lib/route-responses", () => ({
@@ -335,6 +342,9 @@ describe("GET /api/cron/event-reminder", () => {
         },
         organizer: { name: "Test Org", email: "org@example.com" },
       },
+      expect.objectContaining({
+        transport: { resendApiKey: "re_test_key" },
+      }),
     );
     expect(mockReleaseEventRegistrationReminderClaim).not.toHaveBeenCalled();
   });

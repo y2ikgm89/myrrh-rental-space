@@ -17,7 +17,11 @@ import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token"
 import { getAppUrl } from "../constants";
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
-import type { EmailResult, ReceiptIssuedEmailData } from "./types";
+import type {
+  EmailResult,
+  ReceiptIssuedEmailData,
+  EmailSendContext,
+} from "./types";
 
 /**
  * 新規発行通知の Resend idempotency key。
@@ -42,30 +46,34 @@ export function buildReceiptIssuedIdempotencyKey(serialNo: string): string {
  */
 export async function sendReceiptIssuedEmail(
   input: ReceiptIssuedEmailData,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
 
-  return sendEmail({
-    payload: {
-      to: input.recipientEmail,
-      subject: `【領収書発行】${input.serialNo}`,
-      react: ReceiptIssuedEmail({
-        recipientName: input.recipientName,
-        subject: input.subject,
-        issuedAt: formatJstDateString(input.issuedAt),
-        amount: formatAmountLabel(input.amount, input.taxAmount),
+  return sendEmail(
+    {
+      payload: {
+        to: input.recipientEmail,
+        subject: `【領収書発行】${input.serialNo}`,
+        react: ReceiptIssuedEmail({
+          recipientName: input.recipientName,
+          subject: input.subject,
+          issuedAt: formatJstDateString(input.issuedAt),
+          amount: formatAmountLabel(input.amount, input.taxAmount),
+          serialNo: input.serialNo,
+          detailUrl: input.detailUrl,
+          footer,
+        }),
+      },
+      idempotencyKey: buildReceiptIssuedIdempotencyKey(input.serialNo),
+      operation: "sendReceiptIssuedEmail",
+      context: {
         serialNo: input.serialNo,
-        detailUrl: input.detailUrl,
-        footer,
-      }),
+        recipientEmail: input.recipientEmail,
+      },
     },
-    idempotencyKey: buildReceiptIssuedIdempotencyKey(input.serialNo),
-    operation: "sendReceiptIssuedEmail",
-    context: {
-      serialNo: input.serialNo,
-      recipientEmail: input.recipientEmail,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -88,44 +96,50 @@ export async function sendReceiptIssuedEmail(
  * abuse 側の連打対策は per-serial rate limiter (`receiptResendBySerialNoRateLimiter`,
  * 3req/hour) が独立に担うため、**idempotency と rate limiting を混同しない** こと。
  */
-export async function sendReceiptResendEmail(input: {
-  readonly recipientEmail: string;
-  readonly serialNo: string;
-  readonly recipientName: string;
-  readonly subject: string;
-  readonly amount: number;
-  readonly taxAmount: number;
-  readonly issuedAt: Date;
-  readonly previousSerialNo?: string;
-}): Promise<EmailResult> {
+export async function sendReceiptResendEmail(
+  input: {
+    readonly recipientEmail: string;
+    readonly serialNo: string;
+    readonly recipientName: string;
+    readonly subject: string;
+    readonly amount: number;
+    readonly taxAmount: number;
+    readonly issuedAt: Date;
+    readonly previousSerialNo?: string;
+  },
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
   const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const receiptDownloadUrl = `${appUrl}/receipts/${input.serialNo}/download?token=${createReceiptDownloadToken(input.serialNo)}`;
 
-  return sendEmail({
-    payload: {
-      to: input.recipientEmail,
-      subject: `【領収書ダウンロードリンク】${input.serialNo}`,
-      react: ReceiptResendEmail(
-        omitUndefined({
-          recipientName: input.recipientName,
-          subject: input.subject,
-          issuedAt: formatJstDateString(input.issuedAt),
-          amount: formatAmountLabel(input.amount, input.taxAmount),
-          serialNo: input.serialNo,
-          previousSerialNo: input.previousSerialNo,
-          receiptDownloadUrl,
-          footer,
-        }),
-      ),
+  return sendEmail(
+    {
+      payload: {
+        to: input.recipientEmail,
+        subject: `【領収書ダウンロードリンク】${input.serialNo}`,
+        react: ReceiptResendEmail(
+          omitUndefined({
+            recipientName: input.recipientName,
+            subject: input.subject,
+            issuedAt: formatJstDateString(input.issuedAt),
+            amount: formatAmountLabel(input.amount, input.taxAmount),
+            serialNo: input.serialNo,
+            previousSerialNo: input.previousSerialNo,
+            receiptDownloadUrl,
+            footer,
+          }),
+        ),
+      },
+      idempotencyKey: `receipt-resend/${input.serialNo}/${input.issuedAt.getTime()}/${Date.now()}`,
+      operation: "sendReceiptResendEmail",
+      context: {
+        serialNo: input.serialNo,
+        recipientEmail: input.recipientEmail,
+      },
     },
-    idempotencyKey: `receipt-resend/${input.serialNo}/${input.issuedAt.getTime()}/${Date.now()}`,
-    operation: "sendReceiptResendEmail",
-    context: {
-      serialNo: input.serialNo,
-      recipientEmail: input.recipientEmail,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**

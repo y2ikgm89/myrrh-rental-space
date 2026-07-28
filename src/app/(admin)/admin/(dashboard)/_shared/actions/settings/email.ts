@@ -16,7 +16,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   updateEmailSettings as updateEmailSettingsCommand,
   updateNotificationSettings as updateNotificationSettingsCommand,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/organization";
 import { DomainError } from "@/shared/domain/domain-error";
 
 import { emptyToNull } from "./schemas/form-schema-helpers";
@@ -27,6 +27,7 @@ import {
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 import type { SenderDomainCheck } from "@/shared/lib/email/domain-verification";
 import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
+import { resolveEmailTransportContext } from "@/shared/domain/settings/queries/email-render-context";
 
 function buildSenderDomainError(
   check: Extract<SenderDomainCheck, { ok: false }>,
@@ -76,7 +77,11 @@ export async function updateEmailSettings(
             "VALIDATION",
           );
         }
-        const check = await validateSenderDomain(effectiveSenderEmail);
+        const transport = await resolveEmailTransportContext();
+        const check = await validateSenderDomain(
+          effectiveSenderEmail,
+          transport,
+        );
         if (!check.ok) {
           throw new DomainError(buildSenderDomainError(check), "VALIDATION");
         }
