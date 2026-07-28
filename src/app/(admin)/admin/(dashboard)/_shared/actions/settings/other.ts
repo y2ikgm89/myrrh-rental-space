@@ -22,6 +22,11 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
 import * as settingsCommands from "@/shared/domain/settings/commands";
 import {
+  updateFooterSettings as updateFooterSettingsCommand,
+  updateHeaderSettings as updateHeaderSettingsCommand,
+  updateSidebarSettings as updateSidebarSettingsCommand,
+} from "@/shared/domain/settings/commands/layout";
+import {
   updateCookieConsentSettings as updateCookieConsentSettingsCommand,
   updateMaintenanceSettings as updateMaintenanceSettingsCommand,
 } from "@/shared/domain/settings/commands/site-chrome";
@@ -164,7 +169,7 @@ export async function updateSidebarSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await settingsCommands.updateSidebarSettings(parsed.data);
+      await updateSidebarSettingsCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {
@@ -218,7 +223,7 @@ export async function updateHeaderSettings(
         resource: "settings",
         action: "update",
         execute: async () => {
-          await settingsCommands.updateHeaderSettings(data);
+          await updateHeaderSettingsCommand(data);
           return null;
         },
         afterSuccess: () => {
@@ -245,7 +250,7 @@ export async function updateFooterSettings(
       resource: "settings",
       action: "update",
       execute: async () => {
-        await settingsCommands.updateFooterSettings({
+        await updateFooterSettingsCommand({
           footerTagline: emptyToNull(data.footerTagline),
           footerNavigationLabel: data.footerNavigationLabel,
           footerContactLabel: data.footerContactLabel,
