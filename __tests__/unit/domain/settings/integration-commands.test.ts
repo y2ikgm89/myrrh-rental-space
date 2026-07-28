@@ -99,6 +99,8 @@ import {
   updateStripeSettings,
   recordStripeConnectionSuccess,
   clearStripeKeys,
+} from "@/shared/domain/settings/stripe-commands";
+import {
   updateGoogleCalendarSettings,
   recordGoogleCalendarConnectionSuccess,
   recordGoogleCalendarConnectionError,
@@ -106,7 +108,7 @@ import {
   updateTwoWaySyncSettings,
   saveGoogleCalendarWebhook,
   clearGoogleCalendarWebhook,
-} from "@/shared/domain/settings/integration-commands";
+} from "@/shared/domain/settings/google-calendar-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";

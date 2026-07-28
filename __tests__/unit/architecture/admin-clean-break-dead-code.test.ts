@@ -234,15 +234,21 @@ describe("admin clean-break dead code boundaries", () => {
     expect(source).not.toContain("if (!hasLeading && !hasTrailing) return");
   });
 
-  test("settings integration commands are imported from their canonical module, not compatibility re-exported", () => {
+  test("settings Stripe/GCal commands are imported from ownership modules, not compatibility re-exported", () => {
     expect(existsSync(filePath("src/shared/domain/settings/commands.ts"))).toBe(
       false,
     );
+    expect(
+      existsSync(
+        filePath("src/shared/domain/settings/integration-commands.ts"),
+      ),
+    ).toBe(false);
 
     const stripeAction = read(
       "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts",
     );
-    expect(stripeAction).toContain(
+    expect(stripeAction).toContain("@/shared/domain/settings/stripe-commands");
+    expect(stripeAction).not.toContain(
       "@/shared/domain/settings/integration-commands",
     );
     expect(stripeAction).not.toContain('@/shared/domain/settings/commands";');
@@ -251,14 +257,17 @@ describe("admin clean-break dead code boundaries", () => {
       "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts",
     );
     expect(calendarAction).toContain(
+      "@/shared/domain/settings/google-calendar-commands",
+    );
+    expect(calendarAction).not.toContain(
       "@/shared/domain/settings/integration-commands",
     );
     expect(calendarAction).not.toContain('@/shared/domain/settings/commands";');
-    const integrationImport = namedImportBlock(
+    const gcalImport = namedImportBlock(
       calendarAction,
-      "@/shared/domain/settings/integration-commands",
+      "@/shared/domain/settings/google-calendar-commands",
     );
-    for (const integrationCommand of [
+    for (const gcalCommand of [
       "clearGoogleCalendarServiceAccount",
       "clearGoogleCalendarWebhook",
       "recordGoogleCalendarConnectionError",
@@ -268,7 +277,7 @@ describe("admin clean-break dead code boundaries", () => {
       "updateGoogleCalendarSettings",
       "updateTwoWaySyncSettings",
     ]) {
-      expect(integrationImport).toContain(integrationCommand);
+      expect(gcalImport).toContain(gcalCommand);
     }
 
     // webhook persistence orchestration は domain 側。lib webhook は API client のみ。
@@ -276,11 +285,14 @@ describe("admin clean-break dead code boundaries", () => {
       "src/shared/domain/settings/google-calendar.ts",
     );
     expect(calendarWebhookDomain).toContain(
-      "@/shared/domain/settings/integration-commands",
+      "@/shared/domain/settings/google-calendar-commands",
     );
     expect(calendarWebhookDomain).toContain("saveGoogleCalendarWebhook");
     const calendarWebhookLib = read(
       "src/shared/lib/google-calendar/webhook.ts",
+    );
+    expect(calendarWebhookLib).not.toContain(
+      "@/shared/domain/settings/google-calendar-commands",
     );
     expect(calendarWebhookLib).not.toContain(
       "@/shared/domain/settings/integration-commands",

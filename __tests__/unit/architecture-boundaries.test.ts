@@ -74,7 +74,7 @@ const GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE = join(
   "route.ts",
 );
 const GOOGLE_SERVICE_ACCOUNT_BOUNDARY_FILES = [
-  join(SRC_ROOT, "shared", "domain", "settings", "integration-commands.ts"),
+  join(SRC_ROOT, "shared", "domain", "settings", "google-calendar-commands.ts"),
   join(SRC_ROOT, "shared", "lib", "analytics", "ga-data-api.ts"),
   join(SRC_ROOT, "shared", "lib", "google-calendar", "service-account.ts"),
 ];

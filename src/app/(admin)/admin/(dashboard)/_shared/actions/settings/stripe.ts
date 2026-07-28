@@ -22,7 +22,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import {
   clearStripeKeys as clearStripeKeysCommand,
   updateStripeSettings as updateStripeSettingsCommand,
-} from "@/shared/domain/settings/integration-commands";
+} from "@/shared/domain/settings/stripe-commands";
 import {
   buildStripeSettingsAuditSnapshot,
   getStripeSettingsAuditSnapshot,

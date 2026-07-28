@@ -33,7 +33,7 @@ mock.module("@/shared/lib/stripe", () => ({
   testStripeConnection: mockTestStripeConnection,
 }));
 
-mock.module("@/shared/domain/settings/integration-commands", () => ({
+mock.module("@/shared/domain/settings/stripe-commands", () => ({
   recordStripeConnectionSuccess: mockRecordStripeConnectionSuccess,
   updateStripeSettings: mock(() => Promise.resolve()),
   clearStripeKeys: mock(() => Promise.resolve()),

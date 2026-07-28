@@ -16,7 +16,7 @@ import {
   getGoogleCalendarWebhookState,
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
-import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/integration-commands";
+import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/google-calendar-commands";
 import { getAppUrl } from "@/shared/lib/constants";
 import { safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
