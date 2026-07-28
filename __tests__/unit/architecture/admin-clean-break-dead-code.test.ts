@@ -235,9 +235,9 @@ describe("admin clean-break dead code boundaries", () => {
   });
 
   test("settings integration commands are imported from their canonical module, not compatibility re-exported", () => {
-    const commandsSource = read("src/shared/domain/settings/commands.ts");
-    expect(commandsSource).not.toContain("./integration-commands");
-    expect(commandsSource).not.toContain("Re-export integration commands");
+    expect(existsSync(filePath("src/shared/domain/settings/commands.ts"))).toBe(
+      false,
+    );
 
     const stripeAction = read(
       "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts",
@@ -253,9 +253,10 @@ describe("admin clean-break dead code boundaries", () => {
     expect(calendarAction).toContain(
       "@/shared/domain/settings/integration-commands",
     );
-    const commandsImport = namedImportBlock(
+    expect(calendarAction).not.toContain('@/shared/domain/settings/commands";');
+    const integrationImport = namedImportBlock(
       calendarAction,
-      "@/shared/domain/settings/commands",
+      "@/shared/domain/settings/integration-commands",
     );
     for (const integrationCommand of [
       "clearGoogleCalendarServiceAccount",
@@ -263,10 +264,11 @@ describe("admin clean-break dead code boundaries", () => {
       "recordGoogleCalendarConnectionError",
       "recordGoogleCalendarConnectionSuccess",
       "saveGoogleCalendarWebhook",
+      "updateEventImportEnabled",
       "updateGoogleCalendarSettings",
       "updateTwoWaySyncSettings",
     ]) {
-      expect(commandsImport).not.toContain(integrationCommand);
+      expect(integrationImport).toContain(integrationCommand);
     }
 
     // webhook persistence orchestration は domain 側。lib webhook は API client のみ。

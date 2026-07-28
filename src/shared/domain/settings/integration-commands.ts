@@ -190,6 +190,15 @@ export async function clearStripeKeys(): Promise<void> {
 // Google Calendar commands
 // ---------------------------------------------------------------------------
 
+export async function updateEventImportEnabled(
+  enabled: boolean,
+): Promise<void> {
+  await prisma.settingsGoogleCalendar.update({
+    where: { id: "singleton" },
+    data: { eventImportEnabled: enabled },
+  });
+}
+
 export async function updateGoogleCalendarSettings(
   data: GoogleCalendarSettingsInput,
 ): Promise<void> {

@@ -76,7 +76,6 @@ describe("notification email clean break", () => {
     );
     const adminQuery = read("src/shared/domain/settings/admin-queries.ts");
     const query = read("src/shared/domain/settings/queries/notification.ts");
-    const commands = read("src/shared/domain/settings/commands.ts");
     const organizationCommands = read(
       "src/shared/domain/settings/commands/organization.ts",
     );
@@ -109,8 +108,6 @@ describe("notification email clean break", () => {
     expect(query).not.toContain(
       "parseStringArray(settings?.notificationEmailAddresses)",
     );
-    expect(commands).not.toContain("notificationStaffIds: string[];");
-    expect(commands).not.toContain("notificationEmailAddresses: string[];");
     expect(organizationCommands).not.toContain(
       "asPrismaInputJsonValue(\n      data.notificationStaffIds",
     );

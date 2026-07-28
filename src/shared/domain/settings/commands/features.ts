@@ -16,18 +16,6 @@ import {
   toExpectedUpdatedAt,
 } from "@/shared/domain/settings/commands/optimistic";
 
-export type ReservationSettingsInput = {
-  defaultTimeSlot: number;
-  minReservationDuration: number;
-  maxReservationDuration: number;
-  cancellationDeadlineHours: number;
-  modificationDeadlineHours: number;
-  customerCanCancelSeriesInFull: boolean;
-  maxRecurrenceInstances: number;
-  /** 楽観的 concurrency: 読み込み時の SettingsReservation.updatedAt */
-  expectedUpdatedAt: string | Date;
-};
-
 /** Feature Module `data-retention` を OFF→ON する際の確認不足メッセージ */
 export const DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE =
   "データ保持ポリシーの自動適用を有効にするには、保持期間経過後の削除・匿名化のリスクを理解したうえで確認チェックボックスにチェックを入れてください。";
@@ -40,40 +28,6 @@ export type FeatureModulesCommandInput = Record<FeatureModule, boolean> & {
 export type DataRetentionSettingsCommandInput = DataRetentionConfig & {
   expectedUpdatedAt: string | Date;
 };
-
-export async function updateReservationSettings(
-  data: ReservationSettingsInput,
-): Promise<void> {
-  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
-  const updateData = {
-    defaultTimeSlot: data.defaultTimeSlot,
-    minReservationDuration: data.minReservationDuration,
-    maxReservationDuration: data.maxReservationDuration,
-    cancellationDeadlineHours: data.cancellationDeadlineHours,
-    modificationDeadlineHours: data.modificationDeadlineHours,
-    customerCanCancelSeriesInFull: data.customerCanCancelSeriesInFull,
-    maxRecurrenceInstances: data.maxRecurrenceInstances,
-  };
-
-  await prisma.$transaction(async (tx) => {
-    const result = await tx.settingsReservation.updateMany({
-      where: { id: "singleton", updatedAt: expectedUpdatedAt },
-      data: updateData,
-    });
-    if (result.count === 0) {
-      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
-    }
-  });
-}
-
-export async function updateEventImportEnabled(
-  enabled: boolean,
-): Promise<void> {
-  await prisma.settingsGoogleCalendar.update({
-    where: { id: "singleton" },
-    data: { eventImportEnabled: enabled },
-  });
-}
 
 /**
  * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
