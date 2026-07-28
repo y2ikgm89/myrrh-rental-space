@@ -94,7 +94,7 @@ function isRefundable(reservation: ReservationWithRelations): boolean {
 type ReservationDetailProps = {
   reservation: ReservationWithRelations;
   /**
-   * Feature Module `payment` (Settings.featureModules.payment) が有効か。
+   * Feature Module `payment` (SettingsFeatures.featureModules.payment) が有効か。
    * false 時は「決済リンクを作成」を非表示。返金は Stripe 決済履歴がある場合のみ表示
    * （domain 層 `assertStripeCredentialsConfigured` 経路。feature OFF でも可）。
    */
@@ -362,7 +362,9 @@ export function ReservationDetail({
     (reservation.stripeCheckoutSessionId ?? null) === null &&
     chargeBase > 0;
   const showCreateCheckout =
-    paymentEnabled && reservation.paymentStatus === PaymentStatus.UNPAID;
+    paymentEnabled &&
+    (reservation.paymentStatus === PaymentStatus.UNPAID ||
+      reservation.paymentStatus === PaymentStatus.FAILED);
   const showRefund = isRefundable(reservation);
 
   return (

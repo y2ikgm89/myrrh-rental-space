@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { RegistrationStatus } from "@generated/prisma/enums";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 type RegistrationEmailRow = {
   id: string;
@@ -62,9 +62,21 @@ const mockRegistrationFindFirst = mock<
 const mockRegistrationAggregate = mock<
   () => Promise<{ _sum: { quantity: number | null } }>
 >(() => Promise.resolve({ _sum: { quantity: null } }));
-const mockRegistrationFindMany = mock<() => Promise<ExportRow[]>>(() =>
-  Promise.resolve([]),
-);
+const mockRegistrationFindMany = mock((args?: Record<string, unknown>) => {
+  const where = args?.["where"];
+  if (
+    where &&
+    typeof where === "object" &&
+    "customerId" in where &&
+    where.customerId
+  ) {
+    return mockRegistrationFindManyForCustomer();
+  }
+  return Promise.resolve([] as ExportRow[]);
+});
+const mockRegistrationFindManyForCustomer = mock<
+  () => Promise<RegistrationEmailRow[]>
+>(() => Promise.resolve([]));
 
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
@@ -81,6 +93,7 @@ import {
   getEventRegistrationDetailsForEmail,
   findEventRegistrationsForReminderWindow,
   getCustomerEventRegistrationDetail,
+  getCustomerEventRegistrations,
 } from "@/shared/domain/events/registration-queries";
 import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
 
@@ -89,6 +102,19 @@ describe("event registration query slot consistency", () => {
     mockRegistrationFindFirst.mockReset();
     mockRegistrationAggregate.mockReset();
     mockRegistrationFindMany.mockReset();
+    mockRegistrationFindManyForCustomer.mockReset();
+    mockRegistrationFindMany.mockImplementation((args) => {
+      const where = args?.["where"];
+      if (
+        where &&
+        typeof where === "object" &&
+        "customerId" in where &&
+        where.customerId
+      ) {
+        return mockRegistrationFindManyForCustomer();
+      }
+      return Promise.resolve([] as ExportRow[]);
+    });
   });
 
   test("email details use the registration slot rather than the event first slot", async () => {
@@ -144,30 +170,32 @@ describe("event registration query slot consistency", () => {
   test("CSV export uses each registration slot as the event datetime", async () => {
     const selectedStart = new Date("2026-05-03T07:00:00.000Z");
     const selectedEnd = new Date("2026-05-03T08:00:00.000Z");
-    mockRegistrationFindMany.mockResolvedValue([
-      {
-        id: "reg-2",
-        name: "佐藤花子",
-        email: "sato@example.com",
-        phone: null,
-        note: null,
-        quantity: 2,
-        status: RegistrationStatus.CONFIRMED,
-        cancelledAt: null,
-        attendedAt: null,
-        createdAt: new Date("2026-04-01T00:00:00.000Z"),
-        slot: {
-          startAt: selectedStart,
-          endAt: selectedEnd,
+    mockRegistrationFindMany.mockImplementationOnce(() =>
+      Promise.resolve([
+        {
+          id: "reg-2",
+          name: "佐藤花子",
+          email: "sato@example.com",
+          phone: null,
+          note: null,
+          quantity: 2,
+          status: RegistrationStatus.CONFIRMED,
+          cancelledAt: null,
+          attendedAt: null,
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          slot: {
+            startAt: selectedStart,
+            endAt: selectedEnd,
+          },
+          event: {
+            title: "複数枠イベント",
+            addressDetail: null,
+            location: { name: "青山" },
+            space: null,
+          },
         },
-        event: {
-          title: "複数枠イベント",
-          addressDetail: null,
-          location: { name: "青山" },
-          space: null,
-        },
-      },
-    ]);
+      ]),
+    );
 
     const rows = await getEventRegistrationsForExport("event-1");
 
@@ -179,11 +207,12 @@ describe("event registration query slot consistency", () => {
   test("findEventRegistrationsForReminderWindow は CONFIRMED + 未送信 + 窓内 + email あり + 未削除イベントで絞り込む", async () => {
     const start = new Date("2026-07-15T00:00:00.000Z");
     const end = new Date("2026-07-15T23:59:59.999Z");
-    mockRegistrationFindMany.mockResolvedValue([]);
+    mockRegistrationFindMany.mockImplementationOnce(() => Promise.resolve([]));
 
     await findEventRegistrationsForReminderWindow(start, end);
 
-    expect(mockRegistrationFindMany).toHaveBeenCalledWith({
+    expect(mockRegistrationFindMany).toHaveBeenCalledTimes(1);
+    expect(mockRegistrationFindMany.mock.calls[0]?.[0]).toEqual({
       where: {
         status: RegistrationStatus.CONFIRMED,
         reminderSentAt: null,
@@ -276,5 +305,45 @@ describe("event registration query slot consistency", () => {
     );
 
     expect(detail).toBeNull();
+  });
+
+  test("getCustomerEventRegistrations は CONFIRMED 以外の meetingUrl を null にする", async () => {
+    mockRegistrationFindManyForCustomer.mockResolvedValueOnce([
+      {
+        id: "reg-waitlisted",
+        eventId: "event-1",
+        slotId: "slot-1",
+        quantity: 1,
+        status: RegistrationStatus.WAITLISTED,
+        cancelledAt: null,
+        createdAt: new Date("2026-07-01T00:00:00.000Z"),
+        waitlistedAt: new Date("2026-07-01T00:00:00.000Z"),
+        offeredAt: null,
+        expiresAt: null,
+        paymentStatus: "UNPAID",
+        ticket: { price: 1000 },
+        ticketId: "ticket-1",
+        slot: {
+          startAt: new Date("2026-08-01T01:00:00.000Z"),
+          endAt: new Date("2026-08-01T02:00:00.000Z"),
+        },
+        event: {
+          id: "event-1",
+          title: "待機中イベント",
+          slug: "waitlisted-event",
+          status: "PUBLISHED",
+          format: "ONLINE",
+          meetingUrl: "https://meet.example.com/secret",
+          addressDetail: null,
+          location: null,
+          space: null,
+        },
+      },
+    ]);
+    mockRegistrationFindManyForCustomer.mockResolvedValueOnce([]);
+
+    const result = await getCustomerEventRegistrations("customer-1");
+
+    expect(result.active[0]?.event.meetingUrl).toBeNull();
   });
 });

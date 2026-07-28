@@ -3,7 +3,7 @@
  *
  * Sanity / Stripe Capabilities / Shopify shop.features の合成パターン:
  * - registry はメタデータのみ保持（label / requires / publicRoutes / sectionTypes / templates 等）
- * - 実際の ON/OFF 値は `Settings.featureModules` JSON column が SSoT
+ * - 実際の ON/OFF 値は `SettingsFeatures.featureModules` JSON column が SSoT
  * - registry に `defaultEnabled` を持たない（DB explicit declarative）
  * - DB key 欠損時は `isFeatureEnabled` が fail-closed（false）
  * - seed.ts / migration が全 module を explicit に設定する契約
@@ -52,11 +52,9 @@ export interface FeatureModuleDef {
   /** AddSectionDialog から除外する section type */
   readonly sectionTypes: readonly string[];
   /**
-   * PAGE_TEMPLATES から除外する template id（metadata-only）。
-   * 現状 Add Page ダイアログは registry.templates を参照せず、admin UI 側で
-   * ハードコード selector を持つ。runtime filter / getFeatureFilterContext には
-   * 含めない (check.ts WIRE-04)。将来 PAGE_TEMPLATES selector を registry 駆動に
-   * する際の予約フィールド。
+   * PAGE_TEMPLATES から除外する template id。
+   * feature OFF 時は `getFeatureFilterContext().disabledTemplates` に集約され、
+   * page create (`assertPageTemplateEnabled`) で fail-closed される。
    */
   readonly templates: readonly string[];
   /** 早期 return 対象の cron route path */
@@ -177,6 +175,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     publicRoutes: [
       "/events/registrations/checkout",
       "/events/registrations/payment-result",
+      "/events/waitlist/checkout",
     ],
     pageSlugs: [],
     sectionTypes: [],
@@ -210,7 +209,7 @@ export function isFeatureModule(value: string): value is FeatureModule {
  * Feature Module の「初期値」を構築する。
  *
  * `disabledIds` に含まれない module は ON で初期化する。
- * - seed.ts の新規 install 時の `Settings.featureModules` 初期化
+ * - seed.ts の新規 install 時の `SettingsFeatures.featureModules` 初期化
  * - 管理画面の「すべて初期値に戻す」ボタン等の reset 用途
  *
  * env var driven override は呼び出し側で解決して `disabledIds` に渡す（このヘルパー

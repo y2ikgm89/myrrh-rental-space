@@ -25,11 +25,70 @@ export const PAYMENT_REFUND_LOCK_NAMESPACE = {
 export type PaymentRefundEntityKind =
   keyof typeof PAYMENT_REFUND_LOCK_NAMESPACE;
 
-/** Payment refund interactive tx: advisory lock + plan/finalize 用。Stripe API は tx 外。 */
-export const PAYMENT_REFUND_TRANSACTION_OPTIONS = {
-  timeout: 30_000,
-  maxWait: 30_000,
+/** Phase A: lock + validate + amount resolution（Stripe I/O なし）。 */
+export const PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS = {
+  timeout: 5_000,
+  maxWait: 5_000,
 } as const;
+
+/** Phase C: lock + Refund insert + paymentStatus 更新（Stripe I/O なし）。 */
+export const PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS = {
+  timeout: 10_000,
+  maxWait: 10_000,
+} as const;
+
+/** @deprecated 3 フェーズ分割後は PREPARE / PERSIST を使用。 */
+export const PAYMENT_REFUND_TRANSACTION_OPTIONS =
+  PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS;
+
+export type ResolvedRefundAmount = {
+  readonly amount: number;
+  readonly cumulativeSoFar: number;
+  readonly newCumulative: number;
+  readonly willBeFullyRefunded: boolean;
+};
+
+/**
+ * 返金額を advisory lock 内で確定する（charge 上限・部分返金・残額全額）。
+ *
+ * @throws DomainError VALIDATION
+ */
+export function resolveRefundAmount(input: {
+  readonly chargeTotal: number;
+  readonly cumulativeSoFar: number;
+  readonly requestedAmount?: number;
+  readonly fullyRefundedMessage: string;
+}): ResolvedRefundAmount {
+  const remaining = input.chargeTotal - input.cumulativeSoFar;
+
+  if (remaining <= 0) {
+    throw new DomainError(input.fullyRefundedMessage, "VALIDATION");
+  }
+
+  const amount = input.requestedAmount ?? remaining;
+
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new DomainError(
+      "返金額は 1 円以上の整数で指定してください",
+      "VALIDATION",
+    );
+  }
+  if (amount > remaining) {
+    throw new DomainError(
+      `返金額が残額を超えています (残額: ${remaining} 円)`,
+      "VALIDATION",
+    );
+  }
+
+  const newCumulative = input.cumulativeSoFar + amount;
+
+  return {
+    amount,
+    cumulativeSoFar: input.cumulativeSoFar,
+    newCumulative,
+    willBeFullyRefunded: newCumulative === input.chargeTotal,
+  };
+}
 
 const SAVEPOINT_NAME_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 

@@ -465,7 +465,10 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
       endTime: row.slot.endAt,
       status: row.event.status,
       format: row.event.format,
-      meetingUrl: row.event.meetingUrl,
+      meetingUrl:
+        row.status === RegistrationStatus.CONFIRMED
+          ? row.event.meetingUrl
+          : null,
       location: formatEventVenue({
         location: row.event.location,
         space: row.event.space,

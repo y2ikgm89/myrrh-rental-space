@@ -13,7 +13,7 @@ import {
  * 有効化されている feature module 集合を解決する。
  *
  * 解決ロジック:
- * 1. DB の `Settings.featureModules` から explicit に true となっている module を抽出
+ * 1. DB の `SettingsFeatures.featureModules` から explicit に true となっている module を抽出
  * 2. `FEATURE_MODULES[id].requires` の依存解決を伝播的に適用（A requires B & B OFF → A も OFF）
  *
  * fail-closed 原則: DB 取得成功時に key が存在しない / DB が空 / 不正値 → その module は OFF。
@@ -76,15 +76,15 @@ export async function isFeatureEnabled(
  * skill 契約)。`FEATURE_MODULES[id].cronPaths` は「その module に紐づく cron route
  * の運用停止範囲を示す doc」であって、runtime gate ではない (registry.test.ts の
  * drift gate が「isFeatureEnabled 引数 ↔ cronPaths 実体」の双方向対応を強制する)。
- * templates も同様に PAGE_TEMPLATES selector 側は現状 registry を参照しない
- * (metadata-only)。以前は `disabledTemplates` / `disabledCronPaths` を Set として
- * 集約していたが consumer 皆無で SSoT drift の温床になっていたため削除 (WIRE-04)。
+ * templates は `resolveTemplateForSlug` / page create 経路で
+ * `getFeatureFilterContext().disabledTemplates` により fail-closed する (WIRE-04)。
  */
 export interface FeatureFilterContext {
   readonly enabled: ReadonlySet<FeatureModule>;
   readonly disabledRoutes: readonly string[];
   readonly disabledPageSlugs: ReadonlySet<string>;
   readonly disabledSectionTypes: ReadonlySet<string>;
+  readonly disabledTemplates: ReadonlySet<string>;
 }
 
 export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
@@ -92,6 +92,7 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
   const disabledRoutes: string[] = [];
   const disabledPageSlugs = new Set<string>();
   const disabledSectionTypes = new Set<string>();
+  const disabledTemplates = new Set<string>();
 
   for (const id of FEATURE_MODULES_LIST) {
     if (enabled.has(id)) continue;
@@ -99,6 +100,7 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
     disabledRoutes.push(...def.publicRoutes);
     for (const slug of def.pageSlugs) disabledPageSlugs.add(slug);
     for (const type of def.sectionTypes) disabledSectionTypes.add(type);
+    for (const templateId of def.templates) disabledTemplates.add(templateId);
   }
 
   return {
@@ -106,7 +108,28 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
     disabledRoutes,
     disabledPageSlugs,
     disabledSectionTypes,
+    disabledTemplates,
   };
+}
+
+/** PAGE template id が feature OFF により利用不可か判定する。 */
+export function isPageTemplateDisabled(
+  templateId: string,
+  disabledTemplates: ReadonlySet<string>,
+): boolean {
+  return disabledTemplates.has(templateId);
+}
+
+/**
+ * Page create / system page bootstrap 用: feature OFF の template は拒否する。
+ */
+export async function assertPageTemplateEnabled(
+  templateId: string,
+): Promise<void> {
+  const ctx = await getFeatureFilterContext();
+  if (isPageTemplateDisabled(templateId, ctx.disabledTemplates)) {
+    throw new DomainError(ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE, "FORBIDDEN");
+  }
 }
 
 /**

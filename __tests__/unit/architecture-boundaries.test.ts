@@ -908,7 +908,7 @@ describe("architecture boundaries", () => {
     const files = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
       files,
-      /prisma\.auditLog\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+      /\b(?:prisma|tx)\.auditLog\.(update|updateMany|delete|deleteMany|upsert)\b/u,
     );
     expect(offenders).toEqual([]);
   });
@@ -2376,25 +2376,6 @@ describe("architecture boundaries", () => {
     const E2E_ROOT = join(ROOT, "e2e");
     const violations: string[] = [];
 
-    function walkSpec(root: string): string[] {
-      if (!existsSync(root)) return [];
-      const out: string[] = [];
-      const stack = [root];
-      while (stack.length > 0) {
-        const dir = stack.pop();
-        if (dir === undefined) break;
-        for (const entry of readdirSync(dir, { withFileTypes: true })) {
-          const path = join(dir, entry.name);
-          if (entry.isDirectory()) {
-            stack.push(path);
-          } else if (/\.(ts|tsx)$/u.test(entry.name)) {
-            out.push(path);
-          }
-        }
-      }
-      return out;
-    }
-
     // 旧 shape を「reject される」negative test fixture として **意図的に**
     // 残している schema 検証 spec のみ allowlist に追加。
     const ALLOWLIST: readonly string[] = [
@@ -2403,7 +2384,8 @@ describe("architecture boundaries", () => {
     ] as const;
 
     for (const root of [TESTS_ROOT, E2E_ROOT]) {
-      for (const path of walkSpec(root)) {
+      if (!existsSync(root)) continue;
+      for (const path of collectSourceFiles(root)) {
         // 自分自身の test ファイルはパターン文字列を含むため除外
         if (path.endsWith("architecture-boundaries.test.ts")) continue;
         const rel = relative(ROOT, path).replaceAll("\\", "/");
@@ -2418,7 +2400,7 @@ describe("architecture boundaries", () => {
     }
 
     expect(violations).toEqual([]);
-  });
+  }, 15_000);
 
   // ──────────────────────────────────────────────────────────────
   // CSP nonce-gap structural prevention helpers

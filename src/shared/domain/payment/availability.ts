@@ -15,7 +15,7 @@ import { isFeatureEnabled } from "@/shared/domain/features/check";
  * ## 二層分離（Shopify shop.features / Stripe Capabilities 相当）
  *
  * - **業務層** — `isFeatureEnabled("payment")`: 運営者が「オンライン決済機能を提供する」と
- *   宣言しているか。`Settings.featureModules.payment` が SSoT。`requires: ["reservation"]`
+ *   宣言しているか。`SettingsFeatures.featureModules.payment` が SSoT。`requires: ["reservation"]`
  *   のため reservation OFF で自動 OFF される（feature module registry の cascade）。
  * - **技術層** — Stripe credentials: `stripeSecretKey` と `stripeWebhookSecret` の
  *   両方が保存されているか。webhook 経由の状態遷移・既存決済の返金・pending checkout

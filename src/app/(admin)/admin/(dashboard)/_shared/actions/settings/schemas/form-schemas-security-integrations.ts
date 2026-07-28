@@ -79,7 +79,7 @@ export type DiscountFormInput = z.infer<typeof discountFormSchema>;
 // =============================================================================
 
 // stripeEnabled トグルは廃止 — オンライン決済の ON/OFF は Feature Module registry の
-// `payment` module (Settings.featureModules.payment) が SSoT。ここで credentials のみ扱う。
+// `payment` module (SettingsFeatures.featureModules.payment) が SSoT。ここで credentials のみ扱う。
 export const stripeFormSchema = z
   .object({
     stripePublishableKey: z
