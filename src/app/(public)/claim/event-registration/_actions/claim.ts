@@ -20,7 +20,7 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/claim-token-cookie-names";
-import { consumeSignupTermsAction } from "@/app/(public)/_shared/actions/consume-signup-terms";
+import { consumeSignupTermsAction } from "@/public/actions/consume-signup-terms";
 
 /**
  * ゲストのイベント参加申込を現在ログイン中の会員アカウントへ再紐付けする（claim）。

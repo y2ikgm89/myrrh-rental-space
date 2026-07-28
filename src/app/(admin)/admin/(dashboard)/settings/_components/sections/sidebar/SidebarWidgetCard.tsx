@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/shared/lib/cn";
-import { toTranslate3d, useSortable } from "@/admin/components/ui";
+import { useSortable } from "@/admin/components/ui";
+import { useSortableImperativeRef } from "@/admin/components/ui/sortable";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -88,10 +89,11 @@ export function SidebarWidgetCard({
     isDragging,
   } = useSortable({ id: getWidgetId(widget), disabled });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   const label = getWidgetLabel(widget);
   const widgetId = getWidgetId(widget);
@@ -103,8 +105,7 @@ export function SidebarWidgetCard({
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group flex items-center gap-3 rounded-md border p-3 transition-colors",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

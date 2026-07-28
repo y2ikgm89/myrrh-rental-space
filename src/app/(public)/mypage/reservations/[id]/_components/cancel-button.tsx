@@ -19,7 +19,7 @@ import {
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { cancelReservationAction } from "../../../_shared/actions/reservation";
-import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
+import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
 
 interface CancelButtonProps {
   readonly reservationId: string;

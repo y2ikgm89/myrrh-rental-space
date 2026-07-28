@@ -99,17 +99,6 @@ const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
 
-  // Turbopack configuration (default bundler in Next.js 16)
-  turbopack: {
-    // Resolve alias for ESM module resolution compatibility
-    // better-auth imports 'next/headers' without .js extension
-    resolveAlias: {
-      "next/headers": "next/headers.js",
-      "next/navigation": "next/navigation.js",
-      "next/server": "next/server.js",
-    },
-  },
-
   // Standalone output for Docker / Cloud Run deployment
   // Docker ビルド時に STANDALONE=true を設定。ローカル開発では不要
   // (Windows の Turbopack が node: protocol をファイル名に含めるため standalone コピーが失敗する)
@@ -159,11 +148,6 @@ const nextConfig: NextConfig = {
   // Partial Prerendering (PPR) - 静的シェル + 動的コンテンツのハイブリッドレンダリング
   // use cache ディレクティブによる明示的キャッシュ制御を有効化
   cacheComponents: true,
-
-  // Better Auth: ESM module resolution fix for Turbopack
-  // serverExternalPackages は Turbopack 開発サーバーで 500 エラーを起こすため transpilePackages を使用
-  // turbopack.resolveAlias で next/headers.js 等のエクステンション解決済み
-  transpilePackages: ["better-auth"],
 
   // Experimental features
   experimental: {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 // --- モック関数の定義（mock.module() より前）---
 
@@ -157,14 +158,14 @@ mock.module("@/shared/domain/events/waitlist-commands", () => ({
   ) => mockExpireAndPromoteWaitlistForEventCommand(...args),
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),
   sendEventWaitlistOffered: (
     ...args: Parameters<typeof mockSendEventWaitlistOffered>
   ) => mockSendEventWaitlistOffered(...args),
-}));
+});
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: (
@@ -367,8 +368,7 @@ describe("GET /api/cron/waitlist-expire", () => {
       CACHE_TAGS.EVENT_WAITLIST,
     ]);
 
-    // I1: cron の EXPIRED 遷移・繰り上げ当選それぞれで通知メールが送られる
-    // （旧実装は TODO(task-6) スタブのままで一切送信していなかった）。
+    // cron の EXPIRED 遷移・繰り上げ当選それぞれで lib-dispatch 経由の通知メールが送られる。
     expect(mockSendEventWaitlistExpired).toHaveBeenCalledTimes(1);
     expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith({
       registration: expect.objectContaining({ id: "reg-1" }),

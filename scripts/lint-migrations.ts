@@ -75,6 +75,15 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // 併せて旧 customer_flagged 行を risk/duplicate type へ再ラベル。計画ダウンタイム
   // 付きデプロイ（SET DATA TYPE）が発動する。
   "prisma/migrations/20260726030000_admin_notification_resource_id_varchar/migration.sql",
+  // inquiry positive-author CHECK + author FK SetNull→Restrict。DROP CONSTRAINT /
+  // FK recreate で計画ダウンタイム付きデプロイが発動。Risk 1 は Cloud Run
+  // min0/max1 atomic switch で排除済。
+  "prisma/migrations/20260728120000_inquiry_author_positive_check/migration.sql",
+  // L1 TIMESTAMPTZ + L2 money INTEGER yen unify。多数の `ALTER COLUMN ... TYPE`
+  // が `changing-column-type` を発火し squawk-ignore だけでは抑止できないため
+  // allowlist。EXCLUDE/trigger を tstzrange で再作成。計画ダウンタイム付きデプロイ。
+  // Risk 1 は Cloud Run min0/max1 atomic switch で排除済。
+  "prisma/migrations/20260728140000_timestamptz_and_yen_int_unify/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

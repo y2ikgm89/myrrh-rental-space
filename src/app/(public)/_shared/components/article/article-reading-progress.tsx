@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 
 /**
  * 記事の読書進捗を表示するブロンズの極細プログレスバー（1px hairline）。
@@ -63,10 +66,13 @@ export function ArticleReadingProgress(): React.ReactElement {
       aria-valuemax={100}
       className="h-px w-full overflow-hidden bg-foreground/10"
     >
-      <div
+      <ImperativeCssScope
         aria-hidden="true"
-        className="h-full origin-left bg-accent transition-transform duration-150 ease-out"
-        style={{ transform: `scaleX(${progress})` }}
+        cssVars={{ [CSS_VAR.readingProgress]: progress }}
+        className={cn(
+          "h-full origin-left bg-accent transition-transform duration-150 ease-out",
+          CSS_VAR_CLASS.readingProgress,
+        )}
       />
     </div>
   );

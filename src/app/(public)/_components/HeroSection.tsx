@@ -14,6 +14,8 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import { Heading } from "@/public/components/design-system/heading";
 import { ScrollIndicator } from "@/public/components/layouts/scroll-indicator";
 import {
@@ -29,10 +31,10 @@ import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 
 const DEFAULT_BG_IMAGE = "/images/seed/page-about-hero.svg";
 
@@ -93,19 +95,26 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
   const heightClass = isCustomHeight
     ? undefined
     : HERO_PARALLAX_HEIGHT_MAP[parsedHeight];
-  const customHeightStyle = isCustomHeight
-    ? { minHeight: `${String(config.heightCustom ?? 80)}svh` }
+  const customHeightClass = isCustomHeight
+    ? CSS_VAR_CLASS.heroMinHeight
+    : undefined;
+  const customHeightCssVars = isCustomHeight
+    ? { [CSS_VAR.heroMinHeight]: `${String(config.heightCustom ?? 80)}svh` }
     : undefined;
 
   return (
-    <section
+    <ImperativeCssScope
+      as="section"
       ref={sectionRef}
+      {...(customHeightCssVars !== undefined && {
+        cssVars: customHeightCssVars,
+      })}
       data-hero=""
       className={cn(
         "relative overflow-hidden pt-[var(--hero-header-offset)]",
         heightClass,
+        customHeightClass,
       )}
-      style={customHeightStyle}
     >
       <div className="mx-auto flex min-h-full max-w-[var(--container-site)] flex-col md:flex-row">
         {/* Left: Image panel */}
@@ -147,7 +156,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
             </p>
           )}
 
-          <div style={getTitleStyle(style)}>
+          <SectionTitleBox style={style}>
             <Heading
               level={1}
               className={cn("mt-6", getTitleClasses(style), "leading-[1.05]")}
@@ -156,18 +165,18 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
 
           {/* Decorative divider */}
           <div className="mt-8 h-px w-12 bg-accent/40" aria-hidden="true" />
 
           {config.subtitle.length > 0 && (
-            <div
+            <SectionTextBox
+              style={style}
               className="mt-6 max-w-sm text-sm leading-[2] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
-              style={getTextStyle(style)}
             >
               <PortableText blocks={config.subtitle} />
-            </div>
+            </SectionTextBox>
           )}
 
           {config.buttons.length > 0 && (
@@ -190,6 +199,6 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
           <ScrollIndicator />
         </div>
       )}
-    </section>
+    </ImperativeCssScope>
   );
 }

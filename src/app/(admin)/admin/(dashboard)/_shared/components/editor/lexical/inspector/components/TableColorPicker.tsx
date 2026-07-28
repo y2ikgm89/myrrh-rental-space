@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import { Button, Input, Label } from "@/admin/components/ui";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
@@ -97,19 +98,20 @@ export function TableColorPicker({
             }}
             className={cn(
               "h-6 w-full rounded border border-border transition-shadow",
+              swatch.value === "" &&
+                "bg-[repeating-conic-gradient(var(--color-muted)_0%_25%,transparent_0%_50%)_0/8px_8px]",
               value === swatch.value && "ring-2 ring-ring ring-offset-1",
             )}
-            style={
-              swatch.value === ""
-                ? {
-                    background:
-                      "repeating-conic-gradient(var(--color-muted) 0% 25%, transparent 0% 50%) 0 / 8px 8px",
-                  }
-                : { backgroundColor: swatch.value }
-            }
             aria-label={swatch.label}
             aria-pressed={value === swatch.value}
-          />
+          >
+            {swatch.value !== "" && (
+              <ColorSwatchPreview
+                color={swatch.value}
+                className="h-full w-full border-0"
+              />
+            )}
+          </button>
         ))}
       </div>
 

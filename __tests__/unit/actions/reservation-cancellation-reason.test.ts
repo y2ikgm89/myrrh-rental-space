@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 const mockExecuteAdminMutationResult = mock();
 const mockUpdateReservationStatusCommand = mock();
@@ -54,11 +55,11 @@ mock.module(
     deleteCalendarSync: mock(async () => ({ success: true })),
   }),
 );
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationAdminNotification: mock(async () => undefined),
   sendReservationConfirmationEmail: mock(async () => undefined),
   sendReservationStatusChangedEmail: mock(async () => undefined),
-}));
+});
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mock(async () => ({
     passcodes: [],

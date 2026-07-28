@@ -4,7 +4,7 @@ import { formatMonthDayTime } from "@/shared/lib/date-format";
 import {
   getAnnouncementBarDisplayStatus,
   getAnnouncementBarDisplayStatusLabel,
-} from "@/public/components/announcement-bar/display-period";
+} from "@/shared/lib/announcement-bar/display-period";
 import {
   Badge,
   Button,
@@ -26,14 +26,16 @@ import {
   arrayMove,
   closestCenter,
   sortableKeyboardCoordinates,
-  toTranslate3d,
   useSensor,
   useSensors,
   useSortable,
   verticalListSortingStrategy,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { cn } from "@/shared/lib/cn";
 import type { BarListProps } from "./types";
@@ -62,10 +64,11 @@ function SortableBarRow({
     isDragging,
   } = useSortable({ id: bar.id, disabled: isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   // eslint-disable-next-line @eslint-react/purity -- Client Component: 公開状態の算出用
   const displayStatus = getAnnouncementBarDisplayStatus(bar, new Date());
@@ -74,8 +77,7 @@ function SortableBarRow({
 
   return (
     <TableRow
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(isDragging && "z-50 shadow-lg ring-2 ring-primary/20")}
     >
       <TableCell className="w-12">

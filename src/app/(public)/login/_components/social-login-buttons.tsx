@@ -14,7 +14,7 @@ import {
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
+import { TermsConsentChecklist } from "@/public/components/forms/TermsConsentChecklist";
 import { setSignupTermsAgreementCookie } from "./signup-terms-action";
 
 /* ------------------------------------------------------------------ */

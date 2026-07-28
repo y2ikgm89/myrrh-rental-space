@@ -16,7 +16,7 @@
  */
 
 import type { Metadata, Viewport } from "next";
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { connection } from "next/server";
@@ -49,9 +49,14 @@ import {
   getAnalyticsConfig,
   getCookieConsentSettings,
   getSiteLayoutSettings,
-  FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
+import { CSS_VAR } from "@/shared/lib/csp/css-vars";
+import { NonceStyleBlock } from "@/shared/lib/csp/nonce-style";
+import {
+  buildDataStyleRule,
+  DATA_STYLE_ID_ATTR,
+} from "@/shared/lib/csp/sanitize-css";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
@@ -71,9 +76,44 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import { getFeedAlternates } from "@/public/lib/seo/feed-alternates";
 import "./_styles/public.css";
 
-type MainShellStyle = CSSProperties & {
-  readonly "--container-site": string;
-};
+const MAIN_SHELL_STYLE_ID = "main-shell";
+
+/**
+ * `<main>` chrome 全体の presentational frame（Server Component）。
+ */
+function MainShellFrame({
+  styleId,
+  isTransparent,
+  taxValue,
+  children,
+}: {
+  readonly styleId: string;
+  readonly isTransparent: boolean;
+  readonly taxValue: PublicTaxDisplay;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      {...{ [DATA_STYLE_ID_ATTR]: styleId }}
+      className="flex-1 pb-[var(--spacing-fluid-md)] focus-visible:outline-none"
+      {...(isTransparent && { "data-header-transparent": "" })}
+    >
+      <TaxSettingsProvider value={taxValue}>
+        <LenisProvider>
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </LenisProvider>
+      </TaxSettingsProvider>
+    </main>
+  );
+}
+
+function MainShellFallback(): ReactElement {
+  return (
+    <div aria-hidden="true" className="flex-1 pb-[var(--spacing-fluid-md)]" />
+  );
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   // favicon は静的 URL `/icon` で `<link rel="icon">` を注入し、実体は dynamic icon
@@ -293,54 +333,6 @@ async function HeaderWithData(): Promise<ReactElement> {
 }
 
 /**
- * `<main>` chrome 全体の presentational frame（Server Component）。
- *
- * 取得した settings は props 経由で渡す。データ取得は `MainShellResolved`（async）が担う。
- */
-function MainShellFrame({
-  style,
-  isTransparent,
-  taxValue,
-  children,
-}: {
-  readonly style: CSSProperties;
-  readonly isTransparent: boolean;
-  readonly taxValue: PublicTaxDisplay;
-  readonly children: ReactNode;
-}): ReactElement {
-  return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="flex-1 pb-[var(--spacing-fluid-md)] focus-visible:outline-none"
-      style={style}
-      {...(isTransparent && { "data-header-transparent": "" })}
-    >
-      <TaxSettingsProvider value={taxValue}>
-        <LenisProvider>
-          <NuqsAdapter>{children}</NuqsAdapter>
-        </LenisProvider>
-      </TaxSettingsProvider>
-    </main>
-  );
-}
-
-// Suspense fallback is a decorative spacer only, so it stays DB-independent.
-const DEFAULT_MAIN_STYLE: MainShellStyle = {
-  "--container-site": getContainerSiteCss(FALLBACK_LAYOUT_CONFIG),
-};
-
-function MainShellFallback(): ReactElement {
-  return (
-    <div
-      aria-hidden="true"
-      className="flex-1 pb-[var(--spacing-fluid-md)]"
-      style={DEFAULT_MAIN_STYLE}
-    />
-  );
-}
-
-/**
  * `<main>` の動的 chrome を解決する async Server Component（Suspense 内で resume）。
  *
  * 設計（PR #76c2316b で確立した build-time prerender 汚染回避 pattern の layout 本体への展開）:
@@ -367,21 +359,24 @@ async function MainShellResolved({
     reducedRate: taxSettings.reducedRate,
     displayMode: taxSettings.displayModePublic,
   };
-  const style: MainShellStyle = {
-    "--container-site": getContainerSiteCss(layoutSettings),
+  const shellCss = buildDataStyleRule(MAIN_SHELL_STYLE_ID, {
+    [CSS_VAR.containerSite]: getContainerSiteCss(layoutSettings),
     ...(isTransparent && {
       marginTop: "calc(var(--header-height, 0px) * -1)",
     }),
-  };
+  });
 
   return (
-    <MainShellFrame
-      style={style}
-      isTransparent={isTransparent}
-      taxValue={taxValue}
-    >
-      {children}
-    </MainShellFrame>
+    <>
+      <NonceStyleBlock id={MAIN_SHELL_STYLE_ID} css={shellCss} />
+      <MainShellFrame
+        styleId={MAIN_SHELL_STYLE_ID}
+        isTransparent={isTransparent}
+        taxValue={taxValue}
+      >
+        {children}
+      </MainShellFrame>
+    </>
   );
 }
 

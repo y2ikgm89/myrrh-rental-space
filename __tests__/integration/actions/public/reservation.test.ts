@@ -127,11 +127,6 @@ installEmailRenderContextMock({
   })),
 });
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationConfirmationEmail: mock(() => Promise.resolve({ ok: true })),
-  sendReservationAdminNotification: mockSendReservationAdminNotification,
-}));
-
 // terms 系: server-side consent gate + 記録コマンドを no-op に。
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
 mock.module("@/shared/domain/terms/queries", () => ({
@@ -141,6 +136,7 @@ mock.module("@/shared/domain/terms/queries", () => ({
   // module 全体差し替え mock ではここに no-op を明示する必要がある。
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
   getPublishedTermsByType: mock(() => Promise.resolve(null)),
+  getFooterTerms: mock(() => Promise.resolve([])),
 }));
 // TermsAgreement 記録は createPublicReservationCommand（domain、本 test では mock）
 // の同一 tx 内で行われる。action 層から recordTermsAgreementsCommand は呼ばない。

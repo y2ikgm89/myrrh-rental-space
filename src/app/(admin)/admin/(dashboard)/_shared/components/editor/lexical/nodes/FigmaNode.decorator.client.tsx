@@ -38,8 +38,7 @@ function FigmaComponent({
         allow="fullscreen"
         loading="lazy"
         title={label || "Figma デザイン"}
-        className="w-full border-none"
-        style={{ height: "450px" }}
+        className="h-[450px] w-full border-none"
       />
     </div>
   );

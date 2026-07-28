@@ -289,16 +289,9 @@ export const serverEnv = createEnv({
 
     // Runtime scaling hints
     //
-    // Rate-limit store is permanently `"in-memory"` (Cloud Run max-instances=1).
-    // Redis / other distributed backends are out of scope by product decision —
-    // do not reintroduce `"redis"` here. `MAX_INSTANCES_HINT` MUST be `1` when
-    // set: multi-instance Cloud Run + LRUCache silently divides every rate
-    // limit N ways per instance.
-    //
-    // `MAX_INSTANCES_HINT` is a copy of the deploy-time Cloud Run
-    // `--max-instances` value, plumbed through as a runtime env var so the
-    // process can self-audit (Cloud Run does not expose the deploy config to
-    // the container). Populated by `cloudbuild.yaml` from `_MAX_INSTANCES`.
+    // Rate-limit store backend. Default `"in-memory"` (Cloud Run max-instances=1).
+    // `MAX_INSTANCES_HINT` MUST be `1` when backend is `in-memory` (validateProductionEnv
+    // hard-fails otherwise).
     RATE_LIMIT_BACKEND: z.literal("in-memory").default("in-memory"),
     MAX_INSTANCES_HINT: z.coerce.number().int().positive().optional(),
 
@@ -549,12 +542,7 @@ export function validateProductionEnv(): void {
   //
   // `InMemoryRateLimitStore` (LRUCache) is per-process. On a Cloud Run service
   // with autoscaling max-instances > 1, every documented rate limit is silently
-  // multiplied by `MAX_INSTANCES` (each instance has its own bucket, XFF/IP
-  // hashing does not steer a client to a specific instance). That is an
-  // observable regression of security-sensitive limiters — brute-force
-  // protection, form spam gates, reservation flood control — so if the
-  // deploy-time hint contradicts the backend, fail-fast at startup with an
-  // actionable message instead of silently letting production run degraded.
+  // multiplied by `MAX_INSTANCES` (each instance has its own bucket).
   //
   // Rate-limit is in-memory only (no Redis). Keep Cloud Run max-instances=1.
   if (

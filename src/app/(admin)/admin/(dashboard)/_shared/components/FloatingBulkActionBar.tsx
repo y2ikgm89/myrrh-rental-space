@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { IconX } from "@tabler/icons-react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { Button } from "./ui/button";
 
 type FloatingBulkActionBarProps = {
@@ -33,14 +34,17 @@ export function FloatingBulkActionBar({
   isPending = false,
   children,
 }: FloatingBulkActionBarProps) {
+  const barRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(barRef, {
+    paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)",
+  });
+
   if (selectedCount === 0) return null;
 
   return (
     <div
+      ref={barRef}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4"
-      style={{
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)",
-      }}
     >
       <div
         role="toolbar"

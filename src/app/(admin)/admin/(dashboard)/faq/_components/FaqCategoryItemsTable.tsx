@@ -34,10 +34,12 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { SortableColumnHeader, stopRowClick } from "@/admin/components/table";
 import { reorderFaqItems, updateFaqItemPublished } from "@/admin/actions/faq";
@@ -100,15 +102,15 @@ function SortableRow({
     isDragging,
   } = useSortable({ id: item.id, disabled: !sortable || isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <TableRow
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

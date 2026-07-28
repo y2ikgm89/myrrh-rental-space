@@ -14,7 +14,11 @@
  * - modifier: vertical axis 制約（`@dnd-kit/modifiers` 不使用、インライン実装）
  */
 
-import { useId, useTransition } from "react";
+import { useId, useRef, useTransition } from "react";
+import {
+  useImperativeStyle,
+  useImperativeTransform,
+} from "@/shared/lib/csp/use-imperative-style";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { IconPlus } from "@tabler/icons-react";
@@ -73,20 +77,27 @@ function SortableSectionListItem({
     isDragging,
   } = useSortable({ id, disabled: !itemProps.canDrag || itemProps.isPending });
 
+  const itemRef = useRef<HTMLDivElement>(null);
+  const combinedRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    itemRef.current = node;
+  };
+  useImperativeTransform(
+    itemRef,
+    transform ? CSS.Translate.toString(transform) : undefined,
+  );
+  useImperativeStyle(itemRef, {
+    transition: transition ?? undefined,
+    opacity: isDragging ? 0.5 : 1,
+  });
+
   const dragHandleProps: Record<string, unknown> = {
     ...attributes,
     ...listeners,
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-      }}
-    >
+    <div ref={combinedRef}>
       <SectionListItem
         {...itemProps}
         {...(itemProps.canDrag && { dragHandleProps })}

@@ -82,6 +82,7 @@ const REMINDER_DATA = {
   customerId: null,
   format: EventFormat.OFFLINE,
   meetingUrl: null,
+  reminderWindowDate: "2099-01-02",
 } satisfies Parameters<typeof sendEventReminderEmail>[0];
 
 function lastKey(): string | undefined {
@@ -96,17 +97,14 @@ beforeEach(() => {
 // ===========================================================================
 // H2: sendEventReminderEmail() の idempotencyKey は cron 呼び出しごとに fresh
 // ===========================================================================
-describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
-  test("同一 registrationId の 2 回連続呼び出しで異なる idempotencyKey を発行する", async () => {
+describe("H2: sendEventReminderEmail() idempotencyKey（reminderWindowDate 単位）", () => {
+  test("同一 reminderWindowDate では同じ idempotencyKey", async () => {
     await sendEventReminderEmail(
       { ...REMINDER_DATA },
       RENDER_CONTEXT,
       EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
-
-    // 別 tick を挟むことで Date.now() の増分を保証する
-    await new Promise((r) => setTimeout(r, 2));
 
     await sendEventReminderEmail(
       { ...REMINDER_DATA },
@@ -115,12 +113,13 @@ describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
     );
     const secondKey = lastKey();
 
-    expect(firstKey).toBeDefined();
-    expect(secondKey).toBeDefined();
-    expect(firstKey).not.toBe(secondKey);
+    expect(firstKey).toBe(
+      `event-reminder/${REMINDER_DATA.registrationId}/${REMINDER_DATA.reminderWindowDate}`,
+    );
+    expect(secondKey).toBe(firstKey);
   });
 
-  test("キーは `event-reminder/<registrationId>/<timestamp>` 形式で始まる", async () => {
+  test("キーは `event-reminder/<registrationId>/<reminderWindowDate>` 形式", async () => {
     await sendEventReminderEmail(
       { ...REMINDER_DATA },
       RENDER_CONTEXT,
@@ -128,14 +127,9 @@ describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
     );
 
     const key = lastKey();
-    expect(key).toBeDefined();
-    expect(
-      key?.startsWith(`event-reminder/${REMINDER_DATA.registrationId}/`),
-    ).toBe(true);
-    // 末尾は Date.now() の数値
-    const suffix = key?.split("/").at(-1) ?? "";
-    expect(Number.isFinite(Number(suffix))).toBe(true);
-    expect(Number(suffix)).toBeGreaterThan(0);
+    expect(key).toBe(
+      `event-reminder/${REMINDER_DATA.registrationId}/${REMINDER_DATA.reminderWindowDate}`,
+    );
   });
 });
 

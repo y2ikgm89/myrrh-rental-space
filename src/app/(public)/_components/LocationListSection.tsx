@@ -26,10 +26,8 @@ import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { Heading } from "@/public/components/design-system/heading";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { DAY_LABELS, ATTR_LABELS } from "@/public/lib/seo/json-ld-config";
 import { cn } from "@/shared/lib/cn";
@@ -613,14 +611,14 @@ export function LocationListSection({
             {config.sectionLabel && (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
-            <div style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn("mt-4 tracking-tight", getTitleClasses(style))}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </ScrollReveal>
         </div>
       )}

@@ -15,7 +15,8 @@ import { getReservationForCompletion } from "@/shared/domain/reservations/custom
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
 import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
-import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
+import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
+import { DetailRow } from "@/public/components/detail-row";
 import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -210,22 +211,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </Stack>
     </PageLayout>
-  );
-}
-
-interface DetailRowProps {
-  readonly label: string;
-  readonly children: React.ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4 py-3 border-b border-border last:border-none">
-      <dt className="text-sm text-muted-foreground sm:w-36 shrink-0">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">{children}</dd>
-    </div>
   );
 }
 

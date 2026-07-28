@@ -197,12 +197,12 @@ type GroupDialogProps = {
 };
 
 function StyleOption({
-  style,
+  groupStyle,
   color,
   selected,
   onSelect,
 }: {
-  style: GroupStyle;
+  groupStyle: GroupStyle;
   color: AccentColor;
   selected: boolean;
   onSelect: () => void;
@@ -212,7 +212,7 @@ function StyleOption({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={GROUP_STYLE_LABELS[style]}
+      aria-label={GROUP_STYLE_LABELS[groupStyle]}
       className={cn(
         "flex flex-col items-stretch gap-1.5 rounded-md border-2 p-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
@@ -222,14 +222,14 @@ function StyleOption({
     >
       <div
         data-group="true"
-        data-group-style={style}
+        data-group-style={groupStyle}
         {...(color !== "default" ? { "data-color": color } : {})}
         className="flex min-h-12 items-center justify-center px-2 py-1.5 text-xs leading-tight text-foreground"
       >
         Aa
       </div>
       <span className="text-xs text-muted-foreground">
-        {GROUP_STYLE_LABELS[style]}
+        {GROUP_STYLE_LABELS[groupStyle]}
       </span>
     </button>
   );
@@ -274,13 +274,13 @@ function GroupDialog({
                     {CATEGORY_HEADINGS[category]}
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {GROUP_STYLE_CATEGORIES[category].map((style) => (
+                    {GROUP_STYLE_CATEGORIES[category].map((groupStyle) => (
                       <StyleOption
-                        key={style}
-                        style={style}
+                        key={groupStyle}
+                        groupStyle={groupStyle}
                         color={selectedColor}
-                        selected={selectedStyle === style}
-                        onSelect={() => setSelectedStyle(style)}
+                        selected={selectedStyle === groupStyle}
+                        onSelect={() => setSelectedStyle(groupStyle)}
                       />
                     ))}
                   </div>

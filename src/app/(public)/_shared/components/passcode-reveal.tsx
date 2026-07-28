@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type ReactElement } from "react";
 import { Button } from "@/public/components/design-system/button";
-import { revealReservationPasscodesAction } from "@/app/(public)/_shared/actions/reveal-reservation-passcodes";
+import { revealReservationPasscodesAction } from "@/public/actions/reveal-reservation-passcodes";
 import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

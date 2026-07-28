@@ -32,10 +32,12 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { stopRowClick } from "@/admin/components/table";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
@@ -45,6 +47,7 @@ import {
 } from "@/admin/actions/space-category";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 import { CategoryActionCell } from "./CategoryActionCell";
 import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 
@@ -72,15 +75,15 @@ function SortableRow({ category, sortable, isPending }: SortableRowProps) {
     isDragging,
   } = useSortable({ id: category.id, disabled: !sortable || isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <TableRow
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
@@ -119,10 +122,7 @@ function SortableRow({ category, sortable, isPending }: SortableRowProps) {
       <TableCell className="hidden lg:table-cell">
         {category.color ? (
           <div className="flex items-center gap-2">
-            <div
-              className="h-6 w-6 rounded border"
-              style={{ backgroundColor: category.color }}
-            />
+            <ColorSwatchPreview color={category.color} className="h-6 w-6" />
             <code className="text-xs text-muted-foreground">
               {category.color}
             </code>

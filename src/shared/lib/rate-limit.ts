@@ -18,8 +18,7 @@
  *
  * **スケール契約（製品決定）:**
  * rate-limit 用 Redis / 分散 store は使わない。Cloud Run は max-instances=1 を維持し、
- * アプリ層は `InMemoryRateLimitStore` のみ。エッジ側の追加防御は Cloudflare
- * Turnstile / WAF に任せる。`RATE_LIMIT_BACKEND` は `"in-memory"` 固定。
+ * エッジ側の追加防御は Cloudflare Turnstile / WAF に任せる。
  *
  * **多層防御:**
  * - Layer 1: `InMemoryRateLimitStore`（このファイル、Cloud Run max=1 でグローバル）

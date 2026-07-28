@@ -10,6 +10,7 @@
 
 import { useState, useRef } from "react";
 import type { RefObject } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { DraggableBlockPlugin_EXPERIMENTAL } from "./lexical-draggable-block-plugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -89,6 +90,19 @@ function TargetLine({
 // =============================================================================
 // Main Plugin
 // =============================================================================
+
+function MenuAnchor({ x, y }: { x: number; y: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useImperativeStyle(ref, {
+    position: "fixed",
+    left: x,
+    top: y,
+    width: 1,
+    height: 1,
+    pointerEvents: "none",
+  });
+  return <span ref={ref} />;
+}
 
 export function DraggableBlockPlugin({
   anchorElem,
@@ -202,16 +216,7 @@ export function DraggableBlockPlugin({
           }}
         >
           <DropdownMenuTrigger asChild>
-            <span
-              style={{
-                position: "fixed",
-                left: menu.x,
-                top: menu.y,
-                width: 1,
-                height: 1,
-                pointerEvents: "none",
-              }}
-            />
+            <MenuAnchor x={menu.x} y={menu.y} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem

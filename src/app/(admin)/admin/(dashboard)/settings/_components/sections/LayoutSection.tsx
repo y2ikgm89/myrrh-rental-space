@@ -8,7 +8,8 @@
  * (LayoutWidth.CUSTOM 選択時のみ) はリアクティブ表示。
  */
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { useRouter } from "next/navigation";
 import {
   getFormProps,
@@ -52,6 +53,24 @@ import {
 } from "../shared/settings-read-only";
 
 const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
+function LayoutContentPreviewBox({
+  width,
+  className,
+  children,
+}: {
+  width: string;
+  className: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useImperativeStyle(ref, { width });
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
+}
 
 interface LayoutSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
@@ -370,11 +389,9 @@ export function LayoutSection({
                       {resolvedSitePx ? `${resolvedSitePx}px` : "全幅"}
                     </span>
                   </div>
-                  <div
+                  <LayoutContentPreviewBox
+                    width={contentRatio ? `${contentRatio}%` : "100%"}
                     className="mx-auto mt-2.5 rounded border border-dashed border-primary/40 bg-background px-3 py-2.5"
-                    style={{
-                      width: contentRatio ? `${contentRatio}%` : "100%",
-                    }}
                   >
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>コンテンツ領域</span>
@@ -392,7 +409,7 @@ export function LayoutSection({
                       <div className="h-2 w-4/5 rounded-full bg-muted" />
                       <div className="h-2 w-3/5 rounded-full bg-muted" />
                     </div>
-                  </div>
+                  </LayoutContentPreviewBox>
                 </div>
               </div>
             </div>

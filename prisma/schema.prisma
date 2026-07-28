@@ -497,7 +497,7 @@ model Space {
   addressDetail        String?   @db.Text
   capacity             Int
   area                 Decimal?  @db.Decimal(10, 2)
-  hourlyPrice          Decimal   @db.Decimal(10, 2)
+  hourlyPrice          Int
   mainImageUrl         String
   gallery              Json      @default("[]")
   /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
@@ -526,7 +526,7 @@ model Space {
 
   // 割引設定（Enum化）
   discountType             DiscountType             @default(none)
-  discountValue            Decimal?                 @db.Decimal(10, 2)
+  discountValue            Int?
   durationDiscountOverride DurationDiscountOverride @default(inherit)
 
   // 税率設定（Enum化）
@@ -583,7 +583,7 @@ model SpaceRatePlan {
   space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   name        String  @db.VarChar(100) // 例: "週末料金", "GW料金", "深夜料金", "祝日料金"
-  hourlyPrice Decimal @db.Decimal(10, 2)
+  hourlyPrice Int
 
   daysOfWeek    DayOfWeek[] // 空配列 = 全曜日（曜日制約なし）
   holidayMode   HolidayMode @default(any)
@@ -646,17 +646,17 @@ model ReservationSeries {
   customerId                    String    @db.Uuid
   couponId                      String?   @db.Uuid
   rrule                         String    @db.VarChar(500)
-  dtstart                       DateTime  @db.Timestamp(6)
+  dtstart                       DateTime  @db.Timestamptz(6)
   duration                      Int
   instanceCount                 Int
   templateData                  Json
   agreementSnapshot             Json
-  createdAt                     DateTime  @default(now())
-  updatedAt                     DateTime  @updatedAt
-  cancelledAt                   DateTime?
+  createdAt                     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                     DateTime  @updatedAt @db.Timestamptz(6)
+  cancelledAt                   DateTime? @db.Timestamptz(6)
   cancelledByType               String?   @db.VarChar(20)
   cancellationReason            String?   @db.Text
-  deletedAt                     DateTime?
+  deletedAt                     DateTime? @db.Timestamptz(6)
   deletedById                   String?   @db.Uuid
   /// Google Calendar 側の recurring master event ID (Phase B.2.1 Task 5 で追加)。
   /// null = 未同期 or Google Calendar 無効。bulk cancel の series-level GCal 操作
@@ -685,22 +685,22 @@ model Reservation {
   customerId String            @db.Uuid
   /// Space reservations are half-open intervals: [startTime, endTime).
   /// DB invariant `reservations_time_order_check` enforces startTime < endTime.
-  startTime  DateTime
-  endTime    DateTime
+  startTime  DateTime @db.Timestamptz(6)
+  endTime    DateTime @db.Timestamptz(6)
   /// Active inventory states are PENDING / CONFIRMED. DB invariant
   /// `reservations_no_active_time_overlap_excl` prevents overlapping active,
   /// non-deleted reservations for the same space by using PostgreSQL EXCLUDE
-  /// with `tsrange(startTime, endTime, '[)')`.
+  /// with `tstzrange(startTime, endTime, '[)')`.
   ///
   /// Prisma schema DSL cannot express EXCLUDE constraints or CHECK constraints.
   /// `prisma db pull` will not preserve these invariants; keep migration SQL,
   /// comments, and `__tests__/integration/domain/reservations/db-invariants.test.ts`
   /// in sync if this model changes.
   status     ReservationStatus @default(PENDING)
-  totalPrice Decimal           @db.Decimal(10, 2) // 割引後・税抜（NOT NULL、legacy row は migration backfill 済み）
+  totalPrice Int // 割引後・税抜（円、NOT NULL）
   notes      String?           @db.Text
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  createdAt  DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime          @updatedAt @db.Timestamptz(6)
 
   /// Optimistic concurrency (Rails ActiveRecord lock_version / Hibernate @Version と同型)。
   /// form-driven update path (updateCustomerReservation / updateAdminReservationCommand) が
@@ -710,10 +710,10 @@ model Reservation {
 
   // 割引情報
   couponId               String?  @db.Uuid // 適用されたクーポンID
-  couponDiscountAmount   Decimal? @db.Decimal(10, 2) // クーポン割引額
-  durationDiscountAmount Decimal? @db.Decimal(10, 2) // 長時間割引額
-  spaceDiscountAmount    Decimal? @db.Decimal(10, 2) // スペース固有割引額
-  basePrice              Decimal  @db.Decimal(10, 2) // 割引前価格（NOT NULL、Σ segment.subtotal）
+  couponDiscountAmount   Int? // クーポン割引額（円）
+  durationDiscountAmount Int? // 長時間割引額（円）
+  spaceDiscountAmount    Int? // スペース固有割引額（円）
+  basePrice              Int // 割引前価格（円、NOT NULL、Σ segment.subtotal）
   /// Rate plan 解決結果のスナップショット（`RateBreakdown` 型、`src/shared/lib/pricing/rate-breakdown.ts`）。
   /// legacy row（本 migration の backfill 対象）は `{ legacy: true, segments: [], ... }` を持つ
   /// （`isLegacyRateBreakdown` で判定、`receipts/issue.ts` 等は legacy 時のみ totalPrice フォールバックを維持）。
@@ -722,14 +722,14 @@ model Reservation {
   // 税情報（予約時点の値を記録）
   taxRateType       TaxRateType // 適用された税率タイプ（NOT NULL、snapshot）
   taxRate           Decimal     @db.Decimal(5, 2) // 適用税率（%）（NOT NULL、snapshot）
-  taxAmount         Decimal     @db.Decimal(10, 2) // 税額（NOT NULL）
-  totalPriceWithTax Decimal     @db.Decimal(10, 2) // 税込み合計（NOT NULL）
+  taxAmount         Int // 税額（円、NOT NULL）
+  totalPriceWithTax Int // 税込み合計（円、NOT NULL）
   /// 管理者が計算値を手動上書きした場合の実行者 User.id（audit 目的）。null = 上書きなし。
   priceOverriddenBy String?
 
   // Google Calendar Sync
   googleCalendarEventId String? // 共有カレンダーのイベントID
-  calendarSyncedAt      DateTime? // 最終同期日時
+  calendarSyncedAt      DateTime? @db.Timestamptz(6) // 最終同期日時
   calendarSyncError     String?   @db.Text // 同期エラーメッセージ
 
   // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
@@ -749,7 +749,7 @@ model Reservation {
   smartLockPasscodes SmartLockPasscode[]
 
   // Soft-delete
-  deletedAt   DateTime?
+  deletedAt   DateTime? @db.Timestamptz(6)
   deletedById String?   @db.Uuid
   deletedBy   User?     @relation("ReservationDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
 
@@ -757,18 +757,18 @@ model Reservation {
   paymentStatus           PaymentStatus @default(UNPAID)
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
-  paidAt                  DateTime?
+  paidAt                  DateTime? @db.Timestamptz(6)
   /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
   /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
   /// `PENDING_RESERVATION_EXPIRY_MINUTES` の cutoff 判定に使う。予約作成時刻
   /// (createdAt) ではなく checkout 開始時刻で判定することで、予約作成から時間をおいて
   /// 決済を開始したケース (createdAt < cutoff だが checkout はまだ生きている) を誤爆
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
-  paymentInitiatedAt      DateTime?
+  paymentInitiatedAt      DateTime? @db.Timestamptz(6)
 
   // Cancellation tracking
   cancellationReason String?   @db.Text
-  cancelledAt        DateTime?
+  cancelledAt        DateTime? @db.Timestamptz(6)
   cancelledByType    String?   @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" | "SYSTEM" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
@@ -776,11 +776,11 @@ model Reservation {
 
   // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
   // 二重送信防止のため送信前に atomic claim で now を立て、送信失敗時は null に戻す。
-  reminderSentAt DateTime?
+  reminderSentAt DateTime? @db.Timestamptz(6)
 
   /// 予約変更後の SwitchBot パスコード再発行待ち（revoke 確定後に webhook/cron が createKey）。
   /// edit-side-effects が revoke 受理後に key 消失を同リクエスト内で確認できなかった場合に立てる。
-  smartLockReissuePendingAt DateTime? @map("smart_lock_reissue_pending_at")
+  smartLockReissuePendingAt DateTime? @map("smart_lock_reissue_pending_at") @db.Timestamptz(6)
 
   // PR#16: 領収書 (適格請求書) の 1:1 relation (1 予約 = 1 領収書、再発行は
   // Receipt.reissuedFromId で自参照)
@@ -829,7 +829,7 @@ model Customer {
   status                 CustomerStatus      @default(NEW)
   notes                  String?             @db.Text
   totalReservations      Int                 @default(0)
-  totalSpent             Decimal?            @db.Decimal(10, 2)
+  totalSpent             Int?
   lastReservationAt      DateTime?
   firstReservationAt     DateTime?
   isActive               Boolean             @default(true)
@@ -953,11 +953,11 @@ model Coupon {
 
   // 割引設定
   type          CouponType
-  discountValue Decimal    @db.Decimal(10, 2) // 割引額 or 割引率
+  discountValue Int // 割引額 or 割引率（円 or %）
 
   // 適用条件
-  minReservationAmount Decimal? @db.Decimal(10, 2) // 最低利用金額
-  maxDiscountAmount    Decimal? @db.Decimal(10, 2) // 最大割引額（パーセント割引時）
+  minReservationAmount Int? // 最低利用金額（円）
+  maxDiscountAmount    Int? // 最大割引額（円、パーセント割引時）
 
   // 有効期限
   validFrom  DateTime
@@ -1051,17 +1051,17 @@ model InquiryReply {
   id         String                 @id @default(uuid()) @db.Uuid
   inquiryId  String                 @db.Uuid
   authorType InquiryReplyAuthorType
-  /// STAFF → User.id (User 削除で SetNull)。CUSTOMER では null。
+  /// STAFF → User.id (User 削除は Restrict — positive-author CHECK と整合)。CUSTOMER では null。
   authorId   String?                @db.Uuid
-  /// CUSTOMER → Customer.id (Customer 削除で SetNull)。STAFF では null。
+  /// CUSTOMER → Customer.id (Customer 削除は Restrict)。STAFF では null。
   authorCustomerId String?          @db.Uuid
   body       String                 @db.Text
   createdAt  DateTime               @default(now())
   updatedAt  DateTime               @updatedAt
 
   inquiry        Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  author         User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  authorCustomer Customer?           @relation("InquiryReplyAuthorCustomer", fields: [authorCustomerId], references: [id], onDelete: SetNull)
+  author         User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  authorCustomer Customer?           @relation("InquiryReplyAuthorCustomer", fields: [authorCustomerId], references: [id], onDelete: Restrict)
   attachments    InquiryAttachment[]
 
   @@index([inquiryId, createdAt])
@@ -1098,15 +1098,15 @@ model InquiryAttachment {
   mimeType             String   @db.VarChar(100)
   sizeBytes            Int
   filename             String   @db.VarChar(255)
-  /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか。
+  /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか（必須）。
   uploadedById         String?  @db.Uuid
   uploadedByCustomerId String?  @db.Uuid
   createdAt            DateTime @default(now())
 
   inquiry            Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   reply              InquiryReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
-  uploadedByUser     User?         @relation("InquiryAttachmentUploadedByUser", fields: [uploadedById], references: [id], onDelete: SetNull)
-  uploadedByCustomer Customer?     @relation("InquiryAttachmentUploadedByCustomer", fields: [uploadedByCustomerId], references: [id], onDelete: SetNull)
+  uploadedByUser     User?         @relation("InquiryAttachmentUploadedByUser", fields: [uploadedById], references: [id], onDelete: Restrict)
+  uploadedByCustomer Customer?     @relation("InquiryAttachmentUploadedByCustomer", fields: [uploadedByCustomerId], references: [id], onDelete: Restrict)
 
   @@index([inquiryId, createdAt])
   @@index([replyId])
@@ -2270,13 +2270,13 @@ model Event {
   registrationOpen     Boolean           @default(true)
   /// 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。
   registrationDeadline DateTime?         @db.Timestamptz(6)
-  publishedAt          DateTime?
-  deletedAt            DateTime?
+  publishedAt          DateTime?         @db.Timestamptz(6)
+  deletedAt            DateTime?         @db.Timestamptz(6)
   deletedById          String?           @db.Uuid
   /// 写真ギャラリー (本文外の最上位画像一覧)。GalleryItem[] = { url, alt, caption }[]。最大20件。
   gallery              Json              @default("[]")
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
   /// MIN(slots.startAt) の非正規化キャッシュ。スロット変更時に commands 層で同期。
   /// null = スロット未登録。ORDER BY / フィルタ用途に特化。slots.startAt と型を合わせ TIMESTAMPTZ(6)。
   firstSlotStartAt     DateTime?         @db.Timestamptz(6)
@@ -2381,12 +2381,12 @@ model EventRegistration {
   quantity    Int                @default(1)
   status      RegistrationStatus @default(CONFIRMED)
   customerId  String?            @db.Uuid
-  cancelledAt DateTime?
+  cancelledAt DateTime? @db.Timestamptz(6)
   cancelledByType String? @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
-  attendedAt  DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  attendedAt  DateTime? @db.Timestamptz(6)
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
@@ -2398,7 +2398,7 @@ model EventRegistration {
 
   // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
   // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
-  reminderSentAt DateTime?
+  reminderSentAt DateTime? @db.Timestamptz(6)
 
   // Payment (Stripe) — Reservation と同型。有料 EventTicket の Stripe Checkout 対応 (PR#9)。
   // 決済フロー実装 (PR#10) はこの schema 追加を前提とする。無料チケット (price=0) は
@@ -2413,7 +2413,7 @@ model EventRegistration {
   // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
   paidAmount              Int?
-  paidAt                  DateTime?
+  paidAt                  DateTime? @db.Timestamptz(6)
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)

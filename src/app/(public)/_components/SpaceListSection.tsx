@@ -17,10 +17,8 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
@@ -172,7 +170,7 @@ export function SpaceListSection({
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               </ScrollReveal>
             )}
-            <div className="mt-4" style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn("tracking-tight", getTitleClasses(style))}
@@ -181,7 +179,7 @@ export function SpaceListSection({
                   <PortableTextSpans spans={config.title} />
                 </SplitText>
               </Heading>
-            </div>
+            </SectionTitleBox>
           </div>
         )}
 

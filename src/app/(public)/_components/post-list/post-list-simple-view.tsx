@@ -20,10 +20,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import {
   IMAGE_ASPECT_MAP,
@@ -106,7 +106,7 @@ export function PostListSimpleView({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          <div className="mt-4" style={getTitleStyle(style)}>
+          <SectionTitleBox style={style} className="mt-4">
             <Heading
               level={2}
               className={cn("tracking-tight", getTitleClasses(style))}
@@ -115,7 +115,7 @@ export function PostListSimpleView({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         </div>
       )}
 
@@ -167,12 +167,12 @@ export function PostListSimpleView({
               <h3 className="mt-1 font-heading text-base font-light tracking-tight transition-colors group-hover:text-foreground md:text-lg">
                 {post.title}
               </h3>
-              <p
+              <SectionTextBox
+                style={style}
                 className="mt-2 line-clamp-2 text-sm text-muted-foreground"
-                style={getTextStyle(style)}
               >
                 {post.excerpt}
-              </p>
+              </SectionTextBox>
             </div>
           </Link>
         ))}

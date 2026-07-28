@@ -13,6 +13,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // 1. モック関数定義（import より前に必須）
@@ -212,14 +213,14 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getWaitlistConfirmationEmailDetails: () => Promise.resolve(null),
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
   sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
-}));
+});
 
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
+import { DetailRow } from "@/public/components/detail-row";
 
 export interface EventMeetingUrlRowProps {
   readonly meetingUrl: string | null;

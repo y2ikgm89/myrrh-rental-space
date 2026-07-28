@@ -45,7 +45,7 @@ import { cn } from "@/shared/lib/cn";
 import {
   TermsConsentChecklist,
   type ConsentTerm,
-} from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
+} from "@/public/components/forms/TermsConsentChecklist";
 
 interface EventRegistrationFormProps {
   readonly eventId: string;

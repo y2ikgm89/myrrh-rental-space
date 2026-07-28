@@ -3,7 +3,17 @@ import "server-only";
 /**
  * Waitlist promote 用 advisory lock。
  *
- * - namespace 728350 (event registration xact lock) は create/cancel の tx 内で使う。
+ * ## Advisory lock 取得順序（deadlock 回避）
+ *
+ * 複数 namespace を同一 tx で取る場合は **常に番号昇順**:
+ * `728351` (space schedule) → `728350` (event registration capacity) → …
+ *
+ * - 予約 / series: `728357` (series) → `728351` (space) — reservations/series-advisory-lock.ts
+ * - イベント管理更新 (`updateEventCommand`): `728351` (space overlap がある場合) →
+ *   `728350` (slot/ticket 定員 sync の直前) — 申込 create/cancel/waitlist と直列化
+ * - イベント申込のみ: `728350` のみ
+ *
+ * - namespace 728350 (event registration xact lock) は create/cancel / 管理更新の定員 sync で使う。
  * - namespace 728354 (waitlist promote session lock) は cron が「全 slot 走査 → EXPIRED 化 → 次 promote」
  *   のバッチを event 単位で直列化するために使う。同一 event を 2 プロセスが同時に走査すると
  *   updateMany claim の順序が非決定的になる (FIFO の tie-breaker が壊れる) ため session lock で防ぐ。
@@ -20,6 +30,17 @@ import "server-only";
 
 export const WAITLIST_XACT_LOCK_NAMESPACE = 728350 as const;
 export const WAITLIST_PROMOTE_LOCK_NAMESPACE = 728354 as const;
+
+/**
+ * イベント単位の申込定員直列化ロック（xact scope）。
+ * commit / rollback で自動解放。void 戻り値のため $executeRaw を使用。
+ */
+export async function lockEventRegistrationForTransaction(
+  client: LockClient,
+  eventId: string,
+): Promise<void> {
+  await client.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${eventId}))`;
+}
 
 type LockClient = {
   readonly $queryRaw: <T = unknown>(

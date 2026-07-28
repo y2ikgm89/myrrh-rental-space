@@ -17,6 +17,8 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -116,14 +118,13 @@ const mockSendAdminNotification = mock<
     delivery: Record<string, unknown>,
   ) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailLibDispatchMock({
   sendEventRegistrationCancelled: mockSendCancelledEmail,
   sendEventAdminNotification: mockSendAdminNotification,
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+  sendEventWaitlistOffered: mock(() => Promise.resolve({ ok: true })),
+});
 
-mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+installEmailRenderContextMock({
   getEventEmailRenderContext: mock(() =>
     Promise.resolve({
       calendarSettings: { icalAttachmentEnabled: false },
@@ -136,11 +137,7 @@ mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
       notificationEmails: ["admin@example.com"],
     }),
   ),
-}));
-
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
-  sendEventWaitlistOffered: mock(() => Promise.resolve({ ok: true })),
-}));
+});
 
 const mockExpireOpenCheckoutSessionBestEffort = mock<
   (input: {

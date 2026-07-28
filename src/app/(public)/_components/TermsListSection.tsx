@@ -1,10 +1,8 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
@@ -44,14 +42,14 @@ export function TermsListSection({
             {config.sectionLabel && (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
-            <div style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </div>
         )}
 

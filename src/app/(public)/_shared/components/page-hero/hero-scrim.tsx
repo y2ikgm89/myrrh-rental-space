@@ -9,6 +9,8 @@
 
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import type { ScrimTone } from "@/shared/lib/sections/definitions/_shared/scrim";
 
 export function HeroScrim({
@@ -22,13 +24,14 @@ export function HeroScrim({
 }): ReactElement | null {
   if (!enabled || opacity <= 0) return null;
   return (
-    <div
+    <ImperativeCssScope
       aria-hidden="true"
+      cssVars={{ [CSS_VAR.sectionOverlayOpacity]: opacity }}
       className={cn(
         "absolute inset-0",
         tone === "dark" ? "bg-foreground" : "bg-background",
+        CSS_VAR_CLASS.sectionOverlayOpacity,
       )}
-      style={{ opacity: opacity / 100 }}
     />
   );
 }

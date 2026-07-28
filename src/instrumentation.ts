@@ -19,9 +19,12 @@ export async function register(): Promise<void> {
     const { validateProductionEnv } = await import("@/shared/lib/env/server");
     validateProductionEnv();
 
-    const { bootstrapSystemPages } =
-      await import("@/shared/domain/pages/system-pages-server");
-    await bootstrapSystemPages();
+    const { serverEnv } = await import("@/shared/lib/env/server");
+    if (serverEnv.APP_SURFACE === "admin") {
+      const { bootstrapSystemPages } =
+        await import("@/shared/domain/pages/system-pages-server");
+      await bootstrapSystemPages();
+    }
 
     // Cloudflare credentials + tag purge startup probe (production only).
     // Surfaces missing/malformed credentials or purge API failures as

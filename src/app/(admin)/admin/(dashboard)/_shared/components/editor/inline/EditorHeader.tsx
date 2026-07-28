@@ -7,6 +7,7 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
+import { useRef } from "react";
 import {
   IconArrowLeft,
   IconSettings,
@@ -18,8 +19,10 @@ import {
   IconMessage,
 } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
+import { cn } from "@/shared/lib/cn";
 import { Button } from "@/admin/components/ui";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
+import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EditorHeaderProps } from "./types";
 
@@ -69,10 +72,13 @@ export function EditorHeader({
 }: EditorHeaderProps) {
   const isPublished = checkIsPublished(publishActions);
 
+  const headerRef = useRef<HTMLElement>(null);
+  useAdminZIndexImperative(headerRef, Z_INDEX.editorToolbar);
+
   return (
     <header
-      className={styles.header()}
-      style={{ zIndex: Z_INDEX.editorToolbar }}
+      ref={headerRef}
+      className={cn(styles.header(), adminZIndexClassName())}
     >
       <div className={styles.container()}>
         {/* 左側: 戻るボタン + タイトル */}

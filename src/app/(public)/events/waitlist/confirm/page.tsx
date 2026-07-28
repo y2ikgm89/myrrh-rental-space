@@ -22,6 +22,7 @@ import {
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
 import { WaitlistConfirmForm } from "./_components/waitlist-confirm-form";
+import { DetailRow } from "@/public/components/detail-row";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（events/cancel と同方針）。
 export const metadata: Metadata = {
@@ -193,22 +194,6 @@ function Layout({ children }: { children: ReactNode }) {
         {children}
       </Stack>
     </PageLayout>
-  );
-}
-
-interface DetailRowProps {
-  readonly label: string;
-  readonly children: ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4 py-3 border-b border-border last:border-none">
-      <dt className="text-sm text-muted-foreground sm:w-36 shrink-0">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">{children}</dd>
-    </div>
   );
 }
 

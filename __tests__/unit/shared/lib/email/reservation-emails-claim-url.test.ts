@@ -138,6 +138,7 @@ const REMINDER_DATA: ReminderEmailData = {
   location: undefined,
   notes: undefined,
   icsSequence: 0,
+  reminderWindowDate: "2099-01-02",
 };
 
 const CLAIM_URL_PATTERN = /\/claim\/reservation\?token=[A-Za-z0-9_-]+$/;

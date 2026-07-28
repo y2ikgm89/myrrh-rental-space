@@ -1,7 +1,7 @@
 /**
  * 予約 / イベント参加申込の claim トークン cookie 名
  *
- * `proxy.ts`（Edge runtime middleware）が `?token=...` を HttpOnly cookie に転写し、
+ * `proxy.ts`（Node.js runtime proxy）が `?token=...` を HttpOnly cookie に転写し、
  * `claim/reservation` / `claim/event-registration` 配下の page.tsx・Server Action
  * （Node runtime）がその cookie を読む。`proxy.ts` は `next/server` の Edge 専用型に
  * 依存するため、Node runtime 側のファイルから `proxy.ts` を直接 import すると Edge 専用

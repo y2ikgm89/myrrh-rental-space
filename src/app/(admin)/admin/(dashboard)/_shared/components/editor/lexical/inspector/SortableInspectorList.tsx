@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-  toTranslate3d,
+  useSortableImperativeRef,
   type DragEndEvent,
 } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
@@ -72,15 +72,15 @@ function SortableListItem({
     isDragging,
   } = useSortable({ id: item.id });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group/item flex items-center gap-1 rounded-md border px-1.5 h-9",
         item.isActive ? "border-primary/30 bg-primary/5" : "border-border",

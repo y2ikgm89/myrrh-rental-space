@@ -3,6 +3,7 @@ import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import { DomainError } from "@/shared/domain/domain-error";
 import { applyCancellation } from "./cancel-core";
 import { cancelReservationSeriesCommand } from "./series-commands";
@@ -146,7 +147,7 @@ export async function cancelCustomerReservation(
     }
 
     return { success: true, payload: { reservationId } };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 }
 
 /**
@@ -236,7 +237,7 @@ export async function cancelReservationByToken(
     }
 
     return { success: true, payload: { reservationId } };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 }
 
 // ---------------------------------------------------------------------------
@@ -605,5 +606,5 @@ async function updateReservationCommand(input: {
         googleCalendarEventId: reservation.googleCalendarEventId,
       },
     };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 }

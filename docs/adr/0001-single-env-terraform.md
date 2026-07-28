@@ -27,17 +27,15 @@ backend、`terraform/*.tf` は flat 構造を維持する。
   を必要とし、これを env ごとに複製すると OAuth consent screen の再承認 /
   Cloudflare zone 設定 / IAP-secured group 管理が env ごとに発生する。
   automated provisioning でも drift が起きる面が increases 3-fold
-- **seed 差分管理コスト**: `prisma/seed.ts` と `prisma/seed-prod.ts` の 2 系統
-  だけでも drift が起きているため (memory:
-  `project_production-seed-fake-data-cleanup-2026-07-10`)、staging 用の
-  3 系統目を維持する余力がない
+- **seed 差分管理コスト**: `prisma/seed.ts` 単一系統の維持コストが
+  solo team 規模では十分。staging 用の別 seed 系統を増やす ROI が低い
 - **チーム規模 mismatch**: solo team + single-tenant B2B SaaS 規模で
   multi-env の benefit (parallel dev streams / SLA-driven staging validation /
   compliance-required audit env) がいずれも該当しない
 - **pre-prod validation は既に担保**: `docker compose up -d test-db`
   (localhost:5433) + `bun run build:skip-env` + `bun run test:integration` で
   ローカル validation、CI で `terraform plan` + `terraform validate` +
-  tfsec / tflint、main merge 時に自動で breaking migration mode
+  tfsec / tflint、手動 `workflow_dispatch` デプロイ時に breaking migration mode
   (DROP/RENAME 検出時の 310s drain 付きデプロイ) が動く。staging env なしでも
   「本番に壊れた config が入る」経路は塞がっている
 
@@ -83,5 +81,5 @@ Migration triggers のいずれか発火時は、multi-env 化の設計として
   closure / strict blocking gate)
 - `terraform/README.md` — Phase 進捗 / bootstrap-owns-all-project-IAM 契約 /
   Custom role lifecycle
-- `.claude/rules/deploy-infra.md` — main push = 即・本番デプロイ / breaking
+- `.claude/rules/deploy-infra.md` — 手動 `workflow_dispatch` デプロイ / breaking
   migration mode の挙動

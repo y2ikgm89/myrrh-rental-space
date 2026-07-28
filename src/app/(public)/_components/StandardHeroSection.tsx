@@ -29,6 +29,9 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
+import type { ImperativeStyleValues } from "@/shared/lib/csp/use-imperative-style";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -51,11 +54,45 @@ import {
   getHeroTextClasses,
 } from "@/public/components/page-hero/hero-scrim";
 import {
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
 
 type HeroButton = HeroConfig["buttons"][number];
+
+function HeroSecondaryLink({ button }: { readonly button: HeroButton }) {
+  const secondaryCssVars: ImperativeStyleValues = {};
+  if (button.backgroundColor) {
+    secondaryCssVars[CSS_VAR.customBg] = button.backgroundColor;
+  }
+  if (button.textColor) {
+    secondaryCssVars[CSS_VAR.customText] = button.textColor;
+  }
+  const hasSecondaryCssVars = Object.keys(secondaryCssVars).length > 0;
+
+  return (
+    <ImperativeCssScope
+      as={Link}
+      href={toAppRoute(button.url)}
+      {...(hasSecondaryCssVars && { cssVars: secondaryCssVars })}
+      className={cn(
+        "group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground",
+        button.backgroundColor && CSS_VAR_CLASS.customBg,
+        button.textColor && CSS_VAR_CLASS.customText,
+      )}
+      {...(button.openInNewTab && {
+        target: "_blank" as const,
+        rel: "noopener noreferrer",
+      })}
+    >
+      {spansToPlainText(button.label)}
+      {button.openInNewTab && (
+        <span className="sr-only">（新しいタブで開く）</span>
+      )}
+      <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
+    </ImperativeCssScope>
+  );
+}
 
 function HeroButtons({
   primary,
@@ -82,30 +119,7 @@ function HeroButtons({
           openInNewTab={primary.openInNewTab}
         />
       )}
-      {secondary && (
-        <Link
-          href={toAppRoute(secondary.url)}
-          className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
-          {...(secondary.openInNewTab && {
-            target: "_blank" as const,
-            rel: "noopener noreferrer",
-          })}
-          {...((secondary.backgroundColor || secondary.textColor) && {
-            style: {
-              ...(secondary.backgroundColor && {
-                backgroundColor: secondary.backgroundColor,
-              }),
-              ...(secondary.textColor && { color: secondary.textColor }),
-            },
-          })}
-        >
-          {spansToPlainText(secondary.label)}
-          {secondary.openInNewTab && (
-            <span className="sr-only">（新しいタブで開く）</span>
-          )}
-          <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
-        </Link>
-      )}
+      {secondary && <HeroSecondaryLink button={secondary} />}
     </div>
   );
 }
@@ -196,8 +210,11 @@ export function StandardHeroSection({
   const heightClass = isCustomHeight
     ? undefined
     : (HEIGHT_MAP[config.height] ?? HEIGHT_MAP["md"]);
-  const customHeightStyle = isCustomHeight
-    ? { minHeight: `${String(config.heightCustom ?? 60)}svh` }
+  const customHeightClass = isCustomHeight
+    ? CSS_VAR_CLASS.heroMinHeight
+    : undefined;
+  const customHeightCssVars = isCustomHeight
+    ? { [CSS_VAR.heroMinHeight]: `${String(config.heightCustom ?? 60)}svh` }
     : undefined;
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
@@ -230,9 +247,9 @@ export function StandardHeroSection({
             </ScrollReveal>
           )}
           {hasTitle && (
-            <div
+            <SectionTitleBox
+              style={style}
               className={cn(showSectionLabel && "mt-4")}
-              style={getTitleStyle(style)}
             >
               <Heading
                 level={1}
@@ -242,16 +259,16 @@ export function StandardHeroSection({
                   <PortableTextSpans spans={config.title} />
                 </SplitText>
               </Heading>
-            </div>
+            </SectionTitleBox>
           )}
           {hasSubtitle && (
             <ScrollReveal delay={0.5}>
-              <div
+              <SectionTextBox
+                style={style}
                 className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
-                style={getTextStyle(style)}
               >
                 <PortableText blocks={config.subtitle} />
-              </div>
+              </SectionTextBox>
             </ScrollReveal>
           )}
           {(primaryButton ?? secondaryButton) && (
@@ -273,14 +290,18 @@ export function StandardHeroSection({
   // =========================================================================
   if (variant === "split") {
     return (
-      <section
+      <ImperativeCssScope
+        as="section"
         ref={sectionRef}
+        {...(customHeightCssVars !== undefined && {
+          cssVars: customHeightCssVars,
+        })}
         data-hero=""
         className={cn(
           "relative overflow-hidden pt-[var(--hero-header-offset)]",
           heightClass,
+          customHeightClass,
         )}
-        style={customHeightStyle}
       >
         <div
           ref={contentRef}
@@ -293,9 +314,9 @@ export function StandardHeroSection({
               </ScrollReveal>
             )}
             {hasTitle && (
-              <div
+              <SectionTitleBox
+                style={style}
                 className={cn(showSectionLabel && "mt-4")}
-                style={getTitleStyle(style)}
               >
                 <Heading
                   level={1}
@@ -305,16 +326,16 @@ export function StandardHeroSection({
                     <PortableTextSpans spans={config.title} />
                   </SplitText>
                 </Heading>
-              </div>
+              </SectionTitleBox>
             )}
             {hasSubtitle && (
               <ScrollReveal delay={0.2}>
-                <div
+                <SectionTextBox
+                  style={style}
                   className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
-                  style={getTextStyle(style)}
                 >
                   <PortableText blocks={config.subtitle} />
-                </div>
+                </SectionTextBox>
               </ScrollReveal>
             )}
             {hasButtons && (
@@ -341,7 +362,7 @@ export function StandardHeroSection({
             </div>
           )}
         </div>
-      </section>
+      </ImperativeCssScope>
     );
   }
 
@@ -349,14 +370,18 @@ export function StandardHeroSection({
   // Default / Parallax: centered with background media (image or video)
   // =========================================================================
   return (
-    <section
+    <ImperativeCssScope
+      as="section"
       ref={sectionRef}
+      {...(customHeightCssVars !== undefined && {
+        cssVars: customHeightCssVars,
+      })}
       data-hero=""
       className={cn(
         "relative flex items-center justify-center overflow-hidden pt-[var(--hero-header-offset)]",
         heightClass,
+        customHeightClass,
       )}
-      style={customHeightStyle}
     >
       {/* Background media: 単一画像 + parallax は scrub、それ以外はスライドショー */}
       {hasMedia &&
@@ -405,9 +430,9 @@ export function StandardHeroSection({
           </ScrollReveal>
         )}
         {hasTitle && (
-          <div
+          <SectionTitleBox
+            style={style}
             className={cn(showSectionLabel && "mt-4")}
-            style={getTitleStyle(style)}
           >
             <Heading
               level={1}
@@ -420,21 +445,21 @@ export function StandardHeroSection({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         )}
 
         {hasSubtitle && (
           <ScrollReveal delay={0.2}>
-            <div
+            <SectionTextBox
+              style={style}
               className={cn(
                 "mx-auto mt-4 max-w-lg text-sm leading-relaxed md:mt-6 md:text-base",
                 "[&_p]:mt-0 [&_p+p]:mt-3",
                 text.subtitle,
               )}
-              style={getTextStyle(style)}
             >
               <PortableText blocks={config.subtitle} />
-            </div>
+            </SectionTextBox>
           </ScrollReveal>
         )}
 
@@ -448,6 +473,6 @@ export function StandardHeroSection({
           </ScrollReveal>
         )}
       </div>
-    </section>
+    </ImperativeCssScope>
   );
 }

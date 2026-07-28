@@ -458,6 +458,43 @@
   }
 }
 
+/* Announcement Bar — CSP-safe design style (CSS var + class, no inline style attrs) */
+.announcement-bar-striped {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    color-mix(in srgb, var(--announcement-stripe) 12.5%, transparent) 10px,
+    color-mix(in srgb, var(--announcement-stripe) 12.5%, transparent) 20px
+  );
+}
+
+.announcement-bar-striped-animate {
+  background-size: 28.28px 28.28px;
+  animation: stripe-slide 1s linear infinite;
+}
+
+.announcement-bar-gradient-animate {
+  background-size: 200% 100%;
+  animation: gradient-flow 3s ease infinite;
+}
+
+.announcement-bar-glass-shimmer {
+  animation: glass-shimmer 3s ease-in-out infinite;
+}
+
+.announcement-bar-transition-fade {
+  animation: bar-fade-in 0.3s ease-out;
+}
+
+.announcement-bar-transition-slide-x {
+  animation: bar-slide-x-in 0.3s ease-out;
+}
+
+.announcement-bar-transition-slide-y {
+  animation: bar-slide-y-in 0.3s ease-out;
+}
+
 @keyframes section-enter {
   from {
     opacity: 0;
@@ -766,4 +803,10 @@
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
+}
+
+/* CSP-safe initial state for GSAP-driven progress fills (scaleX 0→1) */
+@utility progress-fill-origin {
+  transform: scaleX(0);
+  transform-origin: left center;
 }

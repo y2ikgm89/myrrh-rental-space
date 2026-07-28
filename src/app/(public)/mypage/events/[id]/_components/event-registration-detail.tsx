@@ -32,10 +32,10 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
-import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
-import { EventMeetingUrlRow } from "@/app/(public)/_shared/components/event-meeting-url-row";
-import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
+import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
+import { DetailRow } from "@/public/components/detail-row";
+import { EventMeetingUrlRow } from "@/public/components/event-meeting-url-row";
+import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
 import {
   TurnstileWidget,
   type TurnstileInstance,

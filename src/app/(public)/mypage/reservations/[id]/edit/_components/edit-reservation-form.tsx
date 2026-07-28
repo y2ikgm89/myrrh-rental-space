@@ -1,1 +1,1 @@
-export { EditReservationForm } from "@/app/(public)/_shared/components/edit-reservation-form";
+export { EditReservationForm } from "@/public/components/edit-reservation-form";

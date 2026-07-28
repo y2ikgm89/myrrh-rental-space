@@ -336,7 +336,7 @@ jobs:
           )
 
           if ((${#changed_migrations[@]} > 0)); then
-            if grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE' "${changed_migrations[@]}"; then
+            if grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE' "${changed_migrations[@]}"; then
               BREAKING_MIGRATION_DEPLOY="true"
               printf 'Breaking migration deploy mode enabled for:\n'
               printf '  %s\n' "${changed_migrations[@]}"

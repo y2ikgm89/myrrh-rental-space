@@ -94,8 +94,8 @@ export function resolveWidthStyles(
 
   if (width === LayoutWidth.CUSTOM && customPx) {
     return {
-      className: "mx-auto",
-      style: { maxWidth: `${customPx}px` },
+      className: `mx-auto max-w-[${customPx}px]`,
+      style: undefined,
       px: customPx,
     };
   }
@@ -103,8 +103,8 @@ export function resolveWidthStyles(
   const preset = presets[width];
   if (preset.px) {
     return {
-      className: "mx-auto",
-      style: { maxWidth: `${preset.px}px` },
+      className: `mx-auto max-w-[${preset.px}px]`,
+      style: undefined,
       px: preset.px,
     };
   }

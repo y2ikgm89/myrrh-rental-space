@@ -10,6 +10,7 @@ import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import { isImageUrl } from "@/shared/lib/media/detect-media-type";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface SpaceCardProps {
   readonly slug: string;
@@ -100,7 +101,7 @@ export async function SpaceCard({
 
     return (
       <Link
-        href={`/spaces/${slug}`}
+        href={toAppRoute(`/spaces/${slug}`)}
         aria-label={
           isAvailableForSearch === false
             ? `${name}（指定の日時は空きがありません）`
@@ -219,7 +220,7 @@ export async function SpaceCard({
 
   return (
     <Link
-      href={`/spaces/${slug}`}
+      href={toAppRoute(`/spaces/${slug}`)}
       className="group block overflow-hidden border border-border"
     >
       {/* Image area */}

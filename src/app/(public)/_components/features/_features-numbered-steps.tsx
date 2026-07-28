@@ -6,10 +6,8 @@ import {
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { DynamicTablerIcon } from "@/public/components/ui/dynamic-tabler-icon";
 import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
@@ -39,14 +37,14 @@ export function FeaturesNumberedSteps({
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             ) : null}
-            <div className="mt-4" style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn(getTitleClasses(style), "tracking-tight")}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </ScrollReveal>
         </div>
       )}

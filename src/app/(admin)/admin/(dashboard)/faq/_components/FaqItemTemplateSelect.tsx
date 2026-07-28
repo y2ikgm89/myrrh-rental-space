@@ -54,7 +54,7 @@ export function FaqItemTemplateSelect({
         </SelectTrigger>
         {/* SelectContent は body へ Portal されるため、既定の Z_INDEX.dropdown (25) では
             Dialog (90) の Portal の背後に隠れる。このダイアログ内でのみ dialog より上に持ち上げる */}
-        <SelectContent style={{ zIndex: Z_INDEX.dialog + 1 }}>
+        <SelectContent zIndex={Z_INDEX.dialog + 1}>
           {FAQ_ITEM_TEMPLATE_GROUPS.map((group) => {
             const items = FAQ_ITEM_TEMPLATES.filter(
               (template) => template.group === group,

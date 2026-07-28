@@ -92,6 +92,7 @@ const REMINDER_DATA: {
   icsSequence: number;
   format: EventFormatValue;
   meetingUrl: null;
+  reminderWindowDate: string;
 } = {
   registrationId: "registration-abcd12",
   customerName: "山田太郎",
@@ -104,6 +105,7 @@ const REMINDER_DATA: {
   icsSequence: 0,
   format: "OFFLINE",
   meetingUrl: null,
+  reminderWindowDate: "2099-01-02",
 };
 
 const CLAIM_URL_PATTERN = /\/claim\/event-registration\?token=[A-Za-z0-9_-]+$/;

@@ -93,7 +93,7 @@ function MapEmbedComponent({
   return (
     <div data-map="true" className="flex flex-col gap-1">
       {label && <p className="text-sm text-muted-foreground">{label}</p>}
-      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+      <div className="relative aspect-video w-full">
         <iframe
           src={embedUrl}
           className="absolute inset-0 h-full w-full border-0"

@@ -25,6 +25,8 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import type {
   HeroTransition,
   PageHeroConfig,
@@ -392,13 +394,13 @@ export function EditorialSplitHero({
         onTouchEnd={handleTouchEnd}
       >
         {resolvedImages.map((img, i) => (
-          <div
+          <ImperativeCssScope
             key={img.url}
             ref={(el) => {
-              imageElsRef.current[i] = el;
+              imageElsRef.current[i] = el as HTMLDivElement | null;
             }}
-            className="absolute inset-0"
-            style={{ opacity: i === 0 ? 1 : 0 }}
+            cssVars={{ [CSS_VAR.heroSlideOpacity]: i === 0 ? 1 : 0 }}
+            className={cn("absolute inset-0", CSS_VAR_CLASS.heroSlideOpacity)}
             aria-hidden={i !== activeIndex}
             {...(hasMultiple && {
               role: "group",
@@ -415,7 +417,7 @@ export function EditorialSplitHero({
               loading={i === 0 ? "eager" : "lazy"}
               fetchPriority={i === 0 ? "high" : "auto"}
             />
-          </div>
+          </ImperativeCssScope>
         ))}
 
         <div
@@ -429,12 +431,12 @@ export function EditorialSplitHero({
 
         {hasMultiple ? (
           <p
-            className="pointer-events-none absolute top-6 right-6 z-20 text-eyebrow-lg uppercase tabular-nums text-background"
-            style={{
-              paintOrder: "stroke fill",
-              WebkitTextStroke: "0.4px rgba(0,0,0,0.5)",
-              textShadow: "0 1px 3px rgba(0,0,0,0.55)",
-            }}
+            className={cn(
+              "pointer-events-none absolute top-6 right-6 z-20 text-eyebrow-lg uppercase tabular-nums text-background",
+              "[paint-order:stroke_fill]",
+              "[-webkit-text-stroke:0.4px_rgb(0_0_0/0.5)]",
+              "[text-shadow:0_1px_3px_rgb(0_0_0/0.55)]",
+            )}
             aria-hidden="true"
           >
             {String(activeIndex + 1).padStart(2, "0")}
@@ -475,8 +477,7 @@ export function EditorialSplitHero({
                       ref={(el) => {
                         progressFillsRef.current[i] = el;
                       }}
-                      className="absolute inset-0 rounded-full bg-accent"
-                      style={{ transform: "scaleX(0)" }}
+                      className="progress-fill-origin absolute inset-0 rounded-full bg-accent"
                       aria-hidden="true"
                     />
                   </span>

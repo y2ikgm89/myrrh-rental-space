@@ -5,9 +5,9 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
-import { StatusHubInvalidLinkView } from "@/app/(public)/_shared/components/status-hub/status-hub-invalid-link-view";
-import { StatusHubShell } from "@/app/(public)/_shared/components/status-hub/status-hub-shell";
-import { StatusHubTooManyRequestsView } from "@/app/(public)/_shared/components/status-hub/status-hub-too-many-requests-view";
+import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
+import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
+import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
 import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
@@ -39,11 +39,11 @@ import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
-import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
-import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
-import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
-import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
+import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
+import { DetailRow } from "@/public/components/detail-row";
+import { PasscodeReveal } from "@/public/components/passcode-reveal";
+import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { GuestStatusMemberOwnershipMismatchView } from "@/public/components/guest-status-member-ownership-mismatch-view";
 import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import {
   publicQueryRateLimiter,
@@ -150,6 +150,7 @@ export default async function GuestReservationStatusPage({
   const cancelHref = buildGuestCancelHref({
     reservationId: reservation.id,
     status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
     startTime: reservation.startTime,
     cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
     now,

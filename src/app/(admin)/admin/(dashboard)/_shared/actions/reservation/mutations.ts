@@ -215,6 +215,21 @@ export const updateReservationStatus = async (
         }
       }
 
+      // COMPLETED / NO_SHOW への遷移時は利用期間終了のため、発行済みスマートロック
+      // passcode を revoke する（キャンセル・CONFIRMED→PENDING 格下げと同 helper）。
+      if (
+        result.previousStatus !== status &&
+        (status === ReservationStatus.COMPLETED ||
+          status === ReservationStatus.NO_SHOW)
+      ) {
+        fireAndForget(revokeSmartLockPasscodesForReservation(id), {
+          operation: "revokeSmartLockPasscodesForReservation",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: { reservationId: id, trigger: status },
+        });
+      }
+
       // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール
       if (
         result.previousStatus !== status &&

@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
@@ -123,12 +124,12 @@ const mockSendBulkReservationCancelledEmail = mock<
 const mockSendBulkAdminNotification = mock<
   (data: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
   sendBulkReservationCancelledEmail: mockSendBulkReservationCancelledEmail,
   sendBulkAdminNotification: mockSendBulkAdminNotification,
-}));
+});
 
 const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
   () => {},

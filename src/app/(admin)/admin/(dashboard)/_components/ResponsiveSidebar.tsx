@@ -8,7 +8,7 @@
  * - モバイル: ドロワー (スライドイン)
  */
 
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import type { ReactNode } from "react";
 import { tv } from "tailwind-variants";
 import Link from "next/link";
@@ -18,7 +18,8 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button, TooltipProvider } from "@/admin/components/ui";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
+import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
 import type { SidebarGroup } from "@/admin/types/admin-layout";
 import { AdminNavFeatureDisabledIndicator } from "./AdminNavFeatureDisabledIndicator";
 import { isSidebarItemActive } from "./sidebar-active";
@@ -135,6 +136,14 @@ export function ResponsiveSidebar({
     return () => document.body.classList.remove("overflow-hidden");
   }, [effectiveIsMobile, isOpen]);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  useAdminZIndexImperative(overlayRef, Z_INDEX.overlay);
+  useAdminZIndexImperative(
+    sidebarRef,
+    effectiveIsMobile ? Z_INDEX.sidebarDrawer : Z_INDEX.sidebar,
+  );
+
   // フルスクリーンモード時はレンダリングしない（Lexicalエディタ等）
   if (isFullscreen) return null;
 
@@ -142,26 +151,26 @@ export function ResponsiveSidebar({
     <>
       {/* オーバーレイ (モバイル) */}
       <div
+        ref={overlayRef}
         className={cn(
           classes.overlay(),
+          adminZIndexClassName(),
           hideBeforeHydrationOnMobile &&
             "max-lg:pointer-events-none max-lg:opacity-0",
         )}
-        style={{ zIndex: Z_INDEX.overlay }}
         onClick={closeSidebar}
         aria-hidden="true"
       />
 
       {/* サイドバー */}
       <aside
+        ref={sidebarRef}
         id="admin-sidebar"
         className={cn(
           classes.sidebar(),
+          adminZIndexClassName(),
           hideBeforeHydrationOnMobile && "max-lg:-translate-x-full",
         )}
-        style={{
-          zIndex: effectiveIsMobile ? Z_INDEX.sidebarDrawer : Z_INDEX.sidebar,
-        }}
         aria-label="メインナビゲーション"
       >
         {/* 閉じるボタン (モバイル) */}

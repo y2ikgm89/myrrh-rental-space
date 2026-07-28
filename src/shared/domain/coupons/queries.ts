@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma, type Coupon } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
-import type { Decimal } from "@prisma/client/runtime/client";
 import type {
   CouponData,
   CouponDetailData,
@@ -14,45 +13,8 @@ import type {
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainObject } from "@/shared/lib/serialize";
 
-/**
- * `$queryRaw` の戻り値型（findMany 経路の `Coupon` と物理列を 1:1 対応させる）。
- *
- * Prisma の `result` 拡張（`createAppPrismaClient` の Decimal→number 変換）は
- * model API（`prisma.coupon.findMany` 等）にのみ適用され、`$queryRaw` には
- * かからない（公式仕様）。Decimal 列はそのまま `Prisma.Decimal` インスタンスで
- * 返ってくるため、findMany 経路と型契約を揃えるには row mapping で number に
- * 正規化する必要がある。
- *
- * @see https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/raw-queries
- */
-type CouponRawRow = Omit<
-  Coupon,
-  "discountValue" | "minReservationAmount" | "maxDiscountAmount"
-> & {
-  discountValue: Decimal;
-  minReservationAmount: Decimal | null;
-  maxDiscountAmount: Decimal | null;
-};
-
-/**
- * `$queryRaw` で返ってきた `Prisma.Decimal` を `number` に正規化する。
- *
- * `Decimal` は number ではなくクラスインスタンス（`{ toString(): string }` を持つ
- * オブジェクト）なので、`typeof === "object"` で null と判別する。null は
- * そのまま維持する（findMany 経路の `Coupon` 型と整合）。
- */
-function normalizeCouponRow(row: CouponRawRow): Coupon {
-  return {
-    ...row,
-    discountValue: Number(row.discountValue),
-    minReservationAmount:
-      row.minReservationAmount === null
-        ? null
-        : Number(row.minReservationAmount),
-    maxDiscountAmount:
-      row.maxDiscountAmount === null ? null : Number(row.maxDiscountAmount),
-  };
-}
+/** `$queryRaw` の戻り値型（findMany 経路の `Coupon` と物理列を 1:1 対応）。 */
+type CouponRawRow = Coupon;
 
 const SORT_COLUMN_MAP = {
   code: Prisma.raw('"code"'),
@@ -243,9 +205,6 @@ export async function getCoupons(
     `;
 
     total = Number(countResult[0]?.count ?? 0n);
-    // 公式仕様: $queryRaw は Prisma の result 拡張をバイパスし、Decimal 列を
-    // `Prisma.Decimal` インスタンスのまま返す。findMany 経路の `Coupon`
-    // （Decimal→number 変換済）と型契約を揃えるため row mapping で正規化する。
     const rawRows = await prisma.$queryRaw<CouponRawRow[]>`
       SELECT *
       FROM ${COUPONS_TABLE}
@@ -254,7 +213,7 @@ export async function getCoupons(
       LIMIT ${take}
       OFFSET ${skip}
     `;
-    coupons = rawRows.map(normalizeCouponRow);
+    coupons = rawRows;
   } else {
     const where = buildCouponWhere(filters);
     [total, coupons] = await Promise.all([

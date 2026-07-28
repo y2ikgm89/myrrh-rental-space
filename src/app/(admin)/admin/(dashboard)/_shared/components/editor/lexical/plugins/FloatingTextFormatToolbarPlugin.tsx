@@ -13,6 +13,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -115,6 +116,12 @@ function FloatingToolbar({
   onOpenTooltip,
 }: FloatingToolbarProps) {
   const popupRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(popupRef, {
+    top: 0,
+    left: 0,
+    opacity: 0,
+    transform: "translate(-10000px, -10000px)",
+  });
 
   // ポジション更新コールバック
   const updateFloatingToolbar = useEffectEvent(() => {
@@ -253,12 +260,6 @@ function FloatingToolbar({
     <div
       ref={popupRef}
       className="absolute z-50 flex flex-wrap items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg"
-      style={{
-        top: 0,
-        left: 0,
-        opacity: 0,
-        transform: "translate(-10000px, -10000px)",
-      }}
     >
       <QuickFormatSection
         isBold={isBold}

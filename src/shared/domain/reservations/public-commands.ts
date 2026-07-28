@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import {
   CustomerType,
   ReservationStatus,
@@ -291,7 +292,7 @@ export async function createPublicReservationCommand(
     }
 
     return created;
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   // Compute guest name diff for admin notification
   const guestFullName = `${input.lastName} ${input.firstName}`.trim();

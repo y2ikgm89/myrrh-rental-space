@@ -10,10 +10,8 @@ import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
@@ -62,14 +60,14 @@ export function EmbedSection({
               {config.sectionLabel && (
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
-              <div style={getTitleStyle(style)}>
+              <SectionTitleBox style={style} className="mt-4">
                 <Heading
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
                   <PortableTextSpans spans={config.title} />
                 </Heading>
-              </div>
+              </SectionTitleBox>
             </ScrollReveal>
           </div>
         )}

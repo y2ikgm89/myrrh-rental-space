@@ -15,6 +15,8 @@ import {
   getAuditLogHashKeyId,
   type AuditLogHashPayload,
 } from "./hash-chain";
+import { updateTag } from "next/cache";
+import { getCacheTag } from "@/shared/lib/constants";
 
 /**
  * 監査ログ書込の生入力型。
@@ -212,6 +214,9 @@ export async function createAuditLogRecord(
       );
 
       emitAuditLogIntegrityAnchor(anchor);
+      if (input.userId) {
+        updateTag(getCacheTag.auditLogs.recent(input.userId));
+      }
       return;
     } catch (error) {
       lastError = error;

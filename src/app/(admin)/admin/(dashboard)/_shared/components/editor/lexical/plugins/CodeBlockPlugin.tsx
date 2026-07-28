@@ -6,7 +6,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getNodeByKey,
@@ -81,14 +82,16 @@ function CodeToolbar({
 
   const rect = codeNode.element.getBoundingClientRect();
   const anchorRect = anchorElem.getBoundingClientRect();
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(toolbarRef, {
+    top: `${rect.top - anchorRect.top}px`,
+    right: `${anchorRect.right - rect.right}px`,
+  });
 
   return createPortal(
     <div
+      ref={toolbarRef}
       className="absolute z-50 flex items-center gap-1 rounded-md border border-border bg-background/95 px-1 py-0.5 shadow-sm backdrop-blur-sm"
-      style={{
-        top: `${rect.top - anchorRect.top}px`,
-        right: `${anchorRect.right - rect.right}px`,
-      }}
     >
       <select
         value={codeNode.language}

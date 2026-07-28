@@ -8,6 +8,9 @@ import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 mock.module("server-only", () => ({}));
 
+const OK_EMAIL_RESULT = { ok: true } as const;
+const noopReservationEmailAsync = mock(async () => OK_EMAIL_RESULT);
+
 const START_TIME = new Date("2027-03-01T01:00:00.000Z");
 const END_TIME = new Date("2027-03-01T03:00:00.000Z");
 const SPACE_ID = "22222222-2222-4222-8222-222222222222";
@@ -39,7 +42,16 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
 installEmailRenderContextMock();
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
+  buildMemberReservationUrl: () => "",
+  buildBookingHubUrl: () => "",
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
+  sendReservationUpdatedEmail: noopReservationEmailAsync,
+  sendReservationCancelledEmail: noopReservationEmailAsync,
+  sendReservationStatusChangedEmail: noopReservationEmailAsync,
+  sendReservationRefundEmail: noopReservationEmailAsync,
+  sendReservationAdminNotification: noopReservationEmailAsync,
+  sendBulkReservationCancelledEmail: noopReservationEmailAsync,
+  sendBulkAdminNotification: noopReservationEmailAsync,
 }));
 
 await installErrorsServerMock({

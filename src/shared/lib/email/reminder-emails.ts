@@ -112,7 +112,7 @@ export async function sendReservationReminderEmail(
         ),
         attachments,
       }),
-      idempotencyKey: `reservation-reminder/${data.reservationId}/${Date.now()}`,
+      idempotencyKey: `reservation-reminder/${data.reservationId}/${data.reminderWindowDate}`,
       operation: "sendReservationReminderEmail",
       context: {
         reservationId: data.reservationId,

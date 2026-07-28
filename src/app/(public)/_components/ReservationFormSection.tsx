@@ -20,10 +20,8 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
 import {
@@ -44,7 +42,7 @@ import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/re
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 import { ReservationForm } from "../reservation/_components/reservation-form";
-import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
+import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 
@@ -131,7 +129,7 @@ export async function ReservationFormSection({
             </ScrollReveal>
           )}
           {hasTitle && (
-            <div className="mt-4" style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn("tracking-tight", getTitleClasses(style))}
@@ -140,7 +138,7 @@ export async function ReservationFormSection({
                   <PortableTextSpans spans={config.title} />
                 </SplitText>
               </Heading>
-            </div>
+            </SectionTitleBox>
           )}
           {hasDescription && (
             <div className="mt-3 text-sm text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">

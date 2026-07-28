@@ -1,6 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef } from "react";
+import type { Transform } from "@dnd-kit/utilities";
+import {
+  useImperativeStyle,
+  useImperativeTransform,
+} from "@/shared/lib/csp/use-imperative-style";
 
 /**
  * @dnd-kit Sortable Components
@@ -46,6 +51,25 @@ import { cn } from "@/shared/lib/cn";
  * CSS.Translate.toString は dnd-kit 公式の translate-only ヘルパー。
  */
 const toTranslate3d: typeof CSS.Translate.toString = CSS.Translate.toString;
+
+/** CSP-safe sortable ref: imperative transform + transition (GalleryItemRow pattern). */
+export function useSortableImperativeRef(
+  setNodeRef: (element: HTMLElement | null) => void,
+  transform: Transform | null,
+  transition: string | null | undefined,
+): (node: HTMLElement | null) => void {
+  const elementRef = useRef<HTMLElement | null>(null);
+  const combinedRef = (node: HTMLElement | null) => {
+    setNodeRef(node);
+    elementRef.current = node;
+  };
+  useImperativeTransform(
+    elementRef,
+    transform ? toTranslate3d(transform) : undefined,
+  );
+  useImperativeStyle(elementRef, { transition: transition ?? undefined });
+  return combinedRef;
+}
 
 // =============================================================================
 // Types
@@ -127,15 +151,15 @@ export function SortableItemWrapper({
     isDragging,
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "relative",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
@@ -175,15 +199,15 @@ export function SortableTableRow({
     isDragging,
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <tr
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

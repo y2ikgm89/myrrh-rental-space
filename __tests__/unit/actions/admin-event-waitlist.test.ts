@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
@@ -43,14 +44,14 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   ) => mockCreateAuditLogRecord(...args),
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendEventWaitlistOffered: (
     ...args: Parameters<typeof mockSendEventWaitlistOffered>
   ) => mockSendEventWaitlistOffered(...args),
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),
-}));
+});
 
 // UA-HORIZ-03: buildAuditRequestContext は next/headers に依存する Server Action 内
 // helper なので、unit test では固定値を返す stub に差し替える。

@@ -3,6 +3,9 @@
 import type { ReactElement } from "react";
 import type { NodeKey } from "lexical";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
+import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import {
   isInlineImagePosition,
   type InlineImagePosition,
@@ -12,6 +15,12 @@ import {
   getDecoratorStringProp,
   registerLexicalDecorator,
 } from "./decorator-registry";
+
+const INLINE_IMAGE_POSITION_CLASS: Record<InlineImagePosition, string> = {
+  left: "inline-block float-left mr-4 mb-2",
+  right: "inline-block float-right ml-4 mb-2",
+  full: "block w-full my-4",
+};
 
 function InlineImageComponent({
   src,
@@ -28,32 +37,24 @@ function InlineImageComponent({
 }): ReactElement {
   const [isSelected] = useLexicalNodeSelection(nodeKey);
 
-  const floatStyle: React.CSSProperties =
-    position === "left"
-      ? { float: "left", marginRight: "1rem", marginBottom: "0.5rem" }
-      : position === "right"
-        ? { float: "right", marginLeft: "1rem", marginBottom: "0.5rem" }
-        : {};
-
-  const containerStyle: React.CSSProperties = {
-    display: "inline-block",
-    width: position !== "full" ? width : undefined,
-    ...floatStyle,
-  };
-
   return (
-    <span
+    <ImperativeCssScope
+      as="span"
       data-lexical-node-key={nodeKey}
-      style={containerStyle}
-      className={isSelected ? "ring-2 ring-primary rounded" : ""}
+      data-inline-image="true"
+      data-position={position}
+      data-width={String(width)}
+      {...(position !== "full" && {
+        cssVars: { [CSS_VAR.inlineImageWidth]: `${width}px` },
+      })}
+      className={cn(
+        INLINE_IMAGE_POSITION_CLASS[position],
+        position !== "full" && CSS_VAR_CLASS.inlineImageWidth,
+        isSelected && "rounded ring-2 ring-primary",
+      )}
     >
-      <img
-        src={src}
-        alt={altText}
-        style={{ width: "100%", display: "block" }}
-        draggable={false}
-      />
-    </span>
+      <img src={src} alt={altText} className="block w-full" draggable={false} />
+    </ImperativeCssScope>
   );
 }
 

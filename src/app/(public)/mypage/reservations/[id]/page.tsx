@@ -25,10 +25,9 @@ import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
-import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { toPlainObject } from "@/shared/lib/serialize";
 import { getReviewForReservation } from "@/shared/domain/reviews/public-queries";
@@ -49,8 +48,6 @@ import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-pass
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const CANCELLABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
 
 const REDIRECT_REASONS = ["status", "deadline", "discount", "payment"] as const;
 type RedirectReason = (typeof REDIRECT_REASONS)[number];
@@ -120,21 +117,17 @@ export default async function ReservationDetailPage({
     notFound();
   }
 
-  const isCancellableStatus = CANCELLABLE_STATUSES.has(reservation.status);
-
   const now = reservationDeadlineNow();
 
-  // Codex #1433: 閲覧は reservation feature OFF でも許可するが、キャンセル・変更
-  // という「予約ミューテーション」相当の操作ボタンは feature OFF 時に隠す
-  // (対応する Server Action 側にも独立した fail-closed gate を追加済み)。
   const canCancel =
     reservationFeatureEnabled &&
-    isCancellableStatus &&
-    isWithinDeadline(
-      reservation.startTime,
-      deadlineSettings.cancellationDeadlineHours,
+    canCustomerInitiateCancellation({
+      status: reservation.status,
+      paymentStatus: reservation.paymentStatus,
+      startTime: reservation.startTime,
+      cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
       now,
-    );
+    });
 
   const canEdit =
     reservationFeatureEnabled &&

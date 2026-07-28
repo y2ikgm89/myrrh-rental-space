@@ -15,6 +15,7 @@ import type {
 } from "@/shared/domain/events/public-slot-options";
 import { shouldExposePublicEventSlotSelector } from "@/shared/domain/events/public-slot-options";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export type EventInfoPanelVenue =
   | {
@@ -389,7 +390,7 @@ function VenueItem({
     case "space":
       return (
         <Link
-          href={`/spaces/${venue.slug}`}
+          href={toAppRoute(`/spaces/${venue.slug}`)}
           className="underline decoration-border decoration-1 underline-offset-4 transition-colors hover:decoration-foreground"
         >
           {venue.name}

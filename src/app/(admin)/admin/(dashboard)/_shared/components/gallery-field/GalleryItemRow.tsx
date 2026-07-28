@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactElement } from "react";
+import { useId, useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { IconGripVertical, IconX } from "@tabler/icons-react";
 import {
@@ -10,6 +10,10 @@ import {
   toTranslate3d,
   useSortable,
 } from "@/admin/components/ui";
+import {
+  useImperativeStyle,
+  useImperativeTransform,
+} from "@/shared/lib/csp/use-imperative-style";
 
 interface GalleryTextField {
   readonly name: string;
@@ -40,6 +44,7 @@ export function GalleryItemRow({
 }: GalleryItemRowProps): ReactElement {
   const altId = useId();
   const captionId = useId();
+  const rowRef = useRef<HTMLDivElement>(null);
   const {
     attributes,
     listeners,
@@ -49,10 +54,20 @@ export function GalleryItemRow({
     isDragging,
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
+  const combinedRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    rowRef.current = node;
+  };
+
+  useImperativeTransform(
+    rowRef,
+    transform ? toTranslate3d(transform) : undefined,
+  );
+  useImperativeStyle(rowRef, { transition: transition ?? undefined });
+
   return (
     <div
-      ref={setNodeRef}
-      style={{ transform: toTranslate3d(transform), transition }}
+      ref={combinedRef}
       className={`flex items-start gap-3 rounded border bg-card p-3 ${isDragging ? "opacity-50" : ""}`}
     >
       <button

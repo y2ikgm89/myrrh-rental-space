@@ -18,6 +18,7 @@ import {
 } from "@/shared/lib/events/venue";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import {
   generateArticleMetadata,
@@ -179,7 +180,9 @@ export default async function EventDetailPage({
                     name: venueName,
                     ...(venueAddress ? { address: venueAddress } : {}),
                     ...(event.space?.slug
-                      ? { url: `${baseUrl}/spaces/${event.space.slug}` }
+                      ? {
+                          url: `${baseUrl}${toAppRoute(`/spaces/${event.space.slug}`)}`,
+                        }
                       : {}),
                   },
                 }

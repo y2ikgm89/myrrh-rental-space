@@ -6,17 +6,17 @@
  *     hideOnMobile / hideOnDesktop / animateOnScroll
  *   - `style: SectionStylePayload` — 背景タイプ / テキスト揃え / customClass
  *
- * 両方指定時の優先順位:
- *   - padding / containerWidth は `layout` 優先
- *   - background / textAlign / customClass は `style` から
- *   - hideOnMobile / hideOnDesktop / animateOnScroll は `layout` のみ
+ * 動的 CSS は ImperativeCssScope（style= 属性なし、CSP strict 準拠）。
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
+import type { ImperativeStyleValues } from "@/shared/lib/csp/use-imperative-style";
 import type {
   LayoutContainerWidth,
   LayoutAnimate,
@@ -26,10 +26,6 @@ import type {
 // =============================================================================
 // Mapping tables — Layout
 // =============================================================================
-
-// セクション間の上下余白は SectionStack（親コンテナの統一 gap）が SSoT。
-// SectionWrapper は内側 padding を持たない（背景塗りセクションが導入されたら
-// 背景の内側余白だけここで復活させる想定）。
 
 /** layout.containerWidth → max-w-* クラス */
 const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
@@ -52,8 +48,6 @@ const backgroundMap: Record<
   surface: "bg-surface",
   muted: "bg-muted",
   gradient: "bg-accent/5",
-  // image 背景は next/image fill で別途レンダリング（CSS background-image を使うと
-  // AVIF/WebP 変換・srcset・device-size responsive を完全バイパスしてしまう）
   image: "",
 };
 
@@ -88,8 +82,8 @@ interface SectionWrapperProps {
   readonly className?: string;
   /** 共通 layout / visibility / animation 設定 */
   readonly layout?: SectionLayoutConfig;
-  /** 追加の inline style（config.backgroundColor 等） */
-  readonly styleProp?: CSSProperties;
+  /** CSS custom properties（backgroundColor / overlay 等） */
+  readonly cssVars?: ImperativeStyleValues;
   /** コンテナ div を省略する場合に true（Hero 等の特殊レイアウト用） */
   readonly skipContainer?: boolean;
 }
@@ -99,15 +93,13 @@ export function SectionWrapper({
   children,
   className,
   layout,
-  styleProp,
+  cssVars,
   skipContainer,
 }: SectionWrapperProps) {
-  // ---- containerWidth ----
   const maxWidthClass = layout
     ? LAYOUT_CONTAINER_WIDTH_CLASSES[layout.containerWidth]
     : maxWidthMap[style.container.maxWidth];
 
-  // ---- background / textAlign / customClass (style payload 由来、layout は触らない) ----
   const bgClass = backgroundMap[style.background.type];
   const alignClass =
     style.typography.textAlign !== "left"
@@ -119,11 +111,18 @@ export function SectionWrapper({
       ? style.background.imageUrl
       : undefined;
   const hasBgImage = Boolean(bgImageUrl);
-  const mergedStyle = styleProp;
-
+  const hasCustomBg =
+    cssVars !== undefined && CSS_VAR.sectionBgColor in cssVars;
   const showOverlay = hasBgImage && style.background.overlayOpacity > 0;
 
-  // ---- visibility (layout のみ) ----
+  const sectionCssVars: ImperativeStyleValues = {
+    ...cssVars,
+  };
+
+  const overlayCssVars: ImperativeStyleValues | undefined = showOverlay
+    ? { [CSS_VAR.sectionOverlayOpacity]: style.background.overlayOpacity }
+    : undefined;
+
   const visibilityClass = layout
     ? cn(
         layout.hideOnMobile && "max-md:hidden",
@@ -144,7 +143,6 @@ export function SectionWrapper({
     </div>
   );
 
-  // ---- animation (layout のみ) ----
   const animate: LayoutAnimate = layout?.animateOnScroll ?? "none";
   const wrapped =
     animate === "none" ? (
@@ -154,25 +152,21 @@ export function SectionWrapper({
     );
 
   return (
-    <section
+    <ImperativeCssScope
+      as="section"
+      cssVars={sectionCssVars}
       className={cn(
         "relative",
-        // 背景画像を持つときは `isolate` で stacking context を section 内に閉じ込め、
-        // 内側 `-z-10` が祖先まで突き抜けないようにする（next/image fill canonical pattern）。
         hasBgImage && "isolate",
         bgClass,
+        hasCustomBg && CSS_VAR_CLASS.sectionBgColor,
         alignClass,
         visibilityClass,
         style.customClass,
         className,
       )}
-      style={mergedStyle}
     >
       {bgImageUrl && (
-        // next/image fill: AVIF/WebP + srcset + responsive を有効化する canonical pattern。
-        // 親 <section> が `relative isolate` なので fill の position:absolute と -z-10 が
-        // 正しく section 内に閉じる。
-        // 公式: https://nextjs.org/docs/app/api-reference/components/image#fill
         <Image
           src={bgImageUrl}
           alt=""
@@ -183,12 +177,15 @@ export function SectionWrapper({
         />
       )}
       {showOverlay && (
-        <div
-          className="pointer-events-none absolute inset-0 bg-foreground"
-          style={{ opacity: style.background.overlayOpacity / 100 }}
+        <ImperativeCssScope
+          {...(overlayCssVars !== undefined && { cssVars: overlayCssVars })}
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-foreground",
+            CSS_VAR_CLASS.sectionOverlayOpacity,
+          )}
         />
       )}
       {wrapped}
-    </section>
+    </ImperativeCssScope>
   );
 }

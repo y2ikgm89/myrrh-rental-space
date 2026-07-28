@@ -14,12 +14,17 @@
  * - System (95-99): トースト・ツールチップなど最上位
  *
  * @example
- * import { Z_INDEX } from '@/admin/lib/styles/z-index'
- * // ✅ inline style（Tailwind JIT は静的スキャンのため template literal 内の
- * //    arbitrary value `z-[${VAR}]` は CSS 未生成 → z-index 無効の silent bug）
- * <div style={{ zIndex: Z_INDEX.editorToolbar }} />
- * // ❌ className={`z-[${Z_INDEX.editorToolbar}]`} は禁止（CSS が生成されない）
+ * import { Z_INDEX, adminZIndexLayerProps } from '@/admin/lib/styles/z-index'
+ * import { useAdminZIndexLayer } from '@/admin/lib/styles/use-admin-z-index-layer'
+ * // ✅ CSP-safe: className + imperative z-index on ref
+ * const layer = useAdminZIndexLayer(ref, Z_INDEX.dropdown, style)
+ * <Content ref={layer.setRef} className={cn(layer.className, className)} />
+ * // ❌ style={{ zIndex: Z_INDEX.dropdown }} — CSP style-src で nonce 不可
+ * // ❌ className={`z-[${Z_INDEX.dropdown}]`} — Tailwind JIT 未生成で silent bug
  */
+
+import type { CSSProperties } from "react";
+import { CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
 
 export const Z_INDEX = {
   // Base (0-9)
@@ -61,3 +66,36 @@ export const Z_INDEX = {
 } satisfies Record<string, number>;
 
 export type ZIndexKey = keyof typeof Z_INDEX;
+
+/** Tailwind class that consumes `--admin-z-index`. */
+export function adminZIndexClassName(): string {
+  return CSS_VAR_CLASS.adminZIndex;
+}
+
+/** Resolve z-index from caller `style.zIndex` override or token default. */
+export function resolveAdminZIndex(
+  defaultZIndex: number,
+  style?: CSSProperties,
+): number {
+  const fromStyle = style?.zIndex;
+  if (typeof fromStyle === "number") return fromStyle;
+  if (typeof fromStyle === "string") {
+    const parsed = Number(fromStyle);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return defaultZIndex;
+}
+
+/** Remove legacy `zIndex` from a style object (other keys must be CSS vars). */
+export function stripZIndexFromStyle(
+  style?: CSSProperties,
+): CSSProperties | undefined {
+  if (!style) return undefined;
+  const { zIndex: _zIndex, ...rest } = style;
+  return Object.keys(rest).length > 0 ? rest : undefined;
+}
+
+/** Tailwind class for admin z-index layer. Pair with `useAdminZIndexLayer` for CSP-safe z-index. */
+export function adminZIndexLayerProps(): { className: string } {
+  return { className: adminZIndexClassName() };
+}

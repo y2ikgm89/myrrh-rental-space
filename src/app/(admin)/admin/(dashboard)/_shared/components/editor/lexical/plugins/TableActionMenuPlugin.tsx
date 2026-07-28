@@ -9,7 +9,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -112,11 +113,14 @@ function TableActionMenu({
   onUnmergeCell,
   isMergedCell,
 }: TableActionMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(menuRef, {
+    top: position.top + 4,
+    left: position.left,
+  });
+
   return (
-    <div
-      className="absolute z-10"
-      style={{ top: position.top + 4, left: position.left }}
-    >
+    <div ref={menuRef} className="absolute z-10">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button

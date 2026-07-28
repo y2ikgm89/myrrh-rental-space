@@ -1,7 +1,8 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useRef } from "react";
 import { cn } from "@/shared/lib/cn";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { formatTimeShort } from "@/shared/lib/date-format";
 import { getStatusColorClass } from "@/admin/lib/calendar";
 import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
@@ -17,10 +18,6 @@ interface EventCellProps {
   /** イベント終了時刻が現在より過去か (Google Calendar 同等の muted 表示) */
   isPast?: boolean;
 }
-
-type EventCellStyle = CSSProperties & {
-  readonly "--event-z": number;
-};
 
 /**
  * 構造化された aria-label を生成する。
@@ -67,6 +64,7 @@ function formatSeriesLabel(event: CalendarEvent): string | null {
  */
 export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
   const { position } = event;
+  const cellRef = useRef<HTMLButtonElement>(null);
   const isCancelled = event.status === "CANCELLED";
   const iconName = RESERVATION_STATUS_ICONS[event.status];
   const showTitle = position.height >= 36;
@@ -74,17 +72,17 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
   // 過去イベント / キャンセルは統一的に muted (Google Calendar 同等)
   const isMuted = isCancelled || isPast;
 
-  const style: EventCellStyle = {
+  useImperativeStyle(cellRef, {
     top: `${position.top}px`,
     height: `${position.height}px`,
     left: `${position.left}%`,
     width: `${position.width}%`,
-    // Tailwind v4 CSS var arbitrary: `z-[var(--event-z)]` で参照
     "--event-z": position.zIndex,
-  };
+  });
 
   return (
     <button
+      ref={cellRef}
       type="button"
       title={`${formatTimeShort(event.startTime)}-${formatTimeShort(event.endTime)}  ${event.title}  (${event.spaceName})`}
       aria-label={buildAriaLabel(event)}
@@ -99,7 +97,6 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
         // Tailwind v4 公式 utility (saturate-{0,50,100,150,200} がデフォルトスケール)。
         isMuted && "opacity-60 saturate-50",
       )}
-      style={style}
       onClick={() => onClick(event)}
     >
       <div className="flex items-center gap-1 font-semibold leading-tight tabular-nums">

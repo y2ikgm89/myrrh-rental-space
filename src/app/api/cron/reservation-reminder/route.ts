@@ -94,6 +94,7 @@ export async function GET(request: Request) {
           notes: reservation.notes ?? undefined,
           icsSequence: reservation.icsSequence,
           userId: reservation.userId,
+          reminderWindowDate: tomorrowJstStr,
         });
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。

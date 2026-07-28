@@ -1,6 +1,9 @@
 "use client";
 
 import { CALENDAR_LAYOUT } from "@/admin/lib/calendar";
+import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 
 interface TimeColumnProps {
   timeSlots: string[];
@@ -14,16 +17,23 @@ interface TimeColumnProps {
  */
 export function TimeColumn({ timeSlots }: TimeColumnProps) {
   return (
-    <div className="h-full">
+    <ImperativeCssScope
+      className="h-full"
+      cssVars={{
+        [CSS_VAR.calendarSlotHeight]: `${CALENDAR_LAYOUT.pixelsPerHour}px`,
+      }}
+    >
       {timeSlots.map((time) => (
         <div
           key={time}
-          style={{ height: `${CALENDAR_LAYOUT.pixelsPerHour}px` }}
-          className="flex items-start justify-end border-b pr-2 pt-1 text-xs font-medium tabular-nums text-muted-foreground last:border-b-0"
+          className={cn(
+            "flex items-start justify-end border-b pr-2 pt-1 text-xs font-medium tabular-nums text-muted-foreground last:border-b-0",
+            CSS_VAR_CLASS.calendarSlotHeight,
+          )}
         >
           {time}
         </div>
       ))}
-    </div>
+    </ImperativeCssScope>
   );
 }

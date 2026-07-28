@@ -1,14 +1,16 @@
 import "server-only";
 
-import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
 import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
 } from "@/shared/lib/reservation-cancel-token";
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { buildGuestEditHref } from "./edit-eligibility";
 
 export { buildGuestEditHref };
@@ -54,30 +56,26 @@ export function shouldShowGuestClaimLink(input: {
   return !input.isLoggedIn && input.customerUserId == null;
 }
 
-const CANCELLABLE_STATUSES = new Set<ReservationStatus>(
-  ACTIVE_RESERVATION_STATUSES,
-);
-
 /**
  * ゲスト向けキャンセル導線 URL。
- * キャンセル可能ステータスかつ期限内のときのみ返す。
+ * キャンセル可能ステータス・期限内・決済処理中でないときのみ返す。
  */
 export function buildGuestCancelHref(input: {
   reservationId: string;
   status: ReservationStatus;
+  paymentStatus: PaymentStatus;
   startTime: Date;
   cancellationDeadlineHours: number;
   now: Date;
 }): string | null {
-  if (!CANCELLABLE_STATUSES.has(input.status)) {
-    return null;
-  }
   if (
-    !isWithinDeadline(
-      input.startTime,
-      input.cancellationDeadlineHours,
-      input.now,
-    )
+    !canCustomerInitiateCancellation({
+      status: input.status,
+      paymentStatus: input.paymentStatus,
+      startTime: input.startTime,
+      cancellationDeadlineHours: input.cancellationDeadlineHours,
+      now: input.now,
+    })
   ) {
     return null;
   }

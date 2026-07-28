@@ -125,7 +125,7 @@ export function LocationMeoScoreCard({
                 fill="transparent"
                 strokeWidth={strokeWidth}
                 strokeDasharray={`${circumference} ${circumference}`}
-                style={{ strokeDashoffset }}
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 r={normalizedRadius}
                 cx={radius}

@@ -51,11 +51,13 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { postCategoriesResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import {
@@ -105,17 +107,17 @@ function SortableCategoryRow({
     isDragging,
   } = useSortable({ id: category.id, disabled: !isSortable || isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
     <TableRow
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(isDragging && "z-50 shadow-lg ring-2 ring-primary/20")}
     >
       <TableCell className="w-12">

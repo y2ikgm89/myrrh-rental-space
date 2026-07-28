@@ -7,14 +7,6 @@ import { collectSourceFiles } from "../helpers/architecture-fs";
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
 const SCRIPTS_ROOT = join(ROOT, "scripts");
-const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
-const ENUMS_GATEWAY_ROOT = join(
-  SRC_ROOT,
-  "shared",
-  "lib",
-  "validations",
-  "enums",
-);
 const SHARED_DOMAIN_ROOT = join(SRC_ROOT, "shared", "domain");
 const APP_ROUTE_ROOT = join(SRC_ROOT, "app");
 const API_CRON_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "cron");
@@ -407,30 +399,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "event-broadcast.ts",
   ),
 ];
-/**
- * `@/shared/db/prisma` を import する src 配下の全ファイルを動的に列挙する。
- *
- * 旧実装は手書き allowlist だったが、追加ファイルが allowlist に登録されない限り
- * gate が dead になる drift があり 58+ ファイルが未保護だった。
- * import 検出ベースに切り替えて drift gate を回復する。
- *
- * prisma.ts / better-auth-adapter.ts は自身を import しないため明示的に含める
- * （これらは Prisma client を直接ホストするため当然 server-only 必須）。
- */
-function collectPrismaImportingFiles(): string[] {
-  const importRe = /from\s+["']@\/shared\/db\/prisma["']/u;
-  const hits = collectSourceFiles(SRC_ROOT).filter((file) => {
-    const source = readFileSync(file, "utf8");
-    return importRe.test(source);
-  });
-  const seed = [
-    join(SRC_ROOT, "shared", "db", "prisma.ts"),
-    join(SRC_ROOT, "shared", "db", "better-auth-adapter.ts"),
-  ];
-  const set = new Set<string>([...seed, ...hits]);
-  return [...set].sort();
-}
-
 /** TS / TSX / CSS を再帰収集（design token 廃止の横断 grep 用） */
 function collectStyleSourceFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -692,158 +660,6 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("generated Prisma import は shared/db の外に残さない", () => {
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const offenders = sourceFiles
-      .filter((file) => !file.startsWith(SHARED_DB_ROOT))
-      .filter((file) => !file.startsWith(ENUMS_GATEWAY_ROOT))
-      .filter((file) => !file.startsWith(SHARED_DOMAIN_ROOT))
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return (
-          source.includes("@generated/prisma") ||
-          source.includes("shared/generated/prisma")
-        );
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("shared/domain は @generated/prisma/enums を直接 import しない（prisma-types SSoT）", () => {
-    // Prisma enum 値は `@/shared/lib/validations/enums/prisma-types` 経由が SSoT。
-    // `Prisma` 名前空間の型-only import は `@generated/prisma/client` から許可
-    // （上記「generated Prisma import」テストで shared/domain は client 直接 import 可）。
-    // 凍結 allowlist は ratchet 用 — 解消 PR では当該ファイルを削除すること。
-    const DOMAIN_ENUM_IMPORT_ALLOWLIST = new Set<string>();
-
-    const domainFiles = collectSourceFiles(SHARED_DOMAIN_ROOT).filter(
-      (file) => {
-        const rel = relative(ROOT, file).replace(/\\/g, "/");
-        return !DOMAIN_ENUM_IMPORT_ALLOWLIST.has(rel);
-      },
-    );
-
-    const offenders = collectNonCommentOffenders(
-      domainFiles,
-      /@generated\/prisma\/enums/u,
-    );
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("enums gateway は @generated/prisma/client を import しない（参照同一性フットガン排除）", () => {
-    // gateway は client-safe である必要があるため、server-only な
-    // `@generated/prisma/client` から値を re-export してはならない。
-    // Prisma.JsonNull / DbNull は browser entry と client entry で
-    // 異なる runtime モジュール（runtime/index-browser vs runtime/client）を
-    // 参照しており、unique object として実装されているため両者で別オブジェクト
-    // 参照になる。Prisma client は identity 比較で sentinel を判定するため、
-    // gateway 経由（browser 由来）の sentinel を渡すと検出されない。
-    // gateway は browser entry の type 再 export と enums の値再 export のみ。
-    const gatewayFiles = collectSourceFiles(ENUMS_GATEWAY_ROOT).filter((file) =>
-      file.endsWith(".ts"),
-    );
-    expect(gatewayFiles.length).toBeGreaterThan(0);
-
-    for (const gatewayFile of gatewayFiles) {
-      // コメント・blank 行を除外した実コード行のみで検査
-      const codeLines = readFileSync(gatewayFile, "utf8")
-        .split(/\r?\n/u)
-        .filter((line) => {
-          const trimmed = line.trim();
-          return (
-            trimmed.length > 0 &&
-            !trimmed.startsWith("//") &&
-            !trimmed.startsWith("*") &&
-            !trimmed.startsWith("/*")
-          );
-        });
-      const codeSource = codeLines.join("\n");
-
-      // server-only の client entry import を禁止
-      expect(codeSource).not.toMatch(
-        /from\s+["']@generated\/prisma\/client["']/u,
-      );
-      // 値としての Prisma re-export を禁止（type-only に限定）
-      expect(codeSource).not.toMatch(/^export\s+\{\s*Prisma\b/mu);
-      // PrismaClient 自体の re-export を禁止（型・値とも）
-      expect(codeSource).not.toMatch(/\bPrismaClient\b/u);
-      // gateway は browser entry または enums entry のみから import 可能
-      // （models / internal 等の他 entry は禁止）
-      const importLines = codeLines.filter((line) =>
-        line.includes("@generated/prisma"),
-      );
-      for (const line of importLines) {
-        expect(line).toMatch(/@generated\/prisma\/(browser|enums)["']/u);
-      }
-    }
-  });
-
-  test("PrismaClient のインスタンス化は shared/db/prisma.ts のみ", () => {
-    // `new PrismaClient(...)` が許される唯一のファイルは shared/db/prisma.ts
-    // それ以外で見つかった場合は singleton 規約違反
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const allowedFile = join(SHARED_DB_ROOT, "prisma.ts");
-    const offenders = sourceFiles
-      .filter((file) => file !== allowedFile)
-      .filter((file) => {
-        const lines = readFileSync(file, "utf8").split(/\r?\n/u);
-        return lines.some((line) => {
-          const trimmed = line.trim();
-          // コメント行は除外
-          if (
-            trimmed.startsWith("//") ||
-            trimmed.startsWith("*") ||
-            trimmed.startsWith("/*")
-          ) {
-            return false;
-          }
-          return /\bnew\s+PrismaClient\s*\(/u.test(line);
-        });
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("shared/db/prisma.ts は basePrisma と prisma の両方を export する", () => {
-    // basePrisma: Better Auth アダプター専用（$extends 前）→ `export { basePrisma }` 形式
-    // prisma:     アプリ本体用（$extends 適用済み）       → `export const prisma = createAppPrismaClient(...)` 形式
-    // 両方が export されていることが singleton 規約の前提
-    const prismaFile = join(SHARED_DB_ROOT, "prisma.ts");
-    const source = readFileSync(prismaFile, "utf8");
-    expect(source).toMatch(/export\s+\{\s*basePrisma\s*\}/u);
-    expect(source).toMatch(/export\s+const\s+prisma\s*=/u);
-  });
-
-  test("legacy prisma shim import は残さない", () => {
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const offenders = sourceFiles
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return source.includes('from "@/shared/lib/prisma"');
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("public app layer は prisma facade を直接 import しない", () => {
-    const sourceFiles = collectSourceFiles(PUBLIC_APP_ROOT);
-    const offenders = sourceFiles
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return (
-          source.includes('from "@/shared/db/prisma"') ||
-          source.includes('from "@/shared/lib/prisma"')
-        );
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
   test("deprecated spacing-section CSS variables は src 以下に残さない（Phase A: --space-* へ移行済み）", () => {
     const files = collectStyleSourceFiles(SRC_ROOT);
     const offenders = files
@@ -967,88 +783,6 @@ describe("architecture boundaries", () => {
     expect({ px4, px6 }).toEqual({ px4: [], px6: [] });
   });
 
-  test("app layer は generated Prisma model/client type を直接 import しない", () => {
-    const appRoot = join(SRC_ROOT, "app");
-    const sourceFiles = collectSourceFiles(appRoot);
-    const offenders = sourceFiles
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return (
-          source.includes("@/shared/db/models") ||
-          source.includes("@/shared/db/client")
-        );
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("shared/ の外に Prisma 直 import を残さない", () => {
-    const SHARED_ROOT = join(SRC_ROOT, "shared");
-    // app 層からの Prisma 直 import 禁止（CLAUDE.md のアーキテクチャ境界）
-    // (calendar-sync $queryRaw は @/shared/domain/calendar-sync/locks helper に集約済、例外なし)
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const offenders = sourceFiles
-      .filter((file) => !file.startsWith(SHARED_ROOT))
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return source.includes('from "@/shared/db/prisma"');
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("shared/db barrel は shared/db の外から import しない", () => {
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const offenders = sourceFiles
-      .filter((file) => !file.startsWith(SHARED_DB_ROOT))
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return source.includes('from "@/shared/db"');
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("legacy db shim files を再導入しない", () => {
-    expect(existsSync(join(SRC_ROOT, "shared", "db", "index.ts"))).toBe(false);
-    expect(existsSync(join(SRC_ROOT, "shared", "db", "client.ts"))).toBe(false);
-    expect(
-      existsSync(join(SRC_ROOT, "shared", "db", "models", "Page.ts")),
-    ).toBe(false);
-  });
-
-  test("shared/ 内の Prisma 直 import / model 呼出は domain・db 配下に限定する（placement gate）", () => {
-    // CLAUDE.md コア規約「DB query / command は src/shared/domain/<entity>/{queries,commands}.ts に置く」を
-    // 機械強制する。shared/ 配下で prisma facade を import し、かつ `prisma.<model>.<method>` の形で
-    // 実際に DB 呼出をしているファイルは原則 domain/db 配下に限る。
-    // ALLOWLIST: domain/db に切り出すと過剰な抽象になる正当な lib 境界の例外のみ列挙する。
-    const SHARED_ROOT = join(SRC_ROOT, "shared");
-    const ALLOWLIST = new Set<string>();
-    const importsPrisma = (source: string) =>
-      /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
-    // `prisma.<model>.<method>` のみを「DB 呼出」とみなす。
-    const containsPrismaModelCall = (source: string) =>
-      /\bprisma\.\w+\.\w+/u.test(source);
-
-    const offenders = collectSourceFiles(SHARED_ROOT)
-      .filter(
-        (file) =>
-          !file.startsWith(SHARED_DOMAIN_ROOT) &&
-          !file.startsWith(SHARED_DB_ROOT),
-      )
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return importsPrisma(source) && containsPrismaModelCall(source);
-      })
-      .map((file) => relative(ROOT, file))
-      .filter((rel) => !ALLOWLIST.has(rel));
-
-    expect(offenders).toEqual([]);
-  });
-
   test("shared/lib → shared/domain import は allowlist 凍結（新規 lib→domain 禁止 ratchet）", () => {
     // CLAUDE.md: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
     // 解消可能な lib→domain は ALLOWLIST から削除する（ratchet）。
@@ -1095,24 +829,6 @@ describe("architecture boundaries", () => {
       .filter((file) => !actual.has(file))
       .sort();
     expect(staleAllowlist).toEqual([]);
-  });
-
-  test("`@/shared/db/prisma` を import する全ファイルが server-only を明示する", () => {
-    // 動的列挙: 手書き allowlist は追加ファイルが登録されない限り gate が dead になり、
-    // 実際に 58+ ファイルが未保護で drift していた。`from "@/shared/db/prisma"` を持つ
-    // ファイルを毎回走査して server-only 強制する canonical 方式に切り替えた。
-    const files = collectPrismaImportingFiles();
-    // sanity: 少なくとも prisma.ts + better-auth-adapter.ts + 主要 domain は検出される
-    expect(files.length).toBeGreaterThan(10);
-
-    const offenders = files
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return !/import\s+["']server-only["'];?/.test(source);
-      })
-      .map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
   });
 
   test("移行済み admin action は Prisma を直接 import しない", () => {
@@ -3570,6 +3286,8 @@ describe("AuditLog resource文字列の統一 (event-registration)", () => {
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
 // 分離済み (2490 行 → 2263 行にスリム化。merge conflict hotspot 緩和が目的)。
 // 引継ぎ先:
+//   - __tests__/unit/architecture/prisma-import-boundary.test.ts
+//     (Prisma gateway / singleton / server-only import gates)
 //   - __tests__/unit/architecture/type-safety-cast-and-cache-tag-drift.test.ts
 //     (conform FieldMetadata cast gate + CACHE_TAGS producer/consumer drift)
 //   - __tests__/unit/architecture/section-config-widening-cast.test.ts

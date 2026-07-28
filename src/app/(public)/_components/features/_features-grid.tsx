@@ -7,10 +7,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTextStyle,
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { DynamicTablerIcon } from "@/public/components/ui/dynamic-tabler-icon";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import { cn } from "@/shared/lib/cn";
@@ -38,14 +38,14 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             ) : null}
-            <div className="mt-4" style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn(getTitleClasses(style), "tracking-tight")}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </ScrollReveal>
         </div>
       )}
@@ -76,12 +76,12 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
                 <PortableTextSpans spans={item.title} />
               </h3>
               {item.description.length > 0 ? (
-                <div
+                <SectionTextBox
+                  style={style}
                   className="text-sm leading-[1.9] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
-                  style={getTextStyle(style)}
                 >
                   <PortableText blocks={item.description} />
-                </div>
+                </SectionTextBox>
               ) : null}
             </article>
           ))}

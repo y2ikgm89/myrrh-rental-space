@@ -2,6 +2,9 @@
 
 import { IconAlertCircle, IconDeviceDesktop } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { renderEditorStateJsonToHtmlClient } from "../preview/render-editor-state-to-html-client";
 import { findUnregisteredLexicalNodeTypes } from "../config/registered-node-types";
@@ -30,7 +33,10 @@ export function MobileEditorFallback({
       : null;
 
   return (
-    <div className="flex flex-col" style={{ height }}>
+    <ImperativeCssScope
+      className={cn("flex flex-col", CSS_VAR_CLASS.editorHeight)}
+      cssVars={{ [CSS_VAR.editorHeight]: height }}
+    >
       <div className="flex flex-col items-center justify-center gap-3 border-b border-border p-6">
         <IconDeviceDesktop className="h-10 w-10 text-muted-foreground" />
         <div className="space-y-1 text-center">
@@ -78,6 +84,6 @@ export function MobileEditorFallback({
           </div>
         </div>
       ) : null}
-    </div>
+    </ImperativeCssScope>
   );
 }

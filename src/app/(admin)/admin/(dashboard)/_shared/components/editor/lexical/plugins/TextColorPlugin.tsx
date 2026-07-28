@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/admin/components/ui/dropdown-menu";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 
 // =============================================================================
 // Types & Constants
@@ -242,14 +243,11 @@ export function TextColorPlugin() {
             <div className="relative">
               <IconTypography className="h-4 w-4" />
               {hasColor && (
-                <div
-                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                  style={{
-                    backgroundColor: getPreviewColor(
-                      textColor,
-                      currentColorValue,
-                    ),
-                  }}
+                <ColorSwatchPreview
+                  color={
+                    getPreviewColor(textColor, currentColorValue) ?? "#000000"
+                  }
+                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full border-0"
                 />
               )}
             </div>
@@ -299,10 +297,9 @@ function TextColorMenu({
             className="flex items-center justify-between gap-2"
           >
             <span className="flex items-center gap-2">
-              <span
-                className="h-4 w-4 rounded"
-                style={{ backgroundColor: config.value }}
-                aria-hidden="true"
+              <ColorSwatchPreview
+                color={config.value}
+                className="h-4 w-4 rounded border-0"
               />
               <span>{config.label}</span>
             </span>
@@ -387,14 +384,11 @@ export function TextColorCompact({
           <div className="relative">
             <IconTypography className="h-4 w-4" />
             {hasColor && (
-              <div
-                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                style={{
-                  backgroundColor: getPreviewColor(
-                    textColor,
-                    currentColorValue,
-                  ),
-                }}
+              <ColorSwatchPreview
+                color={
+                  getPreviewColor(textColor, currentColorValue) ?? "#000000"
+                }
+                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full border-0"
               />
             )}
           </div>

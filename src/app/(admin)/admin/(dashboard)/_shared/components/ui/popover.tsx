@@ -1,10 +1,11 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useRef, type ComponentProps } from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 
 import { cn } from "@/shared/lib/cn";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
+import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
 
 function Popover({ ...props }: ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -23,17 +24,23 @@ function PopoverContent({
   style,
   ...props
 }: ComponentProps<typeof PopoverPrimitive.Content>) {
+  const internalRef = useRef<HTMLDivElement>(null);
+  useAdminZIndexImperative(internalRef, Z_INDEX.popover, style);
+
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
         data-slot="popover-content"
+        ref={(node) => {
+          internalRef.current = node;
+        }}
         align={align}
         sideOffset={sideOffset}
         className={cn(
           "w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          adminZIndexClassName(),
           className,
         )}
-        style={{ ...style, zIndex: style?.zIndex ?? Z_INDEX.popover }}
         {...props}
       />
     </PopoverPrimitive.Portal>

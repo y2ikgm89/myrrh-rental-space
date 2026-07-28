@@ -88,12 +88,12 @@ variable "max_instances_hint" {
 }
 
 variable "rate_limit_backend" {
-  description = "Runtime rate-limit backend (in-memory | redis). instrumentation で max_instances_hint と cross-check"
+  description = "Runtime rate-limit backend (in-memory only). instrumentation で max_instances_hint と cross-check"
   type        = string
   default     = "in-memory"
   validation {
-    condition     = contains(["in-memory", "redis"], var.rate_limit_backend)
-    error_message = "rate_limit_backend must be one of: in-memory, redis."
+    condition     = var.rate_limit_backend == "in-memory"
+    error_message = "rate_limit_backend must be in-memory (Redis / Memorystore is out of scope)."
   }
 }
 

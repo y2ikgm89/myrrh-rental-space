@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { installEmailLibDispatchMock } from "../../../../support/email-lib-dispatch-mock";
 
 // ---------------------------------------------------------------------------
 // 1. モック関数定義（TDZ 回避のため import より前）
@@ -76,9 +77,9 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendWelcomeEmail: mockSendWelcomeEmail,
-}));
+});
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,

@@ -5,6 +5,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { parseJstDateOnly } from "@/shared/lib/date-format";
 import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateFormData } from "@/shared/lib/validations/blocked-date";
+import { acquireBlockedDateWriteLocks } from "./locks";
 
 /**
  * scope に応じた紐づけ対象（スペース / 拠点）の存在を検証する。
@@ -74,12 +75,16 @@ export async function createBlockedDateCommand(
 ): Promise<{ id: string }> {
   await ensureScopeTargetExists(data);
 
-  const created = await prisma.blockedDate.create({
-    data: { ...toBlockedDateData(data), createdBy: actor.id },
-    select: { id: true },
-  });
+  return prisma.$transaction(async (tx) => {
+    await acquireBlockedDateWriteLocks(tx, data);
 
-  return { id: created.id };
+    const created = await tx.blockedDate.create({
+      data: { ...toBlockedDateData(data), createdBy: actor.id },
+      select: { id: true },
+    });
+
+    return { id: created.id };
+  });
 }
 
 export async function updateBlockedDateCommand(
@@ -89,9 +94,13 @@ export async function updateBlockedDateCommand(
   await ensureBlockedDateExists(id);
   await ensureScopeTargetExists(data);
 
-  await prisma.blockedDate.update({
-    where: { id },
-    data: toBlockedDateData(data),
+  await prisma.$transaction(async (tx) => {
+    await acquireBlockedDateWriteLocks(tx, data);
+
+    await tx.blockedDate.update({
+      where: { id },
+      data: toBlockedDateData(data),
+    });
   });
 
   return { id };
@@ -100,9 +109,28 @@ export async function updateBlockedDateCommand(
 export async function deleteBlockedDateCommand(
   id: string,
 ): Promise<{ id: string }> {
-  await ensureBlockedDateExists(id);
+  const existing = await prisma.blockedDate.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      scope: true,
+      spaceId: true,
+      locationId: true,
+    },
+  });
+  if (!existing) {
+    throw new DomainError("休業日が見つかりません", "NOT_FOUND");
+  }
 
-  await prisma.blockedDate.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await acquireBlockedDateWriteLocks(tx, {
+      scope: existing.scope as BlockedDateFormData["scope"],
+      spaceId: existing.spaceId,
+      locationId: existing.locationId,
+    });
+
+    await tx.blockedDate.delete({ where: { id } });
+  });
 
   return { id };
 }

@@ -4,6 +4,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 installEmailRenderContextMock();
@@ -113,7 +114,7 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
   sendReservationStatusChangedEmail: mock(async () => {}),
@@ -126,7 +127,7 @@ mock.module("@/shared/domain/email/lib-dispatch", () => ({
     ok: false,
     reason: "disabled",
   })),
-}));
+});
 
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mockIssueSmartLockPasscodes,

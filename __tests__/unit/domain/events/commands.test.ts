@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
@@ -258,10 +259,10 @@ installEmailRenderContextMock({
   ) => mockGetEventEmailRenderContext(...args),
 });
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendEventUpdatedToAllParticipants: mockSendEventUpdated,
   sendEventCancelledToAllParticipants: mockSendEventCancelled,
-}));
+});
 
 await installPrismaEnumsMock({
   EventStatus,

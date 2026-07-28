@@ -40,6 +40,7 @@ import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
+import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -505,6 +506,10 @@ export async function updateEventCommand(
         ...(wasPublished && { publishedAt: new Date() }),
       },
     });
+
+    // スロット/チケット定員 sync は CONFIRMED 集計と capacity 更新の read-modify-write。
+    // 728350 で公開申込 create/cancel/waitlist と直列化しないと TOCTOU overbooking になる。
+    await lockEventRegistrationForTransaction(tx, id);
 
     ({ removedGoogleCalendarEventIds } = await syncEventSlotsAndTicketsCommand(
       tx,
