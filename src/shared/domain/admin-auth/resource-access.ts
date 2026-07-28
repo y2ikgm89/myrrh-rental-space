@@ -1,10 +1,10 @@
 import "server-only";
 
-import type { AdminUser } from "@/shared/lib/admin-auth";
+import type { AdminAuthUser } from "@/shared/domain/admin-auth/queries";
+import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Resource, Action } from "@/shared/lib/admin-resources";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
-import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 
 /**
  * ユーザーが特定リソースIDへのアクセス権を持つかチェック。
@@ -23,10 +23,10 @@ import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments
  *
  * admin dashboard の mutation 経路（`executeAdminMutationResult`）と、
  * `src/app/(public)/preview/*` の閲覧専用プレビュールートの双方から参照される
- * ため shared に置く（`(public)` tree は `@/admin/*` を import しない）。
+ * （`(public)` tree は `@/admin/*` を import しない）。
  */
 export async function userHasResourceAccess(
-  user: AdminUser,
+  user: AdminAuthUser,
   resource: Resource,
   action: Action,
   resourceId?: string,

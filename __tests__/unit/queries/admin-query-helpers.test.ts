@@ -45,7 +45,7 @@ mock.module("@/shared/lib/admin-role-guards", () => ({
     mockIsEditorRole(...args),
 }));
 
-mock.module("@/shared/lib/admin-resource-access", () => ({
+mock.module("@/shared/domain/admin-auth/resource-access", () => ({
   userHasResourceAccess: (
     ...args: Parameters<typeof mockUserHasResourceAccess>
   ) => mockUserHasResourceAccess(...args),

@@ -16,7 +16,7 @@ import {
 } from "@/shared/lib/admin-auth";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { canAccessAdmin } from "@/admin/lib/permissions";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";

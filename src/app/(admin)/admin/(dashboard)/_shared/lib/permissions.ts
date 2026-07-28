@@ -7,7 +7,7 @@
  * `@/shared/lib/admin-permissions` / `@/shared/lib/admin-resources` /
  * `@/shared/lib/admin-role-guards` に集約。resource-level access チェック
  * （`userHasResourceAccess`）も `@/app/(public)/preview/*` から参照するため
- * `@/shared/lib/admin-resource-access` に集約。
+ * `@/shared/domain/admin-auth/resource-access` に集約。
  *
  * 本ファイルは server-only セッション連携が必要なヘルパー
  * （`userHasPermission` / `canAccessAdmin`）と、UI 表示用ラベル

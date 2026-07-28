@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { canPreviewPageByPublishState } from "@/shared/lib/pages/can-preview-page";
 import { getPageBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import { getPageForEditQuery } from "@/shared/domain/sections/admin-queries";
