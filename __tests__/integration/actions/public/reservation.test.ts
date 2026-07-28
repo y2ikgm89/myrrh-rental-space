@@ -23,6 +23,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -97,6 +98,39 @@ installEmailLibDispatchMock({
   sendReservationStatusChangedEmail: mock(() => Promise.resolve({ ok: true })),
   sendReservationAdminNotification: mockSendReservationAdminNotification,
 });
+installEmailRenderContextMock({
+  resolveReservationAdminNotificationDelivery: mock(async () => ({
+    enabled: true,
+    notificationEmails: ["admin@example.com"],
+  })),
+  resolveEmailSendContext: mock(async () => ({
+    transport: { resendApiKey: "re_test_key" },
+    delivery: {
+      senderEmail: "noreply@example.com",
+      senderName: "Test",
+      replyToEmail: null,
+    },
+    suppressedEmailHashes: new Set<string>(),
+  })),
+  isReservationConfirmationEmailEnabled: mock(async () => true),
+  getReservationEmailRenderContext: mock(async () => ({
+    calendarSettings: {
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    },
+    deadlineSettings: {
+      cancellationDeadlineHours: 24,
+      modificationDeadlineHours: 6,
+    },
+    organizer: { name: "Test Org", email: "org@example.com" },
+    cancellationPolicyUrl: undefined,
+  })),
+});
+
+mock.module("@/shared/lib/email/reservation-emails", () => ({
+  sendReservationConfirmationEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationAdminNotification: mockSendReservationAdminNotification,
+}));
 
 // terms 系: server-side consent gate + 記録コマンドを no-op に。
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
@@ -106,6 +140,7 @@ mock.module("@/shared/domain/terms/queries", () => ({
   // getReagreeRequiredTermsForCustomer を新規 import したため、
   // module 全体差し替え mock ではここに no-op を明示する必要がある。
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
+  getPublishedTermsByType: mock(() => Promise.resolve(null)),
 }));
 // TermsAgreement 記録は createPublicReservationCommand（domain、本 test では mock）
 // の同一 tx 内で行われる。action 層から recordTermsAgreementsCommand は呼ばない。

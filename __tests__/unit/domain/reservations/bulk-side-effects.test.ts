@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -107,6 +108,8 @@ mock.module("@/shared/domain/reservations/calendar-sync-series", () => ({
   GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
   GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
 }));
+
+installEmailRenderContextMock();
 
 const mockSendCancelledEmail = mock<
   (data: Record<string, unknown>) => Promise<unknown>

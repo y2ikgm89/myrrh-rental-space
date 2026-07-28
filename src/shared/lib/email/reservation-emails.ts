@@ -15,13 +15,6 @@ import { ReservationRefundEmail } from "@/shared/emails/reservation-refund";
 import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import {
-  getCalendarEmailSettings,
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
-import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
   computeCancelTokenExpiresAt,
@@ -39,8 +32,6 @@ import {
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
-import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import {
@@ -60,7 +51,9 @@ import type {
   BulkReservationCancelledEmailData,
   EmailResult,
   EmailSendContext,
+  ReservationAdminNotificationDelivery,
   ReservationEmailData,
+  ReservationEmailRenderContext,
   ReservationRefundEmailData,
   StatusChangeEmailData,
 } from "./types";
@@ -98,42 +91,25 @@ export function buildBookingHubUrl(
 }
 
 /**
- * 公開中のキャンセルポリシー規約の絶対 URL を解決する。該当文書が無ければ
- * undefined を返し、呼び出し側はプレーンテキストにフォールバックする。
- */
-async function resolveCancellationPolicyUrl(): Promise<string | undefined> {
-  const doc = await getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE);
-  return doc ? `${getAppUrl()}/terms/${doc.slug}` : undefined;
-}
-
-/**
- * 予約確認メールを送信
+ * 予約確認メールを送信。
+ * Settings トグルと render DTO は domain が解決して渡す（lib は render+send のみ）。
  */
 export async function sendReservationConfirmationEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const { sendReservationConfirmationEmail: enabled } =
-    await getEmailDeliverySettings();
-  if (!enabled) return { ok: false, reason: "disabled" };
-
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [
+  const {
     calendarSettings,
     deadlineSettings,
     organizer,
-    footer,
     cancellationPolicyUrl,
-  ] = await Promise.all([
-    getCalendarEmailSettings(),
-    getReservationDeadlineSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-    resolveCancellationPolicyUrl(),
-  ]);
+  } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -279,25 +255,20 @@ export async function sendReservationConfirmationEmail(
  */
 export async function sendReservationUpdatedEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [
+  const {
     calendarSettings,
     deadlineSettings,
     organizer,
-    footer,
     cancellationPolicyUrl,
-  ] = await Promise.all([
-    getCalendarEmailSettings(),
-    getReservationDeadlineSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-    resolveCancellationPolicyUrl(),
-  ]);
+  } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -418,19 +389,15 @@ export async function sendReservationUpdatedEmail(
  */
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [calendarSettings, organizer, footer, cancellationPolicyUrl] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-      resolveCancellationPolicyUrl(),
-    ]);
+  const { calendarSettings, organizer, cancellationPolicyUrl } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   const memberReservationUrl = buildMemberReservationUrl(
@@ -516,17 +483,15 @@ export async function sendReservationCancelledEmail(
  */
 export async function sendReservationStatusChangedEmail(
   data: StatusChangeEmailData,
+  renderContext: ReservationEmailRenderContext,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -693,23 +658,18 @@ export async function sendReservationRefundEmail(
 }
 
 /**
- * 予約に関する管理者通知メールを送信
+ * 予約に関する管理者通知メールを送信。
+ * toggle × 宛先の解決は domain が担い、lib は空宛先のみ disabled とする。
  */
 export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: "new" | "update" | "cancel",
+  delivery: ReservationAdminNotificationDelivery,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  const enabledByAction = {
-    new: toggles.notifyNewReservation,
-    update: toggles.notifyReservationChange,
-    cancel: toggles.notifyReservationCancel,
-  }[action];
-  if (!enabledByAction) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
@@ -722,7 +682,7 @@ export async function sendReservationAdminNotification(
   return sendEmail(
     {
       payload: {
-        to: notificationEmails,
+        to: [...delivery.notificationEmails],
         subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
         react: AdminNotificationEmail(
           omitUndefined({
@@ -810,22 +770,18 @@ export async function sendBulkReservationCancelledEmail(
 /**
  * Phase B.2 task 12: series 一括キャンセルの集約通知メール（管理者向け・1 通）。
  *
- * 既存の `sendReservationAdminNotification` と同じ通知トグル
- * （`notifyReservationCancel`）・宛先解決（`getNotificationEmailAddresses`）で
- * gating する。本文は顧客向けと同じ skeleton テンプレートを流用する
+ * toggle × 宛先は domain の `resolveReservationAdminNotificationDelivery("cancel")`
+ * と共有する。本文は顧客向けと同じ skeleton テンプレートを流用する
  * （管理者専用の文言・deep link は Task 27 で最終調整）。
  */
 export async function sendBulkAdminNotification(
   data: BulkReservationCancelledEmailData,
+  delivery: ReservationAdminNotificationDelivery,
   sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  if (!toggles.notifyReservationCancel) {
+  if (delivery.notificationEmails.length === 0) {
     return { ok: false, reason: "disabled" };
   }
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   const footer = await getEmailFooterData();
   const reservationList = formatBulkInstanceList(data.instances);
@@ -833,7 +789,7 @@ export async function sendBulkAdminNotification(
   return sendEmail(
     {
       payload: {
-        to: notificationEmails,
+        to: [...delivery.notificationEmails],
         subject: `【定期予約一括キャンセル】${data.spaceName} - ${data.customerName}様`,
         react: BulkReservationCancelledEmail(
           omitUndefined({

@@ -4,6 +4,9 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
+
+installEmailRenderContextMock();
 
 mock.module("server-only", () => ({}));
 

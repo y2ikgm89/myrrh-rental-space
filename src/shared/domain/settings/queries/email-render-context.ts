@@ -10,6 +10,8 @@ import type {
   EventEmailRenderContext,
   InquiryAdminNotificationDelivery,
   ReminderEmailRenderContext,
+  ReservationAdminNotificationDelivery,
+  ReservationEmailRenderContext,
   SystemNotificationDelivery,
 } from "@/shared/lib/email/types";
 import { getSuppressedEmailSet } from "@/shared/domain/customers/queries";
@@ -30,7 +32,10 @@ import {
 import { sendEmail as sendEmailWithContext } from "@/shared/lib/email/send";
 import type { SendEmailParams } from "@/shared/lib/email/send";
 import type { EmailResult } from "@/shared/lib/email/types";
-import { PRIVACY_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
+import {
+  CANCELLATION_POLICY_TERMS_TYPE,
+  PRIVACY_POLICY_TERMS_TYPE,
+} from "@/shared/lib/validations/terms";
 import { getAppUrl } from "@/shared/lib/constants";
 
 function toEmailDeliveryContext(
@@ -88,6 +93,29 @@ export async function getEventEmailRenderContext(): Promise<EventEmailRenderCont
   return { calendarSettings, organizer };
 }
 
+export async function getReservationEmailRenderContext(): Promise<ReservationEmailRenderContext> {
+  const [calendarSettings, organizer, deadlineSettings, cancellationDoc] =
+    await Promise.all([
+      getCalendarEmailSettings(),
+      getIcalOrganizer(),
+      getReservationDeadlineSettings(),
+      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    ]);
+  return {
+    calendarSettings,
+    organizer,
+    deadlineSettings,
+    cancellationPolicyUrl: cancellationDoc
+      ? `${getAppUrl()}/terms/${cancellationDoc.slug}`
+      : undefined,
+  };
+}
+
+export async function isReservationConfirmationEmailEnabled(): Promise<boolean> {
+  const toggles = await getEmailDeliverySettings();
+  return toggles.sendReservationConfirmationEmail;
+}
+
 export type EventAdminNotificationType =
   "registration" | "waitlist_registration" | "cancellation";
 
@@ -113,6 +141,35 @@ export async function resolveEventAdminNotificationDelivery(
   return {
     enabled:
       isEventAdminNotificationEnabled(type, toggles) &&
+      notificationEmails.length > 0,
+    notificationEmails,
+  };
+}
+
+export type ReservationAdminNotificationType = "new" | "update" | "cancel";
+
+export function isReservationAdminNotificationEnabled(
+  action: ReservationAdminNotificationType,
+  toggles: EmailDeliverySettings,
+): boolean {
+  const enabledByAction: Record<ReservationAdminNotificationType, boolean> = {
+    new: toggles.notifyNewReservation,
+    update: toggles.notifyReservationChange,
+    cancel: toggles.notifyReservationCancel,
+  };
+  return enabledByAction[action];
+}
+
+export async function resolveReservationAdminNotificationDelivery(
+  action: ReservationAdminNotificationType,
+): Promise<ReservationAdminNotificationDelivery & { enabled: boolean }> {
+  const [toggles, notificationEmails] = await Promise.all([
+    getEmailDeliverySettings(),
+    getNotificationEmailAddresses(),
+  ]);
+  return {
+    enabled:
+      isReservationAdminNotificationEnabled(action, toggles) &&
       notificationEmails.length > 0,
     notificationEmails,
   };

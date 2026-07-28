@@ -255,9 +255,14 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
-installEmailLibDispatchMock({
+installEmailRenderContextMock();
+
+mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+}));
+
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),

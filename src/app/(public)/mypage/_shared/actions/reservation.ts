@@ -27,6 +27,10 @@ import {
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
+  getReservationEmailRenderContext,
+  resolveReservationAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
+import {
   sendReservationAdminNotification,
   sendReservationUpdatedEmail,
 } from "@/shared/domain/email/lib-dispatch";
@@ -332,9 +336,19 @@ export async function updateReservationAction(
                 ? { smartLockIssuanceFailed: true }
                 : {}),
             });
+            const [renderContext, adminDelivery] = await Promise.all([
+              getReservationEmailRenderContext(),
+              resolveReservationAdminNotificationDelivery("update"),
+            ]);
             await Promise.all([
-              sendReservationUpdatedEmail(payloadData),
-              sendReservationAdminNotification(payloadData, "update"),
+              sendReservationUpdatedEmail(payloadData, renderContext),
+              adminDelivery.enabled
+                ? sendReservationAdminNotification(
+                    payloadData,
+                    "update",
+                    adminDelivery,
+                  )
+                : Promise.resolve(),
             ]);
           })(),
           {

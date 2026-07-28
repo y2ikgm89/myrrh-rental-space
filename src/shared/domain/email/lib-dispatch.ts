@@ -53,7 +53,9 @@ import type {
   InquiryReplyEmailData,
   InquiryStatusNotificationData,
   ReceiptIssuedEmailData,
+  ReservationAdminNotificationDelivery,
   ReservationEmailData,
+  ReservationEmailRenderContext,
   ReservationRefundEmailData,
   ReviewReplyEmailData,
   StatusChangeEmailData,
@@ -260,34 +262,38 @@ export async function sendEventWaitlistExpired(
 
 export async function sendReservationConfirmationEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendReservationConfirmationEmailLib(data, sendContext);
+  return sendReservationConfirmationEmailLib(data, renderContext, sendContext);
 }
 
 export async function sendReservationUpdatedEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendReservationUpdatedEmailLib(data, sendContext);
+  return sendReservationUpdatedEmailLib(data, renderContext, sendContext);
 }
 
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendReservationCancelledEmailLib(data, sendContext);
+  return sendReservationCancelledEmailLib(data, renderContext, sendContext);
 }
 
 export async function sendReservationStatusChangedEmail(
   data: StatusChangeEmailData,
+  renderContext: ReservationEmailRenderContext,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendReservationStatusChangedEmailLib(data, sendContext);
+  return sendReservationStatusChangedEmailLib(data, renderContext, sendContext);
 }
 
 export async function sendReservationRefundEmail(
@@ -301,10 +307,16 @@ export async function sendReservationRefundEmail(
 export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: "new" | "update" | "cancel",
+  delivery: ReservationAdminNotificationDelivery,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendReservationAdminNotificationLib(data, action, sendContext);
+  return sendReservationAdminNotificationLib(
+    data,
+    action,
+    delivery,
+    sendContext,
+  );
 }
 
 export async function sendBulkReservationCancelledEmail(
@@ -317,8 +329,9 @@ export async function sendBulkReservationCancelledEmail(
 
 export async function sendBulkAdminNotification(
   data: BulkReservationCancelledEmailData,
+  delivery: ReservationAdminNotificationDelivery,
 ): Promise<EmailResult> {
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
-  return sendBulkAdminNotificationLib(data, sendContext);
+  return sendBulkAdminNotificationLib(data, delivery, sendContext);
 }

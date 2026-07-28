@@ -14,6 +14,10 @@ import type {
   CancellationSideEffectInput,
   SideEffectReservation,
 } from "@/shared/domain/reservations/cancellation/types";
+import {
+  getReservationEmailRenderContext,
+  resolveReservationAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { deleteCalendarSync } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import {
   sendReservationAdminNotification,
@@ -113,7 +117,8 @@ export async function runCustomerEmailStep(args: {
     return { status: "skipped", reason: "suppressed_by_bulk" };
   }
   try {
-    const result = await sendReservationCancelledEmail(payload);
+    const renderContext = await getReservationEmailRenderContext();
+    const result = await sendReservationCancelledEmail(payload, renderContext);
     return mapEmailResultToOutcome(result);
   } catch (err) {
     const normalized = normalizeError(err);
@@ -140,7 +145,16 @@ export async function runAdminEmailStep(args: {
     return { status: "skipped", reason: "suppressed_by_bulk" };
   }
   try {
-    const result = await sendReservationAdminNotification(payload, "cancel");
+    const delivery =
+      await resolveReservationAdminNotificationDelivery("cancel");
+    if (!delivery.enabled) {
+      return { status: "skipped", reason: "disabled_or_suppressed" };
+    }
+    const result = await sendReservationAdminNotification(
+      payload,
+      "cancel",
+      delivery,
+    );
     return mapEmailResultToOutcome(result);
   } catch (err) {
     const normalized = normalizeError(err);

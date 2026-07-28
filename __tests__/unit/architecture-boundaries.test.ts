@@ -1061,7 +1061,6 @@ describe("architecture boundaries", () => {
         "admin-resource-access.ts",
         // Better Auth deleteUser.beforeDelete → Customer anonymize adapter
         "customer-auth.ts",
-        "email/reservation-emails.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",

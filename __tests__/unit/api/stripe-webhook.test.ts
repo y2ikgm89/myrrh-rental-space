@@ -4,6 +4,7 @@ import {
   expectReceivedResult,
 } from "../../helpers/type-assertions";
 import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Stripe from "stripe";
@@ -326,9 +327,14 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
 }));
 
-installEmailLibDispatchMock({
+installEmailRenderContextMock();
+
+mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+}));
+
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),

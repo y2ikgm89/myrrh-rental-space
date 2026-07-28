@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,8 @@ mock.module("@/shared/domain/reservations/series-calendar-outbound", () => ({
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: () => Promise.resolve(),
 }));
+
+installEmailRenderContextMock();
 
 const mockCreateAuditLog = mock<
   (input: Record<string, unknown>) => Promise<void>
@@ -412,6 +415,10 @@ describe("applyCancellationSideEffects", () => {
     expect(mockSendAdminNotification).toHaveBeenCalledWith(
       expect.any(Object),
       "cancel",
+      expect.objectContaining({
+        enabled: true,
+        notificationEmails: ["admin@example.com"],
+      }),
     );
     // payload に customer 情報 + 整形済 location（base + detail）が含まれる
     const payload = mockSendCancelledEmail.mock.calls[0]?.[0];

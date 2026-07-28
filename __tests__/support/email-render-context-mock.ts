@@ -8,6 +8,15 @@ export const DEFAULT_EVENT_EMAIL_RENDER_CONTEXT = {
   organizer: { name: "Test Org", email: "org@example.com" },
 } as const;
 
+export const DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT = {
+  ...DEFAULT_EVENT_EMAIL_RENDER_CONTEXT,
+  deadlineSettings: {
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 6,
+  },
+  cancellationPolicyUrl: undefined,
+} as const;
+
 /** `email-render-context` の named export をすべて提供する stub（部分 mock 禁止）。 */
 export function createEmailRenderContextMockModule(
   overrides: Record<string, unknown> = {},
@@ -30,8 +39,17 @@ export function createEmailRenderContextMockModule(
     getEventEmailRenderContext: mock(
       async () => DEFAULT_EVENT_EMAIL_RENDER_CONTEXT,
     ),
+    getReservationEmailRenderContext: mock(
+      async () => DEFAULT_RESERVATION_EMAIL_RENDER_CONTEXT,
+    ),
+    isReservationConfirmationEmailEnabled: mock(async () => true),
     isEventAdminNotificationEnabled: mock(() => true),
     resolveEventAdminNotificationDelivery: mock(async () => ({
+      enabled: true,
+      notificationEmails: ["admin@example.com"],
+    })),
+    isReservationAdminNotificationEnabled: mock(() => true),
+    resolveReservationAdminNotificationDelivery: mock(async () => ({
       enabled: true,
       notificationEmails: ["admin@example.com"],
     })),
