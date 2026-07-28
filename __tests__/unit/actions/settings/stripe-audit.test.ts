@@ -74,7 +74,7 @@ const mockClearStripeKeysCommand = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 
-mock.module("@/shared/domain/settings/integration-commands", () => ({
+mock.module("@/shared/domain/settings/stripe-commands", () => ({
   updateStripeSettings: (
     ...args: Parameters<typeof mockUpdateStripeSettingsCommand>
   ) => mockUpdateStripeSettingsCommand(...args),

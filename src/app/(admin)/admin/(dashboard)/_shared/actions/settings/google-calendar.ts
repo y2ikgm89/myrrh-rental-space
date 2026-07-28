@@ -29,7 +29,7 @@ import {
   updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
-} from "@/shared/domain/settings/integration-commands";
+} from "@/shared/domain/settings/google-calendar-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   logError,
