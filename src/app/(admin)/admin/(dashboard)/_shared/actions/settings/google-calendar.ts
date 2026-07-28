@@ -19,7 +19,6 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
-import { updateEventImportEnabled } from "@/shared/domain/settings/commands";
 import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
@@ -27,6 +26,7 @@ import {
   recordGoogleCalendarConnectionError,
   recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
+  updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
 } from "@/shared/domain/settings/integration-commands";

@@ -20,12 +20,16 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
-import * as settingsCommands from "@/shared/domain/settings/commands";
+import {
+  updateDataRetentionSettings as updateDataRetentionSettingsCommand,
+  updateFeatureModulesCommand,
+} from "@/shared/domain/settings/commands/features";
 import {
   updateFooterSettings as updateFooterSettingsCommand,
   updateHeaderSettings as updateHeaderSettingsCommand,
   updateSidebarSettings as updateSidebarSettingsCommand,
 } from "@/shared/domain/settings/commands/layout";
+import { updateReservationSettings as updateReservationSettingsCommand } from "@/shared/domain/settings/commands/reservation";
 import {
   updateCookieConsentSettings as updateCookieConsentSettingsCommand,
   updateMaintenanceSettings as updateMaintenanceSettingsCommand,
@@ -139,7 +143,7 @@ export async function updateReservationSettings(
         resource: "settings",
         action: "update",
         execute: async () => {
-          await settingsCommands.updateReservationSettings(data);
+          await updateReservationSettingsCommand(data);
           return null;
         },
         afterSuccess: () => {
@@ -296,7 +300,7 @@ export async function updateFeatureModulesSettings(
         resource: "settings",
         action: "manage",
         execute: async () => {
-          await settingsCommands.updateFeatureModulesCommand(data);
+          await updateFeatureModulesCommand(data);
           return null;
         },
         afterSuccess: () => {
@@ -341,7 +345,7 @@ export async function updateDataRetentionSettings(
         resource: "settings",
         action: "manage",
         execute: async () => {
-          await settingsCommands.updateDataRetentionSettings(data);
+          await updateDataRetentionSettingsCommand(data);
           return null;
         },
       });

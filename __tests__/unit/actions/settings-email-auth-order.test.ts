@@ -49,7 +49,7 @@ mock.module("@/shared/lib/email/domain-verification", () => ({
   ) => mockValidateSenderDomain(...args),
 }));
 
-mock.module("@/shared/domain/settings/commands", () => ({
+mock.module("@/shared/domain/settings/commands/organization", () => ({
   updateEmailSettings: (
     ...args: Parameters<typeof mockUpdateEmailSettingsCommand>
   ) => mockUpdateEmailSettingsCommand(...args),

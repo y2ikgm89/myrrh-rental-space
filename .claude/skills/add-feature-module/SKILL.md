@@ -77,7 +77,7 @@ domain 層で gate する（`src/shared/domain/reviews/public-queries.ts` /
 
 保存経路: `updateFeatureModulesSettings`
 (`(admin)/(dashboard)/_shared/actions/settings/other.ts`) →
-`updateFeatureModulesCommand` (`src/shared/domain/settings/commands.ts`) →
+`updateFeatureModulesCommand` (`src/shared/domain/settings/commands/features.ts`) →
 afterSuccess で `invalidateSiteWideCache([FEATURE_MODULES, NAVIGATION, PAGE_SECTIONS,
 SECTIONS, PAGES, REVIEWS])`。**新 module の公開面が別の `'use cache'` タグに依存するなら
 この afterSuccess のタグ配列に追加**（例: reviews は `CACHE_TAGS.REVIEWS` を含めている）。
