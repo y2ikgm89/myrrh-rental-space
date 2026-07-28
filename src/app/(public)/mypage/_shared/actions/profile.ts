@@ -31,7 +31,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
-import { sendChangeEmailVerificationEmail } from "@/shared/lib/email/change-email-emails";
+import { sendChangeEmailVerificationEmail } from "@/shared/domain/email/lib-dispatch";
 
 const EMAIL_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして登録を完了してください。";

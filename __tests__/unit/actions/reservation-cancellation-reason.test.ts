@@ -54,7 +54,7 @@ mock.module(
     deleteCalendarSync: mock(async () => ({ success: true })),
   }),
 );
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationAdminNotification: mock(async () => undefined),
   sendReservationConfirmationEmail: mock(async () => undefined),
   sendReservationStatusChangedEmail: mock(async () => undefined),

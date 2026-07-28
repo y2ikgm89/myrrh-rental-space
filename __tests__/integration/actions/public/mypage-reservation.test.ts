@@ -28,6 +28,7 @@ import {
   expectErrorResult,
 } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -94,24 +95,20 @@ mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
 }));
 
 // 新規: updateReservationAction が変更通知メール送信に直接呼ぶ関数を no-op モック
-// （実体は send.ts → customers/queries.ts の getSuppressedEmailSet まで連鎖するため）
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationAdminNotification: mock(() =>
     Promise.resolve({ ok: true, messageId: "msg_test" }),
   ),
   sendReservationUpdatedEmail: mock(() =>
     Promise.resolve({ ok: true, messageId: "msg_test" }),
   ),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
   sendBulkReservationCancelledEmail: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
   sendBulkAdminNotification: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
-}));
+});
 
 // auth モック
 const mockGetSession = mock(

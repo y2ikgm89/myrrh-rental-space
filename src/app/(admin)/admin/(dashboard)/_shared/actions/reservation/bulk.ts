@@ -28,7 +28,7 @@ import {
   syncReservationToCalendar,
   updateCalendarSync,
 } from "@/shared/domain/reservations/reservation-calendar-outbound";
-import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
+import { sendReservationAdminNotification } from "@/shared/domain/email/lib-dispatch";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 

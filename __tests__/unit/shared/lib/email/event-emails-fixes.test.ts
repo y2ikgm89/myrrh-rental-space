@@ -14,10 +14,6 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  RENDER_CONTEXT,
-  RENDER_CONTEXT_WITH_ICAL,
-} from "./_email-test-fixtures";
 
 type CapturedSendEmailParams = {
   idempotencyKey?: string;
@@ -58,6 +54,13 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+  RENDER_CONTEXT_WITH_ICAL,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendEventReminderEmail,
@@ -95,13 +98,21 @@ beforeEach(() => {
 // ===========================================================================
 describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
   test("同一 registrationId の 2 回連続呼び出しで異なる idempotencyKey を発行する", async () => {
-    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
+    await sendEventReminderEmail(
+      { ...REMINDER_DATA },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastKey();
 
     // 別 tick を挟むことで Date.now() の増分を保証する
     await new Promise((r) => setTimeout(r, 2));
 
-    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
+    await sendEventReminderEmail(
+      { ...REMINDER_DATA },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastKey();
 
     expect(firstKey).toBeDefined();
@@ -110,7 +121,11 @@ describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
   });
 
   test("キーは `event-reminder/<registrationId>/<timestamp>` 形式で始まる", async () => {
-    await sendEventReminderEmail({ ...REMINDER_DATA }, RENDER_CONTEXT);
+    await sendEventReminderEmail(
+      { ...REMINDER_DATA },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const key = lastKey();
     expect(key).toBeDefined();
@@ -183,6 +198,7 @@ describe("M10: sendEventCancelledToAllParticipants() の waitlist 網羅と ICS 
     await sendEventCancelledToAllParticipants(
       payload,
       RENDER_CONTEXT_WITH_ICAL,
+      EMAIL_SEND_CONTEXT,
       "講師都合のため中止",
     );
 

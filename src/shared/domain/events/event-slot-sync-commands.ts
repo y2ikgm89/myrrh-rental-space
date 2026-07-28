@@ -9,7 +9,7 @@ import {
 import { getEventUpdatedNotificationPayload } from "@/shared/domain/events/email-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { sendEventUpdatedToAllParticipants } from "@/shared/lib/email/event-emails";
+import { sendEventUpdatedToAllParticipants } from "@/shared/domain/email/lib-dispatch";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import {
   EventStatus,

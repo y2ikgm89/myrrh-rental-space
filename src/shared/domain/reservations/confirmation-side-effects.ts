@@ -17,7 +17,7 @@
 import "server-only";
 
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
-import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
+import { sendReservationConfirmationEmail } from "@/shared/domain/email/lib-dispatch";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
 import {
   ErrorCategory,

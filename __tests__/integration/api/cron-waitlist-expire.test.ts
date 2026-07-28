@@ -28,6 +28,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
 } from "@generated/prisma/enums";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -99,14 +100,14 @@ const mockSendEventWaitlistOffered = mock<
     paymentContext: unknown;
   }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+installEmailLibDispatchMock({
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),
   sendEventWaitlistOffered: (
     ...args: Parameters<typeof mockSendEventWaitlistOffered>
   ) => mockSendEventWaitlistOffered(...args),
-}));
+});
 
 // fireAndForget を「発火した Promise を配列に集める」だけの同期的な mock に
 // 差し替える。ループ内のメール送信 fireAndForget はレスポンス完了を待たないため、

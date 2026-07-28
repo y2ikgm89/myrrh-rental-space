@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { requestReceiptResendByEmail } from "@/shared/domain/receipts/resend";
-import { sendReceiptResendEmail } from "@/shared/lib/email/receipt-emails";
+import { sendReceiptResendEmail } from "@/shared/domain/email/lib-dispatch";
 import {
   createMutationError,
   type MutationResult,

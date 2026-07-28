@@ -9,7 +9,7 @@ import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { replyToInquiryAsCustomerCommand } from "@/shared/domain/inquiries/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
+import { sendInquiryCustomerReplyAdminEmail } from "@/shared/domain/email/lib-dispatch";
 import { resolveInquiryCustomerReplyAdminDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { customerInquiryReplySchema } from "@/shared/lib/validations/inquiry";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";

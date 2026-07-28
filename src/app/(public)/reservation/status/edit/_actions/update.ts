@@ -25,7 +25,7 @@ import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   sendReservationAdminNotification,
   sendReservationUpdatedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";

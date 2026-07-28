@@ -13,7 +13,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   sendEventWaitlistOffered,
   sendEventWaitlistExpired,
-} from "@/shared/lib/email/event-waitlist-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { fireEventWaitlistOfferedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {

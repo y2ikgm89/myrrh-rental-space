@@ -22,6 +22,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -90,21 +91,12 @@ mock.module("@/shared/domain/spaces/public-queries", () => ({
 
 const mockSendReservationAdminNotification = mock(() => Promise.resolve());
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationConfirmationEmail: mock(() => Promise.resolve()),
-  sendReservationCancelledEmail: mock(() => Promise.resolve()),
-  sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
+installEmailLibDispatchMock({
+  sendReservationConfirmationEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationCancelledEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationStatusChangedEmail: mock(() => Promise.resolve({ ok: true })),
   sendReservationAdminNotification: mockSendReservationAdminNotification,
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
+});
 
 // terms 系: server-side consent gate + 記録コマンドを no-op に。
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));

@@ -79,6 +79,12 @@ mock.module("@/shared/emails/event-waitlist-expired", () => ({
   EventWaitlistExpiredEmail: mockEventWaitlistExpiredEmail,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendEventWaitlistRegistered,
@@ -107,11 +113,14 @@ beforeEach(() => {
 
 describe("sendEventWaitlistRegistered", () => {
   test("subject に site name と event title の両方を含む", async () => {
-    await sendEventWaitlistRegistered({
-      registration: GUEST_REGISTRATION,
-      position: 3,
-      to: "guest@example.com",
-    });
+    await sendEventWaitlistRegistered(
+      {
+        registration: GUEST_REGISTRATION,
+        position: 3,
+        to: "guest@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const { subject } = lastSendEmailCall().payload;
     expect(subject).toContain("Test Site");
@@ -119,22 +128,28 @@ describe("sendEventWaitlistRegistered", () => {
   });
 
   test("position を props にそのまま渡す", async () => {
-    await sendEventWaitlistRegistered({
-      registration: GUEST_REGISTRATION,
-      position: 7,
-      to: "guest@example.com",
-    });
+    await sendEventWaitlistRegistered(
+      {
+        registration: GUEST_REGISTRATION,
+        position: 7,
+        to: "guest@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventWaitlistRegisteredEmail.mock.calls.at(-1)?.[0];
     expect(props?.position).toBe(7);
   });
 
   test("ゲスト（customerId なし）は claimUrl と status hub URL を発行する", async () => {
-    await sendEventWaitlistRegistered({
-      registration: GUEST_REGISTRATION,
-      position: 1,
-      to: "guest@example.com",
-    });
+    await sendEventWaitlistRegistered(
+      {
+        registration: GUEST_REGISTRATION,
+        position: 1,
+        to: "guest@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventWaitlistRegisteredEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toMatch(
@@ -146,11 +161,14 @@ describe("sendEventWaitlistRegistered", () => {
   });
 
   test("会員（customerId あり）は mypage hub URL を発行し claimUrl は発行しない", async () => {
-    await sendEventWaitlistRegistered({
-      registration: MEMBER_REGISTRATION,
-      position: 1,
-      to: "member@example.com",
-    });
+    await sendEventWaitlistRegistered(
+      {
+        registration: MEMBER_REGISTRATION,
+        position: 1,
+        to: "member@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventWaitlistRegisteredEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventRegistrationHubUrl).toMatch(/\/mypage\/events\/reg-2$/);
@@ -160,27 +178,33 @@ describe("sendEventWaitlistRegistered", () => {
 
 describe("sendEventWaitlistOffered", () => {
   test("free と paid で subject が異なる", async () => {
-    await sendEventWaitlistOffered({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-      expiresAt: new Date("2099-01-02T00:00:00Z"),
-      paymentContext: {
-        kind: "free",
-        confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
+    await sendEventWaitlistOffered(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+        expiresAt: new Date("2099-01-02T00:00:00Z"),
+        paymentContext: {
+          kind: "free",
+          confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
+        },
       },
-    });
+      EMAIL_SEND_CONTEXT,
+    );
     const freeSubject = lastSendEmailCall().payload.subject;
 
-    await sendEventWaitlistOffered({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-      expiresAt: new Date("2099-01-02T00:00:00Z"),
-      paymentContext: {
-        kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
-        price: 3000,
+    await sendEventWaitlistOffered(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+        expiresAt: new Date("2099-01-02T00:00:00Z"),
+        paymentContext: {
+          kind: "paid",
+          checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
+          price: 3000,
+        },
       },
-    });
+      EMAIL_SEND_CONTEXT,
+    );
     const paidSubject = lastSendEmailCall().payload.subject;
 
     expect(freeSubject).toContain("繰り上げ当選");
@@ -189,16 +213,19 @@ describe("sendEventWaitlistOffered", () => {
   });
 
   test("paid では priceDisplay と checkout actionUrl を渡す", async () => {
-    await sendEventWaitlistOffered({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-      expiresAt: new Date("2099-01-02T00:00:00Z"),
-      paymentContext: {
-        kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
-        price: 3000,
+    await sendEventWaitlistOffered(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+        expiresAt: new Date("2099-01-02T00:00:00Z"),
+        paymentContext: {
+          kind: "paid",
+          checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
+          price: 3000,
+        },
       },
-    });
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
     expect(props?.isPaid).toBe(true);
@@ -208,15 +235,18 @@ describe("sendEventWaitlistOffered", () => {
 
   test("idempotencyKey に expiresAt.getTime() を含める", async () => {
     const expiresAt = new Date("2099-01-02T00:00:00Z");
-    await sendEventWaitlistOffered({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-      expiresAt,
-      paymentContext: {
-        kind: "free",
-        confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
+    await sendEventWaitlistOffered(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+        expiresAt,
+        paymentContext: {
+          kind: "free",
+          confirmUrl: "https://example.com/events/waitlist/confirm?token=tok",
+        },
       },
-    });
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(lastSendEmailCall().idempotencyKey).toBe(
       `event-waitlist-offered/reg-1/${expiresAt.getTime()}`,
@@ -226,10 +256,13 @@ describe("sendEventWaitlistOffered", () => {
 
 describe("sendEventWaitlistExpired", () => {
   test("idempotencyKey が registrationId 固定", async () => {
-    await sendEventWaitlistExpired({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-    });
+    await sendEventWaitlistExpired(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(lastSendEmailCall().idempotencyKey).toBe(
       "event-waitlist-expired/reg-1",
@@ -237,10 +270,13 @@ describe("sendEventWaitlistExpired", () => {
   });
 
   test("eventUrl に event slug を含む", async () => {
-    await sendEventWaitlistExpired({
-      registration: GUEST_REGISTRATION,
-      to: "guest@example.com",
-    });
+    await sendEventWaitlistExpired(
+      {
+        registration: GUEST_REGISTRATION,
+        to: "guest@example.com",
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventWaitlistExpiredEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventUrl).toMatch(/\/events\/summer-workshop$/);

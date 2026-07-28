@@ -14,6 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // ---------------------------------------------------------------------------
 // Facade / external module mocks (順序: mock.module 宣言 → dynamic import)
@@ -77,18 +78,17 @@ const mockSendCancelled = mock<(data: unknown) => Promise<EmailResult>>(() =>
 const mockSendAdminNotification = mock<
   (data: unknown, action: string) => Promise<EmailResult>
 >(() => Promise.resolve({ ok: true, messageId: "admin_msg_1" }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: (d: unknown) => mockSendCancelled(d),
   sendReservationAdminNotification: (d: unknown, action: string) =>
     mockSendAdminNotification(d, action),
-  // 他 export (bulk 系) は本 test で使わないが mock.module の全 export 契約のため置く。
   sendBulkReservationCancelledEmail: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
   sendBulkAdminNotification: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
-}));
+});
 
 // SmartLock revoke
 const mockRevokeSmartLock = mock<(reservationId: string) => Promise<void>>(() =>

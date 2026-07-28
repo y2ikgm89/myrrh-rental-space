@@ -212,24 +212,13 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   getWaitlistConfirmationEmailDetails: () => Promise.resolve(null),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
-
-mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module("@/shared/domain/receipts/issue", () => ({

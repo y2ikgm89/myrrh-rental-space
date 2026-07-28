@@ -21,6 +21,8 @@ import {
   RegistrationStatus,
 } from "@generated/prisma/enums";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -96,9 +98,12 @@ mock.module("@/shared/domain/features/check", () => ({
 const mockSendEventWaitlistRegistered = mock(() =>
   Promise.resolve({ ok: true as const }),
 );
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+installEmailLibDispatchMock({
+  sendEventRegistrationConfirmation: mock(() => Promise.resolve({ ok: true })),
+  sendEventAdminNotification: mock(() => Promise.resolve({ ok: true })),
   sendEventWaitlistRegistered: mockSendEventWaitlistRegistered,
-}));
+});
+installEmailRenderContextMock();
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
@@ -124,13 +129,6 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
 mock.module("@/shared/domain/events/registration-commands", () => ({
   createEventRegistrationCommand: mock(() => Promise.resolve(null)),
   cancelEventRegistrationCommand: mock(() => Promise.resolve(null)),
-}));
-
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
-  sendEventAdminNotification: mock(() => Promise.resolve()),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
 mock.module(

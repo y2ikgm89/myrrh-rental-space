@@ -3,6 +3,7 @@ import {
   expectErrorResult,
   expectReceivedResult,
 } from "../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Stripe from "stripe";
@@ -325,22 +326,13 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
+});
 
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>

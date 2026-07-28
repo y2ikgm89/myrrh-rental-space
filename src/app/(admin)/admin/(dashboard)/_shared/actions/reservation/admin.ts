@@ -35,7 +35,7 @@ import {
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {

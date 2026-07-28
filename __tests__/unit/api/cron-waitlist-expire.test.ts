@@ -157,7 +157,7 @@ mock.module("@/shared/domain/events/waitlist-commands", () => ({
   ) => mockExpireAndPromoteWaitlistForEventCommand(...args),
 }));
 
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),

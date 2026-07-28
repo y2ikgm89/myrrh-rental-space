@@ -7,7 +7,6 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { RENDER_CONTEXT } from "./_email-test-fixtures";
 
 mock.module("server-only", () => ({}));
 
@@ -151,6 +150,12 @@ mock.module("@/shared/emails/event-updated-notification", () => ({
   EventUpdatedNotificationEmail: mockEventUpdatedNotificationEmail,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendEventCancelledToAllParticipants,
@@ -173,6 +178,7 @@ describe("sendEventCancelledToAllParticipants() の eventRegistrationHubUrl 出�
     await sendEventCancelledToAllParticipants(
       makeCancelledPayload(),
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
       "講師都合のため中止",
     );
 
@@ -200,6 +206,7 @@ describe("sendEventUpdatedToAllParticipants() の eventRegistrationHubUrl 出し
       makeUpdatedPayload(),
       new Map([["slot-1", new Date("2098-12-25T01:00:00Z")]]),
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const calls = mockEventUpdatedNotificationEmail.mock.calls;

@@ -23,7 +23,7 @@ import { createPublicReservationCommand } from "@/shared/domain/reservations/pub
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
-import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
+import { sendReservationAdminNotification } from "@/shared/domain/email/lib-dispatch";
 import { syncReservationToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";

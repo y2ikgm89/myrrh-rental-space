@@ -14,7 +14,7 @@ import {
 import {
   sendEventAdminNotification,
   sendEventRegistrationConfirmation,
-} from "@/shared/lib/email/event-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import {
   getEventEmailRenderContext,
   resolveEventAdminNotificationDelivery,

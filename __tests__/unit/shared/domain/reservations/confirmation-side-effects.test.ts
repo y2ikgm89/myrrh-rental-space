@@ -35,7 +35,7 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mockIssueSmartLockPasscodes,
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
 }));
 

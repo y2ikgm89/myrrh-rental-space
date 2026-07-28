@@ -94,6 +94,12 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationConfirmationEmail,
@@ -128,7 +134,10 @@ describe("sendReservationConfirmationEmail() のゲート", () => {
       sendReservationConfirmationEmail: false,
     });
 
-    const result = await sendReservationConfirmationEmail(DATA);
+    const result = await sendReservationConfirmationEmail(
+      DATA,
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
@@ -142,7 +151,11 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
       notifyNewReservation: false,
     });
 
-    const result = await sendReservationAdminNotification(DATA, "new");
+    const result = await sendReservationAdminNotification(
+      DATA,
+      "new",
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
@@ -154,14 +167,18 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
       notifyReservationCancel: false,
     });
 
-    const result = await sendReservationAdminNotification(DATA, "cancel");
+    const result = await sendReservationAdminNotification(
+      DATA,
+      "cancel",
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
   test("action update, notifyReservationChange=true かつ宛先ありなら送信する", async () => {
-    await sendReservationAdminNotification(DATA, "update");
+    await sendReservationAdminNotification(DATA, "update", EMAIL_SEND_CONTEXT);
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
   });
@@ -169,7 +186,11 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
   test("通知先アドレスが空なら送信しない", async () => {
     mockGetNotificationEmailAddresses.mockResolvedValue([]);
 
-    const result = await sendReservationAdminNotification(DATA, "new");
+    const result = await sendReservationAdminNotification(
+      DATA,
+      "new",
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();

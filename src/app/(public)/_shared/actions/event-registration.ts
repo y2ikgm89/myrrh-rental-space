@@ -34,12 +34,12 @@ import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/e
 import {
   sendEventRegistrationConfirmation,
   sendEventAdminNotification,
-} from "@/shared/lib/email/event-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import {
   getEventEmailRenderContext,
   resolveEventAdminNotificationDelivery,
 } from "@/shared/domain/settings/queries/email-render-context";
-import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
+import { sendEventWaitlistRegistered } from "@/shared/domain/email/lib-dispatch";
 import {
   computeWaitlistPositionForRegistration,
   getWaitlistEmailRegistration,

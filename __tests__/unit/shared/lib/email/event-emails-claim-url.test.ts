@@ -9,7 +9,6 @@
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
-import { RENDER_CONTEXT } from "./_email-test-fixtures";
 
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
@@ -48,6 +47,7 @@ mock.module("@/shared/emails/event-reminder", () => ({
   EventReminderEmail: mockEventReminderEmail,
 }));
 
+import { EMAIL_SEND_CONTEXT, RENDER_CONTEXT } from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendEventRegistrationConfirmation,
@@ -126,6 +126,7 @@ describe("sendEventRegistrationConfirmation() の claimUrl 出し分け", () => 
         customerId: null,
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -139,6 +140,7 @@ describe("sendEventRegistrationConfirmation() の claimUrl 出し分け", () => 
         customerId: "customer-1",
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -154,6 +156,7 @@ describe("sendEventReminderEmail() の claimUrl 出し分け", () => {
         customerId: null,
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
@@ -167,6 +170,7 @@ describe("sendEventReminderEmail() の claimUrl 出し分け", () => {
         customerId: "customer-1",
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
@@ -182,6 +186,7 @@ describe("sendEventRegistrationConfirmation() の eventRegistrationHubUrl 出し
         customerId: "customer-1",
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -195,6 +200,7 @@ describe("sendEventRegistrationConfirmation() の eventRegistrationHubUrl 出し
         customerId: null,
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -211,6 +217,7 @@ describe("sendEventRegistrationConfirmation() は receiptDownloadUrl を載せ�
         customerId: null,
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -224,6 +231,7 @@ describe("sendEventRegistrationConfirmation() は receiptDownloadUrl を載せ�
         customerId: "customer-1",
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
@@ -239,6 +247,7 @@ describe("sendEventReminderEmail() の eventRegistrationHubUrl 出し分け", ()
         customerId: "customer-1",
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
@@ -252,6 +261,7 @@ describe("sendEventReminderEmail() の eventRegistrationHubUrl 出し分け", ()
         customerId: null,
       },
       RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];

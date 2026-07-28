@@ -17,7 +17,7 @@ import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import { sendDeleteAccountVerificationEmail } from "@/shared/lib/email/delete-account-emails";
+import { sendDeleteAccountVerificationEmail } from "@/shared/domain/email/lib-dispatch";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { anonymizeCustomerBeforeAuthUserDelete } from "@/shared/domain/customers/account-deletion";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";

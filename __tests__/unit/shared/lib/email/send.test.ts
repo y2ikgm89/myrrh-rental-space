@@ -7,16 +7,13 @@ import {
   afterEach,
   spyOn,
 } from "bun:test";
-import { createHash } from "node:crypto";
+import { hashSuppressedEmailCandidate } from "@/shared/lib/email/suppression-hash";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
-// send.ts の suppression 判定 (hashSuppressedEmailCandidate(normalizeEmailForIdentity(recipient)))
-// と bit-for-bit 同じ hash 値を生成するテストヘルパー。
-// normalizeEmailForIdentity は小文字化 + trim なので、単純 canonical (すでに小文字) は
-// そのまま SHA-256 に通せば良い。
 function hashForTest(canonicalEmail: string): string {
-  return createHash("sha256")
-    .update(canonicalEmail.trim().toLowerCase())
-    .digest("hex");
+  return hashSuppressedEmailCandidate(
+    normalizeEmailForIdentity(canonicalEmail),
+  );
 }
 
 // setTimeout をモックして backoff sleep をスキップする
@@ -59,10 +56,9 @@ const mockResendSend = mock<
   }>
 >();
 
-const mockIsEmailEnabled = mock<() => boolean>(() => true);
-const mockGetResendClient = mock<
-  () => { emails: { send: typeof mockResendSend } } | null
->(() => ({ emails: { send: mockResendSend } }));
+const mockGetResendClientForApiKey = mock(() => ({
+  emails: { send: mockResendSend },
+}));
 const mockGetFromAddress = mock<
   (senderEmail?: string | null, senderName?: string | null) => string
 >(() => "テストサービス <noreply@example.com>");
@@ -73,41 +69,10 @@ const mockNormalizeError = mock<(e: unknown) => Error>((e: unknown) =>
   e instanceof Error ? e : new Error(String(e)),
 );
 
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  senderEmail: string | null;
-  senderName: string | null;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  senderEmail: null,
-  senderName: null,
-  replyToEmail: null,
-};
-
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-
 // 2. mock.module — import より前
 mock.module("@/shared/lib/email/client", () => ({
-  isEmailEnabled: mockIsEmailEnabled,
-  getResendClient: mockGetResendClient,
+  getResendClientForApiKey: mockGetResendClientForApiKey,
   getFromAddress: mockGetFromAddress,
-}));
-
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -117,26 +82,11 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: mockNormalizeError,
 }));
 
-// Resend webhook suppression check (DB lookup) のモック:
-// Bun 公式 re-export pattern (...actual, override) で他の export を保ち
-// `getSuppressedEmailSet` のみ module-level mock に差し替える。
-// デフォルトは空 Set（= 全宛先送信許可）。suppression 検証は
-// describe("suppression branch") で per-test に mockResolvedValue で切替える。
-// 引数を取らない (PII cache leak fix: 引数を cache key にしないため、
-// 送信側で recipient を canonical に正規化して .has() 判定する)。
-const actualCustomersQueries =
-  await import("@/shared/domain/customers/queries");
-const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
-  Promise.resolve(new Set()),
-);
-mock.module("@/shared/domain/customers/queries", () => ({
-  ...actualCustomersQueries,
-  getSuppressedEmailSet: mockGetSuppressedEmailSet,
-}));
-
 // 3. テスト対象 import
+import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendEmail, hashForKey } from "@/shared/lib/email/send";
+import type { EmailSendContext } from "@/shared/lib/email/types";
 
 // -----------------------------------------------------------------------
 // 共通テストデータ
@@ -152,6 +102,24 @@ const BASE_PARAMS = {
   operation: "testOperation",
 };
 
+function sendContext(
+  overrides: Partial<EmailSendContext> = {},
+): EmailSendContext {
+  return {
+    ...EMAIL_SEND_CONTEXT,
+    ...overrides,
+    transport: { ...EMAIL_SEND_CONTEXT.transport, ...overrides.transport },
+    delivery: { ...EMAIL_SEND_CONTEXT.delivery, ...overrides.delivery },
+    suppressedEmailHashes:
+      overrides.suppressedEmailHashes ??
+      EMAIL_SEND_CONTEXT.suppressedEmailHashes,
+  };
+}
+
+function disabledSendContext(): EmailSendContext {
+  return sendContext({ transport: { resendApiKey: null } });
+}
+
 // -----------------------------------------------------------------------
 // beforeEach: モックをリセットしてデフォルト挙動を再設定
 // -----------------------------------------------------------------------
@@ -163,26 +131,16 @@ beforeEach(() => {
   );
 
   mockResendSend.mockReset();
-  mockIsEmailEnabled.mockReset();
-  mockGetResendClient.mockReset();
+  mockGetResendClientForApiKey.mockReset();
   mockLogError.mockReset();
   mockNormalizeError.mockReset();
-  // suppression: デフォルトで「全宛先送信許可」（空 Set）にリセット
-  mockGetSuppressedEmailSet.mockReset();
-  mockGetSuppressedEmailSet.mockResolvedValue(new Set());
-
-  // デフォルト挙動: メール有効 + クライアント存在
-  // NOTE: mockResendSend のデフォルト戻り値は各テストで個別に設定する
-  //       ここで設定するとリトライテストの Once 連鎖に干渉するため
-  mockIsEmailEnabled.mockReturnValue(true);
-  mockGetResendClient.mockReturnValue({ emails: { send: mockResendSend } });
+  mockGetResendClientForApiKey.mockReturnValue({
+    emails: { send: mockResendSend },
+  });
   mockGetFromAddress.mockReturnValue("テストサービス <noreply@example.com>");
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
   mockNormalizeError.mockImplementation((e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
   );
-  // 標準ケース: 送信成功（retry テストでは上書きされる）
   mockResendSend.mockResolvedValue({ data: { id: "email-1" }, error: null });
 });
 
@@ -197,20 +155,8 @@ afterEach(() => {
 
 describe("sendEmail()", () => {
   describe("no-op path", () => {
-    test("isEmailEnabled() が false の場合、SDK を呼ばずに { ok: false, reason: 'disabled' } を返す", async () => {
-      mockIsEmailEnabled.mockReturnValue(false);
-
-      const result = await sendEmail(BASE_PARAMS);
-
-      expect(result).toEqual({ ok: false, reason: "disabled" });
-      expect(mockResendSend).not.toHaveBeenCalled();
-    });
-
-    test("getResendClient() が null の場合、SDK を呼ばずに { ok: false, reason: 'disabled' } を返す", async () => {
-      mockGetResendClient.mockReturnValue(null);
-
-      const result = await sendEmail(BASE_PARAMS);
-
+    test("transport.resendApiKey が null の場合 disabled", async () => {
+      const result = await sendEmail(BASE_PARAMS, disabledSendContext());
       expect(result).toEqual({ ok: false, reason: "disabled" });
       expect(mockResendSend).not.toHaveBeenCalled();
     });
@@ -222,7 +168,7 @@ describe("sendEmail()", () => {
         data: { id: "msg_test123" },
         error: null,
       });
-      const result = await sendEmail(BASE_PARAMS);
+      const result = await sendEmail(BASE_PARAMS, sendContext());
 
       expect(result).toEqual({ ok: true, messageId: "msg_test123" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
@@ -245,10 +191,13 @@ describe("sendEmail()", () => {
         data: { id: "msg_test456" },
         error: null,
       });
-      const result = await sendEmail({
-        ...BASE_PARAMS,
-        idempotencyKey: "reservation-confirm/reservation-1",
-      });
+      const result = await sendEmail(
+        {
+          ...BASE_PARAMS,
+          idempotencyKey: "reservation-confirm/reservation-1",
+        },
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "msg_test456" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
@@ -259,7 +208,7 @@ describe("sendEmail()", () => {
     });
 
     test("from が getFromAddress() から payload に自動注入される", async () => {
-      await sendEmail(BASE_PARAMS);
+      await sendEmail(BASE_PARAMS, sendContext());
 
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -274,7 +223,7 @@ describe("sendEmail()", () => {
         error: null,
       });
 
-      const result = await sendEmail(BASE_PARAMS);
+      const result = await sendEmail(BASE_PARAMS, sendContext());
 
       expect(result).toEqual({ ok: true, messageId: "test-email-id" });
     });
@@ -282,12 +231,16 @@ describe("sendEmail()", () => {
 
   describe("返信先(reply-to)注入", () => {
     test("settings.replyToEmail が payload に replyTo として注入される", async () => {
-      mockGetEmailDeliverySettings.mockResolvedValue({
-        ...DELIVERY_DEFAULTS,
-        replyToEmail: "info@myrrh.example.com",
-      });
-
-      await sendEmail(BASE_PARAMS);
+      await sendEmail(
+        BASE_PARAMS,
+        sendContext({
+          delivery: {
+            senderEmail: null,
+            senderName: null,
+            replyToEmail: "info@myrrh.example.com",
+          },
+        }),
+      );
 
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({ replyTo: "info@myrrh.example.com" }),
@@ -295,22 +248,20 @@ describe("sendEmail()", () => {
     });
 
     test("replyToEmail が未設定なら replyTo を付与しない", async () => {
-      await sendEmail(BASE_PARAMS);
+      await sendEmail(BASE_PARAMS, sendContext());
 
       const firstCall = mockResendSend.mock.calls[0];
       expect(firstCall?.[0]).not.toHaveProperty("replyTo");
     });
 
     test("payload が replyTo を明示していれば設定値より優先する", async () => {
-      mockGetEmailDeliverySettings.mockResolvedValue({
-        ...DELIVERY_DEFAULTS,
-        replyToEmail: "settings@example.com",
-      });
-
-      await sendEmail({
-        ...BASE_PARAMS,
-        payload: { ...VALID_PAYLOAD, replyTo: "override@example.com" },
-      });
+      await sendEmail(
+        {
+          ...BASE_PARAMS,
+          payload: { ...VALID_PAYLOAD, replyTo: "override@example.com" },
+        },
+        sendContext(),
+      );
 
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({ replyTo: "override@example.com" }),
@@ -334,7 +285,10 @@ describe("sendEmail()", () => {
         // attempt 3（= maxRetries）で成功
         .mockResolvedValueOnce({ data: { id: "email-1" }, error: null });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       // 4 回目で成功（attempt 0→1→2→3 の計 4 回）
       expect(result).toEqual({ ok: true, messageId: "email-1" });
@@ -351,7 +305,10 @@ describe("sendEmail()", () => {
         .mockResolvedValueOnce({ data: null, error: serverError })
         .mockResolvedValueOnce({ data: { id: "email-1" }, error: null });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
@@ -367,7 +324,10 @@ describe("sendEmail()", () => {
         .mockResolvedValueOnce({ data: null, error: appError })
         .mockResolvedValueOnce({ data: { id: "email-1" }, error: null });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
@@ -380,7 +340,10 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: validationError });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -398,7 +361,10 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: apiKeyError });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -415,7 +381,10 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: rateLimitError });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 0 },
+        sendContext(),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -437,7 +406,10 @@ describe("sendEmail()", () => {
         .mockResolvedValueOnce({ data: null, error: rateLimitError })
         .mockResolvedValueOnce({ data: { id: "email-retry-ok" }, error: null });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "email-retry-ok" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
@@ -450,7 +422,10 @@ describe("sendEmail()", () => {
         .mockRejectedValueOnce(new Error("ECONNRESET"))
         .mockResolvedValueOnce({ data: { id: "email-throw-ok" }, error: null });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "email-throw-ok" });
       expect(mockResendSend).toHaveBeenCalledTimes(3);
@@ -461,7 +436,10 @@ describe("sendEmail()", () => {
       mockResendSend.mockReset();
       mockResendSend.mockRejectedValue(new Error("ETIMEDOUT"));
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 3 },
+        sendContext(),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -491,7 +469,10 @@ describe("sendEmail()", () => {
       // maxRetries: 0 で即失敗
       mockResendSend.mockResolvedValue({ data: null, error: rateLimitError });
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 0 },
+        sendContext(),
+      );
 
       expect(result.ok).toBe(false);
       if (!result.ok && result.reason === "error") {
@@ -510,7 +491,7 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 }, sendContext());
 
       expect(mockLogError).toHaveBeenCalledTimes(1);
       expect(mockLogError).toHaveBeenCalledWith(
@@ -526,11 +507,14 @@ describe("sendEmail()", () => {
       const serverError = { name: "validation_error", message: "Bad request" };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({
-        ...BASE_PARAMS,
-        operation: "sendReservationEmail",
-        maxRetries: 0,
-      });
+      await sendEmail(
+        {
+          ...BASE_PARAMS,
+          operation: "sendReservationEmail",
+          maxRetries: 0,
+        },
+        sendContext(),
+      );
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
@@ -546,11 +530,14 @@ describe("sendEmail()", () => {
       const serverError = { name: "validation_error", message: "Bad request" };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({
-        ...BASE_PARAMS,
-        idempotencyKey: "reservation-confirm/res-1",
-        maxRetries: 0,
-      });
+      await sendEmail(
+        {
+          ...BASE_PARAMS,
+          idempotencyKey: "reservation-confirm/res-1",
+          maxRetries: 0,
+        },
+        sendContext(),
+      );
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
@@ -569,7 +556,7 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 }, sendContext());
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
@@ -588,7 +575,7 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 }, sendContext());
 
       // attempt=0 なので attempt+1=1 が context に入る
       expect(mockLogError).toHaveBeenCalledWith(
@@ -608,11 +595,14 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({
-        ...BASE_PARAMS,
-        context: { reservationId: "res-1", customerId: "cust-1" },
-        maxRetries: 0,
-      });
+      await sendEmail(
+        {
+          ...BASE_PARAMS,
+          context: { reservationId: "res-1", customerId: "cust-1" },
+          maxRetries: 0,
+        },
+        sendContext(),
+      );
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
@@ -628,7 +618,10 @@ describe("sendEmail()", () => {
     test("SDK throw を尽きた後は固定メッセージで失敗し、retry したうえで logError する", async () => {
       mockResendSend.mockRejectedValue(new Error("ECONNREFUSED"));
 
-      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 2 });
+      const result = await sendEmail(
+        { ...BASE_PARAMS, maxRetries: 2 },
+        sendContext(),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -653,7 +646,7 @@ describe("sendEmail()", () => {
     test("SDK throw 尽きた後も logError で ErrorCategory.EXTERNAL_API が呼ばれる", async () => {
       mockResendSend.mockRejectedValue(new Error("Network error"));
 
-      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 }, sendContext());
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
@@ -671,7 +664,7 @@ describe("sendEmail()", () => {
       };
       mockResendSend.mockResolvedValue({ data: null, error: serverError });
 
-      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 }, sendContext());
 
       // idempotencyKey が含まれる場合のパターンと一致しないことを確認
       // 指定ありケースは "idempotencyKey: ... を含む context" で toHaveBeenCalledWith が通る
@@ -705,11 +698,12 @@ describe("sendEmail()", () => {
     test("1 recipient HARD_BOUNCED なら送信せず suppressed + logError 1 回", async () => {
       // Set は canonical email の SHA-256 hash を格納する契約 (queries.ts)。
       // 送信側で recipient を hash して .has() 判定する。
-      mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set([hashForTest("customer@example.com")]),
+      const result = await sendEmail(
+        BASE_PARAMS,
+        sendContext({
+          suppressedEmailHashes: new Set([hashForTest("customer@example.com")]),
+        }),
       );
-
-      const result = await sendEmail(BASE_PARAMS);
 
       expect(result).toEqual({
         ok: false,
@@ -734,11 +728,12 @@ describe("sendEmail()", () => {
     test("1 recipient COMPLAINED なら送信せず suppressed + logError 1 回", async () => {
       // domain query 側で HARD_BOUNCED / COMPLAINED の両方が Set に入って返る
       // 仕様なので、test は「Set に入っているか」のみ確認すれば良い。
-      mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set([hashForTest("customer@example.com")]),
+      const result = await sendEmail(
+        BASE_PARAMS,
+        sendContext({
+          suppressedEmailHashes: new Set([hashForTest("customer@example.com")]),
+        }),
       );
-
-      const result = await sendEmail(BASE_PARAMS);
 
       expect(result).toEqual({
         ok: false,
@@ -752,9 +747,7 @@ describe("sendEmail()", () => {
     test("SOFT_BOUNCED 相当（suppression set に含まれない）は送信続行", async () => {
       // SOFT_BOUNCED は domain query 側で suppression set に含めない仕様。
       // test では「Set が空 = 送信許可」のケースとして等価に扱う。
-      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
-
-      const result = await sendEmail(BASE_PARAMS);
+      const result = await sendEmail(BASE_PARAMS, sendContext());
 
       expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
@@ -764,37 +757,33 @@ describe("sendEmail()", () => {
     test("DB 未登録（unknown 宛先）は送信続行", async () => {
       // staff / system / inquiry guest 等 Customer レコードなしの宛先は
       // findMany で行が返らず Set に含まれない。
-      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
-
-      const result = await sendEmail(BASE_PARAMS);
+      const result = await sendEmail(BASE_PARAMS, sendContext());
 
       expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
     });
 
     test("複数宛先のうち 1 件のみ HARD_BOUNCED は該当宛先を除外して残りで送信続行 (M1)", async () => {
-      mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set([hashForTest("b@example.com")]),
+      const result = await sendEmail(
+        {
+          ...BASE_PARAMS,
+          payload: {
+            ...VALID_PAYLOAD,
+            to: ["a@example.com", "b@example.com", "c@example.com"],
+          },
+        },
+        sendContext({
+          suppressedEmailHashes: new Set([hashForTest("b@example.com")]),
+        }),
       );
 
-      const result = await sendEmail({
-        ...BASE_PARAMS,
-        payload: {
-          ...VALID_PAYLOAD,
-          to: ["a@example.com", "b@example.com", "c@example.com"],
-        },
-      });
-
-      // 残宛先に送信成功
       expect(result).toEqual({ ok: true, messageId: "email-1" });
-      // Resend には suppressed b@ を除外したリストで送られる
       expect(mockResendSend).toHaveBeenCalledTimes(1);
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ["a@example.com", "c@example.com"],
         }),
       );
-      // drop したアドレスは warning log に残る
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
@@ -805,29 +794,25 @@ describe("sendEmail()", () => {
           }),
         }),
       );
-      // 引数なし版なので getSuppressedEmailSet は 1 回だけ、no-arg で呼ばれる
-      // （per-recipient N×round-trip でないことの回帰防止 + 引数を cache key に
-      // しない PII cache leak fix の回帰防止）
-      expect(mockGetSuppressedEmailSet).toHaveBeenCalledTimes(1);
-      expect(mockGetSuppressedEmailSet).toHaveBeenCalledWith();
     });
 
     test("複数宛先が全て suppressed なら送信せず suppressed + 全アドレスを返す", async () => {
-      mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set([
-          hashForTest("a@example.com"),
-          hashForTest("b@example.com"),
-          hashForTest("c@example.com"),
-        ]),
-      );
-
-      const result = await sendEmail({
-        ...BASE_PARAMS,
-        payload: {
-          ...VALID_PAYLOAD,
-          to: ["a@example.com", "b@example.com", "c@example.com"],
+      const result = await sendEmail(
+        {
+          ...BASE_PARAMS,
+          payload: {
+            ...VALID_PAYLOAD,
+            to: ["a@example.com", "b@example.com", "c@example.com"],
+          },
         },
-      });
+        sendContext({
+          suppressedEmailHashes: new Set([
+            hashForTest("a@example.com"),
+            hashForTest("b@example.com"),
+            hashForTest("c@example.com"),
+          ]),
+        }),
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -843,15 +828,16 @@ describe("sendEmail()", () => {
     });
 
     test("複数宛先が全て OK なら送信続行", async () => {
-      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
-
-      const result = await sendEmail({
-        ...BASE_PARAMS,
-        payload: {
-          ...VALID_PAYLOAD,
-          to: ["a@example.com", "b@example.com", "c@example.com"],
+      const result = await sendEmail(
+        {
+          ...BASE_PARAMS,
+          payload: {
+            ...VALID_PAYLOAD,
+            to: ["a@example.com", "b@example.com", "c@example.com"],
+          },
         },
-      });
+        sendContext(),
+      );
 
       expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);

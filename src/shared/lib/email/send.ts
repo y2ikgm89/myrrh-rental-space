@@ -20,15 +20,11 @@ import {
   logError,
   normalizeError,
 } from "../errors/server";
-import {
-  getSuppressedEmailSet,
-  hashSuppressedEmailCandidate,
-} from "@/shared/domain/customers/queries";
-import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
-import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
+import { getFromAddress, getResendClientForApiKey } from "./client";
 import { normalizeEmailForIdentity } from "./normalize-email";
+import { hashSuppressedEmailCandidate } from "./suppression-hash";
 import { CreateEmailOptionsSchema } from "./schemas";
-import type { EmailResult } from "./types";
+import type { EmailResult, EmailSendContext } from "./types";
 
 /** Resend 公式が retry を推奨するエラー名（429 / 500 系） */
 const RETRYABLE_ERROR_NAMES: ReadonlySet<string> = new Set([
@@ -72,49 +68,31 @@ function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
 /**
  * メールを送信する。
  *
- * Resend API キーが env / 管理画面のいずれにも無い場合は `{ ok: false, reason: "disabled" }` を返す。
- * 既存テンプレ送信経路は `result.ok === false` を「失敗」として log するため動作不変。
- * テスト送信機能は `reason: "disabled"` を「警告」、`reason: "error"` を「エラー」として UI 上区別する。
- *
- * ## Resend Webhook suppression (Gmail Feb 2024 / Yahoo bulk sender 要件 — complaint rate < 0.3%)
- * 宛先の `Customer.emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` のときは送信を抑止する
- * （Resend 側の suppression list をアプリ層で先取りし、API quota / sender reputation を保護）。
- *
- * - 複数宛先の一部が suppressed → 該当宛先だけ除外して残りに送信を継続する
- *   （drop したアドレスは LOW severity で log）。
- * - 全宛先が suppressed → 送信せず `{ ok: false, reason: "suppressed", suppressedRecipients }`。
- *   （呼出側でテスト送信 UI 等が「配信停止済み」を disabled と区別して提示できるようにする）
+ * Settings / suppression / Resend key は domain が `EmailSendContext` に詰めて渡す。
+ * transport が無効なら `{ ok: false, reason: "disabled" }` を返す。
  */
-export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
-  if (!(await isEmailEnabled())) return { ok: false, reason: "disabled" };
+export async function sendEmail(
+  params: SendEmailParams,
+  context: EmailSendContext,
+): Promise<EmailResult> {
+  const apiKey = context.transport.resendApiKey;
+  if (!apiKey) return { ok: false, reason: "disabled" };
 
-  const resend = await getResendClient();
-  if (!resend) return { ok: false, reason: "disabled" };
+  const resend = getResendClientForApiKey(apiKey);
 
   const {
     payload,
     idempotencyKey,
     operation,
-    context,
+    context: logContext,
     maxRetries = DEFAULT_MAX_RETRIES,
   } = params;
 
-  // === Resend Webhook 由来の suppression check（送信前） ===
-  // 宛先のうち HARD_BOUNCED / COMPLAINED を除外する。全滅なら送信せず
-  // `reason: "suppressed"` を返す。一部だけなら残りで送信を継続する
-  // （legitimate co-recipient が 1 件の suppressed で巻き添えにならないため）。
-  //
-  // `getSuppressedEmailSet()` は「全 suppressed 顧客の canonical email を
-  // SHA-256 hash した集合」を単一 `'use cache'` エントリで返す (引数無し
-  // なので cache key に PII を焼き込まない + cache 値も非可逆 hash なので
-  // plaintext PII が Data Cache に残らない — Codex PR #945 review 対応)。
-  // 呼び出し側で recipient を canonical → hash してから .has() 判定する。
-  // cache は Resend webhook の revalidateTag で即時 invalidate される。
   const recipients = normalizeRecipients(payload.to);
   const suppressedRecipients: string[] = [];
   let filteredRecipients: string[] = recipients;
   if (recipients.length > 0) {
-    const suppressedSet = await getSuppressedEmailSet();
+    const suppressedSet = context.suppressedEmailHashes;
     filteredRecipients = [];
     for (const recipient of recipients) {
       const candidateHash = hashSuppressedEmailCandidate(
@@ -128,7 +106,6 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     }
 
     if (suppressedRecipients.length > 0 && filteredRecipients.length === 0) {
-      // 全宛先 suppressed → 送信中止。
       logError(
         new Error(
           `All recipients suppressed: ${suppressedRecipients.join(", ")}`,
@@ -137,7 +114,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
           context: {
-            ...context,
+            ...logContext,
             operation,
             ...(idempotencyKey !== undefined && { idempotencyKey }),
             suppressedRecipients,
@@ -152,7 +129,6 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     }
 
     if (suppressedRecipients.length > 0) {
-      // 一部宛先 suppressed → warning log を残して残宛先で送信続行。
       logError(
         new Error(
           `Dropping suppressed recipients: ${suppressedRecipients.join(", ")}`,
@@ -161,7 +137,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
           context: {
-            ...context,
+            ...logContext,
             operation,
             ...(idempotencyKey !== undefined && { idempotencyKey }),
             droppedRecipients: suppressedRecipients,
@@ -172,27 +148,15 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     }
   }
 
-  // 送信元(from)と返信先(reply-to)は管理画面設定（env 優先・DB フォールバック）を
-  // 注入する。個別の payload が replyTo を明示していればそちらを優先する。
-  const delivery = await getEmailDeliverySettings();
+  const delivery = context.delivery;
   const resolvedReplyTo = payload.replyTo ?? delivery.replyToEmail ?? undefined;
 
   const errorContext = {
-    ...context,
+    ...logContext,
     operation,
     ...(idempotencyKey !== undefined && { idempotencyKey }),
   };
 
-  // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
-  // `Omit<U, "from">` + spread does not round-trip back to the original union under
-  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
-  // 一部宛先を suppression で drop した場合は payload.to をフィルタ後リストで上書きする。
-  //
-  // `getFromAddress` は `resolveSenderEmailAddress` を経由する。env `EMAIL_FROM` と
-  // DB `Settings.senderEmail` が両方 unset の場合は remediation 付き Error を throw する
-  // （旧仕様のハードコード既定値 "noreply@example.com" fallback は廃止）。ここで catch
-  // して他の失敗と同じ `{ ok: false, reason: "error" }` に変換し、audit log 経由で
-  // operator に設定不備を surface する。
   const shouldRewriteTo =
     recipients.length > 0 && suppressedRecipients.length > 0;
   let fullPayload: CreateEmailOptions;
@@ -239,8 +203,6 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       });
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     } catch (error) {
-      // ネットワーク / transport 例外は transient とみなし named retryable error と同様に再試行する。
-      // 設定不備などループ外の throw（payload parse）はこの catch に入らない。
       if (attempt < maxRetries) {
         await sleep(backoffMs(attempt));
         continue;

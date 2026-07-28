@@ -16,7 +16,7 @@ import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/eve
 import { issueReceiptForEventRegistration } from "@/shared/domain/receipts/issue";
 import { notifyReceiptIssuedForEventRegistration } from "@/shared/domain/receipts/notify-issued";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
+import { sendEventRegistrationConfirmation } from "@/shared/domain/email/lib-dispatch";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import {
   logError,
