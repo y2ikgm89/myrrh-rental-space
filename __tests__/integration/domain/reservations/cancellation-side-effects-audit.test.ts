@@ -15,6 +15,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Facade / external module mocks (順序: mock.module 宣言 → dynamic import)
@@ -89,6 +90,7 @@ installEmailLibDispatchMock({
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
 });
+installEmailRenderContextMock();
 
 // SmartLock revoke
 const mockRevokeSmartLock = mock<(reservationId: string) => Promise<void>>(() =>

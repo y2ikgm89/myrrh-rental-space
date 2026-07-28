@@ -1,5 +1,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -177,19 +179,18 @@ installEmailLibDispatchMock({
   sendReservationUpdatedEmail: mock(() => Promise.resolve({ ok: true })),
   sendReservationAdminNotification: mock(() => Promise.resolve({ ok: true })),
 });
+installEmailRenderContextMock();
 
 const mockFireAndForget = mock(() => undefined);
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
 
-mock.module("@/shared/lib/errors/server", () => ({
+await installErrorsServerMock({
   logError: mock(() => undefined),
   normalizeError: (e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
-  ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH" },
-}));
+});
 
 const IMPORT_PATH = "@/app/(public)/reservation/status/edit/_actions/update";
 
