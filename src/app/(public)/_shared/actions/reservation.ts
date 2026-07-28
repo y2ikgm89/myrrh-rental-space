@@ -38,7 +38,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
@@ -50,12 +50,12 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
 
@@ -132,7 +132,7 @@ export async function submitReservation(
         };
       }
 
-      const user = await getCurrentCustomerUser();
+      const user = await resolveOptionalCustomerSession();
 
       // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
       // isActive / status BLACKLIST を Server Action 側で強制する

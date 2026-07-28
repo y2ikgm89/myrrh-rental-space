@@ -52,7 +52,7 @@ import {
 } from "@/shared/domain/settings/queries/site";
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
-import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
+import { getAnalyticsConfig } from "@/shared/domain/settings/queries/analytics";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
   getSeoSettings,

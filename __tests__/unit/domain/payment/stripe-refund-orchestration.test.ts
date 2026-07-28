@@ -40,6 +40,7 @@ const {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
+  resolveRefundAmount,
 } = await import("@/shared/domain/payment/stripe-refund-orchestration");
 
 const tx = {
@@ -104,5 +105,39 @@ describe("stripe-refund-orchestration kernel", () => {
     expect(mockExecuteRawUnsafe).toHaveBeenCalledWith(
       "ROLLBACK TO SAVEPOINT refund_create_reservation",
     );
+  });
+
+  test("resolveRefundAmount uses remaining when amount omitted", () => {
+    expect(
+      resolveRefundAmount({
+        chargeTotal: 5000,
+        cumulativeSoFar: 2000,
+        fullyRefundedMessage: "全額返金済み",
+      }),
+    ).toEqual({
+      amount: 3000,
+      cumulativeSoFar: 2000,
+      newCumulative: 5000,
+      willBeFullyRefunded: true,
+    });
+  });
+
+  test("resolveRefundAmount rejects over-refund and fully refunded", () => {
+    expect(() =>
+      resolveRefundAmount({
+        chargeTotal: 1000,
+        cumulativeSoFar: 1000,
+        fullyRefundedMessage: "全額返金済み",
+      }),
+    ).toThrow("全額返金済み");
+
+    expect(() =>
+      resolveRefundAmount({
+        chargeTotal: 5000,
+        cumulativeSoFar: 0,
+        requestedAmount: 6000,
+        fullyRefundedMessage: "全額返金済み",
+      }),
+    ).toThrow("残額を超えています");
   });
 });

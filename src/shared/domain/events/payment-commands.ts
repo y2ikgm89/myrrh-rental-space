@@ -25,7 +25,9 @@ import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
-  PAYMENT_REFUND_TRANSACTION_OPTIONS,
+  PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
+  PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
+  resolveRefundAmount,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import {
@@ -799,8 +801,9 @@ export interface RefundEventRegistrationResult {
  *   2 回目以降の部分返金でも unique
  *
  * ## 並行制御
- * - interactive tx 冒頭で `pg_advisory_xact_lock(EVENT_REFUND_LOCK_NAMESPACE, hashtext(registrationId))`
- * - Stripe API 呼び出しは tx 内 (Reservation 側と同様、正確性優先)、timeout / maxWait: 30_000ms
+ * - Phase A/C: `pg_advisory_xact_lock` で同一申込の refund を直列化 (over-refund 防止)
+ * - Phase B: Stripe API は tx 外。Phase C で累積額を再検証して persist
+ * - Phase B 成功・Phase C 失敗時は webhook (`charge.refunded`) が救済
  *
  * @throws DomainError NOT_FOUND / VALIDATION / UNEXPECTED
  */
@@ -827,8 +830,7 @@ export async function refundEventRegistrationPaymentCommand(
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
-    // 申込単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
+  const prepared = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
       "event-registration",
@@ -849,7 +851,6 @@ export async function refundEventRegistrationPaymentCommand(
       throw new DomainError("イベント申込が見つかりません", "NOT_FOUND");
     }
 
-    // PAID + PARTIALLY_REFUNDED の両方から返金可能
     if (
       registration.paymentStatus !== PaymentStatus.PAID &&
       registration.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
@@ -871,66 +872,71 @@ export async function refundEventRegistrationPaymentCommand(
       );
     }
 
-    // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
     const aggregate = await tx.refund.aggregate({
       where: { eventRegistrationId: registrationId },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
-    const remaining = registration.paidAmount - cumulativeSoFar;
 
-    if (remaining <= 0) {
-      throw new DomainError(
-        "このイベント申込は既に全額返金済みです",
-        "VALIDATION",
-      );
-    }
-
-    const amount = requestedAmount ?? remaining;
-
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new DomainError(
-        "返金額は 1 円以上の整数で指定してください",
-        "VALIDATION",
-      );
-    }
-    if (amount > remaining) {
-      throw new DomainError(
-        `返金額が残額を超えています (残額: ${remaining} 円)`,
-        "VALIDATION",
-      );
-    }
-
-    const newCumulative = cumulativeSoFar + amount;
-    const willBeFullyRefunded = newCumulative === registration.paidAmount;
-
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: registration.stripePaymentIntentId,
-      amount,
-      stripeCurrency,
-      metadata: {
-        initiator: actorType,
-        ...(reason ? { reason } : {}),
-      },
-      idempotencyKey: `event-registration-refund-${registrationId}-${newCumulative}`,
-      operation: "refundEventRegistrationPayment",
-      logContext: { registrationId },
-      userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
+    const resolved = resolveRefundAmount({
+      chargeTotal: registration.paidAmount,
+      cumulativeSoFar,
+      ...(requestedAmount !== undefined ? { requestedAmount } : {}),
+      fullyRefundedMessage: "このイベント申込は既に全額返金済みです",
     });
 
-    // Belt-and-suspenders: Reservation 側 (`refundReservationPaymentCommand`) と同型。
-    // Codex PR #1146 追加指摘 (P2、Prisma upsert issue #20229): tx 内で単一 create +
-    // savepoint + catch(P2002) の真 atomic pattern に統一 (詳細は Reservation 側 comment 参照)。
+    return {
+      amount: resolved.amount,
+      cumulativeSoFar: resolved.cumulativeSoFar,
+      newCumulative: resolved.newCumulative,
+      willBeFullyRefunded: resolved.willBeFullyRefunded,
+      paymentIntentId: registration.stripePaymentIntentId,
+      idempotencyKey: `event-registration-refund-${registrationId}-${resolved.newCumulative}`,
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: prepared.paymentIntentId,
+    amount: prepared.amount,
+    stripeCurrency,
+    metadata: {
+      initiator: actorType,
+      ...(reason ? { reason } : {}),
+    },
+    idempotencyKey: prepared.idempotencyKey,
+    operation: "refundEventRegistrationPayment",
+    logContext: { registrationId },
+    userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
+
+    const aggregate = await tx.refund.aggregate({
+      where: { eventRegistrationId: registrationId },
+      _sum: { amount: true },
+    });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    if (cumulativeSoFar !== prepared.cumulativeSoFar) {
+      throw new DomainError(
+        "返金処理中に状態が変更されました。管理者に連絡してください。",
+        "CONFLICT",
+      );
+    }
+
     await createRefundRecordIdempotent(tx, "refund_create_event", {
       eventRegistrationId: registrationId,
-      amount,
+      amount: prepared.amount,
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
     });
 
-    // paymentStatus 遷移 (updateMany で status guard)
     await tx.eventRegistration.updateMany({
       where: {
         id: registrationId,
@@ -939,7 +945,7 @@ export async function refundEventRegistrationPaymentCommand(
         },
       },
       data: {
-        paymentStatus: willBeFullyRefunded
+        paymentStatus: prepared.willBeFullyRefunded
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED,
       },
@@ -948,13 +954,13 @@ export async function refundEventRegistrationPaymentCommand(
     return {
       refundId: refund.id,
       status: refund.status,
-      newPaymentStatus: willBeFullyRefunded
+      newPaymentStatus: prepared.willBeFullyRefunded
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED,
-      cumulativeAmount: newCumulative,
-      refundAmount: amount,
+      cumulativeAmount: prepared.newCumulative,
+      refundAmount: prepared.amount,
     } satisfies RefundEventRegistrationResult;
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   // AuditLog (tx 外)
   await createAuditLogRecord({
@@ -1016,7 +1022,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const prepareResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
       "event-registration",
@@ -1079,31 +1085,63 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
       return { outcome: "already_refunded" as const };
     }
 
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: paymentIntentId,
+    return {
+      outcome: "stripe_refund" as const,
       amount: remaining,
-      stripeCurrency,
-      metadata: {
-        initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-        reason,
-      },
+      cumulativeSoFar,
+      paymentIntentId,
       idempotencyKey: `event-registration-cancel-orphan-refund-${registrationId}-${expectedAmount}`,
-      operation: "refundOrphanedStripePaymentForCancelledEventRegistration",
-      logContext: {
-        registrationId,
-        stripePaymentIntentId: paymentIntentId,
-      },
-      userMessage: "キャンセル後の自動返金に失敗しました",
-      severity: ErrorSeverity.CRITICAL,
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome !== "stripe_refund") {
+    return prepareResult;
+  }
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: prepareResult.paymentIntentId,
+    amount: prepareResult.amount,
+    stripeCurrency,
+    metadata: {
+      initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      reason,
+    },
+    idempotencyKey: prepareResult.idempotencyKey,
+    operation: "refundOrphanedStripePaymentForCancelledEventRegistration",
+    logContext: {
+      registrationId,
+      stripePaymentIntentId: prepareResult.paymentIntentId,
+    },
+    userMessage: "キャンセル後の自動返金に失敗しました",
+    severity: ErrorSeverity.CRITICAL,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
+
+    const aggregate = await tx.refund.aggregate({
+      where: { eventRegistrationId: registrationId },
+      _sum: { amount: true },
     });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    if (cumulativeSoFar !== prepareResult.cumulativeSoFar) {
+      throw new DomainError(
+        "返金処理中に状態が変更されました。管理者に連絡してください。",
+        "CONFLICT",
+      );
+    }
 
     await createRefundRecordIdempotent(
       tx,
       "refund_create_event_auto_on_cancel",
       {
         eventRegistrationId: registrationId,
-        amount: remaining,
+        amount: prepareResult.amount,
         reason,
         stripeRefundId: refund.id,
         refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
@@ -1118,7 +1156,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
       },
       data: {
         paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId: paymentIntentId,
+        stripePaymentIntentId: prepareResult.paymentIntentId,
         paidAt: new Date(),
       },
     });
@@ -1126,9 +1164,9 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     return {
       outcome: "refunded" as const,
       refundId: refund.id,
-      refundAmount: remaining,
+      refundAmount: prepareResult.amount,
     };
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({
@@ -1181,7 +1219,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const prepareResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
       "event-registration",
@@ -1216,27 +1254,43 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
       return { outcome: "not_applicable" as const };
     }
 
-    const amount = registration.paidAmount;
-
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: stripePaymentIntentId,
-      amount,
-      stripeCurrency,
-      metadata: {
-        initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
-        reason,
-      },
+    return {
+      outcome: "stripe_refund" as const,
+      amount: registration.paidAmount,
       idempotencyKey: `event-registration-capacity-race-refund-${registrationId}`,
-      operation: "refundExpiredWaitlistOfferPayment",
-      logContext: { registrationId },
-      userMessage: "容量レース後の自動返金に失敗しました",
-      severity: ErrorSeverity.CRITICAL,
-    });
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome !== "stripe_refund") {
+    return prepareResult;
+  }
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: stripePaymentIntentId,
+    amount: prepareResult.amount,
+    stripeCurrency,
+    metadata: {
+      initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+      reason,
+    },
+    idempotencyKey: prepareResult.idempotencyKey,
+    operation: "refundExpiredWaitlistOfferPayment",
+    logContext: { registrationId },
+    userMessage: "容量レース後の自動返金に失敗しました",
+    severity: ErrorSeverity.CRITICAL,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
     await createRefundRecordIdempotent(tx, "refund_create_capacity_race", {
       eventRegistrationId: registrationId,
-      amount,
+      amount: prepareResult.amount,
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
@@ -1257,9 +1311,9 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
     return {
       outcome: "refunded" as const,
       refundId: refund.id,
-      refundAmount: amount,
+      refundAmount: prepareResult.amount,
     };
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({
@@ -1315,7 +1369,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const prepareResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
       "event-registration",
@@ -1354,21 +1408,38 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
       return { outcome: "not_applicable" as const };
     }
 
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: stripePaymentIntentId,
-      amount: capturedAppAmount,
-      stripeCurrency,
-      metadata: {
-        initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-        reason,
-      },
+    return {
+      outcome: "stripe_refund" as const,
       idempotencyKey: `event-registration-amount-mismatch-refund-${registrationId}`,
-      operation: "refundCheckoutAmountMismatchForEventRegistration",
-      logContext: { registrationId },
-      userMessage: "金額不一致の自動返金に失敗しました",
-      severity: ErrorSeverity.CRITICAL,
-    });
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome !== "stripe_refund") {
+    return prepareResult;
+  }
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: stripePaymentIntentId,
+    amount: capturedAppAmount,
+    stripeCurrency,
+    metadata: {
+      initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+      reason,
+    },
+    idempotencyKey: prepareResult.idempotencyKey,
+    operation: "refundCheckoutAmountMismatchForEventRegistration",
+    logContext: { registrationId },
+    userMessage: "金額不一致の自動返金に失敗しました",
+    severity: ErrorSeverity.CRITICAL,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
     await createRefundRecordIdempotent(tx, "refund_create_amount_mismatch", {
       eventRegistrationId: registrationId,
@@ -1403,7 +1474,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
       refundId: refund.id,
       refundAmount: capturedAppAmount,
     };
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({

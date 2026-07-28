@@ -14,7 +14,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   （allowlist ではなく動的走査で検査される）
 - facade の import は `src/shared/` 配下限定。`prisma.<model>.<method>` 呼出は
   原則 `shared/domain` / `shared/db` 配下限定（例外は architecture-boundaries テストの
-  placement gate ALLOWLIST に列挙された shared/lib の 4 ファイルのみ）
+  placement gate ALLOWLIST に列挙された shared/lib の 2 ファイルのみ:
+  `calendar-sync/event-inbound.ts`, `google-business-profile/location-sync.ts`）
 - 金額・税率の Decimal 列は number に変換済みで届く。ドメインの金額計算は素の number
 
 ## JSON・エラー・ログ

@@ -22,7 +22,7 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { DomainError } from "@/shared/domain/domain-error";
-import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
+import { runGuestTokenMutation } from "@/shared/domain/guest-token-actions/run-guest-mutation";
 
 const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });

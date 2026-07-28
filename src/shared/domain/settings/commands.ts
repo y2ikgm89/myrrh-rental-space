@@ -10,7 +10,7 @@ import type {
   HeaderScrollBehavior,
   LayoutWidth,
   TaxDisplayMode,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllowlistedNotificationStaffIds } from "@/shared/domain/settings/notification-staff";
 import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";
@@ -929,7 +929,7 @@ export async function updateEventImportEnabled(
 }
 
 /**
- * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
+ * Feature Module ON/OFF map を SettingsFeatures.featureModules JSON column に書き込む。
  *
  * 入力は schema 層（`featureModulesSettingsSchema`）で全 11 module の boolean 必須に
  * 検証済み。persist 前に `normalizeFeatureModules` で依存 cascade を適用する（write-side SSoT）。

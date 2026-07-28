@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
-import type { CalendarSyncMethod } from "@generated/prisma/enums";
+import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,

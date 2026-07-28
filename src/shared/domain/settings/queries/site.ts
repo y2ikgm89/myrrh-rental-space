@@ -2,8 +2,8 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import type { AnalyticsType } from "@generated/prisma/enums";
-import { LayoutWidth } from "@generated/prisma/enums";
+import type { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   criticalFetch,

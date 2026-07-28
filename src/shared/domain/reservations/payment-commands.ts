@@ -30,7 +30,9 @@ import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
-  PAYMENT_REFUND_TRANSACTION_OPTIONS,
+  PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
+  PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
+  resolveRefundAmount,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
   findPaymentMethodsIncompatibleWithCurrency,
@@ -620,11 +622,9 @@ export interface RefundReservationResult {
  *   同一 amount + 同一 newCumulative で idempotent (safe)
  *
  * ## 並行制御
- * - interactive tx 冒頭で `pg_advisory_xact_lock(REFUND_LOCK_NAMESPACE, hashtext(reservationId))`
- *   を取得し、同一予約への concurrent refund を直列化する (over-refund 防止)
- * - Stripe API 呼び出しは tx 内で行う (advisory lock 保持中)。Prisma docs は「tx 内で
- *   長時間 network 操作を避けよ」とするが、tx を 2 分割すると advisory lock を跨いだ
- *   race で over-refund が発生するため、正確性を優先。timeout: 30_000ms で bounded。
+ * - Phase A/C: `pg_advisory_xact_lock` で同一予約の refund を直列化 (over-refund 防止)
+ * - Phase B: Stripe API は tx 外 (Prisma 公式推奨)。Phase C で累積額を再検証して persist
+ * - Phase B 成功・Phase C 失敗時は webhook (`charge.refunded`) が `stripeRefundId` で救済
  *
  * ## Belt-and-suspenders
  * - Stripe refund 成功後、`Refund.stripeRefundId @unique` により二重 insert は DB 側で reject。
@@ -655,8 +655,7 @@ export async function refundReservationPaymentCommand(
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
-    // 予約単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
+  const prepared = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     const reservation = await tx.reservation.findUnique({
@@ -666,9 +665,6 @@ export async function refundReservationPaymentCommand(
         customerId: true,
         paymentStatus: true,
         stripePaymentIntentId: true,
-        // Checkout は `totalPriceWithTax`（税込）を Stripe に送るため、実 charge
-        // 額と refund 上限・領収書 (Receipt.amount) は `totalPriceWithTax` を
-        // 単一 SSoT とする。
         totalPriceWithTax: true,
       },
     });
@@ -677,7 +673,6 @@ export async function refundReservationPaymentCommand(
       throw new DomainError("予約が見つかりません", "NOT_FOUND");
     }
 
-    // PAID + PARTIALLY_REFUNDED の両方から返金可能
     if (
       reservation.paymentStatus !== PaymentStatus.PAID &&
       reservation.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
@@ -702,73 +697,68 @@ export async function refundReservationPaymentCommand(
       );
     }
 
-    // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
     const aggregate = await tx.refund.aggregate({
       where: { reservationId },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
-    const remaining = reservation.totalPriceWithTax - cumulativeSoFar;
 
-    if (remaining <= 0) {
-      // paymentStatus が PARTIALLY_REFUNDED のまま累積が charge 額に
-      // 到達している異常状態 (paymentStatus 側の flip が失敗)。次回 admin refund で顕在化する。
-      throw new DomainError("この予約は既に全額返金済みです", "VALIDATION");
-    }
-
-    const amount = requestedAmount ?? remaining;
-
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new DomainError(
-        "返金額は 1 円以上の整数で指定してください",
-        "VALIDATION",
-      );
-    }
-    if (amount > remaining) {
-      throw new DomainError(
-        `返金額が残額を超えています (残額: ${remaining} 円)`,
-        "VALIDATION",
-      );
-    }
-
-    const newCumulative = cumulativeSoFar + amount;
-    const willBeFullyRefunded = newCumulative === reservation.totalPriceWithTax;
-
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: reservation.stripePaymentIntentId,
-      amount,
-      stripeCurrency,
-      metadata: {
-        initiator: actorType,
-        ...(reason ? { reason } : {}),
-      },
-      idempotencyKey: `reservation-refund-${reservationId}-${newCumulative}`,
-      operation: "refundReservationPayment",
-      logContext: { reservationId },
-      userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
+    const resolved = resolveRefundAmount({
+      chargeTotal: reservation.totalPriceWithTax,
+      cumulativeSoFar,
+      ...(requestedAmount !== undefined ? { requestedAmount } : {}),
+      fullyRefundedMessage: "この予約は既に全額返金済みです",
     });
 
-    // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
-    // Refund を書いていた場合の idempotent 処理。
-    //
-    // Codex PR #1146 追加指摘 (P2): Prisma の `upsert({where, create, update: {}})` は
-    // SELECT+INSERT に compile されるため並行 create で `refunds_stripeRefundId_key`
-    // 一意制約違反が依然発生する (Prisma issue #20229)。単一 `create` + `catch (P2002)` が
-    // 真 atomic pattern だが、interactive tx 内で query fail すると tx 全体が abort 状態
-    // になる (PostgreSQL の semantics)。そのため PostgreSQL SAVEPOINT で局所 rollback を
-    // 挟んで tx 全体を保護する。
-    //
-    // savepoint 名は tx 内で unique であれば良い (call site 単位で衝突しない)。
+    return {
+      amount: resolved.amount,
+      cumulativeSoFar: resolved.cumulativeSoFar,
+      newCumulative: resolved.newCumulative,
+      willBeFullyRefunded: resolved.willBeFullyRefunded,
+      paymentIntentId: reservation.stripePaymentIntentId,
+      customerId: reservation.customerId,
+      idempotencyKey: `reservation-refund-${reservationId}-${resolved.newCumulative}`,
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: prepared.paymentIntentId,
+    amount: prepared.amount,
+    stripeCurrency,
+    metadata: {
+      initiator: actorType,
+      ...(reason ? { reason } : {}),
+    },
+    idempotencyKey: prepared.idempotencyKey,
+    operation: "refundReservationPayment",
+    logContext: { reservationId },
+    userMessage: "返金処理に失敗しました。しばらく経ってからお試しください。",
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
+
+    const aggregate = await tx.refund.aggregate({
+      where: { reservationId },
+      _sum: { amount: true },
+    });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    if (cumulativeSoFar !== prepared.cumulativeSoFar) {
+      throw new DomainError(
+        "返金処理中に状態が変更されました。管理者に連絡してください。",
+        "CONFLICT",
+      );
+    }
+
     await createRefundRecordIdempotent(tx, "refund_create_reservation", {
       reservationId,
-      amount,
+      amount: prepared.amount,
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
     });
 
-    // paymentStatus 遷移 (updateMany で status guard)
     await tx.reservation.updateMany({
       where: {
         id: reservationId,
@@ -778,7 +768,7 @@ export async function refundReservationPaymentCommand(
         },
       },
       data: {
-        paymentStatus: willBeFullyRefunded
+        paymentStatus: prepared.willBeFullyRefunded
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED,
       },
@@ -787,14 +777,14 @@ export async function refundReservationPaymentCommand(
     return {
       refundId: refund.id,
       status: refund.status,
-      customerId: reservation.customerId,
-      newPaymentStatus: willBeFullyRefunded
+      customerId: prepared.customerId,
+      newPaymentStatus: prepared.willBeFullyRefunded
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED,
-      cumulativeAmount: newCumulative,
-      refundAmount: amount,
+      cumulativeAmount: prepared.newCumulative,
+      refundAmount: prepared.amount,
     } satisfies RefundReservationResult;
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   // AuditLog (tx 外、hash-chain の write は独立)
   await createAuditLogRecord({
@@ -856,7 +846,7 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const prepareResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     const reservation = await tx.reservation.findUnique({
@@ -890,7 +880,6 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
 
     const paymentIntentId = stripePaymentIntentId;
 
-    // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
     const aggregate = await tx.refund.aggregate({
       where: { reservationId },
       _sum: { amount: true },
@@ -914,28 +903,56 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
       return { outcome: "already_refunded" as const };
     }
 
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: paymentIntentId,
+    return {
+      outcome: "stripe_refund" as const,
       amount: remaining,
-      stripeCurrency,
-      metadata: {
-        initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-        reason,
-      },
+      cumulativeSoFar,
+      paymentIntentId,
       idempotencyKey: `reservation-refund-${reservationId}-${reservation.totalPriceWithTax}`,
-      operation: "refundOrphanedStripePaymentForCancelledReservation",
-      logContext: {
-        reservationId,
-        stripePaymentIntentId: paymentIntentId,
-      },
-      userMessage: "キャンセル後の自動返金に失敗しました",
-      severity: ErrorSeverity.CRITICAL,
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome !== "stripe_refund") {
+    return prepareResult;
+  }
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: prepareResult.paymentIntentId,
+    amount: prepareResult.amount,
+    stripeCurrency,
+    metadata: {
+      initiator: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      reason,
+    },
+    idempotencyKey: prepareResult.idempotencyKey,
+    operation: "refundOrphanedStripePaymentForCancelledReservation",
+    logContext: {
+      reservationId,
+      stripePaymentIntentId: prepareResult.paymentIntentId,
+    },
+    userMessage: "キャンセル後の自動返金に失敗しました",
+    severity: ErrorSeverity.CRITICAL,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
+
+    const aggregate = await tx.refund.aggregate({
+      where: { reservationId },
+      _sum: { amount: true },
     });
+    const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    if (cumulativeSoFar !== prepareResult.cumulativeSoFar) {
+      throw new DomainError(
+        "返金処理中に状態が変更されました。管理者に連絡してください。",
+        "CONFLICT",
+      );
+    }
 
     await createRefundRecordIdempotent(tx, "refund_create_auto_on_cancel", {
       reservationId,
-      amount: remaining,
+      amount: prepareResult.amount,
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
@@ -950,7 +967,7 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
       },
       data: {
         paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId: paymentIntentId,
+        stripePaymentIntentId: prepareResult.paymentIntentId,
         paidAt: new Date(),
       },
     });
@@ -958,9 +975,9 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
     return {
       outcome: "refunded" as const,
       refundId: refund.id,
-      refundAmount: remaining,
+      refundAmount: prepareResult.amount,
     };
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({
@@ -1016,7 +1033,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
 
   const stripeCurrency = stripeSettings.stripeCurrency;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const prepareResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     const reservation = await tx.reservation.findUnique({
@@ -1049,21 +1066,34 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
       return { outcome: "not_applicable" as const };
     }
 
-    const refund = await createStripeRefundOrThrow({
-      client,
-      paymentIntentId: stripePaymentIntentId,
-      amount: capturedAppAmount,
-      stripeCurrency,
-      metadata: {
-        initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-        reason,
-      },
+    return {
+      outcome: "stripe_refund" as const,
       idempotencyKey: `reservation-amount-mismatch-refund-${reservationId}`,
-      operation: "refundCheckoutAmountMismatchForReservation",
-      logContext: { reservationId },
-      userMessage: "金額不一致の自動返金に失敗しました",
-      severity: ErrorSeverity.CRITICAL,
-    });
+    };
+  }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
+
+  if (prepareResult.outcome !== "stripe_refund") {
+    return prepareResult;
+  }
+
+  const refund = await createStripeRefundOrThrow({
+    client,
+    paymentIntentId: stripePaymentIntentId,
+    amount: capturedAppAmount,
+    stripeCurrency,
+    metadata: {
+      initiator: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+      reason,
+    },
+    idempotencyKey: prepareResult.idempotencyKey,
+    operation: "refundCheckoutAmountMismatchForReservation",
+    logContext: { reservationId },
+    userMessage: "金額不一致の自動返金に失敗しました",
+    severity: ErrorSeverity.CRITICAL,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     await createRefundRecordIdempotent(tx, "refund_create_amount_mismatch", {
       reservationId,
@@ -1095,7 +1125,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
       refundId: refund.id,
       refundAmount: capturedAppAmount,
     };
-  }, PAYMENT_REFUND_TRANSACTION_OPTIONS);
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (result.outcome === "refunded") {
     await createAuditLogRecord({

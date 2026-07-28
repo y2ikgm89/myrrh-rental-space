@@ -50,7 +50,7 @@ const mockCheckSlugAvailability = mock<
   () => Promise<{ available: boolean; reason?: unknown }>
 >(() => Promise.resolve({ available: true }));
 
-mock.module("@/shared/lib/slug-validation", () => ({
+mock.module("@/shared/domain/slugs/availability", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mock((reason: { type: string }) => {
     if (reason.type === "reserved") return "予約済みスラッグです";

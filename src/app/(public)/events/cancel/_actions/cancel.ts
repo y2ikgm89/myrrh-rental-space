@@ -20,7 +20,7 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import { DomainError } from "@/shared/domain/domain-error";
-import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
+import { runGuestTokenMutation } from "@/shared/domain/guest-token-actions/run-guest-mutation";
 
 const EVENT_CANCEL_TOKEN_COOKIE_NAME = "event-cancel-token";
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");

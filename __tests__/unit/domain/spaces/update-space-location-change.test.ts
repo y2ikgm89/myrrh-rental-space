@@ -61,7 +61,7 @@ mock.module("@/shared/domain/media/managed-image-assertions", () => ({
   assertAllowedManagedImageUrls: () => undefined,
 }));
 
-mock.module("@/shared/lib/slug-validation", () => ({
+mock.module("@/shared/domain/slugs/availability", () => ({
   checkSlugAvailability: () => Promise.resolve({ available: true }),
   getSlugErrorMessage: () => "スラッグが使用できません",
 }));

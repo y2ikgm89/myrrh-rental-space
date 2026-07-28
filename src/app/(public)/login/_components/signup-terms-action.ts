@@ -13,7 +13,7 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { assertAllRequiredTermsAgreed } from "@/shared/domain/terms/consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_MAX_AGE_SECONDS,
@@ -21,7 +21,7 @@ import {
   encodeSignupTermsCookie,
 } from "@/shared/lib/signup-terms-cookie";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 
 const inputSchema = z.object({
   termsIds: z

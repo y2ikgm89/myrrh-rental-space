@@ -11,6 +11,7 @@ import {
   parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
+import { isPageTemplateDisabled } from "@/shared/lib/features/check";
 import { featureModulesSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 
@@ -101,6 +102,7 @@ describe("FEATURE_MODULES routing alignment", () => {
     expect(FEATURE_MODULES.payment.publicRoutes).toEqual([
       "/events/registrations/checkout",
       "/events/registrations/payment-result",
+      "/events/waitlist/checkout",
     ]);
   });
 
@@ -118,6 +120,12 @@ describe("FEATURE_MODULES routing alignment", () => {
     expect(getFeatureModuleForPageSlug("blog")).toBe("posts");
     expect(getFeatureModuleForPageSlug("spaces")).toBe("spaces");
     expect(getFeatureModuleForPageSlug("home")).toBeNull();
+  });
+
+  test("feature OFF module の templates は disabledTemplates 判定に使える", () => {
+    const disabled = new Set(FEATURE_MODULES.events.templates);
+    expect(isPageTemplateDisabled("events-archive", disabled)).toBe(true);
+    expect(isPageTemplateDisabled("home", disabled)).toBe(false);
   });
 });
 

@@ -4,7 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -35,7 +35,7 @@ export async function reagreeAction(
   formData: FormData,
 ): Promise<SubmissionResult> {
   return executeConformMutation(formData, reagreeFormSchema, async (input) => {
-    const { user } = await verifyCustomerSession();
+    const { user } = await requireMypageSession();
     const { customer } = await ensureCustomerLinked(user);
 
     try {

@@ -4,7 +4,7 @@ import { checkPermission } from "@/admin/lib/action-auth";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/availability";
 import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 

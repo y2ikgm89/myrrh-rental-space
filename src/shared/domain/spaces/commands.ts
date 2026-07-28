@@ -7,7 +7,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   assertAllowedManagedGallery,
@@ -21,7 +21,7 @@ import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/help
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/availability";
 import {
   gallerySchema,
   type GalleryItem,
@@ -343,7 +343,7 @@ export async function deleteSpaceCommand(
  *   （R2 オブジェクト複製は行わない。差し替えは管理者の編集操作）
  *
  * 同一実装が `events/commands.ts` の `duplicateEventCommand` にもある（YAGNI のため
- * 共通化していない。3 リソース目で `@/shared/lib/slug-validation` への抽出を検討）。
+ * 共通化していない。3 リソース目で `@/shared/domain/slugs/availability` への抽出を検討）。
  */
 export async function duplicateSpaceCommand(
   id: string,

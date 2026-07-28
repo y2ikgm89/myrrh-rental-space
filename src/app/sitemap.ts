@@ -29,7 +29,7 @@ import {
   getFeatureFilterContext,
   isUrlDisabled,
 } from "@/shared/lib/features/check";
-import { isReservedPath } from "@/shared/lib/slug-validation";
+import { isReservedPath } from "@/shared/domain/slugs/availability";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors/server";
 

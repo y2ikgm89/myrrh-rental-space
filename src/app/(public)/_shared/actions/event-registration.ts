@@ -60,7 +60,7 @@ import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/regi
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
-} from "@/shared/lib/terms-consent-gate";
+} from "@/shared/domain/terms/consent-gate";
 import {
   AuditAction,
   TermsScope,
@@ -72,7 +72,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   checkPublicSiteWritable,
   getPublicMaintenanceBlockMutation,
-} from "@/shared/lib/maintenance-guard";
+} from "@/shared/domain/settings/maintenance-guard";
 
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 

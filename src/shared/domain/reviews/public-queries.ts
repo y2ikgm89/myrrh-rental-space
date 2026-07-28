@@ -14,7 +14,7 @@ import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 /**
  * サイト全体のレビュー機能 global gate
  *
- * `Settings.featureModules.reviews` SSoT を `isFeatureEnabled` 経由で解決する。
+ * `SettingsFeatures.featureModules.reviews` SSoT を `isFeatureEnabled` 経由で解決する。
  * 依存解決（reviews requires spaces）も含むため、spaces OFF → reviews も自動 OFF。
  */
 async function isReviewsEnabledGlobally(): Promise<boolean> {

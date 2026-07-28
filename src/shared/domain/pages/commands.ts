@@ -7,7 +7,7 @@ import { toPlainObject } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/availability";
 import { ensurePageSections } from "@/shared/lib/section-defaults";
 import {
   getSystemPageDefinition,
@@ -17,6 +17,7 @@ import {
 } from "@/shared/lib/validations/page";
 import { createDefaultCustomPageSections } from "@/shared/lib/constants/default-page-sections";
 import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
+import { assertPageTemplateEnabled } from "@/shared/lib/features/check";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 
 function normalizeNullableString(
@@ -123,6 +124,9 @@ export async function createPageCommand(
 ): Promise<{ slug: string }> {
   await ensurePageSlugAvailable(input.slug);
 
+  const template = resolveTemplateForSlug(input.slug);
+  await assertPageTemplateEnabled(template);
+
   const publishedAt = input.isPublished ? new Date() : null;
   const sections = createDefaultCustomPageSections(input.title);
 
@@ -131,7 +135,7 @@ export async function createPageCommand(
       data: {
         slug: input.slug,
         title: input.title,
-        template: resolveTemplateForSlug(input.slug),
+        template,
         isPublished: input.isPublished,
         publishedAt,
         isActive: true,

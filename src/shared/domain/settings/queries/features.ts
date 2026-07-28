@@ -7,7 +7,7 @@ import { criticalFetch, ErrorCategory } from "@/shared/lib/errors/server";
 import { parseFeatureModules } from "@/shared/lib/json-validators";
 
 /**
- * 機能モジュール ON/OFF map（Settings.featureModules JSON column の正規化結果）
+ * 機能モジュール ON/OFF map（SettingsFeatures.featureModules JSON column の正規化結果）
  *
  * - DB 取得成功時: `{}` / 不正形式 / 欠落 key → 空オブジェクト（欠落 key は fail-closed OFF）
  * - DB 取得失敗時: `criticalFetch` が throw → Data Cache に失敗結果を書かない

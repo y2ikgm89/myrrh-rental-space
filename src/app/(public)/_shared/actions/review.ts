@@ -15,7 +15,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -25,7 +25,7 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function submitReview(
   _prev: SubmissionResult | undefined,

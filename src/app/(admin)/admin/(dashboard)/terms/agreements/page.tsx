@@ -16,7 +16,7 @@ import {
   TableShell,
 } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { requireAdminDashboardPage } from "@/admin/helpers/page-auth";
 import { getAdminAgreements, getAdminTermsList } from "@/admin/queries/terms";
 import { TermsAgreementsFilters } from "./_components/TermsAgreementsFilters";
 import {
@@ -168,7 +168,7 @@ async function TermsAgreementsList({
 export default async function AdminTermsAgreementsPage({
   searchParams,
 }: PageProps) {
-  const user = await requireAdminDashboardAccess();
+  const user = await requireAdminDashboardPage();
   const canExportTermsAgreements = hasPermission(user.role, "terms", "update");
   const params = await loadAdminTermsAgreementsSearchParams(searchParams);
   const scope = isTermsScope(params.scope) ? params.scope : undefined;

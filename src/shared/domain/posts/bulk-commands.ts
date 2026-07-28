@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PostStatus } from "@generated/prisma/enums";
+import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 
 export type BulkTogglePublishedPostsResult = {

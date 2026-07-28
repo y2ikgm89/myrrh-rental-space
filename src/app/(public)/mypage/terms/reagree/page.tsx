@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
 import { Heading } from "@/public/components/design-system/heading";
@@ -36,7 +36,7 @@ export default async function TermsReagreePage({
 }): Promise<ReactElement> {
   await connection();
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const { customer } = await ensureCustomerLinked(user);
 
   const params = await searchParams;

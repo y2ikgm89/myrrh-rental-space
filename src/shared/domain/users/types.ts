@@ -1,4 +1,4 @@
-import type { Role } from "@generated/prisma/enums";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type UserRecord = {

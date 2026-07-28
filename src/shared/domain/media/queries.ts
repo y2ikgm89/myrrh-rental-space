@@ -4,7 +4,10 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
-import type { MediaType, MediaUsage } from "@generated/prisma/enums";
+import type {
+  MediaType,
+  MediaUsage,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 function transformMedia(media: {
   id: string;

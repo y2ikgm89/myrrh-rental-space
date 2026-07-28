@@ -20,7 +20,7 @@ import {
 } from "@/shared/domain/events/guest-status-view";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import {
   checkGuestStatusMemberOwnership,
   GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
@@ -85,7 +85,7 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
 
   const [registration, user] = await Promise.all([
     getEventRegistrationForGuestStatus(access.registrationId),
-    getCurrentCustomerUser(),
+    resolveOptionalCustomerSession(),
   ]);
 
   if (!registration) {

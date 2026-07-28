@@ -207,7 +207,7 @@ const featureModulesSchema = z.record(z.string(), z.boolean());
  * - 空オブジェクト / 不正値 / null / undefined → `{}`
  * - boolean 以外の値を持つ key は silently 除外
  *
- * SSoT: `Settings.featureModules` JSON column。registry: `@/shared/lib/features/registry`。
+ * SSoT: `SettingsFeatures.featureModules` JSON column。registry: `@/shared/lib/features/registry`。
  * 解決ロジック: `@/shared/lib/features/check.ts` の `getEnabledFeatures`。
  */
 export function parseFeatureModules(value: unknown): Record<string, boolean> {

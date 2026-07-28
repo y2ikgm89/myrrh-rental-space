@@ -1,5 +1,5 @@
 import "server-only";
-import { PostStatus } from "@generated/prisma/enums";
+import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -12,7 +12,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+} from "@/shared/domain/slugs/availability";
 import type {
   CreatePostCommandInput,
   CreatePostResult,

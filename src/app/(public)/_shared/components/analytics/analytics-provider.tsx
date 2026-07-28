@@ -12,7 +12,7 @@
 import Script from "next/script";
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import { useAnalyticsConsent } from "@/public/components/analytics/use-analytics-consent";
-import type { AnalyticsConfig } from "@/shared/lib/analytics/config";
+import type { AnalyticsConfig } from "@/shared/domain/settings/queries/analytics";
 import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface AnalyticsProviderProps {
