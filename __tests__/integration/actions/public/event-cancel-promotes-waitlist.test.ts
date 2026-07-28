@@ -41,6 +41,7 @@ import {
   EventStatus,
   RegistrationStatus,
 } from "@generated/prisma/enums";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -123,17 +124,6 @@ mock.module("@/shared/domain/terms/consent-gate", () => ({
 // 既存 3 種の副作用（キャンセル確認メール・管理者通知メール）は実
 // registration-cancellation-side-effects.ts から実際に呼ばれるが、本テストの
 // 対象ではないため no-op 化する（Resend への実送信を避ける）。
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationCancelled: () => Promise.resolve({ ok: true }),
-  sendEventAdminNotification: () => Promise.resolve({ ok: true }),
-  // registerForEvent（同一ファイル、本テストでは未使用）が top-level import する。
-  sendEventRegistrationConfirmation: () =>
-    Promise.reject(new Error("not used in this test")),
-  // event-waitlist-emails 実体が hub URL 組み立てで参照する（mock 漏れ防止）。
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
-
 // 繰り上げ当選メール（本テストの主たる検証対象）。
 const mockSendEventWaitlistOffered = mock<
   (args: {
@@ -145,13 +135,16 @@ const mockSendEventWaitlistOffered = mock<
       | { kind: "paid"; checkoutUrl: string; price: number };
   }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+
+installEmailLibDispatchMock({
+  sendEventRegistrationCancelled: () => Promise.resolve({ ok: true }),
+  sendEventAdminNotification: () => Promise.resolve({ ok: true }),
+  sendEventRegistrationConfirmation: () =>
+    Promise.reject(new Error("not used in this test")),
   sendEventWaitlistOffered: mockSendEventWaitlistOffered,
-  // registerForEventWaitlist（同一ファイル、本テストでは未使用）が
-  // top-level import する。
   sendEventWaitlistRegistered: () =>
     Promise.reject(new Error("not used in this test")),
-}));
+});
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: () => Promise.resolve(),

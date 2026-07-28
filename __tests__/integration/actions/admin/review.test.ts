@@ -13,6 +13,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -109,9 +110,9 @@ mock.module("@/shared/domain/reviews/commands", () => ({
 
 // review-emails モック（fireAndForget 用）
 const mockSendReviewReplyEmail = mock(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/email/review-emails", () => ({
+installEmailLibDispatchMock({
   sendReviewReplyEmail: mockSendReviewReplyEmail,
-}));
+});
 
 // next/cache モック
 const mockUpdateTag = mock<(tag: string) => void>(() => undefined);

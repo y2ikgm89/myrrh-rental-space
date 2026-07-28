@@ -23,6 +23,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailDispatchMock } from "../../../support/email-dispatch-mock";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -82,10 +83,10 @@ mock.module("@/shared/domain/inquiries/commands", () => ({
 const mockSendContactConfirmationEmail = mock(() => Promise.resolve());
 const mockSendContactAdminNotification = mock(() => Promise.resolve());
 
-mock.module("@/shared/lib/email/contact-emails", () => ({
+installEmailDispatchMock({
   sendContactConfirmationEmail: mockSendContactConfirmationEmail,
   sendContactAdminNotification: mockSendContactAdminNotification,
-}));
+});
 
 // terms 系: server-side consent gate を no-op に。
 // `assertAllRequiredTermsAgreed` は内部で `getRequiredTermsByScope` を呼び、

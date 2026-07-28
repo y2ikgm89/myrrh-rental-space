@@ -17,6 +17,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -121,22 +122,11 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationAdminNotification: mock(async () => {}),
   sendReservationConfirmationEmail: mock(async () => {}),
   sendReservationStatusChangedEmail: mock(async () => {}),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(async () => ({
-    ok: false,
-    reason: "disabled",
-  })),
-  sendBulkAdminNotification: mock(async () => ({
-    ok: false,
-    reason: "disabled",
-  })),
-}));
+});
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock(() => {}),

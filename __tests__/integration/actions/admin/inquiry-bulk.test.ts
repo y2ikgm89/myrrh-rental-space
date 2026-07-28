@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { InquiryStatus } from "@generated/prisma/enums";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // Mocks (must be defined before importing target module)
@@ -54,10 +55,10 @@ mock.module("@/shared/domain/inquiries/bulk-status-commands", () => ({
   bulkSetStatusInquiriesCommand: mockBulkSetStatusInquiriesCommand,
 }));
 
-mock.module("@/shared/lib/email/inquiry-emails", () => ({
-  sendInquiryReplyEmail: mock(() => Promise.resolve({ success: true })),
+installEmailLibDispatchMock({
+  sendInquiryReplyEmail: mock(() => Promise.resolve({ ok: true })),
   sendInquiryStatusNotificationToAll: mockSendInquiryStatusNotificationToAll,
-}));
+});
 
 type ExecuteOpts<T> = {
   resource: string;

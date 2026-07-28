@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -172,10 +173,10 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: mock(() => Promise.resolve()),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationUpdatedEmail: mock(() => Promise.resolve()),
-  sendReservationAdminNotification: mock(() => Promise.resolve()),
-}));
+installEmailLibDispatchMock({
+  sendReservationUpdatedEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationAdminNotification: mock(() => Promise.resolve({ ok: true })),
+});
 
 const mockFireAndForget = mock(() => undefined);
 mock.module("@/shared/lib/async-utils", () => ({

@@ -13,6 +13,8 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -106,16 +108,18 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailLibDispatchMock({
   sendEventRegistrationConfirmation: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
   sendEventAdminNotification: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+  sendEventWaitlistRegistered: mock(() =>
+    Promise.reject(new Error("not used in cancel test")),
+  ),
+});
+installEmailRenderContextMock();
 
 // cancelEventRegistration は使わないが、同一ファイルの registerForEventWaitlist が
 // import するため、モジュール解決を通すために "not used" スタブを提供する
@@ -124,12 +128,6 @@ mock.module("@/shared/lib/email/event-emails", () => ({
 // 衝突して失敗する — 実体験済み）。
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   registerWaitlistEntryCommand: mock(() =>
-    Promise.reject(new Error("not used in cancel test")),
-  ),
-}));
-
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
-  sendEventWaitlistRegistered: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
 }));
