@@ -242,9 +242,11 @@ import {
   updateContactInfo,
 } from "@/shared/domain/settings/commands/organization";
 import {
-  updateReservationSettings,
   updateDiscountSettings,
   updateTaxSettings,
+} from "@/shared/domain/settings/commands/commerce";
+import {
+  updateReservationSettings,
   updateDataRetentionSettings,
   updateFeatureModulesCommand,
   DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,

@@ -23,7 +23,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import * as settingsCommands from "@/shared/domain/settings/commands";
+import { updateRefundPolicy as updateRefundPolicyCommand } from "@/shared/domain/settings/commands/commerce";
 import { getRefundPolicySettings } from "@/shared/domain/settings/admin-queries";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -56,7 +56,7 @@ export async function updateRefundPolicySettings(
                 defaultRefundRate: data.refundPolicyDefaultRefundRate,
               }
             : null;
-          await settingsCommands.updateRefundPolicy({
+          await updateRefundPolicyCommand({
             policy,
             expectedUpdatedAt: data.expectedUpdatedAt,
           });
