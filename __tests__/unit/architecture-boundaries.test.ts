@@ -1170,7 +1170,7 @@ describe("architecture boundaries", () => {
 
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
     const source = readFileSync(
-      join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
+      join(SRC_ROOT, "shared", "domain", "admin-auth", "session.ts"),
       "utf8",
     );
 
