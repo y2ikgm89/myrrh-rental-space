@@ -8,11 +8,14 @@
  * ブランディング表示（ロゴ/サイト名）対応
  */
 
+import { useRef } from "react";
 import { IconExternalLink, IconMenu2 } from "@tabler/icons-react";
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
+import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
 import { getBaseUrl } from "@/shared/lib/constants/urls";
 import { LogoutButton } from "./LogoutButton";
 import type { ReactNode } from "react";
@@ -31,6 +34,9 @@ export function TopBar({
   const { toggleSidebar, sidebarState, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
 
+  const headerRef = useRef<HTMLElement>(null);
+  useAdminZIndexImperative(headerRef, Z_INDEX.header);
+
   // フルスクリーンモード時はヘッダーを非表示
   if (isFullscreen) return null;
 
@@ -41,8 +47,11 @@ export function TopBar({
 
   return (
     <header
-      className="sticky top-0 flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm lg:px-6"
-      style={{ zIndex: Z_INDEX.header }}
+      ref={headerRef}
+      className={cn(
+        "sticky top-0 flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm lg:px-6",
+        adminZIndexClassName(),
+      )}
     >
       {/* 左: ハンバーガー + ブランディング */}
       <div className="flex items-center gap-3">

@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
-import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
+import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
 /**
  * 管理者による参加登録の事後編集。氏名/email/電話/備考/数量をまとめて更新する。
@@ -70,7 +70,7 @@ export async function updateEventRegistrationCommand(data: {
       }
 
       if (quantityChanged && existing.status === RegistrationStatus.CONFIRMED) {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${existing.eventId}))`;
+        await lockEventRegistrationForTransaction(tx, existing.eventId);
 
         const slot = await tx.eventTimeSlot.findUnique({
           where: { id: existing.slotId },

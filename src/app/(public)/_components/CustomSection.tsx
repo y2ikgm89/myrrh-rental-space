@@ -11,10 +11,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { cn } from "@/shared/lib/cn";
 import type { CustomConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -51,27 +51,27 @@ export function CustomSection({
               {config.sectionLabel && (
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
-              <div className="mt-4" style={getTitleStyle(style)}>
+              <SectionTitleBox style={style} className="mt-4">
                 <Heading
                   level={2}
                   className={cn(getTitleClasses(style), "tracking-tight")}
                 >
                   {config.title}
                 </Heading>
-              </div>
+              </SectionTitleBox>
             </ScrollReveal>
           </div>
         )}
 
         {hasBody && (
           <ScrollReveal>
-            <div style={getTextStyle(style)}>
+            <SectionTextBox style={style}>
               <SanitizedHtml
                 html={config.body}
                 className="prose prose-neutral max-w-none"
                 restrictIframeHostnames
               />
-            </div>
+            </SectionTextBox>
           </ScrollReveal>
         )}
       </div>

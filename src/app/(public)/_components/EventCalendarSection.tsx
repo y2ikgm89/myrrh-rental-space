@@ -16,10 +16,10 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/event-calendar/schema";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -89,7 +89,7 @@ export function EventCalendarSection({
               </ScrollReveal>
             )}
             {hasTitle && (
-              <div style={getTitleStyle(style)}>
+              <SectionTitleBox style={style}>
                 <Heading
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
@@ -98,16 +98,16 @@ export function EventCalendarSection({
                     <PortableTextSpans spans={config.title} />
                   </SplitText>
                 </Heading>
-              </div>
+              </SectionTitleBox>
             )}
             {hasDescription && (
               <ScrollReveal delay={0.2}>
-                <div
+                <SectionTextBox
+                  style={style}
                   className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
-                  style={getTextStyle(style)}
                 >
                   <PortableText blocks={config.description} />
-                </div>
+                </SectionTextBox>
               </ScrollReveal>
             )}
           </div>

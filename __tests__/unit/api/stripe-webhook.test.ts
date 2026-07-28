@@ -329,16 +329,26 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
 
 installEmailRenderContextMock();
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationConfirmationEmail: (data: unknown) =>
-    mockSendReservationConfirmationEmail(data),
-}));
-
 installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
 });
+
+const noopReservationEmailAsync = mock(async () => ({ ok: true }));
+mock.module("@/shared/lib/email/reservation-emails", () => ({
+  buildMemberReservationUrl: () => "",
+  buildBookingHubUrl: () => "",
+  sendReservationConfirmationEmail: (data: unknown) =>
+    mockSendReservationConfirmationEmail(data),
+  sendReservationUpdatedEmail: noopReservationEmailAsync,
+  sendReservationCancelledEmail: noopReservationEmailAsync,
+  sendReservationStatusChangedEmail: noopReservationEmailAsync,
+  sendReservationRefundEmail: noopReservationEmailAsync,
+  sendReservationAdminNotification: noopReservationEmailAsync,
+  sendBulkReservationCancelledEmail: noopReservationEmailAsync,
+  sendBulkAdminNotification: noopReservationEmailAsync,
+}));
 
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>

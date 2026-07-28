@@ -9,13 +9,14 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { requireFeatureEnabled } from "@/shared/domain/features/check";
+import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
-import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
@@ -131,11 +132,28 @@ export default async function GuestCancelPage(): Promise<ReactElement> {
     );
   }
 
-  const canCancel = isWithinDeadline(
-    reservation.startTime,
-    deadlineSettings.cancellationDeadlineHours,
+  if (reservation.paymentStatus === PaymentStatus.PENDING) {
+    return (
+      <Layout>
+        <div className="border border-border p-6 text-center">
+          <p className="text-base font-medium text-foreground">
+            決済処理中のためキャンセルできません
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            決済完了後にキャンセルするか、しばらく経ってから再度お試しください。
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const canCancel = canCustomerInitiateCancellation({
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    startTime: reservation.startTime,
+    cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
     now,
-  );
+  });
 
   if (!canCancel) {
     return (

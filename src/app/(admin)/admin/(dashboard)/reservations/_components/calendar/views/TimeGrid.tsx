@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import { CALENDAR_LAYOUT } from "@/admin/lib/calendar";
 import { TimeColumn } from "./TimeColumn";
 
@@ -80,9 +82,15 @@ export function TimeGrid({
     ...columns.map((c) => `minmax(${c.minWidthPx}px, 1fr)`),
   ].join(" ");
 
+  const gridHeightVar = `${gridHeight}px`;
+  const slotHeightVar = `${CALENDAR_LAYOUT.pixelsPerHour}px`;
+
   return (
     <div role="region" aria-label={ariaLabel} className="flex-1 overflow-auto">
-      <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
+      <ImperativeCssScope
+        className={cn("grid", CSS_VAR_CLASS.calendarGridTemplate)}
+        cssVars={{ [CSS_VAR.calendarGridTemplate]: gridTemplate }}
+      >
         {/* Corner cell: 縦横スクロール時も常に左上に固定 (z-30) */}
         <div
           aria-hidden="true"
@@ -103,12 +111,15 @@ export function TimeGrid({
         ))}
 
         {/* 時刻列: 横スクロール時に左固定 (z-10) */}
-        <div
-          className="sticky left-0 z-10 border-r bg-card"
-          style={{ height: `${gridHeight}px` }}
+        <ImperativeCssScope
+          className={cn(
+            "sticky left-0 z-10 border-r bg-card",
+            CSS_VAR_CLASS.calendarGridHeight,
+          )}
+          cssVars={{ [CSS_VAR.calendarGridHeight]: gridHeightVar }}
         >
           <TimeColumn timeSlots={timeSlots} />
-        </div>
+        </ImperativeCssScope>
 
         {/* 各列のボディ: 通常配置。イベントは absolute レイヤーで重ねる */}
         {columns.map((col) => {
@@ -121,56 +132,72 @@ export function TimeGrid({
             : 0;
 
           return (
-            <div
+            <ImperativeCssScope
               key={col.key}
               className={cn(
                 "relative border-r last:border-r-0",
+                CSS_VAR_CLASS.calendarGridHeight,
                 col.bodyClassName,
               )}
-              style={{ height: `${gridHeight}px` }}
+              cssVars={{ [CSS_VAR.calendarGridHeight]: gridHeightVar }}
             >
               {timeSlots.map((time) => (
-                <div
+                <ImperativeCssScope
                   key={time}
-                  style={{ height: `${CALENDAR_LAYOUT.pixelsPerHour}px` }}
-                  className="border-b last:border-b-0"
+                  className={cn(
+                    "border-b last:border-b-0",
+                    CSS_VAR_CLASS.calendarSlotHeight,
+                  )}
+                  cssVars={{ [CSS_VAR.calendarSlotHeight]: slotHeightVar }}
                 />
               ))}
 
               {renderTodayOverlay && (
                 <>
-                  {/* 過去帯 (営業開始〜現在) — events より下 (z-0) */}
                   {clampedNow > 0 && (
-                    <div
+                    <ImperativeCssScope
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-0 right-0 top-0 bg-muted/30"
-                      style={{ height: `${clampedNow}px` }}
+                      className={cn(
+                        "pointer-events-none absolute left-0 right-0 top-0 bg-muted/30",
+                        CSS_VAR_CLASS.calendarOverlayHeight,
+                      )}
+                      cssVars={{
+                        [CSS_VAR.calendarOverlayHeight]: `${clampedNow}px`,
+                      }}
                     />
                   )}
-                  {/* 未来帯 (現在〜営業終了) — events より下 (z-0) */}
                   {clampedNow < gridHeight && (
-                    <div
+                    <ImperativeCssScope
                       aria-hidden="true"
-                      className="pointer-events-none absolute bottom-0 left-0 right-0 bg-primary/5"
-                      style={{ top: `${clampedNow}px` }}
+                      className={cn(
+                        "pointer-events-none absolute bottom-0 left-0 right-0 bg-primary/5",
+                        CSS_VAR_CLASS.calendarOverlayTop,
+                      )}
+                      cssVars={{
+                        [CSS_VAR.calendarOverlayTop]: `${clampedNow}px`,
+                      }}
                     />
                   )}
-                  {/* Now ライン — events より上 (z-[15]) で identification 確保 */}
                   {clampedNow > 0 && clampedNow < gridHeight && (
-                    <div
+                    <ImperativeCssScope
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-0 right-0 z-[15] h-0.5 bg-destructive"
-                      style={{ top: `${clampedNow}px` }}
+                      className={cn(
+                        "pointer-events-none absolute left-0 right-0 z-[15] h-0.5 bg-destructive",
+                        CSS_VAR_CLASS.calendarOverlayTop,
+                      )}
+                      cssVars={{
+                        [CSS_VAR.calendarOverlayTop]: `${clampedNow}px`,
+                      }}
                     />
                   )}
                 </>
               )}
 
               {col.body}
-            </div>
+            </ImperativeCssScope>
           );
         })}
-      </div>
+      </ImperativeCssScope>
     </div>
   );
 }

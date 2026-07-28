@@ -19,10 +19,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -126,7 +126,7 @@ export function TestimonialSection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          <div style={getTitleStyle(style)}>
+          <SectionTitleBox style={style}>
             <Heading
               level={2}
               className={cn("mt-4 tracking-tight", getTitleClasses(style))}
@@ -135,7 +135,7 @@ export function TestimonialSection({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         </div>
       )}
 
@@ -187,7 +187,8 @@ export function TestimonialSection({
                   </span>
                 )}
 
-                <div
+                <SectionTextBox
+                  style={style}
                   className={cn(
                     variant !== "minimal" && "mt-3",
                     isFeatured
@@ -197,7 +198,6 @@ export function TestimonialSection({
                         : "text-sm leading-relaxed",
                     "text-foreground [&_p]:mt-0 [&_p+p]:mt-3",
                   )}
-                  style={getTextStyle(style)}
                 >
                   {variant === "minimal" && (
                     <span
@@ -216,7 +216,7 @@ export function TestimonialSection({
                       &rdquo;
                     </span>
                   )}
-                </div>
+                </SectionTextBox>
 
                 {config.showRating && item.rating != null && (
                   <div className="mt-4">

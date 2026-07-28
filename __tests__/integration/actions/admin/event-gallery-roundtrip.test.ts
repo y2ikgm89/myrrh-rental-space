@@ -85,6 +85,8 @@ mock.module("@/shared/db/prisma", () => ({
     $transaction: mock(async (fn: (tx: unknown) => Promise<unknown>) => {
       // interactive transaction — tx は prisma と同じ mock を使う
       const tx = {
+        // advisory lock (lockEventRegistrationForTransaction) uses $executeRaw
+        $executeRaw: mock(() => Promise.resolve(0)),
         event: {
           create: mockCreate,
           update: mockUpdate,

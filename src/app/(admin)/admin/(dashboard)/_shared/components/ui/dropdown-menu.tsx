@@ -1,10 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { IconChevronRight } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
+import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 
 const dropdownMenuContentVariants = tv({
   base: "min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
@@ -29,13 +32,22 @@ function DropdownMenuContent({
   style,
   ...props
 }: React.ComponentPropsWithRef<typeof DropdownMenuPrimitive.Content>) {
+  const internalRef = useRef<HTMLDivElement>(null);
+  useAdminZIndexImperative(internalRef, Z_INDEX.dropdown, style);
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
-        ref={ref}
+        ref={(node) => {
+          internalRef.current = node;
+          assignRef(ref, node);
+        }}
         sideOffset={sideOffset}
-        className={cn(dropdownMenuContentVariants(), className)}
-        style={{ ...style, zIndex: style?.zIndex ?? Z_INDEX.dropdown }}
+        className={cn(
+          dropdownMenuContentVariants(),
+          adminZIndexClassName(),
+          className,
+        )}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -207,12 +219,21 @@ function DropdownMenuSubContent({
   style,
   ...props
 }: React.ComponentPropsWithRef<typeof DropdownMenuPrimitive.SubContent>) {
+  const internalRef = useRef<HTMLDivElement>(null);
+  useAdminZIndexImperative(internalRef, Z_INDEX.dropdown, style);
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.SubContent
-        ref={ref}
-        className={cn(dropdownMenuContentVariants(), className)}
-        style={{ ...style, zIndex: style?.zIndex ?? Z_INDEX.dropdown }}
+        ref={(node) => {
+          internalRef.current = node;
+          assignRef(ref, node);
+        }}
+        className={cn(
+          dropdownMenuContentVariants(),
+          adminZIndexClassName(),
+          className,
+        )}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>

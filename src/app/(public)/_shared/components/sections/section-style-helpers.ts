@@ -2,12 +2,13 @@
  * Section style helpers — pure functions for title / text styling derived from
  * `SectionStylePayload`. Server Components から import 可能な pure module。
  *
- * `SectionWrapper.tsx` から分離（"use client" モジュールの非-Component export を
- * Server Component から呼ぶと Client Reference として扱われ、Server で実行できない）。
+ * CSP strict: React `style=` 禁止。CSS var 値は build*CssVars / build*StyleRule
+ * で生成し、NonceStyleBlock または ImperativeCssScope へ渡す。
  */
 
-import type { CSSProperties } from "react";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { buildDataStyleRule } from "@/shared/lib/csp/sanitize-css";
 
 /**
  * titleSize → レスポンシブ CSS クラスのマッピング
@@ -33,23 +34,71 @@ export function getTitleClasses(style: SectionStylePayload): string {
 }
 
 /**
- * style から title 用 inline style を生成（カラー指定時のみ）
+ * style から title 用 CSS var レコードを生成（カラー指定時のみ）
  */
-export function getTitleStyle(
+export function buildTitleCssVars(
   style: SectionStylePayload,
-): CSSProperties | undefined {
+): Record<string, string> | undefined {
   return style.typography.titleColor
-    ? { color: style.typography.titleColor }
+    ? { [CSS_VAR.sectionTitleColor]: style.typography.titleColor }
     : undefined;
 }
 
+/** @deprecated use buildTitleCssVars + NonceStyleBlock / ImperativeCssScope */
+export function getTitleStyle(style: SectionStylePayload) {
+  return buildTitleCssVars(style);
+}
+
 /**
- * style から body text 用 inline style を生成（カラー指定時のみ）
+ * style から title 用 Tailwind class を生成（カラー指定時のみ）
  */
-export function getTextStyle(
+export function getTitleColorClass(style: SectionStylePayload): string {
+  return style.typography.titleColor ? CSS_VAR_CLASS.sectionTitleColor : "";
+}
+
+/**
+ * style から body text 用 CSS var レコードを生成（カラー指定時のみ）
+ */
+export function buildTextCssVars(
   style: SectionStylePayload,
-): CSSProperties | undefined {
+): Record<string, string> | undefined {
   return style.typography.textColor
-    ? { color: style.typography.textColor }
+    ? { [CSS_VAR.sectionTextColor]: style.typography.textColor }
     : undefined;
+}
+
+/** @deprecated use buildTextCssVars */
+export function getTextStyle(style: SectionStylePayload) {
+  return buildTextCssVars(style);
+}
+
+/**
+ * style から body text 用 Tailwind class を生成（カラー指定時のみ）
+ */
+export function getTextColorClass(style: SectionStylePayload): string {
+  return style.typography.textColor ? CSS_VAR_CLASS.sectionTextColor : "";
+}
+
+/**
+ * セクション背景色用 CSS var レコード（CTA 等の config.backgroundColor 向け）
+ */
+export function buildSectionBgCssVars(
+  backgroundColor: string | undefined,
+): Record<string, string> | undefined {
+  return backgroundColor
+    ? { [CSS_VAR.sectionBgColor]: backgroundColor }
+    : undefined;
+}
+
+/** @deprecated use buildSectionBgCssVars */
+export function getSectionBgStyle(backgroundColor: string | undefined) {
+  return buildSectionBgCssVars(backgroundColor);
+}
+
+export function buildSectionStyleRule(
+  styleId: string,
+  vars: Record<string, string | number | undefined | null> | undefined,
+): string {
+  if (!vars) return "";
+  return buildDataStyleRule(styleId, vars);
 }

@@ -136,11 +136,15 @@ function buildCsp(
   //   許可する非対称な権限で、文字列 eval / new Function / setTimeout(string) は
   //   引き続き遮断される（'unsafe-eval' とは別物。'unsafe-eval' を本番に置かない
   //   設計 SSoT を侵害しない）。Chrome 97+ / Firefox 102+ / Safari 16+ で実装済。
-  // - style-src: 'unsafe-inline' を許可。nonce は <style> 要素のみ認可し、インライン
-  //   style 属性（next/image fill・React の style prop・アニメーション初期値など）は
-  //   CSP3 仕様上 nonce で認可できず、本番では全て遮断される（実ブラウザでホームページに
-  //   39 件の "inline style ... has been blocked" を確認）。style インジェクションは
-  //   script より低リスクのため、Next.js 公式の非 nonce 例に倣い 'unsafe-inline' を許可する。
+  // - style-src: <style> 要素のみ nonce 認可。React style= 属性はコードベース側で
+  //   使用禁止（imperative element.style または nonce <style> ブロック）。
+  // - style-src-attr: 'unsafe-inline' は置かない。CSP3 'unsafe-hashes' + hash で
+  //   next/image が内部 emit する 3 つの固定 style 属性文字列だけを許可する:
+  //   - ZDrxq…: fill 画像の `position:absolute;height:100%;…;color:transparent`
+  //   - zlqnb…: 通常画像の `color:transparent`
+  //   - KpSV7…: fill ラッパーの `position:relative`
+  //   Next.js がこれらの文字列を変更すると homepage smoke CSP テストが fail し、
+  //   violation メッセージが新しい hash を報告する（ここを更新する）。
   // - connect-src / img-src: strict-dynamic は script-src のみ作用するため、ビーコン送信先は
   //   明示許可が必要。GA4 は *.google-analytics.com（地域別 region1/2/3 を包含）/
   //   *.analytics.google.com に加え、gtag.js / GTM が設定取得・収集に使う *.googletagmanager.com
@@ -151,7 +155,8 @@ function buildCsp(
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
-    style-src 'self' 'unsafe-inline';
+    style-src 'self' 'nonce-${nonce}';
+    style-src-attr 'unsafe-hashes' 'sha256-ZDrxqUOB4m/L0JWL/+gS52g1CRH0l/qwMhjTw5Z/Fsc=' 'sha256-zlqnbDt84zf1iSefLU/ImC54isoprH/MRiVZGskwexk=' 'sha256-KpSV7LuPYEu58+3u9LJr9v5Drm0uIKEv0h3u/+NVNm8=';
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
@@ -234,7 +239,7 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
  * cookie に転写することで残留経路を遮断し、cookie 自体は HttpOnly + SameSite=Strict +
  * (本番) Secure で送信制御する。
  *
- * トークン形式は middleware (edge) で軽量検証のみ行う:
+ * トークン形式は proxy（Node.js runtime）で軽量検証のみ行う:
  *   - base64url 文字種
  *   - 長さ 32〜1024 字（典型 100〜300）
  * 暗号学的な verify は Node ランタイムの page/action で実施する。

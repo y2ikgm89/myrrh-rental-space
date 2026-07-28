@@ -9,12 +9,7 @@
  * `label` (PortableTextSpan[]) でテキスト + アイコンの混在ラベルを描画する。
  */
 
-import {
-  useRef,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { useRef, type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { gsap } from "@/public/lib/gsap-config";
@@ -22,6 +17,8 @@ import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import type { Route } from "next";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { useImperativeCssVars } from "@/shared/lib/csp/use-imperative-style";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type MagneticButtonSize = "sm" | "md" | "lg";
@@ -78,6 +75,13 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
     ref.current = element;
   };
 
+  useImperativeCssVars(ref, {
+    ...(customBackgroundColor
+      ? { [CSS_VAR.customBg]: customBackgroundColor }
+      : {}),
+    ...(customTextColor ? { [CSS_VAR.customText]: customTextColor } : {}),
+  });
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!motionOk.current) return;
     const el = ref.current;
@@ -115,12 +119,12 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
     className,
   );
 
-  const inlineStyle: CSSProperties = {
-    ...(customBackgroundColor && { backgroundColor: customBackgroundColor }),
-    ...(customTextColor && { color: customTextColor }),
-  };
-  const hasInlineStyle =
+  const hasCustomColors =
     Boolean(customBackgroundColor) || Boolean(customTextColor);
+  const customColorClasses = cn(
+    customBackgroundColor && CSS_VAR_CLASS.customBg,
+    customTextColor && CSS_VAR_CLASS.customText,
+  );
 
   // PortableTextSpan[] の空配列 `[]` も truthy のため `props.label.length > 0`
   // で gate しないと <PortableTextSpans spans={[]}> が何も render せず button
@@ -140,8 +144,7 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
       <Link
         ref={setRef}
         href={href}
-        className={baseClassName}
-        {...(hasInlineStyle && { style: inlineStyle })}
+        className={cn(baseClassName, hasCustomColors && customColorClasses)}
         {...(openInNewTab && {
           target: "_blank" as const,
           rel: "noopener noreferrer",
@@ -159,8 +162,7 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
     <button
       ref={setRef}
       type="button"
-      className={baseClassName}
-      {...(hasInlineStyle && { style: inlineStyle })}
+      className={cn(baseClassName, hasCustomColors && customColorClasses)}
       onClick={onClick}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}

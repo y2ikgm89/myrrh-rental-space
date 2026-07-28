@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { IconExternalLink } from "@tabler/icons-react";
@@ -15,6 +16,12 @@ function getElementFromTarget(target: EventTarget | null): HTMLElement | null {
 }
 
 function LinkHoverPreview({ url, position }: LinkPreviewState) {
+  const previewRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(previewRef, {
+    top: position.top,
+    left: position.left,
+  });
+
   let domain = "";
   try {
     domain = new URL(url).hostname;
@@ -25,8 +32,8 @@ function LinkHoverPreview({ url, position }: LinkPreviewState) {
 
   return (
     <div
+      ref={previewRef}
       className="fixed z-50 rounded-lg border bg-popover px-3 py-2 text-sm shadow-md flex items-center gap-2 pointer-events-none"
-      style={{ top: position.top, left: position.left }}
     >
       {isExternal && (
         <IconExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />

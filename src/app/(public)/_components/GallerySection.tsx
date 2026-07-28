@@ -17,10 +17,10 @@ import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { VideoPlayer } from "@/public/components/design-system/video-player";
@@ -188,7 +188,7 @@ export function GallerySection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          <div style={getTitleStyle(style)}>
+          <SectionTitleBox style={style}>
             <Heading
               level={2}
               className={cn("mt-4 tracking-tight", getTitleClasses(style))}
@@ -197,7 +197,7 @@ export function GallerySection({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         </div>
       )}
 
@@ -267,12 +267,12 @@ export function GallerySection({
                 </button>
               )}
               {item.caption.length > 0 && (
-                <p
+                <SectionTextBox
+                  style={style}
                   className="mt-2 text-xs text-muted-foreground"
-                  style={getTextStyle(style)}
                 >
                   {item.caption}
-                </p>
+                </SectionTextBox>
               )}
             </div>
           );

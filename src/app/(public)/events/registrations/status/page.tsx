@@ -4,9 +4,9 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { Heading } from "@/public/components/design-system/heading";
-import { StatusHubInvalidLinkView } from "@/app/(public)/_shared/components/status-hub/status-hub-invalid-link-view";
-import { StatusHubShell } from "@/app/(public)/_shared/components/status-hub/status-hub-shell";
-import { StatusHubTooManyRequestsView } from "@/app/(public)/_shared/components/status-hub/status-hub-too-many-requests-view";
+import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
+import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
+import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
 import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
@@ -38,10 +38,10 @@ import {
   publicQueryRateLimiter,
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
-import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
-import { EventMeetingUrlRow } from "@/app/(public)/_shared/components/event-meeting-url-row";
-import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
-import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
+import { DetailRow } from "@/public/components/detail-row";
+import { EventMeetingUrlRow } from "@/public/components/event-meeting-url-row";
+import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { GuestStatusMemberOwnershipMismatchView } from "@/public/components/guest-status-member-ownership-mismatch-view";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（cancel と同方針）。
 // robots.ts は `/events/registrations/` でまとめて disallow 済み。

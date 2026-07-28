@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
@@ -258,10 +259,10 @@ installEmailRenderContextMock({
   ) => mockGetEventEmailRenderContext(...args),
 });
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendEventUpdatedToAllParticipants: mockSendEventUpdated,
   sendEventCancelledToAllParticipants: mockSendEventCancelled,
-}));
+});
 
 await installPrismaEnumsMock({
   EventStatus,
@@ -1211,7 +1212,7 @@ describe("updateEventCommand", () => {
         ],
       });
 
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
       expect(mockEventTicketUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventTicketCreateMany).not.toHaveBeenCalled();
     });
@@ -1342,7 +1343,7 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockEventTicketUpdate).not.toHaveBeenCalled();
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
     });
 
     test("EVENT_STATUS_TRANSITIONS 外の遷移 (CANCELLED → PUBLISHED) は VALIDATION", async () => {

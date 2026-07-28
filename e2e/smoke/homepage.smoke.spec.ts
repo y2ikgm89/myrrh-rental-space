@@ -40,4 +40,22 @@ test.describe("smoke: homepage", () => {
     const title = await page.title();
     expect(title.length).toBeGreaterThan(0);
   });
+
+  test("CSP violation が console に出ない", async ({ page }) => {
+    test.skip(appSurface !== "public", "public surface の CSP 検証のみ");
+
+    const cspViolations: string[] = [];
+    page.on("console", (msg) => {
+      if (
+        msg.type() === "error" &&
+        msg.text().includes("Content Security Policy")
+      ) {
+        cspViolations.push(msg.text());
+      }
+    });
+
+    await page.goto(urls.home);
+    await expect(page.getByRole("main")).toBeVisible();
+    expect(cspViolations).toEqual([]);
+  });
 });

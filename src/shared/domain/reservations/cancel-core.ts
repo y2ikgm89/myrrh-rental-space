@@ -37,6 +37,27 @@ export const CANCELLABLE_STATUSES: readonly ReservationStatus[] = [
   ReservationStatus.CONFIRMED,
 ];
 
+/** キャンセル UI 導線を出すか（applyCancellation と同じ payment ガードを含む） */
+export function canCustomerInitiateCancellation(input: {
+  status: ReservationStatus;
+  paymentStatus: PaymentStatus;
+  startTime: Date;
+  cancellationDeadlineHours: number;
+  now: Date;
+}): boolean {
+  if (!CANCELLABLE_STATUSES.includes(input.status)) {
+    return false;
+  }
+  if (input.paymentStatus === PaymentStatus.PENDING) {
+    return false;
+  }
+  return isWithinDeadline(
+    input.startTime,
+    input.cancellationDeadlineHours,
+    input.now,
+  );
+}
+
 export interface CancellableReservation {
   id: string;
   status: ReservationStatus;

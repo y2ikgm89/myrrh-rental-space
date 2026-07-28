@@ -27,6 +27,10 @@ const mockSettingsFindUniqueOrThrow = mock<
   (args: Record<string, unknown>) => Promise<{ maxRecurrenceInstances: number }>
 >(() => Promise.resolve({ maxRecurrenceInstances: 26 }));
 
+const mockSpaceFindUniqueOrThrow = mock<
+  (args: Record<string, unknown>) => Promise<{ locationId: string | null }>
+>(() => Promise.resolve({ locationId: "loc-1" }));
+
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>
 >(() => Promise.resolve(undefined));
@@ -57,8 +61,15 @@ const mockCouponUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
 
+const mockBlockedDateFindFirst = mock<
+  (args: Record<string, unknown>) => Promise<unknown>
+>(() => Promise.resolve(null));
+
 const mockTx = {
   $executeRaw: mockExecuteRaw,
+  blockedDate: {
+    findFirst: mockBlockedDateFindFirst,
+  },
   reservationSeries: {
     create: mockSeriesCreate,
     update: mockSeriesUpdate,
@@ -79,6 +90,7 @@ const mockTransaction = mock<
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settingsReservation: { findUniqueOrThrow: mockSettingsFindUniqueOrThrow },
+    space: { findUniqueOrThrow: mockSpaceFindUniqueOrThrow },
     $transaction: mockTransaction,
   },
 }));
@@ -189,6 +201,8 @@ function baseCreateInput(
 
 function resetAllMocks(): void {
   mockSettingsFindUniqueOrThrow.mockReset();
+  mockSpaceFindUniqueOrThrow.mockReset();
+  mockBlockedDateFindFirst.mockReset();
   mockExecuteRaw.mockReset();
   mockSeriesCreate.mockReset();
   mockSeriesUpdate.mockReset();
@@ -208,6 +222,8 @@ function resetAllMocks(): void {
   mockSettingsFindUniqueOrThrow.mockResolvedValue({
     maxRecurrenceInstances: 26,
   });
+  mockSpaceFindUniqueOrThrow.mockResolvedValue({ locationId: "loc-1" });
+  mockBlockedDateFindFirst.mockResolvedValue(null);
   mockExecuteRaw.mockResolvedValue(undefined);
   mockSeriesCreate.mockResolvedValue({ id: SERIES_ID, instanceCount: 3 });
   mockSeriesUpdate.mockResolvedValue({});

@@ -14,10 +14,11 @@ import { PortableTextSpans } from "@/shared/components/portable-text/PortableTex
 import { isAppRoute } from "@/shared/lib/typed-routes";
 import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import { useCarousel } from "./use-carousel";
 import { useDismissedBars, dismissBar } from "./use-dismissed-bars";
 import { isWithinDisplayPeriod } from "./display-period";
-import { computeBarStyles, getTransitionAnimation } from "./styles";
+import { computeBarStyles, getTransitionAnimationClass } from "./styles";
 import type { AnnouncementBarItem, CarouselSettings } from "./types";
 
 // prefers-reduced-motion を render に反映する購読（React 19 公式パターン、module-scope
@@ -114,7 +115,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
 
   if (visibleBars.length === 0 || !currentBar) return null;
 
-  const { className, style, linkHoverClass, hasCustomText } =
+  const { className, cssVars, linkHoverClass, hasCustomText } =
     computeBarStyles(settings);
   const showNav = total > 1;
   // 自動回転が実際に進行中か（aria-live の off/polite 切替）。停止コントロールは
@@ -141,10 +142,10 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
   const messageSpanClassName = cn("min-w-0", !hasCustomText && "text-white");
 
   return (
-    <div
+    <ImperativeCssScope
       ref={containerRef}
       className={className}
-      style={style}
+      {...(cssVars !== undefined && { cssVars })}
       role="region"
       aria-live={autoRotating ? "off" : "polite"}
       aria-label="お知らせ"
@@ -160,8 +161,8 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
             aria-hidden="true"
           >
             <div
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent"
-              style={{ animation: "glass-shimmer 3s ease-in-out infinite" }}
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent announcement-bar-glass-shimmer"
+              aria-hidden="true"
             />
           </div>
         )}
@@ -187,12 +188,10 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
        * バー高さは ResizeObserver が再計算）。 */}
       <div className="flex min-h-[1.5rem] min-w-0 flex-1 items-center justify-center overflow-hidden">
         <div
-          className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center"
-          style={
-            isTransitioning
-              ? { animation: getTransitionAnimation(settings.animation) }
-              : undefined
-          }
+          className={cn(
+            "flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center",
+            isTransitioning && getTransitionAnimationClass(settings.animation),
+          )}
           onAnimationEnd={onAnimationEnd}
         >
           <span className={messageSpanClassName}>
@@ -291,6 +290,6 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
       >
         <IconX className="h-4 w-4" />
       </button>
-    </div>
+    </ImperativeCssScope>
   );
 }

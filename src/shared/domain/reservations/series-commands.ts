@@ -27,6 +27,7 @@ import type {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllRequiredTermsAgreed } from "@/shared/domain/terms/queries";
@@ -35,6 +36,7 @@ import { formatJstDateString } from "@/shared/lib/date-format";
 import type { RateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
 import { claimCouponUsage, ensureNoOverlap } from "./payloads";
+import { ensureDateNotBlocked } from "./availability";
 import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import {
   applyBulkCancellationSideEffects,
@@ -160,6 +162,11 @@ export async function createReservationSeriesCommand(
   //     というチキンエッグになる (Task 10 踏襲)。
   const seriesId = randomUUID();
 
+  const space = await prisma.space.findUniqueOrThrow({
+    where: { id: input.spaceId },
+    select: { locationId: true },
+  });
+
   return await prisma.$transaction(async (tx) => {
     // series 単位 lock (728357) → Space 単位 lock (728351、既存契約) の順で取得する。
     // 全経路がこの順序を守ることで deadlock を予防する（series-advisory-lock.ts 参照）。
@@ -171,6 +178,12 @@ export async function createReservationSeriesCommand(
     // （EXCLUDE 制約だけに頼ると「一括 insert が丸ごと reject」で原因の instance が
     // 特定できず admin UX が悪化するため、アプリ層で先制的に特定する）。
     for (const window of instanceWindows) {
+      await ensureDateNotBlocked(
+        input.spaceId,
+        space.locationId,
+        formatJstDateString(window.startTime),
+        tx,
+      );
       // ensureNoOverlap → checkSpaceOverlap（Reservation + EventTimeSlot）。
       // 旧 checkReservationOverlapQuery は Event を見ず DB trigger に依存していた。
       try {
@@ -300,7 +313,7 @@ export async function createReservationSeriesCommand(
       series: { id: series.id, instanceCount: series.instanceCount },
       instanceIds: created.map((r) => r.id),
     };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 }
 
 // =============================================================================
@@ -387,7 +400,7 @@ export async function cancelReservationSeriesCommand(
       cancelledIds: result.cancelledIds,
       fromInstanceStartTime: idsToCancel.fromInstanceStartTime,
     };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   const cancelledIds = resolved.cancelledIds;
 

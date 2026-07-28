@@ -10,7 +10,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
-import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
+import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
@@ -53,7 +53,7 @@ export async function createEventRegistrationCommand(data: {
       // hashtext(eventId) でイベント単位の粒度にする（int4 × int4 の 2 引数形式）。
       // pg_advisory_xact_lock は void を返すため、結果セットを読まない $executeRaw を
       // 使う（$queryRaw は void 列の deserialize に失敗する）。
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${data.eventId}))`;
+      await lockEventRegistrationForTransaction(tx, data.eventId);
 
       await ensureCustomerNotBlacklisted(
         { customerId: data.customerId ?? null, email: data.email },

@@ -18,10 +18,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { cn } from "@/shared/lib/cn";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
@@ -98,7 +98,7 @@ export function NewsListSimpleView({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          <div className="mt-4" style={getTitleStyle(style)}>
+          <SectionTitleBox style={style} className="mt-4">
             <Heading
               level={2}
               className={cn(getTitleClasses(style), "tracking-tight")}
@@ -107,7 +107,7 @@ export function NewsListSimpleView({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         </div>
       )}
 
@@ -127,12 +127,14 @@ export function NewsListSimpleView({
               data-news-item=""
               className="group border border-border p-5 transition-colors duration-200"
             >
-              <time
+              <SectionTextBox
+                style={style}
                 className="text-sm tabular-nums text-muted-foreground"
-                style={getTextStyle(style)}
               >
-                {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
-              </time>
+                <time>
+                  {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
+                </time>
+              </SectionTextBox>
               <h3 className="mt-2 font-heading text-base font-light tracking-tight transition-colors group-hover:text-foreground md:text-lg">
                 {item.title}
               </h3>
@@ -144,12 +146,14 @@ export function NewsListSimpleView({
               data-news-item=""
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >
-              <time
+              <SectionTextBox
+                style={style}
                 className="shrink-0 text-sm tabular-nums text-muted-foreground"
-                style={getTextStyle(style)}
               >
-                {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
-              </time>
+                <time>
+                  {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
+                </time>
+              </SectionTextBox>
               <h3 className="text-sm transition-colors duration-200 group-hover:text-foreground md:text-base">
                 {item.title}
               </h3>

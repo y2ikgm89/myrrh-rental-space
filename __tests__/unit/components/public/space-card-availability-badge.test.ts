@@ -33,7 +33,7 @@ describe("SpaceCard availability badge (spaces-availability-sort follow-up)", ()
 
   test("horizontal layout の Link は isAvailableForSearch === false のとき accessible name にバッジの警告を明示する（見た目上の連結テキストに丸投げしない）", () => {
     const linkAriaLabel =
-      /<Link\s+href=\{`\/spaces\/\$\{slug\}`\}\s+aria-label=\{\s*isAvailableForSearch === false\s*\?\s*`\$\{name\}（指定の日時は空きがありません）`\s*:\s*name\s*\}/;
+      /<Link\s+href=\{toAppRoute\(`\/spaces\/\$\{slug\}`\)\}\s+aria-label=\{\s*isAvailableForSearch === false\s*\?\s*`\$\{name\}（指定の日時は空きがありません）`\s*:\s*name\s*\}/;
     expect(source).toMatch(linkAriaLabel);
   });
 

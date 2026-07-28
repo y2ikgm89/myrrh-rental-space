@@ -34,8 +34,11 @@ import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { VideoPlayer } from "@/public/components/design-system/video-player";
 import { DURATION, EASE } from "@/public/lib/animations";
+import { cn } from "@/shared/lib/cn";
 import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
 import { detectVideoProvider } from "@/shared/lib/video/url-detect";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import type { HeroBgTransition } from "@/shared/lib/sections/definitions/_shared/media";
 
 export interface HeroSlideItem {
@@ -324,13 +327,13 @@ export function HeroBackgroundSlideshow({
         const kind = kinds[i];
         const isFirst = i === 0;
         return (
-          <div
+          <ImperativeCssScope
             key={item.url}
             ref={(el) => {
-              layerElsRef.current[i] = el;
+              layerElsRef.current[i] = el as HTMLDivElement | null;
             }}
-            className="absolute inset-0"
-            style={{ opacity: isFirst ? 1 : 0 }}
+            cssVars={{ [CSS_VAR.heroSlideOpacity]: isFirst ? 1 : 0 }}
+            className={cn("absolute inset-0", CSS_VAR_CLASS.heroSlideOpacity)}
           >
             {kind === "image" ? (
               <HeroSlideImage
@@ -356,7 +359,7 @@ export function HeroBackgroundSlideshow({
                 })}
               />
             )}
-          </div>
+          </ImperativeCssScope>
         );
       })}
 

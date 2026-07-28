@@ -146,13 +146,7 @@ export function ReceiptResendForm({
           tabIndex={-1}
           aria-hidden="true"
           autoComplete="off"
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            width: "1px",
-            height: "1px",
-            opacity: 0,
-          }}
+          className="sr-only"
         />
         <TurnstileWidget
           ref={turnstileRef}

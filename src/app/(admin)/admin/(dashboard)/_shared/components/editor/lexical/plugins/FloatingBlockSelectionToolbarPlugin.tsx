@@ -186,13 +186,7 @@ function FloatingBlockSelectionToolbar({
       ref={popupRef}
       role="toolbar"
       aria-label="ブロック選択ツールバー"
-      className="absolute z-50 flex flex-wrap items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg"
-      style={{
-        top: 0,
-        left: 0,
-        opacity: 0,
-        transform: "translate(-10000px, -10000px)",
-      }}
+      className="absolute top-0 left-0 z-50 flex -translate-x-[10000px] -translate-y-[10000px] flex-wrap items-center gap-0.5 rounded-lg border bg-popover p-1 opacity-0 shadow-lg"
     >
       <Button
         type="button"

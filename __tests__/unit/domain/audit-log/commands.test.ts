@@ -37,6 +37,13 @@ const originalConsoleInfo = console.info;
 
 mock.module("server-only", () => ({}));
 
+mock.module("next/cache", () => ({
+  updateTag: mock(() => undefined),
+  revalidateTag: mock(() => undefined),
+  cacheTag: mock(() => undefined),
+  cacheLife: mock(() => undefined),
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     $transaction: mockTransaction,

@@ -11,6 +11,15 @@
 - Tailwind v4 CSS-first（`tailwind.config.*` なし）/ conform + Zod 4 / Better Auth（顧客のみ）
 - テスト: bun test（`scripts/run-tests.ts` 経由必須）+ Playwright
 
+### 依存 pin ポリシー
+
+| 依存       | pin 方針                                                              | SSoT                                                                      |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Bun        | exact（`packageManager` + `engines.bun`）                             | `package.json`                                                            |
+| TypeScript | exact（`6.0.3`）                                                      | `package.json` devDependencies + `scripts/ensure-typescript-toolchain.ts` |
+| Zod        | exact（`4.4.3`）                                                      | `package.json` dependencies                                               |
+| Lexical    | exact（`0.46.0`、全 `@lexical/*` パッケージを同一バージョンに揃える） | `package.json` dependencies                                               |
+
 ## コマンド
 
 ### 最小証明 (smallest proof)

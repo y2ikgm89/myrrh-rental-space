@@ -43,7 +43,7 @@ import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
-import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
+import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
   scrollToTop,

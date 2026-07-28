@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
-import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
+import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 

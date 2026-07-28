@@ -1,10 +1,15 @@
 "use client";
 
+import { useRef } from "react";
 import {
   DEFAULT_TYPE_STYLE,
   getStripedStyle,
 } from "@/shared/lib/announcement-bar-utils";
 import { cn } from "@/shared/lib/cn";
+import {
+  useImperativeStyle,
+  type ImperativeStyleValues,
+} from "@/shared/lib/csp/use-imperative-style";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import type { DesignPreviewProps } from "./types";
 
@@ -95,6 +100,9 @@ export function DesignPreview({
     }
   }
 
+  const previewRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(previewRef, customStyles as ImperativeStyleValues);
+
   return (
     <>
       {designStyle === AnnouncementBarDesignStyle.striped &&
@@ -125,12 +133,12 @@ export function DesignPreview({
         `}</style>
       )}
       <div
+        ref={previewRef}
         className={cn(
           "flex items-center justify-center gap-2 px-4 py-2 text-sm",
           getStyleClasses(),
           getTextClasses(),
         )}
-        style={customStyles}
       >
         {/* グラスシマーオーバーレイ */}
         {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
@@ -138,10 +146,7 @@ export function DesignPreview({
             className="pointer-events-none absolute inset-0 overflow-hidden"
             aria-hidden="true"
           >
-            <div
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent"
-              style={{ animation: "glass-shimmer 3s ease-in-out infinite" }}
-            />
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent announcement-bar-glass-shimmer" />
           </div>
         )}
         <span>{message || "サンプルお知らせメッセージ"}</span>

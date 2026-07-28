@@ -1,21 +1,8 @@
 /**
- * 予約リマインダーメール (`sendReservationReminderEmail`) の idempotencyKey drift gate。
+ * 予約リマインダーメール idempotencyKey — cron バッチ単位で deterministic。
  *
- * Resend の idempotency key は 24h 有効で、同一キーでの再送に payload 差分がある場合は
- * 409 `invalid_idempotent_request` を返す。この 409 は `RETRYABLE_ERROR_NAMES`
- * (`send.ts`) に含まれないため silent drop に近い挙動になり、顧客にリマインダーが
- * 届かない事故を引き起こす。
- *
- * リマインダーの payload には呼び出し毎に**新規に暗号化された** cancelUrl / claimUrl が
- * 埋め込まれる（`crypto.ts` の AES-GCM は都度異なる IV を使うため同じ入力でも暗号文が
- * 変わる）。よって cron が transient 失敗で `reminderSentAt` claim を release し同予約を
- * 再 pick したとき、静的キー (`reservation-reminder/<id>`) だと必ず payload drift で 409 になる。
- *
- * この gate は「呼び出しごとに fresh な idempotencyKey が発行される」ことを強制する
- * (`event-waitlist-emails.test.ts:302` の `expiresAt.getTime()` パターンと対称)。
- * 実際の重複送信抑止は `reminderSentAt` WHERE 節（claim 済みは pick しない）が担う。
- *
- * Fixes RESEND-AUDIT M9.
+ * 同一 reminderWindowDate（JST 日付）内の再送は Resend 冪等で抑止し、
+ * 別日の cron 実行では新キーで再送可能。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -90,6 +77,8 @@ import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import type { ReminderEmailData } from "@/shared/lib/email/types";
 
+const REMINDER_WINDOW = "2099-01-02";
+
 const REMINDER_BASE: ReminderEmailData = {
   reservationId: "reservation-abcdef12",
   customerEmail: "customer@example.com",
@@ -101,6 +90,7 @@ const REMINDER_BASE: ReminderEmailData = {
   notes: undefined,
   icsSequence: 0,
   userId: null,
+  reminderWindowDate: REMINDER_WINDOW,
 };
 
 function lastKey(): string | undefined {
@@ -112,18 +102,14 @@ beforeEach(() => {
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
 });
 
-describe("sendReservationReminderEmail() の idempotencyKey は呼び出し毎に fresh になる", () => {
-  test("同一 data を連続で 2 回送っても異なるキー（cron re-pick で 409 silent drop を回避）", async () => {
+describe("sendReservationReminderEmail() idempotencyKey", () => {
+  test("同一 reminderWindowDate では同じキー（Resend 冪等）", async () => {
     await sendReservationReminderEmail(
       { ...REMINDER_BASE },
       REMINDER_RENDER_CONTEXT,
       EMAIL_SEND_CONTEXT,
     );
     const firstKey = lastKey();
-
-    // Date.now() の bucket が確実に切り替わるよう少し待つ
-    // （bun test 環境の setTimeout は fake ではないので実時間で待つ）
-    await new Promise((resolve) => setTimeout(resolve, 2));
 
     await sendReservationReminderEmail(
       { ...REMINDER_BASE },
@@ -132,27 +118,27 @@ describe("sendReservationReminderEmail() の idempotencyKey は呼び出し毎�
     );
     const secondKey = lastKey();
 
-    expect(firstKey).toBeDefined();
-    expect(secondKey).toBeDefined();
-    expect(firstKey).not.toBe(secondKey);
+    expect(firstKey).toBe(
+      `reservation-reminder/${REMINDER_BASE.reservationId}/${REMINDER_WINDOW}`,
+    );
+    expect(secondKey).toBe(firstKey);
   });
 
-  test("キーは `reservation-reminder/<reservationId>/<timestamp>` 形式で timestamp は数字", async () => {
+  test("reminderWindowDate が異なれば別キー", async () => {
     await sendReservationReminderEmail(
-      { ...REMINDER_BASE },
+      { ...REMINDER_BASE, reminderWindowDate: "2099-01-02" },
       REMINDER_RENDER_CONTEXT,
       EMAIL_SEND_CONTEXT,
     );
-    const key = lastKey();
+    const firstKey = lastKey();
 
-    expect(key).toBeDefined();
-    expect(
-      key?.startsWith(`reservation-reminder/${REMINDER_BASE.reservationId}/`),
-    ).toBe(true);
-
-    const suffix = key?.slice(
-      `reservation-reminder/${REMINDER_BASE.reservationId}/`.length,
+    await sendReservationReminderEmail(
+      { ...REMINDER_BASE, reminderWindowDate: "2099-01-03" },
+      REMINDER_RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
     );
-    expect(suffix).toMatch(/^\d+$/);
+    const secondKey = lastKey();
+
+    expect(firstKey).not.toBe(secondKey);
   });
 });

@@ -30,10 +30,12 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { EmptyState } from "@/admin/components/EmptyState";
 import {
@@ -75,18 +77,18 @@ function SortableCategoryCard({
     isDragging,
   } = useSortable({ id: category.id, disabled: isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   const itemCount = category.itemCount;
   const publishedCount = category.publishedItemCount;
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group relative flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors",
         "hover:border-primary/40",

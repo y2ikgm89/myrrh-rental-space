@@ -47,7 +47,7 @@ import { SpaceReviews } from "./_components/space-reviews";
 import { MobileReserveCTA } from "./_components/mobile-reserve-cta";
 import { SpaceAvailabilityCalendar } from "./_components/space-availability-calendar";
 import { AccessMap } from "@/app/(public)/_components/access-map";
-import { ShareButtons } from "@/app/(public)/_shared/components/ui/share-buttons";
+import { ShareButtons } from "@/public/components/ui/share-buttons";
 
 interface SpaceDetailPageProps {
   readonly params: Promise<{ slug: string }>;

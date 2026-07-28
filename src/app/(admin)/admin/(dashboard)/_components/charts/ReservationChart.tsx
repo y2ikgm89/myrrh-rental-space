@@ -31,6 +31,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 import type {
   ChartDataPoint,
   ReservationChartSummary,
@@ -266,10 +267,9 @@ function ReservationTooltip({ active, payload, label }: ChartTooltipProps) {
       <dl className="space-y-1">
         <div className="flex items-center justify-between gap-6">
           <dt className="flex items-center gap-1.5 text-muted-foreground">
-            <span
-              aria-hidden
+            <ColorSwatchPreview
+              color={CHART_COLORS.reservations}
               className="inline-block size-2 rounded-sm"
-              style={{ backgroundColor: CHART_COLORS.reservations }}
             />
             予約数
           </dt>
@@ -279,10 +279,9 @@ function ReservationTooltip({ active, payload, label }: ChartTooltipProps) {
         </div>
         <div className="flex items-center justify-between gap-6">
           <dt className="flex items-center gap-1.5 text-muted-foreground">
-            <span
-              aria-hidden
+            <ColorSwatchPreview
+              color={CHART_COLORS.revenue}
               className="inline-block h-0.5 w-3"
-              style={{ backgroundColor: CHART_COLORS.revenue }}
             />
             売上
           </dt>
@@ -364,9 +363,9 @@ export function ReservationChart({
           */}
           <div
             ref={chartContainerRef}
+            className="min-h-[240px]"
             role="img"
             aria-label={chartDescription}
-            style={{ minHeight: CHART_MIN_HEIGHT }}
           >
             {width > 0 ? (
               <ComposedChart
@@ -458,18 +457,16 @@ export function ReservationChart({
           </div>
           <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden
+              <ColorSwatchPreview
+                color={CHART_COLORS.reservations}
                 className="inline-block size-2.5 rounded-sm"
-                style={{ backgroundColor: CHART_COLORS.reservations }}
               />
               予約数（左軸 / 件）
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden
+              <ColorSwatchPreview
+                color={CHART_COLORS.revenue}
                 className="inline-block h-0.5 w-4"
-                style={{ backgroundColor: CHART_COLORS.revenue }}
               />
               売上（右軸 / 円）
             </span>

@@ -19,10 +19,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import {
@@ -113,7 +113,7 @@ export function SpaceListSimpleView({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          <div className="mt-4" style={getTitleStyle(style)}>
+          <SectionTitleBox style={style} className="mt-4">
             <Heading
               level={2}
               className={cn("tracking-tight", getTitleClasses(style))}
@@ -122,7 +122,7 @@ export function SpaceListSimpleView({
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         </div>
       )}
 
@@ -164,12 +164,12 @@ export function SpaceListSimpleView({
                 {space.name}
               </h3>
               {space.descriptionPlainText && (
-                <p
+                <SectionTextBox
+                  style={style}
                   className="mt-1 line-clamp-2 text-sm text-muted-foreground"
-                  style={getTextStyle(style)}
                 >
                   {space.descriptionPlainText}
-                </p>
+                </SectionTextBox>
               )}
               {(space.capacity != null || space.hourlyPrice != null) && (
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">

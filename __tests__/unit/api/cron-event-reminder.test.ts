@@ -83,12 +83,20 @@ mock.module("@/shared/domain/events/registration-queries", () => ({
   ) => mockFindEventRegistrationsForReminderWindow(...args),
 }));
 
+const noopEventEmailAsync = mock(async () => ({ ok: true }));
+
 mock.module("@/shared/lib/email/event-emails", () => ({
+  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
+  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
+  sendEventRegistrationConfirmation: noopEventEmailAsync,
   sendEventReminderEmail: (
     ...args: Parameters<typeof mockSendEventReminderEmail>
   ) => mockSendEventReminderEmail(...args),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
+  sendEventRegistrationCancelled: noopEventEmailAsync,
+  sendEventAdminNotification: noopEventEmailAsync,
+  sendEventCancelledToAllParticipants: noopEventEmailAsync,
+  sendEventUpdatedToAllParticipants: noopEventEmailAsync,
+  sendEventBroadcast: noopEventEmailAsync,
 }));
 
 mock.module("@/shared/domain/events/registration-commands", () => ({

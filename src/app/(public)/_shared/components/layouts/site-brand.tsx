@@ -42,7 +42,7 @@ const LOGO_HEIGHT_CLASS = "h-11 md:h-12";
 
 /**
  * Next.js Image の `width` は aspect ratio 推論にのみ使われ、
- * 実レンダーサイズは CSS で制御（`style={{ width: "auto" }}`）。
+ * 実レンダーサイズは CSS `w-auto` で制御。
  * 240:64 は横長ロゴの一般的なアスペクト比（3.75:1）を仮定。
  * 実ロゴの縦横比は `object-contain` で吸収され、高さ制約が視覚的に効く。
  */

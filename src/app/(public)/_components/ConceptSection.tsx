@@ -16,10 +16,10 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -64,7 +64,7 @@ export function ConceptSection({
       )}
 
       {hasHeading && (
-        <div className="mt-6" style={getTitleStyle(style)}>
+        <SectionTitleBox style={style} className="mt-6">
           <Heading
             level={2}
             className={cn(
@@ -76,20 +76,20 @@ export function ConceptSection({
               <PortableTextSpans spans={heading} />
             </SplitText>
           </Heading>
-        </div>
+        </SectionTitleBox>
       )}
 
       {hasBody && (
         <ScrollReveal delay={0.2}>
-          <div
+          <SectionTextBox
+            style={style}
             className={cn(
               "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-4",
               isStacked && "mx-auto max-w-2xl",
             )}
-            style={getTextStyle(style)}
           >
             <PortableText blocks={body} />
-          </div>
+          </SectionTextBox>
         </ScrollReveal>
       )}
     </div>

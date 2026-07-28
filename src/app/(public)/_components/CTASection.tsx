@@ -16,9 +16,12 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import {
   getTitleClasses,
-  getTitleStyle,
-  getTextStyle,
+  buildSectionBgCssVars,
 } from "@/public/components/sections/section-style-helpers";
 import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -92,9 +95,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
   const variant = config.variant;
-  const bgStyleProp = config.backgroundColor
-    ? { backgroundColor: config.backgroundColor }
-    : undefined;
+  const bgCssVars = buildSectionBgCssVars(config.backgroundColor);
 
   const hasTitle = config.title.length > 0;
   const hasDescription = config.description.length > 0;
@@ -105,7 +106,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
       <SectionWrapper
         style={style}
         layout={config.layout}
-        {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
+        {...(bgCssVars !== undefined && { cssVars: bgCssVars })}
       >
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
           <div className="flex-1">
@@ -115,7 +116,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
               </ScrollReveal>
             )}
             {hasTitle && (
-              <div style={getTitleStyle(style)}>
+              <SectionTitleBox style={style}>
                 <Heading
                   level={2}
                   className={cn("mt-6 tracking-tight", getTitleClasses(style))}
@@ -124,16 +125,16 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
                     <PortableTextSpans spans={config.title} />
                   </SplitText>
                 </Heading>
-              </div>
+              </SectionTitleBox>
             )}
             {hasDescription && (
               <ScrollReveal delay={0.2}>
-                <div
+                <SectionTextBox
+                  style={style}
                   className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
-                  style={getTextStyle(style)}
                 >
                   <PortableText blocks={config.description} />
-                </div>
+                </SectionTextBox>
               </ScrollReveal>
             )}
           </div>
@@ -154,7 +155,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
     <SectionWrapper
       style={style}
       layout={config.layout}
-      {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
+      {...(bgCssVars !== undefined && { cssVars: bgCssVars })}
     >
       <div className="text-center">
         {config.sectionLabel && (hasTitle || hasDescription) && (
@@ -164,7 +165,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
         )}
 
         {hasTitle && (
-          <div style={getTitleStyle(style)}>
+          <SectionTitleBox style={style}>
             <Heading
               level={2}
               className={cn("mt-6 tracking-tight", getTitleClasses(style))}
@@ -173,17 +174,17 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
                 <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
-          </div>
+          </SectionTitleBox>
         )}
 
         {hasDescription && (
           <ScrollReveal delay={0.2}>
-            <div
+            <SectionTextBox
+              style={style}
               className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
-              style={getTextStyle(style)}
             >
               <PortableText blocks={config.description} />
-            </div>
+            </SectionTextBox>
           </ScrollReveal>
         )}
 

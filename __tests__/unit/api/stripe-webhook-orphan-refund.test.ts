@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 import {
   expectErrorResult,
   expectReceivedResult,
@@ -251,13 +252,13 @@ mock.module("@/shared/lib/route-responses", () => ({
     mockJsonError(error.issues[0]?.message ?? "validation", 400),
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationConfirmationEmail: () => Promise.resolve({ ok: true }),
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
   sendEventRegistrationConfirmation: () => Promise.resolve({ ok: true }),
-}));
+});
 
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: () =>

@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import type { AdminProxyRegistrationInput } from "@/admin/actions/event-registration";
-import { useRadioGroupKeyboard } from "@/public/lib/a11y/use-radio-group-keyboard";
+import { useRadioGroupKeyboard } from "@/shared/lib/a11y/use-radio-group-keyboard";
+import { formatJstMonthDay, formatTimeShort } from "@/shared/lib/date-format";
 
 type Ticket = {
   id: string;
@@ -58,22 +59,8 @@ type Props = {
 function formatSlotLabel(startAt: string, endAt: string): string {
   const start = new Date(startAt);
   const end = new Date(endAt);
-  const dateLabel = start.toLocaleDateString("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    month: "numeric",
-    day: "numeric",
-  });
-  const startTime = start.toLocaleTimeString("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const endTime = end.toLocaleTimeString("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `${dateLabel} ${startTime}〜${endTime}`;
+  const dateLabel = formatJstMonthDay(start);
+  return `${dateLabel} ${formatTimeShort(start)}〜${formatTimeShort(end)}`;
 }
 
 /**

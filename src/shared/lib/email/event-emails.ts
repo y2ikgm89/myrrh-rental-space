@@ -263,6 +263,8 @@ type EventReminderEmailData = {
   customerId: string | null;
   format: EventFormatValue;
   meetingUrl: string | null;
+  /** cron リマインダ対象日（JST YYYY-MM-DD）。Resend idempotencyKey 用。 */
+  reminderWindowDate: string;
 };
 
 /**
@@ -364,11 +366,7 @@ export async function sendEventReminderEmail(
         ),
         attachments,
       }),
-      // NOTE: registrationId 単体では claimUrl / cancelUrl の再暗号化で payload が
-      // 毎回差分化するため、cron 再走時に Resend が 409 invalid_idempotent_request
-      // で silent drop してしまう。Date.now() を混ぜて invocation ごとに fresh
-      // key を発行する。冪等性の権威は reminderSentAt claim gate 側にある。
-      idempotencyKey: `event-reminder/${data.registrationId}/${Date.now()}`,
+      idempotencyKey: `event-reminder/${data.registrationId}/${data.reminderWindowDate}`,
       operation: "sendEventReminderEmail",
       context: {
         registrationId: data.registrationId,

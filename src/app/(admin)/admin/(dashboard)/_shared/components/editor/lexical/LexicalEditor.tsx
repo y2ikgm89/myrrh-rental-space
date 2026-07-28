@@ -11,7 +11,8 @@
 
 import "./nodes/register-decorator-components.client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -159,16 +160,34 @@ function EditorInner({
   // ariaLabelledBy 未指定時は従来通り ariaLabel、それも未指定なら既定で「本文」。
   const resolvedAriaLabel = ariaLabelledBy ? undefined : (ariaLabel ?? "本文");
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentWidthElRef = useRef<HTMLDivElement>(null);
+  useImperativeStyle(
+    containerRef,
+    isFullscreen ? { zIndex: Z_INDEX.editorFullscreen } : { height },
+  );
+  useImperativeStyle(
+    contentWidthElRef,
+    contentWidth != null
+      ? { maxWidth: contentWidth + EDITOR_PADDING_HORIZONTAL }
+      : {},
+  );
+
+  const setContentWidthRefWithImperative = (node: HTMLDivElement | null) => {
+    setContentWidthRef(node);
+    contentWidthElRef.current = node;
+  };
+
   return (
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
+        ref={containerRef}
         className={cn(
           "flex flex-col w-full flex-1 min-w-0 min-h-0 bg-card overflow-hidden",
           // 埋め込み（タブ/ダイアログ）はカード見た目、フル画面インライン編集は edge-to-edge
           !flush && "border border-border rounded-lg",
           isFullscreen && "fixed inset-0 rounded-none border-0",
         )}
-        style={isFullscreen ? { zIndex: Z_INDEX.editorFullscreen } : { height }}
       >
         {/* ツールバー（全幅: エディタ + インスペクターにまたがる） */}
         {showToolbar && (
@@ -197,15 +216,8 @@ function EditorInner({
               className="relative flex-1 min-h-0 overflow-y-auto"
             >
               <div
-                ref={setContentWidthRef}
+                ref={setContentWidthRefWithImperative}
                 className={cn("relative", contentWidth != null && "mx-auto")}
-                style={
-                  contentWidth != null
-                    ? {
-                        maxWidth: contentWidth + EDITOR_PADDING_HORIZONTAL,
-                      }
-                    : undefined
-                }
               >
                 <RichTextPlugin
                   contentEditable={

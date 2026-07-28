@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  useImperativeStyle,
+  useImperativeTransform,
+} from "@/shared/lib/csp/use-imperative-style";
 import {
   Badge,
   Switch,
@@ -13,7 +17,10 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { spansToPlainText } from "@/shared/lib/portable-text";
@@ -94,38 +101,45 @@ export function SortableNavRow({
     isDragging,
   } = useSortable({ id: item.id, disabled: isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
-    transition,
-  };
-
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const itemLabel = spansToPlainText(item.label) || "メニュー";
-
   const displayDepth =
     isDragTarget && isDragging ? getProjectedDepth(dragOffsetX, depth) : depth;
   const isChild = displayDepth === 1;
+
+  const rowRef = useRef<HTMLDivElement>(null);
+  const combinedRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    rowRef.current = node;
+  };
+  useImperativeTransform(
+    rowRef,
+    transform ? toTranslate3d(transform) : undefined,
+  );
+  useImperativeStyle(rowRef, {
+    transition: transition ?? undefined,
+    paddingLeft: isChild ? 32 : undefined,
+  });
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const itemLabel = spansToPlainText(item.label) || "メニュー";
 
   return (
     <>
       {/* Drop indicator line */}
       {isDropTarget && !isDragging && (
         <div
-          className="h-0.5 rounded-full bg-primary"
-          style={{ marginLeft: displayDepth === 1 ? 32 : 0 }}
+          className={cn(
+            "h-0.5 rounded-full bg-primary",
+            displayDepth === 1 && "ms-8",
+          )}
         />
       )}
       <div
-        ref={setNodeRef}
-        style={{
-          ...style,
-          paddingLeft: isChild ? 32 : undefined,
-        }}
+        ref={combinedRef}
         className={cn(
           "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
           isDragging && "opacity-30",
           !item.isActive && "opacity-50",
-          isChild && "border-l-2 border-l-primary/30",
+          isChild && "border-l-2 border-l-primary/30 ps-8",
         )}
       >
         <div
@@ -235,10 +249,11 @@ export function SortableSocialRow({
     isDragging,
   } = useSortable({ id: link.id, disabled: isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const PlatformIcon = platformIcons[link.platform] ?? IconExternalLink;
@@ -246,8 +261,7 @@ export function SortableSocialRow({
   return (
     <>
       <div
-        ref={setNodeRef}
-        style={style}
+        ref={combinedRef}
         className={cn(
           "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
           isDragging && "opacity-30",

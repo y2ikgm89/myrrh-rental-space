@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 const mockExecuteAdminMutationResult = mock();
 const mockSendEventBroadcast = mock();
@@ -25,10 +26,10 @@ mock.module("@/admin/lib/admin-action", () => ({
   ) => mockExecuteAdminMutationResult(...args),
 }));
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendEventBroadcast: (...args: Parameters<typeof mockSendEventBroadcast>) =>
     mockSendEventBroadcast(...args),
-}));
+});
 
 mock.module("@/shared/domain/events/email-queries", () => ({
   getEventBroadcastPayload: (

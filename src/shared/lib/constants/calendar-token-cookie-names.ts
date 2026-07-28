@@ -1,7 +1,7 @@
 /**
  * カレンダー (.ics) ダウンロード用トークン cookie 名
  *
- * `proxy.ts`（Edge runtime）がメールリンクの `?token=...` を HttpOnly cookie に転写し、
+ * `proxy.ts`（Node.js runtime proxy）がメールリンクの `?token=...` を HttpOnly cookie に転写し、
  * `/api/calendar/reservation/*` / `/api/calendar/event/*` の Route Handler（Node runtime）
  * がその cookie を読む。`proxy.ts` は Edge 専用型に依存するため、Node 側から直接
  * import すると型が引き込まれる。この定数ファイルはランタイム依存を持たない単一の

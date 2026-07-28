@@ -11,8 +11,8 @@ import { describe, expect, test } from "bun:test";
 // + 310 s drain = planned downtime). If a destructive pattern is missed here,
 // the migration ships live and users hit locks in production.
 //
-// The 4 destructive families this suite pins:
-//   1. DROP     — DROP COLUMN / DROP TABLE / DROP TYPE
+// The 5 destructive families this suite pins:
+//   1. DROP     — DROP COLUMN / DROP TABLE / DROP TYPE / DROP CONSTRAINT
 //   2. RENAME   — RENAME COLUMN / RENAME TO
 //   3. TYPE     — ALTER COLUMN ... TYPE (full table rewrite + AccessExclusiveLock)
 //   4. NOT NULL — ALTER COLUMN ... SET NOT NULL (full table scan under lock)
@@ -84,6 +84,10 @@ const breakingFixtures: ReadonlyArray<{
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" SET NOT NULL;',
   },
   {
+    name: "DROP CONSTRAINT",
+    sql: 'ALTER TABLE "users" DROP CONSTRAINT "users_foo_key";',
+  },
+  {
     name: "DROP TABLE",
     sql: 'DROP TABLE "users";',
   },
@@ -140,15 +144,17 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     expect(breakingPattern.length).toBeGreaterThan(0);
   });
 
-  test("workflow pattern covers the 4 destructive families in one grep", () => {
+  test("workflow pattern covers the 5 destructive families in one grep", () => {
     // These substrings encode each destructive family. Losing any one of them
     // would silently ship the corresponding change without downtime mode.
     expect(breakingPattern).toContain("DROP[[:space:]]+COLUMN");
+    expect(breakingPattern).toContain("DROP[[:space:]]+CONSTRAINT");
     expect(breakingPattern).toContain("RENAME[[:space:]]+COLUMN");
     expect(breakingPattern).toContain("RENAME[[:space:]]+TO");
     expect(breakingPattern).toContain(
       "ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE)",
     );
+    expect(breakingPattern).toContain("DROP[[:space:]]+CONSTRAINT");
     expect(breakingPattern).toContain("DROP[[:space:]]+TABLE");
     expect(breakingPattern).toContain("DROP[[:space:]]+TYPE");
   });

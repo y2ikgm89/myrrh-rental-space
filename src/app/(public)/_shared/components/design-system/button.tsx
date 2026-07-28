@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import type { CSSProperties, ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import {
+  useImperativeCssVars,
+  type ImperativeStyleValues,
+} from "@/shared/lib/csp/use-imperative-style";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
@@ -22,7 +27,6 @@ const variantClasses = {
     "border border-foreground text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
 } as const satisfies Record<ButtonVariant, string>;
 
-// WCAG 2.5.5 Enhanced (AAA) — all sizes meet 44×44 CSS px minimum
 const sizeClasses = {
   sm: "px-3 py-2 text-sm min-h-11",
   md: "px-5 py-2.5 text-base min-h-11",
@@ -39,17 +43,10 @@ interface ButtonBaseProps {
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
   readonly className?: string;
-  /** カスタム背景色（HEX）。variant 既定色を上書きする。 */
   readonly customBackgroundColor?: string;
-  /** カスタム文字色（HEX）。variant 既定色を上書きする。 */
   readonly customTextColor?: string;
 }
 
-/**
- * `label` は Sanity Portable Text 公式準拠の Span 配列。
- * span はテキストとして、iconInline は curation icon として
- * 順次描画する。`children` と排他（discriminated union）。
- */
 interface LabelProps extends ButtonBaseProps {
   readonly label: PortableTextSpan[];
   readonly children?: never;
@@ -81,6 +78,18 @@ function resolveIconSize(size: ButtonSize, variant: ButtonVariant): ButtonSize {
   return variant === "link" ? "md" : size;
 }
 
+function buildCustomColorVars(
+  customBackgroundColor?: string,
+  customTextColor?: string,
+): ImperativeStyleValues {
+  return {
+    ...(customBackgroundColor
+      ? { [CSS_VAR.customBg]: customBackgroundColor }
+      : {}),
+    ...(customTextColor ? { [CSS_VAR.customText]: customTextColor } : {}),
+  };
+}
+
 export function Button(props: ButtonProps) {
   const {
     variant = "primary",
@@ -89,6 +98,13 @@ export function Button(props: ButtonProps) {
     customBackgroundColor,
     customTextColor,
   } = props;
+  const ref = useRef<HTMLButtonElement & HTMLAnchorElement>(null);
+  const colorVars = buildCustomColorVars(
+    customBackgroundColor,
+    customTextColor,
+  );
+  useImperativeCssVars(ref, colorVars);
+
   const classes = cn(
     "inline-flex items-center justify-center gap-2 transition-colors duration-200",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
@@ -97,16 +113,13 @@ export function Button(props: ButtonProps) {
     className,
   );
 
-  const inlineStyle: CSSProperties = {
-    ...(customBackgroundColor && { backgroundColor: customBackgroundColor }),
-    ...(customTextColor && { color: customTextColor }),
-  };
-  const hasInlineStyle =
+  const hasCustomColors =
     Boolean(customBackgroundColor) || Boolean(customTextColor);
+  const customColorClasses = cn(
+    customBackgroundColor && CSS_VAR_CLASS.customBg,
+    customTextColor && CSS_VAR_CLASS.customText,
+  );
 
-  // PortableTextSpan[] の空配列 `[]` も truthy のため `props.label.length > 0`
-  // で gate しないと <PortableTextSpans spans={[]}> が何も render せず button
-  // text が empty になり Lighthouse link-name / WCAG 4.1.2 violation に至る。
   const content =
     "label" in props && props.label !== undefined && props.label.length > 0 ? (
       <PortableTextSpans
@@ -120,9 +133,9 @@ export function Button(props: ButtonProps) {
   if ("href" in props && typeof props.href === "string") {
     return (
       <Link
+        ref={ref}
         href={props.href}
-        className={classes}
-        {...(hasInlineStyle && { style: inlineStyle })}
+        className={cn(classes, hasCustomColors && customColorClasses)}
         {...("target" in props && props.target && { target: props.target })}
         {...(props.onClick && { onClick: props.onClick })}
       >
@@ -133,14 +146,15 @@ export function Button(props: ButtonProps) {
 
   return (
     <button
+      ref={ref}
       type={"type" in props ? (props.type ?? "button") : "button"}
       disabled={"disabled" in props ? props.disabled : undefined}
       onClick={props.onClick}
       className={cn(
         classes,
         "disabled:opacity-50 disabled:pointer-events-none",
+        hasCustomColors && customColorClasses,
       )}
-      {...(hasInlineStyle && { style: inlineStyle })}
     >
       {content}
     </button>

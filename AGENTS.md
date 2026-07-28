@@ -52,6 +52,8 @@ For human onboarding — setup, common commands, repo layout — see
   promptly after each related merge. `customer-auth.ts` is an intentional permanent
   Better Auth `beforeDelete` adapter — do not force the allowlist to zero or add DI
   shims to clear it. Detail: `.claude/rules/architecture-allowlist.md`.
+- Do not commit, push, or open PRs unless the user explicitly asks (overrides
+  CLAUDE.md auto-ship policy).
 
 ## Learned Workspace Facts
 
@@ -77,37 +79,43 @@ For human onboarding — setup, common commands, repo layout — see
   into mypage remains optional for list management. Status hub VIEW and passcode
   reveal enforce member-ownership when a logged-in customer session coexists with
   a status-token cookie (same policy as guest edit/cancel).
-- Guest payment/checkout tokens (event registration and waitlist) transfer via
-  HttpOnly cookie through the proxy — not as URL path segments (avoids
-  log/Referer/history leaks).
+- Guest payment & token transport: checkout/status/cancel/claim tokens use
+  HttpOnly cookie transfer via `proxy.ts` (not URL path segments). Intentional
+  URL/form token exceptions: receipt download confirm and waitlist free confirm.
+  Guest reservation online payment has no dedicated guest Checkout route — pay via
+  admin manual payment or claim into mypage (`success_url` →
+  `/mypage/reservations/:id`); payment feature OFF still allows create + manual pay.
 - Event `meetingUrl` must not be selected into public `'use cache'` payloads;
   keep it on authenticated/token/mypage/status query paths only.
+- Advisory lock coordination: event capacity writes serialize on namespace 728350
+  (`lockEventRegistrationForTransaction`) — registration/cancel/waitlist/onsite and
+  admin capacity/slot/ticket sync must all take 728350 before capacity-changing work.
+  BlockedDate writes use `acquireBlockedDateWriteLocks` to serialize with reservation
+  create (728351); GLOBAL/LOCATION scopes lock affected spaces in id ascending order.
 - Seed-imported domain helpers must stay seed-safe (no `import "server-only"`);
   Next-only wrappers belong in thin `*-server.ts` modules. `src/shared/lib` must
   not import Prisma (domain/db only); domain enums go through
   `@/shared/lib/validations/enums/prisma-types`.
+- Customer-initiated cancellation is blocked while `paymentStatus === PENDING`
+  (Stripe Checkout in flight); UI gates via `canCustomerInitiateCancellation` /
+  `buildGuestCancelHref`.
 - Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
   distributed rate-limit backends are intentionally out of scope.
-- Site Settings are split into domain singleton tables (`SettingsNotification`,
-  `SettingsStripe`, `SettingsCommerce`, `SettingsFeatures`, …), not one monolith.
-- Inquiries: `InquiryReply` authorship is dual-sided (STAFF → `authorId` / CUSTOMER
-  → `authorCustomerId`, DB CHECK forbids cross-side FK pollution); customer replies
-  are members-only on NEW/IN_PROGRESS/RESOLVED/FLAGGED (RESOLVED/FLAGGED reopen to
-  IN_PROGRESS) and blocked on CLOSED/SPAM; attachments use private R2 +
-  authenticated streaming (not the public Media CDN).
-- CI service Postgres uses `public.ecr.aws/docker/library/postgres:16` (not Docker
-  Hub `postgres:16`) to avoid hosted-runner Hub timeouts; do not revert the image
-  reference to match GitHub tutorial examples.
-- Guest reservation online payment: no dedicated guest Checkout route. Guests pay via
-  admin manual payment, or claim into mypage then use member Checkout (`success_url`
-  lands on `/mypage/reservations/:id`). Payment feature OFF still allows reservation
-  create + manual admin payment.
-- Intentional URL token exceptions (not proxy cookie transfer): receipt download
-  confirm (`/receipts/:serial/download?token=`) and waitlist free confirm
-  (`/events/waitlist/confirm`) carry tokens in URL/form by design; event registration
-  checkout, waitlist paid checkout, reservation status/cancel, and claim routes use
-  HttpOnly cookie transfer via `proxy.ts`.
+- `(admin)` must not import `@/public` and `(public)` must not import `@/admin`
+  (enforced by `cross-surface-import-gate.test.ts`).
 - Unit tests that pull reservation/email side effects must use the shared domain
   email mock helpers (`installEmailLibDispatchMock` /
   `installEmailRenderContextMock`); do not partially mock `@/shared/lib/email/*`
-  (missing named exports and `cacheLife()` leaks outside Next).
+  (missing named exports and `cacheLife()` leaks outside Next). Resend
+  `idempotencyKey` must be deterministic per send intent (e.g. `reminderWindowDate`
+  JST YYYY-MM-DD), never `Date.now()`.
+- CSP (`src/proxy.ts`): split `style-src` (nonce-only for `<style>`) from
+  `style-src-attr 'unsafe-inline'` (CSP3 cannot nonce HTML `style=` attributes).
+  Removing `'unsafe-inline'` from `style-src` alone also blocks CSS-var `style=`.
+  Dynamic UI styling uses `src/shared/lib/csp/css-vars.ts` (`cssVarStyle` + Tailwind
+  `var(--*)` classes) or `use-imperative-style.ts` for client transforms; direct
+  `backgroundColor`/`color`/etc. in React `style=` are forbidden.
+- Local `chromium-smoke` E2E: set `TEST_DATABASE_URL` to test DB port 5433, pre-build
+  with `bun run build:skip-env:prepared`, run with `CI=true` to skip webServer rebuild;
+  Playwright webServer chains migrate → seed → start — seed must stay idempotent
+  (e.g. STAFF inquiry replies need `authorId`, category `sortOrder` on re-seed).

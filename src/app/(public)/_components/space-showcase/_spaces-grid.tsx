@@ -13,10 +13,8 @@ import {
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { cn } from "@/shared/lib/cn";
 import { SpaceCard } from "../space-list/space-card";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";
@@ -55,14 +53,14 @@ export function SpacesGrid({
               {config.sectionLabel ? (
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               ) : null}
-              <div className="mt-4" style={getTitleStyle(style)}>
+              <SectionTitleBox style={style} className="mt-4">
                 <Heading
                   level={2}
                   className={cn(getTitleClasses(style), "tracking-tight")}
                 >
                   <PortableTextSpans spans={config.title} />
                 </Heading>
-              </div>
+              </SectionTitleBox>
             </ScrollReveal>
           </div>
           <div className="mb-3 hidden flex-1 md:block">

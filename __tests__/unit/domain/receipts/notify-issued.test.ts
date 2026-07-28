@@ -6,6 +6,7 @@
  * - binding 不一致・宛先なしは送信しない
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 const mockReceiptFindUnique = mock<(...args: unknown[]) => Promise<unknown>>(
   () => Promise.resolve(null),
@@ -34,9 +35,9 @@ const mockSendReceiptIssuedEmail = mock((_input: SendIssuedInput) =>
   Promise.resolve({ ok: true as const, messageId: "msg_test" }),
 );
 
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReceiptIssuedEmail: mockSendReceiptIssuedEmail,
-}));
+});
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {

@@ -8,6 +8,7 @@
 "use client";
 
 import { Label } from "@/admin/components/ui";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 import {
   ACCENT_COLORS,
   ACCENT_COLOR_LABELS,
@@ -44,10 +45,14 @@ export function ColorSwatchPicker({
                   ? "ring-2 ring-ring ring-offset-1"
                   : "hover:ring-1 hover:ring-border",
               ].join(" ")}
-              style={{ backgroundColor: ACCENT_COLOR_SWATCHES[color] }}
               aria-label={ACCENT_COLOR_LABELS[color]}
               aria-pressed={isSelected}
-            />
+            >
+              <ColorSwatchPreview
+                color={ACCENT_COLOR_SWATCHES[color]}
+                className="h-full w-full"
+              />
+            </button>
           );
         })}
       </div>

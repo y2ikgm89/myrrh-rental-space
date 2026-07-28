@@ -100,10 +100,7 @@ export function ArticleLayout({
   const heroBlock = hero ? <div className="mb-12">{hero}</div> : null;
 
   const body = (
-    <div
-      className={cn("min-w-0", widthStyles?.className)}
-      {...(widthStyles?.style && { style: widthStyles.style })}
-    >
+    <div className={cn("min-w-0", widthStyles?.className)}>
       {heroPosition === "in-grid" ? heroBlock : null}
       {mobileToc ? <div className="lg:hidden">{mobileToc}</div> : null}
       {children}

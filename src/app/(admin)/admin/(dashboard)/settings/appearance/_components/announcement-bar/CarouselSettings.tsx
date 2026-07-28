@@ -22,6 +22,7 @@ import {
   isValidAnnouncementBarDesignStyle,
 } from "@/shared/lib/validations/enums/guards";
 import { DesignPreview } from "./DesignPreview";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 import {
   ANIMATION_OPTIONS,
   DESIGN_STYLE_OPTIONS,
@@ -116,9 +117,9 @@ export function CarouselSettingsPanel({
                   disabled={isPending}
                 />
                 {settings.announcementBarBgColor && (
-                  <div
-                    className="h-10 w-10 shrink-0 rounded border"
-                    style={{ backgroundColor: settings.announcementBarBgColor }}
+                  <ColorSwatchPreview
+                    color={settings.announcementBarBgColor}
+                    className="h-10 w-10 shrink-0"
                   />
                 )}
               </div>
@@ -143,11 +144,9 @@ export function CarouselSettingsPanel({
                   disabled={isPending}
                 />
                 {settings.announcementBarTextColor && (
-                  <div
-                    className="h-10 w-10 shrink-0 rounded border"
-                    style={{
-                      backgroundColor: settings.announcementBarTextColor,
-                    }}
+                  <ColorSwatchPreview
+                    color={settings.announcementBarTextColor}
+                    className="h-10 w-10 shrink-0"
                   />
                 )}
               </div>
@@ -176,11 +175,9 @@ export function CarouselSettingsPanel({
                     disabled={isPending}
                   />
                   {settings.announcementBarStripeColor && (
-                    <div
-                      className="h-10 w-10 shrink-0 rounded border"
-                      style={{
-                        backgroundColor: settings.announcementBarStripeColor,
-                      }}
+                    <ColorSwatchPreview
+                      color={settings.announcementBarStripeColor}
+                      className="h-10 w-10 shrink-0"
                     />
                   )}
                 </div>

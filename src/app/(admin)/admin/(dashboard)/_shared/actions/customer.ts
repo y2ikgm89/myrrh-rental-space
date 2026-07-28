@@ -15,6 +15,8 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkPermission } from "@/admin/lib/action-auth";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
+import { expensiveAdminRateLimiter } from "@/shared/lib/rate-limit";
 // CACHE-INVALIDATE-04: mergeCustomers は公開側の EVENTS collection (CDN `event-v1`)
 // にも波及するため helper 経由で CDN purge も併発する。CUSTOMERS/RESERVATIONS/
 // INQUIRIES/REVIEWS は admin-only (private,no-store) なので raw updateTag のまま。
@@ -723,6 +725,9 @@ export async function searchCustomersAction(
   // ロール（customer:read を持たない EDITOR 含む）を通すため RBAC バイパスになる。
   const auth = await checkPermission("customer", "read");
   if (!auth.success) return [];
+
+  const rateLimit = await checkActionRateLimit(expensiveAdminRateLimiter);
+  if (!rateLimit.success) return [];
 
   const results = await searchCustomers(query);
 

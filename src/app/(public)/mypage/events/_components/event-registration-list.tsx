@@ -30,7 +30,7 @@ import {
 import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
 import {
   TurnstileWidget,
   type TurnstileInstance,

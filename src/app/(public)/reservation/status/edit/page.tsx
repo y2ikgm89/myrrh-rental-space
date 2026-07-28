@@ -26,8 +26,8 @@ import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { Stack } from "@/public/components/design-system/stack";
-import { EditReservationForm } from "@/app/(public)/_shared/components/edit-reservation-form";
-import { GuestStatusMemberOwnershipMismatchView } from "@/app/(public)/_shared/components/guest-status-member-ownership-mismatch-view";
+import { EditReservationForm } from "@/public/components/edit-reservation-form";
+import { GuestStatusMemberOwnershipMismatchView } from "@/public/components/guest-status-member-ownership-mismatch-view";
 import { updateGuestReservationAction } from "./_actions/update";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
@@ -35,6 +35,7 @@ import {
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
 import Link from "next/link";
+import { formatJstDateString, formatTimeShort } from "@/shared/lib/date-format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export default async function GuestReservationEditPage(): Promise<ReactElement> {
@@ -109,23 +110,9 @@ export default async function GuestReservationEditPage(): Promise<ReactElement> 
     getTurnstileSiteKey(),
   ]);
 
-  const TZ = "Asia/Tokyo";
-  const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-
-  const dateStr = dateFormatter.format(reservation.startTime);
-  const startTimeStr = timeFormatter.format(reservation.startTime);
-  const endTimeStr = timeFormatter.format(reservation.endTime);
+  const dateStr = formatJstDateString(reservation.startTime);
+  const startTimeStr = formatTimeShort(reservation.startTime);
+  const endTimeStr = formatTimeShort(reservation.endTime);
 
   return (
     <PageLayout variant="form">

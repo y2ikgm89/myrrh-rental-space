@@ -311,6 +311,8 @@ export type ReminderEmailData = {
   icsSequence: number;
   /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
   userId?: string | null;
+  /** cron リマインダ対象日（JST YYYY-MM-DD）。Resend idempotencyKey 用。 */
+  reminderWindowDate: string;
 };
 
 export type DeleteAccountVerificationEmailData = {

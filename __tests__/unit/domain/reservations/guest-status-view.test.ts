@@ -118,6 +118,7 @@ describe("buildGuestCancelHref", () => {
     const href = buildGuestCancelHref({
       reservationId,
       status: ReservationStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.UNPAID,
       startTime,
       cancellationDeadlineHours: 24,
       now,
@@ -125,11 +126,25 @@ describe("buildGuestCancelHref", () => {
     expect(href).toMatch(/^\/reservation\/cancel\?token=[A-Za-z0-9_-]+$/);
   });
 
+  test("PENDING 決済中は null", () => {
+    expect(
+      buildGuestCancelHref({
+        reservationId,
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PENDING,
+        startTime,
+        cancellationDeadlineHours: 24,
+        now,
+      }),
+    ).toBeNull();
+  });
+
   test("CANCELLED なら null", () => {
     expect(
       buildGuestCancelHref({
         reservationId,
         status: ReservationStatus.CANCELLED,
+        paymentStatus: PaymentStatus.UNPAID,
         startTime,
         cancellationDeadlineHours: 24,
         now,
@@ -142,6 +157,7 @@ describe("buildGuestCancelHref", () => {
       buildGuestCancelHref({
         reservationId,
         status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.UNPAID,
         startTime: new Date("2026-04-01T12:00:00Z"),
         cancellationDeadlineHours: 24,
         now,

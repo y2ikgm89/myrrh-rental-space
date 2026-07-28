@@ -18,10 +18,10 @@ import { Heading } from "@/public/components/design-system/heading";
 import { cn } from "@/shared/lib/cn";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  getTextStyle,
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+  SectionTextBox,
+  SectionTitleBox,
+} from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -84,14 +84,14 @@ export function FeaturesNumberedEditorial({
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             ) : null}
-            <div style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </ScrollReveal>
         </div>
       )}
@@ -114,12 +114,12 @@ export function FeaturesNumberedEditorial({
                 <PortableTextSpans spans={feature.title} />
               </h3>
               {feature.description.length > 0 ? (
-                <div
+                <SectionTextBox
+                  style={style}
                   className="mt-3 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
-                  style={getTextStyle(style)}
                 >
                   <PortableText blocks={feature.description} />
-                </div>
+                </SectionTextBox>
               ) : null}
             </div>
           </div>

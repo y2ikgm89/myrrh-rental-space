@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import {
   PaymentStatus,
   type ReservationStatus,
@@ -220,7 +221,7 @@ export async function createAdminReservationCommand(input: {
     await incrementCustomerReservationStats(tx, resolvedCustomerId);
 
     return createdReservation;
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     id: reservation.id,
@@ -584,7 +585,7 @@ export async function updateAdminReservationCommand(
       // recompute は 1 回のみ。
       await recomputeCustomerReservationStats(tx, input.customerId);
     }
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     googleCalendarEventId: currentReservation.googleCalendarEventId,

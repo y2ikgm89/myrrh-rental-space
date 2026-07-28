@@ -33,10 +33,12 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import { DragHandle } from "@/admin/components/ui/sortable";
+import {
+  DragHandle,
+  useSortableImperativeRef,
+} from "@/admin/components/ui/sortable";
 import { stopRowClick } from "@/admin/components/table";
 import {
   updateLocationOrder,
@@ -105,15 +107,15 @@ function SortableRow({ location, sortable, isPending }: SortableRowProps) {
     isDragging,
   } = useSortable({ id: location.id, disabled: !sortable || isPending });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <TableRow
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "group",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

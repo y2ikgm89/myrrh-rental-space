@@ -278,6 +278,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     BulkReservationCancelledEmail,
     bulkReservationCancelledFixture,
   ),
+  "bulk-reservation-cancelled-admin": defineEntry(
+    "bulk-reservation-cancelled-admin",
+    BulkReservationCancelledEmail,
+    bulkReservationCancelledFixture,
+  ),
   "event-registration-confirmation": defineEntry(
     "event-registration-confirmation",
     EventRegistrationConfirmationEmail,

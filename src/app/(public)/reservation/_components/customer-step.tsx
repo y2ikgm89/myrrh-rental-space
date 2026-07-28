@@ -15,10 +15,10 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
-import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
+import { TermsConsentChecklist } from "@/public/components/forms/TermsConsentChecklist";
 import { BookingSummary } from "./booking-summary";
-import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
-import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
+import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
+import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 
 // ---------------------------------------------------------------------------
 // Types — conform fields SSoT

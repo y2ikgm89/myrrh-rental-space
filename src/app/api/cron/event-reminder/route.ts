@@ -115,6 +115,7 @@ export async function GET(request: Request) {
             customerId: registration.customerId,
             format: registration.event.format,
             meetingUrl: registration.event.meetingUrl,
+            reminderWindowDate: tomorrowJstStr,
           },
           renderContext,
           sendContext,

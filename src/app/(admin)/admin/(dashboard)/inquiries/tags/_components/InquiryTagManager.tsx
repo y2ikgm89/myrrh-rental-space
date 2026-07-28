@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
+import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { useRouter } from "next/navigation";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { cn } from "@/shared/lib/cn";
+import { badgeVariants } from "@/admin/components/ui/badge";
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -46,6 +48,35 @@ type InquiryTagManagerProps = {
 };
 
 type EditingTag = { id: string; name: string; color: string };
+
+function InquiryTagBadge({
+  name,
+  color,
+}: {
+  name: string;
+  color: string | null;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useImperativeStyle(
+    ref,
+    color
+      ? {
+          backgroundColor: color,
+          borderColor: "transparent",
+          color: "#fff",
+        }
+      : {},
+  );
+
+  return (
+    <span
+      ref={ref}
+      className={cn(badgeVariants({ variant: color ? "default" : "outline" }))}
+    >
+      {name}
+    </span>
+  );
+}
 
 export function InquiryTagManager({ tags }: InquiryTagManagerProps) {
   const router = useRouter();
@@ -171,20 +202,7 @@ export function InquiryTagManager({ tags }: InquiryTagManagerProps) {
                 {tags.map((tag) => (
                   <TableRow key={tag.id}>
                     <TableCell>
-                      <Badge
-                        variant={tag.color ? "default" : "outline"}
-                        style={
-                          tag.color
-                            ? {
-                                backgroundColor: tag.color,
-                                borderColor: "transparent",
-                                color: "#fff",
-                              }
-                            : undefined
-                        }
-                      >
-                        {tag.name}
-                      </Badge>
+                      <InquiryTagBadge name={tag.name} color={tag.color} />
                     </TableCell>
                     <TableCell>{tag.inquiryCount}件</TableCell>
                     <TableCell className="text-right">

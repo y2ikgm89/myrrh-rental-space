@@ -16,6 +16,7 @@ import {
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 // ---------------------------------------------------------------------------
@@ -143,7 +144,7 @@ export function ReservationCard({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
             {canCancel && (
               <Link
-                href={`/mypage/reservations/${id}`}
+                href={toAppRoute(`/mypage/reservations/${id}`)}
                 aria-label={`${reservationLabel} をキャンセルする`}
                 className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-destructive transition-colors hover:text-destructive/80 sm:w-auto sm:justify-start"
               >
@@ -153,7 +154,7 @@ export function ReservationCard({
 
             {canModify && (
               <Link
-                href={`/mypage/reservations/${id}/edit`}
+                href={toAppRoute(`/mypage/reservations/${id}/edit`)}
                 aria-label={`${reservationLabel} を変更する`}
                 className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:justify-start"
               >
@@ -162,7 +163,7 @@ export function ReservationCard({
             )}
 
             <Link
-              href={`/mypage/reservations/${id}`}
+              href={toAppRoute(`/mypage/reservations/${id}`)}
               aria-label={`${reservationLabel} の詳細を見る`}
               className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
             >

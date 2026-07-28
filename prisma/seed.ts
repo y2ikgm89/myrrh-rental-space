@@ -764,34 +764,32 @@ async function seedLocations(overridePublished?: boolean) {
 // =============================================================================
 
 async function seedSpaceCategories() {
+  // sortOrder は fixture に書かない: create 時に max+1 を都度採番するため
+  // 配列の宣言順がそのまま表示順になる（無条件 @unique 衝突を構造的に回避）。
   const categories = [
     {
       name: "会議室",
       description: "少人数から中規模のミーティングに最適",
       icon: "Users",
       color: "#3B82F6",
-      sortOrder: 0,
     },
     {
       name: "セミナールーム",
       description: "大人数の講義やワークショップ向け",
       icon: "Presentation",
       color: "#8B5CF6",
-      sortOrder: 1,
     },
     {
       name: "コワーキング",
       description: "自由席で気軽に作業できるスペース",
       icon: "Laptop",
       color: "#10B981",
-      sortOrder: 2,
     },
     {
       name: "イベントスペース",
       description: "パーティーや展示会などの特別なイベントに",
       icon: "PartyPopper",
       color: "#F59E0B",
-      sortOrder: 3,
     },
   ];
 
@@ -810,9 +808,14 @@ async function seedSpaceCategories() {
       where: { name: cat.name, isActive: true },
     });
     if (existing) {
+      // Re-seed 時は sortOrder を上書きしない（無条件 @unique 衝突回避）。
       await prisma.spaceCategory.update({
         where: { id: existing.id },
-        data: cat,
+        data: {
+          description: cat.description,
+          icon: cat.icon,
+          color: cat.color,
+        },
       });
     } else {
       const maxOrder = await prisma.spaceCategory.aggregate({
@@ -828,17 +831,15 @@ async function seedSpaceCategories() {
 }
 
 async function seedEventCategories() {
-  // sortOrder は 1 始まり: 0 は `20260722235352_add_event_category` migration が
-  // 恒久的に投入する「未分類」フォールバックカテゴリー（events.categoryId 必須化の
-  // backfill 先）が既に占有している。sortOrder は無条件 @unique のため、この4件を
-  // 0 始まりで定義すると update 分岐（下記）が「未分類」との P2002 衝突で
-  // 再実行時に必ず失敗する（create 分岐は max+1 を都度計算するため無害だが、
-  // update 分岐はここに書いたリテラル値をそのまま書き込む）。
+  // sortOrder は fixture に書かない: create 時に max+1 を都度採番する。
+  // sortOrder は無条件 @unique で、0 は `20260722235352_add_event_category`
+  // migration が投入する「未分類」が占有するため、fresh DB でも採番は 1 始まりに
+  // 自然解決する。配列の宣言順がそのまま表示順になる。
   const categories = [
-    { name: "ワークショップ", sortOrder: 1 },
-    { name: "マルシェ・展示", sortOrder: 2 },
-    { name: "セミナー・交流会", sortOrder: 3 },
-    { name: "その他", sortOrder: 4 },
+    { name: "ワークショップ" },
+    { name: "マルシェ・展示" },
+    { name: "セミナー・交流会" },
+    { name: "その他" },
   ];
 
   // seedSpaceCategories と同型（Round-5 audit Finding #18 の教訓）: name は
@@ -850,10 +851,8 @@ async function seedEventCategories() {
       where: { name: cat.name, isActive: true },
     });
     if (existing) {
-      await prisma.eventCategory.update({
-        where: { id: existing.id },
-        data: cat,
-      });
+      // Re-seed 時は sortOrder を上書きしない（「未分類」等との @unique 衝突回避）。
+      continue;
     } else {
       const maxOrder = await prisma.eventCategory.aggregate({
         _max: { sortOrder: true },
@@ -904,7 +903,7 @@ async function seedSpaces(overridePublished?: boolean) {
       addressDetail: "3F",
       capacity: 8,
       area: new Prisma.Decimal(25.5),
-      hourlyPrice: new Prisma.Decimal(3000),
+      hourlyPrice: 3000,
       mainImageUrl: "/images/seed/meeting-room.svg",
       gallery: [],
       facilities: [
@@ -929,7 +928,7 @@ async function seedSpaces(overridePublished?: boolean) {
       addressDetail: "4F",
       capacity: 30,
       area: new Prisma.Decimal(60.0),
-      hourlyPrice: new Prisma.Decimal(8000),
+      hourlyPrice: 8000,
       mainImageUrl: "/images/seed/seminar-room.svg",
       gallery: [],
       facilities: [
@@ -955,7 +954,7 @@ async function seedSpaces(overridePublished?: boolean) {
       addressDetail: "2F",
       capacity: 20,
       area: new Prisma.Decimal(80.0),
-      hourlyPrice: new Prisma.Decimal(500),
+      hourlyPrice: 500,
       mainImageUrl: "/images/seed/coworking.svg",
       gallery: [],
       facilities: [
@@ -1087,7 +1086,7 @@ async function seedCoupons() {
       name: "初回限定10%OFF",
       description: "初めてのご利用で10%割引。新規のお客様限定クーポンです。",
       type: "PERCENTAGE",
-      discountValue: new Prisma.Decimal(10),
+      discountValue: 10,
       validFrom: now,
       validUntil: sixMonthsLater,
       usageLimit: 100,
@@ -1099,7 +1098,7 @@ async function seedCoupons() {
       name: "夏季キャンペーン15%OFF",
       description: "期間限定の夏季キャンペーン。全スペース15%割引。",
       type: "PERCENTAGE",
-      discountValue: new Prisma.Decimal(15),
+      discountValue: 15,
       validFrom: now,
       validUntil: threeMonthsLater,
       usageLimit: 50,
@@ -1111,8 +1110,8 @@ async function seedCoupons() {
       name: "1,000円割引",
       description: "5,000円以上のご利用で1,000円割引。",
       type: "FIXED_AMOUNT",
-      discountValue: new Prisma.Decimal(1000),
-      minReservationAmount: new Prisma.Decimal(5000),
+      discountValue: 1000,
+      minReservationAmount: 5000,
       validFrom: now,
       validUntil: threeMonthsLater,
       isActive: true,
@@ -1123,9 +1122,9 @@ async function seedCoupons() {
       name: "長時間利用割引20%OFF",
       description: "4時間以上のご利用で20%割引。",
       type: "PERCENTAGE",
-      discountValue: new Prisma.Decimal(20),
-      minReservationAmount: new Prisma.Decimal(10000),
-      maxDiscountAmount: new Prisma.Decimal(5000),
+      discountValue: 20,
+      minReservationAmount: 10000,
+      maxDiscountAmount: 5000,
       validFrom: now,
       validUntil: sixMonthsLater,
       isActive: true,
@@ -1136,8 +1135,8 @@ async function seedCoupons() {
       name: "VIP会員様専用30%OFF",
       description: "VIP会員様限定の特別クーポン。",
       type: "PERCENTAGE",
-      discountValue: new Prisma.Decimal(30),
-      maxDiscountAmount: new Prisma.Decimal(10000),
+      discountValue: 30,
+      maxDiscountAmount: 10000,
       validFrom: now,
       validUntil: oneMonthLater,
       usageLimit: 20,
@@ -1525,9 +1524,7 @@ async function seedCustomers() {
         data: {
           ...customer,
           emailCanonical,
-          totalSpent: customer.totalSpent
-            ? new Prisma.Decimal(customer.totalSpent)
-            : null,
+          totalSpent: customer.totalSpent ?? null,
         },
       });
       console.log(
@@ -1742,8 +1739,8 @@ function buildSeedLegacyPricingSnapshot(totalPrice: number) {
   return {
     taxRateType: "standard" as const,
     taxRate: new Prisma.Decimal(SEED_LEGACY_TAX_RATE),
-    taxAmount: new Prisma.Decimal(taxAmount),
-    totalPriceWithTax: new Prisma.Decimal(totalPrice + taxAmount),
+    taxAmount,
+    totalPriceWithTax: totalPrice + taxAmount,
     rateBreakdownJson: asPrismaInputJsonValue(
       SEED_LEGACY_RATE_BREAKDOWN,
       "seed rateBreakdownJson が不正です",
@@ -2271,11 +2268,11 @@ async function seedReservations() {
           startTime: date,
           endTime: endDate,
           status: res.status,
-          basePrice: new Prisma.Decimal(basePrice),
-          totalPrice: new Prisma.Decimal(totalPrice),
+          basePrice,
+          totalPrice,
           couponId,
           couponDiscountAmount: couponDiscountAmount
-            ? new Prisma.Decimal(couponDiscountAmount)
+            ? couponDiscountAmount
             : null,
           ...buildSeedLegacyPricingSnapshot(totalPrice),
           ...(res.notes != null ? { notes: res.notes } : {}),
@@ -2403,8 +2400,8 @@ async function seedDevCustomerAndReservations() {
         endTime: end,
         status: r.status,
         paymentStatus: r.paymentStatus,
-        basePrice: new Prisma.Decimal(basePrice),
-        totalPrice: new Prisma.Decimal(basePrice),
+        basePrice,
+        totalPrice: basePrice,
         notes: r.notes,
         ...buildSeedLegacyPricingSnapshot(basePrice),
       },
@@ -2467,6 +2464,15 @@ async function seedDevCustomerAndReservations() {
         "ご返信ありがとうございました。引き続きよろしくお願いします。",
     },
   ];
+  const staffAuthor = await prisma.user.findUnique({
+    where: { email: "admin@example.com" },
+    select: { id: true },
+  });
+  if (!staffAuthor) {
+    console.log(
+      "⚠️ admin@example.com not found; skipping inquiry reply seed for dev customer fixtures.",
+    );
+  }
   let inquiryCreated = 0;
   for (const [i, fixture] of inquiryFixtures.entries()) {
     const existingInquiry = await prisma.inquiry.findFirst({
@@ -2491,12 +2497,12 @@ async function seedDevCustomerAndReservations() {
 
     // Inquiry Overhaul Phase 1: replyMessage は InquiryReply table へ移行済み。
     // 旧 fixture の replyMessage は STAFF 返信の初期投稿として書き込む。
-    if (fixture.replyMessage !== undefined) {
+    if (fixture.replyMessage !== undefined && staffAuthor) {
       await prisma.inquiryReply.create({
         data: {
           inquiryId: createdInquiry.id,
           authorType: "STAFF",
-          authorId: null,
+          authorId: staffAuthor.id,
           body: fixture.replyMessage,
         },
       });
@@ -2526,7 +2532,7 @@ const SERIES_E2E_RRULE = "FREQ=WEEKLY;BYDAY=TU;COUNT=3";
 const SERIES_E2E_DURATION_MINUTES = 120;
 
 async function seedRecurringReservationSeriesFixture(input: {
-  space: { id: string; hourlyPrice: Prisma.Decimal | number };
+  space: { id: string; hourlyPrice: number };
   customer: { id: string };
 }): Promise<void> {
   // idempotent: marker が既存 series の agreementSnapshot に含まれていれば skip
@@ -2595,8 +2601,8 @@ async function seedRecurringReservationSeriesFixture(input: {
       endTime,
       status: "CONFIRMED" as const,
       paymentStatus: "UNPAID" as const,
-      basePrice: new Prisma.Decimal(basePrice),
-      totalPrice: new Prisma.Decimal(basePrice),
+      basePrice,
+      totalPrice: basePrice,
       notes: `${SERIES_E2E_MARKER} ${(i + 1).toString()}/3`,
       ...buildSeedLegacyPricingSnapshot(basePrice),
     };
@@ -2888,7 +2894,6 @@ async function seedFaq(overridePublished?: boolean) {
         slug: "reservation",
         description: "予約に関するよくあるご質問",
         icon: "IconCalendarEvent",
-        order: 0,
       },
       items: [
         {
@@ -2921,7 +2926,6 @@ async function seedFaq(overridePublished?: boolean) {
         slug: "payment",
         description: "料金・お支払いに関するご質問",
         icon: "IconBuildingStore",
-        order: 1,
       },
       items: [
         {
@@ -2949,7 +2953,6 @@ async function seedFaq(overridePublished?: boolean) {
         slug: "facilities",
         description: "スペースの設備に関するご質問",
         icon: "IconSettings",
-        order: 2,
       },
       items: [
         {
@@ -2987,7 +2990,16 @@ async function seedFaq(overridePublished?: boolean) {
     });
 
     if (!faqCategory) {
-      faqCategory = await prisma.faqCategory.create({ data: category });
+      const maxOrder = await prisma.faqCategory.aggregate({
+        where: { deletedAt: null },
+        _max: { order: true },
+      });
+      faqCategory = await prisma.faqCategory.create({
+        data: {
+          ...category,
+          order: (maxOrder._max.order ?? -1) + 1,
+        },
+      });
       console.log(`✅ Created FAQ category: ${category.name}`);
     }
 
@@ -4136,8 +4148,8 @@ async function seedPublicReviewE2EFixture() {
           endTime: end,
           status: "COMPLETED",
           paymentStatus: "PAID",
-          basePrice: new Prisma.Decimal(basePrice),
-          totalPrice: new Prisma.Decimal(basePrice),
+          basePrice,
+          totalPrice: basePrice,
           notes,
         },
         select: { id: true },
@@ -4150,8 +4162,8 @@ async function seedPublicReviewE2EFixture() {
           endTime: end,
           status: "COMPLETED",
           paymentStatus: "PAID",
-          basePrice: new Prisma.Decimal(basePrice),
-          totalPrice: new Prisma.Decimal(basePrice),
+          basePrice,
+          totalPrice: basePrice,
           notes,
           ...buildSeedLegacyPricingSnapshot(basePrice),
         },

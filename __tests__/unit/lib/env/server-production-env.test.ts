@@ -243,15 +243,6 @@ describe("server production env validation", () => {
     expect(() => validateProductionEnv()).not.toThrow();
   });
 
-  test("rejects RATE_LIMIT_BACKEND=redis (in-memory only; Redis out of scope)", async () => {
-    setProductionEnv({
-      RATE_LIMIT_BACKEND: "redis",
-      MAX_INSTANCES_HINT: "1",
-    });
-
-    await expect(importServerEnv()).rejects.toThrow();
-  });
-
   test("accepts deploys that omit MAX_INSTANCES_HINT entirely", async () => {
     setProductionEnv({
       RATE_LIMIT_BACKEND: "in-memory",

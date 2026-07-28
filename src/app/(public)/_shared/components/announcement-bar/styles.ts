@@ -1,6 +1,7 @@
-import type { CSSProperties } from "react";
+import type { ImperativeStyleValues } from "@/shared/lib/csp/use-imperative-style";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
 import type { CarouselSettings } from "./types";
 
 /**
@@ -68,7 +69,8 @@ function adjustBrightness(hex: string, amount: number): string {
 
 export interface BarStyles {
   className: string;
-  style: CSSProperties;
+  /** CSS custom properties for ImperativeCssScope */
+  cssVars: ImperativeStyleValues | undefined;
   linkHoverClass: string;
   hasCustomText: boolean;
 }
@@ -79,39 +81,21 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
   const hasCustomBg = !!settings.bgColor;
   const hasCustomText = !!settings.textColor;
 
-  let style: CSSProperties = {};
-  if (settings.bgColor) style.backgroundColor = settings.bgColor;
-  if (settings.textColor) style.color = settings.textColor;
+  const cssVars: ImperativeStyleValues = {};
+  if (settings.bgColor) {
+    cssVars[CSS_VAR.announcementBg] = settings.bgColor;
+  }
+  if (settings.textColor) {
+    cssVars[CSS_VAR.announcementText] = settings.textColor;
+  }
 
   if (design === AnnouncementBarDesignStyle.striped) {
     const baseHex = settings.bgColor ?? DEFAULT_STYLE.hex;
     const stripe = settings.stripeColor ?? adjustBrightness(baseHex, 20);
-    style = {
-      ...style,
-      backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 10px, ${stripe}20 10px, ${stripe}20 20px)`,
-      ...(settings.stripeAnimation
-        ? {
-            backgroundSize: "28.28px 28.28px",
-            animation: "stripe-slide 1s linear infinite",
-          }
-        : {}),
-    };
+    cssVars[CSS_VAR.announcementStripe] = stripe;
   }
 
-  if (
-    design === AnnouncementBarDesignStyle.gradient &&
-    settings.gradientAnimation
-  ) {
-    style = {
-      ...style,
-      backgroundSize: "200% 100%",
-      animation: "gradient-flow 3s ease infinite",
-    };
-  }
-
-  if (design === AnnouncementBarDesignStyle.glass && settings.glassAnimation) {
-    style = { ...style, position: "relative", overflow: "hidden" };
-  }
+  const resolvedCssVars = Object.keys(cssVars).length > 0 ? cssVars : undefined;
 
   const needsDefaultText =
     !hasCustomText &&
@@ -127,7 +111,19 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
     settings.sticky && "sticky top-0 z-41",
     config.container,
     !hasCustomBg && config.containerWithBg,
+    hasCustomBg && CSS_VAR_CLASS.announcementBg,
+    hasCustomText && CSS_VAR_CLASS.announcementText,
     config.border,
+    design === AnnouncementBarDesignStyle.striped && "announcement-bar-striped",
+    design === AnnouncementBarDesignStyle.striped &&
+      settings.stripeAnimation &&
+      "announcement-bar-striped-animate",
+    design === AnnouncementBarDesignStyle.gradient &&
+      settings.gradientAnimation &&
+      "announcement-bar-gradient-animate",
+    design === AnnouncementBarDesignStyle.glass &&
+      settings.glassAnimation &&
+      "overflow-hidden",
     needsDefaultText && DEFAULT_STYLE.text,
     !hasCustomText &&
       (design === AnnouncementBarDesignStyle.outlined ||
@@ -140,16 +136,16 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
 
   const linkHoverClass = !hasCustomText ? DEFAULT_STYLE.hover : "";
 
-  return { className, style, linkHoverClass, hasCustomText };
+  return { className, cssVars: resolvedCssVars, linkHoverClass, hasCustomText };
 }
 
-export function getTransitionAnimation(
+export function getTransitionAnimationClass(
   animation: CarouselSettings["animation"],
 ): string {
   const map = {
-    fade: "bar-fade-in",
-    slideX: "bar-slide-x-in",
-    slideY: "bar-slide-y-in",
+    fade: "announcement-bar-transition-fade",
+    slideX: "announcement-bar-transition-slide-x",
+    slideY: "announcement-bar-transition-slide-y",
   } as const;
-  return `${map[animation]} 0.3s ease-out`;
+  return map[animation];
 }

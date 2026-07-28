@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import {
   PaymentStatus,
   ReservationStatus,
@@ -160,7 +161,7 @@ export async function updateReservationStatusCommand(
         customer: { select: CUSTOMER_SELECT },
       },
     });
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   const source = current;
 
@@ -322,7 +323,7 @@ export async function restoreReservationStatusCommand(
       where: { id },
       select: { icsSequence: true },
     });
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     previousStatus,
@@ -424,7 +425,7 @@ export async function deleteReservationCommand(
         data: { usageCount: { decrement: 1 } },
       });
     }
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     googleCalendarEventId: reservation.googleCalendarEventId,
@@ -522,7 +523,7 @@ export async function restoreReservationCommand(id: string) {
           "クーポンが利用できません（無効化されたか、利用上限・有効期限・最低利用額を満たさない可能性があります）",
       });
     }
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     customerId: reservation.customerId,

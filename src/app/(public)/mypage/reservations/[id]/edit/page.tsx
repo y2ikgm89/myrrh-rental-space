@@ -18,9 +18,10 @@ import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reser
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
-import { EditReservationForm } from "@/app/(public)/_shared/components/edit-reservation-form";
+import { EditReservationForm } from "@/public/components/edit-reservation-form";
 import { updateReservationAction } from "../../../_shared/actions/reservation";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { formatJstDateString, formatTimeShort } from "@/shared/lib/date-format";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -82,27 +83,9 @@ export default async function ReservationEditPage({
     getTurnstileSiteKey(),
   ]);
 
-  // タイムゾーンを明示して JST で日付・時刻文字列を生成（Cloud Run は UTC）
-  const TZ = "Asia/Tokyo";
-  const startDate = reservation.startTime;
-  const endDate = reservation.endTime;
-
-  const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-
-  const dateStr = dateFormatter.format(startDate);
-  const startTimeStr = timeFormatter.format(startDate);
-  const endTimeStr = timeFormatter.format(endDate);
+  const dateStr = formatJstDateString(reservation.startTime);
+  const startTimeStr = formatTimeShort(reservation.startTime);
+  const endTimeStr = formatTimeShort(reservation.endTime);
 
   return (
     <div className="mx-auto max-w-2xl">

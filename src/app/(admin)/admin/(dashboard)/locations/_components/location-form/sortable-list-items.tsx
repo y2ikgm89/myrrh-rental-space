@@ -4,12 +4,8 @@ import Image from "next/image";
 import { getInputProps } from "@conform-to/react";
 import type { LocationFormInput } from "@/shared/lib/validations/location";
 import type { FieldMetadata } from "@conform-to/react";
-import {
-  Button,
-  Input,
-  useSortable,
-  toTranslate3d,
-} from "@/admin/components/ui";
+import { Button, Input, useSortable } from "@/admin/components/ui";
+import { useSortableImperativeRef } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
 
 export function DragHandle({
@@ -71,15 +67,15 @@ export function SortableImageItem({
     isDragging,
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "flex items-center gap-2 rounded border p-2",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
@@ -139,17 +135,17 @@ export function SortableAccessLineItem({
     isDragging,
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
-  const style = {
-    transform: toTranslate3d(transform),
+  const combinedRef = useSortableImperativeRef(
+    setNodeRef,
+    transform,
     transition,
-  };
+  );
 
   const itemFields = itemField.getFieldset();
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={combinedRef}
       className={cn(
         "flex items-center gap-2 rounded border p-2",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

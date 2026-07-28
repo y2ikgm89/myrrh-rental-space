@@ -32,16 +32,16 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
+import { SectionTitleBox } from "@/public/components/sections/section-color-boxes";
+import { getTitleClasses } from "@/public/components/sections/section-style-helpers";
 import { useAriaLiveOptional } from "@/shared/contexts";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { gsap } from "@/public/lib/gsap-config";
 import { EASE } from "@/public/lib/animations";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { cn } from "@/shared/lib/cn";
+import { CSS_VAR, CSS_VAR_CLASS } from "@/shared/lib/csp/css-vars";
+import { ImperativeCssScope } from "@/shared/lib/csp/imperative-css-scope";
 import { getCardStyle, shortestStep, wrapIndex } from "./_carousel-math";
 import type { ShowcaseSpaceData } from "../SpaceShowcaseSection";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
@@ -371,14 +371,14 @@ export function SpacesCarousel({
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             ) : null}
-            <div className="mt-4" style={getTitleStyle(style)}>
+            <SectionTitleBox style={style} className="mt-4">
               <Heading
                 level={2}
                 className={cn(getTitleClasses(style), "tracking-tight")}
               >
                 <PortableTextSpans spans={config.title} />
               </Heading>
-            </div>
+            </SectionTitleBox>
           </ScrollReveal>
         </div>
       )}
@@ -397,9 +397,12 @@ export function SpacesCarousel({
           onKeyDown={handleKeyDown}
           onFocusCapture={handleFocusCapture}
         >
-          <div
-            className="relative flex items-center justify-center"
-            style={{ height: `${trackHeight}px` }}
+          <ImperativeCssScope
+            className={cn(
+              "relative flex items-center justify-center",
+              CSS_VAR_CLASS.carouselTrackHeight,
+            )}
+            cssVars={{ [CSS_VAR.carouselTrackHeight]: `${trackHeight}px` }}
           >
             {visibleCards.map(({ i, offset, distance }) => {
               const realIdx = wrapIndex(i, safeCount);
@@ -411,14 +414,21 @@ export function SpacesCarousel({
               const translateX = offset * cardStep;
 
               return (
-                <div
+                <ImperativeCssScope
                   key={`card-${String(i)}`}
-                  className={cn("absolute", transitionClass)}
-                  style={{
-                    width: `${cardWidth}px`,
-                    zIndex,
-                    transform: `translateX(${translateX}px) scale(${scale})`,
-                    opacity,
+                  className={cn(
+                    "absolute",
+                    transitionClass,
+                    CSS_VAR_CLASS.carouselCardWidth,
+                    CSS_VAR_CLASS.carouselCardZIndex,
+                    CSS_VAR_CLASS.carouselCardOpacity,
+                    CSS_VAR_CLASS.carouselCardTransform,
+                  )}
+                  cssVars={{
+                    [CSS_VAR.carouselCardWidth]: `${cardWidth}px`,
+                    [CSS_VAR.carouselCardZIndex]: zIndex,
+                    [CSS_VAR.carouselCardOpacity]: opacity,
+                    [CSS_VAR.carouselCardTransform]: `translateX(${translateX}px) scale(${scale})`,
                   }}
                 >
                   <button
@@ -481,10 +491,10 @@ export function SpacesCarousel({
                       ) : null}
                     </div>
                   </button>
-                </div>
+                </ImperativeCssScope>
               );
             })}
-          </div>
+          </ImperativeCssScope>
 
           <button
             type="button"
@@ -586,8 +596,7 @@ export function SpacesCarousel({
                         ref={(el) => {
                           progressFillsRef.current[i] = el;
                         }}
-                        className="absolute inset-0 rounded-full bg-accent"
-                        style={{ transform: "scaleX(0)" }}
+                        className="progress-fill-origin absolute inset-0 rounded-full bg-accent"
                         aria-hidden="true"
                       />
                     </span>

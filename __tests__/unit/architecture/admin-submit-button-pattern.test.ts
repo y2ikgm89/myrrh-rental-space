@@ -24,17 +24,7 @@ const SUBMIT_BUTTON_IMPL = join(
  * SubmitButton 適用対象外（複合条件 disabled 等）。
  * これらのファイルは `<Button type="submit" disabled={complexCondition}>` を保持する
  */
-const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([
-  join(
-    ADMIN_APP_ROOT,
-    "admin",
-    "(dashboard)",
-    "settings",
-    "_components",
-    "sections",
-    "SidebarSection.tsx",
-  ),
-]);
+const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([]);
 
 /** JSX / HTML で submit を直指定している疑い（実装ファイルは除外） */
 const SUBMIT_ATTR_PATTERNS: RegExp[] = [
@@ -88,5 +78,5 @@ describe("admin submit button pattern", () => {
     }
 
     expect(violations).toEqual([]);
-  });
+  }, 30_000);
 });

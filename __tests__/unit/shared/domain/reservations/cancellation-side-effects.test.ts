@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../../../support/email-lib-dispatch-mock";
 import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
@@ -133,10 +134,10 @@ const mockSendCancelledEmail = mock<
 const mockSendAdminNotification = mock<
   (data: Record<string, unknown>, action: string) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/domain/email/lib-dispatch", () => ({
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
-}));
+});
 
 const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
 // `...actual` re-export で safeFetch 等を残す（部分 mock は Export named not found）。

@@ -23,10 +23,10 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
-import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
-import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
-import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
+import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
+import { DetailRow } from "@/public/components/detail-row";
+import { PasscodeReveal } from "@/public/components/passcode-reveal";
+import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
 import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -366,7 +366,9 @@ export function ReservationDetail({
           予約に戻る
         </Link>
         <Link
-          href={`/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`}
+          href={toAppRoute(
+            `/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`,
+          )}
           className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
         >
           この予約について問い合わせる

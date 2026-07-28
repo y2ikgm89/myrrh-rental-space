@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/admin/components/ui/dropdown-menu";
+import { ColorSwatchPreview } from "@/admin/components/ColorSwatchPreview";
 
 // =============================================================================
 // Types & Constants
@@ -186,11 +187,9 @@ export function HighlightPlugin() {
             <div className="relative">
               <IconHighlight className="h-4 w-4" />
               {hasHighlight && (
-                <div
-                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                  style={{
-                    backgroundColor: HIGHLIGHT_COLORS[highlightColor].value,
-                  }}
+                <ColorSwatchPreview
+                  color={HIGHLIGHT_COLORS[highlightColor].value}
+                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full border-0"
                 />
               )}
             </div>
@@ -234,10 +233,9 @@ function HighlightColorMenu({
             className="flex items-center justify-between gap-2"
           >
             <span className="flex items-center gap-2">
-              <span
-                className="h-4 w-4 rounded"
-                style={{ backgroundColor: config.value }}
-                aria-hidden="true"
+              <ColorSwatchPreview
+                color={config.value}
+                className="h-4 w-4 rounded border-0"
               />
               <span>{config.label}</span>
             </span>
@@ -290,11 +288,9 @@ export function HighlightCompact({
           <div className="relative">
             <IconHighlight className="h-4 w-4" />
             {hasHighlight && (
-              <div
-                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                style={{
-                  backgroundColor: HIGHLIGHT_COLORS[highlightColor].value,
-                }}
+              <ColorSwatchPreview
+                color={HIGHLIGHT_COLORS[highlightColor].value}
+                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full border-0"
               />
             )}
           </div>
