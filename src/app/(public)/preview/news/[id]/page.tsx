@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { NewsDetailPageContent } from "@/app/(public)/news/_components/news-detail-page-content";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { verifyAdminSession } from "@/shared/domain/admin-auth/session";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { getNewsByIdForPreview } from "@/shared/domain/news/preview-queries";
 

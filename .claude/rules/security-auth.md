@@ -4,7 +4,6 @@ paths:
     "src/proxy.ts",
     "src/shared/lib/iap/**",
     "src/shared/lib/customer-auth.ts",
-    "src/shared/lib/admin-auth.ts",
     "src/shared/lib/admin-permissions.ts",
     "src/shared/lib/admin-roles.ts",
     "src/shared/lib/admin-resources.ts",
@@ -30,6 +29,8 @@ paths:
 - **管理** = Cloud Run IAP のみ（`x-goog-iap-jwt-assertion` JWT を audience/issuer 検証）。
   Better Auth の admin instance・管理ログインフォームの再導入はテストで禁止。
   IAP identity は Google Workspace グループ所属から Role へ同期される。
+  session / login audit の SSoT は `src/shared/domain/admin-auth/session.ts`
+  （`getCurrentAdminUser` / `verifyAdminSession`）。
   role group env は **4 つ全設定か全未設定のみ**（部分設定は admin ログイン全滅）
 
 ## 管理 RBAC

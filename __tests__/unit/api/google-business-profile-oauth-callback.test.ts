@@ -43,7 +43,7 @@ mock.module("@/admin/lib/action-auth", () => ({
   checkPermission: mockCheckPermission,
 }));
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   getAdminSession: mockGetAdminSession,
   getAdminSessionUser: mockGetAdminSessionUser,
 }));

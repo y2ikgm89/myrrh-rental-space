@@ -3,8 +3,6 @@ import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Role } from "@/shared/lib/validations/enums/prisma-types";
-import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import {
   recordAdminLoginFailed,
   recordAdminLoginSuccess,
@@ -13,31 +11,21 @@ import {
 import {
   findAdminAuthUserByEmail,
   findOrSyncAdminAuthUserByEmail,
+  type AdminAuthUser,
 } from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
-import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
-import { isLocalProductionE2EEnv } from "./e2e-runtime";
-import { serverEnv } from "./env/server";
-import { isLoopbackRequestHost } from "./request-host";
-import { isRecord } from "./serialize";
+import { isAdminOrHigherRole, isDashboardRole } from "@/shared/lib/admin-roles";
+import { isLocalProductionE2EEnv } from "@/shared/lib/e2e-runtime";
+import { serverEnv } from "@/shared/lib/env/server";
+import { isLoopbackRequestHost } from "@/shared/lib/request-host";
+import { isRecord } from "@/shared/lib/serialize";
+import { isValidRole } from "@/shared/lib/validations/enums/guards";
 
-export type AdminUser = {
-  id: string;
-  email: string;
-  name: string;
-  image: string | null;
-  role: Role;
-  emailVerified: boolean;
-};
+export type { AdminAuthUser };
 
 export type AdminSession = {
-  user: AdminUser;
+  user: AdminAuthUser;
 };
-
-/**
- * ダッシュボードアクセス可能なロール（Single Source of Truth は `admin-roles.ts`）。
- */
-export { DASHBOARD_ROLES } from "./admin-roles";
 
 async function resolveRequestHeaders(
   requestHeaders?: Headers,
@@ -98,7 +86,7 @@ async function resolveAdminEmail(requestHeaders?: Headers): Promise<{
 const loadAdminUserByEmail = cache(findOrSyncAdminAuthUserByEmail);
 const loadTestAdminUserByEmail = cache(findAdminAuthUserByEmail);
 
-function coerceAdminUser(user: unknown): AdminUser | null {
+function coerceAdminUser(user: unknown): AdminAuthUser | null {
   if (!isRecord(user)) return null;
   const { id, email, name, image, role, emailVerified } = user;
   if (
@@ -119,14 +107,14 @@ function coerceAdminUser(user: unknown): AdminUser | null {
   };
 }
 
-export function getAdminSessionUser(session: unknown): AdminUser | null {
+export function getAdminSessionUser(session: unknown): AdminAuthUser | null {
   if (!isRecord(session)) return null;
   return coerceAdminUser(session["user"]);
 }
 
 export async function getCurrentAdminUser(
   requestHeaders?: Headers,
-): Promise<AdminUser | null> {
+): Promise<AdminAuthUser | null> {
   const resolved = await resolveAdminEmail(requestHeaders);
   if (!resolved) return null;
 
@@ -163,7 +151,7 @@ export async function getCurrentAdminUser(
 }
 
 export const verifyAdminSession = cache(
-  async (requestHeaders?: Headers): Promise<AdminUser> => {
+  async (requestHeaders?: Headers): Promise<AdminAuthUser> => {
     const user = await getCurrentAdminUser(requestHeaders);
     if (!user || !isDashboardRole(user.role)) {
       redirect("/admin/access-denied");

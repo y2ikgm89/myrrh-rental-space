@@ -1057,8 +1057,6 @@ describe("architecture boundaries", () => {
     const SHARED_LIB_ROOT = join(SRC_ROOT, "shared", "lib");
     const LIB_TO_DOMAIN_IMPORT_ALLOWLIST = new Set(
       [
-        // IAP session facade → domain admin-auth audit/queries（次 PR で domain/session へ移す）
-        "admin-auth.ts",
         // Better Auth 公式: deleteUser.beforeDelete / sendDeleteAccountVerification は
         // betterAuth() config 内に置く。customer-auth.ts は恒久 adapter（解消対象外）。
         // @see https://www.better-auth.com/docs/concepts/users-accounts
@@ -1172,7 +1170,7 @@ describe("architecture boundaries", () => {
 
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
     const source = readFileSync(
-      join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
+      join(SRC_ROOT, "shared", "domain", "admin-auth", "session.ts"),
       "utf8",
     );
 

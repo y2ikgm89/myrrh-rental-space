@@ -17,7 +17,7 @@
 import "server-only";
 
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
-import { type AdminUser } from "@/shared/lib/admin-auth";
+import { type AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Resource, Action } from "@/shared/lib/admin-resources";
@@ -42,7 +42,7 @@ export const ACTION_LABELS: Record<Action, string> = {
  * ユーザーが権限を持つかチェック（同期）
  */
 export function userHasPermission(
-  user: AdminUser,
+  user: AdminAuthUser,
   resource: Resource,
   action: Action,
 ): boolean {

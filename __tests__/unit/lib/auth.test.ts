@@ -16,7 +16,7 @@ import {
 import {
   getAdminSessionUser,
   type AdminSession,
-} from "@/shared/lib/admin-auth";
+} from "@/shared/domain/admin-auth/session";
 import { Role } from "@generated/prisma/enums";
 
 // モックセッション型

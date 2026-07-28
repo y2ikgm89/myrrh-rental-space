@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AdminUser } from "@/shared/lib/admin-auth";
+import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
@@ -23,7 +23,7 @@ type ExecuteAdminMutationResultCommon<TData> = {
   action: Action;
   /** EDITOR の `userPageAssignment` を参照する resource-level access チェックを有効化 */
   checkResourceAccess?: boolean;
-  execute: (user: AdminUser) => Promise<TData>;
+  execute: (user: AdminAuthUser) => Promise<TData>;
   afterSuccess?: (data: TData) => Promise<void> | void;
   /** 実行結果から監査ログ用 resourceId を解決（create 系で execute 後に id 確定するケース） */
   resolveAuditResourceId?: (data: TData) => string | undefined;
@@ -47,7 +47,7 @@ export type ExecuteAdminMutationResultOptions<TData> =
       | { resourceId: string; resolveResourceId?: never }
       | {
           resourceId?: never;
-          resolveResourceId: (user: AdminUser) => Promise<string | null>;
+          resolveResourceId: (user: AdminAuthUser) => Promise<string | null>;
         }
       | { resourceId?: never; resolveResourceId?: never }
     );

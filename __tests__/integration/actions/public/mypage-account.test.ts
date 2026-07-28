@@ -143,7 +143,7 @@ mock.module("@/shared/lib/oauth-revoke", () => ({
   revokeLineOAuthGrant: mock(() => Promise.resolve(undefined)),
 }));
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   getAdminSession: mock(() => Promise.resolve(null)),
   getCurrentAdminUser: mock(() => Promise.resolve(null)),
   verifyAdminSession: mock(() => Promise.resolve(null)),
