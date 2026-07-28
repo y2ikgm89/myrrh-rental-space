@@ -102,7 +102,7 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
 }));
 
 const { getAdminSession, getCurrentAdminUser, verifyAdminSession } =
-  await import("@/shared/lib/admin-auth");
+  await import("@/shared/domain/admin-auth/session");
 
 const AUTH_USER_SELECT = {
   id: true,

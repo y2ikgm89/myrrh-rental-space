@@ -1,10 +1,11 @@
 /**
  * 管理者ロールの Single Source of Truth（client-safe）
  *
- * admin-auth.ts は server-only のため、client component からは import できない。
+ * domain/admin-auth/session.ts は server-only のため、client component からは
+ * 本ファイル（roles 定数）だけを import する。
  * このモジュールは server-only を持たず、ロール定数・ラベル・説明・階層制御を一元管理する。
  *
- * - `DASHBOARD_ROLES` — 管理画面アクセス可能なロール（admin-auth が再 export）
+ * - `DASHBOARD_ROLES` — 管理画面アクセス可能なロール（caller は admin-roles から直接 import）
  * - `ROLE_LABELS` — 日本語ラベル
  * - `ROLE_DESCRIPTIONS` — UI 表示用のロール説明
  * - `STAFF_ASSIGNABLE_ROLES` — スタッフ管理 UI から付与できるロール

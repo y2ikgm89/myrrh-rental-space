@@ -39,8 +39,9 @@ lifecycle の正規 composition** として残す:
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `customer-auth.ts` | Better Auth 公式は `deleteUser.beforeDelete` 等を `betterAuth()` config 内に置く。domain（anonymize / email dispatch）呼び出しは config 縁で行うのが正しい。BA 工場を domain に移すと framework adapter が domain を汚染する |
 
-解消 PR を書くときは上記以外の行だけを削除対象にする。`customer-auth.ts` を
-allowlist から外すために DI shim や互換 re-export を足さない（clean-break 禁止）。
+管理 IAP session（旧 `admin-auth.ts`）と resource-access は
+`src/shared/domain/admin-auth/` へ移済み。`customer-auth.ts` を allowlist から
+外すために DI shim や互換 re-export を足さない（clean-break 禁止）。
 
 ## 将来の構造改善（任意）
 

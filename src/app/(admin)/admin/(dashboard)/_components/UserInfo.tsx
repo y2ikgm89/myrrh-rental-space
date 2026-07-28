@@ -5,7 +5,7 @@
  * Server Component
  */
 
-import { getAdminSession } from "@/shared/lib/admin-auth";
+import { getAdminSession } from "@/shared/domain/admin-auth/session";
 import type { ReactElement } from "react";
 
 export async function UserInfo(): Promise<ReactElement | null> {

@@ -12,7 +12,7 @@ const serverEnv = readFileSync(
   "utf8",
 );
 const adminAuth = readFileSync(
-  join(process.cwd(), "src/shared/lib/admin-auth.ts"),
+  join(process.cwd(), "src/shared/domain/admin-auth/session.ts"),
   "utf8",
 );
 const adminAuthQueries = readFileSync(

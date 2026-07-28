@@ -3,9 +3,9 @@
  */
 
 import { Role } from "@generated/prisma/enums";
-import type { AdminUser } from "@/shared/lib/admin-auth";
+import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
 
-type FixtureUser = AdminUser & {
+type FixtureUser = AdminAuthUser & {
   createdAt: Date;
   updatedAt: Date;
 };

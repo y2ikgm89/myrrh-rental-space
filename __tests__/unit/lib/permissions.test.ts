@@ -24,7 +24,7 @@ import {
   hasPermission,
   ROLE_PERMISSIONS,
 } from "@/shared/lib/admin-permissions";
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-auth";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,

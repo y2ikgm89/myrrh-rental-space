@@ -124,7 +124,7 @@ const mockCheckPermission = mock<() => Promise<MockPermissionResult>>(() =>
   }),
 );
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   verifyAdminSession: mockVerifyAdminSession,
   DASHBOARD_ROLES: ["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const,
 }));

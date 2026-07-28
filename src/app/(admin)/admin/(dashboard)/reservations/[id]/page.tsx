@@ -13,7 +13,7 @@ import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { verifyAdminSession } from "@/shared/domain/admin-auth/session";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { hasPermission } from "@/shared/lib/admin-permissions";

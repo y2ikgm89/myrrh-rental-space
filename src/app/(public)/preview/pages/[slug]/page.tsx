@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { verifyAdminSession } from "@/shared/domain/admin-auth/session";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { canPreviewPageByPublishState } from "@/shared/lib/pages/can-preview-page";
 import { getPageBySlugQuery } from "@/shared/domain/pages/admin-queries";

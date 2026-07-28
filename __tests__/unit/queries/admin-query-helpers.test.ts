@@ -20,7 +20,7 @@ mock.module("next/headers", () => ({
   headers: () => mockHeaders(),
 }));
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   verifyAdminSession: () => mockVerifyAdminSession(),
   getCurrentAdminUser: mock(() => Promise.resolve(null)),
   getAdminSession: mock(() => Promise.resolve(null)),
