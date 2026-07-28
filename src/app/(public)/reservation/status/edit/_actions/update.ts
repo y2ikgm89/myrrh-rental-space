@@ -5,6 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { updateGuestReservationByToken } from "@/shared/domain/reservations/customer-commands";
 import {
@@ -18,20 +19,21 @@ import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads
 import {
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
+  getReservationEmailRenderContext,
+  resolveReservationAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
+import {
   sendReservationAdminNotification,
   sendReservationUpdatedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
   editByReservationRateLimiter,
@@ -56,7 +58,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import { GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
@@ -265,9 +267,19 @@ export async function updateGuestReservationAction(
                 ? { smartLockIssuanceFailed: true }
                 : {}),
             });
+            const [renderContext, adminDelivery] = await Promise.all([
+              getReservationEmailRenderContext(),
+              resolveReservationAdminNotificationDelivery("update"),
+            ]);
             await Promise.all([
-              sendReservationUpdatedEmail(payloadData),
-              sendReservationAdminNotification(payloadData, "update"),
+              sendReservationUpdatedEmail(payloadData, renderContext),
+              adminDelivery.enabled
+                ? sendReservationAdminNotification(
+                    payloadData,
+                    "update",
+                    adminDelivery,
+                  )
+                : Promise.resolve(),
             ]);
           })(),
           {

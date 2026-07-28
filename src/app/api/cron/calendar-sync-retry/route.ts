@@ -30,9 +30,9 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
-import { retryFailedSyncs } from "@/shared/lib/calendar-sync/outbound";
-import { retryFailedEventCalendarSyncs } from "@/shared/lib/calendar-sync/event-outbound";
-import { isGoogleCalendarConfigured } from "@/shared/lib/google-calendar";
+import { retryFailedSyncs } from "@/shared/domain/reservations/reservation-calendar-outbound";
+import { retryFailedEventCalendarSyncs } from "@/shared/domain/events/event-calendar-outbound";
+import { isGoogleCalendarConfigured } from "@/shared/domain/settings/google-calendar";
 import {
   logError,
   ErrorCategory,

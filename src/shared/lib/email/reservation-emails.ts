@@ -15,13 +15,6 @@ import { ReservationRefundEmail } from "@/shared/emails/reservation-refund";
 import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import {
-  getCalendarEmailSettings,
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
-import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
   computeCancelTokenExpiresAt,
@@ -39,8 +32,6 @@ import {
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
-import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import {
@@ -59,7 +50,10 @@ import { sendEmail } from "./send";
 import type {
   BulkReservationCancelledEmailData,
   EmailResult,
+  EmailSendContext,
+  ReservationAdminNotificationDelivery,
   ReservationEmailData,
+  ReservationEmailRenderContext,
   ReservationRefundEmailData,
   StatusChangeEmailData,
 } from "./types";
@@ -97,41 +91,25 @@ export function buildBookingHubUrl(
 }
 
 /**
- * 公開中のキャンセルポリシー規約の絶対 URL を解決する。該当文書が無ければ
- * undefined を返し、呼び出し側はプレーンテキストにフォールバックする。
- */
-async function resolveCancellationPolicyUrl(): Promise<string | undefined> {
-  const doc = await getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE);
-  return doc ? `${getAppUrl()}/terms/${doc.slug}` : undefined;
-}
-
-/**
- * 予約確認メールを送信
+ * 予約確認メールを送信。
+ * Settings トグルと render DTO は domain が解決して渡す（lib は render+send のみ）。
  */
 export async function sendReservationConfirmationEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const { sendReservationConfirmationEmail: enabled } =
-    await getEmailDeliverySettings();
-  if (!enabled) return { ok: false, reason: "disabled" };
-
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [
+  const {
     calendarSettings,
     deadlineSettings,
     organizer,
-    footer,
     cancellationPolicyUrl,
-  ] = await Promise.all([
-    getCalendarEmailSettings(),
-    getReservationDeadlineSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-    resolveCancellationPolicyUrl(),
-  ]);
+  } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -218,48 +196,53 @@ export async function sendReservationConfirmationEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
-      react: ReservationConfirmationEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          totalPrice: formatPrice(data.totalPrice, "未設定"),
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          notes: data.notes,
-          addToCalendarLinks,
-          cancelUrl,
-          memberReservationUrl,
-          bookingHubUrl,
-          claimUrl,
-          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
-          modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
-          cancellationPolicyUrl,
-          smartLockIssuanceFailed: data.smartLockIssuanceFailed,
-          smartLockFallbackContact: data.smartLockFallbackContact,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // icsSequence を含めることで、同一予約が PENDING で 1 通目 → 別経路で
-    // CONFIRMED に遷移して 2 通目を送るような復元/再送ケースでも idempotency key が
-    // 衝突せず Resend が `invalid_idempotent_request` で silent drop することを防ぐ
-    // (updated / cancelled / statusChanged と対称)。version discriminator を欠くと
-    // Cluster H #16 のような silent drop 回帰を招くため、この形状は architecture-
-    // boundaries.test.ts の drift gate で強制する。
-    idempotencyKey: `reservation-confirm/${data.reservationId}/${data.icsSequence}`,
-    operation: "sendReservationConfirmationEmail",
-    context: {
-      reservationId: data.reservationId,
-      customerEmail: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
+        react: ReservationConfirmationEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            notes: data.notes,
+            addToCalendarLinks,
+            cancelUrl,
+            memberReservationUrl,
+            bookingHubUrl,
+            claimUrl,
+            cancellationDeadlineHours:
+              deadlineSettings.cancellationDeadlineHours,
+            modificationDeadlineHours:
+              deadlineSettings.modificationDeadlineHours,
+            cancellationPolicyUrl,
+            smartLockIssuanceFailed: data.smartLockIssuanceFailed,
+            smartLockFallbackContact: data.smartLockFallbackContact,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      // icsSequence を含めることで、同一予約が PENDING で 1 通目 → 別経路で
+      // CONFIRMED に遷移して 2 通目を送るような復元/再送ケースでも idempotency key が
+      // 衝突せず Resend が `invalid_idempotent_request` で silent drop することを防ぐ
+      // (updated / cancelled / statusChanged と対称)。version discriminator を欠くと
+      // Cluster H #16 のような silent drop 回帰を招くため、この形状は architecture-
+      // boundaries.test.ts の drift gate で強制する。
+      idempotencyKey: `reservation-confirm/${data.reservationId}/${data.icsSequence}`,
+      operation: "sendReservationConfirmationEmail",
+      context: {
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -272,24 +255,20 @@ export async function sendReservationConfirmationEmail(
  */
 export async function sendReservationUpdatedEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [
+  const {
     calendarSettings,
     deadlineSettings,
     organizer,
-    footer,
     cancellationPolicyUrl,
-  ] = await Promise.all([
-    getCalendarEmailSettings(),
-    getReservationDeadlineSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-    resolveCancellationPolicyUrl(),
-  ]);
+  } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -361,43 +340,48 @@ export async function sendReservationUpdatedEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【ご予約内容変更】${data.spaceName} - ${reservationDate}`,
-      react: ReservationUpdatedEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          totalPrice: formatPrice(data.totalPrice, "未設定"),
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          notes: data.notes,
-          addToCalendarLinks,
-          cancelUrl,
-          memberReservationUrl,
-          bookingHubUrl,
-          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
-          modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
-          cancellationPolicyUrl,
-          smartLockIssuanceFailed: data.smartLockIssuanceFailed,
-          smartLockFallbackContact: data.smartLockFallbackContact,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // icsSequence を含めることで、同一予約が短時間に複数回変更されても
-    // idempotency key が衝突せず Resend が silent drop しないようにする。
-    idempotencyKey: `reservation-update/${data.reservationId}/${data.icsSequence}`,
-    operation: "sendReservationUpdatedEmail",
-    context: {
-      reservationId: data.reservationId,
-      customerEmail: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【ご予約内容変更】${data.spaceName} - ${reservationDate}`,
+        react: ReservationUpdatedEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            notes: data.notes,
+            addToCalendarLinks,
+            cancelUrl,
+            memberReservationUrl,
+            bookingHubUrl,
+            cancellationDeadlineHours:
+              deadlineSettings.cancellationDeadlineHours,
+            modificationDeadlineHours:
+              deadlineSettings.modificationDeadlineHours,
+            cancellationPolicyUrl,
+            smartLockIssuanceFailed: data.smartLockIssuanceFailed,
+            smartLockFallbackContact: data.smartLockFallbackContact,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      // icsSequence を含めることで、同一予約が短時間に複数回変更されても
+      // idempotency key が衝突せず Resend が silent drop しないようにする。
+      idempotencyKey: `reservation-update/${data.reservationId}/${data.icsSequence}`,
+      operation: "sendReservationUpdatedEmail",
+      context: {
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -405,18 +389,15 @@ export async function sendReservationUpdatedEmail(
  */
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData,
+  renderContext: ReservationEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [calendarSettings, organizer, footer, cancellationPolicyUrl] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-      resolveCancellationPolicyUrl(),
-    ]);
+  const { calendarSettings, organizer, cancellationPolicyUrl } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   const memberReservationUrl = buildMemberReservationUrl(
@@ -461,36 +442,39 @@ export async function sendReservationCancelledEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
-      react: ReservationCancelledEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          memberReservationUrl,
-          cancellationPolicyUrl,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
-    // 戻した後、24h 内に再度キャンセルされた場合でも idempotency key が衝突せず
-    // Resend が `invalid_idempotent_request` で silent drop することを防ぐ
-    // （sendReservationUpdatedEmail / sendReservationStatusChangedEmail と対称）。
-    idempotencyKey: `reservation-cancel/${data.reservationId}/${data.icsSequence}`,
-    operation: "sendReservationCancelledEmail",
-    context: {
-      reservationId: data.reservationId,
-      customerEmail: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
+        react: ReservationCancelledEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            memberReservationUrl,
+            cancellationPolicyUrl,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
+      // 戻した後、24h 内に再度キャンセルされた場合でも idempotency key が衝突せず
+      // Resend が `invalid_idempotent_request` で silent drop することを防ぐ
+      // （sendReservationUpdatedEmail / sendReservationStatusChangedEmail と対称）。
+      idempotencyKey: `reservation-cancel/${data.reservationId}/${data.icsSequence}`,
+      operation: "sendReservationCancelledEmail",
+      context: {
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -499,16 +483,15 @@ export async function sendReservationCancelledEmail(
  */
 export async function sendReservationStatusChangedEmail(
   data: StatusChangeEmailData,
+  renderContext: ReservationEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
   const startTime = formatTimeShort(data.startTime);
   const endTime = formatTimeShort(data.endTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -573,39 +556,42 @@ export async function sendReservationStatusChangedEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
-      react: ReservationStatusChangedEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          totalPrice: formatPrice(data.totalPrice, "未設定"),
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          newStatus: data.newStatus,
-          location: data.location,
-          addToCalendarLinks,
-          memberReservationUrl,
-          bookingHubUrl,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // icsSequence は status 変更ごとに増分されるため、24h 内に同一予約で複数回 status 変更
-    // が起きても idempotency key が衝突せず Resend が `invalid_idempotent_request` で
-    // silent drop することを防ぐ。
-    idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}/${data.icsSequence}`,
-    operation: "sendReservationStatusChangedEmail",
-    context: {
-      reservationId: data.reservationId,
-      customerEmail: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
+        react: ReservationStatusChangedEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            newStatus: data.newStatus,
+            location: data.location,
+            addToCalendarLinks,
+            memberReservationUrl,
+            bookingHubUrl,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      // icsSequence は status 変更ごとに増分されるため、24h 内に同一予約で複数回 status 変更
+      // が起きても idempotency key が衝突せず Resend が `invalid_idempotent_request` で
+      // silent drop することを防ぐ。
+      idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}/${data.icsSequence}`,
+      operation: "sendReservationStatusChangedEmail",
+      context: {
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -617,6 +603,7 @@ export async function sendReservationStatusChangedEmail(
  */
 export async function sendReservationRefundEmail(
   data: ReservationRefundEmailData,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
 
@@ -629,61 +616,60 @@ export async function sendReservationRefundEmail(
     data.reservationId,
   );
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【ご返金のお知らせ】${data.spaceName} - ${reservationDate}`,
-      react: ReservationRefundEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          refundAmount: formatPrice(data.refundAmount, "未設定"),
-          cumulativeRefundAmount: formatPrice(
-            data.cumulativeRefundAmount,
-            "未設定",
-          ),
-          originalTotal: formatPrice(data.originalTotal, "未設定"),
-          isFullyRefunded: data.isFullyRefunded,
-          reason: data.reason,
-          memberReservationUrl,
-          footer,
-        }),
-      ),
-    }),
-    // refundId (Stripe refund の primary key) を含めることで、同一予約への
-    // 複数回の部分返金 (accidental retry / partial refund の連続実行) でも
-    // idempotency key が衝突せず Resend が silent drop することを防ぐ。
-    idempotencyKey: `reservation-refund/${data.reservationId}/${data.refundId}`,
-    operation: "sendReservationRefundEmail",
-    context: {
-      reservationId: data.reservationId,
-      customerEmail: data.customerEmail,
-      refundId: data.refundId,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【ご返金のお知らせ】${data.spaceName} - ${reservationDate}`,
+        react: ReservationRefundEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            refundAmount: formatPrice(data.refundAmount, "未設定"),
+            cumulativeRefundAmount: formatPrice(
+              data.cumulativeRefundAmount,
+              "未設定",
+            ),
+            originalTotal: formatPrice(data.originalTotal, "未設定"),
+            isFullyRefunded: data.isFullyRefunded,
+            reason: data.reason,
+            memberReservationUrl,
+            footer,
+          }),
+        ),
+      }),
+      // refundId (Stripe refund の primary key) を含めることで、同一予約への
+      // 複数回の部分返金 (accidental retry / partial refund の連続実行) でも
+      // idempotency key が衝突せず Resend が silent drop することを防ぐ。
+      idempotencyKey: `reservation-refund/${data.reservationId}/${data.refundId}`,
+      operation: "sendReservationRefundEmail",
+      context: {
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+        refundId: data.refundId,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
- * 予約に関する管理者通知メールを送信
+ * 予約に関する管理者通知メールを送信。
+ * toggle × 宛先の解決は domain が担い、lib は空宛先のみ disabled とする。
  */
 export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: "new" | "update" | "cancel",
+  delivery: ReservationAdminNotificationDelivery,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  const enabledByAction = {
-    new: toggles.notifyNewReservation,
-    update: toggles.notifyReservationChange,
-    cancel: toggles.notifyReservationCancel,
-  }[action];
-  if (!enabledByAction) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
@@ -693,38 +679,41 @@ export async function sendReservationAdminNotification(
 
   const actionText = RESERVATION_ACTION_LABELS[action];
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
-      react: AdminNotificationEmail(
-        omitUndefined({
-          type: "reservation" as const,
-          action,
-          customerName: data.customerName,
-          customerEmail: data.customerEmail,
-          guestName: data.guestName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          totalPrice: formatPrice(data.totalPrice, "未設定"),
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-          adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
-          footer,
-        }),
-      ),
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
+        react: AdminNotificationEmail(
+          omitUndefined({
+            type: "reservation" as const,
+            action,
+            customerName: data.customerName,
+            customerEmail: data.customerEmail,
+            guestName: data.guestName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
+            footer,
+          }),
+        ),
+      },
+      // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
+      // 戻した後、24h 内に再度同一 action の管理者通知が発火しても idempotency key が
+      // 衝突せず Resend が silent drop することを防ぐ（顧客向け通知と対称）。
+      idempotencyKey: `reservation-admin/${data.reservationId}/${action}/${data.icsSequence}`,
+      operation: "sendReservationAdminNotification",
+      context: {
+        reservationId: data.reservationId,
+        action,
+      },
     },
-    // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
-    // 戻した後、24h 内に再度同一 action の管理者通知が発火しても idempotency key が
-    // 衝突せず Resend が silent drop することを防ぐ（顧客向け通知と対称）。
-    idempotencyKey: `reservation-admin/${data.reservationId}/${action}/${data.icsSequence}`,
-    operation: "sendReservationAdminNotification",
-    context: {
-      reservationId: data.reservationId,
-      action,
-    },
-  });
+    sendContext,
+  );
 }
 
 /** `BulkReservationCancelledEmailData.instances` を表示用の日付/時刻文字列に整形する。 */
@@ -746,76 +735,80 @@ function formatBulkInstanceList(
  */
 export async function sendBulkReservationCancelledEmail(
   data: BulkReservationCancelledEmailData,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
   const reservationList = formatBulkInstanceList(data.instances);
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【予約キャンセル】${data.spaceName} 定期予約（${String(data.instances.length)}件）`,
-      react: BulkReservationCancelledEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          seriesTitle: data.spaceName,
-          instanceCount: data.instances.length,
-          reservationList,
-          reason: data.reason,
-          footer,
-        }),
-      ),
-    }),
-    idempotencyKey: `bulk-reservation-cancel/${data.seriesId}/${data.batchNonce}`,
-    operation: "sendBulkReservationCancelledEmail",
-    context: {
-      seriesId: data.seriesId,
-      instanceCount: data.instances.length,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【予約キャンセル】${data.spaceName} 定期予約（${String(data.instances.length)}件）`,
+        react: BulkReservationCancelledEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            seriesTitle: data.spaceName,
+            instanceCount: data.instances.length,
+            reservationList,
+            reason: data.reason,
+            footer,
+          }),
+        ),
+      }),
+      idempotencyKey: `bulk-reservation-cancel/${data.seriesId}/${data.batchNonce}`,
+      operation: "sendBulkReservationCancelledEmail",
+      context: {
+        seriesId: data.seriesId,
+        instanceCount: data.instances.length,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 /**
  * Phase B.2 task 12: series 一括キャンセルの集約通知メール（管理者向け・1 通）。
  *
- * 既存の `sendReservationAdminNotification` と同じ通知トグル
- * （`notifyReservationCancel`）・宛先解決（`getNotificationEmailAddresses`）で
- * gating する。本文は顧客向けと同じ skeleton テンプレートを流用する
+ * toggle × 宛先は domain の `resolveReservationAdminNotificationDelivery("cancel")`
+ * と共有する。本文は顧客向けと同じ skeleton テンプレートを流用する
  * （管理者専用の文言・deep link は Task 27 で最終調整）。
  */
 export async function sendBulkAdminNotification(
   data: BulkReservationCancelledEmailData,
+  delivery: ReservationAdminNotificationDelivery,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  if (!toggles.notifyReservationCancel) {
+  if (delivery.notificationEmails.length === 0) {
     return { ok: false, reason: "disabled" };
   }
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   const footer = await getEmailFooterData();
   const reservationList = formatBulkInstanceList(data.instances);
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject: `【定期予約一括キャンセル】${data.spaceName} - ${data.customerName}様`,
-      react: BulkReservationCancelledEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          seriesTitle: data.spaceName,
-          instanceCount: data.instances.length,
-          reservationList,
-          reason: data.reason,
-          footer,
-        }),
-      ),
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject: `【定期予約一括キャンセル】${data.spaceName} - ${data.customerName}様`,
+        react: BulkReservationCancelledEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            seriesTitle: data.spaceName,
+            instanceCount: data.instances.length,
+            reservationList,
+            reason: data.reason,
+            footer,
+          }),
+        ),
+      },
+      idempotencyKey: `bulk-reservation-cancel-admin/${data.seriesId}/${data.batchNonce}`,
+      operation: "sendBulkAdminNotification",
+      context: {
+        seriesId: data.seriesId,
+        instanceCount: data.instances.length,
+      },
     },
-    idempotencyKey: `bulk-reservation-cancel-admin/${data.seriesId}/${data.batchNonce}`,
-    operation: "sendBulkAdminNotification",
-    context: {
-      seriesId: data.seriesId,
-      instanceCount: data.instances.length,
-    },
-  });
+    sendContext,
+  );
 }

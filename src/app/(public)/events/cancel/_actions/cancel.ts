@@ -20,7 +20,9 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import { DomainError } from "@/shared/domain/domain-error";
-import { runGuestTokenMutation } from "@/shared/domain/guest-token-actions/run-guest-mutation";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
+import { runGuestTokenMutation } from "@/shared/lib/guest-token-actions/run-guest-mutation";
 
 const EVENT_CANCEL_TOKEN_COOKIE_NAME = "event-cancel-token";
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
@@ -43,9 +45,11 @@ export async function cancelGuestEventRegistrationAction(
 ): Promise<MutationResult<null>> {
   return runGuestTokenMutation<EventMemberContext>({
     operation: "guestEventCancelAction",
+    getMaintenanceBlock: getPublicMaintenanceBlockMutation,
     cookieName: EVENT_CANCEL_TOKEN_COOKIE_NAME,
     turnstileAction: TURNSTILE_ACTIONS.guest_event_registration_cancel,
     turnstileToken,
+    validateTurnstile,
     expectedEntityId: expectedRegistrationId,
     verifyNow: () => new Date(),
     verifyToken: (token, now) => {

@@ -19,12 +19,12 @@ mock.module("@/shared/domain/user-page-assignments/queries", () => ({
 }));
 
 import { canAccessAdmin, userHasPermission } from "@/admin/lib/permissions";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import {
   hasPermission,
   ROLE_PERMISSIONS,
 } from "@/shared/lib/admin-permissions";
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-auth";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,

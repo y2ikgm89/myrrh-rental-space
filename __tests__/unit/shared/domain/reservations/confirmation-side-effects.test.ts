@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 mock.module("server-only", () => ({}));
@@ -34,6 +35,8 @@ const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
 mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: mockIssueSmartLockPasscodes,
 }));
+
+installEmailRenderContextMock();
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,

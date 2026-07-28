@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../../../support/email-render-context-mock";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
@@ -72,7 +73,7 @@ async function drainSideEffects(): Promise<void> {
 // GCal series-outbound は本 test では触らないが、mock.module の live binding が
 // 他 test file の実 import に干渉するのを避けるため空 stub を置く
 // (feedback_stale-branch-name-reuse-and-mock-module-coverage)。
-mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
+mock.module("@/shared/domain/reservations/series-calendar-outbound", () => ({
   deleteGcalMaster: () => Promise.resolve(),
   getSeriesGcalMasterEventId: () => Promise.resolve(null),
   patchGcalMasterUntil: () => Promise.resolve(),
@@ -83,6 +84,8 @@ mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: () => Promise.resolve(),
 }));
+
+installEmailRenderContextMock();
 
 const mockCreateAuditLog = mock<
   (input: Record<string, unknown>) => Promise<void>
@@ -117,9 +120,12 @@ const mockDeleteCalendarSync = mock<
     eventId: string,
   ) => Promise<{ success: true } | { success: false; error: string }>
 >(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: mockDeleteCalendarSync,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: mockDeleteCalendarSync,
+  }),
+);
 
 const mockSendCancelledEmail = mock<
   (data: Record<string, unknown>) => Promise<unknown>
@@ -127,18 +133,9 @@ const mockSendCancelledEmail = mock<
 const mockSendAdminNotification = mock<
   (data: Record<string, unknown>, action: string) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
 }));
 
 const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
@@ -418,6 +415,10 @@ describe("applyCancellationSideEffects", () => {
     expect(mockSendAdminNotification).toHaveBeenCalledWith(
       expect.any(Object),
       "cancel",
+      expect.objectContaining({
+        enabled: true,
+        notificationEmails: ["admin@example.com"],
+      }),
     );
     // payload に customer 情報 + 整形済 location（base + detail）が含まれる
     const payload = mockSendCancelledEmail.mock.calls[0]?.[0];

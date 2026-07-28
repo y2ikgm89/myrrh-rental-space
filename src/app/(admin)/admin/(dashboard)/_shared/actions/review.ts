@@ -15,7 +15,7 @@ import { invalidateReviewCaches } from "@/shared/lib/cache/review-cache";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { reviewReplySchema } from "@/shared/lib/validations/review";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
+import { sendReviewReplyEmail } from "@/shared/domain/email/lib-dispatch";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 

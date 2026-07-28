@@ -9,7 +9,7 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { eventBroadcastRateLimiter } from "@/shared/lib/rate-limit";
-import { sendEventBroadcast } from "@/shared/lib/email/event-emails";
+import { sendEventBroadcast } from "@/shared/domain/email/lib-dispatch";
 import { getEventBroadcastPayload } from "@/shared/domain/events/email-queries";
 import { DomainError } from "@/shared/domain/domain-error";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";

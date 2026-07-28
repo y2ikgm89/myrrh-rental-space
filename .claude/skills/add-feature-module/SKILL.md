@@ -17,7 +17,7 @@ description: サイト機能モジュール (Feature Module) を新規追加す�
 - **fail-closed**: key 欠損・不正値・DB fetch 失敗 → その module は **OFF**。
   seed / migration が全 module の key を explicit に埋めることで運用上 ON になる。
 
-解決ロジックは `src/shared/lib/features/check.ts`:
+解決ロジックは `src/shared/domain/features/check.ts`:
 `getEnabledFeatures`（`stored[id] === true` のみ ON → `requires` を fixed-point で伝播 OFF）、
 `isFeatureEnabled` / `requireFeatureEnabled`（OFF なら `notFound()`）、
 `getFeatureFilterContext`（disabled の routes / pageSlugs / sectionTypes / templates / cronPaths を集約）、
@@ -77,7 +77,7 @@ domain 層で gate する（`src/shared/domain/reviews/public-queries.ts` /
 
 保存経路: `updateFeatureModulesSettings`
 (`(admin)/(dashboard)/_shared/actions/settings/other.ts`) →
-`updateFeatureModulesCommand` (`src/shared/domain/settings/commands.ts`) →
+`updateFeatureModulesCommand` (`src/shared/domain/settings/commands/features.ts`) →
 afterSuccess で `invalidateSiteWideCache([FEATURE_MODULES, NAVIGATION, PAGE_SECTIONS,
 SECTIONS, PAGES, REVIEWS])`。**新 module の公開面が別の `'use cache'` タグに依存するなら
 この afterSuccess のタグ配列に追加**（例: reviews は `CACHE_TAGS.REVIEWS` を含めている）。
@@ -106,7 +106,7 @@ posts は /blog /category/[slug] /tag/[slug] の 3 系統）の async component 
 await requireFeatureEnabled("<id>");
 ```
 
-`@/shared/lib/features/check` から import。OFF 時は `notFound()` で 404。
+`@/shared/domain/features/check` から import。OFF 時は `notFound()` で 404。
 既存 14 箇所の例: `src/app/(public)/contact/page.tsx`、`src/app/(public)/spaces/[slug]/page.tsx`。
 ガードは page 単位（route handler や proxy ではない）。
 
@@ -142,7 +142,7 @@ await requireFeatureEnabled("<id>");
   `pageSlugs` ⊆ `SYSTEM_PAGE_SLUGS`
   (`src/shared/lib/validations/page.ts` の `SYSTEM_PAGES`) の不変条件があるため、
   Page-backed なシステムページを持つ module は `SYSTEM_PAGES` への追加が先。
-- `__tests__/unit/lib/features/check.test.ts` — 全 module を列挙する fixture
+- `__tests__/unit/domain/features/check.test.ts` — 全 module を列挙する fixture
   (全 ON で size が registry と一致) を更新。requires を持たせたなら依存解決ケースを追加。
 - `__tests__/unit/app/sitemap-static-pages.test.ts` — `STATIC_PAGES` に entry を足した場合、
   feature gate 対象 path は「exactly 1 module の publicRoutes に出現」が強制される。

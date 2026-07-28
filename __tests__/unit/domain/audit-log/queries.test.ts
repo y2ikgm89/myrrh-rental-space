@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -53,7 +54,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   AuditAction: {
     CREATE: "CREATE",
     UPDATE: "UPDATE",
@@ -70,7 +71,7 @@ mock.module("@generated/prisma/enums", () => ({
     ROLE_CHANGE: "ROLE_CHANGE",
     INTEGRITY_CHECK: "INTEGRITY_CHECK",
   },
-}));
+});
 
 const { getAuditLogs, getAuditLogsForExport, getAuditLogStats } =
   await import("@/shared/domain/audit-log/queries");

@@ -76,7 +76,9 @@ describe("notification email clean break", () => {
     );
     const adminQuery = read("src/shared/domain/settings/admin-queries.ts");
     const query = read("src/shared/domain/settings/queries/notification.ts");
-    const commands = read("src/shared/domain/settings/commands.ts");
+    const organizationCommands = read(
+      "src/shared/domain/settings/commands/organization.ts",
+    );
 
     expect(formSchema).toMatch(/z\s*\.array/u);
     expect(formSchema).not.toContain('.split(",")');
@@ -106,13 +108,15 @@ describe("notification email clean break", () => {
     expect(query).not.toContain(
       "parseStringArray(settings?.notificationEmailAddresses)",
     );
-    expect(commands).not.toContain(
+    expect(organizationCommands).not.toContain(
       "asPrismaInputJsonValue(\n      data.notificationStaffIds",
     );
-    expect(commands).not.toContain(
+    expect(organizationCommands).not.toContain(
       "asPrismaInputJsonValue(\n      data.notificationEmailAddresses",
     );
-    expect(commands).toContain("notificationStaffIds: string[];");
-    expect(commands).toContain("notificationEmailAddresses: string[];");
+    expect(organizationCommands).toContain("notificationStaffIds: string[];");
+    expect(organizationCommands).toContain(
+      "notificationEmailAddresses: string[];",
+    );
   });
 });

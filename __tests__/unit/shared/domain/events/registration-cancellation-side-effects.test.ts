@@ -104,16 +104,38 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
 }));
 
 const mockSendCancelledEmail = mock<
-  (data: Record<string, unknown>) => Promise<unknown>
+  (
+    data: Record<string, unknown>,
+    renderContext: Record<string, unknown>,
+  ) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
 const mockSendAdminNotification = mock<
-  (data: Record<string, unknown>, action: string) => Promise<unknown>
+  (
+    data: Record<string, unknown>,
+    action: string,
+    delivery: Record<string, unknown>,
+  ) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
 mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventRegistrationCancelled: mockSendCancelledEmail,
   sendEventAdminNotification: mockSendAdminNotification,
   buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
   buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
+}));
+
+mock.module("@/shared/domain/settings/queries/email-render-context", () => ({
+  getEventEmailRenderContext: mock(() =>
+    Promise.resolve({
+      calendarSettings: { icalAttachmentEnabled: false },
+      organizer: { name: "Test Org", email: "org@example.com" },
+    }),
+  ),
+  resolveEventAdminNotificationDelivery: mock(() =>
+    Promise.resolve({
+      enabled: true,
+      notificationEmails: ["admin@example.com"],
+    }),
+  ),
 }));
 
 mock.module("@/shared/lib/email/event-waitlist-emails", () => ({

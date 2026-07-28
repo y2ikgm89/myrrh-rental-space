@@ -10,7 +10,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   eventRegistrationByEmailRateLimiter,
@@ -29,13 +28,18 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { registerWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {
   sendEventRegistrationConfirmation,
   sendEventAdminNotification,
-} from "@/shared/lib/email/event-emails";
-import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
+} from "@/shared/domain/email/lib-dispatch";
+import {
+  getEventEmailRenderContext,
+  resolveEventAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
+import { sendEventWaitlistRegistered } from "@/shared/domain/email/lib-dispatch";
 import {
   computeWaitlistPositionForRegistration,
   getWaitlistEmailRegistration,
@@ -44,7 +48,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { buildEventRegistrationPaymentCheckoutUrl } from "@/shared/lib/tokens/event-registration-payment-token";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
@@ -197,38 +201,49 @@ export async function registerForEvent(
                   )
                 : undefined;
 
+            const [renderContext, adminDelivery] = await Promise.all([
+              getEventEmailRenderContext(),
+              resolveEventAdminNotificationDelivery("registration"),
+            ]);
+
             await Promise.all([
-              sendEventRegistrationConfirmation({
-                registrationId: result.registration.id,
-                customerName: result.registration.name,
-                customerEmail: result.registration.email,
-                eventTitle: result.event.title,
-                eventStartTime: event.startTime,
-                eventEndTime: event.endTime,
-                location: event.location ?? undefined,
-                quantity: result.registration.quantity,
-                icsSequence: result.registration.icsSequence,
-                customerId,
-                format: event.format,
-                meetingUrl: event.meetingUrl,
-                ...(paymentCheckoutUrl !== undefined
-                  ? { paymentCheckoutUrl }
-                  : {}),
-              }),
-              sendEventAdminNotification(
+              sendEventRegistrationConfirmation(
                 {
                   registrationId: result.registration.id,
-                  eventId: result.registration.eventId,
-                  participantName: result.registration.name,
-                  participantEmail: result.registration.email,
+                  customerName: result.registration.name,
+                  customerEmail: result.registration.email,
                   eventTitle: result.event.title,
                   eventStartTime: event.startTime,
+                  eventEndTime: event.endTime,
+                  location: event.location ?? undefined,
                   quantity: result.registration.quantity,
-                  currentRegistrations: event.confirmedCount,
-                  capacity: event.capacity,
+                  icsSequence: result.registration.icsSequence,
+                  customerId,
+                  format: event.format,
+                  meetingUrl: event.meetingUrl,
+                  ...(paymentCheckoutUrl !== undefined
+                    ? { paymentCheckoutUrl }
+                    : {}),
                 },
-                "registration",
+                renderContext,
               ),
+              adminDelivery.enabled
+                ? sendEventAdminNotification(
+                    {
+                      registrationId: result.registration.id,
+                      eventId: result.registration.eventId,
+                      participantName: result.registration.name,
+                      participantEmail: result.registration.email,
+                      eventTitle: result.event.title,
+                      eventStartTime: event.startTime,
+                      quantity: result.registration.quantity,
+                      currentRegistrations: event.confirmedCount,
+                      capacity: event.capacity,
+                    },
+                    "registration",
+                    adminDelivery,
+                  )
+                : Promise.resolve({ ok: false, reason: "disabled" } as const),
             ]);
           })(),
           {
@@ -416,13 +431,17 @@ export async function registerForEventWaitlist(
             const position =
               await computeWaitlistPositionForRegistration(registration);
 
+            const adminDelivery = await resolveEventAdminNotificationDelivery(
+              "waitlist_registration",
+            );
+
             await Promise.all([
               sendEventWaitlistRegistered({
                 registration,
                 position,
                 to: data.email,
               }),
-              event
+              event && adminDelivery.enabled
                 ? sendEventAdminNotification(
                     {
                       registrationId: result.registration.id,
@@ -436,6 +455,7 @@ export async function registerForEventWaitlist(
                       capacity: event.capacity,
                     },
                     "waitlist_registration",
+                    adminDelivery,
                   )
                 : Promise.resolve(),
             ]);

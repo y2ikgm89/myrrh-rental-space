@@ -3,17 +3,20 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logPermissionDenied } from "@/admin/lib/audit";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
-import { verifyAdminSession, type AdminUser } from "@/shared/lib/admin-auth";
+import {
+  verifyAdminSession,
+  type AdminAuthUser,
+} from "@/shared/domain/admin-auth/session";
 
 function redirectToAdminHome(): never {
   redirect("/admin");
 }
 
-export async function requireAdminDashboardAccess(): Promise<AdminUser> {
+export async function requireAdminDashboardAccess(): Promise<AdminAuthUser> {
   await headers();
   return verifyAdminSession();
 }
@@ -21,7 +24,7 @@ export async function requireAdminDashboardAccess(): Promise<AdminUser> {
 export async function requireAdminPermission(
   resource: Resource,
   action: Action,
-): Promise<AdminUser> {
+): Promise<AdminAuthUser> {
   await headers();
   const user = await verifyAdminSession();
 
@@ -37,7 +40,7 @@ export async function requireAdminResourcePermission(
   resource: Resource,
   action: Action,
   resourceId?: string,
-): Promise<AdminUser> {
+): Promise<AdminAuthUser> {
   await headers();
   const user = await requireAdminPermission(resource, action);
 

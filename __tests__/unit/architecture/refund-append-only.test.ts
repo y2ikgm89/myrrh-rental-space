@@ -40,9 +40,25 @@ describe("refunds append-only boundary", () => {
   });
 
   test("Refund domain commands は update/delete/upsert を呼び出さない", () => {
+    const eventPaymentDir = join(
+      process.cwd(),
+      "src/shared/domain/events/payment",
+    );
+    const eventPaymentModules = readdirSync(eventPaymentDir)
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => `src/shared/domain/events/payment/${name}`);
+
+    const reservationPaymentDir = join(
+      process.cwd(),
+      "src/shared/domain/reservations/payment",
+    );
+    const reservationPaymentModules = readdirSync(reservationPaymentDir)
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => `src/shared/domain/reservations/payment/${name}`);
+
     const files = [
-      "src/shared/domain/events/payment-commands.ts",
-      "src/shared/domain/reservations/payment-commands.ts",
+      ...eventPaymentModules,
+      ...reservationPaymentModules,
       "src/shared/domain/reservations/payment-queries.ts",
     ];
 

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（mock.module より先に定義 — TDZ 回避）
 const mockNavigationItemCreate = mock<() => Promise<Record<string, unknown>>>(
@@ -156,7 +157,7 @@ mock.module("@generated/prisma/client", () => {
   };
 });
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   NavigationType: {
     HEADER_DESKTOP: "HEADER_DESKTOP",
     HEADER_MOBILE: "HEADER_MOBILE",
@@ -171,7 +172,7 @@ mock.module("@generated/prisma/enums", () => ({
     TIKTOK: "TIKTOK",
     OTHER: "OTHER",
   },
-}));
+});
 
 import {
   createNavigationItem,

@@ -21,7 +21,7 @@ import { sanitizeReturnTo } from "./_lib/sanitize-return-to";
  * LOGIN_SIGNUP scope の再同意 Server Action。
  *
  * client 入力は信用せず、handler 内で:
- *   1. session を再検証 (`verifyCustomerSession` + `ensureCustomerLinked`)
+ *   1. session を再検証 (`requireMypageSession` + `ensureCustomerLinked`)
  *   2. `getReagreeRequiredTermsForCustomer` で pending を再導出
  *   3. client の agreedTermsIds ⊇ pending termsIds を強制 (curl bypass 防止)
  *   4. `recordTermsAgreementsCommand(scope: LOGIN_SIGNUP)` で append-only insert

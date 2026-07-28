@@ -10,7 +10,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";

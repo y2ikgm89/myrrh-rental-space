@@ -106,16 +106,22 @@ const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
 mock.module("server-only", () => ({}));
 
+mock.module(
+  "@/shared/domain/reservations/calendar-sync-inbound-mutations",
+  () => ({
+    GCAL_DELETE_CANCELLATION_REASON:
+      "Google Calendar 上でイベントが削除されたため自動キャンセル",
+    applyCalendarTimeChange: (...args: unknown[]) =>
+      mockApplyCalendarTimeChange(...args),
+    cancelReservationFromCalendar: (...args: unknown[]) =>
+      mockCancelReservationFromCalendar(...args),
+  }),
+);
+
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
-  GCAL_DELETE_CANCELLATION_REASON:
-    "Google Calendar 上でイベントが削除されたため自動キャンセル",
   getCalendarSyncRuntimeState: () => mockGetCalendarSyncRuntimeState(),
   recordCalendarSyncCompleted: () => mockRecordCalendarSyncCompleted(),
   saveCalendarSyncToken: (token: string) => mockSaveCalendarSyncToken(token),
-  applyCalendarTimeChange: (...args: unknown[]) =>
-    mockApplyCalendarTimeChange(...args),
-  cancelReservationFromCalendar: (...args: unknown[]) =>
-    mockCancelReservationFromCalendar(...args),
   getReservationByCalendarEventId: (...args: unknown[]) =>
     mockGetReservationByCalendarEventId(...args),
 }));
@@ -130,11 +136,11 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
     mockApplyReservationEditSideEffects(...args),
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/reservations/calendar-sync-fetch", () => ({
   fetchCalendarChanges: () => mockFetchCalendarChanges(),
 }));
 
-mock.module("@/shared/lib/email/system-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendCalendarSyncRejectionEmail: (...args: unknown[]) =>
     mockSendCalendarSyncRejectionEmail(...args),
 }));
@@ -172,7 +178,8 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: () => undefined,
 }));
 
-const { syncFromCalendar } = await import("@/shared/lib/calendar-sync/inbound");
+const { syncFromCalendar } =
+  await import("@/shared/domain/reservations/reservation-calendar-inbound");
 
 // -----------------------------------------------------------------------
 // Suite

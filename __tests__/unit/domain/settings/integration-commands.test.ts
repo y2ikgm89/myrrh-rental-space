@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // =============================================================================
 // Prisma モック関数（import より前に定義 — TDZ 回避）
@@ -86,18 +87,20 @@ function lastGoogleCalendarUpdate(): Record<string, unknown> {
 }
 
 // CalendarSyncMethod enum モック
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CalendarSyncMethod: {
     polling: "polling",
     webhook: "webhook",
     both: "both",
   },
-}));
+});
 
 import {
   updateStripeSettings,
   recordStripeConnectionSuccess,
   clearStripeKeys,
+} from "@/shared/domain/settings/stripe-commands";
+import {
   updateGoogleCalendarSettings,
   recordGoogleCalendarConnectionSuccess,
   recordGoogleCalendarConnectionError,
@@ -105,11 +108,11 @@ import {
   updateTwoWaySyncSettings,
   saveGoogleCalendarWebhook,
   clearGoogleCalendarWebhook,
-} from "@/shared/domain/settings/integration-commands";
+} from "@/shared/domain/settings/google-calendar-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands";
+import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands/optimistic";
 
 const STRIPE_EXPECTED_UPDATED_AT = new Date("2026-01-15T00:00:00.000Z");
 

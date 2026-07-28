@@ -1,13 +1,12 @@
 import "server-only";
 
-import { createHash, createHmac } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
 import {
   CustomerStatus,
   EmailDeliveryStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
-import { serverEnv } from "@/shared/lib/env/server";
+import { hashSuppressedEmailCandidate } from "@/shared/lib/email/suppression-hash";
 import type {
   CustomerData,
   CustomerFilters,
@@ -453,12 +452,20 @@ export async function getSuppressedEmailSet(): Promise<Set<string>> {
  * （local / test 用）。本番は `validateProductionEnv()` が fail-closed。
  * cache 値は再生成で自動移行するため migration 不要。
  */
-export function hashSuppressedEmailCandidate(canonicalEmail: string): string {
-  const secret = serverEnv.SUPPRESSION_HASH_SECRET;
-  if (secret && secret.length > 0) {
-    return createHmac("sha256", secret).update(canonicalEmail).digest("hex");
-  }
-  return createHash("sha256").update(canonicalEmail).digest("hex");
+export { hashSuppressedEmailCandidate };
+
+/**
+ * RESEND-AUDIT M7: `emailDeliveryStatus` が suppression 対象
+ * (HARD_BOUNCED / COMPLAINED) かを判定する SSoT。anonymize / merge / email
+ * 変更で `suppressedEmailHash` に元の emailCanonical の hash を保存すべきかを決める。
+ */
+export function isSuppressedDeliveryStatus(
+  status: EmailDeliveryStatus,
+): boolean {
+  return (
+    status === EmailDeliveryStatus.HARD_BOUNCED ||
+    status === EmailDeliveryStatus.COMPLAINED
+  );
 }
 
 export async function getCustomerByUserId(userId: string) {

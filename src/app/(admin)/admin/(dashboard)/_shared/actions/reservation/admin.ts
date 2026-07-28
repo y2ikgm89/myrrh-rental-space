@@ -5,7 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import {
   apiRateLimiter,
@@ -28,14 +28,19 @@ import {
   deleteCalendarSync,
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
+import {
+  getReservationEmailRenderContext,
+  isReservationConfirmationEmailEnabled,
+  resolveReservationAdminNotificationDelivery,
+} from "@/shared/domain/settings/queries/email-render-context";
 import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
-} from "@/shared/lib/email/reservation-emails";
+} from "@/shared/domain/email/lib-dispatch";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -143,7 +148,16 @@ export async function createReservationAction(
                 },
               );
               fireAndForget(
-                sendReservationAdminNotification(payloadData, "new"),
+                (async () => {
+                  const delivery =
+                    await resolveReservationAdminNotificationDelivery("new");
+                  if (!delivery.enabled) return;
+                  await sendReservationAdminNotification(
+                    payloadData,
+                    "new",
+                    delivery,
+                  );
+                })(),
                 {
                   operation: "createReservationActionAdminNotificationConfirm",
                   category: ErrorCategory.EXTERNAL_API,
@@ -170,10 +184,29 @@ export async function createReservationAction(
             }
           } else if (data.sendEmail) {
             fireAndForget(
-              Promise.all([
-                sendReservationConfirmationEmail(payloadData),
-                sendReservationAdminNotification(payloadData, "new"),
-              ]),
+              (async () => {
+                const [enabled, renderContext, adminDelivery] =
+                  await Promise.all([
+                    isReservationConfirmationEmailEnabled(),
+                    getReservationEmailRenderContext(),
+                    resolveReservationAdminNotificationDelivery("new"),
+                  ]);
+                await Promise.all([
+                  enabled
+                    ? sendReservationConfirmationEmail(
+                        payloadData,
+                        renderContext,
+                      )
+                    : Promise.resolve(),
+                  adminDelivery.enabled
+                    ? sendReservationAdminNotification(
+                        payloadData,
+                        "new",
+                        adminDelivery,
+                      )
+                    : Promise.resolve(),
+                ]);
+              })(),
               {
                 operation: "createReservationActionSendConfirmationEmails",
                 category: ErrorCategory.EXTERNAL_API,
@@ -390,10 +423,20 @@ export async function updateReservationAction(
               },
             );
             fireAndForget(
-              sendReservationAdminNotification(
-                payloadData,
-                previousStatus === ReservationStatus.PENDING ? "new" : "update",
-              ),
+              (async () => {
+                const action =
+                  previousStatus === ReservationStatus.PENDING
+                    ? "new"
+                    : "update";
+                const delivery =
+                  await resolveReservationAdminNotificationDelivery(action);
+                if (!delivery.enabled) return;
+                await sendReservationAdminNotification(
+                  payloadData,
+                  action,
+                  delivery,
+                );
+              })(),
               {
                 operation: "updateReservationActionAdminNotificationConfirm",
                 category: ErrorCategory.EXTERNAL_API,
@@ -403,24 +446,39 @@ export async function updateReservationAction(
             );
           } else if (statusFlipToPending) {
             fireAndForget(
-              Promise.all([
-                sendReservationStatusChangedEmail({
-                  reservationId: payloadData.reservationId,
-                  customerEmail: payloadData.customerEmail,
-                  customerName: payloadData.customerName,
-                  spaceName: payloadData.spaceName,
-                  startTime: payloadData.startTime,
-                  endTime: payloadData.endTime,
-                  totalPrice: payloadData.totalPrice,
-                  oldStatus: previousStatus,
-                  newStatus,
-                  icsSequence: payloadData.icsSequence,
-                  ...(payloadData.location != null
-                    ? { location: payloadData.location }
-                    : {}),
-                }),
-                sendReservationAdminNotification(payloadData, "update"),
-              ]),
+              (async () => {
+                const [renderContext, adminDelivery] = await Promise.all([
+                  getReservationEmailRenderContext(),
+                  resolveReservationAdminNotificationDelivery("update"),
+                ]);
+                await Promise.all([
+                  sendReservationStatusChangedEmail(
+                    {
+                      reservationId: payloadData.reservationId,
+                      customerEmail: payloadData.customerEmail,
+                      customerName: payloadData.customerName,
+                      spaceName: payloadData.spaceName,
+                      startTime: payloadData.startTime,
+                      endTime: payloadData.endTime,
+                      totalPrice: payloadData.totalPrice,
+                      oldStatus: previousStatus,
+                      newStatus,
+                      icsSequence: payloadData.icsSequence,
+                      ...(payloadData.location != null
+                        ? { location: payloadData.location }
+                        : {}),
+                    },
+                    renderContext,
+                  ),
+                  adminDelivery.enabled
+                    ? sendReservationAdminNotification(
+                        payloadData,
+                        "update",
+                        adminDelivery,
+                      )
+                    : Promise.resolve(),
+                ]);
+              })(),
               {
                 operation: "updateReservationActionStatusFlipToPending",
                 category: ErrorCategory.EXTERNAL_API,
@@ -462,9 +520,19 @@ export async function updateReservationAction(
                 const emailPayload = sideEffectResult.issuanceFailed
                   ? { ...payloadData, smartLockIssuanceFailed: true }
                   : payloadData;
+                const [renderContext, adminDelivery] = await Promise.all([
+                  getReservationEmailRenderContext(),
+                  resolveReservationAdminNotificationDelivery("update"),
+                ]);
                 await Promise.all([
-                  sendReservationUpdatedEmail(emailPayload),
-                  sendReservationAdminNotification(emailPayload, "update"),
+                  sendReservationUpdatedEmail(emailPayload, renderContext),
+                  adminDelivery.enabled
+                    ? sendReservationAdminNotification(
+                        emailPayload,
+                        "update",
+                        adminDelivery,
+                      )
+                    : Promise.resolve(),
                 ]);
               })(),
               {

@@ -6,8 +6,8 @@ import {
   claimReservationReminder,
   releaseReservationReminderClaim,
 } from "@/shared/domain/reservations/reminder-commands";
-import { isEmailEnabled } from "@/shared/lib/email/client";
-import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
+import { isEmailEnabled } from "@/shared/domain/settings/queries/email-render-context";
+import { sendReservationReminderEmail } from "@/shared/domain/email/dispatch";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
@@ -15,7 +15,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {

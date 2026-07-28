@@ -1,18 +1,15 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   ErrorCategory,
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
-import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import {
   createMutationError,
+  type MutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
 import {
@@ -35,11 +32,26 @@ export type VerifyGuestTokenResult =
 export type GuestTokenMemberGuardResult<TMemberContext = void> =
   { ok: true; memberContext: TMemberContext } | { ok: false; error: string };
 
+type GuestTurnstileResult =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
 export interface GuestTokenMutationConfig<TMemberContext = void> {
+  /** logError context.operation */
   operation: string;
+  /** maintenance ON / DB 不明時の fail-closed block（app 層から domain helper を注入） */
+  getMaintenanceBlock: () => Promise<MutationError | null>;
   cookieName: string;
   turnstileAction: TurnstileAction;
   turnstileToken?: string | undefined;
+  /**
+   * domain `validateTurnstile` を呼び出し側から注入する。
+   * lib→domain 依存を避けるため、本モジュールは Settings を解決しない。
+   */
+  validateTurnstile: (params: {
+    readonly token: string | undefined;
+    readonly expectedAction: TurnstileAction;
+  }) => Promise<GuestTurnstileResult>;
   expectedEntityId: string;
   verifyToken: (token: string, now: Date) => VerifyGuestTokenResult;
   verifyNow: () => Date;
@@ -49,11 +61,17 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
   perEntityRateLimiter: {
     check: (entityId: string) => Promise<RateLimitResult>;
   };
+  /** logError context.limiter for per-entity hits */
   perEntityRateLimitLogLimiter: string;
   perEntityRateLimitError: string;
+  /** entity id 突合後の追加検証（例: キャンセル理由）。エラー時は MutationResult を返す。 */
   afterEntityIdMatch?: (
     entityId: string,
   ) => Promise<MutationResult<null> | undefined>;
+  /**
+   * member-ownership + linked-customer gates。
+   * session の有無に関わらず呼ぶ（resource 側 active/BLACKLIST は常時強制）。
+   */
   guardMemberOwnership?: (
     entityId: string,
     sessionUserId: string | null,
@@ -66,10 +84,24 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
   }) => Promise<MutationResult<null>>;
 }
 
+/**
+ * ゲスト向け HttpOnly cookie トークン Server Action の共通パイプライン。
+ *
+ * セキュリティ階層（entity 固有の順序差は config で保持）:
+ *  1. maintenance block
+ *  2. IP rate-limit（formSubmitRateLimiter）
+ *  3. Turnstile
+ *  4. cookie → 暗号検証
+ *  5. entity id 形式検証 + 表示中 entity との突合（stale-tab 対策）
+ *  6. optional afterEntityIdMatch（理由など）
+ *  7. per-entity rate-limit
+ *  8. optional member-ownership / guest-token customer gates（inject）
+ *  9. execute() — domain mutation + side effects
+ */
 export async function runGuestTokenMutation<TMemberContext = void>(
   config: GuestTokenMutationConfig<TMemberContext>,
 ): Promise<MutationResult<null>> {
-  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  const maintenanceBlock = await config.getMaintenanceBlock();
   if (maintenanceBlock) return maintenanceBlock;
 
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
@@ -85,7 +117,7 @@ export async function runGuestTokenMutation<TMemberContext = void>(
     return createMutationError("リクエストが多すぎます");
   }
 
-  const turnstile = await validateTurnstile({
+  const turnstile = await config.validateTurnstile({
     token: config.turnstileToken,
     expectedAction: config.turnstileAction,
   });

@@ -15,6 +15,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // -----------------------------------------------------------------------------
 // Prisma mock: 単一の Settings singleton レコードを in-memory で保持
@@ -67,7 +68,7 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // admin-queries.ts が触る他 enum も mock（本テストでは値そのものは使わない）
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
   DiscountCombinationMode: { best: "best", both: "both" },
   TaxDisplayMode: {
@@ -75,7 +76,7 @@ mock.module("@generated/prisma/enums", () => ({
     tax_excluded: "tax_excluded",
     both: "both",
   },
-}));
+});
 
 // google-calendar/service-account は googleapis に依存するためモック（値は未使用）
 mock.module("@/shared/lib/google-calendar/service-account", () => ({
@@ -91,7 +92,7 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
 
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/integration-commands";
+import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/google-calendar-commands";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 
 // -----------------------------------------------------------------------------

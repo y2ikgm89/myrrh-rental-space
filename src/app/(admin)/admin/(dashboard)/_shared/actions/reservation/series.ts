@@ -19,7 +19,7 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
+import { assertAdminFeatureCreateAllowed } from "@/shared/domain/features/check";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -33,7 +33,7 @@ import {
   createReservationSeriesCommand,
 } from "@/shared/domain/reservations/series-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
-import { syncReservationSeriesToCalendar } from "@/shared/lib/calendar-sync/outbound";
+import { syncReservationSeriesToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { z } from "zod";

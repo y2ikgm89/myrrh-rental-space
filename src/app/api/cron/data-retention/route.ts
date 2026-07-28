@@ -8,7 +8,7 @@ import {
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import {
   getDataRetentionConfig,
   runDataRetentionPurge,

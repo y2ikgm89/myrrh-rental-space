@@ -2,9 +2,6 @@ import "server-only";
 import { formatDateWithWeekday } from "@/shared/lib/date-format";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
-import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import { buildBookingHubUrl } from "./reservation-emails";
 import {
@@ -21,27 +18,25 @@ import {
 import { buildReservationCalendar } from "../ical";
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
-import type { EmailResult, ReminderEmailData } from "./types";
+import type {
+  EmailResult,
+  EmailSendContext,
+  ReminderEmailData,
+  ReminderEmailRenderContext,
+} from "./types";
 
 export async function sendReservationReminderEmail(
   data: ReminderEmailData,
+  renderContext: ReminderEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const reservationDate = formatDateWithWeekday(data.startTime);
 
-  const [calendarSettings, deadlineSettings, organizer, footer] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getReservationDeadlineSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-    ]);
+  const { calendarSettings, deadlineSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
   const appUrl = getAppUrl();
 
-  // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を生成する。
-  // 「リマインダにキャンセル URL が無い」と顧客が連絡無くキャンセルし得る運用上の穴を塞ぐ。
-  // 漏洩窓上限（MAX_CANCEL_TOKEN_LIFETIME_MS）を掛けるが、リマインダは予約直前に送るため
-  // 通常は policy 期限の方が早く採用される（cap は実質効かない）。
   const cancelDeadline = computeCancelTokenExpiresAt(
     data.startTime,
     deadlineSettings.cancellationDeadlineHours,
@@ -53,7 +48,6 @@ export async function sendReservationReminderEmail(
 
   const bookingHubUrl = buildBookingHubUrl(data.userId, data.reservationId);
 
-  // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
   const claimUrl = data.userId
     ? undefined
     : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
@@ -95,37 +89,36 @@ export async function sendReservationReminderEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【ご予約リマインダー】${data.spaceName} - ${reservationDate}`,
-      react: ReservationReminderEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          location: data.location,
-          notes: data.notes,
-          cancelUrl,
-          bookingHubUrl,
-          claimUrl,
-          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // NOTE: 静的キー (reservationId のみ) だと Resend が 409 invalid_idempotent_request を
-    // 返す再送 race が発生する。cron が transient 失敗で reminderSentAt claim を release し
-    // 同予約を再 pick したとき、新規に暗号化された cancelUrl/claimUrl payload を同一キーで
-    // 再送するため。実際の重複送信抑止は reminderSentAt WHERE (claim 済みは pick しない)
-    // が担うので、キーは呼び出し毎に fresh にして 409 を回避する。
-    idempotencyKey: `reservation-reminder/${data.reservationId}/${Date.now()}`,
-    operation: "sendReservationReminderEmail",
-    context: {
-      reservationId: data.reservationId,
-      email: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【ご予約リマインダー】${data.spaceName} - ${reservationDate}`,
+        react: ReservationReminderEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            location: data.location,
+            notes: data.notes,
+            cancelUrl,
+            bookingHubUrl,
+            claimUrl,
+            cancellationDeadlineHours:
+              deadlineSettings.cancellationDeadlineHours,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      idempotencyKey: `reservation-reminder/${data.reservationId}/${Date.now()}`,
+      operation: "sendReservationReminderEmail",
+      context: {
+        reservationId: data.reservationId,
+        email: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }

@@ -1,4 +1,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 mock.module("server-only", () => ({}));
 
@@ -25,9 +28,12 @@ const mockValidateTurnstile = mock(
   (): Promise<{ success: boolean; error?: string }> =>
     Promise.resolve({ success: true }),
 );
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/domain/settings/maintenance-guard", () => ({
@@ -141,7 +147,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   getCustomerSession: mockGetCustomerSession,
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
 }));
 
@@ -153,10 +159,13 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
   fetchReservationEmailData: mock(() => Promise.resolve(null)),
 }));
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mock(() => Promise.resolve({ success: true })),
-  updateCalendarSync: mock(() => Promise.resolve({ success: true })),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mock(() => Promise.resolve({ success: true })),
+    updateCalendarSync: mock(() => Promise.resolve({ success: true })),
+  }),
+);
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: mock(() => Promise.resolve()),
@@ -166,23 +175,22 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: mock(() => Promise.resolve()),
 }));
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
-  sendReservationUpdatedEmail: mock(() => Promise.resolve()),
-  sendReservationAdminNotification: mock(() => Promise.resolve()),
-}));
+installEmailLibDispatchMock({
+  sendReservationUpdatedEmail: mock(() => Promise.resolve({ ok: true })),
+  sendReservationAdminNotification: mock(() => Promise.resolve({ ok: true })),
+});
+installEmailRenderContextMock();
 
 const mockFireAndForget = mock(() => undefined);
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
 
-mock.module("@/shared/lib/errors/server", () => ({
+await installErrorsServerMock({
   logError: mock(() => undefined),
   normalizeError: (e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
-  ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH" },
-}));
+});
 
 const IMPORT_PATH = "@/app/(public)/reservation/status/edit/_actions/update";
 

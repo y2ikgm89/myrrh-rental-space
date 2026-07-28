@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // InquiryStatus 定数（FLAGGED / SPAM 追加後の 6 値）
 const InquiryStatus = {
@@ -143,19 +144,17 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
 // helpers.ts が transitive import する他 enum (Role, ReservationStatus, AuditAction, ...) を
-// 潰さないよう spread + override 形式で mock する。
-const actualEnums = await import("@generated/prisma/enums");
-mock.module("@generated/prisma/enums", () => ({
-  ...actualEnums,
+// 潰さないよう generated 実体 + override 形式で mock する。
+await installPrismaEnumsMock({
   InquiryStatus,
   InquiryReplyAuthorType,
   CustomerType,
-}));
+});
 
 mock.module("@generated/prisma/client", () => ({
   Prisma: {

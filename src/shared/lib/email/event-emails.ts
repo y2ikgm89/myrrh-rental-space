@@ -21,17 +21,6 @@ import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-regist
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
-  getCalendarEmailSettings,
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
-import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import type {
-  EventBroadcastPayload,
-  EventCancelledNotificationPayload,
-  EventUpdatedNotificationPayload,
-} from "@/shared/domain/events/email-queries";
-import {
   computeCancelTokenExpiresAt as computeEventCancelTokenExpiresAt,
   createCancelToken as createEventCancelToken,
 } from "@/shared/lib/event-registration-cancel-token";
@@ -59,7 +48,15 @@ import { omitUndefined } from "../serialize";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
-import type { EmailResult } from "./types";
+import type {
+  EmailResult,
+  EmailSendContext,
+  EventAdminNotificationDelivery,
+  EventBroadcastPayload,
+  EventCancelledNotificationPayload,
+  EventEmailRenderContext,
+  EventUpdatedNotificationPayload,
+} from "./types";
 
 // =============================================================================
 // Event Registration Emails
@@ -122,6 +119,8 @@ type EventRegistrationConfirmationData = {
  */
 export async function sendEventRegistrationConfirmation(
   data: EventRegistrationConfirmationData,
+  renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   if (!data.customerEmail) return { ok: false, reason: "disabled" };
   const customerEmail = data.customerEmail;
@@ -130,11 +129,8 @@ export async function sendEventRegistrationConfirmation(
   const startTime = formatTimeShort(data.eventStartTime);
   const endTime = formatTimeShort(data.eventEndTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -215,39 +211,42 @@ export async function sendEventRegistrationConfirmation(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: customerEmail,
-      subject: `【イベント申込確認】${data.eventTitle} - ${eventDate}`,
-      react: EventRegistrationConfirmationEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          eventTitle: data.eventTitle,
-          eventDate,
-          startTime,
-          endTime,
-          location: data.location,
-          format: data.format,
-          meetingUrl: data.meetingUrl,
-          quantity: data.quantity,
-          registrationId: data.registrationId.slice(0, 8).toUpperCase(),
-          addToCalendarLinks,
-          eventRegistrationHubUrl,
-          claimUrl,
-          cancelUrl,
-          paymentCheckoutUrl: data.paymentCheckoutUrl,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    idempotencyKey: `event-reg-confirm/${data.registrationId}`,
-    operation: "sendEventRegistrationConfirmation",
-    context: {
-      registrationId: data.registrationId,
-      customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: customerEmail,
+        subject: `【イベント申込確認】${data.eventTitle} - ${eventDate}`,
+        react: EventRegistrationConfirmationEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            eventTitle: data.eventTitle,
+            eventDate,
+            startTime,
+            endTime,
+            location: data.location,
+            format: data.format,
+            meetingUrl: data.meetingUrl,
+            quantity: data.quantity,
+            registrationId: data.registrationId.slice(0, 8).toUpperCase(),
+            addToCalendarLinks,
+            eventRegistrationHubUrl,
+            claimUrl,
+            cancelUrl,
+            paymentCheckoutUrl: data.paymentCheckoutUrl,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      idempotencyKey: `event-reg-confirm/${data.registrationId}`,
+      operation: "sendEventRegistrationConfirmation",
+      context: {
+        registrationId: data.registrationId,
+        customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 type EventReminderEmailData = {
@@ -274,16 +273,15 @@ type EventReminderEmailData = {
  */
 export async function sendEventReminderEmail(
   data: EventReminderEmailData,
+  renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const eventDate = formatDateWithWeekday(data.eventStartTime);
   const startTime = formatTimeShort(data.eventStartTime);
   const endTime = formatTimeShort(data.eventEndTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
   const appUrl = getAppUrl();
 
@@ -344,38 +342,41 @@ export async function sendEventReminderEmail(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: data.customerEmail,
-      subject: `【イベント前日リマインダー】${data.eventTitle} - ${eventDate}`,
-      react: EventReminderEmail(
-        omitUndefined({
-          customerName: data.customerName,
-          eventTitle: data.eventTitle,
-          eventDate,
-          startTime,
-          endTime,
-          location: data.location,
-          quantity: data.quantity,
-          eventRegistrationHubUrl,
-          claimUrl,
-          cancelUrl,
-          footer,
-        }),
-      ),
-      attachments,
-    }),
-    // NOTE: registrationId 単体では claimUrl / cancelUrl の再暗号化で payload が
-    // 毎回差分化するため、cron 再走時に Resend が 409 invalid_idempotent_request
-    // で silent drop してしまう。Date.now() を混ぜて invocation ごとに fresh
-    // key を発行する。冪等性の権威は reminderSentAt claim gate 側にある。
-    idempotencyKey: `event-reminder/${data.registrationId}/${Date.now()}`,
-    operation: "sendEventReminderEmail",
-    context: {
-      registrationId: data.registrationId,
-      customerEmail: data.customerEmail,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: data.customerEmail,
+        subject: `【イベント前日リマインダー】${data.eventTitle} - ${eventDate}`,
+        react: EventReminderEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            eventTitle: data.eventTitle,
+            eventDate,
+            startTime,
+            endTime,
+            location: data.location,
+            quantity: data.quantity,
+            eventRegistrationHubUrl,
+            claimUrl,
+            cancelUrl,
+            footer,
+          }),
+        ),
+        attachments,
+      }),
+      // NOTE: registrationId 単体では claimUrl / cancelUrl の再暗号化で payload が
+      // 毎回差分化するため、cron 再走時に Resend が 409 invalid_idempotent_request
+      // で silent drop してしまう。Date.now() を混ぜて invocation ごとに fresh
+      // key を発行する。冪等性の権威は reminderSentAt claim gate 側にある。
+      idempotencyKey: `event-reminder/${data.registrationId}/${Date.now()}`,
+      operation: "sendEventReminderEmail",
+      context: {
+        registrationId: data.registrationId,
+        customerEmail: data.customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 type EventRegistrationCancelledData = {
@@ -399,17 +400,16 @@ type EventRegistrationCancelledData = {
  */
 export async function sendEventRegistrationCancelled(
   data: EventRegistrationCancelledData,
+  renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   if (!data.customerEmail) return { ok: false, reason: "disabled" };
   const customerEmail = data.customerEmail;
 
   const eventDate = formatDateWithWeekday(data.eventStartTime);
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   const calendarParams = omitUndefined({
@@ -451,28 +451,31 @@ export async function sendEventRegistrationCancelled(
     }
   }
 
-  return sendEmail({
-    payload: omitUndefined({
-      to: customerEmail,
-      subject: `【イベント申込キャンセル】${data.eventTitle}`,
-      react: EventRegistrationCancelledEmail({
-        customerName: data.customerName,
-        eventTitle: data.eventTitle,
-        eventDate,
-        footer,
+  return sendEmail(
+    {
+      payload: omitUndefined({
+        to: customerEmail,
+        subject: `【イベント申込キャンセル】${data.eventTitle}`,
+        react: EventRegistrationCancelledEmail({
+          customerName: data.customerName,
+          eventTitle: data.eventTitle,
+          eventDate,
+          footer,
+        }),
+        attachments,
       }),
-      attachments,
-    }),
-    // icsSequence を含めることで、将来 restore path が追加されて 24h 内に同一
-    // registration が再キャンセルされる可能性が生まれても idempotency key が
-    // 衝突しないよう SSoT で対称化する（reservation-cancel と同方針）。
-    idempotencyKey: `event-reg-cancel/${data.registrationId}/${data.icsSequence}`,
-    operation: "sendEventRegistrationCancelled",
-    context: {
-      registrationId: data.registrationId,
-      customerEmail,
+      // icsSequence を含めることで、将来 restore path が追加されて 24h 内に同一
+      // registration が再キャンセルされる可能性が生まれても idempotency key が
+      // 衝突しないよう SSoT で対称化する（reservation-cancel と同方針）。
+      idempotencyKey: `event-reg-cancel/${data.registrationId}/${data.icsSequence}`,
+      operation: "sendEventRegistrationCancelled",
+      context: {
+        registrationId: data.registrationId,
+        customerEmail,
+      },
     },
-  });
+    sendContext,
+  );
 }
 
 type EventAdminNotificationData = {
@@ -494,18 +497,12 @@ type EventAdminNotificationData = {
 export async function sendEventAdminNotification(
   data: EventAdminNotificationData,
   type: "registration" | "waitlist_registration" | "cancellation",
+  delivery: EventAdminNotificationDelivery,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const toggles = await getEmailDeliverySettings();
-  // Record 網羅で type 追加漏れを compile-time に検知させる。
-  const enabledByType: boolean = {
-    registration: toggles.notifyEventRegistration,
-    waitlist_registration: toggles.notifyEventWaitlistRegistration,
-    cancellation: toggles.notifyEventCancellation,
-  }[type];
-  if (!enabledByType) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
@@ -517,30 +514,33 @@ export async function sendEventAdminNotification(
     cancellation: "イベント申込キャンセル",
   }[type];
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject: `【${actionText}】${data.eventTitle} - ${data.participantName}様`,
-      react: EventAdminNotificationEmail({
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject: `【${actionText}】${data.eventTitle} - ${data.participantName}様`,
+        react: EventAdminNotificationEmail({
+          type,
+          participantName: data.participantName,
+          participantEmail: data.participantEmail,
+          eventTitle: data.eventTitle,
+          eventDate,
+          quantity: data.quantity,
+          currentRegistrations: data.currentRegistrations,
+          capacity: data.capacity,
+          adminUrl: getAdminUrl(`/events/${data.eventId}`),
+          footer,
+        }),
+      },
+      idempotencyKey: `event-admin/${data.registrationId}/${type}`,
+      operation: "sendEventAdminNotification",
+      context: {
+        registrationId: data.registrationId,
         type,
-        participantName: data.participantName,
-        participantEmail: data.participantEmail,
-        eventTitle: data.eventTitle,
-        eventDate,
-        quantity: data.quantity,
-        currentRegistrations: data.currentRegistrations,
-        capacity: data.capacity,
-        adminUrl: getAdminUrl(`/events/${data.eventId}`),
-        footer,
-      }),
+      },
     },
-    idempotencyKey: `event-admin/${data.registrationId}/${type}`,
-    operation: "sendEventAdminNotification",
-    context: {
-      registrationId: data.registrationId,
-      type,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -548,15 +548,14 @@ export async function sendEventAdminNotification(
  */
 export async function sendEventCancelledToAllParticipants(
   payload: EventCancelledNotificationPayload,
+  renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
   reason?: string,
 ): Promise<void> {
   const eventUpdatedAt = payload.updatedAt.getTime();
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外
@@ -612,29 +611,32 @@ export async function sendEventCancelledToAllParticipants(
         }
       }
 
-      return sendEmail({
-        payload: omitUndefined({
-          to: registration.email,
-          subject: `【イベント中止のお知らせ】${payload.title}`,
-          react: EventCancelledNotificationEmail(
-            omitUndefined({
-              customerName: registration.name,
-              eventTitle: payload.title,
-              eventDate,
-              reason,
-              eventRegistrationHubUrl,
-              footer,
-            }),
-          ),
-          attachments,
-        }),
-        idempotencyKey: `event-cancelled/${payload.eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
-        operation: "sendEventCancelledToAllParticipants",
-        context: {
-          eventId: payload.eventId,
-          participantEmail: registration.email,
+      return sendEmail(
+        {
+          payload: omitUndefined({
+            to: registration.email,
+            subject: `【イベント中止のお知らせ】${payload.title}`,
+            react: EventCancelledNotificationEmail(
+              omitUndefined({
+                customerName: registration.name,
+                eventTitle: payload.title,
+                eventDate,
+                reason,
+                eventRegistrationHubUrl,
+                footer,
+              }),
+            ),
+            attachments,
+          }),
+          idempotencyKey: `event-cancelled/${payload.eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
+          operation: "sendEventCancelledToAllParticipants",
+          context: {
+            eventId: payload.eventId,
+            participantEmail: registration.email,
+          },
         },
-      });
+        sendContext,
+      );
     }),
   );
 
@@ -667,14 +669,13 @@ export async function sendEventCancelledToAllParticipants(
 export async function sendEventUpdatedToAllParticipants(
   payload: EventUpdatedNotificationPayload,
   oldSlotStartTimes: ReadonlyMap<string, Date>,
+  renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
 ): Promise<void> {
   const eventUpdatedAt = payload.updatedAt.getTime();
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const { calendarSettings, organizer } = renderContext;
+  const footer = await getEmailFooterData();
   const host = getAppHost();
 
   // walk-in 由来 (email=null) は宛先が無いため除外
@@ -731,28 +732,31 @@ export async function sendEventUpdatedToAllParticipants(
         }
       }
 
-      return sendEmail({
-        payload: omitUndefined({
-          to: registration.email,
-          subject: `【イベント内容変更のお知らせ】${payload.title}`,
-          react: EventUpdatedNotificationEmail({
-            customerName: registration.name,
-            eventTitle: payload.title,
-            eventDate: oldEventDate,
-            newEventDate: `${newEventDate}〜${newEndTime}`,
-            location: payload.venueDisplay ?? undefined,
-            eventRegistrationHubUrl,
-            footer,
+      return sendEmail(
+        {
+          payload: omitUndefined({
+            to: registration.email,
+            subject: `【イベント内容変更のお知らせ】${payload.title}`,
+            react: EventUpdatedNotificationEmail({
+              customerName: registration.name,
+              eventTitle: payload.title,
+              eventDate: oldEventDate,
+              newEventDate: `${newEventDate}〜${newEndTime}`,
+              location: payload.venueDisplay ?? undefined,
+              eventRegistrationHubUrl,
+              footer,
+            }),
+            attachments,
           }),
-          attachments,
-        }),
-        idempotencyKey: `event-updated/${payload.eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
-        operation: "sendEventUpdatedToAllParticipants",
-        context: {
-          eventId: payload.eventId,
-          participantEmail: registration.email,
+          idempotencyKey: `event-updated/${payload.eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
+          operation: "sendEventUpdatedToAllParticipants",
+          context: {
+            eventId: payload.eventId,
+            participantEmail: registration.email,
+          },
         },
-      });
+        sendContext,
+      );
     }),
   );
 
@@ -812,6 +816,7 @@ export async function sendEventBroadcast(
     body: string;
     broadcastNonce: string;
   },
+  sendContext: EmailSendContext,
 ): Promise<EventBroadcastResult> {
   if (payload.recipients.length === 0) {
     return { ok: true, sent: 0, skipped: payload.skipped };
@@ -834,29 +839,32 @@ export async function sendEventBroadcast(
           ? createMarketingUnsubscribeArtifacts(customerId)
           : null;
 
-      return sendEmail({
-        payload: {
-          to: registration.email,
-          subject: params.subject,
-          ...(unsubscribe !== null ? { headers: unsubscribe.headers } : {}),
-          react: EventBroadcastEmail({
-            eventTitle: payload.title,
-            eventUrl,
+      return sendEmail(
+        {
+          payload: {
+            to: registration.email,
             subject: params.subject,
-            bodyText: params.body,
-            ...(unsubscribe !== null
-              ? { unsubscribeUrl: unsubscribe.url }
-              : {}),
-            footer,
-          }),
+            ...(unsubscribe !== null ? { headers: unsubscribe.headers } : {}),
+            react: EventBroadcastEmail({
+              eventTitle: payload.title,
+              eventUrl,
+              subject: params.subject,
+              bodyText: params.body,
+              ...(unsubscribe !== null
+                ? { unsubscribeUrl: unsubscribe.url }
+                : {}),
+              footer,
+            }),
+          },
+          idempotencyKey: `event-broadcast/${payload.eventId}/${hashForKey(registration.email)}/${params.broadcastNonce}`,
+          operation: "sendEventBroadcast",
+          context: {
+            eventId: payload.eventId,
+            participantEmail: registration.email,
+          },
         },
-        idempotencyKey: `event-broadcast/${payload.eventId}/${hashForKey(registration.email)}/${params.broadcastNonce}`,
-        operation: "sendEventBroadcast",
-        context: {
-          eventId: payload.eventId,
-          participantEmail: registration.email,
-        },
-      });
+        sendContext,
+      );
     }),
   );
 

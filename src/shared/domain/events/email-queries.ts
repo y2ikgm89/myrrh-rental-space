@@ -1,63 +1,20 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { formatEventVenue } from "@/shared/domain/events/venue";
-import {
-  RegistrationStatus,
-  type EventFormatValue,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { formatEventVenue } from "@/shared/lib/events/venue";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import type {
+  EventBroadcastPayload,
+  EventCancelledNotificationPayload,
+  EventUpdatedNotificationPayload,
+} from "@/shared/lib/email/types";
 
-export type EventCancelledNotificationPayload = {
-  readonly eventId: string;
-  readonly title: string;
-  readonly format: EventFormatValue;
-  readonly meetingUrl: string | null;
-  readonly updatedAt: Date;
-  readonly venueDisplay: string | null;
-  readonly registrations: ReadonlyArray<{
-    readonly id: string;
-    readonly name: string;
-    readonly email: string | null;
-    readonly quantity: number;
-    readonly icsSequence: number;
-    readonly customerId: string | null;
-    readonly status: RegistrationStatus;
-    readonly slot: { readonly startAt: Date; readonly endAt: Date };
-  }>;
-};
-
-export type EventUpdatedNotificationPayload = {
-  readonly eventId: string;
-  readonly title: string;
-  readonly format: EventFormatValue;
-  readonly meetingUrl: string | null;
-  readonly updatedAt: Date;
-  readonly venueDisplay: string | null;
-  readonly registrations: ReadonlyArray<{
-    readonly id: string;
-    readonly name: string;
-    readonly email: string | null;
-    readonly quantity: number;
-    readonly icsSequence: number;
-    readonly slotId: string;
-    readonly customerId: string | null;
-    readonly slot: { readonly startAt: Date; readonly endAt: Date };
-  }>;
-};
-
-export type EventBroadcastPayload = {
-  readonly eventId: string;
-  readonly title: string;
-  readonly slug: string;
-  readonly recipients: ReadonlyArray<{
-    readonly id: string;
-    readonly email: string;
-    readonly customerId: string | null;
-  }>;
-  readonly skipped: number;
-  readonly customerIdByEmail: ReadonlyMap<string, string>;
-};
+export type {
+  EventBroadcastPayload,
+  EventCancelledNotificationPayload,
+  EventUpdatedNotificationPayload,
+} from "@/shared/lib/email/types";
 
 /**
  * イベント中止通知メール (`sendEventCancelledToAllParticipants`) 用 payload。

@@ -25,18 +25,18 @@ import {
   requireAdminPermission,
   requireAdminResourcePermission,
 } from "@/admin/queries/_helpers";
-import type { AdminUser } from "@/shared/lib/admin-auth";
+import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 
 /** Dashboard shell: IAP session + dashboard role only. */
-export async function requireAdminDashboardPage(): Promise<AdminUser> {
+export async function requireAdminDashboardPage(): Promise<AdminAuthUser> {
   return requireAdminDashboardAccess();
 }
 
 /** List/index pages that enforce read access at the page boundary. */
 export async function requireAdminListPage(
   resource: Resource,
-): Promise<AdminUser> {
+): Promise<AdminAuthUser> {
   return requireAdminPermission(resource, "read");
 }
 
@@ -44,13 +44,13 @@ export async function requireAdminListPage(
 export async function requireAdminDetailPage(
   resource: Resource,
   resourceId?: string,
-): Promise<AdminUser> {
+): Promise<AdminAuthUser> {
   return requireAdminResourcePermission(resource, "read", resourceId);
 }
 
 /** Settings hub (`read`) and mutation subpages (`manage`). */
 export async function requireAdminSettingsPage(
   action: Extract<Action, "read" | "manage"> = "read",
-): Promise<AdminUser> {
+): Promise<AdminAuthUser> {
   return requireAdminPermission("settings", action);
 }

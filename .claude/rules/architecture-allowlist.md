@@ -3,75 +3,47 @@ paths:
   [
     "__tests__/unit/architecture-boundaries.test.ts",
     "__tests__/unit/architecture/**",
-    "src/shared/lib/**",
-    "src/shared/domain/**",
   ]
 ---
 
-# Architecture allowlist policy
+# architecture allowlist 並列 PR
 
-Mechanical SSoT for allowlist **contents** lives in
-`__tests__/unit/architecture-boundaries.test.ts` and focused tests under
-`__tests__/unit/architecture/`. This document describes **policy only** — do not
-duplicate allowlist arrays here.
+`__tests__/unit/architecture-boundaries.test.ts` の ratchet allowlist
+（特に `LIB_TO_DOMAIN_IMPORT_ALLOWLIST`）は **単一の配列リテラル** のため、
+複数 PR が同時に行を削除すると merge のたびに `DIRTY` / `CONFLICTING` になる。
 
-## Ratchet rules
+## 並列ルール
 
-1. **No growth** — adding a new allowlist entry requires removing another entry in
-   the same PR, unless the test explicitly allows net-new debt (rare).
-2. **Serial PRs** — allowlist-editing PRs that touch `LIB_TO_DOMAIN_IMPORT_ALLOWLIST`
-   or `DOMAIN_ENUM_IMPORT_ALLOWLIST` should stay **one OPEN at a time**. After each
-   merge, rematch `origin/main` and resolve conflicts as the **union of deletions**
-   (never resurrect cleared entries).
-3. **No DI shims to clear debt** — prefer moving code to the correct layer or a thin
-   `*-server.ts` wrapper over adapter injection solely to satisfy the gate.
+- **allowlist 行を増減する PR は同時に OPEN 1 本まで**。次の allowlist PR は
+  前 PR が main に merge されてから切る
+- 並列してよいのは allowlist を触らない変更だけ（例: domain 内のファイル分割、
+  pure helper の移動で allowlist 行が変わらないもの）
+- lib→domain 解消を複数 seam で進めたいときも、allowlist 編集は **直列**。
+  実装 worktree を先に用意しても、push / PR 作成は前件 merge 後に行う
 
-## Permanent exceptions
+## 競合が起きたときの解消
 
-| Allowlist                        | Entry              | Reason                                                                     |
-| -------------------------------- | ------------------ | -------------------------------------------------------------------------- |
-| `LIB_TO_DOMAIN_IMPORT_ALLOWLIST` | `customer-auth.ts` | Better Auth `beforeDelete` adapter; intentional permanent cross-layer hook |
+1. 対象 branch で `git fetch origin main && git merge origin/main`
+2. allowlist は **削除の union**（両側で消した行をすべて消す）。cleared 済み行を
+   復活させない
+3. 実装側の import は「この PR の意図」と「main の新しい正規 path」を両立させる
+   （例: domain dispatch + 別 PR で移った maintenance / turnstile inject）
+4. rematch 後に `architecture-boundaries` + `bun run validate`、push、auto-merge 継続
 
-Do not force this allowlist to zero or add compatibility shims to remove it.
+## 恒久 adapter（解消対象外）
 
-## Integration adapters (LIB_TO_DOMAIN session-lock)
+`LIB_TO_DOMAIN_IMPORT_ALLOWLIST` の一部は「未移行の借り」ではなく **framework
+lifecycle の正規 composition** として残す:
 
-These `shared/lib` modules **intentionally** read domain settings or orchestrate
-cross-surface infrastructure. They stay on the allowlist permanently; the ratchet
-only blocks **new** lib → domain imports, not removal of documented exceptions.
+| エントリ           | 理由                                                                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customer-auth.ts` | Better Auth 公式は `deleteUser.beforeDelete` 等を `betterAuth()` config 内に置く。domain（anonymize / email dispatch）呼び出しは config 縁で行うのが正しい。BA 工場を domain に移すと framework adapter が domain を汚染する |
 
-| Category              | Files                                                                                | Reason                                                         |
-| --------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| Admin auth            | `admin-auth.ts`, `admin-resource-access.ts`                                          | IAP admin surface; shared lib is the facade entry              |
-| Email                 | `email/*` (10 files)                                                                 | Template dispatch reads domain for settings / entity context   |
-| Calendar / GBP / iCal | `calendar-sync/*`, `google-calendar/*`, `google-business-profile/*`, `ical/index.ts` | External sync adapters gated by domain settings                |
-| Lexical embeds        | `lexical/resolve-internal-link-cards.ts`, `lexical/resolve-space-card-embeds.ts`     | Rich-text resolve paths need domain queries                    |
-| Feature gate          | `features/check.ts`                                                                  | Cross-surface feature module check; admin + public both import |
-| Turnstile             | `turnstile.ts` (+ `action-helpers.ts` if listed)                                     | Reads decrypted Turnstile settings from domain                 |
-| Pages                 | `pages/require-published.ts`                                                         | Published-page guard for lib callers                           |
-| Reservation slots     | `reservation/time-slots.ts`                                                          | Public availability helper; domain-backed                      |
-| Sections              | `section-defaults.ts`                                                                | Page builder defaults tied to domain registry                  |
-| Customer auth         | `customer-auth.ts`                                                                   | Better Auth `beforeDelete` hook (see above)                    |
+管理 IAP session（旧 `admin-auth.ts`）と resource-access は
+`src/shared/domain/admin-auth/` へ移済み。`customer-auth.ts` を allowlist から
+外すために DI shim や互換 re-export を足さない（clean-break 禁止）。
 
-Do **not** clear these via DI shims. New integration adapters must be added to the
-allowlist **and** documented in this table in the same PR.
+## 将来の構造改善（任意）
 
-## Active allowlist categories
-
-| Category                         | Test location                                  | Goal                                                                                       |
-| -------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `LIB_TO_DOMAIN_IMPORT_ALLOWLIST` | `architecture-boundaries.test.ts`              | Eliminate undocumented `shared/lib` → `shared/domain` imports                              |
-| `DOMAIN_ENUM_IMPORT_ALLOWLIST`   | `architecture-boundaries.test.ts`              | Route domain enums through `@/shared/lib/validations/enums/prisma-types` (currently empty) |
-| Prisma placement ALLOWLIST       | `architecture-boundaries.test.ts`              | `shared/lib` files that call `prisma.*` directly (currently 2)                             |
-| Auth legacy allowlists           | `auth-gate-ssot.test.ts`                       | Migrate app pages to gate facades                                                          |
-| CDN / cache drift                | `type-safety-cast-and-cache-tag-drift.test.ts` | Document invalidation-only tags                                                            |
-
-## Verification
-
-After allowlist edits:
-
-```sh
-bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts
-bun scripts/run-tests.ts __tests__/unit/architecture/auth-gate-ssot.test.ts
-bun run validate
-```
+衝突頻度が高いなら、allowlist を 1 行 1 エントリのテキスト / 1 ファイル 1 エントリに
+分離すると git merge が自動解決しやすくなる。それまでは上記の直列運用を守る。

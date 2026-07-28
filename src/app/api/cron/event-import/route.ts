@@ -11,8 +11,8 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
-import { importCalendarEvents } from "@/shared/lib/calendar-sync/event-inbound";
-import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
+import { importCalendarEvents } from "@/shared/domain/events/event-calendar-import";
+import { isGoogleCalendarEnabled } from "@/shared/domain/settings/google-calendar";
 import { getEventImportSettings } from "@/shared/domain/settings/admin-queries";
 import {
   logError,
@@ -21,7 +21,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 /**

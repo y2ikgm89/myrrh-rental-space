@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 import {
   CustomerStatus,
   EventStatus,
@@ -84,7 +85,7 @@ const mockCustomerFindFirst = mock<
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
@@ -117,11 +118,11 @@ mock.module("@/shared/db/prisma", () => {
   };
 });
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CustomerStatus,
   EventStatus,
   RegistrationStatus,
-}));
+});
 
 import {
   createEventRegistrationCommand,

@@ -28,6 +28,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
 } from "@generated/prisma/enums";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -49,7 +50,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
 // 経由するが、この real-DB テストは advisory lock / FIFO promote の実 Postgres
 // 挙動検証が目的でテスト DB の Settings シーディングとは無関係なため、
 // registration-overbooking.test.ts と同じ mock パターンで gate 自体をバイパスする。
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 
@@ -99,14 +100,14 @@ const mockSendEventWaitlistOffered = mock<
     paymentContext: unknown;
   }) => Promise<{ ok: boolean }>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+installEmailLibDispatchMock({
   sendEventWaitlistExpired: (
     ...args: Parameters<typeof mockSendEventWaitlistExpired>
   ) => mockSendEventWaitlistExpired(...args),
   sendEventWaitlistOffered: (
     ...args: Parameters<typeof mockSendEventWaitlistOffered>
   ) => mockSendEventWaitlistOffered(...args),
-}));
+});
 
 // fireAndForget を「発火した Promise を配列に集める」だけの同期的な mock に
 // 差し替える。ループ内のメール送信 fireAndForget はレスポンス完了を待たないため、

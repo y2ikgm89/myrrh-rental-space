@@ -75,15 +75,15 @@ export type ExecuteConformMutationOptions = {
  * "use server";
  * import { executeConformMutation } from "@/shared/lib/forms/conform-action";
  * import { siteInfoFormSchema } from "@/shared/lib/validations/settings";
- * import { updateSiteInfoCommand } from "@/shared/domain/settings/commands";
+ * import { updateBasicInfo } from "@/shared/domain/settings/commands/site-chrome";
  *
  * export async function updateSiteInfoAction(
  *   _prev: SubmissionResult | undefined,
  *   formData: FormData,
  * ): Promise<SubmissionResult> {
  *   return executeConformMutation(formData, siteInfoFormSchema, async (input) => {
- *     const result = await updateSiteInfoCommand(input);
- *     return result.ok ? { ok: true } : { ok: false, error: result.error };
+ *     await updateBasicInfo(input);
+ *     return { ok: true };
  *   });
  * }
  * ```

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 const mockSpaceCreate = mock<() => Promise<Record<string, unknown>>>(() =>
@@ -67,7 +68,7 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // enum モック
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   DiscountType: {
     none: "none",
     percentage: "percentage",
@@ -90,7 +91,7 @@ mock.module("@generated/prisma/enums", () => ({
     CANCELLED: "CANCELLED",
     NO_SHOW: "NO_SHOW",
   },
-}));
+});
 
 // スラッグバリデーションモック
 const mockCheckSlugAvailability = mock<
@@ -98,7 +99,7 @@ const mockCheckSlugAvailability = mock<
 >(() => Promise.resolve({ available: true }));
 const mockGetSlugErrorMessage = mock<() => string>(() => "スラッグエラー");
 
-mock.module("@/shared/domain/slugs/availability", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));

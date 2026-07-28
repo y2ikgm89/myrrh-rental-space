@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const singletonTimestamps = {
   id: "singleton",
@@ -358,7 +359,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CalendarSyncMethod: {
     polling: "polling",
     webhook: "webhook",
@@ -373,7 +374,7 @@ mock.module("@generated/prisma/enums", () => ({
     tax_excluded: "tax_excluded",
     both: "both",
   },
-}));
+});
 
 mock.module("@/shared/lib/crypto", () => ({
   safeDecrypt: mock(() => "decrypted-secret"),

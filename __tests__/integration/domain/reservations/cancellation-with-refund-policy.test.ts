@@ -39,6 +39,7 @@ import {
 } from "bun:test";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // preload の DATABASE_URL 上書きを、gateway import 前に実 TEST_DB へ向け直す。
 // interactive tx の並行度は refund-command test と同じ 20/60s に揃える (advisory lock
@@ -127,10 +128,13 @@ mock.module("@/shared/domain/notifications/commands", () => ({
 const mockDeleteCalendarSync = mock<
   (reservationId: string, eventId: string) => Promise<void>
 >(() => Promise.resolve());
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  deleteCalendarSync: (rId: string, eId: string) =>
-    mockDeleteCalendarSync(rId, eId),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    deleteCalendarSync: (rId: string, eId: string) =>
+      mockDeleteCalendarSync(rId, eId),
+  }),
+);
 
 // メール送信 (顧客 + 管理者) は外部 SMTP を叩くため mock。
 const mockSendCancelled = mock<
@@ -139,24 +143,20 @@ const mockSendCancelled = mock<
 const mockSendAdminNotification = mock<
   (data: Record<string, unknown>, action: string) => Promise<unknown>
 >(() => Promise.resolve({ ok: true }));
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: (d: Record<string, unknown>) =>
     mockSendCancelled(d),
   sendReservationAdminNotification: (
     d: Record<string, unknown>,
     action: string,
   ) => mockSendAdminNotification(d, action),
-  // Task 12 で追加された bulk 系 export。本 test では使わないが、
-  // mock.module の process-global live binding が他 test file の実 import に
-  // 干渉して "Export named ... not found" SyntaxError を起こすため必須
-  // ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
   sendBulkReservationCancelledEmail: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
   sendBulkAdminNotification: mock(() =>
     Promise.resolve({ ok: false, reason: "disabled" }),
   ),
-}));
+});
 
 // SwitchBot revoke: 外部 API を叩くため mock。
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({

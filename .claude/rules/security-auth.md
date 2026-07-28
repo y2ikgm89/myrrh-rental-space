@@ -4,7 +4,6 @@ paths:
     "src/proxy.ts",
     "src/shared/lib/iap/**",
     "src/shared/lib/customer-auth.ts",
-    "src/shared/lib/admin-auth.ts",
     "src/shared/lib/admin-permissions.ts",
     "src/shared/lib/admin-roles.ts",
     "src/shared/lib/admin-resources.ts",
@@ -23,10 +22,15 @@ paths:
 ## 認証は 2 系統（混ぜない）
 
 - **顧客** = Better Auth（`src/shared/lib/customer-auth.ts`、basePath `/api/customer-auth`）。
-  Prisma adapter には `$extends` 前の `basePrisma` を渡す必須契約（理由は db-domain ルール参照）
+  Prisma adapter には `$extends` 前の `basePrisma` を渡す必須契約（理由は db-domain ルール参照）。
+  `deleteUser.beforeDelete` → Customer anonymize / 確認メール送信は Better Auth 公式どおり
+  auth config 内に置き、domain を呼ぶ（`LIB_TO_DOMAIN` の恒久 adapter。DI shim で
+  allowlist を空にしない）
 - **管理** = Cloud Run IAP のみ（`x-goog-iap-jwt-assertion` JWT を audience/issuer 検証）。
   Better Auth の admin instance・管理ログインフォームの再導入はテストで禁止。
   IAP identity は Google Workspace グループ所属から Role へ同期される。
+  session / login audit の SSoT は `src/shared/domain/admin-auth/session.ts`
+  （`getCurrentAdminUser` / `verifyAdminSession`）。
   role group env は **4 つ全設定か全未設定のみ**（部分設定は admin ログイン全滅）
 
 ## 管理 RBAC
@@ -34,6 +38,8 @@ paths:
 - アクセス可否は `DASHBOARD_ROLES`（SUPER_ADMIN/ADMIN/EDITOR/VIEWER）が SSoT
 - 権限は `${Resource}:${Action}` 形式の PermissionKey × ROLE_PERMISSIONS。
   EDITOR は独立 resource 権限を持たず userPageAssignment（page UUID 単位）で gate される。
+  resource-level gate の SSoT は `src/shared/domain/admin-auth/resource-access.ts` の
+  `userHasResourceAccess`（admin mutation + public preview 双方）。
   admin mutation の追加時は `executeAdminMutationResult` の permission 段を必ず通す
 
 ## rate limit / クライアント IP

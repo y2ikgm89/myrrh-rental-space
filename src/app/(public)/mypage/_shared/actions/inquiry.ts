@@ -2,18 +2,17 @@
 
 import { updateTag } from "next/cache";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/domain/terms/consent-gate";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { replyToInquiryAsCustomerCommand } from "@/shared/domain/inquiries/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
+import { sendInquiryCustomerReplyAdminEmail } from "@/shared/domain/email/lib-dispatch";
+import { resolveInquiryCustomerReplyAdminDelivery } from "@/shared/domain/settings/queries/email-render-context";
 import { customerInquiryReplySchema } from "@/shared/lib/validations/inquiry";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
@@ -99,13 +98,20 @@ export async function replyToInquiryAction(
     );
 
     fireAndForget(
-      sendInquiryCustomerReplyAdminEmail({
-        inquiryId: result.inquiryId,
-        receiptNumber: emailContext.receiptNumber,
-        customerName: emailContext.name,
-        subject: emailContext.subject,
-        replyMessage: emailContext.replyBody,
-      }),
+      (async () => {
+        const delivery = await resolveInquiryCustomerReplyAdminDelivery();
+        if (!delivery.enabled) return;
+        return sendInquiryCustomerReplyAdminEmail(
+          {
+            inquiryId: result.inquiryId,
+            receiptNumber: emailContext.receiptNumber,
+            customerName: emailContext.name,
+            subject: emailContext.subject,
+            replyMessage: emailContext.replyBody,
+          },
+          delivery,
+        );
+      })(),
       {
         operation: "sendInquiryCustomerReplyAdminEmail",
         category: ErrorCategory.EXTERNAL_API,

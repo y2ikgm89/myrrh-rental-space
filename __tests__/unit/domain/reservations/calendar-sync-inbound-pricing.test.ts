@@ -157,7 +157,7 @@ mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { applyCalendarTimeChange, cancelReservationFromCalendar } =
-  await import("@/shared/domain/reservations/calendar-sync");
+  await import("@/shared/domain/reservations/calendar-sync-inbound-mutations");
 
 describe("applyCalendarTimeChange (GCal inbound pricing)", () => {
   const baseInput = {

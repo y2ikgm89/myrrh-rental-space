@@ -13,13 +13,21 @@ type ListResult = {
 };
 
 const mockDomainsList = mock<() => Promise<ListResult>>();
-const mockGetResendClient =
-  mock<() => { domains: { list: typeof mockDomainsList } } | null>();
+const mockGetResendClientForApiKey =
+  mock<() => { domains: { list: typeof mockDomainsList } }>();
 
 mock.module("@/shared/lib/email/client", () => ({
-  getResendClient: mockGetResendClient,
+  getResendClientForApiKey: mockGetResendClientForApiKey,
 }));
 
+const EMAIL_TRANSPORT_CONTEXT = { resendApiKey: "re_test_key" } as const;
+
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 
@@ -32,8 +40,10 @@ function listOf(domains: DomainEntry[]): ListResult {
 
 beforeEach(() => {
   mockDomainsList.mockReset();
-  mockGetResendClient.mockReset();
-  mockGetResendClient.mockReturnValue({ domains: { list: mockDomainsList } });
+  mockGetResendClientForApiKey.mockReset();
+  mockGetResendClientForApiKey.mockReturnValue({
+    domains: { list: mockDomainsList },
+  });
 });
 
 describe("validateSenderDomain()", () => {
@@ -41,7 +51,12 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockResolvedValue(
       listOf([{ name: "mail.example.com", status: "verified" }]),
     );
-    expect(await validateSenderDomain("noreply@mail.example.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@mail.example.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: true,
     });
   });
@@ -50,7 +65,12 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockResolvedValue(
       listOf([{ name: "Mail.Example.com", status: "verified" }]),
     );
-    expect(await validateSenderDomain("noreply@mail.EXAMPLE.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@mail.EXAMPLE.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: true,
     });
   });
@@ -59,7 +79,9 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockResolvedValue(
       listOf([{ name: "example.com", status: "partially_verified" }]),
     );
-    expect(await validateSenderDomain("info@example.com")).toEqual({
+    expect(
+      await validateSenderDomain("info@example.com", EMAIL_TRANSPORT_CONTEXT),
+    ).toEqual({
       ok: true,
     });
   });
@@ -68,7 +90,12 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockResolvedValue(
       listOf([{ name: "verified.com", status: "verified" }]),
     );
-    expect(await validateSenderDomain("noreply@unknown.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@unknown.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: false,
       verifiedDomains: ["verified.com"],
       reason: "domain_unverified",
@@ -79,16 +106,24 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockResolvedValue(
       listOf([{ name: "pending.com", status: "pending" }]),
     );
-    expect(await validateSenderDomain("noreply@pending.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@pending.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: false,
       verifiedDomains: [],
       reason: "domain_unverified",
     });
   });
 
-  test("APIキー未設定（client が null）は fail-closed", async () => {
-    mockGetResendClient.mockReturnValue(null);
-    expect(await validateSenderDomain("noreply@example.com")).toEqual({
+  test("APIキー未設定は fail-closed", async () => {
+    expect(
+      await validateSenderDomain("noreply@example.com", {
+        resendApiKey: null,
+      }),
+    ).toEqual({
       ok: false,
       verifiedDomains: [],
       reason: "resend_unavailable",
@@ -100,7 +135,12 @@ describe("validateSenderDomain()", () => {
       data: null,
       error: { message: "boom" },
     });
-    expect(await validateSenderDomain("noreply@example.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@example.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: false,
       verifiedDomains: [],
       reason: "resend_error",
@@ -111,7 +151,12 @@ describe("validateSenderDomain()", () => {
     mockDomainsList.mockImplementation(() => {
       throw new Error("network");
     });
-    expect(await validateSenderDomain("noreply@example.com")).toEqual({
+    expect(
+      await validateSenderDomain(
+        "noreply@example.com",
+        EMAIL_TRANSPORT_CONTEXT,
+      ),
+    ).toEqual({
       ok: false,
       verifiedDomains: [],
       reason: "resend_error",

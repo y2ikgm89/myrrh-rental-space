@@ -15,7 +15,7 @@ import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { createMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { sendCustomerBroadcast } from "@/shared/lib/email/customer-emails";
+import { sendCustomerBroadcast } from "@/shared/domain/email/dispatch";
 import { customerBroadcastRateLimiter } from "@/shared/lib/rate-limit";
 import {
   bulkToggleActiveCustomersCommand,
@@ -23,7 +23,7 @@ import {
   type BulkToggleActiveCustomersResult,
   type BulkAnonymizeCustomersResult,
 } from "@/shared/domain/customers/bulk-commands";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/customer-lifecycle-commands";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   bulkSetStatusCustomersCommand,

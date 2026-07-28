@@ -24,13 +24,14 @@ mock.module("next/cache", () => ({
   revalidatePath: mock(() => undefined),
 }));
 
-const mockVerifyCustomerSession = mock(() =>
+const mockRequireMypageSession = mock(() =>
   Promise.resolve({
+    session: { user: { id: "user-001" } },
     user: { id: "user-001", email: "member@example.com", name: "Member" },
   }),
 );
-mock.module("@/shared/lib/customer-auth", () => ({
-  verifyCustomerSession: mockVerifyCustomerSession,
+mock.module("@/shared/lib/customer-auth/gates", () => ({
+  requireMypageSession: mockRequireMypageSession,
 }));
 
 const mockEnsureCustomerLinked = mock(() =>
@@ -90,13 +91,14 @@ function inputToFormData(input: {
 
 describe("reagreeAction", () => {
   beforeEach(() => {
-    mockVerifyCustomerSession.mockClear();
+    mockRequireMypageSession.mockClear();
     mockEnsureCustomerLinked.mockClear();
     mockAssertCustomerActive.mockClear();
     mockGetReagreeRequiredTermsForCustomer.mockClear();
 
-    mockVerifyCustomerSession.mockImplementation(() =>
+    mockRequireMypageSession.mockImplementation(() =>
       Promise.resolve({
+        session: { user: { id: "user-001" } },
         user: { id: "user-001", email: "member@example.com", name: "Member" },
       }),
     );

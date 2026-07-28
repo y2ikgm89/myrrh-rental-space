@@ -1,4 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // ---------------------------------------------------------------------------
 // Enums（Prisma import チェーンを避けるために再宣言）
@@ -52,7 +54,18 @@ const mockEventUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
 
-const mockFireAndForget = mock<() => void>(() => undefined);
+const pendingFireAndForget: Promise<unknown>[] = [];
+const mockFireAndForget = mock<(promise: Promise<unknown>) => void>(
+  (promise) => {
+    pendingFireAndForget.push(promise.catch(() => undefined));
+  },
+);
+async function flushFireAndForget(): Promise<void> {
+  while (pendingFireAndForget.length > 0) {
+    const batch = pendingFireAndForget.splice(0, pendingFireAndForget.length);
+    await Promise.all(batch);
+  }
+}
 
 const eventUpdatedNotificationPayload = {
   eventId: "event-1",
@@ -64,20 +77,36 @@ const eventUpdatedNotificationPayload = {
   registrations: [],
 };
 
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
+
 const mockGetEventUpdatedNotificationPayload = mock<
   (eventId: string) => Promise<typeof eventUpdatedNotificationPayload | null>
 >(() => Promise.resolve(eventUpdatedNotificationPayload));
+
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<typeof EVENT_EMAIL_RENDER_CONTEXT>
+>(() => Promise.resolve(EVENT_EMAIL_RENDER_CONTEXT));
 
 const mockSendEventUpdated = mock<
   (
     payload: typeof eventUpdatedNotificationPayload,
     oldSlotStartTimes: ReadonlyMap<string, Date>,
+    renderContext: typeof EVENT_EMAIL_RENDER_CONTEXT,
   ) => Promise<void>
 >(() => Promise.resolve());
 
-const mockSendEventCancelled = mock<() => Promise<void>>(() =>
-  Promise.resolve(),
-);
+const mockSendEventCancelled = mock<
+  (
+    payload: typeof eventUpdatedNotificationPayload,
+    renderContext: typeof EVENT_EMAIL_RENDER_CONTEXT,
+  ) => Promise<void>
+>(() => Promise.resolve());
 
 // ---------------------------------------------------------------------------
 // mock.module（import より前）
@@ -223,17 +252,21 @@ mock.module("@/shared/domain/events/email-queries", () => ({
   ) => mockGetEventUpdatedNotificationPayload(...args),
 }));
 
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailRenderContextMock({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+});
+
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendEventUpdatedToAllParticipants: mockSendEventUpdated,
   sendEventCancelledToAllParticipants: mockSendEventCancelled,
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   EventStatus,
   RegistrationStatus,
-}));
+});
 
 mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
@@ -257,7 +290,6 @@ import {
   publishEventCommand,
   cancelEventCommand,
   archiveEventCommand,
-  upsertEventFromCalendar,
   eventInputSchema,
 } from "@/shared/domain/events/commands";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -740,8 +772,13 @@ describe("updateEventCommand", () => {
     mockExecuteRaw.mockClear();
     mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
+    pendingFireAndForget.length = 0;
     mockSendEventUpdated.mockClear();
     mockGetEventUpdatedNotificationPayload.mockClear();
+    mockGetEventEmailRenderContext.mockClear();
+    mockGetEventEmailRenderContext.mockResolvedValue(
+      EVENT_EMAIL_RENDER_CONTEXT,
+    );
     mockGetEventUpdatedNotificationPayload.mockResolvedValue(
       eventUpdatedNotificationPayload,
     );
@@ -975,11 +1012,13 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      await flushFireAndForget();
       // 変更前の日時は「変更されたスロット自身」の旧 startAt であるべき
       // （他スロットの値や新しい値を誤って渡していないこと）
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
         eventUpdatedNotificationPayload,
         new Map([["slot-1", new Date("2024-06-15T10:00:00Z")]]),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
     });
 
@@ -1047,6 +1086,7 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      await flushFireAndForget();
       // slot-1・slot-2 双方の「変更前」日時が個別に渡され、単一の代表値
       // （例えば slot-1 の値）を全参加者に使い回していないことを確認する
       expect(mockSendEventUpdated).toHaveBeenCalledWith(
@@ -1055,6 +1095,7 @@ describe("updateEventCommand", () => {
           ["slot-1", new Date("2024-06-15T10:00:00Z")],
           ["slot-2", new Date("2024-06-16T10:00:00Z")],
         ]),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
     });
 
@@ -1572,6 +1613,7 @@ describe("cancelEventCommand", () => {
     mockEventUpdate.mockClear();
     mockEventUpdateMany.mockClear();
     mockFireAndForget.mockClear();
+    pendingFireAndForget.length = 0;
     // default: claim wins ⇒ real transition
     mockEventUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
   });
@@ -1892,178 +1934,6 @@ describe("duplicateEventCommand", () => {
       await expect(duplicateEventCommand("deleted-event")).rejects.toThrow(
         DomainError,
       );
-    });
-  });
-});
-
-describe("upsertEventFromCalendar", () => {
-  beforeEach(() => {
-    mockEventFindFirst.mockClear();
-    mockEventFindMany.mockClear();
-    mockEventCreate.mockClear();
-    mockEventUpdate.mockClear();
-    mockEventTimeSlotFindFirst.mockClear();
-    mockEventCategoryFindFirst.mockClear();
-    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
-    mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
-    // 更新保護判定の既定: DRAFT かつアクティブ申込なし → 上書き可
-    mockEventFindFirst.mockImplementation(() =>
-      Promise.resolve({
-        id: "event-1",
-        status: EventStatus.DRAFT,
-        registrations: [],
-      }),
-    );
-    // 新規作成分岐（既存スロットなし）のフォールバックカテゴリー解決を既定で成功させる。
-    mockEventCategoryFindFirst.mockImplementation(() =>
-      Promise.resolve({ id: "fallback-category-1" }),
-    );
-  });
-
-  const CALENDAR_INPUT = {
-    googleCalendarEventId: "gcal-event-1",
-    title: "Google Calendar Event",
-    description: "説明",
-    startTime: new Date("2024-06-15T10:00:00Z"),
-    endTime: new Date("2024-06-15T12:00:00Z"),
-    location: "オンライン",
-  };
-
-  describe("正常系", () => {
-    test("既存スロット（googleCalendarEventId 一致）を更新し action: updated を返す", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
-      );
-      mockEventUpdate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
-      );
-
-      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(result).toMatchObject({ id: "event-1", action: "updated" });
-      // 1 回目 = event 本体更新、2 回目 = firstSlotStartAt/lastSlotEndAt 同期
-      expect(mockEventUpdate).toHaveBeenCalledTimes(2);
-      expect(mockEventCreate).not.toHaveBeenCalled();
-    });
-
-    test("PUBLISHED イベントは上書きせず action: skipped を返す", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
-      );
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({
-          id: "event-1",
-          status: EventStatus.PUBLISHED,
-          registrations: [],
-        }),
-      );
-
-      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(result).toEqual({
-        id: "event-1",
-        action: "skipped",
-        reason: "published_event_protected",
-      });
-      expect(mockEventUpdate).not.toHaveBeenCalled();
-    });
-
-    test("非キャンセル申込があるイベントは上書きせず action: skipped を返す", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
-      );
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({
-          id: "event-1",
-          status: EventStatus.DRAFT,
-          registrations: [{ id: "reg-1" }],
-        }),
-      );
-
-      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(result).toEqual({
-        id: "event-1",
-        action: "skipped",
-        reason: "has_active_registrations",
-      });
-      expect(mockEventUpdate).not.toHaveBeenCalled();
-    });
-
-    test("既存スロットがない場合、新規作成し action: created を返す", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve(null),
-      );
-      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
-      mockEventCreate.mockImplementation(() =>
-        Promise.resolve({ id: "event-new" }),
-      );
-
-      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(result).toMatchObject({ id: "event-new", action: "created" });
-      expect(mockEventCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("新規作成時にステータスが DRAFT になる", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve(null),
-      );
-      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
-      mockEventCreate.mockImplementation(() =>
-        Promise.resolve({ id: "event-new" }),
-      );
-
-      await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(mockEventCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: EventStatus.DRAFT,
-            firstSlotStartAt: CALENDAR_INPUT.startTime,
-            lastSlotEndAt: CALENDAR_INPUT.endTime,
-          }),
-        }),
-      );
-    });
-
-    test("既存スロット紐づきの event 更新に正しいフィールドが渡される", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
-      );
-
-      await upsertEventFromCalendar(CALENDAR_INPUT);
-
-      expect(mockEventUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: "event-1",
-            deletedAt: null,
-          }),
-          data: expect.objectContaining({
-            title: "Google Calendar Event",
-            // Google Calendar の location 文字列は addressDetail に格納される
-            addressDetail: "オンライン",
-          }),
-        }),
-      );
-    });
-
-    test("description が null の場合も作成できる", async () => {
-      mockEventTimeSlotFindFirst.mockImplementation(() =>
-        Promise.resolve(null),
-      );
-      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
-      mockEventCreate.mockImplementation(() =>
-        Promise.resolve({ id: "event-new" }),
-      );
-
-      const result = await upsertEventFromCalendar({
-        ...CALENDAR_INPUT,
-        description: null,
-      });
-
-      expect(result).toMatchObject({ action: "created" });
     });
   });
 });

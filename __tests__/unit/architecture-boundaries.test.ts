@@ -74,7 +74,7 @@ const GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE = join(
   "route.ts",
 );
 const GOOGLE_SERVICE_ACCOUNT_BOUNDARY_FILES = [
-  join(SRC_ROOT, "shared", "domain", "settings", "commands.ts"),
+  join(SRC_ROOT, "shared", "domain", "settings", "google-calendar-commands.ts"),
   join(SRC_ROOT, "shared", "lib", "analytics", "ga-data-api.ts"),
   join(SRC_ROOT, "shared", "lib", "google-calendar", "service-account.ts"),
 ];
@@ -1026,23 +1026,10 @@ describe("architecture boundaries", () => {
     // 実際に DB 呼出をしているファイルは原則 domain/db 配下に限る。
     // ALLOWLIST: domain/db に切り出すと過剰な抽象になる正当な lib 境界の例外のみ列挙する。
     const SHARED_ROOT = join(SRC_ROOT, "shared");
-    const ALLOWLIST = new Set(
-      [
-        join(SRC_ROOT, "shared", "lib", "calendar-sync", "event-inbound.ts"),
-        join(
-          SRC_ROOT,
-          "shared",
-          "lib",
-          "google-business-profile",
-          "location-sync.ts",
-        ),
-      ].map((file) => relative(ROOT, file)),
-    );
+    const ALLOWLIST = new Set<string>();
     const importsPrisma = (source: string) =>
       /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
     // `prisma.<model>.<method>` のみを「DB 呼出」とみなす。
-    // prisma を delegate として下層 command に渡すだけのファイル（bootstrap / section-defaults）は
-    // 二段目のドット参照を持たないため自然に除外される。
     const containsPrismaModelCall = (source: string) =>
       /\bprisma\.\w+\.\w+/u.test(source);
 
@@ -1064,46 +1051,16 @@ describe("architecture boundaries", () => {
 
   test("shared/lib → shared/domain import は allowlist 凍結（新規 lib→domain 禁止 ratchet）", () => {
     // CLAUDE.md: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
-    // 既存の lib→domain 依存は integration adapter として ALLOWLIST 凍結し、
-    // 新規追加と「解消済みだが allowlist 残留」の両方を fail する（ratchet）。
-    // 依存解消 PR では当該ファイルを ALLOWLIST から削除すること。
+    // 解消可能な lib→domain は ALLOWLIST から削除する（ratchet）。
+    // 残件は framework lifecycle adapter のみを意図的に残す（下記コメント参照）。
+    // 新規 lib→domain と「解消済みだが allowlist 残留」の両方を fail する。
     const SHARED_LIB_ROOT = join(SRC_ROOT, "shared", "lib");
     const LIB_TO_DOMAIN_IMPORT_ALLOWLIST = new Set(
       [
-        "admin-auth.ts",
-        "admin-resource-access.ts",
-        "calendar-sync/event-inbound.ts",
-        "calendar-sync/event-outbound.ts",
-        "calendar-sync/inbound.ts",
-        "calendar-sync/outbound.ts",
-        "calendar-sync/series-outbound.ts",
-        // Better Auth deleteUser.beforeDelete → Customer anonymize adapter
+        // Better Auth 公式: deleteUser.beforeDelete / sendDeleteAccountVerification は
+        // betterAuth() config 内に置く。customer-auth.ts は恒久 adapter（解消対象外）。
+        // @see https://www.better-auth.com/docs/concepts/users-accounts
         "customer-auth.ts",
-        "email/client.ts",
-        "email/contact-emails.ts",
-        "email/customer-emails.ts",
-        "email/event-emails.ts",
-        "email/inquiry-emails.ts",
-        "email/reminder-emails.ts",
-        "email/reservation-emails.ts",
-        "email/send.ts",
-        "email/system-emails.ts",
-        "features/check.ts",
-        "google-business-profile/client.ts",
-        "google-business-profile/index.ts",
-        "google-business-profile/location-sync.ts",
-        "google-calendar/events.ts",
-        "google-calendar/service-account.ts",
-        "google-calendar/settings.ts",
-        "google-calendar/sync.ts",
-        "google-calendar/webhook.ts",
-        "ical/index.ts",
-        "lexical/resolve-internal-link-cards.ts",
-        "lexical/resolve-space-card-embeds.ts",
-        "pages/require-published.ts",
-        "reservation/time-slots.ts",
-        "section-defaults.ts",
-        "turnstile.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
           "\\",
@@ -1213,7 +1170,7 @@ describe("architecture boundaries", () => {
 
   test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
     const source = readFileSync(
-      join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
+      join(SRC_ROOT, "shared", "domain", "admin-auth", "session.ts"),
       "utf8",
     );
 

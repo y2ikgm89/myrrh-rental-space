@@ -43,7 +43,7 @@ describe("posts public URL clean break", () => {
       "shared",
       "domain",
       "slugs",
-      "availability.ts",
+      "validation.ts",
     );
 
     expect(registry).not.toContain("/posts");

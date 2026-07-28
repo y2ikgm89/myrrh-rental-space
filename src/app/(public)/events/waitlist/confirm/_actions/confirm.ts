@@ -2,21 +2,20 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { publicEventWaitlistConfirmSchema } from "@/shared/lib/validations/event-registration";
-import {
-  checkActionRateLimit,
-  validateTurnstile,
-} from "@/shared/lib/action-helpers";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { eventWaitlistConfirmRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { confirmWaitlistOfferCommand } from "@/shared/domain/events/waitlist-commands";
 import {
   getEventRegistrationForConfirm,
   getWaitlistConfirmationEmailDetails,
 } from "@/shared/domain/events/waitlist-queries";
 import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
-import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
+import { sendEventRegistrationConfirmation } from "@/shared/domain/email/lib-dispatch";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -162,20 +161,24 @@ export async function confirmWaitlistOfferAction(
               result.registration.id,
             );
             if (!details) return;
-            await sendEventRegistrationConfirmation({
-              registrationId: details.id,
-              customerName: details.name,
-              customerEmail: details.email,
-              eventTitle: details.eventTitle,
-              eventStartTime: details.startTime,
-              eventEndTime: details.endTime,
-              location: details.location ?? undefined,
-              quantity: details.quantity,
-              icsSequence: details.icsSequence,
-              customerId: details.customerId,
-              format: details.format,
-              meetingUrl: details.meetingUrl,
-            });
+            const renderContext = await getEventEmailRenderContext();
+            await sendEventRegistrationConfirmation(
+              {
+                registrationId: details.id,
+                customerName: details.name,
+                customerEmail: details.email,
+                eventTitle: details.eventTitle,
+                eventStartTime: details.startTime,
+                eventEndTime: details.endTime,
+                location: details.location ?? undefined,
+                quantity: details.quantity,
+                icsSequence: details.icsSequence,
+                customerId: details.customerId,
+                format: details.format,
+                meetingUrl: details.meetingUrl,
+              },
+              renderContext,
+            );
           })(),
           {
             operation: "sendWaitlistConfirmationEmail",

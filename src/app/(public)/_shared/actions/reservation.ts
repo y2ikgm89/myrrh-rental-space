@@ -9,7 +9,6 @@ import {
   checkActionRateLimit,
   checkBotHeuristics,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   getClientIpFromHeaders,
@@ -19,12 +18,17 @@ import {
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
+import {
+  resolveReservationAdminNotificationDelivery,
+  resolveEmailSendContext,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
-import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
+import { syncReservationToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -173,10 +177,25 @@ export async function submitReservation(
         });
 
         const payload = omitUndefined(result.payload);
-        fireAndForget(sendReservationAdminNotification(payload, "new"), {
-          operation: "sendReservationAdminNotification",
-          category: ErrorCategory.EXTERNAL_API,
-        });
+        fireAndForget(
+          (async () => {
+            const [delivery, sendContext] = await Promise.all([
+              resolveReservationAdminNotificationDelivery("new"),
+              resolveEmailSendContext(),
+            ]);
+            if (!delivery.enabled || !sendContext) return;
+            await sendReservationAdminNotification(
+              payload,
+              "new",
+              delivery,
+              sendContext,
+            );
+          })(),
+          {
+            operation: "sendReservationAdminNotification",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
 
         fireAndForget(
           applyConfirmationSideEffects({

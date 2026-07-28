@@ -19,16 +19,17 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
-import { updateEventImportEnabled } from "@/shared/domain/settings/commands";
+import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
   clearGoogleCalendarWebhook,
   recordGoogleCalendarConnectionError,
   recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
+  updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
-} from "@/shared/domain/settings/integration-commands";
+} from "@/shared/domain/settings/google-calendar-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   logError,
@@ -41,7 +42,7 @@ import {
   stopWebhookWatch,
   testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -217,7 +218,16 @@ export async function setupCalendarWebhook(): Promise<
         : `https://${baseUrl}`;
       const webhookUrl = `${normalizedBaseUrl}/api/webhooks/google-calendar`;
 
-      const result = await setupWebhookWatch(webhookUrl);
+      const client = await getServiceAccountClient();
+      if (!client) {
+        throw new DomainError(
+          "Google Calendar is not configured",
+          "VALIDATION",
+        );
+      }
+
+      const webhookState = await getGoogleCalendarWebhookState();
+      const result = await setupWebhookWatch(client, webhookState, webhookUrl);
       if (
         !result.success ||
         !result.channelId ||
@@ -253,7 +263,16 @@ export async function stopCalendarWebhook(): Promise<MutationResult> {
         throw new DomainError("Webhookが設定されていません", "VALIDATION");
       }
 
+      const client = await getServiceAccountClient();
+      if (!client) {
+        throw new DomainError(
+          "Google Calendar is not configured",
+          "VALIDATION",
+        );
+      }
+
       const result = await stopWebhookWatch(
+        client,
         webhookState.channelId,
         webhookState.resourceId,
       );

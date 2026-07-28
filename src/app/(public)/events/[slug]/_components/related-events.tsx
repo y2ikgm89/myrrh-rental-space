@@ -6,7 +6,7 @@ import { Section } from "@/public/components/design-system/section";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { getUpcomingEventsExcluding } from "@/shared/domain/events/public-queries";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import {
   EventCard,
   type EventCardData,

@@ -35,8 +35,8 @@ import {
   updateCustomer as updateCustomerCommand,
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
+  type AnonymizeCustomerReason,
 } from "@/shared/domain/customers/commands";
-import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";

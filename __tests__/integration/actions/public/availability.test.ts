@@ -19,9 +19,11 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mock(() => Promise.resolve({ success: true })),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
     fieldErrors: Object.fromEntries(
@@ -38,7 +40,7 @@ const mockGetAvailableTimeSlots = mock(() =>
   ]),
 );
 
-mock.module("@/shared/lib/reservation/time-slots", () => ({
+mock.module("@/shared/domain/reservations/time-slots", () => ({
   getAvailableTimeSlots: mockGetAvailableTimeSlots,
 }));
 

@@ -7,12 +7,37 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { getAppUrl } from "@/shared/lib/constants/urls";
-import { formatEventVenue } from "@/shared/domain/events/venue";
+import { formatEventVenue } from "@/shared/lib/events/venue";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
 /** delete 失敗時の retry 振り分け用 prefix（reservation 側と同値） */
 export const GCAL_DELETE_FAILED_PREFIX = "gcal_delete_failed:";
+
+export async function getEventImportSyncToken(): Promise<string | null> {
+  const settings = await prisma.settingsGoogleCalendar.findFirstOrThrow({
+    where: { id: "singleton" },
+    select: { eventImportSyncToken: true },
+  });
+
+  return settings.eventImportSyncToken;
+}
+
+export async function saveEventImportSyncToken(
+  syncToken: string,
+): Promise<void> {
+  await prisma.settingsGoogleCalendar.update({
+    where: { id: "singleton" },
+    data: { eventImportSyncToken: syncToken },
+  });
+}
+
+export async function clearEventImportSyncToken(): Promise<void> {
+  await prisma.settingsGoogleCalendar.update({
+    where: { id: "singleton" },
+    data: { eventImportSyncToken: null },
+  });
+}
 
 export type EventSyncContext = EventSyncData & {
   googleCalendarEventId: string | null;

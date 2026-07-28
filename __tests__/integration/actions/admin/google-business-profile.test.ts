@@ -51,12 +51,15 @@ const mockSyncLocationToGbp = mock<
 const mockCreateOAuth2Client = mock<() => unknown>(() => null);
 const mockGetGbpClient = mock<() => unknown>(() => null);
 
-mock.module("@/shared/lib/google-business-profile", () => ({
-  getGbpAuthorizeUrl: mockGetGbpAuthorizeUrl,
-  revokeGbpToken: mockRevokeGbpToken,
+mock.module("@/shared/domain/google-business-profile/settings", () => ({
   clearGbpAuthState: mockClearGbpAuthState,
   getGbpAuthState: mockGetGbpAuthState,
   saveGbpAuthState: mockSaveGbpAuthState,
+}));
+
+mock.module("@/shared/lib/google-business-profile", () => ({
+  getGbpAuthorizeUrl: mockGetGbpAuthorizeUrl,
+  revokeGbpToken: mockRevokeGbpToken,
   listGbpAccounts: mockListGbpAccounts,
   exchangeGbpAuthCode: mockExchangeGbpAuthCode,
   syncLocationToGbp: mockSyncLocationToGbp,
@@ -121,7 +124,7 @@ const mockCheckPermission = mock<() => Promise<MockPermissionResult>>(() =>
   }),
 );
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   verifyAdminSession: mockVerifyAdminSession,
   DASHBOARD_ROLES: ["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const,
 }));

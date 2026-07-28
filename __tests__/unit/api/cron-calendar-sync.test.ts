@@ -83,11 +83,14 @@ mock.module("@/shared/domain/calendar-sync/locks", () => ({
   releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
 }));
 
-mock.module("@/shared/lib/calendar-sync/inbound", () => ({
-  syncFromCalendar: () => mockSyncFromCalendar(),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-inbound",
+  () => ({
+    syncFromCalendar: () => mockSyncFromCalendar(),
+  }),
+);
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: () => mockIsTwoWaySyncEnabled(),
   renewWebhookIfNeeded: () => mockRenewWebhookIfNeeded(),
 }));
@@ -96,7 +99,7 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getTwoWaySyncSettings: () => mockGetTwoWaySyncSettings(),
 }));
 
-mock.module("@/shared/lib/email/system-emails", () => ({
+mock.module("@/shared/domain/email/dispatch", () => ({
   sendWebhookRenewalNotification: (...args: unknown[]) =>
     mockSendWebhookRenewalNotification(...args),
 }));

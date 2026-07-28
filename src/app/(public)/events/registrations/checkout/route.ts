@@ -12,7 +12,7 @@
 
 import { cookies } from "next/headers";
 import { connection, NextResponse } from "next/server";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
 import { verifyEventRegistrationPaymentToken } from "@/shared/lib/tokens/event-registration-payment-token";
 import { createEventCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";

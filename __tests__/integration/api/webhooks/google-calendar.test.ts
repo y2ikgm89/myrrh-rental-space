@@ -69,20 +69,26 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getTwoWaySyncSettings: mockGetTwoWaySyncSettings,
 }));
 
-mock.module("@/shared/lib/google-calendar", () => ({
+mock.module("@/shared/domain/settings/google-calendar", () => ({
   isTwoWaySyncEnabled: mockIsTwoWaySyncEnabled,
-  // Phase B.2 task 16 で追加された fetchEventInstances。本 test では未使用だが、
-  // mock.module の process-global live binding が他 test file の実 import に
-  // 干渉して SyntaxError を起こすため必須
-  // ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+}));
+
+// Phase B.2 task 16 で追加された fetchEventInstances。本 test では未使用だが、
+// mock.module の process-global live binding が他 test file の実 import に
+// 干渉して SyntaxError を起こすため必須
+// ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+mock.module("@/shared/lib/google-calendar", () => ({
   fetchEventInstances: mock(() =>
     Promise.resolve({ success: true, instances: [] }),
   ),
 }));
 
-mock.module("@/shared/lib/calendar-sync/inbound", () => ({
-  syncFromCalendar: mockSyncFromCalendar,
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-inbound",
+  () => ({
+    syncFromCalendar: mockSyncFromCalendar,
+  }),
+);
 
 // GCAL-AUDIT-08: webhook route が cron と同じ advisory lock を取得する。
 // 未 mock だと実 DB の pg_try_advisory_lock が走り、外 catch が

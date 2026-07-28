@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const mockFindMany = mock<(_args?: unknown) => Promise<{ id: string }[]>>(() =>
   Promise.resolve([]),
@@ -14,13 +15,13 @@ const mockDeleteMany = mock<(_args?: unknown) => Promise<{ count: number }>>(
 
 mock.module("server-only", () => ({}));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PostStatus: {
     DRAFT: "DRAFT",
     PUBLISHED: "PUBLISHED",
     ARCHIVED: "ARCHIVED",
   },
-}));
+});
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {

@@ -3,10 +3,6 @@ import { InquiryCustomerReplyAdminEmail } from "@/shared/emails/inquiry-customer
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import {
-  getEmailDeliverySettings,
-  getNotificationEmailAddresses,
-} from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
 import { buildMemberInquiryUrl } from "./contact-emails";
 import { hashForKey, sendEmail } from "./send";
@@ -18,22 +14,18 @@ import {
 } from "../errors/server";
 import type {
   EmailResult,
+  EmailSendContext,
+  InquiryAdminNotificationDelivery,
   InquiryCustomerReplyAdminEmailData,
   InquiryReplyEmailData,
+  InquiryStatusNotificationData,
 } from "./types";
 
-export type InquiryStatusNotificationData = {
-  readonly id: string;
-  readonly receiptNumber: string;
-  readonly name: string;
-  readonly email: string;
-  readonly subject: string;
-  readonly updatedAt: Date;
-  readonly customerUserId: string | undefined;
-};
+export type { InquiryStatusNotificationData } from "./types";
 
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
   const memberInquiryUrl = buildMemberInquiryUrl(
@@ -41,28 +33,31 @@ export async function sendInquiryReplyEmail(
     data.inquiryId,
   );
 
-  return sendEmail({
-    payload: {
-      to: data.customerEmail,
-      subject: `【お問い合わせ回答】${data.subject} [${data.receiptNumber}]`,
-      react: InquiryReplyEmail({
-        customerName: data.customerName,
-        receiptNumber: data.receiptNumber,
-        subject: data.subject,
-        message: data.message,
-        replyMessage: data.replyMessage,
-        repliedByName: data.repliedByName,
-        ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
-        footer,
-      }),
+  return sendEmail(
+    {
+      payload: {
+        to: data.customerEmail,
+        subject: `【お問い合わせ回答】${data.subject} [${data.receiptNumber}]`,
+        react: InquiryReplyEmail({
+          customerName: data.customerName,
+          receiptNumber: data.receiptNumber,
+          subject: data.subject,
+          message: data.message,
+          replyMessage: data.replyMessage,
+          repliedByName: data.repliedByName,
+          ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
+          footer,
+        }),
+      },
+      idempotencyKey: `inquiry-reply/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
+      operation: "sendInquiryReplyEmail",
+      context: {
+        inquiryId: data.inquiryId,
+        email: data.customerEmail,
+      },
     },
-    idempotencyKey: `inquiry-reply/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
-    operation: "sendInquiryReplyEmail",
-    context: {
-      inquiryId: data.inquiryId,
-      email: data.customerEmail,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -70,34 +65,37 @@ export async function sendInquiryReplyEmail(
  */
 export async function sendInquiryCustomerReplyAdminEmail(
   data: InquiryCustomerReplyAdminEmailData,
+  delivery: InquiryAdminNotificationDelivery,
+  sendContext: EmailSendContext,
 ): Promise<EmailResult> {
-  const { notifyInquiryCustomerReply } = await getEmailDeliverySettings();
-  if (!notifyInquiryCustomerReply) return { ok: false, reason: "disabled" };
-
-  const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+  if (delivery.notificationEmails.length === 0) {
+    return { ok: false, reason: "disabled" };
+  }
 
   const footer = await getEmailFooterData();
 
-  return sendEmail({
-    payload: {
-      to: notificationEmails,
-      subject: `【お問い合わせ続報】${data.subject} [${data.receiptNumber}]`,
-      react: InquiryCustomerReplyAdminEmail({
-        customerName: data.customerName,
-        receiptNumber: data.receiptNumber,
-        subject: data.subject,
-        replyMessage: data.replyMessage,
-        adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
-        footer,
-      }),
+  return sendEmail(
+    {
+      payload: {
+        to: [...delivery.notificationEmails],
+        subject: `【お問い合わせ続報】${data.subject} [${data.receiptNumber}]`,
+        react: InquiryCustomerReplyAdminEmail({
+          customerName: data.customerName,
+          receiptNumber: data.receiptNumber,
+          subject: data.subject,
+          replyMessage: data.replyMessage,
+          adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
+          footer,
+        }),
+      },
+      idempotencyKey: `inquiry-customer-reply-admin/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
+      operation: "sendInquiryCustomerReplyAdminEmail",
+      context: {
+        inquiryId: data.inquiryId,
+      },
     },
-    idempotencyKey: `inquiry-customer-reply-admin/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
-    operation: "sendInquiryCustomerReplyAdminEmail",
-    context: {
-      inquiryId: data.inquiryId,
-    },
-  });
+    sendContext,
+  );
 }
 
 /**
@@ -109,6 +107,7 @@ export async function sendInquiryCustomerReplyAdminEmail(
 export async function sendInquiryStatusNotificationToAll(
   inquiries: InquiryStatusNotificationData[],
   newStatus: "RESOLVED" | "CLOSED",
+  sendContext: EmailSendContext,
 ): Promise<void> {
   if (inquiries.length === 0) return;
 
@@ -121,26 +120,26 @@ export async function sendInquiryStatusNotificationToAll(
         inquiry.customerUserId,
         inquiry.id,
       );
-      return sendEmail({
-        payload: {
-          to: inquiry.email,
-          subject: `【お問い合わせ${statusLabel}】${inquiry.subject} [${inquiry.receiptNumber}]`,
-          react: InquiryStatusNotificationEmail({
-            customerName: inquiry.name,
-            receiptNumber: inquiry.receiptNumber,
-            inquirySubject: inquiry.subject,
-            newStatus,
-            ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
-            footer,
-          }),
+      return sendEmail(
+        {
+          payload: {
+            to: inquiry.email,
+            subject: `【お問い合わせ${statusLabel}】${inquiry.subject} [${inquiry.receiptNumber}]`,
+            react: InquiryStatusNotificationEmail({
+              customerName: inquiry.name,
+              receiptNumber: inquiry.receiptNumber,
+              inquirySubject: inquiry.subject,
+              newStatus,
+              ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
+              footer,
+            }),
+          },
+          idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}/${inquiry.updatedAt.getTime()}`,
+          operation: "sendInquiryStatusNotificationToAll",
+          context: { inquiryId: inquiry.id, email: inquiry.email },
         },
-        // 同一 inquiry を 24h 内に RESOLVED → 再オープン → 再 RESOLVED するケースで
-        // payload (name/subject) が変わっても Resend が `invalid_idempotent_request` で
-        // silent drop することを防ぐため updatedAt を末尾に混ぜる。
-        idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}/${inquiry.updatedAt.getTime()}`,
-        operation: "sendInquiryStatusNotificationToAll",
-        context: { inquiryId: inquiry.id, email: inquiry.email },
-      });
+        sendContext,
+      );
     }),
   );
 

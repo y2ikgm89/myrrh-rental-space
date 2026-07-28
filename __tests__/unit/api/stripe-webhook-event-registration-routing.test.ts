@@ -3,6 +3,8 @@ import {
   expectErrorResult,
   expectReceivedResult,
 } from "../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -143,7 +145,25 @@ const mockGetWaitlistConfirmationEmailDetails = mock<
   } | null>
 >();
 const mockSendEventRegistrationConfirmation =
-  mock<(data: unknown) => Promise<unknown>>();
+  mock<(data: unknown, renderContext: unknown) => Promise<unknown>>();
+
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<{
+    calendarSettings: {
+      icalAttachmentEnabled: boolean;
+      addToCalendarLinksEnabled: boolean;
+    };
+    organizer: { name: string; email: string };
+  }>
+>(() =>
+  Promise.resolve({
+    calendarSettings: {
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    },
+    organizer: { name: "Test Org", email: "org@example.com" },
+  }),
+);
 
 // Site-wide cache invalidation (Route Handler variant)
 const mockInvalidateSiteWideCacheFromRouteHandler =
@@ -235,22 +255,20 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
+installEmailRenderContextMock();
+
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+}));
+
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
+  sendEventRegistrationConfirmation: (data: unknown, renderContext: unknown) =>
+    mockSendEventRegistrationConfirmation(data, renderContext),
+});
 
 // STRIPE-DEDUP-A: route.ts が signature verification 直後に chokepoint を呼ぶため
 // stub。default では "claimed" を返して既存テストの流れを維持する。
@@ -302,12 +320,11 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
     mockGetWaitlistConfirmationEmailDetails(id),
 }));
 
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: (data: unknown) =>
-    mockSendEventRegistrationConfirmation(data),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+installEmailRenderContextMock({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+});
 
 // receipt-full-wiring gap PR#2 で webhook が issueReceiptForEventRegistration を await
 // 呼出するようになったため、実 DB を叩かないよう境界差替 (default で成功を返す stub)。
@@ -432,7 +449,17 @@ const DEFAULT_WAITLIST_DETAILS = {
   startTime: new Date("2026-08-01T10:00:00.000Z"),
   endTime: new Date("2026-08-01T12:00:00.000Z"),
   location: "東京会場",
+  format: "OFFLINE" as const,
+  meetingUrl: null,
 };
+
+const EVENT_EMAIL_RENDER_CONTEXT = {
+  calendarSettings: {
+    icalAttachmentEnabled: false,
+    addToCalendarLinksEnabled: false,
+  },
+  organizer: { name: "Test Org", email: "org@example.com" },
+} as const;
 
 function makeSessionCompletedEvent(
   metadata: Record<string, string>,
@@ -553,6 +580,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockFindEventRegistrationForReceiptNotify.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
+    mockGetEventEmailRenderContext.mockReset();
     mockIssueReceiptForReservation.mockReset();
     mockIssueReceiptForEventRegistration.mockReset();
     mockNotifyReceiptIssuedForReservation.mockReset();
@@ -625,6 +653,9 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     });
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
+    );
+    mockGetEventEmailRenderContext.mockResolvedValue(
+      EVENT_EMAIL_RENDER_CONTEXT,
     );
     mockSendEventRegistrationConfirmation.mockResolvedValue({ ok: true });
     mockSendReservationConfirmationEmail.mockResolvedValue(undefined);
@@ -800,6 +831,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           registrationId: "reg-waitlist-1",
           customerEmail: "waitlist@example.com",
         }),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
@@ -1195,6 +1227,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           registrationId: "reg-waitlist-1",
           customerEmail: "waitlist@example.com",
         }),
+        EVENT_EMAIL_RENDER_CONTEXT,
       );
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],

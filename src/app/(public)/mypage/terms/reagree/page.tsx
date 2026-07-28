@@ -2,7 +2,7 @@
  * /mypage/terms/reagree — LOGIN_SIGNUP scope の必須規約が更新された・未同意の場合の再同意ページ
  *
  * MypageAuthGate は「pending が存在する」ことを検出して本ページに redirect する。
- * ここでは verifyCustomerSession → ensureCustomerLinked → pending 再導出を行い、
+ * ここでは requireMypageSession → ensureCustomerLinked → pending 再導出を行い、
  * 0 件なら returnTo (allowlist 経由でサニタイズ) にリダイレクト、それ以外は
  * ReagreeForm を出す。
  *

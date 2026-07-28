@@ -36,9 +36,11 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/domain/settings/maintenance-guard", () => ({
@@ -63,7 +65,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   customerAuth: {},
 }));
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   getAdminSession: mock(() => Promise.resolve(null)),
   getCurrentAdminUser: mock(() => Promise.resolve(null)),
   verifyAdminSession: mock(() => Promise.resolve(null)),

@@ -7,7 +7,7 @@
  * `@/shared/lib/admin-permissions` / `@/shared/lib/admin-resources` /
  * `@/shared/lib/admin-role-guards` に集約。resource-level access チェック
  * （`userHasResourceAccess`）も `@/app/(public)/preview/*` から参照するため
- * `@/shared/lib/admin-resource-access` に集約。
+ * `@/shared/domain/admin-auth/resource-access` に集約。
  *
  * 本ファイルは server-only セッション連携が必要なヘルパー
  * （`userHasPermission` / `canAccessAdmin`）と、UI 表示用ラベル
@@ -17,7 +17,7 @@
 import "server-only";
 
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
-import { type AdminUser } from "@/shared/lib/admin-auth";
+import { type AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Resource, Action } from "@/shared/lib/admin-resources";
@@ -42,7 +42,7 @@ export const ACTION_LABELS: Record<Action, string> = {
  * ユーザーが権限を持つかチェック（同期）
  */
 export function userHasPermission(
-  user: AdminUser,
+  user: AdminAuthUser,
   resource: Resource,
   action: Action,
 ): boolean {

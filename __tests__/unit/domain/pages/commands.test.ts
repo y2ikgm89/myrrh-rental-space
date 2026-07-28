@@ -21,6 +21,31 @@ const mockPageUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
 
+const mockSectionFindMany = mock<() => Promise<Array<{ type: string }>>>(() =>
+  Promise.resolve([]),
+);
+
+const mockSectionCreateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+
+const mockTransaction = mock(
+  (
+    fn: (tx: {
+      section: {
+        findMany: typeof mockSectionFindMany;
+        createMany: typeof mockSectionCreateMany;
+      };
+    }) => Promise<unknown>,
+  ) =>
+    fn({
+      section: {
+        findMany: mockSectionFindMany,
+        createMany: mockSectionCreateMany,
+      },
+    }),
+);
+
 // スラッグバリデーションモック
 const mockCheckSlugAvailability = mock<
   () => Promise<{ available: boolean; reason?: unknown }>
@@ -28,11 +53,6 @@ const mockCheckSlugAvailability = mock<
 
 const mockGetSlugErrorMessage = mock<() => string>(
   () => "スラッグが使用できません",
-);
-
-// ensurePageSections モック
-const mockEnsurePageSections = mock<() => Promise<number>>(() =>
-  Promise.resolve(0),
 );
 
 // モジュールモック（import より前に配置）
@@ -53,16 +73,17 @@ mock.module("@/shared/db/prisma", () => ({
       delete: mockPageDelete,
       updateMany: mockPageUpdateMany,
     },
+    section: {
+      findMany: mockSectionFindMany,
+      createMany: mockSectionCreateMany,
+    },
+    $transaction: mockTransaction,
   },
 }));
 
-mock.module("@/shared/domain/slugs/availability", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
-}));
-
-mock.module("@/shared/lib/section-defaults", () => ({
-  ensurePageSections: mockEnsurePageSections,
 }));
 
 import {
@@ -178,14 +199,25 @@ describe("ensureSystemPageCommand", () => {
   beforeEach(() => {
     mockPageFindUnique.mockReset();
     mockPageCreate.mockReset();
-    mockEnsurePageSections.mockReset();
+    mockSectionFindMany.mockReset();
+    mockSectionCreateMany.mockReset();
+    mockTransaction.mockClear();
     mockPageFindUnique.mockResolvedValue(null);
     mockPageCreate.mockResolvedValue({
       id: "page-1",
       slug: SYSTEM_PAGE_SLUG,
       title: "ホームページ",
     });
-    mockEnsurePageSections.mockResolvedValue(0);
+    mockSectionFindMany.mockResolvedValue([]);
+    mockSectionCreateMany.mockResolvedValue({ count: 0 });
+    mockTransaction.mockImplementation((fn) =>
+      fn({
+        section: {
+          findMany: mockSectionFindMany,
+          createMany: mockSectionCreateMany,
+        },
+      }),
+    );
   });
 
   describe("正常系", () => {
@@ -209,10 +241,10 @@ describe("ensureSystemPageCommand", () => {
       expect(mockPageCreate).not.toHaveBeenCalled();
     });
 
-    test("ensurePageSections が呼ばれる", async () => {
+    test("ensurePageSections 経由で section.findMany が呼ばれる", async () => {
       await ensureSystemPageCommand(SYSTEM_PAGE_SLUG);
 
-      expect(mockEnsurePageSections).toHaveBeenCalledTimes(1);
+      expect(mockSectionFindMany).toHaveBeenCalled();
     });
 
     test("システムページ作成時に isSystemPage: true で create が呼ばれる", async () => {
@@ -238,10 +270,10 @@ describe("ensureSystemPageCommand", () => {
       expect(mockPageCreate).not.toHaveBeenCalled();
     });
 
-    test("システムページ以外では ensurePageSections が呼ばれない", async () => {
+    test("システムページ以外では section.findMany が呼ばれない", async () => {
       await ensureSystemPageCommand("non-system-page");
 
-      expect(mockEnsurePageSections).not.toHaveBeenCalled();
+      expect(mockSectionFindMany).not.toHaveBeenCalled();
     });
   });
 });

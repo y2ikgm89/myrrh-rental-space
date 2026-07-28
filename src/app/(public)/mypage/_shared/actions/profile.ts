@@ -4,10 +4,9 @@ import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
-import {
-  requestCustomerEmailChangeCommand,
-  updateCustomerProfileByUserId,
-} from "@/shared/domain/customers/commands";
+import { validateTurnstile } from "@/shared/domain/settings/turnstile";
+import { requestCustomerEmailChangeCommand } from "@/shared/domain/customers/customer-email-change-commands";
+import { updateCustomerProfileByUserId } from "@/shared/domain/customers/commands";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -18,7 +17,6 @@ import { CACHE_TAGS, getAppUrl, getCacheTag } from "@/shared/lib/constants";
 import {
   checkActionRateLimit,
   checkEmailRateLimit,
-  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
   emailVerificationByEmailRateLimiter,
@@ -33,7 +31,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
-import { sendChangeEmailVerificationEmail } from "@/shared/lib/email/change-email-emails";
+import { sendChangeEmailVerificationEmail } from "@/shared/domain/email/lib-dispatch";
 
 const EMAIL_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして登録を完了してください。";

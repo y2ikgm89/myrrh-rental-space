@@ -16,7 +16,8 @@ import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/eve
 import { issueReceiptForEventRegistration } from "@/shared/domain/receipts/issue";
 import { notifyReceiptIssuedForEventRegistration } from "@/shared/domain/receipts/notify-issued";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
+import { sendEventRegistrationConfirmation } from "@/shared/domain/email/lib-dispatch";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import {
   logError,
   ErrorCategory,
@@ -226,20 +227,26 @@ export async function fulfillEventRegistrationPaymentAtomically(
   if (!details) return;
 
   fireAndForget(
-    sendEventRegistrationConfirmation({
-      registrationId: details.id,
-      customerName: details.name,
-      customerEmail: details.email,
-      eventTitle: details.eventTitle,
-      eventStartTime: details.startTime,
-      eventEndTime: details.endTime,
-      location: details.location ?? undefined,
-      quantity: details.quantity,
-      icsSequence: details.icsSequence,
-      customerId: details.customerId,
-      format: details.format,
-      meetingUrl: details.meetingUrl,
-    }),
+    (async () => {
+      const renderContext = await getEventEmailRenderContext();
+      return sendEventRegistrationConfirmation(
+        {
+          registrationId: details.id,
+          customerName: details.name,
+          customerEmail: details.email,
+          eventTitle: details.eventTitle,
+          eventStartTime: details.startTime,
+          eventEndTime: details.endTime,
+          location: details.location ?? undefined,
+          quantity: details.quantity,
+          icsSequence: details.icsSequence,
+          customerId: details.customerId,
+          format: details.format,
+          meetingUrl: details.meetingUrl,
+        },
+        renderContext,
+      );
+    })(),
     {
       operation: "sendWaitlistOfferPaymentConfirmationEmail",
       category: ErrorCategory.EXTERNAL_API,

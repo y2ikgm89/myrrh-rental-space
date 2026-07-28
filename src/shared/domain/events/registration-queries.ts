@@ -8,7 +8,7 @@ import {
 import {
   formatEventVenue,
   formatEventVenueDisplay,
-} from "@/shared/domain/events/venue";
+} from "@/shared/lib/events/venue";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";

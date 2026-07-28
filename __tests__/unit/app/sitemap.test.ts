@@ -21,7 +21,7 @@
  */
 
 import { describe, expect, test, mock, beforeEach } from "bun:test";
-import type { FeatureFilterContext } from "@/shared/lib/features/check";
+import type { FeatureFilterContext } from "@/shared/domain/features/check";
 import type { FeatureModule } from "@/shared/lib/features/registry";
 
 const BASE_URL = "https://example.com";
@@ -103,7 +103,7 @@ mock.module("@/shared/domain/sitemap/queries", () => ({
       : Promise.resolve(contentFixture),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   getFeatureFilterContext: () => Promise.resolve(contextFixture),
   isUrlDisabled: (url: string, disabledRoutes: readonly string[]): boolean =>
     disabledRoutes.some(

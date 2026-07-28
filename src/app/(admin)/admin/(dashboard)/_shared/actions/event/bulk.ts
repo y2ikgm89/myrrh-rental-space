@@ -23,8 +23,9 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import { sendEventCancelledToAllParticipants } from "@/shared/domain/email/lib-dispatch";
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
+import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { ErrorCategory } from "@/shared/lib/errors";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import { deleteEventOutbound, syncEventOutbound } from "./calendar-outbound";
@@ -285,15 +286,21 @@ export async function bulkSetStatusEvents(
         outcome.affectedIds.length > 0
       ) {
         fireAndForget(
-          Promise.allSettled(
-            outcome.affectedIds.map(async (eventId) => {
-              const payload =
-                await getEventCancelledNotificationPayload(eventId);
-              if (payload) {
-                await sendEventCancelledToAllParticipants(payload);
-              }
-            }),
-          ).then(() => undefined),
+          (async () => {
+            const renderContext = await getEventEmailRenderContext();
+            await Promise.allSettled(
+              outcome.affectedIds.map(async (eventId) => {
+                const payload =
+                  await getEventCancelledNotificationPayload(eventId);
+                if (payload) {
+                  await sendEventCancelledToAllParticipants(
+                    payload,
+                    renderContext,
+                  );
+                }
+              }),
+            );
+          })(),
           {
             operation: "bulkSetStatusEvents.cancel",
             category: ErrorCategory.EXTERNAL_API,

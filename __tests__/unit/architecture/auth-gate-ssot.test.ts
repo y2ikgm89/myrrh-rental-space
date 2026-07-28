@@ -32,10 +32,10 @@ const ADMIN_LEGACY_PAGE_AUTH_IMPORT =
   /import\s*\{[^}]*\b(?:requireAdminDashboardAccess|requireAdminPermission|requireAdminResourcePermission|verifyAdminSession)\b[^}]*\}\s*from\s*["']@\/admin\/queries\/_helpers["']/u;
 
 /** Frozen allowlist: legacy direct customer session imports under `(public)`. */
-const CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST = new Set([]);
+const CUSTOMER_LEGACY_SESSION_IMPORT_ALLOWLIST = new Set<string>();
 
 /** Frozen allowlist: legacy admin page auth imports in dashboard shell files. */
-const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set([]);
+const ADMIN_LEGACY_PAGE_AUTH_IMPORT_ALLOWLIST = new Set<string>();
 
 function normalizeRelPath(filePath: string): string {
   return relative(ROOT, filePath).replaceAll("\\", "/");

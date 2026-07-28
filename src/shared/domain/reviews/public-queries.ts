@@ -8,7 +8,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 /**

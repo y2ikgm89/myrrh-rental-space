@@ -15,6 +15,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import {
   EventScheduleMode,
   EventStatus,
@@ -110,12 +111,10 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // email / calendar / other side-effects をすべて no-op に
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailLibDispatchMock({
   sendEventCancelledToAllParticipants: mock(async () => {}),
   sendEventUpdatedToAllParticipants: mock(async () => {}),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+});
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock((_fn: () => unknown) => {}),
 }));

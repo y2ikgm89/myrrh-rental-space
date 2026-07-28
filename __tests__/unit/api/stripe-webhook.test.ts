@@ -3,6 +3,8 @@ import {
   expectErrorResult,
   expectReceivedResult,
 } from "../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Stripe from "stripe";
@@ -301,7 +303,7 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
 
 // 実際の next/navigation を re-export し、unstable_rethrow のみオーバーライド。
 // Task 9 で route.ts が event-registration 経路
-// （`@/shared/domain/events/waitlist-commands` 経由で `@/shared/lib/features/check`
+// （`@/shared/domain/events/waitlist-commands` 経由で `@/shared/domain/features/check`
 // を import し、同ファイルが `notFound` を使う）を追加した結果、このモジュールを
 // 完全に差し替える旧実装（`unstable_rethrow` のみ）だと named import 解決に失敗する
 // （`SyntaxError: Export named 'notFound' not found`）。他の mock（crypto/serialize/
@@ -325,22 +327,18 @@ mock.module("@/shared/domain/smart-lock/issue-passcode", () => ({
   issueSmartLockPasscodes: () => mockIssueSmartLockPasscodes(),
 }));
 
+installEmailRenderContextMock();
+
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+}));
+
+installEmailLibDispatchMock({
   sendReservationCancelledEmail: mock(() => Promise.resolve()),
   sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mock(() => Promise.resolve()),
-  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
-  // process-global live binding が他 test file の実 import に干渉して
-  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
-  sendBulkReservationCancelledEmail: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-  sendBulkAdminNotification: mock(() =>
-    Promise.resolve({ ok: false, reason: "disabled" }),
-  ),
-}));
+});
 
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>

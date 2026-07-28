@@ -44,13 +44,13 @@ import {
   releaseCalendarSyncLock,
   tryAcquireCalendarSyncLock,
 } from "@/shared/domain/calendar-sync/locks";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { syncFromCalendar } from "@/shared/domain/reservations/reservation-calendar-inbound";
 import {
   isTwoWaySyncEnabled,
   renewWebhookIfNeeded,
-} from "@/shared/lib/google-calendar";
+} from "@/shared/domain/settings/google-calendar";
 import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
-import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
+import { sendWebhookRenewalNotification } from "@/shared/domain/email/dispatch";
 import {
   logError,
   ErrorCategory,

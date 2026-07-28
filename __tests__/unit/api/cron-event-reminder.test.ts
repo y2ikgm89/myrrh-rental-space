@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
+import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 
 // --- モック関数の定義（mock.module() より前）---
 const mockFindEventRegistrationsForReminderWindow = mock<
@@ -26,6 +27,24 @@ const mockReleaseEventRegistrationReminderClaim = mock<() => Promise<void>>(
 const mockGetEmailDeliverySettings = mock<
   () => Promise<{ notifyEventReminder: boolean }>
 >(() => Promise.resolve({ notifyEventReminder: true }));
+
+const mockGetEventEmailRenderContext = mock<
+  () => Promise<{
+    calendarSettings: {
+      icalAttachmentEnabled: boolean;
+      addToCalendarLinksEnabled: boolean;
+    };
+    organizer: { name: string; email: string };
+  }>
+>(() =>
+  Promise.resolve({
+    calendarSettings: {
+      icalAttachmentEnabled: false,
+      addToCalendarLinksEnabled: false,
+    },
+    organizer: { name: "Test Org", email: "org@example.com" },
+  }),
+);
 
 const mockLogError = mock<() => void>(() => undefined);
 
@@ -87,7 +106,24 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   ) => mockGetEmailDeliverySettings(...args),
 }));
 
-mock.module("@/shared/domain/events/venue", () => ({
+installEmailRenderContextMock({
+  getEventEmailRenderContext: (
+    ...args: Parameters<typeof mockGetEventEmailRenderContext>
+  ) => mockGetEventEmailRenderContext(...args),
+  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
+    mockIsEmailEnabled(...args),
+  resolveEmailSendContext: mock(async () => ({
+    transport: { resendApiKey: "re_test_key" },
+    delivery: {
+      senderEmail: "noreply@example.com",
+      senderName: "Test",
+      replyToEmail: null,
+    },
+    suppressedEmailHashes: new Set<string>(),
+  })),
+});
+
+mock.module("@/shared/lib/events/venue", () => ({
   formatEventVenue: (params: {
     location: { name: string } | null;
     space: { name: string } | null;
@@ -106,6 +142,14 @@ mock.module("@/shared/lib/errors/server", () => ({
     error instanceof Error ? error : new Error(String(error)),
   getErrorMessage: (error: unknown) =>
     error instanceof Error ? error.message : String(error),
+  safeFetch: mock(async (opts: { fetch: () => unknown; fallback: unknown }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  }),
+  criticalFetch: mock(async (opts: { fetch: () => unknown }) => opts.fetch()),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",
@@ -128,14 +172,9 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: (...args: Parameters<typeof mockIsFeatureEnabled>) =>
     mockIsFeatureEnabled(...args),
-}));
-
-mock.module("@/shared/lib/email/client", () => ({
-  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
-    mockIsEmailEnabled(...args),
 }));
 
 mock.module("@/shared/lib/route-responses", () => ({
@@ -171,6 +210,8 @@ function makeRegistration(overrides: Record<string, unknown> = {}) {
       addressDetail: null,
       location: { name: "テスト会場" },
       space: null,
+      format: "OFFLINE",
+      meetingUrl: null,
     },
     ...overrides,
   };
@@ -183,6 +224,7 @@ describe("GET /api/cron/event-reminder", () => {
     mockClaimEventRegistrationReminder.mockReset();
     mockReleaseEventRegistrationReminderClaim.mockReset();
     mockGetEmailDeliverySettings.mockReset();
+    mockGetEventEmailRenderContext.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
     mockIsFeatureEnabled.mockReset();
@@ -196,6 +238,13 @@ describe("GET /api/cron/event-reminder", () => {
     mockIsEmailEnabled.mockResolvedValue(true);
     mockGetEmailDeliverySettings.mockResolvedValue({
       notifyEventReminder: true,
+    });
+    mockGetEventEmailRenderContext.mockResolvedValue({
+      calendarSettings: {
+        icalAttachmentEnabled: false,
+        addToCalendarLinksEnabled: false,
+      },
+      organizer: { name: "Test Org", email: "org@example.com" },
     });
     mockFindEventRegistrationsForReminderWindow.mockResolvedValue([]);
     mockClaimEventRegistrationReminder.mockResolvedValue(true);
@@ -285,6 +334,16 @@ describe("GET /api/cron/event-reminder", () => {
         customerName: "山田 太郎",
         eventTitle: "テストイベント",
         quantity: 2,
+      }),
+      {
+        calendarSettings: {
+          icalAttachmentEnabled: false,
+          addToCalendarLinksEnabled: false,
+        },
+        organizer: { name: "Test Org", email: "org@example.com" },
+      },
+      expect.objectContaining({
+        transport: { resendApiKey: "re_test_key" },
       }),
     );
     expect(mockReleaseEventRegistrationReminderClaim).not.toHaveBeenCalled();

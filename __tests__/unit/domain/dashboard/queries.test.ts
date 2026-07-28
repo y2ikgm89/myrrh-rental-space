@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // =============================================================================
 // Mocks (must precede module under test import — TDZ)
@@ -68,7 +69,7 @@ mock.module("@generated/prisma/client", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   ReservationStatus: {
     PENDING: "PENDING",
     CONFIRMED: "CONFIRMED",
@@ -84,7 +85,7 @@ mock.module("@generated/prisma/enums", () => ({
     FLAGGED: "FLAGGED",
     SPAM: "SPAM",
   },
-}));
+});
 
 const {
   getDashboardStats,

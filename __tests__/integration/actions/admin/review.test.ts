@@ -13,12 +13,17 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
 // =============================================================================
 
 // createValidationMutationError モック
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mock(() => Promise.resolve({ success: true })),
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
@@ -27,7 +32,6 @@ mock.module("@/shared/lib/action-helpers", () => ({
     ),
   }),
   checkActionRateLimit: mock(() => Promise.resolve({ success: true })),
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
 }));
 
 // executeAdminMutationResult モック（認証をバイパスし execute を直接呼び出す）
@@ -106,9 +110,9 @@ mock.module("@/shared/domain/reviews/commands", () => ({
 
 // review-emails モック（fireAndForget 用）
 const mockSendReviewReplyEmail = mock(() => Promise.resolve({ success: true }));
-mock.module("@/shared/lib/email/review-emails", () => ({
+installEmailLibDispatchMock({
   sendReviewReplyEmail: mockSendReviewReplyEmail,
-}));
+});
 
 // next/cache モック
 const mockUpdateTag = mock<(tag: string) => void>(() => undefined);

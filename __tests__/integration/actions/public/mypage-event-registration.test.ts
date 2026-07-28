@@ -13,6 +13,8 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -40,9 +42,12 @@ const mockValidateTurnstile = mock(
   (): Promise<{ success: boolean; error?: string }> =>
     Promise.resolve({ success: true }),
 );
+
+mock.module("@/shared/domain/settings/turnstile", () => ({
+  validateTurnstile: mockValidateTurnstile,
+}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mockValidateTurnstile,
   // cancelEventRegistration は使わないが、同一ファイルの registerForEvent が
   // import するため、モジュール解決を通すために固定成功スタブを提供する。
   checkBotHeuristics: () => ({ success: true as const }),
@@ -103,16 +108,18 @@ mock.module(
   }),
 );
 
-mock.module("@/shared/lib/email/event-emails", () => ({
+installEmailLibDispatchMock({
   sendEventRegistrationConfirmation: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
   sendEventAdminNotification: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+  sendEventWaitlistRegistered: mock(() =>
+    Promise.reject(new Error("not used in cancel test")),
+  ),
+});
+installEmailRenderContextMock();
 
 // cancelEventRegistration は使わないが、同一ファイルの registerForEventWaitlist が
 // import するため、モジュール解決を通すために "not used" スタブを提供する
@@ -121,12 +128,6 @@ mock.module("@/shared/lib/email/event-emails", () => ({
 // 衝突して失敗する — 実体験済み）。
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   registerWaitlistEntryCommand: mock(() =>
-    Promise.reject(new Error("not used in cancel test")),
-  ),
-}));
-
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
-  sendEventWaitlistRegistered: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
 }));
@@ -196,7 +197,7 @@ mock.module("@/shared/domain/terms/consent-gate", () => ({
 }));
 
 const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

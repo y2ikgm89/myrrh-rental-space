@@ -287,12 +287,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/reservation", () => ({
-  checkReservationOverlap: mock<() => Promise<{ hasOverlap: boolean }>>(() =>
-    Promise.resolve({ hasOverlap: false }),
-  ),
-}));
-
 // PR#4: `ensureNoOverlap` (payloads.ts) が checkReservationOverlap →
 // checkSpaceOverlap に切替。Reservation ↔ Event cross-table 判定の SSoT なので
 // 個別テストで overlap を返したいケースでは mockCheckSpaceOverlap を差し替える。
@@ -308,7 +302,7 @@ const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mockIsFeatureEnabled,
 }));
 

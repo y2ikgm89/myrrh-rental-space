@@ -7,6 +7,9 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
+
+installEmailRenderContextMock();
 
 type SendResult =
   | { ok: true; messageId: string }
@@ -81,6 +84,11 @@ mock.module("@/shared/lib/email/client", () => ({
   resolveSenderEmailAddress: mock(
     (email: string | null) => email ?? "noreply@example.com",
   ),
+  resolveTransportApiKey: mock(
+    (key: string | null | undefined) => key ?? "re_test_key",
+  ),
+  isEmailTransportEnabled: mock(() => true),
+  getFromAddress: mock(() => "Test <noreply@example.com>"),
 }));
 
 mock.module("@/shared/domain/settings/queries/notification", () => ({

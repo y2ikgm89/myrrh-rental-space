@@ -19,8 +19,10 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   clearGbpAuthState,
-  getGbpAuthorizeUrl,
   getGbpAuthState,
+} from "@/shared/domain/google-business-profile/settings";
+import {
+  getGbpAuthorizeUrl,
   revokeGbpToken,
   GBP_OAUTH_STATE_COOKIE,
   GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,

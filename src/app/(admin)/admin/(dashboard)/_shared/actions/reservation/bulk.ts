@@ -27,7 +27,11 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   syncReservationToCalendar,
   updateCalendarSync,
-} from "@/shared/lib/calendar-sync/outbound";
+} from "@/shared/domain/reservations/reservation-calendar-outbound";
+import {
+  resolveReservationAdminNotificationDelivery,
+  resolveEmailSendContext,
+} from "@/shared/domain/settings/queries/email-render-context";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -115,10 +119,21 @@ function handleConfirmAfterSuccess(
     },
   );
   fireAndForget(
-    sendReservationAdminNotification(
-      payloadData,
-      result.previousStatus === ReservationStatus.PENDING ? "new" : "update",
-    ),
+    (async () => {
+      const action =
+        result.previousStatus === ReservationStatus.PENDING ? "new" : "update";
+      const [delivery, sendContext] = await Promise.all([
+        resolveReservationAdminNotificationDelivery(action),
+        resolveEmailSendContext(),
+      ]);
+      if (!delivery.enabled || !sendContext) return;
+      await sendReservationAdminNotification(
+        payloadData,
+        action,
+        delivery,
+        sendContext,
+      );
+    })(),
     {
       operation: "bulkConfirm:sendAdminNotification",
       category: ErrorCategory.EXTERNAL_API,

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（mock.module より先に定義）
 const mockPostFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
@@ -178,13 +179,13 @@ mock.module("@generated/prisma/client", () => {
   };
 });
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   PostStatus: {
     DRAFT: "DRAFT",
     PUBLISHED: "PUBLISHED",
     ARCHIVED: "ARCHIVED",
   },
-}));
+});
 
 // slug-validation モック（checkSlugAvailability を利用するため）
 const mockCheckSlugAvailability = mock<
@@ -199,7 +200,7 @@ const mockGetSlugErrorMessage = mock<
   return "このスラッグは既に投稿で使用されています";
 });
 
-mock.module("@/shared/domain/slugs/availability", () => ({
+mock.module("@/shared/domain/slugs/validation", () => ({
   checkSlugAvailability: mockCheckSlugAvailability,
   getSlugErrorMessage: mockGetSlugErrorMessage,
 }));

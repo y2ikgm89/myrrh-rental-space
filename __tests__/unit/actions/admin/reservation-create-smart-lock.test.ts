@@ -4,6 +4,9 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
+
+installEmailRenderContextMock();
 
 mock.module("server-only", () => ({}));
 
@@ -93,7 +96,7 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeSmartLockPasscodesForReservation: mock(async () => {}),
 }));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   assertAdminFeatureCreateAllowed: mock(async () => {}),
 }));
 
@@ -101,13 +104,16 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
   invalidateReservationCaches: mock(() => {}),
 }));
 
-mock.module("@/shared/lib/calendar-sync/outbound", () => ({
-  syncReservationToCalendar: mockSyncReservationToCalendar,
-  updateCalendarSync: mock(async () => {}),
-  deleteCalendarSync: mock(async () => {}),
-}));
+mock.module(
+  "@/shared/domain/reservations/reservation-calendar-outbound",
+  () => ({
+    syncReservationToCalendar: mockSyncReservationToCalendar,
+    updateCalendarSync: mock(async () => {}),
+    deleteCalendarSync: mock(async () => {}),
+  }),
+);
 
-mock.module("@/shared/lib/email/reservation-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
   sendReservationConfirmationEmail: mockSendReservationConfirmationEmail,
   sendReservationStatusChangedEmail: mock(async () => {}),

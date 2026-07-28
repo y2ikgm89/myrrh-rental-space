@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
@@ -196,7 +197,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   HeaderScrollBehavior: {
     auto_hide: "auto_hide",
     always_visible: "always_visible",
@@ -227,25 +228,31 @@ mock.module("@generated/prisma/enums", () => ({
     FULL: "FULL",
     CUSTOM: "CUSTOM",
   },
-}));
+});
 
 import {
   updateBasicInfo,
+  updateLayoutSettings,
+} from "@/shared/domain/settings/commands/site-chrome";
+import {
   updateBusinessInfo,
   updateBusinessHoursSettings,
   updateEmailSettings,
-  updateReservationSettings,
   updateNotificationSettings,
+  updateContactInfo,
+} from "@/shared/domain/settings/commands/organization";
+import {
   updateDiscountSettings,
   updateTaxSettings,
-  updateHeaderSettings,
-  updateLayoutSettings,
-  updateContactInfo,
+} from "@/shared/domain/settings/commands/commerce";
+import {
   updateDataRetentionSettings,
   updateFeatureModulesCommand,
   DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,
-  SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/commands/features";
+import { updateHeaderSettings } from "@/shared/domain/settings/commands/layout";
+import { SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE } from "@/shared/domain/settings/commands/optimistic";
+import { updateReservationSettings } from "@/shared/domain/settings/commands/reservation";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 

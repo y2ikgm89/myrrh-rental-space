@@ -12,11 +12,11 @@ import "server-only";
 import {
   getAdminSession,
   getAdminSessionUser,
-  type AdminUser,
-} from "@/shared/lib/admin-auth";
+  type AdminAuthUser,
+} from "@/shared/domain/admin-auth/session";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { canAccessAdmin } from "@/admin/lib/permissions";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
@@ -28,10 +28,12 @@ import type { MutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 export type AuthResult =
-  { success: true; user: AdminUser } | { success: false; error: MutationError };
+  | { success: true; user: AdminAuthUser }
+  | { success: false; error: MutationError };
 
 export type PermissionResult =
-  { success: true; user: AdminUser } | { success: false; error: MutationError };
+  | { success: true; user: AdminAuthUser }
+  | { success: false; error: MutationError };
 
 // =============================================================================
 // Auth Functions (call inside server actions)

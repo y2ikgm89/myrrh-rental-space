@@ -1,25 +1,16 @@
 /**
  * Server Action ヘルパー関数
  *
- * バリデーションエラー抽出、Turnstile検証の共通処理を提供します。
- * Server Actionsで共通的に必要となるユーティリティ関数をまとめています。
- *
- * ## 提供機能
- * - **Zodエラー変換**: ZodErrorをフィールドエラーマップに変換
- * - **Turnstile検証**: ボット対策の検証フロー
- * - **リトライ機構**: 一時的な障害に対する指数バックオフリトライ
+ * バリデーションエラー抽出、ボット対策ヒューリスティック、リトライ機構を提供します。
+ * Turnstile 検証は `shared/domain/settings/turnstile` を参照。
  *
  * @module shared/lib/action-helpers
  */
 
 import "server-only";
 import type { ZodError } from "zod";
-import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
-import type { TurnstileAction } from "./turnstile-actions";
-import { serverEnv } from "./env/server";
-import { getClientIpFromHeaders } from "./rate-limit";
 import { normalizeEmailForIdentity } from "./email/normalize-email";
-import { isE2ESecurityBypassAllowedFromHeaders } from "./e2e-runtime";
+import { getClientIpFromHeaders } from "./rate-limit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
@@ -63,75 +54,6 @@ export function createValidationMutationError(
     code: "VALIDATION",
     fieldErrors: extractFieldErrors(error),
   };
-}
-
-/**
- * Turnstile 検証結果
- */
-export type TurnstileResult =
-  | { readonly success: true }
-  | { readonly success: false; readonly error: string };
-
-export type ValidateTurnstileParams = {
-  readonly token: string | undefined;
-  readonly expectedAction: TurnstileAction;
-};
-
-/**
- * Turnstile 検証の共通フロー（公式推奨の action binding + remoteip + idempotency key）
- *
- * 呼び出し側は `expectedAction` を TURNSTILE_ACTIONS から指定するだけでよい。
- * `remoteip` は `getClientIpFromHeaders()` で自動取得（Server Actions / Route Handlers /
- * Better Auth hook すべてで動作）。
- *
- * Settings/env に site/secret key が未設定の場合、dev/test は検証をスキップする。
- * 本番は bot 対策境界を fail-closed にするため、token 未検証を成功扱いにしない。
- */
-export async function validateTurnstile(
-  params: ValidateTurnstileParams,
-): Promise<TurnstileResult> {
-  // E2E bypass: localhost env URLs + E2E_RUNTIME=1 + production build +
-  // リクエスト Host が loopback の AND のみ許可
-  // (`isE2ESecurityBypassAllowed`、`security-auth.md` rule 準拠)。
-  // E2E webServer は next start (production build) で起動し、Turnstile 秘密鍵は
-  // env / DB 未設定のため、bypass しないと production の fail-closed 分岐に落ちて
-  // 全 form action が「セキュリティ検証が必要」エラーで通らない。
-  if (await isE2ESecurityBypassAllowedFromHeaders()) {
-    return { success: true };
-  }
-
-  if (!(await isTurnstileEnabled())) {
-    if (serverEnv.NODE_ENV === "production") {
-      return {
-        success: false,
-        error: "セキュリティ検証が必要です。ページを再読み込みしてください。",
-      };
-    }
-    return { success: true };
-  }
-
-  if (!params.token) {
-    return {
-      success: false,
-      error: "セキュリティ検証が必要です。ページを再読み込みしてください。",
-    };
-  }
-
-  const result = await verifyTurnstileToken({
-    token: params.token,
-    expectedAction: params.expectedAction,
-    remoteip: await getClientIpFromHeaders(),
-  });
-
-  if (!result.success) {
-    return {
-      success: false,
-      error:
-        "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。",
-    };
-  }
-
-  return { success: true };
 }
 
 // =============================================================================

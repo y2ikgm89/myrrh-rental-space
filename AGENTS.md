@@ -6,7 +6,9 @@ covers stack, structure, testing conventions, absolute rules, and the
 self-completion policy that governs commit → push → PR → auto-merge.
 
 Topic-specific rules live in [`.claude/rules/`](.claude/rules/) and get
-auto-loaded when the relevant files are touched.
+auto-loaded when the relevant files are touched. Parallel PRs that edit
+`LIB_TO_DOMAIN` (and similar ratchet allowlists) must stay serial — see
+[`.claude/rules/architecture-allowlist.md`](.claude/rules/architecture-allowlist.md).
 
 Multi-step workflows (adding a Prisma migration, adding a section type,
 debugging a failed deploy, …) live in [`.claude/skills/`](.claude/skills/) and

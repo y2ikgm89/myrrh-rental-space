@@ -18,7 +18,7 @@ import {
   getAnalyticsStats,
   isAnalyticsApiAvailable,
 } from "@/shared/lib/analytics/ga-data-api";
-import { getAnalyticsConfig } from "@/shared/domain/settings/queries/analytics";
+import { getAnalyticsConfig } from "@/shared/domain/settings/queries/site";
 import { DashboardSectionError } from "./DashboardSectionError";
 import { settleDashboardLoad } from "./settle-dashboard-load";
 

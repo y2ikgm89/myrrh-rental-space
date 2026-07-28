@@ -12,7 +12,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
-} from "@/shared/domain/slugs/availability";
+} from "@/shared/domain/slugs/validation";
 import type {
   CreatePostCommandInput,
   CreatePostResult,

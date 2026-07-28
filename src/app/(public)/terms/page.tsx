@@ -17,7 +17,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
+import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 
 const FALLBACK_METADATA: Metadata = createMetadataErrorFallback(
   "規約一覧",

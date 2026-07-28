@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
   UNPAID: "UNPAID",
@@ -10,7 +11,7 @@ const PaymentStatus = {
 } as const;
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({ PaymentStatus }));
+await installPrismaEnumsMock({ PaymentStatus });
 
 const {
   buildCheckoutSettleUpdateData,

@@ -3,6 +3,8 @@ export type {
   CalendarEventParams,
   CalendarEventResult,
   CalendarConnectionTestResult,
+  GoogleCalendarClientContext,
+  GoogleCalendarEventWriteContext,
   GoogleCalendarSettings,
   CalendarChange,
   SyncChangesResult,
@@ -14,7 +16,7 @@ export type {
 export { formatGoogleApiError } from "./helpers";
 
 export {
-  getServiceAccountClient,
+  createCalendarClientFromServiceAccountJson,
   encryptServiceAccountJson,
 } from "./service-account";
 
@@ -23,22 +25,14 @@ export {
   updateCalendarEvent,
   patchCalendarEvent,
   deleteCalendarEvent,
+  addMeetConferenceToCalendarEvent,
   fetchEventInstances,
   getCalendarEvent,
 } from "./events";
 
 export { fetchCalendarChanges } from "./sync";
+export type { FetchCalendarChangesOptions } from "./sync";
 
-export {
-  setupWebhookWatch,
-  stopWebhookWatch,
-  renewWebhookIfNeeded,
-} from "./webhook";
+export { setupWebhookWatch, stopWebhookWatch } from "./webhook";
 
-export {
-  testServiceAccountConnection,
-  isGoogleCalendarEnabled,
-  isGoogleCalendarConfigured,
-  isTwoWaySyncEnabled,
-  isValidCalendarId,
-} from "./settings";
+export { testServiceAccountConnection, isValidCalendarId } from "./settings";

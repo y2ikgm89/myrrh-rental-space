@@ -34,10 +34,8 @@ const mockSendReceiptIssuedEmail = mock((_input: SendIssuedInput) =>
   Promise.resolve({ ok: true as const, messageId: "msg_test" }),
 );
 
-mock.module("@/shared/lib/email/receipt-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendReceiptIssuedEmail: mockSendReceiptIssuedEmail,
-  buildReceiptIssuedIdempotencyKey: (serialNo: string) =>
-    `receipt-issued/${serialNo}`,
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports

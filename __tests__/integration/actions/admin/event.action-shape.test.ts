@@ -19,7 +19,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/lib/features/check", () => ({
+mock.module("@/shared/domain/features/check", () => ({
   isFeatureEnabled: mock(() => Promise.resolve(true)),
   requireFeatureEnabled: mock(() => Promise.resolve()),
   assertAdminFeatureCreateAllowed: mock(() => Promise.resolve()),
@@ -79,7 +79,7 @@ mock.module("@/shared/domain/events/calendar-sync", () => ({
   getEventSlotsForCalendarSync: mock(async () => []),
 }));
 
-mock.module("@/shared/lib/calendar-sync/event-outbound", () => ({
+mock.module("@/shared/domain/events/event-calendar-outbound", () => ({
   syncEventToCalendar: mock(async () => {}),
   updateEventCalendarSync: mock(async () => {}),
   deleteEventCalendarSync: mock(async () => {}),

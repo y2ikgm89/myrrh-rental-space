@@ -11,6 +11,8 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -32,8 +34,10 @@ const mockCheckEmailRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
+}));
+mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
   checkEmailRateLimit: mockCheckEmailRateLimit,
@@ -63,12 +67,14 @@ mock.module("@/shared/domain/events/registration-commands", () => ({
   cancelEventRegistrationCommand: mock(() => Promise.resolve(null)),
 }));
 
-mock.module("@/shared/lib/email/event-emails", () => ({
-  sendEventRegistrationConfirmation: mock(() => Promise.resolve()),
-  sendEventAdminNotification: mock(() => Promise.resolve()),
-  buildEventRegistrationHubUrl: () => "https://example.com/events/hub",
-  buildMemberEventRegistrationUrl: () => "https://example.com/mypage/events/x",
-}));
+installEmailLibDispatchMock({
+  sendEventRegistrationConfirmation: mock(() => Promise.resolve({ ok: true })),
+  sendEventAdminNotification: mock(() => Promise.resolve({ ok: true })),
+  sendEventWaitlistRegistered: mock(() =>
+    Promise.resolve({ ok: true as const }),
+  ),
+});
+installEmailRenderContextMock();
 
 mock.module(
   "@/shared/domain/events/registration-cancellation-side-effects",
@@ -123,12 +129,6 @@ mock.module("@/shared/lib/cache/event-cache", () => ({
 // terms/queries mock と衝突して失敗する）。
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   registerWaitlistEntryCommand: mock(() => Promise.resolve(null)),
-}));
-
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
-  sendEventWaitlistRegistered: mock(() =>
-    Promise.resolve({ ok: true as const }),
-  ),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({

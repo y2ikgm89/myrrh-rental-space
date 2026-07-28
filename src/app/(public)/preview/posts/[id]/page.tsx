@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { PostDetailPageContent } from "@/app/(public)/blog/_components/post-detail-page-content";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
-import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { verifyAdminSession } from "@/shared/domain/admin-auth/session";
+import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { getPostByIdForPreview } from "@/shared/domain/posts/preview-queries";
 
 interface PageProps {

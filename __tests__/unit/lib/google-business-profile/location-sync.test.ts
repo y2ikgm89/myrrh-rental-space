@@ -74,8 +74,12 @@ mock.module("@/shared/lib/google-api/retry", () => ({
 const mockGetGbpAuthState = mock<() => Promise<unknown | null>>(() =>
   Promise.resolve(null),
 );
+const mockSaveGbpAuthState = mock<(state: unknown) => Promise<void>>(() =>
+  Promise.resolve(),
+);
 mock.module("@/shared/domain/google-business-profile/settings", () => ({
   getGbpAuthState: () => mockGetGbpAuthState(),
+  saveGbpAuthState: (state: unknown) => mockSaveGbpAuthState(state),
 }));
 
 const mockSyncLocationStub = mock(async (input: { locationId: string }) => ({
@@ -87,8 +91,8 @@ mock.module("@/shared/lib/google-business-profile/stub", () => ({
     mockSyncLocationStub(input),
 }));
 
-const { syncLocationToGbp } =
-  await import("@/shared/lib/google-business-profile/location-sync");
+const { syncLocationToGbpCommand } =
+  await import("@/shared/domain/locations/gbp-sync-commands");
 
 const LOCATION_ID = "loc-1";
 const AUTH_STATE = {
@@ -113,7 +117,7 @@ const BASE_LOCATION = {
   gbpSyncEnabled: true,
 };
 
-describe("syncLocationToGbp", () => {
+describe("syncLocationToGbpCommand", () => {
   beforeEach(() => {
     stubModeValue = "false";
     mockLocationFindUnique.mockReset();
@@ -135,7 +139,7 @@ describe("syncLocationToGbp", () => {
   test("GBP_STUB_MODE=true のときはスタブ実装に委譲し DB へ直接触らない", async () => {
     stubModeValue = "true";
 
-    const result = await syncLocationToGbp({ locationId: LOCATION_ID });
+    const result = await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockSyncLocationStub).toHaveBeenCalledWith({
       locationId: LOCATION_ID,
@@ -147,7 +151,7 @@ describe("syncLocationToGbp", () => {
   test("対象拠点が存在しない場合は updateMany で gbpSyncError を記録する", async () => {
     mockLocationFindUnique.mockResolvedValueOnce(null);
 
-    await syncLocationToGbp({ locationId: LOCATION_ID });
+    await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockLocationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -166,7 +170,7 @@ describe("syncLocationToGbp", () => {
       gbpSyncEnabled: false,
     });
 
-    await syncLocationToGbp({ locationId: LOCATION_ID });
+    await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockLocationUpdate).toHaveBeenCalledWith({
       where: { id: LOCATION_ID },
@@ -182,7 +186,7 @@ describe("syncLocationToGbp", () => {
       googleBusinessPlaceId: null,
     });
 
-    await syncLocationToGbp({ locationId: LOCATION_ID });
+    await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockLocationUpdate).toHaveBeenCalledWith({
       where: { id: LOCATION_ID },
@@ -194,7 +198,7 @@ describe("syncLocationToGbp", () => {
   test("GBP 未認証のときは gbpSyncError に '未設定' メッセージを記録する", async () => {
     mockGetGbpAuthState.mockResolvedValueOnce(null);
 
-    await syncLocationToGbp({ locationId: LOCATION_ID });
+    await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockLocationUpdate).toHaveBeenCalledWith({
       where: { id: LOCATION_ID },
@@ -204,7 +208,7 @@ describe("syncLocationToGbp", () => {
   });
 
   test("正常系: API 成功時に gbpSyncedAt を更新し gbpSyncError をクリアする", async () => {
-    const result = await syncLocationToGbp({ locationId: LOCATION_ID });
+    const result = await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockPatch).toHaveBeenCalledWith(
       expect.objectContaining({ name: "locations/12345" }),
@@ -224,7 +228,7 @@ describe("syncLocationToGbp", () => {
   test("API 呼び出しが失敗した場合は throw せず gbpSyncError にエラーメッセージを記録する", async () => {
     mockPatch.mockRejectedValueOnce(new Error("API rate limit exceeded"));
 
-    const result = await syncLocationToGbp({ locationId: LOCATION_ID });
+    const result = await syncLocationToGbpCommand({ locationId: LOCATION_ID });
 
     expect(mockLocationUpdate).toHaveBeenCalledWith({
       where: { id: LOCATION_ID },

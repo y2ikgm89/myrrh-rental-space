@@ -1,49 +1,17 @@
 /**
- * お問い合わせ続報（顧客返信）管理者通知メールの配信ゲート
- * （notifyInquiryCustomerReply / 通知先アドレス）テスト
+ * お問い合わせ続報（顧客返信）管理者通知メールの lib 側配信ゲート
+ * （宛先空 = disabled）テスト。toggle 解決は domain が担う。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  notifyInquiryCustomerReply: boolean;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  notifyInquiryCustomerReply: true,
-  replyToEmail: null,
-};
 
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
-  Promise.resolve(["admin@example.com"]),
-);
 
 mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (value: string) => value.slice(0, 8),
 }));
-
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
-}));
-
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({
@@ -57,6 +25,12 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
 import type { InquiryCustomerReplyAdminEmailData } from "@/shared/lib/email/types";
@@ -72,36 +46,26 @@ const DATA: InquiryCustomerReplyAdminEmailData = {
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
-  mockGetNotificationEmailAddresses.mockReset();
-  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
 });
 
-describe("sendInquiryCustomerReplyAdminEmail() の配信ゲート", () => {
-  test("notifyInquiryCustomerReply が false なら sendEmail を呼ばず disabled を返す", async () => {
-    mockGetEmailDeliverySettings.mockResolvedValue({
-      ...DELIVERY_DEFAULTS,
-      notifyInquiryCustomerReply: false,
-    });
-
-    const result = await sendInquiryCustomerReplyAdminEmail(DATA);
-
-    expect(result).toEqual({ ok: false, reason: "disabled" });
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-
+describe("sendInquiryCustomerReplyAdminEmail() の宛先ゲート", () => {
   test("通知先アドレスが空なら sendEmail を呼ばず disabled を返す", async () => {
-    mockGetNotificationEmailAddresses.mockResolvedValue([]);
-
-    const result = await sendInquiryCustomerReplyAdminEmail(DATA);
+    const result = await sendInquiryCustomerReplyAdminEmail(
+      DATA,
+      { notificationEmails: [] },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
-  test("notifyInquiryCustomerReply true かつ宛先ありなら sendEmail を呼ぶ", async () => {
-    await sendInquiryCustomerReplyAdminEmail(DATA);
+  test("宛先ありなら sendEmail を呼ぶ", async () => {
+    await sendInquiryCustomerReplyAdminEmail(
+      DATA,
+      INQUIRY_ADMIN_DELIVERY,
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
   });

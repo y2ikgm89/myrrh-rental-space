@@ -22,6 +22,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { createHash } from "node:crypto";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const EmailDeliveryStatus = {
   OK: "OK",
@@ -103,11 +104,11 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
 
 mock.module("server-only", () => ({}));
 
-mock.module("@generated/prisma/enums", () => ({
+await installPrismaEnumsMock({
   CustomerStatus,
   CustomerType,
   EmailDeliveryStatus,
-}));
+});
 
 mock.module("@generated/prisma/client", () => ({
   Prisma: {
@@ -182,7 +183,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 // 遅延 import: mock.module 適用後に SUT を読み込む
 const { anonymizeCustomerCommand, mergeCustomerCommand } =
-  await import("@/shared/domain/customers/commands");
+  await import("@/shared/domain/customers/customer-lifecycle-commands");
 const { hashSuppressedEmailCandidate } =
   await import("@/shared/domain/customers/queries");
 

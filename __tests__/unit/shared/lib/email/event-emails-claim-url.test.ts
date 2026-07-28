@@ -10,48 +10,9 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 
-type DeliverySettings = {
-  sendReservationConfirmationEmail: boolean;
-  notifyNewReservation: boolean;
-  notifyReservationChange: boolean;
-  notifyReservationCancel: boolean;
-  notifyNewInquiry: boolean;
-  notifyEventRegistration: boolean;
-  notifyEventCancellation: boolean;
-  replyToEmail: string | null;
-};
-
-const DELIVERY_DEFAULTS: DeliverySettings = {
-  sendReservationConfirmationEmail: true,
-  notifyNewReservation: true,
-  notifyReservationChange: true,
-  notifyReservationCancel: true,
-  notifyNewInquiry: true,
-  notifyEventRegistration: true,
-  notifyEventCancellation: true,
-  replyToEmail: null,
-};
-
 const mockSendEmail = mock<
   (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
 >(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
-const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
-  Promise.resolve(DELIVERY_DEFAULTS),
-);
-const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
-  Promise.resolve(["admin@example.com"]),
-);
-const mockGetCalendarEmailSettings = mock<
-  () => Promise<{
-    icalAttachmentEnabled: boolean;
-    addToCalendarLinksEnabled: boolean;
-  }>
->(() =>
-  Promise.resolve({
-    icalAttachmentEnabled: false,
-    addToCalendarLinksEnabled: false,
-  }),
-);
 
 type HubUrlProps = {
   claimUrl?: string;
@@ -67,16 +28,6 @@ mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
 }));
-mock.module("@/shared/domain/settings/queries/notification", () => ({
-  getEmailDeliverySettings: mockGetEmailDeliverySettings,
-  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
-  getCalendarEmailSettings: mockGetCalendarEmailSettings,
-}));
-mock.module("@/shared/domain/settings/queries/organization", () => ({
-  getIcalOrganizer: () =>
-    Promise.resolve({ name: "Org", email: "org@example.com" }),
-}));
-mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({
@@ -96,6 +47,7 @@ mock.module("@/shared/emails/event-reminder", () => ({
   EventReminderEmail: mockEventReminderEmail,
 }));
 
+import { EMAIL_SEND_CONTEXT, RENDER_CONTEXT } from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendEventRegistrationConfirmation,
@@ -162,30 +114,34 @@ const GUEST_HUB_URL_PATTERN =
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
-  mockGetEmailDeliverySettings.mockReset();
-  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
-  mockGetNotificationEmailAddresses.mockReset();
-  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
   mockEventRegistrationConfirmationEmail.mockClear();
   mockEventReminderEmail.mockClear();
 });
 
 describe("sendEventRegistrationConfirmation() の claimUrl 出し分け", () => {
   test("ゲスト申込（customerId なし）は claimUrl を発行する", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: null,
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: null,
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toMatch(CLAIM_URL_PATTERN);
   });
 
   test("会員申込（customerId あり）は claimUrl を発行しない", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: "customer-1",
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: "customer-1",
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
@@ -194,20 +150,28 @@ describe("sendEventRegistrationConfirmation() の claimUrl 出し分け", () => 
 
 describe("sendEventReminderEmail() の claimUrl 出し分け", () => {
   test("ゲスト申込（customerId なし）は claimUrl を発行する", async () => {
-    await sendEventReminderEmail({
-      ...REMINDER_DATA,
-      customerId: null,
-    });
+    await sendEventReminderEmail(
+      {
+        ...REMINDER_DATA,
+        customerId: null,
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toMatch(CLAIM_URL_PATTERN);
   });
 
   test("会員申込（customerId あり）は claimUrl を発行しない", async () => {
-    await sendEventReminderEmail({
-      ...REMINDER_DATA,
-      customerId: "customer-1",
-    });
+    await sendEventReminderEmail(
+      {
+        ...REMINDER_DATA,
+        customerId: "customer-1",
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
@@ -216,20 +180,28 @@ describe("sendEventReminderEmail() の claimUrl 出し分け", () => {
 
 describe("sendEventRegistrationConfirmation() の eventRegistrationHubUrl 出し分け", () => {
   test("会員申込は mypage 詳細 URL を発行する", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: "customer-1",
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: "customer-1",
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventRegistrationHubUrl).toMatch(MEMBER_HUB_URL_PATTERN);
   });
 
   test("ゲスト申込は status token URL を発行する", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: null,
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: null,
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventRegistrationHubUrl).toMatch(GUEST_HUB_URL_PATTERN);
@@ -239,20 +211,28 @@ describe("sendEventRegistrationConfirmation() の eventRegistrationHubUrl 出し
 // 領収書 DL は発行通知メール (`sendReceiptIssuedEmail`) に集約。確認メールには載せない。
 describe("sendEventRegistrationConfirmation() は receiptDownloadUrl を載せない", () => {
   test("ゲスト申込でも receiptDownloadUrl を渡さない", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: null,
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: null,
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 
   test("会員申込でも receiptDownloadUrl を渡さない", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: "customer-1",
-    });
+    await sendEventRegistrationConfirmation(
+      {
+        ...REGISTRATION_DATA,
+        customerId: "customer-1",
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props).not.toHaveProperty("receiptDownloadUrl");
@@ -261,20 +241,28 @@ describe("sendEventRegistrationConfirmation() は receiptDownloadUrl を載せ�
 
 describe("sendEventReminderEmail() の eventRegistrationHubUrl 出し分け", () => {
   test("会員申込は mypage 詳細 URL を発行する", async () => {
-    await sendEventReminderEmail({
-      ...REMINDER_DATA,
-      customerId: "customer-1",
-    });
+    await sendEventReminderEmail(
+      {
+        ...REMINDER_DATA,
+        customerId: "customer-1",
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventRegistrationHubUrl).toMatch(MEMBER_HUB_URL_PATTERN);
   });
 
   test("ゲスト申込は status token URL を発行する", async () => {
-    await sendEventReminderEmail({
-      ...REMINDER_DATA,
-      customerId: null,
-    });
+    await sendEventReminderEmail(
+      {
+        ...REMINDER_DATA,
+        customerId: null,
+      },
+      RENDER_CONTEXT,
+      EMAIL_SEND_CONTEXT,
+    );
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.eventRegistrationHubUrl).toMatch(GUEST_HUB_URL_PATTERN);

@@ -35,6 +35,12 @@ mock.module("@/shared/emails/receipt-issued", () => ({
   ReceiptIssuedEmail: mockReceiptIssuedEmail,
 }));
 
+import {
+  ADMIN_DELIVERY,
+  EMAIL_SEND_CONTEXT,
+  INQUIRY_ADMIN_DELIVERY,
+  RENDER_CONTEXT,
+} from "./_email-test-fixtures";
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   buildReceiptIssuedIdempotencyKey,
@@ -72,28 +78,37 @@ beforeEach(() => {
 
 describe("sendReceiptIssuedEmail() の detailUrl CTA", () => {
   test("会員向け mypage URL を CTA に渡す", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(lastCallProps()?.detailUrl).toBe(MEMBER_DETAIL_URL);
   });
 
   test("ゲスト向け status URL を CTA に渡す", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: GUEST_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: GUEST_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(lastCallProps()?.detailUrl).toBe(GUEST_DETAIL_URL);
   });
 
   test("PDF API / confirm-page DL 直リンクを組み立てない", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     const url = lastCallProps()?.detailUrl;
     expect(url).toBeDefined();
@@ -105,10 +120,13 @@ describe("sendReceiptIssuedEmail() の detailUrl CTA", () => {
 
 describe("sendReceiptIssuedEmail() の idempotencyKey", () => {
   test("キーは `receipt-issued/<serialNo>` 形式（静的）", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
 
     expect(lastIdempotencyKey()).toBe("receipt-issued/2026-000042");
     expect(lastIdempotencyKey()).toBe(
@@ -117,16 +135,22 @@ describe("sendReceiptIssuedEmail() の idempotencyKey", () => {
   });
 
   test("同一 serialNo → 同一キー（first-send-wins / Resend retry 冪等）", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastIdempotencyKey();
 
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      detailUrl: GUEST_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        detailUrl: GUEST_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastIdempotencyKey();
 
     expect(firstKey).toBe("receipt-issued/2026-000042");
@@ -134,18 +158,24 @@ describe("sendReceiptIssuedEmail() の idempotencyKey", () => {
   });
 
   test("異なる serialNo → 異なるキー", async () => {
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      serialNo: "2026-000001",
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        serialNo: "2026-000001",
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     const firstKey = lastIdempotencyKey();
 
-    await sendReceiptIssuedEmail({
-      ...BASE,
-      serialNo: "2026-000002",
-      detailUrl: MEMBER_DETAIL_URL,
-    });
+    await sendReceiptIssuedEmail(
+      {
+        ...BASE,
+        serialNo: "2026-000002",
+        detailUrl: MEMBER_DETAIL_URL,
+      },
+      EMAIL_SEND_CONTEXT,
+    );
     const secondKey = lastIdempotencyKey();
 
     expect(firstKey).toBe("receipt-issued/2026-000001");

@@ -5,7 +5,7 @@ import { isDomainError } from "@/shared/domain/domain-error";
 import {
   anonymizeCustomerCommand,
   type AnonymizeCustomerReason,
-} from "@/shared/domain/customers/commands";
+} from "@/shared/domain/customers/customer-lifecycle-commands";
 
 export type BulkToggleActiveCustomersResult = {
   count: number;

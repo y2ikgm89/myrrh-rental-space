@@ -43,7 +43,7 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   ) => mockCreateAuditLogRecord(...args),
 }));
 
-mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+mock.module("@/shared/domain/email/lib-dispatch", () => ({
   sendEventWaitlistOffered: (
     ...args: Parameters<typeof mockSendEventWaitlistOffered>
   ) => mockSendEventWaitlistOffered(...args),

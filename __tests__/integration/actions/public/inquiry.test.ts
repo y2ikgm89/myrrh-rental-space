@@ -14,7 +14,7 @@
  * - `createInquiryCommand` の戻り値 payload に receiptNumber / phoneNumber が加わる
  *
  * モック方針:
- * - validateTurnstile: action-helpers をモック(常に成功を返す)
+ * - validateTurnstile: domain/settings/turnstile をモック(常に成功を返す)
  * - createInquiryCommand: domain コマンドをモック
  * - email 送信: email-service をモック
  * - updateTag: next/cache をモック
@@ -23,6 +23,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
+import { installEmailDispatchMock } from "../../../support/email-dispatch-mock";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -43,8 +44,10 @@ const mockCheckBotHeuristics = mock(
   (): { success: boolean; error?: string } => ({ success: true }),
 );
 
-mock.module("@/shared/lib/action-helpers", () => ({
+mock.module("@/shared/domain/settings/turnstile", () => ({
   validateTurnstile: mockValidateTurnstile,
+}));
+mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
 }));
@@ -80,10 +83,10 @@ mock.module("@/shared/domain/inquiries/commands", () => ({
 const mockSendContactConfirmationEmail = mock(() => Promise.resolve());
 const mockSendContactAdminNotification = mock(() => Promise.resolve());
 
-mock.module("@/shared/lib/email/contact-emails", () => ({
+installEmailDispatchMock({
   sendContactConfirmationEmail: mockSendContactConfirmationEmail,
   sendContactAdminNotification: mockSendContactAdminNotification,
-}));
+});
 
 // terms 系: server-side consent gate を no-op に。
 // `assertAllRequiredTermsAgreed` は内部で `getRequiredTermsByScope` を呼び、
@@ -151,7 +154,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
   customerAuth: {},
 }));
 
-mock.module("@/shared/lib/admin-auth", () => ({
+mock.module("@/shared/domain/admin-auth/session", () => ({
   getAdminSession: mock(() => Promise.resolve(null)),
   getCurrentAdminUser: mock(() => Promise.resolve(null)),
   verifyAdminSession: mock(() => Promise.resolve(null)),
