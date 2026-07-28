@@ -64,7 +64,7 @@ mock.module("@/shared/lib/admin-permissions", () => ({
   hasPermission: mock(() => true),
 }));
 
-mock.module("@/shared/lib/admin-resource-access", () => ({
+mock.module("@/shared/domain/admin-auth/resource-access", () => ({
   userHasResourceAccess: mock(() => Promise.resolve(true)),
 }));
 

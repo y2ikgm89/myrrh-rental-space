@@ -1051,15 +1051,17 @@ describe("architecture boundaries", () => {
 
   test("shared/lib → shared/domain import は allowlist 凍結（新規 lib→domain 禁止 ratchet）", () => {
     // CLAUDE.md: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
-    // 既存の lib→domain 依存は integration adapter として ALLOWLIST 凍結し、
-    // 新規追加と「解消済みだが allowlist 残留」の両方を fail する（ratchet）。
-    // 依存解消 PR では当該ファイルを ALLOWLIST から削除すること。
+    // 解消可能な lib→domain は ALLOWLIST から削除する（ratchet）。
+    // 残件は framework lifecycle adapter のみを意図的に残す（下記コメント参照）。
+    // 新規 lib→domain と「解消済みだが allowlist 残留」の両方を fail する。
     const SHARED_LIB_ROOT = join(SRC_ROOT, "shared", "lib");
     const LIB_TO_DOMAIN_IMPORT_ALLOWLIST = new Set(
       [
+        // IAP session facade → domain admin-auth audit/queries（次 PR で domain/session へ移す）
         "admin-auth.ts",
-        "admin-resource-access.ts",
-        // Better Auth deleteUser.beforeDelete → Customer anonymize adapter
+        // Better Auth 公式: deleteUser.beforeDelete / sendDeleteAccountVerification は
+        // betterAuth() config 内に置く。customer-auth.ts は恒久 adapter（解消対象外）。
+        // @see https://www.better-auth.com/docs/concepts/users-accounts
         "customer-auth.ts",
       ].map((rel) =>
         relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(

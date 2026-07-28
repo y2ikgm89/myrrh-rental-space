@@ -30,6 +30,18 @@ paths:
    （例: domain dispatch + 別 PR で移った maintenance / turnstile inject）
 4. rematch 後に `architecture-boundaries` + `bun run validate`、push、auto-merge 継続
 
+## 恒久 adapter（解消対象外）
+
+`LIB_TO_DOMAIN_IMPORT_ALLOWLIST` の一部は「未移行の借り」ではなく **framework
+lifecycle の正規 composition** として残す:
+
+| エントリ           | 理由                                                                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customer-auth.ts` | Better Auth 公式は `deleteUser.beforeDelete` 等を `betterAuth()` config 内に置く。domain（anonymize / email dispatch）呼び出しは config 縁で行うのが正しい。BA 工場を domain に移すと framework adapter が domain を汚染する |
+
+解消 PR を書くときは上記以外の行だけを削除対象にする。`customer-auth.ts` を
+allowlist から外すために DI shim や互換 re-export を足さない（clean-break 禁止）。
+
 ## 将来の構造改善（任意）
 
 衝突頻度が高いなら、allowlist を 1 行 1 エントリのテキスト / 1 ファイル 1 エントリに
