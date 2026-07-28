@@ -106,16 +106,22 @@ const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
 mock.module("server-only", () => ({}));
 
+mock.module(
+  "@/shared/domain/reservations/calendar-sync-inbound-mutations",
+  () => ({
+    GCAL_DELETE_CANCELLATION_REASON:
+      "Google Calendar 上でイベントが削除されたため自動キャンセル",
+    applyCalendarTimeChange: (...args: unknown[]) =>
+      mockApplyCalendarTimeChange(...args),
+    cancelReservationFromCalendar: (...args: unknown[]) =>
+      mockCancelReservationFromCalendar(...args),
+  }),
+);
+
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
-  GCAL_DELETE_CANCELLATION_REASON:
-    "Google Calendar 上でイベントが削除されたため自動キャンセル",
   getCalendarSyncRuntimeState: () => mockGetCalendarSyncRuntimeState(),
   recordCalendarSyncCompleted: () => mockRecordCalendarSyncCompleted(),
   saveCalendarSyncToken: (token: string) => mockSaveCalendarSyncToken(token),
-  applyCalendarTimeChange: (...args: unknown[]) =>
-    mockApplyCalendarTimeChange(...args),
-  cancelReservationFromCalendar: (...args: unknown[]) =>
-    mockCancelReservationFromCalendar(...args),
   getReservationByCalendarEventId: (...args: unknown[]) =>
     mockGetReservationByCalendarEventId(...args),
 }));

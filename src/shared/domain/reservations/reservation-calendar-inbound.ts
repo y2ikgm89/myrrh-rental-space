@@ -12,6 +12,8 @@ import {
   applyCalendarTimeChange,
   cancelReservationFromCalendar,
   GCAL_DELETE_CANCELLATION_REASON,
+} from "@/shared/domain/reservations/calendar-sync-inbound-mutations";
+import {
   getCalendarSyncRuntimeState,
   getReservationByCalendarEventId,
   recordCalendarSyncCompleted,
