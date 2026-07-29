@@ -179,7 +179,11 @@ Status history: detail サイドバーに createdAt asc で表示（read-only）
 - 添付は R2 delete + DB 行削除（または filename を redacted にして object 削除）
 - 既に anonymized → CONFLICT
 - soft-deleted でも可（保持期間中の権利者請求向け）
-- Customer 匿名化は既存のまま。Inquiry は独立（customer 匿名化時に inquiry を自動 anonymize しない — 既存コメント「JOIN 維持」と整合。必要なら follow-up）
+- Customer 匿名化時は紐づく未匿名化 Inquiry へ `customer-cascade` 理由で連鎖
+  anonymize する（`anonymizeInquiryInTx`）。Inquiry 個別 audit 行は作らず、
+  customer anonymization audit に `anonymizedInquiryIds` を載せる。
+- Customer 匿名化は Inquiry customerId 参照を維持。JOIN で PII に到達しても
+  連鎖 anonymize 済みの placeholder 値になる（2026-07-29 実施済み）
 
 ## 7. UI
 

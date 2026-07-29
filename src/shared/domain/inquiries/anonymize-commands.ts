@@ -16,9 +16,11 @@ import {
  *
  * `anonymizeCustomerCommand`（`@/shared/domain/customers/customer-lifecycle-commands`）と同型の
  * 契約: 物理削除ではなく PII を placeholder に置換し `anonymizedAt` /
- * `anonymizedReason` を刻印する append-only 証跡アプローチ。Inquiry は
- * Customer と独立した匿名化対象 — Customer.anonymize 時に inquiry を自動で
- * 追随させることは非ゴール（design §6.5「Inquiry は独立」）。
+ * `anonymizedReason` を刻印する append-only 証跡アプローチ。
+ *
+ * Customer 匿名化時は `anonymizeCustomerCommand` 内で未匿名化 Inquiry へ
+ * `reason: "customer-cascade"` を連鎖適用する（SSoT）。個別の admin 匿名化は
+ * 本 command を直接呼ぶ。
  *
  * 匿名化される列 / データ:
  * - name          → "削除済み"
@@ -42,7 +44,7 @@ import {
  * 匿名化そのものの成功を優先する）。
  */
 export type AnonymizeInquiryReason =
-  "customer-requested" | "admin-purge" | "data-retention";
+  "customer-requested" | "admin-purge" | "data-retention" | "customer-cascade";
 
 const INQUIRY_ANONYMIZE_PLACEHOLDER_NAME = "削除済み";
 const INQUIRY_ANONYMIZE_PLACEHOLDER_MESSAGE = "この内容は匿名化されました";
@@ -50,6 +52,96 @@ const INQUIRY_ANONYMIZE_PLACEHOLDER_REPLY_BODY = "この内容は匿名化され
 
 function buildAnonymizedInquiryEmail(inquiryId: string): string {
   return `deleted+${inquiryId}@anonymized.local`;
+}
+
+export type AnonymizeInquiryTx = {
+  inquiry: Pick<typeof prisma.inquiry, "findUnique" | "update">;
+  inquiryReply: Pick<typeof prisma.inquiryReply, "updateMany">;
+  inquiryAttachment: Pick<
+    typeof prisma.inquiryAttachment,
+    "findMany" | "deleteMany"
+  >;
+};
+
+/**
+ * Inquiry PII 匿名化の DB 更新本体。呼び出し側は tx 内で対象が未匿名化であること
+ * を保証する（standalone command は事前に NOT_FOUND / CONFLICT を検査）。
+ */
+export async function anonymizeInquiryInTx(
+  tx: AnonymizeInquiryTx,
+  input: { inquiryId: string; reason: AnonymizeInquiryReason },
+): Promise<{ anonymizedAt: Date; deletedR2Keys: string[] }> {
+  const anonymizedAt = new Date();
+
+  await tx.inquiry.update({
+    where: { id: input.inquiryId },
+    data: {
+      name: INQUIRY_ANONYMIZE_PLACEHOLDER_NAME,
+      email: buildAnonymizedInquiryEmail(input.inquiryId),
+      phoneNumber: null,
+      companyName: null,
+      message: INQUIRY_ANONYMIZE_PLACEHOLDER_MESSAGE,
+      anonymizedAt,
+      anonymizedReason: input.reason,
+    },
+  });
+
+  await tx.inquiryReply.updateMany({
+    where: { inquiryId: input.inquiryId },
+    data: { body: INQUIRY_ANONYMIZE_PLACEHOLDER_REPLY_BODY },
+  });
+
+  const attachments = await tx.inquiryAttachment.findMany({
+    where: { inquiryId: input.inquiryId },
+    select: { r2Key: true },
+  });
+
+  if (attachments.length > 0) {
+    await tx.inquiryAttachment.deleteMany({
+      where: { inquiryId: input.inquiryId },
+    });
+  }
+
+  return {
+    anonymizedAt,
+    deletedR2Keys: attachments.map((a) => a.r2Key),
+  };
+}
+
+export async function deleteInquiryAttachmentR2Keys(input: {
+  r2Keys: string[];
+  operation: string;
+  inquiryId?: string;
+}): Promise<void> {
+  if (input.r2Keys.length === 0) {
+    return;
+  }
+
+  try {
+    const bucket = getR2InquiriesBucketName();
+    const result = await deleteObjectsFromBucket(bucket, input.r2Keys);
+    if (!result.success) {
+      logError(new Error(result.error ?? "R2 delete failed"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation: input.operation,
+          ...(input.inquiryId !== undefined && { inquiryId: input.inquiryId }),
+          count: input.r2Keys.length,
+        },
+      });
+    }
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: input.operation,
+        ...(input.inquiryId !== undefined && { inquiryId: input.inquiryId }),
+        count: input.r2Keys.length,
+      },
+    });
+  }
 }
 
 export async function anonymizeInquiryCommand(input: {
@@ -79,71 +171,18 @@ export async function anonymizeInquiryCommand(input: {
         );
       }
 
-      const anonymizedAt = new Date();
-
-      await tx.inquiry.update({
-        where: { id: existing.id },
-        data: {
-          name: INQUIRY_ANONYMIZE_PLACEHOLDER_NAME,
-          email: buildAnonymizedInquiryEmail(existing.id),
-          phoneNumber: null,
-          companyName: null,
-          message: INQUIRY_ANONYMIZE_PLACEHOLDER_MESSAGE,
-          anonymizedAt,
-          anonymizedReason: input.reason,
-        },
+      return anonymizeInquiryInTx(tx, {
+        inquiryId: existing.id,
+        reason: input.reason,
       });
-
-      await tx.inquiryReply.updateMany({
-        where: { inquiryId: existing.id },
-        data: { body: INQUIRY_ANONYMIZE_PLACEHOLDER_REPLY_BODY },
-      });
-
-      const attachments = await tx.inquiryAttachment.findMany({
-        where: { inquiryId: existing.id },
-        select: { r2Key: true },
-      });
-
-      if (attachments.length > 0) {
-        await tx.inquiryAttachment.deleteMany({
-          where: { inquiryId: existing.id },
-        });
-      }
-
-      return {
-        anonymizedAt,
-        deletedR2Keys: attachments.map((a) => a.r2Key),
-      };
     },
   );
 
-  if (deletedR2Keys.length > 0) {
-    try {
-      const bucket = getR2InquiriesBucketName();
-      const result = await deleteObjectsFromBucket(bucket, deletedR2Keys);
-      if (!result.success) {
-        logError(new Error(result.error ?? "R2 delete failed"), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "anonymizeInquiryCommand.r2Cleanup",
-            inquiryId: input.inquiryId,
-            count: deletedR2Keys.length,
-          },
-        });
-      }
-    } catch (error) {
-      logError(normalizeError(error), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.HIGH,
-        context: {
-          operation: "anonymizeInquiryCommand.r2Cleanup",
-          inquiryId: input.inquiryId,
-          count: deletedR2Keys.length,
-        },
-      });
-    }
-  }
+  await deleteInquiryAttachmentR2Keys({
+    r2Keys: deletedR2Keys,
+    operation: "anonymizeInquiryCommand.r2Cleanup",
+    inquiryId: input.inquiryId,
+  });
 
   return {
     inquiryId: input.inquiryId,
