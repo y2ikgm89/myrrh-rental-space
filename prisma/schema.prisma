@@ -885,6 +885,8 @@ model Customer {
   eventRegistrations   EventRegistration[]
   termsAgreements      TermsAgreement[]
   pendingEmailChanges  PendingCustomerEmailChange[]
+  pendingMergeAsTarget PendingCustomerMerge[] @relation("MergeTarget")
+  pendingMergeAsSource PendingCustomerMerge[] @relation("MergeSource")
   // Inquiry Overhaul Phase 1: 顧客が添付した inquiry_attachments 行 (uploadedByCustomerId)
   uploadedInquiryAttachments InquiryAttachment[] @relation("InquiryAttachmentUploadedByCustomer")
   authoredInquiryReplies     InquiryReply[]     @relation("InquiryReplyAuthorCustomer")
@@ -939,6 +941,31 @@ model PendingCustomerEmailChange {
   @@index([customerId])
   @@index([expiresAt])
   @@map("pending_customer_email_changes")
+}
+
+// ==============================================
+// PendingCustomerMerge (self-serve guest history merge)
+// ==============================================
+//
+// 会員 Customer と同一 emailCanonical の未リンク guest Customer を、guest email
+// 宛の本人確認 URL 経由で統合するための短命トークン台帳。
+// PendingCustomerEmailChange と同型 (sha256 hash + single-use + TTL)。
+model PendingCustomerMerge {
+  id               String    @id @default(uuid()) @db.Uuid
+  targetCustomerId String    @db.Uuid
+  sourceCustomerId String    @db.Uuid
+  guestEmail       String    @db.VarChar(320)
+  tokenHash        String    @unique @db.VarChar(64)
+  expiresAt        DateTime
+  consumedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  targetCustomer Customer @relation("MergeTarget", fields: [targetCustomerId], references: [id], onDelete: Cascade)
+  sourceCustomer Customer @relation("MergeSource", fields: [sourceCustomerId], references: [id], onDelete: Cascade)
+
+  @@index([targetCustomerId])
+  @@index([expiresAt])
+  @@map("pending_customer_merges")
 }
 
 // ==============================================

@@ -498,3 +498,13 @@ export {
   mergeCustomerCommand,
   type AnonymizeCustomerReason,
 } from "@/shared/domain/customers/customer-lifecycle-commands";
+
+export {
+  consumeCustomerMergeTokenCommand,
+  CUSTOMER_MERGE_TOKEN_TTL_MS,
+  findUnlinkedGuestCustomerForMember,
+  getCustomerMergePreviewForGuest,
+  requestCustomerMergeCommand,
+  validateCustomerMergeTokenCommand,
+  type CustomerMergePreview,
+} from "@/shared/domain/customers/customer-merge-commands";

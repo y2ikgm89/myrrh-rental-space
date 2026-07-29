@@ -14,6 +14,7 @@
 export const REAGREE_ALLOWLIST_PREFIXES: readonly string[] = [
   "/mypage/terms/reagree",
   "/mypage/settings",
+  "/mypage/merge",
   "/mypage/reservations",
   "/mypage/inquiries",
   "/mypage/events",

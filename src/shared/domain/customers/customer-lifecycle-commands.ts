@@ -280,6 +280,14 @@ export async function mergeCustomerCommand(
       where: { customerId: sourceId },
       data: { customerId: targetId },
     });
+    await tx.inquiryReply.updateMany({
+      where: { authorCustomerId: sourceId },
+      data: { authorCustomerId: targetId },
+    });
+    await tx.inquiryAttachment.updateMany({
+      where: { uploadedByCustomerId: sourceId },
+      data: { uploadedByCustomerId: targetId },
+    });
 
     // target の予約統計を実履歴から再計算する。
     // 同型の再計算経路は `updateAdminReservationCommand` の予約再割当時にもあり、

@@ -43,6 +43,8 @@ import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 import { hasUnlinkedGuestCustomerForEmail } from "@/shared/domain/customers/queries";
+import { getAccountProviders } from "@/shared/domain/users/queries";
+import { CUSTOMER_TRUSTED_PROVIDERS } from "@/shared/lib/customer-auth";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
 import { UnlinkedGuestHistoryNotice } from "./_components/unlinked-guest-history-notice";
 import { SignupTermsConsumer } from "./_components/signup-terms-consumer";
@@ -104,7 +106,7 @@ async function MypageAuthGate({
     }
   }
 
-  const [eventsEnabled, contactEnabled, hasUnlinkedGuestHistory] =
+  const [eventsEnabled, contactEnabled, hasUnlinkedGuestHistory, providers] =
     await Promise.all([
       isFeatureEnabled("events"),
       isFeatureEnabled("contact"),
@@ -112,7 +114,12 @@ async function MypageAuthGate({
         email: customer.email,
         excludeCustomerId: customer.id,
       }),
+      getAccountProviders(user.id),
     ]);
+
+  const showSelfServeMerge = CUSTOMER_TRUSTED_PROVIDERS.some((provider) =>
+    providers.includes(provider),
+  );
 
   return (
     <PageLayout variant="dashboard">
@@ -124,6 +131,7 @@ async function MypageAuthGate({
       <UnlinkedGuestHistoryNotice
         hasUnlinkedGuestHistory={hasUnlinkedGuestHistory}
         showContactLink={contactEnabled}
+        showSelfServeMerge={showSelfServeMerge}
       />
       <SignupTermsConsumer isNew={isNew} />
       {children}
