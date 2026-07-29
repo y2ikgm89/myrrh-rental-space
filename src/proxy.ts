@@ -285,6 +285,10 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
   },
   {
+    pathname: "/events/registrations/status/edit",
+    cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
+  },
+  {
     pathname: "/events/registrations/checkout",
     cookieName: EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME,
     cookiePath: "/events/registrations/checkout",
