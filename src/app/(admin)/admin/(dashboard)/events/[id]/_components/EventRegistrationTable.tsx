@@ -152,7 +152,7 @@ export function EventRegistrationTable({
   const [manualPaymentTarget, setManualPaymentTarget] = useState<string | null>(
     null,
   );
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {

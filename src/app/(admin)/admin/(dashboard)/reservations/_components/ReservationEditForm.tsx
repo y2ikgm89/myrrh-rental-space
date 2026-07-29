@@ -205,6 +205,9 @@ export function ReservationEditForm({
   const requestIdRef = useRef(0);
 
   const pricingWindow = resolvePricingWindow(spaceId, date, startTime, endTime);
+  const previewSpaceId = pricingWindow?.spaceId;
+  const previewStartIso = pricingWindow?.startIso;
+  const previewEndIso = pricingWindow?.endIso;
   const couponCode = fields.couponCode.value?.trim() ?? "";
 
   // 料金プレビューはサーバー側 updateAdminReservationCommand と同じ
@@ -215,28 +218,19 @@ export function ReservationEditForm({
   // stale-response race を防ぐ（レビュー指摘）。管理者の手動 totalPrice 上書きが
   // stale な価格で確定してしまう事故を防ぐ。
   useEffect(() => {
-    if (!pricingWindow) return;
+    if (!previewSpaceId || !previewStartIso || !previewEndIso) return;
     const requestId = ++requestIdRef.current;
-    const { spaceId: previewSpaceId, startIso, endIso } = pricingWindow;
     startPricingTransition(async () => {
       const result = await previewReservationPricingAction(
         previewSpaceId,
-        startIso,
-        endIso,
+        previewStartIso,
+        previewEndIso,
         couponCode !== "" ? couponCode : undefined,
       );
       if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
     });
-    // pricingWindow 自体は render のたびに再生成される新規オブジェクトのため
-    // deps に入れると setPricePreview 完了 → 再 render → 新 pricingWindow →
-    // 再実行の無限ループになる（Codex P1 #1105）。プリミティブ値のみを deps にする。
-  }, [
-    pricingWindow?.spaceId,
-    pricingWindow?.startIso,
-    pricingWindow?.endIso,
-    couponCode,
-  ]);
+  }, [previewSpaceId, previewStartIso, previewEndIso, couponCode]);
 
   const calculatedPrice = pricingWindow
     ? (pricePreview?.totalPrice ?? null)

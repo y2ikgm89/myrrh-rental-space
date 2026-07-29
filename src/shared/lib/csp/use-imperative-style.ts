@@ -49,9 +49,7 @@ export function useImperativeStyle<T extends HTMLElement>(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    applyImperativeValues(el, values);
-    // serialized snapshot avoids object identity churn without useMemo
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- values via serialized
+    applyImperativeValues(el, JSON.parse(serialized) as ImperativeStyleValues);
   }, [ref, serialized]);
 }
 
