@@ -102,16 +102,20 @@ For human onboarding — setup, common commands, repo layout — see
 - Advisory lock coordination: event capacity writes serialize on namespace 728350
   (`lockEventRegistrationForTransaction`) — registration/cancel/waitlist/onsite and
   admin capacity/slot/ticket sync must all take 728350 before capacity-changing work.
-  BlockedDate writes use `acquireBlockedDateWriteLocks` to serialize with reservation
-  create (728351); GLOBAL/LOCATION scopes lock affected spaces in id ascending order.
+  Space writes (reservation create/cancel/lifecycle/pending-expiry/series, plus
+  BlockedDate via `acquireBlockedDateWriteLocks`) take 728351
+  (`lockSpaceForTransaction`) before overlap/capacity-changing work; GLOBAL/LOCATION
+  BlockedDate scopes lock affected spaces in id ascending order.
 - Seed-imported domain helpers must stay seed-safe (no `import "server-only"`);
   Next-only wrappers belong in thin `*-server.ts` modules. `src/shared/lib` must
   not import Prisma (domain/db only); domain enums go through
   `@/shared/lib/validations/enums/prisma-types`.
 - Customer anonymize (`anonymizeCustomerCommand` SSoT) redacts Customer PII in place;
   linked Inquiry PII is **not** auto-anonymized (design §6.5 — Inquiry は独立した匿名化
-  対象。`anonymizeInquiryCommand` を個別に呼ぶ). Standalone inquiry anonymize remains
-  `anonymizeInquiryCommand`.
+  対象。`anonymizeInquiryCommand` を個別に呼ぶ). Self-serve guest→member merge is
+  Google trusted-provider only (`CUSTOMER_TRUSTED_PROVIDERS`); uses
+  `PendingCustomerMerge` + email verification at `/mypage/merge/*` and reuses
+  `mergeCustomerCommand` (transfer InquiryReply/InquiryAttachment Restrict FKs first).
 - `(admin)` must not import `@/public` and `(public)` must not import `@/admin`
   (enforced by `cross-surface-import-gate.test.ts`).
 - Unit tests that pull reservation/email side effects must use the shared domain
@@ -119,13 +123,15 @@ For human onboarding — setup, common commands, repo layout — see
   `installEmailRenderContextMock`); do not partially mock `@/shared/lib/email/*`
   (missing named exports and `cacheLife()` leaks outside Next). Resend
   `idempotencyKey` must be deterministic per send intent (e.g. `reminderWindowDate`
-  JST YYYY-MM-DD), never `Date.now()`.
+  JST YYYY-MM-DD); exception: `receipt-resend` appends a per-request suffix
+  (`Date.now()`/nonce) because each resend mints a new download token payload.
 - CSP (`src/proxy.ts`): split `style-src` (nonce-only for `<style>`) from
   `style-src-attr 'unsafe-inline'` (CSP3 cannot nonce HTML `style=` attributes).
   Removing `'unsafe-inline'` from `style-src` alone also blocks CSS-var `style=`.
-  Dynamic UI styling uses `src/shared/lib/csp/css-vars.ts` (`cssVarStyle` + Tailwind
-  `var(--*)` classes) or `use-imperative-style.ts` for client transforms; direct
-  `backgroundColor`/`color`/etc. in React `style=` are forbidden.
+  Dynamic UI styling uses `src/shared/lib/csp/css-vars.ts` (`cssVarStyle` /
+  `ImperativeCssScope` + Tailwind `var(--*)` classes) or `use-imperative-style.ts`
+  for client transforms; direct `backgroundColor`/`color`/etc. in React `style=`
+  are forbidden.
 - Schema/Prisma/migration conventions: no `@db.Decimal` — tax rates are whole-% Int
   (`10 = 10%`); `Space.area` is ㎡×100 Int (`2550 = 25.5㎡`) with ×100/÷100 at
   domain boundary only (UI/forms stay ㎡ and % numbers). Prisma is a single
