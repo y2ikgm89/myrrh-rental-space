@@ -90,6 +90,12 @@ const mockReviewUpdateMany = mock<() => Promise<{ count: number }>>(() =>
 const mockEventRegistrationUpdateMany = mock<() => Promise<{ count: number }>>(
   () => Promise.resolve({ count: 0 }),
 );
+const mockInquiryReplyUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+const mockInquiryAttachmentUpdateMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
 
 const mockCustomerDelete = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "customer-1" }),
@@ -153,6 +159,12 @@ const prismaSpaceReview = {
 const prismaEventRegistration = {
   updateMany: mockEventRegistrationUpdateMany,
 };
+const prismaInquiryReply = {
+  updateMany: mockInquiryReplyUpdateMany,
+};
+const prismaInquiryAttachment = {
+  updateMany: mockInquiryAttachmentUpdateMany,
+};
 
 type TxShape = {
   customer: typeof prismaCustomer;
@@ -162,6 +174,8 @@ type TxShape = {
   inquiry: typeof prismaInquiry;
   spaceReview: typeof prismaSpaceReview;
   eventRegistration: typeof prismaEventRegistration;
+  inquiryReply: typeof prismaInquiryReply;
+  inquiryAttachment: typeof prismaInquiryAttachment;
 };
 
 const txShape: TxShape = {
@@ -172,6 +186,8 @@ const txShape: TxShape = {
   inquiry: prismaInquiry,
   spaceReview: prismaSpaceReview,
   eventRegistration: prismaEventRegistration,
+  inquiryReply: prismaInquiryReply,
+  inquiryAttachment: prismaInquiryAttachment,
 };
 
 mock.module("@/shared/db/prisma", () => ({
@@ -250,6 +266,8 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockInquiryUpdateMany.mockReset();
     mockReviewUpdateMany.mockReset();
     mockEventRegistrationUpdateMany.mockReset();
+    mockInquiryReplyUpdateMany.mockReset();
+    mockInquiryAttachmentUpdateMany.mockReset();
 
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
@@ -259,6 +277,8 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockInquiryUpdateMany.mockResolvedValue({ count: 0 });
     mockReviewUpdateMany.mockResolvedValue({ count: 0 });
     mockEventRegistrationUpdateMany.mockResolvedValue({ count: 0 });
+    mockInquiryReplyUpdateMany.mockResolvedValue({ count: 0 });
+    mockInquiryAttachmentUpdateMany.mockResolvedValue({ count: 0 });
   });
 
   test("HARD_BOUNCED の Customer を anonymize すると suppressedEmailHash に 元 emailCanonical hash が保存される", async () => {
@@ -399,6 +419,8 @@ describe("mergeCustomerCommand — preserves suppression state (RESEND-AUDIT M7)
     mockInquiryUpdateMany.mockReset();
     mockReviewUpdateMany.mockReset();
     mockEventRegistrationUpdateMany.mockReset();
+    mockInquiryReplyUpdateMany.mockReset();
+    mockInquiryAttachmentUpdateMany.mockReset();
 
     mockCustomerUpdate.mockResolvedValue({ id: TARGET_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
@@ -407,6 +429,8 @@ describe("mergeCustomerCommand — preserves suppression state (RESEND-AUDIT M7)
     mockInquiryUpdateMany.mockResolvedValue({ count: 0 });
     mockReviewUpdateMany.mockResolvedValue({ count: 0 });
     mockEventRegistrationUpdateMany.mockResolvedValue({ count: 0 });
+    mockInquiryReplyUpdateMany.mockResolvedValue({ count: 0 });
+    mockInquiryAttachmentUpdateMany.mockResolvedValue({ count: 0 });
   });
 
   test("HARD_BOUNCED の source を non-suppressed target にマージすると target に元 email hash が持ち越される", async () => {
@@ -446,6 +470,36 @@ describe("mergeCustomerCommand — preserves suppression state (RESEND-AUDIT M7)
     // source は物理削除される (契約維持)
     expect(mockCustomerDelete).toHaveBeenCalledWith({
       where: { id: CUSTOMER_ID },
+    });
+  });
+
+  test("merge は InquiryReply / InquiryAttachment の Customer FK も source → target に移譲する (onDelete: Restrict 回避)", async () => {
+    mockCustomerFindUnique.mockResolvedValueOnce({
+      id: CUSTOMER_ID,
+      userId: null,
+      anonymizedAt: null,
+      emailCanonical: "source.ok@example.com",
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      suppressedEmailHash: null,
+    });
+    mockCustomerFindUnique.mockResolvedValueOnce({
+      id: TARGET_ID,
+      userId: null,
+      anonymizedAt: null,
+      emailCanonical: "target.ok@example.com",
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      suppressedEmailHash: null,
+    });
+
+    await mergeCustomerCommand(CUSTOMER_ID, TARGET_ID);
+
+    expect(mockInquiryReplyUpdateMany).toHaveBeenCalledWith({
+      where: { authorCustomerId: CUSTOMER_ID },
+      data: { authorCustomerId: TARGET_ID },
+    });
+    expect(mockInquiryAttachmentUpdateMany).toHaveBeenCalledWith({
+      where: { uploadedByCustomerId: CUSTOMER_ID },
+      data: { uploadedByCustomerId: TARGET_ID },
     });
   });
 

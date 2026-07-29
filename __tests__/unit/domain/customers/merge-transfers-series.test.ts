@@ -72,6 +72,27 @@ describe("mergeCustomerCommand transfers all cascade relations before delete", (
     expect(seriesIdx).toBeLessThan(deleteIdx);
   });
 
+  // InquiryReply.authorCustomerId / InquiryAttachment.uploadedByCustomerId は
+  // onDelete: Restrict — transfer しないと source の tx.customer.delete が
+  // FK 制約で失敗する (Inquiry Overhaul Phase 1 で追加された Customer FK)。
+  test("tx.inquiryReply.updateMany appears BEFORE tx.customer.delete", () => {
+    const rest = source.slice(mergeStart);
+    const replyIdx = rest.search(/tx\.inquiryReply\.updateMany\s*\(/);
+    const deleteIdx = rest.search(/tx\.customer\.delete\s*\(/);
+    expect(replyIdx).toBeGreaterThan(0);
+    expect(deleteIdx).toBeGreaterThan(0);
+    expect(replyIdx).toBeLessThan(deleteIdx);
+  });
+
+  test("tx.inquiryAttachment.updateMany appears BEFORE tx.customer.delete", () => {
+    const rest = source.slice(mergeStart);
+    const attachmentIdx = rest.search(/tx\.inquiryAttachment\.updateMany\s*\(/);
+    const deleteIdx = rest.search(/tx\.customer\.delete\s*\(/);
+    expect(attachmentIdx).toBeGreaterThan(0);
+    expect(deleteIdx).toBeGreaterThan(0);
+    expect(attachmentIdx).toBeLessThan(deleteIdx);
+  });
+
   test("return shape declares transferredSeries: number", () => {
     // signature の Promise<{ ... transferredSeries: number; ... }> をチェック
     expect(source).toMatch(/transferredSeries\s*:\s*number/);
