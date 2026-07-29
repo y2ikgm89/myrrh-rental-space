@@ -6,7 +6,6 @@
 
 import { z } from "zod";
 import { createTypeGuard } from "@/shared/lib/serialize";
-import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 // 読み取り側では重複を silent に除去する（React key の stable ID 保証のため）。
 // 書き込み側の Zod スキーマは `.refine()` で厳格に重複を拒否しているため、

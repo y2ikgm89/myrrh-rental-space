@@ -287,6 +287,9 @@ export function ReservationForm({
     state.startTime,
     endTime,
   );
+  const previewSpaceId = pricingWindow?.spaceId;
+  const previewStartIso = pricingWindow?.startIso;
+  const previewEndIso = pricingWindow?.endIso;
 
   // 料金プレビューはサーバー側 createPublicReservationCommand と同じ
   // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
@@ -296,28 +299,19 @@ export function ReservationForm({
   // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
   // stale-response race を防ぐ（レビュー指摘）。
   useEffect(() => {
-    if (!pricingWindow) return;
+    if (!previewSpaceId || !previewStartIso || !previewEndIso) return;
     const requestId = ++requestIdRef.current;
-    const { spaceId, startIso, endIso } = pricingWindow;
     startPricingTransition(async () => {
       const result = await fetchReservationPricingPreview(
-        spaceId,
-        startIso,
-        endIso,
+        previewSpaceId,
+        previewStartIso,
+        previewEndIso,
         couponCode !== "" ? couponCode : undefined,
       );
       if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
     });
-    // pricingWindow 自体は render のたびに再生成される新規オブジェクトのため
-    // deps に入れると setPricePreview 完了 → 再 render → 新 pricingWindow →
-    // 再実行の無限ループになる（Codex P1 #1105）。プリミティブ値のみを deps にする。
-  }, [
-    pricingWindow?.spaceId,
-    pricingWindow?.startIso,
-    pricingWindow?.endIso,
-    couponCode,
-  ]);
+  }, [previewSpaceId, previewStartIso, previewEndIso, couponCode]);
 
   const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
   const price = pricingWindow ? (pricePreview?.totalPrice ?? null) : null;

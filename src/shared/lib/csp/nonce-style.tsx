@@ -25,6 +25,8 @@ export async function NonceStyleBlock({
     <style
       nonce={nonce}
       data-csp-id={id}
+      // CSP nonce-protected <style> requires dangerouslySetInnerHTML for sanitized CSS injection.
+      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml -- intentional nonce style block
       dangerouslySetInnerHTML={{ __html: sanitizeCss(trimmed) }}
     />
   );
