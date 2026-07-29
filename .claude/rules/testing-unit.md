@@ -44,7 +44,7 @@ paths:
 - preload が DATABASE_URL をダミーに固定するため、prisma gateway を
   **動的 import する前に** `process.env.DATABASE_URL` を TEST_DATABASE_URL で上書きする
   （gateway は module load 時 snapshot を読む）
-- afterAll で `basePrisma.$disconnect()`（しないとサブプロセスがハング）
+- afterAll で `prisma.$disconnect()`（しないとサブプロセスがハング）
 - TEST_DATABASE_URL 未設定での直接実行は describe.skip で **silent skip** される
   （runner 経由なら docker compose の既定値 localhost:5433/myrrh_test が自動注入）
 - 並行競合の再現テストは beforeAll で warmup 並行バーストが必要

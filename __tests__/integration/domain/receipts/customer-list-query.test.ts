@@ -42,7 +42,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type QueriesModule = typeof import("@/shared/domain/receipts/queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getCustomerReceipts: QueriesModule["getCustomerReceipts"];
 let testCategoryId: string;
 
@@ -55,7 +54,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -283,7 +281,7 @@ describeMaybe("getCustomerReceipts — cross-source list query", () => {
   };
 
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getCustomerReceipts } =
       await import("@/shared/domain/receipts/queries"));
     await prisma.$queryRaw`SELECT 1`;
@@ -339,7 +337,7 @@ describeMaybe("getCustomerReceipts — cross-source list query", () => {
     }
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("予約経路 + イベント経路の Receipt を横断取得し issuedAt desc で並ぶ", async () => {

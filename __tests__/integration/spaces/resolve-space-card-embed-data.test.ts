@@ -56,7 +56,6 @@ type PublicQueriesModule =
   typeof import("@/shared/domain/spaces/public-queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let resolveSpaceCardEmbedData: PublicQueriesModule["resolveSpaceCardEmbedData"];
 
 type SpaceFixture = {
@@ -115,14 +114,14 @@ async function seedSpaceForTest(overrides?: {
 
 describeMaybe("resolveSpaceCardEmbedData", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ resolveSpaceCardEmbedData } =
       await import("@/shared/domain/spaces/public-queries"));
-    await basePrisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("published + active space: Map に含まれ、全フィールドが正しく返される", async () => {

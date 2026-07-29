@@ -62,7 +62,7 @@ function formatSpaceToPlain(s: {
     addressDetail: s.addressDetail,
     displayAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
     capacity: s.capacity,
-    area: s.area,
+    area: s.area != null ? s.area / 100 : null,
     hourlyPrice: s.hourlyPrice,
     mainImageUrl: s.mainImageUrl,
     gallery: parseGallery(s.gallery),

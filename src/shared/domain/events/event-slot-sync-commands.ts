@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Prisma } from "@generated/prisma/client";
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   buildOrderScopeLockSql,
@@ -53,27 +54,18 @@ function getAggregateQuantitySum(aggregate: object): number {
   return typeof quantity === "number" ? quantity : 0;
 }
 
+type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /**
  * updateEventCommand のチケット差分同期に必要な tx 面。
- * interactive transaction 全体型ではなく、実際に触るメソッドだけを構造的に宣言する。
  */
 export type SyncEventTicketsTx = {
-  readonly $executeRaw: {
-    (query: Prisma.Sql): Promise<unknown>;
-    (
-      strings: TemplateStringsArray,
-      ...values: readonly unknown[]
-    ): Promise<unknown>;
-  };
-  readonly eventTicket: {
-    findMany(args: object): Promise<{ id: string }[]>;
-    deleteMany(args: object): Promise<unknown>;
-    update(args: object): Promise<unknown>;
-    createMany(args: object): Promise<unknown>;
-  };
-  readonly eventRegistration: {
-    aggregate(args: object): Promise<object>;
-  };
+  readonly $executeRaw: DomainTx["$executeRaw"];
+  readonly eventTicket: Pick<
+    DomainTx["eventTicket"],
+    "findMany" | "deleteMany" | "update" | "createMany"
+  >;
+  readonly eventRegistration: Pick<DomainTx["eventRegistration"], "aggregate">;
 };
 
 export type SyncEventSlotsAndTicketsTx = SyncEventTimeSlotsTx &

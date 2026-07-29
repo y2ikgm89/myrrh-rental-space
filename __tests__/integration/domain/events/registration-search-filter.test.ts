@@ -22,7 +22,6 @@ type RegistrationQueriesModule =
   typeof import("@/shared/domain/events/registration-queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getEventRegistrations: RegistrationQueriesModule["getEventRegistrations"];
 let testCategoryId: string;
 
@@ -77,9 +76,9 @@ async function cleanupFixture(eventId: string): Promise<void> {
   // (check_event_schedule_integrity) が commit 時に違反する。event.delete() の
   // onDelete: Cascade に slot 削除を委譲すれば、同一トランザクション内で親行も
   // 消えるため制約チェックは対象イベントなしとして早期 return される。
-  await basePrisma.eventRegistration.deleteMany({ where: { eventId } });
-  await basePrisma.eventTicket.deleteMany({ where: { eventId } });
-  await basePrisma.event.delete({ where: { id: eventId } });
+  await prisma.eventRegistration.deleteMany({ where: { eventId } });
+  await prisma.eventTicket.deleteMany({ where: { eventId } });
+  await prisma.event.delete({ where: { id: eventId } });
 }
 
 describeMaybe("getEventRegistrations 検索・フィルタ", () => {
@@ -89,7 +88,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
     if (TEST_DB_URL) {
       process.env["DATABASE_URL"] = TEST_DB_URL;
     }
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getEventRegistrations } =
       await import("@/shared/domain/events/registration-queries"));
 
@@ -108,12 +107,12 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("氏名の部分一致（大文字小文字区別なし）で絞り込める", async () => {
     const fixture = await createFixtureEvent();
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -123,7 +122,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
         quantity: 1,
       },
     });
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -147,7 +146,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
 
   test("email の部分一致でも絞り込める", async () => {
     const fixture = await createFixtureEvent();
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -157,7 +156,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
         quantity: 1,
       },
     });
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -181,7 +180,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
 
   test("status で絞り込める", async () => {
     const fixture = await createFixtureEvent();
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -191,7 +190,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
         status: RegistrationStatus.CONFIRMED,
       },
     });
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,
@@ -216,7 +215,7 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
 
   test("search/status を指定しない場合は既存の全件取得と同じ結果になる", async () => {
     const fixture = await createFixtureEvent();
-    await basePrisma.eventRegistration.create({
+    await prisma.eventRegistration.create({
       data: {
         eventId: fixture.eventId,
         slotId: fixture.slotId,

@@ -5,7 +5,6 @@ process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 
 const { prisma } = await import("@/shared/db/prisma");
-const { basePrisma } = await import("@/shared/db/prisma");
 const { claimReservationForCustomer } =
   await import("@/shared/domain/reservations/claim-commands");
 
@@ -77,7 +76,6 @@ async function createGuestReservationWithCustomer() {
         totalHours: 0,
         totalBasePrice: 0,
         holidayFlags: {},
-        legacy: true,
       },
       taxRateType: TaxRateType.standard,
       taxRate: 10,
@@ -124,7 +122,7 @@ describe("claimReservationForCustomer", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("未紐付けゲスト予約を会員Customerへ再紐付けする", async () => {

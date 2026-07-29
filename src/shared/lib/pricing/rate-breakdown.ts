@@ -1,4 +1,3 @@
-import { isRecord } from "@/shared/lib/serialize";
 import { z } from "zod";
 
 export const rateBreakdownSegmentSchema = z.object({
@@ -19,14 +18,8 @@ export const rateBreakdownSchema = z
     totalHours: z.number(),
     totalBasePrice: z.number().int(),
     holidayFlags: z.record(z.string(), z.literal(true)),
-    legacy: z.boolean().optional(),
   })
   .strict();
 
 export type RateBreakdown = z.infer<typeof rateBreakdownSchema>;
 export type RateBreakdownSegment = z.infer<typeof rateBreakdownSegmentSchema>;
-
-export function isLegacyRateBreakdown(json: unknown): boolean {
-  if (!isRecord(json)) return true;
-  return json["legacy"] === true;
-}

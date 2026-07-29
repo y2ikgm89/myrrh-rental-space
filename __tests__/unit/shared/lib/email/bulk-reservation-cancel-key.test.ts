@@ -42,7 +42,7 @@ mock.module("@/shared/lib/email/send", () => ({
   sendEmail: mockSendEmail,
   hashForKey: (s: string) => s,
 }));
-mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+mock.module("@/shared/db/prisma", () => ({ prisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({

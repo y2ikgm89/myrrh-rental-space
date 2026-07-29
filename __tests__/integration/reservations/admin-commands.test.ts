@@ -39,7 +39,6 @@ type RatePlanCommandsModule =
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createAdminReservationCommand: AdminCommandsModule["createAdminReservationCommand"];
 let updateAdminReservationCommand: AdminCommandsModule["updateAdminReservationCommand"];
 let updateCustomerReservation: CustomerCommandsModule["updateCustomerReservation"];
@@ -200,7 +199,7 @@ describeMaybe(
   "createAdminReservationCommand — rate plan 統合 + override policy",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ createAdminReservationCommand, updateAdminReservationCommand } =
         await import("@/shared/domain/reservations/admin-commands"));
       ({ updateCustomerReservation } =
@@ -214,7 +213,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("rate plan なしで従来通り予約作成できる (regression)", async () => {

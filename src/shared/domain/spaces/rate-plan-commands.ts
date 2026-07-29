@@ -7,9 +7,7 @@
  * 経由を想定（`updateTag` は Server Action 以外のコンテキストで throw する。
  * 詳細は space-rate-plan-cache.ts のコメント参照）。
  *
- * `hourlyPrice` は `createAppPrismaClient` の result 拡張（Decimal → number）が
- * `create` / `update` の戻り値にも適用されるため、呼び出し側は素の number として
- * 扱える（`Prisma.Decimal` ではない）。
+ * `hourlyPrice` は schema 上 Int のため create/update の戻り値も number。
  */
 import "server-only";
 

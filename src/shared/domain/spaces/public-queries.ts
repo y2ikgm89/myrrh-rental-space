@@ -66,7 +66,7 @@ function mapSpaceListItem(s: SpaceListRow) {
   return {
     ...s,
     hourlyPrice: Number(s.hourlyPrice),
-    area: s.area ? Number(s.area) : null,
+    area: s.area != null ? s.area / 100 : null,
     gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),
     lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),

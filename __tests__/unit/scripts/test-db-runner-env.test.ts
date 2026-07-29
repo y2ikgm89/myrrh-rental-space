@@ -68,7 +68,7 @@ describe("serial DB test auto-detection", () => {
   test("excludes prisma mock.module integration tests", () => {
     expect(
       fileContentNeedsSerialDbExecution(`
-        mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+        mock.module("@/shared/db/prisma", () => ({ prisma: {} }));
         const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
       `),
     ).toBe(false);

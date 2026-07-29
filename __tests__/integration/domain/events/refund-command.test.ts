@@ -94,7 +94,6 @@ type HelpersModule =
   typeof import("@/shared/lib/validations/enums/refund-attribution");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let refundEventRegistrationPaymentCommand: PaymentCommandsModule["refundEventRegistrationPaymentCommand"];
 let refundExpiredWaitlistOfferPaymentCommand: PaymentCommandsModule["refundExpiredWaitlistOfferPaymentCommand"];
 let PaymentStatus: PrismaEnumsModule["PaymentStatus"];
@@ -228,7 +227,7 @@ async function createExpiredPendingRegistration(paidAmount: number): Promise<{
 
 describeMaybe("event registration refund commands (integration)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({
       refundEventRegistrationPaymentCommand,
       refundExpiredWaitlistOfferPaymentCommand,
@@ -271,7 +270,7 @@ describeMaybe("event registration refund commands (integration)", () => {
     await prisma.event.deleteMany({ where: { id: sharedEvent.eventId } });
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   beforeEach(() => {

@@ -201,7 +201,6 @@ type HelpersModule =
   typeof import("@/shared/lib/validations/enums/refund-attribution");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let applyCancellationSideEffects: SideEffectsModule["applyCancellationSideEffects"];
 let PaymentStatus: PrismaEnumsModule["PaymentStatus"];
 let REFUNDED_BY_TYPE: HelpersModule["REFUNDED_BY_TYPE"];
@@ -279,7 +278,13 @@ async function createPaidReservationFixture(
       status: "CANCELLED",
       totalPrice: totalPriceWithTax,
       basePrice,
-      rateBreakdownJson: { legacy: true, segments: [] },
+      rateBreakdownJson: {
+        schemaVersion: 1,
+        segments: [],
+        totalHours: 0,
+        totalBasePrice: 0,
+        holidayFlags: {},
+      },
       taxRateType: "standard",
       taxRate: 10,
       taxAmount,
@@ -349,7 +354,7 @@ describeMaybe(
   "applyCancellationSideEffects × refundPolicy (integration)",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ applyCancellationSideEffects } =
         await import("@/shared/domain/reservations/cancellation-side-effects"));
       ({ PaymentStatus } = await import("@generated/prisma/enums"));
@@ -384,7 +389,7 @@ describeMaybe(
 
     afterAll(async () => {
       await clearRefundPolicy();
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     beforeEach(async () => {

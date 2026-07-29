@@ -58,7 +58,6 @@ type CommandsModule =
   typeof import("@/shared/domain/events/registration-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createEventRegistrationCommand: CommandsModule["createEventRegistrationCommand"];
 let testCategoryId: string;
 
@@ -158,7 +157,7 @@ const CONCURRENCY = 5;
 
 describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ createEventRegistrationCommand } =
       await import("@/shared/domain/events/registration-commands"));
 
@@ -196,7 +195,7 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("event.capacity=1 に 5 並行申込しても CONFIRMED 合計は capacity を超えない", async () => {

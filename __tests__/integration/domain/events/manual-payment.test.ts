@@ -29,7 +29,6 @@ type PaymentCommandsModule =
   typeof import("@/shared/domain/events/payment-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let recordManualEventPaymentCommand: PaymentCommandsModule["recordManualEventPaymentCommand"];
 let testCategoryId: string;
 
@@ -123,7 +122,7 @@ async function cleanupFixture(eventId: string): Promise<void> {
 
 describeMaybe("recordManualEventPaymentCommand", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ recordManualEventPaymentCommand } =
       await import("@/shared/domain/events/payment-commands"));
 
@@ -143,7 +142,7 @@ describeMaybe("recordManualEventPaymentCommand", () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event がすべて
     // 各テストの finally で削除された後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("UNPAID の登録を PAID にし、金額を記録する", async () => {

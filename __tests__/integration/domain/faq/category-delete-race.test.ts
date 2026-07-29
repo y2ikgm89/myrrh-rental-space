@@ -43,7 +43,6 @@ type CategoryCommandsModule =
 type ItemCommandsModule = typeof import("@/shared/domain/faq/item-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let deleteFaqCategory: CategoryCommandsModule["deleteFaqCategory"];
 let createFaqItem: ItemCommandsModule["createFaqItem"];
 let restoreFaqItem: ItemCommandsModule["restoreFaqItem"];
@@ -84,7 +83,7 @@ describeMaybe(
   "deleteFaqCategory — アクティブ項目チェックと削除の check-then-act レース防止",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ deleteFaqCategory } =
         await import("@/shared/domain/faq/category-commands"));
       ({ createFaqItem, restoreFaqItem } =
@@ -94,7 +93,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("delete と createFaqItem を同時に投げても非公開カテゴリ配下にアクティブ項目が残らない", async () => {

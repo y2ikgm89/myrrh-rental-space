@@ -105,10 +105,6 @@ mock.module("@/shared/db/json", () => ({
   asPrismaInputJsonValue: (value: unknown) => value,
 }));
 
-mock.module("@/shared/lib/pricing/rate-breakdown", () => ({
-  isLegacyRateBreakdown: () => false,
-}));
-
 mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
   AuditAction: { CREATE: "CREATE", UPDATE: "UPDATE" },
   PaymentStatus: {

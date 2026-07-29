@@ -54,7 +54,7 @@ mock.module("@/shared/domain/settings/public-queries", () => ({
       modificationDeadlineHours: 24,
     }),
 }));
-mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+mock.module("@/shared/db/prisma", () => ({ prisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({

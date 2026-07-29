@@ -23,7 +23,7 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
 type PrismaModule = typeof import("@/shared/db/prisma");
 
-let basePrisma: PrismaModule["basePrisma"];
+let prisma: PrismaModule["prisma"];
 
 const ACTIVE_OVERLAP_CONSTRAINT = "reservations_no_active_time_overlap_excl";
 const TIME_ORDER_CONSTRAINT = "reservations_time_order_check";
@@ -37,7 +37,7 @@ type Fixture = {
 async function createReservationFixture(): Promise<Fixture> {
   const suffix = crypto.randomUUID();
 
-  const location = await basePrisma.location.create({
+  const location = await prisma.location.create({
     data: {
       slug: `reservation-invariant-loc-${suffix}`,
       name: `Reservation Invariant Loc ${suffix}`,
@@ -50,7 +50,7 @@ async function createReservationFixture(): Promise<Fixture> {
     select: { id: true },
   });
 
-  const space = await basePrisma.space.create({
+  const space = await prisma.space.create({
     data: {
       slug: `reservation-invariant-space-${suffix}`,
       name: `Reservation Invariant Space ${suffix}`,
@@ -65,7 +65,7 @@ async function createReservationFixture(): Promise<Fixture> {
     select: { id: true },
   });
 
-  const customer = await basePrisma.customer.create({
+  const customer = await prisma.customer.create({
     data: {
       lastName: "制約",
       firstName: "太郎",
@@ -79,12 +79,12 @@ async function createReservationFixture(): Promise<Fixture> {
     spaceId: space.id,
     customerId: customer.id,
     cleanup: async () => {
-      await basePrisma.reservation.deleteMany({
+      await prisma.reservation.deleteMany({
         where: { spaceId: space.id },
       });
-      await basePrisma.space.deleteMany({ where: { id: space.id } });
-      await basePrisma.customer.deleteMany({ where: { id: customer.id } });
-      await basePrisma.location.deleteMany({ where: { id: location.id } });
+      await prisma.space.deleteMany({ where: { id: space.id } });
+      await prisma.customer.deleteMany({ where: { id: customer.id } });
+      await prisma.location.deleteMany({ where: { id: location.id } });
     },
   };
 }
@@ -172,18 +172,16 @@ async function expectDatabaseRejects(operation: () => Promise<unknown>) {
 
 describeMaybe("reservations DB 不変条件", () => {
   beforeAll(async () => {
-    ({ basePrisma } = await import("@/shared/db/prisma"));
-    await basePrisma.$queryRaw`SELECT 1`;
+    ({ prisma } = await import("@/shared/db/prisma"));
+    await prisma.$queryRaw`SELECT 1`;
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("時間順序 CHECK と有効予約重複 EXCLUDE 制約が DB に存在する", async () => {
-    const rows = await basePrisma.$queryRaw<
-      { conname: string; contype: string }[]
-    >`
+    const rows = await prisma.$queryRaw<{ conname: string; contype: string }[]>`
       SELECT conname::text AS conname, contype::text AS contype
       FROM pg_constraint
       WHERE conname IN (${TIME_ORDER_CONSTRAINT}, ${ACTIVE_OVERLAP_CONSTRAINT})

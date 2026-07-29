@@ -51,7 +51,6 @@ type RatePlanCommandsModule =
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createPublicReservationCommand: PublicCommandsModule["createPublicReservationCommand"];
 let updateCustomerReservation: CustomerCommandsModule["updateCustomerReservation"];
 let cancelCustomerReservation: CustomerCommandsModule["cancelCustomerReservation"];
@@ -253,7 +252,7 @@ async function createReservationFixture(opts?: {
 
 describeMaybe("updateCustomerReservation — rate plan 統合", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ createPublicReservationCommand } =
       await import("@/shared/domain/reservations/public-commands"));
     ({ updateCustomerReservation, cancelCustomerReservation } =
@@ -269,7 +268,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("rate plan なしで従来通り予約変更できる (regression)", async () => {

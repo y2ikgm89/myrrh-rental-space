@@ -17,8 +17,8 @@ import { settingsExpectedUpdatedAtSchema } from "./form-schema-helpers";
 export const taxDisplayModeSchema = z.enum(TaxDisplayMode);
 
 export const taxSettingsSchema = z.object({
-  taxStandardRate: z.coerce.number().min(0).max(100),
-  taxReducedRate: z.coerce.number().min(0).max(100),
+  taxStandardRate: z.coerce.number().int().min(0).max(100),
+  taxReducedRate: z.coerce.number().int().min(0).max(100),
   taxDisplayModePublic: taxDisplayModeSchema,
   expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
 });

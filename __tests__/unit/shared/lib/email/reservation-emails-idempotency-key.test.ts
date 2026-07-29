@@ -56,7 +56,7 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
       addToCalendarLinksEnabled: false,
     }),
 }));
-mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+mock.module("@/shared/db/prisma", () => ({ prisma: {} }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: () =>
     Promise.resolve({

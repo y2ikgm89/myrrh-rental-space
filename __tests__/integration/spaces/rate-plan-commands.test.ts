@@ -63,7 +63,6 @@ type CommandsModule =
 type DomainErrorModule = typeof import("@/shared/domain/domain-error");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createSpaceRatePlan: CommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: CommandsModule["updateSpaceRatePlan"];
 let deleteSpaceRatePlan: CommandsModule["deleteSpaceRatePlan"];
@@ -119,15 +118,15 @@ async function seedSpaceForTest(): Promise<SpaceFixture> {
 
 describeMaybe("SpaceRatePlan CRUD", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ createSpaceRatePlan, updateSpaceRatePlan, deleteSpaceRatePlan } =
       await import("@/shared/domain/spaces/rate-plan-commands"));
     ({ DomainError } = await import("@/shared/domain/domain-error"));
-    await basePrisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("createSpaceRatePlan: 基本 field で作成できる", async () => {
@@ -145,7 +144,7 @@ describeMaybe("SpaceRatePlan CRUD", () => {
         effectiveTo: null,
       });
       expect(plan.name).toBe("金曜料金");
-      // hourlyPrice は createAppPrismaClient の result 拡張により create() の
+      // hourlyPrice は schema 上 Int のため create() の戻り値も number。
       // 戻り値時点で既に number（Prisma.Decimal ではない）。
       expect(plan.hourlyPrice).toBe(4000);
 

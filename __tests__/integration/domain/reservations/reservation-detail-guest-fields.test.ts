@@ -8,21 +8,21 @@ import { randomUUID } from "node:crypto";
 process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 
-const { prisma: basePrisma } = await import("@/shared/db/prisma");
+const { prisma } = await import("@/shared/db/prisma");
 const { getReservationByIdQuery } =
   await import("@/shared/domain/reservations/admin-queries");
 const { CustomerType, TaxRateType } = await import("@generated/prisma/enums");
 
 describe("getReservationByIdQuery: guest field parity", () => {
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("guestEmail / guestCustomerType を含めて返す", async () => {
     const testId = randomUUID();
 
     // Create location first (required by Space)
-    const location = await basePrisma.location.create({
+    const location = await prisma.location.create({
       data: {
         slug: `guest-fields-loc-${testId}`,
         name: `Guest Fields Location ${testId}`,
@@ -33,7 +33,7 @@ describe("getReservationByIdQuery: guest field parity", () => {
     });
 
     // Create space with all required fields
-    const space = await basePrisma.space.create({
+    const space = await prisma.space.create({
       data: {
         slug: `guest-fields-space-${testId}`,
         name: `Guest Fields Space ${testId}`,
@@ -47,7 +47,7 @@ describe("getReservationByIdQuery: guest field parity", () => {
       },
     });
 
-    const customer = await basePrisma.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         lastName: "山田",
         firstName: "太郎",
@@ -56,7 +56,7 @@ describe("getReservationByIdQuery: guest field parity", () => {
       },
     });
 
-    const reservation = await basePrisma.reservation.create({
+    const reservation = await prisma.reservation.create({
       data: {
         spaceId: space.id,
         customerId: customer.id,
@@ -64,7 +64,13 @@ describe("getReservationByIdQuery: guest field parity", () => {
         endTime: new Date("2026-08-01T02:00:00.000Z"),
         totalPrice: 1000,
         basePrice: 1000,
-        rateBreakdownJson: { legacy: true, segments: [] },
+        rateBreakdownJson: {
+          schemaVersion: 1,
+          segments: [],
+          totalHours: 0,
+          totalBasePrice: 0,
+          holidayFlags: {},
+        },
         taxRateType: TaxRateType.standard,
         taxRate: 10,
         taxAmount: 100,
@@ -81,9 +87,9 @@ describe("getReservationByIdQuery: guest field parity", () => {
     expect(result?.guestEmail).toBe("guest-at-booking@example.com");
     expect(result?.guestCustomerType).toBe(CustomerType.CORPORATE);
 
-    await basePrisma.reservation.delete({ where: { id: reservation.id } });
-    await basePrisma.customer.delete({ where: { id: customer.id } });
-    await basePrisma.space.delete({ where: { id: space.id } });
-    await basePrisma.location.delete({ where: { id: location.id } });
+    await prisma.reservation.delete({ where: { id: reservation.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.space.delete({ where: { id: space.id } });
+    await prisma.location.delete({ where: { id: location.id } });
   });
 });

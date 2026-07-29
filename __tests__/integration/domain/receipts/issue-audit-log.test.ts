@@ -43,7 +43,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type IssueModule = typeof import("@/shared/domain/receipts/issue");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let issueReceiptForReservation: IssueModule["issueReceiptForReservation"];
 let issueReceiptForEventRegistration: IssueModule["issueReceiptForEventRegistration"];
 let testCategoryId: string;
@@ -59,7 +58,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -277,7 +275,7 @@ async function waitForAuditLog(
 
 describeMaybe("issueReceiptFor* — AuditLog coverage (OBS-02)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ issueReceiptForReservation, issueReceiptForEventRegistration } =
       await import("@/shared/domain/receipts/issue"));
     await prisma.$queryRaw`SELECT 1`;
@@ -297,7 +295,7 @@ describeMaybe("issueReceiptFor* — AuditLog coverage (OBS-02)", () => {
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("issueReceiptForReservation の新規発行で AuditLog CREATE + metadata.source が記録される", async () => {
