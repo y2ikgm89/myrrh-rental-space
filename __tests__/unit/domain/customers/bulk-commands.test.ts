@@ -148,6 +148,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
         reason,
         hadUserId: false,
         preservedSuppression: false,
+        anonymizedInquiryIds: [],
       }),
     );
   });
@@ -206,6 +207,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
             reason,
             hadUserId: false,
             preservedSuppression: false,
+            anonymizedInquiryIds: [],
           }),
       );
 

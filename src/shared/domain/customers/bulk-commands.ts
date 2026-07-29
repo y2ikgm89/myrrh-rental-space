@@ -19,6 +19,7 @@ export type AnonymizedCustomerRecord = {
   reason: AnonymizeCustomerReason;
   hadUserId: boolean;
   preservedSuppression: boolean;
+  anonymizedInquiryIds: string[];
 };
 
 export type BulkAnonymizeCustomersResult = {
@@ -97,6 +98,7 @@ export async function bulkAnonymizeCustomersCommand(
         reason: result.reason,
         hadUserId: result.hadUserId,
         preservedSuppression: result.preservedSuppression,
+        anonymizedInquiryIds: result.anonymizedInquiryIds,
       });
     } catch (error) {
       // 「既に匿名化済み」= 冪等的成功として扱う (bulk 操作の再実行安全性)。

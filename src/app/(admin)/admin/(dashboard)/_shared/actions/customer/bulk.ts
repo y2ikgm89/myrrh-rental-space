@@ -163,6 +163,7 @@ export async function bulkAnonymizeCustomers(
             hadUserId: a.hadUserId,
             preservedSuppression: a.preservedSuppression,
             anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+            anonymizedInquiryIds: a.anonymizedInquiryIds,
           },
         })),
         metadata: buildBulkAuditMetadata({

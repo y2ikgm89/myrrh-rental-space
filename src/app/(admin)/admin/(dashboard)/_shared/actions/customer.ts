@@ -609,6 +609,7 @@ export async function anonymizeCustomer(
             hadUserId: outcome.anonymized.hadUserId,
             preservedSuppression: outcome.anonymized.preservedSuppression,
             anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+            anonymizedInquiryIds: outcome.anonymized.anonymizedInquiryIds,
           },
           metadata: {
             ...(outcome.ip !== null && { ip: outcome.ip }),
