@@ -58,8 +58,18 @@ export async function claimEventRegistrationAsPaid(
       status: true,
       paymentStatus: true,
       stripePaymentIntentId: true,
+      eventId: true,
     },
   });
+
+  if (!current) {
+    return false;
+  }
+
+  const eventResourceLink = {
+    resourceType: "event" as const,
+    resourceId: current.eventId,
+  };
 
   await handlePaidClaimMissWithOrphanRefund({
     entityId: registrationId,
@@ -78,24 +88,21 @@ export async function claimEventRegistrationAsPaid(
         title:
           NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
         message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
-        resourceType: "event-registration",
-        resourceId: registrationId,
+        ...eventResourceLink,
       },
       refunded: (refundAmount) => ({
         type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
         title:
           NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
         message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refundAmount} 円）`,
-        resourceType: "event-registration",
-        resourceId: registrationId,
+        ...eventResourceLink,
       }),
       refundFailed: (paymentIntentId) => ({
         type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
         title:
           NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
         message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
-        resourceType: "event-registration",
-        resourceId: registrationId,
+        ...eventResourceLink,
       }),
     },
     notifyContext: {

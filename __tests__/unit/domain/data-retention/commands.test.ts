@@ -36,6 +36,18 @@ const mockCustomerUpdate = mock<
     id: string;
   }>
 >((args) => Promise.resolve({ id: args.where.id }));
+const mockExecuteRaw = mock<() => Promise<number>>(() => Promise.resolve(0));
+
+const txClient = {
+  $executeRaw: mockExecuteRaw,
+  inquiry: {
+    deleteMany: (args?: MockArgs) => mockInquiryDeleteMany(args),
+  },
+};
+
+const mockTransaction = mock<
+  (fn: (tx: typeof txClient) => Promise<unknown>) => Promise<unknown>
+>((fn) => fn(txClient));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -49,7 +61,6 @@ mock.module("@/shared/db/prisma", () => ({
     reservation: {
       updateMany: (args?: MockArgs) => mockReservationUpdateMany(args),
     },
-    inquiry: { deleteMany: (args?: MockArgs) => mockInquiryDeleteMany(args) },
     inquiryAttachment: {
       findMany: (args?: MockArgs) => mockInquiryAttachmentFindMany(args),
     },
@@ -61,6 +72,7 @@ mock.module("@/shared/db/prisma", () => ({
       }) => mockCustomerUpdate(args),
     },
     settingsDataRetention: { findUnique: mock() },
+    $transaction: mockTransaction,
   },
 }));
 

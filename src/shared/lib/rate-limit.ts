@@ -437,6 +437,13 @@ export const cancelByEventRegistrationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// ゲスト / 会員イベント申込変更「申込 ID 単位」の追加バケット（3 attempts / hour /
+// registration）。editByReservationRateLimiter と同型。
+export const editByEventRegistrationRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
 // ゲスト向け領収書再送信リクエスト (Case B/C 救済フロー) — IP 単位（5 attempts /
 // hour / IP）。formSubmitRateLimiter (5/分) より狭い時間窓で、受信メアド enumeration
 // と外部 SMTP 濫用の総量を構造的に抑える (emailVerificationRequestRateLimiter と同型)。

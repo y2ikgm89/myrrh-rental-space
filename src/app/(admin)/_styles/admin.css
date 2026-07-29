@@ -371,3 +371,38 @@
       8px 8px;
   }
 }
+
+/* Announcement bar design preview keyframes (CSP nonce 不要 — static admin.css) */
+@keyframes stripe-slide {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28.28px 0;
+  }
+}
+
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glass-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.announcement-bar-glass-shimmer {
+  animation: glass-shimmer 3s ease-in-out infinite;
+}

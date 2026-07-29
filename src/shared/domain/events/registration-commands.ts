@@ -7,6 +7,7 @@
  * - {@link ./registration-checkin-commands} — day-of check-in toggle
  * - {@link ./registration-onsite-commands} — walk-in + admin proxy create
  * - {@link ./registration-admin-update-commands} — admin post-registration edit
+ * - {@link ./registration-customer-update-commands} — customer / token self-serve edit
  * - {@link ./registration-reminder-commands} — cron reminder claim / release
  */
 
@@ -26,6 +27,16 @@ export {
 } from "./registration-onsite-commands";
 
 export { updateEventRegistrationCommand } from "./registration-admin-update-commands";
+
+export {
+  updateCustomerEventRegistration,
+  updateGuestEventRegistrationByToken,
+} from "./registration-customer-update-commands";
+export type {
+  EventRegistrationSelfServeUpdateInput,
+  EventRegistrationSelfServeUpdatePayload,
+  EventRegistrationSelfServeUpdateResult,
+} from "./registration-customer-update-commands";
 
 export {
   claimEventRegistrationReminder,

@@ -188,6 +188,7 @@ export async function createCheckoutSessionCommand(input: {
 
   return orchestrateCheckoutSessionCreate({
     operation: "createCheckoutSessionCommand",
+    idempotencyKey: `checkout/reservation/${reservationId}/pending-claim`,
     stripeContext,
     expireContext: { reservationId },
     conflictMessage: "この予約は既に決済が完了しています",

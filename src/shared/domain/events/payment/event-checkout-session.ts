@@ -156,6 +156,7 @@ export async function createEventCheckoutSessionCommand(input: {
 
   return orchestrateCheckoutSessionCreate({
     operation: "createEventCheckoutSessionCommand",
+    idempotencyKey: `checkout/event-registration/${registrationId}/pending-claim`,
     stripeContext,
     expireContext: { registrationId },
     conflictMessage: "この申込は既に決済が完了しています",

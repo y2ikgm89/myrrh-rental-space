@@ -72,6 +72,7 @@ export async function resolveCheckoutStripeContext(): Promise<CheckoutStripeCont
 
 export type CheckoutSessionCreateOrchestrationInput<TResult> = {
   operation: string;
+  idempotencyKey: string;
   stripeContext: CheckoutStripeContext;
   buildSessionParams: () => Stripe.Checkout.SessionCreateParams;
   settleSession: (sessionId: string) => Promise<{ settled: boolean }>;
@@ -94,6 +95,7 @@ export async function orchestrateCheckoutSessionCreate<TResult>(
   try {
     const session = await client.checkout.sessions.create(
       input.buildSessionParams(),
+      { idempotencyKey: input.idempotencyKey },
     );
     createdSessionId = session.id;
 

@@ -104,56 +104,27 @@ export function DesignPreview({
   useImperativeStyle(previewRef, customStyles as ImperativeStyleValues);
 
   return (
-    <>
-      {designStyle === AnnouncementBarDesignStyle.striped &&
-        stripeAnimation && (
-          <style>{`
-          @keyframes stripe-slide {
-            from { background-position: 0 0; }
-            to { background-position: 28.28px 0; }
-          }
-        `}</style>
-        )}
-      {designStyle === AnnouncementBarDesignStyle.gradient &&
-        gradientAnimation && (
-          <style>{`
-          @keyframes gradient-flow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-        `}</style>
-        )}
-      {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
-        <style>{`
-          @keyframes glass-shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-        `}</style>
+    <div
+      ref={previewRef}
+      className={cn(
+        "flex items-center justify-center gap-2 px-4 py-2 text-sm",
+        getStyleClasses(),
+        getTextClasses(),
       )}
-      <div
-        ref={previewRef}
-        className={cn(
-          "flex items-center justify-center gap-2 px-4 py-2 text-sm",
-          getStyleClasses(),
-          getTextClasses(),
-        )}
-      >
-        {/* グラスシマーオーバーレイ */}
-        {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
-          <div
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent announcement-bar-glass-shimmer" />
-          </div>
-        )}
-        <span>{message || "サンプルお知らせメッセージ"}</span>
-        {linkText && (
-          <span className="underline underline-offset-2">{linkText}</span>
-        )}
-      </div>
-    </>
+    >
+      {/* グラスシマーオーバーレイ */}
+      {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent announcement-bar-glass-shimmer" />
+        </div>
+      )}
+      <span>{message || "サンプルお知らせメッセージ"}</span>
+      {linkText && (
+        <span className="underline underline-offset-2">{linkText}</span>
+      )}
+    </div>
   );
 }

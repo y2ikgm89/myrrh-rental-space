@@ -9,6 +9,7 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
+import type { SearchParams } from "nuqs/server";
 import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
@@ -17,6 +18,11 @@ import {
 } from "@/shared/domain/features/check";
 import { getCustomerEventRegistrationDetail } from "@/shared/domain/events/registration-queries";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
+import {
+  eventRegistrationEditEligibilityErrorMessage,
+  isEventRegistrationEditableForCustomerSelfServe,
+  type EventRegistrationEditEligibilityReason,
+} from "@/shared/domain/events/edit-eligibility";
 import { findReceiptSerialNoByEventRegistrationId } from "@/shared/domain/receipts/queries";
 import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
@@ -27,16 +33,30 @@ import { EventRegistrationDetail } from "./_components/event-registration-detail
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
+  readonly searchParams: Promise<SearchParams>;
+}
+
+const REDIRECT_REASONS = ["status", "payment", "deadline"] as const;
+const REDIRECT_REASON_SET = new Set<string>(REDIRECT_REASONS);
+function isRedirectReason(
+  value: string,
+): value is EventRegistrationEditEligibilityReason {
+  return REDIRECT_REASON_SET.has(value);
 }
 
 export default async function MypageEventRegistrationDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
 
   await requireFeatureEnabled("events");
 
   const { id } = await params;
+  const sp = await searchParams;
+  const reasonRaw = typeof sp["reason"] === "string" ? sp["reason"] : null;
+  const reason: EventRegistrationEditEligibilityReason | null =
+    reasonRaw && isRedirectReason(reasonRaw) ? reasonRaw : null;
 
   const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
@@ -55,6 +75,16 @@ export default async function MypageEventRegistrationDetailPage({
   }
 
   const nowIso = eventDeadlineNow().toISOString();
+  const now = eventDeadlineNow();
+  const editEligibility = isEventRegistrationEditableForCustomerSelfServe({
+    status: registration.status,
+    paymentStatus: registration.paymentStatus,
+    slotStartAt: registration.event.startTime,
+    now,
+  });
+  const editHref = editEligibility.ok
+    ? `/mypage/events/${registration.id}/edit`
+    : null;
 
   const [
     receiptSerialNo,
@@ -101,6 +131,20 @@ export default async function MypageEventRegistrationDetailPage({
         <Heading level={1}>イベント申込詳細</Heading>
       </div>
 
+      {reason && (
+        <div
+          role="alert"
+          className="border border-warning/30 bg-warning/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            申込変更ページから戻りました
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {eventRegistrationEditEligibilityErrorMessage(reason)}
+          </p>
+        </div>
+      )}
+
       <EventRegistrationDetail
         registration={serializedRegistration}
         ticketName={registration.ticketName}
@@ -109,6 +153,7 @@ export default async function MypageEventRegistrationDetailPage({
         receiptSerialNo={receiptSerialNo}
         waitlistPosition={waitlistPositionMap.get(registration.id) ?? null}
         paymentEnabled={paymentEnabled}
+        editHref={editHref}
       />
     </Stack>
   );

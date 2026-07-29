@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { consumeSignupTermsAction } from "@/public/actions/consume-signup-terms";
 
 interface SignupTermsConsumerProps {
-  readonly isNew: boolean;
+  /** @deprecated layout 互換のため残置。消費判定は cookie presence のみ。 */
+  readonly isNew?: boolean;
 }
 
 /**
@@ -17,14 +18,14 @@ interface SignupTermsConsumerProps {
  *
  * 表示しないため return null。
  */
-export function SignupTermsConsumer({ isNew }: SignupTermsConsumerProps): null {
+export function SignupTermsConsumer(_props: SignupTermsConsumerProps): null {
   const ranRef = useRef(false);
 
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
-    void consumeSignupTermsAction({ isNew });
-  }, [isNew]);
+    void consumeSignupTermsAction();
+  }, []);
 
   return null;
 }
