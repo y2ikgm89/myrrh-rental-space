@@ -12,6 +12,7 @@ export { ReservationSection } from "./ReservationSection";
 export { DiscountSection } from "./DiscountSection";
 export { TaxSection } from "./TaxSection";
 export { RefundPolicySection } from "./RefundPolicySection";
+export { TransferAccountsSection } from "./TransferAccountsSection";
 export { MaintenanceSection } from "./MaintenanceSection";
 export { CookieConsentSection } from "./CookieConsentSection";
 export { StripeSection } from "./StripeSection";

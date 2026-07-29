@@ -1,19 +1,22 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { CustomerStatus } from "@generated/prisma/enums";
+import type {
+  bulkAnonymizeCustomersCommand,
+  bulkToggleActiveCustomersCommand,
+} from "@/shared/domain/customers/bulk-commands";
+import type { bulkSetStatusCustomersCommand } from "@/shared/domain/customers/bulk-status-commands";
 
 // =============================================================================
 // Mocks (must be defined before importing target module)
+//
+// mock の型は手書きせず実コマンドの `typeof` に揃える。ドメインの戻り値契約が
+// 変わったとき type-check で検出できるようにするため (手書き inline 型は
+// `anonymizedInquiryIds` 追加時のように静かに drift し、audit JSON 検証で
+// 実行時にしか気づけない)。
 // =============================================================================
 
 const mockBulkToggleActiveCustomersCommand = mock<
-  (
-    ids: string[],
-    isActive: boolean,
-  ) => Promise<{
-    count: number;
-    isActive: boolean;
-    affectedIds: string[];
-  }>
+  typeof bulkToggleActiveCustomersCommand
 >(() =>
   Promise.resolve({
     count: 0,
@@ -23,22 +26,7 @@ const mockBulkToggleActiveCustomersCommand = mock<
 );
 
 const mockBulkAnonymizeCustomersCommand = mock<
-  (
-    ids: string[],
-    reason: string,
-  ) => Promise<{
-    count: number;
-    affectedIds: string[];
-    // Round-3 audit Cluster A: per-id snapshot for AuditLog payload
-    affected: ReadonlyArray<{
-      id: string;
-      anonymizedAt: Date;
-      reason: string;
-      hadUserId: boolean;
-      preservedSuppression: boolean;
-    }>;
-    skippedIds: string[];
-  }>
+  typeof bulkAnonymizeCustomersCommand
 >(() =>
   Promise.resolve({
     count: 0,
@@ -49,17 +37,7 @@ const mockBulkAnonymizeCustomersCommand = mock<
 );
 
 const mockBulkSetStatusCustomersCommand = mock<
-  (
-    ids: string[],
-    newStatus: CustomerStatus,
-  ) => Promise<{
-    count: number;
-    newStatus: CustomerStatus;
-    affectedIds: string[];
-    // Round-3 audit Cluster A: per-id previousStatus for AuditLog diff
-    affected: ReadonlyArray<{ id: string; previousStatus: CustomerStatus }>;
-    rejectedIds: string[];
-  }>
+  typeof bulkSetStatusCustomersCommand
 >(() =>
   Promise.resolve({
     count: 0,
@@ -336,9 +314,10 @@ describe("bulkAnonymizeCustomers", () => {
         affected: [VALID_UUID_A, VALID_UUID_B].map((id) => ({
           id,
           anonymizedAt: new Date(),
-          reason: "admin-purge",
+          reason: "admin-purge" as const,
           hadUserId: false,
           preservedSuppression: false,
+          anonymizedInquiryIds: [],
         })),
         skippedIds: [],
       });
@@ -369,9 +348,10 @@ describe("bulkAnonymizeCustomers", () => {
         affected: [VALID_UUID_A, VALID_UUID_B].map((id) => ({
           id,
           anonymizedAt: new Date(),
-          reason: "customer-requested",
+          reason: "customer-requested" as const,
           hadUserId: false,
           preservedSuppression: false,
+          anonymizedInquiryIds: [],
         })),
         skippedIds: [],
       });
@@ -395,9 +375,10 @@ describe("bulkAnonymizeCustomers", () => {
           {
             id: VALID_UUID_A,
             anonymizedAt: new Date(),
-            reason: "data-retention",
+            reason: "data-retention" as const,
             hadUserId: false,
             preservedSuppression: false,
+            anonymizedInquiryIds: [],
           },
         ],
         skippedIds: [VALID_UUID_B],

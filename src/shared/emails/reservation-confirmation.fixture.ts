@@ -30,5 +30,17 @@ export const reservationConfirmationFixture = {
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
   cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
+  transferAccounts: [
+    {
+      bankName: "三井住友銀行",
+      branchName: "渋谷支店",
+      accountType: "ORDINARY",
+      accountNumber: "1234567",
+      accountHolderName: "カ）サンプル",
+      note: "振込手数料はお客様負担でお願いします。",
+    },
+  ],
+  transferGuidance:
+    "ご入金確認後、予約確定のご連絡をいたします。お振込の際は予約番号をご記入ください。",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReservationConfirmationEmail>[0];

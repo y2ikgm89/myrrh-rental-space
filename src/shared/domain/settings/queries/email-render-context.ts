@@ -13,6 +13,7 @@ import type {
   ReservationAdminNotificationDelivery,
   ReservationEmailRenderContext,
   SystemNotificationDelivery,
+  TransferAccountEmailDisplay,
 } from "@/shared/lib/email/types";
 import { getSuppressedEmailSet } from "@/shared/domain/customers/queries";
 import { getDecryptedResendApiKey } from "@/shared/domain/settings/api-key-queries";
@@ -25,6 +26,11 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
+import {
+  getTransferGuidance,
+  listActiveTransferAccounts,
+} from "@/shared/domain/settings/transfer-account-queries";
 import {
   isEmailTransportEnabled,
   resolveTransportApiKey,
@@ -85,22 +91,68 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   return sendEmailWithContext(params, context);
 }
 
+async function resolveTransferEmailFields(): Promise<{
+  paymentFeatureEnabled: boolean;
+  transferAccounts: TransferAccountEmailDisplay[];
+  transferGuidance: string | null;
+}> {
+  const paymentFeatureEnabled = await isFeatureEnabled("payment");
+  if (paymentFeatureEnabled) {
+    return {
+      paymentFeatureEnabled,
+      transferAccounts: [],
+      transferGuidance: null,
+    };
+  }
+
+  const [accounts, transferGuidance] = await Promise.all([
+    listActiveTransferAccounts(),
+    getTransferGuidance(),
+  ]);
+
+  return {
+    paymentFeatureEnabled,
+    transferAccounts: accounts.map((account) => ({
+      bankName: account.bankName,
+      branchName: account.branchName,
+      accountType: account.accountType,
+      accountNumber: account.accountNumber,
+      accountHolderName: account.accountHolderName,
+      note: account.note,
+    })),
+    transferGuidance,
+  };
+}
+
 export async function getEventEmailRenderContext(): Promise<EventEmailRenderContext> {
-  const [calendarSettings, organizer] = await Promise.all([
+  const [calendarSettings, organizer, transferFields] = await Promise.all([
     getCalendarEmailSettings(),
     getIcalOrganizer(),
+    resolveTransferEmailFields(),
   ]);
-  return { calendarSettings, organizer };
+  return {
+    calendarSettings,
+    organizer,
+    transferAccounts: transferFields.transferAccounts,
+    transferGuidance: transferFields.transferGuidance,
+    paymentFeatureEnabled: transferFields.paymentFeatureEnabled,
+  };
 }
 
 export async function getReservationEmailRenderContext(): Promise<ReservationEmailRenderContext> {
-  const [calendarSettings, organizer, deadlineSettings, cancellationDoc] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getIcalOrganizer(),
-      getReservationDeadlineSettings(),
-      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
-    ]);
+  const [
+    calendarSettings,
+    organizer,
+    deadlineSettings,
+    cancellationDoc,
+    transferFields,
+  ] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getReservationDeadlineSettings(),
+    getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    resolveTransferEmailFields(),
+  ]);
   return {
     calendarSettings,
     organizer,
@@ -108,6 +160,9 @@ export async function getReservationEmailRenderContext(): Promise<ReservationEma
     cancellationPolicyUrl: cancellationDoc
       ? `${getAppUrl()}/terms/${cancellationDoc.slug}`
       : undefined,
+    transferAccounts: transferFields.transferAccounts,
+    transferGuidance: transferFields.transferGuidance,
+    paymentFeatureEnabled: transferFields.paymentFeatureEnabled,
   };
 }
 

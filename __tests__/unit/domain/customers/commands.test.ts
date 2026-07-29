@@ -70,6 +70,56 @@ const mockUserDelete = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "user-1" }),
 );
 
+const mockInquiryFindMany = mock<() => Promise<Array<{ id: string }>>>(() =>
+  Promise.resolve([]),
+);
+
+const mockInquiryUpdate = mock<
+  (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{
+    id: string;
+  }>
+>(() => Promise.resolve({ id: "inquiry-1" }));
+
+const mockInquiryReplyUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+
+const mockInquiryAttachmentFindMany = mock<
+  () => Promise<Array<{ r2Key: string }>>
+>(() => Promise.resolve([]));
+
+const mockInquiryAttachmentDeleteMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
+
+const prismaInquiry = {
+  findMany: mockInquiryFindMany,
+  update: mockInquiryUpdate,
+};
+const prismaInquiryReply = {
+  updateMany: mockInquiryReplyUpdateMany,
+};
+const prismaInquiryAttachment = {
+  findMany: mockInquiryAttachmentFindMany,
+  deleteMany: mockInquiryAttachmentDeleteMany,
+};
+
+mock.module("@/shared/lib/r2/client", () => ({
+  getR2InquiriesBucketName: () => "test-inquiries-bucket",
+}));
+
+mock.module("@/shared/lib/r2/delete", () => ({
+  deleteObjectsFromBucket: () => Promise.resolve({ success: true }),
+}));
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: () => {},
+  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
+  ErrorSeverity: { HIGH: "HIGH" },
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
+}));
+
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
@@ -136,17 +186,26 @@ mock.module("@/shared/db/prisma", () => ({
     customer: prismaCustomer,
     pendingCustomerEmailChange: prismaPending,
     user: prismaUser,
+    inquiry: prismaInquiry,
+    inquiryReply: prismaInquiryReply,
+    inquiryAttachment: prismaInquiryAttachment,
     $transaction: <T>(
       fn: (tx: {
         customer: typeof prismaCustomer;
         pendingCustomerEmailChange: typeof prismaPending;
         user: typeof prismaUser;
+        inquiry: typeof prismaInquiry;
+        inquiryReply: typeof prismaInquiryReply;
+        inquiryAttachment: typeof prismaInquiryAttachment;
       }) => Promise<T>,
     ) =>
       fn({
         customer: prismaCustomer,
         pendingCustomerEmailChange: prismaPending,
         user: prismaUser,
+        inquiry: prismaInquiry,
+        inquiryReply: prismaInquiryReply,
+        inquiryAttachment: prismaInquiryAttachment,
       }),
   },
 }));

@@ -76,6 +76,30 @@ mock.module("@/shared/domain/customers/queries", () => ({
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
 }));
+mock.module("@/shared/domain/features/check", () => ({
+  isFeatureEnabled: () => Promise.resolve(false),
+}));
+mock.module("@/shared/domain/settings/transfer-account-queries", () => ({
+  listActiveTransferAccounts: () =>
+    Promise.resolve([
+      {
+        id: "acct-1",
+        label: "本店",
+        bankName: "三井住友銀行",
+        branchName: "渋谷支店",
+        accountType: "ORDINARY",
+        accountNumber: "1234567",
+        accountHolderName: "カ）サンプル",
+        note: null,
+        sortOrder: 0,
+        isActive: true,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ]),
+  getTransferGuidance: () =>
+    Promise.resolve("お振込の際は予約番号をご記入ください。"),
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
@@ -122,6 +146,18 @@ describe("getEventEmailRenderContext()", () => {
         addToCalendarLinksEnabled: false,
       },
       organizer: { name: "Org", email: "org@example.com" },
+      transferAccounts: [
+        {
+          bankName: "三井住友銀行",
+          branchName: "渋谷支店",
+          accountType: "ORDINARY",
+          accountNumber: "1234567",
+          accountHolderName: "カ）サンプル",
+          note: null,
+        },
+      ],
+      transferGuidance: "お振込の際は予約番号をご記入ください。",
+      paymentFeatureEnabled: false,
     });
   });
 });
@@ -141,6 +177,18 @@ describe("getReservationEmailRenderContext()", () => {
         modificationDeadlineHours: 6,
       },
       cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
+      transferAccounts: [
+        {
+          bankName: "三井住友銀行",
+          branchName: "渋谷支店",
+          accountType: "ORDINARY",
+          accountNumber: "1234567",
+          accountHolderName: "カ）サンプル",
+          note: null,
+        },
+      ],
+      transferGuidance: "お振込の際は予約番号をご記入ください。",
+      paymentFeatureEnabled: false,
     });
   });
 

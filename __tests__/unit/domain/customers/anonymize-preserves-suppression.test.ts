@@ -84,6 +84,23 @@ const mockReservationSeriesUpdateMany = mock<() => Promise<{ count: number }>>(
 const mockInquiryUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
+const mockInquiryFindMany = mock<() => Promise<Array<{ id: string }>>>(() =>
+  Promise.resolve([]),
+);
+const mockInquiryUpdate = mock<
+  (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{
+    id: string;
+  }>
+>(() => Promise.resolve({ id: "inquiry-1" }));
+const mockInquiryReplyUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+const mockInquiryAttachmentFindMany = mock<
+  () => Promise<Array<{ r2Key: string }>>
+>(() => Promise.resolve([]));
+const mockInquiryAttachmentDeleteMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
 const mockReviewUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
@@ -151,7 +168,16 @@ const prismaReservationSeries = {
   updateMany: mockReservationSeriesUpdateMany,
 };
 const prismaInquiry = {
+  findMany: mockInquiryFindMany,
+  update: mockInquiryUpdate,
   updateMany: mockInquiryUpdateMany,
+};
+const prismaInquiryReply = {
+  updateMany: mockInquiryReplyUpdateMany,
+};
+const prismaInquiryAttachment = {
+  findMany: mockInquiryAttachmentFindMany,
+  deleteMany: mockInquiryAttachmentDeleteMany,
 };
 const prismaSpaceReview = {
   updateMany: mockReviewUpdateMany,
@@ -172,6 +198,8 @@ type TxShape = {
   reservation: typeof prismaReservation;
   reservationSeries: typeof prismaReservationSeries;
   inquiry: typeof prismaInquiry;
+  inquiryReply: typeof prismaInquiryReply;
+  inquiryAttachment: typeof prismaInquiryAttachment;
   spaceReview: typeof prismaSpaceReview;
   eventRegistration: typeof prismaEventRegistration;
   inquiryReply: typeof prismaInquiryReply;
@@ -184,11 +212,29 @@ const txShape: TxShape = {
   reservation: prismaReservation,
   reservationSeries: prismaReservationSeries,
   inquiry: prismaInquiry,
+  inquiryReply: prismaInquiryReply,
+  inquiryAttachment: prismaInquiryAttachment,
   spaceReview: prismaSpaceReview,
   eventRegistration: prismaEventRegistration,
   inquiryReply: prismaInquiryReply,
   inquiryAttachment: prismaInquiryAttachment,
 };
+
+mock.module("@/shared/lib/r2/client", () => ({
+  getR2InquiriesBucketName: () => "test-inquiries-bucket",
+}));
+
+mock.module("@/shared/lib/r2/delete", () => ({
+  deleteObjectsFromBucket: () => Promise.resolve({ success: true }),
+}));
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: () => {},
+  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
+  ErrorSeverity: { HIGH: "HIGH" },
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {

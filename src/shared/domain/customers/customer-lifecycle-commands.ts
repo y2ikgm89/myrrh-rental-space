@@ -7,6 +7,10 @@ import {
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import {
+  anonymizeInquiryInTx,
+  deleteInquiryAttachmentR2Keys,
+} from "@/shared/domain/inquiries/anonymize-commands";
 import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/payloads";
 
 /**
@@ -78,10 +82,12 @@ export async function anonymizeCustomerCommand(input: {
   hadUserId: boolean;
   /** RESEND-AUDIT M7: 匿名化前の suppression 状態を hash として持ち越したか。 */
   preservedSuppression: boolean;
+  /** Customer 匿名化に連鎖して anonymize した Inquiry id 一覧。 */
+  anonymizedInquiryIds: string[];
 }> {
   const deleteLinkedUser = input.deleteLinkedUser !== false;
 
-  return prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
     const existing = await tx.customer.findUnique({
       where: { id: input.customerId },
       select: {
@@ -156,14 +162,51 @@ export async function anonymizeCustomerCommand(input: {
       await tx.user.delete({ where: { id: existing.userId } });
     }
 
+    const linkedInquiries = await tx.inquiry.findMany({
+      where: {
+        customerId: existing.id,
+        anonymizedAt: null,
+      },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+
+    const anonymizedInquiryIds: string[] = [];
+    const deletedR2Keys: string[] = [];
+
+    for (const inquiry of linkedInquiries) {
+      const cascadeResult = await anonymizeInquiryInTx(tx, {
+        inquiryId: inquiry.id,
+        reason: "customer-cascade",
+      });
+      anonymizedInquiryIds.push(inquiry.id);
+      deletedR2Keys.push(...cascadeResult.deletedR2Keys);
+    }
+
     return {
       customerId: existing.id,
       anonymizedAt,
       reason: input.reason,
       hadUserId: existing.userId !== null,
       preservedSuppression: preservedSuppressionHash !== null,
+      anonymizedInquiryIds,
+      deletedR2Keys,
     };
   });
+
+  await deleteInquiryAttachmentR2Keys({
+    r2Keys: txResult.deletedR2Keys,
+    operation: "anonymizeCustomerCommand.inquiryCascadeR2Cleanup",
+  });
+
+  return {
+    customerId: txResult.customerId,
+    anonymizedAt: txResult.anonymizedAt,
+    reason: txResult.reason,
+    hadUserId: txResult.hadUserId,
+    preservedSuppression: txResult.preservedSuppression,
+    anonymizedInquiryIds: txResult.anonymizedInquiryIds,
+  };
 }
 
 /** 顧客マージ: source の全リレーションを target に移管し source を削除 */

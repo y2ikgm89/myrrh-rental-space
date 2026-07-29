@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import type { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 const mockFindMany = mock<() => Promise<Array<{ id: string }>>>(() =>
   Promise.resolve([]),
@@ -11,22 +12,17 @@ const mockUpdateMany = mock<() => Promise<{ count: number }>>(() =>
 // bulk-commands は anonymizeCustomerCommand を呼び出す実装のため、
 // customer-lifecycle-commands の該当 command を mock 化して bulk 側の
 // ロジック (ループ / skip 判定 / 集計) だけを検証する。
-const mockAnonymizeCustomerCommand = mock<
-  (input: { customerId: string; reason: string }) => Promise<{
-    customerId: string;
-    anonymizedAt: Date;
-    reason: string;
-    hadUserId: boolean;
-    preservedSuppression: boolean;
-  }>
->(({ customerId, reason }) =>
-  Promise.resolve({
-    customerId,
-    anonymizedAt: new Date(),
-    reason,
-    hadUserId: false,
-    preservedSuppression: false,
-  }),
+// 型は実コマンドの `typeof` に揃え、戻り値契約の drift を type-check で検出する。
+const mockAnonymizeCustomerCommand = mock<typeof anonymizeCustomerCommand>(
+  ({ customerId, reason }) =>
+    Promise.resolve({
+      customerId,
+      anonymizedAt: new Date(),
+      reason,
+      hadUserId: false,
+      preservedSuppression: false,
+      anonymizedInquiryIds: [],
+    }),
 );
 
 mock.module("server-only", () => ({}));
@@ -148,6 +144,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
         reason,
         hadUserId: false,
         preservedSuppression: false,
+        anonymizedInquiryIds: [],
       }),
     );
   });
@@ -206,6 +203,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
             reason,
             hadUserId: false,
             preservedSuppression: false,
+            anonymizedInquiryIds: [],
           }),
       );
 

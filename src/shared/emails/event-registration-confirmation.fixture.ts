@@ -26,6 +26,16 @@ export const eventRegistrationConfirmationFixture = {
     "https://example.com/mypage/events/abcdef-0123-4567-89ab-cdef01234567",
   cancelUrl: "https://example.com/events/cancel?token=DEMO-TOKEN-DO-NOT-USE",
   claimUrl: "https://example.com/claim/event-registration?token=preview-token",
+  transferAccounts: [
+    {
+      bankName: "三菱UFJ銀行",
+      branchName: "新宿支店",
+      accountType: "ORDINARY",
+      accountNumber: "7654321",
+      accountHolderName: "カ）サンプル",
+    },
+  ],
+  transferGuidance: "イベント申込番号を振込依頼人名の前にご記入ください。",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventRegistrationConfirmationEmail>[0];
 

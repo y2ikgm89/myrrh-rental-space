@@ -40,6 +40,7 @@ export async function anonymizeCustomerBeforeAuthUserDelete(
       newValue: {
         anonymizedAt: anonymized.anonymizedAt.toISOString(),
         anonymizedReason: anonymized.reason,
+        anonymizedInquiryIds: anonymized.anonymizedInquiryIds,
       },
       metadata: {
         channel: "customer-mypage",

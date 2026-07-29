@@ -23,6 +23,9 @@ export const RENDER_CONTEXT: EventEmailRenderContext = {
     addToCalendarLinksEnabled: false,
   },
   organizer: { name: "Org", email: "org@example.com" },
+  transferAccounts: [],
+  transferGuidance: null,
+  paymentFeatureEnabled: true,
 };
 
 export const RENDER_CONTEXT_WITH_ICAL: EventEmailRenderContext = {
@@ -31,6 +34,9 @@ export const RENDER_CONTEXT_WITH_ICAL: EventEmailRenderContext = {
     addToCalendarLinksEnabled: false,
   },
   organizer: { name: "Org", email: "org@example.com" },
+  transferAccounts: [],
+  transferGuidance: null,
+  paymentFeatureEnabled: true,
 };
 
 export const RESERVATION_RENDER_CONTEXT: ReservationEmailRenderContext = {
@@ -44,6 +50,9 @@ export const RESERVATION_RENDER_CONTEXT: ReservationEmailRenderContext = {
     modificationDeadlineHours: 24,
   },
   cancellationPolicyUrl: undefined,
+  transferAccounts: [],
+  transferGuidance: null,
+  paymentFeatureEnabled: true,
 };
 
 export const RESERVATION_RENDER_CONTEXT_WITH_POLICY: ReservationEmailRenderContext =

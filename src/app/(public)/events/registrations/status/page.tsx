@@ -7,7 +7,10 @@ import { Heading } from "@/public/components/design-system/heading";
 import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
 import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
 import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
-import { requireFeatureEnabled } from "@/shared/domain/features/check";
+import {
+  isFeatureEnabled,
+  requireFeatureEnabled,
+} from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForGuestStatus } from "@/shared/domain/events/registration-queries";
@@ -42,6 +45,8 @@ import {
 import { DetailRow } from "@/public/components/detail-row";
 import { EventMeetingUrlRow } from "@/public/components/event-meeting-url-row";
 import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { TransferAccountsSection } from "@/public/components/transfer-accounts-section";
+import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { GuestStatusMemberOwnershipMismatchView } from "@/public/components/guest-status-member-ownership-mismatch-view";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（cancel と同方針）。
@@ -115,6 +120,11 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   }
 
   const paymentStatus = getValidPaymentStatus(registration.paymentStatus);
+  const paymentFeatureEnabled = await isFeatureEnabled("payment");
+  const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
+    paymentFeatureEnabled,
+    paymentStatus,
+  });
   const receiptDownloadHref = registration.receiptSerialNo
     ? buildGuestReceiptDownloadHref(registration.receiptSerialNo)
     : null;
@@ -204,6 +214,13 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
             />
           )}
         </dl>
+
+        {transferDisplay ? (
+          <TransferAccountsSection
+            accounts={transferDisplay.accounts}
+            guidance={transferDisplay.guidance}
+          />
+        ) : null}
 
         {receiptDownloadHref && (
           <ReceiptDownloadSection href={toAppRoute(receiptDownloadHref)} />
