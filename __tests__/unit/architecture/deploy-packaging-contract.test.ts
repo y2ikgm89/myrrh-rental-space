@@ -81,20 +81,7 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(secrets).toMatch(/destroy\s*=\s*false/);
   });
 
-  /**
-   * Stage A jobs: declared in cron_jobs but NOT yet in GCP, so they must stay
-   * out of imported_cron_jobs (otherwise plan fails with
-   * "Cannot import non-existent remote object"). After the next successful
-   * Deploy Production apply-create, move each name into imported_cron_jobs
-   * and remove it from this set (Stage B / secrets.tf と同じ 2 段階).
-   */
-  const STAGE_A_PENDING_CRON_JOBS = new Set([
-    "unpaid-event-registration-expire",
-    "blog-scheduled-publish",
-    "blog-trash-cleanup",
-  ]);
-
-  test("imported_cron_jobs covers created cron_jobs; Stage A pending stays out", () => {
+  test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
     const cronJobsBlock = scheduler.match(
       /cron_jobs\s*=\s*\[([\s\S]*?)\]\s*\n/,
@@ -119,17 +106,9 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     );
 
     expect(cronNames.size).toBeGreaterThan(0);
-
-    for (const pending of STAGE_A_PENDING_CRON_JOBS) {
-      expect(cronNames.has(pending)).toBe(true);
-      expect(importedNames.has(pending)).toBe(false);
-    }
-
     for (const name of cronNames) {
-      if (STAGE_A_PENDING_CRON_JOBS.has(name)) continue;
       expect(importedNames.has(name)).toBe(true);
     }
-
     for (const name of importedNames) {
       expect(cronNames.has(name)).toBe(true);
     }

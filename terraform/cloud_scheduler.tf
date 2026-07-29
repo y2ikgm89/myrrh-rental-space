@@ -211,9 +211,10 @@ locals {
     "data-retention",
     # 段階 B 完了: PR #1080 で追加 → PR #1083 で apply-create → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "waitlist-expire",
-    # 段階 A (create): unpaid / blog-* は GCP 未作成のため imported に入れない。
-    # Deploy Production run 30411149612 が Cannot import non-existent remote object
-    # で失敗した実績あり。apply-create 成功後の follow-up で imported へ移す。
+    # 段階 B 完了: Deploy Production run 30412202105 で apply-create 済み → state-rebuild 防御
+    "unpaid-event-registration-expire",
+    "blog-scheduled-publish",
+    "blog-trash-cleanup",
     # 段階 B 完了: PR #1121 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "receipt-backfill",
     # 段階 B 完了: PR #1198 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
