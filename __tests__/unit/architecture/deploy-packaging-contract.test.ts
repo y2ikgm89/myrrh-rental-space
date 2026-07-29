@@ -81,7 +81,20 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(secrets).toMatch(/destroy\s*=\s*false/);
   });
 
-  test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
+  /**
+   * Stage A jobs: declared in cron_jobs but NOT yet in GCP, so they must stay
+   * out of imported_cron_jobs (otherwise plan fails with
+   * "Cannot import non-existent remote object"). After the next successful
+   * Deploy Production apply-create, move each name into imported_cron_jobs
+   * and remove it from this set (Stage B / secrets.tf と同じ 2 段階).
+   */
+  const STAGE_A_PENDING_CRON_JOBS = new Set([
+    "unpaid-event-registration-expire",
+    "blog-scheduled-publish",
+    "blog-trash-cleanup",
+  ]);
+
+  test("imported_cron_jobs covers created cron_jobs; Stage A pending stays out", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
     const cronJobsBlock = scheduler.match(
       /cron_jobs\s*=\s*\[([\s\S]*?)\]\s*\n/,
@@ -98,15 +111,27 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
       cronNames.add(match[1] ?? "");
     }
 
+    // Active list entries only (quoted string on its own line), not comments.
     const importedNames = new Set(
-      [...(importedBlock?.[1]?.matchAll(/"([^"]+)"/g) ?? [])].map(
+      [...(importedBlock?.[1]?.matchAll(/^\s*"([^"]+)",?\s*$/gm) ?? [])].map(
         (m) => m[1] ?? "",
       ),
     );
 
     expect(cronNames.size).toBeGreaterThan(0);
+
+    for (const pending of STAGE_A_PENDING_CRON_JOBS) {
+      expect(cronNames.has(pending)).toBe(true);
+      expect(importedNames.has(pending)).toBe(false);
+    }
+
     for (const name of cronNames) {
+      if (STAGE_A_PENDING_CRON_JOBS.has(name)) continue;
       expect(importedNames.has(name)).toBe(true);
+    }
+
+    for (const name of importedNames) {
+      expect(cronNames.has(name)).toBe(true);
     }
   });
 });
