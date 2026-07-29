@@ -22,16 +22,17 @@ describe("cron OIDC clean-break boundary", () => {
     // job の SSoT は `terraform/cloud_scheduler.tf` に移行済 (google_cloud_scheduler_job)。
     // legacy CRON_SECRET shared bearer が復活していないことを、コード側 2 経路
     // + Terraform config で確認する。
-    for (const path of [
-      "src/shared/lib/cron-auth.ts",
-      "src/proxy.ts",
-      "terraform/cloud_scheduler.tf",
-    ]) {
+    for (const path of ["src/proxy.ts", "terraform/cloud_scheduler.tf"]) {
       const source = read(path);
       expect(source).not.toContain("CRON_SECRET");
       expect(source).not.toContain("timingSafeEqualStrings");
       expect(source).not.toContain("Authorization=Bearer");
     }
+
+    const cronAuth = read("src/shared/lib/cron-auth.ts");
+    expect(cronAuth).not.toContain("CRON_SECRET");
+    // OIDC service-account email compare (Phase 6) — not legacy shared-secret bearer.
+    expect(cronAuth).toContain("timingSafeEqualStrings");
 
     const cloudBuild = read("cloudbuild.yaml");
     expect(cloudBuild).not.toContain("_CRON_SECRET_VERSION");
