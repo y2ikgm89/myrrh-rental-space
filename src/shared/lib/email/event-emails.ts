@@ -7,7 +7,10 @@
  */
 
 import "server-only";
-import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  EventFormatValue,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   formatDateWithWeekday,
   formatTimeShort,
@@ -18,6 +21,7 @@ import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled
 import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
+import { shouldShowTransferAccounts } from "@/shared/lib/settings/transfer-account-gate";
 import { EventRegistrationUpdatedEmail } from "@/shared/emails/event-registration-updated";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
@@ -112,6 +116,8 @@ type EventRegistrationConfirmationData = {
   meetingUrl: string | null;
   /** ゲスト向け: 有料チケットの Stripe Checkout 起動 URL (token 認可 route)。 */
   paymentCheckoutUrl?: string;
+  /** 振込先表示 gate 用。省略時は UNPAID 扱い。 */
+  paymentStatus?: PaymentStatus;
 };
 
 /**
@@ -213,6 +219,13 @@ export async function sendEventRegistrationConfirmation(
     }
   }
 
+  const paymentStatus = data.paymentStatus ?? "UNPAID";
+  const showTransferAccounts = shouldShowTransferAccounts({
+    paymentFeatureEnabled: renderContext.paymentFeatureEnabled,
+    paymentStatus,
+    activeAccountCount: renderContext.transferAccounts.length,
+  });
+
   return sendEmail(
     {
       payload: omitUndefined({
@@ -235,6 +248,12 @@ export async function sendEventRegistrationConfirmation(
             claimUrl,
             cancelUrl,
             paymentCheckoutUrl: data.paymentCheckoutUrl,
+            ...(showTransferAccounts
+              ? {
+                  transferAccounts: renderContext.transferAccounts,
+                  transferGuidance: renderContext.transferGuidance,
+                }
+              : {}),
             footer,
           }),
         ),

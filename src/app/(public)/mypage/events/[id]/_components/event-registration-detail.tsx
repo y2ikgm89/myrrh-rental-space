@@ -36,6 +36,8 @@ import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
 import { DetailRow } from "@/public/components/detail-row";
 import { EventMeetingUrlRow } from "@/public/components/event-meeting-url-row";
 import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { TransferAccountsSection } from "@/public/components/transfer-accounts-section";
+import type { TransferAccountPublicDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -64,6 +66,10 @@ export interface EventRegistrationDetailProps {
   readonly receiptSerialNo: string | null;
   readonly waitlistPosition: number | null;
   readonly paymentEnabled: boolean;
+  readonly transferDisplay?: {
+    readonly accounts: readonly TransferAccountPublicDisplay[];
+    readonly guidance: string | null;
+  } | null;
   readonly editHref: string | null;
 }
 
@@ -75,6 +81,7 @@ export function EventRegistrationDetail({
   receiptSerialNo,
   waitlistPosition,
   paymentEnabled,
+  transferDisplay,
   editHref,
 }: EventRegistrationDetailProps) {
   const [isPending, startTransition] = useTransition();
@@ -240,6 +247,13 @@ export function EventRegistrationDetail({
           />
         </div>
       )}
+
+      {transferDisplay ? (
+        <TransferAccountsSection
+          accounts={transferDisplay.accounts}
+          guidance={transferDisplay.guidance}
+        />
+      ) : null}
 
       {receiptSerialNo && (
         <ReceiptDownloadSection

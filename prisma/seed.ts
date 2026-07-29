@@ -476,6 +476,12 @@ async function seedSettings(
     ...businessPlaceholders,
     senderName: "Myrrh Rental Space",
     ...emailPlaceholders,
+    ...(includeBusinessPlaceholders
+      ? {
+          transferGuidance:
+            "ご入金確認後、予約確定のご連絡をいたします。お振込の際は予約番号をご記入ください。",
+        }
+      : {}),
   };
 
   const reservationData = {
@@ -617,6 +623,39 @@ async function seedSettings(
   ]);
 
   console.log("✅ Settings configured");
+}
+
+async function seedTransferAccounts() {
+  const existing = await prisma.transferAccount.count();
+  if (existing > 0) {
+    return;
+  }
+
+  await prisma.transferAccount.createMany({
+    data: [
+      {
+        label: "三井住友 本店",
+        bankName: "三井住友銀行",
+        branchName: "渋谷支店",
+        accountType: "ORDINARY",
+        accountNumber: "1234567",
+        accountHolderName: "カ）サンプル",
+        note: "振込手数料はお客様負担でお願いします。",
+        sortOrder: 0,
+        isActive: true,
+      },
+      {
+        label: "三菱UFJ 副口座",
+        bankName: "三菱UFJ銀行",
+        branchName: "新宿支店",
+        accountType: "ORDINARY",
+        accountNumber: "7654321",
+        accountHolderName: "カ）サンプル",
+        sortOrder: 1,
+        isActive: true,
+      },
+    ],
+  });
 }
 
 // =============================================================================
@@ -5439,6 +5478,7 @@ async function seedDev() {
 
   // Phase 1: 基本設定（dev は feature module を全 ON に強制）
   await seedSettings({ resetFeatureModules: true });
+  await seedTransferAccounts();
 
   // Phase 2: マスターデータ
   await seedLocations();

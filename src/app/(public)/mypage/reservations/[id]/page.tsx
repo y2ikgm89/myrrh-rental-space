@@ -24,7 +24,9 @@ import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-re
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
+import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { getValidPaymentStatus } from "@/shared/lib/validations/enums/helpers";
 import { canCustomerInitiateCancellation } from "@/shared/domain/reservations/cancel-core";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { isReservationEditableForCustomerSelfServe } from "@/shared/domain/reservations/edit-eligibility";
@@ -173,6 +175,12 @@ export default async function ReservationDetailPage({
     ? `/terms/${cancellationPolicy.slug}`
     : undefined;
 
+  const paymentFeatureEnabled = await isFeatureEnabled("payment");
+  const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
+    paymentFeatureEnabled,
+    paymentStatus: getValidPaymentStatus(reservation.paymentStatus),
+  });
+
   const serializedReservation = toPlainObject({
     ...reservation,
     startTime: reservation.startTime.toISOString(),
@@ -235,6 +243,7 @@ export default async function ReservationDetailPage({
         paymentEnabled={paymentEnabled}
         receiptSerialNo={receiptSerialNo}
         passcodeRevealState={passcodeRevealState}
+        transferDisplay={transferDisplay}
       />
 
       {(canEdit || canCancel) && (

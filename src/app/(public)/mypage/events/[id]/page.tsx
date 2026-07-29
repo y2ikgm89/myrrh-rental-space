@@ -25,7 +25,9 @@ import {
 } from "@/shared/domain/events/edit-eligibility";
 import { findReceiptSerialNoByEventRegistrationId } from "@/shared/domain/receipts/queries";
 import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";
+import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { getValidPaymentStatus } from "@/shared/lib/validations/enums/helpers";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -105,6 +107,11 @@ export default async function MypageEventRegistrationDetailPage({
     isFeatureEnabled("payment"),
   ]);
 
+  const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
+    paymentFeatureEnabled: paymentEnabled,
+    paymentStatus: getValidPaymentStatus(registration.paymentStatus),
+  });
+
   const serializedRegistration = {
     ...registration,
     createdAt: registration.createdAt.toISOString(),
@@ -153,6 +160,7 @@ export default async function MypageEventRegistrationDetailPage({
         receiptSerialNo={receiptSerialNo}
         waitlistPosition={waitlistPositionMap.get(registration.id) ?? null}
         paymentEnabled={paymentEnabled}
+        transferDisplay={transferDisplay}
         editHref={editHref}
       />
     </Stack>

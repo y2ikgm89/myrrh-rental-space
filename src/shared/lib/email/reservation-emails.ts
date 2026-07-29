@@ -14,6 +14,7 @@ import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confir
 import { ReservationRefundEmail } from "@/shared/emails/reservation-refund";
 import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
+import { shouldShowTransferAccounts } from "@/shared/lib/settings/transfer-account-gate";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
@@ -169,6 +170,13 @@ export async function sendReservationConfirmationEmail(
     ? undefined
     : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
 
+  const paymentStatus = data.paymentStatus ?? "UNPAID";
+  const showTransferAccounts = shouldShowTransferAccounts({
+    paymentFeatureEnabled: renderContext.paymentFeatureEnabled,
+    paymentStatus,
+    activeAccountCount: renderContext.transferAccounts.length,
+  });
+
   // 領収書 DL CTA は確認メールに載せない。発行通知は `sendReceiptIssuedEmail` /
   // `notifyReceiptIssuedFor*` に集約する (payment-off / guest-status clean-break)。
 
@@ -223,6 +231,12 @@ export async function sendReservationConfirmationEmail(
             cancellationPolicyUrl,
             smartLockIssuanceFailed: data.smartLockIssuanceFailed,
             smartLockFallbackContact: data.smartLockFallbackContact,
+            ...(showTransferAccounts
+              ? {
+                  transferAccounts: renderContext.transferAccounts,
+                  transferGuidance: renderContext.transferGuidance,
+                }
+              : {}),
             footer,
           }),
         ),

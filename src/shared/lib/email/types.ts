@@ -6,9 +6,11 @@
 
 import type {
   EventFormatValue,
+  PaymentStatus,
   RegistrationStatus,
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { TransferAccountType } from "@/shared/lib/validations/enums/helpers";
 
 /** iCal 添付・「カレンダーに追加」リンクの Settings 由来フラグ（lib 側 DTO）。 */
 export type CalendarEmailSettings = {
@@ -73,12 +75,24 @@ export type CustomerBroadcastRecipient = {
 export type EventEmailRenderContext = {
   readonly calendarSettings: CalendarEmailSettings;
   readonly organizer: IcalOrganizerSettings;
+  readonly transferAccounts: readonly TransferAccountEmailDisplay[];
+  readonly transferGuidance: string | null;
+  readonly paymentFeatureEnabled: boolean;
 };
 
 /** 予約メールのキャンセル/変更期限（SettingsReservation 由来）。 */
 export type ReservationDeadlineSettings = {
   readonly cancellationDeadlineHours: number;
   readonly modificationDeadlineHours: number;
+};
+
+export type TransferAccountEmailDisplay = {
+  readonly bankName: string;
+  readonly branchName: string;
+  readonly accountType: TransferAccountType;
+  readonly accountNumber: string;
+  readonly accountHolderName: string;
+  readonly note?: string | null;
 };
 
 /**
@@ -90,6 +104,9 @@ export type ReservationEmailRenderContext = {
   readonly organizer: IcalOrganizerSettings;
   readonly deadlineSettings: ReservationDeadlineSettings;
   readonly cancellationPolicyUrl: string | undefined;
+  readonly transferAccounts: readonly TransferAccountEmailDisplay[];
+  readonly transferGuidance: string | null;
+  readonly paymentFeatureEnabled: boolean;
 };
 
 /** 管理者向けイベント通知メールの宛先（domain が resolve して lib に渡す）。 */
@@ -200,6 +217,8 @@ export type ReservationEmailData = {
     readonly phone?: string | null;
     readonly email?: string | null;
   };
+  /** 振込先表示 gate 用。省略時は UNPAID 扱い（新規予約確認）。 */
+  paymentStatus?: PaymentStatus;
 };
 
 export type ContactEmailData = {

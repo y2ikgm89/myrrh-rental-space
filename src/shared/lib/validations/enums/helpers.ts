@@ -1020,6 +1020,43 @@ export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
 };
 
 // =============================================================================
+// TransferAccount Type（DB VARCHAR 管理 — Prisma enum ではない）
+// =============================================================================
+
+export const TRANSFER_ACCOUNT_TYPE = {
+  ORDINARY: "ORDINARY",
+  CURRENT: "CURRENT",
+  SAVINGS: "SAVINGS",
+} as const;
+
+export type TransferAccountType =
+  (typeof TRANSFER_ACCOUNT_TYPE)[keyof typeof TRANSFER_ACCOUNT_TYPE];
+
+const VALID_TRANSFER_ACCOUNT_TYPES = new Set<string>(
+  Object.values(TRANSFER_ACCOUNT_TYPE),
+);
+
+export function isValidTransferAccountType(
+  value: unknown,
+): value is TransferAccountType {
+  return typeof value === "string" && VALID_TRANSFER_ACCOUNT_TYPES.has(value);
+}
+
+export function getValidTransferAccountType(
+  value: unknown,
+  defaultType: TransferAccountType = TRANSFER_ACCOUNT_TYPE.ORDINARY,
+): TransferAccountType {
+  return isValidTransferAccountType(value) ? value : defaultType;
+}
+
+export const TRANSFER_ACCOUNT_TYPE_LABELS: Record<TransferAccountType, string> =
+  {
+    [TRANSFER_ACCOUNT_TYPE.ORDINARY]: "普通",
+    [TRANSFER_ACCOUNT_TYPE.CURRENT]: "当座",
+    [TRANSFER_ACCOUNT_TYPE.SAVINGS]: "貯蓄",
+  };
+
+// =============================================================================
 // SmartLockDeviceType Labels（SwitchBot 製品名 SSoT）
 // =============================================================================
 

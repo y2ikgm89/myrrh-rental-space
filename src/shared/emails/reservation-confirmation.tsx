@@ -3,6 +3,10 @@ import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { reservationConfirmationFixture } from "./reservation-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
+import {
+  TransferAccountsEmailSection,
+  type TransferAccountEmailDisplay,
+} from "./_shared/TransferAccountsSection";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
@@ -62,6 +66,8 @@ type Props = {
     readonly phone?: string | null;
     readonly email?: string | null;
   };
+  transferAccounts?: readonly TransferAccountEmailDisplay[];
+  transferGuidance?: string | null;
   footer: EmailFooterData;
 };
 
@@ -84,6 +90,8 @@ export function ReservationConfirmationEmail({
   cancellationPolicyUrl,
   smartLockIssuanceFailed,
   smartLockFallbackContact,
+  transferAccounts,
+  transferGuidance,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -134,6 +142,11 @@ export function ReservationConfirmationEmail({
           </Text>
         )}
       </Section>
+
+      <TransferAccountsEmailSection
+        accounts={transferAccounts ?? []}
+        guidance={transferGuidance ?? null}
+      />
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 

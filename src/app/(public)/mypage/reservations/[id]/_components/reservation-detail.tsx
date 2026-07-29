@@ -27,6 +27,8 @@ import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
 import { DetailRow } from "@/public/components/detail-row";
 import { PasscodeReveal } from "@/public/components/passcode-reveal";
 import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { TransferAccountsSection } from "@/public/components/transfer-accounts-section";
+import type { TransferAccountPublicDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -95,6 +97,10 @@ interface ReservationDetailProps {
   readonly receiptSerialNo: string | null;
   /** SwitchBot 解錠番号の非秘匿表示状態（平文なし）。 */
   readonly passcodeRevealState: PasscodeRevealState;
+  readonly transferDisplay?: {
+    readonly accounts: readonly TransferAccountPublicDisplay[];
+    readonly guidance: string | null;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +115,7 @@ export function ReservationDetail({
   paymentEnabled,
   receiptSerialNo,
   passcodeRevealState,
+  transferDisplay,
 }: ReservationDetailProps) {
   const {
     id,
@@ -264,6 +271,13 @@ export function ReservationDetail({
           </DetailRow>
         )}
       </dl>
+
+      {transferDisplay ? (
+        <TransferAccountsSection
+          accounts={transferDisplay.accounts}
+          guidance={transferDisplay.guidance}
+        />
+      ) : null}
 
       <PasscodeReveal reservationId={id} initialState={passcodeRevealState} />
 

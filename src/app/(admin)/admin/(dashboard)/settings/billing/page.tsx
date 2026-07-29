@@ -26,10 +26,15 @@ import {
   DiscountSection,
   TaxSection,
   RefundPolicySection,
+  TransferAccountsSection,
 } from "../_components/sections";
 import { Alert, AlertDescription, AlertTitle } from "@/admin/components/ui";
 import { getAppUrl } from "@/shared/lib/constants";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
+import {
+  getTransferGuidanceSettings,
+  listAllTransferAccountsForAdmin,
+} from "@/shared/domain/settings/transfer-account-queries";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
@@ -47,6 +52,8 @@ async function BillingSettingsContent(): Promise<ReactElement> {
     refundPolicySettings,
     stripeEnvSecretActive,
     paymentFeatureEnabled,
+    transferAccounts,
+    transferGuidanceSettings,
   ] = await Promise.all([
     getSettings(),
     getDiscountSettings(),
@@ -54,6 +61,8 @@ async function BillingSettingsContent(): Promise<ReactElement> {
     getRefundPolicySettings(),
     getStripeEnvSecretOverrideActive(),
     isFeatureEnabled("payment"),
+    listAllTransferAccountsForAdmin(),
+    getTransferGuidanceSettings(),
   ]);
 
   if (!settings) {
@@ -114,6 +123,17 @@ async function BillingSettingsContent(): Promise<ReactElement> {
         <RefundPolicySection
           resolution={refundPolicySettings.resolution}
           commerceUpdatedAt={refundPolicySettings.commerceUpdatedAt.toISOString()}
+        />
+      ),
+    },
+    {
+      value: "transfer",
+      label: "振込先",
+      content: (
+        <TransferAccountsSection
+          accounts={toPlainObject(transferAccounts)}
+          transferGuidance={transferGuidanceSettings.transferGuidance}
+          organizationUpdatedAt={transferGuidanceSettings.organizationUpdatedAt.toISOString()}
         />
       ),
     },
