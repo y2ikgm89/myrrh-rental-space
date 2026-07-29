@@ -1625,6 +1625,9 @@ model SettingsOrganization {
   businessHours Json?
   holidayNotice String? @db.Text
 
+  /// 銀行振込案内文（振込期限・手数料負担等）。payment OFF 時の顧客向け表示用。
+  transferGuidance String? @db.Text
+
   // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
   senderEmail  String?
   senderName   String?
@@ -2707,4 +2710,24 @@ model StripeEvent {
   /// retention cron 用: receivedAt で古い順に削除するため。
   @@index([receivedAt])
   @@map("stripe_events")
+}
+
+/// 銀行振込先マスタ（複数口座）。payment feature OFF かつ未払い時に顧客へ表示。
+model TransferAccount {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label             String   @db.VarChar(50)
+  bankName          String   @db.VarChar(50)
+  branchName        String   @db.VarChar(50)
+  /// TRANSFER_ACCOUNT_TYPE SSoT（DB VARCHAR 管理）
+  accountType       String   @db.VarChar(20)
+  accountNumber     String   @db.VarChar(20)
+  accountHolderName String   @db.VarChar(100)
+  note              String?  @db.VarChar(200)
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("transfer_accounts")
 }

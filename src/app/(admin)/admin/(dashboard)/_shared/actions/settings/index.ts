@@ -151,4 +151,12 @@ export type { TaxSettingsInput } from "./schemas";
 
 export { updateRefundPolicySettings } from "./refund-policy";
 
+export {
+  createTransferAccount,
+  updateTransferAccount,
+  toggleTransferAccountActive,
+  deleteTransferAccount,
+  updateTransferGuidance,
+} from "./transfer-accounts";
+
 export type { RefundPolicyFormInput } from "./schemas/refund-policy";

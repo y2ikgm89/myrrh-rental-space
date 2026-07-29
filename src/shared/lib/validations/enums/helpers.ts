@@ -775,6 +775,7 @@ export const NOTIFICATION_TYPE = {
   REVIEW_NEW: "review_new",
   EVENT_REGISTRATION: "event_registration",
   EVENT_REGISTRATION_CANCEL: "event_registration_cancel",
+  EVENT_REGISTRATION_UPDATE: "event_registration_update",
   EVENT_REGISTRATION_REFUND: "event_registration_refund",
   EVENT_WAITLIST_REGISTRATION: "event_waitlist_registration",
   EVENT_WAITLIST_OFFERED: "event_waitlist_offered",
@@ -815,6 +816,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "イベント申込キャンセル",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_UPDATE]: "イベント申込更新",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND]: "イベント申込返金",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_REGISTRATION]: "キャンセル待ち登録",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_OFFERED]: "キャンセル待ち繰り上げ",
@@ -850,6 +852,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.REVIEW_NEW]: "IconStar",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "IconUsersGroup",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "IconX",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_UPDATE]: "IconCalendarTime",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND]: "IconReceiptRefund",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_REGISTRATION]: "IconClock",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_OFFERED]: "IconUsers",
@@ -931,6 +934,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "destructive",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_UPDATE]: "secondary",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND]: "warning",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_REGISTRATION]: "warning",
   [NOTIFICATION_TYPE.EVENT_WAITLIST_OFFERED]: "warning",
@@ -1014,6 +1018,43 @@ export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
   [BLOCKED_DATE_TYPE.EMERGENCY]: "緊急休業",
   [BLOCKED_DATE_TYPE.OTHER]: "その他",
 };
+
+// =============================================================================
+// TransferAccount Type（DB VARCHAR 管理 — Prisma enum ではない）
+// =============================================================================
+
+export const TRANSFER_ACCOUNT_TYPE = {
+  ORDINARY: "ORDINARY",
+  CURRENT: "CURRENT",
+  SAVINGS: "SAVINGS",
+} as const;
+
+export type TransferAccountType =
+  (typeof TRANSFER_ACCOUNT_TYPE)[keyof typeof TRANSFER_ACCOUNT_TYPE];
+
+const VALID_TRANSFER_ACCOUNT_TYPES = new Set<string>(
+  Object.values(TRANSFER_ACCOUNT_TYPE),
+);
+
+export function isValidTransferAccountType(
+  value: unknown,
+): value is TransferAccountType {
+  return typeof value === "string" && VALID_TRANSFER_ACCOUNT_TYPES.has(value);
+}
+
+export function getValidTransferAccountType(
+  value: unknown,
+  defaultType: TransferAccountType = TRANSFER_ACCOUNT_TYPE.ORDINARY,
+): TransferAccountType {
+  return isValidTransferAccountType(value) ? value : defaultType;
+}
+
+export const TRANSFER_ACCOUNT_TYPE_LABELS: Record<TransferAccountType, string> =
+  {
+    [TRANSFER_ACCOUNT_TYPE.ORDINARY]: "普通",
+    [TRANSFER_ACCOUNT_TYPE.CURRENT]: "当座",
+    [TRANSFER_ACCOUNT_TYPE.SAVINGS]: "貯蓄",
+  };
 
 // =============================================================================
 // SmartLockDeviceType Labels（SwitchBot 製品名 SSoT）
