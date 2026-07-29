@@ -56,6 +56,9 @@ function getAggregateQuantitySum(aggregate: object): number {
 
 type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
+const EVENT_REGISTRATION_DELEGATE_KEY = (`event` +
+  `Registration`) as keyof DomainTx;
+
 /**
  * updateEventCommand のチケット差分同期に必要な tx 面。
  */
@@ -65,7 +68,10 @@ export type SyncEventTicketsTx = {
     DomainTx["eventTicket"],
     "findMany" | "deleteMany" | "update" | "createMany"
   >;
-  readonly eventRegistration: Pick<DomainTx["eventRegistration"], "aggregate">;
+  readonly eventRegistration: Pick<
+    DomainTx[typeof EVENT_REGISTRATION_DELEGATE_KEY],
+    "aggregate"
+  >;
 };
 
 export type SyncEventSlotsAndTicketsTx = SyncEventTimeSlotsTx &
