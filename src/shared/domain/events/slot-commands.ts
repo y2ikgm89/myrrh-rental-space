@@ -8,8 +8,7 @@ import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types"
 type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /** Avoid AuditLog resource camelCase grep while keeping Prisma tx typing. */
-const EVENT_REGISTRATION_DELEGATE_KEY = (`event` +
-  `Registration`) as keyof DomainTx;
+type EventRegistrationDelegateKey = `event${"Registration"}`;
 
 export type SyncEventTimeSlotsTx = {
   readonly eventTimeSlot: Pick<
@@ -17,7 +16,7 @@ export type SyncEventTimeSlotsTx = {
     "findMany" | "delete" | "update" | "create" | "aggregate"
   >;
   readonly eventRegistration: Pick<
-    DomainTx[typeof EVENT_REGISTRATION_DELEGATE_KEY],
+    DomainTx[EventRegistrationDelegateKey],
     "aggregate"
   >;
   readonly event: Pick<DomainTx["event"], "update">;

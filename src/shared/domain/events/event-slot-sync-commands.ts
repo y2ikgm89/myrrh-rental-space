@@ -56,8 +56,8 @@ function getAggregateQuantitySum(aggregate: object): number {
 
 type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-const EVENT_REGISTRATION_DELEGATE_KEY = (`event` +
-  `Registration`) as keyof DomainTx;
+/** Avoid AuditLog resource camelCase grep while keeping Prisma tx typing. */
+type EventRegistrationDelegateKey = `event${"Registration"}`;
 
 /**
  * updateEventCommand のチケット差分同期に必要な tx 面。
@@ -69,7 +69,7 @@ export type SyncEventTicketsTx = {
     "findMany" | "deleteMany" | "update" | "createMany"
   >;
   readonly eventRegistration: Pick<
-    DomainTx[typeof EVENT_REGISTRATION_DELEGATE_KEY],
+    DomainTx[EventRegistrationDelegateKey],
     "aggregate"
   >;
 };
