@@ -160,6 +160,7 @@ interface ReservationFormProps {
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
   readonly isLoggedIn: boolean;
   readonly refundPolicyLines?: readonly string[] | undefined;
+  readonly initialNowIso?: string;
 }
 
 export function ReservationForm({
@@ -174,6 +175,7 @@ export function ReservationForm({
   requiredTerms = [],
   isLoggedIn,
   refundPolicyLines,
+  initialNowIso,
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations, initialSpaceId);
   const preSelected = auto.locationId != null && auto.spaceId != null;
@@ -667,6 +669,7 @@ export function ReservationForm({
           onStartTimeChange={handleStartTimeChange}
           onDurationChange={handleDurationChange}
           onGuestsChange={handleGuestsChange}
+          {...(initialNowIso !== undefined ? { initialNowIso } : {})}
         />
         {renderStepNavigation({
           onBack: hideStep1 ? undefined : () => goToStep(1),

@@ -241,7 +241,10 @@ export async function purgeExpiredInquiries(
     select: { r2Key: true },
   });
 
-  const result = await prisma.inquiry.deleteMany({ where: purgeWhere });
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('myrrh.inquiry_status_history_mutation_bypass', 'purge', true)`;
+    return tx.inquiry.deleteMany({ where: purgeWhere });
+  });
 
   if (attachments.length > 0) {
     try {

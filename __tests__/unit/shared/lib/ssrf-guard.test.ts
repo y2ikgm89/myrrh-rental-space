@@ -31,6 +31,20 @@ describe("isPrivateOrReservedHost", () => {
     expect(isPrivateOrReservedHost("fd12:3456::1")).toBe(true);
     expect(isPrivateOrReservedHost("fe80::1")).toBe(true);
   });
+
+  test("rejects NAT64 well-known prefix embedding private IPv4", () => {
+    expect(isPrivateOrReservedHost("64:ff9b::a00:1")).toBe(true);
+    expect(isPrivateOrReservedHost("64:ff9b::c0a8:1")).toBe(true);
+  });
+
+  test("rejects 6to4 addresses embedding private IPv4", () => {
+    expect(isPrivateOrReservedHost("2002:0a00:0001::")).toBe(true);
+    expect(isPrivateOrReservedHost("2002:c0a8:0001::")).toBe(true);
+  });
+
+  test("allows NAT64 well-known prefix embedding public IPv4", () => {
+    expect(isPrivateOrReservedHost("64:ff9b::5dd8:d822")).toBe(false);
+  });
 });
 
 describe("isUrlSafe", () => {

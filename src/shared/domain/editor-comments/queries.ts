@@ -3,7 +3,12 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { EditorCommentStatus } from "@/shared/lib/validations/enums/prisma-types";
-import type { EditorCommentThread, ThreadListItem } from "./types";
+import type {
+  CommentableContentType,
+  EditorCommentThread,
+  ThreadListItem,
+} from "./types";
+import { isCommentableContentType } from "./types";
 
 export async function getCommentThreadsQuery(input: {
   contentType: string;
@@ -152,5 +157,59 @@ export async function getThreadDetailQuery(
     })),
     createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
     resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,
+  };
+}
+
+/** editor-comment RBAC: threadId から親 CMS エンティティ (contentType/contentId) を解決。 */
+export async function getEditorCommentThreadContentRef(
+  threadId: string,
+): Promise<{
+  contentType: CommentableContentType;
+  contentId: string;
+} | null> {
+  const thread = await prisma.editorCommentThread.findUnique({
+    where: { id: threadId },
+    select: { contentType: true, contentId: true },
+  });
+  if (!thread) {
+    return null;
+  }
+
+  if (!isCommentableContentType(thread.contentType)) {
+    return null;
+  }
+
+  return {
+    contentType: thread.contentType,
+    contentId: thread.contentId,
+  };
+}
+
+/** commentId から親 thread の CMS エンティティ参照を解決（RBAC 用）。 */
+export async function getEditorCommentContentRefFromCommentId(
+  commentId: string,
+): Promise<{
+  contentType: CommentableContentType;
+  contentId: string;
+} | null> {
+  const comment = await prisma.editorComment.findUnique({
+    where: { id: commentId },
+    select: {
+      thread: {
+        select: { contentType: true, contentId: true },
+      },
+    },
+  });
+  if (!comment) {
+    return null;
+  }
+
+  if (!isCommentableContentType(comment.thread.contentType)) {
+    return null;
+  }
+
+  return {
+    contentType: comment.thread.contentType,
+    contentId: comment.thread.contentId,
   };
 }

@@ -187,6 +187,7 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   { name: "DATABASE_URL", version: "2" },
   { name: "BETTER_AUTH_SECRET", version: "1" },
   { name: "ENCRYPTION_KEY", version: "1" },
+  { name: "SECONDARY_ENCRYPTION_KEYS", version: "1" },
   { name: "AUDIT_LOG_HMAC_KEY", version: "1" },
   { name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", version: "1" },
   { name: "R2_ACCOUNT_ID", version: "1" },
@@ -222,6 +223,89 @@ export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_MAX_RETRIES = 0;
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_TIMEOUT_SECONDS = 600;
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_MEMORY_LIMIT = "1Gi";
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_CPU_LIMIT = "1";
+
+/** Plain env keys in Terraform `locals.cloud_run_common_env` (keep in sync with `terraform/locals_cloud_run.tf`). */
+export const TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS = [
+  "NODE_ENV",
+  "NEXT_TELEMETRY_DISABLED",
+  "DATABASE_POOL_MAX",
+  "AUDIT_LOG_HMAC_KEY_ID",
+  "ENCRYPTION_KEY_ID",
+  "CRON_OIDC_AUDIENCE",
+  "CRON_SERVICE_ACCOUNT_EMAIL",
+  "NEXT_PUBLIC_BASE_URL",
+  "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+  "NEXT_PUBLIC_GA_MEASUREMENT_ID",
+  "ADMIN_APP_URL",
+  "MAX_INSTANCES_HINT",
+  "RATE_LIMIT_BACKEND",
+] as const;
+
+export const TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS = [
+  "APP_SURFACE",
+  "NEXT_PUBLIC_APP_URL",
+  "BETTER_AUTH_URL",
+] as const;
+
+export const TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS = [
+  "APP_SURFACE",
+  "NEXT_PUBLIC_APP_URL",
+  "BETTER_AUTH_URL",
+  "IAP_JWT_AUDIENCE",
+  "ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL",
+  "ADMIN_ROLE_GROUP_ADMIN_EMAIL",
+  "ADMIN_ROLE_GROUP_EDITOR_EMAIL",
+  "ADMIN_ROLE_GROUP_VIEWER_EMAIL",
+] as const;
+
+/** Subset of runtime plain env verified live by `audit-gcp-production-iap.ts`. */
+export const AUDIT_PUBLIC_CLOUD_RUN_PLAIN_ENV_KEYS = [
+  "APP_SURFACE",
+  "ADMIN_APP_URL",
+  "BETTER_AUTH_URL",
+  "NEXT_PUBLIC_BASE_URL",
+  "NEXT_PUBLIC_APP_URL",
+  "CRON_OIDC_AUDIENCE",
+  "CRON_SERVICE_ACCOUNT_EMAIL",
+] as const;
+
+export const AUDIT_ADMIN_CLOUD_RUN_PLAIN_ENV_KEYS = [
+  "APP_SURFACE",
+  "ADMIN_APP_URL",
+  "BETTER_AUTH_URL",
+  "NEXT_PUBLIC_BASE_URL",
+  "NEXT_PUBLIC_APP_URL",
+  "IAP_JWT_AUDIENCE",
+  "CRON_OIDC_AUDIENCE",
+  "CRON_SERVICE_ACCOUNT_EMAIL",
+] as const;
+
+/** Extract top-level `KEY =` names from a Terraform HCL map literal (test / drift gate). */
+export function extractTerraformHclMapKeys(
+  content: string,
+  mapName: string,
+): string[] {
+  const mergePattern = new RegExp(
+    `${mapName}\\s*=\\s*merge\\([^,]+,\\s*\\{([\\s\\S]*?)\\n\\s*\\}\\)`,
+    "u",
+  );
+  const mergeMatch = mergePattern.exec(content);
+  const body =
+    mergeMatch?.[1] ??
+    (() => {
+      const mapPattern = new RegExp(
+        `${mapName}\\s*=\\s*\\{([\\s\\S]*?)\\n\\s*\\}`,
+        "u",
+      );
+      return mapPattern.exec(content)?.[1] ?? null;
+    })();
+  if (!body) {
+    return [];
+  }
+  return [...body.matchAll(/^\s*([A-Z0-9_]+)\s*=/gmu)]
+    .map((entry) => entry[1])
+    .filter((key): key is string => key !== undefined);
+}
 
 function uniqueLocations(locations: string[]): string[] {
   return [

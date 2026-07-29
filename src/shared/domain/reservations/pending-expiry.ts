@@ -14,6 +14,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
 
 /**
  * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
@@ -101,6 +102,8 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       : PENDING_RESERVATION_EXPIRY_MINUTES;
 
     const claimed = await prisma.$transaction(async (tx) => {
+      await lockSpaceForTransaction(tx, candidate.spaceId);
+
       const updateResult = await tx.reservation.updateMany({
         where: {
           id: candidate.id,

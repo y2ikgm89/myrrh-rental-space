@@ -11,10 +11,12 @@ const mockUpdateMany = mock<
 const mockCouponUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve({ count: 0 }));
+const mockExecuteRaw = mock<() => Promise<number>>(() => Promise.resolve(0));
 
 const mockTx = {
   reservation: { findFirst: mockFindFirst, updateMany: mockUpdateMany },
   coupon: { updateMany: mockCouponUpdateMany },
+  $executeRaw: mockExecuteRaw,
 };
 
 mock.module("@/shared/db/prisma", () => ({
@@ -49,6 +51,7 @@ describe("cancelReservationByToken", () => {
   test("有効な予約をキャンセルし payload を返す（customerId フィルタなし・CUSTOMER_TOKEN を記録）", async () => {
     mockFindFirst.mockResolvedValue({
       id: "r1",
+      spaceId: "space-1",
       status: "PENDING",
       startTime: FAR_FUTURE,
       couponId: null,

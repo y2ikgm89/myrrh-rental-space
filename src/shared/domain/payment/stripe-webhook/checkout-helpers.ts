@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { refundCheckoutAmountMismatchForReservation } from "@/shared/domain/reservations/payment-commands";
 import { refundCheckoutAmountMismatchForEventRegistration } from "@/shared/domain/events/payment-commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { prisma } from "@/shared/db/prisma";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   logError,
@@ -145,13 +146,23 @@ async function notifyAmountMismatchAutoRefund(input: {
   }
 
   fireAndForget(
-    createNotificationCommand({
-      type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-      title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-      message: `イベント申込 ${subject.registrationId} の Checkout 金額不一致を検知したため、Stripe 課金 (${refundAmount} 円) を自動返金しました`,
-      resourceType: "event-registration",
-      resourceId: subject.registrationId,
-    }),
+    (async () => {
+      const registration = await prisma.eventRegistration.findUnique({
+        where: { id: subject.registrationId },
+        select: { eventId: true },
+      });
+      await createNotificationCommand({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
+        message: `イベント申込 ${subject.registrationId} の Checkout 金額不一致を検知したため、Stripe 課金 (${refundAmount} 円) を自動返金しました`,
+        ...(registration
+          ? {
+              resourceType: "event",
+              resourceId: registration.eventId,
+            }
+          : {}),
+      });
+    })(),
     {
       operation: "notifyEventRegistrationAmountMismatchAutoRefund",
       category: ErrorCategory.EXTERNAL_API,

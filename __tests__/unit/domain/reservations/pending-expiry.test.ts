@@ -29,6 +29,7 @@ const mockApplyCancellationSideEffects = mock<
   (args: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
 const mockLogError = mock(() => undefined);
+const mockExecuteRaw = mock<() => Promise<number>>(() => Promise.resolve(0));
 
 const txClient = {
   reservation: {
@@ -37,6 +38,7 @@ const txClient = {
   coupon: {
     updateMany: mockCouponUpdateMany,
   },
+  $executeRaw: mockExecuteRaw,
 };
 
 const mockTransaction = mock<
@@ -76,6 +78,8 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockCouponUpdateMany.mockReset();
     mockApplyCancellationSideEffects.mockReset();
     mockLogError.mockReset();
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockImplementation(() => Promise.resolve(0));
     mockTransaction.mockReset();
     mockTransaction.mockImplementation((fn) => fn(txClient));
 
