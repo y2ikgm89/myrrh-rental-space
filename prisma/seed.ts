@@ -2751,6 +2751,72 @@ async function seedDevCustomerAndReservations() {
     }
   }
 
+  // Self-serve merge E2E: 同 email の unlinked guest Customer + Google account
+  const GUEST_MERGE_MARKER = "[E2E] guest history for customer merge";
+  let guestCustomer = await prisma.customer.findFirst({
+    where: {
+      emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
+      userId: null,
+      anonymizedAt: null,
+    },
+    select: { id: true },
+  });
+  if (!guestCustomer) {
+    guestCustomer = await prisma.customer.create({
+      data: {
+        email: DEV_CUSTOMER_EMAIL,
+        emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
+        lastName: "ゲスト",
+        firstName: "履歴",
+        phoneNumber: "090-0000-0001",
+        customerType: CustomerType.PERSONAL,
+        status: "REGULAR",
+      },
+      select: { id: true },
+    });
+  }
+
+  const existingGuestReservation = await prisma.reservation.findFirst({
+    where: { customerId: guestCustomer.id, notes: GUEST_MERGE_MARKER },
+    select: { id: true },
+  });
+  if (!existingGuestReservation) {
+    const guestStart = new Date(now);
+    guestStart.setUTCDate(guestStart.getUTCDate() + 21);
+    guestStart.setUTCHours(3, 0, 0, 0);
+    const guestEnd = new Date(guestStart);
+    guestEnd.setUTCMinutes(guestEnd.getUTCMinutes() + 120);
+    const basePrice = Number(space.hourlyPrice) * 2;
+    await prisma.reservation.create({
+      data: {
+        spaceId: space.id,
+        customerId: guestCustomer.id,
+        startTime: guestStart,
+        endTime: guestEnd,
+        status: "CONFIRMED",
+        paymentStatus: "UNPAID",
+        basePrice,
+        totalPrice: basePrice,
+        notes: GUEST_MERGE_MARKER,
+        ...buildSeedLegacyPricingSnapshot(basePrice),
+      },
+    });
+  }
+
+  const googleAccount = await prisma.account.findFirst({
+    where: { userId: user.id, providerId: "google" },
+    select: { id: true },
+  });
+  if (!googleAccount) {
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        providerId: "google",
+        accountId: `e2e-google-${user.id}`,
+      },
+    });
+  }
+
   console.log(
     `✅ Seeded dev customer (${DEV_CUSTOMER_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
   );

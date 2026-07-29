@@ -12,6 +12,7 @@ export function createEmailLibDispatchMockModule(
   return {
     sendWelcomeEmail: okAsync,
     sendChangeEmailVerificationEmail: okAsync,
+    sendCustomerMergeVerificationEmail: okAsync,
     sendDeleteAccountVerificationEmail: okAsync,
     sendReviewReplyEmail: okAsync,
     sendReceiptIssuedEmail: okAsync,

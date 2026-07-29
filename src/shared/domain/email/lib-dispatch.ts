@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sendChangeEmailVerificationEmail as sendChangeEmailVerificationEmailLib } from "@/shared/lib/email/change-email-emails";
+import { sendCustomerMergeVerificationEmail as sendCustomerMergeVerificationEmailLib } from "@/shared/lib/email/customer-merge-emails";
 import { sendDeleteAccountVerificationEmail as sendDeleteAccountVerificationEmailLib } from "@/shared/lib/email/delete-account-emails";
 import {
   sendEventAdminNotification as sendEventAdminNotificationLib,
@@ -41,6 +42,7 @@ import { sendWelcomeEmail as sendWelcomeEmailLib } from "@/shared/lib/email/welc
 import type {
   BulkReservationCancelledEmailData,
   ChangeEmailVerificationEmailData,
+  CustomerMergeVerificationEmailData,
   DeleteAccountVerificationEmailData,
   EmailResult,
   EmailSendContext,
@@ -91,6 +93,14 @@ export async function sendChangeEmailVerificationEmail(
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
   return sendChangeEmailVerificationEmailLib(data, sendContext);
+}
+
+export async function sendCustomerMergeVerificationEmail(
+  data: CustomerMergeVerificationEmailData,
+): Promise<EmailResult> {
+  const sendContext = await requireSendContext();
+  if (!sendContext) return disabledEmailResult();
+  return sendCustomerMergeVerificationEmailLib(data, sendContext);
 }
 
 export async function sendDeleteAccountVerificationEmail(

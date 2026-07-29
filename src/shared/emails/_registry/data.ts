@@ -44,6 +44,7 @@ export const TEMPLATE_KEYS = [
   "welcome",
   "delete-account-verification",
   "change-email-verification",
+  "customer-merge-verification",
   "customer-broadcast",
   "review-reply",
   "__infra_check",
@@ -269,6 +270,13 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     label: "メールアドレスの確認",
     description:
       "マイページからの初回メールアドレス登録時に本人確認 URL をお客様へ送信。",
+    category: "account",
+  },
+  {
+    key: "customer-merge-verification",
+    label: "履歴統合の確認",
+    description:
+      "マイページから guest 履歴を統合する際、guest email 宛に本人確認 URL を送信。",
     category: "account",
   },
   {

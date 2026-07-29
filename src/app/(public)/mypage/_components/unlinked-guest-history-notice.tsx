@@ -2,10 +2,12 @@ import "server-only";
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 
 type UnlinkedGuestHistoryNoticeProps = {
   readonly hasUnlinkedGuestHistory: boolean;
   readonly showContactLink: boolean;
+  readonly showSelfServeMerge: boolean;
 };
 
 /**
@@ -18,6 +20,7 @@ type UnlinkedGuestHistoryNoticeProps = {
 export function UnlinkedGuestHistoryNotice({
   hasUnlinkedGuestHistory,
   showContactLink,
+  showSelfServeMerge,
 }: UnlinkedGuestHistoryNoticeProps): ReactElement | null {
   if (!hasUnlinkedGuestHistory) return null;
 
@@ -27,7 +30,19 @@ export function UnlinkedGuestHistoryNotice({
       className="mb-6 border border-border bg-muted/40 p-4 text-sm text-foreground"
     >
       同じメールアドレスで、ログイン前に作成された予約・お問い合わせ等の履歴が
-      別レコードとして残っている可能性があります。マイページへの統合が必要な場合は
+      別レコードとして残っている可能性があります。
+      {showSelfServeMerge ? (
+        <>
+          <Link
+            href={toAppRoute("/mypage/merge/request")}
+            className="mx-1 text-accent underline underline-offset-4"
+          >
+            自分で統合する
+          </Link>
+          か、
+        </>
+      ) : null}
+      マイページへの統合が必要な場合は
       {showContactLink ? (
         <>
           <Link

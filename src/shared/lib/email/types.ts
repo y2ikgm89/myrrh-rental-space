@@ -348,6 +348,18 @@ export type ChangeEmailVerificationEmailData = {
   verificationUrl: string;
 };
 
+export type CustomerMergeVerificationEmailData = {
+  /** 送信先 = guest email（本人確認用）。 */
+  email: string;
+  name: string;
+  guestEmail: string;
+  verificationUrl: string;
+  reservationCount: number;
+  inquiryCount: number;
+  reviewCount: number;
+  registrationCount: number;
+};
+
 /**
  * Phase B.2: series 一括キャンセルの集約通知メール用データ。
  *
