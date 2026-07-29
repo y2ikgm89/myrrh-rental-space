@@ -211,9 +211,9 @@ locals {
     "data-retention",
     # 段階 B 完了: PR #1080 で追加 → PR #1083 で apply-create → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "waitlist-expire",
-    # 段階 A: 本 PR で cron_jobs + app route 追加。初回 Deploy Production apply-create 後、
-    # state-rebuild 防御のため imported に組み込み (deploy-packaging-contract gate)。
-    "unpaid-event-registration-expire",
+    # 段階 A (create): unpaid / blog-* は GCP 未作成のため imported に入れない。
+    # Deploy Production run 30411149612 が Cannot import non-existent remote object
+    # で失敗した実績あり。apply-create 成功後の follow-up で imported へ移す。
     # 段階 B 完了: PR #1121 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "receipt-backfill",
     # 段階 B 完了: PR #1198 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
@@ -222,8 +222,6 @@ locals {
     "audit-log-integrity",
     # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "news-scheduled-publish",
-    "blog-scheduled-publish",
-    "blog-trash-cleanup",
     # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
     "customer-duplicate-scan",
     "stripe-event-cleanup",
