@@ -5,9 +5,9 @@ CREATE TABLE "pending_customer_merges" (
     "sourceCustomerId" UUID NOT NULL,
     "guestEmail" VARCHAR(320) NOT NULL,
     "tokenHash" VARCHAR(64) NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "consumedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "pending_customer_merges_pkey" PRIMARY KEY ("id")
 );
