@@ -8,7 +8,11 @@ import { Heading } from "@/public/components/design-system/heading";
 import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
 import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
 import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
-import { requireFeatureEnabled } from "@/shared/domain/features/check";
+import {
+  requireFeatureEnabled,
+  isFeatureEnabled,
+} from "@/shared/domain/features/check";
+import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestStatus } from "@/shared/domain/reservations/customer-queries";
@@ -43,6 +47,7 @@ import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
 import { DetailRow } from "@/public/components/detail-row";
 import { PasscodeReveal } from "@/public/components/passcode-reveal";
 import { ReceiptDownloadSection } from "@/public/components/receipt-download-section";
+import { TransferAccountsSection } from "@/public/components/transfer-accounts-section";
 import { GuestStatusMemberOwnershipMismatchView } from "@/public/components/guest-status-member-ownership-mismatch-view";
 import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import {
@@ -139,6 +144,11 @@ export default async function GuestReservationStatusPage({
   const now = reservationDeadlineNow();
   const address = reservation.space.location?.address ?? null;
   const paymentStatus = getValidPaymentStatus(reservation.paymentStatus);
+  const paymentFeatureEnabled = await isFeatureEnabled("payment");
+  const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
+    paymentFeatureEnabled,
+    paymentStatus,
+  });
   const reservationStatusLabel = isValidReservationStatus(reservation.status)
     ? RESERVATION_STATUS_LABELS[reservation.status]
     : reservation.status;
@@ -271,6 +281,13 @@ export default async function GuestReservationStatusPage({
             {PAYMENT_STATUS_LABELS[paymentStatus]}
           </DetailRow>
         </dl>
+
+        {transferDisplay ? (
+          <TransferAccountsSection
+            accounts={transferDisplay.accounts}
+            guidance={transferDisplay.guidance}
+          />
+        ) : null}
 
         <PasscodeReveal
           reservationId={reservation.id}

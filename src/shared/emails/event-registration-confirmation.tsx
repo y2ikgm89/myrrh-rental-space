@@ -5,6 +5,10 @@ import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
+import {
+  TransferAccountsEmailSection,
+  type TransferAccountEmailDisplay,
+} from "./_shared/TransferAccountsSection";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
@@ -44,6 +48,8 @@ type Props = {
   cancelUrl?: string;
   /** ゲスト向け: 有料チケットの Stripe Checkout 起動 URL */
   paymentCheckoutUrl?: string;
+  transferAccounts?: readonly TransferAccountEmailDisplay[];
+  transferGuidance?: string | null;
   footer: EmailFooterData;
 };
 
@@ -63,6 +69,8 @@ export function EventRegistrationConfirmationEmail({
   claimUrl,
   cancelUrl,
   paymentCheckoutUrl,
+  transferAccounts,
+  transferGuidance,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -104,6 +112,11 @@ export function EventRegistrationConfirmationEmail({
           <strong>参加人数:</strong> {String(quantity)}名
         </Text>
       </Section>
+
+      <TransferAccountsEmailSection
+        accounts={transferAccounts ?? []}
+        guidance={transferGuidance ?? null}
+      />
 
       {isEventVirtualAccessible({ format }) && (
         <Section
