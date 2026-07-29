@@ -42,13 +42,8 @@ import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
  *   (transient failure からの自動回復)。retry で duplicate row を積まないよう、
  *   insert 前に `hasTermsAgreementRecorded` で idempotency 判定する
  *   (append-only 契約は維持 — upsert しない、既存があれば skip)。
- *
- *   `isNew` 引数は既存 caller (SignupTermsConsumer / claim/*) との後方互換のため
- *   signature に残すが、内部ロジックからは参照しない (unused-input として意図的に受ける)。
  */
-export async function consumeSignupTermsAction(_input: {
-  isNew: boolean;
-}): Promise<void> {
+export async function consumeSignupTermsAction(): Promise<void> {
   const cookieStore = await cookies();
   const signupCookie = cookieStore.get(SIGNUP_TERMS_COOKIE_NAME);
   if (!signupCookie) return;

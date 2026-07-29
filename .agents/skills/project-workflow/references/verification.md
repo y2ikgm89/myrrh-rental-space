@@ -11,6 +11,8 @@
 - Integration tests: `bun run test:integration`.
 - One Bun test file: `bun scripts/run-tests.ts path/to/file.test.ts` or
   `bun run test -- path/to/file.test.ts`.
+- Integration tests: `bun run test:integration` (requires `test-db`; see
+  root `README.md` § Integration tests (local)).
 - E2E: `bun run e2e`.
 - Build without production env secrets: `bun run build:skip-env`.
 

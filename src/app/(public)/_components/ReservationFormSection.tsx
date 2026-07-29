@@ -45,6 +45,7 @@ import { ReservationForm } from "../reservation/_components/reservation-form";
 import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
+import { serverEnv } from "@/shared/lib/env/server";
 
 interface ReservationFormSectionProps {
   readonly config: ReservationFormConfig;
@@ -119,6 +120,9 @@ export async function ReservationFormSection({
   const hasDescription = config.description.length > 0;
   const hasHeader = hasTitle || hasDescription;
 
+  const initialNowIso =
+    serverEnv.E2E_RUNTIME === "1" ? serverEnv.E2E_FIXED_NOW_ISO : undefined;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
       {hasHeader && (
@@ -162,6 +166,7 @@ export async function ReservationFormSection({
           requiredTerms={requiredTerms}
           isLoggedIn={isLoggedIn}
           refundPolicyLines={refundPolicyLines ?? undefined}
+          {...(initialNowIso !== undefined ? { initialNowIso } : {})}
         />
         <RefundPolicyNotice
           lines={refundPolicyLines}

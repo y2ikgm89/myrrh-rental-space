@@ -53,7 +53,11 @@ For human onboarding — setup, common commands, repo layout — see
   Better Auth `beforeDelete` adapter — do not force the allowlist to zero or add DI
   shims to clear it. Detail: `.claude/rules/architecture-allowlist.md`.
 - Do not commit, push, or open PRs unless the user explicitly asks (overrides
-  CLAUDE.md auto-ship policy).
+  CLAUDE.md auto-ship policy). Phrases like 「推奨の作業を」 or 「公式推奨の作業を」
+  count as explicit ship authorization for that session.
+- Integration tests asserting rejected `DomainError`s: prefer try/catch +
+  `expect(thrown).toMatchObject` over `await expect(...).rejects.toMatchObject`
+  (Bun 1.3.14 can hang on the latter).
 
 ## Learned Workspace Facts
 
@@ -68,9 +72,12 @@ For human onboarding — setup, common commands, repo layout — see
   shows lock/door/battery only (no remote lock/unlock or admin push).
 - Stripe payments are optional; ON/OFF is Feature Module `payment` (credentials live
   in Settings billing). Public and admin must work fully when payment is OFF
-  (manual payment remains available). Payment refunds use a 3-phase flow: advisory-lock
-  prepare/persist in `$transaction`, Stripe API outside tx (webhook + receipt-backfill
-  cron recover Phase C failures).
+  (manual payment remains available). Offline bank transfer uses `TransferAccount`
+  master + `SettingsOrganization.transferGuidance`; when payment is OFF and status
+  is UNPAID/FAILED, customer hubs/emails show accounts via `shouldShowTransferAccounts`
+  in `src/shared/lib/settings/` (lib gate, not domain — LIB_TO_DOMAIN compliance).
+  Payment refunds use a 3-phase flow: advisory-lock prepare/persist in `$transaction`,
+  Stripe API outside tx (webhook + receipt-backfill cron recover Phase C failures).
 - Receipts: email on payment success (manual admin record or Stripe); download from
   booking detail hub (guest token status / member mypage). Hub is also the SSoT for
   SwitchBot passcode reveal and email CTAs (plaintext passcodes are not emailed).
@@ -81,9 +88,15 @@ For human onboarding — setup, common commands, repo layout — see
   claim into mypage (`success_url` → `/mypage/reservations/:id`); payment feature
   OFF still allows create + manual pay. Guests edit on the status hub via the
   status token with the same gates as mypage (`UNPAID`, no discounts, modification
-  deadline, availability); claim into mypage remains optional. Status hub VIEW,
-  passcode reveal, and guest edit/cancel enforce member-ownership when a logged-in
-  customer session coexists with a status-token cookie.
+  deadline, availability); claim into mypage remains optional. Event registration
+  self-serve edit: guest status token `/events/registrations/status/edit`, member
+  `/mypage/events/[id]/edit`; gates in `edit-eligibility.ts` (reservation-edit
+  aligned); updates emit `event-registration-updated` email and
+  `NOTIFICATION_TYPE.EVENT_REGISTRATION_UPDATE`. Customer-initiated cancellation
+  is blocked while `paymentStatus === PENDING` (Stripe Checkout in flight); UI
+  gates via `canCustomerInitiateCancellation` / `buildGuestCancelHref`. Status
+  hub VIEW, passcode reveal, and guest edit/cancel enforce member-ownership when
+  a logged-in customer session coexists with a status-token cookie.
 - Event `meetingUrl` must not be selected into public `'use cache'` payloads;
   keep it on authenticated/token/mypage/status query paths only.
 - Advisory lock coordination: event capacity writes serialize on namespace 728350
@@ -95,9 +108,10 @@ For human onboarding — setup, common commands, repo layout — see
   Next-only wrappers belong in thin `*-server.ts` modules. `src/shared/lib` must
   not import Prisma (domain/db only); domain enums go through
   `@/shared/lib/validations/enums/prisma-types`.
-- Customer-initiated cancellation is blocked while `paymentStatus === PENDING`
-  (Stripe Checkout in flight); UI gates via `canCustomerInitiateCancellation` /
-  `buildGuestCancelHref`.
+- Customer anonymize (`anonymizeCustomerCommand` SSoT) redacts Customer PII in place;
+  linked Inquiry PII is **not** auto-anonymized (design §6.5 — Inquiry は独立した匿名化
+  対象。`anonymizeInquiryCommand` を個別に呼ぶ). Standalone inquiry anonymize remains
+  `anonymizeInquiryCommand`.
 - `(admin)` must not import `@/public` and `(public)` must not import `@/admin`
   (enforced by `cross-surface-import-gate.test.ts`).
 - Unit tests that pull reservation/email side effects must use the shared domain

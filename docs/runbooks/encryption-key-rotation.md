@@ -28,15 +28,17 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
   - `SECONDARY_ENCRYPTION_KEYS` — Steady state: empty string. Format:
     `kid1:hex64,kid2:hex64`. `getSecondaryEncryptionKeys()` throws if the
     format is invalid, so we fail closed at startup rather than at decrypt.
-- `cloudbuild.yaml` binds `SECONDARY_ENCRYPTION_KEYS` at the version pinned by
-  `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` (default `"1"`).
+- Runtime secret binding SSoT: `terraform/variables.tf` の
+  `cloud_run_secret_versions` map（`ENCRYPTION_KEY` / `SECONDARY_ENCRYPTION_KEYS`
+  を version pin）。Deploy Production (`workflow_dispatch`) → `terraform apply`
+  で Cloud Run revision が新 version を参照する。
 - `scripts/bootstrap-terraform.sh` is the SSoT for **all** project-level IAM
   bindings (2026-07-14 F1 refactor). Runtime-sa / build-sa hold project-level
   `roles/secretmanager.secretAccessor` (granted once by bootstrap, idempotent
   on re-run), so any new secret added to the project is automatically readable
   — no per-secret binding or IAM step is required when adding a secret. The
   new-secret PR only touches `terraform/secrets.tf` (metadata) and
-  `cloudbuild.yaml` (`--set-secrets=`).
+  `terraform/variables.tf` (`cloud_run_secret_versions` pin bump).
 - Cloud Build itself has **no Secret Manager IAM management permission**. An
   earlier design (PR #1051-#1053) let Cloud Build reapply IAM automatically,
   but any role that includes `setIamPolicy` opens a self-grant path back to
@@ -65,15 +67,17 @@ re-encrypt data at rest.
 ### Step 1 — capture the CURRENT primary (before touching anything)
 
 The runtime pins `ENCRYPTION_KEY` at a fixed Secret Manager version via
-`_ENCRYPTION_KEY_SECRET_VERSION` in `cloudbuild.yaml` (default `"1"`). We need
-that **specific** version's material for the secondary list — NOT `latest`,
-because Step 2 will publish a new latest and `versions access latest` would
-then return the new key. Publishing the new key back into the secondary list
-under the OLD kid label would produce a rotation window that decrypts nothing.
+`cloud_run_secret_versions.ENCRYPTION_KEY` in `terraform/variables.tf` (default
+`"1"`). We need that **specific** version's material for the secondary list —
+NOT `latest`, because Step 2 will publish a new latest and `versions access
+latest` would then return the new key. Publishing the new key back into the
+secondary list under the OLD kid label would produce a rotation window that
+decrypts nothing.
 
 ```sh
-OLD_KEY_VERSION="$_ENCRYPTION_KEY_SECRET_VERSION"   # from cloudbuild.yaml or the deploy workflow substitution
-OLD_KID="${ENCRYPTION_KEY_ID:-v1}"                  # whatever the running revision has
+OLD_KEY_VERSION="$(terraform -chdir=terraform output -raw encryption_key_secret_version 2>/dev/null || echo 1)"
+# または terraform/variables.tf の cloud_run_secret_versions.ENCRYPTION_KEY を直接参照
+OLD_KID="${ENCRYPTION_KEY_ID:-v1}"                  # terraform var encryption_key_id / running revision
 
 OLD_KEY_HEX=$(gcloud secrets versions access "$OLD_KEY_VERSION" \
   --secret=ENCRYPTION_KEY \
@@ -98,8 +102,8 @@ printf '%s' "$NEW_KEY_HEX" | gcloud secrets versions add ENCRYPTION_KEY \
 ```
 
 Record the returned version number as `NEW_KEY_VERSION`. Do NOT yet bump
-`_ENCRYPTION_KEY_SECRET_VERSION` — the runtime is still on the old primary
-until Step 4 redeploys.
+`cloud_run_secret_versions.ENCRYPTION_KEY` in `terraform/variables.tf` — the
+runtime is still on the old primary until Step 4 redeploys.
 
 ### Step 3 — open the dual-read window
 
@@ -113,31 +117,31 @@ printf '%s:%s' "$OLD_KID" "$OLD_KEY_HEX" \
     --data-file=-
 ```
 
-Note the returned version. Submit a Cloud Build deploy that bumps
-`_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` to the new version. After the
-revision serves, every decrypt still finds the old kid via the secondary
-list. The primary kid is still `vN` at this point.
+Note the returned version. Bump `cloud_run_secret_versions.SECONDARY_ENCRYPTION_KEYS`
+in `terraform/variables.tf` to the new version, then run Deploy Production /
+`terraform apply`. After the revision serves, every decrypt still finds the
+old kid via the secondary list. The primary kid is still `vN` at this point.
 
 ### Step 4 — cut over the primary
 
-Bump the primary key version AND the primary kid identifier in the same Cloud
-Build deploy. Both are Cloud Build substitutions plumbed through
-`cloudbuild.yaml` into the Cloud Run `--set-env-vars` and `--set-secrets`
-lists, so a single deploy flips them atomically:
+Bump the primary key version AND the primary kid identifier in the same deploy.
+Both are Terraform-managed (`cloud_run_secret_versions.ENCRYPTION_KEY` and
+`var.encryption_key_id` → `ENCRYPTION_KEY_ID` env), so a single apply flips
+them atomically:
 
-- `_ENCRYPTION_KEY_SECRET_VERSION` → `NEW_KEY_VERSION`
-- `_ENCRYPTION_KEY_ID` → `v<N+1>`
+- `cloud_run_secret_versions.ENCRYPTION_KEY` → `NEW_KEY_VERSION`
+- `encryption_key_id` variable → `v<N+1>`
 
 ⚠️ Do NOT set `ENCRYPTION_KEY_ID` via a one-off `gcloud run services update`.
 Cloud Run's `--set-env-vars` is **destructive** (it replaces the full env-var
-map, not merge), and `cloudbuild.yaml` reapplies the full `--set-env-vars`
-line on every deploy. A mismatch between `ENCRYPTION_KEY_ID` and
-`_ENCRYPTION_KEY_SECRET_VERSION` means the primary kid points at a different
-key than the runtime is deriving from — decrypt of old data breaks silently
-because the runtime looks up `parsed.kid` against the WRONG kid label first.
+map, not merge), and Terraform reapplies the full env map on every deploy. A
+mismatch between `ENCRYPTION_KEY_ID` and the pinned `ENCRYPTION_KEY` secret
+version means the primary kid points at a different key than the runtime is
+deriving from — decrypt of old data breaks silently because the runtime looks
+up `parsed.kid` against the WRONG kid label first.
 
-Route `ENCRYPTION_KEY_ID` through `_ENCRYPTION_KEY_ID` so the two always
-change together.
+Keep `encryption_key_id` and `ENCRYPTION_KEY` version pin in the same PR /
+apply.
 
 At this point new encrypts use `v<N+1>`, decrypts of `vN` ciphertext resolve
 via the secondary list.
@@ -168,9 +172,9 @@ printf '' | gcloud secrets versions add SECONDARY_ENCRYPTION_KEYS \
   --data-file=-
 ```
 
-Bump `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` again and redeploy. Destroy
-the old versions of `ENCRYPTION_KEY` and `SECONDARY_ENCRYPTION_KEYS` at your
-compliance retention boundary:
+Bump `cloud_run_secret_versions.SECONDARY_ENCRYPTION_KEYS` again and redeploy.
+Destroy the old versions of `ENCRYPTION_KEY` and `SECONDARY_ENCRYPTION_KEYS` at
+your compliance retention boundary:
 
 ```sh
 gcloud secrets versions destroy <old-version> --secret=ENCRYPTION_KEY \
@@ -180,9 +184,9 @@ gcloud secrets versions destroy <old-version> --secret=ENCRYPTION_KEY \
 ## Recovery
 
 - If Step 3 fails halfway and the old primary is already retired: roll back
-  the `_ENCRYPTION_KEY_SECRET_VERSION` substitution and redeploy. The
-  secondary list still contains the pre-rotation key, so the previous
-  revision decrypts everything.
+  `cloud_run_secret_versions.ENCRYPTION_KEY` in Terraform and redeploy. The
+  secondary list still contains the pre-rotation key, so the previous revision
+  decrypts everything.
 - If `SECONDARY_ENCRYPTION_KEYS` accidentally becomes malformed (bad kid,
   wrong hex length), `validateProductionEnv()` throws at
   `instrumentation.register()` time and the revision refuses to serve. Fix

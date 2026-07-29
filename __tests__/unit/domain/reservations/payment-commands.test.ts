@@ -67,7 +67,10 @@ const mockRefundCreate = mock<
   ) => Promise<{ id: string; status: string | null }>
 >(() => Promise.resolve({ id: "re_test_123", status: "succeeded" }));
 const mockCheckoutSessionCreate = mock<
-  (args: Record<string, unknown>) => Promise<{ id: string; url: string }>
+  (
+    args: Record<string, unknown>,
+    options?: { idempotencyKey: string },
+  ) => Promise<{ id: string; url: string }>
 >(() =>
   Promise.resolve({
     id: "cs_test_123",
@@ -333,6 +336,9 @@ describe("reservations/payment-commands", () => {
         expect.objectContaining({
           customer_email: "booked-address@example.com",
         }),
+        {
+          idempotencyKey: `checkout/reservation/${RESERVATION_ID}/pending-claim`,
+        },
       );
     });
 
@@ -478,6 +484,9 @@ describe("reservations/payment-commands", () => {
             }),
           ],
         }),
+        {
+          idempotencyKey: `checkout/reservation/${RESERVATION_ID}/pending-claim`,
+        },
       );
     });
 

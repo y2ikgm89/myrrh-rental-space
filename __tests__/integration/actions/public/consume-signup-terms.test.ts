@@ -199,7 +199,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: true });
+      await consumeSignupTermsAction();
 
       expect(mockVerifyCustomerSession).not.toHaveBeenCalled();
       expect(mockEnsureCustomerLinked).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: true });
+      await consumeSignupTermsAction();
 
       expect(mockRecordTermsAgreementsCommand).not.toHaveBeenCalled();
       expect(mockCookieDelete).toHaveBeenCalledTimes(1);
@@ -232,7 +232,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: false });
+      await consumeSignupTermsAction();
 
       // 旧版 (isNew=false 早期 return) は false でスキップしていたが、
       // 現版は cookie presence 判定なので insert が実行される。
@@ -251,7 +251,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: true });
+      await consumeSignupTermsAction();
 
       expect(mockRecordTermsAgreementsCommand).toHaveBeenCalledTimes(1);
       expect(mockCookieDelete).toHaveBeenCalledTimes(1);
@@ -267,7 +267,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: false });
+      await consumeSignupTermsAction();
 
       expect(mockHasTermsAgreementRecorded).toHaveBeenCalledTimes(1);
       expect(mockHasTermsAgreementRecorded).toHaveBeenCalledWith({
@@ -285,7 +285,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: true });
+      await consumeSignupTermsAction();
 
       expect(mockAssertAllRequiredTermsAgreed).toHaveBeenCalledTimes(1);
       expect(mockAssertAllRequiredTermsAgreed).toHaveBeenCalledWith({
@@ -304,7 +304,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await expect(consumeSignupTermsAction({ isNew: true })).rejects.toThrow(
+      await expect(consumeSignupTermsAction()).rejects.toThrow(
         "すべての必須規約への同意が必要です",
       );
       expect(mockRecordTermsAgreementsCommand).not.toHaveBeenCalled();
@@ -323,7 +323,7 @@ describe("consumeSignupTermsAction", () => {
 
       let caught: unknown = null;
       try {
-        await consumeSignupTermsAction({ isNew: false });
+        await consumeSignupTermsAction();
       } catch (error) {
         caught = error;
       }
@@ -345,7 +345,7 @@ describe("consumeSignupTermsAction", () => {
       const { consumeSignupTermsAction } =
         await import("@/app/(public)/_shared/actions/consume-signup-terms");
 
-      await consumeSignupTermsAction({ isNew: true });
+      await consumeSignupTermsAction();
 
       expect(mockHasTermsAgreementRecorded).toHaveBeenCalledWith({
         customerId: "customer-001",

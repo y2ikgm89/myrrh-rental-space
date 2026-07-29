@@ -10,6 +10,7 @@ import { cancelReservationSeriesCommand } from "./series-commands";
 import type { CancelRequestContext } from "./cancellation-side-effects";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { reservationDeadlineNow } from "./server-deadline-instant";
+import { lockSpaceForTransaction } from "./space-locks";
 import {
   checkReservationDuration,
   isWithinBusinessHours,
@@ -23,7 +24,6 @@ import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
-import { lockSpaceForTransaction } from "./space-locks";
 import {
   buildPricingSettings,
   ensureNoOverlap,
@@ -125,6 +125,7 @@ export async function cancelCustomerReservation(
       where: { id: reservationId, customerId, deletedAt: null },
       select: {
         id: true,
+        spaceId: true,
         status: true,
         paymentStatus: true,
         startTime: true,
@@ -135,6 +136,8 @@ export async function cancelCustomerReservation(
     if (!reservation) {
       return { success: false, error: "予約が見つかりません" };
     }
+
+    await lockSpaceForTransaction(tx, reservation.spaceId);
 
     const result = await applyCancellation(tx, reservation, {
       deadlineHours,
@@ -215,6 +218,7 @@ export async function cancelReservationByToken(
       where: { id: reservationId, deletedAt: null },
       select: {
         id: true,
+        spaceId: true,
         status: true,
         paymentStatus: true,
         startTime: true,
@@ -225,6 +229,8 @@ export async function cancelReservationByToken(
     if (!reservation) {
       return { success: false, error: "予約が見つかりません" };
     }
+
+    await lockSpaceForTransaction(tx, reservation.spaceId);
 
     const result = await applyCancellation(tx, reservation, {
       deadlineHours,

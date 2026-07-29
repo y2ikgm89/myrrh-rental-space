@@ -165,6 +165,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
 
   return orchestrateCheckoutSessionCreate({
     operation: "createWaitlistOfferCheckoutSessionCommand",
+    idempotencyKey: `checkout/waitlist-offer/${registrationId}/pending-claim`,
     stripeContext,
     expireContext: { registrationId },
     conflictMessage: "この申込は既に決済が完了しています",

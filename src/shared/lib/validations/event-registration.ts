@@ -103,6 +103,21 @@ export type PublicEventWaitlistConfirmInput = z.infer<
   typeof publicEventWaitlistConfirmSchema
 >;
 
+/** ゲスト / 会員の申込内容セルフ編集フォーム用スキーマ。 */
+export const eventRegistrationEditSchema = eventRegistrationBaseSchema.extend({
+  registrationId: prismaCuidIdSchema("イベント参加申込"),
+  quantity: z
+    .number()
+    .int()
+    .min(1, { error: "参加人数は1以上です" })
+    .max(10, { error: "参加人数は10名以下です" }),
+  turnstileToken: z.string().min(1, { error: "セキュリティ検証が必要です" }),
+});
+
+export type EventRegistrationEditInput = z.infer<
+  typeof eventRegistrationEditSchema
+>;
+
 export const adminEventRegistrationSchema = eventRegistrationBaseSchema.extend({
   quantity: z.number().int().min(1, { error: "参加人数は1以上です" }),
 });

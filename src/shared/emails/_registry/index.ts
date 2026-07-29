@@ -44,6 +44,8 @@ import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { eventReminderFixture } from "@/shared/emails/event-reminder.fixture";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { eventRegistrationCancelledFixture } from "@/shared/emails/event-registration-cancelled.fixture";
+import { EventRegistrationUpdatedEmail } from "@/shared/emails/event-registration-updated";
+import { eventRegistrationUpdatedFixture } from "@/shared/emails/event-registration-updated.fixture";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { eventRegistrationConfirmationFixture } from "@/shared/emails/event-registration-confirmation.fixture";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
@@ -292,6 +294,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "event-registration-cancelled",
     EventRegistrationCancelledEmail,
     eventRegistrationCancelledFixture,
+  ),
+  "event-registration-updated": defineEntry(
+    "event-registration-updated",
+    EventRegistrationUpdatedEmail,
+    eventRegistrationUpdatedFixture,
   ),
   "event-cancelled-notification": defineEntry(
     "event-cancelled-notification",

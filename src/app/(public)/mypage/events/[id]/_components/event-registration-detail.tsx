@@ -64,6 +64,7 @@ export interface EventRegistrationDetailProps {
   readonly receiptSerialNo: string | null;
   readonly waitlistPosition: number | null;
   readonly paymentEnabled: boolean;
+  readonly editHref: string | null;
 }
 
 export function EventRegistrationDetail({
@@ -74,6 +75,7 @@ export function EventRegistrationDetail({
   receiptSerialNo,
   waitlistPosition,
   paymentEnabled,
+  editHref,
 }: EventRegistrationDetailProps) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -244,6 +246,14 @@ export function EventRegistrationDetail({
           href={`/api/receipts/${receiptSerialNo}/pdf`}
           downloadFilename={`receipt-${receiptSerialNo}.pdf`}
         />
+      )}
+
+      {editHref && (
+        <div className="border-t border-border px-4 py-4 sm:px-6">
+          <Button variant="secondary" size="sm" href={toAppRoute(editHref)}>
+            申込内容を変更する
+          </Button>
+        </div>
       )}
 
       {canCancel && (

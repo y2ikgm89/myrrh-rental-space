@@ -31,8 +31,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
  * Instagram Feed Sync Cronエンドポイント
  * GET /api/cron/instagram-sync
  *
- * Cloud Scheduler から呼び出される
- * 毎日1〜数回実行を推奨
+ * Cloud Scheduler から 30 分ごとに呼び出される。
  *
  * セキュリティ: Cloud Scheduler OIDC token による認証
  */

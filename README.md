@@ -79,20 +79,44 @@ commit; `bun run validate && bun run build` before push (see
 
 ## Common commands
 
-| Command                                         | Purpose                                              |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| `bun run setup`                                 | One-shot local DB setup (migrate deploy + seed)      |
-| `bun run validate`                              | **type-check + lint** (does NOT run tests)           |
-| `bun run test`                                  | Test runner alias → `scripts/run-tests.ts`           |
-| `bun run test:unit`                             | Unit tests, per-file isolated subprocess             |
-| `bun run test:integration`                      | Integration tests against `test-db` (auto-migrated)  |
-| `bun scripts/run-tests.ts <path>`               | One test file — always use this, not bare `bun test` |
-| `bun run lint:files -- <paths>`                 | ESLint on specific files only                        |
-| `bun run build`                                 | Production build (strict env validation)             |
-| `bun run build:skip-env`                        | Production build with placeholder env (offline)      |
-| `bun run db:migrate --name <name>`              | New Prisma migration + apply                         |
-| `bunx playwright test --project=chromium-smoke` | E2E smoke — same as CI required gate                 |
-| `bun run lint-format`                           | ESLint + Prettier (whole repo)                       |
+| Command                    | Purpose                                             |
+| -------------------------- | --------------------------------------------------- |
+| `bun run setup`            | One-shot local DB setup (migrate deploy + seed)     |
+| `bun run validate`         | **type-check + lint** (does NOT run tests)          |
+| `bun run test`             | Test runner alias → `scripts/run-tests.ts`          |
+| `bun run test:unit`        | Unit tests, per-file isolated subprocess            |
+| `bun run test:integration` | Integration tests against `test-db` (auto-migrated) |
+
+### Integration tests (local)
+
+Integration tests use a **separate PostgreSQL instance** (`test-db`, port
+5433 by default). The runner applies migrations automatically; you only need
+the database running and `TEST_DATABASE_URL` set.
+
+```sh
+# Recommended: bootstrap app + test DB together
+bun run setup          # docker compose up db + test-db, migrate, seed
+
+# Or start test-db only when app DB is already up
+docker compose up -d test-db
+
+# Same entry as CI
+bun run test:integration
+
+# Single file
+bun scripts/run-tests.ts __tests__/integration/path/to/file.test.ts
+```
+
+`bun run setup` copies `.env.example` → `.env.local` when missing; that file
+includes `TEST_DATABASE_URL` for the local test database. Override it if your
+Docker port mapping differs.
+| `bun scripts/run-tests.ts <path>` | One test file — always use this, not bare `bun test` |
+| `bun run lint:files -- <paths>` | ESLint on specific files only |
+| `bun run build` | Production build (strict env validation) |
+| `bun run build:skip-env` | Production build with placeholder env (offline) |
+| `bun run db:migrate --name <name>` | New Prisma migration + apply |
+| `bunx playwright test --project=chromium-smoke` | E2E smoke — same as CI required gate |
+| `bun run lint-format` | ESLint + Prettier (whole repo) |
 
 Before committing: `bun run validate && bun run build`. Push runs a lefthook
 pre-push hook (type-check + architecture-boundaries) that takes ~80–110s, so
