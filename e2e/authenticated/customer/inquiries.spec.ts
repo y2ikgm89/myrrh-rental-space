@@ -75,7 +75,7 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
 
     const main = page.locator("#main-content");
     await expect(
-      main.getByRole("heading", { level: 2, name: "スタッフから" }),
+      main.getByRole("heading", { level: 2, name: "管理者" }),
     ).toBeVisible();
     await expect(
       main.getByText(

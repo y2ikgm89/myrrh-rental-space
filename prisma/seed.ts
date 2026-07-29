@@ -39,6 +39,7 @@ import {
   EventScheduleMode,
   EventStatus,
   RegistrationStatus,
+  TermsScope,
 } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import {
@@ -1542,6 +1543,165 @@ async function seedCustomers() {
 // Inquiries
 // =============================================================================
 
+/** E2E / admin UI 用 inquiry enrichment（`e2e/fixtures/test-data.ts` と同期） */
+const SEED_INQUIRY_TAG_NAMES = {
+  inProgress: "対応中",
+  highPriority: "優先度高",
+} as const;
+
+const SEED_INQUIRY_GENERAL_STAFF_REPLY_BODY =
+  "予約変更の手続きについてご案内いたします。マイページの予約詳細から変更可能です。ご不明点があればお知らせください。";
+
+const SEED_INQUIRY_DEV_CUSTOMER_STAFF_REPLY_BODY =
+  "ご返信ありがとうございました。引き続きよろしくお願いします。";
+
+const SEED_INQUIRY_DEV_CUSTOMER_CUSTOMER_REPLY_BODY =
+  "追加で確認したい点があります。解決済みの件ですが、領収書の再発行は可能でしょうか？";
+
+const SEED_INQUIRY_INTERNAL_NOTE_BODY =
+  "月契約の割引可否を確認中。経理担当へ確認メール済み。";
+
+async function ensureInquiryTag(
+  name: string,
+  color?: string,
+): Promise<{ id: string }> {
+  return prisma.inquiryTag.upsert({
+    where: { name },
+    update: color !== undefined ? { color } : {},
+    create: { name, ...(color !== undefined ? { color } : {}) },
+    select: { id: true },
+  });
+}
+
+async function ensureInquiryHasTag(
+  inquiryId: string,
+  tagName: string,
+  color?: string,
+): Promise<void> {
+  const tag = await ensureInquiryTag(tagName, color);
+  await prisma.inquiryTagOnInquiry.upsert({
+    where: {
+      inquiryId_tagId: { inquiryId, tagId: tag.id },
+    },
+    update: {},
+    create: { inquiryId, tagId: tag.id },
+  });
+}
+
+async function ensureInquiryReply(input: {
+  inquiryId: string;
+  authorType: "STAFF" | "CUSTOMER";
+  body: string;
+  authorId?: string;
+  authorCustomerId?: string;
+}): Promise<void> {
+  const existing = await prisma.inquiryReply.findFirst({
+    where: { inquiryId: input.inquiryId, body: input.body },
+    select: { id: true },
+  });
+  if (existing) return;
+
+  await prisma.inquiryReply.create({
+    data: {
+      inquiryId: input.inquiryId,
+      authorType: input.authorType,
+      body: input.body,
+      authorId: input.authorType === "STAFF" ? (input.authorId ?? null) : null,
+      authorCustomerId:
+        input.authorType === "CUSTOMER"
+          ? (input.authorCustomerId ?? null)
+          : null,
+    },
+  });
+}
+
+async function ensureInquiryInternalNote(input: {
+  inquiryId: string;
+  authorId: string;
+  body: string;
+}): Promise<void> {
+  const existing = await prisma.inquiryInternalNote.findFirst({
+    where: { inquiryId: input.inquiryId, body: input.body },
+    select: { id: true },
+  });
+  if (existing) return;
+
+  await prisma.inquiryInternalNote.create({
+    data: {
+      inquiryId: input.inquiryId,
+      authorId: input.authorId,
+      body: input.body,
+    },
+  });
+}
+
+async function findInquiryByEmailSubject(
+  email: string,
+  subject: string,
+): Promise<{ id: string } | null> {
+  return prisma.inquiry.findFirst({
+    where: { email, subject },
+    select: { id: true },
+  });
+}
+
+async function seedInquiryOperationalFixtures(): Promise<void> {
+  const staffAuthor = await prisma.user.findUnique({
+    where: { email: "admin@example.com" },
+    select: { id: true },
+  });
+  if (!staffAuthor) {
+    console.log(
+      "⚠️ admin@example.com not found; skipping inquiry operational fixtures.",
+    );
+    return;
+  }
+
+  const resolvedInquiry = await findInquiryByEmailSubject(
+    "nakajima.yuko@example.com",
+    "予約変更",
+  );
+  if (resolvedInquiry) {
+    await ensureInquiryReply({
+      inquiryId: resolvedInquiry.id,
+      authorType: "STAFF",
+      body: SEED_INQUIRY_GENERAL_STAFF_REPLY_BODY,
+      authorId: staffAuthor.id,
+    });
+  }
+
+  const inProgressInquiry = await findInquiryByEmailSubject(
+    "tanaka@example.com",
+    "料金プラン",
+  );
+  if (inProgressInquiry) {
+    const slaExpiresAt = new Date();
+    slaExpiresAt.setDate(slaExpiresAt.getDate() + 2);
+
+    await prisma.inquiry.update({
+      where: { id: inProgressInquiry.id },
+      data: {
+        assigneeId: staffAuthor.id,
+        slaExpiresAt,
+      },
+    });
+    await ensureInquiryHasTag(
+      inProgressInquiry.id,
+      SEED_INQUIRY_TAG_NAMES.inProgress,
+      "#3b82f6",
+    );
+    await ensureInquiryInternalNote({
+      inquiryId: inProgressInquiry.id,
+      authorId: staffAuthor.id,
+      body: SEED_INQUIRY_INTERNAL_NOTE_BODY,
+    });
+  }
+
+  console.log(
+    "✅ Seeded inquiry operational fixtures (replies/tags/assignee/SLA/notes)",
+  );
+}
+
 async function seedInquiries() {
   const inquiries = [
     {
@@ -1712,6 +1872,8 @@ async function seedInquiries() {
       console.log(`⏭️ Skipped existing inquiry: ${inquiry.subject}`);
     }
   }
+
+  await seedInquiryOperationalFixtures();
 }
 
 // =============================================================================
@@ -2335,6 +2497,46 @@ async function seedDevCustomerAndReservations() {
     },
   });
 
+  // 2.5) TermsAgreement: dev customer の LOGIN_SIGNUP scope 再同意を済ませる。
+  // reagree gate (`assertLoginSignupReagreed`) は contentHash 一致を要求するため、
+  // 現行 TermsDocument の sha256(contentHtml) で最新の同意レコードを upsert する。
+  // E2E の mutation (返信・キャンセル等) が gate で fail しないための前提。
+  {
+    const { createHash } = await import("node:crypto");
+    const loginSignupDocs = await prisma.termsDocument.findMany({
+      where: {
+        deletedAt: null,
+        isPublished: true,
+        scopes: { has: TermsScope.LOGIN_SIGNUP },
+      },
+      select: { id: true, contentHtml: true },
+    });
+    for (const doc of loginSignupDocs) {
+      const contentHash = createHash("sha256")
+        .update(doc.contentHtml)
+        .digest("hex");
+      const existing = await prisma.termsAgreement.findFirst({
+        where: {
+          customerId: customer.id,
+          termsId: doc.id,
+          scope: TermsScope.LOGIN_SIGNUP,
+          contentHash,
+        },
+      });
+      if (!existing) {
+        await prisma.termsAgreement.create({
+          data: {
+            termsId: doc.id,
+            customerId: customer.id,
+            scope: TermsScope.LOGIN_SIGNUP,
+            contentSnapshot: doc.contentHtml,
+            contentHash,
+          },
+        });
+      }
+    }
+  }
+
   // 3) 予約 4 件（status × paymentStatus の主要カバレッジ）
   const space = await prisma.space.findFirst({
     where: { isActive: true, isPublished: true },
@@ -2448,7 +2650,6 @@ async function seedDevCustomerAndReservations() {
     subject: string;
     message: string;
     status: "NEW" | "RESOLVED";
-    replyMessage?: string;
   }> = [
     {
       subject: "[E2E] dev customer の新規お問い合わせ",
@@ -2458,10 +2659,8 @@ async function seedDevCustomerAndReservations() {
     {
       subject: "[E2E] dev customer の解決済お問い合わせ",
       message:
-        "E2E spec で RESOLVED 表示と replyMessage を検証する用 fixture。",
+        "E2E spec で RESOLVED 表示と STAFF/CUSTOMER 返信スレッドを検証する用 fixture。",
       status: "RESOLVED" as const,
-      replyMessage:
-        "ご返信ありがとうございました。引き続きよろしくお願いします。",
     },
   ];
   const staffAuthor = await prisma.user.findUnique({
@@ -2475,39 +2674,50 @@ async function seedDevCustomerAndReservations() {
   }
   let inquiryCreated = 0;
   for (const [i, fixture] of inquiryFixtures.entries()) {
-    const existingInquiry = await prisma.inquiry.findFirst({
+    let inquiry = await prisma.inquiry.findFirst({
       where: { customerId: customer.id, subject: fixture.subject },
       select: { id: true },
     });
-    if (existingInquiry) continue;
 
-    const createdInquiry = await prisma.inquiry.create({
-      data: {
-        receiptNumber: `INQ-E2E${String(i + 1).padStart(5, "0")}`,
-        customerId: customer.id,
-        name: `${customer.lastName} ${customer.firstName}`,
-        email: customer.email,
-        customerType: CustomerType.PERSONAL,
-        subject: fixture.subject,
-        message: fixture.message,
-        status: fixture.status,
-      },
-      select: { id: true },
-    });
-
-    // Inquiry Overhaul Phase 1: replyMessage は InquiryReply table へ移行済み。
-    // 旧 fixture の replyMessage は STAFF 返信の初期投稿として書き込む。
-    if (fixture.replyMessage !== undefined && staffAuthor) {
-      await prisma.inquiryReply.create({
+    if (!inquiry) {
+      inquiry = await prisma.inquiry.create({
         data: {
-          inquiryId: createdInquiry.id,
-          authorType: "STAFF",
-          authorId: staffAuthor.id,
-          body: fixture.replyMessage,
+          receiptNumber: `INQ-E2E${String(i + 1).padStart(5, "0")}`,
+          customerId: customer.id,
+          name: `${customer.lastName} ${customer.firstName}`,
+          email: customer.email,
+          customerType: CustomerType.PERSONAL,
+          subject: fixture.subject,
+          message: fixture.message,
+          status: fixture.status,
         },
+        select: { id: true },
+      });
+      inquiryCreated++;
+    }
+
+    if (fixture.status === "NEW") {
+      await ensureInquiryHasTag(
+        inquiry.id,
+        SEED_INQUIRY_TAG_NAMES.highPriority,
+        "#ef4444",
+      );
+    }
+
+    if (fixture.status === "RESOLVED" && staffAuthor) {
+      await ensureInquiryReply({
+        inquiryId: inquiry.id,
+        authorType: "STAFF",
+        body: SEED_INQUIRY_DEV_CUSTOMER_STAFF_REPLY_BODY,
+        authorId: staffAuthor.id,
+      });
+      await ensureInquiryReply({
+        inquiryId: inquiry.id,
+        authorType: "CUSTOMER",
+        body: SEED_INQUIRY_DEV_CUSTOMER_CUSTOMER_REPLY_BODY,
+        authorCustomerId: customer.id,
       });
     }
-    inquiryCreated++;
   }
 
   console.log(
