@@ -325,6 +325,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         ...l,
         spaces: l.spaces.map((s) => ({
           ...s,
+          area: s.area != null ? s.area / 100 : null,
           gallery: parseGallery(s.gallery),
           facilities: parseFacilities(s.facilities),
         })),

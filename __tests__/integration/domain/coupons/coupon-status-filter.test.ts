@@ -33,7 +33,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type QueriesModule = typeof import("@/shared/domain/coupons/queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getCoupons: QueriesModule["getCoupons"];
 
 // 全テストクーポンを 1 つの検索トークンでスコープし、DB に既存の他クーポンと混ざらない
@@ -102,7 +101,7 @@ async function cleanupCoupons(): Promise<void> {
 
 describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getCoupons } = await import("@/shared/domain/coupons/queries"));
     await cleanupCoupons();
     await seedCoupons();
@@ -110,7 +109,7 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
 
   afterAll(async () => {
     await cleanupCoupons();
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("status=active は raw SQL を例外なく実行し、active クーポンのみ返す", async () => {

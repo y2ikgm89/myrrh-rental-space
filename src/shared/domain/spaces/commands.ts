@@ -74,7 +74,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     descriptionPlainText: input.descriptionPlainText,
     addressDetail: normalizeNullableString(input.addressDetail),
     capacity: input.capacity,
-    area: input.area ?? null,
+    area: input.area != null ? Math.round(input.area * 100) : null,
     hourlyPrice: input.hourlyPrice,
     mainImageUrl: input.mainImageUrl,
     gallery: asPrismaInputJsonValue(input.gallery, "gallery が不正です"),

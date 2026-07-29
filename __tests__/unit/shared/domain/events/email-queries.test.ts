@@ -24,7 +24,6 @@ const mockFindFirst = mock<(args: FindFirstArgs) => Promise<null>>(() =>
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: { event: { findFirst: mockFindFirst } },
-  basePrisma: {},
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports

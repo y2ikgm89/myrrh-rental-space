@@ -112,7 +112,6 @@ type PrismaTypesModule =
   typeof import("@/shared/lib/validations/enums/prisma-types");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let syncEventToCalendar: EventOutboundModule["syncEventToCalendar"];
 let syncReservationToCalendar: OutboundModule["syncReservationToCalendar"];
 let getEventSlotsForCalendarSync: EventsCalendarSyncModule["getEventSlotsForCalendarSync"];
@@ -224,7 +223,13 @@ async function createReservationFixture(): Promise<{
       status: "CONFIRMED",
       totalPrice: 1000,
       basePrice: 1000,
-      rateBreakdownJson: { legacy: true, segments: [] },
+      rateBreakdownJson: {
+        schemaVersion: 1,
+        segments: [],
+        totalHours: 0,
+        totalBasePrice: 0,
+        holidayFlags: {},
+      },
       taxRateType: "standard",
       taxRate: 10,
       taxAmount: 100,
@@ -250,7 +255,7 @@ async function createReservationFixture(): Promise<{
 
 describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ syncEventToCalendar } =
       await import("@/shared/domain/events/event-calendar-outbound"));
     ({ syncReservationToCalendar } =
@@ -288,8 +293,8 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     // Prisma は where の undefined を無視するため `{ id: undefined }` は WHERE 1=1 になり、
     // 他テストの Event が参照する category まで消そうとして FK で落ちる。
     if (!prisma || !testCategoryId) {
-      if (basePrisma) {
-        await basePrisma.$disconnect();
+      if (prisma) {
+        await prisma.$disconnect();
       }
       return;
     }
@@ -313,7 +318,7 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
       await prisma.event.deleteMany({ where: { id: { in: eventIds } } });
     }
     await prisma.eventCategory.deleteMany({ where: { id: categoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("provider=GOOGLE_MEET で slot sync → hangoutLink が Event.meetingUrl に保存", async () => {

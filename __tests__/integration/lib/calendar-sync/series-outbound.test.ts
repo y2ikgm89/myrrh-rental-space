@@ -117,7 +117,6 @@ type OutboundModule =
   typeof import("@/shared/domain/reservations/reservation-calendar-outbound");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let syncReservationSeriesToCalendar: OutboundModule["syncReservationSeriesToCalendar"];
 let writeBackInstanceGoogleCalendarEventIds: OutboundModule["writeBackInstanceGoogleCalendarEventIds"];
 
@@ -208,7 +207,13 @@ async function createSeriesFixture(): Promise<SeriesFixture> {
       status: "CONFIRMED",
       totalPrice: 5000,
       basePrice: 5000,
-      rateBreakdownJson: { legacy: true, segments: [] },
+      rateBreakdownJson: {
+        schemaVersion: 1,
+        segments: [],
+        totalHours: 0,
+        totalBasePrice: 0,
+        holidayFlags: {},
+      },
       taxRateType: "standard",
       taxRate: 10,
       taxAmount: 500,
@@ -246,7 +251,7 @@ describeMaybe(
   "syncReservationSeriesToCalendar — GCal recurring master + writeBack (integration)",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({
         syncReservationSeriesToCalendar,
         writeBackInstanceGoogleCalendarEventIds,
@@ -256,7 +261,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     afterEach(() => {

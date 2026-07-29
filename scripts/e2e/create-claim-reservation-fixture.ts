@@ -93,10 +93,8 @@ async function main(): Promise<void> {
     const endTime = new Date("2027-03-15T03:00:00.000Z");
 
     // taxRateType/taxRate/taxAmount/totalPriceWithTax/rateBreakdownJson は
-    // SpaceRatePlan 導入 (migration 20260714111408) で NOT NULL 化された。この
-    // fixture は rate plan resolver を経由しない直接 insert のため、同 migration
-    // の backfill と同じ legacy パターンでスナップショットを埋める
-    // （`{ legacy: true, segments: [], ... }`、isLegacyRateBreakdown が true 判定）。
+    // fixture は rate plan resolver を経由しない直接 insert のため、空 segments
+    // の rateBreakdownJson スナップショットを埋める。
     const totalPrice = 6000;
     const taxRate = 10;
     const taxAmount = Math.round((totalPrice * taxRate) / 100);
@@ -120,7 +118,6 @@ async function main(): Promise<void> {
             totalHours: 0,
             totalBasePrice: 0,
             holidayFlags: {},
-            legacy: true,
           },
           "fixture rateBreakdownJson が不正です",
         ),

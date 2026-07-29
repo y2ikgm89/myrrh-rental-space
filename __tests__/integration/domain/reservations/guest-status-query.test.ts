@@ -19,18 +19,19 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type CustomerQueriesModule =
   typeof import("@/shared/domain/reservations/customer-queries");
 
-let basePrisma: PrismaModule["prisma"];
 let getReservationForGuestStatus: CustomerQueriesModule["getReservationForGuestStatus"];
+
+let prisma: PrismaModule["prisma"];
 
 describeMaybe("getReservationForGuestStatus", () => {
   beforeAll(async () => {
-    ({ prisma: basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getReservationForGuestStatus } =
       await import("@/shared/domain/reservations/customer-queries"));
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("space / 日時 / 金額 / paymentStatus / receipt serial / customer.userId を返す", async () => {
@@ -39,7 +40,7 @@ describeMaybe("getReservationForGuestStatus", () => {
 
     const testId = randomUUID();
 
-    const location = await basePrisma.location.create({
+    const location = await prisma.location.create({
       data: {
         slug: `guest-status-loc-${testId}`,
         name: `Guest Status Location ${testId}`,
@@ -49,7 +50,7 @@ describeMaybe("getReservationForGuestStatus", () => {
       },
     });
 
-    const space = await basePrisma.space.create({
+    const space = await prisma.space.create({
       data: {
         slug: `guest-status-space-${testId}`,
         name: `Guest Status Space ${testId}`,
@@ -63,7 +64,7 @@ describeMaybe("getReservationForGuestStatus", () => {
       },
     });
 
-    const customer = await basePrisma.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         lastName: "山田",
         firstName: "太郎",
@@ -72,7 +73,7 @@ describeMaybe("getReservationForGuestStatus", () => {
       },
     });
 
-    const reservation = await basePrisma.reservation.create({
+    const reservation = await prisma.reservation.create({
       data: {
         spaceId: space.id,
         customerId: customer.id,
@@ -80,7 +81,13 @@ describeMaybe("getReservationForGuestStatus", () => {
         endTime: new Date("2026-08-01T02:00:00.000Z"),
         totalPrice: 1000,
         basePrice: 1000,
-        rateBreakdownJson: { legacy: true, segments: [] },
+        rateBreakdownJson: {
+          schemaVersion: 1,
+          segments: [],
+          totalHours: 0,
+          totalBasePrice: 0,
+          holidayFlags: {},
+        },
         taxRateType: TaxRateType.standard,
         taxRate: 10,
         taxAmount: 100,
@@ -89,7 +96,7 @@ describeMaybe("getReservationForGuestStatus", () => {
       },
     });
 
-    const receipt = await basePrisma.receipt.create({
+    const receipt = await prisma.receipt.create({
       data: {
         serialNo: `2026-${testId.slice(0, 6).toUpperCase()}`,
         reservationId: reservation.id,
@@ -117,11 +124,11 @@ describeMaybe("getReservationForGuestStatus", () => {
     expect(result?.receipt?.serialNo).toBe(receipt.serialNo);
     expect(result?.customer.userId).toBeNull();
 
-    await basePrisma.receipt.delete({ where: { id: receipt.id } });
-    await basePrisma.reservation.delete({ where: { id: reservation.id } });
-    await basePrisma.customer.delete({ where: { id: customer.id } });
-    await basePrisma.space.delete({ where: { id: space.id } });
-    await basePrisma.location.delete({ where: { id: location.id } });
+    await prisma.receipt.delete({ where: { id: receipt.id } });
+    await prisma.reservation.delete({ where: { id: reservation.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.space.delete({ where: { id: space.id } });
+    await prisma.location.delete({ where: { id: location.id } });
   });
 
   test("存在しない予約は null", async () => {

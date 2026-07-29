@@ -220,7 +220,6 @@ type ActionsModule =
   typeof import("@/app/(public)/_shared/actions/event-registration");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let cancelEventRegistration: ActionsModule["cancelEventRegistration"];
 let testCategoryId: string;
 
@@ -309,7 +308,7 @@ describeMaybe(
   "cancelEventRegistration が waitlist を自動昇格させる（実 DB）",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ cancelEventRegistration } =
         await import("@/app/(public)/_shared/actions/event-registration"));
       await prisma.$queryRaw`SELECT 1`;
@@ -329,7 +328,7 @@ describeMaybe(
     afterAll(async () => {
       // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
       await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     beforeEach(() => {

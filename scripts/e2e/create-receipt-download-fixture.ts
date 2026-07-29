@@ -139,7 +139,6 @@ async function main(): Promise<void> {
             totalHours: 0,
             totalBasePrice: 0,
             holidayFlags: {},
-            legacy: true,
           },
           "fixture rateBreakdownJson が不正です",
         ),

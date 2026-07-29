@@ -27,13 +27,12 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type CustomerQueriesModule = typeof import("@/shared/domain/customers/queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getCustomerById: CustomerQueriesModule["getCustomerById"];
 let testCategoryId: string;
 
 async function createFixtureCustomer(): Promise<string> {
   const suffix = crypto.randomUUID();
-  const customer = await basePrisma.customer.create({
+  const customer = await prisma.customer.create({
     data: {
       lastName: "参加履歴",
       firstName: "太郎",
@@ -95,18 +94,18 @@ async function cleanupEventFixture(eventId: string): Promise<void> {
   // 「ちょうど1つのslot」というDEFERRED制約を持つため、event本体より先に
   // slotだけを消すとslot_count=0でトリガーが発火する。event削除のCascadeに
   // slot削除を任せる(risk-detection.test.tsと同じ順序)。
-  await basePrisma.eventRegistration.deleteMany({ where: { eventId } });
-  await basePrisma.eventTicket.deleteMany({ where: { eventId } });
-  await basePrisma.event.deleteMany({ where: { id: eventId } });
+  await prisma.eventRegistration.deleteMany({ where: { eventId } });
+  await prisma.eventTicket.deleteMany({ where: { eventId } });
+  await prisma.event.deleteMany({ where: { id: eventId } });
 }
 
 async function cleanupCustomerFixture(customerId: string): Promise<void> {
-  await basePrisma.customer.deleteMany({ where: { id: customerId } });
+  await prisma.customer.deleteMany({ where: { id: customerId } });
 }
 
 describeMaybe("getCustomerById", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getCustomerById } = await import("@/shared/domain/customers/queries"));
 
     const category = await prisma.eventCategory.create({
@@ -124,7 +123,7 @@ describeMaybe("getCustomerById", () => {
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("getCustomerById は customerId に紐づくイベント参加履歴を含む(最新20件)", async () => {
@@ -132,7 +131,7 @@ describeMaybe("getCustomerById", () => {
     const { eventId, slotId, ticketId, title } = await createFixtureEvent();
 
     try {
-      await basePrisma.eventRegistration.create({
+      await prisma.eventRegistration.create({
         data: {
           eventId,
           slotId,

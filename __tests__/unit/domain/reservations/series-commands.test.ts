@@ -175,7 +175,6 @@ const templateData: ReservationSeriesTemplateData = {
     totalHours: 2,
     totalBasePrice: 5000,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: "standard" as ReservationSeriesTemplateData["taxRateType"],
   taxRate: 10,

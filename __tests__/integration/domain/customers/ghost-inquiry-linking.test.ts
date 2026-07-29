@@ -26,7 +26,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type LinkModule = typeof import("@/shared/domain/customers/link");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let ensureCustomerLinked: LinkModule["ensureCustomerLinked"];
 
 /**
@@ -44,7 +43,7 @@ function generateTestReceiptNumber(): string {
 }
 
 async function createGuestInquiry(email: string): Promise<string> {
-  const inquiry = await basePrisma.inquiry.create({
+  const inquiry = await prisma.inquiry.create({
     data: {
       receiptNumber: generateTestReceiptNumber(),
       name: "ゲスト太郎",
@@ -60,7 +59,7 @@ async function createGuestInquiry(email: string): Promise<string> {
 }
 
 async function createUser(email: string): Promise<string> {
-  const user = await basePrisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email,
       name: "テスト太郎",
@@ -73,29 +72,29 @@ async function createUser(email: string): Promise<string> {
 }
 
 async function cleanupInquiries(email: string): Promise<void> {
-  await basePrisma.inquiry.deleteMany({
+  await prisma.inquiry.deleteMany({
     where: { email: { equals: email, mode: "insensitive" } },
   });
 }
 
 async function cleanupCustomer(userId: string): Promise<void> {
-  await basePrisma.customer.deleteMany({ where: { userId } });
+  await prisma.customer.deleteMany({ where: { userId } });
 }
 
 async function cleanupUser(userId: string): Promise<void> {
-  await basePrisma.user.deleteMany({ where: { id: userId } });
+  await prisma.user.deleteMany({ where: { id: userId } });
 }
 
 describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ ensureCustomerLinked } = await import("@/shared/domain/customers/link"));
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     prisma; // suppress unused (imported for parity with other integration tests)
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("Customer 新規作成時に同一 email のゲスト Inquiry が backfill される", async () => {
@@ -114,7 +113,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       expect(result.isNew).toBe(true);
       expect(result.customer.userId).toBe(userId);
 
-      const linked = await basePrisma.inquiry.findUnique({
+      const linked = await prisma.inquiry.findUnique({
         where: { id: inquiryId },
         select: { customerId: true },
       });
@@ -140,7 +139,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
         name: "テスト太郎",
       });
 
-      const linked = await basePrisma.inquiry.findUnique({
+      const linked = await prisma.inquiry.findUnique({
         where: { id: inquiryId },
         select: { customerId: true },
       });
@@ -157,7 +156,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
     const suffix = crypto.randomUUID();
     const email = `ghost-noover-${suffix}@example.com`;
     // 事前に別の Customer に紐付いた Inquiry を作る
-    const otherCustomer = await basePrisma.customer.create({
+    const otherCustomer = await prisma.customer.create({
       data: {
         lastName: "他人",
         firstName: "花子",
@@ -166,7 +165,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       },
       select: { id: true },
     });
-    const linkedInquiry = await basePrisma.inquiry.create({
+    const linkedInquiry = await prisma.inquiry.create({
       data: {
         receiptNumber: generateTestReceiptNumber(),
         name: "他人経由",
@@ -188,7 +187,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       });
 
       // 既紐付け Inquiry は otherCustomer のまま維持されているはず
-      const preserved = await basePrisma.inquiry.findUnique({
+      const preserved = await prisma.inquiry.findUnique({
         where: { id: linkedInquiry.id },
         select: { customerId: true },
       });
@@ -198,7 +197,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       await cleanupInquiries(email);
       await cleanupCustomer(userId);
       await cleanupUser(userId);
-      await basePrisma.customer.deleteMany({ where: { id: otherCustomer.id } });
+      await prisma.customer.deleteMany({ where: { id: otherCustomer.id } });
     }
   });
 
@@ -228,7 +227,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       });
       expect(secondResult.isNew).toBe(false);
 
-      const linked = await basePrisma.inquiry.findUnique({
+      const linked = await prisma.inquiry.findUnique({
         where: { id: laterGuestInquiryId },
         select: { customerId: true },
       });

@@ -46,7 +46,6 @@ type AdminQueriesModule =
   typeof import("@/shared/domain/reservations/admin-queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let claimReservationReminder: ReminderCommandsModule["claimReservationReminder"];
 let releaseReservationReminderClaim: ReminderCommandsModule["releaseReservationReminderClaim"];
 let findReservationsForReminderWindow: AdminQueriesModule["findReservationsForReminderWindow"];
@@ -72,7 +71,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -152,7 +150,7 @@ async function createReservationFixture(opts?: {
 
 describeMaybe("claimReservationReminder — cron 冪等性", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ claimReservationReminder, releaseReservationReminderClaim } =
       await import("@/shared/domain/reservations/reminder-commands"));
     ({ findReservationsForReminderWindow } =
@@ -162,7 +160,7 @@ describeMaybe("claimReservationReminder — cron 冪等性", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("連続実行: 初回のみ claim でき、2 回目は false（2 回目は 0 件送信）", async () => {

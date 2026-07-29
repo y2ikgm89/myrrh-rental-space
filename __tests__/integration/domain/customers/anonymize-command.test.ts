@@ -28,7 +28,6 @@ type CommandsModule =
   typeof import("@/shared/domain/customers/customer-lifecycle-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let anonymizeCustomerCommand: CommandsModule["anonymizeCustomerCommand"];
 
 const DEFAULT_RESERVATION_PRICING = {
@@ -40,7 +39,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -152,7 +150,7 @@ async function createCustomerWithReceipt(): Promise<Fixture> {
 
 describeMaybe("anonymizeCustomerCommand — Receipt FK safety (STATE-03)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ anonymizeCustomerCommand } =
       await import("@/shared/domain/customers/customer-lifecycle-commands"));
     // pool warmup (cold start 対策)
@@ -160,7 +158,7 @@ describeMaybe("anonymizeCustomerCommand — Receipt FK safety (STATE-03)", () =>
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("Receipt 発行済の Customer を anonymize しても Receipt/Reservation は残り customerId で JOIN 可能", async () => {

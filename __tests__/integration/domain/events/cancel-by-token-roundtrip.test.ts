@@ -52,7 +52,6 @@ type TokenModule =
 type ClaimModule = typeof import("@/shared/domain/events/claim-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let claimEventRegistrationForCustomer: ClaimModule["claimEventRegistrationForCustomer"];
 let cancelEventRegistrationByToken: CommandsModule["cancelEventRegistrationByToken"];
 let createCancelToken: TokenModule["createCancelToken"];
@@ -158,7 +157,7 @@ describeMaybe(
   "cancelEventRegistrationByToken — token round-trip with real Postgres",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ cancelEventRegistrationByToken } =
         await import("@/shared/domain/events/registration-commands"));
       ({ createCancelToken, verifyCancelToken, computeCancelTokenExpiresAt } =
@@ -192,7 +191,7 @@ describeMaybe(
       await prisma.eventCategory.deleteMany({
         where: { id: testCategoryId },
       });
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("token → verify → cancel: 申込が CANCELLED + CUSTOMER_TOKEN として永続化される", async () => {

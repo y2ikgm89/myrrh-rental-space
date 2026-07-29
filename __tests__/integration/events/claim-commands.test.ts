@@ -3,7 +3,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 
-const { prisma, basePrisma } = await import("@/shared/db/prisma");
+const { prisma } = await import("@/shared/db/prisma");
 const { isPrismaUniqueConstraintError } =
   await import("@/shared/lib/prisma-errors");
 const { claimEventRegistrationForCustomer } =
@@ -167,7 +167,7 @@ describe("claimEventRegistrationForCustomer", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("customerId: null のゲスト申込を会員Customerへ紐付ける", async () => {

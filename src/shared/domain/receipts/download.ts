@@ -11,8 +11,7 @@ import {
  *
  * ## 呼出契約
  * - `receiptId` は `findReceiptForDownload` で解決済みの Receipt.id を渡す。
- * - `input` は `renderReceiptPdf` に渡す render 引数 (`Receipt.taxRate` は
- *   `createAppPrismaClient` の `$extends` で number 化済み)。
+ * - `input` は `renderReceiptPdf` に渡す render 引数 (`Receipt.taxRate` は Int %)。
  *
  * ## 挙動
  * interactive `$transaction` 内で:

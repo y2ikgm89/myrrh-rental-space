@@ -186,7 +186,6 @@ type ActionsModule =
   typeof import("@/app/(public)/_shared/actions/event-registration");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let registerForEventWaitlist: ActionsModule["registerForEventWaitlist"];
 let testCategoryId: string;
 
@@ -310,7 +309,7 @@ async function registerConcurrently(
 
 describeMaybe("registerForEventWaitlist（実 DB）", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ registerForEventWaitlist } =
       await import("@/app/(public)/_shared/actions/event-registration"));
 
@@ -340,7 +339,7 @@ describeMaybe("registerForEventWaitlist（実 DB）", () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   }, 30_000);
 
   test("満員イベントで registerForEventWaitlist → WAITLISTED 登録 + waitlistedAt 設定", async () => {

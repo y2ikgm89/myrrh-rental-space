@@ -48,7 +48,6 @@ type RatePlanCommandsModule =
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createPublicReservationCommand: PublicCommandsModule["createPublicReservationCommand"];
 let createSpaceRatePlan: RatePlanCommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: RatePlanCommandsModule["updateSpaceRatePlan"];
@@ -159,7 +158,7 @@ function guestInput(spaceId: string) {
 
 describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ createPublicReservationCommand } =
       await import("@/shared/domain/reservations/public-commands"));
     ({ createSpaceRatePlan, updateSpaceRatePlan } =
@@ -171,7 +170,7 @@ describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("rate plan なしで従来通り予約作成できる (regression)", async () => {

@@ -20,7 +20,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type PayloadsModule = typeof import("@/shared/domain/reservations/payloads");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let claimCouponUsage: PayloadsModule["claimCouponUsage"];
 
 const SCOPE = `zzclaim-${crypto.randomUUID().slice(0, 8)}`;
@@ -41,7 +40,7 @@ async function expectClaimConflict(
 
 describeMaybe("claimCouponUsage — validity inside atomic claim", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ claimCouponUsage } =
       await import("@/shared/domain/reservations/payloads"));
   });
@@ -52,7 +51,7 @@ describeMaybe("claimCouponUsage — validity inside atomic claim", () => {
         where: { code: { startsWith: SCOPE.toUpperCase() } },
       });
     } finally {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     }
   });
 

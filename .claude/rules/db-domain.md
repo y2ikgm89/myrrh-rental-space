@@ -7,16 +7,14 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
 ## Prisma gateway（src/shared/db/prisma.ts）
 
 - `new PrismaClient()` の実行はこのファイルのみ（テストで機械強制）
-- export は 2 つ: `basePrisma`（`$extends` 前・**Better Auth adapter 専用**）と
-  `prisma`（Decimal→number の result 拡張済み・アプリ標準）。逆に使うと
-  認証干渉 / 型不一致が起きる
+- export は `prisma`（アプリ標準 singleton）と `AppPrismaClient` 型 alias
 - `@/shared/db/prisma` を import する全ファイルは `import "server-only"` 必須
   （allowlist ではなく動的走査で検査される）
 - facade の import は `src/shared/` 配下限定。`prisma.<model>.<method>` 呼出は
   原則 `shared/domain` / `shared/db` 配下限定（例外は architecture-boundaries テストの
   placement gate ALLOWLIST に列挙された shared/lib の 2 ファイルのみ:
   `calendar-sync/event-inbound.ts`, `google-business-profile/location-sync.ts`）
-- 金額・税率の Decimal 列は number に変換済みで届く。ドメインの金額計算は素の number
+- 金額・税率は schema 上 Int（円 / whole-% / area は ㎡×100）。ドメイン計算は素の number
 
 ## JSON・エラー・ログ
 

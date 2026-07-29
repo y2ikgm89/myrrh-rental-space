@@ -43,7 +43,6 @@ type SeriesCommandsModule =
   typeof import("@/shared/domain/reservations/series-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createReservationSeriesCommand: SeriesCommandsModule["createReservationSeriesCommand"];
 let testCategoryId: string;
 
@@ -56,7 +55,6 @@ const TEMPLATE_DATA = {
     totalHours: 2,
     totalBasePrice: 5000,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -149,7 +147,7 @@ describeMaybe(
   "createReservationSeriesCommand — overlap / advisory lock (integration)",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ createReservationSeriesCommand } =
         await import("@/shared/domain/reservations/series-commands"));
       // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ）。
@@ -171,7 +169,7 @@ describeMaybe(
     afterAll(async () => {
       // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
       await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("既存予約と重複する 2 回目の instance は「2 回目 (日付)」の CONFLICT で reject され、series/instance は 1 件も作成されない", async () => {

@@ -41,7 +41,6 @@ import {
   RegistrationStatus,
   TermsScope,
 } from "../generated/prisma/client";
-import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import {
   asPrismaInputJsonValue,
   parsePrismaInputJson,
@@ -113,12 +112,10 @@ const adapter = new PrismaPg({
   connectionTimeoutMillis: 5_000,
 });
 
-// Prisma Client（アプリ本番と同じ Decimal→number 拡張を適用）
-const prisma = createAppPrismaClient(
-  new PrismaClient({
-    adapter,
-  }),
-);
+// Prisma Client（アプリ本番と同じ adapter-pg 構成）
+const prisma = new PrismaClient({
+  adapter,
+});
 
 // =============================================================================
 // Helper: Clear All Data (--fresh用)
@@ -903,7 +900,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ),
       addressDetail: "3F",
       capacity: 8,
-      area: new Prisma.Decimal(25.5),
+      area: 2550,
       hourlyPrice: 3000,
       mainImageUrl: "/images/seed/meeting-room.svg",
       gallery: [],
@@ -928,7 +925,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ),
       addressDetail: "4F",
       capacity: 30,
-      area: new Prisma.Decimal(60.0),
+      area: 6000,
       hourlyPrice: 8000,
       mainImageUrl: "/images/seed/seminar-room.svg",
       gallery: [],
@@ -954,7 +951,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ),
       addressDetail: "2F",
       capacity: 20,
-      area: new Prisma.Decimal(80.0),
+      area: 8000,
       hourlyPrice: 500,
       mainImageUrl: "/images/seed/coworking.svg",
       gallery: [],
@@ -1880,31 +1877,26 @@ async function seedInquiries() {
 // Reservations (with Coupon relations)
 // =============================================================================
 
-// Reservation.taxRateType/taxRate/taxAmount/totalPriceWithTax/rateBreakdownJson は
-// SpaceRatePlan 導入 (migration 20260714111408) で NOT NULL 化された。以下の seed
-// 予約はいずれも rate plan resolver を経由しない直接 insert のため、同 migration の
-// backfill と同じ legacy パターン（`{ legacy: true, segments: [], ... }`、
-// isLegacyRateBreakdown が true 判定、receipts/issue.ts 等は totalPrice
-// フォールバックを維持）で税・内訳スナップショットを埋める。
+// 予約は rate plan resolver を経由しない直接 insert のため、空 segments の
+// rateBreakdownJson スナップショットで税・内訳を埋める。
 const SEED_LEGACY_TAX_RATE = 10;
-const SEED_LEGACY_RATE_BREAKDOWN = {
+const SEED_EMPTY_RATE_BREAKDOWN = {
   schemaVersion: 1,
   segments: [],
   totalHours: 0,
   totalBasePrice: 0,
   holidayFlags: {},
-  legacy: true,
 } as const;
 
 function buildSeedLegacyPricingSnapshot(totalPrice: number) {
   const taxAmount = Math.round((totalPrice * SEED_LEGACY_TAX_RATE) / 100);
   return {
     taxRateType: "standard" as const,
-    taxRate: new Prisma.Decimal(SEED_LEGACY_TAX_RATE),
+    taxRate: SEED_LEGACY_TAX_RATE,
     taxAmount,
     totalPriceWithTax: totalPrice + taxAmount,
     rateBreakdownJson: asPrismaInputJsonValue(
-      SEED_LEGACY_RATE_BREAKDOWN,
+      SEED_EMPTY_RATE_BREAKDOWN,
       "seed rateBreakdownJson が不正です",
     ),
   };
@@ -2765,7 +2757,7 @@ async function seedRecurringReservationSeriesFixture(input: {
     {
       totalPrice: basePrice,
       basePrice,
-      rateBreakdownJson: SEED_LEGACY_RATE_BREAKDOWN,
+      rateBreakdownJson: SEED_EMPTY_RATE_BREAKDOWN,
       taxRateType: "standard",
       taxRate: SEED_LEGACY_TAX_RATE,
       taxAmount: Math.round((basePrice * SEED_LEGACY_TAX_RATE) / 100),

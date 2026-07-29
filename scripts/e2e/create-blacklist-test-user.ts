@@ -45,7 +45,7 @@ interface BlacklistTestUserFixture {
 }
 
 async function main(): Promise<void> {
-  const { base, disconnect } = createScriptPrismaClient();
+  const { prisma, disconnect } = createScriptPrismaClient();
 
   try {
     const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     const password = "blacklist-e2e-password-01234567";
     const name = "E2E ブラックリスト太郎";
 
-    const user = await base.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
         name,
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
 
     const hashedPassword = await hashPassword(password);
 
-    await base.account.create({
+    await prisma.account.create({
       data: {
         userId: user.id,
         accountId: user.id,
@@ -74,7 +74,7 @@ async function main(): Promise<void> {
       },
     });
 
-    const customer = await base.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         userId: user.id,
         email,

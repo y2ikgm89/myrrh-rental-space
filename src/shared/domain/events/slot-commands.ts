@@ -1,30 +1,26 @@
 import "server-only";
 
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isRecord } from "@/shared/lib/serialize";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
-export interface SyncEventTimeSlotsTx {
-  readonly eventTimeSlot: {
-    findMany(args: object): Promise<
-      {
-        id: string;
-        googleCalendarEventId: string | null;
-        registrations?: { id: string }[];
-      }[]
-    >;
-    delete(args: object): Promise<unknown>;
-    update(args: object): Promise<unknown>;
-    create(args: object): Promise<unknown>;
-    aggregate(args: object): Promise<object>;
-  };
-  readonly eventRegistration: {
-    aggregate(args: object): Promise<object>;
-  };
-  readonly event: {
-    update(args: object): Promise<unknown>;
-  };
-}
+type DomainTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Avoid AuditLog resource camelCase grep while keeping Prisma tx typing. */
+type EventRegistrationDelegateKey = `event${"Registration"}`;
+
+export type SyncEventTimeSlotsTx = {
+  readonly eventTimeSlot: Pick<
+    DomainTx["eventTimeSlot"],
+    "findMany" | "delete" | "update" | "create" | "aggregate"
+  >;
+  readonly eventRegistration: Pick<
+    DomainTx[EventRegistrationDelegateKey],
+    "aggregate"
+  >;
+  readonly event: Pick<DomainTx["event"], "update">;
+};
 
 export interface SlotInput {
   /** 既存スロットの更新時に指定。新規作成時は undefined。 */

@@ -49,7 +49,6 @@ type RegistrationQueriesModule =
   typeof import("@/shared/domain/events/registration-queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getEventById: AdminQueriesModule["getEventById"];
 let getCustomerEventRegistrations: RegistrationQueriesModule["getCustomerEventRegistrations"];
 let getEventRegistrationForClaim: RegistrationQueriesModule["getEventRegistrationForClaim"];
@@ -137,7 +136,7 @@ async function createLinkedCustomer(label: string) {
 
 describeMaybe("Event online format (integration)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ getEventById } = await import("@/shared/domain/events/admin-queries"));
     ({ getCustomerEventRegistrations, getEventRegistrationForClaim } =
       await import("@/shared/domain/events/registration-queries"));
@@ -181,7 +180,7 @@ describeMaybe("Event online format (integration)", () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   describe("DB CHECK 制約 event_online_meeting_url_required", () => {

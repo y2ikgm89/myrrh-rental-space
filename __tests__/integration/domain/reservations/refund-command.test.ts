@@ -113,7 +113,6 @@ type HelpersModule =
   typeof import("@/shared/lib/validations/enums/refund-attribution");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let refundReservationPaymentCommand: PaymentCommandsModule["refundReservationPaymentCommand"];
 let PaymentStatus: PrismaEnumsModule["PaymentStatus"];
 let REFUNDED_BY_TYPE: HelpersModule["REFUNDED_BY_TYPE"];
@@ -193,8 +192,13 @@ async function createPaidReservationFixture(
       status: "CONFIRMED",
       totalPrice: totalPriceWithTax,
       basePrice,
-      // legacy 判定を通す最小限 rateBreakdown (receipts/issue.ts の isLegacyRateBreakdown pattern)
-      rateBreakdownJson: { legacy: true, segments: [] },
+      rateBreakdownJson: {
+        schemaVersion: 1,
+        segments: [],
+        totalHours: 0,
+        totalBasePrice: 0,
+        holidayFlags: {},
+      },
       taxRateType: "standard",
       taxRate: 10,
       taxAmount,
@@ -227,7 +231,7 @@ async function createPaidReservationFixture(
 // ---------------------------------------------------------------------------
 describeMaybe("refundReservationPaymentCommand (integration)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ refundReservationPaymentCommand } =
       await import("@/shared/domain/reservations/payment-commands"));
     ({ PaymentStatus } = await import("@generated/prisma/enums"));
@@ -259,7 +263,7 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   beforeEach(async () => {
@@ -503,7 +507,13 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         status: "CONFIRMED",
         totalPrice: totalPriceWithTax,
         basePrice,
-        rateBreakdownJson: { legacy: true, segments: [] },
+        rateBreakdownJson: {
+          schemaVersion: 1,
+          segments: [],
+          totalHours: 0,
+          totalBasePrice: 0,
+          holidayFlags: {},
+        },
         taxRateType: "standard",
         taxRate: 10,
         taxAmount,
