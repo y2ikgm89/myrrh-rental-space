@@ -17,6 +17,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 mock.module("server-only", () => ({}));
 
@@ -25,21 +26,17 @@ const mockUpdateStatus = mock(async () => ({
 }));
 const mockUpdateNotes = mock(async () => ({ previousNotes: null }));
 const mockToggleActive = mock(async () => ({ previousActive: true }));
-const mockAnonymizeCustomer = mock<
-  (input: { customerId: string; reason: string }) => Promise<{
-    customerId: string;
-    anonymizedAt: Date;
-    reason: string;
-    hadUserId: boolean;
-    preservedSuppression: boolean;
-  }>
->(async ({ customerId, reason }) => ({
-  customerId,
-  anonymizedAt: new Date(),
-  reason,
-  hadUserId: false,
-  preservedSuppression: false,
-}));
+// 実コマンドの `typeof` に揃え、戻り値契約の drift を type-check で検出する
+const mockAnonymizeCustomer = mock<typeof anonymizeCustomerCommand>(
+  async ({ customerId, reason }) => ({
+    customerId,
+    anonymizedAt: new Date(),
+    reason,
+    hadUserId: false,
+    preservedSuppression: false,
+    anonymizedInquiryIds: [],
+  }),
+);
 const mockMerge = mock(async () => ({
   transferredReservations: 1,
   transferredInquiries: 0,
