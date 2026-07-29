@@ -101,16 +101,13 @@ const mockInquiryAttachmentFindMany = mock<
 const mockInquiryAttachmentDeleteMany = mock<() => Promise<{ count: number }>>(
   () => Promise.resolve({ count: 0 }),
 );
+const mockInquiryAttachmentUpdateMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
 const mockReviewUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
 const mockEventRegistrationUpdateMany = mock<() => Promise<{ count: number }>>(
-  () => Promise.resolve({ count: 0 }),
-);
-const mockInquiryReplyUpdateMany = mock<() => Promise<{ count: number }>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockInquiryAttachmentUpdateMany = mock<() => Promise<{ count: number }>>(
   () => Promise.resolve({ count: 0 }),
 );
 
@@ -178,18 +175,13 @@ const prismaInquiryReply = {
 const prismaInquiryAttachment = {
   findMany: mockInquiryAttachmentFindMany,
   deleteMany: mockInquiryAttachmentDeleteMany,
+  updateMany: mockInquiryAttachmentUpdateMany,
 };
 const prismaSpaceReview = {
   updateMany: mockReviewUpdateMany,
 };
 const prismaEventRegistration = {
   updateMany: mockEventRegistrationUpdateMany,
-};
-const prismaInquiryReply = {
-  updateMany: mockInquiryReplyUpdateMany,
-};
-const prismaInquiryAttachment = {
-  updateMany: mockInquiryAttachmentUpdateMany,
 };
 
 type TxShape = {
@@ -202,8 +194,6 @@ type TxShape = {
   inquiryAttachment: typeof prismaInquiryAttachment;
   spaceReview: typeof prismaSpaceReview;
   eventRegistration: typeof prismaEventRegistration;
-  inquiryReply: typeof prismaInquiryReply;
-  inquiryAttachment: typeof prismaInquiryAttachment;
 };
 
 const txShape: TxShape = {
@@ -216,8 +206,6 @@ const txShape: TxShape = {
   inquiryAttachment: prismaInquiryAttachment,
   spaceReview: prismaSpaceReview,
   eventRegistration: prismaEventRegistration,
-  inquiryReply: prismaInquiryReply,
-  inquiryAttachment: prismaInquiryAttachment,
 };
 
 mock.module("@/shared/lib/r2/client", () => ({
