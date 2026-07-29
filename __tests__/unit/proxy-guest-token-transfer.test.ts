@@ -129,6 +129,24 @@ describe("guest token transfer", () => {
     expect(cookie?.httpOnly).toBe(true);
   });
 
+  test("/events/registrations/status/edit の ?token= を HttpOnly cookie に転写する", async () => {
+    const token = createEventRegistrationStatusToken(
+      "clxxxxxxxxxxxxxxxxxxxxxxxxx",
+      FUTURE,
+    );
+    const req = new NextRequest(
+      `https://example.com/events/registrations/status/edit?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+  });
+
   test("token なしの /events/registrations/status は素通り（redirect しない）", async () => {
     const req = new NextRequest(
       "https://example.com/events/registrations/status",

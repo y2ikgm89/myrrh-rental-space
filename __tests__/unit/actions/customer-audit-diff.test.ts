@@ -15,6 +15,7 @@ import {
   AuditAction,
   CustomerStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 
 mock.module("server-only", () => ({}));
 
@@ -83,21 +84,15 @@ const mockUpdateCustomerStatusCommand = mock<
 const mockUpdateCustomerCommand = mock<
   () => Promise<{ previous: Record<string, unknown> }>
 >(() => Promise.resolve({ previous: {} }));
-const mockAnonymizeCustomerCommand = mock<
-  () => Promise<{
-    customerId: string;
-    anonymizedAt: Date;
-    reason: string;
-    hadUserId: boolean;
-    preservedSuppression: boolean;
-  }>
->(() =>
+// 実コマンドの `typeof` に揃えて契約 drift を type-check で検出可能にする
+const mockAnonymizeCustomerCommand = mock<typeof anonymizeCustomerCommand>(() =>
   Promise.resolve({
     customerId: "cust-1",
     anonymizedAt: new Date("2026-07-20T00:00:00.000Z"),
     reason: "admin-purge",
     hadUserId: false,
     preservedSuppression: false,
+    anonymizedInquiryIds: [],
   }),
 );
 
@@ -319,6 +314,7 @@ describe("anonymizeCustomer の AuditLog 記録 (customer.anonymization、生PII
       reason: "admin-purge",
       hadUserId: true,
       preservedSuppression: true,
+      anonymizedInquiryIds: ["inquiry-1", "inquiry-2"],
     });
     mockCreateAuditLogRecord.mockReset();
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
@@ -345,6 +341,7 @@ describe("anonymizeCustomer の AuditLog 記録 (customer.anonymization、生PII
     expect(record["reason"]).toBe("admin-purge");
     expect(record["hadUserId"]).toBe(true);
     expect(record["preservedSuppression"]).toBe(true);
+    expect(record["anonymizedInquiryIds"]).toEqual(["inquiry-1", "inquiry-2"]);
     expect(Array.isArray(record["anonymizedFields"])).toBe(true);
     expect(record["anonymizedFields"]).toContain("email");
     expect(record["anonymizedFields"]).toContain("phoneNumber");

@@ -46,6 +46,7 @@ interface DateTimeSectionProps {
   readonly onStartTimeChange: (time: string | null) => void;
   readonly onDurationChange: (minutes: number | null) => void;
   readonly onGuestsChange: (count: number) => void;
+  readonly initialNowIso?: string;
 }
 
 export function DateTimeSection({
@@ -66,6 +67,7 @@ export function DateTimeSection({
   onStartTimeChange,
   onDurationChange,
   onGuestsChange,
+  initialNowIso,
 }: DateTimeSectionProps): ReactElement {
   const availabilityMax = selectedStartTime
     ? calcMaxDuration(slots, selectedStartTime)
@@ -86,6 +88,7 @@ export function DateTimeSection({
           onSelect={onDateChange}
           businessHours={businessHours}
           blockedRanges={blockedRanges}
+          {...(initialNowIso !== undefined ? { initialNowIso } : {})}
         />
       </section>
 

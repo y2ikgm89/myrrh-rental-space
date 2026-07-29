@@ -25,23 +25,8 @@ import { spaceFixtures, urls } from "../fixtures";
  * Playwright project: chromium-smoke（`.claude/skills/e2e-authoring` の
  * 配置ルール — 公開・未認証・setup 非依存のためこの project に適合）。
  *
- * 既知の限定事項（レビュー Finding 2、`test.info().annotations` にも同旨を記録）:
- * 上記の理由でこの日付は実行時の実時刻を起点に動的算出しており、webServer 共有の
- * `E2E_FIXED_NOW_ISO`（既定 2026-07-04T03:00:00.000Z。`events-calendar.spec.ts` 等
- * 他 spec がこの固定値へ依存しているため webServer 全体の既定値としては変更でき
- * ない）には意図的に揃えていない。加えて予約フォームの `CalendarPicker`
- * （`reservation/_components/calendar-picker.tsx`）は `EventCalendarSection` と
- * 異なり `E2E_RUNTIME`/`E2E_FIXED_NOW_ISO` を消費する opt-in 配線を持たず
- * （リポジトリ全体を grep して確認済み: 予約フローの SSR は素の `new Date()` を
- * 使う）、`page.clock.install` は browser 側のみを凍結する。そのため初回 SSR は
- * サーバーの実時刻、client hydration 後はこの spec が固定したフェイク時刻という
- * SSR/CSR 不一致（hydration-418 サガと同種のクラス）が理論上発生し得る。
- * `CalendarPicker` の `minDate`（`useState(() => new Date())` の lazy initializer）
- * が SSR と hydration とで異なる値になり得るのが具体的な発生源。React の
- * client 側再描画が Playwright の auto-retrying assertion 収束前に完了するため
- * 現状このテストは green だが、根治には `EventCalendarSection` と同型の
- * `initialNowIso` 配線を `CalendarPicker`（および親の Server Component）まで
- * 通す production code 変更が必要であり、test-only fix である本 Task のスコープ外。
+ * CalendarPicker は ReservationFormSection 経由で `E2E_FIXED_NOW_ISO` を
+ * 消費するため、page.clock.install と SSR の minDate 計算が整合する。
  *
  * 解消済みの過去の既知問題（Task 16 follow-up fix）: 以前は
  * `e2e/authenticated/admin/space-rate-plan-crud.spec.ts` がこの spec と同一の
@@ -97,22 +82,6 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
   test("金曜 19:00-21:00 を選択すると週末料金がプレビュー価格に反映される", async ({
     page,
   }) => {
-    // 既知の SSR/CSR 不一致リスク（レビュー Finding 2、詳細はファイル冒頭コメント参照）。
-    // CalendarPicker は E2E_RUNTIME/E2E_FIXED_NOW_ISO を消費しないため、下記の
-    // page.clock.install は client 側のみを凍結し、初回 SSR は実時刻のまま。
-    test.info().annotations.push({
-      type: "known-issue",
-      description:
-        "予約フォームの CalendarPicker は EventCalendarSection と異なり " +
-        "E2E_RUNTIME/E2E_FIXED_NOW_ISO の opt-in 配線を持たない。page.clock.install " +
-        "は browser のみを凍結するため、初回 SSR（実時刻）と client hydration 後" +
-        "（このテストが固定したフェイク時刻）で minDate 計算が乖離する " +
-        "hydration-418 サガ同種の SSR/CSR 不一致が理論上発生し得る。React の " +
-        "client 側再描画が Playwright の auto-retry 収束前に完了するため現状 " +
-        "green。根治には CalendarPicker への initialNowIso 配線（production code " +
-        "変更、本 Task のスコープ外）が必要。",
-    });
-
     const dateOnly = pickNonHolidayFriday();
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。

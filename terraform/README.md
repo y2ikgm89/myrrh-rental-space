@@ -313,6 +313,23 @@ Dashboard 手動運用だったが、Sprint 3 で Terraform 管理下に取り�
   `terraform-drift.yml`) の Terraform init/plan/apply step に
   `CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}` を注入
 
+### Nightly drift の対象外（意図的 blind spot）
+
+`.github/workflows/terraform-drift.yml` の `terraform plan` は **Terraform state
+内の resource** のみを比較する。次は nightly drift に含まれないが、本番と
+ずれると影響が大きい層 — 変更時は手動または別 gate で確認する:
+
+| 層                              | 例                                                     | 理由                                                                                                  |
+| ------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Cloud Build substitutions       | `cloudbuild.yaml` の `_NEXT_PUBLIC_*` / build-time ARG | Next.js client bundle は **build 時** に inline 化。runtime Terraform env だけでは drift 検知できない |
+| Bootstrap IAM                   | project-level SA bindings / WIF pool 初期作成          | `terraform/` 外の bootstrap スクリプトが SSoT（README「Bootstrap-owns-all-project-IAM 契約」参照）    |
+| Secret **values**               | Secret Manager payload                                 | Terraform は secret **metadata** のみ管理。rotation は SM console / ops runbook                       |
+| Cloudflare edge（Phase 8 以前） | Transform Rule / Cache Rules の Dashboard 手動変更     | Phase 8 import 完了までは Terraform 未 adopt の resource がありうる                                   |
+
+runtime plain env の **key 集合** は `scripts/gcp-production-audit-model.ts`
+の `TERRAFORM_CLOUD_RUN_*` 定数 + `gcp-production-audit.test.ts` gate と
+`audit-gcp-production-iap.ts` の live 値検証で三重化している。
+
 **現状の Foundation では実 resource は宣言しない** (v5 syntax は v4 と完全に
 非互換な破壊的 rewrite で、既存 Cloudflare state を安全に adopt するには
 `import {}` blocks と正確な resource ID mapping が必要)。次 PR (Phase 8 Step 2)

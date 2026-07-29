@@ -125,6 +125,7 @@ describe("event registration query slot consistency", () => {
       eventId: "event-1",
       slotId: "slot-selected",
       quantity: 2,
+      status: RegistrationStatus.CONFIRMED,
       ticket: { price: 1500 },
       slot: {
         startAt: selectedStart,
@@ -165,6 +166,72 @@ describe("event registration query slot consistency", () => {
       },
       _sum: { quantity: true },
     });
+  });
+
+  test("email details omit meetingUrl unless registration is CONFIRMED", async () => {
+    const selectedStart = new Date("2026-05-02T05:00:00.000Z");
+    const selectedEnd = new Date("2026-05-02T06:00:00.000Z");
+    mockRegistrationFindFirst.mockResolvedValue({
+      id: "reg-waitlist",
+      eventId: "event-1",
+      slotId: "slot-selected",
+      quantity: 1,
+      status: RegistrationStatus.WAITLISTED,
+      ticket: { price: 1500 },
+      slot: {
+        startAt: selectedStart,
+        endAt: selectedEnd,
+        capacity: 8,
+      },
+      event: {
+        title: "オンラインイベント",
+        addressDetail: null,
+        location: null,
+        space: null,
+        format: "ONLINE",
+        meetingUrl: "https://meet.example.com/secret",
+      },
+    });
+    mockRegistrationAggregate.mockResolvedValue({
+      _sum: { quantity: 0 },
+    });
+
+    const details = await getEventRegistrationDetailsForEmail("reg-waitlist");
+
+    expect(details?.meetingUrl).toBeNull();
+  });
+
+  test("email details include meetingUrl when registration is CONFIRMED", async () => {
+    const selectedStart = new Date("2026-05-02T05:00:00.000Z");
+    const selectedEnd = new Date("2026-05-02T06:00:00.000Z");
+    mockRegistrationFindFirst.mockResolvedValue({
+      id: "reg-confirmed",
+      eventId: "event-1",
+      slotId: "slot-selected",
+      quantity: 1,
+      status: RegistrationStatus.CONFIRMED,
+      ticket: { price: 1500 },
+      slot: {
+        startAt: selectedStart,
+        endAt: selectedEnd,
+        capacity: 8,
+      },
+      event: {
+        title: "オンラインイベント",
+        addressDetail: null,
+        location: null,
+        space: null,
+        format: "ONLINE",
+        meetingUrl: "https://meet.example.com/secret",
+      },
+    });
+    mockRegistrationAggregate.mockResolvedValue({
+      _sum: { quantity: 1 },
+    });
+
+    const details = await getEventRegistrationDetailsForEmail("reg-confirmed");
+
+    expect(details?.meetingUrl).toBe("https://meet.example.com/secret");
   });
 
   test("CSV export uses each registration slot as the event datetime", async () => {

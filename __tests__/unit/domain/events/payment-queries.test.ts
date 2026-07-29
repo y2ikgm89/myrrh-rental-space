@@ -96,6 +96,7 @@ const { claimEventRegistrationAsPaid, claimEventRegistrationAsFailed } =
   await import("@/shared/domain/events/payment-queries");
 
 const REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440101";
+const EVENT_ID = "550e8400-e29b-41d4-a716-446655440201";
 const PAYMENT_INTENT_ID = "pi_test_event_123";
 
 describe("events/payment-queries", () => {
@@ -168,6 +169,7 @@ describe("events/payment-queries", () => {
         status: RegistrationStatus.CANCELLED,
         paymentStatus: PaymentStatus.UNPAID,
         stripePaymentIntentId: null,
+        eventId: EVENT_ID,
       });
       mockRefundOrphanedStripePaymentForCancelledEventRegistration.mockResolvedValueOnce(
         { outcome: "refunded", refundId: "re_auto_1", refundAmount: 5000 },
@@ -189,8 +191,8 @@ describe("events/payment-queries", () => {
       expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "event_registration_refund",
-          resourceType: "event-registration",
-          resourceId: REGISTRATION_ID,
+          resourceType: "event",
+          resourceId: EVENT_ID,
         }),
       );
       expect(mockLogError).not.toHaveBeenCalled();
@@ -202,6 +204,7 @@ describe("events/payment-queries", () => {
         status: RegistrationStatus.CANCELLED,
         paymentStatus: PaymentStatus.UNPAID,
         stripePaymentIntentId: null,
+        eventId: EVENT_ID,
       });
 
       const result = await claimEventRegistrationAsPaid(REGISTRATION_ID, {
@@ -216,7 +219,8 @@ describe("events/payment-queries", () => {
       expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "event_registration_refund",
-          resourceType: "event-registration",
+          resourceType: "event",
+          resourceId: EVENT_ID,
         }),
       );
     });

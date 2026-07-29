@@ -21,6 +21,17 @@ import { eventCategoryFormSchema } from "@/shared/lib/validations/event-category
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("イベントカテゴリ");
+
+/** カテゴリ一覧タグのみ（create — イベント未紐付けのため EVENTS 不要） */
+function invalidateEventCategoryListCache(): void {
+  invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+}
+
+/** カテゴリ変更が公開イベント表示に波及する mutation 用 */
+function invalidateEventCategoryAndEventsCache(): void {
+  invalidateSiteWideCache([CACHE_TAGS.EVENT_CATEGORIES, CACHE_TAGS.EVENTS]);
+}
+
 const categoryOrderSchema = z
   .array(
     z.strictObject({
@@ -55,7 +66,7 @@ export async function createEventCategory(
           return createEventCategoryCommand(data);
         },
         afterSuccess: () => {
-          invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+          invalidateEventCategoryListCache();
         },
         resolveAuditResourceId: (result) => result.id,
       });
@@ -86,7 +97,7 @@ export async function updateEventCategory(
         resourceId: idValid.data,
         execute: async () => updateEventCategoryCommand(idValid.data, data),
         afterSuccess: () => {
-          invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+          invalidateEventCategoryAndEventsCache();
         },
         resolveAuditResourceId: (result) => result.id,
       });
@@ -111,7 +122,7 @@ export async function updateEventCategoryOrder(
     action: "update",
     execute: async () => updateEventCategoryOrderCommand(parsed.data),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+      invalidateEventCategoryAndEventsCache();
     },
   });
 }
@@ -130,7 +141,7 @@ export async function deleteEventCategory(
     resourceId: validated.data,
     execute: async () => deleteEventCategoryCommand(validated.data),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+      invalidateEventCategoryListCache();
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -152,7 +163,7 @@ export async function updateEventCategoryActive(
     execute: async () =>
       updateEventCategoryActiveCommand(validated.data, isActive),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.EVENT_CATEGORIES);
+      invalidateEventCategoryAndEventsCache();
     },
   });
 }

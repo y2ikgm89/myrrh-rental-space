@@ -203,6 +203,50 @@ export async function getEventRegistrationForGuestCancel(
   });
 }
 
+const EVENT_REGISTRATION_SELF_SERVE_EDIT_SELECT = {
+  id: true,
+  eventId: true,
+  customerId: true,
+  name: true,
+  email: true,
+  phone: true,
+  note: true,
+  quantity: true,
+  status: true,
+  paymentStatus: true,
+  slot: { select: { startAt: true, endAt: true } },
+  ticket: { select: { name: true, price: true } },
+  event: { select: { title: true } },
+} as const;
+
+/**
+ * ゲスト申込編集ページ (`/events/registrations/status/edit`) 用。
+ * `customerId` フィルタを掛けない（status token 検証側でアクセス権を担保）。
+ */
+export async function getEventRegistrationForGuestEdit(registrationId: string) {
+  return prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: EVENT_REGISTRATION_SELF_SERVE_EDIT_SELECT,
+  });
+}
+
+/**
+ * 会員マイページ申込編集ページ (`/mypage/events/[id]/edit`) 用。
+ */
+export async function getEventRegistrationForCustomerEdit(
+  registrationId: string,
+  customerId: string,
+) {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      customerId,
+      event: { deletedAt: null },
+    },
+    select: EVENT_REGISTRATION_SELF_SERVE_EDIT_SELECT,
+  });
+}
+
 /**
  * ゲスト向け薄いイベント申込ステータスページ (`/events/registrations/status`) 用。
  * status token 検証後にのみ呼ぶ。member-ownership は page.tsx 側で強制する。
@@ -290,6 +334,7 @@ export async function getEventRegistrationDetailsForEmail(
       eventId: true,
       slotId: true,
       quantity: true,
+      status: true,
       ticket: { select: { price: true } },
       slot: {
         select: {
@@ -332,7 +377,10 @@ export async function getEventRegistrationDetailsForEmail(
     capacity: registration.slot.capacity,
     confirmedCount: confirmed._sum.quantity ?? 0,
     format: registration.event.format,
-    meetingUrl: registration.event.meetingUrl,
+    meetingUrl:
+      registration.status === RegistrationStatus.CONFIRMED
+        ? registration.event.meetingUrl
+        : null,
     ticketUnitPrice: registration.ticket.price,
     quantity: registration.quantity,
   };
