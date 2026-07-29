@@ -63,6 +63,32 @@ export const urls = {
   adminTermsAgreements: "/admin/terms/agreements",
 } as const;
 
+/** Mypage inquiry detail path（seed-driven inquiry id 用） */
+export function mypageInquiryDetailPath(inquiryId: string): string {
+  return `/mypage/inquiries/${inquiryId}`;
+}
+
+/**
+ * Inquiry seed contract used by customer/admin E2E specs.
+ *
+ * `prisma/seed.ts` の `seedDevCustomerAndReservations` /
+ * `seedInquiryOperationalFixtures` と同期すること。
+ */
+export const inquiryFixtures = {
+  devCustomerNewSubject: "[E2E] dev customer の新規お問い合わせ",
+  devCustomerResolvedSubject: "[E2E] dev customer の解決済お問い合わせ",
+  devCustomerResolvedStaffReply:
+    "ご返信ありがとうございました。引き続きよろしくお願いします。",
+  devCustomerResolvedCustomerReply:
+    "追加で確認したい点があります。解決済みの件ですが、領収書の再発行は可能でしょうか？",
+  /** `inquiry-reply.spec.ts` がフォーム送信で追加する返信 marker */
+  e2eCustomerReplyMarker: "[E2E] inquiry-reply.spec.ts からの追加返信",
+  generalResolvedStaffReplySubject: "予約変更",
+  generalInProgressAssigneeSubject: "料金プラン",
+  tagInProgress: "対応中",
+  tagHighPriority: "優先度高",
+} as const;
+
 /** Event seed contract used by public/admin/customer E2E specs. */
 export const eventFixtures = {
   singleOccurrenceSlug: "yoga-mindfulness-workshop",
