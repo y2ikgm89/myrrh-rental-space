@@ -27,7 +27,7 @@ if (TEST_DB_URL) {
 /**
  * Task 3 (SpaceRatePlan migration) で NOT NULL 化された価格・税フィールドの
  * 既定値。このテストは検知ロジック（件数集計）のみを検証しており実額は無関係なため、
- * legacy backfill と同じ形の固定値を使う。
+ * 空 segments の固定 rateBreakdownJson を使う。
  */
 const DEFAULT_RESERVATION_PRICING = {
   basePrice: 1000,
@@ -38,7 +38,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -53,7 +52,6 @@ type RiskDetectionModule =
   typeof import("@/shared/domain/customers/risk-detection");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let detectSuspiciousCustomers: RiskDetectionModule["detectSuspiciousCustomers"];
 let applyRiskFlagsCommand: RiskDetectionModule["applyRiskFlagsCommand"];
 let clearRiskFlagCommand: RiskDetectionModule["clearRiskFlagCommand"];
@@ -64,7 +62,7 @@ async function createFixtureSpace(): Promise<{
   spaceId: string;
 }> {
   const suffix = crypto.randomUUID();
-  const location = await basePrisma.location.create({
+  const location = await prisma.location.create({
     data: {
       slug: `risk-detect-loc-${suffix}`,
       name: `Risk Detect Loc ${suffix}`,
@@ -74,7 +72,7 @@ async function createFixtureSpace(): Promise<{
     },
     select: { id: true },
   });
-  const space = await basePrisma.space.create({
+  const space = await prisma.space.create({
     data: {
       slug: `risk-detect-space-${suffix}`,
       name: `Risk Detect Space ${suffix}`,
@@ -95,7 +93,7 @@ async function createFixtureSpace(): Promise<{
 
 async function createFixtureCustomer(): Promise<string> {
   const suffix = crypto.randomUUID();
-  const customer = await basePrisma.customer.create({
+  const customer = await prisma.customer.create({
     data: {
       lastName: "検知",
       firstName: "太郎",
@@ -112,10 +110,10 @@ async function cleanupFixture(
   spaceId: string,
   customerId: string,
 ): Promise<void> {
-  await basePrisma.reservation.deleteMany({ where: { spaceId } });
-  await basePrisma.space.deleteMany({ where: { id: spaceId } });
-  await basePrisma.location.deleteMany({ where: { id: locationId } });
-  await basePrisma.customer.deleteMany({ where: { id: customerId } });
+  await prisma.reservation.deleteMany({ where: { spaceId } });
+  await prisma.space.deleteMany({ where: { id: spaceId } });
+  await prisma.location.deleteMany({ where: { id: locationId } });
+  await prisma.customer.deleteMany({ where: { id: customerId } });
 }
 
 async function createFixtureEvent(): Promise<{
@@ -166,14 +164,14 @@ async function cleanupEventFixture(eventId: string): Promise<void> {
   // 「ちょうど1つのslot」というDEFERRED制約を持つため、event本体より先に
   // slotだけを消すとslot_count=0でトリガーが発火する。event削除のCascadeに
   // slot削除を任せる(registration-overbooking.test.tsのcleanupEventと同じ順序)。
-  await basePrisma.eventRegistration.deleteMany({ where: { eventId } });
-  await basePrisma.eventTicket.deleteMany({ where: { eventId } });
-  await basePrisma.event.deleteMany({ where: { id: eventId } });
+  await prisma.eventRegistration.deleteMany({ where: { eventId } });
+  await prisma.eventTicket.deleteMany({ where: { eventId } });
+  await prisma.event.deleteMany({ where: { id: eventId } });
 }
 
 describeMaybe("detectSuspiciousCustomers", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({
       detectSuspiciousCustomers,
       applyRiskFlagsCommand,
@@ -195,7 +193,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("直近24時間に3件以上予約作成した顧客を rapid_booking で検知する", async () => {
@@ -205,7 +203,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 3; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -236,7 +234,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 2; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -271,7 +269,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 3; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -315,7 +313,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (const [i, ts] of timestamps.entries()) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -350,7 +348,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 3; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -382,7 +380,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 2; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -395,7 +393,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           },
         });
       }
-      await basePrisma.eventRegistration.create({
+      await prisma.eventRegistration.create({
         data: {
           eventId,
           slotId,
@@ -427,7 +425,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 2; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -441,7 +439,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           },
         });
       }
-      await basePrisma.eventRegistration.create({
+      await prisma.eventRegistration.create({
         data: {
           eventId,
           slotId,
@@ -473,7 +471,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 3; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,
@@ -505,7 +503,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
     try {
       for (let i = 0; i < 2; i++) {
-        await basePrisma.reservation.create({
+        await prisma.reservation.create({
           data: {
             spaceId,
             customerId,

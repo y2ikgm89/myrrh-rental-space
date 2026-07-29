@@ -54,7 +54,6 @@ type AdminCommandsModule =
   typeof import("@/shared/domain/reservations/admin-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createAdminReservationCommand: AdminCommandsModule["createAdminReservationCommand"];
 
 type SpaceFixture = {
@@ -146,7 +145,7 @@ describeMaybe(
   "createAdminReservationCommand — スペース時間帯の二重予約防止",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ createAdminReservationCommand } =
         await import("@/shared/domain/reservations/admin-commands"));
       // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ）。
@@ -154,7 +153,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("同一スペース・完全に重複する時間帯へ 5 並行予約しても CONFIRMED はちょうど 1 件", async () => {

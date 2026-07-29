@@ -22,7 +22,7 @@ paths:
 ## 認証は 2 系統（混ぜない）
 
 - **顧客** = Better Auth（`src/shared/lib/customer-auth.ts`、basePath `/api/customer-auth`）。
-  Prisma adapter には `$extends` 前の `basePrisma` を渡す必須契約（理由は db-domain ルール参照）。
+  Prisma adapter には `prisma` singleton を渡す（`db-domain` ルール参照）。
   `deleteUser.beforeDelete` → Customer anonymize / 確認メール送信は Better Auth 公式どおり
   auth config 内に置き、domain を呼ぶ（`LIB_TO_DOMAIN` の恒久 adapter。DI shim で
   allowlist を空にしない）

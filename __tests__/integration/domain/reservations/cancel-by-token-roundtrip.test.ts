@@ -44,7 +44,6 @@ type CommandsModule =
 type TokenModule = typeof import("@/shared/lib/reservation-cancel-token");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let cancelReservationByToken: CommandsModule["cancelReservationByToken"];
 let createCancelToken: TokenModule["createCancelToken"];
 let verifyCancelToken: TokenModule["verifyCancelToken"];
@@ -72,7 +71,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -155,7 +153,7 @@ describeMaybe(
   "cancelReservationByToken — token round-trip with real Postgres",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ cancelReservationByToken } =
         await import("@/shared/domain/reservations/customer-commands"));
       ({ createCancelToken, verifyCancelToken, computeCancelTokenExpiresAt } =
@@ -165,7 +163,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("token → verify → cancel: 予約が CANCELLED + CUSTOMER_TOKEN として永続化される", async () => {

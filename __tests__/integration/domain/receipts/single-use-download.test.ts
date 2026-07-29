@@ -31,7 +31,6 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type DownloadModule = typeof import("@/shared/domain/receipts/download");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let claimReceiptForSingleUseTokenDownload: DownloadModule["claimReceiptForSingleUseTokenDownload"];
 
 // PDF renderer は軽量スタブに差し替え (実 render は integration 対象外)。
@@ -56,7 +55,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -167,7 +165,7 @@ const RENDER_INPUT_STUB = {
 
 describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ claimReceiptForSingleUseTokenDownload } =
       await import("@/shared/domain/receipts/download"));
     // pool warmup (cold start が並行 tx を偶発的に直列化するのを防ぐ)
@@ -175,7 +173,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("初回 DL は success を返し usedAt を刻印する", async () => {

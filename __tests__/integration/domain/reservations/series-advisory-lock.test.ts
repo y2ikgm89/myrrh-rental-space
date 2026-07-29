@@ -29,12 +29,11 @@ type SeriesLockModule =
   typeof import("@/shared/domain/reservations/series-advisory-lock");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let lockReservationSeriesForTransaction: SeriesLockModule["lockReservationSeriesForTransaction"];
 
 describeMaybe("lockReservationSeriesForTransaction (integration)", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ lockReservationSeriesForTransaction } =
       await import("@/shared/domain/reservations/series-advisory-lock"));
     // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ）。
@@ -42,7 +41,7 @@ describeMaybe("lockReservationSeriesForTransaction (integration)", () => {
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("同一 key で 2 並列 tx を直列化", async () => {

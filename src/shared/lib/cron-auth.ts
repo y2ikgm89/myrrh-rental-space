@@ -5,6 +5,7 @@ import { serverEnv } from "@/shared/lib/env/server";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 import { jsonError } from "@/shared/lib/route-responses";
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 export type VerifiedCronOidcToken = {
   email: string;
@@ -88,7 +89,7 @@ export async function authorizeCronRequest({
 
   try {
     const verified = await verifyToken(idToken, audience);
-    if (verified.email !== serviceAccountEmail) {
+    if (!timingSafeEqualStrings(verified.email, serviceAccountEmail)) {
       logError(new Error("Unexpected Cloud Scheduler OIDC service account"), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.MEDIUM,

@@ -9,7 +9,6 @@ import {
   claimNextSerialNo,
   type ReceiptTx,
 } from "@/shared/domain/receipts/serial";
-import { isLegacyRateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type ReceiptIssueOptions = {
@@ -83,7 +82,6 @@ async function resolveReservationIssue(
       taxAmount: true,
       taxRate: true,
       paymentStatus: true,
-      rateBreakdownJson: true,
       customer: {
         select: {
           lastName: true,
@@ -103,10 +101,7 @@ async function resolveReservationIssue(
 
   assertPaidOrPartiallyRefunded(reservation.paymentStatus, "予約");
 
-  const isLegacy = isLegacyRateBreakdown(reservation.rateBreakdownJson);
-  const amount = isLegacy
-    ? (reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0)
-    : (reservation.totalPriceWithTax ?? 0);
+  const amount = reservation.totalPriceWithTax;
   assertPositiveAmount(amount, "予約");
 
   const guestName = reservation.guestCompanyName
@@ -123,8 +118,8 @@ async function resolveReservationIssue(
     recipientName: options?.recipientName ?? guestName ?? customerName,
     subject: options?.subject ?? "スペース利用料として",
     amount,
-    taxAmount: reservation.taxAmount ?? 0,
-    taxRate: reservation.taxRate ?? 0,
+    taxAmount: reservation.taxAmount,
+    taxRate: reservation.taxRate,
   };
 }
 
@@ -201,19 +196,6 @@ async function resolveReceiptIssue(
   }
 }
 
-function existingReceiptLookup(target: ReceiptIssueTarget) {
-  switch (target.kind) {
-    case "reservation":
-      return { where: { reservationId: target.id } as const };
-    case "event-registration":
-      return { where: { eventRegistrationId: target.id } as const };
-    default: {
-      const _exhaustive: never = target;
-      return _exhaustive;
-    }
-  }
-}
-
 /**
  * 領収書初回発行の tx 内コア。entity 単位 advisory lock → idempotent check →
  * amount/recipient 解決 → serialNo 採番 → create (P2002 read-back)。
@@ -228,8 +210,14 @@ export async function issueReceiptInTransaction(
 }> {
   await acquireReceiptAdvisoryLock(tx, target.id);
 
-  const lookup = existingReceiptLookup(target);
-  const existing = await tx.receipt.findUnique(lookup);
+  const existing =
+    target.kind === "reservation"
+      ? await tx.receipt.findUnique({
+          where: { reservationId: target.id },
+        })
+      : await tx.receipt.findUnique({
+          where: { eventRegistrationId: target.id },
+        });
   if (existing) {
     return { receipt: existing, created: false };
   }
@@ -257,7 +245,14 @@ export async function issueReceiptInTransaction(
     return { receipt, created: true };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      const winner = await tx.receipt.findUnique(lookup);
+      const winner =
+        target.kind === "reservation"
+          ? await tx.receipt.findUnique({
+              where: { reservationId: target.id },
+            })
+          : await tx.receipt.findUnique({
+              where: { eventRegistrationId: target.id },
+            });
       if (winner) {
         return { receipt: winner, created: false };
       }

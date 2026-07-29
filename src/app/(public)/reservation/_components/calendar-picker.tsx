@@ -17,6 +17,8 @@ interface CalendarPickerProps {
   readonly onSelect: (date: Date | undefined) => void;
   readonly businessHours: BusinessHours | null;
   readonly blockedRanges?: readonly BlockedDateRange[];
+  /** E2E 固定時刻（SSR/CSR 整合）。ISO 8601。 */
+  readonly initialNowIso?: string;
 }
 
 /**
@@ -28,8 +30,14 @@ export function CalendarPicker({
   onSelect,
   businessHours,
   blockedRanges = [],
+  initialNowIso,
 }: CalendarPickerProps): ReactElement {
-  const [todayJst] = useState(() => formatDateString(new Date()));
+  const [todayJst] = useState(() => {
+    if (initialNowIso !== undefined) {
+      return formatDateString(new Date(initialNowIso));
+    }
+    return formatDateString(new Date());
+  });
   const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
 
   const isBlockedDay = (date: Date): boolean => {

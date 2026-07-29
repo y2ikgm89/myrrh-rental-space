@@ -76,6 +76,10 @@ const EXPECTED_GATES: ReadonlyArray<{
     module: "events",
   },
   {
+    file: "src/app/(public)/events/registrations/status/edit/page.tsx",
+    module: "events",
+  },
+  {
     file: "src/app/(public)/events/waitlist/checkout/route.ts",
     module: "events",
   },
@@ -98,6 +102,10 @@ const EXPECTED_GATES: ReadonlyArray<{
   { file: "src/app/(public)/mypage/events/page.tsx", module: "events" },
   {
     file: "src/app/(public)/mypage/events/[id]/page.tsx",
+    module: "events",
+  },
+  {
+    file: "src/app/(public)/mypage/events/[id]/edit/page.tsx",
     module: "events",
   },
   {

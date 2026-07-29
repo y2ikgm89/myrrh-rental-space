@@ -14,6 +14,7 @@ import { getEventRegistrationForGuestStatus } from "@/shared/domain/events/regis
 import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import {
   buildGuestCancelHref,
+  buildGuestEventRegistrationEditHref,
   buildGuestReceiptDownloadHref,
   resolveGuestEventRegistrationStatusAccess,
   shouldShowGuestClaimLink,
@@ -123,6 +124,12 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
     slotStartAt: registration.slot.startAt,
     now,
   });
+  const editHref = buildGuestEventRegistrationEditHref({
+    status: registration.status,
+    paymentStatus: registration.paymentStatus,
+    slotStartAt: registration.slot.startAt,
+    now,
+  });
   const claimUrl = shouldShowGuestClaimLink({
     customerId: registration.customerId,
     isLoggedIn: user != null,
@@ -208,6 +215,16 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
           次のステップ
         </Heading>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {editHref && (
+            <li>
+              <Link
+                href={toAppRoute(editHref)}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                申込内容を変更する
+              </Link>
+            </li>
+          )}
           {cancelHref && (
             <li>
               <a

@@ -41,7 +41,6 @@ type SeriesCommandsModule =
   typeof import("@/shared/domain/reservations/series-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createReservationSeriesCommand: SeriesCommandsModule["createReservationSeriesCommand"];
 let cancelReservationSeriesCommand: SeriesCommandsModule["cancelReservationSeriesCommand"];
 
@@ -54,7 +53,6 @@ const TEMPLATE_DATA = {
     totalHours: 2,
     totalBasePrice: 5000,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -206,7 +204,7 @@ describeMaybe(
   "cancelReservationSeriesCommand — this-only / this-and-following / series-all (integration)",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ createReservationSeriesCommand, cancelReservationSeriesCommand } =
         await import("@/shared/domain/reservations/series-commands"));
       await prisma.$queryRaw`SELECT 1`;
@@ -214,7 +212,7 @@ describeMaybe(
     });
 
     afterAll(async () => {
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("this-only: 指定した 1 instance のみ CANCELLED になり、series 行は未変更", async () => {

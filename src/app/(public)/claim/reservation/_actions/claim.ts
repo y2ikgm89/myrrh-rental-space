@@ -60,7 +60,7 @@ export async function claimReservationAction(): Promise<
     return createMutationError("リンクの有効期限が切れました");
   }
 
-  const { customer, isNew } = await ensureCustomerLinked(session.user);
+  const { customer } = await ensureCustomerLinked(session.user);
   // OAUTH-BETTER-AUTH-01: 認証済み Customer は isActive / status BLACKLIST を強制する。
   try {
     await assertCustomerActive(customer.id);
@@ -71,7 +71,7 @@ export async function claimReservationAction(): Promise<
     }
     throw error;
   }
-  await consumeSignupTermsAction({ isNew });
+  await consumeSignupTermsAction();
 
   const result = await claimReservationForCustomer(
     verified.reservationId,

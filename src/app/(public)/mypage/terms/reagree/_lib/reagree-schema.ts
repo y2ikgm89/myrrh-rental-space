@@ -12,7 +12,7 @@ import { z } from "zod";
  */
 export const reagreeFormSchema = z.strictObject({
   agreedTermsIds: z
-    .array(z.string().uuid({ error: "不正な規約 ID が含まれています" }))
+    .array(z.uuid({ error: "不正な規約 ID が含まれています" }))
     .min(1, { error: "同意する規約を選択してください" }),
   returnTo: z.string().max(512).nullable().default(null),
 });

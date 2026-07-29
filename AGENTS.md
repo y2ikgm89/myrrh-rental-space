@@ -53,7 +53,11 @@ For human onboarding — setup, common commands, repo layout — see
   Better Auth `beforeDelete` adapter — do not force the allowlist to zero or add DI
   shims to clear it. Detail: `.claude/rules/architecture-allowlist.md`.
 - Do not commit, push, or open PRs unless the user explicitly asks (overrides
-  CLAUDE.md auto-ship policy).
+  CLAUDE.md auto-ship policy). Phrases like 「推奨の作業を」 or 「公式推奨の作業を」
+  count as explicit ship authorization for that session.
+- Integration tests asserting rejected `DomainError`s: prefer try/catch +
+  `expect(thrown).toMatchObject` over `await expect(...).rejects.toMatchObject`
+  (Bun 1.3.14 can hang on the latter).
 
 ## Learned Workspace Facts
 
@@ -68,23 +72,31 @@ For human onboarding — setup, common commands, repo layout — see
   shows lock/door/battery only (no remote lock/unlock or admin push).
 - Stripe payments are optional; ON/OFF is Feature Module `payment` (credentials live
   in Settings billing). Public and admin must work fully when payment is OFF
-  (manual payment remains available). Payment refunds use a 3-phase flow: advisory-lock
-  prepare/persist in `$transaction`, Stripe API outside tx (webhook + receipt-backfill
-  cron recover Phase C failures).
+  (manual payment remains available). Offline bank transfer uses `TransferAccount`
+  master + `SettingsOrganization.transferGuidance`; when payment is OFF and status
+  is UNPAID/FAILED, customer hubs/emails show accounts via `shouldShowTransferAccounts`
+  in `src/shared/lib/settings/` (lib gate, not domain — LIB_TO_DOMAIN compliance).
+  Payment refunds use a 3-phase flow: advisory-lock prepare/persist in `$transaction`,
+  Stripe API outside tx (webhook + receipt-backfill cron recover Phase C failures).
 - Receipts: email on payment success (manual admin record or Stripe); download from
   booking detail hub (guest token status / member mypage). Hub is also the SSoT for
   SwitchBot passcode reveal and email CTAs (plaintext passcodes are not emailed).
-- Guests edit on the status hub via the existing status token with the same gates
-  as mypage (`UNPAID`, no discounts, modification deadline, availability). Claim
-  into mypage remains optional for list management. Status hub VIEW and passcode
-  reveal enforce member-ownership when a logged-in customer session coexists with
-  a status-token cookie (same policy as guest edit/cancel).
-- Guest payment & token transport: checkout/status/cancel/claim tokens use
-  HttpOnly cookie transfer via `proxy.ts` (not URL path segments). Intentional
-  URL/form token exceptions: receipt download confirm and waitlist free confirm.
-  Guest reservation online payment has no dedicated guest Checkout route — pay via
-  admin manual payment or claim into mypage (`success_url` →
-  `/mypage/reservations/:id`); payment feature OFF still allows create + manual pay.
+- Guest flows: checkout/status/cancel/claim tokens use HttpOnly cookie transfer
+  via `proxy.ts` (not URL path segments). Intentional URL/form token exceptions:
+  receipt download confirm and waitlist free confirm. Guest reservation online
+  payment has no dedicated guest Checkout route — pay via admin manual payment or
+  claim into mypage (`success_url` → `/mypage/reservations/:id`); payment feature
+  OFF still allows create + manual pay. Guests edit on the status hub via the
+  status token with the same gates as mypage (`UNPAID`, no discounts, modification
+  deadline, availability); claim into mypage remains optional. Event registration
+  self-serve edit: guest status token `/events/registrations/status/edit`, member
+  `/mypage/events/[id]/edit`; gates in `edit-eligibility.ts` (reservation-edit
+  aligned); updates emit `event-registration-updated` email and
+  `NOTIFICATION_TYPE.EVENT_REGISTRATION_UPDATE`. Customer-initiated cancellation
+  is blocked while `paymentStatus === PENDING` (Stripe Checkout in flight); UI
+  gates via `canCustomerInitiateCancellation` / `buildGuestCancelHref`. Status
+  hub VIEW, passcode reveal, and guest edit/cancel enforce member-ownership when
+  a logged-in customer session coexists with a status-token cookie.
 - Event `meetingUrl` must not be selected into public `'use cache'` payloads;
   keep it on authenticated/token/mypage/status query paths only.
 - Advisory lock coordination: event capacity writes serialize on namespace 728350
@@ -96,11 +108,10 @@ For human onboarding — setup, common commands, repo layout — see
   Next-only wrappers belong in thin `*-server.ts` modules. `src/shared/lib` must
   not import Prisma (domain/db only); domain enums go through
   `@/shared/lib/validations/enums/prisma-types`.
-- Customer-initiated cancellation is blocked while `paymentStatus === PENDING`
-  (Stripe Checkout in flight); UI gates via `canCustomerInitiateCancellation` /
-  `buildGuestCancelHref`.
-- Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
-  distributed rate-limit backends are intentionally out of scope.
+- Customer anonymize (`anonymizeCustomerCommand` SSoT) redacts Customer PII in place;
+  linked Inquiry PII is **not** auto-anonymized (design §6.5 — Inquiry は独立した匿名化
+  対象。`anonymizeInquiryCommand` を個別に呼ぶ). Standalone inquiry anonymize remains
+  `anonymizeInquiryCommand`.
 - `(admin)` must not import `@/public` and `(public)` must not import `@/admin`
   (enforced by `cross-surface-import-gate.test.ts`).
 - Unit tests that pull reservation/email side effects must use the shared domain
@@ -115,7 +126,15 @@ For human onboarding — setup, common commands, repo layout — see
   Dynamic UI styling uses `src/shared/lib/csp/css-vars.ts` (`cssVarStyle` + Tailwind
   `var(--*)` classes) or `use-imperative-style.ts` for client transforms; direct
   `backgroundColor`/`color`/etc. in React `style=` are forbidden.
-- Local `chromium-smoke` E2E: set `TEST_DATABASE_URL` to test DB port 5433, pre-build
-  with `bun run build:skip-env:prepared`, run with `CI=true` to skip webServer rebuild;
-  Playwright webServer chains migrate → seed → start — seed must stay idempotent
-  (e.g. STAFF inquiry replies need `authorId`, category `sortOrder` on re-seed).
+- Schema/Prisma/migration conventions: no `@db.Decimal` — tax rates are whole-% Int
+  (`10 = 10%`); `Space.area` is ㎡×100 Int (`2550 = 25.5㎡`) with ×100/÷100 at
+  domain boundary only (UI/forms stay ㎡ and % numbers). Prisma is a single
+  `@/shared/db/prisma` singleton — no `basePrisma`, `createAppPrismaClient`, or
+  Decimal `$extends`. `rateBreakdownJson` is a future-breakdown snapshot (no `legacy`
+  flag); receipt amounts use `totalPriceWithTax`. Multi-column `ALTER COLUMN ... TYPE`
+  that triggers squawk `changing-column-type` needs an entry in
+  `scripts/lint-migrations.ts` intentional-breaking allowlist (inline
+  `-- squawk-ignore` alone is insufficient). `ALTER COLUMN TYPE` does not trigger
+  planned-downtime deploy mode (only DROP/RENAME do). Domain code must not contain
+  literal `"eventRegistration"` (AuditLog resource grep false positive); for Prisma
+  tx delegate typing use template literal types (e.g. `` `event${"Registration"}` ``).

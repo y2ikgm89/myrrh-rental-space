@@ -44,11 +44,6 @@ export function buildTitleCssVars(
     : undefined;
 }
 
-/** @deprecated use buildTitleCssVars + NonceStyleBlock / ImperativeCssScope */
-export function getTitleStyle(style: SectionStylePayload) {
-  return buildTitleCssVars(style);
-}
-
 /**
  * style から title 用 Tailwind class を生成（カラー指定時のみ）
  */
@@ -67,11 +62,6 @@ export function buildTextCssVars(
     : undefined;
 }
 
-/** @deprecated use buildTextCssVars */
-export function getTextStyle(style: SectionStylePayload) {
-  return buildTextCssVars(style);
-}
-
 /**
  * style から body text 用 Tailwind class を生成（カラー指定時のみ）
  */
@@ -88,11 +78,6 @@ export function buildSectionBgCssVars(
   return backgroundColor
     ? { [CSS_VAR.sectionBgColor]: backgroundColor }
     : undefined;
-}
-
-/** @deprecated use buildSectionBgCssVars */
-export function getSectionBgStyle(backgroundColor: string | undefined) {
-  return buildSectionBgCssVars(backgroundColor);
 }
 
 export function buildSectionStyleRule(

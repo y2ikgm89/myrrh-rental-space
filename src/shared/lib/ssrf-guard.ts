@@ -151,6 +151,27 @@ function isIpv4MappedIpv6(bytes: readonly number[]): boolean {
   );
 }
 
+function extractEmbeddedIpv4FromNat64(bytes: readonly number[]): string | null {
+  if (
+    (bytes[0] ?? 0) === 0x00 &&
+    (bytes[1] ?? 0) === 0x64 &&
+    (bytes[2] ?? 0) === 0xff &&
+    (bytes[3] ?? 0) === 0x9b &&
+    (bytes[4] ?? 0) === 0x00 &&
+    (bytes[5] ?? 0) === 0x00
+  ) {
+    return `${bytes[12] ?? 0}.${bytes[13] ?? 0}.${bytes[14] ?? 0}.${bytes[15] ?? 0}`;
+  }
+  return null;
+}
+
+function extractEmbeddedIpv4From6to4(bytes: readonly number[]): string | null {
+  if ((bytes[0] ?? 0) === 0x20 && (bytes[1] ?? 0) === 0x02) {
+    return `${bytes[2] ?? 0}.${bytes[3] ?? 0}.${bytes[4] ?? 0}.${bytes[5] ?? 0}`;
+  }
+  return null;
+}
+
 function isPrivateOrReservedIpv6(address: string): boolean {
   const bytes = parseIpv6Bytes(address);
   if (!bytes) return false;
@@ -168,6 +189,16 @@ function isPrivateOrReservedIpv6(address: string): boolean {
       bytes[15] ?? 0,
     ];
     return isPrivateOrReservedIpv4(mapped.join("."));
+  }
+
+  const nat64Embedded = extractEmbeddedIpv4FromNat64(bytes);
+  if (nat64Embedded !== null) {
+    return isPrivateOrReservedIpv4(nat64Embedded);
+  }
+
+  const sixToFourEmbedded = extractEmbeddedIpv4From6to4(bytes);
+  if (sixToFourEmbedded !== null) {
+    return isPrivateOrReservedIpv4(sixToFourEmbedded);
   }
 
   return (

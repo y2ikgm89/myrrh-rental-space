@@ -165,7 +165,6 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   };
   const taxAmount = Math.round(
     (REFUND_FIXTURE_TOTAL_PRICE * REFUND_FIXTURE_TAX_RATE) / 100,

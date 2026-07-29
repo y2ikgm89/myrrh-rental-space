@@ -49,7 +49,6 @@ type EventRegistrationQueriesModule =
   typeof import("@/shared/domain/events/registration-queries");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let getReservationForGuestStatus: CustomerQueriesModule["getReservationForGuestStatus"];
 let getReservationCustomerId: CustomerQueriesModule["getReservationCustomerId"];
 let resolveGuestStatusAccess: GuestStatusViewModule["resolveGuestStatusAccess"];
@@ -96,7 +95,6 @@ const DEFAULT_RESERVATION_PRICING = {
     totalHours: 0,
     totalBasePrice: 0,
     holidayFlags: {},
-    legacy: true,
   },
   taxRateType: TaxRateType.standard,
   taxRate: 10,
@@ -406,7 +404,7 @@ describeMaybe(
   "reservation status token — token round-trip with real Postgres",
   () => {
     beforeAll(async () => {
-      ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+      ({ prisma } = await import("@/shared/db/prisma"));
       ({ getReservationForGuestStatus, getReservationCustomerId } =
         await import("@/shared/domain/reservations/customer-queries"));
       ({ resolveGuestStatusAccess } =
@@ -445,7 +443,7 @@ describeMaybe(
       await prisma.eventCategory.deleteMany({
         where: { id: testEventCategoryId },
       });
-      await basePrisma.$disconnect();
+      await prisma.$disconnect();
     });
 
     test("token → verify → access → lookup: 実 reservation 行にバインドされる", async () => {

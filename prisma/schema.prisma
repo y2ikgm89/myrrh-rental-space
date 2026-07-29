@@ -496,7 +496,8 @@ model Space {
   /// 主要交通案内・駐車場情報は親 Location（accessLines / parkingInfo）が SSoT。
   addressDetail        String?   @db.Text
   capacity             Int
-  area                 Decimal?  @db.Decimal(10, 2)
+  /// 面積（㎡×100、例: 2550 = 25.5㎡）
+  area                 Int?
   hourlyPrice          Int
   mainImageUrl         String
   gallery              Json      @default("[]")
@@ -715,13 +716,12 @@ model Reservation {
   spaceDiscountAmount    Int? // スペース固有割引額（円）
   basePrice              Int // 割引前価格（円、NOT NULL、Σ segment.subtotal）
   /// Rate plan 解決結果のスナップショット（`RateBreakdown` 型、`src/shared/lib/pricing/rate-breakdown.ts`）。
-  /// legacy row（本 migration の backfill 対象）は `{ legacy: true, segments: [], ... }` を持つ
-  /// （`isLegacyRateBreakdown` で判定、`receipts/issue.ts` 等は legacy 時のみ totalPrice フォールバックを維持）。
+  /// rate plan 導入前の予約は segments が空の snapshot を保持する（内訳は再現不可）。
   rateBreakdownJson Json
 
   // 税情報（予約時点の値を記録）
   taxRateType       TaxRateType // 適用された税率タイプ（NOT NULL、snapshot）
-  taxRate           Decimal     @db.Decimal(5, 2) // 適用税率（%）（NOT NULL、snapshot）
+  taxRate           Int // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
   taxAmount         Int // 税額（円、NOT NULL）
   totalPriceWithTax Int // 税込み合計（円、NOT NULL）
   /// 管理者が計算値を手動上書きした場合の実行者 User.id（audit 目的）。null = 上書きなし。
@@ -910,6 +910,7 @@ model Customer {
   @@index([firstName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_first_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
   @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
+  @@index([suppressedEmailHash], map: "customers_suppressed_email_hash_idx", where: { suppressedEmailHash: { not: null } })
   @@map("customers")
 }
 
@@ -1670,8 +1671,8 @@ model SettingsCommerce {
   discountCombinationMode DiscountCombinationMode @default(best)
   showOriginalPrice       Boolean                 @default(true)
 
-  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
-  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
+  taxStandardRate      Int            @default(10)
+  taxReducedRate       Int            @default(8)
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
 
   refundPolicy Json? @db.JsonB
@@ -2098,6 +2099,7 @@ model TermsAgreement {
   @@index([resourceId])
   @@index([agreedAt])
   @@index([scope, agreedAt])
+  @@index([guestEmail(ops: raw("gin_trgm_ops"))], type: Gin, map: "terms_agreements_guest_email_trgm_idx")
   @@map("terms_agreements")
 }
 
@@ -2545,7 +2547,7 @@ model Receipt {
   subject         String  @default("スペース利用料として") @db.VarChar(100)
   amount          Int
   taxAmount       Int     @default(0)
-  taxRate         Decimal @db.Decimal(5, 2)
+  taxRate         Int
   // 発行時点の Settings snapshot (凍結)
   issuerSnapshot  Json    @db.JsonB
   // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。

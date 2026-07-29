@@ -9,6 +9,7 @@ import {
   sendEventCancelledToAllParticipants as sendEventCancelledToAllParticipantsLib,
   sendEventRegistrationCancelled as sendEventRegistrationCancelledLib,
   sendEventRegistrationConfirmation as sendEventRegistrationConfirmationLib,
+  sendEventRegistrationUpdated as sendEventRegistrationUpdatedLib,
   sendEventUpdatedToAllParticipants as sendEventUpdatedToAllParticipantsLib,
   type EventBroadcastResult,
 } from "@/shared/lib/email/event-emails";
@@ -187,6 +188,15 @@ export async function sendEventRegistrationCancelled(
   const sendContext = await requireSendContext();
   if (!sendContext) return disabledEmailResult();
   return sendEventRegistrationCancelledLib(data, renderContext, sendContext);
+}
+
+export async function sendEventRegistrationUpdated(
+  data: Parameters<typeof sendEventRegistrationUpdatedLib>[0],
+  renderContext: EventEmailRenderContext,
+): Promise<EmailResult> {
+  const sendContext = await requireSendContext();
+  if (!sendContext) return disabledEmailResult();
+  return sendEventRegistrationUpdatedLib(data, renderContext, sendContext);
 }
 
 export async function sendEventAdminNotification(

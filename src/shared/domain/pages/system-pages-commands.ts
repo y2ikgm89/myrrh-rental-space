@@ -1,4 +1,4 @@
-import type { AppPrismaClient } from "@/shared/db/create-app-prisma-client";
+import type { PrismaClient } from "@generated/prisma/client";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import { logError } from "@/shared/lib/errors/logger-core";
@@ -8,13 +8,13 @@ import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
 /**
  * システムページ用コマンド（引数で PrismaClient を受け取る）
  *
- * seed / Next とも `createAppPrismaClient` 済みの同一型（`AppPrismaClient`）を渡す。
+ * seed / Next とも `PrismaClient` を渡す。
  * 本ファイルは `server-only` を付けない（`prisma/seed.ts` から import するため）。
  * Next 専用の default-prisma ラッパは `system-pages-server.ts`。
  */
 
 export async function ensurePageSectionsCommand(
-  db: AppPrismaClient,
+  db: PrismaClient,
   pageId: string,
   slug: string,
 ): Promise<number> {
@@ -76,7 +76,7 @@ export async function ensurePageSectionsCommand(
 }
 
 export async function bootstrapSystemPagesCommand(
-  db: AppPrismaClient,
+  db: PrismaClient,
 ): Promise<void> {
   for (const definition of SYSTEM_PAGES) {
     try {

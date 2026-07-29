@@ -156,10 +156,9 @@ describe("prisma import boundary", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("shared/db/prisma.ts は basePrisma と prisma の両方を export する", () => {
+  test("shared/db/prisma.ts は prisma singleton を export する", () => {
     const prismaFile = join(SHARED_DB_ROOT, "prisma.ts");
     const source = readFileSync(prismaFile, "utf8");
-    expect(source).toMatch(/export\s+\{\s*basePrisma\s*\}/u);
     expect(source).toMatch(/export\s+const\s+prisma\s*=/u);
   });
 

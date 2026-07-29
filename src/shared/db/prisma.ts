@@ -5,7 +5,6 @@
  * - `PrismaPg` には接続設定オブジェクトを渡す（Prisma 7 公式推奨形式）。`pg.Pool` の
  *   生成・ライフサイクルは adapter-pg 内部に委譲し、アプリは外部 `pg` 依存を持たない
  * - v6 互換のタイムアウト設定を採用（v7 デフォルトの 10s idle は短すぎて Vercel/Cloud Run で早期切断される）
- * - Better Auth には素の `PrismaClient` を渡す（Decimal 拡張干渉を防ぐため）
  *
  * @see https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/connection-pool
  * @see https://www.prisma.io/docs/ai/prompts/nextjs
@@ -17,30 +16,15 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { serverEnv } from "@/shared/lib/env/server";
 import { PrismaClient } from "@generated/prisma/client";
 import type * as PrismaModels from "@generated/prisma/client";
-import type { Decimal } from "@prisma/client/runtime/client";
 
-import { createAppPrismaClient } from "./create-app-prisma-client";
+export type AppPrismaClient = PrismaClient;
 
-export type { AppPrismaClient } from "./create-app-prisma-client";
-
-/**
- * Decimal → number 変換ユーティリティ型（`createAppPrismaClient` の runtime 挙動に整合）
- */
-type ConvertDecimalFields<T> = {
-  [K in keyof T]: T[K] extends Decimal
-    ? number
-    : T[K] extends Decimal | null
-      ? number | null
-      : T[K];
-};
-
-/** Decimal → number 変換済みの型エイリアス */
-export type Space = ConvertDecimalFields<PrismaModels.Space>;
-export type Reservation = ConvertDecimalFields<PrismaModels.Reservation>;
-export type Customer = ConvertDecimalFields<PrismaModels.Customer>;
-export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
-export type SpaceRatePlan = ConvertDecimalFields<PrismaModels.SpaceRatePlan>;
-export type Receipt = ConvertDecimalFields<PrismaModels.Receipt>;
+export type Space = PrismaModels.Space;
+export type Reservation = PrismaModels.Reservation;
+export type Customer = PrismaModels.Customer;
+export type Coupon = PrismaModels.Coupon;
+export type SpaceRatePlan = PrismaModels.SpaceRatePlan;
+export type Receipt = PrismaModels.Receipt;
 
 // ---------------------------------------------------------------------------
 // Singleton: PrismaClient
@@ -93,12 +77,12 @@ const adapter = new PrismaPg({
 });
 
 /**
- * Base PrismaClient（$extends 前の素のクライアント）
+ * アプリ標準の PrismaClient singleton
  *
  * 本番ではクエリログを有効化しない（パフォーマンス・ログサイズ両方のコスト）。
  * 開発環境でも `query` ログはノイズが大きいため `warn` + `error` に限定する。
  */
-const basePrisma =
+export const prisma =
   globalStore.prisma ??
   new PrismaClient({
     adapter,
@@ -106,19 +90,5 @@ const basePrisma =
   });
 
 if (!isProduction) {
-  globalStore.prisma = basePrisma;
+  globalStore.prisma = prisma;
 }
-
-/**
- * 拡張前の素の PrismaClient（Better Auth アダプター専用）
- *
- * $extends 済み `prisma` は Decimal 変換が認証アダプターと干渉するため使わない。
- */
-export { basePrisma };
-
-/**
- * アプリ標準の PrismaClient（Decimal → number 変換済み）
- *
- * `createAppPrismaClient` で `$extends` を適用（seed と共通実装）。
- */
-export const prisma = createAppPrismaClient(basePrisma);

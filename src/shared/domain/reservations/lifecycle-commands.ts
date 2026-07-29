@@ -93,6 +93,10 @@ export async function updateReservationStatusCommand(
   // 30 予約分だけ実 使用量から乖離し、以後のクーポン発行判定が false-limit に
   // 到達して正当な顧客の申込みまで拒否される。
   const current = await prisma.$transaction(async (tx) => {
+    if (isCancellation) {
+      await lockSpaceForTransaction(tx, reservation.spaceId);
+    }
+
     const updated = await tx.reservation.updateMany({
       where: {
         id,
@@ -381,6 +385,7 @@ export async function deleteReservationCommand(
     where: { id, deletedAt: null },
     select: {
       id: true,
+      spaceId: true,
       status: true,
       googleCalendarEventId: true,
       couponId: true,
@@ -402,6 +407,10 @@ export async function deleteReservationCommand(
     : null;
 
   await prisma.$transaction(async (tx) => {
+    if (needsCancellationTracking) {
+      await lockSpaceForTransaction(tx, reservation.spaceId);
+    }
+
     await tx.reservation.update({
       where: { id, deletedAt: null },
       data: {

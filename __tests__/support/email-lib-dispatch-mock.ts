@@ -22,6 +22,7 @@ export function createEmailLibDispatchMockModule(
     sendInquiryStatusNotificationToAll: noopAsync,
     sendEventRegistrationConfirmation: okAsync,
     sendEventRegistrationCancelled: okAsync,
+    sendEventRegistrationUpdated: okAsync,
     sendEventAdminNotification: okAsync,
     sendEventCancelledToAllParticipants: noopAsync,
     sendEventUpdatedToAllParticipants: noopAsync,

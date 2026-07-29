@@ -19,7 +19,6 @@ type RegistrationCommandsModule =
   typeof import("@/shared/domain/events/registration-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let updateEventRegistrationCommand: RegistrationCommandsModule["updateEventRegistrationCommand"];
 let testCategoryId: string;
 
@@ -102,7 +101,7 @@ async function cleanupFixture(eventId: string): Promise<void> {
 
 describeMaybe("updateEventRegistrationCommand", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ updateEventRegistrationCommand } =
       await import("@/shared/domain/events/registration-commands"));
 
@@ -121,7 +120,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   /**

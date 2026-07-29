@@ -34,7 +34,6 @@ mock.module("@/shared/db/prisma", () => ({
     reservation: { findUnique: mockReservationFindUnique },
     settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
   },
-  basePrisma: {},
 }));
 
 // Stripe refund command: 本物は advisory lock + Stripe API を叩くため full mock。

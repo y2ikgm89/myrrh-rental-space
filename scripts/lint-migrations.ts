@@ -84,6 +84,11 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // allowlist。EXCLUDE/trigger を tstzrange で再作成。計画ダウンタイム付きデプロイ。
   // Risk 1 は Cloud Run min0/max1 atomic switch で排除済。
   "prisma/migrations/20260728140000_timestamptz_and_yen_int_unify/migration.sql",
+  // Decimal → Int clean-break (tax rates whole-%, area ×100)。`ALTER COLUMN ... TYPE`
+  // が `changing-column-type` を発火し squawk-ignore だけでは抑止できないため allowlist。
+  // 計画ダウンタイム付きデプロイ（SET DATA TYPE）。Risk 1 は Cloud Run min0/max1
+  // atomic switch で排除済。
+  "prisma/migrations/20260729140000_decimal_to_int_clean_break/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

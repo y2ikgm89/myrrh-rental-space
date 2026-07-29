@@ -44,7 +44,6 @@ type CommandsModule =
   typeof import("@/shared/domain/reservations/public-commands");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 let createPublicReservationCommand: CommandsModule["createPublicReservationCommand"];
 
 async function createTestLocationAndSpace(): Promise<{
@@ -53,7 +52,7 @@ async function createTestLocationAndSpace(): Promise<{
 }> {
   const suffix = crypto.randomUUID();
 
-  const location = await basePrisma.location.create({
+  const location = await prisma.location.create({
     data: {
       slug: `blacklist-guard-loc-${suffix}`,
       name: `Blacklist Guard Loc ${suffix}`,
@@ -64,7 +63,7 @@ async function createTestLocationAndSpace(): Promise<{
     select: { id: true },
   });
 
-  const space = await basePrisma.space.create({
+  const space = await prisma.space.create({
     data: {
       slug: `blacklist-guard-space-${suffix}`,
       name: `Blacklist Guard Space ${suffix}`,
@@ -89,29 +88,29 @@ async function cleanupFixture(
   spaceId: string,
   email: string,
 ): Promise<void> {
-  await basePrisma.reservation.deleteMany({ where: { spaceId } });
-  await basePrisma.space.deleteMany({ where: { id: spaceId } });
-  await basePrisma.location.deleteMany({ where: { id: locationId } });
-  await basePrisma.customer.deleteMany({ where: { email } });
+  await prisma.reservation.deleteMany({ where: { spaceId } });
+  await prisma.space.deleteMany({ where: { id: spaceId } });
+  await prisma.location.deleteMany({ where: { id: locationId } });
+  await prisma.customer.deleteMany({ where: { email } });
 }
 
 describeMaybe("createPublicReservationCommand — BLACKLIST guard", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
     ({ createPublicReservationCommand } =
       await import("@/shared/domain/reservations/public-commands"));
-    await basePrisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("既存のBLACKLISTゲストCustomerと同じメールでの新規ゲスト予約は拒否される", async () => {
     const { locationId, spaceId } = await createTestLocationAndSpace();
     const email = `blacklist-guard-${crypto.randomUUID()}@example.com`;
 
-    await basePrisma.customer.create({
+    await prisma.customer.create({
       data: {
         lastName: "拒否",
         firstName: "太郎",

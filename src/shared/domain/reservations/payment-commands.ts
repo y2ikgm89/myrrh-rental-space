@@ -278,32 +278,36 @@ export async function createCheckoutSessionCommand(input: {
       Math.floor(claimedAt.getTime() / 1000) +
       PENDING_RESERVATION_EXPIRY_MINUTES * 60;
 
-    const session = await client.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: paymentMethodTypes,
-      line_items: [
-        {
-          price_data: {
-            currency,
-            product_data: {
-              name: `予約: ${authoritative.space.name}`,
-            },
-            unit_amount: toStripeUnitAmount(
-              authoritative.totalPriceWithTax,
+    const session = await client.checkout.sessions.create(
+      {
+        mode: "payment",
+        payment_method_types: paymentMethodTypes,
+        line_items: [
+          {
+            price_data: {
               currency,
-            ),
+              product_data: {
+                name: `予約: ${authoritative.space.name}`,
+              },
+              unit_amount: toStripeUnitAmount(
+                authoritative.totalPriceWithTax,
+                currency,
+              ),
+            },
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          reservationId,
         },
-      ],
-      metadata: {
-        reservationId,
+        customer_email:
+          authoritative.guestEmail ?? authoritative.customer.email,
+        expires_at: expiresAt,
+        success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
+        cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
       },
-      customer_email: authoritative.guestEmail ?? authoritative.customer.email,
-      expires_at: expiresAt,
-      success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
-      cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
-    });
+      { idempotencyKey: `checkout/reservation/${reservationId}/pending-claim` },
+    );
     createdSessionId = session.id;
 
     // session id を確定書込 + paymentStatus: PENDING を再 assert する。

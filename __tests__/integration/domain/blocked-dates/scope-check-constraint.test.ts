@@ -25,15 +25,14 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 type PrismaModule = typeof import("@/shared/db/prisma");
 
 let prisma: PrismaModule["prisma"];
-let basePrisma: PrismaModule["basePrisma"];
 
 describeMaybe("blocked_dates scope CHECK 制約", () => {
   beforeAll(async () => {
-    ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
+    ({ prisma } = await import("@/shared/db/prisma"));
   });
 
   afterAll(async () => {
-    await basePrisma.$disconnect();
+    await prisma.$disconnect();
   });
 
   test("CHECK 制約 blocked_dates_scope_target_check が DB に存在する（db pull で消えていない）", async () => {

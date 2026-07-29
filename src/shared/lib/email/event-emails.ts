@@ -18,6 +18,7 @@ import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled
 import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
+import { EventRegistrationUpdatedEmail } from "@/shared/emails/event-registration-updated";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
@@ -45,6 +46,7 @@ import {
   buildEventCancelCalendar,
 } from "../ical";
 import { omitUndefined } from "../serialize";
+import { formatPrice } from "../pricing/format";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
@@ -470,6 +472,71 @@ export async function sendEventRegistrationCancelled(
       context: {
         registrationId: data.registrationId,
         customerEmail,
+      },
+    },
+    sendContext,
+  );
+}
+
+type EventRegistrationUpdatedData = {
+  registrationId: string;
+  customerId: string | null;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  ticketName: string;
+  ticketUnitPrice: number;
+  quantity: number;
+  /** CAS 成功時刻。idempotencyKey 用。 */
+  updatedAt: Date;
+};
+
+/**
+ * イベント申込内容更新通知メールを送信。
+ *
+ * 宛先は更新後の email。slot/ticket 不変のため ICS は再送しない。
+ */
+export async function sendEventRegistrationUpdated(
+  data: EventRegistrationUpdatedData,
+  _renderContext: EventEmailRenderContext,
+  sendContext: EmailSendContext,
+): Promise<EmailResult> {
+  const eventDate = formatDateWithWeekday(data.eventStartTime);
+  const startTime = formatTimeShort(data.eventStartTime);
+  const endTime = formatTimeShort(data.eventEndTime);
+  const footer = await getEmailFooterData();
+  const totalPrice = formatPrice(data.ticketUnitPrice * data.quantity);
+  const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
+    data.customerId,
+    data.registrationId,
+  );
+
+  return sendEmail(
+    {
+      payload: {
+        to: data.customerEmail,
+        subject: `【イベント申込更新】${data.eventTitle}`,
+        react: EventRegistrationUpdatedEmail({
+          customerName: data.customerName,
+          eventTitle: data.eventTitle,
+          eventDate,
+          startTime,
+          endTime,
+          ticketName: data.ticketName,
+          quantity: data.quantity,
+          totalPrice,
+          registrationId: data.registrationId,
+          eventRegistrationHubUrl,
+          footer,
+        }),
+      },
+      idempotencyKey: `event-registration-updated/${data.registrationId}/${data.updatedAt.toISOString()}`,
+      operation: "sendEventRegistrationUpdated",
+      context: {
+        registrationId: data.registrationId,
+        customerEmail: data.customerEmail,
       },
     },
     sendContext,

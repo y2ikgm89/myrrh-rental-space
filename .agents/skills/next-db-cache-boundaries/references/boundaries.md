@@ -45,9 +45,7 @@
 "../generated/prisma" }`.
 - `engineType = "client"` requires a driver adapter; this repo uses
   `@prisma/adapter-pg` in `src/shared/db/prisma.ts`.
-- Use `@/shared/db/prisma` from domain/db server modules.
-- Keep `basePrisma` for Better Auth and `prisma` for app code with Decimal
-  conversion.
+- Use `@/shared/db/prisma` from domain/db server modules (singleton `prisma`).
 - Keep generated Prisma client imports out of app layers.
 - App-safe enum imports should use
   `@/shared/lib/validations/enums/prisma-types`.

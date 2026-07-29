@@ -23,3 +23,14 @@ export async function lockSpaceForTransaction(
 ): Promise<void> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(728351::int4, hashtext(${spaceId}))`;
 }
+
+/** 複数 Space への cancel / bulk write 前に id 昇順で 728351 を取得（deadlock 予防）。 */
+export async function lockSpacesForTransactionInOrder(
+  tx: SpaceLockClient,
+  spaceIds: Iterable<string>,
+): Promise<void> {
+  const uniqueSorted = [...new Set(spaceIds)].sort();
+  for (const spaceId of uniqueSorted) {
+    await lockSpaceForTransaction(tx, spaceId);
+  }
+}
