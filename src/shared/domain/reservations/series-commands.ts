@@ -46,7 +46,10 @@ import {
 } from "./cancellation-side-effects";
 import { lockReservationSeriesForTransaction } from "./series-advisory-lock";
 import { validateRruleForSeries } from "./series-rrule";
-import { lockSpaceForTransaction } from "./space-locks";
+import {
+  lockSpaceForTransaction,
+  lockSpacesForTransactionInOrder,
+} from "./space-locks";
 
 // =============================================================================
 // createReservationSeriesCommand
@@ -364,6 +367,17 @@ export async function cancelReservationSeriesCommand(
     }
 
     const idsToCancel = await resolveIdsToCancel(tx, input);
+
+    if (idsToCancel.ids.length > 0) {
+      const spaceRows = await tx.reservation.findMany({
+        where: { id: { in: idsToCancel.ids } },
+        select: { spaceId: true },
+      });
+      await lockSpacesForTransactionInOrder(
+        tx,
+        spaceRows.map((row) => row.spaceId),
+      );
+    }
 
     const result = await applyBulkCancellation(tx, idsToCancel.ids, {
       cancelledByType: input.cancelledByType,

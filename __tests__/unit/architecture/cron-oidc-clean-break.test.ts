@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -8,32 +8,15 @@ function read(path: string): string {
   return readFileSync(join(root, ...path.split("/")), "utf8");
 }
 
-describe("cron OIDC clean-break boundary", () => {
-  const cronRoutePaths = [
-    "src/app/api/cron/audit-log-integrity/route.ts",
-    "src/app/api/cron/calendar-sync/route.ts",
-    "src/app/api/cron/calendar-sync-retry/route.ts",
-    "src/app/api/cron/customer-duplicate-scan/route.ts",
-    "src/app/api/cron/customer-risk-scan/route.ts",
-    "src/app/api/cron/data-retention/route.ts",
-    "src/app/api/cron/event-import/route.ts",
-    "src/app/api/cron/event-reminder/route.ts",
-    "src/app/api/cron/faq-stale-check/route.ts",
-    "src/app/api/cron/faq-trash-cleanup/route.ts",
-    "src/app/api/cron/blog-trash-cleanup/route.ts",
-    "src/app/api/cron/instagram-refresh/route.ts",
-    "src/app/api/cron/instagram-sync/route.ts",
-    "src/app/api/cron/news-scheduled-publish/route.ts",
-    "src/app/api/cron/blog-scheduled-publish/route.ts",
-    "src/app/api/cron/notification-cleanup/route.ts",
-    "src/app/api/cron/receipt-backfill/route.ts",
-    "src/app/api/cron/reservation-reminder/route.ts",
-    "src/app/api/cron/smart-lock-cleanup/route.ts",
-    "src/app/api/cron/stripe-event-cleanup/route.ts",
-    "src/app/api/cron/waitlist-expire/route.ts",
-    "src/app/api/cron/unpaid-event-registration-expire/route.ts",
-  ] as const;
+function listCronRouteFiles(): string[] {
+  const cronRoot = join(root, "src", "app", "api", "cron");
+  return readdirSync(cronRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `src/app/api/cron/${entry.name}/route.ts`)
+    .sort();
+}
 
+describe("cron OIDC clean-break boundary", () => {
   test("cron auth no longer accepts CRON_SECRET shared bearer fallback", () => {
     // Phase 2 で `scripts/setup-cloud-scheduler.sh` は撤廃され、Cloud Scheduler
     // job の SSoT は `terraform/cloud_scheduler.tf` に移行済 (google_cloud_scheduler_job)。
@@ -105,6 +88,9 @@ describe("cron OIDC clean-break boundary", () => {
   });
 
   test("cron GET route handlers are runtime-only before auth is evaluated", () => {
+    const cronRoutePaths = listCronRouteFiles();
+    expect(cronRoutePaths.length).toBeGreaterThan(0);
+
     for (const path of cronRoutePaths) {
       const source = read(path);
       expect(source).toContain('import { connection } from "next/server";');

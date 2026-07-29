@@ -8,7 +8,7 @@
  * 検証観点:
  * - registry の各エントリについて renderPreview() が例外を投げない
  * - @react-email/render の render() が空でない HTML 文字列を返す
- * - 全 29 エントリを網羅していること
+ * - registry の各エントリ数が TEMPLATE_KEYS と一致すること
  */
 
 import { describe, test, expect } from "bun:test";
@@ -31,6 +31,7 @@ mock.module("@/shared/lib/email/send", () => ({
 
 const { EMAIL_TEMPLATE_REGISTRY } =
   await import("@/shared/emails/_registry/index");
+const { TEMPLATE_KEYS } = await import("@/shared/emails/_registry/data");
 const { render } = await import("@react-email/render");
 
 // -----------------------------------------------------------------------
@@ -43,9 +44,8 @@ describe("EMAIL_TEMPLATE_REGISTRY — 全エントリのレンダリング検証
     { renderPreview: () => import("react").ReactElement },
   ][];
 
-  test("registry に 29 エントリ以上あること（全テンプレを網羅）", () => {
-    // 現時点で 29 エントリ定義済み。新規追加時は自動検知。
-    expect(entries.length).toBeGreaterThanOrEqual(29);
+  test("registry の全テンプレ key 数と一致する", () => {
+    expect(entries.length).toBe(TEMPLATE_KEYS.length);
   });
 
   for (const [key, entry] of entries) {

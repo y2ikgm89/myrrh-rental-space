@@ -11,15 +11,13 @@ export const rateBreakdownSegmentSchema = z.object({
   isHoliday: z.boolean(),
 });
 
-export const rateBreakdownSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    segments: z.array(rateBreakdownSegmentSchema),
-    totalHours: z.number(),
-    totalBasePrice: z.number().int(),
-    holidayFlags: z.record(z.string(), z.literal(true)),
-  })
-  .strict();
+export const rateBreakdownSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  segments: z.array(rateBreakdownSegmentSchema),
+  totalHours: z.number(),
+  totalBasePrice: z.number().int(),
+  holidayFlags: z.record(z.string(), z.literal(true)),
+});
 
 export type RateBreakdown = z.infer<typeof rateBreakdownSchema>;
 export type RateBreakdownSegment = z.infer<typeof rateBreakdownSegmentSchema>;

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeEditorCommentMutationResult } from "@/admin/lib/editor-comment-auth";
 import type {
   AddCommentInput,
   CreateThreadInput,
@@ -55,9 +55,13 @@ export async function createCommentThread(
     return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "update",
+    contentRef: {
+      kind: "content",
+      contentType: validation.data.contentType,
+      contentId: validation.data.contentId,
+    },
     execute: async (user) =>
       createCommentThreadCommand(user.id, validation.data),
     resolveAuditResourceId: (thread) => thread.id,
@@ -72,9 +76,9 @@ export async function addComment(
     return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "update",
+    contentRef: { kind: "thread", threadId: validation.data.threadId },
     execute: async (user) => addCommentCommand(user.id, validation.data),
     resolveAuditResourceId: (comment) => comment.id,
   });
@@ -84,10 +88,9 @@ export async function resolveThread(threadId: string): Promise<MutationResult> {
   const parsed = idSchema.safeParse(threadId);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "update",
-    resourceId: parsed.data,
+    contentRef: { kind: "thread", threadId: parsed.data },
     execute: async (user) => {
       await resolveThreadCommand(user.id, parsed.data);
       return null;
@@ -99,10 +102,9 @@ export async function reopenThread(threadId: string): Promise<MutationResult> {
   const parsed = idSchema.safeParse(threadId);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "update",
-    resourceId: parsed.data,
+    contentRef: { kind: "thread", threadId: parsed.data },
     execute: async () => {
       await reopenThreadCommand(parsed.data);
       return null;
@@ -114,10 +116,9 @@ export async function deleteThread(threadId: string): Promise<MutationResult> {
   const parsed = idSchema.safeParse(threadId);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "delete",
-    resourceId: parsed.data,
+    contentRef: { kind: "thread", threadId: parsed.data },
     execute: async () => {
       await deleteThreadCommand(parsed.data);
       return null;
@@ -131,10 +132,9 @@ export async function deleteComment(
   const parsed = idSchema.safeParse(commentId);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutationResult({
-    resource: "post",
+  return executeEditorCommentMutationResult({
     action: "delete",
-    resourceId: parsed.data,
+    contentRef: { kind: "comment", commentId: parsed.data },
     execute: async (user) => {
       await deleteCommentCommand(user.id, parsed.data);
       return null;

@@ -334,6 +334,7 @@ export async function getEventRegistrationDetailsForEmail(
       eventId: true,
       slotId: true,
       quantity: true,
+      status: true,
       ticket: { select: { price: true } },
       slot: {
         select: {
@@ -376,7 +377,10 @@ export async function getEventRegistrationDetailsForEmail(
     capacity: registration.slot.capacity,
     confirmedCount: confirmed._sum.quantity ?? 0,
     format: registration.event.format,
-    meetingUrl: registration.event.meetingUrl,
+    meetingUrl:
+      registration.status === RegistrationStatus.CONFIRMED
+        ? registration.event.meetingUrl
+        : null,
     ticketUnitPrice: registration.ticket.price,
     quantity: registration.quantity,
   };

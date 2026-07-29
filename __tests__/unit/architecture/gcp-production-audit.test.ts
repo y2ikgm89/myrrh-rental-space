@@ -50,6 +50,12 @@ import {
   readSecretManagerVersionStateErrors,
   readWifProviderConditionErrors,
   readCloudBuildTriggerIdentifiers,
+  AUDIT_ADMIN_CLOUD_RUN_PLAIN_ENV_KEYS,
+  AUDIT_PUBLIC_CLOUD_RUN_PLAIN_ENV_KEYS,
+  extractTerraformHclMapKeys,
+  TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS,
+  TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS,
+  TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS,
 } from "../../../scripts/gcp-production-audit-model";
 
 const auditScript = readFileSync(
@@ -58,6 +64,10 @@ const auditScript = readFileSync(
 );
 const auditModel = readFileSync(
   join(process.cwd(), "scripts", "gcp-production-audit-model.ts"),
+  "utf8",
+);
+const terraformCloudRunLocals = readFileSync(
+  join(process.cwd(), "terraform", "locals_cloud_run.tf"),
   "utf8",
 );
 
@@ -1042,6 +1052,7 @@ describe("GCP production audit model", () => {
       { name: "DATABASE_URL", version: "2" },
       { name: "BETTER_AUTH_SECRET", version: "1" },
       { name: "ENCRYPTION_KEY", version: "1" },
+      { name: "SECONDARY_ENCRYPTION_KEYS", version: "1" },
       { name: "AUDIT_LOG_HMAC_KEY", version: "1" },
       { name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", version: "1" },
       { name: "R2_ACCOUNT_ID", version: "1" },
@@ -1899,5 +1910,52 @@ describe("GCP production audit model", () => {
     expect(auditScript).toMatch(
       /Promise\.all\(\s*getCloudBuildConnectionAuditLocations\(region\)\.map/s,
     );
+  });
+
+  test("Terraform Cloud Run plain env keys stay aligned with audit model SSoT", () => {
+    const commonKeys = extractTerraformHclMapKeys(
+      terraformCloudRunLocals,
+      "cloud_run_common_env",
+    );
+    const publicOverrideKeys = extractTerraformHclMapKeys(
+      terraformCloudRunLocals,
+      "cloud_run_public_env",
+    );
+    const adminOverrideKeys = extractTerraformHclMapKeys(
+      terraformCloudRunLocals,
+      "cloud_run_admin_env",
+    );
+
+    expect(commonKeys).toEqual([...TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS]);
+    expect(publicOverrideKeys).toEqual([
+      ...TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS,
+    ]);
+    expect(adminOverrideKeys).toEqual([
+      ...TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS,
+    ]);
+
+    const mergedPublic = new Set([
+      ...TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS,
+      ...TERRAFORM_CLOUD_RUN_PUBLIC_OVERRIDE_ENV_KEYS,
+    ]);
+    const mergedAdmin = new Set([
+      ...TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS,
+      ...TERRAFORM_CLOUD_RUN_ADMIN_OVERRIDE_ENV_KEYS,
+    ]);
+
+    for (const key of AUDIT_PUBLIC_CLOUD_RUN_PLAIN_ENV_KEYS) {
+      expect(mergedPublic.has(key)).toBe(true);
+    }
+    for (const key of AUDIT_ADMIN_CLOUD_RUN_PLAIN_ENV_KEYS) {
+      expect(mergedAdmin.has(key)).toBe(true);
+    }
+
+    for (const key of AUDIT_PUBLIC_CLOUD_RUN_PLAIN_ENV_KEYS) {
+      expect(auditScript).toContain(`${key}:`);
+    }
+    for (const key of AUDIT_ADMIN_CLOUD_RUN_PLAIN_ENV_KEYS) {
+      expect(auditScript).toContain(`${key}:`);
+    }
+    expect(auditModel).toContain("TERRAFORM_CLOUD_RUN_COMMON_PLAIN_ENV_KEYS");
   });
 });

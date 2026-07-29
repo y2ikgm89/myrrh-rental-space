@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { checkPermission } from "@/admin/lib/action-auth";
+import { checkEditorCommentContentAccess } from "@/admin/lib/editor-comment-auth";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { getCommentThreadsQuery } from "@/shared/domain/editor-comments/queries";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
@@ -15,11 +15,6 @@ const searchSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const auth = await checkPermission("post", "read", request.headers);
-  if (!auth.success) {
-    return jsonError(auth.error.error, 403);
-  }
-
   const url = new URL(request.url);
   const parsed = searchSchema.safeParse({
     contentType: url.searchParams.get("contentType"),
@@ -29,6 +24,16 @@ export async function GET(request: Request) {
 
   if (!parsed.success) {
     return jsonValidationError(parsed.error, "クエリが不正です");
+  }
+
+  const auth = await checkEditorCommentContentAccess(
+    parsed.data.contentType,
+    parsed.data.contentId,
+    "read",
+    request.headers,
+  );
+  if (!auth.success) {
+    return jsonError(auth.error.error, 403);
   }
 
   const threads = await getCommentThreadsQuery(omitUndefined(parsed.data));
