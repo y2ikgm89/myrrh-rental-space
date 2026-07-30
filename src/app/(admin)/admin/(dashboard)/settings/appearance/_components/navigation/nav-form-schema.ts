@@ -31,7 +31,7 @@ const labelSchema = z
   .string()
   .transform((value, ctx): PortableTextSpan[] => {
     try {
-      const parsed = JSON.parse(value);
+      const parsed: unknown = JSON.parse(value);
       const result = z.array(portableTextSpanSchema).safeParse(parsed);
       if (!result.success) {
         ctx.addIssue({

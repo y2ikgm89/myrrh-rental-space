@@ -15,7 +15,7 @@ import {
   facilitiesSchema,
   type BusinessHours,
 } from "@/shared/lib/json-validators";
-import { isRecord } from "@/shared/lib/serialize";
+import { isRecord, isUnknownArray } from "@/shared/lib/serialize";
 import {
   gallerySchema,
   type GalleryItem,
@@ -63,7 +63,7 @@ const coerceBoolean = (value: unknown): boolean =>
  */
 const facilitiesFormSchema = z.preprocess((value) => {
   if (value === undefined || value === null || value === "") return [];
-  if (!Array.isArray(value)) return value;
+  if (!isUnknownArray(value)) return value;
   return value
     .map((item) => {
       if (typeof item === "string") {

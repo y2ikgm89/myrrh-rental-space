@@ -8,11 +8,45 @@
  */
 
 import { useState, useRef, useEffect, startTransition } from "react";
+import { z } from "zod";
 import type {
   MediaFilters,
   MediaPagination,
   GetMediaResult,
 } from "@/admin/types/media-picker";
+
+/** `GET /admin/api/media` の応答検証（`GetMediaResult` と対応）。 */
+const mediaDataSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  url: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  type: z.string(),
+  usage: z.string(),
+  alt: z.string().nullable(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  tags: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  uploader: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+    })
+    .nullable(),
+});
+
+const getMediaResultSchema = z.object({
+  items: z.array(mediaDataSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
 
 interface UseMediaLibraryOptions {
   initialFilters?: MediaFilters;
@@ -87,8 +121,12 @@ function fetchMediaData(
       throw new Error(message);
     }
 
-    const data: GetMediaResult = await response.json();
-    return data;
+    const raw: unknown = await response.json();
+    const parsed = getMediaResultSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error("メディアの取得に失敗しました");
+    }
+    return parsed.data;
   });
 }
 

@@ -25,6 +25,15 @@ import "server-only";
 
 import { isRecord } from "@/shared/lib/serialize";
 
+/**
+ * `Array.isArray` は `unknown` を渡しても `any[]` へ narrow してしまう
+ * TS 標準ライブラリの既知の癖があるため、`unknown[]` へ narrow する
+ * 独自の type guard を用意して any の伝播を断つ（`isRecord` と同型の方針）。
+ */
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 /** 再試行対象の HTTP ステータスコード（reason に関わらず常に retry） */
 const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([429, 500, 503]);
 
@@ -105,7 +114,7 @@ function extractSystemErrorCode(error: unknown): string | null {
 export function extractFirstErrorReason(error: unknown): string | null {
   if (!isRecord(error)) return null;
 
-  const directFirst = Array.isArray(error["errors"])
+  const directFirst = isUnknownArray(error["errors"])
     ? error["errors"][0]
     : undefined;
   if (isRecord(directFirst) && typeof directFirst["reason"] === "string") {
@@ -118,7 +127,9 @@ export function extractFirstErrorReason(error: unknown): string | null {
   const nestedErrors = isRecord(responseError)
     ? responseError["errors"]
     : undefined;
-  const nestedFirst = Array.isArray(nestedErrors) ? nestedErrors[0] : undefined;
+  const nestedFirst = isUnknownArray(nestedErrors)
+    ? nestedErrors[0]
+    : undefined;
   if (isRecord(nestedFirst) && typeof nestedFirst["reason"] === "string") {
     return nestedFirst["reason"];
   }

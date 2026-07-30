@@ -141,7 +141,8 @@ const slotsSchema = z.preprocess(
     if (typeof value !== "string") return value;
     if (value === "") return [];
     try {
-      return JSON.parse(value);
+      const parsed: unknown = JSON.parse(value);
+      return parsed;
     } catch {
       return null;
     }

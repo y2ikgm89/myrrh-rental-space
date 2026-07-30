@@ -3,6 +3,7 @@ import {
   prismaCuid2IdSchema,
   prismaCuidIdSchema,
 } from "@/shared/lib/validations/params";
+import { isUnknownArray } from "@/shared/lib/serialize";
 
 const eventRegistrationBaseSchema = z.object({
   eventId: prismaCuidIdSchema("イベント"),
@@ -42,7 +43,7 @@ export const publicEventRegistrationSchema = eventRegistrationBaseSchema.extend(
     agreedTermsIds: z.preprocess(
       (v) => {
         if (v === undefined || v === null) return [];
-        if (Array.isArray(v)) return v;
+        if (isUnknownArray(v)) return v;
         if (typeof v === "string") return v.length > 0 ? [v] : [];
         return v;
       },
@@ -76,7 +77,7 @@ export const publicEventWaitlistRegistrationSchema =
     agreedTermsIds: z.preprocess(
       (v) => {
         if (v === undefined || v === null) return [];
-        if (Array.isArray(v)) return v;
+        if (isUnknownArray(v)) return v;
         if (typeof v === "string") return v.length > 0 ? [v] : [];
         return v;
       },
