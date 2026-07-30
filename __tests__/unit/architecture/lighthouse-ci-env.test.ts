@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { setNodeEnv } from "../../helpers/env";
 import {
+  applyLhciProductionFallbacks,
   LHCI_PRODUCTION_ENV_FALLBACKS,
   LHCI_READY_MARKER,
 } from "../../../scripts/lhci-env";
@@ -81,8 +82,19 @@ function readWorkflowLevelEnv(): Record<string, string> {
 }
 
 /**
- * Lighthouse CI job の実効 env を再現する。
- * ambient な開発者 env が結果を左右しないよう、`process.env` を明示的に組み立て直す。
+ * Lighthouse CI job の実効 env を、**実際の起動経路と同じ順序で**再現する。
+ *
+ * 1. runner の env（ci.yml の workflow-level `env:`）を敷く
+ * 2. `applyLhciProductionFallbacks()` を**実物のまま**呼ぶ
+ *
+ * 定数 {@link LHCI_PRODUCTION_ENV_FALLBACKS} を直接 Object.assign しないのが要点。
+ * fallback は「未設定 / 空文字のときだけ埋める」= workflow 側の値を保存する契約なので、
+ * 定数で上書きすると両者が重複するキー（BETTER_AUTH_URL / AUDIT_LOG_HMAC_KEY 等）で
+ * 実際に使われる値とテストが使う値が食い違い、ci.yml 側が壊れても緑になる。
+ * 実物を呼ぶことで `applyLhciProductionFallbacks()` 自体の退行もこの gate で捕まる。
+ *
+ * ambient な開発者 env が結果を左右しないよう、`process.env` は明示的に組み立て直す。
+ * overrides は fallback 適用の**後**に効かせる（欠落を再現する対照実験のため）。
  */
 function applyLighthouseJobEnv(
   overrides: Record<string, string | undefined> = {},
@@ -92,11 +104,8 @@ function applyLighthouseJobEnv(
   }
   setNodeEnv("production");
 
-  Object.assign(
-    process.env,
-    readWorkflowLevelEnv(),
-    LHCI_PRODUCTION_ENV_FALLBACKS,
-  );
+  Object.assign(process.env, readWorkflowLevelEnv());
+  applyLhciProductionFallbacks();
 
   for (const [key, value] of Object.entries(overrides)) {
     if (value === undefined) {
@@ -125,6 +134,38 @@ describe("Lighthouse CI runtime env contract", () => {
     applyLighthouseJobEnv();
     const { validateProductionEnv } = await importServerEnv();
 
+    expect(() => {
+      validateProductionEnv();
+    }).not.toThrow();
+  });
+
+  test("fallbacks fill gaps without overwriting the runner's own env", async () => {
+    // 実 job では ci.yml の workflow-level env が先に入っており、fallback は
+    // 未設定のキーだけを埋める。この契約が崩れる（無条件上書きになる）と、
+    // 「テストは fallback 値で緑／実 job は ci.yml 値で赤」の乖離が生まれる。
+    const workflowEnv = readWorkflowLevelEnv();
+    const overlapping = Object.keys(workflowEnv).filter(
+      (key) => key in LHCI_PRODUCTION_ENV_FALLBACKS,
+    );
+
+    // 重複が 0 件ならこのテストは空回りする（ci.yml / fallback の構造変化を検出）
+    expect(overlapping.length).toBeGreaterThan(0);
+
+    applyLighthouseJobEnv();
+
+    for (const key of overlapping) {
+      expect(`${key}=${process.env[key] ?? ""}`).toBe(
+        `${key}=${workflowEnv[key] ?? ""}`,
+      );
+    }
+
+    // 重複しないキーは fallback がそのまま供給する
+    expect(process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"]).toBe(
+      LHCI_PRODUCTION_ENV_FALLBACKS["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
+    );
+
+    // ci.yml 側の値をそのまま使っても production 検証を満たすことまで確認する
+    const { validateProductionEnv } = await importServerEnv();
     expect(() => {
       validateProductionEnv();
     }).not.toThrow();
