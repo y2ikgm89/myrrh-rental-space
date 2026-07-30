@@ -61,12 +61,35 @@ describe("Prisma client module format contract", () => {
 
     if (packageType === "module") {
       // リポジトリを ESM 化した場合は cjs 固定を外すこと（Playwright も ESM で読む）。
-      expect(generatorBlock).not.toContain('moduleFormat    = "cjs"');
+      // 空白数に依存しない形で「cjs 固定が残っていない」ことを検査する。
+      expect(generatorBlock).not.toMatch(/moduleFormat\s*=\s*"cjs"/);
       return;
     }
 
     // CommonJS プロジェクト = Playwright が CJS へ変換する = import.meta は使えない。
     expect(generatorBlock).toMatch(/moduleFormat\s*=\s*"cjs"/);
+  });
+
+  test("Dockerfile runner guard checks the extension moduleFormat actually emits", () => {
+    // generator は moduleFormat から query_compiler の specifier 拡張子を決める
+    // （cjs → .js / esm → .mjs）。Dockerfile の prune guard はその「生成 client が
+    // dynamic import する実ファイル」の存在を保証するのが役目なので、両者がずれると
+    // guard は使われないファイルを見張ることになり、本来の目的を果たさなくなる。
+    const generatorBlock = readGeneratorBlock();
+    const expectedExtension = /moduleFormat\s*=\s*"cjs"/.test(generatorBlock)
+      ? "js"
+      : "mjs";
+
+    const dockerfile = readFileSync(join(process.cwd(), "Dockerfile"), "utf8");
+    const guardedExtensions = [
+      ...dockerfile.matchAll(
+        /query_compiler_fast_bg\.postgresql(?:\.wasm-base64)?\.(m?js)\b/g,
+      ),
+    ].map((match) => match[1]);
+
+    // 抽出が壊れた（Dockerfile の guard が消えた／改名された）ことを 0 件で見逃さない
+    expect(guardedExtensions.length).toBeGreaterThan(0);
+    expect([...new Set(guardedExtensions)]).toEqual([expectedExtension]);
   });
 
   test("generated client carries no import.meta", () => {
