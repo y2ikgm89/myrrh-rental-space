@@ -759,6 +759,34 @@ export async function duplicateEventCommand(id: string) {
   );
 
   const created = await prisma.$transaction(async (tx) => {
+    // Space ↔ Reservation cross-table overlap check (createEventCommand と同型)。
+    // 複製先は常に source と同一 spaceId・同一時間枠の DRAFT (占有ステータス) になる。
+    // excludeEventId は使わない — 複製元と複製後は別イベントであり、両者が同一 Space・
+    // 同一時間帯を同時に占有する状態そのものが不変条件違反のため、複製元自身のスロットも
+    // 検査対象に含める (source.status が CANCELLED/ARCHIVED なら checkSpaceOverlap 側の
+    // ACTIVE_EVENT_STATUSES 判定で自動的に対象外になる)。
+    if (source.spaceId) {
+      await lockSpaceForTransaction(tx, source.spaceId);
+      for (const slot of source.slots) {
+        const overlap = await checkSpaceOverlap(
+          {
+            spaceId: source.spaceId,
+            startTime: slot.startAt,
+            endTime: slot.endAt,
+          },
+          tx,
+        );
+        if (overlap.hasOverlap) {
+          throw new DomainError(
+            overlap.type === "reservation"
+              ? "選択された時間帯は既に予約されています。別の時間帯をお選びください。"
+              : "選択された時間帯は既に他のイベントで予約されています。別の時間帯をお選びください。",
+            "CONFLICT",
+          );
+        }
+      }
+    }
+
     const newEvent = await tx.event.create({
       data: {
         title: `${source.title}（コピー）`,

@@ -616,8 +616,14 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     const { reservationId, cleanup } = await createPaidReservationFixture(5000);
     try {
       // 各 refund は 3000 円要求。合計 9000 > 5000 = totalPriceWithTax。
-      // advisory lock 直列化 → 1 個目 (3000, 累積 3000) → 2 個目は残額 2000 に切り替わって
-      // 3000 要求は over-refund で reject。3 個目も同様 reject。
+      // refundReservationPaymentCommand は Phase A (advisory lock 内で cumulativeSoFar を
+      // 読み残額検証) → Phase B (Stripe API 呼出、tx 外) → Phase C (advisory lock 再取得で
+      // Phase A 時点の cumulativeSoFar と実際値を再検証) の 3 段階構成
+      // (stripe-refund-orchestration.ts)。Phase A/C は別 tx で advisory lock は tx スコープ
+      // のため、1 個目以外が reject される理由は実行タイミング依存になる:
+      // - Phase A がほぼ直列に進めば 2/3 個目は Phase A の残額チェックで VALIDATION
+      // - Phase A がほぼ同時に走れば 2/3 個目は Phase C の状態変更検知で CONFLICT
+      // どちらの経路でも over-refund 自体は防止される（本テストの核心不変条件）。
       const results = await Promise.allSettled([
         refundReservationPaymentCommand({
           reservationId,
@@ -643,7 +649,9 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       expect(fulfilled).toHaveLength(1);
       expect(rejected).toHaveLength(2);
       for (const r of rejected) {
-        expect(r.reason).toMatchObject({ code: "VALIDATION" });
+        expect(r.reason).toMatchObject({
+          code: expect.stringMatching(/^(VALIDATION|CONFLICT)$/),
+        });
       }
 
       // Refund child table は 1 レコードのみ (advisory lock で serialize)
