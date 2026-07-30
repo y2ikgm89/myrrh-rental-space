@@ -18,6 +18,13 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 - playwright.config.ts は `__tests__/unit/architecture/playwright-e2e-webserver-env.test.ts`
   に文字列レベルで pin されている。config 変更時はこの unit テストも更新・実行する
   （SKIP_ENV_VALIDATION の追加はテストが禁止）
+- **`e2e/**` は CommonJS として実行される**。Playwright は ESM/CJS を Node のセマンティクス
+  （拡張子 + 最寄り package.json の `type`）で決め、tsconfig の `module` は無視する
+  （解釈されるのは allowJs / baseUrl / paths / references / extends のみ）。
+  本 repo の package.json に `"type"` は無いため、`e2e/**` に `import.meta` を持ち込むと
+  `SyntaxError: Cannot use 'import.meta' outside a module` で **テストが 1 件も起動しない**。
+  Prisma 生成 client はこのため `moduleFormat = "cjs"` で生成する
+  （gate: `__tests__/unit/architecture/prisma-client-module-format.test.ts`）
 
 ## 書き方の規約（ESLint が機械強制）
 
