@@ -41,6 +41,7 @@ import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
+import { isPrismaExclusionConstraintError } from "@/shared/lib/prisma-errors";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
 /**
@@ -549,15 +550,72 @@ export async function deleteEventCommand(id: string) {
 export async function publishEventCommand(id: string) {
   const event = await prisma.event.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, title: true, status: true },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      spaceId: true,
+      slots: { select: { startAt: true, endAt: true } },
+    },
   });
   if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
   if (!event.title) throw new DomainError("タイトルが必要です", "VALIDATION");
 
-  await prisma.event.update({
-    where: { id, deletedAt: null },
-    data: { status: EventStatus.PUBLISHED, publishedAt: new Date() },
-  });
+  assertEventStatusTransition(event.status, EventStatus.PUBLISHED);
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // publish は非占有 status (CANCELLED/ARCHIVED) から占有 status (PUBLISHED) への
+      // 遷移で、既存 slot による Space 占有を再取得する write。updateEventCommand /
+      // createEventCommand と同じく advisory lock + overlap 検査を行わないと、
+      // 並行する予約 create との間で Space の二重占有が生じうる（DEFERRABLE constraint
+      // trigger は COMMIT 時発火のためこの tx 内 catch では捕捉できず、直列化でしか防げない）。
+      if (event.spaceId) {
+        await lockSpaceForTransaction(tx, event.spaceId);
+        for (const slot of event.slots) {
+          const overlap = await checkSpaceOverlap(
+            {
+              spaceId: event.spaceId,
+              startTime: slot.startAt,
+              endTime: slot.endAt,
+              excludeEventId: id,
+            },
+            tx,
+          );
+          if (overlap.hasOverlap) {
+            throw new DomainError(
+              overlap.type === "reservation"
+                ? "選択された時間帯は既に予約されています。別の時間帯をお選びください。"
+                : "選択された時間帯は既に他のイベントで予約されています。別の時間帯をお選びください。",
+              "CONFLICT",
+            );
+          }
+        }
+      }
+
+      const claim = await tx.event.updateMany({
+        where: { id, deletedAt: null, status: event.status },
+        data: { status: EventStatus.PUBLISHED, publishedAt: new Date() },
+      });
+      if (claim.count === 0) {
+        throw new DomainError(
+          "イベントのステータスが他の操作により変更されています。最新の状態を確認してください",
+          "CONFLICT",
+        );
+      }
+    }, RESERVATION_WRITE_TX_OPTIONS);
+  } catch (err) {
+    // domain 層の checkSpaceOverlap 事前検査をすり抜けた真の race のみ到達する
+    // 最終防衛線。Reservation 側 EXCLUDE 制約違反を生の DriverAdapterError の
+    // まま投げず、人間可読な CONFLICT に変換する。
+    if (isPrismaExclusionConstraintError(err)) {
+      throw new DomainError(
+        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+        "CONFLICT",
+      );
+    }
+    throw err;
+  }
 }
 
 /**

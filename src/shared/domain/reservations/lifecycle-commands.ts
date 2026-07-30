@@ -12,6 +12,7 @@ import {
   TERMINAL_RESERVATION_STATUSES,
 } from "@/shared/lib/validations/enums/helpers";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
+import { isPrismaExclusionConstraintError } from "@/shared/lib/prisma-errors";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload, claimCouponUsage } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
@@ -257,77 +258,98 @@ export async function restoreReservationStatusCommand(
     );
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
-    if (targetStatus === ReservationStatus.CONFIRMED) {
-      await lockSpaceForTransaction(tx, reservation.spaceId);
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      // EXCLUDE 制約 (reservations_no_active_time_overlap_excl) の占有対象は
+      // status IN (PENDING, CONFIRMED) の両方。CONFIRMED のときだけ検査すると
+      // PENDING 復元が DB 側の生の exclusion violation で失敗してしまう
+      // （restore-status-overlap.test.ts が回帰ガード）。
+      if (
+        targetStatus === ReservationStatus.PENDING ||
+        targetStatus === ReservationStatus.CONFIRMED
+      ) {
+        await lockSpaceForTransaction(tx, reservation.spaceId);
 
-      // Reservation と EventTimeSlot の両方で重複を検査する SSoT。旧実装は
-      // `checkReservationOverlap` (Reservation-only) しか呼ばず、EventTimeSlot と
-      // の cross-table 重複は DB 側 CONSTRAINT TRIGGER の raw error だけが最終
-      // 防衛線になっていた。domain 層で先に検出することで、admin に人間可読な
-      // VALIDATION 理由 (event/reservation どちらの重複か) を返す。
-      const overlap = await checkSpaceOverlap(
-        {
-          spaceId: reservation.spaceId,
-          startTime: reservation.startTime,
-          endTime: reservation.endTime,
-          excludeReservationId: id,
+        // Reservation と EventTimeSlot の両方で重複を検査する SSoT。旧実装は
+        // `checkReservationOverlap` (Reservation-only) しか呼ばず、EventTimeSlot と
+        // の cross-table 重複は DB 側 CONSTRAINT TRIGGER の raw error だけが最終
+        // 防衛線になっていた。domain 層で先に検出することで、admin に人間可読な
+        // VALIDATION 理由 (event/reservation どちらの重複か) を返す。
+        const overlap = await checkSpaceOverlap(
+          {
+            spaceId: reservation.spaceId,
+            startTime: reservation.startTime,
+            endTime: reservation.endTime,
+            excludeReservationId: id,
+          },
+          tx,
+        );
+        if (overlap.hasOverlap) {
+          throw new DomainError(
+            overlap.type === "event"
+              ? "同一スペース・同一時間帯に有効なイベントが存在するため復元できません"
+              : "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
+            "VALIDATION",
+          );
+        }
+      }
+
+      // updateMany + status guard による atomic claim。読取後 tx 内 write 前に
+      // 別 admin (or SUPER_ADMIN) が同じ予約を復元 / 再キャンセル / 削除して
+      // status を変えているケースでは count=0 となり CONFLICT で abort する。
+      // 素の update({where: {id, deletedAt: null}}) だと stale な previousStatus
+      // に基づく副作用 (icsSequence 巻き戻し / notification 二重) を silent に
+      // 通してしまう (Round-3 audit Finding #14 / medium)。
+      const claim = await tx.reservation.updateMany({
+        where: { id, deletedAt: null, status: previousStatus },
+        data: {
+          status: targetStatus,
+          icsSequence: { increment: 1 },
+          ...(wasCancelled
+            ? {
+                cancelledAt: null,
+                cancelledByType: null,
+                cancellationReason: null,
+              }
+            : {}),
         },
-        tx,
-      );
-      if (overlap.hasOverlap) {
+      });
+
+      if (claim.count === 0) {
         throw new DomainError(
-          overlap.type === "event"
-            ? "同一スペース・同一時間帯に有効なイベントが存在するため復元できません"
-            : "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
-          "VALIDATION",
+          "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
+          "CONFLICT",
         );
       }
-    }
 
-    // updateMany + status guard による atomic claim。読取後 tx 内 write 前に
-    // 別 admin (or SUPER_ADMIN) が同じ予約を復元 / 再キャンセル / 削除して
-    // status を変えているケースでは count=0 となり CONFLICT で abort する。
-    // 素の update({where: {id, deletedAt: null}}) だと stale な previousStatus
-    // に基づく副作用 (icsSequence 巻き戻し / notification 二重) を silent に
-    // 通してしまう (Round-3 audit Finding #14 / medium)。
-    const claim = await tx.reservation.updateMany({
-      where: { id, deletedAt: null, status: previousStatus },
-      data: {
-        status: targetStatus,
-        icsSequence: { increment: 1 },
-        ...(wasCancelled
-          ? {
-              cancelledAt: null,
-              cancelledByType: null,
-              cancellationReason: null,
-            }
-          : {}),
-      },
-    });
+      // キャンセル時に decrement した usageCount を、非終端へ戻すときに再 claim。
+      if (wasCancelled && reservation.couponId !== null) {
+        await claimCouponUsage(tx, {
+          couponId: reservation.couponId,
+          basePrice: Number(reservation.basePrice),
+          conflictMessage:
+            "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）。復元を中止しました。",
+        });
+      }
 
-    if (claim.count === 0) {
+      return tx.reservation.findUniqueOrThrow({
+        where: { id },
+        select: { icsSequence: true },
+      });
+    }, RESERVATION_WRITE_TX_OPTIONS);
+  } catch (err) {
+    // domain 層の checkSpaceOverlap 事前検査をすり抜けた真の race のみ到達する
+    // 最終防衛線。EXCLUDE 制約違反を生の DriverAdapterError のまま投げず、
+    // 人間可読な CONFLICT に変換する。
+    if (isPrismaExclusionConstraintError(err)) {
       throw new DomainError(
-        "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
+        "同一スペース・同一時間帯に有効な予約またはイベントが存在するため復元できません",
         "CONFLICT",
       );
     }
-
-    // キャンセル時に decrement した usageCount を、非終端へ戻すときに再 claim。
-    if (wasCancelled && reservation.couponId !== null) {
-      await claimCouponUsage(tx, {
-        couponId: reservation.couponId,
-        basePrice: Number(reservation.basePrice),
-        conflictMessage:
-          "クーポンが利用できません（利用上限に達したか、有効期限・最低利用額を満たさない可能性があります）。復元を中止しました。",
-      });
-    }
-
-    return tx.reservation.findUniqueOrThrow({
-      where: { id },
-      select: { icsSequence: true },
-    });
-  }, RESERVATION_WRITE_TX_OPTIONS);
+    throw err;
+  }
 
   return {
     previousStatus,
