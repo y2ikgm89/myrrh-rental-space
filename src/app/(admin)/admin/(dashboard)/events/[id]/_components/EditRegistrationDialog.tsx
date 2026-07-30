@@ -161,7 +161,11 @@ export function EditRegistrationDialog({
           >
             キャンセル
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          <Button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={isPending}
+          >
             {isPending ? "保存中..." : "保存"}
           </Button>
         </DialogFooter>

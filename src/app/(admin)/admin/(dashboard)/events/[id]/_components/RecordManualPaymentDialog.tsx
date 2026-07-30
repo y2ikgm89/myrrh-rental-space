@@ -157,7 +157,11 @@ export function RecordManualPaymentDialog({
           >
             キャンセル
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          <Button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={isPending}
+          >
             {isPending ? "記録中..." : "記録する"}
           </Button>
         </DialogFooter>

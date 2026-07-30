@@ -105,7 +105,7 @@ export function UploadTab({
 
       <Button
         type="button"
-        onClick={handleUpload}
+        onClick={() => void handleUpload()}
         disabled={isUploading || !canAddMore}
         className="w-full"
       >

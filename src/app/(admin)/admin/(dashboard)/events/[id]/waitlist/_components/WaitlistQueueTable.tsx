@@ -178,7 +178,7 @@ export function WaitlistQueueTable({ entries }: WaitlistQueueTableProps) {
                         variant="destructive"
                         size="sm"
                         disabled={isPending}
-                        onClick={() => handleExpire(entry.id)}
+                        onClick={() => void handleExpire(entry.id)}
                       >
                         期限切れにする
                       </Button>

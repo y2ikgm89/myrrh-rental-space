@@ -299,13 +299,13 @@ export function ConnectionCard({
                 label="接続テスト"
                 pendingLabel="テスト中..."
                 variant="outline"
-                onClick={handleTestConnection}
+                onClick={() => void handleTestConnection()}
                 disabled={!manualToken || isPending}
               />
               <SubmitButton
                 isPending={isSaving}
                 label="保存"
-                onClick={handleSaveManualToken}
+                onClick={() => void handleSaveManualToken()}
                 disabled={!manualToken || isPending}
               />
             </div>

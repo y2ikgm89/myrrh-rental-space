@@ -177,6 +177,10 @@ const eslintConfig = defineConfig([
             "@typescript-eslint/no-unsafe-member-access": "error",
             "@typescript-eslint/no-unsafe-argument": "error",
             "@typescript-eslint/no-unsafe-return": "error",
+            // P3: no-misused-promises。JSX イベントハンドラ属性（onClick 等）に
+            // Promise 返却関数を渡す誤用を検出する（void 属性を期待する箇所への
+            // async 関数の直接指定は unhandled rejection の温床になるため）。
+            "@typescript-eslint/no-misused-promises": "error",
           },
         },
         {

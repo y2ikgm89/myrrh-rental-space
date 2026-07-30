@@ -145,7 +145,7 @@ export function GoogleBusinessProfileSection({
             <Button
               type="button"
               variant="destructive"
-              onClick={handleRevoke}
+              onClick={() => void handleRevoke()}
               disabled={isPending}
               className="min-h-11"
             >

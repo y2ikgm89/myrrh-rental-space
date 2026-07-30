@@ -33,24 +33,26 @@ export function useDeleteMedia(): {
   const [isPending, startTransition] = useTransition();
   const confirm = useConfirm();
 
-  const handleDelete = async (item: MediaData) => {
-    const confirmed = await confirm({
-      title: "メディアを削除しますか？",
-      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中の場合、参照チェックにより削除がブロックされます。`,
-      confirmLabel: "削除",
-      variant: "destructive",
-    });
-    if (!confirmed) return;
+  const handleDelete = (item: MediaData) => {
+    void (async () => {
+      const confirmed = await confirm({
+        title: "メディアを削除しますか？",
+        description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中の場合、参照チェックにより削除がブロックされます。`,
+        confirmLabel: "削除",
+        variant: "destructive",
+      });
+      if (!confirmed) return;
 
-    startTransition(async () => {
-      const result = await deleteMedia(item.id);
-      if (!isMutationError(result)) {
-        toast.success("削除しました");
-        router.refresh();
-      } else {
-        toast.error(result.error);
-      }
-    });
+      startTransition(async () => {
+        const result = await deleteMedia(item.id);
+        if (!isMutationError(result)) {
+          toast.success("削除しました");
+          router.refresh();
+        } else {
+          toast.error(result.error);
+        }
+      });
+    })();
   };
 
   return { handleDelete, isPending };

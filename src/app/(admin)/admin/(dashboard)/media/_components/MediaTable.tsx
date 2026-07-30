@@ -120,7 +120,7 @@ export function MediaTable({ items, canDelete = false }: Props) {
                   <TableCell>
                     <ActionDropdown disabled={isPending}>
                       <ActionDropdownItem
-                        onClick={() => handleCopyUrl(item.url)}
+                        onClick={() => void handleCopyUrl(item.url)}
                       >
                         URLをコピー
                       </ActionDropdownItem>

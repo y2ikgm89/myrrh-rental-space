@@ -177,7 +177,7 @@ export function TermsInlineEditor({
             onOpenSettings={editor.openSettingsDialog}
             onSave={editor.handleSave}
             onPreview={editor.handlePreview}
-            onBack={editor.handleBack}
+            onBack={() => void editor.handleBack()}
             publishActions={publishActions}
             extraActions={deleteDialog}
           />

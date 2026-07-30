@@ -221,6 +221,15 @@ export function StripeSection({
 
   const formErrors = form.errors;
 
+  const handleCopyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(stripeWebhookUrl);
+      toast.success("Webhook URL をコピーしました");
+    } catch {
+      toast.error("コピーに失敗しました");
+    }
+  };
+
   const handleConnectionTest = () => {
     if (!secretKeyValue) {
       setTestResult({
@@ -503,14 +512,7 @@ export function StripeSection({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(stripeWebhookUrl);
-                      toast.success("Webhook URL をコピーしました");
-                    } catch {
-                      toast.error("コピーに失敗しました");
-                    }
-                  }}
+                  onClick={() => void handleCopyWebhookUrl()}
                   aria-label="Webhook URL をコピー"
                 >
                   <IconCopy className="h-4 w-4" aria-hidden="true" />
@@ -763,7 +765,7 @@ export function StripeSection({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={handleClearKeys}
+                onClick={() => void handleClearKeys()}
                 disabled={isPending || testPending}
               >
                 キーをクリア

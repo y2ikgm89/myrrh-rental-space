@@ -174,7 +174,7 @@ export function MediaDetailDialog({ item, onClose, canDelete = false }: Props) {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={handleCopyUrl}
+                      onClick={() => void handleCopyUrl()}
                     >
                       <IconCopy className="h-4 w-4 mr-1" />
                       URLをコピー
@@ -296,7 +296,7 @@ export function MediaDetailDialog({ item, onClose, canDelete = false }: Props) {
               {canDelete ? (
                 <Button
                   variant="destructive"
-                  onClick={handleDelete}
+                  onClick={() => void handleDelete()}
                   disabled={isPending}
                 >
                   <IconTrash className="h-4 w-4 mr-1" />

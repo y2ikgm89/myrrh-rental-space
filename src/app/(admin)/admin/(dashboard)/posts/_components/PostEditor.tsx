@@ -213,7 +213,7 @@ export function PostEditor({
             onOpenSettings={editor.openSettingsDialog}
             onSave={editor.handleSave}
             onPreview={editor.handlePreview}
-            onBack={editor.handleBack}
+            onBack={() => void editor.handleBack()}
             publishActions={publishActions}
             showCommentButton={mode === "edit" && !!post}
             isCommentPanelOpen={editor.isCommentsPanelOpen}

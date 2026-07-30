@@ -36,6 +36,18 @@ export function ReviewActionCell({
 
   const hasReply = replyBody !== null;
 
+  const handleConfirmDelete = () => {
+    void (async () => {
+      const result = await deleteReview(reviewId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("レビューを削除しました");
+        router.refresh();
+      }
+    })();
+  };
+
   return (
     <>
       <ActionDropdown>
@@ -57,15 +69,7 @@ export function ReviewActionCell({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         itemName={`レビュー #${reviewId.slice(0, 8)}`}
-        onConfirm={async () => {
-          const result = await deleteReview(reviewId);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-          } else {
-            toast.success("レビューを削除しました");
-            router.refresh();
-          }
-        }}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );
