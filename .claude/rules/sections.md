@@ -46,7 +46,7 @@ paths:
 
 ## デフォルトとテンプレート
 
-- `DEFAULT_PAGE_SECTIONS`（10 slug）は render fallback + 起動時の冪等補充
+- `DEFAULT_PAGE_SECTIONS`（11 slug）は render fallback + 起動時の冪等補充
   （`ensurePageSectionsCommand`、不足 type のみ）+ PAGE_TEMPLATES の供給源。
   DB に section が 1 件でもあれば fallback は混ざらない
 - PAGE_TEMPLATES は UNIVERSAL_SECTION_TYPES + additionalSectionTypes の opt-in 制

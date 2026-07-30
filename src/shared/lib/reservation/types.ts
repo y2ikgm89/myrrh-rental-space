@@ -69,27 +69,3 @@ export interface CalendarDate {
   isPast: boolean;
   hasAvailability: boolean;
 }
-
-/**
- * 重複チェックのパラメータ
- */
-export interface OverlapCheckParams {
-  spaceId: string;
-  startTime: Date;
-  endTime: Date;
-  /** 更新時は自分自身を除外 */
-  excludeReservationId?: string;
-}
-
-/**
- * 重複チェックの結果
- */
-export interface OverlapCheckResult {
-  hasOverlap: boolean;
-  conflictingReservation?: {
-    id: string;
-    startTime: Date;
-    endTime: Date;
-    status: ReservationStatus;
-  };
-}

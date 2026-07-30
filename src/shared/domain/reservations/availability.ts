@@ -16,11 +16,7 @@ import {
   parseBusinessHours,
   type BusinessHours,
 } from "@/shared/lib/json-validators";
-import type {
-  OverlapCheckParams,
-  OverlapCheckResult,
-  PrismaTransactionClient,
-} from "@/shared/lib/reservation/types";
+import type { PrismaTransactionClient } from "@/shared/lib/reservation/types";
 
 export type DateBlockedResult =
   { blocked: true; reason: string | null } | { blocked: false };
@@ -230,39 +226,6 @@ export async function getReservationRuleSettings(): Promise<{
     defaultTimeSlot: settings?.defaultTimeSlot ?? 60,
     minReservationDuration: settings?.minReservationDuration ?? 60,
     maxReservationDuration: settings?.maxReservationDuration ?? 480,
-  };
-}
-
-export async function checkReservationOverlapQuery(
-  params: OverlapCheckParams,
-  tx?: PrismaTransactionClient,
-): Promise<OverlapCheckResult> {
-  const { spaceId, startTime, endTime, excludeReservationId } = params;
-  const client = tx ?? prisma;
-
-  const overlappingReservation = await client.reservation.findFirst({
-    where: {
-      spaceId,
-      deletedAt: null,
-      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-      ...(excludeReservationId && { id: { not: excludeReservationId } }),
-      AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
-    },
-    select: {
-      id: true,
-      startTime: true,
-      endTime: true,
-      status: true,
-    },
-  });
-
-  if (!overlappingReservation) {
-    return { hasOverlap: false };
-  }
-
-  return {
-    hasOverlap: true,
-    conflictingReservation: overlappingReservation,
   };
 }
 

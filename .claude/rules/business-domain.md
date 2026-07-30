@@ -18,8 +18,10 @@ paths:
   `prisma.$transaction` 内で `lockSpaceForTransaction(tx, spaceId)` を
   overlap チェック・書込より先に取得する（`src/shared/domain/reservations/space-locks.ts`）。
   Reservation と Event (EventTimeSlot) の書込は同一 Space namespace (728351) を共有する
-- 重複判定の SSoT は `checkReservationOverlapQuery`: deletedAt null +
-  status ∈ {PENDING, CONFIRMED} + **半開区間 `startTime < end AND endTime > start`**。
+- 重複判定の SSoT は `checkSpaceOverlap`（`src/shared/domain/spaces/overlap.ts`）:
+  Reservation・EventTimeSlot 双方を同一 Space namespace で検査する。Reservation 側は
+  deletedAt null + status ∈ {PENDING, CONFIRMED}、Event 側は EventStatus ∈
+  {DRAFT, PUBLISHED} が対象。両側とも**半開区間 `start < end AND end > start`**で判定。
   lt/gt を lte/gte に変えると隣接予約が誤検出になる（テストが where 句を pin）
 
 ## イベント定員（TOCTOU 防止）
