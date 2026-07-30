@@ -18,10 +18,7 @@ import {
   findKeyInDeviceList,
   type SwitchBotCredentials,
 } from "@/shared/lib/smart-lock/switchbot-client";
-import {
-  SmartLockDeviceType,
-  SmartLockPasscodeStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isSmartLockPadDeviceType } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
@@ -373,7 +370,7 @@ export async function issueSmartLockPasscodes(
     }
 
     // 錠タイプは Space 割当対象外だが、誤割当ガードとして no-op
-    if (!isSmartLockPadDeviceType(device.deviceType as SmartLockDeviceType)) {
+    if (!isSmartLockPadDeviceType(device.deviceType)) {
       return { passcodes: [], issuanceFailed: false };
     }
 

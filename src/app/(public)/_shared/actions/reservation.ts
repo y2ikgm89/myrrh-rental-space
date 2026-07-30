@@ -280,9 +280,13 @@ export async function submitReservation(
 
   // 成功時は PRG で完了ページへ遷移（GET 副作用なし・リロード安全）。
   if (succeeded) {
+    // completeToken は async クロージャ内 (executeConformMutation の handler) で
+    // 代入されるため、TS の control-flow 解析はここでの型を
+    // (実際は string | null だが) never と推論する。String() で明示変換し
+    // restrict-template-expressions を満たす。
     redirect(
       completeToken
-        ? `/reservation/complete?token=${completeToken}`
+        ? `/reservation/complete?token=${String(completeToken)}`
         : "/reservation/complete",
     );
   }

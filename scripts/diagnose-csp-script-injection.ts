@@ -258,7 +258,13 @@ interface DiagnosisRow {
 function classifyZoneSetting(setting: ZoneSetting): DiagnosisRow | null {
   if (!SUSPECT_SETTING_IDS.has(setting.id)) return null;
   const state =
-    typeof setting.value === "string" ? setting.value : String(setting.value);
+    typeof setting.value === "string"
+      ? setting.value
+      : typeof setting.value === "boolean" || typeof setting.value === "number"
+        ? String(setting.value)
+        : setting.value === null
+          ? "null"
+          : JSON.stringify(setting.value);
   switch (setting.id) {
     case "rocket_loader":
       return {

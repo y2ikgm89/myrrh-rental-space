@@ -326,6 +326,18 @@ function readRecords(value: unknown): Record<string, unknown>[] {
   return value.filter(isRecord);
 }
 
+// `unknown` 値(gcloud JSON レスポンス由来のフィールド)を、既定の
+// Object.prototype.toString("[object Object]")化を避けて安全に文字列化する。
+// string/number/boolean はそのまま、それ以外は JSON.stringify、null/undefined は fallback。
+function describeUnknown(value: unknown, fallback: string): string {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
 export function getCloudBuildTriggerAuditLocations(region: string): string[] {
   return uniqueLocations([region, "global", ...CLOUD_BUILD_REGIONS]);
 }
@@ -1222,7 +1234,7 @@ export function readSecretManagerVersionStateErrors(
   const state = value["state"];
   if (state !== "ENABLED") {
     errors.push(
-      `${expectedRef.name} Secret Manager version ${expectedRef.version} must be ENABLED, got ${String(state ?? "missing")}`,
+      `${expectedRef.name} Secret Manager version ${expectedRef.version} must be ENABLED, got ${describeUnknown(state, "missing")}`,
     );
   }
 
@@ -1270,7 +1282,7 @@ export function readCloudRunRevisionHealthErrors(
     const formattedReason =
       typeof reason === "string" && reason.length > 0 ? ` (${reason})` : "";
     return [
-      `${serviceName} ${revisionName} Ready status must be True, got ${String(status ?? "missing")}${formattedReason}`,
+      `${serviceName} ${revisionName} Ready status must be True, got ${describeUnknown(status, "missing")}${formattedReason}`,
     ];
   });
 }

@@ -15,7 +15,6 @@ import {
 import { findKeyInDeviceList } from "@/shared/lib/smart-lock/switchbot-client";
 import {
   ReservationStatus,
-  SmartLockDeviceType,
   SmartLockPasscodeStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isSmartLockBodyDeviceType } from "@/shared/lib/validations/enums/helpers";
@@ -270,7 +269,7 @@ export async function processSwitchBotLockStateReport(
   });
   if (!device) return false;
 
-  if (!isSmartLockBodyDeviceType(device.deviceType as SmartLockDeviceType)) {
+  if (!isSmartLockBodyDeviceType(device.deviceType)) {
     return false;
   }
 

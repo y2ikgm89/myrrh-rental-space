@@ -40,7 +40,7 @@ export async function setupStripeWebhookFixture(): Promise<StripeWebhookFixture>
     typeof parsed !== "object" ||
     parsed === null ||
     !("webhookSecret" in parsed) ||
-    typeof (parsed as { webhookSecret: unknown }).webhookSecret !== "string"
+    typeof parsed.webhookSecret !== "string"
   ) {
     throw new Error(
       `setup-stripe-webhook-fixture returned unexpected shape: ${trimmed}`,

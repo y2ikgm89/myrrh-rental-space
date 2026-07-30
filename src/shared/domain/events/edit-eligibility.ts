@@ -23,7 +23,10 @@ const SELF_SERVE_EDITABLE_PAYMENT_STATUSES = new Set<PaymentStatus>([
 
 export function isEventRegistrationEditableForCustomerSelfServe(input: {
   status: RegistrationStatus;
-  paymentStatus: PaymentStatus | string;
+  // PaymentStatus はすでに string リテラルの union のため `PaymentStatus | string` は
+  // 型としては string と等価（no-redundant-type-constituents）。DB 由来の未検証値も
+  // 受け付ける意図はコメントで残す。
+  paymentStatus: string;
   slotStartAt: Date;
   now: Date;
 }): EventRegistrationEditEligibilityResult {
@@ -52,7 +55,7 @@ export function isEventRegistrationEditableForCustomerSelfServe(input: {
 /** ゲスト status ハブから edit ページへの導線。cookie 前提のため token 付与不要。 */
 export function buildGuestEventRegistrationEditHref(input: {
   status: RegistrationStatus;
-  paymentStatus: PaymentStatus | string;
+  paymentStatus: string;
   slotStartAt: Date;
   now: Date;
 }): string | null {

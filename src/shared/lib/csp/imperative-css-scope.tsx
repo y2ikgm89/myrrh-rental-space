@@ -29,7 +29,7 @@ export function ImperativeCssScope<T extends ElementType = "div">({
   ref: externalRef,
   ...rest
 }: ImperativeCssScopeProps<T>): ReactElement {
-  const Component = (as ?? "div") as ElementType;
+  const Component = as ?? "div";
   const internalRef = useRef<HTMLElement | null>(null);
 
   useImperativeCssVars(internalRef, cssVars ?? {});

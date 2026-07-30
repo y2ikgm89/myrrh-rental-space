@@ -50,7 +50,8 @@ import { cn } from "@/shared/lib/cn";
  * CSS.Transform.toString はスケールを含みドラッグ開始時のレイアウトシフトの原因。
  * CSS.Translate.toString は dnd-kit 公式の translate-only ヘルパー。
  */
-const toTranslate3d: typeof CSS.Translate.toString = CSS.Translate.toString;
+const toTranslate3d: typeof CSS.Translate.toString = (transform) =>
+  CSS.Translate.toString(transform);
 
 /** CSP-safe sortable ref: imperative transform + transition (GalleryItemRow pattern). */
 export function useSortableImperativeRef(

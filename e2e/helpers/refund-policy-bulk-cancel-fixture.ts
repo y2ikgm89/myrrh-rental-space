@@ -25,7 +25,6 @@
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@generated/prisma/client";
-import type { Prisma } from "@generated/prisma/browser";
 
 const REFUND_FIXTURE_MARKER = "[E2E] recurring series (E2E-01 refund policy)";
 const REFUND_FIXTURE_STRIPE_PAYMENT_INTENT_PREFIX = "pi_e2e_01_bulk_cancel_";
@@ -134,7 +133,7 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
   await client.settingsCommerce.update({
     where: { id: "singleton" },
     data: {
-      refundPolicy: REFUND_FIXTURE_POLICY as unknown as Prisma.InputJsonValue,
+      refundPolicy: REFUND_FIXTURE_POLICY,
     },
   });
 
@@ -193,8 +192,8 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
       dtstart: REFUND_FIXTURE_START_TIMES_UTC[0],
       duration: REFUND_FIXTURE_DURATION_MINUTES,
       instanceCount: REFUND_FIXTURE_START_TIMES_UTC.length,
-      templateData: templateData as unknown as Prisma.InputJsonValue,
-      agreementSnapshot: agreementSnapshot as unknown as Prisma.InputJsonValue,
+      templateData: templateData,
+      agreementSnapshot: agreementSnapshot,
     },
     select: { id: true },
   });
@@ -226,8 +225,7 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
         taxRate: REFUND_FIXTURE_TAX_RATE,
         taxAmount,
         totalPriceWithTax: REFUND_FIXTURE_TOTAL_PRICE + taxAmount,
-        rateBreakdownJson:
-          rateBreakdownJson as unknown as Prisma.InputJsonValue,
+        rateBreakdownJson: rateBreakdownJson,
         notes: `${REFUND_FIXTURE_MARKER} ${(i + 1).toString()}/3`,
       },
       select: { id: true },
@@ -272,7 +270,7 @@ export async function teardownRefundPolicyBulkCancelFixture(
     await client.settingsCommerce.update({
       where: { id: "singleton" },
       data: {
-        refundPolicy: fixture.originalRefundPolicy as Prisma.InputJsonValue,
+        refundPolicy: fixture.originalRefundPolicy,
       },
     });
   }

@@ -82,7 +82,11 @@ export function LenisProvider({ children }: LenisProviderProps) {
     });
 
     // ScrollTrigger との同期（Lenis 公式推奨）
-    lenis.on("scroll", ScrollTrigger.update);
+    // ScrollTrigger.update は static method のため、bare 参照だと this 束縛が失われる
+    // (@typescript-eslint/unbound-method)。アロー関数でラップして呼び出す。
+    lenis.on("scroll", () => {
+      ScrollTrigger.update();
+    });
 
     // useLenis(callback) で登録されたコールバックを dispatch
     lenis.on("scroll", () => {

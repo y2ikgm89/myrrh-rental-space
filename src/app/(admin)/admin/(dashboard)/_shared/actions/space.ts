@@ -143,7 +143,10 @@ export async function createSpaceAction(
   );
 
   if (createdId !== null) {
-    redirect(toAppRoute(`/admin/spaces/${createdId}`));
+    // createdId は async クロージャ内 (executeConformMutation の handler) で代入されるため、
+    // TS の control-flow 解析はここでの型を(実際は string だが) never と推論する。
+    // String() で明示変換し restrict-template-expressions を満たす。
+    redirect(toAppRoute(`/admin/spaces/${String(createdId)}`));
   }
 
   return submissionResult;
