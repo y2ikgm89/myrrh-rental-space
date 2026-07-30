@@ -12,7 +12,11 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
   chromium-admin / chromium-admin-mobile / webkit-admin-mobile /
   chromium-visual（e2e/visual）。mobile / webkit 系 6 project は opt-in。
 - CI の毎 push required gate は chromium-smoke のみ（APP_SURFACE=public と admin の 2 回）。
-  広域 E2E・visual・Lighthouse は opt-in（full CI dispatch）
+  広域 E2E・visual・Lighthouse は opt-in。opt-in 条件は「`codex/full-ci/` prefix の PR
+  branch」または workflow_dispatch だが、**prefix 経路の起動実績はゼロ**
+  （2026-07-31 時点、PR #673〜#1679 を走査）。実質 manual dispatch 専用と考え、
+  `gh workflow run ci.yml --ref <branch> -f run_full_ci=true` で明示的に回す。
+  **PR を出すだけでは広域 E2E は走らない**
 - webServer は migrate → seed →（ローカルのみ production build）→ next start を毎回実行し
   `reuseExistingServer: false`。ポート 3000 の dev サーバーとは共存不可・初回起動は長い
 - playwright.config.ts は `__tests__/unit/architecture/playwright-e2e-webserver-env.test.ts`
