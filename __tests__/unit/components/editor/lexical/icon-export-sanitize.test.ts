@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { sanitizeLexicalContentHtml } from "@/shared/lib/html/sanitize-content-html-core";
-import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline.server";
-import { enrichLexicalContentHtmlWithCuratedIcons } from "@/shared/lib/html/enrich-lexical-content-html-icons.server";
+import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline";
+import { enrichLexicalContentHtmlWithCuratedIcons } from "@/shared/lib/html/enrich-lexical-content-html-icons";
 import { renderEditorStateJsonToHtmlCore } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-core";
 import { HEADLESS_EDITOR_NODES } from "@/admin/components/editor/lexical/config/nodes";
 import { createHeadlessEditor } from "@lexical/headless";
