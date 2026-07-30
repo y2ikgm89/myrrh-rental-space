@@ -30,6 +30,7 @@ import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
+  isRefundSettledSuccess,
   PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
   PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
   resolveRefundAmount,
@@ -606,8 +607,16 @@ export interface RefundReservationResult {
   refundId: string;
   status: string | null;
   customerId: string;
+  /**
+   * Stripe が返金を確定 (`status === "succeeded"`) した時点で到達する paymentStatus。
+   * `isSettled: false` の間はまだ DB の paymentStatus には反映されていない
+   * (konbini / customer_balance 等の非同期経路。refund.updated webhook が
+   * 確定後に反映する)。
+   */
   newPaymentStatus:
     typeof PaymentStatus.PARTIALLY_REFUNDED | typeof PaymentStatus.REFUNDED;
+  /** true = 今回 Stripe が同期的に確定済み (paymentStatus 反映・返金完了メール送信可)。 */
+  isSettled: boolean;
   /** 累積返金額 (今回の refund を含めた合計、円) */
   cumulativeAmount: number;
   /** 今回 refund した金額 (円) */
@@ -755,28 +764,36 @@ export async function refundReservationPaymentCommand(
       );
     }
 
+    const isSettled = isRefundSettledSuccess(refund.status);
+
     await createRefundRecordIdempotent(tx, "refund_create_reservation", {
       reservationId,
       amount: prepared.amount,
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
+      status: refund.status ?? "pending",
     });
 
-    await tx.reservation.updateMany({
-      where: {
-        id: reservationId,
-        deletedAt: null,
-        paymentStatus: {
-          in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+    // konbini / customer_balance 等の非同期返金が未確定 (isSettled=false) の間は
+    // paymentStatus を書き換えない。確定は refund.updated webhook が行う
+    // (applyConfirmedRefundStatus 経由)。
+    if (isSettled) {
+      await tx.reservation.updateMany({
+        where: {
+          id: reservationId,
+          deletedAt: null,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
         },
-      },
-      data: {
-        paymentStatus: prepared.willBeFullyRefunded
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIALLY_REFUNDED,
-      },
-    });
+        data: {
+          paymentStatus: prepared.willBeFullyRefunded
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+        },
+      });
+    }
 
     return {
       refundId: refund.id,
@@ -785,6 +802,7 @@ export async function refundReservationPaymentCommand(
       newPaymentStatus: prepared.willBeFullyRefunded
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED,
+      isSettled,
       cumulativeAmount: prepared.newCumulative,
       refundAmount: prepared.amount,
     } satisfies RefundReservationResult;
@@ -960,21 +978,26 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      status: refund.status ?? "pending",
     });
 
-    await tx.reservation.updateMany({
-      where: {
-        id: reservationId,
-        deletedAt: null,
-        status: ReservationStatus.CANCELLED,
-        paymentStatus: { not: PaymentStatus.REFUNDED },
-      },
-      data: {
-        paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId: prepareResult.paymentIntentId,
-        paidAt: new Date(),
-      },
-    });
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (isRefundSettledSuccess(refund.status)) {
+      await tx.reservation.updateMany({
+        where: {
+          id: reservationId,
+          deletedAt: null,
+          status: ReservationStatus.CANCELLED,
+          paymentStatus: { not: PaymentStatus.REFUNDED },
+        },
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          stripePaymentIntentId: prepareResult.paymentIntentId,
+          paidAt: new Date(),
+        },
+      });
+    }
 
     return {
       outcome: "refunded" as const,
@@ -1105,24 +1128,29 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+      status: refund.status ?? "pending",
     });
 
-    await tx.reservation.updateMany({
-      where: {
-        id: reservationId,
-        deletedAt: null,
-        status: {
-          in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (isRefundSettledSuccess(refund.status)) {
+      await tx.reservation.updateMany({
+        where: {
+          id: reservationId,
+          deletedAt: null,
+          status: {
+            in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+          },
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+          },
         },
-        paymentStatus: {
-          in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          stripePaymentIntentId,
         },
-      },
-      data: {
-        paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId,
-      },
-    });
+      });
+    }
 
     return {
       outcome: "refunded" as const,

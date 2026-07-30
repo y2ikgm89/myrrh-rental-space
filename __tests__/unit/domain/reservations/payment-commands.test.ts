@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
@@ -125,6 +126,53 @@ const mockCreateStatusToken = mock(
   (_reservationId: string, _expiresAt: Date) => "STATUS_TOKEN_TEST",
 );
 
+// ---------------------------------------------------------------------------
+// refund tx mocks — isSettled skip 回帰テスト専用 (下記
+// "非同期決済 (status=pending) は paymentStatus 更新を skip する" describe のみで使用)。
+// over-refund / concurrent race / idempotency 等の full 挙動は既存コメントの通り
+// integration test (`refund-command.test.ts`) が担当するため、ここでは
+// `isRefundSettledSuccess` の skip 分岐のみを tx mock で狭く検証する。
+// ---------------------------------------------------------------------------
+const mockTxExecuteRaw = mock<
+  (query: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>
+>(() => Promise.resolve(undefined));
+const mockTxExecuteRawUnsafe = mock<(query: string) => Promise<unknown>>(() =>
+  Promise.resolve(undefined),
+);
+const mockTxReservationFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+const mockTxReservationUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockTxRefundAggregate = mock<
+  (
+    args: Record<string, unknown>,
+  ) => Promise<{ _sum: { amount: number | null } }>
+>(() => Promise.resolve({ _sum: { amount: null } }));
+const mockTxRefundCreate = mock<
+  (args: { data: Record<string, unknown> }) => Promise<unknown>
+>(() => Promise.resolve({ id: "refund-row-1" }));
+
+const mockRefundTx = {
+  $executeRaw: mockTxExecuteRaw,
+  $executeRawUnsafe: mockTxExecuteRawUnsafe,
+  reservation: {
+    findUnique: mockTxReservationFindUnique,
+    updateMany: mockTxReservationUpdateMany,
+  },
+  refund: {
+    aggregate: mockTxRefundAggregate,
+    create: mockTxRefundCreate,
+  },
+};
+const mockTransaction = mock<
+  (
+    callback: (tx: typeof mockRefundTx) => Promise<unknown>,
+    options?: Record<string, unknown>,
+  ) => Promise<unknown>
+>((callback) => callback(mockRefundTx));
+
 mock.module("server-only", () => ({}));
 const AuditAction = {
   CREATE: "CREATE",
@@ -146,6 +194,7 @@ mock.module("@/shared/db/prisma", () => ({
       update: mockReservationUpdate,
       updateMany: mockReservationUpdateMany,
     },
+    $transaction: mockTransaction,
   },
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
@@ -207,8 +256,13 @@ mock.module("@/shared/lib/reservation-status-token", () => ({
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
-const { createCheckoutSessionCommand, recordManualReservationPaymentCommand } =
-  await import("@/shared/domain/reservations/payment-commands");
+const {
+  createCheckoutSessionCommand,
+  recordManualReservationPaymentCommand,
+  refundReservationPaymentCommand,
+  refundOrphanedStripePaymentForCancelledReservation,
+  refundCheckoutAmountMismatchForReservation,
+} = await import("@/shared/domain/reservations/payment-commands");
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
   MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
@@ -759,6 +813,105 @@ describe("reservations/payment-commands", () => {
 
   // refundReservationPaymentCommand の検証は integration test に集約
   // (`__tests__/integration/domain/reservations/refund-command.test.ts`)。
+  //
+  // 以下は例外的に、非同期決済 (konbini / customer_balance 等) の "pending" 応答で
+  // paymentStatus 更新が skip される分岐 (isRefundSettledSuccess) のみを狭く
+  // 検証する unit test。over-refund / concurrent race / idempotency 等の full な
+  // 挙動は上記の通り integration test が担当するため、ここでは範囲を広げない。
+  describe("非同期決済 (status=pending) は paymentStatus 更新を skip する", () => {
+    beforeEach(() => {
+      mockTxExecuteRaw.mockClear();
+      mockTxExecuteRawUnsafe.mockClear();
+      mockTxReservationFindUnique.mockReset();
+      mockTxReservationUpdateMany.mockReset();
+      mockTxRefundAggregate.mockReset();
+      mockTxRefundCreate.mockReset();
+      mockTransaction.mockClear();
+
+      mockTxReservationUpdateMany.mockResolvedValue({ count: 1 });
+      mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockTxRefundCreate.mockResolvedValue({ id: "refund-row-1" });
+    });
+
+    test("refundReservationPaymentCommand: status=pending なら isSettled=false かつ reservation.updateMany 未呼出", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        id: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        totalPriceWithTax: 5000,
+      });
+      mockRefundCreate.mockResolvedValueOnce({
+        id: "re_test_pending",
+        status: "pending",
+      });
+
+      const result = await refundReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+      });
+
+      expect(result.isSettled).toBe(false);
+      expect(result.status).toBe("pending");
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+
+    test("refundOrphanedStripePaymentForCancelledReservation: status=pending なら reservation.updateMany 未呼出", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        status: ReservationStatus.CANCELLED,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        totalPriceWithTax: 5000,
+      });
+      mockRefundCreate.mockResolvedValueOnce({
+        id: "re_test_pending",
+        status: "pending",
+      });
+
+      const result = await refundOrphanedStripePaymentForCancelledReservation({
+        reservationId: RESERVATION_ID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+      });
+
+      expect(result.outcome).toBe("refunded");
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+
+    test("refundCheckoutAmountMismatchForReservation: status=pending なら reservation.updateMany 未呼出", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PENDING,
+      });
+      mockRefundCreate.mockResolvedValueOnce({
+        id: "re_test_pending",
+        status: "pending",
+      });
+
+      const result = await refundCheckoutAmountMismatchForReservation({
+        reservationId: RESERVATION_ID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        capturedAppAmount: 3000,
+      });
+
+      expect(result.outcome).toBe("refunded");
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+  });
 
   describe("recordManualReservationPaymentCommand", () => {
     function unpaidReservation(

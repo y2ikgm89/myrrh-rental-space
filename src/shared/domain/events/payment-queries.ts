@@ -341,3 +341,47 @@ export async function applyEventChargeRefundIdempotent(input: {
     },
   });
 }
+
+/**
+ * refund.updated (status → "succeeded") webhook 確定時に呼ぶ、konbini /
+ * customer_balance 等の非同期返金の後日確定処理。
+ * Reservation 側 `finalizeSettledReservationRefund` と同型
+ * (events 側は返金完了メール送信の仕組み自体が現状無いため paymentStatus 反映のみ)。
+ *
+ * @returns true = 今回このコマンドが確定処理を行った。false = 該当 Refund が
+ *          既に確定済み (webhook 重複配送等) で idempotent に no-op、または
+ *          対象申込が消失済み。
+ */
+export async function finalizeSettledEventRegistrationRefund(
+  registrationId: string,
+): Promise<boolean> {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: { paidAmount: true },
+  });
+  if (!registration || registration.paidAmount === null) {
+    return false;
+  }
+
+  const aggregate = await prisma.refund.aggregate({
+    where: { eventRegistrationId: registrationId, status: "succeeded" },
+    _sum: { amount: true },
+  });
+  const cumulativeSettled = aggregate._sum.amount ?? 0;
+  const willBeFullyRefunded = cumulativeSettled >= registration.paidAmount;
+
+  const updated = await prisma.eventRegistration.updateMany({
+    where: {
+      id: registrationId,
+      paymentStatus: {
+        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+      },
+    },
+    data: {
+      paymentStatus: willBeFullyRefunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED,
+    },
+  });
+  return updated.count > 0;
+}

@@ -253,6 +253,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
   getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
+  finalizeSettledReservationRefund: () => Promise.resolve(false),
 }));
 
 installEmailRenderContextMock();
@@ -303,6 +304,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     Promise.resolve(null),
   expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(5000),
+  finalizeSettledEventRegistrationRefund: () => Promise.resolve(false),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({

@@ -9,6 +9,7 @@ import {
   handleCheckoutSessionExpired,
 } from "./checkout-session-failed";
 import { handleChargeRefunded } from "./charge-refunded";
+import { handleRefundStatusUpdated } from "./refund-status-updated";
 
 /**
  * Stripe webhook event を event type ごとに handler へ dispatch する。
@@ -37,6 +38,11 @@ export async function dispatchStripeWebhookEvent(
 
     case "charge.refunded":
       await handleChargeRefunded(event.data.object);
+      break;
+
+    case "refund.updated":
+    case "refund.failed":
+      await handleRefundStatusUpdated(event.data.object);
       break;
 
     default:

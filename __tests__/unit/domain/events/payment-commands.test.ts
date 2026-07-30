@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 const PaymentStatus = {
@@ -71,6 +72,14 @@ const mockCheckoutSessionCreate = mock<
 const mockCheckoutSessionExpire = mock<
   (sessionId: string) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "cs_test_waitlist" }));
+// refund tx mocks 用 (isSettled skip 回帰テスト専用。下記の
+// "非同期決済 (status=pending) は paymentStatus 更新を skip する" describe のみで使用)。
+const mockRefundsCreate = mock<
+  (
+    params: Record<string, unknown>,
+    options?: Record<string, unknown>,
+  ) => Promise<{ id: string; status: string | null }>
+>(() => Promise.resolve({ id: "re_test_event_123", status: "succeeded" }));
 const mockGetStripeClient = mock(() => ({
   client: {
     checkout: {
@@ -79,9 +88,57 @@ const mockGetStripeClient = mock(() => ({
         expire: mockCheckoutSessionExpire,
       },
     },
+    refunds: { create: mockRefundsCreate },
   },
 }));
 const mockLogError = mock(() => undefined);
+
+// ---------------------------------------------------------------------------
+// refund tx mocks — isSettled skip 回帰テスト専用 (下記
+// "非同期決済 (status=pending) は paymentStatus 更新を skip する" describe のみで使用)。
+// reservations 側 payment-commands.test.ts と対称。over-refund / concurrent race /
+// idempotency 等の full 挙動は integration test (`refund-command.test.ts`) が担当する
+// ため、ここでは `isRefundSettledSuccess` の skip 分岐のみを狭く検証する。
+// ---------------------------------------------------------------------------
+const mockTxExecuteRaw = mock<
+  (query: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>
+>(() => Promise.resolve(undefined));
+const mockTxExecuteRawUnsafe = mock<(query: string) => Promise<unknown>>(() =>
+  Promise.resolve(undefined),
+);
+const mockTxEventRegistrationFindFirst = mock<
+  (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+const mockTxEventRegistrationUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockTxRefundAggregate = mock<
+  (
+    args: Record<string, unknown>,
+  ) => Promise<{ _sum: { amount: number | null } }>
+>(() => Promise.resolve({ _sum: { amount: null } }));
+const mockTxRefundCreate = mock<
+  (args: { data: Record<string, unknown> }) => Promise<unknown>
+>(() => Promise.resolve({ id: "refund-row-1" }));
+
+const mockRefundTx = {
+  $executeRaw: mockTxExecuteRaw,
+  $executeRawUnsafe: mockTxExecuteRawUnsafe,
+  eventRegistration: {
+    findFirst: mockTxEventRegistrationFindFirst,
+    updateMany: mockTxEventRegistrationUpdateMany,
+  },
+  refund: {
+    aggregate: mockTxRefundAggregate,
+    create: mockTxRefundCreate,
+  },
+};
+const mockTransaction = mock<
+  (
+    callback: (tx: typeof mockRefundTx) => Promise<unknown>,
+    options?: Record<string, unknown>,
+  ) => Promise<unknown>
+>((callback) => callback(mockRefundTx));
 
 mock.module("server-only", () => ({}));
 const AuditAction = {
@@ -104,6 +161,7 @@ mock.module("@/shared/db/prisma", () => ({
       findFirst: mockRegFindFirst,
       updateMany: mockRegUpdateMany,
     },
+    $transaction: mockTransaction,
   },
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
@@ -166,6 +224,10 @@ const {
   createEventCheckoutSessionCommand,
   createWaitlistOfferCheckoutSessionCommand,
   recordManualEventPaymentCommand,
+  refundEventRegistrationPaymentCommand,
+  refundOrphanedStripePaymentForCancelledEventRegistration,
+  refundExpiredWaitlistOfferPaymentCommand,
+  refundCheckoutAmountMismatchForEventRegistration,
 } = await import("@/shared/domain/events/payment-commands");
 
 const REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440101";
@@ -278,6 +340,7 @@ describe("events/payment-commands", () => {
             expire: mockCheckoutSessionExpire,
           },
         },
+        refunds: { create: mockRefundsCreate },
       },
     });
     mockCheckoutSessionCreate.mockResolvedValue({
@@ -790,6 +853,128 @@ describe("events/payment-commands", () => {
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
       // authoritative 再読み込みも走らない
       expect(mockRegFindUnique).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // isSettled skip 回帰テスト (reservations 側 payment-commands.test.ts と対称)。
+  // konbini / customer_balance 等の非同期決済は refunds.create() 時点で
+  // status="pending" を返す。この間 paymentStatus は書き換えてはならず、確定は
+  // refund.updated webhook (finalizeSettledEventRegistrationRefund) に委ねる。
+  // over-refund / concurrent race 等の full な挙動は integration test
+  // (`__tests__/integration/domain/events/refund-command.test.ts`) が担当するため、
+  // ここでは isRefundSettledSuccess の skip 分岐のみを狭く検証する。
+  describe("非同期決済 (status=pending) は paymentStatus 更新を skip する", () => {
+    const REFUND_PAYMENT_INTENT_ID = "pi_test_event_refund_pending";
+
+    beforeEach(() => {
+      mockTxExecuteRaw.mockClear();
+      mockTxExecuteRawUnsafe.mockClear();
+      mockTxEventRegistrationFindFirst.mockReset();
+      mockTxEventRegistrationUpdateMany.mockReset();
+      mockTxRefundAggregate.mockReset();
+      mockTxRefundCreate.mockReset();
+      mockTransaction.mockClear();
+      mockRefundsCreate.mockReset();
+
+      mockTxEventRegistrationUpdateMany.mockResolvedValue({ count: 1 });
+      mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockTxRefundCreate.mockResolvedValue({ id: "refund-row-1" });
+      mockRefundsCreate.mockResolvedValue({
+        id: "re_test_pending",
+        status: "pending",
+      });
+    });
+
+    test("refundEventRegistrationPaymentCommand: status=pending なら isSettled=false かつ updateMany 未呼出", async () => {
+      mockTxEventRegistrationFindFirst.mockResolvedValue({
+        id: REGISTRATION_ID,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: REFUND_PAYMENT_INTENT_ID,
+        paidAmount: 5000,
+      });
+
+      const result = await refundEventRegistrationPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+      });
+
+      expect(result.isSettled).toBe(false);
+      expect(result.status).toBe("pending");
+      expect(mockTxEventRegistrationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+
+    test("refundOrphanedStripePaymentForCancelledEventRegistration: status=pending なら updateMany 未呼出", async () => {
+      mockTxEventRegistrationFindFirst.mockResolvedValue({
+        status: RegistrationStatus.CANCELLED,
+        paymentStatus: PaymentStatus.PAID,
+        paidAmount: 5000,
+        quantity: 1,
+        ticket: { price: 5000 },
+      });
+
+      const result =
+        await refundOrphanedStripePaymentForCancelledEventRegistration({
+          registrationId: REGISTRATION_ID,
+          stripePaymentIntentId: REFUND_PAYMENT_INTENT_ID,
+        });
+
+      expect(result.outcome).toBe("refunded");
+      expect(mockTxEventRegistrationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+
+    test("refundExpiredWaitlistOfferPaymentCommand: status=pending なら updateMany 未呼出", async () => {
+      mockTxEventRegistrationFindFirst.mockResolvedValue({
+        id: REGISTRATION_ID,
+        status: RegistrationStatus.EXPIRED,
+        paymentStatus: PaymentStatus.PENDING,
+        paidAmount: 3000,
+        stripePaymentIntentId: null,
+      });
+
+      const result = await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        stripePaymentIntentId: REFUND_PAYMENT_INTENT_ID,
+      });
+
+      expect(result.outcome).toBe("refunded");
+      expect(mockTxEventRegistrationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
+    });
+
+    test("refundCheckoutAmountMismatchForEventRegistration: status=pending なら updateMany 未呼出", async () => {
+      mockTxEventRegistrationFindFirst.mockResolvedValue({
+        id: REGISTRATION_ID,
+        status: RegistrationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PENDING,
+      });
+
+      const result = await refundCheckoutAmountMismatchForEventRegistration({
+        registrationId: REGISTRATION_ID,
+        stripePaymentIntentId: REFUND_PAYMENT_INTENT_ID,
+        capturedAppAmount: 3000,
+      });
+
+      expect(result.outcome).toBe("refunded");
+      expect(mockTxEventRegistrationUpdateMany).not.toHaveBeenCalled();
+      expect(mockTxRefundCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "pending" }),
+        }),
+      );
     });
   });
 

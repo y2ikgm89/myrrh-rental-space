@@ -163,6 +163,11 @@ export async function refundReservationPayment(
     afterSuccess: (data) => {
       invalidateReservationCaches(parsedId.data, data.customerId);
 
+      // konbini / customer_balance 等の非同期返金 (isSettled=false) はまだ Stripe が
+      // 確定させていないため、「返金完了」メール・通知はここでは送らない
+      // (refund.updated webhook 経由の確定時に送信する)。
+      if (!data.isSettled) return;
+
       // Cluster H #8: 顧客への返金通知メール + 管理者向け in-app 通知を発火する。
       // 返金は「更新」「キャンセル」と独立した重要取引通知として非 gate で常時送信。
       // idempotencyKey は refundId ベースなので複数回の部分返金でも silent drop しない。
