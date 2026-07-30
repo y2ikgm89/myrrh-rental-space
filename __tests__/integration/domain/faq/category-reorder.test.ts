@@ -10,14 +10,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -43,24 +36,58 @@ describeMaybe("faq/category-commands の reorder", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    await prisma.faqItem.deleteMany({});
-    await prisma.faqCategory.deleteMany({});
-  });
+  test("reorderFaqCategories は order を並び替える（既存カテゴリーは保持したまま自分の2件を入れ替える）", async () => {
+    // reorderFaqCategories は「未削除 FaqCategory が過不足なく揃っていること」を
+    // 検証するため、対象スコープは全件。FaqItem.categoryId は onDelete: Cascade
+    // だが、deleteMany({}) は seed 済みの実 FAQ カテゴリー・質問を問答無用で破壊し
+    // 以降の seed 実行を壊すため使わない。既存行は保持したまま自分の2行だけ
+    // 追加して入れ替える。
+    const suffix = crypto.randomUUID();
+    const existing = await prisma.faqCategory.findMany({
+      where: { deletedAt: null },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    // order は非削除行間の partial unique。過去の soft-delete で欠番が生じている
+    // 可能性があるため existing.length ではなく既存最大値の次を使う
+    // （0..N-1 への詰め直しは reorderFaqCategories 自体が行う）。
+    const maxOrder = await prisma.faqCategory.aggregate({
+      where: { deletedAt: null },
+      _max: { order: true },
+    });
+    const baseOrder = (maxOrder._max.order ?? -1) + 1;
 
-  test("reorderFaqCategories は order を並び替える", async () => {
     const a = await prisma.faqCategory.create({
-      data: { name: "Repro A", slug: "repro-faq-category-a", order: 0 },
+      data: {
+        name: `Repro A ${suffix}`,
+        slug: `repro-faq-category-a-${suffix}`,
+        order: baseOrder,
+      },
     });
     const b = await prisma.faqCategory.create({
-      data: { name: "Repro B", slug: "repro-faq-category-b", order: 1 },
+      data: {
+        name: `Repro B ${suffix}`,
+        slug: `repro-faq-category-b-${suffix}`,
+        order: baseOrder + 1,
+      },
     });
 
-    await reorderFaqCategories([b.id, a.id]);
+    try {
+      await reorderFaqCategories([...existing.map((e) => e.id), b.id, a.id]);
 
-    const rows = await prisma.faqCategory.findMany({
-      orderBy: { order: "asc" },
-    });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+      const rows = await prisma.faqCategory.findMany({
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([
+        ...existing.map((e) => e.id),
+        b.id,
+        a.id,
+      ]);
+    } finally {
+      await prisma.faqCategory.deleteMany({
+        where: { id: { in: [a.id, b.id] } },
+      });
+    }
   });
 });

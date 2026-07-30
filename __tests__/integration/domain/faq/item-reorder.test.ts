@@ -10,14 +10,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -42,41 +35,55 @@ describeMaybe("faq/item-commands の reorder", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    await prisma.faqItem.deleteMany({});
-    await prisma.faqCategory.deleteMany({});
-  });
-
   test("reorderFaqItems は order を並び替える", async () => {
+    // reorderFaqItems は categoryId スコープの全件一致を検証するため、自分専用の
+    // カテゴリーを作って隔離する（テーブル全体の deleteMany は seed 済みの実
+    // FAQ を破壊するため使わない）。カテゴリーごと削除すれば質問も Cascade で消える。
+    // FaqCategory.order は非削除行間で単独の partial unique index を持つため、
+    // 既定値 0 は seed 済みの先頭カテゴリーと衝突しうる。既存最大値の次を使う。
+    const suffix = crypto.randomUUID();
+    const maxOrder = await prisma.faqCategory.aggregate({
+      where: { deletedAt: null },
+      _max: { order: true },
+    });
     const category = await prisma.faqCategory.create({
-      data: { name: "Repro Category", slug: "repro-faq-item-category" },
-    });
-    const a = await prisma.faqItem.create({
       data: {
-        categoryId: category.id,
-        question: "質問A",
-        answer: "回答A",
-        order: 0,
-      },
-    });
-    const b = await prisma.faqItem.create({
-      data: {
-        categoryId: category.id,
-        question: "質問B",
-        answer: "回答B",
-        order: 1,
+        name: `Repro Category ${suffix}`,
+        slug: `repro-faq-item-category-${suffix}`,
+        order: (maxOrder._max.order ?? -1) + 1,
       },
     });
 
-    await reorderFaqItems(category.id, [
-      { id: a.id, order: 1 },
-      { id: b.id, order: 0 },
-    ]);
+    try {
+      const a = await prisma.faqItem.create({
+        data: {
+          categoryId: category.id,
+          question: "質問A",
+          answer: "回答A",
+          order: 0,
+        },
+      });
+      const b = await prisma.faqItem.create({
+        data: {
+          categoryId: category.id,
+          question: "質問B",
+          answer: "回答B",
+          order: 1,
+        },
+      });
 
-    const rows = await prisma.faqItem.findMany({
-      where: { categoryId: category.id },
-      orderBy: { order: "asc" },
-    });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+      await reorderFaqItems(category.id, [
+        { id: a.id, order: 1 },
+        { id: b.id, order: 0 },
+      ]);
+
+      const rows = await prisma.faqItem.findMany({
+        where: { categoryId: category.id },
+        orderBy: { order: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+    } finally {
+      await prisma.faqCategory.deleteMany({ where: { id: category.id } });
+    }
   });
 });
