@@ -31,7 +31,12 @@ const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
 test.describe("admin proxy registration (T10)", () => {
   test("代行登録 Dialog が開き、事前登録が確定できる", async ({ page }) => {
     // singleOccurrenceSlug のイベント詳細に遷移 → 出欠確認 に遷移
-    await page.goto("/admin/events");
+    // 一覧は開始日時の降順 + 10 件/ページ。他 spec が実行中に作る E2E イベント
+    // (waitlist / broadcast fixture 等) が 1 ページ目を埋め、seed 行は 2 ページ目へ
+    // 押し出される (run 30569714860: 「1-10 / 全 12 件」)。タイトル検索でスコープする。
+    await page.goto(
+      `/admin/events?search=${encodeURIComponent("ヨガ＆マインドフルネス体験会")}`,
+    );
 
     await page
       .getByRole("cell", {
