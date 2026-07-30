@@ -382,7 +382,7 @@ export function ReservationDetail({
                 value={reservation.status}
                 onValueChange={(value) => {
                   if (isValidReservationStatus(value))
-                    handleStatusChange(value);
+                    void handleStatusChange(value);
                 }}
                 disabled={isPending}
               >

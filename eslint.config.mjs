@@ -125,6 +125,49 @@ const eslintConfig = defineConfig([
     ...config,
     files: ["**/*.ts", "**/*.tsx"],
   })),
+
+  // 型情報を使う lint（typed linting）の配線。単一ファイル lint が 58ms → 30.5s に
+  // 悪化するため、lefthook pre-commit の eslint-fix にだけ ESLINT_SKIP_TYPE_CHECK=1
+  // を付けてこのブロック自体を無効化する（package.json の lint 系スクリプトや CI は
+  // 有効のまま）。Phase D 計画: P0 は tseslint.configs.recommendedTypeChecked のうち
+  // recommended（型情報不要版）に無い新規ルールだけを個別列挙する
+  // （プリセット spread は既存カスタム no-unused-vars と衝突し、base 版
+  // require-await 等を誤って有効化すると 544 件出るため不採用）。
+  ...(process.env.ESLINT_SKIP_TYPE_CHECK === "1"
+    ? []
+    : [
+        {
+          name: "typescript-type-checked-wiring",
+          files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          languageOptions: {
+            parserOptions: {
+              projectService: true,
+              tsconfigRootDir: import.meta.dirname,
+            },
+          },
+        },
+        {
+          // P0: recommendedTypeChecked が recommended に対して新規追加するルールの
+          // うち、現時点で違反 0 件の 10 ルール + no-floating-promises（4 件、修正済み）。
+          // 残り（require-await / no-unsafe-* / no-misused-promises /
+          // no-unnecessary-type-assertion 等）は P1〜P4 で個別に段階導入する。
+          name: "typescript-type-checked-rules-p0",
+          files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          rules: {
+            "@typescript-eslint/await-thenable": "error",
+            "@typescript-eslint/no-array-delete": "error",
+            "@typescript-eslint/no-duplicate-type-constituents": "error",
+            "@typescript-eslint/no-for-in-array": "error",
+            "@typescript-eslint/no-implied-eval": "error",
+            "@typescript-eslint/no-unsafe-enum-comparison": "error",
+            "@typescript-eslint/no-unsafe-unary-minus": "error",
+            "@typescript-eslint/only-throw-error": "error",
+            "@typescript-eslint/prefer-promise-reject-errors": "error",
+            "@typescript-eslint/restrict-plus-operands": "error",
+            "@typescript-eslint/no-floating-promises": "error",
+          },
+        },
+      ]),
   {
     name: "typescript-rules",
     files: ["**/*.ts", "**/*.tsx"],

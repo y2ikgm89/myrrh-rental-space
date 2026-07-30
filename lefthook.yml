@@ -18,6 +18,9 @@ pre-commit:
   parallel: true
   jobs:
     # ESLint: staged .ts/.tsx/.js/.jsx/.mjs/.cjs に対して --fix
+    # ESLINT_SKIP_TYPE_CHECK=1: 型情報を使う lint（typed linting）を無効化する。
+    # 有効時は単一ファイル lint が 58ms → 30.5s に悪化し pre-commit を殺すため、
+    # ここでだけ off にする（package.json の lint 系スクリプト・CI は有効のまま）。
     - name: eslint-fix
       glob:
         - "*.ts"
@@ -26,6 +29,8 @@ pre-commit:
         - "*.jsx"
         - "*.mjs"
         - "*.cjs"
+      env:
+        ESLINT_SKIP_TYPE_CHECK: "1"
       run: bunx eslint --fix --no-warn-ignored {staged_files}
       stage_fixed: true
 
