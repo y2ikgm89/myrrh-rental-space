@@ -171,6 +171,7 @@ jobs:
           SQUAWK_VERSION: "2.51.0"
           SQUAWK_SHA256: "8433b7e4500ce6ab7e5b4283ba80be9dde46b7a4de9e22bf766a217777ddb6f9"
         run: |
+          set -euo pipefail
           curl -fsSL -o squawk \
             "https://github.com/sbdchd/squawk/releases/download/v${SQUAWK_VERSION}/squawk-linux-x64"
           echo "${SQUAWK_SHA256}  squawk" | sha256sum -c -
@@ -205,10 +206,23 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
-      # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容
+      # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容。
+      #
+      # `set -euo pipefail` は必須。`run:` の既定 shell は非 Windows で `bash -e {0}` と
+      # 定義されており `-o pipefail` を含まない（`shell: bash` を明示した場合のみ
+      # `bash --noprofile --norc -eo pipefail {0}` になる）。pipefail 無しでは
+      # `| tee` を挟んだ時点でパイプライン終了コードが常に tee の 0 になり、
+      # bun audit の非ゼロ終了が握り潰されて gate が完全な no-op になる。
+      # 公式: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+      #
+      # severity 閾値は `--audit-level`。`--severity` は bun audit に存在しないフラグで、
+      # bun は未知フラグを黙って無視するため閾値が一切効かない状態になる。
+      # 公式: https://bun.com/docs/install/audit
       - name: Run bun audit
         if: needs.changes.outputs.code == 'true'
-        run: bun audit --prod --severity=high 2>&1 | tee audit-report.txt
+        run: |
+          set -euo pipefail
+          bun audit --prod --audit-level=high 2>&1 | tee audit-report.txt
 
       - name: Upload audit report
         if: needs.changes.outputs.code == 'true' && always()

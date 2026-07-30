@@ -45,7 +45,7 @@ GitHub 公式ガイド: <https://docs.github.com/en/code-security/security-advis
 
 - **Renovate**: `.github/renovate.json5` で package grouping + auto-merge patch + 脆弱性即時更新
 - **CodeQL**: GitHub Code Scanning **Default setup**（Repo Settings → Security → Code scanning）で有効化。`default` query suite (OWASP Top 10 含む) を runner / クエリ自動更新で常時実行。`.github/workflows/codeql.yml` は **意図的に未配置**（Advanced setup の手動メンテは drift 源）
-- **bun audit**: `.github/workflows/ci.yml` の `Dependency Audit (bun audit)` job で毎 PR 実行（`--prod --severity=high`）。全依存の脆弱性 scan を提供するため、GitHub `actions/dependency-review-action` は **意図的に未配置**（Dependency Graph 機能依存 + bun audit と機能重複）
+- **bun audit**: `.github/workflows/ci.yml` の `Dependency Audit (bun audit)` job で毎 PR 実行（`bun audit --prod --audit-level=high`）。high 以上を検出したら job を fail させる hard gate（branch protection の required status check）。severity 閾値は `--audit-level` であり、`--severity` は bun audit に存在しないフラグで黙って無視される。また `run:` の既定 shell は pipefail を持たないため、`| tee` を挟む本 step は `set -euo pipefail` を明示している（欠けると終了コードが握り潰され gate が no-op 化する。回帰は `__tests__/unit/architecture/workflow-shell-pipefail.test.ts` が機械強制）。全依存の脆弱性 scan を提供するため、GitHub `actions/dependency-review-action` は **意図的に未配置**（Dependency Graph 機能依存 + bun audit と機能重複）
 - **Better Auth**: 認証・セッション管理を外部ライブラリで委譲
 - **Turnstile**: 全公開フォームに Cloudflare Turnstile CAPTCHA
 - **CSP nonce**: `src/proxy.ts` でリクエストごと nonce 生成
