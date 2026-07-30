@@ -39,6 +39,7 @@
     "email:dev": "email dev --dir src/shared/emails --port 3030",
     "lhci:start-server": "bun run scripts/lhci-start.ts",
     "lhci": "lhci autorun",
+    "lhci:local": "bun run build:skip-env && bun run lhci",
     "lhci:collect": "lhci collect",
     "lhci:assert": "lhci assert",
     "gcp:audit-production-iap": "bun scripts/audit-gcp-production-iap.ts",

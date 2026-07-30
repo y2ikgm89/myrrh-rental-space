@@ -2,65 +2,100 @@
 /**
  * Lighthouse CI 用の本番相当サーバー起動スクリプト。
  *
- * `next start` では NODE_ENV=production のため `instrumentation.register()` 内の
- * `validateProductionEnv()` が実行され、ENCRYPTION_KEY / R2 系などが未設定だと 500 になる。
- * 開発用の `next dev` では同チェックがスキップされるため、この問題は LHCI やローカルの
- * `next start` 検証時にのみ顕在化する。
+ * `next start` は NODE_ENV=production で動くため `instrumentation.register()` の
+ * `validateProductionEnv()` が走る。ここで env が 1 つでも欠けると register() が throw し、
+ * **サーバーは listen したまま全リクエストが 500** になる。Lighthouse からは
+ * `ERRORED_DOCUMENT_REQUEST (Status code: 500)` としか見えず原因が判別できない
+ * （実際に 2026-07-30 の full CI dispatch がこの状態で fail した）。
  *
- * 公式準拠（bun.com/docs）:
- * - Bun runtime は `.env` → `.env.{NODE_ENV}` → `.env.local` の順で auto-load（`.env.local` が最優先）
- * - `Bun.spawnSync([...], options)` の primary form（配列引数）採用
- * - `env: { ...process.env, ... }` でサブプロセスに env 継承
+ * そのため本スクリプトは 2 つの責務だけを持つ:
  *
- * ダミー値は実サービスに接続しない前提のプレースホルダであり、本番デプロイには使わないこと。
+ * 1. `scripts/lhci-env.ts` の env 契約を適用する（CI / ローカル共通の SSoT）。
+ *    契約の充足は `__tests__/unit/architecture/lighthouse-ci-env.test.ts` が
+ *    実際に `validateProductionEnv()` を実行して検証する。
+ * 2. `next start` を起動し、`/api/live` が 200 を返すまで待ってから
+ *    {@link LHCI_READY_MARKER} を stdout に出す。
+ *    Lighthouse CI はこのマーカーを `startServerReadyPattern` で待つ。
+ *    Next.js のログ文言（"Ready in ..."）に依存しないため、Next のバージョン更新で
+ *    silent に壊れない。`/api/live` は instrumentation 実行後でなければ 200 を
+ *    返さないので、register() の throw をここで検出できる。
+ *
+ * **build はしない**。CI は専用の build step、ローカルは `bun run lhci:local`
+ * （build → autorun）を使う。build 出力を `startServerReadyPattern` の監視窓に
+ * 含めないことで、ready 判定の誤マッチと timeout を構造的に排除する。
+ *
+ * @see https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/configuration.md
  */
 
-function applyLhciProductionFallbacks(): void {
-  const hex64 = "0".repeat(64);
+import {
+  applyLhciProductionFallbacks,
+  LHCI_BASE_URL,
+  LHCI_READY_MARKER,
+} from "./lhci-env";
 
-  const fallbacks: Record<string, string> = {
-    ENCRYPTION_KEY: hex64,
-    SUPPRESSION_HASH_SECRET: hex64,
-    CRON_OIDC_AUDIENCE: "http://localhost:3000",
-    CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com",
-    R2_ACCOUNT_ID: "lhci-local-r2-account",
-    R2_ACCESS_KEY_ID: "lhci-local-r2-access-key",
-    R2_SECRET_ACCESS_KEY: "lhci-local-r2-secret-key-32-min!!",
-    R2_BUCKET_NAME: "lhci-local-bucket",
-    R2_INQUIRIES_BUCKET_NAME: "lhci-local-inquiries-bucket",
-    R2_PUBLIC_URL: "https://example.com",
-    NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-  };
+const LIVENESS_URL = `${LHCI_BASE_URL}/api/live`;
+const READY_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 500;
 
-  for (const [key, value] of Object.entries(fallbacks)) {
-    const current = process.env[key];
-    if (current === undefined || current === "") {
-      process.env[key] = value;
-    }
+async function isServerLive(): Promise<boolean> {
+  try {
+    const response = await fetch(LIVENESS_URL, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
+}
+
+/**
+ * `/api/live` が 200 を返すまで poll する。
+ * server プロセスが先に exit した場合は即座に諦める（無駄に timeout まで待たない）。
+ */
+async function waitForServerReady(server: {
+  exitCode: number | null;
+}): Promise<void> {
+  const deadline = Date.now() + READY_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) {
+      throw new Error(
+        `next start exited with code ${server.exitCode} before becoming ready`,
+      );
+    }
+    if (await isServerLive()) return;
+    await Bun.sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(
+    `Server did not answer 200 on ${LIVENESS_URL} within ${READY_TIMEOUT_MS}ms. ` +
+      `instrumentation.register() (validateProductionEnv) likely threw — check the server log above.`,
+  );
 }
 
 applyLhciProductionFallbacks();
 
-const buildScript = process.env["CI"]
-  ? "build:skip-env:prepared"
-  : "build:skip-env";
-
-const build = Bun.spawnSync(["bun", "run", buildScript], {
+const server = Bun.spawn(["bunx", "--bun", "next", "start"], {
   stdout: "inherit",
   stderr: "inherit",
   env: process.env,
 });
 
-if (!build.success) {
-  process.exit(build.exitCode);
+const stopServer = (): void => {
+  server.kill();
+};
+process.on("SIGINT", stopServer);
+process.on("SIGTERM", stopServer);
+process.on("exit", stopServer);
+
+try {
+  await waitForServerReady(server);
+} catch (error) {
+  stopServer();
+  console.error(`[lhci-start] ${(error as Error).message}`);
+  process.exit(1);
 }
 
-const start = Bun.spawnSync(["bunx", "--bun", "next", "start"], {
-  stdout: "inherit",
-  stderr: "inherit",
-  env: process.env,
-});
+console.log(LHCI_READY_MARKER);
 
-process.exit(start.exitCode);
+process.exit(await server.exited);
