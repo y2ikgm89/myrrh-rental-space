@@ -177,6 +177,7 @@ type TxClient = {
   event: {
     create: typeof mockEventCreate;
     update: typeof mockEventUpdate;
+    updateMany: typeof mockEventUpdateMany;
   };
   eventTicket: {
     findMany: typeof mockEventTicketFindMany;
@@ -199,7 +200,11 @@ type TxClient = {
   $executeRaw: typeof mockExecuteRaw;
 };
 const txStub: TxClient = {
-  event: { create: mockEventCreate, update: mockEventUpdate },
+  event: {
+    create: mockEventCreate,
+    update: mockEventUpdate,
+    updateMany: mockEventUpdateMany,
+  },
   eventTicket: {
     findMany: mockEventTicketFindMany,
     update: mockEventTicketUpdate,
@@ -1545,6 +1550,8 @@ describe("publishEventCommand", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
     mockEventUpdate.mockClear();
+    mockEventUpdateMany.mockClear();
+    mockEventUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
   });
 
   describe("正常系", () => {
@@ -1554,16 +1561,19 @@ describe("publishEventCommand", () => {
           id: "event-1",
           title: "テストイベント",
           status: EventStatus.DRAFT,
+          spaceId: null,
+          slots: [],
         }),
-      );
-      mockEventUpdate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
       );
 
       await publishEventCommand("event-1");
 
-      expect(mockEventUpdate).toHaveBeenCalledWith(
+      expect(mockEventUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({
+            id: "event-1",
+            status: EventStatus.DRAFT,
+          }),
           data: expect.objectContaining({
             status: EventStatus.PUBLISHED,
             publishedAt: expect.any(Date),
