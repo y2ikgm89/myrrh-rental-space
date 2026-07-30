@@ -2504,8 +2504,10 @@ model EventRegistration {
 /// - amount は各 refund event の 個別 金額 (円、正整数)。累積は `Refund` 集計 SUM で算出
 /// - stripeRefundId は Stripe refund object の id (@unique で二重返金防止 + webhook idempotency)
 /// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
-/// - append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)。
-///   DB trigger (20260724110000_refunds_no_mutation) で UPDATE/DELETE を拒否。
+/// - 実質 append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)。
+///   DB trigger (20260724110000_refunds_no_mutation) で UPDATE/DELETE を拒否するが、
+///   status 列のみ 20260730115734_refunds_status_column_and_transition_exception が
+///   例外を追加済み (他の全カラムは引き続き不変、DELETE は無条件拒否のまま)。
 model Refund {
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
@@ -2520,6 +2522,13 @@ model Refund {
   stripeRefundId      String   @unique
   /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
   refundedByType      String   @db.VarChar(20)
+  /// Stripe Refund.status: "pending" | "requires_action" | "succeeded" | "failed" | "canceled"。
+  /// konbini / customer_balance 等の非同期決済手段は作成直後 "pending" を返し、後日 Stripe が
+  /// 確定させる。"succeeded" 以外は refund.updated webhook が確定させるまでの暫定値であり、
+  /// paymentStatus は "succeeded" 確定までは変更しない (silent false-positive な返金完了通知を防ぐ)。
+  /// このカラムのみ append-only trigger の例外で更新可能
+  /// (20260730115734_refunds_status_column_and_transition_exception、他カラムは従来通り不変)。
+  status              String   @default("succeeded") @db.VarChar(20)
   createdAt           DateTime @default(now()) @db.Timestamptz(6)
 
   reservation       Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)

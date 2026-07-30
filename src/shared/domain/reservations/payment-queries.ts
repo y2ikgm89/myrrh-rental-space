@@ -19,6 +19,8 @@ import {
 } from "@/shared/domain/payment/payment-status-guards";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { refundOrphanedStripePaymentForCancelledReservation } from "@/shared/domain/reservations/payment-commands";
+import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
+import { sendReservationRefundEmail } from "@/shared/domain/email/lib-dispatch";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -370,4 +372,77 @@ export async function applyChargeRefundIdempotent(input: {
       });
     },
   });
+}
+
+/**
+ * refund.updated (status → "succeeded") webhook 確定時に呼ぶ、konbini /
+ * customer_balance 等の非同期返金の後日確定処理。
+ *
+ * `createRefundRecordIdempotent` 系の各 refund 作成経路は、Stripe が同期的に
+ * 確定できない返金 (status !== "succeeded") では paymentStatus を書き換えずに
+ * 温存する (silent false-positive な返金完了通知を防ぐため)。この関数が
+ * webhook 確定後にその「保留していた」paymentStatus 反映と返金完了メール送信を行う。
+ *
+ * @returns true = 今回このコマンドが確定処理を行った (呼び出し元は追加の副作用を
+ *          起こさない)。false = 該当 Refund が既に確定済み (webhook 重複配送等)
+ *          で idempotent に no-op、または対象予約が消失済み。
+ */
+export async function finalizeSettledReservationRefund(
+  reservationId: string,
+  stripeRefundId: string,
+  thisRefundAmount: number,
+): Promise<boolean> {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    select: { totalPriceWithTax: true },
+  });
+  if (!reservation || reservation.totalPriceWithTax === null) {
+    return false;
+  }
+
+  const aggregate = await prisma.refund.aggregate({
+    where: { reservationId, status: "succeeded" },
+    _sum: { amount: true },
+  });
+  const cumulativeSettled = aggregate._sum.amount ?? 0;
+  const willBeFullyRefunded =
+    cumulativeSettled >= reservation.totalPriceWithTax;
+
+  const updated = await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: {
+        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+      },
+    },
+    data: {
+      paymentStatus: willBeFullyRefunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED,
+    },
+  });
+  if (updated.count === 0) {
+    return false;
+  }
+
+  const emailData = await fetchReservationEmailData(reservationId);
+  if (emailData) {
+    await sendReservationRefundEmail({
+      reservationId: emailData.reservationId,
+      customerEmail: emailData.customerEmail,
+      customerName: emailData.customerName,
+      spaceName: emailData.spaceName,
+      startTime: emailData.startTime,
+      endTime: emailData.endTime,
+      refundAmount: thisRefundAmount,
+      cumulativeRefundAmount: cumulativeSettled,
+      originalTotal: emailData.totalPriceWithTax ?? emailData.totalPrice ?? 0,
+      isFullyRefunded: willBeFullyRefunded,
+      refundId: stripeRefundId,
+      ...(emailData.userId != null ? { userId: emailData.userId } : {}),
+    });
+  }
+
+  return true;
 }

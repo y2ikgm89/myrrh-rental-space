@@ -15,6 +15,11 @@
  * - checkout.session.expired: セッション期限切れ → FAILED
  * - charge.refunded: 返金完了 → REFUNDED（reservation / event-registration）
  *   waitlist 容量 race 後の自動返金は `refundExpiredWaitlistOfferPaymentCommand`
+ * - refund.updated / refund.failed: konbini / customer_balance 等の非同期返金の
+ *   後日確定。作成時点で status が未確定 ("pending" 等) だったため保留していた
+ *   paymentStatus 反映・返金完了メール送信をここで完了させる
+ *   (`handleRefundStatusUpdated`)。"failed"/"canceled" は CRITICAL ログのみ
+ *   （代替返金は自動化しない、Stripe 公式ガイダンス通り管理者対応）
  *
  * ## 決済対象の判別（`extractPaymentSubject`）
  * `session.metadata` の shape で reservation / event-registration を判別する

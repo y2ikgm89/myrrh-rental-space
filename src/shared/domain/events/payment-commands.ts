@@ -25,6 +25,7 @@ import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
+  isRefundSettledSuccess,
   PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
   PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
   resolveRefundAmount,
@@ -792,8 +793,16 @@ export interface RefundEventRegistrationInput {
 export interface RefundEventRegistrationResult {
   refundId: string;
   status: string | null;
+  /**
+   * Stripe が返金を確定 (`status === "succeeded"`) した時点で到達する paymentStatus。
+   * `isSettled: false` の間はまだ DB の paymentStatus には反映されていない
+   * (konbini / customer_balance 等の非同期経路。refund.updated webhook が
+   * 確定後に反映する)。
+   */
   newPaymentStatus:
     typeof PaymentStatus.PARTIALLY_REFUNDED | typeof PaymentStatus.REFUNDED;
+  /** true = 今回 Stripe が同期的に確定済み (paymentStatus 反映・返金完了メール送信可)。 */
+  isSettled: boolean;
   /** 累積返金額 (今回の refund を含めた合計、円) */
   cumulativeAmount: number;
   /** 今回 refund した金額 (円) */
@@ -939,27 +948,34 @@ export async function refundEventRegistrationPaymentCommand(
       );
     }
 
+    const isSettled = isRefundSettledSuccess(refund.status);
+
     await createRefundRecordIdempotent(tx, "refund_create_event", {
       eventRegistrationId: registrationId,
       amount: prepared.amount,
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
+      status: refund.status ?? "pending",
     });
 
-    await tx.eventRegistration.updateMany({
-      where: {
-        id: registrationId,
-        paymentStatus: {
-          in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (isSettled) {
+      await tx.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
         },
-      },
-      data: {
-        paymentStatus: prepared.willBeFullyRefunded
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIALLY_REFUNDED,
-      },
-    });
+        data: {
+          paymentStatus: prepared.willBeFullyRefunded
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+        },
+      });
+    }
 
     return {
       refundId: refund.id,
@@ -967,6 +983,7 @@ export async function refundEventRegistrationPaymentCommand(
       newPaymentStatus: prepared.willBeFullyRefunded
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED,
+      isSettled,
       cumulativeAmount: prepared.newCumulative,
       refundAmount: prepared.amount,
     } satisfies RefundEventRegistrationResult;
@@ -1155,8 +1172,19 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
         reason,
         stripeRefundId: refund.id,
         refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+        status: refund.status ?? "pending",
       },
     );
+
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (!isRefundSettledSuccess(refund.status)) {
+      return {
+        outcome: "refunded" as const,
+        refundId: refund.id,
+        refundAmount: prepareResult.amount,
+      };
+    }
 
     await tx.eventRegistration.updateMany({
       where: {
@@ -1304,19 +1332,24 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+      status: refund.status ?? "pending",
     });
 
-    await tx.eventRegistration.updateMany({
-      where: {
-        id: registrationId,
-        status: RegistrationStatus.EXPIRED,
-        paymentStatus: PaymentStatus.PENDING,
-      },
-      data: {
-        paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId,
-      },
-    });
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (isRefundSettledSuccess(refund.status)) {
+      await tx.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          status: RegistrationStatus.EXPIRED,
+          paymentStatus: PaymentStatus.PENDING,
+        },
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          stripePaymentIntentId,
+        },
+      });
+    }
 
     return {
       outcome: "refunded" as const,
@@ -1457,27 +1490,32 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+      status: refund.status ?? "pending",
     });
 
-    await tx.eventRegistration.updateMany({
-      where: {
-        id: registrationId,
-        status: {
-          in: [
-            RegistrationStatus.CONFIRMED,
-            RegistrationStatus.WAITLISTED_OFFERED,
-            RegistrationStatus.EXPIRED,
-          ],
+    // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
+    // 書き換えない。確定は refund.updated webhook が行う。
+    if (isRefundSettledSuccess(refund.status)) {
+      await tx.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          status: {
+            in: [
+              RegistrationStatus.CONFIRMED,
+              RegistrationStatus.WAITLISTED_OFFERED,
+              RegistrationStatus.EXPIRED,
+            ],
+          },
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+          },
         },
-        paymentStatus: {
-          in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          stripePaymentIntentId,
         },
-      },
-      data: {
-        paymentStatus: PaymentStatus.REFUNDED,
-        stripePaymentIntentId,
-      },
-    });
+      });
+    }
 
     return {
       outcome: "refunded" as const,

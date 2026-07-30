@@ -39,6 +39,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     id: string,
     data: { stripePaymentIntentId: string | null },
   ) => mockClaimReservationAsPaid(id, data),
+  finalizeSettledReservationRefund: () => Promise.resolve(false),
 }));
 
 mock.module(

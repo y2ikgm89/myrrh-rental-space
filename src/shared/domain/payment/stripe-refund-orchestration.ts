@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@generated/prisma/client";
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import type { AsyncOnlyStripe } from "@/shared/lib/stripe";
@@ -105,6 +106,56 @@ type RefundTransactionClient = {
   };
 };
 
+/**
+ * Stripe Refund.status のうち、返金が確定的に完了したとみなせる値。
+ *
+ * カード等の同期的な決済手段は `refunds.create()` のレスポンス時点で既に
+ * "succeeded" を返す。konbini / customer_balance 等の非同期決済手段は
+ * "pending"（まれに "requires_action"）を返し、Stripe が最大45日かけて
+ * 後日 "succeeded" または "failed"/"canceled" を確定させる
+ * (refund.updated webhook で通知)。"succeeded" 以外の状態で
+ * paymentStatus を REFUNDED 確定・返金完了メール送信をしてはならない。
+ *
+ * @see https://docs.stripe.com/refunds#failed-refunds
+ */
+export function isRefundSettledSuccess(status: string | null): boolean {
+  return status === "succeeded";
+}
+
+type RefundStatusUpdateClient = {
+  refund: {
+    updateMany: (args: {
+      where: { stripeRefundId: string; status: string };
+      data: { status: string };
+    }) => Promise<{ count: number }>;
+  };
+};
+
+/**
+ * refund.updated / refund.charge.dispute.* webhook からのみ呼ぶ、status 列
+ * 限定の確定更新。DB 側の append-only trigger
+ * (20260730115734_refunds_status_column_and_transition_exception) が
+ * status 以外の列変更を拒否するため、他列を書き換える経路は物理的に存在しない。
+ *
+ * `where.status: "succeeded"` を含めない代わりに現在値を渡し `updateMany` の
+ * WHERE claim で「まだ確定していない行のみ」に限定する（既に "succeeded" /
+ * "failed" 等に確定済みの行を webhook の再送・順序前後で誤って再書込みしない）。
+ *
+ * @returns 実際に更新された行数 (0 なら該当行が既に別の状態に確定済み、または不在)
+ */
+export async function applyConfirmedRefundStatus(
+  client: RefundStatusUpdateClient,
+  stripeRefundId: string,
+  previousStatus: string,
+  newStatus: string,
+): Promise<number> {
+  const result = await client.refund.updateMany({
+    where: { stripeRefundId, status: previousStatus },
+    data: { status: newStatus },
+  });
+  return result.count;
+}
+
 function assertValidSavepointName(name: string): string {
   if (!SAVEPOINT_NAME_PATTERN.test(name)) {
     throw new Error(`Invalid savepoint name: ${name}`);
@@ -173,4 +224,26 @@ export async function createRefundRecordIdempotent(
     }
     await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${validatedSavepoint}`);
   }
+}
+
+export type RefundEntityLookup = {
+  status: string;
+  reservationId: string | null;
+  eventRegistrationId: string | null;
+};
+
+/**
+ * refund.updated / refund.failed webhook が、対象 Refund 行がどちらのドメイン
+ * (Reservation / EventRegistration) に属するか、および現在の確定前 status を
+ * 引くための lookup。stripeRefundId が repo に存在しない場合 (別環境の Stripe
+ * イベント誤配送等) は null を返す。
+ */
+export async function findRefundEntityByStripeRefundId(
+  stripeRefundId: string,
+): Promise<RefundEntityLookup | null> {
+  const refund = await prisma.refund.findUnique({
+    where: { stripeRefundId },
+    select: { status: true, reservationId: true, eventRegistrationId: true },
+  });
+  return refund;
 }

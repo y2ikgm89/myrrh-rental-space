@@ -338,6 +338,49 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     }
   }, 30_000);
 
+  test("konbini 等の非同期返金 (status=pending) は paymentStatus を書き換えず、Refund.status に暫定値を記録する", async () => {
+    // 実 advisory lock + interactive tx 経由で「未確定の間は paymentStatus を
+    // 変更しない」ことを実 DB で検証する (unit mock では tx/lock 自体をフェイクする
+    // ため、他の書込経路との real race や append-only trigger の実挙動は確認できない)。
+    mockRefundsCreate.mockImplementation((_args, _opts) => {
+      stripeRefundCounter++;
+      return Promise.resolve({
+        id: `re_test_pending_${crypto.randomUUID()}`,
+        status: "pending",
+      });
+    });
+
+    const { reservationId, cleanup } = await createPaidReservationFixture(5000);
+    try {
+      const result = await refundReservationPaymentCommand({
+        reservationId,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        actorUserId: "admin-user-id",
+      });
+
+      expect(result.isSettled).toBe(false);
+      // newPaymentStatus は「確定したら到達する目標」であり続ける (webhook 確定時に使う)。
+      expect(result.newPaymentStatus).toBe(PaymentStatus.REFUNDED);
+
+      const refunds = await prisma.refund.findMany({
+        where: { reservationId },
+      });
+      expect(refunds).toHaveLength(1);
+      expect(refunds[0]!.status).toBe("pending");
+      expect(refunds[0]!.amount).toBe(5000);
+
+      // 最も重要な不変条件: Stripe が未確定の間、paymentStatus は PAID のまま
+      // (REFUNDED に false-positive で遷移していない)。
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: reservationId },
+        select: { paymentStatus: true },
+      });
+      expect(reservation?.paymentStatus).toBe(PaymentStatus.PAID);
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
   test("部分返金 2 回で PAID → PARTIALLY_REFUNDED → REFUNDED + Refund 2 レコード", async () => {
     const { reservationId, cleanup } = await createPaidReservationFixture(5000);
     try {

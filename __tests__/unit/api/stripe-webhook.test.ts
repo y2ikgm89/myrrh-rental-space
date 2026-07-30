@@ -248,6 +248,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   }) => mockApplyChargeRefundIdempotent(input),
   getReservationCheckoutExpectedAmount: (id: string) =>
     mockGetReservationCheckoutExpectedAmount(id),
+  finalizeSettledReservationRefund: () => Promise.resolve(false),
 }));
 
 // STRIPE-DEDUP-A: route.ts が signature verification 直後に呼ぶ chokepoint
@@ -281,6 +282,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     Promise.resolve(null),
   expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(null),
+  finalizeSettledEventRegistrationRefund: () => Promise.resolve(false),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
