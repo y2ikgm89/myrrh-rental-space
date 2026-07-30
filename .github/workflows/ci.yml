@@ -378,7 +378,9 @@ jobs:
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
-          ADMIN_TEST_IAP_EMAIL: "admin@example.com"
+          # e2e/fixtures/test-data.ts の testUsers.admin と一致させる（seed 上 SUPER_ADMIN）。
+          # admin@example.com は seed 上 ADMIN で settings:manage / auditLog:read を持たない。
+          ADMIN_TEST_IAP_EMAIL: "superadmin@example.com"
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           SUPPRESSION_HASH_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_OIDC_AUDIENCE: "http://localhost:3000"
@@ -464,7 +466,7 @@ jobs:
           # E2E 専用 opt-in: DevLoginButton を production build でも表示し、
           # setup-customer が dev login ボタンをクリックできるようにする。
           # setup-admin は IAP-only のため、runtime env の ADMIN_TEST_IAP_EMAIL で
-          # ローカル IAP identity を解決する。
+          # ローカル IAP identity を解決する（値は testUsers.admin と一致必須）。
           # production には絶対伝播させない（login bypass risk — single-env
           # 運用のため production = 唯一の非 CI 環境）。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
@@ -480,7 +482,11 @@ jobs:
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
-          ADMIN_TEST_IAP_EMAIL: "admin@example.com"
+          # e2e/fixtures/test-data.ts の testUsers.admin と一致させる（seed 上 SUPER_ADMIN）。
+          # admin@example.com は seed 上 ADMIN で settings:manage / auditLog:read を持たず、
+          # /admin/settings/{features,billing,integrations,system} と監査ログが
+          # requireAdminPermission の redirect("/admin") に落ちる。
+          ADMIN_TEST_IAP_EMAIL: "superadmin@example.com"
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"

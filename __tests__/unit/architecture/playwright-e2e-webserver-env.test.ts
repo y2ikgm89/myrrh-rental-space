@@ -32,6 +32,10 @@ const e2eTestData = readFileSync(
   join(process.cwd(), "e2e/fixtures/test-data.ts"),
   "utf8",
 );
+const ciWorkflow = readFileSync(
+  join(process.cwd(), ".github/workflows/ci.yml"),
+  "utf8",
+);
 describe("Playwright E2E webServer env", () => {
   test("supplies local-only env required by Next instrumentation", () => {
     for (const key of [
@@ -121,6 +125,21 @@ describe("Playwright E2E webServer env", () => {
     expect(playwrightConfig).not.toContain(
       'process.env["ADMIN_TEST_IAP_EMAIL"] ?? "admin@example.com"',
     );
+  });
+
+  // playwright.config.ts の既定値は `process.env` の値に負けるため、CI が
+  // ADMIN_TEST_IAP_EMAIL を上書きすると上のゲートを素通りして identity が入れ替わる。
+  // seed 上 admin@example.com は ADMIN ロールで settings:manage / auditLog:read を
+  // 持たないため、広域 E2E の管理系 spec が一斉に redirect("/admin") で落ちる。
+  test("keeps the CI IAP identity on the Super Admin fixture", () => {
+    const overrides = [
+      ...ciWorkflow.matchAll(/^\s*ADMIN_TEST_IAP_EMAIL:\s*"([^"]+)"/gmu),
+    ].map((match) => match[1]);
+
+    expect(overrides.length).toBeGreaterThan(0);
+    for (const email of overrides) {
+      expect(email).toBe("superadmin@example.com");
+    }
   });
 
   test("uses one local base URL for browser contexts, server readiness, and Next env", () => {
