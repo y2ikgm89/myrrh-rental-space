@@ -55,8 +55,13 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
   実行ごとに揺れて baseline を更新しても収束しない
 - **baseline は CI Ubuntu runner の `*-linux.png` のみ**を commit する。Windows /
   macOS ローカルで `--update-snapshots` した結果を commit しない（CI が必ず落ちる）
-- 再生成は `workflow_dispatch` の `update_visual_baseline=true`。CI が別 branch +
-  auto-PR を作るので、required checks を通してから merge する
+- 再生成は `workflow_dispatch` の `update_visual_baseline=true`。CI が
+  `ci/visual-baseline-<run_id>` branch と auto-PR を作る
+- **auto-PR には required checks が付かない**。`GITHUB_TOKEN` で作られた PR は
+  GitHub の再帰防止により `pull_request` workflow を起動しないため、CodeQL 以外の
+  checks が永久に未実行のまま BLOCKED になる。PR を close → reopen するか、
+  同 branch の内容で人間名義の PR を作り直して checks を通すこと
+  （恒久解は PAT / GitHub App token の導入だが secret 追加が必要）
 - ローカルで CI と同じ描画を得たいときは Playwright 公式 Docker イメージ
   （`mcr.microsoft.com/playwright:v1.61.1-noble`）を使う
 

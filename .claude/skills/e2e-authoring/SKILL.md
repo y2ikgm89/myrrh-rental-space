@@ -118,7 +118,9 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
 
 ## Step 7（該当時）: visual spec
 
-`PLAYWRIGHT_VISUAL=1` opt-in・baseline の linux/win32 併存は rules の `testing-e2e.md` を参照。
+`PLAYWRIGHT_VISUAL=1` opt-in・baseline 運用は rules の `testing-e2e.md` を参照。
+**canonical baseline は CI Ubuntu の `*-linux.png` のみ**（`*-win32.png` は 2026-07-31 に廃止、
+`posts-blog-clean-break.test.ts` が commit を機械的に拒否する）。
 
 1. `e2e/visual/` に追加し、describe 冒頭に opt-in ガードを置く
    （`test.skip(!VISUAL_ENABLED, ...)` — `e2e/visual/public-pages.spec.ts` 参照）。
@@ -127,9 +129,12 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
 3. `toHaveScreenshot` は `fullPage: true` / `animations: "disabled"` /
    動的要素（announcement / `time, [datetime]` / instagram）の `mask` /
    `maxDiffPixelRatio: 0.01` を指定する。
-4. baseline 生成・意図した視覚変更時の更新:
-   `PLAYWRIGHT_VISUAL=1 bunx playwright test e2e/visual --update-snapshots`
-   （CI canonical の `*-linux.png` は full CI dispatch の update_visual_baseline で更新）。
+4. baseline の生成・更新は **CI でのみ**行う:
+   `gh workflow run ci.yml --ref main -f update_visual_baseline=true`。
+   ローカルで `--update-snapshots` した結果は commit しない（CI と描画が一致せず必ず落ちる）。
+   CI は `ci/visual-baseline-<run_id>` branch と auto-PR を作るが、`GITHUB_TOKEN` 製の PR は
+   **workflow が起動しない**ため required checks が付かない。PR を close → reopen するか、
+   同 branch の内容で自分名義の PR を作り直して checks を通すこと。
 
 ## Step 8: 実行して検証する
 
