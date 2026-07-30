@@ -129,7 +129,7 @@ export function AnnouncementBarManager({
         return;
       }
 
-      loadBars();
+      await loadBars();
     });
   };
 
@@ -166,7 +166,7 @@ export function AnnouncementBarManager({
       toast.success("お知らせバーを削除しました");
       setDeleteDialogOpen(false);
       setDeletingId(null);
-      loadBars();
+      await loadBars();
     });
   };
 
