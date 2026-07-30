@@ -5,7 +5,7 @@ import "server-only";
  *
  * ## Advisory lock 取得順序（deadlock 回避）
  *
- * 複数 namespace を同一 tx で取る場合は **常に番号昇順**:
+ * 複数 namespace を同一 tx で取る場合は **常に番号降順**:
  * `728351` (space schedule) → `728350` (event registration capacity) → …
  *
  * - 予約 / series: `728357` (series) → `728351` (space) — reservations/series-advisory-lock.ts
@@ -17,10 +17,18 @@ import "server-only";
  * - namespace 728354 (waitlist promote session lock) は cron が「全 slot 走査 → EXPIRED 化 → 次 promote」
  *   のバッチを event 単位で直列化するために使う。同一 event を 2 プロセスが同時に走査すると
  *   updateMany claim の順序が非決定的になる (FIFO の tie-breaker が壊れる) ため session lock で防ぐ。
- * - session lock は tx 境界を超えて存続する。commit/rollback で自動解放しない → 必ず release する。
+ * - session lock は tx 境界を超えて存続する。commit はもちろん **rollback でも自動解放
+ *   されない** → release は tx の成否に依存させず、例外発生時にも必ず通る経路
+ *   （`finally`）に置いて呼ぶ必要がある。
  * - **重要 (caller の責務)**: session lock は connection scope。呼び出し側は
- *   acquire → 作業 → release の全 span を単一物理 connection に pin する必要がある
- *   (例: `prisma.$transaction(async (tx) => { await tryAcquire(tx, ...); ...; await release(tx, ...); })`)。
+ *   acquire → 作業 → release の全 span を単一物理 connection に pin し、release は
+ *   `finally` で呼ぶ必要がある
+ *   (例: `prisma.$transaction(async (tx) => { if (!(await tryAcquire(tx, ...))) return; try { ...; } finally { await release(tx, ...); } })`)。
+ *   acquire に失敗した分岐は作業を skip し release も呼ばない（release 自体は未取得時に
+ *   呼んでも idempotent に安全だが、この経路では単に呼ばれない設計）。実例は
+ *   `waitlist-offer-commands.ts` の `expireAndPromoteWaitlistForEventCommand` を参照
+ *   （候補ごとの作業は savepoint 相当の nested `tx.$transaction` に隔離しつつ、session
+ *   lock 自体は outer tx の同一 connection で acquire/release する）。
  *   pooled top-level client で acquire と release を分けて呼ぶと別 connection にルーティング
  *   され得るため、`pg_advisory_unlock` が silent-false を返してロックが元 connection に
  *   leak し、そのイベントの waitlist promotion が pool 再利用まで止まる。

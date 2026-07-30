@@ -11,9 +11,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
 - `@/shared/db/prisma` を import する全ファイルは `import "server-only"` 必須
   （allowlist ではなく動的走査で検査される）
 - facade の import は `src/shared/` 配下限定。`prisma.<model>.<method>` 呼出は
-  原則 `shared/domain` / `shared/db` 配下限定（例外は architecture-boundaries テストの
-  placement gate ALLOWLIST に列挙された shared/lib の 2 ファイルのみ:
-  `calendar-sync/event-inbound.ts`, `google-business-profile/location-sync.ts`）
+  `shared/domain` / `shared/db` 配下限定（`prisma-import-boundary.test.ts` の
+  placement gate ALLOWLIST は現在空集合。shared/lib からの直接呼出は例外なく禁止）
 - 金額・税率は schema 上 Int（円 / whole-% / area は ㎡×100）。ドメイン計算は素の number
 
 ## JSON・エラー・ログ
