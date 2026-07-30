@@ -50,8 +50,10 @@ mock.module("@/shared/lib/rate-limit", () => ({
   },
 }));
 
-const { broadcastEventAction, eventBroadcastSchema } =
+const { broadcastEventAction } =
   await import("@/admin/actions/event-broadcast");
+const { eventBroadcastSchema } =
+  await import("@/shared/lib/validations/event-broadcast");
 
 /** valid Prisma cuid (24 chars starting with "cm") — schema does not accept random strings. */
 const VALID_EVENT_ID = "cm0event1234567890123456";
