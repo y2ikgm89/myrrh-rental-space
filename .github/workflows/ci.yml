@@ -439,8 +439,11 @@ jobs:
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
 
-      - name: Setup Playwright Chromium
+      - name: Setup Playwright browsers (chromium + webkit)
         uses: ./.github/actions/setup-playwright-chromium
+        with:
+          # webkit-*-mobile project (e2e/mobile/*.spec.ts) はこの job でのみ実行される。
+          browsers: "chromium webkit"
 
       - name: Setup Next.js cache
         uses: ./.github/actions/setup-next-cache

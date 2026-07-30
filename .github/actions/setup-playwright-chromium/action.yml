@@ -1,5 +1,16 @@
-name: Setup Playwright Chromium
-description: Restore cached Playwright Chromium browsers and install required system dependencies.
+name: Setup Playwright Browsers
+description: Restore cached Playwright browsers and install required system dependencies.
+
+inputs:
+  browsers:
+    description: >-
+      Space-separated `playwright install` browser names. Default is chromium
+      only (smoke-e2e / visual-regression の required check を軽量に保つため)。
+      webkit-*-mobile project (e2e/mobile/*) を実行する job は "chromium webkit"
+      を明示的に渡す (2026-07-31: webkit-mobile project 追加から未実行のまま
+      放置されていた設定不備の修正、Phase G 監査)。
+    required: false
+    default: "chromium"
 
 runs:
   using: composite
@@ -9,9 +20,11 @@ runs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+        # browsers を key に含める: 既存 (chromium のみ) キャッシュへの誤ヒットで
+        # webkit のインストールが恒久的に skip されるのを防ぐ。
+        key: playwright-${{ inputs.browsers }}-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
-          playwright-${{ runner.os }}-
+          playwright-${{ inputs.browsers }}-${{ runner.os }}-
 
     - name: Remove stale Microsoft apt repo
       shell: bash
@@ -20,9 +33,9 @@ runs:
     - name: Install Playwright browsers
       if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
       shell: bash
-      run: bunx playwright install chromium --with-deps
+      run: bunx playwright install ${{ inputs.browsers }} --with-deps
 
     - name: Install Playwright system deps
       if: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}
       shell: bash
-      run: bunx playwright install-deps chromium
+      run: bunx playwright install-deps ${{ inputs.browsers }}
