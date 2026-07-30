@@ -1,16 +1,22 @@
 name: Actionlint
 
+# `paths:` filter を故意に付けない (terraform.yml と同型の 2026-07-14 anti-pattern 修正)。
+#
+# `paths: [.github/workflows/**, .github/actions/**]` で filter すると、対象外の PR で
+# 本 workflow が発火せず、この check を required 化した際に MISSING 扱いになり
+# branch protection で auto-merge が永久 block される (GitHub 公式仕様、PR #1103 実例)。
+# 参考: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/troubleshooting-rulesets#pull-requests-are-blocked-when-status-checks-are-required-but-not-set-up
+#
+# 対策: `paths:` filter を撤去し全 PR で走らせる。実行時間 ~数十秒 (actionlint バイナリの
+# DL+検証+実行のみ、read-only) なので CI 予算的に許容。
+# `architecture-boundaries.test.ts` の「required checks に path-filtered workflow を
+# 含めない」regression gate も、この workflow が provide する check を将来 required 化
+# する際に同種の再発を検出する。
 on:
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/**"
-      - ".github/actions/**"
   pull_request:
     branches: [main]
-    paths:
-      - ".github/workflows/**"
-      - ".github/actions/**"
 
 # 最小権限の原則（公式 Security hardening）。読み取りのみで十分。
 # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
