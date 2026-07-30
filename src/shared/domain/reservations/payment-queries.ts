@@ -438,9 +438,22 @@ const AUTOMATED_FULL_REFUND_TYPES: readonly string[] = [
  * 他の進行中 refund が後で failed になった場合に取り戻せない REFUNDED 誤確定を
  * 招く。
  *
- * @returns true = 今回このコマンドが claim に成功し paymentStatus 遷移を実行した
- *          (email 送信含む)。false = 既に確定済み (webhook 重複配送・re-try) で
- *          idempotent に no-op、または対象予約が消失済み。
+ * ## soft-delete された予約への確定 (Codex review, PR #1669)
+ *
+ * settlement 確定前に予約が soft-delete される (`deleteReservationCommand` は
+ * paymentStatus を問わず削除できるため、PAID のまま delete され得る) と、
+ * entity 側 updateMany は `deletedAt: null` 述語で claim できない。この場合でも
+ * Refund.status の claim 自体は既に成功済み (Stripe 側で返金は実際に完了) のため、
+ * reservation の paymentStatus 反映は諦めつつ、完了 AuditLog・返金完了メールは
+ * 必ず出す (`sendReservationRefundEmail` は「更新」「キャンセル」と独立した
+ * 重要取引通知として非 gate で常時送信する契約、Cluster H #8)。AuditLog の
+ * `newValue.paymentStatus` は entity が実際に到達した場合のみ記録し、
+ * 到達していない (soft-delete 等) 場合は返金額のみを記録する。
+ *
+ * @returns true = 今回このコマンドが claim に成功した (email 送信・AuditLog 記録は
+ *          常に実行される。reservation 側の paymentStatus 反映自体は soft-delete
+ *          等で行われないこともある)。false = 既に確定済み (webhook 重複配送・
+ *          re-try) で idempotent に no-op、または対象予約が消失済み。
  */
 export async function finalizeSettledReservationRefund(
   reservationId: string,
@@ -497,51 +510,61 @@ export async function finalizeSettledReservationRefund(
       data: { paymentStatus: targetPaymentStatus },
     });
 
-    if (updated.count === 0) {
+    let entityUpdated = updated.count > 0;
+    if (!entityUpdated) {
       // Refund.status の claim (この関数の権威あるゲート) が成功していても、
       // entity 側 updateMany が 0 件になる理由は2通りある: (a) 既に他経路で
-      // target 状態に到達済み (idempotent、無害) — この場合は完了記録を続行して
-      // 実態と一致させる、(b) settlement 確定前に予約が soft-delete される等で
-      // entity が到達不能状態になった — この場合 paymentStatus は実際には
-      // 変わっておらず、完了記録 (AuditLog・返金完了メール) を出すと事実と異なる
-      // 「返金完了」を偽って記録・通知することになる (Codex review, PR #1667)。
-      // 現在値を読み直し、実際に target に到達しているかで判定する。
+      // target 状態に到達済み (idempotent、無害)、(b) settlement 確定前に
+      // 予約が soft-delete される等で entity が到達不能状態になった。
+      // 現在値を読み直し、(a) なら entityUpdated=true 相当として扱い実態と
+      // 一致させる。(b) を含むそれ以外は entityUpdated=false のまま次へ進む
+      // (Codex review, PR #1667: soft-delete でも claim 自体は既に成功済みの
+      // ため、reservation 側の反映可否と無関係に返金確定の事実は保存・通知する
+      // 必要がある — Cluster H #8 の「返金は独立した重要取引通知、非gateで
+      // 常時送信」契約に反しないよう、ここで早期 return して通知ごと握り潰さない、
+      // PR #1669 の Codex 追加指摘)。
       const current = await tx.reservation.findUnique({
         where: { id: reservationId },
         select: { paymentStatus: true, deletedAt: true },
       });
-      const alreadyReachedTarget =
+      entityUpdated =
         current !== null &&
         current.deletedAt === null &&
         current.paymentStatus === targetPaymentStatus;
-      if (!alreadyReachedTarget) {
-        return null;
-      }
     }
 
-    return { willBeFullyRefunded, cumulativeSettled };
+    return { willBeFullyRefunded, cumulativeSettled, entityUpdated };
   }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
   if (claimResult === null) {
     return false;
   }
-  const { willBeFullyRefunded, cumulativeSettled } = claimResult;
+  const { willBeFullyRefunded, cumulativeSettled, entityUpdated } = claimResult;
 
+  // newValue の paymentStatus は entity が実際に target に到達した場合のみ記録する
+  // (soft-delete 等で到達していないのに偽って記録しない、Codex review PR #1667)。
+  // ただし返金自体 (Refund.status="succeeded") は claim 済みで確定した事実のため、
+  // AuditLog 自体・返金完了メールは entityUpdated に関わらず必ず出す
+  // (Codex review, PR #1669: reservation 側の反映可否と、Stripe が実際に返金した
+  // という事実の通知は独立)。
   await createAuditLogRecord({
     action: AuditAction.UPDATE,
     resource: "reservation",
     resourceId: reservationId,
-    newValue: {
-      paymentStatus: willBeFullyRefunded
-        ? PaymentStatus.REFUNDED
-        : PaymentStatus.PARTIALLY_REFUNDED,
-      refundedAmount: cumulativeSettled,
-    },
+    newValue: entityUpdated
+      ? {
+          paymentStatus: willBeFullyRefunded
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+          refundedAmount: cumulativeSettled,
+        }
+      : { refundedAmount: cumulativeSettled },
     metadata: {
       operation: "finalizeSettledReservationRefund",
       stripeRefundId,
       refundAmount: thisRefundAmount,
       cumulativeAmount: cumulativeSettled,
+      entityUpdated,
     },
   });
 
