@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import {
   PaymentStatus,
   ReservationStatus,
@@ -53,6 +54,7 @@ export async function cancelReservationFromCalendar(input: {
   const preClaim = await prisma.reservation.findFirst({
     where: { id: input.reservationId, deletedAt: null },
     select: {
+      spaceId: true,
       paymentStatus: true,
       stripeCheckoutSessionId: true,
     },
@@ -65,6 +67,14 @@ export async function cancelReservationFromCalendar(input: {
   const now = new Date();
 
   const result = await prisma.$transaction(async (tx) => {
+    // 占有解放も規約8の対象（他の cancel 経路 customer-commands / lifecycle-commands /
+    // pending-expiry / series-commands と同型）。単独では EXCLUDE 違反を作らないが、
+    // lock を取らずに解放すると並行する新規予約 create が本 tx の commit 前後で
+    // overlap を誤判定しうる。
+    if (preClaim?.spaceId) {
+      await lockSpaceForTransaction(tx, preClaim.spaceId);
+    }
+
     const claimed = await tx.reservation.updateMany({
       where: {
         id: input.reservationId,
@@ -101,7 +111,7 @@ export async function cancelReservationFromCalendar(input: {
     }
 
     return { cancelled: true };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   if (
     result.cancelled &&
@@ -310,5 +320,5 @@ export async function applyCalendarTimeChange(input: {
     }
 
     return { success: true as const };
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 }
