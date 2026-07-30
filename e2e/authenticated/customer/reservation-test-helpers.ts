@@ -31,17 +31,35 @@ export const customerReservationTargets = {
 export type CustomerReservationTarget =
   (typeof customerReservationTargets)[keyof typeof customerReservationTargets];
 
+/**
+ * 予約履歴から対象ステータスの「詳細を見る」リンクを 1 件に絞る。
+ *
+ * dev customer の予約は seed の 4 件（status × paymentStatus のカバレッジ）だけでは
+ * ない。`seedRecurringReservationSeriesFixture`（PR #1165）が WEEKLY COUNT=3 の
+ * series instance を **CONFIRMED / UNPAID** で 3 件足すほか、他の spec が実行中に
+ * 予約を作る。そのため status ベースの正規表現は必ず複数一致し得る
+ * （strict mode violation で 11 件が失敗していた: run 30569714860）。
+ *
+ * これらの spec は「特定の 1 予約」ではなく「そのステータスの予約詳細で UI が
+ * 成立すること」を検証するので、先頭の一致を対象にすれば十分かつ安定する。
+ * 特定の予約を指す必要が出た場合は fixture 側に識別子を持たせること。
+ */
+function reservationDetailLink(page: Page, target: CustomerReservationTarget) {
+  return page
+    .locator("#main-content")
+    .getByRole("link", { name: target.detailLinkName })
+    .first();
+}
+
 export async function expectCustomerReservationListHas(
   page: Page,
   target: CustomerReservationTarget,
 ): Promise<void> {
   await page.goto(`${urls.mypageReservations}?tab=${target.tab}`);
 
-  await expect(
-    page.locator("#main-content").getByRole("link", {
-      name: target.detailLinkName,
-    }),
-  ).toBeVisible({ timeout: 5000 });
+  await expect(reservationDetailLink(page, target)).toBeVisible({
+    timeout: 5000,
+  });
 }
 
 export async function openCustomerReservationDetail(
@@ -50,9 +68,7 @@ export async function openCustomerReservationDetail(
 ): Promise<void> {
   await page.goto(`${urls.mypageReservations}?tab=${target.tab}`);
 
-  const detailLink = page.locator("#main-content").getByRole("link", {
-    name: target.detailLinkName,
-  });
+  const detailLink = reservationDetailLink(page, target);
   await expect(detailLink).toBeVisible({ timeout: 5000 });
 
   const href = await detailLink.getAttribute("href");
