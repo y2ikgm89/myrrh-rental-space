@@ -36,6 +36,7 @@ const mockReservationFindUnique = mock<
         stripePaymentIntentId: string | null;
       }
     | { totalPriceWithTax: number | null }
+    | { paymentStatus: PaymentStatus; deletedAt: Date | null }
     | null
   >
 >(() =>
@@ -748,6 +749,7 @@ describe("reservations/payment-queries", () => {
         totalPriceWithTax: 10000,
       });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 3000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -775,6 +777,7 @@ describe("reservations/payment-queries", () => {
         totalPriceWithTax: 10000,
       });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -796,6 +799,7 @@ describe("reservations/payment-queries", () => {
         totalPriceWithTax: 10000,
       });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -823,6 +827,7 @@ describe("reservations/payment-queries", () => {
         totalPriceWithTax: 10000,
       });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -843,12 +848,16 @@ describe("reservations/payment-queries", () => {
       );
     });
 
-    test("entity 側 updateMany が count=0 (他経路で既に REFUNDED 確定済み) でも claim が成功していれば AuditLog・メールは実行する", async () => {
+    test("entity 側 updateMany が count=0 だが既に target 状態に到達済み (他経路で確定) なら AuditLog・メールは実行する", async () => {
       mockReservationFindUnique.mockResolvedValueOnce({
         totalPriceWithTax: 10000,
       });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+      mockReservationFindUnique.mockResolvedValueOnce({
+        paymentStatus: PaymentStatus.REFUNDED,
+        deletedAt: null,
+      });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -859,6 +868,55 @@ describe("reservations/payment-queries", () => {
 
       expect(result).toBe(true);
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    });
+
+    test("entity 側 updateMany が count=0 かつ soft-delete 済み (deletedAt 非null) → false、AuditLog もメールも偽って出さない (Codex review, PR #1667)", async () => {
+      // settlement 確定前に予約が admin により削除された想定: 非同期返金は
+      // paymentStatus を PAID のまま温存するため deleteReservationCommand の
+      // deletedAt: null ガードに引っかからず soft-delete が成立してしまう。
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+      mockReservationFindUnique.mockResolvedValueOnce({
+        paymentStatus: PaymentStatus.PAID,
+        deletedAt: new Date("2026-07-30T12:00:00Z"),
+      });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+      expect(mockFetchReservationEmailData).not.toHaveBeenCalled();
+      expect(mockSendReservationRefundEmail).not.toHaveBeenCalled();
+    });
+
+    test("entity 側 updateMany が count=0 かつ現在値も target と不一致 (予期しない状態) → false、AuditLog もメールも出さない", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+      mockReservationFindUnique.mockResolvedValueOnce({
+        paymentStatus: PaymentStatus.PAID,
+        deletedAt: null,
+      });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
     });
 
     test("成功時: AuditLog に実際の遷移先 paymentStatus と累積額を記録する", async () => {

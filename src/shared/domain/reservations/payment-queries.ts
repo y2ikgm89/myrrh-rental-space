@@ -476,7 +476,11 @@ export async function finalizeSettledReservationRefund(
       ? true
       : cumulativeSettled >= reservation.totalPriceWithTax;
 
-    await tx.reservation.updateMany({
+    const targetPaymentStatus = willBeFullyRefunded
+      ? PaymentStatus.REFUNDED
+      : PaymentStatus.PARTIALLY_REFUNDED;
+
+    const updated = await tx.reservation.updateMany({
       where: isAutomatedFullRefund
         ? {
             id: reservationId,
@@ -490,16 +494,30 @@ export async function finalizeSettledReservationRefund(
               in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
             },
           },
-      data: {
-        paymentStatus: willBeFullyRefunded
-          ? PaymentStatus.REFUNDED
-          : PaymentStatus.PARTIALLY_REFUNDED,
-      },
+      data: { paymentStatus: targetPaymentStatus },
     });
-    // entity 側 updateMany の count はここでは見ない。この関数の唯一の権威ある
-    // 冪等性ゲートは上の Refund.status claim であり、entity が既に他経路
-    // (手動 admin 操作等) で REFUNDED 確定済みで count=0 になっても、この
-    // refund 自身の完了記録 (AuditLog・メール) は続行してよい。
+
+    if (updated.count === 0) {
+      // Refund.status の claim (この関数の権威あるゲート) が成功していても、
+      // entity 側 updateMany が 0 件になる理由は2通りある: (a) 既に他経路で
+      // target 状態に到達済み (idempotent、無害) — この場合は完了記録を続行して
+      // 実態と一致させる、(b) settlement 確定前に予約が soft-delete される等で
+      // entity が到達不能状態になった — この場合 paymentStatus は実際には
+      // 変わっておらず、完了記録 (AuditLog・返金完了メール) を出すと事実と異なる
+      // 「返金完了」を偽って記録・通知することになる (Codex review, PR #1667)。
+      // 現在値を読み直し、実際に target に到達しているかで判定する。
+      const current = await tx.reservation.findUnique({
+        where: { id: reservationId },
+        select: { paymentStatus: true, deletedAt: true },
+      });
+      const alreadyReachedTarget =
+        current !== null &&
+        current.deletedAt === null &&
+        current.paymentStatus === targetPaymentStatus;
+      if (!alreadyReachedTarget) {
+        return null;
+      }
+    }
 
     return { willBeFullyRefunded, cumulativeSettled };
   }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
