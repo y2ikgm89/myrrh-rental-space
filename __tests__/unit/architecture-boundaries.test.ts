@@ -1010,9 +1010,15 @@ describe("architecture boundaries", () => {
     expect(scripts["build:skip-env:prepared"]).not.toContain(
       "bun run db:generate",
     );
-    expect(lhciStartSource).toContain('process.env["CI"]');
-    expect(lhciStartSource).toContain('"build:skip-env:prepared"');
-    expect(lhciStartSource).toContain('"build:skip-env"');
+    // LHCI サーバー起動スクリプトは build しない。CI は専用の Build step
+    // (`build:skip-env:prepared` = prisma generate 済み前提)、ローカルは
+    // `lhci:local` (`build:skip-env` = db:generate 込み) が担当する。
+    // build 出力が startServerReadyPattern の監視窓に入る構造を排除するため。
+    // 詳細な LHCI 契約は architecture/lighthouse-ci-env.test.ts が検証する。
+    expect(lhciStartSource).not.toContain("build:skip-env");
+    expect(scripts["lhci:local"]).toBe(
+      "bun run build:skip-env && bun run lhci",
+    );
   });
 
   test("test scripts run real-DB integration tests only after test DB migrations", () => {
