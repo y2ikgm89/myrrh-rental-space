@@ -66,7 +66,7 @@ async function CategoryList() {
 // メインコンポーネント（親ページで `adminSpaceSearchParamsCache.parse` 済みであること）
 // =============================================================================
 
-export async function CategoryTabContent() {
+export function CategoryTabContent() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>

@@ -149,7 +149,7 @@ export async function createCheckoutSessionCommand(input: {
 
   const stripeSettings = await assertOnlinePaymentAvailable();
 
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -649,7 +649,7 @@ export async function refundReservationPaymentCommand(
   } = input;
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -840,7 +840,7 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
   } = input;
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -1027,7 +1027,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
   }
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",

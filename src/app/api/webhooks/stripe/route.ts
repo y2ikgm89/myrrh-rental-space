@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Stripe クライアント取得 + 署名検証
-    const { client } = await getStripeClient(settings.stripeSecretKey);
+    const { client } = getStripeClient(settings.stripeSecretKey);
     if (!client) {
       logError(new Error("Stripe client not available"), {
         category: ErrorCategory.EXTERNAL_API,

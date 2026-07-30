@@ -79,7 +79,7 @@ async function LocationList() {
 // メインコンポーネント（親ページで `adminSpaceSearchParamsCache.parse` 済みであること）
 // =============================================================================
 
-export async function LocationTabContent() {
+export function LocationTabContent() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>

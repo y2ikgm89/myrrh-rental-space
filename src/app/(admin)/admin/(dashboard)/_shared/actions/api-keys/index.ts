@@ -156,7 +156,7 @@ export async function testTurnstileConnectionAction(
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const result = await testTurnstileConnection(siteKey, secretKey);
+      const result = testTurnstileConnection(siteKey, secretKey);
       await recordTurnstileConnectionStatus(
         result.success ? "connected" : "error",
       );

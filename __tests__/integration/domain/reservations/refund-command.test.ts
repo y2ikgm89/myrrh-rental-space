@@ -61,12 +61,11 @@ const mockRefundsCreate = mock<
 >((_args, _opts) => Promise.resolve({ id: "", status: "succeeded" }));
 
 mock.module("@/shared/lib/stripe", () => ({
-  getStripeClient: () =>
-    Promise.resolve({
-      client: {
-        refunds: { create: mockRefundsCreate },
-      },
-    }),
+  getStripeClient: () => ({
+    client: {
+      refunds: { create: mockRefundsCreate },
+    },
+  }),
 }));
 
 // assertStripeCredentialsConfigured: Settings row 依存を回避し dummy credentials を返す。

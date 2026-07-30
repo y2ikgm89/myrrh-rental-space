@@ -116,11 +116,15 @@ export function sessionHasCapturedPayment(
   );
 }
 
-async function notifyAmountMismatchAutoRefund(input: {
+// 通知は fireAndForget で発火するのみで、この関数自身は待ち合わせない
+// （返金フローを通知送信の遅延でブロックしないための意図的な fire-and-forget。
+// fireAndForget 内部の async IIFE が実際の await を保持する）。そのため同期処理で
+// 完結し async ではない。
+function notifyAmountMismatchAutoRefund(input: {
   subject: PaymentSubject;
   refundAmount: number;
   refundId?: string;
-}): Promise<void> {
+}): void {
   const { subject, refundAmount, refundId } = input;
   if (subject.kind === "reservation") {
     fireAndForget(
@@ -270,7 +274,7 @@ export async function orchestrateCheckoutAmountMismatchRefund(
     } else {
       invalidateEventRegistrationCache();
     }
-    await notifyAmountMismatchAutoRefund({
+    notifyAmountMismatchAutoRefund({
       subject,
       refundAmount: refundResult.refundAmount ?? capturedAppAmount,
       ...(refundResult.refundId !== undefined
@@ -291,14 +295,16 @@ export async function orchestrateCheckoutAmountMismatchRefund(
  * を先に呼ぶこと（本関数より前段）。
  *
  * `amount_total` または期待額が欠落している場合は fulfill を skip する (fail-closed)。
+ *
+ * 金額比較 + logError のみで構成される同期処理のため async ではない。
  */
-export async function checkoutSessionAmountMatchesExpected(
+export function checkoutSessionAmountMatchesExpected(
   session: Stripe.Checkout.Session,
   expectedAppAmount: number | null,
   operation: string,
   subjectKey: string,
   subjectId: string,
-): Promise<boolean> {
+): boolean {
   if (session.amount_total == null || expectedAppAmount == null) {
     logError(
       new Error(

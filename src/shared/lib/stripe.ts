@@ -100,10 +100,10 @@ export function createStripeClient(secretKey: string): AsyncOnlyStripe {
  * @param dbSecretKey - DBから取得した暗号化されたシークレットキー
  * @returns Stripeクライアントと設定元
  */
-export async function getStripeClient(dbSecretKey?: string | null): Promise<{
+export function getStripeClient(dbSecretKey?: string | null): {
   client: AsyncOnlyStripe | null;
   source: StripeConfigSource;
-}> {
+} {
   if (dbSecretKey) {
     const decryptedKey = safeDecryptToString(dbSecretKey, {
       expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,

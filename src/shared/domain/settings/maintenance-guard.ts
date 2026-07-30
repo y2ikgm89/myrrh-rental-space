@@ -47,9 +47,11 @@ export async function getPublicMaintenanceBlockMutation(): Promise<MutationError
   return null;
 }
 
-export async function publicMaintenanceJsonResponse(): Promise<
-  NextResponse<{ error: string }>
-> {
+// jsonError は同期処理のため await 不要（本関数を呼ぶ側は `await` していても
+// non-Promise の即時解決として動作するため、既存呼び出し規約を壊さない）。
+export function publicMaintenanceJsonResponse(): NextResponse<{
+  error: string;
+}> {
   return jsonError(PUBLIC_MAINTENANCE_BLOCKED_MESSAGE, 503);
 }
 

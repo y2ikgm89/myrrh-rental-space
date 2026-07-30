@@ -9,9 +9,7 @@ import { logger } from "@/shared/lib/errors/logger-core";
 
 import type { GbpSyncInput, GbpSyncResult } from "./types";
 
-export async function syncLocationStub(
-  input: GbpSyncInput,
-): Promise<GbpSyncResult> {
+export function syncLocationStub(input: GbpSyncInput): GbpSyncResult {
   logger.info("GBP sync stubbed", {
     locationId: input.locationId,
     reason: "GBP_STUB_MODE=true",

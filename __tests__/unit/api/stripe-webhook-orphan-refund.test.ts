@@ -35,12 +35,12 @@ const mockRetrieveCheckoutSession =
     ) => Promise<{ payment_intent: unknown }>
   >();
 const mockGetStripeClient = mock<
-  () => Promise<{
+  () => {
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
       checkout: { sessions: { retrieve: typeof mockRetrieveCheckoutSession } };
     } | null;
-  }>
+  }
 >();
 
 const mockClaimReservationAsPaid = mock<
@@ -394,7 +394,7 @@ describe("POST /api/webhooks/stripe — orphan refund hardening", () => {
 
     mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         webhooks: { constructEventAsync: mockConstructEvent },
         checkout: { sessions: { retrieve: mockRetrieveCheckoutSession } },

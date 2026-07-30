@@ -121,9 +121,12 @@ const eslintConfig = defineConfig([
   },
 
   // TypeScript 専用設定
+  // .mts も対象に含める（下の type-checked ブロックが .mts にも型付きルールを
+  // 適用するため、パーサー自体もここで .mts をカバーしないと parserServices が
+  // 得られず型付きルールが機能しない。Codex レビュー指摘、PR #1657）。
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
   })),
 
   // 型情報を使う lint（typed linting）の配線。単一ファイル lint が 58ms → 30.5s に
@@ -149,9 +152,10 @@ const eslintConfig = defineConfig([
         {
           // P0: recommendedTypeChecked が recommended に対して新規追加するルールの
           // うち、現時点で違反 0 件の 10 ルール + no-floating-promises（4 件、修正済み）。
-          // 残り（require-await / no-unsafe-* / no-misused-promises /
-          // no-unnecessary-type-assertion 等）は P1〜P4 で個別に段階導入する。
-          name: "typescript-type-checked-rules-p0",
+          // P1: require-await（Next.js 契約ファイルは下の exempt ブロックで個別 off）。
+          // 残り（no-unsafe-* / no-misused-promises / no-unnecessary-type-assertion 等）
+          // は P2〜P4 で個別に段階導入する。
+          name: "typescript-type-checked-rules-p0-p1",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
           rules: {
             "@typescript-eslint/await-thenable": "error",
@@ -165,6 +169,25 @@ const eslintConfig = defineConfig([
             "@typescript-eslint/prefer-promise-reject-errors": "error",
             "@typescript-eslint/restrict-plus-operands": "error",
             "@typescript-eslint/no-floating-promises": "error",
+            "@typescript-eslint/require-await": "error",
+          },
+        },
+        {
+          // Next.js の App Router 特殊ファイル規約（page/layout/route の
+          // デフォルトエクスポート・route.ts の HTTP メソッド export・
+          // next.config.ts の headers() 等）はフレームワーク側が async 関数の
+          // シグネチャを要求する契約であり、実装が await を使うかどうかは
+          // 呼び出し側では制御できない。require-await のみここで off にする
+          // （他の型付きルールは通常通り適用したままにする）。
+          name: "typescript-require-await-nextjs-contract-exempt",
+          files: [
+            "next.config.ts",
+            "**/page.tsx",
+            "**/layout.tsx",
+            "**/route.ts",
+          ],
+          rules: {
+            "@typescript-eslint/require-await": "off",
           },
         },
       ]),

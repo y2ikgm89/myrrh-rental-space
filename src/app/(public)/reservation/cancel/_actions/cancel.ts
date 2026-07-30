@@ -74,6 +74,12 @@ export async function cancelGuestReservationAction(
     perEntityRateLimitLogLimiter: "perReservation",
     perEntityRateLimitError:
       "この予約に対するキャンセル試行が多すぎます。しばらく時間をおいてから再度お試しください",
+    // GuestTokenMutationConfig.afterEntityIdMatch は
+    // `(entityId: string) => Promise<MutationResult<null> | undefined>` として
+    // 型定義されており、呼び出し元 runGuestTokenMutation は無条件で await する
+    // （src/shared/domain/guest-token-actions/run-guest-mutation.ts）。この分岐は
+    // 同期処理のみで完結するが、インターフェース契約を保全するため async を維持する。
+     
     afterEntityIdMatch: async () => {
       const parsedReason = reasonSchema.safeParse(
         cancellationReason ?? undefined,

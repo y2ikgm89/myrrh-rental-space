@@ -76,7 +76,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen, allImages.length]);
 
-  const handlePublishChange = async (checked: boolean) => {
+  const handlePublishChange = (checked: boolean) => {
     startTransition(async () => {
       const result = await updateSpacePublished(space.id, checked);
       if (!isMutationError(result)) {

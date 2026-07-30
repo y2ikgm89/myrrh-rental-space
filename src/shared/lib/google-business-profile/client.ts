@@ -57,7 +57,7 @@ export function createOAuth2Client(): InstanceType<
  * - `tokens` イベントで refresh された access token を `options.onTokens` へ通知
  * - OAuth credentials が未設定なら例外を throw
  */
-export async function getGbpClient(
+export function getGbpClient(
   auth: GbpAuthState,
   options?: GetGbpClientOptions,
 ) {

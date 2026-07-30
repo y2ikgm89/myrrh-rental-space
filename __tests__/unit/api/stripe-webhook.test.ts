@@ -49,12 +49,12 @@ const mockRetrieveCheckoutSession =
     ) => Promise<{ payment_intent: unknown }>
   >();
 const mockGetStripeClient = mock<
-  () => Promise<{
+  () => {
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
       checkout: { sessions: { retrieve: typeof mockRetrieveCheckoutSession } };
     } | null;
-  }>
+  }
 >();
 const mockRefundCheckoutAmountMismatchForReservation = mock<
   (input: {
@@ -581,7 +581,7 @@ describe("POST /api/webhooks/stripe", () => {
     // デフォルトの正常系設定
     mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         webhooks: {
           constructEventAsync: mockConstructEvent,
@@ -686,7 +686,7 @@ describe("POST /api/webhooks/stripe", () => {
   });
 
   test("Stripe クライアントが null → 503", async () => {
-    mockGetStripeClient.mockResolvedValue({ client: null });
+    mockGetStripeClient.mockReturnValue({ client: null });
 
     const response = await POST(makeRequest("body"));
     const body = await response.json();
@@ -1349,7 +1349,7 @@ describe("POST /api/webhooks/stripe", () => {
         realStripe.webhooks.constructEventAsync(body, sig, secret),
       );
 
-      mockGetStripeClient.mockResolvedValue({
+      mockGetStripeClient.mockReturnValue({
         client: {
           webhooks: { constructEventAsync: mockConstructEvent },
           checkout: {

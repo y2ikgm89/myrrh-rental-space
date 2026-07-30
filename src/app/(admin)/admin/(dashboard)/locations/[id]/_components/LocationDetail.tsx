@@ -28,7 +28,7 @@ export function LocationDetail({ location }: LocationDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handlePublishChange = async (checked: boolean) => {
+  const handlePublishChange = (checked: boolean) => {
     startTransition(async () => {
       const result = await updateLocationPublished(location.id, checked);
       if (!isMutationError(result)) {

@@ -81,7 +81,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
   const [notes, setNotes] = useState(customer.notes || "");
   const [isRecomputePending, startRecomputeTransition] = useTransition();
 
-  const handleStatusChange = async (status: CustomerStatus) => {
+  const handleStatusChange = (status: CustomerStatus) => {
     startTransition(async () => {
       const result = await updateCustomerStatus(customer.id, status);
       if (isMutationError(result)) {
@@ -105,7 +105,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     });
   };
 
-  const handleNotesUpdate = async () => {
+  const handleNotesUpdate = () => {
     startTransition(async () => {
       const result = await updateCustomerNotes(customer.id, notes || null);
       if (isMutationError(result)) {
@@ -117,7 +117,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     });
   };
 
-  const handleToggleActive = async () => {
+  const handleToggleActive = () => {
     startTransition(async () => {
       const result = await toggleCustomerActive(customer.id);
       if (isMutationError(result)) {
@@ -129,7 +129,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     });
   };
 
-  const handleClearRiskFlag = async () => {
+  const handleClearRiskFlag = () => {
     startTransition(async () => {
       const result = await clearCustomerRiskFlag(customer.id);
       if (isMutationError(result)) {

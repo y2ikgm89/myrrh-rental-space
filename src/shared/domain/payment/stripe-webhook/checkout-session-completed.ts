@@ -46,7 +46,7 @@ export async function handleCheckoutSessionCompleted(
     if (session.payment_status === "paid") {
       const expectedAmount =
         await getReservationCheckoutExpectedAmount(reservationId);
-      const amountOk = await checkoutSessionAmountMatchesExpected(
+      const amountOk = checkoutSessionAmountMatchesExpected(
         session,
         expectedAmount,
         "stripeWebhookCheckoutCompleted",
@@ -87,7 +87,7 @@ export async function handleCheckoutSessionCompleted(
   if (session.payment_status === "paid") {
     const expectedAmount =
       await getEventRegistrationCheckoutExpectedAmount(registrationId);
-    const amountOk = await checkoutSessionAmountMatchesExpected(
+    const amountOk = checkoutSessionAmountMatchesExpected(
       session,
       expectedAmount,
       "stripeWebhookCheckoutCompleted",

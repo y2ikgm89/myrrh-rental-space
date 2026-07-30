@@ -88,7 +88,7 @@ export async function syncLocationToGbpCommand(
   }
 
   try {
-    const client = await getGbpClient(auth, { onTokens: saveGbpAuthState });
+    const client = getGbpClient(auth, { onTokens: saveGbpAuthState });
     const payload = buildLocationPayload({
       name: location.name,
       postalCode: location.postalCode,

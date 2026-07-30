@@ -76,12 +76,11 @@ const mockRefundsCreate = mock<
   }),
 );
 mock.module("@/shared/lib/stripe", () => ({
-  getStripeClient: () =>
-    Promise.resolve({
-      client: {
-        refunds: { create: mockRefundsCreate },
-      },
-    }),
+  getStripeClient: () => ({
+    client: {
+      refunds: { create: mockRefundsCreate },
+    },
+  }),
 }));
 
 // Settings row 依存を回避 (Stripe credentials は fake)。
