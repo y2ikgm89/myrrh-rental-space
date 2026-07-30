@@ -5,7 +5,7 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { emitBulkAuditRecords } from "@/admin/lib/audit";
-import { ANONYMIZED_CUSTOMER_FIELDS } from "@/admin/actions/customer";
+import { ANONYMIZED_CUSTOMER_FIELDS } from "@/shared/lib/constants/anonymized-customer-fields";
 import {
   checkActionRateLimit,
   createValidationMutationError,

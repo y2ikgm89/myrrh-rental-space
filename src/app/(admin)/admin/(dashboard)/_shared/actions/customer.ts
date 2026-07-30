@@ -57,6 +57,7 @@ import {
   CustomerStatus,
   EmailDeliveryStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { ANONYMIZED_CUSTOMER_FIELDS } from "@/shared/lib/constants/anonymized-customer-fields";
 
 const idSchema = uuidIdSchema("顧客");
 
@@ -527,30 +528,6 @@ const anonymizeReasonSchema = z.enum(
   ["customer-requested", "admin-purge", "data-retention"] as const,
   { error: "匿名化理由が不正です" },
 );
-
-// 匿名化で null 化される PII フィールド名（anonymizeCustomerCommand と同期）。
-// 「何が消えたか」の forensic 記録に値そのものは含めない — 匿名化イベントの
-// AuditLog に生 PII を永続保存すると、削除自体の趣旨（データ最小化）と衝突するため。
-export const ANONYMIZED_CUSTOMER_FIELDS = [
-  "email",
-  "emailCanonical",
-  "lastName",
-  "firstName",
-  "lastNameKana",
-  "firstNameKana",
-  "phoneNumber",
-  "companyName",
-  "postalCode",
-  "prefecture",
-  "city",
-  "streetAddress",
-  "building",
-  "notes",
-  "isActive",
-  "marketingOptIn",
-  "phoneContactOptIn",
-  "userId",
-] as const;
 
 export async function anonymizeCustomer(
   id: string,

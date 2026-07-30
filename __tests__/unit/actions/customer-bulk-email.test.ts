@@ -25,9 +25,6 @@ mock.module("@/admin/lib/admin-action", () => ({
 mock.module("@/admin/lib/audit", () => ({
   emitBulkAuditRecords: mock(() => undefined),
 }));
-mock.module("@/admin/actions/customer", () => ({
-  ANONYMIZED_CUSTOMER_FIELDS: [],
-}));
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: (
     ...args: Parameters<typeof mockCheckActionRateLimit>

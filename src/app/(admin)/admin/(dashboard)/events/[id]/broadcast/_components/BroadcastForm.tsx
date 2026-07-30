@@ -7,10 +7,8 @@ import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { Input, SubmitButton, Textarea } from "@/admin/components/ui";
-import {
-  broadcastEventAction,
-  eventBroadcastSchema,
-} from "@/admin/actions/event-broadcast";
+import { broadcastEventAction } from "@/admin/actions/event-broadcast";
+import { eventBroadcastSchema } from "@/shared/lib/validations/event-broadcast";
 
 type BroadcastFormProps = {
   eventId: string;
