@@ -28,6 +28,7 @@ import {
   isRefundSettledSuccess,
   PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
   PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
+  REFUND_AGGREGATE_EXCLUDED_STATUSES,
   resolveRefundAmount,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
@@ -892,7 +893,10 @@ export async function refundEventRegistrationPaymentCommand(
     }
 
     const aggregate = await tx.refund.aggregate({
-      where: { eventRegistrationId: registrationId },
+      where: {
+        eventRegistrationId: registrationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -937,7 +941,10 @@ export async function refundEventRegistrationPaymentCommand(
     );
 
     const aggregate = await tx.refund.aggregate({
-      where: { eventRegistrationId: registrationId },
+      where: {
+        eventRegistrationId: registrationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -989,21 +996,26 @@ export async function refundEventRegistrationPaymentCommand(
     } satisfies RefundEventRegistrationResult;
   }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
-  // AuditLog (tx 外)
+  // AuditLog (tx 外)。isSettled=false (konbini 等の非同期返金が未確定) の間は
+  // paymentStatus を実際には書き換えていないため、append-only の証跡に到達目標の
+  // 状態を確定事実として記録しない (Codex review, PR #1665)。
   await createAuditLogRecord({
     ...(actorUserId ? { userId: actorUserId } : {}),
     action: AuditAction.UPDATE,
     resource: "event-registration",
     resourceId: registrationId,
-    newValue: {
-      paymentStatus: result.newPaymentStatus,
-      refundedAmount: result.cumulativeAmount,
-    },
+    newValue: result.isSettled
+      ? {
+          paymentStatus: result.newPaymentStatus,
+          refundedAmount: result.cumulativeAmount,
+        }
+      : { refundStatus: result.status },
     metadata: {
       actorType,
       refundAmount: result.refundAmount,
       cumulativeAmount: result.cumulativeAmount,
       stripeRefundId: result.refundId,
+      isSettled: result.isSettled,
       ...(reason ? { reason } : {}),
       ...(request?.ip != null ? { ip: request.ip } : {}),
       ...(request?.userAgent != null ? { userAgent: request.userAgent } : {}),
@@ -1091,7 +1103,10 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     const paymentIntentId = stripePaymentIntentId;
 
     const aggregate = await tx.refund.aggregate({
-      where: { eventRegistrationId: registrationId },
+      where: {
+        eventRegistrationId: registrationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -1152,7 +1167,10 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     );
 
     const aggregate = await tx.refund.aggregate({
-      where: { eventRegistrationId: registrationId },
+      where: {
+        eventRegistrationId: registrationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;

@@ -1,10 +1,12 @@
 import "server-only";
 
 import {
+  AuditAction,
   PaymentStatus,
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   applyStripeChargeRefundIdempotent,
   buildChargeRefundPaymentStatusWhere,
@@ -21,6 +23,8 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import { refundOrphanedStripePaymentForCancelledReservation } from "@/shared/domain/reservations/payment-commands";
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import { sendReservationRefundEmail } from "@/shared/domain/email/lib-dispatch";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -383,14 +387,30 @@ export async function applyChargeRefundIdempotent(input: {
  * 温存する (silent false-positive な返金完了通知を防ぐため)。この関数が
  * webhook 確定後にその「保留していた」paymentStatus 反映と返金完了メール送信を行う。
  *
- * @returns true = 今回このコマンドが確定処理を行った (呼び出し元は追加の副作用を
- *          起こさない)。false = 該当 Refund が既に確定済み (webhook 重複配送等)
- *          で idempotent に no-op、または対象予約が消失済み。
+ * `refundedByType` で分岐する (Codex review, PR #1665):
+ * - ADMIN(管理者手動返金): 部分返金対応。累積 **確定済み** 額 (status が
+ *   `REFUND_AGGREGATE_EXCLUDED_STATUSES` に該当しない行の合計) が totalPriceWithTax に
+ *   到達したかで REFUNDED / PARTIALLY_REFUNDED を判定。入口は PAID/PARTIALLY_REFUNDED
+ *   のみ (この経路の唯一の前提)
+ * - AUTO_*(自動返金全般): 常に単発全額返金。入口となる paymentStatus は呼び出し元
+ *   により UNPAID/PENDING/PAID/PARTIALLY_REFUNDED のいずれもあり得るため、
+ *   「まだ REFUNDED になっていない」ことのみを WHERE 条件にし、無条件で REFUNDED に
+ *   確定する (累積額の全額到達判定はしない — 元々「remaining 分を全額返金する」
+ *   単発処理のため)
+ *
+ * webhook からの再試行に対して idempotent: 呼び出し元 (`handleRefundStatusUpdated`)
+ * は Refund.status の claim 成否に関わらず本関数を呼ぶため、`updateMany` の
+ * WHERE 条件自体が二重適用防止の唯一の防衛線になる。
+ *
+ * @returns true = 今回このコマンドが paymentStatus 遷移を実行した (email 送信含む)。
+ *          false = 既に確定済み (webhook 重複配送・re-try) で idempotent に no-op、
+ *          または対象予約が消失済み。
  */
 export async function finalizeSettledReservationRefund(
   reservationId: string,
   stripeRefundId: string,
   thisRefundAmount: number,
+  refundedByType: string,
 ): Promise<boolean> {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
@@ -401,21 +421,32 @@ export async function finalizeSettledReservationRefund(
   }
 
   const aggregate = await prisma.refund.aggregate({
-    where: { reservationId, status: "succeeded" },
+    where: {
+      reservationId,
+      status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+    },
     _sum: { amount: true },
   });
   const cumulativeSettled = aggregate._sum.amount ?? 0;
-  const willBeFullyRefunded =
-    cumulativeSettled >= reservation.totalPriceWithTax;
+  const isAdminPartialRefund = refundedByType === REFUNDED_BY_TYPE.ADMIN;
+  const willBeFullyRefunded = isAdminPartialRefund
+    ? cumulativeSettled >= reservation.totalPriceWithTax
+    : true;
 
   const updated = await prisma.reservation.updateMany({
-    where: {
-      id: reservationId,
-      deletedAt: null,
-      paymentStatus: {
-        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-      },
-    },
+    where: isAdminPartialRefund
+      ? {
+          id: reservationId,
+          deletedAt: null,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
+        }
+      : {
+          id: reservationId,
+          deletedAt: null,
+          paymentStatus: { not: PaymentStatus.REFUNDED },
+        },
     data: {
       paymentStatus: willBeFullyRefunded
         ? PaymentStatus.REFUNDED
@@ -425,6 +456,28 @@ export async function finalizeSettledReservationRefund(
   if (updated.count === 0) {
     return false;
   }
+
+  // 保留していた完了状態への遷移が今回確定した事実を append-only 証跡に残す
+  // (Codex review, PR #1665: pending 時点の AuditLog は状態未確定である旨のみ記録し、
+  // 確定した完了遷移はここで別エントリとして記録する)。webhook 起点のため userId
+  // は付与しない (refundOrphanedStripePaymentForCancelledReservation と同型)。
+  await createAuditLogRecord({
+    action: AuditAction.UPDATE,
+    resource: "reservation",
+    resourceId: reservationId,
+    newValue: {
+      paymentStatus: willBeFullyRefunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED,
+      refundedAmount: cumulativeSettled,
+    },
+    metadata: {
+      operation: "finalizeSettledReservationRefund",
+      stripeRefundId,
+      refundAmount: thisRefundAmount,
+      cumulativeAmount: cumulativeSettled,
+    },
+  });
 
   const emailData = await fetchReservationEmailData(reservationId);
   if (emailData) {

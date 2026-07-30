@@ -33,6 +33,7 @@ import {
   isRefundSettledSuccess,
   PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
   PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS,
+  REFUND_AGGREGATE_EXCLUDED_STATUSES,
   resolveRefundAmount,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
@@ -711,7 +712,10 @@ export async function refundReservationPaymentCommand(
     }
 
     const aggregate = await tx.refund.aggregate({
-      where: { reservationId },
+      where: {
+        reservationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -753,7 +757,10 @@ export async function refundReservationPaymentCommand(
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     const aggregate = await tx.refund.aggregate({
-      where: { reservationId },
+      where: {
+        reservationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -808,21 +815,27 @@ export async function refundReservationPaymentCommand(
     } satisfies RefundReservationResult;
   }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
 
-  // AuditLog (tx 外、hash-chain の write は独立)
+  // AuditLog (tx 外、hash-chain の write は独立)。
+  // isSettled=false (konbini 等の非同期返金が未確定) の間は paymentStatus を
+  // 実際には書き換えていないため、append-only の証跡に到達目標の状態を
+  // 確定事実として記録しない (Codex review, PR #1665)。
   await createAuditLogRecord({
     ...(actorUserId ? { userId: actorUserId } : {}),
     action: AuditAction.UPDATE,
     resource: "reservation",
     resourceId: reservationId,
-    newValue: {
-      paymentStatus: result.newPaymentStatus,
-      refundedAmount: result.cumulativeAmount,
-    },
+    newValue: result.isSettled
+      ? {
+          paymentStatus: result.newPaymentStatus,
+          refundedAmount: result.cumulativeAmount,
+        }
+      : { refundStatus: result.status },
     metadata: {
       actorType,
       refundAmount: result.refundAmount,
       cumulativeAmount: result.cumulativeAmount,
       stripeRefundId: result.refundId,
+      isSettled: result.isSettled,
       ...(reason ? { reason } : {}),
       ...(request?.ip != null ? { ip: request.ip } : {}),
       ...(request?.userAgent != null ? { userAgent: request.userAgent } : {}),
@@ -903,7 +916,10 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
     const paymentIntentId = stripePaymentIntentId;
 
     const aggregate = await tx.refund.aggregate({
-      where: { reservationId },
+      where: {
+        reservationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
@@ -961,7 +977,10 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
     const aggregate = await tx.refund.aggregate({
-      where: { reservationId },
+      where: {
+        reservationId,
+        status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;

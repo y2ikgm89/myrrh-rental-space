@@ -7,6 +7,7 @@ import {
   findRefundEntityByStripeRefundId,
   isRefundSettledSuccess,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
+import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { finalizeSettledReservationRefund } from "@/shared/domain/reservations/payment-queries";
 import { finalizeSettledEventRegistrationRefund } from "@/shared/domain/events/payment-queries";
 import {
@@ -58,32 +59,38 @@ export async function handleRefundStatusUpdated(
     return;
   }
 
-  if (entity.status === refund.status) {
-    // 既に同一 status で確定済み (webhook 再送 / 順序前後)。idempotent no-op。
-    return;
-  }
-
-  const claimed = await applyConfirmedRefundStatus(
-    prisma,
-    refund.id,
-    entity.status,
-    refund.status,
-  );
-  if (claimed === 0) {
-    // 別プロセスが同時に確定済み (race)。idempotent no-op。
-    return;
+  if (entity.status !== refund.status) {
+    // status 列の更新自体は claim 数を問わない: 別プロセスが同時に確定済み
+    // (race) でも、後続の finalize 呼び出しは entity.reservationId /
+    // eventRegistrationId 側の updateMany WHERE claim で独立に idempotent。
+    await applyConfirmedRefundStatus(
+      prisma,
+      refund.id,
+      entity.status,
+      refund.status,
+    );
   }
 
   if (isRefundSettledSuccess(refund.status)) {
+    // finalize は必ず呼ぶ (claimed===0 でも早期 return しない): webhook 再送で
+    // status 列の更新が前回既に完了していても、paymentStatus 反映・メール送信
+    // 側が前回クラッシュ等で未完了のままの可能性があるため。冪等性は finalize
+    // 関数自身の updateMany WHERE claim (paymentStatus ガード) が担保する。
+    const settledAmount = fromStripeUnitAmount(refund.amount, refund.currency);
     if (entity.reservationId) {
       await finalizeSettledReservationRefund(
         entity.reservationId,
         refund.id,
-        refund.amount,
+        settledAmount,
+        entity.refundedByType,
       );
       invalidateReservationCache(entity.reservationId);
     } else if (entity.eventRegistrationId) {
-      await finalizeSettledEventRegistrationRefund(entity.eventRegistrationId);
+      await finalizeSettledEventRegistrationRefund(
+        entity.eventRegistrationId,
+        refund.id,
+        entity.refundedByType,
+      );
       invalidateEventRegistrationCache();
     }
     return;
