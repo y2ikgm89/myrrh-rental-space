@@ -168,12 +168,10 @@ describe("handleRefundStatusUpdated", () => {
       buildRefund({ status: "succeeded", amount: 3000 }),
     );
 
-    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
-      expect.anything(),
-      STRIPE_REFUND_ID,
-      "pending",
-      "succeeded",
-    );
+    // succeeded 側の Refund.status claim は finalize 自身が entity 反映と
+    // atomic に行うため、handler はここで applyConfirmedRefundStatus を呼ばない
+    // (Codex review, PR #1666)。
+    expect(mockApplyConfirmedRefundStatus).not.toHaveBeenCalled();
     expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
       RESERVATION_ID,
       STRIPE_REFUND_ID,
@@ -227,10 +225,12 @@ describe("handleRefundStatusUpdated", () => {
     expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
   });
 
-  test("既に同一 status で確定済みでも finalize は必ず呼ぶ (status 列更新のみ skip、Codex P1 #1 のリトライ安全性)", async () => {
-    // 前回配信で status 列の更新は完了したが finalize (paymentStatus 反映・メール送信)
-    // が完了前にクラッシュしたケースを模す。webhook 再送時に「status 一致=完了済み」と
-    // 誤認して finalize を恒久的にスキップしてはならない。
+  test("既に同一 status (succeeded) で確定済みでも finalize は必ず呼ぶ (claim の権威は finalize 側にあるため)", async () => {
+    // Refund.status の claim (非終端→succeeded) と entity 反映・完了 AuditLog は
+    // finalize 関数自身が同一 tx で atomic に行う。handler 側の entity.status
+    // スナップショットが既に "succeeded" と一致していても、finalize 自身の
+    // claim (この test では default で count=1 = 未確定) が権威を持つため、
+    // handler は常に finalize を呼ぶ (Codex review, PR #1666)。
     mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
       status: "succeeded",
       reservationId: RESERVATION_ID,
@@ -240,9 +240,7 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
-    // status 列は既に一致しているため再更新は不要 (無駄な書込を避ける最適化)。
     expect(mockApplyConfirmedRefundStatus).not.toHaveBeenCalled();
-    // だが finalize は必ず呼ぶ — 冪等性は finalize 自身の updateMany WHERE claim が担保する。
     expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
       RESERVATION_ID,
       STRIPE_REFUND_ID,
@@ -252,27 +250,7 @@ describe("handleRefundStatusUpdated", () => {
     expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
   });
 
-  test("status 列更新が別プロセスと競合 (claimed=0) しても finalize は必ず呼ぶ", async () => {
-    mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
-      status: "pending",
-      reservationId: RESERVATION_ID,
-      eventRegistrationId: null,
-      refundedByType: REFUNDED_BY_TYPE.ADMIN,
-    });
-    mockApplyConfirmedRefundStatus.mockResolvedValueOnce(0);
-
-    await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
-
-    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
-      RESERVATION_ID,
-      STRIPE_REFUND_ID,
-      5000,
-      REFUNDED_BY_TYPE.ADMIN,
-    );
-    expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
-  });
-
-  test("refund.failed (status=failed) は CRITICAL severity で logError し paymentStatus は変更しない", async () => {
+  test("refund.failed (status=failed) は status 列を更新し CRITICAL severity で logError する (paymentStatus は変更しない)", async () => {
     mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
       status: "pending",
       reservationId: RESERVATION_ID,
@@ -282,6 +260,12 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "failed" }));
 
+    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      STRIPE_REFUND_ID,
+      "pending",
+      "failed",
+    );
     expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledWith(
@@ -290,7 +274,7 @@ describe("handleRefundStatusUpdated", () => {
     );
   });
 
-  test("status=canceled も CRITICAL severity で logError する", async () => {
+  test("status=canceled も status 列を更新し CRITICAL severity で logError する", async () => {
     mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
       status: "pending",
       reservationId: RESERVATION_ID,
@@ -300,6 +284,12 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "canceled" }));
 
+    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      STRIPE_REFUND_ID,
+      "pending",
+      "canceled",
+    );
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ severity: "CRITICAL" }),
