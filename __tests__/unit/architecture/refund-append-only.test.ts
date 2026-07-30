@@ -40,25 +40,14 @@ describe("refunds append-only boundary", () => {
   });
 
   test("Refund domain commands は update/delete/upsert を呼び出さない", () => {
-    const eventPaymentDir = join(
-      process.cwd(),
-      "src/shared/domain/events/payment",
-    );
-    const eventPaymentModules = readdirSync(eventPaymentDir)
-      .filter((name) => name.endsWith(".ts"))
-      .map((name) => `src/shared/domain/events/payment/${name}`);
-
-    const reservationPaymentDir = join(
-      process.cwd(),
-      "src/shared/domain/reservations/payment",
-    );
-    const reservationPaymentModules = readdirSync(reservationPaymentDir)
-      .filter((name) => name.endsWith(".ts"))
-      .map((name) => `src/shared/domain/reservations/payment/${name}`);
-
+    // src/shared/domain/{events,reservations}/payment/ は PR#1601/#1607 の分割
+    // 成果だったが実際にはどこからも import されない fork で、実稼働は
+    // payment-commands.ts の monolith 側だった（module-reachability.test.ts の
+    // 監査で判明・Phase B1 で fork を削除済み）。この gate は fork だけを見て
+    // 実稼働コードを検査していなかったため、対象を monolith に差し替える。
     const files = [
-      ...eventPaymentModules,
-      ...reservationPaymentModules,
+      "src/shared/domain/events/payment-commands.ts",
+      "src/shared/domain/reservations/payment-commands.ts",
       "src/shared/domain/reservations/payment-queries.ts",
     ];
 

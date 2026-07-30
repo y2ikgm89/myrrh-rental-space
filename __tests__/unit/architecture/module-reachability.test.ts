@@ -32,24 +32,6 @@ const APP_ROOT_BASENAME_RE =
  * このテストは「新規の到達不能」だけを 0 件にするための ratchet。
  */
 const REACHABILITY_ALLOWLIST = new Set<string>([
-  // --- payment fork（PR #1601/#1607 の分割成果が未配線。実稼働は
-  //     reservations/payment-commands.ts・events/payment-commands.ts の monolith）
-  "src/shared/domain/reservations/payment/admin-refund.ts",
-  "src/shared/domain/reservations/payment/amount-mismatch-refund.ts",
-  "src/shared/domain/reservations/payment/checkout-session.ts",
-  "src/shared/domain/reservations/payment/manual-payment.ts",
-  "src/shared/domain/reservations/payment/orphan-cancel-refund.ts",
-  "src/shared/domain/events/payment/admin-refund.ts",
-  "src/shared/domain/events/payment/amount-mismatch-refund.ts",
-  "src/shared/domain/events/payment/event-checkout-session.ts",
-  "src/shared/domain/events/payment/manual-payment.ts",
-  "src/shared/domain/events/payment/orphan-cancel-refund.ts",
-  "src/shared/domain/events/payment/waitlist-capacity-race-refund.ts",
-  "src/shared/domain/events/payment/waitlist-offer-checkout-session.ts",
-  "src/shared/domain/payment/refund-command-orchestration.ts",
-  "src/shared/domain/payment/orphan-refund-orchestration.ts",
-  "src/shared/domain/payment/checkout-session-create-orchestration.ts",
-
   // --- 未使用 barrel / 旧実装への置換で参照されなくなった shim（Phase B2 で削除予定）
   "src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/config-forms/index.ts",
   "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/index.ts",
