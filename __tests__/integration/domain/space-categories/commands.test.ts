@@ -10,14 +10,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -45,24 +38,46 @@ describeMaybe("space-categories/commands の reorder", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
+  test("updateSpaceCategoryOrder は sortOrder を並び替える（既存カテゴリーは保持したまま自分の2件を入れ替える）", async () => {
     // updateSpaceCategoryOrder は「全 SpaceCategory が過不足なく揃っていること」を
-    // 検証するため、テーブル全体を対象にする（event-categories/commands.test.ts と同型）。
-    await prisma.spaceCategory.deleteMany({});
-  });
-
-  test("updateSpaceCategoryOrder は sortOrder を並び替える", async () => {
-    const a = await createSpaceCategory({ name: "A" });
-    const b = await createSpaceCategory({ name: "B" });
-
-    await updateSpaceCategoryOrder([
-      { id: a.id, sortOrder: 1 },
-      { id: b.id, sortOrder: 0 },
-    ]);
-
-    const rows = await prisma.spaceCategory.findMany({
-      orderBy: { sortOrder: "asc" },
+    // 検証するため、対象スコープは全件。ただし SpaceCategory は Space.categoryId から
+    // onDelete: Restrict で参照されるため deleteMany({}) は使えない（既存データが
+    // あると P2003 で落ちる）。既存行は保持したまま自分の2行だけ追加して入れ替える。
+    const suffix = crypto.randomUUID();
+    const existing = await prisma.spaceCategory.findMany({
+      select: { id: true, sortOrder: true },
     });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+
+    const a = await createSpaceCategory({ name: `Repro A ${suffix}` });
+    const b = await createSpaceCategory({ name: `Repro B ${suffix}` });
+    const aRow = await prisma.spaceCategory.findUniqueOrThrow({
+      where: { id: a.id },
+      select: { sortOrder: true },
+    });
+    const bRow = await prisma.spaceCategory.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { sortOrder: true },
+    });
+
+    try {
+      await updateSpaceCategoryOrder([
+        ...existing.map((e) => ({ id: e.id, sortOrder: e.sortOrder })),
+        { id: a.id, sortOrder: bRow.sortOrder },
+        { id: b.id, sortOrder: aRow.sortOrder },
+      ]);
+
+      const rows = await prisma.spaceCategory.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([
+        ...existing.map((e) => e.id),
+        b.id,
+        a.id,
+      ]);
+    } finally {
+      await prisma.spaceCategory.deleteMany({
+        where: { id: { in: [a.id, b.id] } },
+      });
+    }
   });
 });

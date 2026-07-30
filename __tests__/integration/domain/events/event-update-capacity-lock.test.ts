@@ -142,13 +142,11 @@ describeMaybe("updateEventCommand — capacity lock 728350", () => {
   }, 60_000);
 
   afterAll(async () => {
-    await prisma.event.deleteMany({});
+    // 自分専用の testCategoryId に紐づく event のみを掃除する（グローバルな
+    // event.deleteMany({}) は seed 済みの実イベントを問答無用で破壊するため使わない）。
+    await prisma.event.deleteMany({ where: { categoryId: testCategoryId } });
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await prisma.$disconnect();
-  });
-
-  beforeEach(async () => {
-    await prisma.event.deleteMany({});
   });
 
   test("定員引き下げと申込 create が並行しても CONFIRMED 合計 <= slot.capacity", async () => {
@@ -158,76 +156,80 @@ describeMaybe("updateEventCommand — capacity lock 728350", () => {
         confirmedCount: 8,
       });
 
-    const eventMeta = await prisma.event.findUniqueOrThrow({
-      where: { id: eventId },
-      select: { slug: true, title: true },
-    });
-    const ticket = await prisma.eventTicket.findUniqueOrThrow({
-      where: { id: ticketId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        price: true,
-        capacity: true,
-        unitSize: true,
-        isAvailable: true,
-      },
-    });
-    const slot = await prisma.eventTimeSlot.findFirstOrThrow({
-      where: { eventId },
-      select: { id: true },
-    });
+    try {
+      const eventMeta = await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { slug: true, title: true },
+      });
+      const ticket = await prisma.eventTicket.findUniqueOrThrow({
+        where: { id: ticketId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          capacity: true,
+          unitSize: true,
+          isAvailable: true,
+        },
+      });
+      const slot = await prisma.eventTimeSlot.findFirstOrThrow({
+        where: { eventId },
+        select: { id: true },
+      });
 
-    const results = await Promise.allSettled([
-      updateEventCommand(eventId, {
-        title: eventMeta.title,
-        slug: eventMeta.slug,
-        descriptionJson: { type: "doc" },
-        descriptionHtml: "<p>test</p>",
-        descriptionPlainText: "test",
-        gallery: [],
-        categoryId: testCategoryId,
-        status: EventStatus.PUBLISHED,
-        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
-        registrationOpen: true,
-        slots: [{ startAt: start, endAt: end, capacity: 8 }],
-        tickets: [
-          {
-            id: ticket.id,
-            name: ticket.name,
-            description: ticket.description,
-            price: ticket.price,
-            capacity: ticket.capacity,
-            unitSize: ticket.unitSize,
-            isAvailable: ticket.isAvailable,
-          },
-        ],
-      }),
-      createEventRegistrationCommand({
-        eventId,
-        slotId: slot.id,
-        ticketId,
-        name: "並行申込者",
-        email: `parallel-reg-${eventId}@example.com`,
-        quantity: 1,
-      }),
-    ]);
+      const results = await Promise.allSettled([
+        updateEventCommand(eventId, {
+          title: eventMeta.title,
+          slug: eventMeta.slug,
+          descriptionJson: { type: "doc" },
+          descriptionHtml: "<p>test</p>",
+          descriptionPlainText: "test",
+          gallery: [],
+          categoryId: testCategoryId,
+          status: EventStatus.PUBLISHED,
+          scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+          registrationOpen: true,
+          slots: [{ startAt: start, endAt: end, capacity: 8 }],
+          tickets: [
+            {
+              id: ticket.id,
+              name: ticket.name,
+              description: ticket.description,
+              price: ticket.price,
+              capacity: ticket.capacity,
+              unitSize: ticket.unitSize,
+              isAvailable: ticket.isAvailable,
+            },
+          ],
+        }),
+        createEventRegistrationCommand({
+          eventId,
+          slotId: slot.id,
+          ticketId,
+          name: "並行申込者",
+          email: `parallel-reg-${eventId}@example.com`,
+          quantity: 1,
+        }),
+      ]);
 
-    const slotAfter = await prisma.eventTimeSlot.findFirstOrThrow({
-      where: { eventId },
-      select: { capacity: true },
-    });
-    const confirmedAgg = await prisma.eventRegistration.aggregate({
-      where: {
-        eventId,
-        status: RegistrationStatus.CONFIRMED,
-      },
-      _sum: { quantity: true },
-    });
-    const confirmedTotal = confirmedAgg._sum.quantity ?? 0;
+      const slotAfter = await prisma.eventTimeSlot.findFirstOrThrow({
+        where: { eventId },
+        select: { capacity: true },
+      });
+      const confirmedAgg = await prisma.eventRegistration.aggregate({
+        where: {
+          eventId,
+          status: RegistrationStatus.CONFIRMED,
+        },
+        _sum: { quantity: true },
+      });
+      const confirmedTotal = confirmedAgg._sum.quantity ?? 0;
 
-    expect(confirmedTotal).toBeLessThanOrEqual(slotAfter.capacity);
-    expect(results.some((r) => r.status === "rejected")).toBe(true);
+      expect(confirmedTotal).toBeLessThanOrEqual(slotAfter.capacity);
+      expect(results.some((r) => r.status === "rejected")).toBe(true);
+    } finally {
+      await prisma.event.deleteMany({ where: { id: eventId } });
+    }
   }, 30_000);
 });

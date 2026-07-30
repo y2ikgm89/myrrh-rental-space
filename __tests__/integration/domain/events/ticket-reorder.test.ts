@@ -66,22 +66,16 @@ describeMaybe("events/commands のチケット reorder", () => {
   });
 
   afterAll(async () => {
-    // EventCategory は onDelete: Restrict のため、紐づく Event (最後の test 実行分、
-    // beforeEach では次回実行前にしか削除されない) を先に削除してから category を消す。
-    await prisma.event.deleteMany({});
+    // 自分専用の testCategoryId に紐づく event のみを掃除する（グローバルな
+    // event.deleteMany({}) は seed 済みの実イベントを問答無用で破壊するため使わない）。
+    await prisma.event.deleteMany({ where: { categoryId: testCategoryId } });
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    // Prisma の deleteMany は個別 autocommit 文のため、先に eventTimeSlot だけを
-    // 削除すると「親 Event（SINGLE_OCCURRENCE）が残ったまま slot_count=0」の瞬間に
-    // DEFERRABLE constraint trigger が単文末で発火し 23514 を投げる。
-    // event.deleteMany の onDelete: Cascade で子行を同一文内でまとめて消す。
-    await prisma.event.deleteMany({});
-  });
-
   test("updateEventCommand はチケットの sortOrder を並び替える", async () => {
+    const suffix = crypto.randomUUID();
+    const slug = `repro-ticket-reorder-event-${suffix}`;
     const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
 
@@ -89,7 +83,7 @@ describeMaybe("events/commands のチケット reorder", () => {
       const created = await tx.event.create({
         data: {
           title: "Repro Event",
-          slug: "repro-ticket-reorder-event",
+          slug,
           descriptionJson: {},
           descriptionHtml: "",
           descriptionPlainText: "",
@@ -105,50 +99,54 @@ describeMaybe("events/commands のチケット reorder", () => {
       return created;
     });
 
-    const ticketA = await prisma.eventTicket.create({
-      data: { eventId: event.id, name: "A", price: 1000, sortOrder: 0 },
-    });
-    const ticketB = await prisma.eventTicket.create({
-      data: { eventId: event.id, name: "B", price: 1000, sortOrder: 1 },
-    });
+    try {
+      const ticketA = await prisma.eventTicket.create({
+        data: { eventId: event.id, name: "A", price: 1000, sortOrder: 0 },
+      });
+      const ticketB = await prisma.eventTicket.create({
+        data: { eventId: event.id, name: "B", price: 1000, sortOrder: 1 },
+      });
 
-    await updateEventCommand(event.id, {
-      title: "Repro Event",
-      slug: "repro-ticket-reorder-event",
-      descriptionJson: {},
-      descriptionHtml: "",
-      descriptionPlainText: "",
-      gallery: [],
-      categoryId: testCategoryId,
-      status: EventStatus.DRAFT,
-      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
-      slots: [{ startAt: start, endAt: end, capacity: 10 }],
-      tickets: [
-        {
-          id: ticketB.id,
-          name: "B",
-          description: null,
-          price: 1000,
-          capacity: null,
-          unitSize: 1,
-          isAvailable: true,
-        },
-        {
-          id: ticketA.id,
-          name: "A",
-          description: null,
-          price: 1000,
-          capacity: null,
-          unitSize: 1,
-          isAvailable: true,
-        },
-      ],
-    });
+      await updateEventCommand(event.id, {
+        title: "Repro Event",
+        slug,
+        descriptionJson: {},
+        descriptionHtml: "",
+        descriptionPlainText: "",
+        gallery: [],
+        categoryId: testCategoryId,
+        status: EventStatus.DRAFT,
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+        slots: [{ startAt: start, endAt: end, capacity: 10 }],
+        tickets: [
+          {
+            id: ticketB.id,
+            name: "B",
+            description: null,
+            price: 1000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+          {
+            id: ticketA.id,
+            name: "A",
+            description: null,
+            price: 1000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
 
-    const rows = await prisma.eventTicket.findMany({
-      where: { eventId: event.id },
-      orderBy: { sortOrder: "asc" },
-    });
-    expect(rows.map((r) => r.id)).toEqual([ticketB.id, ticketA.id]);
+      const rows = await prisma.eventTicket.findMany({
+        where: { eventId: event.id },
+        orderBy: { sortOrder: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([ticketB.id, ticketA.id]);
+    } finally {
+      await prisma.event.deleteMany({ where: { id: event.id } });
+    }
   });
 });

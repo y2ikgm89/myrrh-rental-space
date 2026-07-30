@@ -17,9 +17,14 @@
  * （`prisma.$transaction` 等）を経て解決する Promise に対して Bun 1.3.14 で
  * タイムアウトまでハングする事象を実測したため使わない。エラーケースは
  * 明示的な try/catch で検証する（blacklist-guard.test.ts と同型の対処）。
+ *
+ * 各テストは seed 済みの実 EventCategory/Event（「ワークショップ」等）を
+ * 保持したまま、自分が作った行だけを randomUUID サフィックス付きの名前・
+ * slug で作成し、finally で自分の行だけ削除する（テーブル全体の deleteMany
+ * は seed 済みデータを破壊し以降の seed 実行を壊すため使わない）。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 
 process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
@@ -80,48 +85,72 @@ describe("event-categories/commands", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    await prisma.event.deleteMany({});
-    await prisma.eventCategory.deleteMany({});
-  });
-
   test("createEventCategory は末尾に自動採番して作成する", async () => {
-    const first = await createEventCategory({ name: "ワークショップ" });
-    const second = await createEventCategory({ name: "マルシェ" });
-
-    const rows = await prisma.eventCategory.findMany({
-      orderBy: { sortOrder: "asc" },
+    const suffix = crypto.randomUUID();
+    const first = await createEventCategory({
+      name: `ワークショップ ${suffix}`,
     });
-    expect(rows.map((r) => r.id)).toEqual([first.id, second.id]);
-    expect(rows[0]?.sortOrder).toBe(0);
-    expect(rows[1]?.sortOrder).toBe(1);
+    const second = await createEventCategory({ name: `マルシェ ${suffix}` });
+
+    try {
+      const firstRow = await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: first.id },
+        select: { sortOrder: true },
+      });
+      const secondRow = await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: second.id },
+        select: { sortOrder: true },
+      });
+      expect(secondRow.sortOrder).toBe(firstRow.sortOrder + 1);
+
+      const rows = await prisma.eventCategory.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
+      expect(rows.slice(-2).map((r) => r.id)).toEqual([first.id, second.id]);
+    } finally {
+      await prisma.eventCategory.deleteMany({
+        where: { id: { in: [first.id, second.id] } },
+      });
+    }
   });
 
   test("createEventCategory は isActive:true な同名カテゴリーがあると CONFLICT で拒否する", async () => {
-    await createEventCategory({ name: "ワークショップ" });
+    const name = `テスト重複カテゴリー ${crypto.randomUUID()}`;
+    const created = await createEventCategory({ name });
 
-    let thrown: unknown = null;
     try {
-      await createEventCategory({ name: "ワークショップ" });
-    } catch (err) {
-      thrown = err;
+      let thrown: unknown = null;
+      try {
+        await createEventCategory({ name });
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(DomainError);
+    } finally {
+      await prisma.eventCategory.deleteMany({ where: { id: created.id } });
     }
-    expect(thrown).toBeInstanceOf(DomainError);
   });
 
   test("updateEventCategory は名前・説明・アイコン・色を更新する", async () => {
-    const created = await createEventCategory({ name: "ワークショップ" });
-
-    await updateEventCategory(created.id, {
-      name: "ワークショップ改",
-      description: "説明を更新",
+    const suffix = crypto.randomUUID();
+    const created = await createEventCategory({
+      name: `ワークショップ ${suffix}`,
     });
 
-    const updated = await prisma.eventCategory.findUniqueOrThrow({
-      where: { id: created.id },
-    });
-    expect(updated.name).toBe("ワークショップ改");
-    expect(updated.description).toBe("説明を更新");
+    try {
+      await updateEventCategory(created.id, {
+        name: `ワークショップ改 ${suffix}`,
+        description: "説明を更新",
+      });
+
+      const updated = await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: created.id },
+      });
+      expect(updated.name).toBe(`ワークショップ改 ${suffix}`);
+      expect(updated.description).toBe("説明を更新");
+    } finally {
+      await prisma.eventCategory.deleteMany({ where: { id: created.id } });
+    }
   });
 
   test("updateEventCategory は存在しない id で NOT_FOUND を投げる", async () => {
@@ -136,55 +165,105 @@ describe("event-categories/commands", () => {
     expect(thrown).toBeInstanceOf(DomainError);
   });
 
-  test("updateEventCategoryOrder は sortOrder を並び替える", async () => {
-    const a = await createEventCategory({ name: "A" });
-    const b = await createEventCategory({ name: "B" });
-
-    await updateEventCategoryOrder([
-      { id: a.id, sortOrder: 1 },
-      { id: b.id, sortOrder: 0 },
-    ]);
-
-    const rows = await prisma.eventCategory.findMany({
-      orderBy: { sortOrder: "asc" },
+  test("updateEventCategoryOrder は sortOrder を並び替える（既存カテゴリーは保持したまま自分の2件を入れ替える）", async () => {
+    // updateEventCategoryOrder は「全 EventCategory が過不足なく揃っていること」を
+    // 検証するため、対象スコープは全件。既存行は保持したまま自分の2行だけ
+    // 追加して入れ替える。
+    const suffix = crypto.randomUUID();
+    const existing = await prisma.eventCategory.findMany({
+      select: { id: true, sortOrder: true },
     });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+
+    const a = await createEventCategory({ name: `A ${suffix}` });
+    const b = await createEventCategory({ name: `B ${suffix}` });
+    const aRow = await prisma.eventCategory.findUniqueOrThrow({
+      where: { id: a.id },
+      select: { sortOrder: true },
+    });
+    const bRow = await prisma.eventCategory.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { sortOrder: true },
+    });
+
+    try {
+      await updateEventCategoryOrder([
+        ...existing.map((e) => ({ id: e.id, sortOrder: e.sortOrder })),
+        { id: a.id, sortOrder: bRow.sortOrder },
+        { id: b.id, sortOrder: aRow.sortOrder },
+      ]);
+
+      const rows = await prisma.eventCategory.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([
+        ...existing.map((e) => e.id),
+        b.id,
+        a.id,
+      ]);
+    } finally {
+      await prisma.eventCategory.deleteMany({
+        where: { id: { in: [a.id, b.id] } },
+      });
+    }
   });
 
   test("deleteEventCategory はイベントが紐づく場合 CONFLICT で拒否する", async () => {
-    const created = await createEventCategory({ name: "ワークショップ" });
-    await createLinkedEvent(created.id, created.id);
+    const suffix = crypto.randomUUID();
+    const created = await createEventCategory({
+      name: `ワークショップ ${suffix}`,
+    });
+    await createLinkedEvent(created.id, suffix);
 
-    let thrown: unknown = null;
     try {
-      await deleteEventCategory(created.id);
-    } catch (err) {
-      thrown = err;
+      let thrown: unknown = null;
+      try {
+        await deleteEventCategory(created.id);
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(DomainError);
+    } finally {
+      await prisma.event.deleteMany({ where: { categoryId: created.id } });
+      await prisma.eventCategory.deleteMany({ where: { id: created.id } });
     }
-    expect(thrown).toBeInstanceOf(DomainError);
   });
 
   test("deleteEventCategory はイベント紐づけがなければ isActive:false にする", async () => {
-    const created = await createEventCategory({ name: "ワークショップ" });
-
-    await deleteEventCategory(created.id);
-
-    const row = await prisma.eventCategory.findUniqueOrThrow({
-      where: { id: created.id },
+    const suffix = crypto.randomUUID();
+    const created = await createEventCategory({
+      name: `ワークショップ ${suffix}`,
     });
-    expect(row.isActive).toBe(false);
+
+    try {
+      await deleteEventCategory(created.id);
+
+      const row = await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: created.id },
+      });
+      expect(row.isActive).toBe(false);
+    } finally {
+      await prisma.eventCategory.deleteMany({ where: { id: created.id } });
+    }
   });
 
   test("updateEventCategoryActive はイベントが紐づく場合の非アクティブ化を CONFLICT で拒否する", async () => {
-    const created = await createEventCategory({ name: "ワークショップ" });
-    await createLinkedEvent(created.id, `${created.id}-2`);
+    const suffix = crypto.randomUUID();
+    const created = await createEventCategory({
+      name: `ワークショップ ${suffix}`,
+    });
+    await createLinkedEvent(created.id, `${suffix}-2`);
 
-    let thrown: unknown = null;
     try {
-      await updateEventCategoryActive(created.id, false);
-    } catch (err) {
-      thrown = err;
+      let thrown: unknown = null;
+      try {
+        await updateEventCategoryActive(created.id, false);
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(DomainError);
+    } finally {
+      await prisma.event.deleteMany({ where: { categoryId: created.id } });
+      await prisma.eventCategory.deleteMany({ where: { id: created.id } });
     }
-    expect(thrown).toBeInstanceOf(DomainError);
   });
 });

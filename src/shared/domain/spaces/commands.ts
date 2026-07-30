@@ -286,6 +286,7 @@ export async function deleteSpaceCommand(
           select: {
             reservations: {
               where: {
+                deletedAt: null,
                 status: { in: [...ACTIVE_RESERVATION_STATUSES] },
               },
             },

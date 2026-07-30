@@ -10,7 +10,10 @@ import { cancelReservationSeriesCommand } from "./series-commands";
 import type { CancelRequestContext } from "./cancellation-side-effects";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { reservationDeadlineNow } from "./server-deadline-instant";
-import { lockSpaceForTransaction } from "./space-locks";
+import {
+  lockSpaceForTransaction,
+  lockSpacesForTransactionInOrder,
+} from "./space-locks";
 import {
   checkReservationDuration,
   isWithinBusinessHours,
@@ -391,6 +394,7 @@ async function updateReservationCommand(input: {
         id: true,
         status: true,
         paymentStatus: true,
+        spaceId: true,
         startTime: true,
         taxRateType: true,
         taxRate: true,
@@ -456,7 +460,12 @@ async function updateReservationCommand(input: {
       return { success: false, error: txCapacityError };
     }
 
-    await lockSpaceForTransaction(tx, updateInput.spaceId);
+    // spaceId 変更時は旧 Space の占有解放も規約8の対象。新 Space だけ lock すると
+    // 旧 Space への並行 write が本 tx の解放と競合しうる（id 昇順で deadlock 回避）。
+    await lockSpacesForTransactionInOrder(tx, [
+      reservation.spaceId,
+      updateInput.spaceId,
+    ]);
 
     // BlockedDate の tx 内二重ガード (tx 外 pre-check と race する GLOBAL 休業日追加を封鎖)
     await ensureDateNotBlocked(

@@ -122,6 +122,7 @@ export async function bulkDeleteSpacesCommand(
     const reservationSpaces = await tx.reservation.findMany({
       where: {
         spaceId: { in: spaceIds },
+        deletedAt: null,
         status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       },
       select: { spaceId: true },
