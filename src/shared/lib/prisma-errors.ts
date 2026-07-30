@@ -63,3 +63,49 @@ export function isPrismaUniqueConstraintError(
   if (Array.isArray(fields) && fields.includes(targetField)) return true;
   return false;
 }
+
+/**
+ * PostgreSQL EXCLUDE 制約違反 (SQLSTATE 23P01) を検出する type guard。
+ *
+ * P2002 (unique constraint) と異なり、Prisma 7 + `@prisma/adapter-pg` は
+ * exclusion constraint 違反を `PrismaClientKnownRequestError` にラップしない
+ * （Prisma の error-code マッピング表に 23P01 のエントリが無いため）。
+ * catch されるのは adapter 層の生の `DriverAdapterError` そのもの:
+ *
+ *   {
+ *     name: "DriverAdapterError",
+ *     cause: {
+ *       code: "23P01",
+ *       originalCode: "23P01",
+ *       kind: "postgres",
+ *       message: "conflicting key value violates exclusion constraint \"...\"",
+ *       detail: "Key (...) conflicts with existing key (...)."
+ *     }
+ *   }
+ *
+ * （`__tests__/integration/domain/reservations/exclusion-violation-shape.test.ts` で実測）。
+ * `reservations_no_active_time_overlap_excl` は DEFERRABLE ではないため文単位で
+ * 即時発火し、その statement を直接 try/catch できる。一方 Event⇔Reservation の
+ * cross-table CONSTRAINT TRIGGER 3 本は DEFERRABLE INITIALLY DEFERRED で
+ * COMMIT 時にしか発火しないため、それらを拾うには `$transaction(...)` 呼び出し
+ * 自体を try/catch で包む必要がある（tx callback 内の try/catch では捕捉不可）。
+ *
+ * @param error - catch した任意 error
+ * @param constraintName - 特定制約名のみ検出したい場合に指定。省略時は任意の
+ *                        exclusion constraint 違反を true 判定
+ */
+export function isPrismaExclusionConstraintError(
+  error: unknown,
+  constraintName?: string,
+): boolean {
+  if (!isRecord(error)) return false;
+  if (error["name"] !== "DriverAdapterError") return false;
+
+  const cause = error["cause"];
+  if (!isRecord(cause)) return false;
+  if (cause["code"] !== "23P01") return false;
+  if (constraintName === undefined) return true;
+
+  const message = cause["message"];
+  return typeof message === "string" && message.includes(constraintName);
+}

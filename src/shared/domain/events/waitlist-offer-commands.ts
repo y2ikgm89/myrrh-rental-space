@@ -7,6 +7,12 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import {
   WAITLIST_XACT_LOCK_NAMESPACE,
   tryAcquireWaitlistPromoteSessionLock,
   releaseWaitlistPromoteSessionLock,
@@ -264,32 +270,56 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
 
       try {
         for (const candidate of args.candidates) {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${args.eventId}))`;
+          // 1 candidate の処理を savepoint（Prisma のネスト $transaction）に
+          // 隔離する。savepoint を使わず tx を直接 abort させると、Postgres は
+          // トランザクションを aborted 状態にし、以降の全クエリ（726354 の
+          // release も含む）が 25P02 で失敗する。session lock は commit/rollback
+          // では自動解放されないため、release が失敗すると次回 cron 実行まで
+          // (pool の idle timeout まで) その event の promote が止まる
+          // （expire-and-promote-waitlist-session-lock.test.ts が回帰ガード）。
+          try {
+            const result = await tx.$transaction(async (tx2) => {
+              await tx2.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${args.eventId}))`;
 
-          const claim = await tx.eventRegistration.updateMany({
-            where: {
+              const claim = await tx2.eventRegistration.updateMany({
+                where: {
+                  id: candidate.id,
+                  status: RegistrationStatus.WAITLISTED_OFFERED,
+                  expiresAt: { lt: args.now },
+                  // Codex review Critical #1 (defense-in-depth #2) — JSDoc 上部参照
+                  paymentStatus: { not: PaymentStatus.PENDING },
+                },
+                data: { status: RegistrationStatus.EXPIRED },
+              });
+              if (claim.count === 0) return null;
+
+              return offerNextWaitlistEntryCommand(tx2, {
+                slotId: candidate.slotId,
+                ticketId: candidate.ticketId,
+                now: args.now,
+              });
+            });
+
+            if (result === null) continue;
+            expired.push({
               id: candidate.id,
-              status: RegistrationStatus.WAITLISTED_OFFERED,
-              expiresAt: { lt: args.now },
-              // Codex review Critical #1 (defense-in-depth #2) — JSDoc 上部参照
-              paymentStatus: { not: PaymentStatus.PENDING },
-            },
-            data: { status: RegistrationStatus.EXPIRED },
-          });
-          if (claim.count === 0) continue;
-
-          expired.push({
-            id: candidate.id,
-            name: candidate.name,
-            email: candidate.email,
-          });
-
-          const { promoted } = await offerNextWaitlistEntryCommand(tx, {
-            slotId: candidate.slotId,
-            ticketId: candidate.ticketId,
-            now: args.now,
-          });
-          if (promoted) offered.push(promoted);
+              name: candidate.name,
+              email: candidate.email,
+            });
+            if (result.promoted) offered.push(result.promoted);
+          } catch (candidateError) {
+            // savepoint rollback 済み（このcandidateの書込みのみ取消）。
+            // 次回 cron 実行で再試行されるため、ここで batch 全体を止めない。
+            logError(normalizeError(candidateError), {
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.MEDIUM,
+              context: {
+                operation: "expireAndPromoteWaitlistForEventCommand",
+                eventId: args.eventId,
+                registrationId: candidate.id,
+              },
+            });
+          }
         }
       } finally {
         await releaseWaitlistPromoteSessionLock(tx, args.eventId);
