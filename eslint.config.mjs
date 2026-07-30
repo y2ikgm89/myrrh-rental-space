@@ -190,6 +190,32 @@ const eslintConfig = defineConfig([
             "@typescript-eslint/require-await": "off",
           },
         },
+        {
+          // インターフェース契約（呼び出し元・フレームワークが Promise 返却を
+          // 要求）により async を維持する関数を含むファイル。
+          // `eslint-disable-next-line` によるコメント単位の除外は、lefthook
+          // pre-commit の eslint-fix が ESLINT_SKIP_TYPE_CHECK=1
+          // （型付きルール自体が読み込まれない）で `--fix` を実行するたびに
+          // 「unused disable directive」として自動削除されてしまい安定しない
+          // （実際に発生し CI failure を引き起こした）。ファイル単位で off に
+          // することで --fix による誤削除を構造的に防ぐ。
+          // - cache-helpers.ts: afterSuccess（Promise<void> | void）・
+          //   呼び出し元の無条件 await の両方に対応する Cloudflare purge
+          //   ヘルパー群（全関数が同型）
+          // - cancel.ts: GuestTokenMutationConfig.afterEntityIdMatch の
+          //   Promise 返却型契約
+          // - customer-auth.ts: Better Auth 公式 deleteUser.afterDelete の
+          //   Promise<void> 返却型契約
+          name: "typescript-require-await-interface-contract-exempt",
+          files: [
+            "src/app/(admin)/admin/(dashboard)/_shared/actions/post/cache-helpers.ts",
+            "src/app/(public)/reservation/cancel/_actions/cancel.ts",
+            "src/shared/lib/customer-auth.ts",
+          ],
+          rules: {
+            "@typescript-eslint/require-await": "off",
+          },
+        },
       ]),
   {
     name: "typescript-rules",

@@ -79,7 +79,6 @@ export async function cancelGuestReservationAction(
     // 型定義されており、呼び出し元 runGuestTokenMutation は無条件で await する
     // （src/shared/domain/guest-token-actions/run-guest-mutation.ts）。この分岐は
     // 同期処理のみで完結するが、インターフェース契約を保全するため async を維持する。
-     
     afterEntityIdMatch: async () => {
       const parsedReason = reasonSchema.safeParse(
         cancellationReason ?? undefined,

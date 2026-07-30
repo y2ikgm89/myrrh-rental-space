@@ -174,7 +174,6 @@ function createCustomerAuth() {
         // （node_modules/@better-auth/core/src/types/init-options.ts）。この callback
         // に非同期処理は不要だが、フレームワーク側のフック契約（Promise<void> 返却）を
         // 保全するため async を維持する。
-         
         afterDelete: async () => {
           invalidateSiteWideCacheFromRouteHandler([
             CACHE_TAGS.CUSTOMERS,
