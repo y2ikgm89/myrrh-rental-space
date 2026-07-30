@@ -73,7 +73,10 @@ interface CountResult {
   readonly totalCount: number;
 }
 
-const workspaceRoot = path.join(__dirname, "..", "..", "..");
+// e2e/public/ → e2e/ → リポジトリルート（2 階層上）。
+// `bun <fixtureScriptPath>` の cwd にもなるため、階層を 1 つでも間違えると
+// リポジトリ外を指して spawn が ENOENT で落ちる。
+const workspaceRoot = path.join(__dirname, "..", "..");
 const fixtureScriptPath = path.join(
   workspaceRoot,
   "scripts",
