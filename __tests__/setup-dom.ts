@@ -74,6 +74,11 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "sessionStorage", window["sessionStorage"]);
   defineGlobal(globalThis, "localStorage", window["localStorage"]);
 
+  // Radix の FocusScope (`@radix-ui/react-focus-scope`) は createTreeWalker に
+  // bare `NodeFilter.SHOW_ELEMENT` を渡すため、Dialog 系を render するテストが
+  // ReferenceError で落ちる。
+  defineGlobal(globalThis, "NodeFilter", window["NodeFilter"]);
+
   // jsdom は HTMLDialogElement.showModal() / close() を未実装。
   // dialog 要素を使うコンポーネントのテストが TypeError で落ちるため polyfill する。
   // open 属性の付け外しで open プロパティを模倣（JSDOM の HTMLDialogElement.open は

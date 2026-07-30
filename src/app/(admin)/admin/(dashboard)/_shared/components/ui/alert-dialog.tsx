@@ -3,7 +3,10 @@
 import { useRef } from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import {
+  assignAdminZIndex,
+  useAdminZIndexImperative,
+} from "@/admin/lib/styles/use-admin-z-index-layer";
 import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 import { cn } from "@/shared/lib/cn";
 import { buttonVariants } from "./button";
@@ -33,6 +36,7 @@ function AlertDialogOverlay({
       {...props}
       ref={(node) => {
         internalRef.current = node;
+        assignAdminZIndex(node, Z_INDEX.dialogOverlay, style);
         assignRef(ref, node);
       }}
     />
@@ -57,6 +61,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, Z_INDEX.dialog, style);
           assignRef(ref, node);
         }}
         aria-modal="true"

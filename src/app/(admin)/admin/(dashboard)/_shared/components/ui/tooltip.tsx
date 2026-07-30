@@ -5,7 +5,10 @@ import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
 import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import {
+  assignAdminZIndex,
+  useAdminZIndexImperative,
+} from "@/admin/lib/styles/use-admin-z-index-layer";
 import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 
 const tooltipContentVariants = tv({
@@ -42,6 +45,7 @@ function TooltipContent({
       <TooltipPrimitive.Content
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, Z_INDEX.tooltip, style);
           assignRef(ref, node);
         }}
         sideOffset={sideOffset}
