@@ -8,6 +8,9 @@ import {
 } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 
+// 呼び出し元（post/mutations.ts 等）が Promise<void> を前提に await するため async を
+// 維持する。内部の Cloudflare purge は意図的な fire-and-forget（void firePurgeAsync、
+// 詳細は fire-purge.ts）で await せず、関数本体に await は無い。
 export async function purgePostCaches(
   ...slugs: Array<string | undefined>
 ): Promise<void> {
@@ -23,6 +26,9 @@ export async function purgePostCaches(
 
 const POST_LISTING_URLS = ["/blog", "/feed.xml"] as const;
 
+// 呼び出し元（taxonomy.ts / bulk.ts）が Promise<void> を前提に await するため async を
+// 維持する。内部の Cloudflare purge は意図的な fire-and-forget（void firePurgeAsync）で
+// await せず、関数本体に await は無い。
 export async function purgePostArchive(): Promise<void> {
   void firePurgeAsync(() => purgeCloudflareDetailUrls([...POST_LISTING_URLS]), {
     operation: "purgePostArchive",
@@ -30,6 +36,10 @@ export async function purgePostArchive(): Promise<void> {
   });
 }
 
+// 呼び出し元（bulk.ts / mutations.ts）が Promise<void> を前提に await するため async を
+// 維持する。invalidateSiteWideCache / purgeMarketingHomeTag は同期処理、/feed.xml の
+// Cloudflare purge は意図的な fire-and-forget（void firePurgeAsync）で、関数本体に
+// await は無い。
 export async function invalidatePostCollectionCaches(): Promise<void> {
   invalidateSiteWideCache([CACHE_TAGS.POSTS, CACHE_TAGS.SIDEBAR_DATA]);
   purgeMarketingHomeTag();
@@ -41,6 +51,9 @@ export async function invalidatePostCollectionCaches(): Promise<void> {
   });
 }
 
+// 呼び出し元（taxonomy.ts）が Promise<void> を前提に await する、または afterSuccess
+// （Promise<void> | void）に渡されるため async を維持する。invalidateSiteWideCache /
+// purgeMarketingHomeTag はいずれも同期処理のため関数本体に await は無い。
 export async function invalidatePostCategoryCaches(): Promise<void> {
   invalidateSiteWideCache([
     CACHE_TAGS.POSTS,
@@ -50,6 +63,9 @@ export async function invalidatePostCategoryCaches(): Promise<void> {
   purgeMarketingHomeTag();
 }
 
+// 呼び出し元（taxonomy.ts）が Promise<void> を前提に await する、または afterSuccess
+// （Promise<void> | void）に渡されるため async を維持する。invalidateSiteWideCache /
+// purgeMarketingHomeTag はいずれも同期処理のため関数本体に await は無い。
 export async function invalidatePostTagCaches(): Promise<void> {
   invalidateSiteWideCache([
     CACHE_TAGS.POSTS,

@@ -60,7 +60,7 @@ mock.module("@/shared/lib/google-business-profile/schemas", () => ({
 const mockPatch = mock<(args: unknown) => Promise<unknown>>(() =>
   Promise.resolve({}),
 );
-const mockGetGbpClient = mock(async () => ({
+const mockGetGbpClient = mock(() => ({
   locations: { patch: (args: unknown) => mockPatch(args) },
 }));
 mock.module("@/shared/lib/google-business-profile/client", () => ({

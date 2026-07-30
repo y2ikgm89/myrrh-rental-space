@@ -42,7 +42,7 @@ export async function handleAsyncPaymentSucceeded(
     const expectedAmount = await getReservationCheckoutExpectedAmount(
       subject.reservationId,
     );
-    const amountOk = await checkoutSessionAmountMatchesExpected(
+    const amountOk = checkoutSessionAmountMatchesExpected(
       session,
       expectedAmount,
       "stripeWebhookAsyncPaymentSucceeded",
@@ -67,7 +67,7 @@ export async function handleAsyncPaymentSucceeded(
   const expectedAmount = await getEventRegistrationCheckoutExpectedAmount(
     subject.registrationId,
   );
-  const amountOk = await checkoutSessionAmountMatchesExpected(
+  const amountOk = checkoutSessionAmountMatchesExpected(
     session,
     expectedAmount,
     "stripeWebhookAsyncPaymentSucceeded",

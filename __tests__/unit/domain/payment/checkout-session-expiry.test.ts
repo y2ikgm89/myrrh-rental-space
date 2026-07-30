@@ -7,18 +7,16 @@ const mockCheckoutSessionExpire = mock<(sessionId: string) => Promise<void>>(
 const mockCheckoutSessionRetrieve = mock<
   (sessionId: string) => Promise<{ status: string }>
 >(() => Promise.resolve({ status: "expired" }));
-const mockGetStripeClient = mock(() =>
-  Promise.resolve({
-    client: {
-      checkout: {
-        sessions: {
-          expire: mockCheckoutSessionExpire,
-          retrieve: mockCheckoutSessionRetrieve,
-        },
+const mockGetStripeClient = mock(() => ({
+  client: {
+    checkout: {
+      sessions: {
+        expire: mockCheckoutSessionExpire,
+        retrieve: mockCheckoutSessionRetrieve,
       },
     },
-  }),
-);
+  },
+}));
 
 mock.module("server-only", () => ({}));
 mock.module("@/shared/domain/payment/availability", () => ({

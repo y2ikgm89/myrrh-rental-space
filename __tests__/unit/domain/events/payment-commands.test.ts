@@ -71,18 +71,16 @@ const mockCheckoutSessionCreate = mock<
 const mockCheckoutSessionExpire = mock<
   (sessionId: string) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "cs_test_waitlist" }));
-const mockGetStripeClient = mock(() =>
-  Promise.resolve({
-    client: {
-      checkout: {
-        sessions: {
-          create: mockCheckoutSessionCreate,
-          expire: mockCheckoutSessionExpire,
-        },
+const mockGetStripeClient = mock(() => ({
+  client: {
+    checkout: {
+      sessions: {
+        create: mockCheckoutSessionCreate,
+        expire: mockCheckoutSessionExpire,
       },
     },
-  }),
-);
+  },
+}));
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
@@ -272,7 +270,7 @@ describe("events/payment-commands", () => {
       stripeCurrency: "jpy",
       stripePaymentMethodTypes: ["card"],
     });
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         checkout: {
           sessions: {

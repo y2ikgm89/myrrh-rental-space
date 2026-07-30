@@ -230,7 +230,7 @@ export function ReservationDetail({
     });
   };
 
-  const handleStatusChange = async (newStatus: ReservationStatus) => {
+  const handleStatusChange = (newStatus: ReservationStatus) => {
     if (newStatus === reservation.status) return;
 
     if (newStatus === ReservationStatus.CANCELLED) {
@@ -268,7 +268,7 @@ export function ReservationDetail({
     });
   };
 
-  const handleNotesUpdate = async () => {
+  const handleNotesUpdate = () => {
     startTransition(async () => {
       const result = await updateReservationNotes(
         reservation.id,

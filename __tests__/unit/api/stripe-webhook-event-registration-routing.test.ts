@@ -34,7 +34,7 @@ const mockConstructEvent =
     (body: string, sig: string, secret: string) => Promise<StripeWebhookEvent>
   >();
 const mockGetStripeClient = mock<
-  () => Promise<{
+  () => {
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
       checkout: {
@@ -46,7 +46,7 @@ const mockGetStripeClient = mock<
         };
       };
     } | null;
-  }>
+  }
 >();
 
 // Reservation 側（route.ts が import するため mock 必須。このファイルのテストは
@@ -617,7 +617,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
 
     mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         webhooks: { constructEventAsync: mockConstructEvent },
         checkout: {

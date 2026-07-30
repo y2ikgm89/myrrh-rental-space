@@ -92,20 +92,18 @@ const mockExpireOpenCheckoutSessionBestEffort = mock<
 const mockRetrieveCheckoutSessionStatus = mock<
   (sessionId: string) => Promise<string | null>
 >(() => Promise.resolve("expired"));
-const mockGetStripeClient = mock(() =>
-  Promise.resolve({
-    client: {
-      checkout: {
-        sessions: {
-          create: mockCheckoutSessionCreate,
-          expire: mockCheckoutSessionExpire,
-          retrieve: mockCheckoutSessionRetrieve,
-        },
+const mockGetStripeClient = mock(() => ({
+  client: {
+    checkout: {
+      sessions: {
+        create: mockCheckoutSessionCreate,
+        expire: mockCheckoutSessionExpire,
+        retrieve: mockCheckoutSessionRetrieve,
       },
-      refunds: { create: mockRefundCreate },
     },
-  }),
-);
+    refunds: { create: mockRefundCreate },
+  },
+}));
 const mockLogError = mock(() => undefined);
 const mockIssueReceiptForReservation = mock(
   (_reservationId: string, _options?: { source?: string }) =>
@@ -269,7 +267,7 @@ describe("reservations/payment-commands", () => {
       stripeCurrency: "jpy",
       stripePaymentMethodTypes: ["card"],
     });
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         checkout: {
           sessions: {

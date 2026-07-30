@@ -121,9 +121,12 @@ const eslintConfig = defineConfig([
   },
 
   // TypeScript 専用設定
+  // .mts も対象に含める（下の type-checked ブロックが .mts にも型付きルールを
+  // 適用するため、パーサー自体もここで .mts をカバーしないと parserServices が
+  // 得られず型付きルールが機能しない。Codex レビュー指摘、PR #1657）。
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
   })),
 
   // 型情報を使う lint（typed linting）の配線。単一ファイル lint が 58ms → 30.5s に
@@ -149,9 +152,10 @@ const eslintConfig = defineConfig([
         {
           // P0: recommendedTypeChecked が recommended に対して新規追加するルールの
           // うち、現時点で違反 0 件の 10 ルール + no-floating-promises（4 件、修正済み）。
-          // 残り（require-await / no-unsafe-* / no-misused-promises /
-          // no-unnecessary-type-assertion 等）は P1〜P4 で個別に段階導入する。
-          name: "typescript-type-checked-rules-p0",
+          // P1: require-await（Next.js 契約ファイルは下の exempt ブロックで個別 off）。
+          // 残り（no-unsafe-* / no-misused-promises / no-unnecessary-type-assertion 等）
+          // は P2〜P4 で個別に段階導入する。
+          name: "typescript-type-checked-rules-p0-p1",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
           rules: {
             "@typescript-eslint/await-thenable": "error",
@@ -165,6 +169,51 @@ const eslintConfig = defineConfig([
             "@typescript-eslint/prefer-promise-reject-errors": "error",
             "@typescript-eslint/restrict-plus-operands": "error",
             "@typescript-eslint/no-floating-promises": "error",
+            "@typescript-eslint/require-await": "error",
+          },
+        },
+        {
+          // Next.js の App Router 特殊ファイル規約（page/layout/route の
+          // デフォルトエクスポート・route.ts の HTTP メソッド export・
+          // next.config.ts の headers() 等）はフレームワーク側が async 関数の
+          // シグネチャを要求する契約であり、実装が await を使うかどうかは
+          // 呼び出し側では制御できない。require-await のみここで off にする
+          // （他の型付きルールは通常通り適用したままにする）。
+          name: "typescript-require-await-nextjs-contract-exempt",
+          files: [
+            "next.config.ts",
+            "**/page.tsx",
+            "**/layout.tsx",
+            "**/route.ts",
+          ],
+          rules: {
+            "@typescript-eslint/require-await": "off",
+          },
+        },
+        {
+          // インターフェース契約（呼び出し元・フレームワークが Promise 返却を
+          // 要求）により async を維持する関数を含むファイル。
+          // `eslint-disable-next-line` によるコメント単位の除外は、lefthook
+          // pre-commit の eslint-fix が ESLINT_SKIP_TYPE_CHECK=1
+          // （型付きルール自体が読み込まれない）で `--fix` を実行するたびに
+          // 「unused disable directive」として自動削除されてしまい安定しない
+          // （実際に発生し CI failure を引き起こした）。ファイル単位で off に
+          // することで --fix による誤削除を構造的に防ぐ。
+          // - cache-helpers.ts: afterSuccess（Promise<void> | void）・
+          //   呼び出し元の無条件 await の両方に対応する Cloudflare purge
+          //   ヘルパー群（全関数が同型）
+          // - cancel.ts: GuestTokenMutationConfig.afterEntityIdMatch の
+          //   Promise 返却型契約
+          // - customer-auth.ts: Better Auth 公式 deleteUser.afterDelete の
+          //   Promise<void> 返却型契約
+          name: "typescript-require-await-interface-contract-exempt",
+          files: [
+            "src/app/(admin)/admin/(dashboard)/_shared/actions/post/cache-helpers.ts",
+            "src/app/(public)/reservation/cancel/_actions/cancel.ts",
+            "src/shared/lib/customer-auth.ts",
+          ],
+          rules: {
+            "@typescript-eslint/require-await": "off",
           },
         },
       ]),

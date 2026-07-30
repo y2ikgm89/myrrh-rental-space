@@ -146,7 +146,7 @@ export async function createEventCheckoutSessionCommand(input: {
 
   const stripeSettings = await assertOnlinePaymentAvailable();
 
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -376,7 +376,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
 
   const stripeSettings = await assertOnlinePaymentAvailable();
 
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -830,7 +830,7 @@ export async function refundEventRegistrationPaymentCommand(
   } = input;
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -1022,7 +1022,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
   } = input;
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -1219,7 +1219,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
   } = input;
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
@@ -1369,7 +1369,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
   }
 
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",

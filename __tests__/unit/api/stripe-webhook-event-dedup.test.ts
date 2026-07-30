@@ -42,11 +42,11 @@ const mockConstructEvent =
     (body: string, sig: string, secret: string) => Promise<StripeWebhookEvent>
   >();
 const mockGetStripeClient = mock<
-  () => Promise<{
+  () => {
     client: {
       webhooks: { constructEventAsync: typeof mockConstructEvent };
     } | null;
-  }>
+  }
 >();
 
 // Chokepoint under test
@@ -397,7 +397,7 @@ describe("POST /api/webhooks/stripe — STRIPE-DEDUP-A chokepoint", () => {
 
     mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
-    mockGetStripeClient.mockResolvedValue({
+    mockGetStripeClient.mockReturnValue({
       client: {
         webhooks: { constructEventAsync: mockConstructEvent },
       },

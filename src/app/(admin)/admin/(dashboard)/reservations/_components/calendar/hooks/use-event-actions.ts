@@ -75,7 +75,7 @@ export function useEventActions({ events }: UseEventActionsOptions) {
     setSelectedEventId(null);
   };
 
-  const handleStatusChange = async (
+  const handleStatusChange = (
     eventId: string,
     newStatus: ReservationStatus,
     reason?: string,

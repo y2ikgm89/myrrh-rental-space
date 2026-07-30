@@ -16,11 +16,14 @@ import { isValidTurnstileKey } from "@/admin/lib/validations/api-keys";
  * @param siteKey - Turnstile Site Key
  * @param secretKey - Turnstile Secret Key
  * @returns テスト結果
+ *
+ * Note: 形式検証のみの同期処理のため async ではない（Resend/GoogleMaps/SwitchBot の
+ * 同種 test*Connection とは異なり実際の外部 API 呼び出しを行わない）。
  */
-export async function testTurnstileConnection(
+export function testTurnstileConnection(
   siteKey: string,
   secretKey: string,
-): Promise<ApiKeyTestResult> {
+): ApiKeyTestResult {
   // Site Keyの形式検証
   if (!isValidTurnstileKey(siteKey)) {
     return {

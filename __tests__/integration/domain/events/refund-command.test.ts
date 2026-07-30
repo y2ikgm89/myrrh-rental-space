@@ -47,12 +47,11 @@ const mockRefundsCreate = mock<
 >(() => Promise.resolve({ id: "", status: "succeeded" }));
 
 mock.module("@/shared/lib/stripe", () => ({
-  getStripeClient: () =>
-    Promise.resolve({
-      client: {
-        refunds: { create: mockRefundsCreate },
-      },
-    }),
+  getStripeClient: () => ({
+    client: {
+      refunds: { create: mockRefundsCreate },
+    },
+  }),
 }));
 
 mock.module("@/shared/domain/payment/availability", () => ({

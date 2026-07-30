@@ -42,7 +42,7 @@ export async function expireOpenCheckoutSessionBestEffort(input: {
 }): Promise<void> {
   try {
     const stripeSettings = await assertStripeCredentialsConfigured();
-    const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+    const { client } = getStripeClient(stripeSettings.stripeSecretKey);
     if (!client) return;
     await expireCheckoutSessionWithClientBestEffort({
       client,
@@ -69,7 +69,7 @@ export async function retrieveCheckoutSessionStatus(
   sessionId: string,
 ): Promise<string | null> {
   const stripeSettings = await assertStripeCredentialsConfigured();
-  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  const { client } = getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     return null;
   }
