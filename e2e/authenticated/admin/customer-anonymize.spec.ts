@@ -55,9 +55,12 @@ test.describe("admin 顧客 — 匿名化", () => {
     });
 
     await page.getByRole("button", { name: "匿名化" }).click();
+    // 匿名化確認は AlertDialog（Radix が role="alertdialog" を出力する）。
+    // ARIA の alertdialog は dialog を継承しないため `getByRole("dialog")` では
+    // 一致しない（run 30569714860 でこの spec が「element not found」で落ちていた）。
     await expect(
       page
-        .getByRole("dialog")
+        .getByRole("alertdialog")
         .getByText(`${fixture.displayName} を匿名化しますか？`),
     ).toBeVisible();
     await page.getByRole("button", { name: "匿名化する" }).click();

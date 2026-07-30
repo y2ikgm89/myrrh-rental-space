@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
-  guestCustomerExistsForDevEmail,
+  ensureGuestCustomerForDevEmail,
   issueCustomerMergeTokenForE2E,
 } from "../../helpers/customer-merge-fixture";
 
@@ -15,13 +15,11 @@ import {
 test.describe.configure({ mode: "serial" });
 
 test.describe("customer merge — self-serve flow", () => {
+  // 3 番目のテストが merge を実行してゲスト行を消費するため、serial retry で
+  // beforeAll が再実行されたときに「存在チェック」だけだと必ず落ちる。
+  // 消費されていれば作り直す（冪等）。
   test.beforeAll(async () => {
-    const exists = await guestCustomerExistsForDevEmail();
-    if (!exists) {
-      throw new Error(
-        "Guest customer seed missing. Ensure seedDevCustomerAndReservations ran.",
-      );
-    }
+    await ensureGuestCustomerForDevEmail();
   });
 
   test("banner shows self-serve merge CTA", async ({ page }) => {
@@ -58,8 +56,11 @@ test.describe("customer merge — self-serve flow", () => {
 
     await page.getByRole("button", { name: "統合する" }).click();
     await expect(page).toHaveURL(/\/mypage/u, { timeout: 15000 });
-    await expect(page.getByRole("status")).not.toContainText("自分で統合する", {
-      timeout: 10000,
-    });
+    // `getByRole("status")` は merge banner と AriaLiveProvider の sr-only live region の
+    // 2 件に一致して strict mode violation になる。統合完了の実観測点は
+    // 「自分で統合する」CTA が消えることなので、その要素自体を数える。
+    await expect(
+      page.getByRole("link", { name: "自分で統合する" }),
+    ).toHaveCount(0, { timeout: 10000 });
   });
 });

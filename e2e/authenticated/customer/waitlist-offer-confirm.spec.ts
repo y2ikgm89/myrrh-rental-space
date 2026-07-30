@@ -52,6 +52,11 @@ test.describe("waitlist offer — 無料チケット確定", () => {
   test("confirm ランディングが表示され、確定後に mypage が参加確定 badge を示す", async ({
     page,
   }) => {
+    // fixture script を 2 回 spawn する（作成 + 確定）。それぞれ bun 起動 +
+    // Prisma client 初期化を伴い、CI の並列実行下では既定 30s を安定して超える
+    // （run 30569714860 は 3 回とも 30s timeout、ページ描画自体は成功していた）。
+    test.slow();
+
     const offered = await createWaitlistOfferFixture();
 
     await page.goto(`/events/waitlist/confirm?token=${offered.token}`);

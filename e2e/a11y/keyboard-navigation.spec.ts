@@ -39,19 +39,20 @@ async function tabUntilFocused(
 test.describe("トップナビゲーション - Tabキーフォーカス移動", () => {
   test("ヘッダー内のリンクが Tab キーで順に到達できる", async ({ page }) => {
     await page.goto(publicShellUrl);
-    // ロゴリンクに Tab でフォーカスが移動する
-    await page.keyboard.press("Tab");
-    const focused = page.locator(":focus");
-    await expect(focused).toBeVisible();
 
-    // さらに Tab を押してナビゲーションリンクに到達する
-    await page.keyboard.press("Tab");
-    const secondFocused = page.locator(":focus");
-    await expect(secondFocused).toBeVisible();
+    // `locator(":focus")` は activeElement が body のとき 0 件になる。goto 直後の
+    // 1 回目 Tab はドキュメントにフォーカスが渡っていないと空振りし得るため、
+    // 「到達するまで Tab を押す」helper で具体的な要素を狙う
+    // （run 30569714860 で `:focus` が element not found になった flake）。
+    await tabUntilFocused(
+      page,
+      page.getByRole("link", { name: "メインコンテンツへスキップ" }),
+    );
 
-    // フォーカスが header 内の要素に当たっていること
+    // スキップリンクの次はヘッダー内の最初のリンク（ロゴ）に進む。
     const header = page.locator("header");
     await expect(header).toBeVisible();
+    await tabUntilFocused(page, header.getByRole("link").first());
   });
 
   test("デスクトップ幅でナビゲーションリンクが Tab 到達可能", async ({
