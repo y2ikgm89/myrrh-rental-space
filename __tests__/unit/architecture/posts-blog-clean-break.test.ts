@@ -71,8 +71,19 @@ describe("posts public URL clean break", () => {
 
     expect(visualSpec).toContain('"blog-list.png"');
     expect(visualSpec).not.toContain('"posts-list.png"');
-    expect(snapshotNames).toContain("blog-list-chromium-visual-linux.png");
-    expect(snapshotNames).not.toContain("posts-list-chromium-visual-linux.png");
-    expect(snapshotNames).not.toContain("posts-list-chromium-visual-win32.png");
+
+    // baseline の**存在**は要求しない。baseline は CI の
+    // workflow_dispatch(update_visual_baseline=true) が生成する成果物であり、
+    // 再生成待ちの間は空になる（testing-e2e.md § visual regression）。
+    // ここで固定したいのは「legacy な posts-* 命名が残っていないこと」。
+    expect(
+      snapshotNames.filter((name) => name.startsWith("posts-list")),
+    ).toEqual([]);
+
+    // canonical baseline は CI Ubuntu の *-linux.png のみ。
+    // ローカル生成の *-win32.png を commit しない契約を機械強制する。
+    expect(snapshotNames.filter((name) => name.includes("-win32."))).toEqual(
+      [],
+    );
   });
 });
