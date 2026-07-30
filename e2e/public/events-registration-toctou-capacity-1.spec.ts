@@ -73,7 +73,9 @@ interface CountResult {
   readonly totalCount: number;
 }
 
-const workspaceRoot = path.join(__dirname, "..", "..", "..");
+// このファイルは `e2e/public/` 配下 = repo root から 2 階層。`..` を 3 つ重ねると
+// root の 1 つ上を指し、fixture script が `Module not found` になる（CI で長期潜伏した）。
+const workspaceRoot = path.join(__dirname, "..", "..");
 const fixtureScriptPath = path.join(
   workspaceRoot,
   "scripts",

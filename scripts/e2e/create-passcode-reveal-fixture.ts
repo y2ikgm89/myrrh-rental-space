@@ -1,6 +1,4 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
-import { encrypt } from "@/shared/lib/crypto";
-import { PASSCODE_CRYPTO_PURPOSE } from "@/shared/domain/smart-lock/issue-passcode";
 import { SmartLockDeviceType } from "@generated/prisma/enums";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
@@ -10,6 +8,24 @@ process.env["DATABASE_URL"] = resolveTestDatabaseUrl(
 ).url;
 
 process.env["ENCRYPTION_KEY"] = process.env["ENCRYPTION_KEY"] || "0".repeat(64);
+
+// `crypto.ts`（経由する env/encryption.ts）と `issue-passcode.ts` は
+// `import "server-only"` を持つ。`server-only` パッケージは webpack エイリアス無しで
+// 読み込まれると常に throw する実装のため（Next.js のバンドラー内でのみ no-op 化される）、
+// bun test の preload（`__tests__/setup.ts`）と同じ意図で `Bun.plugin` により
+// このスクリプトの実行時だけ `server-only` を no-op モジュールに差し替える。
+Bun.plugin({
+  name: "stub-server-only",
+  setup(build) {
+    build.module("server-only", () => ({ exports: {}, loader: "object" }));
+  },
+});
+
+// `crypto.ts` は `@/shared/lib/env/server.ts`(serverEnv) を module load 時に
+// Zod パースするため、上記の env 上書き後に動的 import する。
+const { encrypt } = await import("@/shared/lib/crypto");
+const { PASSCODE_CRYPTO_PURPOSE } =
+  await import("@/shared/domain/smart-lock/issue-passcode");
 
 const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
 const E2E_PASSCODE = "654321";
