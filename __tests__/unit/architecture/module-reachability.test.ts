@@ -30,35 +30,23 @@ const APP_ROOT_BASENAME_RE =
  * 到達不能と判明しても仕様上・設計上問題ない module。
  * 削除・配線を PR で個別に判断できるよう、必ず理由を書く。
  * このテストは「新規の到達不能」だけを 0 件にするための ratchet。
+ *
+ * Phase B2/B3 で当時の全エントリ（未使用 barrel 5 件・重複 cache tag producer 1 件・
+ * 参照されなくなった re-export/定数 2 件）を削除済み。空集合を維持し、
+ * 新規の到達不能が出た際にここへ理由付きで追加する。
  */
-const REACHABILITY_ALLOWLIST = new Set<string>([
-  // --- 未使用 barrel / 旧実装への置換で参照されなくなった shim（Phase B2 で削除予定）
-  "src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/config-forms/index.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/index.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/preview/index.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/preview/render-editor-state-json-to-html-server.ts",
-  "src/app/(public)/mypage/reservations/[id]/edit/_components/edit-reservation-form.tsx",
-
-  // --- 同一 cache tag の重複 producer（live 側は settings/queries/site.ts）
-  "src/shared/domain/settings/queries/analytics.ts",
-
-  // --- 参照されなくなった re-export / 完全未使用定数（Phase B3 で削除予定）
-  "src/shared/lib/errors/logger.ts",
-  "src/shared/lib/reservation/constants.ts",
-]);
+const REACHABILITY_ALLOWLIST = new Set<string>([]);
 
 /**
  * app root から到達しないが `__tests__/**` からのみ import される（本番コードでは
  * 死んでいるが test だけが生かしている）。gate 自体は root に __tests__ を含めない
- * 設計上、これらも上と同じ orphan 判定になる。理由を明記して同じ扱いにする
- * （Phase B3 で form-data.ts の参照元テストごと削除予定）。
+ * 設計上、これらも上と同じ orphan 判定になる。理由を明記して同じ扱いにする。
+ *
+ * Phase B2/B3 で当時の全 4 エントリを解消済み（3 件は re-export shim を削除し
+ * 参照元テストの import を live 実装へ retarget、1 件は真の dead code として
+ * ファイルごと削除）。空集合を維持する。
  */
-const TEST_ONLY_ALLOWLIST = new Set<string>([
-  "src/shared/lib/form-data.ts",
-  "src/shared/lib/html/enrich-lexical-content-html-icons.server.ts",
-  "src/shared/lib/html/lexical-content-html-pipeline.server.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/html-to-lexical-json.ts",
-]);
+const TEST_ONLY_ALLOWLIST = new Set<string>([]);
 
 /** app root から到達しないが scripts/** / prisma/seed.ts からのみ import される。 */
 const SCRIPT_ONLY_ALLOWLIST = new Set<string>();

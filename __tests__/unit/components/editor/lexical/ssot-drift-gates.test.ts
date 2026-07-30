@@ -42,7 +42,7 @@ import {
 } from "@/admin/components/editor/lexical/config/nodes";
 import { editorTheme } from "@/admin/components/editor/lexical/theme";
 import { renderEditorStateJsonToHtmlCore } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-core";
-import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline.server";
+import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline";
 
 import { INSPECTABLE_NODE_TYPES_FROM_REGISTRY } from "@/admin/components/editor/lexical/config/inspector-registry";
 import { REGISTRY_DIALOG_IDS } from "@/admin/components/editor/lexical/config/dialog-registry";

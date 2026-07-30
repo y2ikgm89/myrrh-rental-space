@@ -119,10 +119,13 @@ describe("admin clean-break dead code boundaries", () => {
 
   test("shared utils compatibility re-export is removed", () => {
     expect(existsSync(filePath("src/shared/lib/utils.ts"))).toBe(false);
+    // form-data.ts はどこからも import されない dead code と判明し
+    // Phase B2/B3 でファイルごと削除済み（module-reachability.test.ts 参照）。
+    expect(existsSync(filePath("src/shared/lib/form-data.ts"))).toBe(false);
 
     const utilsTest = read("__tests__/unit/lib/utils.test.ts");
     expect(utilsTest).not.toContain("@/shared/lib/utils");
-    expect(utilsTest).toContain("@/shared/lib/form-data");
+    expect(utilsTest).not.toContain("@/shared/lib/form-data");
     expect(utilsTest).toContain("@/shared/lib/slug");
   });
 

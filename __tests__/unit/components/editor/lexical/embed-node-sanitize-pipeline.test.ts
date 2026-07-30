@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline.server";
+import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-html-pipeline";
 import { renderEditorStateJsonToHtmlCore } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-core";
 import { HEADLESS_EDITOR_NODES } from "@/admin/components/editor/lexical/config/nodes";
 import { createHeadlessEditor } from "@lexical/headless";
