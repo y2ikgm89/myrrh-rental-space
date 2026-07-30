@@ -27,7 +27,10 @@ import {
   recomputeCustomerReservationStats,
   buildPayload,
 } from "./payloads";
-import { lockSpaceForTransaction } from "./space-locks";
+import {
+  lockSpaceForTransaction,
+  lockSpacesForTransactionInOrder,
+} from "./space-locks";
 import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
 import { resolveRateBreakdown } from "@/shared/lib/pricing/rate-plan-resolver";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
@@ -453,7 +456,12 @@ export async function updateAdminReservationCommand(
   let updatedIcsSequence = 0;
 
   await prisma.$transaction(async (tx) => {
-    await lockSpaceForTransaction(tx, input.spaceId);
+    // spaceId 変更時は旧 Space の占有解放も規約8の対象。新 Space だけ lock すると
+    // 旧 Space への並行 write が本 tx の解放と競合しうる（id 昇順で deadlock 回避）。
+    await lockSpacesForTransactionInOrder(tx, [
+      currentReservation.spaceId,
+      input.spaceId,
+    ]);
 
     await ensureNoOverlap(
       {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -357,7 +358,7 @@ export async function createEventCommand(data: EventCommandInput) {
     }
 
     return created;
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return event;
 }
@@ -517,7 +518,7 @@ export async function updateEventCommand(
       data.slots,
       data.tickets,
     ));
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   notifyEventVenueOrSlotChanged({
     eventId: id,
@@ -751,7 +752,7 @@ export async function duplicateEventCommand(id: string) {
     }
 
     return newEvent;
-  });
+  }, RESERVATION_WRITE_TX_OPTIONS);
 
   return created;
 }

@@ -5,6 +5,7 @@ import {
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import {
   ErrorCategory,
@@ -135,7 +136,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       }
 
       return true;
-    });
+    }, RESERVATION_WRITE_TX_OPTIONS);
 
     if (claimed) {
       expiredLogs.push({
