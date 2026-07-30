@@ -11,6 +11,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { isE2EAdminIdentityEmail } from "@/shared/domain/admin-auth/e2e-identity";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -57,7 +58,9 @@ export async function findOrSyncAdminAuthUserByEmail(
   email: string,
 ): Promise<AdminAuthUser | null> {
   const isE2ETestIdentity =
-    serverEnv.E2E_RUNTIME === "1" && serverEnv.ADMIN_TEST_IAP_EMAIL === email;
+    serverEnv.E2E_RUNTIME === "1" &&
+    (serverEnv.ADMIN_TEST_IAP_EMAIL === email ||
+      isE2EAdminIdentityEmail(email));
 
   try {
     if (!isE2ETestIdentity && isAdminRoleGroupSyncConfigured()) {

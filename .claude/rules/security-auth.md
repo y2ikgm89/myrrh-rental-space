@@ -86,6 +86,12 @@ paths:
   loopback（localhost / 127.0.0.1 / ::1）である AND 条件。非 production の
   `ADMIN_TEST_IAP_EMAIL` も Host loopback 必須。`validateProductionEnv()` が本番で
   throw する。**`CI=true` をバイパス条件にしない**
+- E2E で複数 role を扱う場合は `x-e2e-admin-identity` ヘッダーで identity を選ぶ
+  （SSoT: `src/shared/domain/admin-auth/e2e-identity.ts`）。上記 AND 条件に
+  `E2E_RUNTIME=1` を追加した、既定経路より 1 段厳しいゲート。ヘッダーが運ぶのは
+  **固定ラベルのみ**（email 直指定は解決しない）で、未知ラベルは既定 identity へ
+  fallback せず null にする（fail-closed）。**DB 上の User.role を実行時に
+  書き換えて role を切り替えない** — `fullyParallel` な spec 間に漏れる
 - 暗号化は kid 一致必須（ENCRYPTION_KEY_ID 変更で旧データ復号 throw）。
   本番必須シークレット検証は instrumentation `register()` 起動時実行が契約
   （module load 時に移すとローカル build が壊れる）

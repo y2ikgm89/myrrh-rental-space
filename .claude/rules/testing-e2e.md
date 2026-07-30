@@ -6,10 +6,11 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 
 ## project 構成と実行
 
-- 13 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
+- 14 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
   chromium（e2e/public + e2e/a11y）/ chromium-mobile / webkit-mobile /
   chromium-customer / chromium-customer-mobile / webkit-customer-mobile /
-  chromium-admin / chromium-admin-mobile / webkit-admin-mobile /
+  chromium-admin / chromium-admin-viewer（e2e/authenticated/admin-viewer）/
+  chromium-admin-mobile / webkit-admin-mobile /
   chromium-visual（e2e/visual）。mobile / webkit 系 6 project は opt-in。
 - CI の毎 push required gate は chromium-smoke のみ（APP_SURFACE=public と admin の 2 回）。
   広域 E2E・visual・Lighthouse は opt-in。opt-in 条件は「`codex/full-ci/` prefix の PR
@@ -44,6 +45,15 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 
 - 認証は setup project + storageState（`playwright/.auth/*.json`）。
   admin は cookie ではなく IAP 模擬（ADMIN_TEST_IAP_EMAIL）で成立している
+- **admin の role を切り替えたいときは専用 project を足す**。`chromium-admin-viewer`
+  のように `extraHTTPHeaders: { "x-e2e-admin-identity": "<label>" }` を付けると
+  専用ユーザーとして解決される（ラベル→email の SSoT は
+  `src/shared/domain/admin-auth/e2e-identity.ts`、upsert は
+  `scripts/e2e/ensure-admin-user.ts`、drift gate は
+  `__tests__/unit/architecture/e2e-admin-identity-sync.test.ts`）。
+  **共有 User 行の `role` を実行時に書き換えてはいけない** — `fullyParallel: true` +
+  2 workers では他 spec に漏れ、`settings.spec.ts` の権限カードが消える /
+  RBAC spec の拒否が出ない、という双方向の偽陽性になる（CI run 30577092619）
 - ブラウザ時刻の凍結は `page.clock.install({ time })` を **page.goto より前**に呼び、
   サーバー側 `E2E_FIXED_NOW_ISO`（既定 2026-07-04T03:00:00.000Z）と同一時刻にする
 - fullyParallel のため、Settings 等シングルトン行を mutate する describe は

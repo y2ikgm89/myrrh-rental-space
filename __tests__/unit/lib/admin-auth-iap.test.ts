@@ -322,6 +322,105 @@ describe("admin auth IAP boundary", () => {
     });
   });
 
+  // ---------------------------------------------------------------------
+  // x-e2e-admin-identity ヘッダー（E2E 専用の追加 identity）
+  //
+  // 既定経路より 1 段厳しく E2E_RUNTIME=1 を要求し、未知ラベルは既定 identity へ
+  // fallback せず null にする（fail-closed）。ヘッダーが運ぶのは固定ラベルのみで、
+  // 任意の email を注入する経路は存在しない。
+  // 契約の SSoT: src/shared/domain/admin-auth/e2e-identity.ts
+  // ---------------------------------------------------------------------
+
+  test("loopback + E2E_RUNTIME=1 の viewer ラベルは専用 identity に解決する", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    await getCurrentAdminUser(
+      new Headers({
+        host: "127.0.0.1:3000",
+        "x-e2e-admin-identity": "viewer",
+      }),
+    );
+
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "e2e-viewer@example.com" },
+      select: AUTH_USER_SELECT,
+    });
+  });
+
+  test("E2E_RUNTIME 未設定なら x-e2e-admin-identity を無視して fail-closed", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({
+        host: "127.0.0.1:3000",
+        "x-e2e-admin-identity": "viewer",
+      }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("Host が非 loopback なら x-e2e-admin-identity を使わない", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({
+        host: "preview.example.com",
+        "x-e2e-admin-identity": "viewer",
+      }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("未知ラベルは既定 identity へ fallback せず null にする", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({
+        host: "127.0.0.1:3000",
+        "x-e2e-admin-identity": "super-admin",
+      }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("ヘッダーに email を直接入れても identity として解決しない", async () => {
+    mockServerEnv["NODE_ENV"] = "development";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(dashboardStaffUser());
+
+    const user = await getCurrentAdminUser(
+      new Headers({
+        host: "127.0.0.1:3000",
+        "x-e2e-admin-identity": "attacker@example.com",
+      }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
   test("production E2E env でも Host が非 loopback なら ADMIN_TEST_IAP_EMAIL を使わない", async () => {
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";

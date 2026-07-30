@@ -182,6 +182,25 @@ export default defineConfig({
       dependencies: ["setup-admin"],
       testMatch: /e2e\/authenticated\/admin\/.*\.spec\.ts/,
     },
+    /**
+     * VIEWER role 専用 project。
+     *
+     * `x-e2e-admin-identity: viewer` を全リクエストに付けることで、既定の
+     * SUPER_ADMIN とは別の専用ユーザーとして解決される
+     * (`src/shared/domain/admin-auth/e2e-identity.ts`)。共有 User 行の role を
+     * 実行時に書き換える旧方式は fullyParallel 下で他 spec に漏れていたため廃止した。
+     * identity が project 単位で固定なので chromium-admin と並列実行して安全。
+     */
+    {
+      name: "chromium-admin-viewer",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+        extraHTTPHeaders: { "x-e2e-admin-identity": "viewer" },
+      },
+      dependencies: ["setup-admin"],
+      testMatch: /e2e\/authenticated\/admin-viewer\/.*\.spec\.ts/,
+    },
     {
       name: "chromium-admin-mobile",
       use: {
