@@ -315,7 +315,7 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleStopWebhook}
+                        onClick={() => void handleStopWebhook()}
                         disabled={isPending || actionPending}
                       >
                         停止
@@ -350,7 +350,7 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleManualSync}
+                    onClick={() => void handleManualSync()}
                     disabled={isSyncing || isPending || actionPending}
                   >
                     <IconRefresh

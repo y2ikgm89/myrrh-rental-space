@@ -106,7 +106,7 @@ export function AutoImageField({
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDrop={(e) => void handleDrop(e)}
         aria-busy={isBusy}
       >
         {hasImage ? (

@@ -49,7 +49,7 @@ export function InstagramSection({ config }: InstagramSectionProps) {
       <ConnectionCard
         config={config}
         isPending={isPending}
-        onDisconnect={handleDisconnect}
+        onDisconnect={() => void handleDisconnect()}
       />
     </div>
   );

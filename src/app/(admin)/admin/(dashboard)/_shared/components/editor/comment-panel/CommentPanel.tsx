@@ -460,7 +460,7 @@ export function CommentPanel({
                       isExpanded={effectiveExpanded.has(thread.id)}
                       isActive={thread.markId === activeMarkId}
                       onToggle={handleToggle}
-                      onNeedDetail={ensureDetail}
+                      onNeedDetail={(threadId) => void ensureDetail(threadId)}
                       onNavigate={handleNavigate}
                       {...(thread.status === "ACTIVE" && {
                         onResolve: handleResolve,

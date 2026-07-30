@@ -86,7 +86,7 @@ export function LexicalCorruptedContentNotice({
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleCopy}
+              onClick={() => void handleCopy()}
             >
               JSONをコピー
             </Button>
@@ -99,7 +99,7 @@ export function LexicalCorruptedContentNotice({
               type="button"
               variant="destructive"
               size="sm"
-              onClick={handleReset}
+              onClick={() => void handleReset()}
             >
               本文を空の下書きにリセットして編集を続ける
             </Button>

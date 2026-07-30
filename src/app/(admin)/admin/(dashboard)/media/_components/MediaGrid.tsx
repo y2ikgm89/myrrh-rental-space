@@ -70,7 +70,7 @@ export function MediaGrid({ items, canDelete = false }: Props) {
               <div className="flex justify-end gap-1">
                 <button
                   type="button"
-                  onClick={() => handleCopyUrl(item.url)}
+                  onClick={() => void handleCopyUrl(item.url)}
                   className="inline-flex h-11 w-11 items-center justify-center rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={`${item.filename} の URL をコピー`}
                   title="URLをコピー"

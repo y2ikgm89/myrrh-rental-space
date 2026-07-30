@@ -47,6 +47,18 @@ export function ReservationActionCell({
     });
   };
 
+  const handleConfirmDelete = () => {
+    void (async () => {
+      const result = await deleteReservation(reservationId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("予約を削除しました");
+        router.refresh();
+      }
+    })();
+  };
+
   return (
     <>
       <ActionDropdown>
@@ -92,15 +104,7 @@ export function ReservationActionCell({
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           itemName={`予約 #${reservationId.slice(0, 8)}`}
-          onConfirm={async () => {
-            const result = await deleteReservation(reservationId);
-            if (isMutationError(result)) {
-              toast.error(result.error);
-            } else {
-              toast.success("予約を削除しました");
-              router.refresh();
-            }
-          }}
+          onConfirm={handleConfirmDelete}
         />
       ) : null}
     </>

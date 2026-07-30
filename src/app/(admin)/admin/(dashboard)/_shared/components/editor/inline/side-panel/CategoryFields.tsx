@@ -188,7 +188,7 @@ export function CategoryFields({
             </Button>
             <Button
               type="button"
-              onClick={handleCreateCategory}
+              onClick={() => void handleCreateCategory()}
               disabled={isCreating || !newCategoryName.trim()}
             >
               {isCreating ? "作成中..." : "作成"}

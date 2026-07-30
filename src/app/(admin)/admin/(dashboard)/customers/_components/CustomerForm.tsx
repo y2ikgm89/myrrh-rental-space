@@ -330,7 +330,7 @@ export function CustomerForm(): ReactElement {
               {...getInputProps(fields.email, { type: "email" })}
               autoComplete="email"
               placeholder="example@example.com"
-              onBlur={handleEmailBlur}
+              onBlur={(event) => void handleEmailBlur(event)}
               disabled={isPending}
               aria-invalid={
                 fields.email.errors || emailBlockedByGuestDuplicate

@@ -173,7 +173,7 @@ export function AutoMediaField({
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDrop={(e) => void handleDrop(e)}
         aria-busy={isBusy}
       >
         {hasMedia && value !== undefined ? (

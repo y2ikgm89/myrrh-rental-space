@@ -608,7 +608,7 @@ export function GoogleCalendarSection({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={handleClearCredentials}
+                onClick={() => void handleClearCredentials()}
                 disabled={isPending || testPending}
               >
                 認証情報をクリア

@@ -283,7 +283,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
               <Button
                 type="button"
                 variant="destructive"
-                onClick={handleClearKeys}
+                onClick={() => void handleClearKeys()}
                 disabled={isBusy}
               >
                 {clearPending ? "クリア中..." : "クリア"}

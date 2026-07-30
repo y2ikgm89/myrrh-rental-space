@@ -101,19 +101,21 @@ export function CustomerSelector({
     }
 
     // デバウンス処理（300ms）
-    searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const results = await fetchCustomerSearchResults(searchQuery);
-        setSearchResults(results);
-      } catch (error) {
-        logger.error("顧客検索エラー", {
-          error: getErrorMessage(error),
-        });
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
+    searchTimeoutRef.current = setTimeout(() => {
+      void (async () => {
+        setIsSearching(true);
+        try {
+          const results = await fetchCustomerSearchResults(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          logger.error("顧客検索エラー", {
+            error: getErrorMessage(error),
+          });
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      })();
     }, 300);
   }, [searchQuery]);
 

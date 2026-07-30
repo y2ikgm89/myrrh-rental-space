@@ -145,7 +145,7 @@ export function NewsEditor({
             onOpenSettings={editor.openSettingsDialog}
             onSave={editor.handleSave}
             onPreview={editor.handlePreview}
-            onBack={editor.handleBack}
+            onBack={() => void editor.handleBack()}
             publishActions={publishActions}
             showCommentButton={mode === "edit" && !!news}
             isCommentPanelOpen={editor.isCommentsPanelOpen}

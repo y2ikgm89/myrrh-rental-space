@@ -523,7 +523,7 @@ export function SwitchBotSection({
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleRotateWebhookToken}
+                        onClick={() => void handleRotateWebhookToken()}
                         disabled={isBusy}
                       >
                         {rotatePending ? "更新中..." : "URLトークンを更新"}
@@ -562,7 +562,7 @@ export function SwitchBotSection({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={handleClearKeys}
+                  onClick={() => void handleClearKeys()}
                   disabled={isBusy}
                 >
                   {clearPending ? "クリア中..." : "クリア"}
