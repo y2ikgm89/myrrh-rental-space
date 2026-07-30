@@ -41,7 +41,6 @@ import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
-import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
 import { isPrismaExclusionConstraintError } from "@/shared/lib/prisma-errors";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
