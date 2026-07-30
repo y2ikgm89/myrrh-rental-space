@@ -13,6 +13,10 @@ import {
   findOrSyncAdminAuthUserByEmail,
   type AdminAuthUser,
 } from "@/shared/domain/admin-auth/queries";
+import {
+  E2E_ADMIN_IDENTITY_HEADER,
+  resolveE2EAdminIdentityEmail,
+} from "@/shared/domain/admin-auth/e2e-identity";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "@/shared/lib/admin-roles";
 import { isLocalProductionE2EEnv } from "@/shared/lib/e2e-runtime";
@@ -39,6 +43,16 @@ function getTestIapEmail(requestHeaders: Headers): string | null {
   if (!isLoopbackRequestHost(requestHeaders)) return null;
   const isProductionRuntime = serverEnv.NODE_ENV === "production";
   if (isProductionRuntime && !isLocalProductionE2EEnv()) return null;
+
+  // E2E 専用の追加 identity（`x-e2e-admin-identity: viewer` 等）。
+  // 既定経路より 1 段厳しく E2E_RUNTIME=1 を要求し、未知ラベルは既定へ
+  // fallback せず null を返す（fail-closed）。詳細は e2e-identity.ts。
+  const identityLabel = requestHeaders.get(E2E_ADMIN_IDENTITY_HEADER);
+  if (identityLabel !== null) {
+    if (serverEnv.E2E_RUNTIME !== "1") return null;
+    return resolveE2EAdminIdentityEmail(identityLabel);
+  }
+
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 

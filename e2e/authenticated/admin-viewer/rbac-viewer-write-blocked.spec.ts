@@ -1,7 +1,5 @@
 import { test, expect } from "@playwright/test";
 import { uniqueEmail, urls } from "../../fixtures";
-import { ensureAdminUser } from "../../helpers/ensure-admin-user";
-import { setAdminRoleForE2E } from "../../helpers/set-admin-role";
 
 /**
  * 管理画面 RBAC 境界 — VIEWER role による write server action の block 確認 (E2E-P2-05)
@@ -15,39 +13,25 @@ import { setAdminRoleForE2E } from "../../helpers/set-admin-role";
  *   (`src/app/(admin)/admin/(dashboard)/_shared/lib/action-auth.ts`)。
  *
  * 実現方式:
- *   ADMIN_TEST_IAP_EMAIL 経由の IAP 模擬管理者
- *   (`testUsers.admin.email` = superadmin@example.com) の DB 上の role を
- *   VIEWER に一時的に downgrade し、テスト完了後に SUPER_ADMIN に復元する。
- *   `test.describe.configure({ mode: "serial" })` で file 内直列化しつつ、
- *   afterAll での確実な復元により他 admin spec への影響を最小化する
- *   (Setting singleton mutate の settings.spec.ts と同型の運用)。
+ *   `chromium-admin-viewer` project が `x-e2e-admin-identity: viewer` ヘッダーを
+ *   全リクエストに付け、専用の VIEWER ユーザー (`e2e-viewer@example.com`) として
+ *   解決される (`src/shared/domain/admin-auth/e2e-identity.ts`)。
+ *
+ *   **共有 User 行の role を書き換えない**のがこの spec の要点。旧実装は
+ *   `setAdminRoleForE2E("VIEWER")` で IAP 模擬 identity を降格し afterAll で戻して
+ *   いたが、`fullyParallel: true` + 2 workers の下で他 admin spec に漏れ、
+ *   `settings.spec.ts` の `settings:manage` カードが消える / 本 spec の拒否が
+ *   出ない、という双方向の偽陽性を出していた (CI run 30577092619)。
+ *   role が固定になったため `test.describe.configure({ mode: "serial" })` も不要。
  *
  * 前提:
- *   - chromium-admin project (`e2e/authenticated/admin/*.spec.ts`) で実行される。
- *     admin identity は storageState ではなく webServer env `ADMIN_TEST_IAP_EMAIL`
- *     による IAP 模擬で成立する (`.claude/skills/e2e-authoring` Step 3)。
  *   - VIEWER は DASHBOARD_ROLES に含まれるため `/admin/*` のページ自体には
  *     アクセスできる (`src/shared/lib/admin-roles.ts`)。ページ遷移は成功し、
  *     write server action の呼び出しのみが `checkPermission` で拒否される。
+ *   - ユーザーは `scripts/e2e/ensure-admin-user.ts` が upsert する。
  */
 
-test.describe.configure({ mode: "serial" });
-
 test.describe("管理画面 RBAC — VIEWER role は write action を block される", () => {
-  test.beforeAll(async () => {
-    // superadmin@example.com を確実に upsert してから role を VIEWER に downgrade する。
-    // ensureAdminUser は SUPER_ADMIN で upsert するため、その後の setAdminRoleForE2E で
-    // role のみ書き換える。
-    await ensureAdminUser();
-    await setAdminRoleForE2E("VIEWER");
-  });
-
-  test.afterAll(async () => {
-    // 他 admin spec の期待 (SUPER_ADMIN) に確実に戻す。beforeAll 途中で失敗した
-    // ケースでも上書きするだけで安全に復元できる (upsert)。
-    await setAdminRoleForE2E("SUPER_ADMIN");
-  });
-
   test("VIEWER は /admin/customers の read (一覧ページ) を表示できる", async ({
     page,
   }) => {
@@ -57,6 +41,26 @@ test.describe("管理画面 RBAC — VIEWER role は write action を block さ�
     await expect(
       page.getByRole("heading", { name: "顧客管理", level: 1 }),
     ).toBeVisible({ timeout: 15000 });
+  });
+
+  test("VIEWER は 設定トップで settings:manage カードを見られない", async ({
+    page,
+  }) => {
+    // VIEWER は settings:read のみを持つため、`requiredPermission` 付きカード
+    // (機能モジュール / 課金・決済 / 外部連携 / システム管理) は描画されない。
+    // SUPER_ADMIN 前提の settings.spec.ts と対になる境界確認。
+    await page.goto(urls.adminSettings);
+
+    await expect(
+      page.getByRole("heading", { name: "設定", level: 1 }),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('a[href="/admin/settings/site"]')).toBeVisible();
+    await expect(
+      page.locator('a[href="/admin/settings/features"]'),
+    ).toHaveCount(0);
+    await expect(page.locator('a[href="/admin/settings/billing"]')).toHaveCount(
+      0,
+    );
   });
 
   test("VIEWER は 顧客新規作成 (customer:create) を submit しても block される", async ({

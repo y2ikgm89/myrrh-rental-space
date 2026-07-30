@@ -13,14 +13,15 @@ rules の `testing-e2e.md` を参照。`*.test.ts` との命名分離は rules �
 
 認証要否 → 目的の順で判断する。ディレクトリが project を決める（`playwright.config.ts` の testMatch）。
 
-| ディレクトリ                           | project           | 用途・判断基準                                                                                                                |
-| -------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `e2e/smoke/*.smoke.spec.ts`            | chromium-smoke    | critical path のみ。毎 push の CI required gate（< 3 分）。未認証・setup 非依存が前提。**追加は慎重に**（全 push が遅くなる） |
-| `e2e/public/*.spec.ts`                 | chromium          | 未認証の公開ページ・API・管理 IAP 境界（未認証側から見た /admin の挙動含む）                                                  |
-| `e2e/a11y/*.spec.ts`                   | chromium          | axe スキャン・キーボード操作（→ Step 6）                                                                                      |
-| `e2e/authenticated/customer/*.spec.ts` | chromium-customer | 顧客ログイン済みが前提の画面（マイページ・予約・レビュー等）                                                                  |
-| `e2e/authenticated/admin/*.spec.ts`    | chromium-admin    | 管理画面（IAP 模擬。→ Step 3）                                                                                                |
-| `e2e/visual/*.spec.ts`                 | chromium-visual   | visual regression（opt-in。→ Step 7）                                                                                         |
+| ディレクトリ                               | project               | 用途・判断基準                                                                                                                |
+| ------------------------------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/smoke/*.smoke.spec.ts`                | chromium-smoke        | critical path のみ。毎 push の CI required gate（< 3 分）。未認証・setup 非依存が前提。**追加は慎重に**（全 push が遅くなる） |
+| `e2e/public/*.spec.ts`                     | chromium              | 未認証の公開ページ・API・管理 IAP 境界（未認証側から見た /admin の挙動含む）                                                  |
+| `e2e/a11y/*.spec.ts`                       | chromium              | axe スキャン・キーボード操作（→ Step 6）                                                                                      |
+| `e2e/authenticated/customer/*.spec.ts`     | chromium-customer     | 顧客ログイン済みが前提の画面（マイページ・予約・レビュー等）                                                                  |
+| `e2e/authenticated/admin/*.spec.ts`        | chromium-admin        | 管理画面（IAP 模擬・SUPER_ADMIN。→ Step 3）                                                                                   |
+| `e2e/authenticated/admin-viewer/*.spec.ts` | chromium-admin-viewer | 管理画面を VIEWER role で見る RBAC 境界（→ Step 3）                                                                           |
+| `e2e/visual/*.spec.ts`                     | chromium-visual       | visual regression（opt-in。→ Step 7）                                                                                         |
 
 - 命名は `*.spec.ts`（smoke のみ `*.smoke.spec.ts`）。それ以外の suffix は testMatch に一致せず**実行されない**。
 - 複数 spec で共有するヘルパーは `e2e/helpers/`（例: `admin-auth.ts`）、単一フロー内の共有は
@@ -57,7 +58,15 @@ webServer が毎回 `bun prisma/seed.ts --dev` を実行するため、spec は 
   cookie の存在を前提にした設計・アサーションを書かない。
   - spec 内で管理ユーザーの存在/状態を保証するには `e2e/helpers/ensure-admin-user.ts` の
     `ensureAdminUser()`（`scripts/e2e/ensure-admin-user.ts` を spawn して
-    `testUsers.admin.email` を SUPER_ADMIN で upsert + loginAttempt 掃除）。
+    E2E 用 admin ユーザー群を upsert + loginAttempt 掃除）。
+  - **SUPER_ADMIN 以外の role を試すときは専用 project を足す**。
+    `chromium-admin-viewer` のように `extraHTTPHeaders` で
+    `x-e2e-admin-identity: <label>` を付けると、そのラベル専用ユーザーとして
+    解決される（ラベル→email の SSoT は
+    `src/shared/domain/admin-auth/e2e-identity.ts`）。spec は
+    `e2e/authenticated/admin-viewer/` のように project の testMatch に合う
+    ディレクトリへ置く。**共有 User 行の `role` を実行時に書き換えない**
+    （fullyParallel な他 spec に漏れる）。
   - rate limit の worker 間衝突を避ける client IP 割当が必要なら
     `e2e/helpers/admin-auth.ts` の `primeAdminRequestContext(context)`
     （context 単位で一意な `x-forwarded-for` 203.0.113.x を付与）。
