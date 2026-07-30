@@ -49,10 +49,16 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 ## visual regression
 
 - 実行に `PLAYWRIGHT_VISUAL=1` が必須（無しだと全テスト skip のまま緑になる）
-- **hermetic が前提**。spec は `/_next/image` を固定 PNG に差し替え、Turnstile の
-  外部読込を abort する。CI の `R2_PUBLIC_URL` はダミー（`https://example.com`）で、
-  Next image optimizer が実際に外部取得しに行くため、これが無いと full-page の高さが
-  実行ごとに揺れて baseline を更新しても収束しない
+- 外部由来の描画ゆらぎは spec 側で断つ。現状 abort しているのは
+  **Cloudflare Turnstile のみ**（外部 iframe の読込タイミングで contact の高さが変動する）
+- **画像を route で差し替えない**。seed の画像は全て `/images/seed/*.svg` のローカル SVG で、
+  `dangerouslyAllowSVG` 未設定のため Next は SVG を optimizer に通さず素で配信する
+  （`next/dist/shared/lib/get-img-props.js` の `unoptimized = true` 分岐）。
+  対象ページは `/_next/image` を一度も叩かないので差し替えても効果ゼロ、
+  実画像の回帰検出力を落とすだけになる
+- full-page は hydration と lazy 画像の描画で収束が遅い。既定の expect timeout（5s）は
+  短すぎて「ページは正常なのに fail」を生むため、`toHaveScreenshot` に
+  `timeout` を明示する（現行 20s）
 - **baseline は CI Ubuntu runner の `*-linux.png` のみ**を commit する。Windows /
   macOS ローカルで `--update-snapshots` した結果を commit しない（CI が必ず落ちる）
 - 再生成は `workflow_dispatch` の `update_visual_baseline=true`。CI が
