@@ -46,6 +46,24 @@ describe("CI workflow contract", () => {
     expect(ciWorkflow).not.toMatch(/compat(?:ibility)? shim/iu);
   });
 
+  test("uses an exclusion filter that can actually report code=false", () => {
+    const changesJob = extractJob("changes");
+    const filterPatterns = [...changesJob.matchAll(/^\s+- '([^']+)'$/gmu)]
+      .map((match) => match[1])
+      .filter((pattern): pattern is string => pattern !== undefined);
+
+    expect(filterPatterns.length).toBeGreaterThan(0);
+    // `code` フィルタは除外リスト（全ルールが `!` prefix）で構成されている。
+    expect(filterPatterns.every((pattern) => pattern.startsWith("!"))).toBe(
+      true,
+    );
+    // 除外リストは predicate-quantifier: every でのみ意図どおり動く。
+    // 既定の `some`（いずれか 1 ルールに一致で true）だと、.md しか変わらない PR でも
+    // 「`!docs/**` に一致（= docs 配下ではない）」で必ず true になり gate が no-op 化する。
+    // https://github.com/dorny/paths-filter
+    expect(changesJob).toContain('predicate-quantifier: "every"');
+  });
+
   test("runs lint and format together inside the lint-format job", () => {
     const lintFormatJob = extractJob("lint-format");
 
