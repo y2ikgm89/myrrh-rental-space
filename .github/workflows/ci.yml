@@ -696,8 +696,18 @@ jobs:
       - name: Seed test database
         run: bunx --bun prisma db seed
 
+      # build は LHCI の startServerReadyPattern 監視窓の外に置く。
+      # scripts/lhci-start.ts は next start と readiness poll のみを担当する
+      # （build 出力が ready 判定に混ざる構造を排除）。
+      - name: Build application
+        run: bun run build:skip-env:prepared
+        env:
+          SKIP_ENV_VALIDATION: "true"
+
       # Lighthouse CI autorun: .lighthouserc.json 設定に従い
-      # collect → assert → upload (temporary-public-storage) を一括実行
+      # collect → assert → upload (temporary-public-storage) を一括実行。
+      # runtime env は scripts/lhci-start.ts が SSoT として供給する
+      # （validateProductionEnv との drift は lighthouse-ci-env.test.ts が防ぐ）。
       - name: Run Lighthouse CI
         run: bunx lhci autorun --config=.lighthouserc.json
         env:
