@@ -870,10 +870,13 @@ describe("reservations/payment-queries", () => {
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
     });
 
-    test("entity 側 updateMany が count=0 かつ soft-delete 済み (deletedAt 非null) → false、AuditLog もメールも偽って出さない (Codex review, PR #1667)", async () => {
+    test("entity 側 updateMany が count=0 かつ soft-delete 済み (deletedAt 非null) → claim は既に確定済みのため AuditLog・メールは必ず出す。ただし paymentStatus は偽って記録しない (Codex review, PR #1669)", async () => {
       // settlement 確定前に予約が admin により削除された想定: 非同期返金は
       // paymentStatus を PAID のまま温存するため deleteReservationCommand の
       // deletedAt: null ガードに引っかからず soft-delete が成立してしまう。
+      // Refund.status の claim (Stripe 側で実際に返金完了) は既に成功しているため、
+      // reservation 側の反映は諦めても顧客への返金完了通知は欠落させてはならない
+      // (Cluster H #8: 返金は独立した重要取引通知、非gateで常時送信する契約)。
       mockReservationFindUnique.mockResolvedValueOnce({
         totalPriceWithTax: 10000,
       });
@@ -883,6 +886,17 @@ describe("reservations/payment-queries", () => {
         paymentStatus: PaymentStatus.PAID,
         deletedAt: new Date("2026-07-30T12:00:00Z"),
       });
+      mockFetchReservationEmailData.mockResolvedValueOnce({
+        reservationId: RESERVATION_ID,
+        customerEmail: "customer@example.com",
+        customerName: "田中太郎",
+        spaceName: "テストスペース",
+        startTime: new Date("2024-03-01T10:00:00Z"),
+        endTime: new Date("2024-03-01T12:00:00Z"),
+        totalPriceWithTax: 10000,
+        totalPrice: 10000,
+        userId: null,
+      });
 
       const result = await finalizeSettledReservationRefund(
         RESERVATION_ID,
@@ -891,13 +905,18 @@ describe("reservations/payment-queries", () => {
         REFUNDED_BY_TYPE.ADMIN,
       );
 
-      expect(result).toBe(false);
-      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
-      expect(mockFetchReservationEmailData).not.toHaveBeenCalled();
-      expect(mockSendReservationRefundEmail).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // 到達していない paymentStatus を newValue に含めない (false claim 防止)。
+          newValue: { refundedAmount: 10000 },
+          metadata: expect.objectContaining({ entityUpdated: false }),
+        }),
+      );
+      expect(mockSendReservationRefundEmail).toHaveBeenCalledTimes(1);
     });
 
-    test("entity 側 updateMany が count=0 かつ現在値も target と不一致 (予期しない状態) → false、AuditLog もメールも出さない", async () => {
+    test("entity 側 updateMany が count=0 かつ現在値も target と不一致 (予期しない状態) → claim 済みのため AuditLog・メールは出すが paymentStatus は記録しない", async () => {
       mockReservationFindUnique.mockResolvedValueOnce({
         totalPriceWithTax: 10000,
       });
@@ -915,8 +934,13 @@ describe("reservations/payment-queries", () => {
         REFUNDED_BY_TYPE.ADMIN,
       );
 
-      expect(result).toBe(false);
-      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValue: { refundedAmount: 10000 },
+          metadata: expect.objectContaining({ entityUpdated: false }),
+        }),
+      );
     });
 
     test("成功時: AuditLog に実際の遷移先 paymentStatus と累積額を記録する", async () => {
