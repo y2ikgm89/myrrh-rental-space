@@ -84,9 +84,18 @@ export async function issueCustomerMergeTokenForE2E(): Promise<{
   };
 }
 
-export async function guestCustomerExistsForDevEmail(): Promise<boolean> {
+/**
+ * dev customer と同じメールの「未連携ゲスト Customer」を保証する。
+ *
+ * この行は seed（`seedDevCustomerAndReservations`）が 1 度だけ作るが、
+ * merge を実行する spec 自身がそれを **消費**する。serial describe の retry では
+ * beforeAll が再実行されるため、存在チェックだけだと「自分が消したものが無い」で
+ * 落ちる（run 30569714860 の "Guest customer seed missing"）。
+ * seed 済みかどうかに依存せず冪等に用意することで retry 安全にする。
+ */
+export async function ensureGuestCustomerForDevEmail(): Promise<string> {
   const client = getE2EPrismaClient();
-  const guest = await client.customer.findFirst({
+  const existing = await client.customer.findFirst({
     where: {
       email: DEV_CUSTOMER_EMAIL,
       userId: null,
@@ -94,5 +103,20 @@ export async function guestCustomerExistsForDevEmail(): Promise<boolean> {
     },
     select: { id: true },
   });
-  return guest !== null;
+  if (existing) return existing.id;
+
+  // seed（prisma/seed.ts の guest merge fixture）と同じ形で作り直す。
+  const created = await client.customer.create({
+    data: {
+      email: DEV_CUSTOMER_EMAIL,
+      emailCanonical: DEV_CUSTOMER_EMAIL.trim().toLowerCase(),
+      lastName: "ゲスト",
+      firstName: "履歴",
+      phoneNumber: "090-0000-0001",
+      customerType: "PERSONAL",
+      status: "REGULAR",
+    },
+    select: { id: true },
+  });
+  return created.id;
 }

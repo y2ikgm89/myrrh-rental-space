@@ -77,13 +77,18 @@ test.describe("admin responsive shell", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expectAdminRouteReady(page, ADMIN_DASHBOARD_ROUTE);
 
-    const menuButton = page.getByRole("button", { name: "メニューを開く" });
+    // TopBar は開閉に応じて aria-label を「メニューを開く」↔「メニューを閉じる」に
+    // 切り替える（正しい a11y 実装）。名前でロケートすると開いた瞬間に一致しなくなり、
+    // 直後の aria-expanded アサーションが element not found で落ちる
+    // （run 30569714860 の失敗）。開閉で不変な aria-controls を anchor にする。
+    const menuButton = page.locator('button[aria-controls="admin-sidebar"]');
     await expect(menuButton).toBeVisible();
-    await expect(menuButton).toHaveAttribute("aria-controls", "admin-sidebar");
+    await expect(menuButton).toHaveAccessibleName("メニューを開く");
     await expect(menuButton).toHaveAttribute("aria-expanded", "false");
 
     await menuButton.click();
     await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    await expect(menuButton).toHaveAccessibleName("メニューを閉じる");
     await expect(page.locator("#admin-sidebar")).toHaveAttribute(
       "aria-label",
       "メインナビゲーション",

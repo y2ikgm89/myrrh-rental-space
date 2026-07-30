@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { eventCategoryFixtures } from "../../fixtures";
 
 /**
  * Phase B.1: admin が ONLINE + MANUAL（手入力）+ 会議 URL で event を作成し、
@@ -75,6 +76,13 @@ test.describe("Phase B.1: online event admin flow", () => {
       .getByRole("textbox", { name: "タイトル", exact: true })
       .fill(title);
     await page.getByLabel("スラッグ").fill(slug);
+    // カテゴリーは PR #1434 (EventCategory 導入) で必須になった
+    // (`event-form-schema.ts` の `categoryId.min(1, "カテゴリーを選択してください")`)。
+    // 未選択のまま送信すると基本情報タブに検証エラーが 1 件出て遷移しない。
+    await page.getByLabel("カテゴリー").click();
+    await page
+      .getByRole("option", { name: eventCategoryFixtures.workshopName })
+      .click();
     // 単一開催（デフォルト）の開催枠 1 件に日時を入力する。
     await page.getByLabel("開始日時").fill("2099-08-01T10:00");
     await page.getByLabel("終了日時").fill("2099-08-01T12:00");
