@@ -785,14 +785,32 @@ describe("architecture boundaries", () => {
   });
 
   test("public セクション系 surface は px-4 / px-6 の横パディングを直書きしない（Container / SectionWrapper トークン経由）", () => {
+    // 旧 sectionRoots の "_components/homepage" は既に廃止済みのパスで
+    // existsSync フィルタにより silent に脱落しており、_components 配下は
+    // 実質チェック対象外になっていた（Phase C 監査で判明。実際に px-6 の
+    // 現存違反が複数見つかったため別途修正済み）。
+    // _components 直下のトップレベル *.tsx（= SectionRenderer から呼ばれる
+    // section 本体）のみを対象にする。event-calendar/features/news-list/
+    // post-list/space-list/space-showcase 等のサブディレクトリは section 本体では
+    // なく内部実装コンポーネント（カード/リスト項目/カレンダー UI 等）で、
+    // viewport 端の safe-area とは無関係な独自の内部 padding を持ってよい。
+    const topLevelPublicComponentFiles = readdirSync(
+      join(PUBLIC_APP_ROOT, "_components"),
+      { withFileTypes: true },
+    )
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".tsx"))
+      .map((entry) => join(PUBLIC_APP_ROOT, "_components", entry.name));
+
     const sectionRoots = [
       join(PUBLIC_APP_ROOT, "_shared", "components", "sections"),
       join(PUBLIC_APP_ROOT, "_shared", "components", "page-hero"),
-      join(PUBLIC_APP_ROOT, "_components", "homepage"),
     ];
-    const files = sectionRoots
-      .filter((dir) => existsSync(dir))
-      .flatMap((dir) => collectSourceFiles(dir));
+    const files = [
+      ...sectionRoots
+        .filter((dir) => existsSync(dir))
+        .flatMap((dir) => collectSourceFiles(dir)),
+      ...topLevelPublicComponentFiles,
+    ];
     const px4 = collectNonCommentOffenders(files, /\bpx-4\b/u);
     const px6 = collectNonCommentOffenders(files, /\bpx-6\b/u);
 

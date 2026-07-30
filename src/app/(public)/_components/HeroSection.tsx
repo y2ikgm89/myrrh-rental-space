@@ -148,7 +148,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
         {/* Right: Content panel */}
         <div
           ref={contentRef}
-          className="flex w-full flex-col justify-center px-6 py-12 md:w-1/2 md:px-12 md:py-0 lg:px-20"
+          className="flex w-full flex-col justify-center py-12 ps-[var(--container-padding-start)] pe-[var(--container-padding-end)] md:w-1/2 md:px-12 md:py-0 lg:px-20"
         >
           {config.tagline.length > 0 && (
             <p className="text-xs font-medium uppercase tracking-eyebrow text-accent">
