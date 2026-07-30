@@ -42,9 +42,16 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 ## visual regression
 
 - 実行に `PLAYWRIGHT_VISUAL=1` が必須（無しだと全テスト skip のまま緑になる）
-- baseline 更新は意図した視覚変更のみ:
-  `PLAYWRIGHT_VISUAL=1 bunx playwright test e2e/visual --update-snapshots`
-- Windows ローカルは `*-win32.png` と比較され、CI canonical は `*-linux.png`
+- **hermetic が前提**。spec は `/_next/image` を固定 PNG に差し替え、Turnstile の
+  外部読込を abort する。CI の `R2_PUBLIC_URL` はダミー（`https://example.com`）で、
+  Next image optimizer が実際に外部取得しに行くため、これが無いと full-page の高さが
+  実行ごとに揺れて baseline を更新しても収束しない
+- **baseline は CI Ubuntu runner の `*-linux.png` のみ**を commit する。Windows /
+  macOS ローカルで `--update-snapshots` した結果を commit しない（CI が必ず落ちる）
+- 再生成は `workflow_dispatch` の `update_visual_baseline=true`。CI が別 branch +
+  auto-PR を作るので、required checks を通してから merge する
+- ローカルで CI と同じ描画を得たいときは Playwright 公式 Docker イメージ
+  （`mcr.microsoft.com/playwright:v1.61.1-noble`）を使う
 
 ## seed 契約
 
