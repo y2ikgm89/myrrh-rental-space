@@ -650,12 +650,28 @@ describe("architecture boundaries", () => {
   });
 
   test("React Compiler 対象コードは useMemo / useCallback import を残さない", () => {
-    const offenders = collectNonCommentOffenders(
-      collectSourceFiles(SRC_ROOT).filter(
-        (file) => !REACT_COMPILER_MEMO_EXEMPT_FILES.includes(file),
-      ),
-      /import\s+\{[^}]*\buse(?:Memo|Callback)\b/u,
-    );
+    // Prettier は import { ... } を複数行に整形するため、collectNonCommentOffenders の
+    // 行単位マッチでは複数行 import が素通りする（Phase C 監査で判明）。
+    // コメント除去後の全文を対象にした multiline 判定に置き換える。
+    const offenders = collectSourceFiles(SRC_ROOT)
+      .filter((file) => !REACT_COMPILER_MEMO_EXEMPT_FILES.includes(file))
+      .filter((file) => {
+        const withoutComments = readFileSync(file, "utf8")
+          .split(/\r?\n/u)
+          .filter((line) => {
+            const trimmed = line.trim();
+            return !(
+              trimmed.startsWith("//") ||
+              trimmed.startsWith("*") ||
+              trimmed.startsWith("/*")
+            );
+          })
+          .join("\n");
+        return /import\s*\{[^}]*\buse(?:Memo|Callback)\b[^}]*\}/u.test(
+          withoutComments,
+        );
+      })
+      .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
   });
@@ -1634,13 +1650,18 @@ describe("architecture boundaries", () => {
   });
 
   test("cron route は shared helper 経由で認証する", () => {
-    for (const file of [
-      CALENDAR_SYNC_CRON_ROUTE_FILE,
-      INSTAGRAM_REFRESH_CRON_ROUTE_FILE,
-    ]) {
-      const source = readFileSync(file, "utf8");
-      expect(source).toContain("authorizeCronRequest");
-    }
+    // 固定2ファイルのみの検証だと23件中21件が regression 保護の死角になる
+    // （Phase C 監査で判明）。API_CRON_ROUTE_ROOT 配下の全 route.ts を動的走査する。
+    const routeFiles = collectSourceFiles(API_CRON_ROUTE_ROOT).filter((file) =>
+      file.endsWith(join("route.ts")),
+    );
+    const offenders = routeFiles
+      .filter(
+        (file) => !readFileSync(file, "utf8").includes("authorizeCronRequest"),
+      )
+      .map((file) => relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
   });
 
   test("Google Calendar webhook route は Zod schema でヘッダーを検証する", () => {
@@ -2028,6 +2049,29 @@ describe("architecture boundaries", () => {
     }
   });
 
+  test("_shared/actions 配下は legacy success wrapper を再導入しない（動的走査）", () => {
+    // 上記5テストは代表ファイルの手動列挙による positive spot-check（維持）。
+    // 手動列挙は新規追加ファイルに追従できず、実際に61ファイル中38ファイルが
+    // どのテストにも列挙されていなかった（Phase C 監査で判明）。
+    // _shared/actions 配下を再帰走査し、新規ファイルも含めて legacy wrapper の
+    // 再導入を漏れなく検知する。
+    const actionsRoot = join(
+      SRC_ROOT,
+      "app",
+      "(admin)",
+      "admin",
+      "(dashboard)",
+      "_shared",
+      "actions",
+    );
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(actionsRoot),
+      /\bcreateSuccess\(|type\s+ActionResult\b|\bexecuteAdminMutation\(/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("Phase 0 で削除済の旧 ButtonLabelToken / RichLabelInput / TokenLabel symbol が src/ に残存しない", () => {
     const FORBIDDEN_PATTERNS = [
       "ButtonLabelToken",
@@ -2375,6 +2419,7 @@ describe("architecture boundaries", () => {
       type: string;
       field: string;
       itemTemplate?: Record<string, unknown>;
+      extraItems?: Record<string, unknown>[];
     };
     const targets: ItemTarget[] = [
       { type: "features", field: "title" },
@@ -2385,11 +2430,18 @@ describe("architecture boundaries", () => {
         type: "value-props",
         field: "title",
         itemTemplate: { icon: "IconClock", eyebrow: "Speed" },
+        // value-props.items は min:2 のため、不正 item 1件だけだと配列長エラーで
+        // fail し、title フィールド自体の検証が行われたかをマスクしてしまう
+        // （Phase C 監査で判明）。有効な item を1件足して min 制約を満たす。
+        extraItems: [{ icon: "IconClock", eyebrow: "Speed", title: [] }],
       },
     ];
-    for (const { type, field, itemTemplate } of targets) {
+    for (const { type, field, itemTemplate, extraItems } of targets) {
       const stringInItem = validateSectionConfig(type, {
-        items: [{ ...(itemTemplate ?? {}), [field]: "string-not-array" }],
+        items: [
+          { ...(itemTemplate ?? {}), [field]: "string-not-array" },
+          ...(extraItems ?? []),
+        ],
       });
       expect(stringInItem.success).toBe(false);
     }
@@ -2592,13 +2644,13 @@ describe("architecture boundaries", () => {
   test("unknown/error object の structural property cast は isRecord helper 経由（as { ... } 直書き 0 件）", () => {
     // error / JSON payload など unknown 境界のプロパティ読み取りは
     // `as { code?: ... }` ではなく isRecord + 段階的 narrowing で行う。
-    const allowedFiles = [
-      join(SRC_ROOT, "shared", "lib", "conform", "typed-input-control.ts"),
-    ];
+    // typed-input-control.ts は intersection type への置き換えで `as {` を
+    // 使わなくなった（Phase C 監査で判明）。allowlist は空でも 0 件のまま通るが、
+    // 失効した exemption を残さないよう削除する。
     const sourceFiles = [
       ...collectSourceFiles(SRC_ROOT),
       ...collectSourceFiles(SCRIPTS_ROOT),
-    ].filter((file) => !allowedFiles.includes(file));
+    ];
     const offenders = collectNonCommentOffenders(sourceFiles, /\bas\s+\{/u);
 
     expect(offenders).toEqual([]);
@@ -2723,10 +2775,15 @@ describe("architecture boundaries", () => {
   describe("Phase B.1: public JSX で event.meetingUrl を render しない", () => {
     test("src/app/(public)/events/[slug]/ で event.meetingUrl の JSX 参照ゼロ", async () => {
       const { globSync } = await import("glob");
-      const files = globSync("src/app/(public)/events/[slug]/**/*.tsx", {
+      // glob 構文では [slug] が「s/l/u/g のいずれか1文字」を意味する文字クラスと
+      // 解釈され、Next.js の動的セグメントディレクトリ名としては絶対にマッチしない
+      // （Phase C 監査で判明。修正前は常に0件で下のループ本体が一度も実行されず、
+      // このテストは無条件 green の no-op になっていた）。角カッコをエスケープする。
+      const files = globSync("src/app/(public)/events/\\[slug\\]/**/*.tsx", {
         cwd: ROOT,
         absolute: false,
       });
+      expect(files.length).toBeGreaterThan(0);
 
       for (const file of files) {
         const content = readFileSync(join(ROOT, file), "utf8");
