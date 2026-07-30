@@ -139,6 +139,11 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 # 末尾の `test -f` で、生成 client が dynamic import する postgresql query_compiler の存在を
 # ビルド時に保証する。将来 Prisma がレイアウトを変えて必要ファイルが消えた場合、silent に
 # 壊れた image を出荷せず**ビルドを fail**させて顕在化させるためのガード。
+#
+# **拡張子は schema.prisma の `moduleFormat` に従属する**（generator が
+# cjs → `.js` / esm → `.mjs` を specifier に焼き込む）。現在は cjs なので `.js` を検査する。
+# generator を esm に戻すなら、この 2 行も `.mjs` に戻すこと。
+# 整合は __tests__/unit/architecture/prisma-client-module-format.test.ts が機械照合する。
 RUN find ./node_modules/@prisma/client/runtime \
     \( -name 'query_compiler_*.cockroachdb.*' \
     -o -name 'query_compiler_*.mysql.*' \
@@ -152,8 +157,8 @@ RUN find ./node_modules/@prisma/client/runtime \
     rm -f ./node_modules/@prisma/client/edge.js \
           ./node_modules/@prisma/client/edge.d.ts \
           ./node_modules/@prisma/client/index-browser.js && \
-    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs && \
-    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs
+    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.js && \
+    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.js
 # runner は Cloud Run service 専用。ランタイムは @prisma/client（上でコピー）＋ generated のみ
 # 参照し、Prisma CLI（node_modules/prisma）も prisma/ ソース（schema / migrations）も使わない。
 # migrate deploy は専用の migrator ステージ（上記 Stage 4・完全な node_modules）が担う。

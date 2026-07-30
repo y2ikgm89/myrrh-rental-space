@@ -73,7 +73,7 @@ main ref 限定。`main` merge だけでは走らない）
 2. `bun run build`（next build）のコンパイル/型エラー → ローカルで `bun run build:skip-env`
    で再現する（§6）。deploy pipeline は type-check/lint/test を実行しない設計のため、
    next build 内蔵の型チェックがここで初めて落ちることは通常ない（PR CI が担保済み）。
-3. `test -f .../query_compiler_fast_bg.postgresql.mjs` で fail → runner ステージの
+3. `test -f .../query_compiler_fast_bg.postgresql.js` で fail → runner ステージの
    Prisma prune ガード。Prisma minor bump で内部ファイル名が変わった。**握りつぶさず**
    Dockerfile の prune リスト（`find ./node_modules/@prisma/client/runtime ...`）を更新する。
 4. `bun ci` / tarball 展開エラー → `scripts/bun-ci-install.sh` がリトライ

@@ -208,6 +208,19 @@ describe("Lighthouse CI runtime env contract", () => {
     expect(pattern).toBe(LHCI_READY_MARKER);
   });
 
+  test("the start script actually applies the contract before spawning", () => {
+    // 契約モジュール側だけを検証しても、起動スクリプトが呼ぶのをやめたら意味がない。
+    // 呼び出しが next start の spawn より前にあることまで固定する。
+    const applyIndex = lhciStartSource.indexOf(
+      "applyLhciProductionFallbacks()",
+    );
+    const spawnIndex = lhciStartSource.indexOf("Bun.spawn(");
+
+    expect(applyIndex).toBeGreaterThan(-1);
+    expect(spawnIndex).toBeGreaterThan(-1);
+    expect(applyIndex).toBeLessThan(spawnIndex);
+  });
+
   test("readiness is proven by /api/live, not by Next.js log wording", () => {
     // Next.js の "Ready in ..." 文言に依存すると、Next のバージョン更新で
     // ready 判定が silent に壊れる。さらに log 一致では register() の throw を
