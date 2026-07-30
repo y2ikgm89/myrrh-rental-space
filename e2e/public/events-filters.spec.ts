@@ -26,19 +26,18 @@ test.describe("/events findability — URL 双方向反映", () => {
     expect(res?.status()).toBe(200);
 
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "開催予定" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(page.getByRole("tab", { name: "終了" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "開催予定" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "終了" })).toBeVisible();
     await expect(page.getByLabel("イベントを検索")).toBeVisible();
     await expect(page.getByLabel("カテゴリー")).toBeVisible();
   });
 
   test("?tab=past で終了タブが選択状態になる", async ({ page }) => {
     await page.goto(`${urls.events}?tab=past`);
-    await expect(page.getByRole("tab", { name: "終了" })).toHaveAttribute(
-      "aria-selected",
+    await expect(page.getByRole("button", { name: "終了" })).toHaveAttribute(
+      "aria-pressed",
       "true",
     );
   });
@@ -47,7 +46,7 @@ test.describe("/events findability — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(urls.events);
-    await page.getByRole("tab", { name: "終了" }).click();
+    await page.getByRole("button", { name: "終了" }).click();
     await expect(page).toHaveURL(/[?&]tab=past/);
   });
 

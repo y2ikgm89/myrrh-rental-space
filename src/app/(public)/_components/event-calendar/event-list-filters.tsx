@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition, type ChangeEvent } from "react";
-import { Tabs } from "radix-ui";
 import { useQueryStates, debounce } from "nuqs";
 import { cn } from "@/shared/lib/cn";
 import { Select } from "@/public/components/design-system/select";
@@ -92,15 +91,31 @@ export function EventListFilters({
         isPending && "opacity-60",
       )}
     >
-      <Tabs.Root value={params.tab} onValueChange={handleTabChange}>
-        <Tabs.List
-          aria-label="開催状況"
-          className="flex border-b border-border"
-        >
-          {EVENT_LIST_TABS.map((tab) => (
-            <Tabs.Trigger
+      {/*
+        タブ「風」の見た目だが tabpanel は存在しない（結果一覧はこのバーの外側で
+        サーバーレンダリングされ、選択は URL クエリで表現される）。Radix の
+        `Tabs.Trigger` は必ず `aria-controls="<id>-content-<value>"` を出力するため、
+        `Tabs.Content` を持たないここで使うと参照先の無い aria-controls になり
+        axe の `aria-valid-attr-value`（critical / WCAG 4.1.2）に該当する。
+        検索欄・カテゴリー select と並ぶ facet の 1 つなので、押下状態を持つ
+        トグルボタン群として表現する。
+      */}
+      <div
+        role="group"
+        aria-label="開催状況"
+        className="flex border-b border-border"
+      >
+        {EVENT_LIST_TABS.map((tab) => {
+          const isActive = params.tab === tab;
+          return (
+            <button
               key={tab}
-              value={tab}
+              type="button"
+              aria-pressed={isActive}
+              data-state={isActive ? "active" : "inactive"}
+              onClick={() => {
+                handleTabChange(tab);
+              }}
               className={cn(
                 "group whitespace-nowrap px-4 py-2.5 text-sm tracking-[0.08em] outline-none transition-colors",
                 "text-muted-foreground hover:text-foreground",
@@ -116,10 +131,10 @@ export function EventListFilters({
               >
                 {TAB_LABELS[tab]}
               </span>
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-      </Tabs.Root>
+            </button>
+          );
+        })}
+      </div>
 
       <label className="flex min-h-11 min-w-[10rem] flex-1 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
         検索
