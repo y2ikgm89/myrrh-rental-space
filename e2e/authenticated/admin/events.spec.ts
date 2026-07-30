@@ -74,21 +74,31 @@ test.describe("イベント管理 - 一覧ページ", () => {
   test("seed 由来の単一開催・日時選択制イベントが表示される", async ({
     page,
   }) => {
-    await page.goto(urls.adminEvents);
+    // 一覧は開始日時の降順 + 10 件/ページ。他 spec が実行中に作る E2E イベント
+    // (waitlist / broadcast fixture 等) が 1 ページ目を埋め、seed 行は 2 ページ目へ
+    // 押し出される (run 30569714860: 「1-10 / 全 12 件」)。タイトル検索でスコープする。
+    await page.goto(
+      `${urls.adminEvents}?search=${encodeURIComponent("ヨガ＆マインドフルネス体験会")}`,
+    );
 
     const singleOccurrenceRow = page.getByRole("row", {
       name: /ヨガ＆マインドフルネス体験会 のイベントを編集/u,
     });
-    const timedEntryRow = page.getByRole("row", {
-      name: /写真撮影ワークショップ のイベントを編集/u,
-    });
     await expect(singleOccurrenceRow).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
-    await expect(timedEntryRow).toBeVisible({
+    await expect(singleOccurrenceRow.getByText("単一開催")).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
-    await expect(singleOccurrenceRow.getByText("単一開催")).toBeVisible({
+
+    await page.goto(
+      `${urls.adminEvents}?search=${encodeURIComponent("写真撮影ワークショップ")}`,
+    );
+
+    const timedEntryRow = page.getByRole("row", {
+      name: /写真撮影ワークショップ のイベントを編集/u,
+    });
+    await expect(timedEntryRow).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
     await expect(timedEntryRow.getByText("日時選択制")).toBeVisible({
