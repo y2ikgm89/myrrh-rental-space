@@ -137,7 +137,8 @@ export const locationFormBaseSchema = z.strictObject({
     if (typeof value === "string") {
       if (value === "" || value === "null") return null;
       try {
-        return JSON.parse(value);
+        const parsed: unknown = JSON.parse(value);
+        return parsed;
       } catch {
         return null;
       }
@@ -148,7 +149,8 @@ export const locationFormBaseSchema = z.strictObject({
     if (typeof value === "string") {
       if (value === "" || value === "null") return null;
       try {
-        return JSON.parse(value);
+        const parsed: unknown = JSON.parse(value);
+        return parsed;
       } catch {
         return null;
       }

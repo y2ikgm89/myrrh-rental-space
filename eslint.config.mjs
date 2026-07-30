@@ -170,6 +170,13 @@ const eslintConfig = defineConfig([
             "@typescript-eslint/restrict-plus-operands": "error",
             "@typescript-eslint/no-floating-promises": "error",
             "@typescript-eslint/require-await": "error",
+            // P2: no-unsafe-* 5ルール。any 由来の値の安全でない
+            // assignment/call/member-access/argument/return を検出する。
+            "@typescript-eslint/no-unsafe-assignment": "error",
+            "@typescript-eslint/no-unsafe-call": "error",
+            "@typescript-eslint/no-unsafe-member-access": "error",
+            "@typescript-eslint/no-unsafe-argument": "error",
+            "@typescript-eslint/no-unsafe-return": "error",
           },
         },
         {

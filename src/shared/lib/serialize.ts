@@ -154,7 +154,8 @@ export function toPlainObject(obj: unknown): unknown {
   }
 
   try {
-    return JSON.parse(JSON.stringify(obj));
+    const plain: unknown = JSON.parse(JSON.stringify(obj));
+    return plain;
   } catch {
     // 循環参照や BigInt などでエラーが発生した場合
     // Server Component でのエラーをわかりやすくする
@@ -192,7 +193,8 @@ export function toPlainArray(arr: unknown): unknown {
   }
 
   try {
-    return JSON.parse(JSON.stringify(arr));
+    const plain: unknown = JSON.parse(JSON.stringify(arr));
+    return plain;
   } catch {
     throw new Error(
       `[serialize] Failed to convert array to plain array. ` +
@@ -548,6 +550,26 @@ export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
  */
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * unknown を unknown[] に絞り込む型ガード
+ *
+ * ネイティブの `Array.isArray` は lib.es5.d.ts で
+ * `isArray(arg: any): arg is any[]` と宣言されており、絞り込み後の型が常に
+ * `any[]` になる（TypeScript の既知の制限）。preprocess のコールバック引数
+ * （`unknown`）にそのまま `Array.isArray` を使うと、絞り込んだ後の分岐が
+ * `any[]` に汚染され `no-unsafe-return` 等を引き起こす。
+ * このヘルパーは戻り値の絞り込みを `unknown[]` にすることで any 汚染を止める。
+ *
+ * @example
+ * ```typescript
+ * // Before: if (Array.isArray(v)) return v; // v: any[] (any 汚染)
+ * // After:  if (isUnknownArray(v)) return v; // v: unknown[]
+ * ```
+ */
+export function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
 }
 
 /**

@@ -5,6 +5,7 @@
  */
 
 import { DiscountType } from "@/shared/lib/validations/enums/prisma-types";
+import { isRecord } from "@/shared/lib/serialize";
 import type {
   CouponLike,
   DurationDiscountRule,
@@ -124,10 +125,9 @@ export function validateDurationDiscountRules(rules: unknown): {
 
   for (const rule of rules) {
     if (
-      typeof rule !== "object" ||
-      rule === null ||
-      typeof rule.hours !== "number" ||
-      typeof rule.discountRate !== "number"
+      !isRecord(rule) ||
+      typeof rule["hours"] !== "number" ||
+      typeof rule["discountRate"] !== "number"
     ) {
       return {
         valid: false,
@@ -136,7 +136,7 @@ export function validateDurationDiscountRules(rules: unknown): {
       };
     }
 
-    if (rule.hours <= 0) {
+    if (rule["hours"] <= 0) {
       return {
         valid: false,
         rules: [],
@@ -144,7 +144,7 @@ export function validateDurationDiscountRules(rules: unknown): {
       };
     }
 
-    if (rule.discountRate < 0 || rule.discountRate > 100) {
+    if (rule["discountRate"] < 0 || rule["discountRate"] > 100) {
       return {
         valid: false,
         rules: [],
@@ -153,8 +153,8 @@ export function validateDurationDiscountRules(rules: unknown): {
     }
 
     validRules.push({
-      hours: rule.hours,
-      discountRate: rule.discountRate,
+      hours: rule["hours"],
+      discountRate: rule["discountRate"],
     });
   }
 

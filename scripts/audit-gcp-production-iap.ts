@@ -458,7 +458,9 @@ async function main(): Promise<void> {
     projectId,
     "--format=json",
   ]);
-  const ancestorRows = Array.isArray(ancestors) ? ancestors : [];
+  // `Array.isArray` は `unknown` を渡しても `any[]` へ narrow してしまう TS 標準ライブラリの
+  // 既知の癖があるため、明示的に `unknown[]` 注釈して any の伝播を断つ。
+  const ancestorRows: unknown[] = Array.isArray(ancestors) ? ancestors : [];
   const organization = ancestorRows.find((item) => {
     return isRecord(item) && item["type"] === "organization";
   });

@@ -61,6 +61,21 @@ const serializedNodeSchema = z
 
 const serializedNodeArraySchema = z.array(serializedNodeSchema);
 
+/** `GET /admin/api/block-templates` の応答検証（`BlockTemplateListItem[]` と対応）。 */
+const blockTemplateListItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  creatorName: z.string().nullable(),
+});
+const blockTemplateListSchema = z.array(blockTemplateListItemSchema);
+
+/** `GET /admin/api/block-templates/[id]` の応答検証。 */
+const blockTemplateDetailSchema = z.object({
+  nodeJson: z.unknown(),
+});
+
 // =============================================================================
 // Commands
 // =============================================================================
@@ -87,8 +102,12 @@ async function fetchBlockTemplates(): Promise<BlockTemplateListItem[]> {
     throw new Error(message);
   }
 
-  const data: BlockTemplateListItem[] = await response.json();
-  return data;
+  const raw: unknown = await response.json();
+  const parsed = blockTemplateListSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("テンプレート一覧のデータが不正です");
+  }
+  return parsed.data;
 }
 
 async function fetchBlockTemplateById(
@@ -110,8 +129,12 @@ async function fetchBlockTemplateById(
     throw new Error(message);
   }
 
-  const data: { nodeJson: unknown } = await response.json();
-  return data;
+  const raw: unknown = await response.json();
+  const parsed = blockTemplateDetailSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("テンプレートの取得に失敗しました");
+  }
+  return parsed.data;
 }
 
 // =============================================================================

@@ -8,6 +8,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { toast } from "sonner";
 import {
   IconTrash,
@@ -46,6 +47,25 @@ import type { PageData } from "@/shared/domain/pages/types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
+/** `GET /admin/api/pages/deleted` の応答検証（`PageData` と対応）。 */
+const pageDataSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  metaDescription: z.string().nullable(),
+  metaKeywords: z.string().nullable(),
+  ogpTitle: z.string().nullable(),
+  ogpDescription: z.string().nullable(),
+  ogpImageUrl: z.string().nullable(),
+  isPublished: z.boolean(),
+  publishedAt: z.string().nullable(),
+  isActive: z.boolean(),
+  isSystemPage: z.boolean(),
+  sectionCount: z.number().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 async function fetchDeletedPages(): Promise<PageData[]> {
   const response = await fetch("/admin/api/pages/deleted", {
     credentials: "same-origin",
@@ -63,8 +83,12 @@ async function fetchDeletedPages(): Promise<PageData[]> {
     throw new Error(message);
   }
 
-  const data: PageData[] = await response.json();
-  return data;
+  const raw: unknown = await response.json();
+  const parsed = z.array(pageDataSchema).safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("削除済みページのデータが不正です");
+  }
+  return parsed.data;
 }
 
 export function DeletedPagesDialog() {

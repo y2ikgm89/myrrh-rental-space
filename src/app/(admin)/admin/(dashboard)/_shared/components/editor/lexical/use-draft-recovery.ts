@@ -133,8 +133,10 @@ function getServerDraftSnapshot(): null {
 /** `DRAFT_CLEARED_EVENT` の detail が文字列（= autoSaveKey）かを検証する type guard。 */
 function readClearedDraftKey(event: Event): string | null {
   if (!(event instanceof CustomEvent)) return null;
-  const { detail } = event;
-  return typeof detail === "string" ? detail : null;
+  // `CustomEvent` は `T = any` がデフォルトのため `event.detail` は any 型になる。
+  // 分割代入で一旦 any の変数へ束縛する（unsafe destructuring）代わりに、
+  // プロパティアクセスを直接 typeof で narrow してから返す。
+  return typeof event.detail === "string" ? event.detail : null;
 }
 
 type DraftSnapshotState = {

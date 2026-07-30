@@ -50,6 +50,19 @@ function defineGlobal(target: object, key: string, value: unknown): void {
 }
 
 /**
+ * `@types/jsdom` の `DOMWindow` は `[key: string]: any` の index signature を持つ。
+ * `noPropertyAccessFromIndexSignature` によりブラケット記法が必須な `document` /
+ * `navigator` / `getComputedStyle` / `close` 等は、その index signature 経由でしか
+ * 解決できず静的には `any` になる。実行時 typeof ガードで narrow してから
+ * 呼び出す/bind することで any の伝播を断つ。
+ */
+function isCallableFunction(
+  value: unknown,
+): value is (...args: never[]) => unknown {
+  return typeof value === "function";
+}
+
+/**
  * `__tests__/setup-dom.ts` と共有する DOM グローバル一覧。
  * Lexical のカスタムノード（YouTube/Vimeo/X/Instagram/Image/Table/Audio/File 等）の
  * `exportDOM` / `importDOM` / `createDOM` が `instanceof` 判定や `document.createElement`
@@ -58,6 +71,13 @@ function defineGlobal(target: object, key: string, value: unknown): void {
 export function collectLexicalHeadlessDomGlobals(
   window: JSDOM["window"],
 ): Record<string, unknown> {
+  const rawGetComputedStyle: unknown = window["getComputedStyle"];
+  if (!isCallableFunction(rawGetComputedStyle)) {
+    throw new Error(
+      "jsdom window is missing getComputedStyle (unexpected jsdom version?)",
+    );
+  }
+
   return {
     window,
     document: window["document"],
@@ -75,7 +95,7 @@ export function collectLexicalHeadlessDomGlobals(
     MutationObserver: window.MutationObserver,
     Event: window.Event,
     CustomEvent: window.CustomEvent,
-    getComputedStyle: window["getComputedStyle"].bind(window),
+    getComputedStyle: rawGetComputedStyle.bind(window),
     DOMParser: window.DOMParser,
   };
 }
@@ -130,6 +150,10 @@ export function withLexicalHeadlessDom<T>(callback: () => T): T {
     for (const [key, value] of Object.entries(previous)) {
       defineGlobal(globalThis, key, value);
     }
-    (globals["window"] as JSDOM["window"] | undefined)?.["close"]();
+    const jsdomWindow = globals["window"] as JSDOM["window"] | undefined;
+    const rawClose: unknown = jsdomWindow?.["close"];
+    if (isCallableFunction(rawClose)) {
+      rawClose.call(jsdomWindow);
+    }
   }
 }
