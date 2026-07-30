@@ -146,7 +146,7 @@ export function ConceptSection({
             imagePosition === "left" ? "md:order-2" : "md:order-1",
           )}
         >
-          <div className="px-6 py-16 md:px-12 md:py-24 lg:px-20">
+          <div className="py-16 ps-[var(--container-padding-start)] pe-[var(--container-padding-end)] md:px-12 md:py-24 lg:px-20">
             {textBlock}
           </div>
         </div>

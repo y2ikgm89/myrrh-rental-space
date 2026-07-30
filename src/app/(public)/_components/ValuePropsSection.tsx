@@ -112,7 +112,9 @@ export function ValuePropsSection({
         return (
           <div
             key={`${item.eyebrow}-${spansToPlainText(item.title)}`}
-            className="flex flex-col items-center gap-4 px-6 py-8 text-center @md:px-8 @md:py-10"
+            // grid cell 内部 padding は viewport 端 safe-area と無関係のため
+            // container-padding token は使わず、px-6/@md:px-8 と同値の arbitrary value で表現
+            className="flex flex-col items-center gap-4 px-[1.5rem] py-8 text-center @md:px-[2rem] @md:py-10"
           >
             {iconElement}
             <div className="flex flex-col items-center gap-1.5">
