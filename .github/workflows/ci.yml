@@ -93,7 +93,19 @@ jobs:
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
           # base は PR base / main push 時は前 commit (paths-filter default)。
-          # ! prefix で「これ以外」を意味し、docs / agent / config-only PR を skip 対象にする。
+          #
+          # `code` は全ルールが `!` prefix の除外リストのため
+          # **predicate-quantifier: every が必須**。
+          # 既定の `some` は「いずれか 1 ルールに一致する file があれば true」なので、
+          # 除外ルールだけを並べると .md しか変わらない PR でも
+          # 「`!docs/**` に一致（= docs 配下ではない）」で必ず true になり、
+          # gate が完全な no-op になる（1 file でも変われば常に code=true）。
+          # 実測: PR #1679 は `.md` 2 件のみの変更で `Filter code = true`、
+          # build / unit-tests / smoke-e2e が全て実走した。
+          # `every` は「全ルールに一致した file だけを採用」= 除外リスト本来の意味。
+          # 公式 README がこの negation の落とし穴と `every` による回避を明記している。
+          # https://github.com/dorny/paths-filter
+          predicate-quantifier: "every"
           # Runtime に影響しない project docs / Codex agent config は重い app CI を回さない。
           # .github/workflows/** と .github/actions/** は意図的に除外しない。
           filters: |
