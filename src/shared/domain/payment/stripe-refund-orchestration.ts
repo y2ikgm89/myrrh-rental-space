@@ -230,20 +230,44 @@ export type RefundEntityLookup = {
   status: string;
   reservationId: string | null;
   eventRegistrationId: string | null;
+  refundedByType: string;
 };
 
 /**
  * refund.updated / refund.failed webhook が、対象 Refund 行がどちらのドメイン
- * (Reservation / EventRegistration) に属するか、および現在の確定前 status を
- * 引くための lookup。stripeRefundId が repo に存在しない場合 (別環境の Stripe
- * イベント誤配送等) は null を返す。
+ * (Reservation / EventRegistration) に属するか、現在の確定前 status、および
+ * どの経路が作成したか (`refundedByType`) を引くための lookup。
+ * `refundedByType` は finalize 側が「ADMIN(部分返金対応、累積額から
+ * 全額/一部を判定) か AUTO_*(常に単発全額、任意の未確定状態から REFUNDED へ)か」
+ * を分岐するために使う。stripeRefundId が repo に存在しない場合
+ * (別環境の Stripe イベント誤配送等) は null を返す。
  */
 export async function findRefundEntityByStripeRefundId(
   stripeRefundId: string,
 ): Promise<RefundEntityLookup | null> {
   const refund = await prisma.refund.findUnique({
     where: { stripeRefundId },
-    select: { status: true, reservationId: true, eventRegistrationId: true },
+    select: {
+      status: true,
+      reservationId: true,
+      eventRegistrationId: true,
+      refundedByType: true,
+    },
   });
   return refund;
 }
+
+/**
+ * 返金可能残額の集計 (`resolveRefundAmount` の `cumulativeSoFar` 等) から
+ * 除外すべき Refund.status。"failed"/"canceled" は Stripe 側で実際には資金移動が
+ * 発生しなかった試行であり、これを合算すると (a) 実際より過大な累積返金額と
+ * 誤認し新規返金申請を不当に拒否する、(b) auto-refund 系の
+ * `remaining <= 0` 早期終了チェックが失敗試行のみで満たされ、実際は無返金の
+ * まま paymentStatus=REFUNDED に遷移する、という 2 種の実害を招く
+ * (Codex review, PR #1665)。"pending"/"requires_action" は集計に含める
+ * (確定前でも二重返金防止のため予約済み残高として扱う必要があるため)。
+ */
+export const REFUND_AGGREGATE_EXCLUDED_STATUSES = [
+  "failed",
+  "canceled",
+] as const;

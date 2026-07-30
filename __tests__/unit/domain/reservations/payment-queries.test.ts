@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
+import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 
 // PaymentStatus 定数（@generated/prisma/enums から Prisma enum を再現）
 const PaymentStatus = {
@@ -28,11 +29,15 @@ const mockReservationFindFirst = mock<
 >(() => Promise.resolve(null));
 
 const mockReservationFindUnique = mock<
-  () => Promise<{
-    status: ReservationStatus;
-    paymentStatus: PaymentStatus;
-    stripePaymentIntentId: string | null;
-  } | null>
+  () => Promise<
+    | {
+        status: ReservationStatus;
+        paymentStatus: PaymentStatus;
+        stripePaymentIntentId: string | null;
+      }
+    | { totalPriceWithTax: number | null }
+    | null
+  >
 >(() =>
   Promise.resolve({
     status: ReservationStatus.CONFIRMED,
@@ -40,6 +45,10 @@ const mockReservationFindUnique = mock<
     stripePaymentIntentId: null,
   }),
 );
+
+const mockRefundAggregate = mock<
+  () => Promise<{ _sum: { amount: number | null } }>
+>(() => Promise.resolve({ _sum: { amount: 0 } }));
 
 const mockReservationFindUniqueOrThrow = mock<
   () => Promise<Record<string, unknown>>
@@ -64,6 +73,9 @@ mock.module("@/shared/db/prisma", () => ({
       findUniqueOrThrow: mockReservationFindUniqueOrThrow,
       update: mockReservationUpdate,
       updateMany: mockReservationUpdateMany,
+    },
+    refund: {
+      aggregate: mockRefundAggregate,
     },
   },
 }));
@@ -105,6 +117,30 @@ const mockFireAndForget = mock<
 >((promise) => {
   void promise;
 });
+
+const mockFetchReservationEmailData = mock<
+  (reservationId: string) => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+
+const mockSendReservationRefundEmail = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+
+const mockCreateAuditLogRecord = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+
+mock.module("@/shared/domain/reservations/payloads", () => ({
+  fetchReservationEmailData: mockFetchReservationEmailData,
+}));
+
+installEmailLibDispatchMock({
+  sendReservationRefundEmail: mockSendReservationRefundEmail,
+});
+
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: mockCreateAuditLogRecord,
+}));
 
 mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: mockCreateNotificationCommand,
@@ -156,7 +192,9 @@ import {
   claimReservationAsRefunded,
   findReservationByPaymentIntent,
   savePaymentIntentId,
+  finalizeSettledReservationRefund,
 } from "@/shared/domain/reservations/payment-queries";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
 // テストデータ
 const RESERVATION_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -194,6 +232,10 @@ describe("reservations/payment-queries", () => {
     mockCreateNotificationCommand.mockReset();
     mockRefundOrphanedStripePaymentForCancelledReservation.mockReset();
     mockFireAndForget.mockReset();
+    mockRefundAggregate.mockReset();
+    mockFetchReservationEmailData.mockReset();
+    mockSendReservationRefundEmail.mockReset();
+    mockCreateAuditLogRecord.mockReset();
 
     mockReservationFindFirst.mockResolvedValue(null);
     mockReservationFindUnique.mockResolvedValue({
@@ -211,6 +253,10 @@ describe("reservations/payment-queries", () => {
     mockFireAndForget.mockImplementation((promise) => {
       void promise;
     });
+    mockRefundAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    mockFetchReservationEmailData.mockResolvedValue(null);
+    mockSendReservationRefundEmail.mockResolvedValue(undefined);
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
   // =============================================================================
@@ -573,6 +619,224 @@ describe("reservations/payment-queries", () => {
         }),
       );
       expect(mockReservationUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  // =============================================================================
+  // finalizeSettledReservationRefund（refund.updated webhook の確定後処理）
+  // =============================================================================
+
+  describe("finalizeSettledReservationRefund", () => {
+    const STRIPE_REFUND_ID = "re_test_settled";
+
+    test("予約が見つからない → false（updateMany を呼ばない）", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(null);
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        3000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("totalPriceWithTax が null → false", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: null,
+      });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        3000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("ADMIN: 累積が totalPriceWithTax 未到達 → PARTIALLY_REFUNDED、PAID/PARTIALLY_REFUNDED からのみ claim", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 3000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        3000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(true);
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: RESERVATION_ID,
+            paymentStatus: {
+              in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+            },
+          }),
+          data: { paymentStatus: PaymentStatus.PARTIALLY_REFUNDED },
+        }),
+      );
+    });
+
+    test("ADMIN: 累積が totalPriceWithTax に到達 → REFUNDED", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        7000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(true);
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { paymentStatus: PaymentStatus.REFUNDED },
+        }),
+      );
+    });
+
+    test("AUTO_ON_CANCEL: 入口 paymentStatus を問わず (REFUNDED 以外なら) 無条件 REFUNDED に遷移する", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        4000,
+        REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      );
+
+      expect(result).toBe(true);
+      // ADMIN と異なり累積額の全額到達判定はせず、単発全額返金として無条件 REFUNDED。
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: { not: PaymentStatus.REFUNDED },
+          }),
+          data: { paymentStatus: PaymentStatus.REFUNDED },
+        }),
+      );
+    });
+
+    test("updateMany count=0（既に確定済み）→ false、AuditLog もメールも呼ばない", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+      expect(mockFetchReservationEmailData).not.toHaveBeenCalled();
+      expect(mockSendReservationRefundEmail).not.toHaveBeenCalled();
+    });
+
+    test("成功時: AuditLog に実際の遷移先 paymentStatus と累積額を記録する", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 6000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        6000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resource: "reservation",
+          resourceId: RESERVATION_ID,
+          newValue: {
+            paymentStatus: PaymentStatus.PARTIALLY_REFUNDED,
+            refundedAmount: 6000,
+          },
+          metadata: expect.objectContaining({
+            stripeRefundId: STRIPE_REFUND_ID,
+          }),
+        }),
+      );
+    });
+
+    test("成功時: emailData が取れれば返金完了メールを送信する", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockFetchReservationEmailData.mockResolvedValueOnce({
+        reservationId: RESERVATION_ID,
+        customerEmail: "customer@example.com",
+        customerName: "田中太郎",
+        spaceName: "テストスペース",
+        startTime: new Date("2024-03-01T10:00:00Z"),
+        endTime: new Date("2024-03-01T12:00:00Z"),
+        totalPriceWithTax: 10000,
+        totalPrice: 10000,
+        userId: null,
+      });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(true);
+      expect(mockSendReservationRefundEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reservationId: RESERVATION_ID,
+          refundAmount: 10000,
+          isFullyRefunded: true,
+          refundId: STRIPE_REFUND_ID,
+        }),
+      );
+    });
+
+    test("emailData が null なら送信しないが true は返す", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockFetchReservationEmailData.mockResolvedValueOnce(null);
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(true);
+      expect(mockSendReservationRefundEmail).not.toHaveBeenCalled();
     });
   });
 

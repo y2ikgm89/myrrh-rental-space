@@ -209,8 +209,11 @@ export function EventRegistrationTable({
         toast.error(result.error);
         return;
       }
-      const message =
-        result.newPaymentStatus === PaymentStatusEnum.PARTIALLY_REFUNDED
+      // konbini / customer_balance 等の非同期返金は isSettled=false のまま返る
+      // (paymentStatus 未反映)。「完了」と誤認させる文言を出さない。
+      const message = !result.isSettled
+        ? `返金を受け付けました (${result.refundAmount.toLocaleString()} 円、Stripe側の処理完了後に確定します)`
+        : result.newPaymentStatus === PaymentStatusEnum.PARTIALLY_REFUNDED
           ? `部分返金を実行しました (${result.refundAmount.toLocaleString()} 円、累計 ${result.cumulativeAmount.toLocaleString()} 円)`
           : "全額返金を実行しました";
       toast.success(message);

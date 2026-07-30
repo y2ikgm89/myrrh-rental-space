@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type Stripe from "stripe";
 import { installErrorsServerMock } from "../../../../mocks/errors-server";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
 mock.module("server-only", () => ({}));
 
@@ -30,6 +31,7 @@ const mockFindRefundEntityByStripeRefundId = mock<
     status: string;
     reservationId: string | null;
     eventRegistrationId: string | null;
+    refundedByType: string;
   } | null>
 >(() => Promise.resolve(null));
 const mockApplyConfirmedRefundStatus = mock<
@@ -70,6 +72,7 @@ const mockFinalizeSettledReservationRefund = mock<
     reservationId: string,
     stripeRefundId: string,
     thisRefundAmount: number,
+    refundedByType: string,
   ) => Promise<boolean>
 >(() => Promise.resolve(true));
 mock.module("@/shared/domain/reservations/payment-queries", () => ({
@@ -77,20 +80,34 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     reservationId: string,
     stripeRefundId: string,
     thisRefundAmount: number,
+    refundedByType: string,
   ) =>
     mockFinalizeSettledReservationRefund(
       reservationId,
       stripeRefundId,
       thisRefundAmount,
+      refundedByType,
     ),
 }));
 
 const mockFinalizeSettledEventRegistrationRefund = mock<
-  (registrationId: string) => Promise<boolean>
+  (
+    registrationId: string,
+    stripeRefundId: string,
+    refundedByType: string,
+  ) => Promise<boolean>
 >(() => Promise.resolve(true));
 mock.module("@/shared/domain/events/payment-queries", () => ({
-  finalizeSettledEventRegistrationRefund: (registrationId: string) =>
-    mockFinalizeSettledEventRegistrationRefund(registrationId),
+  finalizeSettledEventRegistrationRefund: (
+    registrationId: string,
+    stripeRefundId: string,
+    refundedByType: string,
+  ) =>
+    mockFinalizeSettledEventRegistrationRefund(
+      registrationId,
+      stripeRefundId,
+      refundedByType,
+    ),
 }));
 
 const mockInvalidateReservationCache = mock<(id: string) => void>(() => {});
@@ -118,6 +135,7 @@ function buildRefund(overrides: Partial<Stripe.Refund> = {}): Stripe.Refund {
     id: STRIPE_REFUND_ID,
     object: "refund",
     amount: 5000,
+    currency: "jpy",
     status: "succeeded",
     ...overrides,
   } as Stripe.Refund;
@@ -143,6 +161,7 @@ describe("handleRefundStatusUpdated", () => {
       status: "pending",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
 
     await handleRefundStatusUpdated(
@@ -159,10 +178,33 @@ describe("handleRefundStatusUpdated", () => {
       RESERVATION_ID,
       STRIPE_REFUND_ID,
       3000,
+      REFUNDED_BY_TYPE.ADMIN,
     );
     expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
     expect(mockFinalizeSettledEventRegistrationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateEventRegistrationCache).not.toHaveBeenCalled();
+  });
+
+  test("非ゼロ小数通貨 (usd) は Stripe 最小単位からアプリ単位に変換して finalize に渡す", async () => {
+    mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
+      status: "pending",
+      reservationId: RESERVATION_ID,
+      eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
+    });
+
+    await handleRefundStatusUpdated(
+      buildRefund({ status: "succeeded", amount: 5000, currency: "usd" }),
+    );
+
+    // 5000 セント → 50 ドル (fromStripeUnitAmount)。変換漏れは USD/EUR で
+    // 返金完了メール等の金額を 100 倍に破損させる (Codex P2 #1, PR #1665)。
+    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
+      RESERVATION_ID,
+      STRIPE_REFUND_ID,
+      50,
+      REFUNDED_BY_TYPE.ADMIN,
+    );
   });
 
   test("event-registration 側: succeeded に確定すると finalizeSettledEventRegistrationRefund を呼びキャッシュを無効化する", async () => {
@@ -170,44 +212,64 @@ describe("handleRefundStatusUpdated", () => {
       status: "pending",
       reservationId: null,
       eventRegistrationId: REGISTRATION_ID,
+      refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
     });
 
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
     expect(mockFinalizeSettledEventRegistrationRefund).toHaveBeenCalledWith(
       REGISTRATION_ID,
+      STRIPE_REFUND_ID,
+      REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
     );
     expect(mockInvalidateEventRegistrationCache).toHaveBeenCalledTimes(1);
     expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
   });
 
-  test("既に同一 status で確定済みなら idempotent no-op (applyConfirmedRefundStatus 未呼出)", async () => {
+  test("既に同一 status で確定済みでも finalize は必ず呼ぶ (status 列更新のみ skip、Codex P1 #1 のリトライ安全性)", async () => {
+    // 前回配信で status 列の更新は完了したが finalize (paymentStatus 反映・メール送信)
+    // が完了前にクラッシュしたケースを模す。webhook 再送時に「status 一致=完了済み」と
+    // 誤認して finalize を恒久的にスキップしてはならない。
     mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
       status: "succeeded",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
 
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
+    // status 列は既に一致しているため再更新は不要 (無駄な書込を避ける最適化)。
     expect(mockApplyConfirmedRefundStatus).not.toHaveBeenCalled();
-    expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
-    expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
+    // だが finalize は必ず呼ぶ — 冪等性は finalize 自身の updateMany WHERE claim が担保する。
+    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
+      RESERVATION_ID,
+      STRIPE_REFUND_ID,
+      5000,
+      REFUNDED_BY_TYPE.ADMIN,
+    );
+    expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
   });
 
-  test("別プロセスが同時に確定済み (claimed=0) は idempotent no-op", async () => {
+  test("status 列更新が別プロセスと競合 (claimed=0) しても finalize は必ず呼ぶ", async () => {
     mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
       status: "pending",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
     mockApplyConfirmedRefundStatus.mockResolvedValueOnce(0);
 
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
-    expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
-    expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
+    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
+      RESERVATION_ID,
+      STRIPE_REFUND_ID,
+      5000,
+      REFUNDED_BY_TYPE.ADMIN,
+    );
+    expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
   });
 
   test("refund.failed (status=failed) は CRITICAL severity で logError し paymentStatus は変更しない", async () => {
@@ -215,6 +277,7 @@ describe("handleRefundStatusUpdated", () => {
       status: "pending",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
 
     await handleRefundStatusUpdated(buildRefund({ status: "failed" }));
@@ -232,6 +295,7 @@ describe("handleRefundStatusUpdated", () => {
       status: "pending",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
 
     await handleRefundStatusUpdated(buildRefund({ status: "canceled" }));
@@ -261,6 +325,7 @@ describe("handleRefundStatusUpdated", () => {
       status: "requires_action",
       reservationId: RESERVATION_ID,
       eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
     });
 
     await handleRefundStatusUpdated(buildRefund({ status: "pending" }));

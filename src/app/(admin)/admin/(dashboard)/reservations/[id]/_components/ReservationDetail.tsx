@@ -310,9 +310,12 @@ export function ReservationDetail({
         return;
       }
 
+      // konbini / customer_balance 等の非同期返金は isSettled=false のまま返る
+      // (paymentStatus 未反映)。「完了」と誤認させる文言を出さない。
       // partial vs full の情報を toast 文言に反映 (data は成功時に residual 情報を含む)
-      const message =
-        result.newPaymentStatus === PaymentStatus.PARTIALLY_REFUNDED
+      const message = !result.isSettled
+        ? `返金を受け付けました (${result.refundAmount.toLocaleString()} 円、Stripe側の処理完了後に確定します)`
+        : result.newPaymentStatus === PaymentStatus.PARTIALLY_REFUNDED
           ? `部分返金を実行しました (${result.refundAmount.toLocaleString()} 円、累計 ${result.cumulativeAmount.toLocaleString()} 円)`
           : "全額返金を実行しました";
       toast.success(message);

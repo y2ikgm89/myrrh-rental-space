@@ -1,10 +1,12 @@
 import "server-only";
 
 import {
+  AuditAction,
   PaymentStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   applyStripeChargeRefundIdempotent,
   buildChargeRefundPaymentStatusWhere,
@@ -17,6 +19,8 @@ import {
   PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_EVENT,
 } from "@/shared/domain/payment/payment-status-guards";
 import { refundOrphanedStripePaymentForCancelledEventRegistration } from "@/shared/domain/events/payment-commands";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -346,14 +350,18 @@ export async function applyEventChargeRefundIdempotent(input: {
  * refund.updated (status → "succeeded") webhook 確定時に呼ぶ、konbini /
  * customer_balance 等の非同期返金の後日確定処理。
  * Reservation 側 `finalizeSettledReservationRefund` と同型
- * (events 側は返金完了メール送信の仕組み自体が現状無いため paymentStatus 反映のみ)。
+ * (events 側は返金完了メール送信の仕組み自体が現状無いため paymentStatus 反映のみ、
+ * refundedByType による ADMIN(部分返金対応) / AUTO_*(常に単発全額) の分岐も同様。
+ * 詳細は reservations 側の docstring 参照、Codex review PR #1665)。
  *
- * @returns true = 今回このコマンドが確定処理を行った。false = 該当 Refund が
- *          既に確定済み (webhook 重複配送等) で idempotent に no-op、または
- *          対象申込が消失済み。
+ * @returns true = 今回このコマンドが確定処理を行った。false = 既に確定済み
+ *          (webhook 重複配送・re-try) で idempotent に no-op、または対象申込が
+ *          消失済み。
  */
 export async function finalizeSettledEventRegistrationRefund(
   registrationId: string,
+  stripeRefundId: string,
+  refundedByType: string,
 ): Promise<boolean> {
   const registration = await prisma.eventRegistration.findUnique({
     where: { id: registrationId },
@@ -364,24 +372,60 @@ export async function finalizeSettledEventRegistrationRefund(
   }
 
   const aggregate = await prisma.refund.aggregate({
-    where: { eventRegistrationId: registrationId, status: "succeeded" },
+    where: {
+      eventRegistrationId: registrationId,
+      status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+    },
     _sum: { amount: true },
   });
   const cumulativeSettled = aggregate._sum.amount ?? 0;
-  const willBeFullyRefunded = cumulativeSettled >= registration.paidAmount;
+  const isAdminPartialRefund = refundedByType === REFUNDED_BY_TYPE.ADMIN;
+  const willBeFullyRefunded = isAdminPartialRefund
+    ? cumulativeSettled >= registration.paidAmount
+    : true;
 
   const updated = await prisma.eventRegistration.updateMany({
-    where: {
-      id: registrationId,
-      paymentStatus: {
-        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-      },
-    },
+    where: isAdminPartialRefund
+      ? {
+          id: registrationId,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
+        }
+      : {
+          id: registrationId,
+          paymentStatus: { not: PaymentStatus.REFUNDED },
+        },
     data: {
       paymentStatus: willBeFullyRefunded
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED,
     },
   });
-  return updated.count > 0;
+  if (updated.count === 0) {
+    return false;
+  }
+
+  // 保留していた完了状態への遷移が今回確定した事実を append-only 証跡に残す
+  // (Codex review, PR #1665: pending 時点の AuditLog は状態未確定である旨のみ記録し、
+  // 確定した完了遷移はここで別エントリとして記録する)。webhook 起点のため userId
+  // は付与しない。
+  await createAuditLogRecord({
+    action: AuditAction.UPDATE,
+    resource: "event-registration",
+    resourceId: registrationId,
+    newValue: {
+      paymentStatus: willBeFullyRefunded
+        ? PaymentStatus.REFUNDED
+        : PaymentStatus.PARTIALLY_REFUNDED,
+      refundedAmount: cumulativeSettled,
+    },
+    metadata: {
+      operation: "finalizeSettledEventRegistrationRefund",
+      stripeRefundId,
+      cumulativeAmount: cumulativeSettled,
+    },
+  });
+
+  return true;
 }
