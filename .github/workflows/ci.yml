@@ -868,6 +868,12 @@ jobs:
             **Run**: [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
             **Base branch**: `${{ github.ref_name }}`
 
+            > [!WARNING]
+            > **この PR には required status checks が付きません。**
+            > `GITHUB_TOKEN` で作成された PR は GitHub の再帰防止により `pull_request`
+            > workflow を起動しないため、CodeQL 以外が未実行のまま BLOCKED になります。
+            > close → reopen するか、同 branch の内容で人間名義の PR を作り直してください。
+
             ## Review checklist
 
             - [ ] `e2e/visual/**/*-snapshots/` の diff が **意図したデザイン変更** に対応している
