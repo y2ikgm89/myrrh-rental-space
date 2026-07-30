@@ -43,8 +43,10 @@ describe("confirmation email: no receipt CTA", () => {
     expect(reservationTypes).not.toMatch(
       /export type ReservationEmailData = \{[\s\S]*?receiptSerialNo[\s\S]*?\};/u,
     );
+    // event-emails.ts の型は export されていないため、export 有無を要求すると
+    // 恒久的に不一致で空振りする（Phase C 監査で判明）。export の有無を問わず検証する。
     expect(eventEmails).not.toMatch(
-      /export type EventRegistrationConfirmationData = \{[\s\S]*?receiptSerialNo[\s\S]*?\};/u,
+      /type EventRegistrationConfirmationData = \{[\s\S]*?receiptSerialNo[\s\S]*?\};/u,
     );
   });
 

@@ -40,6 +40,12 @@ describe("admin field error association", () => {
     const describedByViolations: string[] = [];
     const fieldErrorPattern =
       /fields\.([A-Za-z0-9_]+)\.errors\s*&&\s*\(\s*<p(?<attrs>[\s\S]*?)>/gu;
+    // 一部のフィールドは `renderFieldError(field)` のような汎用 helper に抽出され、
+    // `fields.X` ではなく単一パラメータ名 + 三項演算子で書かれる
+    // （例: EventSeoFields.tsx / TicketsField.tsx。Phase C 監査で判明）。
+    // 同じ変数名が条件式と id 属性の両方に使われているかを別途検証する。
+    const genericFieldErrorHelperPattern =
+      /\b(\w+)\.errors\s*&&\s*\1\.errors\.length\s*>\s*0\s*\?\s*\(\s*<p(?<attrs>[\s\S]*?)>/gu;
     // Some fields thread the association through a child component instead of
     // rendering the DOM attribute directly (e.g. a rich-text editor wrapper that
     // accepts an `ariaDescribedBy` prop and applies `aria-describedby` internally).
@@ -80,6 +86,18 @@ describe("admin field error association", () => {
 
         if (!isReferenced) {
           describedByViolations.push(
+            `${relative(ROOT, filePath)}:${lineNumberFor(source, match.index)}`,
+          );
+        }
+      }
+
+      for (const match of source.matchAll(genericFieldErrorHelperPattern)) {
+        const paramName = match[1];
+        const attrs = match.groups?.["attrs"] ?? "";
+        const hasErrorId = attrs.includes(`id={${paramName}.errorId}`);
+
+        if (!hasErrorId) {
+          violations.push(
             `${relative(ROOT, filePath)}:${lineNumberFor(source, match.index)}`,
           );
         }

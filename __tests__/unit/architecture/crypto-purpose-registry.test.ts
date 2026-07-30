@@ -32,6 +32,12 @@ const OTHER_DOMAIN_PURPOSES = [
   "switchbot-guest-passcode", // smart-lock/issue-passcode.ts
   purposeFor("reservation"), // calendar-token.ts
   purposeFor("event"), // calendar-token.ts
+
+  // Phase C 監査で判明: 以下3件は encrypt() 呼び出しで固有 purpose を持つが
+  // このリストに列挙されておらず、衝突検出の死角になっていた
+  "marketing-unsubscribe", // tokens/marketing-unsubscribe-token.ts
+  "event-registration-payment", // tokens/event-registration-payment-token.ts
+  "receipt-download", // receipt-download-token.ts
 ];
 
 describe("crypto purpose registry", () => {

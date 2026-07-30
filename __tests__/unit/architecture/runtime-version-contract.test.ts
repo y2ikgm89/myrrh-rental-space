@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 
 const packageJson = JSON.parse(
   readFileSync(join(process.cwd(), "package.json"), "utf8"),
-) as { packageManager?: string };
+) as { packageManager?: string; engines?: { bun?: string } };
 const bunCiInstallScript = readFileSync(
   join(process.cwd(), "scripts", "bun-ci-install.sh"),
   "utf8",
@@ -28,6 +28,18 @@ function readPackageManagerBunVersion(): string {
   }
 
   return match.groups["version"];
+}
+
+function readEnginesBunVersion(): string {
+  const version = packageJson.engines?.bun;
+
+  if (!version || !/^\d+\.\d+\.\d+$/u.test(version)) {
+    throw new Error(
+      `package.json#engines.bun must be pinned as x.y.z, got ${String(version)}`,
+    );
+  }
+
+  return version;
 }
 
 function readDockerfileBunVersion(): string {
@@ -58,6 +70,12 @@ function readDevcontainerBunVersion(): string {
 }
 
 describe("runtime version contract", () => {
+  // CLAUDE.md の Bun pin SSoT は packageManager + engines.bun の2フィールド。
+  // engines.bun 単独のドリフトは他のテストで検知できていなかった（Phase C 監査で判明）。
+  test("engines.bun matches packageManager", () => {
+    expect(readEnginesBunVersion()).toBe(readPackageManagerBunVersion());
+  });
+
   test("Docker Bun runtime matches packageManager", () => {
     expect(readDockerfileBunVersion()).toBe(readPackageManagerBunVersion());
   });
