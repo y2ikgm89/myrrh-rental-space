@@ -4,6 +4,7 @@ import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-secti
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * システムページ用コマンド（引数で PrismaClient を受け取る）
@@ -12,6 +13,12 @@ import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
  * 本ファイルは `server-only` を付けない（`prisma/seed.ts` から import するため）。
  * Next 専用の default-prisma ラッパは `system-pages-server.ts`。
  */
+
+const MAX_SECTION_BOOTSTRAP_RETRIES = 3;
+
+function isSerializableWriteConflict(error: unknown): boolean {
+  return isRecord(error) && error["code"] === "P2034";
+}
 
 export async function ensurePageSectionsCommand(
   db: PrismaClient,
@@ -38,41 +45,48 @@ export async function ensurePageSectionsCommand(
     return 0;
   }
 
-  try {
-    return await db.$transaction(
-      async (tx) => {
-        const currentSections = await tx.section.findMany({
-          where: { pageId },
-          select: { type: true },
-        });
-        const currentTypes = new Set(
-          currentSections.map((section) => section.type),
-        );
-        const toCreate = defaults.filter(
-          (section) => !currentTypes.has(section.type),
-        );
+  for (let attempt = 0; attempt < MAX_SECTION_BOOTSTRAP_RETRIES; attempt += 1) {
+    try {
+      return await db.$transaction(
+        async (tx) => {
+          const currentSections = await tx.section.findMany({
+            where: { pageId },
+            select: { type: true },
+          });
+          const currentTypes = new Set(
+            currentSections.map((section) => section.type),
+          );
+          const toCreate = defaults.filter(
+            (section) => !currentTypes.has(section.type),
+          );
 
-        if (toCreate.length === 0) {
-          return 0;
-        }
+          if (toCreate.length === 0) {
+            return 0;
+          }
 
-        const created = await tx.section.createMany({
-          data: toCreate.map((section) => ({
-            pageId,
-            type: section.type,
-            config: section.config,
-            order: section.order,
-            isActive: section.isActive,
-          })),
-        });
+          const created = await tx.section.createMany({
+            data: toCreate.map((section) => ({
+              pageId,
+              type: section.type,
+              config: section.config,
+              order: section.order,
+              isActive: section.isActive,
+            })),
+          });
 
-        return created.count;
-      },
-      { isolationLevel: "Serializable" },
-    );
-  } catch {
-    return 0;
+          return created.count;
+        },
+        { isolationLevel: "Serializable" },
+      );
+    } catch (error) {
+      if (isSerializableWriteConflict(error)) {
+        continue;
+      }
+      return 0;
+    }
   }
+
+  return 0;
 }
 
 export async function bootstrapSystemPagesCommand(

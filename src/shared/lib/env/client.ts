@@ -15,7 +15,7 @@ import { z } from "zod";
  * Zod refine で build 時 fail-fast。
  */
 const noTrailingSlash = z.url().refine((v) => !v.endsWith("/"), {
-  message: "must not end with trailing slash (paths are concatenated)",
+  error: "must not end with trailing slash (paths are concatenated)",
 });
 
 /**
