@@ -21,7 +21,15 @@ export function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
   }
 }
 
-function applyImperativeValues(
+/**
+ * Apply imperative style values to a node right now (no hook, no effect).
+ *
+ * `useImperativeStyle` は mount 時の effect で 1 度だけ適用するため、Radix Portal の
+ * ように「最初の commit ではまだ DOM ノードが無く、2 回目の render で生える」子には
+ * 値が永久に適用されない（effect の deps が変わらないので再実行されない）。
+ * その経路では ref callback からこれを直接呼んで attach 時点で適用する。
+ */
+export function applyImperativeStyleValues(
   el: HTMLElement,
   values: ImperativeStyleValues,
 ): void {
@@ -49,7 +57,10 @@ export function useImperativeStyle<T extends HTMLElement>(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    applyImperativeValues(el, JSON.parse(serialized) as ImperativeStyleValues);
+    applyImperativeStyleValues(
+      el,
+      JSON.parse(serialized) as ImperativeStyleValues,
+    );
   }, [ref, serialized]);
 }
 

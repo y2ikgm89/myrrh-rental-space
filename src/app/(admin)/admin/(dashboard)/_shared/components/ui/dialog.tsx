@@ -4,7 +4,10 @@ import { useRef } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { IconX } from "@tabler/icons-react";
 import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import {
+  assignAdminZIndex,
+  useAdminZIndexImperative,
+} from "@/admin/lib/styles/use-admin-z-index-layer";
 import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 import { cn } from "@/shared/lib/cn";
 
@@ -29,6 +32,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       ref={(node) => {
         internalRef.current = node;
+        assignAdminZIndex(node, Z_INDEX.dialogOverlay, style);
         assignRef(ref, node);
       }}
       className={cn(
@@ -60,6 +64,7 @@ function DialogContent({
       <DialogPrimitive.Content
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, Z_INDEX.dialog, style);
           assignRef(ref, node);
         }}
         aria-modal="true"

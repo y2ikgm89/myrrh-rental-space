@@ -6,7 +6,10 @@ import { IconChevronRight } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
 import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import {
+  assignAdminZIndex,
+  useAdminZIndexImperative,
+} from "@/admin/lib/styles/use-admin-z-index-layer";
 import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 
 const dropdownMenuContentVariants = tv({
@@ -40,6 +43,7 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, Z_INDEX.dropdown, style);
           assignRef(ref, node);
         }}
         sideOffset={sideOffset}
@@ -227,6 +231,7 @@ function DropdownMenuSubContent({
       <DropdownMenuPrimitive.SubContent
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, Z_INDEX.dropdown, style);
           assignRef(ref, node);
         }}
         className={cn(

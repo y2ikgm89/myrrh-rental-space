@@ -5,7 +5,10 @@ import { Select as SelectPrimitive } from "radix-ui";
 import { IconCheck, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import { useAdminZIndexImperative } from "@/admin/lib/styles/use-admin-z-index-layer";
+import {
+  assignAdminZIndex,
+  useAdminZIndexImperative,
+} from "@/admin/lib/styles/use-admin-z-index-layer";
 import { assignRef } from "@/shared/lib/csp/use-imperative-style";
 
 const Select = SelectPrimitive.Root;
@@ -94,6 +97,7 @@ function SelectContent({
       <SelectPrimitive.Content
         ref={(node) => {
           internalRef.current = node;
+          assignAdminZIndex(node, zIndex ?? Z_INDEX.dropdown, style);
           assignRef(ref, node);
         }}
         className={cn(
