@@ -10,14 +10,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -44,29 +37,51 @@ describeMaybe("settings/announcement-bar の reorder", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
-    await prisma.announcementBar.deleteMany({});
-  });
+  test("reorderAnnouncementBars は displayOrder を並び替える（既存お知らせバーは保持したまま自分の2件を入れ替える）", async () => {
+    // reorderAnnouncementBars は全 AnnouncementBar が過不足なく揃っていることを
+    // 検証するため、対象スコープは全件。deleteMany({}) は seed 済みの実
+    // お知らせバーを問答無用で破壊し以降の seed 実行を壊すため使わない。
+    // 既存行は保持したまま自分の2行だけ追加して入れ替える。
+    // displayOrder は無条件 @@unique（ソフトデリート概念なし）。過去の削除で
+    // 欠番が生じている可能性があるため existing.length ではなく既存最大値の
+    // 次を使う（0..N-1 への詰め直しは reorderAnnouncementBars 自体が行う）。
+    const existing = await prisma.announcementBar.findMany({
+      orderBy: { displayOrder: "asc" },
+      select: { id: true },
+    });
+    const maxOrder = await prisma.announcementBar.aggregate({
+      _max: { displayOrder: true },
+    });
+    const baseOrder = (maxOrder._max.displayOrder ?? -1) + 1;
 
-  test("reorderAnnouncementBars は displayOrder を並び替える", async () => {
     const a = await prisma.announcementBar.create({
       data: {
         message: [{ _key: "k", _type: "span", text: "A" }],
-        displayOrder: 0,
+        displayOrder: baseOrder,
       },
     });
     const b = await prisma.announcementBar.create({
       data: {
         message: [{ _key: "k", _type: "span", text: "B" }],
-        displayOrder: 1,
+        displayOrder: baseOrder + 1,
       },
     });
 
-    await reorderAnnouncementBars([b.id, a.id]);
+    try {
+      await reorderAnnouncementBars([...existing.map((e) => e.id), b.id, a.id]);
 
-    const rows = await prisma.announcementBar.findMany({
-      orderBy: { displayOrder: "asc" },
-    });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+      const rows = await prisma.announcementBar.findMany({
+        orderBy: { displayOrder: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([
+        ...existing.map((e) => e.id),
+        b.id,
+        a.id,
+      ]);
+    } finally {
+      await prisma.announcementBar.deleteMany({
+        where: { id: { in: [a.id, b.id] } },
+      });
+    }
   });
 });

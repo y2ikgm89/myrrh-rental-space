@@ -10,14 +10,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { NavigationType } from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
@@ -44,46 +37,60 @@ describeMaybe("navigation/commands の reorder", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(async () => {
+  test("updateNavigationOrder は order を並び替える（既存 HEADER_DESKTOP は保持したまま自分の2件を入れ替える）", async () => {
     // updateNavigationOrder は「同一 type の全件が過不足なく揃っていること」を
-    // 検証するため、他 type（HEADER_MOBILE/FOOTER）を残しつつ本テスト対象の
-    // HEADER_DESKTOP のみを一掃する（テーブル全体の無条件 deleteMany は避ける）。
-    await prisma.navigationItem.deleteMany({
-      where: { type: NavigationType.HEADER_DESKTOP },
-    });
-  });
-
-  test("updateNavigationOrder は order を並び替える", async () => {
+    // 検証するため、対象スコープは同一 type 全件。HEADER_DESKTOP には seed 済みの
+    // 本物のナビゲーション項目（/, /spaces 等）が既に存在しうるため、type 全体の
+    // deleteMany は使わない（削除後に復元しないと、以降の seed 実行が
+    // findFirst(type,url) で既存判定できず (type, order) 一意制約違反を起こす）。
+    // 既存行は保持したまま自分の2行だけ追加して入れ替える。
     const label = [{ _key: "k", _type: "span", text: "リンク" }];
+    const suffix = crypto.randomUUID();
+    const existing = await prisma.navigationItem.findMany({
+      where: { type: NavigationType.HEADER_DESKTOP },
+      select: { id: true, order: true },
+      orderBy: { order: "asc" },
+    });
+    const baseOrder =
+      existing.reduce((max, e) => Math.max(max, e.order), -1) + 1;
+
     const a = await prisma.navigationItem.create({
       data: {
         type: NavigationType.HEADER_DESKTOP,
         label,
-        url: "/repro-nav-a",
-        order: 0,
+        url: `/repro-nav-a-${suffix}`,
+        order: baseOrder,
       },
     });
     const b = await prisma.navigationItem.create({
       data: {
         type: NavigationType.HEADER_DESKTOP,
         label,
-        url: "/repro-nav-b",
-        order: 1,
+        url: `/repro-nav-b-${suffix}`,
+        order: baseOrder + 1,
       },
     });
 
-    await updateNavigationOrder([
-      { id: a.id, order: 1 },
-      { id: b.id, order: 0 },
-    ]);
+    try {
+      await updateNavigationOrder([
+        ...existing.map((e) => ({ id: e.id, order: e.order })),
+        { id: a.id, order: baseOrder + 1 },
+        { id: b.id, order: baseOrder },
+      ]);
 
-    // 永続 test-db に HEADER_MOBILE/FOOTER の行が残っている場合があるため、
-    // 検証は本テストが並び替えた HEADER_DESKTOP のみに絞る
-    // （updateNavigationOrder / beforeEach と同じスコープ）。
-    const rows = await prisma.navigationItem.findMany({
-      where: { type: NavigationType.HEADER_DESKTOP },
-      orderBy: { order: "asc" },
-    });
-    expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);
+      const rows = await prisma.navigationItem.findMany({
+        where: { type: NavigationType.HEADER_DESKTOP },
+        orderBy: { order: "asc" },
+      });
+      expect(rows.map((r) => r.id)).toEqual([
+        ...existing.map((e) => e.id),
+        b.id,
+        a.id,
+      ]);
+    } finally {
+      await prisma.navigationItem.deleteMany({
+        where: { id: { in: [a.id, b.id] } },
+      });
+    }
   });
 });
