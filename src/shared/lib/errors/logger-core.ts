@@ -20,6 +20,7 @@
 import type { ErrorLogContext } from "./types";
 import type { ErrorSeverity } from "./types";
 import { redactContext, redactRequestUrl, redactString } from "./redaction";
+import { isRecord } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
 // PII redaction contract (symmetric)
@@ -237,13 +238,24 @@ export type ExtendedErrorLogContext = ErrorLogContext & LogEnrichment;
 // extractMessage
 // ---------------------------------------------------------------------------
 
+/**
+ * `Object.getPrototypeOf` は lib.es5 上 `(o: any) => any` 型のため、戻り値をそのまま
+ * `?.constructor?.name` で辿ると unsafe member access になる。`unknown` へ即座に
+ * 戻してから `isRecord` で narrow し、`constructor` が実際に関数の場合のみ `.name` を読む。
+ */
+function describeNonErrorConstructorName(error: unknown): string {
+  const proto: unknown = Object.getPrototypeOf(error);
+  const ctor = isRecord(proto) ? proto["constructor"] : undefined;
+  return typeof ctor === "function" ? ctor.name : typeof error;
+}
+
 function extractMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   try {
     const json = JSON.stringify(error);
     return json === "{}"
-      ? `[non-Error object: ${Object.getPrototypeOf(error)?.constructor?.name ?? typeof error}]`
+      ? `[non-Error object: ${describeNonErrorConstructorName(error)}]`
       : json;
   } catch {
     return String(error);

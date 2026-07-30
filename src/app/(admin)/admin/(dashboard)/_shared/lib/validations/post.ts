@@ -8,6 +8,7 @@ import {
   seoOgpFieldsFormSchema,
 } from "@/shared/lib/validations/seo";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import { isUnknownArray } from "@/shared/lib/serialize";
 
 // タグ ID は React key として使われるため、重複を禁止する
 const tagsSchema = z
@@ -18,11 +19,11 @@ const tagsSchema = z
   .default([]);
 
 const tagsFormSchema = z.preprocess((v) => {
-  if (Array.isArray(v)) return v;
+  if (isUnknownArray(v)) return v;
   if (typeof v === "string" && v.length > 0) {
     try {
       const parsed: unknown = JSON.parse(v);
-      return Array.isArray(parsed) ? parsed : [];
+      return isUnknownArray(parsed) ? parsed : [];
     } catch {
       return [];
     }

@@ -3,6 +3,7 @@ import {
   TERMS_SCOPE_VALUES,
   isTermsTypeValue,
 } from "@/shared/lib/validations/terms";
+import { isUnknownArray } from "@/shared/lib/serialize";
 
 const slugSchema = z
   .string()
@@ -30,7 +31,7 @@ const booleanFromCheckbox = z.preprocess(
 const termsScopesField = z.preprocess(
   (v) => {
     if (v === undefined || v === null) return [];
-    if (Array.isArray(v)) return v;
+    if (isUnknownArray(v)) return v;
     if (typeof v === "string") return v.length > 0 ? [v] : [];
     return v;
   },

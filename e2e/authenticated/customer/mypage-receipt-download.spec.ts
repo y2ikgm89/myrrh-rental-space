@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
+import { buffer } from "node:stream/consumers";
 import { test, expect } from "@playwright/test";
 import {
   customerReservationTargets,
@@ -70,10 +71,11 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
     if (stream === null) {
       throw new Error("download stream missing");
     }
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    expect(Buffer.concat(chunks).length).toBeGreaterThan(0);
+    // `stream` は Node の `Readable`。素の `for await...of` は Node の型定義上
+    // `[Symbol.asyncIterator](): NodeJS.AsyncIterator<any>` のため chunk が any 化する
+    // （`no-unsafe-argument`）。`node:stream/consumers` の `buffer()` はストーム全体を
+    // 型安全な `Buffer` へ集約する公式ヘルパーで、any を経由しない。
+    const data = await buffer(stream);
+    expect(data.length).toBeGreaterThan(0);
   });
 });
