@@ -7,7 +7,7 @@ export function isAppRoute(href: string): href is Route {
 
 export function toAppRoute(href: string): Route {
   if (!isAppRoute(href)) {
-    throw new Error(`Expected an internal application route: ${href}`);
+    throw new Error(`Expected an internal application route: ${String(href)}`);
   }
 
   return href;
