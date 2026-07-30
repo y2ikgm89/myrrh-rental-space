@@ -128,7 +128,9 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
    （同 spec の `preparePageForVisualSnapshot`）。
 3. `toHaveScreenshot` は `fullPage: true` / `animations: "disabled"` /
    動的要素（announcement / `time, [datetime]` / instagram）の `mask` /
-   `maxDiffPixelRatio: 0.01` を指定する。
+   `maxDiffPixelRatio: 0.01` / `timeout`（既定 5s は full-page の収束に短い）を指定する。
+   外部由来のゆらぎは `beforeEach` で断つ（現状 Turnstile のみ abort。**画像は route で
+   差し替えない** — seed はローカル SVG で `/_next/image` を経由しないため無意味）。
 4. baseline の生成・更新は **CI でのみ**行う:
    `gh workflow run ci.yml --ref main -f update_visual_baseline=true`。
    ローカルで `--update-snapshots` した結果は commit しない（CI と描画が一致せず必ず落ちる）。
