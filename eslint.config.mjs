@@ -181,6 +181,11 @@ const eslintConfig = defineConfig([
             // Promise 返却関数を渡す誤用を検出する（void 属性を期待する箇所への
             // async 関数の直接指定は unhandled rejection の温床になるため）。
             "@typescript-eslint/no-misused-promises": "error",
+            "@typescript-eslint/no-unnecessary-type-assertion": "error",
+            "@typescript-eslint/no-base-to-string": "error",
+            "@typescript-eslint/no-redundant-type-constituents": "error",
+            "@typescript-eslint/restrict-template-expressions": "error",
+            "@typescript-eslint/unbound-method": "error",
           },
         },
         {

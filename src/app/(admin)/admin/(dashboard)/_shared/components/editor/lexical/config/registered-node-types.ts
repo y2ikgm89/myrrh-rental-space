@@ -15,8 +15,6 @@
 import { EDITOR_NODES } from "./nodes";
 import { collectLexicalEditorStateNodeTypes } from "@/shared/lib/lexical/collect-editor-state-node-types";
 
-type EditorNodeEntry = (typeof EDITOR_NODES)[number];
-
 /**
  * Lexical コア (`createEditor()`) が常に暗黙登録する組込 node type。
  * `node_modules/lexical/src/LexicalEditor.ts` の `createEditor()` 実装
@@ -46,7 +44,7 @@ export function getRegisteredLexicalNodeTypes(): Set<string> {
   }
 
   const types = new Set<string>(IMPLICIT_LEXICAL_NODE_TYPES);
-  for (const entry of EDITOR_NODES as readonly EditorNodeEntry[]) {
+  for (const entry of EDITOR_NODES) {
     if (typeof entry === "object") {
       // node replacement エントリ: { replace, with, withKlass }
       types.add((entry.withKlass ?? entry.replace).getType());

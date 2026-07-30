@@ -112,7 +112,7 @@ function requireEnv(name: string): string {
 
 function formatGcloudError(args: string[], error: unknown): string {
   if (error instanceof Error && "stderr" in error) {
-    const stderr = String(error.stderr ?? "");
+    const stderr = describeUnknown(error.stderr, "");
     return `${gcloudBin} ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`;
   }
   return `${gcloudBin} ${args.join(" ")} failed: ${String(error)}`;
@@ -261,6 +261,18 @@ function getPath(value: unknown, path: string[]): unknown {
     current = current[key];
   }
   return current;
+}
+
+// `unknown` 値(gcloud JSON レスポンス由来のフィールドやエラープロパティ)を、
+// 既定の Object.prototype.toString("[object Object]")化を避けて安全に文字列化する。
+// string/number/boolean はそのまま、それ以外は JSON.stringify、null/undefined は fallback。
+function describeUnknown(value: unknown, fallback: string): string {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
 }
 
 function detailForResult(result: GcloudJsonResult, detail: string): string {
@@ -470,7 +482,7 @@ async function main(): Promise<void> {
   addCheck(
     "project is under the configured Google Cloud Organization",
     organizationId === expectedOrganizationId,
-    `actual=${String(organizationId ?? "none")} expected=${expectedOrganizationId}`,
+    `actual=${describeUnknown(organizationId, "none")} expected=${expectedOrganizationId}`,
   );
 
   const cloudIdentityApi = tryRunGcloudJson([
@@ -535,7 +547,7 @@ async function main(): Promise<void> {
         groupKeyId === expectedGroupEmail,
       detailForResult(
         groupDescription,
-        `group=${String(groupKeyId ?? "missing")} name=${String(groupName ?? "missing")} domain=${cloudIdentityDomain}`,
+        `group=${describeUnknown(groupKeyId, "missing")} name=${describeUnknown(groupName, "missing")} domain=${cloudIdentityDomain}`,
       ),
     );
 
@@ -943,7 +955,7 @@ async function main(): Promise<void> {
   addCheck(
     "admin Cloud Run service has direct IAP enabled",
     adminIapEnabled === "true",
-    `iap-enabled=${String(adminIapEnabled ?? "missing")} url=${String(adminUrl ?? "missing")}`,
+    `iap-enabled=${describeUnknown(adminIapEnabled, "missing")} url=${describeUnknown(adminUrl, "missing")}`,
   );
 
   const adminRunIamPolicy = runGcloudJson([
@@ -1085,7 +1097,7 @@ async function main(): Promise<void> {
     wifProvider.ok && wifProviderState === "ACTIVE",
     detailForResult(
       wifProvider,
-      `provider=${wifProviderId} pool=${wifPoolId} state=${String(wifProviderState ?? "missing")}`,
+      `provider=${wifProviderId} pool=${wifPoolId} state=${describeUnknown(wifProviderState, "missing")}`,
     ),
   );
   addCheck(
@@ -1094,8 +1106,8 @@ async function main(): Promise<void> {
     detailForResult(
       wifProvider,
       wifProviderConditionErrors.length === 0
-        ? `condition=${String(wifProviderCondition ?? "missing")}`
-        : `errors=${wifProviderConditionErrors.join(",")} condition=${String(wifProviderCondition ?? "missing")}`,
+        ? `condition=${describeUnknown(wifProviderCondition, "missing")}`
+        : `errors=${wifProviderConditionErrors.join(",")} condition=${describeUnknown(wifProviderCondition, "missing")}`,
     ),
   );
 

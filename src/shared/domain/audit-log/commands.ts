@@ -32,9 +32,9 @@ export type CreateAuditLogRecordInput = {
   action: AuditAction;
   resource: string;
   resourceId?: string;
-  oldValue?: Prisma.InputJsonValue | typeof Prisma.JsonNull | unknown;
-  newValue?: Prisma.InputJsonValue | typeof Prisma.JsonNull | unknown;
-  metadata?: Prisma.InputJsonValue | typeof Prisma.JsonNull | unknown;
+  oldValue?: unknown;
+  newValue?: unknown;
+  metadata?: unknown;
   createdAt?: Date;
 };
 

@@ -79,9 +79,7 @@ function notifyAnalyticsConsentDenied(): void {
     // を rest args 版で TS-safe に書き直したもの — GTM は dataLayer に push された
     // array-like の numeric index (0="consent", 1="update", 2=payload) を読むため、
     // `arguments` (Arguments object) と rest args (Array) は shape が等価。
-    const win = window as typeof window & {
-      dataLayer?: unknown[];
-    };
+    const win = window;
     if (Array.isArray(win.dataLayer)) {
       const gtag = (...args: unknown[]): void => {
         win.dataLayer?.push(args);

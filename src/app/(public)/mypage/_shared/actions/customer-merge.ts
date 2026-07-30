@@ -159,9 +159,12 @@ export async function confirmCustomerMergeAction(
 ): Promise<void> {
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) {
+    const rawRateLimitToken = formData.get("token");
+    const rateLimitToken =
+      typeof rawRateLimitToken === "string" ? rawRateLimitToken : "";
     redirect(
       toAppRoute(
-        `/mypage/merge/confirm?error=rate_limit&token=${encodeURIComponent(String(formData.get("token") ?? ""))}`,
+        `/mypage/merge/confirm?error=rate_limit&token=${encodeURIComponent(rateLimitToken)}`,
       ),
     );
   }

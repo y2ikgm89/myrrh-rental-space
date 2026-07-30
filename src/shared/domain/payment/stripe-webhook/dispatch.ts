@@ -20,33 +20,23 @@ export async function dispatchStripeWebhookEvent(
 ): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
-      await handleCheckoutSessionCompleted(
-        event.data.object as Stripe.Checkout.Session,
-        stripeClient,
-      );
+      await handleCheckoutSessionCompleted(event.data.object, stripeClient);
       break;
 
     case "checkout.session.async_payment_succeeded":
-      await handleAsyncPaymentSucceeded(
-        event.data.object as Stripe.Checkout.Session,
-        stripeClient,
-      );
+      await handleAsyncPaymentSucceeded(event.data.object, stripeClient);
       break;
 
     case "checkout.session.async_payment_failed":
-      await handleAsyncPaymentFailed(
-        event.data.object as Stripe.Checkout.Session,
-      );
+      await handleAsyncPaymentFailed(event.data.object);
       break;
 
     case "checkout.session.expired":
-      await handleCheckoutSessionExpired(
-        event.data.object as Stripe.Checkout.Session,
-      );
+      await handleCheckoutSessionExpired(event.data.object);
       break;
 
     case "charge.refunded":
-      await handleChargeRefunded(event.data.object as Stripe.Charge);
+      await handleChargeRefunded(event.data.object);
       break;
 
     default:
