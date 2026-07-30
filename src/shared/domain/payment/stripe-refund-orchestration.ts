@@ -156,6 +156,50 @@ export async function applyConfirmedRefundStatus(
   return result.count;
 }
 
+type RefundSettlementClaimClient = {
+  refund: {
+    updateMany: (args: {
+      where: { stripeRefundId: string; status: { notIn: string[] } };
+      data: { status: string };
+    }) => Promise<{ count: number }>;
+  };
+};
+
+/**
+ * Refund 単位の一度きり claim: status 列を非終端状態 (pending/requires_action)
+ * から "succeeded" へ遷移させられた呼び出しだけが count>0 を得る。
+ *
+ * `finalizeSettledReservationRefund` / `finalizeSettledEventRegistrationRefund`
+ * (`reservations` / `events` の payment-queries.ts) が entity 側の
+ * paymentStatus 反映と同一 tx 内でこの claim を呼び、返り値の count を唯一の
+ * 権威ある冪等性ゲートとして使う。webhook の at-least-once 再配信で同じ refund
+ * が何度届いても、2 回目以降はここで count=0 になり早期 return する
+ * (Codex review, PR #1666)。
+ *
+ * この関数を `stripe-refund-orchestration.ts` に置く (呼び出し元の
+ * payment-queries.ts に直接書かない) 理由は `applyConfirmedRefundStatus` と同じ:
+ * `__tests__/unit/architecture/refund-append-only.test.ts` が Refund の
+ * append-only 契約を守るため `events/payment-commands.ts` /
+ * `reservations/payment-commands.ts` / `reservations/payment-queries.ts` を
+ * 対象に `tx.refund.update*` / `prisma.refund.update*` を grep で 0 件強制する。
+ *
+ * @returns 実際に更新された行数 (0 なら別配信で処理済み、または既に failed/canceled
+ *          確定済み)
+ */
+export async function claimRefundSettlement(
+  tx: RefundSettlementClaimClient,
+  stripeRefundId: string,
+): Promise<number> {
+  const result = await tx.refund.updateMany({
+    where: {
+      stripeRefundId,
+      status: { notIn: ["succeeded", "failed", "canceled"] },
+    },
+    data: { status: "succeeded" },
+  });
+  return result.count;
+}
+
 function assertValidSavepointName(name: string): string {
   if (!SAVEPOINT_NAME_PATTERN.test(name)) {
     throw new Error(`Invalid savepoint name: ${name}`);

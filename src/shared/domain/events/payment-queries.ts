@@ -20,7 +20,11 @@ import {
 } from "@/shared/domain/payment/payment-status-guards";
 import { refundOrphanedStripePaymentForCancelledEventRegistration } from "@/shared/domain/events/payment-commands";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
-import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
+import {
+  acquirePaymentRefundAdvisoryLock,
+  claimRefundSettlement,
+  PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
+} from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -347,69 +351,94 @@ export async function applyEventChargeRefundIdempotent(input: {
 }
 
 /**
+ * 呼び出し元が必ず単発で残額全額を請求する自動返金経路。STRIPE_DASHBOARD
+ * (Stripe ダッシュボード経由の手動返金) は ADMIN と同じく人間が任意額を
+ * 指定しうるため、ここには含めない (Codex review, PR #1666)。
+ */
+const AUTOMATED_FULL_REFUND_TYPES: readonly string[] = [
+  REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+  REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+  REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+];
+
+/**
  * refund.updated (status → "succeeded") webhook 確定時に呼ぶ、konbini /
  * customer_balance 等の非同期返金の後日確定処理。
  * Reservation 側 `finalizeSettledReservationRefund` と同型
- * (events 側は返金完了メール送信の仕組み自体が現状無いため paymentStatus 反映のみ、
- * refundedByType による ADMIN(部分返金対応) / AUTO_*(常に単発全額) の分岐も同様。
- * 詳細は reservations 側の docstring 参照、Codex review PR #1665)。
+ * (events 側は返金完了メール送信の仕組み自体が現状無いため paymentStatus 反映のみ)。
+ * 冪等性の設計 (Refund 単位の status claim を tx 内で entity 反映と atomic に行い、
+ * 唯一の権威あるゲートにする理由) と refundedByType 分岐 (ADMIN/STRIPE_DASHBOARD =
+ * 部分返金対応、AUTO_* = 常に単発全額) の詳細は reservations 側の docstring 参照
+ * (Codex review, PR #1666)。
  *
- * @returns true = 今回このコマンドが確定処理を行った。false = 既に確定済み
- *          (webhook 重複配送・re-try) で idempotent に no-op、または対象申込が
- *          消失済み。
+ * @returns true = 今回このコマンドが claim に成功し確定処理を行った。false = 既に
+ *          確定済み (webhook 重複配送・re-try) で idempotent に no-op、または
+ *          対象申込が消失済み。
  */
 export async function finalizeSettledEventRegistrationRefund(
   registrationId: string,
   stripeRefundId: string,
   refundedByType: string,
 ): Promise<boolean> {
-  const registration = await prisma.eventRegistration.findUnique({
-    where: { id: registrationId },
-    select: { paidAmount: true },
-  });
-  if (!registration || registration.paidAmount === null) {
-    return false;
-  }
+  const claimResult = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(
+      tx,
+      "event-registration",
+      registrationId,
+    );
 
-  const aggregate = await prisma.refund.aggregate({
-    where: {
-      eventRegistrationId: registrationId,
-      status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
-    },
-    _sum: { amount: true },
-  });
-  const cumulativeSettled = aggregate._sum.amount ?? 0;
-  const isAdminPartialRefund = refundedByType === REFUNDED_BY_TYPE.ADMIN;
-  const willBeFullyRefunded = isAdminPartialRefund
-    ? cumulativeSettled >= registration.paidAmount
-    : true;
+    const claimedCount = await claimRefundSettlement(tx, stripeRefundId);
+    if (claimedCount === 0) {
+      return null;
+    }
 
-  const updated = await prisma.eventRegistration.updateMany({
-    where: isAdminPartialRefund
-      ? {
-          id: registrationId,
-          paymentStatus: {
-            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+    const registration = await tx.eventRegistration.findUnique({
+      where: { id: registrationId },
+      select: { paidAmount: true },
+    });
+    if (!registration || registration.paidAmount === null) {
+      return null;
+    }
+
+    const aggregate = await tx.refund.aggregate({
+      where: { eventRegistrationId: registrationId, status: "succeeded" },
+      _sum: { amount: true },
+    });
+    const cumulativeSettled = aggregate._sum.amount ?? 0;
+
+    const isAutomatedFullRefund =
+      AUTOMATED_FULL_REFUND_TYPES.includes(refundedByType);
+    const willBeFullyRefunded = isAutomatedFullRefund
+      ? true
+      : cumulativeSettled >= registration.paidAmount;
+
+    await tx.eventRegistration.updateMany({
+      where: isAutomatedFullRefund
+        ? {
+            id: registrationId,
+            paymentStatus: { not: PaymentStatus.REFUNDED },
+          }
+        : {
+            id: registrationId,
+            paymentStatus: {
+              in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+            },
           },
-        }
-      : {
-          id: registrationId,
-          paymentStatus: { not: PaymentStatus.REFUNDED },
-        },
-    data: {
-      paymentStatus: willBeFullyRefunded
-        ? PaymentStatus.REFUNDED
-        : PaymentStatus.PARTIALLY_REFUNDED,
-    },
-  });
-  if (updated.count === 0) {
+      data: {
+        paymentStatus: willBeFullyRefunded
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED,
+      },
+    });
+
+    return { willBeFullyRefunded, cumulativeSettled };
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
+
+  if (claimResult === null) {
     return false;
   }
+  const { willBeFullyRefunded, cumulativeSettled } = claimResult;
 
-  // 保留していた完了状態への遷移が今回確定した事実を append-only 証跡に残す
-  // (Codex review, PR #1665: pending 時点の AuditLog は状態未確定である旨のみ記録し、
-  // 確定した完了遷移はここで別エントリとして記録する)。webhook 起点のため userId
-  // は付与しない。
   await createAuditLogRecord({
     action: AuditAction.UPDATE,
     resource: "event-registration",

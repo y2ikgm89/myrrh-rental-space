@@ -59,23 +59,12 @@ export async function handleRefundStatusUpdated(
     return;
   }
 
-  if (entity.status !== refund.status) {
-    // status 列の更新自体は claim 数を問わない: 別プロセスが同時に確定済み
-    // (race) でも、後続の finalize 呼び出しは entity.reservationId /
-    // eventRegistrationId 側の updateMany WHERE claim で独立に idempotent。
-    await applyConfirmedRefundStatus(
-      prisma,
-      refund.id,
-      entity.status,
-      refund.status,
-    );
-  }
-
   if (isRefundSettledSuccess(refund.status)) {
-    // finalize は必ず呼ぶ (claimed===0 でも早期 return しない): webhook 再送で
-    // status 列の更新が前回既に完了していても、paymentStatus 反映・メール送信
-    // 側が前回クラッシュ等で未完了のままの可能性があるため。冪等性は finalize
-    // 関数自身の updateMany WHERE claim (paymentStatus ガード) が担保する。
+    // Refund.status の claim (非終端 → "succeeded") は finalize 関数自身が
+    // entity 反映と同一 tx 内で atomic に行う (Codex review, PR #1666)。
+    // ここで事前に applyConfirmedRefundStatus を呼んでしまうと finalize 側の
+    // claim が常に count=0 になり、finalize (entity 反映・完了 AuditLog・
+    // 返金完了メール) が一切実行されなくなるため、succeeded 側では呼ばない。
     const settledAmount = fromStripeUnitAmount(refund.amount, refund.currency);
     if (entity.reservationId) {
       await finalizeSettledReservationRefund(
@@ -94,6 +83,19 @@ export async function handleRefundStatusUpdated(
       invalidateEventRegistrationCache();
     }
     return;
+  }
+
+  // succeeded 以外 (failed/canceled/pending/requires_action) はここで status
+  // 列を記録する。副作用を伴う succeeded 側と異なり単純な状態記録のため、
+  // entity.status との一致チェックのみで十分 (再送での重複更新は同値書込に
+  // なるだけで実害がない)。
+  if (entity.status !== refund.status) {
+    await applyConfirmedRefundStatus(
+      prisma,
+      refund.id,
+      entity.status,
+      refund.status,
+    );
   }
 
   if (refund.status === "failed" || refund.status === "canceled") {

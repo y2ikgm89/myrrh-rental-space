@@ -30,6 +30,12 @@ const mockRefundAggregate = mock<
     args: Record<string, unknown>,
   ) => Promise<{ _sum: { amount: number | null } }>
 >(() => Promise.resolve({ _sum: { amount: 0 } }));
+const mockRefundUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockExecuteRaw = mock<(...args: unknown[]) => Promise<unknown>>(() =>
+  Promise.resolve(undefined),
+);
 const mockCreateAuditLogRecord = mock<
   (input: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
@@ -67,7 +73,21 @@ mock.module("@/shared/db/prisma", () => ({
     },
     refund: {
       aggregate: mockRefundAggregate,
+      updateMany: mockRefundUpdateMany,
     },
+    $executeRaw: mockExecuteRaw,
+    $transaction: (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        eventRegistration: {
+          findUnique: mockRegFindUnique,
+          updateMany: mockRegUpdateMany,
+        },
+        refund: {
+          aggregate: mockRefundAggregate,
+          updateMany: mockRefundUpdateMany,
+        },
+        $executeRaw: mockExecuteRaw,
+      }),
   },
 }));
 mock.module("@/shared/domain/audit-log/commands", () => ({
@@ -130,6 +150,8 @@ describe("events/payment-queries", () => {
     mockRefundOrphanedStripePaymentForCancelledEventRegistration.mockClear();
     mockFireAndForget.mockClear();
     mockRefundAggregate.mockClear();
+    mockRefundUpdateMany.mockClear();
+    mockExecuteRaw.mockClear();
     mockCreateAuditLogRecord.mockClear();
     mockRegUpdateMany.mockResolvedValue({ count: 0 });
     mockRefundOrphanedStripePaymentForCancelledEventRegistration.mockResolvedValue(
@@ -139,6 +161,8 @@ describe("events/payment-queries", () => {
       void promise;
     });
     mockRefundAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    mockRefundUpdateMany.mockResolvedValue({ count: 1 });
+    mockExecuteRaw.mockResolvedValue(undefined);
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
@@ -310,6 +334,40 @@ describe("events/payment-queries", () => {
   describe("finalizeSettledEventRegistrationRefund", () => {
     const STRIPE_REFUND_ID = "re_test_event_settled";
 
+    test("この refund の Refund.status claim に失敗 (既に確定済み・二重配信) → false、entity/AuditLog に一切触れない", async () => {
+      mockRefundUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      const result = await finalizeSettledEventRegistrationRefund(
+        REGISTRATION_ID,
+        STRIPE_REFUND_ID,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(result).toBe(false);
+      expect(mockRegFindUnique).not.toHaveBeenCalled();
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+    });
+
+    test("claim 済の Refund 行を非終端状態から succeeded へ遷移させる", async () => {
+      mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+
+      await finalizeSettledEventRegistrationRefund(
+        REGISTRATION_ID,
+        STRIPE_REFUND_ID,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(mockRefundUpdateMany).toHaveBeenCalledWith({
+        where: {
+          stripeRefundId: STRIPE_REFUND_ID,
+          status: { notIn: ["succeeded", "failed", "canceled"] },
+        },
+        data: { status: "succeeded" },
+      });
+    });
+
     test("申込が見つからない → false（updateMany を呼ばない）", async () => {
       mockRegFindUnique.mockResolvedValueOnce(null);
 
@@ -336,10 +394,25 @@ describe("events/payment-queries", () => {
       expect(mockRegUpdateMany).not.toHaveBeenCalled();
     });
 
+    test("累積額の集計は status=succeeded のみに限定する (pending な別 refund を含めない)", async () => {
+      mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 6000 } });
+
+      await finalizeSettledEventRegistrationRefund(
+        REGISTRATION_ID,
+        STRIPE_REFUND_ID,
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+
+      expect(mockRefundAggregate).toHaveBeenCalledWith({
+        where: { eventRegistrationId: REGISTRATION_ID, status: "succeeded" },
+        _sum: { amount: true },
+      });
+    });
+
     test("ADMIN: 累積が paidAmount 未到達 → PARTIALLY_REFUNDED、PAID/PARTIALLY_REFUNDED からのみ claim", async () => {
       mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 3000 } });
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledEventRegistrationRefund(
         REGISTRATION_ID,
@@ -361,10 +434,32 @@ describe("events/payment-queries", () => {
       );
     });
 
+    test("STRIPE_DASHBOARD: ADMIN と同様に部分返金しうるため累積額ベースで判定する (Codex review, PR #1666)", async () => {
+      mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
+
+      const result = await finalizeSettledEventRegistrationRefund(
+        REGISTRATION_ID,
+        STRIPE_REFUND_ID,
+        REFUNDED_BY_TYPE.STRIPE_DASHBOARD,
+      );
+
+      expect(result).toBe(true);
+      expect(mockRegUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: {
+              in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+            },
+          }),
+          data: { paymentStatus: PaymentStatus.PARTIALLY_REFUNDED },
+        }),
+      );
+    });
+
     test("AUTO_CAPACITY_RACE: 入口 paymentStatus を問わず (REFUNDED 以外なら) 無条件 REFUNDED に遷移する", async () => {
       mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await finalizeSettledEventRegistrationRefund(
         REGISTRATION_ID,
@@ -383,7 +478,7 @@ describe("events/payment-queries", () => {
       );
     });
 
-    test("updateMany count=0（既に確定済み）→ false、AuditLog を書かない", async () => {
+    test("entity 側 updateMany が count=0 (他経路で既に REFUNDED 確定済み) でも claim が成功していれば AuditLog は書く", async () => {
       mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
       mockRegUpdateMany.mockResolvedValueOnce({ count: 0 });
@@ -394,14 +489,13 @@ describe("events/payment-queries", () => {
         REFUNDED_BY_TYPE.ADMIN,
       );
 
-      expect(result).toBe(false);
-      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
     });
 
     test("成功時: AuditLog に実際の遷移先 paymentStatus と累積額を記録する", async () => {
       mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       await finalizeSettledEventRegistrationRefund(
         REGISTRATION_ID,

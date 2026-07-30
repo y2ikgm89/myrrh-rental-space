@@ -24,7 +24,11 @@ import { refundOrphanedStripePaymentForCancelledReservation } from "@/shared/dom
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import { sendReservationRefundEmail } from "@/shared/domain/email/lib-dispatch";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
-import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
+import {
+  acquirePaymentRefundAdvisoryLock,
+  claimRefundSettlement,
+  PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS,
+} from "@/shared/domain/payment/stripe-refund-orchestration";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -379,6 +383,17 @@ export async function applyChargeRefundIdempotent(input: {
 }
 
 /**
+ * 呼び出し元が必ず単発で残額全額を請求する自動返金経路。STRIPE_DASHBOARD
+ * (Stripe ダッシュボード経由の手動返金) は ADMIN と同じく人間が任意額を
+ * 指定しうるため、ここには含めない (Codex review, PR #1666)。
+ */
+const AUTOMATED_FULL_REFUND_TYPES: readonly string[] = [
+  REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+  REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+  REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
+];
+
+/**
  * refund.updated (status → "succeeded") webhook 確定時に呼ぶ、konbini /
  * customer_balance 等の非同期返金の後日確定処理。
  *
@@ -387,24 +402,45 @@ export async function applyChargeRefundIdempotent(input: {
  * 温存する (silent false-positive な返金完了通知を防ぐため)。この関数が
  * webhook 確定後にその「保留していた」paymentStatus 反映と返金完了メール送信を行う。
  *
- * `refundedByType` で分岐する (Codex review, PR #1665):
- * - ADMIN(管理者手動返金): 部分返金対応。累積 **確定済み** 額 (status が
- *   `REFUND_AGGREGATE_EXCLUDED_STATUSES` に該当しない行の合計) が totalPriceWithTax に
- *   到達したかで REFUNDED / PARTIALLY_REFUNDED を判定。入口は PAID/PARTIALLY_REFUNDED
- *   のみ (この経路の唯一の前提)
- * - AUTO_*(自動返金全般): 常に単発全額返金。入口となる paymentStatus は呼び出し元
- *   により UNPAID/PENDING/PAID/PARTIALLY_REFUNDED のいずれもあり得るため、
- *   「まだ REFUNDED になっていない」ことのみを WHERE 条件にし、無条件で REFUNDED に
- *   確定する (累積額の全額到達判定はしない — 元々「remaining 分を全額返金する」
- *   単発処理のため)
+ * ## 冪等性の設計 (Codex review, PR #1666)
  *
- * webhook からの再試行に対して idempotent: 呼び出し元 (`handleRefundStatusUpdated`)
- * は Refund.status の claim 成否に関わらず本関数を呼ぶため、`updateMany` の
- * WHERE 条件自体が二重適用防止の唯一の防衛線になる。
+ * 唯一の権威ある冪等性ゲートは、tx 内で行う **この refund 単位の Refund.status
+ * claim**（非終端状態 → "succeeded"）である。entity (Reservation) 側の
+ * paymentStatus を claim に使わないのは、部分返金では遷移先
+ * (PARTIALLY_REFUNDED) が遷移前と同値になり得て非単調なため、webhook の
+ * at-least-once 再配信のたびに完了 AuditLog・返金完了メールが重複実行されて
+ * しまうから。claim (Refund.status 遷移) と entity 側の paymentStatus 反映は
+ * 同一 tx 内で atomic に行い、claim 成功後にプロセスが落ちても DB 上は
+ * 「未着手」に巻き戻る (tx 全体が rollback される) ため、再配信は安全に
+ * 最初からやり直せる。tx 確定後の AuditLog 書込・メール送信のみ tx 外
+ * (audit-log の hash-chain 書込は独自の serializable tx を持つため同一 tx に
+ * ネストできない) — この区間でのクラッシュは稀な残存リスクとして許容する
+ * (webhook 再配信では claim が既に消費済みのため再実行されない＝欠落はしても
+ * 重複はしない)。
  *
- * @returns true = 今回このコマンドが paymentStatus 遷移を実行した (email 送信含む)。
- *          false = 既に確定済み (webhook 重複配送・re-try) で idempotent に no-op、
- *          または対象予約が消失済み。
+ * `refundedByType` で分岐する:
+ * - ADMIN と STRIPE_DASHBOARD (管理者手動返金 / Stripe ダッシュボード経由の
+ *   手動返金。Stripe 側で発生する返金は attribution 不明時もここに fallback
+ *   する) はどちらも部分返金しうるため、累積 **確定済み (status="succeeded")**
+ *   額が totalPriceWithTax に到達したかで REFUNDED / PARTIALLY_REFUNDED を
+ *   判定する。入口は PAID/PARTIALLY_REFUNDED のみ
+ * - AUTO_*(自動返金全般: on-cancel / capacity-race / amount-mismatch) は
+ *   呼び出し元が必ず単発で残額全額を請求するため、常に単発全額返金として扱う。
+ *   入口となる paymentStatus は UNPAID/PENDING/PAID/PARTIALLY_REFUNDED の
+ *   いずれもあり得るため、「まだ REFUNDED になっていない」ことのみを
+ *   WHERE 条件にし、無条件で REFUNDED に確定する
+ *
+ * 累積額の集計は status="succeeded" の行のみに限定する (pending/requires_action
+ * な別の進行中 refund を含めない)。`resolveRefundAmount` 側の「請求可能残額」計算
+ * (`REFUND_AGGREGATE_EXCLUDED_STATUSES` = failed/canceled のみ除外) とは目的が
+ * 異なり、そちらは二重返金防止のため未確定額も予約済み残高として含める必要が
+ * ある一方、ここでの目的は「実際に完了した金額」なので未確定額を含めると、
+ * 他の進行中 refund が後で failed になった場合に取り戻せない REFUNDED 誤確定を
+ * 招く。
+ *
+ * @returns true = 今回このコマンドが claim に成功し paymentStatus 遷移を実行した
+ *          (email 送信含む)。false = 既に確定済み (webhook 重複配送・re-try) で
+ *          idempotent に no-op、または対象予約が消失済み。
  */
 export async function finalizeSettledReservationRefund(
   reservationId: string,
@@ -412,55 +448,67 @@ export async function finalizeSettledReservationRefund(
   thisRefundAmount: number,
   refundedByType: string,
 ): Promise<boolean> {
-  const reservation = await prisma.reservation.findUnique({
-    where: { id: reservationId },
-    select: { totalPriceWithTax: true },
-  });
-  if (!reservation || reservation.totalPriceWithTax === null) {
-    return false;
-  }
+  const claimResult = await prisma.$transaction(async (tx) => {
+    await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);
 
-  const aggregate = await prisma.refund.aggregate({
-    where: {
-      reservationId,
-      status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
-    },
-    _sum: { amount: true },
-  });
-  const cumulativeSettled = aggregate._sum.amount ?? 0;
-  const isAdminPartialRefund = refundedByType === REFUNDED_BY_TYPE.ADMIN;
-  const willBeFullyRefunded = isAdminPartialRefund
-    ? cumulativeSettled >= reservation.totalPriceWithTax
-    : true;
+    const claimedCount = await claimRefundSettlement(tx, stripeRefundId);
+    if (claimedCount === 0) {
+      return null;
+    }
 
-  const updated = await prisma.reservation.updateMany({
-    where: isAdminPartialRefund
-      ? {
-          id: reservationId,
-          deletedAt: null,
-          paymentStatus: {
-            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+    const reservation = await tx.reservation.findUnique({
+      where: { id: reservationId },
+      select: { totalPriceWithTax: true },
+    });
+    if (!reservation || reservation.totalPriceWithTax === null) {
+      return null;
+    }
+
+    const aggregate = await tx.refund.aggregate({
+      where: { reservationId, status: "succeeded" },
+      _sum: { amount: true },
+    });
+    const cumulativeSettled = aggregate._sum.amount ?? 0;
+
+    const isAutomatedFullRefund =
+      AUTOMATED_FULL_REFUND_TYPES.includes(refundedByType);
+    const willBeFullyRefunded = isAutomatedFullRefund
+      ? true
+      : cumulativeSettled >= reservation.totalPriceWithTax;
+
+    await tx.reservation.updateMany({
+      where: isAutomatedFullRefund
+        ? {
+            id: reservationId,
+            deletedAt: null,
+            paymentStatus: { not: PaymentStatus.REFUNDED },
+          }
+        : {
+            id: reservationId,
+            deletedAt: null,
+            paymentStatus: {
+              in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+            },
           },
-        }
-      : {
-          id: reservationId,
-          deletedAt: null,
-          paymentStatus: { not: PaymentStatus.REFUNDED },
-        },
-    data: {
-      paymentStatus: willBeFullyRefunded
-        ? PaymentStatus.REFUNDED
-        : PaymentStatus.PARTIALLY_REFUNDED,
-    },
-  });
-  if (updated.count === 0) {
+      data: {
+        paymentStatus: willBeFullyRefunded
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED,
+      },
+    });
+    // entity 側 updateMany の count はここでは見ない。この関数の唯一の権威ある
+    // 冪等性ゲートは上の Refund.status claim であり、entity が既に他経路
+    // (手動 admin 操作等) で REFUNDED 確定済みで count=0 になっても、この
+    // refund 自身の完了記録 (AuditLog・メール) は続行してよい。
+
+    return { willBeFullyRefunded, cumulativeSettled };
+  }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
+
+  if (claimResult === null) {
     return false;
   }
+  const { willBeFullyRefunded, cumulativeSettled } = claimResult;
 
-  // 保留していた完了状態への遷移が今回確定した事実を append-only 証跡に残す
-  // (Codex review, PR #1665: pending 時点の AuditLog は状態未確定である旨のみ記録し、
-  // 確定した完了遷移はここで別エントリとして記録する)。webhook 起点のため userId
-  // は付与しない (refundOrphanedStripePaymentForCancelledReservation と同型)。
   await createAuditLogRecord({
     action: AuditAction.UPDATE,
     resource: "reservation",
