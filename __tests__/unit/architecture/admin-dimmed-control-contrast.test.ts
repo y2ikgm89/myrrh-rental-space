@@ -3,6 +3,16 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import {
+  AA_MIN_RATIO,
+  contrastRatio,
+  createOklchTokenReader,
+  over,
+  saturate,
+  toHex,
+  type Rgb,
+} from "../../helpers/color-contrast";
+
 /**
  * 管理画面: 「操作可能なのに `opacity-*` で減光している」要素の
  * WCAG 2.1 AA (SC 1.4.3 Contrast Minimum = 4.5:1) drift gate。
@@ -21,7 +31,7 @@ import { describe, expect, test } from "bun:test";
  *
  * ## この gate が守る範囲
  *
- * サイドバー nav 項目（`admin-sidebar-contrast.test.ts`）とは別に、管理画面全域で
+ * サイドバー nav 項目（`admin-feature-disabled-contrast.test.ts`）とは別に、管理画面全域で
  * 「無効 / 非表示 / 過去 / 削除済み」を **group opacity** で表現していた 5 箇所を
  * 対象にする。いずれも減光を撤去し、前景を畳み込まない手がかり
  * （背景 tint / 実色トークン / saturate フィルタ）へ置き換えた。
@@ -126,104 +136,6 @@ const MEDIA_PREVIEW = join(
   "MediaPreview.tsx",
 );
 
-/** WCAG 2.1 SC 1.4.3 (Level AA) の通常サイズテキスト最低比。 */
-const AA_MIN_RATIO = 4.5;
-
-type Rgb = readonly [number, number, number];
-
-// ---------------------------------------------------------------------------
-// 色計算（CSS Color 4 / WCAG 2.1）
-// ---------------------------------------------------------------------------
-
-const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
-
-const encodeGamma = (value: number): number =>
-  value <= 0.0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - 0.055;
-
-const decodeGamma = (value: number): number =>
-  value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-
-/** OKLCH → gamma-encoded sRGB (0..1)。行列は Björn Ottosson / CSS Color 4 準拠。 */
-function oklchToSrgb(lightness: number, chroma: number, hueDeg: number): Rgb {
-  const hue = (hueDeg * Math.PI) / 180;
-  const a = chroma * Math.cos(hue);
-  const b = chroma * Math.sin(hue);
-
-  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
-
-  return [
-    encodeGamma(
-      clamp01(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-    ),
-    encodeGamma(
-      clamp01(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-    ),
-    encodeGamma(
-      clamp01(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-    ),
-  ];
-}
-
-/** CSS の alpha 合成（source-over、gamma-encoded sRGB 空間）。 */
-function over(fg: Rgb, bg: Rgb, alpha: number): Rgb {
-  return [
-    alpha * fg[0] + (1 - alpha) * bg[0],
-    alpha * fg[1] + (1 - alpha) * bg[1],
-    alpha * fg[2] + (1 - alpha) * bg[2],
-  ];
-}
-
-/**
- * CSS `filter: saturate(s)`。Filter Effects の shorthand filter は sRGB 空間で
- * 評価される。係数は WCAG の輝度係数と同じ 0.213/0.715/0.072 だが、gamma-encoded
- * 値に掛けるため相対輝度は**保存されない**（例: warning は 0.418 → 0.382）。
- * よって減光後の比率を測るときは saturate も必ず適用する。
- */
-function saturate(color: Rgb, s: number): Rgb {
-  const [r, g, b] = color;
-  return [
-    clamp01(
-      (0.213 + 0.787 * s) * r +
-        (0.715 - 0.715 * s) * g +
-        (0.072 - 0.072 * s) * b,
-    ),
-    clamp01(
-      (0.213 - 0.213 * s) * r +
-        (0.715 + 0.285 * s) * g +
-        (0.072 - 0.072 * s) * b,
-    ),
-    clamp01(
-      (0.213 - 0.213 * s) * r +
-        (0.715 - 0.715 * s) * g +
-        (0.072 + 0.928 * s) * b,
-    ),
-  ];
-}
-
-function relativeLuminance(color: Rgb): number {
-  return (
-    0.2126 * decodeGamma(color[0]) +
-    0.7152 * decodeGamma(color[1]) +
-    0.0722 * decodeGamma(color[2])
-  );
-}
-
-function contrastRatio(fg: Rgb, bg: Rgb): number {
-  const a = relativeLuminance(fg);
-  const b = relativeLuminance(bg);
-  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-}
-
-function toHex(color: Rgb): string {
-  const channel = (value: number): string =>
-    Math.round(clamp01(value) * 255)
-      .toString(16)
-      .padStart(2, "0");
-  return `#${channel(color[0])}${channel(color[1])}${channel(color[2])}`;
-}
-
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 // ---------------------------------------------------------------------------
@@ -251,23 +163,7 @@ function normalizedSource(path: string): string {
 
 const adminCss = readFileOrThrow(ADMIN_CSS);
 
-/** `--color-<name>: oklch(L C H)` を読む（alpha 付きは対象外）。 */
-function readOklchToken(name: string): Rgb {
-  const match = new RegExp(
-    `--color-${name}:\\s*oklch\\(\\s*([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s*\\)`,
-    "u",
-  ).exec(adminCss);
-  if (match === null) {
-    throw new Error(
-      `admin.css に --color-${name} の oklch 定義が見つかりません`,
-    );
-  }
-  const [, rawL, rawC, rawH] = match;
-  if (rawL === undefined || rawC === undefined || rawH === undefined) {
-    throw new Error(`--color-${name} の oklch() が解析できません`);
-  }
-  return oklchToSrgb(Number(rawL), Number(rawC), Number(rawH));
-}
+const readOklchToken = createOklchTokenReader(adminCss);
 
 const CARD = readOklchToken("card");
 const FOREGROUND = readOklchToken("foreground");
