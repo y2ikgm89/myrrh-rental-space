@@ -335,12 +335,33 @@ jobs:
             git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" -- 'prisma/migrations/**/migration.sql'
           )
 
+          # grep は **行単位**で照合する。Prisma / 手書きの migration は
+          #   ALTER TABLE "terms_agreements"
+          #     ALTER COLUMN "resourceId" SET DATA TYPE TEXT;
+          # のように改行を挟むことがあり、その場合どちらの行も単独では条件を
+          # 満たさないため **判定が丸ごとすり抜ける**（= 破壊的変更が計画
+          # ダウンタイム無しで本番に出る）。実測: マージ済みの
+          # 20260726030000_admin_notification_resource_id_varchar は
+          # この形で rc=1（不一致）だった。
+          #
+          # 照合前に「1 文 = 1 行」へ正規化する:
+          #   1. `sed` で行コメント（`--` 以降）を落とす
+          #      — 散文に "DROP COLUMN" 等が出て誤検知するのを防ぐ
+          #   2. 改行を空白に潰して文の途中の折返しを繋ぐ
+          #   3. `;` で分割して 1 文 1 行にする
+          #      — 隣接する無関係な文どうしが `.*` で繋がる誤検知を防ぐ
           if ((${#changed_migrations[@]} > 0)); then
-            if grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE' "${changed_migrations[@]}"; then
-              BREAKING_MIGRATION_DEPLOY="true"
-              printf 'Breaking migration deploy mode enabled for:\n'
-              printf '  %s\n' "${changed_migrations[@]}"
-            fi
+            for migration_file in "${changed_migrations[@]}"; do
+              # 削除された migration は diff に出るが実体が無い（通常は起きない）
+              [ -f "${migration_file}" ] || continue
+              if sed 's/--.*$//' "${migration_file}" \
+                | tr '\n' ' ' \
+                | tr ';' '\n' \
+                | grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE'; then
+                BREAKING_MIGRATION_DEPLOY="true"
+                printf 'Breaking migration deploy mode enabled by: %s\n' "${migration_file}"
+              fi
+            done
           fi
 
           SHORT_SHA="${GITHUB_SHA::7}"
