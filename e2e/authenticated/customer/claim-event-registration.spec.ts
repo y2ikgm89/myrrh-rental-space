@@ -92,7 +92,12 @@ test.describe("claim/event-registration - ゲストイベント申込のマイ�
     await expect(
       page.getByRole("heading", { level: 1, name: "イベント申込詳細" }),
     ).toBeVisible();
-    await expect(page.getByText(fixture.eventTitle)).toBeVisible();
+    // 申込詳細ページはページ見出しと申込カード見出しの 2 箇所に同じタイトルを出す。
+    // `getByText` だと 2 件一致するので heading role の先頭に絞る
+    // （run 30602667260 の strict mode violation）。
+    await expect(
+      page.getByRole("heading", { name: fixture.eventTitle }).first(),
+    ).toBeVisible();
     // claim 後は詳細ページで参加 URL が表示される（isEventVirtualAccessible gate）。
     await expect(
       page.getByRole("link", { name: fixture.meetingUrl }),
