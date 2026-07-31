@@ -138,7 +138,11 @@ export function SortableNavRow({
         className={cn(
           "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
           isDragging && "opacity-30",
-          !item.isActive && "opacity-50",
+          // 無効の行は操作可能（Switch / メニュー / ドラッグ）なので減光しない。
+          // group opacity は subtree の前景も背景も畳み込むため AA を割る
+          // （opacity-50 で 3.44:1、URL の muted テキストは 2.14:1）。
+          // 状態は「無効」Badge と Switch が担い、背景 tint は補助的な手がかり。
+          !item.isActive && "bg-muted/40",
           isChild && "border-l-2 border-l-primary/30 ps-8",
         )}
       >
@@ -265,7 +269,8 @@ export function SortableSocialRow({
         className={cn(
           "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
           isDragging && "opacity-30",
-          !link.isActive && "opacity-50",
+          // SortableNavRow と同じ理由で減光しない（上のコメント参照）。
+          !link.isActive && "bg-muted/40",
         )}
       >
         <div

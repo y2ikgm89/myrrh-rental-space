@@ -116,14 +116,20 @@ export function ReservationTable({
             <TableBody>
               {reservations.map((reservation) => {
                 const selectable = isSelectable(reservation);
+                // 削除済み行も click / Enter で詳細に遷移できる操作可能な行なので
+                // 減光しない。opacity-50 では本文 3.44:1・muted テキスト 2.14:1 と
+                // WCAG 1.4.3 AA を割っていた（group opacity は subtree の前景も
+                // 背景も畳み込む）。状態は「削除済み」バッジが担い、背景 tint は
+                // 前景を畳み込まない補助的な手がかりとして残す。
+                const deletedRowProps = reservation.deletedAt
+                  ? { className: "bg-muted/40" }
+                  : {};
                 return (
                   <ClickableTableRow
                     key={reservation.id}
                     href={`/admin/reservations/${reservation.id}`}
                     aria-label={`${formatDateWithWeekday(reservation.startTime)} ${reservation.space.name} の予約を表示`}
-                    {...(reservation.deletedAt
-                      ? { className: "opacity-50" }
-                      : {})}
+                    {...deletedRowProps}
                   >
                     <TableCell onClick={stopRowClick}>
                       {canUpdate ? (
