@@ -64,11 +64,17 @@ test.describe("claim/event-registration - ゲストイベント申込のマイ�
       page.getByRole("heading", { level: 2, name: fixture.eventTitle }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Phase B.1 task 17: claim トークン保持者は claim 前でも HYBRID イベントの
-    // 参加 URL を確認できる（isEventVirtualAccessible gate）。
+    // claim ランディングは参加 URL を開示しない（fail-closed）。
+    // `getEventRegistrationForClaim` は eventTitle / startTime しか select しない契約で、
+    // `architecture-boundaries.test.ts` の「meetingUrl query SSoT (fail-closed)」が
+    // `not.toMatch(/meetingUrl/)` で機械強制している。claim トークンは
+    // 「マイページに追加する」ための token であり、参加 URL の閲覧は
+    // ゲストステータスハブ（status token）とマイページの責務。
+    // 旧 spec はこの gate 導入前の想定のまま「claim 前でも URL が見える」と
+    // アサートしていたため落ちていた（run 30569714860）。契約側に合わせる。
     await expect(
       page.getByRole("link", { name: fixture.meetingUrl }),
-    ).toBeVisible();
+    ).toHaveCount(0);
 
     const confirmButton = page.getByRole("button", {
       name: "この申込をマイページに追加する",
