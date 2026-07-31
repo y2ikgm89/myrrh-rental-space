@@ -75,9 +75,10 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
  *   `chromium` project は setup-admin dependency を持たないため、spec 側で
  *   `ensureAdminUser()` + `primeAdminRequestContext(context)` を明示する。
- * - `spaces` は `reservation` / `reviews` の依存元。spaces OFF テストの間だけ
- *   reservation 側の switch が視覚上 disabled になるが、DB 側の explicit true 値
- *   は保存されている (registry.buildInitialFeatureModules の contract)。
+ * - `spaces` は `reservation` / `reviews` の依存元。spaces を OFF にすると
+ *   依存先の switch は disabled + OFF 表示になり、**DB 上も false に畳まれる**
+ *   (`updateFeatureModulesCommand` が persist 前に `normalizeFeatureModules` を
+ *   適用する write-side SSoT)。所有範囲を依存カスケード閉包で取るのはこのため。
  * - APP_SURFACE=public で webServer が起動している場合、proxy が /admin を 404 に
  *   するため spec 全体を skip する (rules の app-structure.md 参照)。ローカル
  *   既定と CI の chromium project は APP_SURFACE=admin で動作する。
@@ -267,9 +268,35 @@ const SEED_DISABLED_MODULES = new Set(
     .filter((id) => id.length > 0),
 );
 
+/**
+ * 所有 module の依存元。registry の `requires` を所有範囲に絞った写しで、
+ * 一致は `e2e-feature-module-ownership.test.ts` が強制する
+ * （所有 module の requires が全て所有内にあることも同 gate が保証する）。
+ */
+const OWNED_MODULE_REQUIRES: Readonly<Record<string, readonly string[]>> = {
+  reservation: ["spaces"],
+  reviews: ["spaces"],
+  payment: ["reservation"],
+};
+
+/**
+ * seed 由来の基準値に**アプリと同じ依存正規化を適用**する。
+ *
+ * `SEED_FEATURE_MODULES_DISABLED=spaces` のように依存元だけを無効化した構成では、
+ * `reservation` / `reviews` / `payment` は env に列挙されていなくても OFF になる。
+ * UI は `checked={depsMet && isOn}` で false を表示し、書込側も
+ * `normalizeFeatureModules`（`updateFeatureModulesCommand` が persist 前に適用する
+ * write-side SSoT）が false に畳む。集合の直接参照だけで「true」と期待すると、
+ * 復元が到達不能な状態を待ち続け afterAll も落ちる。
+ */
+function baselineEnabled(id: string): boolean {
+  if (SEED_DISABLED_MODULES.has(id)) return false;
+  return (OWNED_MODULE_REQUIRES[id] ?? []).every((req) => baselineEnabled(req));
+}
+
 /** seed 由来の desired 値。`aria-checked` と同じ文字列で返す。 */
 function baselineDesiredFor(id: string): string {
-  return SEED_DISABLED_MODULES.has(id) ? "false" : "true";
+  return baselineEnabled(id) ? "true" : "false";
 }
 
 const EXPECTED_BASELINE_STATE = OWNED_MODULE_ENTRIES.map(
