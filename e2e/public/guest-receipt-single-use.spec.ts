@@ -42,9 +42,24 @@ import { test, expect } from "@playwright/test";
  * fixture スクリプトは serialNo を `2099-XXXXXX` のランダム 6 桁で発行する
  * (運用採番の `<現行年>-XXXXXX` と絶対衝突しない範囲)。ReceiptSequence には
  * 触れないため、他 spec / 並列 worker と競合しない。
+ *
+ * ## rate limit バケットの隔離
+ * route handler の per-serialNo limiter (10/hour) は上記のとおり毎回新しい
+ * serialNo になるので当たらない。当たるのは **proxy.ts の apiRateLimiter
+ * (100/分/IP)** のほう — `chromium` project は public spec + a11y spec が
+ * 2 worker から同一 IP で /api を叩き続けるため、飽和した窓に入った request が
+ * 429 を受ける (CI run 30593381788 で 1 回目 POST が 566ms で 429)。
+ * `e2e/helpers/admin-auth.ts` の `primeAdminRequestContext` と同型に、この spec
+ * 専用の client IP を割り当ててバケットを隔離する。XFF が client IP として
+ * 採用されるのは loopback host のときだけ (`rate-limit.ts` の
+ * `canUseDevelopmentProxyFallback`)。
+ *
+ * 動的割当 (`203.0.113.10`〜`.250`) と衝突しない固定値を使う。
  */
 
 const execFileAsync = promisify(execFile);
+
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.5" } });
 
 interface ReceiptDownloadFixture {
   readonly reservationId: string;
