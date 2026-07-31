@@ -11,7 +11,19 @@ import { test, expect } from "@playwright/test";
  *
  * 前提:
  * - dev サーバー動作中（chromium project = 未認証）
+ *
+ * ## rate limit バケットの隔離
+ *
+ * `/api/calendar/*` は proxy の `apiRateLimiter`（100/分/IP）対象
+ * （`/api/webhooks` `/api/cron` の `infraEndpointRateLimiter` や除外の `/api/live`
+ * とは別枠）。既定 IP のままだと飽和した窓で **401 の代わりに 429** を受け、
+ * 認証ガードの contract 検証が偽陰性になる。
+ *
+ * 割当表は `.claude/rules/testing-e2e.md`。gate は
+ * `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts`。
  */
+
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.7" } });
 
 const VALID_UUID = "11111111-1111-1111-1111-111111111111";
 const VALID_CUID_LIKE = "cab1234567890abcdef1234567";

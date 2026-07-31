@@ -93,6 +93,9 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.5` = guest-receipt-single-use、`.6` = calendar-download      |
   | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp` |
 
+  対象は `apiRateLimiter`（100/分）に当たる `/api` のみ。`/api/live` は完全除外、
+  `/api/webhooks` `/api/cron` は別枠の `infraEndpointRateLimiter`（300/分）なので不要。
+
   XFF が client IP として採用されるのは loopback host のときだけ
   （`rate-limit.ts` の `canUseDevelopmentProxyFallback`）なので本番の信頼境界は不変。
 

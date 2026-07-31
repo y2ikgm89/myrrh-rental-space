@@ -56,7 +56,47 @@ function collectStaticIpAssignments(): Map<string, string[]> {
   return byIp;
 }
 
+/**
+ * proxy が `apiRateLimiter`（100/分/IP）を適用する `/api` パスかどうか。
+ *
+ * `/api/live` は完全除外、`/api/webhooks` と `/api/cron` は別枠の
+ * `infraEndpointRateLimiter`（300/分）なので、専用 IP を必須にしない
+ * （`src/proxy.ts` の `isLiveProbeEndpoint` / infra 判定）。
+ */
+function usesSharedApiLimiter(source: string): boolean {
+  const callsApiViaRequest =
+    /request\.(get|post|put|delete|fetch)\s*\(/u.test(source) &&
+    source.includes("/api/");
+  if (!callsApiViaRequest) return false;
+
+  const apiPaths = [
+    ...source.matchAll(/["`'](\/api\/[a-z0-9\-/[\]$.{}]*)/giu),
+  ].map((m) => String(m[1]));
+  return apiPaths.some(
+    (p) =>
+      !p.startsWith("/api/live") &&
+      !p.startsWith("/api/webhooks") &&
+      !p.startsWith("/api/cron"),
+  );
+}
+
 describe("E2E client IP allocation", () => {
+  test("共有 limiter 対象の /api を叩く spec は専用 IP を持つ", () => {
+    // 衝突チェックだけでは「割当が無い spec」が不可視になる（Codex P2 指摘）。
+    // 実測: `calendar-api.spec.ts` は `/api/calendar/*` を request で直接叩くのに
+    // 割当が無く、飽和時に 401 の代わりに 429 を受けうる状態だった。
+    const missing = listE2EFiles()
+      .filter((rel) => rel.endsWith(".spec.ts"))
+      .filter((rel) => {
+        const source = readFileSync(join(root, ...rel.split("/")), "utf8");
+        return (
+          usesSharedApiLimiter(source) && !source.includes("x-forwarded-for")
+        );
+      });
+
+    expect(missing).toEqual([]);
+  });
+
   test("同じ静的 IP を 2 つ以上の spec が使っていない", () => {
     const collisions = [...collectStaticIpAssignments().entries()]
       .filter(([, files]) => files.length > 1)
