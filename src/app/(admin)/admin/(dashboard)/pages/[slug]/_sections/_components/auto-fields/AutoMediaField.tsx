@@ -177,7 +177,14 @@ export function AutoMediaField({
         aria-busy={isBusy}
       >
         {hasMedia && value !== undefined ? (
-          <MediaPreview url={value} accept={accept} alt={label} />
+          // MediaPreview は `<video controls>` / `<audio controls>` / `<iframe>`
+          // を描画しうる。これらは disabled 属性を持てないので、枠を opacity-60 で
+          // 減光しても操作可能なまま残り、WCAG 1.4.3 の inactive 例外が成立しない。
+          // inert で本当に操作不能にする（focus 不可・click 不可・a11y tree 除外）。
+          // aria-busy は外側の枠に残すのでアップロード中の告知は失われない。
+          <div className="h-full w-full" inert={disabled || isBusy}>
+            <MediaPreview url={value} accept={accept} alt={label} />
+          </div>
         ) : (
           <button
             type="button"

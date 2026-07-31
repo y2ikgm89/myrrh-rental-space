@@ -386,8 +386,11 @@ export function getEventsForDay(
  * - text は **text-foreground** 統一 (旧 text-muted-foreground は WCAG 4.5:1 ギリギリ
  *   を回避し AAA 余裕 pass に)
  * - 色覚多様性 (CUD): 色 hue 5 値分離 + Tabler icon (Clock/Check/CircleCheck/
- *   AlertCircle/X) + 日本語ラベル + CANCELLED 取消線/opacity-60/saturate-50 (PR #688-690)
+ *   AlertCircle/X) + 日本語ラベル + CANCELLED 取消線/saturate-50 (PR #688-690)
  *   の **4 重符号化** で WCAG SC 1.4.1 (色に依存しない) を担保
+ * - 過去 / キャンセルの減光に opacity は使わない: セルは click 可能で SC 1.4.3 の
+ *   inactive 例外に当たらず、group opacity が subtree の前景も背景も畳み込んで
+ *   4.5:1 を割るため (saturate は輝度をほぼ保つので色帯の desaturate のみに使う)
  *
  * 業界整合:
  * - COMPLETED = info (青) は Linear / Jira / Notion / Carbon Blue=Info の事実上の標準

@@ -109,7 +109,10 @@ export function SidebarWidgetCard({
       className={cn(
         "group flex items-center gap-3 rounded-md border p-3 transition-colors",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
-        !widget.enabled && "opacity-60 bg-muted/30",
+        // 無効ウィジェットも操作可能（Switch / 編集・削除メニュー / ドラッグ）なので
+        // 減光しない。opacity-60 は説明テキスト（muted）を 2.50:1 まで落としていた。
+        // 手がかりは背景 tint だけで足りる（tint 自体は前景を畳み込まない）。
+        !widget.enabled && "bg-muted/30",
       )}
     >
       {/* Drag Handle */}

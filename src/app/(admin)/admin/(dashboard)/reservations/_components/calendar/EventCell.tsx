@@ -54,7 +54,8 @@ function formatSeriesLabel(event: CalendarEvent): string | null {
  * 時間軸カレンダー (Week/Day/Resource) の絶対配置イベントセル。
  *
  * - 高さに応じて情報量を 3 段階で出し分け (time-only / +title / +space)
- * - キャンセル予約は line-through + opacity で控えめに表示
+ * - キャンセル / 過去予約は line-through + saturate-50 で控えめに表示（opacity は
+ *   操作可能な要素の前景を畳み込んで AA を割るため使わない）
  * - z-index は CSS 変数 `--event-z` 経由で渡し、focus-visible:z-30 / hover:z-20 が
  *   Tailwind 側で specificity 勝ちできるようにする (inline `style.zIndex` を使うと
  *   class の `focus-visible:z-30` が specificity 負けして corner sticky の背後に
@@ -92,10 +93,15 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         "hover:shadow-md",
         getStatusColorClass(event.status),
-        // Google Calendar 同等: 過去 / キャンセルは opacity に加え saturate も
-        // 落とし、border-l-4 の鮮やかな色帯を desaturate して「明確に過去」感を出す。
-        // Tailwind v4 公式 utility (saturate-{0,50,100,150,200} がデフォルトスケール)。
-        isMuted && "opacity-60 saturate-50",
+        // Google Calendar 同等: 過去 / キャンセルは border-l-4 の色帯を desaturate して
+        // 「明確に過去」感を出す。Tailwind v4 公式 utility
+        // (saturate-{0,50,100,150,200} がデフォルトスケール)。
+        //
+        // opacity は使わない: このセルは過去 / キャンセルでも click 可能なので
+        // WCAG 1.4.3 の inactive 例外に当たらず 4.5:1 が要る。group opacity は
+        // subtree の前景も背景も畳み込むため、opacity-60 では本文 4.00〜4.42:1 /
+        // スペース名 2.21:1 まで落ちていた。saturate は輝度をほぼ保つので安全。
+        isMuted && "saturate-50",
       )}
       onClick={() => onClick(event)}
     >
@@ -123,7 +129,9 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
         </div>
       )}
       {showMeta && (
-        <div className="mt-0.5 truncate text-[0.6875rem] leading-tight text-muted-foreground">
+        // muted-foreground は色 tint (bg-destructive/15) と過去セルの bg-muted/30 が
+        // 重なると 4.40:1 まで落ちるため使わない。階層は文字サイズと weight で表す。
+        <div className="mt-0.5 truncate text-[0.6875rem] leading-tight">
           {event.spaceName}
         </div>
       )}
@@ -163,7 +171,8 @@ export function EventBadge({
         "mb-0.5 flex w-full items-center gap-1 truncate rounded border-l-2 px-1.5 py-0.5 text-left text-xs transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         getStatusColorClass(event.status),
-        isMuted && "opacity-60 saturate-50",
+        // EventCell と同じ理由で opacity は使わない（上のコメント参照）。
+        isMuted && "saturate-50",
       )}
       onClick={() => onClick(event)}
     >

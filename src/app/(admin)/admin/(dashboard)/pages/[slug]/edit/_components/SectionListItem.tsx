@@ -110,7 +110,10 @@ export function SectionListItem({
         className={cn(
           "flex min-h-11 flex-1 items-center gap-2 rounded-sm px-1 text-left text-sm",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          !section.isActive && "opacity-60",
+          // 非表示セクションでもこのボタンは押せる（編集対象として選択できる）ので
+          // 減光しない。opacity-60 だと選択中（bg-accent）の行で 4.49:1 と AA を割る。
+          // 実色トークンで de-emphasize すれば 5.11:1 以上を保てる。
+          !section.isActive && "text-muted-foreground",
         )}
       >
         <SectionTypeIcon
