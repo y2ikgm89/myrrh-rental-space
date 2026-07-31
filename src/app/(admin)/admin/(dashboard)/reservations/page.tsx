@@ -128,7 +128,14 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
             予約の確認・ステータス変更・キャンセル処理を行います
           </p>
         </div>
-        <div className="flex gap-2">
+        {/*
+          モバイル幅ではアクション 3 つ（新規予約 / カレンダー表示 / CSV）の合計が
+          コンテンツ幅を 24px 超え、`shrink-0` の Button が縮まないため
+          documentElement.scrollWidth が 398 > 390 になってページ全体が横スクロールする
+          （responsive-shell.spec.ts の実測。犯人は右端 398px の CSV リンク）。
+          折り返しを許して収める。
+        */}
+        <div className="flex flex-wrap gap-2">
           {allowCreate ? (
             <Button asChild>
               <Link href="/admin/reservations/new">
