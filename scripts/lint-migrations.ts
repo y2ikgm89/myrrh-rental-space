@@ -89,6 +89,17 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // 計画ダウンタイム付きデプロイ（SET DATA TYPE）。Risk 1 は Cloud Run min0/max1
   // atomic switch で排除済。
   "prisma/migrations/20260729140000_decimal_to_int_clean_break/migration.sql",
+  // TermsAgreement.resourceId を UUID → TEXT。上の
+  // 20260726030000_admin_notification_resource_id_varchar と**同じ根本原因**で、
+  // そちらを直したときに取り残されていた片割れ: polymorphic な resourceId が
+  // cuid の `EventRegistration.id` を受けるのに uuid 型のままだった。実害は
+  // 「必須規約に同意したイベント参加申込・キャンセル待ち登録が P2007 で必ず
+  // rollback する」本番バグ（full CI run 30632351655 の webServer ログで実測）。
+  // `ALTER COLUMN ... SET DATA TYPE` は `changing-column-type` を発火し
+  // `-- squawk-ignore` では抑止できないため allowlist。widening なので既存の
+  // uuid 値は失われない。計画ダウンタイム付きデプロイ（SET DATA TYPE）が発動する。
+  // Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
+  "prisma/migrations/20260731135410_terms_agreement_resource_id_polymorphic/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {
