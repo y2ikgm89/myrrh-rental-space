@@ -526,19 +526,24 @@ test.describe
       await setFeatureModule(page, c.label, false);
 
       for (const route of c.routes) {
-        // cache invalidation は非同期なので、not-found 境界が出るまで待つ。
-        await expect
-          .poll(
-            async () => {
-              await page.goto(route);
-              return notFoundHeading(page).isVisible();
-            },
-            {
-              timeout: ROUTE_STATUS_TIMEOUT_MS,
-              message: `[${c.module}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
-            },
-          )
-          .toBe(true);
+        // 待つのは **ナビゲーションの内側**で行う。
+        //
+        // 以前は `expect.poll` の predicate に `goto` → `isVisible()` を並べていたが、
+        // `isVisible()` は**リトライしない瞬間値**で、`goto` は `load` で解決する。
+        // not-found 境界の本体は `loading.tsx` の Suspense fallback が差し替わる
+        // 110〜600ms 後に現れるため、probe はほぼ必ず skeleton を見て false を返し、
+        // 次の反復が新しい `goto` を撃って解決済み DOM を捨てる。**20 秒の予算は
+        // 原理的に使えず poll は永遠に勝てない**（run 30631140902 / 30632351655 の
+        // trace で、境界は 4 回描画されていたのに 5 反復すべて false だった）。
+        //
+        // `setFeatureModule` が保存 dispatch の完了を待つようになった（#1741）ので、
+        // probe 時点で cache invalidation は済んでいる。単発 `goto` +
+        // リトライする web-first assertion で足りる（`error-pages.spec.ts` と同型）。
+        await page.goto(route);
+        await expect(
+          notFoundHeading(page),
+          `[${c.module}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
+        ).toBeVisible({ timeout: ROUTE_STATUS_TIMEOUT_MS });
 
         // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
         // 注入する契約に依存する。これが無いと soft-404 が索引される。

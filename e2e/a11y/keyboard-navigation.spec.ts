@@ -162,17 +162,11 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
       "aria-expanded",
       "false",
     );
-    await expect
-      .poll(
-        async () => {
-          if (await controls.closeButton.isVisible()) return true;
-
-          await controls.hamburger.click();
-          return controls.closeButton.isVisible();
-        },
-        { timeout: 5000 },
-      )
-      .toBe(true);
+    // `expect.poll` の predicate に `isVisible()` を置かない（リトライしない瞬間値で、
+    // 反復のたびに副作用の click を撃ち直すことになる）。click は 1 回で十分で、
+    // 開くのを待つのはリトライする web-first assertion の仕事。
+    await controls.hamburger.click();
+    await expect(controls.closeButton).toBeVisible({ timeout: 5000 });
     await expect(controls.dialog).toBeVisible();
     await expect(controls.hamburgerTrigger).toHaveAttribute(
       "aria-expanded",
