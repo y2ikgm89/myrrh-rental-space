@@ -1,11 +1,18 @@
 "use client";
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryDigest,
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
+import { normalizeError } from "@/shared/lib/errors/types";
 import { useEffect } from "react";
 import { logger } from "@/shared/lib/errors/logger-core";
 
-export default function AuthError({ error, unstable_retry }: ErrorInfo) {
-  const digest = "digest" in error ? String(error.digest) : undefined;
+export default function AuthError(props: ErrorBoundaryProps) {
+  const error = normalizeError(props.error);
+  const retry = errorBoundaryRetry(props);
+  const digest = errorBoundaryDigest(props.error);
 
   useEffect(() => {
     logger.error("Auth error boundary triggered", {
@@ -30,7 +37,7 @@ export default function AuthError({ error, unstable_retry }: ErrorInfo) {
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
-            onClick={() => unstable_retry()}
+            onClick={() => retry()}
             className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             再試行する

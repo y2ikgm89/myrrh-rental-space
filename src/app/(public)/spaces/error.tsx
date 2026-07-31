@@ -1,12 +1,16 @@
 "use client";
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
 
 import { Container } from "@/public/components/design-system/container";
 import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
 
-export default function SpacesError({ unstable_retry }: ErrorInfo) {
+export default function SpacesError(props: ErrorBoundaryProps) {
+  const retry = errorBoundaryRetry(props);
   return (
     <div>
       <Container>
@@ -15,7 +19,7 @@ export default function SpacesError({ unstable_retry }: ErrorInfo) {
           <p className="text-muted-foreground">
             しばらく経ってから再度お試しください。
           </p>
-          <Button variant="editorial" onClick={() => unstable_retry()}>
+          <Button variant="editorial" onClick={() => retry()}>
             再試行
           </Button>
         </div>

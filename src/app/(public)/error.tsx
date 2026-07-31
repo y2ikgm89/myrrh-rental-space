@@ -7,14 +7,21 @@
  * Header/Footerレイアウトは維持される。
  */
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryDigest,
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
+import { normalizeError } from "@/shared/lib/errors/types";
 import { useEffect } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { logger } from "@/shared/lib/errors/logger-core";
 
-export default function PublicError({ error, unstable_retry }: ErrorInfo) {
-  const digest = "digest" in error ? String(error.digest) : undefined;
+export default function PublicError(props: ErrorBoundaryProps) {
+  const error = normalizeError(props.error);
+  const retry = errorBoundaryRetry(props);
+  const digest = errorBoundaryDigest(props.error);
 
   useEffect(() => {
     logger.error("Public page error boundary triggered", {
@@ -76,11 +83,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button
-            variant="editorial"
-            size="sm"
-            onClick={() => unstable_retry()}
-          >
+          <Button variant="editorial" size="sm" onClick={() => retry()}>
             再試行
           </Button>
           <Button variant="editorial" size="sm" href="/">

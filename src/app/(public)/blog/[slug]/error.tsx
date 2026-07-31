@@ -1,11 +1,13 @@
 "use client";
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
 import type { ReactElement } from "react";
 
-export default function BlogPostError({
-  unstable_retry,
-}: ErrorInfo): ReactElement {
+export default function BlogPostError(props: ErrorBoundaryProps): ReactElement {
+  const retry = errorBoundaryRetry(props);
   return (
     <div className="flex min-h-[60svh] flex-col items-center justify-center gap-4">
       <h1 className="font-heading text-2xl font-light tracking-tight text-foreground">
@@ -13,7 +15,7 @@ export default function BlogPostError({
       </h1>
       <button
         type="button"
-        onClick={() => unstable_retry()}
+        onClick={() => retry()}
         className="text-sm underline"
       >
         再試行する
