@@ -13,14 +13,13 @@ import {
  * - `receiptId` は `findReceiptForDownload` で解決済みの Receipt.id を渡す。
  * - `input` は `renderReceiptPdf` に渡す render 引数 (`Receipt.taxRate` は Int %)。
  *
- * ## 挙動 — claim を先に取り、勝者だけが render する
- * 1. `updateMany({ where: { id, usedAt: null } })` で単発 claim する。
+ * ## 挙動 — render は DB の外・単発性は updateMany の WHERE claim
+ * 1. `usedAt` を安価に事前確認する（消費済みトークンで無駄に render しないため）。
+ * 2. **トランザクション外**で PDF を render する。同一 receipt への同時要求は
+ *    in-flight の render promise を共有する（request coalescing）。
+ * 3. `updateMany({ where: { id, usedAt: null } })` で単発 claim する。
  *    更新できたのは 1 リクエストだけなので、これが単発性の正本
  *    (`.claude/rules/business-domain.md` の「updateMany の WHERE で claim」パターン)。
- *    敗者はここで "already_used" (=404 相当) になり、render に進まない。
- * 2. 勝者が **トランザクション外**で PDF を render する。
- * 3. render が失敗したら自分の claim だけを解放し (`where: { usedAt: claimedAt }`)、
- *    エラーを再 throw する。次回リクエストで再取得できる。
  *
  * ## なぜ tx 内 render をやめたか（本番 500 の実因）
  * 旧実装は advisory lock + `usedAt` 再 fetch + **render** + UPDATE を 1 つの
@@ -34,16 +33,19 @@ import {
  * で Route Handler が 500 を返していた（広域 E2E run 30569714860 / 30595374008 の
  * `guest-receipt-single-use` が両方でこれ。`operation: receiptPdfDownload`）。
  *
- * ## なぜ render の後ではなく前に claim するか
- * 同一トークンの同時要求（二重送信・rate limiter が許す 10 回まで）が全部 render に
- * 進むと、秒オーダーの CPU 処理が並走して Cloud Run インスタンスを飽和させる。
- * claim を先に取れば render するのは常に 1 リクエストだけで、DB 接続も掴まない。
+ * ## なぜ「先に usedAt を刻んで render する」をやめたか
+ * `usedAt` を in-flight マーカーに流用すると、render 中の再送信リクエストが
+ * `requestReceiptResendByEmail` の **Case C（消費済み）** に落ちて
+ * `reissueReceiptCommand` が走り、元 Receipt が detach されて新トークンが発行される。
+ * そこで render が失敗して `usedAt` を戻すと、**orphan 化した元トークンと
+ * 新トークンの 2 本が有効**になり single-use が破れる（PR #1706 Codex 指摘）。
+ * `usedAt` は「消費済み」以外の意味を持たせない。
  *
- * ## トレードオフ（意図的）
- * claim と render の間でプロセスが落ちると `usedAt` が刻印されたまま残り、
- * そのトークンは失効する（旧実装は tx の roll back で自動復帰していた）。
- * render 失敗の通常経路は上記 3 の解放で戻すため、残るのはプロセス強制終了時のみ。
- * 実際に本番 500 を起こしていた「render 中の接続占有」を消す方を優先する。
+ * ## 同時 render の抑制
+ * 同一 receipt への同時要求（二重送信・rate limiter が許す 10 回まで）が全部
+ * 秒オーダーの render に進むとインスタンスを飽和させるため、in-flight の
+ * render promise をプロセス内で共有する。単発性は DB の claim が担保しているので、
+ * これは純粋に負荷の抑制であり正しさには関与しない。
  *
  * ## Better Auth session 経路との分離
  * 本関数は **token 経路専用**。session 経路 (mypage) は本関数を経由せず、
@@ -52,30 +54,50 @@ import {
 export type SingleUseTokenDownloadResult =
   { status: "success"; pdfBuffer: Buffer } | { status: "already_used" };
 
+/**
+ * 同一 receipt に対する in-flight render を共有するための coalescing map。
+ * 完了・失敗のどちらでもエントリを消すためリークしない。
+ */
+const inFlightRenders = new Map<string, Promise<Buffer>>();
+
+function renderReceiptPdfOnce(
+  receiptId: string,
+  input: RenderReceiptInput,
+): Promise<Buffer> {
+  const existing = inFlightRenders.get(receiptId);
+  if (existing) return existing;
+
+  const pending = renderReceiptPdf(input).finally(() => {
+    inFlightRenders.delete(receiptId);
+  });
+  inFlightRenders.set(receiptId, pending);
+  return pending;
+}
+
 export async function claimReceiptForSingleUseTokenDownload(
   receiptId: string,
   input: RenderReceiptInput,
 ): Promise<SingleUseTokenDownloadResult> {
-  // 1. 単発 claim。更新できるのは 1 リクエストのみ = 単発性の正本。
-  const claimedAt = new Date();
+  // 1. 消費済みトークンで render を走らせないための安価な事前確認。
+  const current = await prisma.receipt.findUnique({
+    where: { id: receiptId },
+    select: { usedAt: true },
+  });
+  if (!current || current.usedAt !== null) {
+    return { status: "already_used" };
+  }
+
+  // 2. DB 接続を掴まずに render する（同時要求は 1 本の render を共有）。
+  const pdfBuffer = await renderReceiptPdfOnce(receiptId, input);
+
+  // 3. 単発性の正本。更新できるのは 1 リクエストのみ。
   const claimed = await prisma.receipt.updateMany({
     where: { id: receiptId, usedAt: null },
-    data: { usedAt: claimedAt },
+    data: { usedAt: new Date() },
   });
   if (claimed.count !== 1) {
     return { status: "already_used" };
   }
 
-  // 2. 勝者だけが render する（DB 接続は掴まない）。
-  try {
-    const pdfBuffer = await renderReceiptPdf(input);
-    return { status: "success", pdfBuffer };
-  } catch (error) {
-    // 3. 自分の claim だけを解放してリトライ可能に戻す。
-    await prisma.receipt.updateMany({
-      where: { id: receiptId, usedAt: claimedAt },
-      data: { usedAt: null },
-    });
-    throw error;
-  }
+  return { status: "success", pdfBuffer };
 }

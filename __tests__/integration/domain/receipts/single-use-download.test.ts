@@ -4,7 +4,7 @@
  * `claimReceiptForSingleUseTokenDownload` (token 経路) が実 Postgres 上で:
  * - 初回 DL 成功時に `usedAt` を刻印し PDF Buffer を返す。
  * - 既に消費済みなら "already_used" を返し、`usedAt` は再刻印しない。
- * - PDF render 中に throw しても claim が解放され `usedAt` は NULL のまま
+ * - PDF render 中に throw しても claim 前なので `usedAt` は NULL のまま
  *   (次回リトライで正常 DL 可能)。
  * - 並行 DL 要求は advisory lock で serialize され、成功するのは 1 tx のみ。
  *
@@ -235,7 +235,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
     }
   });
 
-  test("PDF render 失敗時は claim が解放され usedAt は NULL のままリトライで成功する", async () => {
+  test("PDF render 失敗時は claim 前なので usedAt は NULL のままリトライで成功する", async () => {
     const { receiptId, cleanup } = await createReceiptFixture();
     try {
       rendererState.shouldThrow = true;
@@ -251,7 +251,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
       }
       expect(thrown).toBeInstanceOf(Error);
 
-      // render 失敗時は自分の claim を解放するので usedAt は NULL に戻る
+      // claim は render の後なので usedAt は未刻印のまま
       const afterFail = await prisma.receipt.findUnique({
         where: { id: receiptId },
         select: { usedAt: true },
@@ -278,8 +278,9 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
   test("並行 DL 要求は 1 件だけ成功し、render も 1 回しか走らない", async () => {
     const { receiptId, cleanup } = await createReceiptFixture();
     try {
-      // claim を render より先に取るため、敗者は render に進まない。
-      // 秒オーダーの PDF render が同時多発してインスタンスを飽和させないための契約。
+      // 同一 receipt への同時要求は in-flight の render promise を共有する。
+      // 秒オーダーの PDF render が同時多発してインスタンスを飽和させないための契約
+      // （単発性そのものは下の success/already_used 件数が担保する）。
       rendererState.calls = 0;
       const results = await Promise.all(
         Array.from({ length: 5 }, () =>
