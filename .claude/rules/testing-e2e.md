@@ -80,6 +80,25 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   **共有 User 行の `role` を実行時に書き換えてはいけない** — `fullyParallel: true` +
   2 workers では他 spec に漏れ、`settings.spec.ts` の権限カードが消える /
   RBAC spec の拒否が出ない、という双方向の偽陽性になる（CI run 30577092619）
+- **`/api` を `request` で直接叩く spec は専用 client IP を割り当てる**。proxy の
+  `apiRateLimiter`（100/分/IP）に E2E 免除は無く、既定では全 spec が同一 IP を共有する
+  ため、飽和した窓に入った request が 429 を食う（実測: run 30593381788 の
+  `guest-receipt-single-use`、run 30607885778 の `calendar-download`）。
+  `test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.N" } })` を置く
+  （page と `request` の両方に効く）。割当は衝突すると無言で再発するため
+  `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts` が機械固定する:
+
+  | 範囲                   | 用途                                                                                  |
+  | ---------------------- | ------------------------------------------------------------------------------------- |
+  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.5` = guest-receipt-single-use、`.6` = calendar-download      |
+  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp` |
+
+  対象は `apiRateLimiter`（100/分）に当たる `/api` のみ。`/api/live` は完全除外、
+  `/api/webhooks` `/api/cron` は別枠の `infraEndpointRateLimiter`（300/分）なので不要。
+
+  XFF が client IP として採用されるのは loopback host のときだけ
+  （`rate-limit.ts` の `canUseDevelopmentProxyFallback`）なので本番の信頼境界は不変。
+
 - ブラウザ時刻の凍結は `page.clock.install({ time })` を **page.goto より前**に呼び、
   サーバー側 `E2E_FIXED_NOW_ISO`（既定 2026-07-04T03:00:00.000Z）と同一時刻にする
 - fullyParallel のため、Settings 等シングルトン行を mutate する describe は
