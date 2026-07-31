@@ -4,7 +4,7 @@
  * `claimReceiptForSingleUseTokenDownload` (token 経路) が実 Postgres 上で:
  * - 初回 DL 成功時に `usedAt` を刻印し PDF Buffer を返す。
  * - 既に消費済みなら "already_used" を返し、`usedAt` は再刻印しない。
- * - PDF render 中に throw すれば tx が roll back し、`usedAt` は NULL のまま
+ * - PDF render 中に throw しても claim 前なので `usedAt` は NULL のまま
  *   (次回リトライで正常 DL 可能)。
  * - 並行 DL 要求は advisory lock で serialize され、成功するのは 1 tx のみ。
  *
@@ -234,7 +234,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
     }
   });
 
-  test("PDF render 失敗時は tx が roll back し usedAt は NULL のままリトライで成功する", async () => {
+  test("PDF render 失敗時は claim 前なので usedAt は NULL のままリトライで成功する", async () => {
     const { receiptId, cleanup } = await createReceiptFixture();
     try {
       rendererState.shouldThrow = true;
@@ -250,7 +250,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
       }
       expect(thrown).toBeInstanceOf(Error);
 
-      // roll back で usedAt は NULL のまま
+      // claim は render の後なので usedAt は未刻印のまま
       const afterFail = await prisma.receipt.findUnique({
         where: { id: receiptId },
         select: { usedAt: true },
@@ -274,7 +274,7 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
     }
   });
 
-  test("並行 DL 要求は advisory lock で serialize され成功するのは 1 tx のみ", async () => {
+  test("並行 DL 要求は updateMany の WHERE claim で 1 件だけ成功する", async () => {
     const { receiptId, cleanup } = await createReceiptFixture();
     try {
       const results = await Promise.all(

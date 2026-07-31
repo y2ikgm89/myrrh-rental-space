@@ -52,7 +52,7 @@ import { receiptDownloadBySerialNoRateLimiter } from "@/shared/lib/rate-limit";
  *   active/BLACKLIST を強制する（停止顧客の適格請求書 DL を token 経路でも拒否）。
  *   再同意は免除（証跡アクセスは agreement 前提外 / reagree-allowlist 方針）。
  *   有効期限 24 時間 (RECEIPT-USEDAT-P1)、single-use gate は
- *   `claimReceiptForSingleUseTokenDownload` (advisory-lock tx) 内で「`usedAt IS NULL`
+ *   `claimReceiptForSingleUseTokenDownload` の `updateMany` WHERE claim で「`usedAt IS NULL`
  *   確認 → PDF レンダリング → `usedAt = now` 刻印」の 3 op を atomically 実行する。
  *   既に消費済み・別 tx が保有中なら 404、render 失敗なら tx が roll back して
  *   `usedAt` は NULL のまま (次回リトライ可)。
