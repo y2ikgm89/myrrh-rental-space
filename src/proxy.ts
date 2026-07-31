@@ -399,6 +399,44 @@ function handleClaimTokenTransfer(
   return response;
 }
 
+/**
+ * 管理画面の legacy URL エイリアス。
+ *
+ * **page.tsx 本体で `redirect()` を呼ばない**こと。`(dashboard)/layout.tsx` は
+ * `children` を `<Suspense>` の内側に置き `DashboardChromeResolved` が
+ * `connection()` で suspend するため、fallback 描画時点でストリーミングが始まる。
+ * その後の `redirect()` は HTTP 3xx を返せず meta タグに劣化し（公式仕様。
+ * redirect API リファレンス「When used in a streaming context, this will insert a
+ * meta tag to emit the redirect on the client side.」）、axe の `meta-refresh`
+ * critical (WCAG 2.2.1 / 2.2.4) になる。
+ *
+ * **next.config の `redirects()` でもない**。あれは `next build` 時に routes
+ * manifest へ焼き込まれるが `APP_SURFACE` は Cloud Run の **runtime** 変数で、
+ * 1 つのイメージを public / admin 両サービスへ配る構成（`terraform/locals_cloud_run.tf`、
+ * Dockerfile は APP_SURFACE を設定しない）。build 時に surface で分岐しても効かず、
+ * public 側でも 308 を返してしまい `/admin/*` を 404 にする契約を破る。
+ *
+ * proxy はリクエスト時に走り surface を判定できるうえ、レンダリング前なので
+ * 実 308 を返せる。上の `isBlockedOnPublicSurface` を通過した後に評価するため、
+ * public surface では 404 が優先される。
+ */
+const ADMIN_ALIAS_REDIRECTS = new Map<string, string>([
+  ["/admin/locations", "/admin/spaces?tab=locations"],
+  ["/admin/posts/taxonomy", "/admin/posts?tab=categories"],
+  ["/admin/staff/new", "/admin/staff"],
+]);
+
+/** 完全一致のみ。`/admin/locations/[id]` 等の子ルートは実在する現役ページ。 */
+function resolveAdminAliasRedirect(pathname: string): string | null {
+  const exact = ADMIN_ALIAS_REDIRECTS.get(pathname);
+  if (exact) return exact;
+
+  // /admin/staff/<id>/edit → /admin/staff
+  return /^\/admin\/staff\/[^/]+\/edit$/u.test(pathname)
+    ? "/admin/staff"
+    : null;
+}
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
@@ -425,6 +463,11 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
 
   if (serverEnv.APP_SURFACE === "admin" && pathname === "/") {
     return NextResponse.redirect(new URL("/admin", req.url));
+  }
+
+  const adminAlias = resolveAdminAliasRedirect(pathname);
+  if (adminAlias) {
+    return NextResponse.redirect(new URL(adminAlias, req.url), 308);
   }
 
   if (pathname.startsWith("/api")) {

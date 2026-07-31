@@ -178,24 +178,6 @@ const nextConfig: NextConfig = {
     //        for both `next dev` and `next build`"
   },
 
-  // Cache-Control（セキュリティヘッダーは proxy.ts に集約）
-  //
-  // 設計（公式準拠・defense-in-depth）:
-  // - Next.js headers() は last-match-wins（同一パス × 同一ヘッダーキーは配列で後の定義が
-  //   前を上書きする。公式 "Header Overriding Behavior"）。blanket public を必ず先頭に置き、
-  //   認証 / PII を含む private ルートを後ろに列挙して上書きする。配列順がそのまま仕様。
-  // - blanket public は撤去不可: 公開ページは全て `await connection()` で完全動的のため
-  //   Next.js 自身は no-store を emit する。blanket がそれを上書きすることで初めて Cloudflare の
-  //   エッジキャッシュが成立する（公開 CMS スラッグは [...segments] catch-all で列挙不能なため
-  //   "public 既定 + private blocklist" が唯一の構成）。
-  // - private 値は canonical な `private, no-store`（RFC 9111 §5.2.2.5 / MDN: no-store が共有・
-  //   ブラウザ両キャッシュへの保存を禁止。`no-cache` / `must-revalidate` の併記は冗長）。origin で
-  //   no-store を返すことで、保護が Cloudflare 除外ルールのみに依存する単一障害点を排除する。
-  // - レイヤー間 precedence（実証済 / Next.js 16.2.9・Node runtime・next start）:
-  //   proxy.ts > next.config headers() > Route Handler の Response ヘッダー。
-  //   つまり Route Handler に Cache-Control を書いても next.config が上書きするため、
-  //   API も含め Cache-Control 方針は next.config を SSoT とする（per-route はここに一致させる
-  //   defense-in-depth に留める）。公式 "Execution order"（headers → proxy → filesystem routes）と整合。
   async headers() {
     return [
       // ============================================================
