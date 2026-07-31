@@ -95,7 +95,9 @@ export function FaqCategoryDetailView({
             スラッグ: <code className="font-mono">{category.slug}</code>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* 同ファイル群の他ヘッダーと同じく折り返し可にする（収まる間は無効果）。
+            list view 側は 390px で実際に横溢れしていた。 */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
