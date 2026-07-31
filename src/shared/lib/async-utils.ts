@@ -71,6 +71,47 @@ export function fireAndForget<T>(
 }
 
 /**
+ * レスポンス送信後に同期の副作用を実行する（cache tag の invalidate 用）。
+ *
+ * `updateTag` / `revalidateTag` は **render フェーズで呼ぶと Next.js が throw する**
+ * （`packages/next/src/server/web/spec-extension/revalidate.ts` の
+ * `workUnitStore.phase === "render"` ガード）。書込ヘルパーが Server Action からも
+ * Server Component の render 中からも呼ばれる場合、後者では
+ * 「Route ... used "updateTag ..." during render which is unsupported」で失敗する。
+ *
+ * 同ガードは `phase === "after"` を明示的に許可している（`case "request": break`）ため、
+ * `after()` に委譲すれば両方の経路で invalidate が成立する。
+ *
+ * `fireAndForget` と同じく、リクエストスコープ外（unit テスト・非リクエスト文脈）では
+ * `after()` が同期 throw するので即時実行にフォールバックする。
+ */
+export function afterResponse(
+  run: () => void,
+  options: FireAndForgetOptions,
+): void {
+  const guarded = () => {
+    try {
+      run();
+    } catch (err) {
+      logError(normalizeError(err), {
+        category: options.category ?? ErrorCategory.UNKNOWN,
+        severity: options.severity ?? ErrorSeverity.LOW,
+        context: {
+          operation: options.operation,
+          ...options.context,
+        },
+      });
+    }
+  };
+
+  try {
+    after(guarded);
+  } catch {
+    guarded();
+  }
+}
+
+/**
  * 複数のPromiseを並列実行し、個別のエラーをログに記録
  *
  * すべてのPromiseが完了するまで待機し、
