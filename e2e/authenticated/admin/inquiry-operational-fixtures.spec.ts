@@ -29,7 +29,14 @@ test.describe("admin お問い合わせ — operational fixture 契約", () => {
       name: new RegExp(inquiryFixtures.generalInProgressAssigneeSubject, "u"),
     });
     await expect(row).toBeVisible({ timeout: 15000 });
-    await expect(row.getByText(inquiryFixtures.tagInProgress)).toBeVisible();
+    // fixture の tag 名（「対応中」）はステータスラベルと同じ文字列のため、行全体で
+    // テキスト検索すると タグ列 と ステータス列 の 2 件に一致する
+    // （run 30569714860 の strict mode violation）。タグ列のリストへ明示的に絞る。
+    await expect(
+      row
+        .getByRole("list", { name: "タグ" })
+        .getByText(inquiryFixtures.tagInProgress),
+    ).toBeVisible();
   });
 
   test("dev customer の seed inquiry subject が検索で見つかる", async ({

@@ -159,13 +159,22 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {inquiry.tagNames && inquiry.tagNames.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
+                    // タグ名はステータスラベル（「対応中」等）と同じ文字列になり得るため、
+                    // 支援技術にも自動テストにも「どちらの列か」が判別できるよう
+                    // ラベル付きリストにする。`list-style: none` を当てる Tailwind
+                    // preflight 下では Safari/VoiceOver が list role を落とすため
+                    // `role="list"` を明示する（WAI-ARIA の推奨対応）。
+                    <ul
+                      role="list"
+                      aria-label="タグ"
+                      className="flex flex-wrap gap-1"
+                    >
                       {inquiry.tagNames.map((name) => (
-                        <Badge key={name} variant="outline">
-                          {name}
-                        </Badge>
+                        <li key={name}>
+                          <Badge variant="outline">{name}</Badge>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
