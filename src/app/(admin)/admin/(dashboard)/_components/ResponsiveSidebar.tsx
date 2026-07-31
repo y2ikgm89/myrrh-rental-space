@@ -235,13 +235,16 @@ export function ResponsiveSidebar({
                             >
                               {item.icon}
                             </span>
+                            {/* 公開面 OFF の減光は親 <Link> の `opacity-80 saturate-75` が
+                                担う。ここで `text-sidebar-text-muted/80` を重ねると
+                                実効 alpha が 0.8 × 0.8 = 0.64 になり、
+                                コントラスト比が 3.55:1 まで落ちて WCAG 2.1 AA
+                                (4.5:1) を割る（axe `color-contrast` serious として実測）。
+                                色は親から継承する `text-sidebar-text-muted` のまま。 */}
                             <span
                               className={cn(
                                 "min-w-0 flex-1 text-sm font-medium",
                                 isActive && "text-primary-foreground",
-                                isFeatureDisabled &&
-                                  !isActive &&
-                                  "text-sidebar-text-muted/80",
                               )}
                             >
                               {item.label}
