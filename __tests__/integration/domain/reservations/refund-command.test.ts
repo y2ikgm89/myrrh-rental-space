@@ -703,8 +703,27 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       expect(refunds).toHaveLength(1);
       expect(refunds[0]!.amount).toBe(3000);
 
-      // Stripe refund も 1 回だけ (over-refund の tx は Stripe API に到達しない)
-      expect(mockRefundsCreate).toHaveBeenCalledTimes(1);
+      // Stripe 呼出「回数」は固定できない。Phase B は advisory lock を保持する tx の
+      // 外にあり lock は tx スコープのため、Phase A を通過した本数だけ Phase B に
+      // 到達しうる (1〜3 回)。3 本が同時に Phase A を通れば 3 本とも Stripe を呼び、
+      // 2/3 本目は Phase C の状態変更検知で CONFLICT になる — これは上のコメントが
+      // 説明している正常経路であり、回数を 1 に固定するとこの経路で flaky に落ちる。
+      //
+      // Stripe 側の実際の不変条件は「二重返金が発生しないこと」= idempotency key の
+      // 一致。key は `reservation-refund-<id>-<newCumulative>`
+      // (payment-commands.ts の refundReservationPaymentCommand) で、Phase A を
+      // 通過できるのは cumulativeSoFar=0 を読んだ tx のみ (3000 が書込済みなら
+      // 残額 2000 < 要求 3000 で resolveRefundAmount が VALIDATION reject し
+      // Stripe に到達しない)。よって到達した呼出の key は必ず `...-3000` で一致し、
+      // Stripe 側の実返金は 1 件に収束する。
+      expect(mockRefundsCreate).toHaveBeenCalled();
+      const idempotencyKeys = mockRefundsCreate.mock.calls.map(
+        (call) =>
+          (call[1] as { idempotencyKey?: string } | undefined)?.idempotencyKey,
+      );
+      expect([...new Set(idempotencyKeys)]).toEqual([
+        `reservation-refund-${reservationId}-3000`,
+      ]);
     } finally {
       await cleanup();
     }
