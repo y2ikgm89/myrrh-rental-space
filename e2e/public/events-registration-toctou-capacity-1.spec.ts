@@ -179,8 +179,13 @@ async function describeMainContent(page: Page): Promise<string> {
   // sold-out でもなかった」という事実がヘルパー自身の TimeoutError に
   // すり替わってしまう。
   try {
-    const text =
-      (await page.getByRole("main").textContent({ timeout: 5_000 })) ?? "";
+    // `textContent` ではなく `innerText`。`<main>` の先頭には ArticleLayout が置く
+    // JSON-LD (`<script type="application/ld+json">`) があり、`textContent` は
+    // script の中身まで拾うため 300 文字の予算を JSON-LD だけで食い潰す
+    // （実測 run 30670065962: 報告された "main の実内容" が JSON-LD の途中で切れ、
+    // 肝心の可視テキストが 1 文字も出なかった）。`innerText` は描画されたテキスト
+    // だけを返すので script / 非表示要素は入らない。
+    const text = await page.getByRole("main").innerText({ timeout: 5_000 });
     return text.replace(/\s+/gu, " ").trim().slice(0, 300);
   } catch {
     return `(main landmark を取得できず url=${page.url()})`;
