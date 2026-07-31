@@ -171,8 +171,27 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   `router.refresh()` が終わるまで `isPending` が戻らず、`expectedUpdatedAt` の楽観
   ロック競合時は成功 toast ではなく error toast（フォームエラーによっては無言）に
   なる。判定は**リロード後も状態が保たれているか**（永続化の実体）を `expect.poll`
-  で確認し、競合したら再読込してやり直す。cache invalidation の反映も非同期なので、
-  公開ルート側の確認も単発 `goto` ではなく `expect.poll` で待つ
+  で確認し、競合したら再読込してやり直す
+- **リトライは「ナビゲーションの内側」で行う。`expect.poll` の predicate に
+  `goto` → `isVisible()` を並べない**。`isVisible()` は**リトライしない瞬間値**で、
+  `goto` は `load` で解決する。ページ本体は Suspense fallback が差し替わる
+  100〜600ms 後に現れるため、probe はほぼ必ず skeleton を見て false を返し、
+  次の反復の `goto` が解決済み DOM を捨ててレースをやり直す。**timeout の予算は
+  原理的に使えず poll は永遠に勝てない**（実測 run 30631140902 /
+  30632351655: `feature-module-off-gate` の not-found 境界は 4 回描画されていたのに
+  5 反復すべて false）。正しい形は単発 `goto` + リトライする web-first assertion:
+
+  ```ts
+  await page.goto(route);
+  await expect(notFoundHeading(page)).toBeVisible({
+    timeout: ROUTE_TIMEOUT_MS,
+  });
+  ```
+
+  `expect.poll` を使ってよいのは **DB / API を直接読む**ような「リトライ機構を
+  自前で持たない値」の観測だけ（例: `isReservationSeriesCancelled(seriesId)`）。
+  locator の状態観測には使わない
+
 - APP_SURFACE はローカル既定 admin。public surface 限定テストは `APP_SURFACE=public` を明示
 
 ## visual regression
