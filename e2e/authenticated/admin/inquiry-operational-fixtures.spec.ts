@@ -25,8 +25,11 @@ test.describe("admin お問い合わせ — operational fixture 契約", () => {
       timeout: 15000,
     });
 
+    // 行の accessible name は `<件名> の詳細を表示`。fixture 文字列を
+    // `new RegExp()` に流すと正規表現メタ文字がそのまま解釈されるため
+    // （`[E2E]` が文字クラスになる実害あり。下のテスト参照）、完全一致で指定する。
     const row = page.getByRole("row", {
-      name: new RegExp(inquiryFixtures.generalInProgressAssigneeSubject, "u"),
+      name: `${inquiryFixtures.generalInProgressAssigneeSubject} の詳細を表示`,
     });
     await expect(row).toBeVisible({ timeout: 15000 });
     // fixture の tag 名（「対応中」）はステータスラベルと同じ文字列のため、行全体で
@@ -46,9 +49,12 @@ test.describe("admin お問い合わせ — operational fixture 契約", () => {
       `${ADMIN_INQUIRIES_PATH}?search=${encodeURIComponent(inquiryFixtures.devCustomerNewSubject)}`,
     );
 
+    // `new RegExp("[E2E] dev customer の新規お問い合わせ", "u")` は `[E2E]` が
+    // 文字クラスとして解釈され、実際の accessible name に**一致しない**
+    // （run 30569714860 / 30595374008 で 2 回とも「行はあるのに not found」だった）。
     await expect(
       page.getByRole("row", {
-        name: new RegExp(inquiryFixtures.devCustomerNewSubject, "u"),
+        name: `${inquiryFixtures.devCustomerNewSubject} の詳細を表示`,
       }),
     ).toBeVisible({ timeout: 15000 });
   });

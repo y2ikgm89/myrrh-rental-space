@@ -45,7 +45,7 @@ test.describe("admin 顧客 — 匿名化", () => {
     );
 
     const row = page.getByRole("row", {
-      name: new RegExp(`${fixture.displayName} の顧客情報を表示`, "u"),
+      name: `${fixture.displayName} の顧客情報を表示`,
     });
     await expect(row).toBeVisible({ timeout: 15000 });
     await row.focus();
@@ -74,17 +74,22 @@ test.describe("admin 顧客 — 匿名化", () => {
     );
     await expect(
       page.getByRole("row", {
-        name: new RegExp(`${fixture.displayName} の顧客情報を表示`, "u"),
+        name: `${fixture.displayName} の顧客情報を表示`,
       }),
     ).toHaveCount(0);
 
+    // 匿名化は lastName / firstName を含む PII を **null 化**する
+    // (`ANONYMIZED_CUSTOMER_FIELDS`)。行の accessible name は元の氏名から作られる
+    // ので、匿名化後に元の氏名で行を探すのは契約と矛盾する
+    // （run 30595374008 の失敗）。placeholder email が残っていること自体を確認し、
+    // 元の氏名がもうどこにも出ないことを併せて検証する。
+    const anonymizedEmail = `deleted+${fixture.customerId}@anonymized.local`;
     await page.goto(
-      `${ADMIN_CUSTOMERS_PATH}?search=${encodeURIComponent(`deleted+${fixture.customerId}@anonymized.local`)}`,
+      `${ADMIN_CUSTOMERS_PATH}?search=${encodeURIComponent(anonymizedEmail)}`,
     );
-    await expect(
-      page.getByRole("row", {
-        name: new RegExp(`${fixture.displayName} の顧客情報を表示`, "u"),
-      }),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(anonymizedEmail)).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText(fixture.displayName)).toHaveCount(0);
   });
 });
