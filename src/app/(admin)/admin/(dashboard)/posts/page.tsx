@@ -201,7 +201,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
             投稿・カテゴリー・タグを管理します
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild type="button" variant="destructive">
             <Link href="/admin/posts/trash">
               <IconTrash className="mr-2 h-4 w-4" aria-hidden="true" />

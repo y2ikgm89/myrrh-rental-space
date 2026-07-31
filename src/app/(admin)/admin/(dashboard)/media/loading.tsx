@@ -41,7 +41,7 @@ export default function MediaLoading() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-32" variant="text" />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Skeleton className="h-11 w-11" />
           <Skeleton className="h-11 w-11" />
           <Skeleton className="h-11 w-11" />

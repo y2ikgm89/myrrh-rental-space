@@ -37,7 +37,7 @@ export function CategoryFilters() {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* 非アクティブを含める */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Checkbox
           id="includeInactive"
           checked={params.catIncludeInactive}
