@@ -36,6 +36,11 @@ function toCspHash(value: string): string {
 /**
  * `__insertCSS("…")` に渡される文字列リテラルを 1 つ取り出す。
  * dist は minify されていないため、素直なスキャンで十分。
+ *
+ * **エスケープの解釈は行わない。** 現行 sonner の CSS リテラルは backslash を 1 つも
+ * 含まないため、生の slice がそのまま実際に注入される文字列と一致する（hash 一致で実証済み）。
+ * 自前で unescape すると取りこぼしが silent な hash ずれになるので、backslash を見つけたら
+ * 解釈せずに throw して「sonner 側の表現が変わった」ことを気付かせる。
  */
 function readSonnerInjectedCss(): string {
   const source = readFileSync(
@@ -49,21 +54,17 @@ function readSonnerInjectedCss(): string {
     const start = index + marker.length;
     const quote = source[start];
     if (quote !== undefined && QUOTES.has(quote)) {
-      let cursor = start + 1;
-      const chunks: string[] = [];
-      while (cursor < source.length) {
-        const char = source[cursor];
-        if (char === undefined) break;
-        if (char === "\\") {
-          chunks.push(source.slice(cursor, cursor + 2));
-          cursor += 2;
-          continue;
-        }
-        if (char === quote) break;
-        chunks.push(char);
-        cursor += 1;
+      const end = source.indexOf(quote, start + 1);
+      if (end === -1) {
+        throw new Error("sonner dist の文字列リテラルが閉じていません");
       }
-      return JSON.parse(`"${chunks.join("").replace(/"/gu, '\\"')}"`) as string;
+      const literal = source.slice(start + 1, end);
+      if (literal.includes("\\")) {
+        throw new Error(
+          "sonner の CSS リテラルに escape が入りました。生 slice では hash が合わなくなるため、抽出方法を見直してください",
+        );
+      }
+      return literal;
     }
     index = source.indexOf(marker, start);
   }
