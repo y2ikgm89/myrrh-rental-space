@@ -210,12 +210,27 @@ export function EventRegistrationForm({
     }
   }
 
-  // Turnstile DOM reset は副作用のため effect に残置
+  // Turnstile DOM reset は副作用のため effect に残置。
+  //
+  // 「同じ lastResult に対して 1 回だけ」に絞る必要がある。conform の
+  // `useInputControl` は毎レンダー新しいオブジェクト（`{ value, change, focus, blur }`）
+  // を返すため、`turnstileTokenControl` を依存に持つこの effect は**毎レンダー再実行**
+  // される。エラー結果が残っている間は
+  //   reset() → Turnstile が再チャレンジ → onSuccess → change(token) → 再レンダー
+  //   → control の同一性が変わる → effect 再実行 → reset() …
+  // という無限ループになり、ページの JS メインスレッドを専有して操作不能になる。
+  // 実測: 3 並行申込で満員 reject を受けた 2 ページが応答しなくなり、Playwright の
+  // evaluate / locator が全てタイムアウト、RSC prefetch が 30〜53 秒に膨張していた。
+  // 既に reset 済みの結果は ref で覚える（state にすると effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる。ref の read/write は effect 内なので
+  // render 中 ref 読みの禁止規約にも抵触しない）。
+  const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
-    if (lastResult?.status === "error") {
-      turnstileRef.current?.reset();
-      turnstileTokenControl.change("");
-    }
+    if (lastResult?.status !== "error") return;
+    if (turnstileResetForResultRef.current === lastResult) return;
+    turnstileResetForResultRef.current = lastResult;
+    turnstileRef.current?.reset();
+    turnstileTokenControl.change("");
   }, [lastResult, turnstileTokenControl]);
 
   function handleTurnstileVerify(token: string) {
