@@ -103,7 +103,7 @@ describe("admin の静的エイリアスは next.config redirects で表現す�
         const source = stripComments(
           readFileSync(join(root, ...rel.split("/")), "utf8"),
         );
-        return /redirect\s*\(/u.test(source);
+        return /\bredirect\s*\(/u.test(source);
       })
       .filter((rel) => !CONDITIONAL_PAGE_REDIRECT_ALLOWLIST.includes(rel))
       .sort((a, b) => a.localeCompare(b));
@@ -111,12 +111,24 @@ describe("admin の静的エイリアスは next.config redirects で表現す�
     expect(offenders).toEqual([]);
   });
 
-  test("next.config は public surface で redirects を登録しない", () => {
-    const config = stripComments(read("next.config.ts"));
+  test("エイリアスは proxy が surface 判定の後に処理する", () => {
+    // next.config の redirects() は `next build` 時に routes manifest へ焼き込まれるが、
+    // APP_SURFACE は Cloud Run の **runtime** 変数で 1 イメージを両サービスへ配る
+    // (terraform/locals_cloud_run.tf、Dockerfile は APP_SURFACE を設定しない)。
+    // build 時に surface で分岐しても効かないため proxy で処理する。
+    const proxy = stripComments(read("src/proxy.ts"));
 
-    expect(config).toMatch(/async redirects\(\)/u);
-    expect(config).toMatch(
-      /process\.env\["APP_SURFACE"\]\s*===\s*"public"\s*\)\s*return \[\]/u,
+    expect(proxy).toMatch(/resolveAdminAliasRedirect\(pathname\)/u);
+
+    // public surface の 404 blocklist より **後** に評価されること
+    const blocklist = proxy.indexOf("isBlockedOnPublicSurface(pathname)");
+    const alias = proxy.indexOf("resolveAdminAliasRedirect(pathname)");
+    expect(blocklist).toBeGreaterThan(-1);
+    expect(alias).toBeGreaterThan(blocklist);
+
+    // next.config には戻さない
+    expect(stripComments(read("next.config.ts"))).not.toMatch(
+      /async redirects\(\)/u,
     );
   });
 });
