@@ -103,6 +103,19 @@ export function EventRegistrationForm({
   const [selectedTicketId, setSelectedTicketId] =
     useState<string>(initialTicketId);
   const [submitted, setSubmitted] = useState(false);
+  /**
+   * 送信を開始した時点の `effectiveMode`。完了画面の文言はこれで決める。
+   *
+   * `effectiveMode` は「現在の在庫」から毎レンダー再計算される。申込成功後は
+   * Server Action の `invalidateEventCaches()` によりセクションが再レンダーされ、
+   * **最後の 1 枠を取れた人ほど** 直後には満席＝`mode="waitlist"` が降ってくる。
+   * 完了画面で `effectiveMode` を読むと、正規の申込が成立したユーザーに
+   * 「キャンセル待ちに登録しました」と誤表示してしまう（`key={event.id}` は
+   * 不変なので `submitted` state は再レンダーをまたいで保持される）。
+   */
+  const [submittedMode, setSubmittedMode] = useState<
+    "register" | "waitlist" | null
+  >(null);
   // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
   // Server Action側で送信までの経過時間が短すぎないか検証する。
   const [formRenderedAt] = useState(() => Date.now());
@@ -214,6 +227,8 @@ export function EventRegistrationForm({
   }
 
   if (submitted) {
+    // 送信時点のモードを優先する（理由は submittedMode の宣言コメント参照）。
+    const completedMode = submittedMode ?? effectiveMode;
     return (
       <div className="border border-accent/30 bg-surface px-8 py-12 text-center">
         <IconCircleCheck
@@ -221,12 +236,12 @@ export function EventRegistrationForm({
           aria-hidden
         />
         <Heading level={3} className="mt-4">
-          {effectiveMode === "waitlist"
+          {completedMode === "waitlist"
             ? "キャンセル待ちに登録しました"
             : "お申し込みを受け付けました"}
         </Heading>
         <p className="mt-3 text-muted-foreground">
-          {effectiveMode === "waitlist"
+          {completedMode === "waitlist"
             ? "順番が来ましたらメールでご連絡します。"
             : "確認メールをお送りしましたのでご確認ください。"}
         </p>
@@ -289,6 +304,13 @@ export function EventRegistrationForm({
       <form
         {...getFormProps(form)}
         action={formAction}
+        // 完了画面の文言を決めるモードは「送信を始めた瞬間」に固定する。
+        // 完了後に読むと revalidate 後の在庫（満席）で waitlist に転じてしまう。
+        // capture phase で拾うので conform の onSubmit / form action の前に走る。
+        // バリデーションで送信が止まった場合はそのまま次の送信で上書きされる。
+        onSubmitCapture={() => {
+          setSubmittedMode(effectiveMode);
+        }}
         className="space-y-6 border border-border p-6 sm:p-8"
       >
         <input type="hidden" name={fields.eventId.name} value={eventId} />
