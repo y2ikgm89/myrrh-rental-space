@@ -1,5 +1,8 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
-import { SmartLockDeviceType } from "@generated/prisma/enums";
+import {
+  ReservationStatus,
+  SmartLockDeviceType,
+} from "@generated/prisma/enums";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
 
@@ -70,8 +73,28 @@ async function main(): Promise<void> {
       update: { switchbotEnabled: true },
     });
 
-    const space = await prisma.space.findFirstOrThrow({
-      where: { isActive: true, isPublished: true },
+    // 予約は `reservations_no_active_time_overlap_excl`（spaceId = かつ
+    // `tsrange(startTime, endTime, '[)')` が overlap、status ∈ {PENDING, CONFIRMED}
+    // かつ deletedAt IS NULL）で DB 制約により重複が弾かれる。seed は **今日**の
+    // CONFIRMED 予約を複数スペースに作る（`prisma/seed.ts` の daysOffset: 0 群。
+    // 例: spaceIndex 0 が 09-11 時と 15-17 時）ため、実時刻基準の枠を無条件に
+    // 差し込むと時間帯によっては create が制約違反で落ちる。
+    // 目的の枠と重ならないスペースを選ぶ（制約と同じ半開区間の述語で判定）。
+    const space = await prisma.space.findFirst({
+      where: {
+        isActive: true,
+        isPublished: true,
+        reservations: {
+          none: {
+            deletedAt: null,
+            status: {
+              in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+            },
+            startTime: { lt: RESERVATION_END },
+            endTime: { gt: RESERVATION_START },
+          },
+        },
+      },
       select: {
         id: true,
         name: true,
@@ -79,6 +102,12 @@ async function main(): Promise<void> {
         smartLockDeviceId: true,
       },
     });
+
+    if (!space) {
+      throw new Error(
+        `[passcode-reveal fixture] ${RESERVATION_START.toISOString()}〜${RESERVATION_END.toISOString()} に空いている公開スペースがありません。seed の当日予約と全スペースが衝突しています`,
+      );
+    }
 
     const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     let deviceId = space.smartLockDeviceId;
