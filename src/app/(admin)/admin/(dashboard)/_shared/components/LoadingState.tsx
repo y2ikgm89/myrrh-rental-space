@@ -20,11 +20,7 @@ export function LoadingState({
   variant = "table",
 }: LoadingStateProps) {
   if (variant === "inline") {
-    return (
-      <div className="animate-pulse text-sm text-muted-foreground">
-        {message}
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">{message}</div>;
   }
 
   return (
