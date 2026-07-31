@@ -4,7 +4,28 @@ import { primeAdminRequestContext } from "../helpers/admin-auth";
 import { ensureAdminUser } from "../helpers/ensure-admin-user";
 
 /**
- * E2E-04: Feature Module OFF → 公開ルート 404 (fail-closed regression gate)
+ * E2E-04: Feature Module OFF → 公開ルート not-found (fail-closed regression gate)
+ *
+ * ## なぜ HTTP 404 を assert しないか（Next.js の公式仕様）
+ *
+ * このアプリの公開ページは**必ずストリーミングの内側**にある（root layout が
+ * CSP nonce のために `<html>` を `<Suspense>` で包む公式 opt-in + 各 route の
+ * `loading.tsx`）。Next.js 公式ドキュメント逐語:
+ *
+ * > Once streaming begins, HTTP response headers and status codes cannot be changed.
+ * > If a `notFound()` function triggers mid-stream, Next.js cannot alter the HTTP
+ * > status code to 404 and instead injects a `noindex` meta tag so search engines
+ * > do not index the page.
+ *
+ * つまり `requireFeatureEnabled` → `notFound()` は **200 + noindex** になるのが
+ * 仕様どおりの挙動で、404 を要求する assert は原理的に満たせない
+ * （実測: run 30617695076 / 30622036713 で `/contact` が 20 秒間 200 のまま）。
+ * 実 404 を返すには proxy 層で判定する必要があるが、`proxy.ts` は DB-backed module の
+ * import を規約で禁止しているため採れない。
+ *
+ * よって守るべき契約を「HTTP status」から
+ * **「本来のページが描画されず not-found 境界が出る」+「noindex が付く」**に置き換える。
+ * fail-closed の実体（コンテンツを出さない）と SEO 保護の両方をカバーする。
  *
  * FEAT-3PLANE-04 (PR #1205) で `mypage/inquiries` × 2、`reservation/complete`、
  * `claim/reservation`、`claim/event-registration` に `requireFeatureEnabled` gate
@@ -67,8 +88,16 @@ const CLAIM_TOKEN_STUB = "e2e-stub-token";
 
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
 
-/** cache invalidation の伝播待ち。単発 goto だと 200 を掴む（run 30617695076）。 */
+/** cache invalidation の伝播待ち。単発 goto では反映前の応答を掴む（run 30617695076）。 */
 const ROUTE_STATUS_TIMEOUT_MS = 20_000;
+
+/** `(public)/not-found.tsx` の h1。feature gate が効いた証拠として使う。 */
+function notFoundHeading(page: Page) {
+  return page.getByRole("heading", {
+    level: 1,
+    name: "ページが見つかりません",
+  });
+}
 
 /** 保存がリロード後も残っているかの確認待ち。 */
 const PERSIST_TIMEOUT_MS = 15_000;
@@ -257,17 +286,37 @@ test.describe
   });
 
   for (const c of MODULE_CASES) {
-    test(`${c.module} OFF → 対象ルートが 404 を返す`, async ({ page }) => {
+    test(`${c.module} OFF → 対象ルートが not-found になる`, async ({
+      page,
+    }) => {
       await setFeatureModule(page, c.label, false);
 
       for (const route of c.routes) {
-        // cache invalidation は非同期。単発 goto では反映前の 200 を掴む。
+        // cache invalidation は非同期なので、not-found 境界が出るまで待つ。
         await expect
-          .poll(async () => (await page.goto(route))?.status(), {
-            timeout: ROUTE_STATUS_TIMEOUT_MS,
-            message: `[${c.module}] ${route} は feature OFF 時に 404 を返すべき`,
-          })
-          .toBe(404);
+          .poll(
+            async () => {
+              await page.goto(route);
+              return notFoundHeading(page).isVisible();
+            },
+            {
+              timeout: ROUTE_STATUS_TIMEOUT_MS,
+              message: `[${c.module}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
+            },
+          )
+          .toBe(true);
+
+        // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
+        // 注入する契約に依存する。これが無いと soft-404 が索引される。
+        const robots = await page
+          .locator('meta[name="robots"]')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => node.getAttribute("content") ?? ""),
+          );
+        expect(
+          robots.some((content) => content.includes("noindex")),
+          `[${c.module}] ${route} の not-found 応答に noindex が無い（実際の robots meta: ${JSON.stringify(robots)}）`,
+        ).toBe(true);
       }
     });
   }

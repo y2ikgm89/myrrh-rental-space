@@ -39,6 +39,15 @@ paths:
   `<Suspense>` の内側に置き、その中で `await connection()`** する
 - データ依存の layout chrome（Header/Footer 等）は「Suspense 内 async SC +
   冒頭 `await connection()`」に隔離する（build 時 fallback 焼き込み防止）
+- **公開ページは常にストリーミング内側なので実 HTTP status を返せない**。
+  公式逐語:「Once streaming begins, HTTP response headers and status codes cannot be
+  changed. If a `notFound()` function triggers mid-stream, Next.js cannot alter the
+  HTTP status code to 404 and instead injects a `noindex` meta tag」。
+  page 本体の `notFound()` は **200 + noindex**、`redirect()` は client-side redirect に
+  なる（admin 側の帰結は PR #1711 / #1713 参照）。テストや監視で
+  「404 が返ること」を契約にしない — 契約は「not-found 境界が描画される」
+  「noindex が付く」。実 status が要るときは proxy 層で判定するしかないが、
+  `proxy.ts` は DB-backed import 禁止なので DB 由来の条件では採れない
 - gate は `scripts/check-static-prelude-empty.ts`（`bun run build` /
   `build:skip-env` が自動実行）。route 表の目視ではなく**ビルド成果物を機械検査**する。
   例外は `_global-error.html` のみ（`global-error.tsx` は Next.js 規約上
