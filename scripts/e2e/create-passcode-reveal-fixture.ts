@@ -29,12 +29,31 @@ const { PASSCODE_CRYPTO_PURPOSE } =
 
 const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
 const E2E_PASSCODE = "654321";
-const E2E_NOW = new Date("2026-08-01T02:00:00.000Z");
-const PASSCODE_START = new Date("2026-08-01T00:45:00.000Z");
-const PASSCODE_END = new Date("2026-08-01T03:15:00.000Z");
-const RESERVATION_START = new Date("2026-08-01T01:00:00.000Z");
 const FIXTURE_MARKER = "[E2E] passcode reveal fixture";
-const RESERVATION_END = new Date("2026-08-01T03:00:00.000Z");
+
+/**
+ * 時刻は**実行時の実時刻を基準に相対で作る**（絶対日付を焼き込まない）。
+ *
+ * 解錠番号の表示可否は `customer-passcode-queries.ts` の
+ * `isWithinStoredPasscodeWindow({ now, startTime, endTime })` が
+ * **サーバーの実時刻**で判定する。`E2E_FIXED_NOW_ISO` はサーバー全体の時計を
+ * 差し替える仕組みではなく、`EventCalendarSection` /
+ * `ReservationFormSection` の 2 コンポーネントだけが読む値なので、
+ * このゲートには効かない。
+ *
+ * 旧実装は `2026-08-01T00:45Z`〜`03:15Z` を焼き込んでおり、実時刻がその
+ * 2 時間半に入る 1 日以外は必ず `outside_window` になって
+ * 「解錠番号を表示」ボタンが描画されなかった（実測: CI run 30622036713）。
+ *
+ * 相対配置は旧定数の幾何をそのまま保つ:
+ * now-75min 〜 now+75min の window / 予約開始は now-60min。
+ */
+const MINUTE_MS = 60 * 1000;
+const E2E_NOW = new Date();
+const PASSCODE_START = new Date(E2E_NOW.getTime() - 75 * MINUTE_MS);
+const PASSCODE_END = new Date(E2E_NOW.getTime() + 75 * MINUTE_MS);
+const RESERVATION_START = new Date(E2E_NOW.getTime() - 60 * MINUTE_MS);
+const RESERVATION_END = new Date(E2E_NOW.getTime() + 60 * MINUTE_MS);
 
 async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();

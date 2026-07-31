@@ -7,6 +7,15 @@ import { visibleById } from "../../helpers/streaming-safe-locators";
 // cold route compilation is not raced by multiple workers against one server.
 test.describe.configure({ mode: "serial" });
 
+// CSV / Excel の書き出しは `/api/admin/export/event-registrations` への
+// ナビゲーションで起きるため、proxy の `apiRateLimiter`（100/分/IP、E2E 免除なし）
+// の対象になる。既定では全 spec が同一 IP を共有するので、飽和した窓に入ると
+// 429 が返り download event が発火せず `page.waitForEvent("download")` が
+// タイムアウトする（実測: CI run 30622036713 で 3 attempt とも 30s timeout）。
+// 静的割当レンジ `203.0.113.1`〜`.9` から専用 IP を取る。衝突検知は
+// `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts`。
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.8" } });
+
 const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
 const TIMED_ENTRY_EVENT_TITLE = "写真撮影ワークショップ";
 
