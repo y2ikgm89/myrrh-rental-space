@@ -53,34 +53,56 @@ async function expectAdminRouteReady(
 }
 
 async function expectNoPageHorizontalOverflow(page: Page) {
-  // 幅の数値だけでは「どの要素がはみ出したか」が分からず、失敗しても直せない
-  // （run 30569714860 の /admin/reservings 398 > 390 がまさにこれ）。
-  // はみ出している要素を右端の順に採取して assertion message に載せる。
+  // 幅の数値だけでは「どの要素がはみ出したか」が分からず、失敗しても直せない。
+  //
+  // 初版は `getBoundingClientRect().right` だけを見て、さらにゼロサイズ要素を
+  // スキップしていたため、run 30595374008 では左に置かれた off-canvas サイドバーしか
+  // 拾えず、右 +8px の実犯人を取り逃がした。横オーバーフローの発生源は
+  //
+  //   (a) 自身の矩形が viewport 右端を越える要素
+  //   (b) 自身は収まっているが、`overflow-x: visible` のまま中身がはみ出している容器
+  //       （こちらが祖先へ伝播して documentElement.scrollWidth を押し広げる）
+  //
+  // の 2 系統あるので両方を採取する。ゼロサイズ要素も除外しない（高さ 0 の
+  // 幅広要素は layout overflow に寄与する）。
   const metrics = await page.evaluate(() => {
     const clientWidth = document.documentElement.clientWidth;
+
+    const describe = (element: Element): string => {
+      const id = element.id ? `#${element.id}` : "";
+      const className =
+        typeof element.className === "string" ? element.className : "";
+      const classes = className
+        ? `.${className.trim().split(/\s+/).slice(0, 5).join(".")}`
+        : "";
+      return `${element.tagName.toLowerCase()}${id}${classes}`;
+    };
+
+    const candidates: Element[] = [
+      document.body,
+      ...Array.from(document.body.querySelectorAll("*")),
+    ];
     const offenders: string[] = [];
 
-    for (const element of Array.from(document.body.querySelectorAll("*"))) {
+    for (const element of candidates) {
+      const style = window.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") continue;
+
       const rect = element.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      if (rect.right <= clientWidth + 1 && rect.left >= -1) continue;
+      const overflowsViewport = rect.right > clientWidth + 1;
+      // clip / hidden な容器は自分で止めるので伝播源にならない。
+      const leaksContent =
+        element.scrollWidth > element.clientWidth + 1 &&
+        (style.overflowX === "visible" || style.overflowX === "clip");
+      if (!overflowsViewport && !leaksContent) continue;
 
-      // 祖先が同じ理由ではみ出している場合は最も内側だけを残す
-      if (
-        offenders.length > 0 &&
-        element.parentElement !== null &&
-        element.parentElement.getBoundingClientRect().right === rect.right
-      ) {
-        offenders.pop();
-      }
-
-      const classes =
-        typeof element.className === "string" ? element.className : "";
       offenders.push(
-        `${element.tagName.toLowerCase()}${classes ? `.${classes.trim().split(/\s+/).slice(0, 6).join(".")}` : ""}` +
-          ` [left=${Math.round(rect.left)} right=${Math.round(rect.right)} width=${Math.round(rect.width)}]`,
+        `${describe(element)} [${overflowsViewport ? "rect" : "content"}]` +
+          ` left=${Math.round(rect.left)} right=${Math.round(rect.right)}` +
+          ` width=${Math.round(rect.width)}` +
+          ` scrollWidth=${element.scrollWidth} clientWidth=${element.clientWidth}` +
+          ` position=${style.position} overflowX=${style.overflowX}`,
       );
-      if (offenders.length >= 8) break;
     }
 
     return {
@@ -88,7 +110,8 @@ async function expectNoPageHorizontalOverflow(page: Page) {
       bodyScrollWidth: document.body.scrollWidth,
       htmlClientWidth: clientWidth,
       htmlScrollWidth: document.documentElement.scrollWidth,
-      offenders,
+      offenders: offenders.slice(0, 12),
+      offenderCount: offenders.length,
     };
   });
 
@@ -97,7 +120,11 @@ async function expectNoPageHorizontalOverflow(page: Page) {
     bodyScrollWidth: metrics.bodyScrollWidth,
     htmlClientWidth: metrics.htmlClientWidth,
     htmlScrollWidth: metrics.htmlScrollWidth,
-  })}\noffending elements:\n  ${metrics.offenders.join("\n  ") || "(none detected — check position:fixed / pseudo elements)"}`;
+    offenderCount: metrics.offenderCount,
+  })}\noffending elements:\n  ${
+    metrics.offenders.join("\n  ") ||
+    "(none detected — fixed/absolute descendants or pseudo elements)"
+  }`;
 
   expect(
     metrics.htmlScrollWidth,
