@@ -34,6 +34,8 @@ import {
 import {
   EventRegistrationSection,
   EventRegistrationSectionFallback,
+  EventRegistrationSectionShell,
+  REGISTER_ANCHOR_ID,
 } from "./_components/event-registration-section";
 import { RelatedEvents } from "./_components/related-events";
 import { EventJsonLd } from "./_components/event-json-ld";
@@ -43,8 +45,6 @@ import { ImageFrame } from "@/public/components/design-system/image-frame";
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
-
-const REGISTER_ANCHOR_ID = "event-register";
 
 export async function generateMetadata({
   params,
@@ -258,9 +258,13 @@ export default async function EventDetailPage({
           </section>
         ) : null}
 
-        <Suspense fallback={<EventRegistrationSectionFallback />}>
-          <EventRegistrationSection event={event} slug={slug} />
-        </Suspense>
+        {/* 外殻 (id / 見出し) は Suspense の外。中身だけを差し替えることで
+            ストリーミング中の重複 ID を防ぐ。 */}
+        <EventRegistrationSectionShell>
+          <Suspense fallback={<EventRegistrationSectionFallback />}>
+            <EventRegistrationSection event={event} slug={slug} />
+          </Suspense>
+        </EventRegistrationSectionShell>
 
         <EventCalendarDisclosure urls={calendarUrls} />
 
