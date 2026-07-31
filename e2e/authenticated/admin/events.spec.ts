@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { urls } from "../../fixtures";
+import { visibleById } from "../../helpers/streaming-safe-locators";
 
 // Next dev compiles these admin event routes lazily. Keep this spec serial so
 // cold route compilation is not raced by multiple workers against one server.
@@ -126,7 +127,7 @@ test.describe("イベント管理 - 新規作成", () => {
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
 
-    await expect(page.locator("form#event-create")).toBeVisible({
+    await expect(visibleById(page, "event-create")).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
   });
@@ -136,7 +137,7 @@ test.describe("イベント管理 - 新規作成", () => {
   }) => {
     await page.goto("/admin/events/new");
 
-    const eventCreateForm = page.locator("form#event-create");
+    const eventCreateForm = visibleById(page, "event-create");
     const titleInput = eventCreateForm.getByRole("textbox", {
       name: "タイトル",
       exact: true,

@@ -34,7 +34,8 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 ## 書き方の規約（ESLint が機械強制）
 
 - 禁止: `page.waitForTimeout` / `waitForLoadState("networkidle")` / `page.waitForURL` /
-  `if ((await x.count()) > 0)` 条件アサーション / `locator("#id")` の id セレクタ
+  `if ((await x.count()) > 0)` 条件アサーション / CSS の id セレクタ
+  （`locator("#id")` も修飾付きの `locator("form#id")` も禁止）
 - 待機は web-first assertion で行う: `expect(locator).toBeVisible()`、
   ナビゲーション確定は `expect(page).toHaveURL()`（soft/hard 両対応）
 - ロケーターは `getByRole` 優先（heading/tab/textbox/button/gridcell 等）
@@ -51,7 +52,8 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 読むための公式 opt-in（`<html>` を `<Suspense>` で包む）があるため、**ページ本体は必ず
 どこかの boundary の内側**にある。つまりページ内の任意の DOM は一時的に 2 重になりうる。
 
-- CSS セレクタ（`locator("#id")`）は hidden 側も一致 → `strict mode violation`。
+- CSS セレクタ（`locator("#id")` / `locator("form#id")`）は hidden 側も一致 →
+  `strict mode violation`。
   実測: CI run 30602667260 の `locator('#event-register') resolved to 2 elements`
   （片方は解決済みフォーム、もう片方は fallback を抱えた staging copy）
 - **role locator は安全**。Playwright の role エンジンは既定 `includeHidden: false` で

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { eventCategoryFixtures } from "../../fixtures";
+import { visibleById } from "../../helpers/streaming-safe-locators";
 
 /**
  * Phase B.1: admin が ONLINE + MANUAL（手入力）+ 会議 URL で event を作成し、
@@ -68,7 +69,7 @@ test.describe("Phase B.1: online event admin flow", () => {
 
     await page.goto("/admin/events/new");
 
-    const eventCreateForm = page.locator("form#event-create");
+    const eventCreateForm = visibleById(page, "event-create");
     await expect(eventCreateForm).toBeVisible();
 
     // ---- 基本情報タブ（初期表示） ----
