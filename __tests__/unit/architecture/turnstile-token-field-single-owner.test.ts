@@ -35,6 +35,29 @@ const PUBLIC_TSX_GLOB = "src/app/(public)/**/*.tsx";
 /** widget を描画しているファイルの下限。走査が空振りしたら気付けるようにする。 */
 const MIN_WIDGET_CONSUMERS = 15;
 
+/**
+ * 自前でトークン欄を描画する画面と、その相方の widget。
+ *
+ * field と widget は**別ファイルにありうる**ので対で持つ。ここに追加するときは
+ * widget 側が必ず `onVerify` を渡していること（= 呼び出し側が所有すること）を
+ * 確認する。両方が所有すると同名フィールドが二重になり送信が全弾きされる。
+ */
+const MANUAL_TOKEN_OWNERS = [
+  {
+    owner: "src/app/(public)/reservation/_components/reservation-form.tsx",
+    widget: "src/app/(public)/reservation/_components/customer-step.tsx",
+  },
+] as const;
+
+/** `<TurnstileWidget ... />` の props 部分だけを取り出す。 */
+function widgetPropsOf(source: string): string {
+  const start = source.indexOf("<TurnstileWidget");
+  if (start === -1) return "";
+  const end = source.indexOf("/>", start);
+  if (end === -1) return "";
+  return source.slice(start, end);
+}
+
 function readSource(relativePath: string): string {
   return readFileSync(join(REPO_ROOT, relativePath), "utf8");
 }
@@ -58,13 +81,6 @@ describe("Turnstile トークン欄の所有者は常に 1 つ", () => {
   });
 
   test("自前でトークン欄を描画するのは既知の 1 画面だけ", () => {
-    // 自前 field と widget は**別ファイル**にありうる（reservation-form が field を
-    // 描き、widget は customer-step にある）。同一ファイル内の突合では拾えないため、
-    // 自前 field を持つ画面自体を allowlist で固定する。
-    //
-    // ここに追加するときは、その画面の `<TurnstileWidget>` が **onVerify を渡して
-    // いる**ことを必ず確認する。渡していないと widget も同名 field を出し、
-    // FormData が配列化して `z.string()` のスキーマが送信を全弾きする。
     const owners = [...new Glob(PUBLIC_TSX_GLOB).scanSync({ cwd: REPO_ROOT })]
       .map((relativePath) => relativePath.replaceAll("\\", "/"))
       .filter((relativePath) =>
@@ -72,11 +88,19 @@ describe("Turnstile トークン欄の所有者は常に 1 つ", () => {
       )
       .sort();
 
-    expect(owners).toEqual([
-      // customer-step.tsx の <TurnstileWidget onVerify={setTurnstileToken}> が
-      // トークンを state に流し、この画面が hidden input として描画する。
-      "src/app/(public)/reservation/_components/reservation-form.tsx",
-    ]);
+    expect(owners).toEqual(MANUAL_TOKEN_OWNERS.map((entry) => entry.owner));
+  });
+
+  test("自前でトークン欄を描画する画面の widget は onVerify で所有を宣言している", () => {
+    // allowlist に載せるだけでは不十分。相方の widget から `onVerify` が外れると
+    // `responseField: onVerify === undefined` が true に転じて widget も同名 field を
+    // 出し、自前 field と二重になって送信が全弾きされる（Codex review, PR #1765）。
+    // field 側と widget 側は別ファイルなので、対にして両方を検査する。
+    const violations = MANUAL_TOKEN_OWNERS.filter(
+      ({ widget }) => !widgetPropsOf(readSource(widget)).includes("onVerify="),
+    ).map(({ widget }) => widget);
+
+    expect(violations).toEqual([]);
   });
 
   test("widget の response field は onVerify の有無から導出している", () => {
