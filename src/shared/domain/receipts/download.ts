@@ -13,14 +13,14 @@ import {
  * - `receiptId` は `findReceiptForDownload` で解決済みの Receipt.id を渡す。
  * - `input` は `renderReceiptPdf` に渡す render 引数 (`Receipt.taxRate` は Int %)。
  *
- * ## 挙動 — render は DB の外、claim は updateMany の WHERE で
- * 1. `usedAt` を安価に事前確認する。既に非 NULL なら "already_used" (=404 相当)。
- *    レースを閉じるためではなく、消費済みトークンで無駄に render しないため。
- * 2. **トランザクション外**で PDF を render する。
- * 3. `updateMany({ where: { id, usedAt: null } })` で単発 claim する。
+ * ## 挙動 — claim を先に取り、勝者だけが render する
+ * 1. `updateMany({ where: { id, usedAt: null } })` で単発 claim する。
  *    更新できたのは 1 リクエストだけなので、これが単発性の正本
  *    (`.claude/rules/business-domain.md` の「updateMany の WHERE で claim」パターン)。
- * 4. claim できなければ "already_used"、できれば Buffer を返す。
+ *    敗者はここで "already_used" (=404 相当) になり、render に進まない。
+ * 2. 勝者が **トランザクション外**で PDF を render する。
+ * 3. render が失敗したら自分の claim だけを解放し (`where: { usedAt: claimedAt }`)、
+ *    エラーを再 throw する。次回リクエストで再取得できる。
  *
  * ## なぜ tx 内 render をやめたか（本番 500 の実因）
  * 旧実装は advisory lock + `usedAt` 再 fetch + **render** + UPDATE を 1 つの
@@ -34,15 +34,16 @@ import {
  * で Route Handler が 500 を返していた（広域 E2E run 30569714860 / 30595374008 の
  * `guest-receipt-single-use` が両方でこれ。`operation: receiptPdfDownload`）。
  *
- * ## 失敗時セマンティクス
- * render 失敗は claim の**前**に起きるので `usedAt` は刻印されない = リトライ可能。
- * 旧実装の「roll back で刻印を取り消す」と同じ結果を、補償書込なしで得る。
+ * ## なぜ render の後ではなく前に claim するか
+ * 同一トークンの同時要求（二重送信・rate limiter が許す 10 回まで）が全部 render に
+ * 進むと、秒オーダーの CPU 処理が並走して Cloud Run インスタンスを飽和させる。
+ * claim を先に取れば render するのは常に 1 リクエストだけで、DB 接続も掴まない。
  *
- * ## レース
- * 事前確認をすり抜けた同時リクエストは双方 render するが、`updateMany` で
- * 更新できるのは 1 件だけなので単発性は保たれる（敗者は "already_used"）。
- * 稀なレース時に 1 回分の render が無駄になるのは許容し、その代わりに
- * 「秒オーダーの CPU 処理の間 advisory lock で他要求を待たせる」構造をなくす。
+ * ## トレードオフ（意図的）
+ * claim と render の間でプロセスが落ちると `usedAt` が刻印されたまま残り、
+ * そのトークンは失効する（旧実装は tx の roll back で自動復帰していた）。
+ * render 失敗の通常経路は上記 3 の解放で戻すため、残るのはプロセス強制終了時のみ。
+ * 実際に本番 500 を起こしていた「render 中の接続占有」を消す方を優先する。
  *
  * ## Better Auth session 経路との分離
  * 本関数は **token 経路専用**。session 経路 (mypage) は本関数を経由せず、
@@ -55,26 +56,26 @@ export async function claimReceiptForSingleUseTokenDownload(
   receiptId: string,
   input: RenderReceiptInput,
 ): Promise<SingleUseTokenDownloadResult> {
-  // 1. 消費済みトークンで render を走らせないための安価な事前確認。
-  const current = await prisma.receipt.findUnique({
-    where: { id: receiptId },
-    select: { usedAt: true },
-  });
-  if (!current || current.usedAt !== null) {
-    return { status: "already_used" };
-  }
-
-  // 2. DB 接続を掴まずに render する（失敗しても usedAt は未刻印のまま）。
-  const pdfBuffer = await renderReceiptPdf(input);
-
-  // 3. 単発性の正本。更新できるのは 1 リクエストのみ。
+  // 1. 単発 claim。更新できるのは 1 リクエストのみ = 単発性の正本。
+  const claimedAt = new Date();
   const claimed = await prisma.receipt.updateMany({
     where: { id: receiptId, usedAt: null },
-    data: { usedAt: new Date() },
+    data: { usedAt: claimedAt },
   });
   if (claimed.count !== 1) {
     return { status: "already_used" };
   }
 
-  return { status: "success", pdfBuffer };
+  // 2. 勝者だけが render する（DB 接続は掴まない）。
+  try {
+    const pdfBuffer = await renderReceiptPdf(input);
+    return { status: "success", pdfBuffer };
+  } catch (error) {
+    // 3. 自分の claim だけを解放してリトライ可能に戻す。
+    await prisma.receipt.updateMany({
+      where: { id: receiptId, usedAt: claimedAt },
+      data: { usedAt: null },
+    });
+    throw error;
+  }
 }
