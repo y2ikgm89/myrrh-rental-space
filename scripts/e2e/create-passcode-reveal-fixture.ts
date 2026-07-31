@@ -33,6 +33,7 @@ const E2E_NOW = new Date("2026-08-01T02:00:00.000Z");
 const PASSCODE_START = new Date("2026-08-01T00:45:00.000Z");
 const PASSCODE_END = new Date("2026-08-01T03:15:00.000Z");
 const RESERVATION_START = new Date("2026-08-01T01:00:00.000Z");
+const FIXTURE_MARKER = "[E2E] passcode reveal fixture";
 const RESERVATION_END = new Date("2026-08-01T03:00:00.000Z");
 
 async function main(): Promise<void> {
@@ -81,6 +82,26 @@ async function main(): Promise<void> {
       });
     }
 
+    // 予約は固定時刻（clock 凍結と揃える必要がある）に作るため、前回実行分が
+    // 残っていると DB の EXCLUDE 制約
+    // `reservations_no_active_time_overlap_excl` に衝突して fixture 作成が落ちる
+    // （run 30595374008 の実失敗）。marker 付きの旧 fixture を先に片付けて冪等にする。
+    const stale = await prisma.reservation.findMany({
+      where: {
+        customerId: customer.id,
+        spaceId: space.id,
+        notes: { startsWith: FIXTURE_MARKER },
+      },
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      const staleIds = stale.map((r) => r.id);
+      await prisma.smartLockPasscode.deleteMany({
+        where: { reservationId: { in: staleIds } },
+      });
+      await prisma.reservation.deleteMany({ where: { id: { in: staleIds } } });
+    }
+
     const totalPrice = 6000;
     const taxRate = 10;
     const taxAmount = Math.round((totalPrice * taxRate) / 100);
@@ -109,7 +130,7 @@ async function main(): Promise<void> {
         ),
         status: "CONFIRMED",
         paymentStatus: "PAID",
-        notes: `[E2E] passcode reveal fixture ${unique}`,
+        notes: `${FIXTURE_MARKER} ${unique}`,
       },
       select: { id: true },
     });
@@ -146,6 +167,11 @@ async function main(): Promise<void> {
 
 try {
   await main();
+  // Playwright 側は `execFile` の解決を待つ。メール送信の detached promise や
+  // pg pool のハンドルが残るとイベントループが空にならず、プロセスが終了せず
+  // spec が丸ごとタイムアウトする（run 30595374008 の waitlist-offer-confirm は
+  // 90 s 上限でもこれ）。stdout は書き終わっているので明示的に終了する。
+  process.exit(0);
 } catch (error) {
   console.error(
     "❌ create-passcode-reveal-fixture failed:",
