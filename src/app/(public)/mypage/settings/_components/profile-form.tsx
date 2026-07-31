@@ -84,11 +84,19 @@ export function ProfileForm({
 
   // success / error 後の Turnstile widget DOM reset (副作用)
   // Turnstile token は一度の検証で消費されるため、結果に関わらず reset
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` は
+  // 毎レンダー新しいオブジェクトを返すため、この effect は毎レンダー再実行される。
+  // 早期 return が無いと reset() → Turnstile 再チャレンジ → change(token) →
+  // 再レンダー → effect 再実行 → reset() … が閉じず、JS メインスレッドを専有して
+  // ページが操作不能になる（実測と詳細は
+  // events/[slug]/_components/event-registration-form.tsx の同 effect を参照）。
+  const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
-    if (lastResult !== undefined) {
-      turnstileRef.current?.reset();
-      turnstileTokenControl.change("");
-    }
+    if (lastResult === undefined) return;
+    if (turnstileResetForResultRef.current === lastResult) return;
+    turnstileResetForResultRef.current = lastResult;
+    turnstileRef.current?.reset();
+    turnstileTokenControl.change("");
   }, [lastResult, turnstileTokenControl]);
 
   function handleCustomerTypeChange(type: CustomerType) {
