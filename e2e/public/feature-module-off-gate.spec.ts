@@ -23,9 +23,16 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * 実 404 を返すには proxy 層で判定する必要があるが、`proxy.ts` は DB-backed module の
  * import を規約で禁止しているため採れない。
  *
- * よって守るべき契約を「HTTP status」から
- * **「本来のページが描画されず not-found 境界が出る」+「noindex が付く」**に置き換える。
- * fail-closed の実体（コンテンツを出さない）と SEO 保護の両方をカバーする。
+ * よって守るべき契約を「HTTP status」から **head に載る not-found の証跡**
+ * （`<title>` が not-found のもの + `noindex`）に置き換える。
+ *
+ * 本文 h1 を見ないのは、それが初期 HTML に**要素として載らない**ため。
+ * `(public)/not-found.tsx` の h1 は RSC ストリーミング payload
+ * (`self.__next_f.push([1,"…\"h1\"…"])`) として届き client 側で差し替えられる。
+ * 実測 (run 30638590811 の trace): `/contact` の応答は既にナビゲーションから
+ * 「お問い合わせ」が除外され noindex も付いていた ＝ gate は効いていたのに、
+ * script を除いた DOM には h1 がまだ無かった。title / robots は SSR 時点の head に
+ * 載るのでこの競争に巻き込まれない。
  *
  * FEAT-3PLANE-04 (PR #1205) で `mypage/inquiries` × 2、`reservation/complete`、
  * `claim/reservation`、`claim/event-registration` に `requireFeatureEnabled` gate
@@ -69,7 +76,8 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * - cache invalidation は admin form の `updateFeatureModulesSettings` server action が
  *   `invalidateSiteWideCache([FEATURE_MODULES, ...])` を呼ぶ規約に依存する。DB を
  *   直接書き換えるとキャッシュが古いまま公開ルートが本来のページを返し得るため
- *   admin UI 経由。反映は非同期なので not-found の確認は `expect.poll` で待つ。
+ *   admin UI 経由。保存の dispatch を待ってから遷移するので、公開ルートは
+ *   **最初の 1 回の goto で**新しい状態を返す（`clickSaveAndAwaitDispatch` 参照）。
  * - シングルトン行 mutation のため `test.describe.serial` で直列化。
  * - 管理面へのアクセスは storageState ではなく webServer env
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
@@ -90,16 +98,8 @@ const CLAIM_TOKEN_STUB = "e2e-stub-token";
 
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
 
-/** cache invalidation の伝播待ち。単発 goto では反映前の応答を掴む（run 30617695076）。 */
+/** not-found の head 証跡が出るまでの待ち。 */
 const ROUTE_STATUS_TIMEOUT_MS = 20_000;
-
-/** `(public)/not-found.tsx` の h1。feature gate が効いた証拠として使う。 */
-function notFoundHeading(page: Page) {
-  return page.getByRole("heading", {
-    level: 1,
-    name: "ページが見つかりません",
-  });
-}
 
 /** 保存がリロード後も残っているかの確認待ち。 */
 const PERSIST_TIMEOUT_MS = 15_000;
@@ -526,24 +526,24 @@ test.describe
       await setFeatureModule(page, c.label, false);
 
       for (const route of c.routes) {
-        // 待つのは **ナビゲーションの内側**で行う。
-        //
-        // 以前は `expect.poll` の predicate に `goto` → `isVisible()` を並べていたが、
-        // `isVisible()` は**リトライしない瞬間値**で、`goto` は `load` で解決する。
-        // not-found 境界の本体は `loading.tsx` の Suspense fallback が差し替わる
-        // 110〜600ms 後に現れるため、probe はほぼ必ず skeleton を見て false を返し、
-        // 次の反復が新しい `goto` を撃って解決済み DOM を捨てる。**20 秒の予算は
-        // 原理的に使えず poll は永遠に勝てない**（run 30631140902 / 30632351655 の
-        // trace で、境界は 4 回描画されていたのに 5 反復すべて false だった）。
-        //
-        // `setFeatureModule` が保存 dispatch の完了を待つようになった（#1741）ので、
-        // probe 時点で cache invalidation は済んでいる。単発 `goto` +
-        // リトライする web-first assertion で足りる（`error-pages.spec.ts` と同型）。
         await page.goto(route);
-        await expect(
-          notFoundHeading(page),
-          `[${c.module}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
-        ).toBeVisible({ timeout: ROUTE_STATUS_TIMEOUT_MS });
+
+        // `notFound()` が発火した証拠は **head** で見る。
+        //
+        // 本文 h1（`(public)/not-found.tsx` の「ページが見つかりません」）は
+        // 初期 HTML に要素として載らず、RSC ストリーミング payload
+        // (`self.__next_f.push([1,"…\"h1\"…"])`) として届いてから client 側で
+        // 差し替えられる。実測 (run 30638590811 の trace): `/contact` の応答は
+        // 200 でナビゲーションからも「お問い合わせ」が除外済み ＝ gate は効いて
+        // いるのに、script を除いた DOM には h1 がまだ存在しなかった。
+        //
+        // 旧実装は `expect.poll` の中で **毎回 `page.goto` をやり直しながら**
+        // 一発勝負の `isVisible()` を撃っていたため、差し替えが起きる前に必ず
+        // ページを捨てており、20 秒粘っても永久に false のままだった。
+        // title / robots は SSR 時点の head に載るので、この競争に巻き込まれない。
+        await expect(page).toHaveTitle(/ページが見つかりません/u, {
+          timeout: ROUTE_STATUS_TIMEOUT_MS,
+        });
 
         // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
         // 注入する契約に依存する。これが無いと soft-404 が索引される。

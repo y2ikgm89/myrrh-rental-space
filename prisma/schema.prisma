@@ -2090,7 +2090,14 @@ model TermsAgreement {
   agreedAt        DateTime   @default(now())
   /// 同意が発生した scope (旧 context VARCHAR を enum 化)。
   scope           TermsScope
-  resourceId      String?    @db.Uuid // 予約 ID / 問い合わせ ID / イベント申込 ID 等
+  /// 同意が紐づくリソースの ID（予約 / 問い合わせ / イベント申込）。
+  /// **uuid 固定にしてはいけない**: `Reservation.id` と `Inquiry.id` は uuid だが
+  /// `EventRegistration.id` は cuid（`@default(cuid()) @db.VarChar(30)`）で、
+  /// `@db.Uuid` のままだとイベント申込の同意記録が Postgres の
+  /// `invalid input syntax for type uuid`（Prisma P2007）で必ず失敗する。
+  /// 複数モデルを指す polymorphic 参照なので `AuditLog.resourceId` と同じく
+  /// 型付けしない text にする。
+  resourceId      String?
   ipAddress       String?    @db.VarChar(45)
   userAgent       String?    @db.Text
 
