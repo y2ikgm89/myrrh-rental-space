@@ -35,17 +35,14 @@ import {
  */
 
 /**
- * VIEWER が permission を持たない代表ルート。
+ * VIEWER が **アクセスできる** ルート。
  *
- * VIEWER の permission は `settings:read` と各種 `*:read` のみ
+ * VIEWER の permission は `settings:read` と各種 `*:read`
  * （`src/shared/lib/admin-permissions.ts` の ROLE_PERMISSIONS）。
- * `auditLog:read` は SUPER_ADMIN 限定なので、監査ログは確実に拒否経路を通る。
+ * 描画される UI が SUPER_ADMIN と異なる（権限付きカードが消える等）ため、
+ * VIEWER 視点の a11y は独立して見る価値がある。
  */
 const VIEWER_AXE_ROUTES = [
-  {
-    label: "監査ログ（VIEWER は auditLog:read を持たない）",
-    path: urls.adminAuditLogs,
-  },
   {
     label: "設定トップ（VIEWER は settings:read のみ）",
     path: urls.adminSettings,
@@ -79,4 +76,38 @@ test.describe("a11y scan - VIEWER role の管理画面", () => {
       ).toEqual([]);
     });
   }
+});
+
+test.describe("認可拒否レスポンスは meta refresh を含まない", () => {
+  /**
+   * **既知の未修正バグ**（`test.fail()` で明示）。
+   *
+   * `(dashboard)/layout.tsx` は `children` を Suspense の内側に置き、
+   * `DashboardChromeResolved` が `connection()` で suspend する。fallback が
+   * 描画された時点でストリーミングが始まるため、その後にページ本体が
+   * `redirect()` を呼んでも実 3xx を返せず meta タグに劣化する
+   * （公式仕様。redirect API リファレンス「When used in a streaming context,
+   * this will insert a meta tag to emit the redirect on the client side.」）。
+   * PR #1704 の page-level ガード移動ではこの構造を越えられない（Codex P1 指摘）。
+   *
+   * **ブラウザ遷移を使って検証しない**: 拒否レスポンスの shell は
+   * `DashboardChromeSkeleton`（`<div aria-hidden>`、`main` を持たない）なので、
+   * `main` の可視化を待つと meta refresh の遷移完了を待つことになり、
+   * スキャン対象が遷移先 `/admin` にすり替わって**違反を素通りする**
+   * （Codex P2 指摘）。そこで JS を実行しない `request` で生 HTML を直接見る。
+   *
+   * 恒久解を入れたら `test.fail()` を外す。修正が入ると Playwright は
+   * 「unexpected pass」として fail するので、外し忘れも検出される。
+   */
+  test.fail();
+
+  test("VIEWER の監査ログ拒否は meta refresh に劣化しない", async ({
+    request,
+  }) => {
+    // VIEWER は `auditLog:read` を持たない（SUPER_ADMIN 限定）ため必ず拒否経路を通る。
+    const response = await request.get(urls.adminAuditLogs);
+    const html = await response.text();
+
+    expect(html).not.toMatch(/http-equiv=["']?refresh/iu);
+  });
 });
