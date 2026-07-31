@@ -8,6 +8,13 @@ import {
   openCustomerReservationDetail,
 } from "./reservation-test-helpers";
 
+// `<a download href="/api/receipts/...">` のクリックでブラウザが /api を叩くため、
+// proxy の `apiRateLimiter`（100/分/IP）の共有バケットに乗る。飽和すると 429 が返り、
+// ダウンロードが canceled になる（成功時 12s に対し失敗時 2s で終わるのが徴候。
+// 同 run 30607885778 で同 project の calendar-download が明示的に 429 で落ちていた）。
+// 割当表は `.claude/rules/testing-e2e.md`。
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } });
+
 /**
  * マイページ — 会員 session 経由の領収書 PDF ダウンロード E2E (Phase 7 PR8)
  *

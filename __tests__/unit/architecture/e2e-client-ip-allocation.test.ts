@@ -64,6 +64,15 @@ function collectStaticIpAssignments(): Map<string, string[]> {
  * （`src/proxy.ts` の `isLiveProbeEndpoint` / infra 判定）。
  */
 function usesSharedApiLimiter(source: string): boolean {
+  // ブラウザ経由で /api を叩く経路。`<a download href="/api/...">` のクリックを
+  // `waitForEvent("download")` で待つ spec は、**spec 本文に `/api/` も
+  // `request.*` も現れない**（href はアプリ側が生成する）。`request.*` だけを
+  // 見ていた旧実装はこれを完全に取りこぼし、`mypage-receipt-download` が
+  // 割当漏れのまま 429 で落ち続けていた（CI run 30607885778 / 30621350538）。
+  // 本 repo のダウンロードは全て `/api/*` route handler が返すので、
+  // download 待ちを共有 limiter 利用のシグナルとして扱う。
+  if (/waitForEvent\s*\(\s*["`']download["`']\s*\)/u.test(source)) return true;
+
   const callsApiViaRequest =
     /request\.(get|post|put|delete|fetch)\s*\(/u.test(source) &&
     source.includes("/api/");

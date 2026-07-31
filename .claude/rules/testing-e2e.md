@@ -88,10 +88,15 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   （page と `request` の両方に効く）。割当は衝突すると無言で再発するため
   `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts` が機械固定する:
 
-  | 範囲                   | 用途                                                                                  |
-  | ---------------------- | ------------------------------------------------------------------------------------- |
-  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.5` = guest-receipt-single-use、`.6` = calendar-download      |
-  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp` |
+  | 範囲                   | 用途                                                                                                                                                 |
+  | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.3` = events、`.4` = mypage-receipt-download、`.5` = guest-receipt-single-use、`.6` = calendar-download、`.7` = calendar-api |
+  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                                                |
+
+  **`request` 経由だけでなくブラウザ経由も対象**。`<a download href="/api/...">` を
+  クリックして `waitForEvent("download")` で待つ spec は、本文に `/api/` も `request.*` も
+  現れない（href はアプリ側が生成する）ため見落としやすい。gate は download 待ちを
+  シグナルとして扱う。
 
   対象は `apiRateLimiter`（100/分）に当たる `/api` のみ。`/api/live` は完全除外、
   `/api/webhooks` `/api/cron` は別枠の `infraEndpointRateLimiter`（300/分）なので不要。
