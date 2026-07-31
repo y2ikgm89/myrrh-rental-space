@@ -40,3 +40,22 @@ export function visibleById(
 ): Locator {
   return scope.locator(`#${id}`).filter({ visible: true });
 }
+
+/**
+ * 表示中の要素だけをテキストで掴む。
+ *
+ * `getByText` は staging copy にも一致するため、role もアクセシブルネームも id も
+ * 持たない要素（見出しではない `<p>` のラベル等）を掴むときに strict-mode
+ * violation になる。実測: CI run 30621350538 の
+ * `getByText('統合対象の履歴（概算）') resolved to 2 elements`。
+ *
+ * **role locator で掴めるならそちらを優先すること。** これは
+ * 「role も id も無い」場合の最後の手段で、`visibleById` と同じ
+ * `.filter({ visible: true })` で hidden staging copy を落とす。
+ */
+export function visibleByText(
+  scope: Page | Locator | FrameLocator,
+  text: string | RegExp,
+): Locator {
+  return scope.getByText(text).filter({ visible: true });
+}

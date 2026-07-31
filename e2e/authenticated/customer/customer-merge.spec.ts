@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { visibleByText } from "../../helpers/streaming-safe-locators";
 import {
   ensureGuestCustomerForDevEmail,
   issueCustomerMergeTokenForE2E,
@@ -37,7 +38,11 @@ test.describe("customer merge — self-serve flow", () => {
     await expect(
       page.getByRole("heading", { name: "履歴の統合" }),
     ).toBeVisible();
-    await expect(page.getByText("統合対象の履歴（概算）")).toBeVisible();
+    // `getByText` は React streaming の hidden staging copy にも一致し
+    // strict-mode violation になる（CI run 30621350538）。この `<p>` は role も
+    // id も持たないため `visibleByText` で表示中の 1 本に絞る
+    // （規約: `.claude/rules/testing-e2e.md`「id セレクタ禁止」）。
+    await expect(visibleByText(page, "統合対象の履歴（概算）")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "確認メールを送信" }),
     ).toBeVisible();

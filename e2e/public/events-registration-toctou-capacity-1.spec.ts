@@ -187,12 +187,15 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
 }
 
 test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => {
-  // 既定の 30s では足りない。1 attempt あたり「section 表示 15s + Turnstile
-  // token 15s + submit 有効化 15s」の上限を持ち、それを 3 context 直列で回したうえで
-  // bot heuristic 3.1s と `classifyOutcome` の 30s が乗る（最悪 ≒ 3×45 + 3.1 + 30 ≒ 168s）。
-  // 実測でも 30s 超過で落ちていた（CI run 30617695076 / 30622036713）。
-  // retries: 0 の strict な正しさ契約なので、予算不足による偽 fail を作らない。
-  test.describe.configure({ retries: 0, timeout: 180_000 });
+  // 既定の 30s では足りない。spec 自身の内部待機だけで超過する:
+  //   prepareAttempt × 3（各: goto + セクション可視化 15s + Turnstile token 15s +
+  //   submit 有効化 15s）→ bot heuristic の FORM_FILL_MIN_MS 3.1s →
+  //   3 並列 submit の classifyOutcome 30s
+  // 実測 (CI run 30621350538) では本体を抜ける前に 30s を使い切り、
+  // `finally` の context.close で `Test ended` になっていた。
+  //
+  // retries: 0 は維持する（「1 件だけ勝つ」strict 契約は retry で緑にしない）。
+  test.describe.configure({ retries: 0, timeout: 120_000 });
 
   test("同時申込 3 件のうち正確に 1 件のみが CONFIRMED になる", async ({
     browser,

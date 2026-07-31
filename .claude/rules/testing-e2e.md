@@ -88,10 +88,15 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   （page と `request` の両方に効く）。割当は衝突すると無言で再発するため
   `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts` が機械固定する:
 
-  | 範囲                   | 用途                                                                                                                         |
-  | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.5` guest-receipt-single-use / `.6` calendar-download / `.7` calendar-api / `.8` admin events export |
-  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                        |
+  | 範囲                   | 用途                                                                                                                                                 |
+  | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.3` = events、`.4` = mypage-receipt-download、`.5` = guest-receipt-single-use、`.6` = calendar-download、`.7` = calendar-api |
+  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                                                |
+
+  **`request` 経由だけでなくブラウザ経由も対象**。`<a download href="/api/...">` を
+  クリックして `waitForEvent("download")` で待つ spec は、本文に `/api/` も `request.*` も
+  現れない（href はアプリ側が生成する）ため見落としやすい。gate は download 待ちを
+  シグナルとして扱う。
 
   対象は `apiRateLimiter`（100/分）に当たる `/api` のみ。`/api/live` は完全除外、
   `/api/webhooks` `/api/cron` は別枠の `infraEndpointRateLimiter`（300/分）なので不要。
@@ -110,7 +115,23 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   さらに admin サイドバーが feature-disabled 表示になって `axe-admin-pages` が
   23 テスト × 3 attempt 全滅 = **1 spec の失敗が 30 件超の偽の失敗**を生んだ。
   復元は「触った 1 件」ではなく**対象全件を既定値に揃える**。加えて `afterAll` で
-  復元されたことを検証し、壊れたときは**その spec 自身が落ちる**ようにする
+  復元されたことを検証し、壊れたときは**その spec 自身が落ちる**ようにする。
+  この規約は `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が
+  機械強制する（`test.describe.serial` を持つ spec に `afterEach` / `afterAll` を要求。
+  戻す状態を持たない spec は `RESTORE_EXEMPT` に理由付きで登録する）
+- **「触った 1 件」では足りない**。1 つの form が複数の設定をまとめて送る画面では、
+  1 項目の変更が他項目も書き換える。実例: `/admin/settings/features` は 11 module を
+  単一 form で送り、依存元が OFF の module は
+  `submittedValue = depsMet ? control.value : ""`（`ModuleSwitchRow`）により
+  **OFF として送信される** — `spaces` を OFF にする保存が DB 上の
+  `reservation` / `reviews` / `payment` も同時に false にする。復元対象は
+  「spec が明示的に触った項目」ではなく **form が送る全項目**で数える
+- **復元順は依存元が先**。依存先の UI は依存元が OFF の間 `disabled` になるため
+  （features 画面は `disabled={isPending || !depsMet}`）、先に依存先を click すると
+  Playwright の actionability 待ち（enabled 待ち）で**復元自体がハングする**。
+  `feature-module-off-gate` の `FEATURE_MODULE_BASELINE` は `FEATURE_MODULES_LIST` と
+  同順に並べ、`e2e-feature-module-baseline-sync.test.ts` が網羅性・既定値・
+  依存順の 3 点を registry SSoT に対して固定する
 - **保存完了の判定に toast を使わない**。admin の設定フォームは
   `expectedUpdatedAt` の楽観ロックを持ち、競合すると成功 toast ではなく error toast を
   出すため、成功文言を待つ実装は競合時にタイムアウトする。**リロード後も状態が
