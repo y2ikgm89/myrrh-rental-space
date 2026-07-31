@@ -50,8 +50,10 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *
  * 1. 復元は `afterEach` で**無条件**に行う。旧実装は `try/finally` だったが、
  *    setup 段階 (OFF への切替) で throw すると finally に入らず復元されなかった
- * 2. 復元は「この test が触った module」ではなく**全 module を ON に揃える**
- * 3. `afterAll` で全 module が ON であることを検証し、復元が壊れたら
+ * 2. 復元対象は**所有 module 全件**（= MODULE_CASES の依存カスケード閉包）。
+ *    「触った 1 件」では足りず、かつ**全 11 module でもいけない** — 詳細は
+ *    `OWNED_FEATURE_MODULES` のコメント
+ * 3. `afterAll` で所有 module が基準状態に戻ったことを検証し、復元が壊れたら
  *    **この spec 自身が落ちる**ようにする（巻き添えで他 spec を落とさない）
  *
  * ## 保存の完了判定に toast を使わない
@@ -100,6 +102,34 @@ function notFoundHeading(page: Page) {
 
 /** 保存がリロード後も残っているかの確認待ち。 */
 const PERSIST_TIMEOUT_MS = 15_000;
+
+/** 「送信が始まった」= SubmitButton が disabled になるまでの待ち。 */
+const SAVE_DISPATCH_TIMEOUT_MS = 15_000;
+
+/**
+ * 保存ボタンを押し、**送信が始まったことだけ**を待つ。
+ *
+ * `SubmitButton` は `isPending` の間 disabled + 「保存中...」になるので、disabled に
+ * なれば Server Action は dispatch 済みで、この後 reload しても送信は取り消されない。
+ *
+ * これを待たずに `page.goto` すると in-flight の Server Action が中断される。
+ * Prisma の書込は先にコミットされる一方、`afterSuccess` の
+ * `invalidateSiteWideCache`（`updateTag`）まで到達しないため、**DB は OFF なのに
+ * `'use cache'` のタグが expire されず**、公開ルートが `cacheLife: "days"` の間
+ * 本来のページを描画し続ける（実測: run 30631140902 で `/contact` の not-found
+ * 境界が 20 秒間出ない）。
+ *
+ * 成否は toast でも pending 解除でも判定しない。成功時は `useEffect` の
+ * `router.refresh()` が終わるまで `isPending` が戻らず、楽観ロック競合時は
+ * 成功 toast すら出ないため、どちらも信頼できない。判定は呼び出し側が
+ * 「リロード後の永続化状態」で行う。
+ */
+async function clickSaveAndAwaitDispatch(saveButton: Locator): Promise<void> {
+  await saveButton.click();
+  await expect(saveButton).toBeDisabled({
+    timeout: SAVE_DISPATCH_TIMEOUT_MS,
+  });
+}
 
 interface ModuleCase {
   readonly module: string;
@@ -150,25 +180,35 @@ const MODULE_CASES: readonly ModuleCase[] = [
   },
 ];
 
-interface ModuleBaseline {
-  readonly id: string;
-  readonly label: string;
-  readonly enabled: boolean;
-}
-
 /**
  * afterEach で戻す基準状態 — `buildInitialFeatureModules()` (registry SSoT) と同値。
  * E2E の webServer は `bun prisma/seed.ts --dev` を毎回実行し、`seedDev` が
  * `seedSettings({ resetFeatureModules: true })` でこの値に揃えるため、これが run の
  * 既定状態になる (`data-retention` だけ fail-closed で常に OFF)。
  *
- * ## MODULE_CASES ではなく全 11 module を列挙する理由
+ * ## 「所有 module」= MODULE_CASES の依存カスケード閉包
  *
- * `FeatureModulesForm` は 11 module 全部を **1 つの form** で送る。依存元が OFF の
+ * `Settings.featureModules` は単一行なので、これを触る spec が複数あると
+ * `fullyParallel` 下で衝突する。Playwright の `test.describe.serial` は
+ * **同一ファイル内しか直列化しない**（別 project なら尚更並走する）ため、
+ * 衝突は「所有 module を spec 間で重複させない」ことで防ぐ。
+ * 本 spec は MODULE_CASES の 5 module、`axe-admin-feature-disabled.spec.ts` は
+ * `faq` / `access` を所有し、両者は交わらない。
+ *
+ * 所有範囲は MODULE_CASES そのものではなく**依存カスケード閉包**で決まる。
+ * `FeatureModulesForm` は 11 module 全部を **1 つの form** で送り、依存元が OFF の
  * module は `submittedValue = depsMet ? control.value : ""` (ModuleSwitchRow) により
  * **OFF として送信される**。つまり `spaces` を OFF にする保存は、DB 上の
- * `reservation` / `reviews` / `payment` も同時に false にする。`reviews` と `payment`
- * は MODULE_CASES に無いため、MODULE_CASES だけを復元すると OFF のまま取り残される。
+ * `reservation` / `reviews` / `payment` も巻き込んで false にする。
+ * よって復元対象は 5 module ではなく閉包の 7 module。
+ *
+ * 逆に、**所有していない module を復元してはいけない**。全 11 module を戻すと、
+ * 並行する `axe-admin-feature-disabled.spec.ts` が意図的に OFF にしている
+ * `faq` / `access` を勝手に ON に戻して相手を落とし、こちらの afterAll も
+ * 相手の OFF を検出して落ちる（双方向の偽陽性）。
+ *
+ * 交わりの無さと閉包性は
+ * `__tests__/unit/architecture/e2e-feature-module-ownership.test.ts` が機械強制する。
  *
  * ## 依存元を先に並べる理由
  *
@@ -180,32 +220,29 @@ interface ModuleBaseline {
  * 常に依存元が ON になっている。
  *
  * registry SSoT との一致・順序の妥当性は
- * `__tests__/unit/architecture/e2e-feature-module-baseline-sync.test.ts` が機械強制する。
+ * `__tests__/unit/architecture/e2e-feature-module-ownership.test.ts` が機械強制する。
  */
-const FEATURE_MODULE_BASELINE: readonly ModuleBaseline[] = [
-  { id: "spaces", label: "スペース管理", enabled: true },
-  { id: "reservation", label: "予約フォーム", enabled: true },
-  { id: "events", label: "イベント", enabled: true },
-  { id: "posts", label: "ブログ", enabled: true },
-  { id: "news", label: "お知らせ", enabled: true },
-  { id: "faq", label: "FAQ", enabled: true },
-  { id: "access", label: "アクセス", enabled: true },
-  { id: "contact", label: "お問い合わせ", enabled: true },
-  { id: "reviews", label: "レビュー", enabled: true },
-  { id: "payment", label: "オンライン決済", enabled: true },
-  {
-    id: "data-retention",
-    label: "データ保持ポリシーの自動適用",
-    enabled: false,
-  },
-];
+const OWNED_FEATURE_MODULES = {
+  spaces: "スペース管理",
+  reservation: "予約フォーム",
+  events: "イベント",
+  posts: "ブログ",
+  contact: "お問い合わせ",
+  reviews: "レビュー",
+  payment: "オンライン決済",
+} as const;
 
-/** 保存ボタンは 11 module 共通 (1 form / 1 ボタン)。行特定用の安定した label。 */
-const SAVE_ANCHOR_LABEL = "スペース管理";
+const OWNED_MODULE_ENTRIES = Object.entries(OWNED_FEATURE_MODULES);
 
-/** 期待する基準状態のシリアライズ。差分が 1 行で読めるよう文字列比較する。 */
-const EXPECTED_BASELINE_STATE = FEATURE_MODULE_BASELINE.map(
-  (mod) => `${mod.id}=${mod.enabled ? "true" : "false"}`,
+/** 保存ボタンは全 module 共通 (1 form / 1 ボタン)。行特定用の安定した label。 */
+const SAVE_ANCHOR_LABEL = OWNED_FEATURE_MODULES.spaces;
+
+/**
+ * 所有 module の期待状態。所有分は全て ON が基準（`data-retention` のような
+ * 既定 OFF の module は所有していない）。差分が 1 行で読めるよう文字列比較する。
+ */
+const EXPECTED_BASELINE_STATE = OWNED_MODULE_ENTRIES.map(
+  ([id]) => `${id}=true`,
 ).join(", ");
 
 /**
@@ -272,7 +309,7 @@ async function setFeatureModule(
     const switchButton = moduleSwitch(page, moduleLabel);
     await switchButton.click();
     await expect(switchButton).toHaveAttribute("aria-checked", desired);
-    await moduleSaveButton(page, moduleLabel).click();
+    await clickSaveAndAwaitDispatch(moduleSaveButton(page, moduleLabel));
 
     try {
       await expect
@@ -296,47 +333,50 @@ async function setFeatureModule(
   }
 }
 
-/** 現在の全 module 状態を `EXPECTED_BASELINE_STATE` と同形式で読む。 */
+/** 所有 module の現在状態を `EXPECTED_BASELINE_STATE` と同形式で読む。 */
 async function readBaselineState(page: Page): Promise<string> {
   const states: string[] = [];
-  for (const mod of FEATURE_MODULE_BASELINE) {
-    states.push(`${mod.id}=${await readModuleState(page, mod.label)}`);
+  for (const [id, label] of OWNED_MODULE_ENTRIES) {
+    states.push(`${id}=${await readModuleState(page, label)}`);
   }
   return states.join(", ");
 }
 
 /**
- * 全 module を基準状態へ **1 回の保存で** 戻す。
+ * **所有 module だけ**を基準状態 (全て ON) へ 1 回の保存で戻す。
  *
- * 11 module は 1 つの form / 1 つの保存ボタンを共有するため、差分のある Switch を
+ * 全 module は 1 つの form / 1 つの保存ボタンを共有するため、差分のある Switch を
  * すべて flip してから 1 度だけ保存する。`depsMet` は client 側の form state
  * (`fields[req]?.value === "on"`) から計算されるので、依存元を flip した時点で
  * 依存先の Switch は同じ render で enabled になり、reload なしで続けて操作できる。
  *
  * module ごとに保存する実装 (旧 `restoreAllFeatureModules`) は、依存先を依存元より
  * 先に処理すると disabled な Switch を click しようとしてハングしていた。
+ *
+ * 所有外の module (`faq` / `access` 等) には触れない。並行する
+ * `axe-admin-feature-disabled.spec.ts` が意図的に OFF にしている最中に
+ * ON へ戻すと相手を落とすため (OWNED_FEATURE_MODULES のコメント参照)。
  */
 async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
   for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
     await openFeatureSettings(page);
 
     let changed = false;
-    for (const mod of FEATURE_MODULE_BASELINE) {
-      const desired = mod.enabled ? "true" : "false";
-      const switchButton = moduleSwitch(page, mod.label);
+    for (const [, label] of OWNED_MODULE_ENTRIES) {
+      const switchButton = moduleSwitch(page, label);
       await expect(switchButton).toBeVisible();
-      if ((await switchButton.getAttribute("aria-checked")) === desired) {
+      if ((await switchButton.getAttribute("aria-checked")) === "true") {
         continue;
       }
 
       await switchButton.click();
-      await expect(switchButton).toHaveAttribute("aria-checked", desired);
+      await expect(switchButton).toHaveAttribute("aria-checked", "true");
       changed = true;
     }
 
     if (!changed) return;
 
-    await moduleSaveButton(page, SAVE_ANCHOR_LABEL).click();
+    await clickSaveAndAwaitDispatch(moduleSaveButton(page, SAVE_ANCHOR_LABEL));
 
     try {
       await expect

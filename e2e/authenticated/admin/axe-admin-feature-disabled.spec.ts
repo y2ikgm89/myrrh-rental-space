@@ -82,7 +82,20 @@ const DISABLED_BADGE_LABEL = "非公開";
  * 規約の本質は「**無条件に**復元すること」であって「全件を書き戻すこと」では
  * ないので、無条件 afterEach は維持したまま所有範囲だけに絞る。
  */
-const OWNED_MODULE_LABELS = [SIDEBAR_MODULE_LABEL, TAB_MODULE_LABEL] as const;
+/**
+ * 所有範囲の SSoT。key は registry の module id、value は admin form 上の label。
+ *
+ * `__tests__/unit/architecture/e2e-feature-module-ownership.test.ts` が
+ * 「spec 間で所有が交わらない」「所有集合が依存カスケードで閉じている」
+ * 「feature module を触る spec は必ず所有を宣言する」「label が registry と一致する」
+ * を id 単位で強制する。
+ */
+const OWNED_FEATURE_MODULES = {
+  faq: SIDEBAR_MODULE_LABEL,
+  access: TAB_MODULE_LABEL,
+} as const;
+
+const OWNED_MODULE_LABELS = Object.values(OWNED_FEATURE_MODULES);
 
 /**
  * 機能モジュール 1 行の Switch。

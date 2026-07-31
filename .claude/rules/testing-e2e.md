@@ -126,25 +126,53 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   この規約は `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が
   機械強制する（`test.describe.serial` を持つ spec に `afterEach` / `afterAll` を要求。
   戻す状態を持たない spec は `RESTORE_EXEMPT` に理由付きで登録する）
-- **「触った 1 件」では足りない**。1 つの form が複数の設定をまとめて送る画面では、
-  1 項目の変更が他項目も書き換える。実例: `/admin/settings/features` は 11 module を
-  単一 form で送り、依存元が OFF の module は
+- **同じグローバル状態を触る spec が複数あるなら「所有」を排他分割する**。
+  `test.describe.serial` が直列化するのは**同一 describe 内だけ**で、別ファイル・
+  別 project には効かない（`feature-module-off-gate` は `chromium`、
+  `axe-admin-feature-disabled` は `chromium-admin` で**並走する**）。
+  排他の他の手段は本 repo では使えない:
+
+  | 手段                                              | 可否 | 理由                                                                                                                                         |
+  | ------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Playwright named lock（`test(…, { lock })`）      | ❌   | **stable 未リリース**。1.61.1 / 1.62.1 の `TestDetails` は `annotation` / `tag` のみ。alpha は pin しない                                    |
+  | per-request の E2E ヘッダー上書き（#1693 と同型） | ❌   | feature 解決は `'use cache'` の内側で走る（`getPublicNavigation` は `"use cache"` 後に `getFeatureFilterContext()`）。`headers()` を呼べない |
+  | 所有の排他分割                                    | ✅   | 交わらなければ並走しても互いの検証対象を書き換えない                                                                                         |
+
+  各 spec は `OWNED_FEATURE_MODULES`（key = registry の module id、value = label）で
+  所有を宣言し、**復元も検証も所有分だけ**に限定する。全件を書き戻すと、相手が
+  意図的に OFF にしている module を ON に戻して落とす（双方向の偽陽性）。
+
+- **所有集合は依存カスケードで閉じている必要がある**。1 つの form が複数項目を
+  まとめて送る画面では 1 項目の変更が他項目も書き換える。`/admin/settings/features` は
+  全 module を単一 form で送り、依存元が OFF の module は
   `submittedValue = depsMet ? control.value : ""`（`ModuleSwitchRow`）により
   **OFF として送信される** — `spaces` を OFF にする保存が DB 上の
-  `reservation` / `reviews` / `payment` も同時に false にする。復元対象は
-  「spec が明示的に触った項目」ではなく **form が送る全項目**で数える
+  `reservation` / `reviews` / `payment` も同時に false にする。よって `spaces` を
+  所有するなら 3 つとも所有する（＝自分が壊すものは自分で直す）
 - **復元順は依存元が先**。依存先の UI は依存元が OFF の間 `disabled` になるため
   （features 画面は `disabled={isPending || !depsMet}`）、先に依存先を click すると
-  Playwright の actionability 待ち（enabled 待ち）で**復元自体がハングする**。
-  `feature-module-off-gate` の `FEATURE_MODULE_BASELINE` は `FEATURE_MODULES_LIST` と
-  同順に並べ、`e2e-feature-module-baseline-sync.test.ts` が網羅性・既定値・
-  依存順の 3 点を registry SSoT に対して固定する
-- **保存完了の判定に toast を使わない**。admin の設定フォームは
-  `expectedUpdatedAt` の楽観ロックを持ち、競合すると成功 toast ではなく error toast を
-  出すため、成功文言を待つ実装は競合時にタイムアウトする。**リロード後も状態が
-  保たれているか**（永続化の実体）を `expect.poll` で確認し、競合したら再読込して
-  やり直す。cache invalidation の反映も非同期なので、公開ルートの status 確認も
-  単発 `goto` ではなく `expect.poll` で待つ
+  Playwright の actionability 待ち（enabled 待ち）で**復元自体がハングする**
+
+  上記 3 点（宣言の有無・交わりの無さ・カスケード閉包・label 一致・依存順）は
+  `__tests__/unit/architecture/e2e-feature-module-ownership.test.ts` が機械強制する。
+  判定 marker は「features 設定ページへの `goto`」— URL 文字列の出現だけだと
+  リンクの有無を assert するだけの read-only spec を誤検出する
+
+- **保存クリック後は「送信が始まった」ことを待ってから遷移する**。
+  `SubmitButton` は `isPending` の間 disabled になるので `await expect(save).toBeDisabled()`
+  を挟む。これを待たずに `page.goto` / `reload` すると **in-flight の Server Action が
+  中断される**。Prisma の書込は先にコミットされる一方 `afterSuccess` の
+  `invalidateSiteWideCache`（`updateTag`）まで到達しないため、**DB は変わったのに
+  `'use cache'` のタグが expire されない**。結果、公開ルートは `cacheLife`（feature
+  modules は `"days"`）の間ずっと古い値を描画し続ける。
+  実測: run 30631140902 で `feature-module-off-gate` の `/contact` が、contact を
+  OFF に永続化した後も 20 秒間 not-found 境界を出さなかった
+- **保存の成否は toast でも pending 解除でも判定しない**。成功時は `useEffect` の
+  `router.refresh()` が終わるまで `isPending` が戻らず、`expectedUpdatedAt` の楽観
+  ロック競合時は成功 toast ではなく error toast（フォームエラーによっては無言）に
+  なる。判定は**リロード後も状態が保たれているか**（永続化の実体）を `expect.poll`
+  で確認し、競合したら再読込してやり直す。cache invalidation の反映も非同期なので、
+  公開ルート側の確認も単発 `goto` ではなく `expect.poll` で待つ
 - APP_SURFACE はローカル既定 admin。public surface 限定テストは `APP_SURFACE=public` を明示
 
 ## visual regression
