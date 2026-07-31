@@ -12,13 +12,15 @@
  * `appearance` は省略時 "always"（Cloudflare 公式デフォルト）、widget を隠したい場合は "interaction-only"。
  * フォーム送信成功/失敗後は ref.current?.reset() でトークンをリセット（1 回限り使用）。
  *
- * ## トークンの受け取り方は 2 通りある
+ * ## トークンの受け取り方は 2 通り。所有者は常にどちらか一方だけ
  *
- * 1. **`<form>` 送信（推奨）** — widget が `TURNSTILE_TOKEN_FIELD_NAME` の
- *    hidden input を自前で描画・更新する（Cloudflare 公式の `response-field-name`）。
- *    利用側は何も配線しない。conform 併用フォームは必ずこちら。
- * 2. **`onVerify` でトークンを受け取る** — フォーム送信ではなく引数で
- *    Server Action に渡す画面（ダイアログ内のキャンセル・ログイン・問い合わせ返信等）用。
+ * 1. **widget が所有（`onVerify` を渡さない）** — widget が
+ *    `TURNSTILE_TOKEN_FIELD_NAME` の hidden input を自前で描画・更新する
+ *    （Cloudflare 公式の `response-field-name`）。利用側は何も配線しない。
+ *    conform 併用フォームは必ずこちら。
+ * 2. **呼び出し側が所有（`onVerify` を渡す）** — 受け取ったトークンを state に持ち、
+ *    引数で Server Action に渡す / 自前の hidden input に描画する。この場合
+ *    widget は response field を出さない（同名フィールドの二重描画を防ぐ）。
  *
  * ## conform 管理下のフィールドに値を流し込んではいけない
  *
@@ -102,10 +104,13 @@ export function TurnstileWidget({
         retry: "auto",
         refreshExpired: "auto",
         refreshTimeout: "auto",
-        // widget が hidden input を所有する（詳細はファイル冒頭のコメント）。
-        // 既定でも response field は出るが、名前が cf-turnstile-response なので
-        // アプリのスキーマ側フィールド名に合わせて明示する。
-        responseField: true,
+        // **トークンの所有者は常に 1 つ**。`onVerify` を渡す利用者は自分で
+        // state に持って hidden input を描画する / 引数で Server Action に渡すため、
+        // widget は response field を出さない。出すと `<form>` 内で同名フィールドが
+        // 二重になり、FormData が配列化して `z.string()` のスキーマが弾く
+        // （実例: reservation-form は state 由来の turnstileToken を自前で描画する）。
+        // `onVerify` を渡さない = widget が所有する、が唯一の分岐条件。
+        responseField: onVerify === undefined,
         responseFieldName: TURNSTILE_TOKEN_FIELD_NAME,
       }}
     />
