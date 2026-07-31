@@ -169,6 +169,24 @@ async function prepareAttempt(
   return { context, page, email };
 }
 
+/**
+ * 失敗時に「実際に何が描画されていたか」をメッセージへ載せるための診断ヘルパー。
+ * role locator でスコープするので streaming 中の hidden staging copy は拾わない。
+ */
+async function describeMainContent(page: Page): Promise<string> {
+  // 診断は決して throw しない。main landmark すら取れない状態（遷移中・
+  // context クローズ間際など）で例外を投げると、本来報告すべき「success でも
+  // sold-out でもなかった」という事実がヘルパー自身の TimeoutError に
+  // すり替わってしまう。
+  try {
+    const text =
+      (await page.getByRole("main").textContent({ timeout: 5_000 })) ?? "";
+    return text.replace(/\s+/gu, " ").trim().slice(0, 300);
+  } catch {
+    return `(main landmark を取得できず url=${page.url()})`;
+  }
+}
+
 async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
   const registerSection = registrationSection(page);
   const success = page.getByRole("heading", {
@@ -180,7 +198,23 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
 
   // どちらか一方が visible になるまで待つ。Turnstile → server action → UI 更新
   // の往復に最大数秒かかるため 30 秒を上限に置く。
-  await expect(success.or(soldOut)).toBeVisible({ timeout: 30_000 });
+  //
+  // success / sold-out のどちらでもない「第三の状態」に落ちうる:
+  // Server Action が DomainError 以外を投げると error boundary
+  // (`events/[slug]/error.tsx`) がページごと差し替わり、申込セクション自体が
+  // DOM から消える。素の `.or()` 待機だとこれが「element(s) not found」の
+  // 30 秒タイムアウトにしか見えず、原因が spec なのかアプリなのか判別できない
+  // (CI run 30631140902 の切り分けには artifact の ARIA スナップショットを
+  // 掘る必要があった)。失敗時は main の実テキストを添えてログだけで判る形にする。
+  try {
+    await expect(success.or(soldOut)).toBeVisible({ timeout: 30_000 });
+  } catch (cause) {
+    throw new Error(
+      "申込結果が success (お申し込みを受け付けました) にも sold-out (満員 alert) にも " +
+        `ならなかった。main の実内容: ${await describeMainContent(page)}`,
+      { cause },
+    );
+  }
 
   if (await success.isVisible()) return "success";
   return "sold-out";
@@ -207,22 +241,30 @@ test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => 
 
     const fixture = await createFixture();
     const prepared: PreparedAttempt[] = [];
-    let earliestPreparedAt = Number.POSITIVE_INFINITY;
+    let lastPreparedAt = 0;
 
     try {
       for (let i = 0; i < CONCURRENT_ATTEMPTS; i++) {
-        const t0 = Date.now();
         const attempt = await prepareAttempt(browser, fixture, i);
         prepared.push(attempt);
-        earliestPreparedAt = Math.min(earliestPreparedAt, t0);
+        lastPreparedAt = Date.now();
       }
 
       // bot heuristic (MIN_FORM_FILL_TIME_MS=3000ms) を満たすまで待機。
       // page.waitForTimeout は banned のため Node.js の setTimeout で sleep する。
-      const elapsedSinceEarliest = Date.now() - earliestPreparedAt;
-      if (elapsedSinceEarliest < FORM_FILL_MIN_MS) {
+      //
+      // 基準は「最後に用意したページ」でなければならない。閾値はサーバーが
+      // `Date.now() - formRenderedAt` で測り、`formRenderedAt` は各ページの
+      // client mount 時刻 (`useState(() => Date.now())`、event-registration-form.tsx) の
+      // ため、3 本のうち最も新しいページが最短の fill 時間になる。
+      // 以前は「最初の attempt の開始時刻」を基準にしており、3 本を直列に用意する
+      // 時点でその経過は必ず 3.1s を超えるため **この待機は常にスキップされていた**。
+      // prepareAttempt の戻り時刻は必ず formRenderedAt より後なので、そこから
+      // FORM_FILL_MIN_MS 待てば全ページが閾値を超えることを保証できる。
+      const elapsedSinceLastPrepared = Date.now() - lastPreparedAt;
+      if (elapsedSinceLastPrepared < FORM_FILL_MIN_MS) {
         await new Promise((resolve) =>
-          setTimeout(resolve, FORM_FILL_MIN_MS - elapsedSinceEarliest),
+          setTimeout(resolve, FORM_FILL_MIN_MS - elapsedSinceLastPrepared),
         );
       }
 
