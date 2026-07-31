@@ -132,6 +132,10 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "event:delete",
     "event:publish",
+    // 参加者 CSV / Excel の一括出力（PII）。`customer:manage` と同格の扱いで
+    // VIEWER / EDITOR には付けない。要求側は
+    // `/api/admin/export/event-registrations` と イベント詳細の CSV/Excel リンク。
+    "event:manage",
     "notification:read",
     "notification:update",
     "notification:delete",
@@ -235,6 +239,10 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "event:delete",
     "event:publish",
+    // 参加者 CSV / Excel の一括出力（PII）。`customer:manage` と同格の扱いで
+    // VIEWER / EDITOR には付けない。要求側は
+    // `/api/admin/export/event-registrations` と イベント詳細の CSV/Excel リンク。
+    "event:manage",
     "notification:read",
     "notification:update",
     "notification:delete",
