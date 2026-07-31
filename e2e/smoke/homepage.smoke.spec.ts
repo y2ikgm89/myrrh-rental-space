@@ -4,6 +4,7 @@ import {
   collectCspViolations,
   formatCspViolations,
 } from "../helpers/csp-violations";
+import { ensureAdminUser } from "../helpers/ensure-admin-user";
 
 /**
  * Smoke: ホームページ
@@ -59,6 +60,12 @@ test.describe("smoke: homepage", () => {
    * `e2e/authenticated/admin/csp-inline-style.spec.ts` が担当する。
    */
   test("CSP violation が console に出ない", async ({ page }) => {
+    if (appSurface === "admin") {
+      // IAP 模擬の相手になる管理ユーザーが無いと access-denied に落ちる
+      // （auth.smoke.spec.ts と同じ前提を張る）。
+      await ensureAdminUser();
+    }
+
     const routes =
       appSurface === "public"
         ? [urls.home, urls.contact, urls.events]
