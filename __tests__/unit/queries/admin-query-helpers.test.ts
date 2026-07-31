@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ADMIN_USER, EDITOR_USER, VIEWER_USER } from "../../fixtures/users";
 
-const redirectCalls: string[] = [];
+/** 権限拒否は `notFound()`（その場に 404 境界を描画）で表現される。
+ *  旧実装の `redirect("/admin")` は streaming 下で meta タグに劣化するため廃止。 */
+let notFoundCalls = 0;
 const mockVerifyAdminSession = mock(async () => ADMIN_USER);
 const mockHasPermission = mock(() => true);
 const mockIsEditorRole = mock(() => false);
@@ -10,9 +12,9 @@ const mockLogPermissionDenied = mock(async () => {});
 const mockHeaders = mock(async () => new Headers());
 
 mock.module("next/navigation", () => ({
-  redirect: (path: string) => {
-    redirectCalls.push(path);
-    throw new Error(`REDIRECT:${path}`);
+  notFound: () => {
+    notFoundCalls += 1;
+    throw new Error("NOT_FOUND");
   },
 }));
 
@@ -66,7 +68,7 @@ const { requireAdminPermission, requireAdminResourcePermission } =
 
 describe("admin query helpers", () => {
   beforeEach(() => {
-    redirectCalls.length = 0;
+    notFoundCalls = 0;
     mockVerifyAdminSession.mockReset();
     mockHasPermission.mockReset();
     mockIsEditorRole.mockReset();
@@ -85,18 +87,18 @@ describe("admin query helpers", () => {
   test("権限がある場合は user を返す", async () => {
     const user = await requireAdminPermission("page", "read");
     expect(user.id).toBe(ADMIN_USER.id);
-    expect(redirectCalls).toHaveLength(0);
+    expect(notFoundCalls).toBe(0);
   });
 
-  test("権限がない場合は /admin へ redirect して deny を記録する", async () => {
+  test("権限がない場合は notFound() で拒否して deny を記録する", async () => {
     mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
     mockHasPermission.mockReturnValue(false);
 
     await expect(requireAdminPermission("auditLog", "read")).rejects.toThrow(
-      "REDIRECT:/admin",
+      "NOT_FOUND",
     );
 
-    expect(redirectCalls).toEqual(["/admin"]);
+    expect(notFoundCalls).toBe(1);
     expect(mockLogPermissionDenied).toHaveBeenCalledWith(
       VIEWER_USER.id,
       "auditLog",
@@ -104,7 +106,7 @@ describe("admin query helpers", () => {
     );
   });
 
-  test("EDITOR の resource scope が外れている場合は redirect する", async () => {
+  test("EDITOR の resource scope が外れている場合は notFound() で拒否する", async () => {
     mockVerifyAdminSession.mockResolvedValue(EDITOR_USER);
     mockHasPermission.mockReturnValue(true);
     mockIsEditorRole.mockReturnValue(true);
@@ -112,7 +114,7 @@ describe("admin query helpers", () => {
 
     await expect(
       requireAdminResourcePermission("page", "read", "page-3"),
-    ).rejects.toThrow("REDIRECT:/admin");
+    ).rejects.toThrow("NOT_FOUND");
 
     expect(mockUserHasResourceAccess).toHaveBeenCalledWith(
       EDITOR_USER,
