@@ -28,9 +28,7 @@ const workflow = readFileSync(
  * actually run. Fails loudly if the pattern moves or the extraction breaks.
  */
 function extractBreakingMigrationPattern(): string {
-  const match = workflow.match(
-    /grep -Eiq '(?<pattern>[^']+)' "\$\{changed_migrations\[@\]\}"/,
-  );
+  const match = workflow.match(/grep -Eiq '(?<pattern>[^']+)'/u);
   const pattern = match?.groups?.["pattern"];
   if (!pattern) {
     throw new Error(
@@ -54,6 +52,38 @@ function posixEreToJsRegExp(pattern: string): RegExp {
 
 const breakingPattern = extractBreakingMigrationPattern();
 const breakingRegex = posixEreToJsRegExp(breakingPattern);
+
+/**
+ * Mirror the workflow's pre-grep normalization:
+ *
+ *     sed 's/--.*$//' file | tr '\n' ' ' | tr ';' '\n'
+ *
+ * grep matches **line by line**, so a statement wrapped across lines —
+ *
+ *     ALTER TABLE "terms_agreements"
+ *       ALTER COLUMN "resourceId" SET DATA TYPE TEXT;
+ *
+ * — satisfies the pattern on neither line and slips through entirely. That is
+ * not hypothetical: the merged
+ * `20260726030000_admin_notification_resource_id_varchar` is written this way
+ * and returned rc=1 against the old single-`grep` call, so it would have
+ * deployed without downtime mode.
+ *
+ * Splitting on `;` matters just as much as joining lines: without it, two
+ * unrelated adjacent statements get bridged by `.*` and produce false
+ * positives (e.g. `ALTER TABLE a ADD COLUMN b;` followed by anything
+ * containing `TYPE`).
+ */
+function normalizeMigrationSql(sql: string): string[] {
+  return sql.replace(/--.*$/gmu, "").replaceAll("\n", " ").split(";");
+}
+
+/** grep が行ごとに評価するのと同じく、正規化後の各文に対して照合する。 */
+function detectsBreaking(sql: string): boolean {
+  return normalizeMigrationSql(sql).some((statement) =>
+    breakingRegex.test(statement),
+  );
+}
 
 const breakingFixtures: ReadonlyArray<{
   readonly name: string;
@@ -99,6 +129,24 @@ const breakingFixtures: ReadonlyArray<{
     name: "case-insensitive lowercase drop column",
     sql: 'alter table "users" drop column "foo";',
   },
+  // 以下は改行を挟む実在の書き方。単一行 fixture しか無かったため、この抜けが
+  // 長期間見えていなかった（マージ済み migration が 1 件すり抜けている）。
+  {
+    name: "multi-line ALTER COLUMN ... SET DATA TYPE (Prisma の折返し出力)",
+    sql: 'ALTER TABLE "terms_agreements"\n  ALTER COLUMN "resourceId" SET DATA TYPE TEXT USING "resourceId"::TEXT;',
+  },
+  {
+    name: "multi-line DROP COLUMN",
+    sql: 'ALTER TABLE "users"\n  DROP COLUMN "foo";',
+  },
+  {
+    name: "multi-line ALTER COLUMN ... SET NOT NULL",
+    sql: 'ALTER TABLE "users"\n  ALTER COLUMN "foo"\n  SET NOT NULL;',
+  },
+  {
+    name: "先行コメントがあっても本文は検出する",
+    sql: '-- 意図的な破壊的変更。理由は PR 参照。\nALTER TABLE "users"\n  DROP COLUMN "foo";',
+  },
 ];
 
 const safeFixtures: ReadonlyArray<{
@@ -137,6 +185,16 @@ const safeFixtures: ReadonlyArray<{
     name: "COMMENT ON COLUMN",
     sql: 'COMMENT ON COLUMN "users"."foo" IS \'note\';',
   },
+  // 正規化で誤検知を作っていないことの確認。改行を潰すだけで `;` 分割を
+  // 怠ると、この 2 文が `.*` で橋渡しされて breaking と誤判定される。
+  {
+    name: "隣接する安全な 2 文が繋がって誤検知しない",
+    sql: 'ALTER TABLE "users" ADD COLUMN "foo" TEXT;\nCREATE TYPE "Role" AS ENUM (\'ADMIN\');',
+  },
+  {
+    name: "コメント中の散文は検出しない",
+    sql: '-- Prisma の diff は DROP COLUMN "legacy" も提案してきたが意図的に外した。\nALTER TABLE "users" ADD COLUMN "foo" TEXT;',
+  },
 ];
 
 describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
@@ -159,15 +217,23 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     expect(breakingPattern).toContain("DROP[[:space:]]+TYPE");
   });
 
+  test("workflow は grep の前に 1 文 1 行へ正規化する", () => {
+    // これが無いと改行を挟んだ文が丸ごと判定をすり抜ける。上の
+    // multi-line fixture 群はこの正規化を前提に評価している。
+    expect(workflow).toContain("sed 's/--.*$//' \"${migration_file}\"");
+    expect(workflow).toContain("tr '\\n' ' '");
+    expect(workflow).toContain("tr ';' '\\n'");
+  });
+
   for (const fixture of breakingFixtures) {
     test(`detects breaking: ${fixture.name}`, () => {
-      expect(breakingRegex.test(fixture.sql)).toBe(true);
+      expect(detectsBreaking(fixture.sql)).toBe(true);
     });
   }
 
   for (const fixture of safeFixtures) {
     test(`does not flag safe: ${fixture.name}`, () => {
-      expect(breakingRegex.test(fixture.sql)).toBe(false);
+      expect(detectsBreaking(fixture.sql)).toBe(false);
     });
   }
 });
