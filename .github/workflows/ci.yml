@@ -398,7 +398,10 @@ jobs:
 
       - name: Run admin smoke E2E tests
         if: needs.changes.outputs.code == 'true'
-        run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts --grep "管理入口"
+        # admin surface でしか踏めない経路だけを選ぶ（PR feedback を短く保つため全件は回さない）。
+        # - 管理入口: IAP 模擬の到達性
+        # - CSP violation: admin だけが読み込む sonner の <style> hash / Radix scroll lock
+        run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts e2e/smoke/homepage.smoke.spec.ts --grep "管理入口|CSP violation"
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000

@@ -77,6 +77,29 @@ paths:
   （connect-src / img-src）と `src/shared/lib/constants/frame-sources.ts`（frame-src +
   埋め込み URL 検証で共用）の**両方**を更新する
 
+### inline style の扱い（script とは別ルール）
+
+CSP3 では **style 属性に nonce を付けられない**（許可手段は `'unsafe-inline'` か
+`'unsafe-hashes'` + hash のみ / W3C CSP3 §8.3・MDN style-src-attr）。実際に出る style 属性は
+next/image や Radix など framework / ライブラリ内部由来で**列挙不能**のため、
+`style-src-attr` は `'unsafe-inline'` 単独にしている。hash を混ぜると CSP3 の規定で
+`'unsafe-inline'` が無視されるので混在させない。リスクは CSS に限定され（スクリプト実行は不可）、
+CSS 由来の情報窃取に必要な外部読み込みは img-src / font-src / connect-src で塞いだままにする。
+
+`<style>` 要素は nonce を維持する。nonce を渡す経路は 2 つ:
+
+- server 生成の `<style>` → `NonceStyleBlock`
+- ライブラリが実行時に注入する `<style>` → `RegisterStyleNonce` が `get-nonce` の
+  `setNonce()` に per-request nonce を渡す（Radix scroll lock が使う
+  `react-style-singleton` がこれを読む）。両 root layout の Suspense 内に置くこと
+
+nonce API を持たない `sonner` だけは内容一致 hash で通す。SSoT は
+`src/shared/lib/csp/inline-style-hashes.ts`、drift gate は
+`__tests__/unit/architecture/csp-inline-style-hashes.test.ts`
+（sonner を上げると hash がずれるので、この unit テストが先に落ちる）。
+実挙動の gate は smoke の「CSP violation が console に出ない」と
+`e2e/authenticated/admin/csp-inline-style.spec.ts`。
+
 ## cron 認可 / E2E ゲート / 暗号化
 
 - cron route は Cloud Scheduler の OIDC Bearer token を検証

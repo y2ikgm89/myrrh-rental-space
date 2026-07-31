@@ -12,6 +12,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { getAdminAppUrl } from "@/shared/lib/admin-urls";
+import { StyleNonceRegistrar } from "@/shared/lib/csp/style-nonce-registrar";
 import "./_styles/admin.css";
 
 // metadata は generateMetadata で runtime 評価する。`export const metadata` で
@@ -67,7 +68,14 @@ export default async function AdminRootLayout({
   return (
     <Suspense>
       <html lang="ja">
-        <body className="font-sans antialiased">{children}</body>
+        <body className="font-sans antialiased">
+          {/* Radix の scroll lock が注入する <style> に per-request nonce を渡す。
+              headers() を読むので専用の Suspense 内に置く（詳細は RegisterStyleNonce）。 */}
+          <Suspense fallback={null}>
+            <StyleNonceRegistrar />
+          </Suspense>
+          {children}
+        </body>
       </html>
     </Suspense>
   );
