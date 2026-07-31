@@ -1,0 +1,26 @@
+-- NOTE: Prisma's auto-generated diff for this migration also proposed
+--   DROP INDEX "reservation_series_space_dtstart_active_unique";
+-- This is a known, unrelated false-positive: the ReservationSeries.deletedAt-scoped
+-- partial UNIQUE index is hand-written raw SQL in 20260717010625_add_reservation_series
+-- (see schema.prisma's ReservationSeries model comment), which Prisma's schema
+-- diffing does not recognize as matching its own non-unique @@index declaration.
+-- Intentionally dropped from this migration, exactly as
+-- 20260730115734_refunds_status_column_and_transition_exception did.
+
+-- terms_agreements.resourceId は「同意が紐づくリソース」を指す polymorphic 参照。
+-- uuid 固定にしていたが、指し先の 1 つである EventRegistration.id は cuid
+-- (`@default(cuid()) @db.VarChar(30)`) のため、イベント参加申込・キャンセル待ち登録で
+-- 必須規約に同意すると Postgres が `invalid input syntax for type uuid` を返し
+-- (Prisma P2007)、トランザクションごと巻き戻って申込が 1 件も成立しなかった。
+--
+-- uuid → text は widening なので既存行は文字列として保存され、値は失われない。
+-- Reservation.id / Inquiry.id は uuid のままなので、それらの既存値も
+-- 正規形の uuid 文字列として読み出せる。AuditLog.resourceId が同じ polymorphic
+-- 参照を型付けしない text で持っているのに合わせる。
+-- 1 行に収めること。deploy-production.yml の breaking 判定は `grep -Eiq`（行単位）で
+-- `ALTER TABLE ... ALTER COLUMN ... TYPE` を 1 行として探すため、`ALTER TABLE` と
+-- `ALTER COLUMN` を改行で分けると**判定をすり抜けて計画ダウンタイムが発動しない**。
+-- 実測: 2 行版は rc=1（不一致）。マージ済みの
+-- 20260726030000_admin_notification_resource_id_varchar も同じ理由ですり抜けている
+-- （検出側の恒久修正は別途必要）。
+ALTER TABLE "terms_agreements" ALTER COLUMN "resourceId" SET DATA TYPE TEXT USING "resourceId"::TEXT;
