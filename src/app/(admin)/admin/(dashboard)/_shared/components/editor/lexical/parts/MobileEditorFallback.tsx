@@ -79,7 +79,13 @@ export function MobileEditorFallback({
           <p className="mb-2 text-xs text-muted-foreground">
             現在の編集内容のプレビュー（読み取り専用・未保存の変更を含みます）
           </p>
-          <div className="prose prose-sm pointer-events-none max-w-none opacity-60">
+          {/* 減光しない。これは UI コントロールではなく**コンテンツ**なので、
+              `pointer-events-none` で操作不能にしても SC 1.4.3 の inactive 例外
+              （対象は user interface component）には当たらず 4.5:1 が要る。
+              `opacity-60` では本文が 4.65〜4.74:1 と余裕がほぼ無く、prose 内の
+              見出し・リンク・muted テキストは容易に AA を割る。読み取り専用で
+              あることは直前の説明文が伝えている。 */}
+          <div className="prose prose-sm pointer-events-none max-w-none">
             <SanitizedHtml html={previewHtml} />
           </div>
         </div>
