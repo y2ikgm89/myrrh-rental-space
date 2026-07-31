@@ -95,6 +95,13 @@ const AUTO_MEDIA_FIELD = join(
   "auto-fields",
   "AutoMediaField.tsx",
 );
+const MEDIA_PREVIEW = join(
+  DASHBOARD,
+  "_shared",
+  "components",
+  "media-picker",
+  "MediaPreview.tsx",
+);
 
 /** WCAG 2.1 SC 1.4.3 (Level AA) の通常サイズテキスト最低比。 */
 const AA_MIN_RATIO = 4.5;
@@ -535,26 +542,33 @@ describe("操作可能な要素に group opacity を戻していない", () => {
 
 /**
  * `AutoImageField` / `AutoMediaField` のプレビュー枠は `(disabled || isBusy)` で
- * `opacity-60` を掛けるが、枠内の**すべてのコントロールが実際に `disabled` 属性を
- * 持ち**、drag & drop ハンドラも早期 return するため、SC 1.4.3 の "inactive user
- * interface component" 例外に当たる（実測では muted テキストが 2.55:1 まで落ちる）。
+ * `opacity-60` を掛ける（実測では muted テキストが 2.55:1 まで落ちる）。これが
+ * SC 1.4.3 の "inactive user interface component" 例外で許されるのは、枠内に
+ * **操作できる要素が 1 つも残っていない**場合だけ。前提が崩れた瞬間に例外は消えて
+ * AA 違反になるので、崩れ方を 2 系統に分けて固定する。
  *
- * 例外が成立する前提は「操作できないこと」なので、`disabled` の配線が外れた瞬間に
- * 例外は消えて AA 違反になる。ここではその前提だけを固定する。
+ * 1. `disabled` 属性を持てるコントロール（button / Button）→ 全数に配線されているか
+ * 2. `disabled` 属性を**持てない**操作可能要素（`<video controls>` /
+ *    `<audio controls>` / `<iframe>`）→ `inert` で包まれているか
+ *
+ * (2) は実際に見落としていた: `AutoMediaField` は `MediaPreview` 経由で動画・音声・
+ * 埋め込みプレイヤーを描画しうるのに、それらは disabled にならないため減光下でも
+ * 再生操作ができてしまっていた（PR #1733 のレビュー指摘）。
  */
 describe("減光したまま許容できる箇所は inactive であり続ける", () => {
   for (const [label, path] of [
     ["AutoImageField", AUTO_IMAGE_FIELD],
     ["AutoMediaField", AUTO_MEDIA_FIELD],
   ] as const) {
-    test(`${label} は減光中すべてのコントロールが disabled`, () => {
+    test(`${label} は減光中すべての button が disabled`, () => {
       const source = normalizedSource(path);
 
       // 減光の条件そのもの。
       expect(source).toContain('(disabled || isBusy) && "opacity-60"');
 
       // ボタンの総数と `disabled={disabled || isBusy}` の数が一致する
-      // ＝ 減光中に押せるコントロールが 1 つも残らない。
+      // ＝ 減光中に押せる button が 1 つも残らない。
+      // ※ これは disabled 属性を持てる要素しか見ない。持てない要素は下の test。
       const buttons = source.match(/<[Bb]utton\b/gu) ?? [];
       const disabledBindings =
         source.match(/disabled=\{disabled \|\| isBusy\}/gu) ?? [];
@@ -568,4 +582,35 @@ describe("減光したまま許容できる箇所は inactive であり続ける
       expect(source).toContain("if (disabled || isUploading) return;");
     });
   }
+
+  /** `disabled` 属性を持てないのに操作できる要素。 */
+  const NON_DISABLEABLE_OPERABLE = ["<video", "<audio", "<iframe"];
+
+  test("MediaPreview は disabled にできない操作可能要素を描画する（前提の確認）", () => {
+    // この前提が消えたら下の inert ガードの必要性も見直す。
+    const source = normalizedSource(MEDIA_PREVIEW);
+    const found = NON_DISABLEABLE_OPERABLE.filter((tag) =>
+      source.includes(tag),
+    );
+    expect(found).toEqual(NON_DISABLEABLE_OPERABLE);
+  });
+
+  test("AutoMediaField は MediaPreview を inert で包んで本当に操作不能にする", () => {
+    const source = normalizedSource(AUTO_MEDIA_FIELD);
+    // `inert` は subtree を focus 不可・click 不可にし a11y tree からも除く。
+    // `<video controls>` 等に disabled 相当を効かせる唯一の標準手段。
+    expect(
+      /inert=\{disabled \|\| isBusy\}>\s*<MediaPreview\b/u.exec(source),
+    ).not.toBeNull();
+  });
+
+  test("AutoImageField の減光枠には disabled にできない操作可能要素が無い", () => {
+    // こちらは `<Image>`（非操作）と disabled 済み Button だけなので inert 不要。
+    // 将来 video/audio/iframe が入ったら inert を足す必要がある。
+    const source = normalizedSource(AUTO_IMAGE_FIELD);
+    const found = NON_DISABLEABLE_OPERABLE.filter((tag) =>
+      source.includes(tag),
+    );
+    expect(found).toEqual([]);
+  });
 });
