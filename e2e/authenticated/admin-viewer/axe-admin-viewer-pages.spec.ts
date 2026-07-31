@@ -80,27 +80,21 @@ test.describe("a11y scan - VIEWER role の管理画面", () => {
 
 test.describe("認可拒否レスポンスは meta refresh を含まない", () => {
   /**
-   * **既知の未修正バグ**（`test.fail()` で明示）。
+   * 権限不足は `denyAdminAccess()` = `notFound()` で **その場に** 404 境界を
+   * 描画する（`_shared/queries/_helpers.ts`）。ナビゲーションが起きないので
+   * meta タグ自体が出ない。
    *
-   * `(dashboard)/layout.tsx` は `children` を Suspense の内側に置き、
-   * `DashboardChromeResolved` が `connection()` で suspend する。fallback が
-   * 描画された時点でストリーミングが始まるため、その後にページ本体が
-   * `redirect()` を呼んでも実 3xx を返せず meta タグに劣化する
-   * （公式仕様。redirect API リファレンス「When used in a streaming context,
-   * this will insert a meta tag to emit the redirect on the client side.」）。
-   * PR #1704 の page-level ガード移動ではこの構造を越えられない（Codex P1 指摘）。
+   * 旧実装の `redirect("/admin")` は、`(dashboard)/layout.tsx` が `children` を
+   * Suspense の内側に置いている（`DashboardChromeResolved` が `connection()` で
+   * suspend する）ためストリーミング開始後に評価され、HTTP 3xx を返せず meta
+   * タグに劣化していた。これは axe の `meta-refresh` critical (WCAG 2.2.1 / 2.2.4)。
    *
-   * **ブラウザ遷移を使って検証しない**: 拒否レスポンスの shell は
+   * **ブラウザ遷移で検証しない**: 拒否レスポンスの shell は
    * `DashboardChromeSkeleton`（`<div aria-hidden>`、`main` を持たない）なので、
-   * `main` の可視化を待つと meta refresh の遷移完了を待つことになり、
-   * スキャン対象が遷移先 `/admin` にすり替わって**違反を素通りする**
-   * （Codex P2 指摘）。そこで JS を実行しない `request` で生 HTML を直接見る。
-   *
-   * 恒久解を入れたら `test.fail()` を外す。修正が入ると Playwright は
-   * 「unexpected pass」として fail するので、外し忘れも検出される。
+   * `main` の可視化を待つと（劣化が残っている場合に）遷移完了を待つことになり、
+   * 検査対象が `/admin` にすり替わって違反を素通りする。
+   * JS を実行しない `request` で生 HTML を直接見る。
    */
-  test.fail();
-
   test("VIEWER の監査ログ拒否は meta refresh に劣化しない", async ({
     request,
   }) => {
