@@ -62,6 +62,13 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 - role / アクセシブルネームを持たない要素（アンカー用の素の `<section id>`、conform が
   振る form id 等）だけ `e2e/helpers/streaming-safe-locators.ts` の
   `visibleById(page, "id")`（= `.filter({ visible: true })`）を使う
+- **`page.getByText(...)` を直に書かない**。text エンジンは CSS セレクタと同様に
+  staging copy を掴む（実測 run 30631098725: `guest-reservation-status-hub` で同一
+  class の `<h2>` が 2 件 → strict mode violation）。**role locator でスコープしてから**
+  テキストを見る（`page.getByRole("main").getByText(...)`）。staging copy は
+  a11y ツリー非公開なので、role でスコープした時点で除外される。
+  banner / contentinfo など `<main>` 外のテキストは、その landmark の role で
+  スコープする（`getByRole("banner").getByText(...)`）
 - この二重化は React/Next.js の仕様であってアプリ側のバグではない。
   「Suspense の外に外殻を出す」だけでは解消しない（上位 layout の boundary が残るため）
 - 命名: `e2e/**/*.spec.ts`（smoke は `*.smoke.spec.ts`）。`*.test.ts` を e2e 配下に
