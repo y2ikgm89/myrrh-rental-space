@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import {
+  buildAdminAxeScanner,
+  formatAxeViolations,
+  isBlockingAdminViolation,
+} from "../../helpers/admin-axe";
 
 /**
  * 管理画面 - Lexical ToolbarPlugin ロービングタブインデックス E2E（管理者認証済み state）
@@ -419,23 +423,13 @@ test.describe("Lexical ToolbarPlugin - roving tabindex（WAI-ARIA APG toolbar pa
     await expect(page.getByRole("main")).toBeVisible();
 
     // Lexical の contenteditable は ContentEditable に aria-label 付与済み
-    // （#1340）のため除外しない。axe-admin-pages.spec.ts と同じ方針
-    const results = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
+    // （#1340）のため除外しない。scanner / blocking 判定は admin 共有ヘルパーを使う
+    // — ここで独自に組むと、toolbar の roving tabindex 由来の既知誤検知
+    // （scrollable-region-focusable）の除外がこの spec にだけ効かず、同じノードで
+    // 落ち続ける（PR #1696 Codex 指摘）。
+    const results = await buildAdminAxeScanner(page).analyze();
+    const blocking = results.violations.filter(isBlockingAdminViolation);
 
-    const blocking = results.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
-
-    expect(
-      blocking,
-      blocking
-        .map(
-          (v) =>
-            `[${v.impact ?? "unknown"}] ${v.id}: ${v.help} (${v.nodes.length} node(s))\n  ${v.helpUrl}`,
-        )
-        .join("\n\n"),
-    ).toEqual([]);
+    expect(blocking, formatAxeViolations(results.violations)).toEqual([]);
   });
 });
