@@ -1,15 +1,17 @@
 "use client";
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
 
 import { Button } from "@/public/components/design-system/button";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 
-export default function ReservationCompleteError({
-  unstable_retry,
-}: ErrorInfo) {
+export default function ReservationCompleteError(props: ErrorBoundaryProps) {
+  const retry = errorBoundaryRetry(props);
   return (
     <Container>
       <div className="flex min-h-[60svh] items-center justify-center">
@@ -20,7 +22,7 @@ export default function ReservationCompleteError({
             <br />
             この画面が繰り返し表示される場合はお問い合わせください。
           </p>
-          <Button variant="editorial" onClick={() => unstable_retry()}>
+          <Button variant="editorial" onClick={() => retry()}>
             もう一度試す
           </Button>
         </Stack>

@@ -7,14 +7,21 @@
  * サイドバーレイアウトは維持される。
  */
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryDigest,
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
+import { normalizeError } from "@/shared/lib/errors/types";
 import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/admin/components/ui";
 import { logger } from "@/shared/lib/errors/logger-core";
 
-export default function AdminError({ error, unstable_retry }: ErrorInfo) {
-  const digest = "digest" in error ? String(error.digest) : undefined;
+export default function AdminError(props: ErrorBoundaryProps) {
+  const error = normalizeError(props.error);
+  const retry = errorBoundaryRetry(props);
+  const digest = errorBoundaryDigest(props.error);
 
   useEffect(() => {
     logger.error("Admin error boundary triggered", {
@@ -71,7 +78,7 @@ export default function AdminError({ error, unstable_retry }: ErrorInfo) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button onClick={() => unstable_retry()}>再試行</Button>
+          <Button onClick={() => retry()}>再試行</Button>
           <Button variant="outline" asChild>
             <Link href="/admin">ダッシュボードへ</Link>
           </Button>

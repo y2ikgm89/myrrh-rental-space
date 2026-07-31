@@ -10,12 +10,19 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
  */
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryDigest,
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
+import { normalizeError } from "@/shared/lib/errors/types";
 import { useEffect } from "react";
 import "./global-error.css";
 
-export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
-  const digest = "digest" in error ? String(error.digest) : undefined;
+export default function GlobalError(props: ErrorBoundaryProps) {
+  const error = normalizeError(props.error);
+  const retry = errorBoundaryRetry(props);
+  const digest = errorBoundaryDigest(props.error);
 
   useEffect(() => {
     console.error("Global error boundary triggered", {
@@ -68,7 +75,7 @@ export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
             <div className="ge-actions">
               <button
                 type="button"
-                onClick={() => unstable_retry()}
+                onClick={() => retry()}
                 className="ge-btn-primary"
               >
                 再試行する

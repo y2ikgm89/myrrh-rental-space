@@ -1,14 +1,17 @@
 "use client";
 
-import type { ErrorInfo } from "next/error";
+import {
+  errorBoundaryRetry,
+  type ErrorBoundaryProps,
+} from "@/shared/lib/errors/error-boundary-props";
+import { normalizeError } from "@/shared/lib/errors/types";
 import { useEffect } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { logger } from "@/shared/lib/errors/logger-core";
 
-export default function ReservationEditError({
-  error,
-  unstable_retry,
-}: ErrorInfo) {
+export default function ReservationEditError(props: ErrorBoundaryProps) {
+  const error = normalizeError(props.error);
+  const retry = errorBoundaryRetry(props);
   useEffect(() => {
     logger.error("Mypage reservation edit error", {
       error: error.message,
@@ -27,7 +30,7 @@ export default function ReservationEditError({
           再度お試しいただくか、一覧にお戻りください。
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button variant="editorial" onClick={() => unstable_retry()}>
+          <Button variant="editorial" onClick={() => retry()}>
             再試行
           </Button>
           <Button variant="secondary" href="/mypage">
