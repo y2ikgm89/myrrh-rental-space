@@ -46,7 +46,7 @@ export type CustomerReservationTarget =
  */
 function reservationDetailLink(page: Page, target: CustomerReservationTarget) {
   return page
-    .locator("#main-content")
+    .getByRole("main")
     .getByRole("link", { name: target.detailLinkName })
     .first();
 }
@@ -91,7 +91,7 @@ export async function expectReservationDetailHeading(
 }
 
 export function getReservationDetailMain(page: Page) {
-  return page.locator("#main-content").filter({
+  return page.getByRole("main").filter({
     has: page.getByRole("heading", { level: 1, name: "予約詳細" }),
   });
 }

@@ -443,6 +443,12 @@ const eslintConfig = defineConfig([
   //   rely on web assertions to assess readiness instead."
   // - waitForURL: App Router soft navigation で load event 不発火＝silent timeout。
   //   expect(page).toHaveURL() に統一する。
+  // - locator("#id"): React streaming は完了した Suspense boundary の HTML を hidden な
+  //   staging container へ流し込み、インラインスクリプトで in-place に差し替える。差し替えは
+  //   precedence 付き stylesheet の読み込み待ち + バッチ化されるため、境界内の DOM は
+  //   「in-place + hidden staging」の 2 本立てで一時的に共存する。CSS セレクタは hidden 側も
+  //   掴むので strict-mode violation になる。role locator は a11y ツリー非公開の要素を
+  //   除外する（Playwright 既定の includeHidden=false）ため構造的に安全。
   {
     name: "e2e-playwright-discouraged",
     files: ["e2e/**/*.ts", "playwright.config.ts"],
@@ -473,6 +479,14 @@ const eslintConfig = defineConfig([
             "IfStatement[test.type='BinaryExpression'][test.operator='>'][test.right.value=0] AwaitExpression > CallExpression[callee.property.name='count']",
           message:
             "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/testing-e2e.md",
+        },
+        {
+          // `#id` だけでなく修飾付き (`form#event-create` / `div > #x`) も弾く。
+          // `[href="#main-content"]` のような属性値中の `#` は対象外にするため、
+          // 直前が引用符 / `=` でない `#` に限定する。
+          selector: `CallExpression[callee.property.name='locator'] > Literal[value=/(^|[^"'=])#/]`,
+          message:
+            "CSS の id セレクタ（'#id' / 'form#id'）は React streaming の hidden staging copy も掴み strict-mode violation を起こす。getByRole('main') / getByRole('region', { name }) 等の role locator（a11y ツリー非公開要素を除外）に置換し、role が無い要素だけ visibleById()（.filter({ visible: true })）を使ってください。SSoT: .claude/rules/testing-e2e.md",
         },
       ],
     },

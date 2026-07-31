@@ -127,7 +127,7 @@ test.describe("お問い合わせページ - 基本表示", () => {
 
     await expect(
       page
-        .locator("#main-content")
+        .getByRole("main")
         .getByText("ご質問やご要望がございましたら", { exact: false }),
     ).toBeVisible();
   });

@@ -52,7 +52,7 @@ test.describe("予約 full flow - スペース → 予約ページ遷移", () =>
       new RegExp(`/spaces/${spaceFixtures.publicReservableSpaceSlug}$`, "u"),
     );
 
-    const reserveButton = page.locator("#main-content").getByRole("link", {
+    const reserveButton = page.getByRole("main").getByRole("link", {
       name: "Reserve this space",
     });
     await expect(reserveButton).toBeVisible({ timeout: 5000 });

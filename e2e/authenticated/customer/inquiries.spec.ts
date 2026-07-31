@@ -27,7 +27,7 @@ test.describe("お問い合わせ履歴 - 一覧ページ", () => {
   });
 
   test("seed の inquiry 一覧（最低 2 件）が描画される", async ({ page }) => {
-    const main = page.locator("#main-content");
+    const main = page.getByRole("main");
 
     await expect(
       main.getByRole("link", {
@@ -48,14 +48,14 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
   }) => {
     await page.goto(urls.mypageInquiries);
 
-    const detailLink = page.locator("#main-content").getByRole("link", {
+    const detailLink = page.getByRole("main").getByRole("link", {
       name: /\[E2E\] dev customer の新規お問い合わせ/u,
     });
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
 
     await expect(page).toHaveURL(/\/mypage\/inquiries\/[^/]+$/u);
-    const main = page.locator("#main-content");
+    const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 1 })).toBeVisible();
 
     await expect(
@@ -66,14 +66,14 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
   test("返信済み inquiry のスタッフ返信が表示される", async ({ page }) => {
     await page.goto(urls.mypageInquiries);
 
-    const detailLink = page.locator("#main-content").getByRole("link", {
+    const detailLink = page.getByRole("main").getByRole("link", {
       name: /\[E2E\] dev customer の解決済お問い合わせ/u,
     });
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
     await expect(page).toHaveURL(/\/mypage\/inquiries\/[^/]+$/u);
 
-    const main = page.locator("#main-content");
+    const main = page.getByRole("main");
     await expect(
       main.getByRole("heading", { level: 2, name: "管理者" }),
     ).toBeVisible();

@@ -41,7 +41,7 @@ test.describe("お問い合わせ返信 - 双方向スレッド", () => {
 
     await page.goto(urls.mypageInquiries);
 
-    const main = page.locator("#main-content");
+    const main = page.getByRole("main");
     // [E2E] brackets are regex metacharacters — use text locator for exact match
     const detailLink = main.locator("a", {
       hasText: inquiryFixtures.devCustomerResolvedSubject,
