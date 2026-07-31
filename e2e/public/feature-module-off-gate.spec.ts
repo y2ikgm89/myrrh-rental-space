@@ -105,8 +105,11 @@ const CLAIM_TOKEN_STUB = "e2e-stub-token";
 
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
 
-/** not-found の head 証跡が出るまでの待ち。 */
-const ROUTE_STATUS_TIMEOUT_MS = 20_000;
+/** 1 回の遷移につき not-found 境界を待つ時間。 */
+const NOT_FOUND_ATTEMPT_TIMEOUT_MS = 7_000;
+
+/** 遷移をやり直す回数（cache invalidation の反映待ち）。 */
+const NOT_FOUND_ATTEMPTS = 3;
 
 /** 本文の not-found 境界。`(public)/not-found.tsx` の h1。 */
 function notFoundHeading(page: Page) {
@@ -114,6 +117,47 @@ function notFoundHeading(page: Page) {
     level: 1,
     name: "ページが見つかりません",
   });
+}
+
+/**
+ * feature OFF のルートが **本文に** not-found 境界を描画することを確認する。
+ *
+ * 判定に head (`<title>`) は使えない。CMS ページは `generatePageMetadata` が
+ * feature OFF を見て `FEATURE_DISABLED_PAGE_METADATA` を返すので not-found の
+ * title になるが、`/mypage/inquiries` のような非 CMS route は layout の
+ * `title: "マイページ"` がそのまま解決される（layout metadata は page 本体の
+ * `notFound()` とは独立に決まる）。実測 (run 30643518533): `/contact` は title で
+ * 通ったのに `/mypage/inquiries` は "マイページ | …" のままで、gate は正しく効いていた。
+ *
+ * 遷移をやり直すのは cache invalidation との競合に備えるため。
+ * `clickSaveAndAwaitDispatch` は Server Action の **dispatch** までしか見届けず、
+ * `afterSuccess` の `updateTag` がこの公開リクエストより前に完了する保証はない。
+ * 古い `'use cache'` の document を掴むと、web-first assertion は同じ document を
+ * リトライし続けるだけで回復できないので、遷移そのものをやり直す必要がある。
+ *
+ * ただし **1 attempt には必ずリトライする待ちを与える**。`expect.poll` の中で
+ * `goto` をやり直しつつ `isVisible()` のような一発勝負を撃つと、解決途中の DOM を
+ * 毎回捨てて timeout 予算を使えない（`e2e-poll-predicate-retries.test.ts` の規約）。
+ */
+async function expectNotFoundBoundary(
+  page: Page,
+  route: string,
+  moduleId: string,
+): Promise<void> {
+  for (let attempt = 1; attempt <= NOT_FOUND_ATTEMPTS; attempt++) {
+    await page.goto(route);
+
+    try {
+      await expect(
+        notFoundHeading(page),
+        `[${moduleId}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
+      ).toBeVisible({ timeout: NOT_FOUND_ATTEMPT_TIMEOUT_MS });
+      return;
+    } catch (error) {
+      // 1 回目が古いキャッシュを掴んだ可能性がある。遷移からやり直す。
+      if (attempt === NOT_FOUND_ATTEMPTS) throw error;
+    }
+  }
 }
 
 /** 保存がリロード後も残っているかの確認待ち。 */
@@ -541,28 +585,10 @@ test.describe
       await setFeatureModule(page, c.label, false);
 
       for (const route of c.routes) {
-        await page.goto(route);
+        await expectNotFoundBoundary(page, route, c.module);
 
-        // 判定は **本文の not-found 境界** で行う。
-        //
-        // head (`<title>`) は verdict に使えない。CMS ページは
-        // `generatePageMetadata` が feature OFF を見て
-        // `FEATURE_DISABLED_PAGE_METADATA` を返すので not-found の title になるが、
-        // `/mypage/inquiries` のような非 CMS route は layout の
-        // `title: "マイページ"` がそのまま解決される（layout metadata は page 本体の
-        // `notFound()` とは独立に決まる）。実測 (run 30643518533):
-        // `/contact` は title で通ったのに `/mypage/inquiries` は
-        // "マイページ | Myrrh Rental Space" のままで、gate は正しく効いていた。
-        //
-        // 単発 `goto` + リトライする web-first assertion にするのは
-        // `e2e-poll-predicate-retries.test.ts` の規約どおり。poll の中で `goto` を
-        // やり直すと、解決途中の DOM を毎回捨てて timeout 予算を使えない。
-        // cache invalidation は `clickSaveAndAwaitDispatch` が Server Action の
-        // dispatch を見届けているので、最初の遷移で新しい状態が返る。
-        await expect(notFoundHeading(page)).toBeVisible({
-          timeout: ROUTE_STATUS_TIMEOUT_MS,
-        });
-
+        // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
+        // 注入する契約に依存する。これが無いと soft-404 が索引される。
         const robots = await page
           .locator('meta[name="robots"]')
           .evaluateAll((nodes) =>
