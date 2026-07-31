@@ -20,13 +20,30 @@ paths:
 
 - route segment config（`export const dynamic` / `revalidate` / `runtime` 等）は
   src/app 全域で禁止（テストが 0 件強制）。動的化は `await connection()`
-- 全 route は完全動的（ƒ）が前提。静的シェル（◐）になると framework script に
-  per-request nonce が付かず CSP が全 JS をブロックする。両 root layout の
-  「`generateViewport` 内 `await connection()` + `<html>` を `<Suspense>` で包む」
-  opt-in 構造を崩さない。**layout 本体で `connection()` を呼ぶとビルドが落ちる**
+- **不変条件は「prerender された HTML に nonce 無しの `<script>` が無いこと」**。
+  Next.js は request の `Content-Security-Policy` ヘッダーから nonce を取り出して
+  script に載せるため、ビルド時に焼かれた HTML には nonce を付けられない
+  （公式 CSP ガイド: nonce 利用時は全ページ動的レンダリングが必要 /
+  PPR も _static shell scripts cannot access the nonce_ のため非互換）。
+  `script-src` は `'strict-dynamic'` なので `'self'` は無視され、nonce 無し script は全滅する
+- **route 表の `◐` 単体は違反ではない**。両 root layout の「`generateViewport` 内
+  `await connection()` + `<html>` を `<Suspense>` で包む」opt-in により prerender は
+  `<html>` を emit する前に postpone し、静的 prelude は**空**になる
+  （`.next/server/app/**/*.html` が 0 byte・`hasHtml:false`）。script は resume 時に
+  per-request nonce 付きで書かれる（`resumeToFizzStream(…, { nonce })`）。
+  実測 45 route が `◐` だが prelude はすべて空。この opt-in 構造を崩さない。
+  **layout 本体で `connection()` を呼ぶとビルドが落ちる**
+- Root Layout をバイパスする convention（`global-not-found.tsx` 等）は上記 opt-in が
+  使えない（layout の無い route で `generateViewport` に dynamic API を置くと
+  `next-prerender-dynamic-viewport` でビルドが落ちる）。**`<html>` を返す async SC を
+  `<Suspense>` の内側に置き、その中で `await connection()`** する
 - データ依存の layout chrome（Header/Footer 等）は「Suspense 内 async SC +
   冒頭 `await connection()`」に隔離する（build 時 fallback 焼き込み防止）
-- `bun run build` の route 表（ƒ/◐/○）で動的化を実測確認する
+- gate は `scripts/check-static-prelude-empty.ts`（`bun run build` /
+  `build:skip-env` が自動実行）。route 表の目視ではなく**ビルド成果物を機械検査**する。
+  例外は `_global-error.html` のみ（`global-error.tsx` は Next.js 規約上
+  Client Component 必須で動的化 opt-in を持てない。runtime のエラー応答は
+  `app-render` の `ErrorApp` 経路で request 内に描画され nonce が付く）
 
 ## proxy.ts（Next.js 16 proxy convention）
 

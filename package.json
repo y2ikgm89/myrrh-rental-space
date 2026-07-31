@@ -8,10 +8,10 @@
   },
   "scripts": {
     "dev": "bun run db:generate && next dev",
-    "build": "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && next build",
+    "build": "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && next build && bun scripts/check-static-prelude-empty.ts",
     "build:skip-env": "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && bun run build:skip-env:next",
     "build:skip-env:prepared": "bun run toolchain:check && bun scripts/clean-next-dev-types.ts && bun run build:skip-env:next",
-    "build:skip-env:next": "NEXT_PUBLIC_BASE_URL=http://localhost:3000 NEXT_PUBLIC_APP_URL=http://localhost:3000 BETTER_AUTH_SECRET=build-skip-env-only-placeholder-not-runtime-7dS9kL4qQ8mN2vX5rT6yB3cH1pZ0aW SKIP_ENV_VALIDATION=true next build",
+    "build:skip-env:next": "NEXT_PUBLIC_BASE_URL=http://localhost:3000 NEXT_PUBLIC_APP_URL=http://localhost:3000 BETTER_AUTH_SECRET=build-skip-env-only-placeholder-not-runtime-7dS9kL4qQ8mN2vX5rT6yB3cH1pZ0aW SKIP_ENV_VALIDATION=true next build && bun scripts/check-static-prelude-empty.ts",
     "analyze": "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && next experimental-analyze --output",
     "start": "next start",
     "lint": "eslint . --concurrency 4",

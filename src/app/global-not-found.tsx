@@ -18,6 +18,8 @@
 
 import type { Metadata, Viewport } from "next";
 import type { ReactElement } from "react";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import "./(public)/_styles/public.css";
 
 export const metadata: Metadata = {
@@ -35,6 +37,10 @@ export const metadata: Metadata = {
  * ルートが無いため、ここで明示する。global-not-found は Root Layout を完全に
  * バイパスして自前 `<html>` を描画する仕様のため viewport export が必要。
  *
+ * runtime data は読まないので静的 export のままにする（動的化は下の
+ * `NotFoundDocument` が担当する）。ここで `await connection()` すると layout の無い
+ * route では `next-prerender-dynamic-viewport` でビルドが落ちる。
+ *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata#viewport-object
  */
 export const viewport: Viewport = {
@@ -43,7 +49,30 @@ export const viewport: Viewport = {
   colorScheme: "only light",
 };
 
-export default function NotFound(): ReactElement {
+/**
+ * `await connection()` は **CSP nonce のための必須の動的化**。
+ *
+ * Next.js は request の `Content-Security-Policy` ヘッダーから nonce を取り出して
+ * script タグに載せるため、**静的生成されたページには nonce を付けられない**
+ * （公式 CSP ガイド:「nonce を使う場合は全ページを動的レンダリングする必要がある」
+ * 「PPR も *static shell scripts cannot access the nonce* のため nonce ベース CSP と非互換」）。
+ * これを外すと `/_not-found` が `○ (Static)` に戻り、prerender された shell に
+ * nonce 無しの `<script>` が 13 本焼き込まれて `strict-dynamic` CSP に全弾ブロックされる。
+ *
+ * 配置が肝: このファイルは Root Layout をバイパスするため、両 root layout が使う
+ * 「`generateViewport` 内 `connection()` + `<html>` を `<Suspense>`」opt-in は使えない
+ * （layout の無い route では `next-prerender-dynamic-viewport` でビルドが落ちる）。
+ * 代わりに **`<html>` を返す async SC を Suspense 境界の内側に置く**ことで、prerender は
+ * `<html>` を emit する前に postpone し、静的 prelude が空（`hasHtml:false`）になる。
+ * script は resume 時（= request 時）に per-request nonce 付きで書き出される。
+ *
+ * gate: `scripts/check-static-prelude-empty.ts`（`bun run build` が自動実行）。
+ *
+ * @see https://nextjs.org/docs/app/guides/content-security-policy
+ */
+async function NotFoundDocument(): Promise<ReactElement> {
+  await connection();
+
   return (
     <html lang="ja">
       <body className="font-sans antialiased">
@@ -86,5 +115,13 @@ export default function NotFound(): ReactElement {
         </div>
       </body>
     </html>
+  );
+}
+
+export default function NotFound(): ReactElement {
+  return (
+    <Suspense>
+      <NotFoundDocument />
+    </Suspense>
   );
 }
