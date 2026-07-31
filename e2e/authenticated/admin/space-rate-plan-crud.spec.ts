@@ -32,17 +32,18 @@ import { ratePlanFixtures, spaceFixtures, urls } from "../../fixtures";
 
 const ADMIN_SPACE_NAME = "セミナールーム"; // seed の seminar-room.name（spaceFixtures.adminRatePlanCrudTargetSlug と対応）
 const ADMIN_ROUTE_TIMEOUT = 20000;
-// Server Action 完了後のトースト表示待ち。CI workers:2 の並列実行下では
+// mutation が一覧へ反映されるまでの待ち。CI workers:2 の並列実行下では
 // audit log 書込（`src/shared/domain/audit-log/hash-chain-core.ts` の
 // AUDIT_LOG_CHAIN_LOCK_KEY を使った pg_advisory_xact_lock によるグローバル直列化、
 // 全 admin mutation 共通）や permission チェックを含む admin mutation の往復が
-// 既定 5000ms を超えることがある。この repo の他の admin spec（
-// content-preview.spec.ts / google-business-profile.spec.ts /
-// lexical-inline-icon.spec.ts の inlineEditor 等）も同種の post-mutation 待ちに
-// 明示 timeout を使っており、15000ms が最も一般的な値（`.claude/skills/e2e-authoring`
-// 準拠の repo 内 grep で確認済み）。この spec の 3 箇所のトーストアサーションのみが
-// 既定値のままだったのが repo 内で唯一の例外だった。
-const TOAST_TIMEOUT = 15000;
+// 既定 5000ms を超えることがある。
+//
+// **判定に toast を使わない**（`.claude/rules/testing-e2e.md`）。sonner の toast は
+// 一定時間で自動的に消える一時 UI で、mutation の往復が伸びた回に取り逃す。実測:
+// run 30635688437 で `getByText("料金プランを更新しました")` が 15s で
+// `element(s) not found`。判定は**一覧に反映された永続状態**で行う（この spec は
+// 元々その assertion を toast の直後に持っていたので、toast 待ちは冗長だった）。
+const MUTATION_SETTLE_TIMEOUT = 15000;
 
 test.describe("管理画面 - スペース料金プラン CRUD", () => {
   test("新規プラン追加 → 編集 → 削除が一覧に反映される", async ({ page }) => {
@@ -106,15 +107,14 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
       .getByRole("button", { name: "追加", exact: true })
       .click();
 
-    await expect(createDialog).not.toBeVisible();
-    await expect(page.getByText("料金プランを追加しました")).toBeVisible({
-      timeout: TOAST_TIMEOUT,
+    await expect(createDialog).toBeHidden({
+      timeout: MUTATION_SETTLE_TIMEOUT,
     });
 
     const planRow = pricingPanel.getByRole("row", {
       name: new RegExp(planName),
     });
-    await expect(planRow).toBeVisible();
+    await expect(planRow).toBeVisible({ timeout: MUTATION_SETTLE_TIMEOUT });
     await expect(planRow).toContainText("¥1,200");
     // 上記の月曜限定チェックが実際に反映されたことの証拠（SpaceRatePlanList の
     // formatDaysOfWeek は daysOfWeek=["MONDAY"] を "月" 単体で表示する）。
@@ -130,11 +130,10 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
     await editDialog.getByLabel("時間料金（円/時間）*").fill("1500");
     await editDialog.getByRole("button", { name: "更新", exact: true }).click();
 
-    await expect(editDialog).not.toBeVisible();
-    await expect(page.getByText("料金プランを更新しました")).toBeVisible({
-      timeout: TOAST_TIMEOUT,
+    await expect(editDialog).toBeHidden({ timeout: MUTATION_SETTLE_TIMEOUT });
+    await expect(planRow).toContainText("¥1,500", {
+      timeout: MUTATION_SETTLE_TIMEOUT,
     });
-    await expect(planRow).toContainText("¥1,500");
 
     // --- Delete ---
     await planRow
@@ -148,11 +147,8 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
       .getByRole("button", { name: "削除", exact: true })
       .click();
 
-    await expect(page.getByText("料金プランを削除しました")).toBeVisible({
-      timeout: TOAST_TIMEOUT,
-    });
     await expect(
       pricingPanel.getByRole("row", { name: new RegExp(planName) }),
-    ).toHaveCount(0);
+    ).toHaveCount(0, { timeout: MUTATION_SETTLE_TIMEOUT });
   });
 });
