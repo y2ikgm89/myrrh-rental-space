@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 import { primeAdminRequestContext } from "../helpers/admin-auth";
 import { ensureAdminUser } from "../helpers/ensure-admin-user";
@@ -16,14 +16,38 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * response が 404 になる」ランタイム挙動を守る（source と gate 実装、cache
  * invalidation、not-found rendering までを end-to-end で確認）。
  *
+ * ## この spec は共有 DB のグローバル状態を触る — 復元は絶対契約
+ *
+ * `Settings.featureModules` は singleton row。OFF のまま残すと **1 spec の失敗が
+ * run 全体を汚染する**。実測 (run 30617695076): contact が OFF のまま残り、
+ * `/contact` 404 → public/customer の responsive-shell・inquiries・inquiry-reply が
+ * 巻き添え、さらに admin サイドバーの「お問い合わせ」が feature-disabled 表示
+ * (`text-sidebar-text-muted/80`, contrast 3.54:1) になって
+ * `axe-admin-pages` が 23 テスト × 3 attempt 全滅した。**計 30 件超の偽の失敗**。
+ *
+ * そのため:
+ *
+ * 1. 復元は `afterEach` で**無条件**に行う。旧実装は `try/finally` だったが、
+ *    setup 段階 (OFF への切替) で throw すると finally に入らず復元されなかった
+ * 2. 復元は「この test が触った module」ではなく**全 module を ON に揃える**
+ * 3. `afterAll` で全 module が ON であることを検証し、復元が壊れたら
+ *    **この spec 自身が落ちる**ようにする（巻き添えで他 spec を落とさない）
+ *
+ * ## 保存の完了判定に toast を使わない
+ *
+ * `FeatureModulesForm` は `expectedUpdatedAt` による楽観ロックを持ち、競合すると
+ * 成功 toast ではなく **conflict の error toast** を出す。旧実装は
+ * `getByText("機能モジュールを保存しました")` を待っていたため、競合時に 15s
+ * タイムアウトして復元ごと落ちていた。判定は **リロード後も状態が保たれているか**
+ * （＝永続化の実体）で行い、競合したら再読込して 1 度だけやり直す。
+ *
  * ## 実装メモ
  *
- * - Settings.featureModules は Settings singleton row の JSON column で
- *   `'use cache'` + `cacheTag(FEATURE_MODULES)` されている。admin form の
- *   `updateFeatureModulesSettings` server action が
- *   `invalidateSiteWideCache([FEATURE_MODULES, ...])` を呼ぶ規約 (SSoT: production
- *   flow) を利用して cache invalidation を成立させる。DB を直接書き換えると
- *   キャッシュが古いまま公開ルートが 200 を返し得るため、必ず admin UI 経由。
+ * - cache invalidation は admin form の `updateFeatureModulesSettings` server action が
+ *   `invalidateSiteWideCache([FEATURE_MODULES, ...])` を呼ぶ規約に依存する。DB を
+ *   直接書き換えるとキャッシュが古いまま公開ルートが 200 を返し得るため admin UI 経由。
+ *   反映は非同期なので 404 の確認は `expect.poll` で待つ（旧実装は単発 goto で
+ *   200 を掴んで落ちていた）。
  * - シングルトン行 mutation のため `test.describe.serial` で直列化。
  * - 管理面へのアクセスは storageState ではなく webServer env
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
@@ -31,8 +55,7 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *   `ensureAdminUser()` + `primeAdminRequestContext(context)` を明示する。
  * - `spaces` は `reservation` / `reviews` の依存元。spaces OFF テストの間だけ
  *   reservation 側の switch が視覚上 disabled になるが、DB 側の explicit true 値
- *   は保存されている (registry.buildInitialFeatureModules の contract)。restore
- *   ロジックで元の ON 状態に戻すため他テストに影響しない。
+ *   は保存されている (registry.buildInitialFeatureModules の contract)。
  * - APP_SURFACE=public で webServer が起動している場合、proxy が /admin を 404 に
  *   するため spec 全体を skip する (rules の app-structure.md 参照)。ローカル
  *   既定と CI の chromium project は APP_SURFACE=admin で動作する。
@@ -41,6 +64,14 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
 const IS_PUBLIC_SURFACE = process.env["APP_SURFACE"] === "public";
 
 const CLAIM_TOKEN_STUB = "e2e-stub-token";
+
+const FEATURES_SETTINGS_PATH = "/admin/settings/features";
+
+/** cache invalidation の伝播待ち。単発 goto だと 200 を掴む（run 30617695076）。 */
+const ROUTE_STATUS_TIMEOUT_MS = 20_000;
+
+/** 保存がリロード後も残っているかの確認待ち。 */
+const PERSIST_TIMEOUT_MS = 15_000;
 
 interface ModuleCase {
   readonly module: string;
@@ -92,49 +123,98 @@ const MODULE_CASES: readonly ModuleCase[] = [
 ];
 
 /**
- * `/admin/settings/features` の Switch 行を module label で特定して指定状態に
- * 遷移させる。既に希望状態なら no-op で戻り、変化があった場合のみ「保存」まで
- * 実行して toast 表示を待つ。
+ * Switch 行の locator。各 row は `<div class="rounded-lg border p-4">` + 内側に
+ * `<label>{mod.label}</label>` + Radix `<button role="switch">` を持つ
+ * (FeatureModulesForm.ModuleSwitchRow)。label htmlFor は Switch の button に
+ * 付かない (Radix 実装) ため、行 div 全体を text で filter して switch を取得する。
  */
+function moduleSwitch(page: Page, moduleLabel: string): Locator {
+  return page
+    .locator("div.rounded-lg")
+    .filter({ has: page.getByText(moduleLabel, { exact: true }) })
+    .getByRole("switch");
+}
+
+/**
+ * features ページには機能モジュール用とデータ保持設定用の 2 つの保存ボタンがある。
+ * switch を含む form に絞らないと strict mode violation になる（run 30595374008）。
+ */
+function moduleSaveButton(page: Page, moduleLabel: string): Locator {
+  return page
+    .locator("div.rounded-lg")
+    .filter({ has: page.getByText(moduleLabel, { exact: true }) })
+    .locator("xpath=ancestor::form[1]")
+    .getByRole("button", { name: /^保存/u });
+}
+
+async function openFeatureSettings(page: Page): Promise<void> {
+  await page.goto(FEATURES_SETTINGS_PATH);
+  await expect(
+    page.getByRole("heading", { name: "機能モジュール", level: 1 }),
+  ).toBeVisible();
+}
+
+async function readModuleState(
+  page: Page,
+  moduleLabel: string,
+): Promise<string | null> {
+  const switchButton = moduleSwitch(page, moduleLabel);
+  await expect(switchButton).toBeVisible();
+  return switchButton.getAttribute("aria-checked");
+}
+
+/**
+ * module を指定状態にして**永続化まで**見届ける。
+ *
+ * 判定は toast ではなくリロード後の `aria-checked`。楽観ロック競合で 1 回目の
+ * 保存が弾かれることがあるため、最大 2 回試す（2 回目は再読込した新しい
+ * `expectedUpdatedAt` で送るので競合は解消する）。
+ */
+const SAVE_ATTEMPTS = 2;
+
 async function setFeatureModule(
   page: Page,
   moduleLabel: string,
   enabled: boolean,
 ): Promise<void> {
-  await page.goto("/admin/settings/features");
-  await expect(
-    page.getByRole("heading", { name: "機能モジュール", level: 1 }),
-  ).toBeVisible();
+  const desired = enabled ? "true" : "false";
 
-  // 各 row は `<div class="rounded-lg border p-4">` + 内側に `<label>{mod.label}</label>`
-  // + Radix `<button role="switch">` を持つ (FeatureModulesForm.ModuleSwitchRow)。
-  // label htmlFor は Switch の button に付かない (Radix 実装) ため、行 div 全体を
-  // text で filter して switch を取得する。
-  const row = page.locator("div.rounded-lg").filter({
-    has: page.getByText(moduleLabel, { exact: true }),
-  });
-  const switchButton = row.getByRole("switch");
-  await expect(switchButton).toBeVisible();
+  for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
+    await openFeatureSettings(page);
+    if ((await readModuleState(page, moduleLabel)) === desired) return;
 
-  const currentState = await switchButton.getAttribute("aria-checked");
-  const desiredState = enabled ? "true" : "false";
+    const switchButton = moduleSwitch(page, moduleLabel);
+    await switchButton.click();
+    await expect(switchButton).toHaveAttribute("aria-checked", desired);
+    await moduleSaveButton(page, moduleLabel).click();
 
-  if (currentState === desiredState) {
-    return;
+    try {
+      await expect
+        .poll(
+          async () => {
+            await openFeatureSettings(page);
+            return readModuleState(page, moduleLabel);
+          },
+          {
+            timeout: PERSIST_TIMEOUT_MS,
+            message: `feature module "${moduleLabel}" を ${desired} にする保存が永続化されなかった（楽観ロック競合の可能性）`,
+          },
+        )
+        .toBe(desired);
+      return;
+    } catch (error) {
+      // 1 回目は競合しうる。再読込すれば expectedUpdatedAt が更新されるので
+      // やり直せば通る。最終試行で駄目なら Playwright のメッセージごと投げる。
+      if (attempt === SAVE_ATTEMPTS) throw error;
+    }
   }
+}
 
-  await switchButton.click();
-  await expect(switchButton).toHaveAttribute("aria-checked", desiredState);
-
-  // features ページには機能モジュール用とデータ保持設定用の 2 つの保存ボタンがある。
-  // switch を含む form に絞らないと strict mode violation になる（run 30595374008）。
-  await row
-    .locator("xpath=ancestor::form[1]")
-    .getByRole("button", { name: /^保存/u })
-    .click();
-  await expect(page.getByText("機能モジュールを保存しました")).toBeVisible({
-    timeout: 15000,
-  });
+/** 全 module を ON に揃える。既に ON のものは触らない。 */
+async function restoreAllFeatureModules(page: Page): Promise<void> {
+  for (const moduleCase of MODULE_CASES) {
+    await setFeatureModule(page, moduleCase.label, true);
+  }
 }
 
 // シングルトン Settings.featureModules を mutate するため、他の並列テストと
@@ -150,28 +230,44 @@ test.describe
     await ensureAdminUser();
   });
 
-  for (const c of MODULE_CASES) {
-    test(`${c.module} OFF → 対象ルートが 404 を返す`, async ({
-      page,
-      context,
-    }) => {
-      await primeAdminRequestContext(context);
+  test.beforeEach(async ({ context }) => {
+    await primeAdminRequestContext(context);
+  });
 
-      // Setup: module を OFF に切り替え (invalidate FEATURE_MODULES tag)
+  // setup 段階で失敗しても必ず走る（try/finally では復元されなかった）。
+  test.afterEach(async ({ page }) => {
+    await restoreAllFeatureModules(page);
+  });
+
+  // 復元が壊れていたら、巻き添えで他 spec を落とす前に**この spec が**落ちる。
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await primeAdminRequestContext(page.context());
+      await openFeatureSettings(page);
+      for (const moduleCase of MODULE_CASES) {
+        expect(
+          await readModuleState(page, moduleCase.label),
+          `feature module "${moduleCase.label}" が OFF のまま残っている。共有 DB を汚染するため必ず ON に戻すこと`,
+        ).toBe("true");
+      }
+    } finally {
+      await page.close();
+    }
+  });
+
+  for (const c of MODULE_CASES) {
+    test(`${c.module} OFF → 対象ルートが 404 を返す`, async ({ page }) => {
       await setFeatureModule(page, c.label, false);
 
-      try {
-        // Act + Assert: gate 対象ルートが 404 を返す
-        for (const route of c.routes) {
-          const response = await page.goto(route);
-          expect(
-            response?.status(),
-            `[${c.module}] ${route} は feature OFF 時に 404 を返すべき`,
-          ).toBe(404);
-        }
-      } finally {
-        // Cleanup: 他テストに影響しないよう ON に復元 (fail 経路でも実行)
-        await setFeatureModule(page, c.label, true);
+      for (const route of c.routes) {
+        // cache invalidation は非同期。単発 goto では反映前の 200 を掴む。
+        await expect
+          .poll(async () => (await page.goto(route))?.status(), {
+            timeout: ROUTE_STATUS_TIMEOUT_MS,
+            message: `[${c.module}] ${route} は feature OFF 時に 404 を返すべき`,
+          })
+          .toBe(404);
       }
     });
   }

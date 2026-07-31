@@ -103,6 +103,20 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   サーバー側 `E2E_FIXED_NOW_ISO`（既定 2026-07-04T03:00:00.000Z）と同一時刻にする
 - fullyParallel のため、Settings 等シングルトン行を mutate する describe は
   `test.describe.serial` で直列化する
+- **グローバル状態の復元は `afterEach` で無条件に行う**（`try/finally` は不可）。
+  finally は「setup 段階で throw すると入らない」ため復元漏れになる。実測
+  (run 30617695076): `feature-module-off-gate` が contact を OFF のまま残し、
+  `/contact` 404 → responsive-shell / inquiries / inquiry-reply が巻き添え、
+  さらに admin サイドバーが feature-disabled 表示になって `axe-admin-pages` が
+  23 テスト × 3 attempt 全滅 = **1 spec の失敗が 30 件超の偽の失敗**を生んだ。
+  復元は「触った 1 件」ではなく**対象全件を既定値に揃える**。加えて `afterAll` で
+  復元されたことを検証し、壊れたときは**その spec 自身が落ちる**ようにする
+- **保存完了の判定に toast を使わない**。admin の設定フォームは
+  `expectedUpdatedAt` の楽観ロックを持ち、競合すると成功 toast ではなく error toast を
+  出すため、成功文言を待つ実装は競合時にタイムアウトする。**リロード後も状態が
+  保たれているか**（永続化の実体）を `expect.poll` で確認し、競合したら再読込して
+  やり直す。cache invalidation の反映も非同期なので、公開ルートの status 確認も
+  単発 `goto` ではなく `expect.poll` で待つ
 - APP_SURFACE はローカル既定 admin。public surface 限定テストは `APP_SURFACE=public` を明示
 
 ## visual regression
