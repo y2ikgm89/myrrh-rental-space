@@ -249,9 +249,16 @@ function DropdownMenuShortcut({
   className,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement>) {
+  // 減光に opacity を使わない。menu item は操作可能なので SC 1.4.3 の inactive
+  // 例外に当たらず 4.5:1 が要るが、`opacity-60` は focus 中
+  // (`focus:bg-accent focus:text-accent-foreground`) に 2.78:1 まで落ちる。
+  // 実色トークンなら通常 5.99:1 / focus 5.11:1 を保てる。
   return (
     <span
-      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      className={cn(
+        "ml-auto text-xs tracking-widest text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );

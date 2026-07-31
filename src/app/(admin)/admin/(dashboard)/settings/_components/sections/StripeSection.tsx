@@ -611,7 +611,14 @@ export function StripeSection({
                     htmlFor={inputId}
                     className={cn(
                       "flex items-start gap-3 cursor-pointer",
-                      disabledForCurrency && "opacity-50 cursor-not-allowed",
+                      // 減光しない。この状態でだけ出る「対応通貨: ...」は
+                      // **なぜ選べないかを伝える唯一の導線**で、`opacity-50` では
+                      // 2.14:1（手段名も 3.44:1）まで落ちて読めなくなっていた。
+                      // Checkbox が disabled なので SC 1.4.3 の inactive 例外は
+                      // 形式的には成立するが、例外の趣旨は「不活性な要素の視認性は
+                      // 問わない」であって、説明文を潰してよいという意味ではない。
+                      // 状態は disabled な Checkbox 自身と説明文の存在が担う。
+                      disabledForCurrency && "cursor-not-allowed",
                     )}
                   >
                     <Checkbox

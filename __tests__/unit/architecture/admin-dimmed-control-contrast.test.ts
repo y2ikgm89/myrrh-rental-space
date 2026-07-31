@@ -95,6 +95,29 @@ const AUTO_MEDIA_FIELD = join(
   "auto-fields",
   "AutoMediaField.tsx",
 );
+const STRIPE_SECTION = join(
+  DASHBOARD,
+  "settings",
+  "_components",
+  "sections",
+  "StripeSection.tsx",
+);
+const DROPDOWN_MENU = join(
+  DASHBOARD,
+  "_shared",
+  "components",
+  "ui",
+  "dropdown-menu.tsx",
+);
+const MOBILE_EDITOR_FALLBACK = join(
+  DASHBOARD,
+  "_shared",
+  "components",
+  "editor",
+  "lexical",
+  "parts",
+  "MobileEditorFallback.tsx",
+);
 const MEDIA_PREVIEW = join(
   DASHBOARD,
   "_shared",
@@ -251,6 +274,7 @@ const FOREGROUND = readOklchToken("foreground");
 const MUTED = readOklchToken("muted");
 const MUTED_FOREGROUND = readOklchToken("muted-foreground");
 const ACCENT = readOklchToken("accent");
+const POPOVER = readOklchToken("popover");
 const SECONDARY = readOklchToken("secondary");
 const SECONDARY_FOREGROUND = readOklchToken("secondary-foreground");
 
@@ -402,6 +426,38 @@ const TEXT_PAIRS: { usage: string; fg: Rgb; bg: Rgb }[] = [
     fg: MUTED_FOREGROUND,
     bg: MUTED,
   },
+
+  // --- StripeSection: 通貨非対応の決済手段（減光撤去） ---
+  {
+    usage: "StripeSection 通貨非対応の決済手段名 (foreground on bg-card)",
+    fg: FOREGROUND,
+    bg: CARD,
+  },
+  {
+    usage:
+      "StripeSection 通貨非対応の「対応通貨: ...」(muted-foreground on bg-card)",
+    fg: MUTED_FOREGROUND,
+    bg: CARD,
+  },
+
+  // --- DropdownMenuShortcut: menu item 内のショートカット表記（減光撤去） ---
+  {
+    usage: "DropdownMenuShortcut 通常 (muted-foreground on bg-popover)",
+    fg: MUTED_FOREGROUND,
+    bg: POPOVER,
+  },
+  {
+    usage: "DropdownMenuShortcut focus 中 (muted-foreground on bg-accent)",
+    fg: MUTED_FOREGROUND,
+    bg: ACCENT,
+  },
+
+  // --- MobileEditorFallback: 読み取り専用プレビュー本文（減光撤去） ---
+  {
+    usage: "MobileEditorFallback プレビュー本文 (foreground on bg-card)",
+    fg: FOREGROUND,
+    bg: CARD,
+  },
 ];
 
 // --- EventCell / EventBadge: 過去・キャンセルイベント（saturate-50、opacity なし） ---
@@ -459,6 +515,18 @@ describe("操作可能な減光要素のコントラスト (WCAG 2.1 AA)", () =>
         usage: "ReservationTable opacity-50 の本文",
         ratio: contrastRatio(over(FOREGROUND, CARD, 0.5), CARD),
       },
+      {
+        usage: "StripeSection opacity-50 の「対応通貨: ...」",
+        ratio: contrastRatio(over(MUTED_FOREGROUND, CARD, 0.5), CARD),
+      },
+      {
+        usage: "DropdownMenuShortcut opacity-60 の focus 中",
+        // focus:bg-accent focus:text-accent-foreground が当たった状態。
+        ratio: contrastRatio(
+          over(readOklchToken("accent-foreground"), ACCENT, 0.6),
+          ACCENT,
+        ),
+      },
     ];
     for (const { usage, ratio } of before) {
       expect({ usage, wasBelowAA: ratio < AA_MIN_RATIO }).toMatchObject({
@@ -512,6 +580,30 @@ const OPACITY_GUARDS: {
     path: RESERVATION_TABLE,
     forbidden: /deletedAt[^;]{0,160}?opacity-/u,
     required: ['{ className: "bg-muted/40" }'],
+  },
+  {
+    // この状態でだけ出る「対応通貨: ...」が唯一の理由説明なので、
+    // Checkbox が disabled でも読める必要がある（旧 opacity-50 で 2.14:1）。
+    label: "StripeSection — 通貨非対応の決済手段",
+    path: STRIPE_SECTION,
+    forbidden: /disabledForCurrency && "[^"]*opacity-/u,
+    required: ['disabledForCurrency && "cursor-not-allowed"'],
+  },
+  {
+    // このファイルには `data-[disabled]:opacity-50`（本当に不活性な menu item、
+    // Incidental 例外に該当）が別途あるので、shortcut の class だけを見る。
+    label: "DropdownMenuShortcut — menu item 内のショートカット表記",
+    path: DROPDOWN_MENU,
+    forbidden: /ml-auto text-xs tracking-widest[^"]*opacity-/u,
+    required: ['"ml-auto text-xs tracking-widest text-muted-foreground"'],
+  },
+  {
+    // UI コントロールではなくコンテンツなので、`pointer-events-none` があっても
+    // Incidental 例外は使えない（旧 opacity-60 で 4.65〜4.74:1 と余裕僅少）。
+    label: "MobileEditorFallback — 読み取り専用プレビュー本文",
+    path: MOBILE_EDITOR_FALLBACK,
+    forbidden: /prose prose-sm[^"]*opacity-/u,
+    required: ['"prose prose-sm pointer-events-none max-w-none"'],
   },
 ];
 
