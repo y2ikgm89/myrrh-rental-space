@@ -87,7 +87,11 @@ export function FaqCategoryListView({
             カテゴリを選択して質問を管理します
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* ボタン 3 つ（ページSEO / ゴミ箱 / カテゴリを追加）は 390px 幅で合計
+            409px になり折り返さないと横溢れする（CI run 30621350538 の
+            responsive-shell `/admin/faq`）。admin ヘッダーの他 14 箇所と同じく
+            `flex-wrap` を付ける。 */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild type="button" variant="outline">
             <Link href="/admin/faq/seo">
               <IconSettings className="mr-1 h-4 w-4" aria-hidden="true" />
