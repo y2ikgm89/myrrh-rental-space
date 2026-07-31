@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { ratePlanFixtures, spaceFixtures, urls } from "../../fixtures";
 
 /**
@@ -44,6 +44,30 @@ const ADMIN_ROUTE_TIMEOUT = 20000;
 // `element(s) not found`。判定は**一覧に反映された永続状態**で行う（この spec は
 // 元々その assertion を toast の直後に持っていたので、toast 待ちは冗長だった）。
 const MUTATION_SETTLE_TIMEOUT = 15000;
+
+/**
+ * 料金設定タブをリロードしてから開き直す。
+ *
+ * mutation 後の `router.refresh()` が返す RSC ツリーだけを見ると、
+ * 「その応答では新しいが、次の**新規リクエスト**では古い」ケース（cache tag の
+ * 無効化漏れ）を素通ししてしまう。判定は必ず**リロード後の一覧**で行う
+ * （`.claude/rules/testing-e2e.md`「保存完了の判定に toast を使わない」節）。
+ *
+ * `expect.poll` で回さないのは、このフォームが楽観ロック（`expectedUpdatedAt`）を
+ * 持たず、`invalidateSpaceRatePlansCache`（`updateTag`）が Server Action 内で
+ * 同期的にタグを expire するため、リロードの時点で必ず最新が読めるから。
+ * 競合による再試行が要るのは楽観ロックを持つ設定フォーム側の話。
+ */
+async function reloadPricingPanel(page: Page): Promise<Locator> {
+  await page.reload();
+  await page.getByRole("tab", { name: "料金設定" }).click();
+
+  const panel = page.getByRole("tabpanel", { name: "料金設定" });
+  await expect(
+    panel.getByRole("heading", { level: 3, name: "料金プラン" }),
+  ).toBeVisible({ timeout: ADMIN_ROUTE_TIMEOUT });
+  return panel;
+}
 
 test.describe("管理画面 - スペース料金プラン CRUD", () => {
   test("新規プラン追加 → 編集 → 削除が一覧に反映される", async ({ page }) => {
@@ -111,7 +135,9 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
       timeout: MUTATION_SETTLE_TIMEOUT,
     });
 
-    const planRow = pricingPanel.getByRole("row", {
+    // 追加が**新規リクエストでも**見えることを確認する。
+    const reloadedPanel = await reloadPricingPanel(page);
+    const planRow = reloadedPanel.getByRole("row", {
       name: new RegExp(planName),
     });
     await expect(planRow).toBeVisible({ timeout: MUTATION_SETTLE_TIMEOUT });
@@ -131,9 +157,11 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
     await editDialog.getByRole("button", { name: "更新", exact: true }).click();
 
     await expect(editDialog).toBeHidden({ timeout: MUTATION_SETTLE_TIMEOUT });
-    await expect(planRow).toContainText("¥1,500", {
-      timeout: MUTATION_SETTLE_TIMEOUT,
-    });
+
+    const afterEditPanel = await reloadPricingPanel(page);
+    await expect(
+      afterEditPanel.getByRole("row", { name: new RegExp(planName) }),
+    ).toContainText("¥1,500", { timeout: MUTATION_SETTLE_TIMEOUT });
 
     // --- Delete ---
     await planRow
@@ -147,8 +175,9 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
       .getByRole("button", { name: "削除", exact: true })
       .click();
 
+    const afterDeletePanel = await reloadPricingPanel(page);
     await expect(
-      pricingPanel.getByRole("row", { name: new RegExp(planName) }),
+      afterDeletePanel.getByRole("row", { name: new RegExp(planName) }),
     ).toHaveCount(0, { timeout: MUTATION_SETTLE_TIMEOUT });
   });
 });
