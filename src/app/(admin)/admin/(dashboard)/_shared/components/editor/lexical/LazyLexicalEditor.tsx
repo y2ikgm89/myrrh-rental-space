@@ -49,9 +49,7 @@ import type { LexicalEditorProps } from "./types";
 function LexicalEditorLoadingFallback() {
   return (
     <div className="h-[500px] flex items-center justify-center bg-muted/50">
-      <div className="animate-pulse text-muted-foreground">
-        エディタを読み込み中...
-      </div>
+      <div className="text-muted-foreground">エディタを読み込み中...</div>
     </div>
   );
 }

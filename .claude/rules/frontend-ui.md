@@ -46,6 +46,14 @@ paths:
   `disabled` 属性を持つ本当に不活性なコントロール（`disabled:opacity-50` 等）は
   WCAG 2.1 SC 1.4.3 の Incidental 例外に当たるため対象外。
   feature module OFF 表示は `admin-feature-disabled-contrast.test.ts` が機械強制する
+- **`animate-pulse` をテキストに掛けない**。`opacity: 1 → .5 → 1` を繰り返すため、
+  周期の半分で実効コントラストが半減する（実測: `text-muted-foreground` は
+  opacity 1 で 5.65:1 だが 0.5 で **2.10:1**）。axe は測定タイミング次第で
+  2.2〜4.3 と揺れるので **flaky に見えるが実体は恒常的な違反**
+  （CI run 30635688437 で `lexical-toolbar-roving-tabindex` と
+  `axe-admin-pages` が断続的に落ちていた）。ローディングの合図は文言と
+  非テキストの `Skeleton` 矩形で表現する。gate:
+  `__tests__/unit/architecture/no-animated-opacity-on-text.test.ts`
 - フォーム送信ボタンは `SubmitButton` に統一。`<Button type="submit">` 直書きは
   テストで禁止
 - z-index は `Z_INDEX` 定数を **inline style の `zIndex`** で適用する。
