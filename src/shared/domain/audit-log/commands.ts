@@ -17,6 +17,7 @@ import {
 } from "./hash-chain";
 import { updateTag } from "next/cache";
 import { getCacheTag } from "@/shared/lib/constants";
+import { invalidateTagNowOrAfterResponse } from "@/shared/lib/cache/invalidate-timing";
 
 /**
  * 監査ログ書込の生入力型。
@@ -214,8 +215,25 @@ export async function createAuditLogRecord(
       );
 
       emitAuditLogIntegrityAnchor(anchor);
-      if (input.userId) {
-        updateTag(getCacheTag.auditLogs.recent(input.userId));
+      const auditUserId = input.userId;
+      if (auditUserId) {
+        // 監査ログは Server Action だけでなく、page render 中の
+        // `requireAdminPermission`（PERMISSION_DENIED）や IAP ログイン記録からも
+        // 書かれる。render フェーズで `updateTag` を直接呼ぶと Next.js が
+        // 「used "updateTag ..." during render which is unsupported」で throw し、
+        // recent 監査ログの invalidate が黙って失われる（run 30569714860 の
+        // webServer ログに 6 route 分が記録されていた）。
+        // Server Action では即時実行のまま read-your-own-writes を保ち、
+        // render フェーズのときだけ after へ逃がす。
+        invalidateTagNowOrAfterResponse(
+          () => {
+            updateTag(getCacheTag.auditLogs.recent(auditUserId));
+          },
+          {
+            operation: "updateAuditLogRecentTag",
+            context: { userId: auditUserId },
+          },
+        );
       }
       return;
     } catch (error) {
