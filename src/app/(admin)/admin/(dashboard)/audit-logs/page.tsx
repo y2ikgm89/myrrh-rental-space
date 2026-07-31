@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getAuditLogResources, getAuditLogs } from "@/admin/queries/audit-log";
+import { requireAdminListPage } from "@/admin/helpers/page-auth";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -57,6 +58,17 @@ async function AuditLogFiltersSection() {
 }
 
 export default async function AuditLogsPage({ searchParams }: PageProps) {
+  // 認可は **Suspense 境界より前** で解決する。境界の内側（= streaming 開始後）で
+  // `redirect()` を呼ぶと Next.js は HTTP 3xx を返せず meta タグによる
+  // client-side redirect に劣化する（公式仕様。redirect API リファレンス
+  // 「When used in a streaming context, this will insert a meta tag to emit the
+  // redirect on the client side.」/ streaming ガイド「You cannot change the status
+  // code or headers after streaming starts.」）。劣化した meta refresh は axe の
+  // `meta-refresh` critical (WCAG 2.2.1 / 2.2.4) に当たる。
+  //
+  // `auditLog:read` は SUPER_ADMIN のみが持つため、他ロールは必ずこの経路を通る。
+  await requireAdminListPage("auditLog");
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
