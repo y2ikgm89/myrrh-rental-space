@@ -17,8 +17,7 @@ import {
 } from "./hash-chain";
 import { updateTag } from "next/cache";
 import { getCacheTag } from "@/shared/lib/constants";
-import { afterResponse } from "@/shared/lib/async-utils";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
+import { invalidateTagNowOrAfterResponse } from "@/shared/lib/cache/invalidate-timing";
 
 /**
  * 監査ログ書込の生入力型。
@@ -223,16 +222,15 @@ export async function createAuditLogRecord(
         // 書かれる。render フェーズで `updateTag` を直接呼ぶと Next.js が
         // 「used "updateTag ..." during render which is unsupported」で throw し、
         // recent 監査ログの invalidate が黙って失われる（run 30569714860 の
-        // webServer ログに 6 route 分が記録されていた）。after フェーズは
-        // 明示的に許可されているため委譲する。
-        afterResponse(
+        // webServer ログに 6 route 分が記録されていた）。
+        // Server Action では即時実行のまま read-your-own-writes を保ち、
+        // render フェーズのときだけ after へ逃がす。
+        invalidateTagNowOrAfterResponse(
           () => {
             updateTag(getCacheTag.auditLogs.recent(auditUserId));
           },
           {
             operation: "updateAuditLogRecentTag",
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.LOW,
             context: { userId: auditUserId },
           },
         );
