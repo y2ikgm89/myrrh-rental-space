@@ -57,7 +57,10 @@ test.describe("customer merge — self-serve flow", () => {
     await expect(
       page.getByRole("heading", { name: "履歴統合の最終確認" }),
     ).toBeVisible();
-    await expect(page.getByText("統合対象の履歴")).toBeVisible();
+    // request ページ側と同じ理由。confirm ページの `<p>` も role / id を持たないので
+    // `visibleByText` で表示中の 1 本に絞る。実測: run 30670065962 で
+    // `getByText('統合対象の履歴') resolved to 2 elements`（片方は staging copy）。
+    await expect(visibleByText(page, "統合対象の履歴")).toBeVisible();
 
     await page.getByRole("button", { name: "統合する" }).click();
     await expect(page).toHaveURL(/\/mypage/u, { timeout: 15000 });
