@@ -56,7 +56,20 @@ paths:
 
 handler 冒頭で `checkActionRateLimit(formSubmitRateLimiter)` →
 `validateTurnstile({ token, expectedAction: TURNSTILE_ACTIONS.* })` の順に実行する。
-Turnstile token は一度の検証で消費されるため、失敗時は widget reset + token clear が必要。
+Turnstile token は一度の検証で消費されるため、結果を受けたら widget を張り直す
+（`ref.current?.reset()`）。**トークン欄はアプリ側で持たない** — `TurnstileWidget` が
+Cloudflare 公式の `response-field-name` で `turnstileToken` の hidden input を
+自前で描画・更新する。`<form>` 送信ではなく引数でトークンを渡す画面（ダイアログ内の
+キャンセル・ログイン等）だけ `onVerify` を使う。
+
+**`useInputControl(fields.turnstileToken)` を復活させてはいけない。** conform 管理下の
+フィールドに書き戻すと 2 つの実害が出る:
+
+1. reject 応答後に `change("")` すると `shouldRevalidate: "onInput"` の再バリデーションが
+   走り、**サーバーが返した form-level エラーを client 検証結果で上書きして消す**。
+   「このタイムスロットは満員です」がユーザーに一度も表示されなくなる
+2. `useInputControl` の戻り値は毎レンダー新しいオブジェクトなので effect の依存に
+   入れると無限ループになる（PR #1758）
 
 予約(reservation)・イベント申込(event-registration)は専用のIP単位リミッター
 （`reservationSubmitRateLimiter` / `eventRegistrationSubmitRateLimiter`、

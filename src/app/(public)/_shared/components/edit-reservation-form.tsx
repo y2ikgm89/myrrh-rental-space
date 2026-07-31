@@ -130,7 +130,6 @@ export function EditReservationForm({
     },
   );
 
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
   const numberOfGuestsControl = useInputControl(fields.numberOfGuests);
 
   const selectedSpaceId =
@@ -153,28 +152,23 @@ export function EditReservationForm({
     }
   }
 
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` は
-  // 毎レンダー新しいオブジェクトを返すため、この effect は毎レンダー再実行される。
-  // 早期 return が無いと reset() → Turnstile 再チャレンジ → change(token) →
-  // 再レンダー → effect 再実行 → reset() … が閉じず、JS メインスレッドを専有して
-  // ページが操作不能になる（実測と詳細は
-  // events/[slug]/_components/event-registration-form.tsx の同 effect を参照）。
+  // Turnstile トークンは 1 回限り有効なので、送信結果を受けたら widget を張り直す。
+  // **conform のフィールドには触れない** — トークン欄は widget が所有しており
+  // (`TURNSTILE_TOKEN_FIELD_NAME` の hidden input)、ここで conform 経由の
+  // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
+  // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
+  //
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
+  // 結果は ref で覚える（state だと effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (lastResult?.status !== "error") return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
-    turnstileTokenControl.change("");
-  }, [lastResult, turnstileTokenControl]);
-
-  function handleTurnstileVerify(token: string) {
-    turnstileTokenControl.change(token);
-  }
-
-  function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
-  }
+  }, [lastResult]);
 
   const formErrorMessage =
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
@@ -195,11 +189,6 @@ export function EditReservationForm({
         type="hidden"
         name={fields.numberOfGuests.name}
         value={String(Math.min(guestCount, spaceCapacity))}
-      />
-      <input
-        type="hidden"
-        name={fields.turnstileToken.name}
-        value={turnstileTokenControl.value ?? ""}
       />
       <input type="hidden" name={fields.version.name} value={String(version)} />
 
@@ -279,8 +268,6 @@ export function EditReservationForm({
         ref={turnstileRef}
         siteKey={turnstileSiteKey}
         action={turnstileAction}
-        onVerify={handleTurnstileVerify}
-        onExpire={handleTurnstileExpire}
       />
 
       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-3">

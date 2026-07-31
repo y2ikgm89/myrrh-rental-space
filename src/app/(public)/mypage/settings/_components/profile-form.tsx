@@ -75,40 +75,32 @@ export function ProfileForm({
   });
 
   const customerTypeControl = useInputControl(fields.customerType);
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
 
   const customerTypeValue = customerTypeControl.value;
   const customerType: CustomerType = isValidCustomerType(customerTypeValue)
     ? customerTypeValue
     : defaultValues.customerType;
 
-  // success / error 後の Turnstile widget DOM reset (副作用)
-  // Turnstile token は一度の検証で消費されるため、結果に関わらず reset
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` は
-  // 毎レンダー新しいオブジェクトを返すため、この effect は毎レンダー再実行される。
-  // 早期 return が無いと reset() → Turnstile 再チャレンジ → change(token) →
-  // 再レンダー → effect 再実行 → reset() … が閉じず、JS メインスレッドを専有して
-  // ページが操作不能になる（実測と詳細は
-  // events/[slug]/_components/event-registration-form.tsx の同 effect を参照）。
+  // Turnstile トークンは 1 回限り有効なので、送信結果を受けたら widget を張り直す。
+  // **conform のフィールドには触れない** — トークン欄は widget が所有しており
+  // (`TURNSTILE_TOKEN_FIELD_NAME` の hidden input)、ここで conform 経由の
+  // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
+  // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
+  //
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
+  // 結果は ref で覚える（state だと effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (lastResult === undefined) return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
-    turnstileTokenControl.change("");
-  }, [lastResult, turnstileTokenControl]);
+  }, [lastResult]);
 
   function handleCustomerTypeChange(type: CustomerType) {
     customerTypeControl.change(type);
-  }
-
-  function handleTurnstileVerify(token: string) {
-    turnstileTokenControl.change(token);
-  }
-
-  function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
   }
 
   // success 検出: executeConformMutation の `resetForm: false` 指定で
@@ -130,11 +122,6 @@ export function ProfileForm({
         type="hidden"
         name={fields.customerType.name}
         value={customerType}
-      />
-      <input
-        type="hidden"
-        name={fields.turnstileToken.name}
-        value={turnstileTokenControl.value ?? ""}
       />
 
       {formErrorMessage !== null && (
@@ -274,8 +261,6 @@ export function ProfileForm({
         ref={turnstileRef}
         siteKey={turnstileSiteKey}
         action={TURNSTILE_ACTIONS.mypage_profile}
-        onVerify={handleTurnstileVerify}
-        onExpire={handleTurnstileExpire}
       />
 
       <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
