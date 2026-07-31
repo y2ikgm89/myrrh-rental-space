@@ -3,12 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import Link from "next/link";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
@@ -200,8 +195,6 @@ export function EventRegistrationForm({
     },
   );
 
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
-
   // Render 中 state sync: 成功検出 (default `resetForm: true` → initialValue === null)
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
@@ -210,36 +203,23 @@ export function EventRegistrationForm({
     }
   }
 
-  // Turnstile DOM reset は副作用のため effect に残置。
+  // Turnstile トークンは 1 回限り有効なので、送信結果を受けたら widget を張り直す。
+  // **conform のフィールドには触れない** — トークン欄は widget が所有しており
+  // (`TURNSTILE_TOKEN_FIELD_NAME` の hidden input)、ここで conform 経由の
+  // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
+  // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 「同じ lastResult に対して 1 回だけ」に絞る必要がある。conform の
-  // `useInputControl` は毎レンダー新しいオブジェクト（`{ value, change, focus, blur }`）
-  // を返すため、`turnstileTokenControl` を依存に持つこの effect は**毎レンダー再実行**
-  // される。エラー結果が残っている間は
-  //   reset() → Turnstile が再チャレンジ → onSuccess → change(token) → 再レンダー
-  //   → control の同一性が変わる → effect 再実行 → reset() …
-  // という無限ループになり、ページの JS メインスレッドを専有して操作不能になる。
-  // 実測: 3 並行申込で満員 reject を受けた 2 ページが応答しなくなり、Playwright の
-  // evaluate / locator が全てタイムアウト、RSC prefetch が 30〜53 秒に膨張していた。
-  // 既に reset 済みの結果は ref で覚える（state にすると effect 内 setState になり
-  // react-hooks/set-state-in-effect に触れる。ref の read/write は effect 内なので
-  // render 中 ref 読みの禁止規約にも抵触しない）。
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
+  // 結果は ref で覚える（state だと effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (lastResult?.status !== "error") return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
-    turnstileTokenControl.change("");
-  }, [lastResult, turnstileTokenControl]);
-
-  function handleTurnstileVerify(token: string) {
-    turnstileTokenControl.change(token);
-  }
-
-  function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
-  }
+  }, [lastResult]);
 
   if (submitted) {
     // 送信時点のモードを優先する（理由は submittedMode の宣言コメント参照）。
@@ -338,11 +318,6 @@ export function EventRegistrationForm({
           type="hidden"
           name={fields.ticketId.name}
           value={selectedTicketId}
-        />
-        <input
-          type="hidden"
-          name={fields.turnstileToken.name}
-          value={turnstileTokenControl.value ?? ""}
         />
         <input
           type="hidden"
@@ -571,8 +546,6 @@ export function EventRegistrationForm({
               ? TURNSTILE_ACTIONS.event_waitlist_register
               : TURNSTILE_ACTIONS.event_registration
           }
-          onVerify={handleTurnstileVerify}
-          onExpire={handleTurnstileExpire}
         />
 
         {requiredTerms.length > 0 && (

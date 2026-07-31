@@ -2,12 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { submitReview } from "@/public/actions/review";
 import type { z } from "zod";
@@ -125,8 +120,6 @@ function ReviewFormInner({
     shouldRevalidate: "onInput",
   });
 
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
-
   // Render 中 state sync: 成功検出 (executeConformMutation default
   // `resetForm: true` で `{ initialValue: null }` を返す)
   if (lastResult !== previousResult) {
@@ -136,29 +129,23 @@ function ReviewFormInner({
     }
   }
 
-  // Turnstile DOM reset は副作用のため effect に残置
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` は
-  // 毎レンダー新しいオブジェクトを返すため、この effect は毎レンダー再実行される。
-  // 早期 return が無いと reset() → Turnstile 再チャレンジ → change(token) →
-  // 再レンダー → effect 再実行 → reset() … が閉じず、JS メインスレッドを専有して
-  // ページが操作不能になる（実測と詳細は
-  // events/[slug]/_components/event-registration-form.tsx の同 effect を参照）。
+  // Turnstile トークンは 1 回限り有効なので、送信結果を受けたら widget を張り直す。
+  // **conform のフィールドには触れない** — トークン欄は widget が所有しており
+  // (`TURNSTILE_TOKEN_FIELD_NAME` の hidden input)、ここで conform 経由の
+  // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
+  // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
+  //
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
+  // 結果は ref で覚える（state だと effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (lastResult?.status !== "error") return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
-    turnstileTokenControl.change("");
-  }, [lastResult, turnstileTokenControl]);
-
-  function handleTurnstileVerify(token: string) {
-    turnstileTokenControl.change(token);
-  }
-
-  function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
-  }
+  }, [lastResult]);
 
   if (submitted) {
     return (
@@ -195,11 +182,6 @@ function ReviewFormInner({
           value={reservationId}
         />
         <input type="hidden" name={fields.rating.name} value={String(rating)} />
-        <input
-          type="hidden"
-          name={fields.turnstileToken.name}
-          value={turnstileTokenControl.value ?? ""}
-        />
 
         {formErrorMessage !== null && (
           <div
@@ -259,8 +241,6 @@ function ReviewFormInner({
           ref={turnstileRef}
           siteKey={turnstileSiteKey}
           action={TURNSTILE_ACTIONS.review}
-          onVerify={handleTurnstileVerify}
-          onExpire={handleTurnstileExpire}
         />
 
         <Button type="submit" disabled={isPending}>

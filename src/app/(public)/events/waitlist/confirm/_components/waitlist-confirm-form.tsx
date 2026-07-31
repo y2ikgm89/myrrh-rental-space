@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
@@ -60,8 +60,6 @@ export function WaitlistConfirmForm({
     shouldRevalidate: "onInput",
   });
 
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
-
   // Render 中 state sync: 成功検出 (default `resetForm: true` → initialValue === null)
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
@@ -70,29 +68,23 @@ export function WaitlistConfirmForm({
     }
   }
 
-  // Turnstile DOM reset は副作用のため effect に残置
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` は
-  // 毎レンダー新しいオブジェクトを返すため、この effect は毎レンダー再実行される。
-  // 早期 return が無いと reset() → Turnstile 再チャレンジ → change(token) →
-  // 再レンダー → effect 再実行 → reset() … が閉じず、JS メインスレッドを専有して
-  // ページが操作不能になる（実測と詳細は
-  // events/[slug]/_components/event-registration-form.tsx の同 effect を参照）。
+  // Turnstile トークンは 1 回限り有効なので、送信結果を受けたら widget を張り直す。
+  // **conform のフィールドには触れない** — トークン欄は widget が所有しており
+  // (`TURNSTILE_TOKEN_FIELD_NAME` の hidden input)、ここで conform 経由の
+  // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
+  // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
+  //
+  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
+  // 結果は ref で覚える（state だと effect 内 setState になり
+  // react-hooks/set-state-in-effect に触れる）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (lastResult?.status !== "error") return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
-    turnstileTokenControl.change("");
-  }, [lastResult, turnstileTokenControl]);
-
-  function handleTurnstileVerify(verifiedToken: string) {
-    turnstileTokenControl.change(verifiedToken);
-  }
-
-  function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
-  }
+  }, [lastResult]);
 
   if (submitted) {
     return (
@@ -129,11 +121,6 @@ export function WaitlistConfirmForm({
       className="space-y-6 border border-border p-6 sm:p-8"
     >
       <input type="hidden" name={fields.token.name} value={token} />
-      <input
-        type="hidden"
-        name={fields.turnstileToken.name}
-        value={turnstileTokenControl.value ?? ""}
-      />
 
       <div className="border border-info/30 bg-info/5 p-4 text-sm" role="note">
         <p className="font-medium text-foreground">参加確定について</p>
@@ -149,8 +136,6 @@ export function WaitlistConfirmForm({
         ref={turnstileRef}
         siteKey={turnstileSiteKey}
         action={TURNSTILE_ACTIONS.event_waitlist_confirm}
-        onVerify={handleTurnstileVerify}
-        onExpire={handleTurnstileExpire}
       />
 
       {formErrorMessage !== null && (
