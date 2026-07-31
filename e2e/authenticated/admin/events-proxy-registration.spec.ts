@@ -124,7 +124,10 @@ test.describe("admin proxy registration (T10)", () => {
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
 
-    await page.getByRole("button", { name: "代行登録" }).click();
+    // 1 番目のテストが「代行登録テスト太郎」を作るため、serial 実行の 2 番目では
+    // 出席記録ボタン（aria-label「代行登録テスト太郎 の出席を記録」）と
+    // 部分一致してしまう。1 番目と同様に完全一致で絞る（PR #1701 Codex 指摘）。
+    await page.getByRole("button", { name: "代行登録", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(

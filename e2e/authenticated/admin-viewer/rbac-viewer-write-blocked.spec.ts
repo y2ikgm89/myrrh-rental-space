@@ -81,22 +81,26 @@ test.describe("管理画面 RBAC — VIEWER role は write action を block さ�
     // 必須項目のみ埋める (lastName / firstName / email)。email は onBlur の
     // duplicate check で警告出るのを避けるため一意生成する。ラベルは
     // `<Label>姓 <span>*</span></Label>` のため accessible name は "姓 *"。
-    const lastName = page.getByLabel("姓 *", { exact: true });
-    const firstName = page.getByLabel("名 *", { exact: true });
-    const email = page.getByLabel("メールアドレス *", { exact: true });
-    const emailValue = uniqueEmail("rbac-viewer");
-
-    await lastName.fill("権限");
-    await firstName.fill("テスト");
-    await email.fill(emailValue);
-
     // hydration 完了前に fill すると conform が入力を拾わず、submit が
     // client-side Zod で弾かれる（"Invalid input: expected string, received undefined"）。
     // その場合 server action まで到達しないので、本題である権限拒否 alert が出ない
-    // （run 30595374008 の失敗）。値が実際に載ったことを確認してから submit する。
-    await expect(lastName).toHaveValue("権限");
-    await expect(firstName).toHaveValue("テスト");
-    await expect(email).toHaveValue(emailValue);
+    // （run 30595374008 の失敗）。
+    //
+    // `toHaveValue` は fill が DOM を書き換えた時点で通ってしまい hydration の
+    // 証拠にならない。Radix Select は **client 側でしか開かない** ので、
+    // 区分 combobox が listbox を開けることをもって React ハンドラの接続を確認する。
+    const customerType = page.getByRole("combobox", { name: "区分" });
+    await customerType.click();
+    await expect(page.getByRole("option", { name: "個人" })).toBeVisible({
+      timeout: 15000,
+    });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("option", { name: "個人" })).toHaveCount(0);
+
+    const emailValue = uniqueEmail("rbac-viewer");
+    await page.getByLabel("姓 *", { exact: true }).fill("権限");
+    await page.getByLabel("名 *", { exact: true }).fill("テスト");
+    await page.getByLabel("メールアドレス *", { exact: true }).fill(emailValue);
 
     await page.getByRole("button", { name: "顧客を作成" }).click();
 
