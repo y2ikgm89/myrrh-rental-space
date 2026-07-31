@@ -91,12 +91,15 @@ test.describe("管理画面 RBAC — VIEWER role は write action を block さ�
 
     // executeConformMutation は `submission.reply({ formErrors: [error] })` で
     // 返すため、CustomerForm 末尾の `role="alert"` 領域にエラー文言が入る。
-    const alert = page
-      .getByRole("alert")
-      .filter({ hasText: "権限がありません" });
-    await expect(alert).toBeVisible({ timeout: 15000 });
-    await expect(alert).toContainText("customer");
-    await expect(alert).toContainText("create");
+    // 文言は `action-auth.ts` の `${resource}の${action}権限がありません`。
+    //
+    // **1 アサーションで確定させる**: alert は再 render で差し替わりうる transient な
+    // 要素で、`toBeVisible` → `toContainText("customer")` → `toContainText("create")`
+    // と 3 回に分けて掴むと途中で `element(s) not found` になる
+    // (CI run 30593381788 の実失敗)。
+    await expect(
+      page.getByRole("alert").filter({ hasText: "権限がありません" }),
+    ).toContainText("customerのcreate権限がありません", { timeout: 15000 });
 
     // 権限拒否のため /admin/customers への遷移は発生しない (success 時のみ
     // `router.push("/admin/customers")` される)。URL が /new のままであることを確認する。
