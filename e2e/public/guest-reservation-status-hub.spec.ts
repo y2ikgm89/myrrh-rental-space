@@ -43,7 +43,14 @@ test.describe("ゲスト予約 status hub — 閲覧", () => {
       page.getByRole("heading", { level: 1, name: "予約ステータス" }),
     ).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByText(fixture.spaceName)).toBeVisible();
-    await expect(page.getByText("未払い", { exact: true })).toBeVisible();
+    // page 直下の `getByText` は React streaming の hidden staging copy も掴む
+    // （実測 run 30631098725: 同一 class の `<h2>` が 2 件で strict mode violation）。
+    // role locator は a11y ツリー非公開の要素を除外するので、role でスコープしてから
+    // テキストを見る。SSoT: `.claude/rules/testing-e2e.md`
+    const main = page.getByRole("main");
+    await expect(
+      main.getByRole("heading", { name: fixture.spaceName }),
+    ).toBeVisible();
+    await expect(main.getByText("未払い", { exact: true })).toBeVisible();
   });
 });
