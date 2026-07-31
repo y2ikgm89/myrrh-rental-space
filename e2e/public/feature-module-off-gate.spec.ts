@@ -30,12 +30,12 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * FEAT-3PLANE-04 (PR #1205) で `mypage/inquiries` × 2、`reservation/complete`、
  * `claim/reservation`、`claim/event-registration` に `requireFeatureEnabled` gate
  * が追加された。本 spec は「feature module を OFF にすると gate 対象の公開
- * ルートが 404 を返す」実行時契約を、代表 5 module × 主要ルートで検証する。
+ * ルートが not-found になる」実行時契約を、代表 5 module × 主要ルートで検証する。
  *
  * unit test の `public-route-gates.test.ts` が「grep で gate 呼び出しが存在するか」
- * を drift gate で守るのに対し、本 spec は「実際に OFF にしたときブラウザ HTTP
- * response が 404 になる」ランタイム挙動を守る（source と gate 実装、cache
- * invalidation、not-found rendering までを end-to-end で確認）。
+ * を drift gate で守るのに対し、本 spec は「実際に OFF にしたとき本来のページが
+ * 出ない」ランタイム挙動を守る（source と gate 実装、cache invalidation、
+ * not-found rendering までを end-to-end で確認）。
  *
  * ## この spec は共有 DB のグローバル状態を触る — 復元は絶対契約
  *
@@ -66,9 +66,8 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *
  * - cache invalidation は admin form の `updateFeatureModulesSettings` server action が
  *   `invalidateSiteWideCache([FEATURE_MODULES, ...])` を呼ぶ規約に依存する。DB を
- *   直接書き換えるとキャッシュが古いまま公開ルートが 200 を返し得るため admin UI 経由。
- *   反映は非同期なので 404 の確認は `expect.poll` で待つ（旧実装は単発 goto で
- *   200 を掴んで落ちていた）。
+ *   直接書き換えるとキャッシュが古いまま公開ルートが本来のページを返し得るため
+ *   admin UI 経由。反映は非同期なので not-found の確認は `expect.poll` で待つ。
  * - シングルトン行 mutation のため `test.describe.serial` で直列化。
  * - 管理面へのアクセスは storageState ではなく webServer env
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
@@ -109,7 +108,7 @@ interface ModuleCase {
 }
 
 /**
- * 各 module OFF 時に 404 を返すべき代表ルート。gate 実体は全 22 経路
+ * 各 module OFF 時に not-found になるべき代表ルート。gate 実体は全 22 経路
  * (`public-route-gates.test.ts` EXPECTED_GATES) にあるが、本 spec は 5 module ×
  * 主要ルートに絞ってランタイム挙動を守る (unit drift gate と役割分担)。
  *
@@ -249,7 +248,7 @@ async function restoreAllFeatureModules(page: Page): Promise<void> {
 // シングルトン Settings.featureModules を mutate するため、他の並列テストと
 // 衝突しないよう serial 化する (rules の testing-e2e.md 参照)。
 test.describe
-  .serial("feature-module OFF returns 404 across all critical routes (E2E-04)", () => {
+  .serial("feature-module OFF hides all critical public routes (E2E-04)", () => {
   test.skip(
     IS_PUBLIC_SURFACE,
     "APP_SURFACE=public では /admin にアクセスできないため skip",
