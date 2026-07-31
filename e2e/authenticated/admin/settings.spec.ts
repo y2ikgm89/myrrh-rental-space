@@ -173,26 +173,62 @@ test.describe("サイト基本ページ", () => {
 
 // Setting シングルトンを mutate するため worker 間直列化が必要
 test.describe.serial("サイト名 mutation - 並列化禁止", () => {
-  test("サイト名を変更して保存できる", async ({ page }) => {
-    await page.goto(urls.adminSettings + "/site");
+  const SITE_NAME_LABEL = "サイト名";
+  const SAVE_TIMEOUT_MS = 10000;
 
-    const siteNameInput = page.getByRole("textbox", { name: "サイト名" });
-    await expect(siteNameInput).toBeVisible();
+  /**
+   * mutate する直前に控えた元の値。afterEach が無条件に戻す。
+   *
+   * seed 値をハードコードせず「変更前に読んだ値」を使うのは、seed が変わっても
+   * 腐らないため。復元済み / 未変更なら null に戻して二重復元を避ける。
+   */
+  let originalSiteName: string | null = null;
 
-    await siteNameInput.clear();
-    await siteNameInput.fill("テストサイト名");
-
+  async function saveSiteName(
+    page: import("@playwright/test").Page,
+    value: string,
+  ): Promise<void> {
+    const input = page.getByRole("textbox", { name: SITE_NAME_LABEL });
+    await expect(input).toBeVisible();
+    await input.clear();
+    await input.fill(value);
     await page.getByRole("button", { name: "基本情報を保存" }).click();
 
     await expect
       .poll(
         async () => {
           await page.reload();
-          return page.getByRole("textbox", { name: "サイト名" }).inputValue();
+          return page
+            .getByRole("textbox", { name: SITE_NAME_LABEL })
+            .inputValue();
         },
-        { timeout: 10000 },
+        { timeout: SAVE_TIMEOUT_MS },
       )
-      .toBe("テストサイト名");
+      .toBe(value);
+  }
+
+  // 共有 Settings singleton を汚染したまま他 spec に渡さない。test 本体の
+  // try/finally では setup 失敗時に復元されないため hook で行う
+  // (gate: __tests__/unit/architecture/e2e-global-state-restore.test.ts)。
+  test.afterEach(async ({ page }) => {
+    const restoreTo = originalSiteName;
+    originalSiteName = null;
+    if (restoreTo === null) return;
+
+    await page.goto(urls.adminSettings + "/site");
+    await saveSiteName(page, restoreTo);
+  });
+
+  test("サイト名を変更して保存できる", async ({ page }) => {
+    await page.goto(urls.adminSettings + "/site");
+
+    const siteNameInput = page.getByRole("textbox", { name: SITE_NAME_LABEL });
+    await expect(siteNameInput).toBeVisible();
+
+    // 書き換える前に控える — これ以降どこで失敗しても afterEach が戻せる。
+    originalSiteName = await siteNameInput.inputValue();
+
+    await saveSiteName(page, "テストサイト名");
   });
 });
 

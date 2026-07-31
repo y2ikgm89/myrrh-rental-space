@@ -122,6 +122,64 @@ const MODULE_CASES: readonly ModuleCase[] = [
   },
 ];
 
+interface ModuleBaseline {
+  readonly id: string;
+  readonly label: string;
+  readonly enabled: boolean;
+}
+
+/**
+ * afterEach で戻す基準状態 — `buildInitialFeatureModules()` (registry SSoT) と同値。
+ * E2E の webServer は `bun prisma/seed.ts --dev` を毎回実行し、`seedDev` が
+ * `seedSettings({ resetFeatureModules: true })` でこの値に揃えるため、これが run の
+ * 既定状態になる (`data-retention` だけ fail-closed で常に OFF)。
+ *
+ * ## MODULE_CASES ではなく全 11 module を列挙する理由
+ *
+ * `FeatureModulesForm` は 11 module 全部を **1 つの form** で送る。依存元が OFF の
+ * module は `submittedValue = depsMet ? control.value : ""` (ModuleSwitchRow) により
+ * **OFF として送信される**。つまり `spaces` を OFF にする保存は、DB 上の
+ * `reservation` / `reviews` / `payment` も同時に false にする。`reviews` と `payment`
+ * は MODULE_CASES に無いため、MODULE_CASES だけを復元すると OFF のまま取り残される。
+ *
+ * ## 依存元を先に並べる理由
+ *
+ * 依存元が OFF の間、依存先の Switch は `checked={depsMet && isOn}` /
+ * `disabled={isPending || !depsMet}` により **`aria-checked="false"` かつ `disabled`**
+ * になる。先に依存先を click すると Playwright の actionability 待ち (enabled 待ち)
+ * でハングし、復元そのものが失敗する。`FEATURE_MODULES_LIST` と同順
+ * (spaces → reservation → … → reviews → payment) に並べることで、click する時点では
+ * 常に依存元が ON になっている。
+ *
+ * registry SSoT との一致・順序の妥当性は
+ * `__tests__/unit/architecture/e2e-feature-module-baseline-sync.test.ts` が機械強制する。
+ */
+const FEATURE_MODULE_BASELINE: readonly ModuleBaseline[] = [
+  { id: "spaces", label: "スペース管理", enabled: true },
+  { id: "reservation", label: "予約フォーム", enabled: true },
+  { id: "events", label: "イベント", enabled: true },
+  { id: "posts", label: "ブログ", enabled: true },
+  { id: "news", label: "お知らせ", enabled: true },
+  { id: "faq", label: "FAQ", enabled: true },
+  { id: "access", label: "アクセス", enabled: true },
+  { id: "contact", label: "お問い合わせ", enabled: true },
+  { id: "reviews", label: "レビュー", enabled: true },
+  { id: "payment", label: "オンライン決済", enabled: true },
+  {
+    id: "data-retention",
+    label: "データ保持ポリシーの自動適用",
+    enabled: false,
+  },
+];
+
+/** 保存ボタンは 11 module 共通 (1 form / 1 ボタン)。行特定用の安定した label。 */
+const SAVE_ANCHOR_LABEL = "スペース管理";
+
+/** 期待する基準状態のシリアライズ。差分が 1 行で読めるよう文字列比較する。 */
+const EXPECTED_BASELINE_STATE = FEATURE_MODULE_BASELINE.map(
+  (mod) => `${mod.id}=${mod.enabled ? "true" : "false"}`,
+).join(", ");
+
 /**
  * Switch 行の locator。各 row は `<div class="rounded-lg border p-4">` + 内側に
  * `<label>{mod.label}</label>` + Radix `<button role="switch">` を持つ
@@ -210,10 +268,68 @@ async function setFeatureModule(
   }
 }
 
-/** 全 module を ON に揃える。既に ON のものは触らない。 */
-async function restoreAllFeatureModules(page: Page): Promise<void> {
-  for (const moduleCase of MODULE_CASES) {
-    await setFeatureModule(page, moduleCase.label, true);
+/** 現在の全 module 状態を `EXPECTED_BASELINE_STATE` と同形式で読む。 */
+async function readBaselineState(page: Page): Promise<string> {
+  const states: string[] = [];
+  for (const mod of FEATURE_MODULE_BASELINE) {
+    states.push(`${mod.id}=${await readModuleState(page, mod.label)}`);
+  }
+  return states.join(", ");
+}
+
+/**
+ * 全 module を基準状態へ **1 回の保存で** 戻す。
+ *
+ * 11 module は 1 つの form / 1 つの保存ボタンを共有するため、差分のある Switch を
+ * すべて flip してから 1 度だけ保存する。`depsMet` は client 側の form state
+ * (`fields[req]?.value === "on"`) から計算されるので、依存元を flip した時点で
+ * 依存先の Switch は同じ render で enabled になり、reload なしで続けて操作できる。
+ *
+ * module ごとに保存する実装 (旧 `restoreAllFeatureModules`) は、依存先を依存元より
+ * 先に処理すると disabled な Switch を click しようとしてハングしていた。
+ */
+async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
+  for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
+    await openFeatureSettings(page);
+
+    let changed = false;
+    for (const mod of FEATURE_MODULE_BASELINE) {
+      const desired = mod.enabled ? "true" : "false";
+      const switchButton = moduleSwitch(page, mod.label);
+      await expect(switchButton).toBeVisible();
+      if ((await switchButton.getAttribute("aria-checked")) === desired) {
+        continue;
+      }
+
+      await switchButton.click();
+      await expect(switchButton).toHaveAttribute("aria-checked", desired);
+      changed = true;
+    }
+
+    if (!changed) return;
+
+    await moduleSaveButton(page, SAVE_ANCHOR_LABEL).click();
+
+    try {
+      await expect
+        .poll(
+          async () => {
+            await openFeatureSettings(page);
+            return readBaselineState(page);
+          },
+          {
+            timeout: PERSIST_TIMEOUT_MS,
+            message:
+              "feature module の基準状態への復元が永続化されなかった（楽観ロック競合の可能性）",
+          },
+        )
+        .toBe(EXPECTED_BASELINE_STATE);
+      return;
+    } catch (error) {
+      // 1 回目は競合しうる。再読込すれば expectedUpdatedAt が更新されるので
+      // やり直せば通る。最終試行で駄目なら Playwright のメッセージごと投げる。
+      if (attempt === SAVE_ATTEMPTS) throw error;
+    }
   }
 }
 
@@ -236,21 +352,21 @@ test.describe
 
   // setup 段階で失敗しても必ず走る（try/finally では復元されなかった）。
   test.afterEach(async ({ page }) => {
-    await restoreAllFeatureModules(page);
+    await restoreFeatureModuleBaseline(page);
   });
 
   // 復元が壊れていたら、巻き添えで他 spec を落とす前に**この spec が**落ちる。
+  // MODULE_CASES ではなく全 module を検証する — `spaces` OFF の保存は
+  // `reviews` / `payment` も道連れに OFF にするため (FEATURE_MODULE_BASELINE 参照)。
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
     try {
       await primeAdminRequestContext(page.context());
       await openFeatureSettings(page);
-      for (const moduleCase of MODULE_CASES) {
-        expect(
-          await readModuleState(page, moduleCase.label),
-          `feature module "${moduleCase.label}" が OFF のまま残っている。共有 DB を汚染するため必ず ON に戻すこと`,
-        ).toBe("true");
-      }
+      expect(
+        await readBaselineState(page),
+        "feature module が基準状態に戻っていない。共有 DB を汚染し他 spec を巻き添えで落とすため、必ず復元すること",
+      ).toBe(EXPECTED_BASELINE_STATE);
     } finally {
       await page.close();
     }
