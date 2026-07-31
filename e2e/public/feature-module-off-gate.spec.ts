@@ -126,7 +126,12 @@ async function setFeatureModule(
   await switchButton.click();
   await expect(switchButton).toHaveAttribute("aria-checked", desiredState);
 
-  await page.getByRole("button", { name: /^保存/u }).click();
+  // features ページには機能モジュール用とデータ保持設定用の 2 つの保存ボタンがある。
+  // switch を含む form に絞らないと strict mode violation になる（run 30595374008）。
+  await row
+    .locator("xpath=ancestor::form[1]")
+    .getByRole("button", { name: /^保存/u })
+    .click();
   await expect(page.getByText("機能モジュールを保存しました")).toBeVisible({
     timeout: 15000,
   });

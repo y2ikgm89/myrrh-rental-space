@@ -54,7 +54,12 @@ test.describe("admin proxy registration (T10)", () => {
     });
 
     // 代行登録 ボタンが存在 (walk-in と別 CTA)
-    const proxyButton = page.getByRole("button", { name: "代行登録" });
+    // 出席記録ボタンの aria-label が「代行登録テスト太郎 の出席を記録」となり、
+    // 部分一致では CTA と 2 件一致する（run 30595374008）。完全一致で絞る。
+    const proxyButton = page.getByRole("button", {
+      name: "代行登録",
+      exact: true,
+    });
     await expect(proxyButton).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
@@ -99,7 +104,10 @@ test.describe("admin proxy registration (T10)", () => {
   }) => {
     // 別 slug を使うと fixture 干渉が起きないため、同じイベントで validation のみ検証
     // する（一度目のテストで登録済みでも、この検証は submit を発火させない）。
-    await page.goto("/admin/events");
+    // 一覧のページ押し出し対策は 1 番目のテストと同じ（#1692）。
+    await page.goto(
+      `/admin/events?search=${encodeURIComponent("ヨガ＆マインドフルネス体験会")}`,
+    );
 
     await page
       .getByRole("cell", {

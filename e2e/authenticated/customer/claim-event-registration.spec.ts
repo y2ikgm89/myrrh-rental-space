@@ -82,15 +82,18 @@ test.describe("claim/event-registration - ゲストイベント申込のマイ�
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 
-    await expect(page).toHaveURL(/\/mypage\/events$/u, { timeout: 10000 });
+    // `ClaimConfirmForm` は成功時に一覧ではなく申込詳細へ遷移する
+    // (`router.push(`/mypage/events/${result.eventRegistrationId}`)`)。
+    // spec 側が一覧 URL を期待したままだった（run 30595374008）。
+    await expect(page).toHaveURL(/\/mypage\/events\/[^/]+$/u, {
+      timeout: 10000,
+    });
 
     await expect(
-      page.getByRole("heading", { level: 1, name: "イベント" }),
+      page.getByRole("heading", { level: 1, name: "イベント申込詳細" }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: fixture.eventTitle }),
-    ).toBeVisible();
-    // claim 後、mypage イベント一覧の同一登録カードにも参加 URL が引き続き表示される。
+    await expect(page.getByText(fixture.eventTitle)).toBeVisible();
+    // claim 後は詳細ページで参加 URL が表示される（isEventVirtualAccessible gate）。
     await expect(
       page.getByRole("link", { name: fixture.meetingUrl }),
     ).toBeVisible();

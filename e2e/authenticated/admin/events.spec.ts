@@ -10,7 +10,11 @@ const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
 const TIMED_ENTRY_EVENT_TITLE = "写真撮影ワークショップ";
 
 async function openTimedEntryEventDetail(page: Page) {
-  await page.goto(urls.adminEvents);
+  // 一覧は開始日時の降順 + 10 件/ページで、他 spec が実行中に作る E2E イベントが
+  // 1 ページ目を埋める（#1692 と同じ理由）。タイトル検索でスコープする。
+  await page.goto(
+    `${urls.adminEvents}?search=${encodeURIComponent("写真撮影ワークショップ")}`,
+  );
 
   await page
     .getByRole("cell", {
