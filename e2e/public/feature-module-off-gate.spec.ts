@@ -215,7 +215,25 @@ const MODULE_CASES: readonly ModuleCase[] = [
   {
     module: "contact",
     label: "お問い合わせ",
-    routes: [urls.contact, urls.mypageInquiries],
+    // `/mypage/inquiries` はここでは検証できない（削除理由）。
+    //
+    // `(public)/mypage/layout.tsx` が `requireMypageSession()` を呼び、**layout は
+    // page より先に走る**。この spec の `chromium` project は storageState を持たない
+    // ＝ 未認証の訪問者なので、layout の認証で `/login` へ送られ、
+    // `mypage/inquiries/page.tsx` の `requireFeatureEnabled("contact")` に**到達しない**。
+    // ストリーミング下の `redirect()` は client-side redirect に劣化するため、
+    // 初期 HTML は mypage layout のもの（`<title>マイページ | …`）のまま残る。
+    //
+    // 実測 (run 30670082842): #1760 の soft assertion 化で全 9 ルートが判定され、
+    // 落ちたのは `/mypage/inquiries` **のみ**。`/contact` `/blog` `/reservation`
+    // `/reservation/complete` `/claim/*` `/events` `/spaces` は全て通過した。
+    // 認証が要る唯一のルートだけが落ちている＝アプリのバグではなく分類ミス。
+    // 未認証訪問者をログインへ送るのは fail-closed として正しい。
+    //
+    // gate 呼び出しの存在自体は `public-route-gates.test.ts` が静的に守っている。
+    // 認証付き route のランタイム検証が要るなら storageState を持つ
+    // `chromium-customer` project 側に置くこと。
+    routes: [urls.contact],
   },
   {
     module: "posts",
