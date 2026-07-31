@@ -196,6 +196,56 @@ const nextConfig: NextConfig = {
   //   つまり Route Handler に Cache-Control を書いても next.config が上書きするため、
   //   API も含め Cache-Control 方針は next.config を SSoT とする（per-route はここに一致させる
   //   defense-in-depth に留める）。公式 "Execution order"（headers → proxy → filesystem routes）と整合。
+  // ============================================================
+  // 管理画面の legacy エイリアス
+  //
+  // 旧: 各 alias に `page.tsx` を置き body で `redirect()` していた。しかし
+  // `(dashboard)/layout.tsx` は `children` を `<Suspense>` の内側に置き
+  // `DashboardChromeResolved` が `connection()` で suspend するため、fallback が
+  // 描画された時点でストリーミングが始まる。その後の `redirect()` は HTTP 3xx を
+  // 返せず meta タグに劣化する（公式仕様。redirect API リファレンス「When used in a
+  // streaming context, this will insert a meta tag to emit the redirect on the
+  // client side.」）。劣化した meta refresh は axe の `meta-refresh` critical。
+  //
+  // `redirects()` は **レンダリング前**（公式 "Execution order": headers →
+  // redirects → proxy → filesystem routes）に走るため、実 308 を返せる。
+  // 権限拒否のように DB を要する判定はここに書けないので `notFound()` で扱う
+  // （`_shared/queries/_helpers.ts` の `denyAdminAccess`）。ここは静的な
+  // URL エイリアスに限る。
+  //
+  // **public surface では登録しない**: proxy が `/admin/*` を 404 にする契約
+  // （`serverEnv.APP_SURFACE === "public"` の blocklist）より redirects が先に
+  // 走るため、無条件に登録すると公開面で 404 のはずのパスが 308 を返してしまう。
+  // ============================================================
+  async redirects() {
+    if (process.env["APP_SURFACE"] === "public") return [];
+
+    return [
+      // 完全一致のみ。`/admin/locations/[id]` 等の子ルートは実在するので
+      // prefix マッチにしてはいけない。
+      {
+        source: "/admin/locations",
+        destination: "/admin/spaces?tab=locations",
+        permanent: true,
+      },
+      {
+        source: "/admin/posts/taxonomy",
+        destination: "/admin/posts?tab=categories",
+        permanent: true,
+      },
+      {
+        source: "/admin/staff/new",
+        destination: "/admin/staff",
+        permanent: true,
+      },
+      {
+        source: "/admin/staff/:id/edit",
+        destination: "/admin/staff",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       // ============================================================

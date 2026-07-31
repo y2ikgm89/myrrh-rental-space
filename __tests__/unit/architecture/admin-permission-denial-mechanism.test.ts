@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { Glob } from "bun";
+import { join, sep } from "node:path";
 
 /**
  * 管理画面の権限拒否は `notFound()` で「その場に描画」する（`redirect()` 禁止）。
@@ -73,5 +74,49 @@ describe("管理画面の権限拒否は notFound() で表現する", () => {
     const boundary = read(NOT_FOUND_BOUNDARY);
 
     expect(boundary).toContain("アクセス権限がない可能性があります");
+  });
+});
+
+/**
+ * 静的な URL エイリアスは `next.config.ts` の `redirects()` で表現する（ratchet）。
+ *
+ * dashboard 配下の `page.tsx` 本体で `redirect()` を呼ぶと、layout の Suspense
+ * 内で評価されるためストリーミング開始後になり、実 3xx を返せず meta タグに
+ * 劣化する。`redirects()` は公式 "Execution order"（headers → redirects → proxy →
+ * filesystem routes）でレンダリング前に走るので実 308 を返せる。
+ *
+ * 残る 2 件は DB / 実行時条件に依存し config で表現できないため凍結する。
+ */
+const CONDITIONAL_PAGE_REDIRECT_ALLOWLIST: readonly string[] = [
+  // slug から編集ページへ解決する動的エイリアス
+  "src/app/(admin)/admin/(dashboard)/pages/[slug]/page.tsx",
+  // 連携状態に応じた canonical URL への正規化
+  "src/app/(admin)/admin/(dashboard)/settings/integrations/page.tsx",
+];
+
+describe("admin の静的エイリアスは next.config redirects で表現する", () => {
+  test("dashboard の page.tsx は redirect() を呼ばない（allowlist 除く）", () => {
+    const glob = new Glob("src/app/(admin)/admin/(dashboard)/**/page.tsx");
+    const offenders = [...glob.scanSync(root)]
+      .map((p) => p.split(sep).join("/"))
+      .filter((rel) => {
+        const source = stripComments(
+          readFileSync(join(root, ...rel.split("/")), "utf8"),
+        );
+        return /redirect\s*\(/u.test(source);
+      })
+      .filter((rel) => !CONDITIONAL_PAGE_REDIRECT_ALLOWLIST.includes(rel))
+      .sort((a, b) => a.localeCompare(b));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("next.config は public surface で redirects を登録しない", () => {
+    const config = stripComments(read("next.config.ts"));
+
+    expect(config).toMatch(/async redirects\(\)/u);
+    expect(config).toMatch(
+      /process\.env\["APP_SURFACE"\]\s*===\s*"public"\s*\)\s*return \[\]/u,
+    );
   });
 });
