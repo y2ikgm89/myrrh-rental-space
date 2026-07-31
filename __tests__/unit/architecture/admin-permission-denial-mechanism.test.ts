@@ -85,6 +85,16 @@ describe("管理画面の権限拒否は notFound() で表現する", () => {
     );
   });
 
+  test("layout が投げる notFound() を受ける親境界が /admin にある", () => {
+    // segment 自身の not-found.tsx は **その segment の子ルート**しか包まない。
+    // `verifyAdminSession()` は `(dashboard)/layout.tsx` から呼ばれるため、
+    // その拒否は `(dashboard)/not-found.tsx` を飛び越えて親へ抜ける。
+    // 親に境界が無いと global-not-found（ルーティング外 URL 専用）へ落ちる。
+    const parent = read("src/app/(admin)/admin/not-found.tsx");
+
+    expect(parent).toContain("アクセス権限がない可能性があります");
+  });
+
   test("拒否時に描画される not-found 境界が存在し、権限不足に言及する", () => {
     // `notFound()` は最寄りの not-found.tsx を描画する。dashboard 配下に無いと
     // global-not-found へ落ち、管理画面 chrome の外に飛ぶ。
