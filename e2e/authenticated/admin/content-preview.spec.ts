@@ -30,9 +30,7 @@ async function fillTitleAndSlug(dialog: Locator, title: string, slug: string) {
 }
 
 async function expectPreviewBody(preview: Page, text: string) {
-  await expect(
-    preview.locator("#main-content").getByText(text).first(),
-  ).toBeVisible();
+  await expect(preview.getByRole("main").getByText(text).first()).toBeVisible();
 }
 
 test.describe("content preview", () => {
@@ -166,6 +164,6 @@ test.describe("content preview", () => {
     await expect(preview.getByText("プレビューモード").first()).toBeVisible({
       timeout: 15000,
     });
-    await expect(preview.locator("#main-content")).toBeVisible();
+    await expect(preview.getByRole("main")).toBeVisible();
   });
 });

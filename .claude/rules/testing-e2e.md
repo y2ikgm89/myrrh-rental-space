@@ -34,10 +34,34 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 ## 書き方の規約（ESLint が機械強制）
 
 - 禁止: `page.waitForTimeout` / `waitForLoadState("networkidle")` / `page.waitForURL` /
-  `if ((await x.count()) > 0)` 条件アサーション
+  `if ((await x.count()) > 0)` 条件アサーション / `locator("#id")` の id セレクタ
 - 待機は web-first assertion で行う: `expect(locator).toBeVisible()`、
   ナビゲーション確定は `expect(page).toHaveURL()`（soft/hard 両対応）
 - ロケーターは `getByRole` 優先（heading/tab/textbox/button/gridcell 等）
+
+### id セレクタ禁止（React streaming の二重 DOM）
+
+React のストリーミング SSR は、完了した `<Suspense>` boundary の HTML を **hidden な
+staging container** に流し込み、インラインスクリプトで in-place の fallback と差し替える。
+差し替えは `precedence` 付き stylesheet の読み込み待ち（`completeBoundaryWithStyles` →
+`Promise.all(deps).then($RC)`）と reveal のバッチ化（`$RB`）で遅延しうるため、その間は
+**同じ DOM が in-place と hidden staging の 2 箇所に同時に存在する**。
+
+Next.js では `loading.tsx` のセグメント境界に加え、`generateViewport` が runtime data を
+読むための公式 opt-in（`<html>` を `<Suspense>` で包む）があるため、**ページ本体は必ず
+どこかの boundary の内側**にある。つまりページ内の任意の DOM は一時的に 2 重になりうる。
+
+- CSS セレクタ（`locator("#id")`）は hidden 側も一致 → `strict mode violation`。
+  実測: CI run 30602667260 の `locator('#event-register') resolved to 2 elements`
+  （片方は解決済みフォーム、もう片方は fallback を抱えた staging copy）
+- **role locator は安全**。Playwright の role エンジンは既定 `includeHidden: false` で
+  a11y ツリー非公開の要素を除外する → `getByRole("main")` /
+  `getByRole("region", { name: "お申し込み" })` 等に置換する
+- role / アクセシブルネームを持たない要素（アンカー用の素の `<section id>`、conform が
+  振る form id 等）だけ `e2e/helpers/streaming-safe-locators.ts` の
+  `visibleById(page, "id")`（= `.filter({ visible: true })`）を使う
+- この二重化は React/Next.js の仕様であってアプリ側のバグではない。
+  「Suspense の外に外殻を出す」だけでは解消しない（上位 layout の boundary が残るため）
 - 命名: `e2e/**/*.spec.ts`（smoke は `*.smoke.spec.ts`）。`*.test.ts` を e2e 配下に
   作らない（どのランナーにも拾われない/誤収集の原因）
 

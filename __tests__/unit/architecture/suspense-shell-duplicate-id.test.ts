@@ -7,13 +7,20 @@ import { join } from "node:path";
  *
  * 背景: `event-registration-section.tsx` は fallback と本体が各々
  * `<section id="event-register" aria-labelledby="event-register-heading">` を
- * 描画していた。ストリーミング中は両方が DOM に載るため id が重複し、
- * WCAG 4.1.1 / axe `duplicate-id-aria` 違反かつアンカーの飛び先が不定になる。
- * `#event-register` を strict locator で掴む TOCTOU spec が 2 要素マッチで
- * 落ちたことで発覚した（CI run 30593381788）。
+ * 描画していた。fallback → 本体の差し替え前後で **アンカーの飛び先が別要素に
+ * すり替わる**（片方しか存在しない瞬間もある）ため、`#event-register` への
+ * ページ内リンクが不定になる。
  *
  * 正しい形は「安定した外殻（id + 見出し）を Suspense の外に置き、
  * 中身だけを差し替える」。この gate はその構造を固定する。
+ *
+ * **この gate はストリーミング中の DOM 二重化を解決しない**（当初はそう書いていたが
+ * 誤り）。React は完了した boundary の HTML を hidden な staging container に流し込み、
+ * stylesheet 待ち + バッチで in-place と差し替えるため、boundary の内側にある DOM は
+ * 一時的に 2 箇所へ同時に存在する。ページ本体は `loading.tsx` と root layout の
+ * `<Suspense>`（`generateViewport` 公式 opt-in）の内側にあるので、外殻をどこに
+ * 置いても二重化そのものは消えない。E2E 側の対処が SSoT:
+ * `.claude/rules/testing-e2e.md` の「id セレクタ禁止」。
  *
  * 汎用の「1 ファイル内で id 重複禁止」は排他的な三項分岐（例:
  * `profile-form.tsx` の `profile-email-help`）で偽陽性になるため採らない。

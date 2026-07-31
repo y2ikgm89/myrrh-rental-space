@@ -20,10 +20,14 @@ interface EventRegistrationSectionShellProps {
  * 申込セクションの安定した外殻（`<section>` + 見出し）。
  *
  * **Suspense の外側**に置くこと。以前は解決後の本体と fallback が各々この外殻を
- * 持っていたため、ストリーミング中に `id="event-register"` と
- * `id="event-register-heading"` が DOM に 2 つ現れていた（重複 ID は
- * WCAG 4.1.1 / axe `duplicate-id-aria` 違反で、アンカーリンクの飛び先も不定になる）。
- * 動的に差し替わるのは中身だけなので、外殻は 1 つに固定する。
+ * 持っていたため、差し替えのたびに `id="event-register"` の実体がすり替わり、
+ * info panel の「申し込む」アンカーの飛び先が不定になっていた。動的に差し替わるのは
+ * 中身だけなので、外殻は 1 つに固定する。
+ *
+ * なお React streaming 中の一時的な DOM 二重化（完了した boundary が hidden な
+ * staging container と in-place の両方に存在する期間）は、外殻の位置では解消しない。
+ * ページ本体は `loading.tsx` と root layout の `<Suspense>` の内側にあるため。
+ * E2E 側の規約は `.claude/rules/testing-e2e.md`「id セレクタ禁止」を参照。
  */
 export function EventRegistrationSectionShell({
   children,

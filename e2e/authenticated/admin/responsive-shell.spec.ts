@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { urls } from "../../fixtures";
+import { visibleById } from "../../helpers/streaming-safe-locators";
 
 const ADMIN_ROUTE_TIMEOUT_MS = 20_000;
 
@@ -155,7 +156,7 @@ test.describe("admin responsive shell", () => {
     await menuButton.click();
     await expect(menuButton).toHaveAttribute("aria-expanded", "true");
     await expect(menuButton).toHaveAccessibleName("メニューを閉じる");
-    await expect(page.locator("#admin-sidebar")).toHaveAttribute(
+    await expect(visibleById(page, "admin-sidebar")).toHaveAttribute(
       "aria-label",
       "メインナビゲーション",
     );

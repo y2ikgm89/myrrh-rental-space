@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import * as holidayJp from "@holiday-jp/holiday_jp";
 import { spaceFixtures, urls } from "../fixtures";
+import { visibleById } from "../helpers/streaming-safe-locators";
 
 /**
  * Smoke: 予約プレビュー - 週末料金プラン反映（Task 16）
@@ -96,7 +97,7 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     );
 
     const reserveButton = page
-      .locator("#main-content")
+      .getByRole("main")
       .getByRole("link", { name: "Reserve this space" });
     await expect(reserveButton).toBeVisible({ timeout: 5000 });
     await reserveButton.click();
@@ -113,18 +114,18 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     // "2026年8月21日金曜日" または "Today, ..."）になるため、DayPicker が
     // 各セルに付与する安定した `data-day="YYYY-MM-DD"` 属性でスコープしてから
     // getByRole で実際のボタンをクリックする。
-    const calendar = page.locator("#reservation-calendar");
+    const calendar = visibleById(page, "reservation-calendar");
     await calendar
       .locator(`[data-day="${dateOnly}"]`)
       .getByRole("button")
       .click();
 
     // 開始時刻 19:00
-    const timeSlots = page.locator("#reservation-time-slots");
+    const timeSlots = visibleById(page, "reservation-time-slots");
     await timeSlots.getByRole("button", { name: "19:00", exact: true }).click();
 
     // 利用時間 2 時間（→ 終了 21:00）
-    const duration = page.locator("#reservation-duration");
+    const duration = visibleById(page, "reservation-duration");
     await duration.getByRole("button", { name: "2時間", exact: true }).click();
 
     const nextButton = page.getByRole("button", { name: "次へ" });

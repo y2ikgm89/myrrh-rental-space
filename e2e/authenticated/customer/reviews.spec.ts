@@ -50,7 +50,7 @@ test.describe("レビュー - マイページからの投稿経路", () => {
     );
 
     await expect(
-      page.locator("#main-content").getByRole("heading", {
+      page.getByRole("main").getByRole("heading", {
         name: "レビュー",
         level: 2,
       }),

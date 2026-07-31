@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { urls } from "../../fixtures";
+import { visibleById } from "../../helpers/streaming-safe-locators";
 
 /**
  * マイページ - プロフィール編集 E2E（顧客認証済み state）
@@ -59,7 +60,7 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
     ).toBeVisible();
 
     // 姓 / 名 / 電話番号は autocomplete 属性経由で取得（label は重複しうる）
-    const main = page.locator("#main-content");
+    const main = page.getByRole("main");
     const lastName = main.locator('input[autocomplete="family-name"]');
     const firstName = main.locator('input[autocomplete="given-name"]');
     const phone = main.locator('input[autocomplete="tel"]');
@@ -76,7 +77,9 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
   test("メールアドレス input は disabled（ソーシャル取得値で固定）", async ({
     page,
   }) => {
-    const email = page.locator("#profile-form").getByLabel("メールアドレス");
+    const email = visibleById(page, "profile-form").getByLabel(
+      "メールアドレス",
+    );
     await expect(email).toBeVisible();
     await expect(email).toBeDisabled();
 
@@ -97,7 +100,7 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
 
     // autocomplete="organization" の会社名入力欄
     const company = page
-      .locator("#main-content")
+      .getByRole("main")
       .locator('input[autocomplete="organization"]');
     await expect(company).toBeVisible({ timeout: 3000 });
   });
@@ -108,7 +111,7 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
     // まず法人にして company input を表示させる
     await typeGroup.getByRole("radio", { name: "法人・団体" }).click();
     const company = page
-      .locator("#main-content")
+      .getByRole("main")
       .locator('input[autocomplete="organization"]');
     await expect(company).toBeVisible({ timeout: 3000 });
 

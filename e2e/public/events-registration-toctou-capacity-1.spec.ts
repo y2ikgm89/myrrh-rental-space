@@ -106,6 +106,19 @@ interface PreparedAttempt {
   readonly email: string;
 }
 
+/**
+ * 「お申し込み」セクション。
+ *
+ * `#event-register` の CSS セレクタは使わない: React streaming は完了した Suspense
+ * boundary の HTML を hidden な staging container へ流し込んでから in-place に
+ * 差し替えるため、差し替え待ちの間は同じ id を持つ section が DOM 上に 2 つ存在する
+ * （CI run 30602667260 で実際に strict-mode violation として観測）。role locator は
+ * a11y ツリー非公開の要素を除外するので、常に表示中の 1 本だけを掴む。
+ */
+function registrationSection(page: Page) {
+  return page.getByRole("region", { name: "お申し込み" });
+}
+
 async function prepareAttempt(
   browser: Browser,
   fixture: ToctouFixture,
@@ -117,14 +130,14 @@ async function prepareAttempt(
   const page = await context.newPage();
   await page.goto(`/events/${fixture.eventSlug}`);
 
-  const registerSection = page.locator("#event-register");
+  const registerSection = registrationSection(page);
   await expect(registerSection).toBeVisible({ timeout: 15_000 });
 
-  const nameInput = registerSection.getByLabel("お名前").first();
-  const emailInput = registerSection.getByLabel("メールアドレス").first();
-  const submitButton = registerSection
-    .getByRole("button", { name: "申し込む" })
-    .first();
+  const nameInput = registerSection.getByLabel("お名前");
+  const emailInput = registerSection.getByLabel("メールアドレス");
+  const submitButton = registerSection.getByRole("button", {
+    name: "申し込む",
+  });
 
   await expect(nameInput).toBeEditable();
   await expect(emailInput).toBeEditable();
@@ -157,7 +170,7 @@ async function prepareAttempt(
 }
 
 async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
-  const registerSection = page.locator("#event-register");
+  const registerSection = registrationSection(page);
   const success = page.getByRole("heading", {
     name: "お申し込みを受け付けました",
   });
@@ -210,10 +223,8 @@ test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => 
       // 1 番目だけが残枠 1 を消費、他は DomainError "このタイムスロットは満員です"。
       await Promise.all(
         prepared.map(({ page }) =>
-          page
-            .locator("#event-register")
+          registrationSection(page)
             .getByRole("button", { name: "申し込む" })
-            .first()
             .click(),
         ),
       );

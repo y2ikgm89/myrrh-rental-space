@@ -77,40 +77,34 @@ test.describe("イベント詳細 - 満員時のキャンセル待ち登録フ�
       page.getByRole("heading", { level: 1, name: fixture.eventTitle }),
     ).toBeVisible();
 
-    // 「お申し込み」section（#event-register）にスコープする。
-    const registerSection = page.locator("#event-register");
+    // 「お申し込み」section にスコープする。CSS セレクタ (`#event-register`) は
+    // React streaming の hidden staging copy も掴んでしまうため使わない
+    // （差し替え待ちの間、同じ id の section が DOM に 2 つ並ぶ）。role locator は
+    // a11y ツリー非公開の要素を除外するので表示中の 1 本だけを指す。
+    const registerSection = page.getByRole("region", { name: "お申し込み" });
 
-    // 満員通知（EventStatusNotice variant="warning"）。実測でごく稀に同一テキストの
-    // 要素が瞬間的に 2 件観測されることがある（PPR ストリーミング中の一過性の
-    // 二重描画と見られ、EventStatusNotice 自体は分岐なしの単純描画で恒常的な
-    // 重複要因は無い）。strict-mode violation で spec を落とさないよう `.first()`
-    // で「少なくとも1件は表示されている」ことを検証する。
-    await expect(
-      registerSection.getByText("現在満員です").first(),
-    ).toBeVisible();
+    // 満員通知（EventStatusNotice variant="warning"）
+    await expect(registerSection.getByText("現在満員です")).toBeVisible();
 
     // waitlist モードのフォーム見出し + 送信ボタン
     await expect(
-      registerSection
-        .getByRole("heading", { level: 2, name: "キャンセル待ち登録" })
-        .first(),
+      registerSection.getByRole("heading", {
+        level: 2,
+        name: "キャンセル待ち登録",
+      }),
     ).toBeVisible();
-    const submitButton = registerSection
-      .getByRole("button", { name: "キャンセル待ちに登録する" })
-      .first();
+    const submitButton = registerSection.getByRole("button", {
+      name: "キャンセル待ちに登録する",
+    });
     await expect(submitButton).toBeVisible();
 
     // 規約同意前は無効（quantity 等の必須値はデフォルトで揃っているため、
     // 同意チェックの有無だけが disabled を左右する状態にする）
     await expect(submitButton).toBeDisabled();
 
-    await registerSection
-      .getByLabel("お名前")
-      .first()
-      .fill("E2E キャンセル待ち太郎");
+    await registerSection.getByLabel("お名前").fill("E2E キャンセル待ち太郎");
     await registerSection
       .getByLabel("メールアドレス")
-      .first()
       .fill("e2e-waitlist-user@example.com");
 
     for (const termPattern of [
@@ -118,9 +112,9 @@ test.describe("イベント詳細 - 満員時のキャンセル待ち登録フ�
       /プライバシーポリシー/u,
       /キャンセルポリシー/u,
     ]) {
-      const checkbox = registerSection
-        .getByRole("checkbox", { name: termPattern })
-        .first();
+      const checkbox = registerSection.getByRole("checkbox", {
+        name: termPattern,
+      });
       await checkbox.check();
       await expect(checkbox).toBeChecked();
     }
