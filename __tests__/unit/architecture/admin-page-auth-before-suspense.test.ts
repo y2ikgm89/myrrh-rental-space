@@ -4,33 +4,32 @@ import { join, relative, sep } from "node:path";
 import { Glob } from "bun";
 
 /**
- * 管理ページの認可チェックは `<Suspense>` 境界より前で解決する（ratchet）。
+ * 管理ページの認可はデータ取得より前（ページ本体）で解決する（ratchet）。
  *
- * ## なぜ
+ * ## この gate の目的（2026-07-31 に理由が変わった）
  *
- * Next.js 公式の逐語仕様:
- * - redirect API リファレンス (v16.2.12): 「When used in a streaming context,
- *   this will insert a meta tag to emit the redirect on the client side.」
- * - streaming ガイド: 「Once streaming begins, the HTTP response headers
- *   (including the status code) have already been sent to the client.
- *   **You cannot change the status code or headers after streaming starts.**」
- * - 同ガイド: 「To get a real HTTP status code for errors, place `notFound()`
- *   **before** any `await` or `<Suspense>` boundary」
- * - ストリーミング開始点も公式定義: 「when a Suspense fallback renders ... or
- *   when a Server Component suspends under a `Suspense` boundary」
+ * 当初は「Suspense より前に置けば `redirect()` が実 3xx を返せる」ことを狙って
+ * 導入した。しかし **その前提は誤りだった**: `(dashboard)/layout.tsx` は
+ * `children` 自体を `<Suspense>` の内側に置き `DashboardChromeResolved` が
+ * `connection()` で suspend するため、**ページ本体のどこに置いても**
+ * ストリーミング開始後になる（PR #1704 に対する Codex P1 指摘）。
  *
- * 本 repo の認可拒否は `redirectToAdminHome()` = `redirect("/admin")`。これを
- * Suspense の内側で踏むと HTTP 3xx を返せず meta タグ redirect に劣化し、
- * axe の `meta-refresh` critical (WCAG 2.2.1 / 2.2.4) に当たる。実際 CI run
- * 30577092619 で監査ログページが `meta-refresh` critical を出していた
- * (当時は E2E identity が ADMIN で `auditLog:read` を持たなかったため露出した)。
+ * a11y 側（meta refresh への劣化 = axe `meta-refresh` critical）は PR #1711 が
+ * 拒否を `notFound()`（遷移せずその場に 404 境界を描画）へ変えて解決済みで、
+ * **もはや認可の位置には依存しない**。
+ *
+ * それでもこの gate を残すのは別の理由による:
+ *
+ * - **fail-fast**: 認可をページ本体で解決すると、権限の無いユーザーに対して
+ *   クエリを一切発行せずに拒否できる。Suspense 内の data loader に任せると
+ *   DB クエリが走ってから拒否される。
+ * - **可読性**: そのページが要求する権限が page.tsx を読むだけで分かる。
  *
  * ## 採用しなかった代替
  *
- * `forbidden()` / `unauthorized()` は v16.2.12 に存在するが
+ * `forbidden()` / `unauthorized()` は v16.2.12 にも存在するが
  * **`experimental.authInterrupts` 必須の experimental で「本番非推奨」**と
- * 公式に明記されており、authentication / data-security ガイドも一切言及しない。
- * よって公式推奨ではないため採らない。
+ * 公式に明記され、authentication / data-security ガイドも一切言及しない。
  *
  * ## ratchet 運用
  *
@@ -148,6 +147,7 @@ describe("admin ページの認可は Suspense 境界より前で解決する", 
   });
 
   test("監査ログページは解消済み（回帰防止）", () => {
+    // PR #1704 で最初に解消したページ。allowlist へ差し戻さない。
     const rel = "src/app/(admin)/admin/(dashboard)/audit-logs/page.tsx";
 
     expect(PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST).not.toContain(rel);
