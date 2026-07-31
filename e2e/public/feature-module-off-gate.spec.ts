@@ -187,8 +187,8 @@ const MODULE_CASES: readonly ModuleCase[] = [
  * 毎回実行し `seedSettings({ resetFeatureModules: true })` が
  * `buildInitialFeatureModules(SEED_FEATURE_MODULES_DISABLED)` を書き込むため、
  * 所有 module が初期 OFF の環境もありうる（`SEED_FEATURE_MODULES_DISABLED=payment`
- * は公式にサポートされた運用）。基準値は `beforeAll` の `captureBaselineState` が
- * 実測する — 詳細は `expectedBaselineState` のコメント。
+ * は公式にサポートされた運用）。基準値は seed と同じ env から導出する —
+ * 詳細は `SEED_DISABLED_MODULES` のコメント。
  *
  * ## 「所有 module」= MODULE_CASES の依存カスケード閉包
  *
@@ -242,29 +242,39 @@ const OWNED_MODULE_ENTRIES = Object.entries(OWNED_FEATURE_MODULES);
 const SAVE_ANCHOR_LABEL = OWNED_FEATURE_MODULES.spaces;
 
 /**
- * 所有 module の基準状態。**`beforeAll` で実測して捕まえる**（ハードコードしない）。
+ * 所有 module の基準状態。**seed の構成から導出する**（実状態のスナップショットに
+ * しない・ON 決め打ちにもしない）。
  *
- * seed が投入する値は `buildInitialFeatureModules(SEED_FEATURE_MODULES_DISABLED)`
- * であって「所有分は全て ON」ではない。`SEED_FEATURE_MODULES_DISABLED=payment` の
+ * seed が書き込むのは `buildInitialFeatureModules(SEED_FEATURE_MODULES_DISABLED)` で
+ * あって「所有分は全て ON」ではない。`SEED_FEATURE_MODULES_DISABLED=payment` の
  * ように所有 module を初期 OFF にする運用は公式にサポートされている
- * (`add-feature-module` skill)。ON を決め打ちで書き戻すと、その環境では
- * afterEach のたびに **seed 基準から離れた状態へ書き換えてしまい**、以降の spec が
- * 意図した feature-OFF 環境を検証しなくなる（afterAll も歪んだ状態を追認する）。
+ * (`add-feature-module` skill)。ON を決め打ちすると、その環境では afterEach の
+ * たびに seed 基準から離れた状態へ書き換えてしまう。
  *
- * 静的な `buildInitialFeatureModules()` 比較でも不十分 — unit gate 側は env 無しで
- * 評価されるため結局「全て true」になり、実行時の env を反映できない。
- * 唯一正しいのは **その run の実状態を起動時に読むこと**。
+ * かといって **`beforeAll` で実状態を読むのも駄目**。`test.describe.serial` の
+ * リトライは新しい worker で `beforeAll` から再実行されるため、前の attempt が
+ * 復元しきれずに残した OFF をそのまま「基準」として捕まえてしまい、リトライも
+ * `afterAll` も汚染を追認する（検出も修復もされない）。
+ *
+ * よって seed と同じ env を同じ規則で読む。run 中に変化しないので、リトライしても
+ * 基準はぶれない。`beforeAll` は逆にこの不変の基準へ**復元してから**始めるので、
+ * 前 worker が残した汚染は追認ではなく修復される。
  */
-let expectedBaselineState: string | null = null;
+const SEED_DISABLED_MODULES = new Set(
+  (process.env["SEED_FEATURE_MODULES_DISABLED"] ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0),
+);
 
-function requireBaseline(): string {
-  if (expectedBaselineState === null) {
-    throw new Error(
-      "基準状態が未捕捉。beforeAll の captureBaselineState が失敗している",
-    );
-  }
-  return expectedBaselineState;
+/** seed 由来の desired 値。`aria-checked` と同じ文字列で返す。 */
+function baselineDesiredFor(id: string): string {
+  return SEED_DISABLED_MODULES.has(id) ? "false" : "true";
 }
+
+const EXPECTED_BASELINE_STATE = OWNED_MODULE_ENTRIES.map(
+  ([id]) => `${id}=${baselineDesiredFor(id)}`,
+).join(", ");
 
 /**
  * Switch 行の locator。各 row は `<div class="rounded-lg border p-4">` + 内側に
@@ -364,27 +374,6 @@ async function readBaselineState(page: Page): Promise<string> {
 }
 
 /**
- * この run の基準状態を実測して固定する。以降の復元・検証はこの値だけを見る。
- * 所有 module しか読まないので、並行 spec が自分の所有 module を OFF にしていても
- * 影響を受けない。
- */
-async function captureBaselineState(page: Page): Promise<void> {
-  await openFeatureSettings(page);
-  expectedBaselineState = await readBaselineState(page);
-}
-
-/** 捕捉した基準状態から module 単位の desired 値を引く。 */
-function baselineDesiredFor(id: string): string {
-  const entry = requireBaseline()
-    .split(", ")
-    .find((pair) => pair.startsWith(`${id}=`));
-  if (entry === undefined) {
-    throw new Error(`基準状態に ${id} が含まれていない`);
-  }
-  return entry.slice(id.length + 1);
-}
-
-/**
  * **所有 module だけ**を `beforeAll` で捕捉した基準状態へ 1 回の保存で戻す。
  *
  * 全 module は 1 つの form / 1 つの保存ボタンを共有するため、差分のある Switch を
@@ -412,6 +401,15 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
         continue;
       }
 
+      // 依存元が seed で OFF の構成では、依存先の Switch は disabled + OFF 表示に
+      // なる（`checked={depsMet && isOn}`）。永続値が true でも UI 上は操作できず、
+      // click すると actionability 待ちでハングする。触らずに次へ進む。
+      // なお、その永続値はアプリ側がどの保存でも `submittedValue` で false に
+      // 正規化するため、spec 側で保てるものではない（app の仕様）。
+      if (await switchButton.isDisabled()) {
+        continue;
+      }
+
       await switchButton.click();
       await expect(switchButton).toHaveAttribute("aria-checked", desired);
       changed = true;
@@ -434,7 +432,7 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
               "feature module の基準状態への復元が永続化されなかった（楽観ロック競合の可能性）",
           },
         )
-        .toBe(requireBaseline());
+        .toBe(EXPECTED_BASELINE_STATE);
       return;
     } catch (error) {
       // 1 回目は競合しうる。再読込すれば expectedUpdatedAt が更新されるので
@@ -456,11 +454,13 @@ test.describe
   test.beforeAll(async ({ browser }) => {
     await ensureAdminUser();
 
-    // この run の基準状態を実測して固定する（seed の env 設定に依存しない）。
+    // 開始前に基準状態へ**復元**する。リトライは新 worker で beforeAll から
+    // やり直されるため、前の attempt が afterEach で戻しきれずに残した OFF は
+    // ここで修復される（実状態を基準として捕まえると汚染を追認してしまう）。
     const page = await browser.newPage();
     try {
       await primeAdminRequestContext(page.context());
-      await captureBaselineState(page);
+      await restoreFeatureModuleBaseline(page);
     } finally {
       await page.close();
     }
@@ -486,7 +486,7 @@ test.describe
       expect(
         await readBaselineState(page),
         "feature module が基準状態に戻っていない。共有 DB を汚染し他 spec を巻き添えで落とすため、必ず復元すること",
-      ).toBe(requireBaseline());
+      ).toBe(EXPECTED_BASELINE_STATE);
     } finally {
       await page.close();
     }
