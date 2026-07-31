@@ -53,20 +53,59 @@ async function expectAdminRouteReady(
 }
 
 async function expectNoPageHorizontalOverflow(page: Page) {
-  const metrics = await page.evaluate(() => ({
-    bodyClientWidth: document.body.clientWidth,
-    bodyScrollWidth: document.body.scrollWidth,
-    htmlClientWidth: document.documentElement.clientWidth,
-    htmlScrollWidth: document.documentElement.scrollWidth,
-  }));
+  // 幅の数値だけでは「どの要素がはみ出したか」が分からず、失敗しても直せない
+  // （run 30569714860 の /admin/reservings 398 > 390 がまさにこれ）。
+  // はみ出している要素を右端の順に採取して assertion message に載せる。
+  const metrics = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const offenders: string[] = [];
+
+    for (const element of Array.from(document.body.querySelectorAll("*"))) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      if (rect.right <= clientWidth + 1 && rect.left >= -1) continue;
+
+      // 祖先が同じ理由ではみ出している場合は最も内側だけを残す
+      if (
+        offenders.length > 0 &&
+        element.parentElement !== null &&
+        element.parentElement.getBoundingClientRect().right === rect.right
+      ) {
+        offenders.pop();
+      }
+
+      const classes =
+        typeof element.className === "string" ? element.className : "";
+      offenders.push(
+        `${element.tagName.toLowerCase()}${classes ? `.${classes.trim().split(/\s+/).slice(0, 6).join(".")}` : ""}` +
+          ` [left=${Math.round(rect.left)} right=${Math.round(rect.right)} width=${Math.round(rect.width)}]`,
+      );
+      if (offenders.length >= 8) break;
+    }
+
+    return {
+      bodyClientWidth: document.body.clientWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+      htmlClientWidth: clientWidth,
+      htmlScrollWidth: document.documentElement.scrollWidth,
+      offenders,
+    };
+  });
+
+  const detail = `${JSON.stringify({
+    bodyClientWidth: metrics.bodyClientWidth,
+    bodyScrollWidth: metrics.bodyScrollWidth,
+    htmlClientWidth: metrics.htmlClientWidth,
+    htmlScrollWidth: metrics.htmlScrollWidth,
+  })}\noffending elements:\n  ${metrics.offenders.join("\n  ") || "(none detected — check position:fixed / pseudo elements)"}`;
 
   expect(
     metrics.htmlScrollWidth,
-    `html overflowed horizontally: ${JSON.stringify(metrics)}`,
+    `html overflowed horizontally: ${detail}`,
   ).toBeLessThanOrEqual(metrics.htmlClientWidth + 1);
   expect(
     metrics.bodyScrollWidth,
-    `body overflowed horizontally: ${JSON.stringify(metrics)}`,
+    `body overflowed horizontally: ${detail}`,
   ).toBeLessThanOrEqual(metrics.bodyClientWidth + 1);
 }
 

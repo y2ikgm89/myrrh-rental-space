@@ -329,7 +329,20 @@ export function ToolbarPlugin({
         className="grid min-h-11 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
       >
         <div aria-hidden="true" />
-        <div className="flex min-h-11 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
+        {/*
+          axe の `scrollable-region-focusable` は「スクロール領域の子孫に tabindex>=0
+          が無い」ことを serious 違反として報告する。WAI-ARIA APG の toolbar pattern
+          （Radix RovingFocusGroup）はフォーカス進入前の item を全て tabindex=-1 に
+          保ち、tabindex=0 は親の Toolbar.Root 側にあるため、axe からは常に
+          「focusable content 無し」に見える。実際には Tab で Root に入り矢印キーで
+          移動でき、その過程でこの領域はスクロールする（キーボード操作性は
+          `e2e/authenticated/admin/lexical-toolbar-roving-tabindex.spec.ts` が保証）。
+          axe 側で除外できるよう安定した目印を持たせる。
+        */}
+        <div
+          data-slot="lexical-toolbar-scroll"
+          className="flex min-h-11 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide"
+        >
           <HistorySection
             canUndo={canUndo}
             canRedo={canRedo}

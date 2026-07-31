@@ -72,7 +72,31 @@ function formatViolations(violations: readonly Result[]): string {
 
 const BLOCKING_IMPACTS = new Set(["serious", "critical"]);
 
+/**
+ * axe が WAI-ARIA APG の toolbar pattern を評価できないことによる既知の誤検知。
+ *
+ * `scrollable-region-focusable` は「スクロール領域の子孫に tabindex>=0 が無い」ことを
+ * serious として報告する。Radix の RovingFocusGroup はフォーカス進入前の item を
+ * すべて tabindex=-1 に保ち、単一の tab stop は親の `Toolbar.Root` 側にあるため、
+ * axe からは常に「focusable content 無し」に見える。
+ *
+ * 実際には Tab で Root に入り矢印キーで item 間を移動でき、その過程でこの領域は
+ * スクロールする。この操作性は `lexical-toolbar-roving-tabindex.spec.ts` が
+ * (a) 単一 tab stop (b) Arrow/Home/End 移動 (c) disabled のスキップ まで実測している。
+ *
+ * item を tabindex=0 にすると toolbar 内に複数の tab stop ができ APG に反するため、
+ * 実装を曲げずにこのノードだけを除外する。**ルール自体は無効化しない**
+ * （他のスクロール領域の違反は引き続き blocking）。
+ */
+function isRovingToolbarScrollRegion(violation: Result): boolean {
+  if (violation.id !== "scrollable-region-focusable") return false;
+  return violation.nodes.every((node) =>
+    node.html.includes('data-slot="lexical-toolbar-scroll"'),
+  );
+}
+
 function isBlocking(violation: Result): boolean {
+  if (isRovingToolbarScrollRegion(violation)) return false;
   return violation.impact ? BLOCKING_IMPACTS.has(violation.impact) : false;
 }
 
