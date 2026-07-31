@@ -49,6 +49,17 @@ import {
 const root = process.cwd();
 const e2eRoot = join(root, "e2e");
 
+/** registry を id 文字列で引くための索引（literal union cast を避ける）。 */
+const REGISTRY_BY_ID = new Map(
+  FEATURE_MODULES_LIST.map((id) => [
+    String(id),
+    {
+      label: FEATURE_MODULES[id].label,
+      requires: FEATURE_MODULES[id].requires ?? [],
+    },
+  ]),
+);
+
 const FEATURE_SETTINGS_PATH = "/admin/settings/features";
 
 /**
@@ -124,6 +135,29 @@ function parseOwnership(file: string, source: string): SpecOwnership | null {
   }
 
   return { file, ids, labels };
+}
+
+/**
+ * `const OWNED_MODULE_REQUIRES: ... = { id: ["dep", ...], ... };` を解析する。
+ * 値はソート済みカンマ区切りに正規化して比較しやすくする。宣言が無ければ空 Map。
+ */
+function parseOwnedRequires(source: string): Map<string, string> {
+  const block = /const OWNED_MODULE_REQUIRES[^=]*= \{([\s\S]*?)\n\};/u.exec(
+    source,
+  );
+  const declared = new Map<string, string>();
+  if (!block?.[1]) return declared;
+
+  for (const m of block[1].matchAll(
+    /^\s*([A-Za-z][\w-]*):\s*\[([^\]]*)\]/gmu,
+  )) {
+    const deps = [...String(m[2]).matchAll(/"([^"]+)"/gu)]
+      .map((d) => String(d[1]))
+      .sort();
+    declared.set(String(m[1]), deps.join(","));
+  }
+
+  return declared;
 }
 
 function collectSpecs(): {
@@ -233,15 +267,67 @@ describe("E2E feature module ownership", () => {
 
     const mismatched = ownerships.flatMap((o) =>
       o.ids
-        .filter((id) => {
-          const def = FEATURE_MODULES[id as keyof typeof FEATURE_MODULES];
-          return def === undefined || def.label !== o.labels.get(id);
-        })
+        .filter((id) => REGISTRY_BY_ID.get(id)?.label !== o.labels.get(id))
         .map(
           (id) =>
-            `${o.file}: ${id} の label が spec="${o.labels.get(id) ?? "(解析不能)"}" / registry="${FEATURE_MODULES[id as keyof typeof FEATURE_MODULES]?.label ?? "(未登録)"}"`,
+            `${o.file}: ${id} の label が spec="${o.labels.get(id) ?? "(解析不能)"}" / registry="${REGISTRY_BY_ID.get(id)?.label ?? "(未登録)"}"`,
         ),
     );
+
+    expect(mismatched).toEqual([]);
+  });
+
+  test("所有 module の依存元も所有内にある（基準値を計算可能にする）", () => {
+    const { ownerships } = collectSpecs();
+
+    const violations = ownerships.flatMap((o) => {
+      const owned = new Set(o.ids);
+      return o.ids.flatMap((id) =>
+        (REGISTRY_BY_ID.get(id)?.requires ?? [])
+          .filter((req) => !owned.has(req))
+          .map(
+            (req) =>
+              `${o.file}: ${id} の依存元 ${req} を所有していない。依存正規化後の基準値を決められないため所有に含めること`,
+          ),
+      );
+    });
+
+    expect(violations).toEqual([]);
+  });
+
+  test("OWNED_MODULE_REQUIRES が registry の requires と一致する", () => {
+    const { ownerships } = collectSpecs();
+
+    const mismatched = ownerships.flatMap((o) => {
+      const source = readFileSync(join(root, o.file), "utf8");
+      const declared = parseOwnedRequires(source);
+
+      // registry 側の期待値: 所有 module のうち requires を持つものだけ
+      const expected = new Map(
+        o.ids
+          .map((id) => [id, REGISTRY_BY_ID.get(id)?.requires ?? []] as const)
+          .filter(([, requires]) => requires.length > 0)
+          .map(([id, requires]) => [id, [...requires].sort().join(",")]),
+      );
+
+      const problems: string[] = [];
+      for (const [id, want] of expected) {
+        const got = declared.get(id);
+        if (got !== want) {
+          problems.push(
+            `${o.file}: OWNED_MODULE_REQUIRES.${id} が "${got ?? "(未宣言)"}" だが registry は "${want}"`,
+          );
+        }
+      }
+      for (const id of declared.keys()) {
+        if (!expected.has(id)) {
+          problems.push(
+            `${o.file}: OWNED_MODULE_REQUIRES.${id} は registry に requires が無い（または非所有）ので不要`,
+          );
+        }
+      }
+      return problems;
+    });
 
     expect(mismatched).toEqual([]);
   });
@@ -252,9 +338,7 @@ describe("E2E feature module ownership", () => {
     const violations = ownerships.flatMap((o) => {
       const positionOf = new Map(o.ids.map((id, index) => [id, index]));
       return o.ids.flatMap((id, index) => {
-        const requires =
-          FEATURE_MODULES[id as keyof typeof FEATURE_MODULES]?.requires ?? [];
-        return requires
+        return (REGISTRY_BY_ID.get(id)?.requires ?? [])
           .filter((req) => (positionOf.get(req) ?? -1) > index)
           .map(
             (req) =>
