@@ -92,7 +92,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
             イベントの作成・編集・公開を管理します
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
             <Link href="/admin/events/seo">
               <IconSettings className="mr-2 h-4 w-4" />

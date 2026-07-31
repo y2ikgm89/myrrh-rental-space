@@ -30,7 +30,7 @@ export default async function AdminTermsPage() {
             サイト規約・プライバシーポリシー・キャンセルポリシー等を管理
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="destructive" size="sm">
             <Link href="/admin/terms/trash">
               <IconTrash className="mr-2 h-4 w-4" />

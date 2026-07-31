@@ -27,7 +27,7 @@ export default async function AdminTermsTrashPage() {
             削除済みの規約を復元または完全削除できます
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/terms">
               <IconArrowLeft className="mr-2 h-4 w-4" />

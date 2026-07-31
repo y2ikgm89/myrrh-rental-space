@@ -58,7 +58,7 @@ export default async function PagesManagementPage({
             公開ページのコンテンツ・SEO設定
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DeletedPagesDialog />
           <CreatePageDialog />
         </div>
