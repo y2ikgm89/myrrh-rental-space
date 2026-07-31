@@ -50,8 +50,10 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *
  * 1. 復元は `afterEach` で**無条件**に行う。旧実装は `try/finally` だったが、
  *    setup 段階 (OFF への切替) で throw すると finally に入らず復元されなかった
- * 2. 復元は「この test が触った module」ではなく**全 module を ON に揃える**
- * 3. `afterAll` で全 module が ON であることを検証し、復元が壊れたら
+ * 2. 復元対象は**所有 module 全件**（= MODULE_CASES の依存カスケード閉包）。
+ *    「触った 1 件」では足りず、かつ**全 11 module でもいけない** — 詳細は
+ *    `OWNED_FEATURE_MODULES` のコメント
+ * 3. `afterAll` で所有 module が基準状態に戻ったことを検証し、復元が壊れたら
  *    **この spec 自身が落ちる**ようにする（巻き添えで他 spec を落とさない）
  *
  * ## 保存の完了判定に toast を使わない
@@ -100,6 +102,34 @@ function notFoundHeading(page: Page) {
 
 /** 保存がリロード後も残っているかの確認待ち。 */
 const PERSIST_TIMEOUT_MS = 15_000;
+
+/** 「送信が始まった」= SubmitButton が disabled になるまでの待ち。 */
+const SAVE_DISPATCH_TIMEOUT_MS = 15_000;
+
+/**
+ * 保存ボタンを押し、**送信が始まったことだけ**を待つ。
+ *
+ * `SubmitButton` は `isPending` の間 disabled + 「保存中...」になるので、disabled に
+ * なれば Server Action は dispatch 済みで、この後 reload しても送信は取り消されない。
+ *
+ * これを待たずに `page.goto` すると in-flight の Server Action が中断される。
+ * Prisma の書込は先にコミットされる一方、`afterSuccess` の
+ * `invalidateSiteWideCache`（`updateTag`）まで到達しないため、**DB は OFF なのに
+ * `'use cache'` のタグが expire されず**、公開ルートが `cacheLife: "days"` の間
+ * 本来のページを描画し続ける（実測: run 30631140902 で `/contact` の not-found
+ * 境界が 20 秒間出ない）。
+ *
+ * 成否は toast でも pending 解除でも判定しない。成功時は `useEffect` の
+ * `router.refresh()` が終わるまで `isPending` が戻らず、楽観ロック競合時は
+ * 成功 toast すら出ないため、どちらも信頼できない。判定は呼び出し側が
+ * 「リロード後の永続化状態」で行う。
+ */
+async function clickSaveAndAwaitDispatch(saveButton: Locator): Promise<void> {
+  await saveButton.click();
+  await expect(saveButton).toBeDisabled({
+    timeout: SAVE_DISPATCH_TIMEOUT_MS,
+  });
+}
 
 interface ModuleCase {
   readonly module: string;
@@ -279,7 +309,7 @@ async function setFeatureModule(
     const switchButton = moduleSwitch(page, moduleLabel);
     await switchButton.click();
     await expect(switchButton).toHaveAttribute("aria-checked", desired);
-    await moduleSaveButton(page, moduleLabel).click();
+    await clickSaveAndAwaitDispatch(moduleSaveButton(page, moduleLabel));
 
     try {
       await expect
@@ -346,7 +376,7 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
 
     if (!changed) return;
 
-    await moduleSaveButton(page, SAVE_ANCHOR_LABEL).click();
+    await clickSaveAndAwaitDispatch(moduleSaveButton(page, SAVE_ANCHOR_LABEL));
 
     try {
       await expect

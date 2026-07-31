@@ -151,12 +151,21 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   判定 marker は「features 設定ページへの `goto`」— URL 文字列の出現だけだと
   リンクの有無を assert するだけの read-only spec を誤検出する
 
-- **保存完了の判定に toast を使わない**。admin の設定フォームは
-  `expectedUpdatedAt` の楽観ロックを持ち、競合すると成功 toast ではなく error toast を
-  出すため、成功文言を待つ実装は競合時にタイムアウトする。**リロード後も状態が
-  保たれているか**（永続化の実体）を `expect.poll` で確認し、競合したら再読込して
-  やり直す。cache invalidation の反映も非同期なので、公開ルートの status 確認も
-  単発 `goto` ではなく `expect.poll` で待つ
+- **保存クリック後は「送信が始まった」ことを待ってから遷移する**。
+  `SubmitButton` は `isPending` の間 disabled になるので `await expect(save).toBeDisabled()`
+  を挟む。これを待たずに `page.goto` / `reload` すると **in-flight の Server Action が
+  中断される**。Prisma の書込は先にコミットされる一方 `afterSuccess` の
+  `invalidateSiteWideCache`（`updateTag`）まで到達しないため、**DB は変わったのに
+  `'use cache'` のタグが expire されない**。結果、公開ルートは `cacheLife`（feature
+  modules は `"days"`）の間ずっと古い値を描画し続ける。
+  実測: run 30631140902 で `feature-module-off-gate` の `/contact` が、contact を
+  OFF に永続化した後も 20 秒間 not-found 境界を出さなかった
+- **保存の成否は toast でも pending 解除でも判定しない**。成功時は `useEffect` の
+  `router.refresh()` が終わるまで `isPending` が戻らず、`expectedUpdatedAt` の楽観
+  ロック競合時は成功 toast ではなく error toast（フォームエラーによっては無言）に
+  なる。判定は**リロード後も状態が保たれているか**（永続化の実体）を `expect.poll`
+  で確認し、競合したら再読込してやり直す。cache invalidation の反映も非同期なので、
+  公開ルート側の確認も単発 `goto` ではなく `expect.poll` で待つ
 - APP_SURFACE はローカル既定 admin。public surface 限定テストは `APP_SURFACE=public` を明示
 
 ## visual regression
