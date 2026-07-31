@@ -17,7 +17,26 @@ import {
  * - dev customer に 4 件 reservation 確実に存在
  * - うち 2 件は非キャンセル状態（COMPLETED+PAID / CONFIRMED+UNPAID）
  * - dev customer に CONFIRMED のイベント申込が 1 件存在
+ *
+ * ## rate limit バケットの隔離
+ *
+ * `request` フィクスチャで `/api/calendar/*` を直接叩くため、proxy の
+ * `apiRateLimiter`（100/分/IP）に当たりうる。`chromium-customer` project は
+ * 2 worker が既定の同一 IP から /api を叩き続けるので、飽和した窓に入った
+ * request が 429 を返す（CI run 30607885778 で本 spec の 2 件が実際に 429）。
+ *
+ * `e2e/helpers/admin-auth.ts` の `primeAdminRequestContext` と同型に、この spec
+ * 専用の client IP を割り当ててバケットを隔離する。`test.use` の
+ * `extraHTTPHeaders` は page と `request` の**両方**に効く。
+ * XFF が client IP として採用されるのは loopback host のときだけなので
+ * （`rate-limit.ts` の `canUseDevelopmentProxyFallback`）、本番の IP 信頼境界は
+ * 変わらない。
+ *
+ * 静的 IP の割当表は `.claude/rules/testing-e2e.md`。動的割当
+ * （`203.0.113.10`〜`.250`）と衝突しない `.1`〜`.9` から採る。
  */
+
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.6" } });
 
 test.describe("AddToCalendar UI 表示", () => {
   test("マイページ予約詳細に AddToCalendar セクションが表示される", async ({
