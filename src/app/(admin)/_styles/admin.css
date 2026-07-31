@@ -134,6 +134,20 @@
   --color-sidebar-border: oklch(0.25 0.02 260);
   --color-sidebar-text: oklch(0.92 0.01 260);
   --color-sidebar-text-muted: oklch(0.7 0.02 260);
+  /* 機能モジュール OFF の nav 項目用（sidebar-text-muted より一段暗い専用トークン）。
+   *
+   * これらの nav 項目は disabled control ではなく **押せるリンク**（管理画面では
+   * 一覧・編集を継続できる仕様）なので、WCAG 2.1 AA の 4.5:1 が免除されない。
+   * 以前は `text-sidebar-text-muted/80` を `opacity-80` の <a> の内側に置いており、
+   * 実効 alpha が 0.8 × 0.8 = 0.64 に畳み込まれて **3.54:1**（axe serious、
+   * run 30617695076 実測）まで落ちていた。opacity による減光は「トークン値を見ても
+   * 実際の比率が分からない」ため、減光は必ずこのトークン 1 本で表現する。
+   *
+   * 実測（sRGB 変換 → WCAG 相対輝度。値は
+   * `admin-sidebar-contrast.test.ts` が admin.css を読んで機械検証する）:
+   *   #858d99 on --color-sidebar-bg (#0a121f)          = 5.60:1
+   *   #858d99 on nav hover (nav-hover を bg に合成 #161d2a) = 5.01:1 */
+  --color-sidebar-text-disabled: oklch(0.64 0.02 260);
   --color-sidebar-accent: oklch(0.55 0.2 260);
   --color-sidebar-nav-hover: oklch(1 0 0 / 0.05);
 

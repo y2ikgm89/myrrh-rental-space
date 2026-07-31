@@ -222,29 +222,39 @@ export function ResponsiveSidebar({
                             className={cn(
                               classes.navItem(),
                               isActive && classes.navItemActive(),
-                              isFeatureDisabled &&
-                                !isActive &&
-                                "opacity-80 saturate-75",
                             )}
                             onClick={() => effectiveIsMobile && closeSidebar()}
                           >
+                            {/* 公開面 OFF の減光は --color-sidebar-text-disabled だけで
+                                表現する。`opacity` / alpha modifier をこの subtree に
+                                足さないこと。
+
+                                CSS の `opacity` は要素と子孫を 1 枚のグループとして
+                                描画してから backdrop へ合成するため（CSS Color 4 §4.1）、
+                                内側の色すべてに掛かって畳み込まれる。以前は <Link> の
+                                `opacity-80` と label の `text-sidebar-text-muted/80` が
+                                重なって実効 alpha 0.8 × 0.8 = 0.64 になり 3.54:1 まで
+                                落ちていた（axe `color-contrast` serious、run 30617695076）。
+                                `opacity-80` だけでも「非公開」badge の背景まで一緒に暗くなり
+                                4.49:1 と AA 境界に貼り付く。トークンで表現すれば
+                                CSS の値がそのまま実効値になり、機械検証もできる。 */}
                             <span
-                              className={
-                                isActive ? "text-primary-foreground" : ""
-                              }
+                              className={cn(
+                                isActive && "text-primary-foreground",
+                                isFeatureDisabled &&
+                                  !isActive &&
+                                  "text-sidebar-text-disabled",
+                              )}
                             >
                               {item.icon}
                             </span>
-                            {/* 公開面 OFF の減光は親 <Link> の `opacity-80 saturate-75` が
-                                担う。ここで `text-sidebar-text-muted/80` を重ねると
-                                実効 alpha が 0.8 × 0.8 = 0.64 になり、
-                                コントラスト比が 3.55:1 まで落ちて WCAG 2.1 AA
-                                (4.5:1) を割る（axe `color-contrast` serious として実測）。
-                                色は親から継承する `text-sidebar-text-muted` のまま。 */}
                             <span
                               className={cn(
                                 "min-w-0 flex-1 text-sm font-medium",
                                 isActive && "text-primary-foreground",
+                                isFeatureDisabled &&
+                                  !isActive &&
+                                  "text-sidebar-text-disabled",
                               )}
                             >
                               {item.label}
