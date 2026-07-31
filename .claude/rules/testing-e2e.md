@@ -192,6 +192,32 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   自前で持たない値」の観測だけ（例: `isReservationSeriesCancelled(seriesId)`）。
   locator の状態観測には使わない
 
+  **禁じているのは「再遷移 × 一発勝負」の組み合わせであって、再遷移そのものでは
+  ない。** サーバー側の状態反映（cache invalidation 等）を待つ必要がある場合は、
+  遷移をやり直しつつ **1 attempt ごとにリトライする待ちを与える**のが正しい:
+
+  ```ts
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    await page.goto(route);
+    try {
+      await expect(target).toBeVisible({ timeout: PER_ATTEMPT_MS });
+      return true;
+    } catch {
+      // 古い応答を掴んだ可能性がある。遷移からやり直す
+    }
+  }
+  ```
+
+  単発 `goto` だけでは、最初の応答が古いキャッシュだったときに web-first assertion が
+  **同じ document をリトライし続けるだけで回復できない**（`feature-module-off-gate`
+  で一度これを踏んで #1759 で戻した）
+
+- **1 テストで複数ルート/複数ケースを回すループは `expect.soft` を使う**。
+  hard assertion だと最初の 1 件で止まり、残りの可否が分からないまま次の CI に
+  持ち越しになる。`feature-module-off-gate` は実際に「1 本直す → 次の 1 本が初めて
+  到達して落ちる」を繰り返し、9 ルートの確認に CI を何往復も要した。soft なら
+  1 回の run で全件の結果が出揃い、テスト自体は最後にまとめて落ちる
+
 - APP_SURFACE はローカル既定 admin。public surface 限定テストは `APP_SURFACE=public` を明示
 
 ## visual regression

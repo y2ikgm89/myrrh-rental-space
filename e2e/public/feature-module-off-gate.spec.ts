@@ -27,19 +27,26 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * **「本来のページが描画されず not-found 境界が出る」+「noindex が付く」**に置き換える。
  * fail-closed の実体（コンテンツを出さない）と SEO 保護の両方をカバーする。
  *
- * 判定は 2 段構え。**cache 反映待ちのリトライは head で**、**fail-closed の証明は
- * 本文で**行う:
+ * **判定は必ず本文で行う。head は使わない。**
  *
- * - `<title>` は SSR 時点で確定するのでストリーミングの差し替えと競争しない。
- *   遷移をやり直すリトライの判定にはこちらを使う
- * - ただし head だけでは足りない。`generatePageMetadata` は page 側の
- *   `requireFeatureEnabled` とは**独立に** feature OFF を見て
- *   `FEATURE_DISABLED_PAGE_METADATA` を返すため、gate を消しても title / noindex は
- *   同じになる。本文 h1 まで見て初めて契約を守れる
+ * `<title>` が not-found になるのは CMS ページだけ。`generatePageMetadata` が
+ * feature OFF を見て `FEATURE_DISABLED_PAGE_METADATA` を返す経路に乗るためで、
+ * `/mypage/inquiries` のような非 CMS route は layout の `title: "マイページ"` が
+ * そのまま解決される（layout metadata は page 本体の `notFound()` と独立）。
+ * 実測 (run 30643518533): `/contact` は title で通ったのに `/mypage/inquiries` は
+ * "マイページ | …" のままで、gate は正しく効いていた。head は一部 route で
+ * **構造的に必ず偽陰性**になる。
  *
  * 本文 h1 は RSC payload (`self.__next_f.push([1,"…\"h1\"…"])`) として届き client 側で
  * 差し替えられるため、**遷移直後の一発勝負では掴めない**（run 30638590811 の trace で
- * 確認）。再遷移しない web-first assertion なら待てる。
+ * 確認）。リトライする web-first assertion で待つ。
+ *
+ * ## ルート単位の判定は soft assertion
+ *
+ * hard だと最初の 1 本で止まり、残りのルートの可否が分からないまま次の CI に
+ * 持ち越しになる。実際この spec は「1 本直す → 次の 1 本が初めて到達して落ちる」を
+ * 繰り返した（`/contact` → `/mypage/inquiries`）。soft なら 1 回の run で
+ * 全 9 ルートの結果が出揃う。
  *
  * FEAT-3PLANE-04 (PR #1205) で `mypage/inquiries` × 2、`reservation/complete`、
  * `claim/reservation`、`claim/event-registration` に `requireFeatureEnabled` gate
@@ -120,7 +127,7 @@ function notFoundHeading(page: Page) {
 }
 
 /**
- * feature OFF のルートが **本文に** not-found 境界を描画することを確認する。
+ * feature OFF のルートが **本文に** not-found 境界を描画するかを返す（throw しない）。
  *
  * 判定に head (`<title>`) は使えない。CMS ページは `generatePageMetadata` が
  * feature OFF を見て `FEATURE_DISABLED_PAGE_METADATA` を返すので not-found の
@@ -139,25 +146,24 @@ function notFoundHeading(page: Page) {
  * `goto` をやり直しつつ `isVisible()` のような一発勝負を撃つと、解決途中の DOM を
  * 毎回捨てて timeout 予算を使えない（`e2e-poll-predicate-retries.test.ts` の規約）。
  */
-async function expectNotFoundBoundary(
+async function probeNotFoundBoundary(
   page: Page,
   route: string,
-  moduleId: string,
-): Promise<void> {
+): Promise<boolean> {
   for (let attempt = 1; attempt <= NOT_FOUND_ATTEMPTS; attempt++) {
     await page.goto(route);
 
     try {
-      await expect(
-        notFoundHeading(page),
-        `[${moduleId}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
-      ).toBeVisible({ timeout: NOT_FOUND_ATTEMPT_TIMEOUT_MS });
-      return;
-    } catch (error) {
+      await expect(notFoundHeading(page)).toBeVisible({
+        timeout: NOT_FOUND_ATTEMPT_TIMEOUT_MS,
+      });
+      return true;
+    } catch {
       // 1 回目が古いキャッシュを掴んだ可能性がある。遷移からやり直す。
-      if (attempt === NOT_FOUND_ATTEMPTS) throw error;
     }
   }
+
+  return false;
 }
 
 /** 保存がリロード後も残っているかの確認待ち。 */
@@ -584,8 +590,20 @@ test.describe
     }) => {
       await setFeatureModule(page, c.label, false);
 
+      // ルートごとの判定は **soft assertion**。hard だと最初の 1 本で止まり、
+      // 残りのルートの状態が分からないまま次の CI に持ち越しになる。実際この spec は
+      // 「1 本直す → 次の 1 本が初めて到達して落ちる」を繰り返してきた
+      // (`/contact` → `/mypage/inquiries`)。soft なら 1 回の run で全ルートの
+      // 可否が出揃い、テスト自体は最後にまとめて落ちる。
       for (const route of c.routes) {
-        await expectNotFoundBoundary(page, route, c.module);
+        const rendersNotFound = await probeNotFoundBoundary(page, route);
+
+        expect
+          .soft(
+            rendersNotFound,
+            `[${c.module}] ${route} は feature OFF 時に not-found 境界を描画すべき`,
+          )
+          .toBe(true);
 
         // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
         // 注入する契約に依存する。これが無いと soft-404 が索引される。
@@ -594,10 +612,12 @@ test.describe
           .evaluateAll((nodes) =>
             nodes.map((node) => node.getAttribute("content") ?? ""),
           );
-        expect(
-          robots.some((content) => content.includes("noindex")),
-          `[${c.module}] ${route} の not-found 応答に noindex が無い（実際の robots meta: ${JSON.stringify(robots)}）`,
-        ).toBe(true);
+        expect
+          .soft(
+            robots.some((content) => content.includes("noindex")),
+            `[${c.module}] ${route} の not-found 応答に noindex が無い（実際の robots meta: ${JSON.stringify(robots)}）`,
+          )
+          .toBe(true);
       }
     });
   }
