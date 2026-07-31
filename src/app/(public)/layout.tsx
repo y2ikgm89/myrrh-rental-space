@@ -53,6 +53,7 @@ import {
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import { CSS_VAR } from "@/shared/lib/csp/css-vars";
 import { NonceStyleBlock } from "@/shared/lib/csp/nonce-style";
+import { StyleNonceRegistrar } from "@/shared/lib/csp/style-nonce-registrar";
 import {
   buildDataStyleRule,
   DATA_STYLE_ID_ATTR,
@@ -410,6 +411,11 @@ export default async function PublicRootLayout({
               maintenance ON → MaintenancePage を直接 return（chrome 全部スキップ）。
               maintenance OFF → children（通常 chrome）を pass-through。
               `'use cache' + safeFetch` を持つ getMaintenanceSettings を rule §6 通り隔離。 */}
+          {/* Radix の scroll lock が注入する <style> に per-request nonce を渡す。
+              headers() を読むので Suspense 内に置く（詳細は RegisterStyleNonce の JSDoc）。 */}
+          <Suspense fallback={null}>
+            <StyleNonceRegistrar />
+          </Suspense>
           <MaintenanceGate>
             {/* 全公開ページ共通の構造化データ */}
             <Suspense fallback={null}>

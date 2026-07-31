@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { urls } from "../fixtures";
+import {
+  collectCspViolations,
+  formatCspViolations,
+} from "../helpers/csp-violations";
 
 /**
  * Smoke: ホームページ
@@ -41,21 +45,34 @@ test.describe("smoke: homepage", () => {
     expect(title.length).toBeGreaterThan(0);
   });
 
+  /**
+   * CSP 違反ゼロを surface ごとに検証する。
+   *
+   * 旧実装は「public surface の `/` だけ」「`msg.type() === "error"` のみ」で、
+   * 実際に出ていた inline style の違反（`INFO:CONSOLE` レベル）を 1 件も拾えていなかった
+   * （CI run 30606269265 で /contact・/events・/admin/reservations から 8 種類が
+   * ブロックされていた）。route を代表的な複数ページに広げ、type 絞りも外す。
+   *
+   * admin surface では sonner が module 評価時に `<style>` を注入するため、
+   * ページを開くだけで `style-src` の hash drift を検知できる。
+   * Radix scroll lock（ダイアログ open 時に nonce 付き `<style>` を注入）は
+   * `e2e/authenticated/admin/csp-inline-style.spec.ts` が担当する。
+   */
   test("CSP violation が console に出ない", async ({ page }) => {
-    test.skip(appSurface !== "public", "public surface の CSP 検証のみ");
+    const routes =
+      appSurface === "public"
+        ? [urls.home, urls.contact, urls.events]
+        : [urls.adminDashboard, urls.adminCustomers];
 
-    const cspViolations: string[] = [];
-    page.on("console", (msg) => {
-      if (
-        msg.type() === "error" &&
-        msg.text().includes("Content Security Policy")
-      ) {
-        cspViolations.push(msg.text());
-      }
-    });
+    const cspViolations = collectCspViolations(page);
 
-    await page.goto(urls.home);
-    await expect(page.getByRole("main")).toBeVisible();
-    expect(cspViolations).toEqual([]);
+    for (const route of routes) {
+      await page.goto(route);
+      await expect(page.getByRole("main")).toBeVisible();
+      expect(
+        cspViolations,
+        `CSP violations after ${route}: ${formatCspViolations(cspViolations)}`,
+      ).toEqual([]);
+    }
   });
 });

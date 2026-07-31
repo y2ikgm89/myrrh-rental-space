@@ -7,6 +7,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
+import { STYLE_ELEMENT_HASHES } from "@/shared/lib/csp/inline-style-hashes";
 import {
   RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
   EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
@@ -136,15 +137,24 @@ function buildCsp(
   //   許可する非対称な権限で、文字列 eval / new Function / setTimeout(string) は
   //   引き続き遮断される（'unsafe-eval' とは別物。'unsafe-eval' を本番に置かない
   //   設計 SSoT を侵害しない）。Chrome 97+ / Firefox 102+ / Safari 16+ で実装済。
-  // - style-src: <style> 要素のみ nonce 認可。React style= 属性はコードベース側で
-  //   使用禁止（imperative element.style または nonce <style> ブロック）。
-  // - style-src-attr: 'unsafe-inline' は置かない。CSP3 'unsafe-hashes' + hash で
-  //   next/image が内部 emit する 3 つの固定 style 属性文字列だけを許可する:
-  //   - ZDrxq…: fill 画像の `position:absolute;height:100%;…;color:transparent`
-  //   - zlqnb…: 通常画像の `color:transparent`
-  //   - KpSV7…: fill ラッパーの `position:relative`
-  //   Next.js がこれらの文字列を変更すると homepage smoke CSP テストが fail し、
-  //   violation メッセージが新しい hash を報告する（ここを更新する）。
+  // - style-src（= <style> 要素 / stylesheet）: nonce を維持し、nonce API を持たない
+  //   `sonner` のぶんだけ厳密な内容一致 hash を足す（SSoT: inline-style-hashes.ts）。
+  //   Radix の scroll lock は実行時計測値を含むため hash 化できないので、
+  //   `RegisterStyleNonce` が `get-nonce` の `setNonce()` に nonce を渡して通す。
+  // - style-src-attr（= style 属性）: **'unsafe-inline'**。CSP3 では style 属性に
+  //   nonce を付けられず、許可手段は 'unsafe-inline' か 'unsafe-hashes' + hash の 2 つしかない
+  //   （W3C CSP3 §8.3 / MDN style-src-attr）。かつて next/image の 3 文字列だけを
+  //   'unsafe-hashes' で許可していたが、実際に出る style 属性は
+  //   **framework / ライブラリ内部由来で列挙不能**だった。実測（CI run 30606269265）で
+  //   /contact・/events・/admin/reservations から 5 種の未許可 hash がブロックされ、
+  //   うち 1 つは Radix が modal 中に body へ当てる `pointer-events:none`。
+  //   next/image も object-fit / object-position の組合せで文字列が増える。
+  //   列挙不能な集合に 'unsafe-hashes' を使うと**取りこぼしが本番だけで壊れる**ため、
+  //   style 属性は 'unsafe-inline' に一本化する。
+  //   リスクは CSS に限定される（スクリプト実行は不可）。CSS 由来の情報窃取に必要な
+  //   外部 URL 読み込みは img-src / font-src / connect-src 側で塞いだままにする。
+  //   なお CSP3 では nonce/hash と 'unsafe-inline' が同居すると 'unsafe-inline' が
+  //   **無視される**ため、style-src-attr から hash を残してはいけない。
   // - connect-src / img-src: strict-dynamic は script-src のみ作用するため、ビーコン送信先は
   //   明示許可が必要。GA4 は *.google-analytics.com（地域別 region1/2/3 を包含）/
   //   *.analytics.google.com に加え、gtag.js / GTM が設定取得・収集に使う *.googletagmanager.com
@@ -155,8 +165,8 @@ function buildCsp(
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
-    style-src 'self' 'nonce-${nonce}';
-    style-src-attr 'unsafe-hashes' 'sha256-ZDrxqUOB4m/L0JWL/+gS52g1CRH0l/qwMhjTw5Z/Fsc=' 'sha256-zlqnbDt84zf1iSefLU/ImC54isoprH/MRiVZGskwexk=' 'sha256-KpSV7LuPYEu58+3u9LJr9v5Drm0uIKEv0h3u/+NVNm8=';
+    style-src 'self' 'nonce-${nonce}' ${STYLE_ELEMENT_HASHES.join(" ")};
+    style-src-attr 'unsafe-inline';
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
