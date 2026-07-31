@@ -13,21 +13,24 @@ import { visibleById } from "../../helpers/streaming-safe-locators";
  * ## なぜ専用 spec が要るのか
  *
  * `axe-admin-pages.spec.ts` は「全機能 ON」の seed 既定状態しか踏まない。
- * サイドバーの「機能モジュール OFF」表示 (`AdminNavFeatureDisabledIndicator` +
- * 減光ラベル) はその経路では一度もレンダリングされないため、
- * 前景 #646c79 / 背景 #0a121f = 3.54:1 の `color-contrast` 違反 (impact serious)
- * が長期間検出されなかった。実際に表面化したのは run 30617695076 で
- * `feature-module-off-gate` spec が状態を戻し損ねた**副作用**としてであり、
- * 状態汚染が直れば再び見えなくなる性質の穴だった。
+ * 「機能モジュール OFF」表示 (`AdminNavFeatureDisabledIndicator` + 減光) は
+ * その経路では一度もレンダリングされないため、コントラスト違反が長期間検出
+ * されなかった。実測 (いずれも `color-contrast` / impact serious):
+ *
+ * - サイドバー nav ラベル: #646c79 on #0a121f = 3.54:1（run 30617695076）
+ * - スペース管理タブ: 3.46:1（本 PR で計算により発見。axe 未検出）
+ *
+ * サイドバー側が表面化したのも `feature-module-off-gate` spec が状態を戻し
+ * 損ねた**副作用**としてであり、状態汚染が直れば再び見えなくなる穴だった。
  *
  * そこで「OFF 状態を意図的に作ってからスキャンする」経路をここに固定する。
  * 機能モジュールの ON/OFF は管理者が実際に使う正規の運用状態なので、
  * この見た目は本番でも起こりうる。
  *
  * トークン値そのもの (OKLCH → sRGB → WCAG コントラスト比) は
- * `__tests__/unit/architecture/admin-sidebar-contrast.test.ts` が required
- * status check 側で検算する。本 spec は「実際に描画された DOM が axe を通る」
- * ことを end-to-end で担保する役割分担。
+ * `__tests__/unit/architecture/admin-feature-disabled-contrast.test.ts` が
+ * required status check 側で検算する。本 spec は「実際に描画された DOM が axe を
+ * 通る」ことを end-to-end で担保する役割分担。
  *
  * ## 実装メモ
  *
@@ -35,50 +38,51 @@ import { visibleById } from "../../helpers/streaming-safe-locators";
  * - 復元は `try/finally` ではなく **`afterEach`** で行う。finally は setup 段階
  *   (module を OFF にする過程) で throw すると入らず、OFF のまま次 spec に漏れる。
  *   run 30617695076 ではこの漏れが 30 件超の偽の失敗を生んだ。
- * - 復元は「触った 1 件」ではなく **既定値の全件**に揃える。
- * - 保存完了の判定に toast を使わない。このフォームは `expectedUpdatedAt` の
- *   楽観ロックを持ち、並行セッションと競合すると成功ではなく error toast を出す。
- *   **リロード後も状態が保たれているか**という永続化の実体を `expect.poll` で
- *   確認し、競合したら読み直してやり直す。
- * - 対象 module は `faq`。`e2e/public/feature-module-off-gate.spec.ts` が触る
- *   5 module (contact / posts / reservation / events / spaces) と重ならないものを
- *   選び、別 project 並列実行時の相互干渉を減らしている。
+ * - ただし復元範囲は **本 spec が所有する module のみ**。全件を書き戻すと、
+ *   別 project で並行実行される `feature-module-off-gate.spec.ts` が意図的に
+ *   OFF にしている最中の module を横から ON へ戻してしまう（下の
+ *   `OWNED_MODULE_LABELS` のコメント参照）。
+ * - 保存の成否を **クライアント状態で判定しない**（toast も pending 解除も
+ *   信頼できない。実測の根拠は `applyFeatureModules` のコメント）。
+ *   **リロード後も状態が保たれているか**という永続化の実体だけを
+ *   `expect.poll` で確認し、競合したら読み直してやり直す。
+ * - 対象 module は `faq`（sidebar）と `access`（スペース管理タブ）。
+ *   `e2e/public/feature-module-off-gate.spec.ts` が触る 5 module
+ *   (contact / posts / reservation / events / spaces) と重ならないものを選び、
+ *   別 project 並列実行時の相互干渉を減らしている。
  */
 
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
 
-/** `FEATURE_MODULES.faq.label` (registry SSoT) と一致させる */
-const TARGET_MODULE_LABEL = "FAQ";
+/** `FEATURE_MODULES.faq.label` (registry SSoT)。sidebar 検証用。 */
+const SIDEBAR_MODULE_LABEL = "FAQ";
 /** `sidebar-items.tsx` の FAQ 項目の label */
-const TARGET_NAV_LABEL = "FAQ";
+const SIDEBAR_NAV_LABEL = "FAQ";
+/** `FEATURE_MODULES.access.label` (registry SSoT)。スペース管理タブ検証用。 */
+const TAB_MODULE_LABEL = "アクセス";
+/** `SpaceManagementTabs.TAB_BASE` の `access` タブの label */
+const TAB_NAV_LABEL = "場所";
 /** `ADMIN_NAV_DISABLED_BADGE_LABEL` (admin-nav.ts SSoT) と一致させる */
 const DISABLED_BADGE_LABEL = "非公開";
-/** `FeatureModulesForm.OPTIMISTIC_CONFLICT_HINT` と一致させる */
-const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
-/** 成功 toast の文言（保存の**決着**検出にのみ使い、成功判定には使わない） */
-const SAVE_SUCCESS_TOAST = "機能モジュールを保存しました";
 
 /**
- * 既定状態 = `buildInitialFeatureModules()` / `prisma/seed.ts` の契約。
+ * 復元対象は **この spec が所有する module だけ** に限定する。
  *
- * `data-retention` は「seed 時に必ず false」が registry の不変条件なので
- * **意図的に含めない** — ON にすると PII を削除する日次 cron が有効化される。
- * 値は `FEATURE_MODULES[*].label` と一致させること。
+ * `testing-e2e.md` は「復元は触った 1 件ではなく対象全件を既定値に揃える」と
+ * 定めているが、あれは `feature-module-off-gate.spec.ts` —— 対象 5 module の
+ * **唯一の所有者** —— に向けた規約。本 spec が同じことをすると害になる:
+ *
+ * `feature-module-off-gate.spec.ts` は `chromium` project、本 spec は
+ * `chromium-admin` project にあり、`fullyParallel: true` + 2 workers で
+ * **同時に走りうる**。`test.describe.serial` が直列化するのは同一 describe 内
+ * だけなので、こちらが全 module を ON に書き戻すと、あちらが「OFF にして
+ * 公開ルートが 404 になること」を検証している最中に横から ON へ戻してしまい、
+ * 200 を観測させて落とす（PR #1725 Codex review P2 の指摘）。
+ *
+ * 規約の本質は「**無条件に**復元すること」であって「全件を書き戻すこと」では
+ * ないので、無条件 afterEach は維持したまま所有範囲だけに絞る。
  */
-const DEFAULT_ENABLED_MODULE_LABELS = [
-  // 依存元 (`requires`) が先に来る順序。spaces を先に ON にしないと
-  // reservation / reviews の Switch が disabled のままクリックできない。
-  "スペース管理",
-  "予約フォーム",
-  "オンライン決済",
-  "レビュー",
-  "イベント",
-  "ブログ",
-  "お知らせ",
-  "FAQ",
-  "アクセス",
-  "お問い合わせ",
-] as const;
+const OWNED_MODULE_LABELS = [SIDEBAR_MODULE_LABEL, TAB_MODULE_LABEL] as const;
 
 /**
  * 機能モジュール 1 行の Switch。
@@ -107,7 +111,7 @@ function moduleSwitch(page: Page, moduleLabel: string): Locator {
  * module 行から祖先 form を辿って絞り込む (run 30595374008 の strict violation)。
  */
 function saveButton(page: Page): Locator {
-  return moduleSwitch(page, TARGET_MODULE_LABEL)
+  return moduleSwitch(page, SIDEBAR_MODULE_LABEL)
     .locator("xpath=ancestor::form[1]")
     .getByRole("button", { name: /^保存/u });
 }
@@ -145,15 +149,25 @@ async function applyFeatureModules(
         }
 
         if (changed) {
-          await saveButton(page).click();
-          // Server Action が「決着した」ことだけを待つ。成功と楽観ロック競合の
-          // どちらでも toast が出るので両方を受ける — 成功文言だけを待つと
-          // 競合時にタイムアウトし、待たずに reload すると送信を中断してしまう。
-          await expect(
-            page
-              .getByText(SAVE_SUCCESS_TOAST)
-              .or(page.getByText(OPTIMISTIC_CONFLICT_HINT)),
-          ).toBeVisible({ timeout: 20000 });
+          const save = saveButton(page);
+          await save.click();
+          // **送信が始まったことだけ**を待つ。`SubmitButton` は isPending の間
+          // disabled + 「保存中...」になるので、disabled になれば Server Action は
+          // dispatch 済みで、この後 reload しても送信は取り消されない。
+          //
+          // 「完了」をクライアント状態で待ってはいけない:
+          //  - 成功 toast を待つ → 楽観ロック競合時は error toast になりタイムアウト。
+          //    競合以外の form エラーでは `FeatureModulesForm` の useEffect が
+          //    どちらの toast も出さず、無言で終わる
+          //  - pending 解除 (`toBeEnabled`) を待つ → 成功時 useEffect が
+          //    `router.refresh()` を呼ぶため、その transition が終わるまで
+          //    isPending が解除されない。ローカル production build では
+          //    **240s 待っても解除されなかった**（実測: 保存自体は成功していて
+          //    audit_logs に MANAGE が毎回記録されていたのに、ボタンは
+          //    `button "保存中..." [disabled]` のままだった）
+          //
+          // 成否は下の「リロード後の永続化状態」だけで判定する。
+          await expect(save).toBeDisabled({ timeout: 15000 });
         }
 
         // 永続化の実体をリロード後の DOM で確認する
@@ -167,36 +181,39 @@ async function applyFeatureModules(
         return true;
       },
       {
-        timeout: 60000,
+        // 1 回の保存が遅いローカル production build でも 2 回はやり直せる幅。
+        timeout: 120000,
         intervals: [1000, 2000, 3000, 5000],
       },
     )
     .toBe(true);
 }
 
-/** 全モジュールを seed 既定値に戻す（data-retention は触らない） */
-async function restoreFeatureModuleDefaults(page: Page): Promise<void> {
+/** 本 spec が OFF にした module だけを既定値 (ON) に戻す */
+async function restoreOwnedFeatureModules(page: Page): Promise<void> {
   await applyFeatureModules(
     page,
-    new Map(DEFAULT_ENABLED_MODULE_LABELS.map((label) => [label, true])),
+    new Map(OWNED_MODULE_LABELS.map((label) => [label, true])),
   );
 }
 
 test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画面", () => {
   // 復元は必ず走らせる。setup 段階で失敗しても OFF のまま次 spec に漏らさない。
   test.afterEach(async ({ page }) => {
-    await restoreFeatureModuleDefaults(page);
+    await restoreOwnedFeatureModules(page);
   });
 
   // 復元されたことを独立に検証し、壊れていれば本 spec 自身を落とす。
   // 管理面の認証は cookie ではなく webServer env の IAP 模擬なので、
   // storageState なしの新規 context でもそのまま管理者として解決される。
+  // 所有 module だけを見る — 他 module は並行 spec が意図的に OFF にしている
+  // 可能性があり、そこまで検証すると本 spec が偽陽性で落ちる。
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     try {
       await openFeatureSettings(page);
-      for (const label of DEFAULT_ENABLED_MODULE_LABELS) {
+      for (const label of OWNED_MODULE_LABELS) {
         await expect(
           moduleSwitch(page, label),
           `[cleanup] 機能モジュール「${label}」が ON に復元されていない`,
@@ -212,9 +229,9 @@ test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画�
   }) => {
     // Playwright の test timeout は afterEach hook と共有される。設定保存 →
     // リロード検証を「OFF 化」と「復元」で 2 度まわすため既定 30s では足りない。
-    test.setTimeout(240000);
+    test.setTimeout(360000);
 
-    await applyFeatureModules(page, new Map([[TARGET_MODULE_LABEL, false]]));
+    await applyFeatureModules(page, new Map([[SIDEBAR_MODULE_LABEL, false]]));
 
     await page.goto(urls.adminDashboard);
     await expect(page.getByRole("main")).toBeVisible();
@@ -225,7 +242,7 @@ test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画�
     // (responsive-shell.spec.ts と同じ、実証済みのロケーター)。
     const sidebar = visibleById(page, "admin-sidebar");
     const disabledNavLink = sidebar.getByRole("link", {
-      name: new RegExp(TARGET_NAV_LABEL, "u"),
+      name: new RegExp(SIDEBAR_NAV_LABEL, "u"),
     });
     await expect(disabledNavLink).toBeVisible();
     await expect(disabledNavLink).toContainText(DISABLED_BADGE_LABEL);
@@ -236,6 +253,37 @@ test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画�
     expect(
       blocking,
       `Admin dashboard (feature module OFF) a11y violations:\n${formatAxeViolations(results.violations)}`,
+    ).toEqual([]);
+  });
+
+  test("機能モジュール OFF のスペース管理タブに critical/serious 違反がない", async ({
+    page,
+  }) => {
+    test.setTimeout(360000);
+
+    // `access` は sidebar には現れず、スペース管理タブ (`SpaceManagementTabs`) の
+    // 「場所」タブにだけ「非公開」表示を出す。sidebar と同じ意匠だが明色テーマで、
+    // `opacity-80` を掛けると 3.46:1 まで落ちていた経路。
+    await applyFeatureModules(page, new Map([[TAB_MODULE_LABEL, false]]));
+
+    await page.goto(urls.adminSpaces);
+    await expect(page.getByRole("main")).toBeVisible();
+
+    const tabs = page.getByRole("navigation", {
+      name: "スペース管理ナビゲーション",
+    });
+    const disabledTab = tabs.getByRole("button", {
+      name: new RegExp(TAB_NAV_LABEL, "u"),
+    });
+    await expect(disabledTab).toBeVisible();
+    await expect(disabledTab).toContainText(DISABLED_BADGE_LABEL);
+
+    const results = await buildAdminAxeScanner(page).analyze();
+    const blocking = results.violations.filter(isBlockingAdminViolation);
+
+    expect(
+      blocking,
+      `Admin spaces tabs (feature module OFF) a11y violations:\n${formatAxeViolations(results.violations)}`,
     ).toEqual([]);
   });
 });

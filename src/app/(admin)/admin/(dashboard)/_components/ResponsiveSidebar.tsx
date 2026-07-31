@@ -225,11 +225,19 @@ export function ResponsiveSidebar({
                             )}
                             onClick={() => effectiveIsMobile && closeSidebar()}
                           >
-                            {/* 機能 OFF の減光は --color-sidebar-text-disabled に一本化する。
-                             * 以前ここには <a> 側の `opacity-80` と label 側の `/80` が
-                             * 併存し、実効 alpha 0.64 で 3.54:1（WCAG AA 未達）になっていた。
-                             * opacity / alpha modifier をこの行に戻さないこと（トークン値
-                             * だけでは実比率が読めなくなる）。 */}
+                            {/* 公開面 OFF の減光は --color-sidebar-text-disabled だけで
+                                表現する。`opacity` / alpha modifier をこの subtree に
+                                足さないこと。
+
+                                CSS の `opacity` は要素と子孫を 1 枚のグループとして
+                                描画してから backdrop へ合成するため（CSS Color 4 §4.1）、
+                                内側の色すべてに掛かって畳み込まれる。以前は <Link> の
+                                `opacity-80` と label の `text-sidebar-text-muted/80` が
+                                重なって実効 alpha 0.8 × 0.8 = 0.64 になり 3.54:1 まで
+                                落ちていた（axe `color-contrast` serious、run 30617695076）。
+                                `opacity-80` だけでも「非公開」badge の背景まで一緒に暗くなり
+                                4.49:1 と AA 境界に貼り付く。トークンで表現すれば
+                                CSS の値がそのまま実効値になり、機械検証もできる。 */}
                             <span
                               className={cn(
                                 isActive && "text-primary-foreground",

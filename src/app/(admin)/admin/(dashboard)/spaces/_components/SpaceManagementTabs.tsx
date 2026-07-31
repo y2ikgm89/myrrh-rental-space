@@ -66,9 +66,19 @@ export function SpaceManagementTabs({
                     "hover:bg-background/50",
                     isActive &&
                       "bg-card text-foreground shadow-sm hover:bg-card",
-                    showDisabledBadge && !isActive && "opacity-80",
                   )}
                 >
+                  {/* 公開面 OFF の合図は「非公開」badge が担う。ここに opacity を
+                      足さないこと。
+
+                      このタブは押せる（inactive な UI コンポーネントではない）ので
+                      WCAG 2.1 SC 1.4.3 の Incidental 例外に当たらず 4.5:1 が要る。
+                      一方 `bg-muted` 上の `text-muted-foreground` は元から 5.18:1
+                      しか無く、`opacity-80` を掛けると 3.46:1 まで落ちて AA を割る
+                      （sidebar と同じグループ opacity の畳み込み。sidebar は
+                      ダークテーマで余裕があるため専用トークンで減光できるが、
+                      この明色テーマには減光に使える幅が無い）。
+                      検証: `__tests__/unit/architecture/admin-sidebar-contrast.test.ts` */}
                   <span>{label}</span>
                   {showDisabledBadge && featureModule !== undefined && (
                     <AdminNavFeatureDisabledIndicator
