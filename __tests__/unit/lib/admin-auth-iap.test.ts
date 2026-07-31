@@ -6,6 +6,10 @@ const mockHeaders = mock(() => new Headers());
 const mockRedirect = mock((path: string): never => {
   throw new Error(`redirect:${path}`);
 });
+/** `verifyAdminSession` の拒否は notFound()（その場に 404 境界を描画）。 */
+const mockNotFound = mock((): never => {
+  throw new Error("NOT_FOUND");
+});
 const mockFindUnique = mock();
 const mockUserCreate = mock();
 const mockUserUpdate = mock();
@@ -36,6 +40,7 @@ mock.module("next/headers", () => ({
 
 mock.module("next/navigation", () => ({
   redirect: mockRedirect,
+  notFound: mockNotFound,
 }));
 
 mock.module("@/shared/db/prisma", () => ({
@@ -151,6 +156,10 @@ beforeEach(() => {
   mockRedirect.mockReset();
   mockRedirect.mockImplementation((path: string): never => {
     throw new Error(`redirect:${path}`);
+  });
+  mockNotFound.mockReset();
+  mockNotFound.mockImplementation((): never => {
+    throw new Error("NOT_FOUND");
   });
   mockFindUnique.mockReset();
   mockUserCreate.mockReset();
@@ -493,7 +502,7 @@ describe("admin auth IAP boundary", () => {
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  test("verifyAdminSession は未登録 IAP user を access-denied に送る", async () => {
+  test("verifyAdminSession は未登録 IAP user を notFound() で拒否する", async () => {
     mockResolveIapIdentity.mockResolvedValue({
       email: "missing@example.com",
       subject: "subject-1",
@@ -501,9 +510,9 @@ describe("admin auth IAP boundary", () => {
     mockFindUnique.mockResolvedValue(null);
 
     await expect(verifyAdminSession(new Headers())).rejects.toThrow(
-      "redirect:/admin/access-denied",
+      "NOT_FOUND",
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/admin/access-denied");
+    expect(mockNotFound).toHaveBeenCalled();
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "LOGIN_FAILED",
@@ -641,7 +650,7 @@ describe("admin auth IAP boundary", () => {
     mockFindUnique.mockResolvedValue(null);
 
     await expect(verifyAdminSession(new Headers())).rejects.toThrow(
-      "redirect:/admin/access-denied",
+      "NOT_FOUND",
     );
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { email: "conflicting@example.com" },
@@ -651,7 +660,7 @@ describe("admin auth IAP boundary", () => {
     expect(mockUserUpdate).not.toHaveBeenCalled();
   });
 
-  test("verifyAdminSession は dashboard role 以外を access-denied に送る", async () => {
+  test("verifyAdminSession は dashboard role 以外を notFound() で拒否する", async () => {
     mockResolveIapIdentity.mockResolvedValue({
       email: "customer@example.com",
       subject: "subject-1",
@@ -666,9 +675,9 @@ describe("admin auth IAP boundary", () => {
     );
 
     await expect(verifyAdminSession(new Headers())).rejects.toThrow(
-      "redirect:/admin/access-denied",
+      "NOT_FOUND",
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/admin/access-denied");
+    expect(mockNotFound).toHaveBeenCalled();
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-2",

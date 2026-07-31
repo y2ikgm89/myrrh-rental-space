@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   recordAdminLoginFailed,
   recordAdminLoginSuccess,
@@ -168,7 +168,31 @@ export const verifyAdminSession = cache(
   async (requestHeaders?: Headers): Promise<AdminAuthUser> => {
     const user = await getCurrentAdminUser(requestHeaders);
     if (!user || !isDashboardRole(user.role)) {
-      redirect("/admin/access-denied");
+      // 拒否は `notFound()`（最寄りの not-found 境界を**その場に描画**）で表現する。
+      //
+      // 旧実装は `redirect("/admin/access-denied")` だった。しかし本関数の呼び出し元は
+      // いずれも `<Suspense>` の内側で評価される — admin は
+      // `(dashboard)/layout.tsx` が `children` ごと Suspense に入れ
+      // `DashboardChromeResolved` が `connection()` で suspend し、preview は
+      // `(public)` 側の境界配下。ストリーミング開始後の `redirect()` は HTTP 3xx を
+      // 返せず meta タグに劣化する（公式仕様。redirect API リファレンス「When used
+      // in a streaming context, this will insert a meta tag to emit the redirect on
+      // the client side.」）。劣化した meta refresh は axe の `meta-refresh`
+      // critical (WCAG 2.2.1 / 2.2.4)。
+      //
+      // `notFound()` は遷移しないので meta タグ自体が出ない。権限拒否を
+      // `notFound()` に寄せた `_helpers.ts` の `denyAdminAccess()` と揃う。
+      // preview ページは既に隣接行の resource 権限拒否で `notFound()` を使っており、
+      // 同一関数の 2 つの拒否が別方式だった不整合もこれで解消する。
+      //
+      // 表示は各 route group の最寄り境界: admin は `(dashboard)/not-found.tsx`
+      // （「アクセス権限がない可能性があります」と明記）、preview は
+      // `(public)/not-found.tsx`。権限の無いリソースの存在を秘匿する
+      // （existence hiding）点でも 404 が適切。
+      //
+      // `/admin/access-denied` ページは残す。GBP OAuth callback（Route Handler）が
+      // 使っており、そちらはストリーミングしないので実 3xx を返せる。
+      notFound();
     }
     return user;
   },

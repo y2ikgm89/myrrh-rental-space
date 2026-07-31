@@ -12,6 +12,10 @@ const refreshMock = mock(() => {});
 const cancelMock = mock();
 
 mock.module("next/navigation", () => ({
+  // `verifyAdminSession` の拒否は notFound()。mock に無いと module load で落ちる。
+  notFound: mock(() => {
+    throw new Error("NOT_FOUND");
+  }),
   useRouter: () => ({ refresh: refreshMock }),
   redirect: mock(),
 }));
