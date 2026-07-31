@@ -222,16 +222,21 @@ export function ResponsiveSidebar({
                             className={cn(
                               classes.navItem(),
                               isActive && classes.navItemActive(),
-                              isFeatureDisabled &&
-                                !isActive &&
-                                "opacity-80 saturate-75",
                             )}
                             onClick={() => effectiveIsMobile && closeSidebar()}
                           >
+                            {/* 機能 OFF の減光は --color-sidebar-text-disabled に一本化する。
+                             * 以前ここには <a> 側の `opacity-80` と label 側の `/80` が
+                             * 併存し、実効 alpha 0.64 で 3.54:1（WCAG AA 未達）になっていた。
+                             * opacity / alpha modifier をこの行に戻さないこと（トークン値
+                             * だけでは実比率が読めなくなる）。 */}
                             <span
-                              className={
-                                isActive ? "text-primary-foreground" : ""
-                              }
+                              className={cn(
+                                isActive && "text-primary-foreground",
+                                isFeatureDisabled &&
+                                  !isActive &&
+                                  "text-sidebar-text-disabled",
+                              )}
                             >
                               {item.icon}
                             </span>
@@ -241,7 +246,7 @@ export function ResponsiveSidebar({
                                 isActive && "text-primary-foreground",
                                 isFeatureDisabled &&
                                   !isActive &&
-                                  "text-sidebar-text-muted/80",
+                                  "text-sidebar-text-disabled",
                               )}
                             >
                               {item.label}
