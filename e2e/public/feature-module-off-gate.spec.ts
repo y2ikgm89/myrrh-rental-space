@@ -541,41 +541,28 @@ test.describe
       await setFeatureModule(page, c.label, false);
 
       for (const route of c.routes) {
-        // cache invalidation の反映はこの遷移より後に完了しうるので、**遷移ごと**に
-        // やり直す。`toHaveTitle` 等の web-first assertion は再遷移しないため、
-        // 1 回目が古いキャッシュを掴むと同じ document を 20 秒見続けて落ちる。
-        //
-        // 1 attempt の判定に head (`<title>`) を使うのは、これが SSR 時点で確定して
-        // いてストリーミングの差し替えと競争しないから。本文 h1 は RSC payload
-        // (`self.__next_f.push([1,"…\"h1\"…"])`) として届くので、遷移直後の
-        // 一発勝負では掴めない（run 30638590811 の trace で確認）。
-        await expect
-          .poll(
-            async () => {
-              await page.goto(route);
-              return page.title();
-            },
-            {
-              timeout: ROUTE_STATUS_TIMEOUT_MS,
-              message: `[${c.module}] ${route} は feature OFF 時に not-found を返すべき`,
-            },
-          )
-          .toMatch(/ページが見つかりません/u);
+        await page.goto(route);
 
-        // head だけでは **fail-closed の証明にならない**。
-        // `generatePageMetadata` は page 側の `requireFeatureEnabled` とは独立に
-        // feature OFF を見て `FEATURE_DISABLED_PAGE_METADATA` を返すため、
-        // page の gate を消しても title / noindex は同じになる。本文の not-found
-        // 境界まで確認して初めて「本来のコンテンツが出ていない」ことを守れる。
+        // 判定は **本文の not-found 境界** で行う。
         //
-        // ここは再遷移しない web-first assertion なので、ストリーミングの差し替えを
-        // そのまま待てる（`error-pages.spec.ts` / `homepage.spec.ts` と同じ形）。
+        // head (`<title>`) は verdict に使えない。CMS ページは
+        // `generatePageMetadata` が feature OFF を見て
+        // `FEATURE_DISABLED_PAGE_METADATA` を返すので not-found の title になるが、
+        // `/mypage/inquiries` のような非 CMS route は layout の
+        // `title: "マイページ"` がそのまま解決される（layout metadata は page 本体の
+        // `notFound()` とは独立に決まる）。実測 (run 30643518533):
+        // `/contact` は title で通ったのに `/mypage/inquiries` は
+        // "マイページ | Myrrh Rental Space" のままで、gate は正しく効いていた。
+        //
+        // 単発 `goto` + リトライする web-first assertion にするのは
+        // `e2e-poll-predicate-retries.test.ts` の規約どおり。poll の中で `goto` を
+        // やり直すと、解決途中の DOM を毎回捨てて timeout 予算を使えない。
+        // cache invalidation は `clickSaveAndAwaitDispatch` が Server Action の
+        // dispatch を見届けているので、最初の遷移で新しい状態が返る。
         await expect(notFoundHeading(page)).toBeVisible({
           timeout: ROUTE_STATUS_TIMEOUT_MS,
         });
 
-        // ストリーミング下では 404 ステータスを返せないぶん、Next.js が noindex を
-        // 注入する契約に依存する。これが無いと soft-404 が索引される。
         const robots = await page
           .locator('meta[name="robots"]')
           .evaluateAll((nodes) =>
