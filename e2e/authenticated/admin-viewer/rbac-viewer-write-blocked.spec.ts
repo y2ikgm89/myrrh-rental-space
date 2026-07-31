@@ -81,22 +81,36 @@ test.describe("管理画面 RBAC — VIEWER role は write action を block さ�
     // 必須項目のみ埋める (lastName / firstName / email)。email は onBlur の
     // duplicate check で警告出るのを避けるため一意生成する。ラベルは
     // `<Label>姓 <span>*</span></Label>` のため accessible name は "姓 *"。
-    await page.getByLabel("姓 *", { exact: true }).fill("権限");
-    await page.getByLabel("名 *", { exact: true }).fill("テスト");
-    await page
-      .getByLabel("メールアドレス *", { exact: true })
-      .fill(uniqueEmail("rbac-viewer"));
+    const lastName = page.getByLabel("姓 *", { exact: true });
+    const firstName = page.getByLabel("名 *", { exact: true });
+    const email = page.getByLabel("メールアドレス *", { exact: true });
+    const emailValue = uniqueEmail("rbac-viewer");
+
+    await lastName.fill("権限");
+    await firstName.fill("テスト");
+    await email.fill(emailValue);
+
+    // hydration 完了前に fill すると conform が入力を拾わず、submit が
+    // client-side Zod で弾かれる（"Invalid input: expected string, received undefined"）。
+    // その場合 server action まで到達しないので、本題である権限拒否 alert が出ない
+    // （run 30595374008 の失敗）。値が実際に載ったことを確認してから submit する。
+    await expect(lastName).toHaveValue("権限");
+    await expect(firstName).toHaveValue("テスト");
+    await expect(email).toHaveValue(emailValue);
 
     await page.getByRole("button", { name: "顧客を作成" }).click();
 
     // executeConformMutation は `submission.reply({ formErrors: [error] })` で
     // 返すため、CustomerForm 末尾の `role="alert"` 領域にエラー文言が入る。
-    const alert = page
-      .getByRole("alert")
-      .filter({ hasText: "権限がありません" });
-    await expect(alert).toBeVisible({ timeout: 15000 });
-    await expect(alert).toContainText("customer");
-    await expect(alert).toContainText("create");
+    // 文言は `action-auth.ts` の `${resource}の${action}権限がありません`。
+    //
+    // **1 アサーションで確定させる**: alert は再 render で差し替わりうる transient な
+    // 要素で、`toBeVisible` → `toContainText("customer")` → `toContainText("create")`
+    // と 3 回に分けて掴むと途中で `element(s) not found` になる
+    // (CI run 30593381788 の実失敗)。
+    await expect(
+      page.getByRole("alert").filter({ hasText: "権限がありません" }),
+    ).toContainText("customerのcreate権限がありません", { timeout: 15000 });
 
     // 権限拒否のため /admin/customers への遷移は発生しない (success 時のみ
     // `router.push("/admin/customers")` される)。URL が /new のままであることを確認する。
