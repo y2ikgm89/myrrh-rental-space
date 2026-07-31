@@ -68,6 +68,23 @@ describe("管理画面の権限拒否は notFound() で表現する", () => {
     expect(calls).toBeGreaterThanOrEqual(3); // 定義 1 + 呼び出し 2
   });
 
+  test("verifyAdminSession も notFound() で拒否する（redirect 禁止）", () => {
+    // dashboard role を持たない場合の拒否。呼び出し元は admin layout と
+    // (public)/preview の双方で、いずれも Suspense 内で評価されるため
+    // redirect では meta タグに劣化する。
+    const source = stripComments(
+      read("src/shared/domain/admin-auth/session.ts"),
+    );
+
+    expect(source).toMatch(
+      /import\s*\{\s*notFound\s*\}\s*from\s+"next\/navigation"/u,
+    );
+    expect(source).not.toMatch(/\bredirect\s*\(/u);
+    expect(source).toMatch(
+      /isDashboardRole\(user\.role\)[\s\S]{0,80}notFound\(\)/u,
+    );
+  });
+
   test("拒否時に描画される not-found 境界が存在し、権限不足に言及する", () => {
     // `notFound()` は最寄りの not-found.tsx を描画する。dashboard 配下に無いと
     // global-not-found へ落ち、管理画面 chrome の外に飛ぶ。

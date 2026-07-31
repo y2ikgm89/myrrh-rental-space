@@ -146,6 +146,10 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 mock.module("next/navigation", () => ({
+  // `verifyAdminSession` の拒否は notFound()。mock に無いと module load で落ちる。
+  notFound: mock(() => {
+    throw new Error("NOT_FOUND");
+  }),
   redirect: mock(() => {
     throw new Error("REDIRECT");
   }),
