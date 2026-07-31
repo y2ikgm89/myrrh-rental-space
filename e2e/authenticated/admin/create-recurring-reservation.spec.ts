@@ -9,19 +9,46 @@
  *   - Task 22 calendar view 「定期」バッジ ✅
  *   - Task 23 admin SeriesInfoSection ✅
  *   - Task 26 customer mypage SeriesInfoSection ✅
- *   - Task B seed fixture (`seedRecurringReservationSeriesFixture`) + 定数 SSoT ✅
- *   - Task B follow-up: Turnstile localhost bypass (`isLocalProductionE2ERuntime`) +
- *     `getSeededSeriesFirstInstanceId` / `getSeededSeriesId` /
- *     `isSeededSeriesCancelled` helper ✅ 本 spec で有効化
+ *   - Turnstile localhost bypass (`isLocalProductionE2ERuntime`) ✅
+ *
+ * ## fixture の所有権
+ *
+ * series-all キャンセルは fixture を**破壊的に消費する**ため、共有 seed 行では
+ * retry も再実行もできない（初回失敗が必ず永続失敗に化ける）。
+ * `scripts/e2e/create-recurring-series-fixture.ts` が実行のたびに専用の
+ * Location / Space / Customer ごと fresh な series を作る。
  */
 
+import { execFile } from "node:child_process";
+import path from "node:path";
+import { promisify } from "node:util";
 import { test, expect } from "@playwright/test";
-import { seriesFixtures } from "../../fixtures/test-data";
-import {
-  getSeededSeriesFirstInstanceId,
-  getSeededSeriesId,
-  isSeededSeriesCancelled,
-} from "../../helpers/seeded-fixtures";
+import { visibleByText } from "../../helpers/streaming-safe-locators";
+import { isReservationSeriesCancelled } from "../../helpers/reservation-series-db";
+
+const execFileAsync = promisify(execFile);
+
+// このファイルは `e2e/authenticated/admin/` 配下 = repo root から 3 階層。
+const workspaceRoot = path.join(__dirname, "..", "..", "..");
+const fixtureScriptPath = path.join(
+  workspaceRoot,
+  "scripts",
+  "e2e",
+  "create-recurring-series-fixture.ts",
+);
+
+interface RecurringSeriesFixture {
+  readonly seriesId: string;
+  readonly firstInstanceId: string;
+}
+
+async function createRecurringSeriesFixture(): Promise<RecurringSeriesFixture> {
+  const { stdout } = await execFileAsync("bun", [fixtureScriptPath], {
+    cwd: workspaceRoot,
+    env: process.env,
+  });
+  return JSON.parse(stdout.trim()) as RecurringSeriesFixture;
+}
 
 test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
   test("form が表示され、繰返し設定 fields が render される (smoke)", async ({
@@ -68,16 +95,13 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
     ).toBeVisible();
   });
 
-  test("seed 済 series の SeriesInfoSection + 3 択キャンセル full flow", async ({
+  test("専用 series の SeriesInfoSection + 3 択キャンセル full flow", async ({
     page,
   }) => {
-    // Task B seed fixture (dev customer + WEEKLY BYDAY=TU COUNT=3) の instance ID を lookup
-    const instanceId = await getSeededSeriesFirstInstanceId(
-      seriesFixtures.markerNotesPrefix,
-    );
-    const seriesId = await getSeededSeriesId(seriesFixtures.markerNotesPrefix);
+    // 実行のたびに fresh な series（WEEKLY BYDAY=TU COUNT=3）を専用 Space ごと作る。
+    const { seriesId, firstInstanceId } = await createRecurringSeriesFixture();
 
-    await page.goto(`/admin/reservations/${instanceId}`);
+    await page.goto(`/admin/reservations/${firstInstanceId}`);
 
     // SeriesInfoSection の heading と 3 択キャンセル button 3 種
     await expect(
@@ -102,16 +126,20 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
     // DB 側で series.deletedAt が set されるまで polling
     // (Server Action → applyBulkCancellationSideEffects → cache invalidate の完了待ち)
     await expect
-      .poll(() => isSeededSeriesCancelled(seriesId), {
+      .poll(() => isReservationSeriesCancelled(seriesId), {
         timeout: 15_000,
         intervals: [500, 1000, 2000],
       })
       .toBe(true);
 
-    // UI 側の cache が invalidate 済のため reload で cancelled 表示に切替
-    await page.reload();
+    // UI 側の cache が invalidate 済のため reload で cancelled 表示に切替。
+    //
+    // この `<p>` は role もアクセシブルネームも id も持たないため `getByText` は
+    // React streaming の hidden staging copy にも一致し、strict-mode violation に
+    // なる（CI run 30632351655 で `resolved to 2 elements`、うち 1 つは "hidden"）。
+    // 表示中の 1 本だけを掴む。
     await expect(
-      page.getByText(/この series は既にキャンセル済み/u),
+      visibleByText(page, /この series は既にキャンセル済み/u),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "定期予約すべてをキャンセル" }),
