@@ -299,6 +299,33 @@ describe("createAuditLogRecord", () => {
     });
   });
 
+  describe("トランザクション isolation level", () => {
+    test("chain の $transaction に isolationLevel を渡さない（既定 READ COMMITTED）", async () => {
+      await createAuditLogRecord({
+        action: "CREATE",
+        resource: "post",
+        resourceId: "post-1",
+      });
+
+      // 直列化を担うのは `pg_advisory_xact_lock` であって isolation level ではない。
+      // SERIALIZABLE を足すと「スナップショットは最初のクエリの *開始時*＝advisory
+      // lock の取得を待つ前に凍結する」ため、後続 writer が古い max(sequence) を読んで
+      // P2034 で abort し、リトライを使い切った分だけ監査ログが無言で失われる
+      // （PostgreSQL 13.4.2 が明示する罠。公式が挙げる逃げ道 `LOCK TABLE` は
+      // クエリではないので凍結しないが、関数呼び出しの advisory lock は使えない）。
+      //
+      // この unit テストは `$transaction` を丸ごと mock しているため実挙動を見られない。
+      // 実測の証明は
+      // `__tests__/integration/domain/audit-log/chain-concurrency.test.ts`
+      // （修正前は 6 並行のうち 3 件が失格した）。ここでは「第 2 引数を渡さない」
+      // という契約だけを DB 無しで固定する。
+      const call = mockTransaction.mock.calls[0];
+
+      expect(call).toBeDefined();
+      expect(call?.length).toBe(1);
+    });
+  });
+
   describe("P2034 直列化衝突リトライ (#11)", () => {
     // 各テスト後に mockTransaction を元のデフォルト実装に戻す。
     // beforeEach の mockTransaction.mockClear() は呼出履歴のみを消すため、

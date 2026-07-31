@@ -38,6 +38,19 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   `__tests__/unit/architecture/prisma-interactive-tx-no-promise-all.test.ts`
   が `src/shared/domain/**` と `src/shared/db/**` を静的走査で拒否する
 - `pg_advisory_xact_lock` は void を返すため `$executeRaw` で呼ぶ（`$queryRaw` は失敗）
+- **advisory lock で直列化する tx に `isolationLevel` を足さない**（既定の READ COMMITTED
+  のまま使う）。SERIALIZABLE / REPEATABLE READ はスナップショットを
+  「トランザクション内の最初のクエリの _開始時_」に凍結するため、最初の文が
+  `SELECT pg_advisory_xact_lock(...)` だと **ロック取得を待つ前に**スナップショットが
+  確定し、待機中に先行 writer がコミットしても見えない。結果、ロックを取れた側が
+  古い値を読んで衝突し P2034 で abort する（リトライしても新 tx が再び
+  ロック待ちより前に凍結するので繰り返す）。PostgreSQL 公式も
+  「明示ロックで並行変更を防ぐなら Read Committed を使うか、それ以上ではクエリより
+  前にロックを取れ」と警告している（13.4.2）。公式が挙げる逃げ道は `LOCK TABLE`
+  （クエリではないので凍結しない）だが、**関数呼び出しである advisory lock は
+  その逃げ道を取れない**。実測・回帰防止は
+  `__tests__/integration/domain/audit-log/chain-concurrency.test.ts`
+  （監査ログ chain で 6 並行のうち 3 件が失格していた）
 - advisory lock 採番レジストリ（衝突禁止）: 728349=calendar-sync（session lock）、
   728350=イベント申込、728351=Space スケジュール空間（Reservation + EventTimeSlot 書込 + order-scope）、
   728352=スペースのlocationId/smartLockDeviceId整合性（`spaces/commands.ts`の

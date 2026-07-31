@@ -99,7 +99,14 @@ function normalizeAuditJsonForHash(value: unknown): unknown {
   return value;
 }
 
-function isSerializableWriteConflict(error: unknown): boolean {
+/**
+ * リトライで回復しうる書込衝突（Prisma P2034 = write conflict / deadlock）。
+ *
+ * chain の採番は下の advisory lock が直列化するため、通常この経路には入らない。
+ * 残しているのは deadlock（別の advisory lock を保持したまま監査ログを書く
+ * 呼出が将来入る可能性）への保険。
+ */
+function isRetryableWriteConflict(error: unknown): boolean {
   return isRecord(error) && error["code"] === "P2034";
 }
 
@@ -146,61 +153,63 @@ export async function createAuditLogRecord(
 
   for (let attempt = 0; attempt < MAX_AUDIT_LOG_CHAIN_RETRIES; attempt += 1) {
     try {
-      const anchor = await prisma.$transaction(
-        async (tx) => {
-          await tx.$executeRaw(
-            Prisma.sql`SELECT pg_advisory_xact_lock(${AUDIT_LOG_CHAIN_LOCK_KEY})`,
-          );
+      // 既定の READ COMMITTED で走らせる（isolationLevel を指定しない）。
+      //
+      // 直列化を担うのは下の `pg_advisory_xact_lock` であって isolation level ではない。
+      // ここを SERIALIZABLE にすると **逆に壊れる**:
+      //
+      // - スナップショットは「トランザクション内の最初のクエリの *開始時*」に凍結される。
+      //   最初の文が `SELECT pg_advisory_xact_lock(...)` なので、**ロック取得を待つ前に**
+      //   スナップショットが確定し、待っている間に先行 writer がコミットしても見えない。
+      // - PostgreSQL 公式もこの罠を明示している: 明示ロックで並行変更を防ぐなら
+      //   Read Committed を使うか、Repeatable Read 以上ではクエリより前にロックを取れ
+      //   （13.4.2 Enforcing Consistency With Explicit Blocking Locks）。逃げ道として
+      //   挙げられているのは `LOCK TABLE`（クエリではないので凍結しない）で、
+      //   **関数呼び出しである advisory lock はその逃げ道を取れない**。
+      // - 結果、後続 writer は古い max(sequence) を読んで衝突し P2034 で abort する。
+      //   リトライしても新トランザクションが再び「ロック待ちより前」にスナップショットを
+      //   取るため衝突が続く。実測（integration/domain/audit-log/chain-concurrency）:
+      //   6 並行で 3 件がリトライ 3 回を使い切って失格した。
+      //
+      // READ COMMITTED なら各文が実行時に新しいスナップショットを取る。advisory lock は
+      // コミット完了（＝新スナップショットへの可視化後）に解放されるので、ロックを得た
+      // 時点で先行 writer の行は必ず見える。本 repo の他の advisory lock 直列化
+      // （予約・イベント・領収書連番）もすべてこの形。
+      const anchor = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw(
+          Prisma.sql`SELECT pg_advisory_xact_lock(${AUDIT_LOG_CHAIN_LOCK_KEY})`,
+        );
 
-          const previous = await tx.auditLog.findFirst({
-            select: { sequence: true, entryHash: true },
-            orderBy: { sequence: "desc" },
-          });
+        const previous = await tx.auditLog.findFirst({
+          select: { sequence: true, entryHash: true },
+          orderBy: { sequence: "desc" },
+        });
 
-          const id = randomUUID();
-          const sequence = previous ? previous.sequence + 1n : 1n;
-          const previousHash = previous?.entryHash ?? AUDIT_LOG_GENESIS_HASH;
-          const hashKeyId = getAuditLogHashKeyId();
-          const createdAt = input.createdAt ?? new Date();
-          const hashPayload: AuditLogHashPayload = {
-            version: AUDIT_LOG_CHAIN_VERSION,
-            id,
-            sequence: sequence.toString(),
-            previousHash,
-            hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
-            hashKeyId,
-            userId: input.userId ?? null,
-            action: input.action,
-            resource: input.resource,
-            resourceId: input.resourceId ?? null,
-            oldValue: normalizeAuditJsonForHash(oldValue),
-            newValue: normalizeAuditJsonForHash(newValue),
-            metadata: normalizeAuditJsonForHash(metadata),
-            createdAt: createdAt.toISOString(),
-          };
-          const entryHash = computeAuditLogEntryHash(hashPayload);
+        const id = randomUUID();
+        const sequence = previous ? previous.sequence + 1n : 1n;
+        const previousHash = previous?.entryHash ?? AUDIT_LOG_GENESIS_HASH;
+        const hashKeyId = getAuditLogHashKeyId();
+        const createdAt = input.createdAt ?? new Date();
+        const hashPayload: AuditLogHashPayload = {
+          version: AUDIT_LOG_CHAIN_VERSION,
+          id,
+          sequence: sequence.toString(),
+          previousHash,
+          hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+          hashKeyId,
+          userId: input.userId ?? null,
+          action: input.action,
+          resource: input.resource,
+          resourceId: input.resourceId ?? null,
+          oldValue: normalizeAuditJsonForHash(oldValue),
+          newValue: normalizeAuditJsonForHash(newValue),
+          metadata: normalizeAuditJsonForHash(metadata),
+          createdAt: createdAt.toISOString(),
+        };
+        const entryHash = computeAuditLogEntryHash(hashPayload);
 
-          await tx.auditLog.create({
-            data: omitUndefined({
-              id,
-              sequence,
-              previousHash,
-              entryHash,
-              hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
-              hashKeyId,
-              chainVersion: AUDIT_LOG_CHAIN_VERSION,
-              userId: input.userId,
-              action: input.action,
-              resource: input.resource,
-              resourceId: input.resourceId,
-              oldValue,
-              newValue,
-              metadata,
-              createdAt,
-            }),
-          });
-
-          return {
+        await tx.auditLog.create({
+          data: omitUndefined({
             id,
             sequence,
             previousHash,
@@ -208,11 +217,28 @@ export async function createAuditLogRecord(
             hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
             hashKeyId,
             chainVersion: AUDIT_LOG_CHAIN_VERSION,
+            userId: input.userId,
+            action: input.action,
+            resource: input.resource,
+            resourceId: input.resourceId,
+            oldValue,
+            newValue,
+            metadata,
             createdAt,
-          };
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+          }),
+        });
+
+        return {
+          id,
+          sequence,
+          previousHash,
+          entryHash,
+          hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+          hashKeyId,
+          chainVersion: AUDIT_LOG_CHAIN_VERSION,
+          createdAt,
+        };
+      });
 
       emitAuditLogIntegrityAnchor(anchor);
       const auditUserId = input.userId;
@@ -238,7 +264,7 @@ export async function createAuditLogRecord(
       return;
     } catch (error) {
       lastError = error;
-      if (isSerializableWriteConflict(error)) {
+      if (isRetryableWriteConflict(error)) {
         continue;
       }
       throw error;
