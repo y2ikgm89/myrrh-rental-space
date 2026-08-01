@@ -29,15 +29,20 @@ import type { EditorHeaderProps } from "./types";
 const styles = tv({
   slots: {
     // z-index は inline style で適用（Tailwind JIT は `z-[${VAR}]` を scan しないため CSS 未生成）
-    // `lg:left-64` はサイドバー幅 (`w-64`) 分のオフセット。これが無いと
-    // viewport 固定の半透明ヘッダーが暗色サイドバー (`bg-sidebar-bg`) の上に重なり、
-    // `bg-background/60` の合成結果が中間グレー (#989da4) になる。その上の
-    // `text-muted-foreground` (#5b646f) は 2.2:1 で AA 未満
-    // （実測: CI run 30677872134 の axe-admin-pages「投稿新規作成ページ」)。
-    // サイドバーの `transition-transform` で合成結果が揺れるため flaky に見えるが、
-    // 実体は恒常的な違反。本文側の `lg:pl-64` と同じ起点に揃えて重なり自体を無くす。
-    header:
-      "fixed top-0 left-0 right-0 lg:left-64 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+    // **不透明にする**。半透明のままだと背後の色と合成され、text-muted-foreground の
+    // 実効コントラストが背後次第で変わる。エディタは `useFullscreenMode` の
+    // `useLayoutEffect` で `enterFullscreen()` を呼ぶが、それが走る前
+    // （SSR HTML〜hydration の窓）は `ResponsiveSidebar` がまだ描画されており、
+    // viewport 固定の本ヘッダーが暗色サイドバー (`bg-sidebar-bg`) に重なる。
+    // その合成結果が #989da4 になり、slug の `text-muted-foreground` (#5b646f) が
+    // 2.2:1 まで落ちていた（実測: run 30677872134 の axe-admin-pages）。
+    // axe がこの窓を踏むかは実行タイミング次第なので flaky に見える。
+    //
+    // サイドバー幅のオフセット (`lg:left-64`) で重なりを避ける手は使えない。
+    // fullscreen 中はサイドバーが unmount され `DashboardShell` の `lg:pl-64` も
+    // 外れるため、定常状態で 256px の空白が残る（PR #1773 の退行）。
+    // 背後に依存しない不透明化が唯一レイアウトから独立した解。
+    header: "fixed top-0 left-0 right-0 border-b bg-background",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
     center: "flex-1 flex items-center justify-center",
