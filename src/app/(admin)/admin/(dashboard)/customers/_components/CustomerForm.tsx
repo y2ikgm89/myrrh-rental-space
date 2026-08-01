@@ -61,13 +61,13 @@ export function CustomerForm(): ReactElement {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerFormSchema });
     },
-    // **`<form action={action}>` を使わず、ここから自分で action を呼ぶ。**
+    // **hydration 後の submit は React に渡さず、ここから自分で action を呼ぶ。**
     //
-    // React 19 は `action` prop に関数を渡すと、その関数が resolve した時点で
-    // フォームを自動リセットする（公式 Server Functions:「React handles the
-    // submission and automatically resets the form upon success」）。
-    // `useActionState` の action は throw せず `SubmissionResult` を返すため、
-    // **サーバーが form-level エラーを返した応答もリセット対象**になる。
+    // React 19 は `action` prop に渡した関数が resolve した時点でフォームを
+    // 自動リセットする（公式 Server Functions:「React handles the submission and
+    // automatically resets the form upon success」）。`useActionState` の action は
+    // throw せず `SubmissionResult` を返すため、**サーバーが form-level エラーを
+    // 返した応答もリセット対象**になる。
     //
     // リセットで input が空になると conform は空の FormData で再検証し、
     // その結果（全必須項目が `Invalid input: expected string, received undefined`）
@@ -82,8 +82,19 @@ export function CustomerForm(): ReactElement {
     // ではない」ときだけ呼ばれる公式の拡張点（`createFormContext` が
     // `formData.has(INTENT)` で除外する）。ここで `preventDefault()` してから
     // `startTransition` で action を呼べば auto-reset は起きず、`lastResult` の
-    // 値とエラーがそのまま残る。引き換えに JS 無効時の progressive enhancement を
-    // 失うが、管理画面は Radix UI 前提で JS 必須のため実害はない。
+    // 値とエラーがそのまま残る。react-dom の form action listener は
+    // `nativeEvent.defaultPrevented` を見て `startHostTransition(…, null, formData)`
+    // （action = null）で抜けるため、**preventDefault 済みの submit で action が
+    // 二重に走ることはない**。conform の onSubmit は React の listener より先に
+    // 走る（client 検証が落ちた submit が Server Action に到達しないのと同じ順序）。
+    //
+    // **`action` prop は外さないこと。** `getFormProps` が返すのは
+    // id / onSubmit / noValidate / aria 属性だけで **`method` を含まない**。
+    // `action` を外すと SSR された form は action も method も持たず、hydration 前に
+    // submit したユーザーはネイティブ **GET** で現在の URL に飛ばされ、
+    // 氏名・メール・電話番号・住所が **クエリ文字列に載って履歴とアクセスログに残る**。
+    // `action` を残せば React が SSR 時に action / `method="POST"` / `$ACTION_ID`
+    // hidden を出力するので、hydration 前は POST fallback として正しく動く。
     //
     // @see https://react.dev/reference/rsc/server-functions
     onSubmit(event, { formData }) {
@@ -164,7 +175,7 @@ export function CustomerForm(): ReactElement {
   const formErrors = form.errors;
 
   return (
-    <form {...getFormProps(form)}>
+    <form {...getFormProps(form)} action={action}>
       <Card className="p-6">
         <div className="space-y-6">
           {/* 区分 */}
