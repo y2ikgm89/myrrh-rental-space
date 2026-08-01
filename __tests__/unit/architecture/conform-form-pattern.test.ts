@@ -33,8 +33,8 @@
  * 二重管理し、field-level エラー表示と `aria-invalid` / `aria-describedby` を
  * 落とす。house pattern は conform + Zod（`.claude/rules/forms-mutations.md`）。
  *
- * こちらは **ratchet**。既存の逸脱を allowlist に固定し、新規追加だけを止める。
- * allowlist から 1 件ずつ外していくのが解消手順。
+ * こちらは **ratchet**。allowlist は現在 **空**（全フォーム移行済み）で、
+ * 新しい手書きフォームが入った時点で落ちる。
  *
  * @see https://react.dev/reference/rsc/server-functions
  */
@@ -48,21 +48,13 @@ const APP_ROOT = join(ROOT, "src", "app");
 const HELPER = join(ROOT, "src", "shared", "lib", "forms", "conform-submit.ts");
 
 /**
- * conform 未使用のまま残っているフォーム（Tier 2 の解消対象）。
+ * conform 未使用のまま残っているフォーム。
  *
- * 追加するときは **なぜ conform に載らないのか**を書く。単に「まだ直していない」
- * ものは足さず、直してから消すこと。
+ * **現在ゼロ。** 追加するときは **なぜ conform に載らないのか**を書く。単に
+ * 「まだ直していない」ものは足さず、直してから消すこと。移行が済んだ entry は
+ * 「allowlist の entry は今も違反している」テストが落として消し忘れを防ぐ。
  */
-const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([
-  [
-    "src/app/(admin)/admin/(dashboard)/events/[id]/check-in/_components/ProxyRegistrationDialog.tsx",
-    "代行登録ダイアログ (7 項目)。action が MutationResult を返す形なので、移行には Server Action の signature 変更を伴う",
-  ],
-  [
-    "src/app/(admin)/admin/(dashboard)/events/[id]/check-in/_components/WalkInDialog.tsx",
-    "当日参加ダイアログ (7 項目)。同上",
-  ],
-]);
+const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([]);
 
 const HAS_FORM = /<form[\s>]/u;
 const IMPORTS_CONFORM = /from "@conform-to\/react"/u;
