@@ -208,7 +208,6 @@ export function ReservationForm({
   const [customerType, setCustomerType] = useState<CustomerType>(
     CustomerType.PERSONAL,
   );
-  const [turnstileToken, setTurnstileToken] = useState("");
   // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
   // Server Action側で送信までの経過時間が短すぎないか検証する。
   const [formRenderedAt] = useState(() => Date.now());
@@ -343,7 +342,8 @@ export function ReservationForm({
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
     if (lastResult?.status === "error") {
-      setTurnstileToken("");
+      // トークン欄は widget が所有するので、ここでは触らない。消費済みトークンの
+      // 張り直しは下の `turnstileRef.current?.reset()` が行う。
       const formErrors = lastResult.error?.[""];
       if (formErrors !== undefined && formErrors !== null && formErrors[0]) {
         dispatch({ type: "setError", message: formErrors[0] });
@@ -425,14 +425,6 @@ export function ReservationForm({
 
   function handleCustomerTypeChange(type: CustomerType) {
     setCustomerType(type);
-  }
-
-  function handleTurnstileVerify(token: string) {
-    setTurnstileToken(token);
-  }
-
-  function handleTurnstileExpire() {
-    setTurnstileToken("");
   }
 
   function toggleTermAgreement(id: string) {
@@ -572,11 +564,6 @@ export function ReservationForm({
         />
         <input
           type="hidden"
-          name={fields.turnstileToken.name}
-          value={turnstileToken}
-        />
-        <input
-          type="hidden"
           name={fields.formRenderedAt.name}
           value={formRenderedAt}
         />
@@ -636,8 +623,6 @@ export function ReservationForm({
             showOriginalPrice: discountSettings.showOriginalPrice,
           }}
           onCustomerTypeChange={handleCustomerTypeChange}
-          onTurnstileVerify={handleTurnstileVerify}
-          onTurnstileExpire={handleTurnstileExpire}
           onToggleTerm={toggleTermAgreement}
           onBack={() => goToStep(2)}
           refundPolicyLines={refundPolicyLines}
