@@ -90,14 +90,17 @@ function InquiryReplyFormInner({
     }
   }, [lastResult, router]);
 
-  // Turnstile token は一度の検証で消費される。エラー応答を受けたら widget を
-  // 張り直さないと再送できない。**conform のフィールドには触れない** — トークン欄は
-  // widget が `response-field-name` で所有しており、conform 経由で書き戻すと
-  // 再バリデーションがサーバーの form-level エラーを上書きして消す
-  // （詳細は turnstile-widget.tsx / `.claude/rules/forms-mutations.md`）。
+  // Turnstile token は一度の検証で消費されるので、**成功・失敗を問わず**応答を
+  // 受けたら widget を張り直す。このフォームは送信後も画面に residing したまま
+  // （完了画面に切り替わらず `router.refresh()` でスレッドだけ更新する）なので、
+  // 成功時に張り直さないと 2 通目が消費済み token を送り、本来通るはずの返信が
+  // Turnstile 検証失敗になる。**conform のフィールドには触れない** — トークン欄は
+  // widget が `response-field-name` で所有しており、書き戻すと再バリデーションが
+  // サーバーの form-level エラーを上書きして消す
+  // （詳細は turnstile-widget.tsx / .claude/rules/forms-mutations.md）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
-    if (lastResult?.status !== "error") return;
+    if (!lastResult) return;
     if (turnstileResetForResultRef.current === lastResult) return;
     turnstileResetForResultRef.current = lastResult;
     turnstileRef.current?.reset();
