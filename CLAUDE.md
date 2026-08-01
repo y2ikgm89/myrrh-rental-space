@@ -19,6 +19,14 @@
 | TypeScript | exact（`6.0.3`）                                                      | `package.json` devDependencies + `scripts/ensure-typescript-toolchain.ts` |
 | Zod        | exact（`4.4.3`）                                                      | `package.json` dependencies                                               |
 | Lexical    | exact（`0.46.0`、全 `@lexical/*` パッケージを同一バージョンに揃える） | `package.json` dependencies                                               |
+| Next.js    | **一時的に pre-release pin**（`16.3.0-preview.10`）                   | `package.json` dependencies                                               |
+
+**Next.js の preview pin は暫定措置**。上流 React の `useDeferredValue` stuck バグ
+（facebook/react#36134 / vercel/next.js#86055）で revalidate 付き Server Action 後に
+保存ボタンが永久 pending になる本番実害があり、修正は 16.3.0 のみ・16.2 系への
+backport は無いため preview を採った（PR #1786 に判断根拠と E2E 実測 0/10 失敗）。
+**`16.3.0` stable が出たら通常の exact pin へ戻す**（revert は `package.json` 1 行）。
+pre-release なので E2E が覆っていない領域の回帰は未知である点に留意する。
 
 ## コマンド
 
