@@ -227,15 +227,40 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   判定 marker は「features 設定ページへの `goto`」— URL 文字列の出現だけだと
   リンクの有無を assert するだけの read-only spec を誤検出する
 
-- **保存クリック後は「送信が始まった」ことを待ってから遷移する**。
-  `SubmitButton` は `isPending` の間 disabled になるので `await expect(save).toBeDisabled()`
-  を挟む。これを待たずに `page.goto` / `reload` すると **in-flight の Server Action が
+- **保存クリック後は Server Action の POST 応答を待ってから遷移する**。
+  これを待たずに `page.goto` / `reload` すると **in-flight の Server Action が
   中断される**。Prisma の書込は先にコミットされる一方 `afterSuccess` の
   `invalidateSiteWideCache`（`updateTag`）まで到達しないため、**DB は変わったのに
   `'use cache'` のタグが expire されない**。結果、公開ルートは `cacheLife`（feature
   modules は `"days"`）の間ずっと古い値を描画し続ける。
   実測: run 30631140902 で `feature-module-off-gate` の `/contact` が、contact を
-  OFF に永続化した後も 20 秒間 not-found 境界を出さなかった
+  OFF に永続化した後も 20 秒間 not-found 境界を出さなかった。
+
+  ```ts
+  await Promise.all([
+    // Server Action は現在のページ URL へ POST される
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === SETTINGS_PATH,
+      { timeout: SAVE_DISPATCH_TIMEOUT_MS },
+    ),
+    saveButton.click(),
+  ]);
+  ```
+
+  **`await expect(save).toBeDisabled()` で待ってはいけない**（2026-08-01 に
+  この規約自体を差し替えた）。`SubmitButton` が `isPending` の間 disabled になるのを
+  「送信が始まった」の代理指標にしていたが、**disabled は一瞬しか存在しない状態**
+  なので、保存が速く終わると窓を取り逃して偽の失敗になる。実測 run 30688324782:
+  `axe-admin-feature-disabled` が 15 秒間 34 回ポーリングして一度も観測できず、
+  機能モジュールの復元に失敗して cleanup 検証まで連鎖で落ちた。同 spec は
+  `chromium-feature-modules`（全 reader project の `dependencies`）なので、
+  **依存側の project が丸ごと未実行になる**という広い被害を出す。
+
+  POST 応答は**必ず発生する事象**なので取り逃しがなく、返った時点でサーバー側は
+  `afterSuccess` まで完了しているため、上記の危険を代理指標なしに直接排除できる
+
 - **保存の成否は toast でも pending 解除でも判定しない**。成功時は `useEffect` の
   `router.refresh()` が終わるまで `isPending` が戻らず、`expectedUpdatedAt` の楽観
   ロック競合時は成功 toast ではなく error toast（フォームエラーによっては無言）に
