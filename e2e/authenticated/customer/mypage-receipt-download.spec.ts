@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   customerReservationTargets,
   openCustomerReservationDetail,
@@ -25,6 +25,30 @@ test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } });
 
 const execFileAsync = promisify(execFile);
 const workspaceRoot = path.join(__dirname, "..", "..", "..");
+
+/**
+ * ダウンロードが失敗したときだけ呼ぶ診断。同じ URL を context の session で直接叩き、
+ * HTTP ステータスと本文の頭を失敗メッセージに載せる。
+ *
+ * route handler の早期 return は 404 / 403 / 429 を短い本文で返し分けるので、
+ * ステータスと本文が取れれば「セッション無し / 所有者不一致 / 顧客停止 /
+ * serialNo 単位の rate limit」のどれかまで一意に絞れる。
+ *
+ * 再取得が 200 を返した場合はそれ自体が情報になる（恒常的な拒否ではなく
+ * 一過性の競合だったことが分かる）。
+ */
+async function probeReceiptEndpoint(
+  page: Page,
+  downloadUrl: string,
+): Promise<string> {
+  try {
+    const probe = await page.request.get(downloadUrl);
+    const head = (await probe.text()).slice(0, 120);
+    return `再取得 GET ${downloadUrl} → ${probe.status().toString()} ${probe.statusText()} body="${head}"`;
+  } catch (error) {
+    return `再取得 GET ${downloadUrl} 自体が失敗: ${String(error)}`;
+  }
+}
 
 interface MypageReceiptFixture {
   readonly reservationId: string;
@@ -60,16 +84,6 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
       new RegExp(`/mypage/reservations/${fixture.reservationId}$`, "u"),
     );
 
-    // ダウンロード応答は **trace に残らない**（Playwright の仕様）。「canceled」の
-    // 一行だけでは 429 なのか 500 なのか分からず、実際そこで 2 度推測が入った。
-    // ステータスを spec 側で拾って失敗メッセージに載せる。
-    const receiptResponses: string[] = [];
-    page.on("response", (response) => {
-      if (response.url().includes("/api/receipts/")) {
-        receiptResponses.push(`${response.status()} ${response.url()}`);
-      }
-    });
-
     const downloadLink = page.getByRole("link", {
       name: "領収書をダウンロード",
     });
@@ -80,28 +94,32 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
       downloadLink.click(),
     ]);
 
+    // `suggestedFilename()` は **anchor の `download` 属性**から来るので、サーバーが
+    // 4xx を返していても一致する。成否の判定に使ってはいけない（残しているのは
+    // リンクの配線を見るため）。
     expect(download.suggestedFilename()).toBe(
       `receipt-${fixture.serialNo}.pdf`,
     );
 
     // **失敗理由を先に確定させる。** `failure()` はダウンロード完了まで待ってから
-    // 理由を返す公式 API（`path()` も待つが、`createReadStream()` は待たず、
-    // 失敗/中断済みなら「canceled」とだけ throw する）。
-    //
-    // 旧実装は `createReadStream()` を直に呼んでいたため、落ちても
-    // `download.createReadStream: canceled` の一行しか残らなかった。Playwright の
-    // trace はダウンロード応答を記録しないので、CI アーティファクトからも
-    // ステータスを追えず、原因を**推測**するしかない状態が続いていた
-    // （429 と見て専用 client IP を割り当てたのが上の test.use。それでも
-    // run 30685242600 まで再発している = 429 だけが原因ではない）。
-    // 理由を assertion のメッセージに載せて、次に落ちたときは推測を挟まず読める形にする。
+    // 理由を返す公式 API（`createReadStream()` は待たず、失敗/中断済みなら
+    // 「canceled」とだけ throw する）。
+    const failure = await download.failure();
+
+    // `failure()` が返すのは「canceled」だけで HTTP ステータスを含まない。
+    // **`page.on("response")` でも取れない** — Playwright はダウンロードを通常の
+    // ネットワークイベントに載せないため（trace に応答が残らないのと同じ理由）。
+    // 実測 run 30688324782 でこの listener は「(記録なし)」しか出せなかった。
+    // 唯一確実なのは同じ URL を context の session で叩き直すこと。`page.request` は
+    // storage state と `test.use` の extraHTTPHeaders（上の client IP）を共有するので、
+    // ブラウザのダウンロードと同じ条件で再現できる。
+    // 失敗時にしか実行しないので、成功パス（PDF 生成に実測 10 秒前後かかる）は遅くならない。
+    const diagnosis =
+      failure === null ? "" : await probeReceiptEndpoint(page, download.url());
+
     expect(
-      await download.failure(),
-      `領収書 PDF のダウンロードが失敗した。受領書 API の応答: ${
-        receiptResponses.length > 0
-          ? receiptResponses.join(" / ")
-          : "(記録なし)"
-      }`,
+      failure,
+      `領収書 PDF のダウンロードが失敗した。${diagnosis}`,
     ).toBeNull();
 
     // 完了を保証してから読む（公式テストと同じ `path()` → 読み取りの順序）。
