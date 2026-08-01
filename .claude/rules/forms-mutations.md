@@ -39,6 +39,81 @@ paths:
 成功検出は resetForm の設定で変わる: `resetForm: true` → `lastResult.initialValue === null`、
 `resetForm: false` → `lastResult.status === "success"`。
 
+## React 19 の form auto-reset がサーバーのエラーを消す（最重要）
+
+React 19 は `action` prop に渡した関数が resolve した時点でフォームを自動リセットする
+（公式 Server Functions:「React handles the submission and automatically resets the form
+upon success」）。`useActionState` の action は **throw せず `SubmissionResult` を返す**ため、
+**サーバーが form-level エラーを返した応答もリセット対象**になる。
+
+リセットで input が空になると conform は空の FormData で再検証し、その field errors が
+**サーバーのメッセージを上書きして消す**。実測（CI run 30695870083 の trace）: VIEWER の
+顧客作成でサーバーが `customerのcreate権限がありません` を返し
+`aria-describedby="customer-create-error"` まで付いた +76ms 後の状態から、+236ms でその
+表示が消え、空欄由来の `Invalid input: expected string, received undefined` だけが残った。
+**利用者は理由を知れないまま入力も全て失う。** 公開側では「このタイムスロットは満員です」
+等の DomainError が同じ経路で消える。
+
+対策は conform の `onSubmit` から自分で action を呼ぶこと:
+
+```tsx
+const [lastResult, action] = useActionState(submitX, undefined);
+const [form, fields] = useForm({
+  lastResult,
+  onSubmit: dispatchWithoutFormReset(action), // src/shared/lib/forms/conform-submit.ts
+  // ...
+});
+return (
+  <form {...getFormProps(form)} action={action}>
+    …
+  </form>
+);
+```
+
+- conform の `onSubmit` は「client 検証を通過 **かつ** intent submission ではない」ときだけ
+  呼ばれる公式の拡張点（`createFormContext` が `formData.has(INTENT)` で除外する）
+- react-dom の form action listener は `nativeEvent.defaultPrevented` を先に見て
+  `startHostTransition(…, null, formData)`（action = null）で抜けるため、
+  **preventDefault 済みの submit で action が二重に走ることはない**
+- **`action` prop は外さない。** `getFormProps` が返すのは id / onSubmit / noValidate /
+  aria 属性だけで **`method` を含まない**。外すと SSR された form は action も method も
+  持たず、hydration 前に submit した利用者は**ネイティブ GET** で現在の URL に飛ばされ、
+  氏名・メールアドレス・電話番号が**クエリ文字列に載って履歴とアクセスログに残る**
+- ref の capture 等で helper に渡せないときは同じ処理を `onSubmit(event, { formData })` の
+  inline で書く（`CreatePageDialog` が実例。ref を触る関数を helper に渡すと
+  `react-hooks/refs` が「render 中に ref を読みうる」で落ちる）
+- 一括置換で拾えない配線に注意。`action={isInteractive ? formAction : undefined}` の
+  条件式は `action={<識別子>}` の grep をすり抜け、公開の問い合わせフォームだけが
+  取り残された（#1802）
+
+gate: `__tests__/unit/architecture/conform-form-pattern.test.ts`（**allowlist なしで 0 件強制**、
+`<form action>` の件数と guard 件数を突き合わせるので 1 ファイル複数フォームでも漏れない）
+
+## サーバーの拒否を捨てない
+
+`executeConformMutation` を通す action の結果を `const [_state, formAction] = useActionState(…)`
+で捨てると、**サーバーが返した拒否理由を画面に出す手段が無くなる**。実例: 繰返し予約の
+3 択キャンセルは権限拒否・ドメインエラー・楽観ロック競合のすべてが**無言**で、操作者には
+「押したのに何も起きない」としか見えなかった（#1803 で修正）。
+
+入力が hidden だけのフォームでも `useForm` に載せ、`form.allErrors` をまとめて描画する。
+form-level と field-level を分ける意味があるのは、利用者が個々の欄を直せるときだけ。
+
+## 手書きフォームを増やさない
+
+`useState` + `if (!name) toast.error(…)` は Zod schema と検証を二重管理し、field-level
+エラー表示と `aria-invalid` / `aria-describedby` を落とす。**テキスト入力を持つフォームは
+conform を使う**（`<input>` は `type` 省略時 HTML 既定で `text` なので、これも対象）。
+
+既存の逸脱 5 件は上記 gate の allowlist に「なぜ移行できないか」付きで固定してある。
+**allowlist は減る方向にしか動かさない** — 移行が済んだ entry を消し忘れると、後から
+conform を外したときに残骸が黙って免除する（gate 側で検出するようにしてある）。
+
+conform 化が不要なのは「client validation する入力が無い」ケースだけ:
+`redirect` しか返さない OAuth 開始フォーム、hidden token だけを POST する Server
+Component（`receipts/[serialNo]/download`。JS 無効時の動作と token を URL に残さない
+設計が意図的なので client component 化しない）、select / toggle しか持たないダイアログ。
+
 ## admin mutation
 
 - 標準ラッパーは `executeAdminMutationResult`（`@/admin/lib/admin-action`）。
