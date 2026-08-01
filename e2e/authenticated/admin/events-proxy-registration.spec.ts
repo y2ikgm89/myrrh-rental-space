@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { deleteEventRegistrationsByEmail } from "../../helpers/event-registration-fixture";
 
 /**
  * T10 admin proxy registration の smoke E2E。
@@ -22,6 +23,19 @@ import { test, expect } from "@playwright/test";
 test.describe.configure({ mode: "serial" });
 
 const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
+
+/** seed に存在しない、この spec 専用の代行登録メール（復元 hook の削除キー）。 */
+const PROXY_REGISTRATION_EMAIL = "proxy@example.com";
+
+// 代行登録は seed に無い `EventRegistration` を作り、対象イベントのスロット定員を
+// 実際に消費する（`invalidateEventCaches()` 経由で公開側の残り枠表示にも出る）。
+// serial の retry は describe を先頭からやり直すため、残したままだと 2 周目に
+// 「代行登録テスト太郎 の出席を記録」が 2 件一致して strict mode violation になり、
+// retry が構造的に成功しなくなる。復元は無条件に hook で行う
+// （規約: `.claude/rules/testing-e2e.md`）。
+test.afterEach(async () => {
+  await deleteEventRegistrationsByEmail(PROXY_REGISTRATION_EMAIL);
+});
 
 /**
  * seed の SINGLE_OCCURRENCE イベント（ヨガ体験会）を使う。
@@ -81,7 +95,7 @@ test.describe("admin proxy registration (T10)", () => {
       .fill("代行登録テスト太郎");
     await dialog
       .getByLabel("メール", { exact: false })
-      .fill("proxy@example.com");
+      .fill(PROXY_REGISTRATION_EMAIL);
 
     // 送信 → toast で成功通知
     await dialog.getByRole("button", { name: "事前登録を確定" }).click();
@@ -124,9 +138,9 @@ test.describe("admin proxy registration (T10)", () => {
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
 
-    // 1 番目のテストが「代行登録テスト太郎」を作るため、serial 実行の 2 番目では
-    // 出席記録ボタン（aria-label「代行登録テスト太郎 の出席を記録」）と
-    // 部分一致してしまう。1 番目と同様に完全一致で絞る（PR #1701 Codex 指摘）。
+    // 1 番目のテストが作る「代行登録テスト太郎」行は afterEach で削除されるが、
+    // 出席記録ボタン（aria-label「代行登録テスト太郎 の出席を記録」）が残る状況では
+    // CTA と部分一致する。1 番目と同様に完全一致で絞る（PR #1701 Codex 指摘）。
     await page.getByRole("button", { name: "代行登録", exact: true }).click();
 
     const dialog = page.getByRole("dialog");

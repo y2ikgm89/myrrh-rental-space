@@ -3,6 +3,7 @@ import { visibleByText } from "../../helpers/streaming-safe-locators";
 import {
   ensureGuestCustomerForDevEmail,
   issueCustomerMergeTokenForE2E,
+  restoreGuestCustomerFixture,
 } from "../../helpers/customer-merge-fixture";
 
 /**
@@ -21,6 +22,15 @@ test.describe("customer merge — self-serve flow", () => {
   // 消費されていれば作り直す（冪等）。
   test.beforeAll(async () => {
     await ensureGuestCustomerForDevEmail();
+  });
+
+  // merge は guest Customer を物理削除し、その予約を dev member customer へ
+  // 付け替える。戻さないと (1) mypage の統合バナーが他 spec から消えたまま、
+  // (2) seed が marker 予約を作り直して dev customer の予約履歴が run ごとに
+  // 1 件ずつ増え続ける。beforeAll の冪等化だけでは (2) は戻らないため、
+  // 復元は無条件に hook で行う（規約: `.claude/rules/testing-e2e.md`）。
+  test.afterEach(async () => {
+    await restoreGuestCustomerFixture();
   });
 
   test("banner shows self-serve merge CTA", async ({ page }) => {

@@ -22,38 +22,50 @@ import { join, relative, sep } from "node:path";
  * `serial-db-test-detection.ts` が content marker + opt-out で serial bucket を
  * 判定するのと同型）。
  *
- * 対象は 2 形:
+ * 対象は 3 形:
  *
  * - `test.describe.serial(...)`
  * - `test.describe.configure({ mode: "default" })` — 順番に実行しつつ、失敗した
  *   test を**個別に**リトライする公式モード。`feature-module-off-gate` は
  *   「1 回の run で全 module の可否を出す」ため serial からこちらへ移した
  *   （serial は 1 本落ちると後続を全 skip する）。
- *
- * ## 既知の穴: `test.describe.configure({ mode: "serial" })`
- *
- * configure 経由の `mode: "serial"` は**意図的にマーカーへ含めていない**。現状
- * `events.spec.ts` / `events-broadcast.spec.ts` / `events-proxy-registration.spec.ts` /
- * `customer-merge.spec.ts` / `inquiry-reply.spec.ts` の 5 本がこの形で、いずれも
- * `afterEach` / `afterAll` を持たない。含めた瞬間 5 本が同時に落ちるため、
- * 「各 spec が本当にグローバル可変状態を戻すべきか」を 1 本ずつ検証したうえで
- * 復元 hook を足すか `RESTORE_EXEMPT` に理由付きで登録する、別の変更で塞ぐ。
- * 検証なしの一括 exempt はこの gate を空洞化させるのでやらない。
+ * - `test.describe.configure({ mode: "serial" })` — configure 経由の serial 宣言。
+ *   serial の retry は describe を**先頭からやり直す**ため、復元漏れは retry 自体を
+ *   壊す（`events-proxy-registration` は残った申込行が 2 周目に strict mode
+ *   violation を起こし、retry が構造的に成功しなくなる）。
  */
 
 const root = process.cwd();
 const e2eRoot = join(root, "e2e");
 
+/*
+ * マーカーは全て **行頭**（インデントのみ許容）で照合する。JSDoc / `//` の解説文に
+ * 現れた同じ文字列を拾わないため。実例: `rbac-viewer-write-blocked.spec.ts` は
+ * 「role が固定になったため `test.describe.configure({ mode: "serial" })` も不要」と
+ * 本文で説明しており、行頭固定にしないと configure 呼び出しが 1 つも無い spec を
+ * 順序固定 spec として検出してしまう（`blacklist-reservation-block.spec.ts` /
+ * `events-registration-toctou-capacity-1.spec.ts` にも同種の言及がある）。
+ * 実コードの宣言は prettier が必ず行頭（+インデント）に置く。
+ */
+
 /** prettier が `test.describe` と `.serial(` を改行分割するため `\s*` を挟む。 */
-const SERIAL_DESCRIBE = /test\.describe\s*\.serial\s*\(/u;
+const SERIAL_DESCRIBE = /^[ \t]*test\.describe\s*\.serial\s*\(/mu;
 
 /** `test.describe.configure({ … mode: "default" … })`（複数行整形にも耐える）。 */
 const DEFAULT_MODE_DESCRIBE =
-  /test\.describe\s*\.configure\s*\(\s*\{[^}]*\bmode:\s*"default"/u;
+  /^[ \t]*test\.describe\s*\.configure\s*\(\s*\{[^}]*\bmode:\s*"default"/mu;
+
+/** `test.describe.configure({ … mode: "serial" … })`。 */
+const SERIAL_MODE_DESCRIBE =
+  /^[ \t]*test\.describe\s*\.configure\s*\(\s*\{[^}]*\bmode:\s*"serial"/mu;
 
 /** `fullyParallel` を describe 単位で打ち消している = 順序に依存する spec。 */
 function isSequencedSpec(source: string): boolean {
-  return SERIAL_DESCRIBE.test(source) || DEFAULT_MODE_DESCRIBE.test(source);
+  return (
+    SERIAL_DESCRIBE.test(source) ||
+    DEFAULT_MODE_DESCRIBE.test(source) ||
+    SERIAL_MODE_DESCRIBE.test(source)
+  );
 }
 
 /**
@@ -70,6 +82,10 @@ const RESTORE_EXEMPT = new Map<string, string>([
   [
     "e2e/public/stripe-webhook-dedup-replay.spec.ts",
     "StripeEvent は append-only の dedup 台帳。直列化は event.id の重複配信契約を検証するためで、元に戻すべき可変状態を持たない",
+  ],
+  [
+    "e2e/authenticated/admin/events-broadcast.spec.ts",
+    "配信フォームの唯一の書込は executeAdminMutationResult の AuditLog（絶対規約 9 で append-only）。broadcastEventAction は自コメントどおり event / registrations を変更せず、getEventBroadcastPayload は read-only、実送信を担う src/shared/lib/email/ は Prisma を一切 import しない（E2E は Resend 未設定で silent no-op）。直列化は admin event route の遅延コンパイル対策",
   ],
 ]);
 
@@ -99,7 +115,7 @@ describe("E2E global state restore", () => {
     expect(findSerialSpecs().length).toBeGreaterThan(0);
   });
 
-  test("2 形のマーカーがそれぞれ現役（片方だけ腐っても気付ける）", () => {
+  test("3 形のマーカーがそれぞれ現役（1 つだけ腐っても気付ける）", () => {
     const sources = listSpecFiles(e2eRoot).map((file) =>
       readFileSync(file, "utf8"),
     );
@@ -109,6 +125,9 @@ describe("E2E global state restore", () => {
     ).toBeGreaterThan(0);
     expect(
       sources.filter((s) => DEFAULT_MODE_DESCRIBE.test(s)).length,
+    ).toBeGreaterThan(0);
+    expect(
+      sources.filter((s) => SERIAL_MODE_DESCRIBE.test(s)).length,
     ).toBeGreaterThan(0);
   });
 
