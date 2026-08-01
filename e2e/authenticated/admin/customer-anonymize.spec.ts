@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 
 /**
  * 管理画面 — 顧客匿名化 E2E (Phase 7 PR11)

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 import { eventFixtures } from "../fixtures";
 
 test.describe("イベント詳細 - 開催方式別申込 UI", () => {

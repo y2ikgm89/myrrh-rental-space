@@ -3,7 +3,7 @@
  * 認証は chromium-admin project の storageState で処理。
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 
 test.describe("Admin dashboard shell", () => {

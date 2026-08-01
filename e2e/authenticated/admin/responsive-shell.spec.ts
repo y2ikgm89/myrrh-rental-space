@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 import { visibleById } from "../../helpers/streaming-safe-locators";
 

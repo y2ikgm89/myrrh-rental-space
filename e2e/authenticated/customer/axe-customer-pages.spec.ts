@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../../fixtures/e2e-test";
 import AxeBuilder from "@axe-core/playwright";
 import type { Result } from "axe-core";
 import { urls } from "../../fixtures";

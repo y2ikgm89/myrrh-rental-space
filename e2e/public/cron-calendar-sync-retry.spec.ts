@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 
 /**
  * E2E-05: GCal series retry cron - HTTP contract regression gate

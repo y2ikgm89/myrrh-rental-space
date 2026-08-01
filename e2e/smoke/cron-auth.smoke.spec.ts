@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 
 /**
  * Smoke: cron endpoint 認可ガード (task #3 cron-e2e)

@@ -1,16 +1,16 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 import {
   customerReservationTargets,
   openCustomerReservationDetail,
 } from "./reservation-test-helpers";
 
-// 領収書 PDF の取得は proxy の `apiRateLimiter`（100/分/IP）の共有バケットに乗る。
-// 飽和すると 429 が返る（同 run 30607885778 で同 project の calendar-download が
-// 明示的に 429 で落ちていた）。割当表は `.claude/rules/testing-e2e.md`。
-test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } });
+// 領収書 PDF の取得は proxy の `apiRateLimiter`（100/分/IP）に乗る。IP を共有して
+// いた頃は飽和すると 429 が返っていた（同 run 30607885778 で同 project の
+// calendar-download が明示的に 429 で落ちた）。client IP は
+// `e2e/fixtures/e2e-test.ts` の fixture がテストごとに配る。
 
 /**
  * マイページ — 会員 session 経由の領収書 PDF ダウンロード E2E (Phase 7 PR8)
@@ -94,8 +94,8 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
     // 本当の原因を rate limit と誤認する）。
     //
     // よって **リクエストは 1 回だけ**にし、その 1 回からステータスを取る。
-    // `page.request` は storage state と `test.use` の extraHTTPHeaders（上の
-    // client IP）を共有するので、ブラウザが送るのと同じ条件になる。
+    // `page.request` は storage state と context の extraHTTPHeaders（fixture が
+    // 配った client IP）を共有するので、ブラウザが送るのと同じ条件になる。
     const response = await page.request.get(href);
     expect(
       response.status(),

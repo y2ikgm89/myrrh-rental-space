@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import type { E2ETestOptions } from "./e2e/fixtures/e2e-test";
 import { testUsers } from "./e2e/fixtures/test-data";
 import { resolveTestDatabaseUrl } from "./scripts/test-db-url";
 
@@ -55,11 +56,18 @@ const e2eWebServerCommand = [
  *   DB を書き換える特定の describe は各 spec 内で `test.describe.serial(...)`
  *   を局所適用して隔離する。
  *
+ * client IP:
+ *   rate limiter の token になる `x-forwarded-for` は `e2e/fixtures/e2e-test.ts`
+ *   の `extraHTTPHeaders` fixture がテスト単位で配る。**この config で
+ *   `extraHTTPHeaders` を設定しない** — option を上書きすると fixture ごと
+ *   置き換わり全テストが IP を共有する（`x-e2e-admin-identity` は
+ *   `adminIdentity` option 経由で合成する）。
+ *
  * @see https://playwright.dev/docs/test-configuration
  * @see https://playwright.dev/docs/test-parallel
  * @see https://playwright.dev/docs/auth
  */
-export default defineConfig({
+export default defineConfig<E2ETestOptions>({
   testDir: "./e2e",
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -223,18 +231,21 @@ export default defineConfig({
     /**
      * VIEWER role 専用 project。
      *
-     * `x-e2e-admin-identity: viewer` を全リクエストに付けることで、既定の
+     * `adminIdentity: "viewer"` を指定すると `e2e/fixtures/e2e-test.ts` の
+     * fixture が `x-e2e-admin-identity: viewer` を全リクエストに載せ、既定の
      * SUPER_ADMIN とは別の専用ユーザーとして解決される
      * (`src/shared/domain/admin-auth/e2e-identity.ts`)。共有 User 行の role を
      * 実行時に書き換える旧方式は fullyParallel 下で他 spec に漏れていたため廃止した。
      * identity が project 単位で固定なので chromium-admin と並列実行して安全。
+     *
+     * 生の `extraHTTPHeaders` で渡すと client IP fixture を潰すため option を使う。
      */
     {
       name: "chromium-admin-viewer",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/admin.json",
-        extraHTTPHeaders: { "x-e2e-admin-identity": "viewer" },
+        adminIdentity: "viewer",
       },
       dependencies: ["setup-admin", "chromium-feature-modules"],
       testMatch: /e2e\/authenticated\/admin-viewer\/.*\.spec\.ts/,

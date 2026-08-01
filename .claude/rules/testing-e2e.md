@@ -81,44 +81,52 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 - 認証は setup project + storageState（`playwright/.auth/*.json`）。
   admin は cookie ではなく IAP 模擬（ADMIN_TEST_IAP_EMAIL）で成立している
 - **admin の role を切り替えたいときは専用 project を足す**。`chromium-admin-viewer`
-  のように `extraHTTPHeaders: { "x-e2e-admin-identity": "<label>" }` を付けると
-  専用ユーザーとして解決される（ラベル→email の SSoT は
+  のように `use: { adminIdentity: "<label>" }` を付けると `x-e2e-admin-identity`
+  ヘッダーが載り、専用ユーザーとして解決される（ラベル→email の SSoT は
   `src/shared/domain/admin-auth/e2e-identity.ts`、upsert は
   `scripts/e2e/ensure-admin-user.ts`、drift gate は
   `__tests__/unit/architecture/e2e-admin-identity-sync.test.ts`）。
   **共有 User 行の `role` を実行時に書き換えてはいけない** — `fullyParallel: true` +
   2 workers では他 spec に漏れ、`settings.spec.ts` の権限カードが消える /
   RBAC spec の拒否が出ない、という双方向の偽陽性になる（CI run 30577092619）
-- **`/api` を `request` で直接叩く spec は専用 client IP を割り当てる**。proxy の
-  `apiRateLimiter`（100/分/IP）に E2E 免除は無く、既定では全 spec が同一 IP を共有する
-  ため、飽和した窓に入った request が 429 を食う（実測: run 30593381788 の
-  `guest-receipt-single-use`、run 30607885778 の `calendar-download`）。
-  `test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.N" } })` を置く
-  （page と `request` の両方に効く）。割当は衝突すると無言で再発するため
-  `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts` が機械固定する:
+- **`test` は `e2e/fixtures/e2e-test.ts` から import する。`@playwright/test` を
+  直接 import してよいのはそのファイルだけ。** 共有 test は `extraHTTPHeaders`
+  option を override し、**テストごとに一意な client IP**（`x-forwarded-for`）を
+  page と `request` fixture の両方に載せる。spec 側に書くことは何も無い。
 
-  | 範囲                   | 用途                                                                                                                                                                       |
-  | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.3` = events、`.4` = mypage-receipt-download、`.5` = guest-receipt-single-use、`.6` = calendar-download、`.7` = calendar-api、`.8` = inquiry-reply |
-  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                                                                      |
+  rate limiter は IP をトークンにするため、既定のままだと `fullyParallel` ×
+  2 workers の全 spec が同じバケットを共有し、窓の狭い limiter から順に飽和する:
 
-  **`/api` だけの話ではない。公開フォームの Server Action はもっと狭い窓を使う。**
-  `checkActionRateLimit(formSubmitRateLimiter)` は **5 リクエスト/分/IP** で、
-  `apiRateLimiter`（100/分）の 20 分の 1。`getContextClientIp` による動的割当は
-  `signInAsAdmin` 経由（admin project）にしか無いため、**顧客・公開 spec は既定で
-  全 spec と同一 IP を共有する**。フォーム送信を伴う spec が増えるほど窓を奪い合う。
-  実測 (run 30681869018): `inquiry-reply` の返信フォームが
-  `リクエストが多すぎます` を出したまま 3 attempt 全滅した（**リトライも同じ 1 分窓に
-  入るので retry では救えない**）。gate はこの経路をまだ機械検出しないので、
-  フォーム送信を伴う spec を足すときは静的 IP の要否を手で判断する。
+  | limiter                    | 予算        | 経路                           |
+  | -------------------------- | ----------- | ------------------------------ |
+  | `formSubmitRateLimiter` 等 | 5 / 分 / IP | 公開フォームの Server Action   |
+  | `authMutationRateLimiter`  | 20 / 15 分  | Better Auth の sign-in/sign-up |
+  | `apiRateLimiter`           | 100 / 分    | proxy が `/api/*` に適用       |
 
-  **`request` 経由だけでなくブラウザ経由も対象**。`<a download href="/api/...">` を
-  クリックして `waitForEvent("download")` で待つ spec は、本文に `/api/` も `request.*` も
-  現れない（href はアプリ側が生成する）ため見落としやすい。gate は download 待ちを
-  シグナルとして扱う。
+  実測: run 30593381788 `guest-receipt-single-use`、run 30607885778
+  `calendar-download`、run 30681869018 `inquiry-reply`（返信フォームが
+  `リクエストが多すぎます` のまま 3 attempt 全滅。**リトライも同じ 1 分窓に入るので
+  retry では救えない**）。
 
-  対象は `apiRateLimiter`（100/分）に当たる `/api` のみ。`/api/live` は完全除外、
-  `/api/webhooks` `/api/cron` は別枠の `infraEndpointRateLimiter`（300/分）なので不要。
+  **やってはいけないこと**: `test.use({ extraHTTPHeaders: ... })` /
+  project `use.extraHTTPHeaders` / `x-forwarded-for` の直書き。option を上書きすると
+  fixture ごと消え、その spec だけ無言で IP 共有に戻る。ヘッダーを足したいときは
+  共有 test に option を生やして合成する（`adminIdentity` がその実例）。
+
+  **手動生成した context は fixture の対象外**。`browser.newContext()` /
+  `browser.newPage()` で作った context には `primeRequestContext(context)`
+  （同じく `e2e/fixtures/e2e-test.ts`）を明示的に呼ぶ。
+
+  割当は RFC 5737 TEST-NET-3（`203.0.113.1`〜`.254`）を `parallelIndex` で
+  レーン分割して配る（採番カウンタは worker プロセスごとのモジュール状態なので、
+  レーンを分けないと worker 間で同じ値が出る）。ロジックの SSoT は
+  `e2e/helpers/client-ip.ts`、gate は
+  `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts`。
+
+  **旧方式（spec ごとの静的割当）は廃止した。** 「専用 IP が要る spec」を本文から
+  推定する gate は、シグナルを `request.*` → `waitForEvent("download")` →
+  Server Action と足すたびに新しい漏れが CI で見つかった。推定をやめて全テストに
+  配る構造にしたので、gate も「共有 test を迂回していないか」だけを見る。
 
   XFF が client IP として採用されるのは loopback host のときだけ
   （`rate-limit.ts` の `canUseDevelopmentProxyFallback`）なので本番の信頼境界は不変。

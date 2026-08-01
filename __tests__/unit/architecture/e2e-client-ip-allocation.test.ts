@@ -3,135 +3,177 @@ import { readFileSync } from "node:fs";
 import { join, sep } from "node:path";
 import { Glob } from "bun";
 
+import {
+  CLIENT_IP_HEADER,
+  CLIENT_IP_PREFIX,
+  FIRST_CLIENT_IP_OCTET,
+  LAST_CLIENT_IP_OCTET,
+  clientIpForSlot,
+  clientIpLaneSize,
+  nextClientIp,
+} from "../../../e2e/helpers/client-ip";
+
 /**
- * E2E の client IP（`x-forwarded-for`）割当が衝突しないことの gate。
+ * E2E の client IP（`x-forwarded-for`）割当の gate。
  *
  * ## なぜ
  *
- * proxy の `apiRateLimiter` は 100 req/分/IP で `/api/*` に効き、E2E 免除は無い
- * （規約上 `CI=true` をバイパス条件にしないため、意図的に無い）。`fullyParallel`
- * かつ 2 worker で走る E2E は既定だと**全 spec が同一 IP**を共有するので、
- * `/api` を直接叩く spec は飽和した窓で 429 を食う。
+ * サーバー側の rate limiter は IP をトークンにする。既定のままだと
+ * `fullyParallel` × 2 workers の全 spec が同一 IP を共有し、狭い窓を持つ
+ * limiter から順に飽和する（`formSubmitRateLimiter` は **5 req/分/IP**、
+ * `apiRateLimiter` は 100 req/分/IP。E2E 免除は規約上意図的に無い）。
+ * リトライも同じ窓に入るので retry では救えない。
  *
- * 実測: CI run 30593381788 で `guest-receipt-single-use`、
- * run 30607885778 で `calendar-download` の 2 件が 429 で落ちた。
+ * 実測: run 30593381788 `guest-receipt-single-use` / run 30607885778
+ * `calendar-download` / run 30681869018 `inquiry-reply`（3 attempt 全滅）。
  *
- * 対処は spec ごとに専用 IP を割り当てること（`test.use` の `extraHTTPHeaders`
- * は page と `request` の両方に効く）。ただし**同じ IP を 2 spec が使うと
- * バケットを共有してしまい、無言でこのバグが再発する**。それを防ぐ。
+ * ## 何を強制するか（構造で、heuristic ではなく）
  *
- * ## 割当規約
+ * 旧 gate は「専用 IP が要る spec」を本文から**推定**していた。判定シグナルは
+ * `request.*` → `waitForEvent("download")` → Server Action と後追いを重ねたが、
+ * そのたびに漏れが CI で見つかった（推定である以上、次の漏れも必ず来る）。
  *
- * - 静的割当（spec 単位）: `203.0.113.1`〜`.9`
- * - 動的割当（browser context 単位）: `203.0.113.10`〜`.250`
- *   （`e2e/helpers/admin-auth.ts` の `getContextClientIp`）
+ * 現行は推定をやめ、**全テストに無条件で一意な IP を配る**。適用点は
+ * `e2e/fixtures/e2e-test.ts` の `extraHTTPHeaders` fixture ただ 1 箇所なので、
+ * gate は「その 1 箇所を迂回していないか」だけを見ればよい:
  *
- * いずれも RFC 5737 の TEST-NET-3（ドキュメント用に予約された範囲）。
+ * 1. `e2e/**` から `@playwright/test` を import してよいのは共有 test 定義だけ
+ * 2. spec / setup は必ずその共有 test を import する
+ * 3. `extraHTTPHeaders` / `x-forwarded-for` の直書きが他所に無い
+ *    （option を上書きすると fixture ごと消えて全テストが IP を共有する）
+ * 4. 割当ロジック自体が範囲内かつ worker 間で衝突しない
  */
 
 const root = process.cwd();
 
-const DYNAMIC_RANGE_START = 10;
+/** `@playwright/test` の import と client IP 割当を独占する共有 test 定義 */
+const SHARED_TEST_MODULE = "e2e/fixtures/e2e-test.ts";
+
+/** 割当ロジック本体（純粋関数のみ。Playwright に依存しない） */
+const CLIENT_IP_MODULE = "e2e/helpers/client-ip.ts";
 
 function listE2EFiles(): string[] {
   const glob = new Glob("e2e/**/*.ts");
   return [...glob.scanSync(root)].map((p) => p.split(sep).join("/")).sort();
 }
 
-/** spec が `test.use` で静的に固定した IP を集める（helper の動的割当は除く） */
-function collectStaticIpAssignments(): Map<string, string[]> {
-  const byIp = new Map<string, string[]>();
-
-  for (const rel of listE2EFiles()) {
-    const source = readFileSync(join(root, ...rel.split("/")), "utf8");
-    for (const match of source.matchAll(
-      /"x-forwarded-for":\s*"(\d+\.\d+\.\d+\.\d+)"/gu,
-    )) {
-      const ip = match[1];
-      if (ip === undefined) continue;
-      byIp.set(ip, [...(byIp.get(ip) ?? []), rel]);
-    }
-  }
-
-  return byIp;
+function read(rel: string): string {
+  return readFileSync(join(root, ...rel.split("/")), "utf8");
 }
 
 /**
- * proxy が `apiRateLimiter`（100/分/IP）を適用する `/api` パスかどうか。
+ * `extraHTTPHeaders: ...` の**代入**だけを拾う。
  *
- * `/api/live` は完全除外、`/api/webhooks` と `/api/cron` は別枠の
- * `infraEndpointRateLimiter`（300/分）なので、専用 IP を必須にしない
- * （`src/proxy.ts` の `isLiveProbeEndpoint` / infra 判定）。
+ * 行頭固定にはできない — 最も危険な形が `test.use({ extraHTTPHeaders: {...} });`
+ * の 1 行書きで、行頭は `test.use({` になるため。代わりに「直前が backtick /
+ * 識別子でない」+「直後が `:`」で code と散文を分ける（docstring は
+ * `` `extraHTTPHeaders` `` と書くので colon が付かない）。
  */
-function usesSharedApiLimiter(source: string): boolean {
-  // ブラウザ経由で /api を叩く経路。`<a download href="/api/...">` のクリックを
-  // `waitForEvent("download")` で待つ spec は、**spec 本文に `/api/` も
-  // `request.*` も現れない**（href はアプリ側が生成する）。`request.*` だけを
-  // 見ていた旧実装はこれを完全に取りこぼし、`mypage-receipt-download` が
-  // 割当漏れのまま 429 で落ち続けていた（CI run 30607885778 / 30621350538）。
-  // 本 repo のダウンロードは全て `/api/*` route handler が返すので、
-  // download 待ちを共有 limiter 利用のシグナルとして扱う。
-  if (/waitForEvent\s*\(\s*["`']download["`']\s*\)/u.test(source)) return true;
+function assignsExtraHttpHeaders(source: string): boolean {
+  return /(?<![`\w.])extraHTTPHeaders\s*:/u.test(source);
+}
 
-  const callsApiViaRequest =
-    /request\.(get|post|put|delete|fetch)\s*\(/u.test(source) &&
-    source.includes("/api/");
-  if (!callsApiViaRequest) return false;
-
-  const apiPaths = [
-    ...source.matchAll(/["`'](\/api\/[a-z0-9\-/[\]$.{}]*)/giu),
-  ].map((m) => String(m[1]));
-  return apiPaths.some(
-    (p) =>
-      !p.startsWith("/api/live") &&
-      !p.startsWith("/api/webhooks") &&
-      !p.startsWith("/api/cron"),
-  );
+/** `"x-forwarded-for"` の文字列リテラル（散文は backtick で囲むので当たらない） */
+function quotesClientIpHeader(source: string): boolean {
+  return new RegExp(`"${CLIENT_IP_HEADER}"`, "u").test(source);
 }
 
 describe("E2E client IP allocation", () => {
-  test("共有 limiter 対象の /api を叩く spec は専用 IP を持つ", () => {
-    // 衝突チェックだけでは「割当が無い spec」が不可視になる（Codex P2 指摘）。
-    // 実測: `calendar-api.spec.ts` は `/api/calendar/*` を request で直接叩くのに
-    // 割当が無く、飽和時に 401 の代わりに 429 を受けうる状態だった。
+  test("`@playwright/test` を直接 import するのは共有 test 定義だけ", () => {
+    // 別の `test` オブジェクトを掴むと fixture が効かず、その spec だけ
+    // 無言で IP 共有に戻る。型だけの import も共有側の re-export で足りる。
+    const offenders = listE2EFiles()
+      .filter((rel) => rel !== SHARED_TEST_MODULE)
+      .filter((rel) => /from\s+"@playwright\/test"/u.test(read(rel)));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("spec / setup は共有 test 定義を import する", () => {
     const missing = listE2EFiles()
-      .filter((rel) => rel.endsWith(".spec.ts"))
-      .filter((rel) => {
-        const source = readFileSync(join(root, ...rel.split("/")), "utf8");
-        return (
-          usesSharedApiLimiter(source) && !source.includes("x-forwarded-for")
-        );
-      });
+      .filter((rel) => rel.endsWith(".spec.ts") || rel.endsWith(".setup.ts"))
+      .filter((rel) => !read(rel).includes("fixtures/e2e-test"));
 
     expect(missing).toEqual([]);
   });
 
-  test("同じ静的 IP を 2 つ以上の spec が使っていない", () => {
-    const collisions = [...collectStaticIpAssignments().entries()]
-      .filter(([, files]) => files.length > 1)
-      .map(([ip, files]) => `${ip} が重複: ${files.join(", ")}`);
+  test("client IP と extraHTTPHeaders の直書きが共有 test 定義の外に無い", () => {
+    const allowed = new Set([SHARED_TEST_MODULE, CLIENT_IP_MODULE]);
+    const offenders = listE2EFiles()
+      .filter((rel) => !allowed.has(rel))
+      .filter((rel) => {
+        const source = read(rel);
+        return assignsExtraHttpHeaders(source) || quotesClientIpHeader(source);
+      });
 
-    expect(collisions).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
-  test("静的 IP が動的割当レンジ（.10〜.250）と衝突しない", () => {
-    const overlaps = [...collectStaticIpAssignments().keys()]
-      .filter((ip) => {
-        const lastOctet = Number(ip.split(".").at(-1));
-        return lastOctet >= DYNAMIC_RANGE_START;
-      })
-      .map((ip) => `${ip} は動的割当レンジと衝突する`);
-
-    expect(overlaps).toEqual([]);
+  test("playwright.config.ts が extraHTTPHeaders を設定しない", () => {
+    // project / global の `use` も fixture を上書きする。管理者 identity は
+    // `adminIdentity` option 経由で fixture 側が合成する。
+    expect(assignsExtraHttpHeaders(read("playwright.config.ts"))).toBe(false);
   });
 
-  test("動的割当の開始オクテットが規約どおり", () => {
-    // 静的側の上限（.9）と動的側の下限が食い違うと無言で衝突する。
-    const helper = readFileSync(
-      join(root, "e2e", "helpers", "admin-auth.ts"),
-      "utf8",
-    );
+  test("共有 test 定義が client IP を全リクエストに載せる配線を保つ", () => {
+    const fixture = read(SHARED_TEST_MODULE);
 
-    expect(helper).toMatch(/nextContextIpOctet\s*=\s*10/u);
+    expect(fixture).toContain("extraHTTPHeaders:");
+    expect(fixture).toContain("nextClientIp(");
+    expect(fixture).toContain("testInfo.parallelIndex");
+    expect(fixture).toContain("testInfo.config.workers");
+    // 手動生成 context 用の逃げ道（`browser.newContext()` には fixture が効かない）
+    expect(fixture).toContain("primeRequestContext");
+  });
+
+  test("割当は RFC 5737 TEST-NET-3 の範囲を出ない", () => {
+    for (const workers of [1, 2, 4, 8, 300]) {
+      for (let parallelIndex = 0; parallelIndex < workers; parallelIndex += 1) {
+        for (const sequence of [0, 1, 7, 253, 1000, 99999]) {
+          const ip = clientIpForSlot(parallelIndex, workers, sequence);
+          expect(ip.startsWith(`${CLIENT_IP_PREFIX}.`)).toBe(true);
+
+          const octet = Number(ip.slice(CLIENT_IP_PREFIX.length + 1));
+          expect(octet).toBeGreaterThanOrEqual(FIRST_CLIENT_IP_OCTET);
+          expect(octet).toBeLessThanOrEqual(LAST_CLIENT_IP_OCTET);
+        }
+      }
+    }
+  });
+
+  test("同時実行中の worker 同士が同じ IP を配らない", () => {
+    // 採番カウンタは worker プロセスごとのモジュール状態なので、レーンを
+    // 分けないと worker 0 と worker 1 が同じ値から始まる（旧実装の穴）。
+    for (const workers of [2, 4, 8]) {
+      const seen = new Map<string, number>();
+
+      for (let parallelIndex = 0; parallelIndex < workers; parallelIndex += 1) {
+        for (
+          let sequence = 0;
+          sequence < clientIpLaneSize(workers);
+          sequence += 1
+        ) {
+          const ip = clientIpForSlot(parallelIndex, workers, sequence);
+          const owner = seen.get(ip);
+          expect(owner ?? parallelIndex).toBe(parallelIndex);
+          seen.set(ip, parallelIndex);
+        }
+      }
+    }
+  });
+
+  test("1 worker あたりのレーンが rate limit の窓より十分広い", () => {
+    // レーンを使い切ると巡回してアドレスを再利用する。最短の窓（1 分）の間に
+    // 1 worker がこの本数のテストを消化することは無い、という前提を固定する。
+    for (const workers of [1, 2, 4]) {
+      expect(clientIpLaneSize(workers)).toBeGreaterThanOrEqual(60);
+    }
+  });
+
+  test("払い出しは呼ぶたびに進む", () => {
+    const first = nextClientIp(0, 2);
+    const second = nextClientIp(0, 2);
+
+    expect(first).not.toBe(second);
   });
 });

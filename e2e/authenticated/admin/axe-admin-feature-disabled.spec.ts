@@ -1,4 +1,10 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  primeRequestContext,
+  type Locator,
+  type Page,
+} from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 import {
   buildAdminAxeScanner,
@@ -223,6 +229,9 @@ test.describe.serial("a11y scan - 機能モジュール OFF 状態の管理画�
   // 可能性があり、そこまで検証すると本 spec が偽陽性で落ちる。
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext();
+    // 手動生成した context には `extraHTTPHeaders` fixture が効かない。
+    // 明示的に client IP を割り当てないと rate limit バケットを共有する。
+    await primeRequestContext(context);
     const page = await context.newPage();
     try {
       await openFeatureSettings(page);

@@ -6,7 +6,7 @@ import {
   expect,
   type APIRequestContext,
   type BrowserContext,
-} from "@playwright/test";
+} from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 
 /**

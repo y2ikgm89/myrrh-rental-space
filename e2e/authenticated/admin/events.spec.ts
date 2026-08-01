@@ -1,13 +1,8 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../../fixtures/e2e-test";
 import { readFile } from "node:fs/promises";
 import { eventFixtures, urls } from "../../fixtures";
 import { visibleById } from "../../helpers/streaming-safe-locators";
 import { clearEventCheckInsBySlug } from "../../helpers/event-registration-fixture";
-
-// CSV / Excel リンクのクリックでブラウザが `/api/admin/export/event-registrations` を
-// 叩くため、共有 rate-limit バケットを避けて専用 IP を割り当てる（割当表は
-// `.claude/rules/testing-e2e.md`）。
-test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.3" } });
 
 // Next dev compiles these admin event routes lazily. Keep this spec serial so
 // cold route compilation is not raced by multiple workers against one server.
