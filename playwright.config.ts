@@ -269,7 +269,14 @@ export default defineConfig({
     {
       name: "chromium-visual",
       use: { ...devices["Desktop Chrome"] },
-      dependencies: ["chromium-feature-modules"],
+      // `chromium-feature-modules` に依存させない。visual job は
+      // `.github/workflows/ci.yml` で **`APP_SURFACE=public`** かつ
+      // `--project=chromium-visual` 単独で回る。依存を張ると先に `setup-admin` が
+      // 走るが、public surface では proxy が `/admin/*` を 404 にするため
+      // `e2e/auth/admin.setup.ts` の `getByRole("main")` が満たせず、
+      // スナップショットを 1 枚も撮る前に job ごと落ちる。
+      // 単独 job = 別 webServer / 別 DB なので mutator と競合しようがなく、
+      // そもそも保護が不要（`chromium-smoke` を除外しているのと同じ理由）。
       testMatch: /e2e\/visual\/.*\.spec\.ts/,
     },
   ],
