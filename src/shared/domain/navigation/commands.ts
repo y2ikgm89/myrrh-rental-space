@@ -33,7 +33,9 @@ export const navigationItemInputSchema = z
       (spans) => spansToPlainText(spans).trim().length > 0,
       { error: "ラベルにテキストを 1 文字以上含めてください" },
     ),
-    url: z.string().min(1, { error: "URLは必須です" }).max(500),
+    // フォーム側（nav-form-schema.ts）と同じく `.trim()` で正規化してから
+    // superRefine に渡す。理由は safe-href.ts の `hasSurroundingWhitespace`。
+    url: z.string().trim().min(1, { error: "URLは必須です" }).max(500),
     isExternal: z.boolean().default(false),
     isActive: z.boolean().default(true),
   })

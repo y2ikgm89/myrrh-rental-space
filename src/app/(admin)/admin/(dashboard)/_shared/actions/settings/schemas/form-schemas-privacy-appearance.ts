@@ -26,6 +26,7 @@ export const cookieConsentFormSchema = z.object({
     (value) => (value === null || value === "" ? undefined : value),
     z
       .string()
+      .trim()
       .max(200, { error: "200文字以内で入力してください" })
       .optional()
       .refine(
