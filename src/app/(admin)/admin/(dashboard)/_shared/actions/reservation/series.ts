@@ -36,7 +36,7 @@ import { previewReservationPricing } from "@/shared/domain/reservations/pricing-
 import { syncReservationSeriesToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
-import { z } from "zod";
+import { cancelReservationSeriesSchema } from "@/shared/lib/validations/reservation-series";
 import { createRecurringReservationFormSchema } from "../../../reservations/_components/reservation-form-schema";
 import { buildRruleString } from "../../../reservations/_components/rrule-utils";
 
@@ -165,33 +165,13 @@ export async function createRecurringReservationAction(
 // cancelReservationSeriesAction
 // ---------------------------------------------------------------------------
 
-const cancelInputSchema = z
-  .object({
-    seriesId: z.uuid({ error: "series id が不正です" }),
-    scope: z.enum(["this-only", "this-and-following", "series-all"]),
-    fromInstanceId: z.uuid().optional().or(z.literal("")),
-    cancellationReason: z.string().max(500).optional().or(z.literal("")),
-  })
-  .superRefine((data, ctx) => {
-    if (
-      (data.scope === "this-only" || data.scope === "this-and-following") &&
-      (!data.fromInstanceId || data.fromInstanceId === "")
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "対象 instance が指定されていません",
-        path: ["fromInstanceId"],
-      });
-    }
-  });
-
 export async function cancelReservationSeriesAction(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
   return await executeConformMutation(
     formData,
-    cancelInputSchema,
+    cancelReservationSeriesSchema,
     async (data) => {
       const request = await buildAuditRequestContext();
 
