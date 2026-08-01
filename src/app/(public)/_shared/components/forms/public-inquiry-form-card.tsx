@@ -1,7 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import type { FormEvent, ReactElement } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { ReactElement } from "react";
 import {
   getFormProps,
   getInputProps,
@@ -134,6 +140,28 @@ export function PublicInquiryFormCard({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: publicInquirySchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は
+    // `dispatchWithoutFormReset` の JSDoc）。問い合わせでは rate limit 超過と
+    // Turnstile 検証失敗が form-level エラーで返るため、消えると利用者は
+    // 「送れない理由」を一切知れないまま入力も失う。
+    //
+    // helper をそのまま使わないのは、送信前にオフライン判定を挟むため。
+    // conform の `onSubmit` は client 検証を通過した submit だけを渡してくるので、
+    // ここが「送信を実行するかどうか」を決める唯一の分岐になる。
+    onSubmit(event, { formData }) {
+      event.preventDefault();
+      // プレビュー (mode !== "live") では送信自体を行わない
+      if (!isInteractive) return;
+      if (!navigator.onLine) {
+        setClientError(OFFLINE_ERROR_MESSAGE);
+        return;
+      }
+      setClientError(null);
+      startTransition(() => {
+        formAction(formData);
+      });
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
@@ -185,19 +213,6 @@ export function PublicInquiryFormCard({
     setAgreedTermsIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    formProps.onSubmit(event);
-    if (event.defaultPrevented) return;
-
-    if (!navigator.onLine) {
-      event.preventDefault();
-      setClientError(OFFLINE_ERROR_MESSAGE);
-      return;
-    }
-
-    setClientError(null);
   }
 
   const allTermsAgreed =
@@ -275,7 +290,6 @@ export function PublicInquiryFormCard({
         <form
           {...formProps}
           action={isInteractive ? formAction : undefined}
-          onSubmit={handleSubmit}
           className="mt-8"
         >
           <input
