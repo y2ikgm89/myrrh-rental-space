@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 function readInquiryStatusHistoryNoMutationMigration(): string {
@@ -38,6 +38,25 @@ describe("inquiry_status_history append-only boundary", () => {
     expect(migration).toContain("'purge'");
     expect(migration).not.toContain("terms_agreement_mutation_bypass");
     expect(migration).not.toContain("audit_log_mutation_bypass");
+  });
+
+  test("E2E helper が inquiry_status_history を mutate しない", () => {
+    // #1772 の restore helper が `inquiryStatusHistory.deleteMany` を呼び、
+    // trigger に弾かれて `inquiry-reply` spec が落ちた（run 30682539184）。
+    // 履歴は積み上がるのが正しく、bypass GUC は seed / purge 専用。
+    const glob = new Bun.Glob("e2e/**/*.ts");
+    const offenders = [...glob.scanSync(process.cwd())]
+      .filter((rel) =>
+        /inquiryStatusHistory\s*\.\s*(delete|deleteMany|update|updateMany|upsert)\s*\(/u.test(
+          readFileSync(join(process.cwd(), rel), { encoding: "utf8" }),
+        ),
+      )
+      .map(
+        (rel) =>
+          `${rel.split(sep).join("/")}: inquiry_status_history は append-only。trigger が UPDATE/DELETE を拒否するので E2E からも mutate しない`,
+      );
+
+    expect(offenders).toEqual([]);
   });
 
   test("data-retention purge が inquiry delete 前に purge bypass を設定する", () => {

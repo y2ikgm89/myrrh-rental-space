@@ -11,14 +11,6 @@ import { inquiryFixtures } from "../fixtures";
 import { getE2EPrismaClient } from "./e2e-prisma";
 
 /**
- * `replyToInquiryAsCustomerCommand` が RESOLVED / FLAGGED を IN_PROGRESS へ
- * reopen するときに残す `InquiryStatusHistory.reason`。seed はこの履歴行を
- * 作らない（`prisma/seed.ts` に `inquiryStatusHistory` の書込は無い）ため、
- * 存在するものは E2E が作ったものだけ。
- */
-const CUSTOMER_REPLY_REOPEN_REASON = "customer-reply-reopen";
-
-/**
  * dev customer の「解決済お問い合わせ」fixture を seed 状態へ戻す。
  *
  * 顧客返信は 3 つの副作用を持ち、いずれも seed では戻らない:
@@ -29,7 +21,12 @@ const CUSTOMER_REPLY_REOPEN_REASON = "customer-reply-reopen";
  * 2. status が RESOLVED → IN_PROGRESS へ reopen される。seed の inquiry 作成は
  *    「無ければ作る」だけで status を書き戻さない → 「解決済」fixture が
  *    IN_PROGRESS のまま固定化する
- * 3. reopen の `InquiryStatusHistory` 行が残る
+ * 3. reopen の `InquiryStatusHistory` 行が残る —— **これは戻さない**。
+ *    `inquiry_status_history` は append-only で、DB trigger
+ *    `prevent_inquiry_status_history_mutation` が UPDATE / DELETE を拒否する
+ *    （gate: `__tests__/unit/architecture/inquiry-status-history-append-only.test.ts`）。
+ *    そもそも履歴は積み上がるのが正しく、spec も件数を assert しない。
+ *    bypass GUC は seed と data-retention purge 専用なので E2E から使わない。
  */
 export async function restoreDevCustomerResolvedInquiry(): Promise<void> {
   const client = getE2EPrismaClient();
@@ -48,9 +45,6 @@ export async function restoreDevCustomerResolvedInquiry(): Promise<void> {
       inquiryId: inquiry.id,
       body: inquiryFixtures.e2eCustomerReplyMarker,
     },
-  });
-  await client.inquiryStatusHistory.deleteMany({
-    where: { inquiryId: inquiry.id, reason: CUSTOMER_REPLY_REOPEN_REASON },
   });
   await client.inquiry.update({
     where: { id: inquiry.id },
