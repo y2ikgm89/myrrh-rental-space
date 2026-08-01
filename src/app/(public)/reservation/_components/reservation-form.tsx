@@ -14,6 +14,7 @@ import { useQueryState, parseAsInteger } from "nuqs";
 import { getFormProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
@@ -262,6 +263,10 @@ export function ReservationForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: publicReservationSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    // 「このタイムスロットは満員です」はこの経路でしか利用者に伝わらない。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

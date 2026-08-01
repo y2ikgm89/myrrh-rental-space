@@ -22,6 +22,7 @@ import {
 import type { TurnstileAction } from "@/shared/lib/turnstile-actions";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { eventRegistrationEditSchema } from "@/shared/lib/validations/event-registration";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import type { z } from "zod";
@@ -87,6 +88,9 @@ export function EditEventRegistrationForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: eventRegistrationEditSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

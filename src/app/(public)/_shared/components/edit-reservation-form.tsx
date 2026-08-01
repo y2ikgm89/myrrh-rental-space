@@ -15,6 +15,7 @@ import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
 import { formatCurrency } from "@/shared/lib/pricing/format";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import type { z } from "zod";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
@@ -125,6 +126,9 @@ export function EditReservationForm({
           schema: customerReservationEditSchema,
         });
       },
+      // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+      // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+      onSubmit: dispatchWithoutFormReset(formAction),
       shouldValidate: "onBlur",
       shouldRevalidate: "onInput",
     },
