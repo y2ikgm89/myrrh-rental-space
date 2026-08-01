@@ -12,6 +12,7 @@ import type { TransferAccountRecord } from "@/shared/domain/settings/transfer-ac
 import type { Serialized } from "@/shared/lib/serialize";
 import { updateTransferGuidance } from "@/admin/actions/settings/transfer-accounts";
 import { TransferAccountRegistry } from "@/admin/components/TransferAccountRegistry";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type Props = {
   accounts: Serialized<TransferAccountRecord>[];
@@ -39,6 +40,9 @@ export function TransferAccountsSection({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: transferGuidanceFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

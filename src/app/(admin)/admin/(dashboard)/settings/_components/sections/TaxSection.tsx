@@ -36,6 +36,7 @@ import type { AdminTaxSettings } from "@/shared/domain/settings/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { taxSettingsSchema } from "@/admin/actions/settings/schemas/discount";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface TaxSectionProps {
   settings: Serialized<AdminTaxSettings>;
@@ -107,6 +108,9 @@ export function TaxSection({ settings }: TaxSectionProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: taxSettingsSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

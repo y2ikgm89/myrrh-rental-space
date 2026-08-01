@@ -41,6 +41,7 @@ import type { TurnstileConfig } from "@/admin/types/api-keys";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface TurnstileSectionProps {
   config: TurnstileConfig;
@@ -70,6 +71,9 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: turnstileFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

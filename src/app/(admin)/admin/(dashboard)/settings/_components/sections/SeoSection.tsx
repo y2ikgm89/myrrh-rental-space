@@ -47,6 +47,7 @@ import {
   isSettingsFormDisabled,
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface SeoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
@@ -84,6 +85,9 @@ function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: metaFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
@@ -249,6 +253,9 @@ function AnalyticsSettingsCard({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: analyticsFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
@@ -466,6 +473,9 @@ function SearchVerificationCard({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: searchVerificationFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

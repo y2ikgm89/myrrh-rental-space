@@ -28,6 +28,7 @@ import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-
 import type { Serialized } from "@/shared/lib/serialize";
 import { barFormSchema } from "./bar-form-schema";
 import type { DeleteDialogProps } from "./types";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 // =============================================================================
 // BarFormDialog
@@ -71,6 +72,9 @@ export function BarFormDialog({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: barFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
