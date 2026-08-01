@@ -90,14 +90,14 @@ const USES_ACTION_STATE = /useActionState\(/u;
  */
 const FORM_ACTION_PROP = /<form[^>]*action=\{/su;
 /**
- * conform の設定 1 つ = guard 1 つが要る単位。
+ * gate が数を数えられなくなる書き方。
  *
- * **代入の形まで見る。** 素朴に `useForm[<(]` を数えると、canonical shape を
- * 説明する JSDoc の `useForm<z.input<typeof schema>>` まで 1 件に数えてしまい、
- * `BroadcastForm` が「useForm 2 件に対し guard 1 件」で落ちた。
- * `.claude/rules` に記録済みの prose 誤検出（#1772）と同型。
+ * `import { useForm as useConformForm }` のように別名を付けられると識別子ベースの
+ * 検出が 0 件になり、**guard を 1 つも持たないフォームが素通りする**
+ * （Codex #1808 指摘、probe で再現済み）。静かに緩めるのではなく明示的に落として、
+ * 別名を付けない書き方に戻させる。
  */
-const USE_FORM_CONFIG = /=\s*useForm[<(]/gu;
+const ALIASED_HOOK_IMPORT = /\b(useForm|useActionState)\s+as\s+\w+/u;
 /**
  * helper を conform の `onSubmit` に **渡している**こと。
  * 素朴に `dispatchWithoutFormReset` を探すと **import 行だけで通ってしまう**
@@ -178,7 +178,27 @@ describe("conform form pattern", () => {
     expect(existsSync(HELPER)).toBe(true);
   });
 
-  test("conform + <form action> は 1 フォームごとに auto-reset を止めている", () => {
+  /**
+   * **検出できる範囲を明示しておく。**
+   *
+   * このテストが落とせるのは「conform + Server Action のファイルに guard が
+   * 1 つも無い」場合と「hook を別名 import して検出不能にした」場合。
+   * 1 ファイルに複数の action フォームがあり **その一部だけ** guard を欠く形は
+   * 検出できない。
+   *
+   * 件数比較を 3 通り試したが、いずれも正当なコードを誤検出した:
+   *
+   * | 数える対象      | 誤検出する正当な形                                          |
+   * | --------------- | ----------------------------------------------------------- |
+   * | `<form action>` | 1 設定を条件分岐で 2 つの `<form>` として描画する            |
+   * | `useForm`       | action を持たない client-only の conform 設定が同居している   |
+   * | `useActionState`| 2 つの Dialog が共通の Form コンポーネントに action を渡す（`FaqCategoryDialog`） |
+   *
+   * 静的解析では「どの hook がどの `<form>` に対応するか」を追えない。
+   * **誤検出は正しいコードを書けなくする**ので、そちらを避けて範囲を狭めた。
+   * 部分的な漏れは `.claude/rules/forms-mutations.md` とレビューで見る。
+   */
+  test("conform + <form action> のファイルは auto-reset の guard を持つ", () => {
     const violations: string[] = [];
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
@@ -190,12 +210,17 @@ describe("conform form pattern", () => {
       // `<form action>` は「この gate の対象か」の判定だけに使う
       if (!FORM_ACTION_PROP.test(source)) continue;
 
-      const configs = countMatches(source, USE_FORM_CONFIG);
-      const guards = countGuards(source);
-      if (guards >= configs) continue;
+      if (ALIASED_HOOK_IMPORT.test(source)) {
+        violations.push(
+          `${toRepoPath(filePath)} (useForm / useActionState を別名 import している。gate が検出できないので別名を付けない)`,
+        );
+        continue;
+      }
+
+      if (countGuards(source) > 0) continue;
 
       violations.push(
-        `${toRepoPath(filePath)} (useForm ${configs.toString()} 件に対し guard ${guards.toString()} 件)`,
+        `${toRepoPath(filePath)} (auto-reset の guard が 1 つも無い)`,
       );
     }
 
