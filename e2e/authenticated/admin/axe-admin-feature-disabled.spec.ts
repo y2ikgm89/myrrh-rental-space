@@ -169,10 +169,10 @@ async function applyFeatureModules(
 
         if (changed) {
           const save = saveButton(page);
-          await save.click();
-          // **送信が始まったことだけ**を待つ。`SubmitButton` は isPending の間
-          // disabled + 「保存中...」になるので、disabled になれば Server Action は
-          // dispatch 済みで、この後 reload しても送信は取り消されない。
+
+          // **Server Action がサーバー側で完走した**ことを待つ。これを待たずに
+          // reload すると in-flight の Server Action が中断され、Prisma の書込は
+          // コミット済みなのに `afterSuccess` の `updateTag` まで到達しない。
           //
           // 「完了」をクライアント状態で待ってはいけない:
           //  - 成功 toast を待つ → 楽観ロック競合時は error toast になりタイムアウト。
@@ -180,13 +180,23 @@ async function applyFeatureModules(
           //    どちらの toast も出さず、無言で終わる
           //  - pending 解除 (`toBeEnabled`) を待つ → 成功時 useEffect が
           //    `router.refresh()` を呼ぶため、その transition が終わるまで
-          //    isPending が解除されない。ローカル production build では
-          //    **240s 待っても解除されなかった**（実測: 保存自体は成功していて
-          //    audit_logs に MANAGE が毎回記録されていたのに、ボタンは
-          //    `button "保存中..." [disabled]` のままだった）
+          //    isPending が解除されないことがある
+          //  - **pending 開始 (`toBeDisabled`) を待つのも不可** → disabled は
+          //    isPending の間しか存在しない一過性の状態なので、保存が速く終わると
+          //    窓を取り逃して偽の失敗になる（実測 run 30688324782: 15 秒間 34 回
+          //    ポーリングして一度も観測できず、復元に失敗して連鎖的に落ちた）
           //
-          // 成否は下の「リロード後の永続化状態」だけで判定する。
-          await expect(save).toBeDisabled({ timeout: 15000 });
+          // POST 応答は**必ず発生する事象**なので取り逃しがなく、返った時点で
+          // サーバー側は `afterSuccess` まで完了している。
+          await Promise.all([
+            page.waitForResponse(
+              (response) =>
+                response.request().method() === "POST" &&
+                new URL(response.url()).pathname === FEATURES_SETTINGS_PATH,
+              { timeout: 15000 },
+            ),
+            save.click(),
+          ]);
         }
 
         // 永続化の実体をリロード後の DOM で確認する

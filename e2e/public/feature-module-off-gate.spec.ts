@@ -223,10 +223,7 @@ const SAVE_DISPATCH_TIMEOUT_MS = 15_000;
 const SAVE_ATTEMPTS = 2;
 
 /**
- * 保存ボタンを押し、**送信が始まったことだけ**を待つ。
- *
- * `SubmitButton` は `isPending` の間 disabled + 「保存中...」になるので、disabled に
- * なれば Server Action は dispatch 済みで、この後 reload しても送信は取り消されない。
+ * 保存ボタンを押し、**Server Action がサーバー側で完走した**ことを待つ。
  *
  * これを待たずに `page.goto` すると in-flight の Server Action が中断される。
  * Prisma の書込は先にコミットされる一方、`afterSuccess` の
@@ -235,16 +232,34 @@ const SAVE_ATTEMPTS = 2;
  * 本来のページを描画し続ける（実測: run 30631140902 で `/contact` の not-found
  * 境界が 20 秒間出ない）。
  *
- * 成否は toast でも pending 解除でも判定しない。成功時は `useEffect` の
- * `router.refresh()` が終わるまで `isPending` が戻らず、楽観ロック競合時は
- * 成功 toast すら出ないため、どちらも信頼できない。判定は呼び出し側が
- * 「リロード後の永続化状態」で行う。
+ * **`toBeDisabled` で待ってはいけない。** `SubmitButton` が `isPending` の間だけ
+ * disabled になるのを代理指標にしていたが、これは**一瞬しか存在しない状態の観測**を
+ * 要求するので、保存が速く終わると窓を取り逃して偽の失敗になる（実測 run
+ * 30688324782: `axe-admin-feature-disabled` が 15 秒間 34 回ポーリングして
+ * 一度も disabled を観測できず、復元に失敗して連鎖的に落ちた）。
+ *
+ * Server Action の POST 応答は**必ず発生する事象**なので取り逃しがなく、しかも
+ * 応答が返った時点でサーバー側は `afterSuccess`（= `updateTag`）まで完了している。
+ * 上記の危険（in-flight 中断）を直接的に排除できる。
+ *
+ * 成否はここでは判定しない。楽観ロック競合でも Server Action は 200 を返し、
+ * conform のエラー結果を載せてくるため。判定は呼び出し側が「リロード後の
+ * 永続化状態」で行う。
  */
-async function clickSaveAndAwaitDispatch(saveButton: Locator): Promise<void> {
-  await saveButton.click();
-  await expect(saveButton).toBeDisabled({
-    timeout: SAVE_DISPATCH_TIMEOUT_MS,
-  });
+async function clickSaveAndAwaitDispatch(
+  page: Page,
+  saveButton: Locator,
+): Promise<void> {
+  await Promise.all([
+    // Server Action は現在のページ URL へ POST される。
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === FEATURES_SETTINGS_PATH,
+      { timeout: SAVE_DISPATCH_TIMEOUT_MS },
+    ),
+    saveButton.click(),
+  ]);
 }
 
 interface ModuleCase {
@@ -566,7 +581,10 @@ async function setFeatureModule(
       const switchButton = moduleSwitch(page, moduleLabel);
       await switchButton.click();
       await expect(switchButton).toHaveAttribute("aria-checked", desired);
-      await clickSaveAndAwaitDispatch(moduleSaveButton(page, moduleLabel));
+      await clickSaveAndAwaitDispatch(
+        page,
+        moduleSaveButton(page, moduleLabel),
+      );
 
       await expect
         .poll(
@@ -648,6 +666,7 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
       if (!changed) return;
 
       await clickSaveAndAwaitDispatch(
+        page,
         moduleSaveButton(page, SAVE_ANCHOR_LABEL),
       );
 
