@@ -12,8 +12,8 @@ export const customerProfileSchema = z
     customerType: customerTypeSchema,
     // lastName / firstName は独自 label ("姓を入力してください" / "名を入力してください")
     // を維持するため personNameFieldSchema helper (label 引数式) を使わず個別維持。
-    lastName: z.string().min(1, { error: "姓を入力してください" }),
-    firstName: z.string().min(1, { error: "名を入力してください" }),
+    lastName: z.string().trim().min(1, { error: "姓を入力してください" }),
+    firstName: z.string().trim().min(1, { error: "名を入力してください" }),
     companyName: companyNameSchema,
     phoneNumber: optionalPhoneNumberSchema,
     // 初回 email 登録用 (LINE OAuth で email scope 未付与顧客の詰み状態解消)。

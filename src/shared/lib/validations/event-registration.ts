@@ -11,6 +11,7 @@ const eventRegistrationBaseSchema = z.object({
   ticketId: prismaCuidIdSchema("チケット"),
   name: z
     .string()
+    .trim()
     .min(1, { error: "お名前は必須です" })
     .max(100, { error: "お名前は100文字以内です" }),
   email: z.email({ error: "有効なメールアドレスを入力してください" }),
