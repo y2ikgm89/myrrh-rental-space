@@ -128,7 +128,7 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
 );
 
 /**
- * サイドバー custom 等: 空 / 未指定は許可、値があれば内部 or 許可外部。
+ * サイドバー custom 等: 空 / null / undefined は許可、値があれば内部 or 許可外部。
  *
  * **`z.preprocess` も `transform` も使わない。** preprocess は入力が本質的に
  * `unknown` なので、この schema を含む object を `z.output` で読むと
@@ -136,13 +136,14 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
  * conform（`useForm<z.input<…>>` が house pattern）の `submission.value` が
  * 変換前の型で返るので、受け取る側と噛み合わない。
  *
- * 入出力を同じ `string | undefined` に保ち、空文字は `refine` 側で通す。
+ * `union` で `null` を受け、空文字と `null` は `refine` 側で通す。入出力が
+ * どちらも `string | null | undefined` に揃い、**`null` を許す既存の契約**
+ * （`safe-href.test.ts`）も保てる。
  * 空文字→`undefined` の正規化は保存経路（`SidebarSection` の `|| undefined`）が
  * 従来から行っており、この schema の責務ではない。
  */
 export const optionalSafePublicHrefSchema = z
-  .string()
-  .max(500)
+  .union([z.string().max(500), z.null()])
   .optional()
   .refine((value) => !value || isSafePublicHref(value), {
     error:
