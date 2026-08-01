@@ -9,6 +9,7 @@
  */
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   type FocusEvent,
@@ -59,6 +60,37 @@ export function CustomerForm(): ReactElement {
     lastResult,
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerFormSchema });
+    },
+    // **`<form action={action}>` を使わず、ここから自分で action を呼ぶ。**
+    //
+    // React 19 は `action` prop に関数を渡すと、その関数が resolve した時点で
+    // フォームを自動リセットする（公式 Server Functions:「React handles the
+    // submission and automatically resets the form upon success」）。
+    // `useActionState` の action は throw せず `SubmissionResult` を返すため、
+    // **サーバーが form-level エラーを返した応答もリセット対象**になる。
+    //
+    // リセットで input が空になると conform は空の FormData で再検証し、
+    // その結果（全必須項目が `Invalid input: expected string, received undefined`）
+    // が **サーバーの form-level エラーを上書きして消す**。実測
+    // (CI run 30695870083 の trace): VIEWER が顧客作成を submit すると
+    // サーバーは `customerのcreate権限がありません` を返し +76ms で
+    // `aria-describedby="customer-create-error"` まで付いているのに、+236ms で
+    // その表示が消え、空欄由来の field error だけが残っていた。
+    // ユーザーには **拒否理由が伝わらず入力も全消失**する。
+    //
+    // conform の `onSubmit` は「client 検証を通過 **かつ** intent submission
+    // ではない」ときだけ呼ばれる公式の拡張点（`createFormContext` が
+    // `formData.has(INTENT)` で除外する）。ここで `preventDefault()` してから
+    // `startTransition` で action を呼べば auto-reset は起きず、`lastResult` の
+    // 値とエラーがそのまま残る。引き換えに JS 無効時の progressive enhancement を
+    // 失うが、管理画面は Radix UI 前提で JS 必須のため実害はない。
+    //
+    // @see https://react.dev/reference/rsc/server-functions
+    onSubmit(event, { formData }) {
+      event.preventDefault();
+      startTransition(() => {
+        action(formData);
+      });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
@@ -132,7 +164,7 @@ export function CustomerForm(): ReactElement {
   const formErrors = form.errors;
 
   return (
-    <form {...getFormProps(form)} action={action}>
+    <form {...getFormProps(form)}>
       <Card className="p-6">
         <div className="space-y-6">
           {/* 区分 */}
