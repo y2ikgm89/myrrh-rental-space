@@ -34,10 +34,14 @@ export function AdminNavFeatureDisabledIndicator({
             event.preventDefault();
             event.stopPropagation();
           }}
+          // 背景は**不透明トークン**を使う。半透明（旧 `bg-sidebar-nav-hover` =
+          // 白 5%）だと実効背景が nav 項目の状態で変わり、active 項目（青）の上では
+          // `text-sidebar-text-muted` が 1.72:1 まで落ちる。詳細は admin.css の
+          // `--color-sidebar-badge-bg`。gate: admin-feature-disabled-contrast.test.ts
           className={
             compact
               ? "shrink-0 border-transparent bg-muted px-1.5 py-0 text-[0.625rem] font-medium text-muted-foreground"
-              : "ml-auto shrink-0 border-transparent bg-sidebar-nav-hover px-1.5 py-0 text-[0.625rem] font-medium text-sidebar-text-muted"
+              : "ml-auto shrink-0 border-transparent bg-sidebar-badge-bg px-1.5 py-0 text-[0.625rem] font-medium text-sidebar-text-muted"
           }
         >
           {ADMIN_NAV_DISABLED_BADGE_LABEL}
