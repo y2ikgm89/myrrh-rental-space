@@ -71,6 +71,7 @@ import type { PostCategoryData } from "@/shared/domain/posts/types";
 import { cn } from "@/shared/lib/cn";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { useCategoryFilters } from "../_hooks/use-taxonomy-filters";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 async function fetchPostCategories(): Promise<PostCategoryData[]> {
   return fetchAdminJson(
@@ -208,6 +209,9 @@ function CategoryFormDialog({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: categoryFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

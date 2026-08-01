@@ -47,6 +47,7 @@ import {
   type NewCustomerData,
 } from "./reservation-form-helpers";
 import { createReservationFormSchema } from "./reservation-form-schema";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type ReservationFormProps = {
   spaces: SpaceOption[];
@@ -117,6 +118,9 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: createReservationFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

@@ -51,6 +51,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateShort } from "@/shared/lib/date-format";
 import { useTagFilters } from "../_hooks/use-taxonomy-filters";
 import type { PostTaxonomySortField } from "@/shared/lib/nuqs";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 async function fetchPostTags(): Promise<PostTagData[]> {
   return fetchAdminJson("/admin/api/post-tags", postTagsResponseSchema);
@@ -157,6 +158,9 @@ function TagFormDialog({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: tagFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

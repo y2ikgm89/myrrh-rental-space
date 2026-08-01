@@ -42,6 +42,7 @@ import { LocationBasicTab } from "./location-form/LocationBasicTab";
 import { LocationMeoTab } from "./location-form/LocationMeoTab";
 import { LocationBlockedDatesTab } from "./location-form/LocationBlockedDatesTab";
 import { LocationSmartLockDevicesTab } from "./location-form/LocationSmartLockDevicesTab";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type LocationFormProps = {
   location?: LocationWithStats;
@@ -147,6 +148,9 @@ export function LocationForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: locationFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: location

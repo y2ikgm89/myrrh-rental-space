@@ -45,6 +45,7 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -196,6 +197,9 @@ export function EventForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: eventFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: event

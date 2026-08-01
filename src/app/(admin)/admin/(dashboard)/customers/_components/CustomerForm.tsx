@@ -9,7 +9,6 @@
  */
 
 import {
-  startTransition,
   useActionState,
   useEffect,
   type FocusEvent,
@@ -48,6 +47,7 @@ import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 import { toast } from "sonner";
 import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
@@ -61,48 +61,12 @@ export function CustomerForm(): ReactElement {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerFormSchema });
     },
-    // **hydration 後の submit は React に渡さず、ここから自分で action を呼ぶ。**
-    //
-    // React 19 は `action` prop に渡した関数が resolve した時点でフォームを
-    // 自動リセットする（公式 Server Functions:「React handles the submission and
-    // automatically resets the form upon success」）。`useActionState` の action は
-    // throw せず `SubmissionResult` を返すため、**サーバーが form-level エラーを
-    // 返した応答もリセット対象**になる。
-    //
-    // リセットで input が空になると conform は空の FormData で再検証し、
-    // その結果（全必須項目が `Invalid input: expected string, received undefined`）
-    // が **サーバーの form-level エラーを上書きして消す**。実測
-    // (CI run 30695870083 の trace): VIEWER が顧客作成を submit すると
-    // サーバーは `customerのcreate権限がありません` を返し +76ms で
-    // `aria-describedby="customer-create-error"` まで付いているのに、+236ms で
-    // その表示が消え、空欄由来の field error だけが残っていた。
-    // ユーザーには **拒否理由が伝わらず入力も全消失**する。
-    //
-    // conform の `onSubmit` は「client 検証を通過 **かつ** intent submission
-    // ではない」ときだけ呼ばれる公式の拡張点（`createFormContext` が
-    // `formData.has(INTENT)` で除外する）。ここで `preventDefault()` してから
-    // `startTransition` で action を呼べば auto-reset は起きず、`lastResult` の
-    // 値とエラーがそのまま残る。react-dom の form action listener は
-    // `nativeEvent.defaultPrevented` を見て `startHostTransition(…, null, formData)`
-    // （action = null）で抜けるため、**preventDefault 済みの submit で action が
-    // 二重に走ることはない**。conform の onSubmit は React の listener より先に
-    // 走る（client 検証が落ちた submit が Server Action に到達しないのと同じ順序）。
-    //
-    // **`action` prop は外さないこと。** `getFormProps` が返すのは
-    // id / onSubmit / noValidate / aria 属性だけで **`method` を含まない**。
-    // `action` を外すと SSR された form は action も method も持たず、hydration 前に
-    // submit したユーザーはネイティブ **GET** で現在の URL に飛ばされ、
-    // 氏名・メール・電話番号・住所が **クエリ文字列に載って履歴とアクセスログに残る**。
-    // `action` を残せば React が SSR 時に action / `method="POST"` / `$ACTION_ID`
-    // hidden を出力するので、hydration 前は POST fallback として正しく動く。
-    //
-    // @see https://react.dev/reference/rsc/server-functions
-    onSubmit(event, { formData }) {
-      event.preventDefault();
-      startTransition(() => {
-        action(formData);
-      });
-    },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    // このフォームが実測元: CI run 30695870083 の trace で、VIEWER の顧客作成に
+    // サーバーが返した `customerのcreate権限がありません` が +236ms で消え、
+    // 空欄由来の field error だけが残っていた。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
