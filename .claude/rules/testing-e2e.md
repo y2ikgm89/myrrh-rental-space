@@ -15,11 +15,15 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
   chromium-admin-mobile / webkit-admin-mobile /
   chromium-visual（e2e/visual）。mobile / webkit 系 6 project は opt-in。
 - CI の毎 push required gate は chromium-smoke のみ（APP_SURFACE=public と admin の 2 回）。
-  広域 E2E・visual・Lighthouse は opt-in。opt-in 条件は「`codex/full-ci/` prefix の PR
-  branch」または workflow_dispatch だが、**prefix 経路の起動実績はゼロ**
-  （2026-07-31 時点、PR #673〜#1679 を走査）。実質 manual dispatch 専用と考え、
-  `gh workflow run ci.yml --ref <branch> -f run_full_ci=true` で明示的に回す。
-  **PR を出すだけでは広域 E2E は走らない**
+  **広域 E2E は main の nightly（`schedule`、18:00 UTC = 03:00 JST）で自動実行される。**
+  加えて `gh workflow run ci.yml --ref <branch> -f run_full_ci=true` で任意に回せる。
+  visual・Lighthouse は nightly に含まれず手動 dispatch 専用。
+  **PR を出すだけでは広域 E2E は走らない** — マージ前に確認したいときは明示的に
+  dispatch する。
+  かつて `codex/full-ci/` prefix の PR branch で起動する条件があったが起動実績ゼロ
+  （PR #673〜#1679 を走査）のため撤去した。opt-in を手動だけに頼った結果、main の
+  失敗が誰にも見られず滞留する事故が起きた（2026-07-31、hard failure 3 件）ことが
+  nightly を入れた理由
 - webServer は migrate → seed →（ローカルのみ production build）→ next start を毎回実行し
   `reuseExistingServer: false`。ポート 3000 の dev サーバーとは共存不可・初回起動は長い
 - playwright.config.ts は `__tests__/unit/architecture/playwright-e2e-webserver-env.test.ts`

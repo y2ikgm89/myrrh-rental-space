@@ -5,10 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # `codex/full-ci/` で始まる PR branch は heavy jobs を含む full CI を実行する
-    # ——— ことになっているが起動実績はゼロ。実運用の full CI 起動経路は
-    # workflow_dispatch のみ（詳細は下の e2e-tests job のコメント）。
     types: [opened, synchronize, reopened]
+  # 広域 E2E の nightly 実行。opt-in の手動 dispatch だけに頼ると失敗が誰にも
+  # 見られないまま滞留する（実例: 2026-07-31 に main で 3 件の hard failure が
+  # 放置されていた）。18:00 UTC = 03:00 JST の低トラフィック帯に main を回す。
+  # concurrency group に event_name を含めているため push run とは干渉しない。
+  schedule:
+    - cron: "0 18 * * *"
   workflow_dispatch:
     inputs:
       run_full_ci:
@@ -441,27 +444,25 @@ jobs:
     timeout-minutes: 60
     # 広域 E2E は重く maintenance コストが高いため opt-in 実行。
     # critical path は `smoke-e2e` job が毎 push でカバー。
-    # - PR head branch が `codex/full-ci/` で始まる場合
+    # 起動経路:
+    # - nightly の schedule（main、18:00 UTC = 03:00 JST）
     # - workflow_dispatch で run_full_ci=true 指定
     #
-    # **branch prefix 経路は一度も使われていない**（2026-07-31 時点）。
-    #   gh pr list --state all --limit 1000 → `codex/full-ci/` prefix は 0 件
-    #     （PR #673〜#1679 を走査）
-    #   gh pr list --search "head:codex/full-ci" → 0 件
-    #   git ls-remote --heads origin 'refs/heads/codex/full-ci/*' → 0 件
-    # つまり本 job / lighthouse-ci / visual-regression の 3 つは実質
-    # **manual workflow_dispatch 専用**:
-    #   gh workflow run ci.yml --ref <branch> -f run_full_ci=true
-    # prefix 条件は escape hatch として残すが、「PR を出せば full CI が回る」
-    # 前提で運用計画を立てないこと。branch 名を後から変えるのは
-    # PR 作成後に取りにくい選択肢で、これが未使用の実務的な理由と考えられる。
+    # かつて `codex/full-ci/` prefix の PR branch でも起動する条件があったが、
+    # **起動実績はゼロだったため撤去した**（2026-07-31 時点の調査:
+    # `gh pr list --state all --limit 1000` で PR #673〜#1679 を走査、
+    # `git ls-remote --heads origin 'refs/heads/codex/full-ci/*'` ともに 0 件）。
+    # branch 名を後から変えるのは PR 作成後に取りにくい選択肢で、これが
+    # 使われなかった実務的な理由と考えられる。opt-in を手動 dispatch だけに
+    # 頼った結果、main の失敗が誰にも見られず滞留する事故が起きたため
+    # （2026-07-31、hard failure 3 件）、nightly を正規の起動経路に据える。
     #
     # main への push では実行しない (single-env 運用のため staging preflight は
     # 存在しない — 参照: docs/adr/0001-single-env-terraform.md)。本番デプロイ
     # 直後は post-deploy-smoke skill (HTTP smoke) が公開エンドポイントを
     # 叩いて基本疎通を確認する。
     if: |
-      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+      github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
@@ -707,14 +708,11 @@ jobs:
     # CI 内 next start (localhost:3000) で計測する。本番相当の実測は
     # 別途 PageSpeed Insights / Web Vitals API を production URL に対して
     # 手動で叩く。
-    # - PR head branch が `codex/full-ci/` で始まる場合
-    # - workflow_dispatch で run_full_ci=true 指定
-    # branch prefix 経路の起動実績はゼロ = 実質 workflow_dispatch 専用
-    # （根拠は e2e-tests job のコメント）。
+    # 起動は workflow_dispatch (run_full_ci=true) のみ。nightly には含めない
+    # （計測が重く、回帰検出の主目的は e2e-tests が担うため）。
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      ((github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
-       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
+      (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:16
@@ -778,7 +776,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # opt-in 実行条件:
-    # - PR head branch が `codex/full-ci/` で始まる場合（baseline 比較）
     # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
     # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
     # branch prefix 経路の起動実績はゼロ = 実質 workflow_dispatch 専用
@@ -791,7 +788,6 @@ jobs:
       contents: write # auto-PR 用 branch push
       pull-requests: write # auto-PR 作成
     if: |
-      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
