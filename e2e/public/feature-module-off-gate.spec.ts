@@ -119,15 +119,32 @@ const CLAIM_TOKEN_STUB = "e2e-stub-token";
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
 
 /**
- * 1 回の `goto` に許す上限。
+ * 公開ルート探索 1 回の `goto` に許す上限。
  *
  * Playwright の navigation timeout は既定で **無制限**（`navigationTimeout` は
  * config 未設定）なので、遅い遷移 1 本が test 予算を丸ごと食い潰す。実測
  * (run 30672479398 attempt 0): 1 回の `goto` が **15.5 秒**かかり、続く待機と
  * 合わせて 30 秒の既定予算を超過して test が timeout した。予算を定数から
  * 導出する（`TEST_TIMEOUT_MS`）ために、遷移も明示的に有界にする。
+ *
+ * ここを短く取れるのは `probeNotFoundBoundary` が **遷移ごとリトライする**から。
+ * 遅い 1 回は失敗ではなく 1 attempt の消費で済む。
  */
-const NAVIGATION_TIMEOUT_MS = 10_000;
+const PROBE_NAVIGATION_TIMEOUT_MS = 10_000;
+
+/**
+ * 管理画面 (features 設定ページ) の `goto` に許す上限。**探索より大幅に緩い。**
+ *
+ * ここでの遷移失敗は「そのルートが 1 回見えなかった」では済まず、
+ * `restoreFeatureModuleBaseline` を丸ごと諦めさせて **共有 DB を OFF のまま残す**。
+ * 探索と同じ 10 秒にすると、上のコメントが記録している 15.5 秒級の遅延で
+ * 復元そのものが落ちる。観測された裾（15.5 秒）の 2 倍を取る。
+ *
+ * 有界のままにするのは、無制限だと本体 timeout → page 破棄 → 復元不能という
+ * より悪い経路に戻るため。加えて呼び出し側の retry ループの **内側**に置き、
+ * 遅延が復元の中止ではなく attempt の消費になるようにしてある。
+ */
+const SETTINGS_NAVIGATION_TIMEOUT_MS = 30_000;
 
 /** 1 回の遷移につき not-found 境界を待つ時間。 */
 const NOT_FOUND_ATTEMPT_TIMEOUT_MS = 7_000;
@@ -172,7 +189,7 @@ async function probeNotFoundBoundary(
       // goto も try の中に置く。無制限だと遅い遷移 1 本で test ごと timeout し、
       // afterEach の復元まで巻き込んで共有 DB を汚す（`TEST_TIMEOUT_MS` 参照）。
       // 有界にしたうえで「遷移が遅れた」も 1 attempt として消費させる。
-      await page.goto(route, { timeout: NAVIGATION_TIMEOUT_MS });
+      await page.goto(route, { timeout: PROBE_NAVIGATION_TIMEOUT_MS });
       await expect(notFoundHeading(page)).toBeVisible({
         timeout: NOT_FOUND_ATTEMPT_TIMEOUT_MS,
       });
@@ -311,21 +328,24 @@ const MAX_ROUTES_PER_CASE = Math.max(
  * この spec にとって「本体の timeout」は自分が落ちるだけでは済まず、
  * **run 全体を汚染する**。だから本体は timeout してはならない。
  *
- * ## 予算の内訳
+ * ## 予算の内訳（積み方を 2 系統に分ける）
  *
- * 支配項はルート探索。1 ルートあたり最悪
- * `NOT_FOUND_ATTEMPTS × (遷移 + not-found 待ち)` を使い、これは
- * **soft assertion で全ルートを報告するために意図的に払うコスト**（失敗ルートは
- * 必ず全 attempt を使い切る）。保存 / 基準復元は実測 0.6–1.1 秒と桁が小さいので、
- * `homepage.spec.ts` と同じく固定ヘッドルームでまとめて見る。
+ * - **ルート探索は最悪ケースで積む。** 1 ルートあたり
+ *   `NOT_FOUND_ATTEMPTS × (遷移 + not-found 待ち)`。失敗ルートは必ず全 attempt を
+ *   使い切るので、これは **soft assertion で全ルートを報告するために意図的に払う
+ *   決定論的なコスト**。ここを削ると「報告しきる前に timeout」に逆戻りする。
+ * - **管理画面往復は実測に対する十分な余裕で積む**（最悪値の積は取らない）。
+ *   実測 0.3–1.1 秒に対して 60 秒 = 50 倍以上。理論最悪（`SAVE_ATTEMPTS` ×
+ *   `SETTINGS_NAVIGATION_TIMEOUT_MS` × 呼び出し箇所…）まで覆うと本物のハングを
+ *   検出できなくなるので、そこは覆わない。60 秒を超える往復が要るなら壊れている。
  *
  * MODULE_CASES にルートを足すと予算も自動で増える。手で書いた数値を置かないこと。
  */
 const TEST_TIMEOUT_MS =
   MAX_ROUTES_PER_CASE *
     NOT_FOUND_ATTEMPTS *
-    (NAVIGATION_TIMEOUT_MS + NOT_FOUND_ATTEMPT_TIMEOUT_MS) +
-  45_000;
+    (PROBE_NAVIGATION_TIMEOUT_MS + NOT_FOUND_ATTEMPT_TIMEOUT_MS) +
+  60_000;
 
 /**
  * この spec が所有する feature module（id → admin form の label）。
@@ -473,8 +493,17 @@ function moduleSaveButton(page: Page, moduleLabel: string): Locator {
     .getByRole("button", { name: /^保存/u });
 }
 
+/**
+ * features 設定ページを開く。
+ *
+ * **必ず呼び出し側の retry ループの内側で呼ぶこと。** 遷移は有界なので、CI が
+ * 詰まっているときは throw しうる。ループの外で呼ぶと 1 回の遅延で
+ * `restoreFeatureModuleBaseline` が中止され、共有 DB が OFF のまま残る。
+ */
 async function openFeatureSettings(page: Page): Promise<void> {
-  await page.goto(FEATURES_SETTINGS_PATH, { timeout: NAVIGATION_TIMEOUT_MS });
+  await page.goto(FEATURES_SETTINGS_PATH, {
+    timeout: SETTINGS_NAVIGATION_TIMEOUT_MS,
+  });
   await expect(
     page.getByRole("heading", { name: "機能モジュール", level: 1 }),
   ).toBeVisible();
@@ -495,6 +524,10 @@ async function readModuleState(
  * 判定は toast ではなくリロード後の `aria-checked`。楽観ロック競合で 1 回目の
  * 保存が弾かれることがあるため、最大 2 回試す（2 回目は再読込した新しい
  * `expectedUpdatedAt` で送るので競合は解消する）。
+ *
+ * **1 attempt は全体を `try` で覆う。** 遷移・click・保存のどれが transient に
+ * 落ちても attempt の消費として扱い、次の attempt でやり直す。ページを開く処理を
+ * ループの外に置くと、そこでの 1 回の遅延がリトライされずに関数ごと落ちる。
  */
 const SAVE_ATTEMPTS = 2;
 
@@ -506,15 +539,15 @@ async function setFeatureModule(
   const desired = enabled ? "true" : "false";
 
   for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
-    await openFeatureSettings(page);
-    if ((await readModuleState(page, moduleLabel)) === desired) return;
-
-    const switchButton = moduleSwitch(page, moduleLabel);
-    await switchButton.click();
-    await expect(switchButton).toHaveAttribute("aria-checked", desired);
-    await clickSaveAndAwaitDispatch(moduleSaveButton(page, moduleLabel));
-
     try {
+      await openFeatureSettings(page);
+      if ((await readModuleState(page, moduleLabel)) === desired) return;
+
+      const switchButton = moduleSwitch(page, moduleLabel);
+      await switchButton.click();
+      await expect(switchButton).toHaveAttribute("aria-checked", desired);
+      await clickSaveAndAwaitDispatch(moduleSaveButton(page, moduleLabel));
+
       await expect
         .poll(
           async () => {
@@ -529,7 +562,7 @@ async function setFeatureModule(
         .toBe(desired);
       return;
     } catch (error) {
-      // 1 回目は競合しうる。再読込すれば expectedUpdatedAt が更新されるので
+      // 1 回目は競合・遅延しうる。再読込すれば expectedUpdatedAt も更新されるので
       // やり直せば通る。最終試行で駄目なら Playwright のメッセージごと投げる。
       if (attempt === SAVE_ATTEMPTS) throw error;
     }
@@ -563,36 +596,41 @@ async function readBaselineState(page: Page): Promise<string> {
  */
 async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
   for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
-    await openFeatureSettings(page);
-
-    let changed = false;
-    for (const [id, label] of OWNED_MODULE_ENTRIES) {
-      const desired = baselineDesiredFor(id);
-      const switchButton = moduleSwitch(page, label);
-      await expect(switchButton).toBeVisible();
-      if ((await switchButton.getAttribute("aria-checked")) === desired) {
-        continue;
-      }
-
-      // 依存元が seed で OFF の構成では、依存先の Switch は disabled + OFF 表示に
-      // なる（`checked={depsMet && isOn}`）。永続値が true でも UI 上は操作できず、
-      // click すると actionability 待ちでハングする。触らずに次へ進む。
-      // なお、その永続値はアプリ側がどの保存でも `submittedValue` で false に
-      // 正規化するため、spec 側で保てるものではない（app の仕様）。
-      if (await switchButton.isDisabled()) {
-        continue;
-      }
-
-      await switchButton.click();
-      await expect(switchButton).toHaveAttribute("aria-checked", desired);
-      changed = true;
-    }
-
-    if (!changed) return;
-
-    await clickSaveAndAwaitDispatch(moduleSaveButton(page, SAVE_ANCHOR_LABEL));
-
     try {
+      // `openFeatureSettings` は必ずこの try の内側で呼ぶ。外に出すと、CI が
+      // 詰まって遷移が 1 回遅れただけで復元が中止され、共有 DB が OFF のまま残る
+      // （まさにそれが他 spec を巻き添えにする経路）。
+      await openFeatureSettings(page);
+
+      let changed = false;
+      for (const [id, label] of OWNED_MODULE_ENTRIES) {
+        const desired = baselineDesiredFor(id);
+        const switchButton = moduleSwitch(page, label);
+        await expect(switchButton).toBeVisible();
+        if ((await switchButton.getAttribute("aria-checked")) === desired) {
+          continue;
+        }
+
+        // 依存元が seed で OFF の構成では、依存先の Switch は disabled + OFF 表示に
+        // なる（`checked={depsMet && isOn}`）。永続値が true でも UI 上は操作できず、
+        // click すると actionability 待ちでハングする。触らずに次へ進む。
+        // なお、その永続値はアプリ側がどの保存でも `submittedValue` で false に
+        // 正規化するため、spec 側で保てるものではない（app の仕様）。
+        if (await switchButton.isDisabled()) {
+          continue;
+        }
+
+        await switchButton.click();
+        await expect(switchButton).toHaveAttribute("aria-checked", desired);
+        changed = true;
+      }
+
+      if (!changed) return;
+
+      await clickSaveAndAwaitDispatch(
+        moduleSaveButton(page, SAVE_ANCHOR_LABEL),
+      );
+
       await expect
         .poll(
           async () => {
@@ -608,7 +646,7 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
         .toBe(EXPECTED_BASELINE_STATE);
       return;
     } catch (error) {
-      // 1 回目は競合しうる。再読込すれば expectedUpdatedAt が更新されるので
+      // 1 回目は競合・遅延しうる。再読込すれば expectedUpdatedAt も更新されるので
       // やり直せば通る。最終試行で駄目なら Playwright のメッセージごと投げる。
       if (attempt === SAVE_ATTEMPTS) throw error;
     }
