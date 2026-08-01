@@ -124,10 +124,10 @@ const nextConfig: NextConfig = {
   // task #7 PR#7 (2026-07-15 receipt-full-wiring)。
   outputFileTracingIncludes: {
     "/api/receipts/**": [
-      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.woff",
+      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.ttf",
     ],
     "/api/cron/receipt-backfill": [
-      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.woff",
+      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.ttf",
     ],
   },
 

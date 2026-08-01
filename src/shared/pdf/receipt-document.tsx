@@ -25,9 +25,23 @@ import type { ReactElement } from "react";
  * 6. 宛名 (書類の交付を受ける者の氏名または名称)
  *
  * ## フォント (Noto Sans JP、Japanese subset を repo 同梱、PR#7)
- * Fontsource の `@fontsource/noto-sans-jp` から Japanese subset (JIS 90 相当、~500KB) の
- * WOFF ファイルを npm 経由で取得し、@react-pdf/renderer の Font.register に **absolute path**
- * で渡す (Buffer 直渡しは非対応、WOFF2 も非対応 — TTF と WOFF のみ)。
+ * Fontsource の `@fontsource/noto-sans-jp` から Japanese subset (JIS 90 相当、総グリフ
+ * 7,466) を取得し、@react-pdf/renderer の Font.register に **absolute path** で渡す
+ * (Buffer 直渡しは非対応、WOFF2 も非対応 — TTF と WOFF のみ)。
+ *
+ * ### **WOFF ではなく非圧縮 TTF を同梱する (性能上の必須要件)**
+ * fontkit の `TTFSubset._addGlyph` は **埋め込むグリフ 1 つごとに**
+ * `font._getTableStream('glyf')` を呼ぶ。WOFF はテーブル単位で zlib 圧縮されているため、
+ * その都度 数 MB の `glyf` テーブルを展開し直す。実測 (総グリフ 7,466 / 埋込 21 グリフ、
+ * Node v24 と Bun 1.3.14 で同傾向):
+ *
+ * | 形式 | subset encode | 1 グリフ単価 |
+ * | ---- | ------------- | ------------ |
+ * | WOFF | 1,141 ms      | 54.35 ms     |
+ * | TTF  | 1.1 ms        | 0.05 ms      |
+ *
+ * 領収書 1 通の生成が約 4 秒かかっていた原因がこれ。TTF に替えると 0.1 秒未満になる。
+ * **WOFF に戻さないこと。** 差し替え手順は `scripts/fonts/woff-to-ttf.ts` を参照。
  * - 旧実装は CDN (jsdelivr) から NotoSansCJKjp-Regular.otf (~5MB fullset) を毎 cold start で
  *   fetch していた (~1s 初回遅延)。npm 同梱に切替え、cold start ~1s → ~0ms へ短縮。
  * - Next.js standalone build は `outputFileTracing` で node_modules 内の参照ファイルを自動追跡
@@ -66,7 +80,7 @@ import type { ReactElement } from "react";
 const NOTO_SANS_JP_PATH = path.join(
   process.cwd(),
   "src/shared/pdf/fonts",
-  "noto-sans-jp-japanese-400-normal.woff",
+  "noto-sans-jp-japanese-400-normal.ttf",
 );
 
 // 副作用は module load 時に 1 回だけ実行される。@react-pdf/renderer の Font store は
