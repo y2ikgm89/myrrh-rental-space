@@ -18,11 +18,19 @@ import { restoreDevCustomerResolvedInquiry } from "../../helpers/inquiry-fixture
  * DB 書き込みを伴うため describe を serial 化（並列 worker 衝突回避）。
  */
 
+// 返信送信は `replyToInquiryAction` の冒頭で `formSubmitRateLimiter`
+// （**5 リクエスト/分/IP**）を通る。`getContextClientIp` による動的割当は
+// `signInAsAdmin` 経路（admin project）にしか無く、顧客 spec は既定で全 spec と
+// 同一 IP を共有するため、他の公開フォーム spec と窓を奪い合って弾かれる。
+// 実測 (run 30681869018): 返信フォームに `リクエストが多すぎます` が出たまま
+// 3 attempt 全滅した（リトライも同じ 1 分窓に入るので全部落ちる）。
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.8" } });
+
 test.describe.configure({ mode: "serial" });
 
 // 顧客返信は seed fixture を 2 方向に壊す: marker 返信が append され（seed の
 // `ensureInquiryReply` は本文一致の存在チェックなので消さない → run ごとに 1 件増え、
-// 下の `getByText(replyBody)` がいずれ strict mode violation になる）、status が
+// 下の `postedReply` がいずれ strict mode violation になる）、status が
 // RESOLVED → IN_PROGRESS へ reopen される（seed の inquiry 作成は「無ければ作る」
 // だけで status を書き戻さないため「解決済」fixture が IN_PROGRESS で固定化する）。
 // 復元は無条件に hook で行う（規約: `.claude/rules/testing-e2e.md`）。
@@ -75,12 +83,17 @@ test.describe("お問い合わせ返信 - 双方向スレッド", () => {
     await main.getByLabel("返信内容").fill(replyBody);
     await main.getByRole("button", { name: "返信を送信する" }).click();
 
-    await expect(main.getByText(replyBody)).toBeVisible({ timeout: 15000 });
+    // `main.getByText(replyBody)` で待ってはいけない — **自分が fill した
+    // textarea の中身にマッチして通ってしまう**ので、送信が失敗していても
+    // 素通りする。実測 (run 30681869018): 返信は rate limit で弾かれ
+    // `リクエストが多すぎます` が出ていたのに、この行は通過して次の行で初めて
+    // 落ちた。待つ対象は最初から「投稿されたスレッド上の返信」にする。
+    const postedReply = main
+      .getByRole("article")
+      .filter({ hasText: replyBody });
+    await expect(postedReply).toBeVisible({ timeout: 15000 });
     await expect(
-      main
-        .getByRole("article")
-        .filter({ hasText: replyBody })
-        .getByRole("heading", { name: "あなた" }),
+      postedReply.getByRole("heading", { name: "あなた" }),
     ).toBeVisible();
   });
 });
