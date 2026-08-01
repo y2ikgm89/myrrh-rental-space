@@ -205,11 +205,13 @@ describe("conform form pattern", () => {
       const source = readFileSync(filePath, "utf8");
       if (!HAS_FORM.test(source)) continue;
       if (!IMPORTS_CONFORM.test(source)) continue;
-      if (!USES_ACTION_STATE.test(source)) continue;
-
       // `<form action>` は「この gate の対象か」の判定だけに使う
       if (!FORM_ACTION_PROP.test(source)) continue;
 
+      // **alias の判定は usage の絞り込みより前に置く。** `useActionState as X`
+      // と書かれると `USES_ACTION_STATE` が一致せず、その時点で continue して
+      // alias 判定に到達しない = guard 皆無のフォームが素通りする
+      // （Codex #1809 指摘、probe で再現済み: 5 pass のまま緑だった）。
       if (ALIASED_HOOK_IMPORT.test(source)) {
         violations.push(
           `${toRepoPath(filePath)} (useForm / useActionState を別名 import している。gate が検出できないので別名を付けない)`,
@@ -217,6 +219,7 @@ describe("conform form pattern", () => {
         continue;
       }
 
+      if (!USES_ACTION_STATE.test(source)) continue;
       if (countGuards(source) > 0) continue;
 
       violations.push(
