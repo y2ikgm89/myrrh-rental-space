@@ -185,34 +185,51 @@ export function Pagination({
             <span className="ml-1 hidden sm:inline">前へ</span>
           </Button>
 
-          {getPageNumbers(currentPage, totalPages).map((page, i) =>
-            page === "ellipsis" ? (
-              <span
-                /* eslint-disable-next-line @eslint-react/no-array-index-key */
-                key={`ellipsis-${i}`}
-                aria-hidden="true"
-                className={cn(
-                  "inline-flex min-h-11 min-w-11 items-center justify-center",
-                  "text-sm text-muted-foreground",
-                )}
-              >
-                …
-              </span>
-            ) : (
-              <Button
-                key={page}
-                variant={page === currentPage ? "default" : "outline"}
-                size="sm"
-                className="min-w-11 px-0"
-                onClick={() => goToPage(page)}
-                disabled={isPending}
-                aria-label={`${page} ページ目へ移動`}
-                aria-current={page === currentPage ? "page" : undefined}
-              >
-                {page}
-              </Button>
-            ),
-          )}
+          {/*
+            番号ボタンは md 未満で隠す。prev + 番号 + next を全部並べると最悪
+            9 コントロール（44px）+ gap 8 個（4px）= 428px になり、390px 幅の
+            main（p-4 を除くと 358px）に収まらない。`justify-center` なので
+            左右へ 35px ずつ溢れ、body の scrollWidth が 409px になっていた
+            （実測: CI run 30673881231 の /admin/audit-logs、63 件 = 7 ページ）。
+
+            省略形（8 ページ以上）も 1 + … + 周辺 3 + … + last = 7 エントリ止まりで
+            コントロール数は同じ 9 なので、ページ数を増やしても解決しない。
+            md 以上では left ブロックと合わせても 736px 幅に収まる。
+          */}
+          <span className="inline-flex min-h-11 items-center px-2 text-sm text-muted-foreground md:hidden">
+            {currentPage} / {totalPages}
+          </span>
+
+          <div className="hidden items-center gap-1 md:flex">
+            {getPageNumbers(currentPage, totalPages).map((page, i) =>
+              page === "ellipsis" ? (
+                <span
+                  /* eslint-disable-next-line @eslint-react/no-array-index-key */
+                  key={`ellipsis-${i}`}
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex min-h-11 min-w-11 items-center justify-center",
+                    "text-sm text-muted-foreground",
+                  )}
+                >
+                  …
+                </span>
+              ) : (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "default" : "outline"}
+                  size="sm"
+                  className="min-w-11 px-0"
+                  onClick={() => goToPage(page)}
+                  disabled={isPending}
+                  aria-label={`${page} ページ目へ移動`}
+                  aria-current={page === currentPage ? "page" : undefined}
+                >
+                  {page}
+                </Button>
+              ),
+            )}
+          </div>
 
           <Button
             variant="outline"
