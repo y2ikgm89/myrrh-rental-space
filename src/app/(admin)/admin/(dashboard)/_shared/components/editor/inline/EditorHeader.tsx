@@ -29,30 +29,26 @@ import type { EditorHeaderProps } from "./types";
 const styles = tv({
   slots: {
     // z-index は inline style で適用（Tailwind JIT は `z-[${VAR}]` を scan しないため CSS 未生成）
+    // **不透明にする**。半透明のままだと背後の色と合成され、text-muted-foreground の
+    // 実効コントラストが背後次第で変わる。エディタは `useFullscreenMode` の
+    // `useLayoutEffect` で `enterFullscreen()` を呼ぶが、それが走る前
+    // （SSR HTML〜hydration の窓）は `ResponsiveSidebar` がまだ描画されており、
+    // viewport 固定の本ヘッダーが暗色サイドバー (`bg-sidebar-bg`) に重なる。
+    // その合成結果が #989da4 になり、slug の `text-muted-foreground` (#5b646f) が
+    // 2.2:1 まで落ちていた（実測: run 30677872134 の axe-admin-pages、
+    // run 30678172597 の lexical-toolbar-roving-tabindex）。
+    // axe がこの窓を踏むかは実行タイミング次第なので flaky に見える。
     //
-    // 背景は**不透明**であること。`bg-background/95` +
-    // `supports-[backdrop-filter]:bg-background/60` + `backdrop-blur` を使っていた頃は、
-    // このヘッダーの実効背景が「背後に何が描かれているか」で決まり、コントラストが
-    // トークンから読めなくなっていた。
+    // サイドバー幅のオフセット (`lg:left-64`) で重なりを避ける手は使えない。
+    // fullscreen 中はサイドバーが unmount され `DashboardShell` の `lg:pl-64` も
+    // 外れるため、定常状態で 256px の空白が残る（PR #1773 の退行）。
+    // 背後に依存しない不透明化が唯一レイアウトから独立した解。
     //
-    // このヘッダーは `fixed left-0 right-0` = ビューポート全幅で、z-index は
-    // `Z_INDEX.editorToolbar`(65) — サイドバーの `Z_INDEX.sidebar`(10) より上にある。
-    // 一方、管理シェルがサイドバーを外すのは **hydration 後**（`InlineEditorShell` の
-    // `useFullscreenMode` → `useLayoutEffect` → `enterFullscreen()`）なので、
-    // SSR HTML にはサイドバーが載っている。つまり最初のペイントからハイドレーション
-    // 完了までの間、ヘッダー左 256px（`w-64`）の実効背景は
-    // `--color-sidebar-bg` との合成になる。
-    //
-    // 実測（CI run 30678172597 の axe color-contrast serious）:
-    //   bg-background(#f6f9fc) を alpha 0.6 で sidebar-bg(#0a121f) に合成 → #989da4
-    //   その上の `slug`(text-muted-foreground #5b646f) = **2.18:1**（AA 4.5:1 未達）
-    // axe はこの窓に入ったスキャンでだけ違反として報告するため flaky に見えるが、
-    // 実体はページを開くたびに必ず通る経路。
-    //
-    // なお、ここでの `backdrop-blur` は元々**視覚効果として機能していない**。
+    // 併せて外した `backdrop-blur` は元々**視覚効果として機能していない**。
     // `InlineEditorShell` は `h-dvh` + 内側 `overflow-hidden` で本文用のスクロール
-    // コンテナをヘッダーの下端より下に置くため、ヘッダーの下を通過するコンテンツが
-    // 存在しない。gate: `__tests__/unit/architecture/admin-editor-header-contrast.test.ts`
+    // コンテナをヘッダー下端より下に置くため、ヘッダーの下を通過するコンテンツが
+    // 存在しないため。
+    // gate: `__tests__/unit/architecture/admin-editor-header-contrast.test.ts`
     header: "fixed top-0 left-0 right-0 border-b bg-background",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
