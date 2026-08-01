@@ -79,30 +79,67 @@ const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([
 const HAS_FORM = /<form[\s>]/u;
 const IMPORTS_CONFORM = /from "@conform-to\/react"/u;
 const USES_ACTION_STATE = /useActionState\(/u;
-/** `<form ... action={...}>`。属性は改行を跨ぐので dotAll で見る */
-const FORM_ACTION_PROP = /<form[^>]*action=\{/su;
+/**
+ * `<form ... action={...}>`。属性は改行を跨ぐので dotAll。
+ * **1 ファイルに複数ありうる**ので、真偽ではなく数を取る（`countGuards` 参照）。
+ */
+const FORM_ACTION_PROP = /<form[^>]*action=\{/gsu;
 /**
  * helper を conform の `onSubmit` に **渡している**こと。
  * 素朴に `dispatchWithoutFormReset` を探すと **import 行だけで通ってしまう**
  * （この gate 自身の self-test で実際に踏んだ: 呼び出しを消しても import が
  * 残っていたため緑になった）。呼び出しの形まで見る。
  */
-const USES_HELPER = /onSubmit:\s*dispatchWithoutFormReset\(/u;
+const USES_HELPER = /onSubmit:\s*dispatchWithoutFormReset\(/gu;
 /** ref capture 等で helper に載せられない場合の inline 実装 */
-const HAS_INLINE_ONSUBMIT = /onSubmit\(event/u;
+const INLINE_ONSUBMIT = /onSubmit\(event/gu;
 /** inline 版は preventDefault で React の action 実行を止めているのが必須 */
 const HAS_PREVENT_DEFAULT = /event\.preventDefault\(\)/u;
 
-function stopsAutoReset(source: string): boolean {
-  if (USES_HELPER.test(source)) return true;
-  return HAS_INLINE_ONSUBMIT.test(source) && HAS_PREVENT_DEFAULT.test(source);
+function countMatches(source: string, pattern: RegExp): number {
+  return (source.match(pattern) ?? []).length;
 }
+
 /**
- * ユーザーがテキストを打ち込む入力。select / switch / checkbox しか無い
- * フォームは client validation する対象が無いので対象外にする。
+ * auto-reset を止めている箇所の数。
+ *
+ * **ファイル単位の真偽値にしてはいけない。** `TaxonomyEditor` のように conform
+ * フォームを 2 つ持つファイルでは「どこかに 1 つあれば緑」になり、片方の退行を
+ * 取り逃す（self-test で確認: 2 つのうち 1 つを消しても 4 pass のままだった）。
+ * `<form action>` の数と突き合わせるためにカウントを返す。
  */
-const HAS_TEXT_INPUT =
-  /<(Input|Textarea)[\s/>]|<input[^>]*type="(text|email|tel|password|search|url|number)"/u;
+function countGuards(source: string): number {
+  const helperCalls = countMatches(source, USES_HELPER);
+  // inline 版は preventDefault とセットのときだけ有効とみなす
+  const inlineCalls = HAS_PREVENT_DEFAULT.test(source)
+    ? countMatches(source, INLINE_ONSUBMIT)
+    : 0;
+  return helperCalls + inlineCalls;
+}
+
+/** conform 由来の UI プリミティブ（常にテキスト入力） */
+const CONFORM_UI_INPUT = /<(Input|Textarea)[\s/>]/u;
+const NATIVE_INPUT_TAG = /<input\b[^>]*>/gsu;
+/**
+ * テキスト入力**ではない** native input の type。
+ *
+ * `type` を書かない `<input name="title" />` は HTML 既定で `text` なので
+ * **テキスト入力として数える**。明示 type だけを列挙する書き方だと、この
+ * 一番ありふれた形が gate をすり抜ける。`type={expr}` の動的指定も判別
+ * できない以上テキスト側に倒し、gate を緩める方向には解釈しない。
+ */
+const NON_TEXT_INPUT_TYPE =
+  /\btype=\s*["'{]?\s*(hidden|checkbox|radio|file|submit|button|reset|image|range|color)\b/u;
+
+/** conform を使わず、ユーザーがテキストを打ち込むフォーム = 移行対象 */
+function isHandRolledTextForm(source: string): boolean {
+  if (!HAS_FORM.test(source)) return false;
+  if (IMPORTS_CONFORM.test(source)) return false;
+  if (CONFORM_UI_INPUT.test(source)) return true;
+  return (source.match(NATIVE_INPUT_TAG) ?? []).some(
+    (tag) => !NON_TEXT_INPUT_TYPE.test(tag),
+  );
+}
 
 function collectTsxFiles(dir: string): string[] {
   const out: string[] = [];
@@ -127,7 +164,7 @@ describe("conform form pattern", () => {
     expect(existsSync(HELPER)).toBe(true);
   });
 
-  test("conform + <form action> のフォームは form auto-reset を止めている", () => {
+  test("conform + <form action> は 1 フォームごとに auto-reset を止めている", () => {
     const violations: string[] = [];
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
@@ -135,10 +172,16 @@ describe("conform form pattern", () => {
       if (!HAS_FORM.test(source)) continue;
       if (!IMPORTS_CONFORM.test(source)) continue;
       if (!USES_ACTION_STATE.test(source)) continue;
-      if (!FORM_ACTION_PROP.test(source)) continue;
-      if (stopsAutoReset(source)) continue;
 
-      violations.push(toRepoPath(filePath));
+      const formActions = countMatches(source, FORM_ACTION_PROP);
+      if (formActions === 0) continue;
+
+      const guards = countGuards(source);
+      if (guards >= formActions) continue;
+
+      violations.push(
+        `${toRepoPath(filePath)} (<form action> ${formActions.toString()} 件に対し guard ${guards.toString()} 件)`,
+      );
     }
 
     expect(violations).toEqual([]);
@@ -148,10 +191,7 @@ describe("conform form pattern", () => {
     const violations: string[] = [];
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
-      const source = readFileSync(filePath, "utf8");
-      if (!HAS_FORM.test(source)) continue;
-      if (IMPORTS_CONFORM.test(source)) continue;
-      if (!HAS_TEXT_INPUT.test(source)) continue;
+      if (!isHandRolledTextForm(readFileSync(filePath, "utf8"))) continue;
 
       const repoPath = toRepoPath(filePath);
       if (CONFORM_MIGRATION_ALLOWLIST.has(repoPath)) continue;
@@ -168,5 +208,23 @@ describe("conform form pattern", () => {
     );
 
     expect(stale).toEqual([]);
+  });
+
+  test("allowlist の entry は今も違反している（移行が済んだら消す）", () => {
+    // path の存在だけを見ると、移行済みファイルの entry が残り続ける。その状態で
+    // 後から conform を外すと、残骸の entry が黙って免除してしまう。
+    // 「今も手書きのままか」を毎回検証して、ratchet に死んだ免除を溜めない。
+    const alreadyMigrated: string[] = [];
+
+    for (const repoPath of CONFORM_MIGRATION_ALLOWLIST.keys()) {
+      const absolute = join(ROOT, repoPath);
+      // 消滅は上のテストが検出するのでここでは飛ばす
+      if (!existsSync(absolute)) continue;
+      if (isHandRolledTextForm(readFileSync(absolute, "utf8"))) continue;
+
+      alreadyMigrated.push(repoPath);
+    }
+
+    expect(alreadyMigrated).toEqual([]);
   });
 });
