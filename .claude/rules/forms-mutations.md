@@ -87,7 +87,8 @@ return (
   取り残された（#1802）
 
 gate: `__tests__/unit/architecture/conform-form-pattern.test.ts`（**allowlist なしで 0 件強制**、
-`<form action>` の件数と guard 件数を突き合わせるので 1 ファイル複数フォームでも漏れない）
+`useForm` の設定数と guard 件数を突き合わせるので、1 ファイルに複数フォームがあっても
+片方だけ guard を外すと落ちる）
 
 ## サーバーの拒否を捨てない
 
