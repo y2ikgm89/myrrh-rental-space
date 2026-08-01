@@ -150,6 +150,24 @@
   --color-sidebar-text-disabled: oklch(0.64 0.02 260);
   --color-sidebar-accent: oklch(0.55 0.2 260);
   --color-sidebar-nav-hover: oklch(1 0 0 / 0.05);
+  /* 機能モジュール OFF の「非公開」badge 背景。**不透明**であることが要件。
+   *
+   * 以前は `bg-sidebar-nav-hover`（白 5% = ほぼ透明）を敷いていたため、実効背景が
+   * **nav 項目の状態で変わって**いた。通常項目なら `--color-sidebar-bg` に合成されて
+   * #161d2a（`--color-sidebar-text-muted` #979fab と 6.30:1）だが、**active 項目では
+   * `--color-sidebar-accent`（青）に合成されて #2871e5 になり 1.72:1** まで落ちる。
+   * 実測: run 30682367841 の `axe-admin-feature-disabled`「機能モジュール OFF の
+   * スペース管理タブ」で axe が bgColor #2771e4 / contrastRatio 1.72 を報告。
+   *
+   * nav 項目のアイコンとラベルは `isActive && "text-primary-foreground"` で色を
+   * 反転させているが、badge は別コンポーネントでその反転から漏れていた。badge に
+   * `isActive` を配線する手もあるが、**badge が自分の背景を持てば状態から独立**する
+   * ので、そちらを採る（配線は将来 active 判定が増えたときに再び漏れる）。
+   *
+   * 値は従来の合成結果 #161d2a の再現（#161d29）。見た目を変えずに実効値を確定させる。
+   * 上の `--color-sidebar-text-disabled` と同じ「減光は alpha でなく専用トークンで
+   * 表現する」方針の適用。 */
+  --color-sidebar-badge-bg: oklch(0.231 0.025 260);
 
   /* --------------------------------------------------------------------------
    * Border Radius: Swiss Design はシャープ

@@ -69,6 +69,10 @@ const SPACE_TABS_TSX = join(
   process.cwd(),
   "src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceManagementTabs.tsx",
 );
+const BADGE_TSX = join(
+  process.cwd(),
+  "src/app/(admin)/admin/(dashboard)/_components/AdminNavFeatureDisabledIndicator.tsx",
+);
 
 /** `bg-sidebar-nav-hover` = `oklch(1 0 0 / 0.05)` = 白 5%。 */
 const NAV_HOVER_WHITE_ALPHA = 0.05;
@@ -102,9 +106,59 @@ const sidebarBg = readOklchToken("sidebar-bg");
 const sidebarText = readOklchToken("sidebar-text");
 const sidebarTextMuted = readOklchToken("sidebar-text-muted");
 const sidebarTextDisabled = readOklchToken("sidebar-text-disabled");
+const sidebarAccent = readOklchToken("sidebar-accent");
 const white: Rgb = [1, 1, 1];
-/** `bg-sidebar-nav-hover` を sidebar 背景に合成した実効背景（hover 行 / badge）。 */
+/** `bg-sidebar-nav-hover` を sidebar 背景に合成した実効背景（hover 行）。 */
 const navHoverBg = over(white, sidebarBg, NAV_HOVER_WHITE_ALPHA);
+
+/** `--color-<name>` の oklch alpha（`/ A` 省略時は 1）。 */
+function readTokenAlpha(name: string): number {
+  const declaration = new RegExp(
+    `--color-${name}:\\s*oklch\\(([^)]*)\\)`,
+    "u",
+  ).exec(readFileOrThrow(ADMIN_CSS));
+  if (!declaration?.[1]) {
+    throw new Error(`--color-${name} の oklch 定義が見つかりません`);
+  }
+  const alpha = /\/\s*([\d.]+)/u.exec(declaration[1]);
+  return alpha?.[1] === undefined ? 1 : Number(alpha[1]);
+}
+
+const badgeBgAlpha = readTokenAlpha("sidebar-badge-bg");
+
+// `readOklchToken` は `oklch(L C H)` しか解析しないため、alpha 付きに戻されると
+// 「定義が見つかりません」という無関係なメッセージで落ちる。何が壊れたのかが
+// 分かるよう、色を読む前にここで明示的に弾く。
+if (badgeBgAlpha !== 1) {
+  throw new Error(
+    `--color-sidebar-badge-bg に alpha (${String(badgeBgAlpha)}) が付いています。` +
+      "「非公開」badge の背景は不透明でなければならない — 半透明だと実効背景が " +
+      "nav 項目の状態（active は bg-sidebar-accent の青）で変わり、" +
+      "text-sidebar-text-muted が 1.72:1 まで落ちる（run 30682367841 の実測）。",
+  );
+}
+
+/** 「非公開」badge の背景トークン（不透明であることは上で保証済み）。 */
+const sidebarBadgeBg = readOklchToken("sidebar-badge-bg");
+
+/**
+ * nav 項目が取りうる背景。**badge の実効背景はこれに依存してはいけない。**
+ *
+ * `ResponsiveSidebar` の `navItemActive` は `bg-sidebar-accent`（青）を敷き、
+ * アイコンとラベルは `isActive && "text-primary-foreground"` で色を反転させる。
+ * badge は別コンポーネントなのでその反転から漏れる。背景まで半透明だと、
+ * 反転しないテキスト色が青の上に載って AA を大きく割る。
+ */
+const NAV_ITEM_BACKDROPS = [
+  ["通常", sidebarBg],
+  ["hover", navHoverBg],
+  ["active（bg-sidebar-accent）", sidebarAccent],
+] as const;
+
+/** badge 背景を nav 項目の背景に合成した実効値（不透明なら backdrop は透けない）。 */
+function effectiveBadgeBg(backdrop: Rgb): Rgb {
+  return over(sidebarBadgeBg, backdrop, badgeBgAlpha);
+}
 
 // --- light: space management tabs / compact badge ----------------------------
 const muted = readOklchToken("muted");
@@ -178,7 +232,7 @@ const TEXT_PAIRS: { usage: string; fg: Rgb; bg: Rgb }[] = [
   {
     usage: "sidebar: AdminNavFeatureDisabledIndicator の「非公開」badge",
     fg: sidebarTextMuted,
-    bg: navHoverBg,
+    bg: sidebarBadgeBg,
   },
   {
     usage: "sidebar: 通常の nav 項目（hover 中）",
@@ -216,6 +270,59 @@ describe("機能モジュール OFF 表示のコントラスト (WCAG 2.1 AA)", 
     expect(relativeLuminance(sidebarTextDisabled)).toBeLessThan(
       relativeLuminance(sidebarTextMuted),
     );
+  });
+});
+
+/**
+ * 「非公開」badge が **nav 項目の状態に依存しない**ことの gate。
+ *
+ * 事故 (run 30682367841 / `axe-admin-feature-disabled`「機能モジュール OFF の
+ * スペース管理タブ」): badge 背景が `bg-sidebar-nav-hover`（白 5% = ほぼ透明）
+ * だったため実効背景が nav 項目の状態で変わり、**active 項目（`bg-sidebar-accent`
+ * = 青）の上で 1.72:1** まで落ちた。axe 実測 `fgColor #979fab` /
+ * `bgColor #2771e4` / `contrastRatio 1.72`。
+ *
+ * 通常項目の上では 6.30:1 で通っていたため、暗色背景だけをモデル化していた
+ * 従来の `TEXT_PAIRS` では**構造的に検出できなかった**。badge が「自分の背景を
+ * 持つ」ことを不変条件にして、nav 項目が取りうる全背景で検査する。
+ *
+ * badge に `isActive` を配線する解も採らない — 将来 active 判定が増えたときに
+ * 再び漏れる。背景を不透明にすれば状態から独立する。
+ */
+describe("「非公開」badge は nav 項目の状態から独立している", () => {
+  test("badge 背景トークンが不透明（alpha を持たない）", () => {
+    expect({
+      token: "--color-sidebar-badge-bg",
+      alpha: badgeBgAlpha,
+      hex: toHex(sidebarBadgeBg),
+    }).toMatchObject({ alpha: 1 });
+  });
+
+  test("badge が半透明の nav-hover 背景を使っていない", () => {
+    // 旧実装への逆戻り検出。className リテラルだけを見るのでコメントは拾わない。
+    expect(classNameLiterals(BADGE_TSX)).not.toContain("bg-sidebar-nav-hover");
+  });
+
+  for (const [state, backdrop] of NAV_ITEM_BACKDROPS) {
+    test(`${state} の nav 項目の上でも AA を満たす`, () => {
+      const bg = effectiveBadgeBg(backdrop);
+      const ratio = contrastRatio(sidebarTextMuted, bg);
+      expect({
+        state,
+        fg: toHex(sidebarTextMuted),
+        bg: toHex(bg),
+        ratio: Math.round(ratio * 100) / 100,
+        required: AA_MIN_RATIO,
+        pass: ratio >= AA_MIN_RATIO,
+      }).toMatchObject({ pass: true });
+    });
+  }
+
+  test("半透明に戻すと active 項目で AA を割る（この gate が空振りでないこと）", () => {
+    // 旧実装（白 5%）を active 背景に合成した再現。axe の実測 1.72 と一致する。
+    const oldBadgeBg = over(white, sidebarAccent, NAV_HOVER_WHITE_ALPHA);
+    expect(toHex(oldBadgeBg)).toBe("#2871e5");
+    expect(contrastRatio(sidebarTextMuted, oldBadgeBg)).toBeCloseTo(1.72, 2);
   });
 });
 

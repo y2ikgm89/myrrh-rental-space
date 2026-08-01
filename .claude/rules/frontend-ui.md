@@ -65,6 +65,17 @@ paths:
   必要な不透明度は「**最悪の下地（真っ黒）でも 4.5:1**」で決める（`bg-background/95`
   なら実効 `#f2f2f2` / 5.36:1 で安全、`/90` が 4.77:1 で下限付近）。gate:
   `__tests__/unit/architecture/admin-overlay-surface-contrast.test.ts`
+- **背景が状態で変わる面に半透明背景を敷かない**。上と同じ理屈が「重なり」だけでなく
+  「兄弟要素の状態」にも当たる。実測（run 30682367841）: サイドバーの「非公開」badge が
+  `bg-sidebar-nav-hover`（= `oklch(1 0 0 / 0.05)` = 白 5%）だったため、実効背景が
+  nav 項目の状態で変わり、**active 項目（`bg-sidebar-accent` の青）の上で 1.72:1**。
+  通常項目の上では 6.30:1 で通るので、暗色背景だけをモデル化した gate では
+  構造的に検出できなかった。nav 項目のアイコン / ラベルは
+  `isActive && "text-primary-foreground"` で反転するのに、別コンポーネントの badge が
+  その反転から漏れていたのが実体。**`isActive` を配線するのではなく、要素が自分の
+  不透明な背景トークンを持つ**ようにする（配線は状態が増えるたびに再び漏れる）。
+  gate: `__tests__/unit/architecture/admin-feature-disabled-contrast.test.ts` が
+  nav 項目の取りうる全背景（通常 / hover / active）で検査する
 - **「重ならない位置へずらす」で代替しない**。レイアウトは条件で変わるので、
   オフセットは前提が崩れた瞬間に退行する。実例: `EditorHeader` に
   `lg:left-64`（サイドバー幅ぶんのオフセット）を入れた PR #1773 は、
