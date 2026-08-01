@@ -67,10 +67,6 @@ const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([
     "サイドバーウィジェット (4 項目)。Zod を URL 検証にだけ部分使用しており、schema 全体の定義から必要",
   ],
   [
-    "src/app/(public)/mypage/inquiries/[id]/_components/inquiry-reply-form.tsx",
-    "問い合わせ返信。action が引数受け取り (inquiryId, body, token) なので FormData 化が必要",
-  ],
-  [
     "src/app/(public)/receipts/reissue-request/_components/receipt-resend-form.tsx",
     "領収書再発行依頼。同上",
   ],
