@@ -80,10 +80,24 @@ const HAS_FORM = /<form[\s>]/u;
 const IMPORTS_CONFORM = /from "@conform-to\/react"/u;
 const USES_ACTION_STATE = /useActionState\(/u;
 /**
- * `<form ... action={...}>`。属性は改行を跨ぐので dotAll。
- * **1 ファイルに複数ありうる**ので、真偽ではなく数を取る（`countGuards` 参照）。
+ * `<form ... action={...}>`。この gate の適用対象かどうかの判定にだけ使う。
+ *
+ * **JSX タグの数を guard 数と突き合わせてはいけない。** 1 つの conform 設定を
+ * 条件分岐で 2 つの `<form>` として描画するのは正当だし、conform フォームと
+ * 無関係な Server Action フォームが 1 ファイルに同居することもある。
+ * どちらも guard は 1 つで足りるのに、タグ数で数えると落ちる（Codex #1806 指摘。
+ * probe で誤検出を再現済み）。突き合わせる相手は `useForm` の数（下記）。
  */
-const FORM_ACTION_PROP = /<form[^>]*action=\{/gsu;
+const FORM_ACTION_PROP = /<form[^>]*action=\{/su;
+/**
+ * conform の設定 1 つ = guard 1 つが要る単位。
+ *
+ * **代入の形まで見る。** 素朴に `useForm[<(]` を数えると、canonical shape を
+ * 説明する JSDoc の `useForm<z.input<typeof schema>>` まで 1 件に数えてしまい、
+ * `BroadcastForm` が「useForm 2 件に対し guard 1 件」で落ちた。
+ * `.claude/rules` に記録済みの prose 誤検出（#1772）と同型。
+ */
+const USE_FORM_CONFIG = /=\s*useForm[<(]/gu;
 /**
  * helper を conform の `onSubmit` に **渡している**こと。
  * 素朴に `dispatchWithoutFormReset` を探すと **import 行だけで通ってしまう**
@@ -129,7 +143,7 @@ const NATIVE_INPUT_TAG = /<input\b[^>]*>/gsu;
  * できない以上テキスト側に倒し、gate を緩める方向には解釈しない。
  */
 const NON_TEXT_INPUT_TYPE =
-  /\btype=\s*["'{]?\s*(hidden|checkbox|radio|file|submit|button|reset|image|range|color)\b/u;
+  /\btype=\s*\{?\s*["']?\s*(hidden|checkbox|radio|file|submit|button|reset|image|range|color)\b/u;
 
 /** conform を使わず、ユーザーがテキストを打ち込むフォーム = 移行対象 */
 function isHandRolledTextForm(source: string): boolean {
@@ -173,14 +187,15 @@ describe("conform form pattern", () => {
       if (!IMPORTS_CONFORM.test(source)) continue;
       if (!USES_ACTION_STATE.test(source)) continue;
 
-      const formActions = countMatches(source, FORM_ACTION_PROP);
-      if (formActions === 0) continue;
+      // `<form action>` は「この gate の対象か」の判定だけに使う
+      if (!FORM_ACTION_PROP.test(source)) continue;
 
+      const configs = countMatches(source, USE_FORM_CONFIG);
       const guards = countGuards(source);
-      if (guards >= formActions) continue;
+      if (guards >= configs) continue;
 
       violations.push(
-        `${toRepoPath(filePath)} (<form action> ${formActions.toString()} 件に対し guard ${guards.toString()} 件)`,
+        `${toRepoPath(filePath)} (useForm ${configs.toString()} 件に対し guard ${guards.toString()} 件)`,
       );
     }
 
