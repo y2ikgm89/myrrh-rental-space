@@ -45,6 +45,7 @@ import {
   toggleTransferAccountActive,
   updateTransferAccount,
 } from "@/admin/actions/settings/transfer-accounts";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type Props = {
   accounts: Serialized<TransferAccountRecord>[];
@@ -96,6 +97,9 @@ function TransferAccountFormDialog({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: transferAccountFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

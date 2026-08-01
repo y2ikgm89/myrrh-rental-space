@@ -42,6 +42,7 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { SEO_LIMITS } from "@/shared/lib/validations/seo";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/pages";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface PageSeoData {
   slug: string;
@@ -72,6 +73,9 @@ export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: updatePageSeoSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

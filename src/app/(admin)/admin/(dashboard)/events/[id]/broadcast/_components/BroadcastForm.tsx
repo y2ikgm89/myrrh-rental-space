@@ -9,6 +9,7 @@ import type { z } from "zod";
 import { Input, SubmitButton, Textarea } from "@/admin/components/ui";
 import { broadcastEventAction } from "@/admin/actions/event-broadcast";
 import { eventBroadcastSchema } from "@/shared/lib/validations/event-broadcast";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type BroadcastFormProps = {
   eventId: string;
@@ -44,6 +45,9 @@ export function BroadcastForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: eventBroadcastSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

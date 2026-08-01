@@ -51,6 +51,7 @@ import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
@@ -82,6 +83,9 @@ export function CustomerEditForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

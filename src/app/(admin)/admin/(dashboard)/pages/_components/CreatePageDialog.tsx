@@ -13,6 +13,7 @@
  */
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   useEffectEvent,
@@ -111,6 +112,22 @@ export function CreatePageDialog({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: createPageSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は
+    // `dispatchWithoutFormReset` の JSDoc）。このフォームは送信 slug を ref に
+    // capture するため、helper に `wrappedFormAction` を渡すと
+    // 「render 中に ref を読みうる」として react-hooks/refs が落ちる。
+    // よってここだけ helper と同じ処理を inline で書く。
+    onSubmit(event, { formData }) {
+      const slugValue = formData.get("slug");
+      if (typeof slugValue === "string") {
+        submittedSlugRef.current = slugValue;
+      }
+      event.preventDefault();
+      startTransition(() => {
+        formAction(formData);
+      });
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
@@ -125,7 +142,8 @@ export function CreatePageDialog({
   const title = titleControl.value ?? "";
   const slug = slugControl.value ?? "";
 
-  // 送信前に slug を ref に capture（resetForm で消える前に保存）
+  // hydration 前の POST fallback (`action` prop) 用。hydration 後は上の
+  // `onSubmit` が同じ capture を行うので、こちらは JS 無効時にだけ効く。
   const wrappedFormAction = (formData: FormData) => {
     const slugValue = formData.get("slug");
     if (typeof slugValue === "string") {

@@ -58,6 +58,7 @@ import {
   HOLIDAY_MODE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 export type SpaceRatePlanEditModalProps = {
   readonly spaceId: string;
@@ -99,6 +100,9 @@ export function SpaceRatePlanEditModal({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: spaceRatePlanFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

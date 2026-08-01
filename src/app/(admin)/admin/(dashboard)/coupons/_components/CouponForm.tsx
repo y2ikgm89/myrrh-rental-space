@@ -37,6 +37,7 @@ import {
 import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCouponType } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type CouponFormProps = {
   coupon?: CouponData;
@@ -60,6 +61,9 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: couponFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: coupon
