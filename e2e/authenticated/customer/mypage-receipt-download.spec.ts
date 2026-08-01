@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { buffer } from "node:stream/consumers";
+import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 import {
   customerReservationTargets,
@@ -60,6 +60,16 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
       new RegExp(`/mypage/reservations/${fixture.reservationId}$`, "u"),
     );
 
+    // ダウンロード応答は **trace に残らない**（Playwright の仕様）。「canceled」の
+    // 一行だけでは 429 なのか 500 なのか分からず、実際そこで 2 度推測が入った。
+    // ステータスを spec 側で拾って失敗メッセージに載せる。
+    const receiptResponses: string[] = [];
+    page.on("response", (response) => {
+      if (response.url().includes("/api/receipts/")) {
+        receiptResponses.push(`${response.status()} ${response.url()}`);
+      }
+    });
+
     const downloadLink = page.getByRole("link", {
       name: "領収書をダウンロード",
     });
@@ -73,16 +83,33 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
     expect(download.suggestedFilename()).toBe(
       `receipt-${fixture.serialNo}.pdf`,
     );
-    const stream = await download.createReadStream();
-    expect(stream).not.toBeNull();
-    if (stream === null) {
-      throw new Error("download stream missing");
-    }
-    // `stream` は Node の `Readable`。素の `for await...of` は Node の型定義上
-    // `[Symbol.asyncIterator](): NodeJS.AsyncIterator<any>` のため chunk が any 化する
-    // （`no-unsafe-argument`）。`node:stream/consumers` の `buffer()` はストーム全体を
-    // 型安全な `Buffer` へ集約する公式ヘルパーで、any を経由しない。
-    const data = await buffer(stream);
+
+    // **失敗理由を先に確定させる。** `failure()` はダウンロード完了まで待ってから
+    // 理由を返す公式 API（`path()` も待つが、`createReadStream()` は待たず、
+    // 失敗/中断済みなら「canceled」とだけ throw する）。
+    //
+    // 旧実装は `createReadStream()` を直に呼んでいたため、落ちても
+    // `download.createReadStream: canceled` の一行しか残らなかった。Playwright の
+    // trace はダウンロード応答を記録しないので、CI アーティファクトからも
+    // ステータスを追えず、原因を**推測**するしかない状態が続いていた
+    // （429 と見て専用 client IP を割り当てたのが上の test.use。それでも
+    // run 30685242600 まで再発している = 429 だけが原因ではない）。
+    // 理由を assertion のメッセージに載せて、次に落ちたときは推測を挟まず読める形にする。
+    expect(
+      await download.failure(),
+      `領収書 PDF のダウンロードが失敗した。受領書 API の応答: ${
+        receiptResponses.length > 0
+          ? receiptResponses.join(" / ")
+          : "(記録なし)"
+      }`,
+    ).toBeNull();
+
+    // 完了を保証してから読む（公式テストと同じ `path()` → 読み取りの順序）。
+    const filePath = await download.path();
+    const data = await readFile(filePath);
+
     expect(data.length).toBeGreaterThan(0);
+    // 長さだけだと「空でない何か」で通ってしまう。PDF の magic byte まで見る。
+    expect(data.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 });
