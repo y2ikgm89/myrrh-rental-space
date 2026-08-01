@@ -41,12 +41,17 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * 差し替えられるため、**遷移直後の一発勝負では掴めない**（run 30638590811 の trace で
  * 確認）。リトライする web-first assertion で待つ。
  *
- * ## ルート単位の判定は soft assertion
+ * ## 「1 回の run で全件の可否を出す」= route 単位も test 単位も止めない
  *
- * hard だと最初の 1 本で止まり、残りのルートの可否が分からないまま次の CI に
- * 持ち越しになる。実際この spec は「1 本直す → 次の 1 本が初めて到達して落ちる」を
- * 繰り返した（`/contact` → `/mypage/inquiries`）。soft なら 1 回の run で
- * 全 9 ルートの結果が出揃う。
+ * ルート単位の判定は **soft assertion**。hard だと最初の 1 本で止まり、残りの
+ * ルートの可否が分からないまま次の CI に持ち越しになる。実際この spec は
+ * 「1 本直す → 次の 1 本が初めて到達して落ちる」を繰り返した
+ * （`/contact` → `/mypage/inquiries`）。
+ *
+ * 同じことが **test 単位**では `test.describe.serial` によって起きていた。serial は
+ * 1 本落ちると後続を全て skip するため、contact が落ちている間 posts / reservation /
+ * events / spaces は 2 run 連続で一度も実行されていない（describe 直上の表を参照）。
+ * `mode: "default"` に変えて、9 ルート全部が 1 回の run で出揃うようにした。
  *
  * FEAT-3PLANE-04 (PR #1205) で `mypage/inquiries` × 2、`reservation/complete`、
  * `claim/reservation`、`claim/event-registration` に `requireFeatureEnabled` gate
@@ -92,7 +97,8 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *   直接書き換えるとキャッシュが古いまま公開ルートが本来のページを返し得るため
  *   admin UI 経由。保存の dispatch を待ってから遷移するので、公開ルートは
  *   **最初の 1 回の goto で**新しい状態を返す（`clickSaveAndAwaitDispatch` 参照）。
- * - シングルトン行 mutation のため `test.describe.serial` で直列化。
+ * - シングルトン行 mutation のため `test.describe.configure({ mode: "default" })`
+ *   で順序を固定する（`test.describe.serial` は使わない — 理由は describe 直上）。
  * - 管理面へのアクセスは storageState ではなく webServer env
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
  *   `chromium` project は setup-admin dependency を持たないため、spec 側で
@@ -111,6 +117,17 @@ const IS_PUBLIC_SURFACE = process.env["APP_SURFACE"] === "public";
 const CLAIM_TOKEN_STUB = "e2e-stub-token";
 
 const FEATURES_SETTINGS_PATH = "/admin/settings/features";
+
+/**
+ * 1 回の `goto` に許す上限。
+ *
+ * Playwright の navigation timeout は既定で **無制限**（`navigationTimeout` は
+ * config 未設定）なので、遅い遷移 1 本が test 予算を丸ごと食い潰す。実測
+ * (run 30672479398 attempt 0): 1 回の `goto` が **15.5 秒**かかり、続く待機と
+ * 合わせて 30 秒の既定予算を超過して test が timeout した。予算を定数から
+ * 導出する（`TEST_TIMEOUT_MS`）ために、遷移も明示的に有界にする。
+ */
+const NAVIGATION_TIMEOUT_MS = 10_000;
 
 /** 1 回の遷移につき not-found 境界を待つ時間。 */
 const NOT_FOUND_ATTEMPT_TIMEOUT_MS = 7_000;
@@ -151,9 +168,11 @@ async function probeNotFoundBoundary(
   route: string,
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= NOT_FOUND_ATTEMPTS; attempt++) {
-    await page.goto(route);
-
     try {
+      // goto も try の中に置く。無制限だと遅い遷移 1 本で test ごと timeout し、
+      // afterEach の復元まで巻き込んで共有 DB を汚す（`TEST_TIMEOUT_MS` 参照）。
+      // 有界にしたうえで「遷移が遅れた」も 1 attempt として消費させる。
+      await page.goto(route, { timeout: NAVIGATION_TIMEOUT_MS });
       await expect(notFoundHeading(page)).toBeVisible({
         timeout: NOT_FOUND_ATTEMPT_TIMEOUT_MS,
       });
@@ -264,6 +283,50 @@ const MODULE_CASES: readonly ModuleCase[] = [
   },
 ];
 
+/** 1 module あたりの最大ルート数。予算計算のためだけに使う。 */
+const MAX_ROUTES_PER_CASE = Math.max(
+  ...MODULE_CASES.map((c) => c.routes.length),
+);
+
+/**
+ * test 1 本の予算。**本体が絶対に timeout しないように定数から導出する。**
+ *
+ * ## なぜ既定 30 秒では駄目か（timeout の代償が復元の破壊）
+ *
+ * Playwright 公式の timeout 仕様は「test timeout は test 本体・fixture setup・
+ * `beforeEach` を覆い、`afterEach` と fixture teardown には**同じ値の別予算**が
+ * 与えられる」。つまり `afterEach` は本体に予算を食われない。にもかかわらず
+ * 実測 (run 30672479398 attempt 0) では復元が失敗している:
+ *
+ * ```
+ * Test timeout of 30000ms exceeded.
+ * Error: page.goto: net::ERR_ABORTED at http://localhost:3000/admin/settings/features
+ * Error: locator.evaluateAll: Target page, context or browser has been closed
+ * Error: feature module が基準状態に戻っていない。…
+ * ```
+ *
+ * **本体が timeout すると page / context ごと閉じられる**ため、別予算を持つ
+ * `afterEach` も生きた page を使えず復元できない。結果 contact が OFF のまま残り、
+ * `responsive-shell` の `/contact` が mobile / desktop の両 viewport で落ちた。
+ * この spec にとって「本体の timeout」は自分が落ちるだけでは済まず、
+ * **run 全体を汚染する**。だから本体は timeout してはならない。
+ *
+ * ## 予算の内訳
+ *
+ * 支配項はルート探索。1 ルートあたり最悪
+ * `NOT_FOUND_ATTEMPTS × (遷移 + not-found 待ち)` を使い、これは
+ * **soft assertion で全ルートを報告するために意図的に払うコスト**（失敗ルートは
+ * 必ず全 attempt を使い切る）。保存 / 基準復元は実測 0.6–1.1 秒と桁が小さいので、
+ * `homepage.spec.ts` と同じく固定ヘッドルームでまとめて見る。
+ *
+ * MODULE_CASES にルートを足すと予算も自動で増える。手で書いた数値を置かないこと。
+ */
+const TEST_TIMEOUT_MS =
+  MAX_ROUTES_PER_CASE *
+    NOT_FOUND_ATTEMPTS *
+    (NAVIGATION_TIMEOUT_MS + NOT_FOUND_ATTEMPT_TIMEOUT_MS) +
+  45_000;
+
 /**
  * この spec が所有する feature module（id → admin form の label）。
  *
@@ -277,9 +340,9 @@ const MODULE_CASES: readonly ModuleCase[] = [
  * ## 「所有 module」= MODULE_CASES の依存カスケード閉包
  *
  * `Settings.featureModules` は単一行なので、これを触る spec が複数あると
- * `fullyParallel` 下で衝突する。Playwright の `test.describe.serial` は
- * **同一ファイル内しか直列化しない**（別 project なら尚更並走する）ため、
- * 衝突は「所有 module を spec 間で重複させない」ことで防ぐ。
+ * `fullyParallel` 下で衝突する。Playwright の実行モード（`serial` / `default`）が
+ * 順序を保証するのは **同一 describe 内だけ**で、別ファイル・別 project には効かない。
+ * よって衝突は「所有 module を spec 間で重複させない」ことで防ぐ。
  * 本 spec は MODULE_CASES の 5 module、`axe-admin-feature-disabled.spec.ts` は
  * `faq` / `access` を所有し、両者は交わらない。
  *
@@ -335,14 +398,13 @@ const SAVE_ANCHOR_LABEL = OWNED_FEATURE_MODULES.spaces;
  * (`add-feature-module` skill)。ON を決め打ちすると、その環境では afterEach の
  * たびに seed 基準から離れた状態へ書き換えてしまう。
  *
- * かといって **`beforeAll` で実状態を読むのも駄目**。`test.describe.serial` の
- * リトライは新しい worker で `beforeAll` から再実行されるため、前の attempt が
- * 復元しきれずに残した OFF をそのまま「基準」として捕まえてしまい、リトライも
+ * かといって **実状態をスナップショットして基準にするのも駄目**。前の test / attempt が
+ * 復元しきれずに残した OFF をそのまま「基準」として捕まえてしまい、以降のリトライも
  * `afterAll` も汚染を追認する（検出も修復もされない）。
  *
- * よって seed と同じ env を同じ規則で読む。run 中に変化しないので、リトライしても
- * 基準はぶれない。`beforeAll` は逆にこの不変の基準へ**復元してから**始めるので、
- * 前 worker が残した汚染は追認ではなく修復される。
+ * よって seed と同じ env を同じ規則で読む。run 中に変化しないので、どの test から
+ * 数えても基準はぶれない。`beforeEach` は逆にこの不変の基準へ**復元してから**始める
+ * ので、前の test が残した汚染は追認ではなく修復される。
  */
 const SEED_DISABLED_MODULES = new Set(
   (process.env["SEED_FEATURE_MODULES_DISABLED"] ?? "")
@@ -412,7 +474,7 @@ function moduleSaveButton(page: Page, moduleLabel: string): Locator {
 }
 
 async function openFeatureSettings(page: Page): Promise<void> {
-  await page.goto(FEATURES_SETTINGS_PATH);
+  await page.goto(FEATURES_SETTINGS_PATH, { timeout: NAVIGATION_TIMEOUT_MS });
   await expect(
     page.getByRole("heading", { name: "機能モジュール", level: 1 }),
   ).toBeVisible();
@@ -484,7 +546,8 @@ async function readBaselineState(page: Page): Promise<string> {
 }
 
 /**
- * **所有 module だけ**を `beforeAll` で捕捉した基準状態へ 1 回の保存で戻す。
+ * **所有 module だけ**を seed 由来の基準状態（`EXPECTED_BASELINE_STATE`）へ
+ * 1 回の保存で戻す。差分が無ければ features ページを 1 回開くだけで返る。
  *
  * 全 module は 1 つの form / 1 つの保存ボタンを共有するため、差分のある Switch を
  * すべて flip してから 1 度だけ保存する。`depsMet` は client 側の form state
@@ -552,42 +615,52 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
   }
 }
 
-// シングルトン Settings.featureModules を mutate するため、他の並列テストと
-// 衝突しないよう serial 化する (rules の testing-e2e.md 参照)。
-test.describe
-  .serial("feature-module OFF hides all critical public routes (E2E-04)", () => {
+test.describe("feature-module OFF hides all critical public routes (E2E-04)", () => {
+  // シングルトン Settings.featureModules を mutate するため順序を固定する。
+  // `mode: "default"` は公式仕様で「順番に実行し、失敗した test は**個別に**
+  // リトライする」— `fullyParallel: true` を describe 単位で打ち消す
+  // (`test.describe.configure` / test-parallel の "Opt out of fully parallel mode")。
+  //
+  // `test.describe.serial` は使わない。serial は**1 本落ちると後続を全て skip する**
+  // ため、この spec のように「1 回の run で全 module の可否を出す」ことが目的の
+  // gate とは相容れない。実測でも 2 run 連続でそれが起きていた:
+  //
+  // | run        | contact          | posts / reservation / events / spaces |
+  // | ---------- | ---------------- | ------------------------------------- |
+  // | 30670082842 | failed × 3      | **skipped × 3**                       |
+  // | 30672479398 | timedOut/failed  | **skipped × 3**                       |
+  //
+  // 9 ルート中 7 本が一度も実行されていない。#1760 が route 単位で soft assertion に
+  // 変えて解いたのと同じ問題が、test 単位では serial のせいで残っていた
+  // （公式も "Running tests serially is generally not recommended" としている）。
+  test.describe.configure({ mode: "default", timeout: TEST_TIMEOUT_MS });
+
   test.skip(
     IS_PUBLIC_SURFACE,
     "APP_SURFACE=public では /admin にアクセスできないため skip",
   );
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async () => {
     await ensureAdminUser();
-
-    // 開始前に基準状態へ**復元**する。リトライは新 worker で beforeAll から
-    // やり直されるため、前の attempt が afterEach で戻しきれずに残した OFF は
-    // ここで修復される（実状態を基準として捕まえると汚染を追認してしまう）。
-    const page = await browser.newPage();
-    try {
-      await primeAdminRequestContext(page.context());
-      await restoreFeatureModuleBaseline(page);
-    } finally {
-      await page.close();
-    }
   });
 
-  test.beforeEach(async ({ context }) => {
+  // 基準状態への復元は **beforeEach でも**行う。`mode: "default"` では前の test が
+  // 落ちても後続が skip されずに走るため、汚れた基準を引き継がせない。差分が無ければ
+  // features ページを 1 回開くだけで返る（実測 0.6–1.1 秒）ので常時払っても安い。
+  test.beforeEach(async ({ page, context }) => {
     await primeAdminRequestContext(context);
+    await restoreFeatureModuleBaseline(page);
   });
 
   // setup 段階で失敗しても必ず走る（try/finally では復元されなかった）。
+  // 並走する spec に対して OFF の窓を最小化するため、test ごとに戻す。
   test.afterEach(async ({ page }) => {
     await restoreFeatureModuleBaseline(page);
   });
 
   // 復元が壊れていたら、巻き添えで他 spec を落とす前に**この spec が**落ちる。
-  // MODULE_CASES ではなく全 module を検証する — `spaces` OFF の保存は
-  // `reviews` / `payment` も道連れに OFF にするため (FEATURE_MODULE_BASELINE 参照)。
+  // MODULE_CASES ではなく所有 module 全件を検証する — `spaces` OFF の保存は
+  // `reviews` / `payment` も道連れに OFF にするため (OWNED_FEATURE_MODULES 参照)。
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
     try {
@@ -608,11 +681,9 @@ test.describe
     }) => {
       await setFeatureModule(page, c.label, false);
 
-      // ルートごとの判定は **soft assertion**。hard だと最初の 1 本で止まり、
-      // 残りのルートの状態が分からないまま次の CI に持ち越しになる。実際この spec は
-      // 「1 本直す → 次の 1 本が初めて到達して落ちる」を繰り返してきた
-      // (`/contact` → `/mypage/inquiries`)。soft なら 1 回の run で全ルートの
-      // 可否が出揃い、テスト自体は最後にまとめて落ちる。
+      // ルートごとの判定は **soft assertion**（理由はファイル冒頭
+      // 「1 回の run で全件の可否を出す」）。1 本落ちても残りを最後まで判定し、
+      // テスト自体は最後にまとめて落ちる。
       for (const route of c.routes) {
         const rendersNotFound = await probeNotFoundBoundary(page, route);
 

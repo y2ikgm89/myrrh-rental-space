@@ -114,7 +114,14 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 - ブラウザ時刻の凍結は `page.clock.install({ time })` を **page.goto より前**に呼び、
   サーバー側 `E2E_FIXED_NOW_ISO`（既定 2026-07-04T03:00:00.000Z）と同一時刻にする
 - fullyParallel のため、Settings 等シングルトン行を mutate する describe は
-  `test.describe.serial` で直列化する
+  順序を固定する。既定は **`test.describe.configure({ mode: "default" })`**
+  （順番に実行し、失敗した test は個別にリトライする公式モード）。
+  **`test.describe.serial` は「1 本落ちたら後続を全部 skip してよい」場合だけ**に
+  使う — serial は後続を skip するため、「1 回の run で全ケースの可否を出す」
+  目的の gate では実行されないケースが静かに増える。実測: `feature-module-off-gate`
+  は contact が落ちている間、残り 4 module（7 ルート）が 2 run 連続
+  （30670082842 / 30672479398）で `skipped` になり、一度も検証されていなかった。
+  公式も "Running tests serially is generally not recommended" としている
 - **グローバル状態の復元は `afterEach` で無条件に行う**（`try/finally` は不可）。
   finally は「setup 段階で throw すると入らない」ため復元漏れになる。実測
   (run 30617695076): `feature-module-off-gate` が contact を OFF のまま残し、
@@ -124,11 +131,21 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   復元は「触った 1 件」ではなく**対象全件を既定値に揃える**。加えて `afterAll` で
   復元されたことを検証し、壊れたときは**その spec 自身が落ちる**ようにする。
   この規約は `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が
-  機械強制する（`test.describe.serial` を持つ spec に `afterEach` / `afterAll` を要求。
-  戻す状態を持たない spec は `RESTORE_EXEMPT` に理由付きで登録する）
+  機械強制する（`test.describe.serial` / `configure({ mode: "default" })` を持つ spec に
+  `afterEach` / `afterAll` を要求。戻す状態を持たない spec は `RESTORE_EXEMPT` に
+  理由付きで登録する）
+- **test 本体を timeout させない**。timeout すると page / context ごと閉じられ、
+  別予算を持つ `afterEach` も生きた page を使えず**復元できない**（公式の timeout 仕様は
+  「test timeout は本体・fixture setup・`beforeEach` を覆い、`afterEach` と fixture
+  teardown には同じ値の別予算」だが、page が死ぬので別予算は救いにならない）。実測
+  (run 30672479398): 本体 timeout → `afterEach` の `goto` が `net::ERR_ABORTED` →
+  contact が OFF のまま残り `responsive-shell` が 2 viewport 巻き添え。対策は
+  ①`goto` に明示 timeout を渡す（既定は**無制限**で、実測 15.5 秒の遷移が予算を
+  食い潰した）②`test.describe.configure({ timeout })` を**定数から導出**して
+  最悪ケースを覆う（手書きの数値は route 追加で静かに破綻する）
 - **同じグローバル状態を触る spec が複数あるなら「所有」を排他分割する**。
-  `test.describe.serial` が直列化するのは**同一 describe 内だけ**で、別ファイル・
-  別 project には効かない（`feature-module-off-gate` は `chromium`、
+  実行モード（`serial` / `default`）が順序を保証するのは**同一 describe 内だけ**で、
+  別ファイル・別 project には効かない（`feature-module-off-gate` は `chromium`、
   `axe-admin-feature-disabled` は `chromium-admin` で**並走する**）。
   排他の他の手段は本 repo では使えない:
 
