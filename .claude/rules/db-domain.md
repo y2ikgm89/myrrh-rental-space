@@ -84,3 +84,19 @@ Prisma query の順で書く（詳細は caching ルール）。
 - `AuditLog` は HMAC-SHA256 の hash chain で改ざん検知される（`src/shared/domain/audit-log/`）。
   書込は既存の commands 経由のみ。chain 契約（sequence 直列化・canonical JSON）を壊さない
 - `Settings` は `id: "singleton"` の単一行モデル
+- **append-only は 4 テーブルが DB trigger で強制されている**。src / `e2e/**` /
+  `scripts/**` のどこから触っても UPDATE・DELETE は `RAISE EXCEPTION` で落ちる:
+
+  | テーブル                 | trigger 関数                              | bypass GUC（許可値）                                               |
+  | ------------------------ | ----------------------------------------- | ------------------------------------------------------------------ |
+  | `audit_logs`             | `prevent_audit_logs_mutation`             | `myrrh.audit_log_mutation_bypass`（`seed`）                        |
+  | `terms_agreements`       | `prevent_terms_agreements_mutation`       | `myrrh.terms_agreement_mutation_bypass`（`seed`）                  |
+  | `refunds`                | `prevent_refunds_mutation`                | `myrrh.refund_mutation_bypass`（`seed`）                           |
+  | `inquiry_status_history` | `prevent_inquiry_status_history_mutation` | `myrrh.inquiry_status_history_mutation_bypass`（`seed` / `purge`） |
+
+  bypass GUC は seed と data-retention purge の専用口で、テストや fixture から使わない。
+  **「E2E が作った行だから消してよい」は成立しない** — E2E の復元 hook が
+  `inquiryStatusHistory.deleteMany` を呼んで広域 run を落とした実例がある
+  （#1772 → #1781。gate: `__tests__/unit/architecture/inquiry-status-history-append-only.test.ts`）。
+  また **該当行 0 件の DELETE は行レベル trigger を発火させない**ため、
+  ローカルで「クエリが通った」ことは trigger を通過した証明にならない
