@@ -6,7 +6,9 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 
 ## project 構成と実行
 
-- 14 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
+- 15 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
+  **chromium-feature-modules**（`Settings.featureModules` を mutate する spec 専用。
+  全 reader project の `dependencies` に入れて**単独で先に走らせる** — 詳細は下記）/
   chromium（e2e/public + e2e/a11y）/ chromium-mobile / webkit-mobile /
   chromium-customer / chromium-customer-mobile / webkit-customer-mobile /
   chromium-admin / chromium-admin-viewer（e2e/authenticated/admin-viewer）/
@@ -170,6 +172,19 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   各 spec は `OWNED_FEATURE_MODULES`（key = registry の module id、value = label）で
   所有を宣言し、**復元も検証も所有分だけ**に限定する。全件を書き戻すと、相手が
   意図的に OFF にしている module を ON に戻して落とす（双方向の偽陽性）。
+
+- **所有分割が守るのは mutator 同士だけ。read-only な spec は守られない。**
+  同じ singleton を**読むだけ**の spec は所有を宣言しようがないので、mutator が
+  OFF にしている最中に読むと落ちる。実測 (run 30677872134): `feature-module-off-gate`
+  が spaces を OFF にしている間に `responsive-shell` が `/spaces` を読み、
+  「ページが見つかりません」を掴んだ。`/faq` も `axe-admin-feature-disabled` の
+  所有なので同型。
+
+  対策は **mutator を専用 project に隔離し、全 reader project の `dependencies` に
+  置く**こと（`chromium-feature-modules`）。dependency project は依存側が始まる前に
+  完走するので、mutator が走る間は他に何も走らない。named lock が stable に来るまでは
+  これが唯一の公式手段。`chromium-smoke` だけは依存させない — CI 上別 job
+  （別 webServer / 別 DB）で競合せず、required gate を遅くしたくないため
 
 - **所有集合は依存カスケードで閉じている必要がある**。1 つの form が複数項目を
   まとめて送る画面では 1 項目の変更が他項目も書き換える。`/admin/settings/features` は
