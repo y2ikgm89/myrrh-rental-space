@@ -183,8 +183,11 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   対策は **mutator を専用 project に隔離し、全 reader project の `dependencies` に
   置く**こと（`chromium-feature-modules`）。dependency project は依存側が始まる前に
   完走するので、mutator が走る間は他に何も走らない。named lock が stable に来るまでは
-  これが唯一の公式手段。`chromium-smoke` だけは依存させない — CI 上別 job
-  （別 webServer / 別 DB）で競合せず、required gate を遅くしたくないため
+  これが唯一の公式手段。**`chromium-smoke` と `chromium-visual` は依存させない** —
+  どちらも CI 上別 job（別 webServer / 別 DB）で競合しようがないうえ、両者とも
+  `APP_SURFACE=public` で回る。public surface では proxy が `/admin/*` を 404 に
+  するので、依存を張ると `setup-admin` が `/admin` に到達できず job ごと落ちる。
+  **surface が異なる job に admin 依存を足さない**
 
 - **所有集合は依存カスケードで閉じている必要がある**。1 つの form が複数項目を
   まとめて送る画面では 1 項目の変更が他項目も書き換える。`/admin/settings/features` は
