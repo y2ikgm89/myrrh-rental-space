@@ -63,8 +63,6 @@ interface CustomerStepProps {
     readonly showOriginalPrice: boolean;
   };
   readonly onCustomerTypeChange: (type: CustomerType) => void;
-  readonly onTurnstileVerify: (token: string) => void;
-  readonly onTurnstileExpire: () => void;
   readonly onToggleTerm: (id: string) => void;
   readonly onBack: () => void;
   readonly refundPolicyLines?: readonly string[] | undefined;
@@ -82,8 +80,6 @@ export function CustomerStep({
   errorMessage,
   summary,
   onCustomerTypeChange,
-  onTurnstileVerify,
-  onTurnstileExpire,
   onToggleTerm,
   onBack,
   refundPolicyLines,
@@ -266,8 +262,6 @@ export function CustomerStep({
             ref={turnstileRef}
             siteKey={turnstileSiteKey}
             action={TURNSTILE_ACTIONS.reservation}
-            onVerify={onTurnstileVerify}
-            onExpire={onTurnstileExpire}
           />
         </div>
       </div>
