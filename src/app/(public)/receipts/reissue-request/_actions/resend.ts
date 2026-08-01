@@ -1,14 +1,11 @@
 "use server";
 
-import { z } from "zod";
-
 import { validateTurnstile } from "@/shared/domain/settings/turnstile";
 import { requestReceiptResendByEmail } from "@/shared/domain/receipts/resend";
 import { sendReceiptResendEmail } from "@/shared/domain/email/lib-dispatch";
-import {
-  createMutationError,
-  type MutationResult,
-} from "@/shared/lib/mutation-result";
+import type { SubmissionResult } from "@conform-to/react";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { receiptResendRequestSchema } from "@/shared/lib/validations/receipt-resend";
 import {
   checkActionRateLimit,
   checkBotHeuristics,
@@ -63,151 +60,147 @@ import {
  * 設計にする (Stripe recovery flow と同型)。
  */
 
-const inputSchema = z.object({
-  serialNo: z.string().trim().min(1).max(20),
-  email: z.email({ error: "メールアドレスの形式が正しくありません" }).max(255),
-  honeypot: z.string().optional(),
-  formRenderedAt: z.number().int().nonnegative().optional(),
-  turnstileToken: z.string().optional(),
-});
-
-export type ReceiptResendActionInput = z.input<typeof inputSchema>;
-
 export async function requestReceiptResendAction(
-  input: ReceiptResendActionInput,
-): Promise<MutationResult<null>> {
-  // 1. IP rate-limit
-  const ipRateLimit = await checkActionRateLimit(
-    receiptResendRequestRateLimiter,
-  );
-  if (!ipRateLimit.success) {
-    return createMutationError(ipRateLimit.error);
-  }
-
-  // 2. Zod parse
-  const parsed = inputSchema.safeParse(input);
-  if (!parsed.success) {
-    return createMutationError(
-      parsed.error.issues[0]?.message ?? "入力内容に誤りがあります",
-    );
-  }
-  const { serialNo, email, honeypot, formRenderedAt, turnstileToken } =
-    parsed.data;
-
-  // 3. Bot heuristics (DB/外部 API 呼出なし・軽い順に並べる)
-  const botCheck = checkBotHeuristics({
-    honeypot,
-    formRenderedAt,
-  });
-  if (!botCheck.success) {
-    return createMutationError(botCheck.error);
-  }
-
-  // 4. Email 単位の追加バケット
-  const emailRateLimit = await checkEmailRateLimit(
-    receiptResendByEmailRateLimiter,
-    email,
-  );
-  if (!emailRateLimit.success) {
-    return createMutationError(emailRateLimit.error);
-  }
-
-  // 5. Turnstile (P1: SerialNo バケットより先に置く — 上記 JSDoc 参照)
-  const turnstile = await validateTurnstile({
-    token: turnstileToken,
-    expectedAction: TURNSTILE_ACTIONS.guest_receipt_resend_request,
-  });
-  if (!turnstile.success) {
-    return createMutationError(turnstile.error);
-  }
-
-  // 6. SerialNo 単位の追加バケット
-  const serialNoLimit =
-    await receiptResendBySerialNoRateLimiter.check(serialNo);
-  if (!serialNoLimit.success) {
-    return createMutationError(
-      "この領収書に対する再送信リクエストが多すぎます。しばらく時間をおいてからお試しください",
-    );
-  }
-
-  // 7. Domain command
-  try {
-    const result = await requestReceiptResendByEmail({ serialNo, email });
-
-    if (result !== null) {
-      // メール送信 (失敗しても enumeration 対策で client には成功を返す)
-      const emailResult = await sendReceiptResendEmail({
-        recipientEmail: result.recipientEmail,
-        serialNo: result.receipt.serialNo,
-        recipientName: result.receipt.recipientName,
-        subject: result.receipt.subject,
-        amount: result.receipt.amount,
-        taxAmount: result.receipt.taxAmount,
-        issuedAt: result.receipt.issuedAt,
-        ...(result.previousSerialNo !== undefined
-          ? { previousSerialNo: result.previousSerialNo }
-          : {}),
-      });
-
-      if (!emailResult.ok) {
-        logError(new Error(`Guest receipt resend email failed`), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "sendReceiptResendEmail",
-            reason: emailResult.reason,
-            serialNo: result.receipt.serialNo,
-          },
-        });
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    receiptResendRequestSchema,
+    // Zod parse は wrapper が先に済ませる（上記 JSDoc の階層 2）。handler は 1 と
+    // 3 以降を担う。IP rate-limit を schema より後に置いても、DB / 外部 API を
+    // 叩く前に落ちる点は変わらない。
+    async ({ serialNo, email, website, formRenderedAt, turnstileToken }) => {
+      // 1. IP rate-limit
+      const ipRateLimit = await checkActionRateLimit(
+        receiptResendRequestRateLimiter,
+      );
+      if (!ipRateLimit.success) {
+        return { ok: false, error: ipRateLimit.error };
       }
 
-      // AuditLog: guest 経路の証跡 (fire-and-forget, chain tx は別接続)。
-      // Case C (wasReissued=true) = CREATE、Case B = UPDATE として action 種別を分ける。
-      const { ip, userAgent } = await buildAuditRequestContext();
-      const auditPromise = createAuditLogRecord({
-        action: result.wasReissued ? AuditAction.CREATE : AuditAction.UPDATE,
-        resource: "receipt",
-        resourceId: result.receipt.id,
-        metadata: {
-          path: "guest-resend-request",
-          serialNo: result.receipt.serialNo,
-          wasReissued: result.wasReissued,
-          emailSent: emailResult.ok,
-          ...(result.previousSerialNo !== undefined
-            ? { previousSerialNo: result.previousSerialNo }
-            : {}),
-          ...(ip !== null ? { ip } : {}),
-          ...(userAgent !== null ? { userAgent } : {}),
-        },
+      // 3. Bot heuristics (DB/外部 API 呼出なし・軽い順に並べる)
+      const botCheck = checkBotHeuristics({
+        honeypot: website,
+        formRenderedAt,
       });
-      fireAndForget(auditPromise, {
-        category: ErrorCategory.DATABASE,
-        severity: ErrorSeverity.MEDIUM,
-        operation: "receiptResendAuditLog",
-        context: { serialNo: result.receipt.serialNo },
-      });
-    } else {
-      // enumeration: mismatch でも client には成功を返す。内部ログには理由のみ残す
-      // (serialNo / email 詳細は残さない — 攻撃者に強い oracle を与えないため)。
-      logError(new Error("Guest receipt resend: no match or orphan"), {
-        category: ErrorCategory.AUTHORIZATION,
-        severity: ErrorSeverity.LOW,
-        context: {
-          operation: "requestReceiptResendAction",
-          reason: "no_match_or_orphan",
-        },
-      });
-    }
+      if (!botCheck.success) {
+        return { ok: false, error: botCheck.error };
+      }
 
-    return null;
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: "requestReceiptResendAction" },
-    });
-    return createMutationError(
-      "再送信リクエストの処理中にエラーが発生しました。しばらく時間をおいてから再度お試しください。",
-    );
-  }
+      // 4. Email 単位の追加バケット
+      const emailRateLimit = await checkEmailRateLimit(
+        receiptResendByEmailRateLimiter,
+        email,
+      );
+      if (!emailRateLimit.success) {
+        return { ok: false, error: emailRateLimit.error };
+      }
+
+      // 5. Turnstile (P1: SerialNo バケットより先に置く — 上記 JSDoc 参照)
+      const turnstile = await validateTurnstile({
+        token: turnstileToken,
+        expectedAction: TURNSTILE_ACTIONS.guest_receipt_resend_request,
+      });
+      if (!turnstile.success) {
+        return { ok: false, error: turnstile.error };
+      }
+
+      // 6. SerialNo 単位の追加バケット
+      const serialNoLimit =
+        await receiptResendBySerialNoRateLimiter.check(serialNo);
+      if (!serialNoLimit.success) {
+        return {
+          ok: false,
+          error:
+            "この領収書に対する再送信リクエストが多すぎます。しばらく時間をおいてからお試しください",
+        };
+      }
+
+      // 7. Domain command
+      try {
+        const result = await requestReceiptResendByEmail({ serialNo, email });
+
+        if (result !== null) {
+          // メール送信 (失敗しても enumeration 対策で client には成功を返す)
+          const emailResult = await sendReceiptResendEmail({
+            recipientEmail: result.recipientEmail,
+            serialNo: result.receipt.serialNo,
+            recipientName: result.receipt.recipientName,
+            subject: result.receipt.subject,
+            amount: result.receipt.amount,
+            taxAmount: result.receipt.taxAmount,
+            issuedAt: result.receipt.issuedAt,
+            ...(result.previousSerialNo !== undefined
+              ? { previousSerialNo: result.previousSerialNo }
+              : {}),
+          });
+
+          if (!emailResult.ok) {
+            logError(new Error(`Guest receipt resend email failed`), {
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.HIGH,
+              context: {
+                operation: "sendReceiptResendEmail",
+                reason: emailResult.reason,
+                serialNo: result.receipt.serialNo,
+              },
+            });
+          }
+
+          // AuditLog: guest 経路の証跡 (fire-and-forget, chain tx は別接続)。
+          // Case C (wasReissued=true) = CREATE、Case B = UPDATE として action 種別を分ける。
+          const { ip, userAgent } = await buildAuditRequestContext();
+          const auditPromise = createAuditLogRecord({
+            action: result.wasReissued
+              ? AuditAction.CREATE
+              : AuditAction.UPDATE,
+            resource: "receipt",
+            resourceId: result.receipt.id,
+            metadata: {
+              path: "guest-resend-request",
+              serialNo: result.receipt.serialNo,
+              wasReissued: result.wasReissued,
+              emailSent: emailResult.ok,
+              ...(result.previousSerialNo !== undefined
+                ? { previousSerialNo: result.previousSerialNo }
+                : {}),
+              ...(ip !== null ? { ip } : {}),
+              ...(userAgent !== null ? { userAgent } : {}),
+            },
+          });
+          fireAndForget(auditPromise, {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+            operation: "receiptResendAuditLog",
+            context: { serialNo: result.receipt.serialNo },
+          });
+        } else {
+          // enumeration: mismatch でも client には成功を返す。内部ログには理由のみ残す
+          // (serialNo / email 詳細は残さない — 攻撃者に強い oracle を与えないため)。
+          logError(new Error("Guest receipt resend: no match or orphan"), {
+            category: ErrorCategory.AUTHORIZATION,
+            severity: ErrorSeverity.LOW,
+            context: {
+              operation: "requestReceiptResendAction",
+              reason: "no_match_or_orphan",
+            },
+          });
+        }
+
+        return { ok: true };
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: { operation: "requestReceiptResendAction" },
+        });
+        return {
+          ok: false,
+          error:
+            "再送信リクエストの処理中にエラーが発生しました。しばらく時間をおいてから再度お試しください。",
+        };
+      }
+    },
+  );
 }

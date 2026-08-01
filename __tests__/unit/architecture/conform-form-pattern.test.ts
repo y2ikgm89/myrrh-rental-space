@@ -66,10 +66,6 @@ const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([
     "src/app/(admin)/admin/(dashboard)/settings/_components/sections/sidebar/SidebarWidgetDialog.tsx",
     "サイドバーウィジェット (4 項目)。Zod を URL 検証にだけ部分使用しており、schema 全体の定義から必要",
   ],
-  [
-    "src/app/(public)/receipts/reissue-request/_components/receipt-resend-form.tsx",
-    "領収書再発行依頼。同上",
-  ],
 ]);
 
 const HAS_FORM = /<form[\s>]/u;
