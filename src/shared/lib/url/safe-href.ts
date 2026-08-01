@@ -128,16 +128,23 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
 );
 
 /**
- * サイドバー custom 等: 空 / null / undefined は許可、値があれば内部 or 許可外部。
+ * サイドバー custom 等: 空 / 未指定は許可、値があれば内部 or 許可外部。
+ *
+ * **`z.preprocess` も `transform` も使わない。** preprocess は入力が本質的に
+ * `unknown` なので、この schema を含む object を `z.output` で読むと
+ * `linkUrl?: unknown` に落ちる。transform で直すと今度は input ≠ output になり、
+ * conform（`useForm<z.input<…>>` が house pattern）の `submission.value` が
+ * 変換前の型で返るので、受け取る側と噛み合わない。
+ *
+ * 入出力を同じ `string | undefined` に保ち、空文字は `refine` 側で通す。
+ * 空文字→`undefined` の正規化は保存経路（`SidebarSection` の `|| undefined`）が
+ * 従来から行っており、この schema の責務ではない。
  */
-export const optionalSafePublicHrefSchema = z.preprocess(
-  (value) => (value === null || value === "" ? undefined : value),
-  z
-    .string()
-    .max(500)
-    .optional()
-    .refine((value) => value === undefined || isSafePublicHref(value), {
-      error:
-        "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
-    }),
-);
+export const optionalSafePublicHrefSchema = z
+  .string()
+  .max(500)
+  .optional()
+  .refine((value) => !value || isSafePublicHref(value), {
+    error:
+      "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
+  });

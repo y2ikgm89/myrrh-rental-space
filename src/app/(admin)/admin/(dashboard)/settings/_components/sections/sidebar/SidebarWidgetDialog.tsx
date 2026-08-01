@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import {
   Button,
   Dialog,
@@ -13,79 +15,64 @@ import {
   SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
-import type { CustomWidget } from "@/shared/lib/validations/sidebar";
-import { optionalSafePublicHrefSchema } from "@/shared/lib/url/safe-href";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export interface CustomWidgetFormData {
-  title: string;
-  description: string;
-  linkUrl: string;
-  linkLabel: string;
-}
-
-const EMPTY_FORM: CustomWidgetFormData = {
-  title: "",
-  description: "",
-  linkUrl: "",
-  linkLabel: "",
-};
-
-// =============================================================================
-// Props
-// =============================================================================
+import {
+  customWidgetFormSchema,
+  type CustomWidget,
+  type CustomWidgetFormValues,
+} from "@/shared/lib/validations/sidebar";
 
 export interface SidebarWidgetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingWidget: CustomWidget | null;
-  onSubmit: (data: CustomWidgetFormData) => void;
+  onSubmit: (data: CustomWidgetFormValues) => void;
 }
 
-// =============================================================================
-// Component
-// =============================================================================
-
+/**
+ * サイドバーのカスタムウィジェット編集ダイアログ。
+ *
+ * **Server Action を呼ばない。** 値は親 (`SidebarSection`) の widgets state に
+ * 積まれ、保存は設定フォーム全体の submit でまとめて行われる。よって
+ * `action` prop も `dispatchWithoutFormReset` も要らない（React 19 の
+ * form auto-reset は `action` prop に関数を渡したときだけ起きる）。
+ *
+ * conform に載せているのは検証と表示のため: 以前は `title` の必須判定が
+ * 送信ボタンの `disabled` だけで**理由が文言として出ず**、`linkUrl` のエラーだけが
+ * 手書きの state で表示されていた。schema は `customWidgetSchema` から `pick`
+ * しているので、widget 側の規則とずれない。
+ */
 export function SidebarWidgetDialog({
   open,
   onOpenChange,
   editingWidget,
   onSubmit,
 }: SidebarWidgetDialogProps) {
-  const [form, setForm] = useState<CustomWidgetFormData>(() =>
-    editingWidget
-      ? {
-          title: editingWidget.title,
-          description: editingWidget.description ?? "",
-          linkUrl: editingWidget.linkUrl ?? "",
-          linkLabel: editingWidget.linkLabel ?? "",
-        }
-      : EMPTY_FORM,
-  );
-  const [linkUrlError, setLinkUrlError] = useState<string | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title.trim()) return;
-
-    const linkUrlResult = optionalSafePublicHrefSchema.safeParse(
-      form.linkUrl.trim() === "" ? "" : form.linkUrl.trim(),
-    );
-    if (!linkUrlResult.success) {
-      setLinkUrlError(
-        linkUrlResult.error.issues[0]?.message ??
-          "リンクURLの形式が正しくありません",
-      );
-      return;
-    }
-
-    setLinkUrlError(null);
-    onSubmit(form);
-    onOpenChange(false);
-  };
+  const [form, fields] = useForm<z.input<typeof customWidgetFormSchema>>({
+    // 編集対象が変わったら別フォーム扱いにして、前の値が残らないようにする
+    id: editingWidget
+      ? `sidebar-widget-${editingWidget.id}`
+      : "sidebar-widget-new",
+    constraint: getZodConstraint(customWidgetFormSchema),
+    defaultValue: {
+      title: editingWidget?.title ?? "",
+      description: editingWidget?.description ?? "",
+      linkUrl: editingWidget?.linkUrl ?? "",
+      linkLabel: editingWidget?.linkLabel ?? "",
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: customWidgetFormSchema });
+    },
+    onSubmit(event, { submission }) {
+      event.preventDefault();
+      // conform は client 検証を通過した submit だけ渡してくるが、
+      // `submission` は型上 optional なので明示的に確かめる
+      if (submission?.status !== "success") return;
+      onSubmit(submission.value);
+      onOpenChange(false);
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,79 +84,82 @@ export function SidebarWidgetDialog({
               : "カスタムウィジェットを追加"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form {...getFormProps(form)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="widget-title">
+            <Label htmlFor={fields.title.id}>
               タイトル <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="widget-title"
-              value={form.title}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
-              }
+              {...getInputProps(fields.title, { type: "text" })}
               placeholder="ウィジェットタイトル"
-              required
               maxLength={100}
             />
+            {fields.title.errors && (
+              <p
+                id={fields.title.errorId}
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {fields.title.errors.join(", ")}
+              </p>
+            )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="widget-description">説明</Label>
+            <Label htmlFor={fields.description.id}>説明</Label>
             <Textarea
-              id="widget-description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
+              {...getInputProps(fields.description, { type: "text" })}
               placeholder="ウィジェットの説明（任意）"
               maxLength={500}
               rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="widget-link-url">リンクURL</Label>
-            <Input
-              id="widget-link-url"
-              value={form.linkUrl}
-              onChange={(e) => {
-                setLinkUrlError(null);
-                setForm((prev) => ({ ...prev, linkUrl: e.target.value }));
-              }}
-              placeholder="/contact または https://..."
-              maxLength={500}
-              aria-invalid={linkUrlError ? true : undefined}
-              aria-describedby={
-                linkUrlError ? "widget-link-url-error" : undefined
-              }
-            />
-            {linkUrlError ? (
+            {fields.description.errors && (
               <p
-                id="widget-link-url-error"
+                id={fields.description.errorId}
                 className="text-sm text-destructive"
                 role="alert"
               >
-                {linkUrlError}
+                {fields.description.errors.join(", ")}
               </p>
-            ) : null}
+            )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="widget-link-label">リンクラベル</Label>
+            <Label htmlFor={fields.linkUrl.id}>リンクURL</Label>
             <Input
-              id="widget-link-label"
-              value={form.linkLabel}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  linkLabel: e.target.value,
-                }))
-              }
+              {...getInputProps(fields.linkUrl, { type: "text" })}
+              placeholder="/contact または https://..."
+              maxLength={500}
+            />
+            {fields.linkUrl.errors && (
+              <p
+                id={fields.linkUrl.errorId}
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {fields.linkUrl.errors.join(", ")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={fields.linkLabel.id}>リンクラベル</Label>
+            <Input
+              {...getInputProps(fields.linkLabel, { type: "text" })}
               placeholder="もっと見る"
               maxLength={100}
             />
+            {fields.linkLabel.errors && (
+              <p
+                id={fields.linkLabel.errorId}
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {fields.linkLabel.errors.join(", ")}
+              </p>
+            )}
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -180,7 +170,6 @@ export function SidebarWidgetDialog({
             </Button>
             <SubmitButton
               isPending={false}
-              disabled={!form.title.trim()}
               label={editingWidget ? "更新" : "追加"}
             />
           </DialogFooter>
