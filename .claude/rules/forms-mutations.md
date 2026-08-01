@@ -86,9 +86,13 @@ return (
   条件式は `action={<識別子>}` の grep をすり抜け、公開の問い合わせフォームだけが
   取り残された（#1802）
 
-gate: `__tests__/unit/architecture/conform-form-pattern.test.ts`（**allowlist なしで 0 件強制**、
-`useForm` の設定数と guard 件数を突き合わせるので、1 ファイルに複数フォームがあっても
-片方だけ guard を外すと落ちる）
+gate: `__tests__/unit/architecture/conform-form-pattern.test.ts`（**allowlist なし**）。
+落とせるのは「conform + Server Action のファイルに guard が **1 つも無い**」場合と
+「hook を別名 import して検出不能にした」場合。**1 ファイル内の複数フォームで一部だけ
+guard を欠く形は検出できない** — 件数比較を 3 通り（`<form action>` タグ数 / `useForm`
+設定数 / `useActionState` 数）試したが、いずれも正当なコード（条件分岐で 2 つの
+`<form>` を描画する / client-only の conform 設定が同居する / 複数 Dialog が共通の
+Form コンポーネントに action を渡す）を誤検出したため断念した。**そこはレビューで見る。**
 
 ## サーバーの拒否を捨てない
 
