@@ -62,10 +62,6 @@ const CONFORM_MIGRATION_ALLOWLIST = new Map<string, string>([
     "src/app/(admin)/admin/(dashboard)/events/[id]/check-in/_components/WalkInDialog.tsx",
     "当日参加ダイアログ (7 項目)。同上",
   ],
-  [
-    "src/app/(admin)/admin/(dashboard)/settings/_components/sections/sidebar/SidebarWidgetDialog.tsx",
-    "サイドバーウィジェット (4 項目)。Zod を URL 検証にだけ部分使用しており、schema 全体の定義から必要",
-  ],
 ]);
 
 const HAS_FORM = /<form[\s>]/u;

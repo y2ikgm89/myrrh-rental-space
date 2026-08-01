@@ -44,6 +44,7 @@ import {
   DEFAULT_SIDEBAR_WIDGETS,
   tryParseSidebarWidgets,
   type CustomWidget,
+  type CustomWidgetFormValues,
   type PopularWidget,
   type PostListLayout,
   type RecentWidget,
@@ -52,7 +53,6 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { SidebarWidgetGrid } from "./sidebar/SidebarWidgetGrid";
 import { SidebarWidgetDialog } from "./sidebar/SidebarWidgetDialog";
-import type { CustomWidgetFormData } from "./sidebar/SidebarWidgetDialog";
 import { getWidgetId } from "./sidebar/SidebarWidgetCard";
 import {
   isSettingsFormDisabled,
@@ -169,7 +169,7 @@ export function SidebarSection({
     });
   };
 
-  const handleWidgetDialogSubmit = (data: CustomWidgetFormData) => {
+  const handleWidgetDialogSubmit = (data: CustomWidgetFormValues) => {
     if (editingWidget) {
       setWidgets((prev) =>
         prev.map((w) =>

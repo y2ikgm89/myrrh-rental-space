@@ -44,7 +44,7 @@ const popularWidgetSchema = z.object({
   showRanking: z.boolean().default(true),
 });
 
-const customWidgetSchema = z.object({
+export const customWidgetSchema = z.object({
   type: z.literal("custom"),
   enabled: z.boolean(),
   id: z.string().min(1),
@@ -53,6 +53,22 @@ const customWidgetSchema = z.object({
   linkUrl: optionalSafePublicHrefSchema,
   linkLabel: z.string().max(100).optional(),
 });
+
+/**
+ * カスタムウィジェットの編集フォームが扱う項目。
+ *
+ * `type` / `enabled` / `id` は widget の identity 側の関心で、フォームには出ない。
+ * 検証規則を書き写さずに `pick` するのは、両者が食い違うと「保存はできるが
+ * 一覧で弾かれる」ような噛み合わなさが生まれるため。
+ */
+export const customWidgetFormSchema = customWidgetSchema.pick({
+  title: true,
+  description: true,
+  linkUrl: true,
+  linkLabel: true,
+});
+
+export type CustomWidgetFormValues = z.output<typeof customWidgetFormSchema>;
 
 export type SimpleBuiltinWidget = z.infer<typeof simpleBuiltinWidgetSchema>;
 export type RecentWidget = z.infer<typeof recentWidgetSchema>;

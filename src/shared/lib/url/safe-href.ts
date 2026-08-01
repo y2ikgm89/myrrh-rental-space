@@ -129,15 +129,22 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
 
 /**
  * サイドバー custom 等: 空 / null / undefined は許可、値があれば内部 or 許可外部。
+ *
+ * **`z.preprocess` も `transform` も使わない。** preprocess は入力が本質的に
+ * `unknown` なので、この schema を含む object を `z.output` で読むと
+ * `linkUrl?: unknown` に落ちる。transform で `null` に畳むと今度は
+ * input ≠ output になり、conform（`useForm<z.input<…>>` が house pattern）の
+ * `submission.value` が変換前の型で返るので受け取る側と噛み合わない。
+ *
+ * `union` で `null` を受け、空文字と `null` は `refine` 側で通す。これで
+ * 入出力がどちらも `string | null | undefined` に揃い、
+ * **`null` を許すという既存の契約**（`safe-href.test.ts`）も保てる。
+ * 空 → `undefined` の正規化は保存経路（`SidebarSection` の `|| undefined`）の責務。
  */
-export const optionalSafePublicHrefSchema = z.preprocess(
-  (value) => (value === null || value === "" ? undefined : value),
-  z
-    .string()
-    .max(500)
-    .optional()
-    .refine((value) => value === undefined || isSafePublicHref(value), {
-      error:
-        "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
-    }),
-);
+export const optionalSafePublicHrefSchema = z
+  .union([z.string().max(500), z.null()])
+  .optional()
+  .refine((value) => !value || isSafePublicHref(value), {
+    error:
+      "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
+  });
