@@ -63,6 +63,14 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
     await expect(downloadLink).toBeVisible({ timeout: 10000 });
 
     // ---- リンクの配線（リクエストを伴わない） ----
+    // `toBeVisible()` は可視性しか見ないので、オーバーレイに覆われている /
+    // `pointer-events: none` で不活性になっている、といった「見えるのに押せない」
+    // 状態を検出できない。`trial: true` は **actionability チェックだけ行い
+    // クリックは実行しない**公式オプション（attached / visible / stable /
+    // receives-events / enabled を確認する）なので、リクエストを 1 回に保ったまま
+    // ブラウザ層のカバレッジを維持できる。
+    await downloadLink.click({ trial: true });
+
     // ブラウザにダウンロードさせるのはこの 2 属性なので、属性を直接見れば
     // 「クリックすれば PDF が落ちてくる」配線は request 無しで検証できる。
     const href = await downloadLink.getAttribute("href");
