@@ -17,7 +17,7 @@ import { getE2EPrismaClient } from "./e2e-prisma";
  *
  * 1. `InquiryReply`（marker 本文）が append される。seed の `ensureInquiryReply` は
  *    本文一致の存在チェックなので消さない → run のたびに 1 件ずつ増え、spec 自身の
- *    `getByText(replyBody)` が strict mode violation になる
+ *    `postedReply`（marker 本文で絞った article）が strict mode violation になる
  * 2. status が RESOLVED → IN_PROGRESS へ reopen される。seed の inquiry 作成は
  *    「無ければ作る」だけで status を書き戻さない → 「解決済」fixture が
  *    IN_PROGRESS のまま固定化する

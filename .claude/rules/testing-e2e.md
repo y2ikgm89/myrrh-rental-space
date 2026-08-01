@@ -97,10 +97,20 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   （page と `request` の両方に効く）。割当は衝突すると無言で再発するため
   `__tests__/unit/architecture/e2e-client-ip-allocation.test.ts` が機械固定する:
 
-  | 範囲                   | 用途                                                                                                                                                 |
-  | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.3` = events、`.4` = mypage-receipt-download、`.5` = guest-receipt-single-use、`.6` = calendar-download、`.7` = calendar-api |
-  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                                                |
+  | 範囲                   | 用途                                                                                                                                                                       |
+  | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `203.0.113.1`〜`.9`    | **静的**（spec 単位）。`.3` = events、`.4` = mypage-receipt-download、`.5` = guest-receipt-single-use、`.6` = calendar-download、`.7` = calendar-api、`.8` = inquiry-reply |
+  | `203.0.113.10`〜`.250` | **動的**（browser context 単位）。`e2e/helpers/admin-auth.ts` の `getContextClientIp`                                                                                      |
+
+  **`/api` だけの話ではない。公開フォームの Server Action はもっと狭い窓を使う。**
+  `checkActionRateLimit(formSubmitRateLimiter)` は **5 リクエスト/分/IP** で、
+  `apiRateLimiter`（100/分）の 20 分の 1。`getContextClientIp` による動的割当は
+  `signInAsAdmin` 経由（admin project）にしか無いため、**顧客・公開 spec は既定で
+  全 spec と同一 IP を共有する**。フォーム送信を伴う spec が増えるほど窓を奪い合う。
+  実測 (run 30681869018): `inquiry-reply` の返信フォームが
+  `リクエストが多すぎます` を出したまま 3 attempt 全滅した（**リトライも同じ 1 分窓に
+  入るので retry では救えない**）。gate はこの経路をまだ機械検出しないので、
+  フォーム送信を伴う spec を足すときは静的 IP の要否を手で判断する。
 
   **`request` 経由だけでなくブラウザ経由も対象**。`<a download href="/api/...">` を
   クリックして `waitForEvent("download")` で待つ spec は、本文に `/api/` も `request.*` も
