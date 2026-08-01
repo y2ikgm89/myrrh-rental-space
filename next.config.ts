@@ -96,6 +96,20 @@ const TERMS_CACHE_TAG = joinWithSiteWide([
 const SITEMAP_CACHE_TAG = joinCacheTags([CDN_CACHE_TAGS.SITEMAP]);
 
 const nextConfig: NextConfig = {
+  // Turbopack / outputFileTracing の workspace root を明示固定する。
+  // 未設定だと Next.js は「最寄りの lockfile を上方向に探索」して root を推論するが、
+  // `.claude/worktrees/*` の git worktree はそれぞれ bun.lock を持つため、worktree 内から
+  // dev/build を起動すると lockfile が複数ヒットし「Next.js inferred your workspace root」
+  // 警告と共に root が親のリポジトリルートへ解決される（= ファイル監視が全 worktree に広がる）。
+  // `import.meta.dirname` は「この next.config.ts があるディレクトリ」なので、メインツリーでも
+  // worktree でも常にそのツリー自身が root になる。相対パスは cwd 基準で resolve され起動場所に
+  // 依存するため使わない。
+  // NOTE: `outputFileTracingRoot` は Next.js 側でこの値に自動同期される（server/config.ts）。
+  //       併記して値がずれると「must have the same value」警告になるため、ここだけを SSoT にする。
+  turbopack: {
+    root: import.meta.dirname,
+  },
+
   // React Compiler for automatic memoization
   reactCompiler: true,
 
