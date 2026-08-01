@@ -17,8 +17,14 @@ export default function EditorLoading() {
       aria-live="polite"
       aria-label="読み込み中"
     >
-      {/* Fixed top header (h-14) */}
-      <div className="fixed inset-x-0 top-0 z-40 h-14 border-b bg-background/95 backdrop-blur">
+      {/* Fixed top header (h-14)
+          背景は EditorHeader と同じ理由で不透明にする。この fallback は
+          サイドバーがまだ載っている状態（fullscreen 移行は本体の hydration 後）で
+          描画され、`fixed inset-x-0` かつ z-40 > `Z_INDEX.sidebar`(10) なので
+          半透明にすると左 256px の実効背景が `--color-sidebar-bg` との合成になる。
+          今は中身が Skeleton だけで axe の color-contrast 対象テキストが無いが、
+          ラベルを 1 つ足した瞬間に AA 違反になる。 */}
+      <div className="fixed inset-x-0 top-0 z-40 h-14 border-b bg-background">
         <div className="flex h-full items-center justify-between px-4">
           {/* Left: back + title */}
           <div className="flex items-center gap-3">

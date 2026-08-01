@@ -35,13 +35,20 @@ const styles = tv({
     // （SSR HTML〜hydration の窓）は `ResponsiveSidebar` がまだ描画されており、
     // viewport 固定の本ヘッダーが暗色サイドバー (`bg-sidebar-bg`) に重なる。
     // その合成結果が #989da4 になり、slug の `text-muted-foreground` (#5b646f) が
-    // 2.2:1 まで落ちていた（実測: run 30677872134 の axe-admin-pages）。
+    // 2.2:1 まで落ちていた（実測: run 30677872134 の axe-admin-pages、
+    // run 30678172597 の lexical-toolbar-roving-tabindex）。
     // axe がこの窓を踏むかは実行タイミング次第なので flaky に見える。
     //
     // サイドバー幅のオフセット (`lg:left-64`) で重なりを避ける手は使えない。
     // fullscreen 中はサイドバーが unmount され `DashboardShell` の `lg:pl-64` も
     // 外れるため、定常状態で 256px の空白が残る（PR #1773 の退行）。
     // 背後に依存しない不透明化が唯一レイアウトから独立した解。
+    //
+    // 併せて外した `backdrop-blur` は元々**視覚効果として機能していない**。
+    // `InlineEditorShell` は `h-dvh` + 内側 `overflow-hidden` で本文用のスクロール
+    // コンテナをヘッダー下端より下に置くため、ヘッダーの下を通過するコンテンツが
+    // そもそも存在しない。
+    // gate: `__tests__/unit/architecture/admin-editor-header-contrast.test.ts`
     header: "fixed top-0 left-0 right-0 border-b bg-background",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
