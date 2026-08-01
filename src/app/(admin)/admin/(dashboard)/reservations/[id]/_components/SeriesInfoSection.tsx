@@ -15,7 +15,8 @@
  */
 
 import { useActionState, type ReactElement } from "react";
-import { useFormStatus } from "react-dom";
+import { getFormProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Card,
   CardContent,
@@ -25,6 +26,8 @@ import {
 } from "@/admin/components/ui";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { cancelReservationSeriesAction } from "@/admin/actions/reservation";
+import { cancelReservationSeriesSchema } from "@/shared/lib/validations/reservation-series";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface Props {
   reservationId: string;
@@ -132,37 +135,60 @@ function CancelForm({
   label,
   variant = "outline",
 }: CancelFormProps): ReactElement {
-  const [_state, formAction] = useActionState(
+  const [lastResult, formAction, isPending] = useActionState(
     cancelReservationSeriesAction,
     undefined,
   );
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="seriesId" value={seriesId} />
-      <input type="hidden" name="scope" value={scope} />
-      {fromInstanceId !== undefined && (
-        <input type="hidden" name="fromInstanceId" value={fromInstanceId} />
-      )}
-      <CancelSubmitButton label={label} variant={variant} />
-    </form>
-  );
-}
 
-function CancelSubmitButton({
-  label,
-  variant,
-}: {
-  label: string;
-  variant: "default" | "destructive" | "outline";
-}): ReactElement {
-  const { pending } = useFormStatus();
+  // `cancelReservationSeriesAction` は `executeConformMutation` を通すので
+  // 拒否は `SubmissionResult` として返る。以前はその結果を `_state` で捨てており、
+  // **キャンセルが失敗しても画面に何も出なかった**（権限拒否・在庫整合エラー・
+  // 楽観ロック競合がすべて無言）。conform に渡して初めて描画できる。
+  const [form, fields] = useForm({
+    // 同じページに scope 違いの 3 フォームが並ぶので id を分ける
+    id: `cancel-series-${scope}`,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: cancelReservationSeriesSchema });
+    },
+    // React 19 の form auto-reset がサーバーの form-level エラーを消すのを防ぐ
+    // （理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  // 入力は hidden のみなので、form-level と field-level を分けて出す意味がない。
+  // `superRefine` が返す `fromInstanceId` の欠落も同じ場所にまとめて見せる。
+  const errorMessages = Object.values(form.allErrors).flat();
+
   return (
-    <SubmitButton
-      isPending={pending}
-      label={label}
-      pendingLabel="処理中..."
-      size="sm"
-      variant={variant}
-    />
+    <form {...getFormProps(form)} action={formAction} className="space-y-2">
+      <input type="hidden" name={fields.seriesId.name} value={seriesId} />
+      <input type="hidden" name={fields.scope.name} value={scope} />
+      {fromInstanceId !== undefined && (
+        <input
+          type="hidden"
+          name={fields.fromInstanceId.name}
+          value={fromInstanceId}
+        />
+      )}
+      <SubmitButton
+        isPending={isPending}
+        label={label}
+        pendingLabel="処理中..."
+        size="sm"
+        variant={variant}
+      />
+      {errorMessages.length > 0 && (
+        <p
+          id={form.errorId}
+          role="alert"
+          className="max-w-64 text-xs text-destructive"
+        >
+          {errorMessages.join(" / ")}
+        </p>
+      )}
+    </form>
   );
 }
