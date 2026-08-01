@@ -47,7 +47,7 @@ const styles = tv({
     // 併せて外した `backdrop-blur` は元々**視覚効果として機能していない**。
     // `InlineEditorShell` は `h-dvh` + 内側 `overflow-hidden` で本文用のスクロール
     // コンテナをヘッダー下端より下に置くため、ヘッダーの下を通過するコンテンツが
-    // 存在しないため。
+    // そもそも存在しない。
     // gate: `__tests__/unit/architecture/admin-editor-header-contrast.test.ts`
     header: "fixed top-0 left-0 right-0 border-b bg-background",
     container: "flex h-14 items-center justify-between px-4",
