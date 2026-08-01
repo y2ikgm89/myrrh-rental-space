@@ -105,6 +105,38 @@ export default defineConfig({
     },
 
     /* ===================================================================
+     * feature module mutator project: **単独で先に走らせる**
+     *
+     * `Settings.featureModules` を OFF に切り替える spec 群。所有分割
+     * (`e2e-feature-module-ownership.test.ts`) で互いの衝突は防いでいるが、
+     * それは **mutator 同士**の話で、同じ singleton を**読むだけ**の spec は
+     * 守られない。実測 (run 30677872134): `feature-module-off-gate` が spaces を
+     * OFF にしている最中に `responsive-shell` が `/spaces` を読み、
+     * 「ページが見つかりません」を掴んで落ちた。`/faq` も
+     * `axe-admin-feature-disabled` の所有なので同型の競合が起きうる。
+     *
+     * Playwright の named lock (ファイル・worker・project 跨ぎの排他) は stable 未
+     * リリースのため、公式に使える手段は **project `dependencies` による順序付け**
+     * だけ。この project を全 reader project の依存に置くことで、mutator が走る間は
+     * 他に何も走らない状態を作る。追加コストは先頭の数十秒のみ。
+     *
+     * `chromium-smoke` は依存させない — CI 上別 job (= 別 webServer / 別 DB) で、
+     * 競合しないうえ required gate の実行時間を延ばしたくない。
+     * =================================================================== */
+    {
+      name: "chromium-feature-modules",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+      },
+      dependencies: ["setup-admin"],
+      testMatch: [
+        /e2e\/public\/feature-module-off-gate\.spec\.ts/,
+        /e2e\/authenticated\/admin\/axe-admin-feature-disabled\.spec\.ts/,
+      ],
+    },
+
+    /* ===================================================================
      * 未認証 project: 公開ページ + 管理 IAP 境界 + a11y
      * `e2e/public/*.spec.ts` および `e2e/a11y/*.spec.ts` を対象。
      * setup spec / 認証済 / visual / smoke は明示除外。
@@ -112,7 +144,9 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["chromium-feature-modules"],
       testMatch: [/e2e\/public\/.*\.spec\.ts/, /e2e\/a11y\/.*\.spec\.ts/],
+      testIgnore: /e2e\/public\/feature-module-off-gate\.spec\.ts/,
     },
     {
       name: "chromium-mobile",
@@ -121,6 +155,7 @@ export default defineConfig({
         isMobile: true,
         hasTouch: true,
       },
+      dependencies: ["chromium-feature-modules"],
       testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
     },
     {
@@ -131,6 +166,7 @@ export default defineConfig({
         isMobile: true,
         hasTouch: true,
       },
+      dependencies: ["chromium-feature-modules"],
       testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
     },
 
@@ -143,7 +179,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer"],
+      dependencies: ["setup-customer", "chromium-feature-modules"],
       testMatch: /e2e\/authenticated\/customer\/.*\.spec\.ts/,
     },
     {
@@ -154,7 +190,7 @@ export default defineConfig({
         hasTouch: true,
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer"],
+      dependencies: ["setup-customer", "chromium-feature-modules"],
       testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
     },
     {
@@ -166,7 +202,7 @@ export default defineConfig({
         hasTouch: true,
         storageState: "playwright/.auth/customer.json",
       },
-      dependencies: ["setup-customer"],
+      dependencies: ["setup-customer", "chromium-feature-modules"],
       testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
     },
 
@@ -179,8 +215,10 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin"],
+      dependencies: ["setup-admin", "chromium-feature-modules"],
       testMatch: /e2e\/authenticated\/admin\/.*\.spec\.ts/,
+      testIgnore:
+        /e2e\/authenticated\/admin\/axe-admin-feature-disabled\.spec\.ts/,
     },
     /**
      * VIEWER role 専用 project。
@@ -198,7 +236,7 @@ export default defineConfig({
         storageState: "playwright/.auth/admin.json",
         extraHTTPHeaders: { "x-e2e-admin-identity": "viewer" },
       },
-      dependencies: ["setup-admin"],
+      dependencies: ["setup-admin", "chromium-feature-modules"],
       testMatch: /e2e\/authenticated\/admin-viewer\/.*\.spec\.ts/,
     },
     {
@@ -209,7 +247,7 @@ export default defineConfig({
         hasTouch: true,
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin"],
+      dependencies: ["setup-admin", "chromium-feature-modules"],
       testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
     {
@@ -221,7 +259,7 @@ export default defineConfig({
         hasTouch: true,
         storageState: "playwright/.auth/admin.json",
       },
-      dependencies: ["setup-admin"],
+      dependencies: ["setup-admin", "chromium-feature-modules"],
       testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
 
@@ -231,6 +269,7 @@ export default defineConfig({
     {
       name: "chromium-visual",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["chromium-feature-modules"],
       testMatch: /e2e\/visual\/.*\.spec\.ts/,
     },
   ],
