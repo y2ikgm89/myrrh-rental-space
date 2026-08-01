@@ -48,7 +48,7 @@ export const customWidgetSchema = z.object({
   type: z.literal("custom"),
   enabled: z.boolean(),
   id: z.string().min(1),
-  title: z.string().min(1, { error: "タイトルは必須です" }).max(100),
+  title: z.string().trim().min(1, { error: "タイトルは必須です" }).max(100),
   description: z.string().max(500).optional(),
   linkUrl: optionalSafePublicHrefSchema,
   linkLabel: z.string().max(100).optional(),

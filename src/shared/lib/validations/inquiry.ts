@@ -25,10 +25,12 @@ export const publicInquirySchema = z
       .optional(),
     subject: z
       .string()
+      .trim()
       .min(1, { error: "件名は必須です" })
       .max(200, { error: "件名は200文字以内で入力してください" }),
     message: z
       .string()
+      .trim()
       .min(1, { error: "お問い合わせ内容は必須です" })
       .max(5000, {
         error: "お問い合わせ内容は5000文字以内で入力してください",

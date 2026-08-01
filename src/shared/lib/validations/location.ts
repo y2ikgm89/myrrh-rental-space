@@ -60,6 +60,7 @@ const imageUrlsSchema = z
 export const locationFormBaseSchema = z.strictObject({
   name: z
     .string()
+    .trim()
     .min(1, { error: "名前を入力してください" })
     .max(100, { error: "名前は100文字以内で入力してください" }),
   slug: z
@@ -76,6 +77,7 @@ export const locationFormBaseSchema = z.strictObject({
     .optional(),
   address: z
     .string()
+    .trim()
     .min(1, { error: "住所を入力してください" })
     .max(500, { error: "住所は500文字以内で入力してください" }),
   postalCode: z

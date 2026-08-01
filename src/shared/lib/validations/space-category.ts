@@ -7,6 +7,7 @@ import { z } from "zod";
 export const spaceCategoryFormSchema = z.strictObject({
   name: z
     .string()
+    .trim()
     .min(1, { error: "カテゴリー名を入力してください" })
     .max(50, { error: "カテゴリー名は50文字以内で入力してください" }),
   description: z

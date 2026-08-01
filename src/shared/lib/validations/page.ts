@@ -100,6 +100,7 @@ export function canDeletePage(slug: string): boolean {
 export const updatePageSeoSchema = z.object({
   title: z
     .string()
+    .trim()
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内です" }),
   metaDescription: z
@@ -147,6 +148,7 @@ export const createPageSchema = z.object({
     }),
   title: z
     .string()
+    .trim()
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内です" }),
   isPublished: z.boolean().default(false),

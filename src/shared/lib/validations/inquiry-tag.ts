@@ -8,6 +8,7 @@ import { z } from "zod";
 export const inquiryTagFormSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, { error: "タグ名を入力してください" })
     .max(50, { error: "タグ名は50文字以内で入力してください" }),
   color: z
