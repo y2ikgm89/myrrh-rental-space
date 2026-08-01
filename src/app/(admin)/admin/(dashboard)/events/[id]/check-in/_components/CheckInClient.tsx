@@ -188,7 +188,11 @@ function CheckInClientState({
   return (
     <div className="space-y-4">
       {/* ヘッダー: 進捗カウンタ + 操作 */}
-      <div className="sticky top-16 z-10 -mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:mx-0 sm:rounded-lg sm:border">
+      {/* 背景は 95% で固定（`supports-[backdrop-filter]:bg-background/60` は使わない）。
+          sticky bar はスクロールで任意のコンテンツの上に重なるため下地を選べず、60% だと
+          実効コントラストが下地次第で AA を割る。95% なら最悪の下地でも 5.36:1。
+          `admin-overlay-surface-contrast.test.ts` が機械強制する。 */}
+      <div className="sticky top-16 z-10 -mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold tabular-nums">
