@@ -52,6 +52,10 @@ const NO_TRIM_ALLOWLIST = new Map<string, string>([
 /**
  * `name: z.string()....min(1` を拾う。チェーンは改行を跨ぐので dotAll。
  * `.max()` や `{ error: … }` を挟んでいても順序は問わない。
+ *
+ * **拾えないもの**: `const base = z.string()` を経由して `base.min(1)` と書く形。
+ * `z.string()` が field 名の直後に来る書き方だけを見る。この repo の schema は
+ * 全てその形なので今は取りこぼしが無いが、間接参照を足すならここも直す。
  */
 const REQUIRED_STRING_FIELD =
   /(\w+):\s*z\s*\.string\(\)((?:\s*\.\w+\([^()]*(?:\([^()]*\)[^()]*)*\))*)/gsu;
@@ -69,45 +73,53 @@ function collectTsFiles(dir: string): string[] {
   return out;
 }
 
+/**
+ * `<file>:<field>` → その名前で現れた必須 string のうち `.trim()` が無い数。
+ *
+ * 同名フィールドは複数の schema に現れる（`page.ts` の `title` など）。
+ * **1 つでも trim 無しがあれば違反**として扱いたいので、Map には
+ * 最後に見た定義ではなく「trim 無しの件数」を入れる。
+ */
+function collectRequiredStrings(): Map<string, number> {
+  const untrimmedCount = new Map<string, number>();
+
+  for (const filePath of collectTsFiles(VALIDATIONS_ROOT)) {
+    const fileName = relative(VALIDATIONS_ROOT, filePath).split("\\").join("/");
+    const source = readFileSync(filePath, "utf8");
+
+    for (const match of source.matchAll(REQUIRED_STRING_FIELD)) {
+      const field = match[1] ?? "";
+      const chain = match[2] ?? "";
+      if (!chain.includes(".min(1")) continue;
+
+      const key = `${fileName}:${field}`;
+      const previous = untrimmedCount.get(key) ?? 0;
+      untrimmedCount.set(key, previous + (chain.includes(".trim()") ? 0 : 1));
+    }
+  }
+
+  return untrimmedCount;
+}
+
 describe("required text fields are trimmed", () => {
   test("`.min(1)` を課す string は `.trim()` も通している", () => {
-    const violations: string[] = [];
-
-    for (const filePath of collectTsFiles(VALIDATIONS_ROOT)) {
-      const fileName = relative(VALIDATIONS_ROOT, filePath)
-        .split("\\")
-        .join("/");
-      const source = readFileSync(filePath, "utf8");
-
-      for (const match of source.matchAll(REQUIRED_STRING_FIELD)) {
-        const field = match[1] ?? "";
-        const chain = match[2] ?? "";
-        if (!chain.includes(".min(1")) continue;
-        if (chain.includes(".trim()")) continue;
-        if (NO_TRIM_ALLOWLIST.has(`${fileName}:${field}`)) continue;
-
-        violations.push(`${fileName}:${field}`);
-      }
-    }
+    const violations = [...collectRequiredStrings()]
+      .filter(
+        ([key, untrimmed]) => untrimmed > 0 && !NO_TRIM_ALLOWLIST.has(key),
+      )
+      .map(([key]) => key);
 
     expect(violations).toEqual([]);
   });
 
   test("allowlist に死んだ entry が残っていない", () => {
-    const sources = new Map(
-      collectTsFiles(VALIDATIONS_ROOT).map((p) => [
-        relative(VALIDATIONS_ROOT, p).split("\\").join("/"),
-        readFileSync(p, "utf8"),
-      ]),
-    );
+    const untrimmedCount = collectRequiredStrings();
 
-    const stale = [...NO_TRIM_ALLOWLIST.keys()].filter((key) => {
-      const [fileName, field] = key.split(":");
-      const source = fileName === undefined ? undefined : sources.get(fileName);
-      if (source === undefined) return true;
-      // フィールドが消えた / `.trim()` が入ったなら entry はもう要らない
-      return field === undefined || !source.includes(`${field}:`);
-    });
+    // entry が要るのは「今も trim 無しで存在する」場合だけ。フィールドが消えても、
+    // `.trim()` が入って例外が不要になっても、entry は残骸になる。
+    const stale = [...NO_TRIM_ALLOWLIST.keys()].filter(
+      (key) => (untrimmedCount.get(key) ?? 0) === 0,
+    );
 
     expect(stale).toEqual([]);
   });
