@@ -138,8 +138,10 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
   });
 
   // Step 2: dev customer + 既存 space を lookup
+  // seed は同じメールで会員（userId あり）と merge fixture 用のゲスト（userId null）の
+  // 2 行を作る。`userId` で絞らないと任意の順でゲスト行を掴み、その run だけ落ちる。
   const customer = await client.customer.findFirst({
-    where: { email: "dev-customer@example.com" },
+    where: { email: "dev-customer@example.com", userId: { not: null } },
     select: { id: true },
   });
   if (!customer) {

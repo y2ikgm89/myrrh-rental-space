@@ -59,8 +59,10 @@ async function main(): Promise<void> {
       return;
     }
 
+    // seed は同じメールで会員（userId あり）と merge fixture 用のゲスト（userId null）の
+    // 2 行を作る。`userId` で絞らないと任意の順でゲスト行を掴み、その run だけ落ちる。
     const devCustomer = await prisma.customer.findFirstOrThrow({
-      where: { email: DEV_CUSTOMER_EMAIL },
+      where: { email: DEV_CUSTOMER_EMAIL, userId: { not: null } },
       select: { id: true },
     });
 
