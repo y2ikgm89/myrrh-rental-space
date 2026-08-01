@@ -321,21 +321,21 @@ test.describe("課金・決済設定ページ", () => {
   test("決済タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/billing");
 
-    const paymentTab = page.locator('[role="tab"]:has-text("決済")');
+    const paymentTab = page.getByRole("tab", { name: "決済" });
     await expect(paymentTab).toBeVisible();
   });
 
   test("割引タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/billing");
 
-    const discountTab = page.locator('[role="tab"]:has-text("割引")');
+    const discountTab = page.getByRole("tab", { name: "割引" });
     await expect(discountTab).toBeVisible();
   });
 
   test("消費税タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/billing");
 
-    const taxTab = page.locator('[role="tab"]:has-text("消費税")');
+    const taxTab = page.getByRole("tab", { name: "消費税" });
     await expect(taxTab).toBeVisible();
   });
 });
@@ -354,13 +354,9 @@ test.describe("外部連携設定ページ", () => {
   test("外部連携設定ページが読み込まれる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/integrations");
 
-    await expect(page.locator('[role="tab"]:has-text("Resend")')).toBeVisible();
-    await expect(
-      page.locator('[role="tab"]:has-text("Turnstile")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[role="tab"]:has-text("Google Maps")'),
-    ).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Resend" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Turnstile" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Google Maps" })).toBeVisible();
   });
 });
 
@@ -378,11 +374,9 @@ test.describe("システム管理設定ページ", () => {
   test("システム管理設定ページが読み込まれる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/system");
 
-    await expect(
-      page.locator('[role="tab"]:has-text("メンテナンス")'),
-    ).toBeVisible();
-    await expect(page.locator('[role="tab"]:has-text("Cookie")')).toBeVisible();
-    await expect(page.locator('[role="tab"]:has-text("権限")')).toBeVisible();
+    await expect(page.getByRole("tab", { name: "メンテナンス" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Cookie" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "権限" })).toBeVisible();
   });
 });
 
@@ -400,14 +394,14 @@ test.describe("サイトの見た目ページ", () => {
   test("ナビゲーションタブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/appearance");
 
-    const navTab = page.locator('[role="tab"]:has-text("ナビゲーション")');
+    const navTab = page.getByRole("tab", { name: "ナビゲーション" });
     await expect(navTab).toBeVisible();
   });
 
   test("お知らせバータブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/appearance");
 
-    const barTab = page.locator('[role="tab"]:has-text("お知らせバー")');
+    const barTab = page.getByRole("tab", { name: "お知らせバー" });
     await expect(barTab).toBeVisible();
   });
 });

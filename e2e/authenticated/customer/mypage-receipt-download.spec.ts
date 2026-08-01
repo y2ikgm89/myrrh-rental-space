@@ -1,18 +1,16 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { readFile } from "node:fs/promises";
 import { test, expect } from "../../fixtures/e2e-test";
 import {
   customerReservationTargets,
   openCustomerReservationDetail,
 } from "./reservation-test-helpers";
 
-// `<a download href="/api/receipts/...">` のクリックでブラウザが /api を叩くため、
-// proxy の `apiRateLimiter`（100/分/IP）に乗る。IP を共有していた頃は飽和で 429 が
-// 返り、ダウンロードが canceled になっていた（成功時 12s に対し失敗時 2s で終わるのが
-// 徴候。同 run 30607885778 で同 project の calendar-download が明示的に 429 で落ちた）。
-// client IP は `e2e/fixtures/e2e-test.ts` の fixture がテストごとに配る。
+// 領収書 PDF の取得は proxy の `apiRateLimiter`（100/分/IP）に乗る。IP を共有して
+// いた頃は飽和すると 429 が返っていた（同 run 30607885778 で同 project の
+// calendar-download が明示的に 429 で落ちた）。client IP は
+// `e2e/fixtures/e2e-test.ts` の fixture がテストごとに配る。
 
 /**
  * マイページ — 会員 session 経由の領収書 PDF ダウンロード E2E (Phase 7 PR8)
@@ -59,54 +57,47 @@ test.describe("マイページ — 領収書ダウンロード (session 経路)"
       new RegExp(`/mypage/reservations/${fixture.reservationId}$`, "u"),
     );
 
-    // ダウンロード応答は **trace に残らない**（Playwright の仕様）。「canceled」の
-    // 一行だけでは 429 なのか 500 なのか分からず、実際そこで 2 度推測が入った。
-    // ステータスを spec 側で拾って失敗メッセージに載せる。
-    const receiptResponses: string[] = [];
-    page.on("response", (response) => {
-      if (response.url().includes("/api/receipts/")) {
-        receiptResponses.push(`${response.status()} ${response.url()}`);
-      }
-    });
-
     const downloadLink = page.getByRole("link", {
       name: "領収書をダウンロード",
     });
     await expect(downloadLink).toBeVisible({ timeout: 10000 });
 
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      downloadLink.click(),
-    ]);
-
-    expect(download.suggestedFilename()).toBe(
+    // ---- リンクの配線（リクエストを伴わない） ----
+    // ブラウザにダウンロードさせるのはこの 2 属性なので、属性を直接見れば
+    // 「クリックすれば PDF が落ちてくる」配線は request 無しで検証できる。
+    const href = await downloadLink.getAttribute("href");
+    expect(href).toBe(`/api/receipts/${fixture.serialNo}/pdf`);
+    expect(await downloadLink.getAttribute("download")).toBe(
       `receipt-${fixture.serialNo}.pdf`,
     );
+    if (href === null) throw new Error("download link href missing");
 
-    // **失敗理由を先に確定させる。** `failure()` はダウンロード完了まで待ってから
-    // 理由を返す公式 API（`path()` も待つが、`createReadStream()` は待たず、
-    // 失敗/中断済みなら「canceled」とだけ throw する）。
+    // ---- エンドポイントの応答（リクエスト 1 回だけ） ----
+    // **クリックしてダウンロードさせない。** ブラウザのダウンロードは失敗理由を
+    // 「canceled」としか返さず、HTTP ステータスを取り出す手段が無い:
+    // `download.failure()` はステータスを含まず、`page.on("response")` は
+    // ダウンロードでは発火せず（実測 run 30688324782 で「(記録なし)」）、
+    // Playwright の trace にも応答が残らない。
     //
-    // 旧実装は `createReadStream()` を直に呼んでいたため、落ちても
-    // `download.createReadStream: canceled` の一行しか残らなかった。Playwright の
-    // trace はダウンロード応答を記録しないので、CI アーティファクトからも
-    // ステータスを追えず、原因を**推測**するしかない状態が続いていた
-    // （429 と見て専用 client IP を割り当てたのが上の test.use。それでも
-    // run 30685242600 まで再発している = 429 だけが原因ではない）。
-    // 理由を assertion のメッセージに載せて、次に落ちたときは推測を挟まず読める形にする。
+    // 失敗後に同じ URL を叩き直す案は成立しない。この endpoint は
+    // `receiptDownloadBySerialNoRateLimiter`（**10 回/時/serialNo**、GET と POST で
+    // バケット共有）という可変状態を持つので、2 回目は別リクエストとして 1 消費し、
+    // 元の失敗とは違うステータスを返しうる（元が枠を使い切った直後なら 429 が返り、
+    // 本当の原因を rate limit と誤認する）。
+    //
+    // よって **リクエストは 1 回だけ**にし、その 1 回からステータスを取る。
+    // `page.request` は storage state と context の extraHTTPHeaders（fixture が
+    // 配った client IP）を共有するので、ブラウザが送るのと同じ条件になる。
+    const response = await page.request.get(href);
     expect(
-      await download.failure(),
-      `領収書 PDF のダウンロードが失敗した。受領書 API の応答: ${
-        receiptResponses.length > 0
-          ? receiptResponses.join(" / ")
-          : "(記録なし)"
-      }`,
-    ).toBeNull();
+      response.status(),
+      `領収書 PDF の取得に失敗した: ${response.status().toString()} ${response.statusText()} body="${(
+        await response.text()
+      ).slice(0, 120)}"`,
+    ).toBe(200);
+    expect(response.headers()["content-type"]).toContain("application/pdf");
 
-    // 完了を保証してから読む（公式テストと同じ `path()` → 読み取りの順序）。
-    const filePath = await download.path();
-    const data = await readFile(filePath);
-
+    const data = await response.body();
     expect(data.length).toBeGreaterThan(0);
     // 長さだけだと「空でない何か」で通ってしまう。PDF の magic byte まで見る。
     expect(data.subarray(0, 5).toString("latin1")).toBe("%PDF-");
