@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import type { SubmissionResult } from "@conform-to/react";
 import { installEmailRenderContextMock } from "../../support/email-render-context-mock";
 import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
@@ -129,16 +129,38 @@ const slotId = "cm0slot1234567890123456ab"; // cuid2 (25 chars)
 const ticketId = "cm0ticket1234567890123456";
 const registrationId = "cm0reg12345678901234567";
 
-const validInput = {
-  eventId,
-  slotId,
-  ticketId,
+/**
+ * action は conform の Server Action になったので FormData で呼ぶ。
+ * `quantity` も FormData 上は文字列（schema 側が `z.coerce.number()` で受ける）。
+ */
+const VALID = {
   name: "山田花子",
   email: "hanako@example.com",
   phone: "090-1234-5678",
   note: "電話で申込",
   quantity: 2,
 } as const;
+
+function validInput(overrides: Record<string, string> = {}): FormData {
+  const formData = new FormData();
+  formData.set("eventId", eventId);
+  formData.set("slotId", slotId);
+  formData.set("ticketId", ticketId);
+  formData.set("name", VALID.name);
+  formData.set("email", VALID.email);
+  formData.set("phone", VALID.phone);
+  formData.set("note", VALID.note);
+  formData.set("quantity", String(VALID.quantity));
+  for (const [key, value] of Object.entries(overrides)) {
+    formData.set(key, value);
+  }
+  return formData;
+}
+
+/** Zod の field error は `submission.reply()` が field 名のキーに載せる */
+function hasFieldError(result: SubmissionResult, field: string): boolean {
+  return (result.error?.[field]?.length ?? 0) > 0;
+}
 
 describe("createAdminProxyRegistration (admin proxy registration action)", () => {
   beforeEach(() => {
@@ -167,52 +189,43 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
   });
 
   test("空の email は VALIDATION で弾かれる（walk-in と対比: 事前登録は必須）", async () => {
-    const result = await createAdminProxyRegistration({
-      ...validInput,
-      email: "",
-    });
+    const result = await createAdminProxyRegistration(
+      undefined,
+      validInput({ email: "" }),
+    );
 
-    expect(isMutationError(result)).toBe(true);
-    if (isMutationError(result)) {
-      expect(result.code).toBe("VALIDATION");
-    }
+    expect(hasFieldError(result, "email")).toBe(true);
     expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
     expect(mockCreateAdminProxyRegistrationCommand).not.toHaveBeenCalled();
   });
 
   test("不正な email 形式は VALIDATION で弾かれる", async () => {
-    const result = await createAdminProxyRegistration({
-      ...validInput,
-      email: "not-an-email",
-    });
+    const result = await createAdminProxyRegistration(
+      undefined,
+      validInput({ email: "not-an-email" }),
+    );
 
-    expect(isMutationError(result)).toBe(true);
-    if (isMutationError(result)) {
-      expect(result.code).toBe("VALIDATION");
-    }
+    expect(result.status).toBe("error");
     expect(mockCreateAdminProxyRegistrationCommand).not.toHaveBeenCalled();
   });
 
   test("空の name は VALIDATION で弾かれる", async () => {
-    const result = await createAdminProxyRegistration({
-      ...validInput,
-      name: "",
-    });
+    const result = await createAdminProxyRegistration(
+      undefined,
+      validInput({ name: "" }),
+    );
 
-    expect(isMutationError(result)).toBe(true);
-    if (isMutationError(result)) {
-      expect(result.code).toBe("VALIDATION");
-    }
+    expect(result.status).toBe("error");
     expect(mockCreateAdminProxyRegistrationCommand).not.toHaveBeenCalled();
   });
 
   test("quantity 0 は VALIDATION で弾かれる（境界値）", async () => {
-    const result = await createAdminProxyRegistration({
-      ...validInput,
-      quantity: 0,
-    });
+    const result = await createAdminProxyRegistration(
+      undefined,
+      validInput({ quantity: "0" }),
+    );
 
-    expect(isMutationError(result)).toBe(true);
+    expect(result.status).toBe("error");
     expect(mockCreateAdminProxyRegistrationCommand).not.toHaveBeenCalled();
   });
 
@@ -226,17 +239,17 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         eventId,
         slotId,
         ticketId,
-        name: validInput.name,
-        email: validInput.email,
-        quantity: validInput.quantity,
+        name: VALID.name,
+        email: VALID.email,
+        quantity: VALID.quantity,
         icsSequence: 0,
       },
       event: { title: "テストイベント", slug: "test-event" },
     });
 
-    const result = await createAdminProxyRegistration(validInput);
+    const result = await createAdminProxyRegistration(undefined, validInput());
 
-    expect(isMutationError(result)).toBe(false);
+    expect(result.initialValue).toBeNull();
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "event",
@@ -249,11 +262,11 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         eventId,
         slotId,
         ticketId,
-        name: validInput.name,
-        email: validInput.email,
-        phone: validInput.phone,
-        note: validInput.note,
-        quantity: validInput.quantity,
+        name: VALID.name,
+        email: VALID.email,
+        phone: VALID.phone,
+        note: VALID.note,
+        quantity: VALID.quantity,
       }),
     );
   });
@@ -265,9 +278,9 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         eventId,
         slotId,
         ticketId,
-        name: validInput.name,
-        email: validInput.email,
-        quantity: validInput.quantity,
+        name: VALID.name,
+        email: VALID.email,
+        quantity: VALID.quantity,
         icsSequence: 3,
       },
       event: { title: "テストイベント", slug: "test-event" },
@@ -288,11 +301,11 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
       return data;
     });
 
-    const result = await createAdminProxyRegistration(validInput);
+    const result = await createAdminProxyRegistration(undefined, validInput());
     // afterSuccess 内の fireAndForget 経由で積まれた副作用 Promise を待つ
     await Promise.allSettled(firedPromises);
 
-    expect(isMutationError(result)).toBe(false);
+    expect(result.initialValue).toBeNull();
 
     // 公開側の残枠表示に影響するため EVENTS キャッシュを無効化
     expect(mockInvalidateEventCaches).toHaveBeenCalled();
@@ -301,10 +314,10 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
     expect(mockSendEventRegistrationConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
         registrationId,
-        customerName: validInput.name,
-        customerEmail: validInput.email,
+        customerName: VALID.name,
+        customerEmail: VALID.email,
         eventTitle: "テストイベント",
-        quantity: validInput.quantity,
+        quantity: VALID.quantity,
         icsSequence: 3,
         customerId: null,
       }),
@@ -316,10 +329,10 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
       expect.objectContaining({
         registrationId,
         eventId,
-        participantName: validInput.name,
-        participantEmail: validInput.email,
+        participantName: VALID.name,
+        participantEmail: VALID.email,
         eventTitle: "テストイベント",
-        quantity: validInput.quantity,
+        quantity: VALID.quantity,
         currentRegistrations: 5,
         capacity: 20,
       }),
@@ -348,22 +361,24 @@ describe("createAdminProxyRegistration (admin proxy registration action)", () =>
         eventId,
         slotId,
         ticketId,
-        name: validInput.name,
-        email: validInput.email,
+        name: VALID.name,
+        email: VALID.email,
         quantity: 1,
         icsSequence: 0,
       },
       event: { title: "テストイベント", slug: "test-event" },
     });
 
-    await createAdminProxyRegistration({
-      eventId,
-      slotId,
-      ticketId,
-      name: "テスト太郎",
-      email: "test@example.com",
-      quantity: 1,
-    });
+    await createAdminProxyRegistration(
+      undefined,
+      validInput({
+        name: "テスト太郎",
+        email: "test@example.com",
+        quantity: "1",
+        phone: "",
+        note: "",
+      }),
+    );
 
     expect(mockCreateAdminProxyRegistrationCommand).toHaveBeenCalledWith(
       expect.objectContaining({

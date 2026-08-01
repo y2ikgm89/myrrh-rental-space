@@ -47,11 +47,20 @@ import {
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
-import type { MutationResult } from "@/shared/lib/mutation-result";
+import {
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 import {
   prismaCuid2IdSchema,
   prismaCuidIdSchema,
 } from "@/shared/lib/validations/params";
+import type { SubmissionResult } from "@conform-to/react";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import {
+  adminProxyRegistrationSchema,
+  walkInRegistrationSchema,
+} from "@/shared/lib/validations/event-registration-onsite";
 
 const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 const eventIdSchema = prismaCuidIdSchema("イベント");
@@ -324,121 +333,67 @@ export async function updateEventRegistration(
 // 当日参加 (walk-in) — 受付確定と同時に出席打刻
 // =============================================================================
 
-const walkInSchema = z.object({
-  eventId: eventIdSchema,
-  slotId: eventTimeSlotIdSchema,
-  ticketId: eventTicketIdSchema,
-  name: z.string().trim().min(1, "氏名を入力してください").max(100),
-  // 受付係が代行入力するため任意。空文字は null 扱い
-  email: z
-    .string()
-    .trim()
-    .max(255)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v))
-    .pipe(
-      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
-    ),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  note: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  quantity: z.number().int().min(1).max(100),
-});
-
-export type WalkInRegistrationInput = z.input<typeof walkInSchema>;
-
 export async function createWalkInRegistration(
-  input: WalkInRegistrationInput,
-): Promise<
-  MutationResult<{ registrationId: string; eventId: string; name: string }>
-> {
-  const parsed = walkInSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "event",
-    action: "update",
-    resourceId: parsed.data.eventId,
-    execute: async () => {
-      await assertAdminFeatureCreateAllowed("events");
-      const result = await createWalkInRegistrationCommand({
-        eventId: parsed.data.eventId,
-        slotId: parsed.data.slotId,
-        ticketId: parsed.data.ticketId,
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        note: parsed.data.note,
-        quantity: parsed.data.quantity,
-      });
-      return {
-        registrationId: result.registration.id,
-        eventId: result.registration.eventId,
-        name: result.registration.name,
-      };
-    },
-    afterSuccess: (data) => {
-      // walk-in は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
-      invalidateEventCaches();
-
-      fireAndForget(
-        createNotificationCommand({
-          type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-          message: `${data.name}様が当日参加で受付されました`,
-          resourceType: "event",
-          resourceId: data.eventId,
-        }),
-        {
-          operation: "createWalkInRegistrationNotification",
-          category: ErrorCategory.DATABASE,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    walkInRegistrationSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "event",
+        action: "update",
+        resourceId: data.eventId,
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("events");
+          const result = await createWalkInRegistrationCommand({
+            eventId: data.eventId,
+            slotId: data.slotId,
+            ticketId: data.ticketId,
+            name: data.name,
+            // schema は検証だけを担うので、空欄→null の正規化はここで行う
+            email: data.email || null,
+            phone: data.phone || null,
+            note: data.note || null,
+            quantity: data.quantity,
+          });
+          return {
+            registrationId: result.registration.id,
+            eventId: result.registration.eventId,
+            name: result.registration.name,
+          };
         },
-      );
+        afterSuccess: (created) => {
+          // walk-in は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
+          invalidateEventCaches();
+
+          fireAndForget(
+            createNotificationCommand({
+              type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+              title:
+                NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
+              message: `${created.name}様が当日参加で受付されました`,
+              resourceType: "event",
+              resourceId: created.eventId,
+            }),
+            {
+              operation: "createWalkInRegistrationNotification",
+              category: ErrorCategory.DATABASE,
+            },
+          );
+        },
+      });
+
+      if (isMutationError(result)) return { ok: false, error: result.error };
+      return { ok: true };
     },
-  });
+  );
 }
 
 // =============================================================================
 // 事前代行登録 (admin proxy) — 電話・口頭申込を admin が代理登録し、確認メールも送る
 // =============================================================================
-
-const adminProxySchema = z.object({
-  eventId: eventIdSchema,
-  slotId: eventTimeSlotIdSchema,
-  ticketId: eventTicketIdSchema,
-  name: z.string().trim().min(1, "氏名を入力してください").max(100),
-  // 代行登録では確認メールを送るため必須。空文字は Zod がエラーとする。
-  email: z
-    .string()
-    .trim()
-    .min(1, "メールアドレスを入力してください")
-    .max(255)
-    .pipe(z.email({ error: "メールアドレスの形式が不正です" })),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  note: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  quantity: z.number().int().min(1).max(100).default(1),
-});
-
-export type AdminProxyRegistrationInput = z.input<typeof adminProxySchema>;
 
 type AdminProxyRegistrationData = {
   registrationId: string;
@@ -450,119 +405,129 @@ type AdminProxyRegistrationData = {
 };
 
 export async function createAdminProxyRegistration(
-  input: AdminProxyRegistrationInput,
-): Promise<MutationResult<AdminProxyRegistrationData>> {
-  const parsed = adminProxySchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    adminProxyRegistrationSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "event",
+        action: "update",
+        resourceId: data.eventId,
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("events");
+          const result = await createAdminProxyRegistrationCommand({
+            eventId: data.eventId,
+            slotId: data.slotId,
+            ticketId: data.ticketId,
+            name: data.name,
+            // 代行登録では email は Zod で必須検証済み。空欄→null の正規化が要るのは
+            // 任意項目だけ（schema は検証に徹し、正規化はこの保存経路の責務）。
+            email: data.email,
+            phone: data.phone || null,
+            note: data.note || null,
+            quantity: data.quantity,
+          });
+          // email は Zod で必須検証済 (string 保証)。DB 返り値の
+          // `EventRegistration.email` は `string | null` 型なので、渡した値を再利用
+          // することで narrowing する（data.email 由来なので同一値）。
+          return {
+            registrationId: result.registration.id,
+            eventId: result.registration.eventId,
+            name: result.registration.name,
+            email: data.email,
+            quantity: result.registration.quantity,
+            icsSequence: result.registration.icsSequence,
+          };
+        },
+        afterSuccess: (created) => {
+          // admin proxy は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
+          invalidateEventCaches();
 
-  return executeAdminMutationResult({
-    resource: "event",
-    action: "update",
-    resourceId: parsed.data.eventId,
-    execute: async () => {
-      await assertAdminFeatureCreateAllowed("events");
-      const result = await createAdminProxyRegistrationCommand({
-        eventId: parsed.data.eventId,
-        slotId: parsed.data.slotId,
-        ticketId: parsed.data.ticketId,
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        note: parsed.data.note,
-        quantity: parsed.data.quantity,
-      });
-      // email は Zod で必須検証済 (string 保証)。DB 返り値の
-      // `EventRegistration.email` は `string | null` 型なので、渡した値を再利用
-      // することで narrowing する（parsed.data.email 由来なので同一値）。
-      return {
-        registrationId: result.registration.id,
-        eventId: result.registration.eventId,
-        name: result.registration.name,
-        email: parsed.data.email,
-        quantity: result.registration.quantity,
-        icsSequence: result.registration.icsSequence,
-      };
-    },
-    afterSuccess: (data) => {
-      // admin proxy は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
-      invalidateEventCaches();
+          // 確認メール（参加者宛 + admin 通知）を fire-and-forget で送信。
+          // 公開申込 path (registerForEvent) と同じ getEventRegistrationDetailsForEmail
+          // 経由でスロット時刻・定員・残数を解決してから送る。
+          fireAndForget(
+            (async () => {
+              const details = await getEventRegistrationDetailsForEmail(
+                created.registrationId,
+              );
+              if (!details) return;
 
-      // 確認メール（参加者宛 + admin 通知）を fire-and-forget で送信。
-      // 公開申込 path (registerForEvent) と同じ getEventRegistrationDetailsForEmail
-      // 経由でスロット時刻・定員・残数を解決してから送る。
-      fireAndForget(
-        (async () => {
-          const details = await getEventRegistrationDetailsForEmail(
-            data.registrationId,
+              const [renderContext, adminDelivery] = await Promise.all([
+                getEventEmailRenderContext(),
+                resolveEventAdminNotificationDelivery("registration"),
+              ]);
+
+              const sends = [
+                sendEventRegistrationConfirmation(
+                  {
+                    registrationId: created.registrationId,
+                    customerName: created.name,
+                    customerEmail: created.email,
+                    eventTitle: details.eventTitle,
+                    eventStartTime: details.startTime,
+                    eventEndTime: details.endTime,
+                    location: details.location ?? undefined,
+                    quantity: created.quantity,
+                    icsSequence: created.icsSequence,
+                    customerId: null,
+                    format: details.format,
+                    meetingUrl: details.meetingUrl,
+                  },
+                  renderContext,
+                ),
+              ];
+              if (adminDelivery.enabled) {
+                sends.push(
+                  sendEventAdminNotification(
+                    {
+                      registrationId: created.registrationId,
+                      eventId: created.eventId,
+                      participantName: created.name,
+                      participantEmail: created.email,
+                      eventTitle: details.eventTitle,
+                      eventStartTime: details.startTime,
+                      quantity: created.quantity,
+                      currentRegistrations: details.confirmedCount,
+                      capacity: details.capacity,
+                    },
+                    "registration",
+                    adminDelivery,
+                  ),
+                );
+              }
+              await Promise.all(sends);
+            })(),
+            {
+              operation: "sendAdminProxyRegistrationEmails",
+              category: ErrorCategory.EXTERNAL_API,
+            },
           );
-          if (!details) return;
 
-          const [renderContext, adminDelivery] = await Promise.all([
-            getEventEmailRenderContext(),
-            resolveEventAdminNotificationDelivery("registration"),
-          ]);
-
-          const sends = [
-            sendEventRegistrationConfirmation(
-              {
-                registrationId: data.registrationId,
-                customerName: data.name,
-                customerEmail: data.email,
-                eventTitle: details.eventTitle,
-                eventStartTime: details.startTime,
-                eventEndTime: details.endTime,
-                location: details.location ?? undefined,
-                quantity: data.quantity,
-                icsSequence: data.icsSequence,
-                customerId: null,
-                format: details.format,
-                meetingUrl: details.meetingUrl,
-              },
-              renderContext,
-            ),
-          ];
-          if (adminDelivery.enabled) {
-            sends.push(
-              sendEventAdminNotification(
-                {
-                  registrationId: data.registrationId,
-                  eventId: data.eventId,
-                  participantName: data.name,
-                  participantEmail: data.email,
-                  eventTitle: details.eventTitle,
-                  eventStartTime: details.startTime,
-                  quantity: data.quantity,
-                  currentRegistrations: details.confirmedCount,
-                  capacity: details.capacity,
-                },
-                "registration",
-                adminDelivery,
-              ),
-            );
-          }
-          await Promise.all(sends);
-        })(),
-        {
-          operation: "sendAdminProxyRegistrationEmails",
-          category: ErrorCategory.EXTERNAL_API,
+          fireAndForget(
+            createNotificationCommand({
+              type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+              title:
+                NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
+              message: `${created.name}様の申込を代行登録しました`,
+              resourceType: "event",
+              resourceId: created.eventId,
+            }),
+            {
+              operation: "createAdminProxyRegistrationNotification",
+              category: ErrorCategory.DATABASE,
+            },
+          );
         },
-      );
+      });
 
-      fireAndForget(
-        createNotificationCommand({
-          type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-          message: `${data.name}様の申込を代行登録しました`,
-          resourceType: "event",
-          resourceId: data.eventId,
-        }),
-        {
-          operation: "createAdminProxyRegistrationNotification",
-          category: ErrorCategory.DATABASE,
-        },
-      );
+      if (isMutationError(result)) return { ok: false, error: result.error };
+      return { ok: true };
     },
-  });
+  );
 }
 
 // =============================================================================

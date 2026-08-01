@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import {
   Button,
   Dialog,
@@ -13,10 +21,9 @@ import {
   Label,
   SubmitButton,
 } from "@/admin/components/ui";
-import { toast } from "sonner";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import type { MutationResult } from "@/shared/lib/mutation-result";
-import type { WalkInRegistrationInput } from "@/admin/actions/event-registration";
+import type { SubmissionResult } from "@conform-to/react";
+import { walkInRegistrationSchema } from "@/shared/lib/validations/event-registration-onsite";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { useRadioGroupKeyboard } from "@/shared/lib/a11y/use-radio-group-keyboard";
 import { formatJstMonthDay, formatTimeShort } from "@/shared/lib/date-format";
 
@@ -41,10 +48,9 @@ type Props = {
   readonly slots: SlotInfo[];
   readonly onSuccess: () => void;
   readonly action: (
-    input: WalkInRegistrationInput,
-  ) => Promise<
-    MutationResult<{ registrationId: string; eventId: string; name: string }>
-  >;
+    prev: SubmissionResult | undefined,
+    formData: FormData,
+  ) => Promise<SubmissionResult>;
 };
 
 // timeZone を明示しない Intl 呼び出しは SSR (Cloud Run = UTC) と CSR (ブラウザ tz)
@@ -69,81 +75,70 @@ export function WalkInDialog({
 }: Props) {
   const firstTicketId = tickets[0]?.id ?? "";
   const firstSlotId = slots[0]?.id ?? "";
-  const [ticketId, setTicketId] = useState<string>(firstTicketId);
-  const [slotId, setSlotId] = useState<string>(firstSlotId);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [note, setNote] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [lastResult, formAction, isPending] = useActionState(action, undefined);
 
-  // WAI-ARIA APG radio group: roving tabindex + ArrowLeft/Right/Up/Down +
-  // Home/End + selection follows focus。button 要素に radio role を付ける
-  // 独自実装のため、公開側で使用中の共通 hook を再利用する。
+  const [form, fields] = useForm<z.input<typeof walkInRegistrationSchema>>({
+    id: `walk-in-${eventId}`,
+    lastResult,
+    constraint: getZodConstraint(walkInRegistrationSchema),
+    defaultValue: {
+      eventId,
+      slotId: firstSlotId,
+      ticketId: firstTicketId,
+      quantity: "1",
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: walkInRegistrationSchema });
+    },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由は helper の JSDoc）。ここでは権限拒否・定員超過・
+    // 機能 OFF がこの経路で返る。
+    onSubmit: dispatchWithoutFormReset(formAction),
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  // slot / ticket は button 要素の独自 radio group（WAI-ARIA APG の roving
+  // tabindex）で選ぶため、conform には hidden input 経由で伝える。値の保持を
+  // `useState` ではなく `useInputControl` に寄せるのは、conform 側の
+  // defaultValue / reset と同期させるため（公式パターン）。
+  const slotIdControl = useInputControl(fields.slotId);
+  const ticketIdControl = useInputControl(fields.ticketId);
+  const slotId = slotIdControl.value ?? firstSlotId;
+  const ticketId = ticketIdControl.value ?? firstTicketId;
+
   const slotRadio = useRadioGroupKeyboard<SlotInfo, string, HTMLButtonElement>({
     items: slots,
     selected: slotId,
-    onSelect: setSlotId,
+    onSelect: (id) => slotIdControl.change(id),
     getKey: (s) => s.id,
     disabled: slots.length <= 1,
   });
   const ticketRadio = useRadioGroupKeyboard<Ticket, string, HTMLButtonElement>({
     items: tickets,
     selected: ticketId,
-    onSelect: setTicketId,
+    onSelect: (id) => ticketIdControl.change(id),
     getKey: (t) => t.id,
     disabled: tickets.length <= 1,
   });
 
-  function reset() {
-    setTicketId(firstTicketId);
-    setSlotId(firstSlotId);
-    setName("");
-    setEmail("");
-    setPhone("");
-    setQuantity(1);
-    setNote("");
-  }
+  // 成功したらダイアログを閉じて一覧を更新する。`resetForm: true` の reply は
+  // `initialValue === null` を返すので、それを合図にする。
+  const handledResultRef = useRef<unknown>(undefined);
+  useEffect(() => {
+    if (!lastResult || lastResult.initialValue !== null) return;
+    if (handledResultRef.current === lastResult) return;
+    handledResultRef.current = lastResult;
+    onOpenChange(false);
+    onSuccess();
+  }, [lastResult, onOpenChange, onSuccess]);
 
   function handleOpenChange(next: boolean) {
-    if (!next) reset();
+    if (!next) form.reset();
     onOpenChange(next);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!slotId) {
-      toast.error("タイムスロットを選択してください");
-      return;
-    }
-    if (!ticketId) {
-      toast.error("チケット種別を選択してください");
-      return;
-    }
-    if (!name.trim()) {
-      toast.error("氏名を入力してください");
-      return;
-    }
-    startTransition(async () => {
-      const result = await action({
-        eventId,
-        slotId,
-        ticketId,
-        name: name.trim(),
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        note: note.trim() || undefined,
-        quantity,
-      });
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      reset();
-      onSuccess();
-    });
-  }
+  const formErrors = form.errors;
 
   if (tickets.length === 0 || slots.length === 0) {
     const reason =
@@ -176,7 +171,11 @@ export function WalkInDialog({
             来場された参加者をその場で登録し、即出席扱いにします。確認メールは送信しません。
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form {...getFormProps(form)} action={formAction} className="space-y-4">
+          <input type="hidden" name={fields.eventId.name} value={eventId} />
+          {/* radio group は button 要素なので、値は hidden input で conform に渡す */}
+          <input type="hidden" name={fields.slotId.name} value={slotId} />
+          <input type="hidden" name={fields.ticketId.name} value={ticketId} />
           {/* スロット選択 */}
           {slots.length > 1 && (
             <div className="space-y-2">
@@ -198,7 +197,7 @@ export function WalkInDialog({
                       ref={itemProps.ref}
                       tabIndex={itemProps.tabIndex}
                       onKeyDown={itemProps.onKeyDown}
-                      onClick={() => setSlotId(s.id)}
+                      onClick={() => slotIdControl.change(s.id)}
                       className={
                         selected
                           ? "rounded-md border-2 border-primary bg-primary/10 px-3 py-2 text-sm font-medium"
@@ -234,7 +233,7 @@ export function WalkInDialog({
                       ref={itemProps.ref}
                       tabIndex={itemProps.tabIndex}
                       onKeyDown={itemProps.onKeyDown}
-                      onClick={() => setTicketId(t.id)}
+                      onClick={() => ticketIdControl.change(t.id)}
                       className={
                         selected
                           ? "rounded-md border-2 border-primary bg-primary/10 px-3 py-2 text-sm font-medium"
@@ -256,77 +255,115 @@ export function WalkInDialog({
 
           {/* 氏名 (必須) */}
           <div className="space-y-2">
-            <Label htmlFor="walk-in-name">
+            <Label htmlFor={fields.name.id}>
               氏名 <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="walk-in-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+              {...getInputProps(fields.name, { type: "text" })}
               autoFocus
               maxLength={100}
             />
+            {fields.name.errors && (
+              <p
+                id={fields.name.errorId}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {fields.name.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* 参加人数 */}
           <div className="space-y-2">
-            <Label htmlFor="walk-in-qty">参加人数</Label>
+            <Label htmlFor={fields.quantity.id}>参加人数</Label>
             <Input
-              id="walk-in-qty"
-              type="number"
+              {...getInputProps(fields.quantity, { type: "number" })}
               inputMode="numeric"
               min={1}
               max={100}
-              value={quantity}
-              onChange={(e) => {
-                const n = Number.parseInt(e.target.value, 10);
-                setQuantity(Number.isFinite(n) && n > 0 ? n : 1);
-              }}
             />
+            {fields.quantity.errors && (
+              <p
+                id={fields.quantity.errorId}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {fields.quantity.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* メール (任意) */}
           <div className="space-y-2">
-            <Label htmlFor="walk-in-email">メール (任意)</Label>
+            <Label htmlFor={fields.email.id}>メール (任意)</Label>
             <Input
-              id="walk-in-email"
-              type="email"
+              {...getInputProps(fields.email, { type: "email" })}
               inputMode="email"
               autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               maxLength={255}
               placeholder="未入力可"
             />
+            {fields.email.errors && (
+              <p
+                id={fields.email.errorId}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {fields.email.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* 電話 (任意) */}
           <div className="space-y-2">
-            <Label htmlFor="walk-in-phone">電話 (任意)</Label>
+            <Label htmlFor={fields.phone.id}>電話 (任意)</Label>
             <Input
-              id="walk-in-phone"
-              type="tel"
+              {...getInputProps(fields.phone, { type: "tel" })}
               inputMode="tel"
               autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
               maxLength={20}
               placeholder="未入力可"
             />
+            {fields.phone.errors && (
+              <p
+                id={fields.phone.errorId}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {fields.phone.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* メモ */}
           <div className="space-y-2">
-            <Label htmlFor="walk-in-note">メモ (任意)</Label>
+            <Label htmlFor={fields.note.id}>メモ (任意)</Label>
             <Input
-              id="walk-in-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+              {...getInputProps(fields.note, { type: "text" })}
               maxLength={2000}
               placeholder="未入力可"
             />
+            {fields.note.errors && (
+              <p
+                id={fields.note.errorId}
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {fields.note.errors.join(", ")}
+              </p>
+            )}
           </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
 
           <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
