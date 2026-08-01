@@ -142,7 +142,11 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   contact が OFF のまま残り `responsive-shell` が 2 viewport 巻き添え。対策は
   ①`goto` に明示 timeout を渡す（既定は**無制限**で、実測 15.5 秒の遷移が予算を
   食い潰した）②`test.describe.configure({ timeout })` を**定数から導出**して
-  最悪ケースを覆う（手書きの数値は route 追加で静かに破綻する）
+  最悪ケースを覆う（手書きの数値は route 追加で静かに破綻する）。
+  ただし **有界にした `goto` は必ずリトライループの内側に置く** — 復元処理の
+  ページ遷移をループの外で呼ぶと、遅延 1 回が「リトライされない throw」になり、
+  timeout を防ぐつもりが逆に復元を中止させる。復元経路の遷移上限は探索用より
+  緩く取る（観測された裾の 2 倍）
 - **同じグローバル状態を触る spec が複数あるなら「所有」を排他分割する**。
   実行モード（`serial` / `default`）が順序を保証するのは**同一 describe 内だけ**で、
   別ファイル・別 project には効かない（`feature-module-off-gate` は `chromium`、
