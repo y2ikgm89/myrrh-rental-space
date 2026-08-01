@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page } from "../fixtures/e2e-test";
 
 /**
  * CSP 違反をコンソールから収集する。

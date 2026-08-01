@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "../../fixtures/e2e-test";
 
 function uniqueSlug(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}`;

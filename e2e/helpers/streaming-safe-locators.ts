@@ -1,4 +1,4 @@
-import type { FrameLocator, Locator, Page } from "@playwright/test";
+import type { FrameLocator, Locator, Page } from "../fixtures/e2e-test";
 
 /**
  * React streaming に対して安全なロケーター。

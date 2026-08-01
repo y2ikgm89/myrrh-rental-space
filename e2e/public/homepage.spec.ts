@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
 const NAVIGATION_TIMEOUT_MS = 45_000;

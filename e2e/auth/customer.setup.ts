@@ -1,4 +1,4 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup, expect } from "../fixtures/e2e-test";
 import path from "node:path";
 import { urls } from "../fixtures";
 

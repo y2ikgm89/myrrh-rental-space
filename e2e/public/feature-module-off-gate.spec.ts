@@ -1,6 +1,11 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  primeRequestContext,
+  type Locator,
+  type Page,
+} from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
-import { primeAdminRequestContext } from "../helpers/admin-auth";
 import { ensureAdminUser } from "../helpers/ensure-admin-user";
 
 /**
@@ -102,7 +107,9 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * - 管理面へのアクセスは storageState ではなく webServer env
  *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
  *   `chromium` project は setup-admin dependency を持たないため、spec 側で
- *   `ensureAdminUser()` + `primeAdminRequestContext(context)` を明示する。
+ *   `ensureAdminUser()` を明示する。復元 hook が `browser.newPage()` で開く
+ *   context だけは fixture の client IP 割当が効かないので
+ *   `primeRequestContext(page.context())` を挟む。
  * - `spaces` は `reservation` / `reviews` の依存元。spaces を OFF にすると
  *   依存先の switch は disabled + OFF 表示になり、**DB 上も false に畳まれる**
  *   (`updateFeatureModulesCommand` が persist 前に `normalizeFeatureModules` を
@@ -698,8 +705,7 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
   // 基準状態への復元は **beforeEach でも**行う。`mode: "default"` では前の test が
   // 落ちても後続が skip されずに走るため、汚れた基準を引き継がせない。差分が無ければ
   // features ページを 1 回開くだけで返る（実測 0.6–1.1 秒）ので常時払っても安い。
-  test.beforeEach(async ({ page, context }) => {
-    await primeAdminRequestContext(context);
+  test.beforeEach(async ({ page }) => {
     await restoreFeatureModuleBaseline(page);
   });
 
@@ -715,7 +721,7 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
   test.afterEach(async ({ browser }) => {
     const page = await browser.newPage();
     try {
-      await primeAdminRequestContext(page.context());
+      await primeRequestContext(page.context());
       await restoreFeatureModuleBaseline(page);
     } finally {
       await page.close();
@@ -728,7 +734,7 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
     try {
-      await primeAdminRequestContext(page.context());
+      await primeRequestContext(page.context());
       await openFeatureSettings(page);
       expect(
         await readBaselineState(page),

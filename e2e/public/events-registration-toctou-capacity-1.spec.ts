@@ -6,9 +6,9 @@ import {
   expect,
   type Browser,
   type BrowserContext,
+  primeRequestContext,
   type Page,
-} from "@playwright/test";
-import { primeAdminRequestContext } from "../helpers/admin-auth";
+} from "../fixtures/e2e-test";
 import { uniqueEmail } from "../fixtures";
 
 /**
@@ -37,8 +37,9 @@ import { uniqueEmail } from "../fixtures";
  *   の空 event を都度その場作成する（seed の `waitlist-test` は既に埋まっており
  *   TOCTOU 検証に使えないため）。同 script が `count <eventId>` サブコマンドで
  *   post-hoc の DB 集計も返す
- * - 独立 IP は `primeAdminRequestContext(context)` (`e2e/helpers/admin-auth.ts`)
- *   で `x-forwarded-for` を context 単位に割り当てる。同一 IP 3 連発は
+ * - 独立 IP は `primeRequestContext(context)` (`e2e/fixtures/e2e-test.ts`) で
+ *   割り当てる。`browser.newContext()` で手動生成した context には fixture の
+ *   割当が効かないため、明示的に呼ぶ必要がある。同一 IP 3 連発は
  *   `eventRegistrationSubmitRateLimiter` に阻まれ TOCTOU 以外の理由で失敗する
  * - bot heuristic (`checkBotHeuristics`) の MIN_FORM_FILL_TIME_MS=3000 を守るため、
  *   全 page が form mount してから submit までに 3.1s 以上の間隔を空ける
@@ -125,7 +126,7 @@ async function prepareAttempt(
   index: number,
 ): Promise<PreparedAttempt> {
   const context = await browser.newContext();
-  await primeAdminRequestContext(context);
+  await primeRequestContext(context);
 
   const page = await context.newPage();
   await page.goto(`/events/${fixture.eventSlug}`);

@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext } from "@playwright/test";
+import { test, expect, type BrowserContext } from "../../fixtures/e2e-test";
 import { spaceFixtures, urls } from "../../fixtures";
 import {
   customerReservationTargets,

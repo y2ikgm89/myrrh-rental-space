@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures/e2e-test";
 
 test.describe("admin command palette dialog", () => {
   test("search trigger opens a named dialog and restores focus on Escape", async ({

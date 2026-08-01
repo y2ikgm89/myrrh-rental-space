@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 import * as holidayJp from "@holiday-jp/holiday_jp";
 import { spaceFixtures, urls } from "../fixtures";
 import { visibleById } from "../helpers/streaming-safe-locators";

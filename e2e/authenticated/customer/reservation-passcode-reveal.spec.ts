@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 
 /**
  * マイページ — SwitchBot 解錠番号表示 E2E (Phase 7 PR12)

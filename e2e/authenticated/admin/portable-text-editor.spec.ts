@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 
 /**
  * 管理画面 - Portable Text editor E2E（管理者認証済み state）

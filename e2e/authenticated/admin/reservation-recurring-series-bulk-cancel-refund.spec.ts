@@ -64,7 +64,7 @@
  * @see docs/audits/2026-07-18-mypage-implementation-audit.md
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 import {
   findSeriesCancellationAudit,
   getPerInstanceCancellationAudits,

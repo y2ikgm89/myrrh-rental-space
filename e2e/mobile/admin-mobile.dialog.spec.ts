@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
 const NEW_POST_PATH = `${urls.adminPosts}/new`;

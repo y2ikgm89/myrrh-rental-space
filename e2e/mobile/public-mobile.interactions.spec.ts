@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";

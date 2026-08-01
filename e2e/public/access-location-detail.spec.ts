@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 
 /**
  * /access 拠点情報ページ E2E テスト

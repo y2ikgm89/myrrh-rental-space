@@ -52,19 +52,28 @@ describe("E2E admin identity sync", () => {
     expect(missing).toEqual([]);
   });
 
-  test("playwright project のヘッダー値が SSoT のラベルと一致する", () => {
+  test("playwright project の adminIdentity option が SSoT のラベルと一致する", () => {
     const config = read("playwright.config.ts");
     const labels = [...parseIdentitySsot().keys()];
 
-    const headerValues = [
-      ...config.matchAll(/"x-e2e-admin-identity":\s*"([^"]+)"/gu),
+    // 生の `extraHTTPHeaders` で渡すと client IP fixture ごと潰れるため
+    // （`e2e/fixtures/e2e-test.ts`）、config 側は option 名で指定する。
+    const optionValues = [
+      ...config.matchAll(/adminIdentity:\s*"([^"]+)"/gu),
     ].map((m) => String(m[1]));
 
     // gate 自体が空振りしていないことの sanity check
-    expect(headerValues.length).toBeGreaterThan(0);
+    expect(optionValues.length).toBeGreaterThan(0);
 
-    const unknown = headerValues.filter((value) => !labels.includes(value));
+    const unknown = optionValues.filter((value) => !labels.includes(value));
     expect(unknown).toEqual([]);
+  });
+
+  test("adminIdentity option がヘッダーに変換される配線が残っている", () => {
+    const fixture = read("e2e/fixtures/e2e-test.ts");
+
+    expect(fixture).toContain("adminIdentity");
+    expect(fixture).toContain('"x-e2e-admin-identity"');
   });
 
   test("role を実行時に書き換える旧ヘルパーを再導入しない", () => {

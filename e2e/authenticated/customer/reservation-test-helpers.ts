@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 
 type ReservationListTab = "active" | "past";

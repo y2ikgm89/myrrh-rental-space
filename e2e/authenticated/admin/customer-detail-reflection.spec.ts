@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../../fixtures/e2e-test";
 
 /**
  * 管理画面 - 顧客詳細表示 reflection E2E（管理者認証済み state）

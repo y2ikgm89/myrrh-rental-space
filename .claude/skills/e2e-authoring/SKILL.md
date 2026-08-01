@@ -26,6 +26,11 @@ rules の `testing-e2e.md` を参照。`*.test.ts` との命名分離は rules �
 - 命名は `*.spec.ts`（smoke のみ `*.smoke.spec.ts`）。それ以外の suffix は testMatch に一致せず**実行されない**。
 - 複数 spec で共有するヘルパーは `e2e/helpers/`（例: `admin-auth.ts`）、単一フロー内の共有は
   spec 隣接ファイル（例: `e2e/authenticated/customer/reservation-test-helpers.ts`。`.spec.ts` を付けない）。
+- **`test` / `expect` / 型は `e2e/fixtures/e2e-test.ts` から import する**
+  （`import { test, expect } from "../fixtures/e2e-test";`）。`@playwright/test` の
+  直 import は gate が禁止する — 共有 test が rate limit 用の client IP を
+  テストごとに配っており、別の `test` を掴むとその spec だけ割当が消えるため。
+  詳細は rules の `testing-e2e.md`。
 
 ## Step 2: テストデータを決める（seed 契約）
 
@@ -60,17 +65,15 @@ webServer が毎回 `bun prisma/seed.ts --dev` を実行するため、spec は 
     `ensureAdminUser()`（`scripts/e2e/ensure-admin-user.ts` を spawn して
     E2E 用 admin ユーザー群を upsert + loginAttempt 掃除）。
   - **SUPER_ADMIN 以外の role を試すときは専用 project を足す**。
-    `chromium-admin-viewer` のように `extraHTTPHeaders` で
-    `x-e2e-admin-identity: <label>` を付けると、そのラベル専用ユーザーとして
+    `chromium-admin-viewer` のように `use: { adminIdentity: "<label>" }` を
+    付けると `x-e2e-admin-identity` ヘッダーが載り、そのラベル専用ユーザーとして
     解決される（ラベル→email の SSoT は
     `src/shared/domain/admin-auth/e2e-identity.ts`）。spec は
     `e2e/authenticated/admin-viewer/` のように project の testMatch に合う
     ディレクトリへ置く。**共有 User 行の `role` を実行時に書き換えない**
     （fullyParallel な他 spec に漏れる）。
-  - rate limit の worker 間衝突を避ける client IP 割当が必要なら
-    `e2e/helpers/admin-auth.ts` の `primeAdminRequestContext(context)`
-    （context 単位で一意な `x-forwarded-for` 203.0.113.x を付与）。
-    setup 相当を自前でやるなら同ファイルの `signInAsAdmin(page)`。
+  - setup 相当を自前でやるなら `e2e/helpers/admin-auth.ts` の
+    `signInAsAdmin(page)`。
 - 顧客ログインバイパスは `src/shared/lib/e2e-runtime.ts` の
   `isCustomerE2ELoginEnabled(headers)`（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` AND
   localhost env URL の `isLocalProductionE2EEnv()` AND リクエスト Host が loopback）

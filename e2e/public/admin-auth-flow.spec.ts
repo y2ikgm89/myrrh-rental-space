@@ -1,6 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
-import { primeAdminRequestContext, signInAsAdmin } from "../helpers/admin-auth";
+import { signInAsAdmin } from "../helpers/admin-auth";
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
 
@@ -9,10 +9,6 @@ function emailTextbox(page: Page) {
 }
 
 test.describe("admin IAP-only access boundary", () => {
-  test.beforeEach(async ({ page }) => {
-    await primeAdminRequestContext(page.context());
-  });
-
   test("admin surface opens /admin without an app password form", async ({
     page,
   }) => {

@@ -2,18 +2,17 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 import {
   customerReservationTargets,
   openCustomerReservationDetail,
 } from "./reservation-test-helpers";
 
 // `<a download href="/api/receipts/...">` のクリックでブラウザが /api を叩くため、
-// proxy の `apiRateLimiter`（100/分/IP）の共有バケットに乗る。飽和すると 429 が返り、
-// ダウンロードが canceled になる（成功時 12s に対し失敗時 2s で終わるのが徴候。
-// 同 run 30607885778 で同 project の calendar-download が明示的に 429 で落ちていた）。
-// 割当表は `.claude/rules/testing-e2e.md`。
-test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } });
+// proxy の `apiRateLimiter`（100/分/IP）に乗る。IP を共有していた頃は飽和で 429 が
+// 返り、ダウンロードが canceled になっていた（成功時 12s に対し失敗時 2s で終わるのが
+// 徴候。同 run 30607885778 で同 project の calendar-download が明示的に 429 で落ちた）。
+// client IP は `e2e/fixtures/e2e-test.ts` の fixture がテストごとに配る。
 
 /**
  * マイページ — 会員 session 経由の領収書 PDF ダウンロード E2E (Phase 7 PR8)

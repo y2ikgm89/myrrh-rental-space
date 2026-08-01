@@ -1,33 +1,17 @@
-import { expect, type BrowserContext, type Page } from "@playwright/test";
+import { expect, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 import { ensureAdminUser } from "./ensure-admin-user";
 
-const contextIpMap = new WeakMap<BrowserContext, string>();
-let nextContextIpOctet = 10;
-
-function getContextClientIp(context: BrowserContext): string {
-  const existing = contextIpMap.get(context);
-  if (existing) {
-    return existing;
-  }
-
-  const ip = `203.0.113.${nextContextIpOctet}`;
-  nextContextIpOctet = nextContextIpOctet >= 250 ? 10 : nextContextIpOctet + 1;
-  contextIpMap.set(context, ip);
-  return ip;
-}
-
-export async function primeAdminRequestContext(
-  context: BrowserContext,
-): Promise<void> {
-  await context.setExtraHTTPHeaders({
-    "x-forwarded-for": getContextClientIp(context),
-  });
-}
-
+/**
+ * 管理画面にサインイン済みの状態を作る（IAP 模擬）。
+ *
+ * client IP の割当はここでは行わない。`e2e/fixtures/e2e-test.ts` の
+ * `extraHTTPHeaders` fixture がテスト単位で配るため、fixture 由来の context は
+ * この関数を呼ぶ前から一意な IP を持っている。`browser.newContext()` で
+ * 手動生成した context だけが `primeRequestContext(context)` を必要とする。
+ */
 export async function signInAsAdmin(page: Page): Promise<void> {
   await ensureAdminUser();
-  await primeAdminRequestContext(page.context());
   await page.goto(urls.adminDashboard);
   await expect(page).toHaveURL(urls.adminDashboard, { timeout: 15000 });
   await expect(page.getByRole("main")).toBeVisible();

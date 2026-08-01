@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../fixtures/e2e-test";
 import { inquiryFixtures, urls } from "../../fixtures";
 import { restoreDevCustomerResolvedInquiry } from "../../helpers/inquiry-fixture";
 
@@ -19,13 +19,11 @@ import { restoreDevCustomerResolvedInquiry } from "../../helpers/inquiry-fixture
  */
 
 // 返信送信は `replyToInquiryAction` の冒頭で `formSubmitRateLimiter`
-// （**5 リクエスト/分/IP**）を通る。`getContextClientIp` による動的割当は
-// `signInAsAdmin` 経路（admin project）にしか無く、顧客 spec は既定で全 spec と
-// 同一 IP を共有するため、他の公開フォーム spec と窓を奪い合って弾かれる。
+// （**5 リクエスト/分/IP**）を通る。client IP をテスト単位で配る前は顧客 spec が
+// 全 spec と同一 IP を共有しており、他の公開フォーム spec と窓を奪い合って弾かれた。
 // 実測 (run 30681869018): 返信フォームに `リクエストが多すぎます` が出たまま
-// 3 attempt 全滅した（リトライも同じ 1 分窓に入るので全部落ちる）。
-test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.8" } });
-
+// 3 attempt 全滅（リトライも同じ 1 分窓に入るので全部落ちる）。割当は
+// `e2e/fixtures/e2e-test.ts` の fixture が担う。
 test.describe.configure({ mode: "serial" });
 
 // 顧客返信は seed fixture を 2 方向に壊す: marker 返信が append され（seed の

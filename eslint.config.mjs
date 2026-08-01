@@ -492,6 +492,21 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // e2e/** に React コンポーネントは 1 つも無いが、base ブロックの React ルールは
+  // 全 TS ファイルに掛かる。Playwright の fixture は公式シグネチャが
+  // `async ({ deps }, use) => { await use(value) }` で、この `use(...)` を
+  // react-hooks / @eslint-react が **React の `use` フック**と誤認して error にする
+  // (`e2e/fixtures/e2e-test.ts`)。公式どおりの命名を保つため、e2e に限って
+  // hooks 判定を切る — React が無い以上、実バグを見逃す余地は無い。
+  {
+    name: "e2e-not-react",
+    files: ["e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "@eslint-react/rules-of-hooks": "off",
+    },
+  },
+
   // next.config.ts: ban raw string literals as Cache-Tag values.
   // CDN cache tags MUST come from src/shared/lib/constants/cdn-cache-tags.ts.
   {

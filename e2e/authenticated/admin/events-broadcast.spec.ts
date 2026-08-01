@@ -8,7 +8,7 @@
  * になり、sendEventBroadcast も ok:true / sent:0 で返るため form reset は成立する)。
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures/test-data";
 
 test.describe.configure({ mode: "serial" });

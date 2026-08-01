@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/e2e-test";
 import Stripe from "stripe";
 import { setupStripeWebhookFixture } from "../helpers/setup-stripe-webhook-fixture";
 
