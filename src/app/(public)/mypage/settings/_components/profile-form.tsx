@@ -16,6 +16,7 @@ import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import type { z } from "zod";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -70,6 +71,9 @@ export function ProfileForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerProfileSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

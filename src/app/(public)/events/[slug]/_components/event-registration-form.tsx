@@ -15,6 +15,7 @@ import {
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import {
   registerForEvent,
   registerForEventWaitlist,
@@ -190,6 +191,10 @@ export function EventRegistrationForm({
           schema: publicEventRegistrationSchema,
         });
       },
+      // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+      // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+      // 定員超過などの DomainError はこの経路でしか利用者に伝わらない。
+      onSubmit: dispatchWithoutFormReset(formAction),
       shouldValidate: "onBlur",
       shouldRevalidate: "onInput",
     },

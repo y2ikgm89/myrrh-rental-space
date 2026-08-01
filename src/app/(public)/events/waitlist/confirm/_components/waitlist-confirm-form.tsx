@@ -13,6 +13,7 @@ import {
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import type { z } from "zod";
 import { publicEventWaitlistConfirmSchema } from "@/shared/lib/validations/event-registration";
 import { confirmWaitlistOfferAction } from "../_actions/confirm";
@@ -56,6 +57,9 @@ export function WaitlistConfirmForm({
         schema: publicEventWaitlistConfirmSchema,
       });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });

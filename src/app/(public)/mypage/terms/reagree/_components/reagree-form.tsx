@@ -7,6 +7,7 @@ import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import type { z } from "zod";
 import { Button } from "@/public/components/design-system/button";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import type { RequiredTerm } from "@/shared/domain/terms/queries";
 import { reagreeAction } from "../_actions";
 import { reagreeFormSchema } from "../_lib/reagree-schema";
@@ -42,6 +43,9 @@ export function ReagreeForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: reagreeFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
