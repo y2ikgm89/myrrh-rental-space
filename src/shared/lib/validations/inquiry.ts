@@ -54,8 +54,11 @@ export type PublicInquiryInput = z.input<typeof publicInquirySchema>;
 
 export const customerInquiryReplySchema = z.object({
   inquiryId: z.uuid({ error: "お問い合わせIDが不正です" }),
+  // `.trim()` を挟まないと空白だけの返信が `.min(1)` を通り、
+  // 見た目が空の返信が保存されて通知メールまで飛ぶ。
   body: z
     .string()
+    .trim()
     .min(1, { error: "返信内容を入力してください" })
     .max(5000, { error: "返信内容は5000文字以内で入力してください" }),
   turnstileToken: z.string().optional(),
