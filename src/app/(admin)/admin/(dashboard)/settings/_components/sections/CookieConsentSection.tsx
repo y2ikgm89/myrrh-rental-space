@@ -33,6 +33,7 @@ import { cookieConsentFormSchema } from "@/admin/actions/settings/schemas/form-s
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 const DEFAULT_MESSAGE =
   "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
@@ -56,6 +57,9 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: cookieConsentFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

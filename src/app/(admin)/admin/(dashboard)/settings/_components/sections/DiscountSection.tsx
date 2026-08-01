@@ -43,6 +43,7 @@ import type { Serialized } from "@/shared/lib/serialize";
 import { discountFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidDiscountCombinationMode } from "@/shared/lib/validations/enums/guards";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface DiscountSectionProps {
   settings: Serialized<DiscountSettingsData>;
@@ -67,6 +68,9 @@ export function DiscountSection({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: discountFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {

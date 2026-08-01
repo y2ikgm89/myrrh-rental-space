@@ -49,6 +49,7 @@ import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types"
 import { isValidCalendarSyncMethod } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 interface TwoWaySyncSectionProps {
   settings: Serialized<SettingsData>;
@@ -89,6 +90,9 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: twoWaySyncFormSchema });
     },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(action),
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
