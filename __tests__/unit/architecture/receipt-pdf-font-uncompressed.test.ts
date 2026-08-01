@@ -58,6 +58,40 @@ describe("receipt PDF font asset", () => {
     }
   });
 
+  test("table directory が tag のバイト列昇順である", () => {
+    // SFNT の必須要件。`localeCompare` で並べると `cmap` が `GDEF` より前に来て
+    // directory を binary search する consumer がテーブルを見つけられなくなる。
+    for (const name of readdirSync(FONT_DIR).filter((f) =>
+      f.endsWith(".ttf"),
+    )) {
+      const font = readFileSync(join(FONT_DIR, name));
+      const numTables = font.readUInt16BE(4);
+      const tags = Array.from({ length: numTables }, (_, i) =>
+        font.toString("latin1", 12 + i * 16, 16 + i * 16),
+      );
+
+      expect(`${name}: ${tags.join(" ")}`).toBe(
+        `${name}: ${[...tags].sort().join(" ")}`,
+      );
+    }
+  });
+
+  test("head.checkSumAdjustment が再計算されている", () => {
+    // table offset を組み直したのに WOFF の値を引き継ぐと、フォント全体の
+    // checksum が仕様の 0xB1B0AFBA にならず SFNT を検証する consumer に弾かれうる。
+    for (const name of readdirSync(FONT_DIR).filter((f) =>
+      f.endsWith(".ttf"),
+    )) {
+      const font = readFileSync(join(FONT_DIR, name));
+      let checksum = 0;
+      for (let i = 0; i + 4 <= font.length; i += 4) {
+        checksum = (checksum + font.readUInt32BE(i)) >>> 0;
+      }
+
+      expect(`${name}: 0x${checksum.toString(16)}`).toBe(`${name}: 0xb1b0afba`);
+    }
+  });
+
   test("receipt-document.tsx が参照するフォント名が .ttf である", () => {
     const source = readFileSync(RECEIPT_DOCUMENT, { encoding: "utf8" });
 

@@ -85,8 +85,39 @@ function readWoffTables(woff: Buffer): SfntTable[] {
     tables.push({ tag, data, origChecksum, offset: 0 });
   }
 
-  // SFNT の table directory は tag の昇順であることが要求される。
-  return tables.sort((a, b) => a.tag.localeCompare(b.tag, "en"));
+  // SFNT の table directory は **tag のバイト列昇順**（大文字が小文字より前）で
+  // なければならない。`localeCompare` は言語の照合順なので `cmap` を `GDEF` より
+  // 前に置いてしまい、directory を binary search する consumer が
+  // テーブルを見つけられなくなる。生バイトで比較する。
+  return tables.sort((a, b) =>
+    Buffer.compare(Buffer.from(a.tag, "latin1"), Buffer.from(b.tag, "latin1")),
+  );
+}
+
+/**
+ * `head.checkSumAdjustment` を再計算して書き込む。
+ *
+ * この field は「フォント全体の checksum を 0xB1B0AFBA にするための補正値」で、
+ * table の offset を組み直すと当然ずれる。WOFF から引き継いだ値のままだと
+ * SFNT を検証する consumer にフォントを弾かれうる。
+ *
+ * 仕様どおり **自身を 0 とみなして** 全体を uint32 big-endian で合計し、
+ * `0xB1B0AFBA - 合計` を書き戻す。
+ *
+ * @see https://learn.microsoft.com/en-us/typography/opentype/spec/head
+ */
+function writeCheckSumAdjustment(sfnt: Buffer, headOffset: number): void {
+  const ADJUSTMENT_FIELD_OFFSET = 8;
+  const MAGIC = 0xb1b0afba;
+
+  sfnt.writeUInt32BE(0, headOffset + ADJUSTMENT_FIELD_OFFSET);
+
+  let sum = 0;
+  for (let i = 0; i + 4 <= sfnt.length; i += 4) {
+    sum = (sum + sfnt.readUInt32BE(i)) >>> 0;
+  }
+
+  sfnt.writeUInt32BE((MAGIC - sum) >>> 0, headOffset + ADJUSTMENT_FIELD_OFFSET);
 }
 
 function buildSfnt(flavor: number, tables: readonly SfntTable[]): Buffer {
@@ -113,14 +144,25 @@ function buildSfnt(flavor: number, tables: readonly SfntTable[]): Buffer {
     10,
   );
 
+  let headOffset: number | null = null;
+
   tables.forEach((table, i) => {
     const p = SFNT_HEADER_SIZE + i * SFNT_DIRECTORY_ENTRY_SIZE;
     out.write(table.tag, p, 4, "latin1");
+    // table 本体は無変更なので、WOFF が持つ元テーブルの checksum をそのまま使える
+    // （`head` の checksum は仕様上 checkSumAdjustment を 0 とみなして計算するため、
+    //   この後 adjustment を書き換えても影響しない）。
     out.writeUInt32BE(table.origChecksum, p + 4);
     out.writeUInt32BE(table.offset, p + 8);
     out.writeUInt32BE(table.data.length, p + 12);
     table.data.copy(out, table.offset);
+    if (table.tag === "head") headOffset = table.offset;
   });
+
+  if (headOffset === null) {
+    throw new Error("head テーブルがありません（SFNT として不正）");
+  }
+  writeCheckSumAdjustment(out, headOffset);
 
   return out;
 }
