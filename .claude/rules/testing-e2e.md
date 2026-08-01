@@ -131,9 +131,17 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   復元は「触った 1 件」ではなく**対象全件を既定値に揃える**。加えて `afterAll` で
   復元されたことを検証し、壊れたときは**その spec 自身が落ちる**ようにする。
   この規約は `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が
-  機械強制する（`test.describe.serial` / `configure({ mode: "default" })` を持つ spec に
-  `afterEach` / `afterAll` を要求。戻す状態を持たない spec は `RESTORE_EXEMPT` に
-  理由付きで登録する）
+  機械強制する。順序固定マーカーは 3 形（`test.describe.serial` /
+  `configure({ mode: "default" })` / `configure({ mode: "serial" })`）で、
+  該当 spec に `afterEach` / `afterAll` を要求する。戻す状態を持たない spec は
+  `RESTORE_EXEMPT` に**検証済みの**理由付きで登録する（一括 exempt は gate を空洞化
+  させるので不可）。マーカーは**行頭**でのみ照合されるため、JSDoc や `//` 内で
+  `test.describe.configure({ mode: "serial" })` に言及しても誤検出されない
+- **復元は UI ではなく DB で行ってよい**（むしろ推奨）。test 本体が timeout すると
+  page ごと閉じられて hook から画面を操作できないため、`e2e/helpers/e2e-prisma.ts` の
+  `getE2EPrismaClient()`（Playwright process 側の PrismaClient。webServer の Prisma
+  facade は `server-only` で import できない）を使って直接戻す。既存の復元 helper:
+  `event-registration-fixture.ts` / `inquiry-fixture.ts` / `customer-merge-fixture.ts`
 - **test 本体を timeout させない**。timeout すると page / context ごと閉じられ、
   別予算を持つ `afterEach` も生きた page を使えず**復元できない**（公式の timeout 仕様は
   「test timeout は本体・fixture setup・`beforeEach` を覆い、`afterEach` と fixture

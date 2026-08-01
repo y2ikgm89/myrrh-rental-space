@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { urls } from "../../fixtures";
+import { eventFixtures, urls } from "../../fixtures";
 import { visibleById } from "../../helpers/streaming-safe-locators";
+import { clearEventCheckInsBySlug } from "../../helpers/event-registration-fixture";
 
 // CSV / Excel リンクのクリックでブラウザが `/api/admin/export/event-registrations` を
 // 叩くため、共有 rate-limit バケットを避けて専用 IP を割り当てる（割当表は
@@ -11,6 +12,15 @@ test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.3" } });
 // Next dev compiles these admin event routes lazily. Keep this spec serial so
 // cold route compilation is not raced by multiple workers against one server.
 test.describe.configure({ mode: "serial" });
+
+// 出欠トグルは seed 申込行の `attendedAt` を書き換える共有グローバル状態の変更。
+// 最後のテストは本文内で「記録 → 取消」まで戻すが、途中の assertion 失敗・timeout で
+// 打刻が残ると、同 spec の「未出席」表示・CSV の出席日時・当日受付の集計が汚染される
+// （seed は run 中に戻さない）。復元は無条件に hook で行う
+// （規約: `.claude/rules/testing-e2e.md`）。
+test.afterEach(async () => {
+  await clearEventCheckInsBySlug(eventFixtures.timedEntrySlug);
+});
 
 const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
 const TIMED_ENTRY_EVENT_TITLE = "写真撮影ワークショップ";

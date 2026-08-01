@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { inquiryFixtures, urls } from "../../fixtures";
+import { restoreDevCustomerResolvedInquiry } from "../../helpers/inquiry-fixture";
 
 /**
  * マイページ - お問い合わせ返信 E2E（顧客認証済み state）
@@ -18,6 +19,17 @@ import { inquiryFixtures, urls } from "../../fixtures";
  */
 
 test.describe.configure({ mode: "serial" });
+
+// 顧客返信は seed fixture を 2 方向に壊す: marker 返信が append され（seed の
+// `ensureInquiryReply` は本文一致の存在チェックなので消さない → run ごとに 1 件増え、
+// 下の `getByText(replyBody)` がいずれ strict mode violation になる）、status が
+// RESOLVED → IN_PROGRESS へ reopen される（seed の inquiry 作成は「無ければ作る」
+// だけで status を書き戻さないため「解決済」fixture が IN_PROGRESS で固定化する）。
+// 復元は無条件に hook で行う（規約: `.claude/rules/testing-e2e.md`）。
+// 規約同意 gate が作りうる `TermsAgreement` は append-only の証跡なので戻さない。
+test.afterEach(async () => {
+  await restoreDevCustomerResolvedInquiry();
+});
 
 test.describe("お問い合わせ返信 - 双方向スレッド", () => {
   test("STAFF 返信を確認し、CUSTOMER 返信を送信できる", async ({ page }) => {

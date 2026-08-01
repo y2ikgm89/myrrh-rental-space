@@ -6,25 +6,16 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@generated/prisma/client";
+import { getE2EPrismaClient } from "./e2e-prisma";
 
 const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
 const CUSTOMER_MERGE_TOKEN_TTL_MS = 60 * 60 * 1000;
 
-let cachedClient: PrismaClient | null = null;
-
-function getE2EPrismaClient(): PrismaClient {
-  if (cachedClient) return cachedClient;
-  const connectionString = process.env["DATABASE_URL"];
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is not set for customer merge E2E helper.");
-  }
-  cachedClient = new PrismaClient({
-    adapter: new PrismaPg({ connectionString }),
-  });
-  return cachedClient;
-}
+/**
+ * seed（`prisma/seed.ts` の `GUEST_MERGE_MARKER`）が guest Customer に付ける
+ * 予約の marker。seed と二重定義なので seed 変更時は同時に更新する。
+ */
+const GUEST_MERGE_RESERVATION_MARKER = "[E2E] guest history for customer merge";
 
 function hashToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
@@ -119,4 +110,34 @@ export async function ensureGuestCustomerForDevEmail(): Promise<string> {
     select: { id: true },
   });
   return created.id;
+}
+
+/**
+ * merge で消費した guest fixture を seed 状態へ戻す（復元 hook 専用）。
+ *
+ * `mergeCustomerCommand` は source Customer の予約・問い合わせ等を member へ
+ * 付け替えたあと **source を物理削除**する（`customer-lifecycle-commands.ts`）。
+ * したがって merge 後は
+ *
+ * - mypage の統合バナー（未リンク guest 行の存在が条件）が消える
+ * - marker 予約が dev member customer の予約履歴に移る。seed の存在チェックは
+ *   `{ customerId: guestCustomer.id, notes: marker }` なので、戻さないと次の seed が
+ *   marker 予約をもう 1 本作り、**E2E を回すたび dev customer の予約が 1 件ずつ増える**
+ *
+ * の 2 つが残る。guest 行を作り直し、marker 予約をそこへ戻す。
+ */
+export async function restoreGuestCustomerFixture(): Promise<void> {
+  const client = getE2EPrismaClient();
+  const guestCustomerId = await ensureGuestCustomerForDevEmail();
+
+  await client.reservation.updateMany({
+    where: { notes: GUEST_MERGE_RESERVATION_MARKER },
+    data: { customerId: guestCustomerId },
+  });
+
+  // merge が成立した run の PendingCustomerMerge は source 削除の cascade で
+  // 消えるが、途中で落ちた run の未消費 token は残る。seed は 1 件も作らない。
+  await client.pendingCustomerMerge.deleteMany({
+    where: { guestEmail: DEV_CUSTOMER_EMAIL },
+  });
 }
