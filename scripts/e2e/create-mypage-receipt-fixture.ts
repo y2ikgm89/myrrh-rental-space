@@ -19,8 +19,13 @@ async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();
 
   try {
+    // seed は同じメールで **2 行** 作る（会員 = userId あり / merge fixture 用の
+    // ゲスト = userId null）。`userId` で絞らないと Postgres が返す任意の順に依存し、
+    // ゲスト行を掴んだ run だけ予約が 0 件になって落ちる。merge spec がゲスト行を
+    // 削除・再作成して物理位置が変わるため、実行ごとに結果が変わりうる。
+    // 会員行の判定は `e2e/helpers/customer-merge-fixture.ts` と同じ `userId: { not: null }`。
     const customer = await prisma.customer.findFirstOrThrow({
-      where: { email: DEV_CUSTOMER_EMAIL },
+      where: { email: DEV_CUSTOMER_EMAIL, userId: { not: null } },
       select: { id: true, lastName: true, firstName: true },
     });
 
