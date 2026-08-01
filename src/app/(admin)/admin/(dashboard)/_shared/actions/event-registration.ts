@@ -51,10 +51,7 @@ import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import {
-  prismaCuid2IdSchema,
-  prismaCuidIdSchema,
-} from "@/shared/lib/validations/params";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
@@ -64,8 +61,6 @@ import {
 
 const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 const eventIdSchema = prismaCuidIdSchema("イベント");
-const eventTicketIdSchema = prismaCuidIdSchema("イベントチケット");
-const eventTimeSlotIdSchema = prismaCuid2IdSchema("イベントタイムスロット");
 
 type CancelRegistrationData = {
   registrationId: string;
@@ -394,15 +389,6 @@ export async function createWalkInRegistration(
 // =============================================================================
 // 事前代行登録 (admin proxy) — 電話・口頭申込を admin が代理登録し、確認メールも送る
 // =============================================================================
-
-type AdminProxyRegistrationData = {
-  registrationId: string;
-  eventId: string;
-  name: string;
-  email: string;
-  quantity: number;
-  icsSequence: number;
-};
 
 export async function createAdminProxyRegistration(
   _prev: SubmissionResult | undefined,
