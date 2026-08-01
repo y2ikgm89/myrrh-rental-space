@@ -29,32 +29,20 @@ import type { EditorHeaderProps } from "./types";
 const styles = tv({
   slots: {
     // z-index は inline style で適用（Tailwind JIT は `z-[${VAR}]` を scan しないため CSS 未生成）
+    // **不透明にする**。半透明のままだと背後の色と合成され、text-muted-foreground の
+    // 実効コントラストが背後次第で変わる。エディタは `useFullscreenMode` の
+    // `useLayoutEffect` で `enterFullscreen()` を呼ぶが、それが走る前
+    // （SSR HTML〜hydration の窓）は `ResponsiveSidebar` がまだ描画されており、
+    // viewport 固定の本ヘッダーが暗色サイドバー (`bg-sidebar-bg`) に重なる。
+    // その合成結果が #989da4 になり、slug の `text-muted-foreground` (#5b646f) が
+    // 2.2:1 まで落ちていた（実測: run 30677872134 の axe-admin-pages）。
+    // axe がこの窓を踏むかは実行タイミング次第なので flaky に見える。
     //
-    // 半透明ヘッダーの AA 対策は **2 段構え**。どちらか片方では足りない。
-    //
-    // 1. `lg:left-64`（#1773）— サイドバー幅 (`w-64`) 分のオフセット。本文側の
-    //    `lg:pl-64` と起点を揃え、デスクトップで暗色サイドバーとの重なり自体を無くす。
-    // 2. `bg-background/95` 固定（`supports-[backdrop-filter]:bg-background/60` は使わない）
-    //    — 位置指定された面は**下地を選べない**ので、不透明度そのもので下限を作る。
-    //
-    // 1 だけでは 2 経路が残る: (a) `lg` 未満ではヘッダーは `left-0` のままで、
-    // モバイルのサイドバードロワーを開くと `Z_INDEX.editorToolbar`(65) >
-    // `sidebarDrawer`(45) によりまた暗色の上に重なる。(b) `lg` でも暗いカードや
-    // 画像がヘッダーの下をスクロールすれば同じ合成が起きる。
-    //
-    // 実効値（実測: axe が run 30677872134 / 30679156212 で独立に計測）:
-    //
-    // | 背景                          | 実効背景  | 比       |
-    // | ----------------------------- | --------- | -------- |
-    // | `bg-background/60` on sidebar | `#989da4` | **2.2**  |
-    // | `bg-background/95` on sidebar | `#f3f3f4` | **5.40** |
-    // | `bg-background/95` on 真っ黒  | `#f2f2f2` | **5.36** |
-    //
-    // `backdrop-blur` は背景をぼかすだけで**輝度を変えない**ので救いにならない。
-    // 95% なら最悪の下地でも AA を満たす。gate:
-    // `__tests__/unit/architecture/admin-overlay-surface-contrast.test.ts`
-    header:
-      "fixed top-0 left-0 right-0 lg:left-64 border-b bg-background/95 backdrop-blur",
+    // サイドバー幅のオフセット (`lg:left-64`) で重なりを避ける手は使えない。
+    // fullscreen 中はサイドバーが unmount され `DashboardShell` の `lg:pl-64` も
+    // 外れるため、定常状態で 256px の空白が残る（PR #1773 の退行）。
+    // 背後に依存しない不透明化が唯一レイアウトから独立した解。
+    header: "fixed top-0 left-0 right-0 border-b bg-background",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
     center: "flex-1 flex items-center justify-center",

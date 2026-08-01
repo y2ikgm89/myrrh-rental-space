@@ -56,7 +56,7 @@ paths:
   `__tests__/unit/architecture/no-animated-opacity-on-text.test.ts`
 - **位置指定された面（`fixed` / `sticky` / `absolute`）に半透明背景を敷かない**。
   下地が何になるかを選べないため、実効コントラストが下地次第で決まってしまう。
-  実測（run 30679156212）: `EditorHeader` は `left-0 right-0` かつ
+  実測（run 30677872134 / 30679156212）: `EditorHeader` は `left-0 right-0` かつ
   `Z_INDEX.editorToolbar`(65) > `sidebar`(10) でサイドバーに被さるので、
   `supports-[backdrop-filter]:bg-background/60` だと `--color-sidebar-bg`(#0a121f) が
   透けて実効背景 `#989da4` → `text-muted-foreground` が **2.2:1**。
@@ -65,6 +65,14 @@ paths:
   必要な不透明度は「**最悪の下地（真っ黒）でも 4.5:1**」で決める（`bg-background/95`
   なら実効 `#f2f2f2` / 5.36:1 で安全、`/90` が 4.77:1 で下限付近）。gate:
   `__tests__/unit/architecture/admin-overlay-surface-contrast.test.ts`
+- **「重ならない位置へずらす」で代替しない**。レイアウトは条件で変わるので、
+  オフセットは前提が崩れた瞬間に退行する。実例: `EditorHeader` に
+  `lg:left-64`（サイドバー幅ぶんのオフセット）を入れた PR #1773 は、
+  `useFullscreenMode` が fullscreen 中にサイドバーを unmount し
+  `DashboardShell` の `lg:pl-64` も外れるため **定常状態で 256px の空白**を作り、
+  PR #1776 で不透明化に差し替えられた。**背後に依存しない不透明化が唯一
+  レイアウトから独立した解**。位置で避けられるように見えても、
+  その位置関係が全状態で成り立つかを先に確かめること
 - フォーム送信ボタンは `SubmitButton` に統一。`<Button type="submit">` 直書きは
   テストで禁止
 - z-index は `Z_INDEX` 定数を **inline style の `zIndex`** で適用する。
