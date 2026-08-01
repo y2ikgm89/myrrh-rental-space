@@ -143,9 +143,47 @@ jobs:
           # `latest` には戻さない (float tag より確定 SHA/version 相当の再現性を優先)。
           tflint_version: v0.64.0
 
+      # ダウンロード済み ruleset を持ち回してネットワーク依存自体を減らす。
+      # `.tflint.hcl` に plugin の version が書かれているので、その hash が
+      # 変われば取り直す。cache hit 時の `tflint --init` は署名検証を含めて
+      # 外部へ出ないため、下のリトライは cache miss のときの保険になる。
+      - name: Cache TFLint plugins
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+
       - name: TFLint init (install ruleset plugins)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: tflint --init --config="${GITHUB_WORKSPACE}/.tflint.hcl"
+        # `tflint --init` は ruleset を GitHub Releases から取得し、その署名を
+        # sigstore の TUF リポジトリ (tuf-repo-cdn.sigstore.dev) で検証する。
+        # どちらも外部ホストなので、単発実行だと相手側の瞬断でジョブごと落ちる。
+        # 実測 (2026-08-01, run 30703488913): Terraform を 1 行も含まない PR で
+        # `tuf refresh failed: … read: connection reset by peer` が出て赤くなった。
+        # 直近 40 run 中 1 件と頻度は低いが、**変更内容と無関係に落ちる**のが問題。
+        # `scripts/bun-ci-install.sh` と同じ方針でリトライする。
+        #
+        # `shell: bash` を明示する。GHA の既定 shell は `bash -e {0}` 定義で
+        # `-o pipefail` を含まず、明示したときだけ
+        # `bash --noprofile --norc -eo pipefail {0}` になる。
+        # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          attempts=3
+          for attempt in $(seq 1 "${attempts}"); do
+            if tflint --init --config="${GITHUB_WORKSPACE}/.tflint.hcl"; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq "${attempts}" ]; then
+              break
+            fi
+            delay=$((attempt * 10))
+            echo "::warning::tflint --init failed (attempt ${attempt}/${attempts}); retrying in ${delay}s"
+            sleep "${delay}"
+          done
+          echo "::error::tflint --init failed after ${attempts} attempts"
+          exit 1
         env:
           # Increases the anonymous rate limit when fetching the google
           # ruleset from GitHub Releases (avoids 403 on busy runners).
