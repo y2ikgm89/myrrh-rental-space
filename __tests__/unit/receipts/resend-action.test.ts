@@ -10,6 +10,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import type { SubmissionResult } from "@conform-to/react";
 
 const SERIAL_NO = "2026-000042";
 const NEW_SERIAL_NO = "2026-000099";
@@ -135,15 +136,34 @@ async function importAction() {
   return await import("@/app/(public)/receipts/reissue-request/_actions/resend");
 }
 
-function validInput(overrides: Record<string, unknown> = {}) {
-  return {
-    serialNo: SERIAL_NO,
-    email: CUSTOMER_EMAIL,
-    honeypot: "",
-    formRenderedAt: Date.now() - 10_000,
-    turnstileToken: "test-token",
-    ...overrides,
-  };
+/**
+ * action は conform の Server Action になったので FormData で呼ぶ。
+ * honeypot のフィールド名は公開フォーム共通の `website`。
+ */
+function validInput(overrides: Record<string, string> = {}): FormData {
+  const formData = new FormData();
+  formData.set("serialNo", SERIAL_NO);
+  formData.set("email", CUSTOMER_EMAIL);
+  formData.set("website", "");
+  formData.set("formRenderedAt", String(Date.now() - 10_000));
+  formData.set("turnstileToken", "test-token");
+  for (const [key, value] of Object.entries(overrides)) {
+    formData.set(key, value);
+  }
+  return formData;
+}
+
+/**
+ * handler が返した `{ ok: false, error }` は `submission.reply({ formErrors })`
+ * を経由して form-level（キー `""`）に入る。field-level の Zod エラーとは別物。
+ */
+function formError(result: SubmissionResult): string | undefined {
+  return result.error?.[""]?.[0] ?? undefined;
+}
+
+/** `executeConformMutation` の成功 reply は `resetForm: true` = `initialValue: null` */
+function isSuccess(result: SubmissionResult): boolean {
+  return result.initialValue === null;
 }
 
 describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
@@ -153,11 +173,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toEqual(
-      expect.objectContaining({ error: "rate-limit-error" }),
-    );
+    expect(formError(result)).toBe("rate-limit-error");
     expect(domainSpy).not.toHaveBeenCalled();
     expect(sendReceiptResendEmailSpy).not.toHaveBeenCalled();
   });
@@ -168,9 +186,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toHaveProperty("error");
+    expect(formError(result)).toBeDefined();
     expect(domainSpy).not.toHaveBeenCalled();
   });
 
@@ -180,9 +198,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toEqual(expect.objectContaining({ error: "email-limit" }));
+    expect(formError(result)).toBe("email-limit");
     expect(domainSpy).not.toHaveBeenCalled();
   });
 
@@ -192,11 +210,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toEqual(
-      expect.objectContaining({ error: "turnstile-error" }),
-    );
+    expect(formError(result)).toBe("turnstile-error");
     expect(domainSpy).not.toHaveBeenCalled();
   });
 
@@ -211,7 +227,7 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    await requestReceiptResendAction(validInput());
+    await requestReceiptResendAction(undefined, validInput());
 
     expect(serialNoCheckSpy).not.toHaveBeenCalled();
   });
@@ -224,10 +240,11 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
 
     const { requestReceiptResendAction } = await importAction();
     const result = await requestReceiptResendAction(
-      validInput({ honeypot: "spam" }),
+      undefined,
+      validInput({ website: "spam" }),
     );
 
-    expect(result).toEqual(expect.objectContaining({ error: "bot-detected" }));
+    expect(formError(result)).toBe("bot-detected");
     expect(domainSpy).not.toHaveBeenCalled();
   });
 
@@ -235,9 +252,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     domainSpy.mockImplementation(() => Promise.resolve(null));
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toBeNull();
+    expect(isSuccess(result)).toBe(true);
     expect(domainSpy).toHaveBeenCalledTimes(1);
     expect(sendReceiptResendEmailSpy).not.toHaveBeenCalled();
   });
@@ -261,9 +278,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toBeNull();
+    expect(isSuccess(result)).toBe(true);
     expect(sendReceiptResendEmailSpy).toHaveBeenCalledTimes(1);
     expect(sendReceiptResendEmailSpy.mock.calls[0]?.[0]).toMatchObject({
       serialNo: SERIAL_NO,
@@ -298,9 +315,9 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     );
 
     const { requestReceiptResendAction } = await importAction();
-    const result = await requestReceiptResendAction(validInput());
+    const result = await requestReceiptResendAction(undefined, validInput());
 
-    expect(result).toBeNull();
+    expect(isSuccess(result)).toBe(true);
     expect(sendReceiptResendEmailSpy).toHaveBeenCalledTimes(1);
     expect(sendReceiptResendEmailSpy.mock.calls[0]?.[0]).toMatchObject({
       serialNo: NEW_SERIAL_NO,
@@ -311,10 +328,14 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
   test("Zod validate 失敗 (無効な email) で error 返却 (domain 未呼出)", async () => {
     const { requestReceiptResendAction } = await importAction();
     const result = await requestReceiptResendAction(
+      undefined,
       validInput({ email: "not-an-email" }),
     );
 
-    expect(result).toHaveProperty("error");
+    // Zod 失敗は wrapper が handler を呼ぶ前に `submission.reply()` するので、
+    // form-level ではなく **field-level**（`error.email`）に入る。
+    expect(result.error?.["email"]).toBeDefined();
+    expect(formError(result)).toBeUndefined();
     expect(domainSpy).not.toHaveBeenCalled();
   });
 });
