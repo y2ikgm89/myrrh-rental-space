@@ -209,6 +209,13 @@ const PERSIST_TIMEOUT_MS = 15_000;
 const SAVE_DISPATCH_TIMEOUT_MS = 15_000;
 
 /**
+ * 保存・復元をやり直す回数。楽観ロック競合で 1 回目が弾かれることがあるため
+ * 最大 2 回試す（2 回目は再読込した新しい `expectedUpdatedAt` で送るので競合は解消する）。
+ * 遷移や click の transient な失敗もこの attempt で吸収する。
+ */
+const SAVE_ATTEMPTS = 2;
+
+/**
  * 保存ボタンを押し、**送信が始まったことだけ**を待つ。
  *
  * `SubmitButton` は `isPending` の間 disabled + 「保存中...」になるので、disabled に
@@ -306,14 +313,23 @@ const MAX_ROUTES_PER_CASE = Math.max(
 );
 
 /**
- * test 1 本の予算。**本体が絶対に timeout しないように定数から導出する。**
+ * 本体の管理画面操作 (`setFeatureModule`) の最悪値。
  *
- * ## なぜ既定 30 秒では駄目か（timeout の代償が復元の破壊）
+ * 1 attempt = 遷移 + 永続化 poll。`SAVE_ATTEMPTS` 回まで繰り返す。
+ * 予算に手書きの数値を置かず、実際に使う定数から導出する。
+ */
+const SETTINGS_BUDGET_MS =
+  SAVE_ATTEMPTS * (SETTINGS_NAVIGATION_TIMEOUT_MS + PERSIST_TIMEOUT_MS);
+
+/**
+ * test 1 本の予算。**定数から導出する**（手書きの数値は route 追加で静かに破綻する）。
+ *
+ * ## なぜ既定 30 秒では駄目だったか
  *
  * Playwright 公式の timeout 仕様は「test timeout は test 本体・fixture setup・
  * `beforeEach` を覆い、`afterEach` と fixture teardown には**同じ値の別予算**が
  * 与えられる」。つまり `afterEach` は本体に予算を食われない。にもかかわらず
- * 実測 (run 30672479398 attempt 0) では復元が失敗している:
+ * 実測 (run 30672479398 attempt 0) では復元が失敗していた:
  *
  * ```
  * Test timeout of 30000ms exceeded.
@@ -322,30 +338,31 @@ const MAX_ROUTES_PER_CASE = Math.max(
  * Error: feature module が基準状態に戻っていない。…
  * ```
  *
- * **本体が timeout すると page / context ごと閉じられる**ため、別予算を持つ
- * `afterEach` も生きた page を使えず復元できない。結果 contact が OFF のまま残り、
+ * **本体が timeout すると test scope の page / context ごと閉じられる**ため、別予算を
+ * 持つ `afterEach` もその page を使えなかった。結果 contact が OFF のまま残り、
  * `responsive-shell` の `/contact` が mobile / desktop の両 viewport で落ちた。
- * この spec にとって「本体の timeout」は自分が落ちるだけでは済まず、
- * **run 全体を汚染する**。だから本体は timeout してはならない。
  *
- * ## 予算の内訳（積み方を 2 系統に分ける）
+ * ただし**予算計算だけでこの汚染を防ごうとしない**。それは「探索の最悪値 ×
+ * 管理画面の最悪値」を同時に覆う数字を追い続けることになり、そこまで膨らませると
+ * timeout が本物のハングを検出しなくなる。汚染は構造で断ってある —
+ * `afterEach` は worker scope の `browser` から**新しい page を開いて**復元するので、
+ * 本体が timeout して test scope の page が死んでも復元は走る（同 run の `afterAll` が
+ * `browser.newPage()` で実際に検査できていたことが、browser が生き残る実証）。
+ * この予算は「timeout させない」ためではなく **soft assertion が全ルートを報告し
+ * きれるようにする**ためにある。
  *
- * - **ルート探索は最悪ケースで積む。** 1 ルートあたり
- *   `NOT_FOUND_ATTEMPTS × (遷移 + not-found 待ち)`。失敗ルートは必ず全 attempt を
- *   使い切るので、これは **soft assertion で全ルートを報告するために意図的に払う
- *   決定論的なコスト**。ここを削ると「報告しきる前に timeout」に逆戻りする。
- * - **管理画面往復は実測に対する十分な余裕で積む**（最悪値の積は取らない）。
- *   実測 0.3–1.1 秒に対して 60 秒 = 50 倍以上。理論最悪（`SAVE_ATTEMPTS` ×
- *   `SETTINGS_NAVIGATION_TIMEOUT_MS` × 呼び出し箇所…）まで覆うと本物のハングを
- *   検出できなくなるので、そこは覆わない。60 秒を超える往復が要るなら壊れている。
+ * ## 内訳
  *
- * MODULE_CASES にルートを足すと予算も自動で増える。手で書いた数値を置かないこと。
+ * - ルート探索: `MAX_ROUTES_PER_CASE × NOT_FOUND_ATTEMPTS × (遷移 + not-found 待ち)`。
+ *   失敗ルートは必ず全 attempt を使い切るので、これは**全ルート報告のために意図的に
+ *   払う決定論的コスト**
+ * - 管理画面操作: `SETTINGS_BUDGET_MS`（保存 1 サイクルの最悪値）
  */
 const TEST_TIMEOUT_MS =
   MAX_ROUTES_PER_CASE *
     NOT_FOUND_ATTEMPTS *
     (PROBE_NAVIGATION_TIMEOUT_MS + NOT_FOUND_ATTEMPT_TIMEOUT_MS) +
-  60_000;
+  SETTINGS_BUDGET_MS;
 
 /**
  * この spec が所有する feature module（id → admin form の label）。
@@ -521,16 +538,12 @@ async function readModuleState(
 /**
  * module を指定状態にして**永続化まで**見届ける。
  *
- * 判定は toast ではなくリロード後の `aria-checked`。楽観ロック競合で 1 回目の
- * 保存が弾かれることがあるため、最大 2 回試す（2 回目は再読込した新しい
- * `expectedUpdatedAt` で送るので競合は解消する）。
+ * 判定は toast ではなくリロード後の `aria-checked`（`SAVE_ATTEMPTS` 参照）。
  *
  * **1 attempt は全体を `try` で覆う。** 遷移・click・保存のどれが transient に
  * 落ちても attempt の消費として扱い、次の attempt でやり直す。ページを開く処理を
  * ループの外に置くと、そこでの 1 回の遅延がリトライされずに関数ごと落ちる。
  */
-const SAVE_ATTEMPTS = 2;
-
 async function setFeatureModule(
   page: Page,
   moduleLabel: string,
@@ -692,8 +705,21 @@ test.describe("feature-module OFF hides all critical public routes (E2E-04)", ()
 
   // setup 段階で失敗しても必ず走る（try/finally では復元されなかった）。
   // 並走する spec に対して OFF の窓を最小化するため、test ごとに戻す。
-  test.afterEach(async ({ page }) => {
-    await restoreFeatureModuleBaseline(page);
+  //
+  // **test scope の `page` fixture は使わない。** 本体が timeout すると page /
+  // context ごと閉じられ、別予算を持つこの hook でも `goto` が
+  // `net::ERR_ABORTED` になって復元できない（run 30672479398 attempt 0 の実測）。
+  // worker scope の `browser` は生き残るので、そこから新しい page を開く —
+  // 同じ run で `afterAll` が `browser.newPage()` で状態を読めていたことが実証。
+  // これで復元は「本体が予算内に収まったか」に依存しなくなる。
+  test.afterEach(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await primeAdminRequestContext(page.context());
+      await restoreFeatureModuleBaseline(page);
+    } finally {
+      await page.close();
+    }
   });
 
   // 復元が壊れていたら、巻き添えで他 spec を落とす前に**この spec が**落ちる。
