@@ -29,8 +29,15 @@ import type { EditorHeaderProps } from "./types";
 const styles = tv({
   slots: {
     // z-index は inline style で適用（Tailwind JIT は `z-[${VAR}]` を scan しないため CSS 未生成）
+    // `lg:left-64` はサイドバー幅 (`w-64`) 分のオフセット。これが無いと
+    // viewport 固定の半透明ヘッダーが暗色サイドバー (`bg-sidebar-bg`) の上に重なり、
+    // `bg-background/60` の合成結果が中間グレー (#989da4) になる。その上の
+    // `text-muted-foreground` (#5b646f) は 2.2:1 で AA 未満
+    // （実測: CI run 30677872134 の axe-admin-pages「投稿新規作成ページ」)。
+    // サイドバーの `transition-transform` で合成結果が揺れるため flaky に見えるが、
+    // 実体は恒常的な違反。本文側の `lg:pl-64` と同じ起点に揃えて重なり自体を無くす。
     header:
-      "fixed top-0 left-0 right-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      "fixed top-0 left-0 right-0 lg:left-64 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
     center: "flex-1 flex items-center justify-center",
