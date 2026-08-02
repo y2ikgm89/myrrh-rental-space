@@ -103,6 +103,37 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
     expect(read(FIXTURE)).not.toMatch(/reservations:\s*\{\s*none:/u);
   });
 
+  test("seed は Pad デバイスを毎回揃え直す（skip しない）", () => {
+    const body =
+      /async function seedE2EFixtureSpace\([^)]*\)[\s\S]*?\n\}/u.exec(
+        read(SEED),
+      );
+    if (!body) throw new Error("seedE2EFixtureSpace が見つかりません");
+
+    // **`update:` ブロックだけ**を見る。`create:` 側にも同じ行があるので、
+    // 関数全体への `toContain` では「既存行を揃え直さない」実装を検出できない
+    // （実際そう書いて空振りした）。
+    const updateBlock = /update:\s*\{([^}]*)\}/u.exec(body[0]);
+    if (!updateBlock?.[1]) {
+      throw new Error(
+        "smartLockDevice.upsert の update ブロックが見つかりません",
+      );
+    }
+
+    // `getPasscodeRevealState` は `!device.isActive` と非 Pad 型を弾く。
+    // 既存行を揃え直さないと、非活性化された状態から再実行で復旧できず、
+    // spec は「表示ボタンが出ない」という分かりにくい形で落ちる。
+    expect(updateBlock[1]).toContain("isActive: true");
+    expect(updateBlock[1]).toContain(
+      "deviceType: SmartLockDeviceType.KEYPAD_TOUCH",
+    );
+
+    // 「紐づいていれば抜ける」early return への逆戻り検出。
+    expect(body[0]).not.toMatch(
+      /if \(space\.smartLockDeviceId\)[\s\S]{0,120}return;/u,
+    );
+  });
+
   test("seed は専有スペースを非公開で作る", () => {
     const source = read(SEED);
     const body = /async function seedE2EFixtureSpace\(\)[\s\S]*?\n\}/u.exec(
