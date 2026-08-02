@@ -30,6 +30,18 @@ const e2eWebServerCommand = [
   "bun run db:generate",
   "bun run test:db:migrate",
   "bun prisma/seed.ts --dev",
+  // Stripe 認証情報は seed ではなくここで入れる。`SettingsStripe.stripeWebhookSecret`
+  // の唯一の書き手がこの script で、`availability.ts` はそれが無いと決済を
+  // 「利用不可」にする。以前は `stripe-webhook-dedup-replay.spec.ts`（chromium）が
+  // spec 内から呼ぶだけだったので、`--project=chromium-customer` を単独で回すと
+  // 「オンラインで決済する」CTA が出ず、決済機能の product regression に見えた
+  // （全 project を回すと project の宣言順で偶然通っていた）。
+  //
+  // seed に入れない理由: `prisma/seed.ts` は `@/shared/lib/crypto` を import して
+  // おらず、`server-only` の stub と `serverEnv` の事前設定が要る。加えて偽の
+  // Stripe 認証情報を**全開発者の dev DB**に書くことになる。webServer chain なら
+  // E2E の DB だけに閉じ、local / CI のどちらでも全 project より先に走る。
+  "bun scripts/e2e/setup-stripe-webhook-fixture.ts",
   ...(process.env["CI"] ? [] : ["bun run build:skip-env"]),
   "bun run start",
 ].join(" && ");

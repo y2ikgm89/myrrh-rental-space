@@ -32,11 +32,18 @@ import { setupStripeWebhookFixture } from "../helpers/setup-stripe-webhook-fixtu
  *
  * ## 前提 / 契約
  *
- * - webServer 起動時に seed が Stripe secret / webhook secret を書かないため、
- *   `beforeAll` で `scripts/e2e/setup-stripe-webhook-fixture.ts` を実行して
- *   Settings singleton に暗号化 secret を仕込む。fixture が返す plaintext
- *   webhook secret を Stripe SDK の `webhooks.generateTestHeaderString()` に渡して
- *   valid な `stripe-signature` header を生成する。
+ * - Stripe secret / webhook secret は **webServer chain**
+ *   （`playwright.config.ts` の `e2eWebServerCommand`、seed の直後）で
+ *   `scripts/e2e/setup-stripe-webhook-fixture.ts` が投入する。この spec が
+ *   `beforeAll` でも同じ script を実行するのは、**plaintext の webhook secret を
+ *   受け取る**ため（Stripe SDK の `webhooks.generateTestHeaderString()` に渡して
+ *   valid な `stripe-signature` header を作る）。script は upsert なので冪等。
+ *
+ *   かつてはこの spec の `beforeAll` が唯一の投入経路だった。`availability.ts` は
+ *   webhook secret が無いと決済を利用不可にするため、
+ *   `--project=chromium-customer` を単独で回すと「オンラインで決済する」CTA が
+ *   出ず、決済機能の product regression に見えていた（全 project を回すと
+ *   project の宣言順で偶然通っていた）。
  * - Stripe secret / webhook secret は `getStripeCredentialCiphertext` 経由で
  *   キャッシュせず読むため、fixture 投入後は webhook 経路へ即座に反映される。
  * - `test.describe.serial` で 3 test を直列化する。event.id が dedup 契約の
