@@ -135,11 +135,22 @@ interface MediaFieldOpts extends StringConstraints, CommonFieldOpts {
 }
 
 /** string 制約を z.string() に適用する境界ヘルパー */
+/**
+ * section フィールドの文字列制約。**`.trim()` を最初に置く。**
+ *
+ * ここは管理者が書く公開ページ本文の最大の面（見出し・本文・ラベル）で、
+ * `local/require-trimmed-text` からは見えない — 制約が `z.string()` の
+ * チェーンではなく、この関数の中で引数の schema に後付けされるため。
+ * ルールが届かない代わりに、**構築点で全フィールドに一律で効かせる**。
+ *
+ * 順序が重要: `.trim()` は Zod 4 では宣言順に走る overwrite なので、
+ * `.min()` より後ろに置くと空白を含んだ値に長さ制約が当たってしまう。
+ */
 function applyStringConstraints(
   schema: z.ZodString,
   constraints: StringConstraints,
 ): z.ZodString {
-  let s = schema;
+  let s = schema.trim();
   if (constraints.minLength !== undefined) s = s.min(constraints.minLength);
   if (constraints.maxLength !== undefined) s = s.max(constraints.maxLength);
   return s;
