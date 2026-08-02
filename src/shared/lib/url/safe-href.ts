@@ -33,11 +33,29 @@ function isAllowedPublicHrefScheme(
 }
 
 /**
+ * 前後に空白の付いた href を弾く。
+ *
+ * **3 つの述語すべてがこれを課すこと自体が不変条件。** `new URL()` は WHATWG URL 仕様
+ * どおり前後の空白（と C0 制御文字）を捨ててから解釈するので、`" https://example.com"` は
+ * scheme 判定を素通りする。以前は保存側の `isExternalPublicHref` だけがこれを許し、
+ * 描画側の `toSafePublicHref` が拒否していたため、**管理者が URL を貼り付けたときに
+ * 先頭の空白ごと保存が成功し、公開ページではそのリンクが href 無しで描画される**
+ * （エラーは一度も出ない）。保存を通る href は描画も通る、を保つ。
+ *
+ * 貼り付けに紛れ込む空白は入力の不備であって拒否の理由ではないので、管理者が打ち込む
+ * schema 側は `.trim()` で先に正規化する。ここで弾くのは schema を経由しない呼び出しと、
+ * 文字列の**内側**に空白を含むような直しようのない値だけになる。
+ */
+function hasSurroundingWhitespace(url: string): boolean {
+  return url.trim() !== url;
+}
+
+/**
  * 内部 app route（`/` 始まり、`//` 除外）または許可スキーム付き絶対 URL か。
  * protocol-relative (`//evil`) や `javascript:` は false。
  */
 export function isSafePublicHref(url: string): boolean {
-  if (!url || url.trim() !== url) return false;
+  if (!url || hasSurroundingWhitespace(url)) return false;
   // `isAppRoute` は type predicate のため、true 分岐後の url は Route に narrow され
   // 後続の `startsWith("//")` が never 扱いになる。protocol-relative を先に弾く。
   if (url.startsWith("//")) return false;
@@ -59,7 +77,8 @@ export function isInternalNavHref(url: string): boolean {
  * 相対 path は不可。http(s)/mailto/tel のみ。
  */
 export function isExternalPublicHref(url: string): boolean {
-  if (!url || url.startsWith("/") || url.startsWith("//")) return false;
+  if (!url || hasSurroundingWhitespace(url)) return false;
+  if (url.startsWith("/") || url.startsWith("//")) return false;
   const scheme = getUrlScheme(url);
   if (scheme === null) return false;
   return isAllowedPublicHrefScheme(scheme);
@@ -77,6 +96,7 @@ export function toSafePublicHref(
 
 export const internalNavHrefSchema = z
   .string()
+  .trim()
   .min(1, { error: "URLは必須です" })
   .max(500)
   .refine(isInternalNavHref, {
@@ -85,6 +105,7 @@ export const internalNavHrefSchema = z
 
 export const externalPublicHrefSchema = z
   .string()
+  .trim()
   .min(1, { error: "URLは必須です" })
   .max(500)
   .refine(isExternalPublicHref, {
@@ -104,7 +125,8 @@ export function navigationHrefSchema(isExternal: boolean) {
  */
 export function isHttpOrInternalPublicHref(url: string): boolean {
   if (isInternalNavHref(url)) return true;
-  if (!url || url.startsWith("//")) return false;
+  if (!url || hasSurroundingWhitespace(url)) return false;
+  if (url.startsWith("//")) return false;
   const scheme = getUrlScheme(url);
   return scheme === "http" || scheme === "https";
 }
@@ -116,6 +138,7 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
   (value) => (value === null || value === "" ? undefined : value),
   z
     .string()
+    .trim()
     .max(500)
     .optional()
     .refine(
@@ -142,7 +165,7 @@ export const optionalHttpOrInternalHrefSchema = z.preprocess(
  * 空 → `undefined` の正規化は保存経路（`SidebarSection` の `|| undefined`）の責務。
  */
 export const optionalSafePublicHrefSchema = z
-  .union([z.string().max(500), z.null()])
+  .union([z.string().trim().max(500), z.null()])
   .optional()
   .refine((value) => !value || isSafePublicHref(value), {
     error:

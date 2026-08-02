@@ -71,7 +71,10 @@ export const navFormSchema = z
       z.uuid().nullable(),
     ),
     label: labelSchema,
-    url: z.string().min(1, { error: "URLは必須です" }),
+    // `.trim()` は貼り付けに紛れた前後の空白を正規化するため。無いと
+    // `isExternalPublicHref` を通って保存され、描画側の `toSafePublicHref` が
+    // 弾いてリンクが href 無しになる（safe-href.ts の `hasSurroundingWhitespace`）。
+    url: z.string().trim().min(1, { error: "URLは必須です" }),
     isExternal: booleanFromCheckbox,
     isActive: booleanFromCheckbox,
   })
