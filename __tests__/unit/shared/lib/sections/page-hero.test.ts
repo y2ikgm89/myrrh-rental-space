@@ -39,9 +39,13 @@ describe("pageHeroConfigSchema", () => {
     });
 
     test("デフォルトの images は 1 枚以上", () => {
-      if (DEFAULT_PAGE_HERO.variant === "editorial-split") {
-        expect(DEFAULT_PAGE_HERO.images.length).toBeGreaterThan(0);
+      // variant を条件にして if の中だけで assert すると、既定 variant を変えた瞬間に
+      // このテストは無言で通るようになる。variant 自体を契約として固定する。
+      expect(DEFAULT_PAGE_HERO.variant).toBe("editorial-split");
+      if (DEFAULT_PAGE_HERO.variant !== "editorial-split") {
+        throw new Error("到達しない");
       }
+      expect(DEFAULT_PAGE_HERO.images.length).toBeGreaterThan(0);
     });
   });
 

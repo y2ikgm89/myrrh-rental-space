@@ -85,21 +85,23 @@ describe("useNodeUpdater pattern", () => {
     test("型ガードが成功した場合、$setStateで更新できる", async () => {
       await editor.update(() => {
         const targetNode = $getNodeByKey(buttonNodeKey);
-        if ($isButtonNode(targetNode)) {
-          $setState(targetNode, buttonLabelState, [
-            createSpan("更新後テキスト"),
-          ]);
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(targetNode)).toBe(true);
+        if (!$isButtonNode(targetNode)) throw new Error("到達しない");
+        $setState(targetNode, buttonLabelState, [createSpan("更新後テキスト")]);
       });
 
       // 更新が反映されていることを確認
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey);
-        if ($isButtonNode(node)) {
-          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
-            "更新後テキスト",
-          );
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
+          "更新後テキスト",
+        );
       });
     });
 
@@ -128,24 +130,26 @@ describe("useNodeUpdater pattern", () => {
     test("複数のプロパティを一度に更新できる", async () => {
       await editor.update(() => {
         const targetNode = $getNodeByKey(buttonNodeKey);
-        if ($isButtonNode(targetNode)) {
-          $setState(targetNode, buttonLabelState, [
-            createSpan("新しいテキスト"),
-          ]);
-          $setState(targetNode, buttonHrefState, "https://new-url.com");
-          $setState(targetNode, buttonVariantState, "secondary");
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(targetNode)).toBe(true);
+        if (!$isButtonNode(targetNode)) throw new Error("到達しない");
+        $setState(targetNode, buttonLabelState, [createSpan("新しいテキスト")]);
+        $setState(targetNode, buttonHrefState, "https://new-url.com");
+        $setState(targetNode, buttonVariantState, "secondary");
       });
 
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey);
-        if ($isButtonNode(node)) {
-          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
-            "新しいテキスト",
-          );
-          expect($getState(node, buttonHrefState)).toBe("https://new-url.com");
-          expect($getState(node, buttonVariantState)).toBe("secondary");
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
+          "新しいテキスト",
+        );
+        expect($getState(node, buttonHrefState)).toBe("https://new-url.com");
+        expect($getState(node, buttonVariantState)).toBe("secondary");
       });
     });
   });
@@ -175,9 +179,11 @@ describe("useNodeUpdater pattern", () => {
       let originalText = "";
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          originalText = spansToPlainText($getState(node, buttonLabelState));
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        originalText = spansToPlainText($getState(node, buttonLabelState));
       });
 
       expect(originalText).toBe("テスト");
@@ -185,21 +191,23 @@ describe("useNodeUpdater pattern", () => {
       // 更新
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createSpan("更新後")]);
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        $setState(node, buttonLabelState, [createSpan("更新後")]);
       });
 
       // 更新後の状態を確認
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          const updatedText = spansToPlainText(
-            $getState(node, buttonLabelState),
-          );
-          expect(updatedText).toBe("更新後");
-          expect(updatedText).not.toBe(originalText);
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        const updatedText = spansToPlainText($getState(node, buttonLabelState));
+        expect(updatedText).toBe("更新後");
+        expect(updatedText).not.toBe(originalText);
       });
     });
 
@@ -220,26 +228,32 @@ describe("useNodeUpdater pattern", () => {
       // 複数回更新
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createSpan("更新1")]);
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        $setState(node, buttonLabelState, [createSpan("更新1")]);
       });
 
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createSpan("更新2")]);
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        $setState(node, buttonLabelState, [createSpan("更新2")]);
       });
 
       // 最新の値が取得できることを確認
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey);
-        if ($isButtonNode(node)) {
-          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
-            "更新2",
-          );
-        }
+        // ガードが false でも通ってしまう形にしない。ノードが取れないなら
+        // 何も検査せず緑になるので、ガード自体を契約として assert する。
+        expect($isButtonNode(node)).toBe(true);
+        if (!$isButtonNode(node)) throw new Error("到達しない");
+        expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
+          "更新2",
+        );
       });
     });
   });
