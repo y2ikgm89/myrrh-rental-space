@@ -925,6 +925,36 @@ async function seedEventCategories() {
 
 const REVIEW_E2E_SPACE_SLUG = "coworking-space";
 const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
+
+/**
+ * dev customer の**会員行**（`userId` を持つ方）を引く。
+ *
+ * `seedDevCustomerAndReservations` は同じ email で **2 行**作る:
+ * 会員（`userId` あり、`Customer.userId` は @unique）と、merge fixture 用の
+ * ゲスト（`userId: null`）。`emailCanonical` に unique は無い（`@@index` のみ）
+ * ので、email だけで `findFirst` すると **どちらが返るか保証が無い**。
+ *
+ * これは実害のある曖昧さで、ゲスト行が返るとイベント申込がそちらに紐づく。
+ * `/mypage/events` は `getCustomerByUserId(user.id)` で会員行を解決するため
+ * （`userId` が @unique なので必ず会員行）、申込は**画面に出てこない**。
+ * `calendar-download.spec.ts` はその申込を hard-assert している。
+ *
+ * fixture 側（`scripts/e2e/**`・`e2e/helpers/**`）は既に 6 箇所で
+ * `userId: { not: null }` を付けており、seed だけが取り残されていた。
+ * ゲスト行は自分自身の述語（`userId: null, anonymizedAt: null`）で引くので、
+ * 互換用の shim は要らない。
+ */
+async function findDevMemberCustomer<T extends Record<string, boolean>>(
+  select: T,
+) {
+  return prisma.customer.findFirst({
+    where: {
+      emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
+      userId: { not: null },
+    },
+    select,
+  });
+}
 const SEED_REVIEWABLE_SPACE_SLUGS = [
   "meeting-room-a",
   "seminar-room",
@@ -4370,9 +4400,11 @@ async function seedEvents() {
     }
   }
 
-  const devCustomer = await prisma.customer.findFirst({
-    where: { emailCanonical: normalizeSeedEmail("dev-customer@example.com") },
-    select: { id: true, email: true, lastName: true, firstName: true },
+  const devCustomer = await findDevMemberCustomer({
+    id: true,
+    email: true,
+    lastName: true,
+    firstName: true,
   });
   const singleEvent = await prisma.event.findUnique({
     where: { slug: "yoga-mindfulness-workshop" },
@@ -4628,10 +4660,7 @@ async function seedPublicReviewE2EFixture() {
       where: { slug: REVIEW_E2E_SPACE_SLUG },
       select: { id: true, hourlyPrice: true },
     }),
-    prisma.customer.findFirst({
-      where: { email: DEV_CUSTOMER_EMAIL, isActive: true },
-      select: { id: true },
-    }),
+    findDevMemberCustomer({ id: true }),
   ]);
 
   if (!space || !customer) {
