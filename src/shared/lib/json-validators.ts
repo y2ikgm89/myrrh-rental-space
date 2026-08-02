@@ -117,7 +117,7 @@ const facilityItemSchema = z.object({
     .min(1, { error: "設備名を入力してください" })
     .max(50, { error: "設備名は50文字以内で入力してください" }),
   // 空文字許容（icon 未指定 — UI で fallback として text のみ表示）
-  iconName: z.string().max(64),
+  iconName: z.string().trim().max(64),
 });
 
 /**

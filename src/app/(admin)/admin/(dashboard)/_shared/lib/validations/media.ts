@@ -53,18 +53,26 @@ export const mediaUploadSchema = z.object({
   usage: MediaUsageEnum.default("GENERAL"),
   alt: z
     .string()
+    .trim()
     .max(200, { error: "代替テキストは200文字以内で入力してください" })
     .optional(),
   title: z
     .string()
+    .trim()
     .max(100, { error: "タイトルは100文字以内で入力してください" })
     .optional(),
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内で入力してください" })
     .optional(),
   tags: z
-    .array(z.string().max(50, { error: "タグは50文字以内で入力してください" }))
+    .array(
+      z
+        .string()
+        .trim()
+        .max(50, { error: "タグは50文字以内で入力してください" }),
+    )
     .max(10, { error: "タグは最大10個まで設定できます" })
     .default([]),
 });
@@ -94,18 +102,26 @@ export type ParsedMediaUploadFormData =
 export const mediaUpdateSchema = z.object({
   alt: z
     .string()
+    .trim()
     .max(200, { error: "代替テキストは200文字以内で入力してください" })
     .optional(),
   title: z
     .string()
+    .trim()
     .max(100, { error: "タイトルは100文字以内で入力してください" })
     .optional(),
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内で入力してください" })
     .optional(),
   tags: z
-    .array(z.string().max(50, { error: "タグは50文字以内で入力してください" }))
+    .array(
+      z
+        .string()
+        .trim()
+        .max(50, { error: "タグは50文字以内で入力してください" }),
+    )
     .max(10, { error: "タグは最大10個まで設定できます" })
     .optional(),
   usage: MediaUsageEnum.optional(),

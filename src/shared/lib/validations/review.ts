@@ -9,11 +9,13 @@ export const spaceReviewSchema = z.object({
     .max(5, { error: "5以下を選択してください" }),
   title: z
     .string()
+    .trim()
     .max(100, { error: "タイトルは100文字以内" })
     .optional()
     .or(z.literal("")),
   comment: z
     .string()
+    .trim()
     .max(1000, { error: "コメントは1000文字以内" })
     .optional()
     .or(z.literal("")),

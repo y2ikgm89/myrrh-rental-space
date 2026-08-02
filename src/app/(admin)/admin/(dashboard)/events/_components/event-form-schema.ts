@@ -77,6 +77,7 @@ const ticketInputSchema = z.strictObject({
    */
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内です" })
     .nullable()
     .default(null),
@@ -156,7 +157,7 @@ const slotsSchema = z.preprocess(
 const optionalNullableString = (maxLength: number, error: string) =>
   z.preprocess(
     emptyOrNullToNull,
-    z.string().max(maxLength, { error }).nullable().optional(),
+    z.string().trim().max(maxLength, { error }).nullable().optional(),
   );
 
 const eventFormBaseSchema = z.object({
@@ -197,6 +198,7 @@ const eventFormBaseSchema = z.object({
     (value) => (value === "" ? null : value),
     z
       .string()
+      .trim()
       .max(200, { error: "会場情報は200文字以内です" })
       .nullable()
       .optional(),

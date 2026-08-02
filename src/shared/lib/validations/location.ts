@@ -73,6 +73,7 @@ export const locationFormBaseSchema = z.strictObject({
     }),
   description: z
     .string()
+    .trim()
     .max(2000, { error: "説明は2000文字以内で入力してください" })
     .nullable()
     .optional(),
@@ -83,26 +84,31 @@ export const locationFormBaseSchema = z.strictObject({
     .max(500, { error: "住所は500文字以内で入力してください" }),
   postalCode: z
     .string()
+    .trim()
     .max(10, { error: "郵便番号は10文字以内で入力してください" })
     .nullable()
     .optional(),
   prefecture: z
     .string()
+    .trim()
     .max(20, { error: "都道府県は20文字以内で入力してください" })
     .nullable()
     .optional(),
   city: z
     .string()
+    .trim()
     .max(100, { error: "市区町村は100文字以内で入力してください" })
     .nullable()
     .optional(),
   streetAddress: z
     .string()
+    .trim()
     .max(200, { error: "番地は200文字以内で入力してください" })
     .nullable()
     .optional(),
   buildingName: z
     .string()
+    .trim()
     .max(100, { error: "建物名は100文字以内で入力してください" })
     .nullable()
     .optional(),
@@ -121,6 +127,7 @@ export const locationFormBaseSchema = z.strictObject({
     .default([]),
   parkingInfo: z
     .string()
+    .trim()
     .max(1000, { error: "駐車場案内は1000文字以内で入力してください" })
     .nullable()
     .optional(),
@@ -199,6 +206,7 @@ export const locationFormBaseSchema = z.strictObject({
     .optional(),
   googleBusinessPlaceId: z
     .string()
+    .trim()
     .max(100, {
       error: "Google Business Place ID は100文字以内で入力してください",
     })
@@ -210,16 +218,19 @@ export const locationFormBaseSchema = z.strictObject({
     .optional(),
   priceRange: z
     .string()
+    .trim()
     .max(100, { error: "価格帯は100文字以内で入力してください" })
     .nullable()
     .optional(),
   paymentAccepted: z
     .string()
+    .trim()
     .max(500, { error: "支払い方法は500文字以内で入力してください" })
     .nullable()
     .optional(),
   phoneNumber: z
     .string()
+    .trim()
     .max(30, { error: "電話番号は30文字以内で入力してください" })
     .nullable()
     .optional(),

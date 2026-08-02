@@ -46,6 +46,7 @@ export function switchBoolean() {
 export function optionalText(max: number, message?: string) {
   return z
     .string()
+    .trim()
     .max(max, { error: message ?? `${max}文字以内で入力してください` })
     .optional();
 }

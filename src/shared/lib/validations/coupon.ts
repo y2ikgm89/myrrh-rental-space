@@ -61,6 +61,7 @@ export const couponFormBaseSchema = z.object({
     .max(100, { error: "名称は100文字以内で入力してください" }),
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内で入力してください" })
     .optional()
     .or(z.literal("")),

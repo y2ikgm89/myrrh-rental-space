@@ -13,6 +13,7 @@ import { z } from "zod";
 export const resendSettingsSchema = z.object({
   resendApiKey: z
     .string()
+    .trim()
     .max(200)
     .nullable()
     .optional()
@@ -35,8 +36,8 @@ export function isValidResendApiKey(key: string): boolean {
 // =============================================================================
 
 export const turnstileSettingsSchema = z.object({
-  turnstileSiteKey: z.string().max(100).nullable().optional(),
-  turnstileSecretKey: z.string().max(200).nullable().optional(),
+  turnstileSiteKey: z.string().trim().max(100).nullable().optional(),
+  turnstileSecretKey: z.string().trim().max(200).nullable().optional(),
 });
 
 export type TurnstileSettingsInput = z.infer<typeof turnstileSettingsSchema>;
@@ -56,6 +57,7 @@ export function isValidTurnstileKey(key: string): boolean {
 export const googleMapsSettingsSchema = z.object({
   googleMapsApiKey: z
     .string()
+    .trim()
     .max(200)
     .nullable()
     .optional()

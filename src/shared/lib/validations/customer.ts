@@ -22,22 +22,26 @@ export const customerFormSchema = z.object({
   firstName: personNameFieldSchema("名"),
   lastNameKana: z
     .string()
+    .trim()
     .max(50, { error: "セイは50文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   firstNameKana: z
     .string()
+    .trim()
     .max(50, { error: "メイは50文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   companyName: z
     .string()
+    .trim()
     .max(100, { error: "会社名は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   email: emailFieldSchema,
   phoneNumber: z
     .string()
+    .trim()
     .max(20, { error: "電話番号は20文字以内で入力してください" })
     .regex(/^[\d\-+() ]+$/, {
       error: "電話番号は数字・ハイフン・+・括弧・空白のみ使用できます",
@@ -53,26 +57,31 @@ export const customerFormSchema = z.object({
     .or(z.literal("")),
   prefecture: z
     .string()
+    .trim()
     .max(10, { error: "都道府県は10文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   city: z
     .string()
+    .trim()
     .max(100, { error: "市区町村は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   streetAddress: z
     .string()
+    .trim()
     .max(200, { error: "町名・番地は200文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   building: z
     .string()
+    .trim()
     .max(200, { error: "建物名は200文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   notes: z
     .string()
+    .trim()
     .max(2000, { error: "メモは2000文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
@@ -107,7 +116,7 @@ export type UpdateCustomerStatusInput = z.infer<
  */
 export const updateCustomerNotesSchema = z.object({
   id: z.uuid(),
-  notes: z.string().max(2000).nullable(),
+  notes: z.string().trim().max(2000).nullable(),
 });
 
 export type UpdateCustomerNotesInput = z.infer<

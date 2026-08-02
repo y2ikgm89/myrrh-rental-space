@@ -50,9 +50,9 @@ export const customWidgetSchema = z.object({
   // eslint-disable-next-line local/require-trimmed-text -- crypto.randomUUID() 由来の内部 ID
   id: z.string().min(1),
   title: z.string().trim().min(1, { error: "タイトルは必須です" }).max(100),
-  description: z.string().max(500).optional(),
+  description: z.string().trim().max(500).optional(),
   linkUrl: optionalSafePublicHrefSchema,
-  linkLabel: z.string().max(100).optional(),
+  linkLabel: z.string().trim().max(100).optional(),
 });
 
 /**

@@ -12,11 +12,13 @@ export const spaceCategoryFormSchema = z.strictObject({
     .max(50, { error: "カテゴリー名は50文字以内で入力してください" }),
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
   icon: z
     .string()
+    .trim()
     .max(50, { error: "アイコン名は50文字以内で入力してください" })
     .optional()
     .or(z.literal("")),

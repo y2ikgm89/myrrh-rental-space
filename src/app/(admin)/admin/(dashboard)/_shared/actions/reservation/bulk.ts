@@ -71,6 +71,7 @@ const bulkIdsSchema = z
 
 const bulkCancellationReasonSchema = z
   .string()
+  .trim()
   .max(500, { error: "理由は500文字以内で入力してください" })
   .optional()
   .or(z.literal(""));

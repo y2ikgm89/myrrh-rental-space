@@ -66,7 +66,7 @@ export const termsSettingsFormSchema = z.strictObject({
   scopes: termsScopesField,
   changelog: z.preprocess(
     (v) => (typeof v === "string" && v.length === 0 ? null : v),
-    z.string().max(2000).nullable().default(null),
+    z.string().trim().max(2000).nullable().default(null),
   ),
   showInFooter: z.preprocess(
     (v) => v === "on" || v === true,

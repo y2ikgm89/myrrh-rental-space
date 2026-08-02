@@ -21,6 +21,7 @@ const createBlockTemplateSchema = z.object({
     .max(100, { error: "100文字以内で入力してください" }),
   description: z
     .string()
+    .trim()
     .max(500, { error: "500文字以内で入力してください" })
     .optional(),
   nodeJson: z.record(z.string(), z.unknown()).or(z.array(z.unknown())),

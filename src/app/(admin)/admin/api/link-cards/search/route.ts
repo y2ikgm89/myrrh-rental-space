@@ -18,7 +18,7 @@ import {
 
 const querySchema = z.object({
   contentType: z.enum(LINK_CARD_CONTENT_TYPES),
-  query: z.string().max(100).default(""),
+  query: z.string().trim().max(100).default(""),
 });
 
 export async function GET(request: Request): Promise<NextResponse> {

@@ -7,6 +7,26 @@ import {
 } from "@/shared/lib/portable-text/schema";
 
 describe("portableTextSpanSchema", () => {
+  // span の text は `spansToPlainText` が `join("")` で連結して 1 本の文にする。
+  // 語の区切りは span 自身が持つ前後の空白なので、**ここを trim してはいけない**
+  // （"Hello " + "world" が "Helloworld" になる）。他の自由テキストは
+  // `local/require-trimmed-text` が trim を要求するので、その例外であることを固定する。
+  test("span の前後の空白は保つ（連結して 1 本の文になるため）", () => {
+    const parse = (text: string): string => {
+      const parsed = portableTextSpanSchema.parse({
+        _key: "11111111-1111-4111-8111-111111111111",
+        _type: "span",
+        text,
+      });
+      if (parsed._type !== "span") throw new Error("span を期待");
+      return parsed.text;
+    };
+
+    expect(parse("Hello ")).toBe("Hello ");
+    expect(parse("Hello ") + parse("world")).toBe("Hello world");
+    expect(parse("   ")).toBe("   ");
+  });
+
   test("text span: _type=span / _key / text を要求する", () => {
     const ok = portableTextSpanSchema.safeParse({
       _key: "11111111-1111-4111-8111-111111111111",

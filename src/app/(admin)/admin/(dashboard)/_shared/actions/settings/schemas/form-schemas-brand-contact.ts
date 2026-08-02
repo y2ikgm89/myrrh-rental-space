@@ -37,10 +37,12 @@ export type BasicInfoFormInput = z.infer<typeof basicInfoFormSchema>;
 export const contactInfoFormSchema = z.object({
   phoneNumber: z
     .string()
+    .trim()
     .max(20, { error: "20文字以内で入力してください" })
     .optional(),
   faxNumber: z
     .string()
+    .trim()
     .max(20, { error: "20文字以内で入力してください" })
     .optional(),
   email: z
@@ -51,22 +53,27 @@ export const contactInfoFormSchema = z.object({
     .optional(),
   postalCode: z
     .string()
+    .trim()
     .max(10, { error: "10文字以内で入力してください" })
     .optional(),
   prefecture: z
     .string()
+    .trim()
     .max(10, { error: "10文字以内で入力してください" })
     .optional(),
   city: z
     .string()
+    .trim()
     .max(50, { error: "50文字以内で入力してください" })
     .optional(),
   streetAddress: z
     .string()
+    .trim()
     .max(100, { error: "100文字以内で入力してください" })
     .optional(),
   buildingName: z
     .string()
+    .trim()
     .max(100, { error: "100文字以内で入力してください" })
     .optional(),
 });
@@ -96,14 +103,17 @@ export type MaintenanceFormInput = z.infer<typeof maintenanceFormSchema>;
 export const businessInfoFormSchema = z.object({
   businessName: z
     .string()
+    .trim()
     .max(100, { error: "100文字以内で入力してください" })
     .optional(),
   businessNameKana: z
     .string()
+    .trim()
     .max(100, { error: "100文字以内で入力してください" })
     .optional(),
   representativeName: z
     .string()
+    .trim()
     .max(50, { error: "50文字以内で入力してください" })
     .optional(),
   establishedDate: z.iso
@@ -111,6 +121,7 @@ export const businessInfoFormSchema = z.object({
     .optional(),
   registrationNumber: z
     .string()
+    .trim()
     .max(50, { error: "50文字以内で入力してください" })
     .refine((value) => value === undefined || /^\d{0,13}$/.test(value), {
       error: "法人番号は数字13桁以内で入力してください",
@@ -125,6 +136,7 @@ export const businessInfoFormSchema = z.object({
     .optional(),
   businessDescription: z
     .string()
+    .trim()
     .max(2000, { error: "2000文字以内で入力してください" })
     .optional(),
   expectedUpdatedAt: z.iso.datetime({

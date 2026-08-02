@@ -9,6 +9,7 @@ export const customerTypeSchema = z
 
 export const companyNameSchema = z
   .string()
+  .trim()
   .max(100, { error: "会社名は100文字以内で入力してください" })
   .optional()
   .or(z.literal(""));

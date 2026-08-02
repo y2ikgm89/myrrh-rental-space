@@ -594,7 +594,7 @@ const previewPricingSchema = z.object({
   spaceId: z.uuid(),
   startDateTime: z.iso.datetime(),
   endDateTime: z.iso.datetime(),
-  couponCode: z.string().max(20).optional(),
+  couponCode: z.string().trim().max(20).optional(),
 });
 
 /**

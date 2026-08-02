@@ -21,6 +21,7 @@ export const publicInquirySchema = z
     email: emailFieldSchema,
     phoneNumber: z
       .string()
+      .trim()
       .max(20, { error: "電話番号は20文字以内で入力してください" })
       .optional(),
     subject: z

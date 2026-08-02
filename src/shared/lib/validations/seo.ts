@@ -37,19 +37,26 @@ export const SEO_LIMITS = {
 export const seoFieldsSchema = z.object({
   metaDescription: z
     .string()
+    .trim()
     .max(SEO_LIMITS.META_DESCRIPTION)
     .nullable()
     .optional(),
-  metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).nullable().optional(),
+  metaKeywords: z
+    .string()
+    .trim()
+    .max(SEO_LIMITS.META_KEYWORDS)
+    .nullable()
+    .optional(),
 });
 
 /**
  * OGP フィールドスキーマ（Server Action用）
  */
 export const ogpFieldsSchema = z.object({
-  ogpTitle: z.string().max(SEO_LIMITS.OGP_TITLE).nullable().optional(),
+  ogpTitle: z.string().trim().max(SEO_LIMITS.OGP_TITLE).nullable().optional(),
   ogpDescription: z
     .string()
+    .trim()
     .max(SEO_LIMITS.OGP_DESCRIPTION)
     .nullable()
     .optional(),
@@ -72,16 +79,20 @@ export const seoOgpFieldsSchema = z.object({
  * SEO フィールドスキーマ（フォーム用）
  */
 export const seoFieldsFormSchema = z.object({
-  metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).optional(),
-  metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).optional(),
+  metaDescription: z
+    .string()
+    .trim()
+    .max(SEO_LIMITS.META_DESCRIPTION)
+    .optional(),
+  metaKeywords: z.string().trim().max(SEO_LIMITS.META_KEYWORDS).optional(),
 });
 
 /**
  * OGP フィールドスキーマ（フォーム用）
  */
 export const ogpFieldsFormSchema = z.object({
-  ogpTitle: z.string().max(SEO_LIMITS.OGP_TITLE).optional(),
-  ogpDescription: z.string().max(SEO_LIMITS.OGP_DESCRIPTION).optional(),
+  ogpTitle: z.string().trim().max(SEO_LIMITS.OGP_TITLE).optional(),
+  ogpDescription: z.string().trim().max(SEO_LIMITS.OGP_DESCRIPTION).optional(),
   ogpImageUrl: z.string().optional(),
 });
 

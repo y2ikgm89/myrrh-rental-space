@@ -64,6 +64,7 @@ export const barFormSchema = z
     linkUrl: optionalHttpOrInternalHrefSchema,
     linkText: z
       .string()
+      .trim()
       .max(50, { error: "リンクテキストは50文字以内" })
       .optional(),
     isActive: z.preprocess(

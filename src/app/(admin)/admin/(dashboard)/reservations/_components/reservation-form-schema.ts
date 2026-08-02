@@ -45,12 +45,14 @@ const timeStringSchema = z.string().regex(TIME_REGEX, {
 
 const couponCodeSchema = z
   .string()
+  .trim()
   .max(20, { error: "クーポンコードは20文字以内です" })
   .optional()
   .or(z.literal(""));
 
 const notesSchema = z
   .string()
+  .trim()
   .max(1000, { error: "メモは1000文字以内で入力してください" })
   .optional()
   .or(z.literal(""));
@@ -79,6 +81,7 @@ const newCustomerObjectSchema = z.object({
     .max(50, { error: "名は50文字以内で入力してください" }),
   companyName: z
     .string()
+    .trim()
     .max(100, { error: "会社名は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
@@ -89,6 +92,7 @@ const newCustomerObjectSchema = z.object({
     .email({ error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z
     .string()
+    .trim()
     .max(20, { error: "電話番号は20文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
@@ -111,6 +115,7 @@ const guestContactFieldsSchema = {
   guestEmail: emailFieldSchema.optional().or(z.literal("")),
   guestPhone: z
     .string()
+    .trim()
     .max(20, { error: "電話番号は20文字以内で入力してください" })
     .regex(/^[\d\-+() ]+$/, {
       error: "電話番号は数字・ハイフン・+・括弧・空白のみ使用できます",
@@ -119,6 +124,7 @@ const guestContactFieldsSchema = {
     .or(z.literal("")),
   guestCompanyName: z
     .string()
+    .trim()
     .max(100, { error: "会社名は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),

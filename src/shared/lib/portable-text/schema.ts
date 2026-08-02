@@ -38,6 +38,10 @@ const tokenKeySchema = z.string().min(1, { error: "_key は必須です" });
 const spanTokenSchema = z.object({
   _key: tokenKeySchema,
   _type: z.literal("span"),
+  // span の text は連結されて 1 本の文になる（spansToPlainText は join("")）。
+  // span ごとに trim すると "Hello " + "world" が "Helloworld" になり、
+  // 語の区切りが消える。
+  // eslint-disable-next-line local/require-trimmed-text -- 上記のとおり連結される値
   text: z.string().max(500, { error: "テキストは500文字以内です" }),
 });
 
