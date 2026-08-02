@@ -98,11 +98,16 @@ export function evaluateSeedSafety(input: {
   // `--reset` は廃止した（`bun run db:reset` = `prisma migrate reset --force`
   // + seed が同じことをより確実に行う）。筋肉記憶で打たれたときに黙って dev に
   // 落ちないよう、unknown option として明示的に落とす。
+  //
+  // 代替として案内する `db:reset` は **seed が起動する前に DB を落とす**ので、
+  // このファイルのガードは間に合わない。`scripts/assert-destructive-db-target.ts`
+  // を前段に置いて初めて等価な安全性になる（そちらは Prisma CLI と同じ順序で
+  // `DIRECT_URL` → `DATABASE_URL` を解決する）。案内文と実体を乖離させないこと。
   if (hasFlag(argv, "--reset")) {
     return {
       ok: false,
       error:
-        "Refusing seed: --reset は廃止しました。破壊的な作り直しは `bun run db:reset` を使ってください。",
+        "Refusing seed: --reset は廃止しました。破壊的な作り直しは `bun run db:reset` を使ってください（前段の assert-destructive-db-target.ts が対象 DB を検証します）。",
     };
   }
 
