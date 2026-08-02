@@ -26,6 +26,8 @@ import { publicReservationSchema } from "@/shared/lib/validations/public-reserva
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import { facilitiesSchema } from "@/shared/lib/json-validators";
 import { field } from "@/shared/lib/sections/field-registry";
+import { getZodConstraint } from "@conform-to/zod/v4";
+import { adminProxyRegistrationSchema } from "@/shared/lib/validations/event-registration-onsite";
 
 /** 見た目が空になる入力。半角・全角・改行・タブ・NBSP を網羅する。 */
 const BLANK_INPUTS = [
@@ -206,4 +208,26 @@ describe("必須 email の未入力メッセージ", () => {
       expect(message).toBe("有効なメールアドレスを入力してください");
     });
   }
+});
+
+/**
+ * `.pipe()` は ZodString のチェーンを閉じるので conform が長さ制約を拾えなくなる。
+ * 実測で `.trim().min(1).max(255).pipe(z.email())` は `{required:true}` だけを返し、
+ * 入力欄から `maxlength="255"` が消えていた。判定は公式の top-level `z.email()` を
+ * `.refine()` に載せて借りる（`isEmailFormat`）。
+ */
+describe("email の HTML 制約が conform に届く", () => {
+  test("proxy 登録の email は minLength / maxLength を保つ", () => {
+    expect(getZodConstraint(adminProxyRegistrationSchema)["email"]).toEqual({
+      required: true,
+      minLength: 1,
+      maxLength: 255,
+    });
+  });
+
+  test("検証自体は維持される", () => {
+    const email = adminProxyRegistrationSchema.shape.email;
+    expect(email.safeParse("nope").success).toBe(false);
+    expect(email.safeParse(" a@b.com ")).toMatchObject({ data: "a@b.com" });
+  });
 });

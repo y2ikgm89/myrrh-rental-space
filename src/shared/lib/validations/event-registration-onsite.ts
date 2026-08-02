@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isEmailFormat } from "@/shared/lib/validations/customer-shared-fields";
 
 import {
   prismaCuid2IdSchema,
@@ -43,7 +44,7 @@ export const walkInRegistrationSchema = z.object({
     .trim()
     .max(255)
     .optional()
-    .refine((v) => !v || z.email().safeParse(v).success, {
+    .refine((v) => !v || isEmailFormat(v), {
       error: "メールアドレスの形式が不正です",
     }),
 });
@@ -56,7 +57,8 @@ export const adminProxyRegistrationSchema = z.object({
     .trim()
     .min(1, "メールアドレスを入力してください")
     .max(255)
-    .pipe(z.email({ error: "メールアドレスの形式が不正です" })),
+    // `.pipe()` にすると conform が maxLength を拾えず maxlength="255" が消える。
+    .refine(isEmailFormat, { error: "メールアドレスの形式が不正です" }),
 });
 
 export type WalkInRegistrationInput = z.input<typeof walkInRegistrationSchema>;
