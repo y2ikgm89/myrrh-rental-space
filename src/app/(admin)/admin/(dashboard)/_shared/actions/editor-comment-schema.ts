@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isCommentableContentType } from "./types";
+import { isCommentableContentType } from "@/shared/domain/editor-comments/types";
 
 /**
  * エディタのコメントスレッド作成・返信の入力スキーマ。
@@ -8,9 +8,11 @@ import { isCommentableContentType } from "./types";
  * `"use server"` ファイルにあり async 関数しか export できないため、schema は
  * ここに置く（配置規約は `.claude/rules/forms-mutations.md`）。
  *
- * `validations/` ではなく domain 側に置くのは、`contentType` の判定に
- * `isCommentableContentType`（domain の型ガード）が要るため。`shared/lib` から
- * `shared/domain` への import は ratchet で凍結されている。
+ * `src/shared/lib/validations/` ではなく action 隣接なのは、`contentType` の判定に
+ * domain の `isCommentableContentType` が要るため。`shared/lib → shared/domain` は
+ * ratchet で凍結されているが、app 層から domain を参照するのは通常の向きで、
+ * 同じ action が `commands` を import しているのと同じ経路になる。
+ * 隣接配置の前例は `_shared/actions/settings/schemas/`。
  */
 export const createEditorCommentThreadSchema = z.object({
   // eslint-disable-next-line local/require-trimmed-text -- Lexical の MarkNode が生成する内部 ID
