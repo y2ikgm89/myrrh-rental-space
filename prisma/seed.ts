@@ -4389,6 +4389,15 @@ async function seedEvents() {
   ];
 
   let createdCount = 0;
+  /**
+   * 会計証跡があって作り直しを見送った event の id。
+   *
+   * 後段の申込 fixture（generic sample 3 件 + yoga の dev customer 1 件）は
+   * 「作り直し時に delete が先に走る」ことを前提に冪等になっている。見送った
+   * event はその delete を通らないので、除外しないと**再実行のたびに積み増す**。
+   * 申込が増えれば CONFIRMED の占有数も増え、定員・待機列の E2E 契約が崩れる。
+   */
+  const skippedEventIds = new Set<string>();
   for (const {
     description,
     price,
@@ -4406,27 +4415,10 @@ async function seedEvents() {
     await prisma.$transaction(async (tx) => {
       // Event.slug は deletedAt IS NULL の partial unique。Prisma upsert(where:{slug})
       // はフル unique を要求するため ON CONFLICT が失敗する → findFirst + update/create。
-      const eventData = {
-        ...eventRest,
-        ...buildSeedDescription(description),
-        publishedAt: publishedAt ?? null,
-        firstSlotStartAt: firstSlot.startAt,
-        lastSlotEndAt: lastSlot.endAt,
-      };
       const existingEvent = await tx.event.findFirst({
         where: { slug: eventRest.slug, deletedAt: null },
         select: { id: true },
       });
-      const event = existingEvent
-        ? await tx.event.update({
-            where: { id: existingEvent.id },
-            data: eventData,
-            select: { id: true },
-          })
-        : await tx.event.create({
-            data: eventData,
-            select: { id: true },
-          });
 
       // Dev/test seed contract: seeded events are rebuilt so E2E data never drifts.
       //
@@ -4442,22 +4434,51 @@ async function seedEvents() {
       // 「証跡付きだけ残して他を消す」では解けない。`slotId` / `ticketId` の FK も
       // `RESTRICT` なので、残した申込が参照する slot / ticket の削除で今度はそちらが
       // 落ちる。event 単位で作り直しを見送り、理由を名指しで出すのが正しい形。
-      const accountedRegistrations = await tx.eventRegistration.count({
-        where: {
-          eventId: event.id,
-          // `receipt` は to-one（`Receipt.eventRegistrationId` が @unique）、
-          // `refunds` は to-many。カーディナリティが違うので述語も変える。
-          OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
-        },
-      });
-      if (accountedRegistrations > 0) {
+      // **判定は event を書き換える前に行う。** `firstSlotStartAt` /
+      // `lastSlotEndAt` は slot から導出した非正規化列で、`eventData` には実行時刻
+      // 基準の新しい値が入っている。先に update してしまうと、作り直しを見送って
+      // 古い slot を残したのに順序・表示用の列だけ新しい日付になり、
+      // 「Skipped rebuilding」と言いながら中身が食い違う状態を作る。
+      const accountedRegistrations = existingEvent
+        ? await tx.eventRegistration.count({
+            where: {
+              eventId: existingEvent.id,
+              // `receipt` は to-one（`Receipt.eventRegistrationId` が @unique）、
+              // `refunds` は to-many。カーディナリティが違うので述語も変える。
+              OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
+            },
+          })
+        : 0;
+      if (existingEvent && accountedRegistrations > 0) {
         console.log(
           `⏭️ Skipped rebuilding event ${eventRest.slug}: ${String(accountedRegistrations)} registration(s) carry a receipt/refund (accounting trail is protected by ON DELETE RESTRICT)`,
         );
+        // 後段の申込 fixture からも外す。`EventRegistration` にはこれらの fixture を
+        // 一意にする制約が無いので、外さないと**再実行のたびに 3 件ずつ積み増す**
+        // （作り直した event では delete が先に走るので冪等になっている）。
+        skippedEventIds.add(existingEvent.id);
         // `$transaction` の callback 内なので `continue` は使えない（この event の
         // 作り直しだけを見送る）。
         return;
       }
+
+      const eventData = {
+        ...eventRest,
+        ...buildSeedDescription(description),
+        publishedAt: publishedAt ?? null,
+        firstSlotStartAt: firstSlot.startAt,
+        lastSlotEndAt: lastSlot.endAt,
+      };
+      const event = existingEvent
+        ? await tx.event.update({
+            where: { id: existingEvent.id },
+            data: eventData,
+            select: { id: true },
+          })
+        : await tx.event.create({
+            data: eventData,
+            select: { id: true },
+          });
 
       await tx.eventRegistration.deleteMany({ where: { eventId: event.id } });
       await tx.eventTimeSlot.deleteMany({ where: { eventId: event.id } });
@@ -4540,6 +4561,9 @@ async function seedEvents() {
 
   let registrationCount = 0;
   for (const event of publishedEvents) {
+    // 作り直しを見送った event は delete を通っていないので、ここで足すと重複する。
+    if (skippedEventIds.has(event.id)) continue;
+
     const firstTicket = event.tickets[0];
     if (!firstTicket) continue;
 
@@ -4586,7 +4610,14 @@ async function seedEvents() {
   });
   const devTicketId = singleEvent?.tickets[0]?.id;
   const devSlotId = singleEvent?.slots[0]?.id;
-  if (devCustomer && singleEvent && devTicketId && devSlotId) {
+  if (
+    devCustomer &&
+    singleEvent &&
+    // 上と同じ理由。見送った event へ足すと再実行のたびに増える。
+    !skippedEventIds.has(singleEvent.id) &&
+    devTicketId &&
+    devSlotId
+  ) {
     await prisma.eventRegistration.create({
       data: {
         eventId: singleEvent.id,
@@ -4625,7 +4656,14 @@ async function seedEvents() {
   });
   const waitlistTicketId = waitlistTestEvent?.tickets[0]?.id;
   const waitlistSlotId = waitlistTestEvent?.slots[0]?.id;
-  if (waitlistTestEvent && waitlistTicketId && waitlistSlotId) {
+  if (
+    waitlistTestEvent &&
+    // 上 2 つと同じ理由。ここは「1 CONFIRMED + 2 WAITLISTED + 1 OFFERED」の固定契約なので、
+    // 積み増すと待機列 E2E が最初に壊れる。
+    !skippedEventIds.has(waitlistTestEvent.id) &&
+    waitlistTicketId &&
+    waitlistSlotId
+  ) {
     const now = new Date();
     const waitlistSeedData: Array<{
       name: string;
