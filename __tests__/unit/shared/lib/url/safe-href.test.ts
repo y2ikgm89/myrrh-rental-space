@@ -68,31 +68,45 @@ describe("isInternalNavHref / isExternalPublicHref", () => {
  * 描画される**。実際 `isExternalPublicHref` が前後の空白を許していたため、
  * ナビゲーションに `" https://example.com"` を貼り付けると保存は成功し、
  * 公開側ではリンクが消えていた。
+ *
+ * **候補ごとに期待値を持たせる。** 以前は
+ * `if (保存側が true) expect(描画も通る)` と書いていたため、拒否される候補では
+ * 本体が実行されず 15 件中 9 件が空振りしていた。その形だと「全部拒否」に
+ * 変わっても全件 pass する。
  */
-describe("保存を通る href は描画も通る", () => {
-  const CANDIDATES = [
-    "https://example.com",
-    "http://example.com",
-    "mailto:a@example.com",
-    "tel:+819012345678",
-    "/about",
-    "/",
-    " https://example.com",
-    "https://example.com ",
-    "\thttps://example.com",
-    " /about",
-    "/about ",
-    "//evil.example",
-    "javascript:alert(1)",
-    "data:text/html,hi",
-    "",
+describe("保存と描画の判定が一致する", () => {
+  // 見えない文字はソースに直接書かない。エスケープ表記も端末やレビュー画面で
+  // 実文字と見分けがつかないので、コードポイントを数値で書く。
+  const TAB = String.fromCharCode(0x09);
+  const C0 = String.fromCharCode(0x01);
+  const CASES: ReadonlyArray<readonly [string, boolean]> = [
+    ["https://example.com", true],
+    ["http://example.com", true],
+    ["mailto:a@example.com", true],
+    ["tel:+819012345678", true],
+    ["/about", true],
+    ["/", true],
+    [" https://example.com", false],
+    ["https://example.com ", false],
+    [`${TAB}https://example.com`, false],
+    // `new URL()` は C0 制御文字も捨てて解釈するので、保存側もそこへ揃える。
+    // 揃えないと制御文字ごと保存され、href にそのまま出る。
+    [`${C0}https://example.com`, false],
+    [`https://example.com${C0}`, false],
+    [" /about", false],
+    ["/about ", false],
+    ["//evil.example", false],
+    ["javascript:alert(1)", false],
+    ["data:text/html,hi", false],
+    ["", false],
   ];
 
-  for (const value of CANDIDATES) {
-    test(`${JSON.stringify(value)}`, () => {
-      if (isExternalPublicHref(value) || isInternalNavHref(value)) {
-        expect(toSafePublicHref(value)).toBe(value);
-      }
+  for (const [value, accepted] of CASES) {
+    test(`${JSON.stringify(value)} -> ${accepted ? "受理" : "拒否"}`, () => {
+      const savable = isExternalPublicHref(value) || isInternalNavHref(value);
+      expect(savable).toBe(accepted);
+      // 保存を通るなら描画もそのまま通る。通らないなら描画も null。
+      expect(toSafePublicHref(value)).toBe(accepted ? value : null);
     });
   }
 });
