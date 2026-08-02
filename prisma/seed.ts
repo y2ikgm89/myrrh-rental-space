@@ -39,6 +39,7 @@ import {
   EventScheduleMode,
   EventStatus,
   RegistrationStatus,
+  SmartLockDeviceType,
   TermsScope,
 } from "../generated/prisma/client";
 import {
@@ -915,6 +916,69 @@ const SEED_REVIEWABLE_SPACE_SLUGS = [
   REVIEW_E2E_SPACE_SLUG,
 ] as const;
 
+/**
+ * デモ予約を載せるスペース。**slug で明示し、順序を固定する。**
+ *
+ * 以前は `prisma.space.findMany({ where: { isActive: true } })` を `orderBy` 無しで
+ * 引き、`spaceIndex % spaces.length` で割り当てていた。Postgres の返却順は保証が
+ * 無いので「`spaceIndex: 0` がどのスペースか」が run ごとに変わり、E2E から見た
+ * seed の意味が安定しなかった（#1793 と同じ欠陥）。
+ *
+ * この配列は `E2E_PASSCODE_FIXTURE_SPACE_SLUG` を**構造的に含まない**。それが
+ * 「fixture 専用スペースにはデモ予約が載らない」保証の実体で、
+ * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
+ */
+const DEMO_RESERVATION_SPACE_SLUGS = [
+  "meeting-room-a",
+  "seminar-room",
+  REVIEW_E2E_SPACE_SLUG,
+] as const;
+
+/**
+ * dev customer の `[E2E]` 予約を載せるスペース。
+ *
+ * `stripe-payment.spec.ts` / `stripe-3ds-sca-challenge.spec.ts` は予約詳細の
+ * 見出しで「ミーティングルーム A」を assert する。以前は `findFirst` の
+ * 暗黙の順序に依存していたため、Postgres が別の行を先に返した瞬間に落ちる
+ * 構造だった。slug で固定する。
+ */
+const DEV_CUSTOMER_RESERVATION_SPACE_SLUG = "meeting-room-a";
+
+/**
+ * 時刻依存 E2E fixture が**専有する**スペースの slug（dev seed 限定）。
+ *
+ * ## なぜ専用スペースが要るのか
+ *
+ * `scripts/e2e/create-passcode-reveal-fixture.ts` は「解錠番号が今まさに有効」な
+ * 状態を作るため、実行時刻をまたぐ CONFIRMED 予約を必要とする。ところが予約は
+ * DB の EXCLUDE 制約 `reservations_no_active_time_overlap_excl` で重複できず、
+ * デモ予約が当日の時間帯を埋めているため、**実行時刻によっては全スペースが
+ * 塞がって fixture 生成そのものが失敗**していた。
+ *
+ * 実測（CI run 30708064822、コンテナ TZ=UTC）: デモ当日予約は 09-11 / 15-17、
+ * 10-13 / 17-19、14-18 を占める。fixture が要求する `[now-1h, now+1h]` は
+ * **now が 16:00〜18:00 UTC のとき 3 スペースすべてと衝突**する。
+ * 落ちた run の起動は 16:24 UTC。さらに nightly は `cron: "0 18 * * *"` で、
+ * 15-17 の予約が終わる 17:00 と窓の開始が**同時刻**という 0 秒差で通っていた。
+ *
+ * ## なぜ「空きスペースを探す」ではなく専有なのか
+ *
+ * `e2e/fixtures/test-data.ts` の `spaceFixtures` は既に **spec ごとにスペースを
+ * 所有分割**している（並列実行での相互破壊を防ぐため）。時刻依存 fixture にも
+ * 同じ規約を適用するのが一貫していて、探索ロジックも失敗経路も不要になる。
+ *
+ * ## なぜ非公開・dev 限定なのか
+ *
+ * - `isPublished: false` — 公開一覧に出ないので `/spaces` の visual baseline
+ *   （`e2e/visual/public-pages.spec.ts` の `spaces-list.png`）に影響しない
+ * - `seedDev()` からのみ呼ぶ — `seedProduction()` は `seedSpaces(false)` しか
+ *   呼ばないので、この行が本番に入ることはない（dev/prod 分離ポリシー）
+ */
+const E2E_PASSCODE_FIXTURE_SPACE_SLUG = "e2e-passcode-fixture";
+
+/** 上記スペースに紐づく Pad デバイスの SwitchBot 側 ID（`deviceId` は @unique）。 */
+const E2E_PASSCODE_FIXTURE_DEVICE_ID = "e2e-passcode-fixture-keypad";
+
 async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
   const locations = await prisma.location.findMany({
@@ -1031,6 +1095,88 @@ async function seedSpaces(overridePublished?: boolean) {
       `✅ Enabled reviews for ${result.count.toString()} seed space(s)`,
     );
   }
+}
+
+/**
+ * 時刻依存 E2E fixture 専用スペース（**dev seed 限定・非公開**）。
+ *
+ * 目的と設計判断は `E2E_PASSCODE_FIXTURE_SPACE_SLUG` のコメントを参照。
+ * ここでは Pad デバイスまで用意して、fixture 側が「予約 + パスコード行を作る」
+ * だけで済むようにする（fixture がデバイスを作り足す旧実装は、失敗時に
+ * 中途半端な状態を残す経路があった）。
+ *
+ * `seedProduction()` からは呼ばない。
+ */
+async function seedE2EFixtureSpace() {
+  const location = await prisma.location.findFirst({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true },
+  });
+  if (!location) {
+    console.log("⚠️ No location found for the E2E fixture space. Skipping.");
+    return;
+  }
+
+  // `Space.slug` は Prisma 上 unique ではない（soft-delete 済み行の値を永久に
+  // 予約しないための partial unique index で、`isActive` 条件付き）。よって
+  // `upsert({ where: { slug } })` は使えず、seedSpaces と同じ findFirst → create/update。
+  const existing = await prisma.space.findFirst({
+    where: { slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG },
+    select: { id: true, smartLockDeviceId: true, locationId: true },
+  });
+
+  const space = existing
+    ? // 既存行は「非公開・有効」を毎回揃え直す（手動で公開されても戻す）。
+      await prisma.space.update({
+        where: { id: existing.id },
+        data: { isPublished: false, isActive: true },
+        select: { id: true, smartLockDeviceId: true, locationId: true },
+      })
+    : await prisma.space.create({
+        data: {
+          slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG,
+          name: "[E2E] 解錠番号検証用スペース",
+          ...buildSeedDescription(
+            "時刻依存の E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+          ),
+          capacity: 1,
+          hourlyPrice: 3000,
+          // 公開されないので画像は既存 seed のプレースホルダを流用する。
+          mainImageUrl: "/images/seed/meeting-room.svg",
+          gallery: [],
+          facilities: [],
+          // 公開しない = /spaces に出ないので visual baseline に影響しない。
+          isPublished: false,
+          isActive: true,
+          reviewsEnabled: false,
+          locationId: location.id,
+        },
+        select: { id: true, smartLockDeviceId: true, locationId: true },
+      });
+
+  if (space.smartLockDeviceId) {
+    console.log(`⏭️ Skipped existing E2E fixture space device`);
+    return;
+  }
+
+  const device = await prisma.smartLockDevice.upsert({
+    where: { deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID },
+    create: {
+      locationId: space.locationId ?? location.id,
+      deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID,
+      deviceName: "[E2E] テストキーパッド",
+      deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
+      isActive: true,
+    },
+    update: { isActive: true },
+    select: { id: true },
+  });
+
+  await prisma.space.update({
+    where: { id: space.id },
+    data: { smartLockDeviceId: device.id },
+  });
+  console.log(`✅ Created E2E fixture space with a keypad device`);
 }
 
 // =============================================================================
@@ -1942,7 +2088,16 @@ function buildSeedLegacyPricingSnapshot(totalPrice: number) {
 }
 
 async function seedReservations() {
-  const spaces = await prisma.space.findMany({ where: { isActive: true } });
+  // slug で明示し、`DEMO_RESERVATION_SPACE_SLUGS` の宣言順に並べ替える。
+  // `findMany({ where: { isActive: true } })` を `orderBy` 無しで引くと Postgres の
+  // 返却順に依存し、`spaceIndex` がどのスペースを指すか run ごとに変わる。
+  // 併せて fixture 専用スペースを構造的に対象外にする。
+  const found = await prisma.space.findMany({
+    where: { slug: { in: [...DEMO_RESERVATION_SPACE_SLUGS] }, isActive: true },
+  });
+  const spaces = DEMO_RESERVATION_SPACE_SLUGS.map((slug) =>
+    found.find((space) => space.slug === slug),
+  ).filter((space) => space !== undefined);
   const customers = await prisma.customer.findMany({
     where: { isActive: true },
   });
@@ -2569,8 +2724,17 @@ async function seedDevCustomerAndReservations() {
   }
 
   // 3) 予約 4 件（status × paymentStatus の主要カバレッジ）
+  //
+  // slug で固定する。`findFirst({ isActive, isPublished })` は Postgres の返却順に
+  // 依存しており、`stripe-payment.spec.ts` / `stripe-3ds-sca-challenge.spec.ts` が
+  // 予約詳細の見出しで assert する「ミーティングルーム A」が別スペースに
+  // すり替わりうる構造だった（#1793 と同じ欠陥）。
   const space = await prisma.space.findFirst({
-    where: { isActive: true, isPublished: true },
+    where: {
+      slug: DEV_CUSTOMER_RESERVATION_SPACE_SLUG,
+      isActive: true,
+      isPublished: true,
+    },
     select: { id: true, hourlyPrice: true, name: true },
   });
   if (!space) {
@@ -5451,6 +5615,10 @@ async function seedDev() {
 
   // Phase 3: スペース（リレーション設定）
   await seedSpaces();
+  // 時刻依存 E2E fixture が専有する非公開スペース（dev のみ）。
+  // デモ予約より先に作るが、`DEMO_RESERVATION_SPACE_SLUGS` に含まれないので
+  // デモ予約は載らない。
+  await seedE2EFixtureSpace();
   await seedSpaceRatePlans();
 
   // Phase 4: 顧客・問い合わせ・クーポン

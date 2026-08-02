@@ -1,8 +1,5 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
-import {
-  ReservationStatus,
-  SmartLockDeviceType,
-} from "@generated/prisma/enums";
+import { spaceFixtures } from "../../e2e/fixtures/test-data";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
 
@@ -75,62 +72,42 @@ async function main(): Promise<void> {
       update: { switchbotEnabled: true },
     });
 
-    // 予約は `reservations_no_active_time_overlap_excl`（spaceId = かつ
-    // `tsrange(startTime, endTime, '[)')` が overlap、status ∈ {PENDING, CONFIRMED}
-    // かつ deletedAt IS NULL）で DB 制約により重複が弾かれる。seed は **今日**の
-    // CONFIRMED 予約を複数スペースに作る（`prisma/seed.ts` の daysOffset: 0 群。
-    // 例: spaceIndex 0 が 09-11 時と 15-17 時）ため、実時刻基準の枠を無条件に
-    // 差し込むと時間帯によっては create が制約違反で落ちる。
-    // 目的の枠と重ならないスペースを選ぶ（制約と同じ半開区間の述語で判定）。
+    // 専有スペースを slug で引く。**探索しない。**
+    //
+    // 予約は DB の EXCLUDE 制約 `reservations_no_active_time_overlap_excl`
+    // （spaceId = かつ `tsrange(startTime, endTime, '[)')` が overlap、
+    // status ∈ {PENDING, CONFIRMED} かつ deletedAt IS NULL）で重複を弾かれる。
+    // 旧実装は「今の時刻の窓が空いている公開スペース」を探していたが、seed の
+    // デモ当日予約が 3 スペースすべてを塞ぐ時間帯があり（実測 16:00〜18:00 UTC、
+    // CI run 30708064822）、そこに当たると fixture 生成ごと落ちていた。
+    //
+    // このスペースは seed の `DEMO_RESERVATION_SPACE_SLUGS` に含まれないので、
+    // 実行時刻がどこであっても窓は必ず空いている。所有分割の規約と slug の一致は
+    // `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が強制する。
     const space = await prisma.space.findFirst({
       where: {
+        slug: spaceFixtures.passcodeRevealSpaceSlug,
         isActive: true,
-        isPublished: true,
-        reservations: {
-          none: {
-            deletedAt: null,
-            status: {
-              in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
-            },
-            startTime: { lt: RESERVATION_END },
-            endTime: { gt: RESERVATION_START },
-          },
-        },
       },
-      select: {
-        id: true,
-        name: true,
-        locationId: true,
-        smartLockDeviceId: true,
-      },
+      select: { id: true, name: true, smartLockDeviceId: true },
     });
 
     if (!space) {
       throw new Error(
-        `[passcode-reveal fixture] ${RESERVATION_START.toISOString()}〜${RESERVATION_END.toISOString()} に空いている公開スペースがありません。seed の当日予約と全スペースが衝突しています`,
+        `[passcode-reveal fixture] 専有スペース "${spaceFixtures.passcodeRevealSpaceSlug}" がありません。dev seed（seedE2EFixtureSpace）が走っているか確認してください`,
+      );
+    }
+
+    // Pad デバイスも seed が用意する。ここで作り足すと、失敗時に
+    // 「デバイスだけ残る」中途半端な状態を作りうるので作らない。
+    const deviceId = space.smartLockDeviceId;
+    if (!deviceId) {
+      throw new Error(
+        `[passcode-reveal fixture] 専有スペースに Pad デバイスが紐づいていません。dev seed（seedE2EFixtureSpace）を再実行してください`,
       );
     }
 
     const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-    let deviceId = space.smartLockDeviceId;
-
-    if (!deviceId) {
-      const device = await prisma.smartLockDevice.create({
-        data: {
-          locationId: space.locationId,
-          deviceId: `e2e-pad-${unique}`,
-          deviceName: "E2Eテストキーパッド",
-          deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
-          isActive: true,
-        },
-        select: { id: true },
-      });
-      deviceId = device.id;
-      await prisma.space.update({
-        where: { id: space.id },
-        data: { smartLockDeviceId: deviceId },
-      });
-    }
 
     // 予約は固定時刻（clock 凍結と揃える必要がある）に作るため、前回実行分が
     // 残っていると DB の EXCLUDE 制約

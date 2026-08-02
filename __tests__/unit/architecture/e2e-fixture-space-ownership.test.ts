@@ -1,0 +1,132 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, test } from "bun:test";
+
+import { spaceFixtures } from "../../../e2e/fixtures/test-data";
+
+/**
+ * 時刻依存 E2E fixture が**専有するスペース**の所有分割を機械強制する gate。
+ *
+ * ## なぜ専有が要るのか
+ *
+ * `scripts/e2e/create-passcode-reveal-fixture.ts` は「解錠番号が今まさに有効」な
+ * 状態を作るため、実行時刻をまたぐ CONFIRMED 予約を必要とする。予約は DB の
+ * EXCLUDE 制約 `reservations_no_active_time_overlap_excl` で重複できないので、
+ * seed のデモ当日予約と同じスペース・同じ時間帯を要求すると生成に失敗する。
+ *
+ * 旧実装は「窓が空いている公開スペースを探す」方式だった。実測（CI run
+ * 30708064822、コンテナ TZ=UTC）ではデモ当日予約が 09-11 / 15-17、10-13 / 17-19、
+ * 14-18 を占め、fixture が要求する `[now-1h, now+1h]` は **now が 16:00〜18:00 UTC
+ * のとき 3 スペースすべてと衝突**する。落ちた run の起動は 16:24 UTC。
+ * さらに nightly は `cron: "0 18 * * *"` で、15-17 の終端 17:00 と窓の開始が
+ * **同時刻**という 0 秒差で通っていた。つまり「たまに落ちる」ではなく
+ * **時間帯で決まる恒常的な失敗**だった。
+ *
+ * ## 何を強制するか
+ *
+ * 1. seed とテスト側で slug が一致している（二重定義の drift 防止）
+ * 2. 専有スペースが seed のデモ予約対象（`DEMO_RESERVATION_SPACE_SLUGS`）に
+ *    **含まれない** — これが「窓が必ず空いている」ことの実体
+ * 3. 専有スペースが他の spec の所有スペースと交わらない
+ * 4. fixture が slug を直書きせず `spaceFixtures` を参照している
+ * 5. seed が専有スペースを**非公開**で作る（`/spaces` の visual baseline を動かさない）
+ * 6. 専有スペースの作成が **dev seed 限定**（本番 seed に混入しない）
+ */
+
+const root = process.cwd();
+const SEED = join(root, "prisma/seed.ts");
+const FIXTURE = join(root, "scripts/e2e/create-passcode-reveal-fixture.ts");
+
+function read(path: string): string {
+  return readFileSync(path, "utf8");
+}
+
+/** `const NAME = "value";` の value を取り出す。 */
+function readStringConst(source: string, name: string): string {
+  const match = new RegExp(`const ${name} = "([^"]+)";`, "u").exec(source);
+  if (!match?.[1]) {
+    throw new Error(`${name} の宣言が見つかりません`);
+  }
+  return match[1];
+}
+
+/** `const NAME = [ "a", "b" ] as const;` の要素を取り出す。 */
+function readStringArrayConst(source: string, name: string): string[] {
+  const block = new RegExp(
+    `const ${name} = \\[([\\s\\S]*?)\\] as const;`,
+    "u",
+  ).exec(source);
+  if (!block?.[1]) {
+    throw new Error(`${name} の宣言が見つかりません`);
+  }
+  return [...block[1].matchAll(/"([^"]+)"/gu)].map((m) => String(m[1]));
+}
+
+describe("時刻依存 E2E fixture の専有スペース", () => {
+  test("seed とテスト fixture で slug が一致する", () => {
+    expect(readStringConst(read(SEED), "E2E_PASSCODE_FIXTURE_SPACE_SLUG")).toBe(
+      spaceFixtures.passcodeRevealSpaceSlug,
+    );
+  });
+
+  test("専有スペースには seed のデモ予約が載らない", () => {
+    const demoSlugs = readStringArrayConst(
+      read(SEED),
+      "DEMO_RESERVATION_SPACE_SLUGS",
+    );
+
+    // gate が空振りしていないこと（正規表現が腐ると空配列になる）。
+    expect(demoSlugs.length).toBeGreaterThan(0);
+    expect(demoSlugs).not.toContain(spaceFixtures.passcodeRevealSpaceSlug);
+  });
+
+  test("他の spec が所有するスペースと交わらない", () => {
+    const others = Object.entries(spaceFixtures)
+      .filter(([key]) => key !== "passcodeRevealSpaceSlug")
+      .map(([, slug]) => slug);
+
+    expect(others.length).toBeGreaterThan(0);
+    expect(others).not.toContain(spaceFixtures.passcodeRevealSpaceSlug);
+  });
+
+  test("fixture は slug を直書きせず spaceFixtures を参照する", () => {
+    const source = read(FIXTURE);
+    expect(source).toContain("spaceFixtures.passcodeRevealSpaceSlug");
+    // 直書きに戻ると二重定義の drift を gate が検出できなくなる。
+    expect(source).not.toContain(`"${spaceFixtures.passcodeRevealSpaceSlug}"`);
+  });
+
+  test("fixture は空きスペースを探さない（探索方式へ逆戻りしていない）", () => {
+    // 旧実装の marker。`reservations: { none: ... }` で「空いているスペース」を
+    // 引く形に戻ると、再び時間帯依存の失敗が復活する。
+    expect(read(FIXTURE)).not.toMatch(/reservations:\s*\{\s*none:/u);
+  });
+
+  test("seed は専有スペースを非公開で作る", () => {
+    const source = read(SEED);
+    const body = /async function seedE2EFixtureSpace\(\)[\s\S]*?\n\}/u.exec(
+      source,
+    );
+    if (!body) throw new Error("seedE2EFixtureSpace が見つかりません");
+
+    // 公開すると /spaces に出て visual baseline (`spaces-list.png`) が動く。
+    expect(body[0]).toContain("isPublished: false");
+    expect(body[0]).not.toMatch(/isPublished:\s*true/u);
+  });
+
+  test("専有スペースの作成は dev seed 限定（本番に混入しない）", () => {
+    const source = read(SEED);
+    // `seedProduction` は引数を取るので `\(\)` 決め打ちにしない。
+    const devBody = /async function seedDev\([^)]*\)[\s\S]*?\n\}/u.exec(source);
+    const prodBody = /async function seedProduction\([^)]*\)[\s\S]*?\n\}/u.exec(
+      source,
+    );
+    if (!devBody || !prodBody) {
+      throw new Error("seedDev / seedProduction が見つかりません");
+    }
+
+    expect(devBody[0]).toContain("await seedE2EFixtureSpace();");
+    expect(prodBody[0]).not.toContain("seedE2EFixtureSpace");
+  });
+});

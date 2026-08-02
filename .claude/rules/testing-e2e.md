@@ -195,6 +195,34 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   所有を宣言し、**復元も検証も所有分だけ**に限定する。全件を書き戻すと、相手が
   意図的に OFF にしている module を ON に戻して落とす（双方向の偽陽性）。
 
+- **時間軸で衝突する fixture にも所有分割を適用する。**「実行時刻をまたぐ予約」を
+  作る fixture は、DB の EXCLUDE 制約
+  `reservations_no_active_time_overlap_excl` により seed のデモ当日予約と競合する。
+  空いているスペースを**探す**実装は、デモ予約が全スペースを塞ぐ時間帯で必ず落ちる —
+  実測 (run 30708064822、コンテナ TZ=UTC): デモ当日予約 09-11 / 15-17、10-13 / 17-19、
+  14-18 に対し `[now-1h, now+1h]` は **now が 16:00〜18:00 UTC で 3 スペース全滅**。
+  nightly (`cron: "0 18 * * *"`) は 15-17 の終端と窓の開始が同時刻という 0 秒差で
+  通っていた。**時間帯で決まる恒常的な失敗**であって flake ではない。
+
+  対策は **fixture 専用スペースを seed に置き、デモ予約の対象 slug 集合から外す**こと
+  （`E2E_PASSCODE_FIXTURE_SPACE_SLUG` / `DEMO_RESERVATION_SPACE_SLUGS`）。窓が
+  必ず空くので探索も失敗経路も要らない。専用スペースは **`isPublished: false`**
+  （`/spaces` に出ないので `spaces-list.png` の visual baseline を動かさない）かつ
+  **`seedDev()` からのみ**作る（本番に混入させない）。slug は
+  `e2e/fixtures/test-data.ts` の `spaceFixtures` と二重定義になるので、
+  `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が一致を強制する。
+
+  なお **fixture が実行のたびにスペースを新規作成する形にはしない**。
+  `create-recurring-series-fixture.ts` 等がその形で、後始末が無いため行が際限なく
+  溜まる（実測: ローカル test DB に `claim-space-*` / `e2e-recurring-space-*` が数百行）。
+  seed の 1 行を marker 付きで使い回すほうが冪等で観測もしやすい。
+
+- **seed が spec に見せるデータは `orderBy` 無しの `findFirst` / `findMany` で選ばない。**
+  Postgres の返却順は保証が無いので、`spaceIndex` や「最初のスペース」が run ごとに
+  変わる。`stripe-payment.spec.ts` が予約詳細で「ミーティングルーム A」を assert する
+  のに、seed 側は `findFirst({ isActive, isPublished })` で拾っていた（#1793 と同じ欠陥）。
+  slug など安定キーで明示的に引く。
+
 - **所有分割が守るのは mutator 同士だけ。read-only な spec は守られない。**
   同じ singleton を**読むだけ**の spec は所有を宣言しようがないので、mutator が
   OFF にしている最中に読むと落ちる。実測 (run 30677872134): `feature-module-off-gate`
