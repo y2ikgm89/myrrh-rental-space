@@ -991,8 +991,52 @@ const DEV_CUSTOMER_RESERVATION_SPACE_SLUG = "meeting-room-a";
  */
 const E2E_PASSCODE_FIXTURE_SPACE_SLUG = "e2e-passcode-fixture";
 
+/**
+ * ゲスト予約系 fixture が専有するスペース。
+ *
+ * `create-claim-reservation-fixture` / `create-guest-status-fixture` /
+ * `create-receipt-download-fixture` は固定または乱択の日時に予約を作る。共有の
+ * `coworking-space` に作っていたため、同じ枠を要求する 2 回目の実行が EXCLUDE 制約
+ * `reservations_no_active_time_overlap_excl` に弾かれていた。claim は spec 本体から
+ * 呼ばれ CI は `retries: 2` なので、**1 度落ちると 3 attempt すべてが別の理由で
+ * 落ち続ける**（fixture 生成エラーで、本来の失敗理由が見えなくなる）。
+ *
+ * 解錠番号 fixture とは別スペースにする。所有分割の要点は「1 fixture 1 スペース」で、
+ * 相乗りさせると同じ衝突が別の組み合わせで復活する。
+ */
+const E2E_GUEST_RESERVATION_FIXTURE_SPACE_SLUG =
+  "e2e-guest-reservation-fixture";
+
 /** 上記スペースに紐づく Pad デバイスの SwitchBot 側 ID（`deviceId` は @unique）。 */
 const E2E_PASSCODE_FIXTURE_DEVICE_ID = "e2e-passcode-fixture-keypad";
+
+/**
+ * dev seed が用意する fixture 専有スペースの宣言。
+ *
+ * いずれも **`isPublished: false`**（`/spaces` に出ないので
+ * `e2e/visual/public-pages.spec.ts` の `spaces-list.png` に影響しない）かつ
+ * **`seedDev()` からのみ**作る（`seedProduction()` は `seedSpaces(false)` しか
+ * 呼ばないので本番には入らない）。
+ *
+ * どれも `DEMO_RESERVATION_SPACE_SLUGS` に含まれない。これが「fixture が要求する
+ * 時間帯は必ず空いている」ことの実体で、
+ * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
+ */
+const E2E_FIXTURE_SPACES = [
+  {
+    slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG,
+    name: "[E2E] 解錠番号検証用スペース",
+    description:
+      "時刻依存の E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+    keypadDeviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID,
+  },
+  {
+    slug: E2E_GUEST_RESERVATION_FIXTURE_SPACE_SLUG,
+    name: "[E2E] ゲスト予約検証用スペース",
+    description:
+      "ゲスト予約系 E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+  },
+] as const satisfies readonly FixtureSpaceSpec[];
 
 async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
@@ -1125,13 +1169,27 @@ async function seedSpaces(overridePublished?: boolean) {
  *
  * `seedProduction()` からは呼ばない。
  */
-async function seedE2EFixtureSpace() {
+interface FixtureSpaceSpec {
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string;
+  /** SwitchBot の Pad デバイスを紐づけるか（解錠番号 fixture のみ必要）。 */
+  readonly keypadDeviceId?: string;
+}
+
+/**
+ * 時刻依存 E2E fixture が専有するスペースを 1 件用意する（**dev seed 限定・非公開**）。
+ *
+ * 目的と設計判断は `E2E_FIXTURE_SPACES` のコメントを参照。
+ * `seedProduction()` からは呼ばない。
+ */
+async function ensureFixtureSpace(spec: FixtureSpaceSpec) {
   const location = await prisma.location.findFirst({
     orderBy: { sortOrder: "asc" },
     select: { id: true },
   });
   if (!location) {
-    console.log("⚠️ No location found for the E2E fixture space. Skipping.");
+    console.log(`⚠️ No location found for ${spec.slug}. Skipping.`);
     return;
   }
 
@@ -1139,7 +1197,7 @@ async function seedE2EFixtureSpace() {
   // 予約しないための partial unique index で、`isActive` 条件付き）。よって
   // `upsert({ where: { slug } })` は使えず、seedSpaces と同じ findFirst → create/update。
   const existing = await prisma.space.findFirst({
-    where: { slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG, isActive: true },
+    where: { slug: spec.slug, isActive: true },
     select: { id: true, smartLockDeviceId: true, locationId: true },
   });
 
@@ -1152,11 +1210,9 @@ async function seedE2EFixtureSpace() {
       })
     : await prisma.space.create({
         data: {
-          slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG,
-          name: "[E2E] 解錠番号検証用スペース",
-          ...buildSeedDescription(
-            "時刻依存の E2E fixture が専有する非公開スペース。公開一覧には出ません。",
-          ),
+          slug: spec.slug,
+          name: spec.name,
+          ...buildSeedDescription(spec.description),
           capacity: 1,
           hourlyPrice: 3000,
           // 公開されないので画像は既存 seed のプレースホルダを流用する。
@@ -1172,6 +1228,11 @@ async function seedE2EFixtureSpace() {
         select: { id: true, smartLockDeviceId: true, locationId: true },
       });
 
+  if (spec.keypadDeviceId === undefined) {
+    console.log(`✅ Reconciled fixture space: ${spec.slug}`);
+    return;
+  }
+
   // デバイスは**毎回揃え直す**。「`smartLockDeviceId` が入っていれば抜ける」に
   // すると、手動で非活性化されたり deviceType を変えられたときに再実行で
   // 復旧できない。`getPasscodeRevealState` は `!device.isActive` と非 Pad 型を
@@ -1179,10 +1240,10 @@ async function seedE2EFixtureSpace() {
   // ボタンが出ず、spec は原因の分かりにくい形で落ちる。seed の冪等性は
   // 「再実行すれば必ず期待状態になる」ことを指す。
   const device = await prisma.smartLockDevice.upsert({
-    where: { deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID },
+    where: { deviceId: spec.keypadDeviceId },
     create: {
       locationId: space.locationId ?? location.id,
-      deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID,
+      deviceId: spec.keypadDeviceId,
       deviceName: "[E2E] テストキーパッド",
       deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
       isActive: true,
@@ -1200,7 +1261,14 @@ async function seedE2EFixtureSpace() {
       data: { smartLockDeviceId: device.id },
     });
   }
-  console.log(`✅ Reconciled E2E fixture space and its keypad device`);
+  console.log(`✅ Reconciled fixture space with keypad: ${spec.slug}`);
+}
+
+/** 時刻依存 E2E fixture が専有するスペース群（dev seed 限定）。 */
+async function seedE2EFixtureSpaces() {
+  for (const spec of E2E_FIXTURE_SPACES) {
+    await ensureFixtureSpace(spec);
+  }
 }
 
 // =============================================================================
@@ -5694,7 +5762,7 @@ async function seedDev() {
   // 時刻依存 E2E fixture が専有する非公開スペース（dev のみ）。
   // デモ予約より先に作るが、`DEMO_RESERVATION_SPACE_SLUGS` に含まれないので
   // デモ予約は載らない。
-  await seedE2EFixtureSpace();
+  await seedE2EFixtureSpaces();
   await seedSpaceRatePlans();
 
   // Phase 4: 顧客・問い合わせ・クーポン

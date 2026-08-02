@@ -139,6 +139,21 @@ export const spaceFixtures = {
    * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
    */
   passcodeRevealSpaceSlug: "e2e-passcode-fixture",
+  /**
+   * ゲスト予約系 fixture（claim / status hub / 領収書）が**専有する**非公開スペース。
+   *
+   * これらは固定または乱択の日時に予約を作る。共有の `coworking-space` に作って
+   * いたため、同じ枠を要求する 2 回目の実行が EXCLUDE 制約
+   * `reservations_no_active_time_overlap_excl` に弾かれていた。claim fixture は
+   * spec 本体から呼ばれ CI は `retries: 2` なので、**1 度落ちると 3 attempt すべてが
+   * fixture 生成エラーで落ち続け、本来の失敗理由が見えなくなる**。
+   *
+   * 解錠番号 fixture とは別スペースにする（1 fixture 1 スペース。相乗りさせると
+   * 同じ衝突が別の組み合わせで復活する）。slug の一致と
+   * `DEMO_RESERVATION_SPACE_SLUGS` からの除外は
+   * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
+   */
+  guestReservationSpaceSlug: "e2e-guest-reservation-fixture",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */
