@@ -74,3 +74,15 @@ baseline reset を適用しない。
 - **本番 seed と共用する関数では、宣言済みの構造列だけを reconcile する。**
   `isActive` / `isPublished` を書き始めると `--production` 再実行が管理画面の編集を
   踏み潰す。`seedNavigation(reconcile)` のように dev/prod で挙動を分ける
+
+### 会計証跡が付いた行は seed が消さない
+
+`Receipt` / `Refund` は予約・イベント申込を `onDelete: Restrict` で参照する
+（「領収書がある予約/申込は物理削除不可」= 会計証跡保護）。seed の「作り直し」が
+そこへ踏み込むと P2003 で中断し、`main().catch` の `process.exit(1)` で以降の
+phase が丸ごと走らなくなる。dev / staging で Stripe のテスト決済を 1 度通すだけで
+この状態になる。
+
+**「証跡付きだけ残して他を消す」では解けない** — 残した申込が参照する
+`slotId` / `ticketId` の FK も `RESTRICT` なので、次はそちらが落ちる。
+証跡がある単位（event 単位）で作り直しを見送り、理由を名指しでログに出す。
