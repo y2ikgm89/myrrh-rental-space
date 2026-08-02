@@ -113,6 +113,7 @@ const typeSchema = z
 
 const titleSchema = z
   .string()
+  .trim()
   .min(1, { error: "タイトルを入力してください" })
   .max(100, { error: "タイトルは100文字以内です" });
 

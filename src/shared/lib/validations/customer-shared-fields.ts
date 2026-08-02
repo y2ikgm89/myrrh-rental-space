@@ -20,6 +20,7 @@ import { z } from "zod";
 export function personNameFieldSchema(label: string) {
   return z
     .string()
+    .trim()
     .min(1, { error: `${label}は必須です` })
     .max(50, { error: `${label}は50文字以内で入力してください` });
 }
