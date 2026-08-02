@@ -4,8 +4,46 @@ import {
   parseStringArrayOrNull,
   parseBusinessHours,
   parseBusinessAttributes,
+  parseFacilities,
   type BusinessHours,
 } from "@/shared/lib/json-validators";
+
+describe("parseFacilities", () => {
+  const wifi = { name: "Wi-Fi", iconName: "IconWifi" };
+  const desk = { name: "机", iconName: "" };
+
+  test("有効な配列を正しくパースする", () => {
+    expect(parseFacilities([wifi, desk])).toEqual([wifi, desk]);
+  });
+
+  // `name` に `.trim()` を課す前（#1819 以前）は空白だけの設備名が保存できた。
+  // 配列ごと検証していると、そういう行が 1 件あるだけで**そのスペースの設備が
+  // 全部消える**（公開ページも管理画面も）。1 件ずつ検証して残りを守る。
+  test("空白だけの設備名は、その 1 件だけ落として残りを保つ", () => {
+    expect(
+      parseFacilities([wifi, { name: "   ", iconName: "" }, desk]),
+    ).toEqual([wifi, desk]);
+  });
+
+  // 旧スキーマでは "Wi-Fi" と " Wi-Fi " が別名として共存できた。
+  test("trim 後に重複する設備は先に現れた方を残す", () => {
+    expect(
+      parseFacilities([wifi, { name: " Wi-Fi ", iconName: "IconOther" }]),
+    ).toEqual([wifi]);
+  });
+
+  test("前後の空白は正規化して返す", () => {
+    expect(parseFacilities([{ name: "  椅子  ", iconName: "" }])).toEqual([
+      { name: "椅子", iconName: "" },
+    ]);
+  });
+
+  test("壊れた要素は飛ばし、配列でない入力は空配列", () => {
+    expect(parseFacilities([wifi, { nope: 1 }, desk])).toEqual([wifi, desk]);
+    expect(parseFacilities("garbage")).toEqual([]);
+    expect(parseFacilities(null)).toEqual([]);
+  });
+});
 
 describe("parseStringArray", () => {
   test("有効な配列を正しくパースする", () => {
