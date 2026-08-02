@@ -38,7 +38,11 @@ export function personNameFieldSchema(label: string) {
  * `{ required: true }` を返す）。
  */
 export const emailFieldSchema = z
-  .string()
+  // `error` は外側にも要る。conform は空の FormData 値を `undefined` に畳むので、
+  // 未入力はこの `z.string()` で落ちる。ここを素の `z.string()` にすると
+  // Zod 既定の英語メッセージ（"Invalid input: expected string, received undefined"）が
+  // **公開フォームにそのまま出る**（実測。#1835 の退行）。
+  .string({ error: "有効なメールアドレスを入力してください" })
   .trim()
   .pipe(z.email({ error: "有効なメールアドレスを入力してください" }));
 
