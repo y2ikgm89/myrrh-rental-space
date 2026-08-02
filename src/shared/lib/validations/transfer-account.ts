@@ -59,5 +59,5 @@ export const transferGuidanceFormSchema = z.object({
     .max(5000, { error: "案内文は5000文字以内です" })
     .optional()
     .transform((value) => value || null),
-  expectedUpdatedAt: z.string().min(1, { error: "更新日時が不正です" }),
+  expectedUpdatedAt: z.string().trim().min(1, { error: "更新日時が不正です" }),
 });

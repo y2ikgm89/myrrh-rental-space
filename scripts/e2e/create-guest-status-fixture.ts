@@ -1,4 +1,5 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
+import { spaceFixtures } from "../../e2e/fixtures/test-data";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
 
@@ -24,7 +25,11 @@ Bun.plugin({
 const { createStatusToken, STATUS_TOKEN_LIFETIME_MS } =
   await import("@/shared/lib/reservation-status-token");
 
-const SPACE_SLUG = "coworking-space";
+/** この fixture が専有するスペース。共有スペースだと EXCLUDE 制約で 2 回目が落ちる。 */
+const SPACE_SLUG = spaceFixtures.guestReservationSpaceSlug;
+
+/** 冪等化のための marker。前回分を purge してから作り直す。 */
+const FIXTURE_MARKER = "[E2E] guest status fixture";
 
 async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();
@@ -49,8 +54,23 @@ async function main(): Promise<void> {
       select: { id: true },
     });
 
+    // 固定枠。専有スペースなので他 fixture とは衝突しないが、**この fixture の
+    // 前回分**とは衝突する（`reservations_no_active_time_overlap_excl` は
+    // status ∈ {PENDING, CONFIRMED} を対象にする）。marker で先に片付けて冪等にする。
     const startTime = new Date("2027-06-10T01:00:00.000Z");
     const endTime = new Date("2027-06-10T03:00:00.000Z");
+
+    const stale = await prisma.reservation.findMany({
+      where: { spaceId: space.id, notes: { startsWith: FIXTURE_MARKER } },
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      const staleIds = stale.map((r) => r.id);
+      await prisma.receipt.deleteMany({
+        where: { reservationId: { in: staleIds } },
+      });
+      await prisma.reservation.deleteMany({ where: { id: { in: staleIds } } });
+    }
     const totalPrice = 6000;
     const taxRate = 10;
     const taxAmount = Math.round((totalPrice * taxRate) / 100);
@@ -82,6 +102,7 @@ async function main(): Promise<void> {
         guestEmail,
         status: "CONFIRMED",
         paymentStatus: "UNPAID",
+        notes: `${FIXTURE_MARKER} ${unique}`,
       },
       select: { id: true },
     });

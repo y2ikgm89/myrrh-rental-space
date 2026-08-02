@@ -138,12 +138,54 @@ export const facilitiesSchema = z
 
 export type FacilityItem = z.infer<typeof facilityItemSchema>;
 
+/** `tryParseFacilities` の結果（失敗側はデータを持たない） */
+export type TryParseFacilitiesResult =
+  { success: true; data: FacilityItem[] } | { success: false };
+
+/**
+ * `Space.facilities` の strict parse — 読み取り失敗を呼び出し側に伝える。
+ *
+ * `parseFacilities` は「読めた分だけ返す」ので、戻り値が `[]` でも
+ * **「元から設備なし」と「保存値が丸ごと読めなかった」を区別できない**。
+ * 管理画面の編集フォームは設備 1 件につき hidden input を 1 つしか出さないため、
+ * 後者を空配列として扱うと、価格や説明文だけを直して保存した操作で
+ * `Space.facilities` が空配列に上書きされる（sidebar 設定の
+ * `tryParseSidebarWidgets` と同じ役割をここで担う）。
+ *
+ * `success: false` は「本当に何も読めなかった」ときだけ:
+ * - 配列でない値が保存されている（object / string / number）
+ * - 空でない配列なのに 1 件も検証を通らなかった
+ *
+ * null / undefined（未設定）と空配列は「設備なし」であって読み取り失敗ではない。
+ * 一部だけ壊れた配列は #1822 の方針どおり読めた分を返す（`success: true`）—
+ * 生き残った設備を編集できる状態のほうが被害が小さいため。
+ */
+export function tryParseFacilities(value: unknown): TryParseFacilitiesResult {
+  if (value === null || value === undefined) return { success: true, data: [] };
+  if (!Array.isArray(value)) return { success: false };
+
+  const data: FacilityItem[] = [];
+  // `name` は React key の stable ID なので、canonical schema と同じく重複を許さない
+  const seenNames = new Set<string>();
+  for (const item of value) {
+    const parsed = facilityItemSchema.safeParse(item);
+    if (!parsed.success) continue;
+    if (seenNames.has(parsed.data.name)) continue;
+    seenNames.add(parsed.data.name);
+    data.push(parsed.data);
+  }
+
+  if (value.length > 0 && data.length === 0) return { success: false };
+  return { success: true, data };
+}
+
 /**
  * unknown 値を `FacilityItem[]` に安全に変換
  *
  * `Space.facilities` は構造化された設備リスト（Airbnb / Booking.com 標準）。
  * `{ name: string; iconName: string }[]` 形式で保存。
- * 旧 `string[]` 形式はマイグレーション 20260507163006 で object 化済み。
+ * 旧 `string[]` 形式は init migration に畳み込み済み（当時の変換 migration は
+ * squash されて残っていないので、番号での参照はしない）。
  *
  * **配列全体ではなく 1 件ずつ検証する**（`parseGallery` と同じ形）。まとめて
  * `facilitiesSchema` に通すと、1 件の不正で**そのスペースの設備が全部消える**。
@@ -155,23 +197,17 @@ export type FacilityItem = z.infer<typeof facilityItemSchema>;
  * 1 件ずつなら、空白だけの設備（元々画面に何も出ていない）だけが落ちて
  * 残りは生き残る。重複は先に現れた方を採る。
  *
+ * **書き戻す画面では使わない** — 読めたかどうかを潰してしまうため、
+ * 編集フォームなど「読んだ値をそのまま保存し直す」経路は
+ * `tryParseFacilities` を使って読み取り失敗を検出する。
+ *
  * @example
  * const facilities = parseFacilities(space.facilities)
  * // facilities[0].name / facilities[0].iconName でアクセス
  */
 export function parseFacilities(value: unknown): FacilityItem[] {
-  if (!Array.isArray(value)) return [];
-  const result: FacilityItem[] = [];
-  // `name` は React key の stable ID なので、canonical schema と同じく重複を許さない
-  const seenNames = new Set<string>();
-  for (const item of value) {
-    const parsed = facilityItemSchema.safeParse(item);
-    if (!parsed.success) continue;
-    if (seenNames.has(parsed.data.name)) continue;
-    seenNames.add(parsed.data.name);
-    result.push(parsed.data);
-  }
-  return result;
+  const result = tryParseFacilities(value);
+  return result.success ? result.data : [];
 }
 
 /**

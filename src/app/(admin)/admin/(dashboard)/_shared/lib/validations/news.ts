@@ -45,6 +45,7 @@ const isPublishedFormSchema = z.preprocess((v) => {
  */
 export const newsSlugSchema = z
   .string()
+  .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(100, { error: "スラッグは100文字以内で入力してください" })
   .regex(/^[a-z0-9-]+$/, {

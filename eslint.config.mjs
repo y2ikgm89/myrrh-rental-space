@@ -359,6 +359,11 @@ const eslintConfig = defineConfig([
         "error",
         { mappedKeys: CDN_MAPPED_CACHE_TAGS_KEYS },
       ],
+      // 必須テキストは `.trim()` を先に通す。`.min(1)` は空白 1 文字を通すため、
+      // 見た目が空の値が保存され、その先の副作用まで走る。**順序が本体** —
+      // `z.string().min(1).trim()` は "   " を通して data を "" にする。
+      // 例外（token / id / slug 等の機械生成値）は行単位の disable で理由を書く。
+      "local/require-trimmed-text": "error",
     },
   },
 

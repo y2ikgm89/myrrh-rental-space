@@ -26,11 +26,21 @@ export function personNameFieldSchema(label: string) {
 }
 
 /**
- * 顧客メールアドレス (Zod 4 top-level `z.email`)。
+ * 顧客メールアドレス。
+ *
+ * **trim してから形式検証する。** 素の `z.email()` は `" a@example.com"` を
+ * 拒否するので、貼り付けに空白が紛れただけで「有効なメールアドレスを入力して
+ * ください」が出る — 利用者には打ち間違いに見えない。`z.string().trim()` を
+ * 前段に置いて正規化してから `z.email()` に渡す。
+ *
+ * conform の制約出力は変わらない（実測: 素の `z.email()` も
+ * `z.string().trim().pipe(z.email())` も `getZodConstraint` は
+ * `{ required: true }` を返す）。
  */
-export const emailFieldSchema = z.email({
-  error: "有効なメールアドレスを入力してください",
-});
+export const emailFieldSchema = z
+  .string()
+  .trim()
+  .pipe(z.email({ error: "有効なメールアドレスを入力してください" }));
 
 /**
  * 任意電話番号 (最大 20 文字、空文字許容)。

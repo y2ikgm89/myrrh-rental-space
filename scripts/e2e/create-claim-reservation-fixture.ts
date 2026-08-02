@@ -1,4 +1,5 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
+import { spaceFixtures } from "../../e2e/fixtures/test-data";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
 
@@ -62,7 +63,11 @@ Bun.plugin({
 const { createReservationClaimToken } =
   await import("@/shared/lib/reservation-claim-token");
 
-const SPACE_SLUG = "coworking-space";
+/** この fixture が専有するスペース。共有スペースだと EXCLUDE 制約で 2 回目が落ちる。 */
+const SPACE_SLUG = spaceFixtures.guestReservationSpaceSlug;
+
+/** 冪等化のための marker。前回分を purge してから作り直す。 */
+const FIXTURE_MARKER = "[E2E] claim reservation fixture";
 
 async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();
@@ -87,10 +92,24 @@ async function main(): Promise<void> {
       select: { id: true },
     });
 
-    // 過去/既存 seed データと重ならない、十分未来の固定枠を使う
-    // （直接 Prisma insert のため overlap チェックは走らない）。
+    // 固定枠を使う。専有スペースなので他 fixture とは衝突しないが、**この fixture の
+    // 前回分**とは衝突する（EXCLUDE 制約 `reservations_no_active_time_overlap_excl`）。
+    // spec 本体から呼ばれ CI は `retries: 2` なので、1 度残ると 3 attempt すべてが
+    // fixture 生成エラーになる。marker 付きの旧行を先に片付けて冪等にする。
     const startTime = new Date("2027-03-15T01:00:00.000Z");
     const endTime = new Date("2027-03-15T03:00:00.000Z");
+
+    const stale = await prisma.reservation.findMany({
+      where: { spaceId: space.id, notes: { startsWith: FIXTURE_MARKER } },
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      const staleIds = stale.map((r) => r.id);
+      await prisma.receipt.deleteMany({
+        where: { reservationId: { in: staleIds } },
+      });
+      await prisma.reservation.deleteMany({ where: { id: { in: staleIds } } });
+    }
 
     // taxRateType/taxRate/taxAmount/totalPriceWithTax/rateBreakdownJson は
     // fixture は rate plan resolver を経由しない直接 insert のため、空 segments
@@ -124,6 +143,7 @@ async function main(): Promise<void> {
         guestLastName: "クレームE2Eゲスト",
         guestFirstName: "太郎",
         guestEmail,
+        notes: `${FIXTURE_MARKER} ${unique}`,
       },
       select: { id: true },
     });

@@ -18,11 +18,13 @@ export const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /**
  * URLスラッグパラメータ（小文字英数字 + ハイフン、1-100文字）
  */
+// eslint-disable-next-line local/require-trimmed-text -- URL の path segment
 export const slugParamSchema = z.string().min(1).max(100).regex(SLUG_REGEX);
 
 /**
  * エンティティIDパラメータ（CUID等、1-100文字）
  */
+// eslint-disable-next-line local/require-trimmed-text -- 同上
 export const idParamSchema = z.string().min(1).max(100);
 
 /**

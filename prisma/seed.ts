@@ -6,7 +6,6 @@
  * 使用方法（dev / prod を明確に分離）:
  *   bun prisma/seed.ts                          # DEV（既定・冪等）: 完全な開発環境を構築
  *   bun prisma/seed.ts --dev                    #   ↑ の明示エイリアス
- *   bun prisma/seed.ts --reset                  # DEV: 全削除してから再構築（破壊的・開発専用）
  *   bun prisma/seed.ts --production [email] [name]              # PROD: 本番テンプレート（デモ/テストなし）
  *
  * DEV（引数なし）が構築するもの:
@@ -20,11 +19,10 @@
  *
  * 例:
  *   bun prisma/seed.ts
- *   bun prisma/seed.ts --reset
  *   bun prisma/seed.ts --production owner@example.com "オーナー名"
  *
  * Safety:
- *   `--dev` / `--reset` fail closed against production-looking DATABASE_URL and
+ *   `--dev` fail closed against production-looking DATABASE_URL and
  *   deployed runtimes (NODE_ENV=production / APP_SURFACE). See `./seed-safety`.
  */
 
@@ -120,81 +118,6 @@ const prisma = new PrismaClient({
 
 // =============================================================================
 // Helper: Clear All Data (--fresh用)
-// =============================================================================
-
-async function clearAllData() {
-  console.log("🗑️  Clearing all data...");
-  console.log("");
-
-  // 依存関係の逆順で削除（interactive transaction）
-  await prisma.$transaction(async (tx) => {
-    // SpaceReview（FK: reservation / customer / space / user）
-    await tx.spaceReview.deleteMany();
-
-    // AdminNotification（管理画面通知）
-    await tx.adminNotification.deleteMany();
-
-    // BlockTemplate（Lexical 再利用ブロック）
-    await tx.blockTemplate.deleteMany();
-
-    // 予約関連
-    // NOTE: termsDocument / termsAgreement は意図的に deleteMany しない。
-    //   規約マスターは Prisma 公式 Data Migration パターンとして
-    //   初期 baseline migration で SSoT 管理しており、
-    //   seed.ts は規約に一切触れない設計に統一済。
-    //   完全再初期化が必要な場合は `prisma migrate reset` を使用すること
-    //   (schema drop + 全 migration 再適用で terms_documents も再生成される)。
-    await tx.reservation.deleteMany();
-
-    // コンテンツ
-    await tx.post.deleteMany();
-    await tx.postCategory.deleteMany();
-    await tx.postTag.deleteMany();
-    await tx.faqItem.deleteMany();
-    await tx.faqCategory.deleteMany();
-    await tx.news.deleteMany();
-    await tx.section.deleteMany();
-    await tx.userPageAssignment.deleteMany();
-    await tx.page.deleteMany();
-
-    // 顧客・問い合わせ
-    await tx.inquiry.deleteMany();
-    await tx.customer.deleteMany();
-
-    // イベント申込（FK: EventRegistration → Event）
-    await tx.eventRegistration.deleteMany();
-    await tx.event.deleteMany();
-
-    // スペース関連
-    await tx.space.deleteMany();
-    await tx.spaceCategory.deleteMany();
-    await tx.location.deleteMany();
-
-    // クーポン
-    await tx.coupon.deleteMany();
-
-    // サイト設定
-    await tx.navigationItem.deleteMany();
-    await tx.announcementBar.deleteMany();
-    await tx.socialLink.deleteMany();
-
-    // 認証関連
-    await tx.$executeRaw`SELECT set_config('myrrh.audit_log_mutation_bypass', 'seed', true)`;
-    await tx.auditLog.deleteMany();
-    await tx.session.deleteMany();
-    await tx.verification.deleteMany();
-    await tx.account.deleteMany();
-    await tx.user.deleteMany();
-
-    // Media
-    await tx.media.deleteMany();
-
-    // Settings は削除しない（upsertで更新）
-  });
-
-  console.log("✅ All data cleared");
-  console.log("");
-}
 
 // =============================================================================
 // Helper: Create or Update Staff User (IAP only)
@@ -433,6 +356,11 @@ async function seedSettings(
     includeBusinessPlaceholders?: boolean;
   } = {},
 ) {
+  // dev seed だけが SwitchBot 等の統合を有効化する（本番テンプレートは既定のまま）。
+  // 判別子は `includeBusinessPlaceholders`: `seedProduction` だけが false を渡す。
+  const enableDevOnlyIntegrations =
+    options.includeBusinessPlaceholders !== false;
+
   // 特定商取引法表示等に関わる法人情報。DB は全列 nullable（NOT NULL 制約なし）で、
   // admin フォームも空欄保存を公式に許容する（個人事業主は法人番号を持たない等）。
   // 空欄なら getOrganizationJsonLdData 側が該当プロパティを丸ごと省略するため、
@@ -613,8 +541,18 @@ async function seedSettings(
     }),
     prisma.settingsSwitchbot.upsert({
       where: { id: "singleton" },
-      update: {},
-      create: { id: "singleton" },
+      // dev は SwitchBot を有効にしておく。以前は
+      // `create-passcode-reveal-fixture` が実行時にこの singleton を true へ
+      // 書き換えて**戻さなかった**ので、seed が作れる状態（schema 既定の false）と
+      // 実際の DB が恒久的に食い違っていた。singleton の書き換えは fixture ではなく
+      // seed の宣言に置くほうが観測しやすく、復元 hook も要らない。
+      // 本番テンプレート（`seedSettings({ includeBusinessPlaceholders: false })`）
+      // には効かせない。
+      update: enableDevOnlyIntegrations ? { switchbotEnabled: true } : {},
+      create: {
+        id: "singleton",
+        ...(enableDevOnlyIntegrations ? { switchbotEnabled: true } : {}),
+      },
     }),
     prisma.settingsDataRetention.upsert({
       where: { id: "singleton" },
@@ -689,7 +627,6 @@ async function seedLocations(overridePublished?: boolean) {
         food_allowed: true,
       },
       imageUrl: "/images/seed/location-main.svg",
-      sortOrder: 0,
       isPublished: true,
       latitude: 35.6651,
       longitude: 139.7119,
@@ -720,7 +657,6 @@ async function seedLocations(overridePublished?: boolean) {
         photography_allowed: true,
       },
       imageUrl: "/images/seed/location-annex.svg",
-      sortOrder: 1,
       isPublished: true,
       latitude: 35.6653,
       longitude: 139.7121,
@@ -758,7 +694,6 @@ async function seedLocations(overridePublished?: boolean) {
         music_allowed: true,
       },
       imageUrl: "/images/seed/location-shinjuku.svg",
-      sortOrder: 2,
       isPublished: false,
       latitude: 35.6896,
       longitude: 139.6917,
@@ -776,6 +711,15 @@ async function seedLocations(overridePublished?: boolean) {
   // index のため、upsert({where:{name}}) は ON CONFLICT ("name") が対応する
   // index (WHERE "isActive" = true) を解決できずエラーになる。SpaceCategory
   // と同型の findFirst + create/update に置き換えて idempotent 化する。
+  //
+  // **`sortOrder` は fixture に書かず、update でも触らない。** `Location.sortOrder`
+  // にも `isActive` 条件の partial unique index があり、管理画面の
+  // `updateLocationOrder`（`locations/commands.ts`）が並び替えると値が入れ替わる。
+  // 旧実装はリテラルの 0/1/2 を update の data ごと書き戻していたため、
+  // 恒等でない並び替えが一度でも行われた DB では re-seed が P2002 で中断し、
+  // `main().catch` の `process.exit(1)` で以降の phase が丸ごと走らなくなった。
+  // create 時に max+1 で採番すれば宣言順がそのまま表示順になり、衝突しえない
+  // （`seedSpaceCategories` と同じ形）。
   for (const loc of locations) {
     const locationData =
       overridePublished !== undefined
@@ -790,7 +734,16 @@ async function seedLocations(overridePublished?: boolean) {
         data: locationData,
       });
     } else {
-      await prisma.location.create({ data: locationData });
+      const maxOrder = await prisma.location.aggregate({
+        where: { isActive: true },
+        _max: { sortOrder: true },
+      });
+      await prisma.location.create({
+        data: {
+          ...locationData,
+          sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+        },
+      });
     }
   }
 
@@ -910,6 +863,36 @@ async function seedEventCategories() {
 
 const REVIEW_E2E_SPACE_SLUG = "coworking-space";
 const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
+
+/**
+ * dev customer の**会員行**（`userId` を持つ方）を引く。
+ *
+ * `seedDevCustomerAndReservations` は同じ email で **2 行**作る:
+ * 会員（`userId` あり、`Customer.userId` は @unique）と、merge fixture 用の
+ * ゲスト（`userId: null`）。`emailCanonical` に unique は無い（`@@index` のみ）
+ * ので、email だけで `findFirst` すると **どちらが返るか保証が無い**。
+ *
+ * これは実害のある曖昧さで、ゲスト行が返るとイベント申込がそちらに紐づく。
+ * `/mypage/events` は `getCustomerByUserId(user.id)` で会員行を解決するため
+ * （`userId` が @unique なので必ず会員行）、申込は**画面に出てこない**。
+ * `calendar-download.spec.ts` はその申込を hard-assert している。
+ *
+ * fixture 側（`scripts/e2e/**`・`e2e/helpers/**`）は既に 6 箇所で
+ * `userId: { not: null }` を付けており、seed だけが取り残されていた。
+ * ゲスト行は自分自身の述語（`userId: null, anonymizedAt: null`）で引くので、
+ * 互換用の shim は要らない。
+ */
+async function findDevMemberCustomer<T extends Record<string, boolean>>(
+  select: T,
+) {
+  return prisma.customer.findFirst({
+    where: {
+      emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
+      userId: { not: null },
+    },
+    select,
+  });
+}
 const SEED_REVIEWABLE_SPACE_SLUGS = [
   "meeting-room-a",
   "seminar-room",
@@ -928,6 +911,58 @@ const SEED_REVIEWABLE_SPACE_SLUGS = [
  * 「fixture 専用スペースにはデモ予約が載らない」保証の実体で、
  * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
  */
+/**
+ * デモ予約を割り当てる顧客。**seedCustomers の宣言順**で固定する。
+ *
+ * 旧実装は `customer.findMany({ where: { isActive: true } })` を `orderBy` 無しで
+ * 引き、`customerIndex % customers.length` で割り当てていた。2 つの意味で不安定:
+ *
+ * - Postgres の返却順は保証が無い（`spaceIndex` と同じ欠陥）
+ * - **集合そのものが動く**。`create-receipt-download-fixture` 等が実行のたびに
+ *   有効な顧客を増やすので `customers.length` が変わり、剰余で全割り当てがずれる
+ *
+ * 宣言した email だけを対象にすれば、fixture が作った顧客は構造的に入らない。
+ */
+const DEMO_RESERVATION_CUSTOMER_EMAILS = [
+  "watabe.ryo@example.com",
+  "kondo.aya@example.com",
+  "asano.shinichi@example.com",
+  "tanaka.taro@example.com",
+  "yamada.hanako@example.com",
+  "sato.ichiro@example.com",
+  "kimura.yuko@example.com",
+  "hayashi.daisuke@example.com",
+  "suzuki.misaki@example.com",
+  "takahashi.kenta@example.com",
+  "ito.sakura@example.com",
+  "watanabe.daisuke@example.com",
+  "kobayashi.mayu@example.com",
+  "matsumoto.naoki@example.com",
+  "inoue.mika@example.com",
+  "saito.takuya@example.com",
+  "shimizu.yumi@example.com",
+  "yamaguchi.sho@example.com",
+  "ishida.ai@example.com",
+  "maeda.kenichi@example.com",
+  "kato.makoto@example.com",
+  "yoshida.miho@example.com",
+  "yamamoto.shota@example.com",
+  "nakajima.yuko@example.com",
+  "ono.yudai@example.com",
+  "fujita.megumi@example.com",
+  "nakamura.keiko@example.com",
+  "ogawa.yusuke@example.com",
+  "okada.mari@example.com",
+  "blacklist.user@example.com",
+  "tamura@abc-corp.example.com",
+  "morita@xyz-llc.example.com",
+  "nishimura@sample.example.com",
+  "murakami@npo.example.com",
+] as const;
+
+/** デモ予約の marker。冪等判定のキーで、実行日に依存しない。 */
+const SEED_DEMO_RESERVATION_MARKER = "[SEED-DEMO]";
+
 const DEMO_RESERVATION_SPACE_SLUGS = [
   "meeting-room-a",
   "seminar-room",
@@ -976,8 +1011,52 @@ const DEV_CUSTOMER_RESERVATION_SPACE_SLUG = "meeting-room-a";
  */
 const E2E_PASSCODE_FIXTURE_SPACE_SLUG = "e2e-passcode-fixture";
 
+/**
+ * ゲスト予約系 fixture が専有するスペース。
+ *
+ * `create-claim-reservation-fixture` / `create-guest-status-fixture` /
+ * `create-receipt-download-fixture` は固定または乱択の日時に予約を作る。共有の
+ * `coworking-space` に作っていたため、同じ枠を要求する 2 回目の実行が EXCLUDE 制約
+ * `reservations_no_active_time_overlap_excl` に弾かれていた。claim は spec 本体から
+ * 呼ばれ CI は `retries: 2` なので、**1 度落ちると 3 attempt すべてが別の理由で
+ * 落ち続ける**（fixture 生成エラーで、本来の失敗理由が見えなくなる）。
+ *
+ * 解錠番号 fixture とは別スペースにする。所有分割の要点は「1 fixture 1 スペース」で、
+ * 相乗りさせると同じ衝突が別の組み合わせで復活する。
+ */
+const E2E_GUEST_RESERVATION_FIXTURE_SPACE_SLUG =
+  "e2e-guest-reservation-fixture";
+
 /** 上記スペースに紐づく Pad デバイスの SwitchBot 側 ID（`deviceId` は @unique）。 */
 const E2E_PASSCODE_FIXTURE_DEVICE_ID = "e2e-passcode-fixture-keypad";
+
+/**
+ * dev seed が用意する fixture 専有スペースの宣言。
+ *
+ * いずれも **`isPublished: false`**（`/spaces` に出ないので
+ * `e2e/visual/public-pages.spec.ts` の `spaces-list.png` に影響しない）かつ
+ * **`seedDev()` からのみ**作る（`seedProduction()` は `seedSpaces(false)` しか
+ * 呼ばないので本番には入らない）。
+ *
+ * どれも `DEMO_RESERVATION_SPACE_SLUGS` に含まれない。これが「fixture が要求する
+ * 時間帯は必ず空いている」ことの実体で、
+ * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
+ */
+const E2E_FIXTURE_SPACES = [
+  {
+    slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG,
+    name: "[E2E] 解錠番号検証用スペース",
+    description:
+      "時刻依存の E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+    keypadDeviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID,
+  },
+  {
+    slug: E2E_GUEST_RESERVATION_FIXTURE_SPACE_SLUG,
+    name: "[E2E] ゲスト予約検証用スペース",
+    description:
+      "ゲスト予約系 E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+  },
+] as const satisfies readonly FixtureSpaceSpec[];
 
 async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
@@ -1074,16 +1153,57 @@ async function seedSpaces(overridePublished?: boolean) {
     },
   ];
 
+  // **本番 seed（`seedSpaces(false)`）は既存行に触らない。** dev だけが宣言へ
+  // 収束させる。`--production` の再実行が管理画面の編集を踏み潰さないため。
+  const reconcileDeclaredContent = overridePublished === undefined;
+
   for (const space of spaces) {
+    // `slug` unique は isActive 条件の partial index。判定の母集合を制約に揃える
+    // （soft-delete 済みの同 slug 行を「存在する」と数えると create をスキップし、
+    // seedDevCustomerAndReservations が空振りして stripe 系 spec が落ちる）。
     const existing = await prisma.space.findFirst({
-      where: { slug: space.slug },
+      where: { slug: space.slug, isActive: true },
     });
     if (!existing) {
       await prisma.space.create({ data: space });
       console.log(`✅ Created space: ${space.name}`);
-    } else {
-      console.log(`⏭️ Skipped existing space: ${space.name}`);
+      continue;
     }
+
+    if (!reconcileDeclaredContent) {
+      console.log(`⏭️ Skipped existing space: ${space.name}`);
+      continue;
+    }
+
+    // 宣言済みの**内容**だけを揃え直す。`isPublished` / `isActive` /
+    // `reviewsEnabled` / `locationId` / `categoryId` は書かない — 公開状態や
+    // 配置は管理画面と他 spec（`axe-admin-feature-disabled` 等）の領分で、
+    // seed が触ると相手を壊す。
+    //
+    // 収束させないと、宣言を変えても既存の dev / test DB に反映されない。
+    // `scripts/migrate-test-db.ts` は `migrate deploy` しか流さないので、
+    // ローカルだけ CI と静かに食い違う。実害: `rate-plan-preview.smoke.spec.ts`
+    // がロックしている「¥1,430」は `hourlyPrice: 500` から導出されるので、
+    // 古い価格が残った DB では価格アサーションが落ちる。
+    const {
+      slug: _slug,
+      isPublished: _isPublished,
+      isActive: _isActive,
+      reviewsEnabled: _reviewsEnabled,
+      locationId: _locationId,
+      categoryId: _categoryId,
+      ...declaredContent
+    } = {
+      locationId: undefined,
+      categoryId: undefined,
+      ...space,
+    };
+
+    await prisma.space.update({
+      where: { id: existing.id },
+      data: declaredContent,
+    });
+    console.log(`✅ Reconciled space: ${space.name}`);
   }
 
   if (overridePublished !== false) {
@@ -1107,13 +1227,27 @@ async function seedSpaces(overridePublished?: boolean) {
  *
  * `seedProduction()` からは呼ばない。
  */
-async function seedE2EFixtureSpace() {
+interface FixtureSpaceSpec {
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string;
+  /** SwitchBot の Pad デバイスを紐づけるか（解錠番号 fixture のみ必要）。 */
+  readonly keypadDeviceId?: string;
+}
+
+/**
+ * 時刻依存 E2E fixture が専有するスペースを 1 件用意する（**dev seed 限定・非公開**）。
+ *
+ * 目的と設計判断は `E2E_FIXTURE_SPACES` のコメントを参照。
+ * `seedProduction()` からは呼ばない。
+ */
+async function ensureFixtureSpace(spec: FixtureSpaceSpec) {
   const location = await prisma.location.findFirst({
     orderBy: { sortOrder: "asc" },
     select: { id: true },
   });
   if (!location) {
-    console.log("⚠️ No location found for the E2E fixture space. Skipping.");
+    console.log(`⚠️ No location found for ${spec.slug}. Skipping.`);
     return;
   }
 
@@ -1121,7 +1255,7 @@ async function seedE2EFixtureSpace() {
   // 予約しないための partial unique index で、`isActive` 条件付き）。よって
   // `upsert({ where: { slug } })` は使えず、seedSpaces と同じ findFirst → create/update。
   const existing = await prisma.space.findFirst({
-    where: { slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG },
+    where: { slug: spec.slug, isActive: true },
     select: { id: true, smartLockDeviceId: true, locationId: true },
   });
 
@@ -1134,11 +1268,9 @@ async function seedE2EFixtureSpace() {
       })
     : await prisma.space.create({
         data: {
-          slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG,
-          name: "[E2E] 解錠番号検証用スペース",
-          ...buildSeedDescription(
-            "時刻依存の E2E fixture が専有する非公開スペース。公開一覧には出ません。",
-          ),
+          slug: spec.slug,
+          name: spec.name,
+          ...buildSeedDescription(spec.description),
           capacity: 1,
           hourlyPrice: 3000,
           // 公開されないので画像は既存 seed のプレースホルダを流用する。
@@ -1154,6 +1286,11 @@ async function seedE2EFixtureSpace() {
         select: { id: true, smartLockDeviceId: true, locationId: true },
       });
 
+  if (spec.keypadDeviceId === undefined) {
+    console.log(`✅ Reconciled fixture space: ${spec.slug}`);
+    return;
+  }
+
   // デバイスは**毎回揃え直す**。「`smartLockDeviceId` が入っていれば抜ける」に
   // すると、手動で非活性化されたり deviceType を変えられたときに再実行で
   // 復旧できない。`getPasscodeRevealState` は `!device.isActive` と非 Pad 型を
@@ -1161,10 +1298,10 @@ async function seedE2EFixtureSpace() {
   // ボタンが出ず、spec は原因の分かりにくい形で落ちる。seed の冪等性は
   // 「再実行すれば必ず期待状態になる」ことを指す。
   const device = await prisma.smartLockDevice.upsert({
-    where: { deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID },
+    where: { deviceId: spec.keypadDeviceId },
     create: {
       locationId: space.locationId ?? location.id,
-      deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID,
+      deviceId: spec.keypadDeviceId,
       deviceName: "[E2E] テストキーパッド",
       deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
       isActive: true,
@@ -1182,7 +1319,14 @@ async function seedE2EFixtureSpace() {
       data: { smartLockDeviceId: device.id },
     });
   }
-  console.log(`✅ Reconciled E2E fixture space and its keypad device`);
+  console.log(`✅ Reconciled fixture space with keypad: ${spec.slug}`);
+}
+
+/** 時刻依存 E2E fixture が専有するスペース群（dev seed 限定）。 */
+async function seedE2EFixtureSpaces() {
+  for (const spec of E2E_FIXTURE_SPACES) {
+    await ensureFixtureSpace(spec);
+  }
 }
 
 // =============================================================================
@@ -1335,15 +1479,22 @@ async function seedCoupons() {
   ];
 
   for (const coupon of coupons) {
-    const existing = await prisma.coupon.findUnique({
+    // 有効期間は**作成時の時計**から計算されるので、skip すると古い DB では
+    // 期限切れのまま永久に残る（`VIP30` は 1 ヶ月で失効し、以後どの再 seed でも
+    // 蘇らない）。`code` は無条件 @unique なので upsert が使えて、
+    // 期間だけ引き直せる。`usageCount` は本物のデモ履歴なので触らない。
+    await prisma.coupon.upsert({
       where: { code: coupon.code },
+      update: {
+        validFrom: coupon.validFrom,
+        // `exactOptionalPropertyTypes` のため undefined を明示代入しない。
+        ...(coupon.validUntil !== undefined
+          ? { validUntil: coupon.validUntil }
+          : {}),
+      },
+      create: coupon,
     });
-    if (!existing) {
-      await prisma.coupon.create({ data: coupon });
-      console.log(`✅ Created coupon: ${coupon.code}`);
-    } else {
-      console.log(`⏭️ Skipped existing coupon: ${coupon.code}`);
-    }
+    console.log(`✅ Reconciled coupon window: ${coupon.code}`);
   }
 }
 
@@ -2093,6 +2244,28 @@ function buildSeedLegacyPricingSnapshot(totalPrice: number) {
   };
 }
 
+/** JST の時差。アプリの表示は JST 固定（`src/shared/lib/date-format.ts`）。 */
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/**
+ * **JST の暦日 + 時**から UTC の `Date` を作る。
+ *
+ * `date.setHours(9)` はコンテナのローカル時刻で解釈されるので、JST の開発機では
+ * 9 時が 9 時でも UTC の CI runner では 9 時が JST 18 時になる。アプリは JST 固定の
+ * formatter で表示するため、同じ seed が環境で違う意味になっていた。
+ */
+function jstDateTime(base: Date, daysOffset: number, hour: number): Date {
+  const jst = new Date(base.getTime() + JST_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      jst.getUTCFullYear(),
+      jst.getUTCMonth(),
+      jst.getUTCDate() + daysOffset,
+      hour,
+    ) - JST_OFFSET_MS,
+  );
+}
+
 async function seedReservations() {
   // slug で明示し、`DEMO_RESERVATION_SPACE_SLUGS` の宣言順に並べ替える。
   // `findMany({ where: { isActive: true } })` を `orderBy` 無しで引くと Postgres の
@@ -2104,9 +2277,15 @@ async function seedReservations() {
   const spaces = DEMO_RESERVATION_SPACE_SLUGS.map((slug) =>
     found.find((space) => space.slug === slug),
   ).filter((space) => space !== undefined);
-  const customers = await prisma.customer.findMany({
-    where: { isActive: true },
+  const foundCustomers = await prisma.customer.findMany({
+    where: {
+      email: { in: [...DEMO_RESERVATION_CUSTOMER_EMAILS] },
+      isActive: true,
+    },
   });
+  const customers = DEMO_RESERVATION_CUSTOMER_EMAILS.map((email) =>
+    foundCustomers.find((customer) => customer.email === email),
+  ).filter((customer) => customer !== undefined);
   const coupons = await prisma.coupon.findMany({ where: { isActive: true } });
 
   if (spaces.length === 0 || customers.length === 0) {
@@ -2571,19 +2750,24 @@ async function seedReservations() {
     const customer = customers[res.customerIndex % customers.length];
     if (!space || !customer) continue;
 
-    const date = new Date(now);
-    date.setDate(date.getDate() + res.daysOffset);
-    date.setHours(res.startHour, 0, 0, 0);
+    // 時刻は **JST の暦日 + 時** で組む。`setHours` はコンテナのローカル時刻なので、
+    // JST の開発機では 9 時が 9 時でも、UTC の CI runner では 9 時が JST 18 時を
+    // 指す。アプリは JST 固定の formatter で表示する（絶対規約）ため、同じ seed が
+    // 環境で違う意味になっていた。
+    const date = jstDateTime(now, res.daysOffset, res.startHour);
+    const endDate = jstDateTime(
+      now,
+      res.daysOffset,
+      res.startHour + res.duration,
+    );
 
-    const endDate = new Date(date);
-    endDate.setHours(endDate.getHours() + res.duration);
-
+    // 冪等判定は **marker** で行う。旧実装は `startTime` をキーにしていたが、
+    // これは `now` からの相対で決まるので、日付が変わると全エントリが「無い」と
+    // 判定されて再作成され、デモ予約が run のたびに増え続けた。
+    // キーはエントリ自身の内容から導出するので、実行日に依存しない。
+    const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
     const existing = await prisma.reservation.findFirst({
-      where: {
-        spaceId: space.id,
-        customerId: customer.id,
-        startTime: date,
-      },
+      where: { notes: { startsWith: marker } },
     });
 
     if (!existing) {
@@ -2629,7 +2813,8 @@ async function seedReservations() {
             ? couponDiscountAmount
             : null,
           ...buildSeedLegacyPricingSnapshot(totalPrice),
-          ...(res.notes != null ? { notes: res.notes } : {}),
+          // marker を先頭に置く。冪等判定のキーであり、実行日に依存しない。
+          notes: res.notes != null ? `${marker} ${res.notes}` : marker,
           ...(res.paymentStatus !== undefined
             ? { paymentStatus: res.paymentStatus }
             : {}),
@@ -3379,20 +3564,34 @@ async function seedFaq(overridePublished?: boolean) {
       console.log(`✅ Created FAQ category: ${category.name}`);
     }
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (!item) continue;
+    for (const item of items) {
+      // `deletedAt: null` を必ず入れる。`FaqItem` の `(categoryId, order)` unique は
+      // 未削除行だけを対象にした partial index なので、削除済み行を「存在する」と
+      // 判定すると create をスキップして表示が欠け、逆に削除済み行の order を
+      // 空き扱いすると衝突する。判定の母集合を制約の述語に合わせる。
       const existing = await prisma.faqItem.findFirst({
-        where: { categoryId: faqCategory.id, question: item.question },
+        where: {
+          categoryId: faqCategory.id,
+          question: item.question,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
+        // `order` は配列 index を書かない。管理画面の並び替え / 追加
+        // （`faq/item-commands.ts`）で既存行が別の order を占有していると
+        // P2002 で seed が中断する。未削除行の max+1 で採番すれば、
+        // 宣言順がそのまま表示順になり衝突しえない。
+        const maxOrder = await prisma.faqItem.aggregate({
+          where: { categoryId: faqCategory.id, deletedAt: null },
+          _max: { order: true },
+        });
         await prisma.faqItem.create({
           data: {
             categoryId: faqCategory.id,
             question: item.question,
             answer: item.answer,
-            order: i,
+            order: (maxOrder._max.order ?? -1) + 1,
             isPublished: overridePublished ?? true,
             ...(overridePublished === false
               ? { publishedAt: null }
@@ -3636,62 +3835,96 @@ async function seedBlog() {
 // Navigation
 // =============================================================================
 
-async function seedNavigation() {
-  // label は PortableTextSpan[] 形式（テキスト + アイコンの混在 span 配列）。
-  // _key は span ごとの stable identity（Sanity Portable Text 公式準拠）。
-  const t = (text: string) => [
-    { _key: crypto.randomUUID(), _type: "span" as const, text },
-  ];
+/**
+ * ナビゲーション項目の宣言。**`(type, order)` が一意キー**
+ * （`navigation_items_type_order_key`、`prisma/schema.prisma`）。
+ *
+ * 旧実装は `(type, url)` で存在判定して `order` をリテラルで create していた。
+ * 判定キーと制約キーが違うため、url だけがずれた行が既にあると
+ * 「見つからない → 同じ order で create → P2002」で seed が中断し、
+ * `main().catch` の `process.exit(1)` で以降の phase が丸ごと走らなくなる。
+ * url がずれるのは実際に起きる: 管理画面の `updateNavigationItem` は
+ * `url` を書き換えるが `order` は据え置く（`navigation/commands.ts`）。
+ * 過去のコミットで url を変えた seed（`/posts` → `/blog` 等）を当てた DB も同じ。
+ *
+ * `_key` は決定的にする。`crypto.randomUUID()` だと reconcile のたびに JSON が
+ * 変わり、毎回無意味な更新が走る。Portable Text の `_key` は
+ * `z.string().min(1)`（`portable-text/schema.ts`）で形式自由なので、
+ * `${type}-${order}` で一意かつ安定に作れる。
+ */
+const SEED_NAVIGATION_GROUPS = [
+  {
+    type: "HEADER_DESKTOP",
+    items: [
+      { text: "ホーム", url: "/", order: 0 },
+      { text: "スペース", url: "/spaces", order: 1 },
+      { text: "イベント", url: "/events", order: 2 },
+      { text: "ブログ", url: "/blog", order: 3 },
+      { text: "お知らせ", url: "/news", order: 4 },
+      { text: "よくある質問", url: "/faq", order: 5 },
+      { text: "アクセス", url: "/access", order: 6 },
+      { text: "お問い合わせ", url: "/contact", order: 7 },
+    ],
+  },
+  {
+    type: "HEADER_MOBILE",
+    items: [
+      { text: "ホーム", url: "/", order: 0 },
+      { text: "スペース", url: "/spaces", order: 1 },
+      { text: "イベント", url: "/events", order: 2 },
+      { text: "ブログ", url: "/blog", order: 3 },
+      { text: "お知らせ", url: "/news", order: 4 },
+      { text: "よくある質問", url: "/faq", order: 5 },
+      { text: "アクセス", url: "/access", order: 6 },
+      { text: "お問い合わせ", url: "/contact", order: 7 },
+    ],
+  },
+  {
+    type: "FOOTER",
+    items: [
+      { text: "規約一覧", url: "/terms", order: 0 },
+      { text: "会社概要", url: "/about", order: 1 },
+      { text: "お問い合わせ", url: "/contact", order: 2 },
+    ],
+  },
+] as const;
 
-  const headerItems = [
-    { label: t("ホーム"), url: "/", order: 0 },
-    { label: t("スペース"), url: "/spaces", order: 1 },
-    { label: t("イベント"), url: "/events", order: 2 },
-    { label: t("ブログ"), url: "/blog", order: 3 },
-    { label: t("お知らせ"), url: "/news", order: 4 },
-    { label: t("よくある質問"), url: "/faq", order: 5 },
-    { label: t("アクセス"), url: "/access", order: 6 },
-    { label: t("お問い合わせ"), url: "/contact", order: 7 },
-  ];
+/**
+ * @param reconcile 既存行を宣言どおりに戻すか。dev は true（デモデータを宣言に
+ *   収束させる）、**本番は false**（管理画面での編集を seed が踏み潰さない）。
+ *   `seedLocations(false)` / `seedFaq(false)` と同じ dev/prod 分離の形。
+ */
+async function seedNavigation(reconcile = true) {
+  for (const group of SEED_NAVIGATION_GROUPS) {
+    for (const item of group.items) {
+      // label は PortableTextSpan[]（テキスト + アイコン混在の token 配列）。
+      const label = [
+        {
+          _key: `${group.type}-${String(item.order)}`,
+          _type: "span" as const,
+          text: item.text,
+        },
+      ];
 
-  const footerItems = [
-    { label: t("規約一覧"), url: "/terms", order: 0 },
-    { label: t("会社概要"), url: "/about", order: 1 },
-    { label: t("お問い合わせ"), url: "/contact", order: 2 },
-  ];
-
-  for (const item of headerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "HEADER_DESKTOP", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({
-        data: { ...item, type: "HEADER_DESKTOP" },
+      await prisma.navigationItem.upsert({
+        // 制約と同じキーで引く。これが P2002 を構造的に不可能にする。
+        where: { type_order: { type: group.type, order: item.order } },
+        update: reconcile ? { label, url: item.url } : {},
+        create: {
+          type: group.type,
+          order: item.order,
+          label,
+          url: item.url,
+        },
       });
     }
   }
 
-  for (const item of headerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "HEADER_MOBILE", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({
-        data: { ...item, type: "HEADER_MOBILE" },
-      });
-    }
-  }
-
-  for (const item of footerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "FOOTER", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({ data: { ...item, type: "FOOTER" } });
-    }
-  }
-
-  console.log("✅ Created navigation items");
+  console.log(
+    reconcile
+      ? "✅ Reconciled navigation items"
+      : "✅ Created missing navigation items",
+  );
 }
 
 // =============================================================================
@@ -3708,7 +3941,6 @@ async function seedAnnouncementBar() {
     text: string;
     linkUrl?: string;
     linkText?: string;
-    displayOrder: number;
     isActive?: boolean;
   }) => ({
     probe: text,
@@ -3722,19 +3954,16 @@ async function seedAnnouncementBar() {
       text: "年末年始の営業日程を掲載しました",
       linkUrl: "/news",
       linkText: "詳細を見る",
-      displayOrder: 2,
     }),
     createSeedAnnouncement({
       icon: "IconSparkles",
       text: "オープン記念!今月末まで全スペース20%OFF",
       linkUrl: "/spaces",
       linkText: "スペースを見る",
-      displayOrder: 1,
     }),
     createSeedAnnouncement({
       icon: "IconAlertTriangle",
       text: "1月15日(水)は設備点検のため休館いたします",
-      displayOrder: 0,
       isActive: false,
     }),
   ];
@@ -3751,8 +3980,15 @@ async function seedAnnouncementBar() {
     });
 
     if (!existing) {
+      // `displayOrder` は無条件 @unique。宣言リテラルのまま create すると、
+      // 管理画面で並び替えた DB の re-seed が P2002 で中断する。max+1 で採番する。
       const { probe: _probe, ...data } = announcement;
-      await prisma.announcementBar.create({ data });
+      const maxOrder = await prisma.announcementBar.aggregate({
+        _max: { displayOrder: true },
+      });
+      await prisma.announcementBar.create({
+        data: { ...data, displayOrder: (maxOrder._max.displayOrder ?? -1) + 1 },
+      });
       console.log(
         `✅ Created announcement: ${announcement.probe.slice(0, 30)}...`,
       );
@@ -3769,27 +4005,22 @@ async function seedSocialLinks() {
     {
       platform: "TWITTER" as const,
       url: "https://twitter.com/myrrh_rental",
-      order: 0,
     },
     {
       platform: "INSTAGRAM" as const,
       url: "https://instagram.com/myrrh_rental",
-      order: 1,
     },
     {
       platform: "FACEBOOK" as const,
       url: "https://facebook.com/myrrh.rental",
-      order: 2,
     },
     {
       platform: "LINE" as const,
       url: "https://line.me/R/ti/p/@myrrh-rental",
-      order: 3,
     },
     {
       platform: "YOUTUBE" as const,
       url: "https://youtube.com/@myrrh-rental",
-      order: 4,
       showOnMobile: false,
     },
   ];
@@ -3800,7 +4031,15 @@ async function seedSocialLinks() {
     });
 
     if (!existing) {
-      await prisma.socialLink.create({ data: link });
+      // `order` は無条件 @unique。宣言リテラルのまま create すると、管理画面で
+      // 並び替えた DB の re-seed が P2002 で中断する。max+1 で採番する。
+      const data = link;
+      const maxOrder = await prisma.socialLink.aggregate({
+        _max: { order: true },
+      });
+      await prisma.socialLink.create({
+        data: { ...data, order: (maxOrder._max.order ?? -1) + 1 },
+      });
       console.log(`✅ Created social link: ${link.platform}`);
     }
   }
@@ -4127,6 +4366,36 @@ async function seedEvents() {
           });
 
       // Dev/test seed contract: seeded events are rebuilt so E2E data never drifts.
+      //
+      // ただし**会計証跡が付いた申込がある event は丸ごと作り直さない**。
+      // `Receipt.eventRegistration` / `Refund.eventRegistration` は
+      // `onDelete: Restrict`（「領収書がある申込は物理削除不可」= 会計証跡保護）
+      // なので、削除しようとすると P2003 で seed が中断し、`main().catch` の
+      // `process.exit(1)` で以降の phase が丸ごと走らなくなる。
+      // dev / staging で Stripe のテスト決済を 1 度通すだけでこの状態になる
+      // （`events/payment-commands.ts` と
+      // `stripe-webhook/fulfill-event-registration-payment.ts` が領収書を発行する）。
+      //
+      // 「証跡付きだけ残して他を消す」では解けない。`slotId` / `ticketId` の FK も
+      // `RESTRICT` なので、残した申込が参照する slot / ticket の削除で今度はそちらが
+      // 落ちる。event 単位で作り直しを見送り、理由を名指しで出すのが正しい形。
+      const accountedRegistrations = await tx.eventRegistration.count({
+        where: {
+          eventId: event.id,
+          // `receipt` は to-one（`Receipt.eventRegistrationId` が @unique）、
+          // `refunds` は to-many。カーディナリティが違うので述語も変える。
+          OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
+        },
+      });
+      if (accountedRegistrations > 0) {
+        console.log(
+          `⏭️ Skipped rebuilding event ${eventRest.slug}: ${String(accountedRegistrations)} registration(s) carry a receipt/refund (accounting trail is protected by ON DELETE RESTRICT)`,
+        );
+        // `$transaction` の callback 内なので `continue` は使えない（この event の
+        // 作り直しだけを見送る）。
+        return;
+      }
+
       await tx.eventRegistration.deleteMany({ where: { eventId: event.id } });
       await tx.eventTimeSlot.deleteMany({ where: { eventId: event.id } });
       await tx.eventTicket.deleteMany({ where: { eventId: event.id } });
@@ -4230,9 +4499,11 @@ async function seedEvents() {
     }
   }
 
-  const devCustomer = await prisma.customer.findFirst({
-    where: { emailCanonical: normalizeSeedEmail("dev-customer@example.com") },
-    select: { id: true, email: true, lastName: true, firstName: true },
+  const devCustomer = await findDevMemberCustomer({
+    id: true,
+    email: true,
+    lastName: true,
+    firstName: true,
   });
   const singleEvent = await prisma.event.findUnique({
     where: { slug: "yoga-mindfulness-workshop" },
@@ -4488,10 +4759,7 @@ async function seedPublicReviewE2EFixture() {
       where: { slug: REVIEW_E2E_SPACE_SLUG },
       select: { id: true, hourlyPrice: true },
     }),
-    prisma.customer.findFirst({
-      where: { email: DEV_CUSTOMER_EMAIL, isActive: true },
-      select: { id: true },
-    }),
+    findDevMemberCustomer({ id: true }),
   ]);
 
   if (!space || !customer) {
@@ -5400,7 +5668,6 @@ async function seedInstagramPosts() {
     caption: string;
     mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
     permalink: string;
-    sortOrder: number;
   }> = [
     {
       postId: "seed-ig-001",
@@ -5410,7 +5677,6 @@ async function seedInstagramPosts() {
       caption: "本日の会議室A。午後のご予約受付中です。#レンタルスペース",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-001/",
-      sortOrder: 0,
     },
     {
       postId: "seed-ig-002",
@@ -5420,7 +5686,6 @@ async function seedInstagramPosts() {
       caption: "スペース紹介ツアー動画を公開しました。",
       mediaType: "VIDEO",
       permalink: "https://www.instagram.com/p/seed-ig-002/",
-      sortOrder: 1,
     },
     {
       postId: "seed-ig-003",
@@ -5430,7 +5695,6 @@ async function seedInstagramPosts() {
       caption: "セミナールーム 新レイアウト公開。",
       mediaType: "CAROUSEL_ALBUM",
       permalink: "https://www.instagram.com/p/seed-ig-003/",
-      sortOrder: 2,
     },
     {
       postId: "seed-ig-004",
@@ -5440,7 +5704,6 @@ async function seedInstagramPosts() {
       caption: "コワーキングスペース、Wi-Fi 増強完了。",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-004/",
-      sortOrder: 3,
     },
     {
       postId: "seed-ig-005",
@@ -5450,7 +5713,6 @@ async function seedInstagramPosts() {
       caption: "イベント告知：ヨガ＆マインドフルネス体験会",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-005/",
-      sortOrder: 4,
     },
     {
       postId: "seed-ig-006",
@@ -5460,15 +5722,19 @@ async function seedInstagramPosts() {
       caption: "ブログ更新：レンタルスペースを活用したセミナー開催のコツ",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-006/",
-      sortOrder: 5,
     },
   ];
 
   for (const p of posts) {
+    // `sortOrder` は @@unique。宣言リテラルを書くと、管理画面で並び替えた DB の
+    // re-seed が P2002 で中断する。宣言順のまま max+1 で採番する。
+    const maxOrder = await prisma.instagramPost.aggregate({
+      _max: { sortOrder: true },
+    });
     await prisma.instagramPost.upsert({
       where: { postId: p.postId },
       update: {},
-      create: p,
+      create: { ...p, sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
     });
   }
 
@@ -5624,7 +5890,7 @@ async function seedDev() {
   // 時刻依存 E2E fixture が専有する非公開スペース（dev のみ）。
   // デモ予約より先に作るが、`DEMO_RESERVATION_SPACE_SLUGS` に含まれないので
   // デモ予約は載らない。
-  await seedE2EFixtureSpace();
+  await seedE2EFixtureSpaces();
   await seedSpaceRatePlans();
 
   // Phase 4: 顧客・問い合わせ・クーポン
@@ -5706,7 +5972,7 @@ async function seedProduction(email: string | undefined, name: string) {
   // 規約は baseline Data Migration で投入済のため seed では何もしない
 
   // Phase 5: サイト設定
-  await seedNavigation();
+  await seedNavigation(false); // 本番: 既存の編集を踏み潰さない
   // お知らせ帯・SNSリンクは実在の URL・公開時点の運用告知が前提のデータのため、
   // 架空データを本番に投入しない（管理画面 /admin/settings/appearance から
   // 実際の値で作成する）。
@@ -5758,11 +6024,7 @@ async function main() {
       // DEV（既定）: prisma db seed / bun run db:reset の seed 経路。
       await seedDev();
       break;
-    case "reset":
-      // DEV: 全削除してから再構築（破壊的・開発専用）。
-      await clearAllData();
-      await seedDev();
-      break;
+    // DEV: 全削除してから再構築（破壊的・開発専用）。
     case "production": {
       const email = args[1];
       const name = args[2];

@@ -17,6 +17,7 @@ export const spaceReviewSchema = z.object({
     .max(1000, { error: "コメントは1000文字以内" })
     .optional()
     .or(z.literal("")),
+  // eslint-disable-next-line local/require-trimmed-text -- Turnstile が発行する値
   turnstileToken: z.string().min(1, { error: "認証トークンが必要です" }),
 });
 
@@ -26,6 +27,7 @@ export const reviewReplySchema = z.object({
   reviewId: z.uuid({ error: "レビューIDが不正です" }),
   replyBody: z
     .string({ error: "返信内容を入力してください" })
+    .trim()
     .min(1, { error: "返信内容を入力してください" })
     .max(1000, { error: "返信は1000文字以内" }),
 });

@@ -26,6 +26,7 @@ const idSchema = uuidIdSchema("ページセクション");
 
 const createPageSectionSchema = z.strictObject({
   pageId: z.uuid({ error: "ページIDが不正です" }),
+  // eslint-disable-next-line local/require-trimmed-text -- section registry の type 名。select から来る
   type: z.string().min(1, { error: "セクションタイプは必須です" }),
 });
 

@@ -5,9 +5,11 @@ export const googleServiceAccountCredentialsSchema = z
     type: z.literal("service_account", {
       error: "サービスアカウントJSONを入力してください",
     }),
+    // eslint-disable-next-line local/require-trimmed-text -- 鍵ファイル JSON の中身。人が打つ値ではない
     client_email: z
       .string({ error: "client_email が必要です" })
       .min(1, { error: "client_email が必要です" }),
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     private_key: z
       .string({ error: "private_key が必要です" })
       .min(1, { error: "private_key が必要です" }),

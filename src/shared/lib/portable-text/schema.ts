@@ -32,6 +32,7 @@ import type { PortableTextSpan, PortableTextBlock } from "./types";
 // この module からの type re-export 復活を 0 件強制する。
 
 const ICON_NAME_PATTERN = /^Icon[A-Z][A-Za-z0-9]*$/;
+// eslint-disable-next-line local/require-trimmed-text -- span の内部 _key
 const tokenKeySchema = z.string().min(1, { error: "_key は必須です" });
 
 const spanTokenSchema = z.object({
@@ -43,6 +44,7 @@ const spanTokenSchema = z.object({
 const iconInlineTokenSchema = z.object({
   _key: tokenKeySchema,
   _type: z.literal("iconInline"),
+  // eslint-disable-next-line local/require-trimmed-text -- アイコンピッカーが渡す IconXxx 名。人は打たない
   name: z
     .string()
     .min(1, { error: "アイコン名は必須です" })

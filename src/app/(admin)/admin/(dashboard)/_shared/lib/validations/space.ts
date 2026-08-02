@@ -103,6 +103,7 @@ export const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride);
  */
 export const spaceSlugSchema = z
   .string()
+  .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(100, { error: "スラッグは100文字以内で入力してください" })
   .regex(/^[a-z0-9-]+$/, {
@@ -201,6 +202,7 @@ export const spaceFormBaseSchema = z
       if (value === undefined) return false;
       return value === "on" || value === true;
     }, z.boolean()),
+    // eslint-disable-next-line local/require-trimmed-text -- select の値。後段の z.uuid() が形式を見る
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })
@@ -333,6 +335,14 @@ export type SpaceWithStats = {
   mainImageUrl: string;
   gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
+  /**
+   * DB の `facilities` から 1 件も読めなかった（`tryParseFacilities` が失敗）。
+   *
+   * `facilities` が `[]` になる理由は「元から設備なし」と「保存値が読めない」の
+   * 2 つあり、編集フォームは後者で保存を止める必要がある（読んだ設備をそのまま
+   * hidden input で書き戻す作りなので、無関係な項目の保存で設備が消えるため）。
+   */
+  facilitiesUnreadable: boolean;
   businessHours: BusinessHours | null;
   isPublished: boolean;
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */
