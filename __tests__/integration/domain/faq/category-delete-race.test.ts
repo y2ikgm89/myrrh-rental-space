@@ -195,6 +195,18 @@ describeMaybe(
         } else {
           // 項目操作が勝った: 削除は CONFLICT で拒否され、カテゴリは生きていて
           // 項目も残る。
+          //
+          // **拒否の理由まで固定する。** status だけ見ると、advisory lock やクエリの
+          // 退行で別の理由で落ちた場合も「項目操作が勝った」と読めてしまい、
+          // 意図した直列化ガードを通ったことの証明にならない。
+          expect(deleteOutcome?.reason).toBeInstanceOf(DomainError);
+          expect(
+            (
+              deleteOutcome?.reason as InstanceType<
+                DomainErrorModule["DomainError"]
+              >
+            ).code,
+          ).toBe("CONFLICT");
           expect(category?.deletedAt).toBeNull();
           expect(activeItemCount).toBeGreaterThan(0);
         }
@@ -252,6 +264,18 @@ describeMaybe(
         } else {
           // 項目操作が勝った: 削除は CONFLICT で拒否され、カテゴリは生きていて
           // 項目も残る。
+          //
+          // **拒否の理由まで固定する。** status だけ見ると、advisory lock やクエリの
+          // 退行で別の理由で落ちた場合も「項目操作が勝った」と読めてしまい、
+          // 意図した直列化ガードを通ったことの証明にならない。
+          expect(deleteOutcome?.reason).toBeInstanceOf(DomainError);
+          expect(
+            (
+              deleteOutcome?.reason as InstanceType<
+                DomainErrorModule["DomainError"]
+              >
+            ).code,
+          ).toBe("CONFLICT");
           expect(category?.deletedAt).toBeNull();
           expect(activeItemCount).toBeGreaterThan(0);
         }
