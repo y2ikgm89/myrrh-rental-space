@@ -141,6 +141,7 @@ export type UpdatePageSeoInput = z.infer<typeof updatePageSeoSchema>;
 export const createPageSchema = z.object({
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(100, { error: "スラッグは100文字以内です" })
     .regex(SLUG_REGEX, {

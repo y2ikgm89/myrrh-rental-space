@@ -67,6 +67,7 @@ const ticketInputSchema = z.strictObject({
   id: z.string().optional(),
   name: z
     .string({ error: "チケット名は必須です" })
+    .trim()
     .min(1, { error: "チケット名は必須です" })
     .max(100, { error: "チケット名は100文字以内です" }),
   /**
@@ -166,12 +167,14 @@ const eventFormBaseSchema = z.object({
     .max(200, { error: "タイトルは200文字以内です" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(100, { error: "スラッグは100文字以内です" })
     .regex(SLUG_REGEX, {
       error:
         "スラッグは小文字英数字とハイフンのみ使用できます（先頭/末尾/連続ハイフン禁止）",
     }),
+  // eslint-disable-next-line local/require-trimmed-text -- select の値。後段の z.uuid() が形式を見る
   categoryId: z
     .string()
     .min(1, { error: "カテゴリーを選択してください" })

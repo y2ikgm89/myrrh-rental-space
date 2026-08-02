@@ -13,6 +13,7 @@ const baseTaxonomySchema = z.strictObject({
   name: z.string().trim().min(1).max(50),
   slug: z
     .string()
+    .trim()
     .min(1)
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -34,6 +35,7 @@ export const categoryFormSchema = baseTaxonomySchema.extend({
     .max(50, { error: "カテゴリ名は50文字以内" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -53,6 +55,7 @@ export const tagFormSchema = baseTaxonomySchema.extend({
     .max(50, { error: "タグ名は50文字以内" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),

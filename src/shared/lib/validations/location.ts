@@ -65,6 +65,7 @@ export const locationFormBaseSchema = z.strictObject({
     .max(100, { error: "名前は100文字以内で入力してください" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(255, { error: "スラッグは255文字以内で入力してください" })
     .regex(SLUG_REGEX, {

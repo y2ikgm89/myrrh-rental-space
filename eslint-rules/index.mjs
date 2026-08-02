@@ -7,6 +7,7 @@
  */
 
 import noRawUpdatetagForCdnMappedCacheTag from "./no-raw-updatetag-for-cdn-mapped-cache-tag.mjs";
+import requireTrimmedText from "./require-trimmed-text.mjs";
 
 /** @type {import("eslint").ESLint.Plugin} */
 const plugin = {
@@ -17,6 +18,7 @@ const plugin = {
   rules: {
     "no-raw-updatetag-for-cdn-mapped-cache-tag":
       noRawUpdatetagForCdnMappedCacheTag,
+    "require-trimmed-text": requireTrimmedText,
   },
 };
 

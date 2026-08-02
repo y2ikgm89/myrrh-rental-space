@@ -3,6 +3,7 @@ import { z } from "zod";
 function requiredHeader(message: string) {
   return z.preprocess(
     (value) => (typeof value === "string" ? value : ""),
+    // eslint-disable-next-line local/require-trimmed-text -- Google が送る webhook ヘッダー値
     z.string().min(1, { error: message }),
   );
 }

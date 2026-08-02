@@ -25,7 +25,7 @@ export const locationListConfigSchema = z.object({
     group: "content",
   }),
   locationSlugs: field.array("表示する拠点 slug（mode=selected 時のみ有効）", {
-    fields: { slug: z.string().min(1).max(100) },
+    fields: { slug: z.string().trim().min(1).max(100) },
     helpText: "Location 管理で発行された slug を順序通りに指定",
     group: "content",
   }),

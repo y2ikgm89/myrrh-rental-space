@@ -44,6 +44,7 @@ import {
 import { calendarDownloadByRegistrationIdRateLimiter } from "@/shared/lib/rate-limit";
 
 const paramSchema = z.object({
+  // eslint-disable-next-line local/require-trimmed-text -- URL の path segment
   registrationId: z
     .string()
     .min(1, { error: "Invalid registration id" })

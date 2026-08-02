@@ -103,6 +103,7 @@ export const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride);
  */
 export const spaceSlugSchema = z
   .string()
+  .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(100, { error: "スラッグは100文字以内で入力してください" })
   .regex(/^[a-z0-9-]+$/, {
@@ -201,6 +202,7 @@ export const spaceFormBaseSchema = z
       if (value === undefined) return false;
       return value === "on" || value === true;
     }, z.boolean()),
+    // eslint-disable-next-line local/require-trimmed-text -- select の値。後段の z.uuid() が形式を見る
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })

@@ -71,6 +71,7 @@ export const createPostSchema = z
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
       .string()
+      .trim()
       .min(1, { error: "スラッグは必須です" })
       .max(200)
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -122,6 +123,7 @@ export const updatePostSettingsSchema = z
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
       .string()
+      .trim()
       .min(1, { error: "スラッグは必須です" })
       .max(200)
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -178,6 +180,7 @@ export const postSettingsFormSchema = z
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
       .string()
+      .trim()
       .min(1, { error: "スラッグは必須です" })
       .max(200)
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -216,6 +219,7 @@ export const postCategorySchema = z.strictObject({
     .max(50, { error: "カテゴリ名は50文字以内" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
@@ -248,6 +252,7 @@ export const postTagSchema = z.strictObject({
     .max(50, { error: "タグ名は50文字以内" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
