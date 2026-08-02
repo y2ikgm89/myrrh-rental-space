@@ -6,7 +6,6 @@
  * 使用方法（dev / prod を明確に分離）:
  *   bun prisma/seed.ts                          # DEV（既定・冪等）: 完全な開発環境を構築
  *   bun prisma/seed.ts --dev                    #   ↑ の明示エイリアス
- *   bun prisma/seed.ts --reset                  # DEV: 全削除してから再構築（破壊的・開発専用）
  *   bun prisma/seed.ts --production [email] [name]              # PROD: 本番テンプレート（デモ/テストなし）
  *
  * DEV（引数なし）が構築するもの:
@@ -20,11 +19,10 @@
  *
  * 例:
  *   bun prisma/seed.ts
- *   bun prisma/seed.ts --reset
  *   bun prisma/seed.ts --production owner@example.com "オーナー名"
  *
  * Safety:
- *   `--dev` / `--reset` fail closed against production-looking DATABASE_URL and
+ *   `--dev` fail closed against production-looking DATABASE_URL and
  *   deployed runtimes (NODE_ENV=production / APP_SURFACE). See `./seed-safety`.
  */
 
@@ -120,81 +118,6 @@ const prisma = new PrismaClient({
 
 // =============================================================================
 // Helper: Clear All Data (--fresh用)
-// =============================================================================
-
-async function clearAllData() {
-  console.log("🗑️  Clearing all data...");
-  console.log("");
-
-  // 依存関係の逆順で削除（interactive transaction）
-  await prisma.$transaction(async (tx) => {
-    // SpaceReview（FK: reservation / customer / space / user）
-    await tx.spaceReview.deleteMany();
-
-    // AdminNotification（管理画面通知）
-    await tx.adminNotification.deleteMany();
-
-    // BlockTemplate（Lexical 再利用ブロック）
-    await tx.blockTemplate.deleteMany();
-
-    // 予約関連
-    // NOTE: termsDocument / termsAgreement は意図的に deleteMany しない。
-    //   規約マスターは Prisma 公式 Data Migration パターンとして
-    //   初期 baseline migration で SSoT 管理しており、
-    //   seed.ts は規約に一切触れない設計に統一済。
-    //   完全再初期化が必要な場合は `prisma migrate reset` を使用すること
-    //   (schema drop + 全 migration 再適用で terms_documents も再生成される)。
-    await tx.reservation.deleteMany();
-
-    // コンテンツ
-    await tx.post.deleteMany();
-    await tx.postCategory.deleteMany();
-    await tx.postTag.deleteMany();
-    await tx.faqItem.deleteMany();
-    await tx.faqCategory.deleteMany();
-    await tx.news.deleteMany();
-    await tx.section.deleteMany();
-    await tx.userPageAssignment.deleteMany();
-    await tx.page.deleteMany();
-
-    // 顧客・問い合わせ
-    await tx.inquiry.deleteMany();
-    await tx.customer.deleteMany();
-
-    // イベント申込（FK: EventRegistration → Event）
-    await tx.eventRegistration.deleteMany();
-    await tx.event.deleteMany();
-
-    // スペース関連
-    await tx.space.deleteMany();
-    await tx.spaceCategory.deleteMany();
-    await tx.location.deleteMany();
-
-    // クーポン
-    await tx.coupon.deleteMany();
-
-    // サイト設定
-    await tx.navigationItem.deleteMany();
-    await tx.announcementBar.deleteMany();
-    await tx.socialLink.deleteMany();
-
-    // 認証関連
-    await tx.$executeRaw`SELECT set_config('myrrh.audit_log_mutation_bypass', 'seed', true)`;
-    await tx.auditLog.deleteMany();
-    await tx.session.deleteMany();
-    await tx.verification.deleteMany();
-    await tx.account.deleteMany();
-    await tx.user.deleteMany();
-
-    // Media
-    await tx.media.deleteMany();
-
-    // Settings は削除しない（upsertで更新）
-  });
-
-  console.log("✅ All data cleared");
-  console.log("");
-}
 
 // =============================================================================
 // Helper: Create or Update Staff User (IAP only)
@@ -5963,11 +5886,7 @@ async function main() {
       // DEV（既定）: prisma db seed / bun run db:reset の seed 経路。
       await seedDev();
       break;
-    case "reset":
-      // DEV: 全削除してから再構築（破壊的・開発専用）。
-      await clearAllData();
-      await seedDev();
-      break;
+    // DEV: 全削除してから再構築（破壊的・開発専用）。
     case "production": {
       const email = args[1];
       const name = args[2];

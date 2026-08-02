@@ -48,8 +48,14 @@ baseline reset を適用しない。
 
 ## seed（prisma/seed.ts）
 
-- 3 モード: 既定 dev（冪等・IAP 用固定スタッフ + デモデータ + 全 feature ON）/
-  `--reset`（破壊的再構築）/ `--production [email] [name]`（本番テンプレート）
+- 2 モード: 既定 dev（冪等・IAP 用固定スタッフ + デモデータ + 全 feature ON）/
+  `--production [email] [name]`（本番テンプレート）。
+  **`--reset` は廃止した** — 呼び出し元が 1 つも無く、`clearAllData` の削除順が
+  `onDelete: Restrict` の FK（Receipt / Refund → Reservation・EventRegistration、
+  BlockedDate → User）と append-only trigger（terms_agreements）に追随できておらず、
+  3 系統で壊れていた。同じことは `bun run db:reset`
+  （`prisma migrate reset --force` + seed）がより確実に行う。
+  フラグは**明示的に拒否**する（黙って dev に落とさない）
 - Prisma 7 は `migrate reset` 後に自動 seed しない（`db:reset` script が明示実行する）
 - seed は feature module の全 key を explicit に設定する契約、および E2E fixture
   （`e2e/fixtures/test-data.ts`）と slug・ステータスで二重定義結合している。

@@ -1,13 +1,13 @@
 /**
  * Seed CLI fail-closed safety (pure, no Prisma / server-only imports).
  *
- * `--dev` (default) and `--reset` must never run against a production-looking
+ * `--dev` (default) must never run against a production-looking
  * DATABASE_URL or inside a deployed runtime (NODE_ENV=production / APP_SURFACE).
  * `--production` is the only intentional prod bootstrap path and cannot combine
  * with `--reset`.
  */
 
-export type SeedCliMode = "dev" | "reset" | "production";
+export type SeedCliMode = "dev" | "production";
 
 export type SeedSafetyEnv = {
   readonly databaseUrl: string | undefined;
@@ -82,7 +82,6 @@ function hasFlag(argv: readonly string[], flag: string): boolean {
 function resolveMode(argv: readonly string[]): SeedCliMode | "unknown" {
   const mode = argv[0];
   if (!mode || mode === "--dev") return "dev";
-  if (mode === "--reset") return "reset";
   if (mode === "--production") return "production";
   return "unknown";
 }
@@ -96,11 +95,14 @@ export function evaluateSeedSafety(input: {
 }): SeedSafetyResult {
   const { argv, env } = input;
 
-  if (hasFlag(argv, "--reset") && hasFlag(argv, "--production")) {
+  // `--reset` は廃止した（`bun run db:reset` = `prisma migrate reset --force`
+  // + seed が同じことをより確実に行う）。筋肉記憶で打たれたときに黙って dev に
+  // 落ちないよう、unknown option として明示的に落とす。
+  if (hasFlag(argv, "--reset")) {
     return {
       ok: false,
       error:
-        "Refusing seed: --production cannot be combined with --reset. Reset is forever forbidden against production bootstrap.",
+        "Refusing seed: --reset は廃止しました。破壊的な作り直しは `bun run db:reset` を使ってください。",
     };
   }
 
@@ -108,7 +110,7 @@ export function evaluateSeedSafety(input: {
   if (mode === "unknown") {
     return {
       ok: false,
-      error: `Unknown option: ${argv[0]}\nUsage: bun prisma/seed.ts [--dev | --reset | --production [email] [name]]`,
+      error: `Unknown option: ${argv[0]}\nUsage: bun prisma/seed.ts [--dev | --production [email] [name]]`,
     };
   }
 
@@ -120,7 +122,7 @@ export function evaluateSeedSafety(input: {
   if (!databaseUrl) {
     return {
       ok: false,
-      error: "Refusing seed --dev/--reset: DATABASE_URL is not set.",
+      error: "Refusing seed --dev: DATABASE_URL is not set.",
     };
   }
 
