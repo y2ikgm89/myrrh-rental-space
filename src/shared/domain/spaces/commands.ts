@@ -26,6 +26,7 @@ import {
   gallerySchema,
   type GalleryItem,
 } from "@/shared/lib/validations/gallery";
+import { facilitiesSchema } from "@/shared/lib/json-validators";
 
 type SpaceCommandInput = {
   slug: string;
@@ -389,6 +390,13 @@ export async function duplicateSpaceCommand(
     throw new DomainError("gallery が不正です", "VALIDATION");
   }
   const sourceGallery = sourceGalleryResult.data;
+  // gallery と同じく検証してから複製する。素通りさせると、複製が読めない設備を
+  // 新しい行に運び直し、正規化の届かない汚れた行を増やし続ける。
+  const sourceFacilitiesResult = facilitiesSchema.safeParse(source.facilities);
+  if (!sourceFacilitiesResult.success) {
+    throw new DomainError("facilities が不正です", "VALIDATION");
+  }
+  const sourceFacilities = sourceFacilitiesResult.data;
   assertAllowedManagedImageSourcesInJson(
     "スペース本文画像",
     source.descriptionJson,
@@ -414,7 +422,7 @@ export async function duplicateSpaceCommand(
       mainImageUrl: source.mainImageUrl,
       gallery: asPrismaInputJsonValue(sourceGallery, "gallery が不正です"),
       facilities: asPrismaInputJsonValue(
-        source.facilities,
+        sourceFacilities,
         "facilities が不正です",
       ),
       businessHours:

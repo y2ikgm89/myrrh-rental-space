@@ -184,7 +184,8 @@ export function tryParseFacilities(value: unknown): TryParseFacilitiesResult {
  *
  * `Space.facilities` は構造化された設備リスト（Airbnb / Booking.com 標準）。
  * `{ name: string; iconName: string }[]` 形式で保存。
- * 旧 `string[]` 形式はマイグレーション 20260507163006 で object 化済み。
+ * 旧 `string[]` 形式は init migration に畳み込み済み（当時の変換 migration は
+ * squash されて残っていないので、番号での参照はしない）。
  *
  * **配列全体ではなく 1 件ずつ検証する**（`parseGallery` と同じ形）。まとめて
  * `facilitiesSchema` に通すと、1 件の不正で**そのスペースの設備が全部消える**。

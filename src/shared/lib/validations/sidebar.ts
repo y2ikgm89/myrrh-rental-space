@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { optionalSafePublicHrefSchema } from "@/shared/lib/url/safe-href";
-import { isRecord } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
 // Widget types
@@ -138,40 +137,18 @@ export type TryParseSidebarWidgetsResult =
   { success: true; data: SidebarWidget[] } | { success: false };
 
 /**
- * `title` に `.trim()` を課す前（#1815 以前）に保存された widget を救う。
- *
- * 旧スキーマは `z.string().min(1)` だったので**空白だけのタイトル**を通していた。
- * そのまま今の schema に掛けると配列全体の検証が落ち、公開側は
- * `DEFAULT_SIDEBAR_WIDGETS` に、管理画面も既定値 + 警告に化ける。つまり
- * **1 件の空白タイトルで管理者のサイドバー構成が丸ごと失われる**。
- *
- * ここで落とすのは「空白だけのタイトルを持つ custom widget」だけ。元々画面に
- * 何も表示されていなかったものなので、捨てても見た目は変わらない。それ以外の
- * 壊れ方（配列でない・未知の type）は触らず、下の strict parse に失敗させる。
- */
-function dropLegacyBlankTitleWidgets(value: unknown): unknown {
-  if (!Array.isArray(value)) return value;
-  return value.filter((item) => {
-    if (!isRecord(item)) return true;
-    if (item["type"] !== "custom") return true;
-    const title = item["title"];
-    return typeof title !== "string" || title.trim() !== "";
-  });
-}
-
-/**
  * Strict parse for admin paths — no silent fallback.
  *
- * 旧データの空白タイトルだけ先に落としてから検証する。こうしておくと
- * `success: false` は「本当に読めない構成」だけを意味し、管理画面が出す
- * 警告（`storedWidgetsInvalid`）も意味を保てる。
+ * `title` に `.trim()` を課す前（#1815 以前）に保存された空白だけのタイトルは、
+ * migration `20260802120000_canonicalize_stored_text_whitespace` が一度だけ
+ * 正規化して消してある。**その救済をここに常設しない** — 読み取り側で黙って
+ * 直すと、管理画面の「保存されているウィジェット設定が不正です」警告が
+ * 意味を失い、汚れた行は保存されたまま残り続ける。
  */
 export function tryParseSidebarWidgets(
   value: unknown,
 ): TryParseSidebarWidgetsResult {
-  const result = sidebarWidgetsSchema.safeParse(
-    dropLegacyBlankTitleWidgets(value),
-  );
+  const result = sidebarWidgetsSchema.safeParse(value);
   if (result.success) return { success: true, data: result.data };
   return { success: false };
 }

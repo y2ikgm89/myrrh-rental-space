@@ -85,25 +85,26 @@ describe("tryParseSidebarWidgets", () => {
     ).toEqual({ success: false });
   });
 
-  // `title` に `.trim()` を課す前（#1815 以前）は空白だけのタイトルが保存できた。
-  // それを failure 扱いにすると、管理画面は既定値 + 警告に化け、**保存した時点で
-  // 管理者のサイドバー構成が丸ごと失われる**。空白タイトルの widget だけ落とす。
-  test("旧データの空白だけのタイトルは、その widget だけ落として残りを保つ", () => {
-    const kept = { type: "search", enabled: true } as const;
-    const blank = { type: "custom", enabled: true, id: "a2", title: "   " };
-
-    const result = tryParseSidebarWidgets([kept, blank]);
-
-    expect(result).toEqual({ success: true, data: [kept] });
-  });
-
-  test("空白タイトルを落としても、本当に読めない構成は failure のまま", () => {
+  // 空白だけのタイトルは migration
+  // `20260802120000_canonicalize_stored_text_whitespace` が一度だけ消してある。
+  // ここで黙って直さないのは、直すと管理画面の
+  // 「保存されているウィジェット設定が不正です」警告が意味を失い、
+  // 汚れた行が保存されたまま残り続けるため。読めない構成は読めないと言う。
+  test("空白だけのタイトルは failure（読み取り側で黙って直さない）", () => {
     expect(
       tryParseSidebarWidgets([
-        { type: "custom", enabled: true, id: "a1", title: "  " },
-        { type: "unknown", enabled: true },
+        { type: "search", enabled: true },
+        { type: "custom", enabled: true, id: "a2", title: "   " },
       ]),
     ).toEqual({ success: false });
+  });
+
+  test("前後に空白のあるタイトルは正規化して success", () => {
+    const result = tryParseSidebarWidgets([
+      { type: "custom", enabled: true, id: "a3", title: "  案内  " },
+    ]);
+
+    expect(result.success && result.data[0]).toMatchObject({ title: "案内" });
   });
 });
 
