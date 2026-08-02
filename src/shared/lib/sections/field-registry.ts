@@ -6,6 +6,7 @@
 // ADR 0018: .describe(JSON.stringify()) 廃止 → z.registry<FieldMeta>() 採用
 
 import { z } from "zod";
+import { isSafePublicHref } from "@/shared/lib/url/safe-href";
 
 import {
   createBlockArraySchema,
@@ -385,14 +386,28 @@ export const field = {
   },
 
   /**
-   * URL 入力（有効な URL または空文字列を許容）
+   * URL 入力（描画側が受け入れる URL、または空文字列）。
    *
-   * `z.url()` は空文字を拒否するため、空文字列は `z.literal("")` で別途許可する。
+   * **`z.url()` を使わない。** `z.url()` は `new URL()` が解釈できれば通すので、
+   * `javascript:alert(1)` / `data:text/html,…` / `vbscript:x` をすべて受理する
+   * （実測）。section は管理者が自由に URL を書ける面なので、保存側は
+   * 描画側の `toSafePublicHref` と**同じ集合**に揃える — 内部 path または
+   * http(s) / mailto / tel のみ。保存を通った URL は描画も通る、を保つ
+   * （safe-href.ts の `hasSurroundingWhitespace` 参照）。
+   *
+   * 空文字は「未入力」なので許可する。`.refine()` で扱い、`z.literal("")` との
+   * union にしないのは、union にすると conform の `getZodConstraint` が
+   * maxLength を落とすため。
    */
   url(label: string, opts?: StringFieldOpts) {
     return z
-      .url()
-      .or(z.literal(""))
+      .string()
+      .trim()
+      .max(2000)
+      .refine((value) => value === "" || isSafePublicHref(value), {
+        error:
+          "URL は / から始まるパス、または http(s) / mailto / tel を指定してください（javascript: 等は不可）",
+      })
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "url",

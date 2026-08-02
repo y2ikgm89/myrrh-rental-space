@@ -195,6 +195,35 @@ describe("field.url", () => {
     expect(result.success).toBe(false);
   });
 
+  // `z.url()` は `new URL()` が解釈できれば通すので、これらを**すべて受理していた**。
+  // section は管理者が自由に URL を書ける面なので、保存側を描画側の
+  // `toSafePublicHref` と同じ集合に揃える。
+  test("実行可能スキームと protocol-relative を拒否する", () => {
+    const schema = field.url("リンク");
+
+    for (const dangerous of [
+      "javascript:alert(1)",
+      "data:text/html,<script>x</script>",
+      "vbscript:x",
+      "//evil.example",
+    ]) {
+      expect(schema.safeParse(dangerous).success).toBe(false);
+    }
+  });
+
+  test("内部 path / mailto / tel は受理する", () => {
+    const schema = field.url("リンク");
+
+    expect(schema.parse("/about")).toBe("/about");
+    expect(schema.parse("mailto:a@example.com")).toBe("mailto:a@example.com");
+    expect(schema.parse("tel:+819012345678")).toBe("tel:+819012345678");
+  });
+
+  test("貼り付けに紛れた前後の空白は正規化する", () => {
+    const schema = field.url("リンク");
+    expect(schema.parse("  https://example.com  ")).toBe("https://example.com");
+  });
+
   test("FieldMeta の fieldType が url", () => {
     const schema = field.url("リンク");
     const meta = extractFieldMeta(schema);
