@@ -4258,6 +4258,36 @@ async function seedEvents() {
           });
 
       // Dev/test seed contract: seeded events are rebuilt so E2E data never drifts.
+      //
+      // ただし**会計証跡が付いた申込がある event は丸ごと作り直さない**。
+      // `Receipt.eventRegistration` / `Refund.eventRegistration` は
+      // `onDelete: Restrict`（「領収書がある申込は物理削除不可」= 会計証跡保護）
+      // なので、削除しようとすると P2003 で seed が中断し、`main().catch` の
+      // `process.exit(1)` で以降の phase が丸ごと走らなくなる。
+      // dev / staging で Stripe のテスト決済を 1 度通すだけでこの状態になる
+      // （`events/payment-commands.ts` と
+      // `stripe-webhook/fulfill-event-registration-payment.ts` が領収書を発行する）。
+      //
+      // 「証跡付きだけ残して他を消す」では解けない。`slotId` / `ticketId` の FK も
+      // `RESTRICT` なので、残した申込が参照する slot / ticket の削除で今度はそちらが
+      // 落ちる。event 単位で作り直しを見送り、理由を名指しで出すのが正しい形。
+      const accountedRegistrations = await tx.eventRegistration.count({
+        where: {
+          eventId: event.id,
+          // `receipt` は to-one（`Receipt.eventRegistrationId` が @unique）、
+          // `refunds` は to-many。カーディナリティが違うので述語も変える。
+          OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
+        },
+      });
+      if (accountedRegistrations > 0) {
+        console.log(
+          `⏭️ Skipped rebuilding event ${eventRest.slug}: ${String(accountedRegistrations)} registration(s) carry a receipt/refund (accounting trail is protected by ON DELETE RESTRICT)`,
+        );
+        // `$transaction` の callback 内なので `continue` は使えない（この event の
+        // 作り直しだけを見送る）。
+        return;
+      }
+
       await tx.eventRegistration.deleteMany({ where: { eventId: event.id } });
       await tx.eventTimeSlot.deleteMany({ where: { eventId: event.id } });
       await tx.eventTicket.deleteMany({ where: { eventId: event.id } });
