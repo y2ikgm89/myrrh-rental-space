@@ -168,27 +168,44 @@ honeypot フィールドは Zod スキーマ上では検証エラーにしない
 
 ## スキーマ配置
 
-置き場は **最も下の層の利用者**で決まる。「公開側が使うか」ではない。次の 4 つで、
-それ以外に増やさない:
+**制約**（守る）と **新規の置き先**（選ぶ）を分ける。既存ファイルを選好に合わせて
+動かさない — 動かす理由になるのは制約違反だけ。
 
-| 置き場                                  | 対象                                                                                    |
-| --------------------------------------- | --------------------------------------------------------------------------------------- |
-| `src/shared/lib/validations/`           | `src/shared/**`（domain / lib）が使うもの。app 層より下が触るなら**必ず**ここ           |
-| `(dashboard)/_shared/lib/validations/`  | **app の admin 層だけ**が使うリソーススキーマ（post / faq / space / editor-comment 等） |
-| `_shared/actions/settings/schemas/`     | 設定画面のフォーム                                                                      |
-| コンポーネント隣接の `*-form-schema.ts` | その画面だけが使うフォーム（`event-form-schema.ts` 等）                                 |
+（この段落は 4 度書き直している。「中身の列挙」「公開側が使うか」「最も下の層の
+利用者」はいずれも実在するファイルを取りこぼし、「最も内側に置く」は逆に
+`seo` / `transfer-account` など 6 件へ無用な移動を指示した。列挙も最適化も誤る。）
 
-**「admin しか使わない」だけでは admin 側へは動かせない。** `shared/lib/validations/` には
-公開側の利用者が 1 つも無いのに `shared/domain` が型を import しているものが 8 件ある
-（`coupon` / `location` / `event-category` / `space-category` / `customer` / `blocked-date` /
-`google-service-account` / `enums/refund-attribution`）。これらを admin 層へ移すと
-domain → app の import が要り、依存方向に反する。判定は「公開側が使うか」ではなく
-**「`src/shared/**` が使うか」**で行う。
+### 制約: 全利用者から import できる位置に置く
+
+到達可能性を決めているのは 2 つだけ:
+
+- `src/shared/**` は `@/admin` / `@/public` を import できない（依存方向。テストが強制）
+- `(public)` と `(admin)` は互いを import しない（Multiple Root Layouts。現状 0 件）
+
+したがって **`src/shared/**` か両 surface が使うなら `src/shared/lib/validations/` 以外に
+置けない**。それ以外はどこでも成立するので、次の選好で決める。
+
+### 新規の置き先
+
+| 利用者                       | 置き場                                                              |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `src/shared/**` / 両 surface | `src/shared/lib/validations/`（制約）                               |
+| `(public)` の複数箇所        | `src/shared/lib/validations/`（public 側に共有 validations は無い） |
+| `(admin)` の複数箇所         | `(dashboard)/_shared/lib/validations/`                              |
+| 設定画面のフォーム           | `_shared/actions/settings/schemas/`                                 |
+| 1 画面だけ                   | コンポーネント隣接の `*-form-schema.ts`                             |
+
+`src/shared/lib/validations/` の 41 モジュールのうち 16 件は `src/shared/**` の利用者を
+持たず、13 件は複数の app が共有している（`section-parsers` は public 10 箇所、
+`event-registration` は public 7 箇所、`review` は public + admin）。うち 6 件
+（`seo` / `transfer-account` / `business-hours` / `receipt-reissue` /
+`reservation-series` / `event-registration-onsite`）は admin だけが使うが、**制約は
+満たしているので動かさない**。
 
 `src/shared/lib` は `src/shared/domain` を import できない（ratchet で凍結）。domain の
-型ガードや enum が要るスキーマは `shared/lib/validations/` に置けないので、`src/shared/**`
-からの利用が無いなら `(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の
-re-export 経由で参照する。
+型ガードや enum が要るスキーマはこの制約で `shared/lib/validations/` に置けない。
+利用者が admin だけなら `(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の
+re-export 経由で参照する（`editor-comment` が実例）。
 
 `"use server"` ファイルは async 関数以外を export できないので、Server Action の入力
 スキーマも上のいずれかに切り出して両側から参照する。
