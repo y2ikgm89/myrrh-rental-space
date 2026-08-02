@@ -79,12 +79,15 @@ describe("AnnouncementBar Admin Action Integration", () => {
         expect(result.success).toBe(false);
       });
 
-      test("linkUrlはnull許可", () => {
+      // 未入力は空文字（または未指定）で表す。`null` は受け付けない。
+      // DB 列の NULL 化は `normalizeAnnouncementBarInput` の
+      // `data.linkUrl || null` が行うので、リンク解除の挙動は変わらない。
+      test("linkUrlはnullを拒否する（未入力は空文字で表す）", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
           linkUrl: null,
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
 
       test("linkUrlは空文字許可", () => {

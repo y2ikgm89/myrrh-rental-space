@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { z } from "zod";
+import { getZodConstraint } from "@conform-to/zod/v4";
 import {
   externalPublicHrefSchema,
   internalNavHrefSchema,
@@ -6,6 +8,7 @@ import {
   isHttpOrInternalPublicHref,
   isInternalNavHref,
   isSafePublicHref,
+  optionalHttpOrInternalHrefSchema,
   optionalSafePublicHrefSchema,
   toSafePublicHref,
 } from "@/shared/lib/url/safe-href";
@@ -145,18 +148,40 @@ describe("schemas", () => {
     expect(internalNavHrefSchema.safeParse("   ").success).toBe(false);
   });
 
-  test("optionalSafePublicHrefSchema allows empty/null and safe urls", () => {
+  // 未入力は空文字ひとつで表す。`null` は**受け付けない**（破壊的変更）。
+  // 保存経路は `data.linkUrl || undefined` で `null` を書かず、保存済み JSON にも
+  // `linkUrl: null` は無い。DB 列の NULL 化は保存側の責務。
+  test("optionalSafePublicHrefSchema は未入力と安全な URL を受け、null は拒否する", () => {
     expect(optionalSafePublicHrefSchema.safeParse(undefined).success).toBe(
       true,
     );
     expect(optionalSafePublicHrefSchema.safeParse("").success).toBe(true);
-    expect(optionalSafePublicHrefSchema.safeParse(null).success).toBe(true);
+    expect(optionalSafePublicHrefSchema.safeParse("   ")).toMatchObject({
+      success: true,
+      data: "",
+    });
+    expect(optionalSafePublicHrefSchema.safeParse(null).success).toBe(false);
     expect(optionalSafePublicHrefSchema.safeParse("/contact").success).toBe(
       true,
     );
     expect(
       optionalSafePublicHrefSchema.safeParse("javascript:alert(1)").success,
     ).toBe(false);
+  });
+
+  // 「任意なのに required」を出す形に戻らないことを固定する。conform はこの制約を
+  // そのまま input に載せるので、union 形だと linkUrl だけ必須表示になっていた。
+  test("任意 href は conform に required を出さず maxLength を保つ", () => {
+    for (const schema of [
+      optionalHttpOrInternalHrefSchema,
+      optionalSafePublicHrefSchema,
+      optionalHttpOrInternalHrefSchema,
+    ]) {
+      expect(getZodConstraint(z.object({ u: schema }))["u"]).toEqual({
+        required: false,
+        maxLength: 500,
+      });
+    }
   });
 });
 
