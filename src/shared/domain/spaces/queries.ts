@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import {
   parseBusinessHours,
-  parseFacilities,
+  tryParseFacilities,
 } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
@@ -52,6 +52,10 @@ function formatSpaceToPlain(s: {
   ogpImageUrl: string | null;
   _count: { reservations: number };
 }) {
+  // 編集フォームは読んだ設備をそのまま hidden input で書き戻すため、
+  // 「読めなかった」を空配列に潰すと無関係な項目の保存で設備が消える。
+  const facilitiesParse = tryParseFacilities(s.facilities);
+
   return {
     id: s.id,
     slug: s.slug,
@@ -66,7 +70,9 @@ function formatSpaceToPlain(s: {
     hourlyPrice: s.hourlyPrice,
     mainImageUrl: s.mainImageUrl,
     gallery: parseGallery(s.gallery),
-    facilities: parseFacilities(s.facilities),
+    facilities: facilitiesParse.success ? facilitiesParse.data : [],
+    /** DB の設備リストが 1 件も読めなかった（編集フォームはこの間 保存を止める） */
+    facilitiesUnreadable: !facilitiesParse.success,
     businessHours: parseBusinessHours(s.businessHours),
     isPublished: s.isPublished,
     publishedAt: s.publishedAt ? s.publishedAt.toISOString() : null,
