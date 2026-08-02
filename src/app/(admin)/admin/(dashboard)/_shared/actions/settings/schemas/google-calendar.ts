@@ -18,6 +18,7 @@ const CALENDAR_ID_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const requiredCalendarIdSchema = z
   .string()
+  .trim()
   .min(1, { error: "カレンダーIDを入力してください" })
   .max(200)
   .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {

@@ -65,6 +65,20 @@ const NO_TRIM_ALLOWLIST = new Map<string, string>([
     "app/api/calendar/event/[registrationId]/route.ts:registrationId",
     "URL の path segment",
   ],
+  [
+    "app/(public)/events/registrations/status/edit/_actions/update.ts:registrationIdSchema",
+    "同上",
+  ],
+  ["shared/lib/validations/params.ts:idParamSchema", "route param の ID"],
+  ["shared/lib/portable-text/schema.ts:tokenKeySchema", "span の内部 `_key`"],
+  [
+    "shared/lib/validations/instagram.ts:instagramTokenSchema",
+    "Instagram API が発行する access token",
+  ],
+  [
+    "shared/lib/validations/instagram.ts:instagramPostIdSchema",
+    "Instagram の投稿 ID",
+  ],
 
   // --- slug / 識別子: 別途 pattern 検証がある ---
   ["shared/lib/validations/location.ts:slug", "SLUG_REGEX が形式を見る"],
@@ -86,10 +100,25 @@ const NO_TRIM_ALLOWLIST = new Map<string, string>([
     "shared/lib/sections/definitions/location-list/schema.ts:slug",
     "参照先 Location の slug。人は打たない",
   ],
+  ["shared/lib/validations/params.ts:slugParamSchema", "同上"],
+  [
+    "app/(admin)/admin/(dashboard)/_shared/lib/validations/news.ts:newsSlugSchema",
+    "同上",
+  ],
+  [
+    "app/(admin)/admin/(dashboard)/_shared/lib/validations/space.ts:spaceSlugSchema",
+    "同上",
+  ],
+  [
+    "app/(admin)/admin/(dashboard)/_shared/lib/validations/terms.ts:slugSchema",
+    "同上",
+  ],
+  ["shared/lib/validations/terms.ts:slugSchema", "同上"],
   [
     "app/(admin)/admin/(dashboard)/_shared/lib/validations/terms.ts:type",
     "`^[a-z0-9-]+$` を課す識別子",
   ],
+  ["shared/lib/validations/terms.ts:typeSchema", "同上"],
   [
     "app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts:type",
     "section registry の type 名",
@@ -108,15 +137,27 @@ const NO_TRIM_ALLOWLIST = new Map<string, string>([
 ]);
 
 /**
- * `name: z.string()....min(1` を拾う。チェーンは改行を跨ぐので dotAll。
- * `.max()` や `{ error: … }` を挟んでいても順序は問わない。
+ * `.string()` に続くメソッドチェーンを捕まえる 3 つの形。チェーンは改行を跨ぐので
+ * dotAll、`.max()` や `{ error: … }` を挟んでいても順序は問わない。
  *
- * **拾えないもの**: `const base = z.string()` を経由して `base.min(1)` と書く形。
- * `z.string()` が field 名の直後に来る書き方だけを見る。この repo の schema は
- * 全てその形なので今は取りこぼしが無いが、間接参照を足すならここも直す。
+ * **object の field だけ見ると足りない。** 共有 schema 経由の定義は
+ * `lastName: personNameFieldSchema("姓")` と書かれ、`z.string()` が現れないため
+ * FIELD だけでは素通りする。実際 `personNameFieldSchema` は untrimmed のままで、
+ * **公開の問い合わせフォームと予約フォームは姓名が空白だけでも通っていた**
+ * （#1815 の gate は検出できず、Codex のレビューで判明）。名前付きの schema も
+ * 同じ規則で見る。
+ *
+ * 残る死角は「`z.string()` が識別子の直後に来ない」書き方
+ * （`schemas.push(z.string().min(1))` など）。現状 repo に無い。
  */
-const REQUIRED_STRING_FIELD =
-  /(\w+):\s*z\s*\.string\(\)((?:\s*\.\w+\([^()]*(?:\([^()]*\)[^()]*)*\))*)/gsu;
+const REQUIRED_STRING_PATTERNS = [
+  // `lastName: z.string()…`
+  /(\w+):\s*z\s*\.string\(\)((?:\s*\.\w+\([^()]*(?:\([^()]*\)[^()]*)*\))*)/gsu,
+  // `const titleSchema = z.string()…`
+  /const\s+(\w+)\s*=\s*z\s*\.string\(\)((?:\s*\.\w+\([^()]*(?:\([^()]*\)[^()]*)*\))*)/gsu,
+  // `function personNameFieldSchema(label) { return z.string()… }`
+  /function\s+(\w+)\s*\([^)]*\)[^{]*\{[^}]*?return\s+z\s*\.string\(\)((?:\s*\.\w+\([^()]*(?:\([^()]*\)[^()]*)*\))*)/gsu,
+];
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 
@@ -134,10 +175,10 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 /**
- * `<src からの相対パス>:<field>` → その名前で現れた必須 string のうち
- * `.trim()` が無い数。
+ * `<src からの相対パス>:<名前>` → その名前で現れた必須 string のうち
+ * `.trim()` が無い数。名前は object の field 名か、共有 schema の識別子。
  *
- * 同名フィールドは複数の schema に現れる（`post.ts` の `title` は 3 箇所）。
+ * 同名は複数の schema に現れる（`post.ts` の `title` は 3 箇所）。
  * **1 つでも trim 無しがあれば違反**として扱いたいので、Map には最後に見た
  * 定義ではなく「trim 無しの件数」を入れる。
  */
@@ -148,14 +189,16 @@ function collectRequiredStrings(): Map<string, number> {
     const fileName = relative(SRC_ROOT, filePath).split("\\").join("/");
     const source = readFileSync(filePath, "utf8");
 
-    for (const match of source.matchAll(REQUIRED_STRING_FIELD)) {
-      const field = match[1] ?? "";
-      const chain = match[2] ?? "";
-      if (!chain.includes(".min(1")) continue;
+    for (const pattern of REQUIRED_STRING_PATTERNS) {
+      for (const match of source.matchAll(pattern)) {
+        const name = match[1] ?? "";
+        const chain = match[2] ?? "";
+        if (!chain.includes(".min(1")) continue;
 
-      const key = `${fileName}:${field}`;
-      const previous = untrimmedCount.get(key) ?? 0;
-      untrimmedCount.set(key, previous + (chain.includes(".trim()") ? 0 : 1));
+        const key = `${fileName}:${name}`;
+        const previous = untrimmedCount.get(key) ?? 0;
+        untrimmedCount.set(key, previous + (chain.includes(".trim()") ? 0 : 1));
+      }
     }
   }
 
