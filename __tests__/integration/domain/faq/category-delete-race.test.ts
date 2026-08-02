@@ -121,9 +121,12 @@ describeMaybe(
         });
 
         // 核心の不変条件：カテゴリが削除済みなら、配下にアクティブ項目は 0 件。
-        if (category?.deletedAt !== null) {
-          expect(activeItemCount).toBe(0);
-        }
+        // **削除が効いたことを先に固定する。** `if (削除済み) expect(0)` だけだと、
+        // `deleteFaqCategory` が競合に毎回負ける（あるいは例外で何もしない）ように
+        // なっても緑のままで、競合テストが何も検査しない状態に静かに退化する。
+        expect(category).toBeDefined();
+        expect(category?.deletedAt).not.toBeNull();
+        expect(activeItemCount).toBe(0);
       } finally {
         await cleanup();
       }
@@ -160,9 +163,12 @@ describeMaybe(
 
         // 核心の不変条件：カテゴリが削除済みなら、配下にアクティブ項目は 0 件
         // （restoreFaqItem が成功していれば、必ずカテゴリ削除は失敗＝CONFLICT のはず）。
-        if (category?.deletedAt !== null) {
-          expect(activeItemCount).toBe(0);
-        }
+        // **削除が効いたことを先に固定する。** `if (削除済み) expect(0)` だけだと、
+        // `deleteFaqCategory` が競合に毎回負ける（あるいは例外で何もしない）ように
+        // なっても緑のままで、競合テストが何も検査しない状態に静かに退化する。
+        expect(category).toBeDefined();
+        expect(category?.deletedAt).not.toBeNull();
+        expect(activeItemCount).toBe(0);
       } finally {
         await cleanup();
       }

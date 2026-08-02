@@ -205,10 +205,13 @@ describe("isFeatureModule", () => {
 
   test("型 narrow が効く", () => {
     const value: string = "spaces";
-    if (isFeatureModule(value)) {
-      const narrowed: FeatureModule = value;
-      expect(narrowed).toBe("spaces");
-    }
+
+    // ガードが false を返しても通ってしまう形（if の中だけで assert）にしない。
+    // narrow の確認は型検査の仕事なので、実行時には**ガードが真であること**を見る。
+    expect(isFeatureModule(value)).toBe(true);
+    if (!isFeatureModule(value)) throw new Error("到達しない");
+    const narrowed: FeatureModule = value;
+    expect(narrowed).toBe("spaces");
   });
 });
 

@@ -2904,22 +2904,35 @@ describe("architecture boundaries", () => {
   describe("Phase B.2: rrule package import restriction", () => {
     test("rrule import は domain layer + admin form utils のみ許可", async () => {
       const files = collectSourceFiles(SRC_ROOT);
+      // `rrule` package を import してよいのは server 側の domain だけ。
+      // `_components/rrule-utils.ts` の許可は削除した — あのファイルは
+      // 「`rrule` package の client bundle 持ち込みを避けるため素の string
+      // concatenation で生成する」ために存在しており（同ファイル冒頭の JSDoc）、
+      // 許可を残すことは**そのファイルが避けている当のものを許す**ことだった。
       const allowedPatterns = [
         /src[/\\]shared[/\\]domain[/\\]reservations[/\\]/,
-        /src[/\\]app[/\\]\(admin\)[/\\]admin[/\\]\(dashboard\)[/\\]reservations[/\\]_components[/\\]rrule-utils\.ts$/,
       ];
-      for (const file of files) {
+      const importers = files.filter((file) => {
         const content = readFileSync(file, "utf8");
-        const importsRrule =
+        return (
           /from ["']rrule["']/.test(content) ||
-          /import\s+.*\s+from\s+["']rrule["']/.test(content);
-        if (importsRrule) {
-          const isAllowed = allowedPatterns.some((p) => p.test(file));
-          expect(
-            isAllowed,
-            `${relative(ROOT, file)}: rrule import は domain layer + rrule-utils.ts のみ許可`,
-          ).toBe(true);
-        }
+          /import\s+.*\s+from\s+["']rrule["']/.test(content)
+        );
+      });
+
+      const violations = importers
+        .filter((file) => !allowedPatterns.some((p) => p.test(file)))
+        .map((file) => relative(ROOT, file));
+      expect(violations).toEqual([]);
+
+      // 許可した場所が今も rrule を使っていること。使わなくなった許可を消し忘れると、
+      // 後から同じ場所に import を戻したとき黙って通る。importers が 0 件だと上の
+      // assertion は何も検査しないので、対象の存在自体もここで固定する。
+      for (const pattern of allowedPatterns) {
+        expect(
+          importers.some((file) => pattern.test(file)),
+          `${String(pattern)}: rrule を import しなくなった許可が残っている`,
+        ).toBe(true);
       }
     });
   });
