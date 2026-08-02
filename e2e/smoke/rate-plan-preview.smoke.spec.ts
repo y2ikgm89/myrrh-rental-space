@@ -1,6 +1,9 @@
 import { test, expect } from "../fixtures/e2e-test";
-import * as holidayJp from "@holiday-jp/holiday_jp";
 import { spaceFixtures, urls } from "../fixtures";
+import {
+  bookableDateClockTime,
+  pickBookableDate,
+} from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
 
 /**
@@ -39,55 +42,20 @@ import { visibleById } from "../helpers/streaming-safe-locators";
  * seminar-room。cache tag は spaceId キーのため構造的に別タグ）へ移し解消した。
  */
 
-const SEED_RESERVATION_MAX_DAYS_OFFSET = 30; // prisma/seed.ts seedReservations() の最大 daysOffset
-const SAFETY_MARGIN_DAYS = 5;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * MS_PER_DAY);
-}
-
-function formatUtcDateOnly(date: Date): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-/**
- * 実行時点から十分先（seed のデモ予約と衝突しない）かつ日本の祝日ではない
- * 金曜日の "YYYY-MM-DD" を返す。カレンダー UI はこの日を `page.clock.install` で
- * 「今日」に固定するため、月送り操作なしで選択できる。
- */
-function pickNonHolidayFriday(): string {
-  const now = new Date();
-  let candidate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  candidate = addUtcDays(
-    candidate,
-    SEED_RESERVATION_MAX_DAYS_OFFSET + SAFETY_MARGIN_DAYS,
-  );
-
-  const daysUntilFriday = (5 - candidate.getUTCDay() + 7) % 7;
-  candidate = addUtcDays(candidate, daysUntilFriday);
-
-  while (holidayJp.isHoliday(formatUtcDateOnly(candidate))) {
-    candidate = addUtcDays(candidate, 7); // 翌週の同じ金曜へ
-  }
-
-  return formatUtcDateOnly(candidate);
-}
+/** 週末料金プランが適用される曜日（`ratePlanFixtures.weekendPlanName` の daysOfWeek）。 */
+const FRIDAY = 5;
 
 test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () => {
   test("金曜 19:00-21:00 を選択すると週末料金がプレビュー価格に反映される", async ({
     page,
   }) => {
-    const dateOnly = pickNonHolidayFriday();
+    // 週末料金プランの検証なので金曜に固定する。導出規則は `pickBookableDate`
+    // （seed のデモ予約帯を避け、日曜休業と日本の祝日を除外する）。
+    const dateOnly = pickBookableDate({ weekday: FRIDAY });
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。
     // page.goto より前に呼ぶ（時刻凍結の規約）。
-    await page.clock.install({ time: new Date(`${dateOnly}T03:00:00.000Z`) });
+    await page.clock.install({ time: bookableDateClockTime(dateOnly) });
 
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,

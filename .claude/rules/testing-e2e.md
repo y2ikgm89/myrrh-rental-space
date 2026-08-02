@@ -371,3 +371,41 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 
 spec は `prisma/seed.ts` の fixture（slug・予約ステータス等）と
 `e2e/fixtures/test-data.ts` で二重定義結合している。seed 変更は fixture/spec の同時更新必須。
+
+- **予約カレンダーの日付を位置（`.nth(n)`）で選ばない。** 予約フォームには時計が 2 つ
+  あり、ずれている: カレンダーの過去日判定は `E2E_FIXED_NOW_ISO`（既定 2026-07-04）
+  基準（`ReservationFormSection` → `calendar-picker.tsx` の `initialNowIso`）、
+  送信時の `publicReservationSchema` の日付 refine は**実時刻**基準（conform が
+  client 側でも走らせる）。カレンダーは実時刻の月を描くのに過去日を無効化しないので、
+  位置指定は実日付が進むほど過去へずれ、**月の 4 営業日目を過ぎた時点から月末まで
+  必ず送信が弾かれる**。`reservation-submit.smoke.spec.ts` は必須ゲートなのに
+  この形で、追加日が月初だったため気付かれていなかった。
+  正しい形は `e2e/helpers/reservation-date.ts` で実時刻から日付を導出し、DayPicker の
+  安定属性 `data-day="YYYY-MM-DD"` で選ぶこと。**時計の扱いは送信するかどうかで逆**:
+
+  | spec                           | 日付の導出                      | 時計                                        |
+  | ------------------------------ | ------------------------------- | ------------------------------------------- |
+  | 送信しない（価格プレビュー等） | `pickBookableDate()`            | `page.clock.install` で導出日を「今日」に   |
+  | **送信する**                   | `pickBookableDateInNextMonth()` | **固定しない**。カレンダーを 1 回翌月へ送る |
+
+  送信 spec で時計を固定すると 2 通りに壊れる（#1823 で 1 回ずつ観測）:
+  ①`clock.install` は時間を止めるので **Turnstile の challenge が進まず** hidden
+  input が空のまま（run 30728829959）②`ReservationForm` は `formRenderedAt` を
+  `useState(() => Date.now())` で**初回マウント時**にブラウザ時計から焼き、
+  `checkBotHeuristics` がサーバー実時刻と引き算するため、未来へ固定すると差が負に
+  なって**全送信が bot 判定**で弾かれる（run 30731786539）。②は日付選択後に
+  `setSystemTime` で戻しても遅い — 値はもう焼かれている。
+
+  **カレンダーの月送りと日付セルは `click()` ではなく `press("Enter")` で押す。**
+  `click` は hit-target check（"element receives pointer events"）を通すので、
+  上に重なる要素があると永久に retry する。実測 run 30736160628: sticky な
+  `<header role="banner">` と DayPicker 自身の `.rdp-month_caption` が交互に
+  pointer events を奪い、120 秒の test timeout まで 60 回以上 retry した。
+  `press` は focus + keydown/keyup だけで **actionability チェックを一切行わない**
+  （公式 `types.d.ts`: "press fires keydown+keyup on the focused element; no
+  actionability checks"）ので hit-target に阻まれず、`<button>` への Enter は
+  ネイティブに click を発火する。**その代わり可視性も待たない**ので、
+  `await expect(target).toBeVisible()` を必ず前に置く。
+
+  有効セルの集合は実時計の関数なので allowlist で
+  固定できない。gate: `__tests__/unit/architecture/e2e-calendar-date-selection.test.ts`

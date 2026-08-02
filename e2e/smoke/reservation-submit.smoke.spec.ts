@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "../fixtures/e2e-test";
 import { spaceFixtures, uniqueEmail, urls } from "../fixtures";
+import { pickBookableDateInNextMonth } from "../helpers/reservation-date";
+import { visibleById } from "../helpers/streaming-safe-locators";
 
 /**
  * ゲスト予約の送信 happy path（smoke / 未認証）
@@ -53,6 +55,22 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
   test("スペース詳細から予約を作成し、完了ページへ到達する", async ({
     page,
   }) => {
+    // 日付は**翌月の最初の予約可能日**を実時刻から導出する。
+    //
+    // 位置指定（旧実装の `.nth(3)`）は使えない: カレンダーの過去日判定は
+    // `E2E_FIXED_NOW_ISO`（2026-07-04 固定）基準で 8 月以降を一切無効化しないのに、
+    // `publicReservationSchema` の日付 refine は**実時刻**で走る。位置は動かないまま
+    // 実日付だけが進むので、月の 4 営業日目を過ぎた時点から月末まで必ず弾かれる。
+    //
+    // かといって**時計は固定できない**。`ReservationForm` は
+    // `useState(() => Date.now())` で `formRenderedAt` をフォームの初回マウント時に
+    // 焼き込み、`checkBotHeuristics` がサーバーの実時刻と引き算する。未来へ固定すると
+    // 差が負になり全送信が bot 判定で落ちる（実測 run 30731786539）。
+    //
+    // よって実時刻のまま、カレンダーを**常に 1 回だけ翌月へ送る**。翌月は全体が
+    // 未来なので条件分岐なしに必ず選べる（条件付きロケーターは ESLint で禁止）。
+    const dateOnly = pickBookableDateInNextMonth();
+
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
     );
@@ -68,8 +86,38 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
     const dateTime = page.getByRole("group", { name: "日時選択" });
     await expect(dateTime).toBeVisible({ timeout: 20_000 });
 
-    // 当日は営業時間の経過で開始枠が減るため、数日先の予約可能日を選ぶ。
-    await enabled(page, dateTime.getByRole("gridcell")).nth(3).click();
+    // 翌月へ送る。DayPicker は `<nav>`（role="navigation"）に前月 → 翌月の順で
+    // 2 ボタンを描く（`react-day-picker` の `components/Nav.js`）。aria-label は
+    // locale に従って翻訳される（実測「次の月へ」）ので、名前ではなく構造で掴む。
+    //
+    // **`click()` ではなく `press("Enter")` を使う。** click は hit-target check
+    // （"element receives pointer events"）を通すため、カレンダーの上に重なる要素が
+    // あると永久に retry する。実測 run 30736160628: sticky な `<header
+    // role="banner">` と DayPicker 自身の `.rdp-month_caption` が交互に pointer
+    // events を奪い、120 秒の test timeout まで 60 回以上 retry して失敗した。
+    // `press` は focus + keydown/keyup だけで **actionability チェックを一切
+    // 行わない**（公式 `types.d.ts`: "press fires keydown+keyup on the focused
+    // element; no actionability checks"）ので hit-target に阻まれない。`<button>`
+    // への Enter はネイティブに click を発火する。
+    //
+    // 代わりに**可視性は自分で待つ**。actionability を見ない以上、描画前の要素に
+    // キーを送ってしまわないよう web-first assertion を前に置く。
+    const calendar = visibleById(page, "reservation-calendar");
+    const nextMonth = calendar
+      .getByRole("navigation")
+      .getByRole("button")
+      .last();
+    await expect(nextMonth).toBeVisible({ timeout: 20_000 });
+    await nextMonth.press("Enter");
+
+    // DayPicker がセルに付ける安定属性 `data-day` で選ぶ。アクセシブルネームは
+    // ロケール依存の長い書式（例「2026年9月8日火曜日」）なので使わない。
+    // 可視になるまで待つことが「月送りが効いた」ことの確認も兼ねる。
+    const targetDay = calendar
+      .locator(`[data-day="${dateOnly}"]`)
+      .getByRole("button");
+    await expect(targetDay).toBeVisible({ timeout: 20_000 });
+    await targetDay.press("Enter");
 
     await enabled(page, page.getByRole("group", { name: "開始時間を選択" }))
       .first()
