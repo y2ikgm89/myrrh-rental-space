@@ -43,6 +43,16 @@ import { resolveTestDatabaseUrl } from "../test-db-url";
  * context も閉じられ、hook は走っても仕事ができない
  * （`.claude/rules/testing-e2e.md`、run 30672479398）。入口 purge なら
  * timeout しても次回に回収される。
+ *
+ * **ただし purge は「古い行」だけを対象にする。** `playwright.config.ts` は
+ * `fullyParallel: true` / CI で `workers: 2` なので、1 つの describe の 3 テストが
+ * 別 worker に分かれうる。`beforeAll` は **worker ごとに 1 回**走るため、後発 worker の
+ * 入口 purge が先発 worker の**生きている fixture**（User / Account / Session /
+ * Customer）を消してしまう。消された側はサインインやリダイレクトで落ちる。
+ *
+ * prefix だけで狙うとこれが防げない。かといって worker 固有の prefix にすると
+ * 「別 worker が落とした残骸」を誰も回収しなくなる。作成から一定時間が経った行
+ * だけを消せば、同時実行中の行には構造的に触れず、残骸は次回以降に回収される。
  */
 
 process.env["DATABASE_URL"] = resolveTestDatabaseUrl(
@@ -59,13 +69,27 @@ interface BlacklistTestUserFixture {
 /** この fixture が作る User の email prefix。入口 purge のキー。 */
 const EMAIL_PREFIX = "e2e-blacklist-";
 
+/**
+ * 入口 purge の対象にする「古さ」。
+ *
+ * 同時実行中の worker が作った行は生後数秒〜数十秒なので、この閾値を超えない。
+ * 一方 spec 全体（3 テスト）の実測は数十秒で、describe の timeout も分単位。
+ * 30 分は「並列の生きた行」と「前回 run の残骸」を確実に分ける幅であり、
+ * 残骸は次回 run で必ず回収される。
+ */
+const PURGE_AGE_MS = 30 * 60 * 1000;
+
 async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();
 
   try {
-    // 前回分を先に片付ける（入口 purge）。この fixture の行だけを prefix で狙う。
+    // 前回分を先に片付ける（入口 purge）。prefix に加えて **createdAt が古いこと**を
+    // 要求する。prefix だけだと、並列 worker が今まさに使っている行を消してしまう。
     const stale = await prisma.user.findMany({
-      where: { email: { startsWith: EMAIL_PREFIX } },
+      where: {
+        email: { startsWith: EMAIL_PREFIX },
+        createdAt: { lt: new Date(Date.now() - PURGE_AGE_MS) },
+      },
       select: { id: true },
     });
     if (stale.length > 0) {
