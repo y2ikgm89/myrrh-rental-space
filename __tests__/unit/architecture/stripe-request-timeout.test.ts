@@ -71,8 +71,25 @@ describe("Stripe 呼び出しの上限", () => {
     // Playwright 既定の 30 秒は poll 予算より短い。手書きの数値だと予算変更で
     // 片方だけ動く。
     expect(spec).toMatch(
-      /test\.describe\.configure\(\{\s*timeout:\s*REFUND_PIPELINE_TIMEOUT_MS/u,
+      /test\.describe\.configure\(\{\s*timeout:\s*TEST_TIMEOUT_MS/u,
     );
+    expect(spec).toMatch(
+      /TEST_TIMEOUT_MS\s*=\s*POLL_COUNT \* REFUND_PIPELINE_TIMEOUT_MS/u,
+    );
+  });
+
+  test("POLL_COUNT が実際の poll の数と一致している", () => {
+    const spec = readFileSync(SPEC, "utf8");
+
+    // poll は**直列に**走るので、1 回分から導くと 1 つ目が長引いたときに
+    // 2 つ目が自分の timeout に届く前に test ごと落ちる。poll を足したのに
+    // POLL_COUNT を据え置くと、同じ壊れ方が静かに戻る。
+    const declared = /const POLL_COUNT = (\d+);/u.exec(spec);
+    if (!declared?.[1]) throw new Error("POLL_COUNT の宣言が見つかりません");
+
+    const actual = [...spec.matchAll(/\.poll\(/gu)].length;
+    expect(actual).toBeGreaterThan(0);
+    expect(Number(declared[1])).toBe(actual);
   });
 
   test("spec が「認証情報が無い」という失効した前提を書いていない", () => {

@@ -412,6 +412,29 @@ const eslintConfig = defineConfig([
       "no-console": "off",
     },
   },
+
+  // seed の書き込み・存在判定が prisma schema の一意制約と噛み合っていること。
+  //
+  // 判定キーと制約キーがずれていると再実行が P2002 で中断し、seed は
+  // `main().catch` で `process.exit(1)` するので以降の phase が丸ごと走らない。
+  // Playwright の webServer chain は seed → build → start なので、ローカルの
+  // E2E スイートがそもそも起動しなくなる。
+  //
+  // 前身は seed.ts を正規表現で走査するテストだったが、位置・スコープ・入れ子を
+  // 見られないため広げるたびに次の穴が出た（`require-trimmed-text` と同じ経緯）。
+  // 配線の drift は `__tests__/unit/architecture/eslint-seed-unique-rule.test.ts`
+  // が検出する。
+  {
+    name: "seed-unique-constraint-gate",
+    files: ["prisma/seed.ts"],
+    plugins: {
+      local: localPlugin,
+    },
+    rules: {
+      "local/seed-respects-unique-constraints": "error",
+    },
+  },
+
   // Lexical DraggableBlock フォーク（@lexical/react 由来のパターンを許容）。
   // fork コードが React Compiler / @eslint-react ルールに抵触するため緩和する。
   {

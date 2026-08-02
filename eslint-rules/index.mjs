@@ -8,6 +8,7 @@
 
 import noRawUpdatetagForCdnMappedCacheTag from "./no-raw-updatetag-for-cdn-mapped-cache-tag.mjs";
 import requireTrimmedText from "./require-trimmed-text.mjs";
+import seedRespectsUniqueConstraints from "./seed-respects-unique-constraints.mjs";
 
 /** @type {import("eslint").ESLint.Plugin} */
 const plugin = {
@@ -19,6 +20,7 @@ const plugin = {
     "no-raw-updatetag-for-cdn-mapped-cache-tag":
       noRawUpdatetagForCdnMappedCacheTag,
     "require-trimmed-text": requireTrimmedText,
+    "seed-respects-unique-constraints": seedRespectsUniqueConstraints,
   },
 };
 
