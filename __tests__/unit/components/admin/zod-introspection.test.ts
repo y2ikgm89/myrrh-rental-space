@@ -10,6 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import {
   extractDiscriminatedUnionInfo,
   getArrayConstraints,
@@ -135,5 +136,38 @@ describe("zod-introspection — ZodPrefault unwrap", () => {
       expect(info?.discriminator).toBe("variant");
       expect(info?.options.map((o) => o.value)).toEqual(["image", "video"]);
     });
+
+    test("z.preprocess(...) も unwrap して info を返す", () => {
+      const info = extractDiscriminatedUnionInfo(
+        z.preprocess((v) => v, duSchema),
+      );
+      expect(info?.discriminator).toBe("variant");
+      expect(info?.options.map((o) => o.value)).toEqual(["image", "video"]);
+    });
+
+    // `.register(fieldRegistry, …)` は**ラッパー側**に付く。unwrap してから
+    // `fieldRegistry.get` を呼ぶと `undefined` になり、discriminator の label が
+    // 生キー（"variant"）に落ちて helpText も消える — フォームには出るが日本語が
+    // 消えるだけなので、options だけ見ていると気づけない。
+    for (const [label, wrap] of [
+      ["default", (s: z.ZodType) => s.default({ variant: "image", url: "" })],
+      ["optional", (s: z.ZodType) => s.optional()],
+      ["prefault", (s: z.ZodType) => s.prefault({ variant: "image", url: "" })],
+      ["preprocess", (s: z.ZodType) => z.preprocess((v) => v, s)],
+    ] as Array<[string, (s: z.ZodType) => z.ZodType]>) {
+      test(`${label} で包んでも registry の FieldMeta を失わない`, () => {
+        const registered = wrap(duSchema).register(fieldRegistry, {
+          fieldType: "select",
+          label: "バリアント",
+          group: "content",
+          helpText: "説明文",
+        });
+
+        const info = extractDiscriminatedUnionInfo(registered);
+
+        expect(info?.meta?.label).toBe("バリアント");
+        expect(info?.meta?.helpText).toBe("説明文");
+      });
+    }
   });
 });
