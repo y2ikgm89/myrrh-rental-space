@@ -4059,15 +4059,35 @@ async function seedNavigation(reconcile = true) {
         },
       ];
 
+      // 宣言している内容の全体。`create` と `update` で同じものを使う。
+      //
+      // 以前 `update` は `label` と `url` だけを戻していた。`isExternal` /
+      // `isActive` / `parentId` は schema の default に任せて create でしか
+      // 効かないので、管理画面でそれらを変えた行は **url だけが宣言値に戻り、
+      // 他は変えられたまま**になる。`isExternal: true` のまま `url: "/"` に
+      // されて内部リンクが外部リンク扱いになったり、既定の項目が非表示のまま
+      // 残ったり、別項目の下にぶら下がったままになる。dev の収束を謳う以上、
+      // 宣言している列は全部戻す。
+      //
+      // seed が置くのは全て内部パス（`/spaces` 等）なので `isExternal: false`、
+      // トップレベル項目なので `parentId: null` が宣言値。
+      const declaredContent = {
+        label,
+        url: item.url,
+        isExternal: false,
+        isActive: true,
+        parentId: null,
+      };
+
       await prisma.navigationItem.upsert({
         // 制約と同じキーで引く。これが P2002 を構造的に不可能にする。
         where: { type_order: { type: group.type, order: item.order } },
-        update: reconcile ? { label, url: item.url } : {},
+        // 本番（`reconcile: false`）は空のまま。管理画面の編集を踏み潰さない。
+        update: reconcile ? declaredContent : {},
         create: {
           type: group.type,
           order: item.order,
-          label,
-          url: item.url,
+          ...declaredContent,
         },
       });
     }
