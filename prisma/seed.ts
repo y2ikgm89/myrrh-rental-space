@@ -1163,6 +1163,10 @@ async function seedSpaces(overridePublished?: boolean) {
     },
   ];
 
+  // **本番 seed（`seedSpaces(false)`）は既存行に触らない。** dev だけが宣言へ
+  // 収束させる。`--production` の再実行が管理画面の編集を踏み潰さないため。
+  const reconcileDeclaredContent = overridePublished === undefined;
+
   for (const space of spaces) {
     // `slug` unique は isActive 条件の partial index。判定の母集合を制約に揃える
     // （soft-delete 済みの同 slug 行を「存在する」と数えると create をスキップし、
@@ -1173,9 +1177,43 @@ async function seedSpaces(overridePublished?: boolean) {
     if (!existing) {
       await prisma.space.create({ data: space });
       console.log(`✅ Created space: ${space.name}`);
-    } else {
-      console.log(`⏭️ Skipped existing space: ${space.name}`);
+      continue;
     }
+
+    if (!reconcileDeclaredContent) {
+      console.log(`⏭️ Skipped existing space: ${space.name}`);
+      continue;
+    }
+
+    // 宣言済みの**内容**だけを揃え直す。`isPublished` / `isActive` /
+    // `reviewsEnabled` / `locationId` / `categoryId` は書かない — 公開状態や
+    // 配置は管理画面と他 spec（`axe-admin-feature-disabled` 等）の領分で、
+    // seed が触ると相手を壊す。
+    //
+    // 収束させないと、宣言を変えても既存の dev / test DB に反映されない。
+    // `scripts/migrate-test-db.ts` は `migrate deploy` しか流さないので、
+    // ローカルだけ CI と静かに食い違う。実害: `rate-plan-preview.smoke.spec.ts`
+    // がロックしている「¥1,430」は `hourlyPrice: 500` から導出されるので、
+    // 古い価格が残った DB では価格アサーションが落ちる。
+    const {
+      slug: _slug,
+      isPublished: _isPublished,
+      isActive: _isActive,
+      reviewsEnabled: _reviewsEnabled,
+      locationId: _locationId,
+      categoryId: _categoryId,
+      ...declaredContent
+    } = {
+      locationId: undefined,
+      categoryId: undefined,
+      ...space,
+    };
+
+    await prisma.space.update({
+      where: { id: existing.id },
+      data: declaredContent,
+    });
+    console.log(`✅ Reconciled space: ${space.name}`);
   }
 
   if (overridePublished !== false) {
