@@ -1154,11 +1154,12 @@ async function seedE2EFixtureSpace() {
         select: { id: true, smartLockDeviceId: true, locationId: true },
       });
 
-  if (space.smartLockDeviceId) {
-    console.log(`⏭️ Skipped existing E2E fixture space device`);
-    return;
-  }
-
+  // デバイスは**毎回揃え直す**。「`smartLockDeviceId` が入っていれば抜ける」に
+  // すると、手動で非活性化されたり deviceType を変えられたときに再実行で
+  // 復旧できない。`getPasscodeRevealState` は `!device.isActive` と非 Pad 型を
+  // 弾くので（`customer-passcode-queries.ts`）、その状態では「解錠番号を表示」
+  // ボタンが出ず、spec は原因の分かりにくい形で落ちる。seed の冪等性は
+  // 「再実行すれば必ず期待状態になる」ことを指す。
   const device = await prisma.smartLockDevice.upsert({
     where: { deviceId: E2E_PASSCODE_FIXTURE_DEVICE_ID },
     create: {
@@ -1168,15 +1169,20 @@ async function seedE2EFixtureSpace() {
       deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
       isActive: true,
     },
-    update: { isActive: true },
+    update: {
+      isActive: true,
+      deviceType: SmartLockDeviceType.KEYPAD_TOUCH,
+    },
     select: { id: true },
   });
 
-  await prisma.space.update({
-    where: { id: space.id },
-    data: { smartLockDeviceId: device.id },
-  });
-  console.log(`✅ Created E2E fixture space with a keypad device`);
+  if (space.smartLockDeviceId !== device.id) {
+    await prisma.space.update({
+      where: { id: space.id },
+      data: { smartLockDeviceId: device.id },
+    });
+  }
+  console.log(`✅ Reconciled E2E fixture space and its keypad device`);
 }
 
 // =============================================================================
