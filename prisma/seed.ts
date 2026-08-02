@@ -356,6 +356,11 @@ async function seedSettings(
     includeBusinessPlaceholders?: boolean;
   } = {},
 ) {
+  // dev seed だけが SwitchBot 等の統合を有効化する（本番テンプレートは既定のまま）。
+  // 判別子は `includeBusinessPlaceholders`: `seedProduction` だけが false を渡す。
+  const enableDevOnlyIntegrations =
+    options.includeBusinessPlaceholders !== false;
+
   // 特定商取引法表示等に関わる法人情報。DB は全列 nullable（NOT NULL 制約なし）で、
   // admin フォームも空欄保存を公式に許容する（個人事業主は法人番号を持たない等）。
   // 空欄なら getOrganizationJsonLdData 側が該当プロパティを丸ごと省略するため、
@@ -536,8 +541,18 @@ async function seedSettings(
     }),
     prisma.settingsSwitchbot.upsert({
       where: { id: "singleton" },
-      update: {},
-      create: { id: "singleton" },
+      // dev は SwitchBot を有効にしておく。以前は
+      // `create-passcode-reveal-fixture` が実行時にこの singleton を true へ
+      // 書き換えて**戻さなかった**ので、seed が作れる状態（schema 既定の false）と
+      // 実際の DB が恒久的に食い違っていた。singleton の書き換えは fixture ではなく
+      // seed の宣言に置くほうが観測しやすく、復元 hook も要らない。
+      // 本番テンプレート（`seedSettings({ includeBusinessPlaceholders: false })`）
+      // には効かせない。
+      update: enableDevOnlyIntegrations ? { switchbotEnabled: true } : {},
+      create: {
+        id: "singleton",
+        ...(enableDevOnlyIntegrations ? { switchbotEnabled: true } : {}),
+      },
     }),
     prisma.settingsDataRetention.upsert({
       where: { id: "singleton" },
