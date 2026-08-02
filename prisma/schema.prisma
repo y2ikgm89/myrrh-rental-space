@@ -670,8 +670,11 @@ model ReservationSeries {
   deletedBy User?             @relation("ReservationSeriesDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   instances Reservation[]
 
-  // partial UNIQUE (WHERE deletedAt IS NULL) は migration.sql で raw SQL で定義。
-  // Prisma @@unique は無条件のため schema には非 unique index のみ宣言。
+  // soft-delete 済み行が (spaceId, dtstart) を恒久占有しないよう partial UNIQUE。
+  // 実体は 20260717010625_add_reservation_series が raw SQL で作った索引で、
+  // `map` で同名を指すことで migrate diff が「一致」と判定する（新規 migration 不要）。
+  // この宣言を消すと diff が DROP INDEX を提案し続ける（PR #1870 以前の状態）。
+  @@unique([spaceId, dtstart], map: "reservation_series_space_dtstart_active_unique", where: { deletedAt: null })
   @@index([spaceId, dtstart])
   @@index([customerId])
   @@index([createdAt])
