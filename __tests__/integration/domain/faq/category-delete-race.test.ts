@@ -41,11 +41,13 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type CategoryCommandsModule =
   typeof import("@/shared/domain/faq/category-commands");
 type ItemCommandsModule = typeof import("@/shared/domain/faq/item-commands");
+type DomainErrorModule = typeof import("@/shared/domain/domain-error");
 
 let prisma: PrismaModule["prisma"];
 let deleteFaqCategory: CategoryCommandsModule["deleteFaqCategory"];
 let createFaqItem: ItemCommandsModule["createFaqItem"];
 let restoreFaqItem: ItemCommandsModule["restoreFaqItem"];
+let DomainError: DomainErrorModule["DomainError"];
 
 let nextFixtureOrder = 1_400_000_000;
 
@@ -88,6 +90,7 @@ describeMaybe(
         await import("@/shared/domain/faq/category-commands"));
       ({ createFaqItem, restoreFaqItem } =
         await import("@/shared/domain/faq/item-commands"));
+      ({ DomainError } = await import("@/shared/domain/domain-error"));
       // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ）。
       await prisma.$queryRaw`SELECT 1`;
     });
@@ -96,11 +99,63 @@ describeMaybe(
       await prisma.$disconnect();
     });
 
+    // 競合テストは直列化を見るもので、**この環境では削除が常に競合に負ける**ため
+    // 「削除が勝った」分岐が一度も走らない（CONFLICT ガードを外して 5 回実行しても
+    // 全て緑だった）。ガードそのものはスケジューリングに依存しない形で検査する。
+    test("アクティブ項目があるカテゴリの削除は CONFLICT で拒否される", async () => {
+      const { categoryId, cleanup } = await createCategoryFixture();
+
+      try {
+        await createFaqItem({
+          categoryId,
+          question: `ガード検査 質問 ${crypto.randomUUID()}`,
+          answer: "回答",
+          isPublished: false,
+        });
+
+        let thrown: unknown = null;
+        try {
+          await deleteFaqCategory(categoryId);
+        } catch (error) {
+          thrown = error;
+        }
+
+        expect(thrown).toBeInstanceOf(DomainError);
+        expect(
+          (thrown as InstanceType<DomainErrorModule["DomainError"]>).code,
+        ).toBe("CONFLICT");
+
+        const category = await prisma.faqCategory.findUnique({
+          where: { id: categoryId },
+          select: { deletedAt: true },
+        });
+        expect(category?.deletedAt).toBeNull();
+      } finally {
+        await cleanup();
+      }
+    }, 30_000);
+
+    test("アクティブ項目が無いカテゴリは削除できる", async () => {
+      const { categoryId, cleanup } = await createCategoryFixture();
+
+      try {
+        await deleteFaqCategory(categoryId);
+
+        const category = await prisma.faqCategory.findUnique({
+          where: { id: categoryId },
+          select: { deletedAt: true },
+        });
+        expect(category?.deletedAt).not.toBeNull();
+      } finally {
+        await cleanup();
+      }
+    }, 30_000);
+
     test("delete と createFaqItem を同時に投げても非公開カテゴリ配下にアクティブ項目が残らない", async () => {
       const { categoryId, cleanup } = await createCategoryFixture();
 
       try {
-        await Promise.allSettled([
+        const [deleteOutcome] = await Promise.allSettled([
           deleteFaqCategory(categoryId),
           ...Array.from({ length: CONCURRENCY }, (_unused, index) =>
             createFaqItem({
@@ -120,13 +175,29 @@ describeMaybe(
           where: { categoryId, deletedAt: null },
         });
 
-        // 核心の不変条件：カテゴリが削除済みなら、配下にアクティブ項目は 0 件。
-        // **削除が効いたことを先に固定する。** `if (削除済み) expect(0)` だけだと、
-        // `deleteFaqCategory` が競合に毎回負ける（あるいは例外で何もしない）ように
-        // なっても緑のままで、競合テストが何も検査しない状態に静かに退化する。
+        // 核心の不変条件：**削除済みカテゴリの配下にアクティブ項目は残らない**。
+        //
+        // 勝者は固定しない。`deleteFaqCategory` は advisory lock 内で
+        // `_count.items > 0` なら CONFLICT を投げるので、項目操作が先にロックを
+        // 取れば削除が失敗するのが正しい直列化であり、そこを `deletedAt` 必須に
+        // すると**正しい挙動がスケジューリング次第で落ちる**。
+        //
+        // 一方で DB の状態だけで分岐すると、削除が壊れていても「負けたのだろう」と
+        // 読めてしまい何も検出しない（実測: 削除を no-op にしても CONFLICT ガードを
+        // 外しても緑のままだった）。**削除コマンド自身の結果**で分岐して、
+        // その結果と DB 状態の整合を両分岐で検査する。
         expect(category).toBeDefined();
-        expect(category?.deletedAt).not.toBeNull();
-        expect(activeItemCount).toBe(0);
+
+        if (deleteOutcome?.status === "fulfilled") {
+          // 削除が勝った: 実際に削除済みで、配下は空。
+          expect(category?.deletedAt).not.toBeNull();
+          expect(activeItemCount).toBe(0);
+        } else {
+          // 項目操作が勝った: 削除は CONFLICT で拒否され、カテゴリは生きていて
+          // 項目も残る。
+          expect(category?.deletedAt).toBeNull();
+          expect(activeItemCount).toBeGreaterThan(0);
+        }
       } finally {
         await cleanup();
       }
@@ -148,7 +219,7 @@ describeMaybe(
           data: { deletedAt: new Date() },
         });
 
-        await Promise.allSettled([
+        const [deleteOutcome] = await Promise.allSettled([
           deleteFaqCategory(categoryId),
           restoreFaqItem(itemId),
         ]);
@@ -161,14 +232,29 @@ describeMaybe(
           where: { categoryId, deletedAt: null },
         });
 
-        // 核心の不変条件：カテゴリが削除済みなら、配下にアクティブ項目は 0 件
-        // （restoreFaqItem が成功していれば、必ずカテゴリ削除は失敗＝CONFLICT のはず）。
-        // **削除が効いたことを先に固定する。** `if (削除済み) expect(0)` だけだと、
-        // `deleteFaqCategory` が競合に毎回負ける（あるいは例外で何もしない）ように
-        // なっても緑のままで、競合テストが何も検査しない状態に静かに退化する。
+        // 核心の不変条件：**削除済みカテゴリの配下にアクティブ項目は残らない**。
+        //
+        // 勝者は固定しない。`deleteFaqCategory` は advisory lock 内で
+        // `_count.items > 0` なら CONFLICT を投げるので、項目操作が先にロックを
+        // 取れば削除が失敗するのが正しい直列化であり、そこを `deletedAt` 必須に
+        // すると**正しい挙動がスケジューリング次第で落ちる**。
+        //
+        // 一方で DB の状態だけで分岐すると、削除が壊れていても「負けたのだろう」と
+        // 読めてしまい何も検出しない（実測: 削除を no-op にしても CONFLICT ガードを
+        // 外しても緑のままだった）。**削除コマンド自身の結果**で分岐して、
+        // その結果と DB 状態の整合を両分岐で検査する。
         expect(category).toBeDefined();
-        expect(category?.deletedAt).not.toBeNull();
-        expect(activeItemCount).toBe(0);
+
+        if (deleteOutcome?.status === "fulfilled") {
+          // 削除が勝った: 実際に削除済みで、配下は空。
+          expect(category?.deletedAt).not.toBeNull();
+          expect(activeItemCount).toBe(0);
+        } else {
+          // 項目操作が勝った: 削除は CONFLICT で拒否され、カテゴリは生きていて
+          // 項目も残る。
+          expect(category?.deletedAt).toBeNull();
+          expect(activeItemCount).toBeGreaterThan(0);
+        }
       } finally {
         await cleanup();
       }
