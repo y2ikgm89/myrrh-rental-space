@@ -122,6 +122,23 @@ export const spaceFixtures = {
    * 作成するため、CRUD spec の健全性チェックはこの Space でも成立する）。
    */
   adminRatePlanCrudTargetSlug: "seminar-room",
+  /**
+   * 時刻依存 fixture（`scripts/e2e/create-passcode-reveal-fixture.ts`）が
+   * **専有する**非公開スペース。上の 2 つと同じ「spec ごとにスペースを分けて
+   * 相互破壊を防ぐ」規約の適用で、こちらは時間軸の衝突を防ぐ。
+   *
+   * このスペースは seed のデモ予約（`DEMO_RESERVATION_SPACE_SLUGS`）の対象外なので、
+   * 実行時刻がどこであっても `[now-1h, now+1h]` が必ず空いている。以前は
+   * 「空いている公開スペースを探す」実装で、デモ当日予約が全スペースを塞ぐ
+   * 時間帯（実測 16:00〜18:00 UTC）に fixture 生成ごと落ちていた
+   * （CI run 30708064822）。
+   *
+   * 非公開なので `/spaces` に出ず、`e2e/visual/public-pages.spec.ts` の
+   * `spaces-list.png` にも影響しない。seed 側は `seedDev()` からのみ作るため
+   * 本番には入らない。slug の一致は
+   * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
+   */
+  passcodeRevealSpaceSlug: "e2e-passcode-fixture",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */
