@@ -351,6 +351,13 @@ export function extractDiscriminatedUnionInfo(
     return extractDiscriminatedUnionInfo(def["innerType"]);
   }
 
+  // ZodPipe（`z.preprocess` の実体）→ 出力側へ unwrap。
+  // page-hero は `safeParse({})` を成立させるため union を preprocess で包んでいる
+  // （schema.ts の JSDoc 参照）。ここを辿らないと variant の select が描画されない。
+  if (type === "pipe" && isZodType(def["out"])) {
+    return extractDiscriminatedUnionInfo(def["out"]);
+  }
+
   // discriminated union: type === "union" + discriminator が string
   if (type !== "union") return undefined;
   const discriminator = def["discriminator"];
