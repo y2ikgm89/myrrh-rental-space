@@ -96,6 +96,18 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
       .first()
       .click();
 
+    // **日付を選び終えたら実時刻へ戻す。** 次のステップで `ReservationForm` が
+    // `const [formRenderedAt] = useState(() => Date.now())` を**ブラウザの時計**で
+    // 焼き込み、Server Action の `checkBotHeuristics` はそれを**サーバーの実時刻**と
+    // 引き算する（`Date.now() - formRenderedAt >= 3000ms`）。固定したままだと
+    // formRenderedAt が 35 日先になり、差が負 = 3 秒未満と判定されて
+    // **全送信が bot 扱いで弾かれる**（実測: run 30712... の smoke 失敗）。
+    // カレンダーの表示月を決めるのに固定が要るのはここまでなので、フォームが
+    // マウントされる前に戻す。日付側の検証は
+    // `data.date >= formatJstDateString(new Date())` で、選んだ日は実時刻でも
+    // 未来なので通る。
+    await page.clock.setSystemTime(new Date());
+
     await page.getByRole("button", { name: "次へ" }).click();
     await expect(page).toHaveURL(/step=3/u, { timeout: 20_000 });
 

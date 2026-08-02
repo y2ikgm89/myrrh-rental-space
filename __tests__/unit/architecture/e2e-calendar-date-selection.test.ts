@@ -96,6 +96,30 @@ describe("予約カレンダーの日付選択", () => {
     expect(violations.map((v) => `${v.file}: ${v.reason}`)).toEqual([]);
   });
 
+  test("フォームを送信する spec は送信前に実時刻へ戻す", () => {
+    // `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
+    // **ブラウザの時計**から焼き込み、Server Action の `checkBotHeuristics` は
+    // それを**サーバーの実時刻**と引き算する。未来へ固定したまま送信すると差が
+    // 負になり、3 秒の下限を満たさず全送信が bot 判定で弾かれる。
+    // 実測: #1823 の chromium-smoke が完了 URL 待ちで timeout した。
+    const violations = listSpecFiles()
+      .filter((file) => {
+        const source = read(file);
+        return (
+          INSTALLS_CLOCK.test(source) &&
+          // 予約フォームを実際に送信している spec だけが対象。
+          /name: "予約を確定する"/u.test(source)
+        );
+      })
+      .filter((file) => !/clock\.setSystemTime\(/u.test(read(file)))
+      .map(
+        (file) =>
+          `${file}: 時刻を固定したまま予約フォームを送信している。日付選択後に page.clock.setSystemTime(new Date()) で実時刻へ戻すこと（formRenderedAt はブラウザ時計、bot 判定はサーバー時刻）`,
+      );
+
+    expect(violations).toEqual([]);
+  });
+
   test("日付導出は共有ヘルパー 1 箇所に集約されている", () => {
     // 各 spec が自前で「祝日を避けた N 日後」を組み立てると、seed のデモ予約帯や
     // 日曜休業の条件が spec ごとに乖離する。実際 2 つの smoke spec が同じ導出を

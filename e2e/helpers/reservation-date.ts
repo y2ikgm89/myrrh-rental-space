@@ -105,6 +105,14 @@ export function pickBookableDate(options?: {
  *
  * 12:00 JST（= 03:00 UTC）に揃える。`events-calendar.spec.ts` と同じ anchor で、
  * ホスト側タイムゾーンによる日付境界のずれを避ける。
+ *
+ * **フォームを送信する spec は、日付を選び終えたら
+ * `page.clock.setSystemTime(new Date())` で実時刻へ戻すこと。**
+ * `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
+ * **ブラウザの時計**から焼き込み、Server Action の `checkBotHeuristics` はそれを
+ * **サーバーの実時刻**と引き算する（`Date.now() - formRenderedAt >= 3000ms`）。
+ * 固定したままだと差が負になり、3 秒の下限を満たさず全送信が bot 判定で弾かれる。
+ * 固定が要るのはカレンダーの表示月を決めるところまで。
  */
 export function bookableDateClockTime(dateOnly: string): Date {
   return new Date(`${dateOnly}T03:00:00.000Z`);
