@@ -5,6 +5,7 @@ import {
   parseBusinessHours,
   parseBusinessAttributes,
   parseFacilities,
+  tryParseFacilities,
   type BusinessHours,
 } from "@/shared/lib/json-validators";
 
@@ -42,6 +43,55 @@ describe("parseFacilities", () => {
     expect(parseFacilities([wifi, { nope: 1 }, desk])).toEqual([wifi, desk]);
     expect(parseFacilities("garbage")).toEqual([]);
     expect(parseFacilities(null)).toEqual([]);
+  });
+});
+
+// `parseFacilities` の戻り値が `[]` でも「元から設備なし」と「保存値が読めない」を
+// 区別できない。編集フォームは読んだ設備をそのまま書き戻すため、後者を空配列として
+// 扱うと無関係な項目の保存で設備が消える。その 2 つを分ける strict 版。
+describe("tryParseFacilities", () => {
+  const wifi = { name: "Wi-Fi", iconName: "IconWifi" };
+  const desk = { name: "机", iconName: "" };
+
+  test("読めた設備は success で返す", () => {
+    expect(tryParseFacilities([wifi, desk])).toEqual({
+      success: true,
+      data: [wifi, desk],
+    });
+  });
+
+  test("未設定・空配列は「設備なし」であって読み取り失敗ではない", () => {
+    expect(tryParseFacilities(null)).toEqual({ success: true, data: [] });
+    expect(tryParseFacilities(undefined)).toEqual({ success: true, data: [] });
+    expect(tryParseFacilities([])).toEqual({ success: true, data: [] });
+  });
+
+  test("配列でない値は読み取り失敗", () => {
+    expect(tryParseFacilities("garbage")).toEqual({ success: false });
+    expect(tryParseFacilities({ name: "Wi-Fi" })).toEqual({ success: false });
+    expect(tryParseFacilities(42)).toEqual({ success: false });
+  });
+
+  test("空でない配列から 1 件も読めなければ読み取り失敗", () => {
+    expect(tryParseFacilities([{ nope: 1 }, "壊れ"])).toEqual({
+      success: false,
+    });
+    expect(tryParseFacilities([{ name: "   ", iconName: "" }])).toEqual({
+      success: false,
+    });
+  });
+
+  // #1822 の方針: 一部だけ壊れているなら、生き残った設備を編集できる状態を保つ。
+  test("一部だけ壊れた配列は読めた分を success で返す", () => {
+    expect(tryParseFacilities([wifi, { nope: 1 }, desk])).toEqual({
+      success: true,
+      data: [wifi, desk],
+    });
+  });
+
+  test("parseFacilities は tryParseFacilities の失敗を空配列に潰す", () => {
+    expect(parseFacilities([{ nope: 1 }])).toEqual([]);
+    expect(tryParseFacilities([{ nope: 1 }]).success).toBe(false);
   });
 });
 

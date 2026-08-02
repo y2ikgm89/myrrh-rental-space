@@ -5,7 +5,11 @@ import { useActionState, useEffect, useEffectEvent, useState } from "react";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
   SubmitButton,
   Tabs,
@@ -149,6 +153,18 @@ export function SpaceEditForm({
   const [newFacility, setNewFacility] = useState<string>("");
   const [newFacilityIconName, setNewFacilityIconName] = useState<string>("");
 
+  // 設備は 1 件につき hidden input 1 つでしか送られないため、DB の値が読めずに
+  // 空リストで start すると、価格や説明文だけを直した保存で設備が全部消える。
+  // 読めなかった間は保存自体を止める（サイドバー設定の storedWidgetsInvalid と同型）。
+  // mount 時に凍結して、保存後の router.refresh() で警告と了承状態がぶれないようにする。
+  const [storedFacilitiesInvalid] = useState(
+    space?.facilitiesUnreadable ?? false,
+  );
+  const [facilitiesResetConfirmed, setFacilitiesResetConfirmed] =
+    useState(false);
+  const saveBlockedByFacilities =
+    storedFacilitiesInvalid && !facilitiesResetConfirmed;
+
   const [isPublished, setIsPublished] = useState<boolean>(
     space?.isPublished ?? false,
   );
@@ -245,7 +261,16 @@ export function SpaceEditForm({
     setFacilities((prev) => prev.filter((f) => f.key !== key));
   };
 
+  // 読めなかった設備が失われることを了承して保存を解禁する。設備には既定値が
+  // 無いので、サイドバー設定の「デフォルトにリセット」に当たる操作は空リスト化。
+  const clearUnreadableFacilities = () => {
+    setFacilities([]);
+    setFacilitiesResetConfirmed(true);
+  };
+
   const triggerSave = useEffectEvent(() => {
+    // Ctrl+S の requestSubmit() は disabled な送信ボタンを迂回してしまう。
+    if (saveBlockedByFacilities) return;
     const formEl = document.getElementById(form.id);
     if (formEl instanceof HTMLFormElement) {
       formEl.requestSubmit();
@@ -390,6 +415,31 @@ export function SpaceEditForm({
           onRestore={draftRecovery.restore}
           onDismiss={draftRecovery.dismiss}
         />
+      )}
+
+      {storedFacilitiesInvalid && (
+        <Alert variant="destructive">
+          <IconAlertTriangle aria-hidden="true" />
+          <AlertTitle>保存されている設備リストが不正です</AlertTitle>
+          <AlertDescription>
+            <p>
+              データベース上の設備リストを読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
+            </p>
+            <p>
+              設備リストを空にすると保存できるようになります（保存すると、読み込めなかった設備は失われます）。
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={clearUnreadableFacilities}
+              disabled={isPending || facilitiesResetConfirmed}
+            >
+              設備リストを空にする
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {form.errors && form.errors.length > 0 && (
@@ -557,6 +607,7 @@ export function SpaceEditForm({
             isPending={isPending}
             label={isEdit ? "変更を保存" : "スペースを作成"}
             pendingLabel={isEdit ? "保存中..." : "作成中..."}
+            disabled={saveBlockedByFacilities}
           />
         </div>
       </div>

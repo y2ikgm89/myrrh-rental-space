@@ -333,6 +333,14 @@ export type SpaceWithStats = {
   mainImageUrl: string;
   gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
+  /**
+   * DB の `facilities` から 1 件も読めなかった（`tryParseFacilities` が失敗）。
+   *
+   * `facilities` が `[]` になる理由は「元から設備なし」と「保存値が読めない」の
+   * 2 つあり、編集フォームは後者で保存を止める必要がある（読んだ設備をそのまま
+   * hidden input で書き戻す作りなので、無関係な項目の保存で設備が消えるため）。
+   */
+  facilitiesUnreadable: boolean;
   businessHours: BusinessHours | null;
   isPublished: boolean;
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */
