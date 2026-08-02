@@ -140,7 +140,9 @@ export function useComment(): UseCommentReturn {
   // コメントを追加
   const addComment = (): AddCommentPayload | null => {
     const quotedText = getSelectedText(editor);
-    if (!quotedText) return null;
+    // 引用は逐語で保持する（schema 側で trim しない）ので、空白だけの選択を
+    // ここで止める。通さないと引用の吹き出しが中身なしで描画される。
+    if (!quotedText.trim()) return null;
 
     const markId = generateMarkId();
 

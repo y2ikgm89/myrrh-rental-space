@@ -28,9 +28,12 @@ const createThreadSchema = z.object({
     .string()
     .refine(isCommentableContentType, { error: "contentType が無効です" }),
   contentId: z.uuid({ error: "contentId は有効な UUID である必要があります" }),
+  // 選択範囲をそのまま保持する。`markId` が指す本文と `CommentCard` が出す引用が
+  // 食い違わないよう、インデントや行頭・行末の空白も落とさない。空白だけの選択で
+  // スレッドを作らせない責務は `CommentPlugin` の `addComment` が持つ。
+  // eslint-disable-next-line local/require-trimmed-text -- 本文から取った逐語の引用
   quotedText: z
     .string()
-    .trim()
     .min(1, { error: "引用テキストは必須です" })
     .max(2000, { error: "引用テキストは2000文字以内" }),
   initialComment: z

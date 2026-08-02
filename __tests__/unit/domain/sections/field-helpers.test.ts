@@ -224,6 +224,24 @@ describe("field.url", () => {
     expect(schema.parse("  https://example.com  ")).toBe("https://example.com");
   });
 
+  // `.default()` は値をそのまま返して検証を飛ばすので、危険な既定値が
+  // section defaults に載ってしまう。`.prefault()` は既定値も検証を通す。
+  test("既定値も検証を通る", () => {
+    expect(
+      field.url("リンク", { default: "https://ok.example" }).parse(undefined),
+    ).toBe("https://ok.example");
+    expect(
+      field
+        .url("リンク", { default: "javascript:alert(1)" })
+        .safeParse(undefined).success,
+    ).toBe(false);
+    expect(
+      field
+        .url("リンク", { default: "  https://ok.example  " })
+        .parse(undefined),
+    ).toBe("https://ok.example");
+  });
+
   test("FieldMeta の fieldType が url", () => {
     const schema = field.url("リンク");
     const meta = extractFieldMeta(schema);

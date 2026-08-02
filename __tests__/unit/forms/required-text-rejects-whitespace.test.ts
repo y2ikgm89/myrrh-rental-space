@@ -171,3 +171,39 @@ describe("field.text / field.textarea", () => {
     });
   });
 });
+
+/**
+ * 必須 email が未入力のとき、**日本語のメッセージ**が出ること。
+ *
+ * conform は空の FormData 値を `undefined` に畳むので、`z.string().trim().pipe(z.email())`
+ * の外側 `z.string()` で落ちる。そこに `error` を渡していないと Zod 既定の
+ * "Invalid input: expected string, received undefined" が公開フォームに出る（#1835 の退行）。
+ */
+describe("必須 email の未入力メッセージ", () => {
+  const base = {
+    lastName: "山田",
+    firstName: "太郎",
+    email: "taro@example.com",
+    subject: "設備について",
+    message: "利用したいのですが",
+  };
+
+  test("正常系が通る（これが false なら probe 自体が誤り）", () => {
+    expect(publicInquirySchema.safeParse(base).success).toBe(true);
+  });
+
+  for (const [label, value] of [
+    ["未入力", undefined],
+    ["空文字", ""],
+    ["形式が不正", "nope"],
+  ] as const) {
+    test(`${label}なら日本語のメッセージを返す`, () => {
+      const result = publicInquirySchema.safeParse({ ...base, email: value });
+      expect(result.success).toBe(false);
+      const message = result.success
+        ? ""
+        : (result.error.issues[0]?.message ?? "");
+      expect(message).toBe("有効なメールアドレスを入力してください");
+    });
+  }
+});

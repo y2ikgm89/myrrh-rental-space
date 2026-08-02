@@ -400,30 +400,36 @@ export const field = {
    * maxLength を落とすため。
    */
   url(label: string, opts?: StringFieldOpts) {
-    return z
-      .string()
-      .trim()
-      .max(2000)
-      .refine((value) => value === "" || isSafePublicHref(value), {
-        error:
-          "URL は / から始まるパス、または http(s) / mailto / tel を指定してください（javascript: 等は不可）",
-      })
-      .default(opts?.default ?? "")
-      .register(fieldRegistry, {
-        fieldType: "url",
-        label,
-        group: opts?.group ?? "content",
-        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
-        ...(opts?.placeholder !== undefined && {
-          placeholder: opts.placeholder,
-        }),
-        ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
-        // url field のデフォルト leading icon は IconLink（明示指定で上書き可）
-        leadingIcon: opts?.leadingIcon ?? "IconLink",
-        ...(opts?.trailingIcon !== undefined && {
-          trailingIcon: opts.trailingIcon,
-        }),
-      });
+    return (
+      z
+        .string()
+        .trim()
+        .max(2000)
+        .refine((value) => value === "" || isSafePublicHref(value), {
+          error:
+            "URL は / から始まるパス、または http(s) / mailto / tel を指定してください（javascript: 等は不可）",
+        })
+        // `.default()` は値をそのまま返して検証を飛ばすため、section が
+        // `field.url(..., { default: "javascript:alert(1)" })` と書くと未検証のまま
+        // section defaults に載ってしまう。`.prefault()` は既定値も検証を通すので、
+        // 誤った既定値は定義した時点の `safeParse({})` で落ちる。
+        .prefault(opts?.default ?? "")
+        .register(fieldRegistry, {
+          fieldType: "url",
+          label,
+          group: opts?.group ?? "content",
+          ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
+          ...(opts?.placeholder !== undefined && {
+            placeholder: opts.placeholder,
+          }),
+          ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+          // url field のデフォルト leading icon は IconLink（明示指定で上書き可）
+          leadingIcon: opts?.leadingIcon ?? "IconLink",
+          ...(opts?.trailingIcon !== undefined && {
+            trailingIcon: opts.trailingIcon,
+          }),
+        })
+    );
   },
 
   /** アイコン名入力（Tabler Icons 等） */
