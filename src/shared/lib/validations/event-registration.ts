@@ -34,6 +34,7 @@ export const publicEventRegistrationSchema = eventRegistrationBaseSchema.extend(
       .min(1, { error: "参加人数は1以上です" })
       .max(10, { error: "参加人数は10名以下です" })
       .default(1),
+    // eslint-disable-next-line local/require-trimmed-text -- Turnstile が発行する値
     turnstileToken: z
       .string({ error: "セキュリティ検証が必要です" })
       .min(1, { error: "セキュリティ検証が必要です" }),
@@ -72,6 +73,7 @@ export const publicEventWaitlistRegistrationSchema =
       .min(1, { error: "参加人数は1以上です" })
       .max(10, { error: "参加人数は10名以下です" })
       .default(1),
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     turnstileToken: z
       .string({ error: "セキュリティ検証が必要です" })
       .min(1, { error: "セキュリティ検証が必要です" }),
@@ -101,7 +103,9 @@ export type PublicEventWaitlistRegistrationInput = z.input<
  * 固定フォーマットを持たないため min(1) のみで検証する。
  */
 export const publicEventWaitlistConfirmSchema = z.object({
+  // eslint-disable-next-line local/require-trimmed-text -- URL から渡る単発トークン
   token: z.string().min(1, { error: "トークンが必要です" }),
+  // eslint-disable-next-line local/require-trimmed-text -- Turnstile が発行する値
   turnstileToken: z
     .string({ error: "セキュリティ検証が必要です" })
     .min(1, { error: "セキュリティ検証が必要です" }),
@@ -119,6 +123,7 @@ export const eventRegistrationEditSchema = eventRegistrationBaseSchema.extend({
     .int()
     .min(1, { error: "参加人数は1以上です" })
     .max(10, { error: "参加人数は10名以下です" }),
+  // eslint-disable-next-line local/require-trimmed-text -- 同上
   turnstileToken: z
     .string({ error: "セキュリティ検証が必要です" })
     .min(1, { error: "セキュリティ検証が必要です" }),

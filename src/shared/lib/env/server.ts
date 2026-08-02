@@ -125,6 +125,7 @@ export const serverEnv = createEnv({
     DATABASE_URL: z.url(),
 
     // Better Auth（必須）
+    // eslint-disable-next-line local/require-trimmed-text -- 環境変数の秘密値。空白混入はデプロイ設定の誤りなので黙って直さない
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: noTrailingSlashUrl.optional(),
 
@@ -168,6 +169,7 @@ export const serverEnv = createEnv({
     // API キー / OAuth トークン等の暗号化に使用。
     // 鍵ローテーション: `ENCRYPTION_KEY` は常に「新規 encrypt に使う primary key」、
     // `ENCRYPTION_KEY_ID` はそれの kid（識別子、デフォルト "v1"）。
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     ENCRYPTION_KEY: z
       .string()
       .length(64, { error: "ENCRYPTION_KEY must be exactly 64 characters" })
@@ -201,6 +203,7 @@ export const serverEnv = createEnv({
 
     // Audit log integrity（本番必須 - ランタイム検証）
     // 監査ログ hash chain の HMAC-SHA256 鍵。DB 内に保存しないこと。
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     AUDIT_LOG_HMAC_KEY: z
       .string()
       .length(64, {
@@ -284,7 +287,9 @@ export const serverEnv = createEnv({
         error: "CLOUDFLARE_ZONE_ID must be exactly 32 hex characters",
       })
       .optional(),
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     CLOUDFLARE_API_TOKEN: z.string().min(40).optional(),
+    // eslint-disable-next-line local/require-trimmed-text -- 同上
     CLOUDFLARE_ORIGIN_HEADER_SECRET: z.string().min(32).optional(),
 
     // Runtime scaling hints

@@ -34,6 +34,7 @@ import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/consta
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import { GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
 
+// eslint-disable-next-line local/require-trimmed-text -- URL から渡る申込 ID
 const registrationIdSchema = z.string().min(1, { error: "申込IDが不正です" });
 
 export async function updateGuestEventRegistrationAction(

@@ -23,6 +23,7 @@ export const faqCategoryFormSchema = z.strictObject({
     .max(100, { error: "カテゴリ名は100文字以内で入力してください" }),
   slug: z
     .string()
+    .trim()
     .min(1, { error: "スラッグを入力してください" })
     .max(100, { error: "スラッグは100文字以内で入力してください" })
     .regex(/^[a-z0-9-]+$/, {

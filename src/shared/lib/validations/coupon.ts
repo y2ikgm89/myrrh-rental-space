@@ -24,6 +24,7 @@ import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
  */
 export const couponCodeSchema = z
   .string()
+  .trim()
   .min(4, { error: "クーポンコードは4文字以上で入力してください" })
   .max(20, { error: "クーポンコードは20文字以内で入力してください" })
   .regex(/^[A-Z0-9]+$/, {

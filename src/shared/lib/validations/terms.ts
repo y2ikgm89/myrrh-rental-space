@@ -97,6 +97,7 @@ export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
 
 const slugSchema = z
   .string()
+  .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(50, { error: "スラッグは50文字以内です" })
   .regex(/^[a-z0-9-]+$/u, {
@@ -105,6 +106,7 @@ const slugSchema = z
 
 const typeSchema = z
   .string()
+  .trim()
   .min(1, { error: "タイプを入力してください" })
   .max(64, { error: "タイプは64文字以内です" })
   .regex(/^[a-z0-9-]+$/u, {

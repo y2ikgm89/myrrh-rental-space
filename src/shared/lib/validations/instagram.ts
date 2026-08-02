@@ -40,6 +40,7 @@ export function isValidInstagramPostUrl(url: string): boolean {
  */
 export const instagramTokenSchema = z
   .string()
+  .trim()
   .min(1, { error: "トークンを入力してください" });
 
 /**
@@ -60,6 +61,7 @@ export function isValidInstagramToken(token: string): boolean {
  */
 export const instagramPostIdSchema = z
   .string()
+  .trim()
   .min(1, { error: "投稿IDを入力してください" })
   .regex(/^[a-zA-Z0-9_-]+$/, { error: "無効な投稿ID形式です" });
 

@@ -48,6 +48,7 @@ const popularWidgetSchema = z.object({
 export const customWidgetSchema = z.object({
   type: z.literal("custom"),
   enabled: z.boolean(),
+  // eslint-disable-next-line local/require-trimmed-text -- crypto.randomUUID() 由来の内部 ID
   id: z.string().min(1),
   title: z.string().trim().min(1, { error: "タイトルは必須です" }).max(100),
   description: z.string().max(500).optional(),

@@ -191,7 +191,35 @@ UI 側で `value.trim().length === 0` を見て送信ボタンを disabled に�
 `.trim()` は Zod 4 では `ZodString` の flag であって transform ではないので、
 input / output はどちらも `string` のまま。conform の `submission.value` の型は動かない。
 
-gate: `__tests__/unit/architecture/required-text-is-trimmed.test.ts`。**配置で絞らず
-`src/` 全体**を走査する（規約に載っていない置き場を丸ごと見逃さないため）。
-token / id / slug のような機械が生成する値だけ、理由付きで allowlist に載せる。
-URL も `.trim()` する側 — 空白付き URL は保存を通って描画で消えるため（safe-href.ts）。
+**順序が本体。** `.trim()` は `$ZodCheckOverwrite` で、check は宣言順に走る。
+つまり `z.string().min(1).trim()` は**空白を含んだ値**に `min(1)` を当てて通し、
+その後で空文字に潰す。実測:
+
+```
+z.string().trim().min(1).safeParse("   ")  → 拒否
+z.string().min(1).trim().safeParse("   ")  → 通過、data === ""
+```
+
+`.trim()` は必ず `.string()` の直後に置く（`.max()` / `.regex()` / `.refine()` も
+同じ理由で trim より後ろでなければならない）。
+
+**線引きは「誰がその値を作るか」**:
+
+| 値の出どころ                                                                      | 扱い           |
+| --------------------------------------------------------------------------------- | -------------- |
+| 人がフォームに入力・貼り付ける（タイトル / slug / クーポンコード / API トークン） | `.trim()` する |
+| 機械が渡す（URL param / Turnstile / 生成 ID / env / webhook / `<select>` の値）   | trim しない    |
+
+slug も `.trim()` する側。pattern 検証があるのは「trim が**無害**」な理由であって
+「**不要**」な理由ではなく、実際 `" my-post "` は「小文字英数字とハイフンのみ」という
+入力内容と噛み合わないエラーになっていた。
+
+gate: ESLint の `local/require-trimmed-text`（`eslint-rules/require-trimmed-text.mjs`）。
+`z.string()` から呼び出しチェーンを AST で辿るので、**構文の形と順序の両方**を見る。
+例外は中央の一覧ではなく、その行の `eslint-disable-next-line local/require-trimmed-text --
+<理由>` で表明する。
+
+（旧 `required-text-is-trimmed.test.ts` は正規表現 3 本で `.trim()` の**有無だけ**を
+見ており、順序を検査できず — つまり gate が赤い開発者が末尾に `.trim()` を足すと
+緑になったうえで空文字が保存される — さらに 24 通りの書き方のうち 18 通りを
+取りこぼしていたため廃止した。）

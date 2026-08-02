@@ -22,6 +22,7 @@ import {
 const idSchema = uuidIdSchema("コメント");
 
 const createThreadSchema = z.object({
+  // eslint-disable-next-line local/require-trimmed-text -- Lexical の MarkNode が生成する内部 ID
   markId: z.string().min(1, { error: "markId は必須です" }),
   contentType: z
     .string()
@@ -29,6 +30,7 @@ const createThreadSchema = z.object({
   contentId: z.uuid({ error: "contentId は有効な UUID である必要があります" }),
   quotedText: z
     .string()
+    .trim()
     .min(1, { error: "引用テキストは必須です" })
     .max(2000, { error: "引用テキストは2000文字以内" }),
   initialComment: z
