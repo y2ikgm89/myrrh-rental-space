@@ -21,24 +21,42 @@
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { extname, join, relative } from "node:path";
 
 const ROOT = process.cwd();
 
 /** 走査するディレクトリ。ビルド成果物と依存は見ない。 */
 const SCAN_DIRS = ["src", "__tests__", "scripts", "e2e", "prisma"];
 
-const TEXT_EXTENSIONS = [
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".js",
-  ".mjs",
-  ".sql",
-  ".json",
-  ".md",
-  ".css",
-];
+/**
+ * **バイナリだけを挙げ、それ以外は全部見る。** 逆（テキスト拡張子の許可リスト）に
+ * すると新しい種類が黙って対象外になる — 最初の版が実際にそうで、`.sh` 5 件・
+ * `.prisma` 2 件・`.toml` 1 件が走査されていなかった（Codex の指摘）。
+ *
+ * 挙げ漏れたバイナリは「テキストとして読めない」で落ちる = 気づける。
+ * 挙げ漏れたテキストは黙って素通りする = 気づけない。落ちる側に倒す。
+ */
+const BINARY_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".avif",
+  ".ico",
+  ".pdf",
+  ".zip",
+  ".gz",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+  ".eot",
+  ".mp4",
+  ".webm",
+  ".mp3",
+  ".wav",
+]);
 
 /** tab / LF / CR は通常のテキストなので除く。それ以外の C0 と DEL を見る。 */
 function findControlCharacters(source: string): readonly number[] {
@@ -54,11 +72,12 @@ function findControlCharacters(source: string): readonly number[] {
 function collectFiles(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".next") continue;
+    if (entry === "node_modules" || entry === ".next" || entry === "generated")
+      continue;
     const p = join(dir, entry);
     if (statSync(p).isDirectory()) {
       out.push(...collectFiles(p));
-    } else if (TEXT_EXTENSIONS.some((ext) => entry.endsWith(ext))) {
+    } else if (!BINARY_EXTENSIONS.has(extname(entry).toLowerCase())) {
       out.push(p);
     }
   }
