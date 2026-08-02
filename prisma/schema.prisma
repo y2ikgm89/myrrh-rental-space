@@ -280,8 +280,8 @@ model User {
   /// Google Workspace グループ同期でダッシュボード利用可否を表す。
   /// false のとき管理ログイン拒否・通知先/担当候補から除外（ロール履歴は保持）。
   dashboardEnabled Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   accounts     Account[]
@@ -297,23 +297,23 @@ model User {
   pageAssignments UserPageAssignment[]
 
   // FK: createdBy / resolvedBy / deletedBy リレーション
-  createdCommentThreads    EditorCommentThread[] @relation("CommentThreadCreator")
-  resolvedCommentThreads   EditorCommentThread[] @relation("CommentThreadResolver")
-  createdEditorComments    EditorComment[]       @relation("EditorCommentCreator")
-  deletedEditorComments    EditorComment[]       @relation("EditorCommentDeleter")
+  createdCommentThreads        EditorCommentThread[]  @relation("CommentThreadCreator")
+  resolvedCommentThreads       EditorCommentThread[]  @relation("CommentThreadResolver")
+  createdEditorComments        EditorComment[]        @relation("EditorCommentCreator")
+  deletedEditorComments        EditorComment[]        @relation("EditorCommentDeleter")
   // Inquiry Overhaul Phase 1: 旧 1:1 の replyMessage/repliedBy を廃止。
   // 複数返信スレッド (InquiryReply) と担当者アサイン (Inquiry.assignee) に分割し、
   // status 変更履歴・添付・内部メモの author も User FK として持つ。
-  assignedInquiries          Inquiry[]              @relation("InquiryAssignee")
-  authoredInquiryReplies     InquiryReply[]         @relation("InquiryReplyAuthor")
+  assignedInquiries            Inquiry[]              @relation("InquiryAssignee")
+  authoredInquiryReplies       InquiryReply[]         @relation("InquiryReplyAuthor")
   authoredInquiryStatusChanges InquiryStatusHistory[] @relation("InquiryStatusHistoryChangedBy")
-  uploadedInquiryAttachments InquiryAttachment[]    @relation("InquiryAttachmentUploadedByUser")
-  authoredInquiryNotes       InquiryInternalNote[]  @relation("InquiryInternalNoteAuthor")
-  reservationDeletions     Reservation[]         @relation("ReservationDeletions")
-  deletedReservationSeries ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
-  eventDeletions           Event[]               @relation("EventDeletions")
-  createdBlockTemplates    BlockTemplate[]       @relation("BlockTemplateCreator")
-  repliedSpaceReviews      SpaceReview[]         @relation("SpaceReviewReplyAuthor")
+  uploadedInquiryAttachments   InquiryAttachment[]    @relation("InquiryAttachmentUploadedByUser")
+  authoredInquiryNotes         InquiryInternalNote[]  @relation("InquiryInternalNoteAuthor")
+  reservationDeletions         Reservation[]          @relation("ReservationDeletions")
+  deletedReservationSeries     ReservationSeries[]    @relation("ReservationSeriesDeletedBy")
+  eventDeletions               Event[]                @relation("EventDeletions")
+  createdBlockTemplates        BlockTemplate[]        @relation("BlockTemplateCreator")
+  repliedSpaceReviews          SpaceReview[]          @relation("SpaceReviewReplyAuthor")
 
   // OR検索用インデックス
   @@index([name])
@@ -340,12 +340,12 @@ model Account {
   accessToken           String?   @db.Text
   refreshToken          String?   @db.Text
   idToken               String?   @db.Text
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
   scope                 String?
   password              String? // Better Auth: credential provider のパスワード（scrypt hash）
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -357,11 +357,11 @@ model Session {
   id        String   @id @default(uuid()) @db.Uuid
   token     String   @unique
   userId    String   @db.Uuid
-  expiresAt DateTime
+  expiresAt DateTime @db.Timestamptz(6)
   ipAddress String?
   userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -373,9 +373,9 @@ model Verification {
   id         String   @id @default(uuid()) @db.Uuid
   identifier String
   value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([identifier])
   @@map("verification")
@@ -420,14 +420,14 @@ model Location {
 
   // GBP Sync
   gbpSyncEnabled Boolean   @default(true)
-  gbpSyncedAt    DateTime?
+  gbpSyncedAt    DateTime? @db.Timestamptz(6)
   gbpSyncError   String?   @db.Text
 
   sortOrder   Int      @default(0)
   isPublished Boolean  @default(false)
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
   // スマートロックデバイス登録簿からの既定デバイス（任意）。新規Space作成時に
   // Space.smartLockDeviceIdの初期値として継承される（登録し忘れ防止）。
@@ -435,10 +435,10 @@ model Location {
 
   // Relations
   spaces                 Space[]
-  events                  Event[]
-  blockedDates            BlockedDate[]
-  smartLockDevices        SmartLockDevice[]      @relation("LocationSmartLockDevices")
-  defaultSmartLockDevice  SmartLockDevice?        @relation("LocationDefaultSmartLockDevice", fields: [defaultSmartLockDeviceId], references: [id], onDelete: SetNull)
+  events                 Event[]
+  blockedDates           BlockedDate[]
+  smartLockDevices       SmartLockDevice[] @relation("LocationSmartLockDevices")
+  defaultSmartLockDevice SmartLockDevice?  @relation("LocationDefaultSmartLockDevice", fields: [defaultSmartLockDeviceId], references: [id], onDelete: SetNull)
 
   @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
   @@unique([slug], map: "locations_slug_active_key", where: { isActive: true })
@@ -463,8 +463,8 @@ model SpaceCategory {
   color       String? // テーマカラー（任意）
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   spaces Space[]
@@ -508,13 +508,13 @@ model Space {
   facilities           Json      @default("[]")
   businessHours        Json?
   isPublished          Boolean   @default(false)
-  publishedAt          DateTime?
+  publishedAt          DateTime? @db.Timestamptz(6)
   isActive             Boolean   @default(true)
   /// レビュー機能の per-space ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
   /// 新規スペースはデフォルト false（opt-in）。`Settings.featureModules.reviews` が上位 gate。
   reviewsEnabled       Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
 
   // SEO設定
   metaDescription String?
@@ -553,6 +553,7 @@ model Space {
   category          SpaceCategory?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   smartLockDevice   SmartLockDevice?    @relation(fields: [smartLockDeviceId], references: [id], onDelete: SetNull)
 
+  @@unique([slug], map: "spaces_slug_active_key", where: { isActive: true })
   // OR検索用インデックス
   @@index([name])
   @@index([addressDetail])
@@ -566,7 +567,6 @@ model Space {
   // Seq Scan fallback (per Codex review on PR #986).
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_name_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_slug_trgm_idx")
-  @@unique([slug], map: "spaces_slug_active_key", where: { isActive: true })
   @@map("spaces")
 }
 
@@ -583,7 +583,7 @@ model SpaceRatePlan {
   spaceId String @db.Uuid
   space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
-  name        String  @db.VarChar(100) // 例: "週末料金", "GW料金", "深夜料金", "祝日料金"
+  name        String @db.VarChar(100) // 例: "週末料金", "GW料金", "深夜料金", "祝日料金"
   hourlyPrice Int
 
   daysOfWeek    DayOfWeek[] // 空配列 = 全曜日（曜日制約なし）
@@ -593,8 +593,8 @@ model SpaceRatePlan {
   effectiveFrom DateTime?   @db.Date // JST 日付、null = 期限なし
   effectiveTo   DateTime?   @db.Date // JST 日付（inclusive）、null = 期限なし
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // last-updated-wins 優先度用
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6) // last-updated-wins 優先度用
 
   @@index([spaceId, updatedAt(sort: Desc)])
   @@map("space_rate_plans")
@@ -628,8 +628,8 @@ model BlockedDate {
   /// "HOLIDAY" | "MAINTENANCE" | "EMERGENCY" | "OTHER"（isValidBlockedDateType で検証）
   type       String   @db.VarChar(32)
   createdBy  String   @db.Uuid
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   space    Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -642,32 +642,32 @@ model BlockedDate {
 }
 
 model ReservationSeries {
-  id                            String    @id @default(uuid()) @db.Uuid
-  spaceId                       String    @db.Uuid
-  customerId                    String    @db.Uuid
-  couponId                      String?   @db.Uuid
-  rrule                         String    @db.VarChar(500)
-  dtstart                       DateTime  @db.Timestamptz(6)
-  duration                      Int
-  instanceCount                 Int
-  templateData                  Json
-  agreementSnapshot             Json
-  createdAt                     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt                     DateTime  @updatedAt @db.Timestamptz(6)
-  cancelledAt                   DateTime? @db.Timestamptz(6)
-  cancelledByType               String?   @db.VarChar(20)
-  cancellationReason            String?   @db.Text
-  deletedAt                     DateTime? @db.Timestamptz(6)
-  deletedById                   String?   @db.Uuid
+  id                          String    @id @default(uuid()) @db.Uuid
+  spaceId                     String    @db.Uuid
+  customerId                  String    @db.Uuid
+  couponId                    String?   @db.Uuid
+  rrule                       String    @db.VarChar(500)
+  dtstart                     DateTime  @db.Timestamptz(6)
+  duration                    Int
+  instanceCount               Int
+  templateData                Json
+  agreementSnapshot           Json
+  createdAt                   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                   DateTime  @updatedAt @db.Timestamptz(6)
+  cancelledAt                 DateTime? @db.Timestamptz(6)
+  cancelledByType             String?   @db.VarChar(20)
+  cancellationReason          String?   @db.Text
+  deletedAt                   DateTime? @db.Timestamptz(6)
+  deletedById                 String?   @db.Uuid
   /// Google Calendar 側の recurring master event ID (Phase B.2.1 Task 5 で追加)。
   /// null = 未同期 or Google Calendar 無効。bulk cancel の series-level GCal 操作
   /// (deleteGcalMaster / patchGcalMasterUntil) が非 null 時のみ発火する。
-  googleCalendarMasterEventId   String?   @db.VarChar(1024)
+  googleCalendarMasterEventId String?   @db.VarChar(1024)
 
-  space    Space              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  customer Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  coupon   Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  deletedBy User?             @relation("ReservationSeriesDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  space     Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  customer  Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon    Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  deletedBy User?         @relation("ReservationSeriesDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   instances Reservation[]
 
   // soft-delete 済み行が (spaceId, dtstart) を恒久占有しないよう partial UNIQUE。
@@ -689,8 +689,8 @@ model Reservation {
   customerId String            @db.Uuid
   /// Space reservations are half-open intervals: [startTime, endTime).
   /// DB invariant `reservations_time_order_check` enforces startTime < endTime.
-  startTime  DateTime @db.Timestamptz(6)
-  endTime    DateTime @db.Timestamptz(6)
+  startTime  DateTime          @db.Timestamptz(6)
+  endTime    DateTime          @db.Timestamptz(6)
   /// Active inventory states are PENDING / CONFIRMED. DB invariant
   /// `reservations_no_active_time_overlap_excl` prevents overlapping active,
   /// non-deleted reservations for the same space by using PostgreSQL EXCLUDE
@@ -713,14 +713,14 @@ model Reservation {
   version Int @default(0)
 
   // 割引情報
-  couponId               String?  @db.Uuid // 適用されたクーポンID
+  couponId               String? @db.Uuid // 適用されたクーポンID
   couponDiscountAmount   Int? // クーポン割引額（円）
   durationDiscountAmount Int? // 長時間割引額（円）
   spaceDiscountAmount    Int? // スペース固有割引額（円）
   basePrice              Int // 割引前価格（円、NOT NULL、Σ segment.subtotal）
   /// Rate plan 解決結果のスナップショット（`RateBreakdown` 型、`src/shared/lib/pricing/rate-breakdown.ts`）。
   /// rate plan 導入前の予約は segments が空の snapshot を保持する（内訳は再現不可）。
-  rateBreakdownJson Json
+  rateBreakdownJson      Json
 
   // 税情報（予約時点の値を記録）
   taxRateType       TaxRateType // 適用された税率タイプ（NOT NULL、snapshot）
@@ -760,14 +760,14 @@ model Reservation {
   paymentStatus           PaymentStatus @default(UNPAID)
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
-  paidAt                  DateTime? @db.Timestamptz(6)
+  paidAt                  DateTime?     @db.Timestamptz(6)
   /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
   /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
   /// `PENDING_RESERVATION_EXPIRY_MINUTES` の cutoff 判定に使う。予約作成時刻
   /// (createdAt) ではなく checkout 開始時刻で判定することで、予約作成から時間をおいて
   /// 決済を開始したケース (createdAt < cutoff だが checkout はまだ生きている) を誤爆
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
-  paymentInitiatedAt      DateTime? @db.Timestamptz(6)
+  paymentInitiatedAt      DateTime?     @db.Timestamptz(6)
 
   // Cancellation tracking
   cancellationReason String?   @db.Text
@@ -833,8 +833,8 @@ model Customer {
   notes                  String?             @db.Text
   totalReservations      Int                 @default(0)
   totalSpent             Int?
-  lastReservationAt      DateTime?
-  firstReservationAt     DateTime?
+  lastReservationAt      DateTime?           @db.Timestamptz(6)
+  firstReservationAt     DateTime?           @db.Timestamptz(6)
   isActive               Boolean             @default(true)
   marketingOptIn         Boolean             @default(false) // メルマガ・キャンペーン受信可否
   phoneContactOptIn      Boolean             @default(true) // 電話連絡可否
@@ -844,21 +844,21 @@ model Customer {
   /// [write-only audit trail] Resend Webhook 観測時刻。現状 admin UI 未配線 (src/ read consumer 0)。
   /// 単独 DROP は 310s 計画ダウンタイム発生のため次の必然的 destructive migration に bundle 予定
   /// (memory: dead-taxinputmode-bundle-deferred-2026-07-11 と同方針)。
-  emailDeliveryUpdatedAt DateTime?
+  emailDeliveryUpdatedAt DateTime?           @db.Timestamptz(6)
   /// [write-only audit trail] Resend Webhook payload の bounce.message / suppression reason (人間可読のラベル)。
   /// 現状 admin UI 未配線 (src/ read consumer 0)。単独 DROP は 310s 計画ダウンタイム発生のため
   /// 次の必然的 destructive migration に bundle 予定。誤って未使用と判断して単独 DROP しないこと。
   emailDeliveryReason    String?             @db.VarChar(500)
   /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
-  flaggedForReviewAt     DateTime?
+  flaggedForReviewAt     DateTime?           @db.Timestamptz(6)
   flagReasons            String[]            @default([])
   /// STATE-03: 匿名化 (anonymize) 実施時刻。非 null = 匿名化済み。
   /// 決済歴 (Receipt 発行済) のある Customer は物理削除できないため
   /// (Receipt.reservation は onDelete: Restrict)、PII を placeholder に置換して
   /// Reservation / Receipt の customerId を残す。関連の会計証跡は不変。
   /// append-only の証跡列 (再設定禁止、reset は別 workflow)。
-  anonymizedAt           DateTime?
+  anonymizedAt           DateTime?           @db.Timestamptz(6)
   /// STATE-03: 匿名化理由コード。
   /// - "customer-requested": 顧客本人からの削除依頼 (GDPR 相当)
   /// - "admin-purge":        管理者による purge (誤登録・重複クリーンアップ)
@@ -873,26 +873,26 @@ model Customer {
   /// 再送信を suppression list で継続的に弾ける (sender reputation 保護)。
   /// 通常 Customer では NULL、匿名化・マージ後の永続 hash 記録用。
   suppressedEmailHash    String?             @db.VarChar(128)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime            @updatedAt @db.Timestamptz(6)
 
   // Social Auth Link
   userId String? @unique @db.Uuid
   user   User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
 
   // Relations
-  reservations         Reservation[]
-  reservationSeries    ReservationSeries[]
-  inquiries            Inquiry[]
-  reviews              SpaceReview[]
-  eventRegistrations   EventRegistration[]
-  termsAgreements      TermsAgreement[]
-  pendingEmailChanges  PendingCustomerEmailChange[]
-  pendingMergeAsTarget PendingCustomerMerge[] @relation("MergeTarget")
-  pendingMergeAsSource PendingCustomerMerge[] @relation("MergeSource")
+  reservations               Reservation[]
+  reservationSeries          ReservationSeries[]
+  inquiries                  Inquiry[]
+  reviews                    SpaceReview[]
+  eventRegistrations         EventRegistration[]
+  termsAgreements            TermsAgreement[]
+  pendingEmailChanges        PendingCustomerEmailChange[]
+  pendingMergeAsTarget       PendingCustomerMerge[]       @relation("MergeTarget")
+  pendingMergeAsSource       PendingCustomerMerge[]       @relation("MergeSource")
   // Inquiry Overhaul Phase 1: 顧客が添付した inquiry_attachments 行 (uploadedByCustomerId)
-  uploadedInquiryAttachments InquiryAttachment[] @relation("InquiryAttachmentUploadedByCustomer")
-  authoredInquiryReplies     InquiryReply[]     @relation("InquiryReplyAuthorCustomer")
+  uploadedInquiryAttachments InquiryAttachment[]          @relation("InquiryAttachmentUploadedByCustomer")
+  authoredInquiryReplies     InquiryReply[]               @relation("InquiryReplyAuthorCustomer")
 
   @@index([lastName])
   @@index([firstName])
@@ -938,9 +938,9 @@ model PendingCustomerEmailChange {
   newEmail          String    @db.VarChar(320)
   newEmailCanonical String    @db.VarChar(320)
   tokenHash         String    @unique @db.VarChar(64) // sha256 hex
-  expiresAt         DateTime
-  consumedAt        DateTime?
-  createdAt         DateTime  @default(now())
+  expiresAt         DateTime  @db.Timestamptz(6)
+  consumedAt        DateTime? @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([customerId])
   @@index([expiresAt])
@@ -960,9 +960,9 @@ model PendingCustomerMerge {
   sourceCustomerId String    @db.Uuid
   guestEmail       String    @db.VarChar(320)
   tokenHash        String    @unique @db.VarChar(64)
-  expiresAt        DateTime
-  consumedAt       DateTime?
-  createdAt        DateTime  @default(now())
+  expiresAt        DateTime  @db.Timestamptz(6)
+  consumedAt       DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
 
   targetCustomer Customer @relation("MergeTarget", fields: [targetCustomerId], references: [id], onDelete: Cascade)
   sourceCustomer Customer @relation("MergeSource", fields: [sourceCustomerId], references: [id], onDelete: Cascade)
@@ -991,8 +991,8 @@ model Coupon {
   maxDiscountAmount    Int? // 最大割引額（円、パーセント割引時）
 
   // 有効期限
-  validFrom  DateTime
-  validUntil DateTime?
+  validFrom  DateTime  @db.Timestamptz(6)
+  validUntil DateTime? @db.Timestamptz(6)
 
   // 利用制限
   usageLimit Int? // 利用回数上限（null=無制限）
@@ -1002,8 +1002,8 @@ model Coupon {
   // 併用設定
   canCombineWithDurationDiscount Boolean @default(true) // 長時間割引との併用可否
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   reservations      Reservation[]
@@ -1032,19 +1032,19 @@ model Inquiry {
   subject       String
   message       String        @db.Text
   status        InquiryStatus @default(NEW)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
 
   // Inquiry Overhaul Phase 1: 担当者アサイン (SLA 対応期限とセットで運用)
-  assigneeId   String? @db.Uuid
-  assignee     User?   @relation("InquiryAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  slaExpiresAt DateTime?
+  assigneeId   String?   @db.Uuid
+  assignee     User?     @relation("InquiryAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  slaExpiresAt DateTime? @db.Timestamptz(6)
 
   // Soft delete: admin UI の削除は deletedAt を刻むだけ。hard delete は
   // data-retention cron (`purgeExpiredInquiries`) が唯一の経路。
-  deletedAt        DateTime?
+  deletedAt        DateTime? @db.Timestamptz(6)
   // GDPR / PIPA 22 対応の PII 匿名化タイムスタンプ + 理由 (Phase 6 で anonymize command 実装)
-  anonymizedAt     DateTime?
+  anonymizedAt     DateTime? @db.Timestamptz(6)
   anonymizedReason String?   @db.VarChar(50)
 
   // Customer Link（ログインユーザーのお問い合わせ紐づけ）
@@ -1079,16 +1079,16 @@ model Inquiry {
 
 /// Inquiry の返信スレッド (STAFF / CUSTOMER 双方向)。作成順に createdAt 昇順で並べる。
 model InquiryReply {
-  id         String                 @id @default(uuid()) @db.Uuid
-  inquiryId  String                 @db.Uuid
-  authorType InquiryReplyAuthorType
+  id               String                 @id @default(uuid()) @db.Uuid
+  inquiryId        String                 @db.Uuid
+  authorType       InquiryReplyAuthorType
   /// STAFF → User.id (User 削除は Restrict — positive-author CHECK と整合)。CUSTOMER では null。
-  authorId   String?                @db.Uuid
+  authorId         String?                @db.Uuid
   /// CUSTOMER → Customer.id (Customer 削除は Restrict)。STAFF では null。
-  authorCustomerId String?          @db.Uuid
-  body       String                 @db.Text
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
+  authorCustomerId String?                @db.Uuid
+  body             String                 @db.Text
+  createdAt        DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime               @updatedAt @db.Timestamptz(6)
 
   inquiry        Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   author         User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1109,7 +1109,7 @@ model InquiryStatusHistory {
   toStatus    InquiryStatus
   changedById String?        @db.Uuid
   reason      String?        @db.VarChar(200)
-  createdAt   DateTime       @default(now())
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
 
   inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   changedBy User?   @relation("InquiryStatusHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
@@ -1132,7 +1132,7 @@ model InquiryAttachment {
   /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか（必須）。
   uploadedById         String?  @db.Uuid
   uploadedByCustomerId String?  @db.Uuid
-  createdAt            DateTime @default(now())
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
 
   inquiry            Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   reply              InquiryReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
@@ -1150,8 +1150,8 @@ model InquiryInternalNote {
   inquiryId String   @db.Uuid
   authorId  String   @db.Uuid
   body      String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   author  User    @relation("InquiryInternalNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1166,8 +1166,8 @@ model InquiryTag {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @unique @db.VarChar(50)
   color     String?  @db.VarChar(20)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   inquiries InquiryTagOnInquiry[]
 
@@ -1178,7 +1178,7 @@ model InquiryTag {
 model InquiryTagOnInquiry {
   inquiryId String   @db.Uuid
   tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   tag     InquiryTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
@@ -1195,11 +1195,11 @@ model News {
   contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
   contentJson        Json? // Lexical EditorState JSON（プライマリ）
   isPublished        Boolean      @default(false)
-  publishedAt        DateTime?
+  publishedAt        DateTime?    @db.Timestamptz(6)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  createdAt          DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
 
   // SEO設定
   metaDescription String?
@@ -1232,10 +1232,10 @@ model AnnouncementBar {
   textColor    String? // カスタム文字色 (hex)
   isActive     Boolean   @default(true)
   displayOrder Int       @default(0)
-  startAt      DateTime?
-  endAt        DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  startAt      DateTime? @db.Timestamptz(6)
+  endAt        DateTime? @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
 
   @@unique([displayOrder], map: "announcement_bars_displayOrder_key")
   @@index([isActive, displayOrder])
@@ -1262,22 +1262,24 @@ model Post {
   metaKeywords       String?
   ogpTitle           String?
   ogpDescription     String?
-  publishedAt        DateTime?
+  publishedAt        DateTime?    @db.Timestamptz(6)
   status             PostStatus   @default(DRAFT)
   viewCount          Int          @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
   authorId           String?      @db.Uuid // ユーザー削除時にnull化
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   /// Soft delete: admin 削除は deletedAt を刻むだけ。hard delete はゴミ箱の永久削除 or trash-cleanup cron。
-  deletedAt          DateTime?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?    @db.Timestamptz(6)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
 
   // Relations
   category PostCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   author   User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
   postTags PostTagOnPost[]
 
+  // ソフトデリート済み行が slug を占有し続けないよう partial unique（Event と同型）。
+  @@unique([slug], map: "posts_slug_active_key", where: { deletedAt: null })
   // OR検索用インデックス
   @@index([title])
   @@index([authorId])
@@ -1290,8 +1292,6 @@ model Post {
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
-  // ソフトデリート済み行が slug を占有し続けないよう partial unique（Event と同型）。
-  @@unique([slug], map: "posts_slug_active_key", where: { deletedAt: null })
   @@map("posts")
 }
 
@@ -1316,8 +1316,8 @@ model PostCategory {
   metaDescription String?  @db.Text
   ogpImageUrl     String?
   order           Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   posts Post[]
@@ -1335,8 +1335,8 @@ model PostTag {
   metaTitle       String?
   metaDescription String?  @db.Text
   ogpImageUrl     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   posts PostTagOnPost[]
@@ -1358,12 +1358,12 @@ model Page {
   ogpDescription  String?
   ogpImageUrl     String?
   isPublished     Boolean   @default(true)
-  publishedAt     DateTime?
+  publishedAt     DateTime? @db.Timestamptz(6)
   isActive        Boolean   @default(true)
   isSystemPage    Boolean   @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
   template        String    @db.VarChar(64)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
   sections    Section[]
@@ -1390,8 +1390,8 @@ model Section {
   order     Int      @default(0) // 表示順序（DnDで変更可能）
   isActive  Boolean  @default(true) // ON/OFF制御
   config    Json     @default("{}") // タイプ別設定（Zodで型安全）
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
@@ -1414,8 +1414,8 @@ model NavigationItem {
   isExternal Boolean        @default(false)
   order      Int
   isActive   Boolean        @default(true)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  createdAt  DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @db.Timestamptz(6)
 
   // Self-relation for submenus
   parent   NavigationItem?  @relation("NavigationHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
@@ -1435,8 +1435,8 @@ model SocialLink {
   isActive      Boolean        @default(true)
   showOnDesktop Boolean        @default(true) // デスクトップで表示
   showOnMobile  Boolean        @default(true) // モバイルで表示
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(6)
 
   @@unique([order], map: "social_links_order_key")
   @@index([order])
@@ -1455,9 +1455,9 @@ model FaqCategory {
   icon        String? // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
   order       Int       @default(0)
   isActive    Boolean   @default(true)
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
   items FaqItem[]
@@ -1484,14 +1484,14 @@ model FaqItem {
   answer          String    @db.Text // 回答（プレーンテキスト、改行保持）
   order           Int       @default(0)
   isPublished     Boolean   @default(true)
-  publishedAt     DateTime?
-  deletedAt       DateTime?
+  publishedAt     DateTime? @db.Timestamptz(6)
+  deletedAt       DateTime? @db.Timestamptz(6)
   viewCount       Int       @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
-  lastViewedAt    DateTime? // 直近閲覧日時（人気度の新鮮度判断用）
+  lastViewedAt    DateTime? @db.Timestamptz(6) // 直近閲覧日時（人気度の新鮮度判断用）
   helpfulCount    Int       @default(0) // 「役に立った」投票数（localStorage で dedup）
   notHelpfulCount Int       @default(0) // 「役に立たなかった」投票数（localStorage で dedup）
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -1516,8 +1516,8 @@ model FaqItem {
 
 model SettingsAnnouncementCarousel {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   animation         AnnouncementBarAnimation   @default(fade)
   duration          Int                        @default(5000)
@@ -1539,8 +1539,8 @@ model SettingsAnnouncementCarousel {
 
 model SettingsSystem {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   maintenanceMode         Boolean @default(false)
   maintenanceMessage      String? @db.Text
@@ -1555,8 +1555,8 @@ model SettingsSystem {
 
 model SettingsSeo {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
   // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
@@ -1582,8 +1582,8 @@ model SettingsSeo {
 
 model SettingsAnalytics {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   analyticsType         AnalyticsType?
   googleAnalyticsId     String?
@@ -1598,29 +1598,29 @@ model SettingsAnalytics {
 
 model SettingsLayout {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  containerWidth       LayoutWidth?
-  containerWidthCustom Int?
-  contentWidth         LayoutWidth?
-  contentWidthCustom   Int?
-  headerScrollBehavior HeaderScrollBehavior @default(always_visible)
-  headerBackgroundMode HeaderBackgroundMode @default(solid)
-  themeColor           String               @default("#fafafa")
-  footerTagline        String?
-  footerNavigationLabel String              @default("Navigation")
-  footerContactLabel   String               @default("Contact")
-  footerHoursLabel     String               @default("Hours")
-  footerShowSocialLinks Boolean             @default(true)
+  containerWidth        LayoutWidth?
+  containerWidthCustom  Int?
+  contentWidth          LayoutWidth?
+  contentWidthCustom    Int?
+  headerScrollBehavior  HeaderScrollBehavior @default(always_visible)
+  headerBackgroundMode  HeaderBackgroundMode @default(solid)
+  themeColor            String               @default("#fafafa")
+  footerTagline         String?
+  footerNavigationLabel String               @default("Navigation")
+  footerContactLabel    String               @default("Contact")
+  footerHoursLabel      String               @default("Hours")
+  footerShowSocialLinks Boolean              @default(true)
 
   @@map("settings_layouts")
 }
 
 model SettingsSidebar {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   sidebarEnabled      Boolean @default(true)
   sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]")
@@ -1633,16 +1633,16 @@ model SettingsSidebar {
 
 model SettingsOrganization {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   businessName        String?
   businessNameKana    String?
   representativeName  String?
-  establishedDate     DateTime?
+  establishedDate     DateTime? @db.Timestamptz(6)
   registrationNumber  String?
   invoiceNumber       String?
-  businessDescription String? @db.Text
+  businessDescription String?   @db.Text
 
   phoneNumber   String?
   faxNumber     String?
@@ -1669,8 +1669,8 @@ model SettingsOrganization {
 
 model SettingsCommerce {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   durationDiscountEnabled Boolean                 @default(false)
   durationDiscountRules   Json                    @default("[]")
@@ -1688,8 +1688,8 @@ model SettingsCommerce {
 
 model SettingsNotification {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   notifyNewReservation            Boolean @default(true)
   notifyReservationChange         Boolean @default(true)
@@ -1709,8 +1709,8 @@ model SettingsNotification {
 
 model SettingsReservation {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   defaultTimeSlot                  Int     @default(60)
   minReservationDuration           Int     @default(60)
@@ -1726,30 +1726,30 @@ model SettingsReservation {
 
 model SettingsStripe {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
-  stripePublishableKey       String?
-  stripeSecretKey            String?   @db.Text
-  stripeWebhookSecret        String?   @db.Text
-  stripeAccountId            String?
-  stripeCurrency             String    @default("jpy")
-  stripePaymentMethodTypes   String[]  @default(["card"])
-  stripeLastTestedAt         DateTime?
-  stripeConnectionStatus     String?
+  stripePublishableKey     String?
+  stripeSecretKey          String?   @db.Text
+  stripeWebhookSecret      String?   @db.Text
+  stripeAccountId          String?
+  stripeCurrency           String    @default("jpy")
+  stripePaymentMethodTypes String[]  @default(["card"])
+  stripeLastTestedAt       DateTime? @db.Timestamptz(6)
+  stripeConnectionStatus   String?
 
   @@map("settings_stripes")
 }
 
 model SettingsResend {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   resendApiKey           String?   @db.Text
   resendWebhookSecret    String?   @db.Text
-  resendLastTestedAt     DateTime?
+  resendLastTestedAt     DateTime? @db.Timestamptz(6)
   resendConnectionStatus String?
 
   @@map("settings_resends")
@@ -1757,12 +1757,12 @@ model SettingsResend {
 
 model SettingsTurnstile {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   turnstileSiteKey          String?
   turnstileSecretKey        String?   @db.Text
-  turnstileLastTestedAt     DateTime?
+  turnstileLastTestedAt     DateTime? @db.Timestamptz(6)
   turnstileConnectionStatus String?
 
   @@map("settings_turnstiles")
@@ -1770,11 +1770,11 @@ model SettingsTurnstile {
 
 model SettingsGoogleMaps {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   googleMapsApiKey           String?   @db.Text
-  googleMapsLastTestedAt     DateTime?
+  googleMapsLastTestedAt     DateTime? @db.Timestamptz(6)
   googleMapsConnectionStatus String?
 
   @@map("settings_google_maps")
@@ -1782,13 +1782,13 @@ model SettingsGoogleMaps {
 
 model SettingsGoogleCalendar {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   googleCalendarEnabled            Boolean            @default(false)
   googleCalendarServiceAccountJson String?            @db.Text
   googleCalendarId                 String?
-  googleCalendarLastTestedAt       DateTime?
+  googleCalendarLastTestedAt       DateTime?          @db.Timestamptz(6)
   googleCalendarConnectionStatus   String?
   googleCalendarReminderMinutes    Int?
   icalAttachmentEnabled            Boolean            @default(true)
@@ -1796,12 +1796,12 @@ model SettingsGoogleCalendar {
   googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
   googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
   googleCalendarSyncToken          String?            @db.Text
-  googleCalendarLastSyncedAt       DateTime?
+  googleCalendarLastSyncedAt       DateTime?          @db.Timestamptz(6)
   eventImportEnabled               Boolean            @default(false)
   eventImportSyncToken             String?            @db.Text
   googleCalendarWebhookChannelId   String?
   googleCalendarWebhookResourceId  String?
-  googleCalendarWebhookExpiration  DateTime?
+  googleCalendarWebhookExpiration  DateTime?          @db.Timestamptz(6)
   googleCalendarWebhookToken       String?            @db.Text
 
   @@map("settings_google_calendars")
@@ -1809,8 +1809,8 @@ model SettingsGoogleCalendar {
 
 model SettingsGoogleBusinessProfile {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   googleBusinessProfileEnabled Boolean @default(false)
   googleBusinessProfileAuth    Json?
@@ -1820,11 +1820,11 @@ model SettingsGoogleBusinessProfile {
 
 model SettingsInstagram {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   instagramAccessToken    String?   @db.Text
-  instagramTokenExpiresAt DateTime?
+  instagramTokenExpiresAt DateTime? @db.Timestamptz(6)
   instagramUserId         String?
   instagramUsername       String?
   instagramAccountType    String?
@@ -1834,14 +1834,14 @@ model SettingsInstagram {
 
 model SettingsSwitchbot {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   switchbotEnabled               Boolean   @default(false)
   switchbotOpenToken             String?   @db.Text
   switchbotSecretKey             String?   @db.Text
   switchbotConnectionStatus      String?
-  switchbotLastTestedAt          DateTime?
+  switchbotLastTestedAt          DateTime? @db.Timestamptz(6)
   switchbotPasscodeBufferMinutes Int       @default(15)
   switchbotWebhookPathToken      String?   @db.Text
 
@@ -1850,8 +1850,8 @@ model SettingsSwitchbot {
 
 model SettingsFeatures {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
   /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / payment / data-retention）。
@@ -1864,8 +1864,8 @@ model SettingsFeatures {
 
 model SettingsDataRetention {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   /// データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数（0 = opt-out）。
   /// 形式: `{ sessionMonths, verificationMonths, loginAttemptMonths, reservationGuestMonths, inquiryMonths, customerInactiveMonths }`。
@@ -1892,8 +1892,8 @@ model InstagramPost {
   mediaType    InstagramMediaType
   permalink    String // 永続リンク
   sortOrder    Int                @default(0)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
 
   @@unique([sortOrder], map: "instagram_posts_sortOrder_key")
   @@index([sortOrder])
@@ -1967,7 +1967,7 @@ model AuditLog {
   oldValue      Json? // 変更前の値（UPDATE時）
   newValue      Json? // 変更後の値 or 作成値
   metadata      Json? // 追加情報（IPアドレス、UserAgent等）
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime    @default(now()) @db.Timestamptz(6)
 
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -2008,8 +2008,8 @@ model Media {
   // 管理情報
   uploadedBy String?  @db.Uuid // アップロードユーザーID（User削除時にnull化）
   isActive   Boolean  @default(true) // ソフトデリート
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   uploader User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
@@ -2031,7 +2031,7 @@ model LoginAttempt {
   identifier String // IPアドレス or メールのハッシュ
   email      String // 試行されたメールアドレス
   success    Boolean // 成功/失敗
-  createdAt  DateTime @default(now())
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([identifier, createdAt])
   @@index([email, createdAt])
@@ -2062,16 +2062,16 @@ model TermsDocument {
   contentJson  Json // Lexical EditorState
   contentHtml  String       @db.Text // SSR / 同意記録 snapshot 用（保存時 sanitize-html で再生成）
   isPublished  Boolean      @default(false)
-  publishedAt  DateTime?
+  publishedAt  DateTime?    @db.Timestamptz(6)
   /// 適用 scope 配列。空配列 = フッター掲載専用 (どの consent フォームにも出ない)。
   scopes       TermsScope[]
   /// 改訂時の周知文 (民法 548 条の 4 周知義務対応・任意)。
   changelog    String?      @db.Text
   showInFooter Boolean      @default(true)
   displayOrder Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  deletedAt    DateTime?
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(6)
+  deletedAt    DateTime?    @db.Timestamptz(6)
 
   agreements TermsAgreement[]
 
@@ -2090,7 +2090,7 @@ model TermsAgreement {
   guestEmail      String?    @db.VarChar(255)
   contentSnapshot String     @db.Text // 同意時 HTML 完全保存
   contentHash     String     @db.VarChar(64) // sha256(contentSnapshot)
-  agreedAt        DateTime   @default(now())
+  agreedAt        DateTime   @default(now()) @db.Timestamptz(6)
   /// 同意が発生した scope (旧 context VARCHAR を enum 化)。
   scope           TermsScope
   /// 同意が紐づくリソースの ID（予約 / 問い合わせ / イベント申込）。
@@ -2128,10 +2128,10 @@ model EditorCommentThread {
   contentId   String              @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
   quotedText  String              @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
-  resolvedAt  DateTime? // 解決日時
+  resolvedAt  DateTime?           @db.Timestamptz(6) // 解決日時
   resolvedBy  String?             @db.Uuid // 解決者ID（User.id）- ユーザー削除時にnull化
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @db.Timestamptz(6)
   createdBy   String?             @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
@@ -2153,10 +2153,10 @@ model EditorComment {
   threadId  String    @db.Uuid
   content   String    @db.Text // コメント本文
   isDeleted Boolean   @default(false) // ソフトデリート
-  deletedAt DateTime? // 削除日時
+  deletedAt DateTime? @db.Timestamptz(6) // 削除日時
   deletedBy String?   @db.Uuid // 削除者ID（User.id）- ユーザー削除時にnull化
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
   createdBy String?   @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
@@ -2176,8 +2176,8 @@ model BlockTemplate {
   name        String // テンプレート名
   description String?  @db.Text // 説明
   nodeJson    Json // Lexical SerializedEditorState JSON
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
   createdBy   String?  @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
@@ -2202,10 +2202,10 @@ model SpaceReview {
   comment       String?   @db.VarChar(1000)
   isPublished   Boolean   @default(true)
   replyBody     String?   @db.VarChar(1000)
-  repliedAt     DateTime?
+  repliedAt     DateTime? @db.Timestamptz(6)
   repliedById   String?   @db.Uuid
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
 
   space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -2234,8 +2234,8 @@ model EventTimeSlot {
   endAt                 DateTime @db.Timestamptz(6)
   capacity              Int
   googleCalendarEventId String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
 
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
@@ -2263,8 +2263,8 @@ model EventCategory {
   color       String?
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
   events Event[]
 
@@ -2353,6 +2353,11 @@ model Event {
   categoryId String        @db.Uuid
   category   EventCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  // FaqCategory.slug と同型: slug が無条件 @unique だと、ソフトデリート済みイベントが
+  // (permanentlyDelete するまで) 行として残り続ける限り同じ slug の新規作成が DB 制約で
+  // 常に拒否される。ensureUniqueSlug は deletedAt: null で絞っているため partial unique
+  // index に揃える。
+  @@unique([slug], map: "events_slug_active_key", where: { deletedAt: null })
   @@index([status])
   @@index([categoryId])
   @@index([locationId])
@@ -2370,11 +2375,6 @@ model Event {
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
   @@index([spaceId], map: "events_spaceId_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
-  // FaqCategory.slug と同型: slug が無条件 @unique だと、ソフトデリート済みイベントが
-  // (permanentlyDelete するまで) 行として残り続ける限り同じ slug の新規作成が DB 制約で
-  // 常に拒否される。ensureUniqueSlug は deletedAt: null で絞っているため partial unique
-  // index に揃える。
-  @@unique([slug], map: "events_slug_active_key", where: { deletedAt: null })
   @@map("events")
 }
 
@@ -2393,8 +2393,8 @@ model EventTicket {
   unitSize    Int      @default(1)
   sortOrder   Int      @default(0)
   isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
@@ -2410,25 +2410,25 @@ model EventTicket {
 // ==============================================
 
 model EventRegistration {
-  id          String             @id @default(cuid()) @db.VarChar(30)
-  eventId     String             @db.VarChar(30)
+  id              String             @id @default(cuid()) @db.VarChar(30)
+  eventId         String             @db.VarChar(30)
   /// 申込対象タイムスロット。イベント申込は必ず 1 つの時間枠に属する。
-  slotId      String             @db.VarChar(30)
-  ticketId    String             @db.VarChar(30)
-  name        String             @db.VarChar(100)
+  slotId          String             @db.VarChar(30)
+  ticketId        String             @db.VarChar(30)
+  name            String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
-  email       String?            @db.VarChar(255)
-  phone       String?            @db.VarChar(20)
-  note        String?            @db.Text
-  quantity    Int                @default(1)
-  status      RegistrationStatus @default(CONFIRMED)
-  customerId  String?            @db.Uuid
-  cancelledAt DateTime? @db.Timestamptz(6)
-  cancelledByType String? @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  email           String?            @db.VarChar(255)
+  phone           String?            @db.VarChar(20)
+  note            String?            @db.Text
+  quantity        Int                @default(1)
+  status          RegistrationStatus @default(CONFIRMED)
+  customerId      String?            @db.Uuid
+  cancelledAt     DateTime?          @db.Timestamptz(6)
+  cancelledByType String?            @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
-  attendedAt  DateTime? @db.Timestamptz(6)
-  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
+  attendedAt      DateTime?          @db.Timestamptz(6)
+  createdAt       DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(6)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
@@ -2455,7 +2455,7 @@ model EventRegistration {
   // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
   paidAmount              Int?
-  paidAt                  DateTime? @db.Timestamptz(6)
+  paidAt                  DateTime?     @db.Timestamptz(6)
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
@@ -2489,15 +2489,12 @@ model EventRegistration {
 
 /**
  * 領収書 (適格請求書要件を満たす形式)。
- *
  * 発行対象: PAID 状態の Reservation と EventRegistration。
  * 発行契機: Stripe webhook checkout.session.completed の trigger 側 tx 内で自動採番。
  * 連番: ReceiptSequence の atomic increment (Postgres sequence の代替)。
- *
  * issuerSnapshot は Settings (invoiceNumber / 事業者名 / 所在地) の凍結 copy。
  * Settings 側 invoiceNumber を後日書き換えても既発行分は影響を受けない
  * (append-only の証跡性)。
- *
  * 再発行 (reissuedFromId 参照) 時は **新しい serialNo を採番** し、元 Receipt の
  * `reservationId` / `eventRegistrationId` を NULL 化 (orphan 化) することで
  * @unique(reservationId) / @unique(eventRegistrationId) 制約を維持したまま新 Receipt を
@@ -2555,35 +2552,35 @@ model Receipt {
   /// DB 側 DEFAULT gen_random_uuid()（20260713045802_add_receipt_tables migration で手書き）。
   /// Prisma 7 の diff engine は @default(uuid()) と DB 側 gen_random_uuid() を同値と見なさず
   /// ALTER COLUMN ... DROP DEFAULT を提案するため dbgenerated で明示する。
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
-  serialNo        String   @unique @db.VarChar(20)
-  issuedAt        DateTime @default(now()) @db.Timestamptz(6)
+  serialNo            String             @unique @db.VarChar(20)
+  issuedAt            DateTime           @default(now()) @db.Timestamptz(6)
   // 発行対象 (Reservation OR EventRegistration の polymorphic)
-  reservationId       String? @unique @db.Uuid
-  eventRegistrationId String? @unique @db.VarChar(30)
+  reservationId       String?            @unique @db.Uuid
+  eventRegistrationId String?            @unique @db.VarChar(30)
   reservation         Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
   // 適格請求書要件フィールド
-  recipientName   String  @db.VarChar(100)
-  subject         String  @default("スペース利用料として") @db.VarChar(100)
-  amount          Int
-  taxAmount       Int     @default(0)
-  taxRate         Int
+  recipientName       String             @db.VarChar(100)
+  subject             String             @default("スペース利用料として") @db.VarChar(100)
+  amount              Int
+  taxAmount           Int                @default(0)
+  taxRate             Int
   // 発行時点の Settings snapshot (凍結)
-  issuerSnapshot  Json    @db.JsonB
+  issuerSnapshot      Json               @db.JsonB
   // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。
   // 元 Receipt は監査証跡として残り、chain (reissuedTo) 経由で辿れる。
   // revision は「何回目の再発行か」を示す counter (元 = 0、1 回目 reissue = 1)。
-  reissuedFromId  String?  @db.Uuid
-  reissuedFrom    Receipt? @relation("ReissuedReceipts", fields: [reissuedFromId], references: [id], onDelete: SetNull)
-  reissuedTo      Receipt[] @relation("ReissuedReceipts")
-  reissuedReason  String?  @db.Text
-  revision        Int      @default(0)
+  reissuedFromId      String?            @db.Uuid
+  reissuedFrom        Receipt?           @relation("ReissuedReceipts", fields: [reissuedFromId], references: [id], onDelete: SetNull)
+  reissuedTo          Receipt[]          @relation("ReissuedReceipts")
+  reissuedReason      String?            @db.Text
+  revision            Int                @default(0)
   /// ゲスト署名 URL 経路 (Receipt-USEDAT-P1) で 1 回だけ DL を許可するための刻印。
   /// NULL = 未使用、非 NULL = その時刻に DL 済み (以降 token 経路は 404)。
   /// Better Auth session 経路 (mypage) では参照・更新せず、常時 DL 可能。
-  usedAt          DateTime? @db.Timestamptz(6)
+  usedAt              DateTime?          @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -2601,7 +2598,7 @@ model Receipt {
  */
 model ReceiptSequence {
   id        String   @id @default("singleton") @db.VarChar(20)
-  year      Int      // 4 桁年
+  year      Int // 4 桁年
   nextNo    Int      @default(1) // 次に発行する連番 (1-indexed)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
@@ -2664,22 +2661,22 @@ enum SmartLockPasscodeStatus {
 /// - 錠（LOCK*）: 施錠状態・電池の監視のみ。パスコード発行・Space 割当対象外。
 /// 1 拠点に複数台を登録できる（1:N from Location）。同一パッドを複数 Space で共有可。
 model SmartLockDevice {
-  id         String              @id @default(uuid()) @db.Uuid
-  locationId String              @db.Uuid
-  deviceId   String              @unique // SwitchBot 側の device ID（MAC アドレス）
-  deviceName String
-  deviceType SmartLockDeviceType
-  isActive   Boolean             @default(true)
+  id                 String              @id @default(uuid()) @db.Uuid
+  locationId         String              @db.Uuid
+  deviceId           String              @unique // SwitchBot 側の device ID（MAC アドレス）
+  deviceName         String
+  deviceType         SmartLockDeviceType
+  isActive           Boolean             @default(true)
   /// パッド → ペア錠（錠ロールの SmartLockDevice）。錠側では null。
-  pairedLockDeviceId String?     @db.Uuid
+  pairedLockDeviceId String?             @db.Uuid
   /// webhook / status 由来（錠ロール）。正規化: LOCKED|UNLOCKED|JAMMED
-  lastLockState String?
+  lastLockState      String?
   /// Pro/Lock のみ。正規化: OPEN|CLOSE。Lite は常に null
-  lastDoorState String?
-  lastBattery   Int?
-  lastStateAt   DateTime?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+  lastDoorState      String?
+  lastBattery        Int?
+  lastStateAt        DateTime?           @db.Timestamptz(6)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(6)
 
   location            Location            @relation("LocationSmartLockDevices", fields: [locationId], references: [id], onDelete: Cascade)
   defaultForLocations Location[]          @relation("LocationDefaultSmartLockDevice")
@@ -2694,28 +2691,28 @@ model SmartLockDevice {
 
 /// 予約 1 件・デバイス 1 台ごとに発行される一時パスコード。
 model SmartLockPasscode {
-  id            String                  @id @default(uuid()) @db.Uuid
-  reservationId String                  @db.Uuid
-  deviceId      String                  @db.Uuid
-  status        SmartLockPasscodeStatus @default(PENDING)
+  id                       String                  @id @default(uuid()) @db.Uuid
+  reservationId            String                  @db.Uuid
+  deviceId                 String                  @db.Uuid
+  status                   SmartLockPasscodeStatus @default(PENDING)
   /// encrypt(purpose: "switchbot-guest-passcode") 済み。平文は DB に保持しない。
-  passcodeCiphertext String             @db.Text
+  passcodeCiphertext       String                  @db.Text
   /// createKey 呼出の同期レスポンス（相関確認用、keyId ではない）
-  switchbotCommandId String?
+  switchbotCommandId       String?
   /// deleteKey 呼出の同期レスポンス commandId（無い場合あり）
   switchbotDeleteCommandId String?
   /// Device List keyList[].id（deleteKey に必須）
-  switchbotKeyId     String?
+  switchbotKeyId           String?
   /// パスコード有効期間（予約時間 ± switchbotPasscodeBufferMinutes）
-  startTime     DateTime
-  endTime       DateTime
-  failureReason String?
-  confirmedAt   DateTime?
+  startTime                DateTime                @db.Timestamptz(6)
+  endTime                  DateTime                @db.Timestamptz(6)
+  failureReason            String?
+  confirmedAt              DateTime?               @db.Timestamptz(6)
   /// REVOKE_PENDING 開始時刻（stale 判定用）
-  revokeRequestedAt DateTime?
-  revokedAt     DateTime?
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  revokeRequestedAt        DateTime?               @db.Timestamptz(6)
+  revokedAt                DateTime?               @db.Timestamptz(6)
+  createdAt                DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime                @updatedAt @db.Timestamptz(6)
 
   reservation Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   device      SmartLockDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
@@ -2773,8 +2770,8 @@ model TransferAccount {
   note              String?  @db.VarChar(200)
   sortOrder         Int      @default(0)
   isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([isActive, sortOrder])
   @@map("transfer_accounts")
