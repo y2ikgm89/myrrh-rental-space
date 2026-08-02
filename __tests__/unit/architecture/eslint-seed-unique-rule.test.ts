@@ -180,6 +180,166 @@ describe("seed の一意制約 rule — 前身の正規表現 gate が通して�
   });
 });
 
+describe("seed の一意制約 rule — AST 版の 2 巡目に塞いだ 3 つ", () => {
+  test("④ 引数が変数の deleteMany を「条件なし」と同一視しない", () => {
+    // 前回は `where` の値だけを見ていたので、引数そのものを変数へ括り出されると
+    // 「where が無い＝全件削除」に化けていた。
+    // 報告は `unprovableDeletion`（「解析できない」）— 原因を名指しできる分、
+    // 素の `literalUniqueWrite` より直せる情報が多い。
+    expect(
+      messageIds(`
+        async function seed() {
+          const args = { where: { status: "DRAFT" } };
+          await prisma.slot.deleteMany(args);
+          await prisma.slot.create({ data: { position: 0, status: "OPEN" } });
+        }
+      `),
+    ).toEqual(["unprovableDeletion"]);
+  });
+
+  test("⑤ createMany の配列ペイロードを検査する", () => {
+    // 直下のオブジェクトしか見ていないと、配列の中のリテラルを丸ごと見落とす。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.createMany({ data: [{ position: 0 }] });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑤ .map() と const 配列の中も検査する", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.createMany({
+            data: rows.map((row) => ({ position: 0, status: row.status })),
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+
+    expect(
+      messageIds(`
+        async function seed() {
+          const rows = [{ position: 0 }];
+          await prisma.slot.createMany({ data: rows });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑥ 条件分岐の中の削除は証明にならない", () => {
+    // 条件が false の経路では既存行が残ったまま create に進む。
+    expect(
+      messageIds(`
+        async function seed() {
+          if (reconcile) {
+            await tx.ticket.deleteMany({ where: { eventId: event.id } });
+          }
+          await tx.ticket.create({
+            data: { eventId: event.id, sortOrder: 0 },
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑥ 同じ枝の中なら通る", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          if (reconcile) {
+            await tx.ticket.deleteMany({ where: { eventId: event.id } });
+            await tx.ticket.create({
+              data: { eventId: event.id, sortOrder: 0 },
+            });
+          }
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  test("⑥ 同じループ本体なら通る（実 seedEvents の形）", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          for (const event of events) {
+            await tx.ticket.deleteMany({ where: { eventId: event.id } });
+            await tx.ticket.create({
+              data: { eventId: event.id, sortOrder: 0 },
+            });
+          }
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  test("⑥ ループの中で消してループの外で作るのは通らない", () => {
+    // ループが 0 回なら削除は一度も走らない。
+    expect(
+      messageIds(`
+        async function seed() {
+          for (const event of events) {
+            await tx.ticket.deleteMany({ where: { eventId: event.id } });
+          }
+          await tx.ticket.create({
+            data: { eventId: event.id, sortOrder: 0 },
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑥ 外側が式文でも内側の分岐を見失わない（実 seed の形）", () => {
+    // 実 seed は `await prisma.$transaction(async (tx) => { ... })` の中に居る。
+    // 制御パスを**最初の**式文で切ると、その外側の式文で切れてしまい内側の
+    // `if` が消える。合成コード片だけで検証していたので一度これを見逃した。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.$transaction(async (tx) => {
+            if (existing) {
+              await tx.ticket.deleteMany({ where: { eventId: event.id } });
+            }
+            await tx.ticket.create({
+              data: { eventId: event.id, sortOrder: 0 },
+            });
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑥ transaction の中でも同じ枝なら通る", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.$transaction(async (tx) => {
+            await tx.ticket.deleteMany({ where: { eventId: event.id } });
+            await tx.ticket.create({
+              data: { eventId: event.id, sortOrder: 0 },
+            });
+          });
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  test("読めない spread があっても、見えるリテラルは検査する", () => {
+    // spread 全体で bail すると `...declaredContent` を持つ正常な seed を
+    // 22 箇所叩いて blanket disable を招く。逆に無視すると見えるリテラルまで
+    // 漏らす。**見える分だけ**検査するのが正しい境界。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.create({ data: { ...base, position: 0 } });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+});
+
 describe("seed の一意制約 rule — その他の不変条件", () => {
   test("削除を狭める余分な条件があれば証明にならない", () => {
     // `isAvailable: true` を足すと非公開行が残り、キー空間は空にならない。

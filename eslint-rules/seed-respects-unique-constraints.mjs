@@ -55,17 +55,29 @@ import {
 
 const WRITE_METHODS = new Set(["create", "createMany", "upsert"]);
 
-/** 解析結果。`analyzable: false` は「証明に使えない」を意味する（安全側）。 */
+/**
+ * オブジェクトリテラルを field → 値のテキストで読む。
+ *
+ * - `analyzable: false` — そもそもオブジェクトリテラルではない
+ * - `complete: false` — spread / computed key があり、**読めなかった部分がある**
+ *
+ * 2 つを分けるのが要点。書き込み側は「見えているリテラル」を検査できれば足りる
+ * （読めない spread の中に隠れたリテラルはそもそも観測できない）。一方、削除の
+ * `where` は**フィルタ全体**が分からないと範囲を証明できないので `complete` を要求する。
+ * 両者を同じ真偽値で扱うと、`...declaredContent` を持つ正常な seed が大量に
+ * 誤検知される（実測 22 件）か、範囲不明の削除が証明として通るかのどちらかになる。
+ */
 function readObjectProperties(node, sourceCode) {
   if (!node || node.type !== "ObjectExpression") {
-    return { analyzable: false, properties: new Map() };
+    return { analyzable: false, complete: false, properties: new Map() };
   }
 
   const properties = new Map();
+  let complete = true;
   for (const property of node.properties) {
-    // spread は中身が静的に分からない。computed key も同様。
     if (property.type !== "Property" || property.computed) {
-      return { analyzable: false, properties: new Map() };
+      complete = false;
+      continue;
     }
     const key =
       property.key.type === "Identifier"
@@ -74,14 +86,15 @@ function readObjectProperties(node, sourceCode) {
           ? String(property.key.value)
           : null;
     if (key === null) {
-      return { analyzable: false, properties: new Map() };
+      complete = false;
+      continue;
     }
     properties.set(
       key,
       normalizeExpression(sourceCode.getText(property.value)),
     );
   }
-  return { analyzable: true, properties };
+  return { analyzable: true, complete, properties };
 }
 
 /** `<anything>.<model>.<method>(...)` から model / method を取り出す。 */
@@ -111,6 +124,110 @@ function enclosingFunction(sourceCode, node) {
       return ancestor;
     }
   }
+  return null;
+}
+
+/**
+ * 削除が「その式文より上」で通る制御パス。
+ *
+ * 自分自身を包む式文から下（`ExpressionStatement` / `AwaitExpression` / 呼び出し）は
+ * 落とす。残りが**その削除に到達するために通らなければならない分岐**になる。
+ */
+function controlPath(sourceCode, node) {
+  const ancestors = sourceCode.getAncestors(node);
+  // **最も内側**の式文で切る。最初に見つかったものを使うと、外側の
+  // `await prisma.$transaction(async (tx) => { ... })` 自体が式文なので、
+  // その内側の `if` / `for` を丸ごと落としてしまう（実 seed で空振りした）。
+  const statementIndex = ancestors.findLastIndex(
+    (ancestor) => ancestor.type === "ExpressionStatement",
+  );
+  return statementIndex === -1 ? ancestors : ancestors.slice(0, statementIndex);
+}
+
+/**
+ * 削除が書き込みを **dominate** するか（＝書き込みへ至る全経路で必ず実行されるか）。
+ *
+ * 位置と囲み関数だけでは足りない。`if (reconcile) await deleteMany(...)` の後に
+ * 無条件の `create` を置くと、条件が false の経路では既存行が残ったまま create に
+ * 進む — lint は通るのに実行時に P2002 で落ちる。
+ *
+ * 削除の制御パス（分岐ノードとその枝）がすべて書き込み側にも現れることを要求すれば、
+ * 「削除に到達する条件」は「書き込みに到達する条件」に含まれる。
+ * 同じ `for` の中なら両方が同じループ本体を通るので通り、
+ * `if` の片方の枝だけに削除があれば枝ノードが一致せず落ちる。
+ */
+function dominates(deletionPath, writePath) {
+  const writeNodes = new Set(writePath);
+  return deletionPath.every((node) => writeNodes.has(node));
+}
+
+/**
+ * 書き込みペイロードから **1 行を表すオブジェクト**を取り出す。
+ *
+ * `createMany` は配列を取り、seed は `.map()` や `const rows = [...]` も使う。
+ * `data` の直下だけを見ていると、それらの中のリテラルを丸ごと見落とす
+ * （前身の grep gate は行単位で走査していたので拾えていた＝**カバレッジの後退**）。
+ *
+ * 解決できた形は中身を返し、解決できなかった形は `null` を返す。
+ * `null` は「安全」ではなく「証明できない」— 呼び出し側が報告する。
+ */
+function collectRowObjects(node, sourceCode, seen = new Set()) {
+  if (!node || seen.has(node)) return null;
+  seen.add(node);
+
+  if (node.type === "ObjectExpression") return [node];
+
+  if (node.type === "ArrayExpression") {
+    const rows = [];
+    for (const element of node.elements) {
+      if (element === null) continue;
+      const nested = collectRowObjects(element, sourceCode, seen);
+      if (nested === null) return null;
+      rows.push(...nested);
+    }
+    return rows;
+  }
+
+  // `rows.map((row) => ({ ... }))` — コールバックの返す行を見る。
+  if (
+    node.type === "CallExpression" &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    node.callee.property.type === "Identifier" &&
+    node.callee.property.name === "map"
+  ) {
+    const callback = node.arguments.at(-1);
+    if (
+      callback?.type === "ArrowFunctionExpression" ||
+      callback?.type === "FunctionExpression"
+    ) {
+      if (callback.body.type !== "BlockStatement") {
+        return collectRowObjects(callback.body, sourceCode, seen);
+      }
+      const returned = callback.body.body.find(
+        (statement) => statement.type === "ReturnStatement",
+      );
+      if (returned?.argument) {
+        return collectRowObjects(returned.argument, sourceCode, seen);
+      }
+    }
+    return null;
+  }
+
+  // `const rows = [...]` のように束縛されている場合は宣言まで辿る。
+  if (node.type === "Identifier") {
+    const scope = sourceCode.getScope(node);
+    for (let current = scope; current; current = current.upper) {
+      const variable = current.variables.find((v) => v.name === node.name);
+      if (variable === undefined) continue;
+      // 再代入されるものは静的に決まらない。
+      const writes = variable.references.filter((ref) => ref.isWrite());
+      if (writes.length !== 1) return null;
+      const init = variable.defs[0]?.node?.init;
+      return init ? collectRowObjects(init, sourceCode, seen) : null;
+    }
+  }
+
   return null;
 }
 
@@ -201,32 +318,71 @@ const rule = {
 
         if (call.method === "deleteMany") {
           const argument = node.arguments[0];
-          const whereProperty =
-            argument?.type === "ObjectExpression"
-              ? argument.properties.find(
-                  (property) =>
-                    property.type === "Property" &&
-                    !property.computed &&
-                    property.key.type === "Identifier" &&
-                    property.key.name === "where",
-                )
-              : undefined;
 
-          const where =
-            whereProperty === undefined
-              ? null
-              : readObjectProperties(whereProperty.value, sourceCode);
+          // 引数の形で 3 通りに分ける。**「引数が読めない」を「引数が無い」と
+          // 同一視しない** — `deleteMany(args)` のように変数へ括り出されていると、
+          // 条件付きの削除が「母集合ごと空にする削除」に化ける。
+          let state;
+          if (argument === undefined) {
+            // `deleteMany()` は全件削除。
+            state = {
+              unconditional: true,
+              analyzable: true,
+              properties: new Map(),
+            };
+          } else if (argument.type !== "ObjectExpression") {
+            state = {
+              unconditional: false,
+              analyzable: false,
+              properties: new Map(),
+            };
+          } else {
+            const hasSpread = argument.properties.some(
+              (property) => property.type !== "Property",
+            );
+            // 引数そのものに spread があると `where` の有無すら決められない。
+            const whereProperty = argument.properties.find(
+              (property) =>
+                property.type === "Property" &&
+                !property.computed &&
+                property.key.type === "Identifier" &&
+                property.key.name === "where",
+            );
+
+            if (hasSpread) {
+              state = {
+                unconditional: false,
+                analyzable: false,
+                properties: new Map(),
+              };
+            } else if (whereProperty === undefined) {
+              // `deleteMany({})` に where は無い＝全件削除。
+              state = {
+                unconditional: true,
+                analyzable: true,
+                properties: new Map(),
+              };
+            } else {
+              const where = readObjectProperties(
+                whereProperty.value,
+                sourceCode,
+              );
+              // フィルタに読めない部分があれば範囲を証明できない。
+              const usable = where.analyzable && where.complete;
+              state = {
+                unconditional: usable && where.properties.size === 0,
+                analyzable: usable,
+                properties: where.properties,
+              };
+            }
+          }
 
           deletions.push({
             model: call.model,
             scope: enclosingFunction(sourceCode, node),
+            path: controlPath(sourceCode, node),
             end: node.range[1],
-            // 引数なし / `{}` / `where: {}` は母集合ごと空にする。
-            unconditional:
-              where === null ||
-              (where.analyzable && where.properties.size === 0),
-            analyzable: where !== null && where.analyzable,
-            properties: where?.properties ?? new Map(),
+            ...state,
           });
           return;
         }
@@ -249,6 +405,9 @@ const rule = {
       const argument = node.arguments[0];
       if (argument?.type !== "ObjectExpression") return;
 
+      const scope = enclosingFunction(sourceCode, node);
+      const writePath = controlPath(sourceCode, node);
+
       // create は `data`、upsert は `create` に書く値が入る。
       for (const key of ["data", "create"]) {
         const holder = argument.properties.find(
@@ -260,50 +419,64 @@ const rule = {
         );
         if (holder === undefined) continue;
 
-        const data = readObjectProperties(holder.value, sourceCode);
-        if (!data.analyzable) continue;
+        // `createMany` は配列を取り、seed は `.map()` や `const rows = [...]` も
+        // 使う。直下のオブジェクトだけを見ると、そこに入ったリテラルを
+        // 丸ごと見落とす（前身の gate は行単位で走査していたので拾えていた）。
+        // 解決できない形（destructure の spread、関数呼び出しの戻り値など）は
+        // **見えるリテラルが 1 つも無い**ので検査対象が存在しない。報告しても
+        // 実 seed の正常なコードを 22 箇所叩くだけで、blanket disable を招いて
+        // rule 自体を空洞化させる。ここは rule の適用範囲の境界として明示する。
+        const rows = collectRowObjects(holder.value, sourceCode) ?? [];
 
-        const scope = enclosingFunction(sourceCode, node);
-        for (const [field, value] of data.properties) {
-          if (!isPositionalLiteral(value)) continue;
+        for (const row of rows) {
+          const data = readObjectProperties(row, sourceCode);
+          if (!data.analyzable) continue;
 
-          const relevant = groups.filter((group) =>
-            group.fields.includes(field),
-          );
-          if (relevant.length === 0) continue;
+          for (const [field, value] of data.properties) {
+            if (!isPositionalLiteral(value)) continue;
 
-          for (const group of relevant) {
-            const candidates = deletions.filter(
-              (deletion) =>
-                deletion.model === call.model &&
-                deletion.scope === scope &&
-                deletion.end <= node.range[0],
+            const relevant = groups.filter((group) =>
+              group.fields.includes(field),
             );
+            if (relevant.length === 0) continue;
 
-            const proven = candidates.some((deletion) =>
-              deletionClearsSlice(deletion, data.properties, {
-                ...group,
-                literalField: field,
-              }),
-            );
-            if (proven) continue;
+            for (const group of relevant) {
+              // 削除は**書き込みを dominate している**ものだけを証明に使う。
+              // 位置と囲み関数だけだと、`if (reconcile) deleteMany(...)` の後の
+              // 無条件 create が「守られている」ことになってしまう。
+              const candidates = deletions.filter(
+                (deletion) =>
+                  deletion.model === call.model &&
+                  deletion.scope === scope &&
+                  deletion.end <= node.range[0] &&
+                  dominates(deletion.path, writePath),
+              );
 
-            const unprovable = candidates.some(
-              (deletion) => !deletion.unconditional && !deletion.analyzable,
-            );
+              const proven = candidates.some((deletion) =>
+                deletionClearsSlice(deletion, data.properties, {
+                  ...group,
+                  literalField: field,
+                }),
+              );
+              if (proven) continue;
 
-            context.report({
-              node: holder.value,
-              messageId: unprovable
-                ? "unprovableDeletion"
-                : "literalUniqueWrite",
-              data: {
-                model: call.model,
-                field,
-                value,
-                group: group.fields.join(", "),
-              },
-            });
+              const unprovable = candidates.some(
+                (deletion) => !deletion.unconditional && !deletion.analyzable,
+              );
+
+              context.report({
+                node: row,
+                messageId: unprovable
+                  ? "unprovableDeletion"
+                  : "literalUniqueWrite",
+                data: {
+                  model: call.model,
+                  field,
+                  value,
+                  group: group.fields.join(", "),
+                },
+              });
+            }
           }
         }
       }
