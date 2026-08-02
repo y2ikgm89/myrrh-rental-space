@@ -189,13 +189,79 @@ function declarationLineOffsets(body: string, name: string): Set<number> {
   return offsets;
 }
 
+/** `@@unique([a, b])` / 単一 `@unique` を**グループ単位**で返す。 */
+function readUniqueGroups(model: string): string[][] {
+  const body = modelBodies().get(model);
+  if (body === undefined) return [];
+
+  const groups: string[][] = [];
+  for (const u of body.matchAll(/@@unique\(\[([^\]]+)\]/gu)) {
+    groups.push(
+      String(u[1])
+        .split(",")
+        .map((f) => f.trim())
+        .filter((f) => f.length > 0),
+    );
+  }
+  for (const line of body.split("\n")) {
+    const single = /^\s+(\w+)\s+\S+.*@unique/u.exec(line);
+    if (single?.[1]) groups.push([single[1]]);
+  }
+  return groups;
+}
+
+/** `<call>({ <key>: { ... } })` の直下を field → 値で取り出す。 */
+function objectArgument(
+  body: string,
+  callPattern: string,
+  key: string,
+): Map<string, string | null> | null {
+  const match = new RegExp(
+    `${callPattern}\\(\\{[\\s\\S]{0,200}?${key}:\\s*\\{`,
+    "u",
+  ).exec(body);
+  if (!match) return null;
+
+  const open = match.index + match[0].length;
+  let depth = 1;
+  let close = open;
+  while (close < body.length && depth > 0) {
+    const char = body[close];
+    if (char === "{") depth++;
+    else if (char === "}") depth--;
+    if (depth === 0) break;
+    close++;
+  }
+  return parseWhereEntries(body.slice(open, close));
+}
+
 /**
- * 同じ関数内で、その model を **作る前に `deleteMany` している**か。
+ * その model の一意列にリテラルを書いてよいか — **削除がその行の一意キー空間を
+ * 空にしていることまで**確かめる。
  *
- * 消してから作るなら母集合は空なので、一意列にリテラルを書いても衝突しない。
- * 「先に」まで見るのが要点 — 作ってから消す順序では守られない。
+ * 「作る前に `deleteMany` がある」だけでは足りない。フィルタ付きの削除は母集合の
+ * 一部しか消さないので、たとえば footer のナビ行だけを消してから header 行を
+ * リテラル order で作れば、header 側の既存行と普通に衝突する。
+ *
+ * 安全なのは次のどちらか:
+ *
+ * 1. 無条件の `deleteMany({})`（母集合が空になる）
+ * 2. リテラルを書く列と同じ unique グループの**残り全部**を、削除の where と
+ *    create の data が**同じ式**で固定している（＝その行が入るキー空間だけは
+ *    確実に空になっている）
+ *
+ * 2 が `seedEvents` の形: `deleteMany({ where: { eventId: event.id } })` の後に
+ * `create({ data: { eventId: event.id, sortOrder: 0 } })`。
+ * `@@unique([eventId, sortOrder])` の `eventId` が両側で `event.id` に固定されて
+ * いるので、その eventId 配下の sortOrder は必ず空。
  */
-function deletesBeforeCreating(body: string, clientProperty: string): boolean {
+function literalIsSafeAfterDeletion(
+  body: string,
+  model: string,
+  column: string,
+): boolean {
+  const clientProperty = toClientProperty(model);
+
   const deleteAt = body.search(
     new RegExp(`(?:prisma|tx)\\.${clientProperty}\\.deleteMany\\(`, "u"),
   );
@@ -207,7 +273,34 @@ function deletesBeforeCreating(body: string, clientProperty: string): boolean {
       "u",
     ),
   );
-  return createAt !== -1 && deleteAt < createAt;
+  // 作ってから消す順序では守られない。
+  if (createAt === -1 || deleteAt > createAt) return false;
+
+  const call = `(?:prisma|tx)\\.${clientProperty}`;
+  const deleteWhere = objectArgument(body, `${call}\\.deleteMany`, "where");
+
+  // `deleteMany({})` / `deleteMany({ where: {} })` は母集合ごと空にする。
+  if (deleteWhere === null || deleteWhere.size === 0) return true;
+
+  const createData = objectArgument(body, `${call}\\.create`, "data");
+  if (createData === null) return false;
+
+  const groups = readUniqueGroups(model).filter((group) =>
+    group.includes(column),
+  );
+  if (groups.length === 0) return false;
+
+  return groups.every((group) =>
+    group
+      .filter((field) => field !== column)
+      .every((field) => {
+        const deleted = deleteWhere.get(field);
+        const created = createData.get(field);
+        return (
+          deleted !== undefined && created !== undefined && deleted === created
+        );
+      }),
+  );
 }
 
 interface Violation {
@@ -251,8 +344,12 @@ function findLiteralUniqueWrites(): Violation[] {
       // model を先に `deleteMany` していれば母集合は空になり、衝突しえない。
       // 例: `seedEvents` は tickets / slots / registrations を消してから
       // `sortOrder: 0` の ticket を 1 枚だけ作る（`@@unique([eventId, sortOrder])`）。
-      if (deletesBeforeCreating(fn.body, toClientProperty(model))) continue;
-      for (const column of uniqueColumns.get(model) ?? []) columns.add(column);
+      for (const column of uniqueColumns.get(model) ?? []) {
+        // **作る前に消していれば無条件で免除、ではない。** その削除が「これから
+        // 作る行の一意キー空間」を空にしていることまで確かめる。
+        if (literalIsSafeAfterDeletion(fn.body, model, column)) continue;
+        columns.add(column);
+      }
     }
     if (columns.size === 0) continue;
 
