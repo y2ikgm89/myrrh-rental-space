@@ -12,7 +12,6 @@ import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/eve
 import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import { valuePropsConfigSchema } from "@/shared/lib/sections/definitions/value-props/schema";
 import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
-import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
 import { termsListConfigSchema } from "@/shared/lib/sections/definitions/terms-list/schema";
 
 // =============================================================================
@@ -133,11 +132,8 @@ export const getValuePropsConfig = createTypedConfigGetterFromSchema(
   valuePropsConfigSchema,
 );
 
-// discriminated union なので `{}` では復元できない。既定の hero 設定を渡す。
-export const getPageHeroConfig = createTypedConfigGetterFromSchema(
-  pageHeroConfigSchema,
-  DEFAULT_PAGE_HERO,
-);
+export const getPageHeroConfig =
+  createTypedConfigGetterFromSchema(pageHeroConfigSchema);
 
 export const getTermsListConfig = createTypedConfigGetterFromSchema(
   termsListConfigSchema,

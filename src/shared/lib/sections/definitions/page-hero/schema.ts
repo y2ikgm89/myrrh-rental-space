@@ -23,6 +23,7 @@ import { sectionLayoutSchema } from "../_shared/layout";
 import { createButtonsArraySchema } from "../_shared/buttons";
 import { createMediaArraySchema, HERO_BG_TRANSITIONS } from "../_shared/media";
 import { createScrimFields } from "../_shared/scrim";
+import { DEFAULT_PAGE_HERO_VARIANT } from "./defaults";
 
 const HERO_TRANSITIONS = [
   "crossfade",
@@ -148,6 +149,17 @@ const mediaSchema = z.object({
   layout: sectionLayoutSchema,
 });
 
+/** variant が無い入力に既定の枝を補う。下の `pageHeroConfigSchema` の JSDoc を参照。 */
+function withDefaultVariant(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return value;
+  }
+  const record: Record<string, unknown> = { ...value };
+  if (record["variant"] === undefined)
+    record["variant"] = DEFAULT_PAGE_HERO_VARIANT;
+  return record;
+}
+
 /**
  * pageHeroConfigSchema は discriminated union 自体を fieldRegistry に register する。
  *
@@ -159,14 +171,31 @@ const mediaSchema = z.object({
  *
  * variant 切替時は AutoSectionForm が `useWatch` + `form.reset()` で新 variant の
  * default 値を流し込む（共通フィールドも reset、RHF 公式パターン）。
+ *
+ * ## `z.preprocess` で variant を補う理由
+ *
+ * section スキーマは全て `safeParse({})` が成立することを前提に既定 config を作る
+ * （`createPageSectionCommand` / `getDefaultSectionConfig` / renderer の config getter）。
+ * **discriminated union は素のままではこれを満たせない** — discriminator は default
+ * 適用より前に照合されるので、`variant` を持たない `{}` はどの枝にも一致しない。
+ * `.default()` を discriminator に付けても `.prefault()` を union に付けても変わらない
+ * （Zod 4 で実測）。
+ *
+ * 満たせないまま放置した結果、`createPageSectionCommand` は不正な `{}` を保存し、
+ * 管理画面はそれを読めずに custom セクションの既定値へ化け、公開側の config getter は
+ * 「到達不能」と書かれた分岐で throw していた。**消費側を 1 つずつ直すのではなく、
+ * スキーマが契約を満たす**ようにする。
  */
 export const pageHeroConfigSchema = z
-  .discriminatedUnion("variant", [
-    editorialSplitSchema,
-    compactSchema,
-    minimalSchema,
-    mediaSchema,
-  ])
+  .preprocess(
+    withDefaultVariant,
+    z.discriminatedUnion("variant", [
+      editorialSplitSchema,
+      compactSchema,
+      minimalSchema,
+      mediaSchema,
+    ]),
+  )
   .register(fieldRegistry, {
     fieldType: "select",
     label: "バリアント",

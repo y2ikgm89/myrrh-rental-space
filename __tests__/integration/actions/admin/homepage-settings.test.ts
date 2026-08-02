@@ -299,13 +299,11 @@ describe("Homepage Settings Admin Action Integration", () => {
       // Section schema test contract:
       // 「全 schema は safeParse({}) 成立必須」が architectural contract。
       //
-      // 例外: page-hero は discriminated union（variant: editorial-split /
-      // compact / minimal）のため、discriminator value 不在で safeParse は
-      // 失敗する設計。AutoSectionForm が
-      // `useWatch` + form.reset で discriminator を補ってから schema を通す。
-      const SKIP_DISCRIMINATED_UNIONS = new Set(["page-hero"]);
+      // **例外は無い。** page-hero は discriminated union で素のままでは
+      // discriminator 不在の `{}` を弾くが、schema 側が `z.preprocess` で既定 variant を
+      // 補って契約を満たす。除外していた頃は `createPageSectionCommand` が不正な `{}` を
+      // 保存し、管理画面が custom の既定値へ化け、renderer が throw していた。
       for (const type of Object.values(SectionType)) {
-        if (SKIP_DISCRIMINATED_UNIONS.has(type)) continue;
         const result = validateSectionConfig(type, {});
         expect(result.success).toBe(true);
       }

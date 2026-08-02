@@ -7,6 +7,9 @@
 import { createBlock, createSpan } from "@/shared/lib/portable-text";
 import type { PageHeroConfig } from "./schema";
 
+/** `variant` を持たない config に補う既定の枝。schema の preprocess が使う。 */
+export const DEFAULT_PAGE_HERO_VARIANT = "editorial-split" as const;
+
 export const DEFAULT_PAGE_HERO = {
   variant: "editorial-split",
   label: [createSpan("Volume One — Spring 2026")],
