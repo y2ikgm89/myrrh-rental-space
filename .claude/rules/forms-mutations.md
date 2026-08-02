@@ -168,18 +168,27 @@ honeypot フィールドは Zod スキーマ上では検証エラーにしない
 
 ## スキーマ配置
 
-置き場は **誰が使うか**で決まる。次の 4 つで、それ以外に増やさない:
+置き場は **最も下の層の利用者**で決まる。「公開側が使うか」ではない。次の 4 つで、
+それ以外に増やさない:
 
-| 置き場                                  | 対象                                                                                                         |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `src/shared/lib/validations/`           | 公開側と管理側の**両方**が使うもの（問い合わせ・予約・顧客など）                                             |
-| `(dashboard)/_shared/lib/validations/`  | **admin だけ**が使うリソーススキーマ（post / faq / news / space / stripe / terms / editor-comment 等 12 件） |
-| `_shared/actions/settings/schemas/`     | 設定画面のフォーム                                                                                           |
-| コンポーネント隣接の `*-form-schema.ts` | その画面だけが使うフォーム（`event-form-schema.ts` 等）                                                      |
+| 置き場                                  | 対象                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------- |
+| `src/shared/lib/validations/`           | `src/shared/**`（domain / lib）が使うもの。app 層より下が触るなら**必ず**ここ           |
+| `(dashboard)/_shared/lib/validations/`  | **app の admin 層だけ**が使うリソーススキーマ（post / faq / space / editor-comment 等） |
+| `_shared/actions/settings/schemas/`     | 設定画面のフォーム                                                                      |
+| コンポーネント隣接の `*-form-schema.ts` | その画面だけが使うフォーム（`event-form-schema.ts` 等）                                 |
+
+**「admin しか使わない」だけでは admin 側へは動かせない。** `shared/lib/validations/` には
+公開側の利用者が 1 つも無いのに `shared/domain` が型を import しているものが 8 件ある
+（`coupon` / `location` / `event-category` / `space-category` / `customer` / `blocked-date` /
+`google-service-account` / `enums/refund-attribution`）。これらを admin 層へ移すと
+domain → app の import が要り、依存方向に反する。判定は「公開側が使うか」ではなく
+**「`src/shared/**` が使うか」**で行う。
 
 `src/shared/lib` は `src/shared/domain` を import できない（ratchet で凍結）。domain の
-型ガードや enum が要るスキーマは `shared/lib/validations/` に置けないので、admin 専用なら
-`(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の re-export 経由で参照する。
+型ガードや enum が要るスキーマは `shared/lib/validations/` に置けないので、`src/shared/**`
+からの利用が無いなら `(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の
+re-export 経由で参照する。
 
 `"use server"` ファイルは async 関数以外を export できないので、Server Action の入力
 スキーマも上のいずれかに切り出して両側から参照する。
