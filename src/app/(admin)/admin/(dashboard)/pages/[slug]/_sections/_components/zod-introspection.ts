@@ -327,10 +327,17 @@ export interface DiscriminatedUnionInfo {
  *
  * page-hero `backgroundMedia` のような `z.discriminatedUnion(...).prefault({...})`
  * を unwrap しないと info が null 返りで variant select が出ない silent bug。
+ *
+ * **FieldMeta は unwrap の外側で登録されている。** `.register(fieldRegistry, …)` は
+ * ラッパー側に付くので、再帰で内側へ降りてから `fieldRegistry.get` を呼ぶと
+ * `undefined` になり、discriminator の label が生キー（`variant`）に落ちて helpText も
+ * 消える。見つけた最も外側の meta を `outerMeta` で持ち回る。
  */
 export function extractDiscriminatedUnionInfo(
   schema: z.ZodType,
+  outerMeta?: FieldMeta,
 ): DiscriminatedUnionInfo | undefined {
+  const registeredMeta = outerMeta ?? fieldRegistry.get(schema);
   const def = getZodDef(schema);
   if (!def) return undefined;
 
@@ -338,24 +345,24 @@ export function extractDiscriminatedUnionInfo(
 
   // ZodDefault → unwrap
   if (type === "default" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"]);
+    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
   }
 
   // ZodOptional → unwrap
   if (type === "optional" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"]);
+    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
   }
 
   // ZodPrefault → unwrap
   if (type === "prefault" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"]);
+    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
   }
 
   // ZodPipe（`z.preprocess` の実体）→ 出力側へ unwrap。
   // page-hero は `safeParse({})` を成立させるため union を preprocess で包んでいる
   // （schema.ts の JSDoc 参照）。ここを辿らないと variant の select が描画されない。
   if (type === "pipe" && isZodType(def["out"])) {
-    return extractDiscriminatedUnionInfo(def["out"]);
+    return extractDiscriminatedUnionInfo(def["out"], registeredMeta);
   }
 
   // discriminated union: type === "union" + discriminator が string
@@ -383,7 +390,7 @@ export function extractDiscriminatedUnionInfo(
   return {
     discriminator,
     options,
-    meta: fieldRegistry.get(schema),
+    meta: registeredMeta,
   };
 }
 
