@@ -165,41 +165,68 @@ describe("event-categories/commands", () => {
     expect(thrown).toBeInstanceOf(DomainError);
   });
 
-  test("updateEventCategoryOrder は sortOrder を並び替える（既存カテゴリーは保持したまま自分の2件を入れ替える）", async () => {
-    // updateEventCategoryOrder は「全 EventCategory が過不足なく揃っていること」を
-    // 検証するため、対象スコープは全件。既存行は保持したまま自分の2行だけ
-    // 追加して入れ替える。
+  test("updateEventCategoryOrder は指定した 2 件の並びだけを入れ替える", async () => {
+    // `updateEventCategoryOrder` は「全 EventCategory が過不足なく揃っていること」を
+    // 要求するので、入力は全件でなければならない。ただし **assertion は自分が作った
+    // 2 件の相対順序だけに限る**。
+    //
+    // 以前は全件の id 配列をそのまま `toEqual` で比較していた。この test DB は
+    // 他のテストと共有で、並び替え系のテストが `sortOrder` を書き換えて去る
+    // （実際に 0 と 109402888 台へ散っていた）。さらに比較の相手を `orderBy` 無しの
+    // `findMany` で取っていたため、突き合わせ先が Postgres の**物理行順**になり、
+    // 行を UPDATE するだけで並びが変わって不定に落ちていた。
+    // 検査したいのは「指定した 2 件が入れ替わり、他は動かない」ことなので、
+    // 他テストが作った状態に依存しない形で書く。
     const suffix = crypto.randomUUID();
-    const existing = await prisma.eventCategory.findMany({
+    const before = await prisma.eventCategory.findMany({
       select: { id: true, sortOrder: true },
+      orderBy: { sortOrder: "asc" },
     });
 
     const a = await createEventCategory({ name: `A ${suffix}` });
     const b = await createEventCategory({ name: `B ${suffix}` });
-    const aRow = await prisma.eventCategory.findUniqueOrThrow({
-      where: { id: a.id },
-      select: { sortOrder: true },
-    });
-    const bRow = await prisma.eventCategory.findUniqueOrThrow({
-      where: { id: b.id },
-      select: { sortOrder: true },
-    });
+    const aOrder = (
+      await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: a.id },
+        select: { sortOrder: true },
+      })
+    ).sortOrder;
+    const bOrder = (
+      await prisma.eventCategory.findUniqueOrThrow({
+        where: { id: b.id },
+        select: { sortOrder: true },
+      })
+    ).sortOrder;
 
     try {
       await updateEventCategoryOrder([
-        ...existing.map((e) => ({ id: e.id, sortOrder: e.sortOrder })),
-        { id: a.id, sortOrder: bRow.sortOrder },
-        { id: b.id, sortOrder: aRow.sortOrder },
+        ...before.map((e) => ({ id: e.id, sortOrder: e.sortOrder })),
+        { id: a.id, sortOrder: bOrder },
+        { id: b.id, sortOrder: aOrder },
       ]);
 
-      const rows = await prisma.eventCategory.findMany({
+      const after = await prisma.eventCategory.findMany({
+        select: { id: true, sortOrder: true },
         orderBy: { sortOrder: "asc" },
       });
-      expect(rows.map((r) => r.id)).toEqual([
-        ...existing.map((e) => e.id),
-        b.id,
-        a.id,
-      ]);
+      const orderOf = (id: string): number => {
+        const row = after.find((r) => r.id === id);
+        if (row === undefined) throw new Error(`${id} が消えている`);
+        return row.sortOrder;
+      };
+
+      // 作成時は a → b の順に採番される。入れ替え後は b が先に来る。
+      expect(aOrder).toBeLessThan(bOrder);
+      expect(orderOf(b.id)).toBeLessThan(orderOf(a.id));
+      expect(orderOf(a.id)).toBe(bOrder);
+      expect(orderOf(b.id)).toBe(aOrder);
+
+      // 他の行は 1 つも動いていない。
+      expect(
+        after
+          .filter((r) => r.id !== a.id && r.id !== b.id)
+          .map((r) => ({ id: r.id, sortOrder: r.sortOrder })),
+      ).toEqual(before.map((r) => ({ id: r.id, sortOrder: r.sortOrder })));
     } finally {
       await prisma.eventCategory.deleteMany({
         where: { id: { in: [a.id, b.id] } },
