@@ -689,7 +689,6 @@ async function seedLocations(overridePublished?: boolean) {
         food_allowed: true,
       },
       imageUrl: "/images/seed/location-main.svg",
-      sortOrder: 0,
       isPublished: true,
       latitude: 35.6651,
       longitude: 139.7119,
@@ -720,7 +719,6 @@ async function seedLocations(overridePublished?: boolean) {
         photography_allowed: true,
       },
       imageUrl: "/images/seed/location-annex.svg",
-      sortOrder: 1,
       isPublished: true,
       latitude: 35.6653,
       longitude: 139.7121,
@@ -758,7 +756,6 @@ async function seedLocations(overridePublished?: boolean) {
         music_allowed: true,
       },
       imageUrl: "/images/seed/location-shinjuku.svg",
-      sortOrder: 2,
       isPublished: false,
       latitude: 35.6896,
       longitude: 139.6917,
@@ -776,6 +773,15 @@ async function seedLocations(overridePublished?: boolean) {
   // index のため、upsert({where:{name}}) は ON CONFLICT ("name") が対応する
   // index (WHERE "isActive" = true) を解決できずエラーになる。SpaceCategory
   // と同型の findFirst + create/update に置き換えて idempotent 化する。
+  //
+  // **`sortOrder` は fixture に書かず、update でも触らない。** `Location.sortOrder`
+  // にも `isActive` 条件の partial unique index があり、管理画面の
+  // `updateLocationOrder`（`locations/commands.ts`）が並び替えると値が入れ替わる。
+  // 旧実装はリテラルの 0/1/2 を update の data ごと書き戻していたため、
+  // 恒等でない並び替えが一度でも行われた DB では re-seed が P2002 で中断し、
+  // `main().catch` の `process.exit(1)` で以降の phase が丸ごと走らなくなった。
+  // create 時に max+1 で採番すれば宣言順がそのまま表示順になり、衝突しえない
+  // （`seedSpaceCategories` と同じ形）。
   for (const loc of locations) {
     const locationData =
       overridePublished !== undefined
@@ -790,7 +796,16 @@ async function seedLocations(overridePublished?: boolean) {
         data: locationData,
       });
     } else {
-      await prisma.location.create({ data: locationData });
+      const maxOrder = await prisma.location.aggregate({
+        where: { isActive: true },
+        _max: { sortOrder: true },
+      });
+      await prisma.location.create({
+        data: {
+          ...locationData,
+          sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+        },
+      });
     }
   }
 
@@ -1075,8 +1090,11 @@ async function seedSpaces(overridePublished?: boolean) {
   ];
 
   for (const space of spaces) {
+    // `slug` unique は isActive 条件の partial index。判定の母集合を制約に揃える
+    // （soft-delete 済みの同 slug 行を「存在する」と数えると create をスキップし、
+    // seedDevCustomerAndReservations が空振りして stripe 系 spec が落ちる）。
     const existing = await prisma.space.findFirst({
-      where: { slug: space.slug },
+      where: { slug: space.slug, isActive: true },
     });
     if (!existing) {
       await prisma.space.create({ data: space });
@@ -1121,7 +1139,7 @@ async function seedE2EFixtureSpace() {
   // 予約しないための partial unique index で、`isActive` 条件付き）。よって
   // `upsert({ where: { slug } })` は使えず、seedSpaces と同じ findFirst → create/update。
   const existing = await prisma.space.findFirst({
-    where: { slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG },
+    where: { slug: E2E_PASSCODE_FIXTURE_SPACE_SLUG, isActive: true },
     select: { id: true, smartLockDeviceId: true, locationId: true },
   });
 
@@ -3379,20 +3397,34 @@ async function seedFaq(overridePublished?: boolean) {
       console.log(`✅ Created FAQ category: ${category.name}`);
     }
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (!item) continue;
+    for (const item of items) {
+      // `deletedAt: null` を必ず入れる。`FaqItem` の `(categoryId, order)` unique は
+      // 未削除行だけを対象にした partial index なので、削除済み行を「存在する」と
+      // 判定すると create をスキップして表示が欠け、逆に削除済み行の order を
+      // 空き扱いすると衝突する。判定の母集合を制約の述語に合わせる。
       const existing = await prisma.faqItem.findFirst({
-        where: { categoryId: faqCategory.id, question: item.question },
+        where: {
+          categoryId: faqCategory.id,
+          question: item.question,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
+        // `order` は配列 index を書かない。管理画面の並び替え / 追加
+        // （`faq/item-commands.ts`）で既存行が別の order を占有していると
+        // P2002 で seed が中断する。未削除行の max+1 で採番すれば、
+        // 宣言順がそのまま表示順になり衝突しえない。
+        const maxOrder = await prisma.faqItem.aggregate({
+          where: { categoryId: faqCategory.id, deletedAt: null },
+          _max: { order: true },
+        });
         await prisma.faqItem.create({
           data: {
             categoryId: faqCategory.id,
             question: item.question,
             answer: item.answer,
-            order: i,
+            order: (maxOrder._max.order ?? -1) + 1,
             isPublished: overridePublished ?? true,
             ...(overridePublished === false
               ? { publishedAt: null }
@@ -3636,62 +3668,96 @@ async function seedBlog() {
 // Navigation
 // =============================================================================
 
-async function seedNavigation() {
-  // label は PortableTextSpan[] 形式（テキスト + アイコンの混在 span 配列）。
-  // _key は span ごとの stable identity（Sanity Portable Text 公式準拠）。
-  const t = (text: string) => [
-    { _key: crypto.randomUUID(), _type: "span" as const, text },
-  ];
+/**
+ * ナビゲーション項目の宣言。**`(type, order)` が一意キー**
+ * （`navigation_items_type_order_key`、`prisma/schema.prisma`）。
+ *
+ * 旧実装は `(type, url)` で存在判定して `order` をリテラルで create していた。
+ * 判定キーと制約キーが違うため、url だけがずれた行が既にあると
+ * 「見つからない → 同じ order で create → P2002」で seed が中断し、
+ * `main().catch` の `process.exit(1)` で以降の phase が丸ごと走らなくなる。
+ * url がずれるのは実際に起きる: 管理画面の `updateNavigationItem` は
+ * `url` を書き換えるが `order` は据え置く（`navigation/commands.ts`）。
+ * 過去のコミットで url を変えた seed（`/posts` → `/blog` 等）を当てた DB も同じ。
+ *
+ * `_key` は決定的にする。`crypto.randomUUID()` だと reconcile のたびに JSON が
+ * 変わり、毎回無意味な更新が走る。Portable Text の `_key` は
+ * `z.string().min(1)`（`portable-text/schema.ts`）で形式自由なので、
+ * `${type}-${order}` で一意かつ安定に作れる。
+ */
+const SEED_NAVIGATION_GROUPS = [
+  {
+    type: "HEADER_DESKTOP",
+    items: [
+      { text: "ホーム", url: "/", order: 0 },
+      { text: "スペース", url: "/spaces", order: 1 },
+      { text: "イベント", url: "/events", order: 2 },
+      { text: "ブログ", url: "/blog", order: 3 },
+      { text: "お知らせ", url: "/news", order: 4 },
+      { text: "よくある質問", url: "/faq", order: 5 },
+      { text: "アクセス", url: "/access", order: 6 },
+      { text: "お問い合わせ", url: "/contact", order: 7 },
+    ],
+  },
+  {
+    type: "HEADER_MOBILE",
+    items: [
+      { text: "ホーム", url: "/", order: 0 },
+      { text: "スペース", url: "/spaces", order: 1 },
+      { text: "イベント", url: "/events", order: 2 },
+      { text: "ブログ", url: "/blog", order: 3 },
+      { text: "お知らせ", url: "/news", order: 4 },
+      { text: "よくある質問", url: "/faq", order: 5 },
+      { text: "アクセス", url: "/access", order: 6 },
+      { text: "お問い合わせ", url: "/contact", order: 7 },
+    ],
+  },
+  {
+    type: "FOOTER",
+    items: [
+      { text: "規約一覧", url: "/terms", order: 0 },
+      { text: "会社概要", url: "/about", order: 1 },
+      { text: "お問い合わせ", url: "/contact", order: 2 },
+    ],
+  },
+] as const;
 
-  const headerItems = [
-    { label: t("ホーム"), url: "/", order: 0 },
-    { label: t("スペース"), url: "/spaces", order: 1 },
-    { label: t("イベント"), url: "/events", order: 2 },
-    { label: t("ブログ"), url: "/blog", order: 3 },
-    { label: t("お知らせ"), url: "/news", order: 4 },
-    { label: t("よくある質問"), url: "/faq", order: 5 },
-    { label: t("アクセス"), url: "/access", order: 6 },
-    { label: t("お問い合わせ"), url: "/contact", order: 7 },
-  ];
+/**
+ * @param reconcile 既存行を宣言どおりに戻すか。dev は true（デモデータを宣言に
+ *   収束させる）、**本番は false**（管理画面での編集を seed が踏み潰さない）。
+ *   `seedLocations(false)` / `seedFaq(false)` と同じ dev/prod 分離の形。
+ */
+async function seedNavigation(reconcile = true) {
+  for (const group of SEED_NAVIGATION_GROUPS) {
+    for (const item of group.items) {
+      // label は PortableTextSpan[]（テキスト + アイコン混在の token 配列）。
+      const label = [
+        {
+          _key: `${group.type}-${String(item.order)}`,
+          _type: "span" as const,
+          text: item.text,
+        },
+      ];
 
-  const footerItems = [
-    { label: t("規約一覧"), url: "/terms", order: 0 },
-    { label: t("会社概要"), url: "/about", order: 1 },
-    { label: t("お問い合わせ"), url: "/contact", order: 2 },
-  ];
-
-  for (const item of headerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "HEADER_DESKTOP", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({
-        data: { ...item, type: "HEADER_DESKTOP" },
+      await prisma.navigationItem.upsert({
+        // 制約と同じキーで引く。これが P2002 を構造的に不可能にする。
+        where: { type_order: { type: group.type, order: item.order } },
+        update: reconcile ? { label, url: item.url } : {},
+        create: {
+          type: group.type,
+          order: item.order,
+          label,
+          url: item.url,
+        },
       });
     }
   }
 
-  for (const item of headerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "HEADER_MOBILE", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({
-        data: { ...item, type: "HEADER_MOBILE" },
-      });
-    }
-  }
-
-  for (const item of footerItems) {
-    const existing = await prisma.navigationItem.findFirst({
-      where: { type: "FOOTER", url: item.url },
-    });
-    if (!existing) {
-      await prisma.navigationItem.create({ data: { ...item, type: "FOOTER" } });
-    }
-  }
-
-  console.log("✅ Created navigation items");
+  console.log(
+    reconcile
+      ? "✅ Reconciled navigation items"
+      : "✅ Created missing navigation items",
+  );
 }
 
 // =============================================================================
@@ -3708,7 +3774,6 @@ async function seedAnnouncementBar() {
     text: string;
     linkUrl?: string;
     linkText?: string;
-    displayOrder: number;
     isActive?: boolean;
   }) => ({
     probe: text,
@@ -3722,19 +3787,16 @@ async function seedAnnouncementBar() {
       text: "年末年始の営業日程を掲載しました",
       linkUrl: "/news",
       linkText: "詳細を見る",
-      displayOrder: 2,
     }),
     createSeedAnnouncement({
       icon: "IconSparkles",
       text: "オープン記念!今月末まで全スペース20%OFF",
       linkUrl: "/spaces",
       linkText: "スペースを見る",
-      displayOrder: 1,
     }),
     createSeedAnnouncement({
       icon: "IconAlertTriangle",
       text: "1月15日(水)は設備点検のため休館いたします",
-      displayOrder: 0,
       isActive: false,
     }),
   ];
@@ -3751,8 +3813,15 @@ async function seedAnnouncementBar() {
     });
 
     if (!existing) {
+      // `displayOrder` は無条件 @unique。宣言リテラルのまま create すると、
+      // 管理画面で並び替えた DB の re-seed が P2002 で中断する。max+1 で採番する。
       const { probe: _probe, ...data } = announcement;
-      await prisma.announcementBar.create({ data });
+      const maxOrder = await prisma.announcementBar.aggregate({
+        _max: { displayOrder: true },
+      });
+      await prisma.announcementBar.create({
+        data: { ...data, displayOrder: (maxOrder._max.displayOrder ?? -1) + 1 },
+      });
       console.log(
         `✅ Created announcement: ${announcement.probe.slice(0, 30)}...`,
       );
@@ -3769,27 +3838,22 @@ async function seedSocialLinks() {
     {
       platform: "TWITTER" as const,
       url: "https://twitter.com/myrrh_rental",
-      order: 0,
     },
     {
       platform: "INSTAGRAM" as const,
       url: "https://instagram.com/myrrh_rental",
-      order: 1,
     },
     {
       platform: "FACEBOOK" as const,
       url: "https://facebook.com/myrrh.rental",
-      order: 2,
     },
     {
       platform: "LINE" as const,
       url: "https://line.me/R/ti/p/@myrrh-rental",
-      order: 3,
     },
     {
       platform: "YOUTUBE" as const,
       url: "https://youtube.com/@myrrh-rental",
-      order: 4,
       showOnMobile: false,
     },
   ];
@@ -3800,7 +3864,15 @@ async function seedSocialLinks() {
     });
 
     if (!existing) {
-      await prisma.socialLink.create({ data: link });
+      // `order` は無条件 @unique。宣言リテラルのまま create すると、管理画面で
+      // 並び替えた DB の re-seed が P2002 で中断する。max+1 で採番する。
+      const data = link;
+      const maxOrder = await prisma.socialLink.aggregate({
+        _max: { order: true },
+      });
+      await prisma.socialLink.create({
+        data: { ...data, order: (maxOrder._max.order ?? -1) + 1 },
+      });
       console.log(`✅ Created social link: ${link.platform}`);
     }
   }
@@ -5400,7 +5472,6 @@ async function seedInstagramPosts() {
     caption: string;
     mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
     permalink: string;
-    sortOrder: number;
   }> = [
     {
       postId: "seed-ig-001",
@@ -5410,7 +5481,6 @@ async function seedInstagramPosts() {
       caption: "本日の会議室A。午後のご予約受付中です。#レンタルスペース",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-001/",
-      sortOrder: 0,
     },
     {
       postId: "seed-ig-002",
@@ -5420,7 +5490,6 @@ async function seedInstagramPosts() {
       caption: "スペース紹介ツアー動画を公開しました。",
       mediaType: "VIDEO",
       permalink: "https://www.instagram.com/p/seed-ig-002/",
-      sortOrder: 1,
     },
     {
       postId: "seed-ig-003",
@@ -5430,7 +5499,6 @@ async function seedInstagramPosts() {
       caption: "セミナールーム 新レイアウト公開。",
       mediaType: "CAROUSEL_ALBUM",
       permalink: "https://www.instagram.com/p/seed-ig-003/",
-      sortOrder: 2,
     },
     {
       postId: "seed-ig-004",
@@ -5440,7 +5508,6 @@ async function seedInstagramPosts() {
       caption: "コワーキングスペース、Wi-Fi 増強完了。",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-004/",
-      sortOrder: 3,
     },
     {
       postId: "seed-ig-005",
@@ -5450,7 +5517,6 @@ async function seedInstagramPosts() {
       caption: "イベント告知：ヨガ＆マインドフルネス体験会",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-005/",
-      sortOrder: 4,
     },
     {
       postId: "seed-ig-006",
@@ -5460,15 +5526,19 @@ async function seedInstagramPosts() {
       caption: "ブログ更新：レンタルスペースを活用したセミナー開催のコツ",
       mediaType: "IMAGE",
       permalink: "https://www.instagram.com/p/seed-ig-006/",
-      sortOrder: 5,
     },
   ];
 
   for (const p of posts) {
+    // `sortOrder` は @@unique。宣言リテラルを書くと、管理画面で並び替えた DB の
+    // re-seed が P2002 で中断する。宣言順のまま max+1 で採番する。
+    const maxOrder = await prisma.instagramPost.aggregate({
+      _max: { sortOrder: true },
+    });
     await prisma.instagramPost.upsert({
       where: { postId: p.postId },
       update: {},
-      create: p,
+      create: { ...p, sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
     });
   }
 
@@ -5706,7 +5776,7 @@ async function seedProduction(email: string | undefined, name: string) {
   // 規約は baseline Data Migration で投入済のため seed では何もしない
 
   // Phase 5: サイト設定
-  await seedNavigation();
+  await seedNavigation(false); // 本番: 既存の編集を踏み潰さない
   // お知らせ帯・SNSリンクは実在の URL・公開時点の運用告知が前提のデータのため、
   // 架空データを本番に投入しない（管理画面 /admin/settings/appearance から
   // 実際の値で作成する）。
