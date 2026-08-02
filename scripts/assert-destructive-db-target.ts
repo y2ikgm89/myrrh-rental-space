@@ -81,15 +81,26 @@ export function evaluateDestructiveDbTarget(env: {
   return { ok: true, target: `${source}=${describeTarget(url)}` };
 }
 
-// `noPropertyAccessFromIndexSignature` のためブラケット記法で取り出す。
-const result = evaluateDestructiveDbTarget({
-  DIRECT_URL: process.env["DIRECT_URL"],
-  DATABASE_URL: process.env["DATABASE_URL"],
-});
+// CLI として起動されたときだけ評価する。
+//
+// このブロックを module scope に裸で置くと、**import しただけで `process.exit(1)`
+// が走る**。`__tests__/unit/architecture/destructive-db-guard.test.ts` は上の
+// 純関数を静的 import するので、開発者の `.env.local` に本物の `DIRECT_URL` が
+// 入っている環境ではテストが 1 件も走らないまま落ちる（`__tests__/setup.ts` が
+// 固定するのは `DATABASE_URL` だけで、`DIRECT_URL` は素通りする）。
+// しかもそれは**このガードが対象にしている状況そのもの**なので、
+// 「守りたい環境でだけテストが死ぬ」という最悪の形になる。
+if (import.meta.main) {
+  // `noPropertyAccessFromIndexSignature` のためブラケット記法で取り出す。
+  const result = evaluateDestructiveDbTarget({
+    DIRECT_URL: process.env["DIRECT_URL"],
+    DATABASE_URL: process.env["DATABASE_URL"],
+  });
 
-if (!result.ok) {
-  console.error(`❌ ${result.error}`);
-  process.exit(1);
+  if (!result.ok) {
+    console.error(`❌ ${result.error}`);
+    process.exit(1);
+  }
+
+  console.log(`✅ 破壊的操作の対象は安全なローカル DB です: ${result.target}`);
 }
-
-console.log(`✅ 破壊的操作の対象は安全なローカル DB です: ${result.target}`);
