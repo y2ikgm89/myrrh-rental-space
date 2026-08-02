@@ -34,8 +34,10 @@ import {
   Prisma,
   Role,
   CustomerType,
+  DayOfWeek,
   EventScheduleMode,
   EventStatus,
+  HolidayMode,
   RegistrationStatus,
   SmartLockDeviceType,
   TermsScope,
@@ -1349,56 +1351,57 @@ async function seedSpaceRatePlans() {
   });
 
   for (const space of spaces) {
-    const existingWeekendPlan = await prisma.spaceRatePlan.findFirst({
-      where: { spaceId: space.id, name: SEED_WEEKEND_RATE_PLAN_NAME },
-    });
-    if (!existingWeekendPlan) {
-      await prisma.spaceRatePlan.create({
-        data: {
-          spaceId: space.id,
-          name: SEED_WEEKEND_RATE_PLAN_NAME,
-          hourlyPrice: Math.round(space.hourlyPrice * 1.3),
-          daysOfWeek: ["FRIDAY", "SATURDAY", "SUNDAY"],
-          holidayMode: "any",
-          startTime: null,
-          endTime: null,
-          effectiveFrom: null,
-          effectiveTo: null,
-        },
-      });
-      console.log(
-        `✅ Created rate plan: ${space.name} - ${SEED_WEEKEND_RATE_PLAN_NAME}`,
-      );
-    } else {
-      console.log(
-        `⏭️ Skipped existing rate plan: ${space.name} - ${SEED_WEEKEND_RATE_PLAN_NAME}`,
-      );
-    }
+    // 料金は **`space.hourlyPrice` の関数**。既存行を skip すると、スペース側の
+    // 基本料金を宣言値へ寄せ直しても（`seedSpaces` の reconcile）プランだけ
+    // 古い基本料金から導いた値で取り残される。E2E は税込の実額を assert する
+    // （`rate-plan-preview.smoke.spec.ts` の「¥1,430（税込）」= round(1,300 × 1.1)、
+    // 1,300 = round(1,000 × 1.3)）ので、ここがずれると必須ゲートが落ちる。
+    // 導出値である以上、毎回引き直すのが正しい。
+    const declaredPlans = [
+      {
+        name: SEED_WEEKEND_RATE_PLAN_NAME,
+        hourlyPrice: Math.round(space.hourlyPrice * 1.3),
+        daysOfWeek: [DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY],
+        holidayMode: HolidayMode.any,
+      },
+      {
+        name: SEED_HOLIDAY_RATE_PLAN_NAME,
+        hourlyPrice: Math.round(space.hourlyPrice * 1.5),
+        daysOfWeek: [],
+        holidayMode: HolidayMode.only,
+      },
+    ];
 
-    const existingHolidayPlan = await prisma.spaceRatePlan.findFirst({
-      where: { spaceId: space.id, name: SEED_HOLIDAY_RATE_PLAN_NAME },
-    });
-    if (!existingHolidayPlan) {
-      await prisma.spaceRatePlan.create({
-        data: {
-          spaceId: space.id,
-          name: SEED_HOLIDAY_RATE_PLAN_NAME,
-          hourlyPrice: Math.round(space.hourlyPrice * 1.5),
-          daysOfWeek: [],
-          holidayMode: "only",
-          startTime: null,
-          endTime: null,
-          effectiveFrom: null,
-          effectiveTo: null,
-        },
+    for (const plan of declaredPlans) {
+      const declaredContent = {
+        hourlyPrice: plan.hourlyPrice,
+        daysOfWeek: plan.daysOfWeek,
+        holidayMode: plan.holidayMode,
+        startTime: null,
+        endTime: null,
+        effectiveFrom: null,
+        effectiveTo: null,
+      };
+
+      // `SpaceRatePlan` に (spaceId, name) の unique は無いので upsert は使えない。
+      // `findFirst` は `orderBy` 無しだと同名が複数あるとき掴む行が run ごとに変わる
+      // ため、`updateMany` で**同名すべて**を宣言値へ寄せる。重複があっても収束し、
+      // 「1 件も無い」を count で判定できるので存在確認も兼ねる。
+      const { count } = await prisma.spaceRatePlan.updateMany({
+        where: { spaceId: space.id, name: plan.name },
+        data: declaredContent,
       });
-      console.log(
-        `✅ Created rate plan: ${space.name} - ${SEED_HOLIDAY_RATE_PLAN_NAME}`,
-      );
-    } else {
-      console.log(
-        `⏭️ Skipped existing rate plan: ${space.name} - ${SEED_HOLIDAY_RATE_PLAN_NAME}`,
-      );
+
+      if (count === 0) {
+        await prisma.spaceRatePlan.create({
+          data: { spaceId: space.id, name: plan.name, ...declaredContent },
+        });
+        console.log(`✅ Created rate plan: ${space.name} - ${plan.name}`);
+      } else {
+        console.log(
+          `♻️ Reconciled rate plan: ${space.name} - ${plan.name} (¥${String(plan.hourlyPrice)}/h)`,
+        );
+      }
     }
   }
 }
@@ -2296,6 +2299,71 @@ async function seedReservations() {
   const welcomeCoupon = coupons.find((c) => c.code === "WELCOME10");
   const now = new Date();
 
+  // --- 既存のデモ予約は毎回まとめて作り直す ---------------------------
+  //
+  // marker（`SEED_DEMO_RESERVATION_MARKER`）は「同じエントリを二重に作らない」
+  // ためのキーであって、**行を現在時刻へ追従させる**役には立たない。marker 行を
+  // skip していると `daysOffset: 0` の「本日のご予約」が初回 seed の暦日に貼り付き、
+  // 30 日も経てば**未来のデモ予約が 1 件も無い DB** になる（実測: 本日 2026-08-02 に
+  // 対し marker 行は 2026-06-03〜07-30、`daysOffset: 0` の行が全部 2026-06-03）。
+  //
+  // さらに marker 導入**前**に作られた行は marker を持たないので、既存 DB では
+  // 全エントリが「無い」と判定される。COMPLETED / CANCELLED は EXCLUDE 制約の
+  // 対象外なので重複がそのまま増え、PENDING / CONFIRMED は旧行と重なって毎回
+  // 「skip overlapping」になり永久に収束しない（実測: marker 行 20 件と marker 無しの
+  // 旧デモ行が併存していた）。
+  //
+  // どちらも「消してから作る」ことで構造的に消える。EXCLUDE 制約
+  // `reservations_no_active_time_overlap_excl` は DEFERRABLE ではないため、
+  // 削除を先に済ませる順序であることが正しさの条件でもある。
+  //
+  // ただし **会計証跡を持つ行は消さない**（`seedEvents` と同じ判断）。Receipt /
+  // Refund は `onDelete: Restrict` で、消せないだけでなく消してはいけない記録。
+  // レビューは直後の `seedSpaceReviews()` が COMPLETED 予約へ貼り直すので対象外。
+  //
+  // `seedEvents` は「証跡付きだけ残す」が成立せず event 単位で作り直しを見送っている
+  // が、予約には**その連鎖が無い**。残った予約が参照するのは Space / Customer
+  // （`Cascade`）と Coupon / User / ReservationSeries（`SetNull`）だけで `Restrict` が
+  // 1 本も無く、しかもこの関数はそれらを消さない。だから行単位で選り分けられる。
+  const existingDemoReservations = await prisma.reservation.findMany({
+    where: {
+      OR: [
+        { notes: { startsWith: SEED_DEMO_RESERVATION_MARKER } },
+        {
+          spaceId: { in: spaces.map((space) => space.id) },
+          customerId: { in: customers.map((customer) => customer.id) },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      receipt: { select: { id: true } },
+      refunds: { select: { id: true }, take: 1 },
+    },
+  });
+
+  const accountedDemoReservations = existingDemoReservations.filter(
+    (reservation) =>
+      reservation.receipt !== null || reservation.refunds.length > 0,
+  );
+  const disposableDemoReservationIds = existingDemoReservations
+    .filter((reservation) => !accountedDemoReservations.includes(reservation))
+    .map((reservation) => reservation.id);
+
+  if (disposableDemoReservationIds.length > 0) {
+    await prisma.reservation.deleteMany({
+      where: { id: { in: disposableDemoReservationIds } },
+    });
+    console.log(
+      `🧹 Rebuilt demo reservations: removed ${String(disposableDemoReservationIds.length)}`,
+    );
+  }
+  if (accountedDemoReservations.length > 0) {
+    console.log(
+      `ℹ️ Kept ${String(accountedDemoReservations.length)} demo reservations that carry an accounting trail`,
+    );
+  }
+
   const reservations: Array<{
     spaceIndex: number;
     customerIndex: number;
@@ -2761,71 +2829,66 @@ async function seedReservations() {
       res.startHour + res.duration,
     );
 
-    // 冪等判定は **marker** で行う。旧実装は `startTime` をキーにしていたが、
-    // これは `now` からの相対で決まるので、日付が変わると全エントリが「無い」と
-    // 判定されて再作成され、デモ予約が run のたびに増え続けた。
-    // キーはエントリ自身の内容から導出するので、実行日に依存しない。
+    // marker はエントリ自身の内容から導出する（実行日に依存しない）。上の一括削除で
+    // 自分の行はもう残っていないので、ここでの存在確認は要らない。marker が残る理由は
+    // ①次回 run で「seed が作った行」を過不足なく特定できること
+    // ②管理画面でデモ行だと一目で分かること の 2 つ。
     const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
-    const existing = await prisma.reservation.findFirst({
-      where: { notes: { startsWith: marker } },
+
+    // 残るのは会計証跡付きのデモ行と、デモ scope 外の行（dev customer の `[E2E]` 予約等）。
+    // それらと重なる枠は EXCLUDE 制約に弾かれるので、作る前に譲る。
+    const overlappingActiveReservation = await prisma.reservation.findFirst({
+      where: {
+        spaceId: space.id,
+        deletedAt: null,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        AND: [{ startTime: { lt: endDate } }, { endTime: { gt: date } }],
+      },
+      select: { id: true },
     });
 
-    if (!existing) {
-      const overlappingActiveReservation = await prisma.reservation.findFirst({
-        where: {
-          spaceId: space.id,
-          deletedAt: null,
-          status: { in: ["PENDING", "CONFIRMED"] },
-          AND: [{ startTime: { lt: endDate } }, { endTime: { gt: date } }],
-        },
-        select: { id: true },
-      });
-
-      if (overlappingActiveReservation) {
-        console.log(`⏭️ Skipped overlapping reservation`);
-        continue;
-      }
-
-      const basePrice = Number(space.hourlyPrice) * res.duration;
-      let couponDiscountAmount: number | null = null;
-      let couponId: string | null = null;
-
-      // クーポン適用（一部の予約にのみ）
-      if (res.applyCoupon && welcomeCoupon) {
-        couponId = welcomeCoupon.id;
-        couponDiscountAmount =
-          basePrice * (Number(welcomeCoupon.discountValue) / 100);
-      }
-
-      const totalPrice = basePrice - (couponDiscountAmount ?? 0);
-
-      await prisma.reservation.create({
-        data: {
-          spaceId: space.id,
-          customerId: customer.id,
-          startTime: date,
-          endTime: endDate,
-          status: res.status,
-          basePrice,
-          totalPrice,
-          couponId,
-          couponDiscountAmount: couponDiscountAmount
-            ? couponDiscountAmount
-            : null,
-          ...buildSeedLegacyPricingSnapshot(totalPrice),
-          // marker を先頭に置く。冪等判定のキーであり、実行日に依存しない。
-          notes: res.notes != null ? `${marker} ${res.notes}` : marker,
-          ...(res.paymentStatus !== undefined
-            ? { paymentStatus: res.paymentStatus }
-            : {}),
-        },
-      });
-      console.log(
-        `✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`,
-      );
-    } else {
-      console.log(`⏭️ Skipped existing reservation`);
+    if (overlappingActiveReservation) {
+      console.log(`⏭️ Skipped overlapping reservation`);
+      continue;
     }
+
+    const basePrice = Number(space.hourlyPrice) * res.duration;
+    let couponDiscountAmount: number | null = null;
+    let couponId: string | null = null;
+
+    // クーポン適用（一部の予約にのみ）
+    if (res.applyCoupon && welcomeCoupon) {
+      couponId = welcomeCoupon.id;
+      couponDiscountAmount =
+        basePrice * (Number(welcomeCoupon.discountValue) / 100);
+    }
+
+    const totalPrice = basePrice - (couponDiscountAmount ?? 0);
+
+    await prisma.reservation.create({
+      data: {
+        spaceId: space.id,
+        customerId: customer.id,
+        startTime: date,
+        endTime: endDate,
+        status: res.status,
+        basePrice,
+        totalPrice,
+        couponId,
+        couponDiscountAmount: couponDiscountAmount
+          ? couponDiscountAmount
+          : null,
+        ...buildSeedLegacyPricingSnapshot(totalPrice),
+        // marker を先頭に置く。次回 run の削除対象を特定するキー。
+        notes: res.notes != null ? `${marker} ${res.notes}` : marker,
+        ...(res.paymentStatus !== undefined
+          ? { paymentStatus: res.paymentStatus }
+          : {}),
+      },
+    });
+    console.log(
+      `✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`,
+    );
   }
 }
 

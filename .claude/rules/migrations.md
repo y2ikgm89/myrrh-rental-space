@@ -81,6 +81,32 @@ baseline reset を適用しない。
   `isActive` / `isPublished` を書き始めると `--production` 再実行が管理画面の編集を
   踏み潰す。`seedNavigation(reconcile)` のように dev/prod で挙動を分ける
 
+### 「あれば skip」が使えるのは自己完結した行だけ
+
+存在確認して skip する冪等化は、その行の内容が**自分の宣言だけで決まる**ときに限り
+正しい。次のどちらかに当たる行では、skip は「古い値を保存する」に変わる:
+
+| 行の性質                       | skip すると起きること                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `now` からの相対で時刻を決める | 初回 seed の暦日に貼り付く。実測: `daysOffset: 0` の「本日のご予約」が 2 か月前の日付のまま残り、**未来のデモ予約が 0 件**の DB になっていた                       |
+| 他の行から値を導出する         | 導出元だけが動いて drift する。実測: `seedSpaces` の reconcile 後も料金プランが古い `hourlyPrice × 1.3` のまま残り、税込実額を assert する required smoke が落ちる |
+
+対処は**毎 run 引き直す**こと。時刻相対の集合は「消してから作る」
+（`seedReservations`）、導出値は `updateMany` で宣言値へ寄せる
+（`seedSpaceRatePlans`）。gate は
+`__tests__/unit/architecture/seed-demo-reservation-rebuild.test.ts` と
+`seed-derived-value-reconcile.test.ts`。
+
+**この壊れ方は CI では絶対に出ない。** CI は毎回まっさらな DB に seed するので
+相対時刻も導出値も必ず正しい。壊れるのは開発機と staging の**長生きした DB** だけで、
+しかも「seed は冪等」という前提のせいで疑われない。実測（2026-08-02 のローカル
+test DB）: marker 付き 20 件の裏に marker 導入前の旧デモ行が併存し、marker 行自体も
+2 か月前の日付だった。**marker 方式の導入それ自体が、既存 DB では
+「全エントリが無い」判定になって重複を生む**点にも注意する。
+
+削除の順序も正しさの一部。`reservations_no_active_time_overlap_excl` は
+DEFERRABLE ではないので、作る前に消しきる。
+
 ### 会計証跡が付いた行は seed が消さない
 
 `Receipt` / `Refund` は予約・イベント申込を `onDelete: Restrict` で参照する
@@ -92,3 +118,9 @@ phase が丸ごと走らなくなる。dev / staging で Stripe のテスト決�
 **「証跡付きだけ残して他を消す」では解けない** — 残した申込が参照する
 `slotId` / `ticketId` の FK も `RESTRICT` なので、次はそちらが落ちる。
 証跡がある単位（event 単位）で作り直しを見送り、理由を名指しでログに出す。
+
+**予約側は逆に行単位で選り分けられる**。残った予約が参照するのは Space / Customer
+（`Cascade`）と Coupon / User / ReservationSeries（`SetNull`）だけで `Restrict` が
+1 本も無く、`seedReservations` はそれらを消さないため連鎖が起きない。
+「event は単位で見送り、reservation は行で選り分け」の差は FK の onDelete が決めている
+——**関数ごとに参照先を確認してから決める**こと。
