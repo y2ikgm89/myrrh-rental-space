@@ -396,5 +396,16 @@ spec は `prisma/seed.ts` の fixture（slug・予約ステータス等）と
   なって**全送信が bot 判定**で弾かれる（run 30731786539）。②は日付選択後に
   `setSystemTime` で戻しても遅い — 値はもう焼かれている。
 
+  **カレンダーの月送りと日付セルは `click()` ではなく `press("Enter")` で押す。**
+  `click` は hit-target check（"element receives pointer events"）を通すので、
+  上に重なる要素があると永久に retry する。実測 run 30736160628: sticky な
+  `<header role="banner">` と DayPicker 自身の `.rdp-month_caption` が交互に
+  pointer events を奪い、120 秒の test timeout まで 60 回以上 retry した。
+  `press` は focus + keydown/keyup だけで **actionability チェックを一切行わない**
+  （公式 `types.d.ts`: "press fires keydown+keyup on the focused element; no
+  actionability checks"）ので hit-target に阻まれず、`<button>` への Enter は
+  ネイティブに click を発火する。**その代わり可視性も待たない**ので、
+  `await expect(target).toBeVisible()` を必ず前に置く。
+
   有効セルの集合は実時計の関数なので allowlist で
   固定できない。gate: `__tests__/unit/architecture/e2e-calendar-date-selection.test.ts`

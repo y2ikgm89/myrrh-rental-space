@@ -87,19 +87,37 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
     await expect(dateTime).toBeVisible({ timeout: 20_000 });
 
     // 翌月へ送る。DayPicker は `<nav>`（role="navigation"）に前月 → 翌月の順で
-    // 2 ボタンを描く（`react-day-picker` の `components/Nav.js`）。aria-label の
-    // 既定は英語固定（"Go to the Next Month"。`locale={ja}` は formatter にしか
-    // 効かない）だが、アプリが `labels` を渡せば日本語化されうる。順序のほうが
-    // 構造として安定しているので、名前ではなく最後のボタンを掴む。
+    // 2 ボタンを描く（`react-day-picker` の `components/Nav.js`）。aria-label は
+    // locale に従って翻訳される（実測「次の月へ」）ので、名前ではなく構造で掴む。
+    //
+    // **`click()` ではなく `press("Enter")` を使う。** click は hit-target check
+    // （"element receives pointer events"）を通すため、カレンダーの上に重なる要素が
+    // あると永久に retry する。実測 run 30736160628: sticky な `<header
+    // role="banner">` と DayPicker 自身の `.rdp-month_caption` が交互に pointer
+    // events を奪い、120 秒の test timeout まで 60 回以上 retry して失敗した。
+    // `press` は focus + keydown/keyup だけで **actionability チェックを一切
+    // 行わない**（公式 `types.d.ts`: "press fires keydown+keyup on the focused
+    // element; no actionability checks"）ので hit-target に阻まれない。`<button>`
+    // への Enter はネイティブに click を発火する。
+    //
+    // 代わりに**可視性は自分で待つ**。actionability を見ない以上、描画前の要素に
+    // キーを送ってしまわないよう web-first assertion を前に置く。
     const calendar = visibleById(page, "reservation-calendar");
-    await calendar.getByRole("navigation").getByRole("button").last().click();
+    const nextMonth = calendar
+      .getByRole("navigation")
+      .getByRole("button")
+      .last();
+    await expect(nextMonth).toBeVisible({ timeout: 20_000 });
+    await nextMonth.press("Enter");
 
     // DayPicker がセルに付ける安定属性 `data-day` で選ぶ。アクセシブルネームは
     // ロケール依存の長い書式（例「2026年9月8日火曜日」）なので使わない。
-    await calendar
+    // 可視になるまで待つことが「月送りが効いた」ことの確認も兼ねる。
+    const targetDay = calendar
       .locator(`[data-day="${dateOnly}"]`)
-      .getByRole("button")
-      .click();
+      .getByRole("button");
+    await expect(targetDay).toBeVisible({ timeout: 20_000 });
+    await targetDay.press("Enter");
 
     await enabled(page, page.getByRole("group", { name: "開始時間を選択" }))
       .first()
