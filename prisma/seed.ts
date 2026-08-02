@@ -1464,15 +1464,22 @@ async function seedCoupons() {
   ];
 
   for (const coupon of coupons) {
-    const existing = await prisma.coupon.findUnique({
+    // 有効期間は**作成時の時計**から計算されるので、skip すると古い DB では
+    // 期限切れのまま永久に残る（`VIP30` は 1 ヶ月で失効し、以後どの再 seed でも
+    // 蘇らない）。`code` は無条件 @unique なので upsert が使えて、
+    // 期間だけ引き直せる。`usageCount` は本物のデモ履歴なので触らない。
+    await prisma.coupon.upsert({
       where: { code: coupon.code },
+      update: {
+        validFrom: coupon.validFrom,
+        // `exactOptionalPropertyTypes` のため undefined を明示代入しない。
+        ...(coupon.validUntil !== undefined
+          ? { validUntil: coupon.validUntil }
+          : {}),
+      },
+      create: coupon,
     });
-    if (!existing) {
-      await prisma.coupon.create({ data: coupon });
-      console.log(`✅ Created coupon: ${coupon.code}`);
-    } else {
-      console.log(`⏭️ Skipped existing coupon: ${coupon.code}`);
-    }
+    console.log(`✅ Reconciled coupon window: ${coupon.code}`);
   }
 }
 
