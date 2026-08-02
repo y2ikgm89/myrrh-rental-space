@@ -100,6 +100,14 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // uuid 値は失われない。計画ダウンタイム付きデプロイ（SET DATA TYPE）が発動する。
   // Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
   "prisma/migrations/20260731135410_terms_agreement_resource_id_polymorphic/migration.sql",
+  // 20260728140000 が対象外に残した 177 列を TIMESTAMPTZ(6) へ寄せ、DB 全体の日時型を
+  // 統一する（naive 177 → 0）。上の 20260728140000 と**同一の手法・同一の理由**での
+  // allowlist: 多数の `ALTER COLUMN ... TYPE` が `changing-column-type` を発火し、
+  // `-- squawk-ignore` では抑止できない。timestamp → timestamptz は表現域の widening で
+  // 値は失われず、変換は `AT TIME ZONE 'UTC'` の明示指定（保存値の SSoT は UTC）。
+  // 計画ダウンタイム付きデプロイが発動する。Risk 1 の窓は Cloud Run min0/max1 の
+  // atomic switch で排除済。
+  "prisma/migrations/20260803020000_timestamptz_unify_remaining/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

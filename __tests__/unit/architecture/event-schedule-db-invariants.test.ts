@@ -27,7 +27,10 @@ describe("event schedule DB invariants", () => {
     expect(schema).toMatch(
       /\bregistrationDeadline\s+DateTime\?\s+@db\.Timestamptz\(6\)/u,
     );
-    expect(schema).toContain("slotId      String             @db.VarChar(30)");
+    // 空白で pin すると `prisma format` の列揃え直しだけで落ちる（実際に落ちた）。
+    // 守りたいのは「slotId が EventTimeSlot.id の cuid と同じ VarChar(30)」であって
+    // 桁揃えではないので、隣の assertion と同じく空白非依存の正規表現で書く。
+    expect(schema).toMatch(/\bslotId\s+String\s+@db\.VarChar\(30\)/u);
   });
 
   test("baseline migration enforces DB-level schedule invariants", () => {
