@@ -59,7 +59,7 @@ const baseLocalEnv = {
 };
 
 describe("evaluateSeedSafety", () => {
-  test("allows --dev/--reset only against safe local DATABASE_URL", () => {
+  test("allows --dev only against safe local DATABASE_URL", () => {
     expect(
       evaluateSeedSafety({
         argv: [],
@@ -69,15 +69,15 @@ describe("evaluateSeedSafety", () => {
 
     expect(
       evaluateSeedSafety({
-        argv: ["--reset"],
+        argv: ["--dev"],
         env: { ...baseLocalEnv, nodeEnv: undefined },
       }),
-    ).toEqual({ ok: true, mode: "reset" });
+    ).toEqual({ ok: true, mode: "dev" });
   });
 
-  test("refuses --dev/--reset when APP_SURFACE is set without E2E_RUNTIME/CI", () => {
+  test("refuses --dev when APP_SURFACE is set without E2E_RUNTIME/CI", () => {
     const surfaceRefuse = evaluateSeedSafety({
-      argv: ["--reset"],
+      argv: ["--dev"],
       env: {
         ...baseLocalEnv,
         appSurface: "public",
@@ -116,7 +116,7 @@ describe("evaluateSeedSafety", () => {
     ).toEqual({ ok: true, mode: "dev" });
   });
 
-  test("refuses --dev/--reset against Neon / Cloud SQL DATABASE_URL", () => {
+  test("refuses --dev against Neon / Cloud SQL DATABASE_URL", () => {
     const neonRefuse = evaluateSeedSafety({
       argv: [],
       env: {
@@ -147,7 +147,8 @@ describe("evaluateSeedSafety", () => {
     ).toEqual({ ok: true, mode: "production" });
   });
 
-  test("forever refuses combining --production with --reset", () => {
+  test("still refuses the retired flag when mixed with --production", () => {
+    // 廃止後も「筋肉記憶で打たれた --reset が本番 bootstrap に紛れる」経路を塞ぐ。
     const mixed = evaluateSeedSafety({
       argv: ["--production", "--reset", "owner@example.com"],
       env: {
@@ -160,7 +161,7 @@ describe("evaluateSeedSafety", () => {
     });
     expect(mixed.ok).toBe(false);
     if (!mixed.ok) {
-      expect(mixed.error).toContain("cannot be combined");
+      expect(mixed.error).toContain("--reset");
     }
   });
 });

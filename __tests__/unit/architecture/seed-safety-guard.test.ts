@@ -22,6 +22,9 @@ describe("seed production DATABASE_URL fail-closed guard", () => {
     expect(safety).toContain(".neon.tech");
     expect(safety).toContain("NODE_ENV");
     expect(safety).toContain("APP_SURFACE");
-    expect(safety).toContain("cannot be combined with --reset");
+    // `--reset` は廃止済み。黙って dev に落ちず明示的に拒否することを固定する
+    // （筋肉記憶で打たれた破壊フラグが dev seed として通ると最悪）。
+    expect(safety).toContain('hasFlag(argv, "--reset")');
+    expect(safety).toContain("--reset は廃止しました");
   });
 });
