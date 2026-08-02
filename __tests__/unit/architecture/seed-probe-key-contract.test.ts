@@ -61,7 +61,8 @@ const LITERAL_ALLOWED_BLOCK = "SEED_NAVIGATION_GROUPS";
 interface PartialUnique {
   readonly model: string;
   readonly fields: readonly string[];
-  readonly predicateFields: readonly string[];
+  /** 述語の field → 宣言値（`deletedAt: null` なら "null"）。 */
+  readonly predicate: ReadonlyMap<string, string>;
 }
 
 function modelBodies(): Map<string, string> {
@@ -87,8 +88,11 @@ function readPartialUniques(): PartialUnique[] {
           .split(",")
           .map((f) => f.trim())
           .filter((f) => f.length > 0),
-        predicateFields: [...predicate[1].matchAll(/(\w+)\s*:/gu)].map((m) =>
-          String(m[1]),
+        predicate: new Map(
+          [...predicate[1].matchAll(/(\w+)\s*:\s*([^,}]+)/gu)].map((m) => [
+            String(m[1]),
+            String(m[2]).trim(),
+          ]),
         ),
       });
     }
@@ -138,13 +142,72 @@ function seedFunctions(): SeedFunction[] {
     if (match?.[1]) starts.push({ name: match[1], index });
   });
 
-  return starts.map((start, i) => ({
-    name: start.name,
-    startLine: start.index,
-    body: lines
-      .slice(start.index, starts[i + 1]?.index ?? lines.length)
-      .join("\n"),
-  }));
+  // **関数の閉じ括弧で切る。** 「次の関数の先頭まで」で切ると、関数と関数の間に
+  // ある top-level 宣言（`SEED_NAVIGATION_GROUPS` 等）が手前の関数の body に
+  // 紛れ込む。allowlist を body 一致で判定していたため、宣言 1 つのために
+  // **その関数まるごと**が走査対象から外れていた。
+  return starts.map((start) => {
+    const nextTopLevelClose = lines.findIndex(
+      (line, index) => index > start.index && line === "}",
+    );
+    const end = nextTopLevelClose === -1 ? lines.length : nextTopLevelClose + 1;
+    return {
+      name: start.name,
+      startLine: start.index,
+      body: lines.slice(start.index, end).join("\n"),
+    };
+  });
+}
+
+/**
+ * `const <name> = ...;` の宣言が占める**行 offset**を返す。
+ *
+ * ネストを数えて対応する閉じ括弧まで辿るので、宣言が何行あってもその 1 ブロック
+ * だけが対象になる。行単位で返すのは、違反行の行番号を `fn.body` の offset から
+ * 出しているため — テキストを切り落とすと行番号がずれる。
+ */
+function declarationLineOffsets(body: string, name: string): Set<number> {
+  const lines = body.split("\n");
+  const first = lines.findIndex((line) => line.includes(`const ${name} =`));
+  if (first === -1) return new Set();
+
+  const offsets = new Set<number>([first]);
+  let depth = 0;
+  let seenOpen = false;
+  for (let i = first; i < lines.length; i++) {
+    offsets.add(i);
+    for (const char of lines[i] ?? "") {
+      if (char === "[" || char === "{" || char === "(") {
+        depth++;
+        seenOpen = true;
+      } else if (char === "]" || char === "}" || char === ")") {
+        depth--;
+      }
+    }
+    if (seenOpen && depth <= 0) break;
+  }
+  return offsets;
+}
+
+/**
+ * 同じ関数内で、その model を **作る前に `deleteMany` している**か。
+ *
+ * 消してから作るなら母集合は空なので、一意列にリテラルを書いても衝突しない。
+ * 「先に」まで見るのが要点 — 作ってから消す順序では守られない。
+ */
+function deletesBeforeCreating(body: string, clientProperty: string): boolean {
+  const deleteAt = body.search(
+    new RegExp(`(?:prisma|tx)\\.${clientProperty}\\.deleteMany\\(`, "u"),
+  );
+  if (deleteAt === -1) return false;
+
+  const createAt = body.search(
+    new RegExp(
+      `(?:prisma|tx)\\.${clientProperty}\\.(?:create|createMany|upsert)\\(`,
+      "u",
+    ),
+  );
+  return createAt !== -1 && deleteAt < createAt;
 }
 
 interface Violation {
@@ -163,10 +226,19 @@ function findLiteralUniqueWrites(): Violation[] {
   const violations: Violation[] = [];
 
   for (const fn of seedFunctions()) {
-    if (fn.body.includes(`const ${LITERAL_ALLOWED_BLOCK} =`)) continue;
+    // 免除は**宣言そのもの**に限る。以前は「body に宣言が含まれていたら
+    // `continue`」だったが、関数スライスが次の関数の手前まで伸びていたため
+    // top-level の宣言が手前の関数に紛れ込み、**その関数まるごと**が走査対象から
+    // 外れていた。スライスは閉じ括弧で切るようにしたうえで、万一この宣言が
+    // 関数内へ移動しても正しく振る舞うよう、ブロック単位で切り落とす。
+    const exempt = declarationLineOffsets(fn.body, LITERAL_ALLOWED_BLOCK);
 
     const written = new Set(
-      [...fn.body.matchAll(/prisma\.(\w+)\.(?:create|createMany|upsert)\(/gu)]
+      [
+        ...fn.body.matchAll(
+          /(?:prisma|tx)\.(\w+)\.(?:create|createMany|upsert)\(/gu,
+        ),
+      ]
         .map((m) => toModelName(String(m[1])))
         .filter((model) => uniqueColumns.has(model)),
     );
@@ -174,6 +246,12 @@ function findLiteralUniqueWrites(): Violation[] {
 
     const columns = new Set<string>();
     for (const model of written) {
+      // **作る前に全部消している model は対象外。** リテラルが危険なのは
+      // 「既存行がその値を占有しているかもしれない」からで、同じ関数が同じ
+      // model を先に `deleteMany` していれば母集合は空になり、衝突しえない。
+      // 例: `seedEvents` は tickets / slots / registrations を消してから
+      // `sortOrder: 0` の ticket を 1 枚だけ作る（`@@unique([eventId, sortOrder])`）。
+      if (deletesBeforeCreating(fn.body, toClientProperty(model))) continue;
       for (const column of uniqueColumns.get(model) ?? []) columns.add(column);
     }
     if (columns.size === 0) continue;
@@ -184,6 +262,7 @@ function findLiteralUniqueWrites(): Violation[] {
     );
 
     fn.body.split("\n").forEach((line, offset) => {
+      if (exempt.has(offset)) return;
       const match = pattern.exec(line);
       if (!match) return;
       violations.push({
@@ -196,15 +275,79 @@ function findLiteralUniqueWrites(): Violation[] {
   return violations;
 }
 
-/** `prisma.<model>.findFirst({ where: { ... } })` の where 直下キー。 */
-function probeWhereKeys(clientProperty: string): string[][] {
+/**
+ * `prisma.<model>.findFirst({ where: { ... } })` の where 直下を field → 値で返す。
+ *
+ * **キーの有無だけでは足りない。** partial unique の述語が `isActive: true` の
+ * ときに probe が `isActive: false` で引いていると、母集合が制約と逆になって
+ * 有効な行を見落とし、conflict する create に進む — 防ぎたい P2002 がそのまま出る。
+ * 値まで見て初めて「制約の述語に揃っている」と言える。
+ * shorthand（`where: { slug }`）は値 `null` として記録する。
+ */
+function probeWhereClauses(
+  clientProperty: string,
+): Array<Map<string, string | null>> {
+  const source = read(SEED);
   const pattern = new RegExp(
-    `prisma\\.${clientProperty}\\.findFirst\\(\\{[\\s\\S]{0,120}?where:\\s*\\{([^{}]*)\\}`,
+    // `tx.` も見る。作り直しを advisory lock 付きの transaction に入れた結果、
+    // probe が `prisma.` から `tx.` に変わった箇所がある。片方しか見ないと、
+    // tx 化した瞬間にその probe が gate の視界から消える。
+    `(?:prisma|tx)\\.${clientProperty}\\.findFirst\\(\\{[\\s\\S]{0,120}?where:\\s*\\{`,
     "gu",
   );
-  return [...read(SEED).matchAll(pattern)].map((m) =>
-    [...String(m[1]).matchAll(/(\w+)\s*:/gu)].map((k) => String(k[1])),
-  );
+
+  return [...source.matchAll(pattern)].map((m) => {
+    // **ネストを正規表現で切らない。** `deletedAt: { not: null }` のような
+    // 入れ子があると `[^{}]*` では where 全体を掴めず、その probe が丸ごと
+    // gate の視界から消える — 一番危ない「述語を反転させた probe」が
+    // 素通りしていた。深さを数えて対応する `}` まで取る。
+    const open = m.index + m[0].length;
+    let depth = 1;
+    let close = open;
+    while (close < source.length && depth > 0) {
+      const char = source[close];
+      if (char === "{") depth++;
+      else if (char === "}") depth--;
+      if (depth === 0) break;
+      close++;
+    }
+
+    return parseWhereEntries(source.slice(open, close));
+  });
+}
+
+/** where 直下を `field → 値` に割る（ネストは値としてそのまま保持）。 */
+function parseWhereEntries(body: string): Map<string, string | null> {
+  const clause = new Map<string, string | null>();
+
+  // top-level の `,` だけで割る。`{ not: null }` の内側の `,` で割らない。
+  const entries: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of body) {
+    if (char === "{" || char === "[" || char === "(") depth++;
+    if (char === "}" || char === "]" || char === ")") depth--;
+    if (char === "," && depth === 0) {
+      entries.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  entries.push(current);
+
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (trimmed.length === 0) continue;
+    const withValue = /^(\w+)\s*:\s*([\s\S]+)$/u.exec(trimmed);
+    if (withValue?.[1]) {
+      clause.set(withValue[1], String(withValue[2]).trim());
+      continue;
+    }
+    const shorthand = /^(\w+)$/u.exec(trimmed);
+    if (shorthand?.[1]) clause.set(shorthand[1], null);
+  }
+  return clause;
 }
 
 describe("seed と schema の一意制約が噛み合っている", () => {
@@ -215,7 +358,7 @@ describe("seed と schema の一意制約が噛み合っている", () => {
     // unique 列を持つ model を書く関数が実在すること（絞り込みが効きすぎていない）。
     expect(
       seedFunctions().some((fn) =>
-        /prisma\.\w+\.(?:create|upsert)\(/u.test(fn.body),
+        /(?:prisma|tx)\.\w+\.(?:create|upsert)\(/u.test(fn.body),
       ),
     ).toBe(true);
   });
@@ -240,17 +383,31 @@ describe("seed と schema の一意制約が噛み合っている", () => {
     const violations = readPartialUniques().flatMap((partial) => {
       const clientProperty = toClientProperty(partial.model);
       return (
-        probeWhereKeys(clientProperty)
+        probeWhereClauses(clientProperty)
           // その unique の列で引いている probe だけが対象。
           // `where: { status }` のような読み取りクエリは制約と無関係。
-          .filter((keys) => keys.some((key) => partial.fields.includes(key)))
-          .flatMap((keys, index) =>
-            partial.predicateFields
-              .filter((field) => !keys.includes(field))
-              .map(
-                (field) =>
-                  `prisma.${clientProperty}.findFirst #${String(index + 1)}: where に "${field}" が無い。${partial.model} の (${partial.fields.join(", ")}) unique は ${field} 条件の partial index なので、判定の母集合を制約の述語に揃える必要がある`,
-              ),
+          .filter((clause) =>
+            [...clause.keys()].some((key) => partial.fields.includes(key)),
+          )
+          .flatMap((clause, index) =>
+            [...partial.predicate].flatMap(([field, declared]) => {
+              const label = `prisma.${clientProperty}.findFirst #${String(index + 1)}`;
+              if (!clause.has(field)) {
+                return [
+                  `${label}: where に "${field}" が無い。${partial.model} の (${partial.fields.join(", ")}) unique は ${field} 条件の partial index なので、判定の母集合を制約の述語に揃える必要がある`,
+                ];
+              }
+
+              // 値まで一致していること。逆向きの述語で引くと母集合が反転し、
+              // 有効な行を見落として conflict する create に進む。
+              const actual = clause.get(field);
+              if (actual !== declared) {
+                return [
+                  `${label}: "${field}" の値が制約と違う（宣言 ${declared} / probe ${actual ?? "(shorthand)"}）。partial index の述語と同じ値で引くこと`,
+                ];
+              }
+              return [];
+            }),
           )
       );
     });
