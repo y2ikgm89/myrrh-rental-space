@@ -14,6 +14,7 @@ import { WEEKDAYS } from "./rrule-utils";
 import {
   personNameFieldSchema,
   emailFieldSchema,
+  isEmailFormat,
 } from "@/shared/lib/validations/customer-shared-fields";
 
 /**
@@ -89,7 +90,8 @@ const newCustomerObjectSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "メールアドレスを入力してください" })
-    .email({ error: "有効なメールアドレスを入力してください" }),
+    // `.email()` は Zod 4 で @deprecated（top-level `z.email()` が正）。
+    .refine(isEmailFormat, { error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z
     .string()
     .trim()

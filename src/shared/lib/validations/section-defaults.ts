@@ -12,6 +12,7 @@ import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/eve
 import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import { valuePropsConfigSchema } from "@/shared/lib/sections/definitions/value-props/schema";
 import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
+import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
 import { termsListConfigSchema } from "@/shared/lib/sections/definitions/terms-list/schema";
 
 // =============================================================================
@@ -56,15 +57,24 @@ import {
  * 具体スキーマを直接 safeParse することで、戻り値型が z.output<Schema> に推論される。
  * as T キャスト不要。
  */
-function createTypedConfigGetterFromSchema<S extends z.ZodType>(schema: S) {
+function createTypedConfigGetterFromSchema<S extends z.ZodType>(
+  schema: S,
+  /**
+   * 読めない config を受けたときに代わりに通す入力。
+   *
+   * 既定の `{}` で足りるのは全フィールドが default を持つ object スキーマだけ。
+   * **discriminated union は `{}` から復元できない** — discriminator は default
+   * 適用より前に照合されるので、`variant` を持たない `{}` はどの枝にも一致しない
+   * （Zod 4 で実測）。page-hero がこれに当たり、`{}` を渡していたために
+   * 「到達不能」なはずの throw が公開ページの描画中に起きていた。
+   */
+  fallbackInput: unknown = {},
+) {
   return (config: unknown): z.output<S> => {
     const result = schema.safeParse(config);
     if (result.success) return result.data;
-    // フォールバック: 空オブジェクトをパースしてデフォルト値を取得
-    // 全セクションスキーマはフィールドにデフォルト値を持つため safeParse({}) は必ず成功する
-    const fallback = schema.safeParse({});
+    const fallback = schema.safeParse(fallbackInput);
     if (fallback.success) return fallback.data;
-    // 到達不能: 全スキーマが {} からデフォルト値を生成可能
     throw new Error(`Failed to parse default config for section schema`);
   };
 }
@@ -123,8 +133,11 @@ export const getValuePropsConfig = createTypedConfigGetterFromSchema(
   valuePropsConfigSchema,
 );
 
-export const getPageHeroConfig =
-  createTypedConfigGetterFromSchema(pageHeroConfigSchema);
+// discriminated union なので `{}` では復元できない。既定の hero 設定を渡す。
+export const getPageHeroConfig = createTypedConfigGetterFromSchema(
+  pageHeroConfigSchema,
+  DEFAULT_PAGE_HERO,
+);
 
 export const getTermsListConfig = createTypedConfigGetterFromSchema(
   termsListConfigSchema,

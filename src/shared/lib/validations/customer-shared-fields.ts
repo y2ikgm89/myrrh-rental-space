@@ -26,6 +26,21 @@ export function personNameFieldSchema(label: string) {
 }
 
 /**
+ * メールアドレスの形式判定。**`.pipe(z.email())` を使わない。**
+ *
+ * `.pipe()` は ZodString のチェーンを閉じるので、conform の `getZodConstraint` が
+ * `minLength` / `maxLength` を拾えなくなる（実測: `.trim().min(1).max(255).pipe(z.email())`
+ * は `{required:true}` だけを返し、`maxlength="255"` が入力欄から消える）。
+ * `z.string().email()` はチェーンを保つが Zod 4 で `@deprecated`。
+ *
+ * 判定だけを公式の top-level `z.email()` から借りて `.refine()` に載せると、
+ * 公式 API のまま制約も残る。メールを検証する箇所はすべてこれを使う。
+ */
+export function isEmailFormat(value: string): boolean {
+  return z.email().safeParse(value).success;
+}
+
+/**
  * 顧客メールアドレス。
  *
  * **trim してから形式検証する。** 素の `z.email()` は `" a@example.com"` を
@@ -44,7 +59,7 @@ export const emailFieldSchema = z
   // **公開フォームにそのまま出る**（実測。#1835 の退行）。
   .string({ error: "有効なメールアドレスを入力してください" })
   .trim()
-  .pipe(z.email({ error: "有効なメールアドレスを入力してください" }));
+  .refine(isEmailFormat, { error: "有効なメールアドレスを入力してください" });
 
 /**
  * 任意電話番号 (最大 20 文字、空文字許容)。
