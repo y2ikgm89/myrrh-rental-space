@@ -1049,9 +1049,18 @@ describe("architecture boundaries", () => {
     expectRecord(scripts);
 
     expect(scripts["db:seed"]).toBe("bunx --bun prisma db seed");
-    expect(scripts["db:reset"]).toBe(
-      "bunx --bun prisma migrate reset --force && bun run db:seed",
-    );
+
+    // 破壊的操作の前段ガードは `destructive-db-guard.test.ts` が別途強制する
+    // （そちらは「先頭にあること」まで見る）。ここは Prisma v7 の
+    // 明示 seed workflow だけを pin したいので、ガードを剥がしてから比較する。
+    const dbReset = scripts["db:reset"];
+    expect(typeof dbReset).toBe("string");
+    expect(
+      String(dbReset).replace(
+        "bun scripts/assert-destructive-db-target.ts && ",
+        "",
+      ),
+    ).toBe("bunx --bun prisma migrate reset --force && bun run db:seed");
   });
 
   test("production seed は運用時点データ（お知らせ帯・SNSリンク・News）と架空の法人情報を投入しない", () => {
