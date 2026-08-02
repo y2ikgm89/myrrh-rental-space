@@ -145,15 +145,33 @@ export type FacilityItem = z.infer<typeof facilityItemSchema>;
  * `{ name: string; iconName: string }[]` 形式で保存。
  * 旧 `string[]` 形式はマイグレーション 20260507163006 で object 化済み。
  *
- * バリデーション失敗時は空配列を返す（防御的読み取り、historical data の自己修復）。
+ * **配列全体ではなく 1 件ずつ検証する**（`parseGallery` と同じ形）。まとめて
+ * `facilitiesSchema` に通すと、1 件の不正で**そのスペースの設備が全部消える**。
+ * `name` に `.trim()` を課した際（#1819）にこれが実害になった: 旧スキーマは
+ * `z.string().min(1)` で空白のみの設備名を通していたので、そういう行が既に
+ * 保存されていれば読み取りが丸ごと失敗する。`"Wi-Fi"` と `" Wi-Fi "` の併存も
+ * 同じで、trim 後に重複して uniqueness の refine が落ちる。
+ *
+ * 1 件ずつなら、空白だけの設備（元々画面に何も出ていない）だけが落ちて
+ * 残りは生き残る。重複は先に現れた方を採る。
  *
  * @example
  * const facilities = parseFacilities(space.facilities)
  * // facilities[0].name / facilities[0].iconName でアクセス
  */
 export function parseFacilities(value: unknown): FacilityItem[] {
-  const result = facilitiesSchema.safeParse(value);
-  return result.success ? result.data : [];
+  if (!Array.isArray(value)) return [];
+  const result: FacilityItem[] = [];
+  // `name` は React key の stable ID なので、canonical schema と同じく重複を許さない
+  const seenNames = new Set<string>();
+  for (const item of value) {
+    const parsed = facilityItemSchema.safeParse(item);
+    if (!parsed.success) continue;
+    if (seenNames.has(parsed.data.name)) continue;
+    seenNames.add(parsed.data.name);
+    result.push(parsed.data);
+  }
+  return result;
 }
 
 /**

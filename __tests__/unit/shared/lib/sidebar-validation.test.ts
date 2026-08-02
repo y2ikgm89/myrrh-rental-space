@@ -84,6 +84,27 @@ describe("tryParseSidebarWidgets", () => {
       tryParseSidebarWidgets([{ type: "unknown", enabled: true }]),
     ).toEqual({ success: false });
   });
+
+  // `title` に `.trim()` を課す前（#1815 以前）は空白だけのタイトルが保存できた。
+  // それを failure 扱いにすると、管理画面は既定値 + 警告に化け、**保存した時点で
+  // 管理者のサイドバー構成が丸ごと失われる**。空白タイトルの widget だけ落とす。
+  test("旧データの空白だけのタイトルは、その widget だけ落として残りを保つ", () => {
+    const kept = { type: "search", enabled: true } as const;
+    const blank = { type: "custom", enabled: true, id: "a2", title: "   " };
+
+    const result = tryParseSidebarWidgets([kept, blank]);
+
+    expect(result).toEqual({ success: true, data: [kept] });
+  });
+
+  test("空白タイトルを落としても、本当に読めない構成は failure のまま", () => {
+    expect(
+      tryParseSidebarWidgets([
+        { type: "custom", enabled: true, id: "a1", title: "  " },
+        { type: "unknown", enabled: true },
+      ]),
+    ).toEqual({ success: false });
+  });
 });
 
 describe("parseSidebarWidgets", () => {
