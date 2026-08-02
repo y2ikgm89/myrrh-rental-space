@@ -18,6 +18,7 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       mainImageUrl: "https://example.com/image.jpg",
       gallery: [],
       facilities: [],
+      facilitiesUnreadable: false,
       businessHours: null,
       isPublished: true,
       publishedAt: null,

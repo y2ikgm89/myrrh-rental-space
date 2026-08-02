@@ -51,4 +51,96 @@ describe("getSpaceByIdQuery", () => {
       select: { id: true, name: true },
     });
   });
+
+  // 編集フォームは読んだ設備をそのまま hidden input で書き戻すため、
+  // 「読めなかった」を空配列に潰すと無関係な項目の保存で設備が消える。
+  describe("facilitiesUnreadable", () => {
+    function spaceRow(facilities: unknown): Record<string, unknown> {
+      return {
+        id: "11111111-1111-4111-8111-111111111111",
+        slug: "space",
+        name: "Space",
+        descriptionJson: { root: { type: "root", children: [] } },
+        descriptionHtml: "",
+        descriptionPlainText: "",
+        addressDetail: null,
+        capacity: 10,
+        area: null,
+        hourlyPrice: 1000,
+        mainImageUrl: "https://example.com/i.jpg",
+        gallery: [],
+        facilities,
+        businessHours: null,
+        isPublished: true,
+        publishedAt: null,
+        isActive: true,
+        reviewsEnabled: false,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+        locationId: "22222222-2222-4222-8222-222222222222",
+        categoryId: null,
+        smartLockDeviceId: null,
+        location: { address: "東京都渋谷区" },
+        category: null,
+        discountType: null,
+        discountValue: null,
+        durationDiscountOverride: null,
+        taxRateType: "standard",
+        metaDescription: null,
+        metaKeywords: null,
+        ogpTitle: null,
+        ogpDescription: null,
+        ogpImageUrl: null,
+        _count: { reservations: 0 },
+      };
+    }
+
+    test("読めた設備がある場合は false", async () => {
+      mockSpaceFindUnique.mockResolvedValue(
+        spaceRow([{ name: "Wi-Fi", iconName: "IconWifi" }]),
+      );
+
+      const space = await getSpaceByIdQuery(
+        "11111111-1111-4111-8111-111111111111",
+      );
+
+      expect(space?.facilities).toEqual([
+        { name: "Wi-Fi", iconName: "IconWifi" },
+      ]);
+      expect(space?.facilitiesUnreadable).toBe(false);
+    });
+
+    test("設備が未設定（空配列）でも読み取り失敗にはしない", async () => {
+      mockSpaceFindUnique.mockResolvedValue(spaceRow([]));
+
+      const space = await getSpaceByIdQuery(
+        "11111111-1111-4111-8111-111111111111",
+      );
+
+      expect(space?.facilities).toEqual([]);
+      expect(space?.facilitiesUnreadable).toBe(false);
+    });
+
+    test("1 件も読めなかった場合は true（空配列と見分けが付く）", async () => {
+      mockSpaceFindUnique.mockResolvedValue(spaceRow([{ nope: 1 }]));
+
+      const space = await getSpaceByIdQuery(
+        "11111111-1111-4111-8111-111111111111",
+      );
+
+      expect(space?.facilities).toEqual([]);
+      expect(space?.facilitiesUnreadable).toBe(true);
+    });
+
+    test("配列でない値が保存されていた場合も true", async () => {
+      mockSpaceFindUnique.mockResolvedValue(spaceRow("Wi-Fi,机"));
+
+      const space = await getSpaceByIdQuery(
+        "11111111-1111-4111-8111-111111111111",
+      );
+
+      expect(space?.facilities).toEqual([]);
+      expect(space?.facilitiesUnreadable).toBe(true);
+    });
+  });
 });
