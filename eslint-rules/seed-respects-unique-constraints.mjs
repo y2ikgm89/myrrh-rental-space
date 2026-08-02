@@ -178,11 +178,14 @@ function collectRowObjects(node, sourceCode, seen = new Set()) {
   if (node.type === "ObjectExpression") return [node];
 
   if (node.type === "ArrayExpression") {
+    // **読めない要素で配列ごと捨てない。** `[...baseRows, { position: 0 }]` の
+    // spread は追えないが、その隣に**見えているリテラル**がある。全部捨てると
+    // 「見える分は検査する」という約束と食い違う。
     const rows = [];
     for (const element of node.elements) {
       if (element === null) continue;
       const nested = collectRowObjects(element, sourceCode, seen);
-      if (nested === null) return null;
+      if (nested === null) continue;
       rows.push(...nested);
     }
     return rows;
@@ -229,6 +232,68 @@ function collectRowObjects(node, sourceCode, seen = new Set()) {
   }
 
   return null;
+}
+
+/**
+ * オブジェクトリテラルへ辿り着く（`const args = {...}` の束縛も 1 段追う）。
+ *
+ * 呼び出しの引数を丸ごと変数へ括り出す書き方は普通にあるので、
+ * 「引数がリテラルでなければ検査しない」だと簡単に素通りする。
+ */
+function resolveObjectExpression(node, sourceCode, seen = new Set()) {
+  if (!node || seen.has(node)) return null;
+  seen.add(node);
+
+  if (node.type === "ObjectExpression") return node;
+  if (node.type !== "Identifier") return null;
+
+  const scope = sourceCode.getScope(node);
+  for (let current = scope; current; current = current.upper) {
+    const variable = current.variables.find((v) => v.name === node.name);
+    if (variable === undefined) continue;
+    if (variable.references.filter((ref) => ref.isWrite()).length !== 1) {
+      return null;
+    }
+    const init = variable.defs[0]?.node?.init;
+    return init ? resolveObjectExpression(init, sourceCode, seen) : null;
+  }
+  return null;
+}
+
+/**
+ * upsert の `where` が固定している列 → 値。
+ *
+ * Prisma の upsert は単一 unique（`{ position: 0 }`）と複合キー
+ * （`{ type_order: { type, order } }`）の 2 形を取る。複合キーは 1 段内側に
+ * 実際の列が並ぶので、そこまで開く。
+ */
+function upsertPinnedFields(argument, sourceCode) {
+  const whereProperty = argument.properties.find(
+    (property) =>
+      property.type === "Property" &&
+      !property.computed &&
+      property.key.type === "Identifier" &&
+      property.key.name === "where",
+  );
+  if (whereProperty === undefined) return new Map();
+
+  const where = readObjectProperties(whereProperty.value, sourceCode);
+  if (!where.analyzable) return new Map();
+
+  const pinned = new Map(where.properties);
+
+  // 複合キーの wrapper（`type_order: { ... }`）を開く。
+  if (whereProperty.value.type === "ObjectExpression") {
+    for (const property of whereProperty.value.properties) {
+      if (property.type !== "Property" || property.computed) continue;
+      if (property.value.type !== "ObjectExpression") continue;
+      const nested = readObjectProperties(property.value, sourceCode);
+      if (!nested.analyzable) continue;
+      for (const [field, value] of nested.properties) pinned.set(field, value);
+    }
+  }
+
+  return pinned;
 }
 
 /** 一意列へ書かれたら危険な値か（数値リテラル / ループ index）。 */
@@ -402,11 +467,17 @@ const rule = {
       const groups = uniqueGroups.get(call.model);
       if (groups === undefined) return;
 
-      const argument = node.arguments[0];
-      if (argument?.type !== "ObjectExpression") return;
+      // 引数そのものが変数へ括り出されていても辿る。
+      // `const args = { data: { position: 0 } }; create(args)` を素通りさせない。
+      const argument = resolveObjectExpression(node.arguments[0], sourceCode);
+      if (argument === null) return;
 
       const scope = enclosingFunction(sourceCode, node);
       const writePath = controlPath(sourceCode, node);
+      const upsertKeys =
+        call.method === "upsert"
+          ? upsertPinnedFields(argument, sourceCode)
+          : new Map();
 
       // create は `data`、upsert は `create` に書く値が入る。
       for (const key of ["data", "create"]) {
@@ -441,6 +512,22 @@ const rule = {
             if (relevant.length === 0) continue;
 
             for (const group of relevant) {
+              // **その値自体を upsert の where キーにする**のは規約が名指しして
+              // いる安全な形（`.claude/rules/migrations.md`）。キーが一致して
+              // いれば既存行は update されるだけで、衝突しようがない。
+              if (
+                call.method === "upsert" &&
+                group.fields.every((field) => {
+                  const pinned = upsertKeys.get(field);
+                  return (
+                    pinned !== undefined &&
+                    pinned === data.properties.get(field)
+                  );
+                })
+              ) {
+                continue;
+              }
+
               // 削除は**書き込みを dominate している**ものだけを証明に使う。
               // 位置と囲み関数だけだと、`if (reconcile) deleteMany(...)` の後の
               // 無条件 create が「守られている」ことになってしまう。

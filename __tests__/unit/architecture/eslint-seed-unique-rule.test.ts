@@ -340,6 +340,80 @@ describe("seed の一意制約 rule — AST 版の 2 巡目に塞いだ 3 つ", 
   });
 });
 
+describe("seed の一意制約 rule — AST 版の 3 巡目に塞いだ 3 つ", () => {
+  test("⑦ 引数そのものが変数でも検査する", () => {
+    // `create(args)` の形で丸ごと括り出されると、引数が ObjectExpression では
+    // ないので早期 return していた。行単位で走査していた前身は見えていた。
+    expect(
+      messageIds(`
+        async function seed() {
+          const args = { data: { position: 0 } };
+          await prisma.slot.create(args);
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑧ 配列に spread があっても、見えている行は検査する", () => {
+    // spread は追えないが、その隣のリテラルは見えている。配列ごと捨てると
+    // 「見える分は検査する」という約束と食い違う。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.createMany({
+            data: [...baseRows, { position: 0 }],
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+
+  test("⑨ その値自体を upsert の where キーにする形は通す", () => {
+    // 規約が名指ししている安全な形（`.claude/rules/migrations.md`）。
+    // キーが一致していれば既存行は update されるだけで衝突しえない。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.upsert({
+            where: { position: 0 },
+            update: {},
+            create: { position: 0, status: "OPEN" },
+          });
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  test("⑨ 複合キーの wrapper も開く", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.ticket.upsert({
+            where: { eventId_sortOrder: { eventId: event.id, sortOrder: 0 } },
+            update: {},
+            create: { eventId: event.id, sortOrder: 0 },
+          });
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  test("⑨ where のキーが create の値と違えば通さない", () => {
+    // 「upsert だから安全」ではない。**同じ値で固定されている**ことが根拠。
+    expect(
+      messageIds(`
+        async function seed() {
+          await prisma.slot.upsert({
+            where: { position: 1 },
+            update: {},
+            create: { position: 0, status: "OPEN" },
+          });
+        }
+      `),
+    ).toEqual(["literalUniqueWrite"]);
+  });
+});
+
 describe("seed の一意制約 rule — その他の不変条件", () => {
   test("削除を狭める余分な条件があれば証明にならない", () => {
     // `isAvailable: true` を足すと非公開行が残り、キー空間は空にならない。
