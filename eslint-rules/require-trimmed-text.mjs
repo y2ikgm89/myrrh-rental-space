@@ -61,10 +61,20 @@ const FORMAT_CHECKS = new Set([
   "url",
 ]);
 
-/** `.min(0)` constrains nothing, so it does not demand normalisation. */
-function demandsNonEmpty(node) {
+/**
+ * 「長さを制約された自由テキスト」か。
+ *
+ * `.min(1)` だけを見ていると**任意テキストが丸ごと外れる**。`"   "` は空文字と違って
+ * truthy なので、`{value && <p>{value}</p>}` のような描画ガードを素通りし、公開ページに
+ * 中身のないブロックが出る（実測: `space-info.tsx` は駐車場案内が空白だけのとき
+ * 「— 」だけの行を描画していた）。trim すれば `""` になり、そのガードが本来の意図
+ * どおり落とす。だから `.max()` だけの任意テキストも対象に含める。
+ *
+ * `.min(0)` は何も制約しないので対象外。
+ */
+function constrainsLength(node) {
   const name = node.callee.property.name;
-  if (name === "nonempty" || name === "length") return true;
+  if (name === "nonempty" || name === "length" || name === "max") return true;
   if (name !== "min") return false;
   const [arg] = node.arguments;
   return (
@@ -84,7 +94,7 @@ const rule = {
     schema: [],
     messages: {
       missingTrim:
-        "この文字列は空でないことを要求しているのに `.trim()` を通していません。空白 1 文字が「入力あり」として保存され、画面では空に見えます。`z.string().trim().{{check}}(…)` に直してください。機械が生成する値（token / id / slug 等）なら、理由を書いた eslint-disable-next-line で明示してください。",
+        '長さを制約した自由テキストなのに `.trim()` を通していません。空白だけの入力は `""` と違って truthy なので、`{value && …}` の描画ガードを素通りして中身のないブロックが出ます。`z.string().trim().{{check}}(…)` に直してください。機械が生成する値（token / id / slug 等）なら、理由を書いた eslint-disable-next-line で明示してください。',
       trimTooLate:
         '`.trim()` が `.{{check}}(…)` より後ろにあります。Zod 4 の check は宣言順に走るので、この順序では**空白を含んだ値**が検査され、その後で空文字に潰れます（`z.string().min(1).trim()` は "   " を通し、data は "" になります）。`.trim()` を `.string()` の直後へ移してください。',
     },
@@ -112,7 +122,7 @@ const rule = {
         let current = node;
         let trimIndex = -1;
         let firstOrderSensitive = null;
-        let nonEmptyCheck = null;
+        let lengthCheck = null;
         let isFormat = false;
         let index = 0;
 
@@ -133,14 +143,14 @@ const rule = {
           if (ORDER_SENSITIVE.has(name) && firstOrderSensitive === null) {
             firstOrderSensitive = { name, index };
           }
-          if (nonEmptyCheck === null && demandsNonEmpty(call)) {
-            nonEmptyCheck = { name, node: call };
+          if (lengthCheck === null && constrainsLength(call)) {
+            lengthCheck = { name, node: call };
           }
 
           current = call;
         }
 
-        if (nonEmptyCheck === null) return;
+        if (lengthCheck === null) return;
         // `.pipe(z.email())` and friends validate a format; padding cannot survive it.
         if (isFormat) return;
 
@@ -148,7 +158,7 @@ const rule = {
           context.report({
             node,
             messageId: "missingTrim",
-            data: { check: nonEmptyCheck.name },
+            data: { check: lengthCheck.name },
           });
           return;
         }

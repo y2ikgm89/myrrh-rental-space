@@ -84,6 +84,7 @@ export const stripeFormSchema = z
   .object({
     stripePublishableKey: z
       .string()
+      .trim()
       .max(200, { error: "公開可能キーは200文字以内で入力してください" })
       .refine((val) => !val || isValidPublishableKey(val), {
         error: "公開可能キーは pk_test_ または pk_live_ で始まる必要があります",
@@ -91,6 +92,7 @@ export const stripeFormSchema = z
       .optional(),
     stripeSecretKey: z
       .string()
+      .trim()
       .max(200, { error: "シークレットキーは200文字以内で入力してください" })
       .refine((val) => !val || isValidSecretKey(val), {
         error:
@@ -99,6 +101,7 @@ export const stripeFormSchema = z
       .optional(),
     stripeWebhookSecret: z
       .string()
+      .trim()
       .max(200, {
         error: "Webhookシークレットは200文字以内で入力してください",
       })
@@ -166,6 +169,7 @@ export const resendFormSchema = z.object({
   // stripeWebhookSecret と同じ posture: 200 文字上限 + 前置詞 refine + optional。
   resendWebhookSecret: z
     .string()
+    .trim()
     .max(200, {
       error: "Webhookシークレットは200文字以内で入力してください",
     })

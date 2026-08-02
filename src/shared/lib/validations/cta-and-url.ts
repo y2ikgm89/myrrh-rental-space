@@ -21,6 +21,7 @@ import type { PortableTextSpan } from "@/shared/lib/portable-text";
 export function createSafeUrlSchema(maxLength = 500) {
   return z
     .string()
+    .trim()
     .max(maxLength, { error: `URLは${maxLength}文字以内です` })
     .refine(
       (url) =>

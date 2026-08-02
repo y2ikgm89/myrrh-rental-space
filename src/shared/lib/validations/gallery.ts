@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const galleryItemSchema = z.object({
   url: z.url(),
-  alt: z.string().max(200).default(""),
-  caption: z.string().max(500).default(""),
+  alt: z.string().trim().max(200).default(""),
+  caption: z.string().trim().max(500).default(""),
 });
 
 export type GalleryItem = z.infer<typeof galleryItemSchema>;

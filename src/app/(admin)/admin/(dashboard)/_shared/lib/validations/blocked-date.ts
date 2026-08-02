@@ -12,6 +12,7 @@ export const scopedBlockedDateFormSchema = z
     endDate: z.iso.date({ error: "終了日を正しく入力してください" }),
     reason: z
       .string()
+      .trim()
       .max(200, { error: "理由は200文字以内で入力してください" })
       .nullish()
       .transform((value) => (value == null || value === "" ? null : value)),

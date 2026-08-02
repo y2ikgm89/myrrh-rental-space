@@ -250,6 +250,7 @@ export const announcementBarInputSchema = z
     linkUrl: optionalHttpOrInternalHrefSchema,
     linkText: z
       .string()
+      .trim()
       .max(50, { error: "リンクテキストは50文字以内" })
       .nullable()
       .optional(),

@@ -41,6 +41,7 @@ export const stripeSettingsSchema = z
   .object({
     stripePublishableKey: z
       .string()
+      .trim()
       .max(200, { error: MESSAGES.maxLength("公開可能キー") })
       .nullable()
       .optional()
@@ -49,6 +50,7 @@ export const stripeSettingsSchema = z
       }),
     stripeSecretKey: z
       .string()
+      .trim()
       .max(200, { error: MESSAGES.maxLength("シークレットキー") })
       .nullable()
       .optional()
@@ -57,6 +59,7 @@ export const stripeSettingsSchema = z
       }),
     stripeWebhookSecret: z
       .string()
+      .trim()
       .max(200, { error: MESSAGES.maxLength("Webhookシークレット") })
       .nullable()
       .optional()

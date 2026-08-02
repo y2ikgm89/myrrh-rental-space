@@ -31,11 +31,13 @@ export const faqCategoryFormSchema = z.strictObject({
     }),
   description: z
     .string()
+    .trim()
     .max(500, { error: "説明は500文字以内で入力してください" })
     .nullable()
     .optional(),
   icon: z
     .string()
+    .trim()
     .max(50, { error: "アイコン名は50文字以内で入力してください" })
     .nullable()
     .optional(),

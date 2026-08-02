@@ -156,6 +156,7 @@ export const spaceFormBaseSchema = z
       },
       z
         .string()
+        .trim()
         .max(500, { error: "所在地補足は500文字以内で入力してください" })
         .optional(),
     ),

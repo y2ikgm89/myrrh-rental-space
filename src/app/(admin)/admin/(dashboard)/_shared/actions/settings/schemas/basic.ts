@@ -67,6 +67,7 @@ export const businessHoursSettingsSchema = z
     // HTMLタグを禁止してXSS対策
     holidayNotice: z
       .string()
+      .trim()
       .max(1000, { error: "お知らせは1000文字以内で入力してください" })
       .regex(/^[^<>]*$/, { error: "HTMLタグは使用できません" })
       .nullable()

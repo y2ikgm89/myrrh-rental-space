@@ -16,6 +16,7 @@ const CSS_VAR_NAME = z
 /** Disallow injection vectors in declaration values. */
 const SAFE_DECL_VALUE = z
   .string()
+  .trim()
   .max(512)
   .regex(
     /^[^;{}@]*$/,

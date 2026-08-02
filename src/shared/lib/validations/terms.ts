@@ -144,7 +144,7 @@ export const termsFormSchema = z
     /** 同意必須にする scope 配列 (空配列なら consent UI に出さない・フッター掲載のみ可) */
     scopes: z.array(termsScopeSchema).default([]),
     /** 改訂時の周知文 (任意・将来 mypage 通知で利用) */
-    changelog: z.string().max(2000).nullable().default(null),
+    changelog: z.string().trim().max(2000).nullable().default(null),
     showInFooter: z.boolean(),
   })
   .superRefine((data, ctx) => {

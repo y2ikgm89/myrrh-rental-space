@@ -50,6 +50,7 @@ export const emailFieldSchema = z
  */
 export const optionalPhoneNumberSchema = z
   .string()
+  .trim()
   .max(20, { error: "電話番号は20文字以内で入力してください" })
   .optional()
   .or(z.literal(""));

@@ -105,24 +105,28 @@ export const updatePageSeoSchema = z.object({
     .max(200, { error: "タイトルは200文字以内です" }),
   metaDescription: z
     .string()
+    .trim()
     .max(SEO_LIMITS.META_DESCRIPTION, {
       error: `メタディスクリプションは${SEO_LIMITS.META_DESCRIPTION}文字以内です`,
     })
     .optional(),
   metaKeywords: z
     .string()
+    .trim()
     .max(SEO_LIMITS.META_KEYWORDS, {
       error: `メタキーワードは${SEO_LIMITS.META_KEYWORDS}文字以内です`,
     })
     .optional(),
   ogpTitle: z
     .string()
+    .trim()
     .max(SEO_LIMITS.OGP_TITLE, {
       error: `OGPタイトルは${SEO_LIMITS.OGP_TITLE}文字以内です`,
     })
     .optional(),
   ogpDescription: z
     .string()
+    .trim()
     .max(SEO_LIMITS.OGP_DESCRIPTION, {
       error: `OGP説明は${SEO_LIMITS.OGP_DESCRIPTION}文字以内です`,
     })

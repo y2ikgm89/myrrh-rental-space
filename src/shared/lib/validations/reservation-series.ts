@@ -20,7 +20,7 @@ export const cancelReservationSeriesSchema = z
     seriesId: z.uuid({ error: "series id が不正です" }),
     scope: z.enum(["this-only", "this-and-following", "series-all"]),
     fromInstanceId: z.uuid().optional().or(z.literal("")),
-    cancellationReason: z.string().max(500).optional().or(z.literal("")),
+    cancellationReason: z.string().trim().max(500).optional().or(z.literal("")),
   })
   .superRefine((data, ctx) => {
     if (

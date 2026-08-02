@@ -44,12 +44,12 @@ import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lo
 const updateStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
   status: z.enum(ReservationStatus),
-  reason: z.string().max(500).optional().or(z.literal("")),
+  reason: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 const updateNotesSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
-  notes: z.string().max(1000).nullable(),
+  notes: z.string().trim().max(1000).nullable(),
 });
 
 const restoreStatusSchema = z.object({

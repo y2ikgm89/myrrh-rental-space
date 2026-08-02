@@ -41,6 +41,7 @@ export const publicReservationSchema = z
     phoneNumber: optionalPhoneNumberSchema,
     notes: z
       .string()
+      .trim()
       .max(2000, { error: "備考は2000文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
@@ -48,6 +49,7 @@ export const publicReservationSchema = z
     // 実際の存在チェック・有効期限・利用回数チェックはサーバー側 validateCoupon で行う。
     couponCode: z
       .string()
+      .trim()
       .max(20, { error: "クーポンコードは20文字以内です" })
       .optional()
       .or(z.literal("")),

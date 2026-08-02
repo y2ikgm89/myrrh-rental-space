@@ -17,10 +17,10 @@ const baseTaxonomySchema = z.strictObject({
     .min(1)
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
-  description: z.string().max(500).optional(),
-  metaTitle: z.string().max(70).optional(),
-  metaDescription: z.string().max(160).optional(),
-  ogpImageUrl: z.string().max(2048).optional(),
+  description: z.string().trim().max(500).optional(),
+  metaTitle: z.string().trim().max(70).optional(),
+  metaDescription: z.string().trim().max(160).optional(),
+  ogpImageUrl: z.string().trim().max(2048).optional(),
 });
 
 // =============================================================================
