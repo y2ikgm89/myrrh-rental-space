@@ -28,17 +28,18 @@ describe("audit log append-only boundary", () => {
     expect(migration).toContain("audit_logs is append-only");
   });
 
-  test("seed reset は transaction-local bypass を明示してから audit_logs を削除する", () => {
+  test("seed は audit_logs を削除しない", () => {
     const seed = readFileSync(join(process.cwd(), "prisma", "seed.ts"), {
       encoding: "utf8",
     });
 
-    expect(seed).toContain(
-      "set_config('myrrh.audit_log_mutation_bypass', 'seed', true)",
-    );
-    expect(seed.indexOf("set_config(")).toBeLessThan(
-      seed.indexOf("tx.auditLog.deleteMany()"),
-    );
+    // かつては `--reset` の `clearAllData` が transaction-local bypass GUC を
+    // 立ててから削除していた。そのモードは廃止した（削除順が `onDelete: Restrict`
+    // の FK と append-only trigger に追随できておらず、3 系統で壊れていた）。
+    // 破壊的な作り直しは `bun run db:reset` = `prisma migrate reset --force`
+    // が担う。seed 側に append-only 行を消す経路は**残さない**。
+    expect(seed).not.toContain("auditLog.deleteMany(");
+    expect(seed).not.toContain("audit_log_mutation_bypass");
   });
 
   test("Prisma seed は Next server-only audit command を import しない", () => {
