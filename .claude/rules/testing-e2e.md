@@ -371,3 +371,16 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 
 spec は `prisma/seed.ts` の fixture（slug・予約ステータス等）と
 `e2e/fixtures/test-data.ts` で二重定義結合している。seed 変更は fixture/spec の同時更新必須。
+
+- **予約カレンダーの日付を位置（`.nth(n)`）で選ばない。** 予約フォームには時計が 2 つ
+  あり、ずれている: カレンダーの過去日判定は `E2E_FIXED_NOW_ISO`（既定 2026-07-04）
+  基準（`ReservationFormSection` → `calendar-picker.tsx` の `initialNowIso`）、
+  送信時の `publicReservationSchema` の日付 refine は**実時刻**基準（conform が
+  client 側でも走らせる）。カレンダーは実時刻の月を描くのに過去日を無効化しないので、
+  位置指定は実日付が進むほど過去へずれ、**月の 4 営業日目を過ぎた時点から月末まで
+  必ず送信が弾かれる**。`reservation-submit.smoke.spec.ts` は必須ゲートなのに
+  この形で、追加日が月初だったため気付かれていなかった。
+  正しい形は `e2e/helpers/reservation-date.ts` の `pickBookableDate()` で
+  実時刻から日付を導出 → `page.clock.install` で固定 → DayPicker の安定属性
+  `data-day="YYYY-MM-DD"` で選択。有効セルの集合は実時計の関数なので allowlist で
+  固定できない。gate: `__tests__/unit/architecture/e2e-calendar-date-selection.test.ts`
