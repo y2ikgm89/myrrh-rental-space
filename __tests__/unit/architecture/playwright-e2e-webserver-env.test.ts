@@ -177,15 +177,28 @@ describe("Playwright E2E webServer env", () => {
     expect(playwrightConfig).toContain("reuseExistingServer: false");
     expect(playwrightConfig).not.toContain("bunx next dev");
 
+    // Stripe 認証情報は seed の後・server 起動の前に入れる。
+    // `SettingsStripe.stripeWebhookSecret` の唯一の書き手がこの script で、
+    // 無いと `availability.ts` が決済を利用不可にする。spec 内から呼んでいた頃は
+    // `--project=chromium-customer` 単独実行で決済 CTA が出ず、
+    // product regression に見えていた。
+    expect(playwrightConfig).toContain(
+      "bun scripts/e2e/setup-stripe-webhook-fixture.ts",
+    );
+
     const migrateIndex = playwrightConfig.indexOf("bun run test:db:migrate");
     const seedIndex = playwrightConfig.indexOf("bun prisma/seed.ts --dev");
+    const stripeIndex = playwrightConfig.indexOf(
+      "bun scripts/e2e/setup-stripe-webhook-fixture.ts",
+    );
     const buildIndex = playwrightConfig.indexOf("bun run build:skip-env");
     const startIndex = playwrightConfig.indexOf("bun run start");
 
     expect(migrateIndex).toBeGreaterThanOrEqual(0);
     expect(seedIndex).toBeGreaterThanOrEqual(0);
     expect(seedIndex).toBeGreaterThan(migrateIndex);
-    expect(buildIndex).toBeGreaterThan(seedIndex);
+    expect(stripeIndex).toBeGreaterThan(seedIndex);
+    expect(buildIndex).toBeGreaterThan(stripeIndex);
     expect(startIndex).toBeGreaterThan(buildIndex);
   });
 
