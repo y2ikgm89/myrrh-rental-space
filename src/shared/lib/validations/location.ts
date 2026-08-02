@@ -111,6 +111,7 @@ export const locationFormBaseSchema = z.strictObject({
       z.object({
         value: z
           .string()
+          .trim()
           .min(1, { error: "経路を入力してください" })
           .max(200, { error: "1 行 200 文字以内で入力してください" }),
       }),
@@ -132,6 +133,7 @@ export const locationFormBaseSchema = z.strictObject({
   // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
   imageUrl: z
     .string()
+    .trim()
     .min(1, { error: "建物画像URLを入力してください" })
     .pipe(z.url({ error: "有効なURLを入力してください" })),
   imageUrls: imageUrlsSchema,

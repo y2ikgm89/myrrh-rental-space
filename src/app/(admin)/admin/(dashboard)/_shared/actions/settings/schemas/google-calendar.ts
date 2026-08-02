@@ -27,6 +27,7 @@ const requiredCalendarIdSchema = z
 export const googleCalendarConnectionTestSchema = z.object({
   serviceAccountJson: z
     .string()
+    .trim()
     .min(1, { error: "サービスアカウントJSONを入力してください" })
     .refine((value) => parseGoogleServiceAccountCredentials(value) !== null, {
       error: "サービスアカウントJSONの形式が無効です",

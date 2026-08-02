@@ -161,6 +161,7 @@ const optionalNullableString = (maxLength: number, error: string) =>
 const eventFormBaseSchema = z.object({
   title: z
     .string()
+    .trim()
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内です" }),
   slug: z

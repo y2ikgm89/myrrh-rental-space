@@ -111,6 +111,7 @@ const createNoteSchema = z.object({
   inquiryId: idSchema,
   body: z
     .string()
+    .trim()
     .min(1, { error: "メモを入力してください" })
     .max(2000, { error: "メモは2000文字以内で入力してください" }),
 });

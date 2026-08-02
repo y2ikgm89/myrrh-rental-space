@@ -168,6 +168,30 @@ honeypot フィールドは Zod スキーマ上では検証エラーにしない
 
 ## スキーマ配置
 
-設定系は `_shared/actions/settings/schemas/`、リソース系はコンポーネント隣接の
-`*-form-schema.ts` か `src/shared/lib/validations/`。Zod 4 のメッセージは
-`{ error: "..." }` 形式、日付は `z.iso.date()` / `z.iso.datetime()`。
+新規は次のどれかに置く: 設定系は `_shared/actions/settings/schemas/`、リソース系は
+コンポーネント隣接の `*-form-schema.ts` か `src/shared/lib/validations/`。
+**既存はもう 1 箇所ある** — `(dashboard)/_shared/lib/validations/`（post / faq /
+news / space / space-rate-plan / stripe / terms）。記事も FAQ もそこで定義されている。
+新規に増やさないが、既存を探すときはここも見る。
+
+Zod 4 のメッセージは `{ error: "..." }` 形式、日付は `z.iso.date()` /
+`z.iso.datetime()`。
+
+## 必須テキストは `.trim()` を先に通す
+
+`z.string().min(1)` は**空白 1 文字を通す**。ユーザーが自由入力する項目でこれをやると
+見た目が空の値が保存され、その先の副作用まで走る。実測: 公開問い合わせの
+`subject` / `message` は空白だけの送信が通り、管理者宛の通知メールまで飛んでいた。
+記事タイトル・FAQ の質問文・スペース名も同じ状態だった（#1815 / #1818）。
+
+UI 側で `value.trim().length === 0` を見て送信ボタンを disabled にするのは
+**schema に無い保証を画面に置く**ことになる。実際 `inquiry-reply` は conform 化で
+そのガードを落とした瞬間に空白送信が通るようになった（#1814）。
+
+`.trim()` は Zod 4 では `ZodString` の flag であって transform ではないので、
+input / output はどちらも `string` のまま。conform の `submission.value` の型は動かない。
+
+gate: `__tests__/unit/architecture/required-text-is-trimmed.test.ts`。**配置で絞らず
+`src/` 全体**を走査する（規約に載っていない置き場を丸ごと見逃さないため）。
+token / id / slug のような機械が生成する値だけ、理由付きで allowlist に載せる。
+URL も `.trim()` する側 — 空白付き URL は保存を通って描画で消えるため（safe-href.ts）。

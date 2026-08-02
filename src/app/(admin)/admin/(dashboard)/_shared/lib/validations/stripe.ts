@@ -103,6 +103,7 @@ export type StripeSettingsInput = z.infer<typeof stripeSettingsSchema>;
 export const stripeConnectionTestSchema = z.object({
   secretKey: z
     .string()
+    .trim()
     .min(1, { error: "シークレットキーを入力してください" })
     .refine(isValidSecretKey, {
       error: MESSAGES.secretKey,

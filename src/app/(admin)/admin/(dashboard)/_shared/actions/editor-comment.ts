@@ -33,6 +33,7 @@ const createThreadSchema = z.object({
     .max(2000, { error: "引用テキストは2000文字以内" }),
   initialComment: z
     .string()
+    .trim()
     .min(1, { error: "コメントは必須です" })
     .max(5000, { error: "コメントは5000文字以内" }),
 });
@@ -41,6 +42,7 @@ const addCommentSchema = z.object({
   threadId: z.uuid({ error: "threadId は有効な UUID である必要があります" }),
   content: z
     .string()
+    .trim()
     .min(1, { error: "コメントは必須です" })
     .max(5000, { error: "コメントは5000文字以内" }),
 });
