@@ -896,6 +896,58 @@ const SEED_REVIEWABLE_SPACE_SLUGS = [
  * 「fixture 専用スペースにはデモ予約が載らない」保証の実体で、
  * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
  */
+/**
+ * デモ予約を割り当てる顧客。**seedCustomers の宣言順**で固定する。
+ *
+ * 旧実装は `customer.findMany({ where: { isActive: true } })` を `orderBy` 無しで
+ * 引き、`customerIndex % customers.length` で割り当てていた。2 つの意味で不安定:
+ *
+ * - Postgres の返却順は保証が無い（`spaceIndex` と同じ欠陥）
+ * - **集合そのものが動く**。`create-receipt-download-fixture` 等が実行のたびに
+ *   有効な顧客を増やすので `customers.length` が変わり、剰余で全割り当てがずれる
+ *
+ * 宣言した email だけを対象にすれば、fixture が作った顧客は構造的に入らない。
+ */
+const DEMO_RESERVATION_CUSTOMER_EMAILS = [
+  "watabe.ryo@example.com",
+  "kondo.aya@example.com",
+  "asano.shinichi@example.com",
+  "tanaka.taro@example.com",
+  "yamada.hanako@example.com",
+  "sato.ichiro@example.com",
+  "kimura.yuko@example.com",
+  "hayashi.daisuke@example.com",
+  "suzuki.misaki@example.com",
+  "takahashi.kenta@example.com",
+  "ito.sakura@example.com",
+  "watanabe.daisuke@example.com",
+  "kobayashi.mayu@example.com",
+  "matsumoto.naoki@example.com",
+  "inoue.mika@example.com",
+  "saito.takuya@example.com",
+  "shimizu.yumi@example.com",
+  "yamaguchi.sho@example.com",
+  "ishida.ai@example.com",
+  "maeda.kenichi@example.com",
+  "kato.makoto@example.com",
+  "yoshida.miho@example.com",
+  "yamamoto.shota@example.com",
+  "nakajima.yuko@example.com",
+  "ono.yudai@example.com",
+  "fujita.megumi@example.com",
+  "nakamura.keiko@example.com",
+  "ogawa.yusuke@example.com",
+  "okada.mari@example.com",
+  "blacklist.user@example.com",
+  "tamura@abc-corp.example.com",
+  "morita@xyz-llc.example.com",
+  "nishimura@sample.example.com",
+  "murakami@npo.example.com",
+] as const;
+
+/** デモ予約の marker。冪等判定のキーで、実行日に依存しない。 */
+const SEED_DEMO_RESERVATION_MARKER = "[SEED-DEMO]";
+
 const DEMO_RESERVATION_SPACE_SLUGS = [
   "meeting-room-a",
   "seminar-room",
@@ -2170,6 +2222,28 @@ function buildSeedLegacyPricingSnapshot(totalPrice: number) {
   };
 }
 
+/** JST の時差。アプリの表示は JST 固定（`src/shared/lib/date-format.ts`）。 */
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/**
+ * **JST の暦日 + 時**から UTC の `Date` を作る。
+ *
+ * `date.setHours(9)` はコンテナのローカル時刻で解釈されるので、JST の開発機では
+ * 9 時が 9 時でも UTC の CI runner では 9 時が JST 18 時になる。アプリは JST 固定の
+ * formatter で表示するため、同じ seed が環境で違う意味になっていた。
+ */
+function jstDateTime(base: Date, daysOffset: number, hour: number): Date {
+  const jst = new Date(base.getTime() + JST_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      jst.getUTCFullYear(),
+      jst.getUTCMonth(),
+      jst.getUTCDate() + daysOffset,
+      hour,
+    ) - JST_OFFSET_MS,
+  );
+}
+
 async function seedReservations() {
   // slug で明示し、`DEMO_RESERVATION_SPACE_SLUGS` の宣言順に並べ替える。
   // `findMany({ where: { isActive: true } })` を `orderBy` 無しで引くと Postgres の
@@ -2181,9 +2255,15 @@ async function seedReservations() {
   const spaces = DEMO_RESERVATION_SPACE_SLUGS.map((slug) =>
     found.find((space) => space.slug === slug),
   ).filter((space) => space !== undefined);
-  const customers = await prisma.customer.findMany({
-    where: { isActive: true },
+  const foundCustomers = await prisma.customer.findMany({
+    where: {
+      email: { in: [...DEMO_RESERVATION_CUSTOMER_EMAILS] },
+      isActive: true,
+    },
   });
+  const customers = DEMO_RESERVATION_CUSTOMER_EMAILS.map((email) =>
+    foundCustomers.find((customer) => customer.email === email),
+  ).filter((customer) => customer !== undefined);
   const coupons = await prisma.coupon.findMany({ where: { isActive: true } });
 
   if (spaces.length === 0 || customers.length === 0) {
@@ -2648,19 +2728,24 @@ async function seedReservations() {
     const customer = customers[res.customerIndex % customers.length];
     if (!space || !customer) continue;
 
-    const date = new Date(now);
-    date.setDate(date.getDate() + res.daysOffset);
-    date.setHours(res.startHour, 0, 0, 0);
+    // 時刻は **JST の暦日 + 時** で組む。`setHours` はコンテナのローカル時刻なので、
+    // JST の開発機では 9 時が 9 時でも、UTC の CI runner では 9 時が JST 18 時を
+    // 指す。アプリは JST 固定の formatter で表示する（絶対規約）ため、同じ seed が
+    // 環境で違う意味になっていた。
+    const date = jstDateTime(now, res.daysOffset, res.startHour);
+    const endDate = jstDateTime(
+      now,
+      res.daysOffset,
+      res.startHour + res.duration,
+    );
 
-    const endDate = new Date(date);
-    endDate.setHours(endDate.getHours() + res.duration);
-
+    // 冪等判定は **marker** で行う。旧実装は `startTime` をキーにしていたが、
+    // これは `now` からの相対で決まるので、日付が変わると全エントリが「無い」と
+    // 判定されて再作成され、デモ予約が run のたびに増え続けた。
+    // キーはエントリ自身の内容から導出するので、実行日に依存しない。
+    const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
     const existing = await prisma.reservation.findFirst({
-      where: {
-        spaceId: space.id,
-        customerId: customer.id,
-        startTime: date,
-      },
+      where: { notes: { startsWith: marker } },
     });
 
     if (!existing) {
@@ -2706,7 +2791,8 @@ async function seedReservations() {
             ? couponDiscountAmount
             : null,
           ...buildSeedLegacyPricingSnapshot(totalPrice),
-          ...(res.notes != null ? { notes: res.notes } : {}),
+          // marker を先頭に置く。冪等判定のキーであり、実行日に依存しない。
+          notes: res.notes != null ? `${marker} ${res.notes}` : marker,
           ...(res.paymentStatus !== undefined
             ? { paymentStatus: res.paymentStatus }
             : {}),
