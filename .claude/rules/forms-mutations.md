@@ -168,11 +168,21 @@ honeypot フィールドは Zod スキーマ上では検証エラーにしない
 
 ## スキーマ配置
 
-新規は次のどれかに置く: 設定系は `_shared/actions/settings/schemas/`、リソース系は
-コンポーネント隣接の `*-form-schema.ts` か `src/shared/lib/validations/`。
-**既存はもう 1 箇所ある** — `(dashboard)/_shared/lib/validations/`（post / faq /
-news / space / space-rate-plan / stripe / terms）。記事も FAQ もそこで定義されている。
-新規に増やさないが、既存を探すときはここも見る。
+置き場は **誰が使うか**で決まる。次の 4 つで、それ以外に増やさない:
+
+| 置き場                                  | 対象                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/shared/lib/validations/`           | 公開側と管理側の**両方**が使うもの（問い合わせ・予約・顧客など）                                             |
+| `(dashboard)/_shared/lib/validations/`  | **admin だけ**が使うリソーススキーマ（post / faq / news / space / stripe / terms / editor-comment 等 12 件） |
+| `_shared/actions/settings/schemas/`     | 設定画面のフォーム                                                                                           |
+| コンポーネント隣接の `*-form-schema.ts` | その画面だけが使うフォーム（`event-form-schema.ts` 等）                                                      |
+
+`src/shared/lib` は `src/shared/domain` を import できない（ratchet で凍結）。domain の
+型ガードや enum が要るスキーマは `shared/lib/validations/` に置けないので、admin 専用なら
+`(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の re-export 経由で参照する。
+
+`"use server"` ファイルは async 関数以外を export できないので、Server Action の入力
+スキーマも上のいずれかに切り出して両側から参照する。
 
 Zod 4 のメッセージは `{ error: "..." }` 形式、日付は `z.iso.date()` /
 `z.iso.datetime()`。

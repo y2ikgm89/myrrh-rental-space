@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { createEditorCommentThreadSchema } from "@/admin/actions/editor-comment-schema";
+import { createEditorCommentThreadSchema } from "@/admin/lib/validations/editor-comment";
 
 const VALID = {
   markId: "mark-1",
