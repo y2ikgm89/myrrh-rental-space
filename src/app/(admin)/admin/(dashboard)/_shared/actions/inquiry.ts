@@ -116,7 +116,10 @@ export async function deleteInquiry(id: string): Promise<MutationResult> {
 
 const replySchema = z.object({
   id: z.uuid({ error: "お問い合わせIDが不正です" }),
-  replyMessage: z.string().min(1, { error: "回答内容を入力してください" }),
+  replyMessage: z
+    .string()
+    .trim()
+    .min(1, { error: "回答内容を入力してください" }),
 });
 
 export async function replyToInquiry(

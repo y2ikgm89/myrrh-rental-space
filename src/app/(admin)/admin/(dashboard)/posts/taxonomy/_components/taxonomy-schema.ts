@@ -10,7 +10,7 @@ import { z } from "zod";
 // =============================================================================
 
 const baseTaxonomySchema = z.strictObject({
-  name: z.string().min(1).max(50),
+  name: z.string().trim().min(1).max(50),
   slug: z
     .string()
     .min(1)
@@ -29,6 +29,7 @@ const baseTaxonomySchema = z.strictObject({
 export const categoryFormSchema = baseTaxonomySchema.extend({
   name: z
     .string()
+    .trim()
     .min(1, { error: "カテゴリ名は必須です" })
     .max(50, { error: "カテゴリ名は50文字以内" }),
   slug: z
@@ -47,6 +48,7 @@ export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 export const tagFormSchema = baseTaxonomySchema.extend({
   name: z
     .string()
+    .trim()
     .min(1, { error: "タグ名は必須です" })
     .max(50, { error: "タグ名は50文字以内" }),
   slug: z

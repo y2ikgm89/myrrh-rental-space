@@ -69,10 +69,12 @@ const totalPriceSchema = z.preprocess(
 const newCustomerObjectSchema = z.object({
   lastName: z
     .string()
+    .trim()
     .min(1, { error: "姓を入力してください" })
     .max(50, { error: "姓は50文字以内で入力してください" }),
   firstName: z
     .string()
+    .trim()
     .min(1, { error: "名を入力してください" })
     .max(50, { error: "名は50文字以内で入力してください" }),
   companyName: z
@@ -82,6 +84,7 @@ const newCustomerObjectSchema = z.object({
     .or(z.literal("")),
   email: z
     .string()
+    .trim()
     .min(1, { error: "メールアドレスを入力してください" })
     .email({ error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z

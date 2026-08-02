@@ -59,6 +59,7 @@ export const createNewsSchema = z
     slug: newsSlugSchema,
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     contentJson: lexicalJsonSchema,
@@ -94,6 +95,7 @@ export const updateNewsSettingsSchema = z
     slug: newsSlugSchema,
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     isPublished: z.boolean(),
@@ -135,6 +137,7 @@ export const newsSettingsFormSchema = z
     slug: newsSlugSchema,
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     isPublished: isPublishedFormSchema,

@@ -66,6 +66,7 @@ export const createPostSchema = z
   .object({
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
@@ -75,10 +76,14 @@ export const createPostSchema = z
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
     excerpt: z
       .string()
+      .trim()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
     contentJson: lexicalJsonSchema,
-    thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
+    thumbnailUrl: z
+      .string()
+      .trim()
+      .min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
@@ -112,6 +117,7 @@ export const updatePostSettingsSchema = z
   .object({
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
@@ -121,9 +127,13 @@ export const updatePostSettingsSchema = z
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
     excerpt: z
       .string()
+      .trim()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
-    thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
+    thumbnailUrl: z
+      .string()
+      .trim()
+      .min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
     status: z.enum(PostStatus),
@@ -163,6 +173,7 @@ export const postSettingsFormSchema = z
   .object({
     title: z
       .string()
+      .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内" }),
     slug: z
@@ -172,9 +183,13 @@ export const postSettingsFormSchema = z
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
     excerpt: z
       .string()
+      .trim()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
-    thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
+    thumbnailUrl: z
+      .string()
+      .trim()
+      .min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsFormSchema,
     status: z.enum(PostStatus),
@@ -196,6 +211,7 @@ export type PostSettingsFormData = z.input<typeof postSettingsFormSchema>;
 export const postCategorySchema = z.strictObject({
   name: z
     .string()
+    .trim()
     .min(1, { error: "カテゴリ名は必須です" })
     .max(50, { error: "カテゴリ名は50文字以内" }),
   slug: z
@@ -227,6 +243,7 @@ export type PostCategoryInput = z.infer<typeof postCategorySchema>;
 export const postTagSchema = z.strictObject({
   name: z
     .string()
+    .trim()
     .min(1, { error: "タグ名は必須です" })
     .max(50, { error: "タグ名は50文字以内" }),
   slug: z

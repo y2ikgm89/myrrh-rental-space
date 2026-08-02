@@ -144,6 +144,7 @@ export const spaceFormBaseSchema = z
     slug: spaceSlugSchema,
     name: z
       .string()
+      .trim()
       .min(1, { error: "名前を入力してください" })
       .max(100, { error: "名前は100文字以内で入力してください" }),
     descriptionJson: lexicalJsonSchema,
@@ -188,6 +189,7 @@ export const spaceFormBaseSchema = z
     // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
     mainImageUrl: z
       .string()
+      .trim()
       .min(1, { error: "メイン画像URLを入力してください" })
       .pipe(z.url({ error: "有効なURLを入力してください" })),
     gallery: gallerySchema,

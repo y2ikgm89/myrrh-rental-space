@@ -18,6 +18,7 @@ import { z } from "zod";
 export const faqCategoryFormSchema = z.strictObject({
   name: z
     .string()
+    .trim()
     .min(1, { error: "カテゴリ名を入力してください" })
     .max(100, { error: "カテゴリ名は100文字以内で入力してください" }),
   slug: z
@@ -68,10 +69,12 @@ export const faqItemFormSchema = z.strictObject({
   categoryId: z.uuid({ error: "カテゴリを選択してください" }),
   question: z
     .string()
+    .trim()
     .min(1, { error: "質問を入力してください" })
     .max(500, { error: "質問は500文字以内で入力してください" }),
   answer: z
     .string()
+    .trim()
     .min(1, { error: "回答を入力してください" })
     .max(5000, { error: "回答は5000文字以内で入力してください" }),
   isPublished: z.boolean().default(false),

@@ -113,6 +113,7 @@ export function parseStringArray(value: unknown): string[] {
 const facilityItemSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, { error: "設備名を入力してください" })
     .max(50, { error: "設備名は50文字以内で入力してください" }),
   // 空文字許容（icon 未指定 — UI で fallback として text のみ表示）

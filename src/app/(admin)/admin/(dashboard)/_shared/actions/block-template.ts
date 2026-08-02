@@ -16,6 +16,7 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 const createBlockTemplateSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, { error: "テンプレート名は必須です" })
     .max(100, { error: "100文字以内で入力してください" }),
   description: z
