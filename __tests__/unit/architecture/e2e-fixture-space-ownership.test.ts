@@ -85,8 +85,10 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
   test("seed とテスト fixture で slug が一致する", () => {
     // `E2E_FIXTURE_SPACES` は slug を定数参照で持つので、定数宣言側を突き合わせる。
     const source = read(SEED);
+    // prettier は長い宣言を `=` の後で改行する。`\s*` を挟まないと折り返された
+    // 定数だけ拾えず、gate が静かに 1 件しか見なくなる。
     const seedSlugs = [
-      ...source.matchAll(/const E2E_\w*FIXTURE_SPACE_SLUG = "([^"]+)";/gu),
+      ...source.matchAll(/const E2E_\w*FIXTURE_SPACE_SLUG =\s*"([^"]+)";/gu),
     ].map((m) => String(m[1]));
 
     expect(seedSlugs.length).toBe(FIXTURE_OWNED_SLUGS.length);
