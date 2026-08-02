@@ -43,13 +43,15 @@ describe("デモ予約の再構築", () => {
   test("作成前に既存のデモ予約を削除している", () => {
     const body = seedReservationsBody();
 
-    expect(body).toContain("prisma.reservation.deleteMany(");
-    expect(body).toContain("prisma.reservation.create(");
+    // 作り直しは advisory lock 付きの単一 tx 内で行うので client は `tx`
+    // （順序と lock の検証は `seed-reservation-rebuild-safety.test.ts`）。
+    expect(body).toContain("tx.reservation.deleteMany(");
+    expect(body).toContain("tx.reservation.create(");
 
     // 順序が正しさの一部。EXCLUDE 制約 `reservations_no_active_time_overlap_excl` は
     // DEFERRABLE ではないため、作ってから消す順序だと自分自身と衝突しうる。
-    expect(body.indexOf("prisma.reservation.deleteMany(")).toBeLessThan(
-      body.indexOf("prisma.reservation.create("),
+    expect(body.indexOf("tx.reservation.deleteMany(")).toBeLessThan(
+      body.indexOf("tx.reservation.create("),
     );
   });
 

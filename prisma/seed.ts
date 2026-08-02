@@ -965,6 +965,25 @@ const DEMO_RESERVATION_CUSTOMER_EMAILS = [
 /** デモ予約の marker。冪等判定のキーで、実行日に依存しない。 */
 const SEED_DEMO_RESERVATION_MARKER = "[SEED-DEMO]";
 
+/**
+ * Space スケジュール空間の advisory lock namespace。
+ *
+ * SSoT は `src/shared/domain/reservations/space-locks.ts`（採番レジストリは
+ * `.claude/rules/db-domain.md`）。seed からその module を import できない —
+ * `import "server-only"` を持ち、バンドラーの外では必ず throw するため。
+ * 値がずれると「ロックを取っているのに直列化されない」という最悪の壊れ方をするので、
+ * `__tests__/unit/architecture/seed-space-lock-namespace.test.ts` が一致を強制する。
+ */
+const SEED_SPACE_LOCK_NAMESPACE = 728351;
+
+/** `lockSpaceForTransaction` と同じ lock を seed から取得する。 */
+async function lockSpaceForSeedTransaction(
+  tx: Pick<PrismaClient, "$executeRaw">,
+  spaceId: string,
+): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEED_SPACE_LOCK_NAMESPACE}::int4, hashtext(${spaceId}))`;
+}
+
 const DEMO_RESERVATION_SPACE_SLUGS = [
   "meeting-room-a",
   "seminar-room",
@@ -2299,71 +2318,6 @@ async function seedReservations() {
   const welcomeCoupon = coupons.find((c) => c.code === "WELCOME10");
   const now = new Date();
 
-  // --- 既存のデモ予約は毎回まとめて作り直す ---------------------------
-  //
-  // marker（`SEED_DEMO_RESERVATION_MARKER`）は「同じエントリを二重に作らない」
-  // ためのキーであって、**行を現在時刻へ追従させる**役には立たない。marker 行を
-  // skip していると `daysOffset: 0` の「本日のご予約」が初回 seed の暦日に貼り付き、
-  // 30 日も経てば**未来のデモ予約が 1 件も無い DB** になる（実測: 本日 2026-08-02 に
-  // 対し marker 行は 2026-06-03〜07-30、`daysOffset: 0` の行が全部 2026-06-03）。
-  //
-  // さらに marker 導入**前**に作られた行は marker を持たないので、既存 DB では
-  // 全エントリが「無い」と判定される。COMPLETED / CANCELLED は EXCLUDE 制約の
-  // 対象外なので重複がそのまま増え、PENDING / CONFIRMED は旧行と重なって毎回
-  // 「skip overlapping」になり永久に収束しない（実測: marker 行 20 件と marker 無しの
-  // 旧デモ行が併存していた）。
-  //
-  // どちらも「消してから作る」ことで構造的に消える。EXCLUDE 制約
-  // `reservations_no_active_time_overlap_excl` は DEFERRABLE ではないため、
-  // 削除を先に済ませる順序であることが正しさの条件でもある。
-  //
-  // ただし **会計証跡を持つ行は消さない**（`seedEvents` と同じ判断）。Receipt /
-  // Refund は `onDelete: Restrict` で、消せないだけでなく消してはいけない記録。
-  // レビューは直後の `seedSpaceReviews()` が COMPLETED 予約へ貼り直すので対象外。
-  //
-  // `seedEvents` は「証跡付きだけ残す」が成立せず event 単位で作り直しを見送っている
-  // が、予約には**その連鎖が無い**。残った予約が参照するのは Space / Customer
-  // （`Cascade`）と Coupon / User / ReservationSeries（`SetNull`）だけで `Restrict` が
-  // 1 本も無く、しかもこの関数はそれらを消さない。だから行単位で選り分けられる。
-  const existingDemoReservations = await prisma.reservation.findMany({
-    where: {
-      OR: [
-        { notes: { startsWith: SEED_DEMO_RESERVATION_MARKER } },
-        {
-          spaceId: { in: spaces.map((space) => space.id) },
-          customerId: { in: customers.map((customer) => customer.id) },
-        },
-      ],
-    },
-    select: {
-      id: true,
-      receipt: { select: { id: true } },
-      refunds: { select: { id: true }, take: 1 },
-    },
-  });
-
-  const accountedDemoReservations = existingDemoReservations.filter(
-    (reservation) =>
-      reservation.receipt !== null || reservation.refunds.length > 0,
-  );
-  const disposableDemoReservationIds = existingDemoReservations
-    .filter((reservation) => !accountedDemoReservations.includes(reservation))
-    .map((reservation) => reservation.id);
-
-  if (disposableDemoReservationIds.length > 0) {
-    await prisma.reservation.deleteMany({
-      where: { id: { in: disposableDemoReservationIds } },
-    });
-    console.log(
-      `🧹 Rebuilt demo reservations: removed ${String(disposableDemoReservationIds.length)}`,
-    );
-  }
-  if (accountedDemoReservations.length > 0) {
-    console.log(
-      `ℹ️ Kept ${String(accountedDemoReservations.length)} demo reservations that carry an accounting trail`,
-    );
-  }
-
   const reservations: Array<{
     spaceIndex: number;
     customerIndex: number;
@@ -2813,83 +2767,219 @@ async function seedReservations() {
     },
   ];
 
-  for (const res of reservations) {
-    const space = spaces[res.spaceIndex % spaces.length];
-    const customer = customers[res.customerIndex % customers.length];
-    if (!space || !customer) continue;
+  // 削除と再作成は **1 つの transaction 内で、対象スペースの advisory lock を
+  // 取ってから**行う。この関数は空き枠を動かすので、絶対規約
+  // （`.claude/rules/business-domain.md`）の「可用性に影響する全書込経路は
+  // `lockSpaceForTransaction` を先取する」に該当する。
+  //
+  // tx の外で消すと、削除から再作成までの隙間で枠が空く。served な dev / staging に
+  // 対して seed を回すと、その隙間に入った予約が EXCLUDE 制約
+  // `reservations_no_active_time_overlap_excl` と衝突し、作り直しが途中で止まって
+  // **半分だけ再構築された** DB が残る。
+  await prisma.$transaction(
+    async (tx) => {
+      // deadlock 予防のため id 昇順（`lockSpacesForTransactionInOrder` と同じ規律）。
+      for (const spaceId of [...spaces.map((space) => space.id)].sort()) {
+        await lockSpaceForSeedTransaction(tx, spaceId);
+      }
 
-    // 時刻は **JST の暦日 + 時** で組む。`setHours` はコンテナのローカル時刻なので、
-    // JST の開発機では 9 時が 9 時でも、UTC の CI runner では 9 時が JST 18 時を
-    // 指す。アプリは JST 固定の formatter で表示する（絶対規約）ため、同じ seed が
-    // 環境で違う意味になっていた。
-    const date = jstDateTime(now, res.daysOffset, res.startHour);
-    const endDate = jstDateTime(
-      now,
-      res.daysOffset,
-      res.startHour + res.duration,
-    );
+      // --- 既存のデモ予約は毎回まとめて作り直す ---------------------------
+      //
+      // marker（`SEED_DEMO_RESERVATION_MARKER`）は「同じエントリを二重に作らない」
+      // ためのキーであって、**行を現在時刻へ追従させる**役には立たない。marker 行を
+      // skip していると `daysOffset: 0` の「本日のご予約」が初回 seed の暦日に貼り付き、
+      // 30 日も経てば**未来のデモ予約が 1 件も無い DB** になる（実測: 本日 2026-08-02 に
+      // 対し marker 行は 2026-06-03〜07-30、`daysOffset: 0` の行が全部 2026-06-03）。
+      //
+      // さらに marker 導入**前**に作られた行は marker を持たないので、既存 DB では
+      // 全エントリが「無い」と判定される。COMPLETED / CANCELLED は EXCLUDE 制約の
+      // 対象外なので重複がそのまま増え、PENDING / CONFIRMED は旧行と重なって毎回
+      // 「skip overlapping」になり永久に収束しない（実測: marker 行 20 件と marker 無しの
+      // 旧デモ行が併存していた）。
+      //
+      // どちらも「消してから作る」ことで構造的に消える。EXCLUDE 制約
+      // `reservations_no_active_time_overlap_excl` は DEFERRABLE ではないため、
+      // 削除を先に済ませる順序であることが正しさの条件でもある。
+      //
+      // ただし **会計証跡を持つ行は消さない**（`seedEvents` と同じ判断）。Receipt /
+      // Refund は `onDelete: Restrict` で、消せないだけでなく消してはいけない記録。
+      // レビューは直後の `seedSpaceReviews()` が COMPLETED 予約へ貼り直すので対象外。
+      //
+      // `seedEvents` は「証跡付きだけ残す」が成立せず event 単位で作り直しを見送っている
+      // が、予約には**その連鎖が無い**。残った予約が参照するのは Space / Customer
+      // （`Cascade`）と Coupon / User / ReservationSeries（`SetNull`）だけで `Restrict` が
+      // 1 本も無く、しかもこの関数はそれらを消さない。だから行単位で選り分けられる。
+      //
+      // **「デモ顧客 × デモスペース」で消してはいけない。** その直積には、開発者や
+      // テスターが管理画面・公開フォームから作った普通の予約も入る。marker が無い
+      // だけで消してしまうと、dev / staging の手動データが seed のたびに恒久的に
+      // 消え、レビュー等の子レコードまで cascade する。
+      //
+      // 消してよいのは「seed が作ったと**証明できる**行」だけ:
+      //   1. marker を持つ行（現行 seed 由来）
+      //   2. marker 導入前の行 = デモ顧客 × デモスペース **かつ** notes が
+      //      このテーブルで宣言している文字列と完全一致するもの
+      // 2 は宣言そのものから導出するので、エントリを足し引きしても勝手に追随する。
+      // notes を持たない旧行は区別できないので**残す**（重複は残るが、データを
+      // 消すよりはるかにましで、実行のたびに増えることはもう無い）。
+      const declaredDemoNotes = [
+        ...new Set(
+          reservations
+            .map((entry) => entry.notes)
+            .filter((note): note is string => note !== undefined),
+        ),
+      ];
 
-    // marker はエントリ自身の内容から導出する（実行日に依存しない）。上の一括削除で
-    // 自分の行はもう残っていないので、ここでの存在確認は要らない。marker が残る理由は
-    // ①次回 run で「seed が作った行」を過不足なく特定できること
-    // ②管理画面でデモ行だと一目で分かること の 2 つ。
-    const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
+      const existingDemoReservations = await tx.reservation.findMany({
+        where: {
+          OR: [
+            { notes: { startsWith: SEED_DEMO_RESERVATION_MARKER } },
+            {
+              spaceId: { in: spaces.map((space) => space.id) },
+              customerId: { in: customers.map((customer) => customer.id) },
+              notes: { in: declaredDemoNotes },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          receipt: { select: { id: true } },
+          refunds: { select: { id: true }, take: 1 },
+          // 生きている解錠番号を持つ行は消さない（下記）。
+          smartLockPasscodes: {
+            select: { id: true },
+            where: { status: { in: ["PENDING", "CONFIRMED"] } },
+            take: 1,
+          },
+        },
+      });
 
-    // 残るのは会計証跡付きのデモ行と、デモ scope 外の行（dev customer の `[E2E]` 予約等）。
-    // それらと重なる枠は EXCLUDE 制約に弾かれるので、作る前に譲る。
-    const overlappingActiveReservation = await prisma.reservation.findFirst({
-      where: {
-        spaceId: space.id,
-        deletedAt: null,
-        status: { in: ["PENDING", "CONFIRMED"] },
-        AND: [{ startTime: { lt: endDate } }, { endTime: { gt: date } }],
-      },
-      select: { id: true },
-    });
+      const accountedDemoReservations = existingDemoReservations.filter(
+        (reservation) =>
+          reservation.receipt !== null || reservation.refunds.length > 0,
+      );
 
-    if (overlappingActiveReservation) {
-      console.log(`⏭️ Skipped overlapping reservation`);
-      continue;
-    }
+      // 解錠番号が PENDING / CONFIRMED の予約も消さない。`SmartLockPasscode` は
+      // `onDelete: Cascade` なので、予約を消すと**追跡レコードだけが消えて
+      // 物理キーパッドの暗証番号は生きたまま残る**。取り消しは SwitchBot API を
+      // 叩く必要があり（`revokeSmartLockPasscodesForReservation`）、seed から
+      // 外部 API を副作用として呼ぶのは筋が悪い。作り直しを見送って名指しで報告し、
+      // 取り消しは通常の運用経路に任せる。
+      const liveKeypadReservations = existingDemoReservations.filter(
+        (reservation) =>
+          !accountedDemoReservations.includes(reservation) &&
+          reservation.smartLockPasscodes.length > 0,
+      );
 
-    const basePrice = Number(space.hourlyPrice) * res.duration;
-    let couponDiscountAmount: number | null = null;
-    let couponId: string | null = null;
+      const retained = new Set(
+        [...accountedDemoReservations, ...liveKeypadReservations].map(
+          (reservation) => reservation.id,
+        ),
+      );
+      const disposableDemoReservationIds = existingDemoReservations
+        .filter((reservation) => !retained.has(reservation.id))
+        .map((reservation) => reservation.id);
 
-    // クーポン適用（一部の予約にのみ）
-    if (res.applyCoupon && welcomeCoupon) {
-      couponId = welcomeCoupon.id;
-      couponDiscountAmount =
-        basePrice * (Number(welcomeCoupon.discountValue) / 100);
-    }
+      if (disposableDemoReservationIds.length > 0) {
+        await tx.reservation.deleteMany({
+          where: { id: { in: disposableDemoReservationIds } },
+        });
+        console.log(
+          `🧹 Rebuilt demo reservations: removed ${String(disposableDemoReservationIds.length)}`,
+        );
+      }
+      if (accountedDemoReservations.length > 0) {
+        console.log(
+          `ℹ️ Kept ${String(accountedDemoReservations.length)} demo reservations that carry an accounting trail`,
+        );
+      }
+      if (liveKeypadReservations.length > 0) {
+        console.log(
+          `ℹ️ Kept ${String(liveKeypadReservations.length)} demo reservations with a live keypad passcode (revoke via the app before re-seeding if you need them rebuilt)`,
+        );
+      }
 
-    const totalPrice = basePrice - (couponDiscountAmount ?? 0);
+      for (const res of reservations) {
+        const space = spaces[res.spaceIndex % spaces.length];
+        const customer = customers[res.customerIndex % customers.length];
+        if (!space || !customer) continue;
 
-    await prisma.reservation.create({
-      data: {
-        spaceId: space.id,
-        customerId: customer.id,
-        startTime: date,
-        endTime: endDate,
-        status: res.status,
-        basePrice,
-        totalPrice,
-        couponId,
-        couponDiscountAmount: couponDiscountAmount
-          ? couponDiscountAmount
-          : null,
-        ...buildSeedLegacyPricingSnapshot(totalPrice),
-        // marker を先頭に置く。次回 run の削除対象を特定するキー。
-        notes: res.notes != null ? `${marker} ${res.notes}` : marker,
-        ...(res.paymentStatus !== undefined
-          ? { paymentStatus: res.paymentStatus }
-          : {}),
-      },
-    });
-    console.log(
-      `✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`,
-    );
-  }
+        // 時刻は **JST の暦日 + 時** で組む。`setHours` はコンテナのローカル時刻なので、
+        // JST の開発機では 9 時が 9 時でも、UTC の CI runner では 9 時が JST 18 時を
+        // 指す。アプリは JST 固定の formatter で表示する（絶対規約）ため、同じ seed が
+        // 環境で違う意味になっていた。
+        const date = jstDateTime(now, res.daysOffset, res.startHour);
+        const endDate = jstDateTime(
+          now,
+          res.daysOffset,
+          res.startHour + res.duration,
+        );
+
+        // marker はエントリ自身の内容から導出する（実行日に依存しない）。上の一括削除で
+        // 自分の行はもう残っていないので、ここでの存在確認は要らない。marker が残る理由は
+        // ①次回 run で「seed が作った行」を過不足なく特定できること
+        // ②管理画面でデモ行だと一目で分かること の 2 つ。
+        const marker = `${SEED_DEMO_RESERVATION_MARKER} ${String(res.spaceIndex)}-${String(res.customerIndex)}-${String(res.daysOffset)}-${String(res.startHour)}`;
+
+        // 残るのは会計証跡付きのデモ行と、デモ scope 外の行（dev customer の `[E2E]` 予約等）。
+        // それらと重なる枠は EXCLUDE 制約に弾かれるので、作る前に譲る。
+        const overlappingActiveReservation = await tx.reservation.findFirst({
+          where: {
+            spaceId: space.id,
+            deletedAt: null,
+            status: { in: ["PENDING", "CONFIRMED"] },
+            AND: [{ startTime: { lt: endDate } }, { endTime: { gt: date } }],
+          },
+          select: { id: true },
+        });
+
+        if (overlappingActiveReservation) {
+          console.log(`⏭️ Skipped overlapping reservation`);
+          continue;
+        }
+
+        const basePrice = Number(space.hourlyPrice) * res.duration;
+        let couponDiscountAmount: number | null = null;
+        let couponId: string | null = null;
+
+        // クーポン適用（一部の予約にのみ）
+        if (res.applyCoupon && welcomeCoupon) {
+          couponId = welcomeCoupon.id;
+          couponDiscountAmount =
+            basePrice * (Number(welcomeCoupon.discountValue) / 100);
+        }
+
+        const totalPrice = basePrice - (couponDiscountAmount ?? 0);
+
+        await tx.reservation.create({
+          data: {
+            spaceId: space.id,
+            customerId: customer.id,
+            startTime: date,
+            endTime: endDate,
+            status: res.status,
+            basePrice,
+            totalPrice,
+            couponId,
+            couponDiscountAmount: couponDiscountAmount
+              ? couponDiscountAmount
+              : null,
+            ...buildSeedLegacyPricingSnapshot(totalPrice),
+            // marker を先頭に置く。次回 run の削除対象を特定するキー。
+            notes: res.notes != null ? `${marker} ${res.notes}` : marker,
+            ...(res.paymentStatus !== undefined
+              ? { paymentStatus: res.paymentStatus }
+              : {}),
+          },
+        });
+        console.log(
+          `✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`,
+        );
+      }
+    },
+    // 50 行前後を 1 tx で作り直す。既定の 5 秒では足りない。
+    { timeout: 120_000, maxWait: 30_000 },
+  );
 }
 
 // =============================================================================
