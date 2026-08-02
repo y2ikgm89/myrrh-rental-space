@@ -13,7 +13,7 @@ const mockFindUnique = mock<
     hourlyPrice: number;
     mainImageUrl: string;
     gallery: unknown;
-    facilities: string[];
+    facilities: { name: string; iconName: string }[];
     businessHours: unknown;
     reviewsEnabled: boolean;
     metaDescription: string | null;
@@ -88,7 +88,12 @@ const SOURCE_SPACE = {
     { url: "https://media.example.com/spaces/1.jpg", alt: "", caption: "" },
     { url: "https://media.example.com/spaces/2.jpg", alt: "", caption: "" },
   ],
-  facilities: ["wifi", "projector"],
+  // `Space.facilities` は `{ name, iconName }[]`（json-validators.ts の
+  // facilitiesSchema が SSoT）。旧 string[] 形式は init migration に畳まれて久しい。
+  facilities: [
+    { name: "Wi-Fi", iconName: "IconWifi" },
+    { name: "プロジェクター", iconName: "IconProjector" },
+  ],
   businessHours: null,
   reviewsEnabled: true,
   metaDescription: null,
