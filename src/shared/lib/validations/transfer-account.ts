@@ -59,5 +59,12 @@ export const transferGuidanceFormSchema = z.object({
     .max(5000, { error: "案内文は5000文字以内です" })
     .optional()
     .transform((value) => value || null),
-  expectedUpdatedAt: z.string().trim().min(1, { error: "更新日時が不正です" }),
+  // 他の楽観ロック 6 箇所（basic / brand-contact / sidebar）と同じ形。
+  // 素の string だと "更新日時が不正です" が形式ではなく空欄にしか反応せず、
+  // 壊れた値がそのまま比較に回る。
+  expectedUpdatedAt: z.iso
+    .datetime({
+      error: "更新バージョンが不正です。ページを再読み込みしてください",
+    })
+    .or(z.date()),
 });
