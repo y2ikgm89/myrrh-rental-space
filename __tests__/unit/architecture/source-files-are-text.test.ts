@@ -20,13 +20,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { extname, join } from "node:path";
 
 const ROOT = process.cwd();
-
-/** 走査するディレクトリ。ビルド成果物と依存は見ない。 */
-const SCAN_DIRS = ["src", "__tests__", "scripts", "e2e", "prisma"];
 
 /**
  * **バイナリだけを挙げ、それ以外は全部見る。** 逆（テキスト拡張子の許可リスト）に
@@ -69,44 +67,53 @@ function findControlCharacters(source: string): readonly number[] {
   return found;
 }
 
-function collectFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".next" || entry === "generated")
-      continue;
-    const p = join(dir, entry);
-    if (statSync(p).isDirectory()) {
-      out.push(...collectFiles(p));
-    } else if (!BINARY_EXTENSIONS.has(extname(entry).toLowerCase())) {
-      out.push(p);
-    }
-  }
-  return out;
+/**
+ * **走査対象は git に聞く。ディレクトリを列挙しない。**
+ *
+ * 拡張子の許可リストを反転させた（#1864）のに、ディレクトリ側は列挙のままだった。
+ * 同じ欠陥が 1 階層上に残っていたことになる。実測: tracked 3,687 件のうち
+ * `SCAN_DIRS` が覆っていたのは 3,455 件で、`eslint-rules/` 6 件・`.github/` 21 件・
+ * `terraform/` 24 件・`docs/` 65 件などが素通りしていた。lint ルール本体
+ * （正規表現を書く場所＝この gate が生まれた原因と同じ種類のコード）が
+ * 対象外だったのが端的に悪い。
+ *
+ * tracked file は「コミットされる ＝ レビューされるべきもの」と過不足なく一致し、
+ * ビルド成果物と依存は .gitignore で構造的に外れる。新しいディレクトリを足しても
+ * 何もしなくて済む。
+ */
+function trackedFiles(): string[] {
+  const stdout = execFileSync("git", ["ls-files", "-z"], {
+    cwd: ROOT,
+    maxBuffer: 32 * 1024 * 1024,
+  }).toString("utf8");
+
+  return (
+    stdout
+      // NUL は**実文字を書かない**（この gate 自身の指針）。
+      .split(String.fromCharCode(0))
+      .filter((entry) => entry.length > 0)
+      .filter((entry) => !BINARY_EXTENSIONS.has(extname(entry).toLowerCase()))
+  );
 }
 
 describe("source files stay text", () => {
   test("実制御文字を含むファイルが無い", () => {
     const violations: string[] = [];
 
-    for (const dir of SCAN_DIRS) {
-      const abs = join(ROOT, dir);
-      let files: string[];
-      try {
-        files = collectFiles(abs);
-      } catch {
-        continue; // 存在しないディレクトリは飛ばす
-      }
+    const files = trackedFiles();
+    // gate が空振りしていないこと（git 呼び出しが壊れると 0 件で緑になる）。
+    expect(files.length).toBeGreaterThan(1000);
 
-      for (const filePath of files) {
-        const codes = findControlCharacters(readFileSync(filePath, "utf8"));
-        if (codes.length === 0) continue;
+    for (const name of files) {
+      const codes = findControlCharacters(
+        readFileSync(join(ROOT, name), "utf8"),
+      );
+      if (codes.length === 0) continue;
 
-        const name = relative(ROOT, filePath).split("\\").join("/");
-        const shown = [...new Set(codes)]
-          .map((c) => `U+${c.toString(16).toUpperCase().padStart(4, "0")}`)
-          .join(", ");
-        violations.push(`${name} (${codes.length} 個: ${shown})`);
-      }
+      const shown = [...new Set(codes)]
+        .map((c) => `U+${c.toString(16).toUpperCase().padStart(4, "0")}`)
+        .join(", ");
+      violations.push(`${name} (${codes.length} 個: ${shown})`);
     }
 
     expect(violations).toEqual([]);
