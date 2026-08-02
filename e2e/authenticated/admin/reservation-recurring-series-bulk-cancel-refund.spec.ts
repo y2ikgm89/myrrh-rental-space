@@ -34,10 +34,14 @@
  * per-instance の refund AMOUNT (¥2,500 vs ¥5,000) の直接検証は本 E2E では
  * 行わない。理由:
  *
- *   - E2E 環境は Stripe credentials が未設定 (`playwright.config.ts` の webServer
- *     env と DB Settings のどちらにも `stripeSecretKey` が無い) のため
- *     `refundReservationPaymentCommand` 内の `assertOnlinePaymentAvailable` が
- *     VALIDATION で throw、runRefundStep は `{ status: "error", reason: ... }` を返す。
+ *   - E2E 環境の Stripe 認証情報は **偽物**（`scripts/e2e/setup-stripe-webhook-fixture.ts`
+ *     が webServer chain で `SettingsStripe` に書く）。`assertOnlinePaymentAvailable` は
+ *     通るので `refundReservationPaymentCommand` は**実際に Stripe を叩き**、偽鍵の
+ *     ぶん失敗する。runRefundStep は `{ status: "error", reason: ... }` を返す。
+ *     以前この JSDoc は「認証情報が未設定」と書いていたが、#1828 で fixture を
+ *     webServer chain へ移した時点でその前提は失効している。実際に外向き呼び出しが
+ *     走る点が重要で、egress の無い runner では `STRIPE_REQUEST_TIMEOUT_MS`
+ *     （`src/shared/lib/stripe.ts`、20 秒）が唯一の上限になる。
  *   - refund outcome の `detail.refundAmount` は success 時のみ AuditLog に載る
  *     product 契約 (`cancellation-side-effects.ts` の `runRefundStep`)、error 時は
  *     amount 情報が観測不能。
@@ -65,6 +69,16 @@
  */
 
 import { test, expect } from "../../fixtures/e2e-test";
+
+/**
+ * 3 インスタンス分の返金が**直列に**実際の Stripe 呼び出しを行う。
+ *
+ * 偽の認証情報でも SDK は api.stripe.com へ出るので、egress の無い runner では
+ * 1 回あたり `STRIPE_REQUEST_TIMEOUT_MS`（20 秒）まで待つ。以前の 20 秒予算は
+ * 「認証情報が無いので即 throw する」前提のもので、その前提は #1828 で失効した。
+ * 3 × 20 秒に、監査ログ書き込み（`fireAndForget` → `after()`）の余裕を足す。
+ */
+const REFUND_PIPELINE_TIMEOUT_MS = 3 * 20_000 + 15_000;
 import {
   findSeriesCancellationAudit,
   getPerInstanceCancellationAudits,
@@ -77,6 +91,10 @@ import {
 
 test.describe
   .serial("admin series bulk-cancel enforces per-instance refund policy (E2E-01)", () => {
+  // Playwright 既定の test timeout は 30 秒で、上の poll 予算より短い。
+  // **数値を手書きしない** — 予算を変えたときに片方だけ動くのを防ぐため定数から導く。
+  test.describe.configure({ timeout: REFUND_PIPELINE_TIMEOUT_MS + 30_000 });
+
   let fixture: RefundPolicyBulkCancelFixture;
 
   test.beforeAll(async () => {
@@ -116,7 +134,7 @@ test.describe
     // 前段の DB claim で確定するので、まず series 側で pipeline 起動を確認)。
     await expect
       .poll(() => isSeriesSoftDeleted(fixture.seriesId), {
-        timeout: 20_000,
+        timeout: REFUND_PIPELINE_TIMEOUT_MS,
         intervals: [500, 1000, 2000],
       })
       .toBe(true);
@@ -151,7 +169,7 @@ test.describe
           return audits.length;
         },
         {
-          timeout: 20_000,
+          timeout: REFUND_PIPELINE_TIMEOUT_MS,
           intervals: [500, 1000, 2000],
         },
       )
@@ -177,9 +195,9 @@ test.describe
         `instance ${id} metadata.requiresRefund=true が記録されること`,
       ).toBe(true);
       // sideEffects.refund の outcome が存在すること (= refund step が invoke されて
-      // outcome capture が走ったこと)。E2E 環境は Stripe 未設定のため status は
-      // "error" になるが、outcome 構造自体が存在すれば "pipeline は貫通した" と
-      // 判定できる (spec ヘッダ参照)。
+      // outcome capture が走ったこと)。E2E の Stripe 認証情報は偽物なので status は
+      // "error" になるが、**status の値は assert しない** — outcome 構造自体が
+      // 存在すれば "pipeline は貫通した" と判定できる (spec ヘッダ参照)。
       expect(
         audit?.hasRefundOutcome,
         `instance ${id} sideEffects.refund outcome が記録されること`,
