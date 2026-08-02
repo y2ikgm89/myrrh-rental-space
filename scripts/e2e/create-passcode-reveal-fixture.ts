@@ -66,11 +66,20 @@ async function main(): Promise<void> {
       select: { id: true },
     });
 
-    await prisma.settingsSwitchbot.upsert({
+    // SwitchBot の有効化は **seed の宣言**（`seedSettings`）が持つ。ここで
+    // singleton を書き換えると復元されず、seed が作れる状態と DB が恒久的に
+    // 食い違う（`.claude/rules/testing-e2e.md`「グローバル状態の復元」）。
+    // 無効なままなら `getPasscodeRevealState` が `unavailable` を返すので、
+    // 分かりにくい失敗にならないよう明示的に落とす。
+    const switchbot = await prisma.settingsSwitchbot.findUnique({
       where: { id: "singleton" },
-      create: { switchbotEnabled: true },
-      update: { switchbotEnabled: true },
+      select: { switchbotEnabled: true },
     });
+    if (!switchbot?.switchbotEnabled) {
+      throw new Error(
+        "[passcode-reveal fixture] SwitchBot が無効です。dev seed（seedSettings）が走っているか確認してください",
+      );
+    }
 
     // 専有スペースを slug で引く。**探索しない。**
     //

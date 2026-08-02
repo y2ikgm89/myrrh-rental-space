@@ -30,7 +30,19 @@ import { resolveTestDatabaseUrl } from "../test-db-url";
  * ## email / password の一意性
  *
  * 実行毎に `Date.now()` + `Math.random()` で一意 email を生成するため、fixture の
- * 再実行や並列 spec 実行で collision しない。テスト側は afterAll で cleanup する。
+ * 再実行や並列 spec 実行で collision しない。
+ *
+ * ## 後始末
+ *
+ * **入口で前回分を purge する**（`EMAIL_PREFIX` 一致）。以前この JSDoc は
+ * 「テスト側は afterAll で cleanup する」と書いていたが、
+ * `blacklist-reservation-block.spec.ts` にその hook は無く、実行のたびに
+ * User + credential Account + Customer が 1 組ずつ残り続けていた。
+ *
+ * spec 側に `afterAll` を足す形は採らない — 本体が timeout すると page も
+ * context も閉じられ、hook は走っても仕事ができない
+ * （`.claude/rules/testing-e2e.md`、run 30672479398）。入口 purge なら
+ * timeout しても次回に回収される。
  */
 
 process.env["DATABASE_URL"] = resolveTestDatabaseUrl(
@@ -44,12 +56,30 @@ interface BlacklistTestUserFixture {
   readonly customerId: string;
 }
 
+/** この fixture が作る User の email prefix。入口 purge のキー。 */
+const EMAIL_PREFIX = "e2e-blacklist-";
+
 async function main(): Promise<void> {
   const { prisma, disconnect } = createScriptPrismaClient();
 
   try {
+    // 前回分を先に片付ける（入口 purge）。この fixture の行だけを prefix で狙う。
+    const stale = await prisma.user.findMany({
+      where: { email: { startsWith: EMAIL_PREFIX } },
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      const staleIds = stale.map((u) => u.id);
+      // Customer.userId は `onDelete: SetNull` ではなく明示的に消す
+      // （匿名化済みでない fixture 行を残さない）。
+      await prisma.customer.deleteMany({ where: { userId: { in: staleIds } } });
+      await prisma.account.deleteMany({ where: { userId: { in: staleIds } } });
+      await prisma.session.deleteMany({ where: { userId: { in: staleIds } } });
+      await prisma.user.deleteMany({ where: { id: { in: staleIds } } });
+    }
+
     const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-    const email = `e2e-blacklist-${unique}@example.com`;
+    const email = `${EMAIL_PREFIX}${unique}@example.com`;
     const password = "blacklist-e2e-password-01234567";
     const name = "E2E ブラックリスト太郎";
 
