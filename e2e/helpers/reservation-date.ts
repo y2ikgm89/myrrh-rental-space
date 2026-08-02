@@ -27,9 +27,14 @@ import * as holidayJp from "@holiday-jp/holiday_jp";
  * - **日曜以外**（`DEFAULT_BUSINESS_HOURS_WEEK` は日曜休業）
  * - 日本の祝日以外
  *
- * 呼び出し側は返り値を `page.clock.install({ time: ... })` の起点にし、
- * DayPicker が各セルに付ける安定属性 `data-day="YYYY-MM-DD"` で選択する。
- * アクセシブルネームはロケール依存（例「2026年8月21日金曜日」）なので使わない。
+ * どちらの導出も、DayPicker が各セルに付ける安定属性 `data-day="YYYY-MM-DD"` で
+ * 選択する前提。アクセシブルネームはロケール依存（例「2026年8月21日金曜日」）
+ * なので使わない。**時計の扱いは送信するかどうかで逆になる**:
+ *
+ * - **送信しない** spec — `pickBookableDate()` の返り値を
+ *   `page.clock.install({ time: bookableDateClockTime(...) })` の起点にする
+ * - **送信する** spec — `pickBookableDateInNextMonth()` を使い、時計は固定しない
+ *   （理由は `bookableDateClockTime` の JSDoc）。カレンダーは 1 回翌月へ送る
  */
 
 /** `prisma/seed.ts` の `seedReservations()` が作るデモ予約の最大 daysOffset。 */
@@ -101,18 +106,60 @@ export function pickBookableDate(options?: {
 }
 
 /**
+ * **翌月**の最初の予約可能日を返す（`YYYY-MM-DD`）。
+ *
+ * フォームを実際に送信する spec 用。時計を固定できないので
+ * （`bookableDateClockTime` の注記参照）、カレンダーは**実時刻の月**を描く。
+ * 翌月へ 1 回送れば、条件分岐なしに必ず未来の日付が選べる:
+ *
+ * - 翌月は全体が未来なので `publicReservationSchema` の日付 refine を必ず通る
+ * - 月末に「今月の残りに営業日が無い」ような境界を踏まない
+ * - 条件付きロケーター（`if (await x.count() > 0)`）は ESLint で禁止なので、
+ *   「見つからなければ月送り」という形は採れない。**常に 1 回送る**のが規約に合う
+ */
+export function pickBookableDateInNextMonth(): string {
+  // 「今が何月か」だけは**ローカル時計**で決める。カレンダーの表示月は DayPicker の
+  // `today` 既定（= ブラウザの `new Date()`）で決まるので、UTC で数えると
+  // TZ=UTC 以外のホストでは月境界の数時間だけ 1 ヶ月ずれて月送りが空振りする。
+  // 日付の組み立て自体は他の helper と同じく UTC 基準に揃える。
+  const now = new Date();
+  const firstOfNextMonth = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth() + 1, 1),
+  );
+
+  for (let i = 0; i <= MAX_SEARCH_DAYS; i++) {
+    const date = addUtcDays(firstOfNextMonth, i);
+    if (date.getUTCMonth() !== firstOfNextMonth.getUTCMonth()) break;
+    if (isBookable(date)) return formatUtcDateOnly(date);
+  }
+
+  throw new Error(
+    `[reservation-date] ${formatUtcDateOnly(firstOfNextMonth)} の月に予約可能日が見つかりませんでした`,
+  );
+}
+
+/**
  * `page.clock.install` に渡す固定時刻。
  *
  * 12:00 JST（= 03:00 UTC）に揃える。`events-calendar.spec.ts` と同じ anchor で、
  * ホスト側タイムゾーンによる日付境界のずれを避ける。
  *
- * **フォームを送信する spec は、日付を選び終えたら
- * `page.clock.setSystemTime(new Date())` で実時刻へ戻すこと。**
- * `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
- * **ブラウザの時計**から焼き込み、Server Action の `checkBotHeuristics` はそれを
- * **サーバーの実時刻**と引き算する（`Date.now() - formRenderedAt >= 3000ms`）。
- * 固定したままだと差が負になり、3 秒の下限を満たさず全送信が bot 判定で弾かれる。
- * 固定が要るのはカレンダーの表示月を決めるところまで。
+ * **フォームを送信する spec では時計を固定してはいけない。** 実害が 2 つあり、
+ * どちらも #1823 の CI で 1 回ずつ観測されている。
+ *
+ * 1. **Turnstile が解けない。** `clock.install` は時間を止めるので、widget の
+ *    challenge が進まず hidden input が空のままになる（実測 run 30728829959:
+ *    `expect(locator).not.toHaveValue("")` が 20 秒待って失敗）
+ * 2. **bot 判定に落ちる。** `ReservationForm` は `useState(() => Date.now())` で
+ *    `formRenderedAt` を**ブラウザの時計**から焼き込む。これは step 3 ではなく
+ *    **フォームの初回マウント時**、つまり日付を選ぶより前に確定する。Server Action の
+ *    `checkBotHeuristics` はそれをサーバーの実時刻と引き算する
+ *    （`Date.now() - formRenderedAt >= 3000ms`）ので、未来へ固定していると差が負に
+ *    なり全送信が弾かれる（実測 run 30731786539: step 3 に「セキュリティ検証に
+ *    失敗しました」が出たまま完了 URL に到達せず timeout）
+ *
+ * 2 に対して途中で `setSystemTime` に戻しても遅い — 値はもう焼かれている。
+ * 送信する spec は `pickBookableDateInNextMonth()` + 月送りを使うこと。
  */
 export function bookableDateClockTime(dateOnly: string): Date {
   return new Date(`${dateOnly}T03:00:00.000Z`);

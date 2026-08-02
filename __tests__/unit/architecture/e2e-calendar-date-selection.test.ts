@@ -28,9 +28,14 @@ import { Glob } from "bun";
  *
  * ## 正しい形
  *
- * `e2e/helpers/reservation-date.ts` の `pickBookableDate()` で**実時刻から日付を
- * 導出**し、`page.clock.install` でその日を「今日」に固定してから、DayPicker が
- * 各セルに付ける安定属性 `data-day="YYYY-MM-DD"` で選ぶ。
+ * どちらの spec も `e2e/helpers/reservation-date.ts` で日付を**実時刻から導出**し、
+ * DayPicker が各セルに付ける安定属性 `data-day="YYYY-MM-DD"` で選ぶ。**時計の扱いは
+ * 送信するかどうかで逆になる。**
+ *
+ * - **送信しない** spec（価格プレビュー等）— `pickBookableDate()` で導出し、
+ *   `page.clock.install` でその日を「今日」に固定する。表示月が導出日に揃う
+ * - **送信する** spec — 固定しない。`pickBookableDateInNextMonth()` を使い、
+ *   カレンダーを 1 回だけ翌月へ送る。翌月は全体が未来なので条件分岐なしに選べる
  *
  * 有効セルの集合は実時計の関数なので、allowlist で固定することはできない。
  * 例外を作らないのはそのため。
@@ -47,6 +52,9 @@ const TOUCHES_CALENDAR = /reservation-calendar|getByRole\(\s*["']gridcell["']/u;
 
 /** 時刻を固定している spec の marker。 */
 const INSTALLS_CLOCK = /page\.clock\.install\(/u;
+
+/** 予約フォームを実際に送信している spec の marker。 */
+const SUBMITS_RESERVATION = /name: "予約を確定する"/u;
 
 interface Violation {
   readonly file: string;
@@ -83,9 +91,12 @@ describe("予約カレンダーの日付選択", () => {
     expect(violations.map((v) => `${v.file}: ${v.reason}`)).toEqual([]);
   });
 
-  test("カレンダーを触る spec は時刻を固定している", () => {
+  test("カレンダーを触るだけの spec は時刻を固定している", () => {
+    // 送信する spec は逆に固定してはいけない（次のテスト）。両立しないので、
+    // 「送信しない」ものだけを対象にする。
     const violations: Violation[] = listSpecFiles()
       .filter((file) => TOUCHES_CALENDAR.test(read(file)))
+      .filter((file) => !SUBMITS_RESERVATION.test(read(file)))
       .filter((file) => !INSTALLS_CLOCK.test(read(file)))
       .map((file) => ({
         file,
@@ -96,25 +107,25 @@ describe("予約カレンダーの日付選択", () => {
     expect(violations.map((v) => `${v.file}: ${v.reason}`)).toEqual([]);
   });
 
-  test("フォームを送信する spec は送信前に実時刻へ戻す", () => {
-    // `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
-    // **ブラウザの時計**から焼き込み、Server Action の `checkBotHeuristics` は
-    // それを**サーバーの実時刻**と引き算する。未来へ固定したまま送信すると差が
-    // 負になり、3 秒の下限を満たさず全送信が bot 判定で弾かれる。
-    // 実測: #1823 の chromium-smoke が完了 URL 待ちで timeout した。
+  test("フォームを送信する spec は時計を固定しない", () => {
+    // 実害は 2 つあり、#1823 の chromium-smoke で 1 回ずつ観測された。
+    //
+    // 1. `clock.install` は時間を止めるので Turnstile の challenge が進まず、
+    //    hidden input が空のままになる（run 30728829959）
+    // 2. `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
+    //    **ブラウザの時計**から、**フォームの初回マウント時**に焼き込む。
+    //    `checkBotHeuristics` はそれをサーバーの実時刻と引き算するので、未来へ
+    //    固定していると差が負になり全送信が bot 判定で弾かれる（run 30731786539:
+    //    step 3 に「セキュリティ検証に失敗しました」が出たまま完了 URL に届かず
+    //    timeout）。**途中で `setSystemTime` に戻しても遅い** — 値はもう焼かれている
     const violations = listSpecFiles()
       .filter((file) => {
         const source = read(file);
-        return (
-          INSTALLS_CLOCK.test(source) &&
-          // 予約フォームを実際に送信している spec だけが対象。
-          /name: "予約を確定する"/u.test(source)
-        );
+        return INSTALLS_CLOCK.test(source) && SUBMITS_RESERVATION.test(source);
       })
-      .filter((file) => !/clock\.setSystemTime\(/u.test(read(file)))
       .map(
         (file) =>
-          `${file}: 時刻を固定したまま予約フォームを送信している。日付選択後に page.clock.setSystemTime(new Date()) で実時刻へ戻すこと（formRenderedAt はブラウザ時計、bot 判定はサーバー時刻）`,
+          `${file}: 予約フォームを送信する spec で時計を固定している。formRenderedAt はフォーム初回マウント時にブラウザ時計から焼かれ、bot 判定はサーバー時刻と引き算するので必ず弾かれる。pickBookableDateInNextMonth() + 月送りを使うこと`,
       );
 
     expect(violations).toEqual([]);

@@ -1,9 +1,6 @@
 import { test, expect, type Page } from "../fixtures/e2e-test";
 import { spaceFixtures, uniqueEmail, urls } from "../fixtures";
-import {
-  bookableDateClockTime,
-  pickBookableDate,
-} from "../helpers/reservation-date";
+import { pickBookableDateInNextMonth } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
 
 /**
@@ -58,14 +55,21 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
   test("スペース詳細から予約を作成し、完了ページへ到達する", async ({
     page,
   }) => {
-    // 日付は**実時刻から導出**し、その日を「今日」に固定してから遷移する。
-    // 位置指定（旧実装の `.nth(3)`）が使えない理由は `pickBookableDate` の JSDoc:
-    // カレンダーの過去日判定は `E2E_FIXED_NOW_ISO`（2026-07-04 固定）基準なのに、
-    // `publicReservationSchema` の日付 refine は**実時刻**で走る。位置で選ぶと
-    // 実日付が月の 4 営業日目を過ぎた時点から月末まで必ず送信が弾かれる。
-    // `page.clock.install` は最初の `goto` より前（時刻凍結の規約）。
-    const dateOnly = pickBookableDate();
-    await page.clock.install({ time: bookableDateClockTime(dateOnly) });
+    // 日付は**翌月の最初の予約可能日**を実時刻から導出する。
+    //
+    // 位置指定（旧実装の `.nth(3)`）は使えない: カレンダーの過去日判定は
+    // `E2E_FIXED_NOW_ISO`（2026-07-04 固定）基準で 8 月以降を一切無効化しないのに、
+    // `publicReservationSchema` の日付 refine は**実時刻**で走る。位置は動かないまま
+    // 実日付だけが進むので、月の 4 営業日目を過ぎた時点から月末まで必ず弾かれる。
+    //
+    // かといって**時計は固定できない**。`ReservationForm` は
+    // `useState(() => Date.now())` で `formRenderedAt` をフォームの初回マウント時に
+    // 焼き込み、`checkBotHeuristics` がサーバーの実時刻と引き算する。未来へ固定すると
+    // 差が負になり全送信が bot 判定で落ちる（実測 run 30731786539）。
+    //
+    // よって実時刻のまま、カレンダーを**常に 1 回だけ翌月へ送る**。翌月は全体が
+    // 未来なので条件分岐なしに必ず選べる（条件付きロケーターは ESLint で禁止）。
+    const dateOnly = pickBookableDateInNextMonth();
 
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
@@ -82,9 +86,17 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
     const dateTime = page.getByRole("group", { name: "日時選択" });
     await expect(dateTime).toBeVisible({ timeout: 20_000 });
 
+    // 翌月へ送る。DayPicker は `<nav>`（role="navigation"）に前月 → 翌月の順で
+    // 2 ボタンを描く（`react-day-picker` の `components/Nav.js`）。aria-label の
+    // 既定は英語固定（"Go to the Next Month"。`locale={ja}` は formatter にしか
+    // 効かない）だが、アプリが `labels` を渡せば日本語化されうる。順序のほうが
+    // 構造として安定しているので、名前ではなく最後のボタンを掴む。
+    const calendar = visibleById(page, "reservation-calendar");
+    await calendar.getByRole("navigation").getByRole("button").last().click();
+
     // DayPicker がセルに付ける安定属性 `data-day` で選ぶ。アクセシブルネームは
     // ロケール依存の長い書式（例「2026年9月8日火曜日」）なので使わない。
-    await visibleById(page, "reservation-calendar")
+    await calendar
       .locator(`[data-day="${dateOnly}"]`)
       .getByRole("button")
       .click();
@@ -95,18 +107,6 @@ test.describe("ゲスト予約 - 送信 happy path", () => {
     await enabled(page, page.getByRole("group", { name: "利用時間を選択" }))
       .first()
       .click();
-
-    // **日付を選び終えたら実時刻へ戻す。** 次のステップで `ReservationForm` が
-    // `const [formRenderedAt] = useState(() => Date.now())` を**ブラウザの時計**で
-    // 焼き込み、Server Action の `checkBotHeuristics` はそれを**サーバーの実時刻**と
-    // 引き算する（`Date.now() - formRenderedAt >= 3000ms`）。固定したままだと
-    // formRenderedAt が 35 日先になり、差が負 = 3 秒未満と判定されて
-    // **全送信が bot 扱いで弾かれる**（実測: run 30712... の smoke 失敗）。
-    // カレンダーの表示月を決めるのに固定が要るのはここまでなので、フォームが
-    // マウントされる前に戻す。日付側の検証は
-    // `data.date >= formatJstDateString(new Date())` で、選んだ日は実時刻でも
-    // 未来なので通る。
-    await page.clock.setSystemTime(new Date());
 
     await page.getByRole("button", { name: "次へ" }).click();
     await expect(page).toHaveURL(/step=3/u, { timeout: 20_000 });
