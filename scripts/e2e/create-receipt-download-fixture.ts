@@ -1,4 +1,5 @@
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
+import { spaceFixtures } from "../../e2e/fixtures/test-data";
 import { createScriptPrismaClient } from "../_shared/script-prisma";
 import { resolveTestDatabaseUrl } from "../test-db-url";
 
@@ -61,7 +62,8 @@ Bun.plugin({
 const { createReceiptDownloadToken } =
   await import("@/shared/lib/receipt-download-token");
 
-const SPACE_SLUG = "coworking-space";
+/** この fixture が専有するスペース。共有スペースだと他 fixture の枠と衝突する。 */
+const SPACE_SLUG = spaceFixtures.guestReservationSpaceSlug;
 
 // serialNo は VarChar(20) unique。E2E は並列 worker + 反復実行で衝突しうるため
 // 「YYYY-XXXXXX」形式を保ちつつ、実運用の採番 (現行年 + 1〜) と衝突しない
@@ -104,6 +106,14 @@ async function main(): Promise<void> {
     // 過去/既存 seed データと重ならない、十分未来の固定枠を使う
     // (直接 Prisma insert のため overlap チェックは走らない)。
     // date component をランダム化して parallel worker 間衝突を減らす。
+    // 日付は乱択のまま。**purge-on-entry は使えない** —
+    // `guest-receipt-single-use.spec.ts` はこの fixture を 3 つの並列テストから
+    // 呼ぶので、入口で消すと兄弟テストの行を消してしまう。
+    // 代わりに `status: "COMPLETED"` にする。EXCLUDE 制約
+    // `reservations_no_active_time_overlap_excl` は status ∈ {PENDING, CONFIRMED}
+    // だけを対象にするので、COMPLETED は重なっても合法。領収書は「利用済みの
+    // 予約に対して発行するもの」なので意味論的にもこちらが正しく、
+    // `src/shared/domain/receipts/**` は予約 status に依存していない。
     const dayOffset = Math.floor(Math.random() * 300);
     const baseDate = new Date("2028-01-05T02:00:00.000Z");
     const startTime = new Date(
@@ -145,7 +155,7 @@ async function main(): Promise<void> {
         guestLastName: "レシートE2Eゲスト",
         guestFirstName: "太郎",
         guestEmail,
-        status: "CONFIRMED",
+        status: "COMPLETED",
         paymentStatus: "PAID",
       },
       select: { id: true },
