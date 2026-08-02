@@ -80,11 +80,29 @@ function getEnvSecretKey(): string | null {
  *
  * @param secretKey - シークレットキー（復号化済み）
  */
+/**
+ * Stripe HTTP 呼び出しの上限（ms）。
+ *
+ * 返金は advisory lock 付きの interactive transaction 内で走るため、外向き
+ * 呼び出しが無制限に待つと lock ごと詰まる。E2E でも効く: webServer chain が
+ * 偽の認証情報を入れるので `assertOnlinePaymentAvailable` は通り、返金は
+ * **実際に Stripe を叩く**。egress の無い runner ではここが唯一の脱出口になる。
+ */
+export const STRIPE_REQUEST_TIMEOUT_MS = 20_000;
+
 export function createStripeClient(secretKey: string): AsyncOnlyStripe {
   const client = new Stripe(secretKey, {
     // stripe@22 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
     apiVersion: "2026-06-24.dahlia",
     typescript: true,
+    // **上限を明示する。** 未指定だと SDK 既定の長い待ちに従うが、返金は
+    // `refundReservationPaymentCommand` の advisory lock（728355）を握った
+    // interactive transaction の**内側**で呼ばれる。応答が返らない間、その予約に
+    // 対する後続の返金・状態遷移は全部待たされ、Prisma の tx timeout にも当たる。
+    // Stripe 公式も設定例として global timeout を挙げている。
+    // 正常な refunds.create / checkout.sessions.create は 1 秒未満で返るので、
+    // 20 秒は「詰まっている」と判断して差し支えない幅。
+    timeout: STRIPE_REQUEST_TIMEOUT_MS,
   });
   return {
     accounts: client.accounts,
