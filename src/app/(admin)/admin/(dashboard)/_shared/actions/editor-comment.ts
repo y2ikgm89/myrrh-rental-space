@@ -6,10 +6,13 @@ import type {
   AddCommentInput,
   CreateThreadInput,
 } from "@/admin/types/editor-comment";
-import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
+import {
+  addEditorCommentSchema,
+  createEditorCommentThreadSchema,
+} from "@/shared/domain/editor-comments/schemas";
 import {
   addCommentCommand,
   createCommentThreadCommand,
@@ -21,43 +24,12 @@ import {
 
 const idSchema = uuidIdSchema("コメント");
 
-const createThreadSchema = z.object({
-  // eslint-disable-next-line local/require-trimmed-text -- Lexical の MarkNode が生成する内部 ID
-  markId: z.string().min(1, { error: "markId は必須です" }),
-  contentType: z
-    .string()
-    .refine(isCommentableContentType, { error: "contentType が無効です" }),
-  contentId: z.uuid({ error: "contentId は有効な UUID である必要があります" }),
-  // 選択範囲をそのまま保持する。`markId` が指す本文と `CommentCard` が出す引用が
-  // 食い違わないよう、インデントや行頭・行末の空白も落とさない。空白だけの選択で
-  // スレッドを作らせない責務は `CommentPlugin` の `addComment` が持つ。
-  // eslint-disable-next-line local/require-trimmed-text -- 本文から取った逐語の引用
-  quotedText: z
-    .string()
-    .min(1, { error: "引用テキストは必須です" })
-    .max(2000, { error: "引用テキストは2000文字以内" }),
-  initialComment: z
-    .string()
-    .trim()
-    .min(1, { error: "コメントは必須です" })
-    .max(5000, { error: "コメントは5000文字以内" }),
-});
-
-const addCommentSchema = z.object({
-  threadId: z.uuid({ error: "threadId は有効な UUID である必要があります" }),
-  content: z
-    .string()
-    .trim()
-    .min(1, { error: "コメントは必須です" })
-    .max(5000, { error: "コメントは5000文字以内" }),
-});
-
 export async function createCommentThread(
   input: CreateThreadInput,
 ): Promise<
   MutationResult<Awaited<ReturnType<typeof createCommentThreadCommand>>>
 > {
-  const validation = createThreadSchema.safeParse(input);
+  const validation = createEditorCommentThreadSchema.safeParse(input);
   if (!validation.success) {
     return createValidationMutationError(validation.error);
   }
@@ -78,7 +50,7 @@ export async function createCommentThread(
 export async function addComment(
   input: AddCommentInput,
 ): Promise<MutationResult<Awaited<ReturnType<typeof addCommentCommand>>>> {
-  const validation = addCommentSchema.safeParse(input);
+  const validation = addEditorCommentSchema.safeParse(input);
   if (!validation.success) {
     return createValidationMutationError(validation.error);
   }
