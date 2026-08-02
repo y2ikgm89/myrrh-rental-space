@@ -138,42 +138,42 @@ export function isHttpOrInternalPublicHref(url: string): boolean {
 }
 
 /**
- * 任意の http(s) / 内部 path。空欄は undefined（Server Action で null 化）。
+ * 任意の href 欄を作る。**未入力は空文字ひとつで表す。**
+ *
+ * 以前は 2 つの optional href スキーマが別々の形で書かれ、同じ「未入力」を
+ * `undefined` / `null` / `""` の 3 通りで表していた。形の違いは実害を出していた:
+ *
+ * - `z.union([z.string(), z.null()]).optional()` は conform の `getZodConstraint` に
+ *   **`required: true`** を出させ、`maxLength` を落とす。実測でサイドバーの
+ *   カスタムウィジェットの `linkUrl` だけが「任意なのに必須」の制約を持っていた
+ *   （`description` / `linkLabel` は `required: false`）。#1812 で入れた形
+ * - `z.preprocess` 版は `z.input` が `unknown` に落ち、conform の `submission.value`
+ *   が呼び出し側と噛み合わない
+ *
+ * **`null` は受け付けない**（破壊的変更）。保存経路は `data.linkUrl || undefined` で
+ * `null` を書かず、保存済み JSON にも `linkUrl: null` は無い（実測）。DB 列の NULL 化は
+ * 保存側の責務であってスキーマの関心ではない。
  */
-export const optionalHttpOrInternalHrefSchema = z.preprocess(
-  (value) => (value === null || value === "" ? undefined : value),
-  z
+function optionalHrefSchema(
+  isAllowed: (url: string) => boolean,
+  error: string,
+) {
+  return z
     .string()
     .trim()
     .max(500)
-    .optional()
-    .refine(
-      (value) => value === undefined || isHttpOrInternalPublicHref(value),
-      {
-        error:
-          "リンクは / から始まるパス、または http(s) の URL を指定してください（javascript: 等は不可）",
-      },
-    ),
+    .refine((value) => value === "" || isAllowed(value), { error })
+    .optional();
+}
+
+/** 任意の http(s) / 内部 path（mailto / tel は不可。Cookie 同意バナー等）。 */
+export const optionalHttpOrInternalHrefSchema = optionalHrefSchema(
+  isHttpOrInternalPublicHref,
+  "リンクは / から始まるパス、または http(s) の URL を指定してください（javascript: 等は不可）",
 );
 
-/**
- * サイドバー custom 等: 空 / null / undefined は許可、値があれば内部 or 許可外部。
- *
- * **`z.preprocess` も `transform` も使わない。** preprocess は入力が本質的に
- * `unknown` なので、この schema を含む object を `z.output` で読むと
- * `linkUrl?: unknown` に落ちる。transform で `null` に畳むと今度は
- * input ≠ output になり、conform（`useForm<z.input<…>>` が house pattern）の
- * `submission.value` が変換前の型で返るので受け取る側と噛み合わない。
- *
- * `union` で `null` を受け、空文字と `null` は `refine` 側で通す。これで
- * 入出力がどちらも `string | null | undefined` に揃い、
- * **`null` を許すという既存の契約**（`safe-href.test.ts`）も保てる。
- * 空 → `undefined` の正規化は保存経路（`SidebarSection` の `|| undefined`）の責務。
- */
-export const optionalSafePublicHrefSchema = z
-  .union([z.string().trim().max(500), z.null()])
-  .optional()
-  .refine((value) => !value || isSafePublicHref(value), {
-    error:
-      "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
-  });
+/** 任意の内部 path / http(s) / mailto / tel（サイドバー custom 等）。 */
+export const optionalSafePublicHrefSchema = optionalHrefSchema(
+  isSafePublicHref,
+  "リンクは / から始まるパス、または http(s) / mailto / tel の URL を指定してください",
+);
