@@ -61,7 +61,7 @@ baseline reset を適用しない。
   （`e2e/fixtures/test-data.ts`）と slug・ステータスで二重定義結合している。
   seed のデータ変更は対応 fixture/spec の同時更新が必須
 
-### seed の存在判定と一意列（`seed-probe-key-contract.test.ts` が機械強制）
+### seed の存在判定と一意列（ESLint `local/seed-respects-unique-constraints` が機械強制）
 
 - **存在判定キーは schema が強制する unique と噛み合わせる。** ずれていると
   再実行が P2002 で中断し、seed は `main().catch` で `process.exit(1)` するので
@@ -77,6 +77,17 @@ baseline reset を適用しない。
 - **partial unique（`@@unique([...], where: { deletedAt: null })` 等）の存在判定は
   述語を where に含める。** 母集合を制約に揃えないと、削除済み行を「存在する」と
   数えて create をスキップしたり、位置列が衝突したりする
+- **リテラルを守れるのは「そのキー空間を空にする削除」だけ。** 直前に
+  `deleteMany` があるだけでは足りない — フィルタ付きの削除は母集合の一部しか
+  消さない。証明になるのは①条件なしの削除、②削除の `where` が一意グループの列を
+  **過不足なく** create と同じ式で固定している場合の 2 つだけ。単一列の unique では
+  その列自身を固定する必要がある（「自分以外の列」が空集合になり、判定が無条件
+  true に潰れるため）。where が変数・spread なら**解析できない＝安全ではない**
+- **この規約は正規表現ではなく AST で強制している。** 前身は seed.ts を grep する
+  テストで、位置・スコープ・入れ子を見られないため 5 回広げた末に 1 回のレビューで
+  穴が 3 つ出た（変数 where を全削除と同一視・単一列で無条件 true・免除が関数単位で
+  漏れる）。`require-trimmed-text` が同じ理由で grep から移ったのと同型。
+  **順序・スコープ・入れ子を含む不変条件に正規表現を使わない**
 - **本番 seed と共用する関数では、宣言済みの構造列だけを reconcile する。**
   `isActive` / `isPublished` を書き始めると `--production` 再実行が管理画面の編集を
   踏み潰す。`seedNavigation(reconcile)` のように dev/prod で挙動を分ける

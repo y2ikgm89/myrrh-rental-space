@@ -1,0 +1,31 @@
+// `local/seed-respects-unique-constraints` の rule テスト用 schema。
+//
+// 本物の `prisma/schema.prisma` には存在しない形（数値の単一列 unique 等）まで
+// 網羅したいので fixture を持つ。実 schema × 実 seed の組み合わせは
+// ESLint 本体（`bun run lint:files -- prisma/seed.ts`）が CI で検証する。
+
+model Ticket {
+  id      String @id
+  eventId String
+  // 複合 unique: リテラルを書いても eventId が固定されていれば安全になりうる。
+  sortOrder Int
+
+  @@unique([eventId, sortOrder])
+}
+
+model Slot {
+  id String @id
+  // 単一列 unique: 「自分以外の列」が空集合になるので、免除判定が
+  // 無条件 true に潰れないことを確かめるための形。
+  position Int    @unique
+  status   String
+}
+
+model Article {
+  id   String  @id
+  slug String
+  deletedAt String?
+
+  // partial unique: 存在判定は述語を同じ値で含める必要がある。
+  @@unique([slug], where: { deletedAt: null })
+}

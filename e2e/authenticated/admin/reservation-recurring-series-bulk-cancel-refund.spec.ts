@@ -74,11 +74,25 @@ import { test, expect } from "../../fixtures/e2e-test";
  * 3 インスタンス分の返金が**直列に**実際の Stripe 呼び出しを行う。
  *
  * 偽の認証情報でも SDK は api.stripe.com へ出るので、egress の無い runner では
- * 1 回あたり `STRIPE_REQUEST_TIMEOUT_MS`（20 秒）まで待つ。以前の 20 秒予算は
- * 「認証情報が無いので即 throw する」前提のもので、その前提は #1828 で失効した。
- * 3 × 20 秒に、監査ログ書き込み（`fireAndForget` → `after()`）の余裕を足す。
+ * 1 回あたり `STRIPE_REQUEST_TIMEOUT_MS`（`src/shared/lib/stripe.ts`、20 秒）まで
+ * 待つ。以前の 20 秒予算は「認証情報が無いので即 throw する」前提のもので、
+ * その前提は #1828 で失効した。3 × 20 秒に、監査ログ書き込み
+ * （`fireAndForget` → `after()`）の余裕を足す。
  */
 const REFUND_PIPELINE_TIMEOUT_MS = 3 * 20_000 + 15_000;
+
+/**
+ * この test の予算。
+ *
+ * 上の poll は **直列に 2 回**走る（series の soft-delete → per-instance の監査ログ）。
+ * 予算を 1 回分から導くと、1 つ目が長引いたときに 2 つ目が自分の timeout に到達する
+ * 前に test ごと落ちる。両方が上限まで使う最悪ケースを覆う必要がある。
+ * `POLL_COUNT` は下の `expect.poll` の数と一致させること。
+ */
+const POLL_COUNT = 2;
+const NAVIGATION_AND_ASSERTION_BUDGET_MS = 30_000;
+const TEST_TIMEOUT_MS =
+  POLL_COUNT * REFUND_PIPELINE_TIMEOUT_MS + NAVIGATION_AND_ASSERTION_BUDGET_MS;
 import {
   findSeriesCancellationAudit,
   getPerInstanceCancellationAudits,
@@ -93,7 +107,7 @@ test.describe
   .serial("admin series bulk-cancel enforces per-instance refund policy (E2E-01)", () => {
   // Playwright 既定の test timeout は 30 秒で、上の poll 予算より短い。
   // **数値を手書きしない** — 予算を変えたときに片方だけ動くのを防ぐため定数から導く。
-  test.describe.configure({ timeout: REFUND_PIPELINE_TIMEOUT_MS + 30_000 });
+  test.describe.configure({ timeout: TEST_TIMEOUT_MS });
 
   let fixture: RefundPolicyBulkCancelFixture;
 
