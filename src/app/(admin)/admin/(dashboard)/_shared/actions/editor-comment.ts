@@ -12,7 +12,7 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 import {
   addEditorCommentSchema,
   createEditorCommentThreadSchema,
-} from "@/shared/domain/editor-comments/schemas";
+} from "./editor-comment-schema";
 import {
   addCommentCommand,
   createCommentThreadCommand,
