@@ -11,10 +11,10 @@ import { eventBroadcastRateLimiter } from "@/shared/lib/rate-limit";
 import { sendEventBroadcast } from "@/shared/domain/email/lib-dispatch";
 import { getEventBroadcastPayload } from "@/shared/domain/events/email-queries";
 import { DomainError } from "@/shared/domain/domain-error";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import { eventBroadcastSchema } from "@/shared/lib/validations/event-broadcast";
 
-const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventIdSchema = entityIdSchema("Event");
 
 /**
  * イベント一斉配信 Server Action (T12)。

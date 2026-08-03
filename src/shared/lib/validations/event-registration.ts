@@ -1,15 +1,12 @@
 import { z } from "zod";
-import {
-  prismaCuid2IdSchema,
-  prismaCuidIdSchema,
-} from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import { isUnknownArray } from "@/shared/lib/serialize";
 import { emailFieldSchema } from "./customer-shared-fields";
 
 const eventRegistrationBaseSchema = z.object({
-  eventId: prismaCuidIdSchema("イベント"),
-  slotId: prismaCuid2IdSchema("タイムスロット"),
-  ticketId: prismaCuidIdSchema("チケット"),
+  eventId: entityIdSchema("Event"),
+  slotId: entityIdSchema("EventTimeSlot"),
+  ticketId: entityIdSchema("EventTicket"),
   name: z
     .string()
     .trim()
@@ -118,7 +115,7 @@ export type PublicEventWaitlistConfirmInput = z.infer<
 
 /** ゲスト / 会員の申込内容セルフ編集フォーム用スキーマ。 */
 export const eventRegistrationEditSchema = eventRegistrationBaseSchema.extend({
-  registrationId: prismaCuidIdSchema("イベント参加申込"),
+  registrationId: entityIdSchema("EventRegistration"),
   quantity: z
     .number()
     .int()

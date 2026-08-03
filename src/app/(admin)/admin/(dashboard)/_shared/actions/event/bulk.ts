@@ -27,10 +27,10 @@ import { sendEventCancelledToAllParticipants } from "@/shared/domain/email/lib-d
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 import { getEventEmailRenderContext } from "@/shared/domain/settings/queries/email-render-context";
 import { ErrorCategory } from "@/shared/lib/errors";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import { deleteEventOutbound, syncEventOutbound } from "./calendar-outbound";
 
-const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventIdSchema = entityIdSchema("Event");
 
 const bulkIdsSchema = z
   .array(eventIdSchema)

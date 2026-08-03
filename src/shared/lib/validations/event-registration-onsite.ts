@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { isEmailFormat } from "@/shared/lib/validations/customer-shared-fields";
 
-import {
-  prismaCuid2IdSchema,
-  prismaCuidIdSchema,
-} from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
 /**
  * 受付での参加登録（当日参加 / 代行登録）の入力スキーマ。
@@ -23,9 +20,9 @@ import {
  * それ以外の項目は同一なので共通部分を切り出してある。
  */
 const onsiteRegistrationBase = {
-  eventId: prismaCuidIdSchema("イベント"),
-  slotId: prismaCuid2IdSchema("イベントタイムスロット"),
-  ticketId: prismaCuidIdSchema("イベントチケット"),
+  eventId: entityIdSchema("Event"),
+  slotId: entityIdSchema("EventTimeSlot"),
+  ticketId: entityIdSchema("EventTicket"),
   name: z.string().trim().min(1, "氏名を入力してください").max(100),
   // `transform` で null に畳まないのは、input ≠ output になると conform の
   // `submission.value` が変換前の型で返り、フォーム側と噛み合わなくなるため。

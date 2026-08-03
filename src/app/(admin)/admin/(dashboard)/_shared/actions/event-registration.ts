@@ -51,7 +51,7 @@ import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
@@ -59,8 +59,8 @@ import {
   walkInRegistrationSchema,
 } from "@/shared/lib/validations/event-registration-onsite";
 
-const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
-const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventRegistrationIdSchema = entityIdSchema("EventRegistration");
+const eventIdSchema = entityIdSchema("Event");
 
 type CancelRegistrationData = {
   registrationId: string;

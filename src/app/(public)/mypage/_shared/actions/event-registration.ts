@@ -26,9 +26,9 @@ import { eventRegistrationEditSchema } from "@/shared/lib/validations/event-regi
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
+const registrationIdSchema = entityIdSchema("EventRegistration");
 
 export async function updateCustomerEventRegistrationAction(
   _prev: SubmissionResult | undefined,

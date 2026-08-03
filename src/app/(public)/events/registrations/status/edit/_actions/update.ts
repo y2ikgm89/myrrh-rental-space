@@ -2,7 +2,6 @@
 
 import { cookies } from "next/headers";
 import type { SubmissionResult } from "@conform-to/react";
-import { z } from "zod";
 import { verifyEventRegistrationStatusToken } from "@/shared/lib/event-registration-status-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { validateTurnstile } from "@/shared/domain/settings/turnstile";
@@ -33,9 +32,12 @@ import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 import { GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-// eslint-disable-next-line local/require-trimmed-text -- URL から渡る申込 ID
-const registrationIdSchema = z.string().min(1, { error: "申込IDが不正です" });
+// 同じ EventRegistration.id を、他の経路は cuid として検証しているのにここだけ
+// `min(1)` で通していた。値は自分で mint した status token の payload 由来なので、
+// 形式検証を揃えても正規の導線は落ちない。
+const registrationIdSchema = entityIdSchema("EventRegistration");
 
 export async function updateGuestEventRegistrationAction(
   _prev: SubmissionResult | undefined,
