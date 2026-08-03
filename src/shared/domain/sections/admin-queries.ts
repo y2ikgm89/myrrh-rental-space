@@ -71,7 +71,7 @@ export async function getPublicPageSectionsQuery(pageId: string) {
 }
 
 export async function getPageWithSectionsQuery(slug: string) {
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: { slug },
     select: {
       id: true,
@@ -97,7 +97,7 @@ export async function getPageWithSectionsQuery(slug: string) {
 }
 
 export async function getPageForEditQuery(slug: string) {
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: { slug },
     select: {
       id: true,

@@ -46,7 +46,7 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
 
   const page = await safeFetch({
     fetch: () =>
-      prisma.page.findUnique({
+      prisma.page.findFirst({
         where: {
           ...PUBLIC_WHERE,
           slug,
@@ -90,7 +90,7 @@ export async function isPublicPageUnpublished(slug: string): Promise<boolean> {
 
   const page = await safeFetch({
     fetch: () =>
-      prisma.page.findUnique({
+      prisma.page.findFirst({
         where: {
           slug,
           isActive: true,
@@ -119,7 +119,7 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.page.findUnique({
+      prisma.page.findFirst({
         where: {
           ...PUBLIC_WHERE,
           slug,

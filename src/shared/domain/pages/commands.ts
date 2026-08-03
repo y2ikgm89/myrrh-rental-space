@@ -29,8 +29,12 @@ function normalizeNullableString(
   return value;
 }
 
+const PAGE_SLUG_RESTORE_CONFLICT_MESSAGE =
+  "同じスラッグのページが既に存在するため復元できません。先に既存のページを削除するか、スラッグを変更してください";
+
 async function ensurePageExists(slug: string) {
-  const page = await prisma.page.findUnique({
+  // slug の unique は isActive: true の行にしか掛かっていないため findUnique は使えない。
+  const page = await prisma.page.findFirst({
     where: { slug },
     select: {
       id: true,
@@ -66,7 +70,7 @@ export async function createPageIfNotExistsCommand(
   slug: string,
   title: string,
 ) {
-  const existingPage = await prisma.page.findUnique({
+  const existingPage = await prisma.page.findFirst({
     where: { slug },
   });
 
@@ -93,7 +97,7 @@ export async function ensureSystemPageCommand(slug: string) {
     return null;
   }
 
-  const existingPage = await prisma.page.findUnique({
+  const existingPage = await prisma.page.findFirst({
     where: { slug },
   });
 
@@ -168,10 +172,10 @@ export async function deletePageCommand(slug: string): Promise<void> {
     throw new DomainError("システムページは削除できません", "VALIDATION");
   }
 
-  await ensurePageExists(slug);
+  const page = await ensurePageExists(slug);
 
   await prisma.page.update({
-    where: { slug },
+    where: { id: page.id },
     data: {
       isActive: false,
       isPublished: false,
@@ -186,10 +190,10 @@ export async function deletePagePermanentlyCommand(
     throw new DomainError("システムページは削除できません", "VALIDATION");
   }
 
-  await ensurePageExists(slug);
+  const page = await ensurePageExists(slug);
 
   await prisma.page.delete({
-    where: { slug },
+    where: { id: page.id },
   });
 }
 
@@ -200,12 +204,32 @@ export async function restorePageCommand(slug: string): Promise<void> {
     throw new DomainError("このページは既にアクティブです", "VALIDATION");
   }
 
-  await prisma.page.update({
-    where: { slug },
-    data: {
-      isActive: true,
-    },
+  // slug の一意性が掛かるのは isActive: true の行だけなので、ゴミ箱に入れている
+  // 間に同じ slug で新しいページが作られうる。そのまま復元すると同じ URL の
+  // ページが 2 枚 active になるため、先に確かめて CONFLICT で返す
+  // （`restorePost` と同じ形）。
+  const conflict = await prisma.page.findFirst({
+    where: { slug, isActive: true, id: { not: page.id } },
+    select: { id: true },
   });
+  if (conflict) {
+    throw new DomainError(PAGE_SLUG_RESTORE_CONFLICT_MESSAGE, "CONFLICT");
+  }
+
+  try {
+    await prisma.page.update({
+      where: { id: page.id },
+      data: {
+        isActive: true,
+      },
+    });
+  } catch (error) {
+    // 上の確認と UPDATE の間に別 tx が同じ slug を作る TOCTOU の押さえ。
+    if (isPrismaUniqueConstraintError(error, "slug")) {
+      throw new DomainError(PAGE_SLUG_RESTORE_CONFLICT_MESSAGE, "CONFLICT");
+    }
+    throw error;
+  }
 }
 
 export async function updatePagePublishedCommand(
@@ -219,10 +243,10 @@ export async function updatePagePublishedCommand(
     );
   }
 
-  await ensurePageExists(slug);
+  const page = await ensurePageExists(slug);
 
   await prisma.page.update({
-    where: { slug },
+    where: { id: page.id },
     data: {
       isPublished,
       publishedAt: isPublished ? new Date() : null,
@@ -293,12 +317,12 @@ export async function updatePageSeoCommand(
   input: UpdatePageSeoInput,
 ): Promise<void> {
   assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
-  await ensurePageExists(slug);
+  const page = await ensurePageExists(slug);
 
   // title は schema で `min(1)` 必須のため直接保存（旧 `|| definition?.title || input.title`
   // は左辺が常に truthy で dead branch だった）
   await prisma.page.update({
-    where: { slug },
+    where: { id: page.id },
     data: {
       title: input.title,
       metaDescription: normalizeNullableString(input.metaDescription),

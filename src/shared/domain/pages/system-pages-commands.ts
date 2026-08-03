@@ -94,7 +94,7 @@ export async function bootstrapSystemPagesCommand(
 ): Promise<void> {
   for (const definition of SYSTEM_PAGES) {
     try {
-      const existingPage = await db.page.findUnique({
+      const existingPage = await db.page.findFirst({
         where: { slug: definition.slug },
         select: { id: true, isSystemPage: true },
       });

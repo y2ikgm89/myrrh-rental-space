@@ -1357,7 +1357,8 @@ model PostTag {
 
 model Page {
   id              String    @id @default(uuid(7)) @db.Uuid
-  slug            String    @unique
+  // 一意性は下記 @@unique(where: isActive) 参照（ゴミ箱の slug は解放する）
+  slug            String
   title           String
   metaDescription String?
   metaKeywords    String?
@@ -1376,6 +1377,7 @@ model Page {
   sections    Section[]
   assignments UserPageAssignment[]
 
+  @@unique([slug], map: "pages_slug_active_key", where: { isActive: true })
   @@index([isPublished, isActive])
   @@index([isSystemPage])
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPages ORs

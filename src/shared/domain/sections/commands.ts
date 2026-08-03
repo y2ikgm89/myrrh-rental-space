@@ -50,7 +50,7 @@ async function ensurePageSectionExists(id: string) {
 }
 
 async function getPageSlugByIdOrThrow(pageId: string): Promise<string> {
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: { id: pageId },
     select: { slug: true },
   });
@@ -112,7 +112,7 @@ export async function createPageSectionCommand(input: {
 
   // ページのテンプレートが許可するセクションのみ追加可能（サーバー権威 floor）。
   // PageEditor のクライアントフィルタと同挙動: テンプレートが未知の場合は制限しない。
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: { id: input.pageId },
     select: { template: true },
   });

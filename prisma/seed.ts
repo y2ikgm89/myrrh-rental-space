@@ -4239,8 +4239,9 @@ async function seedSocialLinks() {
 
 async function seedSystemPageSections() {
   // Seed homepage sections (linked to Page record with slug "home")
-  const homePage = await prisma.page.findUnique({
-    where: { slug: "home" },
+  // slug の unique は isActive: true の partial index なので、母集合を述語に揃える
+  const homePage = await prisma.page.findFirst({
+    where: { slug: "home", isActive: true },
     select: { id: true },
   });
 
@@ -4287,7 +4288,9 @@ async function seedSystemPageSections() {
 
   let createdCount = 0;
   for (const slug of systemPageSlugs) {
-    const page = await prisma.page.findFirst({ where: { slug } });
+    const page = await prisma.page.findFirst({
+      where: { slug, isActive: true },
+    });
     if (!page) continue;
 
     const existingCount = await prisma.section.count({

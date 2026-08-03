@@ -100,7 +100,7 @@ export async function getPagesListQuery(
 export async function getPageBySlugQuery(
   slug: string,
 ): Promise<PageData | null> {
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: { slug },
   });
 
@@ -116,7 +116,7 @@ export async function getPageBySlugQuery(
 export async function getPageIdBySlugQuery(
   slug: string,
 ): Promise<string | null> {
-  const row = await prisma.page.findUnique({
+  const row = await prisma.page.findFirst({
     where: { slug },
     select: { id: true },
   });
@@ -126,7 +126,7 @@ export async function getPageIdBySlugQuery(
 export async function getPageForPublicQuery(
   slug: string,
 ): Promise<PageData | null> {
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.findFirst({
     where: {
       slug,
       isPublished: true,
