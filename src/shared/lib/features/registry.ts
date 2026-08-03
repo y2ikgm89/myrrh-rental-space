@@ -190,7 +190,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     id: "data-retention",
     label: "データ保持ポリシーの自動適用",
     description:
-      "個情法 22 条・GDPR 5(1)(e) 準拠の保持期間強制。保持期間経過後の Session / Verification / login_attempts の DELETE、Reservation.guest 情報の NULL 化、Inquiry の DELETE、INACTIVE Customer の PII 匿名化を毎日実行する。保持月数は Settings.dataRetention JSON が SSoT (0 で該当テーブルを opt-out)。opt-in — 有効化前に月数を業務ルールと合わせて確認すること。",
+      "個情法 22 条・GDPR 5(1)(e) 準拠の保持期間強制。保持期間経過後の Session / Verification の DELETE、Reservation.guest 情報の NULL 化、Inquiry の DELETE、INACTIVE Customer の PII 匿名化を毎日実行する。保持月数は Settings.dataRetention JSON が SSoT (0 で該当テーブルを opt-out)。opt-in — 有効化前に月数を業務ルールと合わせて確認すること。",
     publicRoutes: [],
     pageSlugs: [],
     sectionTypes: [],

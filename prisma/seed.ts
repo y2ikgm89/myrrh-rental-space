@@ -5968,76 +5968,6 @@ async function seedInstagramPosts() {
 }
 
 // =============================================================================
-// Login Attempts（レートリミット・認証追跡）
-// =============================================================================
-
-async function seedLoginAttempts() {
-  const existingCount = await prisma.loginAttempt.count();
-  if (existingCount > 0) {
-    console.log(
-      `⏭️ Skipped login attempts (${existingCount.toString()} already exist)`,
-    );
-    return;
-  }
-
-  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
-  // 識別子はハッシュ化済み IP の mock（実運用は `hashForKey` の結果）
-  const attempts: Array<{
-    identifier: string;
-    email: string;
-    success: boolean;
-    createdAt: Date;
-  }> = [
-    // 成功 3 件
-    {
-      identifier: "hash-ip-203-0-113-10",
-      email: "admin@example.com",
-      success: true,
-      createdAt: minutesAgo(5),
-    },
-    {
-      identifier: "hash-ip-203-0-113-11",
-      email: "editor@example.com",
-      success: true,
-      createdAt: minutesAgo(30),
-    },
-    {
-      identifier: "hash-ip-203-0-113-12",
-      email: "viewer@example.com",
-      success: true,
-      createdAt: minutesAgo(90),
-    },
-    // 失敗 3 件（レートリミット検証用・同一 IP 連続失敗を含む）
-    {
-      identifier: "hash-ip-198-51-100-99",
-      email: "bruteforce@example.com",
-      success: false,
-      createdAt: minutesAgo(2),
-    },
-    {
-      identifier: "hash-ip-198-51-100-99",
-      email: "bruteforce@example.com",
-      success: false,
-      createdAt: minutesAgo(3),
-    },
-    {
-      identifier: "hash-ip-198-51-100-77",
-      email: "typo-address@example.com",
-      success: false,
-      createdAt: minutesAgo(60),
-    },
-  ];
-
-  for (const a of attempts) {
-    await prisma.loginAttempt.create({ data: a });
-  }
-
-  console.log(
-    `✅ Created ${attempts.length.toString()} login attempts (3 success / 3 failed)`,
-  );
-}
-
-// =============================================================================
 // User Page Assignments（EDITOR のページ別編集権限）
 // =============================================================================
 
@@ -6156,7 +6086,6 @@ async function seedDev() {
 
   // Phase 10: 監査・規約同意・レートリミット・Instagram
   await seedAuditLog();
-  await seedLoginAttempts();
   await seedEditorComments();
   await seedInstagramPosts();
 }

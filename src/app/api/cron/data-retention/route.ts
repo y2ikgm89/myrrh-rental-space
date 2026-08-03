@@ -20,7 +20,7 @@ import {
  * feature module `data-retention` が ON かつ Settings.dataRetention の各月数が > 0
  * のフィールドについて、保持期限を経過した以下のデータを削除・匿名化する:
  *
- * - Session / Verification / login_attempts — 完全削除（PII 相当）
+ * - Session / Verification — 完全削除（PII 相当）
  * - Reservation.guest* — 完了予約の guest 情報を NULL 化
  * - Inquiry — 完全削除
  * - INACTIVE Customer — PII フィールドを non-routable 値で匿名化

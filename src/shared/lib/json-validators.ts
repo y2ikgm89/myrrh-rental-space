@@ -288,7 +288,6 @@ export function parseFeatureModules(value: unknown): Record<string, boolean> {
 const dataRetentionConfigSchema = z.object({
   sessionMonths: z.number().int().min(0),
   verificationMonths: z.number().int().min(0),
-  loginAttemptMonths: z.number().int().min(0),
   reservationGuestMonths: z.number().int().min(0),
   inquiryMonths: z.number().int().min(0),
   customerInactiveMonths: z.number().int().min(0),
@@ -301,7 +300,7 @@ export type DataRetentionConfig = z.infer<typeof dataRetentionConfigSchema>;
  * 揃えている（fresh install は SQL DEFAULT を使う、既存 install の欠損値
  * フォールバックはこの const を使う）。値を変える際は両方セットで更新する。
  *
- * - Session/Verification/login_attempts: 6 mo — 認証セッション相当の短期
+ * - Session/Verification: 6 mo — 認証セッション相当の短期
  * - Reservation.guest*: 12 mo — 予約完了後 1 年
  * - Inquiry: 36 mo — 問い合わせ 3 年
  * - Customer (INACTIVE のみ): 84 mo — 電磁的記録の一般 7 年基準
@@ -309,7 +308,6 @@ export type DataRetentionConfig = z.infer<typeof dataRetentionConfigSchema>;
 export const DEFAULT_DATA_RETENTION_CONFIG: DataRetentionConfig = {
   sessionMonths: 6,
   verificationMonths: 6,
-  loginAttemptMonths: 6,
   reservationGuestMonths: 12,
   inquiryMonths: 36,
   customerInactiveMonths: 84,

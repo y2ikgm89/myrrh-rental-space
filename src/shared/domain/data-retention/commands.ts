@@ -30,7 +30,6 @@ import type { Prisma } from "@generated/prisma/client";
  * | ------------------ | ---------- | ------------------------------------------- |
  * | Session            | DELETE     | createdAt < now - sessionMonths             |
  * | Verification       | DELETE     | createdAt < now - verificationMonths        |
- * | login_attempts     | DELETE     | createdAt < now - loginAttemptMonths        |
  * | Reservation.guest* | NULL 化    | endTime + reservationGuestMonths < now      |
  * | Inquiry            | DELETE     | createdAt < now - inquiryMonths             |
  * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ createdAt < cutoff ∧ ¬∃ reservation.endTime ≥ cutoff |
@@ -47,7 +46,6 @@ import type { Prisma } from "@generated/prisma/client";
 export interface DataRetentionPurgeResult {
   readonly sessionsDeleted: number;
   readonly verificationsDeleted: number;
-  readonly loginAttemptsDeleted: number;
   readonly reservationGuestFieldsAnonymized: number;
   readonly inquiriesDeleted: number;
   readonly customersAnonymized: number;
@@ -134,21 +132,6 @@ export async function purgeExpiredVerifications(
   if (months <= 0) return 0;
   const cutoff = monthsAgo(now, months);
   const result = await prisma.verification.deleteMany({
-    where: { createdAt: { lt: cutoff } },
-  });
-  return result.count;
-}
-
-/**
- * 保持期限を過ぎた login_attempts を削除する。
- */
-export async function purgeExpiredLoginAttempts(
-  now: Date,
-  months: number,
-): Promise<number> {
-  if (months <= 0) return 0;
-  const cutoff = monthsAgo(now, months);
-  const result = await prisma.loginAttempt.deleteMany({
     where: { createdAt: { lt: cutoff } },
   });
   return result.count;
@@ -381,14 +364,12 @@ export async function runDataRetentionPurge(
   const [
     sessionsDeleted,
     verificationsDeleted,
-    loginAttemptsDeleted,
     reservationGuestFieldsAnonymized,
     inquiriesDeleted,
     customersAnonymized,
   ] = await Promise.all([
     purgeExpiredSessions(now, config.sessionMonths),
     purgeExpiredVerifications(now, config.verificationMonths),
-    purgeExpiredLoginAttempts(now, config.loginAttemptMonths),
     anonymizeExpiredGuestReservations(now, config.reservationGuestMonths),
     purgeExpiredInquiries(now, config.inquiryMonths),
     anonymizeInactiveCustomers(now, config.customerInactiveMonths),
@@ -397,7 +378,6 @@ export async function runDataRetentionPurge(
   return {
     sessionsDeleted,
     verificationsDeleted,
-    loginAttemptsDeleted,
     reservationGuestFieldsAnonymized,
     inquiriesDeleted,
     customersAnonymized,
