@@ -722,6 +722,17 @@ async function seedLocations(overridePublished?: boolean) {
   // `main().catch` の `process.exit(1)` で以降の phase が丸ごと走らなくなった。
   // create 時に max+1 で採番すれば宣言順がそのまま表示順になり、衝突しえない
   // （`seedSpaceCategories` と同じ形）。
+  // **本番 seed（`seedLocations(false)`）は既存行に触らない。** dev だけが宣言へ
+  // 収束させる。`seedSpaces` と同じ形。
+  //
+  // ここは以前、本番でも既存行を `update` していた。`overridePublished` が効くのは
+  // `isPublished` だけなので、住所「東京都渋谷区神宮前1-1-1 サンプルビル」・電話
+  // 「03-1234-5678」・座標・料金レンジといった**架空のテンプレート値が、管理画面で
+  // 実在の拠点情報に直した行へ書き戻されていた**。しかも公開中の拠点が
+  // `isPublished: false` で非公開に落ちる。`--production` の再実行は運用中に起こりうる
+  // （初期スタッフ追加など）ので、これは実データの破壊になる。
+  const reconcileDeclaredContent = overridePublished === undefined;
+
   for (const loc of locations) {
     const locationData =
       overridePublished !== undefined
@@ -731,6 +742,10 @@ async function seedLocations(overridePublished?: boolean) {
       where: { name: loc.name, isActive: true },
     });
     if (existing) {
+      if (!reconcileDeclaredContent) {
+        console.log(`⏭️ Skipped existing location: ${loc.name}`);
+        continue;
+      }
       await prisma.location.update({
         where: { id: existing.id },
         data: locationData,
