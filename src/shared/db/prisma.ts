@@ -14,6 +14,11 @@ import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { serverEnv } from "@/shared/lib/env/server";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+} from "@/shared/lib/errors/server";
 import { PrismaClient } from "@generated/prisma/client";
 import type * as PrismaModels from "@generated/prisma/client";
 
@@ -43,6 +48,28 @@ const globalStore: GlobalStore = (globalThis.__myrrhPrismaGlobalStore ??= {});
 const isProduction = serverEnv.NODE_ENV === "production";
 
 /**
+ * プール／接続レベルのエラーを構造化ログに出す。
+ *
+ * adapter-pg は `pool.on("error")` と tx 用 connection の `on("error")` を**常に**
+ * 自前で張るので、listener 不在で process が落ちる node-postgres の定番の穴は
+ * 元から塞がっている。ただし callback を渡さないと、その listener の中身は
+ * `Debug("prisma:driver-adapter:pg")` の 1 行だけになる。これは `DEBUG` 環境変数を
+ * 立てないと何も出力しないため、**本番ではアイドル接続のエラーが完全に消える**。
+ *
+ * ここで拾うのは「クエリを実行していない接続」で起きた事象（Neon 側のアイドル切断・
+ * ネットワーク断・サーバー再起動）で、失敗したクエリ自体は呼び出し元が別途 throw を
+ * 受け取る。したがってこれ単体は利用者影響のある障害ではなく WARNING 相当にする
+ * （ERROR にすると Error Reporting が平常運転で鳴り続ける）。
+ */
+function logPoolError(source: string, error: Error): void {
+  logError(error, {
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.MEDIUM,
+    context: { operation: "prismaPool", source },
+  });
+}
+
+/**
  * Prisma driver adapter（adapter-pg）
  *
  * `PrismaPg` に接続設定オブジェクトを渡す Prisma 7 公式推奨形式。`pg.Pool` の
@@ -65,16 +92,28 @@ const isProduction = serverEnv.NODE_ENV === "production";
  *   接続を打ち切り、ハングした BEGIN がプールを食い潰すのを防ぐ。
  * いずれも `pg.Pool` が全 client に転送する（node-postgres 公式）。値は正規の
  * 管理レポート／エクスポートより十分長い 15s に設定（runaway のみを打ち切る）。
+ *
+ * `onPoolError` / `onConnectionError` は**第 2 引数**（`PrismaPgOptions`）に置く。
+ * 第 1 引数は `pg.PoolConfig` としてそのまま node-postgres に渡り、実行時に捨てられる。
+ * object literal 直書きなら余剰プロパティ検査が TS2353 で止めるが、設定を変数に
+ * 組んでから渡すと型も素通りする（実測）。配線は
+ * `__tests__/unit/db/prisma-pool-error-wiring.test.ts` が固定している。
  */
-const adapter = new PrismaPg({
-  connectionString: serverEnv.DATABASE_URL,
-  connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 5_000,
-  idleTimeoutMillis: serverEnv.DATABASE_IDLE_TIMEOUT_MS ?? 300_000,
-  max: serverEnv.DATABASE_POOL_MAX ?? 10,
-  statement_timeout: serverEnv.DATABASE_STATEMENT_TIMEOUT_MS ?? 15_000,
-  idle_in_transaction_session_timeout:
-    serverEnv.DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS ?? 15_000,
-});
+const adapter = new PrismaPg(
+  {
+    connectionString: serverEnv.DATABASE_URL,
+    connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 5_000,
+    idleTimeoutMillis: serverEnv.DATABASE_IDLE_TIMEOUT_MS ?? 300_000,
+    max: serverEnv.DATABASE_POOL_MAX ?? 10,
+    statement_timeout: serverEnv.DATABASE_STATEMENT_TIMEOUT_MS ?? 15_000,
+    idle_in_transaction_session_timeout:
+      serverEnv.DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS ?? 15_000,
+  },
+  {
+    onPoolError: (error) => logPoolError("idlePoolClient", error),
+    onConnectionError: (error) => logPoolError("transactionConnection", error),
+  },
+);
 
 /**
  * アプリ標準の PrismaClient singleton
