@@ -284,7 +284,6 @@ const mockDataRetentionUpsert = mock(() =>
     dataRetention: {
       sessionMonths: 6,
       verificationMonths: 6,
-      loginAttemptMonths: 6,
       reservationGuestMonths: 12,
       inquiryMonths: 36,
       customerInactiveMonths: 84,
