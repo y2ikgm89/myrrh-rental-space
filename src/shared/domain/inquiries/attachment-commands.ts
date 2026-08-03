@@ -9,6 +9,10 @@ import {
   detectMediaMimeFromMagicBytes,
   type SupportedMediaMimeType,
 } from "@/shared/lib/r2/media-magic-bytes";
+import {
+  INQUIRY_ATTACHMENT_FILENAME_MAX_LENGTH,
+  truncateFilename,
+} from "@/shared/lib/r2/filename";
 import { MEDIA_MAX_SIZE_BYTES } from "@/shared/lib/r2/media-size";
 import { putPrivateObject } from "@/shared/lib/r2/upload";
 import {
@@ -181,7 +185,12 @@ export async function uploadInquiryAttachmentCommand(
         r2Key: key,
         mimeType: detected,
         sizeBytes: input.file.size,
-        filename: input.file.name,
+        // multipart の filename は client が自由に決められる。VarChar(255) を
+        // 超えると PostgreSQL が 22001 を投げ、DomainError にならないので 500 になる。
+        filename: truncateFilename(
+          input.file.name,
+          INQUIRY_ATTACHMENT_FILENAME_MAX_LENGTH,
+        ),
         uploadedById:
           input.uploader.type === "STAFF" ? input.uploader.userId : null,
         uploadedByCustomerId:
