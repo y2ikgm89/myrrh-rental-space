@@ -202,7 +202,7 @@ function DataRetentionEnableConfirmSection({
       </p>
       <p className="text-sm text-muted-foreground">
         次回以降の毎日 cron 実行で、保持月数設定を過ぎた Session / 認証トークン
-        / ログイン試行記録 / 予約ゲスト情報 / 問い合わせ /
+        / 予約ゲスト情報 / 問い合わせ /
         非アクティブ顧客の個人情報が不可逆的に削除または匿名化される可能性があります。業務ルールと保持月数を確認してから有効化してください。
       </p>
       <label

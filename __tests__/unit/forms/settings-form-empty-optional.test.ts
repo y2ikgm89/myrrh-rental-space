@@ -893,7 +893,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     const fd = form({
       sessionMonths: "6",
       verificationMonths: "6",
-      loginAttemptMonths: "6",
       reservationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",
@@ -911,7 +910,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     const fd = form({
       sessionMonths: "-1",
       verificationMonths: "6",
-      loginAttemptMonths: "6",
       reservationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",

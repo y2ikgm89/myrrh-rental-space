@@ -63,7 +63,7 @@ webServer が毎回 `bun prisma/seed.ts --dev` を実行するため、spec は 
   cookie の存在を前提にした設計・アサーションを書かない。
   - spec 内で管理ユーザーの存在/状態を保証するには `e2e/helpers/ensure-admin-user.ts` の
     `ensureAdminUser()`（`scripts/e2e/ensure-admin-user.ts` を spawn して
-    E2E 用 admin ユーザー群を upsert + loginAttempt 掃除）。
+    E2E 用 admin ユーザー群を upsert）。
   - **SUPER_ADMIN 以外の role を試すときは専用 project を足す**。
     `chromium-admin-viewer` のように `use: { adminIdentity: "<label>" }` を
     付けると `x-e2e-admin-identity` ヘッダーが載り、そのラベル専用ユーザーとして

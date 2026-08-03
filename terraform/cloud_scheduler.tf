@@ -118,7 +118,7 @@ locals {
       name        = "data-retention"
       schedule    = "30 3 * * *"
       path        = "/api/cron/data-retention"
-      description = "PII retention purge (Session/Verification/login_attempts/Reservation.guest*/Inquiry/INACTIVE Customer, daily 03:30 JST, opt-in via feature module data-retention)"
+      description = "PII retention purge (Session/Verification/Reservation.guest*/Inquiry/INACTIVE Customer, daily 03:30 JST, opt-in via feature module data-retention)"
     },
     {
       name        = "waitlist-expire"
