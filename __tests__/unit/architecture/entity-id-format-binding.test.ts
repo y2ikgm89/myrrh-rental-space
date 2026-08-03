@@ -118,6 +118,17 @@ const WRONG_SAMPLE_FOR_FORMAT: Record<EntityIdFormat, string> = {
 
 const REGISTERED_MODELS = Object.keys(ENTITY_ID_SPECS) as EntityIdModel[];
 
+/**
+ * 戻り値注釈で `EntityIdFormat` 全体へ広げる。
+ *
+ * `ENTITY_ID_SPECS[model].format` をそのまま比較すると、登録が cuid 系だけの今は
+ * TS2367（重なりが無い比較）になる。uuid のモデルを登録した時点で自然に意味を持つ
+ * 書き方にしておく。
+ */
+function formatOf(model: EntityIdModel): EntityIdFormat {
+  return ENTITY_ID_SPECS[model].format;
+}
+
 describe("entityIdSchema と schema.prisma の結合", () => {
   test("schema.prisma のパースが機能している（前提の自己検査）", () => {
     // モデルを 1 つも拾えていないと以降の assertion が全部 vacuous に通る。
@@ -192,6 +203,24 @@ describe("形式で選ぶ ID スキーマを src に戻さない", () => {
     const offenders = trackedSourceFiles().filter((file) =>
       /prismaCuid2?IdSchema/u.test(readFileSync(join(ROOT, file), "utf8")),
     );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("uuidIdSchema に非 uuid モデルの表示名を渡していない", () => {
+    // `uuidIdSchema` はまだ 83 箇所（すべて uuid のモデル）で使われている。
+    // 残る事故経路は「cuid のモデルの ID をこちらで検証してしまう」— #904 そのもの。
+    // 表示名はモデル単位に固定したので、それを鍵に検出できる。
+    const nonUuidLabels = REGISTERED_MODELS.filter(
+      (model) => formatOf(model) !== "uuid",
+    ).map((model) => ENTITY_ID_SPECS[model].label);
+
+    const offenders = trackedSourceFiles().flatMap((file) => {
+      const source = readFileSync(join(ROOT, file), "utf8");
+      return nonUuidLabels
+        .filter((label) => source.includes(`uuidIdSchema("${label}")`))
+        .map((label) => `${file}: uuidIdSchema("${label}")`);
+    });
 
     expect(offenders).toEqual([]);
   });
