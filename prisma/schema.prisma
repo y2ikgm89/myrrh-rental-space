@@ -1691,7 +1691,7 @@ model SettingsCommerce {
   taxReducedRate       Int            @default(8)
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
 
-  refundPolicy Json? @db.JsonB
+  refundPolicy Json?
 
   @@map("settings_commerces")
 }
@@ -2593,7 +2593,7 @@ model Receipt {
   taxAmount           Int                @default(0)
   taxRate             Int
   // 発行時点の Settings snapshot (凍結)
-  issuerSnapshot      Json               @db.JsonB
+  issuerSnapshot      Json              
   // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。
   // 元 Receipt は監査証跡として残り、chain (reissuedTo) 経由で辿れる。
   // revision は「何回目の再発行か」を示す counter (元 = 0、1 回目 reissue = 1)。
