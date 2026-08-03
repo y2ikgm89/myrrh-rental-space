@@ -121,7 +121,8 @@ export async function syncEventTicketsCommand(
 
   const existingTickets = await tx.eventTicket.findMany({
     where: { eventId },
-    select: { id: true },
+    // 申込の有無だけ判れば良いので 1 件で打ち切る（slot 側と同じ形）
+    select: { id: true, registrations: { select: { id: true }, take: 1 } },
   });
   const existingTicketIds = new Set(existingTickets.map((ticket) => ticket.id));
 
@@ -131,9 +132,19 @@ export async function syncEventTicketsCommand(
     }
   }
 
-  const toDelete = existingTickets
-    .map((e) => e.id)
-    .filter((existingId) => !incomingIds.has(existingId));
+  const removedTickets = existingTickets.filter(
+    (existing) => !incomingIds.has(existing.id),
+  );
+
+  // `event_registrations.ticketId` は onDelete: RESTRICT。ガードが無いと Prisma が
+  // P2003 を投げ、これは DomainError ではないので管理画面には生の Prisma エラーが出る。
+  // 同型の EventTimeSlot 削除（slot-commands.ts）は申込済みを事前に弾いており、
+  // チケット側だけが取り残されていた。
+  if (removedTickets.some((ticket) => ticket.registrations.length > 0)) {
+    throw new DomainError("申込済みのチケットは削除できません", "VALIDATION");
+  }
+
+  const toDelete = removedTickets.map((ticket) => ticket.id);
   if (toDelete.length > 0) {
     await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
   }
