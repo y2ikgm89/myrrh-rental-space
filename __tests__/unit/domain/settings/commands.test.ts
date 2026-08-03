@@ -1283,7 +1283,6 @@ describe("updateDataRetentionSettings", () => {
     const config = {
       sessionMonths: 6,
       verificationMonths: 6,
-      loginAttemptMonths: 6,
       reservationGuestMonths: 12,
       inquiryMonths: 36,
       customerInactiveMonths: 84,
@@ -1300,7 +1299,6 @@ describe("updateDataRetentionSettings", () => {
           dataRetention: {
             sessionMonths: 6,
             verificationMonths: 6,
-            loginAttemptMonths: 6,
             reservationGuestMonths: 12,
             inquiryMonths: 36,
             customerInactiveMonths: 84,
@@ -1317,7 +1315,6 @@ describe("updateDataRetentionSettings", () => {
       updateDataRetentionSettings({
         sessionMonths: 6,
         verificationMonths: 6,
-        loginAttemptMonths: 6,
         reservationGuestMonths: 12,
         inquiryMonths: 36,
         customerInactiveMonths: 84,

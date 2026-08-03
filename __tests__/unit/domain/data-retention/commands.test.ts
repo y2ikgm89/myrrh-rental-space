@@ -16,9 +16,6 @@ const mockSessionDeleteMany = mock<
 const mockVerificationDeleteMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
-const mockLoginAttemptDeleteMany = mock<
-  (args?: MockArgs) => Promise<DeleteManyResult>
->(() => Promise.resolve({ count: 0 }));
 const mockReservationUpdateMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
@@ -54,9 +51,6 @@ mock.module("@/shared/db/prisma", () => ({
     session: { deleteMany: (args?: MockArgs) => mockSessionDeleteMany(args) },
     verification: {
       deleteMany: (args?: MockArgs) => mockVerificationDeleteMany(args),
-    },
-    loginAttempt: {
-      deleteMany: (args?: MockArgs) => mockLoginAttemptDeleteMany(args),
     },
     reservation: {
       updateMany: (args?: MockArgs) => mockReservationUpdateMany(args),
@@ -102,7 +96,6 @@ mock.module("@/shared/lib/errors/server", () => ({
 const {
   purgeExpiredSessions,
   purgeExpiredVerifications,
-  purgeExpiredLoginAttempts,
   anonymizeExpiredGuestReservations,
   purgeExpiredInquiries,
   anonymizeInactiveCustomers,
@@ -116,7 +109,6 @@ describe("parseDataRetentionConfig", () => {
     const input = {
       sessionMonths: 3,
       verificationMonths: 3,
-      loginAttemptMonths: 3,
       reservationGuestMonths: 6,
       inquiryMonths: 12,
       customerInactiveMonths: 60,
@@ -128,7 +120,6 @@ describe("parseDataRetentionConfig", () => {
     // sessionMonths だけ落ちている
     const input = {
       verificationMonths: 3,
-      loginAttemptMonths: 3,
       reservationGuestMonths: 6,
       inquiryMonths: 12,
       customerInactiveMonths: 60,
@@ -189,10 +180,6 @@ describe("purge commands", () => {
     mockVerificationDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
     );
-    mockLoginAttemptDeleteMany.mockClear();
-    mockLoginAttemptDeleteMany.mockImplementation(() =>
-      Promise.resolve({ count: 0 }),
-    );
     mockReservationUpdateMany.mockClear();
     mockReservationUpdateMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
@@ -222,14 +209,12 @@ describe("purge commands", () => {
   test("months=0 なら各 purge は Prisma を触らず 0 を返す (opt-out 契約)", async () => {
     expect(await purgeExpiredSessions(NOW, 0)).toBe(0);
     expect(await purgeExpiredVerifications(NOW, 0)).toBe(0);
-    expect(await purgeExpiredLoginAttempts(NOW, 0)).toBe(0);
     expect(await anonymizeExpiredGuestReservations(NOW, 0)).toBe(0);
     expect(await purgeExpiredInquiries(NOW, 0)).toBe(0);
     expect(await anonymizeInactiveCustomers(NOW, 0)).toBe(0);
 
     expect(mockSessionDeleteMany).not.toHaveBeenCalled();
     expect(mockVerificationDeleteMany).not.toHaveBeenCalled();
-    expect(mockLoginAttemptDeleteMany).not.toHaveBeenCalled();
     expect(mockReservationUpdateMany).not.toHaveBeenCalled();
     expect(mockInquiryDeleteMany).not.toHaveBeenCalled();
     expect(mockCustomerFindMany).not.toHaveBeenCalled();
@@ -238,17 +223,15 @@ describe("purge commands", () => {
   });
 
   test("months>0 で対象 0 件 → 0 を返す (Prisma は 1 度呼ばれる)", async () => {
-    const [s, v, l, r, i] = await Promise.all([
+    const [s, v, r, i] = await Promise.all([
       purgeExpiredSessions(NOW, 6),
       purgeExpiredVerifications(NOW, 6),
-      purgeExpiredLoginAttempts(NOW, 6),
       anonymizeExpiredGuestReservations(NOW, 12),
       purgeExpiredInquiries(NOW, 36),
     ]);
-    expect([s, v, l, r, i]).toEqual([0, 0, 0, 0, 0]);
+    expect([s, v, r, i]).toEqual([0, 0, 0, 0]);
     expect(mockSessionDeleteMany).toHaveBeenCalledTimes(1);
     expect(mockVerificationDeleteMany).toHaveBeenCalledTimes(1);
-    expect(mockLoginAttemptDeleteMany).toHaveBeenCalledTimes(1);
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
     expect(mockInquiryDeleteMany).toHaveBeenCalledTimes(1);
     // 対象 attachment が 0 件なら R2 delete は呼ばれない (no-op 短絡)。
@@ -372,7 +355,6 @@ describe("purge commands", () => {
     expect(result).toEqual({
       sessionsDeleted: 3,
       verificationsDeleted: 0,
-      loginAttemptsDeleted: 0,
       reservationGuestFieldsAnonymized: 5,
       inquiriesDeleted: 2,
       customersAnonymized: 1,

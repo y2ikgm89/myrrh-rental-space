@@ -25,7 +25,6 @@ const mockGetDataRetentionConfig = mock(() =>
 interface PurgeResult {
   sessionsDeleted: number;
   verificationsDeleted: number;
-  loginAttemptsDeleted: number;
   reservationGuestFieldsAnonymized: number;
   inquiriesDeleted: number;
   customersAnonymized: number;
@@ -34,7 +33,6 @@ interface PurgeResult {
 const zeroResult: PurgeResult = {
   sessionsDeleted: 0,
   verificationsDeleted: 0,
-  loginAttemptsDeleted: 0,
   reservationGuestFieldsAnonymized: 0,
   inquiriesDeleted: 0,
   customersAnonymized: 0,
@@ -168,7 +166,6 @@ describe("/api/cron/data-retention", () => {
     const nonZeroResult = {
       sessionsDeleted: 3,
       verificationsDeleted: 1,
-      loginAttemptsDeleted: 12,
       reservationGuestFieldsAnonymized: 5,
       inquiriesDeleted: 2,
       customersAnonymized: 0,

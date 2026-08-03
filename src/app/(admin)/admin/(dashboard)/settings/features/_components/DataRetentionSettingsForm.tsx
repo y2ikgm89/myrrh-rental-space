@@ -40,11 +40,6 @@ const RETENTION_FIELDS = [
     hint: "Better Auth の Verification トークン",
   },
   {
-    key: "loginAttemptMonths",
-    label: "ログイン試行記録",
-    hint: "login_attempts テーブル",
-  },
-  {
     key: "reservationGuestMonths",
     label: "予約ゲスト情報",
     hint: "予約終了後に guest フィールドを NULL 化",

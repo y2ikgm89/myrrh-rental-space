@@ -52,12 +52,6 @@ await withScript("ensure-admin-user", async (prisma) => {
           providerId: "credential",
         },
       });
-
-      await tx.loginAttempt.deleteMany({
-        where: {
-          email: adminUser.email,
-        },
-      });
     }
   });
 });
