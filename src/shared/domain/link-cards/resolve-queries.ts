@@ -145,7 +145,12 @@ async function resolveEventCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   const rows = await prisma.event.findMany({
-    where: { id: { in: ids }, status: EventStatus.PUBLISHED },
+    // `deletedAt: null` を落とすと、ゴミ箱に入れたイベントのカードが記事・お知らせ・
+    // スペース説明の本文に描画され続け、クリック先が 404 になる。この関数の docblock が
+    // 約束している「削除 / 非公開なら Map に含めない」を満たすのは両方揃ってから。
+    // 公開側の他のイベントクエリ（events/public-queries.ts、calendar-sync.ts）は
+    // いずれも status と deletedAt を対で見ている。
+    where: { id: { in: ids }, status: EventStatus.PUBLISHED, deletedAt: null },
     select: { id: true, slug: true, title: true, thumbnailUrl: true },
   });
 

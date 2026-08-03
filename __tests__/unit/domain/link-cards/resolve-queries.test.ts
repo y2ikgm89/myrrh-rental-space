@@ -133,14 +133,19 @@ describe("resolveLinkCardsByType", () => {
     expect(card?.href).toBe("/spaces/studio");
   });
 
-  test("event: PUBLISHED フィルタ + href は /events/<slug>", async () => {
+  test("event: PUBLISHED + 未削除フィルタ、href は /events/<slug>", async () => {
     mockEventFindMany.mockResolvedValueOnce([
       { id: "e1", slug: "party", title: "パーティ", thumbnailUrl: null },
     ]);
     const map = await resolveLinkCardsByType("event", ["e1"]);
+    // 旧テストは status だけを assert しており、実装が deletedAt を見ていないことを
+    // 追認していた。削除済みイベントのカードが本文に残り 404 になる欠陥を通していた。
     expect(mockEventFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ status: "PUBLISHED" }),
+        where: expect.objectContaining({
+          status: "PUBLISHED",
+          deletedAt: null,
+        }),
       }),
     );
     expect(map.get("e1")?.href).toBe("/events/party");
