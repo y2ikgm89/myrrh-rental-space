@@ -41,8 +41,22 @@ reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 S
   あると terms_documents の slug 一意性が失われたまま停止する
 - 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加）を含む migration は、
   **適用前に違反行が 0 件であることを本番で確認する**
-- どうしても原子性が要るなら Prisma 公式の opt-in どおり `BEGIN;` / `COMMIT;` を
-  自分で書く（`CREATE INDEX CONCURRENTLY` はトランザクション内で使えない点に注意）
+- **既存データに依存して失敗しうる DDL を複数文含む migration は `BEGIN;` / `COMMIT;` で
+  包む**（Prisma 公式の opt-in。`CREATE INDEX CONCURRENTLY` はトランザクション内で
+  使えない点に注意）。対象は `ADD CONSTRAINT` (CHECK / UNIQUE / FOREIGN KEY) /
+  `CREATE UNIQUE INDEX` / `ALTER COLUMN ... TYPE` / `SET NOT NULL`。
+  gate は `__tests__/unit/architecture/migration-atomicity.test.ts`（20260803140000
+  以降が対象。それ以前は絶対規約 #7 で編集できないため境界を切ってある）。
+  境界直前の 20260803120000 / 20260803130000 は規約を書く前に merge されており、
+  gate 内の `PRE_DEPLOY_CHECKS` に**適用前の確認内容**を残してある
+
+  包まないと、本番データ次第で前半だけ適用された状態で止まり、`_prisma_migrations` に
+  失敗が記録されて**以降のデプロイが全部ブロック**される。復旧は本番 DB の手作業になる。
+
+  **代償**: 包むと失敗時の表示が実際の違反ではなく
+  `current transaction is aborted, commands ignored until end of transaction block`
+  になる（実測）。そのため migration ヘッダに**適用前に本番で流す確認クエリ**を
+  必ず書く。原因はそちらで特定する
 
 `.squawk.toml` の `assume_in_transaction` はこの実態に合わせて `false`。
 
