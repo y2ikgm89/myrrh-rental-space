@@ -179,6 +179,17 @@ const safeFixtures: ReadonlyArray<{
     sql: 'ALTER TABLE "users" ADD COLUMN "foo" TEXT;',
   },
   {
+    // 一覧の `RENAME TO` は `ALTER TABLE ...` の下にネストしている。ALTER INDEX /
+    // ALTER SEQUENCE / ALTER TYPE の RENAME TO は発動しない。Prisma は index の
+    // `map` を変えると ALTER INDEX ... RENAME TO を出すので、これは実際に起こる形。
+    name: "ALTER INDEX ... RENAME TO (ALTER TABLE 配下ではない)",
+    sql: 'ALTER INDEX "posts_slug_key" RENAME TO "posts_slug_active_key";',
+  },
+  {
+    name: "ALTER SEQUENCE ... RENAME TO (ALTER TABLE 配下ではない)",
+    sql: 'ALTER SEQUENCE "s" RENAME TO "s2";',
+  },
+  {
     name: "DROP NOT NULL (nullable relaxation, safe)",
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" DROP NOT NULL;',
   },
@@ -211,44 +222,62 @@ const safeFixtures: ReadonlyArray<{
 ];
 
 /**
- * workflow 正規表現に現れる語 → 運用者向けドキュメントでの表記 の対応表。
+ * workflow の正規表現から「発動条件の一覧」を**構造ごと**導出する。
  *
- * **この表を手で保守してはいけない側（= workflow）から検査する。** 前版は
- * この表を起点に「表 → workflow」だけを見ていたため、workflow に新しい選択肢が
- * 増えても表に足さなければ何も起きなかった。実際 `TYPE`（= `ALTER COLUMN ... TYPE`）は
- * 表から漏れていて、運用者向け一覧からその記載を消しても検出できない状態だった。
+ * 手で保守する対応表は置かない。前版は語だけを平坦に抜き出していたため、
+ * `RENAME TO` が `ALTER TABLE ...` の下にネストしている事実が落ち、
+ * ドキュメントは「RENAME TO は停止する」と読める形になっていた。実際には
+ * `ALTER INDEX ... RENAME TO`（Prisma が index の `map` 変更で出す）は
+ * **発動しない**（実測で確認）。4 つのドキュメントが揃って同じ誤りを書いても、
+ * 語の一致しか見ない検査では気づけない。
  *
- * 今は workflow の正規表現から語を機械抽出し、**抽出したすべての語が**
- * structural（前置詞的な語）か、この表に prose を持つかのどちらかであることを要求する。
- * 新しい選択肢を workflow に足すと、表に足すまでテストが落ちる。
+ * 正規表現の入れ子（`ALTER TABLE .*( … | ALTER COLUMN .*( … ) )`）をそのまま
+ * 前置詞として畳み込み、`ALTER TABLE ... ALTER COLUMN ... TYPE` のような
+ * 完全修飾の表記を作る。これでドキュメント側は導出結果と集合一致するだけでよく、
+ * 対応表の drift という失敗モード自体が無くなる。
  */
-const STRUCTURAL_PHRASES: ReadonlySet<string> = new Set([
-  // それ自体は発動条件ではなく、後続の語を修飾する前置部分
-  "ALTER TABLE",
-  "ALTER COLUMN",
-]);
+function splitTopLevelAlternatives(pattern: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of pattern) {
+    if (char === "(") depth += 1;
+    else if (char === ")") depth -= 1;
+    if (char === "|" && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+}
 
-const TRIGGER_PROSE: ReadonlyMap<string, string> = new Map([
-  ["DROP COLUMN", "DROP COLUMN"],
-  ["DROP CONSTRAINT", "DROP CONSTRAINT"],
-  ["RENAME COLUMN", "RENAME COLUMN"],
-  ["RENAME TO", "RENAME TO"],
-  ["SET NOT NULL", "ALTER COLUMN ... SET NOT NULL"],
-  ["DROP DEFAULT", "ALTER COLUMN ... DROP DEFAULT"],
-  // 正規表現上は `ALTER COLUMN ... (…|TYPE)` の裸の `TYPE`。
-  // ドキュメントでは前置部分まで書かないと `DROP TYPE` と読み分けられない。
-  ["TYPE", "ALTER COLUMN ... TYPE"],
-  ["DROP TABLE", "DROP TABLE"],
-  ["DROP TYPE", "DROP TYPE"],
-]);
+/** 前置部分（`ALTER TABLE .*`）を人間向けの `ALTER TABLE ...` に均す。 */
+function toPrefixProse(raw: string): string {
+  return raw.replaceAll(".*", "...").replace(/\s+/gu, " ").trim();
+}
 
-/**
- * 正規表現から大文字語の連なりを抽出する。`[[:space:]]+` を空白に戻したうえで、
- * 正規表現メタ文字（`|` `(` `)` `.` `*` `+`）を区切りとして扱う。
- */
-function extractPhrases(pattern: string): string[] {
+function deriveTriggerProse(pattern: string): string[] {
   const normalized = pattern.replaceAll("[[:space:]]+", " ");
-  return [...new Set(normalized.match(/[A-Z]+(?: [A-Z]+)*/gu) ?? [])];
+  const items: string[] = [];
+
+  for (const branch of splitTopLevelAlternatives(normalized)) {
+    const groupStart = branch.indexOf("(");
+    if (groupStart === -1) {
+      items.push(branch.replace(/\s+/gu, " ").trim());
+      continue;
+    }
+    const groupEnd = branch.lastIndexOf(")");
+    const prefix = toPrefixProse(branch.slice(0, groupStart));
+    const inner = branch.slice(groupStart + 1, groupEnd);
+    for (const nested of deriveTriggerProse(inner)) {
+      items.push(`${prefix} ${nested}`.replace(/\s+/gu, " ").trim());
+    }
+  }
+
+  return items;
 }
 
 const TRIGGER_BLOCK_START = "<!-- breaking-triggers:start -->";
@@ -343,49 +372,22 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       expect(detectsBreaking(fixture.sql)).toBe(false);
     });
   }
-  test("workflow と対応表が双方向で一致する", () => {
-    const phrases = extractPhrases(breakingPattern);
-
-    // workflow → 表: 正規表現に選択肢が増えたら、表に足すまで落ちる
-    const unmapped = phrases.filter(
-      (phrase) => !STRUCTURAL_PHRASES.has(phrase) && !TRIGGER_PROSE.has(phrase),
-    );
-
-    // 表 → workflow: 正規表現から選択肢が**消えた**ときに落ちる。これが無いと、
-    // 削除された条件の対応表とドキュメント記載が古いまま生き残り「まだ停止する」と
-    // 誤読させる（消えた語は unmapped からも required からも同時に落ちるので、
-    // workflow 起点の片方向検査では気づけない）。
-    const stale = [...TRIGGER_PROSE.keys()].filter(
-      (phrase) => !phrases.includes(phrase),
-    );
-
-    expect({
-      unmapped,
-      stale,
-      hint:
-        unmapped.length > 0 || stale.length > 0
-          ? "deploy-production.yml の正規表現と TRIGGER_PROSE を一致させる。増えたら表とドキュメントに足し、減らしたら表とドキュメントからも消す"
-          : "",
-    }).toEqual({ unmapped: [], stale: [], hint: "" });
-  });
-
   test("運用者向けドキュメントの発動条件一覧が workflow と完全一致する", () => {
-    // 検査対象は workflow から抽出した語。表を経由するのは表記の解決だけ。
-    const required = extractPhrases(breakingPattern)
-      .filter((phrase) => !STRUCTURAL_PHRASES.has(phrase))
-      .map((phrase) => TRIGGER_PROSE.get(phrase) ?? phrase)
-      .sort();
-    expect(required.length).toBeGreaterThan(0);
+    const derived = deriveTriggerProse(breakingPattern).sort();
+    // 導出が壊れて空になると以降が空回りで緑になる（vacuous pass 防止）
+    expect(derived.length).toBeGreaterThan(5);
+    // 前置詞が畳み込まれていること（平坦化への逆戻りを検出）
+    expect(derived).toContain("ALTER TABLE ... RENAME TO");
+    expect(derived).toContain("ALTER TABLE ... ALTER COLUMN ... TYPE");
 
-    // 「不足」だけでなく「余分」も見る。workflow から条件を削除したとき、
-    // TRIGGER_PROSE から消しただけでドキュメントに残すと、運用者は「まだ停止する」と
-    // 誤読して不要な計画停止を組む。部分集合ではなく集合の一致を要求する。
+    // 不足だけでなく余分も見る。条件を減らしたのにドキュメントに残すと、
+    // 運用者は「まだ停止する」と誤読して不要な計画停止を組む。
     const mismatches: string[] = [];
     for (const relativePath of TRIGGER_LIST_DOCS) {
       const documented = readTriggerBlock(relativePath).sort();
-      if (JSON.stringify(documented) !== JSON.stringify(required)) {
-        const missing = required.filter((item) => !documented.includes(item));
-        const extra = documented.filter((item) => !required.includes(item));
+      if (JSON.stringify(documented) !== JSON.stringify(derived)) {
+        const missing = derived.filter((item) => !documented.includes(item));
+        const extra = documented.filter((item) => !derived.includes(item));
         mismatches.push(
           `${relativePath}: 不足=[${missing.join(", ")}] 余分=[${extra.join(", ")}]`,
         );
@@ -396,7 +398,7 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       mismatches,
       hint:
         mismatches.length > 0
-          ? "breaking mode の発動条件を変えたら、各ドキュメントの breaking-triggers ブロックも同じ集合にする。不足は「停止しない」と誤読させ、余分は不要な計画停止を組ませる"
+          ? "deploy-production.yml の正規表現を変えたら、各ドキュメントの breaking-triggers ブロックも導出結果と同じ集合にする。不足は「停止しない」と誤読させ、余分は不要な計画停止を組ませる"
           : "",
     }).toEqual({ mismatches: [], hint: "" });
   });
