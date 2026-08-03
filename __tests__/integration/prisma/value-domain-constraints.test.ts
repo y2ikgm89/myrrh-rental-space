@@ -178,6 +178,20 @@ describe("値域 CHECK 制約", () => {
     );
   });
 
+  test("接続ステータスに未知の値を入れられない", async () => {
+    // singleton 行は存在するので UPDATE で叩く。行が無いと 0 行更新で
+    // 例外が出ず「拒否された」と読み違えるため、行数も確かめる。
+    const rows = await client.query<{ readonly n: number }>(
+      `SELECT count(*)::int AS n FROM "settings_stripes"`,
+    );
+    expect(rows.rows[0]?.n ?? 0).toBeGreaterThan(0);
+
+    await expectRejectedBy(
+      "settings_stripes_connection_status_check",
+      `UPDATE "settings_stripes" SET "stripeConnectionStatus" = 'typo'`,
+    );
+  });
+
   test("配列前提の jsonb 列にオブジェクトを入れられない", async () => {
     // 7 本まとめて 1 テストにせず、代表 2 本を別々の表で叩く。CHECK 名まで
     // 突き合わせるので、どちらかの制約が落ちたら名指しで分かる。
