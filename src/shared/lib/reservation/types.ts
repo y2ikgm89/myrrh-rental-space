@@ -12,8 +12,10 @@ import type {
 /**
  * Prismaトランザクションクライアント型
  *
- * Prisma拡張クライアントとの互換性を確保するため、
- * reservationモデルのfindFirstメソッドのみを要求する型定義。
+ * 空き判定が実際に使う findFirst だけを要求する最小構造型。呼び出し側を
+ * `Prisma.TransactionClient` に縛らず、テストでも差し替えやすくする
+ * （app 標準 client は `$extends` していないので互換性のための回避策ではない。
+ * 経緯は `src/shared/domain/reservations/series-advisory-lock.ts` のコメント）。
  * where / orderBy は Prisma 公式の Input 型を使用して field 名 typo / type drift
  * を build 時検出する。
  */
