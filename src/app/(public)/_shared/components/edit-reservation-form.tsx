@@ -143,11 +143,20 @@ export function EditReservationForm({
   const spaceCapacity = selectedSpace?.capacity ?? 1;
   const guestCount = Number(numberOfGuestsControl.value ?? numberOfGuests);
 
-  useEffect(() => {
-    if (guestCount > spaceCapacity) {
-      numberOfGuestsControl.change(String(spaceCapacity));
-    }
-  }, [guestCount, spaceCapacity, numberOfGuestsControl]);
+  // **定員超過を黙って切り詰めない。**
+  //
+  // ここには以前 `guestCount > spaceCapacity` なら `change(String(spaceCapacity))`
+  // する effect があり、送信値も `Math.min(guestCount, spaceCapacity)` だった。
+  // 利用人数が保存されていなかった頃は初期値が常に 1 だったので表面化しなかったが、
+  // 実際の人数を読むようになると、20 名の予約で定員 1 名のスペースを選んだ瞬間に
+  // **人数が 1 に書き換わって送信が通り、記録まで 1 名に化ける**。サーバーの定員
+  // gate は「1 名なら定員 1 に収まる」と正しく判定してしまうので、client の
+  // 切り詰めが gate を無効化していた。管理者が現スペースの定員を下げた後の
+  // 時間だけの変更でも、同じ経路で記録が壊れる。
+  //
+  // 値はそのまま保持し、超過は下のメッセージと server の gate で止める。利用者が
+  // 「人数を減らす」か「大きいスペースを選ぶ」かを明示的に決める。
+  const exceedsCapacity = guestCount > spaceCapacity;
 
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
@@ -192,7 +201,7 @@ export function EditReservationForm({
       <input
         type="hidden"
         name={fields.numberOfGuests.name}
-        value={String(Math.min(guestCount, spaceCapacity))}
+        value={String(guestCount)}
       />
       <input type="hidden" name={fields.version.name} value={String(version)} />
 
@@ -223,12 +232,17 @@ export function EditReservationForm({
           </span>
         </p>
         <GuestStepper
-          value={Math.min(guestCount, spaceCapacity)}
+          value={guestCount}
           max={spaceCapacity}
           onChange={(count) => {
             numberOfGuestsControl.change(String(count));
           }}
         />
+        {exceedsCapacity && (
+          <p className="mt-2 text-sm text-destructive" role="alert">
+            利用人数がスペースの定員（{spaceCapacity}名）を超えています
+          </p>
+        )}
         {fields.numberOfGuests.errors?.[0] !== undefined && (
           <p className="mt-2 text-sm text-destructive" role="alert">
             {fields.numberOfGuests.errors[0]}
