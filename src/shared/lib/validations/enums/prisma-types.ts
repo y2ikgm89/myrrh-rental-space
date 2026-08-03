@@ -46,7 +46,6 @@ export {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
   TaxDisplayMode,
-  TaxInputMode,
   CalendarSyncMethod,
   AnalyticsType,
   DiscountCombinationMode,

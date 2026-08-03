@@ -101,7 +101,6 @@ const ALL_ENUMS = {
     tax_included: "tax_included",
     both: "both",
   },
-  TaxInputMode: { tax_excluded: "tax_excluded", tax_included: "tax_included" },
   CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
   AnalyticsType: { ga4: "ga4", gtm: "gtm" },
   DiscountCombinationMode: { best: "best", both: "both" },
