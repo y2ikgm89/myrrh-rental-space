@@ -251,8 +251,16 @@ function extractPhrases(pattern: string): string[] {
   return [...new Set(normalized.match(/[A-Z]+(?: [A-Z]+)*/gu) ?? [])];
 }
 
-/** 発動条件を「網羅的な一覧」として書いている運用者向けドキュメント。 */
+/**
+ * 発動条件を「網羅的な一覧」として書いている文書。
+ *
+ * **AGENTS.md はここに入る。** 一度は「列挙しない側」に分類したが、実際の本文は
+ * 全条件を並べていた。列挙を持つ文書を弱い検査（ポインタの有無だけ）に置くと、
+ * workflow に条件が増えたとき「`deploy-production.yml` と書いてあるから合格」に
+ * なってしまい、ルート指示がまた古いまま残る。**列挙しているなら網羅検査に載せる。**
+ */
 const TRIGGER_LIST_DOCS: readonly string[] = [
+  "AGENTS.md",
   ".claude/rules/deploy-infra.md",
   ".claude/rules/migrations.md",
   ".claude/skills/deploy-debug/SKILL.md",
@@ -264,7 +272,7 @@ const TRIGGER_LIST_DOCS: readonly string[] = [
  * （AGENTS.md は以前「`ALTER COLUMN TYPE` は計画ダウンタイムを発動しない
  * （DROP/RENAME だけ）」と**事実と逆**のことを書いていた。）
  */
-const SSOT_POINTER_DOCS: readonly string[] = ["CLAUDE.md", "AGENTS.md"];
+const SSOT_POINTER_DOCS: readonly string[] = ["CLAUDE.md"];
 const SSOT_POINTER = "deploy-production.yml";
 
 describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
@@ -306,19 +314,30 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       expect(detectsBreaking(fixture.sql)).toBe(false);
     });
   }
-  test("workflow の全選択肢が対応表に載っている（表 → workflow の片方向にしない）", () => {
-    // workflow 側を起点にする。表に無い語が増えたらここで落ちる。
-    const unmapped = extractPhrases(breakingPattern).filter(
+  test("workflow と対応表が双方向で一致する", () => {
+    const phrases = extractPhrases(breakingPattern);
+
+    // workflow → 表: 正規表現に選択肢が増えたら、表に足すまで落ちる
+    const unmapped = phrases.filter(
       (phrase) => !STRUCTURAL_PHRASES.has(phrase) && !TRIGGER_PROSE.has(phrase),
+    );
+
+    // 表 → workflow: 正規表現から選択肢が**消えた**ときに落ちる。これが無いと、
+    // 削除された条件の対応表とドキュメント記載が古いまま生き残り「まだ停止する」と
+    // 誤読させる（消えた語は unmapped からも required からも同時に落ちるので、
+    // workflow 起点の片方向検査では気づけない）。
+    const stale = [...TRIGGER_PROSE.keys()].filter(
+      (phrase) => !phrases.includes(phrase),
     );
 
     expect({
       unmapped,
+      stale,
       hint:
-        unmapped.length > 0
-          ? "deploy-production.yml の正規表現に新しい発動条件が増えている。TRIGGER_PROSE に人間向け表記を足し、TRIGGER_LIST_DOCS の各ドキュメントにも書く"
+        unmapped.length > 0 || stale.length > 0
+          ? "deploy-production.yml の正規表現と TRIGGER_PROSE を一致させる。増えたら表とドキュメントに足し、減らしたら表とドキュメントからも消す"
           : "",
-    }).toEqual({ unmapped: [], hint: "" });
+    }).toEqual({ unmapped: [], stale: [], hint: "" });
   });
 
   test("運用者向けドキュメントの発動条件一覧が workflow と一致する", () => {
