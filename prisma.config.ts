@@ -36,6 +36,10 @@ export default defineConfig({
     url: resolvePrismaCliDatasourceUrl(),
   },
   migrations: {
+    // 既定値と同じだが明示する（Prisma 公式のテンプレートも明示形式）。schema の
+    // 置き場から暗黙に導出させると、schema を動かしたときに migration の探索先が
+    // 黙って一緒に動く。ここは動かしてはいけない値なので宣言側に固定する。
+    path: "prisma/migrations",
     seed: "bun prisma/seed.ts",
   },
 });
