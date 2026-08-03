@@ -108,6 +108,14 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // 計画ダウンタイム付きデプロイが発動する。Risk 1 の窓は Cloud Run min0/max1 の
   // atomic switch で排除済。
   "prisma/migrations/20260803020000_timestamptz_unify_remaining/migration.sql",
+  // receipts.recipientName / subject を VarChar(100) → TEXT。導出元（Event.title 200 文字 /
+  // Customer の氏名は無制限 TEXT）より狭い上限のせいで、長いイベント名・長い氏名の決済で
+  // P2000 → stripe-webhook 500 → Stripe 無限リトライになっていた。`ALTER COLUMN ... TYPE` は
+  // `changing-column-type` を発火し `-- squawk-ignore` では抑止できないため allowlist。
+  // varchar(n) → text は表現域の widening で既存値は失われない（PostgreSQL は
+  // binary-coercible なので rewrite も起きない）。計画ダウンタイム付きデプロイが発動する。
+  // Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
+  "prisma/migrations/20260803040000_receipt_evidence_text_columns/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {
