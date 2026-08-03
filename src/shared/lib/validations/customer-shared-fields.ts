@@ -59,6 +59,16 @@ export const emailFieldSchema = z
   // **公開フォームにそのまま出る**（実測。#1835 の退行）。
   .string({ error: "有効なメールアドレスを入力してください" })
   .trim()
+  // RFC 5321 の上限（forward-path 256 バイトから山括弧 2 つを引いた 254）。
+  // **DB 側の最狭列に収まる値でもある** — event_registrations.email と
+  // terms_agreements.guestEmail は VarChar(255) で、上限が無いと長いアドレスが
+  // P2000 になる（領収書の列で実際に起きた形と同じ）。
+  //
+  // `.trim()` より後ろに置くこと（実測: 逆順だと空白込みで数え、見た目 254 文字の
+  // 貼り付けが弾かれる）。`.refine()` との前後は制約出力に影響しない（実測）が、
+  // 上の docblock のとおり `.pipe()` に置き換えるとチェーンが閉じて
+  // `getZodConstraint` が `maxLength` を落とす。
+  .max(254, { error: "メールアドレスは254文字以内で入力してください" })
   .refine(isEmailFormat, { error: "有効なメールアドレスを入力してください" });
 
 /**
