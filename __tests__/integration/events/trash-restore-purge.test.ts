@@ -235,6 +235,64 @@ describeMaybe("イベントのゴミ箱運用", () => {
     ).toBe(0);
   });
 
+  test("復元済みイベントは完全削除できない", async () => {
+    // 「ゴミ箱に入っているか」の判断は DELETE の WHERE 一本に寄せてある。
+    // 先読みでも同じ判断をしていた頃は、WHERE の条件を外してもこのテストが
+    // 緑のまま通っていた（実測）。判断を 1 か所にしたことで、ここが claim の検査になる。
+    const f = await createEvent();
+    await deleteEventCommand(f.eventId);
+    await restoreEventCommand(f.eventId);
+
+    let code: string | null = null;
+    try {
+      await permanentlyDeleteEventCommand(f.eventId);
+    } catch (error) {
+      code =
+        error instanceof Error && "code" in error
+          ? String((error as { code: unknown }).code)
+          : null;
+    }
+    expect(code).toBe("CONFLICT");
+    expect(await prisma.event.count({ where: { id: f.eventId } })).toBe(1);
+  });
+
+  test("並行する復元と完全削除は、必ずどちらか一方だけが成功する", async () => {
+    // 競合したときに「どちらが勝ったか」と DB の状態が食い違わないことの検査。
+    //
+    // どちらが勝つかは固定できないが、**勝った側と DB の状態は必ず一致する**:
+    //   復元が成功した → イベントは生きている（消されていない）
+    //   完全削除が成功した → イベントは残っていない
+    // どちらの claim も WHERE で状態を確かめてから書くので、片方は必ず 0 件になる。
+    const f = await createEvent();
+    await deleteEventCommand(f.eventId);
+
+    const [restoreResult, purgeResult] = await Promise.allSettled([
+      restoreEventCommand(f.eventId),
+      permanentlyDeleteEventCommand(f.eventId),
+    ]);
+
+    const survivor = await prisma.event.findUnique({
+      where: { id: f.eventId },
+      select: { deletedAt: true },
+    });
+
+    // **ちょうど 1 つだけ成功する**ことを要求する。「両方成功していない」だけを見ると、
+    // deadlock や timeout で両方落ちた場合も条件が真になり、下の状態検査は
+    // どちらの if にも入らずに緑で終わる（= 何も証明しないテストになる）。
+    const fulfilled = [restoreResult, purgeResult].filter(
+      (r) => r.status === "fulfilled",
+    );
+    expect(fulfilled.length).toBe(1);
+
+    if (restoreResult.status === "fulfilled") {
+      expect(survivor).not.toBeNull();
+      expect(survivor?.deletedAt).toBeNull();
+    }
+    if (purgeResult.status === "fulfilled") {
+      expect(survivor).toBeNull();
+    }
+  });
+
   test("証跡が無ければ cascade だけで子ごと消える", async () => {
     // 当初は「子どうしの Restrict があるので明示順で消す必要がある」と考えていたが、
     // 実測では素の delete で通る（兄弟も同じ DELETE で消えるため Restrict が成立する）。

@@ -578,9 +578,9 @@ export async function restoreEventCommand(id: string): Promise<void> {
     },
   });
   if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
-  if (event.deletedAt === null) {
-    throw new DomainError("このイベントは削除されていません", "VALIDATION");
-  }
+  // 「削除済みか」はここで判断しない。判断を先読みと claim の 2 か所に置くと、
+  // 先読みだけが効いていても検査が緑になり claim の退行に気づけない（purge 側で実際に
+  // そうなっていた）。下の updateMany の WHERE 一本に寄せる。
 
   // slug の一意性は deletedAt: null の行にしか掛かっていない（ゴミ箱は slug を解放する）。
   // ゴミ箱にある間に同じ slug のイベントが作られていれば、復元すると 2 件が同じ URL になる。
@@ -623,10 +623,15 @@ export async function restoreEventCommand(id: string): Promise<void> {
         data: { deletedAt: null, deletedById: null },
       });
       if (claim.count === 0) {
-        throw new DomainError(
-          "イベントの状態が他の操作により変更されています。最新の状態を確認してください",
-          "CONFLICT",
-        );
+        // 戻せなかった理由を、この時点の実際の状態から出す
+        const current = await tx.event.findUnique({
+          where: { id },
+          select: { deletedAt: true },
+        });
+        if (!current) {
+          throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+        }
+        throw new DomainError("このイベントは削除されていません", "VALIDATION");
       }
     }, RESERVATION_WRITE_TX_OPTIONS);
   } catch (err) {
@@ -657,34 +662,60 @@ export async function restoreEventCommand(id: string): Promise<void> {
  * 明示順で消す必要がある」と考えて順序を書いていたが、**実測すると素の
  * `event.delete()` で通る** — 兄弟も同じ DELETE で消えるため Restrict は成立する。
  * 誤った理由で書かれた手順は消した（その挙動はテストで固定している）。
+ *
+ * **削除は「ゴミ箱に入ったままであること」を条件に実行する。** 先読みと DELETE の
+ * 間に復元が挟まると、無条件 delete は復元済みのイベントと復元後に入った申込まで
+ * 消してしまう。証跡検査と削除を単一トランザクションに入れ、DELETE の WHERE に
+ * `deletedAt IS NOT NULL` を残して claim する。なお証跡検査と DELETE の間に
+ * 領収書が発行された場合は FK 側（`receipts_eventRegistrationId_fkey`）が
+ * 削除を拒否する — メッセージは素っ気なくなるが、**消えてはいけないものは消えない**。
  */
 export async function permanentlyDeleteEventCommand(id: string): Promise<void> {
-  const event = await prisma.event.findUnique({
-    where: { id },
-    select: { id: true, deletedAt: true },
-  });
-  if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
-  if (event.deletedAt === null) {
-    throw new DomainError(
-      "先にゴミ箱へ移動してから完全に削除してください",
-      "CONFLICT",
-    );
+  // **「ゴミ箱に入っているか」をここでは見ない。** 判断を先読みと DELETE の 2 か所に
+  // 置くと、先読みだけが効いていても検査が緑になり、DELETE の WHERE が外れたことに
+  // 気づけない（実際にそうなっていた）。判断は下の claim 一本に寄せる。
+  const exists = await prisma.event.count({ where: { id } });
+  if (exists === 0) {
+    throw new DomainError("イベントが見つかりません", "NOT_FOUND");
   }
 
-  const withEvidence = await prisma.eventRegistration.count({
-    where: {
-      eventId: id,
-      OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
-    },
-  });
-  if (withEvidence > 0) {
-    throw new DomainError(
-      "領収書または返金記録のある申込を含むイベントは完全に削除できません",
-      "CONFLICT",
-    );
-  }
+  await prisma.$transaction(async (tx) => {
+    const withEvidence = await tx.eventRegistration.count({
+      where: {
+        eventId: id,
+        OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
+      },
+    });
+    if (withEvidence > 0) {
+      throw new DomainError(
+        "領収書または返金記録のある申込を含むイベントは完全に削除できません",
+        "CONFLICT",
+      );
+    }
 
-  await prisma.event.delete({ where: { id } });
+    // `deletedAt IS NOT NULL` を WHERE に残したまま消す。先読みと削除の間に
+    // `restoreEventCommand` が復元すると count=0 になり、**復元済みのイベントと
+    // 復元後に入った申込を巻き込んで消す**代わりに CONFLICT で止まる。
+    // `delete({ where: { id } })` は非一意条件を取れないので deleteMany を使う
+    // （cascade は FK 側の動作なのでどちらで DELETE しても同じ）。
+    const deleted = await tx.event.deleteMany({
+      where: { id, deletedAt: { not: null } },
+    });
+    if (deleted.count === 0) {
+      // 消えなかった理由を、この時点の実際の状態から出す
+      const current = await tx.event.findUnique({
+        where: { id },
+        select: { deletedAt: true },
+      });
+      if (!current) {
+        throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+      }
+      throw new DomainError(
+        "先にゴミ箱へ移動してから完全に削除してください",
+        "CONFLICT",
+      );
+    }
+  });
 }
 
 export async function publishEventCommand(id: string) {
