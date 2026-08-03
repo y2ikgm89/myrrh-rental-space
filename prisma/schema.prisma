@@ -271,7 +271,7 @@ enum HolidayMode {
 // ==============================================
 
 model User {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @default(uuid(7)) @db.Uuid
   email            String   @unique
   name             String
   emailVerified    Boolean  @default(false)
@@ -331,7 +331,7 @@ model UserPageAssignment {
 }
 
 model Account {
-  id                    String    @id @default(uuid()) @db.Uuid
+  id                    String    @id @default(uuid(7)) @db.Uuid
   userId                String    @db.Uuid
   accountId             String // Better Auth: ユーザーID or プロバイダーのアカウントID
   providerId            String // Better Auth: "credential" or "google" etc.
@@ -352,7 +352,7 @@ model Account {
 }
 
 model Session {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   token     String   @unique
   userId    String   @db.Uuid
   expiresAt DateTime @db.Timestamptz(6)
@@ -368,7 +368,7 @@ model Session {
 }
 
 model Verification {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(uuid(7)) @db.Uuid
   identifier String
   value      String
   expiresAt  DateTime @db.Timestamptz(6)
@@ -384,7 +384,7 @@ model Verification {
 // ==============================================
 
 model Location {
-  id              String  @id @default(uuid()) @db.Uuid
+  id              String  @id @default(uuid(7)) @db.Uuid
   // slug / name の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
   // 値を永久に予約しないため partial index。SpaceCategory.name と同型の fix）。
   slug            String  @db.VarChar(255)
@@ -454,7 +454,7 @@ model Location {
 }
 
 model SpaceCategory {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   name        String // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証。一意性は下記 @@unique(where: isActive) 参照）
   description String?  @db.Text
   icon        String? // アイコン名（任意）
@@ -479,7 +479,7 @@ model SpaceCategory {
 }
 
 model Space {
-  id                   String    @id @default(uuid()) @db.Uuid
+  id                   String    @id @default(uuid(7)) @db.Uuid
   // slug の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
   // 値を永久に予約しないため partial index。Location.slug / SpaceCategory.name と同型）。
   slug                 String
@@ -611,7 +611,7 @@ model SpaceRatePlan {
 /// （`prisma migrate reset` は baseline migration を再生するため制約は復元される）。
 /// アプリ層は Zod superRefine（blocked-date バリデーション）で同一不変条件を二重に保証する。
 model BlockedDate {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(uuid(7)) @db.Uuid
   /// "SPACE" | "LOCATION" | "GLOBAL"（isValidBlockedDateScope で検証）
   scope      String   @db.VarChar(16)
   /// scope=SPACE のみ非 null
@@ -641,7 +641,7 @@ model BlockedDate {
 }
 
 model ReservationSeries {
-  id                          String    @id @default(uuid()) @db.Uuid
+  id                          String    @id @default(uuid(7)) @db.Uuid
   spaceId                     String    @db.Uuid
   customerId                  String    @db.Uuid
   couponId                    String?   @db.Uuid
@@ -684,7 +684,7 @@ model ReservationSeries {
 }
 
 model Reservation {
-  id         String            @id @default(uuid()) @db.Uuid
+  id         String            @id @default(uuid(7)) @db.Uuid
   spaceId    String            @db.Uuid
   userId     String?           @db.Uuid
   customerId String            @db.Uuid
@@ -819,7 +819,7 @@ model Reservation {
 }
 
 model Customer {
-  id                     String              @id @default(uuid()) @db.Uuid
+  id                     String              @id @default(uuid(7)) @db.Uuid
   lastName               String
   firstName              String
   lastNameKana           String? // 姓カナ（任意）
@@ -937,7 +937,7 @@ model Customer {
 // - expiresAt は cron でなく verify Route Handler の compare で判定する
 //   (削除は次回の request 時に customerId 既存行を上書きするため蓄積しない)
 model PendingCustomerEmailChange {
-  id                String    @id @default(uuid()) @db.Uuid
+  id                String    @id @default(uuid(7)) @db.Uuid
   customerId        String    @db.Uuid
   customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   newEmail          String    @db.VarChar(320)
@@ -960,7 +960,7 @@ model PendingCustomerEmailChange {
 // 宛の本人確認 URL 経由で統合するための短命トークン台帳。
 // PendingCustomerEmailChange と同型 (sha256 hash + single-use + TTL)。
 model PendingCustomerMerge {
-  id               String    @id @default(uuid()) @db.Uuid
+  id               String    @id @default(uuid(7)) @db.Uuid
   targetCustomerId String    @db.Uuid
   sourceCustomerId String    @db.Uuid
   guestEmail       String    @db.VarChar(320)
@@ -983,7 +983,7 @@ model PendingCustomerMerge {
 // ==============================================
 
 model Coupon {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(uuid(7)) @db.Uuid
   code        String  @unique // クーポンコード (大文字英数字)
   name        String // 管理用名称
   description String? // 説明
@@ -1026,7 +1026,7 @@ model Coupon {
 }
 
 model Inquiry {
-  id            String        @id @default(uuid()) @db.Uuid
+  id            String        @id @default(uuid(7)) @db.Uuid
   /// ユーザー可視の受付番号 (INQ-XXXXXXXX)。application 層で採番、UNIQUE 制約 + retry。
   receiptNumber String        @unique @db.VarChar(20)
   name          String
@@ -1085,7 +1085,7 @@ model Inquiry {
 
 /// Inquiry の返信スレッド (STAFF / CUSTOMER 双方向)。作成順に createdAt 昇順で並べる。
 model InquiryReply {
-  id               String                 @id @default(uuid()) @db.Uuid
+  id               String                 @id @default(uuid(7)) @db.Uuid
   inquiryId        String                 @db.Uuid
   authorType       InquiryReplyAuthorType
   /// STAFF → User.id (User 削除は Restrict — positive-author CHECK と整合)。CUSTOMER では null。
@@ -1109,7 +1109,7 @@ model InquiryReply {
 
 /// Inquiry.status の変更履歴 (append-only)。fromStatus = NULL は creation。
 model InquiryStatusHistory {
-  id          String         @id @default(uuid()) @db.Uuid
+  id          String         @id @default(uuid(7)) @db.Uuid
   inquiryId   String         @db.Uuid
   fromStatus  InquiryStatus?
   toStatus    InquiryStatus
@@ -1128,7 +1128,7 @@ model InquiryStatusHistory {
 
 /// Inquiry 本文または個別 InquiryReply に紐づく添付ファイル (R2 保管)。
 model InquiryAttachment {
-  id                   String   @id @default(uuid()) @db.Uuid
+  id                   String   @id @default(uuid(7)) @db.Uuid
   inquiryId            String   @db.Uuid
   /// 特定の返信への添付なら非 null (返信削除で cascade 削除)
   replyId              String?  @db.Uuid
@@ -1156,7 +1156,7 @@ model InquiryAttachment {
 
 /// スタッフ間 internal メモ (顧客には見えない)。author 削除は Restrict で保護。
 model InquiryInternalNote {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   inquiryId String   @db.Uuid
   authorId  String   @db.Uuid
   body      String   @db.Text
@@ -1173,7 +1173,7 @@ model InquiryInternalNote {
 
 /// タグマスタ (name UNIQUE)。カラーコードは省略可 (default UI 色)。
 model InquiryTag {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   name      String   @unique @db.VarChar(50)
   color     String?  @db.VarChar(20)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
@@ -1199,7 +1199,7 @@ model InquiryTagOnInquiry {
 }
 
 model News {
-  id                 String       @id @default(uuid()) @db.Uuid
+  id                 String       @id @default(uuid(7)) @db.Uuid
   slug               String       @unique
   title              String
   contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
@@ -1232,7 +1232,7 @@ model News {
 }
 
 model AnnouncementBar {
-  id           String    @id @default(uuid()) @db.Uuid
+  id           String    @id @default(uuid(7)) @db.Uuid
   /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
   /// `{_key,_type:"iconInline",name}` の discriminated union を順次配置する。
   message      Json      @default("[]")
@@ -1258,7 +1258,7 @@ model AnnouncementBar {
 // ==============================================
 
 model Post {
-  id                 String       @id @default(uuid()) @db.Uuid
+  id                 String       @id @default(uuid(7)) @db.Uuid
   title              String
   // 一意性は下記 @@unique(where: deletedAt is null) 参照（Event/FaqCategory と同型）
   slug               String
@@ -1319,7 +1319,7 @@ model PostTagOnPost {
 }
 
 model PostCategory {
-  id              String   @id @default(uuid()) @db.Uuid
+  id              String   @id @default(uuid(7)) @db.Uuid
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
@@ -1339,7 +1339,7 @@ model PostCategory {
 }
 
 model PostTag {
-  id              String   @id @default(uuid()) @db.Uuid
+  id              String   @id @default(uuid(7)) @db.Uuid
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
@@ -1360,7 +1360,7 @@ model PostTag {
 // ==============================================
 
 model Page {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid(7)) @db.Uuid
   slug            String    @unique
   title           String
   metaDescription String?
@@ -1395,7 +1395,7 @@ model Page {
 /// title / contentHtml / contentJson 列は廃止し config JSON に統合済（CUSTOM section の title +
 /// body は config.title + config.body で編集、migration `_drop_section_legacy_columns_*` 参照）。
 model Section {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   pageId    String   @db.Uuid
   type      String   @db.VarChar(64)
   order     Int      @default(0) // 表示順序（DnDで変更可能）
@@ -1414,7 +1414,7 @@ model Section {
 }
 
 model NavigationItem {
-  id         String         @id @default(uuid()) @db.Uuid
+  id         String         @id @default(uuid(7)) @db.Uuid
   type       NavigationType
   parentId   String?        @db.Uuid
   /// Sanity Portable Text 互換の token 配列（{type:"text",value} | {type:"icon",name}）。
@@ -1439,7 +1439,7 @@ model NavigationItem {
 }
 
 model SocialLink {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String         @id @default(uuid(7)) @db.Uuid
   platform      SocialPlatform
   url           String
   order         Int
@@ -1459,7 +1459,7 @@ model SocialLink {
 // ==============================================
 
 model FaqCategory {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(uuid(7)) @db.Uuid
   name        String
   slug        String // 一意性は下記 @@unique(where: deletedAt is null) 参照
   description String?   @db.Text
@@ -1489,7 +1489,7 @@ model FaqCategory {
 }
 
 model FaqItem {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid(7)) @db.Uuid
   categoryId      String    @db.Uuid
   question        String
   answer          String    @db.Text // 回答（プレーンテキスト、改行保持）
@@ -1894,7 +1894,7 @@ model SettingsDataRetention {
 
 /// Instagram投稿のキャッシュ
 model InstagramPost {
-  id           String             @id @default(uuid()) @db.Uuid
+  id           String             @id @default(uuid(7)) @db.Uuid
   postId       String             @unique // Instagram投稿ID
   postUrl      String // 投稿URL
   mediaUrl     String? // メディアURL
@@ -1964,7 +1964,7 @@ enum MediaUsage {
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
 model AuditLog {
-  id            String      @id @default(uuid()) @db.Uuid
+  id            String      @id @default(uuid(7)) @db.Uuid
   sequence      BigInt      @unique
   previousHash  String      @db.Char(64)
   entryHash     String      @db.Char(64)
@@ -2003,7 +2003,7 @@ model AuditLog {
 
 /// メディアファイル管理
 model Media {
-  id          String @id @default(uuid()) @db.Uuid
+  id          String @id @default(uuid(7)) @db.Uuid
   filename    String // 元のファイル名
   storagePath String // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
   url         String // 公開URL
@@ -2043,7 +2043,7 @@ model Media {
 
 /// ログイン試行記録（レートリミット用）
 model LoginAttempt {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(uuid(7)) @db.Uuid
   identifier String // IPアドレス or メールのハッシュ
   email      String // 試行されたメールアドレス
   success    Boolean // 成功/失敗
@@ -2071,7 +2071,7 @@ enum TermsScope {
 
 /// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
 model TermsDocument {
-  id           String       @id @default(uuid()) @db.Uuid
+  id           String       @id @default(uuid(7)) @db.Uuid
   type         String       @db.VarChar(64) // VARCHAR で柔軟化（旧 TermsType enum 廃止）
   slug         String       @db.VarChar(50) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   title        String       @db.VarChar(100)
@@ -2101,7 +2101,7 @@ model TermsDocument {
 
 /// 規約同意記録（証跡）— 同意時の HTML スナップショットを保持しバージョン履歴を兼ねる
 model TermsAgreement {
-  id              String     @id @default(uuid()) @db.Uuid
+  id              String     @id @default(uuid(7)) @db.Uuid
   termsId         String     @db.Uuid
   /// 同意した顧客（null = ゲスト。guestEmail 側で識別する）。
   /// **`customers` への FK は意図的に張らない。** `ON DELETE SET NULL` は
@@ -2147,7 +2147,7 @@ model TermsAgreement {
 
 /// エディタコメントスレッド（Lexical MarkNodeに紐づく）
 model EditorCommentThread {
-  id          String              @id @default(uuid()) @db.Uuid
+  id          String              @id @default(uuid(7)) @db.Uuid
   markId      String // Lexical MarkNode ID（エディタ内での一意識別子）
   contentType String // コンテンツタイプ: "post" | "news" | "page" | "faq"
   contentId   String              @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
@@ -2175,7 +2175,7 @@ model EditorCommentThread {
 
 /// エディタコメント（スレッド内の個別コメント）
 model EditorComment {
-  id        String    @id @default(uuid()) @db.Uuid
+  id        String    @id @default(uuid(7)) @db.Uuid
   threadId  String    @db.Uuid
   content   String    @db.Text // コメント本文
   isDeleted Boolean   @default(false) // ソフトデリート
@@ -2199,7 +2199,7 @@ model EditorComment {
 
 /// エディタブロックテンプレート（再利用可能なブロック）
 model BlockTemplate {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   name        String // テンプレート名
   description String?  @db.Text // 説明
   nodeJson    Json // Lexical SerializedEditorState JSON
@@ -2220,7 +2220,7 @@ model BlockTemplate {
 // ==============================================
 
 model SpaceReview {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String    @id @default(uuid(7)) @db.Uuid
   spaceId       String    @db.Uuid
   customerId    String    @db.Uuid
   reservationId String    @unique @db.Uuid
@@ -2283,7 +2283,7 @@ model EventTimeSlot {
 // ==============================================
 
 model EventCategory {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   name        String
   description String?  @db.Text
   icon        String?
@@ -2545,7 +2545,7 @@ model EventRegistration {
 ///   status 列のみ 20260730115734_refunds_status_column_and_transition_exception が
 ///   例外を追加済み (他の全カラムは引き続き不変、DELETE は無条件拒否のまま)。
 model Refund {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String   @id @default(uuid(7)) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
   reservationId       String?  @db.Uuid
   /// 対象 EventRegistration (polymorphic、reservationId と排他)
@@ -2580,9 +2580,9 @@ model Refund {
 
 model Receipt {
   /// DB 側 DEFAULT gen_random_uuid()（20260713045802_add_receipt_tables migration で手書き）。
-  /// Prisma 7 の diff engine は @default(uuid()) と DB 側 gen_random_uuid() を同値と見なさず
+  /// Prisma 7 の diff engine は @default(uuid(7)) と DB 側 gen_random_uuid() を同値と見なさず
   /// ALTER COLUMN ... DROP DEFAULT を提案するため dbgenerated で明示する。
-  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String             @id @default(uuid(7)) @db.Uuid
   // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
   serialNo            String             @unique @db.VarChar(20)
   issuedAt            DateTime           @default(now()) @db.Timestamptz(6)
@@ -2645,7 +2645,7 @@ model ReceiptSequence {
 // ==============================================
 
 model AdminNotification {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid(7)) @db.Uuid
   type         String   @db.VarChar(50)
   title        String   @db.VarChar(200)
   message      String   @db.VarChar(500)
@@ -2696,7 +2696,7 @@ enum SmartLockPasscodeStatus {
 /// - 錠（LOCK*）: 施錠状態・電池の監視のみ。パスコード発行・Space 割当対象外。
 /// 1 拠点に複数台を登録できる（1:N from Location）。同一パッドを複数 Space で共有可。
 model SmartLockDevice {
-  id                 String              @id @default(uuid()) @db.Uuid
+  id                 String              @id @default(uuid(7)) @db.Uuid
   locationId         String              @db.Uuid
   deviceId           String              @unique // SwitchBot 側の device ID（MAC アドレス）
   deviceName         String
@@ -2727,7 +2727,7 @@ model SmartLockDevice {
 
 /// 予約 1 件・デバイス 1 台ごとに発行される一時パスコード。
 model SmartLockPasscode {
-  id                       String                  @id @default(uuid()) @db.Uuid
+  id                       String                  @id @default(uuid(7)) @db.Uuid
   reservationId            String                  @db.Uuid
   deviceId                 String                  @db.Uuid
   status                   SmartLockPasscodeStatus @default(PENDING)
@@ -2796,7 +2796,7 @@ model StripeEvent {
 
 /// 銀行振込先マスタ（複数口座）。payment feature OFF かつ未払い時に顧客へ表示。
 model TransferAccount {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                String   @id @default(uuid(7)) @db.Uuid
   label             String   @db.VarChar(50)
   bankName          String   @db.VarChar(50)
   branchName        String   @db.VarChar(50)
