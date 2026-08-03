@@ -35,6 +35,7 @@ export async function getCustomerReservationDetail(
     select: {
       ...CUSTOMER_RESERVATION_SELECT,
       version: true,
+      numberOfGuests: true,
       couponId: true,
       couponDiscountAmount: true,
       durationDiscountAmount: true,
@@ -147,6 +148,7 @@ export async function getReservationForGuestEdit(reservationId: string) {
       endTime: true,
       paymentStatus: true,
       version: true,
+      numberOfGuests: true,
       spaceId: true,
       couponDiscountAmount: true,
       durationDiscountAmount: true,

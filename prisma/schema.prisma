@@ -756,6 +756,15 @@ model Reservation {
   deletedById String?   @db.Uuid
   deletedBy   User?     @relation("ReservationDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
 
+  /// 利用人数。公開予約フォームが必須で集め、`guestCountCapacityError` が
+  /// スペース定員に対して server-side で検査する値。
+  ///
+  /// **nullable なのは「記録が無い」を表すため。** この列より前の予約には実際の
+  /// 人数が存在せず、`@default(1)` で埋めると捏造になる。編集画面がまさにそれを
+  /// やっていた（`numberOfGuests={1}` のハードコード）ため、20 名の予約でも
+  /// 定員 1 名のスペースへ移動できていた。
+  numberOfGuests Int?
+
   // Payment (Stripe)
   paymentStatus           PaymentStatus @default(UNPAID)
   /// Stripe Checkout Session の id。`@unique` は「同じ session が別の予約に紐づく」

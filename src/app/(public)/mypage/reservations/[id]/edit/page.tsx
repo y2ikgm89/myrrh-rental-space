@@ -94,7 +94,7 @@ export default async function ReservationEditPage({
       <EditReservationForm
         key={reservation.id}
         reservationId={reservation.id}
-        numberOfGuests={1}
+        numberOfGuests={reservation.numberOfGuests ?? 1}
         spaces={spaces}
         version={reservation.version}
         initialValues={{

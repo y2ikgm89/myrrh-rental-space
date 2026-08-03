@@ -252,6 +252,9 @@ export async function createPublicReservationCommand(
         spaceDiscountAmount: pricing.spaceDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
+        // 定員 gate（guestCountCapacityError）が検査した値をそのまま残す。
+        // 保存しないと編集画面が読む値を失い、gate が編集経路で無効になる。
+        numberOfGuests: input.numberOfGuests ?? null,
         notes: input.notes || null,
         userId: input.userId || null,
         // Guest contact info (予約時の入力を記録)

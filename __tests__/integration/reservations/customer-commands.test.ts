@@ -200,6 +200,7 @@ async function ensureKnownSettings(): Promise<void> {
 async function createInitialReservation(
   spaceId: string,
   date: string,
+  numberOfGuests?: number,
 ): Promise<{ reservationId: string; customerId: string }> {
   const result = await createPublicReservationCommand({
     spaceId,
@@ -209,6 +210,7 @@ async function createInitialReservation(
     lastName: "山田",
     firstName: "太郎",
     email: `customer-cmd-${crypto.randomUUID()}@example.com`,
+    ...(numberOfGuests === undefined ? {} : { numberOfGuests }),
   });
   return { reservationId: result.id, customerId: result.customerId };
 }
@@ -744,6 +746,117 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
     } finally {
       await largeSpace.cleanup();
       await smallSpace.cleanup();
+    }
+  });
+});
+
+describeMaybe("利用人数の永続化と定員 gate", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ createPublicReservationCommand } =
+      await import("@/shared/domain/reservations/public-commands"));
+    ({ updateCustomerReservation } =
+      await import("@/shared/domain/reservations/customer-commands"));
+    await prisma.$queryRaw`SELECT 1`;
+    await ensureKnownSettings();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  test("作成時の人数が DB に残る", async () => {
+    const big = await createSpaceFixtureWithCapacity(20);
+    try {
+      const { reservationId } = await createInitialReservation(
+        big.spaceId,
+        FRIDAY_DATE,
+        20,
+      );
+
+      const row = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { numberOfGuests: true },
+      });
+      // 保存されないと編集画面が読む値を失い、gate が空回りする
+      expect(row.numberOfGuests).toBe(20);
+    } finally {
+      await big.cleanup();
+    }
+  });
+
+  test("記録された人数を超える定員のスペースへは移動できない", async () => {
+    const big = await createSpaceFixtureWithCapacity(20);
+    const small = await createSpaceFixtureWithCapacity(1);
+    try {
+      const { reservationId, customerId } = await createInitialReservation(
+        big.spaceId,
+        FRIDAY_DATE,
+        20,
+      );
+
+      // 編集画面は保存済みの人数を初期値にする。20 名のまま定員 1 名へ移そうとする。
+      const result = await updateCustomerReservation(
+        reservationId,
+        customerId,
+        {
+          spaceId: small.spaceId,
+          date: FRIDAY_DATE,
+          startTime: "10:00",
+          endTime: "12:00",
+          numberOfGuests: 20,
+          version: 0,
+        },
+        MODIFICATION_DEADLINE_HOURS,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.success === false ? result.error : "").toContain("定員");
+
+      // 移動していないこと（gate が通ってしまうと spaceId が書き換わる）
+      const row = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { spaceId: true, numberOfGuests: true },
+      });
+      expect(row.spaceId).toBe(big.spaceId);
+      expect(row.numberOfGuests).toBe(20);
+    } finally {
+      await small.cleanup();
+      await big.cleanup();
+    }
+  });
+
+  test("変更後の人数が保存され、次の編集にも引き継がれる", async () => {
+    const big = await createSpaceFixtureWithCapacity(20);
+    try {
+      const { reservationId, customerId } = await createInitialReservation(
+        big.spaceId,
+        FRIDAY_DATE,
+        20,
+      );
+
+      const result = await updateCustomerReservation(
+        reservationId,
+        customerId,
+        {
+          spaceId: big.spaceId,
+          date: FRIDAY_DATE,
+          startTime: "14:00",
+          endTime: "16:00",
+          numberOfGuests: 5,
+          version: 0,
+        },
+        MODIFICATION_DEADLINE_HOURS,
+      );
+      expect(result.success).toBe(true);
+
+      const row = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { numberOfGuests: true },
+      });
+      expect(row.numberOfGuests).toBe(5);
+    } finally {
+      await big.cleanup();
     }
   });
 });
