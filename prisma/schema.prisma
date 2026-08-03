@@ -636,6 +636,7 @@ model BlockedDate {
   @@index([scope, startDate, endDate])
   @@index([spaceId, startDate, endDate])
   @@index([locationId, startDate, endDate])
+  @@index([createdBy])
   @@map("blocked_dates")
 }
 
@@ -677,6 +678,8 @@ model ReservationSeries {
   @@index([customerId])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([deletedById], map: "reservation_series_deletedById_idx", where: { deletedById: { not: null } })
+  @@index([couponId], map: "reservation_series_couponId_idx", where: { couponId: { not: null } })
   @@map("reservation_series")
 }
 
@@ -808,6 +811,7 @@ model Reservation {
   @@index([paymentStatus])
   @@index([stripePaymentIntentId])
   @@index([seriesId, recurrenceInstanceIndex])
+  @@index([deletedById], map: "reservations_deletedById_idx", where: { deletedById: { not: null } })
   @@map("reservations")
 }
 
@@ -911,6 +915,7 @@ model Customer {
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
   @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
   @@index([suppressedEmailHash], map: "customers_suppressed_email_hash_idx", where: { suppressedEmailHash: { not: null } })
+  @@index([createdAt])
   @@map("customers")
 }
 
@@ -966,6 +971,7 @@ model PendingCustomerMerge {
 
   @@index([targetCustomerId])
   @@index([expiresAt])
+  @@index([sourceCustomerId])
   @@map("pending_customer_merges")
 }
 
@@ -1140,6 +1146,8 @@ model InquiryAttachment {
 
   @@index([inquiryId, createdAt])
   @@index([replyId])
+  @@index([uploadedById], map: "inquiry_attachments_uploadedById_idx", where: { uploadedById: { not: null } })
+  @@index([uploadedByCustomerId], map: "inquiry_attachments_uploadedByCustomerId_idx", where: { uploadedByCustomerId: { not: null } })
   @@map("inquiry_attachments")
 }
 
@@ -1291,6 +1299,7 @@ model Post {
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
+  @@index([createdAt], map: "posts_createdAt_alive_idx", where: { deletedAt: null })
   @@map("posts")
 }
 
@@ -2156,6 +2165,7 @@ model EditorCommentThread {
   @@index([contentType, contentId, status])
   @@index([createdBy])
   @@index([status, createdAt])
+  @@index([resolvedBy], map: "editor_comment_threads_resolvedBy_idx", where: { resolvedBy: { not: null } })
   @@map("editor_comment_threads")
 }
 
@@ -2179,6 +2189,7 @@ model EditorComment {
   @@index([threadId, createdAt])
   @@index([createdBy])
   @@index([isDeleted])
+  @@index([deletedBy], map: "editor_comments_deletedBy_idx", where: { deletedBy: { not: null } })
   @@map("editor_comments")
 }
 
@@ -2387,6 +2398,7 @@ model Event {
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
   @@index([spaceId], map: "events_spaceId_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
+  @@index([deletedById], map: "events_deletedById_idx", where: { deletedById: { not: null } })
   @@map("events")
 }
 
@@ -2606,6 +2618,7 @@ model Receipt {
   @@index([reservationId])
   @@index([eventRegistrationId])
   @@index([issuedAt])
+  @@index([reissuedFromId], map: "receipts_reissuedFromId_idx", where: { reissuedFromId: { not: null } })
   @@map("receipts")
 }
 
@@ -2704,6 +2717,7 @@ model SmartLockDevice {
   pairedPads          SmartLockDevice[]   @relation("PadToLock")
 
   @@index([locationId])
+  @@index([pairedLockDeviceId], map: "smart_lock_devices_pairedLockDeviceId_idx", where: { pairedLockDeviceId: { not: null } })
   @@map("smart_lock_devices")
 }
 
@@ -2738,6 +2752,7 @@ model SmartLockPasscode {
   @@unique([reservationId, deviceId])
   @@index([status, endTime])
   @@index([status, revokeRequestedAt])
+  @@index([deviceId])
   @@map("smart_lock_passcodes")
 }
 
