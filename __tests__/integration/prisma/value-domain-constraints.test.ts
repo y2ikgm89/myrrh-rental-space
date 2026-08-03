@@ -8,6 +8,18 @@
  * **1 制約につき 1 回、実際に違反行を INSERT して拒否されることを確かめる**。全て
  * `BEGIN … ROLLBACK` の中で行うのでテスト DB は汚れない。
  *
+ * ## fixture を作らず、存在しない ID を FK 列に入れている理由
+ *
+ * PostgreSQL は CHECK 制約を**タプル挿入時**に評価し、FK は AFTER トリガとして
+ * 後から評価する。したがって CHECK と FK の両方に違反する行は必ず CHECK 側の
+ * エラーで落ちる（実測で確認済み）。おかげで親行を用意する必要がなく、テストが
+ * **DB の中身に一切依存しない**。
+ *
+ * これは大事な性質で、初版は `INSERT … SELECT FROM spaces CROSS JOIN customers` で
+ * 既存行を借りていた。ローカルの test DB は seed 済みなので通ったが、**CI の
+ * postgres service は migrate deploy だけで seed が無い**ため 0 行にマッチして
+ * INSERT 自体が起きず、CI でだけ落ちた。
+ *
  * これらは 20260803050000 以前は Zod と domain のコードだけが守っており、DB は
  * 負の金額も 200% の税率も受理していた。同種の CHECK は Event 系と space_rate_plans に
  * 既にあり、予約・スペース・クーポン・返金・領収書の側だけが素通しだった。
@@ -20,6 +32,10 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { Client } from "pg";
 import { resolveTestDatabaseUrl } from "../../../scripts/test-db-url";
+
+/** FK 先を用意しないための、実在しないことが保証された UUID。 */
+const ABSENT_UUID_A = "00000000-0000-4000-8000-0000000000aa";
+const ABSENT_UUID_B = "00000000-0000-4000-8000-0000000000bb";
 
 let client: Client;
 
@@ -36,18 +52,18 @@ afterAll(async () => {
 /**
  * 違反行の INSERT が指定の制約名で拒否されることを確かめる。
  *
- * setup が別の理由（NOT NULL 漏れ・FK 不足）で落ちると「拒否された」と読み間違える
- * ため、失敗メッセージに実際の理由をそのまま載せて突き合わせる。
+ * INSERT が別の理由（NOT NULL 漏れ・型不一致）で落ちると「拒否された」と読み間違える
+ * ため、実際のエラーメッセージをそのまま突き合わせる。成功してしまった場合も
+ * 区別できるよう、その旨を文字列にして比較へ載せる。
  */
 async function expectRejectedBy(
   constraintName: string,
   sql: string,
-  params: readonly unknown[] = [],
 ): Promise<void> {
   await client.query("BEGIN");
-  let message: string | null = null;
+  let message = "(INSERT が成功してしまった)";
   try {
-    await client.query(sql, [...params]);
+    await client.query(sql);
   } catch (error) {
     message = error instanceof Error ? error.message : String(error);
   } finally {
@@ -56,98 +72,105 @@ async function expectRejectedBy(
   expect(message).toContain(constraintName);
 }
 
-/** 予約の必須列を全部埋めたうえで、1 列だけ違反値にする。 */
-function reservationInsert(violating: string): string {
+/** 予約の必須列を全部埋めたうえで、指定の式だけを違反値にする。 */
+function reservationInsert(overrides: {
+  readonly basePrice?: string;
+  readonly taxRate?: string;
+}): string {
   return `
     INSERT INTO "reservations" (
       "id","spaceId","customerId","startTime","endTime","status","paymentStatus",
       "basePrice","totalPrice","rateBreakdownJson","taxRateType","taxRate",
       "taxAmount","totalPriceWithTax","createdAt","updatedAt"
-    )
-    SELECT gen_random_uuid(), s."id", c."id", now(), now() + interval '1 hour',
-           'PENDING','UNPAID', ${violating}, '{}'::jsonb, 'standard', 10, 0, 0, now(), now()
-      FROM "spaces" s CROSS JOIN "customers" c
-     LIMIT 1`;
+    ) VALUES (
+      gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}',
+      now(), now() + interval '1 hour', 'PENDING', 'UNPAID',
+      ${overrides.basePrice ?? "0"}, 0, '{}'::jsonb, 'standard',
+      ${overrides.taxRate ?? "10"}, 0, 0, now(), now()
+    )`;
+}
+
+/** スペースの必須列を全部埋めたうえで、指定の列だけを違反値にする。 */
+function spaceInsert(overrides: {
+  readonly capacity?: string;
+  readonly hourlyPrice?: string;
+  readonly discount?: string;
+}): string {
+  const discountColumns = overrides.discount
+    ? ',"discountType","discountValue"'
+    : "";
+  const discountValues = overrides.discount ? `,${overrides.discount}` : "";
+  return `
+    INSERT INTO "spaces" (
+      "id","slug","name","descriptionJson","descriptionHtml","descriptionPlainText",
+      "capacity","hourlyPrice","mainImageUrl","updatedAt","locationId"${discountColumns}
+    ) VALUES (
+      gen_random_uuid(), 'probe-' || gen_random_uuid()::text, 'probe',
+      '{}'::jsonb, '<p>probe</p>', 'probe',
+      ${overrides.capacity ?? "1"}, ${overrides.hourlyPrice ?? "0"},
+      'https://example.test/probe.png', now(), '${ABSENT_UUID_A}'${discountValues}
+    )`;
 }
 
 describe("値域 CHECK 制約", () => {
-  test("前提: 予約・スペース・顧客の行が存在する", async () => {
-    // 行が無いと上の INSERT … SELECT が 0 行になり、拒否されないまま緑になる
-    const counts = await client.query<{
-      readonly spaces: number;
-      readonly customers: number;
-    }>(
-      `SELECT (SELECT count(*)::int FROM "spaces") AS spaces,
-              (SELECT count(*)::int FROM "customers") AS customers`,
-    );
-    expect(counts.rows[0]?.spaces ?? 0).toBeGreaterThan(0);
-    expect(counts.rows[0]?.customers ?? 0).toBeGreaterThan(0);
-  });
-
   test("予約の金額に負の値を入れられない", async () => {
     await expectRejectedBy(
       "reservations_money_non_negative_check",
-      reservationInsert("-1, 0"),
+      reservationInsert({ basePrice: "-1" }),
     );
   });
 
   test("予約の税率が 100 を超えられない", async () => {
     await expectRejectedBy(
       "reservations_tax_rate_range_check",
-      `INSERT INTO "reservations" (
-         "id","spaceId","customerId","startTime","endTime","status","paymentStatus",
-         "basePrice","totalPrice","rateBreakdownJson","taxRateType","taxRate",
-         "taxAmount","totalPriceWithTax","createdAt","updatedAt"
-       )
-       SELECT gen_random_uuid(), s."id", c."id", now(), now() + interval '1 hour',
-              'PENDING','UNPAID', 0, 0, '{}'::jsonb, 'standard', 101, 0, 0, now(), now()
-         FROM "spaces" s CROSS JOIN "customers" c LIMIT 1`,
+      reservationInsert({ taxRate: "101" }),
     );
   });
 
   test("スペースの定員を 0 にできない", async () => {
     await expectRejectedBy(
       "spaces_capacity_positive_check",
-      `UPDATE "spaces" SET "capacity" = 0`,
+      spaceInsert({ capacity: "0" }),
     );
   });
 
   test("スペースの時間単価を負にできない", async () => {
     await expectRejectedBy(
       "spaces_hourly_price_non_negative_check",
-      `UPDATE "spaces" SET "hourlyPrice" = -1`,
+      spaceInsert({ hourlyPrice: "-1" }),
     );
   });
 
   test("パーセント割引のスペースに 100 を超える割引値を入れられない", async () => {
     await expectRejectedBy(
       "spaces_discount_value_range_check",
-      `UPDATE "spaces" SET "discountType" = 'percentage', "discountValue" = 101`,
+      spaceInsert({ discount: `'percentage'::"DiscountType", 101` }),
     );
   });
 
   test("パーセントクーポンに 100 を超える割引値を入れられない", async () => {
     await expectRejectedBy(
       "coupons_discount_value_range_check",
-      `INSERT INTO "coupons" ("id","code","name","type","discountValue","validFrom","createdAt","updatedAt")
-       VALUES (gen_random_uuid(),'PROBE101','probe','PERCENTAGE',101,now(),now(),now())`,
+      `INSERT INTO "coupons" ("id","code","name","type","discountValue","validFrom","updatedAt")
+       VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
+               'probe', 'PERCENTAGE', 101, now(), now())`,
     );
   });
 
   test("クーポンの利用回数上限を 0 にできない", async () => {
     await expectRejectedBy(
       "coupons_usage_range_check",
-      `INSERT INTO "coupons" ("id","code","name","type","discountValue","usageLimit","validFrom","createdAt","updatedAt")
-       VALUES (gen_random_uuid(),'PROBE0','probe','FIXED_AMOUNT',100,0,now(),now(),now())`,
+      `INSERT INTO "coupons" ("id","code","name","type","discountValue","usageLimit","validFrom","updatedAt")
+       VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
+               'probe', 'FIXED_AMOUNT', 100, 0, now(), now())`,
     );
   });
 
   test("0 円の返金を記録できない", async () => {
     await expectRejectedBy(
       "refunds_amount_positive_check",
-      `INSERT INTO "refunds" ("id","reservationId","amount","reason","refundedByType","stripeRefundId","createdAt")
-       SELECT gen_random_uuid(), r."id", 0, 'probe', 'ADMIN', 'probe_' || gen_random_uuid()::text, now()
-         FROM "reservations" r LIMIT 1`,
+      `INSERT INTO "refunds" ("reservationId","amount","refundedByType","stripeRefundId")
+       VALUES ('${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
     );
   });
 
@@ -155,12 +178,13 @@ describe("値域 CHECK 制約", () => {
     await expectRejectedBy(
       "receipts_target_exclusive_check",
       `INSERT INTO "receipts" (
-         "id","serialNo","reservationId","eventRegistrationId","recipientName",
+         "serialNo","reservationId","eventRegistrationId","recipientName",
          "amount","taxRate","issuerSnapshot","updatedAt"
-       )
-       SELECT gen_random_uuid(), 'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
-              r."id", e."id", 'probe', 0, 10, '{}'::jsonb, now()
-         FROM "reservations" r CROSS JOIN "event_registrations" e LIMIT 1`,
+       ) VALUES (
+         'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
+         '${ABSENT_UUID_A}', 'probe-registration-id', 'probe',
+         0, 10, '{}'::jsonb, now()
+       )`,
     );
   });
 });
