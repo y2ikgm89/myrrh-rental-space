@@ -288,7 +288,6 @@ model User {
   sessions     Session[]
   reservations Reservation[]
   posts        Post[]
-  auditLogs    AuditLog[]
   mediaFiles   Media[]
   customer     Customer?     @relation("CustomerUser")
   blockedDates BlockedDate[]
@@ -297,23 +296,22 @@ model User {
   pageAssignments UserPageAssignment[]
 
   // FK: createdBy / resolvedBy / deletedBy リレーション
-  createdCommentThreads        EditorCommentThread[]  @relation("CommentThreadCreator")
-  resolvedCommentThreads       EditorCommentThread[]  @relation("CommentThreadResolver")
-  createdEditorComments        EditorComment[]        @relation("EditorCommentCreator")
-  deletedEditorComments        EditorComment[]        @relation("EditorCommentDeleter")
+  createdCommentThreads      EditorCommentThread[] @relation("CommentThreadCreator")
+  resolvedCommentThreads     EditorCommentThread[] @relation("CommentThreadResolver")
+  createdEditorComments      EditorComment[]       @relation("EditorCommentCreator")
+  deletedEditorComments      EditorComment[]       @relation("EditorCommentDeleter")
   // Inquiry Overhaul Phase 1: 旧 1:1 の replyMessage/repliedBy を廃止。
   // 複数返信スレッド (InquiryReply) と担当者アサイン (Inquiry.assignee) に分割し、
   // status 変更履歴・添付・内部メモの author も User FK として持つ。
-  assignedInquiries            Inquiry[]              @relation("InquiryAssignee")
-  authoredInquiryReplies       InquiryReply[]         @relation("InquiryReplyAuthor")
-  authoredInquiryStatusChanges InquiryStatusHistory[] @relation("InquiryStatusHistoryChangedBy")
-  uploadedInquiryAttachments   InquiryAttachment[]    @relation("InquiryAttachmentUploadedByUser")
-  authoredInquiryNotes         InquiryInternalNote[]  @relation("InquiryInternalNoteAuthor")
-  reservationDeletions         Reservation[]          @relation("ReservationDeletions")
-  deletedReservationSeries     ReservationSeries[]    @relation("ReservationSeriesDeletedBy")
-  eventDeletions               Event[]                @relation("EventDeletions")
-  createdBlockTemplates        BlockTemplate[]        @relation("BlockTemplateCreator")
-  repliedSpaceReviews          SpaceReview[]          @relation("SpaceReviewReplyAuthor")
+  assignedInquiries          Inquiry[]             @relation("InquiryAssignee")
+  authoredInquiryReplies     InquiryReply[]        @relation("InquiryReplyAuthor")
+  uploadedInquiryAttachments InquiryAttachment[]   @relation("InquiryAttachmentUploadedByUser")
+  authoredInquiryNotes       InquiryInternalNote[] @relation("InquiryInternalNoteAuthor")
+  reservationDeletions       Reservation[]         @relation("ReservationDeletions")
+  deletedReservationSeries   ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
+  eventDeletions             Event[]               @relation("EventDeletions")
+  createdBlockTemplates      BlockTemplate[]       @relation("BlockTemplateCreator")
+  repliedSpaceReviews        SpaceReview[]         @relation("SpaceReviewReplyAuthor")
 
   // OR検索用インデックス
   @@index([name])
@@ -886,7 +884,6 @@ model Customer {
   inquiries                  Inquiry[]
   reviews                    SpaceReview[]
   eventRegistrations         EventRegistration[]
-  termsAgreements            TermsAgreement[]
   pendingEmailChanges        PendingCustomerEmailChange[]
   pendingMergeAsTarget       PendingCustomerMerge[]       @relation("MergeTarget")
   pendingMergeAsSource       PendingCustomerMerge[]       @relation("MergeSource")
@@ -1111,8 +1108,10 @@ model InquiryStatusHistory {
   reason      String?        @db.VarChar(200)
   createdAt   DateTime       @default(now()) @db.Timestamptz(6)
 
-  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  changedBy User?   @relation("InquiryStatusHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  /// DELETE Cascade はデータ保持 purge が bypass GUC を立てた状態でだけ通る正規経路。
+  /// onUpdate は NoAction にする（既定の Cascade は append-only trigger に弾かれる）。
+  /// changedById は AuditLog.userId と同じ理由で FK を張らない論理参照。
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([inquiryId, createdAt])
   @@map("inquiry_status_history")
@@ -1960,7 +1959,15 @@ model AuditLog {
   hashAlgorithm String      @default("HMAC-SHA256") @db.VarChar(32)
   hashKeyId     String      @default("v1") @db.VarChar(32)
   chainVersion  Int         @default(1)
-  userId        String?     @db.Uuid // 実行ユーザー（null = システム or 未認証）
+  /// 実行ユーザー（null = システム or 未認証）。
+  /// **`user` への FK は意図的に張らない。** `ON DELETE SET NULL` は audit_logs へ
+  /// UPDATE を発行し append-only trigger に弾かれて親の DELETE を rollback させる
+  /// （顧客アカウント削除が落ちていた）。RESTRICT へ倒すと「監査ログのある利用者は
+  /// 二度と削除できない」になる。entryHash は userId を含めて計算されるので NULL 化は
+  /// ハッシュ chain も壊す。証跡は「その時点で誰が操作したか」の記録であり、対象の
+  /// 削除後も記述は真のまま残るべきなので論理参照にしている。
+  /// 参照の健全性は __tests__/integration/prisma/append-only-fk-actions.test.ts が守る。
+  userId        String?     @db.Uuid
   action        AuditAction // 操作種別
   resource      String // 対象リソース種別 ('space', 'blog' 等)
   resourceId    String? // 対象リソースID
@@ -1968,9 +1975,6 @@ model AuditLog {
   newValue      Json? // 変更後の値 or 作成値
   metadata      Json? // 追加情報（IPアドレス、UserAgent等）
   createdAt     DateTime    @default(now()) @db.Timestamptz(6)
-
-  // Relations
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([resource, resourceId])
@@ -2086,6 +2090,12 @@ model TermsDocument {
 model TermsAgreement {
   id              String     @id @default(uuid()) @db.Uuid
   termsId         String     @db.Uuid
+  /// 同意した顧客（null = ゲスト。guestEmail 側で識別する）。
+  /// **`customers` への FK は意図的に張らない。** `ON DELETE SET NULL` は
+  /// terms_agreements へ UPDATE を発行し append-only trigger に弾かれて
+  /// 顧客マージ（`tx.customer.delete`）を必ず失敗させていた。NULL 化は
+  /// 「誰が同意したか」という証跡そのものを消すため、trigger の拒否が正しい。
+  /// 詳細は AuditLog.userId のコメントと 20260803030000 の migration を参照。
   customerId      String?    @db.Uuid
   guestEmail      String?    @db.VarChar(255)
   contentSnapshot String     @db.Text // 同意時 HTML 完全保存
@@ -2104,8 +2114,10 @@ model TermsAgreement {
   ipAddress       String?    @db.VarChar(45)
   userAgent       String?    @db.Text
 
-  terms    TermsDocument @relation(fields: [termsId], references: [id], onDelete: Restrict)
-  customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  /// termsId は RESTRICT（子を触らない）だが、onUpdate も明示的に NoAction にする。
+  /// 既定の Cascade は親の主キー更新時に terms_agreements へ UPDATE を発行し、
+  /// append-only trigger に弾かれるため。
+  terms TermsDocument @relation(fields: [termsId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([termsId])
   @@index([customerId])
@@ -2539,8 +2551,10 @@ model Refund {
   status              String   @default("succeeded") @db.VarChar(20)
   createdAt           DateTime @default(now()) @db.Timestamptz(6)
 
-  reservation       Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
-  eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
+  /// RESTRICT は子を触らないが、onUpdate も明示的に NoAction にする。既定の Cascade は
+  /// 親の主キー更新時に refunds へ UPDATE を発行し、append-only trigger に弾かれるため。
+  reservation       Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([reservationId])
   @@index([eventRegistrationId])

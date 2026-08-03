@@ -96,13 +96,6 @@ const auditLogSelect = {
   newValue: true,
   metadata: true,
   createdAt: true,
-  user: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-  },
 } satisfies Prisma.AuditLogSelect;
 
 function parseAuditDateBound(value: string, boundary: "start" | "end"): Date {
@@ -137,7 +130,31 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
   return result;
 }
 
-function buildAuditLogWhere(filters: Required<AuditLogFilters>): AuditLogWhere {
+/**
+ * フリーワードが実行ユーザーの名前・メールに一致する User の id を引く。
+ *
+ * `AuditLog.userId` は `user` への FK を持たない論理参照（証跡テーブルを FK の
+ * 参照アクションで書き換えさせないため。schema.prisma の AuditLog.userId 参照）なので、
+ * Prisma のリレーションフィルタ `{ user: { is: ... } }` が使えない。同じ絞り込みを
+ * 「先に id を引いて `userId in (...)` に落とす」2 段クエリで表現する。
+ */
+async function findActorIdsMatching(search: string): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
+}
+
+function buildAuditLogWhere(
+  filters: Required<AuditLogFilters>,
+  actorIdsMatchingSearch: readonly string[],
+): AuditLogWhere {
   const where: AuditLogWhere = {};
   const search = (filters.search ?? "").trim();
   const ipAddress = (filters.ipAddress ?? "").trim();
@@ -170,8 +187,11 @@ function buildAuditLogWhere(filters: Required<AuditLogFilters>): AuditLogWhere {
     where.OR = [
       { resource: { contains: search, mode: "insensitive" } },
       { resourceId: { contains: search, mode: "insensitive" } },
-      { user: { is: { email: { contains: search, mode: "insensitive" } } } },
-      { user: { is: { name: { contains: search, mode: "insensitive" } } } },
+      // 一致するユーザーが 0 件なら OR 項自体を足さない（`in: []` は常に偽なので
+      // 足しても同義だが、無駄な述語を SQL に載せない）
+      ...(actorIdsMatchingSearch.length > 0
+        ? [{ userId: { in: [...actorIdsMatchingSearch] } }]
+        : []),
     ];
   }
 
@@ -189,19 +209,54 @@ type SelectedAuditLog = Prisma.AuditLogGetPayload<{
   select: typeof auditLogSelect;
 }>;
 
-function serializeAuditLog(log: SelectedAuditLog): AuditLogItem {
-  return {
+type AuditActor = NonNullable<AuditLogItem["user"]>;
+
+/**
+ * 行に実行ユーザーの表示情報を貼り直す。
+ *
+ * FK を外したので `include` で引けない。id を集めて 1 回だけ引き直し、Map で合流する
+ * （行数ぶんクエリを撃たない）。**削除済みユーザーの行は `user: null` になる** —
+ * これは FK 撤去の設計上の帰結で、`userId` 自体は証跡として残る。
+ */
+async function attachActors(
+  logs: readonly SelectedAuditLog[],
+): Promise<AuditLogItem[]> {
+  const actorIds = [
+    ...new Set(
+      logs
+        .map((log) => log.userId)
+        .filter((id): id is string => typeof id === "string"),
+    ),
+  ];
+
+  const actors =
+    actorIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+  const actorById = new Map<string, AuditActor>(
+    actors.map((actor) => [actor.id, actor]),
+  );
+
+  return logs.map((log) => ({
     ...log,
     sequence: log.sequence.toString(),
     createdAt: log.createdAt.toISOString(),
     metadata: parseAuditLogMetadata(log.metadata),
-  };
+    user: log.userId === null ? null : (actorById.get(log.userId) ?? null),
+  }));
 }
 
 export async function getAuditLogs(
   filters: Required<AuditLogFilters>,
 ): Promise<AuditLogResult> {
-  const where = buildAuditLogWhere(filters);
+  const search = (filters.search ?? "").trim();
+  const where = buildAuditLogWhere(
+    filters,
+    search ? await findActorIdsMatching(search) : [],
+  );
   const {
     skip,
     take,
@@ -226,7 +281,7 @@ export async function getAuditLogs(
   );
 
   return toPlainObject({
-    logs: logs.map(serializeAuditLog),
+    logs: await attachActors(logs),
     total,
     page,
     totalPages: calcTotalPages(total, perPage),
@@ -236,7 +291,11 @@ export async function getAuditLogs(
 export async function getAuditLogsForExport(
   filters: Required<AuditLogFilters>,
 ): Promise<AuditLogItem[]> {
-  const where = buildAuditLogWhere(filters);
+  const search = (filters.search ?? "").trim();
+  const where = buildAuditLogWhere(
+    filters,
+    search ? await findActorIdsMatching(search) : [],
+  );
   const logs = await prisma.auditLog.findMany({
     where,
     select: auditLogSelect,
@@ -244,7 +303,7 @@ export async function getAuditLogsForExport(
     take: AUDIT_LOG_EXPORT_LIMIT,
   });
 
-  return toPlainObject(logs.map(serializeAuditLog));
+  return toPlainObject(await attachActors(logs));
 }
 
 export async function getAuditLogStats(): Promise<AuditLogStats> {
