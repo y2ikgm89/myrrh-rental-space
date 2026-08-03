@@ -24,7 +24,13 @@ export type SlugCheckResult =
 /** スラッグが使用できない理由 */
 export type SlugUnavailableReason =
   | { type: "reserved"; path: string }
-  | { type: "conflict"; contentType: ContentType; id: string };
+  | {
+      type: "conflict";
+      contentType: ContentType;
+      id: string;
+      /** 衝突相手がゴミ箱の行か（現状 Page のみ true になりうる） */
+      trashed: boolean;
+    };
 
 // =============================================================================
 // Reserved Paths
@@ -157,6 +163,7 @@ export async function checkSlugAvailability(
         type: "conflict",
         contentType: conflict.contentType,
         id: conflict.id,
+        trashed: conflict.trashed,
       },
     };
   }
@@ -183,6 +190,10 @@ export function getSlugErrorMessage(reason: SlugUnavailableReason): string {
     case "reserved":
       return `「${reason.path}」はシステムで予約されているため使用できません`;
     case "conflict":
-      return `このスラッグは既に${CONTENT_TYPE_LABELS[reason.contentType]}で使用されています`;
+      // ゴミ箱の行は一覧に出ないので、素の「使用されています」だと相手を探せない。
+      // 取りうる行動まで書く。
+      return reason.trashed
+        ? `このスラッグはゴミ箱にある${CONTENT_TYPE_LABELS[reason.contentType]}が使用しています。ゴミ箱から復元するか、完全に削除してから作成してください`
+        : `このスラッグは既に${CONTENT_TYPE_LABELS[reason.contentType]}で使用されています`;
   }
 }
