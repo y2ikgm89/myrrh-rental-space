@@ -19,10 +19,16 @@ type SeriesLockClient = {
  * 取得する（deadlock 予防のため全経路で同順序を強制する）。
  *
  * `tx` の型は（`space-locks.ts` と同様）`$executeRaw` のみを要求する最小構造型。
- * 生成 Prisma の `Prisma.TransactionClient`（拡張前の基底型）は `$extends` 済み
- * app 標準 client（`src/shared/db/prisma.ts` の `prisma`）の tx コールバック型と
- * `exactOptionalPropertyTypes: true` 下で構造的に非互換（拡張後 model メソッドの
- * `SelectSubset` 引数型が食い違う）なため使わない。
+ *
+ * **app 標準 client（`src/shared/db/prisma.ts` の `prisma`）は `$extends` していない。**
+ * 以前このコメントは「拡張済みなので `Prisma.TransactionClient` とは非互換」と
+ * 書いていたが、実測すると現状の tx コールバック引数は `Prisma.TransactionClient` に
+ * そのまま代入できる（`tsc` exit 0）。最小構造型を使うのは互換性の回避策ではなく、
+ * 必要なメソッドだけを要求してテストで差し替えやすくするため。
+ *
+ * ただし旧コメントの懸念自体は実在する: 試しに `$extends` を足すと
+ * `$transaction` のコールバック戻り型が壊れ、repo 全体で 546 件の型エラーになる
+ * （実測）。拡張を導入するなら単独の変更として扱うこと。
  */
 export async function lockReservationSeriesForTransaction(
   tx: SeriesLockClient,

@@ -319,13 +319,12 @@ export async function getReagreeRequiredTermsForCustomer(
 /**
  * `assertAllRequiredTermsAgreed` 専用の最小 tx クライアント型。
  *
- * Prisma 拡張クライアント（`$extends` 済み `prisma`、`src/shared/db/prisma.ts`）の
- * interactive tx コールバック引数は、生成 Prisma の `Prisma.TransactionClient`
- * （拡張前の基底型）と `exactOptionalPropertyTypes: true` 下で構造的に非互換
- * （拡張後 model メソッドの `SelectSubset` 引数型が食い違う。詳細は
- * `src/shared/domain/reservations/series-advisory-lock.ts` のコメント参照）。
  * `src/shared/lib/reservation/types.ts` の `PrismaTransactionClient` と同型の
- * パターンで、`termsDocument.findMany` のみを要求する最小構造型にする。
+ * パターンで、`termsDocument.findMany` のみを要求する。app 標準 client
+ * （`src/shared/db/prisma.ts`）は `$extends` していないので
+ * `Prisma.TransactionClient` とも互換だが、必要な 1 メソッドだけを要求する方が
+ * 呼び出し側を縛らずテストでも差し替えやすい（詳細は
+ * `src/shared/domain/reservations/series-advisory-lock.ts` のコメント参照）。
  */
 type TermsDocumentGateClient = {
   termsDocument: {

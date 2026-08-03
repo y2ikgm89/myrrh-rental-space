@@ -157,10 +157,10 @@ export async function applyCancellation(
 /**
  * `applyBulkCancellation` 用の最小構造型 tx。
  *
- * 生成 Prisma の `Prisma.TransactionClient`（拡張前の基底型）は `$extends` 済み
- * app 標準 client（`src/shared/db/prisma.ts` の `prisma`）の tx コールバック型と
- * `exactOptionalPropertyTypes: true` 下で構造的に非互換（TS2345）なため使わない
- * （`series-advisory-lock.ts` の `SeriesLockClient` と同じ理由・同じ回避）。
+ * 必要な 2 メソッドだけを要求してテストで差し替えやすくするための型で、
+ * `Prisma.TransactionClient` との非互換を避けるためではない（app 標準 client は
+ * `$extends` していないので現状は互換。詳細は `series-advisory-lock.ts` の
+ * `SeriesLockClient` のコメント）。
  */
 export interface ApplyBulkCancellationTx {
   readonly reservation: {
