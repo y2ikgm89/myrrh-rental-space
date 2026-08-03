@@ -216,7 +216,7 @@ describe("値域 CHECK 制約", () => {
          "amount","taxRate","issuerSnapshot","updatedAt"
        ) VALUES (
          gen_random_uuid(), 'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
-         '${ABSENT_UUID_A}', 'probe-registration-id', 'probe',
+         '${ABSENT_UUID_A}', '00000000-0000-4000-8000-0000000000aa', 'probe',
          0, 10, '{}'::jsonb, now()
        )`,
     );

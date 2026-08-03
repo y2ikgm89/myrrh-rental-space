@@ -116,6 +116,18 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // binary-coercible なので rewrite も起きない）。計画ダウンタイム付きデプロイが発動する。
   // Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
   "prisma/migrations/20260803040000_receipt_evidence_text_columns/migration.sql",
+  // イベント系 4 モデル + SpaceRatePlan の ID を cuid(varchar 30) → uuid へ統一（PR #1908）。
+  // 12 本の `ALTER COLUMN ... TYPE` が `changing-column-type` を発火する。SQL には
+  // 各文の直前に `-- squawk-ignore changing-column-type` を置いてあるが、上の 7 件と
+  // **同じく抑止されない**（CI run 30829904388 で 12 warning / exit 1 を実測）。
+  // squawk 自体の ignore 機構は生きている（fixtures/ignored.sql の ban-drop-column は
+  // 通る）ので、この rule 固有の挙動。
+  // 追加基準: ①この migration は `ALTER COLUMN ... TYPE` / `DROP CONSTRAINT` を含むため
+  // 計画ダウンタイム付きデプロイ（両サービス scaling=0）が発動し、旧 revision が新スキーマを
+  // 叩く Risk 1 の窓は原理的に存在しない ②schema.prisma 側も同 PR で更新済みなので
+  // breaking 判定が別 gate で走る ③Prisma client 再生成 + type-check 0 エラー、
+  // unit 780 / integration 139 が緑。
+  "prisma/migrations/20260804000000_unify_entity_ids_to_uuid/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

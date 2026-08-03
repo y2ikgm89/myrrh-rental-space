@@ -531,7 +531,7 @@ export async function cancelEventRegistration(
   });
   if (!turnstile.success) return createMutationError(turnstile.error);
 
-  // 3. cuid validation（EventRegistration.id は cuid、UUID ではない）
+  // 3. ID 形式の検証（EventRegistration.id は uuid）
   const idValidation = registrationIdSchema.safeParse(registrationId);
   if (!idValidation.success) return createMutationError("申込IDが不正です");
 

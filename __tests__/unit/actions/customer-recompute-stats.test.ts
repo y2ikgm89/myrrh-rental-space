@@ -129,7 +129,7 @@ describe("recomputeCustomerStatsAction", () => {
       await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
     const { isMutationError } = await import("@/shared/lib/mutation-result");
 
-    const result = await recomputeCustomerStatsAction("not-a-cuid");
+    const result = await recomputeCustomerStatsAction("not-a-uuid");
     expect(isMutationError(result)).toBe(true);
   });
 

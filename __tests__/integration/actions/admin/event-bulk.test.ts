@@ -205,13 +205,13 @@ mock.module("@/shared/lib/cloudflare", () => ({
 // テストデータ
 // =============================================================================
 
-const VALID_EVENT_ID_1 = "cm0event1234567890123456";
-const VALID_EVENT_ID_2 = "cm0event2234567890123456";
+const VALID_EVENT_ID_1 = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+const VALID_EVENT_ID_2 = "b705c6a7-bb72-498c-8d03-888be13d1d96";
 
 const INVALID_EVENT_IDS = [
   "",
   "invalid",
-  "not-a-cuid",
+  "not-a-uuid",
   "11111111-1111-4111-8111", // 短すぎる
 ];
 
@@ -235,7 +235,7 @@ describe("bulkPublishEvents", () => {
   });
 
   describe("正常系", () => {
-    test("有効な CUID 配列で公開できる", async () => {
+    test("有効な UUID 配列で公開できる", async () => {
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
@@ -309,7 +309,7 @@ describe("bulkPublishEvents", () => {
     });
 
     test.each(INVALID_EVENT_IDS)(
-      "不正な CUID '%s' を含む場合はエラーを返す",
+      "不正な UUID '%s' を含む場合はエラーを返す",
       async (invalidId) => {
         const { bulkPublishEvents } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
@@ -369,7 +369,7 @@ describe("bulkSoftDeleteEvents", () => {
   });
 
   describe("正常系", () => {
-    test("有効な CUID 配列でソフト削除できる", async () => {
+    test("有効な UUID 配列でソフト削除できる", async () => {
       const { bulkSoftDeleteEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
@@ -426,7 +426,7 @@ describe("bulkSoftDeleteEvents", () => {
     });
 
     test.each(INVALID_EVENT_IDS)(
-      "不正な CUID '%s' を含む場合はエラーを返す",
+      "不正な UUID '%s' を含む場合はエラーを返す",
       async (invalidId) => {
         const { bulkSoftDeleteEvents } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
@@ -479,12 +479,12 @@ describe("bulkSetStatusEvents", () => {
       expect(result).toHaveProperty("error");
     });
 
-    test("非 CUID の ID は validation error", async () => {
+    test("非 UUID の ID は validation error", async () => {
       const { bulkSetStatusEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
       const result = await bulkSetStatusEvents(
-        ["not-a-cuid"],
+        ["not-a-uuid"],
         EventStatus.CANCELLED,
       );
 

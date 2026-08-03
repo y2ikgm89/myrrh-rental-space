@@ -3,7 +3,7 @@
  *
  * `createEventRegistrationCommand` は `agreedTermsIds` が渡されると、申込と同一
  * トランザクション内で `recordTermsAgreements({ resourceId: registration.id })` を
- * 呼ぶ。`EventRegistration.id` は **cuid**（`@default(cuid()) @db.VarChar(30)`）で、
+ * 呼ぶ。`EventRegistration.id` は uuid だが、`resourceId` は複数モデルを指すため
  * `TermsAgreement.resourceId` が `@db.Uuid` だった間は Postgres が
  * `invalid input syntax for type uuid`（Prisma P2007）を返し、トランザクションごと
  * 巻き戻って**申込が 1 件も成立しなかった**（full CI run 30631140902 /
@@ -166,7 +166,7 @@ describeMaybe("createEventRegistrationCommand — 規約同意の記録", () => 
       });
 
       // 修正前はここに到達せず P2007 が throw されていた
-      // （`EventRegistration.id` の cuid を uuid 列へ渡していたため）。
+      // （当時 `EventRegistration.id` は cuid で、uuid 列へ渡していたため）。
       // コマンドの select は status を返さないので DB 行で確認する。
       const persisted = await prisma.eventRegistration.findUnique({
         where: { id: registration.id },
@@ -183,8 +183,10 @@ describeMaybe("createEventRegistrationCommand — 規約同意の記録", () => 
         { resourceId: registration.id, scope: TermsScope.EVENT_REGISTRATION },
       ]);
 
-      // cuid が uuid に化けていない（列は text）。
-      expect(agreements[0]?.resourceId).toMatch(/^[a-z0-9]{20,30}$/u);
+      // 値がそのまま保存されている（列は text なので uuid へ丸められたりしない）。
+      expect(agreements[0]?.resourceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
+      );
     } finally {
       // TermsAgreement は append-only（DB trigger が UPDATE/DELETE を拒否）。
       // 参照している TermsDocument も削除できないため、この 2 つは残す。

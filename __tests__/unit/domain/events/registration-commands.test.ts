@@ -384,8 +384,8 @@ describe("setEventRegistrationCheckInCommand", () => {
   });
 
   test("registrationId と eventId の両方で対象申込を絞る", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     await expect(
       setEventRegistrationCheckInCommand({
@@ -413,8 +413,8 @@ describe("setEventRegistrationCheckInCommand", () => {
   });
 
   test("CANCELLED を stale read で見た場合は VALIDATION throw で updateMany を呼ばない", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     mockRegistrationFindFirst.mockImplementation(() =>
       Promise.resolve({
@@ -437,8 +437,8 @@ describe("setEventRegistrationCheckInCommand", () => {
   });
 
   test("WAITLISTED は VALIDATION で拒否し updateMany を呼ばない", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     mockRegistrationFindFirst.mockImplementation(() =>
       Promise.resolve({
@@ -463,8 +463,8 @@ describe("setEventRegistrationCheckInCommand", () => {
   });
 
   test("CONFIRMED & attendedAt=null で attended=true → updateMany + CONFIRMED guard で claim", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     mockRegistrationFindFirst.mockImplementation(() =>
       Promise.resolve({
@@ -493,8 +493,8 @@ describe("setEventRegistrationCheckInCommand", () => {
   });
 
   test("TOCTOU: findFirst 後に別 tx で非 CONFIRMED 遷移 → updateMany count=0 → VALIDATION throw", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     // findFirst 時は CONFIRMED (stale read)
     mockRegistrationFindFirst.mockImplementation(() =>

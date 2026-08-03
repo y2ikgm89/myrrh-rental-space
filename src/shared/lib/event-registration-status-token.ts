@@ -36,7 +36,7 @@ const PURPOSE = "event-registration-status";
 export const EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS = 90 * MS_PER_DAY;
 
 interface StatusTokenPayload {
-  /** イベント参加申込ID（cuid） */
+  /** イベント参加申込ID（uuid） */
   rid: string;
   /** 有効期限（ms epoch） */
   exp: number;

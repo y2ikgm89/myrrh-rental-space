@@ -1,7 +1,7 @@
 /**
- * `entityIdSchema` が返す形式を `prisma/schema.prisma` に縛りつける gate。
+ * 「この repo の ID 形式は 1 つ」を `prisma/schema.prisma` から機械強制する gate。
  *
- * ID 形式の取り違えは、このリポジトリで**繰り返し本番に出ている**バグ class:
+ * ID 形式の取り違えは、統一前このリポジトリで**繰り返し本番に出ていた**バグ class:
  *
  * - #904 — マイページのキャンセルが cuid の申込 ID を `z.uuid()` で検証しており、
  *   実在する申込 ID を全て拒否していた
@@ -10,11 +10,11 @@
  * - 20260726030000 — 同じ理由で `AdminNotification.resourceId` を uuid → varchar へ
  *   広げる migration が必要になった
  *
- * 原因は一貫して「呼び出し側が形式を選ぶ」設計だったので、入口をモデル名に寄せた
- * うえで、形式の正しさをここで schema と突き合わせる。
+ * 20260804000000 で cuid の 5 モデルを uuid へ寄せ、混在そのものを無くした。
+ * **この gate はその状態を固定する**もので、`@default(cuid())` のモデルが 1 つでも
+ * 戻ると落ちる。形式が 1 つである限り、上のバグ class は構造的に起こらない。
  *
- * **宣言の一致だけでなく挙動も見る。** 宣言が合っていても `entityIdSchema` の
- * switch が壊れれば同じバグが戻るため、実際に safeParse させて確かめる。
+ * 宣言だけでなく `entityIdSchema` の挙動も見る（switch が壊れれば同じことなので）。
  */
 
 import { execFileSync } from "node:child_process";
@@ -24,10 +24,9 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import {
-  ENTITY_ID_SPECS,
+  ENTITY_ID_LABELS,
   entityIdSchema,
   type EntityIdModel,
-  type EntityIdFormat,
 } from "@/shared/lib/validations/entity-id";
 
 const ROOT = process.cwd();
@@ -35,6 +34,23 @@ const ROOT = process.cwd();
 /** `@default(...)` から読み取れる ID 生成子。 */
 type SchemaIdGenerator =
   "uuid" | "uuidV4" | "cuid" | "cuid2" | "singleton" | "other";
+
+/** 自前で生成する ID に許す生成子。 */
+const ALLOWED_GENERATORS: ReadonlySet<SchemaIdGenerator> = new Set([
+  "uuid",
+  // 単一行モデル（Settings 系 / ReceiptSequence）は主キーが固定文字列
+  "singleton",
+]);
+
+/**
+ * 主キーが**外部システムの識別子**であるモデル。uuid にはできない。
+ *
+ * `@default` を持たない（= アプリが値を渡す）ことまで含めて固定する。ここに
+ * `@default` が生えたら「外部 ID を受け取る」という前提が崩れているので落とす。
+ */
+const EXTERNAL_ID_MODELS: Readonly<Record<string, string>> = {
+  StripeEvent: "Stripe が発行する event.id（`evt_...`）をそのまま主キーにする",
+};
 
 /**
  * schema.prisma の各モデルの `@id` 行から生成子を読む。
@@ -96,105 +112,80 @@ function trackedSourceFiles(): string[] {
 
 const SCHEMA_ID_GENERATORS = readSchemaIdGenerators();
 
-const SAMPLE_IDS = {
-  uuid: "550e8400-e29b-41d4-a716-446655440000",
-  cuid: "cm60x9k3p0000qzrm8f3a1b2c",
-  cuid2: "tz4a98xxat96iws9zmbrgj3a",
-} as const;
+const SAMPLE_UUID = "550e8400-e29b-41d4-a716-446655440000";
+// ここは**旧形式のまま**でなければ意味を持たない（通ってはいけない値の見本）。
+// fixture 一括置換の対象にしないこと。
+const SAMPLE_CUID = "cm60x9k3p0000qzrm8f3a1b2c";
+const SAMPLE_CUID2 = "tz4a98xxat96iws9zmbrgj3a";
 
-/**
- * #904 の再発検知に使う「通ってはいけない値」。
- *
- * 比較式（`format === "uuid" ? …`）で書くと、登録が cuid 系だけの今は
- * TS2367（重なりが無い比較）になる。表にしておけば uuid のモデルを
- * 登録した時点でそのまま意味を持つ。
- */
-const WRONG_SAMPLE_FOR_FORMAT: Record<EntityIdFormat, string> = {
-  uuid: SAMPLE_IDS.cuid,
-  cuid: SAMPLE_IDS.uuid,
-  // cuid2 の正規表現は英小文字と数字だけを許すので、ハイフンを含む uuid を弾く
-  cuid2: SAMPLE_IDS.uuid,
-};
+const REGISTERED_MODELS = Object.keys(ENTITY_ID_LABELS) as EntityIdModel[];
 
-const REGISTERED_MODELS = Object.keys(ENTITY_ID_SPECS) as EntityIdModel[];
-
-/**
- * 戻り値注釈で `EntityIdFormat` 全体へ広げる。
- *
- * `ENTITY_ID_SPECS[model].format` をそのまま比較すると、登録が cuid 系だけの今は
- * TS2367（重なりが無い比較）になる。uuid のモデルを登録した時点で自然に意味を持つ
- * 書き方にしておく。
- */
-function formatOf(model: EntityIdModel): EntityIdFormat {
-  return ENTITY_ID_SPECS[model].format;
-}
-
-describe("entityIdSchema と schema.prisma の結合", () => {
+describe("ID 形式は 1 つに統一されている", () => {
   test("schema.prisma のパースが機能している（前提の自己検査）", () => {
     // モデルを 1 つも拾えていないと以降の assertion が全部 vacuous に通る。
     expect(SCHEMA_ID_GENERATORS.size).toBeGreaterThan(50);
     expect(SCHEMA_ID_GENERATORS.get("Reservation")).toBe("uuid");
-    expect(SCHEMA_ID_GENERATORS.get("EventTimeSlot")).toBe("cuid2");
+    expect(SCHEMA_ID_GENERATORS.get("EventRegistration")).toBe("uuid");
     expect(SCHEMA_ID_GENERATORS.get("SettingsSystem")).toBe("singleton");
   });
 
-  test("登録済みモデルの format が schema.prisma の @default と一致する", () => {
-    const mismatches = REGISTERED_MODELS.map((model) => {
-      const declared = ENTITY_ID_SPECS[model].format;
-      const actual = SCHEMA_ID_GENERATORS.get(model);
-      if (actual === declared) return null;
-      return `${model}: entity-id.ts は "${declared}" だが schema.prisma は "${String(actual)}"`;
-    }).filter((entry) => entry !== null);
+  test("自前生成の主キーは uuid(7) か singleton のどちらか", () => {
+    // ここが緑である限り「どの形式で検証するか」を選ぶ余地が無い＝ #904 が起きない。
+    // cuid / cuid2 / bare uuid() を足すとこのテストが落ちる。
+    const offenders = [...SCHEMA_ID_GENERATORS.entries()]
+      .filter(([model]) => !(model in EXTERNAL_ID_MODELS))
+      .filter(([, generator]) => !ALLOWED_GENERATORS.has(generator))
+      .map(([model, generator]) => `${model}: @default は "${generator}"`);
 
-    expect(mismatches).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
-  test("uuid 以外の ID を持つモデルは全て登録されている", () => {
-    // 未登録のまま新しい cuid モデルが増えると、呼び出し側がまた形式を勘で
-    // 選ぶことになる（それが #904 の入口だった）。
-    const unregistered = [...SCHEMA_ID_GENERATORS.entries()]
-      .filter(([, generator]) => generator === "cuid" || generator === "cuid2")
-      .map(([model]) => model)
-      .filter((model) => !(model in ENTITY_ID_SPECS));
+  test("外部 ID を主キーにするモデルは @default を持たないまま", () => {
+    // 例外の理由（外部システムが値を決める）が実態と合っているかを確かめる。
+    const offenders = Object.keys(EXTERNAL_ID_MODELS)
+      .map((model) => ({ model, generator: SCHEMA_ID_GENERATORS.get(model) }))
+      .filter(({ generator }) => generator !== "other")
+      .map(
+        ({ model, generator }) =>
+          `${model}: 外部 ID のはずが @default が "${String(generator)}" になっている`,
+      );
 
-    expect(unregistered).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
-  test("uuid の ID は全て uuid(7)（バージョン混在を許さない）", () => {
-    const v4Models = [...SCHEMA_ID_GENERATORS.entries()]
-      .filter(([, generator]) => generator === "uuidV4")
-      .map(([model]) => model);
+  test("登録済みモデルは schema.prisma に実在する", () => {
+    const unknown = REGISTERED_MODELS.filter(
+      (model) => !SCHEMA_ID_GENERATORS.has(model),
+    );
 
-    expect(v4Models).toEqual([]);
+    expect(unknown).toEqual([]);
   });
 });
 
 describe("entityIdSchema の挙動", () => {
-  test.each(REGISTERED_MODELS)("%s は宣言どおりの形式だけを通す", (model) => {
+  test.each(REGISTERED_MODELS)("%s は uuid だけを通す", (model) => {
     const schema = entityIdSchema(model);
-    const { format, label } = ENTITY_ID_SPECS[model];
 
-    expect(schema.safeParse(SAMPLE_IDS[format]).success).toBe(true);
+    expect(schema.safeParse(SAMPLE_UUID).success).toBe(true);
 
-    const rejected = schema.safeParse(WRONG_SAMPLE_FOR_FORMAT[format]);
-
-    expect(rejected.success).toBe(false);
-    if (!rejected.success) {
-      expect(rejected.error.issues[0]?.message).toBe(`${label}IDが不正です`);
+    // #904 の再発検知: 旧 cuid / cuid2 形式の ID を通してはいけない。
+    for (const legacy of [SAMPLE_CUID, SAMPLE_CUID2]) {
+      const rejected = schema.safeParse(legacy);
+      expect(rejected.success).toBe(false);
+      if (!rejected.success) {
+        expect(rejected.error.issues[0]?.message).toBe(
+          `${ENTITY_ID_LABELS[model]}IDが不正です`,
+        );
+      }
     }
   });
 });
 
 describe("形式で選ぶ ID スキーマを src に戻さない", () => {
-  test("z.cuid / z.cuid2 の直呼びは entity-id.ts だけ", () => {
-    const offenders = trackedSourceFiles().filter((file) => {
-      if (
-        file.replaceAll("\\", "/") === "src/shared/lib/validations/entity-id.ts"
-      ) {
-        return false;
-      }
-      return /\bz\.cuid2?\(/u.test(readFileSync(join(ROOT, file), "utf8"));
-    });
+  test("z.cuid / z.cuid2 は src のどこにも無い", () => {
+    const offenders = trackedSourceFiles().filter((file) =>
+      /\bz\.cuid2?\(/u.test(readFileSync(join(ROOT, file), "utf8")),
+    );
 
     expect(offenders).toEqual([]);
   });
@@ -203,24 +194,6 @@ describe("形式で選ぶ ID スキーマを src に戻さない", () => {
     const offenders = trackedSourceFiles().filter((file) =>
       /prismaCuid2?IdSchema/u.test(readFileSync(join(ROOT, file), "utf8")),
     );
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("uuidIdSchema に非 uuid モデルの表示名を渡していない", () => {
-    // `uuidIdSchema` はまだ 83 箇所（すべて uuid のモデル）で使われている。
-    // 残る事故経路は「cuid のモデルの ID をこちらで検証してしまう」— #904 そのもの。
-    // 表示名はモデル単位に固定したので、それを鍵に検出できる。
-    const nonUuidLabels = REGISTERED_MODELS.filter(
-      (model) => formatOf(model) !== "uuid",
-    ).map((model) => ENTITY_ID_SPECS[model].label);
-
-    const offenders = trackedSourceFiles().flatMap((file) => {
-      const source = readFileSync(join(ROOT, file), "utf8");
-      return nonUuidLabels
-        .filter((label) => source.includes(`uuidIdSchema("${label}")`))
-        .map((label) => `${file}: uuidIdSchema("${label}")`);
-    });
 
     expect(offenders).toEqual([]);
   });

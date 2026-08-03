@@ -20,8 +20,9 @@ import { test, expect } from "../fixtures/e2e-test";
  * テストごとに配るため spec 側の記述は不要（`request` fixture にも効く）。
  */
 
-const VALID_UUID = "11111111-1111-1111-1111-111111111111";
-const VALID_CUID_LIKE = "cab1234567890abcdef1234567";
+// 予約 ID / イベント申込 ID はどちらも uuid（20260804000000 で統一）なので 1 つで足りる。
+// RFC 4122 の version / variant を満たす値にする（`z.uuid()` は両方を強制する）。
+const VALID_UUID = "d8d799cf-68b2-4885-8361-10af9afeaef6";
 
 test.describe("Calendar API - 認証ガード（未認証）", () => {
   test("GET /api/calendar/reservation/[id] は未認証で 401 を返す", async ({
@@ -36,9 +37,7 @@ test.describe("Calendar API - 認証ガード（未認証）", () => {
   test("GET /api/calendar/event/[registrationId] は未認証で 401 を返す", async ({
     request,
   }) => {
-    const response = await request.get(
-      `/api/calendar/event/${VALID_CUID_LIKE}`,
-    );
+    const response = await request.get(`/api/calendar/event/${VALID_UUID}`);
     expect(response.status()).toBe(401);
   });
 

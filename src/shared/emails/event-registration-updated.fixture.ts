@@ -10,7 +10,7 @@ export const eventRegistrationUpdatedFixture = {
   ticketName: "一般",
   quantity: 2,
   totalPrice: "¥6,000",
-  registrationId: "clx000000000000000000000001",
+  registrationId: "c08ed19d-5ef4-4103-876b-8668a23ffc02",
   eventRegistrationHubUrl:
     "https://example.com/events/registrations/status?token=demo",
   footer: DEMO_FOOTER,

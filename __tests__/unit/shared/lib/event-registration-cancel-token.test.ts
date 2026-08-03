@@ -7,7 +7,7 @@ import {
 } from "@/shared/lib/event-registration-cancel-token";
 import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
-const RID = "ckv1a2b3c0000abcdefghijk";
+const RID = "0c4e4d5f-6182-45ea-8692-bd47250b76d7";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;

@@ -5,7 +5,7 @@
  * text と推論し `sortOrder`（integer 列）への代入で 42804 を投げる
  * （event-categories/commands.test.ts の updateEventCategoryOrder と同じ回帰対象）。
  * events/commands.ts はこの中で唯一 buildTextOrderSqlFragments（uuid キャスト無し版）
- * を使う経路（EventTicket.id は cuid の VarChar）。
+ * を使う経路（EventTicket.id は uuid）。
  *
  * SINGLE_OCCURRENCE の Event は `events_schedule_integrity_check`
  * （00000000000000_init migration の DEFERRABLE INITIALLY DEFERRED constraint trigger）

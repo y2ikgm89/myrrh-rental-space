@@ -5100,7 +5100,8 @@ async function seedAdminNotifications() {
   });
   const latestRegistration = await prisma.eventRegistration.findFirst({
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true },
+    // 申込単体の管理画面ルートは無いので、リンク先はイベントになる（eventId を使う）
+    select: { name: true, eventId: true },
   });
 
   const notifications: Array<{
@@ -5150,11 +5151,15 @@ async function seedAdminNotifications() {
     });
   }
   if (latestRegistration) {
-    // Event / EventRegistration は cuid なので AdminNotification.resourceId（@db.Uuid）に入れない
     notifications.push({
       type: "EVENT_REGISTERED",
       title: "イベント申込",
       message: `${latestRegistration.name}様からイベント申込が入りました`,
+      // `getNotificationResourceHref` のルート表は event / reservation / inquiry /
+      // review / customer しか持たない。"event-registration" を入れてもリンクは
+      // 出ないので、開催イベントの編集画面へ飛ばす。
+      resourceType: "event",
+      resourceId: latestRegistration.eventId,
       isRead: false,
       createdAt: hoursAgo(12),
     });

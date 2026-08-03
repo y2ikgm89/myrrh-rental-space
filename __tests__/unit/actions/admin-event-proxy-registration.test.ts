@@ -124,10 +124,10 @@ mock.module("@/shared/lib/async-utils", () => ({
 const { createAdminProxyRegistration } =
   await import("@/admin/actions/event-registration");
 
-const eventId = "cm0event1234567890123456";
-const slotId = "cm0slot1234567890123456ab"; // cuid2 (25 chars)
-const ticketId = "cm0ticket1234567890123456";
-const registrationId = "cm0reg12345678901234567";
+const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+const slotId = "3cb95465-a4f4-4f72-8c52-e13a4f8e17d3";
+const ticketId = "b50bb4a8-511e-43da-8c46-8e32bdd61d2e";
+const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
 /**
  * action は conform の Server Action になったので FormData で呼ぶ。

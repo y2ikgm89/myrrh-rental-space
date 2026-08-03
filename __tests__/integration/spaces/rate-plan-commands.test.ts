@@ -217,7 +217,7 @@ describeMaybe("SpaceRatePlan CRUD", () => {
   test("updateSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
     let caught: unknown;
     try {
-      await updateSpaceRatePlan("nonexistent-rate-plan-id", {
+      await updateSpaceRatePlan("00000000-0000-4000-8000-00000000beef", {
         hourlyPrice: 1000,
       });
     } catch (err) {
@@ -232,7 +232,7 @@ describeMaybe("SpaceRatePlan CRUD", () => {
   test("deleteSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
     let caught: unknown;
     try {
-      await deleteSpaceRatePlan("nonexistent-rate-plan-id");
+      await deleteSpaceRatePlan("00000000-0000-4000-8000-00000000beef");
     } catch (err) {
       caught = err;
     }

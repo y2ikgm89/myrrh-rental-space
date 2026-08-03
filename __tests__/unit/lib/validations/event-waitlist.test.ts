@@ -6,9 +6,9 @@ import {
 
 describe("publicEventWaitlistRegistrationSchema", () => {
   const validInput = {
-    eventId: "cm0event1234567890123456",
-    ticketId: "cm0ticket1234567890123",
-    slotId: "uvslot123456789012345678",
+    eventId: "0baaa247-7a6c-4938-893c-a0a9c382b12b",
+    ticketId: "96e83639-0c13-4eb1-8de3-8e6fe7892ba9",
+    slotId: "f4becb6e-69df-4871-8998-ccc37decf00c",
     name: "山田太郎",
     email: "yamada@example.com",
     quantity: 2,

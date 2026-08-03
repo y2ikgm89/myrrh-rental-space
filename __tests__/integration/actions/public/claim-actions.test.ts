@@ -31,7 +31,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
 }));
 
 const RESERVATION_ID = "00000000-0000-4000-a000-000000000001";
-const EVENT_REGISTRATION_ID = "cm60x9k3p0000qzrm8f3a1b2c";
+const EVENT_REGISTRATION_ID = "2ea99a40-e250-4d13-873d-6f3a45ed97ad";
 
 mock.module("next/headers", () => ({
   cookies: mock(() =>

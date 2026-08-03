@@ -84,7 +84,7 @@ describe("sendWelcomeEmail() の idempotencyKey は customerId ベース", () =>
     // email 文字列そのものが key に含まれていないこと（hash 前後どちらも）
     expect(key).not.toContain(BASE.customerEmail);
     // 旧 `hashForKey(email)` = sha256 hex は 64 文字。key 長は
-    // `welcome/` + cuid でそれよりずっと短くなる。email hash 混入の粗い検知。
+    // `welcome/` + uuid でそれよりずっと短くなる。email hash 混入の粗い検知。
     expect(key?.length ?? 0).toBeLessThan("welcome/".length + 64);
   });
 

@@ -517,7 +517,7 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   ),
   "AdminNotification.resourceId": generated(
     36,
-    "UUID(36) または cuid(25)。多相参照だが ID 以外は入らない",
+    "UUID(36)。多相参照だが ID 以外は入らない（統一前の行には cuid が残る）",
   ),
 
   // --- 振込先 ------------------------------------------------------------

@@ -85,12 +85,12 @@ describe("admin event registration actions", () => {
     );
   });
 
-  test("管理キャンセルは CUID の申込 ID を検証で落とさず管理 mutation に渡す", async () => {
-    const registrationId = "cm0reg12345678901234567";
+  test("管理キャンセルは UUID の申込 ID を検証で落とさず管理 mutation に渡す", async () => {
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     mockExecuteAdminMutationResult.mockResolvedValue({
       registrationId,
-      eventId: "cm0event1234567890123456",
+      eventId: "0baaa247-7a6c-4938-893c-a0a9c382b12b",
       name: "佐藤花子",
       email: "sato@example.com",
       eventTitle: "イベント",
@@ -111,8 +111,8 @@ describe("admin event registration actions", () => {
   });
 
   test("管理キャンセルの afterSuccess は副作用モジュールを channel:admin で呼ぶ", async () => {
-    const registrationId = "cm0reg12345678901234567";
-    const eventId = "cm0event1234567890123456";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
 
     mockAdminCancelEventRegistrationCommand.mockResolvedValue({
       id: registrationId,
@@ -149,8 +149,8 @@ describe("admin event registration actions", () => {
   });
 
   test("出席トグルは eventId と registrationId をドメインコマンドへ渡す", async () => {
-    const eventId = "cm0event1234567890123456";
-    const registrationId = "cm0reg12345678901234567";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
+    const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 
     mockExecuteAdminMutationResult.mockImplementation(async (options) =>
       options.execute(),

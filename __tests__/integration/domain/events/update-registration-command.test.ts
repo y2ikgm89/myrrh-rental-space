@@ -307,7 +307,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
     let caught: unknown = null;
     try {
       await updateWithPoolRetry({
-        registrationId: "nonexistent000000000000000",
+        registrationId: "00000000-0000-4000-8000-00000000dead",
         name: "x",
         email: null,
         phone: null,
