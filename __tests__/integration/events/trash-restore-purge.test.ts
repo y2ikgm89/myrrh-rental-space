@@ -276,11 +276,13 @@ describeMaybe("イベントのゴミ箱運用", () => {
       select: { deletedAt: true },
     });
 
-    // 両方成功してはいけない（片方は必ず claim で弾かれる）
-    expect(
-      restoreResult.status === "fulfilled" &&
-        purgeResult.status === "fulfilled",
-    ).toBe(false);
+    // **ちょうど 1 つだけ成功する**ことを要求する。「両方成功していない」だけを見ると、
+    // deadlock や timeout で両方落ちた場合も条件が真になり、下の状態検査は
+    // どちらの if にも入らずに緑で終わる（= 何も証明しないテストになる）。
+    const fulfilled = [restoreResult, purgeResult].filter(
+      (r) => r.status === "fulfilled",
+    );
+    expect(fulfilled.length).toBe(1);
 
     if (restoreResult.status === "fulfilled") {
       expect(survivor).not.toBeNull();
