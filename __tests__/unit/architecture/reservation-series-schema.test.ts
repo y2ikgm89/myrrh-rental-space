@@ -36,7 +36,7 @@ describe("ReservationSeries schema invariants", () => {
     expect(sql).toContain('WHERE "deletedAt" IS NULL');
   });
 
-  test("ReservationSeries に @@index 4 個宣言", async () => {
+  test("ReservationSeries の索引宣言が揃っている", async () => {
     const schema = await readFile(
       join(process.cwd(), "prisma/schema.prisma"),
       "utf8",
@@ -45,8 +45,19 @@ describe("ReservationSeries schema invariants", () => {
       /model ReservationSeries \{[\s\S]*?@@map\("reservation_series"\)\s*\}/,
     );
     expect(seriesBlock).not.toBeNull();
-    const indexCount = (seriesBlock![0].match(/@@index\(/g) ?? []).length;
-    expect(indexCount).toBe(4);
+
+    // 以前は「@@index が 4 個」という個数だけを見ていたため、**正当な索引の追加でも
+    // 落ちる**（FK 索引カバレッジの補完で 2 本増えた時点で赤くなった）一方、
+    // どれか 1 本を別のものに差し替えても気づけなかった。守りたいのは個数ではなく
+    // 「この列の索引が存在すること」なので、対象を名指しする。
+    const missing = [
+      "@@index([spaceId, dtstart])",
+      "@@index([customerId])",
+      "@@index([createdAt])",
+      "@@index([deletedAt])",
+    ].filter((declaration) => !seriesBlock![0].includes(declaration));
+
+    expect(missing).toEqual([]);
   });
 
   test("TermsScope に RESERVATION_SERIES 追加済", async () => {
