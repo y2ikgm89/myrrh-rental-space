@@ -41,7 +41,10 @@ import {
   checkSpaceOverlap,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
-import { isPrismaExclusionConstraintError } from "@/shared/lib/prisma-errors";
+import {
+  isPrismaExclusionConstraintError,
+  isPrismaUniqueConstraintError,
+} from "@/shared/lib/prisma-errors";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
 
 /**
@@ -545,6 +548,143 @@ export async function deleteEventCommand(id: string) {
     where: { id, deletedAt: null },
     data: { deletedAt: new Date() },
   });
+}
+
+const EVENT_SLUG_RESTORE_CONFLICT_MESSAGE =
+  "同じスラッグのイベントが既に存在するため復元できません。先に既存のイベントのスラッグを変更してください";
+
+/**
+ * ゴミ箱のイベントを復元する。
+ *
+ * **復元はスペース占有の再取得**である点に注意。`checkSpaceOverlap` は
+ * `event: { deletedAt: null }` で絞っているので、論理削除した時点でそのイベントは
+ * スペースを手放している。ゴミ箱にある間に同じ時間帯へ予約や別イベントが入りうるため、
+ * 何も確かめずに `deletedAt` を戻すと**二重予約が成立する**。
+ *
+ * したがって `publishEventCommand`（非占有 status → 占有 status の遷移）と同じ形を採る:
+ * advisory lock で Space を直列化し、全スロットの重複を検査してから復元する。
+ * status が占有側でない（CANCELLED / ARCHIVED）ときは占有が発生しないので検査を省く。
+ */
+export async function restoreEventCommand(id: string): Promise<void> {
+  const event = await prisma.event.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      spaceId: true,
+      deletedAt: true,
+      slots: { select: { startAt: true, endAt: true } },
+    },
+  });
+  if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+  if (event.deletedAt === null) {
+    throw new DomainError("このイベントは削除されていません", "VALIDATION");
+  }
+
+  // slug の一意性は deletedAt: null の行にしか掛かっていない（ゴミ箱は slug を解放する）。
+  // ゴミ箱にある間に同じ slug のイベントが作られていれば、復元すると 2 件が同じ URL になる。
+  const slugConflict = await prisma.event.findFirst({
+    where: { slug: event.slug, deletedAt: null, id: { not: id } },
+    select: { id: true },
+  });
+  if (slugConflict) {
+    throw new DomainError(EVENT_SLUG_RESTORE_CONFLICT_MESSAGE, "CONFLICT");
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (event.spaceId && isActiveEventStatus(event.status)) {
+        await lockSpaceForTransaction(tx, event.spaceId);
+        for (const slot of event.slots) {
+          const overlap = await checkSpaceOverlap(
+            {
+              spaceId: event.spaceId,
+              startTime: slot.startAt,
+              endTime: slot.endAt,
+              excludeEventId: id,
+            },
+            tx,
+          );
+          if (overlap.hasOverlap) {
+            throw new DomainError(
+              overlap.type === "reservation"
+                ? "復元先の時間帯は既に予約されています。予約を調整してから復元してください。"
+                : "復元先の時間帯は既に他のイベントで使用されています。先に調整してから復元してください。",
+              "CONFLICT",
+            );
+          }
+        }
+      }
+
+      // 削除済みであることを WHERE に含めて claim する（二重復元・並行操作の防止）。
+      const claim = await tx.event.updateMany({
+        where: { id, deletedAt: { not: null } },
+        data: { deletedAt: null, deletedById: null },
+      });
+      if (claim.count === 0) {
+        throw new DomainError(
+          "イベントの状態が他の操作により変更されています。最新の状態を確認してください",
+          "CONFLICT",
+        );
+      }
+    }, RESERVATION_WRITE_TX_OPTIONS);
+  } catch (err) {
+    if (isPrismaExclusionConstraintError(err)) {
+      throw new DomainError(
+        "復元先の時間帯は既に予約されています。予約を調整してから復元してください。",
+        "CONFLICT",
+      );
+    }
+    if (isPrismaUniqueConstraintError(err, "slug")) {
+      throw new DomainError(EVENT_SLUG_RESTORE_CONFLICT_MESSAGE, "CONFLICT");
+    }
+    throw err;
+  }
+}
+
+/**
+ * ゴミ箱のイベントを完全に削除する。
+ *
+ * **会計証跡が付いた申込があるイベントは削除しない。** `Receipt` / `Refund` は
+ * `EventRegistration` を `onDelete: Restrict` で参照している（領収書・返金記録の
+ * ある申込は物理削除できない、という会計証跡保護）。ここで止めないと生の P2003 が
+ * そのまま上がる — 実測: 領収書付き申込のあるイベントを消すと
+ * `receipts_eventRegistrationId_fkey` 違反になる。
+ *
+ * 子（slot / ticket / registration）は `onDelete: Cascade` に任せる。当初は
+ * 「子どうしが Restrict で結ばれている（`EventRegistration.slotId` / `ticketId`）ので
+ * 明示順で消す必要がある」と考えて順序を書いていたが、**実測すると素の
+ * `event.delete()` で通る** — 兄弟も同じ DELETE で消えるため Restrict は成立する。
+ * 誤った理由で書かれた手順は消した（その挙動はテストで固定している）。
+ */
+export async function permanentlyDeleteEventCommand(id: string): Promise<void> {
+  const event = await prisma.event.findUnique({
+    where: { id },
+    select: { id: true, deletedAt: true },
+  });
+  if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+  if (event.deletedAt === null) {
+    throw new DomainError(
+      "先にゴミ箱へ移動してから完全に削除してください",
+      "CONFLICT",
+    );
+  }
+
+  const withEvidence = await prisma.eventRegistration.count({
+    where: {
+      eventId: id,
+      OR: [{ receipt: { isNot: null } }, { refunds: { some: {} } }],
+    },
+  });
+  if (withEvidence > 0) {
+    throw new DomainError(
+      "領収書または返金記録のある申込を含むイベントは完全に削除できません",
+      "CONFLICT",
+    );
+  }
+
+  await prisma.event.delete({ where: { id } });
 }
 
 export async function publishEventCommand(id: string) {
