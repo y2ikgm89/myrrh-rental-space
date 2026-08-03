@@ -20,9 +20,20 @@
 # 本番 / CI の Postgres バージョン（cloudbuild.yaml・ci.yml ともに postgres:16）
 pg_version = "16.0"
 
-# Prisma は各マイグレーションを 1 トランザクションで適用する（PostgreSQL は
-# transactional DDL）。transaction 前提の rule 判定を実態に合わせる。
-assume_in_transaction = true
+# **Prisma は PostgreSQL の migration をトランザクションで包まない。**
+# 公式 (Prisma Migrate DX primitives):
+#   「PostgreSQL: You can opt-in by adding `BEGIN;` and `COMMIT;` to the generated
+#    schema migrations. By default, Migrate does not wrap migrations in a transaction.」
+#
+# 以前ここは `true` だった。実測で否定される: CREATE TABLE → INSERT → 失敗する
+# CREATE UNIQUE INDEX を 1 ファイルに並べて `prisma migrate deploy` を流したところ、
+# index 作成は失敗したのに **CREATE TABLE は残った**（= ロールバックされない）。
+#
+# `true` のままだと squawk は「どうせ全部巻き戻る」前提で判定するため、
+# 途中失敗による部分適用のリスクを過小評価する。実態に合わせて false にする。
+# （docs 内の「single transaction」記述は Prisma **Next** の新しい migration runner の
+# 話で、本リポの `prisma migrate deploy` には当てはまらない。）
+assume_in_transaction = false
 
 # 有効に残す rule（= Risk 1：旧コードが新スキーマで壊れる変更）:
 #   ban-drop-column / ban-drop-table / ban-drop-database

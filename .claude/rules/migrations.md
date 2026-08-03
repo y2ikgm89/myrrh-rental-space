@@ -23,6 +23,29 @@ paths: ["prisma/**"]
 - モデル名とテーブル名は `@@map` で乖離している（AuditLog → audit_logs 等、
   Better Auth 系は単数形）。migration SQL を書く・検証する際は schema.prisma と突合する
 
+## migration は原子的ではない（文の順序が正しさの一部）
+
+**Prisma は PostgreSQL の migration をトランザクションで包まない。** 公式は
+「PostgreSQL: You can opt-in by adding `BEGIN;` and `COMMIT;` … By default, Migrate
+does not wrap migrations in a transaction」と明記している。実測でも、
+CREATE TABLE → INSERT → 失敗する CREATE UNIQUE INDEX を 1 ファイルに並べると
+index だけ失敗して **CREATE TABLE は残った**。
+
+つまり **途中で失敗した migration は部分適用のまま残る**。帰結:
+
+- **失敗しうる文を、それが置き換える対象を DROP する前に置く。** 「古い制約を DROP →
+  新しい制約を CREATE」の順で書くと、CREATE が既存データ違反で落ちたときに
+  **どちらの制約も無い状態**で止まる。実例: 20260803070000 は
+  `DROP INDEX terms_documents_slug_key` の後に `CREATE UNIQUE INDEX
+reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 Stripe ID が
+  あると terms_documents の slug 一意性が失われたまま停止する
+- 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加）を含む migration は、
+  **適用前に違反行が 0 件であることを本番で確認する**
+- どうしても原子性が要るなら Prisma 公式の opt-in どおり `BEGIN;` / `COMMIT;` を
+  自分で書く（`CREATE INDEX CONCURRENTLY` はトランザクション内で使えない点に注意）
+
+`.squawk.toml` の `assume_in_transaction` はこの実態に合わせて `false`。
+
 ## squawk（migration lint）
 
 - 意図的な破壊変更は SQL 文の**直前 1 行**に `-- squawk-ignore <rule名>` を書いて通す
