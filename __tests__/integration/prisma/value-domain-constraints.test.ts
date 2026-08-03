@@ -169,8 +169,9 @@ describe("値域 CHECK 制約", () => {
   test("0 円の返金を記録できない", async () => {
     await expectRejectedBy(
       "refunds_amount_positive_check",
-      `INSERT INTO "refunds" ("reservationId","amount","refundedByType","stripeRefundId")
-       VALUES ('${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
+      // id は明示する。20260803090000 で DB 側 DEFAULT を外し Prisma 側採番へ寄せたため。
+      `INSERT INTO "refunds" ("id","reservationId","amount","refundedByType","stripeRefundId")
+       VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
     );
   });
 
@@ -178,10 +179,10 @@ describe("値域 CHECK 制約", () => {
     await expectRejectedBy(
       "receipts_target_exclusive_check",
       `INSERT INTO "receipts" (
-         "serialNo","reservationId","eventRegistrationId","recipientName",
+         "id","serialNo","reservationId","eventRegistrationId","recipientName",
          "amount","taxRate","issuerSnapshot","updatedAt"
        ) VALUES (
-         'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
+         gen_random_uuid(), 'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
          '${ABSENT_UUID_A}', 'probe-registration-id', 'probe',
          0, 10, '{}'::jsonb, now()
        )`,
