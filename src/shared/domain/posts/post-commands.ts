@@ -27,6 +27,8 @@ const POST_SLUG_CONFLICT_MESSAGE = getSlugErrorMessage({
   type: "conflict",
   contentType: "post",
   id: "",
+  // Post は削除済み行を衝突とみなさないので常に false。
+  trashed: false,
 });
 
 function rethrowPostSlugConflict(error: unknown): never {

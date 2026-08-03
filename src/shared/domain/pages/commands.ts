@@ -155,6 +155,8 @@ export async function createPageCommand(
           type: "conflict",
           contentType: "page",
           id: "unknown",
+          // P2002 からは相手の行が判らない。unique が掛かるのは active 行なので false。
+          trashed: false,
         }),
         "CONFLICT",
       );

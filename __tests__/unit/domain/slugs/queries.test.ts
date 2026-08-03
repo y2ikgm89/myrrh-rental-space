@@ -67,7 +67,7 @@ describe("findSlugConflict", () => {
 
     const result = await findSlugConflict("hello-world", "news");
 
-    expect(result).toEqual({ contentType: "post", id: "p1" });
+    expect(result).toEqual({ contentType: "post", id: "p1", trashed: false });
   });
 
   test("post に conflict がなければ news に fallback", async () => {
@@ -75,7 +75,7 @@ describe("findSlugConflict", () => {
 
     const result = await findSlugConflict("breaking", "post");
 
-    expect(result).toEqual({ contentType: "news", id: "n1" });
+    expect(result).toEqual({ contentType: "news", id: "n1", trashed: false });
   });
 
   test("優先順位は post → news → page → space（複数 conflict 時は post 優先）", async () => {
@@ -94,7 +94,7 @@ describe("findSlugConflict", () => {
 
     const result = await findSlugConflict("studio-a", "news");
 
-    expect(result).toEqual({ contentType: "space", id: "s1" });
+    expect(result).toEqual({ contentType: "space", id: "s1", trashed: false });
     expect(mockSpaceFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({

@@ -292,6 +292,7 @@ describe("getSlugErrorMessage", () => {
         type: "conflict",
         contentType: "post",
         id: "post-1",
+        trashed: false,
       };
       expect(getSlugErrorMessage(reason)).toContain("投稿");
     });
@@ -301,6 +302,7 @@ describe("getSlugErrorMessage", () => {
         type: "conflict",
         contentType: "news",
         id: "news-1",
+        trashed: false,
       };
       expect(getSlugErrorMessage(reason)).toContain("お知らせ");
     });
@@ -310,6 +312,7 @@ describe("getSlugErrorMessage", () => {
         type: "conflict",
         contentType: "page",
         id: "page-1",
+        trashed: false,
       };
       expect(getSlugErrorMessage(reason)).toContain("ページ");
     });
@@ -319,8 +322,37 @@ describe("getSlugErrorMessage", () => {
         type: "conflict",
         contentType: "space",
         id: "space-1",
+        trashed: false,
       };
       expect(getSlugErrorMessage(reason)).toContain("スペース");
+    });
+
+    test("ゴミ箱の行との衝突は、取りうる行動まで伝える", () => {
+      // ゴミ箱の行は一覧に出ない。素の「既に使用されています」だと、利用者は
+      // 何とぶつかっているのか画面から辿れないまま手が止まる。
+      const reason: SlugUnavailableReason = {
+        type: "conflict",
+        contentType: "page",
+        id: "page-1",
+        trashed: true,
+      };
+      const message = getSlugErrorMessage(reason);
+
+      expect(message).toContain("ゴミ箱");
+      expect(message).toContain("復元");
+      expect(message).toContain("完全に削除");
+    });
+
+    test("ゴミ箱でない衝突の文言は従来どおり", () => {
+      const reason: SlugUnavailableReason = {
+        type: "conflict",
+        contentType: "page",
+        id: "page-1",
+        trashed: false,
+      };
+      expect(getSlugErrorMessage(reason)).toBe(
+        "このスラッグは既にページで使用されています",
+      );
     });
   });
 });
