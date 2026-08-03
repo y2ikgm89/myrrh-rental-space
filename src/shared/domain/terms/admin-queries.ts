@@ -195,22 +195,40 @@ export async function getReagreeAffectedCustomerCount(
     .update(doc.contentHtml)
     .digest("hex");
 
-  const affected = await prisma.customer.count({
+  // TermsAgreement.customerId は customers への FK を持たない論理参照なので、
+  // リレーションフィルタ（`NOT: { termsAgreements: { some: ... } }`）が使えない。
+  // 「同意済みの有効顧客」を数えて総数から引く 2 段クエリで同じ値を出す。
+  // `notIn` で除外しないのは、同意者数ぶんの id を SQL に載せずに済ませるため。
+  const agreedCustomerIds = await prisma.termsAgreement.findMany({
     where: {
-      isActive: true,
-      NOT: {
-        termsAgreements: {
-          some: {
-            termsId,
-            scope: TermsScope.LOGIN_SIGNUP,
-            contentHash: currentHash,
-          },
-        },
-      },
+      termsId,
+      scope: TermsScope.LOGIN_SIGNUP,
+      contentHash: currentHash,
+      customerId: { not: null },
     },
+    select: { customerId: true },
+    distinct: ["customerId"],
   });
 
-  return { affected, totalActiveCustomers, scopeApplies: true };
+  const agreedActiveCount =
+    agreedCustomerIds.length > 0
+      ? await prisma.customer.count({
+          where: {
+            isActive: true,
+            id: {
+              in: agreedCustomerIds
+                .map((row) => row.customerId)
+                .filter((id): id is string => typeof id === "string"),
+            },
+          },
+        })
+      : 0;
+
+  return {
+    affected: totalActiveCustomers - agreedActiveCount,
+    totalActiveCustomers,
+    scopeApplies: true,
+  };
 }
 
 /**
@@ -228,10 +246,45 @@ const AGREEMENT_LIST_SELECT = {
   ipAddress: true,
   userAgent: true,
   terms: { select: { title: true, slug: true, type: true } },
-  customer: {
-    select: { id: true, lastName: true, firstName: true, email: true },
-  },
 } as const;
+
+/**
+ * 同意記録に顧客の表示情報を貼り直す。
+ *
+ * `TermsAgreement.customerId` は `customers` への FK を持たない論理参照
+ * （証跡テーブルを FK の参照アクションで書き換えさせないため。schema.prisma の
+ * TermsAgreement.customerId 参照）なので `include` で引けない。id を集めて 1 回だけ
+ * 引き直し Map で合流する。**マージ等で削除済みの顧客は `customer: null` になる** —
+ * `customerId` 自体は「誰が同意したか」の証跡として残る。
+ */
+async function attachAgreementCustomers<
+  T extends { readonly customerId: string | null },
+>(
+  rows: readonly T[],
+): Promise<(T & { customer: AdminAgreementListItem["customer"] })[]> {
+  const customerIds = [
+    ...new Set(
+      rows
+        .map((row) => row.customerId)
+        .filter((id): id is string => typeof id === "string"),
+    ),
+  ];
+
+  const customers =
+    customerIds.length > 0
+      ? await prisma.customer.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, lastName: true, firstName: true, email: true },
+        })
+      : [];
+  const byId = new Map(customers.map((customer) => [customer.id, customer]));
+
+  return rows.map((row) => ({
+    ...row,
+    customer:
+      row.customerId === null ? null : (byId.get(row.customerId) ?? null),
+  }));
+}
 
 export type AdminAgreementListItem = Serialized<{
   id: string;
@@ -306,5 +359,5 @@ export async function getAdminAgreements(
     prisma.termsAgreement.count({ where }),
   ]);
 
-  return { items: toPlainArray(items), total };
+  return { items: toPlainArray(await attachAgreementCustomers(items)), total };
 }

@@ -19,8 +19,30 @@ type AuditLogRow = {
   newValue: unknown;
   metadata: unknown;
   createdAt: Date;
-  user: { id: string; name: string | null; email: string } | null;
 };
+
+/** select が実際に返す形の行を組む（`user` は含まれない = FK 撤去後の姿）。 */
+function auditLogRow(
+  overrides: Partial<AuditLogRow> & { id: string },
+): AuditLogRow {
+  return {
+    sequence: 1n,
+    previousHash: "0".repeat(64),
+    entryHash: "a".repeat(64),
+    hashAlgorithm: "HMAC-SHA256",
+    hashKeyId: "v1",
+    chainVersion: 1,
+    userId: null,
+    action: "CREATE",
+    resource: "space",
+    resourceId: null,
+    oldValue: null,
+    newValue: null,
+    metadata: null,
+    createdAt: new Date("2026-07-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
 
 const mockFindMany = mock<() => Promise<AuditLogRow[]>>(() =>
   Promise.resolve([]),
@@ -43,6 +65,18 @@ const mockTransaction = mock(
     }),
 );
 
+/**
+ * `AuditLog.userId` は user への FK を持たない論理参照になったため
+ * （20260803030000: 証跡テーブルを FK の参照アクションで書き換えさせない）、
+ * 実行ユーザーの検索と表示はどちらも user への別クエリになる。
+ */
+const mockUserFindMany = mock<
+  (args: {
+    where?: unknown;
+    select?: unknown;
+  }) => Promise<{ id: string; name: string | null; email: string }[]>
+>(() => Promise.resolve([]));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     $transaction: mockTransaction,
@@ -51,6 +85,7 @@ mock.module("@/shared/db/prisma", () => ({
       count: mockCount,
       groupBy: mockGroupBy,
     },
+    user: { findMany: mockUserFindMany },
   },
 }));
 
@@ -82,6 +117,8 @@ describe("getAuditLogs", () => {
     mockCount.mockReset();
     mockGroupBy.mockReset();
     mockTransaction.mockReset();
+    mockUserFindMany.mockReset();
+    mockUserFindMany.mockResolvedValue([]);
     mockFindMany.mockResolvedValue([]);
     mockCount.mockResolvedValue(0);
     mockGroupBy.mockResolvedValue([]);
@@ -98,6 +135,56 @@ describe("getAuditLogs", () => {
           },
         }),
     );
+  });
+
+  test("実行ユーザーは 1 回の追加クエリで貼り直され、削除済みなら null になる", async () => {
+    // FK を外した結果 include が使えないので、userId を集めて user を引き直している。
+    // ここが壊れると管理画面の監査ログから実行者名が丸ごと消える（例外は出ない）ため、
+    // 「1 回だけ引く」「id で正しく合流する」「見つからなければ null」を明示的に固定する。
+    mockFindMany.mockResolvedValueOnce([
+      auditLogRow({ id: "log-1", userId: "user-a" }),
+      auditLogRow({ id: "log-2", userId: "user-a" }),
+      auditLogRow({ id: "log-3", userId: "deleted-user" }),
+      auditLogRow({ id: "log-4", userId: null }),
+    ]);
+    mockUserFindMany.mockResolvedValueOnce([
+      { id: "user-a", name: "運用担当", email: "ops@example.com" },
+    ]);
+
+    const result = await getAuditLogs({
+      page: 1,
+      perPage: 20,
+      action: "ALL",
+      resource: "",
+      userId: "",
+      dateFrom: "",
+      dateTo: "",
+      search: "",
+      ipAddress: "",
+      securityOnly: false,
+    });
+
+    // 行数ぶん撃たない（N+1 防止）。重複 userId も 1 回にまとめる
+    expect(mockUserFindMany).toHaveBeenCalledTimes(1);
+    expect(mockUserFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: ["user-a", "deleted-user"] } },
+      }),
+    );
+
+    expect(result.logs.map((log) => log.user)).toEqual([
+      { id: "user-a", name: "運用担当", email: "ops@example.com" },
+      { id: "user-a", name: "運用担当", email: "ops@example.com" },
+      null, // 削除済みユーザー: userId は証跡として残るが表示情報は引けない
+      null, // システム操作
+    ]);
+    // userId 自体は消えない（証跡として残すのが FK 撤去の目的）
+    expect(result.logs.map((log) => log.userId)).toEqual([
+      "user-a",
+      "user-a",
+      "deleted-user",
+      null,
+    ]);
   });
 
   test("一覧と total count は同一 transaction で取得する", async () => {
@@ -150,6 +237,10 @@ describe("getAuditLogs", () => {
   });
 
   test("search は resource/resourceId/user name/email を横断検索する", async () => {
+    mockUserFindMany.mockResolvedValueOnce([
+      { id: "user-hit", name: "admin", email: "admin@example.com" },
+    ]);
+
     await getAuditLogs({
       page: 1,
       perPage: 20,
@@ -179,26 +270,8 @@ describe("getAuditLogs", () => {
                 mode: "insensitive",
               },
             },
-            {
-              user: {
-                is: {
-                  email: {
-                    contains: "admin@example.com",
-                    mode: "insensitive",
-                  },
-                },
-              },
-            },
-            {
-              user: {
-                is: {
-                  name: {
-                    contains: "admin@example.com",
-                    mode: "insensitive",
-                  },
-                },
-              },
-            },
+            // FK が無いのでリレーションフィルタではなく、先に引いた id の in 句になる
+            { userId: { in: ["user-hit"] } },
           ]),
         }),
       }),
@@ -307,6 +380,8 @@ describe("getAuditLogsForExport", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
     mockFindMany.mockResolvedValue([]);
+    mockUserFindMany.mockReset();
+    mockUserFindMany.mockResolvedValue([]);
   });
 
   test("export は同じ filter を使い最大 10000 件を古い順で取得する", async () => {
