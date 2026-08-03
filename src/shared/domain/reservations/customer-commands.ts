@@ -578,6 +578,9 @@ async function updateReservationCommand(input: {
         spaceId: updateInput.spaceId,
         startTime: startDateTime,
         endTime: endDateTime,
+        // 変更後の人数を記録する。ここを書かないと、次回の編集で再び
+        // 「記録が無い」状態から始まり定員 gate が空回りする。
+        numberOfGuests: updateInput.numberOfGuests,
         basePrice: pricing.basePrice,
         totalPrice: pricing.totalPrice,
         rateBreakdownJson: asPrismaInputJsonValue(

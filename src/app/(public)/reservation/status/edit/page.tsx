@@ -121,7 +121,7 @@ export default async function GuestReservationEditPage(): Promise<ReactElement> 
         <EditReservationForm
           key={reservation.id}
           reservationId={reservation.id}
-          numberOfGuests={1}
+          numberOfGuests={reservation.numberOfGuests ?? 1}
           spaces={spaces}
           version={reservation.version}
           initialValues={{

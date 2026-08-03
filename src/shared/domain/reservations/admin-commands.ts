@@ -495,6 +495,11 @@ export async function updateAdminReservationCommand(
         startTime: startDateTime,
         endTime: endDateTime,
         status: input.status,
+        // 人数入力を持つ経路のときだけ更新する。持たない既存経路では undefined を
+        // 渡すことになり、Prisma は列を書かないので記録済みの人数は消えない。
+        ...(input.numberOfGuests === undefined
+          ? {}
+          : { numberOfGuests: input.numberOfGuests }),
         totalPrice: finalTotalPrice,
         basePrice: pricing.basePrice,
         rateBreakdownJson: asPrismaInputJsonValue(
