@@ -9,9 +9,9 @@ import { reissueReceiptCommand } from "@/shared/domain/receipts/issue";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { reissueReceiptInputSchema } from "@/shared/lib/validations/receipt-reissue";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
+const eventRegistrationIdSchema = entityIdSchema("EventRegistration");
 
 /**
  * イベント申込に紐づく領収書の再発行 (RECEIPT-USEDAT-P1 Phase 1)。

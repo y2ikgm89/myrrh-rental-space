@@ -12,9 +12,9 @@ import {
   jsonError,
   jsonValidationError,
 } from "@/shared/lib/route-responses";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventIdSchema = entityIdSchema("Event");
 
 type RouteParams = { params: Promise<{ id: string }> };
 

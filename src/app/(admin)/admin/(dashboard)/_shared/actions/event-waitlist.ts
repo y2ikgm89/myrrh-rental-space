@@ -26,11 +26,11 @@ import {
   AuditAction,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 
-const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
+const eventRegistrationIdSchema = entityIdSchema("EventRegistration");
 
 // =============================================================================
 // 手動繰り上げ当選 (WAITLISTED → WAITLISTED_OFFERED)

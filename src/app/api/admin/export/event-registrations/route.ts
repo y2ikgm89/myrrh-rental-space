@@ -18,10 +18,10 @@ import {
   jsonError,
   jsonValidationError,
 } from "@/shared/lib/route-responses";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import type { CsvColumn } from "@/shared/lib/csv";
 
-const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventIdSchema = entityIdSchema("Event");
 const exportFormatSchema = z.enum(["csv", "xlsx"], {
   error: "format が不正です",
 });

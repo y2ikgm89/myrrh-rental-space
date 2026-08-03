@@ -71,14 +71,14 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   checkPublicSiteWritable,
   getPublicMaintenanceBlockMutation,
 } from "@/shared/domain/settings/maintenance-guard";
 
-const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
+const registrationIdSchema = entityIdSchema("EventRegistration");
 
 export async function registerForEvent(
   _prev: SubmissionResult | undefined,

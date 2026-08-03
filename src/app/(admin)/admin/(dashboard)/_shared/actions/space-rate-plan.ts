@@ -12,9 +12,9 @@ import {
   updateSpaceRatePlan,
 } from "@/shared/domain/spaces/rate-plan-commands";
 import { spaceRatePlanFormSchema } from "@/admin/lib/validations/space-rate-plan";
-import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-const ratePlanIdSchema = prismaCuidIdSchema("料金プラン");
+const ratePlanIdSchema = entityIdSchema("SpaceRatePlan");
 
 /**
  * 管理画面 新規 SpaceRatePlan 作成 — conform `useActionState` canonical
