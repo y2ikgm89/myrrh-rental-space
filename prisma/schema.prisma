@@ -474,7 +474,6 @@ model SpaceCategory {
   // 一意性を強制する partial unique index に変更する。
   @@unique([name], map: "space_categories_name_active_key", where: { isActive: true })
   @@unique([sortOrder], map: "space_categories_sortOrder_key")
-  @@index([sortOrder])
   @@map("space_categories")
 }
 
@@ -801,8 +800,6 @@ model Reservation {
   recurrenceInstanceIndex Int?
   series                  ReservationSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
 
-  @@index([spaceId])
-  @@index([customerId])
   @@index([userId])
   @@index([startTime])
   @@index([endTime])
@@ -898,12 +895,10 @@ model Customer {
   uploadedInquiryAttachments InquiryAttachment[]          @relation("InquiryAttachmentUploadedByCustomer")
   authoredInquiryReplies     InquiryReply[]               @relation("InquiryReplyAuthorCustomer")
 
-  @@index([lastName])
   @@index([firstName])
   @@index([phoneNumber])
   @@index([status])
   @@index([customerType])
-  @@index([emailCanonical])
   @@index([emailCanonical, userId])
   @@index([isActive])
   @@index([lastReservationAt])
@@ -1066,9 +1061,7 @@ model Inquiry {
 
   @@index([email])
   @@index([status])
-  @@index([createdAt])
   @@index([createdAt, status])
-  @@index([customerId])
   @@index([customerId, createdAt])
   @@index([customerId, status])
   @@index([assigneeId])
@@ -1334,7 +1327,6 @@ model PostCategory {
   posts Post[]
 
   @@unique([order], map: "post_categories_order_key")
-  @@index([order])
   @@map("post_categories")
 }
 
@@ -1433,7 +1425,6 @@ model NavigationItem {
   children NavigationItem[] @relation("NavigationHierarchy")
 
   @@unique([type, order], map: "navigation_items_type_order_key")
-  @@index([type, order])
   @@index([parentId])
   @@map("navigation_items")
 }
@@ -1450,7 +1441,6 @@ model SocialLink {
   updatedAt     DateTime       @updatedAt @db.Timestamptz(6)
 
   @@unique([order], map: "social_links_order_key")
-  @@index([order])
   @@map("social_links")
 }
 
@@ -1907,7 +1897,6 @@ model InstagramPost {
   updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
 
   @@unique([sortOrder], map: "instagram_posts_sortOrder_key")
-  @@index([sortOrder])
   @@map("instagram_posts")
 }
 
@@ -1988,7 +1977,6 @@ model AuditLog {
   metadata      Json? // 追加情報（IPアドレス、UserAgent等）
   createdAt     DateTime    @default(now()) @db.Timestamptz(6)
 
-  @@index([userId])
   @@index([resource, resourceId])
   @@index([action])
   @@index([createdAt])
@@ -2269,7 +2257,6 @@ model EventTimeSlot {
 
   /// 同一イベントで同時刻スロット二重登録を防ぐ
   @@unique([eventId, startAt])
-  @@index([eventId, startAt])
   /// 手書き index（20260713044626_event_reservation_cross_overlap_constraint migration で追加）。
   /// CONSTRAINT TRIGGER check_event_slot_no_reservation_overlap() のクロステーブル
   /// range クエリ (startAt, endAt) を高速化する。DROP されると deferred trigger が劣化するため
@@ -2299,7 +2286,6 @@ model EventCategory {
   // partial unique index。無効化済みカテゴリーの名前を永久に予約しない。
   @@unique([name], map: "event_categories_name_active_key", where: { isActive: true })
   @@unique([sortOrder], map: "event_categories_sortOrder_key")
-  @@index([sortOrder])
   @@map("event_categories")
 }
 
@@ -2428,7 +2414,6 @@ model EventTicket {
   registrations EventRegistration[]
 
   @@unique([eventId, sortOrder], map: "event_tickets_eventId_sortOrder_key")
-  @@index([eventId, sortOrder])
   @@index([eventId, isAvailable])
   @@map("event_tickets")
 }
@@ -2494,12 +2479,9 @@ model EventRegistration {
   // task #9 PR#1: 部分返金の repeatable child records (append-only)
   refunds  Refund[]
 
-  @@index([eventId])
-  @@index([slotId])
   @@index([slotId, status])
   @@index([ticketId])
   @@index([customerId])
-  @@index([status])
   @@index([eventId, status, createdAt])
   @@index([eventId, attendedAt])
   // Payment webhook / cron が「未確定 → PAID」の atomic claim で使う (Reservation 同型)
@@ -2619,8 +2601,6 @@ model Receipt {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  @@index([reservationId])
-  @@index([eventRegistrationId])
   @@index([issuedAt])
   @@index([reissuedFromId], map: "receipts_reissuedFromId_idx", where: { reissuedFromId: { not: null } })
   @@map("receipts")
