@@ -4,6 +4,7 @@ import {
   prismaCuidIdSchema,
 } from "@/shared/lib/validations/params";
 import { isUnknownArray } from "@/shared/lib/serialize";
+import { emailFieldSchema } from "./customer-shared-fields";
 
 const eventRegistrationBaseSchema = z.object({
   eventId: prismaCuidIdSchema("イベント"),
@@ -14,7 +15,7 @@ const eventRegistrationBaseSchema = z.object({
     .trim()
     .min(1, { error: "お名前は必須です" })
     .max(100, { error: "お名前は100文字以内です" }),
-  email: z.email({ error: "有効なメールアドレスを入力してください" }),
+  email: emailFieldSchema,
   phone: z.string().trim().max(20).nullable().optional(),
   note: z.string().trim().max(500).nullable().optional(),
   // bot対策のhoneypotフィールド。フォームに実在しない項目("website")を装い、
