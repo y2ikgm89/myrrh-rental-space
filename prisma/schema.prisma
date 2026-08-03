@@ -2575,9 +2575,13 @@ model Receipt {
   eventRegistrationId String?            @unique @db.VarChar(30)
   reservation         Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
-  // 適格請求書要件フィールド
-  recipientName       String             @db.VarChar(100)
-  subject             String             @default("スペース利用料として") @db.VarChar(100)
+  // 適格請求書要件フィールド。
+  // **長さ制約を付けない。** どちらも他レコードからの導出値で、導出元
+  // （Event.title は 200 文字、Customer.lastName/firstName は無制限 TEXT）より
+  // 短い上限を置くと P2000 で領収書発行が落ちる。会計証跡を黙って切り詰めた PDF は
+  // 落ちるより悪いので、上限は入力側の Zod に置く（20260803040000 参照）。
+  recipientName       String             @db.Text
+  subject             String             @default("スペース利用料として") @db.Text
   amount              Int
   taxAmount           Int                @default(0)
   taxRate             Int

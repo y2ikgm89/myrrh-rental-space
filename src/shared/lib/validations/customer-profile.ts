@@ -12,8 +12,19 @@ export const customerProfileSchema = z
     customerType: customerTypeSchema,
     // lastName / firstName は独自 label ("姓を入力してください" / "名を入力してください")
     // を維持するため personNameFieldSchema helper (label 引数式) を使わず個別維持。
-    lastName: z.string().trim().min(1, { error: "姓を入力してください" }),
-    firstName: z.string().trim().min(1, { error: "名を入力してください" }),
+    // **上限は helper と揃える。** ここだけ .max() が無く、マイページからの自己編集で
+    // 無制限長の氏名が TEXT 列に入っていた（他の全経路 — 管理画面 / 公開予約 /
+    // 問い合わせ — は personNameFieldSchema の 50 文字が効く）。
+    lastName: z
+      .string()
+      .trim()
+      .min(1, { error: "姓を入力してください" })
+      .max(50, { error: "姓は50文字以内で入力してください" }),
+    firstName: z
+      .string()
+      .trim()
+      .min(1, { error: "名を入力してください" })
+      .max(50, { error: "名は50文字以内で入力してください" }),
     companyName: companyNameSchema,
     phoneNumber: optionalPhoneNumberSchema,
     // 初回 email 登録用 (LINE OAuth で email scope 未付与顧客の詰み状態解消)。
