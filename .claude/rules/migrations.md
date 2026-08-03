@@ -55,10 +55,22 @@ reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 S
 
 ## デプロイとの連動（重要）
 
-migration に `DROP COLUMN` / `RENAME COLUMN` / `RENAME TO` / `DROP TABLE` / `DROP TYPE` が
-含まれると、main への merge で deploy workflow が自動的に breaking migration mode に入り、
-public/admin 両サービスを scaling=0 停止 + 310 秒 drain する（**計画ダウンタイム発生**）。
-Cloud Run のローリング窓を保つには expand/contract 分割を優先する。
+migration に下記のいずれかが含まれると、deploy workflow が自動的に breaking migration
+mode に入り、public/admin 両サービスを scaling=0 停止 + 310 秒 drain する
+（**計画ダウンタイム発生**）。Cloud Run のローリング窓を保つには expand/contract 分割を優先する。
+
+`ALTER TABLE ...` の DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO /
+ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT、
+および DROP TABLE / DROP TYPE
+
+**この一覧の SSoT は `.github/workflows/deploy-production.yml` の grep 正規表現**で、
+`__tests__/unit/architecture/breaking-migration-detection.test.ts` が発火/非発火の両方を
+fixture で固定している。判定に迷ったらそのテストの fixture を見る（散文の列挙は
+過去に 2 度 drift した — `DROP CONSTRAINT` と `ALTER COLUMN ... TYPE` が長期間欠けていた）。
+
+`ALTER COLUMN ... TYPE` / `SET NOT NULL` はテーブル全体書換 + 排他ロックのため、
+`DROP DEFAULT` は「旧 revision の Prisma Client がその列を INSERT に含めない」ため
+destructive 扱い（migrate は新 revision のデプロイより先に走る）。
 
 ## migration-history baseline reset（clean-break 例外）
 

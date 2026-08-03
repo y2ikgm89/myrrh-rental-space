@@ -210,6 +210,40 @@ const safeFixtures: ReadonlyArray<{
   },
 ];
 
+/**
+ * breaking mode を発動させる DDL の一覧。**運用者向けドキュメントとの drift を防ぐ
+ * ための SSoT**（判定そのものの SSoT は deploy-production.yml の正規表現で、上の
+ * fixture 群がそれを固定している）。
+ *
+ * この一覧は 2 度 drift している: `DROP CONSTRAINT` と `ALTER COLUMN ... TYPE` は
+ * workflow では長期間検出されていたのに、rules / skill の散文には載っていなかった。
+ * 運用者はその散文を読んで「今回は停止しない」と判断するので、抜けは
+ * **両サービスが予告なく scaling=0 になる**形で表面化する。
+ *
+ * `pattern` は workflow 正規表現に含まれるべき断片、`prose` は各ドキュメントに
+ * 現れるべき人間向け表記。
+ */
+const BREAKING_TRIGGERS: ReadonlyArray<{
+  readonly pattern: string;
+  readonly prose: string;
+}> = [
+  { pattern: "DROP[[:space:]]+COLUMN", prose: "DROP COLUMN" },
+  { pattern: "DROP[[:space:]]+CONSTRAINT", prose: "DROP CONSTRAINT" },
+  { pattern: "RENAME[[:space:]]+COLUMN", prose: "RENAME COLUMN" },
+  { pattern: "RENAME[[:space:]]+TO", prose: "RENAME TO" },
+  { pattern: "SET[[:space:]]+NOT[[:space:]]+NULL", prose: "SET NOT NULL" },
+  { pattern: "DROP[[:space:]]+DEFAULT", prose: "DROP DEFAULT" },
+  { pattern: "DROP[[:space:]]+TABLE", prose: "DROP TABLE" },
+  { pattern: "DROP[[:space:]]+TYPE", prose: "DROP TYPE" },
+];
+
+/** 発動条件を「網羅的な一覧」として書いている運用者向けドキュメント。 */
+const TRIGGER_LIST_DOCS: readonly string[] = [
+  ".claude/rules/deploy-infra.md",
+  ".claude/rules/migrations.md",
+  ".claude/skills/deploy-debug/SKILL.md",
+];
+
 describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
   test("pattern is present in deploy-production.yml", () => {
     expect(breakingPattern.length).toBeGreaterThan(0);
@@ -249,4 +283,33 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       expect(detectsBreaking(fixture.sql)).toBe(false);
     });
   }
+  test("運用者向けドキュメントの発動条件一覧が workflow と一致する", () => {
+    // 一覧が workflow 側に実在することを先に確かめる（prose だけ直して
+    // 正規表現を直し忘れる／その逆を両方向で検出する）
+    const missingFromWorkflow = BREAKING_TRIGGERS.filter(
+      (trigger) => !breakingPattern.includes(trigger.pattern),
+    ).map((trigger) => trigger.prose);
+    expect(missingFromWorkflow).toEqual([]);
+
+    const missingFromDocs: string[] = [];
+    for (const relativePath of TRIGGER_LIST_DOCS) {
+      const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
+      // ドキュメント側は行幅の都合で語の途中に改行が入る。空白を 1 個に潰してから
+      // 照合し、折返しの有無で判定が変わらないようにする。
+      const flattened = doc.replace(/\s+/gu, " ");
+      for (const trigger of BREAKING_TRIGGERS) {
+        if (!flattened.includes(trigger.prose)) {
+          missingFromDocs.push(`${relativePath}: ${trigger.prose}`);
+        }
+      }
+    }
+
+    expect({
+      missingFromDocs,
+      hint:
+        missingFromDocs.length > 0
+          ? "breaking mode の発動条件を workflow に足したら、運用者向けの一覧にも同じ語を書く。書かないと「今回は停止しない」と誤読され、両サービスが予告なく scaling=0 になる"
+          : "",
+    }).toEqual({ missingFromDocs: [], hint: "" });
+  });
 });

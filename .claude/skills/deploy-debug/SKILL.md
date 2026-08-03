@@ -40,9 +40,13 @@ main ref 限定。`main` merge だけでは走らない）
 ## 2. breaking migration mode（計画ダウンタイム）
 
 - **発動条件**: deploy-production.yml が push 差分の `prisma/migrations/**/migration.sql` を
-  grep し、`ALTER TABLE ... DROP COLUMN / RENAME COLUMN / RENAME TO`、`DROP TABLE`、
-  `DROP TYPE` のいずれかを検出すると自動で `_BREAKING_MIGRATION_DEPLOY=true` を submit する
-  （Actions ログに `Breaking migration deploy mode enabled for:` と対象ファイルが出る）。
+  grep し、`ALTER TABLE ...` の DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO /
+  ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT、
+  または `DROP TABLE` / `DROP TYPE` を検出すると自動で `_BREAKING_MIGRATION_DEPLOY=true` を
+  submit する（Actions ログに `Breaking migration deploy mode enabled by:` と対象ファイルが出る）。
+  **一覧の SSoT は同 workflow の正規表現**で、
+  `__tests__/unit/architecture/breaking-migration-detection.test.ts` が発火/非発火の両方を
+  fixture で固定している。
 - **挙動**: migrate 実行前に public/admin 両サービスを `--scaling=0` で停止 →
   `_BREAKING_MIGRATION_DRAIN_SECONDS`（既定 310 秒）drain → migrate → 新 revision deploy で
   `--scaling=auto` 復帰。**この間は意図的な全面ダウンタイム**。
