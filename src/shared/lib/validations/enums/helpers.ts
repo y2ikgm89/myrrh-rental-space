@@ -20,7 +20,6 @@ import {
   DurationDiscountOverride,
   TaxRateType,
   TaxDisplayMode,
-  TaxInputMode,
   DiscountCombinationMode,
   AnalyticsType,
   AnnouncementBarAnimation,
@@ -53,7 +52,6 @@ import {
   isValidDurationDiscountOverride,
   isValidTaxRateType,
   isValidTaxDisplayMode,
-  isValidTaxInputMode,
   isValidDiscountCombinationMode,
   isValidAnalyticsType,
   isValidAnnouncementBarAnimation,
@@ -231,13 +229,6 @@ export function getValidTaxDisplayMode(
   fallback: TaxDisplayMode = TaxDisplayMode.both,
 ): TaxDisplayMode {
   return value && isValidTaxDisplayMode(value) ? value : fallback;
-}
-
-export function getValidTaxInputMode(
-  value: string | null | undefined,
-  fallback: TaxInputMode = TaxInputMode.tax_excluded,
-): TaxInputMode {
-  return value && isValidTaxInputMode(value) ? value : fallback;
 }
 
 export function getValidDiscountCombinationMode(

@@ -5,7 +5,6 @@ import {
   isValidDiscountCombinationMode,
   isValidTaxRateType,
   isValidTaxDisplayMode,
-  isValidTaxInputMode,
 } from "@/shared/lib/validations/enums/guards";
 import {
   getValidDiscountType,
@@ -13,7 +12,6 @@ import {
   getValidDiscountCombinationMode,
   getValidTaxRateType,
   getValidTaxDisplayMode,
-  getValidTaxInputMode,
 } from "@/shared/lib/validations/enums/helpers";
 import {
   calculateSpaceDiscount,
@@ -966,36 +964,6 @@ describe("getValidTaxDisplayMode", () => {
 
   test("カスタムデフォルト値を返す", () => {
     expect(getValidTaxDisplayMode(null, "tax_included")).toBe("tax_included");
-  });
-});
-
-describe("isValidTaxInputMode", () => {
-  test("有効な値で true を返す", () => {
-    expect(isValidTaxInputMode("tax_excluded")).toBe(true);
-    expect(isValidTaxInputMode("tax_included")).toBe(true);
-  });
-
-  test("無効な値で false を返す", () => {
-    expect(isValidTaxInputMode("both")).toBe(false);
-    expect(isValidTaxInputMode("invalid")).toBe(false);
-    expect(isValidTaxInputMode(null)).toBe(false);
-  });
-});
-
-describe("getValidTaxInputMode", () => {
-  test("有効な値をそのまま返す", () => {
-    expect(getValidTaxInputMode("tax_excluded")).toBe("tax_excluded");
-    expect(getValidTaxInputMode("tax_included")).toBe("tax_included");
-  });
-
-  test('無効な値でデフォルト "tax_excluded" を返す', () => {
-    expect(getValidTaxInputMode("invalid")).toBe("tax_excluded");
-    expect(getValidTaxInputMode(null)).toBe("tax_excluded");
-    expect(getValidTaxInputMode(undefined)).toBe("tax_excluded");
-  });
-
-  test("カスタムデフォルト値を返す", () => {
-    expect(getValidTaxInputMode(null, "tax_included")).toBe("tax_included");
   });
 });
 

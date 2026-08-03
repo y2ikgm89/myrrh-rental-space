@@ -29,7 +29,7 @@ import type {
   DurationDiscountRule,
 } from "@/shared/lib/pricing/types";
 
-// TaxRateType / TaxDisplayMode / TaxInputMode は @generated/prisma/enums から re-export
+// TaxRateType / TaxDisplayMode は @generated/prisma/enums から re-export
 // テスト内では文字列リテラルを使用する
 const TAX_RATE_TYPE = {
   standard: "standard",

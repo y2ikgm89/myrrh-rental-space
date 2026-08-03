@@ -23,7 +23,6 @@ import {
   DurationDiscountOverride,
   TaxRateType,
   TaxDisplayMode,
-  TaxInputMode,
   DiscountCombinationMode,
   AnalyticsType,
   AnnouncementBarAnimation,
@@ -70,7 +69,6 @@ const VALID_DURATION_DISCOUNT_OVERRIDES = new Set<string>(
 );
 const VALID_TAX_RATE_TYPES = new Set<string>(Object.values(TaxRateType));
 const VALID_TAX_DISPLAY_MODES = new Set<string>(Object.values(TaxDisplayMode));
-const VALID_TAX_INPUT_MODES = new Set<string>(Object.values(TaxInputMode));
 const VALID_DISCOUNT_COMBINATION_MODES = new Set<string>(
   Object.values(DiscountCombinationMode),
 );
@@ -190,10 +188,6 @@ export function isValidTaxRateType(value: unknown): value is TaxRateType {
 
 export function isValidTaxDisplayMode(value: unknown): value is TaxDisplayMode {
   return typeof value === "string" && VALID_TAX_DISPLAY_MODES.has(value);
-}
-
-export function isValidTaxInputMode(value: unknown): value is TaxInputMode {
-  return typeof value === "string" && VALID_TAX_INPUT_MODES.has(value);
 }
 
 export function isValidDiscountCombinationMode(

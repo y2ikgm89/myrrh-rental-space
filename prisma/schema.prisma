@@ -152,11 +152,6 @@ enum TaxDisplayMode {
   both
 }
 
-enum TaxInputMode {
-  tax_excluded
-  tax_included
-}
-
 enum CalendarSyncMethod {
   polling
   webhook

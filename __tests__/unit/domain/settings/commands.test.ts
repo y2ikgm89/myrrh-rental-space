@@ -216,10 +216,6 @@ await installPrismaEnumsMock({
     tax_excluded: "tax_excluded",
     both: "both",
   },
-  TaxInputMode: {
-    tax_included: "tax_included",
-    tax_excluded: "tax_excluded",
-  },
   AnalyticsType: {
     ga4: "ga4",
     gtm: "gtm",

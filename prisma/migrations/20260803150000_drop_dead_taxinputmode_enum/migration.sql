@@ -1,0 +1,24 @@
+-- 未使用の enum 型 `TaxInputMode` を削除する。
+--
+-- どの列もこの型を持っていない（schema.prisma 全体で `TaxInputMode` を型に持つ
+-- フィールド宣言は 0 件）。アプリ側に残っていたのは enum gateway の
+-- `isValidTaxInputMode` / `getValidTaxInputMode` だけで、その 2 つの唯一の呼び出し元は
+-- 自分自身のテスト（__tests__/unit/lib/pricing.test.ts）だった。つまりテストが
+-- 生存しているように見せていただけで、製品コードからの利用は無い。
+--
+-- 税の入力/表示に実際に使われているのは別の enum `TaxDisplayMode`
+-- （tax_excluded / tax_included / both の 3 値）で、こちらは `Settings` 系の列が
+-- 使っている。`TaxInputMode` は 2 値（tax_excluded / tax_included）で、
+-- 途中まで作られて `TaxDisplayMode` に置き換わった残骸と見られる。
+--
+-- 単文なので BEGIN/COMMIT は不要（部分適用のしようがない）。既存データにも依存しない
+-- — 型を使う列が無いので失敗しようがなく、万一どこかの列が使っていれば PostgreSQL が
+-- 依存関係エラーで止める。**CASCADE は付けない**（列ごと巻き込む事故を防ぐため、
+-- 依存があるなら止まってほしい）。
+--
+-- `DROP TYPE` は deploy-production.yml の breaking 判定に一致するため、この migration を
+-- 含むデプロイは計画ダウンタイムモードになる。判定は変更された migration 全件を走査して
+-- 1 つのフラグを立てるので、同時にデプロイする他の破壊的 migration があっても
+-- ダウンタイムは 1 回で済む。
+
+DROP TYPE "TaxInputMode";
