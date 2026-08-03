@@ -759,8 +759,12 @@ model Reservation {
 
   // Payment (Stripe)
   paymentStatus           PaymentStatus @default(UNPAID)
-  stripeCheckoutSessionId String?
-  stripePaymentIntentId   String?
+  /// Stripe Checkout Session の id。`@unique` は「同じ session が別の予約に紐づく」
+  /// silent bug を防ぐ。EventRegistration 側は最初から `@unique` で、そのコメントは
+  /// 「Reservation 側と同型」と書いていたが、実際にはこちら側だけ制約が無かった。
+  stripeCheckoutSessionId String?       @unique
+  /// Stripe PaymentIntent の id。返金の idempotency key としても参照するため一意。
+  stripePaymentIntentId   String?       @unique
   paidAt                  DateTime?     @db.Timestamptz(6)
   /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
   /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
@@ -809,7 +813,6 @@ model Reservation {
   @@index([couponId])
   @@index([deletedAt])
   @@index([paymentStatus])
-  @@index([stripePaymentIntentId])
   @@index([seriesId, recurrenceInstanceIndex])
   @@index([deletedById], map: "reservations_deletedById_idx", where: { deletedById: { not: null } })
   @@map("reservations")
@@ -2070,7 +2073,7 @@ enum TermsScope {
 model TermsDocument {
   id           String       @id @default(uuid()) @db.Uuid
   type         String       @db.VarChar(64) // VARCHAR で柔軟化（旧 TermsType enum 廃止）
-  slug         String       @unique @db.VarChar(50)
+  slug         String       @db.VarChar(50) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   title        String       @db.VarChar(100)
   contentJson  Json // Lexical EditorState
   contentHtml  String       @db.Text // SSR / 同意記録 snapshot 用（保存時 sanitize-html で再生成）
@@ -2088,6 +2091,7 @@ model TermsDocument {
 
   agreements TermsAgreement[]
 
+  @@unique([slug], map: "terms_documents_slug_active_key", where: { deletedAt: null })
   @@unique([displayOrder], map: "terms_documents_displayOrder_active_key", where: { deletedAt: null })
   @@index([type])
   @@index([deletedAt, isPublished])
