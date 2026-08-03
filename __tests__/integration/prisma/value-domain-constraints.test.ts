@@ -95,20 +95,23 @@ function spaceInsert(overrides: {
   readonly capacity?: string;
   readonly hourlyPrice?: string;
   readonly discount?: string;
+  readonly gallery?: string;
 }): string {
   const discountColumns = overrides.discount
     ? ',"discountType","discountValue"'
     : "";
   const discountValues = overrides.discount ? `,${overrides.discount}` : "";
+  const galleryColumn = overrides.gallery ? ',"gallery"' : "";
+  const galleryValue = overrides.gallery ? `,${overrides.gallery}` : "";
   return `
     INSERT INTO "spaces" (
       "id","slug","name","descriptionJson","descriptionHtml","descriptionPlainText",
-      "capacity","hourlyPrice","mainImageUrl","updatedAt","locationId"${discountColumns}
+      "capacity","hourlyPrice","mainImageUrl","updatedAt","locationId"${discountColumns}${galleryColumn}
     ) VALUES (
       gen_random_uuid(), 'probe-' || gen_random_uuid()::text, 'probe',
       '{}'::jsonb, '<p>probe</p>', 'probe',
       ${overrides.capacity ?? "1"}, ${overrides.hourlyPrice ?? "0"},
-      'https://example.test/probe.png', now(), '${ABSENT_UUID_A}'${discountValues}
+      'https://example.test/probe.png', now(), '${ABSENT_UUID_A}'${discountValues}${galleryValue}
     )`;
 }
 
@@ -172,6 +175,22 @@ describe("値域 CHECK 制約", () => {
       // id は明示する。20260803090000 で DB 側 DEFAULT を外し Prisma 側採番へ寄せたため。
       `INSERT INTO "refunds" ("id","reservationId","amount","refundedByType","stripeRefundId")
        VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
+    );
+  });
+
+  test("配列前提の jsonb 列にオブジェクトを入れられない", async () => {
+    // 7 本まとめて 1 テストにせず、代表 2 本を別々の表で叩く。CHECK 名まで
+    // 突き合わせるので、どちらかの制約が落ちたら名指しで分かる。
+    await expectRejectedBy(
+      "spaces_gallery_array_check",
+      spaceInsert({ gallery: `'{"url":"x"}'::jsonb` }),
+    );
+    await expectRejectedBy(
+      "media_tags_array_check",
+      `INSERT INTO "media" ("id","filename","storagePath","url","bucket","mimeType","size","type","tags","updatedAt")
+       VALUES (gen_random_uuid(), 'probe.png', 'probe/probe.png',
+               'https://example.test/probe.png', 'probe', 'image/png', 1,
+               'IMAGE', '"not-an-array"'::jsonb, now())`,
     );
   });
 
