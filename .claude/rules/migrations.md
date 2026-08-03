@@ -59,9 +59,11 @@ migration に下記のいずれかが含まれると、deploy workflow が自動
 mode に入り、public/admin 両サービスを scaling=0 停止 + 310 秒 drain する
 （**計画ダウンタイム発生**）。Cloud Run のローリング窓を保つには expand/contract 分割を優先する。
 
-`ALTER TABLE ...` の DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO /
-ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT、
-および DROP TABLE / DROP TYPE
+<!-- breaking-triggers:start -->
+
+DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO / ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT / DROP TABLE / DROP TYPE
+
+<!-- breaking-triggers:end -->
 
 **この一覧の SSoT は `.github/workflows/deploy-production.yml` の grep 正規表現**で、
 `__tests__/unit/architecture/breaking-migration-detection.test.ts` が発火/非発火の両方を

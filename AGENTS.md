@@ -140,10 +140,18 @@ For human onboarding — setup, common commands, repo layout — see
   flag); receipt amounts use `totalPriceWithTax`. Multi-column `ALTER COLUMN ... TYPE`
   that triggers squawk `changing-column-type` needs an entry in
   `scripts/lint-migrations.ts` intentional-breaking allowlist (inline
-  `-- squawk-ignore` alone is insufficient). `ALTER COLUMN ... TYPE` **does** trigger
-  planned-downtime deploy mode, as do DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN /
-  RENAME TO / SET NOT NULL / DROP DEFAULT / DROP TABLE / DROP TYPE — the authoritative
-  list is the grep pattern in `.github/workflows/deploy-production.yml`, pinned by
-  `__tests__/unit/architecture/breaking-migration-detection.test.ts`. Domain code must not contain
-  literal `"eventRegistration"` (AuditLog resource grep false positive); for Prisma
-  tx delegate typing use template literal types (e.g. `` `event${"Registration"}` ``).
+  `-- squawk-ignore` alone is insufficient). Planned-downtime deploy mode is triggered
+  by the DDL listed below — note `ALTER COLUMN ... TYPE` **does** trigger it. The
+  authoritative source is the grep pattern in
+  `.github/workflows/deploy-production.yml`; this list is pinned to it by
+  `__tests__/unit/architecture/breaking-migration-detection.test.ts`.
+
+<!-- breaking-triggers:start -->
+
+DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO / ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT / DROP TABLE / DROP TYPE
+
+<!-- breaking-triggers:end -->
+
+Domain code must not contain
+literal `"eventRegistration"` (AuditLog resource grep false positive); for Prisma
+tx delegate typing use template literal types (e.g. `` `event${"Registration"}` ``).
