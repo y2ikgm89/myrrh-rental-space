@@ -233,8 +233,8 @@ const TRIGGER_PROSE: ReadonlyMap<string, string> = new Map([
   ["DROP CONSTRAINT", "DROP CONSTRAINT"],
   ["RENAME COLUMN", "RENAME COLUMN"],
   ["RENAME TO", "RENAME TO"],
-  ["SET NOT NULL", "SET NOT NULL"],
-  ["DROP DEFAULT", "DROP DEFAULT"],
+  ["SET NOT NULL", "ALTER COLUMN ... SET NOT NULL"],
+  ["DROP DEFAULT", "ALTER COLUMN ... DROP DEFAULT"],
   // 正規表現上は `ALTER COLUMN ... (…|TYPE)` の裸の `TYPE`。
   // ドキュメントでは前置部分まで書かないと `DROP TYPE` と読み分けられない。
   ["TYPE", "ALTER COLUMN ... TYPE"],
@@ -249,6 +249,35 @@ const TRIGGER_PROSE: ReadonlyMap<string, string> = new Map([
 function extractPhrases(pattern: string): string[] {
   const normalized = pattern.replaceAll("[[:space:]]+", " ");
   return [...new Set(normalized.match(/[A-Z]+(?: [A-Z]+)*/gu) ?? [])];
+}
+
+const TRIGGER_BLOCK_START = "<!-- breaking-triggers:start -->";
+const TRIGGER_BLOCK_END = "<!-- breaking-triggers:end -->";
+
+/**
+ * ドキュメント中の marker で囲まれた列挙を、` / ` 区切りの集合として取り出す。
+ *
+ * **本文全体を走査しない。** 例えば migrations.md は squawk 節や
+ * 「既存 migration 編集禁止」節でも `DROP COLUMN` に言及するので、
+ * 全文から語を拾うと「余分な語」の検出が誤検知だらけになる。
+ * 列挙だけを marker で切り出せば、集合の完全一致で比較できる。
+ */
+function readTriggerBlock(relativePath: string): string[] {
+  const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
+  const start = doc.indexOf(TRIGGER_BLOCK_START);
+  const end = doc.indexOf(TRIGGER_BLOCK_END);
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error(
+      `${relativePath} に ${TRIGGER_BLOCK_START} / ${TRIGGER_BLOCK_END} の対が見つかりません。` +
+        "発動条件の列挙は marker で囲む（全文走査だと他文脈の DDL 言及と区別できない）。",
+    );
+  }
+  return doc
+    .slice(start + TRIGGER_BLOCK_START.length, end)
+    .replace(/\s+/gu, " ")
+    .split("/")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 /**
@@ -340,33 +369,36 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     }).toEqual({ unmapped: [], stale: [], hint: "" });
   });
 
-  test("運用者向けドキュメントの発動条件一覧が workflow と一致する", () => {
+  test("運用者向けドキュメントの発動条件一覧が workflow と完全一致する", () => {
     // 検査対象は workflow から抽出した語。表を経由するのは表記の解決だけ。
     const required = extractPhrases(breakingPattern)
       .filter((phrase) => !STRUCTURAL_PHRASES.has(phrase))
-      .map((phrase) => TRIGGER_PROSE.get(phrase) ?? phrase);
+      .map((phrase) => TRIGGER_PROSE.get(phrase) ?? phrase)
+      .sort();
     expect(required.length).toBeGreaterThan(0);
 
-    const missingFromDocs: string[] = [];
+    // 「不足」だけでなく「余分」も見る。workflow から条件を削除したとき、
+    // TRIGGER_PROSE から消しただけでドキュメントに残すと、運用者は「まだ停止する」と
+    // 誤読して不要な計画停止を組む。部分集合ではなく集合の一致を要求する。
+    const mismatches: string[] = [];
     for (const relativePath of TRIGGER_LIST_DOCS) {
-      const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
-      // ドキュメント側は行幅の都合で語の途中に改行が入る。空白を 1 個に潰してから
-      // 照合し、折返しの有無で判定が変わらないようにする。
-      const flattened = doc.replace(/\s+/gu, " ");
-      for (const prose of required) {
-        if (!flattened.includes(prose)) {
-          missingFromDocs.push(`${relativePath}: ${prose}`);
-        }
+      const documented = readTriggerBlock(relativePath).sort();
+      if (JSON.stringify(documented) !== JSON.stringify(required)) {
+        const missing = required.filter((item) => !documented.includes(item));
+        const extra = documented.filter((item) => !required.includes(item));
+        mismatches.push(
+          `${relativePath}: 不足=[${missing.join(", ")}] 余分=[${extra.join(", ")}]`,
+        );
       }
     }
 
     expect({
-      missingFromDocs,
+      mismatches,
       hint:
-        missingFromDocs.length > 0
-          ? "breaking mode の発動条件を workflow に足したら、運用者向けの一覧にも同じ語を書く。書かないと「今回は停止しない」と誤読され、両サービスが予告なく scaling=0 になる"
+        mismatches.length > 0
+          ? "breaking mode の発動条件を変えたら、各ドキュメントの breaking-triggers ブロックも同じ集合にする。不足は「停止しない」と誤読させ、余分は不要な計画停止を組ませる"
           : "",
-    }).toEqual({ missingFromDocs: [], hint: "" });
+    }).toEqual({ mismatches: [], hint: "" });
   });
 
   test("列挙を持たない文書は SSoT の場所を指している", () => {

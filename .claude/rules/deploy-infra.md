@@ -16,15 +16,20 @@ paths:
 
 - **本番デプロイは手動**（deploy-production.yml の `workflow_dispatch` のみ →
   `gcloud beta builds submit`）。`main` merge だけでは本番は更新されない
-- workflow が「現行 Cloud Run image tag 〜 HEAD」の migration diff を grep し、
-  DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO / ALTER COLUMN ... TYPE /
-  ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT / DROP TABLE / DROP TYPE を
-  検出すると自動で breaking migration mode（両サービス scaling=0 + 310 秒 drain =
+- workflow が「現行 Cloud Run image tag 〜 HEAD」の migration diff を grep し、下記の
+  DDL を検出すると自動で breaking migration mode（両サービス scaling=0 + 310 秒 drain =
   計画ダウンタイム）に切り替わる。`ALTER COLUMN ... TYPE` と `SET NOT NULL` は
   Postgres がテーブル全体書換 + 排他ロックを取るため、`DROP DEFAULT` は旧 revision の
   Prisma Client がその列を INSERT に含めないため destructive 扱い。
   **SSoT は deploy-production.yml の正規表現**で、発火/非発火の両方を
   `__tests__/unit/architecture/breaking-migration-detection.test.ts` が fixture で固定している
+
+<!-- breaking-triggers:start -->
+
+DROP COLUMN / DROP CONSTRAINT / RENAME COLUMN / RENAME TO / ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL / ALTER COLUMN ... DROP DEFAULT / DROP TABLE / DROP TYPE
+
+<!-- breaking-triggers:end -->
+
 - 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
 - **Cloud Run ownership (Phase 6b clean-break)**:
   - Terraform = shape (memory/cpu/probes/ingress/SA) + env/secrets + IAP/IAM
