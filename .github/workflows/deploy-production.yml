@@ -357,7 +357,7 @@ jobs:
               if sed 's/--.*$//' "${migration_file}" \
                 | tr '\n' ' ' \
                 | tr ';' '\n' \
-                | grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE'; then
+                | grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|DROP[[:space:]]+DEFAULT|TYPE))|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE'; then
                 BREAKING_MIGRATION_DEPLOY="true"
                 printf 'Breaking migration deploy mode enabled by: %s\n' "${migration_file}"
               fi

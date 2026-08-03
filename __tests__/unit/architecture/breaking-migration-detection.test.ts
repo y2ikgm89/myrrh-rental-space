@@ -114,6 +114,23 @@ const breakingFixtures: ReadonlyArray<{
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" SET NOT NULL;',
   },
   {
+    // 以前は safeFixtures 側に「DROP DEFAULT (metadata-only)」として置かれていた。
+    // その判断は **ロック/rewrite コスト**の話で、この gate が守っている Risk 1
+    // （旧 revision が新スキーマを叩いて 500）とは別の軸だった。
+    //
+    // `@default(dbgenerated(...))` から生成された旧 revision の Prisma Client は
+    // その列を INSERT に含めない。cloudbuild は migrate を新 revision のデプロイより
+    // **先**に走らせるので、DEFAULT が消えた瞬間から新 revision が出るまでの窓で
+    // 旧 revision の INSERT が NOT NULL 違反になる。まさに Risk 1。
+    //
+    // grep では「旧コードがその DEFAULT に依存しているか」を判別できないので、
+    // 依存していない DROP DEFAULT も巻き込んで停止モードに入る。単一インスタンス・
+    // 低トラフィックで手動デプロイのこの構成では、過剰検知の代償（310 秒の計画停止）
+    // より見逃しの代償（本番 500）の方がはるかに大きい。
+    name: "ALTER COLUMN ... DROP DEFAULT",
+    sql: 'ALTER TABLE "receipts" ALTER COLUMN "id" DROP DEFAULT;',
+  },
+  {
     name: "DROP CONSTRAINT",
     sql: 'ALTER TABLE "users" DROP CONSTRAINT "users_foo_key";',
   },
@@ -166,10 +183,6 @@ const safeFixtures: ReadonlyArray<{
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" DROP NOT NULL;',
   },
   {
-    name: "DROP DEFAULT (metadata-only)",
-    sql: 'ALTER TABLE "users" ALTER COLUMN "foo" DROP DEFAULT;',
-  },
-  {
     name: "SET DEFAULT (metadata-only)",
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" SET DEFAULT \'bar\';',
   },
@@ -210,7 +223,7 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     expect(breakingPattern).toContain("RENAME[[:space:]]+COLUMN");
     expect(breakingPattern).toContain("RENAME[[:space:]]+TO");
     expect(breakingPattern).toContain(
-      "ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|TYPE)",
+      "ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|DROP[[:space:]]+DEFAULT|TYPE)",
     );
     expect(breakingPattern).toContain("DROP[[:space:]]+CONSTRAINT");
     expect(breakingPattern).toContain("DROP[[:space:]]+TABLE");
