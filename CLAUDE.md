@@ -110,7 +110,9 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
     （date-fns `format()` 直呼びが UTC ずれを起こす理由は business-domain ルール参照）
 11. **本番デプロイは手動**（`.github/workflows/deploy-production.yml` の
     `workflow_dispatch` のみ）。`main` merge だけでは Cloud Run は更新されない。
-    DROP/RENAME を含む migration はデプロイ実行時に自動で計画ダウンタイム付きに切り替わる
+    破壊的 DDL を含む migration はデプロイ実行時に自動で計画ダウンタイム付きに切り替わる
+    （発動条件の SSoT は `.github/workflows/deploy-production.yml` の grep パターン。
+    DROP/RENAME だけでなく `ALTER COLUMN ... TYPE` / `SET NOT NULL` / `DROP DEFAULT` も含む）
 12. 秘密値（`.env*` の実値）は出力・コピー・コミットしない
 
 ## 自動完遂ポリシー
