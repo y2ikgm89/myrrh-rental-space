@@ -211,31 +211,45 @@ const safeFixtures: ReadonlyArray<{
 ];
 
 /**
- * breaking mode を発動させる DDL の一覧。**運用者向けドキュメントとの drift を防ぐ
- * ための SSoT**（判定そのものの SSoT は deploy-production.yml の正規表現で、上の
- * fixture 群がそれを固定している）。
+ * workflow 正規表現に現れる語 → 運用者向けドキュメントでの表記 の対応表。
  *
- * この一覧は 2 度 drift している: `DROP CONSTRAINT` と `ALTER COLUMN ... TYPE` は
- * workflow では長期間検出されていたのに、rules / skill の散文には載っていなかった。
- * 運用者はその散文を読んで「今回は停止しない」と判断するので、抜けは
- * **両サービスが予告なく scaling=0 になる**形で表面化する。
+ * **この表を手で保守してはいけない側（= workflow）から検査する。** 前版は
+ * この表を起点に「表 → workflow」だけを見ていたため、workflow に新しい選択肢が
+ * 増えても表に足さなければ何も起きなかった。実際 `TYPE`（= `ALTER COLUMN ... TYPE`）は
+ * 表から漏れていて、運用者向け一覧からその記載を消しても検出できない状態だった。
  *
- * `pattern` は workflow 正規表現に含まれるべき断片、`prose` は各ドキュメントに
- * 現れるべき人間向け表記。
+ * 今は workflow の正規表現から語を機械抽出し、**抽出したすべての語が**
+ * structural（前置詞的な語）か、この表に prose を持つかのどちらかであることを要求する。
+ * 新しい選択肢を workflow に足すと、表に足すまでテストが落ちる。
  */
-const BREAKING_TRIGGERS: ReadonlyArray<{
-  readonly pattern: string;
-  readonly prose: string;
-}> = [
-  { pattern: "DROP[[:space:]]+COLUMN", prose: "DROP COLUMN" },
-  { pattern: "DROP[[:space:]]+CONSTRAINT", prose: "DROP CONSTRAINT" },
-  { pattern: "RENAME[[:space:]]+COLUMN", prose: "RENAME COLUMN" },
-  { pattern: "RENAME[[:space:]]+TO", prose: "RENAME TO" },
-  { pattern: "SET[[:space:]]+NOT[[:space:]]+NULL", prose: "SET NOT NULL" },
-  { pattern: "DROP[[:space:]]+DEFAULT", prose: "DROP DEFAULT" },
-  { pattern: "DROP[[:space:]]+TABLE", prose: "DROP TABLE" },
-  { pattern: "DROP[[:space:]]+TYPE", prose: "DROP TYPE" },
-];
+const STRUCTURAL_PHRASES: ReadonlySet<string> = new Set([
+  // それ自体は発動条件ではなく、後続の語を修飾する前置部分
+  "ALTER TABLE",
+  "ALTER COLUMN",
+]);
+
+const TRIGGER_PROSE: ReadonlyMap<string, string> = new Map([
+  ["DROP COLUMN", "DROP COLUMN"],
+  ["DROP CONSTRAINT", "DROP CONSTRAINT"],
+  ["RENAME COLUMN", "RENAME COLUMN"],
+  ["RENAME TO", "RENAME TO"],
+  ["SET NOT NULL", "SET NOT NULL"],
+  ["DROP DEFAULT", "DROP DEFAULT"],
+  // 正規表現上は `ALTER COLUMN ... (…|TYPE)` の裸の `TYPE`。
+  // ドキュメントでは前置部分まで書かないと `DROP TYPE` と読み分けられない。
+  ["TYPE", "ALTER COLUMN ... TYPE"],
+  ["DROP TABLE", "DROP TABLE"],
+  ["DROP TYPE", "DROP TYPE"],
+]);
+
+/**
+ * 正規表現から大文字語の連なりを抽出する。`[[:space:]]+` を空白に戻したうえで、
+ * 正規表現メタ文字（`|` `(` `)` `.` `*` `+`）を区切りとして扱う。
+ */
+function extractPhrases(pattern: string): string[] {
+  const normalized = pattern.replaceAll("[[:space:]]+", " ");
+  return [...new Set(normalized.match(/[A-Z]+(?: [A-Z]+)*/gu) ?? [])];
+}
 
 /** 発動条件を「網羅的な一覧」として書いている運用者向けドキュメント。 */
 const TRIGGER_LIST_DOCS: readonly string[] = [
@@ -243,6 +257,15 @@ const TRIGGER_LIST_DOCS: readonly string[] = [
   ".claude/rules/migrations.md",
   ".claude/skills/deploy-debug/SKILL.md",
 ];
+
+/**
+ * 発動条件を列挙はしないが breaking mode に言及する文書。列挙を持たせると
+ * 必ず drift するので、**SSoT の場所を指していること**だけを求める。
+ * （AGENTS.md は以前「`ALTER COLUMN TYPE` は計画ダウンタイムを発動しない
+ * （DROP/RENAME だけ）」と**事実と逆**のことを書いていた。）
+ */
+const SSOT_POINTER_DOCS: readonly string[] = ["CLAUDE.md", "AGENTS.md"];
+const SSOT_POINTER = "deploy-production.yml";
 
 describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
   test("pattern is present in deploy-production.yml", () => {
@@ -283,13 +306,27 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       expect(detectsBreaking(fixture.sql)).toBe(false);
     });
   }
+  test("workflow の全選択肢が対応表に載っている（表 → workflow の片方向にしない）", () => {
+    // workflow 側を起点にする。表に無い語が増えたらここで落ちる。
+    const unmapped = extractPhrases(breakingPattern).filter(
+      (phrase) => !STRUCTURAL_PHRASES.has(phrase) && !TRIGGER_PROSE.has(phrase),
+    );
+
+    expect({
+      unmapped,
+      hint:
+        unmapped.length > 0
+          ? "deploy-production.yml の正規表現に新しい発動条件が増えている。TRIGGER_PROSE に人間向け表記を足し、TRIGGER_LIST_DOCS の各ドキュメントにも書く"
+          : "",
+    }).toEqual({ unmapped: [], hint: "" });
+  });
+
   test("運用者向けドキュメントの発動条件一覧が workflow と一致する", () => {
-    // 一覧が workflow 側に実在することを先に確かめる（prose だけ直して
-    // 正規表現を直し忘れる／その逆を両方向で検出する）
-    const missingFromWorkflow = BREAKING_TRIGGERS.filter(
-      (trigger) => !breakingPattern.includes(trigger.pattern),
-    ).map((trigger) => trigger.prose);
-    expect(missingFromWorkflow).toEqual([]);
+    // 検査対象は workflow から抽出した語。表を経由するのは表記の解決だけ。
+    const required = extractPhrases(breakingPattern)
+      .filter((phrase) => !STRUCTURAL_PHRASES.has(phrase))
+      .map((phrase) => TRIGGER_PROSE.get(phrase) ?? phrase);
+    expect(required.length).toBeGreaterThan(0);
 
     const missingFromDocs: string[] = [];
     for (const relativePath of TRIGGER_LIST_DOCS) {
@@ -297,9 +334,9 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       // ドキュメント側は行幅の都合で語の途中に改行が入る。空白を 1 個に潰してから
       // 照合し、折返しの有無で判定が変わらないようにする。
       const flattened = doc.replace(/\s+/gu, " ");
-      for (const trigger of BREAKING_TRIGGERS) {
-        if (!flattened.includes(trigger.prose)) {
-          missingFromDocs.push(`${relativePath}: ${trigger.prose}`);
+      for (const prose of required) {
+        if (!flattened.includes(prose)) {
+          missingFromDocs.push(`${relativePath}: ${prose}`);
         }
       }
     }
@@ -311,5 +348,21 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
           ? "breaking mode の発動条件を workflow に足したら、運用者向けの一覧にも同じ語を書く。書かないと「今回は停止しない」と誤読され、両サービスが予告なく scaling=0 になる"
           : "",
     }).toEqual({ missingFromDocs: [], hint: "" });
+  });
+
+  test("列挙を持たない文書は SSoT の場所を指している", () => {
+    // ここに一覧を書くと必ず drift するので、指す先だけを固定する。
+    const missingPointer = SSOT_POINTER_DOCS.filter((relativePath) => {
+      const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
+      return !doc.includes(SSOT_POINTER);
+    });
+
+    expect({
+      missingPointer,
+      hint:
+        missingPointer.length > 0
+          ? `breaking mode に触れる文書は発動条件を列挙せず ${SSOT_POINTER} を指す`
+          : "",
+    }).toEqual({ missingPointer: [], hint: "" });
   });
 });
