@@ -125,7 +125,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 const { updateEventRegistration } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event-registration");
 
-const REGISTRATION_ID = "ckv1a2b3c4d5e6f7g8h9i0j1"; // cuid-shaped test id
+const REGISTRATION_ID = "5b14871f-398c-400b-8fae-8c4df8dbccf6";
 
 async function flushMicrotasks(): Promise<void> {
   await Promise.resolve();

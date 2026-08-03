@@ -571,7 +571,7 @@ model Space {
 /// `prisma db pull` で introspection すると欠落するため、再生成時は手で復元すること
 /// （BlockedDate の CHECK 制約と同じ注意点）。
 model SpaceRatePlan {
-  id      String @id @default(cuid()) @db.VarChar(30)
+  id      String @id @default(uuid(7)) @db.Uuid
   spaceId String @db.Uuid
   space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
@@ -2092,12 +2092,18 @@ model TermsAgreement {
   /// 同意が発生した scope (旧 context VARCHAR を enum 化)。
   scope           TermsScope
   /// 同意が紐づくリソースの ID（予約 / 問い合わせ / イベント申込）。
-  /// **uuid 固定にしてはいけない**: `Reservation.id` と `Inquiry.id` は uuid だが
-  /// `EventRegistration.id` は cuid（`@default(cuid()) @db.VarChar(30)`）で、
-  /// `@db.Uuid` のままだとイベント申込の同意記録が Postgres の
-  /// `invalid input syntax for type uuid`（Prisma P2007）で必ず失敗する。
-  /// 複数モデルを指す polymorphic 参照なので `AuditLog.resourceId` と同じく
-  /// 型付けしない text にする。
+  ///
+  /// **`@db.Uuid` にしてはいけない。** 理由は 2 つあり、どちらも今も生きている:
+  ///
+  /// 1. 複数モデルを指す polymorphic 参照なので、1 モデルの型で縛らない
+  ///    （`AuditLog.resourceId` と同じ扱い）。全 ID が uuid に揃った今でも、
+  ///    FK を張らないポインタに型を付けると次に別種のリソースを指した瞬間に壊れる
+  /// 2. この表は append-only（`prevent_terms_agreements_mutation`）なので、
+  ///    20260804000000 の ID 統一より前に書かれた行は **cuid のまま残っている**。
+  ///    証跡は書き換えない方針なので、`@db.Uuid` へ narrow すると既存行が読めなくなる
+  ///
+  /// かつては 1 を軽視して `@db.Uuid` にしており、規約同意付きのイベント申込が
+  /// P2007 で必ず失敗していた（#1747）。
   resourceId      String?
   ipAddress       String?    @db.VarChar(45)
   userAgent       String?    @db.Text
@@ -2228,10 +2234,10 @@ model SpaceReview {
 /// 1 イベント = 複数スロット。スロット単位で申込・定員・GCal を管理する。
 /// startAt / endAt は Timestamptz(6) で UTC 保存、JST 表示は date-format.ts SSoT。
 /// capacity は NOT NULL かつ 1 以上 — スロット単位の具体的な座席数が SSoT。
-/// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの cuid とは別）。
+/// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの uuid とは別）。
 model EventTimeSlot {
-  id                    String   @id @default(cuid(2)) @db.VarChar(30)
-  eventId               String   @db.VarChar(30)
+  id                    String   @id @default(uuid(7)) @db.Uuid
+  eventId               String   @db.Uuid
   startAt               DateTime @db.Timestamptz(6)
   endAt                 DateTime @db.Timestamptz(6)
   capacity              Int
@@ -2281,7 +2287,7 @@ model EventCategory {
 // ==============================================
 
 model Event {
-  id                   String            @id @default(cuid()) @db.VarChar(30)
+  id                   String            @id @default(uuid(7)) @db.Uuid
   title                String            @db.VarChar(200)
   slug                 String            @db.VarChar(100) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   /// Lexical EditorState JSON（正本）
@@ -2384,8 +2390,8 @@ model Event {
 // ==============================================
 
 model EventTicket {
-  id          String   @id @default(cuid()) @db.VarChar(30)
-  eventId     String   @db.VarChar(30)
+  id          String   @id @default(uuid(7)) @db.Uuid
+  eventId     String   @db.Uuid
   name        String   @db.VarChar(100)
   description String?  @db.Text
   price       Int
@@ -2410,11 +2416,11 @@ model EventTicket {
 // ==============================================
 
 model EventRegistration {
-  id              String             @id @default(cuid()) @db.VarChar(30)
-  eventId         String             @db.VarChar(30)
+  id              String             @id @default(uuid(7)) @db.Uuid
+  eventId         String             @db.Uuid
   /// 申込対象タイムスロット。イベント申込は必ず 1 つの時間枠に属する。
-  slotId          String             @db.VarChar(30)
-  ticketId        String             @db.VarChar(30)
+  slotId          String             @db.Uuid
+  ticketId        String             @db.Uuid
   name            String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
   email           String?            @db.VarChar(255)
@@ -2518,7 +2524,7 @@ model Refund {
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
   reservationId       String?  @db.Uuid
   /// 対象 EventRegistration (polymorphic、reservationId と排他)
-  eventRegistrationId String?  @db.VarChar(30)
+  eventRegistrationId String?  @db.Uuid
   /// この refund event の金額 (円、正整数)
   amount              Int
   /// 管理者入力の理由 (顧客通知メール文面にも掲載予定)
@@ -2557,7 +2563,7 @@ model Receipt {
   issuedAt            DateTime           @default(now()) @db.Timestamptz(6)
   // 発行対象 (Reservation OR EventRegistration の polymorphic)
   reservationId       String?            @unique @db.Uuid
-  eventRegistrationId String?            @unique @db.VarChar(30)
+  eventRegistrationId String?            @unique @db.Uuid
   reservation         Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
   // 適格請求書要件フィールド。
@@ -2617,8 +2623,12 @@ model AdminNotification {
   title        String   @db.VarChar(200)
   message      String   @db.VarChar(500)
   resourceType String?  @db.VarChar(50)
-  /// UUID（予約・問い合わせ等）または cuid（Event / EventRegistration）。
-  /// 旧 @db.Uuid だと Event.id (cuid) を紐づけられず deep link が常に死んでいた。
+  /// 複数モデルを指す polymorphic 参照（予約 / 問い合わせ / イベント 等）。
+  /// **`@db.Uuid` に戻さない。** 全 ID が uuid に揃った今も、FK を張らないポインタを
+  /// 1 モデルの型で縛ると次に別種のリソースを指した瞬間に壊れる
+  /// （`AuditLog.resourceId` / `TermsAgreement.resourceId` と同じ扱い）。
+  /// かつて `@db.Uuid` だった頃は Event の deep link が常に死んでいた
+  /// （20260726030000 で varchar へ広げた）。統一前に書かれた行には cuid が残る。
   resourceId   String?  @db.VarChar(36)
   isRead       Boolean  @default(false)
   createdAt    DateTime @default(now()) @db.Timestamptz(6)

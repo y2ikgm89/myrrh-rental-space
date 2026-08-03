@@ -114,14 +114,14 @@ type Attendee = React.ComponentProps<
 
 function makeAttendee(overrides: Partial<Attendee> = {}): Attendee {
   return {
-    id: "cm0reg12345678901234567",
+    id: "60e01261-0546-4528-8a03-68d37a9d9568",
     name: "佐藤花子",
     email: "sato@example.com",
     phone: null,
     quantity: 2,
     attendedAt: "2026-07-01T00:00:00.000Z",
     createdAt: "2026-06-01T00:00:00.000Z",
-    ticket: { id: "cm0ticket1234567890123", name: "一般" },
+    ticket: { id: "96e83639-0c13-4eb1-8de3-8e6fe7892ba9", name: "一般" },
     ...overrides,
   };
 }
@@ -129,12 +129,14 @@ function makeAttendee(overrides: Partial<Attendee> = {}): Attendee {
 function renderClient(root: Root, attendees: Attendee[]) {
   root.render(
     <CheckInClient
-      eventId="cm0event1234567890123456"
+      eventId="0baaa247-7a6c-4938-893c-a0a9c382b12b"
       initialAttendees={attendees}
-      tickets={[{ id: "cm0ticket1234567890123", name: "一般", price: 0 }]}
+      tickets={[
+        { id: "96e83639-0c13-4eb1-8de3-8e6fe7892ba9", name: "一般", price: 0 },
+      ]}
       slots={[
         {
-          id: "uvslot123456789012345678",
+          id: "f4becb6e-69df-4871-8998-ccc37decf00c",
           startAt: "2026-07-10T01:00:00.000Z",
           endAt: "2026-07-10T02:00:00.000Z",
         },
@@ -179,15 +181,17 @@ describe("CheckInClient", () => {
   test("refresh 後に Server Component から届いた参加者 props を一覧 state に同期する", async () => {
     await act(async () => {
       if (!root) throw new Error("root missing");
-      renderClient(root, [makeAttendee({ id: "cm0reg12345678901234567" })]);
+      renderClient(root, [
+        makeAttendee({ id: "60e01261-0546-4528-8a03-68d37a9d9568" }),
+      ]);
     });
 
     await act(async () => {
       if (!root) throw new Error("root missing");
       renderClient(root, [
-        makeAttendee({ id: "cm0reg12345678901234567" }),
+        makeAttendee({ id: "60e01261-0546-4528-8a03-68d37a9d9568" }),
         makeAttendee({
-          id: "cm0reg98765432109876543",
+          id: "6a95721c-bd35-4206-87fa-fa0102fb5f88",
           name: "当日参加",
           email: null,
           quantity: 1,

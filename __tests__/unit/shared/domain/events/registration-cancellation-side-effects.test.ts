@@ -185,7 +185,7 @@ import {
 // Fixture
 // ---------------------------------------------------------------------------
 
-const RID = "cm60x9k3p0000qzrm8f3a1b2c";
+const RID = "2ea99a40-e250-4d13-873d-6f3a45ed97ad";
 
 type RegistrationFixture = {
   id: string;

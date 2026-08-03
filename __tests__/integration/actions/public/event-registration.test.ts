@@ -177,9 +177,9 @@ type EventRegistrationInputShape = {
 };
 
 const VALID_INPUT: EventRegistrationInputShape = {
-  eventId: "cku8z9v0u0000qzrmn831i7rn",
-  slotId: "cku8z9v0u0000qzrmn831i7rs",
-  ticketId: "cku8z9v0u0000qzrmn831i7rt",
+  eventId: "de347a04-e219-4840-8b02-64583cc72379",
+  slotId: "7c694063-fa4e-435a-898d-e97ee23697c6",
+  ticketId: "41bbcb64-cd81-4ed5-8006-990b355e43eb",
   name: "山田 太郎",
   email: "yamada@example.com",
   quantity: 1,

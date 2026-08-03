@@ -97,7 +97,7 @@ export type PublicEventWaitlistRegistrationInput = z.input<
 /**
  * 無料チケットの waitlist 繰り上げ当選確認 URL 用スキーマ
  * （`/events/waitlist/confirm?token=...`）。token は
- * `createWaitlistOfferToken` が発行する base64url 暗号文で、cuid 等の
+ * `createWaitlistOfferToken` が発行する base64url 暗号文で、uuid 等の
  * 固定フォーマットを持たないため min(1) のみで検証する。
  */
 export const publicEventWaitlistConfirmSchema = z.object({

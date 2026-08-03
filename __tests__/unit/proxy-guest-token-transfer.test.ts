@@ -113,7 +113,7 @@ describe("guest token transfer", () => {
 
   test("/events/registrations/status の ?token= を HttpOnly cookie に転写する", async () => {
     const token = createEventRegistrationStatusToken(
-      "clxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "0037e4ad-dedf-4c24-8035-418be4f39e2b",
       FUTURE,
     );
     const req = new NextRequest(
@@ -131,7 +131,7 @@ describe("guest token transfer", () => {
 
   test("/events/registrations/status/edit の ?token= を HttpOnly cookie に転写する", async () => {
     const token = createEventRegistrationStatusToken(
-      "clxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "0037e4ad-dedf-4c24-8035-418be4f39e2b",
       FUTURE,
     );
     const req = new NextRequest(
@@ -232,7 +232,7 @@ describe("guest token transfer", () => {
   });
 
   test("/api/calendar/event/:id の ?token= を HttpOnly cookie に転写する", async () => {
-    const registrationId = "clxxxxxxxxxxxxxxxxxxxxxxxxx";
+    const registrationId = "0037e4ad-dedf-4c24-8035-418be4f39e2b";
     const token = createCalendarToken("event", registrationId);
     const req = new NextRequest(
       `https://example.com/api/calendar/event/${registrationId}?token=${token}`,

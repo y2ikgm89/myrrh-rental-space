@@ -140,7 +140,7 @@ const { deleteEvent, publishEvent, duplicateEvent, cancelEvent, archiveEvent } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
-const VALID_EVENT_ID = "cm0event1234567890123456";
+const VALID_EVENT_ID = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
 
 describe("deleteEvent (action shape)", () => {
   beforeEach(() => {

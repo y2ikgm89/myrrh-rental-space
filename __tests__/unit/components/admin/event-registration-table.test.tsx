@@ -150,7 +150,7 @@ type Registration = React.ComponentProps<
 
 function makeRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
-    id: "cm0reg12345678901234567",
+    id: "60e01261-0546-4528-8a03-68d37a9d9568",
     name: "佐藤花子",
     email: "sato@example.com",
     phone: null,
@@ -202,20 +202,20 @@ describe("EventRegistrationTable", () => {
       root.render(
         <NuqsAdapter>
           <EventRegistrationTable
-            eventId="cm0evt12345678901234567"
+            eventId="ae255aca-d24a-49e4-8e57-3904b3889477"
             registrations={[
               makeRegistration({
-                id: "cm0reg12345678901234567",
+                id: "60e01261-0546-4528-8a03-68d37a9d9568",
                 name: "出席済み参加者",
                 attendedAt: "2026-07-10T01:30:00.000Z",
               }),
               makeRegistration({
-                id: "cm0reg98765432109876543",
+                id: "6a95721c-bd35-4206-87fa-fa0102fb5f88",
                 name: "未出席参加者",
                 attendedAt: null,
               }),
               makeRegistration({
-                id: "cm0regcancelled00000001",
+                id: "19d5a86d-4740-4fb7-830d-2bc89ac03abd",
                 name: "キャンセル参加者",
                 status: "CANCELLED",
                 cancelledAt: "2026-07-01T00:00:00.000Z",
@@ -252,7 +252,7 @@ describe("EventRegistrationTable", () => {
       root.render(
         <NuqsAdapter>
           <EventRegistrationTable
-            eventId="cm0evt12345678901234567"
+            eventId="ae255aca-d24a-49e4-8e57-3904b3889477"
             registrations={registrations}
             total={registrations.length}
             currentPage={1}

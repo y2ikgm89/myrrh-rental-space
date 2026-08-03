@@ -75,14 +75,14 @@ const { MergeCustomerDialog } =
   await import("@/app/(admin)/admin/(dashboard)/customers/[id]/_components/MergeCustomerDialog");
 
 const SOURCE_CUSTOMER = {
-  id: "cm0source1234567890123456",
+  id: "aac0c378-6a3c-44ac-8cd3-925a6c29846e",
   lastName: "山田",
   firstName: "太郎",
   email: "yamada@example.com",
 };
 
 const CANDIDATE = {
-  id: "cm0candidate123456789012",
+  id: "54b39377-a966-423c-8e10-4f9832a35576",
   lastName: "山田",
   firstName: "次郎",
   email: "yamada-jiro@example.com",

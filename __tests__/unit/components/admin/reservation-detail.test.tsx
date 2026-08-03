@@ -149,9 +149,9 @@ function makeReservation(
   overrides: Partial<ReservationWithRelations> = {},
 ): ReservationWithRelations {
   return {
-    id: "cm0res12345678901234567",
-    spaceId: "cm0space1234567890123456",
-    customerId: "cm0cust12345678901234567",
+    id: "0ae79d2e-f316-470a-8709-9c27e8c5fe6a",
+    spaceId: "de8ba330-cdc1-402e-8f5f-d506f34bf00a",
+    customerId: "9d21f315-2637-4dad-8dad-ff692fc90b3a",
     startTime: "2026-08-01T01:00:00.000Z",
     endTime: "2026-08-01T03:00:00.000Z",
     status: ReservationStatus.CONFIRMED,
@@ -183,9 +183,9 @@ function makeReservation(
     guestPhone: null,
     guestCompanyName: null,
     guestCustomerType: null,
-    space: { id: "cm0space1234567890123456", name: "Studio A" },
+    space: { id: "de8ba330-cdc1-402e-8f5f-d506f34bf00a", name: "Studio A" },
     customer: {
-      id: "cm0cust12345678901234567",
+      id: "9d21f315-2637-4dad-8dad-ff692fc90b3a",
       firstName: "太郎",
       lastName: "山田",
       companyName: null,

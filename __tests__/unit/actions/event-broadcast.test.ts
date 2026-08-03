@@ -55,8 +55,8 @@ const { broadcastEventAction } =
 const { eventBroadcastSchema } =
   await import("@/shared/lib/validations/event-broadcast");
 
-/** valid Prisma cuid (24 chars starting with "cm") — schema does not accept random strings. */
-const VALID_EVENT_ID = "cm0event1234567890123456";
+/** valid uuid — schema does not accept random strings. */
+const VALID_EVENT_ID = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
 
 function buildFormData(subject: string, body: string): FormData {
   const fd = new FormData();
@@ -142,7 +142,7 @@ describe("broadcastEventAction", () => {
 
   test("不正な eventId は Zod で reject し executeAdminMutationResult を呼ばない", async () => {
     const result = await broadcastEventAction(
-      "not-a-cuid",
+      "not-a-uuid",
       undefined,
       buildFormData("s", "b"),
     );

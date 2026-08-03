@@ -47,7 +47,7 @@ mock.module("@/shared/lib/rate-limit", () => ({
   getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
 }));
 
-const VALID_ID = "ckv1a2b3c0000abcdefghijk";
+const VALID_ID = "0c4e4d5f-6182-45ea-8692-bd47250b76d7";
 const mockVerifyCancelToken = mock<
   (
     token: string,
@@ -286,7 +286,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
 
   test("表示中の申込 ID と cookie 復号後の申込 ID が異なればエラーでドメインを呼ばない（別タブでの cookie 上書き対策）", async () => {
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const staleRegistrationId = "ckstaleaaaa0000abcdefghi";
+    const staleRegistrationId = "0675f01e-3314-43f2-8bb5-8f15cf5b0632";
     const result = await cancelGuestEventRegistrationAction(
       staleRegistrationId,
       "ts",

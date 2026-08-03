@@ -16,7 +16,7 @@ import { receiptDownloadNow } from "@/shared/domain/receipts/server-download-ins
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 describe("resolveGuestEventRegistrationStatusAccess", () => {
-  const registrationId = "clxxxxxxxxxxxxxxxxxxxxxxxxx";
+  const registrationId = "0037e4ad-dedf-4c24-8035-418be4f39e2b";
   const now = new Date("2026-04-01T00:00:00Z");
   const expiresAt = new Date(
     now.getTime() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
@@ -111,7 +111,7 @@ describe("shouldShowGuestClaimLink", () => {
 });
 
 describe("buildGuestCancelHref", () => {
-  const registrationId = "clxxxxxxxxxxxxxxxxxxxxxxxxx";
+  const registrationId = "0037e4ad-dedf-4c24-8035-418be4f39e2b";
   const now = new Date("2026-04-01T00:00:00Z");
   const slotStartAt = new Date("2026-04-05T00:00:00Z");
 

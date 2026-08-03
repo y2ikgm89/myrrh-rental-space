@@ -41,10 +41,10 @@ describe("GET /api/admin/export/event-registrations", () => {
     mockCreateAuditLogRecord.mockReset();
   });
 
-  test("CUID の eventId でイベント申込 CSV を返す", async () => {
-    const eventId = "cm0event1234567890123456";
+  test("UUID の eventId でイベント申込 CSV を返す", async () => {
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
     const registration = {
-      id: "cm0reg12345678901234567",
+      id: "60e01261-0546-4528-8a03-68d37a9d9568",
       name: "佐藤花子",
       email: "sato@example.com",
       phone: "090-0000-0000",
@@ -115,14 +115,14 @@ describe("GET /api/admin/export/event-registrations", () => {
   });
 
   test("format=xlsx の場合は Excel ワークブックを返す", async () => {
-    const eventId = "cm0event1234567890123456";
+    const eventId = "0baaa247-7a6c-4938-893c-a0a9c382b12b";
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "user-1", role: "ADMIN" },
     });
     mockGetEventRegistrationsForExport.mockResolvedValue([
       {
-        id: "cm0reg12345678901234567",
+        id: "60e01261-0546-4528-8a03-68d37a9d9568",
         name: "佐藤花子",
         email: "sato@example.com",
         phone: null,

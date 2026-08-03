@@ -205,9 +205,9 @@ mock.module("@/shared/domain/features/check", () => ({
 // テストデータ
 // =============================================================================
 
-// EventRegistration.id は Prisma cuid（@db.VarChar(30)）であり UUID ではない
+// EventRegistration.id は uuid（20260804000000 で cuid から統一）
 // （prisma/schema.prisma の EventRegistration モデル参照）
-const VALID_REGISTRATION_ID = "cm60x9k3p0000qzrm8f3a1b2c";
+const VALID_REGISTRATION_ID = "2ea99a40-e250-4d13-873d-6f3a45ed97ad";
 const IMPORT_PATH = "@/app/(public)/_shared/actions/event-registration";
 
 // =============================================================================
@@ -328,11 +328,13 @@ describe("cancelEventRegistration", () => {
   });
 
   describe("異常系: 不正な申込 ID", () => {
-    test("cuid 形式でない申込 ID のとき MutationError を返す", async () => {
+    test("uuid 形式でない申込 ID のとき MutationError を返す", async () => {
       const { cancelEventRegistration } = await import(IMPORT_PATH);
 
+      // 旧 cuid 形式。#904 は逆向き（cuid の ID を uuid で検証して全拒否）だったので、
+      // 統一後に見張るべきなのは「旧形式が通らないこと」になる。
       const result = await cancelEventRegistration(
-        "550e8400-e29b-41d4-a716-446655440000",
+        "cm60x9k3p0000qzrm8f3a1b2c",
         "turnstile-token",
       );
 

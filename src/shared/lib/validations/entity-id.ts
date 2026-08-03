@@ -1,56 +1,48 @@
 /**
  * エンティティ ID のパラメータ検証。**形式ではなくモデル名で選ぶ。**
  *
+ * ## ID は 1 形式に統一されている
+ *
+ * `prisma/schema.prisma` の主キーは全モデルが `@default(uuid(7)) @db.Uuid` か、
+ * 単一行モデルの `@default("singleton")` のどちらか。この不変条件は
+ * `__tests__/unit/architecture/entity-id-format-binding.test.ts` が schema を
+ * 直接読んで強制する（cuid のモデルを 1 つでも足すと落ちる）。
+ *
  * ## なぜモデル名で引くのか
  *
- * このリポジトリの ID は 3 形式が混在する（`prisma/schema.prisma` の `@default`）:
- * ほとんどのモデルが `uuid(7)`、イベント系 4 モデルと `SpaceRatePlan` が `cuid()`、
- * `EventTimeSlot` だけが `cuid(2)`。呼び出し側が「どの形式か」を選ぶ設計だと、
- * **形式を知らない開発者が必ず間違える**。実際に本番へ出た:
+ * 2026-08-04 の統一より前は uuid / cuid / cuid2 の 3 形式が混在し、呼び出し側が
+ * 「どの形式か」を選ぶ設計だった。開発者が知らない情報を要求する形なので、
+ * **繰り返し本番に出た**:
  *
- * - #904 — マイページのキャンセルが `z.uuid()` で申込 ID を検証しており、
- *   **実在する申込 ID を全て拒否**していた（cuid なので uuid 検証に通らない）
- * - #1747 — `TermsAgreement.resourceId` が `@db.Uuid` だったため、規約に同意した
- *   イベント申込が P2007 で必ず失敗し、**公開の申込フォームが丸ごと壊れていた**
+ * - #904 — マイページのキャンセルが cuid の申込 ID を `z.uuid()` で検証しており、
+ *   実在する申込 ID を全て拒否していた
+ * - #1747 — `TermsAgreement.resourceId` が `@db.Uuid` で、規約同意付きの
+ *   イベント申込が P2007 で必ず失敗していた（公開フォームが丸ごと壊れていた）
  * - 20260726030000 — 同じ理由で `AdminNotification.resourceId` を uuid → varchar へ
  *   広げる migration が必要になった
  *
- * 開発者が確実に知っているのは形式ではなく**どのモデルを指す ID か**なので、
- * 入口をそちらに寄せてある。形式の正しさは
- * `__tests__/unit/architecture/entity-id-format-binding.test.ts` が
- * `prisma/schema.prisma` と突き合わせて機械強制する（下の宣言がずれたら落ちる）。
- *
- * エラーメッセージも同じ理由でモデル単位に固定する。以前は同じモデルに対して
- * 「チケット」「イベントチケット」のように呼び出し側ごとに揺れていた。
+ * 形式が 1 つになった今も入口をモデル名に寄せたままにするのは、**エラーメッセージを
+ * モデル単位に固定する**ため。以前は同じ `EventTicket` に「チケット」「イベントチケット」の
+ * 2 通りがあった。
  */
 
 import { z } from "zod";
 
-export type EntityIdFormat = "uuid" | "cuid" | "cuid2";
-
-interface EntityIdSpec {
-  /** `prisma/schema.prisma` の `@id @default(...)` と一致していること（gate が強制）。 */
-  readonly format: EntityIdFormat;
-  /** エラーメッセージ用の表示名。`${label}IDが不正です` になる。 */
-  readonly label: string;
-}
-
 /**
- * ID 検証が必要になったモデルを登録する SSoT。
+ * ID 検証が必要になったモデルの表示名。`${label}IDが不正です` になる。
  *
- * 新しいモデルの ID を検証したくなったらここへ足す。`format` を間違えても
- * gate が `prisma/schema.prisma` と突き合わせて落とすので、勘で書いてよい。
- * **`cuid` / `cuid2` のモデルは登録が必須**（未登録だと gate が落ちる）。
+ * 新しいモデルの ID を検証したくなったらここへ足す。モデル名が
+ * `prisma/schema.prisma` に実在することは gate が確かめる。
  */
-export const ENTITY_ID_SPECS = {
-  Event: { format: "cuid", label: "イベント" },
-  EventRegistration: { format: "cuid", label: "イベント参加申込" },
-  EventTicket: { format: "cuid", label: "イベントチケット" },
-  EventTimeSlot: { format: "cuid2", label: "イベントタイムスロット" },
-  SpaceRatePlan: { format: "cuid", label: "料金プラン" },
-} as const satisfies Record<string, EntityIdSpec>;
+export const ENTITY_ID_LABELS = {
+  Event: "イベント",
+  EventRegistration: "イベント参加申込",
+  EventTicket: "イベントチケット",
+  EventTimeSlot: "イベントタイムスロット",
+  SpaceRatePlan: "料金プラン",
+} as const satisfies Record<string, string>;
 
-export type EntityIdModel = keyof typeof ENTITY_ID_SPECS;
+export type EntityIdModel = keyof typeof ENTITY_ID_LABELS;
 
 /**
  * 指定モデルの ID を検証する Zod スキーマを返す。
@@ -58,15 +50,5 @@ export type EntityIdModel = keyof typeof ENTITY_ID_SPECS;
  * @param model Prisma のモデル名（`prisma/schema.prisma` の `model X {`）
  */
 export function entityIdSchema(model: EntityIdModel) {
-  const spec: EntityIdSpec = ENTITY_ID_SPECS[model];
-  const error = `${spec.label}IDが不正です`;
-
-  switch (spec.format) {
-    case "uuid":
-      return z.uuid({ error });
-    case "cuid":
-      return z.cuid({ error });
-    case "cuid2":
-      return z.cuid2({ error });
-  }
+  return z.uuid({ error: `${ENTITY_ID_LABELS[model]}IDが不正です` });
 }

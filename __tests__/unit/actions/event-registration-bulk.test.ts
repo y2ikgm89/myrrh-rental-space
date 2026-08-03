@@ -114,11 +114,11 @@ const { bulkCancelEventRegistrations, bulkCheckInEventRegistrations } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event-registration");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
-// cuid-shaped test ids (z.cuid() は /^[cC][0-9a-z]{6,}$/ を要求するため "r1" 等は不可)
-const REGISTRATION_ID_1 = "ckv1a2b3c4d5e6f7g8h9i0j1";
-const REGISTRATION_ID_2 = "ckv1a2b3c4d5e6f7g8h9i0j2";
-const REGISTRATION_ID_3 = "ckv1a2b3c4d5e6f7g8h9i0j3";
-const EVENT_ID = "ckv1a2b3c4d5e6f7g8h9i0e1";
+// uuid 形式のテスト ID（z.uuid() は形式を強制するため "r1" 等は不可）
+const REGISTRATION_ID_1 = "5b14871f-398c-400b-8fae-8c4df8dbccf6";
+const REGISTRATION_ID_2 = "00a5f2a2-8b62-407e-8b15-27a180a3e45f";
+const REGISTRATION_ID_3 = "c4ba2e81-ed7f-4417-804d-46f9ea05e353";
+const EVENT_ID = "ddbe9246-50e0-41e5-8318-e6be50a312c9";
 
 describe("bulkCancelEventRegistrations", () => {
   beforeEach(() => {

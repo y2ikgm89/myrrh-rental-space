@@ -5150,11 +5150,12 @@ async function seedAdminNotifications() {
     });
   }
   if (latestRegistration) {
-    // Event / EventRegistration は cuid なので AdminNotification.resourceId（@db.Uuid）に入れない
     notifications.push({
       type: "EVENT_REGISTERED",
       title: "イベント申込",
       message: `${latestRegistration.name}様からイベント申込が入りました`,
+      resourceType: "event-registration",
+      resourceId: latestRegistration.id,
       isRead: false,
       createdAt: hoursAgo(12),
     });

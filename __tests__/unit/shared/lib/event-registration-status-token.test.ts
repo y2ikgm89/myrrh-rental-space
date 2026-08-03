@@ -9,7 +9,7 @@ import { createEventRegistrationClaimToken } from "@/shared/lib/event-registrati
 import { createStatusToken } from "@/shared/lib/reservation-status-token";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
 
-const RID = "clxxxxxxxxxxxxxxxxxxxxxxxxx";
+const RID = "0037e4ad-dedf-4c24-8035-418be4f39e2b";
 
 describe("createEventRegistrationStatusToken / verifyEventRegistrationStatusToken", () => {
   test("往復で registrationId を復元できる", () => {

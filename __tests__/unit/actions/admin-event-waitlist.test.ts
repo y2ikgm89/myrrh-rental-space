@@ -73,7 +73,7 @@ mock.module("@/shared/lib/async-utils", () => ({
 const { adminPromoteWaitlistEntryAction, adminExpireWaitlistOfferAction } =
   await import("@/admin/actions/event-waitlist");
 
-const registrationId = "cm0reg12345678901234567";
+const registrationId = "60e01261-0546-4528-8a03-68d37a9d9568";
 const now = new Date("2026-07-14T00:00:00.000Z");
 const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -294,7 +294,7 @@ describe("admin event waitlist actions", () => {
   });
 
   test("不正な registrationId はドメイン層を呼ばず VALIDATION エラーを返す", async () => {
-    const result = await adminPromoteWaitlistEntryAction("not-a-cuid");
+    const result = await adminPromoteWaitlistEntryAction("not-a-uuid");
 
     expect(isMutationError(result)).toBe(true);
     if (isMutationError(result)) {

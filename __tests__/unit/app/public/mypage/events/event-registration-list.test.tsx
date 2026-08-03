@@ -179,7 +179,7 @@ function makeRegistration(
   overrides: Partial<EventRegistrationListItem> = {},
 ): EventRegistrationListItem {
   return {
-    id: "cm0reg12345678901234567",
+    id: "60e01261-0546-4528-8a03-68d37a9d9568",
     quantity: 1,
     status: "CONFIRMED",
     cancelledAt: null,
@@ -190,11 +190,11 @@ function makeRegistration(
     paymentStatus: "UNPAID",
     ticketUnitPrice: 3000,
     ticketTotalPrice: 3000,
-    slotId: "cm0slot0000000000000001",
-    ticketId: "cm0tick0000000000000001",
+    slotId: "cf43a8ed-8e86-4c86-8a1c-321178e32c69",
+    ticketId: "a61a338d-248c-4045-8c8e-552285098d90",
     ...overrides,
     event: {
-      id: "cm0evt00000000000000001",
+      id: "e1bc47d2-1310-46d8-889b-ff7bdf8726f2",
       title: "オンライン勉強会",
       slug: "online-workshop",
       startTime: "2026-08-01T01:00:00.000Z",
@@ -258,7 +258,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
   function detailLink(): HTMLAnchorElement | null {
     if (!container) return null;
     return container.querySelector<HTMLAnchorElement>(
-      'a[href="/mypage/events/cm0reg12345678901234567"]',
+      'a[href="/mypage/events/60e01261-0546-4528-8a03-68d37a9d9568"]',
     );
   }
 
@@ -266,7 +266,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
     renderList(makeRegistration({ status: "CONFIRMED" }));
     expect(meetingUrlLink()).not.toBeNull();
     expect(detailLink()?.getAttribute("href")).toBe(
-      "/mypage/events/cm0reg12345678901234567",
+      "/mypage/events/60e01261-0546-4528-8a03-68d37a9d9568",
     );
   });
 
@@ -275,7 +275,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
       makeRegistration({
         status: "CONFIRMED",
         event: {
-          id: "cm0evt00000000000000001",
+          id: "e1bc47d2-1310-46d8-889b-ff7bdf8726f2",
           title: "ハイブリッド勉強会",
           slug: "hybrid-workshop",
           startTime: "2026-08-01T01:00:00.000Z",
@@ -341,7 +341,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
       makeRegistration({
         status: "CONFIRMED",
         event: {
-          id: "cm0evt00000000000000001",
+          id: "e1bc47d2-1310-46d8-889b-ff7bdf8726f2",
           title: "オフラインイベント",
           slug: "offline",
           startTime: "2026-08-01T01:00:00.000Z",
@@ -365,7 +365,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
         status: "WAITLISTED",
         waitlistedAt: "2026-07-01T00:00:00.000Z",
         event: {
-          id: "cm0evt00000000000000001",
+          id: "e1bc47d2-1310-46d8-889b-ff7bdf8726f2",
           title: "オンライン (URL 未発行)",
           slug: "online-no-url",
           startTime: "2026-08-01T01:00:00.000Z",

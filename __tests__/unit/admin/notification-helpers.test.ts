@@ -8,9 +8,9 @@ describe("getNotificationResourceHref", () => {
       getNotificationResourceHref(
         NOTIFICATION_TYPE.EVENT_REGISTRATION,
         "event",
-        "clxxxxxxxxxxxxxxxxxxxxxx",
+        "8b232297-fb58-4eba-8001-4c65980f906b",
       ),
-    ).toBe("/admin/events/clxxxxxxxxxxxxxxxxxxxxxx/edit");
+    ).toBe("/admin/events/8b232297-fb58-4eba-8001-4c65980f906b/edit");
   });
 
   test("event without resourceId → null", () => {

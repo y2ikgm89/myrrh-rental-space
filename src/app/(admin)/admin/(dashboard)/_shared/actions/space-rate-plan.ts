@@ -49,7 +49,7 @@ export async function createSpaceRatePlanAction(
 /**
  * 管理画面 SpaceRatePlan 更新 — conform `useActionState` canonical
  *
- * id（SpaceRatePlan 自身の cuid）は `bind(null, ratePlan.id)` で部分適用する。
+ * id（SpaceRatePlan 自身の uuid）は `bind(null, ratePlan.id)` で部分適用する。
  * `spaceRatePlanFormSchema` は共有スキーマのため spaceId も parse するが、
  * `UpdateSpaceRatePlanInput`（Task 6）は spaceId を持たない（親 Space の
  * 付け替えは未対応の設計）ため、command 呼び出し前に除外する。

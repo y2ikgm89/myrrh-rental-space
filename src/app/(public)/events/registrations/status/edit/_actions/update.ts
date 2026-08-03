@@ -34,7 +34,7 @@ import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/main
 import { GUEST_STATUS_EVENT_REGISTRATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE } from "@/shared/lib/guest-status-member-ownership";
 import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
-// 同じ EventRegistration.id を、他の経路は cuid として検証しているのにここだけ
+// 同じ EventRegistration.id を、他の経路は形式まで検証しているのにここだけ
 // `min(1)` で通していた。値は自分で mint した status token の payload 由来なので、
 // 形式検証を揃えても正規の導線は落ちない。
 const registrationIdSchema = entityIdSchema("EventRegistration");

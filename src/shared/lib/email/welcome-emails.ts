@@ -22,7 +22,7 @@ export async function sendWelcomeEmail(
           footer,
         }),
       },
-      // Customer.id is unique per registration lifecycle (cuid, never recycled
+      // Customer.id is unique per registration lifecycle (uuid, never recycled
       // across delete-account → re-signup). Keying on the email hash instead
       // collides within Resend's 24h idempotency TTL and silent-drops the
       // welcome email for the re-registered customer (RESEND-AUDIT L5).
