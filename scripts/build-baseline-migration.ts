@@ -101,6 +101,21 @@ export function verifyGeneratedSql(
   return problems;
 }
 
+/**
+ * 上書き対象が持っている **データ投入文**を数える。
+ *
+ * `00000000000000_init` には 8 本の `INSERT INTO public.terms_documents` が入っており、
+ * `prisma/seed.ts` は「規約は baseline Data Migration で投入済」として**一切触らない**
+ * （seed.ts の当該コメント参照）。組み立てた baseline は DDL と不変条件しか含まないので、
+ * 素朴に上書きすると**利用規約・プライバシーポリシー等が消え、同意ゲートの必須規約が
+ * 空集合になる**。しかも DDL は完全なので、適用も起動も成功してしまう。
+ *
+ * データを seed へ移すまでは、この builder が上書きを拒む。
+ */
+export function countDataStatements(sql: string): number {
+  return (sql.match(/^\s*INSERT\s+INTO\s/gimu) ?? []).length;
+}
+
 export function assembleBaseline(
   prelude: string,
   generated: string,
@@ -198,6 +213,22 @@ function run(args: readonly string[]): number {
     diff.sql,
     readFileSync(POSTLUDE_PATH, "utf8"),
   );
+
+  // 上書き先がデータ投入文を持っていて、新しい内容が持っていないなら止める。
+  // DDL は完全なので適用も起動も成功し、**行が消えたことにだけ気付けない**。
+  if (existsSync(out)) {
+    const existingData = countDataStatements(readFileSync(out, "utf8"));
+    const newData = countDataStatements(content);
+    if (existingData > newData) {
+      console.error(
+        `[baseline] ${out} は INSERT を ${existingData} 本持つが、組み立て結果は ${newData} 本しか無い。`,
+      );
+      console.error(
+        "[baseline] そのデータを prisma/seed.ts へ移すまで畳めない（DDL は完全なので、消えても適用は成功してしまう）。",
+      );
+      return 1;
+    }
+  }
 
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, content, "utf8");
