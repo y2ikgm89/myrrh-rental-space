@@ -452,45 +452,45 @@ model Location {
   name            String
   description     String? @db.Text
   address         String
-  postalCode      String?
+  postalCode      String? @map("postal_code")
   prefecture      String?
   city            String?
-  streetAddress   String?
-  buildingName    String?
+  streetAddress   String? @map("street_address")
+  buildingName    String? @map("building_name")
   /// 交通案内（最寄り駅・路線・徒歩分数等）。1 行 = 1 経路の構造化配列。
   /// 旧 access String 列（改行区切り）を 2026-05-01 に Json 配列化（破壊的変更）。
-  accessLines     Json    @default("[]")
-  parkingInfo     String? @db.Text
+  accessLines     Json    @default("[]") @map("access_lines")
+  parkingInfo     String? @map("parking_info") @db.Text
   amenities       Json    @default("{}")
-  imageUrl        String
-  imageUrls       Json    @default("[]")
-  businessHours   Json?
-  specialHolidays Json?
+  imageUrl        String  @map("image_url")
+  imageUrls       Json    @default("[]") @map("image_urls")
+  businessHours   Json?   @map("business_hours")
+  specialHolidays Json?   @map("special_holidays")
 
   // MEO（Local SEO）— Settings から移管
   latitude              Float?
   longitude             Float?
-  googleBusinessPlaceId String?
-  googleReviewUrl       String?
-  priceRange            String? @db.VarChar(100)
-  paymentAccepted       String?
-  phoneNumber           String?
+  googleBusinessPlaceId String? @map("google_business_place_id")
+  googleReviewUrl       String? @map("google_review_url")
+  priceRange            String? @map("price_range") @db.VarChar(100)
+  paymentAccepted       String? @map("payment_accepted")
+  phoneNumber           String? @map("phone_number")
   email                 String?
 
   // GBP Sync
-  gbpSyncEnabled Boolean   @default(true)
-  gbpSyncedAt    DateTime? @db.Timestamptz(6)
-  gbpSyncError   String?   @db.Text
+  gbpSyncEnabled Boolean   @default(true) @map("gbp_sync_enabled")
+  gbpSyncedAt    DateTime? @map("gbp_synced_at") @db.Timestamptz(6)
+  gbpSyncError   String?   @map("gbp_sync_error") @db.Text
 
-  sortOrder   Int      @default(0)
-  isPublished Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isPublished Boolean  @default(false) @map("is_published")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // スマートロックデバイス登録簿からの既定デバイス（任意）。新規Space作成時に
   // Space.smartLockDeviceIdの初期値として継承される（登録し忘れ防止）。
-  defaultSmartLockDeviceId String? @db.Uuid
+  defaultSmartLockDeviceId String? @map("default_smart_lock_device_id") @db.Uuid
 
   // Relations
   spaces                 Space[]
@@ -520,10 +520,10 @@ model SpaceCategory {
   description String?  @db.Text
   icon        String? // アイコン名（任意）
   color       String? // テーマカラー（任意）
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   spaces Space[]
@@ -545,60 +545,60 @@ model Space {
   slug                 String
   name                 String
   /// Lexical EditorState JSON（正本）
-  descriptionJson      Json
+  descriptionJson      Json      @map("description_json")
   /// Lexical → 公開表示用 HTML キャッシュ（SanitizedHtml で出力）
-  descriptionHtml      String    @db.Text
+  descriptionHtml      String    @map("description_html") @db.Text
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
-  descriptionPlainText String    @db.Text
+  descriptionPlainText String    @map("description_plain_text") @db.Text
   /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
   /// 主要交通案内・駐車場情報は親 Location（accessLines / parkingInfo）が SSoT。
-  addressDetail        String?   @db.Text
+  addressDetail        String?   @map("address_detail") @db.Text
   capacity             Int
   /// 面積（㎡×100、例: 2550 = 25.5㎡）
   area                 Int?
-  hourlyPrice          Int
-  mainImageUrl         String
+  hourlyPrice          Int       @map("hourly_price")
+  mainImageUrl         String    @map("main_image_url")
   gallery              Json      @default("[]")
   /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
   /// JSON 配列 `{ name: string; iconName: string }[]`。
   /// `iconName` は `@/shared/lib/icon-curation` の curation 識別子。
   /// 空文字 = icon 未指定（fallback で text のみ表示）。
   facilities           Json      @default("[]")
-  businessHours        Json?
-  isPublished          Boolean   @default(false)
-  publishedAt          DateTime? @db.Timestamptz(6)
-  isActive             Boolean   @default(true)
+  businessHours        Json?     @map("business_hours")
+  isPublished          Boolean   @default(false) @map("is_published")
+  publishedAt          DateTime? @map("published_at") @db.Timestamptz(6)
+  isActive             Boolean   @default(true) @map("is_active")
   /// レビュー機能の per-space ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
   /// 新規スペースはデフォルト false（opt-in）。`Settings.featureModules.reviews` が上位 gate。
-  reviewsEnabled       Boolean   @default(false)
-  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
+  reviewsEnabled       Boolean   @default(false) @map("reviews_enabled")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // SEO設定
-  metaDescription String?
-  metaKeywords    String?
+  metaDescription String? @map("meta_description")
+  metaKeywords    String? @map("meta_keywords")
 
   // OGP設定
-  ogpTitle       String?
-  ogpDescription String?
-  ogpImageUrl    String?
+  ogpTitle       String? @map("ogp_title")
+  ogpDescription String? @map("ogp_description")
+  ogpImageUrl    String? @map("ogp_image_url")
 
   // 割引設定（Enum化）
-  discountType             DiscountType             @default(NONE)
-  discountValue            Int?
-  durationDiscountOverride DurationDiscountOverride @default(INHERIT)
+  discountType             DiscountType             @default(NONE) @map("discount_type")
+  discountValue            Int?                     @map("discount_value")
+  durationDiscountOverride DurationDiscountOverride @default(INHERIT) @map("duration_discount_override")
 
   // 税率設定（Enum化）
-  taxRateType TaxRateType @default(STANDARD)
+  taxRateType TaxRateType @default(STANDARD) @map("tax_rate_type")
 
   // 場所・カテゴリー設定（拠点は必須。カテゴリーは任意）
-  locationId String  @db.Uuid
-  categoryId String? @db.Uuid
+  locationId String  @map("location_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
 
   // スマートロックデバイス（同一Locationに登録済みのデバイスから1台選択、任意）。
   // デバイスはLocation所有のため、同じ物理ロックを複数Spaceで共有できる
   // （例: 建物入口の共有ロックを複数の貸室が使う場合）。
-  smartLockDeviceId String? @db.Uuid
+  smartLockDeviceId String? @map("smart_lock_device_id") @db.Uuid
 
   // Relations
   reservations      Reservation[]
@@ -638,21 +638,21 @@ model Space {
 /// （BlockedDate の CHECK 制約と同じ注意点）。
 model SpaceRatePlan {
   id      String @id @default(uuid(7)) @db.Uuid
-  spaceId String @db.Uuid
+  spaceId String @map("space_id") @db.Uuid
   space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   name        String @db.VarChar(100) // 例: "週末料金", "GW料金", "深夜料金", "祝日料金"
-  hourlyPrice Int
+  hourlyPrice Int    @map("hourly_price")
 
-  daysOfWeek    DayOfWeek[] // 空配列 = 全曜日（曜日制約なし）
-  holidayMode   HolidayMode @default(ANY)
-  startTime     String?     @db.VarChar(5) // "HH:MM" (24h)、null = 00:00（開始）
-  endTime       String?     @db.VarChar(5) // "HH:MM"、null = 24:00（終了、半開区間）
-  effectiveFrom DateTime?   @db.Date // JST 日付、null = 期限なし
-  effectiveTo   DateTime?   @db.Date // JST 日付（inclusive）、null = 期限なし
+  daysOfWeek    DayOfWeek[] @map("days_of_week") // 空配列 = 全曜日（曜日制約なし）
+  holidayMode   HolidayMode @default(ANY) @map("holiday_mode")
+  startTime     String?     @map("start_time") @db.VarChar(5) // "HH:MM" (24h)、null = 00:00（開始）
+  endTime       String?     @map("end_time") @db.VarChar(5) // "HH:MM"、null = 24:00（終了、半開区間）
+  effectiveFrom DateTime?   @map("effective_from") @db.Date // JST 日付、null = 期限なし
+  effectiveTo   DateTime?   @map("effective_to") @db.Date // JST 日付（inclusive）、null = 期限なし
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6) // last-updated-wins 優先度用
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6) // last-updated-wins 優先度用
 
   @@index([spaceId, updatedAt(sort: Desc)])
   @@map("space_rate_plans")
@@ -675,19 +675,19 @@ model BlockedDate {
   /// "SPACE" | "LOCATION" | "GLOBAL"（isValidBlockedDateScope で検証）
   scope      String   @db.VarChar(16)
   /// scope=SPACE のみ非 null
-  spaceId    String?  @db.Uuid
+  spaceId    String?  @map("space_id") @db.Uuid
   /// scope=LOCATION のみ非 null
-  locationId String?  @db.Uuid
+  locationId String?  @map("location_id") @db.Uuid
   /// JST カレンダー日付を UTC 深夜で保持。単日休業は startDate=endDate。
-  startDate  DateTime @db.Date
-  endDate    DateTime @db.Date
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
   /// "年末年始" / "設備点検" / "台風 19 号による臨時休業" 等の plain text ラベル
   reason     String?  @db.VarChar(200)
   /// "HOLIDAY" | "MAINTENANCE" | "EMERGENCY" | "OTHER"（isValidBlockedDateType で検証）
   type       String   @db.VarChar(32)
-  createdBy  String   @db.Uuid
-  createdAt  DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+  createdBy  String   @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   space    Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -2259,10 +2259,10 @@ model BlockTemplate {
   id          String   @id @default(uuid(7)) @db.Uuid
   name        String // テンプレート名
   description String?  @db.Text // 説明
-  nodeJson    Json // Lexical SerializedEditorState JSON
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
-  createdBy   String?  @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
+  nodeJson    Json     @map("node_json") // Lexical SerializedEditorState JSON
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?  @map("created_by") @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   creator User? @relation("BlockTemplateCreator", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2278,18 +2278,18 @@ model BlockTemplate {
 
 model SpaceReview {
   id            String    @id @default(uuid(7)) @db.Uuid
-  spaceId       String    @db.Uuid
-  customerId    String    @db.Uuid
-  reservationId String    @unique @db.Uuid
+  spaceId       String    @map("space_id") @db.Uuid
+  customerId    String    @map("customer_id") @db.Uuid
+  reservationId String    @unique @map("reservation_id") @db.Uuid
   rating        Int
   title         String?   @db.VarChar(100)
   comment       String?   @db.VarChar(1000)
-  isPublished   Boolean   @default(true)
-  replyBody     String?   @db.VarChar(1000)
-  repliedAt     DateTime? @db.Timestamptz(6)
-  repliedById   String?   @db.Uuid
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  isPublished   Boolean   @default(true) @map("is_published")
+  replyBody     String?   @map("reply_body") @db.VarChar(1000)
+  repliedAt     DateTime? @map("replied_at") @db.Timestamptz(6)
+  repliedById   String?   @map("replied_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -2754,21 +2754,21 @@ enum SmartLockPasscodeStatus {
 /// 1 拠点に複数台を登録できる（1:N from Location）。同一パッドを複数 Space で共有可。
 model SmartLockDevice {
   id                 String              @id @default(uuid(7)) @db.Uuid
-  locationId         String              @db.Uuid
-  deviceId           String              @unique // SwitchBot 側の device ID（MAC アドレス）
-  deviceName         String
-  deviceType         SmartLockDeviceType
-  isActive           Boolean             @default(true)
+  locationId         String              @map("location_id") @db.Uuid
+  deviceId           String              @unique @map("device_id") // SwitchBot 側の device ID（MAC アドレス）
+  deviceName         String              @map("device_name")
+  deviceType         SmartLockDeviceType @map("device_type")
+  isActive           Boolean             @default(true) @map("is_active")
   /// パッド → ペア錠（錠ロールの SmartLockDevice）。錠側では null。
-  pairedLockDeviceId String?             @db.Uuid
+  pairedLockDeviceId String?             @map("paired_lock_device_id") @db.Uuid
   /// webhook / status 由来（錠ロール）。正規化: LOCKED|UNLOCKED|JAMMED
-  lastLockState      String?
+  lastLockState      String?             @map("last_lock_state")
   /// Pro/Lock のみ。正規化: OPEN|CLOSE。Lite は常に null
-  lastDoorState      String?
-  lastBattery        Int?
-  lastStateAt        DateTime?           @db.Timestamptz(6)
-  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime            @updatedAt @db.Timestamptz(6)
+  lastDoorState      String?             @map("last_door_state")
+  lastBattery        Int?                @map("last_battery")
+  lastStateAt        DateTime?           @map("last_state_at") @db.Timestamptz(6)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   location            Location            @relation("LocationSmartLockDevices", fields: [locationId], references: [id], onDelete: Cascade)
   defaultForLocations Location[]          @relation("LocationDefaultSmartLockDevice")
@@ -2785,27 +2785,27 @@ model SmartLockDevice {
 /// 予約 1 件・デバイス 1 台ごとに発行される一時パスコード。
 model SmartLockPasscode {
   id                       String                  @id @default(uuid(7)) @db.Uuid
-  reservationId            String                  @db.Uuid
-  deviceId                 String                  @db.Uuid
+  reservationId            String                  @map("reservation_id") @db.Uuid
+  deviceId                 String                  @map("device_id") @db.Uuid
   status                   SmartLockPasscodeStatus @default(PENDING)
   /// encrypt(purpose: "switchbot-guest-passcode") 済み。平文は DB に保持しない。
-  passcodeCiphertext       String                  @db.Text
+  passcodeCiphertext       String                  @map("passcode_ciphertext") @db.Text
   /// createKey 呼出の同期レスポンス（相関確認用、keyId ではない）
-  switchbotCommandId       String?
+  switchbotCommandId       String?                 @map("switchbot_command_id")
   /// deleteKey 呼出の同期レスポンス commandId（無い場合あり）
-  switchbotDeleteCommandId String?
+  switchbotDeleteCommandId String?                 @map("switchbot_delete_command_id")
   /// Device List keyList[].id（deleteKey に必須）
-  switchbotKeyId           String?
+  switchbotKeyId           String?                 @map("switchbot_key_id")
   /// パスコード有効期間（予約時間 ± switchbotPasscodeBufferMinutes）
-  startTime                DateTime                @db.Timestamptz(6)
-  endTime                  DateTime                @db.Timestamptz(6)
-  failureReason            String?
-  confirmedAt              DateTime?               @db.Timestamptz(6)
+  startTime                DateTime                @map("start_time") @db.Timestamptz(6)
+  endTime                  DateTime                @map("end_time") @db.Timestamptz(6)
+  failureReason            String?                 @map("failure_reason")
+  confirmedAt              DateTime?               @map("confirmed_at") @db.Timestamptz(6)
   /// REVOKE_PENDING 開始時刻（stale 判定用）
-  revokeRequestedAt        DateTime?               @db.Timestamptz(6)
-  revokedAt                DateTime?               @db.Timestamptz(6)
-  createdAt                DateTime                @default(now()) @db.Timestamptz(6)
-  updatedAt                DateTime                @updatedAt @db.Timestamptz(6)
+  revokeRequestedAt        DateTime?               @map("revoke_requested_at") @db.Timestamptz(6)
+  revokedAt                DateTime?               @map("revoked_at") @db.Timestamptz(6)
+  createdAt                DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   reservation Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   device      SmartLockDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)

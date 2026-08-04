@@ -244,16 +244,16 @@ export async function updateLocationOrder(
 
     await tx.$executeRaw`
       UPDATE "locations"
-      SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "isActive" = true
+        AND is_active = true
     `;
 
     await tx.$executeRaw`
       UPDATE "locations"
-      SET "sortOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "isActive" = true
+        AND is_active = true
     `;
   });
 

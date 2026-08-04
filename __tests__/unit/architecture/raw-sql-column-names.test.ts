@@ -122,19 +122,66 @@ function readTemplate(source: string, openIndex: number): string | undefined {
   return undefined;
 }
 
-/** 生 SQL のタグ。`$queryRawUnsafe` は文字列が別所で組まれるので静的には見ない。 */
-const SQL_TAG =
-  /(?:\$queryRaw|\$executeRaw|Prisma\.sql)(?:<[^>]*>)?\s*`|\.query\(\s*`/gu;
+/**
+ * 文そのものに見えるリテラルだけを拾う。
+ *
+ * **タグ（`$executeRaw` 等）を目印にしない。** 目印にしていた版は、ヘルパー関数が
+ * 組み立てて返すリテラルを丸ごと取り逃した。実例:
+ * `value-domain-constraints.test.ts` の `spaceInsert()` は `INSERT INTO "spaces" (...)`
+ * を `return` するだけで、実行は呼び出し側。WP11 で `"descriptionJson"` 等が
+ * 旧名のまま残り、ゲートは緑・統合テストだけが落ちた。
+ *
+ * 代わりに **中身が文の形をしているか**で判定する。組み立て方に依存しない。
+ *
+ * **残る限界**: `',"discountType","discountValue"'` のような**断片**は、
+ * どの表のものか静的には決まらない（表名を含まないため）。断片まで追うには
+ * 実行時の連結を再現するしかないので、ここは統合テストに任せる。
+ */
+const SQL_SHAPE =
+  /\b(?:INSERT\s+INTO|UPDATE\s+"?\w|DELETE\s+FROM|SELECT\b[\s\S]*?\bFROM|ALTER\s+TABLE)\b/iu;
 
-function extractSql(source: string): string[] {
+/** 文字列・コメント・テンプレートを状態遷移で読み分け、リテラルだけを取り出す。 */
+function extractLiterals(source: string): string[] {
   const out: string[] = [];
-  for (const match of source.matchAll(SQL_TAG)) {
-    const backtick = source.indexOf("`", match.index);
-    if (backtick === -1) continue;
-    const body = readTemplate(source, backtick);
-    if (body !== undefined) out.push(body);
+  for (let i = 0; i < source.length; i += 1) {
+    const c = source[i];
+    if (c === "/" && source[i + 1] === "/") {
+      const nl = source.indexOf("\n", i);
+      i = nl === -1 ? source.length : nl;
+      continue;
+    }
+    if (c === "/" && source[i + 1] === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end === -1 ? source.length : end + 1;
+      continue;
+    }
+    if (c === "`") {
+      const body = readTemplate(source, i);
+      // 閉じない backtick は文字列内・正規表現内の見間違い。**そこで走査を
+      // 打ち切るとファイルの残り全部が検査対象から消える**ので 1 文字進めるだけにする。
+      if (body === undefined) continue;
+      out.push(body);
+      i += body.length + 1;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      for (; j < source.length; j += 1) {
+        if (source[j] === "\\") {
+          j += 1;
+          continue;
+        }
+        if (source[j] === c || source[j] === "\n") break;
+      }
+      out.push(source.slice(i + 1, j));
+      i = j;
+    }
   }
   return out;
+}
+
+function extractSql(source: string): string[] {
+  return extractLiterals(source).filter((literal) => SQL_SHAPE.test(literal));
 }
 
 const TABLE_MENTION =
@@ -175,8 +222,9 @@ describe("生 SQL の列名", () => {
   test("SQL リテラルの抽出が機能している", () => {
     // 抽出器が壊れると違反ゼロで緑になる。「見つからなかった」と
     // 「見に行っていない」を取り違えないため、実際に取れた数を確かめる。
+    // 実測 3378 ファイル / 文の形をしたリテラル 67 本。
     expect(files.length).toBeGreaterThan(500);
-    expect(literals.length).toBeGreaterThan(100);
+    expect(literals.length).toBeGreaterThan(40);
   });
 
   test("schema の解析が機能している", () => {
