@@ -13,16 +13,16 @@ describe("settings phase 3 schema split", () => {
     const schema = read("prisma/schema.prisma");
 
     expect(schema).toMatch(
-      /model SettingsOrganization \{[\s\S]*@@map\("settings_organizations"\)/u,
+      /model SettingsOrganization \{[\s\S]*@@map\("settings_organization"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsCommerce \{[\s\S]*@@map\("settings_commerces"\)/u,
+      /model SettingsCommerce \{[\s\S]*@@map\("settings_commerce"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsNotification \{[\s\S]*@@map\("settings_notifications"\)/u,
+      /model SettingsNotification \{[\s\S]*@@map\("settings_notification"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsReservation \{[\s\S]*@@map\("settings_reservations"\)/u,
+      /model SettingsReservation \{[\s\S]*@@map\("settings_reservation"\)/u,
     );
   }, 30_000);
 });

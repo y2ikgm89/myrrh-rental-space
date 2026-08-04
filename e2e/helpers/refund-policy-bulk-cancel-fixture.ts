@@ -267,7 +267,7 @@ export async function teardownRefundPolicyBulkCancelFixture(
     fixture.originalRefundPolicy === null ||
     fixture.originalRefundPolicy === undefined
   ) {
-    await client.$executeRaw`UPDATE settings_commerces SET "refundPolicy" = NULL WHERE id = 'singleton'`;
+    await client.$executeRaw`UPDATE settings_commerce SET "refundPolicy" = NULL WHERE id = 'singleton'`;
   } else {
     await client.settingsCommerce.update({
       where: { id: "singleton" },

@@ -14,8 +14,8 @@ describe("settings phase 1 schema split", () => {
     () => {
       const schema = read("prisma/schema.prisma");
 
-      expect(schema).toContain('@@map("settings_announcement_carousels")');
-      expect(schema).toContain('@@map("settings_systems")');
+      expect(schema).toContain('@@map("settings_announcement_carousel")');
+      expect(schema).toContain('@@map("settings_system")');
       expect(schema).toContain("model SettingsAnnouncementCarousel {");
       expect(schema).toContain("model SettingsSystem {");
     },

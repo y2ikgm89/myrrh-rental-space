@@ -29,12 +29,17 @@ describe("notification email clean break", () => {
     // 型変更そのものは一度きりの移行操作なので検査しない（畳めば消える）。
     // 恒久的に守りたいのは「NULL が入らないこと」で、それは baseline の
     // SET NOT NULL が担う（Prisma は scalar list に NOT NULL を出さない）。
+    //
+    // テーブル名は書かない。この 2 列を持つ表は 1 つしか無いので列名だけで一意に
+    // 特定でき、物理テーブル名の変更（`settings_notifications` →
+    // `settings_notification`）でこの検査が落ちる理由が無い。**守りたいのは
+    // NOT NULL であって表の綴りではない。**
     const invariants = readDatabaseInvariants();
-    expect(invariants).toContain(
-      'ALTER TABLE "settings_notifications" ALTER COLUMN "notificationStaffIds" SET NOT NULL;',
+    expect(invariants).toMatch(
+      /ALTER COLUMN "notificationStaffIds" SET NOT NULL;/u,
     );
-    expect(invariants).toContain(
-      'ALTER TABLE "settings_notifications" ALTER COLUMN "notificationEmailAddresses" SET NOT NULL;',
+    expect(invariants).toMatch(
+      /ALTER COLUMN "notificationEmailAddresses" SET NOT NULL;/u,
     );
   });
 

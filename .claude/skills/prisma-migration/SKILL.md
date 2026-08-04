@@ -28,8 +28,11 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 1. `prisma/schema.prisma` を編集する。注意点:
    - datasource ブロックに url は無い。`DATABASE_URL` は `prisma.config.ts` の
      `env("DATABASE_URL")` が供給する (Bun が `.env` / `.env.local` を自動ロード)。
-   - テーブル名は `@@map` で全 41 モデルがマップ済み (snake_case 複数形が基本、
-     Better Auth 系 user/account/session/verification と admin_notification は単数形)。
+   - 物理名は `@@map` で全 77 モデル・全 40 enum がマップ済み。テーブルは
+     snake_case 複数形が既定で、単数形になるのは 1 行しか持たない設定 singleton
+     (`settings_*`。`invariants.sql` の `*_singleton_check` が SSoT) だけ。
+     `media` (不可算) と `inquiry_status_history` (履歴ログの集合名詞) が例外。
+     この規約は `__tests__/unit/architecture/prisma-naming-conventions.test.ts` が強制する。
    - 部分 unique index は previewFeatures `partialIndexes` で表現できる
      (例: `locations` の `@@unique([sortOrder], map: ..., where: { isActive: true })`)。
 2. `bun run db:generate` で client を再生成し、型エラーの波及を確認する。

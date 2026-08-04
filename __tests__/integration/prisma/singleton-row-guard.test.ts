@@ -100,14 +100,14 @@ describe("singleton 行モデルの DB ガード", () => {
   test("2 行目の INSERT が実際に拒否される", async () => {
     // 代表として 1 テーブルで実 INSERT を試す。制約定義の存在確認だけだと
     // 「制約はあるが述語が間違っていて素通り」を検出できない。
-    const target = singletonModels.find((m) => m.table === "settings_systems");
+    const target = singletonModels.find((m) => m.table === "settings_system");
     expect(target).toBeDefined();
 
     await client.query("BEGIN");
     let rejection: string | null = null;
     try {
       await client.query(
-        `INSERT INTO "settings_systems" ("id", "createdAt", "updatedAt")
+        `INSERT INTO "settings_system" ("id", "createdAt", "updatedAt")
          VALUES ($1, now(), now())`,
         ["not-singleton"],
       );
@@ -120,6 +120,6 @@ describe("singleton 行モデルの DB ガード", () => {
       await client.query("ROLLBACK");
     }
 
-    expect(rejection).toMatch(/settings_systems_singleton_check/u);
+    expect(rejection).toMatch(/settings_system_singleton_check/u);
   });
 });

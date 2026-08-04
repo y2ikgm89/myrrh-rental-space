@@ -376,7 +376,7 @@ model User {
 
   // OR検索用インデックス
   @@index([name])
-  @@map("user")
+  @@map("users")
 }
 
 /// EDITOR用のページ割り当て（中間テーブル）
@@ -409,7 +409,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("account")
+  @@map("accounts")
 }
 
 model Session {
@@ -425,7 +425,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("session")
+  @@map("sessions")
 }
 
 model Verification {
@@ -437,7 +437,7 @@ model Verification {
   updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([identifier])
-  @@map("verification")
+  @@map("verifications")
 }
 
 // ==============================================
@@ -1605,7 +1605,7 @@ model SettingsAnnouncementCarousel {
   glassAnimation    Boolean                    @default(false)
   sticky            Boolean                    @default(false)
 
-  @@map("settings_announcement_carousels")
+  @@map("settings_announcement_carousel")
 }
 
 model SettingsSystem {
@@ -1621,7 +1621,7 @@ model SettingsSystem {
   cookieConsentRejectText String?
   cookieConsentPolicyUrl  String?
 
-  @@map("settings_systems")
+  @@map("settings_system")
 }
 
 model SettingsSeo {
@@ -1648,7 +1648,7 @@ model SettingsSeo {
   defaultOgpTitle        String?
   defaultOgpDescription  String?
 
-  @@map("settings_seos")
+  @@map("settings_seo")
 }
 
 model SettingsAnalytics {
@@ -1685,7 +1685,7 @@ model SettingsLayout {
   footerHoursLabel      String               @default("Hours")
   footerShowSocialLinks Boolean              @default(true)
 
-  @@map("settings_layouts")
+  @@map("settings_layout")
 }
 
 model SettingsSidebar {
@@ -1699,7 +1699,7 @@ model SettingsSidebar {
   sidebarPopularCount Int     @default(5)
   sidebarTocEnabled   Boolean @default(true)
 
-  @@map("settings_sidebars")
+  @@map("settings_sidebar")
 }
 
 model SettingsOrganization {
@@ -1735,7 +1735,7 @@ model SettingsOrganization {
   senderName   String?
   replyToEmail String?
 
-  @@map("settings_organizations")
+  @@map("settings_organization")
 }
 
 model SettingsCommerce {
@@ -1754,7 +1754,7 @@ model SettingsCommerce {
 
   refundPolicy Json?
 
-  @@map("settings_commerces")
+  @@map("settings_commerce")
 }
 
 model SettingsNotification {
@@ -1775,7 +1775,7 @@ model SettingsNotification {
   notificationStaffIds       String[] @default([])
   notificationEmailAddresses String[] @default([])
 
-  @@map("settings_notifications")
+  @@map("settings_notification")
 }
 
 model SettingsReservation {
@@ -1792,7 +1792,7 @@ model SettingsReservation {
   cancellationDeadlineHours        Int     @default(24)
   modificationDeadlineHours        Int     @default(24)
 
-  @@map("settings_reservations")
+  @@map("settings_reservation")
 }
 
 model SettingsStripe {
@@ -1810,7 +1810,7 @@ model SettingsStripe {
   stripeLastTestedAt       DateTime? @db.Timestamptz(6)
   stripeConnectionStatus   String?
 
-  @@map("settings_stripes")
+  @@map("settings_stripe")
 }
 
 model SettingsResend {
@@ -1823,7 +1823,7 @@ model SettingsResend {
   resendLastTestedAt     DateTime? @db.Timestamptz(6)
   resendConnectionStatus String?
 
-  @@map("settings_resends")
+  @@map("settings_resend")
 }
 
 model SettingsTurnstile {
@@ -1836,7 +1836,7 @@ model SettingsTurnstile {
   turnstileLastTestedAt     DateTime? @db.Timestamptz(6)
   turnstileConnectionStatus String?
 
-  @@map("settings_turnstiles")
+  @@map("settings_turnstile")
 }
 
 model SettingsGoogleMaps {
@@ -1875,7 +1875,7 @@ model SettingsGoogleCalendar {
   googleCalendarWebhookExpiration  DateTime?          @db.Timestamptz(6)
   googleCalendarWebhookToken       String?            @db.Text
 
-  @@map("settings_google_calendars")
+  @@map("settings_google_calendar")
 }
 
 model SettingsGoogleBusinessProfile {
@@ -1886,7 +1886,7 @@ model SettingsGoogleBusinessProfile {
   googleBusinessProfileEnabled Boolean @default(false)
   googleBusinessProfileAuth    Json?
 
-  @@map("settings_google_business_profiles")
+  @@map("settings_google_business_profile")
 }
 
 model SettingsInstagram {
@@ -1900,7 +1900,7 @@ model SettingsInstagram {
   instagramUsername       String?
   instagramAccountType    String?
 
-  @@map("settings_instagrams")
+  @@map("settings_instagram")
 }
 
 model SettingsSwitchbot {
@@ -1916,7 +1916,7 @@ model SettingsSwitchbot {
   switchbotPasscodeBufferMinutes Int       @default(15)
   switchbotWebhookPathToken      String?   @db.Text
 
-  @@map("settings_switchbots")
+  @@map("settings_switchbot")
 }
 
 model SettingsFeatures {
@@ -1945,7 +1945,7 @@ model SettingsDataRetention {
   /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
   dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}")
 
-  @@map("settings_data_retentions")
+  @@map("settings_data_retention")
 }
 
 // =============================================================================
@@ -2712,7 +2712,7 @@ model AdminNotification {
   @@index([isRead, createdAt(sort: Desc)])
   @@index([type])
   @@index([createdAt(sort: Desc)])
-  @@map("admin_notification")
+  @@map("admin_notifications")
 }
 
 // =============================================================================
