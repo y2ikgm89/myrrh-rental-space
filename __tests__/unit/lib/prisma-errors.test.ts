@@ -126,6 +126,55 @@ describe("isPrismaUniqueConstraintError", () => {
     expect(isPrismaUniqueConstraintError(error, "stripeRefundId")).toBe(false);
   });
 
+  test("adapter-pg の fields は物理列名。field 名で呼んでも一致する", () => {
+    // **この fixture は実測値**（test DB, Prisma 7.8.0 + @prisma/adapter-pg）:
+    //   Unique constraint failed on the fields: (`stripe_refund_id`)
+    //
+    // かつてここは `fields: ["stripeRefundId"]` と書いてあった。物理列名を
+    // snake_case へ寄せた 20260804110000〜20260804150000 で本番経路が壊れたのに、
+    // **この fixture が旧名を焼いていたためテストは緑のままだった**。
+    // 「テストが通る」と「壊れていない」が乖離した実例なので、fixture は
+    // 実測値以外を書かない。
+    const error = {
+      name: "PrismaClientKnownRequestError",
+      code: "P2002",
+      clientVersion: "7.8.0",
+      meta: {
+        modelName: "Refund",
+        driverAdapterError: {
+          name: "DriverAdapterError",
+          cause: {
+            originalCode: "23505",
+            kind: "UniqueConstraintViolation",
+            constraint: { fields: ["stripe_refund_id"] },
+          },
+        },
+      },
+    };
+
+    // 呼び出し側はアプリの語彙（Prisma field 名）のまま書ける
+    expect(isPrismaUniqueConstraintError(error, "stripeRefundId")).toBe(true);
+    // 別 field は取り違えない
+    expect(isPrismaUniqueConstraintError(error, "reservationId")).toBe(false);
+    // 単語 1 つの field は物理名と同形なのでそのまま一致する
+    expect(
+      isPrismaUniqueConstraintError(
+        {
+          code: "P2002",
+          meta: {
+            driverAdapterError: {
+              cause: {
+                kind: "UniqueConstraintViolation",
+                constraint: { fields: ["slug"] },
+              },
+            },
+          },
+        },
+        "slug",
+      ),
+    ).toBe(true);
+  });
+
   test("Prisma 7 + adapter-pg 形状で kind が UniqueConstraintViolation でない場合は false", () => {
     // 同じ driverAdapterError shape でも kind が異なる (foreign key, not-null 等)
     // 場合は unique constraint 判定にしない。
