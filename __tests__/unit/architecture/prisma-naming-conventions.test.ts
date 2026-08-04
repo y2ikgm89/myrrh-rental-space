@@ -196,7 +196,16 @@ const BASELINE_ENUMS_NEEDING_UPPER_SNAKE_VALUES = new Set([
  * 新しい違反を持ち込む余地が残る。出発点を凍結して差し引く形にすれば、
  * **BASELINE に無いものは決して免除されない**。
  */
-const CONVERTED_MODELS: ReadonlySet<string> = new Set([]);
+const CONVERTED_MODELS: ReadonlySet<string> = new Set([
+  "Account",
+  "Customer",
+  "PendingCustomerEmailChange",
+  "PendingCustomerMerge",
+  "Session",
+  "User",
+  "UserPageAssignment",
+  "Verification",
+]);
 const CONVERTED_ENUM_TYPE_MAPS: ReadonlySet<string> = new Set([
   "AnalyticsType",
   "AnnouncementBarAnimation",
