@@ -13,11 +13,22 @@
 
 import { describe, test, expect } from "bun:test";
 import {
+  CENSUS_SECTIONS,
   diffCensus,
   formatCensusDiff,
   normalizeCensusRows,
   parseArgs,
+  validateCensus,
 } from "../../../scripts/db-census";
+
+/** 全セクションを持つ最小の正当なセンサス。 */
+function fullCensus(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const base: Record<string, unknown> = {};
+  for (const section of CENSUS_SECTIONS) base[section] = [];
+  return { ...base, ...overrides };
+}
 
 describe("diffCensus", () => {
   test("完全一致なら差分ゼロ", () => {
@@ -107,6 +118,52 @@ describe("normalizeCensusRows", () => {
         "my_prisma_migrations",
       ]),
     ).toEqual(["_prisma_migrations_backup", "my_prisma_migrations"]);
+  });
+});
+
+describe("validateCensus", () => {
+  test("全セクションが揃っていれば通る", () => {
+    const result = validateCensus(fullCensus({ tables: ["reservations"] }));
+    expect(result.ok).toBe(true);
+  });
+
+  test("空オブジェクトを拒否する — これを通すと生成失敗どうしの diff が「一致」になる", () => {
+    const result = validateCensus({});
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.reason).toContain("セクション不足");
+  });
+
+  test("配列を拒否する", () => {
+    expect(validateCensus([]).ok).toBe(false);
+  });
+
+  test("null を拒否する", () => {
+    expect(validateCensus(null).ok).toBe(false);
+  });
+
+  test("セクションが 1 つでも欠けたら拒否する", () => {
+    const partial = fullCensus();
+    delete partial["triggers"];
+    const result = validateCensus(partial);
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.reason).toContain("triggers");
+  });
+
+  test("知らないセクションがあれば拒否する（形式の drift を検出する）", () => {
+    const result = validateCensus(fullCensus({ bogus: [] }));
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.reason).toContain("bogus");
+  });
+
+  test("string でない要素を含む配列を拒否する", () => {
+    const result = validateCensus(fullCensus({ tables: ["ok", 42] }));
+    expect(result.ok).toBe(false);
+  });
+
+  test("セクションが配列でなければ拒否する", () => {
+    expect(validateCensus(fullCensus({ tables: "reservations" })).ok).toBe(
+      false,
+    );
   });
 });
 

@@ -131,8 +131,12 @@ const CENSUS_QUERIES: Readonly<Record<string, string>> = {
     WHERE i.schemaname = 'public'
     ORDER BY 1`,
 
+  // 有効/無効を**必ず**含める。`ALTER TABLE ... DISABLE TRIGGER` を打っても
+  // `pg_get_triggerdef()` の出力はバイト単位で変わらない（実測）ので、定義だけ見ると
+  // append-only trigger が全部止まっている DB を「同一」と判定してしまう。
+  // tgenabled: O=origin（有効）/ D=disabled / R=replica / A=always。
   triggers: `
-    SELECT pg_get_triggerdef(t.oid) AS entry
+    SELECT '[' || t.tgenabled::text || '] ' || pg_get_triggerdef(t.oid) AS entry
     FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
     JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -159,16 +163,29 @@ const CENSUS_QUERIES: Readonly<Record<string, string>> = {
     GROUP BY t.typname
     ORDER BY 1`,
 
+  // version まで見る。extension 所有オブジェクト（pg_trgm / btree_gist の内部関数）は
+  // functions セクションから意図的に除外しているので、version が違っても他のどこにも
+  // 差が出ない。名前だけの比較では「同じ名前の別物」を同一視する。
   extensions: `
-    SELECT e.extname AS entry
+    SELECT e.extname || ' ' || e.extversion || ' @' || n.nspname AS entry
     FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
     ORDER BY 1`,
 
+  // 名前だけでなく採番の属性まで見る。start / increment / min / max / cache / cycle が
+  // 違えば将来生成される値が変わるため、名前一致は同一性の証明にならない。
+  // `last_value` は**入れない** — データによって動く値でスキーマの一部ではない。
   sequences: `
-    SELECT c.relname AS entry
-    FROM pg_class c
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relkind = 'S'
+    SELECT s.sequencename
+           || ' type=' || s.data_type::text
+           || ' start=' || s.start_value::text
+           || ' inc=' || s.increment_by::text
+           || ' min=' || s.min_value::text
+           || ' max=' || s.max_value::text
+           || ' cache=' || s.cache_size::text
+           || ' cycle=' || s.cycle::text AS entry
+    FROM pg_sequences s
+    WHERE s.schemaname = 'public'
     ORDER BY 1`,
 };
 
@@ -258,20 +275,67 @@ async function capture(url: string, out: string): Promise<number> {
   }
 }
 
-function isCensus(value: unknown): value is Census {
-  if (typeof value !== "object" || value === null) return false;
-  return Object.values(value).every(
-    (rows) =>
-      Array.isArray(rows) && rows.every((row) => typeof row === "string"),
+/** センサスが必ず持つセクション。取得側と検証側で同じ SSoT を使う。 */
+export const CENSUS_SECTIONS: readonly string[] = Object.keys(CENSUS_QUERIES);
+
+/**
+ * センサス JSON の妥当性検査。
+ *
+ * **全セクションの存在を要求する。** 「値が全て string 配列か」だけを見ると
+ * `{}` や `[]` が**空虚に真**になり、生成に失敗した成果物どうしの diff が
+ * 「構造は完全に一致」と言って exit 0 する。安全確認の道具でそれをやると
+ * 「確認した」という記録だけが残って中身が無い。
+ */
+export type CensusValidation =
+  | { readonly ok: true; readonly census: Census }
+  | { readonly ok: false; readonly reason: string };
+
+export function validateCensus(value: unknown): CensusValidation {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return { ok: false, reason: "オブジェクトではない" };
+  }
+  const record: Record<string, unknown> = { ...value };
+
+  const missing = CENSUS_SECTIONS.filter((section) => !(section in record));
+  if (missing.length > 0) {
+    return { ok: false, reason: `セクション不足: ${missing.join(", ")}` };
+  }
+
+  const unknownSections = Object.keys(record).filter(
+    (section) => !CENSUS_SECTIONS.includes(section),
   );
+  if (unknownSections.length > 0) {
+    return {
+      ok: false,
+      reason: `未知のセクション: ${unknownSections.join(", ")}`,
+    };
+  }
+
+  // cast せず絞り込む。`as Census` で通すと、ここで弾きたい型崩れをそのまま
+  // 安全確認の本体へ持ち込むことになる。
+  const census: Record<string, readonly string[]> = {};
+  for (const [section, rows] of Object.entries(record)) {
+    if (!Array.isArray(rows)) {
+      return { ok: false, reason: `${section} が配列ではない` };
+    }
+    const strings = rows.filter(
+      (row): row is string => typeof row === "string",
+    );
+    if (strings.length !== rows.length) {
+      return { ok: false, reason: `${section} に string でない要素がある` };
+    }
+    census[section] = strings;
+  }
+  return { ok: true, census };
 }
 
 async function readCensus(path: string): Promise<Census> {
   const parsed: unknown = JSON.parse(await Bun.file(path).text());
-  if (!isCensus(parsed)) {
-    throw new Error(`${path} はセンサス JSON ではない`);
+  const verdict = validateCensus(parsed);
+  if (!verdict.ok) {
+    throw new Error(`${path} はセンサス JSON ではない — ${verdict.reason}`);
   }
-  return parsed;
+  return verdict.census;
 }
 
 async function diff(beforePath: string, afterPath: string): Promise<number> {
