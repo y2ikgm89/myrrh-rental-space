@@ -70,6 +70,32 @@ export function diffCensus(before: Census, after: Census): CensusDiff[] {
   return diffs;
 }
 
+/** diff の 1 行を `<section> <+|-> <row>` に正規化する（許容リストの照合キー）。 */
+export function renderDiffRows(diffs: readonly CensusDiff[]): string[] {
+  const rows: string[] = [];
+  for (const diff of diffs) {
+    for (const row of diff.removed) rows.push(`${diff.section} - ${row}`);
+    for (const row of diff.added) rows.push(`${diff.section} + ${row}`);
+  }
+  return rows;
+}
+
+/**
+ * 許容リストに載っていない差分だけを返す。
+ *
+ * 履歴を畳むと、意味は同じでもカタログ上の表現が変わる行が必ず残る
+ * （UNIQUE 制約 vs UNIQUE index、DEFAULT の cast 表記、正規化された CHECK 式）。
+ * それを「差分ゼロ」に丸めるのではなく**1 行ずつ列挙して承認する**。
+ * 承認していない行が 1 本でも出たら失敗させるのがこの関数の役目。
+ */
+export function unexpectedDiffRows(
+  diffs: readonly CensusDiff[],
+  accepted: readonly string[],
+): string[] {
+  const allowed = new Set(accepted);
+  return renderDiffRows(diffs).filter((row) => !allowed.has(row));
+}
+
 export function formatCensusDiff(diffs: readonly CensusDiff[]): string {
   if (diffs.length === 0) return "センサス差分なし（構造は完全に一致）";
 
@@ -225,7 +251,12 @@ export async function buildCensus(
 
 export type ParsedArgs =
   | { readonly mode: "capture"; readonly url: string; readonly out: string }
-  | { readonly mode: "diff"; readonly before: string; readonly after: string }
+  | {
+      readonly mode: "diff";
+      readonly before: string;
+      readonly after: string;
+      readonly expect: string | undefined;
+    }
   | { readonly mode: "error"; readonly message: string };
 
 export function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -233,10 +264,21 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   if (diffIndex >= 0) {
     const before = argv[diffIndex + 1];
     const after = argv[diffIndex + 2];
-    if (!before || !after) {
+    if (
+      !before ||
+      !after ||
+      before.startsWith("--") ||
+      after.startsWith("--")
+    ) {
       return { mode: "error", message: "--diff は 2 つのファイルを要求する" };
     }
-    return { mode: "diff", before, after };
+    const expectIndex = argv.indexOf("--expect");
+    return {
+      mode: "diff",
+      before,
+      after,
+      expect: expectIndex >= 0 ? argv[expectIndex + 1] : undefined,
+    };
   }
 
   const urlIndex = argv.indexOf("--url");
@@ -338,13 +380,54 @@ async function readCensus(path: string): Promise<Census> {
   return verdict.census;
 }
 
-async function diff(beforePath: string, afterPath: string): Promise<number> {
+async function readAcceptedDrift(path: string): Promise<string[]> {
+  const parsed: unknown = JSON.parse(await Bun.file(path).text());
+  if (!Array.isArray(parsed) || parsed.some((r) => typeof r !== "string")) {
+    throw new Error(`${path} は文字列の配列ではない`);
+  }
+  return parsed.filter((row): row is string => typeof row === "string");
+}
+
+async function diff(
+  beforePath: string,
+  afterPath: string,
+  expectPath: string | undefined,
+): Promise<number> {
   const diffs = diffCensus(
     await readCensus(beforePath),
     await readCensus(afterPath),
   );
   console.info(formatCensusDiff(diffs));
-  return diffs.length === 0 ? 0 : 1;
+
+  if (expectPath === undefined) {
+    return diffs.length === 0 ? 0 : 1;
+  }
+
+  const accepted = await readAcceptedDrift(expectPath);
+  const unexpected = unexpectedDiffRows(diffs, accepted);
+  const rendered = renderDiffRows(diffs);
+  const stale = accepted.filter((row) => !rendered.includes(row));
+
+  if (unexpected.length > 0) {
+    console.error(
+      `\n[db-census] 承認されていない差分 ${unexpected.length} 件:`,
+    );
+    for (const row of unexpected) console.error(`  ${row}`);
+  }
+  // 承認したのに現れなくなった行も報告する。放置すると許容リストが
+  // 「もう起きない差分」で膨らみ、次に本物が紛れても気付けなくなる。
+  if (stale.length > 0) {
+    console.error(
+      `\n[db-census] 許容リストにあるが実際には出ていない行 ${stale.length} 件（削除すること）:`,
+    );
+    for (const row of stale) console.error(`  ${row}`);
+  }
+  if (unexpected.length === 0 && stale.length === 0) {
+    console.info(
+      `\n[db-census] 差分は承認済み ${accepted.length} 件のみ（想定外なし）`,
+    );
+  }
+  return unexpected.length === 0 && stale.length === 0 ? 0 : 1;
 }
 
 async function run(argv: readonly string[]): Promise<number> {
@@ -353,7 +436,7 @@ async function run(argv: readonly string[]): Promise<number> {
     case "capture":
       return capture(args.url, args.out);
     case "diff":
-      return diff(args.before, args.after);
+      return diff(args.before, args.after, args.expect);
     case "error":
       console.error(`[db-census] ${args.message}`);
       return 2;

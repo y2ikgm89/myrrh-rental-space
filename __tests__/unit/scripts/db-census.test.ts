@@ -18,6 +18,8 @@ import {
   formatCensusDiff,
   normalizeCensusRows,
   parseArgs,
+  renderDiffRows,
+  unexpectedDiffRows,
   validateCensus,
 } from "../../../scripts/db-census";
 
@@ -167,17 +169,68 @@ describe("validateCensus", () => {
   });
 });
 
+describe("renderDiffRows / unexpectedDiffRows", () => {
+  const diffs = [
+    { section: "enums", added: ["e = B, A"], removed: ["e = A, B"] },
+    { section: "triggers", added: [], removed: ["t"] },
+  ];
+
+  test("差分を section 付きの 1 行へ正規化する", () => {
+    expect(renderDiffRows(diffs)).toEqual([
+      "enums - e = A, B",
+      "enums + e = B, A",
+      "triggers - t",
+    ]);
+  });
+
+  test("許容リストに載っている行は落とす", () => {
+    const unexpected = unexpectedDiffRows(diffs, [
+      "enums - e = A, B",
+      "enums + e = B, A",
+    ]);
+    expect(unexpected).toEqual(["triggers - t"]);
+  });
+
+  test("許容リストが空なら全部が想定外", () => {
+    expect(unexpectedDiffRows(diffs, [])).toHaveLength(3);
+  });
+
+  test("部分一致では許容しない（別物を同一視しない）", () => {
+    // "triggers - t" の前方一致で "triggers - t2" を通してはいけない。
+    const one = [{ section: "triggers", added: [], removed: ["t2"] }];
+    expect(unexpectedDiffRows(one, ["triggers - t"])).toEqual([
+      "triggers - t2",
+    ]);
+  });
+});
+
 describe("parseArgs", () => {
   test("--diff は 2 ファイルを取る", () => {
     expect(parseArgs(["--diff", "a.json", "b.json"])).toEqual({
       mode: "diff",
       before: "a.json",
       after: "b.json",
+      expect: undefined,
+    });
+  });
+
+  test("--expect で許容リストを受け取る", () => {
+    expect(
+      parseArgs(["--diff", "a.json", "b.json", "--expect", "accepted.json"]),
+    ).toEqual({
+      mode: "diff",
+      before: "a.json",
+      after: "b.json",
+      expect: "accepted.json",
     });
   });
 
   test("--diff の引数が足りなければ error", () => {
     expect(parseArgs(["--diff", "a.json"]).mode).toBe("error");
+  });
+
+  test("--diff の直後にフラグが来たら error（--expect をファイル名と誤認しない）", () => {
+    expect(parseArgs(["--diff", "--expect", "x.json"]).mode).toBe("error");
   });
 
   test("--url と --out で capture", () => {

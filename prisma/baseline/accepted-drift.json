@@ -1,0 +1,15 @@
+[
+  "columns - receipts.subject text NOT NULL DEFAULT 'スペース利用料として'::character varying",
+  "columns + receipts.subject text NOT NULL DEFAULT 'スペース利用料として'::text",
+  "constraints - audit_logs audit_logs_sequence_key UNIQUE (sequence)",
+  "constraints - refunds refunds_refundedByType_check CHECK (((\"refundedByType\")::text = ANY ((ARRAY['ADMIN'::character varying, 'AUTO_ON_CANCEL'::character varying, 'AUTO_CAPACITY_RACE'::character varying, 'AUTO_AMOUNT_MISMATCH'::character varying, 'STRIPE_DASHBOARD'::character varying])::text[])))",
+  "constraints - refunds refunds_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'requires_action'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying])::text[])))",
+  "constraints + refunds refunds_refundedByType_check CHECK (((\"refundedByType\")::text = ANY (ARRAY[('ADMIN'::character varying)::text, ('AUTO_ON_CANCEL'::character varying)::text, ('AUTO_CAPACITY_RACE'::character varying)::text, ('AUTO_AMOUNT_MISMATCH'::character varying)::text, ('STRIPE_DASHBOARD'::character varying)::text])))",
+  "constraints + refunds refunds_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('requires_action'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('canceled'::character varying)::text])))",
+  "enums - AuditAction = CREATE, UPDATE, DELETE, PUBLISH, LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT, PERMISSION_DENIED, PASSWORD_CHANGE, PASSWORD_RESET_REQUEST, PASSWORD_RESET_FAILED, ROLE_CHANGE, EXPORT, INTEGRITY_CHECK, READ, MANAGE",
+  "enums - PaymentStatus = UNPAID, PENDING, PAID, REFUNDED, FAILED, PARTIALLY_REFUNDED",
+  "enums - SmartLockPasscodeStatus = PENDING, CONFIRMED, FAILED, REVOKED, REVOKE_PENDING",
+  "enums + AuditAction = CREATE, UPDATE, DELETE, READ, MANAGE, PUBLISH, EXPORT, LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT, PERMISSION_DENIED, PASSWORD_CHANGE, PASSWORD_RESET_REQUEST, PASSWORD_RESET_FAILED, ROLE_CHANGE, INTEGRITY_CHECK",
+  "enums + PaymentStatus = UNPAID, PENDING, PAID, PARTIALLY_REFUNDED, REFUNDED, FAILED",
+  "enums + SmartLockPasscodeStatus = PENDING, CONFIRMED, FAILED, REVOKE_PENDING, REVOKED"
+]
