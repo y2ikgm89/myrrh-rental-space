@@ -46,8 +46,8 @@ const SCALAR_TYPES = new Set([
   "Bytes",
 ]);
 
-/** WP10-15 で列に `@map` を入れるまでの免除。**縮める一方**。 */
-const MODELS_PENDING_COLUMN_MAP = new Set([
+/** 変換開始時点で列 `@map` を持たなかったモデル。**この一覧は編集しない**。 */
+const BASELINE_MODELS_NEEDING_COLUMN_MAP = new Set([
   "Account",
   "AdminNotification",
   "AnnouncementBar",
@@ -127,8 +127,8 @@ const MODELS_PENDING_COLUMN_MAP = new Set([
   "Verification",
 ]);
 
-/** WP8 で enum 型名に `@@map` を入れるまでの免除。**縮める一方**。 */
-const ENUMS_PENDING_TYPE_MAP = new Set([
+/** 変換開始時点で `@@map` を持たなかった enum。**この一覧は編集しない**。 */
+const BASELINE_ENUMS_NEEDING_TYPE_MAP = new Set([
   "AnalyticsType",
   "AnnouncementBarAnimation",
   "AnnouncementBarDesignStyle",
@@ -171,8 +171,8 @@ const ENUMS_PENDING_TYPE_MAP = new Set([
   "TermsScope",
 ]);
 
-/** WP8 で値を UPPER_SNAKE に揃えるまでの免除。**縮める一方**。 */
-const ENUMS_PENDING_UPPER_SNAKE_VALUES = new Set([
+/** 変換開始時点で値が UPPER_SNAKE でなかった enum。**この一覧は編集しない**。 */
+const BASELINE_ENUMS_NEEDING_UPPER_SNAKE_VALUES = new Set([
   "AnalyticsType",
   "AnnouncementBarAnimation",
   "AnnouncementBarDesignStyle",
@@ -187,6 +187,38 @@ const ENUMS_PENDING_UPPER_SNAKE_VALUES = new Set([
   "TaxRateType",
 ]);
 
+/**
+ * 変換が済んだもの。**ここだけが増える。**
+ *
+ * 免除は `BASELINE \ CONVERTED` で算出する。件数の上限だけでは「1 つ片付けて 1 つ足す」
+ * 交換を止められない — 実在する名前で、まだ規約違反なら stale 判定も通ってしまうので
+ * 新しい違反を持ち込む余地が残る。出発点を凍結して差し引く形にすれば、
+ * **BASELINE に無いものは決して免除されない**。
+ */
+const CONVERTED_MODELS: ReadonlySet<string> = new Set([]);
+const CONVERTED_ENUM_TYPE_MAPS: ReadonlySet<string> = new Set([]);
+const CONVERTED_ENUM_VALUES: ReadonlySet<string> = new Set([]);
+
+function pending(
+  baseline: ReadonlySet<string>,
+  converted: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return new Set([...baseline].filter((name) => !converted.has(name)));
+}
+
+const MODELS_PENDING_COLUMN_MAP = pending(
+  BASELINE_MODELS_NEEDING_COLUMN_MAP,
+  CONVERTED_MODELS,
+);
+const ENUMS_PENDING_TYPE_MAP = pending(
+  BASELINE_ENUMS_NEEDING_TYPE_MAP,
+  CONVERTED_ENUM_TYPE_MAPS,
+);
+const ENUMS_PENDING_UPPER_SNAKE_VALUES = pending(
+  BASELINE_ENUMS_NEEDING_UPPER_SNAKE_VALUES,
+  CONVERTED_ENUM_VALUES,
+);
+
 export function toSnakeCase(name: string): string {
   return name.replaceAll(/(?<!^)(?=[A-Z])/gu, "_").toLowerCase();
 }
@@ -196,12 +228,26 @@ type Column = {
   readonly mappedTo: string | undefined;
 };
 
+/** enum の値。`@map` があると **DB に入る値はそちら**なので必ず持ち回る。 */
+type EnumValue = {
+  readonly identifier: string;
+  readonly mappedTo: string | undefined;
+};
+
 type Model = { readonly name: string; readonly columns: readonly Column[] };
 type EnumDecl = {
   readonly name: string;
-  readonly values: readonly string[];
+  readonly values: readonly EnumValue[];
   readonly mappedTo: string | undefined;
 };
+
+/** その宣言が実際に DB へ書く名前。`@map` があればそちらが物理名。 */
+function physicalName(
+  identifier: string,
+  mappedTo: string | undefined,
+): string {
+  return mappedTo ?? identifier;
+}
 
 const schema = readPrismaSchema();
 
@@ -242,24 +288,53 @@ const models: Model[] = modelBlocks.map(({ name, body }) => {
 });
 
 const enums: EnumDecl[] = enumBlocks.map(({ name, body }) => {
-  const values: string[] = [];
+  const values: EnumValue[] = [];
   for (const line of body.split(/\r?\n/u)) {
     const match = /^ {2}(\w+)/u.exec(line);
-    if (match?.[1] !== undefined) values.push(match[1]);
+    if (match?.[1] === undefined) continue;
+    const mapped = /@map\("([^"]+)"\)/u.exec(line);
+    values.push({ identifier: match[1], mappedTo: mapped?.[1] });
   }
-  const mapped = /@@map\("([^"]+)"\)/u.exec(body);
-  return { name, values, mappedTo: mapped?.[1] };
+  const mappedType = /@@map\("([^"]+)"\)/u.exec(body);
+  return { name, values, mappedTo: mappedType?.[1] };
 });
 
-/** そのモデルの列がすべて規約を満たしているか。 */
+/**
+ * そのモデルの列がすべて規約を満たしているか。
+ *
+ * **判定は物理名に対して行う**（`@map` があればそちら）。Prisma の field 名だけを
+ * 見ると 2 通りの抜けが出る:
+ *
+ * - 既に snake_case な field に妙な `@map` が付いている（`slug @map("legacySlug")`）
+ * - camelCase の field に `@map` はあるが行き先が規約と違う
+ */
 function columnViolations(model: Model): string[] {
   return model.columns
-    .filter((c) => c.field !== toSnakeCase(c.field))
-    .filter((c) => c.mappedTo !== toSnakeCase(c.field))
+    .filter((c) => physicalName(c.field, c.mappedTo) !== toSnakeCase(c.field))
     .map(
       (c) =>
-        `${model.name}.${c.field} -> @map("${toSnakeCase(c.field)}") が要る` +
-        (c.mappedTo === undefined ? "" : `（今は "${c.mappedTo}"）`),
+        `${model.name}.${c.field} の物理名が "${physicalName(c.field, c.mappedTo)}"` +
+        `（"${toSnakeCase(c.field)}" であるべき）`,
+    );
+}
+
+/**
+ * enum の値が規約を満たしているか。
+ *
+ * **識別子ではなく物理値を見る。** `AUTO_HIDE @map("auto-hide")` は識別子だけ見れば
+ * UPPER_SNAKE だが、**DB に入る値は `auto-hide` のまま**。識別子だけを検査すると
+ * 「揃えた」と報告しながら物理値が旧いまま残る。
+ */
+function enumValueViolations(decl: EnumDecl): string[] {
+  return decl.values
+    .filter(
+      (v) =>
+        physicalName(v.identifier, v.mappedTo) !== v.identifier.toUpperCase(),
+    )
+    .map(
+      (v) =>
+        `enum ${decl.name}.${v.identifier} の物理値が ` +
+        `"${physicalName(v.identifier, v.mappedTo)}"（UPPER_SNAKE であるべき）`,
     );
 }
 
@@ -289,14 +364,10 @@ describe("schema.prisma の物理名", () => {
     expect(violations).toEqual([]);
   });
 
-  test("免除に無い enum の値は UPPER_SNAKE", () => {
+  test("免除に無い enum の値は物理値が UPPER_SNAKE", () => {
     const violations = enums
       .filter((e) => !ENUMS_PENDING_UPPER_SNAKE_VALUES.has(e.name))
-      .flatMap((e) =>
-        e.values
-          .filter((v) => v !== v.toUpperCase())
-          .map((v) => `enum ${e.name}.${v} が UPPER_SNAKE でない`),
-      );
+      .flatMap(enumValueViolations);
 
     expect(violations).toEqual([]);
   });
@@ -325,24 +396,39 @@ describe("schema.prisma の物理名", () => {
   test("片付いた entry が免除に残っていない（enum 値）", () => {
     const stale = enums
       .filter((e) => ENUMS_PENDING_UPPER_SNAKE_VALUES.has(e.name))
-      .filter((e) => e.values.every((v) => v === v.toUpperCase()))
+      .filter((e) => enumValueViolations(e).length === 0)
       .map((e) => e.name);
 
     expect(stale).toEqual([]);
   });
 
-  test("免除は増やせない", () => {
-    // 変換を進めるたびに下げること。上げる変更は必ずレビューで止める。
-    expect(MODELS_PENDING_COLUMN_MAP.size).toBeLessThanOrEqual(77);
-    expect(ENUMS_PENDING_TYPE_MAP.size).toBeLessThanOrEqual(40);
-    expect(ENUMS_PENDING_UPPER_SNAKE_VALUES.size).toBeLessThanOrEqual(12);
+  test("変換済みリストは出発点の中しか指せない", () => {
+    // BASELINE に無い名前を CONVERTED に足しても免除は生まれない（差集合なので）。
+    // ここでは「存在しない名前を書いて満足している」状態を検出する。
+    const bogus = [
+      ...[...CONVERTED_MODELS].filter(
+        (n) => !BASELINE_MODELS_NEEDING_COLUMN_MAP.has(n),
+      ),
+      ...[...CONVERTED_ENUM_TYPE_MAPS].filter(
+        (n) => !BASELINE_ENUMS_NEEDING_TYPE_MAP.has(n),
+      ),
+      ...[...CONVERTED_ENUM_VALUES].filter(
+        (n) => !BASELINE_ENUMS_NEEDING_UPPER_SNAKE_VALUES.has(n),
+      ),
+    ];
+
+    expect(bogus).toEqual([]);
   });
 
   test("免除に実在しない名前が混ざっていない", () => {
     const unknown = [
-      ...[...MODELS_PENDING_COLUMN_MAP].filter((n) => !modelNames.has(n)),
-      ...[...ENUMS_PENDING_TYPE_MAP].filter((n) => !enumNames.has(n)),
-      ...[...ENUMS_PENDING_UPPER_SNAKE_VALUES].filter((n) => !enumNames.has(n)),
+      ...[...BASELINE_MODELS_NEEDING_COLUMN_MAP].filter(
+        (n) => !modelNames.has(n),
+      ),
+      ...[...BASELINE_ENUMS_NEEDING_TYPE_MAP].filter((n) => !enumNames.has(n)),
+      ...[...BASELINE_ENUMS_NEEDING_UPPER_SNAKE_VALUES].filter(
+        (n) => !enumNames.has(n),
+      ),
     ];
 
     expect(unknown).toEqual([]);
