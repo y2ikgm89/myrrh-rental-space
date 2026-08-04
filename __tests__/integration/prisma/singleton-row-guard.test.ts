@@ -107,7 +107,7 @@ describe("singleton 行モデルの DB ガード", () => {
     let rejection: string | null = null;
     try {
       await client.query(
-        `INSERT INTO "settings_system" ("id", "createdAt", "updatedAt")
+        `INSERT INTO "settings_system" ("id", created_at, updated_at)
          VALUES ($1, now(), now())`,
         ["not-singleton"],
       );

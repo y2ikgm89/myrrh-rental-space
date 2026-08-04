@@ -185,7 +185,7 @@ describe("値域 CHECK 制約", () => {
     // `updatedAt` は Prisma の `@updatedAt`（クライアント側で埋める）なので DB 既定値が
     // 無い。生 SQL で入れるときは明示しないと NOT NULL 違反になる。
     await client.query(
-      `INSERT INTO "settings_stripe" ("id", "updatedAt") VALUES ('singleton', now())
+      `INSERT INTO "settings_stripe" ("id", updated_at) VALUES ('singleton', now())
        ON CONFLICT ("id") DO NOTHING`,
     );
 
@@ -197,7 +197,7 @@ describe("値域 CHECK 制約", () => {
 
     await expectRejectedBy(
       "settings_stripe_connection_status_check",
-      `UPDATE "settings_stripe" SET "stripeConnectionStatus" = 'typo'`,
+      `UPDATE "settings_stripe" SET stripe_connection_status = 'typo'`,
     );
   });
 

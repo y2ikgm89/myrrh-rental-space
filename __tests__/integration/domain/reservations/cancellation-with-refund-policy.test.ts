@@ -322,7 +322,7 @@ async function setRefundPolicy(policy: unknown): Promise<void> {
 }
 
 async function clearRefundPolicy(): Promise<void> {
-  await prisma.$executeRaw`UPDATE settings_commerce SET "refundPolicy" = NULL WHERE id = 'singleton'`;
+  await prisma.$executeRaw`UPDATE settings_commerce SET refund_policy = NULL WHERE id = 'singleton'`;
 }
 
 function baseInput(reservationId: string) {
