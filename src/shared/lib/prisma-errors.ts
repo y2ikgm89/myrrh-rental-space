@@ -15,11 +15,38 @@ import { isRecord } from "@/shared/lib/serialize";
  * SELECT+INSERT race (Prisma issue #20229) を回避するため、単一 `create` + `catch`
  * pattern を使うのが真の atomic。この helper が P2002 判定を集約する。
  *
+ * ## driver は **物理列名**を返す（Prisma の field 名ではない）
+ *
+ * 呼び出し側は Prisma の field 名（`stripeRefundId`）で書く。アプリの他の API と
+ * 語彙を揃えるためで、そちらが正しい。**ただし adapter-pg が返すのは物理列名**
+ * （`stripe_refund_id`）なので、この関数が両者を橋渡しする。
+ *
+ * 実測（test DB, Prisma 7.8.0 + @prisma/adapter-pg）:
+ *
+ *   Unique constraint failed on the fields: (`stripe_refund_id`)
+ *
+ * 橋渡しを怠ると **無言で常に false** になる。P2002 を握り潰すはずの経路が
+ * throw に変わり、Stripe の webhook 再送が無限リトライになる（KGI: 返金が
+ * 正しく一度だけ行われる）。実際 20260804110000〜20260804150000 の列 rename で
+ * この経路が壊れ、**単体テストは fixture に旧名を焼いてあったため緑のままだった**。
+ *
+ * 物理名は「field 名の snake_case」と等しい。これは思い込みではなく
+ * `__tests__/unit/architecture/prisma-naming-conventions.test.ts` が全 77 モデルに
+ * 対して機械強制している不変条件で、さらに
+ * `__tests__/unit/architecture/prisma-error-target-fields.test.ts` が
+ * **この関数の呼び出し側リテラルが実在する field であること**を schema.prisma と
+ * 突き合わせる。
+ *
  * @param error - catch した任意 error
  * @param targetField - 特定 field (`@unique` の対象) の制約違反のみ検出したい場合、
- *                     その field 名。省略時は任意の unique 制約違反を true 判定。
+ *                     その **Prisma field 名**。省略時は任意の unique 制約違反を true 判定。
  * @returns P2002 (かつ optional target field) の unique 制約違反なら true
  */
+/** Prisma の field 名 → 物理列名。schema.prisma 全列で成り立つことをゲートが強制する。 */
+function toPhysicalColumnName(field: string): string {
+  return field.replaceAll(/(?<!^)(?=[A-Z])/gu, "_").toLowerCase();
+}
+
 export function isPrismaUniqueConstraintError(
   error: unknown,
   targetField?: string,
@@ -52,6 +79,8 @@ export function isPrismaUniqueConstraintError(
   // legacy shape に fallthrough させず driverAdapterError.cause.constraint.fields
   // まで潜って比較する (この経路が壊れると webhook / refund の idempotency chokepoint
   // が silent に 500 で throw して Stripe 再送の無限リトライを引き起こす)。
+  //
+  // **`fields` は物理列名**。field 名のまま比較すると camelCase の列で必ず false。
   const driverAdapterError = meta["driverAdapterError"];
   if (!isRecord(driverAdapterError)) return false;
   const cause = driverAdapterError["cause"];
@@ -60,8 +89,8 @@ export function isPrismaUniqueConstraintError(
   const constraint = cause["constraint"];
   if (!isRecord(constraint)) return false;
   const fields = constraint["fields"];
-  if (Array.isArray(fields) && fields.includes(targetField)) return true;
-  return false;
+  if (!Array.isArray(fields)) return false;
+  return fields.includes(toPhysicalColumnName(targetField));
 }
 
 /**

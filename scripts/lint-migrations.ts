@@ -15,26 +15,23 @@
  * 生バイナリを SHA256 検証して直接渡す。npm ラッパー（squawk-cli）は spawn 失敗時に
  * exit 0 を返し偽陰性を生むため使わない。
  *
- * ## 意図的 breaking migration allowlist
+ * ## 免除の入口は `-- squawk-ignore` だけ
  *
- * SQL 内 `-- squawk-ignore <rule>` は本来の SSoT だが、既 merge 済 migration の
- * `-- squawk-ignore` コメントの誤りを後から fix しようとすると
- * `scripts/check-protected-files.sh` (絶対規約 #7) が既 commit migration.sql の
- * M (modify) を pre-commit block してしまう。この deadlock を解消するため、
- * 意図的 breaking migration は下記 `INTENTIONAL_BREAKING_MIGRATIONS` に明示 entry
- * して squawk gate を skip する。allowlist は git-tracked で audit trail が残る。
+ * かつてここには `INTENTIONAL_BREAKING_MIGRATIONS` という allowlist があり、
+ * ファイルパスを 1 行足すだけで squawk を丸ごと skip できた。**削除した。**
  *
- * 追加基準 (all を満たす場合のみ):
- * 1. Cloud Run min0/max1 の single-instance atomic switch が Risk 1 (旧 revision が
- *    新スキーマを叩く 500) の窓を原理的に排除している (`.squawk.toml` 冒頭の
- *    「単一インスタンスでは過剰」justification 参照)。
- * 2. schema.prisma 側の変更で CLAUDE.md 絶対規約 #11「DROP/RENAME を含む migration
- *    は自動で計画ダウンタイム付きデプロイに切り替わる」判定が別 gate で走る。
- * 3. アプリ側 (`src/`) の型が新スキーマに合わせて更新済 (Prisma client 再生成 +
- *    型エラーゼロ)。
+ * 理由は 2 つ:
  *
- * 追加しない基準: 単に「squawk が warning 出したから」だけで entry を増やさない。
- * 追加時は必ず PR description で理由と Risk 1 が発生しない根拠を書く。
+ * 1. **入口が 2 つあると弱いほうが使われる。** SQL に理由を書く（人目に触れる）より
+ *    リストに 1 行足す（見えない）ほうが安いので、後者に流れる。
+ * 2. 元々の存在理由（既 merge の migration の `-- squawk-ignore` を後から直せない
+ *    deadlock）は、**これから書く migration には最初から当てはまらない**。
+ *
+ * 免除するときは SQL の先頭に `-- squawk-ignore-file <rule>` を書く。その migration が
+ * 本当に計画ダウンタイム付きでデプロイされることは
+ * `__tests__/unit/architecture/migration-squawk-ignore-is-breaking.test.ts` が
+ * deploy-production.yml の正規表現と突き合わせて機械強制する
+ * （**「安全である」と散文で主張するだけでは通らない**）。
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -47,27 +44,6 @@ const FIXTURE_DIR = join(import.meta.dir, "lint-migrations.fixtures");
 /** prisma migrate dev が生成する migration SQL のパス形だけを受け付ける（防御）。 */
 const MIGRATION_PATH =
   /(^|[\\/])prisma[\\/]migrations[\\/].+[\\/]migration\.sql$/;
-
-/**
- * 意図的 breaking migration の allowlist (git-tracked SSoT)。
- * repo root からの `/` 区切り path で列挙する。docblock の追加基準を満たす場合のみ
- * entry を増やすこと。
- */
-const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
-  // 空。migration 履歴を 1 本の baseline へ畳んだ時点で、ここに載っていた 10 本は
-  // すべて消えた（`refactor/collapse-migration-history`）。
-  //
-  // **安易に足さない。** 元々この allowlist が要ったのは、既 merge の migration.sql を
-  // 後から直せない（絶対規約 #7 / pre-commit が M をブロック）ために
-  // `-- squawk-ignore` の書き損じを修正できず deadlock していたから。
-  // これから追加する migration は最初から正しく書けるので、その deadlock は起きない。
-  // 追加するときは docblock の 3 条件をすべて満たすことを PR で示すこと。
-]);
-
-function isIntentionallyBreaking(file: string): boolean {
-  const normalized = file.replaceAll("\\", "/");
-  return INTENTIONAL_BREAKING_MIGRATIONS.has(normalized);
-}
 
 /**
  * baseline は squawk の検査対象外。**「古いから」ではなく前提が成立しないから**。
@@ -196,20 +172,10 @@ function run(args: readonly string[]): number {
   }
 
   const baseline = present.filter(isBaseline);
-  const intentional = present.filter(
-    (f) => !isBaseline(f) && isIntentionallyBreaking(f),
-  );
-  const toLint = present.filter(
-    (f) => !isBaseline(f) && !isIntentionallyBreaking(f),
-  );
+  const toLint = present.filter((f) => !isBaseline(f));
   for (const f of baseline) {
     console.error(
       `[migration-safety] baseline は空の DB に走るため squawk 非該当: ${f} — skip`,
-    );
-  }
-  for (const f of intentional) {
-    console.error(
-      `[migration-safety] intentional-breaking allowlist にマッチ: ${f} — squawk skip`,
     );
   }
 
@@ -217,9 +183,7 @@ function run(args: readonly string[]): number {
     if (present.length === 0) {
       console.error("[migration-safety] 対象 migration SQL なし — skip");
     } else {
-      console.error(
-        "[migration-safety] 全対象 migration が baseline / intentional-breaking — squawk skip",
-      );
+      console.error("[migration-safety] 全対象 migration が baseline — skip");
     }
     return 0;
   }

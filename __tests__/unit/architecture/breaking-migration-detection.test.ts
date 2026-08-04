@@ -164,6 +164,22 @@ const breakingFixtures: ReadonlyArray<{
     name: "先行コメントがあっても本文は検出する",
     sql: '-- 意図的な破壊的変更。理由は PR 参照。\nALTER TABLE "users"\n  DROP COLUMN "foo";',
   },
+  // enum の rename。**この 2 つは長期間 grep から漏れていた**（Codex #1924 P1）。
+  // 旧 revision は生成済み client が持つ旧型名・旧値をそのまま送るため、
+  // 計画ダウンタイム無しで migrate が走ると `invalid input value for enum` になる。
+  // 20260804085847 が実際にこの状態で書かれていた。
+  {
+    name: "ALTER TYPE ... RENAME VALUE（旧 revision が旧値を送って落ちる）",
+    sql: `ALTER TYPE "DiscountType" RENAME VALUE 'none' TO 'NONE';`,
+  },
+  {
+    name: "ALTER TYPE ... RENAME TO（旧 revision の生 SQL cast が落ちる）",
+    sql: 'ALTER TYPE "DiscountType" RENAME TO discount_type;',
+  },
+  {
+    name: "multi-line ALTER TYPE ... RENAME VALUE",
+    sql: `ALTER TYPE "DiscountType"\n  RENAME VALUE 'none' TO 'NONE';`,
+  },
 ];
 
 const safeFixtures: ReadonlyArray<{
@@ -179,15 +195,34 @@ const safeFixtures: ReadonlyArray<{
     sql: 'ALTER TABLE "users" ADD COLUMN "foo" TEXT;',
   },
   {
-    // 一覧の `RENAME TO` は `ALTER TABLE ...` の下にネストしている。ALTER INDEX /
-    // ALTER SEQUENCE / ALTER TYPE の RENAME TO は発動しない。Prisma は index の
-    // `map` を変えると ALTER INDEX ... RENAME TO を出すので、これは実際に起こる形。
-    name: "ALTER INDEX ... RENAME TO (ALTER TABLE 配下ではない)",
+    // `RENAME TO` を破壊的と見るのは `ALTER TABLE` と `ALTER TYPE` だけ。
+    // index / sequence の名前は旧 revision のコードが参照しないので発動させない。
+    // Prisma は index の `map` を変えると ALTER INDEX ... RENAME TO を出すので、
+    // これは実際に起こる形。
+    name: "ALTER INDEX ... RENAME TO (旧 revision は index 名を参照しない)",
     sql: 'ALTER INDEX "posts_slug_key" RENAME TO "posts_slug_active_key";',
   },
   {
-    name: "ALTER SEQUENCE ... RENAME TO (ALTER TABLE 配下ではない)",
+    name: "ALTER SEQUENCE ... RENAME TO (旧 revision は sequence 名を参照しない)",
     sql: 'ALTER SEQUENCE "s" RENAME TO "s2";',
+  },
+  {
+    // enum への**値の追加**は旧 revision を壊さない（旧コードはその値を送らない）。
+    // 破壊的なのは RENAME だけ。ここを一緒くたに breaking 扱いすると、
+    // 追加だけの migration にも計画ダウンタイムが付く。
+    name: "ALTER TYPE ... ADD VALUE (expand、旧 revision は新値を送らない)",
+    sql: "ALTER TYPE \"Role\" ADD VALUE 'AUDITOR';",
+  },
+  {
+    // **`.*(RENAME)` と書くとここが誤爆する。** 値や型名に RENAME という語が
+    // 含まれるだけで計画ダウンタイム（310 秒の全停止）に入ってしまう。
+    // 節そのもの（`RENAME VALUE` / `RENAME TO`）に一致させる必要がある。
+    name: "ALTER TYPE ... ADD VALUE で値に RENAME を含む",
+    sql: "ALTER TYPE \"Role\" ADD VALUE 'RENAMED';",
+  },
+  {
+    name: "ALTER TYPE ... ADD VALUE で型名に Rename を含む",
+    sql: "ALTER TYPE \"RenameState\" ADD VALUE 'READY';",
   },
   {
     name: "DROP NOT NULL (nullable relaxation, safe)",
