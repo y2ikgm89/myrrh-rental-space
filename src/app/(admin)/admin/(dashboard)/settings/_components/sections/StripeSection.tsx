@@ -67,6 +67,7 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
 
@@ -704,14 +705,17 @@ export function StripeSection({
           {/* 接続ステータス */}
           {settings.stripeConnectionStatus && (
             <StatusBanner
-              success={settings.stripeConnectionStatus === "connected"}
+              success={
+                settings.stripeConnectionStatus === ConnectionStatus.CONNECTED
+              }
             >
               <p className="text-xs text-muted-foreground mb-2">
                 保存済み credentials に基づく接続状態です（接続テストは DB
                 を更新しません）。
               </p>
               <div className="flex items-center gap-2">
-                {settings.stripeConnectionStatus === "connected" ? (
+                {settings.stripeConnectionStatus ===
+                ConnectionStatus.CONNECTED ? (
                   <>
                     <span className="h-2 w-2 rounded-full bg-success" />
                     <span className="text-sm font-medium text-success">

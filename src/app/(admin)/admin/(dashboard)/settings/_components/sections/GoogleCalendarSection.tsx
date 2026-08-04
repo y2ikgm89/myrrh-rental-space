@@ -39,6 +39,7 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface GoogleCalendarSectionProps {
   settings: Serialized<SettingsData>;
@@ -378,11 +379,13 @@ export function GoogleCalendarSection({
             {settings.googleCalendarConnectionStatus && (
               <StatusBanner
                 success={
-                  settings.googleCalendarConnectionStatus === "connected"
+                  settings.googleCalendarConnectionStatus ===
+                  ConnectionStatus.CONNECTED
                 }
               >
                 <div className="flex items-center gap-2">
-                  {settings.googleCalendarConnectionStatus === "connected" ? (
+                  {settings.googleCalendarConnectionStatus ===
+                  ConnectionStatus.CONNECTED ? (
                     <>
                       <span className="h-2 w-2 rounded-full bg-success" />
                       <span className="text-sm font-medium text-success">
@@ -568,7 +571,8 @@ export function GoogleCalendarSection({
           </div>
 
           {/* イベント取り込み設定（接続済みの場合のみ表示） */}
-          {settings.googleCalendarConnectionStatus === "connected" && (
+          {settings.googleCalendarConnectionStatus ===
+            ConnectionStatus.CONNECTED && (
             <div className="space-y-4 border-t pt-4">
               <h4 className="text-sm font-medium">イベント取り込み</h4>
 

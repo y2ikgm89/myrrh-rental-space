@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { calendar_v3 } from "googleapis";
-import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  CalendarSyncMethod,
+  ConnectionStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Calendar Event Types
@@ -74,7 +77,7 @@ export interface CalendarConnectionTestResult {
 export interface GoogleCalendarSettings {
   enabled: boolean;
   calendarId: string | null;
-  connectionStatus: "connected" | "error" | null;
+  connectionStatus: ConnectionStatus | null;
   lastTestedAt: Date | null;
   oauthEnabled: boolean;
 }
