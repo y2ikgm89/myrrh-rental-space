@@ -5,6 +5,7 @@ import { shouldShowTransferAccounts } from "@/shared/lib/settings/transfer-accou
 import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { TransferAccountType } from "@/shared/lib/validations/enums/helpers";
 import { getValidTransferAccountType } from "@/shared/lib/validations/enums/helpers";
+import type { Prisma } from "@generated/prisma/client";
 
 export type TransferAccountRecord = {
   id: string;
@@ -34,7 +35,7 @@ const transferAccountSelect = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.TransferAccountSelect;
 
 function mapTransferAccount(row: {
   id: string;

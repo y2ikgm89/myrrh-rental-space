@@ -122,7 +122,7 @@ const announcementBarSelect = {
   endAt: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.AnnouncementBarSelect;
 
 type AnnouncementBarSelectRow = Prisma.AnnouncementBarGetPayload<{
   select: typeof announcementBarSelect;
@@ -162,7 +162,7 @@ const carouselDbSelect = {
   gradientAnimation: true,
   glassAnimation: true,
   sticky: true,
-} as const;
+} as const satisfies Prisma.SettingsAnnouncementCarouselSelect;
 
 type CarouselDbRow = Prisma.SettingsAnnouncementCarouselGetPayload<{
   select: typeof carouselDbSelect;

@@ -18,7 +18,7 @@ const reviewListSelect = {
   space: { select: { id: true, name: true } },
   customer: { select: { id: true, lastName: true, firstName: true } },
   reservation: { select: { id: true } },
-} as const;
+} as const satisfies Prisma.SpaceReviewSelect;
 
 type ReviewListRow = Awaited<
   ReturnType<

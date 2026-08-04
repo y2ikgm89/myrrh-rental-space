@@ -39,6 +39,7 @@ import {
 import { lockSpaceForTransaction } from "./space-locks";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@generated/prisma/client";
 
 const SPACE_SELECT = {
   id: true,
@@ -52,7 +53,7 @@ const SPACE_SELECT = {
   durationDiscountOverride: true,
   taxRateType: true,
   location: { select: { address: true } },
-} as const;
+} as const satisfies Prisma.SpaceSelect;
 
 // ---------------------------------------------------------------------------
 // Public: Create

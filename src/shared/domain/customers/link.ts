@@ -20,7 +20,7 @@ const CUSTOMER_LINK_SELECT = {
   userId: true,
   isActive: true,
   status: true,
-} as const;
+} as const satisfies Prisma.CustomerSelect;
 
 export interface LinkedCustomer {
   id: string;

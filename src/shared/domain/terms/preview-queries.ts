@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { toPlainObject } from "@/shared/lib/serialize";
+import type { Prisma } from "@generated/prisma/client";
 
 const termsDetailSelect = {
   id: true,
@@ -9,7 +10,7 @@ const termsDetailSelect = {
   title: true,
   contentHtml: true,
   publishedAt: true,
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 /**
  * Preview 用 terms fetch — published filter なし (draft 含む全件)、cache なし (常に最新)。

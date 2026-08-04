@@ -31,6 +31,7 @@ import {
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import type { Prisma } from "@generated/prisma/client";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -63,7 +64,7 @@ const PAYMENT_EMAIL_SELECT = {
       },
     },
   },
-} as const;
+} as const satisfies Prisma.ReservationSelect;
 
 /**
  * 決済完了の atomic claim: 未払い / 決済待ちの予約のみを PAID に遷移させる。

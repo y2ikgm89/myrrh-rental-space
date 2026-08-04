@@ -56,7 +56,7 @@ const postListSelect = {
       slug: true,
     },
   },
-} as const;
+} as const satisfies Prisma.PostSelect;
 
 const postDetailSelect = {
   id: true,
@@ -94,7 +94,7 @@ const postDetailSelect = {
       },
     },
   },
-} as const;
+} as const satisfies Prisma.PostSelect;
 
 function attachPostUrl<
   T extends {

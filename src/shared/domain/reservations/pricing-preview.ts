@@ -9,6 +9,7 @@ import {
   type ReservationPricingResult,
 } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
+import type { Prisma } from "@generated/prisma/client";
 import {
   buildPricingSettings,
   getReservationSettings,
@@ -21,7 +22,7 @@ const PRICING_PREVIEW_SPACE_SELECT = {
   discountValue: true,
   durationDiscountOverride: true,
   taxRateType: true,
-} as const;
+} as const satisfies Prisma.SpaceSelect;
 
 export type ReservationPricingPreviewInput = {
   spaceId: string;

@@ -17,7 +17,7 @@ type SpaceCategoryOrderInput = {
 /** 削除/非アクティブ化ブロック判定用: 有効なスペースのみ数える。 */
 const ACTIVE_SPACE_COUNT_SELECT = {
   spaces: { where: { isActive: true } },
-} as const;
+} as const satisfies Prisma.SpaceCategorySelect;
 
 /**
  * Round-5 audit Finding #18: name の一意性は DB 側で isActive: true な行の間

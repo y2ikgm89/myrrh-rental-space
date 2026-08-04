@@ -143,7 +143,7 @@ const LOCATION_FULL_SELECT = {
   _count: {
     select: { spaces: true },
   },
-} as const;
+} as const satisfies Prisma.LocationSelect;
 
 export async function getLocations(options: {
   isPublished?: boolean | "ALL";

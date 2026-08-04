@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainObject } from "@/shared/lib/serialize";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+import type { Prisma } from "@generated/prisma/client";
 
 const postDetailSelect = {
   id: true,
@@ -24,7 +25,7 @@ const postDetailSelect = {
   postTags: {
     select: { tag: { select: { name: true, slug: true } } },
   },
-} as const;
+} as const satisfies Prisma.PostSelect;
 
 /**
  * Preview 用 post fetch — published filter なし (draft 含む全件)、cache なし (常に最新)。
