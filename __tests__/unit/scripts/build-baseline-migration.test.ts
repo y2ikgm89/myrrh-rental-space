@@ -16,6 +16,7 @@ import { join } from "node:path";
 import {
   assembleBaseline,
   countDeclarations,
+  countDataStatements,
   countGeneratedObjects,
   verifyGeneratedSql,
 } from "../../../scripts/build-baseline-migration";
@@ -111,6 +112,40 @@ describe("verifyGeneratedSql", () => {
     expect(problems.map((p) => p.problem).join(" ")).toContain(
       "宣言が読めていない",
     );
+  });
+});
+
+describe("countDataStatements", () => {
+  test("実物の init migration が持つデータ投入文を数えられる", () => {
+    const init = readFileSync(
+      join(
+        process.cwd(),
+        "prisma",
+        "migrations",
+        "00000000000000_init",
+        "migration.sql",
+      ),
+      "utf8",
+    );
+    // 8 本の terms_documents INSERT（法的文書）。seed.ts はこれらに一切触らないので、
+    // 畳むときに落とすと同意ゲートの必須規約が空集合になる。
+    expect(countDataStatements(init)).toBe(8);
+  });
+
+  test("組み立てた baseline はデータ投入文を持たない", () => {
+    expect(
+      countDataStatements(assembleBaseline("a;", "CREATE TABLE t();", "c;")),
+    ).toBe(0);
+  });
+
+  test("大文字小文字と行頭空白を問わず数える", () => {
+    const sql = [
+      "INSERT INTO a VALUES (1);",
+      "  insert into b values (2);",
+      "-- INSERT INTO c -- コメントは数えない対象ではないが行頭一致しない",
+      "SELECT 1;",
+    ].join("\n");
+    expect(countDataStatements(sql)).toBe(2);
   });
 });
 
