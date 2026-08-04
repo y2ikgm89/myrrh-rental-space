@@ -64,8 +64,24 @@ let isDateBlocked: (typeof import("@/shared/domain/reservations/availability"))[
 /** tx を必ず巻き戻すための番兵。 */
 const ROLLBACK = "__blocked_date_cascade_rollback__";
 
-/** JST カレンダー日付を UTC 深夜で保持する規約に合わせた固定日。 */
-const TARGET_DATE = "2099-03-15";
+/**
+ * 検査に使う日付。**固定日にしない。**
+ *
+ * 固定日にすると、長生きした DB にその日を含む休業日が 1 件でもあった時点で
+ * `isDateBlocked` が fixture 以外の行を選ぶ。トランザクションは自分が入れた行を
+ * 巻き戻すだけで、**既存行を隠さない**。
+ *
+ * 遠未来からランダムに選び、さらに「その日に既存行が無い」ことを実際に数えて
+ * 確かめる（下の `assertDateIsFree`）。空いていなければ**理由を名指しして落とす** —
+ * 黙って別の日へ逃げると、次に人が読んだとき何が起きたか分からない。
+ */
+function pickProbeDate(): string {
+  // 2090-01-01 から約 10 年ぶんの日を等確率で選ぶ。
+  const start = Date.UTC(2090, 0, 1);
+  const day = Math.floor(Math.random() * 3652);
+  const iso = new Date(start + day * 86_400_000).toISOString();
+  return iso.slice(0, 10);
+}
 
 type Fixture = {
   readonly spaceId: string;
@@ -124,8 +140,9 @@ async function insertBlockedDate(
   fixture: Fixture,
   scope: Scope,
   reason: string,
+  date: string,
 ): Promise<void> {
-  const target = new Date(`${TARGET_DATE}T00:00:00.000Z`);
+  const target = new Date(`${date}T00:00:00.000Z`);
   await tx.blockedDate.create({
     data: {
       scope,
@@ -141,22 +158,40 @@ async function insertBlockedDate(
   });
 }
 
+/**
+ * その日に既存の休業日が無いことを実際に数えて確かめる。
+ *
+ * **「たぶん空いている」で済ませない。** 空いていなければ件数を添えて落とす。
+ */
+async function assertDateIsFree(
+  tx: TransactionClient,
+  date: string,
+): Promise<void> {
+  const target = new Date(`${date}T00:00:00.000Z`);
+  const existing = await tx.blockedDate.count({
+    where: { startDate: { lte: target }, endDate: { gte: target } },
+  });
+  expect({ date, existing }).toEqual({ date, existing: 0 });
+}
+
 /** 指定した scope の休業日をすべて入れたうえで、採られた理由を返す。 */
 async function reasonWhenBlockedBy(
   scopes: readonly Scope[],
 ): Promise<string | null | undefined> {
+  const date = pickProbeDate();
   const observed: { reason: string | null | undefined } = { reason: undefined };
   try {
     await prisma.$transaction(async (tx) => {
       const fixture = await createFixture(tx);
+      await assertDateIsFree(tx, date);
       // **入れる順序を優先順位と逆にする。** 挿入順で決まっていたら気づけない。
       for (const scope of [...scopes].reverse()) {
-        await insertBlockedDate(tx, fixture, scope, `reason:${scope}`);
+        await insertBlockedDate(tx, fixture, scope, `reason:${scope}`, date);
       }
       const result = await isDateBlocked(
         fixture.spaceId,
         fixture.locationId,
-        TARGET_DATE,
+        date,
         tx,
       );
       // `DateBlockedResult` は判別可能 union。narrowing してから reason を読む
