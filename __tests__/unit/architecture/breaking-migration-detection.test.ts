@@ -214,6 +214,17 @@ const safeFixtures: ReadonlyArray<{
     sql: "ALTER TYPE \"Role\" ADD VALUE 'AUDITOR';",
   },
   {
+    // **`.*(RENAME)` と書くとここが誤爆する。** 値や型名に RENAME という語が
+    // 含まれるだけで計画ダウンタイム（310 秒の全停止）に入ってしまう。
+    // 節そのもの（`RENAME VALUE` / `RENAME TO`）に一致させる必要がある。
+    name: "ALTER TYPE ... ADD VALUE で値に RENAME を含む",
+    sql: "ALTER TYPE \"Role\" ADD VALUE 'RENAMED';",
+  },
+  {
+    name: "ALTER TYPE ... ADD VALUE で型名に Rename を含む",
+    sql: "ALTER TYPE \"RenameState\" ADD VALUE 'READY';",
+  },
+  {
     name: "DROP NOT NULL (nullable relaxation, safe)",
     sql: 'ALTER TABLE "users" ALTER COLUMN "foo" DROP NOT NULL;',
   },
