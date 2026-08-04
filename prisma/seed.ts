@@ -67,9 +67,7 @@ import {
 } from "../src/shared/domain/audit-log/hash-chain-core";
 import { evaluateSeedSafety } from "./seed-safety";
 
-// NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
-// 初期 baseline migration に SSoT 移管したため撤去済。
-// 規約マスターは `prisma migrate deploy` で投入され、seed.ts は規約を一切扱わない。
+import { SEED_TERMS_DOCUMENTS } from "./seed-terms-documents";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -838,17 +836,30 @@ async function seedSpaceCategories() {
   console.log("✅ Upserted space categories");
 }
 
-async function seedEventCategories() {
+/**
+ * イベントカテゴリー。**「未分類」は本番でも必要**。
+ *
+ * `Event.categoryId` は必須（`onDelete: Restrict`）なので、カテゴリーが 1 件も
+ * 無い DB では管理画面からイベントを作れない。以前は
+ * `20260722235352_add_event_category` migration の `INSERT` が投入していたが、
+ * migration 履歴を畳むと消えるのでここへ移した。
+ *
+ * @param includeDemoCategories dev だけ true。本番は「未分類」のみ投入し、
+ *   実際のカテゴリーは管理画面から作ってもらう（架空のカテゴリー名を本番に置かない）。
+ */
+async function seedEventCategories(includeDemoCategories = true) {
   // sortOrder は fixture に書かない: create 時に max+1 を都度採番する。
-  // sortOrder は無条件 @unique で、0 は `20260722235352_add_event_category`
-  // migration が投入する「未分類」が占有するため、fresh DB でも採番は 1 始まりに
-  // 自然解決する。配列の宣言順がそのまま表示順になる。
-  const categories = [
-    { name: "ワークショップ" },
-    { name: "マルシェ・展示" },
-    { name: "セミナー・交流会" },
-    { name: "その他" },
-  ];
+  // sortOrder は無条件 @unique なので、リテラルを書くと管理画面での並び替え・追加が
+  // その値を占有した瞬間に re-seed が P2002 で落ちる。配列の宣言順が表示順になる。
+  const categories = includeDemoCategories
+    ? [
+        { name: "未分類" },
+        { name: "ワークショップ" },
+        { name: "マルシェ・展示" },
+        { name: "セミナー・交流会" },
+        { name: "その他" },
+      ]
+    : [{ name: "未分類" }];
 
   // seedSpaceCategories と同型（Round-5 audit Finding #18 の教訓）: name は
   // isActive: true な行の間でのみ強制される partial unique index のため、
@@ -3602,14 +3613,70 @@ async function seedPages() {
 }
 
 // =============================================================================
-// Terms — Prisma 公式 Data Migration パターンに完全移管済
+// Terms — 規約マスターの初期投入
 //
-// `prisma/migrations/00000000000000_init/migration.sql` が 8 規約の SSoT。
-// `prisma migrate deploy` (CI / 本番デプロイ) で必ず投入されるため seed.ts は
-// 規約に一切触れない設計に統一。`prisma db seed` は dev/test 用と公式で明示
-// されており、initial data の二重管理を物理的に排除した
-// (公式 doc: https://www.prisma.io/docs/orm/prisma-migrate/workflows/data-migration)。
+// かつては `prisma/migrations/00000000000000_init/migration.sql` の `INSERT` が
+// SSoT で、seed.ts は規約に一切触らない設計だった。だが migration 履歴を 1 本の
+// baseline へ畳むとその `INSERT` ごと消え、**同意ゲートの必須規約が空集合になる**。
+// DDL は完全なので適用も起動も成功し、誰かが気付くまで分からない壊れ方をする。
+// cutover はどのみち本番 seed を 1 回流すので、こちらへ移した。
 // =============================================================================
+
+/**
+ * 規約マスター 8 件を投入する。**既にある規約は一切触らない。**
+ *
+ * 文面は管理画面から改訂されうるので、re-seed で上書きすると編集を踏み潰す。
+ * 「あれば skip」が正しく働く行でもある — 内容が自分の宣言だけで決まり、
+ * `now` からの相対でも他の行からの導出でもないため（seed 規約の判定条件）。
+ *
+ * 存在判定は `terms_documents_slug_active_key`（`deletedAt IS NULL` の partial
+ * unique）に合わせて **slug + deletedAt: null** で行う。述語を落とすと、
+ * ソフトデリート済みの規約を「存在する」と数えて投入をスキップしてしまう。
+ *
+ * `displayOrder` は同じく partial unique に参加するのでリテラルを書かず、
+ * create のたびに `max + 1` で採番する（`seedSpaceCategories` と同型）。
+ * その結果 `SEED_TERMS_DOCUMENTS` の宣言順がそのまま表示順になる。
+ */
+async function seedTermsDocuments() {
+  let created = 0;
+
+  for (const doc of SEED_TERMS_DOCUMENTS) {
+    const existing = await prisma.termsDocument.findFirst({
+      where: { slug: doc.slug, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    const maxOrder = await prisma.termsDocument.aggregate({
+      where: { deletedAt: null },
+      _max: { displayOrder: true },
+    });
+
+    await prisma.termsDocument.create({
+      data: {
+        slug: doc.slug,
+        type: doc.type,
+        title: doc.title,
+        scopes: [...doc.scopes],
+        contentJson: parsePrismaInputJson(
+          doc.contentJson,
+          `seed 規約 (${doc.slug}) の contentJson が不正です`,
+        ),
+        contentHtml: doc.contentHtml,
+        // 同意ゲートは公開済みの規約しか見ないので、公開状態で投入する。
+        isPublished: true,
+        publishedAt: new Date(),
+        showInFooter: true,
+        displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+      },
+    });
+    created += 1;
+  }
+
+  console.log(
+    `✅ Seeded terms documents (${created} created, ${SEED_TERMS_DOCUMENTS.length - created} already present)`,
+  );
+}
 
 // =============================================================================
 // FAQ
@@ -6067,7 +6134,7 @@ async function seedDev() {
   await seedNews();
   await seedPages();
   await seedFaq();
-  // 規約は baseline Data Migration で投入済のため seed では何もしない
+  await seedTermsDocuments();
   await seedBlogTags();
   await seedBlog();
 
@@ -6129,7 +6196,11 @@ async function seedProduction(email: string | undefined, name: string) {
   // 事実を含むため投入しない（下記 Phase 5 の理由と同様）。
   await seedPages();
   await seedFaq(false);
-  // 規約は baseline Data Migration で投入済のため seed では何もしない
+  // 規約は同意ゲートが公開済みのものしか見ないため、公開状態で投入する。
+  // 文面の改訂は管理画面から行う（re-seed は既存を触らない）。
+  await seedTermsDocuments();
+  // 「未分類」だけ。`Event.categoryId` は必須なので、1 件も無いとイベントを作れない。
+  await seedEventCategories(false);
 
   // Phase 5: サイト設定
   await seedNavigation(false); // 本番: 既存の編集を踏み潰さない
