@@ -33,7 +33,12 @@ fi
 # 書いてある）なので、生成し直した結果と 1 バイトも違わないことを確かめる。
 BASELINE_SQL='prisma/migrations/00000000000000_init/migration.sql'
 # 生成物の入力。index と worktree がずれていると検証対象が commit 内容と食い違う。
-BASELINE_INPUTS="prisma/schema.prisma prisma/baseline/extensions.sql prisma/baseline/invariants.sql"
+#
+# **生成器そのものも入力に含める。** 下の再生成はフックが動いている worktree 版の
+# builder を実行するので、builder に stage されていない変更があると
+# 「commit される builder では再現できない SQL」を承認してしまう
+# （逆に、worktree だけの不正な builder が不正な SQL を承認することもできる）。
+BASELINE_INPUTS="prisma/schema.prisma prisma/baseline/extensions.sql prisma/baseline/invariants.sql scripts/build-baseline-migration.ts scripts/build-baseline-invariants.ts"
 modified_migrations=$(printf '%s\n' "$staged_modified" | grep -E '^prisma/migrations/.*\.sql$' || true)
 
 if [ -n "$modified_migrations" ]; then

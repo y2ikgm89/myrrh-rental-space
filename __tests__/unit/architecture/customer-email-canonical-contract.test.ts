@@ -29,10 +29,10 @@ describe("customer email canonical contract", () => {
     const invariants = readDatabaseInvariants();
 
     expect(invariants).toContain(
-      'CONSTRAINT "customers_emailCanonical_not_empty_check"',
+      'CONSTRAINT "customers_email_canonical_not_empty_check"',
     );
     expect(invariants).toContain(
-      `CHECK ((btrim("emailCanonical") <> ''::text))`,
+      `CHECK ((btrim(email_canonical) <> ''::text))`,
     );
   });
 

@@ -586,6 +586,22 @@ describe("schema.prisma の物理名", () => {
     expect(unknown).toEqual([]);
   });
 
+  test("索引・制約に明示した物理名も snake_case", () => {
+    // **索引名はこのゲートの盲点だった。** 列・テーブル・enum を snake_case へ
+    // 寄せた後も `map: "events_space_id_alive_idx"` のような宣言が 21 本残り、
+    // さらに列 rename に追随しそこねた導出名 2 本が履歴 DB に居残っていた
+    // （後者は baseline を畳んだ結果と食い違う実ドリフトで、census が検出した）。
+    //
+    // `@@index` / `@@unique` / `@unique` の `map:` は**そのまま DB のオブジェクト名**に
+    // なるので、列と同じ規約で縛る。
+    const violations = [...schema.matchAll(/map:\s*"([^"]+)"/gu)]
+      .map((m) => m[1])
+      .filter((name): name is string => name !== undefined)
+      .filter((name) => !/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/u.test(name))
+      .map((name) => `map: "${name}" が snake_case でない`);
+    expect(violations).toEqual([]);
+  });
+
   test("免除に無いモデルは全列が snake_case へ map されている", () => {
     const violations = models
       .filter((m) => !MODELS_PENDING_COLUMN_MAP.has(m.name))

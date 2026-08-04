@@ -45,9 +45,9 @@ describe("sidebar DB invariants", () => {
     const invariants = readDatabaseInvariants();
 
     // Prisma DSL では表現できないので手書き CHECK として baseline に載せている。
-    expect(invariants).toContain("SettingsSidebar_sidebarWidgets_array_check");
+    expect(invariants).toContain("settings_sidebar_widgets_array_check");
     expect(invariants).toContain(
-      `CHECK ((jsonb_typeof("sidebarWidgets") = 'array'::text))`,
+      `CHECK ((jsonb_typeof(sidebar_widgets) = 'array'::text))`,
     );
   });
 });

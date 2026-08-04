@@ -499,7 +499,7 @@ model Location {
   smartLockDevices       SmartLockDevice[] @relation("LocationSmartLockDevices")
   defaultSmartLockDevice SmartLockDevice?  @relation("LocationDefaultSmartLockDevice", fields: [defaultSmartLockDeviceId], references: [id], onDelete: SetNull)
 
-  @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
+  @@unique([sortOrder], map: "locations_active_sort_order_key", where: { isActive: true })
   @@unique([slug], map: "locations_slug_active_key", where: { isActive: true })
   @@unique([name], map: "locations_name_active_key", where: { isActive: true })
   @@index([isPublished, isActive])
@@ -534,7 +534,7 @@ model SpaceCategory {
   // になり同名での再作成が常に CONFLICT になっていた。isActive な行の間でのみ
   // 一意性を強制する partial unique index に変更する。
   @@unique([name], map: "space_categories_name_active_key", where: { isActive: true })
-  @@unique([sortOrder], map: "space_categories_sortOrder_key")
+  @@unique([sortOrder], map: "space_categories_sort_order_key")
   @@map("space_categories")
 }
 
@@ -738,8 +738,8 @@ model ReservationSeries {
   @@index([customerId])
   @@index([createdAt])
   @@index([deletedAt])
-  @@index([deletedById], map: "reservation_series_deletedById_idx", where: { deletedById: { not: null } })
-  @@index([couponId], map: "reservation_series_couponId_idx", where: { couponId: { not: null } })
+  @@index([deletedById], map: "reservation_series_deleted_by_id_idx", where: { deletedById: { not: null } })
+  @@index([couponId], map: "reservation_series_coupon_id_idx", where: { couponId: { not: null } })
   @@map("reservation_series")
 }
 
@@ -881,7 +881,7 @@ model Reservation {
   @@index([deletedAt])
   @@index([paymentStatus])
   @@index([seriesId, recurrenceInstanceIndex])
-  @@index([deletedById], map: "reservations_deletedById_idx", where: { deletedById: { not: null } })
+  @@index([deletedById], map: "reservations_deleted_by_id_idx", where: { deletedById: { not: null } })
   @@map("reservations")
 }
 
@@ -1212,8 +1212,8 @@ model InquiryAttachment {
 
   @@index([inquiryId, createdAt])
   @@index([replyId])
-  @@index([uploadedById], map: "inquiry_attachments_uploadedById_idx", where: { uploadedById: { not: null } })
-  @@index([uploadedByCustomerId], map: "inquiry_attachments_uploadedByCustomerId_idx", where: { uploadedByCustomerId: { not: null } })
+  @@index([uploadedById], map: "inquiry_attachments_uploaded_by_id_idx", where: { uploadedById: { not: null } })
+  @@index([uploadedByCustomerId], map: "inquiry_attachments_uploaded_by_customer_id_idx", where: { uploadedByCustomerId: { not: null } })
   @@map("inquiry_attachments")
 }
 
@@ -1310,7 +1310,7 @@ model AnnouncementBar {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([displayOrder], map: "announcement_bars_displayOrder_key")
+  @@unique([displayOrder], map: "announcement_bars_display_order_key")
   @@index([isActive, displayOrder])
   @@index([startAt, endAt])
   @@map("announcement_bars")
@@ -1365,7 +1365,7 @@ model Post {
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
-  @@index([createdAt], map: "posts_createdAt_alive_idx", where: { deletedAt: null })
+  @@index([createdAt], map: "posts_created_at_alive_idx", where: { deletedAt: null })
   @@map("posts")
 }
 
@@ -1469,7 +1469,7 @@ model Section {
   // Relations
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
-  @@unique([pageId, order], map: "sections_pageId_order_key")
+  @@unique([pageId, order], map: "sections_page_id_order_key")
   @@index([pageId, order, isActive])
   @@index([type])
   @@map("sections")
@@ -1567,7 +1567,7 @@ model FaqItem {
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@unique([categoryId, order], map: "faq_items_categoryId_order_active_key", where: { deletedAt: null })
+  @@unique([categoryId, order], map: "faq_items_category_id_order_active_key", where: { deletedAt: null })
   @@index([categoryId, order])
   @@index([categoryId, isPublished, order])
   @@index([isPublished])
@@ -1966,7 +1966,7 @@ model InstagramPost {
   createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([sortOrder], map: "instagram_posts_sortOrder_key")
+  @@unique([sortOrder], map: "instagram_posts_sort_order_key")
   @@map("instagram_posts")
 }
 
@@ -2143,7 +2143,7 @@ model TermsDocument {
   agreements TermsAgreement[]
 
   @@unique([slug], map: "terms_documents_slug_active_key", where: { deletedAt: null })
-  @@unique([displayOrder], map: "terms_documents_displayOrder_active_key", where: { deletedAt: null })
+  @@unique([displayOrder], map: "terms_documents_display_order_active_key", where: { deletedAt: null })
   @@index([type])
   @@index([deletedAt, isPublished])
   @@index([showInFooter, isPublished, displayOrder])
@@ -2226,7 +2226,7 @@ model EditorCommentThread {
   @@index([contentType, contentId, status])
   @@index([createdBy])
   @@index([status, createdAt])
-  @@index([resolvedBy], map: "editor_comment_threads_resolvedBy_idx", where: { resolvedBy: { not: null } })
+  @@index([resolvedBy], map: "editor_comment_threads_resolved_by_idx", where: { resolvedBy: { not: null } })
   @@map("editor_comment_threads")
 }
 
@@ -2250,7 +2250,7 @@ model EditorComment {
   @@index([threadId, createdAt])
   @@index([createdBy])
   @@index([isDeleted])
-  @@index([deletedBy], map: "editor_comments_deletedBy_idx", where: { deletedBy: { not: null } })
+  @@index([deletedBy], map: "editor_comments_deleted_by_idx", where: { deletedBy: { not: null } })
   @@map("editor_comments")
 }
 
@@ -2354,7 +2354,7 @@ model EventCategory {
   // SpaceCategory と同型: isActive:true な行の間でのみ name の一意性を強制する
   // partial unique index。無効化済みカテゴリーの名前を永久に予約しない。
   @@unique([name], map: "event_categories_name_active_key", where: { isActive: true })
-  @@unique([sortOrder], map: "event_categories_sortOrder_key")
+  @@unique([sortOrder], map: "event_categories_sort_order_key")
   @@map("event_categories")
 }
 
@@ -2456,8 +2456,8 @@ model Event {
   /// partialIndexes preview feature は @@index の where にも対応する（@@unique 専用ではない、
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
-  @@index([spaceId], map: "events_spaceId_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
-  @@index([deletedById], map: "events_deletedById_idx", where: { deletedById: { not: null } })
+  @@index([spaceId], map: "events_space_id_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
+  @@index([deletedById], map: "events_deleted_by_id_idx", where: { deletedById: { not: null } })
   @@map("events")
 }
 
@@ -2482,7 +2482,7 @@ model EventTicket {
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
 
-  @@unique([eventId, sortOrder], map: "event_tickets_eventId_sortOrder_key")
+  @@unique([eventId, sortOrder], map: "event_tickets_event_id_sort_order_key")
   @@index([eventId, isAvailable])
   @@map("event_tickets")
 }
@@ -2671,7 +2671,7 @@ model Receipt {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([issuedAt])
-  @@index([reissuedFromId], map: "receipts_reissuedFromId_idx", where: { reissuedFromId: { not: null } })
+  @@index([reissuedFromId], map: "receipts_reissued_from_id_idx", where: { reissuedFromId: { not: null } })
   @@map("receipts")
 }
 
@@ -2778,7 +2778,7 @@ model SmartLockDevice {
   pairedPads          SmartLockDevice[]   @relation("PadToLock")
 
   @@index([locationId])
-  @@index([pairedLockDeviceId], map: "smart_lock_devices_pairedLockDeviceId_idx", where: { pairedLockDeviceId: { not: null } })
+  @@index([pairedLockDeviceId], map: "smart_lock_devices_paired_lock_device_id_idx", where: { pairedLockDeviceId: { not: null } })
   @@map("smart_lock_devices")
 }
 
