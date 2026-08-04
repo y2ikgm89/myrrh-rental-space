@@ -107,37 +107,73 @@ export function flattenAttachment(a: RawAttachment): InquiryAttachmentItem {
   };
 }
 
-/** InquiryStatusHistory の select 生形状 (changedBy を名前に平坦化する前)。 */
+/**
+ * InquiryStatusHistory の select 生形状。
+ *
+ * `changedById` は `AuditLog.userId` と同じ **FK を張らない論理参照**なので
+ * （schema.prisma の InquiryStatusHistory.changedById 参照）、`changedBy` という
+ * リレーションは存在せず `select` で名前を引けない。表示名は
+ * `attachStatusHistoryActors` が id を集めて 1 回だけ引き直す。
+ *
+ * `satisfies` を外さないこと。外すと存在しないリレーションを書いても tsc は通り、
+ * 実行時にはじめて Prisma が `Unknown field` で落ちる。
+ */
 const STATUS_HISTORY_SELECT = {
   id: true,
   fromStatus: true,
   toStatus: true,
   changedById: true,
-  changedBy: { select: { name: true } },
   reason: true,
   createdAt: true,
-} as const;
+} satisfies Prisma.InquiryStatusHistorySelect;
 
 type RawStatusHistory = {
   id: string;
   fromStatus: InquiryStatus | null;
   toStatus: InquiryStatus;
   changedById: string | null;
-  changedBy: { name: string } | null;
   reason: string | null;
   createdAt: Date;
 };
 
-function flattenStatusHistory(h: RawStatusHistory): InquiryStatusHistoryItem {
-  return {
-    id: h.id,
-    fromStatus: h.fromStatus,
-    toStatus: h.toStatus,
-    changedById: h.changedById,
-    changedByName: h.changedBy?.name ?? null,
-    reason: h.reason,
-    createdAt: h.createdAt,
-  };
+/**
+ * 状態履歴の行に変更者の表示名を貼り直す。
+ *
+ * FK が無いので `include` で引けない。id を集めて 1 回だけ引き直し、Map で合流する
+ * （行数ぶんクエリを撃たない。`audit-log/queries.ts` の `attachActors` と同型）。
+ * **削除済みユーザーの行は `changedByName: null` になる** — これは FK を張らない
+ * 設計の帰結で、`changedById` 自体は証跡として残る。
+ */
+async function attachStatusHistoryActors(
+  rows: readonly RawStatusHistory[],
+): Promise<InquiryStatusHistoryItem[]> {
+  const actorIds = [
+    ...new Set(
+      rows
+        .map((row) => row.changedById)
+        .filter((id): id is string => typeof id === "string"),
+    ),
+  ];
+
+  const actors =
+    actorIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+  const nameById = new Map(actors.map((actor) => [actor.id, actor.name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    fromStatus: row.fromStatus,
+    toStatus: row.toStatus,
+    changedById: row.changedById,
+    changedByName:
+      row.changedById === null ? null : (nameById.get(row.changedById) ?? null),
+    reason: row.reason,
+    createdAt: row.createdAt,
+  }));
 }
 
 /** InquiryInternalNote の select 生形状 (author を名前に平坦化する前)。 */
@@ -350,6 +386,8 @@ export async function getInquiryById(
 
   if (!inquiry) return null;
 
+  const statusHistory = await attachStatusHistoryActors(inquiry.statusHistory);
+
   const shaped: InquiryWithCustomer = {
     id: inquiry.id,
     receiptNumber: inquiry.receiptNumber,
@@ -368,7 +406,7 @@ export async function getInquiryById(
     anonymizedAt: inquiry.anonymizedAt,
     replies: inquiry.replies.map(flattenReply),
     attachments: inquiry.attachments.map(flattenAttachment),
-    statusHistory: inquiry.statusHistory.map(flattenStatusHistory),
+    statusHistory,
     internalNotes: inquiry.internalNotes.map(flattenInternalNote),
     tags: inquiry.tags.map((t) => t.tag),
     customer: inquiry.customer,
