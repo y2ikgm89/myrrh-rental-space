@@ -8,6 +8,7 @@ import type {
   HeaderScrollBehavior,
   LayoutWidth,
   TaxDisplayMode,
+  ConnectionStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   BusinessHours,
@@ -120,7 +121,7 @@ export type SettingsData = {
   stripeCurrency: string;
   stripePaymentMethodTypes: string[];
   stripeLastTestedAt: Date | null;
-  stripeConnectionStatus: string | null;
+  stripeConnectionStatus: ConnectionStatus | null;
   cookieConsentEnabled: boolean;
   cookieConsentMessage: string | null;
   cookieConsentAcceptText: string | null;
@@ -143,7 +144,7 @@ export type SettingsData = {
   googleCalendarId: string | null;
   googleCalendarServiceAccountEmailMasked: string | null;
   googleCalendarLastTestedAt: Date | null;
-  googleCalendarConnectionStatus: string | null;
+  googleCalendarConnectionStatus: ConnectionStatus | null;
   googleBusinessProfileEnabled: boolean;
   googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;
@@ -210,7 +211,7 @@ export type RefundPolicySettingsData = {
 export type GoogleCalendarSettingsData = {
   enabled: boolean;
   calendarId: string | null;
-  connectionStatus: "connected" | "error" | null;
+  connectionStatus: ConnectionStatus | null;
   lastTestedAt: Date | null;
   /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知 */
   reminderMinutes: number | null;

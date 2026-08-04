@@ -137,10 +137,14 @@ For human onboarding — setup, common commands, repo layout — see
   domain boundary only (UI/forms stay ㎡ and % numbers). Prisma is a single
   `@/shared/db/prisma` singleton — no `basePrisma`, `createAppPrismaClient`, or
   Decimal `$extends`. `rateBreakdownJson` is a future-breakdown snapshot (no `legacy`
-  flag); receipt amounts use `totalPriceWithTax`. Multi-column `ALTER COLUMN ... TYPE`
-  that triggers squawk `changing-column-type` needs an entry in
-  `scripts/lint-migrations.ts` intentional-breaking allowlist (inline
-  `-- squawk-ignore` alone is insufficient). Planned-downtime deploy mode is triggered
+  flag); receipt amounts use `totalPriceWithTax`. Intentional breaking migrations are
+  declared **only** with `-- squawk-ignore-file <rule>` in the SQL; the
+  `scripts/lint-migrations.ts` allowlist that used to be required alongside it was
+  deleted (a path in a list is a cheaper, less visible way to silence a safety gate
+  than writing the reason where reviewers read it). A migration carrying that
+  directive must also be detected by the planned-downtime grep — enforced by
+  `__tests__/unit/architecture/migration-squawk-ignore-is-breaking.test.ts`.
+  Planned-downtime deploy mode is triggered
   by the DDL listed below — note `ALTER COLUMN ... TYPE` **does** trigger it. The
   authoritative source is the grep pattern in
   `.github/workflows/deploy-production.yml`; this list is pinned to it by

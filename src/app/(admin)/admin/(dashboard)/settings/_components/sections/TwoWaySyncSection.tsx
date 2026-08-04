@@ -45,7 +45,10 @@ import {
   IconAlertCircle,
   IconCircleCheck,
 } from "@tabler/icons-react";
-import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  CalendarSyncMethod,
+  ConnectionStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCalendarSyncMethod } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -61,7 +64,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
   // 「useInputControl is unable to find form」警告（フックは動くが <form> 未描画）を防ぐ。
   if (
     !settings.googleCalendarEnabled ||
-    settings.googleCalendarConnectionStatus !== "connected"
+    settings.googleCalendarConnectionStatus !== ConnectionStatus.CONNECTED
   ) {
     return null;
   }

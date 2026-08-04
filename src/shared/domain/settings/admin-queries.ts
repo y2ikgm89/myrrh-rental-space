@@ -5,6 +5,7 @@ import {
   CalendarSyncMethod,
   DiscountCombinationMode,
   TaxDisplayMode,
+  ConnectionStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   AdminTaxSettings,
@@ -303,10 +304,22 @@ function parseTaxDisplayMode(value: string | null): TaxDisplayMode {
   return TaxDisplayMode.TAX_INCLUDED;
 }
 
+/**
+ * DB の `connection_status` 列を型付き値へ narrow する。
+ *
+ * **引数を `string` にしてはいけない。** 20260805100000 で値を大文字へ寄せたとき、
+ * ここが `value === "connected"` のままだったため型検査を素通りし、
+ * `isGoogleCalendarEnabled()` が常に false を返して**カレンダー連携が無言で止まる**
+ * ところだった（`string` と文字列リテラルの比較は合法なので tsc は何も言わない）。
+ * 引数を enum で受ければ、値域が動いたときに必ずここが落ちる。
+ */
 function parseCalendarConnectionStatus(
-  value: string | null,
-): "connected" | "error" | null {
-  if (value === "connected" || value === "error") {
+  value: ConnectionStatus | null,
+): ConnectionStatus | null {
+  if (
+    value === ConnectionStatus.CONNECTED ||
+    value === ConnectionStatus.ERROR
+  ) {
     return value;
   }
 

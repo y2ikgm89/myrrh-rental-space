@@ -30,7 +30,10 @@ import { createCalendarClientFromServiceAccountJson } from "@/shared/lib/google-
 import type { WebhookRenewalResult } from "@/shared/lib/google-calendar/types";
 import { setupWebhookWatch } from "@/shared/lib/google-calendar/webhook";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  CalendarSyncMethod,
+  ConnectionStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 const WEBHOOK_RENEWAL_THRESHOLD_DAYS = 2;
 
@@ -41,7 +44,9 @@ const WEBHOOK_RENEWAL_THRESHOLD_DAYS = 2;
  */
 export async function isGoogleCalendarEnabled(): Promise<boolean> {
   const settings = await getGoogleCalendarSettings();
-  return settings.enabled && settings.connectionStatus === "connected";
+  return (
+    settings.enabled && settings.connectionStatus === ConnectionStatus.CONNECTED
+  );
 }
 
 /**
@@ -82,7 +87,7 @@ export async function isTwoWaySyncEnabled(): Promise<boolean> {
   ]);
   return (
     calendarSettings.enabled &&
-    calendarSettings.connectionStatus === "connected" &&
+    calendarSettings.connectionStatus === ConnectionStatus.CONNECTED &&
     twoWaySyncSettings.enabled
   );
 }
