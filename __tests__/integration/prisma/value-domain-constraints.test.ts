@@ -98,15 +98,15 @@ function spaceInsert(overrides: {
   readonly gallery?: string;
 }): string {
   const discountColumns = overrides.discount
-    ? ',"discountType","discountValue"'
+    ? ",discount_type,discount_value"
     : "";
   const discountValues = overrides.discount ? `,${overrides.discount}` : "";
   const galleryColumn = overrides.gallery ? ',"gallery"' : "";
   const galleryValue = overrides.gallery ? `,${overrides.gallery}` : "";
   return `
     INSERT INTO "spaces" (
-      "id","slug","name","descriptionJson","descriptionHtml","descriptionPlainText",
-      "capacity","hourlyPrice","mainImageUrl","updatedAt","locationId"${discountColumns}${galleryColumn}
+      "id","slug","name",description_json,description_html,description_plain_text,
+      "capacity",hourly_price,main_image_url,updated_at,location_id${discountColumns}${galleryColumn}
     ) VALUES (
       gen_random_uuid(), 'probe-' || gen_random_uuid()::text, 'probe',
       '{}'::jsonb, '<p>probe</p>', 'probe',

@@ -145,13 +145,13 @@ export async function updateSpaceCategoryOrder(
 
     await tx.$executeRaw`
       UPDATE "space_categories"
-      SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
     `;
 
     await tx.$executeRaw`
       UPDATE "space_categories"
-      SET "sortOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
     `;
   });

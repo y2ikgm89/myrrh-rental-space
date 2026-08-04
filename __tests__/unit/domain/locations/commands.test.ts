@@ -636,7 +636,7 @@ describe("updateLocationOrder", () => {
       expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
-    test("生成 SQL は locations / CASE / isActive を含む", async () => {
+    test("生成 SQL は locations / CASE / is_active を含む", async () => {
       const items = [
         { id: "location-1", sortOrder: 10 },
         { id: "location-2", sortOrder: 11 },
@@ -651,7 +651,7 @@ describe("updateLocationOrder", () => {
         const sql = call[0].join("?");
         expect(sql).toContain("locations");
         expect(sql).toContain("CASE");
-        expect(sql).toContain("isActive");
+        expect(sql).toContain("is_active");
       }
     });
 
