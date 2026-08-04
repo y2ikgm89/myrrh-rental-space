@@ -195,8 +195,12 @@ describe("値域 CHECK 制約", () => {
     );
     expect(rows.rows[0]?.n ?? 0).toBeGreaterThan(0);
 
+    // 以前は 6 つの設定表に同じ値域の CHECK を手書きしていた。20260805100000 で
+    // `connection_status` enum 型へ寄せたので、**拒否するのは CHECK ではなく型**。
+    // 制約名ではなく型名で照合する（保護は弱まっていない — 型は 6 表で共有される
+    // 1 つの定義なので、値を足すときに 1 箇所しか触れない）。
     await expectRejectedBy(
-      "settings_stripe_connection_status_check",
+      "invalid input value for enum connection_status",
       `UPDATE "settings_stripe" SET stripe_connection_status = 'typo'`,
     );
   });

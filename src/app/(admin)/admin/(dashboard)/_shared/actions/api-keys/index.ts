@@ -44,6 +44,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 function refreshSettingsCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
@@ -91,7 +92,7 @@ export async function testResendConnectionAction(
     execute: async () => {
       const result = await testResendConnection(apiKey);
       await recordResendConnectionStatus(
-        result.success ? "connected" : "error",
+        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
       );
       refreshSettingsCache();
 
@@ -158,7 +159,7 @@ export async function testTurnstileConnectionAction(
     execute: async () => {
       const result = testTurnstileConnection(siteKey, secretKey);
       await recordTurnstileConnectionStatus(
-        result.success ? "connected" : "error",
+        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
       );
       refreshSettingsCache();
 
@@ -232,7 +233,7 @@ export async function testGoogleMapsConnectionAction(
     execute: async () => {
       const result = await testGoogleMapsConnection(apiKey);
       await recordGoogleMapsConnectionStatus(
-        result.success ? "connected" : "error",
+        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
       );
       refreshSettingsCache();
 
@@ -301,7 +302,7 @@ export async function testSwitchBotConnectionAction(
     execute: async () => {
       const result = await testSwitchBotConnection(openToken, secretKey);
       await recordSwitchBotConnectionStatus(
-        result.success ? "connected" : "error",
+        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
       );
       refreshSettingsCache();
 

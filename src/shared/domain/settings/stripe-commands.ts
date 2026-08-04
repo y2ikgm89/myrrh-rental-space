@@ -11,6 +11,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { keysHaveMatchingMode } from "@/shared/lib/stripe-shared";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type StripeSettingsInput = {
   stripePublishableKey?: string | null | undefined;
@@ -114,12 +115,12 @@ export async function recordStripeConnectionSuccess(
     create: omitUndefined({
       id: "singleton",
       stripeLastTestedAt: new Date(),
-      stripeConnectionStatus: "connected",
+      stripeConnectionStatus: ConnectionStatus.CONNECTED,
       stripeAccountId: accountId,
     }),
     update: omitUndefined({
       stripeLastTestedAt: new Date(),
-      stripeConnectionStatus: "connected",
+      stripeConnectionStatus: ConnectionStatus.CONNECTED,
       stripeAccountId: accountId,
     }),
   });

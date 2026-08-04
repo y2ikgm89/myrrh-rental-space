@@ -6,7 +6,10 @@ import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ConnectionStatus,
+  SmartLockPasscodeStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   getDecryptedSwitchBotCredentials,
   getDecryptedSwitchBotCredentialsForRevocation,
@@ -108,7 +111,7 @@ export async function updateResendSettings(data: {
 }
 
 export async function recordResendConnectionStatus(
-  status: "connected" | "error",
+  status: ConnectionStatus,
 ): Promise<void> {
   await upsertResendSettings({
     resendLastTestedAt: new Date(),
@@ -150,7 +153,7 @@ export async function updateTurnstileSettings(data: {
 }
 
 export async function recordTurnstileConnectionStatus(
-  status: "connected" | "error",
+  status: ConnectionStatus,
 ): Promise<void> {
   await upsertTurnstileSettings({
     turnstileLastTestedAt: new Date(),
@@ -184,7 +187,7 @@ export async function updateGoogleMapsSettings(data: {
 }
 
 export async function recordGoogleMapsConnectionStatus(
-  status: "connected" | "error",
+  status: ConnectionStatus,
 ): Promise<void> {
   await upsertGoogleMapsSettings({
     googleMapsLastTestedAt: new Date(),
@@ -237,7 +240,7 @@ export async function updateSwitchBotSettings(data: {
 }
 
 export async function recordSwitchBotConnectionStatus(
-  status: "connected" | "error",
+  status: ConnectionStatus,
 ): Promise<void> {
   await upsertSwitchbotSettings({
     switchbotLastTestedAt: new Date(),

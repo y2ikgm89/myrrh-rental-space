@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
@@ -91,11 +92,11 @@ export async function recordGoogleCalendarConnectionSuccess(): Promise<void> {
     create: {
       id: "singleton",
       googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: "connected",
+      googleCalendarConnectionStatus: ConnectionStatus.CONNECTED,
     },
     update: {
       googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: "connected",
+      googleCalendarConnectionStatus: ConnectionStatus.CONNECTED,
     },
   });
 }
@@ -108,11 +109,11 @@ export async function recordGoogleCalendarConnectionError(): Promise<void> {
     create: {
       id: "singleton",
       googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: "error",
+      googleCalendarConnectionStatus: ConnectionStatus.ERROR,
     },
     update: {
       googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: "error",
+      googleCalendarConnectionStatus: ConnectionStatus.ERROR,
     },
   });
 }

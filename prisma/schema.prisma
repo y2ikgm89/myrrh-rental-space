@@ -198,6 +198,18 @@ enum CalendarSyncMethod {
   @@map("calendar_sync_method")
 }
 
+/// 外部サービスとの接続状態。6 つの設定表が同じ値域を持つ。
+///
+/// 以前は各表に `*_connection_status_check` という手書き CHECK を 6 本置いて
+/// `'connected' | 'error'` を強制していた。同じ値域を 6 箇所で書くと、1 箇所だけ
+/// 値を足したときに気づけない。型 1 つに集約する。
+enum ConnectionStatus {
+  CONNECTED
+  ERROR
+
+  @@map("connection_status")
+}
+
 enum AnalyticsType {
   GA4
   GTM
@@ -1801,14 +1813,14 @@ model SettingsStripe {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
-  stripePublishableKey     String?   @map("stripe_publishable_key")
-  stripeSecretKey          String?   @map("stripe_secret_key") @db.Text
-  stripeWebhookSecret      String?   @map("stripe_webhook_secret") @db.Text
-  stripeAccountId          String?   @map("stripe_account_id")
-  stripeCurrency           String    @default("jpy") @map("stripe_currency")
-  stripePaymentMethodTypes String[]  @default(["card"]) @map("stripe_payment_method_types")
-  stripeLastTestedAt       DateTime? @map("stripe_last_tested_at") @db.Timestamptz(6)
-  stripeConnectionStatus   String?   @map("stripe_connection_status")
+  stripePublishableKey     String?           @map("stripe_publishable_key")
+  stripeSecretKey          String?           @map("stripe_secret_key") @db.Text
+  stripeWebhookSecret      String?           @map("stripe_webhook_secret") @db.Text
+  stripeAccountId          String?           @map("stripe_account_id")
+  stripeCurrency           String            @default("jpy") @map("stripe_currency")
+  stripePaymentMethodTypes String[]          @default(["card"]) @map("stripe_payment_method_types")
+  stripeLastTestedAt       DateTime?         @map("stripe_last_tested_at") @db.Timestamptz(6)
+  stripeConnectionStatus   ConnectionStatus? @map("stripe_connection_status")
 
   @@map("settings_stripe")
 }
@@ -1818,10 +1830,10 @@ model SettingsResend {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  resendApiKey           String?   @map("resend_api_key") @db.Text
-  resendWebhookSecret    String?   @map("resend_webhook_secret") @db.Text
-  resendLastTestedAt     DateTime? @map("resend_last_tested_at") @db.Timestamptz(6)
-  resendConnectionStatus String?   @map("resend_connection_status")
+  resendApiKey           String?           @map("resend_api_key") @db.Text
+  resendWebhookSecret    String?           @map("resend_webhook_secret") @db.Text
+  resendLastTestedAt     DateTime?         @map("resend_last_tested_at") @db.Timestamptz(6)
+  resendConnectionStatus ConnectionStatus? @map("resend_connection_status")
 
   @@map("settings_resend")
 }
@@ -1831,10 +1843,10 @@ model SettingsTurnstile {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  turnstileSiteKey          String?   @map("turnstile_site_key")
-  turnstileSecretKey        String?   @map("turnstile_secret_key") @db.Text
-  turnstileLastTestedAt     DateTime? @map("turnstile_last_tested_at") @db.Timestamptz(6)
-  turnstileConnectionStatus String?   @map("turnstile_connection_status")
+  turnstileSiteKey          String?           @map("turnstile_site_key")
+  turnstileSecretKey        String?           @map("turnstile_secret_key") @db.Text
+  turnstileLastTestedAt     DateTime?         @map("turnstile_last_tested_at") @db.Timestamptz(6)
+  turnstileConnectionStatus ConnectionStatus? @map("turnstile_connection_status")
 
   @@map("settings_turnstile")
 }
@@ -1844,9 +1856,9 @@ model SettingsGoogleMaps {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  googleMapsApiKey           String?   @map("google_maps_api_key") @db.Text
-  googleMapsLastTestedAt     DateTime? @map("google_maps_last_tested_at") @db.Timestamptz(6)
-  googleMapsConnectionStatus String?   @map("google_maps_connection_status")
+  googleMapsApiKey           String?           @map("google_maps_api_key") @db.Text
+  googleMapsLastTestedAt     DateTime?         @map("google_maps_last_tested_at") @db.Timestamptz(6)
+  googleMapsConnectionStatus ConnectionStatus? @map("google_maps_connection_status")
 
   @@map("settings_google_maps")
 }
@@ -1860,7 +1872,7 @@ model SettingsGoogleCalendar {
   googleCalendarServiceAccountJson String?            @map("google_calendar_service_account_json") @db.Text
   googleCalendarId                 String?            @map("google_calendar_id")
   googleCalendarLastTestedAt       DateTime?          @map("google_calendar_last_tested_at") @db.Timestamptz(6)
-  googleCalendarConnectionStatus   String?            @map("google_calendar_connection_status")
+  googleCalendarConnectionStatus   ConnectionStatus?  @map("google_calendar_connection_status")
   googleCalendarReminderMinutes    Int?               @map("google_calendar_reminder_minutes")
   icalAttachmentEnabled            Boolean            @default(true) @map("ical_attachment_enabled")
   addToCalendarLinksEnabled        Boolean            @default(true) @map("add_to_calendar_links_enabled")
@@ -1908,13 +1920,13 @@ model SettingsSwitchbot {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  switchbotEnabled               Boolean   @default(false) @map("switchbot_enabled")
-  switchbotOpenToken             String?   @map("switchbot_open_token") @db.Text
-  switchbotSecretKey             String?   @map("switchbot_secret_key") @db.Text
-  switchbotConnectionStatus      String?   @map("switchbot_connection_status")
-  switchbotLastTestedAt          DateTime? @map("switchbot_last_tested_at") @db.Timestamptz(6)
-  switchbotPasscodeBufferMinutes Int       @default(15) @map("switchbot_passcode_buffer_minutes")
-  switchbotWebhookPathToken      String?   @map("switchbot_webhook_path_token") @db.Text
+  switchbotEnabled               Boolean           @default(false) @map("switchbot_enabled")
+  switchbotOpenToken             String?           @map("switchbot_open_token") @db.Text
+  switchbotSecretKey             String?           @map("switchbot_secret_key") @db.Text
+  switchbotConnectionStatus      ConnectionStatus? @map("switchbot_connection_status")
+  switchbotLastTestedAt          DateTime?         @map("switchbot_last_tested_at") @db.Timestamptz(6)
+  switchbotPasscodeBufferMinutes Int               @default(15) @map("switchbot_passcode_buffer_minutes")
+  switchbotWebhookPathToken      String?           @map("switchbot_webhook_path_token") @db.Text
 
   @@map("settings_switchbot")
 }
