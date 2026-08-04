@@ -72,6 +72,20 @@ describe("CI workflow contract", () => {
     expect(lintFormatJob).not.toMatch(/^\s*run: bun run lint$/mu);
   });
 
+  test("only hands added or modified migrations to squawk", () => {
+    const migrationJob = extractJob("migration-safety");
+
+    // paths-filter の既定 change type は **deleted も含む**。履歴を 1 本の baseline へ
+    // 畳む PR は 99 本を削除して 1 本を追加するので、絞らないと実体の無いパスが
+    // squawk に渡って job が落ちる。削除された migration は lint しようが無い。
+    expect(migrationJob).toContain(
+      "added|modified: 'prisma/migrations/**/migration.sql'",
+    );
+    expect(migrationJob).not.toMatch(
+      /^\s+- 'prisma\/migrations\/\*\*\/migration\.sql'$/mu,
+    );
+  });
+
   test("describes migration safety as an explicit destructive-change gate", () => {
     const migrationSafetyText = [
       ciWorkflow,

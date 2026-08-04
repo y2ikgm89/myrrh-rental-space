@@ -155,9 +155,14 @@ jobs:
         with:
           # shell: シェルエスケープ済みのファイル一覧を outputs.migrations_files に出力
           list-files: shell
+          # `added|modified` を明示する。既定の change type は **deleted も含む**ため、
+          # migration 履歴を畳む PR（99 本削除 + 1 本追加）では削除済みパスまで
+          # outputs.migrations_files に載り、squawk が実体の無いファイルを読んで落ちる。
+          # 削除された migration は lint しようが無いので、そもそも列挙させない。
+          # https://github.com/dorny/paths-filter
           filters: |
             migrations:
-              - 'prisma/migrations/**/migration.sql'
+              - added|modified: 'prisma/migrations/**/migration.sql'
 
       - name: Setup Bun
         if: steps.filter.outputs.migrations == 'true'

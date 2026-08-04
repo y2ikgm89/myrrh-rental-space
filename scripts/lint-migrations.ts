@@ -37,6 +37,7 @@
  * 追加時は必ず PR description で理由と Risk 1 が発生しない根拠を書く。
  */
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 const SQUAWK_BIN = process.env["SQUAWK_BIN"] ?? "squawk";
@@ -190,39 +191,78 @@ function selfTest(): number {
   return 0;
 }
 
-const args = process.argv.slice(2);
-
-if (args.includes("--selftest")) {
-  process.exit(selfTest());
+/**
+ * 引数を「lint する / 実体が無い / migration SQL ですらない」に仕分ける。
+ *
+ * 実体の無いパスは lint しようが無い（削除された migration）。CI 側は
+ * paths-filter を `added|modified` に絞ってそもそも渡さないが、履歴を畳む PR や
+ * 手動実行で紛れ込みうるのでここでも落とす。
+ *
+ * **黙って捨てない。** 全件が実体無しのときに 0 件 lint で「通過」してしまうと、
+ * typo したパスが緑になる。呼び出し側がそれを非ゼロにできるよう区別して返す。
+ */
+export function partitionMigrationArgs(
+  args: readonly string[],
+  exists: (path: string) => boolean = existsSync,
+): {
+  readonly present: readonly string[];
+  readonly missing: readonly string[];
+  readonly notMigrations: readonly string[];
+} {
+  const requested = args.filter((a) => MIGRATION_PATH.test(a));
+  return {
+    present: requested.filter((f) => exists(f)),
+    missing: requested.filter((f) => !exists(f)),
+    notMigrations: args.filter((a) => !MIGRATION_PATH.test(a)),
+  };
 }
 
-const files = args.filter((a) => MIGRATION_PATH.test(a));
-const skipped = args.filter((a) => !MIGRATION_PATH.test(a));
-if (skipped.length > 0) {
-  console.error(
-    `[migration-safety] migration SQL でない引数を無視: ${skipped.join(", ")}`,
-  );
-}
+function run(args: readonly string[]): number {
+  if (args.includes("--selftest")) return selfTest();
 
-const intentional = files.filter(isIntentionallyBreaking);
-const toLint = files.filter((f) => !isIntentionallyBreaking(f));
-for (const f of intentional) {
-  console.error(
-    `[migration-safety] intentional-breaking allowlist にマッチ: ${f} — squawk skip`,
-  );
-}
+  const { present, missing, notMigrations } = partitionMigrationArgs(args);
 
-if (toLint.length === 0) {
-  if (files.length === 0) {
-    console.error("[migration-safety] 対象 migration SQL なし — skip");
-  } else {
+  if (notMigrations.length > 0) {
     console.error(
-      "[migration-safety] 全対象 migration が intentional-breaking allowlist — squawk skip",
+      `[migration-safety] migration SQL でない引数を無視: ${notMigrations.join(", ")}`,
     );
   }
-  process.exit(0);
+  if (missing.length > 0) {
+    console.error(
+      `[migration-safety] 実体が無いので skip（削除済み migration）: ${missing.join(", ")}`,
+    );
+  }
+  if (missing.length > 0 && present.length === 0) {
+    console.error(
+      "[migration-safety] 指定された migration が 1 件も実在しない — 引数を確認すること",
+    );
+    return 1;
+  }
+
+  const intentional = present.filter(isIntentionallyBreaking);
+  const toLint = present.filter((f) => !isIntentionallyBreaking(f));
+  for (const f of intentional) {
+    console.error(
+      `[migration-safety] intentional-breaking allowlist にマッチ: ${f} — squawk skip`,
+    );
+  }
+
+  if (toLint.length === 0) {
+    if (present.length === 0) {
+      console.error("[migration-safety] 対象 migration SQL なし — skip");
+    } else {
+      console.error(
+        "[migration-safety] 全対象 migration が intentional-breaking allowlist — squawk skip",
+      );
+    }
+    return 0;
+  }
+
+  console.error(`[migration-safety] lint 対象 ${toLint.length} 件:`);
+  for (const f of toLint) console.error(`  - ${f}`);
+  return runSquawk(toLint);
 }
 
-console.error(`[migration-safety] lint 対象 ${toLint.length} 件:`);
-for (const f of toLint) console.error(`  - ${f}`);
-process.exit(runSquawk(toLint));
+if (import.meta.main) {
+  process.exit(run(process.argv.slice(2)));
+}
