@@ -83,7 +83,7 @@ describe("本番データは seed が持つ", () => {
   });
 
   test("displayOrder をデータに書かない（partial unique を literal で占有しない）", () => {
-    // `terms_documents_displayOrder_active_key` に参加する列なので、リテラルを書くと
+    // `terms_documents_display_order_active_key` に参加する列なので、リテラルを書くと
     // 管理画面での並び替え・追加がその値を占有した瞬間に re-seed が P2002 で落ちる。
     const source = readFileSync(
       join(process.cwd(), "prisma", "seed-terms-documents.ts"),

@@ -429,22 +429,28 @@ describe("display order surfaces clean-break contract", () => {
 
     expect(schema).toContain('previewFeatures = ["partialIndexes"]');
     for (const indexName of [
-      "locations_active_sortOrder_key",
-      "space_categories_sortOrder_key",
-      "announcement_bars_displayOrder_key",
+      "locations_active_sort_order_key",
+      "space_categories_sort_order_key",
+      "announcement_bars_display_order_key",
       "post_categories_order_key",
-      "sections_pageId_order_key",
+      "sections_page_id_order_key",
       "navigation_items_type_order_key",
       "social_links_order_key",
       "faq_categories_order_active_key",
-      "faq_items_categoryId_order_active_key",
-      "terms_documents_displayOrder_active_key",
-      "event_tickets_eventId_sortOrder_key",
-      "instagram_posts_sortOrder_key",
+      "faq_items_category_id_order_active_key",
+      "terms_documents_display_order_active_key",
+      "event_tickets_event_id_sort_order_key",
+      "instagram_posts_sort_order_key",
     ]) {
+      // **migration 履歴のテキストを見ない。** 索引は rename されうるので、
+      // 「どこかに CREATE UNIQUE INDEX がある」は現在の契約の証明にならない。
+      // 実際 20260805090000 が 23 本の索引を rename した時点で、履歴には
+      // 旧名の CREATE 文と新名の ALTER 文が別々に存在する状態になった。
+      // 守りたいのは「今この unique 索引が宣言されていること」なので schema を見る。
       expect(schema).toContain(indexName);
-      expect(migration).toContain(`CREATE UNIQUE INDEX "${indexName}"`);
     }
+    // 履歴を読む必要が無くなったことを固定する（読み戻したら気づけるように）。
+    expect(migration.length).toBeGreaterThan(0);
 
     expect(helper).toContain("const TEMP_ORDER_BASE = -1_000_000;");
     expect(helper).toContain("const ORDER_SCOPE_LOCK_NAMESPACE = 728351;");

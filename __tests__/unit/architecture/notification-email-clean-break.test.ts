@@ -36,10 +36,10 @@ describe("notification email clean break", () => {
     // NOT NULL であって表の綴りではない。**
     const invariants = readDatabaseInvariants();
     expect(invariants).toMatch(
-      /ALTER COLUMN "notificationStaffIds" SET NOT NULL;/u,
+      /ALTER COLUMN "notification_staff_ids" SET NOT NULL;/u,
     );
     expect(invariants).toMatch(
-      /ALTER COLUMN "notificationEmailAddresses" SET NOT NULL;/u,
+      /ALTER COLUMN "notification_email_addresses" SET NOT NULL;/u,
     );
   });
 
