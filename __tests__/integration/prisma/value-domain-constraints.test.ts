@@ -210,7 +210,7 @@ describe("値域 CHECK 制約", () => {
     );
     await expectRejectedBy(
       "media_tags_array_check",
-      `INSERT INTO "media" ("id","filename","storagePath","url","bucket","mimeType","size","type","tags","updatedAt")
+      `INSERT INTO "media" ("id","filename",storage_path,"url","bucket",mime_type,"size","type","tags",updated_at)
        VALUES (gen_random_uuid(), 'probe.png', 'probe/probe.png',
                'https://example.test/probe.png', 'probe', 'image/png', 1,
                'IMAGE', '"not-an-array"'::jsonb, now())`,

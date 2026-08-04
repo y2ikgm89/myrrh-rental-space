@@ -199,7 +199,7 @@ describe("reorderAnnouncementBars", () => {
     for (const call of mockExecuteRaw.mock.calls.slice(1)) {
       const sql = call[0].join("?");
       expect(sql).toContain("announcement_bars");
-      expect(sql).toContain("displayOrder");
+      expect(sql).toContain("display_order");
       expect(sql).toContain("CASE");
     }
   });

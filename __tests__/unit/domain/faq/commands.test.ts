@@ -616,7 +616,7 @@ describe("reorderFaqCategories", () => {
         expect(sql).toContain("faq_categories");
         expect(sql).toContain("order");
         expect(sql).toContain("CASE");
-        expect(sql).toContain("deletedAt");
+        expect(sql).toContain("deleted_at");
       }
     });
   });
@@ -951,9 +951,9 @@ describe("reorderFaqItems", () => {
       for (const call of mockExecuteRaw.mock.calls.slice(1)) {
         const sql = call[0].join("?");
         expect(sql).toContain("faq_items");
-        expect(sql).toContain("categoryId");
+        expect(sql).toContain("category_id");
         expect(sql).toContain("CASE");
-        expect(sql).toContain("deletedAt");
+        expect(sql).toContain("deleted_at");
       }
     });
   });

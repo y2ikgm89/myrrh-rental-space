@@ -1265,23 +1265,23 @@ model News {
   id                 String       @id @default(uuid(7)) @db.Uuid
   slug               String       @unique
   title              String
-  contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
-  contentJson        Json? // Lexical EditorState JSON（プライマリ）
-  isPublished        Boolean      @default(false)
-  publishedAt        DateTime?    @db.Timestamptz(6)
-  contentWidth       LayoutWidth?
-  contentWidthCustom Int? // CUSTOMの場合の幅（px）
-  createdAt          DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
+  contentHtml        String       @map("content_html") @db.Text // HTMLキャッシュ（公開表示用）
+  contentJson        Json?        @map("content_json") // Lexical EditorState JSON（プライマリ）
+  isPublished        Boolean      @default(false) @map("is_published")
+  publishedAt        DateTime?    @map("published_at") @db.Timestamptz(6)
+  contentWidth       LayoutWidth? @map("content_width")
+  contentWidthCustom Int?         @map("content_width_custom") // CUSTOMの場合の幅（px）
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // SEO設定
-  metaDescription String?
-  metaKeywords    String?
+  metaDescription String? @map("meta_description")
+  metaKeywords    String? @map("meta_keywords")
 
   // OGP設定
-  ogpTitle       String?
-  ogpDescription String?
-  ogpImageUrl    String?
+  ogpTitle       String? @map("ogp_title")
+  ogpDescription String? @map("ogp_description")
+  ogpImageUrl    String? @map("ogp_image_url")
 
   // OR検索用インデックス
   @@index([title])
@@ -1299,16 +1299,16 @@ model AnnouncementBar {
   /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
   /// `{_key,_type:"iconInline",name}` の discriminated union を順次配置する。
   message      Json      @default("[]")
-  linkUrl      String?
-  linkText     String?
-  bgColor      String? // カスタム背景色 (hex)
-  textColor    String? // カスタム文字色 (hex)
-  isActive     Boolean   @default(true)
-  displayOrder Int       @default(0)
-  startAt      DateTime? @db.Timestamptz(6)
-  endAt        DateTime? @db.Timestamptz(6)
-  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
+  linkUrl      String?   @map("link_url")
+  linkText     String?   @map("link_text")
+  bgColor      String?   @map("bg_color") // カスタム背景色 (hex)
+  textColor    String?   @map("text_color") // カスタム文字色 (hex)
+  isActive     Boolean   @default(true) @map("is_active")
+  displayOrder Int       @default(0) @map("display_order")
+  startAt      DateTime? @map("start_at") @db.Timestamptz(6)
+  endAt        DateTime? @map("end_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([displayOrder], map: "announcement_bars_displayOrder_key")
   @@index([isActive, displayOrder])
@@ -1326,25 +1326,25 @@ model Post {
   // 一意性は下記 @@unique(where: deletedAt is null) 参照（Event/FaqCategory と同型）
   slug               String
   excerpt            String       @db.Text
-  contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
-  contentJson        Json? // Lexical EditorState JSON（プライマリ）
-  thumbnailUrl       String
-  ogpImageUrl        String?
-  categoryId         String       @db.Uuid
-  metaDescription    String?
-  metaKeywords       String?
-  ogpTitle           String?
-  ogpDescription     String?
-  publishedAt        DateTime?    @db.Timestamptz(6)
+  contentHtml        String       @map("content_html") @db.Text // HTMLキャッシュ（公開表示用）
+  contentJson        Json?        @map("content_json") // Lexical EditorState JSON（プライマリ）
+  thumbnailUrl       String       @map("thumbnail_url")
+  ogpImageUrl        String?      @map("ogp_image_url")
+  categoryId         String       @map("category_id") @db.Uuid
+  metaDescription    String?      @map("meta_description")
+  metaKeywords       String?      @map("meta_keywords")
+  ogpTitle           String?      @map("ogp_title")
+  ogpDescription     String?      @map("ogp_description")
+  publishedAt        DateTime?    @map("published_at") @db.Timestamptz(6)
   status             PostStatus   @default(DRAFT)
-  viewCount          Int          @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
-  authorId           String?      @db.Uuid // ユーザー削除時にnull化
-  contentWidth       LayoutWidth?
-  contentWidthCustom Int? // CUSTOMの場合の幅（px）
+  viewCount          Int          @default(0) @map("view_count") // 公開ページでの閲覧回数（集計値、localStorage で dedup）
+  authorId           String?      @map("author_id") @db.Uuid // ユーザー削除時にnull化
+  contentWidth       LayoutWidth? @map("content_width")
+  contentWidthCustom Int?         @map("content_width_custom") // CUSTOMの場合の幅（px）
   /// Soft delete: admin 削除は deletedAt を刻むだけ。hard delete はゴミ箱の永久削除 or trash-cleanup cron。
-  deletedAt          DateTime?    @db.Timestamptz(6)
-  createdAt          DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
+  deletedAt          DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   category PostCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -1371,8 +1371,8 @@ model Post {
 
 /// Post ↔ PostTag 中間テーブル（JSON配列からの正規化）
 model PostTagOnPost {
-  postId String  @db.Uuid
-  tagId  String  @db.Uuid
+  postId String  @map("post_id") @db.Uuid
+  tagId  String  @map("tag_id") @db.Uuid
   post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag    PostTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
@@ -1386,12 +1386,12 @@ model PostCategory {
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
-  metaTitle       String?
-  metaDescription String?  @db.Text
-  ogpImageUrl     String?
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description") @db.Text
+  ogpImageUrl     String?  @map("ogp_image_url")
   order           Int      @default(0)
-  createdAt       DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   posts Post[]
@@ -1405,11 +1405,11 @@ model PostTag {
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
-  metaTitle       String?
-  metaDescription String?  @db.Text
-  ogpImageUrl     String?
-  createdAt       DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description") @db.Text
+  ogpImageUrl     String?  @map("ogp_image_url")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   posts PostTagOnPost[]
@@ -1425,18 +1425,18 @@ model Page {
   id              String    @id @default(uuid(7)) @db.Uuid
   slug            String    @unique
   title           String
-  metaDescription String?
-  metaKeywords    String?
-  ogpTitle        String?
-  ogpDescription  String?
-  ogpImageUrl     String?
-  isPublished     Boolean   @default(true)
-  publishedAt     DateTime? @db.Timestamptz(6)
-  isActive        Boolean   @default(true)
-  isSystemPage    Boolean   @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
+  metaDescription String?   @map("meta_description")
+  metaKeywords    String?   @map("meta_keywords")
+  ogpTitle        String?   @map("ogp_title")
+  ogpDescription  String?   @map("ogp_description")
+  ogpImageUrl     String?   @map("ogp_image_url")
+  isPublished     Boolean   @default(true) @map("is_published")
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  isActive        Boolean   @default(true) @map("is_active")
+  isSystemPage    Boolean   @default(false) @map("is_system_page") // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
   template        String    @db.VarChar(64)
-  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   sections    Section[]
@@ -1458,13 +1458,13 @@ model Page {
 /// body は config.title + config.body で編集、migration `_drop_section_legacy_columns_*` 参照）。
 model Section {
   id        String   @id @default(uuid(7)) @db.Uuid
-  pageId    String   @db.Uuid
+  pageId    String   @map("page_id") @db.Uuid
   type      String   @db.VarChar(64)
   order     Int      @default(0) // 表示順序（DnDで変更可能）
-  isActive  Boolean  @default(true) // ON/OFF制御
+  isActive  Boolean  @default(true) @map("is_active") // ON/OFF制御
   config    Json     @default("{}") // タイプ別設定（Zodで型安全）
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
@@ -1478,17 +1478,17 @@ model Section {
 model NavigationItem {
   id         String         @id @default(uuid(7)) @db.Uuid
   type       NavigationType
-  parentId   String?        @db.Uuid
+  parentId   String?        @map("parent_id") @db.Uuid
   /// Sanity Portable Text 互換の token 配列（{type:"text",value} | {type:"icon",name}）。
   /// テキスト + アイコンの混在を任意位置で表現する SSoT。空配列 [] は許容しない（空ナビ防止は admin form 層で）。
   /// icon-only モードは禁止（NN/g 準拠 — 必ず text token と併記、SR は text のみ読み上げ）。
   label      Json
   url        String
-  isExternal Boolean        @default(false)
+  isExternal Boolean        @default(false) @map("is_external")
   order      Int
-  isActive   Boolean        @default(true)
-  createdAt  DateTime       @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime       @updatedAt @db.Timestamptz(6)
+  isActive   Boolean        @default(true) @map("is_active")
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Self-relation for submenus
   parent   NavigationItem?  @relation("NavigationHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
@@ -1504,11 +1504,11 @@ model SocialLink {
   platform      SocialPlatform
   url           String
   order         Int
-  isActive      Boolean        @default(true)
-  showOnDesktop Boolean        @default(true) // デスクトップで表示
-  showOnMobile  Boolean        @default(true) // モバイルで表示
-  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @db.Timestamptz(6)
+  isActive      Boolean        @default(true) @map("is_active")
+  showOnDesktop Boolean        @default(true) @map("show_on_desktop") // デスクトップで表示
+  showOnMobile  Boolean        @default(true) @map("show_on_mobile") // モバイルで表示
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([order], map: "social_links_order_key")
   @@map("social_links")
@@ -1525,10 +1525,10 @@ model FaqCategory {
   description String?   @db.Text
   icon        String? // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
   order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  deletedAt   DateTime? @db.Timestamptz(6)
-  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  isActive    Boolean   @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   items FaqItem[]
@@ -1550,19 +1550,19 @@ model FaqCategory {
 
 model FaqItem {
   id              String    @id @default(uuid(7)) @db.Uuid
-  categoryId      String    @db.Uuid
+  categoryId      String    @map("category_id") @db.Uuid
   question        String
   answer          String    @db.Text // 回答（プレーンテキスト、改行保持）
   order           Int       @default(0)
-  isPublished     Boolean   @default(true)
-  publishedAt     DateTime? @db.Timestamptz(6)
-  deletedAt       DateTime? @db.Timestamptz(6)
-  viewCount       Int       @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
-  lastViewedAt    DateTime? @db.Timestamptz(6) // 直近閲覧日時（人気度の新鮮度判断用）
-  helpfulCount    Int       @default(0) // 「役に立った」投票数（localStorage で dedup）
-  notHelpfulCount Int       @default(0) // 「役に立たなかった」投票数（localStorage で dedup）
-  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
+  isPublished     Boolean   @default(true) @map("is_published")
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+  viewCount       Int       @default(0) @map("view_count") // 公開ページでの閲覧回数（集計値、localStorage で dedup）
+  lastViewedAt    DateTime? @map("last_viewed_at") @db.Timestamptz(6) // 直近閲覧日時（人気度の新鮮度判断用）
+  helpfulCount    Int       @default(0) @map("helpful_count") // 「役に立った」投票数（localStorage で dedup）
+  notHelpfulCount Int       @default(0) @map("not_helpful_count") // 「役に立たなかった」投票数（localStorage で dedup）
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -1955,16 +1955,16 @@ model SettingsDataRetention {
 /// Instagram投稿のキャッシュ
 model InstagramPost {
   id           String             @id @default(uuid(7)) @db.Uuid
-  postId       String             @unique // Instagram投稿ID
-  postUrl      String // 投稿URL
-  mediaUrl     String? // メディアURL
-  thumbnailUrl String? // サムネイルURL
+  postId       String             @unique @map("post_id") // Instagram投稿ID
+  postUrl      String             @map("post_url") // 投稿URL
+  mediaUrl     String?            @map("media_url") // メディアURL
+  thumbnailUrl String?            @map("thumbnail_url") // サムネイルURL
   caption      String?            @db.Text // キャプション
-  mediaType    InstagramMediaType
+  mediaType    InstagramMediaType @map("media_type")
   permalink    String // 永続リンク
-  sortOrder    Int                @default(0)
-  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
+  sortOrder    Int                @default(0) @map("sort_order")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([sortOrder], map: "instagram_posts_sortOrder_key")
   @@map("instagram_posts")
@@ -2071,10 +2071,10 @@ model AuditLog {
 model Media {
   id          String @id @default(uuid(7)) @db.Uuid
   filename    String // 元のファイル名
-  storagePath String // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
+  storagePath String @map("storage_path") // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
   url         String // 公開URL
   bucket      String // ストレージ prefix（`STORAGE_PREFIXES` の 4 値: `spaces` / `posts` / `site` / `media`）
-  mimeType    String // MIME type
+  mimeType    String @map("mime_type") // MIME type
   size        Int // ファイルサイズ（bytes）
   width       Int? // 画像幅（px）
   height      Int? // 画像高さ（px）
@@ -2088,10 +2088,10 @@ model Media {
   tags        Json       @default("[]") // タグ配列
 
   // 管理情報
-  uploadedBy String?  @db.Uuid // アップロードユーザーID（User削除時にnull化）
-  isActive   Boolean  @default(true) // ソフトデリート
-  createdAt  DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+  uploadedBy String?  @map("uploaded_by") @db.Uuid // アップロードユーザーID（User削除時にnull化）
+  isActive   Boolean  @default(true) @map("is_active") // ソフトデリート
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   uploader User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
@@ -2205,16 +2205,16 @@ model TermsAgreement {
 /// エディタコメントスレッド（Lexical MarkNodeに紐づく）
 model EditorCommentThread {
   id          String              @id @default(uuid(7)) @db.Uuid
-  markId      String // Lexical MarkNode ID（エディタ内での一意識別子）
-  contentType String // コンテンツタイプ: "post" | "news" | "page" | "faq"
-  contentId   String              @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
-  quotedText  String              @db.Text // マークされたテキスト（参照用）
+  markId      String              @map("mark_id") // Lexical MarkNode ID（エディタ内での一意識別子）
+  contentType String              @map("content_type") // コンテンツタイプ: "post" | "news" | "page" | "faq"
+  contentId   String              @map("content_id") @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
+  quotedText  String              @map("quoted_text") @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
-  resolvedAt  DateTime?           @db.Timestamptz(6) // 解決日時
-  resolvedBy  String?             @db.Uuid // 解決者ID（User.id）- ユーザー削除時にnull化
-  createdAt   DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime            @updatedAt @db.Timestamptz(6)
-  createdBy   String?             @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
+  resolvedAt  DateTime?           @map("resolved_at") @db.Timestamptz(6) // 解決日時
+  resolvedBy  String?             @map("resolved_by") @db.Uuid // 解決者ID（User.id）- ユーザー削除時にnull化
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?             @map("created_by") @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   comments EditorComment[]
@@ -2233,14 +2233,14 @@ model EditorCommentThread {
 /// エディタコメント（スレッド内の個別コメント）
 model EditorComment {
   id        String    @id @default(uuid(7)) @db.Uuid
-  threadId  String    @db.Uuid
+  threadId  String    @map("thread_id") @db.Uuid
   content   String    @db.Text // コメント本文
-  isDeleted Boolean   @default(false) // ソフトデリート
-  deletedAt DateTime? @db.Timestamptz(6) // 削除日時
-  deletedBy String?   @db.Uuid // 削除者ID（User.id）- ユーザー削除時にnull化
-  createdAt DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
-  createdBy String?   @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
+  isDeleted Boolean   @default(false) @map("is_deleted") // ソフトデリート
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6) // 削除日時
+  deletedBy String?   @map("deleted_by") @db.Uuid // 削除者ID（User.id）- ユーザー削除時にnull化
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   thread  EditorCommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)

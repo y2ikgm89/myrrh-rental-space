@@ -418,7 +418,7 @@ export async function updateNavigationOrder(
         UPDATE "navigation_items"
         SET
           "order" = CASE "id" ${Prisma.join(finalCases, " ")} END,
-          "parentId" = CASE "id" ${Prisma.join(parentCases, " ")} ELSE "parentId" END
+          parent_id = CASE "id" ${Prisma.join(parentCases, " ")} ELSE parent_id END
         WHERE "id" IN (${Prisma.join(ids)})
       `;
     });

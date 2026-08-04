@@ -289,16 +289,16 @@ export async function reorderFaqItems(
       UPDATE "faq_items"
       SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(idFragments)})
-        AND "categoryId" = ${categoryId}::uuid
-        AND "deletedAt" IS NULL
+        AND category_id = ${categoryId}::uuid
+        AND deleted_at IS NULL
     `;
 
     await tx.$executeRaw`
       UPDATE "faq_items"
       SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(idFragments)})
-        AND "categoryId" = ${categoryId}::uuid
-        AND "deletedAt" IS NULL
+        AND category_id = ${categoryId}::uuid
+        AND deleted_at IS NULL
     `;
   });
 }
