@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+
+import { readAllMigrationSql } from "../../support/prisma-sources";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -19,17 +21,11 @@ describe("ReservationSeries schema invariants", () => {
     expect(reservationBlock![0]).toMatch(/couponId\s+String\?\s+@db\.Uuid/);
   });
 
-  test("partial UNIQUE index が migration に存在 (Codex #3599414660 fix)", async () => {
-    const { readdirSync } = await import("node:fs");
-    const migrationsDir = join(process.cwd(), "prisma/migrations");
-    const dirs = readdirSync(migrationsDir).filter((d) =>
-      d.endsWith("_add_reservation_series"),
-    );
-    expect(dirs.length).toBe(1);
-    const sql = await readFile(
-      join(migrationsDir, dirs[0]!, "migration.sql"),
-      "utf8",
-    );
+  test("partial UNIQUE index が migration 履歴に存在 (Codex #3599414660 fix)", () => {
+    // **どの migration が作ったかは見ない。** 履歴を 1 本の baseline へ畳むと
+    // 名指しのディレクトリは消えるが、この索引は畳んだ先にも必ず存在する。
+    const sql = readAllMigrationSql();
+
     expect(sql).toContain(
       'CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique"',
     );

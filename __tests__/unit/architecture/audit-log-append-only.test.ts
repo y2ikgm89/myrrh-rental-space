@@ -1,31 +1,17 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-function readAuditLogHashChainMigration(): string {
-  const migrationsDir = join(process.cwd(), "prisma", "migrations");
-  const migrationDir = readdirSync(migrationsDir).find((name) =>
-    name.endsWith("_audit_log_hash_chain"),
-  );
-
-  expect(migrationDir).toBeDefined();
-  if (migrationDir === undefined) {
-    throw new Error("audit log hash chain migration is missing");
-  }
-
-  return readFileSync(join(migrationsDir, migrationDir, "migration.sql"), {
-    encoding: "utf8",
-  });
-}
+import { readDatabaseInvariants } from "../../support/prisma-sources";
 
 describe("audit log append-only boundary", () => {
   test("audit_logs UPDATE/DELETE は DB trigger で拒否する", () => {
-    const migration = readAuditLogHashChainMigration();
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain("prevent_audit_logs_mutation");
-    expect(migration).toContain('BEFORE UPDATE ON "audit_logs"');
-    expect(migration).toContain('BEFORE DELETE ON "audit_logs"');
-    expect(migration).toContain("audit_logs is append-only");
+    expect(invariants).toContain("prevent_audit_logs_mutation");
+    expect(invariants).toContain("BEFORE UPDATE ON public.audit_logs ");
+    expect(invariants).toContain("BEFORE DELETE ON public.audit_logs ");
+    expect(invariants).toContain("audit_logs is append-only");
   });
 
   test("seed は audit_logs を削除しない", () => {
@@ -51,18 +37,23 @@ describe("audit log append-only boundary", () => {
     expect(seed).not.toContain("createAuditLogRecord");
   });
 
-  test("hash chain migration は旧 audit_logs を残さず必須ハッシュ列を追加する", () => {
-    const migration = readAuditLogHashChainMigration();
+  test("hash chain の形式が DB CHECK で強制される", () => {
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain('TRUNCATE TABLE "audit_logs"');
-    expect(migration).toContain("squawk-ignore-file adding-required-field");
-    expect(migration).toContain('"sequence" BIGINT NOT NULL');
-    expect(migration).toContain('"previousHash" CHAR(64) NOT NULL');
-    expect(migration).toContain('"entryHash" CHAR(64) NOT NULL');
-    expect(migration).toContain('"audit_logs_sequence_key" UNIQUE');
-    expect(migration).toContain("audit_logs_entry_hash_hex_check");
-    expect(migration).toContain("audit_logs_chain_version_check");
+    // 16 進 64 文字であること・アルゴリズム名・chainVersion を DB 側で固定する。
+    // アプリが壊れても不正な形の chain 行が入らない最後の壁。
+    expect(invariants).toContain("audit_logs_previous_hash_hex_check");
+    expect(invariants).toContain("audit_logs_entry_hash_hex_check");
+    expect(invariants).toContain("audit_logs_hash_algorithm_check");
+    expect(invariants).toContain("audit_logs_hash_key_id_check");
+    expect(invariants).toContain("audit_logs_chain_version_check");
   });
+
+  // NOTE: かつてここには「hash chain migration が旧 audit_logs を TRUNCATE して
+  // 必須列を足す」ことを検査するテストがあった。**一度きりの移行操作**であって
+  // 不変条件ではないので、履歴を 1 本の baseline へ畳んだ時点で意味を失う
+  // （まっさらな DB に「消すべき旧行」は無い）。列が NOT NULL であることは
+  // 下の schema テストが、CHECK 制約は上のテストが引き継いでいる。
 
   test("AuditLog schema は sequence/hash を nullable にしない", () => {
     const schema = readFileSync(

@@ -1,44 +1,33 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-function readTermsAgreementNoMutationMigration(): string {
-  const migrationsDir = join(process.cwd(), "prisma", "migrations");
-  const migrationDir = readdirSync(migrationsDir).find((name) =>
-    name.endsWith("_terms_agreements_no_mutation"),
-  );
-
-  expect(migrationDir).toBeDefined();
-  if (migrationDir === undefined) {
-    throw new Error("terms_agreements no mutation migration is missing");
-  }
-
-  return readFileSync(join(migrationsDir, migrationDir, "migration.sql"), {
-    encoding: "utf8",
-  });
-}
+import {
+  readDatabaseInvariants,
+  readPlpgsqlFunction,
+} from "../../support/prisma-sources";
 
 describe("terms_agreements append-only boundary", () => {
   test("terms_agreements UPDATE/DELETE は DB trigger で拒否する", () => {
-    const migration = readTermsAgreementNoMutationMigration();
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain("prevent_terms_agreements_mutation");
-    expect(migration).toContain('BEFORE UPDATE ON "terms_agreements"');
-    expect(migration).toContain('BEFORE DELETE ON "terms_agreements"');
-    expect(migration).toContain("terms_agreements is append-only");
-    expect(migration).toContain("integrity_constraint_violation");
+    expect(invariants).toContain("prevent_terms_agreements_mutation");
+    expect(invariants).toContain("BEFORE UPDATE ON public.terms_agreements ");
+    expect(invariants).toContain("BEFORE DELETE ON public.terms_agreements ");
+    expect(invariants).toContain("terms_agreements is append-only");
+    expect(invariants).toContain("integrity_constraint_violation");
   });
 
   test("bypass GUC は audit_logs と衝突しない別名を使う", () => {
-    const migration = readTermsAgreementNoMutationMigration();
+    const body = readPlpgsqlFunction("prevent_terms_agreements_mutation");
 
-    // audit_logs 側は `myrrh.audit_log_mutation_bypass`。terms 側は独立した
-    // `myrrh.terms_agreement_mutation_bypass` を使い、seed が片方だけを bypass
-    // したいケース (通常運用) を隠さないようにする。
-    expect(migration).toContain(
+    expect(body).toContain(
       "current_setting('myrrh.terms_agreement_mutation_bypass', true)",
     );
-    expect(migration).not.toContain("audit_log_mutation_bypass");
+    // 他テーブルの GUC を見ない（1 つの env 変数で全部の証跡が開かない）。
+    expect(body).not.toContain("myrrh.audit_log_mutation_bypass");
+    expect(body).not.toContain("myrrh.refund_mutation_bypass");
+    expect(body).not.toContain("myrrh.inquiry_status_history_mutation_bypass");
   });
 
   test("TermsAgreement schema にビジネスロジックが update/delete を呼び出す痕跡がない", () => {

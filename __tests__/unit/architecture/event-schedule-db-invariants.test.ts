@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
+import {
+  readAllMigrationSql,
+  readDatabaseInvariants,
+} from "../../support/prisma-sources";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -33,27 +38,37 @@ describe("event schedule DB invariants", () => {
     expect(schema).toMatch(/\bslotId\s+String\s+@db\.Uuid\b/u);
   });
 
-  test("baseline migration enforces DB-level schedule invariants", () => {
-    const migration = read(BASELINE_MIGRATION);
+  test("scheduleMode に DB 既定値を置かない（作成時に必ず明示させる）", () => {
+    // 既定値を置くと「指定し忘れ」が SINGLE_OCCURRENCE として通り、スロット数の
+    // 不変条件と食い違ったイベントが黙って作られる。
+    const migration = readAllMigrationSql();
 
     expect(migration).toContain('"scheduleMode" "EventScheduleMode" NOT NULL');
     expect(migration).not.toContain(
       '"scheduleMode" "EventScheduleMode" NOT NULL DEFAULT',
     );
     expect(migration).toContain('"registrationDeadline" TIMESTAMPTZ(6)');
-    expect(migration).toContain(
+  });
+
+  test("スロットの値域と scheduleMode 整合が DB 側で強制される", () => {
+    // Prisma DSL では CHECK も CONSTRAINT TRIGGER も表現できないので baseline の
+    // 手書き不変条件が SSoT。名前は pg_get_* が出す**クォート無し**の正規形。
+    const invariants = readDatabaseInvariants();
+
+    expect(invariants).toContain(
       'CONSTRAINT "event_time_slots_capacity_positive"',
     );
-    expect(migration).toContain('CONSTRAINT "event_time_slots_time_order"');
-    expect(migration).toContain(
+    expect(invariants).toContain('CONSTRAINT "event_time_slots_time_order"');
+    expect(invariants).toContain(
       'CONSTRAINT "event_registrations_quantity_positive"',
     );
-    expect(migration).toContain(
-      'CREATE CONSTRAINT TRIGGER "events_schedule_integrity_check"',
+    expect(invariants).toContain(
+      "CREATE CONSTRAINT TRIGGER events_schedule_integrity_check",
     );
-    expect(migration).toContain(
-      'CREATE CONSTRAINT TRIGGER "event_time_slots_schedule_integrity_check"',
+    expect(invariants).toContain(
+      "CREATE CONSTRAINT TRIGGER event_time_slots_schedule_integrity_check",
     );
-    expect(migration).toContain("DEFERRABLE INITIALLY DEFERRED");
+    // 遅延させないと「Event を作ってから slot を足す」通常の書込順が必ず落ちる。
+    expect(invariants).toContain("DEFERRABLE INITIALLY DEFERRED");
   });
 });

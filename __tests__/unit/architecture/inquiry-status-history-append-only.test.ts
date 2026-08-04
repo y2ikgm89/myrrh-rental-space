@@ -1,43 +1,37 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, sep } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-function readInquiryStatusHistoryNoMutationMigration(): string {
-  const migrationsDir = join(process.cwd(), "prisma", "migrations");
-  const migrationDir = readdirSync(migrationsDir).find((name) =>
-    name.endsWith("_inquiry_status_history_no_mutation"),
-  );
-
-  expect(migrationDir).toBeDefined();
-  if (migrationDir === undefined) {
-    throw new Error("inquiry_status_history no mutation migration is missing");
-  }
-
-  return readFileSync(join(migrationsDir, migrationDir, "migration.sql"), {
-    encoding: "utf8",
-  });
-}
+import {
+  readDatabaseInvariants,
+  readPlpgsqlFunction,
+} from "../../support/prisma-sources";
 
 describe("inquiry_status_history append-only boundary", () => {
   test("inquiry_status_history UPDATE/DELETE は DB trigger で拒否する", () => {
-    const migration = readInquiryStatusHistoryNoMutationMigration();
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain("prevent_inquiry_status_history_mutation");
-    expect(migration).toContain('BEFORE UPDATE ON "inquiry_status_history"');
-    expect(migration).toContain('BEFORE DELETE ON "inquiry_status_history"');
-    expect(migration).toContain("inquiry_status_history is append-only");
-    expect(migration).toContain("integrity_constraint_violation");
+    expect(invariants).toContain("prevent_inquiry_status_history_mutation");
+    expect(invariants).toContain(
+      "BEFORE UPDATE ON public.inquiry_status_history ",
+    );
+    expect(invariants).toContain(
+      "BEFORE DELETE ON public.inquiry_status_history ",
+    );
+    expect(invariants).toContain("inquiry_status_history is append-only");
+    expect(invariants).toContain("integrity_constraint_violation");
   });
 
   test("bypass GUC は seed と data-retention purge を許可する", () => {
-    const migration = readInquiryStatusHistoryNoMutationMigration();
+    const body = readPlpgsqlFunction("prevent_inquiry_status_history_mutation");
 
-    expect(migration).toContain(
+    expect(body).toContain(
       "current_setting('myrrh.inquiry_status_history_mutation_bypass', true)",
     );
-    expect(migration).toContain("'purge'");
-    expect(migration).not.toContain("terms_agreement_mutation_bypass");
-    expect(migration).not.toContain("audit_log_mutation_bypass");
+    // 他テーブルの GUC を見ない（1 つの env 変数で全部の証跡が開かない）。
+    expect(body).not.toContain("myrrh.audit_log_mutation_bypass");
+    expect(body).not.toContain("myrrh.terms_agreement_mutation_bypass");
+    expect(body).not.toContain("myrrh.refund_mutation_bypass");
   });
 
   test("E2E helper が inquiry_status_history を mutate しない", () => {

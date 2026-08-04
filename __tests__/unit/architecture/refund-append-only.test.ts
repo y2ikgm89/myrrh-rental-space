@@ -1,42 +1,33 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-function readRefundsNoMutationMigration(): string {
-  const migrationsDir = join(process.cwd(), "prisma", "migrations");
-  const migrationDir = readdirSync(migrationsDir).find((name) =>
-    name.endsWith("_refunds_no_mutation"),
-  );
-
-  expect(migrationDir).toBeDefined();
-  if (migrationDir === undefined) {
-    throw new Error("refunds no mutation migration is missing");
-  }
-
-  return readFileSync(join(migrationsDir, migrationDir, "migration.sql"), {
-    encoding: "utf8",
-  });
-}
+import {
+  readDatabaseInvariants,
+  readPlpgsqlFunction,
+} from "../../support/prisma-sources";
 
 describe("refunds append-only boundary", () => {
   test("refunds UPDATE/DELETE は DB trigger で拒否する", () => {
-    const migration = readRefundsNoMutationMigration();
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain("prevent_refunds_mutation");
-    expect(migration).toContain('BEFORE UPDATE ON "refunds"');
-    expect(migration).toContain('BEFORE DELETE ON "refunds"');
-    expect(migration).toContain("refunds is append-only");
-    expect(migration).toContain("integrity_constraint_violation");
+    expect(invariants).toContain("prevent_refunds_mutation");
+    expect(invariants).toContain("BEFORE UPDATE ON public.refunds ");
+    expect(invariants).toContain("BEFORE DELETE ON public.refunds ");
+    expect(invariants).toContain("refunds is append-only");
+    expect(invariants).toContain("integrity_constraint_violation");
   });
 
   test("bypass GUC は audit_logs / terms_agreements と衝突しない別名を使う", () => {
-    const migration = readRefundsNoMutationMigration();
+    const body = readPlpgsqlFunction("prevent_refunds_mutation");
 
-    expect(migration).toContain(
+    expect(body).toContain(
       "current_setting('myrrh.refund_mutation_bypass', true)",
     );
-    expect(migration).not.toContain("audit_log_mutation_bypass");
-    expect(migration).not.toContain("terms_agreement_mutation_bypass");
+    // 他テーブルの GUC を見ない（1 つの env 変数で全部の証跡が開かない）。
+    expect(body).not.toContain("myrrh.audit_log_mutation_bypass");
+    expect(body).not.toContain("myrrh.terms_agreement_mutation_bypass");
+    expect(body).not.toContain("myrrh.inquiry_status_history_mutation_bypass");
   });
 
   test("Refund domain commands は update/delete/upsert を呼び出さない", () => {

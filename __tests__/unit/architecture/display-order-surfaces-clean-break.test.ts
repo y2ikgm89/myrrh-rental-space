@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+
+import { readAllMigrationSql } from "../../support/prisma-sources";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -389,12 +391,9 @@ describe("display order surfaces clean-break contract", () => {
 
   test("ordered surfaces have database uniqueness and unique-safe reorder writes", () => {
     const schema = readRepoFile("prisma", "schema.prisma");
-    const migration = readRepoFile(
-      "prisma",
-      "migrations",
-      "20260705000000_order_uniqueness_constraints",
-      "migration.sql",
-    );
+    // **どの migration が作ったかは見ない。** 履歴を畳むと名指しのディレクトリは
+    // 消えるが、これらの UNIQUE 索引は畳んだ先にも必ず存在する。
+    const migration = readAllMigrationSql();
     const helper = readRepoFile("src", "shared", "domain", "order-sql.ts");
     const commands = [
       readRepoFile("src", "shared", "domain", "terms", "commands.ts"),
