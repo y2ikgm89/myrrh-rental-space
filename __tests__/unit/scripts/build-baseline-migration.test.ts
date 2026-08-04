@@ -116,7 +116,7 @@ describe("verifyGeneratedSql", () => {
 });
 
 describe("countDataStatements", () => {
-  test("実物の init migration が持つデータ投入文を数えられる", () => {
+  test("baseline はデータ投入文を持たない（初期データは seed が持つ）", () => {
     const init = readFileSync(
       join(
         process.cwd(),
@@ -127,9 +127,12 @@ describe("countDataStatements", () => {
       ),
       "utf8",
     );
-    // 8 本の terms_documents INSERT（法的文書）。seed.ts はこれらに一切触らないので、
-    // 畳むときに落とすと同意ゲートの必須規約が空集合になる。
-    expect(countDataStatements(init)).toBe(8);
+
+    // かつて baseline には 8 本の terms_documents INSERT（法的文書）が埋まっており、
+    // seed.ts はそれらに一切触らなかった。畳めば消える形だったので seed へ移した。
+    // **ここが 0 でなくなったら、また「migration にしか無いデータ」が生まれている。**
+    // その状態で次に畳むと静かに消える（builder のガードが止めるが、そもそも作らない）。
+    expect(countDataStatements(init)).toBe(0);
   });
 
   test("組み立てた baseline はデータ投入文を持たない", () => {

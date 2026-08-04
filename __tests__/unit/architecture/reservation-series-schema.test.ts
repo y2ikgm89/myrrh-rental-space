@@ -29,7 +29,8 @@ describe("ReservationSeries schema invariants", () => {
     expect(sql).toContain(
       'CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique"',
     );
-    expect(sql).toContain('WHERE "deletedAt" IS NULL');
+    // 生成 DDL は述語を括弧で包む（手書き migration は包んでいなかった）。
+    expect(sql).toMatch(/WHERE \(?"deletedAt" IS NULL\)?/u);
   });
 
   test("ReservationSeries の索引宣言が揃っている", async () => {

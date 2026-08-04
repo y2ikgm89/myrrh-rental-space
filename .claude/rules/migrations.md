@@ -94,8 +94,33 @@ destructive 扱い（migrate は新 revision のデプロイより先に走る�
 空の Neon database/branch へ切替する場合のみ有効。適用前に: 現行 schema からの
 baseline 生成・手書き SQL 不変条件と本番初期データの保全・空 DB への
 `prisma migrate deploy` 成功・`schema.prisma` との diff が空であることの確認・
-squawk 実行・本番 seed の一回限り実行、を証明する。既に migrate 済みの DB に
-baseline reset を適用しない。
+squawk 実行・本番 seed の一回限り実行、を証明する。
+
+**既に migrate 済みの DB に baseline reset を適用しない。Prisma は止めてくれない。**
+実測（2026-08-04、99 本を畳んだ直後の test DB）: `_prisma_migrations` に 99 行あり、
+`00000000000000_init` の checksum が記録値 `9265c27f…` と実ファイル `f2b99ab4…` で
+食い違っているのに、`prisma migrate status` は **`Database schema is up to date!`**、
+`prisma migrate deploy` は **`No pending migrations to apply.`** を返して exit 0 する。
+つまり**適用は無言の no-op になり、DB は畳む前のスキーマのまま残る**。畳んだ後の
+ローカル test DB も同じ理由で作り直しが要る（`test:db:migrate` だけでは古い
+スキーマが残る）。
+
+### 道具
+
+- `scripts/build-baseline-migration.ts` — `extensions.sql` + `migrate diff` +
+  `invariants.sql` を連結して 1 本の baseline を作る。空出力・`CREATE TABLE` /
+  `CREATE TYPE` の件数不一致・**データ投入文の消失**を拒否する
+- `scripts/db-census.ts` — pg_catalog を突き合わせて等価性を証明する。
+  `--expect prisma/baseline/accepted-drift.json` で承認済み差分のみを許し、
+  承認していない差分が 1 本でもあれば失敗する
+
+### Prisma DSL で表現できない不変条件
+
+CHECK / EXCLUDE / plpgsql 関数 / trigger / extension は `migrate diff` の出力に
+**一切含まれない**。SSoT は `prisma/baseline/{extensions,invariants}.sql` で、
+テストからは `__tests__/support/prisma-sources.ts` の `readDatabaseInvariants()` で読む。
+**テストが migration を名前で指してはいけない**（畳めば消える）。
+`gates-do-not-pin-migrations.test.ts` が 0 件を強制する。
 
 ## seed（prisma/seed.ts）
 

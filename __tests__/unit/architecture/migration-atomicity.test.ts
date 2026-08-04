@@ -29,10 +29,9 @@ import { describe, expect, test } from "bun:test";
  *
  * ## 適用範囲
  *
- * この規約を決めたのが 20260803130000 なので、**それ以降の migration だけ**を見る。
- * 既存 migration は絶対規約 #7 で編集禁止なので直せない。allowlist ではなく日付境界に
- * したのは、allowlist だと「古いから」という理由で新しい entry が足されて増え続けるため。
- * 境界は事実（規約の採用時点）なので動かない。
+ * baseline (`00000000000000_init`) 以外のすべての migration を見る。baseline を免除するのは
+ * **空の DB に対して走るので既存行が無い**から（「古いから」ではない）。日付境界や
+ * allowlist は置かない — 置くと「古いから」を理由に entry が増え続ける。
  *
  * `CREATE INDEX CONCURRENTLY` はトランザクション内で使えないので、将来使うなら
  * その migration は分離すること（本 repo は squawk の
@@ -42,31 +41,15 @@ import { describe, expect, test } from "bun:test";
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 
 /**
- * この規約を採用した時点。**これ以降に追加される migration** が検査対象。
+ * baseline migration。**唯一の免除対象**。
  *
- * 20260803120000 と 20260803130000 は、この規約を書く前に merge されてしまった
- * （両方とも複数表への ADD CONSTRAINT を素で並べている）。絶対規約 #7 で編集できないので
- * 境界の外に置き、代わりに**適用前の確認クエリ**を下の PRE_DEPLOY_CHECKS に残す。
- */
-const RULE_ADOPTED_AT = "20260803140000";
-
-/**
- * 境界より前に merge された、包まれていないデータ依存 migration。
- * デプロイ前に本番で違反行 0 件を確認する必要がある。
+ * baseline は必ず**空の DB** に対して走る。既存行が無いので、CHECK / UNIQUE の追加が
+ * データ違反で落ちることが原理的に起こらない。包む必要が無いのはそのため
+ * （「古いから」ではなく「対象データが存在しないから」の免除）。
  *
- * **この一覧は増やさない。** 境界以降は gate が機械的に止めるので、ここへ足す状況は
- * 「gate を迂回した」以外にありえない。
+ * 中身は `scripts/build-baseline-migration.ts` が生成するので手編集もされない。
  */
-const PRE_DEPLOY_CHECKS: ReadonlyMap<string, string> = new Map([
-  [
-    "20260803120000_jsonb_array_shape_checks",
-    "7 列すべてで jsonb_typeof(col) = 'array' 以外の行が 0 件であること",
-  ],
-  [
-    "20260803130000_settings_connection_status_check",
-    "6 列すべてで NULL / 'connected' / 'error' 以外の行が 0 件であること",
-  ],
-]);
+const BASELINE_DIR = "00000000000000_init";
 
 /** 既存行を検証するため、本番のデータ次第で失敗しうる DDL。 */
 const DATA_DEPENDENT_DDL =
@@ -110,30 +93,19 @@ function isWrapped(sql: string): boolean {
 }
 
 describe("migration の原子性", () => {
-  test("境界より前の未包装 migration は把握されている", () => {
-    // 境界を切った以上、その手前に残る未包装 migration は「知らないもの」に
-    // なってはいけない。列挙と実体が一致することを固定する。
-    const unwrappedBefore = migrationDirs().filter((dir) => {
-      if (dir >= RULE_ADOPTED_AT) return false;
-      const sql = readMigration(dir);
-      if (sql === null) return false;
-      return (
-        DATA_DEPENDENT_DDL.test(sql) &&
-        statementCount(sql) >= 2 &&
-        !isWrapped(sql) &&
-        // 境界直前の 2 本だけを対象にする（それ以前は規約以前の歴史なので触れない）
-        dir >= "20260803120000"
-      );
-    });
+  test("免除は baseline だけ（空の DB に走るので既存行が無い）", () => {
+    // 免除を「古い migration」へ広げないための固定。baseline 以外に免除は無い。
+    const dirs = migrationDirs();
 
-    expect(unwrappedBefore).toEqual([...PRE_DEPLOY_CHECKS.keys()]);
+    expect(dirs).toContain(BASELINE_DIR);
+    expect(dirs.filter((dir) => dir < BASELINE_DIR)).toEqual([]);
   });
 
-  test("データ依存 DDL を複数文持つ新規 migration は BEGIN/COMMIT で包む", () => {
+  test("データ依存 DDL を複数文持つ migration は BEGIN/COMMIT で包む", () => {
     const offenders: string[] = [];
 
     for (const dir of migrationDirs()) {
-      if (dir < RULE_ADOPTED_AT) continue;
+      if (dir === BASELINE_DIR) continue;
       const sql = readMigration(dir);
       if (sql === null) continue;
       if (!DATA_DEPENDENT_DDL.test(sql)) continue;

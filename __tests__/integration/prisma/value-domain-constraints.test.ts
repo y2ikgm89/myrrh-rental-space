@@ -179,8 +179,17 @@ describe("値域 CHECK 制約", () => {
   });
 
   test("接続ステータスに未知の値を入れられない", async () => {
-    // singleton 行は存在するので UPDATE で叩く。行が無いと 0 行更新で
-    // 例外が出ず「拒否された」と読み違えるため、行数も確かめる。
+    // singleton 行は seed が作る。migration 履歴を 1 本の baseline へ畳んだ結果、
+    // baseline には INSERT が 1 つも無くなったので、**このテストが自分で用意する**。
+    // migration が入れてくれたデータに依存していると、畳んだ瞬間に静かに 0 行になる。
+    // `updatedAt` は Prisma の `@updatedAt`（クライアント側で埋める）なので DB 既定値が
+    // 無い。生 SQL で入れるときは明示しないと NOT NULL 違反になる。
+    await client.query(
+      `INSERT INTO "settings_stripes" ("id", "updatedAt") VALUES ('singleton', now())
+       ON CONFLICT ("id") DO NOTHING`,
+    );
+
+    // 行が無いと 0 行更新で例外が出ず「拒否された」と読み違えるため、行数を確かめる。
     const rows = await client.query<{ readonly n: number }>(
       `SELECT count(*)::int AS n FROM "settings_stripes"`,
     );

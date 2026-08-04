@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+
+import { readDatabaseInvariants } from "../../support/prisma-sources";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -11,9 +13,6 @@ function read(path: string): string {
 describe("notification email clean break", () => {
   test("notification recipients are stored as non-null Prisma scalar string lists", () => {
     const schema = read("prisma/schema.prisma");
-    const migration = read(
-      "prisma/migrations/20260702000000_notification_recipients_scalar_lists/migration.sql",
-    );
 
     expect(schema).toMatch(
       /notificationStaffIds\s+String\[\]\s+@default\(\[\]\)/u,
@@ -27,26 +26,15 @@ describe("notification email clean break", () => {
     expect(schema).not.toContain("notificationEmailAddresses Json");
     expect(schema).not.toContain("カンマ区切り");
 
-    expect(migration).toContain(
-      'ALTER COLUMN "notificationStaffIds" TYPE TEXT[]',
+    // 型変更そのものは一度きりの移行操作なので検査しない（畳めば消える）。
+    // 恒久的に守りたいのは「NULL が入らないこと」で、それは baseline の
+    // SET NOT NULL が担う（Prisma は scalar list に NOT NULL を出さない）。
+    const invariants = readDatabaseInvariants();
+    expect(invariants).toContain(
+      'ALTER TABLE "settings_notifications" ALTER COLUMN "notificationStaffIds" SET NOT NULL;',
     );
-    expect(migration).toContain(
-      'ALTER COLUMN "notificationEmailAddresses" TYPE TEXT[]',
-    );
-    expect(migration).toContain("ARRAY[]::text[]");
-  });
-
-  test("notification recipient migration uses a narrow Squawk file exception", () => {
-    const migration = read(
-      "prisma/migrations/20260702000000_notification_recipients_scalar_lists/migration.sql",
-    );
-
-    expect(migration).toContain(
-      "-- squawk-ignore-file changing-column-type, adding-not-nullable-field",
-    );
-    expect(migration).not.toMatch(/--\s*squawk-ignore-file\s*(?:\r?\n|$)/u);
-    expect(migration).not.toContain(
-      "-- squawk-ignore changing-column-type, adding-not-nullable-field",
+    expect(invariants).toContain(
+      'ALTER TABLE "settings_notifications" ALTER COLUMN "notificationEmailAddresses" SET NOT NULL;',
     );
   });
 
