@@ -961,7 +961,7 @@ describe("updateNavigationOrder", () => {
       expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
       const sql = mockExecuteRaw.mock.calls[2]?.[0].join("?") ?? "";
       expect(sql).toContain("navigation_items");
-      expect(sql).toContain("parentId");
+      expect(sql).toContain("parent_id");
     });
   });
 

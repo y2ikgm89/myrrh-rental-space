@@ -232,7 +232,7 @@ export async function duplicatePageSectionCommand(
       Prisma.sql`
         UPDATE "sections"
         SET "order" = -("order" + 1000000)
-        WHERE "pageId" = ${sourcePageId}
+        WHERE page_id = ${sourcePageId}
           AND "order" > ${source.order}
       `,
     );
@@ -252,7 +252,7 @@ export async function duplicatePageSectionCommand(
       Prisma.sql`
         UPDATE "sections"
         SET "order" = -"order" - 999999
-        WHERE "pageId" = ${sourcePageId}
+        WHERE page_id = ${sourcePageId}
           AND "order" <= -1000000
       `,
     );
@@ -367,14 +367,14 @@ export async function reorderPageSectionsCommand(input: {
         UPDATE "sections"
         SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
         WHERE "id" IN (${Prisma.join(ids)})
-          AND "pageId" = ${input.pageId}::uuid
+          AND page_id = ${input.pageId}::uuid
       `;
 
       await tx.$executeRaw`
         UPDATE "sections"
         SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
         WHERE "id" IN (${Prisma.join(ids)})
-          AND "pageId" = ${input.pageId}::uuid
+          AND page_id = ${input.pageId}::uuid
       `;
     });
   }

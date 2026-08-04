@@ -272,14 +272,14 @@ export async function reorderFaqCategories(
       UPDATE "faq_categories"
       SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "deletedAt" IS NULL
+        AND deleted_at IS NULL
     `;
 
     await tx.$executeRaw`
       UPDATE "faq_categories"
       SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "deletedAt" IS NULL
+        AND deleted_at IS NULL
     `;
   });
 }
