@@ -48,6 +48,7 @@ export {
   TaxDisplayMode,
   CalendarSyncMethod,
   AnalyticsType,
+  ConnectionStatus,
   DiscountCombinationMode,
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,

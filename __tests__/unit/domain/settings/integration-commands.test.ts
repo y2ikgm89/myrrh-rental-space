@@ -355,7 +355,7 @@ describe("recordStripeConnectionSuccess", () => {
       expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            stripeConnectionStatus: "connected",
+            stripeConnectionStatus: "CONNECTED",
             stripeAccountId: "acct_test123",
           }),
         }),
@@ -369,7 +369,7 @@ describe("recordStripeConnectionSuccess", () => {
       expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            stripeConnectionStatus: "connected",
+            stripeConnectionStatus: "CONNECTED",
           }),
         }),
       );
@@ -660,7 +660,7 @@ describe("recordGoogleCalendarConnectionSuccess", () => {
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            googleCalendarConnectionStatus: "connected",
+            googleCalendarConnectionStatus: "CONNECTED",
           }),
         }),
       );
@@ -698,7 +698,7 @@ describe("recordGoogleCalendarConnectionError", () => {
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            googleCalendarConnectionStatus: "error",
+            googleCalendarConnectionStatus: "ERROR",
           }),
         }),
       );

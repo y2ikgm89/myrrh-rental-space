@@ -56,6 +56,7 @@ import {
 } from "@/admin/components/SmartLockDeviceRegistry";
 import type { SmartLockDeviceWithLocation } from "@/shared/domain/smart-lock/queries";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface SwitchBotSectionProps {
   config: SwitchBotConfig;
@@ -445,9 +446,11 @@ export function SwitchBotSection({
             </div>
 
             {config.connectionStatus && (
-              <StatusBanner success={config.connectionStatus === "connected"}>
+              <StatusBanner
+                success={config.connectionStatus === ConnectionStatus.CONNECTED}
+              >
                 <div className="flex items-center gap-2">
-                  {config.connectionStatus === "connected" ? (
+                  {config.connectionStatus === ConnectionStatus.CONNECTED ? (
                     <>
                       <span
                         className="h-2 w-2 rounded-full bg-success"

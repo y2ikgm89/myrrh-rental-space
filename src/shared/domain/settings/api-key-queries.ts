@@ -24,6 +24,7 @@ import type {
   TurnstileConfig,
 } from "@/shared/types/api-keys";
 import { parseConnectionStatus } from "@/shared/domain/settings/api-key-helpers";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function getResendConfig(): Promise<ResendConfig> {
   const settings = await prisma.settingsResend.findUnique({
@@ -423,7 +424,8 @@ export async function getIntegrationHealthSummary(): Promise<{
     ),
     googleCalendar: Boolean(
       googleCalendar?.googleCalendarEnabled &&
-      googleCalendar?.googleCalendarConnectionStatus === "connected",
+      googleCalendar?.googleCalendarConnectionStatus ===
+        ConnectionStatus.CONNECTED,
     ),
     turnstile: Boolean(
       safeDecryptToString(turnstile?.turnstileSecretKey, {

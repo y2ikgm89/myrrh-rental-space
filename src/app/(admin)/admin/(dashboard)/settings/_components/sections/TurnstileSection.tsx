@@ -42,6 +42,7 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface TurnstileSectionProps {
   config: TurnstileConfig;
@@ -293,9 +294,11 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
           </div>
 
           {config.connectionStatus && (
-            <StatusBanner success={config.connectionStatus === "connected"}>
+            <StatusBanner
+              success={config.connectionStatus === ConnectionStatus.CONNECTED}
+            >
               <div className="flex items-center gap-2">
-                {config.connectionStatus === "connected" ? (
+                {config.connectionStatus === ConnectionStatus.CONNECTED ? (
                   <>
                     <span
                       className="h-2 w-2 rounded-full bg-success"

@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (76) =====
+-- ===== CHECK 制約 (70) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK ((chain_version = 1));
@@ -73,9 +73,7 @@ ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_singleton_chec
 ALTER TABLE "settings_data_retention" ADD CONSTRAINT "settings_data_retention_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_features" ADD CONSTRAINT "settings_features_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_google_business_profile" ADD CONSTRAINT "settings_google_business_profile_singleton_check" CHECK ((id = 'singleton'::text));
-ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_connection_status_check" CHECK (((google_calendar_connection_status IS NULL) OR (google_calendar_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_singleton_check" CHECK ((id = 'singleton'::text));
-ALTER TABLE "settings_google_maps" ADD CONSTRAINT "settings_google_maps_connection_status_check" CHECK (((google_maps_connection_status IS NULL) OR (google_maps_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_google_maps" ADD CONSTRAINT "settings_google_maps_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_instagram" ADD CONSTRAINT "settings_instagram_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_layout" ADD CONSTRAINT "settings_layout_singleton_check" CHECK ((id = 'singleton'::text));
@@ -83,18 +81,14 @@ ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_email_
 ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_staff_ids_text_array_check" CHECK (((array_position(notification_staff_ids, NULL::text) IS NULL) AND (array_position(notification_staff_ids, ''::text) IS NULL)));
 ALTER TABLE "settings_organization" ADD CONSTRAINT "settings_organization_singleton_check" CHECK ((id = 'singleton'::text));
-ALTER TABLE "settings_resend" ADD CONSTRAINT "settings_resend_connection_status_check" CHECK (((resend_connection_status IS NULL) OR (resend_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_resend" ADD CONSTRAINT "settings_resend_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_seo" ADD CONSTRAINT "settings_seo_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_widgets_array_check" CHECK ((jsonb_typeof(sidebar_widgets) = 'array'::text));
-ALTER TABLE "settings_stripe" ADD CONSTRAINT "settings_stripe_connection_status_check" CHECK (((stripe_connection_status IS NULL) OR (stripe_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_stripe" ADD CONSTRAINT "settings_stripe_singleton_check" CHECK ((id = 'singleton'::text));
-ALTER TABLE "settings_switchbot" ADD CONSTRAINT "settings_switchbot_connection_status_check" CHECK (((switchbot_connection_status IS NULL) OR (switchbot_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_switchbot" ADD CONSTRAINT "settings_switchbot_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_system" ADD CONSTRAINT "settings_system_singleton_check" CHECK ((id = 'singleton'::text));
-ALTER TABLE "settings_turnstile" ADD CONSTRAINT "settings_turnstile_connection_status_check" CHECK (((turnstile_connection_status IS NULL) OR (turnstile_connection_status = ANY (ARRAY['connected'::text, 'error'::text]))));
 ALTER TABLE "settings_turnstile" ADD CONSTRAINT "settings_turnstile_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_check" CHECK (((effective_from IS NULL) OR (effective_to IS NULL) OR (effective_from <= effective_to)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_end_time_format_check" CHECK (((end_time IS NULL) OR ((end_time)::text ~ '^([01][0-9]|2[0-3]|24):[0-5][0-9]$'::text)));
