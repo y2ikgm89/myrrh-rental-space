@@ -199,26 +199,26 @@ mock.module("@/shared/db/prisma", () => ({
 
 await installPrismaEnumsMock({
   HeaderScrollBehavior: {
-    auto_hide: "auto_hide",
-    always_visible: "always_visible",
-    hide_on_scroll: "hide_on_scroll",
+    AUTO_HIDE: "AUTO_HIDE",
+    ALWAYS_VISIBLE: "ALWAYS_VISIBLE",
+    HIDE_ON_SCROLL: "HIDE_ON_SCROLL",
   },
   HeaderBackgroundMode: {
-    solid: "solid",
-    transparent: "transparent",
+    SOLID: "SOLID",
+    TRANSPARENT: "TRANSPARENT",
   },
   DiscountCombinationMode: {
-    best: "best",
-    both: "both",
+    BEST: "BEST",
+    BOTH: "BOTH",
   },
   TaxDisplayMode: {
-    tax_included: "tax_included",
-    tax_excluded: "tax_excluded",
-    both: "both",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    BOTH: "BOTH",
   },
   AnalyticsType: {
-    ga4: "ga4",
-    gtm: "gtm",
+    GA4: "GA4",
+    GTM: "GTM",
   },
   LayoutWidth: {
     FULL: "FULL",
@@ -347,7 +347,7 @@ const DISCOUNT_SETTINGS_INPUT = {
     { hours: 2, discountRate: 5 },
     { hours: 4, discountRate: 10 },
   ],
-  discountCombinationMode: "best" as const,
+  discountCombinationMode: "BEST" as const,
   showOriginalPrice: true,
   expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
@@ -355,13 +355,13 @@ const DISCOUNT_SETTINGS_INPUT = {
 const TAX_SETTINGS_INPUT = {
   taxStandardRate: 10,
   taxReducedRate: 8,
-  taxDisplayModePublic: "tax_included" as const,
+  taxDisplayModePublic: "TAX_INCLUDED" as const,
   expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 const HEADER_SETTINGS_INPUT = {
-  headerScrollBehavior: "always_visible" as const,
-  headerBackgroundMode: "transparent" as const,
+  headerScrollBehavior: "ALWAYS_VISIBLE" as const,
+  headerBackgroundMode: "TRANSPARENT" as const,
   expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
@@ -810,8 +810,8 @@ describe("updateHeaderSettings", () => {
         expect.objectContaining({
           where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
           data: expect.objectContaining({
-            headerScrollBehavior: "always_visible",
-            headerBackgroundMode: "transparent",
+            headerScrollBehavior: "ALWAYS_VISIBLE",
+            headerBackgroundMode: "TRANSPARENT",
           }),
         }),
       );
@@ -819,8 +819,8 @@ describe("updateHeaderSettings", () => {
 
     test("hide_on_scroll スクロールと solid 背景でも正常に動作する", async () => {
       await updateHeaderSettings({
-        headerScrollBehavior: "hide_on_scroll",
-        headerBackgroundMode: "solid",
+        headerScrollBehavior: "HIDE_ON_SCROLL",
+        headerBackgroundMode: "SOLID",
         expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 

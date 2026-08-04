@@ -43,7 +43,7 @@ const mockSyncFromCalendar = mock<
   }),
 );
 const mockGetTwoWaySyncSettings = mock<() => Promise<{ syncMethod: string }>>(
-  () => Promise.resolve({ syncMethod: "both" }),
+  () => Promise.resolve({ syncMethod: "BOTH" }),
 );
 const mockTryAcquireCalendarSyncLock = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
@@ -146,9 +146,9 @@ mock.module("@/shared/lib/route-responses", () => ({
 
 mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
   CalendarSyncMethod: {
-    polling: "polling",
-    webhook: "webhook",
-    both: "both",
+    POLLING: "POLLING",
+    WEBHOOK: "WEBHOOK",
+    BOTH: "BOTH",
   },
 }));
 
@@ -162,21 +162,21 @@ function makeRequest(authHeader = "Bearer cloud-scheduler-oidc-token") {
 
 describe("resolveSyncPlan (GCAL-AUDIT-02)", () => {
   test("polling → { renewWebhook: false, poll: true }", () => {
-    expect(resolveSyncPlan("polling")).toEqual({
+    expect(resolveSyncPlan("POLLING")).toEqual({
       renewWebhook: false,
       poll: true,
     });
   });
 
   test("webhook → { renewWebhook: true, poll: false }（旧実装は renew に到達しなかった）", () => {
-    expect(resolveSyncPlan("webhook")).toEqual({
+    expect(resolveSyncPlan("WEBHOOK")).toEqual({
       renewWebhook: true,
       poll: false,
     });
   });
 
   test("both → { renewWebhook: true, poll: true }", () => {
-    expect(resolveSyncPlan("both")).toEqual({
+    expect(resolveSyncPlan("BOTH")).toEqual({
       renewWebhook: true,
       poll: true,
     });
@@ -222,7 +222,7 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
   });
 
   test("syncMethod=webhook → renewWebhookIfNeeded を呼び、Polling is disabled を返す（回帰: 旧実装は renew に到達しなかった）", async () => {
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "webhook" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "WEBHOOK" });
 
     const response = await GET(makeRequest());
 
@@ -240,7 +240,7 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
   });
 
   test("syncMethod=polling → renewWebhookIfNeeded を呼ばず syncFromCalendar のみ実行する", async () => {
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "polling" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "POLLING" });
 
     const response = await GET(makeRequest());
 
@@ -250,7 +250,7 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
   });
 
   test("syncMethod=both → renewWebhookIfNeeded と syncFromCalendar の両方を実行する", async () => {
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "both" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "BOTH" });
 
     const response = await GET(makeRequest());
 
@@ -273,7 +273,7 @@ describe("GET /api/cron/calendar-sync — syncMethod 別実行 (GCAL-AUDIT-02)",
   });
 
   test("lock 取得失敗 → skip して syncFromCalendar / renewWebhookIfNeeded を呼ばない", async () => {
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "both" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "BOTH" });
     mockTryAcquireCalendarSyncLock.mockResolvedValue(false);
 
     const response = await GET(makeRequest());

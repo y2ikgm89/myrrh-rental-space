@@ -40,7 +40,7 @@ const mockGoogleCalendarUpsert = mock(() =>
     icalAttachmentEnabled: true,
     addToCalendarLinksEnabled: true,
     googleCalendarTwoWaySyncEnabled: false,
-    googleCalendarSyncMethod: "webhook",
+    googleCalendarSyncMethod: "WEBHOOK",
     googleCalendarSyncToken: "calendar-sync-token",
     googleCalendarLastSyncedAt: null,
     eventImportEnabled: false,
@@ -116,13 +116,13 @@ const mockSwitchbotUpsert = mock(() =>
 const mockCarouselUpsert = mock(() =>
   Promise.resolve({
     ...singletonTimestamps,
-    animation: "fade",
+    animation: "FADE",
     duration: 5000,
     autoPlay: true,
     pauseOnHover: true,
     showArrows: true,
     showIndicator: true,
-    designStyle: "solid",
+    designStyle: "SOLID",
     bgColor: null,
     textColor: null,
     stripeColor: null,
@@ -185,8 +185,8 @@ const mockLayoutUpsert = mock(() =>
     containerWidthCustom: null,
     contentWidth: null,
     contentWidthCustom: null,
-    headerScrollBehavior: "always_visible",
-    headerBackgroundMode: "solid",
+    headerScrollBehavior: "ALWAYS_VISIBLE",
+    headerBackgroundMode: "SOLID",
     themeColor: "#fafafa",
     footerTagline: null,
     footerNavigationLabel: "Navigation",
@@ -238,11 +238,11 @@ const mockCommerceUpsert = mock(() =>
     ...singletonTimestamps,
     durationDiscountEnabled: false,
     durationDiscountRules: [],
-    discountCombinationMode: "best",
+    discountCombinationMode: "BEST",
     showOriginalPrice: true,
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
+    taxDisplayModePublic: "TAX_INCLUDED",
     refundPolicy: null,
   }),
 );
@@ -360,18 +360,18 @@ mock.module("@/shared/db/prisma", () => ({
 
 await installPrismaEnumsMock({
   CalendarSyncMethod: {
-    polling: "polling",
-    webhook: "webhook",
-    both: "both",
+    POLLING: "POLLING",
+    WEBHOOK: "WEBHOOK",
+    BOTH: "BOTH",
   },
   DiscountCombinationMode: {
-    best: "best",
-    both: "both",
+    BEST: "BEST",
+    BOTH: "BOTH",
   },
   TaxDisplayMode: {
-    tax_included: "tax_included",
-    tax_excluded: "tax_excluded",
-    both: "both",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    BOTH: "BOTH",
   },
 });
 

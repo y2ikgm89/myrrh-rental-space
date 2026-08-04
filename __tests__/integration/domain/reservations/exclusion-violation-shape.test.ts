@@ -86,7 +86,7 @@ describeMaybe("EXCLUDE 制約違反エラーの実測", () => {
         totalBasePrice: 1000,
         holidayFlags: {},
       },
-      taxRateType: "standard" as const,
+      taxRateType: "STANDARD" as const,
       taxRate: 10,
       taxAmount: 100,
       totalPriceWithTax: 1100,

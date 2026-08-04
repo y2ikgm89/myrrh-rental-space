@@ -205,35 +205,35 @@ export function getValidCouponType(
 
 export function getValidDiscountType(
   value: string | null | undefined,
-  fallback: DiscountType = DiscountType.none,
+  fallback: DiscountType = DiscountType.NONE,
 ): DiscountType {
   return value && isValidDiscountType(value) ? value : fallback;
 }
 
 export function getValidDurationDiscountOverride(
   value: string | null | undefined,
-  fallback: DurationDiscountOverride = DurationDiscountOverride.inherit,
+  fallback: DurationDiscountOverride = DurationDiscountOverride.INHERIT,
 ): DurationDiscountOverride {
   return value && isValidDurationDiscountOverride(value) ? value : fallback;
 }
 
 export function getValidTaxRateType(
   value: string | null | undefined,
-  fallback: TaxRateType = TaxRateType.standard,
+  fallback: TaxRateType = TaxRateType.STANDARD,
 ): TaxRateType {
   return value && isValidTaxRateType(value) ? value : fallback;
 }
 
 export function getValidTaxDisplayMode(
   value: string | null | undefined,
-  fallback: TaxDisplayMode = TaxDisplayMode.both,
+  fallback: TaxDisplayMode = TaxDisplayMode.BOTH,
 ): TaxDisplayMode {
   return value && isValidTaxDisplayMode(value) ? value : fallback;
 }
 
 export function getValidDiscountCombinationMode(
   value: string | null | undefined,
-  fallback: DiscountCombinationMode = DiscountCombinationMode.best,
+  fallback: DiscountCombinationMode = DiscountCombinationMode.BEST,
 ): DiscountCombinationMode {
   return value && isValidDiscountCombinationMode(value) ? value : fallback;
 }
@@ -246,35 +246,35 @@ export function getValidAnalyticsType(
 
 export function getValidAnnouncementBarAnimation(
   value: string | null | undefined,
-  fallback: AnnouncementBarAnimation = AnnouncementBarAnimation.fade,
+  fallback: AnnouncementBarAnimation = AnnouncementBarAnimation.FADE,
 ): AnnouncementBarAnimation {
   return value && isValidAnnouncementBarAnimation(value) ? value : fallback;
 }
 
 export function getValidAnnouncementBarDesignStyle(
   value: string | null | undefined,
-  fallback: AnnouncementBarDesignStyle = AnnouncementBarDesignStyle.solid,
+  fallback: AnnouncementBarDesignStyle = AnnouncementBarDesignStyle.SOLID,
 ): AnnouncementBarDesignStyle {
   return value && isValidAnnouncementBarDesignStyle(value) ? value : fallback;
 }
 
 export function getValidHeaderScrollBehavior(
   value: string | null | undefined,
-  fallback: HeaderScrollBehavior = HeaderScrollBehavior.always_visible,
+  fallback: HeaderScrollBehavior = HeaderScrollBehavior.ALWAYS_VISIBLE,
 ): HeaderScrollBehavior {
   return value && isValidHeaderScrollBehavior(value) ? value : fallback;
 }
 
 export function getValidHeaderBackgroundMode(
   value: string | null | undefined,
-  fallback: HeaderBackgroundMode = HeaderBackgroundMode.solid,
+  fallback: HeaderBackgroundMode = HeaderBackgroundMode.SOLID,
 ): HeaderBackgroundMode {
   return value && isValidHeaderBackgroundMode(value) ? value : fallback;
 }
 
 export function getValidCalendarSyncMethod(
   value: string | null | undefined,
-  fallback: CalendarSyncMethod = CalendarSyncMethod.polling,
+  fallback: CalendarSyncMethod = CalendarSyncMethod.POLLING,
 ): CalendarSyncMethod {
   return value && isValidCalendarSyncMethod(value) ? value : fallback;
 }
@@ -700,8 +700,8 @@ export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
 // =============================================================================
 
 export const TAX_RATE_LABELS: Record<TaxRateType, string> = {
-  [TaxRateType.standard]: "標準税率",
-  [TaxRateType.reduced]: "軽減税率",
+  [TaxRateType.STANDARD]: "標準税率",
+  [TaxRateType.REDUCED]: "軽減税率",
 };
 
 export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
@@ -1123,7 +1123,7 @@ export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
 
 /** 祝日の扱いラベル SSoT。 */
 export const HOLIDAY_MODE_LABELS: Record<HolidayMode, string> = {
-  [HolidayMode.any]: "平日・祝日を問わず適用",
-  [HolidayMode.only]: "祝日のみ適用",
-  [HolidayMode.exclude]: "祝日を除く（平日のみ適用）",
+  [HolidayMode.ANY]: "平日・祝日を問わず適用",
+  [HolidayMode.ONLY]: "祝日のみ適用",
+  [HolidayMode.EXCLUDE]: "祝日を除く（平日のみ適用）",
 };

@@ -41,10 +41,10 @@ const mockSpaceFindUniqueTx = mock<
 >(() =>
   Promise.resolve({
     hourlyPrice: 2000,
-    discountType: "none",
+    discountType: "NONE",
     discountValue: null,
     durationDiscountOverride: "use_global",
-    taxRateType: "standard",
+    taxRateType: "STANDARD",
   }),
 );
 
@@ -75,10 +75,10 @@ const mockGetReservationSettings = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: null,
-    discountCombinationMode: "best",
+    discountCombinationMode: "BEST",
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
+    taxDisplayModePublic: "TAX_INCLUDED",
     showOriginalPrice: true,
   }),
 );
@@ -180,10 +180,10 @@ describe("applyCalendarTimeChange (GCal inbound pricing)", () => {
     mockSpaceFindUniqueTx.mockReset();
     mockSpaceFindUniqueTx.mockResolvedValue({
       hourlyPrice: 2000,
-      discountType: "none",
+      discountType: "NONE",
       discountValue: null,
       durationDiscountOverride: "use_global",
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
     });
     mockCheckSpaceOverlap.mockReset();
     mockCheckSpaceOverlap.mockResolvedValue({ hasOverlap: false });
@@ -193,10 +193,10 @@ describe("applyCalendarTimeChange (GCal inbound pricing)", () => {
     mockGetReservationSettings.mockResolvedValue({
       durationDiscountEnabled: false,
       durationDiscountRules: null,
-      discountCombinationMode: "best",
+      discountCombinationMode: "BEST",
       taxStandardRate: 10,
       taxReducedRate: 8,
-      taxDisplayModePublic: "tax_included",
+      taxDisplayModePublic: "TAX_INCLUDED",
       showOriginalPrice: true,
     });
   });

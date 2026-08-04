@@ -70,30 +70,30 @@ export const DESIGN_STYLE_CLASSES: Record<
     border?: string;
   }
 > = {
-  solid: {
+  SOLID: {
     container: "",
     containerWithBg: (type) => TYPE_STYLES[type]?.bg ?? DEFAULT_TYPE_STYLE.bg,
   },
-  gradient: {
+  GRADIENT: {
     container: "bg-gradient-to-r",
     containerWithBg: (type) =>
       TYPE_STYLES[type]?.gradient ?? DEFAULT_TYPE_STYLE.gradient,
   },
-  outlined: {
+  OUTLINED: {
     container: "bg-transparent border-y",
     containerWithBg: () => "",
     border: "border-current",
   },
-  glass: {
+  GLASS: {
     container: "backdrop-blur-md bg-card/10 border-y border-card/20",
     containerWithBg: () => "",
   },
-  minimal: {
+  MINIMAL: {
     container: "bg-transparent border-b",
     containerWithBg: () => "",
     border: "border-current/30",
   },
-  striped: {
+  STRIPED: {
     container: "",
     containerWithBg: (type) => TYPE_STYLES[type]?.bg ?? DEFAULT_TYPE_STYLE.bg,
   },
@@ -194,7 +194,7 @@ export function getGlassShimmerStyle(animate: boolean): CSSProperties {
 export function validateAnimation(value: string): AnnouncementBarAnimation {
   return isValidAnnouncementBarAnimation(value)
     ? value
-    : AnnouncementBarAnimation.fade;
+    : AnnouncementBarAnimation.FADE;
 }
 
 /**
@@ -203,5 +203,5 @@ export function validateAnimation(value: string): AnnouncementBarAnimation {
 export function validateDesignStyle(value: string): AnnouncementBarDesignStyle {
   return isValidAnnouncementBarDesignStyle(value)
     ? value
-    : AnnouncementBarDesignStyle.solid;
+    : AnnouncementBarDesignStyle.SOLID;
 }

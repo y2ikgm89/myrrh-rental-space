@@ -17,7 +17,7 @@ import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
  */
 export function useFormatPrice() {
   const tax = useTaxSettings();
-  const taxRate = getTaxRate(TaxRateType.standard, {
+  const taxRate = getTaxRate(TaxRateType.STANDARD, {
     standardRate: tax.standardRate,
     reducedRate: tax.reducedRate,
     displayModePublic: tax.displayMode,

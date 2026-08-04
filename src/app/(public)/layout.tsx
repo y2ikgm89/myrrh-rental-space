@@ -354,7 +354,7 @@ async function MainShellResolved({
     getSiteLayoutSettings(),
   ]);
   const isTransparent =
-    headerSettings.backgroundMode === HeaderBackgroundMode.transparent;
+    headerSettings.backgroundMode === HeaderBackgroundMode.TRANSPARENT;
   const taxValue: PublicTaxDisplay = {
     standardRate: taxSettings.standardRate,
     reducedRate: taxSettings.reducedRate,

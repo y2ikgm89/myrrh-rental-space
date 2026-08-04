@@ -154,7 +154,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
       onFocusCapture={() => setIsPlaying(false)}
     >
       {/* Glass shimmer overlay */}
-      {settings.designStyle === AnnouncementBarDesignStyle.glass &&
+      {settings.designStyle === AnnouncementBarDesignStyle.GLASS &&
         settings.glassAnimation && (
           <div
             className="pointer-events-none absolute inset-0 overflow-hidden"

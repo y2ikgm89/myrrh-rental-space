@@ -55,9 +55,9 @@ export function calculateReservationPrice(
   // オーバーライド設定を判定
   const durationOverride = space.durationDiscountOverride;
   const effectiveDurationEnabled =
-    durationOverride === DurationDiscountOverride.inherit
+    durationOverride === DurationDiscountOverride.INHERIT
       ? reservationSettings.durationDiscountEnabled
-      : durationOverride === DurationDiscountOverride.enabled;
+      : durationOverride === DurationDiscountOverride.ENABLED;
 
   const durationRules = parseDurationDiscountRules(
     reservationSettings.durationDiscountRules,
@@ -101,7 +101,7 @@ export function calculateReservationPrice(
   const combinationMode = reservationSettings.discountCombinationMode;
 
   if (
-    combinationMode === DiscountCombinationMode.best &&
+    combinationMode === DiscountCombinationMode.BEST &&
     durationDiscount > 0 &&
     couponDiscount > 0
   ) {
@@ -118,7 +118,7 @@ export function calculateReservationPrice(
       warnings.push("より大きな割引が自動的に適用されました");
     }
   } else if (
-    combinationMode === DiscountCombinationMode.both &&
+    combinationMode === DiscountCombinationMode.BOTH &&
     durationDiscount > 0 &&
     couponDiscount > 0
   ) {

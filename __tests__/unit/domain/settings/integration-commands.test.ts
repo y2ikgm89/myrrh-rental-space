@@ -89,9 +89,9 @@ function lastGoogleCalendarUpdate(): Record<string, unknown> {
 // CalendarSyncMethod enum モック
 await installPrismaEnumsMock({
   CalendarSyncMethod: {
-    polling: "polling",
-    webhook: "webhook",
-    both: "both",
+    POLLING: "POLLING",
+    WEBHOOK: "WEBHOOK",
+    BOTH: "BOTH",
   },
 });
 
@@ -765,7 +765,7 @@ describe("updateTwoWaySyncSettings", () => {
     test("双方向同期設定を保存できる（polling）", async () => {
       await updateTwoWaySyncSettings({
         enabled: true,
-        syncMethod: "polling",
+        syncMethod: "POLLING",
       });
 
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
@@ -774,7 +774,7 @@ describe("updateTwoWaySyncSettings", () => {
           where: { id: "singleton" },
           update: expect.objectContaining({
             googleCalendarTwoWaySyncEnabled: true,
-            googleCalendarSyncMethod: "polling",
+            googleCalendarSyncMethod: "POLLING",
           }),
         }),
       );
@@ -783,7 +783,7 @@ describe("updateTwoWaySyncSettings", () => {
     test("無効化の設定を保存できる", async () => {
       await updateTwoWaySyncSettings({
         enabled: false,
-        syncMethod: "webhook",
+        syncMethod: "WEBHOOK",
       });
 
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
@@ -799,7 +799,7 @@ describe("updateTwoWaySyncSettings", () => {
     test("戻り値が void（undefined）", async () => {
       const result = await updateTwoWaySyncSettings({
         enabled: false,
-        syncMethod: "polling",
+        syncMethod: "POLLING",
       });
       expect(result).toBeUndefined();
     });

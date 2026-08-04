@@ -160,8 +160,8 @@ function planMatchesSegment(
     return false;
   }
   // 祝日モード
-  if (plan.holidayMode === HolidayMode.only && !ctx.isHoliday) return false;
-  if (plan.holidayMode === HolidayMode.exclude && ctx.isHoliday) return false;
+  if (plan.holidayMode === HolidayMode.ONLY && !ctx.isHoliday) return false;
+  if (plan.holidayMode === HolidayMode.EXCLUDE && ctx.isHoliday) return false;
   // 時間帯（半開区間 [start, end)）
   const planStartTod = timeStrToMinutes(plan.startTime, false);
   const planEndTod = timeStrToMinutes(plan.endTime, true);

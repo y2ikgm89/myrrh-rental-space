@@ -1407,13 +1407,13 @@ async function seedSpaceRatePlans() {
         name: SEED_WEEKEND_RATE_PLAN_NAME,
         hourlyPrice: Math.round(space.hourlyPrice * 1.3),
         daysOfWeek: [DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY],
-        holidayMode: HolidayMode.any,
+        holidayMode: HolidayMode.ANY,
       },
       {
         name: SEED_HOLIDAY_RATE_PLAN_NAME,
         hourlyPrice: Math.round(space.hourlyPrice * 1.5),
         daysOfWeek: [],
-        holidayMode: HolidayMode.only,
+        holidayMode: HolidayMode.ONLY,
       },
     ];
 
@@ -2281,7 +2281,7 @@ const SEED_EMPTY_RATE_BREAKDOWN = {
 function buildSeedLegacyPricingSnapshot(totalPrice: number) {
   const taxAmount = Math.round((totalPrice * SEED_LEGACY_TAX_RATE) / 100);
   return {
-    taxRateType: "standard" as const,
+    taxRateType: "STANDARD" as const,
     taxRate: SEED_LEGACY_TAX_RATE,
     taxAmount,
     totalPriceWithTax: totalPrice + taxAmount,

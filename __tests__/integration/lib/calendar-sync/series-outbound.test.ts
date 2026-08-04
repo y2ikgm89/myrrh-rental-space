@@ -214,7 +214,7 @@ async function createSeriesFixture(): Promise<SeriesFixture> {
         totalBasePrice: 0,
         holidayFlags: {},
       },
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       taxRate: 10,
       taxAmount: 500,
       totalPriceWithTax: 5500,

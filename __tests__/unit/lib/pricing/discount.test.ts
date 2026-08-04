@@ -83,39 +83,39 @@ const ALL_ENUMS = {
   PostStatus: { DRAFT: "DRAFT", PUBLISHED: "PUBLISHED", ARCHIVED: "ARCHIVED" },
   CouponType: { PERCENTAGE: "PERCENTAGE", FIXED_AMOUNT: "FIXED_AMOUNT" },
   AnnouncementBarType: { info: "info", warning: "warning", promo: "promo" },
-  DiscountType: { none: "none", percentage: "percentage", fixed: "fixed" },
+  DiscountType: { NONE: "NONE", PERCENTAGE: "PERCENTAGE", FIXED: "FIXED" },
   DurationDiscountOverride: {
-    inherit: "inherit",
-    enabled: "enabled",
-    disabled: "disabled",
+    INHERIT: "INHERIT",
+    ENABLED: "ENABLED",
+    DISABLED: "DISABLED",
   },
-  TaxRateType: { standard: "standard", reduced: "reduced" },
+  TaxRateType: { STANDARD: "STANDARD", REDUCED: "REDUCED" },
   HeaderScrollBehavior: {
-    auto_hide: "auto_hide",
-    always_visible: "always_visible",
-    hide_on_scroll: "hide_on_scroll",
+    AUTO_HIDE: "AUTO_HIDE",
+    ALWAYS_VISIBLE: "ALWAYS_VISIBLE",
+    HIDE_ON_SCROLL: "HIDE_ON_SCROLL",
   },
-  HeaderBackgroundMode: { solid: "solid", transparent: "transparent" },
+  HeaderBackgroundMode: { SOLID: "SOLID", TRANSPARENT: "TRANSPARENT" },
   TaxDisplayMode: {
-    tax_excluded: "tax_excluded",
-    tax_included: "tax_included",
-    both: "both",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    BOTH: "BOTH",
   },
-  CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
-  AnalyticsType: { ga4: "ga4", gtm: "gtm" },
-  DiscountCombinationMode: { best: "best", both: "both" },
+  CalendarSyncMethod: { POLLING: "POLLING", WEBHOOK: "WEBHOOK", BOTH: "BOTH" },
+  AnalyticsType: { ga4: "GA4", GTM: "GTM" },
+  DiscountCombinationMode: { BEST: "BEST", BOTH: "BOTH" },
   AnnouncementBarAnimation: {
-    fade: "fade",
-    slideX: "slideX",
-    slideY: "slideY",
+    FADE: "FADE",
+    SLIDE_X: "SLIDE_X",
+    SLIDE_Y: "SLIDE_Y",
   },
   AnnouncementBarDesignStyle: {
-    solid: "solid",
-    gradient: "gradient",
-    outlined: "outlined",
-    glass: "glass",
-    minimal: "minimal",
-    striped: "striped",
+    SOLID: "SOLID",
+    GRADIENT: "GRADIENT",
+    OUTLINED: "OUTLINED",
+    GLASS: "GLASS",
+    MINIMAL: "MINIMAL",
+    STRIPED: "STRIPED",
   },
   InstagramMediaType: {
     IMAGE: "IMAGE",
@@ -176,20 +176,20 @@ describe("calculateSpaceDiscount", () => {
   describe("正常系", () => {
     test("パーセント割引 10% を正しく計算する（切り捨て）", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 10,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(1000);
-      expect(result.applied).toEqual({ type: "percentage", value: 10 });
+      expect(result.applied).toEqual({ type: "PERCENTAGE", value: 10 });
     });
 
     test("パーセント割引で端数は切り捨てる", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 15,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       // 10000 * 0.15 = 1500（切り捨て不要だが整合性確認）
       const result = calculateSpaceDiscount(10000, settings);
@@ -198,9 +198,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("パーセント割引で端数が生じる場合は切り捨て（Math.floor）", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 10,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       // 9999 * 0.10 = 999.9 → Math.floor → 999
       const result = calculateSpaceDiscount(9999, settings);
@@ -209,31 +209,31 @@ describe("calculateSpaceDiscount", () => {
 
     test("固定割引を正しく計算する", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 500,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(500);
-      expect(result.applied).toEqual({ type: "fixed", value: 500 });
+      expect(result.applied).toEqual({ type: "FIXED", value: 500 });
     });
 
     test("固定割引: 割引額が基本料金を超える場合は基本料金を上限とする", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 20000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(10000);
-      expect(result.applied).toEqual({ type: "fixed", value: 20000 });
+      expect(result.applied).toEqual({ type: "FIXED", value: 20000 });
     });
 
     test("固定割引: 割引額と基本料金が等しい場合は全額割引", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 5000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(5000, settings);
       expect(result.discount).toBe(5000);
@@ -241,9 +241,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("100% 割引で基本料金がゼロになる", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 100,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(10000);
@@ -265,9 +265,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("discountType が none の場合は割引なし", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "none",
+        discountType: "NONE",
         discountValue: 1000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(0);
@@ -276,9 +276,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("discountValue が null の場合は割引なし", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: null,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(0);
@@ -289,9 +289,9 @@ describe("calculateSpaceDiscount", () => {
   describe("エッジケース", () => {
     test("基本料金 0 に対するパーセント割引は 0", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 20,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(0, settings);
       expect(result.discount).toBe(0);
@@ -299,20 +299,20 @@ describe("calculateSpaceDiscount", () => {
 
     test("discountValue が 0 の固定割引は割引額 0", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 0,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(0);
-      expect(result.applied).toEqual({ type: "fixed", value: 0 });
+      expect(result.applied).toEqual({ type: "FIXED", value: 0 });
     });
 
     test("大きな基本料金でも正しく計算する", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 5,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(1000000, settings);
       expect(result.discount).toBe(50000);

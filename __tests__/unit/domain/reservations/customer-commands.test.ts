@@ -18,10 +18,10 @@ const mockSpaceFindUniqueTx = mock<() => Promise<unknown>>(() =>
     id: "space-1",
     locationId: "loc-1",
     hourlyPrice: 1000,
-    discountType: "none",
+    discountType: "NONE",
     discountValue: null,
     durationDiscountOverride: "use_global",
-    taxRateType: "standard",
+    taxRateType: "STANDARD",
   }),
 );
 const mockBlockedDateFindFirst = mock<
@@ -54,10 +54,10 @@ const mockSettingsFindFirst = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: null,
-    discountCombinationMode: "best",
+    discountCombinationMode: "BEST",
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
+    taxDisplayModePublic: "TAX_INCLUDED",
     showOriginalPrice: true,
   }),
 );
@@ -176,10 +176,10 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         locationId: "loc-1",
         capacity: 10,
         hourlyPrice: 1000,
-        discountType: "none",
+        discountType: "NONE",
         discountValue: null,
         durationDiscountOverride: "use_global",
-        taxRateType: "standard",
+        taxRateType: "STANDARD",
       }),
     );
 

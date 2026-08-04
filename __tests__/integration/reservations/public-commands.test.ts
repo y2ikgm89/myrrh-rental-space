@@ -119,10 +119,10 @@ async function ensureKnownSettings(): Promise<void> {
   const commerceData = {
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included" as const,
+    taxDisplayModePublic: "TAX_INCLUDED" as const,
     durationDiscountEnabled: false,
     durationDiscountRules: [],
-    discountCombinationMode: "best" as const,
+    discountCombinationMode: "BEST" as const,
     showOriginalPrice: true,
   };
   const reservationData = {
@@ -188,7 +188,7 @@ describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
       expect(rateBreakdown.segments[0]?.hourlyPrice).toBe(hourlyPrice);
       expect(rateBreakdown.segments[0]?.ratePlanId).toBeNull();
 
-      expect(reservation.taxRateType).toBe(TaxRateType.standard);
+      expect(reservation.taxRateType).toBe(TaxRateType.STANDARD);
       expect(reservation.taxRate).toBe(10);
 
       // totalPrice は NOT NULL 列だが result 拡張の型は number | null
@@ -214,7 +214,7 @@ describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
         name: "金曜特別料金",
         hourlyPrice: 2000,
         daysOfWeek: [DayOfWeek.FRIDAY],
-        holidayMode: HolidayMode.any,
+        holidayMode: HolidayMode.ANY,
         startTime: null,
         endTime: null,
         effectiveFrom: null,
@@ -248,7 +248,7 @@ describeMaybe("createPublicReservationCommand — rate plan 統合", () => {
         name: "金曜特別料金",
         hourlyPrice: 2000,
         daysOfWeek: [DayOfWeek.FRIDAY],
-        holidayMode: HolidayMode.any,
+        holidayMode: HolidayMode.ANY,
         startTime: null,
         endTime: null,
         effectiveFrom: null,

@@ -83,39 +83,39 @@ const ALL_ENUMS = {
   PostStatus: { DRAFT: "DRAFT", PUBLISHED: "PUBLISHED", ARCHIVED: "ARCHIVED" },
   CouponType: { PERCENTAGE: "PERCENTAGE", FIXED_AMOUNT: "FIXED_AMOUNT" },
   AnnouncementBarType: { info: "info", warning: "warning", promo: "promo" },
-  DiscountType: { none: "none", percentage: "percentage", fixed: "fixed" },
+  DiscountType: { NONE: "NONE", PERCENTAGE: "PERCENTAGE", FIXED: "FIXED" },
   DurationDiscountOverride: {
-    inherit: "inherit",
-    enabled: "enabled",
-    disabled: "disabled",
+    INHERIT: "INHERIT",
+    ENABLED: "ENABLED",
+    DISABLED: "DISABLED",
   },
-  TaxRateType: { standard: "standard", reduced: "reduced" },
+  TaxRateType: { STANDARD: "STANDARD", REDUCED: "REDUCED" },
   HeaderScrollBehavior: {
-    auto_hide: "auto_hide",
-    always_visible: "always_visible",
-    hide_on_scroll: "hide_on_scroll",
+    AUTO_HIDE: "AUTO_HIDE",
+    ALWAYS_VISIBLE: "ALWAYS_VISIBLE",
+    HIDE_ON_SCROLL: "HIDE_ON_SCROLL",
   },
-  HeaderBackgroundMode: { solid: "solid", transparent: "transparent" },
+  HeaderBackgroundMode: { SOLID: "SOLID", TRANSPARENT: "TRANSPARENT" },
   TaxDisplayMode: {
-    tax_excluded: "tax_excluded",
-    tax_included: "tax_included",
-    both: "both",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    BOTH: "BOTH",
   },
-  CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
-  AnalyticsType: { ga4: "ga4", gtm: "gtm" },
-  DiscountCombinationMode: { best: "best", both: "both" },
+  CalendarSyncMethod: { POLLING: "POLLING", WEBHOOK: "WEBHOOK", BOTH: "BOTH" },
+  AnalyticsType: { ga4: "GA4", GTM: "GTM" },
+  DiscountCombinationMode: { BEST: "BEST", BOTH: "BOTH" },
   AnnouncementBarAnimation: {
-    fade: "fade",
-    slideX: "slideX",
-    slideY: "slideY",
+    FADE: "FADE",
+    SLIDE_X: "SLIDE_X",
+    SLIDE_Y: "SLIDE_Y",
   },
   AnnouncementBarDesignStyle: {
-    solid: "solid",
-    gradient: "gradient",
-    outlined: "outlined",
-    glass: "glass",
-    minimal: "minimal",
-    striped: "striped",
+    SOLID: "SOLID",
+    GRADIENT: "GRADIENT",
+    OUTLINED: "OUTLINED",
+    GLASS: "GLASS",
+    MINIMAL: "MINIMAL",
+    STRIPED: "STRIPED",
   },
   InstagramMediaType: {
     IMAGE: "IMAGE",
@@ -187,11 +187,11 @@ describe("DEFAULT_TAX_SETTINGS", () => {
 describe("getTaxRate", () => {
   describe("デフォルト設定を使用", () => {
     test("standard タイプでデフォルト標準税率 (10%) を返す", () => {
-      expect(getTaxRate("standard")).toBe(10);
+      expect(getTaxRate("STANDARD")).toBe(10);
     });
 
     test("reduced タイプでデフォルト軽減税率 (8%) を返す", () => {
-      expect(getTaxRate("reduced")).toBe(8);
+      expect(getTaxRate("REDUCED")).toBe(8);
     });
   });
 
@@ -201,7 +201,7 @@ describe("getTaxRate", () => {
         ...DEFAULT_TAX_SETTINGS,
         standardRate: 15,
       };
-      expect(getTaxRate("standard", customSettings)).toBe(15);
+      expect(getTaxRate("STANDARD", customSettings)).toBe(15);
     });
 
     test("カスタム軽減税率を返す", () => {
@@ -209,7 +209,7 @@ describe("getTaxRate", () => {
         ...DEFAULT_TAX_SETTINGS,
         reducedRate: 5,
       };
-      expect(getTaxRate("reduced", customSettings)).toBe(5);
+      expect(getTaxRate("REDUCED", customSettings)).toBe(5);
     });
 
     test("標準税率 0% のカスタム設定", () => {
@@ -217,7 +217,7 @@ describe("getTaxRate", () => {
         ...DEFAULT_TAX_SETTINGS,
         standardRate: 0,
       };
-      expect(getTaxRate("standard", customSettings)).toBe(0);
+      expect(getTaxRate("STANDARD", customSettings)).toBe(0);
     });
   });
 
@@ -228,8 +228,8 @@ describe("getTaxRate", () => {
         standardRate: 10,
         reducedRate: 8,
       };
-      expect(getTaxRate("standard", settings)).toBe(10);
-      expect(getTaxRate("standard", settings)).not.toBe(8);
+      expect(getTaxRate("STANDARD", settings)).toBe(10);
+      expect(getTaxRate("STANDARD", settings)).not.toBe(8);
     });
 
     test("reduced タイプは standardRate を返さない", () => {
@@ -238,8 +238,8 @@ describe("getTaxRate", () => {
         standardRate: 10,
         reducedRate: 8,
       };
-      expect(getTaxRate("reduced", settings)).toBe(8);
-      expect(getTaxRate("reduced", settings)).not.toBe(10);
+      expect(getTaxRate("REDUCED", settings)).toBe(8);
+      expect(getTaxRate("REDUCED", settings)).not.toBe(10);
     });
   });
 });
@@ -441,7 +441,7 @@ describe("resolvePublicDisplayPrice", () => {
     expect(
       resolvePublicDisplayPrice(1000, {
         ...DEFAULT_TAX_SETTINGS,
-        displayModePublic: "tax_included",
+        displayModePublic: "TAX_INCLUDED",
       }),
     ).toBe(1100);
   });
@@ -450,7 +450,7 @@ describe("resolvePublicDisplayPrice", () => {
     expect(
       resolvePublicDisplayPrice(1000, {
         ...DEFAULT_TAX_SETTINGS,
-        displayModePublic: "both",
+        displayModePublic: "BOTH",
       }),
     ).toBe(1100);
   });
@@ -459,7 +459,7 @@ describe("resolvePublicDisplayPrice", () => {
     expect(
       resolvePublicDisplayPrice(1000, {
         ...DEFAULT_TAX_SETTINGS,
-        displayModePublic: "tax_excluded",
+        displayModePublic: "TAX_EXCLUDED",
       }),
     ).toBe(1000);
   });

@@ -53,10 +53,10 @@ const CONSENT_DENIED_ALL = {
  *
  * ## 経路別ハンドリング (Codex #3564716547 対応)
  *
- * - `AnalyticsType.ga4` 経路: `@next/third-parties/google` の
+ * - `AnalyticsType.GA4` 経路: `@next/third-parties/google` の
  *   `<GoogleAnalytics>` が gtag.js を注入するため `globalThis.gtag` が存在する。
  *   これを直接呼ぶ。
- * - `AnalyticsType.gtm` 経路: `<GoogleTagManager>` は gtag.js を注入せず
+ * - `AnalyticsType.GTM` 経路: `<GoogleTagManager>` は gtag.js を注入せず
  *   `window.dataLayer` だけを露出する (公式 GTM snippet の実装)。この場合
  *   `globalThis.gtag` は undefined のまま、dataLayer 側にだけ consent update
  *   を push しないと GTM で管理している GA4 tag / Ads tag へ denied が届かない。

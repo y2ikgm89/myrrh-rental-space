@@ -83,7 +83,7 @@ export async function SpaceCard({
     : [mainImageUrl];
 
   const tax = await getPublicTaxSettings();
-  const taxRate = getTaxRate(TaxRateType.standard, tax);
+  const taxRate = getTaxRate(TaxRateType.STANDARD, tax);
   const hourlyPriceLabel =
     hourlyPrice != null
       ? formatUnitPriceWithTax(

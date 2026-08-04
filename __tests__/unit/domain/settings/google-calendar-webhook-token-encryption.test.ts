@@ -69,12 +69,12 @@ mock.module("@/shared/db/prisma", () => ({
 
 // admin-queries.ts が触る他 enum も mock（本テストでは値そのものは使わない）
 await installPrismaEnumsMock({
-  CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
-  DiscountCombinationMode: { best: "best", both: "both" },
+  CalendarSyncMethod: { POLLING: "POLLING", WEBHOOK: "WEBHOOK", BOTH: "BOTH" },
+  DiscountCombinationMode: { BEST: "BEST", BOTH: "BOTH" },
   TaxDisplayMode: {
-    tax_included: "tax_included",
-    tax_excluded: "tax_excluded",
-    both: "both",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    BOTH: "BOTH",
   },
 });
 

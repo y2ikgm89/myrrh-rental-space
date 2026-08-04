@@ -432,7 +432,7 @@ describe("spaceFormSchema", () => {
     test("percentage の割引値は100以下のみ許可", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 101,
       });
 
@@ -446,7 +446,7 @@ describe("spaceFormSchema", () => {
     test("fixed の割引値は100超でも許可", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 101,
       });
 
@@ -473,11 +473,11 @@ describe("defaultSpaceFormValues", () => {
       locationId: "",
       categoryId: null,
       // 割引設定
-      discountType: "none",
+      discountType: "NONE",
       discountValue: null,
-      durationDiscountOverride: "inherit",
+      durationDiscountOverride: "INHERIT",
       // 税率設定
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       metaDescription: null,
       metaKeywords: null,
       ogpTitle: null,

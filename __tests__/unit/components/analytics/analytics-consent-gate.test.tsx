@@ -32,7 +32,7 @@ import { shouldLoadAnalytics } from "@/public/components/analytics/use-analytics
 import { AnalyticsProvider } from "@/public/components/analytics/analytics-provider";
 
 const analyticsConfig = {
-  analyticsType: AnalyticsType.ga4,
+  analyticsType: AnalyticsType.GA4,
   googleAnalyticsId: "G-TEST123",
   googleTagManagerId: null,
   googleSearchConsoleId: null,

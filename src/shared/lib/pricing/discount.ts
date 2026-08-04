@@ -25,7 +25,7 @@ export function calculateSpaceDiscount(
 ): { discount: number; applied: { type: DiscountType; value: number } | null } {
   if (
     !settings ||
-    settings.discountType === DiscountType.none ||
+    settings.discountType === DiscountType.NONE ||
     settings.discountValue == null
   ) {
     return { discount: 0, applied: null };
@@ -33,11 +33,11 @@ export function calculateSpaceDiscount(
 
   const discountValue = settings.discountValue;
 
-  if (settings.discountType === DiscountType.percentage) {
+  if (settings.discountType === DiscountType.PERCENTAGE) {
     const discount = Math.floor(basePrice * (discountValue / 100));
     return {
       discount,
-      applied: { type: DiscountType.percentage, value: discountValue },
+      applied: { type: DiscountType.PERCENTAGE, value: discountValue },
     };
   }
 
@@ -45,7 +45,7 @@ export function calculateSpaceDiscount(
   const discount = Math.min(discountValue, basePrice); // 割引額が価格を超えないように
   return {
     discount,
-    applied: { type: DiscountType.fixed, value: discountValue },
+    applied: { type: DiscountType.FIXED, value: discountValue },
   };
 }
 

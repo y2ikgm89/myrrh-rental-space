@@ -32,14 +32,14 @@ import type {
 // TaxRateType / TaxDisplayMode は @generated/prisma/enums から re-export
 // テスト内では文字列リテラルを使用する
 const TAX_RATE_TYPE = {
-  standard: "standard",
-  reduced: "reduced",
+  STANDARD: "STANDARD",
+  REDUCED: "REDUCED",
 } as const;
 
 const TAX_DISPLAY_MODE = {
-  tax_excluded: "tax_excluded",
-  tax_included: "tax_included",
-  both: "both",
+  TAX_EXCLUDED: "TAX_EXCLUDED",
+  TAX_INCLUDED: "TAX_INCLUDED",
+  BOTH: "BOTH",
 } as const;
 
 // =============================================================================
@@ -63,12 +63,12 @@ describe("DEFAULT_TAX_SETTINGS", () => {
 describe("getTaxRate", () => {
   describe("正常系", () => {
     test("standard タイプで標準税率を返す", () => {
-      const rate = getTaxRate(TAX_RATE_TYPE.standard);
+      const rate = getTaxRate(TAX_RATE_TYPE.STANDARD);
       expect(rate).toBe(10);
     });
 
     test("reduced タイプで軽減税率を返す", () => {
-      const rate = getTaxRate(TAX_RATE_TYPE.reduced);
+      const rate = getTaxRate(TAX_RATE_TYPE.REDUCED);
       expect(rate).toBe(8);
     });
 
@@ -78,12 +78,12 @@ describe("getTaxRate", () => {
         standardRate: 15,
         reducedRate: 5,
       };
-      expect(getTaxRate(TAX_RATE_TYPE.standard, customSettings)).toBe(15);
-      expect(getTaxRate(TAX_RATE_TYPE.reduced, customSettings)).toBe(5);
+      expect(getTaxRate(TAX_RATE_TYPE.STANDARD, customSettings)).toBe(15);
+      expect(getTaxRate(TAX_RATE_TYPE.REDUCED, customSettings)).toBe(5);
     });
 
     test("設定省略時はデフォルト設定が使用される", () => {
-      expect(getTaxRate(TAX_RATE_TYPE.standard)).toBe(
+      expect(getTaxRate(TAX_RATE_TYPE.STANDARD)).toBe(
         DEFAULT_TAX_SETTINGS.standardRate,
       );
     });
@@ -247,7 +247,7 @@ describe("formatPriceWithTax", () => {
       const result = formatPriceWithTax({
         taxExcludedPrice: 1000,
         taxRate: 10,
-        displayMode: TAX_DISPLAY_MODE.tax_excluded,
+        displayMode: TAX_DISPLAY_MODE.TAX_EXCLUDED,
       });
       expect(result).toBe("¥1,000（税抜）");
     });
@@ -258,7 +258,7 @@ describe("formatPriceWithTax", () => {
       const result = formatPriceWithTax({
         taxExcludedPrice: 1000,
         taxRate: 10,
-        displayMode: TAX_DISPLAY_MODE.tax_included,
+        displayMode: TAX_DISPLAY_MODE.TAX_INCLUDED,
       });
       expect(result).toBe("¥1,100（税込）");
     });
@@ -269,7 +269,7 @@ describe("formatPriceWithTax", () => {
       const result = formatPriceWithTax({
         taxExcludedPrice: 1000,
         taxRate: 10,
-        displayMode: TAX_DISPLAY_MODE.both,
+        displayMode: TAX_DISPLAY_MODE.BOTH,
       });
       expect(result).toBe("¥1,100（税込）/ ¥1,000（税抜）");
     });
@@ -280,7 +280,7 @@ describe("formatPriceWithTax", () => {
       const result = formatPriceWithTax({
         taxExcludedPrice: 0,
         taxRate: 10,
-        displayMode: TAX_DISPLAY_MODE.tax_included,
+        displayMode: TAX_DISPLAY_MODE.TAX_INCLUDED,
       });
       expect(result).toBe("¥0（税込）");
     });
@@ -289,7 +289,7 @@ describe("formatPriceWithTax", () => {
       const result = formatPriceWithTax({
         taxExcludedPrice: 100000,
         taxRate: 10,
-        displayMode: TAX_DISPLAY_MODE.tax_included,
+        displayMode: TAX_DISPLAY_MODE.TAX_INCLUDED,
       });
       expect(result).toBe("¥110,000（税込）");
     });
@@ -302,17 +302,17 @@ describe("formatPriceWithTax", () => {
 
 describe("getTaxRateLabel", () => {
   test("standard タイプで '標準税率（X%）' 形式を返す", () => {
-    const label = getTaxRateLabel(TAX_RATE_TYPE.standard, 10);
+    const label = getTaxRateLabel(TAX_RATE_TYPE.STANDARD, 10);
     expect(label).toBe("標準税率（10%）");
   });
 
   test("reduced タイプで '軽減税率（X%）' 形式を返す", () => {
-    const label = getTaxRateLabel(TAX_RATE_TYPE.reduced, 8);
+    const label = getTaxRateLabel(TAX_RATE_TYPE.REDUCED, 8);
     expect(label).toBe("軽減税率（8%）");
   });
 
   test("カスタム税率でも正しくラベルを返す", () => {
-    const label = getTaxRateLabel(TAX_RATE_TYPE.standard, 15);
+    const label = getTaxRateLabel(TAX_RATE_TYPE.STANDARD, 15);
     expect(label).toBe("標準税率（15%）");
   });
 });

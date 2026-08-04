@@ -67,9 +67,9 @@ export type SpaceRatePlanEditModalProps = {
 };
 
 const HOLIDAY_MODE_VALUES: readonly HolidayMode[] = [
-  HolidayMode.any,
-  HolidayMode.only,
-  HolidayMode.exclude,
+  HolidayMode.ANY,
+  HolidayMode.ONLY,
+  HolidayMode.EXCLUDE,
 ];
 
 const VALID_HOLIDAY_MODES = new Set<string>(HOLIDAY_MODE_VALUES);
@@ -109,7 +109,7 @@ export function SpaceRatePlanEditModal({
       spaceId,
       name: plan?.name ?? "",
       hourlyPrice: plan ? String(plan.hourlyPrice) : "0",
-      holidayMode: plan?.holidayMode ?? HolidayMode.any,
+      holidayMode: plan?.holidayMode ?? HolidayMode.ANY,
       startTime: plan?.startTime ?? "",
       endTime: plan?.endTime ?? "",
       effectiveFrom: plan?.effectiveFrom
@@ -136,7 +136,7 @@ export function SpaceRatePlanEditModal({
   const holidayModeControl = useInputControl(fields.holidayMode);
   const holidayModeValue = isHolidayModeValue(holidayModeControl.value)
     ? holidayModeControl.value
-    : HolidayMode.any;
+    : HolidayMode.ANY;
 
   // success → close は render 中 sync（set-state-in-effect 回避、既存 admin dialog 群と同じ idiom）
   const [previousResult, setPreviousResult] = useState(lastResult);

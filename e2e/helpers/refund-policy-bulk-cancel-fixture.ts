@@ -174,7 +174,7 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
     totalPrice: REFUND_FIXTURE_TOTAL_PRICE,
     basePrice: REFUND_FIXTURE_TOTAL_PRICE,
     rateBreakdownJson,
-    taxRateType: "standard",
+    taxRateType: "STANDARD",
     taxRate: REFUND_FIXTURE_TAX_RATE,
     taxAmount,
     totalPriceWithTax: REFUND_FIXTURE_TOTAL_PRICE + taxAmount,
@@ -223,7 +223,7 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
         // なくなるため、number literal で pass する (server-side facade 契約と等価)。
         totalPrice: REFUND_FIXTURE_TOTAL_PRICE,
         basePrice: REFUND_FIXTURE_TOTAL_PRICE,
-        taxRateType: "standard",
+        taxRateType: "STANDARD",
         taxRate: REFUND_FIXTURE_TAX_RATE,
         taxAmount,
         totalPriceWithTax: REFUND_FIXTURE_TOTAL_PRICE + taxAmount,

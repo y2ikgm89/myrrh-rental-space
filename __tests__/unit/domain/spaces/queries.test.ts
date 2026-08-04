@@ -85,7 +85,7 @@ describe("getSpaceByIdQuery", () => {
         discountType: null,
         discountValue: null,
         durationDiscountOverride: null,
-        taxRateType: "standard",
+        taxRateType: "STANDARD",
         metaDescription: null,
         metaKeywords: null,
         ogpTitle: null,

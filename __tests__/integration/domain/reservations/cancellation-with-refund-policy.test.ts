@@ -284,7 +284,7 @@ async function createPaidReservationFixture(
         totalBasePrice: 0,
         holidayFlags: {},
       },
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       taxRate: 10,
       taxAmount,
       totalPriceWithTax,

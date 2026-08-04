@@ -284,7 +284,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   test("Analytics: type=ga4 + googleAnalyticsId 空欄は error", () => {
     const result = parseWithZod(
       form({
-        analyticsType: "ga4",
+        analyticsType: "GA4",
         googleAnalyticsId: "",
         googleTagManagerId: "",
         gaPropertyId: "",
@@ -298,7 +298,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   test("Analytics: type=gtm + googleTagManagerId 空欄は error", () => {
     const result = parseWithZod(
       form({
-        analyticsType: "gtm",
+        analyticsType: "GTM",
         googleAnalyticsId: "",
         googleTagManagerId: "",
         gaPropertyId: "",
@@ -313,7 +313,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     expectSuccess(
       analyticsFormSchema,
       form({
-        analyticsType: "ga4",
+        analyticsType: "GA4",
         googleAnalyticsId: "G-ABC123DEF4",
         googleTagManagerId: "",
         gaPropertyId: "123456789",
@@ -328,7 +328,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       ["microsoftClarityId", 'abcd1234";alert(1)//'],
     ] as const) {
       const fd = form({
-        analyticsType: "ga4",
+        analyticsType: "GA4",
         googleAnalyticsId: "G-ABC123DEF4",
         googleTagManagerId: "GTM-ABC123",
         gaPropertyId: "123456789",

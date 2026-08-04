@@ -176,7 +176,7 @@ const templateData: ReservationSeriesTemplateData = {
     totalBasePrice: 5000,
     holidayFlags: {},
   },
-  taxRateType: "standard" as ReservationSeriesTemplateData["taxRateType"],
+  taxRateType: "STANDARD" as ReservationSeriesTemplateData["taxRateType"],
   taxRate: 10,
   taxAmount: 500,
   totalPriceWithTax: 5500,

@@ -78,7 +78,7 @@ export function AnnouncementBarManager({
     () => ({
       announcementBarAnimation: validateAnimation(
         initialCarouselSettings.announcementBarAnimation ??
-          AnnouncementBarAnimation.fade,
+          AnnouncementBarAnimation.FADE,
       ),
       announcementBarDuration: initialCarouselSettings.announcementBarDuration,
       announcementBarAutoPlay: initialCarouselSettings.announcementBarAutoPlay,
@@ -90,7 +90,7 @@ export function AnnouncementBarManager({
         initialCarouselSettings.announcementBarShowIndicator,
       announcementBarDesignStyle: validateDesignStyle(
         initialCarouselSettings.announcementBarDesignStyle ??
-          AnnouncementBarDesignStyle.solid,
+          AnnouncementBarDesignStyle.SOLID,
       ),
       announcementBarBgColor:
         initialCarouselSettings.announcementBarBgColor || "",

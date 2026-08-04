@@ -215,7 +215,7 @@ export async function getCalendarSyncRuntimeState(): Promise<{
     syncToken: settings?.googleCalendarSyncToken ?? null,
     lastSyncedAt: settings?.googleCalendarLastSyncedAt ?? null,
     syncMethod:
-      settings?.googleCalendarSyncMethod ?? CalendarSyncMethod.polling,
+      settings?.googleCalendarSyncMethod ?? CalendarSyncMethod.POLLING,
     webhookChannelId: settings?.googleCalendarWebhookChannelId ?? null,
     webhookExpiration: settings?.googleCalendarWebhookExpiration ?? null,
   };

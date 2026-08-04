@@ -93,9 +93,9 @@ export function AnalyticsProvider({
   }
 
   const isGa4 =
-    config.analyticsType === AnalyticsType.ga4 && config.googleAnalyticsId;
+    config.analyticsType === AnalyticsType.GA4 && config.googleAnalyticsId;
   const isGtm =
-    config.analyticsType === AnalyticsType.gtm && config.googleTagManagerId;
+    config.analyticsType === AnalyticsType.GTM && config.googleTagManagerId;
   const hasClarity = Boolean(config.microsoftClarityId);
 
   if (!isGa4 && !isGtm && !hasClarity) {

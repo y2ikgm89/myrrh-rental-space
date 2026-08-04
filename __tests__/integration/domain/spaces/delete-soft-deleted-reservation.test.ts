@@ -103,7 +103,7 @@ async function createSoftDeletedConfirmedReservation(params: {
         totalBasePrice: 1000,
         holidayFlags: {},
       },
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       taxRate: 10,
       taxAmount: 100,
       totalPriceWithTax: 1100,

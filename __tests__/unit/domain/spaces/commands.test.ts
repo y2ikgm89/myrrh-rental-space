@@ -70,17 +70,17 @@ mock.module("@/shared/db/prisma", () => ({
 // enum モック
 await installPrismaEnumsMock({
   DiscountType: {
-    none: "none",
-    percentage: "percentage",
-    fixed: "fixed",
+    NONE: "NONE",
+    PERCENTAGE: "PERCENTAGE",
+    FIXED: "FIXED",
   },
   DurationDiscountOverride: {
-    inherit: "inherit",
+    INHERIT: "INHERIT",
     override: "override",
   },
   TaxRateType: {
-    standard: "standard",
-    reduced: "reduced",
+    STANDARD: "STANDARD",
+    REDUCED: "REDUCED",
     zero: "zero",
     exempt: "exempt",
   },

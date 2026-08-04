@@ -138,7 +138,7 @@ async function main(): Promise<void> {
         endTime,
         basePrice: totalPrice,
         totalPrice,
-        taxRateType: "standard",
+        taxRateType: "STANDARD",
         taxRate,
         taxAmount,
         totalPriceWithTax,

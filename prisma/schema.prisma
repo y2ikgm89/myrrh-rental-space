@@ -26,6 +26,8 @@ enum Role {
   VIEWER // 閲覧のみ
   USER // 公開ユーザー（非管理者）
   CUSTOMER // 顧客（ソーシャルログイン）
+
+  @@map("role")
 }
 
 enum ReservationStatus {
@@ -34,12 +36,16 @@ enum ReservationStatus {
   COMPLETED
   CANCELLED
   NO_SHOW
+
+  @@map("reservation_status")
 }
 
 enum ReservationSeriesFreq {
   DAILY
   WEEKLY
   MONTHLY
+
+  @@map("reservation_series_freq")
 }
 
 enum InquiryStatus {
@@ -49,16 +55,22 @@ enum InquiryStatus {
   CLOSED
   FLAGGED
   SPAM
+
+  @@map("inquiry_status")
 }
 
 enum InquiryReplyAuthorType {
   STAFF
   CUSTOMER
+
+  @@map("inquiry_reply_author_type")
 }
 
 enum CustomerType {
   PERSONAL
   CORPORATE
+
+  @@map("customer_type")
 }
 
 enum CustomerStatus {
@@ -67,6 +79,8 @@ enum CustomerStatus {
   VIP
   INACTIVE
   BLACKLIST
+
+  @@map("customer_status")
 }
 
 enum PaymentStatus {
@@ -76,12 +90,16 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
   REFUNDED
   FAILED
+
+  @@map("payment_status")
 }
 
 enum NavigationType {
   HEADER_DESKTOP // デスクトップ用ヘッダーメニュー
   HEADER_MOBILE // モバイル用ヘッダーメニュー
   FOOTER // フッターメニュー
+
+  @@map("navigation_type")
 }
 
 enum SocialPlatform {
@@ -92,6 +110,8 @@ enum SocialPlatform {
   LINE
   TIKTOK
   OTHER
+
+  @@map("social_platform")
 }
 
 enum LayoutWidth {
@@ -102,91 +122,121 @@ enum LayoutWidth {
   XL
   FULL
   CUSTOM
+
+  @@map("layout_width")
 }
 
 enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+
+  @@map("post_status")
 }
 
 enum CouponType {
   PERCENTAGE // パーセント割引 (例: 20%)
   FIXED_AMOUNT // 定額割引 (例: ¥1,000)
+
+  @@map("coupon_type")
 }
 
 // --- 新規 Enum（String → Enum 変換） ---
 
 enum DiscountType {
-  none
-  percentage
-  fixed
+  NONE
+  PERCENTAGE
+  FIXED
+
+  @@map("discount_type")
 }
 
 enum DurationDiscountOverride {
-  inherit
-  enabled
-  disabled
+  INHERIT
+  ENABLED
+  DISABLED
+
+  @@map("duration_discount_override")
 }
 
 enum TaxRateType {
-  standard
-  reduced
+  STANDARD
+  REDUCED
+
+  @@map("tax_rate_type")
 }
 
 // @map required: hyphens in DB values
 enum HeaderScrollBehavior {
-  auto_hide      @map("auto-hide")
-  always_visible @map("always-visible")
-  hide_on_scroll @map("hide-on-scroll")
+  AUTO_HIDE
+  ALWAYS_VISIBLE
+  HIDE_ON_SCROLL
+
+  @@map("header_scroll_behavior")
 }
 
 enum HeaderBackgroundMode {
-  solid       @map("solid")
-  transparent @map("transparent")
+  SOLID
+  TRANSPARENT
+
+  @@map("header_background_mode")
 }
 
 enum TaxDisplayMode {
-  tax_excluded
-  tax_included
-  both
+  TAX_EXCLUDED
+  TAX_INCLUDED
+  BOTH
+
+  @@map("tax_display_mode")
 }
 
 enum CalendarSyncMethod {
-  polling
-  webhook
-  both
+  POLLING
+  WEBHOOK
+  BOTH
+
+  @@map("calendar_sync_method")
 }
 
 enum AnalyticsType {
-  ga4
-  gtm
+  GA4
+  GTM
+
+  @@map("analytics_type")
 }
 
 enum DiscountCombinationMode {
-  best
-  both
+  BEST
+  BOTH
+
+  @@map("discount_combination_mode")
 }
 
 enum AnnouncementBarAnimation {
-  fade
-  slideX
-  slideY
+  FADE
+  SLIDE_X
+  SLIDE_Y
+
+  @@map("announcement_bar_animation")
 }
 
 enum AnnouncementBarDesignStyle {
-  solid
-  gradient
-  outlined
-  glass
-  minimal
-  striped
+  SOLID
+  GRADIENT
+  OUTLINED
+  GLASS
+  MINIMAL
+  STRIPED
+
+  @@map("announcement_bar_design_style")
 }
 
 enum InstagramMediaType {
   IMAGE
   VIDEO
   CAROUSEL_ALBUM
+
+  @@map("instagram_media_type")
 }
 
 enum EventStatus {
@@ -194,6 +244,8 @@ enum EventStatus {
   PUBLISHED
   CANCELLED
   ARCHIVED
+
+  @@map("event_status")
 }
 
 enum EventScheduleMode {
@@ -201,6 +253,8 @@ enum EventScheduleMode {
   SINGLE_OCCURRENCE
   /// 日時選択制。公開申込で複数の EventTimeSlot から選ばせる。
   TIMED_ENTRY
+
+  @@map("event_schedule_mode")
 }
 
 /// オンライン開催対応 (Phase B.1)。schema.org eventAttendanceMode に対応。
@@ -211,6 +265,8 @@ enum EventFormat {
   ONLINE
   /// schema.org MixedEventAttendanceMode
   HYBRID
+
+  @@map("event_format")
 }
 
 /// Event.meetingUrl の発行元 (Phase B.1)。
@@ -219,6 +275,8 @@ enum MeetingProvider {
   MANUAL
   /// GCal API 経由で自動発行、応答の URL は Event.meetingUrl に write-back
   GOOGLE_MEET
+
+  @@map("meeting_provider")
 }
 
 enum RegistrationStatus {
@@ -227,6 +285,8 @@ enum RegistrationStatus {
   WAITLISTED
   WAITLISTED_OFFERED
   EXPIRED
+
+  @@map("registration_status")
 }
 
 /// Resend Webhook (email.bounced / email.complained) で観測された配信状態。
@@ -241,6 +301,8 @@ enum EmailDeliveryStatus {
   SOFT_BOUNCED
   HARD_BOUNCED
   COMPLAINED
+
+  @@map("email_delivery_status")
 }
 
 /// SpaceRatePlan の曜日制約。空配列 (daysOfWeek: []) は「全曜日」を意味する。
@@ -252,13 +314,17 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
+
+  @@map("day_of_week")
 }
 
 /// SpaceRatePlan の祝日マッチ条件。
 enum HolidayMode {
-  any // 祝日/平日どちらでもマッチ (default)
-  only // 祝日のみマッチ
-  exclude // 祝日は除外 (平日のみ)
+  ANY // 祝日/平日どちらでもマッチ (default)
+  ONLY // 祝日のみマッチ
+  EXCLUDE // 祝日は除外 (平日のみ)
+
+  @@map("holiday_mode")
 }
 
 // ==============================================
@@ -518,12 +584,12 @@ model Space {
   ogpImageUrl    String?
 
   // 割引設定（Enum化）
-  discountType             DiscountType             @default(none)
+  discountType             DiscountType             @default(NONE)
   discountValue            Int?
-  durationDiscountOverride DurationDiscountOverride @default(inherit)
+  durationDiscountOverride DurationDiscountOverride @default(INHERIT)
 
   // 税率設定（Enum化）
-  taxRateType TaxRateType @default(standard)
+  taxRateType TaxRateType @default(STANDARD)
 
   // 場所・カテゴリー設定（拠点は必須。カテゴリーは任意）
   locationId String  @db.Uuid
@@ -579,7 +645,7 @@ model SpaceRatePlan {
   hourlyPrice Int
 
   daysOfWeek    DayOfWeek[] // 空配列 = 全曜日（曜日制約なし）
-  holidayMode   HolidayMode @default(any)
+  holidayMode   HolidayMode @default(ANY)
   startTime     String?     @db.VarChar(5) // "HH:MM" (24h)、null = 00:00（開始）
   endTime       String?     @db.VarChar(5) // "HH:MM"、null = 24:00（終了、半開区間）
   effectiveFrom DateTime?   @db.Date // JST 日付、null = 期限なし
@@ -1524,13 +1590,13 @@ model SettingsAnnouncementCarousel {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  animation         AnnouncementBarAnimation   @default(fade)
+  animation         AnnouncementBarAnimation   @default(FADE)
   duration          Int                        @default(5000)
   autoPlay          Boolean                    @default(true)
   pauseOnHover      Boolean                    @default(true)
   showArrows        Boolean                    @default(true)
   showIndicator     Boolean                    @default(true)
-  designStyle       AnnouncementBarDesignStyle @default(solid)
+  designStyle       AnnouncementBarDesignStyle @default(SOLID)
   bgColor           String?
   textColor         String?
   stripeColor       String?
@@ -1610,8 +1676,8 @@ model SettingsLayout {
   containerWidthCustom  Int?
   contentWidth          LayoutWidth?
   contentWidthCustom    Int?
-  headerScrollBehavior  HeaderScrollBehavior @default(always_visible)
-  headerBackgroundMode  HeaderBackgroundMode @default(solid)
+  headerScrollBehavior  HeaderScrollBehavior @default(ALWAYS_VISIBLE)
+  headerBackgroundMode  HeaderBackgroundMode @default(SOLID)
   themeColor            String               @default("#fafafa")
   footerTagline         String?
   footerNavigationLabel String               @default("Navigation")
@@ -1679,12 +1745,12 @@ model SettingsCommerce {
 
   durationDiscountEnabled Boolean                 @default(false)
   durationDiscountRules   Json                    @default("[]")
-  discountCombinationMode DiscountCombinationMode @default(best)
+  discountCombinationMode DiscountCombinationMode @default(BEST)
   showOriginalPrice       Boolean                 @default(true)
 
   taxStandardRate      Int            @default(10)
   taxReducedRate       Int            @default(8)
-  taxDisplayModePublic TaxDisplayMode @default(tax_included)
+  taxDisplayModePublic TaxDisplayMode @default(TAX_INCLUDED)
 
   refundPolicy Json?
 
@@ -1799,7 +1865,7 @@ model SettingsGoogleCalendar {
   icalAttachmentEnabled            Boolean            @default(true)
   addToCalendarLinksEnabled        Boolean            @default(true)
   googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
-  googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
+  googleCalendarSyncMethod         CalendarSyncMethod @default(POLLING)
   googleCalendarSyncToken          String?            @db.Text
   googleCalendarLastSyncedAt       DateTime?          @db.Timestamptz(6)
   eventImportEnabled               Boolean            @default(false)
@@ -1929,12 +1995,16 @@ enum AuditAction {
   PASSWORD_RESET_FAILED
   ROLE_CHANGE
   INTEGRITY_CHECK
+
+  @@map("audit_action")
 }
 
 enum EditorCommentStatus {
   ACTIVE // アクティブ（未解決）
   RESOLVED // 解決済み
   DELETED // 削除済み（ソフトデリート）
+
+  @@map("editor_comment_status")
 }
 
 enum MediaType {
@@ -1943,6 +2013,8 @@ enum MediaType {
   AUDIO
   DOCUMENT
   OTHER
+
+  @@map("media_type")
 }
 
 enum MediaUsage {
@@ -1953,6 +2025,8 @@ enum MediaUsage {
   EVENT
   SITE
   GENERAL
+
+  @@map("media_usage")
 }
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
@@ -2042,6 +2116,8 @@ enum TermsScope {
   INQUIRY // お問い合わせフォーム (/contact + 各 ContactFormSection)
   EVENT_REGISTRATION // イベント申込フォーム (/events/[slug] 申込)
   RESERVATION_SERIES // 繰返し予約フォーム (Phase B.2)
+
+  @@map("terms_scope")
 }
 
 /// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
@@ -2653,6 +2729,8 @@ enum SmartLockDeviceType {
   LOCK
   LOCK_LITE
   LOCK_PRO
+
+  @@map("smart_lock_device_type")
 }
 
 enum SmartLockPasscodeStatus {
@@ -2666,6 +2744,8 @@ enum SmartLockPasscodeStatus {
   REVOKE_PENDING
   /// deleteKey 確定（チェックアウト後 or キャンセルによる失効）
   REVOKED
+
+  @@map("smart_lock_passcode_status")
 }
 
 /// 拠点（Location）に紐づく SwitchBot デバイス登録簿。

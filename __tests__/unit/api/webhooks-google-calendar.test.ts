@@ -33,7 +33,7 @@ const mockGetGoogleCalendarWebhookState = mock<
   }),
 );
 const mockGetTwoWaySyncSettings = mock<() => Promise<{ syncMethod: string }>>(
-  () => Promise.resolve({ syncMethod: "both" }),
+  () => Promise.resolve({ syncMethod: "BOTH" }),
 );
 const mockIsTwoWaySyncEnabled = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
@@ -127,7 +127,7 @@ mock.module("@/shared/lib/route-responses", () => ({
 }));
 
 mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
-  CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
+  CalendarSyncMethod: { POLLING: "POLLING", WEBHOOK: "WEBHOOK", BOTH: "BOTH" },
 }));
 
 const { POST } = await import("@/app/api/webhooks/google-calendar/route");
@@ -163,7 +163,7 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
       resourceId: RESOURCE_ID,
       calendarId: CALENDAR_ID,
     });
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "both" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "BOTH" });
     mockIsTwoWaySyncEnabled.mockResolvedValue(true);
     mockSyncFromCalendar.mockResolvedValue({
       success: true,
@@ -217,7 +217,7 @@ describe("POST /api/webhooks/google-calendar — 排他ロック契約 (GCAL-AUD
   });
 
   test("syncMethod=polling → lock を取得せず pollingOnly を ack する", async () => {
-    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "polling" });
+    mockGetTwoWaySyncSettings.mockResolvedValue({ syncMethod: "POLLING" });
 
     const response = await POST(makeValidRequest());
 

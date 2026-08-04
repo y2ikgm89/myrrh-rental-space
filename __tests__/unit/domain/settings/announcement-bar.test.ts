@@ -80,14 +80,14 @@ mock.module("@generated/prisma/client", () => {
 
 await installPrismaEnumsMock({
   AnnouncementBarAnimation: {
-    fade: "fade",
+    FADE: "FADE",
     slide: "slide",
     none: "none",
   },
   AnnouncementBarDesignStyle: {
-    solid: "solid",
-    gradient: "gradient",
-    glass: "glass",
+    SOLID: "SOLID",
+    GRADIENT: "GRADIENT",
+    GLASS: "GLASS",
     stripe: "stripe",
   },
 });

@@ -125,14 +125,14 @@ export function SpaceEditForm({
     space ? String(space.hourlyPrice) : "0",
   );
   const [discountType, setDiscountType] = useState<DiscountType>(
-    space?.discountType ?? DiscountType.none,
+    space?.discountType ?? DiscountType.NONE,
   );
   const [discountValue, setDiscountValue] = useState<string>(
     space?.discountValue != null ? String(space.discountValue) : "",
   );
   const [durationDiscountOverride, setDurationDiscountOverride] =
     useState<DurationDiscountOverride>(
-      space?.durationDiscountOverride ?? DurationDiscountOverride.inherit,
+      space?.durationDiscountOverride ?? DurationDiscountOverride.INHERIT,
     );
   const [taxRateType, setTaxRateType] = useState(() =>
     getValidTaxRateType(space?.taxRateType),
