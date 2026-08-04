@@ -69,6 +69,29 @@ function isIntentionallyBreaking(file: string): boolean {
   return INTENTIONAL_BREAKING_MIGRATIONS.has(normalized);
 }
 
+/**
+ * baseline は squawk の検査対象外。**「古いから」ではなく前提が成立しないから**。
+ *
+ * squawk がこの repo で見ているのは「Cloud Run のローリング切替窓（migrate 完了〜
+ * 新リビジョン ready）で**旧コードが破壊済み新スキーマを叩く**」事故（docblock 冒頭）。
+ * baseline はまっさらな空の DB に対して走る最初の 1 本なので、
+ *
+ * - 旧 revision が存在しない → 参照事故の窓が無い
+ * - 既存行が存在しない → `SET NOT NULL` / `ADD CONSTRAINT` がデータ違反で落ちない
+ *
+ * つまり squawk の全ルールが構造的に非該当になる。実際 `invariants.sql` の
+ * `ALTER COLUMN … SET NOT NULL` 3 本が `adding-not-nullable-field` を発火させるが、
+ * 空の DB では違反しようがない。
+ *
+ * **この免除を他の migration へ広げない。** 2 本目以降は必ず既存 DB に当たる。
+ */
+const BASELINE_MIGRATION =
+  "prisma/migrations/00000000000000_init/migration.sql";
+
+function isBaseline(file: string): boolean {
+  return file.replaceAll("\\", "/") === BASELINE_MIGRATION;
+}
+
 /** squawk を実行し exit code を返す。違反検出時は非ゼロ（squawk 本体仕様）。 */
 function runSquawk(files: readonly string[]): number {
   const result = spawnSync(SQUAWK_BIN, ["--config", CONFIG_PATH, ...files], {
@@ -172,8 +195,18 @@ function run(args: readonly string[]): number {
     return 1;
   }
 
-  const intentional = present.filter(isIntentionallyBreaking);
-  const toLint = present.filter((f) => !isIntentionallyBreaking(f));
+  const baseline = present.filter(isBaseline);
+  const intentional = present.filter(
+    (f) => !isBaseline(f) && isIntentionallyBreaking(f),
+  );
+  const toLint = present.filter(
+    (f) => !isBaseline(f) && !isIntentionallyBreaking(f),
+  );
+  for (const f of baseline) {
+    console.error(
+      `[migration-safety] baseline は空の DB に走るため squawk 非該当: ${f} — skip`,
+    );
+  }
   for (const f of intentional) {
     console.error(
       `[migration-safety] intentional-breaking allowlist にマッチ: ${f} — squawk skip`,
@@ -185,7 +218,7 @@ function run(args: readonly string[]): number {
       console.error("[migration-safety] 対象 migration SQL なし — skip");
     } else {
       console.error(
-        "[migration-safety] 全対象 migration が intentional-breaking allowlist — squawk skip",
+        "[migration-safety] 全対象 migration が baseline / intentional-breaking — squawk skip",
       );
     }
     return 0;
