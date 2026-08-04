@@ -15,28 +15,28 @@ describe("settings phase 4 schema split", () => {
     const schema = read("prisma/schema.prisma");
 
     expect(schema).toMatch(
-      /model SettingsStripe \{[\s\S]*@@map\("settings_stripes"\)/u,
+      /model SettingsStripe \{[\s\S]*@@map\("settings_stripe"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsResend \{[\s\S]*@@map\("settings_resends"\)/u,
+      /model SettingsResend \{[\s\S]*@@map\("settings_resend"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsTurnstile \{[\s\S]*@@map\("settings_turnstiles"\)/u,
+      /model SettingsTurnstile \{[\s\S]*@@map\("settings_turnstile"\)/u,
     );
     expect(schema).toMatch(
       /model SettingsGoogleMaps \{[\s\S]*@@map\("settings_google_maps"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsGoogleCalendar \{[\s\S]*@@map\("settings_google_calendars"\)/u,
+      /model SettingsGoogleCalendar \{[\s\S]*@@map\("settings_google_calendar"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsGoogleBusinessProfile \{[\s\S]*@@map\("settings_google_business_profiles"\)/u,
+      /model SettingsGoogleBusinessProfile \{[\s\S]*@@map\("settings_google_business_profile"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsInstagram \{[\s\S]*@@map\("settings_instagrams"\)/u,
+      /model SettingsInstagram \{[\s\S]*@@map\("settings_instagram"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsSwitchbot \{[\s\S]*@@map\("settings_switchbots"\)/u,
+      /model SettingsSwitchbot \{[\s\S]*@@map\("settings_switchbot"\)/u,
     );
   }, 60_000);
 });

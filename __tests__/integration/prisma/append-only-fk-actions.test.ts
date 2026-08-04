@@ -134,7 +134,7 @@ describe("append-only テーブルへの FK 参照アクション", () => {
     let failure: string | null = null;
     try {
       await client.query(
-        `INSERT INTO "user" ("id","name","email","emailVerified","role","createdAt","updatedAt")
+        `INSERT INTO "users" ("id","name","email","emailVerified","role","createdAt","updatedAt")
          VALUES ($1,'append-only probe','append-only-probe@example.test',false,'ADMIN',now(),now())`,
         [userId],
       );
@@ -147,7 +147,7 @@ describe("append-only テーブルへの FK 参照アクション", () => {
         [userId, hash],
       );
       setupOk = true;
-      await client.query(`DELETE FROM "user" WHERE "id" = $1`, [userId]);
+      await client.query(`DELETE FROM "users" WHERE "id" = $1`, [userId]);
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     } finally {

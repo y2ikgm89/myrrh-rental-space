@@ -6,6 +6,7 @@
  * - 列の物理名は snake_case。Prisma の field 名は camelCase のまま `@map` で寄せる
  * - enum の型名は snake_case（`@@map`）
  * - enum の値は UPPER_SNAKE
+ * - テーブルの物理名は snake_case。1 行しか持たない設定表は単数形、集合表は複数形
  *
  * ## なぜゲートが要るのか
  *
@@ -288,7 +289,13 @@ type EnumValue = {
   readonly mappedTo: string | undefined;
 };
 
-type Model = { readonly name: string; readonly columns: readonly Column[] };
+type Model = {
+  readonly name: string;
+  readonly columns: readonly Column[];
+  readonly mappedTo: string | undefined;
+  /** `id String @id @default("singleton")` を持つ = 1 行しか存在しない設定表。 */
+  readonly isSingleton: boolean;
+};
 type EnumDecl = {
   readonly name: string;
   readonly values: readonly EnumValue[];
@@ -338,7 +345,13 @@ const models: Model[] = modelBlocks.map(({ name, body }) => {
     const mapped = /@map\("([^"]+)"\)/u.exec(line);
     columns.push({ field, mappedTo: mapped?.[1] });
   }
-  return { name, columns };
+  const mappedTable = /@@map\("([^"]+)"\)/u.exec(body);
+  return {
+    name,
+    columns,
+    mappedTo: mappedTable?.[1],
+    isSingleton: /@id\s+@default\("singleton"\)/u.test(body),
+  };
 });
 
 const enums: EnumDecl[] = enumBlocks.map(({ name, body }) => {
@@ -392,6 +405,73 @@ function enumValueViolations(decl: EnumDecl): string[] {
     );
 }
 
+/**
+ * 英語の規則変化だけを実装した複数形。
+ *
+ * 不規則変化は扱わない — **扱う必要が無い**。現行 77 モデルの物理名はすべて規則変化か
+ * 単数形そのもので、不規則な語が来たら下の `TABLE_NAME_EXEMPTIONS` に理由付きで
+ * 載せることになる。ここに不規則語の辞書を持たせると、辞書に無い語が黙って通る。
+ */
+function pluralize(word: string): string {
+  if (/(?:s|x|z|ch|sh)$/u.test(word)) return `${word}es`;
+  if (/[^aeiou]y$/u.test(word)) return `${word.slice(0, -1)}ies`;
+  return `${word}s`;
+}
+
+/**
+ * 物理テーブル名が規約から外れてよいモデルと、その理由。
+ *
+ * **「英語として不自然だから」では載せない。** 規約どおりの名前が
+ * *間違い* になる場合だけ載せる。
+ */
+const TABLE_NAME_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
+  ["Media", "media は不可算。medias は英語として存在しない"],
+  [
+    "InquiryStatusHistory",
+    "history は履歴の集合そのものを指す集合名詞。inquiry_status_histories は「履歴の複数」という別の意味になる",
+  ],
+  [
+    "ReceiptSequence",
+    "現状は id='singleton' の 1 行だが、year 列で年ごとの採番系列を持つ設計。単数形へ寄せると年キー化したときに戻すことになる",
+  ],
+  ["ReservationSeries", "series は単複同形。serieses は英語として存在しない"],
+  ["News", "news は不可算。newses は英語として存在しない"],
+]);
+
+/**
+ * テーブルの物理名が規約を満たしているか。
+ *
+ * 規約は 2 本立て:
+ *
+ * 1. **単数形か複数形かは singleton かどうかで決まる。** 1 行しか持たない設定表
+ *    （`@id @default("singleton")`）は単数形、それ以外の集合表は複数形。
+ *    `settings_seos` のような「singleton なのに複数形」を落とすのはこの規則。
+ *    判定材料を schema.prisma 内に閉じているので、DB や migration を読みに行かない。
+ * 2. **語幹はモデル名から機械的に導く。** `SettingsSeo` を `seo_settings` に
+ *    map するような、モデル名と対応の取れない名前を落とす。
+ *
+ * `SettingsAnalytics` / `SettingsGoogleMaps` / `SettingsFeatures` が免除不要なのは、
+ * モデル名自体が不可算・固有名詞・複数形で、単数形の規約と元から一致するため。
+ */
+function tableViolations(model: Model): string[] {
+  if (model.mappedTo === undefined) {
+    return [`${model.name} に @@map が無い（物理名がモデル名のままになる）`];
+  }
+  const physical = model.mappedTo;
+  if (!/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/u.test(physical)) {
+    return [`${model.name} の @@map("${physical}") が snake_case でない`];
+  }
+  if (TABLE_NAME_EXEMPTIONS.has(model.name)) return [];
+
+  const stem = toSnakeCase(model.name);
+  const expected = model.isSingleton ? stem : pluralize(stem);
+  if (physical === expected) return [];
+  return [
+    `${model.name} の物理名が "${physical}"（"${expected}" であるべき — ` +
+      `${model.isSingleton ? "1 行しか持たない設定表なので単数形" : "集合表なので複数形"}）`,
+  ];
+}
+
 describe("schema.prisma の物理名", () => {
   test("解析が空振りしていない", () => {
     expect(models.length).toBeGreaterThan(50);
@@ -399,6 +479,33 @@ describe("schema.prisma の物理名", () => {
     expect(models.reduce((n, m) => n + m.columns.length, 0)).toBeGreaterThan(
       900,
     );
+    // singleton 判定が全滅／全通しになっていないこと。ここが 0 になると
+    // 「全部 集合表」と見なして複数形を強制し、逆に全件なら単数形を強制する。
+    const singletons = models.filter((m) => m.isSingleton).length;
+    expect(singletons).toBeGreaterThan(10);
+    expect(singletons).toBeLessThan(models.length);
+  });
+
+  test("全モデルが規約どおりの物理テーブル名を持つ", () => {
+    const violations = models.flatMap(tableViolations);
+    expect(violations).toEqual([]);
+  });
+
+  test("免除に載っているのに規約どおりのモデルがいない", () => {
+    const unnecessary = [...TABLE_NAME_EXEMPTIONS.keys()].filter((name) => {
+      const model = models.find((m) => m.name === name);
+      if (model?.mappedTo === undefined) return false;
+      const stem = toSnakeCase(model.name);
+      return model.mappedTo === (model.isSingleton ? stem : pluralize(stem));
+    });
+    expect(unnecessary).toEqual([]);
+  });
+
+  test("免除に実在しないモデル名が混ざっていない", () => {
+    const unknown = [...TABLE_NAME_EXEMPTIONS.keys()].filter(
+      (name) => !modelNames.has(name),
+    );
+    expect(unknown).toEqual([]);
   });
 
   test("免除に無いモデルは全列が snake_case へ map されている", () => {

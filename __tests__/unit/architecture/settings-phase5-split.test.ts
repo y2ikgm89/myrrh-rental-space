@@ -35,7 +35,7 @@ describe("settings phase 5 schema split", () => {
       /model SettingsFeatures \{[\s\S]*@@map\("settings_features"\)/u,
     );
     expect(schema).toMatch(
-      /model SettingsDataRetention \{[\s\S]*@@map\("settings_data_retentions"\)/u,
+      /model SettingsDataRetention \{[\s\S]*@@map\("settings_data_retention"\)/u,
     );
   }, 30_000);
 

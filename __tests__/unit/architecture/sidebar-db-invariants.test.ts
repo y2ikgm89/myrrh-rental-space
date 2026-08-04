@@ -34,7 +34,7 @@ describe("sidebar DB invariants", () => {
     expect(schema).toContain(
       `sidebarWidgets      Json    @default("${CANONICAL_DEFAULT}")`,
     );
-    expect(schema).toContain('@@map("settings_sidebars")');
+    expect(schema).toContain('@@map("settings_sidebar")');
     // 旧オブジェクト形の既定値に戻っていないこと。
     expect(schema).not.toContain(
       '@default("{\\"search\\":true,\\"recent\\":true,\\"popular\\":true,\\"categories\\":true,\\"tags\\":true}")',
