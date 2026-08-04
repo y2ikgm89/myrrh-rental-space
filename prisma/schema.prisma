@@ -1587,22 +1587,22 @@ model FaqItem {
 
 model SettingsAnnouncementCarousel {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   animation         AnnouncementBarAnimation   @default(FADE)
   duration          Int                        @default(5000)
-  autoPlay          Boolean                    @default(true)
-  pauseOnHover      Boolean                    @default(true)
-  showArrows        Boolean                    @default(true)
-  showIndicator     Boolean                    @default(true)
-  designStyle       AnnouncementBarDesignStyle @default(SOLID)
-  bgColor           String?
-  textColor         String?
-  stripeColor       String?
-  stripeAnimation   Boolean                    @default(false)
-  gradientAnimation Boolean                    @default(false)
-  glassAnimation    Boolean                    @default(false)
+  autoPlay          Boolean                    @default(true) @map("auto_play")
+  pauseOnHover      Boolean                    @default(true) @map("pause_on_hover")
+  showArrows        Boolean                    @default(true) @map("show_arrows")
+  showIndicator     Boolean                    @default(true) @map("show_indicator")
+  designStyle       AnnouncementBarDesignStyle @default(SOLID) @map("design_style")
+  bgColor           String?                    @map("bg_color")
+  textColor         String?                    @map("text_color")
+  stripeColor       String?                    @map("stripe_color")
+  stripeAnimation   Boolean                    @default(false) @map("stripe_animation")
+  gradientAnimation Boolean                    @default(false) @map("gradient_animation")
+  glassAnimation    Boolean                    @default(false) @map("glass_animation")
   sticky            Boolean                    @default(false)
 
   @@map("settings_announcement_carousel")
@@ -1610,340 +1610,340 @@ model SettingsAnnouncementCarousel {
 
 model SettingsSystem {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  maintenanceMode         Boolean @default(false)
-  maintenanceMessage      String? @db.Text
-  cookieConsentEnabled    Boolean @default(false)
-  cookieConsentMessage    String? @db.Text
-  cookieConsentAcceptText String?
-  cookieConsentRejectText String?
-  cookieConsentPolicyUrl  String?
+  maintenanceMode         Boolean @default(false) @map("maintenance_mode")
+  maintenanceMessage      String? @map("maintenance_message") @db.Text
+  cookieConsentEnabled    Boolean @default(false) @map("cookie_consent_enabled")
+  cookieConsentMessage    String? @map("cookie_consent_message") @db.Text
+  cookieConsentAcceptText String? @map("cookie_consent_accept_text")
+  cookieConsentRejectText String? @map("cookie_consent_reject_text")
+  cookieConsentPolicyUrl  String? @map("cookie_consent_policy_url")
 
   @@map("settings_system")
 }
 
 model SettingsSeo {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
   // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
   // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
   // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
   // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
-  siteName               String?
-  siteDescription        String? @db.Text
-  faviconUrl             String  @default("")
-  defaultOgpImageUrl     String?
-  headerLogoUrl          String?
-  footerLogoUrl          String?
-  footerCopyright        String?
-  useHeaderLogo          Boolean @default(true)
-  useFooterLogo          Boolean @default(true)
-  defaultMetaDescription String?
-  defaultMetaKeywords    String?
-  defaultOgpTitle        String?
-  defaultOgpDescription  String?
+  siteName               String? @map("site_name")
+  siteDescription        String? @map("site_description") @db.Text
+  faviconUrl             String  @default("") @map("favicon_url")
+  defaultOgpImageUrl     String? @map("default_ogp_image_url")
+  headerLogoUrl          String? @map("header_logo_url")
+  footerLogoUrl          String? @map("footer_logo_url")
+  footerCopyright        String? @map("footer_copyright")
+  useHeaderLogo          Boolean @default(true) @map("use_header_logo")
+  useFooterLogo          Boolean @default(true) @map("use_footer_logo")
+  defaultMetaDescription String? @map("default_meta_description")
+  defaultMetaKeywords    String? @map("default_meta_keywords")
+  defaultOgpTitle        String? @map("default_ogp_title")
+  defaultOgpDescription  String? @map("default_ogp_description")
 
   @@map("settings_seo")
 }
 
 model SettingsAnalytics {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  analyticsType         AnalyticsType?
-  googleAnalyticsId     String?
-  googleTagManagerId    String?
-  googleSearchConsoleId String?
-  bingWebmasterToolsId  String?
-  gaPropertyId          String?
-  microsoftClarityId    String?
+  analyticsType         AnalyticsType? @map("analytics_type")
+  googleAnalyticsId     String?        @map("google_analytics_id")
+  googleTagManagerId    String?        @map("google_tag_manager_id")
+  googleSearchConsoleId String?        @map("google_search_console_id")
+  bingWebmasterToolsId  String?        @map("bing_webmaster_tools_id")
+  gaPropertyId          String?        @map("ga_property_id")
+  microsoftClarityId    String?        @map("microsoft_clarity_id")
 
   @@map("settings_analytics")
 }
 
 model SettingsLayout {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  containerWidth        LayoutWidth?
-  containerWidthCustom  Int?
-  contentWidth          LayoutWidth?
-  contentWidthCustom    Int?
-  headerScrollBehavior  HeaderScrollBehavior @default(ALWAYS_VISIBLE)
-  headerBackgroundMode  HeaderBackgroundMode @default(SOLID)
-  themeColor            String               @default("#fafafa")
-  footerTagline         String?
-  footerNavigationLabel String               @default("Navigation")
-  footerContactLabel    String               @default("Contact")
-  footerHoursLabel      String               @default("Hours")
-  footerShowSocialLinks Boolean              @default(true)
+  containerWidth        LayoutWidth?         @map("container_width")
+  containerWidthCustom  Int?                 @map("container_width_custom")
+  contentWidth          LayoutWidth?         @map("content_width")
+  contentWidthCustom    Int?                 @map("content_width_custom")
+  headerScrollBehavior  HeaderScrollBehavior @default(ALWAYS_VISIBLE) @map("header_scroll_behavior")
+  headerBackgroundMode  HeaderBackgroundMode @default(SOLID) @map("header_background_mode")
+  themeColor            String               @default("#fafafa") @map("theme_color")
+  footerTagline         String?              @map("footer_tagline")
+  footerNavigationLabel String               @default("Navigation") @map("footer_navigation_label")
+  footerContactLabel    String               @default("Contact") @map("footer_contact_label")
+  footerHoursLabel      String               @default("Hours") @map("footer_hours_label")
+  footerShowSocialLinks Boolean              @default(true) @map("footer_show_social_links")
 
   @@map("settings_layout")
 }
 
 model SettingsSidebar {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  sidebarEnabled      Boolean @default(true)
-  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]")
-  sidebarRecentCount  Int     @default(5)
-  sidebarPopularCount Int     @default(5)
-  sidebarTocEnabled   Boolean @default(true)
+  sidebarEnabled      Boolean @default(true) @map("sidebar_enabled")
+  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]") @map("sidebar_widgets")
+  sidebarRecentCount  Int     @default(5) @map("sidebar_recent_count")
+  sidebarPopularCount Int     @default(5) @map("sidebar_popular_count")
+  sidebarTocEnabled   Boolean @default(true) @map("sidebar_toc_enabled")
 
   @@map("settings_sidebar")
 }
 
 model SettingsOrganization {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  businessName        String?
-  businessNameKana    String?
-  representativeName  String?
-  establishedDate     DateTime? @db.Timestamptz(6)
-  registrationNumber  String?
-  invoiceNumber       String?
-  businessDescription String?   @db.Text
+  businessName        String?   @map("business_name")
+  businessNameKana    String?   @map("business_name_kana")
+  representativeName  String?   @map("representative_name")
+  establishedDate     DateTime? @map("established_date") @db.Timestamptz(6)
+  registrationNumber  String?   @map("registration_number")
+  invoiceNumber       String?   @map("invoice_number")
+  businessDescription String?   @map("business_description") @db.Text
 
-  phoneNumber   String?
-  faxNumber     String?
+  phoneNumber   String? @map("phone_number")
+  faxNumber     String? @map("fax_number")
   email         String?
-  postalCode    String?
+  postalCode    String? @map("postal_code")
   prefecture    String?
   city          String?
-  streetAddress String?
-  buildingName  String?
+  streetAddress String? @map("street_address")
+  buildingName  String? @map("building_name")
 
-  businessHours Json?
-  holidayNotice String? @db.Text
+  businessHours Json?   @map("business_hours")
+  holidayNotice String? @map("holiday_notice") @db.Text
 
   /// 銀行振込案内文（振込期限・手数料負担等）。payment OFF 時の顧客向け表示用。
-  transferGuidance String? @db.Text
+  transferGuidance String? @map("transfer_guidance") @db.Text
 
   // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
-  senderEmail  String?
-  senderName   String?
-  replyToEmail String?
+  senderEmail  String? @map("sender_email")
+  senderName   String? @map("sender_name")
+  replyToEmail String? @map("reply_to_email")
 
   @@map("settings_organization")
 }
 
 model SettingsCommerce {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  durationDiscountEnabled Boolean                 @default(false)
-  durationDiscountRules   Json                    @default("[]")
-  discountCombinationMode DiscountCombinationMode @default(BEST)
-  showOriginalPrice       Boolean                 @default(true)
+  durationDiscountEnabled Boolean                 @default(false) @map("duration_discount_enabled")
+  durationDiscountRules   Json                    @default("[]") @map("duration_discount_rules")
+  discountCombinationMode DiscountCombinationMode @default(BEST) @map("discount_combination_mode")
+  showOriginalPrice       Boolean                 @default(true) @map("show_original_price")
 
-  taxStandardRate      Int            @default(10)
-  taxReducedRate       Int            @default(8)
-  taxDisplayModePublic TaxDisplayMode @default(TAX_INCLUDED)
+  taxStandardRate      Int            @default(10) @map("tax_standard_rate")
+  taxReducedRate       Int            @default(8) @map("tax_reduced_rate")
+  taxDisplayModePublic TaxDisplayMode @default(TAX_INCLUDED) @map("tax_display_mode_public")
 
-  refundPolicy Json?
+  refundPolicy Json? @map("refund_policy")
 
   @@map("settings_commerce")
 }
 
 model SettingsNotification {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  notifyNewReservation            Boolean @default(true)
-  notifyReservationChange         Boolean @default(true)
-  notifyReservationCancel         Boolean @default(true)
-  notifyNewInquiry                Boolean @default(true)
-  notifyInquiryCustomerReply      Boolean @default(true)
-  notifyEventRegistration         Boolean @default(true)
-  notifyEventWaitlistRegistration Boolean @default(true)
-  notifyEventCancellation         Boolean @default(true)
-  notifyEventReminder             Boolean @default(false)
+  notifyNewReservation            Boolean @default(true) @map("notify_new_reservation")
+  notifyReservationChange         Boolean @default(true) @map("notify_reservation_change")
+  notifyReservationCancel         Boolean @default(true) @map("notify_reservation_cancel")
+  notifyNewInquiry                Boolean @default(true) @map("notify_new_inquiry")
+  notifyInquiryCustomerReply      Boolean @default(true) @map("notify_inquiry_customer_reply")
+  notifyEventRegistration         Boolean @default(true) @map("notify_event_registration")
+  notifyEventWaitlistRegistration Boolean @default(true) @map("notify_event_waitlist_registration")
+  notifyEventCancellation         Boolean @default(true) @map("notify_event_cancellation")
+  notifyEventReminder             Boolean @default(false) @map("notify_event_reminder")
 
-  notificationStaffIds       String[] @default([])
-  notificationEmailAddresses String[] @default([])
+  notificationStaffIds       String[] @default([]) @map("notification_staff_ids")
+  notificationEmailAddresses String[] @default([]) @map("notification_email_addresses")
 
   @@map("settings_notification")
 }
 
 model SettingsReservation {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  defaultTimeSlot                  Int     @default(60)
-  minReservationDuration           Int     @default(60)
-  maxReservationDuration           Int     @default(480)
-  sendReservationConfirmationEmail Boolean @default(true)
-  maxRecurrenceInstances           Int     @default(26)
-  customerCanCancelSeriesInFull    Boolean @default(false)
-  cancellationDeadlineHours        Int     @default(24)
-  modificationDeadlineHours        Int     @default(24)
+  defaultTimeSlot                  Int     @default(60) @map("default_time_slot")
+  minReservationDuration           Int     @default(60) @map("min_reservation_duration")
+  maxReservationDuration           Int     @default(480) @map("max_reservation_duration")
+  sendReservationConfirmationEmail Boolean @default(true) @map("send_reservation_confirmation_email")
+  maxRecurrenceInstances           Int     @default(26) @map("max_recurrence_instances")
+  customerCanCancelSeriesInFull    Boolean @default(false) @map("customer_can_cancel_series_in_full")
+  cancellationDeadlineHours        Int     @default(24) @map("cancellation_deadline_hours")
+  modificationDeadlineHours        Int     @default(24) @map("modification_deadline_hours")
 
   @@map("settings_reservation")
 }
 
 model SettingsStripe {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
-  stripePublishableKey     String?
-  stripeSecretKey          String?   @db.Text
-  stripeWebhookSecret      String?   @db.Text
-  stripeAccountId          String?
-  stripeCurrency           String    @default("jpy")
-  stripePaymentMethodTypes String[]  @default(["card"])
-  stripeLastTestedAt       DateTime? @db.Timestamptz(6)
-  stripeConnectionStatus   String?
+  stripePublishableKey     String?   @map("stripe_publishable_key")
+  stripeSecretKey          String?   @map("stripe_secret_key") @db.Text
+  stripeWebhookSecret      String?   @map("stripe_webhook_secret") @db.Text
+  stripeAccountId          String?   @map("stripe_account_id")
+  stripeCurrency           String    @default("jpy") @map("stripe_currency")
+  stripePaymentMethodTypes String[]  @default(["card"]) @map("stripe_payment_method_types")
+  stripeLastTestedAt       DateTime? @map("stripe_last_tested_at") @db.Timestamptz(6)
+  stripeConnectionStatus   String?   @map("stripe_connection_status")
 
   @@map("settings_stripe")
 }
 
 model SettingsResend {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  resendApiKey           String?   @db.Text
-  resendWebhookSecret    String?   @db.Text
-  resendLastTestedAt     DateTime? @db.Timestamptz(6)
-  resendConnectionStatus String?
+  resendApiKey           String?   @map("resend_api_key") @db.Text
+  resendWebhookSecret    String?   @map("resend_webhook_secret") @db.Text
+  resendLastTestedAt     DateTime? @map("resend_last_tested_at") @db.Timestamptz(6)
+  resendConnectionStatus String?   @map("resend_connection_status")
 
   @@map("settings_resend")
 }
 
 model SettingsTurnstile {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  turnstileSiteKey          String?
-  turnstileSecretKey        String?   @db.Text
-  turnstileLastTestedAt     DateTime? @db.Timestamptz(6)
-  turnstileConnectionStatus String?
+  turnstileSiteKey          String?   @map("turnstile_site_key")
+  turnstileSecretKey        String?   @map("turnstile_secret_key") @db.Text
+  turnstileLastTestedAt     DateTime? @map("turnstile_last_tested_at") @db.Timestamptz(6)
+  turnstileConnectionStatus String?   @map("turnstile_connection_status")
 
   @@map("settings_turnstile")
 }
 
 model SettingsGoogleMaps {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  googleMapsApiKey           String?   @db.Text
-  googleMapsLastTestedAt     DateTime? @db.Timestamptz(6)
-  googleMapsConnectionStatus String?
+  googleMapsApiKey           String?   @map("google_maps_api_key") @db.Text
+  googleMapsLastTestedAt     DateTime? @map("google_maps_last_tested_at") @db.Timestamptz(6)
+  googleMapsConnectionStatus String?   @map("google_maps_connection_status")
 
   @@map("settings_google_maps")
 }
 
 model SettingsGoogleCalendar {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  googleCalendarEnabled            Boolean            @default(false)
-  googleCalendarServiceAccountJson String?            @db.Text
-  googleCalendarId                 String?
-  googleCalendarLastTestedAt       DateTime?          @db.Timestamptz(6)
-  googleCalendarConnectionStatus   String?
-  googleCalendarReminderMinutes    Int?
-  icalAttachmentEnabled            Boolean            @default(true)
-  addToCalendarLinksEnabled        Boolean            @default(true)
-  googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
-  googleCalendarSyncMethod         CalendarSyncMethod @default(POLLING)
-  googleCalendarSyncToken          String?            @db.Text
-  googleCalendarLastSyncedAt       DateTime?          @db.Timestamptz(6)
-  eventImportEnabled               Boolean            @default(false)
-  eventImportSyncToken             String?            @db.Text
-  googleCalendarWebhookChannelId   String?
-  googleCalendarWebhookResourceId  String?
-  googleCalendarWebhookExpiration  DateTime?          @db.Timestamptz(6)
-  googleCalendarWebhookToken       String?            @db.Text
+  googleCalendarEnabled            Boolean            @default(false) @map("google_calendar_enabled")
+  googleCalendarServiceAccountJson String?            @map("google_calendar_service_account_json") @db.Text
+  googleCalendarId                 String?            @map("google_calendar_id")
+  googleCalendarLastTestedAt       DateTime?          @map("google_calendar_last_tested_at") @db.Timestamptz(6)
+  googleCalendarConnectionStatus   String?            @map("google_calendar_connection_status")
+  googleCalendarReminderMinutes    Int?               @map("google_calendar_reminder_minutes")
+  icalAttachmentEnabled            Boolean            @default(true) @map("ical_attachment_enabled")
+  addToCalendarLinksEnabled        Boolean            @default(true) @map("add_to_calendar_links_enabled")
+  googleCalendarTwoWaySyncEnabled  Boolean            @default(false) @map("google_calendar_two_way_sync_enabled")
+  googleCalendarSyncMethod         CalendarSyncMethod @default(POLLING) @map("google_calendar_sync_method")
+  googleCalendarSyncToken          String?            @map("google_calendar_sync_token") @db.Text
+  googleCalendarLastSyncedAt       DateTime?          @map("google_calendar_last_synced_at") @db.Timestamptz(6)
+  eventImportEnabled               Boolean            @default(false) @map("event_import_enabled")
+  eventImportSyncToken             String?            @map("event_import_sync_token") @db.Text
+  googleCalendarWebhookChannelId   String?            @map("google_calendar_webhook_channel_id")
+  googleCalendarWebhookResourceId  String?            @map("google_calendar_webhook_resource_id")
+  googleCalendarWebhookExpiration  DateTime?          @map("google_calendar_webhook_expiration") @db.Timestamptz(6)
+  googleCalendarWebhookToken       String?            @map("google_calendar_webhook_token") @db.Text
 
   @@map("settings_google_calendar")
 }
 
 model SettingsGoogleBusinessProfile {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  googleBusinessProfileEnabled Boolean @default(false)
-  googleBusinessProfileAuth    Json?
+  googleBusinessProfileEnabled Boolean @default(false) @map("google_business_profile_enabled")
+  googleBusinessProfileAuth    Json?   @map("google_business_profile_auth")
 
   @@map("settings_google_business_profile")
 }
 
 model SettingsInstagram {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  instagramAccessToken    String?   @db.Text
-  instagramTokenExpiresAt DateTime? @db.Timestamptz(6)
-  instagramUserId         String?
-  instagramUsername       String?
-  instagramAccountType    String?
+  instagramAccessToken    String?   @map("instagram_access_token") @db.Text
+  instagramTokenExpiresAt DateTime? @map("instagram_token_expires_at") @db.Timestamptz(6)
+  instagramUserId         String?   @map("instagram_user_id")
+  instagramUsername       String?   @map("instagram_username")
+  instagramAccountType    String?   @map("instagram_account_type")
 
   @@map("settings_instagram")
 }
 
 model SettingsSwitchbot {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  switchbotEnabled               Boolean   @default(false)
-  switchbotOpenToken             String?   @db.Text
-  switchbotSecretKey             String?   @db.Text
-  switchbotConnectionStatus      String?
-  switchbotLastTestedAt          DateTime? @db.Timestamptz(6)
-  switchbotPasscodeBufferMinutes Int       @default(15)
-  switchbotWebhookPathToken      String?   @db.Text
+  switchbotEnabled               Boolean   @default(false) @map("switchbot_enabled")
+  switchbotOpenToken             String?   @map("switchbot_open_token") @db.Text
+  switchbotSecretKey             String?   @map("switchbot_secret_key") @db.Text
+  switchbotConnectionStatus      String?   @map("switchbot_connection_status")
+  switchbotLastTestedAt          DateTime? @map("switchbot_last_tested_at") @db.Timestamptz(6)
+  switchbotPasscodeBufferMinutes Int       @default(15) @map("switchbot_passcode_buffer_minutes")
+  switchbotWebhookPathToken      String?   @map("switchbot_webhook_path_token") @db.Text
 
   @@map("settings_switchbot")
 }
 
 model SettingsFeatures {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
   /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / payment / data-retention）。
   /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
   /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
-  featureModules Json @default("{}")
+  featureModules Json @default("{}") @map("feature_modules")
 
   @@map("settings_features")
 }
 
 model SettingsDataRetention {
   id        String   @id @default("singleton")
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   /// データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数（0 = opt-out）。
   /// 形式: `{ sessionMonths, verificationMonths, reservationGuestMonths, inquiryMonths, customerInactiveMonths }`。
   /// SSoT: `parseDataRetentionConfig` (`src/shared/lib/json-validators.ts`)。
   /// デフォルトは規約テンプレの保持期間に合わせた: Session/Verification 6mo、Reservation.guest* 12mo、Inquiry 36mo、INACTIVE Customer 84mo。
   /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
-  dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}")
+  dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}") @map("data_retention")
 
   @@map("settings_data_retention")
 }
