@@ -63,10 +63,19 @@ describe("audit log append-only boundary", () => {
       },
     );
 
-    expect(schema).toContain("sequence      BigInt      @unique");
-    expect(schema).toContain("previousHash  String      @db.Char(64)");
-    expect(schema).toContain("entryHash     String      @db.Char(64)");
-    expect(schema).toContain("chainVersion  Int         @default(1)");
+    // 空白と `@map` は pin しない。`prisma format` の桁揃え直しや物理名の変更で
+    // 落ちても、守りたい「nullable にしない」は何も変わらないため。
+    // `?` が付いていないこと（= NOT NULL）だけを見る。
+    expect(schema).toMatch(/\bsequence\s+BigInt\s+@unique/u);
+    expect(schema).toMatch(
+      /\bpreviousHash\s+String\s+(?:@map\("\w+"\)\s+)?@db\.Char\(64\)/u,
+    );
+    expect(schema).toMatch(
+      /\bentryHash\s+String\s+(?:@map\("\w+"\)\s+)?@db\.Char\(64\)/u,
+    );
+    expect(schema).toMatch(
+      /\bchainVersion\s+Int\s+(?:@map\("\w+"\)\s+)?@default\(1\)/u,
+    );
   });
 
   test("audit log HMAC は後方互換 legacy key env を持たない", () => {
