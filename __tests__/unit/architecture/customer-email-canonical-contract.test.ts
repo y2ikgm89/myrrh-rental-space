@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { readDatabaseInvariants } from "../../support/prisma-sources";
+
 const root = process.cwd();
 
 function read(path: string): string {
@@ -19,17 +21,18 @@ describe("customer email canonical contract", () => {
     expect(schema).not.toContain("Contract phase should");
   });
 
-  test("migration backfills emailCanonical before enforcing NOT NULL", () => {
-    const migration = read(
-      "prisma/migrations/20260702000001_customer_email_canonical_not_null/migration.sql",
-    );
+  test("emailCanonical は空文字を DB が拒む", () => {
+    // かつてここでは「既存行を lower(btrim(email)) で backfill してから NOT NULL に
+    // した migration」を検査していた。**一度きりの移行操作**なので、履歴を 1 本の
+    // baseline へ畳めば意味を失う（まっさらな DB に埋めるべき既存行は無い）。
+    // 残すべき保証は「空文字が入らないこと」で、それは CHECK 制約が担う。
+    const invariants = readDatabaseInvariants();
 
-    expect(migration).toContain(
-      'UPDATE "customers" SET "emailCanonical" = lower(btrim("email"))',
-    );
-    expect(migration).toContain('ALTER COLUMN "emailCanonical" SET NOT NULL');
-    expect(migration).toContain(
+    expect(invariants).toContain(
       'CONSTRAINT "customers_emailCanonical_not_empty_check"',
+    );
+    expect(invariants).toContain(
+      `CHECK ((btrim("emailCanonical") <> ''::text))`,
     );
   });
 
