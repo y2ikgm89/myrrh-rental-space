@@ -4,8 +4,9 @@
  * order-sql.ts の CASE 式 THEN 値に ::int4 キャストが無いと、Postgres が式全体を
  * text と推論し `sortOrder`（integer 列）への代入で 42804 を投げる
  * （event-categories/commands.test.ts の updateEventCategoryOrder と同じ回帰対象）。
- * events/commands.ts はこの中で唯一 buildTextOrderSqlFragments（uuid キャスト無し版）
- * を使う経路（EventTicket.id は uuid）。
+ * 以前この経路だけがキャスト無しの buildTextOrderSqlFragments を使っていたが、
+ * EventTicket.id は uuid なので他の並び替え面と同じ buildUuidOrderSqlFragments に
+ * 統一した（text 版は削除済み）。
  *
  * SINGLE_OCCURRENCE の Event は `events_schedule_integrity_check`
  * （00000000000000_init migration の DEFERRABLE INITIALLY DEFERRED constraint trigger）
