@@ -5,7 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   buildOrderScopeLockSql,
-  buildTextOrderSqlFragments,
+  buildUuidOrderSqlFragments,
 } from "@/shared/domain/order-sql";
 import { getEventUpdatedNotificationPayload } from "@/shared/domain/events/email-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -150,7 +150,7 @@ export async function syncEventTicketsCommand(
   }
 
   if (incomingExistingTickets.length > 0) {
-    const { ids, tempCases } = buildTextOrderSqlFragments(
+    const { ids, tempCases } = buildUuidOrderSqlFragments(
       incomingExistingTickets,
       (ticket) => ticket.id,
       (_ticket, index) => index,

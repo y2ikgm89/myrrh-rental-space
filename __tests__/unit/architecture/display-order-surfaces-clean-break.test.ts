@@ -450,7 +450,11 @@ describe("display order surfaces clean-break contract", () => {
     expect(helper).toContain("const TEMP_ORDER_BASE = -1_000_000;");
     expect(helper).toContain("const ORDER_SCOPE_LOCK_NAMESPACE = 728351;");
     expect(helper).toContain("buildUuidOrderSqlFragments");
-    expect(helper).toContain("buildTextOrderSqlFragments");
+    // 全 ID が uuid に統一された (PR #1908) ので、キャスト無しの text 版は削除した。
+    // 再導入すると bind parameter が `unknown` のまま文脈依存で解決される状態に戻る。
+    // **行頭の export 宣言だけ**を見る。単なる toContain だと、削除理由を説明する
+    // 散文が marker 文字列と一致して誤検出する（実際に一度踏んだ）。
+    expect(helper).not.toMatch(/^export function buildTextOrderSqlFragments/mu);
     expect(helper).toContain("buildOrderScopeLockSql");
     expect(helper).toContain("pg_advisory_xact_lock");
     expect(commands).toContain("await prisma.$transaction(async (tx) => {");

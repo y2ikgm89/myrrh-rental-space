@@ -13,15 +13,59 @@ import type {
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainObject } from "@/shared/lib/serialize";
 
-/** `$queryRaw` の戻り値型（findMany 経路の `Coupon` と物理列を 1:1 対応）。 */
+/** `$queryRaw` の戻り値型（findMany 経路の `Coupon` と 1:1 対応）。 */
 type CouponRawRow = Coupon;
 
+/**
+ * Prisma field 名 → 物理列名の対応表。
+ *
+ * **`SELECT *` を使ってはいけない。** `$queryRaw` の結果は Prisma が field 名へ
+ * 写し戻さず **物理列名のまま**返る。列を `@map` で rename すると、戻り値の型は
+ * `Coupon`（camelCase）のままなのでコンパイルは通り、`coupon.validFrom` が
+ * `undefined` になって実行時にはじめて落ちる — 型検査が一切効かない種類の壊れ方。
+ *
+ * 明示的な `"物理列" AS "field名"` リストにしておけば、rename の影響はこの表
+ * 1 箇所に閉じる。`satisfies Record<keyof CouponRawRow, string>` が列の増減を
+ * tsc で検出するので、モデルに列を足して SELECT に入れ忘れることもできない。
+ */
+const COUPON_COLUMNS = {
+  id: "id",
+  code: "code",
+  name: "name",
+  description: "description",
+  type: "type",
+  discountValue: "discountValue",
+  minReservationAmount: "minReservationAmount",
+  maxDiscountAmount: "maxDiscountAmount",
+  validFrom: "validFrom",
+  validUntil: "validUntil",
+  usageLimit: "usageLimit",
+  usageCount: "usageCount",
+  isActive: "isActive",
+  canCombineWithDurationDiscount: "canCombineWithDurationDiscount",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+} satisfies Record<keyof CouponRawRow, string>;
+
+/** WHERE / ORDER BY 用のクォート済み物理列参照。 */
+function couponColumn(field: keyof CouponRawRow): Prisma.Sql {
+  return Prisma.raw(`"${COUPON_COLUMNS[field]}"`);
+}
+
+/** `SELECT` 用の `"物理列" AS "field名"` リスト（`SELECT *` の代替）。 */
+const COUPON_SELECT_LIST = Prisma.join(
+  Object.entries(COUPON_COLUMNS).map(([field, column]) =>
+    Prisma.raw(`"${column}" AS "${field}"`),
+  ),
+  ", ",
+);
+
 const SORT_COLUMN_MAP = {
-  code: Prisma.raw('"code"'),
-  name: Prisma.raw('"name"'),
-  createdAt: Prisma.raw('"createdAt"'),
-  validFrom: Prisma.raw('"validFrom"'),
-  usageCount: Prisma.raw('"usageCount"'),
+  code: couponColumn("code"),
+  name: couponColumn("name"),
+  createdAt: couponColumn("createdAt"),
+  validFrom: couponColumn("validFrom"),
+  usageCount: couponColumn("usageCount"),
 } satisfies Record<NonNullable<CouponPagination["sortBy"]>, Prisma.Sql>;
 
 // raw SQL は物理テーブル名で実行される。Coupon モデルは @@map("coupons")
@@ -151,28 +195,34 @@ function buildRawCouponWhere(filters: CouponFilters): Prisma.Sql {
   const now = new Date();
   const clauses: Prisma.Sql[] = [];
 
+  const usageLimit = couponColumn("usageLimit");
+  const usageCount = couponColumn("usageCount");
+
   if (filters.status === "limitReached") {
-    clauses.push(Prisma.sql`"usageLimit" IS NOT NULL`);
-    clauses.push(Prisma.sql`"usageCount" >= "usageLimit"`);
+    clauses.push(Prisma.sql`${usageLimit} IS NOT NULL`);
+    clauses.push(Prisma.sql`${usageCount} >= ${usageLimit}`);
   }
 
   if (filters.status === "active") {
-    clauses.push(Prisma.sql`"isActive" = true`);
-    clauses.push(Prisma.sql`"validFrom" <= ${now}`);
-    clauses.push(Prisma.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`);
+    const validUntil = couponColumn("validUntil");
+    clauses.push(Prisma.sql`${couponColumn("isActive")} = true`);
+    clauses.push(Prisma.sql`${couponColumn("validFrom")} <= ${now}`);
     clauses.push(
-      Prisma.sql`("usageLimit" IS NULL OR "usageCount" < "usageLimit")`,
+      Prisma.sql`(${validUntil} IS NULL OR ${validUntil} >= ${now})`,
+    );
+    clauses.push(
+      Prisma.sql`(${usageLimit} IS NULL OR ${usageCount} < ${usageLimit})`,
     );
   }
 
   if (filters.type) {
-    clauses.push(Prisma.sql`"type" = ${filters.type}`);
+    clauses.push(Prisma.sql`${couponColumn("type")} = ${filters.type}`);
   }
 
   if (filters.search) {
     const pattern = `%${filters.search}%`;
     clauses.push(
-      Prisma.sql`("code" ILIKE ${pattern} OR "name" ILIKE ${pattern})`,
+      Prisma.sql`(${couponColumn("code")} ILIKE ${pattern} OR ${couponColumn("name")} ILIKE ${pattern})`,
     );
   }
 
@@ -206,7 +256,7 @@ export async function getCoupons(
 
     total = Number(countResult[0]?.count ?? 0n);
     const rawRows = await prisma.$queryRaw<CouponRawRow[]>`
-      SELECT *
+      SELECT ${COUPON_SELECT_LIST}
       FROM ${COUPONS_TABLE}
       ${whereSql}
       ORDER BY ${sortColumn} ${sortDirection}
