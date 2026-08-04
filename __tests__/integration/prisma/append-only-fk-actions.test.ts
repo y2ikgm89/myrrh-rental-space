@@ -134,7 +134,7 @@ describe("append-only テーブルへの FK 参照アクション", () => {
     let failure: string | null = null;
     try {
       await client.query(
-        `INSERT INTO "users" ("id","name","email","emailVerified","role","createdAt","updatedAt")
+        `INSERT INTO "users" ("id","name","email",email_verified,"role",created_at,updated_at)
          VALUES ($1,'append-only probe','append-only-probe@example.test',false,'ADMIN',now(),now())`,
         [userId],
       );
@@ -167,7 +167,7 @@ describe("append-only テーブルへの FK 参照アクション", () => {
     try {
       await client.query(
         `INSERT INTO "customers"
-           ("id","lastName","firstName","email","emailCanonical","updatedAt")
+           ("id",last_name,first_name,"email",email_canonical,updated_at)
          VALUES ($1,'probe','probe','append-only-merge@example.test','append-only-merge@example.test',now())`,
         [customerId],
       );

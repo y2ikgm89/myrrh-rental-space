@@ -335,14 +335,14 @@ model User {
   id               String   @id @default(uuid(7)) @db.Uuid
   email            String   @unique
   name             String
-  emailVerified    Boolean  @default(false)
+  emailVerified    Boolean  @default(false) @map("email_verified")
   image            String?
   role             Role     @default(USER)
   /// Google Workspace グループ同期でダッシュボード利用可否を表す。
   /// false のとき管理ログイン拒否・通知先/担当候補から除外（ロール履歴は保持）。
-  dashboardEnabled Boolean  @default(true)
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  dashboardEnabled Boolean  @default(true) @map("dashboard_enabled")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   accounts     Account[]
@@ -381,8 +381,8 @@ model User {
 
 /// EDITOR用のページ割り当て（中間テーブル）
 model UserPageAssignment {
-  userId String @db.Uuid
-  pageId String @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  pageId String @map("page_id") @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
@@ -393,18 +393,18 @@ model UserPageAssignment {
 
 model Account {
   id                    String    @id @default(uuid(7)) @db.Uuid
-  userId                String    @db.Uuid
-  accountId             String // Better Auth: ユーザーID or プロバイダーのアカウントID
-  providerId            String // Better Auth: "credential" or "google" etc.
-  accessToken           String?   @db.Text
-  refreshToken          String?   @db.Text
-  idToken               String?   @db.Text
-  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
-  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
+  userId                String    @map("user_id") @db.Uuid
+  accountId             String    @map("account_id") // Better Auth: ユーザーID or プロバイダーのアカウントID
+  providerId            String    @map("provider_id") // Better Auth: "credential" or "google" etc.
+  accessToken           String?   @map("access_token") @db.Text
+  refreshToken          String?   @map("refresh_token") @db.Text
+  idToken               String?   @map("id_token") @db.Text
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(6)
   scope                 String?
   password              String? // Better Auth: credential provider のパスワード（scrypt hash）
-  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -415,12 +415,12 @@ model Account {
 model Session {
   id        String   @id @default(uuid(7)) @db.Uuid
   token     String   @unique
-  userId    String   @db.Uuid
-  expiresAt DateTime @db.Timestamptz(6)
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -432,9 +432,9 @@ model Verification {
   id         String   @id @default(uuid(7)) @db.Uuid
   identifier String
   value      String
-  expiresAt  DateTime @db.Timestamptz(6)
-  createdAt  DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([identifier])
   @@map("verifications")
@@ -887,55 +887,55 @@ model Reservation {
 
 model Customer {
   id                     String              @id @default(uuid(7)) @db.Uuid
-  lastName               String
-  firstName              String
-  lastNameKana           String? // 姓カナ（任意）
-  firstNameKana          String? // 名カナ（任意）
-  companyName            String? // 会社名・団体名（法人の場合）
-  customerType           CustomerType        @default(PERSONAL)
+  lastName               String              @map("last_name")
+  firstName              String              @map("first_name")
+  lastNameKana           String?             @map("last_name_kana") // 姓カナ（任意）
+  firstNameKana          String?             @map("first_name_kana") // 名カナ（任意）
+  companyName            String?             @map("company_name") // 会社名・団体名（法人の場合）
+  customerType           CustomerType        @default(PERSONAL) @map("customer_type")
   email                  String
-  emailCanonical         String
-  phoneNumber            String?
-  postalCode             String?             @db.VarChar(8) // 郵便番号 "123-4567" 等
+  emailCanonical         String              @map("email_canonical")
+  phoneNumber            String?             @map("phone_number")
+  postalCode             String?             @map("postal_code") @db.VarChar(8) // 郵便番号 "123-4567" 等
   prefecture             String?             @db.VarChar(10) // 都道府県（PREFECTURES SSoT）
   city                   String?             @db.VarChar(100) // 市区町村
-  streetAddress          String?             @db.VarChar(200) // 町名・番地
+  streetAddress          String?             @map("street_address") @db.VarChar(200) // 町名・番地
   building               String?             @db.VarChar(200) // 建物名・部屋番号
   status                 CustomerStatus      @default(NEW)
   notes                  String?             @db.Text
-  totalReservations      Int                 @default(0)
-  totalSpent             Int?
-  lastReservationAt      DateTime?           @db.Timestamptz(6)
-  firstReservationAt     DateTime?           @db.Timestamptz(6)
-  isActive               Boolean             @default(true)
-  marketingOptIn         Boolean             @default(false) // メルマガ・キャンペーン受信可否
-  phoneContactOptIn      Boolean             @default(true) // 電話連絡可否
+  totalReservations      Int                 @default(0) @map("total_reservations")
+  totalSpent             Int?                @map("total_spent")
+  lastReservationAt      DateTime?           @map("last_reservation_at") @db.Timestamptz(6)
+  firstReservationAt     DateTime?           @map("first_reservation_at") @db.Timestamptz(6)
+  isActive               Boolean             @default(true) @map("is_active")
+  marketingOptIn         Boolean             @default(false) @map("marketing_opt_in") // メルマガ・キャンペーン受信可否
+  phoneContactOptIn      Boolean             @default(true) @map("phone_contact_opt_in") // 電話連絡可否
   /// Resend Webhook で観測された配信状態。HARD_BOUNCED / COMPLAINED は送信前にスキップ。
   /// 詳細は EmailDeliveryStatus enum 参照。
-  emailDeliveryStatus    EmailDeliveryStatus @default(OK)
+  emailDeliveryStatus    EmailDeliveryStatus @default(OK) @map("email_delivery_status")
   /// [write-only audit trail] Resend Webhook 観測時刻。現状 admin UI 未配線 (src/ read consumer 0)。
   /// 単独 DROP は 310s 計画ダウンタイム発生のため次の必然的 destructive migration に bundle 予定
   /// (memory: dead-taxinputmode-bundle-deferred-2026-07-11 と同方針)。
-  emailDeliveryUpdatedAt DateTime?           @db.Timestamptz(6)
+  emailDeliveryUpdatedAt DateTime?           @map("email_delivery_updated_at") @db.Timestamptz(6)
   /// [write-only audit trail] Resend Webhook payload の bounce.message / suppression reason (人間可読のラベル)。
   /// 現状 admin UI 未配線 (src/ read consumer 0)。単独 DROP は 310s 計画ダウンタイム発生のため
   /// 次の必然的 destructive migration に bundle 予定。誤って未使用と判断して単独 DROP しないこと。
-  emailDeliveryReason    String?             @db.VarChar(500)
+  emailDeliveryReason    String?             @map("email_delivery_reason") @db.VarChar(500)
   /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
-  flaggedForReviewAt     DateTime?           @db.Timestamptz(6)
-  flagReasons            String[]            @default([])
+  flaggedForReviewAt     DateTime?           @map("flagged_for_review_at") @db.Timestamptz(6)
+  flagReasons            String[]            @default([]) @map("flag_reasons")
   /// STATE-03: 匿名化 (anonymize) 実施時刻。非 null = 匿名化済み。
   /// 決済歴 (Receipt 発行済) のある Customer は物理削除できないため
   /// (Receipt.reservation は onDelete: Restrict)、PII を placeholder に置換して
   /// Reservation / Receipt の customerId を残す。関連の会計証跡は不変。
   /// append-only の証跡列 (再設定禁止、reset は別 workflow)。
-  anonymizedAt           DateTime?           @db.Timestamptz(6)
+  anonymizedAt           DateTime?           @map("anonymized_at") @db.Timestamptz(6)
   /// STATE-03: 匿名化理由コード。
   /// - "customer-requested": 顧客本人からの削除依頼 (GDPR 相当)
   /// - "admin-purge":        管理者による purge (誤登録・重複クリーンアップ)
   /// - "data-retention":     データ保持期限経過による自動 purge
-  anonymizedReason       String?             @db.VarChar(50)
+  anonymizedReason       String?             @map("anonymized_reason") @db.VarChar(50)
   /// RESEND-AUDIT M7: anonymize / merge で emailCanonical が placeholder に
   /// 書き換えられる際、その時点の emailCanonical (= 実 email) の
   /// `hashSuppressedEmailCandidate` 値を保存する。`getSuppressedEmailSet` は
@@ -944,12 +944,12 @@ model Customer {
   /// これにより「匿名化前に HARD_BOUNCED / COMPLAINED だった email」への
   /// 再送信を suppression list で継続的に弾ける (sender reputation 保護)。
   /// 通常 Customer では NULL、匿名化・マージ後の永続 hash 記録用。
-  suppressedEmailHash    String?             @db.VarChar(128)
-  createdAt              DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt              DateTime            @updatedAt @db.Timestamptz(6)
+  suppressedEmailHash    String?             @map("suppressed_email_hash") @db.VarChar(128)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Social Auth Link
-  userId String? @unique @db.Uuid
+  userId String? @unique @map("user_id") @db.Uuid
   user   User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
 
   // Relations
@@ -1003,14 +1003,14 @@ model Customer {
 //   (削除は次回の request 時に customerId 既存行を上書きするため蓄積しない)
 model PendingCustomerEmailChange {
   id                String    @id @default(uuid(7)) @db.Uuid
-  customerId        String    @db.Uuid
+  customerId        String    @map("customer_id") @db.Uuid
   customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  newEmail          String    @db.VarChar(320)
-  newEmailCanonical String    @db.VarChar(320)
-  tokenHash         String    @unique @db.VarChar(64) // sha256 hex
-  expiresAt         DateTime  @db.Timestamptz(6)
-  consumedAt        DateTime? @db.Timestamptz(6)
-  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  newEmail          String    @map("new_email") @db.VarChar(320)
+  newEmailCanonical String    @map("new_email_canonical") @db.VarChar(320)
+  tokenHash         String    @unique @map("token_hash") @db.VarChar(64) // sha256 hex
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt        DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([customerId])
   @@index([expiresAt])
@@ -1026,13 +1026,13 @@ model PendingCustomerEmailChange {
 // PendingCustomerEmailChange と同型 (sha256 hash + single-use + TTL)。
 model PendingCustomerMerge {
   id               String    @id @default(uuid(7)) @db.Uuid
-  targetCustomerId String    @db.Uuid
-  sourceCustomerId String    @db.Uuid
-  guestEmail       String    @db.VarChar(320)
-  tokenHash        String    @unique @db.VarChar(64)
-  expiresAt        DateTime  @db.Timestamptz(6)
-  consumedAt       DateTime? @db.Timestamptz(6)
-  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  targetCustomerId String    @map("target_customer_id") @db.Uuid
+  sourceCustomerId String    @map("source_customer_id") @db.Uuid
+  guestEmail       String    @map("guest_email") @db.VarChar(320)
+  tokenHash        String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt       DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   targetCustomer Customer @relation("MergeTarget", fields: [targetCustomerId], references: [id], onDelete: Cascade)
   sourceCustomer Customer @relation("MergeSource", fields: [sourceCustomerId], references: [id], onDelete: Cascade)
@@ -2653,7 +2653,7 @@ model Receipt {
   taxAmount           Int                @default(0)
   taxRate             Int
   // 発行時点の Settings snapshot (凍結)
-  issuerSnapshot      Json              
+  issuerSnapshot      Json
   // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。
   // 元 Receipt は監査証跡として残り、chain (reissuedTo) 経由で辿れる。
   // revision は「何回目の再発行か」を示す counter (元 = 0、1 回目 reissue = 1)。
