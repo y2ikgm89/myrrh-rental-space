@@ -57,7 +57,7 @@ export const spaceRatePlanFormSchema = z
       .min(0, { error: "時間料金は0以上で入力してください" })
       .max(1_000_000, { error: "時間料金が上限を超えています" }),
     daysOfWeek: z.array(z.enum(DayOfWeek)).default([]),
-    holidayMode: z.enum(HolidayMode).default(HolidayMode.any),
+    holidayMode: z.enum(HolidayMode).default(HolidayMode.ANY),
     startTime: z.preprocess(
       emptyToNull,
       z

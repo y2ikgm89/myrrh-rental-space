@@ -83,39 +83,39 @@ const ALL_ENUMS = {
   PostStatus: { DRAFT: "DRAFT", PUBLISHED: "PUBLISHED", ARCHIVED: "ARCHIVED" },
   CouponType: { PERCENTAGE: "PERCENTAGE", FIXED_AMOUNT: "FIXED_AMOUNT" },
   AnnouncementBarType: { info: "info", warning: "warning", promo: "promo" },
-  DiscountType: { none: "none", percentage: "percentage", fixed: "fixed" },
+  DiscountType: { NONE: "NONE", PERCENTAGE: "PERCENTAGE", FIXED: "FIXED" },
   DurationDiscountOverride: {
-    inherit: "inherit",
-    enabled: "enabled",
-    disabled: "disabled",
+    INHERIT: "INHERIT",
+    ENABLED: "ENABLED",
+    DISABLED: "DISABLED",
   },
-  TaxRateType: { standard: "standard", reduced: "reduced" },
+  TaxRateType: { STANDARD: "STANDARD", REDUCED: "REDUCED" },
   HeaderScrollBehavior: {
-    auto_hide: "auto_hide",
-    always_visible: "always_visible",
-    hide_on_scroll: "hide_on_scroll",
+    AUTO_HIDE: "AUTO_HIDE",
+    ALWAYS_VISIBLE: "ALWAYS_VISIBLE",
+    HIDE_ON_SCROLL: "HIDE_ON_SCROLL",
   },
-  HeaderBackgroundMode: { solid: "solid", transparent: "transparent" },
+  HeaderBackgroundMode: { SOLID: "SOLID", TRANSPARENT: "TRANSPARENT" },
   TaxDisplayMode: {
-    tax_excluded: "tax_excluded",
-    tax_included: "tax_included",
-    both: "both",
+    TAX_EXCLUDED: "TAX_EXCLUDED",
+    TAX_INCLUDED: "TAX_INCLUDED",
+    BOTH: "BOTH",
   },
-  CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
-  AnalyticsType: { ga4: "ga4", gtm: "gtm" },
-  DiscountCombinationMode: { best: "best", both: "both" },
+  CalendarSyncMethod: { POLLING: "POLLING", WEBHOOK: "WEBHOOK", BOTH: "BOTH" },
+  AnalyticsType: { ga4: "GA4", GTM: "GTM" },
+  DiscountCombinationMode: { BEST: "BEST", BOTH: "BOTH" },
   AnnouncementBarAnimation: {
-    fade: "fade",
-    slideX: "slideX",
-    slideY: "slideY",
+    FADE: "FADE",
+    SLIDE_X: "SLIDE_X",
+    SLIDE_Y: "SLIDE_Y",
   },
   AnnouncementBarDesignStyle: {
-    solid: "solid",
-    gradient: "gradient",
-    outlined: "outlined",
-    glass: "glass",
-    minimal: "minimal",
-    striped: "striped",
+    SOLID: "SOLID",
+    GRADIENT: "GRADIENT",
+    OUTLINED: "OUTLINED",
+    GLASS: "GLASS",
+    MINIMAL: "MINIMAL",
+    STRIPED: "STRIPED",
   },
   InstagramMediaType: {
     IMAGE: "IMAGE",
@@ -173,15 +173,15 @@ const BASE_DURATION_RULES: DurationDiscountRule[] = [
 ];
 
 const BASE_SPACE: SpaceDiscountSettings = {
-  discountType: "none",
+  discountType: "NONE",
   discountValue: null,
-  durationDiscountOverride: "inherit",
+  durationDiscountOverride: "INHERIT",
 };
 
 const BASE_SETTINGS: PriceCalculationSettings = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
-  discountCombinationMode: "best",
+  discountCombinationMode: "BEST",
 };
 
 // basePrice = 1000 * 2（旧テストの hourlyPrice:1000, hours:2 相当）
@@ -255,9 +255,9 @@ describe("calculateReservationPrice", () => {
   describe("スペース割引のみ", () => {
     test("パーセント割引が正しく適用される", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 10,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -269,16 +269,16 @@ describe("calculateReservationPrice", () => {
       expect(result.spaceDiscount).toBe(500);
       expect(result.totalPrice).toBe(4500);
       expect(result.appliedSpaceDiscount).toEqual({
-        type: "percentage",
+        type: "PERCENTAGE",
         value: 10,
       });
     });
 
     test("固定額割引が正しく適用される", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 800,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -293,9 +293,9 @@ describe("calculateReservationPrice", () => {
 
     test("スペース割引のみの場合 durationDiscount と couponDiscount は 0", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 20,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -309,9 +309,9 @@ describe("calculateReservationPrice", () => {
 
     test("総割引率を正しく計算する（パーセント割引 20% → 20%）", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 20,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -389,9 +389,9 @@ describe("calculateReservationPrice", () => {
 
     test("スペース割引適用後の価格に対して長時間割引を計算する", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 1000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -463,9 +463,9 @@ describe("calculateReservationPrice", () => {
 
     test("スペース割引・長時間割引適用後の価格にクーポンを計算する", () => {
       const space: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 500,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
@@ -476,7 +476,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: PERCENTAGE_COUPON,
       });
@@ -509,7 +509,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "best",
+          discountCombinationMode: "BEST",
         },
         coupon: smallCoupon,
       });
@@ -545,7 +545,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "best",
+          discountCombinationMode: "BEST",
         },
         coupon: bigCoupon,
       });
@@ -566,7 +566,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "best",
+          discountCombinationMode: "BEST",
         },
       });
       expect(result.warnings).toEqual([]);
@@ -590,7 +590,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "best",
+          discountCombinationMode: "BEST",
         },
         coupon: smallCoupon,
         showWarning: false,
@@ -613,7 +613,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: combinableCoupon,
       });
@@ -634,7 +634,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: nonCombinableCoupon,
       });
@@ -660,7 +660,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: combinableCoupon,
       });
@@ -682,7 +682,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: combinableCoupon,
         showWarning: false,
@@ -703,9 +703,9 @@ describe("calculateReservationPrice", () => {
           durationDiscountEnabled: true,
         },
         space: {
-          discountType: "none",
+          discountType: "NONE",
           discountValue: null,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       expect(result.durationDiscount).toBeGreaterThan(0);
@@ -722,9 +722,9 @@ describe("calculateReservationPrice", () => {
           durationDiscountEnabled: false,
         },
         space: {
-          discountType: "none",
+          discountType: "NONE",
           discountValue: null,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       expect(result.durationDiscount).toBe(0);
@@ -741,9 +741,9 @@ describe("calculateReservationPrice", () => {
           durationDiscountEnabled: false, // グローバルは無効
         },
         space: {
-          discountType: "none",
+          discountType: "NONE",
           discountValue: null,
-          durationDiscountOverride: "enabled", // スペースで強制有効
+          durationDiscountOverride: "ENABLED", // スペースで強制有効
         },
       });
       expect(result.durationDiscount).toBeGreaterThan(0);
@@ -760,9 +760,9 @@ describe("calculateReservationPrice", () => {
           durationDiscountEnabled: true, // グローバルは有効
         },
         space: {
-          discountType: "none",
+          discountType: "NONE",
           discountValue: null,
-          durationDiscountOverride: "disabled", // スペースで強制無効
+          durationDiscountOverride: "DISABLED", // スペースで強制無効
         },
       });
       expect(result.durationDiscount).toBe(0);
@@ -781,9 +781,9 @@ describe("calculateReservationPrice", () => {
         basePrice: 5000,
         totalHours: 5,
         space: {
-          discountType: "percentage",
+          discountType: "PERCENTAGE",
           discountValue: 20,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       expect(result.totalDiscountRate).toBe(20);
@@ -800,12 +800,12 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         space: {
-          discountType: "percentage",
+          discountType: "PERCENTAGE",
           discountValue: 10,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       // spaceDiscount = 500, priceAfterSpace = 4500, durationDiscount = 450
@@ -833,13 +833,13 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "both",
+          discountCombinationMode: "BOTH",
         },
         coupon: massiveCoupon,
         space: {
-          discountType: "percentage",
+          discountType: "PERCENTAGE",
           discountValue: 50,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       expect(result.totalPrice).toBeGreaterThanOrEqual(0);
@@ -869,9 +869,9 @@ describe("calculateReservationPrice", () => {
         basePrice: 5000,
         totalHours: 5,
         space: {
-          discountType: "none",
+          discountType: "NONE",
           discountValue: null,
-          durationDiscountOverride: "inherit",
+          durationDiscountOverride: "INHERIT",
         },
       });
       expect(result.spaceDiscount).toBe(0);
@@ -909,7 +909,7 @@ describe("calculateReservationPrice", () => {
           ...BASE_SETTINGS,
           durationDiscountRules: BASE_DURATION_RULES,
           durationDiscountEnabled: true,
-          discountCombinationMode: "best",
+          discountCombinationMode: "BEST",
         },
         coupon: smallCoupon,
       });

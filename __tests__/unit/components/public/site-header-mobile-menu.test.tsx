@@ -160,8 +160,8 @@ function renderHeader(
       brand={brand}
       navItems={navItems}
       mobileNavItems={mobileNavItems}
-      scrollBehavior={HeaderScrollBehavior.always_visible}
-      backgroundMode={HeaderBackgroundMode.transparent}
+      scrollBehavior={HeaderScrollBehavior.ALWAYS_VISIBLE}
+      backgroundMode={HeaderBackgroundMode.TRANSPARENT}
     />,
   );
 }

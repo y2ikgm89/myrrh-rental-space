@@ -39,10 +39,10 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     addressDetail: null,
     capacity: 10,
     hourlyPrice: 1000,
-    discountType: "none",
+    discountType: "NONE",
     discountValue: null,
     durationDiscountOverride: "use_global",
-    taxRateType: "standard",
+    taxRateType: "STANDARD",
     locationId: "loc-1",
     location: { address: "東京都渋谷区1-1-1" },
   }),
@@ -78,10 +78,10 @@ const mockSettingsCommerceFindUnique = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: null,
-    discountCombinationMode: "best",
+    discountCombinationMode: "BEST",
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
+    taxDisplayModePublic: "TAX_INCLUDED",
     showOriginalPrice: true,
   }),
 );
@@ -102,10 +102,10 @@ const mockSpaceFindUniqueTx = mock<() => Promise<unknown>>(() =>
     locationId: "loc-1",
     capacity: 10,
     hourlyPrice: 1000,
-    discountType: "none",
+    discountType: "NONE",
     discountValue: null,
     durationDiscountOverride: "use_global",
-    taxRateType: "standard",
+    taxRateType: "STANDARD",
   }),
 );
 const mockTxReservationFindFirst = mock<() => Promise<unknown>>(() =>
@@ -131,10 +131,10 @@ const mockSettingsCommerceFindFirst = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: null,
-    discountCombinationMode: "best",
+    discountCombinationMode: "BEST",
     taxStandardRate: 10,
     taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
+    taxDisplayModePublic: "TAX_INCLUDED",
     showOriginalPrice: true,
   }),
 );
@@ -263,10 +263,10 @@ describe("public booking gates — createPublicReservationCommand", () => {
       addressDetail: null,
       capacity: 10,
       hourlyPrice: 1000,
-      discountType: "none",
+      discountType: "NONE",
       discountValue: null,
       durationDiscountOverride: "use_global",
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       locationId: "loc-1",
       location: { address: "東京都渋谷区1-1-1" },
     });
@@ -352,10 +352,10 @@ describe("public booking gates — updateCustomerReservation", () => {
       locationId: "loc-1",
       capacity: 10,
       hourlyPrice: 1000,
-      discountType: "none",
+      discountType: "NONE",
       discountValue: null,
       durationDiscountOverride: "use_global",
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
     });
     mockTxReservationFindFirst.mockClear();
     mockTxReservationFindFirst.mockResolvedValue({

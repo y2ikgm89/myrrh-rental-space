@@ -85,7 +85,7 @@ function reservationInsert(overrides: {
     ) VALUES (
       gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}',
       now(), now() + interval '1 hour', 'PENDING', 'UNPAID',
-      ${overrides.basePrice ?? "0"}, 0, '{}'::jsonb, 'standard',
+      ${overrides.basePrice ?? "0"}, 0, '{}'::jsonb, 'STANDARD',
       ${overrides.taxRate ?? "10"}, 0, 0, now(), now()
     )`;
 }
@@ -147,7 +147,7 @@ describe("値域 CHECK 制約", () => {
   test("パーセント割引のスペースに 100 を超える割引値を入れられない", async () => {
     await expectRejectedBy(
       "spaces_discount_value_range_check",
-      spaceInsert({ discount: `'percentage'::"DiscountType", 101` }),
+      spaceInsert({ discount: `'PERCENTAGE'::discount_type, 101` }),
     );
   });
 

@@ -54,7 +54,7 @@ const TEMPLATE_DATA = {
     totalBasePrice: 5000,
     holidayFlags: {},
   },
-  taxRateType: TaxRateType.standard,
+  taxRateType: TaxRateType.STANDARD,
   taxRate: 10,
   taxAmount: 500,
   totalPriceWithTax: 5500,

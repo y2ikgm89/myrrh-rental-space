@@ -179,7 +179,7 @@ export async function POST(request: Request) {
 
     // 同期方式を確認（webhookまたはbothの場合のみ実行）
     const syncSettings = await getTwoWaySyncSettings();
-    if (syncSettings.syncMethod === CalendarSyncMethod.polling) {
+    if (syncSettings.syncMethod === CalendarSyncMethod.POLLING) {
       return acknowledgeNotification({ pollingOnly: true });
     }
 

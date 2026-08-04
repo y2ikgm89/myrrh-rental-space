@@ -19,7 +19,7 @@ const plan = (
   name: "test",
   hourlyPrice: 3000,
   daysOfWeek: [],
-  holidayMode: HolidayMode.any,
+  holidayMode: HolidayMode.ANY,
   startTime: null,
   endTime: null,
   effectiveFrom: null,
@@ -129,7 +129,7 @@ describe("resolveRateBreakdown", () => {
       id: "h",
       name: "祝日料金",
       hourlyPrice: 5000,
-      holidayMode: HolidayMode.only,
+      holidayMode: HolidayMode.ONLY,
     });
     // 2026-05-05 (火) は祝日
     const result = resolveRateBreakdown({
@@ -148,7 +148,7 @@ describe("resolveRateBreakdown", () => {
       id: "wd",
       name: "平日料金",
       hourlyPrice: 3000,
-      holidayMode: HolidayMode.exclude,
+      holidayMode: HolidayMode.EXCLUDE,
     });
     const result = resolveRateBreakdown({
       ratePlans: [weekdayPlan],

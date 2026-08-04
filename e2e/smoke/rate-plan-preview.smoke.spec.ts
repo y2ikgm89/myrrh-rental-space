@@ -15,13 +15,13 @@ import { visibleById } from "../helpers/streaming-safe-locators";
  * 反映されることを検証する。公開予約 UI はプラン名自体を表示しないため（内部実装の
  * 詳細）、「反映されている」ことは金額そのものをロックダウンして証明する:
  *
- *   週末料金プラン: daysOfWeek=[FRIDAY,SATURDAY,SUNDAY], holidayMode="any",
+ *   週末料金プラン: daysOfWeek=[FRIDAY,SATURDAY,SUNDAY], holidayMode="ANY",
  *   hourlyPrice = round(coworking-space.hourlyPrice(500) * 1.3) = 650
  *   → 2 時間分の base price = 650 * 2 = 1,300
  *   → 標準税率 10%・tax_included 表示（Settings 既定）で
  *     totalPriceWithTax = round(1,300 * 1.1) = 1,430 → 「¥1,430（税込）」
  *
- * 祝日料金プラン（holidayMode="only"、last-updated-wins で週末料金より優先され得る）
+ * 祝日料金プラン（holidayMode="ONLY"、last-updated-wins で週末料金より優先され得る）
  * と競合しないよう、選択日は日本の祝日ではない金曜日を実行時に動的選定する。
  * `prisma/seed.ts` の `seedReservations` はデモ予約を実行時点から最大 +30 日の
  * 範囲にのみ生成するため、それより十分先の日付を選んで衝突を避ける。

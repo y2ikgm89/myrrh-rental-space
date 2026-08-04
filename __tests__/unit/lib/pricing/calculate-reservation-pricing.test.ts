@@ -6,19 +6,19 @@ const noHoliday = () => false;
 
 const baseSpace = {
   hourlyPrice: 2000,
-  discountType: "none" as const,
+  discountType: "NONE" as const,
   discountValue: null,
-  durationDiscountOverride: "inherit" as const,
-  taxRateType: "standard" as const,
+  durationDiscountOverride: "INHERIT" as const,
+  taxRateType: "STANDARD" as const,
 };
 
 const baseSettings = {
   taxStandardRate: 10,
   taxReducedRate: 8,
-  taxDisplayModePublic: "tax_included" as const,
+  taxDisplayModePublic: "TAX_INCLUDED" as const,
   durationDiscountEnabled: false,
   durationDiscountRules: null,
-  discountCombinationMode: "best" as const,
+  discountCombinationMode: "BEST" as const,
   showOriginalPrice: false,
 };
 
@@ -52,7 +52,7 @@ describe("calculateReservationPricing", () => {
           name: "金曜料金",
           hourlyPrice: 4000,
           daysOfWeek: ["FRIDAY"],
-          holidayMode: "any",
+          holidayMode: "ANY",
           startTime: null,
           endTime: null,
           effectiveFrom: null,
@@ -71,7 +71,7 @@ describe("calculateReservationPricing", () => {
     const result = calculateReservationPricing({
       startDateTime: jst("2026-07-15T10:00"),
       endDateTime: jst("2026-07-15T12:00"),
-      space: { ...baseSpace, discountType: "percentage", discountValue: 10 },
+      space: { ...baseSpace, discountType: "PERCENTAGE", discountValue: 10 },
       ratePlans: [],
       reservationSettings: baseSettings,
       coupon: null,
@@ -105,7 +105,7 @@ describe("calculateReservationPricing", () => {
           { hours: 5, discountRate: 10 },
           { hours: 8, discountRate: 20 },
         ],
-        discountCombinationMode: "best",
+        discountCombinationMode: "BEST",
       },
       coupon: smallCoupon,
       holidayJudge: noHoliday,
@@ -135,7 +135,7 @@ describe("calculateReservationPricing", () => {
         ...baseSettings,
         durationDiscountEnabled: true,
         durationDiscountRules: [{ hours: 3, discountRate: 5 }],
-        discountCombinationMode: "best",
+        discountCombinationMode: "BEST",
       },
       coupon: bigCoupon,
       holidayJudge: noHoliday,

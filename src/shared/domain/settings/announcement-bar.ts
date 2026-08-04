@@ -217,13 +217,13 @@ export async function ensureSettingsAnnouncementCarousel() {
 }
 
 const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
-  announcementBarAnimation: AnnouncementBarAnimation.fade,
+  announcementBarAnimation: AnnouncementBarAnimation.FADE,
   announcementBarDuration: 5000,
   announcementBarAutoPlay: true,
   announcementBarPauseOnHover: true,
   announcementBarShowArrows: true,
   announcementBarShowIndicator: true,
-  announcementBarDesignStyle: AnnouncementBarDesignStyle.solid,
+  announcementBarDesignStyle: AnnouncementBarDesignStyle.SOLID,
   announcementBarBgColor: null,
   announcementBarTextColor: null,
   announcementBarStripeColor: null,

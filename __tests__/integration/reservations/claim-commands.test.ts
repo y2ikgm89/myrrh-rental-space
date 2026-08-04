@@ -77,7 +77,7 @@ async function createGuestReservationWithCustomer() {
         totalBasePrice: 0,
         holidayFlags: {},
       },
-      taxRateType: TaxRateType.standard,
+      taxRateType: TaxRateType.STANDARD,
       taxRate: 10,
       taxAmount: 100,
       totalPriceWithTax: 1100,

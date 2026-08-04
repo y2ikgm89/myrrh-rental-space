@@ -243,19 +243,19 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={CalendarSyncMethod.polling}>
+                      <SelectItem value={CalendarSyncMethod.POLLING}>
                         <div className="flex items-center gap-2">
                           <IconClock className="h-4 w-4" aria-hidden="true" />
                           ポーリングのみ
                         </div>
                       </SelectItem>
-                      <SelectItem value={CalendarSyncMethod.webhook}>
+                      <SelectItem value={CalendarSyncMethod.WEBHOOK}>
                         <div className="flex items-center gap-2">
                           <IconWebhook className="h-4 w-4" aria-hidden="true" />
                           Webhookのみ
                         </div>
                       </SelectItem>
-                      <SelectItem value={CalendarSyncMethod.both}>
+                      <SelectItem value={CalendarSyncMethod.BOTH}>
                         <div className="flex items-center gap-2">
                           <IconRefresh className="h-4 w-4" aria-hidden="true" />
                           両方使用（推奨）
@@ -264,11 +264,11 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-muted-foreground">
-                    {syncMethod === CalendarSyncMethod.polling &&
+                    {syncMethod === CalendarSyncMethod.POLLING &&
                       "ポーリング: 定期的にカレンダーをチェック（5分ごと推奨）"}
-                    {syncMethod === CalendarSyncMethod.webhook &&
+                    {syncMethod === CalendarSyncMethod.WEBHOOK &&
                       "Webhook: カレンダー変更時に即座に通知を受信"}
-                    {syncMethod === CalendarSyncMethod.both &&
+                    {syncMethod === CalendarSyncMethod.BOTH &&
                       "Webhookで即時同期 + ポーリングでバックアップ"}
                   </p>
                   {fields.syncMethod.errors && (
@@ -283,8 +283,8 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
               </div>
 
               {/* Webhook設定 */}
-              {(syncMethod === CalendarSyncMethod.webhook ||
-                syncMethod === CalendarSyncMethod.both) && (
+              {(syncMethod === CalendarSyncMethod.WEBHOOK ||
+                syncMethod === CalendarSyncMethod.BOTH) && (
                 <div className="rounded-lg border p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">

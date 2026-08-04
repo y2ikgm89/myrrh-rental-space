@@ -47,11 +47,11 @@ export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
   const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
 
   switch (displayMode) {
-    case TaxDisplayMode.tax_excluded:
+    case TaxDisplayMode.TAX_EXCLUDED:
       return `${formatCurrency(taxExcludedPrice)}（税抜）`;
-    case TaxDisplayMode.tax_included:
+    case TaxDisplayMode.TAX_INCLUDED:
       return `${formatCurrency(taxIncludedPrice)}（税込）`;
-    case TaxDisplayMode.both:
+    case TaxDisplayMode.BOTH:
       return `${formatCurrency(taxIncludedPrice)}（税込）/ ${formatCurrency(taxExcludedPrice)}（税抜）`;
   }
 }
@@ -66,11 +66,11 @@ export function formatUnitPriceWithTax(
   const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
 
   switch (displayMode) {
-    case TaxDisplayMode.tax_excluded:
+    case TaxDisplayMode.TAX_EXCLUDED:
       return `${formatCurrency(taxExcludedPrice)}${unit}（税抜）`;
-    case TaxDisplayMode.tax_included:
+    case TaxDisplayMode.TAX_INCLUDED:
       return `${formatCurrency(taxIncludedPrice)}${unit}（税込）`;
-    case TaxDisplayMode.both:
+    case TaxDisplayMode.BOTH:
       return `${formatCurrency(taxIncludedPrice)}${unit}（税込）`;
   }
 }
@@ -81,7 +81,7 @@ export function getTaxRateLabel(
   taxRate: number,
 ): string {
   const typeLabel =
-    taxRateType === TaxRateType.reduced ? "軽減税率" : "標準税率";
+    taxRateType === TaxRateType.REDUCED ? "軽減税率" : "標準税率";
   return `${typeLabel}（${taxRate}%）`;
 }
 
@@ -103,7 +103,7 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
 
   if (calculation.appliedSpaceDiscount) {
     const label =
-      calculation.appliedSpaceDiscount.type === DiscountType.percentage
+      calculation.appliedSpaceDiscount.type === DiscountType.PERCENTAGE
         ? `${calculation.appliedSpaceDiscount.value}%OFF`
         : `${formatCurrency(calculation.appliedSpaceDiscount.value)}OFF`;
     summaries.push(

@@ -360,7 +360,7 @@ export function Header({
           if (isScrolled === next) return;
           isScrolled = next;
           setScrolled(next);
-          if (backgroundMode === HeaderBackgroundMode.solid) return;
+          if (backgroundMode === HeaderBackgroundMode.SOLID) return;
           if (next) {
             header.style.backgroundColor =
               "color-mix(in oklch, var(--color-background) 85%, transparent)";
@@ -380,7 +380,7 @@ export function Header({
 
             updateScrolled(scroll > SCROLL_THRESHOLD);
 
-            if (scrollBehavior === HeaderScrollBehavior.always_visible) return;
+            if (scrollBehavior === HeaderScrollBehavior.ALWAYS_VISIBLE) return;
 
             if (scroll <= SCROLL_THRESHOLD) {
               show();
@@ -397,7 +397,7 @@ export function Header({
             }
 
             if (direction === 1) {
-              if (scrollBehavior === HeaderScrollBehavior.hide_on_scroll) {
+              if (scrollBehavior === HeaderScrollBehavior.HIDE_ON_SCROLL) {
                 hide();
               } else {
                 accumulated += delta;
@@ -431,7 +431,7 @@ export function Header({
         // pt-[var(--header-safe-top)]: edge-to-edge 時にノッチを避ける（announcement
         // bar が在るときは 0 に補正。ResizeObserver が含めて --header-height を再公開）。
         "sticky top-[var(--announcement-bar-height,0px)] z-40 pt-[var(--header-safe-top)] transition-[background-color,backdrop-filter,box-shadow,border-color,translate] duration-300",
-        backgroundMode === HeaderBackgroundMode.transparent
+        backgroundMode === HeaderBackgroundMode.TRANSPARENT
           ? "bg-transparent"
           : "bg-background",
         scrolled && "border-b border-border/50",

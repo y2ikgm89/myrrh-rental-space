@@ -155,7 +155,7 @@ export function CarouselSettingsPanel({
 
           {/* ストライプ設定（stripedスタイル選択時のみ） */}
           {settings.announcementBarDesignStyle ===
-            AnnouncementBarDesignStyle.striped && (
+            AnnouncementBarDesignStyle.STRIPED && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">ストライプ設定</h4>
 
@@ -212,7 +212,7 @@ export function CarouselSettingsPanel({
 
           {/* グラデーション設定（gradientスタイル選択時のみ） */}
           {settings.announcementBarDesignStyle ===
-            AnnouncementBarDesignStyle.gradient && (
+            AnnouncementBarDesignStyle.GRADIENT && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラデーション設定</h4>
 
@@ -242,7 +242,7 @@ export function CarouselSettingsPanel({
 
           {/* グラス設定（glassスタイル選択時のみ） */}
           {settings.announcementBarDesignStyle ===
-            AnnouncementBarDesignStyle.glass && (
+            AnnouncementBarDesignStyle.GLASS && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラス設定</h4>
 

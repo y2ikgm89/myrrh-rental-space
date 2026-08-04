@@ -33,7 +33,7 @@ export function DesignPreview({
   };
 
   // ストライプスタイル（共通ユーティリティを使用）
-  if (designStyle === AnnouncementBarDesignStyle.striped) {
+  if (designStyle === AnnouncementBarDesignStyle.STRIPED) {
     const baseColor = bgColor || defaultColors.hex;
     const stripedStyles = getStripedStyle(
       baseColor,
@@ -45,7 +45,7 @@ export function DesignPreview({
 
   // グラデーションアニメーション
   if (
-    designStyle === AnnouncementBarDesignStyle.gradient &&
+    designStyle === AnnouncementBarDesignStyle.GRADIENT &&
     gradientAnimation
   ) {
     customStyles = {
@@ -56,7 +56,7 @@ export function DesignPreview({
   }
 
   // グラスアニメーション用
-  if (designStyle === AnnouncementBarDesignStyle.glass && glassAnimation) {
+  if (designStyle === AnnouncementBarDesignStyle.GLASS && glassAnimation) {
     customStyles = {
       ...customStyles,
       position: "relative",
@@ -67,17 +67,17 @@ export function DesignPreview({
   // デザインスタイル別のクラス
   function getStyleClasses(): string {
     switch (designStyle) {
-      case AnnouncementBarDesignStyle.solid:
+      case AnnouncementBarDesignStyle.SOLID:
         return !bgColor ? defaultColors.bg : "";
-      case AnnouncementBarDesignStyle.gradient:
+      case AnnouncementBarDesignStyle.GRADIENT:
         return `bg-gradient-to-r ${defaultColors.gradient}`;
-      case AnnouncementBarDesignStyle.outlined:
+      case AnnouncementBarDesignStyle.OUTLINED:
         return "bg-transparent border-y border-border";
-      case AnnouncementBarDesignStyle.glass:
+      case AnnouncementBarDesignStyle.GLASS:
         return "backdrop-blur-md bg-card/10 border-y border-card/20";
-      case AnnouncementBarDesignStyle.minimal:
+      case AnnouncementBarDesignStyle.MINIMAL:
         return "bg-transparent border-b border-border";
-      case AnnouncementBarDesignStyle.striped:
+      case AnnouncementBarDesignStyle.STRIPED:
         return !bgColor ? defaultColors.bg : "";
       default:
         return "";
@@ -87,13 +87,13 @@ export function DesignPreview({
   function getTextClasses(): string {
     if (textColor) return "";
     switch (designStyle) {
-      case AnnouncementBarDesignStyle.solid:
-      case AnnouncementBarDesignStyle.gradient:
-      case AnnouncementBarDesignStyle.glass:
-      case AnnouncementBarDesignStyle.striped:
+      case AnnouncementBarDesignStyle.SOLID:
+      case AnnouncementBarDesignStyle.GRADIENT:
+      case AnnouncementBarDesignStyle.GLASS:
+      case AnnouncementBarDesignStyle.STRIPED:
         return "text-primary-foreground";
-      case AnnouncementBarDesignStyle.outlined:
-      case AnnouncementBarDesignStyle.minimal:
+      case AnnouncementBarDesignStyle.OUTLINED:
+      case AnnouncementBarDesignStyle.MINIMAL:
         return "text-foreground";
       default:
         return "";
@@ -113,7 +113,7 @@ export function DesignPreview({
       )}
     >
       {/* グラスシマーオーバーレイ */}
-      {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.GLASS && glassAnimation && (
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
           aria-hidden="true"

@@ -24,7 +24,7 @@ let webhookState: GoogleCalendarWebhookState = { ...webhookStateBase };
 let twoWaySyncEnabled = true;
 let twoWaySyncSettings: TwoWaySyncSettingsData = {
   enabled: true,
-  syncMethod: CalendarSyncMethod.webhook,
+  syncMethod: CalendarSyncMethod.WEBHOOK,
   lastSyncedAt: null,
   webhookExpiration: null,
 };
@@ -152,7 +152,7 @@ describe("POST /api/webhooks/google-calendar", () => {
     twoWaySyncEnabled = true;
     twoWaySyncSettings = {
       enabled: true,
-      syncMethod: CalendarSyncMethod.webhook,
+      syncMethod: CalendarSyncMethod.WEBHOOK,
       lastSyncedAt: null,
       webhookExpiration: null,
     };

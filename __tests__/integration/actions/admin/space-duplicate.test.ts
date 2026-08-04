@@ -102,10 +102,10 @@ const SOURCE_SPACE = {
   ogpDescription: null,
   ogpImageUrl: null,
   termsId: null,
-  discountType: "none",
+  discountType: "NONE",
   discountValue: null,
-  durationDiscountOverride: "inherit",
-  taxRateType: "standard",
+  durationDiscountOverride: "INHERIT",
+  taxRateType: "STANDARD",
   locationId: "00000000-0000-0000-0000-000000000001",
   categoryId: null,
 };

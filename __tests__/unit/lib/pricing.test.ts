@@ -47,21 +47,22 @@ import type {
 // =============================================================================
 
 describe("isValidDiscountType", () => {
-  test('有効な値 "none" で true を返す', () => {
-    expect(isValidDiscountType("none")).toBe(true);
+  test('有効な値 "NONE" で true を返す', () => {
+    expect(isValidDiscountType("NONE")).toBe(true);
   });
 
-  test('有効な値 "percentage" で true を返す', () => {
-    expect(isValidDiscountType("percentage")).toBe(true);
+  test('有効な値 "PERCENTAGE" で true を返す', () => {
+    expect(isValidDiscountType("PERCENTAGE")).toBe(true);
   });
 
-  test('有効な値 "fixed" で true を返す', () => {
-    expect(isValidDiscountType("fixed")).toBe(true);
+  test('有効な値 "FIXED" で true を返す', () => {
+    expect(isValidDiscountType("FIXED")).toBe(true);
   });
 
   test("無効な文字列で false を返す", () => {
     expect(isValidDiscountType("invalid")).toBe(false);
-    expect(isValidDiscountType("PERCENTAGE")).toBe(false);
+    // ケース感度のプローブ。正準形が UPPER_SNAKE になったので、弾かれる側は小文字。
+    expect(isValidDiscountType("percentage")).toBe(false);
     expect(isValidDiscountType("")).toBe(false);
   });
 
@@ -76,40 +77,41 @@ describe("isValidDiscountType", () => {
 
 describe("getValidDiscountType", () => {
   test("有効な値をそのまま返す", () => {
-    expect(getValidDiscountType("none")).toBe("none");
-    expect(getValidDiscountType("percentage")).toBe("percentage");
-    expect(getValidDiscountType("fixed")).toBe("fixed");
+    expect(getValidDiscountType("NONE")).toBe("NONE");
+    expect(getValidDiscountType("PERCENTAGE")).toBe("PERCENTAGE");
+    expect(getValidDiscountType("FIXED")).toBe("FIXED");
   });
 
-  test('無効な値でデフォルト "none" を返す', () => {
-    expect(getValidDiscountType("invalid")).toBe("none");
-    expect(getValidDiscountType("")).toBe("none");
+  test('無効な値でデフォルト "NONE" を返す', () => {
+    expect(getValidDiscountType("invalid")).toBe("NONE");
+    expect(getValidDiscountType("")).toBe("NONE");
   });
 
-  test('null でデフォルト "none" を返す', () => {
-    expect(getValidDiscountType(null)).toBe("none");
+  test('null でデフォルト "NONE" を返す', () => {
+    expect(getValidDiscountType(null)).toBe("NONE");
   });
 
-  test('undefined でデフォルト "none" を返す', () => {
-    expect(getValidDiscountType(undefined)).toBe("none");
+  test('undefined でデフォルト "NONE" を返す', () => {
+    expect(getValidDiscountType(undefined)).toBe("NONE");
   });
 
   test("カスタムデフォルト値を返す", () => {
-    expect(getValidDiscountType(null, "percentage")).toBe("percentage");
-    expect(getValidDiscountType("invalid", "fixed")).toBe("fixed");
+    expect(getValidDiscountType(null, "PERCENTAGE")).toBe("PERCENTAGE");
+    expect(getValidDiscountType("invalid", "FIXED")).toBe("FIXED");
   });
 });
 
 describe("isValidDurationDiscountOverride", () => {
   test("有効な値で true を返す", () => {
-    expect(isValidDurationDiscountOverride("inherit")).toBe(true);
-    expect(isValidDurationDiscountOverride("enabled")).toBe(true);
-    expect(isValidDurationDiscountOverride("disabled")).toBe(true);
+    expect(isValidDurationDiscountOverride("INHERIT")).toBe(true);
+    expect(isValidDurationDiscountOverride("ENABLED")).toBe(true);
+    expect(isValidDurationDiscountOverride("DISABLED")).toBe(true);
   });
 
   test("無効な文字列で false を返す", () => {
     expect(isValidDurationDiscountOverride("invalid")).toBe(false);
-    expect(isValidDurationDiscountOverride("INHERIT")).toBe(false);
+    // ケース感度のプローブ。正準形が UPPER_SNAKE になったので、弾かれる側は小文字。
+    expect(isValidDurationDiscountOverride("inherit")).toBe(false);
     expect(isValidDurationDiscountOverride("")).toBe(false);
   });
 
@@ -122,37 +124,38 @@ describe("isValidDurationDiscountOverride", () => {
 
 describe("getValidDurationDiscountOverride", () => {
   test("有効な値をそのまま返す", () => {
-    expect(getValidDurationDiscountOverride("inherit")).toBe("inherit");
-    expect(getValidDurationDiscountOverride("enabled")).toBe("enabled");
-    expect(getValidDurationDiscountOverride("disabled")).toBe("disabled");
+    expect(getValidDurationDiscountOverride("INHERIT")).toBe("INHERIT");
+    expect(getValidDurationDiscountOverride("ENABLED")).toBe("ENABLED");
+    expect(getValidDurationDiscountOverride("DISABLED")).toBe("DISABLED");
   });
 
-  test('無効な値でデフォルト "inherit" を返す', () => {
-    expect(getValidDurationDiscountOverride("invalid")).toBe("inherit");
+  test('無効な値でデフォルト "INHERIT" を返す', () => {
+    expect(getValidDurationDiscountOverride("invalid")).toBe("INHERIT");
   });
 
-  test('null でデフォルト "inherit" を返す', () => {
-    expect(getValidDurationDiscountOverride(null)).toBe("inherit");
+  test('null でデフォルト "INHERIT" を返す', () => {
+    expect(getValidDurationDiscountOverride(null)).toBe("INHERIT");
   });
 
-  test('undefined でデフォルト "inherit" を返す', () => {
-    expect(getValidDurationDiscountOverride(undefined)).toBe("inherit");
+  test('undefined でデフォルト "INHERIT" を返す', () => {
+    expect(getValidDurationDiscountOverride(undefined)).toBe("INHERIT");
   });
 
   test("カスタムデフォルト値を返す", () => {
-    expect(getValidDurationDiscountOverride(null, "enabled")).toBe("enabled");
+    expect(getValidDurationDiscountOverride(null, "ENABLED")).toBe("ENABLED");
   });
 });
 
 describe("isValidDiscountCombinationMode", () => {
   test("有効な値で true を返す", () => {
-    expect(isValidDiscountCombinationMode("best")).toBe(true);
-    expect(isValidDiscountCombinationMode("both")).toBe(true);
+    expect(isValidDiscountCombinationMode("BEST")).toBe(true);
+    expect(isValidDiscountCombinationMode("BOTH")).toBe(true);
   });
 
   test("無効な文字列で false を返す", () => {
     expect(isValidDiscountCombinationMode("invalid")).toBe(false);
-    expect(isValidDiscountCombinationMode("BEST")).toBe(false);
+    // ケース感度のプローブ。正準形が UPPER_SNAKE になったので、弾かれる側は小文字。
+    expect(isValidDiscountCombinationMode("best")).toBe(false);
     expect(isValidDiscountCombinationMode("")).toBe(false);
   });
 
@@ -165,24 +168,24 @@ describe("isValidDiscountCombinationMode", () => {
 
 describe("getValidDiscountCombinationMode", () => {
   test("有効な値をそのまま返す", () => {
-    expect(getValidDiscountCombinationMode("best")).toBe("best");
-    expect(getValidDiscountCombinationMode("both")).toBe("both");
+    expect(getValidDiscountCombinationMode("BEST")).toBe("BEST");
+    expect(getValidDiscountCombinationMode("BOTH")).toBe("BOTH");
   });
 
-  test('無効な値でデフォルト "best" を返す', () => {
-    expect(getValidDiscountCombinationMode("invalid")).toBe("best");
+  test('無効な値でデフォルト "BEST" を返す', () => {
+    expect(getValidDiscountCombinationMode("invalid")).toBe("BEST");
   });
 
-  test('null でデフォルト "best" を返す', () => {
-    expect(getValidDiscountCombinationMode(null)).toBe("best");
+  test('null でデフォルト "BEST" を返す', () => {
+    expect(getValidDiscountCombinationMode(null)).toBe("BEST");
   });
 
-  test('undefined でデフォルト "best" を返す', () => {
-    expect(getValidDiscountCombinationMode(undefined)).toBe("best");
+  test('undefined でデフォルト "BEST" を返す', () => {
+    expect(getValidDiscountCombinationMode(undefined)).toBe("BEST");
   });
 
   test("カスタムデフォルト値を返す", () => {
-    expect(getValidDiscountCombinationMode(null, "both")).toBe("both");
+    expect(getValidDiscountCombinationMode(null, "BOTH")).toBe("BOTH");
   });
 });
 
@@ -203,11 +206,11 @@ describe("calculateSpaceDiscount", () => {
     expect(result.applied).toBeNull();
   });
 
-  test('discountTypeが "none" の場合、割引なしを返す', () => {
+  test('discountTypeが "NONE" の場合、割引なしを返す', () => {
     const settings: SpaceDiscountSettings = {
-      discountType: "none",
+      discountType: "NONE",
       discountValue: 10,
-      durationDiscountOverride: "inherit",
+      durationDiscountOverride: "INHERIT",
     };
     const result = calculateSpaceDiscount(10000, settings);
     expect(result.discount).toBe(0);
@@ -216,9 +219,9 @@ describe("calculateSpaceDiscount", () => {
 
   test("discountValueがnullの場合、割引なしを返す", () => {
     const settings: SpaceDiscountSettings = {
-      discountType: "percentage",
+      discountType: "PERCENTAGE",
       discountValue: null,
-      durationDiscountOverride: "inherit",
+      durationDiscountOverride: "INHERIT",
     };
     const result = calculateSpaceDiscount(10000, settings);
     expect(result.discount).toBe(0);
@@ -228,31 +231,31 @@ describe("calculateSpaceDiscount", () => {
   describe("パーセント割引", () => {
     test("10%割引を正しく計算する", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 10,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(1000);
-      expect(result.applied).toEqual({ type: "percentage", value: 10 });
+      expect(result.applied).toEqual({ type: "PERCENTAGE", value: 10 });
     });
 
     test("50%割引を正しく計算する", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 50,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(5000);
-      expect(result.applied).toEqual({ type: "percentage", value: 50 });
+      expect(result.applied).toEqual({ type: "PERCENTAGE", value: 50 });
     });
 
     test("端数がfloorされる（切り捨て）", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 33,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       // 10000 * 33 / 100 = 3300
       const result = calculateSpaceDiscount(10000, settings);
@@ -265,9 +268,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("100%割引で基本料金全額を返す", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 100,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(10000);
@@ -275,9 +278,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("0%割引で0を返す", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "percentage",
+        discountType: "PERCENTAGE",
         discountValue: 0,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(0);
@@ -287,20 +290,20 @@ describe("calculateSpaceDiscount", () => {
   describe("定額割引", () => {
     test("固定額を正しく返す", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 1500,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(1500);
-      expect(result.applied).toEqual({ type: "fixed", value: 1500 });
+      expect(result.applied).toEqual({ type: "FIXED", value: 1500 });
     });
 
     test("割引額が基本料金を超えない", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 15000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(10000); // min(15000, 10000)
@@ -308,9 +311,9 @@ describe("calculateSpaceDiscount", () => {
 
     test("割引額が基本料金と同額の場合、全額割引", () => {
       const settings: SpaceDiscountSettings = {
-        discountType: "fixed",
+        discountType: "FIXED",
         discountValue: 10000,
-        durationDiscountOverride: "inherit",
+        durationDiscountOverride: "INHERIT",
       };
       const result = calculateSpaceDiscount(10000, settings);
       expect(result.discount).toBe(10000);
@@ -774,7 +777,7 @@ describe("formatDiscountSummary", () => {
       couponDiscount: 0,
       totalPrice: 9000,
       totalDiscountRate: 10,
-      appliedSpaceDiscount: { type: "percentage", value: 10 },
+      appliedSpaceDiscount: { type: "PERCENTAGE", value: 10 },
       appliedDurationRule: null,
       appliedCoupon: null,
       warnings: [],
@@ -792,7 +795,7 @@ describe("formatDiscountSummary", () => {
       couponDiscount: 0,
       totalPrice: 9500,
       totalDiscountRate: 5,
-      appliedSpaceDiscount: { type: "fixed", value: 500 },
+      appliedSpaceDiscount: { type: "FIXED", value: 500 },
       appliedDurationRule: null,
       appliedCoupon: null,
       warnings: [],
@@ -876,7 +879,7 @@ describe("formatDiscountSummary", () => {
       couponDiscount: 1440,
       totalPrice: 5760,
       totalDiscountRate: 42,
-      appliedSpaceDiscount: { type: "percentage", value: 10 },
+      appliedSpaceDiscount: { type: "PERCENTAGE", value: 10 },
       appliedDurationRule: { hours: 8, discountRate: 20 },
       appliedCoupon: {
         id: "c1",
@@ -901,13 +904,14 @@ describe("formatDiscountSummary", () => {
 
 describe("isValidTaxRateType", () => {
   test("有効な値で true を返す", () => {
-    expect(isValidTaxRateType("standard")).toBe(true);
-    expect(isValidTaxRateType("reduced")).toBe(true);
+    expect(isValidTaxRateType("STANDARD")).toBe(true);
+    expect(isValidTaxRateType("REDUCED")).toBe(true);
   });
 
   test("無効な文字列で false を返す", () => {
     expect(isValidTaxRateType("invalid")).toBe(false);
-    expect(isValidTaxRateType("STANDARD")).toBe(false);
+    // ケース感度のプローブ。正準形が UPPER_SNAKE になったので、弾かれる側は小文字。
+    expect(isValidTaxRateType("standard")).toBe(false);
     expect(isValidTaxRateType("")).toBe(false);
   });
 
@@ -920,26 +924,26 @@ describe("isValidTaxRateType", () => {
 
 describe("getValidTaxRateType", () => {
   test("有効な値をそのまま返す", () => {
-    expect(getValidTaxRateType("standard")).toBe("standard");
-    expect(getValidTaxRateType("reduced")).toBe("reduced");
+    expect(getValidTaxRateType("STANDARD")).toBe("STANDARD");
+    expect(getValidTaxRateType("REDUCED")).toBe("REDUCED");
   });
 
-  test('無効な値でデフォルト "standard" を返す', () => {
-    expect(getValidTaxRateType("invalid")).toBe("standard");
-    expect(getValidTaxRateType(null)).toBe("standard");
-    expect(getValidTaxRateType(undefined)).toBe("standard");
+  test('無効な値でデフォルト "STANDARD" を返す', () => {
+    expect(getValidTaxRateType("invalid")).toBe("STANDARD");
+    expect(getValidTaxRateType(null)).toBe("STANDARD");
+    expect(getValidTaxRateType(undefined)).toBe("STANDARD");
   });
 
   test("カスタムデフォルト値を返す", () => {
-    expect(getValidTaxRateType(null, "reduced")).toBe("reduced");
+    expect(getValidTaxRateType(null, "REDUCED")).toBe("REDUCED");
   });
 });
 
 describe("isValidTaxDisplayMode", () => {
   test("有効な値で true を返す", () => {
-    expect(isValidTaxDisplayMode("tax_excluded")).toBe(true);
-    expect(isValidTaxDisplayMode("tax_included")).toBe(true);
-    expect(isValidTaxDisplayMode("both")).toBe(true);
+    expect(isValidTaxDisplayMode("TAX_EXCLUDED")).toBe(true);
+    expect(isValidTaxDisplayMode("TAX_INCLUDED")).toBe(true);
+    expect(isValidTaxDisplayMode("BOTH")).toBe(true);
   });
 
   test("無効な値で false を返す", () => {
@@ -951,19 +955,19 @@ describe("isValidTaxDisplayMode", () => {
 
 describe("getValidTaxDisplayMode", () => {
   test("有効な値をそのまま返す", () => {
-    expect(getValidTaxDisplayMode("tax_excluded")).toBe("tax_excluded");
-    expect(getValidTaxDisplayMode("tax_included")).toBe("tax_included");
-    expect(getValidTaxDisplayMode("both")).toBe("both");
+    expect(getValidTaxDisplayMode("TAX_EXCLUDED")).toBe("TAX_EXCLUDED");
+    expect(getValidTaxDisplayMode("TAX_INCLUDED")).toBe("TAX_INCLUDED");
+    expect(getValidTaxDisplayMode("BOTH")).toBe("BOTH");
   });
 
-  test('無効な値でデフォルト "both" を返す', () => {
-    expect(getValidTaxDisplayMode("invalid")).toBe("both");
-    expect(getValidTaxDisplayMode(null)).toBe("both");
-    expect(getValidTaxDisplayMode(undefined)).toBe("both");
+  test('無効な値でデフォルト "BOTH" を返す', () => {
+    expect(getValidTaxDisplayMode("invalid")).toBe("BOTH");
+    expect(getValidTaxDisplayMode(null)).toBe("BOTH");
+    expect(getValidTaxDisplayMode(undefined)).toBe("BOTH");
   });
 
   test("カスタムデフォルト値を返す", () => {
-    expect(getValidTaxDisplayMode(null, "tax_included")).toBe("tax_included");
+    expect(getValidTaxDisplayMode(null, "TAX_INCLUDED")).toBe("TAX_INCLUDED");
   });
 });
 
@@ -975,17 +979,17 @@ describe("DEFAULT_TAX_SETTINGS", () => {
   test("デフォルト税設定が正しい", () => {
     expect(DEFAULT_TAX_SETTINGS.standardRate).toBe(10);
     expect(DEFAULT_TAX_SETTINGS.reducedRate).toBe(8);
-    expect(DEFAULT_TAX_SETTINGS.displayModePublic).toBe("tax_included");
+    expect(DEFAULT_TAX_SETTINGS.displayModePublic).toBe("TAX_INCLUDED");
   });
 });
 
 describe("getTaxRate", () => {
   test("標準税率を返す", () => {
-    expect(getTaxRate("standard")).toBe(10);
+    expect(getTaxRate("STANDARD")).toBe(10);
   });
 
   test("軽減税率を返す", () => {
-    expect(getTaxRate("reduced")).toBe(8);
+    expect(getTaxRate("REDUCED")).toBe(8);
   });
 
   test("カスタム設定の標準税率を返す", () => {
@@ -994,8 +998,8 @@ describe("getTaxRate", () => {
       standardRate: 15,
       reducedRate: 5,
     };
-    expect(getTaxRate("standard", customSettings)).toBe(15);
-    expect(getTaxRate("reduced", customSettings)).toBe(5);
+    expect(getTaxRate("STANDARD", customSettings)).toBe(15);
+    expect(getTaxRate("REDUCED", customSettings)).toBe(5);
   });
 });
 
@@ -1118,7 +1122,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 1000,
       taxRate: 10,
-      displayMode: "tax_excluded",
+      displayMode: "TAX_EXCLUDED",
     });
     expect(result).toBe("¥1,000（税抜）");
   });
@@ -1127,7 +1131,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 1000,
       taxRate: 10,
-      displayMode: "tax_included",
+      displayMode: "TAX_INCLUDED",
     });
     expect(result).toBe("¥1,100（税込）");
   });
@@ -1136,7 +1140,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 1000,
       taxRate: 10,
-      displayMode: "both",
+      displayMode: "BOTH",
     });
     expect(result).toBe("¥1,100（税込）/ ¥1,000（税抜）");
   });
@@ -1145,7 +1149,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 1000,
       taxRate: 8,
-      displayMode: "tax_included",
+      displayMode: "TAX_INCLUDED",
     });
     expect(result).toBe("¥1,080（税込）");
   });
@@ -1154,7 +1158,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 0,
       taxRate: 10,
-      displayMode: "both",
+      displayMode: "BOTH",
     });
     expect(result).toBe("¥0（税込）/ ¥0（税抜）");
   });
@@ -1163,7 +1167,7 @@ describe("formatPriceWithTax", () => {
     const result = formatPriceWithTax({
       taxExcludedPrice: 100000,
       taxRate: 10,
-      displayMode: "both",
+      displayMode: "BOTH",
     });
     expect(result).toBe("¥110,000（税込）/ ¥100,000（税抜）");
   });
@@ -1171,15 +1175,15 @@ describe("formatPriceWithTax", () => {
 
 describe("getTaxRateLabel", () => {
   test("標準税率のラベルを返す", () => {
-    expect(getTaxRateLabel("standard", 10)).toBe("標準税率（10%）");
+    expect(getTaxRateLabel("STANDARD", 10)).toBe("標準税率（10%）");
   });
 
   test("軽減税率のラベルを返す", () => {
-    expect(getTaxRateLabel("reduced", 8)).toBe("軽減税率（8%）");
+    expect(getTaxRateLabel("REDUCED", 8)).toBe("軽減税率（8%）");
   });
 
   test("カスタム税率でもラベルを返す", () => {
-    expect(getTaxRateLabel("standard", 15)).toBe("標準税率（15%）");
-    expect(getTaxRateLabel("reduced", 5)).toBe("軽減税率（5%）");
+    expect(getTaxRateLabel("STANDARD", 15)).toBe("標準税率（15%）");
+    expect(getTaxRateLabel("REDUCED", 5)).toBe("軽減税率（5%）");
   });
 });

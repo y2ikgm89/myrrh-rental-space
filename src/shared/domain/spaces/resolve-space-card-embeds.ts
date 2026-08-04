@@ -25,7 +25,7 @@ import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
  *
  * `resolveInternalLinkCards` と同じく regex ベースの純粋 HTML 後処理として実装する。
  * 税率は既存の公開 SpaceCard コンポーネント（`(public)/_components/space-list/space-card.tsx`）
- * と同じ簡略化で `TaxRateType.standard` 固定（`Space.taxRateType` による分岐はしない）。
+ * と同じ簡略化で `TaxRateType.STANDARD` 固定（`Space.taxRateType` による分岐はしない）。
  */
 
 const PLACEHOLDER_RE = /<a\b[^>]*\bdata-space-card-embed\b[^>]*>\s*<\/a>/gi;
@@ -84,7 +84,7 @@ export async function resolveSpaceCardEmbeds(html: string): Promise<string> {
       resolveSpaceCardEmbedData(Array.from(ids)),
       getPublicTaxSettings(),
     ]);
-    const taxRate = getTaxRate(TaxRateType.standard, tax);
+    const taxRate = getTaxRate(TaxRateType.STANDARD, tax);
 
     return html.replace(PLACEHOLDER_RE, (tag) => {
       const id = extractAttr(tag, "data-space-id");

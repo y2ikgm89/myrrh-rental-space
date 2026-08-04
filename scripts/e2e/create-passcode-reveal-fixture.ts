@@ -150,7 +150,7 @@ async function main(): Promise<void> {
         endTime: RESERVATION_END,
         basePrice: totalPrice,
         totalPrice,
-        taxRateType: "standard",
+        taxRateType: "STANDARD",
         taxRate,
         taxAmount,
         totalPriceWithTax: totalPrice + taxAmount,

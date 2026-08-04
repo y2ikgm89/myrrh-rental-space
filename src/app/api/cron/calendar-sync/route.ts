@@ -79,11 +79,11 @@ interface SyncPlan {
  */
 export function resolveSyncPlan(method: CalendarSyncMethod): SyncPlan {
   switch (method) {
-    case CalendarSyncMethod.polling:
+    case CalendarSyncMethod.POLLING:
       return { renewWebhook: false, poll: true };
-    case CalendarSyncMethod.webhook:
+    case CalendarSyncMethod.WEBHOOK:
       return { renewWebhook: true, poll: false };
-    case CalendarSyncMethod.both:
+    case CalendarSyncMethod.BOTH:
       return { renewWebhook: true, poll: true };
     default: {
       const _exhaustive: never = method;

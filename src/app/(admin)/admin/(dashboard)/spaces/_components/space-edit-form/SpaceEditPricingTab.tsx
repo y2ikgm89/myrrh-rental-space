@@ -84,17 +84,17 @@ export function SpaceEditPricingTab({
   const discountValueNum = discountValue === "" ? null : Number(discountValue);
 
   const calculateDiscountedPrice = (price: number): number => {
-    if (!price || discountType === DiscountType.none || !discountValueNum)
+    if (!price || discountType === DiscountType.NONE || !discountValueNum)
       return price;
-    if (discountType === DiscountType.percentage)
+    if (discountType === DiscountType.PERCENTAGE)
       return Math.max(0, Math.round(price * (1 - discountValueNum / 100)));
-    if (discountType === DiscountType.fixed)
+    if (discountType === DiscountType.FIXED)
       return Math.max(0, price - discountValueNum);
     return price;
   };
   const discountedHourlyPrice = calculateDiscountedPrice(hourlyPriceNum);
   const hasDiscount =
-    discountType !== DiscountType.none &&
+    discountType !== DiscountType.NONE &&
     discountValueNum !== null &&
     discountValueNum > 0;
   const currentTaxRate = getTaxRate(taxRateType, taxSettings);
@@ -162,7 +162,7 @@ export function SpaceEditPricingTab({
                     value={discountType}
                     onValueChange={(value) =>
                       onDiscountTypeChange(
-                        getValidDiscountType(value, DiscountType.none),
+                        getValidDiscountType(value, DiscountType.NONE),
                       )
                     }
                     disabled={isPending}
@@ -171,16 +171,16 @@ export function SpaceEditPricingTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={DiscountType.none}>なし</SelectItem>
-                      <SelectItem value={DiscountType.percentage}>
+                      <SelectItem value={DiscountType.NONE}>なし</SelectItem>
+                      <SelectItem value={DiscountType.PERCENTAGE}>
                         パーセント割引
                       </SelectItem>
-                      <SelectItem value={DiscountType.fixed}>
+                      <SelectItem value={DiscountType.FIXED}>
                         定額割引
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  {discountType === DiscountType.percentage && (
+                  {discountType === DiscountType.PERCENTAGE && (
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -204,7 +204,7 @@ export function SpaceEditPricingTab({
                       <span className="text-sm text-muted-foreground">%</span>
                     </div>
                   )}
-                  {discountType === DiscountType.fixed && (
+                  {discountType === DiscountType.FIXED && (
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -268,7 +268,7 @@ export function SpaceEditPricingTab({
                     onDurationDiscountOverrideChange(
                       getValidDurationDiscountOverride(
                         value,
-                        DurationDiscountOverride.inherit,
+                        DurationDiscountOverride.INHERIT,
                       ),
                     )
                   }
@@ -278,13 +278,13 @@ export function SpaceEditPricingTab({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={DurationDiscountOverride.inherit}>
+                    <SelectItem value={DurationDiscountOverride.INHERIT}>
                       グローバル設定に従う
                     </SelectItem>
-                    <SelectItem value={DurationDiscountOverride.enabled}>
+                    <SelectItem value={DurationDiscountOverride.ENABLED}>
                       このスペースは常に有効
                     </SelectItem>
-                    <SelectItem value={DurationDiscountOverride.disabled}>
+                    <SelectItem value={DurationDiscountOverride.DISABLED}>
                       このスペースは無効
                     </SelectItem>
                   </SelectContent>
@@ -307,10 +307,10 @@ export function SpaceEditPricingTab({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TaxRateType.standard}>
+                  <SelectItem value={TaxRateType.STANDARD}>
                     標準税率（{taxSettings.standardRate}%）
                   </SelectItem>
-                  <SelectItem value={TaxRateType.reduced}>
+                  <SelectItem value={TaxRateType.REDUCED}>
                     軽減税率（{taxSettings.reducedRate}%）
                   </SelectItem>
                 </SelectContent>
@@ -353,7 +353,7 @@ export function SpaceEditPricingTab({
                   {hasDiscount && (
                     <p className="border-t border-border/50 pt-2 text-xs text-muted-foreground">
                       割引:{" "}
-                      {discountType === DiscountType.percentage
+                      {discountType === DiscountType.PERCENTAGE
                         ? `${discountValueNum ?? 0}% OFF`
                         : `${formatCurrency(discountValueNum ?? 0)}引`}
                     </p>

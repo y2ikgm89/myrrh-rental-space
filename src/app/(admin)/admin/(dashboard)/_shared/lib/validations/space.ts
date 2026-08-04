@@ -215,7 +215,7 @@ export const spaceFormBaseSchema = z
       )
       .optional(),
     // 割引設定
-    discountType: spaceDiscountTypeSchema.default(DiscountType.none),
+    discountType: spaceDiscountTypeSchema.default(DiscountType.NONE),
     discountValue: z
       .preprocess(
         coerceOptionalNumber,
@@ -229,10 +229,10 @@ export const spaceFormBaseSchema = z
       )
       .optional(),
     durationDiscountOverride: durationDiscountOverrideSchema.default(
-      DurationDiscountOverride.inherit,
+      DurationDiscountOverride.INHERIT,
     ),
     // 税率設定
-    taxRateType: z.enum(TaxRateType).default(TaxRateType.standard),
+    taxRateType: z.enum(TaxRateType).default(TaxRateType.STANDARD),
   })
   .extend(optionalSeoStringShape);
 
@@ -248,7 +248,7 @@ export const spaceFormSchema = spaceFormBaseSchema
   })
   .superRefine((data, ctx) => {
     if (
-      data.discountType === DiscountType.percentage &&
+      data.discountType === DiscountType.PERCENTAGE &&
       data.discountValue !== null &&
       data.discountValue !== undefined &&
       data.discountValue > 100
@@ -290,11 +290,11 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   locationId: "",
   categoryId: null,
   // 割引設定
-  discountType: DiscountType.none,
+  discountType: DiscountType.NONE,
   discountValue: null,
-  durationDiscountOverride: DurationDiscountOverride.inherit,
+  durationDiscountOverride: DurationDiscountOverride.INHERIT,
   // 税率設定
-  taxRateType: TaxRateType.standard,
+  taxRateType: TaxRateType.STANDARD,
   ...defaultSeoOgpValues,
 };
 

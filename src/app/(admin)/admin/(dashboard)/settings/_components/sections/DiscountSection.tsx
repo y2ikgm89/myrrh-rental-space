@@ -339,16 +339,16 @@ export function DiscountSection({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DiscountCombinationMode.best}>
+                <SelectItem value={DiscountCombinationMode.BEST}>
                   最もお得な割引のみ適用
                 </SelectItem>
-                <SelectItem value={DiscountCombinationMode.both}>
+                <SelectItem value={DiscountCombinationMode.BOTH}>
                   両方の割引を適用
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {combinationMode === DiscountCombinationMode.best
+              {combinationMode === DiscountCombinationMode.BEST
                 ? "長時間割引とクーポンのうち、割引額が大きい方のみ適用されます"
                 : "長時間割引とクーポンの両方が適用されます（クーポンの併用設定が優先されます）"}
             </p>

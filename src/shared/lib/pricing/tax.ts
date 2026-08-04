@@ -14,7 +14,7 @@ import type { TaxSettings } from "./types";
 export const DEFAULT_TAX_SETTINGS: TaxSettings = {
   standardRate: 10,
   reducedRate: 8,
-  displayModePublic: TaxDisplayMode.tax_included,
+  displayModePublic: TaxDisplayMode.TAX_INCLUDED,
 };
 
 /**
@@ -24,7 +24,7 @@ export function getTaxRate(
   taxRateType: TaxRateType,
   settings: TaxSettings = DEFAULT_TAX_SETTINGS,
 ): number {
-  return taxRateType === TaxRateType.reduced
+  return taxRateType === TaxRateType.REDUCED
     ? settings.reducedRate
     : settings.standardRate;
 }
@@ -70,12 +70,12 @@ export function resolvePublicDisplayPrice(
   taxExcludedPrice: number,
   settings: TaxSettings = DEFAULT_TAX_SETTINGS,
 ): number {
-  const taxRate = getTaxRate(TaxRateType.standard, settings);
+  const taxRate = getTaxRate(TaxRateType.STANDARD, settings);
   switch (settings.displayModePublic) {
-    case TaxDisplayMode.tax_excluded:
+    case TaxDisplayMode.TAX_EXCLUDED:
       return taxExcludedPrice;
-    case TaxDisplayMode.tax_included:
-    case TaxDisplayMode.both:
+    case TaxDisplayMode.TAX_INCLUDED:
+    case TaxDisplayMode.BOTH:
       return calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
     default: {
       const _exhaustive: never = settings.displayModePublic;

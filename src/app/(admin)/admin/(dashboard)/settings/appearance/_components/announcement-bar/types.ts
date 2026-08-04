@@ -15,17 +15,17 @@ export const ANIMATION_OPTIONS: readonly {
   description: string;
 }[] = [
   {
-    value: AnnouncementBarAnimation.fade,
+    value: AnnouncementBarAnimation.FADE,
     label: "フェード",
     description: "透明度でふわっと切り替え",
   },
   {
-    value: AnnouncementBarAnimation.slideX,
+    value: AnnouncementBarAnimation.SLIDE_X,
     label: "横スライド",
     description: "左右にスライドして切り替え",
   },
   {
-    value: AnnouncementBarAnimation.slideY,
+    value: AnnouncementBarAnimation.SLIDE_Y,
     label: "縦スライド",
     description: "上下にスライドして切り替え",
   },
@@ -37,32 +37,32 @@ export const DESIGN_STYLE_OPTIONS: readonly {
   description: string;
 }[] = [
   {
-    value: AnnouncementBarDesignStyle.solid,
+    value: AnnouncementBarDesignStyle.SOLID,
     label: "ソリッド",
     description: "シンプルなベタ塗り",
   },
   {
-    value: AnnouncementBarDesignStyle.gradient,
+    value: AnnouncementBarDesignStyle.GRADIENT,
     label: "グラデーション",
     description: "モダンなグラデーション背景",
   },
   {
-    value: AnnouncementBarDesignStyle.outlined,
+    value: AnnouncementBarDesignStyle.OUTLINED,
     label: "アウトライン",
     description: "枠線スタイルですっきり",
   },
   {
-    value: AnnouncementBarDesignStyle.glass,
+    value: AnnouncementBarDesignStyle.GLASS,
     label: "グラス",
     description: "半透明のグラスモーフィズム",
   },
   {
-    value: AnnouncementBarDesignStyle.minimal,
+    value: AnnouncementBarDesignStyle.MINIMAL,
     label: "ミニマル",
     description: "細い帯のミニマルスタイル",
   },
   {
-    value: AnnouncementBarDesignStyle.striped,
+    value: AnnouncementBarDesignStyle.STRIPED,
     label: "ストライプ",
     description: "さりげない斜めストライプ",
   },

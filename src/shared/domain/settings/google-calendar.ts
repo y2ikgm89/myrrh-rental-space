@@ -147,8 +147,8 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
   }
 
   if (
-    syncSettings.syncMethod !== CalendarSyncMethod.webhook &&
-    syncSettings.syncMethod !== CalendarSyncMethod.both
+    syncSettings.syncMethod !== CalendarSyncMethod.WEBHOOK &&
+    syncSettings.syncMethod !== CalendarSyncMethod.BOTH
   ) {
     return { success: true, renewed: false };
   }

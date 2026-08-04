@@ -150,7 +150,7 @@ async function main(): Promise<void> {
     const pricingSnapshot = {
       basePrice,
       totalPrice: basePrice,
-      taxRateType: "standard" as const,
+      taxRateType: "STANDARD" as const,
       taxRate: TAX_RATE,
       taxAmount,
       totalPriceWithTax: basePrice + taxAmount,

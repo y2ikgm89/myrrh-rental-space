@@ -327,7 +327,7 @@ function AnalyticsSettingsCard({
               )}
             </div>
 
-            {analyticsType === AnalyticsType.ga4 && (
+            {analyticsType === AnalyticsType.GA4 && (
               <div className="space-y-2">
                 <Label htmlFor={fields.googleAnalyticsId.id}>
                   GA4 Measurement ID
@@ -351,7 +351,7 @@ function AnalyticsSettingsCard({
               </div>
             )}
 
-            {analyticsType === AnalyticsType.gtm && (
+            {analyticsType === AnalyticsType.GTM && (
               <div className="space-y-2">
                 <Label htmlFor={fields.googleTagManagerId.id}>
                   GTM Container ID

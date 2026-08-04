@@ -74,7 +74,7 @@ export const analyticsFormSchema = z
   })
   .superRefine((data, ctx) => {
     if (
-      data.analyticsType === AnalyticsType.ga4 &&
+      data.analyticsType === AnalyticsType.GA4 &&
       isEmptyAnalyticsId(data.googleAnalyticsId)
     ) {
       ctx.addIssue({
@@ -84,7 +84,7 @@ export const analyticsFormSchema = z
       });
     }
     if (
-      data.analyticsType === AnalyticsType.gtm &&
+      data.analyticsType === AnalyticsType.GTM &&
       isEmptyAnalyticsId(data.googleTagManagerId)
     ) {
       ctx.addIssue({

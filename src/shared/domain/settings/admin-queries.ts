@@ -51,7 +51,7 @@ import {
 const DEFAULT_DISCOUNT_SETTINGS = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
-  discountCombinationMode: DiscountCombinationMode.best,
+  discountCombinationMode: DiscountCombinationMode.BEST,
   showOriginalPrice: true,
 } satisfies Omit<DiscountSettingsData, "commerceUpdatedAt">;
 
@@ -294,13 +294,13 @@ function toSettingsData(
 
 function parseTaxDisplayMode(value: string | null): TaxDisplayMode {
   if (
-    value === TaxDisplayMode.tax_excluded ||
-    value === TaxDisplayMode.tax_included ||
-    value === TaxDisplayMode.both
+    value === TaxDisplayMode.TAX_EXCLUDED ||
+    value === TaxDisplayMode.TAX_INCLUDED ||
+    value === TaxDisplayMode.BOTH
   ) {
     return value;
   }
-  return TaxDisplayMode.tax_included;
+  return TaxDisplayMode.TAX_INCLUDED;
 }
 
 function parseCalendarConnectionStatus(
@@ -315,14 +315,14 @@ function parseCalendarConnectionStatus(
 
 function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
   if (
-    value === CalendarSyncMethod.polling ||
-    value === CalendarSyncMethod.webhook ||
-    value === CalendarSyncMethod.both
+    value === CalendarSyncMethod.POLLING ||
+    value === CalendarSyncMethod.WEBHOOK ||
+    value === CalendarSyncMethod.BOTH
   ) {
     return value;
   }
 
-  return CalendarSyncMethod.polling;
+  return CalendarSyncMethod.POLLING;
 }
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {

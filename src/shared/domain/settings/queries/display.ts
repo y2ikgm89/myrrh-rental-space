@@ -85,10 +85,10 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
   return {
     scrollBehavior: isValidHeaderScrollBehavior(result?.headerScrollBehavior)
       ? result.headerScrollBehavior
-      : HeaderScrollBehavior.always_visible,
+      : HeaderScrollBehavior.ALWAYS_VISIBLE,
     backgroundMode: isValidHeaderBackgroundMode(result?.headerBackgroundMode)
       ? result.headerBackgroundMode
-      : HeaderBackgroundMode.solid,
+      : HeaderBackgroundMode.SOLID,
     brand: {
       siteName: result?.siteName ?? DEFAULT_SITE_NAME,
       logoUrl: result?.headerLogoUrl ?? null,

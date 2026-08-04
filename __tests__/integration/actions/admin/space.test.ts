@@ -40,10 +40,10 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   reviewsEnabled: true,
   locationId: VALID_UUID,
   categoryId: null,
-  discountType: "none",
+  discountType: "NONE",
   discountValue: null,
-  durationDiscountOverride: "inherit",
-  taxRateType: "standard",
+  durationDiscountOverride: "INHERIT",
+  taxRateType: "STANDARD",
   metaDescription: null,
   metaKeywords: null,
   ogpTitle: null,
@@ -162,7 +162,7 @@ describe("Space Admin Action Integration", () => {
         const result = spaceFormSchema.safeParse(input);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.discountType).toBe("none");
+          expect(result.data.discountType).toBe("NONE");
         }
       });
 
@@ -179,7 +179,7 @@ describe("Space Admin Action Integration", () => {
         const result = spaceFormSchema.safeParse(input);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.durationDiscountOverride).toBe("inherit");
+          expect(result.data.durationDiscountOverride).toBe("INHERIT");
         }
       });
 
@@ -196,7 +196,7 @@ describe("Space Admin Action Integration", () => {
         const result = spaceFormSchema.safeParse(input);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.taxRateType).toBe("standard");
+          expect(result.data.taxRateType).toBe("STANDARD");
         }
       });
     });
@@ -576,7 +576,7 @@ describe("Space Admin Action Integration", () => {
       test("percentageは有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          discountType: "percentage",
+          discountType: "PERCENTAGE",
         });
         expect(result.success).toBe(true);
       });
@@ -584,7 +584,7 @@ describe("Space Admin Action Integration", () => {
       test("fixedは有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          discountType: "fixed",
+          discountType: "FIXED",
         });
         expect(result.success).toBe(true);
       });
@@ -640,7 +640,7 @@ describe("Space Admin Action Integration", () => {
       test("percentage の割引値が100を超える場合はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          discountType: "percentage",
+          discountType: "PERCENTAGE",
           discountValue: 101,
         });
         expect(result.success).toBe(false);
@@ -653,7 +653,7 @@ describe("Space Admin Action Integration", () => {
       test("fixed の割引値は100を超えても有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          discountType: "fixed",
+          discountType: "FIXED",
           discountValue: 101,
         });
         expect(result.success).toBe(true);
@@ -664,7 +664,7 @@ describe("Space Admin Action Integration", () => {
       test("enabledは有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          durationDiscountOverride: "enabled",
+          durationDiscountOverride: "ENABLED",
         });
         expect(result.success).toBe(true);
       });
@@ -672,7 +672,7 @@ describe("Space Admin Action Integration", () => {
       test("disabledは有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          durationDiscountOverride: "disabled",
+          durationDiscountOverride: "DISABLED",
         });
         expect(result.success).toBe(true);
       });
@@ -690,7 +690,7 @@ describe("Space Admin Action Integration", () => {
       test("reducedは有効", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          taxRateType: "reduced",
+          taxRateType: "REDUCED",
         });
         expect(result.success).toBe(true);
       });

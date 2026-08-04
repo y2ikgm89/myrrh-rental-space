@@ -31,29 +31,29 @@ interface DesignStyleConfig {
 }
 
 const DESIGN_STYLES: Record<AnnouncementBarDesignStyle, DesignStyleConfig> = {
-  solid: {
+  SOLID: {
     container: "",
     containerWithBg: DEFAULT_STYLE.bg,
   },
-  gradient: {
+  GRADIENT: {
     container: "bg-gradient-to-r",
     containerWithBg: DEFAULT_STYLE.gradient,
   },
-  outlined: {
+  OUTLINED: {
     container: "bg-transparent border-y",
     containerWithBg: "",
     border: "border-current",
   },
-  glass: {
+  GLASS: {
     container: "backdrop-blur-md bg-card/10 border-y border-card/20",
     containerWithBg: "",
   },
-  minimal: {
+  MINIMAL: {
     container: "bg-transparent border-b",
     containerWithBg: "",
     border: "border-current/30",
   },
-  striped: {
+  STRIPED: {
     container: "",
     containerWithBg: DEFAULT_STYLE.bg,
   },
@@ -89,7 +89,7 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
     cssVars[CSS_VAR.announcementText] = settings.textColor;
   }
 
-  if (design === AnnouncementBarDesignStyle.striped) {
+  if (design === AnnouncementBarDesignStyle.STRIPED) {
     const baseHex = settings.bgColor ?? DEFAULT_STYLE.hex;
     const stripe = settings.stripeColor ?? adjustBrightness(baseHex, 20);
     cssVars[CSS_VAR.announcementStripe] = stripe;
@@ -99,9 +99,9 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
 
   const needsDefaultText =
     !hasCustomText &&
-    (design === AnnouncementBarDesignStyle.solid ||
-      design === AnnouncementBarDesignStyle.gradient ||
-      design === AnnouncementBarDesignStyle.striped);
+    (design === AnnouncementBarDesignStyle.SOLID ||
+      design === AnnouncementBarDesignStyle.GRADIENT ||
+      design === AnnouncementBarDesignStyle.STRIPED);
 
   const className = cn(
     // edge-to-edge: 最上部要素なのでノッチ分を上 padding で確保（inset=0 で無変化）。
@@ -114,23 +114,23 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
     hasCustomBg && CSS_VAR_CLASS.announcementBg,
     hasCustomText && CSS_VAR_CLASS.announcementText,
     config.border,
-    design === AnnouncementBarDesignStyle.striped && "announcement-bar-striped",
-    design === AnnouncementBarDesignStyle.striped &&
+    design === AnnouncementBarDesignStyle.STRIPED && "announcement-bar-striped",
+    design === AnnouncementBarDesignStyle.STRIPED &&
       settings.stripeAnimation &&
       "announcement-bar-striped-animate",
-    design === AnnouncementBarDesignStyle.gradient &&
+    design === AnnouncementBarDesignStyle.GRADIENT &&
       settings.gradientAnimation &&
       "announcement-bar-gradient-animate",
-    design === AnnouncementBarDesignStyle.glass &&
+    design === AnnouncementBarDesignStyle.GLASS &&
       settings.glassAnimation &&
       "overflow-hidden",
     needsDefaultText && DEFAULT_STYLE.text,
     !hasCustomText &&
-      (design === AnnouncementBarDesignStyle.outlined ||
-        design === AnnouncementBarDesignStyle.minimal) &&
+      (design === AnnouncementBarDesignStyle.OUTLINED ||
+        design === AnnouncementBarDesignStyle.MINIMAL) &&
       "text-foreground",
     !hasCustomText &&
-      design === AnnouncementBarDesignStyle.glass &&
+      design === AnnouncementBarDesignStyle.GLASS &&
       "text-card",
   );
 
@@ -143,9 +143,9 @@ export function getTransitionAnimationClass(
   animation: CarouselSettings["animation"],
 ): string {
   const map = {
-    fade: "announcement-bar-transition-fade",
-    slideX: "announcement-bar-transition-slide-x",
-    slideY: "announcement-bar-transition-slide-y",
+    FADE: "announcement-bar-transition-fade",
+    SLIDE_X: "announcement-bar-transition-slide-x",
+    SLIDE_Y: "announcement-bar-transition-slide-y",
   } as const;
   return map[animation];
 }

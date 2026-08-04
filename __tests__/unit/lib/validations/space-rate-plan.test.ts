@@ -18,7 +18,7 @@ const BASE_INPUT = {
   name: "平日昼間",
   hourlyPrice: 1500,
   daysOfWeek: [DayOfWeek.MONDAY, DayOfWeek.TUESDAY],
-  holidayMode: HolidayMode.exclude,
+  holidayMode: HolidayMode.EXCLUDE,
   startTime: "10:00",
   endTime: "18:00",
   effectiveFrom: "2026-04-01",
@@ -57,7 +57,7 @@ describe("spaceRatePlanFormSchema", () => {
         expect(result.data.effectiveFrom).toBeNull();
         expect(result.data.effectiveTo).toBeNull();
         expect(result.data.daysOfWeek).toEqual([]);
-        expect(result.data.holidayMode).toBe(HolidayMode.any);
+        expect(result.data.holidayMode).toBe(HolidayMode.ANY);
       }
     });
   });
@@ -69,7 +69,7 @@ describe("spaceRatePlanFormSchema", () => {
         name: "終日",
         hourlyPrice: 3000,
         daysOfWeek: [],
-        holidayMode: HolidayMode.any,
+        holidayMode: HolidayMode.ANY,
         startTime: "",
         endTime: "",
         effectiveFrom: "2026-01-01",

@@ -15,7 +15,7 @@ const mockGetPublicTaxSettings = mock(() =>
   Promise.resolve({
     standardRate: 10,
     reducedRate: 8,
-    displayModePublic: TaxDisplayMode.tax_included,
+    displayModePublic: TaxDisplayMode.TAX_INCLUDED,
   }),
 );
 

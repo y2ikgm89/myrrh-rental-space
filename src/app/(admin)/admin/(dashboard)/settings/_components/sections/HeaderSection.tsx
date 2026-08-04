@@ -48,17 +48,17 @@ import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 const SCROLL_BEHAVIOR_OPTIONS: SelectionBoxOption[] = [
   {
-    value: HeaderScrollBehavior.auto_hide,
+    value: HeaderScrollBehavior.AUTO_HIDE,
     label: "自動非表示",
     description: "下スクロール150px蓄積で非表示、上スクロールで復帰",
   },
   {
-    value: HeaderScrollBehavior.always_visible,
+    value: HeaderScrollBehavior.ALWAYS_VISIBLE,
     label: "常時表示",
     description: "スクロールしてもヘッダーは常に表示（背景のみ変化）",
   },
   {
-    value: HeaderScrollBehavior.hide_on_scroll,
+    value: HeaderScrollBehavior.HIDE_ON_SCROLL,
     label: "スクロールで即非表示",
     description: "下スクロール開始で即座に非表示、上スクロールで復帰",
   },
@@ -66,12 +66,12 @@ const SCROLL_BEHAVIOR_OPTIONS: SelectionBoxOption[] = [
 
 const BACKGROUND_MODE_OPTIONS: SelectionBoxOption[] = [
   {
-    value: HeaderBackgroundMode.solid,
+    value: HeaderBackgroundMode.SOLID,
     label: "不透明",
     description: "ヘッダーの下にコンテンツが配置される通常レイアウト",
   },
   {
-    value: HeaderBackgroundMode.transparent,
+    value: HeaderBackgroundMode.TRANSPARENT,
     label: "透明",
     description: "ヒーロー画像がヘッダー背後に広がる透過レイアウト",
   },
@@ -231,7 +231,7 @@ export function HeaderSection({
 
             <div className="rounded-md border border-muted bg-muted/50 p-4">
               <p className="text-sm text-muted-foreground">
-                {backgroundMode.value === HeaderBackgroundMode.transparent
+                {backgroundMode.value === HeaderBackgroundMode.TRANSPARENT
                   ? "ヒーロー画像がヘッダー背後に広がります。テキストが見にくい場合は「不透明」に変更してください。"
                   : "予約導線を常時表示したい場合は「常時表示」がおすすめです。"}
               </p>

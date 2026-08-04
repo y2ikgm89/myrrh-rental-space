@@ -130,7 +130,7 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
       twoWaySyncEnabled: false,
       syncToken: null,
       lastSyncedAt: null,
-      syncMethod: "polling",
+      syncMethod: "POLLING",
       webhookChannelId: null,
       webhookExpiration: null,
     }),

@@ -15,7 +15,7 @@ import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidTaxDisplayMode } from "@/shared/lib/validations/enums/guards";
 
 function parseTaxDisplayMode(value: string): TaxDisplayMode {
-  return isValidTaxDisplayMode(value) ? value : TaxDisplayMode.tax_included;
+  return isValidTaxDisplayMode(value) ? value : TaxDisplayMode.TAX_INCLUDED;
 }
 
 export async function getPublicTaxSettings(): Promise<TaxSettings> {

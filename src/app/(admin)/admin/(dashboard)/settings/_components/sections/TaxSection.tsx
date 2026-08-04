@@ -79,13 +79,13 @@ function DisplayModeSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={TaxDisplayMode.tax_excluded}>
+          <SelectItem value={TaxDisplayMode.TAX_EXCLUDED}>
             税抜き価格のみ
           </SelectItem>
-          <SelectItem value={TaxDisplayMode.tax_included}>
+          <SelectItem value={TaxDisplayMode.TAX_INCLUDED}>
             税込み価格のみ
           </SelectItem>
-          <SelectItem value={TaxDisplayMode.both}>両方表示</SelectItem>
+          <SelectItem value={TaxDisplayMode.BOTH}>両方表示</SelectItem>
         </SelectContent>
       </Select>
       <input type="hidden" name={field.name} value={control.value ?? ""} />

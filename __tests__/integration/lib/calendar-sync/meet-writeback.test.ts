@@ -230,7 +230,7 @@ async function createReservationFixture(): Promise<{
         totalBasePrice: 0,
         holidayFlags: {},
       },
-      taxRateType: "standard",
+      taxRateType: "STANDARD",
       taxRate: 10,
       taxAmount: 100,
       totalPriceWithTax: 1100,
