@@ -268,16 +268,16 @@ export async function reorderTermsCommand(
 
     await tx.$executeRaw`
       UPDATE "terms_documents"
-      SET "displayOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      SET display_order = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "deletedAt" IS NULL
+        AND deleted_at IS NULL
     `;
 
     await tx.$executeRaw`
       UPDATE "terms_documents"
-      SET "displayOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      SET display_order = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "deletedAt" IS NULL
+        AND deleted_at IS NULL
     `;
   });
 

@@ -140,8 +140,8 @@ describe("append-only テーブルへの FK 参照アクション", () => {
       );
       await client.query(
         `INSERT INTO "audit_logs"
-           ("id","userId","action","resource","resourceId","metadata","createdAt","sequence",
-            "previousHash","entryHash","hashAlgorithm","hashKeyId","chainVersion")
+           ("id",user_id,"action","resource",resource_id,"metadata",created_at,"sequence",
+            previous_hash,entry_hash,hash_algorithm,hash_key_id,chain_version)
          VALUES (gen_random_uuid(),$1,'CREATE','probe','probe','{}'::jsonb,now(),
                  (SELECT coalesce(max("sequence"),0)+1 FROM "audit_logs"),$2,$2,'HMAC-SHA256','probe',1)`,
         [userId, hash],
@@ -182,7 +182,7 @@ describe("append-only テーブルへの FK 参照アクション", () => {
       }
       await client.query(
         `INSERT INTO "terms_agreements"
-           ("id","termsId","customerId","contentSnapshot","contentHash","agreedAt","scope")
+           ("id",terms_id,customer_id,content_snapshot,content_hash,agreed_at,"scope")
          VALUES (gen_random_uuid(),$1,$2,'probe','probe',now(),'RESERVATION')`,
         [termsId, customerId],
       );

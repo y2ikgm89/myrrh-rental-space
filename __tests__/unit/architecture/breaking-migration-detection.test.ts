@@ -150,7 +150,7 @@ const breakingFixtures: ReadonlyArray<{
   // 長期間見えていなかった（マージ済み migration が 1 件すり抜けている）。
   {
     name: "multi-line ALTER COLUMN ... SET DATA TYPE (Prisma の折返し出力)",
-    sql: 'ALTER TABLE "terms_agreements"\n  ALTER COLUMN "resourceId" SET DATA TYPE TEXT USING "resourceId"::TEXT;',
+    sql: 'ALTER TABLE "terms_agreements"\n  ALTER COLUMN resource_id SET DATA TYPE TEXT USING resource_id::TEXT;',
   },
   {
     name: "multi-line DROP COLUMN",

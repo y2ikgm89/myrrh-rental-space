@@ -474,9 +474,9 @@ describe("reorderTermsCommand", () => {
     for (const call of mockExecuteRaw.mock.calls.slice(1)) {
       const sql = call[0].join("?");
       expect(sql).toContain("terms_documents");
-      expect(sql).toContain("displayOrder");
+      expect(sql).toContain("display_order");
       expect(sql).toContain("CASE");
-      expect(sql).toContain("deletedAt");
+      expect(sql).toContain("deleted_at");
     }
   });
 

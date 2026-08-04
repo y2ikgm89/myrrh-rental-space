@@ -1093,33 +1093,33 @@ model Coupon {
 model Inquiry {
   id            String        @id @default(uuid(7)) @db.Uuid
   /// ユーザー可視の受付番号 (INQ-XXXXXXXX)。application 層で採番、UNIQUE 制約 + retry。
-  receiptNumber String        @unique @db.VarChar(20)
+  receiptNumber String        @unique @map("receipt_number") @db.VarChar(20)
   name          String
-  companyName   String? // 会社名・団体名（法人の場合）
-  customerType  CustomerType?
+  companyName   String?       @map("company_name") // 会社名・団体名（法人の場合）
+  customerType  CustomerType? @map("customer_type")
   email         String
   /// 任意入力の連絡先電話番号 (public フォーム + 会員 prefill 対応)
-  phoneNumber   String?
+  phoneNumber   String?       @map("phone_number")
   subject       String
   message       String        @db.Text
   status        InquiryStatus @default(NEW)
-  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Inquiry Overhaul Phase 1: 担当者アサイン (SLA 対応期限とセットで運用)
-  assigneeId   String?   @db.Uuid
+  assigneeId   String?   @map("assignee_id") @db.Uuid
   assignee     User?     @relation("InquiryAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  slaExpiresAt DateTime? @db.Timestamptz(6)
+  slaExpiresAt DateTime? @map("sla_expires_at") @db.Timestamptz(6)
 
   // Soft delete: admin UI の削除は deletedAt を刻むだけ。hard delete は
   // data-retention cron (`purgeExpiredInquiries`) が唯一の経路。
-  deletedAt        DateTime? @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
   // GDPR / PIPA 22 対応の PII 匿名化タイムスタンプ + 理由 (Phase 6 で anonymize command 実装)
-  anonymizedAt     DateTime? @db.Timestamptz(6)
-  anonymizedReason String?   @db.VarChar(50)
+  anonymizedAt     DateTime? @map("anonymized_at") @db.Timestamptz(6)
+  anonymizedReason String?   @map("anonymized_reason") @db.VarChar(50)
 
   // Customer Link（ログインユーザーのお問い合わせ紐づけ）
-  customerId String?   @db.Uuid
+  customerId String?   @map("customer_id") @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   // 複数返信スレッド / 状態履歴 / 添付 / 内部メモ / タグ
@@ -1149,15 +1149,15 @@ model Inquiry {
 /// Inquiry の返信スレッド (STAFF / CUSTOMER 双方向)。作成順に createdAt 昇順で並べる。
 model InquiryReply {
   id               String                 @id @default(uuid(7)) @db.Uuid
-  inquiryId        String                 @db.Uuid
-  authorType       InquiryReplyAuthorType
+  inquiryId        String                 @map("inquiry_id") @db.Uuid
+  authorType       InquiryReplyAuthorType @map("author_type")
   /// STAFF → User.id (User 削除は Restrict — positive-author CHECK と整合)。CUSTOMER では null。
-  authorId         String?                @db.Uuid
+  authorId         String?                @map("author_id") @db.Uuid
   /// CUSTOMER → Customer.id (Customer 削除は Restrict)。STAFF では null。
-  authorCustomerId String?                @db.Uuid
+  authorCustomerId String?                @map("author_customer_id") @db.Uuid
   body             String                 @db.Text
-  createdAt        DateTime               @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime               @updatedAt @db.Timestamptz(6)
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   inquiry        Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   author         User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1173,12 +1173,12 @@ model InquiryReply {
 /// Inquiry.status の変更履歴 (append-only)。fromStatus = NULL は creation。
 model InquiryStatusHistory {
   id          String         @id @default(uuid(7)) @db.Uuid
-  inquiryId   String         @db.Uuid
-  fromStatus  InquiryStatus?
-  toStatus    InquiryStatus
-  changedById String?        @db.Uuid
+  inquiryId   String         @map("inquiry_id") @db.Uuid
+  fromStatus  InquiryStatus? @map("from_status")
+  toStatus    InquiryStatus  @map("to_status")
+  changedById String?        @map("changed_by_id") @db.Uuid
   reason      String?        @db.VarChar(200)
-  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   /// DELETE Cascade はデータ保持 purge が bypass GUC を立てた状態でだけ通る正規経路。
   /// onUpdate は NoAction にする（既定の Cascade は append-only trigger に弾かれる）。
@@ -1192,18 +1192,18 @@ model InquiryStatusHistory {
 /// Inquiry 本文または個別 InquiryReply に紐づく添付ファイル (R2 保管)。
 model InquiryAttachment {
   id                   String   @id @default(uuid(7)) @db.Uuid
-  inquiryId            String   @db.Uuid
+  inquiryId            String   @map("inquiry_id") @db.Uuid
   /// 特定の返信への添付なら非 null (返信削除で cascade 削除)
-  replyId              String?  @db.Uuid
+  replyId              String?  @map("reply_id") @db.Uuid
   /// R2 object key (UNIQUE)。physical uniqueness の source of truth。
-  r2Key                String   @unique
-  mimeType             String   @db.VarChar(100)
-  sizeBytes            Int
+  r2Key                String   @unique @map("r2_key")
+  mimeType             String   @map("mime_type") @db.VarChar(100)
+  sizeBytes            Int      @map("size_bytes")
   filename             String   @db.VarChar(255)
   /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか（必須）。
-  uploadedById         String?  @db.Uuid
-  uploadedByCustomerId String?  @db.Uuid
-  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  uploadedById         String?  @map("uploaded_by_id") @db.Uuid
+  uploadedByCustomerId String?  @map("uploaded_by_customer_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inquiry            Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   reply              InquiryReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
@@ -1220,11 +1220,11 @@ model InquiryAttachment {
 /// スタッフ間 internal メモ (顧客には見えない)。author 削除は Restrict で保護。
 model InquiryInternalNote {
   id        String   @id @default(uuid(7)) @db.Uuid
-  inquiryId String   @db.Uuid
-  authorId  String   @db.Uuid
+  inquiryId String   @map("inquiry_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
   body      String   @db.Text
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   author  User    @relation("InquiryInternalNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1239,8 +1239,8 @@ model InquiryTag {
   id        String   @id @default(uuid(7)) @db.Uuid
   name      String   @unique @db.VarChar(50)
   color     String?  @db.VarChar(20)
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   inquiries InquiryTagOnInquiry[]
 
@@ -1249,9 +1249,9 @@ model InquiryTag {
 
 /// Inquiry ↔ InquiryTag 中間テーブル。
 model InquiryTagOnInquiry {
-  inquiryId String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  inquiryId String   @map("inquiry_id") @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   tag     InquiryTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
@@ -2033,11 +2033,11 @@ enum MediaUsage {
 model AuditLog {
   id            String      @id @default(uuid(7)) @db.Uuid
   sequence      BigInt      @unique
-  previousHash  String      @db.Char(64)
-  entryHash     String      @db.Char(64)
-  hashAlgorithm String      @default("HMAC-SHA256") @db.VarChar(32)
-  hashKeyId     String      @default("v1") @db.VarChar(32)
-  chainVersion  Int         @default(1)
+  previousHash  String      @map("previous_hash") @db.Char(64)
+  entryHash     String      @map("entry_hash") @db.Char(64)
+  hashAlgorithm String      @default("HMAC-SHA256") @map("hash_algorithm") @db.VarChar(32)
+  hashKeyId     String      @default("v1") @map("hash_key_id") @db.VarChar(32)
+  chainVersion  Int         @default(1) @map("chain_version")
   /// 実行ユーザー（null = システム or 未認証）。
   /// **`user` への FK は意図的に張らない。** `ON DELETE SET NULL` は audit_logs へ
   /// UPDATE を発行し append-only trigger に弾かれて親の DELETE を rollback させる
@@ -2046,14 +2046,14 @@ model AuditLog {
   /// ハッシュ chain も壊す。証跡は「その時点で誰が操作したか」の記録であり、対象の
   /// 削除後も記述は真のまま残るべきなので論理参照にしている。
   /// 参照の健全性は __tests__/integration/prisma/append-only-fk-actions.test.ts が守る。
-  userId        String?     @db.Uuid
+  userId        String?     @map("user_id") @db.Uuid
   action        AuditAction // 操作種別
   resource      String // 対象リソース種別 ('space', 'blog' 等)
-  resourceId    String? // 対象リソースID
-  oldValue      Json? // 変更前の値（UPDATE時）
-  newValue      Json? // 変更後の値 or 作成値
+  resourceId    String?     @map("resource_id") // 対象リソースID
+  oldValue      Json?       @map("old_value") // 変更前の値（UPDATE時）
+  newValue      Json?       @map("new_value") // 変更後の値 or 作成値
   metadata      Json? // 追加情報（IPアドレス、UserAgent等）
-  createdAt     DateTime    @default(now()) @db.Timestamptz(6)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([resource, resourceId])
   @@index([action])
@@ -2126,19 +2126,19 @@ model TermsDocument {
   type         String       @db.VarChar(64) // VARCHAR で柔軟化（旧 TermsType enum 廃止）
   slug         String       @db.VarChar(50) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   title        String       @db.VarChar(100)
-  contentJson  Json // Lexical EditorState
-  contentHtml  String       @db.Text // SSR / 同意記録 snapshot 用（保存時 sanitize-html で再生成）
-  isPublished  Boolean      @default(false)
-  publishedAt  DateTime?    @db.Timestamptz(6)
+  contentJson  Json         @map("content_json") // Lexical EditorState
+  contentHtml  String       @map("content_html") @db.Text // SSR / 同意記録 snapshot 用（保存時 sanitize-html で再生成）
+  isPublished  Boolean      @default(false) @map("is_published")
+  publishedAt  DateTime?    @map("published_at") @db.Timestamptz(6)
   /// 適用 scope 配列。空配列 = フッター掲載専用 (どの consent フォームにも出ない)。
   scopes       TermsScope[]
   /// 改訂時の周知文 (民法 548 条の 4 周知義務対応・任意)。
   changelog    String?      @db.Text
-  showInFooter Boolean      @default(true)
-  displayOrder Int          @default(0)
-  createdAt    DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime     @updatedAt @db.Timestamptz(6)
-  deletedAt    DateTime?    @db.Timestamptz(6)
+  showInFooter Boolean      @default(true) @map("show_in_footer")
+  displayOrder Int          @default(0) @map("display_order")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
   agreements TermsAgreement[]
 
@@ -2153,18 +2153,18 @@ model TermsDocument {
 /// 規約同意記録（証跡）— 同意時の HTML スナップショットを保持しバージョン履歴を兼ねる
 model TermsAgreement {
   id              String     @id @default(uuid(7)) @db.Uuid
-  termsId         String     @db.Uuid
+  termsId         String     @map("terms_id") @db.Uuid
   /// 同意した顧客（null = ゲスト。guestEmail 側で識別する）。
   /// **`customers` への FK は意図的に張らない。** `ON DELETE SET NULL` は
   /// terms_agreements へ UPDATE を発行し append-only trigger に弾かれて
   /// 顧客マージ（`tx.customer.delete`）を必ず失敗させていた。NULL 化は
   /// 「誰が同意したか」という証跡そのものを消すため、trigger の拒否が正しい。
   /// 詳細は AuditLog.userId のコメントと 20260803030000 の migration を参照。
-  customerId      String?    @db.Uuid
-  guestEmail      String?    @db.VarChar(255)
-  contentSnapshot String     @db.Text // 同意時 HTML 完全保存
-  contentHash     String     @db.VarChar(64) // sha256(contentSnapshot)
-  agreedAt        DateTime   @default(now()) @db.Timestamptz(6)
+  customerId      String?    @map("customer_id") @db.Uuid
+  guestEmail      String?    @map("guest_email") @db.VarChar(255)
+  contentSnapshot String     @map("content_snapshot") @db.Text // 同意時 HTML 完全保存
+  contentHash     String     @map("content_hash") @db.VarChar(64) // sha256(contentSnapshot)
+  agreedAt        DateTime   @default(now()) @map("agreed_at") @db.Timestamptz(6)
   /// 同意が発生した scope (旧 context VARCHAR を enum 化)。
   scope           TermsScope
   /// 同意が紐づくリソースの ID（予約 / 問い合わせ / イベント申込）。
@@ -2180,9 +2180,9 @@ model TermsAgreement {
   ///
   /// かつては 1 を軽視して `@db.Uuid` にしており、規約同意付きのイベント申込が
   /// P2007 で必ず失敗していた（#1747）。
-  resourceId      String?
-  ipAddress       String?    @db.VarChar(45)
-  userAgent       String?    @db.Text
+  resourceId      String?    @map("resource_id")
+  ipAddress       String?    @map("ip_address") @db.VarChar(45)
+  userAgent       String?    @map("user_agent") @db.Text
 
   /// termsId は RESTRICT（子を触らない）だが、onUpdate も明示的に NoAction にする。
   /// 既定の Cascade は親の主キー更新時に terms_agreements へ UPDATE を発行し、
@@ -2598,17 +2598,17 @@ model EventRegistration {
 model Refund {
   id                  String   @id @default(uuid(7)) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
-  reservationId       String?  @db.Uuid
+  reservationId       String?  @map("reservation_id") @db.Uuid
   /// 対象 EventRegistration (polymorphic、reservationId と排他)
-  eventRegistrationId String?  @db.Uuid
+  eventRegistrationId String?  @map("event_registration_id") @db.Uuid
   /// この refund event の金額 (円、正整数)
   amount              Int
   /// 管理者入力の理由 (顧客通知メール文面にも掲載予定)
   reason              String?  @db.Text
   /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
-  stripeRefundId      String   @unique
+  stripeRefundId      String   @unique @map("stripe_refund_id")
   /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
-  refundedByType      String   @db.VarChar(20)
+  refundedByType      String   @map("refunded_by_type") @db.VarChar(20)
   /// Stripe Refund.status: "pending" | "requires_action" | "succeeded" | "failed" | "canceled"。
   /// konbini / customer_balance 等の非同期決済手段は作成直後 "pending" を返し、後日 Stripe が
   /// 確定させる。"succeeded" 以外は refund.updated webhook が確定させるまでの暫定値であり、
@@ -2616,7 +2616,7 @@ model Refund {
   /// このカラムのみ append-only trigger の例外で更新可能
   /// (20260730115734_refunds_status_column_and_transition_exception、他カラムは従来通り不変)。
   status              String   @default("succeeded") @db.VarChar(20)
-  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   /// RESTRICT は子を触らないが、onUpdate も明示的に NoAction にする。既定の Cascade は
   /// 親の主キー更新時に refunds へ UPDATE を発行し、append-only trigger に弾かれるため。
@@ -2635,11 +2635,11 @@ model Receipt {
   /// ALTER COLUMN ... DROP DEFAULT を提案するため dbgenerated で明示する。
   id                  String             @id @default(uuid(7)) @db.Uuid
   // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
-  serialNo            String             @unique @db.VarChar(20)
-  issuedAt            DateTime           @default(now()) @db.Timestamptz(6)
+  serialNo            String             @unique @map("serial_no") @db.VarChar(20)
+  issuedAt            DateTime           @default(now()) @map("issued_at") @db.Timestamptz(6)
   // 発行対象 (Reservation OR EventRegistration の polymorphic)
-  reservationId       String?            @unique @db.Uuid
-  eventRegistrationId String?            @unique @db.Uuid
+  reservationId       String?            @unique @map("reservation_id") @db.Uuid
+  eventRegistrationId String?            @unique @map("event_registration_id") @db.Uuid
   reservation         Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
   // 適格請求書要件フィールド。
@@ -2647,28 +2647,28 @@ model Receipt {
   // （Event.title は 200 文字、Customer.lastName/firstName は無制限 TEXT）より
   // 短い上限を置くと P2000 で領収書発行が落ちる。会計証跡を黙って切り詰めた PDF は
   // 落ちるより悪いので、上限は入力側の Zod に置く（20260803040000 参照）。
-  recipientName       String             @db.Text
+  recipientName       String             @map("recipient_name") @db.Text
   subject             String             @default("スペース利用料として") @db.Text
   amount              Int
-  taxAmount           Int                @default(0)
-  taxRate             Int
+  taxAmount           Int                @default(0) @map("tax_amount")
+  taxRate             Int                @map("tax_rate")
   // 発行時点の Settings snapshot (凍結)
-  issuerSnapshot      Json
+  issuerSnapshot      Json               @map("issuer_snapshot")
   // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。
   // 元 Receipt は監査証跡として残り、chain (reissuedTo) 経由で辿れる。
   // revision は「何回目の再発行か」を示す counter (元 = 0、1 回目 reissue = 1)。
-  reissuedFromId      String?            @db.Uuid
+  reissuedFromId      String?            @map("reissued_from_id") @db.Uuid
   reissuedFrom        Receipt?           @relation("ReissuedReceipts", fields: [reissuedFromId], references: [id], onDelete: SetNull)
   reissuedTo          Receipt[]          @relation("ReissuedReceipts")
-  reissuedReason      String?            @db.Text
+  reissuedReason      String?            @map("reissued_reason") @db.Text
   revision            Int                @default(0)
   /// ゲスト署名 URL 経路 (Receipt-USEDAT-P1) で 1 回だけ DL を許可するための刻印。
   /// NULL = 未使用、非 NULL = その時刻に DL 済み (以降 token 経路は 404)。
   /// Better Auth session 経路 (mypage) では参照・更新せず、常時 DL 可能。
-  usedAt              DateTime?          @db.Timestamptz(6)
+  usedAt              DateTime?          @map("used_at") @db.Timestamptz(6)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([issuedAt])
   @@index([reissuedFromId], map: "receipts_reissuedFromId_idx", where: { reissuedFromId: { not: null } })
@@ -2683,8 +2683,8 @@ model Receipt {
 model ReceiptSequence {
   id        String   @id @default("singleton") @db.VarChar(20)
   year      Int // 4 桁年
-  nextNo    Int      @default(1) // 次に発行する連番 (1-indexed)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  nextNo    Int      @default(1) @map("next_no") // 次に発行する連番 (1-indexed)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("receipt_sequences")
 }
@@ -2698,16 +2698,16 @@ model AdminNotification {
   type         String   @db.VarChar(50)
   title        String   @db.VarChar(200)
   message      String   @db.VarChar(500)
-  resourceType String?  @db.VarChar(50)
+  resourceType String?  @map("resource_type") @db.VarChar(50)
   /// 複数モデルを指す polymorphic 参照（予約 / 問い合わせ / イベント 等）。
   /// **`@db.Uuid` に戻さない。** 全 ID が uuid に揃った今も、FK を張らないポインタを
   /// 1 モデルの型で縛ると次に別種のリソースを指した瞬間に壊れる
   /// （`AuditLog.resourceId` / `TermsAgreement.resourceId` と同じ扱い）。
   /// かつて `@db.Uuid` だった頃は Event の deep link が常に死んでいた
   /// （20260726030000 で varchar へ広げた）。統一前に書かれた行には cuid が残る。
-  resourceId   String?  @db.VarChar(36)
-  isRead       Boolean  @default(false)
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  resourceId   String?  @map("resource_id") @db.VarChar(36)
+  isRead       Boolean  @default(false) @map("is_read")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([isRead, createdAt(sort: Desc)])
   @@index([type])
@@ -2842,9 +2842,9 @@ model StripeEvent {
   /// event.type (`checkout.session.completed` 等)。監査/デバッグ用。
   type        String    @db.VarChar(80)
   /// signature verification 直後に record を作成した時刻 = 初回受領時刻。
-  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
   /// handler が全て成功して switch block を抜けた時刻。null = 実行中 or crash-recovery 待ち。
-  processedAt DateTime? @db.Timestamptz(6)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
 
   /// retention cron 用: receivedAt で古い順に削除するため。
   @@index([receivedAt])
@@ -2855,17 +2855,17 @@ model StripeEvent {
 model TransferAccount {
   id                String   @id @default(uuid(7)) @db.Uuid
   label             String   @db.VarChar(50)
-  bankName          String   @db.VarChar(50)
-  branchName        String   @db.VarChar(50)
+  bankName          String   @map("bank_name") @db.VarChar(50)
+  branchName        String   @map("branch_name") @db.VarChar(50)
   /// TRANSFER_ACCOUNT_TYPE SSoT（DB VARCHAR 管理）
-  accountType       String   @db.VarChar(20)
-  accountNumber     String   @db.VarChar(20)
-  accountHolderName String   @db.VarChar(100)
+  accountType       String   @map("account_type") @db.VarChar(20)
+  accountNumber     String   @map("account_number") @db.VarChar(20)
+  accountHolderName String   @map("account_holder_name") @db.VarChar(100)
   note              String?  @db.VarChar(200)
-  sortOrder         Int      @default(0)
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(6)
+  sortOrder         Int      @default(0) @map("sort_order")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([isActive, sortOrder])
   @@map("transfer_accounts")

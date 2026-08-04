@@ -173,7 +173,7 @@ describe("値域 CHECK 制約", () => {
     await expectRejectedBy(
       "refunds_amount_positive_check",
       // id は明示する。20260803090000 で DB 側 DEFAULT を外し Prisma 側採番へ寄せたため。
-      `INSERT INTO "refunds" ("id","reservationId","amount","refundedByType","stripeRefundId")
+      `INSERT INTO "refunds" ("id",reservation_id,"amount",refunded_by_type,stripe_refund_id)
        VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
     );
   });
@@ -221,8 +221,8 @@ describe("値域 CHECK 制約", () => {
     await expectRejectedBy(
       "receipts_target_exclusive_check",
       `INSERT INTO "receipts" (
-         "id","serialNo","reservationId","eventRegistrationId","recipientName",
-         "amount","taxRate","issuerSnapshot","updatedAt"
+         "id",serial_no,reservation_id,event_registration_id,recipient_name,
+         "amount",tax_rate,issuer_snapshot,updated_at
        ) VALUES (
          gen_random_uuid(), 'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
          '${ABSENT_UUID_A}', '00000000-0000-4000-8000-0000000000aa', 'probe',
