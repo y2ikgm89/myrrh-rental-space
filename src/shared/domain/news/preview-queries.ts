@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { toPlainObject } from "@/shared/lib/serialize";
+import type { Prisma } from "@generated/prisma/client";
 
 const newsDetailSelect = {
   id: true,
@@ -16,7 +17,7 @@ const newsDetailSelect = {
   ogpTitle: true,
   ogpDescription: true,
   ogpImageUrl: true,
-} as const;
+} as const satisfies Prisma.NewsSelect;
 
 /**
  * Preview 用 news fetch — published filter なし (draft 含む全件)、cache なし (常に最新)。

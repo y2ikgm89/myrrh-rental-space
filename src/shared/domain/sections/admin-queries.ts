@@ -7,6 +7,7 @@ import {
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
+import type { Prisma } from "@generated/prisma/client";
 
 const ADMIN_SECTION_SELECT = {
   id: true,
@@ -17,7 +18,7 @@ const ADMIN_SECTION_SELECT = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.SectionSelect;
 
 function parseSectionConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);

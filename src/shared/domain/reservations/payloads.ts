@@ -8,6 +8,7 @@ import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import type { ReservationPricingInput } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import type { Prisma } from "@generated/prisma/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,7 +65,7 @@ export const CUSTOMER_SELECT = {
   lastName: true,
   companyName: true,
   email: true,
-} as const;
+} as const satisfies Prisma.CustomerSelect;
 
 // ---------------------------------------------------------------------------
 // Shared helpers

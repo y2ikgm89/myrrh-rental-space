@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
 import { SMART_LOCK_PAD_DEVICE_TYPES } from "@/shared/lib/validations/enums/helpers";
+import type { Prisma } from "@generated/prisma/client";
 
 const SMART_LOCK_DEVICE_SELECT = {
   id: true,
@@ -19,7 +20,7 @@ const SMART_LOCK_DEVICE_SELECT = {
   lastStateAt: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.SmartLockDeviceSelect;
 
 function formatSmartLockDevice(row: {
   id: string;

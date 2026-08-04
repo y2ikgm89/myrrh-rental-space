@@ -12,6 +12,7 @@ import {
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@generated/prisma/client";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -217,7 +218,7 @@ const EVENT_REGISTRATION_SELF_SERVE_EDIT_SELECT = {
   slot: { select: { startAt: true, endAt: true } },
   ticket: { select: { name: true, price: true } },
   event: { select: { title: true } },
-} as const;
+} as const satisfies Prisma.EventRegistrationSelect;
 
 /**
  * ゲスト申込編集ページ (`/events/registrations/status/edit`) 用。
@@ -456,7 +457,7 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
       space: { select: { name: true } },
     },
   },
-} as const;
+} as const satisfies Prisma.EventRegistrationSelect;
 
 type CustomerEventRegistrationRow = {
   readonly id: string;

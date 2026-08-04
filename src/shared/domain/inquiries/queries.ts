@@ -38,7 +38,7 @@ export const REPLY_SELECT_INTERNAL = {
   createdAt: true,
   author: { select: { name: true } },
   authorCustomer: { select: { lastName: true, firstName: true } },
-} as const;
+} as const satisfies Prisma.InquiryReplySelect;
 
 type RawReply = {
   id: string;
@@ -85,7 +85,7 @@ export const ATTACHMENT_SELECT_INTERNAL = {
   sizeBytes: true,
   replyId: true,
   createdAt: true,
-} as const;
+} as const satisfies Prisma.InquiryAttachmentSelect;
 
 type RawAttachment = {
   id: string;
@@ -184,7 +184,7 @@ const INTERNAL_NOTE_SELECT = {
   author: { select: { name: true } },
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.InquiryInternalNoteSelect;
 
 type RawInternalNote = {
   id: string;

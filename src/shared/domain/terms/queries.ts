@@ -37,7 +37,7 @@ const PUBLIC_LIST_SELECT = {
   showInFooter: true,
   displayOrder: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 const PUBLIC_DETAIL_SELECT = {
   id: true,
@@ -47,14 +47,14 @@ const PUBLIC_DETAIL_SELECT = {
   contentHtml: true,
   publishedAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 const PUBLIC_REQUIRED_SELECT = {
   id: true,
   slug: true,
   title: true,
   contentHtml: true,
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 export type PublicTermsListItem = Serialized<{
   id: string;

@@ -24,6 +24,7 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { AdminAuthUser } from "./queries";
+import type { Prisma } from "@generated/prisma/client";
 
 type AdminRoleGroup = {
   role: (typeof DASHBOARD_ROLES)[number];
@@ -72,7 +73,7 @@ const AUTH_USER_SELECT = {
   role: true,
   emailVerified: true,
   dashboardEnabled: true,
-} as const;
+} as const satisfies Prisma.UserSelect;
 
 function readConfiguredRoleGroups(): AdminRoleGroup[] | null {
   const groupValues = ROLE_GROUP_ENV.map((entry) => {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@generated/prisma/client";
 
 const CUSTOMER_RESERVATION_SELECT = {
   id: true,
@@ -16,7 +17,7 @@ const CUSTOMER_RESERVATION_SELECT = {
   notes: true,
   createdAt: true,
   space: { select: { id: true, name: true, slug: true } },
-} as const;
+} as const satisfies Prisma.ReservationSelect;
 
 export async function getCustomerReservations(customerId: string) {
   return prisma.reservation.findMany({

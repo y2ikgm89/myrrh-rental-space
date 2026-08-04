@@ -6,6 +6,7 @@ import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@generated/prisma/client";
 
 /**
  * 管理画面向け規約クエリ
@@ -27,7 +28,7 @@ const ADMIN_LIST_SELECT = {
   updatedAt: true,
   deletedAt: true,
   _count: { select: { agreements: true } },
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 const ADMIN_DETAIL_SELECT = {
   id: true,
@@ -45,7 +46,7 @@ const ADMIN_DETAIL_SELECT = {
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
-} as const;
+} as const satisfies Prisma.TermsDocumentSelect;
 
 export type AdminTermsListItem = Serialized<{
   id: string;
@@ -246,7 +247,7 @@ const AGREEMENT_LIST_SELECT = {
   ipAddress: true,
   userAgent: true,
   terms: { select: { title: true, slug: true, type: true } },
-} as const;
+} as const satisfies Prisma.TermsAgreementSelect;
 
 /**
  * 同意記録に顧客の表示情報を貼り直す。

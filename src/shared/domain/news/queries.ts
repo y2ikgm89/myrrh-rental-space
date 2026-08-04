@@ -41,7 +41,7 @@ const newsListSelect = {
   slug: true,
   title: true,
   publishedAt: true,
-} as const;
+} as const satisfies Prisma.NewsSelect;
 
 const newsDetailSelect = {
   id: true,
@@ -56,7 +56,7 @@ const newsDetailSelect = {
   ogpTitle: true,
   ogpDescription: true,
   ogpImageUrl: true,
-} as const;
+} as const satisfies Prisma.NewsSelect;
 
 function attachNewsUrl<T extends { slug: string }>(
   item: T,

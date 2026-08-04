@@ -8,6 +8,7 @@ import {
 } from "@/shared/domain/faq/constants";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
+import type { Prisma } from "@generated/prisma/client";
 import type {
   FaqCategoryData,
   FaqCategoryListResult,
@@ -62,7 +63,7 @@ const CATEGORY_SELECT = {
   deletedAt: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.FaqCategorySelect;
 
 const ITEM_SELECT = {
   id: true,
@@ -79,7 +80,7 @@ const ITEM_SELECT = {
   notHelpfulCount: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.FaqItemSelect;
 
 const ITEM_WITH_CATEGORY_SELECT = {
   ...ITEM_SELECT,
@@ -90,7 +91,7 @@ const ITEM_WITH_CATEGORY_SELECT = {
       slug: true,
     },
   },
-} as const;
+} as const satisfies Prisma.FaqItemSelect;
 
 /**
  * カテゴリごとの公開中（非削除）項目数をまとめて集計する。

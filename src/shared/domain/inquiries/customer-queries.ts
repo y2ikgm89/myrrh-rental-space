@@ -8,6 +8,7 @@ import {
   REPLY_SELECT_INTERNAL,
 } from "./queries";
 import type { InquiryAttachmentItem, InquiryReplyItem } from "./types";
+import type { Prisma } from "@generated/prisma/client";
 
 const CUSTOMER_INQUIRY_LIST_SELECT = {
   id: true,
@@ -18,7 +19,7 @@ const CUSTOMER_INQUIRY_LIST_SELECT = {
   updatedAt: true,
   /** 返信が 1 件でもあるか (list の "返信あり" バッジ判定用) */
   _count: { select: { replies: true } },
-} as const;
+} as const satisfies Prisma.InquirySelect;
 
 const CUSTOMER_INQUIRY_DETAIL_SELECT = {
   id: true,
@@ -40,7 +41,7 @@ const CUSTOMER_INQUIRY_DETAIL_SELECT = {
     orderBy: { createdAt: "asc" },
     select: ATTACHMENT_SELECT_INTERNAL,
   },
-} as const;
+} as const satisfies Prisma.InquirySelect;
 
 /** 一覧行 (返信有無だけ持つ軽量 shape)。 */
 export type CustomerInquiryListItem = {

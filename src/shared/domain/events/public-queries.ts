@@ -56,7 +56,7 @@ const publicEventSelect = {
     },
     orderBy: { sortOrder: "asc" as const },
   },
-};
+} satisfies Prisma.EventSelect;
 
 const publicEventDetailSelect = {
   ...publicEventSelect,
@@ -68,7 +68,7 @@ const publicEventDetailSelect = {
   ogpDescription: true,
   metaDescription: true,
   metaKeywords: true,
-};
+} satisfies Prisma.EventSelect;
 
 type PublicEventRow = Awaited<
   ReturnType<typeof prisma.event.findMany<{ select: typeof publicEventSelect }>>

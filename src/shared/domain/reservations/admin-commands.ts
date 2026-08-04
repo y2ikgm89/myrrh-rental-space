@@ -36,6 +36,7 @@ import { resolveRateBreakdown } from "@/shared/lib/pricing/rate-plan-resolver";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
+import type { Prisma } from "@generated/prisma/client";
 
 const SPACE_SELECT = {
   id: true,
@@ -48,7 +49,7 @@ const SPACE_SELECT = {
   durationDiscountOverride: true,
   taxRateType: true,
   location: { select: { address: true } },
-} as const;
+} as const satisfies Prisma.SpaceSelect;
 
 // ---------------------------------------------------------------------------
 // Admin: Create

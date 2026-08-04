@@ -13,7 +13,7 @@ const NOTIFICATION_SELECT = {
   resourceId: true,
   isRead: true,
   createdAt: true,
-} as const;
+} as const satisfies Prisma.AdminNotificationSelect;
 
 export type AdminNotificationData = {
   id: string;

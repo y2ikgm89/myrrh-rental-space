@@ -8,6 +8,7 @@ import {
   getValidBlockedDateType,
 } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
+import type { Prisma } from "@generated/prisma/client";
 
 const BLOCKED_DATE_SELECT = {
   id: true,
@@ -21,7 +22,7 @@ const BLOCKED_DATE_SELECT = {
   createdBy: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} as const satisfies Prisma.BlockedDateSelect;
 
 function formatBlockedDate(row: {
   id: string;

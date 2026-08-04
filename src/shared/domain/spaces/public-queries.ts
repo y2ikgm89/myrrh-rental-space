@@ -56,7 +56,7 @@ const spaceListSelect = {
   reviewsEnabled: true,
   category: { select: { id: true, name: true, icon: true } },
   location: { select: { name: true, address: true } },
-} as const;
+} as const satisfies Prisma.SpaceSelect;
 
 type SpaceListRow = Awaited<
   ReturnType<typeof prisma.space.findMany<{ select: typeof spaceListSelect }>>

@@ -5,6 +5,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { applyEventRegistrationCancellation } from "./registration-cancel-core";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import type { Prisma } from "@generated/prisma/client";
 
 const CANCEL_REGISTRATION_SELECT = {
   id: true,
@@ -19,7 +20,7 @@ const CANCEL_REGISTRATION_SELECT = {
   status: true,
   paymentStatus: true,
   event: { select: { title: true, slug: true } },
-} as const;
+} as const satisfies Prisma.EventRegistrationSelect;
 
 /**
  * 申込キャンセルの共通実装。
