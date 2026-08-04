@@ -79,9 +79,9 @@ function reservationInsert(overrides: {
 }): string {
   return `
     INSERT INTO "reservations" (
-      "id","spaceId","customerId","startTime","endTime","status","paymentStatus",
-      "basePrice","totalPrice","rateBreakdownJson","taxRateType","taxRate",
-      "taxAmount","totalPriceWithTax","createdAt","updatedAt"
+      "id",space_id,customer_id,start_time,end_time,"status",payment_status,
+      base_price,total_price,rate_breakdown_json,tax_rate_type,tax_rate,
+      tax_amount,total_price_with_tax,created_at,updated_at
     ) VALUES (
       gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}',
       now(), now() + interval '1 hour', 'PENDING', 'UNPAID',
@@ -154,7 +154,7 @@ describe("値域 CHECK 制約", () => {
   test("パーセントクーポンに 100 を超える割引値を入れられない", async () => {
     await expectRejectedBy(
       "coupons_discount_value_range_check",
-      `INSERT INTO "coupons" ("id","code","name","type","discountValue","validFrom","updatedAt")
+      `INSERT INTO "coupons" ("id","code","name","type",discount_value,valid_from,updated_at)
        VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
                'probe', 'PERCENTAGE', 101, now(), now())`,
     );
@@ -163,7 +163,7 @@ describe("値域 CHECK 制約", () => {
   test("クーポンの利用回数上限を 0 にできない", async () => {
     await expectRejectedBy(
       "coupons_usage_range_check",
-      `INSERT INTO "coupons" ("id","code","name","type","discountValue","usageLimit","validFrom","updatedAt")
+      `INSERT INTO "coupons" ("id","code","name","type",discount_value,usage_limit,valid_from,updated_at)
        VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
                'probe', 'FIXED_AMOUNT', 100, 0, now(), now())`,
     );

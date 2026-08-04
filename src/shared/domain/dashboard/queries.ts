@@ -344,14 +344,14 @@ export async function getReservationChartData(): Promise<ReservationChartResult>
 
   const dailyStats = await prisma.$queryRaw<DailyStats[]>`
     SELECT
-      TO_CHAR("createdAt" AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD') as date,
+      TO_CHAR(created_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD') as date,
       COUNT(*)::bigint as reservations,
-      SUM(CASE WHEN status IN (${revenueStatuses}) THEN "totalPrice"::numeric ELSE 0 END) as revenue
+      SUM(CASE WHEN status IN (${revenueStatuses}) THEN total_price::numeric ELSE 0 END) as revenue
     FROM "reservations"
-    WHERE "createdAt" >= ${oldestJstMidnightUtc}
-      AND "deletedAt" IS NULL
+    WHERE created_at >= ${oldestJstMidnightUtc}
+      AND deleted_at IS NULL
       AND status NOT IN (${excludedStatuses})
-    GROUP BY TO_CHAR("createdAt" AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD')
+    GROUP BY TO_CHAR(created_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD')
     ORDER BY date ASC
   `;
 

@@ -331,12 +331,12 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     const couponSql = mockExecuteRaw.mock.calls[2]?.[0]?.join("");
     expect(couponSql).toContain("UPDATE");
     expect(couponSql).toContain("coupons");
-    expect(couponSql).toContain("usageCount");
-    expect(couponSql).toContain("usageLimit");
-    expect(couponSql).toContain("isActive");
-    expect(couponSql).toContain("validFrom");
-    expect(couponSql).toContain("validUntil");
-    expect(couponSql).toContain("minReservationAmount");
+    expect(couponSql).toContain("usage_count");
+    expect(couponSql).toContain("usage_limit");
+    expect(couponSql).toContain("is_active");
+    expect(couponSql).toContain("valid_from");
+    expect(couponSql).toContain("valid_until");
+    expect(couponSql).toContain("min_reservation_amount");
     // updateMany 経路には呼ばれない ($executeRaw に統一済)
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });

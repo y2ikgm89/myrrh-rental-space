@@ -46,12 +46,12 @@ describe("claimCouponUsage", () => {
     const call = mockExecuteRaw.mock.calls[0];
     const sql = (call?.[0] as TemplateStringsArray).join("?");
     expect(sql).toContain('UPDATE "coupons"');
-    expect(sql).toContain('"usageCount"');
-    expect(sql).toContain('"isActive"');
-    expect(sql).toContain('"usageLimit"');
-    expect(sql).toContain('"validFrom"');
-    expect(sql).toContain('"validUntil"');
-    expect(sql).toContain('"minReservationAmount"');
+    expect(sql).toContain("usage_count");
+    expect(sql).toContain("is_active");
+    expect(sql).toContain("usage_limit");
+    expect(sql).toContain("valid_from");
+    expect(sql).toContain("valid_until");
+    expect(sql).toContain("min_reservation_amount");
 
     // couponId, now (validFrom), now (validUntil), basePrice がバインドされる
     expect(call?.[1]).toBe("11111111-1111-1111-1111-111111111111");

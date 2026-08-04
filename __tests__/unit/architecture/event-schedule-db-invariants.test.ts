@@ -30,12 +30,14 @@ describe("event schedule DB invariants", () => {
       /\bscheduleMode\s+EventScheduleMode\s+@default\b/u,
     );
     expect(schema).toMatch(
-      /\bregistrationDeadline\s+DateTime\?\s+@db\.Timestamptz\(6\)/u,
+      /\bregistrationDeadline\s+DateTime\?\s+(?:@map\("\w+"\)\s+)?@db\.Timestamptz\(6\)/u,
     );
     // 空白で pin すると `prisma format` の列揃え直しだけで落ちる（実際に落ちた）。
-    // 守りたいのは「slotId が EventTimeSlot.id と同じ uuid 型」であって
-    // 桁揃えではないので、隣の assertion と同じく空白非依存の正規表現で書く。
-    expect(schema).toMatch(/\bslotId\s+String\s+@db\.Uuid\b/u);
+    // `@map` も同じ理由で任意にしてある — 守りたいのは「slotId が EventTimeSlot.id と
+    // 同じ uuid 型」であって、桁揃えでも物理名でもない。
+    expect(schema).toMatch(
+      /\bslotId\s+String\s+(?:@map\("\w+"\)\s+)?@db\.Uuid\b/u,
+    );
   });
 
   test("scheduleMode に DB 既定値を置かない（作成時に必ず明示させる）", () => {

@@ -219,15 +219,15 @@ export async function claimCouponUsage(
   const now = args.now ?? new Date();
   const claimed = await tx.$executeRaw`
     UPDATE "coupons"
-    SET "usageCount" = "usageCount" + 1
+    SET usage_count = usage_count + 1
     WHERE "id" = ${args.couponId}::uuid
-      AND "isActive" = true
-      AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
-      AND "validFrom" <= ${now}
-      AND ("validUntil" IS NULL OR "validUntil" >= ${now})
+      AND is_active = true
+      AND (usage_limit IS NULL OR usage_count < usage_limit)
+      AND valid_from <= ${now}
+      AND (valid_until IS NULL OR valid_until >= ${now})
       AND (
-        "minReservationAmount" IS NULL
-        OR "minReservationAmount" <= ${args.basePrice}
+        min_reservation_amount IS NULL
+        OR min_reservation_amount <= ${args.basePrice}
       )
   `;
   // driver によっては BigInt で返るため Number で正規化する。
@@ -335,11 +335,11 @@ export async function recomputeCustomerReservationStats(
   >`
     SELECT
       COUNT(*)::bigint AS count,
-      SUM(COALESCE("totalPriceWithTax", "totalPrice"))::float8 AS sum,
-      MIN("createdAt") AS first_created,
-      MAX("createdAt") AS last_created
+      SUM(COALESCE(total_price_with_tax, total_price))::float8 AS sum,
+      MIN(created_at) AS first_created,
+      MAX(created_at) AS last_created
     FROM "reservations"
-    WHERE "customerId" = ${customerId} AND "deletedAt" IS NULL
+    WHERE customer_id = ${customerId} AND deleted_at IS NULL
   `;
   const stats = rows[0];
 
