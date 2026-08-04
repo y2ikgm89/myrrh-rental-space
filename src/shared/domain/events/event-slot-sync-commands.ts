@@ -157,9 +157,9 @@ export async function syncEventTicketsCommand(
     );
     await tx.$executeRaw`
       UPDATE "event_tickets"
-      SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
-        AND "eventId" = ${eventId}
+        AND event_id = ${eventId}
     `;
   }
 

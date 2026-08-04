@@ -18,7 +18,9 @@ describe("ReservationSeries schema invariants", () => {
       /model Reservation \{[\s\S]*?@@map\("reservations"\)\s*\}/,
     );
     expect(reservationBlock).not.toBeNull();
-    expect(reservationBlock![0]).toMatch(/couponId\s+String\?\s+@db\.Uuid/);
+    expect(reservationBlock![0]).toMatch(
+      /couponId\s+String\?\s+(?:@map\("\w+"\)\s+)?@db\.Uuid/,
+    );
   });
 
   test("partial UNIQUE index が migration 履歴に存在 (Codex #3599414660 fix)", () => {

@@ -137,8 +137,13 @@ function readTemplate(source: string, openIndex: number): string | undefined {
  * どの表のものか静的には決まらない（表名を含まないため）。断片まで追うには
  * 実行時の連結を再現するしかないので、ここは統合テストに任せる。
  */
+// **末尾に `\b` を置かない。** `UPDATE\s+"?\w` は語の途中（`UPDATE "e`）で終わるため、
+// 全体を `\b(?:…)\b` で包むと語境界が成立せず **UPDATE 文が丸ごと検査対象外になる**。
+// 実測: `event-slot-sync-commands.ts` の `UPDATE "event_tickets" SET "sortOrder" = …` が
+// 素通りし、統合テストだけが `column "eventId" does not exist` で落ちた。
+// 語境界が要る分岐には、その分岐の中で `\b` を書く。
 const SQL_SHAPE =
-  /\b(?:INSERT\s+INTO|UPDATE\s+"?\w|DELETE\s+FROM|SELECT\b[\s\S]*?\bFROM|ALTER\s+TABLE)\b/iu;
+  /\b(?:INSERT\s+INTO\b|UPDATE\s+(?:public\.)?"?\w|DELETE\s+FROM\b|SELECT\b[\s\S]*?\bFROM\b|ALTER\s+TABLE\b)/iu;
 
 /** 文字列・コメント・テンプレートを状態遷移で読み分け、リテラルだけを取り出す。 */
 function extractLiterals(source: string): string[] {
@@ -188,6 +193,18 @@ const TABLE_MENTION =
   /\b(?:FROM|INTO|UPDATE|JOIN|TABLE)\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/giu;
 const CAMEL_IDENTIFIER = /"([a-z]+(?:[A-Z][a-zA-Z0-9]*)+)"/gu;
 
+/**
+ * SQL の**値**を落として、識別子だけを残す。
+ *
+ * SQL では `'...'` が値で `"..."` が識別子。jsonb リテラルを書くと
+ * `'{"schemaVersion": 1}'::jsonb` のように**値の中に二重引用符が入る**ので、
+ * 素通しすると JSON のキーを列名と読み違える（実測: `db-invariants.test.ts` の
+ * `rateBreakdownJson` の中身 4 件が偽陽性になった）。
+ */
+function stripSqlValues(sql: string): string {
+  return sql.replaceAll(/'(?:[^']|'')*'/gu, "''");
+}
+
 const files = ROOTS.flatMap((root) => walk(root));
 const literals = files.flatMap((file) =>
   extractSql(readFileSync(file, "utf8")).map((sql) => ({ file, sql })),
@@ -195,7 +212,8 @@ const literals = files.flatMap((file) =>
 
 function violations(): string[] {
   const out: string[] = [];
-  for (const { file, sql } of literals) {
+  for (const { file, sql: raw } of literals) {
+    const sql = stripSqlValues(raw);
     const mentioned = [...sql.matchAll(TABLE_MENTION)]
       .map((m) => m[1])
       .filter((name): name is string => name !== undefined)

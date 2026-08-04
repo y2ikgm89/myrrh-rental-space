@@ -702,26 +702,26 @@ model BlockedDate {
 
 model ReservationSeries {
   id                          String    @id @default(uuid(7)) @db.Uuid
-  spaceId                     String    @db.Uuid
-  customerId                  String    @db.Uuid
-  couponId                    String?   @db.Uuid
+  spaceId                     String    @map("space_id") @db.Uuid
+  customerId                  String    @map("customer_id") @db.Uuid
+  couponId                    String?   @map("coupon_id") @db.Uuid
   rrule                       String    @db.VarChar(500)
   dtstart                     DateTime  @db.Timestamptz(6)
   duration                    Int
-  instanceCount               Int
-  templateData                Json
-  agreementSnapshot           Json
-  createdAt                   DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt                   DateTime  @updatedAt @db.Timestamptz(6)
-  cancelledAt                 DateTime? @db.Timestamptz(6)
-  cancelledByType             String?   @db.VarChar(20)
-  cancellationReason          String?   @db.Text
-  deletedAt                   DateTime? @db.Timestamptz(6)
-  deletedById                 String?   @db.Uuid
+  instanceCount               Int       @map("instance_count")
+  templateData                Json      @map("template_data")
+  agreementSnapshot           Json      @map("agreement_snapshot")
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByType             String?   @map("cancelled_by_type") @db.VarChar(20)
+  cancellationReason          String?   @map("cancellation_reason") @db.Text
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  deletedById                 String?   @map("deleted_by_id") @db.Uuid
   /// Google Calendar 側の recurring master event ID (Phase B.2.1 Task 5 で追加)。
   /// null = 未同期 or Google Calendar 無効。bulk cancel の series-level GCal 操作
   /// (deleteGcalMaster / patchGcalMasterUntil) が非 null 時のみ発火する。
-  googleCalendarMasterEventId String?   @db.VarChar(1024)
+  googleCalendarMasterEventId String?   @map("google_calendar_master_event_id") @db.VarChar(1024)
 
   space     Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   customer  Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -745,13 +745,13 @@ model ReservationSeries {
 
 model Reservation {
   id         String            @id @default(uuid(7)) @db.Uuid
-  spaceId    String            @db.Uuid
-  userId     String?           @db.Uuid
-  customerId String            @db.Uuid
+  spaceId    String            @map("space_id") @db.Uuid
+  userId     String?           @map("user_id") @db.Uuid
+  customerId String            @map("customer_id") @db.Uuid
   /// Space reservations are half-open intervals: [startTime, endTime).
   /// DB invariant `reservations_time_order_check` enforces startTime < endTime.
-  startTime  DateTime          @db.Timestamptz(6)
-  endTime    DateTime          @db.Timestamptz(6)
+  startTime  DateTime          @map("start_time") @db.Timestamptz(6)
+  endTime    DateTime          @map("end_time") @db.Timestamptz(6)
   /// Active inventory states are PENDING / CONFIRMED. DB invariant
   /// `reservations_no_active_time_overlap_excl` prevents overlapping active,
   /// non-deleted reservations for the same space by using PostgreSQL EXCLUDE
@@ -762,10 +762,10 @@ model Reservation {
   /// comments, and `__tests__/integration/domain/reservations/db-invariants.test.ts`
   /// in sync if this model changes.
   status     ReservationStatus @default(PENDING)
-  totalPrice Int // 割引後・税抜（円、NOT NULL）
+  totalPrice Int               @map("total_price") // 割引後・税抜（円、NOT NULL）
   notes      String?           @db.Text
-  createdAt  DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime          @updatedAt @db.Timestamptz(6)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   /// Optimistic concurrency (Rails ActiveRecord lock_version / Hibernate @Version と同型)。
   /// form-driven update path (updateCustomerReservation / updateAdminReservationCommand) が
@@ -774,35 +774,35 @@ model Reservation {
   version Int @default(0)
 
   // 割引情報
-  couponId               String? @db.Uuid // 適用されたクーポンID
-  couponDiscountAmount   Int? // クーポン割引額（円）
-  durationDiscountAmount Int? // 長時間割引額（円）
-  spaceDiscountAmount    Int? // スペース固有割引額（円）
-  basePrice              Int // 割引前価格（円、NOT NULL、Σ segment.subtotal）
+  couponId               String? @map("coupon_id") @db.Uuid // 適用されたクーポンID
+  couponDiscountAmount   Int?    @map("coupon_discount_amount") // クーポン割引額（円）
+  durationDiscountAmount Int?    @map("duration_discount_amount") // 長時間割引額（円）
+  spaceDiscountAmount    Int?    @map("space_discount_amount") // スペース固有割引額（円）
+  basePrice              Int     @map("base_price") // 割引前価格（円、NOT NULL、Σ segment.subtotal）
   /// Rate plan 解決結果のスナップショット（`RateBreakdown` 型、`src/shared/lib/pricing/rate-breakdown.ts`）。
   /// rate plan 導入前の予約は segments が空の snapshot を保持する（内訳は再現不可）。
-  rateBreakdownJson      Json
+  rateBreakdownJson      Json    @map("rate_breakdown_json")
 
   // 税情報（予約時点の値を記録）
-  taxRateType       TaxRateType // 適用された税率タイプ（NOT NULL、snapshot）
-  taxRate           Int // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
-  taxAmount         Int // 税額（円、NOT NULL）
-  totalPriceWithTax Int // 税込み合計（円、NOT NULL）
+  taxRateType       TaxRateType @map("tax_rate_type") // 適用された税率タイプ（NOT NULL、snapshot）
+  taxRate           Int         @map("tax_rate") // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
+  taxAmount         Int         @map("tax_amount") // 税額（円、NOT NULL）
+  totalPriceWithTax Int         @map("total_price_with_tax") // 税込み合計（円、NOT NULL）
   /// 管理者が計算値を手動上書きした場合の実行者 User.id（audit 目的）。null = 上書きなし。
-  priceOverriddenBy String?
+  priceOverriddenBy String?     @map("price_overridden_by")
 
   // Google Calendar Sync
-  googleCalendarEventId String? // 共有カレンダーのイベントID
-  calendarSyncedAt      DateTime? @db.Timestamptz(6) // 最終同期日時
-  calendarSyncError     String?   @db.Text // 同期エラーメッセージ
+  googleCalendarEventId String?   @map("google_calendar_event_id") // 共有カレンダーのイベントID
+  calendarSyncedAt      DateTime? @map("calendar_synced_at") @db.Timestamptz(6) // 最終同期日時
+  calendarSyncError     String?   @map("calendar_sync_error") @db.Text // 同期エラーメッセージ
 
   // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
-  guestLastName     String?
-  guestFirstName    String?
-  guestEmail        String?
-  guestPhone        String?
-  guestCompanyName  String?
-  guestCustomerType CustomerType?
+  guestLastName     String?       @map("guest_last_name")
+  guestFirstName    String?       @map("guest_first_name")
+  guestEmail        String?       @map("guest_email")
+  guestPhone        String?       @map("guest_phone")
+  guestCompanyName  String?       @map("guest_company_name")
+  guestCustomerType CustomerType? @map("guest_customer_type")
 
   // Relations
   space              Space               @relation(fields: [spaceId], references: [id], onDelete: Cascade)
@@ -813,8 +813,8 @@ model Reservation {
   smartLockPasscodes SmartLockPasscode[]
 
   // Soft-delete
-  deletedAt   DateTime? @db.Timestamptz(6)
-  deletedById String?   @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  deletedById String?   @map("deleted_by_id") @db.Uuid
   deletedBy   User?     @relation("ReservationDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
 
   /// 利用人数。公開予約フォームが必須で集め、`guestCountCapacityError` が
@@ -824,36 +824,36 @@ model Reservation {
   /// 人数が存在せず、`@default(1)` で埋めると捏造になる。編集画面がまさにそれを
   /// やっていた（`numberOfGuests={1}` のハードコード）ため、20 名の予約でも
   /// 定員 1 名のスペースへ移動できていた。
-  numberOfGuests Int?
+  numberOfGuests Int? @map("number_of_guests")
 
   // Payment (Stripe)
-  paymentStatus           PaymentStatus @default(UNPAID)
+  paymentStatus           PaymentStatus @default(UNPAID) @map("payment_status")
   /// Stripe Checkout Session の id。`@unique` は「同じ session が別の予約に紐づく」
   /// silent bug を防ぐ。EventRegistration 側は最初から `@unique` で、そのコメントは
   /// 「Reservation 側と同型」と書いていたが、実際にはこちら側だけ制約が無かった。
-  stripeCheckoutSessionId String?       @unique
+  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id")
   /// Stripe PaymentIntent の id。返金の idempotency key としても参照するため一意。
-  stripePaymentIntentId   String?       @unique
-  paidAt                  DateTime?     @db.Timestamptz(6)
+  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id")
+  paidAt                  DateTime?     @map("paid_at") @db.Timestamptz(6)
   /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
   /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
   /// `PENDING_RESERVATION_EXPIRY_MINUTES` の cutoff 判定に使う。予約作成時刻
   /// (createdAt) ではなく checkout 開始時刻で判定することで、予約作成から時間をおいて
   /// 決済を開始したケース (createdAt < cutoff だが checkout はまだ生きている) を誤爆
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
-  paymentInitiatedAt      DateTime?     @db.Timestamptz(6)
+  paymentInitiatedAt      DateTime?     @map("payment_initiated_at") @db.Timestamptz(6)
 
   // Cancellation tracking
-  cancellationReason String?   @db.Text
-  cancelledAt        DateTime? @db.Timestamptz(6)
-  cancelledByType    String?   @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" | "SYSTEM" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancellationReason String?   @map("cancellation_reason") @db.Text
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByType    String?   @map("cancelled_by_type") @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" | "SYSTEM" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
-  icsSequence Int @default(0)
+  icsSequence Int @default(0) @map("ics_sequence")
 
   // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
   // 二重送信防止のため送信前に atomic claim で now を立て、送信失敗時は null に戻す。
-  reminderSentAt DateTime? @db.Timestamptz(6)
+  reminderSentAt DateTime? @map("reminder_sent_at") @db.Timestamptz(6)
 
   /// 予約変更後の SwitchBot パスコード再発行待ち（revoke 確定後に webhook/cron が createKey）。
   /// edit-side-effects が revoke 受理後に key 消失を同リクエスト内で確認できなかった場合に立てる。
@@ -866,8 +866,8 @@ model Reservation {
   refunds Refund[]
 
   // Phase B.2: 繰返し予約 (RRULE) の親 series への参照。単発予約は両方 null。
-  seriesId                String?            @db.Uuid
-  recurrenceInstanceIndex Int?
+  seriesId                String?            @map("series_id") @db.Uuid
+  recurrenceInstanceIndex Int?               @map("recurrence_instance_index")
   series                  ReservationSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -1055,26 +1055,26 @@ model Coupon {
 
   // 割引設定
   type          CouponType
-  discountValue Int // 割引額 or 割引率（円 or %）
+  discountValue Int        @map("discount_value") // 割引額 or 割引率（円 or %）
 
   // 適用条件
-  minReservationAmount Int? // 最低利用金額（円）
-  maxDiscountAmount    Int? // 最大割引額（円、パーセント割引時）
+  minReservationAmount Int? @map("min_reservation_amount") // 最低利用金額（円）
+  maxDiscountAmount    Int? @map("max_discount_amount") // 最大割引額（円、パーセント割引時）
 
   // 有効期限
-  validFrom  DateTime  @db.Timestamptz(6)
-  validUntil DateTime? @db.Timestamptz(6)
+  validFrom  DateTime  @map("valid_from") @db.Timestamptz(6)
+  validUntil DateTime? @map("valid_until") @db.Timestamptz(6)
 
   // 利用制限
-  usageLimit Int? // 利用回数上限（null=無制限）
-  usageCount Int     @default(0) // 利用回数
-  isActive   Boolean @default(true)
+  usageLimit Int?    @map("usage_limit") // 利用回数上限（null=無制限）
+  usageCount Int     @default(0) @map("usage_count") // 利用回数
+  isActive   Boolean @default(true) @map("is_active")
 
   // 併用設定
-  canCombineWithDurationDiscount Boolean @default(true) // 長時間割引との併用可否
+  canCombineWithDurationDiscount Boolean @default(true) @map("can_combine_with_duration_discount") // 長時間割引との併用可否
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   reservations      Reservation[]
@@ -2313,13 +2313,13 @@ model SpaceReview {
 /// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの uuid とは別）。
 model EventTimeSlot {
   id                    String   @id @default(uuid(7)) @db.Uuid
-  eventId               String   @db.Uuid
-  startAt               DateTime @db.Timestamptz(6)
-  endAt                 DateTime @db.Timestamptz(6)
+  eventId               String   @map("event_id") @db.Uuid
+  startAt               DateTime @map("start_at") @db.Timestamptz(6)
+  endAt                 DateTime @map("end_at") @db.Timestamptz(6)
   capacity              Int
-  googleCalendarEventId String?
-  createdAt             DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
+  googleCalendarEventId String?  @map("google_calendar_event_id")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
@@ -2344,10 +2344,10 @@ model EventCategory {
   description String?  @db.Text
   icon        String?
   color       String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   events Event[]
 
@@ -2367,46 +2367,46 @@ model Event {
   title                String            @db.VarChar(200)
   slug                 String            @db.VarChar(100) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   /// Lexical EditorState JSON（正本）
-  descriptionJson      Json
+  descriptionJson      Json              @map("description_json")
   /// Lexical → 公開表示用 HTML キャッシュ（SanitizedHtml で出力）
-  descriptionHtml      String            @db.Text
+  descriptionHtml      String            @map("description_html") @db.Text
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
-  descriptionPlainText String            @db.Text
-  thumbnailUrl         String?
-  ogpImageUrl          String?
-  ogpTitle             String?
-  ogpDescription       String?
-  metaDescription      String?           @db.Text
-  metaKeywords         String?
+  descriptionPlainText String            @map("description_plain_text") @db.Text
+  thumbnailUrl         String?           @map("thumbnail_url")
+  ogpImageUrl          String?           @map("ogp_image_url")
+  ogpTitle             String?           @map("ogp_title")
+  ogpDescription       String?           @map("ogp_description")
+  metaDescription      String?           @map("meta_description") @db.Text
+  metaKeywords         String?           @map("meta_keywords")
   /// 号室・フロア・補足情報または外部会場名。
   /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
   /// 両方 null のときは外部会場名として使う。
-  addressDetail        String?           @db.VarChar(200)
+  addressDetail        String?           @map("address_detail") @db.VarChar(200)
   /// 会場（本館・渋谷店等）。null = 外部会場または未設定
-  locationId           String?           @db.Uuid
+  locationId           String?           @map("location_id") @db.Uuid
   /// 会場内のスペース。null = 会場全体 or 外部会場
-  spaceId              String?           @db.Uuid
+  spaceId              String?           @map("space_id") @db.Uuid
   status               EventStatus       @default(DRAFT)
   /// 開催方式。予約対象は常に EventTimeSlot。
   /// DB trigger で SINGLE_OCCURRENCE=スロット1件、TIMED_ENTRY=スロット2件以上を強制。
   /// 新規作成時は必ず明示指定する。DB default は置かない。
-  scheduleMode         EventScheduleMode
-  registrationOpen     Boolean           @default(true)
+  scheduleMode         EventScheduleMode @map("schedule_mode")
+  registrationOpen     Boolean           @default(true) @map("registration_open")
   /// 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。
-  registrationDeadline DateTime?         @db.Timestamptz(6)
-  publishedAt          DateTime?         @db.Timestamptz(6)
-  deletedAt            DateTime?         @db.Timestamptz(6)
-  deletedById          String?           @db.Uuid
+  registrationDeadline DateTime?         @map("registration_deadline") @db.Timestamptz(6)
+  publishedAt          DateTime?         @map("published_at") @db.Timestamptz(6)
+  deletedAt            DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  deletedById          String?           @map("deleted_by_id") @db.Uuid
   /// 写真ギャラリー (本文外の最上位画像一覧)。GalleryItem[] = { url, alt, caption }[]。最大20件。
   gallery              Json              @default("[]")
-  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// MIN(slots.startAt) の非正規化キャッシュ。スロット変更時に commands 層で同期。
   /// null = スロット未登録。ORDER BY / フィルタ用途に特化。slots.startAt と型を合わせ TIMESTAMPTZ(6)。
-  firstSlotStartAt     DateTime?         @db.Timestamptz(6)
+  firstSlotStartAt     DateTime?         @map("first_slot_start_at") @db.Timestamptz(6)
   /// MAX(slots.endAt) の非正規化キャッシュ。firstSlotStartAt と対称。
   /// 「終了が遅い順」ソート (past タブ既定) を semantic に支える。
-  lastSlotEndAt        DateTime?         @db.Timestamptz(6)
+  lastSlotEndAt        DateTime?         @map("last_slot_end_at") @db.Timestamptz(6)
 
   location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
@@ -2420,19 +2420,19 @@ model Event {
   /// オンライン会議 URL。ONLINE/HYBRID + MANUAL provider では必須 (DB CHECK
   /// event_online_meeting_url_required で担保)。GOOGLE_MEET provider では
   /// 発行前は null、発行後に write-back される。公開ページ・JSON-LD には出力しない。
-  meetingUrl      String?         @db.VarChar(500)
+  meetingUrl      String?         @map("meeting_url") @db.VarChar(500)
   /// meetingUrl の発行元。
-  meetingProvider MeetingProvider @default(MANUAL)
+  meetingProvider MeetingProvider @default(MANUAL) @map("meeting_provider")
 
   /// Google Calendar 同期エラーメッセージ（null = 未エラー/解消済み）。
   /// slot 単位の `EventTimeSlot.googleCalendarEventId` とは別に、event 全体の
   /// 同期状態（作成失敗・Meet write-back 失敗等）を可視化する
   /// (`/api/cron/calendar-sync-retry` の retry pool 判定・admin dashboard 表示用)。
-  calendarSyncError String? @db.Text
+  calendarSyncError String? @map("calendar_sync_error") @db.Text
 
   /// イベントの種類・カテゴリー（必須）。EventCategory 側は onDelete: Restrict のため
   /// 紐づくイベントがある限り物理削除・非アクティブ化できない。
-  categoryId String        @db.Uuid
+  categoryId String        @map("category_id") @db.Uuid
   category   EventCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   // FaqCategory.slug と同型: slug が無条件 @unique だと、ソフトデリート済みイベントが
@@ -2467,17 +2467,17 @@ model Event {
 
 model EventTicket {
   id          String   @id @default(uuid(7)) @db.Uuid
-  eventId     String   @db.Uuid
+  eventId     String   @map("event_id") @db.Uuid
   name        String   @db.VarChar(100)
   description String?  @db.Text
   price       Int
   capacity    Int?
   /// 1申込あたりの人数単位（1 = 1名、2 = 2名セット 等）
-  unitSize    Int      @default(1)
-  sortOrder   Int      @default(0)
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  unitSize    Int      @default(1) @map("unit_size")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
@@ -2493,10 +2493,10 @@ model EventTicket {
 
 model EventRegistration {
   id              String             @id @default(uuid(7)) @db.Uuid
-  eventId         String             @db.Uuid
+  eventId         String             @map("event_id") @db.Uuid
   /// 申込対象タイムスロット。イベント申込は必ず 1 つの時間枠に属する。
-  slotId          String             @db.Uuid
-  ticketId        String             @db.Uuid
+  slotId          String             @map("slot_id") @db.Uuid
+  ticketId        String             @map("ticket_id") @db.Uuid
   name            String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
   email           String?            @db.VarChar(255)
@@ -2504,40 +2504,40 @@ model EventRegistration {
   note            String?            @db.Text
   quantity        Int                @default(1)
   status          RegistrationStatus @default(CONFIRMED)
-  customerId      String?            @db.Uuid
-  cancelledAt     DateTime?          @db.Timestamptz(6)
-  cancelledByType String?            @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  customerId      String?            @map("customer_id") @db.Uuid
+  cancelledAt     DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByType String?            @map("cancelled_by_type") @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
-  attendedAt      DateTime?          @db.Timestamptz(6)
-  createdAt       DateTime           @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime           @updatedAt @db.Timestamptz(6)
+  attendedAt      DateTime?          @map("attended_at") @db.Timestamptz(6)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
-  icsSequence Int @default(0)
+  icsSequence Int @default(0) @map("ics_sequence")
 
   // Waitlist columns (Plan: 2026-07-13-event-waitlist)
-  waitlistedAt DateTime? @db.Timestamptz(6) // WAITLISTED になった時刻 (FIFO 用)
-  offeredAt    DateTime? @db.Timestamptz(6) // WAITLISTED_OFFERED になった時刻
-  expiresAt    DateTime? @db.Timestamptz(6) // WAITLISTED_OFFERED の 24h 期限、cron で判定
+  waitlistedAt DateTime? @map("waitlisted_at") @db.Timestamptz(6) // WAITLISTED になった時刻 (FIFO 用)
+  offeredAt    DateTime? @map("offered_at") @db.Timestamptz(6) // WAITLISTED_OFFERED になった時刻
+  expiresAt    DateTime? @map("expires_at") @db.Timestamptz(6) // WAITLISTED_OFFERED の 24h 期限、cron で判定
 
   // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
   // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
-  reminderSentAt DateTime? @db.Timestamptz(6)
+  reminderSentAt DateTime? @map("reminder_sent_at") @db.Timestamptz(6)
 
   // Payment (Stripe) — Reservation と同型。有料 EventTicket の Stripe Checkout 対応 (PR#9)。
   // 決済フロー実装 (PR#10) はこの schema 追加を前提とする。無料チケット (price=0) は
   // 従来通り UNPAID のまま CONFIRMED を確定させる (walk-in / 招待枠と同じ扱い)。
-  paymentStatus           PaymentStatus @default(UNPAID)
+  paymentStatus           PaymentStatus @default(UNPAID) @map("payment_status")
   // Stripe Checkout Session の id。@unique で「同じ session が別 registration に紐づく」
   // silent bug を防ぐ (Reservation 側と同型)。
-  stripeCheckoutSessionId String?       @unique
+  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id")
   // Stripe PaymentIntent の id。session が payment_intent に紐付いた後の webhook で
   // 保存。@unique で refund の idempotency key 用途にも使う。
-  stripePaymentIntentId   String?       @unique
+  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id")
   // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
-  paidAmount              Int?
-  paidAt                  DateTime?     @db.Timestamptz(6)
+  paidAmount              Int?          @map("paid_amount")
+  paidAt                  DateTime?     @map("paid_at") @db.Timestamptz(6)
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)

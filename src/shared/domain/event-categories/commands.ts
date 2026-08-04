@@ -136,13 +136,13 @@ export async function updateEventCategoryOrder(
 
     await tx.$executeRaw`
       UPDATE "event_categories"
-      SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(tempCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
     `;
 
     await tx.$executeRaw`
       UPDATE "event_categories"
-      SET "sortOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      SET sort_order = CASE "id" ${Prisma.join(finalCases, " ")} END
       WHERE "id" IN (${Prisma.join(ids)})
     `;
   });

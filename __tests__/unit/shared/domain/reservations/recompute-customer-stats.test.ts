@@ -85,13 +85,13 @@ describe("recomputeCustomerReservationStats", () => {
     const sql = strings.join("?");
 
     expect(sql).toContain("COUNT(*)");
-    // 核心: totalPriceWithTax 優先 + totalPrice fallback
-    expect(sql).toContain('SUM(COALESCE("totalPriceWithTax", "totalPrice"))');
-    expect(sql).toContain('MIN("createdAt")');
-    expect(sql).toContain('MAX("createdAt")');
+    // 核心: total_price_with_tax 優先 + total_price fallback
+    expect(sql).toContain("SUM(COALESCE(total_price_with_tax, total_price))");
+    expect(sql).toContain("MIN(created_at)");
+    expect(sql).toContain("MAX(created_at)");
     expect(sql).toContain('FROM "reservations"');
-    expect(sql).toContain('"customerId" =');
-    expect(sql).toContain('"deletedAt" IS NULL');
+    expect(sql).toContain("customer_id =");
+    expect(sql).toContain("deleted_at IS NULL");
   });
 
   test("$queryRaw の parameter bind に customerId が渡る (SQL injection 防止 = Prisma tagged-template)", async () => {
