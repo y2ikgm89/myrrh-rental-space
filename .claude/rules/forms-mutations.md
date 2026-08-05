@@ -128,9 +128,10 @@ Component（`receipts/[serialNo]/download`。JS 無効時の動作と token を 
 - execute 内で throw した `DomainError` は自動で MutationError に変換される
 - legacy wrapper（`createSuccess(` / `type ActionResult` / `executeAdminMutation(`）の
   再導入はテストで即 fail
-- admin action ファイルは Prisma を直 import しない（thin action、テスト強制）。
-  ファイルを移動・改名したら `architecture-boundaries.test.ts` の
-  THIN_ADMIN_ACTION_FILES 配列も更新する（不在 path は hard-fail）
+- admin action ファイルは Prisma を直 import しない（thin action）。強制は
+  `__tests__/unit/architecture/prisma-import-boundary.test.ts` が **src 全体を走査**して
+  行う（`from` も `await import(...)` も見る）。**登録する配列は無い** — 手書きの
+  ファイル一覧は移動・改名で黙って空振りするので廃止した
 
 ## 公開フォーム action
 
