@@ -62,10 +62,54 @@ const exempted: Exempted[] = migrationDirs()
   })
   .filter((entry) => entry.rules.length > 0);
 
+/**
+ * 走査と判定が生きていることを、**実データではなく見本で**確かめるための SQL。
+ *
+ * 履歴を 1 本の baseline へ畳むと免除つき migration は 0 本になる。以前の
+ * 自己検査は「免除が 1 本以上ある」ことを要求しており、畳んだ瞬間に落ちた。
+ * **実データの件数に依存する自己検査は、正しい状態でも落ちる。**
+ *
+ * ここでは「見本を食わせて期待どおりに分類できるか」を見る。0 本でも成立し、
+ * 走査や判定が壊れれば落ちる。
+ */
+const SAMPLE_EXEMPTED_BREAKING = [
+  "-- squawk-ignore-file changing-column-type",
+  'ALTER TABLE "x" ALTER COLUMN "y" TYPE uuid;',
+].join("\n");
+const SAMPLE_EXEMPTED_NON_BREAKING = [
+  "-- squawk-ignore-file prefer-robust-stmts",
+  'CREATE INDEX "x_y_idx" ON "x" ("y");',
+].join("\n");
+const SAMPLE_PLAIN = 'CREATE INDEX "x_y_idx" ON "x" ("y");';
+
+function rulesIn(sql: string): string[] {
+  return [...sql.matchAll(SQUAWK_IGNORE)]
+    .map((m) => m[1])
+    .filter((rule): rule is string => rule !== undefined);
+}
+
 describe("squawk を免除した migration", () => {
-  test("走査が空振りしていない", () => {
-    // migration が 1 本も読めていない状態で「違反ゼロ」と報告しない。
-    expect(migrationDirs().length).toBeGreaterThan(1);
+  test("走査が空振りしていない（見本での自己検査）", () => {
+    // migration を 1 本も読めていない状態で「違反ゼロ」と報告しない。
+    expect(migrationDirs().length).toBeGreaterThan(0);
+
+    // 免除の検出: 書いてあれば拾い、書いていなければ拾わない。
+    expect(rulesIn(SAMPLE_EXEMPTED_BREAKING)).toEqual(["changing-column-type"]);
+    expect(rulesIn(SAMPLE_PLAIN)).toEqual([]);
+
+    // 破壊的判定: 合致する SQL と、しない SQL を取り違えない。
+    expect(detector.detects(SAMPLE_EXEMPTED_BREAKING)).toBe(true);
+    expect(detector.detects(SAMPLE_EXEMPTED_NON_BREAKING)).toBe(false);
+  });
+
+  test("免除していて破壊的でない migration を見逃さない（見本での自己検査）", () => {
+    // 実データが 0 件でも、判定そのものが機能していることを固定する。
+    // 以前はここを「免除が 1 本以上ある」で代用しており、畳むと落ちた。
+    const wouldViolate = [SAMPLE_EXEMPTED_NON_BREAKING]
+      .filter((sql) => rulesIn(sql).length > 0)
+      .filter((sql) => !detector.detects(sql));
+
+    expect(wouldViolate).toEqual([SAMPLE_EXEMPTED_NON_BREAKING]);
   });
 
   test("破壊的 DDL 判定に必ず引っかかる（＝計画ダウンタイムが付く）", () => {
@@ -80,10 +124,9 @@ describe("squawk を免除した migration", () => {
     expect(violations).toEqual([]);
   });
 
-  test("免除していない migration まで巻き込んで検査していない", () => {
-    // 全 migration が免除扱いになっていたら、上の test は「全部 breaking」を
-    // 要求するだけの別物になる。実際に免除されているのは一部であることを固定する。
-    expect(exempted.length).toBeGreaterThan(0);
-    expect(exempted.length).toBeLessThan(migrationDirs().length);
+  test("baseline を免除の対象に数えない", () => {
+    // baseline は空 DB に走る最初の 1 本で Risk 1 の窓が原理的に無い。
+    // ここに混ざると「全部 breaking であれ」という別の要求に化ける。
+    expect(exempted.map((entry) => entry.dir)).not.toContain(BASELINE_DIR);
   });
 });

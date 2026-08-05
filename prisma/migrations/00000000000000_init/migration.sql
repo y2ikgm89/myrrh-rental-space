@@ -19,191 +19,206 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER', 'CUSTOMER');
+CREATE TYPE "role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER', 'CUSTOMER');
 
 -- CreateEnum
-CREATE TYPE "ReservationStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
+CREATE TYPE "reservation_status" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateEnum
-CREATE TYPE "ReservationSeriesFreq" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
+CREATE TYPE "reservation_series_freq" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
 
 -- CreateEnum
-CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'FLAGGED', 'SPAM');
+CREATE TYPE "inquiry_status" AS ENUM ('NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'FLAGGED', 'SPAM');
 
 -- CreateEnum
-CREATE TYPE "InquiryReplyAuthorType" AS ENUM ('STAFF', 'CUSTOMER');
+CREATE TYPE "inquiry_reply_author_type" AS ENUM ('STAFF', 'CUSTOMER');
 
 -- CreateEnum
-CREATE TYPE "CustomerType" AS ENUM ('PERSONAL', 'CORPORATE');
+CREATE TYPE "customer_type" AS ENUM ('PERSONAL', 'CORPORATE');
 
 -- CreateEnum
-CREATE TYPE "CustomerStatus" AS ENUM ('NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST');
+CREATE TYPE "customer_status" AS ENUM ('NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('UNPAID', 'PENDING', 'PAID', 'PARTIALLY_REFUNDED', 'REFUNDED', 'FAILED');
+CREATE TYPE "payment_status" AS ENUM ('UNPAID', 'PENDING', 'PAID', 'PARTIALLY_REFUNDED', 'REFUNDED', 'FAILED');
 
 -- CreateEnum
-CREATE TYPE "NavigationType" AS ENUM ('HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER');
+CREATE TYPE "navigation_type" AS ENUM ('HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER');
 
 -- CreateEnum
-CREATE TYPE "SocialPlatform" AS ENUM ('TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER');
+CREATE TYPE "social_platform" AS ENUM ('TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "LayoutWidth" AS ENUM ('XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM');
+CREATE TYPE "layout_width" AS ENUM ('XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM');
 
 -- CreateEnum
-CREATE TYPE "PostStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
+CREATE TYPE "post_status" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "CouponType" AS ENUM ('PERCENTAGE', 'FIXED_AMOUNT');
+CREATE TYPE "coupon_type" AS ENUM ('PERCENTAGE', 'FIXED_AMOUNT');
 
 -- CreateEnum
-CREATE TYPE "DiscountType" AS ENUM ('none', 'percentage', 'fixed');
+CREATE TYPE "discount_type" AS ENUM ('NONE', 'PERCENTAGE', 'FIXED');
 
 -- CreateEnum
-CREATE TYPE "DurationDiscountOverride" AS ENUM ('inherit', 'enabled', 'disabled');
+CREATE TYPE "duration_discount_override" AS ENUM ('INHERIT', 'ENABLED', 'DISABLED');
 
 -- CreateEnum
-CREATE TYPE "TaxRateType" AS ENUM ('standard', 'reduced');
+CREATE TYPE "tax_rate_type" AS ENUM ('STANDARD', 'REDUCED');
 
 -- CreateEnum
-CREATE TYPE "HeaderScrollBehavior" AS ENUM ('auto-hide', 'always-visible', 'hide-on-scroll');
+CREATE TYPE "header_scroll_behavior" AS ENUM ('AUTO_HIDE', 'ALWAYS_VISIBLE', 'HIDE_ON_SCROLL');
 
 -- CreateEnum
-CREATE TYPE "HeaderBackgroundMode" AS ENUM ('solid', 'transparent');
+CREATE TYPE "header_background_mode" AS ENUM ('SOLID', 'TRANSPARENT');
 
 -- CreateEnum
-CREATE TYPE "TaxDisplayMode" AS ENUM ('tax_excluded', 'tax_included', 'both');
+CREATE TYPE "tax_display_mode" AS ENUM ('TAX_EXCLUDED', 'TAX_INCLUDED', 'BOTH');
 
 -- CreateEnum
-CREATE TYPE "CalendarSyncMethod" AS ENUM ('polling', 'webhook', 'both');
+CREATE TYPE "calendar_sync_method" AS ENUM ('POLLING', 'WEBHOOK', 'BOTH');
 
 -- CreateEnum
-CREATE TYPE "AnalyticsType" AS ENUM ('ga4', 'gtm');
+CREATE TYPE "connection_status" AS ENUM ('CONNECTED', 'ERROR');
 
 -- CreateEnum
-CREATE TYPE "DiscountCombinationMode" AS ENUM ('best', 'both');
+CREATE TYPE "blocked_date_scope" AS ENUM ('GLOBAL', 'LOCATION', 'SPACE');
 
 -- CreateEnum
-CREATE TYPE "AnnouncementBarAnimation" AS ENUM ('fade', 'slideX', 'slideY');
+CREATE TYPE "blocked_date_type" AS ENUM ('HOLIDAY', 'MAINTENANCE', 'EMERGENCY', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AnnouncementBarDesignStyle" AS ENUM ('solid', 'gradient', 'outlined', 'glass', 'minimal', 'striped');
+CREATE TYPE "refunded_by_type" AS ENUM ('ADMIN', 'AUTO_ON_CANCEL', 'AUTO_CAPACITY_RACE', 'AUTO_AMOUNT_MISMATCH', 'STRIPE_DASHBOARD');
 
 -- CreateEnum
-CREATE TYPE "InstagramMediaType" AS ENUM ('IMAGE', 'VIDEO', 'CAROUSEL_ALBUM');
+CREATE TYPE "transfer_account_type" AS ENUM ('ORDINARY', 'CURRENT', 'SAVINGS');
 
 -- CreateEnum
-CREATE TYPE "EventStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'CANCELLED', 'ARCHIVED');
+CREATE TYPE "analytics_type" AS ENUM ('GA4', 'GTM');
 
 -- CreateEnum
-CREATE TYPE "EventScheduleMode" AS ENUM ('SINGLE_OCCURRENCE', 'TIMED_ENTRY');
+CREATE TYPE "discount_combination_mode" AS ENUM ('BEST', 'BOTH');
 
 -- CreateEnum
-CREATE TYPE "EventFormat" AS ENUM ('OFFLINE', 'ONLINE', 'HYBRID');
+CREATE TYPE "announcement_bar_animation" AS ENUM ('FADE', 'SLIDE_X', 'SLIDE_Y');
 
 -- CreateEnum
-CREATE TYPE "MeetingProvider" AS ENUM ('MANUAL', 'GOOGLE_MEET');
+CREATE TYPE "announcement_bar_design_style" AS ENUM ('SOLID', 'GRADIENT', 'OUTLINED', 'GLASS', 'MINIMAL', 'STRIPED');
 
 -- CreateEnum
-CREATE TYPE "RegistrationStatus" AS ENUM ('CONFIRMED', 'CANCELLED', 'WAITLISTED', 'WAITLISTED_OFFERED', 'EXPIRED');
+CREATE TYPE "instagram_media_type" AS ENUM ('IMAGE', 'VIDEO', 'CAROUSEL_ALBUM');
 
 -- CreateEnum
-CREATE TYPE "EmailDeliveryStatus" AS ENUM ('OK', 'SOFT_BOUNCED', 'HARD_BOUNCED', 'COMPLAINED');
+CREATE TYPE "event_status" AS ENUM ('DRAFT', 'PUBLISHED', 'CANCELLED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "DayOfWeek" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY');
+CREATE TYPE "event_schedule_mode" AS ENUM ('SINGLE_OCCURRENCE', 'TIMED_ENTRY');
 
 -- CreateEnum
-CREATE TYPE "HolidayMode" AS ENUM ('any', 'only', 'exclude');
+CREATE TYPE "event_format" AS ENUM ('OFFLINE', 'ONLINE', 'HYBRID');
 
 -- CreateEnum
-CREATE TYPE "AuditAction" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'READ', 'MANAGE', 'PUBLISH', 'EXPORT', 'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 'PERMISSION_DENIED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_FAILED', 'ROLE_CHANGE', 'INTEGRITY_CHECK');
+CREATE TYPE "meeting_provider" AS ENUM ('MANUAL', 'GOOGLE_MEET');
 
 -- CreateEnum
-CREATE TYPE "EditorCommentStatus" AS ENUM ('ACTIVE', 'RESOLVED', 'DELETED');
+CREATE TYPE "registration_status" AS ENUM ('CONFIRMED', 'CANCELLED', 'WAITLISTED', 'WAITLISTED_OFFERED', 'EXPIRED');
 
 -- CreateEnum
-CREATE TYPE "MediaType" AS ENUM ('IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT', 'OTHER');
+CREATE TYPE "email_delivery_status" AS ENUM ('OK', 'SOFT_BOUNCED', 'HARD_BOUNCED', 'COMPLAINED');
 
 -- CreateEnum
-CREATE TYPE "MediaUsage" AS ENUM ('POST', 'NEWS', 'PAGE', 'SPACE', 'EVENT', 'SITE', 'GENERAL');
+CREATE TYPE "day_of_week" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY');
 
 -- CreateEnum
-CREATE TYPE "TermsScope" AS ENUM ('LOGIN_SIGNUP', 'RESERVATION', 'INQUIRY', 'EVENT_REGISTRATION', 'RESERVATION_SERIES');
+CREATE TYPE "holiday_mode" AS ENUM ('ANY', 'ONLY', 'EXCLUDE');
 
 -- CreateEnum
-CREATE TYPE "SmartLockDeviceType" AS ENUM ('KEYPAD', 'KEYPAD_TOUCH', 'KEYPAD_VISION', 'KEYPAD_VISION_PRO', 'LOCK', 'LOCK_LITE', 'LOCK_PRO');
+CREATE TYPE "audit_action" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'READ', 'MANAGE', 'PUBLISH', 'EXPORT', 'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 'PERMISSION_DENIED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_FAILED', 'ROLE_CHANGE', 'INTEGRITY_CHECK');
 
 -- CreateEnum
-CREATE TYPE "SmartLockPasscodeStatus" AS ENUM ('PENDING', 'CONFIRMED', 'FAILED', 'REVOKE_PENDING', 'REVOKED');
+CREATE TYPE "editor_comment_status" AS ENUM ('ACTIVE', 'RESOLVED', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "media_type" AS ENUM ('IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "media_usage" AS ENUM ('POST', 'NEWS', 'PAGE', 'SPACE', 'EVENT', 'SITE', 'GENERAL');
+
+-- CreateEnum
+CREATE TYPE "terms_scope" AS ENUM ('LOGIN_SIGNUP', 'RESERVATION', 'INQUIRY', 'EVENT_REGISTRATION', 'RESERVATION_SERIES');
+
+-- CreateEnum
+CREATE TYPE "smart_lock_device_type" AS ENUM ('KEYPAD', 'KEYPAD_TOUCH', 'KEYPAD_VISION', 'KEYPAD_VISION_PRO', 'LOCK', 'LOCK_LITE', 'LOCK_PRO');
+
+-- CreateEnum
+CREATE TYPE "smart_lock_passcode_status" AS ENUM ('PENDING', 'CONFIRMED', 'FAILED', 'REVOKE_PENDING', 'REVOKED');
 
 -- CreateTable
-CREATE TABLE "user" (
+CREATE TABLE "users" (
     "id" UUID NOT NULL,
-    "email" TEXT NOT NULL,
+    "email" VARCHAR(254) NOT NULL,
     "name" TEXT NOT NULL,
-    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "email_verified" BOOLEAN NOT NULL DEFAULT false,
     "image" TEXT,
-    "role" "Role" NOT NULL DEFAULT 'USER',
-    "dashboardEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "role" "role" NOT NULL DEFAULT 'USER',
+    "dashboard_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "user_page_assignments" (
-    "userId" UUID NOT NULL,
-    "pageId" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
+    "page_id" UUID NOT NULL,
 
-    CONSTRAINT "user_page_assignments_pkey" PRIMARY KEY ("userId","pageId")
+    CONSTRAINT "user_page_assignments_pkey" PRIMARY KEY ("user_id","page_id")
 );
 
 -- CreateTable
-CREATE TABLE "account" (
+CREATE TABLE "accounts" (
     "id" UUID NOT NULL,
-    "userId" UUID NOT NULL,
-    "accountId" TEXT NOT NULL,
-    "providerId" TEXT NOT NULL,
-    "accessToken" TEXT,
-    "refreshToken" TEXT,
-    "idToken" TEXT,
-    "accessTokenExpiresAt" TIMESTAMPTZ(6),
-    "refreshTokenExpiresAt" TIMESTAMPTZ(6),
+    "user_id" UUID NOT NULL,
+    "account_id" TEXT NOT NULL,
+    "provider_id" TEXT NOT NULL,
+    "access_token" TEXT,
+    "refresh_token" TEXT,
+    "id_token" TEXT,
+    "access_token_expires_at" TIMESTAMPTZ(6),
+    "refresh_token_expires_at" TIMESTAMPTZ(6),
     "scope" TEXT,
     "password" TEXT,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "account_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "session" (
+CREATE TABLE "sessions" (
     "id" UUID NOT NULL,
     "token" TEXT NOT NULL,
-    "userId" UUID NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "ipAddress" TEXT,
-    "userAgent" TEXT,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "user_id" UUID NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
+    "ip_address" TEXT,
+    "user_agent" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "verification" (
+CREATE TABLE "verifications" (
     "id" UUID NOT NULL,
     "identifier" TEXT NOT NULL,
     "value" TEXT NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "verifications_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -213,35 +228,35 @@ CREATE TABLE "locations" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "address" TEXT NOT NULL,
-    "postalCode" TEXT,
-    "prefecture" TEXT,
-    "city" TEXT,
-    "streetAddress" TEXT,
-    "buildingName" TEXT,
-    "accessLines" JSONB NOT NULL DEFAULT '[]',
-    "parkingInfo" TEXT,
+    "postal_code" VARCHAR(10),
+    "prefecture" VARCHAR(20),
+    "city" VARCHAR(100),
+    "street_address" VARCHAR(200),
+    "building_name" VARCHAR(200),
+    "access_lines" JSONB NOT NULL DEFAULT '[]',
+    "parking_info" TEXT,
     "amenities" JSONB NOT NULL DEFAULT '{}',
-    "imageUrl" TEXT NOT NULL,
-    "imageUrls" JSONB NOT NULL DEFAULT '[]',
-    "businessHours" JSONB,
-    "specialHolidays" JSONB,
+    "image_url" TEXT NOT NULL,
+    "image_urls" JSONB NOT NULL DEFAULT '[]',
+    "business_hours" JSONB,
+    "special_holidays" JSONB,
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
-    "googleBusinessPlaceId" TEXT,
-    "googleReviewUrl" TEXT,
-    "priceRange" VARCHAR(100),
-    "paymentAccepted" TEXT,
-    "phoneNumber" TEXT,
-    "email" TEXT,
-    "gbpSyncEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "gbpSyncedAt" TIMESTAMPTZ(6),
-    "gbpSyncError" TEXT,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "defaultSmartLockDeviceId" UUID,
+    "google_business_place_id" TEXT,
+    "google_review_url" TEXT,
+    "price_range" VARCHAR(100),
+    "payment_accepted" TEXT,
+    "phone_number" VARCHAR(30),
+    "email" VARCHAR(254),
+    "gbp_sync_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "gbp_synced_at" TIMESTAMPTZ(6),
+    "gbp_sync_error" TEXT,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_published" BOOLEAN NOT NULL DEFAULT false,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "default_smart_lock_device_id" UUID,
 
     CONSTRAINT "locations_pkey" PRIMARY KEY ("id")
 );
@@ -253,10 +268,10 @@ CREATE TABLE "space_categories" (
     "description" TEXT,
     "icon" TEXT,
     "color" TEXT,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "space_categories_pkey" PRIMARY KEY ("id")
 );
@@ -266,35 +281,35 @@ CREATE TABLE "spaces" (
     "id" UUID NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "descriptionJson" JSONB NOT NULL,
-    "descriptionHtml" TEXT NOT NULL,
-    "descriptionPlainText" TEXT NOT NULL,
-    "addressDetail" TEXT,
+    "description_json" JSONB NOT NULL,
+    "description_html" TEXT NOT NULL,
+    "description_plain_text" TEXT NOT NULL,
+    "address_detail" TEXT,
     "capacity" INTEGER NOT NULL,
     "area" INTEGER,
-    "hourlyPrice" INTEGER NOT NULL,
-    "mainImageUrl" TEXT NOT NULL,
+    "hourly_price" INTEGER NOT NULL,
+    "main_image_url" TEXT NOT NULL,
     "gallery" JSONB NOT NULL DEFAULT '[]',
     "facilities" JSONB NOT NULL DEFAULT '[]',
-    "businessHours" JSONB,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "publishedAt" TIMESTAMPTZ(6),
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "reviewsEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "metaDescription" TEXT,
-    "metaKeywords" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "ogpImageUrl" TEXT,
-    "discountType" "DiscountType" NOT NULL DEFAULT 'none',
-    "discountValue" INTEGER,
-    "durationDiscountOverride" "DurationDiscountOverride" NOT NULL DEFAULT 'inherit',
-    "taxRateType" "TaxRateType" NOT NULL DEFAULT 'standard',
-    "locationId" UUID NOT NULL,
-    "categoryId" UUID,
-    "smartLockDeviceId" UUID,
+    "business_hours" JSONB,
+    "is_published" BOOLEAN NOT NULL DEFAULT false,
+    "published_at" TIMESTAMPTZ(6),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "reviews_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "meta_description" TEXT,
+    "meta_keywords" TEXT,
+    "ogp_title" TEXT,
+    "ogp_description" TEXT,
+    "ogp_image_url" TEXT,
+    "discount_type" "discount_type" NOT NULL DEFAULT 'NONE',
+    "discount_value" INTEGER,
+    "duration_discount_override" "duration_discount_override" NOT NULL DEFAULT 'INHERIT',
+    "tax_rate_type" "tax_rate_type" NOT NULL DEFAULT 'STANDARD',
+    "location_id" UUID NOT NULL,
+    "category_id" UUID,
+    "smart_lock_device_id" UUID,
 
     CONSTRAINT "spaces_pkey" PRIMARY KEY ("id")
 );
@@ -302,17 +317,17 @@ CREATE TABLE "spaces" (
 -- CreateTable
 CREATE TABLE "space_rate_plans" (
     "id" UUID NOT NULL,
-    "spaceId" UUID NOT NULL,
+    "space_id" UUID NOT NULL,
     "name" VARCHAR(100) NOT NULL,
-    "hourlyPrice" INTEGER NOT NULL,
-    "daysOfWeek" "DayOfWeek"[],
-    "holidayMode" "HolidayMode" NOT NULL DEFAULT 'any',
-    "startTime" VARCHAR(5),
-    "endTime" VARCHAR(5),
-    "effectiveFrom" DATE,
-    "effectiveTo" DATE,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "hourly_price" INTEGER NOT NULL,
+    "days_of_week" "day_of_week"[],
+    "holiday_mode" "holiday_mode" NOT NULL DEFAULT 'ANY',
+    "start_time" VARCHAR(5),
+    "end_time" VARCHAR(5),
+    "effective_from" DATE,
+    "effective_to" DATE,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "space_rate_plans_pkey" PRIMARY KEY ("id")
 );
@@ -320,16 +335,16 @@ CREATE TABLE "space_rate_plans" (
 -- CreateTable
 CREATE TABLE "blocked_dates" (
     "id" UUID NOT NULL,
-    "scope" VARCHAR(16) NOT NULL,
-    "spaceId" UUID,
-    "locationId" UUID,
-    "startDate" DATE NOT NULL,
-    "endDate" DATE NOT NULL,
+    "scope" "blocked_date_scope" NOT NULL,
+    "space_id" UUID,
+    "location_id" UUID,
+    "start_date" DATE NOT NULL,
+    "end_date" DATE NOT NULL,
     "reason" VARCHAR(200),
-    "type" VARCHAR(32) NOT NULL,
-    "createdBy" UUID NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "type" "blocked_date_type" NOT NULL,
+    "created_by" UUID NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "blocked_dates_pkey" PRIMARY KEY ("id")
 );
@@ -337,23 +352,23 @@ CREATE TABLE "blocked_dates" (
 -- CreateTable
 CREATE TABLE "reservation_series" (
     "id" UUID NOT NULL,
-    "spaceId" UUID NOT NULL,
-    "customerId" UUID NOT NULL,
-    "couponId" UUID,
+    "space_id" UUID NOT NULL,
+    "customer_id" UUID NOT NULL,
+    "coupon_id" UUID,
     "rrule" VARCHAR(500) NOT NULL,
     "dtstart" TIMESTAMPTZ(6) NOT NULL,
     "duration" INTEGER NOT NULL,
-    "instanceCount" INTEGER NOT NULL,
-    "templateData" JSONB NOT NULL,
-    "agreementSnapshot" JSONB NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "cancelledAt" TIMESTAMPTZ(6),
-    "cancelledByType" VARCHAR(20),
-    "cancellationReason" TEXT,
-    "deletedAt" TIMESTAMPTZ(6),
-    "deletedById" UUID,
-    "googleCalendarMasterEventId" VARCHAR(1024),
+    "instance_count" INTEGER NOT NULL,
+    "template_data" JSONB NOT NULL,
+    "agreement_snapshot" JSONB NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "cancelled_at" TIMESTAMPTZ(6),
+    "cancelled_by_type" VARCHAR(20),
+    "cancellation_reason" TEXT,
+    "deleted_at" TIMESTAMPTZ(6),
+    "deleted_by_id" UUID,
+    "google_calendar_master_event_id" VARCHAR(1024),
 
     CONSTRAINT "reservation_series_pkey" PRIMARY KEY ("id")
 );
@@ -361,53 +376,53 @@ CREATE TABLE "reservation_series" (
 -- CreateTable
 CREATE TABLE "reservations" (
     "id" UUID NOT NULL,
-    "spaceId" UUID NOT NULL,
-    "userId" UUID,
-    "customerId" UUID NOT NULL,
-    "startTime" TIMESTAMPTZ(6) NOT NULL,
-    "endTime" TIMESTAMPTZ(6) NOT NULL,
-    "status" "ReservationStatus" NOT NULL DEFAULT 'PENDING',
-    "totalPrice" INTEGER NOT NULL,
+    "space_id" UUID NOT NULL,
+    "user_id" UUID,
+    "customer_id" UUID NOT NULL,
+    "start_time" TIMESTAMPTZ(6) NOT NULL,
+    "end_time" TIMESTAMPTZ(6) NOT NULL,
+    "status" "reservation_status" NOT NULL DEFAULT 'PENDING',
+    "total_price" INTEGER NOT NULL,
     "notes" TEXT,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 0,
-    "couponId" UUID,
-    "couponDiscountAmount" INTEGER,
-    "durationDiscountAmount" INTEGER,
-    "spaceDiscountAmount" INTEGER,
-    "basePrice" INTEGER NOT NULL,
-    "rateBreakdownJson" JSONB NOT NULL,
-    "taxRateType" "TaxRateType" NOT NULL,
-    "taxRate" INTEGER NOT NULL,
-    "taxAmount" INTEGER NOT NULL,
-    "totalPriceWithTax" INTEGER NOT NULL,
-    "priceOverriddenBy" TEXT,
-    "googleCalendarEventId" TEXT,
-    "calendarSyncedAt" TIMESTAMPTZ(6),
-    "calendarSyncError" TEXT,
-    "guestLastName" TEXT,
-    "guestFirstName" TEXT,
-    "guestEmail" TEXT,
-    "guestPhone" TEXT,
-    "guestCompanyName" TEXT,
-    "guestCustomerType" "CustomerType",
-    "deletedAt" TIMESTAMPTZ(6),
-    "deletedById" UUID,
-    "numberOfGuests" INTEGER,
-    "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'UNPAID',
-    "stripeCheckoutSessionId" TEXT,
-    "stripePaymentIntentId" TEXT,
-    "paidAt" TIMESTAMPTZ(6),
-    "paymentInitiatedAt" TIMESTAMPTZ(6),
-    "cancellationReason" TEXT,
-    "cancelledAt" TIMESTAMPTZ(6),
-    "cancelledByType" VARCHAR(20),
-    "icsSequence" INTEGER NOT NULL DEFAULT 0,
-    "reminderSentAt" TIMESTAMPTZ(6),
+    "coupon_id" UUID,
+    "coupon_discount_amount" INTEGER,
+    "duration_discount_amount" INTEGER,
+    "space_discount_amount" INTEGER,
+    "base_price" INTEGER NOT NULL,
+    "rate_breakdown_json" JSONB NOT NULL,
+    "tax_rate_type" "tax_rate_type" NOT NULL,
+    "tax_rate" INTEGER NOT NULL,
+    "tax_amount" INTEGER NOT NULL,
+    "total_price_with_tax" INTEGER NOT NULL,
+    "price_overridden_by_id" UUID,
+    "google_calendar_event_id" TEXT,
+    "calendar_synced_at" TIMESTAMPTZ(6),
+    "calendar_sync_error" TEXT,
+    "guest_last_name" VARCHAR(50),
+    "guest_first_name" VARCHAR(50),
+    "guest_email" VARCHAR(254),
+    "guest_phone" VARCHAR(30),
+    "guest_company_name" VARCHAR(100),
+    "guest_customer_type" "customer_type",
+    "deleted_at" TIMESTAMPTZ(6),
+    "deleted_by_id" UUID,
+    "number_of_guests" INTEGER,
+    "payment_status" "payment_status" NOT NULL DEFAULT 'UNPAID',
+    "stripe_checkout_session_id" TEXT,
+    "stripe_payment_intent_id" TEXT,
+    "paid_at" TIMESTAMPTZ(6),
+    "payment_initiated_at" TIMESTAMPTZ(6),
+    "cancellation_reason" TEXT,
+    "cancelled_at" TIMESTAMPTZ(6),
+    "cancelled_by_type" VARCHAR(20),
+    "ics_sequence" INTEGER NOT NULL DEFAULT 0,
+    "reminder_sent_at" TIMESTAMPTZ(6),
     "smart_lock_reissue_pending_at" TIMESTAMPTZ(6),
-    "seriesId" UUID,
-    "recurrenceInstanceIndex" INTEGER,
+    "series_id" UUID,
+    "recurrence_instance_index" INTEGER,
 
     CONSTRAINT "reservations_pkey" PRIMARY KEY ("id")
 );
@@ -415,40 +430,40 @@ CREATE TABLE "reservations" (
 -- CreateTable
 CREATE TABLE "customers" (
     "id" UUID NOT NULL,
-    "lastName" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastNameKana" TEXT,
-    "firstNameKana" TEXT,
-    "companyName" TEXT,
-    "customerType" "CustomerType" NOT NULL DEFAULT 'PERSONAL',
-    "email" TEXT NOT NULL,
-    "emailCanonical" TEXT NOT NULL,
-    "phoneNumber" TEXT,
-    "postalCode" VARCHAR(8),
-    "prefecture" VARCHAR(10),
+    "last_name" VARCHAR(50) NOT NULL,
+    "first_name" VARCHAR(50) NOT NULL,
+    "last_name_kana" VARCHAR(50),
+    "first_name_kana" VARCHAR(50),
+    "company_name" VARCHAR(100),
+    "customer_type" "customer_type" NOT NULL DEFAULT 'PERSONAL',
+    "email" VARCHAR(254) NOT NULL,
+    "email_canonical" VARCHAR(254) NOT NULL,
+    "phone_number" VARCHAR(30),
+    "postal_code" VARCHAR(10),
+    "prefecture" VARCHAR(20),
     "city" VARCHAR(100),
-    "streetAddress" VARCHAR(200),
+    "street_address" VARCHAR(200),
     "building" VARCHAR(200),
-    "status" "CustomerStatus" NOT NULL DEFAULT 'NEW',
+    "status" "customer_status" NOT NULL DEFAULT 'NEW',
     "notes" TEXT,
-    "totalReservations" INTEGER NOT NULL DEFAULT 0,
-    "totalSpent" INTEGER,
-    "lastReservationAt" TIMESTAMPTZ(6),
-    "firstReservationAt" TIMESTAMPTZ(6),
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "marketingOptIn" BOOLEAN NOT NULL DEFAULT false,
-    "phoneContactOptIn" BOOLEAN NOT NULL DEFAULT true,
-    "emailDeliveryStatus" "EmailDeliveryStatus" NOT NULL DEFAULT 'OK',
-    "emailDeliveryUpdatedAt" TIMESTAMPTZ(6),
-    "emailDeliveryReason" VARCHAR(500),
-    "flaggedForReviewAt" TIMESTAMPTZ(6),
-    "flagReasons" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "anonymizedAt" TIMESTAMPTZ(6),
-    "anonymizedReason" VARCHAR(50),
-    "suppressedEmailHash" VARCHAR(128),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "userId" UUID,
+    "total_reservations" INTEGER NOT NULL DEFAULT 0,
+    "total_spent" INTEGER,
+    "last_reservation_at" TIMESTAMPTZ(6),
+    "first_reservation_at" TIMESTAMPTZ(6),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "marketing_opt_in" BOOLEAN NOT NULL DEFAULT false,
+    "phone_contact_opt_in" BOOLEAN NOT NULL DEFAULT true,
+    "email_delivery_status" "email_delivery_status" NOT NULL DEFAULT 'OK',
+    "email_delivery_updated_at" TIMESTAMPTZ(6),
+    "email_delivery_reason" VARCHAR(500),
+    "flagged_for_review_at" TIMESTAMPTZ(6),
+    "flag_reasons" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "anonymized_at" TIMESTAMPTZ(6),
+    "anonymized_reason" VARCHAR(50),
+    "suppressed_email_hash" VARCHAR(128),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "user_id" UUID,
 
     CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
 );
@@ -456,13 +471,13 @@ CREATE TABLE "customers" (
 -- CreateTable
 CREATE TABLE "pending_customer_email_changes" (
     "id" UUID NOT NULL,
-    "customerId" UUID NOT NULL,
-    "newEmail" VARCHAR(320) NOT NULL,
-    "newEmailCanonical" VARCHAR(320) NOT NULL,
-    "tokenHash" VARCHAR(64) NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "consumedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "customer_id" UUID NOT NULL,
+    "new_email" VARCHAR(254) NOT NULL,
+    "new_email_canonical" VARCHAR(254) NOT NULL,
+    "token_hash" VARCHAR(64) NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
+    "consumed_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "pending_customer_email_changes_pkey" PRIMARY KEY ("id")
 );
@@ -470,13 +485,13 @@ CREATE TABLE "pending_customer_email_changes" (
 -- CreateTable
 CREATE TABLE "pending_customer_merges" (
     "id" UUID NOT NULL,
-    "targetCustomerId" UUID NOT NULL,
-    "sourceCustomerId" UUID NOT NULL,
-    "guestEmail" VARCHAR(320) NOT NULL,
-    "tokenHash" VARCHAR(64) NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "consumedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "target_customer_id" UUID NOT NULL,
+    "source_customer_id" UUID NOT NULL,
+    "guest_email" VARCHAR(254) NOT NULL,
+    "token_hash" VARCHAR(64) NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
+    "consumed_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "pending_customer_merges_pkey" PRIMARY KEY ("id")
 );
@@ -487,18 +502,18 @@ CREATE TABLE "coupons" (
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "type" "CouponType" NOT NULL,
-    "discountValue" INTEGER NOT NULL,
-    "minReservationAmount" INTEGER,
-    "maxDiscountAmount" INTEGER,
-    "validFrom" TIMESTAMPTZ(6) NOT NULL,
-    "validUntil" TIMESTAMPTZ(6),
-    "usageLimit" INTEGER,
-    "usageCount" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "canCombineWithDurationDiscount" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "type" "coupon_type" NOT NULL,
+    "discount_value" INTEGER NOT NULL,
+    "min_reservation_amount" INTEGER,
+    "max_discount_amount" INTEGER,
+    "valid_from" TIMESTAMPTZ(6) NOT NULL,
+    "valid_until" TIMESTAMPTZ(6),
+    "usage_limit" INTEGER,
+    "usage_count" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "can_combine_with_duration_discount" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
 );
@@ -506,23 +521,23 @@ CREATE TABLE "coupons" (
 -- CreateTable
 CREATE TABLE "inquiries" (
     "id" UUID NOT NULL,
-    "receiptNumber" VARCHAR(20) NOT NULL,
-    "name" TEXT NOT NULL,
-    "companyName" TEXT,
-    "customerType" "CustomerType",
-    "email" TEXT NOT NULL,
-    "phoneNumber" TEXT,
-    "subject" TEXT NOT NULL,
+    "receipt_number" VARCHAR(20) NOT NULL,
+    "name" VARCHAR(101) NOT NULL,
+    "company_name" VARCHAR(100),
+    "customer_type" "customer_type",
+    "email" VARCHAR(254) NOT NULL,
+    "phone_number" VARCHAR(30),
+    "subject" VARCHAR(200) NOT NULL,
     "message" TEXT NOT NULL,
-    "status" "InquiryStatus" NOT NULL DEFAULT 'NEW',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "assigneeId" UUID,
-    "slaExpiresAt" TIMESTAMPTZ(6),
-    "deletedAt" TIMESTAMPTZ(6),
-    "anonymizedAt" TIMESTAMPTZ(6),
-    "anonymizedReason" VARCHAR(50),
-    "customerId" UUID,
+    "status" "inquiry_status" NOT NULL DEFAULT 'NEW',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "assignee_id" UUID,
+    "sla_expires_at" TIMESTAMPTZ(6),
+    "deleted_at" TIMESTAMPTZ(6),
+    "anonymized_at" TIMESTAMPTZ(6),
+    "anonymized_reason" VARCHAR(50),
+    "customer_id" UUID,
 
     CONSTRAINT "inquiries_pkey" PRIMARY KEY ("id")
 );
@@ -530,13 +545,13 @@ CREATE TABLE "inquiries" (
 -- CreateTable
 CREATE TABLE "inquiry_replies" (
     "id" UUID NOT NULL,
-    "inquiryId" UUID NOT NULL,
-    "authorType" "InquiryReplyAuthorType" NOT NULL,
-    "authorId" UUID,
-    "authorCustomerId" UUID,
+    "inquiry_id" UUID NOT NULL,
+    "author_type" "inquiry_reply_author_type" NOT NULL,
+    "author_id" UUID,
+    "author_customer_id" UUID,
     "body" TEXT NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "inquiry_replies_pkey" PRIMARY KEY ("id")
 );
@@ -544,12 +559,12 @@ CREATE TABLE "inquiry_replies" (
 -- CreateTable
 CREATE TABLE "inquiry_status_history" (
     "id" UUID NOT NULL,
-    "inquiryId" UUID NOT NULL,
-    "fromStatus" "InquiryStatus",
-    "toStatus" "InquiryStatus" NOT NULL,
-    "changedById" UUID,
+    "inquiry_id" UUID NOT NULL,
+    "from_status" "inquiry_status",
+    "to_status" "inquiry_status" NOT NULL,
+    "changed_by_id" UUID,
     "reason" VARCHAR(200),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "inquiry_status_history_pkey" PRIMARY KEY ("id")
 );
@@ -557,15 +572,15 @@ CREATE TABLE "inquiry_status_history" (
 -- CreateTable
 CREATE TABLE "inquiry_attachments" (
     "id" UUID NOT NULL,
-    "inquiryId" UUID NOT NULL,
-    "replyId" UUID,
-    "r2Key" TEXT NOT NULL,
-    "mimeType" VARCHAR(100) NOT NULL,
-    "sizeBytes" INTEGER NOT NULL,
+    "inquiry_id" UUID NOT NULL,
+    "reply_id" UUID,
+    "r2_key" TEXT NOT NULL,
+    "mime_type" VARCHAR(100) NOT NULL,
+    "size_bytes" INTEGER NOT NULL,
     "filename" VARCHAR(255) NOT NULL,
-    "uploadedById" UUID,
-    "uploadedByCustomerId" UUID,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "uploaded_by_id" UUID,
+    "uploaded_by_customer_id" UUID,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "inquiry_attachments_pkey" PRIMARY KEY ("id")
 );
@@ -573,11 +588,11 @@ CREATE TABLE "inquiry_attachments" (
 -- CreateTable
 CREATE TABLE "inquiry_internal_notes" (
     "id" UUID NOT NULL,
-    "inquiryId" UUID NOT NULL,
-    "authorId" UUID NOT NULL,
+    "inquiry_id" UUID NOT NULL,
+    "author_id" UUID NOT NULL,
     "body" TEXT NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "inquiry_internal_notes_pkey" PRIMARY KEY ("id")
 );
@@ -587,19 +602,19 @@ CREATE TABLE "inquiry_tags" (
     "id" UUID NOT NULL,
     "name" VARCHAR(50) NOT NULL,
     "color" VARCHAR(20),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "inquiry_tags_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "inquiry_tag_on_inquiries" (
-    "inquiryId" UUID NOT NULL,
-    "tagId" UUID NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "inquiry_id" UUID NOT NULL,
+    "tag_id" UUID NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "inquiry_tag_on_inquiries_pkey" PRIMARY KEY ("inquiryId","tagId")
+    CONSTRAINT "inquiry_tag_on_inquiries_pkey" PRIMARY KEY ("inquiry_id","tag_id")
 );
 
 -- CreateTable
@@ -607,19 +622,19 @@ CREATE TABLE "news" (
     "id" UUID NOT NULL,
     "slug" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
-    "contentJson" JSONB,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "publishedAt" TIMESTAMPTZ(6),
-    "contentWidth" "LayoutWidth",
-    "contentWidthCustom" INTEGER,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "metaDescription" TEXT,
-    "metaKeywords" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "ogpImageUrl" TEXT,
+    "content_html" TEXT NOT NULL,
+    "content_json" JSONB,
+    "is_published" BOOLEAN NOT NULL DEFAULT false,
+    "published_at" TIMESTAMPTZ(6),
+    "content_width" "layout_width",
+    "content_width_custom" INTEGER,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "meta_description" TEXT,
+    "meta_keywords" TEXT,
+    "ogp_title" TEXT,
+    "ogp_description" TEXT,
+    "ogp_image_url" TEXT,
 
     CONSTRAINT "news_pkey" PRIMARY KEY ("id")
 );
@@ -628,16 +643,16 @@ CREATE TABLE "news" (
 CREATE TABLE "announcement_bars" (
     "id" UUID NOT NULL,
     "message" JSONB NOT NULL DEFAULT '[]',
-    "linkUrl" TEXT,
-    "linkText" TEXT,
-    "bgColor" TEXT,
-    "textColor" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "displayOrder" INTEGER NOT NULL DEFAULT 0,
-    "startAt" TIMESTAMPTZ(6),
-    "endAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "link_url" TEXT,
+    "link_text" TEXT,
+    "bg_color" TEXT,
+    "text_color" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "display_order" INTEGER NOT NULL DEFAULT 0,
+    "start_at" TIMESTAMPTZ(6),
+    "end_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "announcement_bars_pkey" PRIMARY KEY ("id")
 );
@@ -648,34 +663,34 @@ CREATE TABLE "posts" (
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "excerpt" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
-    "contentJson" JSONB,
-    "thumbnailUrl" TEXT NOT NULL,
-    "ogpImageUrl" TEXT,
-    "categoryId" UUID NOT NULL,
-    "metaDescription" TEXT,
-    "metaKeywords" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "publishedAt" TIMESTAMPTZ(6),
-    "status" "PostStatus" NOT NULL DEFAULT 'DRAFT',
-    "viewCount" INTEGER NOT NULL DEFAULT 0,
-    "authorId" UUID,
-    "contentWidth" "LayoutWidth",
-    "contentWidthCustom" INTEGER,
-    "deletedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "content_html" TEXT NOT NULL,
+    "content_json" JSONB,
+    "thumbnail_url" TEXT NOT NULL,
+    "ogp_image_url" TEXT,
+    "category_id" UUID NOT NULL,
+    "meta_description" TEXT,
+    "meta_keywords" TEXT,
+    "ogp_title" TEXT,
+    "ogp_description" TEXT,
+    "published_at" TIMESTAMPTZ(6),
+    "status" "post_status" NOT NULL DEFAULT 'DRAFT',
+    "view_count" INTEGER NOT NULL DEFAULT 0,
+    "author_id" UUID,
+    "content_width" "layout_width",
+    "content_width_custom" INTEGER,
+    "deleted_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "posts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "post_tag_on_posts" (
-    "postId" UUID NOT NULL,
-    "tagId" UUID NOT NULL,
+    "post_id" UUID NOT NULL,
+    "tag_id" UUID NOT NULL,
 
-    CONSTRAINT "post_tag_on_posts_pkey" PRIMARY KEY ("postId","tagId")
+    CONSTRAINT "post_tag_on_posts_pkey" PRIMARY KEY ("post_id","tag_id")
 );
 
 -- CreateTable
@@ -684,12 +699,12 @@ CREATE TABLE "post_categories" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
-    "metaTitle" TEXT,
-    "metaDescription" TEXT,
-    "ogpImageUrl" TEXT,
+    "meta_title" TEXT,
+    "meta_description" TEXT,
+    "ogp_image_url" TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "post_categories_pkey" PRIMARY KEY ("id")
 );
@@ -700,11 +715,11 @@ CREATE TABLE "post_tags" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
-    "metaTitle" TEXT,
-    "metaDescription" TEXT,
-    "ogpImageUrl" TEXT,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "meta_title" TEXT,
+    "meta_description" TEXT,
+    "ogp_image_url" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "post_tags_pkey" PRIMARY KEY ("id")
 );
@@ -714,18 +729,18 @@ CREATE TABLE "pages" (
     "id" UUID NOT NULL,
     "slug" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "metaDescription" TEXT,
-    "metaKeywords" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "ogpImageUrl" TEXT,
-    "isPublished" BOOLEAN NOT NULL DEFAULT true,
-    "publishedAt" TIMESTAMPTZ(6),
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "isSystemPage" BOOLEAN NOT NULL DEFAULT false,
+    "meta_description" TEXT,
+    "meta_keywords" TEXT,
+    "ogp_title" TEXT,
+    "ogp_description" TEXT,
+    "ogp_image_url" TEXT,
+    "is_published" BOOLEAN NOT NULL DEFAULT true,
+    "published_at" TIMESTAMPTZ(6),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "is_system_page" BOOLEAN NOT NULL DEFAULT false,
     "template" VARCHAR(64) NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "pages_pkey" PRIMARY KEY ("id")
 );
@@ -733,13 +748,13 @@ CREATE TABLE "pages" (
 -- CreateTable
 CREATE TABLE "sections" (
     "id" UUID NOT NULL,
-    "pageId" UUID NOT NULL,
+    "page_id" UUID NOT NULL,
     "type" VARCHAR(64) NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
     "config" JSONB NOT NULL DEFAULT '{}',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "sections_pkey" PRIMARY KEY ("id")
 );
@@ -747,15 +762,15 @@ CREATE TABLE "sections" (
 -- CreateTable
 CREATE TABLE "navigation_items" (
     "id" UUID NOT NULL,
-    "type" "NavigationType" NOT NULL,
-    "parentId" UUID,
+    "type" "navigation_type" NOT NULL,
+    "parent_id" UUID,
     "label" JSONB NOT NULL,
     "url" TEXT NOT NULL,
-    "isExternal" BOOLEAN NOT NULL DEFAULT false,
+    "is_external" BOOLEAN NOT NULL DEFAULT false,
     "order" INTEGER NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "navigation_items_pkey" PRIMARY KEY ("id")
 );
@@ -763,14 +778,14 @@ CREATE TABLE "navigation_items" (
 -- CreateTable
 CREATE TABLE "social_links" (
     "id" UUID NOT NULL,
-    "platform" "SocialPlatform" NOT NULL,
+    "platform" "social_platform" NOT NULL,
     "url" TEXT NOT NULL,
     "order" INTEGER NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "showOnDesktop" BOOLEAN NOT NULL DEFAULT true,
-    "showOnMobile" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "show_on_desktop" BOOLEAN NOT NULL DEFAULT true,
+    "show_on_mobile" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "social_links_pkey" PRIMARY KEY ("id")
 );
@@ -783,10 +798,10 @@ CREATE TABLE "faq_categories" (
     "description" TEXT,
     "icon" TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "deletedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "deleted_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "faq_categories_pkey" PRIMARY KEY ("id")
 );
@@ -794,375 +809,375 @@ CREATE TABLE "faq_categories" (
 -- CreateTable
 CREATE TABLE "faq_items" (
     "id" UUID NOT NULL,
-    "categoryId" UUID NOT NULL,
+    "category_id" UUID NOT NULL,
     "question" TEXT NOT NULL,
     "answer" TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
-    "isPublished" BOOLEAN NOT NULL DEFAULT true,
-    "publishedAt" TIMESTAMPTZ(6),
-    "deletedAt" TIMESTAMPTZ(6),
-    "viewCount" INTEGER NOT NULL DEFAULT 0,
-    "lastViewedAt" TIMESTAMPTZ(6),
-    "helpfulCount" INTEGER NOT NULL DEFAULT 0,
-    "notHelpfulCount" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "is_published" BOOLEAN NOT NULL DEFAULT true,
+    "published_at" TIMESTAMPTZ(6),
+    "deleted_at" TIMESTAMPTZ(6),
+    "view_count" INTEGER NOT NULL DEFAULT 0,
+    "last_viewed_at" TIMESTAMPTZ(6),
+    "helpful_count" INTEGER NOT NULL DEFAULT 0,
+    "not_helpful_count" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_announcement_carousels" (
+CREATE TABLE "settings_announcement_carousel" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "animation" "AnnouncementBarAnimation" NOT NULL DEFAULT 'fade',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "animation" "announcement_bar_animation" NOT NULL DEFAULT 'FADE',
     "duration" INTEGER NOT NULL DEFAULT 5000,
-    "autoPlay" BOOLEAN NOT NULL DEFAULT true,
-    "pauseOnHover" BOOLEAN NOT NULL DEFAULT true,
-    "showArrows" BOOLEAN NOT NULL DEFAULT true,
-    "showIndicator" BOOLEAN NOT NULL DEFAULT true,
-    "designStyle" "AnnouncementBarDesignStyle" NOT NULL DEFAULT 'solid',
-    "bgColor" TEXT,
-    "textColor" TEXT,
-    "stripeColor" TEXT,
-    "stripeAnimation" BOOLEAN NOT NULL DEFAULT false,
-    "gradientAnimation" BOOLEAN NOT NULL DEFAULT false,
-    "glassAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "auto_play" BOOLEAN NOT NULL DEFAULT true,
+    "pause_on_hover" BOOLEAN NOT NULL DEFAULT true,
+    "show_arrows" BOOLEAN NOT NULL DEFAULT true,
+    "show_indicator" BOOLEAN NOT NULL DEFAULT true,
+    "design_style" "announcement_bar_design_style" NOT NULL DEFAULT 'SOLID',
+    "bg_color" TEXT,
+    "text_color" TEXT,
+    "stripe_color" TEXT,
+    "stripe_animation" BOOLEAN NOT NULL DEFAULT false,
+    "gradient_animation" BOOLEAN NOT NULL DEFAULT false,
+    "glass_animation" BOOLEAN NOT NULL DEFAULT false,
     "sticky" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "settings_announcement_carousels_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_announcement_carousel_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_systems" (
+CREATE TABLE "settings_system" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "maintenanceMode" BOOLEAN NOT NULL DEFAULT false,
-    "maintenanceMessage" TEXT,
-    "cookieConsentEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "cookieConsentMessage" TEXT,
-    "cookieConsentAcceptText" TEXT,
-    "cookieConsentRejectText" TEXT,
-    "cookieConsentPolicyUrl" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "maintenance_mode" BOOLEAN NOT NULL DEFAULT false,
+    "maintenance_message" TEXT,
+    "cookie_consent_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "cookie_consent_message" TEXT,
+    "cookie_consent_accept_text" TEXT,
+    "cookie_consent_reject_text" TEXT,
+    "cookie_consent_policy_url" TEXT,
 
-    CONSTRAINT "settings_systems_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_system_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_seos" (
+CREATE TABLE "settings_seo" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "siteName" TEXT,
-    "siteDescription" TEXT,
-    "faviconUrl" TEXT NOT NULL DEFAULT '',
-    "defaultOgpImageUrl" TEXT,
-    "headerLogoUrl" TEXT,
-    "footerLogoUrl" TEXT,
-    "footerCopyright" TEXT,
-    "useHeaderLogo" BOOLEAN NOT NULL DEFAULT true,
-    "useFooterLogo" BOOLEAN NOT NULL DEFAULT true,
-    "defaultMetaDescription" TEXT,
-    "defaultMetaKeywords" TEXT,
-    "defaultOgpTitle" TEXT,
-    "defaultOgpDescription" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "site_name" TEXT,
+    "site_description" TEXT,
+    "favicon_url" TEXT NOT NULL DEFAULT '',
+    "default_ogp_image_url" TEXT,
+    "header_logo_url" TEXT,
+    "footer_logo_url" TEXT,
+    "footer_copyright" TEXT,
+    "use_header_logo" BOOLEAN NOT NULL DEFAULT true,
+    "use_footer_logo" BOOLEAN NOT NULL DEFAULT true,
+    "default_meta_description" TEXT,
+    "default_meta_keywords" TEXT,
+    "default_ogp_title" TEXT,
+    "default_ogp_description" TEXT,
 
-    CONSTRAINT "settings_seos_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_seo_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "settings_analytics" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "analyticsType" "AnalyticsType",
-    "googleAnalyticsId" TEXT,
-    "googleTagManagerId" TEXT,
-    "googleSearchConsoleId" TEXT,
-    "bingWebmasterToolsId" TEXT,
-    "gaPropertyId" TEXT,
-    "microsoftClarityId" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "analytics_type" "analytics_type",
+    "google_analytics_id" TEXT,
+    "google_tag_manager_id" TEXT,
+    "google_search_console_id" TEXT,
+    "bing_webmaster_tools_id" TEXT,
+    "ga_property_id" TEXT,
+    "microsoft_clarity_id" TEXT,
 
     CONSTRAINT "settings_analytics_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_layouts" (
+CREATE TABLE "settings_layout" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "containerWidth" "LayoutWidth",
-    "containerWidthCustom" INTEGER,
-    "contentWidth" "LayoutWidth",
-    "contentWidthCustom" INTEGER,
-    "headerScrollBehavior" "HeaderScrollBehavior" NOT NULL DEFAULT 'always-visible',
-    "headerBackgroundMode" "HeaderBackgroundMode" NOT NULL DEFAULT 'solid',
-    "themeColor" TEXT NOT NULL DEFAULT '#fafafa',
-    "footerTagline" TEXT,
-    "footerNavigationLabel" TEXT NOT NULL DEFAULT 'Navigation',
-    "footerContactLabel" TEXT NOT NULL DEFAULT 'Contact',
-    "footerHoursLabel" TEXT NOT NULL DEFAULT 'Hours',
-    "footerShowSocialLinks" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "container_width" "layout_width",
+    "container_width_custom" INTEGER,
+    "content_width" "layout_width",
+    "content_width_custom" INTEGER,
+    "header_scroll_behavior" "header_scroll_behavior" NOT NULL DEFAULT 'ALWAYS_VISIBLE',
+    "header_background_mode" "header_background_mode" NOT NULL DEFAULT 'SOLID',
+    "theme_color" TEXT NOT NULL DEFAULT '#fafafa',
+    "footer_tagline" TEXT,
+    "footer_navigation_label" TEXT NOT NULL DEFAULT 'Navigation',
+    "footer_contact_label" TEXT NOT NULL DEFAULT 'Contact',
+    "footer_hours_label" TEXT NOT NULL DEFAULT 'Hours',
+    "footer_show_social_links" BOOLEAN NOT NULL DEFAULT true,
 
-    CONSTRAINT "settings_layouts_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_layout_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_sidebars" (
+CREATE TABLE "settings_sidebar" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "sidebarEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "sidebarWidgets" JSONB NOT NULL DEFAULT '[{"type":"search","enabled":true},{"type":"recent","enabled":true,"layout":"compact"},{"type":"popular","enabled":true,"layout":"compact","showRanking":true},{"type":"categories","enabled":true},{"type":"tags","enabled":true}]',
-    "sidebarRecentCount" INTEGER NOT NULL DEFAULT 5,
-    "sidebarPopularCount" INTEGER NOT NULL DEFAULT 5,
-    "sidebarTocEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "sidebar_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "sidebar_widgets" JSONB NOT NULL DEFAULT '[{"type":"search","enabled":true},{"type":"recent","enabled":true,"layout":"compact"},{"type":"popular","enabled":true,"layout":"compact","showRanking":true},{"type":"categories","enabled":true},{"type":"tags","enabled":true}]',
+    "sidebar_recent_count" INTEGER NOT NULL DEFAULT 5,
+    "sidebar_popular_count" INTEGER NOT NULL DEFAULT 5,
+    "sidebar_toc_enabled" BOOLEAN NOT NULL DEFAULT true,
 
-    CONSTRAINT "settings_sidebars_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_sidebar_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_organizations" (
+CREATE TABLE "settings_organization" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "businessName" TEXT,
-    "businessNameKana" TEXT,
-    "representativeName" TEXT,
-    "establishedDate" TIMESTAMPTZ(6),
-    "registrationNumber" TEXT,
-    "invoiceNumber" TEXT,
-    "businessDescription" TEXT,
-    "phoneNumber" TEXT,
-    "faxNumber" TEXT,
-    "email" TEXT,
-    "postalCode" TEXT,
-    "prefecture" TEXT,
-    "city" TEXT,
-    "streetAddress" TEXT,
-    "buildingName" TEXT,
-    "businessHours" JSONB,
-    "holidayNotice" TEXT,
-    "transferGuidance" TEXT,
-    "senderEmail" TEXT,
-    "senderName" TEXT,
-    "replyToEmail" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "business_name" TEXT,
+    "business_name_kana" TEXT,
+    "representative_name" TEXT,
+    "established_date" DATE,
+    "registration_number" TEXT,
+    "invoice_number" TEXT,
+    "business_description" TEXT,
+    "phone_number" VARCHAR(30),
+    "fax_number" VARCHAR(30),
+    "email" VARCHAR(254),
+    "postal_code" VARCHAR(10),
+    "prefecture" VARCHAR(20),
+    "city" VARCHAR(100),
+    "street_address" VARCHAR(200),
+    "building_name" VARCHAR(200),
+    "business_hours" JSONB,
+    "holiday_notice" TEXT,
+    "transfer_guidance" TEXT,
+    "sender_email" VARCHAR(254),
+    "sender_name" TEXT,
+    "reply_to_email" VARCHAR(254),
 
-    CONSTRAINT "settings_organizations_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_organization_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_commerces" (
+CREATE TABLE "settings_commerce" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "durationDiscountEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "durationDiscountRules" JSONB NOT NULL DEFAULT '[]',
-    "discountCombinationMode" "DiscountCombinationMode" NOT NULL DEFAULT 'best',
-    "showOriginalPrice" BOOLEAN NOT NULL DEFAULT true,
-    "taxStandardRate" INTEGER NOT NULL DEFAULT 10,
-    "taxReducedRate" INTEGER NOT NULL DEFAULT 8,
-    "taxDisplayModePublic" "TaxDisplayMode" NOT NULL DEFAULT 'tax_included',
-    "refundPolicy" JSONB,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "duration_discount_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "duration_discount_rules" JSONB NOT NULL DEFAULT '[]',
+    "discount_combination_mode" "discount_combination_mode" NOT NULL DEFAULT 'BEST',
+    "show_original_price" BOOLEAN NOT NULL DEFAULT true,
+    "tax_standard_rate" INTEGER NOT NULL DEFAULT 10,
+    "tax_reduced_rate" INTEGER NOT NULL DEFAULT 8,
+    "tax_display_mode_public" "tax_display_mode" NOT NULL DEFAULT 'TAX_INCLUDED',
+    "refund_policy" JSONB,
 
-    CONSTRAINT "settings_commerces_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_commerce_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_notifications" (
+CREATE TABLE "settings_notification" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "notifyNewReservation" BOOLEAN NOT NULL DEFAULT true,
-    "notifyReservationChange" BOOLEAN NOT NULL DEFAULT true,
-    "notifyReservationCancel" BOOLEAN NOT NULL DEFAULT true,
-    "notifyNewInquiry" BOOLEAN NOT NULL DEFAULT true,
-    "notifyInquiryCustomerReply" BOOLEAN NOT NULL DEFAULT true,
-    "notifyEventRegistration" BOOLEAN NOT NULL DEFAULT true,
-    "notifyEventWaitlistRegistration" BOOLEAN NOT NULL DEFAULT true,
-    "notifyEventCancellation" BOOLEAN NOT NULL DEFAULT true,
-    "notifyEventReminder" BOOLEAN NOT NULL DEFAULT false,
-    "notificationStaffIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "notificationEmailAddresses" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "notify_new_reservation" BOOLEAN NOT NULL DEFAULT true,
+    "notify_reservation_change" BOOLEAN NOT NULL DEFAULT true,
+    "notify_reservation_cancel" BOOLEAN NOT NULL DEFAULT true,
+    "notify_new_inquiry" BOOLEAN NOT NULL DEFAULT true,
+    "notify_inquiry_customer_reply" BOOLEAN NOT NULL DEFAULT true,
+    "notify_event_registration" BOOLEAN NOT NULL DEFAULT true,
+    "notify_event_waitlist_registration" BOOLEAN NOT NULL DEFAULT true,
+    "notify_event_cancellation" BOOLEAN NOT NULL DEFAULT true,
+    "notify_event_reminder" BOOLEAN NOT NULL DEFAULT false,
+    "notification_staff_ids" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "notification_email_addresses" TEXT[] DEFAULT ARRAY[]::TEXT[],
 
-    CONSTRAINT "settings_notifications_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_reservations" (
+CREATE TABLE "settings_reservation" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "defaultTimeSlot" INTEGER NOT NULL DEFAULT 60,
-    "minReservationDuration" INTEGER NOT NULL DEFAULT 60,
-    "maxReservationDuration" INTEGER NOT NULL DEFAULT 480,
-    "sendReservationConfirmationEmail" BOOLEAN NOT NULL DEFAULT true,
-    "maxRecurrenceInstances" INTEGER NOT NULL DEFAULT 26,
-    "customerCanCancelSeriesInFull" BOOLEAN NOT NULL DEFAULT false,
-    "cancellationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
-    "modificationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "default_time_slot" INTEGER NOT NULL DEFAULT 60,
+    "min_reservation_duration" INTEGER NOT NULL DEFAULT 60,
+    "max_reservation_duration" INTEGER NOT NULL DEFAULT 480,
+    "send_reservation_confirmation_email" BOOLEAN NOT NULL DEFAULT true,
+    "max_recurrence_instances" INTEGER NOT NULL DEFAULT 26,
+    "customer_can_cancel_series_in_full" BOOLEAN NOT NULL DEFAULT false,
+    "cancellation_deadline_hours" INTEGER NOT NULL DEFAULT 24,
+    "modification_deadline_hours" INTEGER NOT NULL DEFAULT 24,
 
-    CONSTRAINT "settings_reservations_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_reservation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_stripes" (
+CREATE TABLE "settings_stripe" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "stripePublishableKey" TEXT,
-    "stripeSecretKey" TEXT,
-    "stripeWebhookSecret" TEXT,
-    "stripeAccountId" TEXT,
-    "stripeCurrency" TEXT NOT NULL DEFAULT 'jpy',
-    "stripePaymentMethodTypes" TEXT[] DEFAULT ARRAY['card']::TEXT[],
-    "stripeLastTestedAt" TIMESTAMPTZ(6),
-    "stripeConnectionStatus" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "stripe_publishable_key" TEXT,
+    "stripe_secret_key" TEXT,
+    "stripe_webhook_secret" TEXT,
+    "stripe_account_id" TEXT,
+    "stripe_currency" TEXT NOT NULL DEFAULT 'jpy',
+    "stripe_payment_method_types" TEXT[] DEFAULT ARRAY['card']::TEXT[],
+    "stripe_last_tested_at" TIMESTAMPTZ(6),
+    "stripe_connection_status" "connection_status",
 
-    CONSTRAINT "settings_stripes_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_stripe_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_resends" (
+CREATE TABLE "settings_resend" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "resendApiKey" TEXT,
-    "resendWebhookSecret" TEXT,
-    "resendLastTestedAt" TIMESTAMPTZ(6),
-    "resendConnectionStatus" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "resend_api_key" TEXT,
+    "resend_webhook_secret" TEXT,
+    "resend_last_tested_at" TIMESTAMPTZ(6),
+    "resend_connection_status" "connection_status",
 
-    CONSTRAINT "settings_resends_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_resend_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_turnstiles" (
+CREATE TABLE "settings_turnstile" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "turnstileSiteKey" TEXT,
-    "turnstileSecretKey" TEXT,
-    "turnstileLastTestedAt" TIMESTAMPTZ(6),
-    "turnstileConnectionStatus" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "turnstile_site_key" TEXT,
+    "turnstile_secret_key" TEXT,
+    "turnstile_last_tested_at" TIMESTAMPTZ(6),
+    "turnstile_connection_status" "connection_status",
 
-    CONSTRAINT "settings_turnstiles_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_turnstile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "settings_google_maps" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "googleMapsApiKey" TEXT,
-    "googleMapsLastTestedAt" TIMESTAMPTZ(6),
-    "googleMapsConnectionStatus" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "google_maps_api_key" TEXT,
+    "google_maps_last_tested_at" TIMESTAMPTZ(6),
+    "google_maps_connection_status" "connection_status",
 
     CONSTRAINT "settings_google_maps_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_google_calendars" (
+CREATE TABLE "settings_google_calendar" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "googleCalendarEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "googleCalendarServiceAccountJson" TEXT,
-    "googleCalendarId" TEXT,
-    "googleCalendarLastTestedAt" TIMESTAMPTZ(6),
-    "googleCalendarConnectionStatus" TEXT,
-    "googleCalendarReminderMinutes" INTEGER,
-    "icalAttachmentEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "addToCalendarLinksEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "googleCalendarTwoWaySyncEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "googleCalendarSyncMethod" "CalendarSyncMethod" NOT NULL DEFAULT 'polling',
-    "googleCalendarSyncToken" TEXT,
-    "googleCalendarLastSyncedAt" TIMESTAMPTZ(6),
-    "eventImportEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "eventImportSyncToken" TEXT,
-    "googleCalendarWebhookChannelId" TEXT,
-    "googleCalendarWebhookResourceId" TEXT,
-    "googleCalendarWebhookExpiration" TIMESTAMPTZ(6),
-    "googleCalendarWebhookToken" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "google_calendar_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "google_calendar_service_account_json" TEXT,
+    "google_calendar_id" TEXT,
+    "google_calendar_last_tested_at" TIMESTAMPTZ(6),
+    "google_calendar_connection_status" "connection_status",
+    "google_calendar_reminder_minutes" INTEGER,
+    "ical_attachment_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "add_to_calendar_links_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "google_calendar_two_way_sync_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "google_calendar_sync_method" "calendar_sync_method" NOT NULL DEFAULT 'POLLING',
+    "google_calendar_sync_token" TEXT,
+    "google_calendar_last_synced_at" TIMESTAMPTZ(6),
+    "event_import_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "event_import_sync_token" TEXT,
+    "google_calendar_webhook_channel_id" TEXT,
+    "google_calendar_webhook_resource_id" TEXT,
+    "google_calendar_webhook_expiration" TIMESTAMPTZ(6),
+    "google_calendar_webhook_token" TEXT,
 
-    CONSTRAINT "settings_google_calendars_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_google_calendar_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_google_business_profiles" (
+CREATE TABLE "settings_google_business_profile" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "googleBusinessProfileEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "googleBusinessProfileAuth" JSONB,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "google_business_profile_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "google_business_profile_auth" JSONB,
 
-    CONSTRAINT "settings_google_business_profiles_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_google_business_profile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_instagrams" (
+CREATE TABLE "settings_instagram" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "instagramAccessToken" TEXT,
-    "instagramTokenExpiresAt" TIMESTAMPTZ(6),
-    "instagramUserId" TEXT,
-    "instagramUsername" TEXT,
-    "instagramAccountType" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "instagram_access_token" TEXT,
+    "instagram_token_expires_at" TIMESTAMPTZ(6),
+    "instagram_user_id" TEXT,
+    "instagram_username" TEXT,
+    "instagram_account_type" TEXT,
 
-    CONSTRAINT "settings_instagrams_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_instagram_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_switchbots" (
+CREATE TABLE "settings_switchbot" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "switchbotEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "switchbotOpenToken" TEXT,
-    "switchbotSecretKey" TEXT,
-    "switchbotConnectionStatus" TEXT,
-    "switchbotLastTestedAt" TIMESTAMPTZ(6),
-    "switchbotPasscodeBufferMinutes" INTEGER NOT NULL DEFAULT 15,
-    "switchbotWebhookPathToken" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "switchbot_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "switchbot_open_token" TEXT,
+    "switchbot_secret_key" TEXT,
+    "switchbot_connection_status" "connection_status",
+    "switchbot_last_tested_at" TIMESTAMPTZ(6),
+    "switchbot_passcode_buffer_minutes" INTEGER NOT NULL DEFAULT 15,
+    "switchbot_webhook_path_token" TEXT,
 
-    CONSTRAINT "settings_switchbots_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_switchbot_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "settings_features" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "featureModules" JSONB NOT NULL DEFAULT '{}',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "feature_modules" JSONB NOT NULL DEFAULT '{}',
 
     CONSTRAINT "settings_features_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "settings_data_retentions" (
+CREATE TABLE "settings_data_retention" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "dataRetention" JSONB NOT NULL DEFAULT '{"sessionMonths":6,"verificationMonths":6,"reservationGuestMonths":12,"inquiryMonths":36,"customerInactiveMonths":84}',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "data_retention" JSONB NOT NULL DEFAULT '{"sessionMonths":6,"verificationMonths":6,"reservationGuestMonths":12,"inquiryMonths":36,"customerInactiveMonths":84}',
 
-    CONSTRAINT "settings_data_retentions_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "settings_data_retention_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "instagram_posts" (
     "id" UUID NOT NULL,
-    "postId" TEXT NOT NULL,
-    "postUrl" TEXT NOT NULL,
-    "mediaUrl" TEXT,
-    "thumbnailUrl" TEXT,
+    "post_id" TEXT NOT NULL,
+    "post_url" TEXT NOT NULL,
+    "media_url" TEXT,
+    "thumbnail_url" TEXT,
     "caption" TEXT,
-    "mediaType" "InstagramMediaType" NOT NULL,
+    "media_type" "instagram_media_type" NOT NULL,
     "permalink" TEXT NOT NULL,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "instagram_posts_pkey" PRIMARY KEY ("id")
 );
@@ -1171,19 +1186,19 @@ CREATE TABLE "instagram_posts" (
 CREATE TABLE "audit_logs" (
     "id" UUID NOT NULL,
     "sequence" BIGINT NOT NULL,
-    "previousHash" CHAR(64) NOT NULL,
-    "entryHash" CHAR(64) NOT NULL,
-    "hashAlgorithm" VARCHAR(32) NOT NULL DEFAULT 'HMAC-SHA256',
-    "hashKeyId" VARCHAR(32) NOT NULL DEFAULT 'v1',
-    "chainVersion" INTEGER NOT NULL DEFAULT 1,
-    "userId" UUID,
-    "action" "AuditAction" NOT NULL,
+    "previous_hash" CHAR(64) NOT NULL,
+    "entry_hash" CHAR(64) NOT NULL,
+    "hash_algorithm" VARCHAR(32) NOT NULL DEFAULT 'HMAC-SHA256',
+    "hash_key_id" VARCHAR(32) NOT NULL DEFAULT 'v1',
+    "chain_version" INTEGER NOT NULL DEFAULT 1,
+    "user_id" UUID,
+    "action" "audit_action" NOT NULL,
     "resource" TEXT NOT NULL,
-    "resourceId" TEXT,
-    "oldValue" JSONB,
-    "newValue" JSONB,
+    "resource_id" TEXT,
+    "old_value" JSONB,
+    "new_value" JSONB,
     "metadata" JSONB,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
@@ -1192,23 +1207,23 @@ CREATE TABLE "audit_logs" (
 CREATE TABLE "media" (
     "id" UUID NOT NULL,
     "filename" TEXT NOT NULL,
-    "storagePath" TEXT NOT NULL,
+    "storage_path" TEXT NOT NULL,
     "url" TEXT NOT NULL,
     "bucket" TEXT NOT NULL,
-    "mimeType" TEXT NOT NULL,
+    "mime_type" TEXT NOT NULL,
     "size" INTEGER NOT NULL,
     "width" INTEGER,
     "height" INTEGER,
-    "type" "MediaType" NOT NULL,
-    "usage" "MediaUsage" NOT NULL DEFAULT 'GENERAL',
+    "type" "media_type" NOT NULL,
+    "usage" "media_usage" NOT NULL DEFAULT 'GENERAL',
     "alt" TEXT,
     "title" TEXT,
     "description" TEXT,
     "tags" JSONB NOT NULL DEFAULT '[]',
-    "uploadedBy" UUID,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "uploaded_by" UUID,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "media_pkey" PRIMARY KEY ("id")
 );
@@ -1219,17 +1234,17 @@ CREATE TABLE "terms_documents" (
     "type" VARCHAR(64) NOT NULL,
     "slug" VARCHAR(50) NOT NULL,
     "title" VARCHAR(100) NOT NULL,
-    "contentJson" JSONB NOT NULL,
-    "contentHtml" TEXT NOT NULL,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "publishedAt" TIMESTAMPTZ(6),
-    "scopes" "TermsScope"[],
+    "content_json" JSONB NOT NULL,
+    "content_html" TEXT NOT NULL,
+    "is_published" BOOLEAN NOT NULL DEFAULT false,
+    "published_at" TIMESTAMPTZ(6),
+    "scopes" "terms_scope"[],
     "changelog" TEXT,
-    "showInFooter" BOOLEAN NOT NULL DEFAULT true,
-    "displayOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "deletedAt" TIMESTAMPTZ(6),
+    "show_in_footer" BOOLEAN NOT NULL DEFAULT true,
+    "display_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "deleted_at" TIMESTAMPTZ(6),
 
     CONSTRAINT "terms_documents_pkey" PRIMARY KEY ("id")
 );
@@ -1237,16 +1252,16 @@ CREATE TABLE "terms_documents" (
 -- CreateTable
 CREATE TABLE "terms_agreements" (
     "id" UUID NOT NULL,
-    "termsId" UUID NOT NULL,
-    "customerId" UUID,
-    "guestEmail" VARCHAR(255),
-    "contentSnapshot" TEXT NOT NULL,
-    "contentHash" VARCHAR(64) NOT NULL,
-    "agreedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "scope" "TermsScope" NOT NULL,
-    "resourceId" TEXT,
-    "ipAddress" VARCHAR(45),
-    "userAgent" TEXT,
+    "terms_id" UUID NOT NULL,
+    "customer_id" UUID,
+    "guest_email" VARCHAR(254),
+    "content_snapshot" TEXT NOT NULL,
+    "content_hash" VARCHAR(64) NOT NULL,
+    "agreed_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "scope" "terms_scope" NOT NULL,
+    "resource_id" TEXT,
+    "ip_address" VARCHAR(45),
+    "user_agent" TEXT,
 
     CONSTRAINT "terms_agreements_pkey" PRIMARY KEY ("id")
 );
@@ -1254,16 +1269,16 @@ CREATE TABLE "terms_agreements" (
 -- CreateTable
 CREATE TABLE "editor_comment_threads" (
     "id" UUID NOT NULL,
-    "markId" TEXT NOT NULL,
-    "contentType" TEXT NOT NULL,
-    "contentId" UUID NOT NULL,
-    "quotedText" TEXT NOT NULL,
-    "status" "EditorCommentStatus" NOT NULL DEFAULT 'ACTIVE',
-    "resolvedAt" TIMESTAMPTZ(6),
-    "resolvedBy" UUID,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "createdBy" UUID,
+    "mark_id" TEXT NOT NULL,
+    "content_type" TEXT NOT NULL,
+    "content_id" UUID NOT NULL,
+    "quoted_text" TEXT NOT NULL,
+    "status" "editor_comment_status" NOT NULL DEFAULT 'ACTIVE',
+    "resolved_at" TIMESTAMPTZ(6),
+    "resolved_by" UUID,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "created_by" UUID,
 
     CONSTRAINT "editor_comment_threads_pkey" PRIMARY KEY ("id")
 );
@@ -1271,14 +1286,14 @@ CREATE TABLE "editor_comment_threads" (
 -- CreateTable
 CREATE TABLE "editor_comments" (
     "id" UUID NOT NULL,
-    "threadId" UUID NOT NULL,
+    "thread_id" UUID NOT NULL,
     "content" TEXT NOT NULL,
-    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
-    "deletedAt" TIMESTAMPTZ(6),
-    "deletedBy" UUID,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "createdBy" UUID,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" TIMESTAMPTZ(6),
+    "deleted_by" UUID,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "created_by" UUID,
 
     CONSTRAINT "editor_comments_pkey" PRIMARY KEY ("id")
 );
@@ -1288,10 +1303,10 @@ CREATE TABLE "block_templates" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "nodeJson" JSONB NOT NULL,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "createdBy" UUID,
+    "node_json" JSONB NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "created_by" UUID,
 
     CONSTRAINT "block_templates_pkey" PRIMARY KEY ("id")
 );
@@ -1299,18 +1314,18 @@ CREATE TABLE "block_templates" (
 -- CreateTable
 CREATE TABLE "space_reviews" (
     "id" UUID NOT NULL,
-    "spaceId" UUID NOT NULL,
-    "customerId" UUID NOT NULL,
-    "reservationId" UUID NOT NULL,
+    "space_id" UUID NOT NULL,
+    "customer_id" UUID NOT NULL,
+    "reservation_id" UUID NOT NULL,
     "rating" INTEGER NOT NULL,
     "title" VARCHAR(100),
     "comment" VARCHAR(1000),
-    "isPublished" BOOLEAN NOT NULL DEFAULT true,
-    "replyBody" VARCHAR(1000),
-    "repliedAt" TIMESTAMPTZ(6),
-    "repliedById" UUID,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "is_published" BOOLEAN NOT NULL DEFAULT true,
+    "reply_body" VARCHAR(1000),
+    "replied_at" TIMESTAMPTZ(6),
+    "replied_by_id" UUID,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "space_reviews_pkey" PRIMARY KEY ("id")
 );
@@ -1318,13 +1333,13 @@ CREATE TABLE "space_reviews" (
 -- CreateTable
 CREATE TABLE "event_time_slots" (
     "id" UUID NOT NULL,
-    "eventId" UUID NOT NULL,
-    "startAt" TIMESTAMPTZ(6) NOT NULL,
-    "endAt" TIMESTAMPTZ(6) NOT NULL,
+    "event_id" UUID NOT NULL,
+    "start_at" TIMESTAMPTZ(6) NOT NULL,
+    "end_at" TIMESTAMPTZ(6) NOT NULL,
     "capacity" INTEGER NOT NULL,
-    "googleCalendarEventId" TEXT,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "google_calendar_event_id" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "event_time_slots_pkey" PRIMARY KEY ("id")
 );
@@ -1336,10 +1351,10 @@ CREATE TABLE "event_categories" (
     "description" TEXT,
     "icon" TEXT,
     "color" TEXT,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "event_categories_pkey" PRIMARY KEY ("id")
 );
@@ -1349,35 +1364,35 @@ CREATE TABLE "events" (
     "id" UUID NOT NULL,
     "title" VARCHAR(200) NOT NULL,
     "slug" VARCHAR(100) NOT NULL,
-    "descriptionJson" JSONB NOT NULL,
-    "descriptionHtml" TEXT NOT NULL,
-    "descriptionPlainText" TEXT NOT NULL,
-    "thumbnailUrl" TEXT,
-    "ogpImageUrl" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "metaDescription" TEXT,
-    "metaKeywords" TEXT,
-    "addressDetail" VARCHAR(200),
-    "locationId" UUID,
-    "spaceId" UUID,
-    "status" "EventStatus" NOT NULL DEFAULT 'DRAFT',
-    "scheduleMode" "EventScheduleMode" NOT NULL,
-    "registrationOpen" BOOLEAN NOT NULL DEFAULT true,
-    "registrationDeadline" TIMESTAMPTZ(6),
-    "publishedAt" TIMESTAMPTZ(6),
-    "deletedAt" TIMESTAMPTZ(6),
-    "deletedById" UUID,
+    "description_json" JSONB NOT NULL,
+    "description_html" TEXT NOT NULL,
+    "description_plain_text" TEXT NOT NULL,
+    "thumbnail_url" TEXT,
+    "ogp_image_url" TEXT,
+    "ogp_title" TEXT,
+    "ogp_description" TEXT,
+    "meta_description" TEXT,
+    "meta_keywords" TEXT,
+    "address_detail" VARCHAR(200),
+    "location_id" UUID,
+    "space_id" UUID,
+    "status" "event_status" NOT NULL DEFAULT 'DRAFT',
+    "schedule_mode" "event_schedule_mode" NOT NULL,
+    "registration_open" BOOLEAN NOT NULL DEFAULT true,
+    "registration_deadline" TIMESTAMPTZ(6),
+    "published_at" TIMESTAMPTZ(6),
+    "deleted_at" TIMESTAMPTZ(6),
+    "deleted_by_id" UUID,
     "gallery" JSONB NOT NULL DEFAULT '[]',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "firstSlotStartAt" TIMESTAMPTZ(6),
-    "lastSlotEndAt" TIMESTAMPTZ(6),
-    "format" "EventFormat" NOT NULL DEFAULT 'OFFLINE',
-    "meetingUrl" VARCHAR(500),
-    "meetingProvider" "MeetingProvider" NOT NULL DEFAULT 'MANUAL',
-    "calendarSyncError" TEXT,
-    "categoryId" UUID NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "first_slot_start_at" TIMESTAMPTZ(6),
+    "last_slot_end_at" TIMESTAMPTZ(6),
+    "format" "event_format" NOT NULL DEFAULT 'OFFLINE',
+    "meeting_url" VARCHAR(500),
+    "meeting_provider" "meeting_provider" NOT NULL DEFAULT 'MANUAL',
+    "calendar_sync_error" TEXT,
+    "category_id" UUID NOT NULL,
 
     CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
@@ -1385,16 +1400,16 @@ CREATE TABLE "events" (
 -- CreateTable
 CREATE TABLE "event_tickets" (
     "id" UUID NOT NULL,
-    "eventId" UUID NOT NULL,
+    "event_id" UUID NOT NULL,
     "name" VARCHAR(100) NOT NULL,
     "description" TEXT,
     "price" INTEGER NOT NULL,
     "capacity" INTEGER,
-    "unitSize" INTEGER NOT NULL DEFAULT 1,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isAvailable" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "unit_size" INTEGER NOT NULL DEFAULT 1,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_available" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "event_tickets_pkey" PRIMARY KEY ("id")
 );
@@ -1402,31 +1417,31 @@ CREATE TABLE "event_tickets" (
 -- CreateTable
 CREATE TABLE "event_registrations" (
     "id" UUID NOT NULL,
-    "eventId" UUID NOT NULL,
-    "slotId" UUID NOT NULL,
-    "ticketId" UUID NOT NULL,
+    "event_id" UUID NOT NULL,
+    "slot_id" UUID NOT NULL,
+    "ticket_id" UUID NOT NULL,
     "name" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(255),
-    "phone" VARCHAR(20),
+    "email" VARCHAR(254),
+    "phone" VARCHAR(30),
     "note" TEXT,
     "quantity" INTEGER NOT NULL DEFAULT 1,
-    "status" "RegistrationStatus" NOT NULL DEFAULT 'CONFIRMED',
-    "customerId" UUID,
-    "cancelledAt" TIMESTAMPTZ(6),
-    "cancelledByType" VARCHAR(20),
-    "attendedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
-    "icsSequence" INTEGER NOT NULL DEFAULT 0,
-    "waitlistedAt" TIMESTAMPTZ(6),
-    "offeredAt" TIMESTAMPTZ(6),
-    "expiresAt" TIMESTAMPTZ(6),
-    "reminderSentAt" TIMESTAMPTZ(6),
-    "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'UNPAID',
-    "stripeCheckoutSessionId" TEXT,
-    "stripePaymentIntentId" TEXT,
-    "paidAmount" INTEGER,
-    "paidAt" TIMESTAMPTZ(6),
+    "status" "registration_status" NOT NULL DEFAULT 'CONFIRMED',
+    "customer_id" UUID,
+    "cancelled_at" TIMESTAMPTZ(6),
+    "cancelled_by_type" VARCHAR(20),
+    "attended_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+    "ics_sequence" INTEGER NOT NULL DEFAULT 0,
+    "waitlisted_at" TIMESTAMPTZ(6),
+    "offered_at" TIMESTAMPTZ(6),
+    "expires_at" TIMESTAMPTZ(6),
+    "reminder_sent_at" TIMESTAMPTZ(6),
+    "payment_status" "payment_status" NOT NULL DEFAULT 'UNPAID',
+    "stripe_checkout_session_id" TEXT,
+    "stripe_payment_intent_id" TEXT,
+    "paid_amount" INTEGER,
+    "paid_at" TIMESTAMPTZ(6),
 
     CONSTRAINT "event_registrations_pkey" PRIMARY KEY ("id")
 );
@@ -1434,14 +1449,14 @@ CREATE TABLE "event_registrations" (
 -- CreateTable
 CREATE TABLE "refunds" (
     "id" UUID NOT NULL,
-    "reservationId" UUID,
-    "eventRegistrationId" UUID,
+    "reservation_id" UUID,
+    "event_registration_id" UUID,
     "amount" INTEGER NOT NULL,
     "reason" TEXT,
-    "stripeRefundId" TEXT NOT NULL,
-    "refundedByType" VARCHAR(20) NOT NULL,
+    "stripe_refund_id" TEXT NOT NULL,
+    "refunded_by_type" "refunded_by_type" NOT NULL,
     "status" VARCHAR(20) NOT NULL DEFAULT 'succeeded',
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "refunds_pkey" PRIMARY KEY ("id")
 );
@@ -1449,65 +1464,64 @@ CREATE TABLE "refunds" (
 -- CreateTable
 CREATE TABLE "receipts" (
     "id" UUID NOT NULL,
-    "serialNo" VARCHAR(20) NOT NULL,
-    "issuedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "reservationId" UUID,
-    "eventRegistrationId" UUID,
-    "recipientName" TEXT NOT NULL,
+    "serial_no" VARCHAR(20) NOT NULL,
+    "issued_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reservation_id" UUID,
+    "event_registration_id" UUID,
+    "recipient_name" TEXT NOT NULL,
     "subject" TEXT NOT NULL DEFAULT 'スペース利用料として',
     "amount" INTEGER NOT NULL,
-    "taxAmount" INTEGER NOT NULL DEFAULT 0,
-    "taxRate" INTEGER NOT NULL,
-    "issuerSnapshot" JSONB NOT NULL,
-    "reissuedFromId" UUID,
-    "reissuedReason" TEXT,
+    "tax_amount" INTEGER NOT NULL DEFAULT 0,
+    "tax_rate" INTEGER NOT NULL,
+    "issuer_snapshot" JSONB NOT NULL,
+    "reissued_from_id" UUID,
+    "reissued_reason" TEXT,
     "revision" INTEGER NOT NULL DEFAULT 0,
-    "usedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "used_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "receipts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "receipt_sequences" (
-    "id" VARCHAR(20) NOT NULL DEFAULT 'singleton',
     "year" INTEGER NOT NULL,
-    "nextNo" INTEGER NOT NULL DEFAULT 1,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "next_no" INTEGER NOT NULL DEFAULT 1,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "receipt_sequences_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "receipt_sequences_pkey" PRIMARY KEY ("year")
 );
 
 -- CreateTable
-CREATE TABLE "admin_notification" (
+CREATE TABLE "admin_notifications" (
     "id" UUID NOT NULL,
     "type" VARCHAR(50) NOT NULL,
     "title" VARCHAR(200) NOT NULL,
     "message" VARCHAR(500) NOT NULL,
-    "resourceType" VARCHAR(50),
-    "resourceId" VARCHAR(36),
-    "isRead" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resource_type" VARCHAR(50),
+    "resource_id" VARCHAR(36),
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "admin_notification_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "admin_notifications_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "smart_lock_devices" (
     "id" UUID NOT NULL,
-    "locationId" UUID NOT NULL,
-    "deviceId" TEXT NOT NULL,
-    "deviceName" TEXT NOT NULL,
-    "deviceType" "SmartLockDeviceType" NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "pairedLockDeviceId" UUID,
-    "lastLockState" TEXT,
-    "lastDoorState" TEXT,
-    "lastBattery" INTEGER,
-    "lastStateAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "location_id" UUID NOT NULL,
+    "device_id" TEXT NOT NULL,
+    "device_name" TEXT NOT NULL,
+    "device_type" "smart_lock_device_type" NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "paired_lock_device_id" UUID,
+    "last_lock_state" TEXT,
+    "last_door_state" TEXT,
+    "last_battery" INTEGER,
+    "last_state_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "smart_lock_devices_pkey" PRIMARY KEY ("id")
 );
@@ -1515,21 +1529,21 @@ CREATE TABLE "smart_lock_devices" (
 -- CreateTable
 CREATE TABLE "smart_lock_passcodes" (
     "id" UUID NOT NULL,
-    "reservationId" UUID NOT NULL,
-    "deviceId" UUID NOT NULL,
-    "status" "SmartLockPasscodeStatus" NOT NULL DEFAULT 'PENDING',
-    "passcodeCiphertext" TEXT NOT NULL,
-    "switchbotCommandId" TEXT,
-    "switchbotDeleteCommandId" TEXT,
-    "switchbotKeyId" TEXT,
-    "startTime" TIMESTAMPTZ(6) NOT NULL,
-    "endTime" TIMESTAMPTZ(6) NOT NULL,
-    "failureReason" TEXT,
-    "confirmedAt" TIMESTAMPTZ(6),
-    "revokeRequestedAt" TIMESTAMPTZ(6),
-    "revokedAt" TIMESTAMPTZ(6),
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "reservation_id" UUID NOT NULL,
+    "device_id" UUID NOT NULL,
+    "status" "smart_lock_passcode_status" NOT NULL DEFAULT 'PENDING',
+    "passcode_ciphertext" TEXT NOT NULL,
+    "switchbot_command_id" TEXT,
+    "switchbot_delete_command_id" TEXT,
+    "switchbot_key_id" TEXT,
+    "start_time" TIMESTAMPTZ(6) NOT NULL,
+    "end_time" TIMESTAMPTZ(6) NOT NULL,
+    "failure_reason" TEXT,
+    "confirmed_at" TIMESTAMPTZ(6),
+    "revoke_requested_at" TIMESTAMPTZ(6),
+    "revoked_at" TIMESTAMPTZ(6),
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "smart_lock_passcodes_pkey" PRIMARY KEY ("id")
 );
@@ -1538,8 +1552,8 @@ CREATE TABLE "smart_lock_passcodes" (
 CREATE TABLE "stripe_events" (
     "id" VARCHAR(80) NOT NULL,
     "type" VARCHAR(80) NOT NULL,
-    "receivedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "processedAt" TIMESTAMPTZ(6),
+    "received_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "processed_at" TIMESTAMPTZ(6),
 
     CONSTRAINT "stripe_events_pkey" PRIMARY KEY ("id")
 );
@@ -1548,52 +1562,52 @@ CREATE TABLE "stripe_events" (
 CREATE TABLE "transfer_accounts" (
     "id" UUID NOT NULL,
     "label" VARCHAR(50) NOT NULL,
-    "bankName" VARCHAR(50) NOT NULL,
-    "branchName" VARCHAR(50) NOT NULL,
-    "accountType" VARCHAR(20) NOT NULL,
-    "accountNumber" VARCHAR(20) NOT NULL,
-    "accountHolderName" VARCHAR(100) NOT NULL,
+    "bank_name" VARCHAR(50) NOT NULL,
+    "branch_name" VARCHAR(50) NOT NULL,
+    "account_type" "transfer_account_type" NOT NULL,
+    "account_number" VARCHAR(20) NOT NULL,
+    "account_holder_name" VARCHAR(100) NOT NULL,
     "note" VARCHAR(200),
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "transfer_accounts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "user_name_idx" ON "user"("name");
+CREATE INDEX "users_name_idx" ON "users"("name");
 
 -- CreateIndex
-CREATE INDEX "user_page_assignments_pageId_idx" ON "user_page_assignments"("pageId");
+CREATE INDEX "user_page_assignments_page_id_idx" ON "user_page_assignments"("page_id");
 
 -- CreateIndex
-CREATE INDEX "account_userId_idx" ON "account"("userId");
+CREATE INDEX "accounts_user_id_idx" ON "accounts"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
+CREATE UNIQUE INDEX "sessions_token_key" ON "sessions"("token");
 
 -- CreateIndex
-CREATE INDEX "session_userId_idx" ON "session"("userId");
+CREATE INDEX "sessions_user_id_idx" ON "sessions"("user_id");
 
 -- CreateIndex
-CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
+CREATE INDEX "verifications_identifier_idx" ON "verifications"("identifier");
 
 -- CreateIndex
-CREATE INDEX "locations_isPublished_isActive_idx" ON "locations"("isPublished", "isActive");
+CREATE INDEX "locations_is_published_is_active_idx" ON "locations"("is_published", "is_active");
 
 -- CreateIndex
-CREATE INDEX "locations_sortOrder_idx" ON "locations"("sortOrder");
+CREATE INDEX "locations_sort_order_idx" ON "locations"("sort_order");
 
 -- CreateIndex
-CREATE INDEX "locations_gbpSyncError_idx" ON "locations"("gbpSyncError");
+CREATE INDEX "locations_gbp_sync_error_idx" ON "locations"("gbp_sync_error");
 
 -- CreateIndex
-CREATE INDEX "locations_defaultSmartLockDeviceId_idx" ON "locations"("defaultSmartLockDeviceId");
+CREATE INDEX "locations_default_smart_lock_device_id_idx" ON "locations"("default_smart_lock_device_id");
 
 -- CreateIndex
 CREATE INDEX "locations_name_trgm_idx" ON "locations" USING GIN ("name" gin_trgm_ops);
@@ -1602,40 +1616,40 @@ CREATE INDEX "locations_name_trgm_idx" ON "locations" USING GIN ("name" gin_trgm
 CREATE INDEX "locations_address_trgm_idx" ON "locations" USING GIN ("address" gin_trgm_ops);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "locations_active_sortOrder_key" ON "locations"("sortOrder") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "locations_active_sort_order_key" ON "locations"("sort_order") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "locations_slug_active_key" ON "locations"("slug") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "locations_slug_active_key" ON "locations"("slug") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "locations_name_active_key" ON "locations"("name") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "locations_name_active_key" ON "locations"("name") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "space_categories_name_active_key" ON "space_categories"("name") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "space_categories_name_active_key" ON "space_categories"("name") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "space_categories_sortOrder_key" ON "space_categories"("sortOrder");
+CREATE UNIQUE INDEX "space_categories_sort_order_key" ON "space_categories"("sort_order");
 
 -- CreateIndex
 CREATE INDEX "spaces_name_idx" ON "spaces"("name");
 
 -- CreateIndex
-CREATE INDEX "spaces_addressDetail_idx" ON "spaces"("addressDetail");
+CREATE INDEX "spaces_address_detail_idx" ON "spaces"("address_detail");
 
 -- CreateIndex
-CREATE INDEX "spaces_isPublished_isActive_idx" ON "spaces"("isPublished", "isActive");
+CREATE INDEX "spaces_is_published_is_active_idx" ON "spaces"("is_published", "is_active");
 
 -- CreateIndex
-CREATE INDEX "spaces_publishedAt_isActive_idx" ON "spaces"("publishedAt", "isActive");
+CREATE INDEX "spaces_published_at_is_active_idx" ON "spaces"("published_at", "is_active");
 
 -- CreateIndex
-CREATE INDEX "spaces_locationId_idx" ON "spaces"("locationId");
+CREATE INDEX "spaces_location_id_idx" ON "spaces"("location_id");
 
 -- CreateIndex
-CREATE INDEX "spaces_categoryId_idx" ON "spaces"("categoryId");
+CREATE INDEX "spaces_category_id_idx" ON "spaces"("category_id");
 
 -- CreateIndex
-CREATE INDEX "spaces_smartLockDeviceId_idx" ON "spaces"("smartLockDeviceId");
+CREATE INDEX "spaces_smart_lock_device_id_idx" ON "spaces"("smart_lock_device_id");
 
 -- CreateIndex
 CREATE INDEX "spaces_name_trgm_idx" ON "spaces" USING GIN ("name" gin_trgm_ops);
@@ -1644,166 +1658,169 @@ CREATE INDEX "spaces_name_trgm_idx" ON "spaces" USING GIN ("name" gin_trgm_ops);
 CREATE INDEX "spaces_slug_trgm_idx" ON "spaces" USING GIN ("slug" gin_trgm_ops);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "spaces_slug_active_key" ON "spaces"("slug") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "spaces_slug_active_key" ON "spaces"("slug") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE INDEX "space_rate_plans_spaceId_updatedAt_idx" ON "space_rate_plans"("spaceId", "updatedAt" DESC);
+CREATE INDEX "space_rate_plans_space_id_updated_at_idx" ON "space_rate_plans"("space_id", "updated_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "blocked_dates_scope_startDate_endDate_idx" ON "blocked_dates"("scope", "startDate", "endDate");
+CREATE INDEX "blocked_dates_scope_start_date_end_date_idx" ON "blocked_dates"("scope", "start_date", "end_date");
 
 -- CreateIndex
-CREATE INDEX "blocked_dates_spaceId_startDate_endDate_idx" ON "blocked_dates"("spaceId", "startDate", "endDate");
+CREATE INDEX "blocked_dates_space_id_start_date_end_date_idx" ON "blocked_dates"("space_id", "start_date", "end_date");
 
 -- CreateIndex
-CREATE INDEX "blocked_dates_locationId_startDate_endDate_idx" ON "blocked_dates"("locationId", "startDate", "endDate");
+CREATE INDEX "blocked_dates_location_id_start_date_end_date_idx" ON "blocked_dates"("location_id", "start_date", "end_date");
 
 -- CreateIndex
-CREATE INDEX "blocked_dates_createdBy_idx" ON "blocked_dates"("createdBy");
+CREATE INDEX "blocked_dates_created_by_idx" ON "blocked_dates"("created_by");
 
 -- CreateIndex
-CREATE INDEX "reservation_series_spaceId_dtstart_idx" ON "reservation_series"("spaceId", "dtstart");
+CREATE INDEX "reservation_series_space_id_dtstart_idx" ON "reservation_series"("space_id", "dtstart");
 
 -- CreateIndex
-CREATE INDEX "reservation_series_customerId_idx" ON "reservation_series"("customerId");
+CREATE INDEX "reservation_series_customer_id_idx" ON "reservation_series"("customer_id");
 
 -- CreateIndex
-CREATE INDEX "reservation_series_createdAt_idx" ON "reservation_series"("createdAt");
+CREATE INDEX "reservation_series_created_at_idx" ON "reservation_series"("created_at");
 
 -- CreateIndex
-CREATE INDEX "reservation_series_deletedAt_idx" ON "reservation_series"("deletedAt");
+CREATE INDEX "reservation_series_deleted_at_idx" ON "reservation_series"("deleted_at");
 
 -- CreateIndex
-CREATE INDEX "reservation_series_deletedById_idx" ON "reservation_series"("deletedById") WHERE ("deletedById" IS NOT NULL);
+CREATE INDEX "reservation_series_deleted_by_id_idx" ON "reservation_series"("deleted_by_id") WHERE ("deleted_by_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "reservation_series_couponId_idx" ON "reservation_series"("couponId") WHERE ("couponId" IS NOT NULL);
+CREATE INDEX "reservation_series_coupon_id_idx" ON "reservation_series"("coupon_id") WHERE ("coupon_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique" ON "reservation_series"("spaceId", "dtstart") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique" ON "reservation_series"("space_id", "dtstart") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "reservations_stripeCheckoutSessionId_key" ON "reservations"("stripeCheckoutSessionId");
+CREATE UNIQUE INDEX "reservations_stripe_checkout_session_id_key" ON "reservations"("stripe_checkout_session_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "reservations_stripePaymentIntentId_key" ON "reservations"("stripePaymentIntentId");
+CREATE UNIQUE INDEX "reservations_stripe_payment_intent_id_key" ON "reservations"("stripe_payment_intent_id");
 
 -- CreateIndex
-CREATE INDEX "reservations_userId_idx" ON "reservations"("userId");
+CREATE INDEX "reservations_user_id_idx" ON "reservations"("user_id");
 
 -- CreateIndex
-CREATE INDEX "reservations_startTime_idx" ON "reservations"("startTime");
+CREATE INDEX "reservations_start_time_idx" ON "reservations"("start_time");
 
 -- CreateIndex
-CREATE INDEX "reservations_endTime_idx" ON "reservations"("endTime");
+CREATE INDEX "reservations_end_time_idx" ON "reservations"("end_time");
 
 -- CreateIndex
 CREATE INDEX "reservations_status_idx" ON "reservations"("status");
 
 -- CreateIndex
-CREATE INDEX "reservations_createdAt_idx" ON "reservations"("createdAt");
+CREATE INDEX "reservations_created_at_idx" ON "reservations"("created_at");
 
 -- CreateIndex
-CREATE INDEX "reservations_spaceId_startTime_endTime_idx" ON "reservations"("spaceId", "startTime", "endTime");
+CREATE INDEX "reservations_space_id_start_time_end_time_idx" ON "reservations"("space_id", "start_time", "end_time");
 
 -- CreateIndex
-CREATE INDEX "reservations_customerId_startTime_idx" ON "reservations"("customerId", "startTime");
+CREATE INDEX "reservations_customer_id_start_time_idx" ON "reservations"("customer_id", "start_time");
 
 -- CreateIndex
-CREATE INDEX "reservations_couponId_idx" ON "reservations"("couponId");
+CREATE INDEX "reservations_coupon_id_idx" ON "reservations"("coupon_id");
 
 -- CreateIndex
-CREATE INDEX "reservations_deletedAt_idx" ON "reservations"("deletedAt");
+CREATE INDEX "reservations_deleted_at_idx" ON "reservations"("deleted_at");
 
 -- CreateIndex
-CREATE INDEX "reservations_paymentStatus_idx" ON "reservations"("paymentStatus");
+CREATE INDEX "reservations_payment_status_idx" ON "reservations"("payment_status");
 
 -- CreateIndex
-CREATE INDEX "reservations_seriesId_recurrenceInstanceIndex_idx" ON "reservations"("seriesId", "recurrenceInstanceIndex");
+CREATE INDEX "reservations_series_id_recurrence_instance_index_idx" ON "reservations"("series_id", "recurrence_instance_index");
 
 -- CreateIndex
-CREATE INDEX "reservations_deletedById_idx" ON "reservations"("deletedById") WHERE ("deletedById" IS NOT NULL);
+CREATE INDEX "reservations_deleted_by_id_idx" ON "reservations"("deleted_by_id") WHERE ("deleted_by_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "customers_userId_key" ON "customers"("userId");
+CREATE INDEX "reservations_price_overridden_by_id_idx" ON "reservations"("price_overridden_by_id") WHERE ("price_overridden_by_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "customers_firstName_idx" ON "customers"("firstName");
+CREATE UNIQUE INDEX "customers_user_id_key" ON "customers"("user_id");
 
 -- CreateIndex
-CREATE INDEX "customers_phoneNumber_idx" ON "customers"("phoneNumber");
+CREATE INDEX "customers_first_name_idx" ON "customers"("first_name");
+
+-- CreateIndex
+CREATE INDEX "customers_phone_number_idx" ON "customers"("phone_number");
 
 -- CreateIndex
 CREATE INDEX "customers_status_idx" ON "customers"("status");
 
 -- CreateIndex
-CREATE INDEX "customers_customerType_idx" ON "customers"("customerType");
+CREATE INDEX "customers_customer_type_idx" ON "customers"("customer_type");
 
 -- CreateIndex
-CREATE INDEX "customers_emailCanonical_userId_idx" ON "customers"("emailCanonical", "userId");
+CREATE INDEX "customers_email_canonical_user_id_idx" ON "customers"("email_canonical", "user_id");
 
 -- CreateIndex
-CREATE INDEX "customers_isActive_idx" ON "customers"("isActive");
+CREATE INDEX "customers_is_active_idx" ON "customers"("is_active");
 
 -- CreateIndex
-CREATE INDEX "customers_lastReservationAt_idx" ON "customers"("lastReservationAt");
+CREATE INDEX "customers_last_reservation_at_idx" ON "customers"("last_reservation_at");
 
 -- CreateIndex
-CREATE INDEX "customers_lastName_firstName_idx" ON "customers"("lastName", "firstName");
+CREATE INDEX "customers_last_name_first_name_idx" ON "customers"("last_name", "first_name");
 
 -- CreateIndex
-CREATE INDEX "customers_emailDeliveryStatus_idx" ON "customers"("emailDeliveryStatus");
+CREATE INDEX "customers_email_delivery_status_idx" ON "customers"("email_delivery_status");
 
 -- CreateIndex
-CREATE INDEX "customers_flaggedForReviewAt_idx" ON "customers"("flaggedForReviewAt");
+CREATE INDEX "customers_flagged_for_review_at_idx" ON "customers"("flagged_for_review_at");
 
 -- CreateIndex
-CREATE INDEX "customers_last_name_trgm_idx" ON "customers" USING GIN ("lastName" gin_trgm_ops);
+CREATE INDEX "customers_last_name_trgm_idx" ON "customers" USING GIN ("last_name" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "customers_first_name_trgm_idx" ON "customers" USING GIN ("firstName" gin_trgm_ops);
+CREATE INDEX "customers_first_name_trgm_idx" ON "customers" USING GIN ("first_name" gin_trgm_ops);
 
 -- CreateIndex
 CREATE INDEX "customers_email_trgm_idx" ON "customers" USING GIN ("email" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "customers_company_name_trgm_idx" ON "customers" USING GIN ("companyName" gin_trgm_ops);
+CREATE INDEX "customers_company_name_trgm_idx" ON "customers" USING GIN ("company_name" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "customers_suppressed_email_hash_idx" ON "customers"("suppressedEmailHash") WHERE ("suppressedEmailHash" IS NOT NULL);
+CREATE INDEX "customers_suppressed_email_hash_idx" ON "customers"("suppressed_email_hash") WHERE ("suppressed_email_hash" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "customers_createdAt_idx" ON "customers"("createdAt");
+CREATE INDEX "customers_created_at_idx" ON "customers"("created_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "pending_customer_email_changes_tokenHash_key" ON "pending_customer_email_changes"("tokenHash");
+CREATE UNIQUE INDEX "pending_customer_email_changes_token_hash_key" ON "pending_customer_email_changes"("token_hash");
 
 -- CreateIndex
-CREATE INDEX "pending_customer_email_changes_customerId_idx" ON "pending_customer_email_changes"("customerId");
+CREATE INDEX "pending_customer_email_changes_customer_id_idx" ON "pending_customer_email_changes"("customer_id");
 
 -- CreateIndex
-CREATE INDEX "pending_customer_email_changes_expiresAt_idx" ON "pending_customer_email_changes"("expiresAt");
+CREATE INDEX "pending_customer_email_changes_expires_at_idx" ON "pending_customer_email_changes"("expires_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "pending_customer_merges_tokenHash_key" ON "pending_customer_merges"("tokenHash");
+CREATE UNIQUE INDEX "pending_customer_merges_token_hash_key" ON "pending_customer_merges"("token_hash");
 
 -- CreateIndex
-CREATE INDEX "pending_customer_merges_targetCustomerId_idx" ON "pending_customer_merges"("targetCustomerId");
+CREATE INDEX "pending_customer_merges_target_customer_id_idx" ON "pending_customer_merges"("target_customer_id");
 
 -- CreateIndex
-CREATE INDEX "pending_customer_merges_expiresAt_idx" ON "pending_customer_merges"("expiresAt");
+CREATE INDEX "pending_customer_merges_expires_at_idx" ON "pending_customer_merges"("expires_at");
 
 -- CreateIndex
-CREATE INDEX "pending_customer_merges_sourceCustomerId_idx" ON "pending_customer_merges"("sourceCustomerId");
+CREATE INDEX "pending_customer_merges_source_customer_id_idx" ON "pending_customer_merges"("source_customer_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "coupons_code_key" ON "coupons"("code");
 
 -- CreateIndex
-CREATE INDEX "coupons_validFrom_validUntil_idx" ON "coupons"("validFrom", "validUntil");
+CREATE INDEX "coupons_valid_from_valid_until_idx" ON "coupons"("valid_from", "valid_until");
 
 -- CreateIndex
-CREATE INDEX "coupons_isActive_idx" ON "coupons"("isActive");
+CREATE INDEX "coupons_is_active_idx" ON "coupons"("is_active");
 
 -- CreateIndex
 CREATE INDEX "coupons_code_trgm_idx" ON "coupons" USING GIN ("code" gin_trgm_ops);
@@ -1812,7 +1829,7 @@ CREATE INDEX "coupons_code_trgm_idx" ON "coupons" USING GIN ("code" gin_trgm_ops
 CREATE INDEX "coupons_name_trgm_idx" ON "coupons" USING GIN ("name" gin_trgm_ops);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "inquiries_receiptNumber_key" ON "inquiries"("receiptNumber");
+CREATE UNIQUE INDEX "inquiries_receipt_number_key" ON "inquiries"("receipt_number");
 
 -- CreateIndex
 CREATE INDEX "inquiries_email_idx" ON "inquiries"("email");
@@ -1821,25 +1838,25 @@ CREATE INDEX "inquiries_email_idx" ON "inquiries"("email");
 CREATE INDEX "inquiries_status_idx" ON "inquiries"("status");
 
 -- CreateIndex
-CREATE INDEX "inquiries_createdAt_status_idx" ON "inquiries"("createdAt", "status");
+CREATE INDEX "inquiries_created_at_status_idx" ON "inquiries"("created_at", "status");
 
 -- CreateIndex
-CREATE INDEX "inquiries_customerId_createdAt_idx" ON "inquiries"("customerId", "createdAt");
+CREATE INDEX "inquiries_customer_id_created_at_idx" ON "inquiries"("customer_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "inquiries_customerId_status_idx" ON "inquiries"("customerId", "status");
+CREATE INDEX "inquiries_customer_id_status_idx" ON "inquiries"("customer_id", "status");
 
 -- CreateIndex
-CREATE INDEX "inquiries_assigneeId_idx" ON "inquiries"("assigneeId");
+CREATE INDEX "inquiries_assignee_id_idx" ON "inquiries"("assignee_id");
 
 -- CreateIndex
-CREATE INDEX "inquiries_deletedAt_idx" ON "inquiries"("deletedAt");
+CREATE INDEX "inquiries_deleted_at_idx" ON "inquiries"("deleted_at");
 
 -- CreateIndex
-CREATE INDEX "inquiries_slaExpiresAt_idx" ON "inquiries"("slaExpiresAt");
+CREATE INDEX "inquiries_sla_expires_at_idx" ON "inquiries"("sla_expires_at");
 
 -- CreateIndex
-CREATE INDEX "inquiries_anonymizedAt_idx" ON "inquiries"("anonymizedAt");
+CREATE INDEX "inquiries_anonymized_at_idx" ON "inquiries"("anonymized_at");
 
 -- CreateIndex
 CREATE INDEX "inquiries_name_trgm_idx" ON "inquiries" USING GIN ("name" gin_trgm_ops);
@@ -1851,43 +1868,43 @@ CREATE INDEX "inquiries_email_trgm_idx" ON "inquiries" USING GIN ("email" gin_tr
 CREATE INDEX "inquiries_subject_trgm_idx" ON "inquiries" USING GIN ("subject" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "inquiry_replies_inquiryId_createdAt_idx" ON "inquiry_replies"("inquiryId", "createdAt");
+CREATE INDEX "inquiry_replies_inquiry_id_created_at_idx" ON "inquiry_replies"("inquiry_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "inquiry_replies_authorId_idx" ON "inquiry_replies"("authorId");
+CREATE INDEX "inquiry_replies_author_id_idx" ON "inquiry_replies"("author_id");
 
 -- CreateIndex
-CREATE INDEX "inquiry_replies_authorCustomerId_idx" ON "inquiry_replies"("authorCustomerId");
+CREATE INDEX "inquiry_replies_author_customer_id_idx" ON "inquiry_replies"("author_customer_id");
 
 -- CreateIndex
-CREATE INDEX "inquiry_status_history_inquiryId_createdAt_idx" ON "inquiry_status_history"("inquiryId", "createdAt");
+CREATE INDEX "inquiry_status_history_inquiry_id_created_at_idx" ON "inquiry_status_history"("inquiry_id", "created_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "inquiry_attachments_r2Key_key" ON "inquiry_attachments"("r2Key");
+CREATE UNIQUE INDEX "inquiry_attachments_r2_key_key" ON "inquiry_attachments"("r2_key");
 
 -- CreateIndex
-CREATE INDEX "inquiry_attachments_inquiryId_createdAt_idx" ON "inquiry_attachments"("inquiryId", "createdAt");
+CREATE INDEX "inquiry_attachments_inquiry_id_created_at_idx" ON "inquiry_attachments"("inquiry_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "inquiry_attachments_replyId_idx" ON "inquiry_attachments"("replyId");
+CREATE INDEX "inquiry_attachments_reply_id_idx" ON "inquiry_attachments"("reply_id");
 
 -- CreateIndex
-CREATE INDEX "inquiry_attachments_uploadedById_idx" ON "inquiry_attachments"("uploadedById") WHERE ("uploadedById" IS NOT NULL);
+CREATE INDEX "inquiry_attachments_uploaded_by_id_idx" ON "inquiry_attachments"("uploaded_by_id") WHERE ("uploaded_by_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "inquiry_attachments_uploadedByCustomerId_idx" ON "inquiry_attachments"("uploadedByCustomerId") WHERE ("uploadedByCustomerId" IS NOT NULL);
+CREATE INDEX "inquiry_attachments_uploaded_by_customer_id_idx" ON "inquiry_attachments"("uploaded_by_customer_id") WHERE ("uploaded_by_customer_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "inquiry_internal_notes_inquiryId_createdAt_idx" ON "inquiry_internal_notes"("inquiryId", "createdAt");
+CREATE INDEX "inquiry_internal_notes_inquiry_id_created_at_idx" ON "inquiry_internal_notes"("inquiry_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "inquiry_internal_notes_authorId_idx" ON "inquiry_internal_notes"("authorId");
+CREATE INDEX "inquiry_internal_notes_author_id_idx" ON "inquiry_internal_notes"("author_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "inquiry_tags_name_key" ON "inquiry_tags"("name");
 
 -- CreateIndex
-CREATE INDEX "inquiry_tag_on_inquiries_tagId_idx" ON "inquiry_tag_on_inquiries"("tagId");
+CREATE INDEX "inquiry_tag_on_inquiries_tag_id_idx" ON "inquiry_tag_on_inquiries"("tag_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "news_slug_key" ON "news"("slug");
@@ -1896,10 +1913,10 @@ CREATE UNIQUE INDEX "news_slug_key" ON "news"("slug");
 CREATE INDEX "news_title_idx" ON "news"("title");
 
 -- CreateIndex
-CREATE INDEX "news_isPublished_publishedAt_idx" ON "news"("isPublished", "publishedAt");
+CREATE INDEX "news_is_published_published_at_idx" ON "news"("is_published", "published_at");
 
 -- CreateIndex
-CREATE INDEX "news_createdAt_idx" ON "news"("createdAt");
+CREATE INDEX "news_created_at_idx" ON "news"("created_at");
 
 -- CreateIndex
 CREATE INDEX "news_title_trgm_idx" ON "news" USING GIN ("title" gin_trgm_ops);
@@ -1908,34 +1925,34 @@ CREATE INDEX "news_title_trgm_idx" ON "news" USING GIN ("title" gin_trgm_ops);
 CREATE INDEX "news_slug_trgm_idx" ON "news" USING GIN ("slug" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "announcement_bars_isActive_displayOrder_idx" ON "announcement_bars"("isActive", "displayOrder");
+CREATE INDEX "announcement_bars_is_active_display_order_idx" ON "announcement_bars"("is_active", "display_order");
 
 -- CreateIndex
-CREATE INDEX "announcement_bars_startAt_endAt_idx" ON "announcement_bars"("startAt", "endAt");
+CREATE INDEX "announcement_bars_start_at_end_at_idx" ON "announcement_bars"("start_at", "end_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "announcement_bars_displayOrder_key" ON "announcement_bars"("displayOrder");
+CREATE UNIQUE INDEX "announcement_bars_display_order_key" ON "announcement_bars"("display_order");
 
 -- CreateIndex
 CREATE INDEX "posts_title_idx" ON "posts"("title");
 
 -- CreateIndex
-CREATE INDEX "posts_authorId_idx" ON "posts"("authorId");
+CREATE INDEX "posts_author_id_idx" ON "posts"("author_id");
 
 -- CreateIndex
-CREATE INDEX "posts_status_publishedAt_idx" ON "posts"("status", "publishedAt");
+CREATE INDEX "posts_status_published_at_idx" ON "posts"("status", "published_at");
 
 -- CreateIndex
-CREATE INDEX "posts_categoryId_status_publishedAt_idx" ON "posts"("categoryId", "status", "publishedAt");
+CREATE INDEX "posts_category_id_status_published_at_idx" ON "posts"("category_id", "status", "published_at");
 
 -- CreateIndex
-CREATE INDEX "posts_viewCount_idx" ON "posts"("viewCount");
+CREATE INDEX "posts_view_count_idx" ON "posts"("view_count");
 
 -- CreateIndex
-CREATE INDEX "posts_status_viewCount_idx" ON "posts"("status", "viewCount");
+CREATE INDEX "posts_status_view_count_idx" ON "posts"("status", "view_count");
 
 -- CreateIndex
-CREATE INDEX "posts_deletedAt_idx" ON "posts"("deletedAt");
+CREATE INDEX "posts_deleted_at_idx" ON "posts"("deleted_at");
 
 -- CreateIndex
 CREATE INDEX "posts_title_trgm_idx" ON "posts" USING GIN ("title" gin_trgm_ops);
@@ -1944,13 +1961,13 @@ CREATE INDEX "posts_title_trgm_idx" ON "posts" USING GIN ("title" gin_trgm_ops);
 CREATE INDEX "posts_slug_trgm_idx" ON "posts" USING GIN ("slug" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "posts_createdAt_alive_idx" ON "posts"("createdAt") WHERE ("deletedAt" IS NULL);
+CREATE INDEX "posts_created_at_alive_idx" ON "posts"("created_at") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "posts_slug_active_key" ON "posts"("slug") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "posts_slug_active_key" ON "posts"("slug") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE INDEX "post_tag_on_posts_tagId_idx" ON "post_tag_on_posts"("tagId");
+CREATE INDEX "post_tag_on_posts_tag_id_idx" ON "post_tag_on_posts"("tag_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "post_categories_name_key" ON "post_categories"("name");
@@ -1971,10 +1988,10 @@ CREATE UNIQUE INDEX "post_tags_slug_key" ON "post_tags"("slug");
 CREATE UNIQUE INDEX "pages_slug_key" ON "pages"("slug");
 
 -- CreateIndex
-CREATE INDEX "pages_isPublished_isActive_idx" ON "pages"("isPublished", "isActive");
+CREATE INDEX "pages_is_published_is_active_idx" ON "pages"("is_published", "is_active");
 
 -- CreateIndex
-CREATE INDEX "pages_isSystemPage_idx" ON "pages"("isSystemPage");
+CREATE INDEX "pages_is_system_page_idx" ON "pages"("is_system_page");
 
 -- CreateIndex
 CREATE INDEX "pages_title_trgm_idx" ON "pages" USING GIN ("title" gin_trgm_ops);
@@ -1983,16 +2000,16 @@ CREATE INDEX "pages_title_trgm_idx" ON "pages" USING GIN ("title" gin_trgm_ops);
 CREATE INDEX "pages_slug_trgm_idx" ON "pages" USING GIN ("slug" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "sections_pageId_order_isActive_idx" ON "sections"("pageId", "order", "isActive");
+CREATE INDEX "sections_page_id_order_is_active_idx" ON "sections"("page_id", "order", "is_active");
 
 -- CreateIndex
 CREATE INDEX "sections_type_idx" ON "sections"("type");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sections_pageId_order_key" ON "sections"("pageId", "order");
+CREATE UNIQUE INDEX "sections_page_id_order_key" ON "sections"("page_id", "order");
 
 -- CreateIndex
-CREATE INDEX "navigation_items_parentId_idx" ON "navigation_items"("parentId");
+CREATE INDEX "navigation_items_parent_id_idx" ON "navigation_items"("parent_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "navigation_items_type_order_key" ON "navigation_items"("type", "order");
@@ -2004,34 +2021,34 @@ CREATE UNIQUE INDEX "social_links_order_key" ON "social_links"("order");
 CREATE INDEX "faq_categories_order_idx" ON "faq_categories"("order");
 
 -- CreateIndex
-CREATE INDEX "faq_categories_isActive_order_idx" ON "faq_categories"("isActive", "order");
+CREATE INDEX "faq_categories_is_active_order_idx" ON "faq_categories"("is_active", "order");
 
 -- CreateIndex
-CREATE INDEX "faq_categories_deletedAt_idx" ON "faq_categories"("deletedAt");
+CREATE INDEX "faq_categories_deleted_at_idx" ON "faq_categories"("deleted_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "faq_categories_slug_active_key" ON "faq_categories"("slug") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "faq_categories_slug_active_key" ON "faq_categories"("slug") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "faq_categories_order_active_key" ON "faq_categories"("order") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "faq_categories_order_active_key" ON "faq_categories"("order") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE INDEX "faq_items_categoryId_order_idx" ON "faq_items"("categoryId", "order");
+CREATE INDEX "faq_items_category_id_order_idx" ON "faq_items"("category_id", "order");
 
 -- CreateIndex
-CREATE INDEX "faq_items_categoryId_isPublished_order_idx" ON "faq_items"("categoryId", "isPublished", "order");
+CREATE INDEX "faq_items_category_id_is_published_order_idx" ON "faq_items"("category_id", "is_published", "order");
 
 -- CreateIndex
-CREATE INDEX "faq_items_isPublished_idx" ON "faq_items"("isPublished");
+CREATE INDEX "faq_items_is_published_idx" ON "faq_items"("is_published");
 
 -- CreateIndex
-CREATE INDEX "faq_items_deletedAt_idx" ON "faq_items"("deletedAt");
+CREATE INDEX "faq_items_deleted_at_idx" ON "faq_items"("deleted_at");
 
 -- CreateIndex
-CREATE INDEX "faq_items_updatedAt_idx" ON "faq_items"("updatedAt");
+CREATE INDEX "faq_items_updated_at_idx" ON "faq_items"("updated_at");
 
 -- CreateIndex
-CREATE INDEX "faq_items_viewCount_idx" ON "faq_items"("viewCount");
+CREATE INDEX "faq_items_view_count_idx" ON "faq_items"("view_count");
 
 -- CreateIndex
 CREATE INDEX "faq_items_question_trgm_idx" ON "faq_items" USING GIN ("question" gin_trgm_ops);
@@ -2040,154 +2057,154 @@ CREATE INDEX "faq_items_question_trgm_idx" ON "faq_items" USING GIN ("question" 
 CREATE INDEX "faq_items_answer_trgm_idx" ON "faq_items" USING GIN ("answer" gin_trgm_ops);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "faq_items_categoryId_order_active_key" ON "faq_items"("categoryId", "order") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "faq_items_category_id_order_active_key" ON "faq_items"("category_id", "order") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "instagram_posts_postId_key" ON "instagram_posts"("postId");
+CREATE UNIQUE INDEX "instagram_posts_post_id_key" ON "instagram_posts"("post_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "instagram_posts_sortOrder_key" ON "instagram_posts"("sortOrder");
+CREATE UNIQUE INDEX "instagram_posts_sort_order_key" ON "instagram_posts"("sort_order");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "audit_logs_sequence_key" ON "audit_logs"("sequence");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_resource_resourceId_idx" ON "audit_logs"("resource", "resourceId");
+CREATE INDEX "audit_logs_resource_resource_id_idx" ON "audit_logs"("resource", "resource_id");
 
 -- CreateIndex
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs"("created_at");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_userId_createdAt_idx" ON "audit_logs"("userId", "createdAt");
+CREATE INDEX "audit_logs_user_id_created_at_idx" ON "audit_logs"("user_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_hashKeyId_sequence_idx" ON "audit_logs"("hashKeyId", "sequence");
+CREATE INDEX "audit_logs_hash_key_id_sequence_idx" ON "audit_logs"("hash_key_id", "sequence");
 
 -- CreateIndex
 CREATE INDEX "media_type_usage_idx" ON "media"("type", "usage");
 
 -- CreateIndex
-CREATE INDEX "media_uploadedBy_idx" ON "media"("uploadedBy");
+CREATE INDEX "media_uploaded_by_idx" ON "media"("uploaded_by");
 
 -- CreateIndex
-CREATE INDEX "media_isActive_createdAt_idx" ON "media"("isActive", "createdAt");
+CREATE INDEX "media_is_active_created_at_idx" ON "media"("is_active", "created_at");
 
 -- CreateIndex
-CREATE INDEX "media_mimeType_idx" ON "media"("mimeType");
+CREATE INDEX "media_mime_type_idx" ON "media"("mime_type");
 
 -- CreateIndex
 CREATE INDEX "terms_documents_type_idx" ON "terms_documents"("type");
 
 -- CreateIndex
-CREATE INDEX "terms_documents_deletedAt_isPublished_idx" ON "terms_documents"("deletedAt", "isPublished");
+CREATE INDEX "terms_documents_deleted_at_is_published_idx" ON "terms_documents"("deleted_at", "is_published");
 
 -- CreateIndex
-CREATE INDEX "terms_documents_showInFooter_isPublished_displayOrder_idx" ON "terms_documents"("showInFooter", "isPublished", "displayOrder");
+CREATE INDEX "terms_documents_show_in_footer_is_published_display_order_idx" ON "terms_documents"("show_in_footer", "is_published", "display_order");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "terms_documents_slug_active_key" ON "terms_documents"("slug") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "terms_documents_slug_active_key" ON "terms_documents"("slug") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "terms_documents_displayOrder_active_key" ON "terms_documents"("displayOrder") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "terms_documents_display_order_active_key" ON "terms_documents"("display_order") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_termsId_idx" ON "terms_agreements"("termsId");
+CREATE INDEX "terms_agreements_terms_id_idx" ON "terms_agreements"("terms_id");
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_customerId_idx" ON "terms_agreements"("customerId");
+CREATE INDEX "terms_agreements_customer_id_idx" ON "terms_agreements"("customer_id");
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_resourceId_idx" ON "terms_agreements"("resourceId");
+CREATE INDEX "terms_agreements_resource_id_idx" ON "terms_agreements"("resource_id");
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_agreedAt_idx" ON "terms_agreements"("agreedAt");
+CREATE INDEX "terms_agreements_agreed_at_idx" ON "terms_agreements"("agreed_at");
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_scope_agreedAt_idx" ON "terms_agreements"("scope", "agreedAt");
+CREATE INDEX "terms_agreements_scope_agreed_at_idx" ON "terms_agreements"("scope", "agreed_at");
 
 -- CreateIndex
-CREATE INDEX "terms_agreements_guest_email_trgm_idx" ON "terms_agreements" USING GIN ("guestEmail" gin_trgm_ops);
+CREATE INDEX "terms_agreements_guest_email_trgm_idx" ON "terms_agreements" USING GIN ("guest_email" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "editor_comment_threads_contentType_contentId_status_idx" ON "editor_comment_threads"("contentType", "contentId", "status");
+CREATE INDEX "editor_comment_threads_content_type_content_id_status_idx" ON "editor_comment_threads"("content_type", "content_id", "status");
 
 -- CreateIndex
-CREATE INDEX "editor_comment_threads_createdBy_idx" ON "editor_comment_threads"("createdBy");
+CREATE INDEX "editor_comment_threads_created_by_idx" ON "editor_comment_threads"("created_by");
 
 -- CreateIndex
-CREATE INDEX "editor_comment_threads_status_createdAt_idx" ON "editor_comment_threads"("status", "createdAt");
+CREATE INDEX "editor_comment_threads_status_created_at_idx" ON "editor_comment_threads"("status", "created_at");
 
 -- CreateIndex
-CREATE INDEX "editor_comment_threads_resolvedBy_idx" ON "editor_comment_threads"("resolvedBy") WHERE ("resolvedBy" IS NOT NULL);
+CREATE INDEX "editor_comment_threads_resolved_by_idx" ON "editor_comment_threads"("resolved_by") WHERE ("resolved_by" IS NOT NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "editor_comment_threads_markId_contentType_contentId_key" ON "editor_comment_threads"("markId", "contentType", "contentId");
+CREATE UNIQUE INDEX "editor_comment_threads_mark_id_content_type_content_id_key" ON "editor_comment_threads"("mark_id", "content_type", "content_id");
 
 -- CreateIndex
-CREATE INDEX "editor_comments_threadId_createdAt_idx" ON "editor_comments"("threadId", "createdAt");
+CREATE INDEX "editor_comments_thread_id_created_at_idx" ON "editor_comments"("thread_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "editor_comments_createdBy_idx" ON "editor_comments"("createdBy");
+CREATE INDEX "editor_comments_created_by_idx" ON "editor_comments"("created_by");
 
 -- CreateIndex
-CREATE INDEX "editor_comments_isDeleted_idx" ON "editor_comments"("isDeleted");
+CREATE INDEX "editor_comments_is_deleted_idx" ON "editor_comments"("is_deleted");
 
 -- CreateIndex
-CREATE INDEX "editor_comments_deletedBy_idx" ON "editor_comments"("deletedBy") WHERE ("deletedBy" IS NOT NULL);
+CREATE INDEX "editor_comments_deleted_by_idx" ON "editor_comments"("deleted_by") WHERE ("deleted_by" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "block_templates_createdBy_idx" ON "block_templates"("createdBy");
+CREATE INDEX "block_templates_created_by_idx" ON "block_templates"("created_by");
 
 -- CreateIndex
-CREATE INDEX "block_templates_createdAt_idx" ON "block_templates"("createdAt");
+CREATE INDEX "block_templates_created_at_idx" ON "block_templates"("created_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "space_reviews_reservationId_key" ON "space_reviews"("reservationId");
+CREATE UNIQUE INDEX "space_reviews_reservation_id_key" ON "space_reviews"("reservation_id");
 
 -- CreateIndex
-CREATE INDEX "space_reviews_spaceId_isPublished_createdAt_idx" ON "space_reviews"("spaceId", "isPublished", "createdAt" DESC);
+CREATE INDEX "space_reviews_space_id_is_published_created_at_idx" ON "space_reviews"("space_id", "is_published", "created_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "space_reviews_customerId_idx" ON "space_reviews"("customerId");
+CREATE INDEX "space_reviews_customer_id_idx" ON "space_reviews"("customer_id");
 
 -- CreateIndex
-CREATE INDEX "space_reviews_repliedById_idx" ON "space_reviews"("repliedById");
+CREATE INDEX "space_reviews_replied_by_id_idx" ON "space_reviews"("replied_by_id");
 
 -- CreateIndex
-CREATE INDEX "event_time_slots_time_range_idx" ON "event_time_slots"("startAt", "endAt");
+CREATE INDEX "event_time_slots_time_range_idx" ON "event_time_slots"("start_at", "end_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_time_slots_eventId_startAt_key" ON "event_time_slots"("eventId", "startAt");
+CREATE UNIQUE INDEX "event_time_slots_event_id_start_at_key" ON "event_time_slots"("event_id", "start_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_categories_name_active_key" ON "event_categories"("name") WHERE ("isActive" = true);
+CREATE UNIQUE INDEX "event_categories_name_active_key" ON "event_categories"("name") WHERE ("is_active" = true);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_categories_sortOrder_key" ON "event_categories"("sortOrder");
+CREATE UNIQUE INDEX "event_categories_sort_order_key" ON "event_categories"("sort_order");
 
 -- CreateIndex
 CREATE INDEX "events_status_idx" ON "events"("status");
 
 -- CreateIndex
-CREATE INDEX "events_categoryId_idx" ON "events"("categoryId");
+CREATE INDEX "events_category_id_idx" ON "events"("category_id");
 
 -- CreateIndex
-CREATE INDEX "events_locationId_idx" ON "events"("locationId");
+CREATE INDEX "events_location_id_idx" ON "events"("location_id");
 
 -- CreateIndex
-CREATE INDEX "events_spaceId_idx" ON "events"("spaceId");
+CREATE INDEX "events_space_id_idx" ON "events"("space_id");
 
 -- CreateIndex
-CREATE INDEX "events_deletedAt_idx" ON "events"("deletedAt");
+CREATE INDEX "events_deleted_at_idx" ON "events"("deleted_at");
 
 -- CreateIndex
-CREATE INDEX "events_firstSlotStartAt_idx" ON "events"("firstSlotStartAt");
+CREATE INDEX "events_first_slot_start_at_idx" ON "events"("first_slot_start_at");
 
 -- CreateIndex
-CREATE INDEX "events_lastSlotEndAt_idx" ON "events"("lastSlotEndAt");
+CREATE INDEX "events_last_slot_end_at_idx" ON "events"("last_slot_end_at");
 
 -- CreateIndex
 CREATE INDEX "events_title_trgm_idx" ON "events" USING GIN ("title" gin_trgm_ops);
@@ -2196,369 +2213,363 @@ CREATE INDEX "events_title_trgm_idx" ON "events" USING GIN ("title" gin_trgm_ops
 CREATE INDEX "events_slug_trgm_idx" ON "events" USING GIN ("slug" gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "events_spaceId_alive_idx" ON "events"("spaceId") WHERE ("deletedAt" IS NULL AND "spaceId" IS NOT NULL);
+CREATE INDEX "events_space_id_alive_idx" ON "events"("space_id") WHERE ("deleted_at" IS NULL AND "space_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "events_deletedById_idx" ON "events"("deletedById") WHERE ("deletedById" IS NOT NULL);
+CREATE INDEX "events_deleted_by_id_idx" ON "events"("deleted_by_id") WHERE ("deleted_by_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "events_slug_active_key" ON "events"("slug") WHERE ("deletedAt" IS NULL);
+CREATE UNIQUE INDEX "events_slug_active_key" ON "events"("slug") WHERE ("deleted_at" IS NULL);
 
 -- CreateIndex
-CREATE INDEX "event_tickets_eventId_isAvailable_idx" ON "event_tickets"("eventId", "isAvailable");
+CREATE INDEX "event_tickets_event_id_is_available_idx" ON "event_tickets"("event_id", "is_available");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_tickets_eventId_sortOrder_key" ON "event_tickets"("eventId", "sortOrder");
+CREATE UNIQUE INDEX "event_tickets_event_id_sort_order_key" ON "event_tickets"("event_id", "sort_order");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_registrations_stripeCheckoutSessionId_key" ON "event_registrations"("stripeCheckoutSessionId");
+CREATE UNIQUE INDEX "event_registrations_stripe_checkout_session_id_key" ON "event_registrations"("stripe_checkout_session_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "event_registrations_stripePaymentIntentId_key" ON "event_registrations"("stripePaymentIntentId");
+CREATE UNIQUE INDEX "event_registrations_stripe_payment_intent_id_key" ON "event_registrations"("stripe_payment_intent_id");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_slotId_status_idx" ON "event_registrations"("slotId", "status");
+CREATE INDEX "event_registrations_slot_id_status_idx" ON "event_registrations"("slot_id", "status");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_ticketId_idx" ON "event_registrations"("ticketId");
+CREATE INDEX "event_registrations_ticket_id_idx" ON "event_registrations"("ticket_id");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_customerId_idx" ON "event_registrations"("customerId");
+CREATE INDEX "event_registrations_customer_id_idx" ON "event_registrations"("customer_id");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_eventId_status_createdAt_idx" ON "event_registrations"("eventId", "status", "createdAt");
+CREATE INDEX "event_registrations_event_id_status_created_at_idx" ON "event_registrations"("event_id", "status", "created_at");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_eventId_attendedAt_idx" ON "event_registrations"("eventId", "attendedAt");
+CREATE INDEX "event_registrations_event_id_attended_at_idx" ON "event_registrations"("event_id", "attended_at");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_paymentStatus_idx" ON "event_registrations"("paymentStatus");
+CREATE INDEX "event_registrations_payment_status_idx" ON "event_registrations"("payment_status");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_slotId_ticketId_status_waitlistedAt_idx" ON "event_registrations"("slotId", "ticketId", "status", "waitlistedAt");
+CREATE INDEX "event_registrations_slot_id_ticket_id_status_waitlisted_at_idx" ON "event_registrations"("slot_id", "ticket_id", "status", "waitlisted_at");
 
 -- CreateIndex
-CREATE INDEX "event_registrations_status_expiresAt_idx" ON "event_registrations"("status", "expiresAt");
+CREATE INDEX "event_registrations_status_expires_at_idx" ON "event_registrations"("status", "expires_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "refunds_stripeRefundId_key" ON "refunds"("stripeRefundId");
+CREATE UNIQUE INDEX "refunds_stripe_refund_id_key" ON "refunds"("stripe_refund_id");
 
 -- CreateIndex
-CREATE INDEX "refunds_reservationId_idx" ON "refunds"("reservationId");
+CREATE INDEX "refunds_reservation_id_idx" ON "refunds"("reservation_id");
 
 -- CreateIndex
-CREATE INDEX "refunds_eventRegistrationId_idx" ON "refunds"("eventRegistrationId");
+CREATE INDEX "refunds_event_registration_id_idx" ON "refunds"("event_registration_id");
 
 -- CreateIndex
-CREATE INDEX "refunds_createdAt_idx" ON "refunds"("createdAt");
+CREATE INDEX "refunds_created_at_idx" ON "refunds"("created_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "receipts_serialNo_key" ON "receipts"("serialNo");
+CREATE UNIQUE INDEX "receipts_serial_no_key" ON "receipts"("serial_no");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "receipts_reservationId_key" ON "receipts"("reservationId");
+CREATE UNIQUE INDEX "receipts_reservation_id_key" ON "receipts"("reservation_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "receipts_eventRegistrationId_key" ON "receipts"("eventRegistrationId");
+CREATE UNIQUE INDEX "receipts_event_registration_id_key" ON "receipts"("event_registration_id");
 
 -- CreateIndex
-CREATE INDEX "receipts_issuedAt_idx" ON "receipts"("issuedAt");
+CREATE INDEX "receipts_issued_at_idx" ON "receipts"("issued_at");
 
 -- CreateIndex
-CREATE INDEX "receipts_reissuedFromId_idx" ON "receipts"("reissuedFromId") WHERE ("reissuedFromId" IS NOT NULL);
+CREATE INDEX "receipts_reissued_from_id_idx" ON "receipts"("reissued_from_id") WHERE ("reissued_from_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "admin_notification_isRead_createdAt_idx" ON "admin_notification"("isRead", "createdAt" DESC);
+CREATE INDEX "admin_notifications_is_read_created_at_idx" ON "admin_notifications"("is_read", "created_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "admin_notification_type_idx" ON "admin_notification"("type");
+CREATE INDEX "admin_notifications_type_idx" ON "admin_notifications"("type");
 
 -- CreateIndex
-CREATE INDEX "admin_notification_createdAt_idx" ON "admin_notification"("createdAt" DESC);
+CREATE INDEX "admin_notifications_created_at_idx" ON "admin_notifications"("created_at" DESC);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "smart_lock_devices_deviceId_key" ON "smart_lock_devices"("deviceId");
+CREATE UNIQUE INDEX "smart_lock_devices_device_id_key" ON "smart_lock_devices"("device_id");
 
 -- CreateIndex
-CREATE INDEX "smart_lock_devices_locationId_idx" ON "smart_lock_devices"("locationId");
+CREATE INDEX "smart_lock_devices_location_id_idx" ON "smart_lock_devices"("location_id");
 
 -- CreateIndex
-CREATE INDEX "smart_lock_devices_pairedLockDeviceId_idx" ON "smart_lock_devices"("pairedLockDeviceId") WHERE ("pairedLockDeviceId" IS NOT NULL);
+CREATE INDEX "smart_lock_devices_paired_lock_device_id_idx" ON "smart_lock_devices"("paired_lock_device_id") WHERE ("paired_lock_device_id" IS NOT NULL);
 
 -- CreateIndex
-CREATE INDEX "smart_lock_passcodes_status_endTime_idx" ON "smart_lock_passcodes"("status", "endTime");
+CREATE INDEX "smart_lock_passcodes_status_end_time_idx" ON "smart_lock_passcodes"("status", "end_time");
 
 -- CreateIndex
-CREATE INDEX "smart_lock_passcodes_status_revokeRequestedAt_idx" ON "smart_lock_passcodes"("status", "revokeRequestedAt");
+CREATE INDEX "smart_lock_passcodes_status_revoke_requested_at_idx" ON "smart_lock_passcodes"("status", "revoke_requested_at");
 
 -- CreateIndex
-CREATE INDEX "smart_lock_passcodes_deviceId_idx" ON "smart_lock_passcodes"("deviceId");
+CREATE INDEX "smart_lock_passcodes_device_id_idx" ON "smart_lock_passcodes"("device_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "smart_lock_passcodes_reservationId_deviceId_key" ON "smart_lock_passcodes"("reservationId", "deviceId");
+CREATE UNIQUE INDEX "smart_lock_passcodes_reservation_id_device_id_key" ON "smart_lock_passcodes"("reservation_id", "device_id");
 
 -- CreateIndex
-CREATE INDEX "stripe_events_receivedAt_idx" ON "stripe_events"("receivedAt");
+CREATE INDEX "stripe_events_received_at_idx" ON "stripe_events"("received_at");
 
 -- CreateIndex
-CREATE INDEX "transfer_accounts_isActive_sortOrder_idx" ON "transfer_accounts"("isActive", "sortOrder");
+CREATE INDEX "transfer_accounts_is_active_sort_order_idx" ON "transfer_accounts"("is_active", "sort_order");
 
 -- AddForeignKey
-ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_pageId_fkey" FOREIGN KEY ("pageId") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_page_id_fkey" FOREIGN KEY ("page_id") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "locations" ADD CONSTRAINT "locations_defaultSmartLockDeviceId_fkey" FOREIGN KEY ("defaultSmartLockDeviceId") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "locations" ADD CONSTRAINT "locations_default_smart_lock_device_id_fkey" FOREIGN KEY ("default_smart_lock_device_id") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "space_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "space_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_smartLockDeviceId_fkey" FOREIGN KEY ("smartLockDeviceId") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_smart_lock_device_id_fkey" FOREIGN KEY ("smart_lock_device_id") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_coupon_id_fkey" FOREIGN KEY ("coupon_id") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_deleted_by_id_fkey" FOREIGN KEY ("deleted_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_coupon_id_fkey" FOREIGN KEY ("coupon_id") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_deleted_by_id_fkey" FOREIGN KEY ("deleted_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_seriesId_fkey" FOREIGN KEY ("seriesId") REFERENCES "reservation_series"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_price_overridden_by_id_fkey" FOREIGN KEY ("price_overridden_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "customers" ADD CONSTRAINT "customers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_series_id_fkey" FOREIGN KEY ("series_id") REFERENCES "reservation_series"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pending_customer_email_changes" ADD CONSTRAINT "pending_customer_email_changes_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customers" ADD CONSTRAINT "customers_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pending_customer_merges" ADD CONSTRAINT "pending_customer_merges_targetCustomerId_fkey" FOREIGN KEY ("targetCustomerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "pending_customer_email_changes" ADD CONSTRAINT "pending_customer_email_changes_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pending_customer_merges" ADD CONSTRAINT "pending_customer_merges_sourceCustomerId_fkey" FOREIGN KEY ("sourceCustomerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "pending_customer_merges" ADD CONSTRAINT "pending_customer_merges_target_customer_id_fkey" FOREIGN KEY ("target_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_assigneeId_fkey" FOREIGN KEY ("assigneeId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "pending_customer_merges" ADD CONSTRAINT "pending_customer_merges_source_customer_id_fkey" FOREIGN KEY ("source_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_assignee_id_fkey" FOREIGN KEY ("assignee_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_inquiry_id_fkey" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_authorCustomerId_fkey" FOREIGN KEY ("authorCustomerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_status_history" ADD CONSTRAINT "inquiry_status_history_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_customer_id_fkey" FOREIGN KEY ("author_customer_id") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiry_status_history" ADD CONSTRAINT "inquiry_status_history_inquiry_id_fkey" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_replyId_fkey" FOREIGN KEY ("replyId") REFERENCES "inquiry_replies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_inquiry_id_fkey" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_reply_id_fkey" FOREIGN KEY ("reply_id") REFERENCES "inquiry_replies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploadedByCustomerId_fkey" FOREIGN KEY ("uploadedByCustomerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploaded_by_id_fkey" FOREIGN KEY ("uploaded_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_internal_notes" ADD CONSTRAINT "inquiry_internal_notes_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploaded_by_customer_id_fkey" FOREIGN KEY ("uploaded_by_customer_id") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_internal_notes" ADD CONSTRAINT "inquiry_internal_notes_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_internal_notes" ADD CONSTRAINT "inquiry_internal_notes_inquiry_id_fkey" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_tag_on_inquiries" ADD CONSTRAINT "inquiry_tag_on_inquiries_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiry_internal_notes" ADD CONSTRAINT "inquiry_internal_notes_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inquiry_tag_on_inquiries" ADD CONSTRAINT "inquiry_tag_on_inquiries_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "inquiry_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inquiry_tag_on_inquiries" ADD CONSTRAINT "inquiry_tag_on_inquiries_inquiry_id_fkey" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "posts" ADD CONSTRAINT "posts_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "post_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inquiry_tag_on_inquiries" ADD CONSTRAINT "inquiry_tag_on_inquiries_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "inquiry_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "posts" ADD CONSTRAINT "posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "posts" ADD CONSTRAINT "posts_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "post_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_postId_fkey" FOREIGN KEY ("postId") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "posts" ADD CONSTRAINT "posts_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "post_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sections" ADD CONSTRAINT "sections_pageId_fkey" FOREIGN KEY ("pageId") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "post_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "navigation_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sections" ADD CONSTRAINT "sections_page_id_fkey" FOREIGN KEY ("page_id") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "faq_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "navigation_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "media" ADD CONSTRAINT "media_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "faq_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "terms_agreements" ADD CONSTRAINT "terms_agreements_termsId_fkey" FOREIGN KEY ("termsId") REFERENCES "terms_documents"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
+ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "terms_agreements" ADD CONSTRAINT "terms_agreements_terms_id_fkey" FOREIGN KEY ("terms_id") REFERENCES "terms_documents"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_resolvedBy_fkey" FOREIGN KEY ("resolvedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "editor_comment_threads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_resolved_by_fkey" FOREIGN KEY ("resolved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "editor_comment_threads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_deletedBy_fkey" FOREIGN KEY ("deletedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_deleted_by_fkey" FOREIGN KEY ("deleted_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_repliedById_fkey" FOREIGN KEY ("repliedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_replied_by_id_fkey" FOREIGN KEY ("replied_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "events" ADD CONSTRAINT "events_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "events" ADD CONSTRAINT "events_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "events" ADD CONSTRAINT "events_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_space_id_fkey" FOREIGN KEY ("space_id") REFERENCES "spaces"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "events" ADD CONSTRAINT "events_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "event_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_deleted_by_id_fkey" FOREIGN KEY ("deleted_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "event_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_slotId_fkey" FOREIGN KEY ("slotId") REFERENCES "event_time_slots"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "event_tickets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "event_time_slots"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_ticket_id_fkey" FOREIGN KEY ("ticket_id") REFERENCES "event_tickets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_eventRegistrationId_fkey" FOREIGN KEY ("eventRegistrationId") REFERENCES "event_registrations"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_event_registration_id_fkey" FOREIGN KEY ("event_registration_id") REFERENCES "event_registrations"("id") ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_eventRegistrationId_fkey" FOREIGN KEY ("eventRegistrationId") REFERENCES "event_registrations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_reissuedFromId_fkey" FOREIGN KEY ("reissuedFromId") REFERENCES "receipts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_event_registration_id_fkey" FOREIGN KEY ("event_registration_id") REFERENCES "event_registrations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_reissued_from_id_fkey" FOREIGN KEY ("reissued_from_id") REFERENCES "receipts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_pairedLockDeviceId_fkey" FOREIGN KEY ("pairedLockDeviceId") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_paired_lock_device_id_fkey" FOREIGN KEY ("paired_lock_device_id") REFERENCES "smart_lock_devices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_deviceId_fkey" FOREIGN KEY ("deviceId") REFERENCES "smart_lock_devices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "smart_lock_devices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ============================================================================
 -- baseline invariants — Prisma DSL で表現できない不変条件
 -- ============================================================================
 --
--- `prisma migrate diff --from-empty --to-schema` が出す DDL には
--- **CHECK 制約・EXCLUDE 制約・plpgsql 関数・trigger が一切含まれない**。
--- Prisma のスキーマ言語がそれらを表現できないため。migration 履歴を 1 本の
--- baseline へ畳むと、この 100 件が黙って消える。
+-- **このファイルは生成物。手で編集しない。**
+--   bun scripts/build-baseline-invariants.ts --url <全 migration 適用済み DB> --force
 --
--- このファイルは `scripts/build-baseline-migration.ts` が生成 DDL の**後ろ**に
--- 連結する。extension だけは GIN index より前に要るので別ファイル
--- （`extensions.sql`）で prelude として先に流す。
+-- `prisma migrate diff --from-empty --to-schema` が出す DDL には CHECK 制約・
+-- EXCLUDE 制約・plpgsql 関数・trigger が一切含まれない（Prisma のスキーマ言語が
+-- それらを表現できないため）。migration 履歴を 1 本の baseline へ畳むと黙って消える。
 --
--- 中身は手で列挙していない。migration 履歴を適用した DB と、生成 DDL だけを
--- 適用した DB の **pg_catalog センサス差分**から機械的に起こしてある
--- （`scripts/db-census.ts`）。手で書くと必ず取りこぼす。
---
--- ## 意図的に含めないもの
---
--- - `audit_logs_sequence_key` — 履歴では `ADD CONSTRAINT ... UNIQUE`、Prisma は
---   `CREATE UNIQUE INDEX` で出す。強制力は同一でカタログ上の表現だけが違う。
---   ここで constraint として作り直すと Prisma が作った同名 index と衝突する。
+-- `scripts/build-baseline-migration.ts` が生成 DDL の**後ろ**に連結する。extension だけは
+-- GIN index より前に要るので別ファイル（`extensions.sql`）で prelude として先に流す。
 --
 -- ## 順序
 --
@@ -2568,171 +2579,145 @@ ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_deviceId
 
 -- ===== スカラー配列列の NOT NULL (3) =====
 --
--- Prisma は `String[]` に NOT NULL を出さない（Prisma 側の型は非 null なので
--- クライアントが null を書かない前提）。履歴では手書き migration が付けていた。
--- 落とすと「Prisma 経由以外の書込で null が入る」余地が開くので復元する。
+-- Prisma は `String[]` に NOT NULL を出さない（Prisma 側の型が非 null なので
+-- クライアントが null を書かない前提）。落とすと Prisma 経由以外の書込で null が
+-- 入る余地が開く。
 
-ALTER TABLE "settings_notifications" ALTER COLUMN "notificationEmailAddresses" SET NOT NULL;
+ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" SET NOT NULL;
+ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
+ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
-ALTER TABLE "settings_notifications" ALTER COLUMN "notificationStaffIds" SET NOT NULL;
+-- ===== CHECK 制約 (123) =====
 
-ALTER TABLE "settings_stripes" ALTER COLUMN "stripePaymentMethodTypes" SET NOT NULL;
-
--- ===== CHECK constraints (76) =====
+ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
-
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK (("chainVersion" = 1));
-
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_entry_hash_hex_check" CHECK (("entryHash" ~ '^[0-9a-f]{64}$'::text));
-
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_algorithm_check" CHECK ((("hashAlgorithm")::text = 'HMAC-SHA256'::text));
-
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_key_id_check" CHECK ((("hashKeyId")::text ~ '^[A-Za-z0-9_-]{1,32}$'::text));
-
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_previous_hash_hex_check" CHECK (("previousHash" ~ '^[0-9a-f]{64}$'::text));
-
-ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_scope_target_check" CHECK (((((scope)::text = 'SPACE'::text) AND ("spaceId" IS NOT NULL) AND ("locationId" IS NULL)) OR (((scope)::text = 'LOCATION'::text) AND ("locationId" IS NOT NULL) AND ("spaceId" IS NULL)) OR (((scope)::text = 'GLOBAL'::text) AND ("spaceId" IS NULL) AND ("locationId" IS NULL))));
-
-ALTER TABLE "coupons" ADD CONSTRAINT "coupons_amount_bounds_check" CHECK (((("maxDiscountAmount" IS NULL) OR ("maxDiscountAmount" > 0)) AND (("minReservationAmount" IS NULL) OR ("minReservationAmount" >= 0))));
-
-ALTER TABLE "coupons" ADD CONSTRAINT "coupons_discount_value_range_check" CHECK ((("discountValue" > 0) AND ((type <> 'PERCENTAGE'::"CouponType") OR ("discountValue" <= 100))));
-
-ALTER TABLE "coupons" ADD CONSTRAINT "coupons_usage_range_check" CHECK ((("usageCount" >= 0) AND (("usageLimit" IS NULL) OR ("usageLimit" >= 1))));
-
-ALTER TABLE "customers" ADD CONSTRAINT "customers_emailCanonical_not_empty_check" CHECK ((btrim("emailCanonical") <> ''::text));
-
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK ((chain_version = 1));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_entry_hash_hex_check" CHECK ((entry_hash ~ '^[0-9a-f]{64}$'::text));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_algorithm_check" CHECK (((hash_algorithm)::text = 'HMAC-SHA256'::text));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_key_id_check" CHECK (((hash_key_id)::text ~ '^[A-Za-z0-9_-]{1,32}$'::text));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_previous_hash_hex_check" CHECK ((previous_hash ~ '^[0-9a-f]{64}$'::text));
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_scope_target_check" CHECK (((((scope)::text = 'SPACE'::text) AND (space_id IS NOT NULL) AND (location_id IS NULL)) OR (((scope)::text = 'LOCATION'::text) AND (location_id IS NOT NULL) AND (space_id IS NULL)) OR (((scope)::text = 'GLOBAL'::text) AND (space_id IS NULL) AND (location_id IS NULL))));
+ALTER TABLE "coupons" ADD CONSTRAINT "coupons_amount_bounds_check" CHECK ((((max_discount_amount IS NULL) OR (max_discount_amount > 0)) AND ((min_reservation_amount IS NULL) OR (min_reservation_amount >= 0))));
+ALTER TABLE "coupons" ADD CONSTRAINT "coupons_discount_value_range_check" CHECK (((discount_value > 0) AND ((type <> 'PERCENTAGE'::coupon_type) OR (discount_value <= 100))));
+ALTER TABLE "coupons" ADD CONSTRAINT "coupons_usage_range_check" CHECK (((usage_count >= 0) AND ((usage_limit IS NULL) OR (usage_limit >= 1))));
+ALTER TABLE "customers" ADD CONSTRAINT "customers_email_canonical_not_empty_check" CHECK ((btrim(email_canonical) <> ''::text));
+ALTER TABLE "customers" ADD CONSTRAINT "customers_total_reservations_non_negative_check" CHECK ((total_reservations >= 0));
+ALTER TABLE "customers" ADD CONSTRAINT "customers_total_spent_non_negative_check" CHECK ((total_spent >= 0));
+ALTER TABLE "event_categories" ADD CONSTRAINT "event_categories_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_ics_sequence_non_negative_check" CHECK ((ics_sequence >= 0));
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_paid_amount_non_negative_check" CHECK ((paid_amount >= 0));
 ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_quantity_positive" CHECK ((quantity >= 1));
-
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_capacity_positive_or_null" CHECK (((capacity IS NULL) OR (capacity >= 1)));
-
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_price_non_negative" CHECK ((price >= 0));
-
-ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_unit_size_positive" CHECK (("unitSize" >= 1));
-
+ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_unit_size_positive" CHECK ((unit_size >= 1));
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_capacity_positive" CHECK ((capacity >= 1));
-
-ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_time_order" CHECK (("startAt" < "endAt"));
-
-ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::"EventFormat") OR ("meetingProvider" = 'GOOGLE_MEET'::"MeetingProvider") OR ("meetingUrl" IS NOT NULL)));
-
+ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_time_order" CHECK ((start_at < end_at));
+ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::event_format) OR (meeting_provider = 'GOOGLE_MEET'::meeting_provider) OR (meeting_url IS NOT NULL)));
 ALTER TABLE "events" ADD CONSTRAINT "events_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
-
-ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploader_side_check" CHECK (((("uploadedById" IS NOT NULL) AND ("uploadedByCustomerId" IS NULL)) OR (("uploadedByCustomerId" IS NOT NULL) AND ("uploadedById" IS NULL))));
-
-ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_side_check" CHECK (((("authorType" = 'STAFF'::"InquiryReplyAuthorType") AND ("authorId" IS NOT NULL) AND ("authorCustomerId" IS NULL)) OR (("authorType" = 'CUSTOMER'::"InquiryReplyAuthorType") AND ("authorCustomerId" IS NOT NULL) AND ("authorId" IS NULL))));
-
-ALTER TABLE "locations" ADD CONSTRAINT "locations_accessLines_array_check" CHECK ((("accessLines" IS NULL) OR (jsonb_typeof("accessLines") = 'array'::text)));
-
-ALTER TABLE "locations" ADD CONSTRAINT "locations_imageUrls_array_check" CHECK ((("imageUrls" IS NULL) OR (jsonb_typeof("imageUrls") = 'array'::text)));
-
+ALTER TABLE "faq_categories" ADD CONSTRAINT "faq_categories_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_helpful_count_non_negative_check" CHECK ((helpful_count >= 0));
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_not_helpful_count_non_negative_check" CHECK ((not_helpful_count >= 0));
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_view_count_non_negative_check" CHECK ((view_count >= 0));
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_size_bytes_non_negative_check" CHECK ((size_bytes >= 0));
+ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploader_side_check" CHECK ((((uploaded_by_id IS NOT NULL) AND (uploaded_by_customer_id IS NULL)) OR ((uploaded_by_customer_id IS NOT NULL) AND (uploaded_by_id IS NULL))));
+ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_side_check" CHECK ((((author_type = 'STAFF'::inquiry_reply_author_type) AND (author_id IS NOT NULL) AND (author_customer_id IS NULL)) OR ((author_type = 'CUSTOMER'::inquiry_reply_author_type) AND (author_customer_id IS NOT NULL) AND (author_id IS NULL))));
+ALTER TABLE "instagram_posts" ADD CONSTRAINT "instagram_posts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_access_lines_array_check" CHECK (((access_lines IS NULL) OR (jsonb_typeof(access_lines) = 'array'::text)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_image_urls_array_check" CHECK (((image_urls IS NULL) OR (jsonb_typeof(image_urls) = 'array'::text)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_latitude_range_check" CHECK (((latitude >= ('-90'::integer)::double precision) AND (latitude <= (90)::double precision)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_longitude_range_check" CHECK (((longitude >= ('-180'::integer)::double precision) AND (longitude <= (180)::double precision)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "media" ADD CONSTRAINT "media_height_non_negative_check" CHECK ((height >= 0));
+ALTER TABLE "media" ADD CONSTRAINT "media_size_non_negative_check" CHECK ((size >= 0));
 ALTER TABLE "media" ADD CONSTRAINT "media_tags_array_check" CHECK (((tags IS NULL) OR (jsonb_typeof(tags) = 'array'::text)));
-
-ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_singleton_check" CHECK (((id)::text = 'singleton'::text));
-
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK (((amount >= 0) AND ("taxAmount" >= 0)));
-
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_target_exclusive_check" CHECK ((NOT (("reservationId" IS NOT NULL) AND ("eventRegistrationId" IS NOT NULL))));
-
-ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_rate_range_check" CHECK ((("taxRate" >= 0) AND ("taxRate" <= 100)));
-
+ALTER TABLE "media" ADD CONSTRAINT "media_width_non_negative_check" CHECK ((width >= 0));
+ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "news" ADD CONSTRAINT "news_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
+ALTER TABLE "post_categories" ADD CONSTRAINT "post_categories_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "posts" ADD CONSTRAINT "posts_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
+ALTER TABLE "posts" ADD CONSTRAINT "posts_view_count_non_negative_check" CHECK ((view_count >= 0));
+ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_next_no_positive_check" CHECK ((next_no > 0));
+ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_year_range_check" CHECK (((year >= 2000) AND (year <= 9999)));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK (((amount >= 0) AND (tax_amount >= 0)));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_revision_non_negative_check" CHECK ((revision >= 0));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_target_exclusive_check" CHECK ((NOT ((reservation_id IS NOT NULL) AND (event_registration_id IS NOT NULL))));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_amount_positive_check" CHECK ((amount >= 1));
-
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_refundedByType_check" CHECK ((("refundedByType")::text = ANY ((ARRAY['ADMIN'::character varying, 'AUTO_ON_CANCEL'::character varying, 'AUTO_CAPACITY_RACE'::character varying, 'AUTO_AMOUNT_MISMATCH'::character varying, 'STRIPE_DASHBOARD'::character varying])::text[])));
-
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_status_check" CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'requires_action'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying])::text[])));
-
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_target_check" CHECK (((("reservationId" IS NOT NULL) AND ("eventRegistrationId" IS NULL)) OR (("reservationId" IS NULL) AND ("eventRegistrationId" IS NOT NULL))));
-
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_money_non_negative_check" CHECK ((("basePrice" >= 0) AND ("totalPrice" >= 0) AND ("taxAmount" >= 0) AND ("totalPriceWithTax" >= 0) AND (("couponDiscountAmount" IS NULL) OR ("couponDiscountAmount" >= 0)) AND (("durationDiscountAmount" IS NULL) OR ("durationDiscountAmount" >= 0)) AND (("spaceDiscountAmount" IS NULL) OR ("spaceDiscountAmount" >= 0))));
-
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_number_of_guests_positive_check" CHECK ((("numberOfGuests" IS NULL) OR ("numberOfGuests" >= 1)));
-
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_rate_range_check" CHECK ((("taxRate" >= 0) AND ("taxRate" <= 100)));
-
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_order_check" CHECK (("startTime" < "endTime"));
-
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_status_check" CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('requires_action'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('canceled'::character varying)::text])));
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_target_check" CHECK ((((reservation_id IS NOT NULL) AND (event_registration_id IS NULL)) OR ((reservation_id IS NULL) AND (event_registration_id IS NOT NULL))));
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_duration_positive_check" CHECK ((duration > 0));
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_instance_count_positive_check" CHECK ((instance_count > 0));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_ics_sequence_non_negative_check" CHECK ((ics_sequence >= 0));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_money_non_negative_check" CHECK (((base_price >= 0) AND (total_price >= 0) AND (tax_amount >= 0) AND (total_price_with_tax >= 0) AND ((coupon_discount_amount IS NULL) OR (coupon_discount_amount >= 0)) AND ((duration_discount_amount IS NULL) OR (duration_discount_amount >= 0)) AND ((space_discount_amount IS NULL) OR (space_discount_amount >= 0))));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_number_of_guests_positive_check" CHECK (((number_of_guests IS NULL) OR (number_of_guests >= 1)));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_recurrence_instance_index_non_negative_check" CHECK ((recurrence_instance_index >= 0));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_order_check" CHECK ((start_time < end_time));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_version_non_negative_check" CHECK ((version >= 0));
+ALTER TABLE "sections" ADD CONSTRAINT "sections_order_position_check" CHECK ((("order" >= '-1'::integer) OR ("order" <= '-1000000'::integer)));
 ALTER TABLE "settings_analytics" ADD CONSTRAINT "settings_analytics_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_announcement_carousels" ADD CONSTRAINT "settings_announcement_carousels_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_commerces" ADD CONSTRAINT "SettingsCommerce_durationDiscountRules_array_check" CHECK ((jsonb_typeof("durationDiscountRules") = 'array'::text));
-
-ALTER TABLE "settings_commerces" ADD CONSTRAINT "settings_commerces_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_data_retentions" ADD CONSTRAINT "settings_data_retentions_singleton_check" CHECK ((id = 'singleton'::text));
-
+ALTER TABLE "settings_announcement_carousel" ADD CONSTRAINT "settings_announcement_carousel_duration_positive_check" CHECK ((duration > 0));
+ALTER TABLE "settings_announcement_carousel" ADD CONSTRAINT "settings_announcement_carousel_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_duration_discount_rules_array_check" CHECK ((jsonb_typeof(duration_discount_rules) = 'array'::text));
+ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_tax_reduced_rate_range_check" CHECK (((tax_reduced_rate >= 0) AND (tax_reduced_rate <= 100)));
+ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_tax_standard_rate_range_check" CHECK (((tax_standard_rate >= 0) AND (tax_standard_rate <= 100)));
+ALTER TABLE "settings_data_retention" ADD CONSTRAINT "settings_data_retention_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_features" ADD CONSTRAINT "settings_features_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_google_business_profiles" ADD CONSTRAINT "settings_google_business_profiles_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_google_calendars" ADD CONSTRAINT "settings_google_calendars_connection_status_check" CHECK ((("googleCalendarConnectionStatus" IS NULL) OR ("googleCalendarConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
-ALTER TABLE "settings_google_calendars" ADD CONSTRAINT "settings_google_calendars_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_google_maps" ADD CONSTRAINT "settings_google_maps_connection_status_check" CHECK ((("googleMapsConnectionStatus" IS NULL) OR ("googleMapsConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
+ALTER TABLE "settings_google_business_profile" ADD CONSTRAINT "settings_google_business_profile_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_reminder_minutes_non_negative_check" CHECK ((google_calendar_reminder_minutes >= 0));
+ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_google_maps" ADD CONSTRAINT "settings_google_maps_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_instagrams" ADD CONSTRAINT "settings_instagrams_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_layouts" ADD CONSTRAINT "settings_layouts_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_notifications" ADD CONSTRAINT "SettingsNotification_notificationEmailAddresses_text_array_chec" CHECK (((array_position("notificationEmailAddresses", NULL::text) IS NULL) AND (array_position("notificationEmailAddresses", ''::text) IS NULL)));
-
-ALTER TABLE "settings_notifications" ADD CONSTRAINT "SettingsNotification_notificationStaffIds_text_array_check" CHECK (((array_position("notificationStaffIds", NULL::text) IS NULL) AND (array_position("notificationStaffIds", ''::text) IS NULL)));
-
-ALTER TABLE "settings_notifications" ADD CONSTRAINT "settings_notifications_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_organizations" ADD CONSTRAINT "settings_organizations_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_resends" ADD CONSTRAINT "settings_resends_connection_status_check" CHECK ((("resendConnectionStatus" IS NULL) OR ("resendConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
-ALTER TABLE "settings_resends" ADD CONSTRAINT "settings_resends_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_reservations" ADD CONSTRAINT "settings_reservations_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_seos" ADD CONSTRAINT "settings_seos_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_sidebars" ADD CONSTRAINT "SettingsSidebar_sidebarWidgets_array_check" CHECK ((jsonb_typeof("sidebarWidgets") = 'array'::text));
-
-ALTER TABLE "settings_sidebars" ADD CONSTRAINT "settings_sidebars_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_stripes" ADD CONSTRAINT "settings_stripes_connection_status_check" CHECK ((("stripeConnectionStatus" IS NULL) OR ("stripeConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
-ALTER TABLE "settings_stripes" ADD CONSTRAINT "settings_stripes_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_switchbots" ADD CONSTRAINT "settings_switchbots_connection_status_check" CHECK ((("switchbotConnectionStatus" IS NULL) OR ("switchbotConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
-ALTER TABLE "settings_switchbots" ADD CONSTRAINT "settings_switchbots_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_systems" ADD CONSTRAINT "settings_systems_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "settings_turnstiles" ADD CONSTRAINT "settings_turnstiles_connection_status_check" CHECK ((("turnstileConnectionStatus" IS NULL) OR ("turnstileConnectionStatus" = ANY (ARRAY['connected'::text, 'error'::text]))));
-
-ALTER TABLE "settings_turnstiles" ADD CONSTRAINT "settings_turnstiles_singleton_check" CHECK ((id = 'singleton'::text));
-
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_check" CHECK ((("effectiveFrom" IS NULL) OR ("effectiveTo" IS NULL) OR ("effectiveFrom" <= "effectiveTo")));
-
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_endTime_format_check" CHECK ((("endTime" IS NULL) OR (("endTime")::text ~ '^([01][0-9]|2[0-3]|24):[0-5][0-9]$'::text)));
-
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_hourlyPrice_non_negative_check" CHECK ((("hourlyPrice")::numeric >= (0)::numeric));
-
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_startTime_format_check" CHECK ((("startTime" IS NULL) OR (("startTime")::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)));
-
+ALTER TABLE "settings_instagram" ADD CONSTRAINT "settings_instagram_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_layout" ADD CONSTRAINT "settings_layout_container_width_custom_positive_check" CHECK ((container_width_custom > 0));
+ALTER TABLE "settings_layout" ADD CONSTRAINT "settings_layout_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
+ALTER TABLE "settings_layout" ADD CONSTRAINT "settings_layout_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_email_addresses_text_array_check" CHECK (((array_position(notification_email_addresses, NULL::text) IS NULL) AND (array_position(notification_email_addresses, ''::text) IS NULL)));
+ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_staff_ids_text_array_check" CHECK (((array_position(notification_staff_ids, NULL::text) IS NULL) AND (array_position(notification_staff_ids, ''::text) IS NULL)));
+ALTER TABLE "settings_organization" ADD CONSTRAINT "settings_organization_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_resend" ADD CONSTRAINT "settings_resend_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_cancellation_deadline_hours_positive_check" CHECK ((cancellation_deadline_hours > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_default_time_slot_positive_check" CHECK ((default_time_slot > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_max_recurrence_instances_positive_check" CHECK ((max_recurrence_instances > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_max_reservation_duration_positive_check" CHECK ((max_reservation_duration > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_min_reservation_duration_positive_check" CHECK ((min_reservation_duration > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_modification_deadline_hours_positive_check" CHECK ((modification_deadline_hours > 0));
+ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_seo" ADD CONSTRAINT "settings_seo_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_sidebar_popular_count_positive_check" CHECK ((sidebar_popular_count > 0));
+ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_sidebar_recent_count_positive_check" CHECK ((sidebar_recent_count > 0));
+ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_sidebar" ADD CONSTRAINT "settings_sidebar_widgets_array_check" CHECK ((jsonb_typeof(sidebar_widgets) = 'array'::text));
+ALTER TABLE "settings_stripe" ADD CONSTRAINT "settings_stripe_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_switchbot" ADD CONSTRAINT "settings_switchbot_passcode_buffer_minutes_non_negative_check" CHECK ((switchbot_passcode_buffer_minutes >= 0));
+ALTER TABLE "settings_switchbot" ADD CONSTRAINT "settings_switchbot_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_system" ADD CONSTRAINT "settings_system_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_turnstile" ADD CONSTRAINT "settings_turnstile_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_last_battery_range_check" CHECK (((last_battery >= 0) AND (last_battery <= 100)));
+ALTER TABLE "social_links" ADD CONSTRAINT "social_links_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "space_categories" ADD CONSTRAINT "space_categories_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_check" CHECK (((effective_from IS NULL) OR (effective_to IS NULL) OR (effective_from <= effective_to)));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_end_time_format_check" CHECK (((end_time IS NULL) OR ((end_time)::text ~ '^([01][0-9]|2[0-3]|24):[0-5][0-9]$'::text)));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_hourly_price_non_negative_check" CHECK (((hourly_price)::numeric >= (0)::numeric));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_start_time_format_check" CHECK (((start_time IS NULL) OR ((start_time)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)));
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_rating_range_check" CHECK (((rating >= 1) AND (rating <= 5)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_area_positive_check" CHECK (((area IS NULL) OR (area > 0)));
-
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_capacity_positive_check" CHECK ((capacity >= 1));
-
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_discount_value_range_check" CHECK ((("discountValue" IS NULL) OR (("discountValue" >= 0) AND (("discountType" <> 'percentage'::"DiscountType") OR ("discountValue" <= 100)))));
-
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_discount_value_range_check" CHECK (((discount_value IS NULL) OR ((discount_value >= 0) AND ((discount_type <> 'PERCENTAGE'::discount_type) OR (discount_value <= 100)))));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_facilities_array_check" CHECK (((facilities IS NULL) OR (jsonb_typeof(facilities) = 'array'::text)));
-
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_hourly_price_non_negative_check" CHECK ((hourly_price >= 0));
+ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
+ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_hourly_price_non_negative_check" CHECK (("hourlyPrice" >= 0));
+-- ===== plpgsql 関数 (10) =====
+--
+-- trigger 関数と、その本体から呼ばれる検査関数。**本体はテキスト**なので、
+-- 列や型を rename しても自動追随しない（rename する migration 側で作り直す）。
 
-
--- ===== plpgsql functions (10) =====
 CREATE OR REPLACE FUNCTION public.check_event_no_reservation_overlap()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -2742,8 +2727,8 @@ DECLARE
   conflicting_slot_id VARCHAR;
 BEGIN
   -- spaceId null (外部会場) / soft-deleted / 非 active status は検査対象外
-  IF NEW."spaceId" IS NULL
-     OR NEW."deletedAt" IS NOT NULL
+  IF NEW.space_id IS NULL
+     OR NEW.deleted_at IS NOT NULL
      OR NEW.status NOT IN ('DRAFT', 'PUBLISHED') THEN
     RETURN NEW;
   END IF;
@@ -2752,17 +2737,17 @@ BEGIN
     INTO conflicting_reservation_id, conflicting_slot_id
   FROM event_time_slots ets
   JOIN reservations r
-    ON r."spaceId" = NEW."spaceId"
-   AND r."deletedAt" IS NULL
+    ON r.space_id = NEW.space_id
+   AND r.deleted_at IS NULL
    AND r.status IN ('PENDING', 'CONFIRMED')
-   AND ets."startAt" < r."endTime"
-   AND ets."endAt" > r."startTime"
-  WHERE ets."eventId" = NEW.id
+   AND ets.start_at < r.end_time
+   AND ets.end_at > r.start_time
+  WHERE ets.event_id = NEW.id
   LIMIT 1;
 
   IF conflicting_reservation_id IS NOT NULL THEN
     RAISE EXCEPTION 'Event slot % overlaps with reservation % on space %',
-      conflicting_slot_id, conflicting_reservation_id, NEW."spaceId"
+      conflicting_slot_id, conflicting_reservation_id, NEW.space_id
       USING ERRCODE = 'exclusion_violation';
   END IF;
 
@@ -2775,25 +2760,25 @@ CREATE OR REPLACE FUNCTION public.check_event_schedule_integrity("targetEventId"
  LANGUAGE plpgsql
 AS $function$
 DECLARE
-  current_mode "EventScheduleMode";
+  current_mode event_schedule_mode;
   current_deadline timestamp with time zone;
   slot_count integer;
   first_slot_start timestamp with time zone;
 BEGIN
-  SELECT "scheduleMode", "registrationDeadline"
+  SELECT schedule_mode, registration_deadline
   INTO current_mode, current_deadline
   FROM "events"
   WHERE "id" = "targetEventId"
-    AND "deletedAt" IS NULL;
+    AND deleted_at IS NULL;
 
   IF current_mode IS NULL THEN
     RETURN;
   END IF;
 
-  SELECT COUNT(*), MIN("startAt")
+  SELECT COUNT(*), MIN(start_at)
   INTO slot_count, first_slot_start
   FROM "event_time_slots"
-  WHERE "eventId" = "targetEventId";
+  WHERE event_id = "targetEventId";
 
   IF current_mode = 'SINGLE_OCCURRENCE' AND slot_count <> 1 THEN
     RAISE EXCEPTION
@@ -2840,16 +2825,16 @@ DECLARE
   target_event_id uuid;
 BEGIN
   IF TG_OP = 'DELETE' THEN
-    target_event_id := OLD."eventId";
+    target_event_id := OLD.event_id;
     PERFORM "check_event_schedule_integrity"(target_event_id);
     RETURN OLD;
   END IF;
 
-  target_event_id := NEW."eventId";
+  target_event_id := NEW.event_id;
   PERFORM "check_event_schedule_integrity"(target_event_id);
 
-  IF TG_OP = 'UPDATE' AND OLD."eventId" <> NEW."eventId" THEN
-    PERFORM "check_event_schedule_integrity"(OLD."eventId");
+  IF TG_OP = 'UPDATE' AND OLD.event_id <> NEW.event_id THEN
+    PERFORM "check_event_schedule_integrity"(OLD.event_id);
   END IF;
 
   RETURN NEW;
@@ -2866,10 +2851,10 @@ DECLARE
   event_deleted_at TIMESTAMP;
   conflicting_reservation_id VARCHAR;
 BEGIN
-  SELECT "spaceId", status::text, "deletedAt"
+  SELECT space_id, status::text, deleted_at
     INTO event_space_id, event_status, event_deleted_at
   FROM events
-  WHERE id = NEW."eventId";
+  WHERE id = NEW.event_id;
 
   -- spaceId null (外部会場) / soft-deleted event / 非 active status は検査対象外
   IF event_space_id IS NULL
@@ -2880,11 +2865,11 @@ BEGIN
 
   SELECT r.id INTO conflicting_reservation_id
   FROM reservations r
-  WHERE r."spaceId" = event_space_id
-    AND r."deletedAt" IS NULL
+  WHERE r.space_id = event_space_id
+    AND r.deleted_at IS NULL
     AND r.status IN ('PENDING', 'CONFIRMED')
-    AND r."startTime" < NEW."endAt"
-    AND r."endTime" > NEW."startAt"
+    AND r.start_time < NEW.end_at
+    AND r.end_time > NEW.start_at
   LIMIT 1;
 
   IF conflicting_reservation_id IS NOT NULL THEN
@@ -2905,24 +2890,24 @@ DECLARE
   conflicting_slot_id VARCHAR;
 BEGIN
   -- soft-deleted or 非 active status は検査対象外
-  IF NEW."deletedAt" IS NOT NULL
+  IF NEW.deleted_at IS NOT NULL
      OR NEW.status NOT IN ('PENDING', 'CONFIRMED') THEN
     RETURN NEW;
   END IF;
 
   SELECT ets.id INTO conflicting_slot_id
   FROM event_time_slots ets
-  JOIN events e ON e.id = ets."eventId"
-  WHERE e."spaceId" = NEW."spaceId"
-    AND e."deletedAt" IS NULL
+  JOIN events e ON e.id = ets.event_id
+  WHERE e.space_id = NEW.space_id
+    AND e.deleted_at IS NULL
     AND e.status IN ('DRAFT', 'PUBLISHED')
-    AND ets."startAt" < NEW."endTime"
-    AND ets."endAt" > NEW."startTime"
+    AND ets.start_at < NEW.end_time
+    AND ets.end_at > NEW.start_time
   LIMIT 1;
 
   IF conflicting_slot_id IS NOT NULL THEN
     RAISE EXCEPTION 'Reservation time overlaps with EventTimeSlot % on space %',
-      conflicting_slot_id, NEW."spaceId"
+      conflicting_slot_id, NEW.space_id
       USING ERRCODE = 'exclusion_violation';
   END IF;
 
@@ -2981,13 +2966,13 @@ BEGIN
 
   IF TG_OP = 'UPDATE'
      AND NEW.id = OLD.id
-     AND NEW."reservationId" IS NOT DISTINCT FROM OLD."reservationId"
-     AND NEW."eventRegistrationId" IS NOT DISTINCT FROM OLD."eventRegistrationId"
+     AND NEW.reservation_id IS NOT DISTINCT FROM OLD.reservation_id
+     AND NEW.event_registration_id IS NOT DISTINCT FROM OLD.event_registration_id
      AND NEW.amount = OLD.amount
      AND NEW.reason IS NOT DISTINCT FROM OLD.reason
-     AND NEW."stripeRefundId" = OLD."stripeRefundId"
-     AND NEW."refundedByType" = OLD."refundedByType"
-     AND NEW."createdAt" = OLD."createdAt"
+     AND NEW.stripe_refund_id = OLD.stripe_refund_id
+     AND NEW.refunded_by_type = OLD.refunded_by_type
+     AND NEW.created_at = OLD.created_at
   THEN
     RETURN NEW;
   END IF;
@@ -3016,33 +3001,22 @@ END;
 $function$;
 
 
--- ===== EXCLUDE constraints (1) =====
-ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE USING gist ("spaceId" WITH =, tstzrange("startTime", "endTime", '[)'::text) WITH &&) WHERE ((("deletedAt" IS NULL) AND (status = ANY (ARRAY['PENDING'::"ReservationStatus", 'CONFIRMED'::"ReservationStatus"]))));
+-- ===== EXCLUDE 制約 (1) =====
 
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE USING gist (space_id WITH =, tstzrange(start_time, end_time, '[)'::text) WITH &&) WHERE (((deleted_at IS NULL) AND (status = ANY (ARRAY['PENDING'::reservation_status, 'CONFIRMED'::reservation_status]))));
 
--- ===== triggers (13) =====
-CREATE CONSTRAINT TRIGGER event_time_slots_no_reservation_overlap_check AFTER INSERT OR UPDATE OF "eventId", "startAt", "endAt" ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_no_reservation_overlap();
-
-CREATE CONSTRAINT TRIGGER event_time_slots_schedule_integrity_check AFTER INSERT OR DELETE OR UPDATE OF "eventId", "startAt" ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_slot();
-
-CREATE CONSTRAINT TRIGGER events_no_reservation_overlap_check AFTER INSERT OR UPDATE OF "spaceId", status, "deletedAt" ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_no_reservation_overlap();
-
-CREATE CONSTRAINT TRIGGER events_schedule_integrity_check AFTER INSERT OR UPDATE OF "scheduleMode", "deletedAt", "registrationDeadline" ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_event();
-
-CREATE CONSTRAINT TRIGGER reservations_no_event_slot_overlap_check AFTER INSERT OR UPDATE OF "spaceId", "startTime", "endTime", status, "deletedAt" ON public.reservations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_reservation_no_event_slot_overlap();
+-- ===== trigger (13) =====
 
 CREATE TRIGGER audit_logs_no_delete BEFORE DELETE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
-
 CREATE TRIGGER audit_logs_no_update BEFORE UPDATE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
-
+CREATE CONSTRAINT TRIGGER event_time_slots_no_reservation_overlap_check AFTER INSERT OR UPDATE OF event_id, start_at, end_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_no_reservation_overlap();
+CREATE CONSTRAINT TRIGGER event_time_slots_schedule_integrity_check AFTER INSERT OR DELETE OR UPDATE OF event_id, start_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_slot();
+CREATE CONSTRAINT TRIGGER events_no_reservation_overlap_check AFTER INSERT OR UPDATE OF space_id, status, deleted_at ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_no_reservation_overlap();
+CREATE CONSTRAINT TRIGGER events_schedule_integrity_check AFTER INSERT OR UPDATE OF schedule_mode, deleted_at, registration_deadline ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_event();
 CREATE TRIGGER inquiry_status_history_no_delete BEFORE DELETE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
-
 CREATE TRIGGER inquiry_status_history_no_update BEFORE UPDATE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
-
 CREATE TRIGGER refunds_no_delete BEFORE DELETE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
-
 CREATE TRIGGER refunds_no_update BEFORE UPDATE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
-
+CREATE CONSTRAINT TRIGGER reservations_no_event_slot_overlap_check AFTER INSERT OR UPDATE OF space_id, start_time, end_time, status, deleted_at ON public.reservations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_reservation_no_event_slot_overlap();
 CREATE TRIGGER terms_agreements_no_delete BEFORE DELETE ON public.terms_agreements FOR EACH ROW EXECUTE FUNCTION prevent_terms_agreements_mutation();
-
 CREATE TRIGGER terms_agreements_no_update BEFORE UPDATE ON public.terms_agreements FOR EACH ROW EXECUTE FUNCTION prevent_terms_agreements_mutation();

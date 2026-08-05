@@ -45,11 +45,17 @@ describe("event schedule DB invariants", () => {
     // 不変条件と食い違ったイベントが黙って作られる。
     const migration = readAllMigrationSql();
 
-    expect(migration).toContain('"scheduleMode" "EventScheduleMode" NOT NULL');
-    expect(migration).not.toContain(
-      '"scheduleMode" "EventScheduleMode" NOT NULL DEFAULT',
+    // **物理名で書く。** 20260804* の列名 snake_case 化までは旧名
+    // （`"scheduleMode" "EventScheduleMode"`）で書いてあり、それでも通っていた —
+    // 畳む前は古い migration ファイルにその文字列が残っていたからで、
+    // **実際のスキーマは既に別の名前だった**。履歴を畳んで初めて空振りが露見した。
+    expect(migration).toContain(
+      '"schedule_mode" "event_schedule_mode" NOT NULL',
     );
-    expect(migration).toContain('"registrationDeadline" TIMESTAMPTZ(6)');
+    expect(migration).not.toContain(
+      '"schedule_mode" "event_schedule_mode" NOT NULL DEFAULT',
+    );
+    expect(migration).toContain('"registration_deadline" TIMESTAMPTZ(6)');
   });
 
   test("スロットの値域と scheduleMode 整合が DB 側で強制される", () => {
