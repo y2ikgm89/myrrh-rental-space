@@ -4,6 +4,7 @@ import {
   PaymentStatus,
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
 
@@ -22,12 +23,19 @@ import { isWithinDeadline } from "./deadline";
  * これにより通知二重発火・クーポン usageCount 二重 decrement を構造的に防ぐ。
  */
 
+/** 引数は Prisma 公式の Input 型で受ける（`object` にすると列名の drift が実行時まで出ない）。 */
 export interface ApplyCancellationTx {
   readonly reservation: {
-    updateMany(args: object): Promise<{ count: number }>;
+    updateMany(args: {
+      where: Prisma.ReservationWhereInput;
+      data: Prisma.ReservationUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
   };
   readonly coupon: {
-    updateMany(args: object): Promise<{ count: number }>;
+    updateMany(args: {
+      where: Prisma.CouponWhereInput;
+      data: Prisma.CouponUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
   };
 }
 
@@ -164,8 +172,14 @@ export async function applyCancellation(
  */
 export interface ApplyBulkCancellationTx {
   readonly reservation: {
-    updateMany(args: object): Promise<{ count: number }>;
-    findMany(args: object): Promise<Array<{ id: string }>>;
+    updateMany(args: {
+      where: Prisma.ReservationWhereInput;
+      data: Prisma.ReservationUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
+    findMany(args: {
+      where: Prisma.ReservationWhereInput;
+      select: Prisma.ReservationSelect;
+    }): Promise<Array<{ id: string }>>;
   };
 }
 

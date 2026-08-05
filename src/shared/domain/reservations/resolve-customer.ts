@@ -9,12 +9,26 @@ import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 // Types (moved from commands.ts)
 // ---------------------------------------------------------------------------
 
+/** 引数は Prisma 公式の Input 型で受ける（`object` にすると列名の drift が実行時まで出ない）。 */
 export interface ResolveCustomerTx {
   readonly customer: {
-    findUnique(args: object): Promise<{ id: string } | null>;
-    findFirst(args: object): Promise<{ id: string } | null>;
-    create(args: object): Promise<{ id: string }>;
-    update(args: object): Promise<{ id: string }>;
+    findUnique(args: {
+      where: Prisma.CustomerWhereUniqueInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ id: string } | null>;
+    findFirst(args: {
+      where: Prisma.CustomerWhereInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ id: string } | null>;
+    create(args: {
+      data: Prisma.CustomerUncheckedCreateInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ id: string }>;
+    update(args: {
+      where: Prisma.CustomerWhereUniqueInput;
+      data: Prisma.CustomerUncheckedUpdateInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ id: string }>;
   };
 }
 

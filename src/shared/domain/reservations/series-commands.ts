@@ -473,7 +473,10 @@ export async function cancelReservationSeriesCommand(
 type CancelSeriesTx = {
   reservation: {
     findUnique: (args: {
-      where: { id: string };
+      // Prisma の Input 型と交差させる。呼び出し側を id 指定に絞ったまま、
+      // 列名が変わったらコンパイルで落とすため（`object` や素の手書き形では
+      // 列の drift が実行時の PrismaClientValidationError まで出ない）。
+      where: Prisma.ReservationWhereUniqueInput & { id: string };
       select: { seriesId: true; startTime: true };
     }) => Promise<{ seriesId: string | null; startTime: Date } | null>;
     findMany: (args: {

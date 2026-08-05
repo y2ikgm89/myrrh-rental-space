@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
@@ -15,10 +16,17 @@ import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 // - status が BLACKLIST なら DomainError(FORBIDDEN) を throw する。
 // ---------------------------------------------------------------------------
 
+/** 引数は Prisma 公式の Input 型で受ける（`object` にすると列名の drift が実行時まで出ない）。 */
 export interface GuardTx {
   readonly customer: {
-    findUnique(args: object): Promise<{ status: CustomerStatus } | null>;
-    findFirst(args: object): Promise<{ status: CustomerStatus } | null>;
+    findUnique(args: {
+      where: Prisma.CustomerWhereUniqueInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ status: CustomerStatus } | null>;
+    findFirst(args: {
+      where: Prisma.CustomerWhereInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ status: CustomerStatus } | null>;
   };
 }
 
@@ -91,9 +99,10 @@ const ACCOUNT_SUSPENDED_MESSAGE =
 
 export interface ActiveGuardTx {
   readonly customer: {
-    findUnique(
-      args: object,
-    ): Promise<{ isActive: boolean; status: CustomerStatus } | null>;
+    findUnique(args: {
+      where: Prisma.CustomerWhereUniqueInput;
+      select: Prisma.CustomerSelect;
+    }): Promise<{ isActive: boolean; status: CustomerStatus } | null>;
   };
 }
 
