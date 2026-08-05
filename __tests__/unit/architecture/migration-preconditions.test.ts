@@ -175,6 +175,17 @@ describe("migration 適用前チェックの導出", () => {
       expect([...both.keys()]).toEqual(["a", "b"]);
     });
 
+    test("同じ文の後続アクションは前のアクションが足した列を見る", () => {
+      // `ADD COLUMN … DEFAULT 0, ADD CONSTRAINT … CHECK ("score" >= 0)` は
+      // 通る migration。後半が前半を見ないと「列が無い」でプローブが落ち、
+      // 未評価として deploy を止めてしまう（誤検知だが実害は同じ）。
+      const probe = probesOf(
+        'ALTER TABLE "orders" ADD COLUMN "score" int NOT NULL DEFAULT 0, ADD CONSTRAINT "orders_score_check" CHECK ("score" >= 0)',
+      ).get("orders_score_check");
+
+      expect(probe).toContain('0 AS "score"');
+    });
+
     test("兄弟句の DEFAULT を自分のものとして読まない", () => {
       // `a` に既定値があるからといって `b` が安全になるわけではない。
       const probes = probesOf(

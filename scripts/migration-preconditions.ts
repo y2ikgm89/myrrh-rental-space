@@ -442,9 +442,29 @@ export function classifyStatement(
   const table = alterTable?.[1];
   const actions = alterTable?.[2];
   if (table !== undefined && actions !== undefined) {
-    return topLevelSplit(actions).flatMap((action) =>
-      classifyAlterAction(table, action, head, pending),
-    );
+    // **アクションは前から順に効く。** `ADD COLUMN "score" … DEFAULT 0,
+    // ADD CONSTRAINT … CHECK ("score" >= 0)` の後半は、前半が足した列を見た
+    // うえで組まないとプローブが「列が無い」で落ち、通る migration を止める。
+    const local = new Map(pending);
+    const out: Classified[] = [];
+    for (const action of topLevelSplit(actions)) {
+      for (const classified of classifyAlterAction(
+        table,
+        action,
+        head,
+        local,
+      )) {
+        const added =
+          classified.kind === "safe" || classified.kind === "data-dependent"
+            ? classified.adds
+            : null;
+        if (added !== null) {
+          local.set(added.table, [...(local.get(added.table) ?? []), added]);
+        }
+        out.push(classified);
+      }
+    }
+    return out;
   }
 
   if (SAFE_STATEMENT.test(sql)) return [{ kind: "safe", adds: null }];

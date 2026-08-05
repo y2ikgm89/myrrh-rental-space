@@ -108,6 +108,25 @@ COMMIT;
     expect(await run(["--url", url, "--migrations", dir])).toBe(0);
   });
 
+  test("1 文で列を足してその列を制約する → 通る migration は止めない", async () => {
+    // Prisma が出す形。後続アクションが前のアクションの列を見ないと
+    // 「列が無い」でプローブが落ち、通る migration を未評価として止めてしまう。
+    const ok = migrationDir(
+      "20260806000000_same_statement",
+      `ALTER TABLE "${TABLE}" ADD COLUMN "score" integer NOT NULL DEFAULT 0, ADD CONSTRAINT "${TABLE}_score_check" CHECK ("score" >= 0);
+`,
+    );
+    expect(await run(["--url", url, "--migrations", ok])).toBe(0);
+
+    // 同じ形で既定値が違反するなら、当然 1。
+    const bad = migrationDir(
+      "20260806000000_same_statement",
+      `ALTER TABLE "${TABLE}" ADD COLUMN "score" integer NOT NULL DEFAULT -1, ADD CONSTRAINT "${TABLE}_score_check" CHECK ("score" >= 0);
+`,
+    );
+    expect(await run(["--url", url, "--migrations", bad])).toBe(1);
+  });
+
   test("プローブが実行できない → 1", async () => {
     // 存在しない列を参照する CHECK。かつてはここが SKIP のログだけ出して
     // exit 0 になり、`migrate deploy` へ進んでいた。
