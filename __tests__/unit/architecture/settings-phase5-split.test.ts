@@ -26,16 +26,34 @@ function listSourceFiles(dir: string): string[] {
   return files;
 }
 
+/**
+ * `model <name>` の `@@map` を返す。無ければ null。
+ *
+ * **`/model X \{[\s\S]*@@map\("y"\)/` で書かない。** 2 つの理由がある:
+ *
+ *   1. **正しくない。** `[\s\S]*` はモデル境界を越えるので、`@@map("y")` が
+ *      *別のモデル* にあっても一致する
+ *   2. **遅い。** 後戻り探索が schema 長に対して二次で効く。実測 1 式 2.4〜3.1 秒で、
+ *      列注釈を足して schema が伸びた時点で CI の 30 秒制限を超えて落ちた
+ *
+ * モデルのブロックを切り出してからその中だけを見れば、両方とも起きない。
+ */
+function mapOf(schema: string, model: string): string | null {
+  const start = schema.indexOf(`\nmodel ${model} {`);
+  if (start === -1) return null;
+  const end = schema.indexOf("\n}", start);
+  const body = schema.slice(start, end === -1 ? undefined : end);
+  return /@@map\("([^"]+)"\)/u.exec(body)?.[1] ?? null;
+}
+
 describe("settings phase 5 schema split", () => {
   test("Settings hub model is removed; features and data retention split out", () => {
     const schema = read("prisma/schema.prisma");
 
     expect(schema).not.toMatch(/^model Settings \{/mu);
-    expect(schema).toMatch(
-      /model SettingsFeatures \{[\s\S]*@@map\("settings_features"\)/u,
-    );
-    expect(schema).toMatch(
-      /model SettingsDataRetention \{[\s\S]*@@map\("settings_data_retention"\)/u,
+    expect(mapOf(schema, "SettingsFeatures")).toBe("settings_features");
+    expect(mapOf(schema, "SettingsDataRetention")).toBe(
+      "settings_data_retention",
     );
   }, 30_000);
 
