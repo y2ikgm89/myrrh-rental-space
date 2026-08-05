@@ -228,9 +228,15 @@ function generated(
 
 const SHARED = "@/shared/lib/validations";
 const ADMIN = "@/admin/lib/validations";
+const SETTINGS =
+  "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas";
 
 /** 数字のみ（郵便番号など）のサンプル。 */
 const digits = (len: number): string => "1".repeat(len);
+
+/** 形式として妥当な、長さ `len` のメールアドレス。 */
+const emailOfLength = (len: number): string =>
+  `${"a".repeat(Math.max(len - 12, 1))}@example.com`;
 
 const CONTRACTS: Readonly<Record<string, Contract>> = {
   // --- Location ---------------------------------------------------------
@@ -294,13 +300,17 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     module: `${SHARED}/customer`,
     exportName: "customerFormSchema",
     field: "postalCode",
-    // regex `^\d{3}-?\d{4}$`: 7 桁 or ハイフン込み 8 桁のみ通る
+    // regex `^\d{3}-?\d{4}$`: 7 桁 or ハイフン込み 8 桁のみ通る。
+    // 列は他の郵便番号列と揃えて 10 だが、この欄が受けるのは 8 まで。
+    maxLength: 8,
     sample: (len) => (len === 8 ? "123-4567" : digits(len)),
   }),
   "Customer.prefecture": validated({
     module: `${SHARED}/customer`,
     exportName: "customerFormSchema",
     field: "prefecture",
+    // 列は locationFormSchema の 20 に揃えたが、この欄は 10 で止まる
+    maxLength: 10,
   }),
   "Customer.city": validated({
     module: `${SHARED}/customer`,
@@ -469,6 +479,8 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     module: `${SHARED}/event-registration`,
     exportName: "publicEventRegistrationSchema",
     field: "phone",
+    // 列は locationFormSchema の 30 に揃えたが、この欄は 20 で止まる
+    maxLength: 20,
     sample: digits,
   }),
   "EventRegistration.cancelledByType": generated(
@@ -541,6 +553,233 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     module: `${SHARED}/transfer-account`,
     exportName: "transferAccountFormSchema",
     field: "note",
+  }),
+  // --- 連絡先・住所（20260805160000 で値域を 1 つに揃えた列） -------------
+  //
+  // 列長はドメインごとに「アプリが受理する最長」で揃えてある。個々の欄がそれより
+  // 狭い場合は maxLength で実測値を明示する（列に余白があること自体は問題ではない
+  // — 危ないのは列の方が狭いとき）。
+  "User.email": generated(
+    254,
+    "Better Auth / Google IAP が渡す。RFC 5321 の 254 を超えない",
+  ),
+  "Location.postalCode": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "postalCode",
+    sample: digits,
+  }),
+  "Location.prefecture": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "prefecture",
+  }),
+  "Location.city": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "city",
+  }),
+  "Location.streetAddress": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "streetAddress",
+  }),
+  "Location.buildingName": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "buildingName",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+  }),
+  "Location.phoneNumber": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "phoneNumber",
+    sample: digits,
+  }),
+  "Location.email": validated({
+    module: `${SHARED}/location`,
+    exportName: "locationFormSchema",
+    field: "email",
+    sample: emailOfLength,
+  }),
+  "Reservation.guestLastName": validated({
+    module: `${SHARED}/public-reservation`,
+    exportName: "publicReservationSchema",
+    field: "lastName",
+  }),
+  "Reservation.guestFirstName": validated({
+    module: `${SHARED}/public-reservation`,
+    exportName: "publicReservationSchema",
+    field: "firstName",
+  }),
+  "Reservation.guestEmail": validated({
+    module: `${SHARED}/public-reservation`,
+    exportName: "publicReservationSchema",
+    field: "email",
+    sample: emailOfLength,
+  }),
+  "Reservation.guestPhone": validated({
+    module: `${SHARED}/public-reservation`,
+    exportName: "publicReservationSchema",
+    field: "phoneNumber",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 20,
+    sample: digits,
+  }),
+  "Reservation.guestCompanyName": validated({
+    module: `${SHARED}/public-reservation`,
+    exportName: "publicReservationSchema",
+    field: "companyName",
+  }),
+  "Customer.lastName": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "lastName",
+  }),
+  "Customer.firstName": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "firstName",
+  }),
+  "Customer.lastNameKana": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "lastNameKana",
+  }),
+  "Customer.firstNameKana": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "firstNameKana",
+  }),
+  "Customer.companyName": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "companyName",
+  }),
+  "Customer.email": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "email",
+    sample: emailOfLength,
+  }),
+  "Customer.emailCanonical": generated(
+    254,
+    "Customer.email を正規化（小文字化）したもの。長さは増えない",
+  ),
+  "Customer.phoneNumber": validated({
+    module: `${SHARED}/customer`,
+    exportName: "customerFormSchema",
+    field: "phoneNumber",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 20,
+    sample: digits,
+  }),
+  "Inquiry.name": generated(
+    101,
+    "姓(50) + 半角空白 + 名(50)。空白ぶんを足さないと上限いっぱいの氏名で 22001 になる",
+    {
+      module: `${SHARED}/customer-shared-fields`,
+      exportName: "FULL_NAME_MAX_LENGTH",
+    },
+  ),
+  "Inquiry.companyName": validated({
+    module: `${SHARED}/inquiry`,
+    exportName: "publicInquirySchema",
+    field: "companyName",
+  }),
+  "Inquiry.email": validated({
+    module: `${SHARED}/inquiry`,
+    exportName: "publicInquirySchema",
+    field: "email",
+    sample: emailOfLength,
+  }),
+  "Inquiry.phoneNumber": validated({
+    module: `${SHARED}/inquiry`,
+    exportName: "publicInquirySchema",
+    field: "phoneNumber",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 20,
+    sample: digits,
+  }),
+  "Inquiry.subject": validated({
+    module: `${SHARED}/inquiry`,
+    exportName: "publicInquirySchema",
+    field: "subject",
+  }),
+  "SettingsOrganization.phoneNumber": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "phoneNumber",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 20,
+    sample: digits,
+  }),
+  "SettingsOrganization.faxNumber": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "faxNumber",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 20,
+    sample: digits,
+  }),
+  "SettingsOrganization.email": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "email",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+    sample: emailOfLength,
+  }),
+  "SettingsOrganization.postalCode": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "postalCode",
+    sample: digits,
+  }),
+  "SettingsOrganization.prefecture": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "prefecture",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 10,
+  }),
+  "SettingsOrganization.city": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "city",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 50,
+  }),
+  "SettingsOrganization.streetAddress": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "streetAddress",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+  }),
+  "SettingsOrganization.buildingName": validated({
+    module: `${SETTINGS}/form-schemas-brand-contact`,
+    exportName: "contactInfoFormSchema",
+    field: "buildingName",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+  }),
+  "SettingsOrganization.senderEmail": validated({
+    module: `${SETTINGS}/form-schemas-email-notification`,
+    exportName: "emailFormSchema",
+    field: "senderEmail",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+    sample: emailOfLength,
+  }),
+  "SettingsOrganization.replyToEmail": validated({
+    module: `${SETTINGS}/form-schemas-email-notification`,
+    exportName: "emailFormSchema",
+    field: "replyToEmail",
+    // 列はドメインで揃えた幅。この欄が実際に受けるのはここまで
+    maxLength: 100,
+    sample: emailOfLength,
   }),
 };
 
