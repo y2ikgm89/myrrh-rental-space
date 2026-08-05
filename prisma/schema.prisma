@@ -1788,7 +1788,15 @@ model SettingsOrganization {
   businessName        String?   @map("business_name")
   businessNameKana    String?   @map("business_name_kana")
   representativeName  String?   @map("representative_name")
-  establishedDate     DateTime? @map("established_date") @db.Timestamptz(6)
+  /// 設立日。**瞬間ではなく暦日**なので `date`（`BlockedDate.startDate` /
+  /// `SpaceRatePlan.effectiveFrom` と同じ）。timestamptz だと「どの時点か」を
+  /// 保持してしまい、表示側が UTC で読むか JST で読むかで日付が 1 日ずれうる。
+  ///
+  /// Prisma は `date` を **UTC 深夜の Date に正規化**して返す（実測）。したがって
+  /// `toISOString()` 由来の導出はサーバーの TZ に依存しない。**生の `pg`
+  /// （`$queryRaw`）はローカル深夜を返す**ので、そちら経由で読むなら
+  /// `toISOString()` を通さず日付文字列のまま扱うこと。
+  establishedDate     DateTime? @map("established_date") @db.Date
   registrationNumber  String?   @map("registration_number")
   invoiceNumber       String?   @map("invoice_number")
   businessDescription String?   @map("business_description") @db.Text
