@@ -8,8 +8,8 @@ type TransactionClient = Parameters<
 
 /**
  * Integration test cleanup only. Refunds are append-only at the DB layer;
- * deleteMany requires the transaction-local bypass GUC set by migration
- * 20260724110000_refunds_no_mutation.
+ * deleteMany requires the transaction-local bypass GUC read by the
+ * `prevent_refunds_mutation` trigger (SSoT: `prisma/baseline/invariants.sql`).
  */
 export async function deleteRefundsForTest(
   prisma: PrismaClient,

@@ -54,7 +54,8 @@ let workDir: string;
 
 function migrationDir(sql: string): string {
   const root = mkdtempSync(join(workDir, "mig-"));
-  const name = "20260806000000_rehearsal";
+  // timestamp 形の名前は使わない（`gates-do-not-pin-migrations.test.ts` の docblock 参照）。
+  const name = "rehearsal_fixture";
   mkdirSync(join(root, name), { recursive: true });
   writeFileSync(join(root, name, "migration.sql"), sql, "utf8");
   return root;

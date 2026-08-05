@@ -19,8 +19,10 @@ function existsIn(paths: readonly string[]): (path: string) => boolean {
   return (path) => paths.includes(path);
 }
 
-const A = "prisma/migrations/20260101000000_a/migration.sql";
-const B = "prisma/migrations/20260102000000_b/migration.sql";
+// timestamp 形の名前は使わない（実在しない migration を名指ししていると
+// `gates-do-not-pin-migrations.test.ts` が区別できないため。同 gate の docblock 参照）。
+const A = "prisma/migrations/fixture_a/migration.sql";
+const B = "prisma/migrations/fixture_b/migration.sql";
 
 describe("partitionMigrationArgs", () => {
   test("実在するものだけを lint 対象にする", () => {

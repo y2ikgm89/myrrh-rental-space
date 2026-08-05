@@ -636,7 +636,7 @@ model Space {
   publishedAt          DateTime? @map("published_at") @db.Timestamptz(6)
   isActive             Boolean   @default(true) @map("is_active")
   /// レビュー機能の per-space ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
-  /// 新規スペースはデフォルト false（opt-in）。`Settings.featureModules.reviews` が上位 gate。
+  /// 新規スペースはデフォルト false（opt-in）。`SettingsFeatures.featureModules.reviews` が上位 gate。
   reviewsEnabled       Boolean   @default(false) @map("reviews_enabled")
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -699,10 +699,10 @@ model Space {
 /// `Space.hourlyPrice` にフォールバックする。同一時間帯に複数 plan がマッチした場合は
 /// `updatedAt DESC`（last-updated-wins）で 1 件を採用する。解決ロジックは
 /// `src/shared/lib/pricing/rate-plan-resolver.ts`（Task 4 で追加）。
-/// CHECK 制約 4 本（hourlyPrice >= 0 / startTime・endTime の HH:MM 形式 / effectiveFrom <=
-/// effectiveTo）は Prisma 7 が `@@check` 属性を持たないため migration.sql に手書きしてある。
-/// `prisma db pull` で introspection すると欠落するため、再生成時は手で復元すること
-/// （BlockedDate の CHECK 制約と同じ注意点）。
+/// CHECK 制約（hourlyPrice >= 0 / startTime・endTime の HH:MM 形式 / effectiveFrom <=
+/// effectiveTo）は Prisma 7 が `@@check` 属性を持たないため schema.prisma には現れない。
+/// **SSoT は `prisma/baseline/invariants.sql`**（生成物。`bun scripts/build-baseline-invariants.ts`
+/// が実 DB から再生成し、`scripts/build-baseline-migration.ts` が baseline へ連結する）。
 model SpaceRatePlan {
   id      String @id @default(uuid(7)) @db.Uuid
   spaceId String @map("space_id") @db.Uuid
@@ -727,19 +727,19 @@ model SpaceRatePlan {
 
 /// 臨時休業 / 急な休み（businessHours の曜日別定休日を補完する日付範囲ベースの休業）。
 /// per-space / per-location / global の 3 階層 cascade（additive、override なし）。
-/// scope と type は VarChar + 型ガード SSoT（`@/shared/lib/validations/enums/helpers`）で運用。
+/// scope と type は PG enum（`blocked_date_scope` / `blocked_date_type`）。値の追加は
+/// `ALTER TYPE ... ADD VALUE` を伴う。
 /// scope / spaceId / locationId は discriminated union 不変条件を持つ:
 /// SPACE→spaceId 必須・locationId null / LOCATION→locationId 必須・spaceId null /
-/// GLOBAL→両方 null。これは DB の CHECK 制約 `blocked_dates_scope_target_check`
-/// (baseline migration 00000000000000_init) で強制されるが、Prisma schema DSL では
-/// 表現できないため schema.prisma は完全な SSoT ではない。
-/// ⚠ `prisma db pull`（introspection）は CHECK 制約を取り込まず黙って落とすので、
-/// introspection で schema を再生成する際は本制約を手で復元すること
-/// （`prisma migrate reset` は baseline migration を再生するため制約は復元される）。
+/// GLOBAL→両方 null。これは DB の CHECK 制約 `blocked_dates_scope_target_check` で
+/// 強制されるが、Prisma schema DSL では表現できないため schema.prisma は完全な
+/// SSoT ではない。**制約の SSoT は `prisma/baseline/invariants.sql`**（生成物。
+/// `bun scripts/build-baseline-invariants.ts` が実 DB から再生成する）。
+/// ⚠ `prisma db pull`（introspection）は CHECK 制約を取り込まず黙って落とす。
 /// アプリ層は Zod superRefine（blocked-date バリデーション）で同一不変条件を二重に保証する。
 model BlockedDate {
   id         String           @id @default(uuid(7)) @db.Uuid
-  /// "SPACE" | "LOCATION" | "GLOBAL"（isValidBlockedDateScope で検証）
+  /// 値域は enum BlockedDateScope
   scope      BlockedDateScope
   /// scope=SPACE のみ非 null
   spaceId    String?          @map("space_id") @db.Uuid
@@ -750,7 +750,7 @@ model BlockedDate {
   endDate    DateTime         @map("end_date") @db.Date
   /// "年末年始" / "設備点検" / "台風 19 号による臨時休業" 等の plain text ラベル
   reason     String?          @db.VarChar(200)
-  /// "HOLIDAY" | "MAINTENANCE" | "EMERGENCY" | "OTHER"（isValidBlockedDateType で検証）
+  /// 値域は enum BlockedDateType
   type       BlockedDateType
   createdBy  String           @map("created_by") @db.Uuid
   createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -781,7 +781,7 @@ model ReservationSeries {
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType             String?   @map("cancelled_by_type") @db.VarChar(20)
+  cancelledByType             String?   @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
   cancellationReason          String?   @map("cancellation_reason") @db.Text
   deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz(6)
   deletedById                 String?   @map("deleted_by_id") @db.Uuid
@@ -797,8 +797,8 @@ model ReservationSeries {
   instances Reservation[]
 
   // soft-delete 済み行が (spaceId, dtstart) を恒久占有しないよう partial UNIQUE。
-  // 実体は 20260717010625_add_reservation_series が raw SQL で作った索引で、
-  // `map` で同名を指すことで migrate diff が「一致」と判定する（新規 migration 不要）。
+  // 実体は raw SQL で作られた索引で、`map` で同名を指すことで migrate diff が
+  // 「一致」と判定する（新規 migration 不要）。
   // この宣言を消すと diff が DROP INDEX を提案し続ける（PR #1870 以前の状態）。
   @@unique([spaceId, dtstart], map: "reservation_series_space_dtstart_active_unique", where: { deletedAt: null })
   @@index([spaceId, dtstart])
@@ -921,7 +921,7 @@ model Reservation {
   // Cancellation tracking
   cancellationReason String?   @map("cancellation_reason") @db.Text
   cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType    String?   @map("cancelled_by_type") @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" | "SYSTEM" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancelledByType    String?   @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0) @map("ics_sequence")
@@ -1886,7 +1886,7 @@ model SettingsStripe {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
+  // オンライン決済の ON/OFF は `SettingsFeatures.featureModules.payment` が SSoT。
   stripePublishableKey     String?           @map("stripe_publishable_key") @db.Text
   stripeSecretKey          String?           @map("stripe_secret_key") @db.Text
   stripeWebhookSecret      String?           @map("stripe_webhook_secret") @db.Text
@@ -2011,9 +2011,9 @@ model SettingsFeatures {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
-  /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / payment / data-retention）。
+  /// 形式: `Record<FeatureModule, boolean>` — module の集合は写経しない。
   /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
-  /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
+  /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES_LIST。seed.ts と migration が全 module を explicit に保つ。
   featureModules Json @default("{}") @map("feature_modules")
 
   @@map("settings_features")
@@ -2412,7 +2412,7 @@ model EventTimeSlot {
 
   /// 同一イベントで同時刻スロット二重登録を防ぐ
   @@unique([eventId, startAt])
-  /// 手書き index（20260713044626_event_reservation_cross_overlap_constraint migration で追加）。
+  /// 手書き index。
   /// CONSTRAINT TRIGGER check_event_slot_no_reservation_overlap() のクロステーブル
   /// range クエリ (startAt, endAt) を高速化する。DROP されると deferred trigger が劣化するため
   /// diff engine に既存物として認識させる目的の宣言。
@@ -2537,7 +2537,7 @@ model Event {
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_slug_trgm_idx")
-  /// 手書き partial index（20260713044626_event_reservation_cross_overlap_constraint migration で追加）。
+  /// 手書き partial index。
   /// CONSTRAINT TRIGGER check_event_no_reservation_overlap() のクロステーブルクエリを高速化する。
   /// partialIndexes preview feature は @@index の where にも対応する（@@unique 専用ではない、
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
@@ -2592,7 +2592,7 @@ model EventRegistration {
   status          RegistrationStatus @default(CONFIRMED)
   customerId      String?            @map("customer_id") @db.Uuid
   cancelledAt     DateTime?          @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType String?            @map("cancelled_by_type") @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancelledByType String?            @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
   attendedAt      DateTime?          @map("attended_at") @db.Timestamptz(6)
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2676,11 +2676,10 @@ model EventRegistration {
 /// - reservationId / eventRegistrationId は polymorphic (どちらか片方が非 null、CHECK 制約で強制)
 /// - amount は各 refund event の 個別 金額 (円、正整数)。累積は `Refund` 集計 SUM で算出
 /// - stripeRefundId は Stripe refund object の id (@unique で二重返金防止 + webhook idempotency)
-/// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
-/// - 実質 append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)。
-///   DB trigger (20260724110000_refunds_no_mutation) で UPDATE/DELETE を拒否するが、
-///   status 列のみ 20260730115734_refunds_status_column_and_transition_exception が
-///   例外を追加済み (他の全カラムは引き続き不変、DELETE は無条件拒否のまま)。
+/// - refundedByType: 返金を発生させた主体 (値域は enum RefundedByType、AuditLog と併用)
+/// - append-only。DB trigger `prevent_refunds_mutation`
+///   (SSoT: `prisma/baseline/invariants.sql`) が UPDATE/DELETE を拒否する。
+///   **例外は status 列のみ**で、他の全カラムは不変・DELETE は無条件拒否。
 model Refund {
   id                  String         @id @default(uuid(7)) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
@@ -2693,14 +2692,14 @@ model Refund {
   reason              String?        @db.Text
   /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
   stripeRefundId      String         @unique @map("stripe_refund_id") @db.Text
-  /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
+  /// 返金を発生させた主体。値域は enum RefundedByType。(AuditLog と併用)
   refundedByType      RefundedByType @map("refunded_by_type")
   /// Stripe Refund.status: "pending" | "requires_action" | "succeeded" | "failed" | "canceled"。
   /// konbini / customer_balance 等の非同期決済手段は作成直後 "pending" を返し、後日 Stripe が
   /// 確定させる。"succeeded" 以外は refund.updated webhook が確定させるまでの暫定値であり、
   /// paymentStatus は "succeeded" 確定までは変更しない (silent false-positive な返金完了通知を防ぐ)。
   /// このカラムのみ append-only trigger の例外で更新可能
-  /// (20260730115734_refunds_status_column_and_transition_exception、他カラムは従来通り不変)。
+  /// （append-only trigger の唯一の例外。他カラムは不変）。
   status              String         @default("succeeded") @db.VarChar(20)
   createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -2716,9 +2715,7 @@ model Refund {
 }
 
 model Receipt {
-  /// DB 側 DEFAULT gen_random_uuid()（20260713045802_add_receipt_tables migration で手書き）。
-  /// Prisma 7 の diff engine は @default(uuid(7)) と DB 側 gen_random_uuid() を同値と見なさず
-  /// ALTER COLUMN ... DROP DEFAULT を提案するため dbgenerated で明示する。
+  /// id は Prisma client が uuid(7) で採番する（DB 側に DEFAULT は無い）。
   id                  String             @id @default(uuid(7)) @db.Uuid
   // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
   serialNo            String             @unique @map("serial_no") @db.VarChar(20)
@@ -2950,7 +2947,7 @@ model TransferAccount {
   label             String              @db.VarChar(50)
   bankName          String              @map("bank_name") @db.VarChar(50)
   branchName        String              @map("branch_name") @db.VarChar(50)
-  /// TRANSFER_ACCOUNT_TYPE SSoT（DB VARCHAR 管理）
+  /// 値域は enum TransferAccountType（PG enum `transfer_account_type`）。
   accountType       TransferAccountType @map("account_type")
   accountNumber     String              @map("account_number") @db.VarChar(20)
   accountHolderName String              @map("account_holder_name") @db.VarChar(100)

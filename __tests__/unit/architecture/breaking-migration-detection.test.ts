@@ -64,10 +64,9 @@ const breakingRegex = posixEreToJsRegExp(breakingPattern);
  *       ALTER COLUMN "resourceId" SET DATA TYPE TEXT;
  *
  * — satisfies the pattern on neither line and slips through entirely. That is
- * not hypothetical: the merged
- * `20260726030000_admin_notification_resource_id_varchar` is written this way
- * and returned rc=1 against the old single-`grep` call, so it would have
- * deployed without downtime mode.
+ * not hypothetical: a merged migration that split `ALTER TABLE` from
+ * `ALTER COLUMN ... SET DATA TYPE` across lines returned rc=1 against the old
+ * single-`grep` call, so it would have deployed without downtime mode.
  *
  * Splitting on `;` matters just as much as joining lines: without it, two
  * unrelated adjacent statements get bridged by `.*` and produce false

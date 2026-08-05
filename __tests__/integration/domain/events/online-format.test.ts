@@ -4,8 +4,8 @@
  *
  * 2 つの独立した契約を検証する:
  *
- * 1. DB CHECK 制約 `event_online_meeting_url_required`（migration
- *    20260716084951_add_event_online_format）: `format = 'OFFLINE' OR
+ * 1. DB CHECK 制約 `event_online_meeting_url_required`
+ *    （SSoT: `prisma/baseline/invariants.sql`）: `format = 'OFFLINE' OR
  *    meetingProvider = 'GOOGLE_MEET' OR meetingUrl IS NOT NULL` を
  *    `prisma.event.create` の生 round-trip で検証する。
  * 2. Task 5 で拡張した select 群（`adminEventSelect` 相当の `eventDetailSelect` /

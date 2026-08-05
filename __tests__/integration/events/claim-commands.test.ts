@@ -14,8 +14,8 @@ const { RegistrationStatus, EventStatus, EventScheduleMode } =
 /**
  * このファイルは作成した Event/Customer/User の後始末をしない（既存の慣習、
  * 本 Task では変更しない）ため、専用 EventCategory を都度作ると onDelete: Restrict
- * により孤児行が無限に積み上がる。migration がシードする "未分類" カテゴリー
- * （`prisma/migrations/20260722235352_add_event_category/migration.sql`）を
+ * により孤児行が無限に積み上がる。`prisma/seed.ts` の `seedEventCategories` が
+ * 必ず投入する "未分類" カテゴリーを
  * 再利用する（`create-claim-reservation-fixture.ts` が既存 slug の Space を
  * findFirstOrThrow で引く一貫パターンと同型）。
  *

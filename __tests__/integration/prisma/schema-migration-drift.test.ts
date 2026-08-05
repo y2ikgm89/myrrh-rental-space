@@ -79,5 +79,9 @@ describe("prisma schema ↔ migration drift", () => {
       diagnosis: "",
     });
     expect(stdout).toContain("This is an empty migration.");
-  });
+    // `prisma migrate diff` は engine の cold start を含むと既定の 5000ms を超える。
+    // 超えると exitCode が null になり「DB 未到達」と表示されるので、**drift が
+    // 無いのに赤くなる**。再実行すれば緑になる gate は「緑」の意味を薄めるので、
+    // 実測（cold ≈ 5s / warm ≈ 2s）に対して十分な余裕を明示する。
+  }, 60_000);
 });

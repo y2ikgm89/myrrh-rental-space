@@ -85,8 +85,7 @@ describe("tryParseSidebarWidgets", () => {
     ).toEqual({ success: false });
   });
 
-  // 空白だけのタイトルは migration
-  // `20260802120000_canonicalize_stored_text_whitespace` が一度だけ消してある。
+  // 空白だけのタイトルは一度きりの正規化 migration で消してある。
   // ここで黙って直さないのは、直すと管理画面の
   // 「保存されているウィジェット設定が不正です」警告が意味を失い、
   // 汚れた行が保存されたまま残り続けるため。読めない構成は読めないと言う。

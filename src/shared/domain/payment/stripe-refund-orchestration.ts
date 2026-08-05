@@ -139,9 +139,9 @@ type RefundStatusUpdateClient = {
 
 /**
  * refund.updated / refund.charge.dispute.* webhook からのみ呼ぶ、status 列
- * 限定の確定更新。DB 側の append-only trigger
- * (20260730115734_refunds_status_column_and_transition_exception) が
- * status 以外の列変更を拒否するため、他列を書き換える経路は物理的に存在しない。
+ * 限定の確定更新。DB 側の append-only trigger `prevent_refunds_mutation`
+ * (SSoT: `prisma/baseline/invariants.sql`) が status 以外の列変更を拒否するため、
+ * 他列を書き換える経路は物理的に存在しない。
  *
  * `where.status: "succeeded"` を含めない代わりに現在値を渡し `updateMany` の
  * WHERE claim で「まだ確定していない行のみ」に限定する（既に "succeeded" /

@@ -732,8 +732,8 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
  *   キャンセル (`/api/cron/pending-reservation-expire`) で使用。
  *
  * 新規書き込みは経路別 (`CUSTOMER_MYPAGE` / `CUSTOMER_TOKEN` / `SYSTEM`) を必ず指定する。
- * legacy 値 `CUSTOMER` は migration `20260724120000_cancelled_by_customer_mypage_backfill`
- * で `CUSTOMER_MYPAGE` に backfill 済み。
+ * legacy 値 `CUSTOMER` は一度きりの backfill で `CUSTOMER_MYPAGE` へ寄せ済み
+ * （現行 DB に `CUSTOMER` の行は無い）。
  */
 export const CANCELLED_BY = {
   CUSTOMER_MYPAGE: "CUSTOMER_MYPAGE",
@@ -946,7 +946,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
 };
 
 // =============================================================================
-// BlockedDate Scope / Type（DB VARCHAR 管理 — Prisma enum ではない）
+// BlockedDate Scope / Type（PG enum `blocked_date_scope` / `blocked_date_type` の別名）
 // =============================================================================
 
 /**
@@ -994,7 +994,7 @@ export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
 };
 
 // =============================================================================
-// TransferAccount Type（DB VARCHAR 管理 — Prisma enum ではない）
+// TransferAccount Type（PG enum `transfer_account_type` の別名）
 // =============================================================================
 
 /** 値域の SSoT は DB の `transfer_account_type` 型。 */
