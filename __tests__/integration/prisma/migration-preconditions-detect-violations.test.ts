@@ -41,14 +41,15 @@ let prisma: PrismaClient;
 
 /** DDL を分類してプローブを取り出す。プローブが無ければテストを落とす。 */
 function probeFor(ddl: string): string {
-  const classified = classifyStatement(ddl);
-  if (
-    classified.kind !== "data-dependent" ||
-    classified.detail.probe === null
-  ) {
-    throw new Error(`プローブが得られない: ${ddl}`);
+  const probes = classifyStatement(ddl).flatMap((classified) =>
+    classified.kind === "data-dependent" && classified.detail.probe !== null
+      ? [classified.detail.probe]
+      : [],
+  );
+  if (probes.length !== 1) {
+    throw new Error(`プローブが 1 本にならない (${probes.length}): ${ddl}`);
   }
-  return classified.detail.probe;
+  return probes[0] ?? "";
 }
 
 async function count(probe: string): Promise<number> {
