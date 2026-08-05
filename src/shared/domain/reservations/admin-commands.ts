@@ -68,7 +68,7 @@ export async function createAdminReservationCommand(input: {
   manualDiscountReason?: string | null | undefined;
   status: ReservationStatus;
   notes?: string | null | undefined;
-  /** 手動 totalPrice override の実行者 (admin User.id)。監査目的で priceOverriddenBy に記録する。 */
+  /** 手動 totalPrice override の実行者 (admin User.id)。監査目的で priceOverriddenById に記録する。 */
   adminUserId: string;
 }) {
   if (!CREATABLE_RESERVATION_STATUSES.includes(input.status)) {
@@ -137,7 +137,7 @@ export async function createAdminReservationCommand(input: {
   // Admin override policy: 管理者が totalPrice を明示指定した場合のみ、計算値を
   // 上書きし taxAmount/totalPriceWithTax を上書き後の totalPrice から派生再計算する
   // (taxRate 自体は calculateReservationPricing が解決した値をそのまま使う — create
-  // 時点なのでスナップショットとなる過去の taxRate は存在しない)。priceOverriddenBy は
+  // 時点なのでスナップショットとなる過去の taxRate は存在しない)。priceOverriddenById は
   // 現在の totalPrice が手動値かどうかを表す (override 指定がなければ null)。
   const finalTotalPrice = input.totalPrice ?? pricing.totalPrice;
   const finalTaxAmount =
@@ -148,7 +148,8 @@ export async function createAdminReservationCommand(input: {
     input.totalPrice != null
       ? input.totalPrice + finalTaxAmount
       : pricing.totalPriceWithTax;
-  const priceOverriddenBy = input.totalPrice != null ? input.adminUserId : null;
+  const priceOverriddenById =
+    input.totalPrice != null ? input.adminUserId : null;
 
   const reservation = await prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);
@@ -191,7 +192,7 @@ export async function createAdminReservationCommand(input: {
         taxRate: pricing.taxRate,
         taxAmount: finalTaxAmount,
         totalPriceWithTax: finalTotalPriceWithTax,
-        priceOverriddenBy,
+        priceOverriddenById,
         couponId: pricing.appliedCoupon?.id ?? null,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
@@ -259,7 +260,7 @@ export async function updateAdminReservationCommand(
     couponCode?: string | null | undefined;
     status: ReservationStatus;
     notes?: string | null | undefined;
-    /** 手動 totalPrice override の実行者 (admin User.id)。監査目的で priceOverriddenBy に記録する。 */
+    /** 手動 totalPrice override の実行者 (admin User.id)。監査目的で priceOverriddenById に記録する。 */
     adminUserId: string;
     /** 楽観制御: form が予約を load した時点の version。updateMany の WHERE 述語で claim する。 */
     version: number;
@@ -389,7 +390,7 @@ export async function updateAdminReservationCommand(
   // Admin override policy（create と同一契約 — 詳細は createAdminReservationCommand
   // のコメント参照）。totalPrice を明示指定した場合のみ計算値を上書きする。
   //
-  // priceOverriddenBy は override 時 (input.totalPrice != null) のみ update payload に
+  // priceOverriddenById は override 時 (input.totalPrice != null) のみ update payload に
   // 含める。totalPrice 省略時はフィールド自体を書かず既存 DB 値を保持する
   // (Codex P1 #1105: 以前は totalPrice 省略時に毎回 null を書き込んでいたため、
   // 価格に触れない通常の日時/スペース編集保存のたびに既存の手動上書きフラグが
@@ -508,7 +509,7 @@ export async function updateAdminReservationCommand(
           "料金内訳の生成に失敗しました",
         ),
         ...(input.totalPrice != null && {
-          priceOverriddenBy: input.adminUserId,
+          priceOverriddenById: input.adminUserId,
         }),
         couponId: newCouponId,
         couponDiscountAmount: pricing.couponDiscountAmount,

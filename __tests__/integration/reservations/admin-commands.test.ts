@@ -165,6 +165,37 @@ async function createAdminReservationFixture(opts?: {
 }
 
 /** Commerce / reservation singletons を既知値へ揃える（schema の @default と同値、他テストへの副作用ゼロ）。 */
+/**
+ * `adminUserId` に使う管理者を実在させる。
+ *
+ * 20260805120000 で `reservations.price_overridden_by_id` に FK を張るまで、この
+ * テストは **`users` に存在しない ID** を書き込んでいた。FK が無いので通っており、
+ * 「実行者を記録している」という assertion は**辿れない文字列**を突き合わせていた
+ * だけだった。実在する行を指してはじめて「後から誰か引ける」の検査になる。
+ *
+ * test DB は共有なので upsert（他ファイルが同じ ID を使っても壊れない）。
+ */
+async function ensureAdminUsers(): Promise<void> {
+  await Promise.all(
+    [
+      { id: ADMIN_USER_ID, label: "Admin One" },
+      { id: OTHER_ADMIN_USER_ID, label: "Admin Two" },
+    ].map(({ id, label }) =>
+      prisma.user.upsert({
+        where: { id },
+        create: {
+          id,
+          name: label,
+          email: `admin-commands-${id}@example.test`,
+          emailVerified: false,
+          role: "ADMIN",
+        },
+        update: {},
+      }),
+    ),
+  );
+}
+
 async function ensureKnownSettings(): Promise<void> {
   const commerceData = {
     taxStandardRate: 10,
@@ -209,6 +240,7 @@ describeMaybe(
       ({ rateBreakdownSchema } =
         await import("@/shared/lib/pricing/rate-breakdown"));
       await prisma.$queryRaw`SELECT 1`;
+      await ensureAdminUsers();
       await ensureKnownSettings();
     });
 
@@ -255,7 +287,7 @@ describeMaybe(
         expect(reservation.totalPriceWithTax).toBe(
           reservation.totalPrice + expectedTaxAmount,
         );
-        expect(reservation.priceOverriddenBy).toBeNull();
+        expect(reservation.priceOverriddenById).toBeNull();
       } finally {
         await cleanup();
       }
@@ -375,7 +407,7 @@ describeMaybe(
         // 税は override 後の totalPrice から派生: 10000 × 10% = 1000
         expect(reservation.taxAmount).toBe(1000);
         expect(reservation.totalPriceWithTax).toBe(11000);
-        expect(reservation.priceOverriddenBy).toBe(ADMIN_USER_ID);
+        expect(reservation.priceOverriddenById).toBe(ADMIN_USER_ID);
       } finally {
         await cleanup();
       }
@@ -420,13 +452,13 @@ describeMaybe(
         expect(reservation.taxRate).toBe(10);
         expect(reservation.taxAmount).toBe(500); // 5000 × 10% = 500
         expect(reservation.totalPriceWithTax).toBe(5500);
-        expect(reservation.priceOverriddenBy).toBe(OTHER_ADMIN_USER_ID);
+        expect(reservation.priceOverriddenById).toBe(OTHER_ADMIN_USER_ID);
       } finally {
         await cleanup();
       }
     });
 
-    test("update で totalPrice を省略すると既存の priceOverriddenBy が保持される（no-op 保存で override フラグが消える Codex P1 #1105 の回帰防止）", async () => {
+    test("update で totalPrice を省略すると既存の priceOverriddenById が保持される（no-op 保存で override フラグが消える Codex P1 #1105 の回帰防止）", async () => {
       const { spaceId, customerId, cleanup } = await createSpaceFixture(1000);
       try {
         // override ありで作成: totalPrice=10000（計算値は 2000 = 1000×2h）
@@ -461,13 +493,13 @@ describeMaybe(
           where: { id: created.id },
         });
 
-        // priceOverriddenBy は「今回の update 呼び出し元 (OTHER_ADMIN_USER_ID)」
+        // priceOverriddenById は「今回の update 呼び出し元 (OTHER_ADMIN_USER_ID)」
         // ではなく、元の override 実行者のまま保持される
         // （totalPrice 省略時はフィールド自体を update payload に書かないため）。
-        expect(reservation.priceOverriddenBy).toBe(ADMIN_USER_ID);
+        expect(reservation.priceOverriddenById).toBe(ADMIN_USER_ID);
         // totalPrice は override 値 (10000) ではなく、現在の rate plan から
         // 再計算された値 (1000×2h=2000) になる。仕様: totalPrice 省略時は
-        // 常に再計算する。保持されるのは priceOverriddenBy フラグのみ
+        // 常に再計算する。保持されるのは priceOverriddenById フラグのみ
         // （「過去に手動調整されたことがある」という監査情報）。
         expect(reservation.totalPrice).toBe(2000);
       } finally {
@@ -475,10 +507,10 @@ describeMaybe(
       }
     });
 
-    test("update で totalPrice を省略しても未 override の予約は priceOverriddenBy が null のまま（regression）", async () => {
+    test("update で totalPrice を省略しても未 override の予約は priceOverriddenById が null のまま（regression）", async () => {
       const { spaceId, customerId, cleanup } = await createSpaceFixture(1000);
       try {
-        // override なしで作成: priceOverriddenBy=null
+        // override なしで作成: priceOverriddenById=null
         const created = await createAdminReservationCommand({
           spaceId,
           date: FRIDAY_DATE,
@@ -507,7 +539,7 @@ describeMaybe(
           where: { id: created.id },
         });
 
-        expect(reservation.priceOverriddenBy).toBeNull();
+        expect(reservation.priceOverriddenById).toBeNull();
         expect(reservation.totalPrice).toBe(2000);
       } finally {
         await cleanup();

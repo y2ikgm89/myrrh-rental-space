@@ -596,7 +596,7 @@ async function updateReservationCommand(input: {
         // 過去に admin が override した予約が編集された場合も含め、常に「手動上書き
         // なし」に戻す（admin override の履歴が新しい自動計算額に紐付いたまま残る
         // stale 表示を防ぐ）。
-        priceOverriddenBy: null,
+        priceOverriddenById: null,
         // best 併用でクーポンが落ちた場合は appliedCoupon=null。usage は作成時に
         // claim 済みのためここでは増減しないが、参照と割引額は pricing SSoT に揃える。
         couponId: pricing.appliedCoupon?.id ?? null,
