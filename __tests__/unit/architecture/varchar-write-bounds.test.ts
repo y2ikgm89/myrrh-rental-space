@@ -28,9 +28,13 @@
  *
  * **証明しない**: 「名指しした schema がその列の**唯一の**書込経路である」こと。
  * `generated` と宣言した列に至っては、申告した上限の根拠は散文の `why` だけで、
- * テストが確かめているのは「申告値 ≤ 列長」に過ぎない。書込側の網羅は静的には
- * 取れないので、派生値（テンプレートリテラル連結）を VarChar 列へ書く形の検出は
- * 別 gate で扱う。ここで嘘をつかないために明記しておく。
+ * テストが確かめているのは「申告値 ≤ 列長」に過ぎない（`source` を書いた列だけは
+ * 定数との一致まで見る）。
+ *
+ * 派生値（テンプレートリテラル連結）を VarChar 列へ書く形は
+ * `derived-value-varchar-writes.test.ts` が見る。**長らくここには「別 gate で
+ * 扱う」とだけ書いてあり、その gate は存在しなかった** — 散文で批判をかわして
+ * 実装が無い状態で、その間に `events.title` / `events.slug` が実際に溢れていた。
  *
  * ## なぜ `getZodConstraint` を使わないか
  *
@@ -451,8 +455,22 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   }),
 
   // --- イベント ----------------------------------------------------------
-  "Event.title": generated(200, "`eventFormSchema` の .max(200) を通る"),
-  "Event.slug": generated(100, "`eventFormSchema` の .max(100) を通る"),
+  "Event.title": generated(
+    200,
+    "`eventFormSchema` の .max() を通る。複製は appendWithinLimit で詰めてから連結する",
+    {
+      module: `${SHARED}/event-limits`,
+      exportName: "EVENT_TITLE_MAX_LENGTH",
+    },
+  ),
+  "Event.slug": generated(
+    100,
+    "`eventFormSchema` の .max() を通る。ensureUniqueSlug が連番ぶんを空けてから採番する",
+    {
+      module: `${SHARED}/event-limits`,
+      exportName: "EVENT_SLUG_MAX_LENGTH",
+    },
+  ),
   "Event.addressDetail": generated(
     200,
     "`eventFormSchema` の .max(200) を通る",
