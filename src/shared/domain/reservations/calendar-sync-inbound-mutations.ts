@@ -307,7 +307,7 @@ export async function applyCalendarTimeChange(input: {
         couponDiscountAmount: pricing.couponDiscountAmount,
         taxAmount,
         totalPriceWithTax: pricing.totalPrice + taxAmount,
-        priceOverriddenBy: null,
+        priceOverriddenById: null,
         couponId: pricing.appliedCoupon?.id ?? null,
         calendarSyncedAt: new Date(),
         calendarSyncError: null,

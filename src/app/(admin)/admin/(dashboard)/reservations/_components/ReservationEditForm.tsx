@@ -150,11 +150,11 @@ export function ReservationEditForm({
   // Codex P1 (#1105): 以前は現在の totalPrice で事前入力していたが、それだと
   // 価格に一切触れない通常の日時/スペース編集保存でも hidden totalPrice input が
   // 常に非空になり、updateAdminReservationCommand が「明示 override」と誤認して
-  // 毎回 priceOverriddenBy を上書きしてしまっていた。空で開始し、現在価格は
+  // 毎回 priceOverriddenById を上書きしてしまっていた。空で開始し、現在価格は
   // Input の placeholder でヒント表示するだけにする（下記 JSX 参照）。
-  // 「no-op 保存で既存の priceOverriddenBy が消える」問題（Task 8 handoff の
+  // 「no-op 保存で既存の priceOverriddenById が消える」問題（Task 8 handoff の
   // 元々の懸念）はサーバー側で解決する: updateAdminReservationCommand は
-  // input.totalPrice が undefined の場合、priceOverriddenBy フィールド自体を
+  // input.totalPrice が undefined の場合、priceOverriddenById フィールド自体を
   // update payload から省略し既存 DB 値を保持する。
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 

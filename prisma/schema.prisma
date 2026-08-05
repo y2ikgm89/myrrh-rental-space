@@ -439,6 +439,7 @@ model User {
   eventDeletions             Event[]               @relation("EventDeletions")
   createdBlockTemplates      BlockTemplate[]       @relation("BlockTemplateCreator")
   repliedSpaceReviews        SpaceReview[]         @relation("SpaceReviewReplyAuthor")
+  priceOverriddenReservations Reservation[]        @relation("ReservationPriceOverrides")
 
   // OR検索用インデックス
   @@index([name])
@@ -854,8 +855,14 @@ model Reservation {
   taxRate           Int         @map("tax_rate") // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
   taxAmount         Int         @map("tax_amount") // 税額（円、NOT NULL）
   totalPriceWithTax Int         @map("total_price_with_tax") // 税込み合計（円、NOT NULL）
-  /// 管理者が計算値を手動上書きした場合の実行者 User.id（audit 目的）。null = 上書きなし。
-  priceOverriddenBy String?     @map("price_overridden_by")
+  /// 管理者が計算値を手動上書きした場合の実行者（audit 目的）。null = 上書きなし。
+  ///
+  /// **FK を張る。** 上書き額は返金額・領収書金額の根拠なので「誰が決めたか」は
+  /// 後から必ず引ける必要がある。text の論理参照だと実行者が退職して users 行が
+  /// 消えても ID 文字列だけが残り、**存在しない人を指したまま**になる。
+  /// `deletedById` / `repliedById` と同じ `onDelete: SetNull` に揃え、
+  /// 「消えた＝辿れない」を NULL で正直に表す。
+  priceOverriddenById String?   @map("price_overridden_by_id") @db.Uuid
 
   // Google Calendar Sync
   googleCalendarEventId String?   @map("google_calendar_event_id") // 共有カレンダーのイベントID
@@ -882,6 +889,8 @@ model Reservation {
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
   deletedById String?   @map("deleted_by_id") @db.Uuid
   deletedBy   User?     @relation("ReservationDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  priceOverriddenBy User? @relation("ReservationPriceOverrides", fields: [priceOverriddenById], references: [id], onDelete: SetNull)
 
   /// 利用人数。公開予約フォームが必須で集め、`guestCountCapacityError` が
   /// スペース定員に対して server-side で検査する値。
@@ -948,6 +957,9 @@ model Reservation {
   @@index([paymentStatus])
   @@index([seriesId, recurrenceInstanceIndex])
   @@index([deletedById], map: "reservations_deleted_by_id_idx", where: { deletedById: { not: null } })
+  // 手動上書きは例外的な操作なので大半の行が NULL。partial にして
+  // `deleted_by_id` と同じ形にする（NULL を索引に載せない）。
+  @@index([priceOverriddenById], map: "reservations_price_overridden_by_id_idx", where: { priceOverriddenById: { not: null } })
   @@map("reservations")
 }
 

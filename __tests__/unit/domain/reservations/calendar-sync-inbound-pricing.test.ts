@@ -221,7 +221,7 @@ describe("applyCalendarTimeChange (GCal inbound pricing)", () => {
     expect(updateArgs.data["basePrice"]).toBe(4000);
     expect(updateArgs.data["taxAmount"]).toBe(400);
     expect(updateArgs.data["totalPriceWithTax"]).toBe(4400);
-    expect(updateArgs.data["priceOverriddenBy"]).toBeNull();
+    expect(updateArgs.data["priceOverriddenById"]).toBeNull();
   });
 
   test("updateMany count=0 のとき payment_race を返す", async () => {
