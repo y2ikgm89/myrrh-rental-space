@@ -88,6 +88,23 @@ function toNewsListItem(item: {
   };
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function newsOrderBy(
+  sortBy: NonNullable<NewsPagination["sortBy"]>,
+  direction: "asc" | "desc",
+): Prisma.NewsOrderByWithRelationInput {
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: direction };
+    case "publishedAt":
+      return { publishedAt: direction };
+  }
+}
+
 export async function getNewsList(
   filters: NewsFilters = {},
   pagination: NewsPagination = {},
@@ -118,9 +135,7 @@ export async function getNewsList(
         ogpDescription: true,
         ogpImageUrl: true,
       },
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+      orderBy: newsOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),

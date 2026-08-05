@@ -233,6 +233,29 @@ function buildRawCouponWhere(filters: CouponFilters): Prisma.Sql {
   return Prisma.sql`WHERE ${Prisma.join(clauses, " AND ")}`;
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function couponOrderBy(
+  sortBy: NonNullable<CouponPagination["sortBy"]>,
+  direction: "asc" | "desc",
+): Prisma.CouponOrderByWithRelationInput {
+  switch (sortBy) {
+    case "code":
+      return { code: direction };
+    case "name":
+      return { name: direction };
+    case "createdAt":
+      return { createdAt: direction };
+    case "validFrom":
+      return { validFrom: direction };
+    case "usageCount":
+      return { usageCount: direction };
+  }
+}
+
 export async function getCoupons(
   filters: CouponFilters = {},
   pagination: CouponPagination = {},
@@ -288,7 +311,7 @@ export async function getCoupons(
           createdAt: true,
           updatedAt: true,
         },
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: couponOrderBy(sortBy, sortOrder),
         skip,
         take,
       }),

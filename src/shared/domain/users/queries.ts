@@ -19,6 +19,27 @@ const STAFF_QUERY_ROLES: Role[] = [...DASHBOARD_ROLES];
 /**
  * 通知先ピッカー用に、管理ロールのスタッフ一覧を取得する（ページングなし）。
  */
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function userOrderBy(
+  sortBy: NonNullable<UserListParams["sortBy"]>,
+  direction: "asc" | "desc",
+): Prisma.UserOrderByWithRelationInput {
+  switch (sortBy) {
+    case "name":
+      return { name: direction };
+    case "email":
+      return { email: direction };
+    case "role":
+      return { role: direction };
+    case "createdAt":
+      return { createdAt: direction };
+  }
+}
+
 export async function getNotificationStaffCandidates(): Promise<
   NotificationStaffCandidate[]
 > {
@@ -108,7 +129,7 @@ export async function getUsers(
           },
         },
       },
-      orderBy: { [sortBy]: sortOrder },
+      orderBy: userOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),

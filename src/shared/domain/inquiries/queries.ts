@@ -206,6 +206,23 @@ function flattenInternalNote(n: RawInternalNote): InquiryInternalNoteItem {
   };
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function inquiryOrderBy(
+  sortBy: NonNullable<InquiryPagination["sortBy"]>,
+  direction: "asc" | "desc",
+): Prisma.InquiryOrderByWithRelationInput {
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: direction };
+    case "updatedAt":
+      return { updatedAt: direction };
+  }
+}
+
 export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {},
@@ -298,9 +315,7 @@ export async function getInquiries(
         tags: { select: { tag: { select: { name: true } } } },
         createdAt: true,
       },
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+      orderBy: inquiryOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),
