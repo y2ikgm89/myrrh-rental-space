@@ -31,8 +31,14 @@ describe("customer email canonical contract", () => {
     expect(invariants).toContain(
       'CONSTRAINT "customers_email_canonical_not_empty_check"',
     );
+    // **式の綴りは列の型に従う。** `email_canonical` が text だった頃は
+    // `btrim(email_canonical)` だったが、20260805160000 で varchar(254) へ寄せた結果、
+    // PostgreSQL は `btrim((email_canonical)::text)` と正規化して返すようになった。
+    // ここが陳腐化していても census は気づかない（PostgreSQL が parse 時に正規化する
+    // ので、どちらの綴りで CREATE しても保存される式は同じ）。気づけるのは
+    // `invariants-are-regenerated.test.ts` が実 DB と突き合わせたときだけ。
     expect(invariants).toContain(
-      `CHECK ((btrim(email_canonical) <> ''::text))`,
+      `CHECK ((btrim((email_canonical)::text) <> ''::text))`,
     );
   });
 

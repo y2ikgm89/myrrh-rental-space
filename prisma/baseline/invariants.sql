@@ -28,20 +28,23 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (123) =====
+-- ===== CHECK 制約 (128) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
+ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_period_order_check" CHECK (((start_at IS NULL) OR (end_at IS NULL) OR (start_at <= end_at)));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK ((chain_version = 1));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_entry_hash_hex_check" CHECK ((entry_hash ~ '^[0-9a-f]{64}$'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_algorithm_check" CHECK (((hash_algorithm)::text = 'HMAC-SHA256'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_key_id_check" CHECK (((hash_key_id)::text ~ '^[A-Za-z0-9_-]{1,32}$'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_previous_hash_hex_check" CHECK ((previous_hash ~ '^[0-9a-f]{64}$'::text));
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_date_order_check" CHECK ((start_date <= end_date));
 ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_scope_target_check" CHECK (((((scope)::text = 'SPACE'::text) AND (space_id IS NOT NULL) AND (location_id IS NULL)) OR (((scope)::text = 'LOCATION'::text) AND (location_id IS NOT NULL) AND (space_id IS NULL)) OR (((scope)::text = 'GLOBAL'::text) AND (space_id IS NULL) AND (location_id IS NULL))));
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_amount_bounds_check" CHECK ((((max_discount_amount IS NULL) OR (max_discount_amount > 0)) AND ((min_reservation_amount IS NULL) OR (min_reservation_amount >= 0))));
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_discount_value_range_check" CHECK (((discount_value > 0) AND ((type <> 'PERCENTAGE'::coupon_type) OR (discount_value <= 100))));
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_usage_range_check" CHECK (((usage_count >= 0) AND ((usage_limit IS NULL) OR (usage_limit >= 1))));
-ALTER TABLE "customers" ADD CONSTRAINT "customers_email_canonical_not_empty_check" CHECK ((btrim(email_canonical) <> ''::text));
+ALTER TABLE "coupons" ADD CONSTRAINT "coupons_validity_order_check" CHECK (((valid_until IS NULL) OR (valid_from <= valid_until)));
+ALTER TABLE "customers" ADD CONSTRAINT "customers_email_canonical_not_empty_check" CHECK ((btrim((email_canonical)::text) <> ''::text));
 ALTER TABLE "customers" ADD CONSTRAINT "customers_total_reservations_non_negative_check" CHECK ((total_reservations >= 0));
 ALTER TABLE "customers" ADD CONSTRAINT "customers_total_spent_non_negative_check" CHECK ((total_spent >= 0));
 ALTER TABLE "event_categories" ADD CONSTRAINT "event_categories_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
@@ -56,6 +59,7 @@ ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_capacity_positiv
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_time_order" CHECK ((start_at < end_at));
 ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::event_format) OR (meeting_provider = 'GOOGLE_MEET'::meeting_provider) OR (meeting_url IS NOT NULL)));
 ALTER TABLE "events" ADD CONSTRAINT "events_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
+ALTER TABLE "events" ADD CONSTRAINT "events_slot_span_order_check" CHECK (((first_slot_start_at IS NULL) OR (last_slot_end_at IS NULL) OR (first_slot_start_at <= last_slot_end_at)));
 ALTER TABLE "faq_categories" ADD CONSTRAINT "faq_categories_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
 ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_helpful_count_non_negative_check" CHECK ((helpful_count >= 0));
 ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_not_helpful_count_non_negative_check" CHECK ((not_helpful_count >= 0));
@@ -138,6 +142,7 @@ ALTER TABLE "settings_switchbot" ADD CONSTRAINT "settings_switchbot_singleton_ch
 ALTER TABLE "settings_system" ADD CONSTRAINT "settings_system_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_turnstile" ADD CONSTRAINT "settings_turnstile_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "smart_lock_devices" ADD CONSTRAINT "smart_lock_devices_last_battery_range_check" CHECK (((last_battery >= 0) AND (last_battery <= 100)));
+ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_window_order_check" CHECK ((start_time <= end_time));
 ALTER TABLE "social_links" ADD CONSTRAINT "social_links_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
 ALTER TABLE "space_categories" ADD CONSTRAINT "space_categories_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_check" CHECK (((effective_from IS NULL) OR (effective_to IS NULL) OR (effective_from <= effective_to)));

@@ -221,6 +221,31 @@ describe("値域 CHECK 制約", () => {
     );
   });
 
+  test("期間の列は逆転した値を受け付けない（向きの実測）", async () => {
+    // 名前と参照列だけを見る静的ゲート（temporal-order-constraints）は
+    // `<=` と `>=` を取り違えても通る。**向きはここで実際に入れて確かめる。**
+    await expectRejectedBy(
+      "blocked_dates_date_order_check",
+      `INSERT INTO "blocked_dates" ("id","scope",start_date,end_date,"type",created_by,updated_at)
+       VALUES (gen_random_uuid(), 'GLOBAL', DATE '2099-01-10', DATE '2099-01-01',
+               'OTHER', '${ABSENT_UUID_A}', now())`,
+    );
+    await expectRejectedBy(
+      "coupons_validity_order_check",
+      `INSERT INTO "coupons" ("id","code","name","type",discount_value,valid_from,valid_until,updated_at)
+       VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
+               'probe', 'FIXED_AMOUNT', 100,
+               TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
+    );
+    await expectRejectedBy(
+      "smart_lock_passcodes_window_order_check",
+      `INSERT INTO "smart_lock_passcodes" ("id",reservation_id,device_id,passcode_ciphertext,
+                                           start_time,end_time,updated_at)
+       VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}', 'probe',
+               TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
+    );
+  });
+
   test("予約とイベント申込の両方を指す領収書を作れない", async () => {
     await expectRejectedBy(
       "receipts_target_exclusive_check",
