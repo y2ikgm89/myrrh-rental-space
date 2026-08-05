@@ -20,10 +20,14 @@ model: sonnet
    カンマ区切り）。ローカルに squawk バイナリが無い場合は `SQUAWK_BIN` で
    公式バイナリのパスを指定するか、CI の migration-safety job
    (SHA256 検証済み squawk 2.51.0、`.github/workflows/ci.yml`) に委ねる
-2. **breaking デプロイ判定**（詳細は rules の `migrations.md` 参照）: DROP COLUMN /
-   RENAME COLUMN / RENAME TO（ALTER TABLE 文脈）/ DROP TABLE / DROP TYPE の有無を grep。
-   あれば「main merge で自動的に計画ダウンタイム（両サービス scaling=0 + 310 秒 drain）が
-   発動する」ことを必ず報告し、expand/contract 分割の可否を検討する
+2. **breaking デプロイ判定**: 発動条件の SSoT は
+   `.github/workflows/deploy-production.yml` の grep 正規表現で、網羅一覧は
+   rules の `migrations.md` の breaking-triggers ブロック（そちらは
+   `breaking-migration-detection.test.ts` が yml から導出した集合に pin している）。
+   **ここに DDL を列挙しない — 要約側の列挙は必ず drift する。**
+   該当すれば「Deploy Production を**手動実行したとき**に計画ダウンタイム
+   （両サービス scaling=0 + 310 秒 drain）が発動する」ことを必ず報告し
+   （main merge では何も起きない）、expand/contract 分割の可否を検討する
 3. **既存 migration の改変禁止**: `git diff --cached --diff-filter=M -- prisma/migrations`
    と working tree の diff で既存 migration.sql の変更が無いか確認（pre-commit で
    ブロックされる。修正は新規 migration のみ）

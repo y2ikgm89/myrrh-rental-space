@@ -5,6 +5,11 @@ Claude Code, Codex, or SDK-driven agent should read that file first — it
 covers stack, structure, testing conventions, absolute rules, and the
 self-completion policy that governs commit → push → PR → auto-merge.
 
+**This file must never restate or override a policy that CLAUDE.md owns.**
+Two instruction files that disagree let an agent pick whichever one suits
+what it already wanted to do, and neither side is ever wrong. If something
+here conflicts with CLAUDE.md, CLAUDE.md wins and the line here gets deleted.
+
 Topic-specific rules live in [`.claude/rules/`](.claude/rules/) and get
 auto-loaded when the relevant files are touched. Parallel PRs that edit
 `LIB_TO_DOMAIN` (and similar ratchet allowlists) must stay serial — see
@@ -29,7 +34,6 @@ For human onboarding — setup, common commands, repo layout — see
 
 - Prefer official-docs-aligned, clean-break implementations without backward-compat
   shims when redesigning integrations.
-- When parallelizing work with subagents, use Composer or Grok as appropriate.
 - Prefer concurrent work that does not disturb other in-flight sessions or branches;
   stay inside the assigned/existing `.worktrees/*` worktree (or a separate branch)
   and do not create temp worktrees or touch unrelated worktrees.
@@ -52,9 +56,6 @@ For human onboarding — setup, common commands, repo layout — see
   promptly after each related merge. `customer-auth.ts` is an intentional permanent
   Better Auth `beforeDelete` adapter — do not force the allowlist to zero or add DI
   shims to clear it. Detail: `.claude/rules/architecture-allowlist.md`.
-- Do not commit, push, or open PRs unless the user explicitly asks (overrides
-  CLAUDE.md auto-ship policy). Phrases like 「推奨の作業を」 or 「公式推奨の作業を」
-  count as explicit ship authorization for that session.
 - Integration tests asserting rejected `DomainError`s: prefer try/catch +
   `expect(thrown).toMatchObject` over `await expect(...).rejects.toMatchObject`
   (Bun 1.3.14 can hang on the latter).

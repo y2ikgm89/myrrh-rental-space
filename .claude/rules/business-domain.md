@@ -79,5 +79,7 @@ paths:
 - 必須規約同意が `assertAllRequiredTermsAgreed` で **server-side 強制**されるのは
   RESERVATION / INQUIRY / EVENT_REGISTRATION の 3 経路（client gate のみは禁止）。
   LOGIN_SIGNUP は署名 cookie 経由の同意証跡記録のみでこの gate を通らない
-- イベント/BlockedDate の CHECK 制約・DEFERRABLE trigger は baseline migration にのみ
-  存在する手書き不変条件（Prisma DSL で表現不能）。migration 作業時に保全する
+- Prisma DSL で表現できない不変条件（CHECK / EXCLUDE / plpgsql 関数 / DEFERRABLE
+  constraint trigger）の SSoT は `prisma/baseline/invariants.sql`。baseline migration は
+  そこからの生成物なので直接編集しない（絶対規約 #7）。テストからは
+  `__tests__/support/prisma-sources.ts` の `readDatabaseInvariants()` で読む

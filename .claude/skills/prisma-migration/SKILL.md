@@ -10,9 +10,9 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 常設規約 (重複記載しない — 必ず先に参照):
 
 - 禁止事項・squawk 配置・breaking デプロイ連動・seed 契約: rules の `migrations.md`
-- Prisma/ドメイン層の配置境界 (`server-only`, `basePrisma` vs `prisma`): rules の `db-domain.md`
+- Prisma gateway の単一 singleton (`prisma`) と `server-only` 境界: rules の `db-domain.md`
 - 生成型の流通経路 (enums gateway・JSON helper): rules の `type-safety.md`
-- 実 DB 統合テストの書き方 (SERIAL_DB_TESTS 登録等): rules の `testing-unit.md`
+- 実 DB 統合テストの書き方 (serial bucket は自動検出): rules の `testing-unit.md`
 
 ## 0. 事前判断
 
@@ -28,7 +28,7 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 1. `prisma/schema.prisma` を編集する。注意点:
    - datasource ブロックに url は無い。`DATABASE_URL` は `prisma.config.ts` の
      `env("DATABASE_URL")` が供給する (Bun が `.env` / `.env.local` を自動ロード)。
-   - 物理名は `@@map` で全 77 モデル・全 40 enum がマップ済み。テーブルは
+   - 物理名はモデル・enum とも `@@map` 済み。テーブルは
      snake_case 複数形が既定で、単数形になるのは 1 行しか持たない設定 singleton
      (`settings_*`。`invariants.sql` の `*_singleton_check` が SSoT) だけ。
      `media` (不可算) と `inquiry_status_history` (履歴ログの集合名詞) が例外。
@@ -116,7 +116,7 @@ scaling=0 停止 + 310 秒 drain）は rules の `migrations.md`（デプロイ�
 
 ## 7. seed / E2E fixture 整合
 
-- 新モデル・新列は `prisma/seed.ts` への反映要否を判断する (3 モードの契約は
+- 新モデル・新列は `prisma/seed.ts` への反映要否を判断する (モードの契約は
   rules の `migrations.md`)。
 - feature module を追加した場合は `src/shared/lib/features/registry.ts` の
   `FEATURE_MODULES_LIST` に id を追加する。seed の `buildInitialFeatureModules` が
@@ -133,5 +133,7 @@ scaling=0 停止 + 310 秒 drain）は rules の `migrations.md`（デプロイ�
    @@map 整合 / 手書き不変条件 / expand-contract 妥当性の所見を得る。
 2. コミットは `prisma/schema.prisma` + 新規 migration ディレクトリ + 生成型に依存する
    コード変更を同一 commit にまとめる (migration だけ先行させない)。
-3. main への merge は即本番デプロイ (breaking 検出時は自動ダウンタイム) であることを
-   PR 説明に明記する。
+3. **main への merge では本番は動かない**。Cloud Run も prisma-migrate Job も、
+   Deploy Production の手動 `workflow_dispatch` でしか走らない (CLAUDE.md 絶対規約 #11)。
+   破壊的 DDL を含む PR には「デプロイ実行時に計画ダウンタイムが入る」ことを明記し、
+   実行するかどうかはユーザーに確認する。

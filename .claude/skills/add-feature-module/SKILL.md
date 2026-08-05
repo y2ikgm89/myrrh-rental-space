@@ -107,7 +107,9 @@ await requireFeatureEnabled("<id>");
 ```
 
 `@/shared/domain/features/check` から import。OFF 時は `notFound()` で 404。
-既存 14 箇所の例: `src/app/(public)/contact/page.tsx`、`src/app/(public)/spaces/[slug]/page.tsx`。
+例: `src/app/(public)/contact/page.tsx`、`src/app/(public)/spaces/[slug]/page.tsx`。
+実数と網羅性は `git grep -n 'await requireFeatureEnabled' src/app` で確認する
+（**ここに件数を書かない — 数は必ず drift する**）。
 ガードは page 単位（route handler や proxy ではない）。
 
 ### Step 5: セクション・cron の連動
@@ -118,7 +120,8 @@ await requireFeatureEnabled("<id>");
   rules の sections を参照。
 - **cron**: module が cron を持つなら、route handler（`src/app/api/cron/*`）で
   `authorizeCronRequest` の直後に早期 return を入れる（スニペットは rules の
-  `app-structure` 参照。既存 4 route と同型）。例:
+  `app-structure` 参照。既存の gated cron と同型で、実数は
+  `git grep -l isFeatureEnabled src/app/api/cron` で確認する）。例:
   `src/app/api/cron/event-import/route.ts`。registry の `cronPaths` にも path を列挙する
   （現状 metadata だが registry ↔ 実 route の対応表として維持する）。
 
