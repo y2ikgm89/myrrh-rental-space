@@ -1,5 +1,6 @@
 /**
- * migration が**既存の行**に当たって落ちるかを、適用する前に調べる。
+ * 未適用 migration を**本当に流してから巻き戻す**ことで、既存の行に当たって
+ * 落ちるかどうかを適用前に確かめる。
  *
  * ## 何を防ぐのか
  *
@@ -10,76 +11,64 @@
  *   ERROR: current transaction is aborted, commands ignored until end of
  *          transaction block
  *
- * だけで、どの制約のどの行が違反したのかは分からない。しかも
+ * だけで、どの文のどの行が違反したのかは分からない。しかも
  * `_prisma_migrations` には失敗が記録されるので、**以降のデプロイが全部止まる**。
  * 復旧は本番 DB への手作業になる。予約サイトから見れば「原因不明のまま修正が
  * 何も出せない」状態が続く。
  *
- * ## 手起こしの確認クエリでは足りない
+ * ## なぜ「静的に調べる」のをやめたか
  *
- * これまでの守りは「migration ヘッダに適用前の確認クエリを書く」という散文の
- * 約束だけだった。実測: `20260805180000` のヘッダは **23 本の制約のうち 3 本**しか
- * 見ておらず、`locations.special_holidays` に JSON null が残った DB で
- * 「0 件」と出たうえで migration が落ちた。人が書く一覧は、それが覆うべき
- * 制約の集合から必ず離れていく。
+ * 最初は migration SQL を分類してプローブ SQL を組み立てていた。多角レビューを
+ * 2 巡回したところ、**毎回 10 件規模で取りこぼしが出た**（合計 21 件確定。うち
+ * 素通り 9 件・通る migration を止める誤検知 12 件）。原因は全部同じで、
+ * PostgreSQL の意味論を手で書き写していたこと:
  *
- * だからここでは **migration SQL からプローブを導出する**。覆う範囲は
- * migration 自身が持つ文の集合なので、少なくなりようがない。
+ *   - `ALTER TABLE` は 1 文に複数アクションを持ち、順に効く
+ *   - `NOT VALID` を付けた制約は既存行を走査しない
+ *   - `ALTER COLUMN … TYPE … USING <式>` は長さではなく式で落ちる
+ *   - `ATTACH PARTITION` は付ける側を全走査する
+ *   - `CREATE TABLE … AS SELECT` は行を持って生まれる
+ *   - `varchar(n)` への縮小は末尾空白なら通る
+ *   - 合成した既定値に型注釈が無いと `'10' <= '9'` が文字列比較になる
+ *   - `SELECT 0 FROM (SELECT COUNT(<式>) FROM t)` は最適化されて**式を評価しない**
+ *
+ * 最後の 1 つは私が書いたプローブそのものが空振りしていた例で、道具が
+ * 「確認した」と言いながら何も見ていなかった。**この写経は収束しない。**
+ *
+ * だから写すのをやめて、**PostgreSQL に評価させる**。未適用の文を 1 つの
+ * トランザクションで順に流し、最後に必ず巻き戻す。判定は PostgreSQL の実挙動
+ * そのもので、失敗した文と**本当のエラーメッセージ**が出る。
  *
  * ## 使い方
  *
  * ```sh
- * # 未適用の migration を対象に、DATABASE_URL の DB を調べる
  * bun scripts/migration-preconditions.ts
  * bun scripts/migration-preconditions.ts --url postgresql://...
  * ```
  *
- * ## 確かめられなかったものは通さない
+ * 接続先の解決は `prisma.config.ts` と同じ（`DIRECT_URL` → `DATABASE_URL`）。
+ * migrate と別の DB を見ていたら意味が無い。
  *
- * exit 0 を返すのは「全部評価して、違反が 0 件だった」ときだけ。次はすべて exit 1:
+ * ## 巻き戻しの担保
  *
- *   - 違反行が 1 件でもある
- *   - 分類できない文が残っている
- *   - プローブ未実装の制約がある（EXCLUDE）
- *   - **プローブを実行できなかった**
- *   - migration 履歴を読めない / 履歴が無いのにテーブルがある
+ * 1. **事前検査**: トランザクション制御（`ROLLBACK` / `SAVEPOINT` / `COMMIT
+ *    PREPARED` 等）と `CONCURRENTLY` が 1 つでもあれば、**何も実行せずに**止める。
+ *    包み用の `BEGIN` / `COMMIT` / `END` だけは読み飛ばす
+ * 2. 実行は Prisma の interactive transaction（単一コネクション）内だけ。
+ *    最後に必ず例外を投げて巻き戻す
+ * 3. **事後照合**: テーブル数・制約数・`_prisma_migrations` の行数を前後で比べ、
+ *    変わっていたら大声で失敗する
  *
- * 4 番目はかつて `SKIP` のログだけ出して素通りさせていた（PR #1956 のレビュー指摘）。
- * 「列が無いのは既存行がその列を持たないからで、だから違反しえない」と考えたのが
- * 誤りで、**既存行はその列に `DEFAULT` の値を持つことになる**。既定値が制約に
- * 違反する migration は実際に落ちる。
+ * ## この方法が見ないもの
  *
- * そこで `relationSource` が、この migration 群が足す列を既定値（無ければ NULL）で
- * 合成した副問い合わせを組み、プローブが評価できるようにしている。**評価できる
- * ようにしたうえで**、それでも実行できないものは通さない。
- *
- * 5 番目は baseline を migrate 済み DB へ当てた状態。`CREATE TABLE` を「これから
- * 作る＝既存行なし」と読むと検査対象が丸ごと消えるので、DB の実テーブルと突き合わせる。
- *
- * ## 分類の取りこぼしは静かに起きる
- *
- * 多角レビューで 8 種の取りこぼしが出た（いずれも exit 0 を返していた）。
- * 何を直したかは `migration-preconditions.test.ts` の「実際に取りこぼしていた形」に
- * 見本つきで固定してある。要点だけ:
- *
- *   - **1 文は複数のアクションを持つ**（`ADD COLUMN a …, ADD COLUMN b …`）。
- *     先頭だけ見ると 2 番目以降が消える。Prisma が普通に出す形
- *   - `INSERT` / `UPDATE` / `DELETE` は safe ではない。append-only trigger や
- *     `onDelete: Restrict` の FK に当たって落ちる
- *   - `VALIDATE CONSTRAINT` は safe ではない。全行走査そのもの
- *   - 列内制約つきの `ADD COLUMN`（`… DEFAULT '' UNIQUE`）は既定値が全行に入るので必ず衝突する
- *   - `NULLS NOT DISTINCT` では NULL 行を母集合から外せない
- *   - 式 index は一意でなくても、式が評価できない行があると落ちる
- *
- * ## 覆う範囲と、覆わないもの
- *
- * 既存行に当たって失敗しうる DDL のうち、プローブを持つのは CHECK / UNIQUE /
- * PRIMARY KEY / FOREIGN KEY / unique index / 式 index / `SET NOT NULL` /
- * `ALTER COLUMN … TYPE VARCHAR(n)` / 既定値なし NOT NULL 列の追加。
- *
- * **EXCLUDE 制約と `VALIDATE CONSTRAINT` にはプローブが無い。** どちらも
- * 既存テーブルに対して現れた瞬間に `migration-preconditions.test.ts` が
- * PR の時点で赤くなる。deploy の夜に初めて分かることにはならない。
+ * - **シーケンスの採番は巻き戻らない**（`nextval` は非トランザクション）。
+ *   migration が identity 列を埋めると、その分だけ採番が進む
+ * - 未適用が複数あるとき、それらを**1 つの**トランザクションで流す。実際は
+ *   migration ごとに commit されるので、「前の migration が commit 済みである
+ *   ことに依存する文」（`ALTER TYPE … ADD VALUE` の直後にその値を使う等）は
+ *   ここでだけ落ちうる
+ * - ロックと所要時間は本番の migrate と同じだけかかる（同じ DDL を流すため）。
+ *   `lock_timeout` / `statement_timeout` を掛けてあるので、待たされ続けはしない
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -89,6 +78,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@generated/prisma/client";
 
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
+
+/** リハーサル 1 回の上限。本番の migrate と同じだけ掛かりうる。 */
+const REHEARSAL_TIMEOUT_MS = 600_000;
+/** ロック待ちの上限。本番のトラフィックを長く止めない。 */
+const LOCK_TIMEOUT = "10s";
 
 // ---------------------------------------------------------------------------
 // SQL の分割
@@ -128,7 +122,7 @@ export function splitStatements(sql: string): string[] {
     if (inSingleQuote) {
       buffer += char;
       // `E'…'` はバックスラッシュ退避が効く。見落とすと閉じ位置を誤り、
-      // 以降の文が丸ごと 1 文に飲まれて分類から消える。
+      // 以降の文が丸ごと 1 文に飲まれる。
       if (escapeString && char === "\\") {
         buffer += sql.charAt(index + 1);
         index += 2;
@@ -191,680 +185,54 @@ export function splitStatements(sql: string): string[] {
   return out;
 }
 
-/** `open` の直後から始まる括弧組の中身を返す（`open` は `(` の位置）。 */
-function balanced(source: string, open: number): string | null {
-  if (source.charAt(open) !== "(") return null;
-  let depth = 0;
-  let inSingleQuote = false;
-  for (let i = open; i < source.length; i += 1) {
-    const char = source.charAt(i);
-    if (inSingleQuote) {
-      if (char === "'") inSingleQuote = false;
-      continue;
-    }
-    if (char === "'") {
-      inSingleQuote = true;
-      continue;
-    }
-    if (char === "(") depth += 1;
-    else if (char === ")") {
-      depth -= 1;
-      if (depth === 0) return source.slice(open + 1, i);
-    }
+// ---------------------------------------------------------------------------
+// リハーサルで扱えない文
+// ---------------------------------------------------------------------------
+
+/** 包み用のトランザクション制御。リハーサルでは読み飛ばす。 */
+const TRANSACTION_WRAPPER =
+  /^(BEGIN|START\s+TRANSACTION|COMMIT|END)\s*(WORK|TRANSACTION)?\s*$/iu;
+
+/**
+ * 実行してはいけない文。
+ *
+ * `COMMIT PREPARED` や `SAVEPOINT` はこちらのトランザクション境界を壊し、
+ * 巻き戻せなくなる（＝ migration を**本当に適用してしまう**）。
+ * `CONCURRENTLY` はトランザクション内で実行できない。
+ * どれも 1 つでもあれば**何も実行せずに**止める。
+ */
+export function rehearsalBlocker(statement: string): string | null {
+  const sql = statement.replace(/\s+/gu, " ").trim();
+  if (/^(ROLLBACK|ABORT|SAVEPOINT|RELEASE|PREPARE TRANSACTION)\b/iu.test(sql)) {
+    return "トランザクション制御。リハーサルの巻き戻しを壊す";
+  }
+  if (/^(COMMIT|ROLLBACK) PREPARED\b/iu.test(sql)) {
+    return "二相コミット。リハーサルの巻き戻しを壊す";
+  }
+  if (/^SET\s+TRANSACTION\b/iu.test(sql)) {
+    return "トランザクション属性の変更。リハーサルの前提を壊す";
+  }
+  if (/\bCONCURRENTLY\b/iu.test(sql)) {
+    return "CONCURRENTLY はトランザクション内で実行できない";
+  }
+  if (/^VACUUM\b/iu.test(sql)) {
+    return "VACUUM はトランザクション内で実行できない";
   }
   return null;
 }
 
-/** 括弧の深さ 0 のカンマで割る（`tstzrange(a, b)` を割らない）。 */
-function topLevelSplit(list: string): string[] {
-  const out: string[] = [];
-  let depth = 0;
-  let buffer = "";
-  let inSingleQuote = false;
-  for (const char of list) {
-    if (inSingleQuote) {
-      buffer += char;
-      if (char === "'") inSingleQuote = false;
-      continue;
-    }
-    if (char === "'") {
-      inSingleQuote = true;
-      buffer += char;
-      continue;
-    }
-    if (char === "(") depth += 1;
-    if (char === ")") depth -= 1;
-    if (char === "," && depth === 0) {
-      out.push(buffer.trim());
-      buffer = "";
-      continue;
-    }
-    buffer += char;
-  }
-  const tail = buffer.trim();
-  if (tail.length > 0) out.push(tail);
-  return out;
-}
+export type RehearsalStep =
+  | { readonly kind: "skip" }
+  | { readonly kind: "run" }
+  | { readonly kind: "blocked"; readonly reason: string };
 
-// ---------------------------------------------------------------------------
-// 分類
-// ---------------------------------------------------------------------------
-
-/** 既存行に当たって失敗しうる 1 文。 */
-export interface DataDependentStatement {
-  /** 検査対象のテーブル（物理名）。 */
-  readonly table: string;
-  /** 制約名、または `table.column` 形式の識別子。 */
-  readonly label: string;
-  /** 何が満たされていなければならないか（人が読む用）。 */
-  readonly requirement: string;
-  /**
-   * 違反行数を 1 列 1 行で返す SQL。`null` は**プローブ未実装**を意味し、
-   * 呼び出し側は成功として扱ってはいけない。
-   */
-  readonly probe: string | null;
-}
-
-/** 未適用 migration が既存テーブルへ足す列。プローブから見える形にするために要る。 */
-export interface AddedColumn {
-  readonly table: string;
-  readonly column: string;
-  /** 列の型（`NULL::<type>` を組み立てるのに使う）。 */
-  readonly type: string;
-  /** `DEFAULT` 式。無ければ `null`（既存行はその列が NULL になる）。 */
-  readonly defaultSql: string | null;
-}
-
-export type Classified =
-  | { readonly kind: "safe"; readonly adds: AddedColumn | null }
-  | { readonly kind: "creates-table"; readonly table: string }
-  | {
-      readonly kind: "data-dependent";
-      readonly detail: DataDependentStatement;
-      readonly adds: AddedColumn | null;
-    }
-  | { readonly kind: "unknown"; readonly head: string };
-
-/** 未適用 migration が足す列（テーブル物理名 → 列）。 */
-export type PendingColumns = ReadonlyMap<string, readonly AddedColumn[]>;
-
-const NO_PENDING_COLUMNS: PendingColumns = new Map();
-
-const IDENT = '"?([A-Za-z_][A-Za-z0-9_]*)"?';
-
-function quote(identifier: string): string {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
-/**
- * プローブの `FROM` に置く関係式。
- *
- * この migration 群がそのテーブルへ列を足すなら、**既存行がその列に持つことに
- * なる値**（`DEFAULT` 式、無ければ NULL）を合成した副問い合わせを返す。
- * こうしないと「列を足してから、その列に制約を付ける」migration のプローブが
- * 「列が無い」で落ち、評価できないまま素通りする。既存行が `DEFAULT` のせいで
- * 制約に違反するのは実際に起こる。
- */
-function relationSource(table: string, pending: PendingColumns): string {
-  const added = pending.get(table) ?? [];
-  if (added.length === 0) return quote(table);
-  const synthesized = added
-    .map(
-      (column) =>
-        `${column.defaultSql ?? `NULL::${column.type}`} AS ${quote(column.column)}`,
-    )
-    .join(", ");
-  return `(SELECT __base.*, ${synthesized} FROM ${quote(table)} AS __base)`;
-}
-
-/** `FROM <source> AS <alias>`。別名を明示すると自己参照 FK でも曖昧にならない。 */
-function fromClause(
-  table: string,
-  pending: PendingColumns,
-  alias: string = table,
-): string {
-  return `${relationSource(table, pending)} AS ${quote(alias)}`;
-}
-
-/** `"a", "b"` → `["a", "b"]`（式もそのまま返す）。 */
-function columnList(raw: string): string[] {
-  return topLevelSplit(raw).map((entry) =>
-    entry.replace(/\s+(ASC|DESC)$/iu, "").trim(),
-  );
-}
-
-/**
- * 重複によって余る行数を返すスカラー副問い合わせ。
- *
- * `countNulls` が false のときは NULL を持つ行を母集合から外す。unique index は
- * NULL どうしを衝突と見なさないため（PRIMARY KEY だけが例外）。
- */
-function duplicateCountScalar(
-  table: string,
-  columns: readonly string[],
-  predicate: string | null,
-  countNulls: boolean,
-  pending: PendingColumns,
-): string {
-  const keys = columns.join(", ");
-  const notNull = columns
-    .map((column) => `(${column}) IS NOT NULL`)
-    .join(" AND ");
-  const where = [countNulls ? null : notNull, predicate]
-    .filter((clause): clause is string => clause !== null && clause.length > 0)
-    .map((clause) => `(${clause})`)
-    .join(" AND ");
-  const filter = where.length > 0 ? ` WHERE ${where}` : "";
-  return (
-    `SELECT COALESCE(SUM(extra), 0) FROM (` +
-    `SELECT COUNT(*) - 1 AS extra FROM ${fromClause(table, pending)}${filter} ` +
-    `GROUP BY ${keys} HAVING COUNT(*) > 1) AS duplicates`
-  );
-}
-
-/** 一意性の違反行数を 1 列 1 行で返す SQL。 */
-function uniquenessProbe(
-  table: string,
-  columns: readonly string[],
-  predicate: string | null,
-  countNulls: boolean,
-  pending: PendingColumns,
-): string {
-  return `SELECT (${duplicateCountScalar(table, columns, predicate, countNulls, pending)})::int AS n`;
-}
-
-/** 列定義（`ADD COLUMN "c" <ここ>`）から型と DEFAULT を取り出す。 */
-function parseAddedColumn(
-  table: string,
-  column: string,
-  definition: string,
-): AddedColumn | null {
-  // 型は先頭から、列制約が始まるまで。
-  const boundary =
-    /\s+(?:DEFAULT|NOT\s+NULL|NULL|CONSTRAINT|GENERATED|REFERENCES|COLLATE|CHECK|UNIQUE|PRIMARY)\b/iu;
-  const cut = boundary.exec(definition);
-  const type = (cut === null ? definition : definition.slice(0, cut.index))
-    .trim()
-    .replace(/,$/u, "");
-  if (type.length === 0) return null;
-
-  const defaultAt = /\bDEFAULT\s+/iu.exec(definition);
-  let defaultSql: string | null = null;
-  if (defaultAt !== null) {
-    const rest = definition.slice(defaultAt.index + defaultAt[0].length);
-    const end =
-      /\s+(?:NOT\s+NULL|NULL|CONSTRAINT|GENERATED|REFERENCES|COLLATE|CHECK|UNIQUE|PRIMARY)\b/iu.exec(
-        rest,
-      );
-    defaultSql = (end === null ? rest : rest.slice(0, end.index))
-      .trim()
-      .replace(/,$/u, "");
-    if (defaultSql.length === 0) return null;
-  }
-
-  return { table, column, type, defaultSql };
-}
-
-/**
- * 1 文を分類する。**1 文が複数のアクションを持つ**ので配列を返す。
- *
- * `ALTER TABLE "t" ADD COLUMN "a" …, ADD COLUMN "b" …` は Prisma が普通に出す形で、
- * 先頭だけ見ると 2 番目以降が丸ごと検査から消える。実測で 9 通りの取りこぼしが
- * ここから出た。
- *
- * 判定できないものは `unknown` にする。「知らないものは安全」にすると、
- * 新しい種類の DDL が黙って素通りして、この道具が「確認した」という記録だけの
- * ものになる。
- */
-export function classifyStatement(
-  statement: string,
-  pending: PendingColumns = NO_PENDING_COLUMNS,
-): readonly Classified[] {
+export function planStep(statement: string): RehearsalStep {
   const sql = statement.replace(/\s+/gu, " ").trim();
-  const head = sql.slice(0, 90);
-
-  const createTable = new RegExp(
-    `^CREATE (?:UNLOGGED )?TABLE (?:IF NOT EXISTS )?${IDENT}`,
-    "iu",
-  ).exec(sql);
-  const createdTable = createTable?.[1];
-  if (createdTable !== undefined) {
-    return [{ kind: "creates-table", table: createdTable }];
-  }
-
-  const index = classifyCreateIndex(sql, head, pending);
-  if (index !== null) return index;
-
-  const alterTable = new RegExp(
-    `^ALTER TABLE (?:IF EXISTS )?(?:ONLY )?${IDENT} (.*)$`,
-    "iu",
-  ).exec(sql);
-  const table = alterTable?.[1];
-  const actions = alterTable?.[2];
-  if (table !== undefined && actions !== undefined) {
-    // **アクションは前から順に効く。** `ADD COLUMN "score" … DEFAULT 0,
-    // ADD CONSTRAINT … CHECK ("score" >= 0)` の後半は、前半が足した列を見た
-    // うえで組まないとプローブが「列が無い」で落ち、通る migration を止める。
-    const local = new Map(pending);
-    const out: Classified[] = [];
-    for (const action of topLevelSplit(actions)) {
-      for (const classified of classifyAlterAction(
-        table,
-        action,
-        head,
-        local,
-      )) {
-        const added =
-          classified.kind === "safe" || classified.kind === "data-dependent"
-            ? classified.adds
-            : null;
-        if (added !== null) {
-          local.set(added.table, [...(local.get(added.table) ?? []), added]);
-        }
-        out.push(classified);
-      }
-    }
-    return out;
-  }
-
-  if (SAFE_STATEMENT.test(sql)) return [{ kind: "safe", adds: null }];
-  return [{ kind: "unknown", head }];
+  if (TRANSACTION_WRAPPER.test(sql)) return { kind: "skip" };
+  const blocker = rehearsalBlocker(sql);
+  if (blocker !== null) return { kind: "blocked", reason: blocker };
+  return { kind: "run" };
 }
-
-/**
- * `CREATE [UNIQUE] INDEX`。
- *
- * 一意でない index でも**式 index は既存行に当たって落ちる**（`(x->>'k')::int` の
- * ような式が評価できない行があると build が失敗する）。式を含むなら、その式を
- * 全行に対して評価するだけのプローブを置く。評価が通れば index も張れる。
- */
-function classifyCreateIndex(
-  sql: string,
-  head: string,
-  pending: PendingColumns,
-): readonly Classified[] | null {
-  const match = new RegExp(
-    // Prisma は `ON "t"("col")` と空白なしで出す。人が書く SQL は空ける。
-    `^CREATE (UNIQUE )?INDEX (?:CONCURRENTLY )?(?:IF NOT EXISTS )?${IDENT} ON (?:ONLY )?${IDENT}(?: USING [A-Za-z]+)? ?(\\(.*)$`,
-    "iu",
-  ).exec(sql);
-  if (match === null) return null;
-
-  const unique = match[1] !== undefined;
-  const name = match[2];
-  const table = match[3];
-  const rest = match[4];
-  if (name === undefined || table === undefined || rest === undefined) {
-    return [{ kind: "unknown", head }];
-  }
-
-  const columns = balanced(rest, 0);
-  if (columns === null) return [{ kind: "unknown", head }];
-  const tail = rest.slice(columns.length + 2);
-  const wherePos = tail.search(/\bWHERE\b/iu);
-  const predicate = wherePos === -1 ? null : tail.slice(wherePos + 5).trim();
-  const list = columnList(columns);
-
-  const out: Classified[] = [];
-  const evaluation = expressionEvaluationProbe(table, list, pending);
-  if (evaluation !== null) {
-    out.push({
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: `${name}（式の評価）`,
-        requirement: "全行で index 式を評価できる",
-        probe: evaluation,
-      },
-    });
-  }
-  if (unique) {
-    // `NULLS NOT DISTINCT` は NULL どうしも衝突させる。既定（DISTINCT）の
-    // 「NULL 行を母集合から外す」を続けると、その形の重複を数えられない。
-    const nullsNotDistinct = /\bNULLS NOT DISTINCT\b/iu.test(tail);
-    out.push({
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: name,
-        requirement: `${list.join(", ")} が一意${nullsNotDistinct ? "（NULL も衝突）" : ""}`,
-        probe: uniquenessProbe(
-          table,
-          list,
-          predicate,
-          nullsNotDistinct,
-          pending,
-        ),
-      },
-    });
-  }
-  return out.length > 0 ? out : [{ kind: "safe", adds: null }];
-}
-
-/** 式を含む index 要素があれば、その式を全行で評価するだけの SQL を返す。 */
-function expressionEvaluationProbe(
-  table: string,
-  elements: readonly string[],
-  pending: PendingColumns,
-): string | null {
-  const expressions = elements.filter((element) => element.includes("("));
-  if (expressions.length === 0) return null;
-  const counted = expressions
-    .map((expression) => `COUNT(${expression})`)
-    .join(", ");
-  return (
-    `SELECT 0::int AS n FROM ` +
-    `(SELECT ${counted} FROM ${fromClause(table, pending)}) AS __eval`
-  );
-}
-
-/** `ALTER TABLE "t"` の 1 アクション。 */
-function classifyAlterAction(
-  table: string,
-  rawAction: string,
-  head: string,
-  pending: PendingColumns,
-): readonly Classified[] {
-  const action = rawAction.trim();
-  const where = `${head} …[${action.slice(0, 60)}]`;
-
-  const addColumn = new RegExp(
-    `^ADD COLUMN (?:IF NOT EXISTS )?${IDENT} (.*)$`,
-    "iu",
-  ).exec(action);
-  const addedName = addColumn?.[1];
-  const definition = addColumn?.[2];
-  if (addedName !== undefined && definition !== undefined) {
-    return classifyAddColumn(table, addedName, definition, where, pending);
-  }
-
-  const alterColumn = new RegExp(`^ALTER COLUMN ${IDENT} (.*)$`, "iu").exec(
-    action,
-  );
-  const alteredName = alterColumn?.[1];
-  const alterRest = alterColumn?.[2];
-  if (alteredName !== undefined && alterRest !== undefined) {
-    return [classifyAlterColumn(table, alteredName, alterRest, where, pending)];
-  }
-
-  const addConstraint = new RegExp(
-    `^ADD (?:CONSTRAINT ${IDENT} )?(CHECK|UNIQUE|PRIMARY KEY|FOREIGN KEY|EXCLUDE)\\b(.*)$`,
-    "iu",
-  ).exec(action);
-  const constraintName = addConstraint?.[1];
-  const constraintKind = addConstraint?.[2];
-  const constraintRest = addConstraint?.[3];
-  if (constraintKind !== undefined && constraintRest !== undefined) {
-    const fallbackName = `${table}_${constraintKind.replace(/\s+/gu, "_").toLowerCase()}`;
-    return [
-      classifyConstraint(
-        table,
-        constraintName ?? fallbackName,
-        `${constraintKind}${constraintRest}`,
-        where,
-        pending,
-      ),
-    ];
-  }
-
-  if (SAFE_ALTER_ACTION.test(action)) return [{ kind: "safe", adds: null }];
-  return [{ kind: "unknown", head: where }];
-}
-
-/**
- * `ADD COLUMN`。
- *
- * 列内制約（`UNIQUE` / `REFERENCES` / `CHECK` / `PRIMARY KEY` / `GENERATED … AS`）は
- * **既存行に当たって落ちる**（既定値が全行に入るので `UNIQUE` は必ず衝突する）。
- * ここでは解かず `unknown` にする — 別の `ADD CONSTRAINT` に分ければ検査できる。
- */
-function classifyAddColumn(
-  table: string,
-  column: string,
-  definition: string,
-  head: string,
-  pending: PendingColumns,
-): readonly Classified[] {
-  if (
-    /\b(UNIQUE|REFERENCES|CHECK|PRIMARY KEY|GENERATED)\b/iu.test(definition)
-  ) {
-    return [
-      {
-        kind: "unknown",
-        head: `${head} — 列内制約つきの ADD COLUMN は ADD CONSTRAINT に分ける`,
-      },
-    ];
-  }
-
-  const added = parseAddedColumn(table, column, definition);
-  if (added === null) return [{ kind: "unknown", head }];
-  if (/\bNOT NULL\b/iu.test(definition) && added.defaultSql === null) {
-    return [
-      {
-        kind: "data-dependent",
-        adds: added,
-        detail: {
-          table,
-          label: `${table}.${column}`,
-          requirement:
-            "既定値なしの NOT NULL 列を足すので、行が 0 件であること",
-          probe: `SELECT COUNT(*)::int AS n FROM ${fromClause(table, pending)}`,
-        },
-      },
-    ];
-  }
-  return [{ kind: "safe", adds: added }];
-}
-
-/**
- * 既存行を検査しない `ALTER TABLE` のアクション。
- *
- * **`VALIDATE CONSTRAINT` は入れない。** `NOT VALID` で足した制約を全行走査して
- * 検証する文で、まさにこの道具が対象にすべきもの。
- */
-const SAFE_ALTER_ACTION =
-  /^(DROP COLUMN\b|DROP CONSTRAINT\b|RENAME\b|OWNER TO\b|SET SCHEMA\b|SET TABLESPACE\b|SET \(|RESET \(|SET WITHOUT\b|ENABLE\b|DISABLE\b|CLUSTER ON\b|SET WITH\b|ALTER CONSTRAINT\b|REPLICA IDENTITY\b|INHERIT\b|NO INHERIT\b|ATTACH PARTITION\b|DETACH PARTITION\b)/iu;
-
-function classifyConstraint(
-  table: string,
-  name: string,
-  body: string,
-  head: string,
-  pending: PendingColumns,
-): Classified {
-  if (/^CHECK\b/iu.test(body)) {
-    const expression = balanced(body, body.indexOf("("));
-    if (expression === null) return { kind: "unknown", head };
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: name,
-        requirement: expression.trim(),
-        // CHECK は式が UNKNOWN のとき通る。違反は FALSE のときだけ。
-        probe: `SELECT COUNT(*)::int AS n FROM ${fromClause(table, pending)} WHERE (${expression}) IS FALSE`,
-      },
-    };
-  }
-
-  if (/^(UNIQUE|PRIMARY KEY)\b/iu.test(body)) {
-    const columns = balanced(body, body.indexOf("("));
-    if (columns === null) return { kind: "unknown", head };
-    const isPrimaryKey = /^PRIMARY KEY\b/iu.test(body);
-    const list = columnList(columns);
-    if (!isPrimaryKey) {
-      // `UNIQUE NULLS NOT DISTINCT` は NULL どうしも衝突させる。既定の
-      // 「NULL 行を母集合から外す」を続けると、その形の重複を数えられない。
-      const nullsNotDistinct = /\bNULLS NOT DISTINCT\b/iu.test(body);
-      return {
-        kind: "data-dependent",
-        adds: null,
-        detail: {
-          table,
-          label: name,
-          requirement: `${list.join(", ")} が一意${nullsNotDistinct ? "（NULL も衝突）" : ""}`,
-          probe: uniquenessProbe(table, list, null, nullsNotDistinct, pending),
-        },
-      };
-    }
-    // PRIMARY KEY は一意性に加えて NOT NULL も要る。NULL を除外せずに数え、
-    // NULL の行数を足す。
-    const nulls = list
-      .map(
-        (column) =>
-          `(SELECT COUNT(*) FROM ${fromClause(table, pending)} WHERE (${column}) IS NULL)`,
-      )
-      .join(" + ");
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: name,
-        requirement: `${list.join(", ")} が一意かつ NOT NULL`,
-        probe:
-          `SELECT ((${nulls}) + ` +
-          `(${duplicateCountScalar(table, list, null, true, pending)}))::int AS n`,
-      },
-    };
-  }
-
-  if (/^FOREIGN KEY\b/iu.test(body)) {
-    const localColumns = balanced(body, body.indexOf("("));
-    const referencesAt = body.search(/\bREFERENCES\b/iu);
-    if (localColumns === null || referencesAt === -1) {
-      return { kind: "unknown", head };
-    }
-    const rest = body.slice(referencesAt + "REFERENCES".length).trim();
-    const parent = new RegExp(`^${IDENT}`, "u").exec(rest)?.[1];
-    const parenAt = rest.indexOf("(");
-    const parentColumns = parenAt === -1 ? null : balanced(rest, parenAt);
-    if (parent === undefined || parentColumns === null) {
-      return { kind: "unknown", head };
-    }
-    const child = columnList(localColumns);
-    const parentList = columnList(parentColumns);
-    // 列名は DDL の綴りをそのまま使う（既に `"col"` と引用されている）。
-    // ここで `quote()` を重ねると `"""col"""` になって実行時に落ちる。
-    const join = child
-      .map((column, position) => {
-        const target = parentList[position];
-        return target === undefined
-          ? null
-          : `__parent.${target} = __child.${column}`;
-      })
-      .filter((clause): clause is string => clause !== null)
-      .join(" AND ");
-    const notNull = child
-      .map((column) => `__child.${column} IS NOT NULL`)
-      .join(" AND ");
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: name,
-        requirement: `${child.join(", ")} の参照先が ${parent} に実在する`,
-        probe:
-          `SELECT COUNT(*)::int AS n FROM ${fromClause(table, pending, "__child")} ` +
-          `WHERE ${notNull} AND NOT EXISTS (` +
-          `SELECT 1 FROM ${fromClause(parent, pending, "__parent")} WHERE ${join})`,
-      },
-    };
-  }
-
-  if (/^EXCLUDE\b/iu.test(body)) {
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: name,
-        requirement: body.trim(),
-        // プローブ未実装。gate が PR の時点で赤くする（docblock 参照）。
-        probe: null,
-      },
-    };
-  }
-
-  return { kind: "unknown", head };
-}
-
-function classifyAlterColumn(
-  table: string,
-  column: string,
-  rest: string,
-  head: string,
-  pending: PendingColumns,
-): Classified {
-  if (/^SET NOT NULL$/iu.test(rest.trim())) {
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: `${table}.${column}`,
-        requirement: "NULL の行が無い",
-        probe: `SELECT COUNT(*)::int AS n FROM ${fromClause(table, pending)} WHERE ${quote(column)} IS NULL`,
-      },
-    };
-  }
-
-  if (
-    /^(DROP NOT NULL|SET DEFAULT\b|DROP DEFAULT|SET STATISTICS\b|SET STORAGE\b)/iu.test(
-      rest.trim(),
-    )
-  ) {
-    return { kind: "safe", adds: null };
-  }
-
-  const retype = /^(?:SET DATA )?TYPE\s+(.+)$/iu.exec(rest.trim());
-  const target = retype?.[1];
-  if (target !== undefined) {
-    const varchar = /^(?:CHARACTER VARYING|VARCHAR)\s*\((\d+)\)/iu.exec(
-      target.trim(),
-    );
-    const limit = varchar?.[1];
-    if (limit !== undefined) {
-      return {
-        kind: "data-dependent",
-        adds: null,
-        detail: {
-          table,
-          label: `${table}.${column}`,
-          requirement: `${limit} 文字以下`,
-          probe:
-            `SELECT COUNT(*)::int AS n FROM ${fromClause(table, pending)} ` +
-            `WHERE LENGTH(${quote(column)}::text) > ${limit}`,
-        },
-      };
-    }
-    return {
-      kind: "data-dependent",
-      adds: null,
-      detail: {
-        table,
-        label: `${table}.${column}`,
-        requirement: `${target.trim()} へ変換できる`,
-        probe: null,
-      },
-    };
-  }
-
-  return { kind: "unknown", head };
-}
-
-/**
- * 既存行を検査しない文。
- *
- * ここに足すのは「既存の行がどうであっても成功する」文だけ。迷ったら足さずに
- * `unknown` のままにする（赤くなって気づける方が安い）。
- */
-const SAFE_STATEMENT =
-  /^(BEGIN\b|COMMIT\b|ROLLBACK\b|SET\b|SELECT\b|COMMENT\b|GRANT\b|REVOKE\b|ANALYZE\b|VACUUM\b|CREATE (SCHEMA|TYPE|EXTENSION|SEQUENCE|OR REPLACE FUNCTION|FUNCTION|OR REPLACE TRIGGER|TRIGGER|CONSTRAINT TRIGGER|OR REPLACE VIEW|VIEW)\b|ALTER (TYPE|SEQUENCE|SCHEMA|EXTENSION|FUNCTION|INDEX)\b|DROP\b)/iu;
 
 // ---------------------------------------------------------------------------
 // migration の読み取り
@@ -893,111 +261,90 @@ export function readMigrations(dir: string = MIGRATIONS_DIR): Migration[] {
     });
 }
 
-export interface Precondition {
+export interface PendingStatement {
   readonly migration: string;
-  readonly detail: DataDependentStatement;
+  readonly sql: string;
 }
 
-export interface PlanResult {
-  readonly preconditions: readonly Precondition[];
-  readonly unknown: readonly {
-    readonly migration: string;
-    readonly head: string;
-  }[];
-  /** この migration が作るはずのテーブルが既に DB にある（履歴と実体の食い違い）。 */
-  readonly conflicts: readonly {
-    readonly migration: string;
-    readonly table: string;
-  }[];
-}
-
-/**
- * 未適用 migration から検査対象を組み立てる。
- *
- * **その migration 群が作るテーブルは除く。** 既存行が存在しえないので調べる
- * ものが無い（baseline が丸ごとここに入る）。
- *
- * ただしその判断は **DB に実在しないこと**が前提。`existingTables` を渡すと、
- * 「この migration が CREATE するはずのテーブルが既にある」状態
- * （履歴と実スキーマの食い違い。baseline を migrate 済み DB へ当てると起きる）を
- * `conflicts` として報告し、免除も取り消す。渡さない場合は免除がそのまま効くので、
- * **実行時は必ず渡す**（渡さないのはテストから純粋関数として呼ぶときだけ）。
- */
-export function planPreconditions(
+/** 未適用 migration の、実行すべき文を順に並べる。 */
+export function pendingStatements(
   migrations: readonly Migration[],
   applied: ReadonlySet<string>,
-  existingTables: ReadonlySet<string> | null = null,
-): PlanResult {
-  const preconditions: Precondition[] = [];
-  const unknown: { migration: string; head: string }[] = [];
-  const conflicts: { migration: string; table: string }[] = [];
-  const created = new Set<string>();
-  const pending = new Map<string, AddedColumn[]>();
+): {
+  readonly steps: readonly PendingStatement[];
+  readonly blocked: readonly {
+    readonly migration: string;
+    readonly sql: string;
+    readonly reason: string;
+  }[];
+} {
+  const steps: PendingStatement[] = [];
+  const blocked: { migration: string; sql: string; reason: string }[] = [];
 
   for (const migration of migrations) {
     if (applied.has(migration.name)) continue;
-    for (const statement of splitStatements(migration.sql)) {
-      for (const classified of classifyStatement(statement, pending)) {
-        if (classified.kind === "creates-table") {
-          if (existingTables?.has(classified.table) === true) {
-            conflicts.push({
-              migration: migration.name,
-              table: classified.table,
-            });
-          } else {
-            created.add(classified.table);
-          }
-          continue;
-        }
-        if (classified.kind === "unknown") {
-          unknown.push({ migration: migration.name, head: classified.head });
-          continue;
-        }
-        if (classified.adds !== null) {
-          const bucket = pending.get(classified.adds.table) ?? [];
-          bucket.push(classified.adds);
-          pending.set(classified.adds.table, bucket);
-        }
-        if (classified.kind === "safe") continue;
-        if (created.has(classified.detail.table)) continue;
-        preconditions.push({
-          migration: migration.name,
-          detail: classified.detail,
-        });
+    for (const sql of splitStatements(migration.sql)) {
+      const step = planStep(sql);
+      if (step.kind === "skip") continue;
+      if (step.kind === "blocked") {
+        blocked.push({ migration: migration.name, sql, reason: step.reason });
+        continue;
       }
+      steps.push({ migration: migration.name, sql });
     }
   }
 
-  return { preconditions, unknown, conflicts };
+  return { steps, blocked };
 }
 
 // ---------------------------------------------------------------------------
-// 実行
+// DB とのやり取り
 // ---------------------------------------------------------------------------
 
-function parseUrl(argv: readonly string[]): string | null {
-  const at = argv.indexOf("--url");
-  if (at !== -1) return argv[at + 1] ?? null;
-  return process.env["DATABASE_URL"] ?? null;
+/** 巻き戻し確認用の指紋。適用が漏れれば必ずどれかが動く。 */
+interface Fingerprint {
+  readonly tables: number;
+  readonly constraints: number;
+  readonly indexes: number;
+  readonly history: number;
 }
 
-/** `--migrations <dir>`。検査そのものを実 DB で試すテストから使う。 */
-function parseMigrationsDir(argv: readonly string[]): string {
-  const at = argv.indexOf("--migrations");
-  return at === -1 ? MIGRATIONS_DIR : (argv[at + 1] ?? MIGRATIONS_DIR);
-}
-
-type CountRow = { readonly n: number };
-
-/** public スキーマに実在するテーブル。 */
-async function readExistingTables(prisma: PrismaClient): Promise<Set<string>> {
-  const rows = await prisma.$queryRawUnsafe<{ table_name: string }[]>(
-    `SELECT c.relname AS table_name
-       FROM pg_class c
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = 'public' AND c.relkind = 'r'`,
+async function readFingerprint(prisma: PrismaClient): Promise<Fingerprint> {
+  const [counts] = await prisma.$queryRawUnsafe<
+    { tables: bigint; constraints: bigint; indexes: bigint }[]
+  >(
+    `SELECT
+       (SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind = 'r') AS tables,
+       (SELECT COUNT(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+         WHERE n.nspname = 'public') AS constraints,
+       (SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind = 'i') AS indexes`,
   );
-  return new Set(rows.map((row) => row.table_name));
+  let history = 0;
+  try {
+    const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+      `SELECT COUNT(*) AS n FROM _prisma_migrations`,
+    );
+    history = Number(row?.n ?? 0);
+  } catch {
+    history = -1;
+  }
+  return {
+    tables: Number(counts?.tables ?? 0),
+    constraints: Number(counts?.constraints ?? 0),
+    indexes: Number(counts?.indexes ?? 0),
+    history,
+  };
+}
+
+function sameFingerprint(before: Fingerprint, after: Fingerprint): boolean {
+  return (
+    before.tables === after.tables &&
+    before.constraints === after.constraints &&
+    before.indexes === after.indexes &&
+    before.history === after.history
+  );
 }
 
 type History =
@@ -1009,14 +356,11 @@ type History =
  *
  * `_prisma_migrations` が無いことを「空の DB」と読んでよいのは、**ユーザー
  * テーブルが 1 つも無いとき**だけ。テーブルはあるのに履歴が無い DB を空扱いすると、
- * baseline の `CREATE TABLE` を「これから作る＝既存行なし」と見なして
- * 検査対象が丸ごと消え、何も確かめずに exit 0 する。
- *
- * 読み取りが別の理由（権限・接続）で失敗した場合も同じで、通してはいけない。
+ * baseline を丸ごと未適用として流すことになり、実態と噛み合わない。
  */
 async function readMigrationHistory(
   prisma: PrismaClient,
-  existingTables: ReadonlySet<string>,
+  tables: number,
 ): Promise<History> {
   try {
     const rows = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
@@ -1028,19 +372,12 @@ async function readMigrationHistory(
       applied: new Set(rows.map((row) => row.migration_name)),
     };
   } catch (error) {
-    if (existingTables.has("_prisma_migrations")) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        ok: false,
-        reason: `_prisma_migrations を読めない（${message.split("\n")[0] ?? ""}）— 適用済み migration が分からないので検査できない`,
-      };
-    }
-    if (existingTables.size > 0) {
+    if (tables > 0) {
       return {
         ok: false,
         reason:
-          `migration 履歴が無いのにテーブルが ${existingTables.size} 個ある。` +
-          "履歴と実スキーマが食い違っており、何が未適用なのか決められない",
+          `migration 履歴を読めないのにテーブルが ${tables} 個ある` +
+          `（${describeError(error)}）。何が未適用なのか決められない`,
       };
     }
     console.info(
@@ -1050,36 +387,132 @@ async function readMigrationHistory(
   }
 }
 
-type CountResult =
-  | { readonly ok: true; readonly rows: number }
-  | { readonly ok: false; readonly reason: string };
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
+}
 
-/** プローブを実行して違反行数を得る。数として読めなければ失敗を返す。 */
-async function countViolations(
-  prisma: PrismaClient,
-  probe: string,
-): Promise<CountResult> {
-  try {
-    const rows = await prisma.$queryRawUnsafe<CountRow[]>(probe);
-    if (rows.length !== 1) {
-      return { ok: false, reason: `${rows.length} 行返った（1 行のはず）` };
-    }
-    const value = Number(rows[0]?.n);
-    if (!Number.isFinite(value)) {
-      return { ok: false, reason: "件数が数として読めない" };
-    }
-    return { ok: true, rows: value };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: message.split("\n")[0] ?? "不明なエラー" };
+/**
+ * エラーから、**PostgreSQL が言ったこと**を取り出す。
+ *
+ * Prisma は本当のメッセージを ``Invalid `prisma.$executeRawUnsafe()`
+ * invocation:`` という前口上で包む。素朴に先頭行を取ると、デプロイを止められた
+ * 運用者に出るのがその前口上だけになり、原因が分からない
+ * ——`current transaction is aborted` しか出ないのを直すための道具なのに、
+ * 同じことをやってしまう。実値は `meta.driverAdapterError.cause` にある。
+ */
+export function describeError(error: unknown): string {
+  const cause = asRecord(
+    asRecord(asRecord(asRecord(error)?.["meta"])?.["driverAdapterError"])?.[
+      "cause"
+    ],
+  );
+  const driverMessage = cause?.["message"];
+  if (typeof driverMessage === "string" && driverMessage.length > 0) {
+    const code = cause?.["code"];
+    return typeof code === "string" && code.length > 0
+      ? `${code}: ${driverMessage}`
+      : driverMessage;
   }
+
+  // Error 以外が投げられたら、中身を推測せず型だけ言う（`[object Object]` を
+  // 運用者に見せない）。
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : `${typeof error} が投げられた`;
+  const lines = message
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  // 前口上は先頭に来るので、最後の行のほうが原因に近い。
+  return lines.at(-1) ?? "（エラーメッセージなし）";
+}
+
+export interface RehearsalFailure {
+  readonly migration: string;
+  readonly sql: string;
+  readonly error: string;
+}
+
+/** リハーサル本体。必ず巻き戻す。 */
+async function rehearse(
+  prisma: PrismaClient,
+  steps: readonly PendingStatement[],
+): Promise<RehearsalFailure | null> {
+  if (steps.length === 0) return null;
+
+  // `erasableSyntaxOnly` のため parameter property は使えない。
+  class Done extends Error {
+    readonly failure: RehearsalFailure | null;
+    constructor(failure: RehearsalFailure | null) {
+      super("rehearsal finished");
+      this.failure = failure;
+    }
+  }
+
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRawUnsafe(
+          `SET LOCAL lock_timeout = '${LOCK_TIMEOUT}'`,
+        );
+        for (const step of steps) {
+          try {
+            await tx.$executeRawUnsafe(step.sql);
+          } catch (error) {
+            throw new Done({
+              migration: step.migration,
+              sql: step.sql,
+              error: describeError(error),
+            });
+          }
+        }
+        // 成功しても**必ず**投げる。commit させない。
+        throw new Done(null);
+      },
+      { timeout: REHEARSAL_TIMEOUT_MS, maxWait: 30_000 },
+    );
+  } catch (error) {
+    if (error instanceof Done) return error.failure;
+    throw error;
+  }
+  // ここには来ない（必ず投げる）。来たら commit された可能性がある。
+  throw new Error(
+    "リハーサルが巻き戻されずに終了した。適用されている可能性がある",
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 実行
+// ---------------------------------------------------------------------------
+
+/** `prisma.config.ts` と同じ解決順。migrate と別の DB を見ないため。 */
+export function resolveUrl(
+  argv: readonly string[],
+  env: Record<string, string | undefined>,
+): string | null {
+  const at = argv.indexOf("--url");
+  if (at !== -1) return argv[at + 1] ?? null;
+  const direct = env["DIRECT_URL"]?.trim();
+  if (direct !== undefined && direct.length > 0) return direct;
+  const database = env["DATABASE_URL"]?.trim();
+  return database !== undefined && database.length > 0 ? database : null;
+}
+
+function parseMigrationsDir(argv: readonly string[]): string {
+  const at = argv.indexOf("--migrations");
+  return at === -1 ? MIGRATIONS_DIR : (argv[at + 1] ?? MIGRATIONS_DIR);
 }
 
 export async function run(argv: readonly string[]): Promise<number> {
-  const url = parseUrl(argv);
-  if (url === null || url.length === 0) {
+  const url = resolveUrl(argv, process.env);
+  if (url === null) {
     console.error(
-      "[migration-preconditions] DATABASE_URL か --url <url> が要る",
+      "[migration-preconditions] DIRECT_URL / DATABASE_URL / --url <url> のいずれかが要る",
     );
     return 2;
   }
@@ -1089,78 +522,68 @@ export async function run(argv: readonly string[]): Promise<number> {
   });
 
   try {
-    const existingTables = await readExistingTables(prisma);
-    const history = await readMigrationHistory(prisma, existingTables);
+    const before = await readFingerprint(prisma);
+    const history = await readMigrationHistory(prisma, before.tables);
     if (!history.ok) {
       console.error(`[migration-preconditions] ${history.reason}`);
       return 1;
     }
 
-    const { preconditions, unknown, conflicts } = planPreconditions(
+    const { steps, blocked } = pendingStatements(
       readMigrations(parseMigrationsDir(argv)),
       history.applied,
-      existingTables,
     );
 
-    const violations: string[] = [];
-    const unevaluated: string[] = [
-      ...unknown.map(
-        (entry) => `${entry.migration}: 分類できない文 — ${entry.head}`,
-      ),
-      ...conflicts.map(
-        (entry) =>
-          `${entry.migration}: CREATE TABLE ${entry.table} だがそのテーブルは既にある。` +
-          `migration 履歴と実スキーマが食い違っている（baseline を migrate 済み DB へ当てた等）`,
-      ),
-    ];
-
-    for (const { migration, detail } of preconditions) {
-      if (detail.probe === null) {
-        unevaluated.push(
-          `${migration} / ${detail.label}: プローブ未実装 — ${detail.requirement}`,
+    // **何も実行する前に**止める。1 文でも巻き戻せないものがあれば、
+    // 途中まで流してから気づくのでは遅い。
+    if (blocked.length > 0) {
+      for (const entry of blocked) {
+        console.error(
+          `[migration-preconditions] リハーサル不可 ${entry.migration}: ${entry.reason}\n  ${entry.sql.slice(0, 160)}`,
         );
-        continue;
       }
-      const count = await countViolations(prisma, detail.probe);
-      if (count.ok) {
-        if (count.rows > 0) {
-          violations.push(
-            `${migration} / ${detail.label}: ${count.rows} 行が違反 — ${detail.requirement}`,
-          );
-        } else {
-          console.info(`[migration-preconditions] OK  ${detail.label}`);
-        }
-        continue;
-      }
-      // **評価できなかったものを通さない。** ここを握り潰すと、この道具は
-      // 「確認した」という記録だけになる。列を足してから制約を付ける migration は
-      // `relationSource` が既定値を合成して評価できるようにしてあるので、
-      // ここに来るのは想定外の形だけ。
-      unevaluated.push(
-        `${migration} / ${detail.label}: プローブを実行できない（${count.reason}）— ${detail.requirement}`,
-      );
-    }
-
-    for (const line of unevaluated) {
-      console.error(`[migration-preconditions] 未評価 ${line}`);
-    }
-    for (const line of violations) {
-      console.error(`[migration-preconditions] 違反 ${line}`);
-    }
-
-    if (violations.length > 0 || unevaluated.length > 0) {
       console.error(
-        "[migration-preconditions] このまま適用すると migration が落ちるか、" +
-          "落ちないことを確かめられない。データの是正は正規のドメインコマンド経由で行う" +
+        "[migration-preconditions] この migration は流して確かめられない。適用前の確認は手作業になる",
+      );
+      return 1;
+    }
+
+    if (steps.length === 0) {
+      console.info("[migration-preconditions] 未適用の migration は無い");
+      return 0;
+    }
+
+    console.info(
+      `[migration-preconditions] ${steps.length} 文をリハーサルする（適用はしない）`,
+    );
+    const failure = await rehearse(prisma, steps);
+
+    const after = await readFingerprint(prisma);
+    if (!sameFingerprint(before, after)) {
+      console.error(
+        "[migration-preconditions] 巻き戻しが効いていない。" +
+          `テーブル ${before.tables}→${after.tables} / 制約 ${before.constraints}→${after.constraints} / ` +
+          `index ${before.indexes}→${after.indexes} / 履歴 ${before.history}→${after.history}。` +
+          "DB の状態を確認すること",
+      );
+      return 1;
+    }
+
+    if (failure !== null) {
+      console.error(
+        `[migration-preconditions] ${failure.migration} が落ちる:\n` +
+          `  ${failure.sql.slice(0, 400)}\n` +
+          `  → ${failure.error}`,
+      );
+      console.error(
+        "[migration-preconditions] データの是正は正規のドメインコマンド経由で行う" +
           "（migration 内で直さない）",
       );
       return 1;
     }
 
     console.info(
-      preconditions.length === 0
-        ? "[migration-preconditions] 既存行を検査する未適用 DDL は無い"
-        : `[migration-preconditions] ${preconditions.length} 件すべて違反なし`,
+      "[migration-preconditions] 全文が通った（変更は巻き戻し済み）",
     );
     return 0;
   } finally {
