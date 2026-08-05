@@ -18,9 +18,9 @@ import type { LocationFormData } from "@/shared/lib/validations/location";
 
 function businessHoursToJson(
   value: BusinessHours | null | undefined,
-): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+): Prisma.InputJsonValue | typeof Prisma.DbNull {
   if (value === null || value === undefined) {
-    return Prisma.JsonNull;
+    return Prisma.DbNull;
   }
 
   const days = [
@@ -82,7 +82,7 @@ function toLocationData(data: LocationFormData) {
             data.specialHolidays,
             "specialHolidays が不正です",
           )
-        : Prisma.JsonNull,
+        : Prisma.DbNull,
     latitude: data.latitude ?? null,
     longitude: data.longitude ?? null,
     googleBusinessPlaceId: data.googleBusinessPlaceId || null,

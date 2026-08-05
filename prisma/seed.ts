@@ -636,7 +636,7 @@ async function seedLocations(overridePublished?: boolean) {
       googleReviewUrl: null,
       priceRange: "¥1,000〜¥5,000/時間",
       paymentAccepted: "現金, クレジットカード, 電子マネー",
-      specialHolidays: Prisma.JsonNull,
+      specialHolidays: Prisma.DbNull,
     },
     {
       name: "別館",
@@ -666,7 +666,7 @@ async function seedLocations(overridePublished?: boolean) {
       googleReviewUrl: null,
       priceRange: "¥800〜¥3,000/時間",
       paymentAccepted: "現金, クレジットカード",
-      specialHolidays: Prisma.JsonNull,
+      specialHolidays: Prisma.DbNull,
     },
     {
       name: "新宿支店",
@@ -703,7 +703,7 @@ async function seedLocations(overridePublished?: boolean) {
       googleReviewUrl: null,
       priceRange: "¥1,500〜¥8,000/時間",
       paymentAccepted: "現金, クレジットカード, 電子マネー, QRコード決済",
-      specialHolidays: Prisma.JsonNull,
+      specialHolidays: Prisma.DbNull,
     },
   ];
 

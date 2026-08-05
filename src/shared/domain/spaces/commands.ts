@@ -427,7 +427,7 @@ export async function duplicateSpaceCommand(
       ),
       businessHours:
         source.businessHours === null
-          ? Prisma.JsonNull
+          ? Prisma.DbNull
           : asPrismaInputJsonValue(
               source.businessHours,
               "businessHours が不正です",

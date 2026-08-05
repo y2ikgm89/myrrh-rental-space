@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (128) =====
+-- ===== CHECK 制約 (151) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -37,7 +37,9 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK (
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_entry_hash_hex_check" CHECK ((entry_hash ~ '^[0-9a-f]{64}$'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_algorithm_check" CHECK (((hash_algorithm)::text = 'HMAC-SHA256'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_key_id_check" CHECK (((hash_key_id)::text ~ '^[A-Za-z0-9_-]{1,32}$'::text));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_metadata_object_check" CHECK (((metadata IS NULL) OR (jsonb_typeof(metadata) = 'object'::text)));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_previous_hash_hex_check" CHECK ((previous_hash ~ '^[0-9a-f]{64}$'::text));
+ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_node_json_object_check" CHECK ((jsonb_typeof(node_json) = 'object'::text));
 ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_date_order_check" CHECK ((start_date <= end_date));
 ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_scope_target_check" CHECK (((((scope)::text = 'SPACE'::text) AND (space_id IS NOT NULL) AND (location_id IS NULL)) OR (((scope)::text = 'LOCATION'::text) AND (location_id IS NOT NULL) AND (space_id IS NULL)) OR (((scope)::text = 'GLOBAL'::text) AND (space_id IS NULL) AND (location_id IS NULL))));
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_amount_bounds_check" CHECK ((((max_discount_amount IS NULL) OR (max_discount_amount > 0)) AND ((min_reservation_amount IS NULL) OR (min_reservation_amount >= 0))));
@@ -58,6 +60,7 @@ ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_unit_size_positive" CH
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_capacity_positive" CHECK ((capacity >= 1));
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_time_order" CHECK ((start_at < end_at));
 ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::event_format) OR (meeting_provider = 'GOOGLE_MEET'::meeting_provider) OR (meeting_url IS NOT NULL)));
+ALTER TABLE "events" ADD CONSTRAINT "events_description_json_object_check" CHECK ((jsonb_typeof(description_json) = 'object'::text));
 ALTER TABLE "events" ADD CONSTRAINT "events_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
 ALTER TABLE "events" ADD CONSTRAINT "events_slot_span_order_check" CHECK (((first_slot_start_at IS NULL) OR (last_slot_end_at IS NULL) OR (first_slot_start_at <= last_slot_end_at)));
 ALTER TABLE "faq_categories" ADD CONSTRAINT "faq_categories_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
@@ -70,21 +73,28 @@ ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploader_s
 ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_side_check" CHECK ((((author_type = 'STAFF'::inquiry_reply_author_type) AND (author_id IS NOT NULL) AND (author_customer_id IS NULL)) OR ((author_type = 'CUSTOMER'::inquiry_reply_author_type) AND (author_customer_id IS NOT NULL) AND (author_id IS NULL))));
 ALTER TABLE "instagram_posts" ADD CONSTRAINT "instagram_posts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_access_lines_array_check" CHECK (((access_lines IS NULL) OR (jsonb_typeof(access_lines) = 'array'::text)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_amenities_object_check" CHECK ((jsonb_typeof(amenities) = 'object'::text));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_business_hours_object_check" CHECK (((business_hours IS NULL) OR (jsonb_typeof(business_hours) = 'object'::text)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_image_urls_array_check" CHECK (((image_urls IS NULL) OR (jsonb_typeof(image_urls) = 'array'::text)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_latitude_range_check" CHECK (((latitude >= ('-90'::integer)::double precision) AND (latitude <= (90)::double precision)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_longitude_range_check" CHECK (((longitude >= ('-180'::integer)::double precision) AND (longitude <= (180)::double precision)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "locations" ADD CONSTRAINT "locations_special_holidays_array_check" CHECK (((special_holidays IS NULL) OR (jsonb_typeof(special_holidays) = 'array'::text)));
 ALTER TABLE "media" ADD CONSTRAINT "media_height_non_negative_check" CHECK ((height >= 0));
 ALTER TABLE "media" ADD CONSTRAINT "media_size_non_negative_check" CHECK ((size >= 0));
 ALTER TABLE "media" ADD CONSTRAINT "media_tags_array_check" CHECK (((tags IS NULL) OR (jsonb_typeof(tags) = 'array'::text)));
 ALTER TABLE "media" ADD CONSTRAINT "media_width_non_negative_check" CHECK ((width >= 0));
+ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_label_array_check" CHECK ((jsonb_typeof(label) = 'array'::text));
 ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "news" ADD CONSTRAINT "news_content_json_object_check" CHECK (((content_json IS NULL) OR (jsonb_typeof(content_json) = 'object'::text)));
 ALTER TABLE "news" ADD CONSTRAINT "news_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
 ALTER TABLE "post_categories" ADD CONSTRAINT "post_categories_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
+ALTER TABLE "posts" ADD CONSTRAINT "posts_content_json_object_check" CHECK (((content_json IS NULL) OR (jsonb_typeof(content_json) = 'object'::text)));
 ALTER TABLE "posts" ADD CONSTRAINT "posts_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
 ALTER TABLE "posts" ADD CONSTRAINT "posts_view_count_non_negative_check" CHECK ((view_count >= 0));
 ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_next_no_positive_check" CHECK ((next_no > 0));
 ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_year_range_check" CHECK (((year >= 2000) AND (year <= 9999)));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_issuer_snapshot_object_check" CHECK ((jsonb_typeof(issuer_snapshot) = 'object'::text));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK (((amount >= 0) AND (tax_amount >= 0)));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_revision_non_negative_check" CHECK ((revision >= 0));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_target_exclusive_check" CHECK ((NOT ((reservation_id IS NOT NULL) AND (event_registration_id IS NOT NULL))));
@@ -92,25 +102,34 @@ ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_rate_range_check" CHECK (((t
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_amount_positive_check" CHECK ((amount >= 1));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_status_check" CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('requires_action'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('canceled'::character varying)::text])));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_target_check" CHECK ((((reservation_id IS NOT NULL) AND (event_registration_id IS NULL)) OR ((reservation_id IS NULL) AND (event_registration_id IS NOT NULL))));
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_agreement_snapshot_array_check" CHECK ((jsonb_typeof(agreement_snapshot) = 'array'::text));
 ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_duration_positive_check" CHECK ((duration > 0));
 ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_instance_count_positive_check" CHECK ((instance_count > 0));
+ALTER TABLE "reservation_series" ADD CONSTRAINT "reservation_series_template_data_object_check" CHECK ((jsonb_typeof(template_data) = 'object'::text));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_ics_sequence_non_negative_check" CHECK ((ics_sequence >= 0));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_money_non_negative_check" CHECK (((base_price >= 0) AND (total_price >= 0) AND (tax_amount >= 0) AND (total_price_with_tax >= 0) AND ((coupon_discount_amount IS NULL) OR (coupon_discount_amount >= 0)) AND ((duration_discount_amount IS NULL) OR (duration_discount_amount >= 0)) AND ((space_discount_amount IS NULL) OR (space_discount_amount >= 0))));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_number_of_guests_positive_check" CHECK (((number_of_guests IS NULL) OR (number_of_guests >= 1)));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_rate_breakdown_object_check" CHECK ((jsonb_typeof(rate_breakdown_json) = 'object'::text));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_recurrence_instance_index_non_negative_check" CHECK ((recurrence_instance_index >= 0));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_total_derivation_check" CHECK ((total_price_with_tax = (total_price + tax_amount)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_order_check" CHECK ((start_time < end_time));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_version_non_negative_check" CHECK ((version >= 0));
+ALTER TABLE "sections" ADD CONSTRAINT "sections_config_object_check" CHECK ((jsonb_typeof(config) = 'object'::text));
 ALTER TABLE "sections" ADD CONSTRAINT "sections_order_position_check" CHECK ((("order" >= '-1'::integer) OR ("order" <= '-1000000'::integer)));
 ALTER TABLE "settings_analytics" ADD CONSTRAINT "settings_analytics_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_announcement_carousel" ADD CONSTRAINT "settings_announcement_carousel_duration_positive_check" CHECK ((duration > 0));
 ALTER TABLE "settings_announcement_carousel" ADD CONSTRAINT "settings_announcement_carousel_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_duration_discount_rules_array_check" CHECK ((jsonb_typeof(duration_discount_rules) = 'array'::text));
+ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_refund_policy_object_check" CHECK (((refund_policy IS NULL) OR (jsonb_typeof(refund_policy) = 'object'::text)));
 ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_tax_reduced_rate_range_check" CHECK (((tax_reduced_rate >= 0) AND (tax_reduced_rate <= 100)));
 ALTER TABLE "settings_commerce" ADD CONSTRAINT "settings_commerce_tax_standard_rate_range_check" CHECK (((tax_standard_rate >= 0) AND (tax_standard_rate <= 100)));
+ALTER TABLE "settings_data_retention" ADD CONSTRAINT "settings_data_retention_object_check" CHECK ((jsonb_typeof(data_retention) = 'object'::text));
 ALTER TABLE "settings_data_retention" ADD CONSTRAINT "settings_data_retention_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_features" ADD CONSTRAINT "settings_features_modules_object_check" CHECK ((jsonb_typeof(feature_modules) = 'object'::text));
 ALTER TABLE "settings_features" ADD CONSTRAINT "settings_features_singleton_check" CHECK ((id = 'singleton'::text));
+ALTER TABLE "settings_google_business_profile" ADD CONSTRAINT "settings_gbp_auth_object_check" CHECK (((google_business_profile_auth IS NULL) OR (jsonb_typeof(google_business_profile_auth) = 'object'::text)));
 ALTER TABLE "settings_google_business_profile" ADD CONSTRAINT "settings_google_business_profile_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_reminder_minutes_non_negative_check" CHECK ((google_calendar_reminder_minutes >= 0));
 ALTER TABLE "settings_google_calendar" ADD CONSTRAINT "settings_google_calendar_singleton_check" CHECK ((id = 'singleton'::text));
@@ -122,6 +141,7 @@ ALTER TABLE "settings_layout" ADD CONSTRAINT "settings_layout_singleton_check" C
 ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_email_addresses_text_array_check" CHECK (((array_position(notification_email_addresses, NULL::text) IS NULL) AND (array_position(notification_email_addresses, ''::text) IS NULL)));
 ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_notification" ADD CONSTRAINT "settings_notification_staff_ids_text_array_check" CHECK (((array_position(notification_staff_ids, NULL::text) IS NULL) AND (array_position(notification_staff_ids, ''::text) IS NULL)));
+ALTER TABLE "settings_organization" ADD CONSTRAINT "settings_organization_business_hours_object_check" CHECK (((business_hours IS NULL) OR (jsonb_typeof(business_hours) = 'object'::text)));
 ALTER TABLE "settings_organization" ADD CONSTRAINT "settings_organization_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_resend" ADD CONSTRAINT "settings_resend_singleton_check" CHECK ((id = 'singleton'::text));
 ALTER TABLE "settings_reservation" ADD CONSTRAINT "settings_reservation_cancellation_deadline_hours_positive_check" CHECK ((cancellation_deadline_hours > 0));
@@ -151,11 +171,14 @@ ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_hourly_price_non
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_start_time_format_check" CHECK (((start_time IS NULL) OR ((start_time)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)));
 ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_rating_range_check" CHECK (((rating >= 1) AND (rating <= 5)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_area_positive_check" CHECK (((area IS NULL) OR (area > 0)));
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_business_hours_object_check" CHECK (((business_hours IS NULL) OR (jsonb_typeof(business_hours) = 'object'::text)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_capacity_positive_check" CHECK ((capacity >= 1));
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_description_json_object_check" CHECK ((jsonb_typeof(description_json) = 'object'::text));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_discount_value_range_check" CHECK (((discount_value IS NULL) OR ((discount_value >= 0) AND ((discount_type <> 'PERCENTAGE'::discount_type) OR (discount_value <= 100)))));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_facilities_array_check" CHECK (((facilities IS NULL) OR (jsonb_typeof(facilities) = 'array'::text)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_hourly_price_non_negative_check" CHECK ((hourly_price >= 0));
+ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_content_json_object_check" CHECK ((jsonb_typeof(content_json) = 'object'::text));
 ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 

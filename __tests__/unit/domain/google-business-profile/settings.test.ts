@@ -54,9 +54,12 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
-// `Prisma.JsonNull` runtime sentinel
+// `Prisma.DbNull` / `Prisma.JsonNull` runtime sentinel。
+// **両方を用意する。** `DbNull` を書き忘れると `Prisma.DbNull` が `undefined` になり、
+// Prisma では「そのフィールドを書かない」意味になるので、**クリアが no-op になった
+// のを緑のまま見逃す**。実クライアントには両方あることを確認済み。
 mock.module("@generated/prisma/client", () => ({
-  Prisma: { JsonNull: { __jsonNull: true } },
+  Prisma: { JsonNull: { __jsonNull: true }, DbNull: { __dbNull: true } },
 }));
 
 const { getGbpAuthState, saveGbpAuthState, clearGbpAuthState } =
@@ -192,15 +195,16 @@ describe("clearGbpAuthState", () => {
     mockSettingsUpdate.mockReset();
   });
 
-  test("auth を Prisma.JsonNull にし enabled を false にする", async () => {
+  test("auth を SQL NULL にし enabled を false にする", async () => {
     await clearGbpAuthState();
 
     expect(mockSettingsUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           googleBusinessProfileEnabled: false,
-          // mock した Prisma.JsonNull sentinel が渡される
-          googleBusinessProfileAuth: { __jsonNull: true },
+          // 「未設定」は SQL NULL 一本に寄せた（JSON null と 2 通りあると
+          // 読み手が両方を扱う必要が出る）。mock した DbNull sentinel が渡る。
+          googleBusinessProfileAuth: { __dbNull: true },
         }),
       }),
     );
