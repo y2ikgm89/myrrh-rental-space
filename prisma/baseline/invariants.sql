@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (124) =====
+-- ===== CHECK 制約 (123) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -80,7 +80,6 @@ ALTER TABLE "post_categories" ADD CONSTRAINT "post_categories_order_position_che
 ALTER TABLE "posts" ADD CONSTRAINT "posts_content_width_custom_positive_check" CHECK ((content_width_custom > 0));
 ALTER TABLE "posts" ADD CONSTRAINT "posts_view_count_non_negative_check" CHECK ((view_count >= 0));
 ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_next_no_positive_check" CHECK ((next_no > 0));
-ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_singleton_check" CHECK (((id)::text = 'singleton'::text));
 ALTER TABLE "receipt_sequences" ADD CONSTRAINT "receipt_sequences_year_range_check" CHECK (((year >= 2000) AND (year <= 9999)));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK (((amount >= 0) AND (tax_amount >= 0)));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_revision_non_negative_check" CHECK ((revision >= 0));

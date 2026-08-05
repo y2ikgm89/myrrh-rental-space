@@ -2766,9 +2766,16 @@ model Receipt {
  * Postgres sequence 代替: 「YYYY-XXXXXX」形式を年ごとに管理し、
  * 年替わりで nextNo をリセットする運用に対応する。
  */
+/// 領収書番号（`YYYY-NNNNNN`）の年ごとの連番。
+///
+/// **主キーは年そのもの。** 単一行 + `year` 列にすると「年が変わったら
+/// カウンタを 1 に戻す」分岐が要り、その分岐は**過去の年の到達点を破壊する**。
+/// 時計が戻る・年を跨いだ再実行といった場面で、既に発行済みの番号を
+/// もう一度採ってしまう（`serial_no` は @unique なので領収書の発行が落ちる）。
+///
+/// 年ごとに行を持てば、採番は「その年の行を +1 する」だけになり、分岐が消える。
 model ReceiptSequence {
-  id        String   @id @default("singleton") @db.VarChar(20)
-  year      Int // 4 桁年
+  year      Int      @id // 4 桁年
   nextNo    Int      @default(1) @map("next_no") // 次に発行する連番 (1-indexed)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

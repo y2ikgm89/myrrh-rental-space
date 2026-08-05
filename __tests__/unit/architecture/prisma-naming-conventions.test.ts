@@ -203,10 +203,6 @@ const TABLE_NAME_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
     "InquiryStatusHistory",
     "history は履歴の集合そのものを指す集合名詞。inquiry_status_histories は「履歴の複数」という別の意味になる",
   ],
-  [
-    "ReceiptSequence",
-    "現状は id='singleton' の 1 行だが、year 列で年ごとの採番系列を持つ設計。単数形へ寄せると年キー化したときに戻すことになる",
-  ],
   ["ReservationSeries", "series は単複同形。serieses は英語として存在しない"],
   ["News", "news は不可算。newses は英語として存在しない"],
 ]);

@@ -35,34 +35,30 @@ function getJstYear(): number {
 
 /**
  * ReceiptSequence の atomic increment で次の serialNo を採番する。
- * ReceiptSequence 単一行の advisory lock で year 跨ぎ race を防ぐ。
+ *
+ * **年ごとに 1 行**（主キーが年）なので、年が変わったら新しい行が生えるだけで
+ * 済む。単一行 + `year` 列だった頃は「年が変わったらカウンタを 1 に戻す」分岐が
+ * 必要で、その分岐は**過去の年の到達点を破壊する** — 時計が戻る・年を跨いだ
+ * 再実行で発行済みの番号を再び採り、`receipts.serial_no` の UNIQUE に弾かれて
+ * 領収書が出せなくなる。行を分けたことでその分岐自体が無くなった。
+ *
+ * advisory lock は残す。Prisma の `upsert` は条件次第で SELECT→INSERT に分解され
+ * （prisma#20229）、並行呼び出しで同じ番号を返しうるため、直列化はここが担う。
  */
 export async function claimNextSerialNo(tx: ReceiptTx): Promise<string> {
   await acquireReceiptAdvisoryLock(tx, "receipt-sequence");
 
   const currentYear = getJstYear();
 
-  const existing = await tx.receiptSequence.findUnique({
-    where: { id: "singleton" },
+  // upsert は**更新後**の行を返す。`nextNo` は「次に発行する番号」なので、
+  // 今回採るのはその 1 つ手前。新規作成時は 2 が返り、採るのは 1。
+  const sequence = await tx.receiptSequence.upsert({
+    where: { year: currentYear },
+    create: { year: currentYear, nextNo: 2 },
+    update: { nextNo: { increment: 1 } },
+    select: { nextNo: true },
   });
 
-  let nextNo: number;
-  if (!existing || existing.year !== currentYear) {
-    nextNo = 1;
-    await tx.receiptSequence.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", year: currentYear, nextNo: 2 },
-      update: { year: currentYear, nextNo: 2 },
-    });
-  } else {
-    nextNo = existing.nextNo;
-    await tx.receiptSequence.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", year: currentYear, nextNo: nextNo + 1 },
-      update: { year: currentYear, nextNo: nextNo + 1 },
-    });
-  }
-
-  const padded = nextNo.toString().padStart(6, "0");
+  const padded = (sequence.nextNo - 1).toString().padStart(6, "0");
   return `${currentYear}-${padded}`;
 }
