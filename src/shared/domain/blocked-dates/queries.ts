@@ -2,13 +2,13 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { formatJstDateOnly } from "@/shared/lib/date-format";
-import {
-  BLOCKED_DATE_SCOPE,
-  getValidBlockedDateScope,
-  getValidBlockedDateType,
-} from "@/shared/lib/validations/enums/helpers";
+import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import type { Prisma } from "@generated/prisma/client";
+import type {
+  BlockedDateScope,
+  BlockedDateType,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 const BLOCKED_DATE_SELECT = {
   id: true,
@@ -26,26 +26,26 @@ const BLOCKED_DATE_SELECT = {
 
 function formatBlockedDate(row: {
   id: string;
-  scope: string;
+  scope: BlockedDateScope;
   spaceId: string | null;
   locationId: string | null;
   startDate: Date;
   endDate: Date;
   reason: string | null;
-  type: string;
+  type: BlockedDateType;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }): BlockedDateData {
   return {
     id: row.id,
-    scope: getValidBlockedDateScope(row.scope),
+    scope: row.scope,
     spaceId: row.spaceId,
     locationId: row.locationId,
     startDate: formatJstDateOnly(row.startDate),
     endDate: formatJstDateOnly(row.endDate),
     reason: row.reason,
-    type: getValidBlockedDateType(row.type),
+    type: row.type,
     createdBy: row.createdBy,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

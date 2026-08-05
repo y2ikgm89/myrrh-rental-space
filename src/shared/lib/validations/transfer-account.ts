@@ -1,11 +1,17 @@
 import { z } from "zod";
 import { TRANSFER_ACCOUNT_TYPE } from "@/shared/lib/validations/enums/helpers";
 
+/**
+ * **`as [string, ...string[]]` を戻さない。** そのキャストはリテラル型を捨てるので
+ * `z.infer` が `string` に潰れ、DB が enum になっても呼び出し側で型検査が働かない。
+ * `z.enum(const)` に直接渡せば値もメッセージも保ったまま narrow できる
+ * （`blocked-date.ts` と同じ書き方）。
+ */
 export const TRANSFER_ACCOUNT_TYPE_VALUES = Object.values(
   TRANSFER_ACCOUNT_TYPE,
-) as [string, ...string[]];
+);
 
-const transferAccountTypeSchema = z.enum(TRANSFER_ACCOUNT_TYPE_VALUES, {
+const transferAccountTypeSchema = z.enum(TRANSFER_ACCOUNT_TYPE, {
   error: "口座種別が不正です",
 });
 

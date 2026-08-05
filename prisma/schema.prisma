@@ -210,6 +210,60 @@ enum ConnectionStatus {
   @@map("connection_status")
 }
 
+/// 臨時休業の適用範囲。**宣言順が cascade の優先順位そのもの**。
+///
+/// `availability.ts` は `orderBy: { scope: "asc" }` で最優先の理由を採る。
+/// PostgreSQL の enum は**宣言順**でソートされるので、この並びを変えると
+/// 全社休業日よりスペース単位の休業が優先される — 顧客には「休業にしたのに
+/// 別の理由が出る」形で現れる。順序は
+/// `__tests__/integration/domain/blocked-dates/cascade-priority.test.ts` が
+/// 実 DB に行を入れて検査する。
+enum BlockedDateScope {
+  GLOBAL
+  LOCATION
+  SPACE
+
+  @@map("blocked_date_scope")
+}
+
+/// 臨時休業の理由区分。
+///
+/// 以前は VARCHAR で **DB 側に制約が 1 つも無かった**（TS の型ガードだけ）。
+/// 生 SQL・seed・将来の直接書込が通れば任意の値が入る状態だった。
+enum BlockedDateType {
+  HOLIDAY
+  MAINTENANCE
+  EMERGENCY
+  OTHER
+
+  @@map("blocked_date_type")
+}
+
+/// 返金を発生させた主体。会計証跡（append-only な refunds）の一部。
+///
+/// 以前は VARCHAR + 手書き CHECK（`refunds_refunded_by_type_check`）で値域を
+/// 強制していた。型 1 つに寄せて CHECK を落とす。
+enum RefundedByType {
+  ADMIN
+  AUTO_ON_CANCEL
+  AUTO_CAPACITY_RACE
+  AUTO_AMOUNT_MISMATCH
+  STRIPE_DASHBOARD
+
+  @@map("refunded_by_type")
+}
+
+/// 振込先の口座種別。顧客が振込先として見る値。
+///
+/// 以前は VARCHAR で **DB 側に制約が 1 つも無かった**。
+enum TransferAccountType {
+  ORDINARY
+  CURRENT
+  SAVINGS
+
+  @@map("transfer_account_type")
+}
+
 enum AnalyticsType {
   GA4
   GTM
@@ -683,23 +737,23 @@ model SpaceRatePlan {
 /// （`prisma migrate reset` は baseline migration を再生するため制約は復元される）。
 /// アプリ層は Zod superRefine（blocked-date バリデーション）で同一不変条件を二重に保証する。
 model BlockedDate {
-  id         String   @id @default(uuid(7)) @db.Uuid
+  id         String           @id @default(uuid(7)) @db.Uuid
   /// "SPACE" | "LOCATION" | "GLOBAL"（isValidBlockedDateScope で検証）
-  scope      String   @db.VarChar(16)
+  scope      BlockedDateScope
   /// scope=SPACE のみ非 null
-  spaceId    String?  @map("space_id") @db.Uuid
+  spaceId    String?          @map("space_id") @db.Uuid
   /// scope=LOCATION のみ非 null
-  locationId String?  @map("location_id") @db.Uuid
+  locationId String?          @map("location_id") @db.Uuid
   /// JST カレンダー日付を UTC 深夜で保持。単日休業は startDate=endDate。
-  startDate  DateTime @map("start_date") @db.Date
-  endDate    DateTime @map("end_date") @db.Date
+  startDate  DateTime         @map("start_date") @db.Date
+  endDate    DateTime         @map("end_date") @db.Date
   /// "年末年始" / "設備点検" / "台風 19 号による臨時休業" 等の plain text ラベル
-  reason     String?  @db.VarChar(200)
+  reason     String?          @db.VarChar(200)
   /// "HOLIDAY" | "MAINTENANCE" | "EMERGENCY" | "OTHER"（isValidBlockedDateType で検証）
-  type       String   @db.VarChar(32)
-  createdBy  String   @map("created_by") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  type       BlockedDateType
+  createdBy  String           @map("created_by") @db.Uuid
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   space    Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -2608,27 +2662,27 @@ model EventRegistration {
 ///   status 列のみ 20260730115734_refunds_status_column_and_transition_exception が
 ///   例外を追加済み (他の全カラムは引き続き不変、DELETE は無条件拒否のまま)。
 model Refund {
-  id                  String   @id @default(uuid(7)) @db.Uuid
+  id                  String         @id @default(uuid(7)) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
-  reservationId       String?  @map("reservation_id") @db.Uuid
+  reservationId       String?        @map("reservation_id") @db.Uuid
   /// 対象 EventRegistration (polymorphic、reservationId と排他)
-  eventRegistrationId String?  @map("event_registration_id") @db.Uuid
+  eventRegistrationId String?        @map("event_registration_id") @db.Uuid
   /// この refund event の金額 (円、正整数)
   amount              Int
   /// 管理者入力の理由 (顧客通知メール文面にも掲載予定)
-  reason              String?  @db.Text
+  reason              String?        @db.Text
   /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
-  stripeRefundId      String   @unique @map("stripe_refund_id")
+  stripeRefundId      String         @unique @map("stripe_refund_id")
   /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
-  refundedByType      String   @map("refunded_by_type") @db.VarChar(20)
+  refundedByType      RefundedByType @map("refunded_by_type")
   /// Stripe Refund.status: "pending" | "requires_action" | "succeeded" | "failed" | "canceled"。
   /// konbini / customer_balance 等の非同期決済手段は作成直後 "pending" を返し、後日 Stripe が
   /// 確定させる。"succeeded" 以外は refund.updated webhook が確定させるまでの暫定値であり、
   /// paymentStatus は "succeeded" 確定までは変更しない (silent false-positive な返金完了通知を防ぐ)。
   /// このカラムのみ append-only trigger の例外で更新可能
   /// (20260730115734_refunds_status_column_and_transition_exception、他カラムは従来通り不変)。
-  status              String   @default("succeeded") @db.VarChar(20)
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  status              String         @default("succeeded") @db.VarChar(20)
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   /// RESTRICT は子を触らないが、onUpdate も明示的に NoAction にする。既定の Cascade は
   /// 親の主キー更新時に refunds へ UPDATE を発行し、append-only trigger に弾かれるため。
@@ -2865,19 +2919,19 @@ model StripeEvent {
 
 /// 銀行振込先マスタ（複数口座）。payment feature OFF かつ未払い時に顧客へ表示。
 model TransferAccount {
-  id                String   @id @default(uuid(7)) @db.Uuid
-  label             String   @db.VarChar(50)
-  bankName          String   @map("bank_name") @db.VarChar(50)
-  branchName        String   @map("branch_name") @db.VarChar(50)
+  id                String              @id @default(uuid(7)) @db.Uuid
+  label             String              @db.VarChar(50)
+  bankName          String              @map("bank_name") @db.VarChar(50)
+  branchName        String              @map("branch_name") @db.VarChar(50)
   /// TRANSFER_ACCOUNT_TYPE SSoT（DB VARCHAR 管理）
-  accountType       String   @map("account_type") @db.VarChar(20)
-  accountNumber     String   @map("account_number") @db.VarChar(20)
-  accountHolderName String   @map("account_holder_name") @db.VarChar(100)
-  note              String?  @db.VarChar(200)
-  sortOrder         Int      @default(0) @map("sort_order")
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  accountType       TransferAccountType @map("account_type")
+  accountNumber     String              @map("account_number") @db.VarChar(20)
+  accountHolderName String              @map("account_holder_name") @db.VarChar(100)
+  note              String?             @db.VarChar(200)
+  sortOrder         Int                 @default(0) @map("sort_order")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([isActive, sortOrder])
   @@map("transfer_accounts")

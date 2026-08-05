@@ -4,6 +4,7 @@ import {
   AuditAction,
   PaymentStatus,
   RegistrationStatus,
+  RefundedByType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -378,7 +379,7 @@ const AUTOMATED_FULL_REFUND_TYPES: readonly string[] = [
 export async function finalizeSettledEventRegistrationRefund(
   registrationId: string,
   stripeRefundId: string,
-  refundedByType: string,
+  refundedByType: RefundedByType,
 ): Promise<boolean> {
   const claimResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(

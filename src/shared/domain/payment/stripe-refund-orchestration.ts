@@ -6,6 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import type { AsyncOnlyStripe } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import type { RefundedByType } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -274,7 +275,7 @@ export type RefundEntityLookup = {
   status: string;
   reservationId: string | null;
   eventRegistrationId: string | null;
-  refundedByType: string;
+  refundedByType: RefundedByType;
 };
 
 /**

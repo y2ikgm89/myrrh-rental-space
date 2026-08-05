@@ -124,7 +124,7 @@ export async function deleteBlockedDateCommand(
 
   await prisma.$transaction(async (tx) => {
     await acquireBlockedDateWriteLocks(tx, {
-      scope: existing.scope as BlockedDateFormData["scope"],
+      scope: existing.scope,
       spaceId: existing.spaceId,
       locationId: existing.locationId,
     });

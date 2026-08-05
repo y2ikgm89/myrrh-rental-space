@@ -147,7 +147,7 @@ async function detectDuplicate(
         refundedByType: "ADMIN",
         status: "succeeded",
         stripeRefundId: `re_dup_${crypto.randomUUID()}`,
-      };
+      } as const;
       await tx.refund.create({ data });
       try {
         await tx.refund.create({ data });

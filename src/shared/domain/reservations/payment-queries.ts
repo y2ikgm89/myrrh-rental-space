@@ -4,6 +4,7 @@ import {
   AuditAction,
   PaymentStatus,
   ReservationStatus,
+  RefundedByType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -460,7 +461,7 @@ export async function finalizeSettledReservationRefund(
   reservationId: string,
   stripeRefundId: string,
   thisRefundAmount: number,
-  refundedByType: string,
+  refundedByType: RefundedByType,
 ): Promise<boolean> {
   const claimResult = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(tx, "reservation", reservationId);

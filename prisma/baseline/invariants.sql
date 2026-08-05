@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (70) =====
+-- ===== CHECK 制約 (69) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_chain_version_check" CHECK ((chain_version = 1));
@@ -59,7 +59,6 @@ ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK 
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_target_exclusive_check" CHECK ((NOT ((reservation_id IS NOT NULL) AND (event_registration_id IS NOT NULL))));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_amount_positive_check" CHECK ((amount >= 1));
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_refunded_by_type_check" CHECK (((refunded_by_type)::text = ANY (ARRAY[('ADMIN'::character varying)::text, ('AUTO_ON_CANCEL'::character varying)::text, ('AUTO_CAPACITY_RACE'::character varying)::text, ('AUTO_AMOUNT_MISMATCH'::character varying)::text, ('STRIPE_DASHBOARD'::character varying)::text])));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_status_check" CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('requires_action'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('canceled'::character varying)::text])));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_target_check" CHECK ((((reservation_id IS NOT NULL) AND (event_registration_id IS NULL)) OR ((reservation_id IS NULL) AND (event_registration_id IS NOT NULL))));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_money_non_negative_check" CHECK (((base_price >= 0) AND (total_price >= 0) AND (tax_amount >= 0) AND (total_price_with_tax >= 0) AND ((coupon_discount_amount IS NULL) OR (coupon_discount_amount >= 0)) AND ((duration_discount_amount IS NULL) OR (duration_discount_amount >= 0)) AND ((space_discount_amount IS NULL) OR (space_discount_amount >= 0))));

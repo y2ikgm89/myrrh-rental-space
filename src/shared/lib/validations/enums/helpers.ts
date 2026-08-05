@@ -64,6 +64,11 @@ import {
   isValidNewsStatusFilter,
   type NewsStatusFilter,
 } from "./guards";
+import {
+  BlockedDateScope,
+  BlockedDateType,
+  TransferAccountType,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Status Constants (for Prisma where clauses)
@@ -944,14 +949,12 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
 // BlockedDate Scope / Type（DB VARCHAR 管理 — Prisma enum ではない）
 // =============================================================================
 
-export const BLOCKED_DATE_SCOPE = {
-  SPACE: "SPACE",
-  LOCATION: "LOCATION",
-  GLOBAL: "GLOBAL",
-} as const;
-
-export type BlockedDateScope =
-  (typeof BLOCKED_DATE_SCOPE)[keyof typeof BLOCKED_DATE_SCOPE];
+/**
+ * **値域の SSoT は DB の `blocked_date_scope` 型**。ここはその別名。
+ * 手で並べ直すと DB と食い違うので、生成 enum をそのまま使う。
+ */
+export const BLOCKED_DATE_SCOPE = BlockedDateScope;
+export type { BlockedDateScope };
 
 const VALID_BLOCKED_DATE_SCOPES = new Set<string>(
   Object.values(BLOCKED_DATE_SCOPE),
@@ -963,28 +966,15 @@ export function isValidBlockedDateScope(
   return typeof value === "string" && VALID_BLOCKED_DATE_SCOPES.has(value);
 }
 
-export function getValidBlockedDateScope(
-  value: unknown,
-  defaultScope: BlockedDateScope = BLOCKED_DATE_SCOPE.GLOBAL,
-): BlockedDateScope {
-  return isValidBlockedDateScope(value) ? value : defaultScope;
-}
-
 export const BLOCKED_DATE_SCOPE_LABELS: Record<BlockedDateScope, string> = {
   [BLOCKED_DATE_SCOPE.SPACE]: "スペース",
   [BLOCKED_DATE_SCOPE.LOCATION]: "拠点",
   [BLOCKED_DATE_SCOPE.GLOBAL]: "全体",
 };
 
-export const BLOCKED_DATE_TYPE = {
-  HOLIDAY: "HOLIDAY",
-  MAINTENANCE: "MAINTENANCE",
-  EMERGENCY: "EMERGENCY",
-  OTHER: "OTHER",
-} as const;
-
-export type BlockedDateType =
-  (typeof BLOCKED_DATE_TYPE)[keyof typeof BLOCKED_DATE_TYPE];
+/** 値域の SSoT は DB の `blocked_date_type` 型。 */
+export const BLOCKED_DATE_TYPE = BlockedDateType;
+export type { BlockedDateType };
 
 const VALID_BLOCKED_DATE_TYPES = new Set<string>(
   Object.values(BLOCKED_DATE_TYPE),
@@ -994,13 +984,6 @@ export function isValidBlockedDateType(
   value: unknown,
 ): value is BlockedDateType {
   return typeof value === "string" && VALID_BLOCKED_DATE_TYPES.has(value);
-}
-
-export function getValidBlockedDateType(
-  value: unknown,
-  defaultType: BlockedDateType = BLOCKED_DATE_TYPE.OTHER,
-): BlockedDateType {
-  return isValidBlockedDateType(value) ? value : defaultType;
 }
 
 export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
@@ -1014,14 +997,9 @@ export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
 // TransferAccount Type（DB VARCHAR 管理 — Prisma enum ではない）
 // =============================================================================
 
-export const TRANSFER_ACCOUNT_TYPE = {
-  ORDINARY: "ORDINARY",
-  CURRENT: "CURRENT",
-  SAVINGS: "SAVINGS",
-} as const;
-
-export type TransferAccountType =
-  (typeof TRANSFER_ACCOUNT_TYPE)[keyof typeof TRANSFER_ACCOUNT_TYPE];
+/** 値域の SSoT は DB の `transfer_account_type` 型。 */
+export const TRANSFER_ACCOUNT_TYPE = TransferAccountType;
+export type { TransferAccountType };
 
 const VALID_TRANSFER_ACCOUNT_TYPES = new Set<string>(
   Object.values(TRANSFER_ACCOUNT_TYPE),
@@ -1031,13 +1009,6 @@ export function isValidTransferAccountType(
   value: unknown,
 ): value is TransferAccountType {
   return typeof value === "string" && VALID_TRANSFER_ACCOUNT_TYPES.has(value);
-}
-
-export function getValidTransferAccountType(
-  value: unknown,
-  defaultType: TransferAccountType = TRANSFER_ACCOUNT_TYPE.ORDINARY,
-): TransferAccountType {
-  return isValidTransferAccountType(value) ? value : defaultType;
 }
 
 export const TRANSFER_ACCOUNT_TYPE_LABELS: Record<TransferAccountType, string> =

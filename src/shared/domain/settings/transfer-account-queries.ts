@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import { shouldShowTransferAccounts } from "@/shared/lib/settings/transfer-account-gate";
 import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { TransferAccountType } from "@/shared/lib/validations/enums/helpers";
-import { getValidTransferAccountType } from "@/shared/lib/validations/enums/helpers";
 import type { Prisma } from "@generated/prisma/client";
 
 export type TransferAccountRecord = {
@@ -42,7 +41,7 @@ function mapTransferAccount(row: {
   label: string;
   bankName: string;
   branchName: string;
-  accountType: string;
+  accountType: TransferAccountType;
   accountNumber: string;
   accountHolderName: string;
   note: string | null;
@@ -51,10 +50,7 @@ function mapTransferAccount(row: {
   createdAt: Date;
   updatedAt: Date;
 }): TransferAccountRecord {
-  return {
-    ...row,
-    accountType: getValidTransferAccountType(row.accountType),
-  };
+  return { ...row };
 }
 
 export async function listActiveTransferAccounts(): Promise<

@@ -74,6 +74,18 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "Cloudflare Turnstile の検証応答（`VerifyTurnstileResult`）。値域は Cloudflare が決めるので AuditAction とは無関係",
   ],
   [
+    "src/shared/domain/instagram/types.ts::accountType",
+    "Instagram Graph API のアカウント種別（`InstagramConfig`）。TransferAccount.accountType（口座種別）とは無関係",
+  ],
+  [
+    "src/shared/lib/instagram/index.ts::accountType",
+    "同上（`InstagramUserInfo`）。Instagram が返す値",
+  ],
+  [
+    "src/shared/domain/instagram/commands.ts::accountType",
+    "同上。API のテスト結果 metadata から取り出した値",
+  ],
+  [
     "src/shared/lib/smart-lock/switchbot-client.ts::deviceType",
     "SwitchBot API のデバイス一覧応答（`SwitchBotDeviceListItem`）。SwitchBot が返す任意のデバイス種別で、こちらの SmartLockDeviceType は取り扱う分だけを列挙した狭い集合",
   ],
