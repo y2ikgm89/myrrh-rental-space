@@ -135,6 +135,23 @@ export function buildReservationListWhere(
   return where;
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function reservationOrderBy(
+  sortBy: "startTime" | "createdAt",
+  direction: "asc" | "desc",
+): Prisma.ReservationOrderByWithRelationInput {
+  switch (sortBy) {
+    case "startTime":
+      return { startTime: direction };
+    case "createdAt":
+      return { createdAt: direction };
+  }
+}
+
 export async function getReservationsQuery(
   filters: ReservationListFilters = {},
   pagination: {
@@ -210,9 +227,7 @@ export async function getReservationsQuery(
           },
         },
       },
-      orderBy: {
-        [effectiveSortBy]: effectiveSortOrder,
-      },
+      orderBy: reservationOrderBy(effectiveSortBy, effectiveSortOrder),
       skip,
       take,
     }),

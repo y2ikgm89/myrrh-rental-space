@@ -24,17 +24,36 @@ import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 type CustomerWhereInput = Prisma.CustomerWhereInput;
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+/** lastReservationAt / totalSpent は nullable のため nulls: "last" で安定化 */
+function customerSortKey(
+  sortBy: CustomerSortBy,
+  sortOrder: "asc" | "desc",
+): Prisma.CustomerOrderByWithRelationInput {
+  switch (sortBy) {
+    case "lastReservationAt":
+      return { lastReservationAt: { sort: sortOrder, nulls: "last" } };
+    case "totalSpent":
+      return { totalSpent: { sort: sortOrder, nulls: "last" } };
+    case "createdAt":
+      return { createdAt: sortOrder };
+    case "lastName":
+      return { lastName: sortOrder };
+    case "totalReservations":
+      return { totalReservations: sortOrder };
+  }
+}
+
 function buildCustomerOrderBy(
   sortBy: CustomerSortBy,
   sortOrder: "asc" | "desc",
 ): Prisma.CustomerOrderByWithRelationInput[] {
-  // lastReservationAt / totalSpent は nullable のため nulls: "last" で安定化
-  const primary: Prisma.CustomerOrderByWithRelationInput =
-    sortBy === "lastReservationAt" || sortBy === "totalSpent"
-      ? { [sortBy]: { sort: sortOrder, nulls: "last" } }
-      : { [sortBy]: sortOrder };
   // tie-breaker: 同値の場合は更新日時降順で安定化
-  return [primary, { updatedAt: "desc" }];
+  return [customerSortKey(sortBy, sortOrder), { updatedAt: "desc" }];
 }
 
 function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {

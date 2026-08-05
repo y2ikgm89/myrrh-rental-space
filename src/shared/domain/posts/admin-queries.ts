@@ -55,6 +55,25 @@ export type DeletedPostListItem = {
 /**
  * Recycle Bin: ソフトデリート済み投稿一覧（ゴミ箱テーブル用）。
  */
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function postOrderBy(
+  sortBy: NonNullable<PostPagination["sortBy"]>,
+  direction: "asc" | "desc",
+): Prisma.PostOrderByWithRelationInput {
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: direction };
+    case "publishedAt":
+      return { publishedAt: direction };
+    case "title":
+      return { title: direction };
+  }
+}
+
 export async function getDeletedPosts(): Promise<DeletedPostListItem[]> {
   const posts = await prisma.post.findMany({
     where: { deletedAt: { not: null } },
@@ -130,9 +149,7 @@ export async function getPosts(
           },
         },
       },
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+      orderBy: postOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),

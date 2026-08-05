@@ -48,6 +48,23 @@ function formatReviewRow(r: ReviewListRow) {
   };
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function spaceReviewOrderBy(
+  sortBy: "createdAt" | "rating",
+  direction: "asc" | "desc",
+): Prisma.SpaceReviewOrderByWithRelationInput {
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: direction };
+    case "rating":
+      return { rating: direction };
+  }
+}
+
 export async function getReviewsQuery(
   filters: {
     search?: string;
@@ -107,7 +124,7 @@ export async function getReviewsQuery(
     prisma.spaceReview.findMany({
       where,
       select: reviewListSelect,
-      orderBy: { [sortBy]: sortOrder },
+      orderBy: spaceReviewOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),

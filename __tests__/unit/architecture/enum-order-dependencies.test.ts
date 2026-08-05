@@ -8,16 +8,34 @@
  * と書いた瞬間、schema.prisma の値の並びが**アプリの挙動そのもの**になる。
  * 並べ替え・値の挿入は型検査にもテストにも引っかからないのに、順序だけが変わる。
  *
- * 既に 2 箇所ある:
+ * 現に 3 箇所ある:
  *
  * | 使っている場所 | 依存している順序 | 変わると |
  * | --- | --- | --- |
  * | `reservations/availability.ts`（休業日 cascade） | `GLOBAL` < `LOCATION` < `SPACE` | 全社休業日よりスペース単位の理由が優先され、**表示される休業理由が変わる** |
  * | `events/waitlist-queries.ts`（キャンセル待ち一覧） | `WAITLISTED` < `WAITLISTED_OFFERED` | オファー済みが待機中より下に沈み、**管理者が見落として 24 時間の期限が切れる** |
+ * | `users/queries.ts`（スタッフ一覧の権限列） | `SUPER_ADMIN` < … < `VIEWER` < `USER` | 権限順に並ばなくなり、スタッフ一覧で管理者を追えなくなる |
  *
- * 前者は実 DB テスト（`cascade-priority.test.ts`）が守っていたが、**後者は
- * 何も守っていなかった**。1 つ目を見つけたのは偶然で、2 つ目はこの gate が
- * 機械的に見つけた。
+ * 1 つ目は実 DB テスト（`cascade-priority.test.ts`）が守っていた。2 つ目は何も
+ * 守っておらず、この gate が見つけた。3 つ目は**この gate 自身の取りこぼし**で、
+ * レビューで指摘されて分かった（PR #1955）。
+ *
+ * ## 並び順のキーは AST で読む
+ *
+ * 最初は `orderBy:` を正規表現で拾っていた。それでは
+ *
+ *   - `orderBy: { [sortBy]: sortOrder }`（計算されたキー）
+ *   - `orderBy: ORDER_BY_UPDATED`（定数参照）
+ *   - `orderBy: [{ a }, { b }]` の **2 要素目以降**
+ *
+ * が全部読めない。実際に 1 つ目で `User.role` の並べ替えを丸ごと落としていた。
+ * 正規表現を広げるのではなく AST に移してある（順序・スコープ・入れ子を含む
+ * 不変条件に正規表現を使わない、というのは `require-trimmed-text` /
+ * `seed-respects-unique-constraints` と同じ判断）。
+ *
+ * **同一ファイル内なら定数も関数の戻り値も辿る。辿れなければ通さない。**
+ * 「読めなかった＝安全」にした瞬間、計算されたキーが黙って素通りする。
+ * import された値を `orderBy` に渡したい場合は、その値をこのファイルへ持ってくる。
  *
  * ## 母集合は「enum 列 × orderBy」
  *
@@ -26,8 +44,9 @@
  *
  * ## この gate が証明すること / しないこと
  *
- * **証明する**: enum 列で並べ替えている箇所がすべて宣言されており、宣言した
- * 「この値はこの値より先」が schema.prisma の宣言順と一致する。
+ * **証明する**: `orderBy` の並び順キーがすべて静的に読めており、enum 列で
+ * 並べ替えている箇所がすべて宣言されており、宣言した「この値はこの値より先」が
+ * schema.prisma の宣言順と一致する。
  *
  * **証明しない**: その順序がプロダクトとして正しいこと。`asc` / `desc` の
  * 取り違えもここでは分からない。休業日 cascade はその先まで
@@ -40,6 +59,34 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import {
+  ScriptKind,
+  ScriptTarget,
+  SyntaxKind,
+  createSourceFile,
+  forEachChild,
+  isArrayLiteralExpression,
+  isArrowFunction,
+  isAsExpression,
+  isBlock,
+  isCallExpression,
+  isComputedPropertyName,
+  isConditionalExpression,
+  isFunctionDeclaration,
+  isFunctionExpression,
+  isIdentifier,
+  isObjectLiteralExpression,
+  isParenthesizedExpression,
+  isPropertyAssignment,
+  isReturnStatement,
+  isSatisfiesExpression,
+  isShorthandPropertyAssignment,
+  isStringLiteralLike,
+  isVariableDeclaration,
+  type Expression,
+  type Node,
+  type ObjectLiteralExpression,
+} from "typescript";
 
 import { readPrismaSchema } from "../../support/prisma-sources";
 
@@ -99,8 +146,238 @@ interface OrderByUse {
   readonly field: string;
 }
 
-/** src の `orderBy: { <enum列>: ... }`（配列形式も含む）。 */
-function enumOrderByUses(): OrderByUse[] {
+/** 解決できなかった `orderBy`。件数 0 を強制する。 */
+interface UnresolvedOrderBy {
+  readonly file: string;
+  readonly line: number;
+  readonly reason: string;
+}
+
+function unwrap(expression: Expression): Expression {
+  if (
+    isAsExpression(expression) ||
+    isSatisfiesExpression(expression) ||
+    isParenthesizedExpression(expression)
+  ) {
+    return unwrap(expression.expression);
+  }
+  return expression;
+}
+
+/**
+ * `{ sort: "asc", nulls: "last" }` か（Prisma の `SortOrderInput`）。
+ *
+ * `{ space: { name: "asc" } }`（リレーション経由の並び）と形が同じなので、
+ * キーで見分ける。見分けないと `{ lastReservationAt: { sort, nulls } }` の
+ * 並ぶ列を `sort` / `nulls` と読んでしまう。
+ */
+function isSortOrderInput(node: ObjectLiteralExpression): boolean {
+  const keys = node.properties.map((property) =>
+    property.name !== undefined &&
+    (isIdentifier(property.name) || isStringLiteralLike(property.name))
+      ? property.name.text
+      : null,
+  );
+  return (
+    keys.length > 0 &&
+    keys.every((key) => key === "sort" || key === "nulls") &&
+    keys.includes("sort")
+  );
+}
+
+/** 関数本体が返す式（`return e` と簡潔記法のアロー）。 */
+function returnedExpressions(fn: Node): Expression[] {
+  const out: Expression[] = [];
+  if (
+    (isArrowFunction(fn) ||
+      isFunctionExpression(fn) ||
+      isFunctionDeclaration(fn)) &&
+    fn.body !== undefined &&
+    !isBlock(fn.body)
+  ) {
+    out.push(fn.body);
+    return out;
+  }
+  const walk = (node: Node): void => {
+    // 入れ子の関数の return は自分のものではない。
+    if (
+      isArrowFunction(node) ||
+      isFunctionExpression(node) ||
+      isFunctionDeclaration(node)
+    ) {
+      return;
+    }
+    if (isReturnStatement(node) && node.expression !== undefined) {
+      out.push(node.expression);
+    }
+    forEachChild(node, walk);
+  };
+  forEachChild(fn, walk);
+  return out;
+}
+
+/**
+ * 1 ファイルの `orderBy` を読む。
+ *
+ * **同一ファイル内なら定数も関数の戻り値も辿る。** 辿れないもの（他ファイルから
+ * import した値、計算されたキー、spread）は `unresolved` に入れて 0 件を強制する。
+ * 「読めなかった＝安全」にすると、`orderBy: { [sortBy]: … }` のような書き方が
+ * 黙って素通りする（実際にそうなっていた）。
+ */
+function readOrderBy(
+  file: string,
+  source: string,
+): { uses: OrderByUse[]; unresolved: UnresolvedOrderBy[] } {
+  const sourceFile = createSourceFile(
+    file,
+    source,
+    ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ScriptKind.TSX : ScriptKind.TS,
+  );
+
+  const values = new Map<string, Expression>();
+  const functions = new Map<string, Node>();
+  const collect = (node: Node): void => {
+    if (
+      isVariableDeclaration(node) &&
+      isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      const initializer = unwrap(node.initializer);
+      if (isArrowFunction(initializer) || isFunctionExpression(initializer)) {
+        functions.set(node.name.text, initializer);
+      } else {
+        values.set(node.name.text, node.initializer);
+      }
+    }
+    if (isFunctionDeclaration(node) && node.name) {
+      functions.set(node.name.text, node);
+    }
+    forEachChild(node, collect);
+  };
+  collect(sourceFile);
+
+  const uses: OrderByUse[] = [];
+  const unresolved: UnresolvedOrderBy[] = [];
+  const lineOf = (node: Node): number =>
+    sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line +
+    1;
+
+  const resolve = (expression: Expression, at: Node, seen: Set<Node>): void => {
+    const node = unwrap(expression);
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (isArrayLiteralExpression(node)) {
+      // 配列は「第 1 キーが同値なら第 2 キー」。**全要素**が並びを決める。
+      for (const element of node.elements) resolve(element, at, seen);
+      return;
+    }
+
+    if (isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (isShorthandPropertyAssignment(property)) {
+          // `{ order }` は列名が `order`。値（向き）は並ぶ列に関係しない。
+          uses.push({ file, field: property.name.text });
+          continue;
+        }
+        if (!isPropertyAssignment(property)) {
+          unresolved.push({
+            file,
+            line: lineOf(property),
+            reason: "spread で並び順のキーが読めない",
+          });
+          continue;
+        }
+        if (isComputedPropertyName(property.name)) {
+          unresolved.push({
+            file,
+            line: lineOf(property),
+            reason:
+              "計算されたキー（`{ [sortBy]: … }`）。どの列で並ぶかが静的に決まらない — " +
+              "取りうる列ごとにリテラルで分岐させる",
+          });
+          continue;
+        }
+        const key =
+          isIdentifier(property.name) || isStringLiteralLike(property.name)
+            ? property.name.text
+            : null;
+        if (key === null) {
+          unresolved.push({
+            file,
+            line: lineOf(property),
+            reason: "キーが読めない",
+          });
+          continue;
+        }
+        const value = unwrap(property.initializer);
+        if (isObjectLiteralExpression(value) && !isSortOrderInput(value)) {
+          // リレーション経由（`{ space: { name: "asc" } }`）。並ぶ列は内側。
+          resolve(value, at, seen);
+          continue;
+        }
+        uses.push({ file, field: key });
+      }
+      return;
+    }
+
+    if (isConditionalExpression(node)) {
+      resolve(node.whenTrue, at, seen);
+      resolve(node.whenFalse, at, seen);
+      return;
+    }
+
+    if (isIdentifier(node)) {
+      const target = values.get(node.text);
+      if (target !== undefined) {
+        resolve(target, at, seen);
+        return;
+      }
+      unresolved.push({
+        file,
+        line: lineOf(at),
+        reason: `${node.text} を同じファイル内で辿れない（import された値は読めない）`,
+      });
+      return;
+    }
+
+    if (isCallExpression(node) && isIdentifier(node.expression)) {
+      const fn = functions.get(node.expression.text);
+      if (fn !== undefined) {
+        for (const returned of returnedExpressions(fn))
+          resolve(returned, at, seen);
+        return;
+      }
+    }
+
+    unresolved.push({
+      file,
+      line: lineOf(at),
+      reason: `${SyntaxKind[node.kind]} は並び順のキーまで辿れない`,
+    });
+  };
+
+  const visit = (node: Node): void => {
+    if (isPropertyAssignment(node)) {
+      const name =
+        isIdentifier(node.name) || isStringLiteralLike(node.name)
+          ? node.name.text
+          : null;
+      if (name === "orderBy") resolve(node.initializer, node, new Set());
+    }
+    forEachChild(node, visit);
+  };
+  visit(sourceFile);
+
+  return { uses, unresolved };
+}
+
+function scanSource(): {
+  uses: OrderByUse[];
+  unresolved: UnresolvedOrderBy[];
+} {
   const files = execFileSync("git", ["ls-files", "-z", "src"], {
     cwd: ROOT,
     maxBuffer: 32 * 1024 * 1024,
@@ -110,18 +387,20 @@ function enumOrderByUses(): OrderByUse[] {
     .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"));
 
   const uses: OrderByUse[] = [];
+  const unresolved: UnresolvedOrderBy[] = [];
   for (const file of files) {
     const source = readFileSync(join(ROOT, file), "utf8");
     if (!source.includes("orderBy")) continue;
-    for (const m of source.matchAll(/orderBy:\s*(?:\[\s*)?\{\s*(\w+)\s*:/gu)) {
-      const field = m[1];
-      if (field && ENUM_FIELDS.has(field)) uses.push({ file, field });
-    }
+    const found = readOrderBy(file, source);
+    uses.push(...found.uses);
+    unresolved.push(...found.unresolved);
   }
-  return uses;
+  return { uses, unresolved };
 }
 
-const USES = enumOrderByUses();
+const SCAN = scanSource();
+const UNRESOLVED = SCAN.unresolved;
+const USES = SCAN.uses.filter((use) => ENUM_FIELDS.has(use.field));
 
 /**
  * enum 列で並べ替えている箇所と、**そこが依存している値の前後関係**。
@@ -161,6 +440,42 @@ const ORDER_DEPENDENCIES: readonly {
     after: "WAITLISTED_OFFERED",
     why: '`orderBy: [{ status: "desc" }]` でオファー済みを先頭に出す。逆転するとオファー済みが待機中より下に沈み、管理者が見落として 24 時間の期限が切れる',
   },
+  // スタッフ一覧の「権限」列で並べ替えると、`Role` の宣言順がそのまま表示順になる。
+  // 宣言順は権限の強い順（SUPER_ADMIN → … → VIEWER）で、その後ろに非管理者
+  // （USER / CUSTOMER）が来る。並べ替えても権限の階層が読めることが要件なので、
+  // アルファベット順などに並べ替え直すと列の意味が失われる。
+  {
+    file: "src/shared/domain/users/queries.ts",
+    field: "role",
+    enumName: "Role",
+    before: "SUPER_ADMIN",
+    after: "ADMIN",
+    why: "スタッフ一覧を権限順に並べる。権限の強い順が崩れると、昇順の先頭が最上位権限でなくなる",
+  },
+  {
+    file: "src/shared/domain/users/queries.ts",
+    field: "role",
+    enumName: "Role",
+    before: "ADMIN",
+    after: "EDITOR",
+    why: "同上（権限の階層 2 段目と 3 段目）",
+  },
+  {
+    file: "src/shared/domain/users/queries.ts",
+    field: "role",
+    enumName: "Role",
+    before: "EDITOR",
+    after: "VIEWER",
+    why: "同上（権限の階層 3 段目と 4 段目）",
+  },
+  {
+    file: "src/shared/domain/users/queries.ts",
+    field: "role",
+    enumName: "Role",
+    before: "VIEWER",
+    after: "USER",
+    why: "管理者ロールが先、非管理者（USER / CUSTOMER）が後ろ。混ざるとスタッフ一覧で管理者を追えなくなる",
+  },
 ];
 
 function declaredIndex(enumName: string, value: string): number {
@@ -179,6 +494,22 @@ describe("enum 列での並べ替えは宣言順に依存する", () => {
       "LOCATION",
       "SPACE",
     ]);
+    // AST が定数と配列の 2 要素目を辿れていること（正規表現版はどちらも取り落とした）。
+    const adminSearch = SCAN.uses.filter(
+      (use) => use.file === "src/shared/domain/admin-search/queries.ts",
+    );
+    expect(adminSearch.map((use) => use.field)).toContain("id");
+  });
+
+  test("並び順のキーを読み切れない orderBy が無い", () => {
+    // 読めなかったものを安全側に倒すと、`orderBy: { [sortBy]: … }` が黙って
+    // 素通りする。実際にそうなっていて、`User.role`（enum）での並べ替えを
+    // 丸ごと見落としていた（Codex 指摘、PR #1955）。
+    expect(
+      UNRESOLVED.map(
+        (entry) => `${entry.file}:${entry.line} — ${entry.reason}`,
+      ),
+    ).toEqual([]);
   });
 
   test("enum 列で並べ替えている箇所がすべて宣言されている", () => {

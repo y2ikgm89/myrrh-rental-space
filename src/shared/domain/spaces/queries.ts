@@ -103,6 +103,27 @@ function formatSpaceToPlain(s: {
   };
 }
 
+/**
+ * 並べ替えのキーは**リテラルで持つ**。`{ [sortBy]: … }` と書くと、どの列で
+ * 並ぶのかが静的に読めなくなり、enum 列の宣言順に依存していても
+ * `enum-order-dependencies.test.ts` が検出できない。
+ */
+function spaceOrderBy(
+  sortBy: "createdAt" | "name" | "updatedAt" | "hourlyPrice",
+  direction: "asc" | "desc",
+): Prisma.SpaceOrderByWithRelationInput {
+  switch (sortBy) {
+    case "createdAt":
+      return { createdAt: direction };
+    case "name":
+      return { name: direction };
+    case "updatedAt":
+      return { updatedAt: direction };
+    case "hourlyPrice":
+      return { hourlyPrice: direction };
+  }
+}
+
 export async function getSpacesQuery(
   filters: {
     isPublished?: boolean | "ALL" | undefined;
@@ -174,9 +195,7 @@ export async function getSpacesQuery(
           },
         },
       },
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+      orderBy: spaceOrderBy(sortBy, sortOrder),
       skip,
       take,
     }),
