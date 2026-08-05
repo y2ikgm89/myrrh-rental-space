@@ -28,9 +28,16 @@ const mockTxReceiptCreate = mock<(...args: unknown[]) => Promise<unknown>>(() =>
 const mockTxReceiptSequenceFindUnique = mock<
   (...args: unknown[]) => Promise<unknown>
 >(() => Promise.resolve({ id: "singleton", year: 2026, nextNo: 1 }));
-const mockTxReceiptSequenceUpsert = mock<
+const mockTxReceiptSequenceUpdate = mock<
+  (...args: unknown[]) => Promise<unknown>
+>(() => Promise.resolve({ nextNo: 100 }));
+const mockTxReceiptSequenceCreate = mock<
   (...args: unknown[]) => Promise<unknown>
 >(() => Promise.resolve({}));
+/** その年の発行済み最大連番（`highestIssuedNo` の $queryRaw）。 */
+const mockTxQueryRaw = mock<(...args: unknown[]) => Promise<unknown>>(() =>
+  Promise.resolve([{ high: null }]),
+);
 const mockTxSettingsOrganizationFindUnique = mock<
   (...args: unknown[]) => Promise<unknown>
 >(() => Promise.resolve(null));
@@ -40,6 +47,7 @@ const mockTransaction = mock(
   async (
     callback: (tx: {
       $executeRaw: (...args: unknown[]) => Promise<unknown>;
+      $queryRaw: (...args: unknown[]) => Promise<unknown>;
       receipt: {
         findUnique: (...args: unknown[]) => Promise<unknown>;
         update: (...args: unknown[]) => Promise<unknown>;
@@ -47,7 +55,8 @@ const mockTransaction = mock(
       };
       receiptSequence: {
         findUnique: (...args: unknown[]) => Promise<unknown>;
-        upsert: (...args: unknown[]) => Promise<unknown>;
+        update: (...args: unknown[]) => Promise<unknown>;
+        create: (...args: unknown[]) => Promise<unknown>;
       };
       settingsOrganization: {
         findUnique: (...args: unknown[]) => Promise<unknown>;
@@ -56,6 +65,7 @@ const mockTransaction = mock(
   ) =>
     callback({
       $executeRaw: mockTxExecuteRaw,
+      $queryRaw: (...args: unknown[]) => mockTxQueryRaw(...args),
       receipt: {
         findUnique: (...args: unknown[]) => mockTxReceiptFindUnique(...args),
         update: (...args: unknown[]) => mockTxReceiptUpdate(...args),
@@ -64,7 +74,8 @@ const mockTransaction = mock(
       receiptSequence: {
         findUnique: (...args: unknown[]) =>
           mockTxReceiptSequenceFindUnique(...args),
-        upsert: (...args: unknown[]) => mockTxReceiptSequenceUpsert(...args),
+        update: (...args: unknown[]) => mockTxReceiptSequenceUpdate(...args),
+        create: (...args: unknown[]) => mockTxReceiptSequenceCreate(...args),
       },
       settingsOrganization: {
         findUnique: (...args: unknown[]) =>
@@ -168,18 +179,18 @@ describe("reissueReceiptCommand", () => {
     mockTxReceiptUpdate.mockReset();
     mockTxReceiptCreate.mockReset();
     mockTxReceiptSequenceFindUnique.mockReset();
-    mockTxReceiptSequenceUpsert.mockReset();
+    mockTxReceiptSequenceUpdate.mockReset();
+    mockTxReceiptSequenceCreate.mockReset();
+    mockTxQueryRaw.mockReset();
     mockTxSettingsOrganizationFindUnique.mockReset();
     mockTransaction.mockClear();
 
     // デフォルト: 採番 / issuerSnapshot の stub
     mockTxExecuteRaw.mockResolvedValue(undefined);
-    mockTxReceiptSequenceFindUnique.mockResolvedValue({
-      id: "singleton",
-      year: 2026,
-      nextNo: 99,
-    });
-    mockTxReceiptSequenceUpsert.mockResolvedValue({});
+    mockTxReceiptSequenceFindUnique.mockResolvedValue({ nextNo: 99 });
+    mockTxReceiptSequenceUpdate.mockResolvedValue({ nextNo: 100 });
+    mockTxReceiptSequenceCreate.mockResolvedValue({});
+    mockTxQueryRaw.mockResolvedValue([{ high: null }]);
     mockTxSettingsOrganizationFindUnique.mockResolvedValue(null);
     mockTxReceiptUpdate.mockResolvedValue({});
   });
