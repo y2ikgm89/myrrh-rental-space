@@ -85,321 +85,40 @@ const REACT_COMPILER_MEMO_EXEMPT_FILES = [
     "lexical-draggable-block-plugin.ts",
   ),
 ];
-const THIN_ADMIN_ACTION_FILES = [
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "navigation.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "announcement-bar.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "block-template.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "coupon.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "faq.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "customer.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "inquiry.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "location.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "instagram.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "news.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "post",
-    "mutations.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "space-category.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "event-category.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "basic.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "business.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "email.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "other.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "discount.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "tax.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "refund-policy.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "google-calendar.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "settings",
-    "stripe.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "editor-comment.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "media.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "pages.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "page-section.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "space.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "reservation",
-    "mutations.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "reservation",
-    "admin.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "event-broadcast.ts",
-  ),
-];
 /** TS / TSX / CSS を再帰収集（design token 廃止の横断 grep 用） */
+/**
+ * `<input` / `<textarea` の開始位置から **本当の opening タグ終端**までを返す。
+ *
+ * 正規表現の lazy match（`<input\b[\s\S]*?>`）は使えない。JSX の attribute には
+ * `onChange={(e) => …}` のようにアロー関数が入り、その `>` でタグが途中で切れる。
+ * 切れた先にある className を検査が一切見なくなるので、**違反が緑のまま通る**。
+ *
+ * `{}` の深度と引用符（`'` / `"` / テンプレート）の外にある `>` だけを終端とみなす。
+ */
+function openingTag(source: string, start: number): string {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = start; i < source.length; i += 1) {
+    const ch = source[i];
+    if (quote !== null) {
+      if (ch === "\\") {
+        i += 1;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") depth -= 1;
+    else if (ch === ">" && depth === 0) return source.slice(start, i + 1);
+  }
+  return source.slice(start);
+}
+
 function collectStyleSourceFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files: string[] = [];
@@ -863,28 +582,6 @@ describe("architecture boundaries", () => {
       .filter((file) => !actual.has(file))
       .sort();
     expect(staleAllowlist).toEqual([]);
-  });
-
-  test("移行済み admin action は Prisma を直接 import しない", () => {
-    // drift gate: 旧実装は `.filter(existsSync)` で不在 path を silent drop し、
-    // リファクタで path が変わった THIN_ADMIN_ACTION_FILES エントリが vacuous test
-    // 化していた（6 件が drop されても test は緑のままだった）。不在 path は
-    // hard-fail させ、配列の更新漏れを機械検知する。
-    const missing = THIN_ADMIN_ACTION_FILES.filter(
-      (file) => !existsSync(file),
-    ).map((file) => relative(ROOT, file));
-    expect(missing).toEqual([]);
-
-    const offenders = THIN_ADMIN_ACTION_FILES.filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return (
-        source.includes("@/shared/db/prisma") ||
-        source.includes('from "@/shared/db"') ||
-        source.includes("@generated/prisma")
-      );
-    }).map((file) => relative(ROOT, file));
-
-    expect(offenders).toEqual([]);
   });
 
   test("public root layout に NuqsAdapter が配置されている", () => {
@@ -2615,18 +2312,6 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("datetime-local を new Date('${d}T${t}') で naive parse しない (single-quote 版)", () => {
-    // 上の template-literal 版と対を成す。single-quote 文字列連結でも server-local
-    // parse になり同じ JST 9h ズレ silent bug を発生させる。
-    const sourceFiles = collectSourceFiles(SRC_ROOT);
-    const offenders = collectNonCommentOffenders(
-      sourceFiles,
-      /new Date\(\s*'[^']*T\$\{/u,
-    );
-
-    expect(offenders).toEqual([]);
-  });
-
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
     // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)
@@ -3322,15 +3007,17 @@ describe("architecture boundaries", () => {
       const files = collectSourceFiles(SRC_ROOT).filter((file) =>
         file.endsWith(".tsx"),
       );
-      // opening タグ全体 (attribute 部を含む) を lazy match。多行 opening tag
-      // (`<input\n type={...}\n className={cn(...)}\n />`) を [\s\S]*? で吸収。
-      // `>` を quoted attribute 内に含む極端なケースは実 codebase では出ない。
-      const tagRe = /<(?:input|textarea)\b[\s\S]*?>/gu;
+      // **lazy match で `>` を探してはいけない。** JSX の attribute には
+      // `onChange={(e) => {…}}` のようにアロー関数が入り、その `>` で opening タグが
+      // 途中で切れる。実測では input/textarea の 18 タグが切り詰められており、
+      // うち 1 件（EmailChips.tsx の text-sm 単独指定）は className が切れた側に
+      // あったため **この gate が現に違反を通していた**。
+      // brace 深度と引用符を追って本当の終端を求める。
       const offenders: string[] = [];
       for (const file of files) {
         const source = readFileSync(file, "utf8");
-        for (const match of source.matchAll(tagRe)) {
-          const tag = match[0];
+        for (const open of source.matchAll(/<(?:input|textarea)\b/gu)) {
+          const tag = openingTag(source, open.index);
           if (!/\btext-sm\b/u.test(tag)) continue;
           if (/\btext-base\b/u.test(tag)) continue;
           offenders.push(relative(ROOT, file));

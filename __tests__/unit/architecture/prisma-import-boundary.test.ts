@@ -208,12 +208,13 @@ describe("prisma import boundary", () => {
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
     const sourceFiles = collectSourceFiles(SRC_ROOT);
+    // `from "…"` だけを見ると `await import("@/shared/db/prisma")` が素通りする。
+    // 動的 import も同じ「app 層が Prisma を直に握る」形なので同じ扱いにする。
+    const DIRECT_PRISMA_IMPORT =
+      /(?:from|import\(|require\()\s*["']@\/shared\/db\/prisma["']/u;
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_ROOT))
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return source.includes('from "@/shared/db/prisma"');
-      })
+      .filter((file) => DIRECT_PRISMA_IMPORT.test(readFileSync(file, "utf8")))
       .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);

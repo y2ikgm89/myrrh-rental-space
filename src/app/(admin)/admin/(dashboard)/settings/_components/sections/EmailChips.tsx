@@ -191,7 +191,7 @@ export function EmailChips({
           aria-invalid={error !== null}
           aria-labelledby={labelledBy}
           aria-describedby={describedByValue}
-          className="min-w-[8rem] flex-1 bg-transparent text-sm outline-none disabled:cursor-not-allowed"
+          className="min-w-[8rem] flex-1 bg-transparent text-base outline-none md:text-sm disabled:cursor-not-allowed"
         />
       </div>
       {value.map((email) => (

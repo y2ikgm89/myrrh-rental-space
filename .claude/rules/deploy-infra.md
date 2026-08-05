@@ -75,6 +75,5 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
 - CI/Docker の install は `scripts/bun-ci-install.sh`（リトライ + キャッシュ消去 +
   network-concurrency 4 の耐 flake 版）に統一されている
 - Lighthouse CI（.lighthouserc.json のバジェット）は workflow_dispatch の
-  run_full_ci=true か `codex/full-ci/` prefix の PR branch でのみ実行。
-  **prefix 経路の起動実績はゼロ**（2026-07-31 時点、PR #673〜#1679 を走査）なので
-  実質 `gh workflow run ci.yml --ref <branch> -f run_full_ci=true` 専用と考える
+  `run_full_ci=true` でのみ実行する（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。
+  `codex/full-ci/` prefix で起動する経路は ci.yml から撤去済み
