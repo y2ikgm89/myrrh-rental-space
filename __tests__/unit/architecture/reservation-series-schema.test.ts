@@ -32,7 +32,9 @@ describe("ReservationSeries schema invariants", () => {
       'CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique"',
     );
     // 生成 DDL は述語を括弧で包む（手書き migration は包んでいなかった）。
-    expect(sql).toMatch(/WHERE \(?"deletedAt" IS NULL\)?/u);
+    // **列名は物理名**。20260804* の snake_case 化まで `"deletedAt"` で書いてあり、
+    // 古い migration ファイルにその文字列が残っていたせいで通り続けていた。
+    expect(sql).toMatch(/WHERE \(?"deleted_at" IS NULL\)?/u);
   });
 
   test("ReservationSeries の索引宣言が揃っている", async () => {
