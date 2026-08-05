@@ -35,6 +35,14 @@ import {
   notifyEventVenueOrSlotChanged,
   syncEventSlotsAndTicketsCommand,
 } from "./event-slot-sync-commands";
+import {
+  appendSlugWithinLimit,
+  appendWithinLimit,
+} from "@/shared/lib/text/bounded-append";
+import {
+  EVENT_SLUG_BASE_MAX_LENGTH,
+  EVENT_TITLE_MAX_LENGTH,
+} from "@/shared/lib/validations/event-limits";
 import { ensureUniqueSlug } from "./event-slug";
 import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
 import {
@@ -913,7 +921,12 @@ export async function duplicateEventCommand(id: string) {
   });
   if (!source) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
-  const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+  // `-copy` を足しても列に収まるようベースを詰める。上限いっぱいの slug を
+  // そのまま連結すると 22001 で複製が 500 になる（DomainError ではないので
+  // 画面には理由が出ない）。
+  const slug = await ensureUniqueSlug(
+    appendSlugWithinLimit(source.slug, "-copy", EVENT_SLUG_BASE_MAX_LENGTH),
+  );
   const sourceGalleryResult = gallerySchema.safeParse(source.gallery);
   if (!sourceGalleryResult.success) {
     throw new DomainError("イベントギャラリーが不正です", "VALIDATION");
@@ -960,7 +973,13 @@ export async function duplicateEventCommand(id: string) {
 
     const newEvent = await tx.event.create({
       data: {
-        title: `${source.title}（コピー）`,
+        // タイトルも同じ理由で詰める。落とすのは元タイトルの末尾で、
+        // 「（コピー）」は複製であることの情報そのものなので必ず残す。
+        title: appendWithinLimit(
+          source.title,
+          "（コピー）",
+          EVENT_TITLE_MAX_LENGTH,
+        ),
         slug,
         descriptionJson: asPrismaInputJsonValue(
           source.descriptionJson,

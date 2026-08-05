@@ -14,6 +14,10 @@ import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
 import { gallerySchema } from "@/shared/lib/validations/gallery";
 import { switchBoolean } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import {
+  EVENT_SLUG_MAX_LENGTH,
+  EVENT_TITLE_MAX_LENGTH,
+} from "@/shared/lib/validations/event-limits";
 
 /**
  * EventForm (conform) form schema
@@ -165,12 +169,16 @@ const eventFormBaseSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "タイトルは必須です" })
-    .max(200, { error: "タイトルは200文字以内です" }),
+    .max(EVENT_TITLE_MAX_LENGTH, {
+      error: `タイトルは${EVENT_TITLE_MAX_LENGTH}文字以内です`,
+    }),
   slug: z
     .string()
     .trim()
     .min(1, { error: "スラッグは必須です" })
-    .max(100, { error: "スラッグは100文字以内です" })
+    .max(EVENT_SLUG_MAX_LENGTH, {
+      error: `スラッグは${EVENT_SLUG_MAX_LENGTH}文字以内です`,
+    })
     .regex(SLUG_REGEX, {
       error:
         "スラッグは小文字英数字とハイフンのみ使用できます（先頭/末尾/連続ハイフン禁止）",
