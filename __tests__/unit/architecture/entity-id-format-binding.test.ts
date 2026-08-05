@@ -38,7 +38,7 @@ type SchemaIdGenerator =
 /** 自前で生成する ID に許す生成子。 */
 const ALLOWED_GENERATORS: ReadonlySet<SchemaIdGenerator> = new Set([
   "uuid",
-  // 単一行モデル（Settings 系 / ReceiptSequence）は主キーが固定文字列
+  // 単一行モデル（Settings 系）は主キーが固定文字列
   "singleton",
 ]);
 
@@ -53,6 +53,19 @@ const EXTERNAL_ID_MODELS: Readonly<Record<string, string>> = {
 };
 
 /**
+ * 主キーが**文字列 ID ではない**モデル。
+ *
+ * この gate が守っているのは「uuid か cuid か」という**ID 形式**の統一で、
+ * 自然キー（意味を持つ値そのものを主キーにする）はその問いの外にある。
+ * ただし黙って対象外にすると「uuid にすべき実体を Int 主キーにした」を
+ * 見逃すので、理由を宣言させる。宣言が実態と合っているかは下で検査する。
+ */
+const NATURAL_KEY_MODELS: Readonly<Record<string, string>> = {
+  ReceiptSequence:
+    "年そのものが主キー（年ごとの連番）。実体ではなくカウンタなので ID を持たない",
+};
+
+/**
  * schema.prisma の各モデルの `@id` 行から生成子を読む。
  *
  * CRLF で checkout されたツリーでも列を取りこぼさないよう `/\r?\n/` で割る
@@ -63,6 +76,7 @@ function readSchemaIdGenerators(): Map<string, SchemaIdGenerator> {
   const generators = new Map<string, SchemaIdGenerator>();
 
   let currentModel: string | null = null;
+  ID_FIELD_TYPES.clear();
 
   for (const rawLine of schema.split(/\r?\n/u)) {
     const line = rawLine.trim();
@@ -83,11 +97,16 @@ function readSchemaIdGenerators(): Map<string, SchemaIdGenerator> {
     // `@@id([a, b])` は複合主キーなので除外する（`@id` を部分文字列に含む）
     if (currentModel === null || !/(?<!@)@id\b/u.test(line)) continue;
 
+    const declaredType = /^\s*\w+\s+(\w+)/u.exec(line)?.[1];
+    ID_FIELD_TYPES.set(currentModel, declaredType ?? "unknown");
     generators.set(currentModel, classifyIdGenerator(line));
   }
 
   return generators;
 }
+
+/** `@id` フィールドの宣言型（`String` / `Int` …）。自然キーの判定に使う。 */
+const ID_FIELD_TYPES = new Map<string, string>();
 
 function classifyIdGenerator(line: string): SchemaIdGenerator {
   if (/@default\(uuid\(7\)\)/u.test(line)) return "uuid";
@@ -134,10 +153,24 @@ describe("ID 形式は 1 つに統一されている", () => {
     // cuid / cuid2 / bare uuid() を足すとこのテストが落ちる。
     const offenders = [...SCHEMA_ID_GENERATORS.entries()]
       .filter(([model]) => !(model in EXTERNAL_ID_MODELS))
+      .filter(([model]) => !(model in NATURAL_KEY_MODELS))
       .filter(([, generator]) => !ALLOWED_GENERATORS.has(generator))
       .map(([model, generator]) => `${model}: @default は "${generator}"`);
 
     expect(offenders).toEqual([]);
+  });
+
+  test("自然キーと宣言したモデルは主キーが文字列 ID でない", () => {
+    // 宣言だけ残して実態が `String @id @default(uuid(7))` に戻ると、
+    // そのモデルは ID 形式の検査から静かに外れる。実態を見て落とす。
+    const contradictions = Object.keys(NATURAL_KEY_MODELS).map((model) => ({
+      model,
+      idType: ID_FIELD_TYPES.get(model),
+    }));
+
+    expect(contradictions).toEqual([
+      { model: "ReceiptSequence", idType: "Int" },
+    ]);
   });
 
   test("外部 ID を主キーにするモデルは @default を持たないまま", () => {

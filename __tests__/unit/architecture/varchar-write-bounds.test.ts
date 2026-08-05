@@ -485,7 +485,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     20,
     "`R-YYYYMMDD-NNNN` 形式でサーバーが採番する",
   ),
-  "ReceiptSequence.id": generated(20, "定数 `singleton`"),
   "StripeEvent.id": generated(80, "Stripe の event id（`evt_` + 24〜）"),
   "StripeEvent.type": generated(80, "Stripe の event type 文字列"),
 
