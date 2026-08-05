@@ -265,14 +265,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   }),
 
   // --- BlockedDate ------------------------------------------------------
-  "BlockedDate.scope": enumerated(
-    `${SHARED}/enums/helpers`,
-    "BLOCKED_DATE_SCOPE",
-  ),
-  "BlockedDate.type": enumerated(
-    `${SHARED}/enums/helpers`,
-    "BLOCKED_DATE_TYPE",
-  ),
   "BlockedDate.reason": validated({
     module: `${SHARED}/blocked-date`,
     exportName: "blockedDateFormSchema",
@@ -485,7 +477,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   ),
 
   // --- 決済・会計 --------------------------------------------------------
-  "Refund.refundedByType": generated(20, "TS union の定数のみ"),
   "Refund.status": generated(
     20,
     "Stripe の refund status 文字列（最長 requires_action = 16）",
@@ -536,10 +527,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     exportName: "transferAccountFormSchema",
     field: "branchName",
   }),
-  "TransferAccount.accountType": enumerated(
-    `${SHARED}/transfer-account`,
-    "TRANSFER_ACCOUNT_TYPE_VALUES",
-  ),
   "TransferAccount.accountNumber": validated({
     module: `${SHARED}/transfer-account`,
     exportName: "transferAccountFormSchema",

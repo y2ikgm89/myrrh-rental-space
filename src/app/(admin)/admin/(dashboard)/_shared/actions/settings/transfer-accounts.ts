@@ -14,7 +14,6 @@ import {
   updateTransferAccountCommand,
   updateTransferGuidanceCommand,
 } from "@/shared/domain/settings/transfer-account-commands";
-import { getValidTransferAccountType } from "@/shared/lib/validations/enums/helpers";
 import {
   transferAccountFormSchema,
   transferGuidanceFormSchema,
@@ -39,7 +38,7 @@ export async function createTransferAccount(
             label: data.label,
             bankName: data.bankName,
             branchName: data.branchName,
-            accountType: getValidTransferAccountType(data.accountType),
+            accountType: data.accountType,
             accountNumber: data.accountNumber,
             accountHolderName: data.accountHolderName,
             note: data.note ?? null,
@@ -81,7 +80,7 @@ export async function updateTransferAccount(
             label: data.label,
             bankName: data.bankName,
             branchName: data.branchName,
-            accountType: getValidTransferAccountType(data.accountType),
+            accountType: data.accountType,
             accountNumber: data.accountNumber,
             accountHolderName: data.accountHolderName,
             note: data.note ?? null,
