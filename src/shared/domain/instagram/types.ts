@@ -1,11 +1,12 @@
 import type { Serialized } from "@/shared/lib/serialize";
+import type { InstagramMediaType } from "@/shared/lib/validations/enums/prisma-types";
 
 type InstagramPostRecord = {
   id: string;
   postId: string;
   postUrl: string;
   mediaUrl: string | null;
-  mediaType: string;
+  mediaType: InstagramMediaType;
   caption: string | null;
   sortOrder: number;
   createdAt: Date;

@@ -32,6 +32,7 @@ import type { TransferAccountPublicDisplay } from "@/shared/domain/settings/tran
 import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,9 +53,9 @@ interface ReservationDetailData {
   readonly status: string;
   readonly totalPrice: number | null;
   readonly basePrice: number | null;
-  readonly paymentStatus: string;
+  readonly paymentStatus: PaymentStatus;
   readonly paidAt: string | null;
-  readonly taxRateType: string | null;
+  readonly taxRateType: TaxRateType | null;
   readonly taxRate: number | null;
   readonly taxAmount: number | null;
   readonly totalPriceWithTax: number | null;

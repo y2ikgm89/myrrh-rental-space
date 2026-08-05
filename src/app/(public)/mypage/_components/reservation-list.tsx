@@ -1,6 +1,7 @@
 import { Button } from "@/public/components/design-system/button";
 import { Stack } from "@/public/components/design-system/stack";
 import { ReservationCard } from "./reservation-card";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface Reservation {
   readonly id: string;
@@ -8,7 +9,7 @@ interface Reservation {
   readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
-  readonly paymentStatus: string;
+  readonly paymentStatus: PaymentStatus;
   readonly notes: string | null;
   readonly createdAt: string;
   readonly space: {

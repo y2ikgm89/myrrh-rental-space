@@ -81,8 +81,8 @@ const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されてい�
 
 interface HeaderSectionProps extends SettingsReadOnlyProps {
   settings: {
-    headerScrollBehavior: string;
-    headerBackgroundMode: string;
+    headerScrollBehavior: HeaderScrollBehavior;
+    headerBackgroundMode: HeaderBackgroundMode;
     layoutUpdatedAt: string;
   };
 }

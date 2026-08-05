@@ -10,6 +10,7 @@ import {
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type EventRegistrationSelfServeUpdateInput = {
   name: string;
@@ -44,7 +45,7 @@ const SELF_SERVE_EDITABLE_STATUSES = [
 function validateEventRegistrationEditableForUpdate(
   registration: {
     status: RegistrationStatus;
-    paymentStatus: string;
+    paymentStatus: PaymentStatus;
     slotStartAt: Date;
   },
   inputQuantity: number,

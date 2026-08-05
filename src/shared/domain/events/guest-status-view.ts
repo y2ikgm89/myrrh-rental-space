@@ -8,6 +8,7 @@ import {
 import { verifyEventRegistrationStatusToken } from "@/shared/lib/event-registration-status-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { buildGuestEventRegistrationEditHref as buildGuestEventRegistrationEditHrefFromEligibility } from "@/shared/domain/events/edit-eligibility";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type GuestEventRegistrationStatusAccessResult =
   | { kind: "invalid" }
@@ -74,7 +75,7 @@ export function buildGuestCancelHref(input: {
 /** ゲスト向け申込内容変更導線 URL。編集可能なときのみ返す。 */
 export function buildGuestEventRegistrationEditHref(input: {
   status: RegistrationStatus;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   slotStartAt: Date;
   now: Date;
 }): string | null {

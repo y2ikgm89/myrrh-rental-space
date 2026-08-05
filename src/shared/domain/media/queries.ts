@@ -1,13 +1,11 @@
+import type { MediaUsage } from "@/shared/lib/validations/enums/prisma-types";
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
-import type {
-  MediaType,
-  MediaUsage,
-} from "@/shared/lib/validations/enums/prisma-types";
+import type { MediaType } from "@/shared/lib/validations/enums/prisma-types";
 
 function transformMedia(media: {
   id: string;
@@ -18,7 +16,7 @@ function transformMedia(media: {
   width: number | null;
   height: number | null;
   type: string;
-  usage: string;
+  usage: MediaUsage;
   alt: string | null;
   title: string | null;
   description: string | null;
@@ -52,6 +50,8 @@ function transformMedia(media: {
 export async function getMediaListQuery(
   filters: {
     type?: MediaType;
+    // **フォーム値ではなく DB フィルタ**。そのまま `where.usage` に入るので
+    // enum 型でなければならない（呼び出し側が URL パラメータを narrow する）。
     usage?: MediaUsage;
     mimeType?: string;
     search?: string;

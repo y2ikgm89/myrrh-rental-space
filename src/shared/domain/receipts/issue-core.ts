@@ -43,7 +43,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 function assertPaidOrPartiallyRefunded(
-  paymentStatus: string,
+  paymentStatus: PaymentStatus,
   entityLabel: "予約" | "イベント申込",
 ): void {
   if (

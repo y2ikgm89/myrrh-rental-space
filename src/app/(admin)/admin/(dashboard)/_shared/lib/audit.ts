@@ -8,6 +8,7 @@
  * @module admin/lib/audit
  */
 
+import type { Action } from "@/shared/lib/admin-resources";
 import "server-only";
 
 import { headers } from "next/headers";
@@ -151,7 +152,10 @@ export async function logUserAction(
 export async function logPermissionDenied(
   userId: string,
   resource: string,
-  action: string,
+  // **`AuditAction` ではない。** DB の `audit_logs.action` に入るのは
+  // `PERMISSION_DENIED` 固定で、ここで受けるのは*拒否された権限操作*
+  // （`"create"` / `"read"` …）。metadata に記録するだけなので型が違う。
+  action: Action,
   resourceId?: string,
 ): Promise<void> {
   await createAuditLog({
