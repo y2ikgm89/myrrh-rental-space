@@ -2,8 +2,10 @@
  * 臨時休業 / 急な休み（BlockedDate）のバリデーションスキーマ
  *
  * 設計方針:
- * - `scope` / `type` は Prisma enum ではなく DB VARCHAR + 型ガード SSoT
- *   （`@/shared/lib/validations/enums/helpers`）で運用。`z.enum(const)` で受ける
+ * - `scope` / `type` は **Prisma enum**（20260805110000 で VARCHAR から移行）。
+ *   `z.enum()` には生成された enum オブジェクトをそのまま渡す。
+ *   **`blocked_date_scope` の宣言順が cascade の優先順位そのもの**なので、
+ *   値を並べ替えると全社休業日よりスペース単位の休業が優先される
  * - `startDate` / `endDate` は `<input type="date">` の値（`"YYYY-MM-DD"`、
  *   JST カレンダー日付）を `z.iso.date()` で受け取る。domain command 側で
  *   `parseJstDateOnly()` を通して `@db.Date` 用の UTC 深夜 Date に変換する

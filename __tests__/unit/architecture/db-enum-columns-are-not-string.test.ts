@@ -92,94 +92,45 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
- * **これは ratchet。凍結された出発点で、縮む方向にしか動かさない。**
+ * **DB 列ではなくフォーム / URL の値**なので enum 型で受けられない箇所。
  *
- * ConnectionStatus の事故を直した時点で、DB 列の射影を `string` で宣言している箇所が
- * 28 件残っていた。1 つの PR に無関係な変更を大量に混ぜないため、出発点を凍結して
- * ここから減らす。**空になったらこの一覧ごと削除する**（空の ratchet は
- * 「一覧に足せば免除される」抜け道でしかない — 命名規約ゲートで一度そうなった）。
+ * 未選択を `""` で表す（`<select>` の空 option / クエリパラメータの欠落）ので、
+ * 取りうる値は `LayoutWidth | ""` のような別の集合になる。DB の enum をそのまま
+ * 当てると「未選択」が表現できず、正しい入力が型エラーになる。
  *
- * **件数まで固定する。** `<path>::<field>` の有無だけだと、同じファイルの同じ
- * field に 2 つ目の `string` 宣言を足しても鍵が変わらず素通りする
- * （実際 `edit-eligibility.ts` は 2 箇所あるのに 1 件として畳まれていた）。
+ * **`NOT_A_DB_COLUMN` とは別物。** あちらは「同じ名前の別概念」で、こちらは
+ * 「同じ概念だが、まだ narrow されていない層にいる」。narrow は入力の境界
+ * （schema / searchParams のパース）で行い、その先は enum 型で流す。
  */
-const PENDING_ENUM_TYPING: ReadonlyMap<string, number> = new Map([
+const FORM_OR_URL_VALUE: ReadonlyMap<string, string> = new Map([
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/types.ts::contentWidth",
-    1,
+    'サイドパネルのフォーム値。未選択が ""',
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-news-editor.ts::contentWidth",
-    1,
+    '同上。フォーム初期値を "" で組む',
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-post-editor.ts::contentWidth",
-    1,
+    "同上",
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/LayoutFields.tsx::contentWidth",
-    1,
+    '同上。`DEFAULT` を "" に読み替えて <select> に渡す',
   ],
-  ["src/app/(admin)/admin/(dashboard)/_shared/lib/audit.ts::action", 1],
-  ["src/app/(admin)/admin/(dashboard)/_shared/types/media-picker.ts::usage", 1],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/types/media-picker.ts::usage",
+    'メディアピッカーの絞り込み。未指定が ""',
+  ],
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaDetailDialog.tsx::usage",
-    1,
+    "同上（表示用の props）",
   ],
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx::usage",
-    1,
+    "同上（searchParams 由来）",
   ],
-  [
-    "src/app/(admin)/admin/(dashboard)/settings/_components/sections/HeaderSection.tsx::headerBackgroundMode",
-    1,
-  ],
-  [
-    "src/app/(admin)/admin/(dashboard)/settings/_components/sections/HeaderSection.tsx::headerScrollBehavior",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/_components/reservation-card.tsx::paymentStatus",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/_components/reservation-list.tsx::paymentStatus",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/_lib/build-reservation-list-items.ts::paymentStatus",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/events/_components/event-registration-list.tsx::paymentStatus",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/reservations/[id]/_components/reservation-detail.tsx::paymentStatus",
-    1,
-  ],
-  [
-    "src/app/(public)/mypage/reservations/[id]/_components/reservation-detail.tsx::taxRateType",
-    1,
-  ],
-  ["src/shared/domain/events/edit-eligibility.ts::paymentStatus", 2],
-  ["src/shared/domain/events/guest-status-view.ts::paymentStatus", 1],
-  [
-    "src/shared/domain/events/registration-customer-update-commands.ts::paymentStatus",
-    1,
-  ],
-  ["src/shared/domain/instagram/commands.ts::mediaType", 1],
-  ["src/shared/domain/instagram/types.ts::mediaType", 1],
-  ["src/shared/domain/media/queries.ts::usage", 1],
-  ["src/shared/domain/receipts/issue-core.ts::paymentStatus", 1],
-  ["src/shared/domain/reservations/edit-eligibility.ts::paymentStatus", 2],
-  [
-    "src/shared/domain/reservations/reservation-card-deadline.ts::paymentStatus",
-    1,
-  ],
-  ["src/shared/domain/settings/queries/organization.ts::platform", 1],
-  ["src/shared/domain/spaces/queries.ts::discountType", 1],
-  ["src/shared/domain/spaces/queries.ts::durationDiscountOverride", 1],
 ]);
 
 const ROOTS = ["src"] as const;
@@ -263,41 +214,36 @@ describe("DB enum の列を string で宣言していない", () => {
     expect(files.length).toBeGreaterThan(500);
   });
 
-  test("DB 列ではないものを ratchet に混ぜていない", () => {
-    // 恒久除外と「いつか直す」を混ぜると、永遠に減らない entry がベースラインに
-    // 居座って ratchet が空にならなくなる。
+  test("2 つの除外を混ぜていない", () => {
+    // 「同じ名前の別概念」と「まだ narrow されていない層」は別の話なので、
+    // 同じ箇所が両方に載っていたらどちらかが嘘。
     const overlap = [...NOT_A_DB_COLUMN.keys()].filter((k) =>
-      PENDING_ENUM_TYPING.has(k),
+      FORM_OR_URL_VALUE.has(k),
     );
     expect(overlap).toEqual([]);
   });
 
-  test("凍結した出発点に無い string 宣言が増えていない", () => {
-    const current = currentViolations();
-    const added: string[] = [];
-    for (const [key, count] of current) {
-      if (NOT_A_DB_COLUMN.has(key)) continue;
-      const allowed = PENDING_ENUM_TYPING.get(key) ?? 0;
-      if (count > allowed) {
-        added.push(
-          `${key} が ${count} 件（許容 ${allowed} 件）— schema.prisma では enum 列。` +
-            `enum 型で受ければ値域が動いたとき型検査が止める`,
-        );
-      }
-    }
+  test("DB 列の射影を string で宣言していない", () => {
+    // かつてここは「28 件の出発点から縮む」ratchet だった。全件を enum 型へ
+    // 寄せたので一覧ごと削除してある（空の ratchet は「一覧に足せば免除される」
+    // 抜け道でしかない — 命名規約ゲートで一度そうなった）。
+    const added = [...currentViolations()]
+      .filter(([key]) => !NOT_A_DB_COLUMN.has(key))
+      .filter(([key]) => !FORM_OR_URL_VALUE.has(key))
+      .map(
+        ([key, count]) =>
+          `${key} が ${count} 件 — schema.prisma では enum 列。` +
+          `enum 型で受ければ値域が動いたとき型検査が止める`,
+      );
     expect(added).toEqual([]);
   });
 
-  test("片付いた entry が出発点に残っていない", () => {
-    // 消し忘れると、後で同じ場所が `string` に戻っても黙って免除される。
+  test("フォーム値の宣言が実在する箇所を指している", () => {
+    // 消し忘れると、後で同じ場所が DB 列の射影になっても黙って免除される。
     const current = currentViolations();
-    const stale = [...PENDING_ENUM_TYPING].flatMap(([key, count]) => {
-      const now = current.get(key) ?? 0;
-      if (now === count) return [];
-      return [
-        `${key}: 出発点 ${count} 件 → 現在 ${now} 件。一覧を更新すること`,
-      ];
-    });
+    const stale = [...FORM_OR_URL_VALUE.keys()]
+      .filter((key) => (current.get(key) ?? 0) === 0)
+      .map((key) => `${key}: もう string 宣言が無い。一覧から外すこと`);
     expect(stale).toEqual([]);
   });
 

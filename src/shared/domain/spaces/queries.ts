@@ -14,6 +14,10 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import type {
+  DiscountType,
+  DurationDiscountOverride,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 function formatSpaceToPlain(s: {
   id: string;
@@ -41,9 +45,9 @@ function formatSpaceToPlain(s: {
   smartLockDeviceId: string | null;
   location: { address: string };
   category: { id: string; name: string } | null;
-  discountType: string | null;
+  discountType: DiscountType | null;
   discountValue: number | null;
-  durationDiscountOverride: string | null;
+  durationDiscountOverride: DurationDiscountOverride | null;
   taxRateType: TaxRateType;
   metaDescription: string | null;
   metaKeywords: string | null;

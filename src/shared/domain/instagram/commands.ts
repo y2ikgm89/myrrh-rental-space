@@ -164,7 +164,7 @@ export async function syncInstagramFeed(
 /**
  * API レスポンスの mediaType 文字列を Prisma enum にマッピング
  */
-function mapMediaType(mediaType: string): InstagramMediaType {
+function mapMediaType(mediaType: InstagramMediaType): InstagramMediaType {
   switch (mediaType) {
     case "IMAGE":
       return InstagramMediaType.IMAGE;

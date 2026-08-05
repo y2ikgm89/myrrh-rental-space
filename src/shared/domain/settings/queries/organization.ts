@@ -10,6 +10,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
+import type { SocialPlatform } from "@/shared/lib/validations/enums/prisma-types";
 
 export interface OrganizationSettings {
   siteName: string | null;
@@ -204,7 +205,7 @@ export async function getOrganizationSettings(): Promise<Serialized<Organization
 }
 
 export interface SocialLinkForFooter {
-  platform: string;
+  platform: SocialPlatform;
   url: string;
   showOnDesktop: boolean;
   showOnMobile: boolean;

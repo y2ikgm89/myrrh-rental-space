@@ -18,7 +18,7 @@ export function isReservationEditableForCustomerSelfServe(input: {
   // PaymentStatus はすでに string リテラルの union のため `PaymentStatus | string` は
   // 型としては string と等価（no-redundant-type-constituents）。DB 由来の未検証値も
   // 受け付ける意図はコメントで残す。
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   discountAmounts: {
     couponDiscountAmount?: number | null;
     durationDiscountAmount?: number | null;
@@ -63,7 +63,7 @@ export function isReservationEditableForCustomerSelfServe(input: {
 /** ゲスト status ハブから edit ページへの導線。cookie 前提のため token 付与不要。 */
 export function buildGuestEditHref(input: {
   status: ReservationStatus;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   discountAmounts: {
     couponDiscountAmount?: number | null;
     durationDiscountAmount?: number | null;

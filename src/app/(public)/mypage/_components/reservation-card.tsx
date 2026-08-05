@@ -18,6 +18,7 @@ import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,7 +30,7 @@ interface Reservation {
   readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
-  readonly paymentStatus: string;
+  readonly paymentStatus: PaymentStatus;
   readonly notes: string | null;
   readonly createdAt: string;
   readonly space: {

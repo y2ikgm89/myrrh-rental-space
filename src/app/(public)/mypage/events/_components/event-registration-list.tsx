@@ -51,7 +51,7 @@ export interface EventRegistrationListItem {
   readonly waitlistedAt: string | null;
   readonly offeredAt: string | null;
   readonly expiresAt: string | null;
-  readonly paymentStatus: string;
+  readonly paymentStatus: PaymentStatus;
   readonly ticketUnitPrice: number;
   readonly ticketTotalPrice: number;
   readonly slotId: string;
