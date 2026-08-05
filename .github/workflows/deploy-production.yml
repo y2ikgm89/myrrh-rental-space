@@ -315,19 +315,47 @@ jobs:
           BREAKING_MIGRATION_DEPLOY="false"
           # workflow_dispatch には github.event.before が無い。複数 merge をまとめて
           # デプロイするため、まず Cloud Run 上の現行 image tag (SHORT_SHA) を base にする。
+          #
+          # **ここは fail-closed でなければならない。** base の解決に失敗したとき
+          # 「直前 1 コミット」へ黙って縮退すると、それ以前に merge 済みの破壊的
+          # migration が diff の窓から外れ、**計画ダウンタイム無しで本番に出る**。
+          # 旧実装は `2>/dev/null || true` で describe の失敗を握りつぶしていたので、
+          # 認証切れ・region 誤り・一時障害のいずれでもその縮退が起きた。
           BASE_SHA=""
+          DESCRIBE_ERR="$(mktemp)"
+          set +e
           DEPLOYED_IMAGE="$(
             gcloud run services describe "${SERVICE_NAME}" \
               --project="${PROJECT_ID}" \
               --region="${REGION}" \
-              --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true
+              --format='value(spec.template.spec.containers[0].image)' 2>"${DESCRIBE_ERR}"
           )"
+          DESCRIBE_RC=$?
+          set -e
+          if [ "${DESCRIBE_RC}" -ne 0 ]; then
+            if grep -qiE 'NOT_FOUND|could not be found|does not exist' "${DESCRIBE_ERR}"; then
+              # サービスが未作成 = 初回デプロイ。守るべき旧 revision が無い。
+              printf 'Cloud Run service %s does not exist yet (first deploy).\n' "${SERVICE_NAME}"
+              DEPLOYED_IMAGE=""
+            else
+              cat "${DESCRIBE_ERR}" >&2
+              echo "::error::Cloud Run の現行 image tag を取得できませんでした。破壊的 migration の判定範囲を決められないためデプロイを中止します。" >&2
+              exit 1
+            fi
+          fi
+          rm -f "${DESCRIBE_ERR}"
+
           DEPLOYED_TAG="${DEPLOYED_IMAGE##*:}"
           if [[ "${DEPLOYED_TAG}" =~ ^[0-9a-f]{7,40}$ ]]; then
             BASE_SHA="$(git rev-parse "${DEPLOYED_TAG}" 2>/dev/null || true)"
           fi
           if [ -z "${BASE_SHA}" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            BASE_SHA="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || git rev-list --max-parents=0 HEAD)"
+            # base を確定できない = どこから差分を取ればよいか分からない。
+            # 窓を狭める代わりに**履歴全体**へ広げ、同時に安全側（計画ダウンタイム）へ倒す。
+            # 余計な停止時間より、破壊的 DDL の見落としのほうが高くつく。
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
+            BREAKING_MIGRATION_DEPLOY="true"
+            echo "::warning::デプロイ済み revision から base を決められませんでした（tag: ${DEPLOYED_TAG:-none}）。履歴全体を走査し、計画ダウンタイムありで進めます。"
           fi
           printf 'Breaking-migration base: %s (deployed tag: %s)\n' "${BASE_SHA}" "${DEPLOYED_TAG:-none}"
 
