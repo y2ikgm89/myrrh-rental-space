@@ -31,13 +31,33 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     const dockerfile = read("Dockerfile");
     expect(dockerfile).toContain("FROM deps AS migrator");
     expect(dockerfile).toContain(
-      'CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]',
+      'CMD ["sh", "-c", "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"]',
     );
+    // 呼べなければ CMD は起動時に落ちる。alias 解決に tsconfig が要る。
+    expect(dockerfile).toContain(
+      "COPY scripts/migration-preconditions.ts ./scripts/migration-preconditions.ts",
+    );
+    expect(dockerfile).toContain("COPY tsconfig.json ./");
     expect(dockerfile).toContain("FROM base AS runner");
     // runner must remain last so bare `docker build .` yields the service image
     expect(dockerfile.lastIndexOf("FROM deps AS migrator")).toBeLessThan(
       dockerfile.lastIndexOf("FROM base AS runner"),
     );
+  });
+
+  test("Cloud Run Job が適用前チェックを migrate より前に実行する", () => {
+    // ここが本番の実体。Cloud Run Job は Dockerfile の CMD を command/args で
+    // 上書きするので、Dockerfile だけ直しても本番では走らない。
+    const job = read("terraform/cloud_run_migrate_job.tf");
+    const args = /args\s*=\s*\[([\s\S]*?)\]/u.exec(job)?.[1] ?? "";
+    const check = args.indexOf("scripts/migration-preconditions.ts");
+    const migrate = args.indexOf("migrate");
+
+    expect(check).toBeGreaterThanOrEqual(0);
+    expect(migrate).toBeGreaterThanOrEqual(0);
+    expect(check).toBeLessThan(migrate);
+    // `;` で繋ぐと失敗しても migrate が走る。順序ではなく短絡であること。
+    expect(args).toContain("&&");
   });
 
   test("Cloud Build service deploy uses services update --image (not deploy + shape)", () => {

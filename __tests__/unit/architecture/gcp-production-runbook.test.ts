@@ -280,8 +280,10 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain(
       "--set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1",
     );
-    expect(runbook).toContain("--command=bunx");
-    expect(runbook).toContain("--args=--bun,prisma,migrate,deploy");
+    expect(runbook).toContain("--command=sh");
+    expect(runbook).toContain(
+      '--args=-c,"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"',
+    );
     expect(runbook).toContain("--tasks=1");
     expect(runbook).toContain("--parallelism=1");
     expect(runbook).toContain("--max-retries=0");

@@ -101,7 +101,14 @@ WORKDIR /app
 # deps は package.json / bun.lock / prisma/ / 完全な node_modules / generated を保持済み。
 # root の prisma.config.ts（datasource.url = env("DATABASE_URL")）だけ追加で必要。
 COPY prisma.config.ts ./
-CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]
+# 適用前の既存行チェック（`scripts/migration-preconditions.ts`）を migrate の**前**に走らせる。
+# tsconfig.json は `@generated/*` alias の解決に要る（bun が paths を読む）。
+#
+# 落ちるなら migrate を始めない、が要点。始めてから落ちると `_prisma_migrations` に
+# 失敗が記録され、以降のデプロイが全部ブロックされて復旧が本番 DB の手作業になる。
+COPY tsconfig.json ./
+COPY scripts/migration-preconditions.ts ./scripts/migration-preconditions.ts
+CMD ["sh", "-c", "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"]
 
 # --- Stage 5: Runner (Cloud Run service) ---
 # Dockerfile 末尾 = `docker build` の既定ターゲット。cloudbuild は `--target=runner` で明示選択。

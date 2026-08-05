@@ -39,8 +39,18 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
       containers {
         image = "asia-northeast1-docker.pkg.dev/myrrh-rental-space/myrrh-rental-space/myrrh-rental-space:migrate-placeholder"
 
-        command = ["bunx"]
-        args    = ["--bun", "prisma", "migrate", "deploy"]
+        # 適用前チェック → migrate。**ここが SSoT**（Dockerfile の CMD はローカル実行用の
+        # 控えで、Cloud Run Job はこの command/args で上書きする。両方が同じ順序を持つことは
+        # `deploy-packaging-contract.test.ts` が固定する）。
+        #
+        # `migration-preconditions.ts` は未適用 migration の DDL から違反行プローブを導出し、
+        # 1 件でも当たれば非 0 で終わる。migrate を**始める前**に落ちるので
+        # `_prisma_migrations` に失敗が残らず、以降のデプロイがブロックされない。
+        command = ["sh"]
+        args = [
+          "-c",
+          "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy",
+        ]
 
         resources {
           limits = {

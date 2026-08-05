@@ -715,9 +715,16 @@ gcloud run jobs create prisma-migrate \
   --max-retries=0 \
   --task-timeout=600s \
   --set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1 \
-  --command=bunx \
-  --args=--bun,prisma,migrate,deploy
+  --command=sh \
+  --args=-c,"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"
 ```
+
+`scripts/migration-preconditions.ts` derives, from the SQL of every unapplied
+migration, a probe for the rows that would make it fail, and exits non-zero
+before `prisma migrate deploy` starts. Failing first matters: a migration that
+dies partway is recorded in `_prisma_migrations` and blocks every later deploy
+until someone repairs the production database by hand. The `&&` is load-bearing
+— with `;` the migrate runs regardless.
 
 Cloud Run resolves environment variable secrets at instance startup. Pin the
 migrate Job to Neon **direct** secrets (`DIRECT_URL:1` and `DATABASE_URL:1`);
@@ -726,7 +733,7 @@ production. The production audit checks `Cloud Run migrate Job env is canonical`
 and fails if either secret is missing, set as a plain value, or references a
 non-pinned Secret Manager version.
 The audit also checks `Cloud Run migrate Job command is canonical` and fails if
-the Job no longer runs `bunx --bun prisma migrate deploy`.
+the Job no longer runs the precondition check before `prisma migrate deploy`.
 The audit also checks `Cloud Run migrate Job execution config is canonical` and
 fails if the Job is not a single task with `--parallelism=1`, no task retries,
 a 600 second task timeout, 1 vCPU, and 1Gi memory.
