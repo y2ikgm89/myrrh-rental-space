@@ -83,7 +83,9 @@ Prisma query の順で書く（詳細は caching ルール）。
   src 全域で grep 禁止）。再有効化は `TermsDocument` 側の操作で行う
 - `AuditLog` は HMAC-SHA256 の hash chain で改ざん検知される（`src/shared/domain/audit-log/`）。
   書込は既存の commands 経由のみ。chain 契約（sequence 直列化・canonical JSON）を壊さない
-- `Settings` は `id: "singleton"` の単一行モデル
+- 設定は `Settings*` の複数の単一行モデルに分割されている（全表 `id = "singleton"`。
+  `invariants.sql` の `*_singleton_check` が SSoT。`prisma.settings` という delegate は
+  存在せず、`settings-phase5-split.test.ts` が src からの参照を 0 件強制する）
 - **append-only は 4 テーブルが DB trigger で強制されている**。src / `e2e/**` /
   `scripts/**` のどこから触っても UPDATE・DELETE は `RAISE EXCEPTION` で落ちる:
 

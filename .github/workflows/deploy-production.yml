@@ -340,8 +340,8 @@ jobs:
           #     ALTER COLUMN "resourceId" SET DATA TYPE TEXT;
           # のように改行を挟むことがあり、その場合どちらの行も単独では条件を
           # 満たさないため **判定が丸ごとすり抜ける**（= 破壊的変更が計画
-          # ダウンタイム無しで本番に出る）。実測: マージ済みの
-          # 20260726030000_admin_notification_resource_id_varchar は
+          # ダウンタイム無しで本番に出る）。実測: `ALTER TABLE` と
+          # `ALTER COLUMN ... SET DATA TYPE` を別行に分けた実在の migration が
           # この形で rc=1（不一致）だった。
           #
           # 照合前に「1 文 = 1 行」へ正規化する:

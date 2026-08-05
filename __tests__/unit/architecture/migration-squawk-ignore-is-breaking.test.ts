@@ -14,7 +14,7 @@
  * 「3 条件を満たす」と書けば通る＝**書けば通る**状態で、実際に条件 2
  * （破壊的 DDL grep に合致する）が成立していない migration が 1 本すり抜けた:
  *
- *   20260804085847_enum_naming_conventions は `ALTER TYPE ... RENAME VALUE` だけを
+ *   enum の値名を揃える migration は `ALTER TYPE ... RENAME VALUE` だけを
  *   含む。当時の grep は `ALTER TABLE ...` と `DROP TABLE|DROP TYPE` しか見ていない
  *   ので**ダウンタイム無しでデプロイされる**。旧 revision は生成済み client が持つ
  *   旧値 `'none'` を送り続け、`invalid input value for enum` で落ちる。

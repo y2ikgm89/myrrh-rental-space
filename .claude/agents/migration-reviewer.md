@@ -39,15 +39,12 @@ model: sonnet
    対象テーブルの再作成・型変更がこれらを落とさないか確認
 6. **PostgreSQL 制約**:
    - enum 値の削除は `ALTER TYPE ... DROP VALUE` 非サポート（RENAME + 新 TYPE +
-     USING cast + DROP が正規手順、実例: `20260703000000_audit_log_hash_chain`
-     は値追加のみ）。`ALTER TYPE ADD VALUE` は実行自体は可能だが新値は commit まで
-     使用不可 — Prisma migrate は 1 migration を 1 トランザクションで適用するため、
-     同一 migration 内での ADD VALUE + 新値使用は失敗する
-   - NOT NULL 化は backfill → SET NOT NULL の順（実例:
-     `20260704000000_display_order_surfaces` — WITH ranked で全行 backfill して
+     USING cast + DROP が正規手順）。`ALTER TYPE ADD VALUE` は実行自体は可能だが
+     新値は commit まで使用不可 — Prisma migrate は 1 migration を 1 トランザクションで
+     適用するため、同一 migration 内での ADD VALUE + 新値使用は失敗する
+   - NOT NULL 化は backfill → SET NOT NULL の順（WITH ranked 等で全行 backfill して
      から SET NOT NULL + SET DEFAULT）
-   - jsonb → text の unquote は `#>> '{}'`（`::text` cast だと引用符が残る。実例:
-     `20260702000000_notification_recipients_scalar_lists`）
+   - jsonb → text の unquote は `#>> '{}'`（`::text` cast だと引用符が残る）
    - 既存データがある前提の制約追加（unique 等）は違反行があると migrate 自体が
      失敗する。事前の重複解消 SQL を同 migration に含める
 7. **schema との drift**: `bun run db:generate` が通ること（型生成の破綻がないこと）

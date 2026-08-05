@@ -7,17 +7,14 @@
  *
  * 1. `reservations_no_event_slot_overlap_check`（reservations テーブル）
  *    Reservation の INSERT/UPDATE 時に EventTimeSlot との重複を検査。
- *    現行定義: prisma/migrations/20260728140000_timestamptz_and_yen_int_unify
- *    （timestamptz 型変換に伴い DROP + 再 CREATE。元の定義は
- *    20260713044626_event_reservation_cross_overlap_constraint）
  * 2. `event_time_slots_no_reservation_overlap_check`（event_time_slots テーブル）
  *    EventTimeSlot の INSERT/UPDATE 時に Reservation との重複を検査。
- *    現行定義: prisma/migrations/20260713044626_event_reservation_cross_overlap_constraint
- *    （後続 migration で再定義されていない）
  * 3. `events_no_reservation_overlap_check`（events テーブル）
  *    Event 親行の spaceId/status/deletedAt 変更時に、紐づく子 slot 全件を
- *    Reservation と再検査。現行定義: 20260728140000_timestamptz_and_yen_int_unify
- *    （元の定義は 20260713060100_event_parent_row_cross_overlap_trigger）
+ *    Reservation と再検査。
+ *
+ * 3 本とも現行定義の SSoT は `prisma/baseline/invariants.sql`
+ * （`readDatabaseInvariants()` で読む）。
  *
  * これらは Prisma DSL では表現できない手書き SQL 不変条件のため、
  * `prisma db pull` や migration の DROP+CREATE 再定義で静かに欠落しても

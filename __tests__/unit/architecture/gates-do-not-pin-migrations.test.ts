@@ -1,15 +1,37 @@
 /**
- * テストは **migration ディレクトリを名前で指してはいけない**（baseline を除く）。
+ * **コードも指示も migration ディレクトリを名前で指してはいけない**（baseline を除く）。
  *
  * ## なぜ
  *
- * 「`_audit_log_hash_chain` で終わるディレクトリを探して中身を検査する」形のゲートが
- * 8 本あった。migration 履歴を 1 本の baseline へ畳むとその**ディレクトリごと消えて
- * 落ちる**。落ちること自体は良いが、直し方が「新しい migration 名を書き直す」に
- * なってしまうのが良くない。
+ * migration 履歴は 1 本の baseline へ畳まれる。畳んだ瞬間、名前で指していた場所は
+ * **存在しないものを指す文章**になる。テストなら落ちるので気づくが、コメントと
+ * 散文は落ちない — 読んだ人が居ない migration を探し、見つからず、そこに書いてある
+ * 前提を確かめられないまま進む。
  *
- * ゲートが見たいのは **その不変条件が今も DB に存在すること**であって、どの migration が
- * 作ったかではない。名指しは「歴史の検査」で、畳めば意味を失う。
+ * 実際、前身は `__tests__` しか見ておらず、畳み込みの後も schema.prisma の索引コメント・
+ * seed.ts・src・deploy-production.yml・migration-reviewer.md に消えた名前が生き残っていた。
+ * 「ゲートの走査範囲を規約の置き場に合わせると、規約に書かれていない置き場を丸ごと
+ * 見逃す」の実例。**件数はここに書かない**（数は必ず drift する。それが分かるのが
+ * この gate の走査結果で、走らせれば出る）。
+ *
+ * ## 何を見るか
+ *
+ * `\d{14}_<name>` の形の名前が、走査対象のどこかに現れたら違反。**コメントも見る**
+ * （前身はコメントを落としていたが、畳み込み後に残る drift はまさにコメントの中にある）。
+ *
+ * 唯一の免除は baseline `00000000000000_init`。畳んだ結果が書かれる先で、パスが変わらない。
+ *
+ * ## 走査対象と、対象外にした理由
+ *
+ * | 対象 | |
+ * | --- | --- |
+ * | `src` / `scripts` / `__tests__` | 実行されるコード |
+ * | `prisma`（`migrations/` を除く） | schema.prisma・seed.ts・baseline 入力 |
+ * | `.claude` / `.github` | エージェントと CI への**指示**。誤った前提で作業させる |
+ *
+ * `prisma/migrations/**` は対象外 — ディレクトリ名そのものが timestamp であり、
+ * 中身は絶対規約 #7 で編集できない。`docs/**` も対象外で、こちらは**日付入りの
+ * 記録**（調査ログ・設計 spec）だから。記録は当時の事実を書いたもので、指示ではない。
  *
  * ## 代わりに使うもの（`__tests__/support/prisma-sources.ts`）
  *
@@ -20,92 +42,136 @@
  * | 畳んだ先の baseline そのもの | `readBaselineMigration()` |
  * | モデル・列・index 宣言 | `readPrismaSchema()` |
  *
- * ## 例外
+ * 由来を書き残したいときは、**どの migration がやったか**ではなく**何が起きたか**を書く
+ * （「一度きりの backfill で寄せ済み」「raw SQL で作られた索引」）。それは畳んでも真のままで、
+ * 名前は畳めば嘘になる。
  *
- * `00000000000000_init` だけは名指してよい。畳んだ結果が書かれる先で、パスが変わらない。
- * migration 履歴そのものの性質（原子性・時刻の単調性）を検査するテストは
- * ディレクトリ一覧を走査するので、この規約の対象外（名前を**固定**していない）。
+ * ## 合成 fixture について
+ *
+ * テストが自分で作る一時ディレクトリや、引数として渡すだけの偽パスは、実在する
+ * migration を指してはいない。**それでも timestamp 形の名前を使わない** — 免除を
+ * 設けると「これは fixture だから」が抜け道になる。`rehearsal_fixture` のように
+ * 形で区別が付く名前にする。
+ *
+ * この gate 自身の fixture だけは 14 桁の名前が要る（検出できることの証明だから）。
+ * ソースにリテラルで置くと自分を違反として数えるので、**実行時に組み立てる**。
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
-const TESTS_ROOT = join(process.cwd(), "__tests__");
+const ROOT = process.cwd();
 
 /** 畳んでも残る唯一の migration 名。 */
 const BASELINE_DIR_NAME = "00000000000000_init";
 
-/** Prisma の記帳テーブル。migration ディレクトリではない。 */
-const BOOKKEEPING_TABLE = "_prisma_migrations";
+/** 14 桁 timestamp + `_` + 名前。引用符もパスも問わず、コメントの中も見る。 */
+const MIGRATION_NAME = /\b\d{14}_[a-z0-9]+(?:_[a-z0-9]+)*/gu;
 
-/**
- * `20260705000000_order_uniqueness_constraints` のような timestamp 付きの
- * migration ディレクトリ名リテラル、および `_add_reservation_series` のような
- * 接尾辞での探索。
- */
-const PINNED_MIGRATION_NAME =
-  /["'`](\d{14}_[a-z0-9_]+|_[a-z0-9]+(?:_[a-z0-9]+)+)["'`]/gu;
+const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
+  { dir: "src", glob: "**/*.{ts,tsx}" },
+  { dir: "scripts", glob: "**/*.{ts,sh}" },
+  { dir: "__tests__", glob: "**/*.{ts,tsx}" },
+  { dir: "prisma", glob: "*.{ts,prisma}" },
+  { dir: "prisma/baseline", glob: "*.{sql,json}" },
+  { dir: ".claude", glob: "**/*.md" },
+  { dir: ".github", glob: "**/*.{yml,yaml,md}" },
+];
 
-/**
- * コメントを落とす。
- *
- * **散文まで見ると必ず誤検出する。** 「この挙動は migration `_section_page_id_not_null`
- * で発生不能になった」のような由来の説明は、名指しの検査ではなく残すべき記録。
- * このゲート自身の docblock も同じ理由で自己検出してしまう。
- */
-function stripComments(source: string): string {
-  return source
-    .replaceAll(/\/\*[\s\S]*?\*\//gu, "")
-    .replaceAll(/(^|[^:])\/\/.*$/gmu, "$1");
-}
-
-function listTestFiles(dir: string): string[] {
+function scannedFiles(): string[] {
   const out: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      out.push(...listTestFiles(full));
-    } else if (entry.endsWith(".ts") || entry.endsWith(".tsx")) {
-      out.push(full);
+  for (const entry of SCAN) {
+    const glob = new Bun.Glob(entry.glob);
+    for (const file of glob.scanSync({
+      cwd: join(ROOT, entry.dir),
+      absolute: true,
+    })) {
+      out.push(file);
     }
   }
   return out;
 }
 
-/** migration を扱っている行だけを対象にする（無関係な文字列で誤検出しないため）。 */
-function pinnedMigrationReferences(source: string): string[] {
-  const found: string[] = [];
-  for (const line of stripComments(source).split(/\r?\n/u)) {
-    if (!/migration/iu.test(line)) continue;
-    for (const match of line.matchAll(PINNED_MIGRATION_NAME)) {
-      const name = match[1];
-      if (name === undefined) continue;
-      if (name === BASELINE_DIR_NAME) continue;
-      if (name === BOOKKEEPING_TABLE) continue;
-      if (name.startsWith(BOOKKEEPING_TABLE)) continue;
-      found.push(name);
-    }
+/** そのテキストが名指ししている非 baseline の migration 名。 */
+export function pinnedMigrationNames(source: string): string[] {
+  const found = new Set<string>();
+  for (const match of source.matchAll(MIGRATION_NAME)) {
+    if (match[0] === BASELINE_DIR_NAME) continue;
+    found.add(match[0]);
   }
-  return found;
+  return [...found];
 }
 
-describe("ゲートは migration を名指ししない", () => {
-  test("走査対象のテストが実在する（gate 自体が空振りしていない）", () => {
-    expect(listTestFiles(TESTS_ROOT).length).toBeGreaterThan(100);
+describe("コードも指示も migration を名指ししない", () => {
+  test("走査対象が実在する（gate 自体が空振りしていない）", () => {
+    const files = scannedFiles();
+    expect(files.length).toBeGreaterThan(1000);
+    // 各ルートが 1 件も拾えていない、を個別に弾く（1 つ壊れても総数で隠れないように）。
+    for (const entry of SCAN) {
+      const glob = new Bun.Glob(entry.glob);
+      const count = [
+        ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
+      ].length;
+      expect({ dir: entry.dir, empty: count === 0 }).toEqual({
+        dir: entry.dir,
+        empty: false,
+      });
+    }
   });
 
-  test("baseline 以外の migration 名をリテラルで書いているテストが無い", () => {
+  test("通ってはいけない書き方が実際に落ちる（fixture）", () => {
+    // このファイル自身も走査対象なので、fixture の migration 名は**実行時に組み立てる**。
+    // ソースに 14 桁の名前をリテラルで置くと、この gate が自分を違反として数える。
+    // 免除を作る代わりにこうする（免除は「これは fixture だから」の抜け道になる）。
+    const ts = (suffix: string): string => `2026${"0101000000"}_${suffix}`;
+
+    // 引用符が隣接しない形（前身の正規表現はこれを取りこぼしていた）。
+    expect(
+      pinnedMigrationNames(
+        `const A = "prisma/migrations/${ts("a")}/migration.sql";`,
+      ),
+    ).toEqual([ts("a")]);
+    // "migration" という語を含まない行（前身の行フィルタはこれを飛ばしていた）。
+    expect(pinnedMigrationNames(`const name = "${ts("rehearsal")}";`)).toEqual([
+      ts("rehearsal"),
+    ]);
+    // コメントの中（前身はコメントを落としていた）。
+    expect(
+      pinnedMigrationNames(`// 実体は ${ts("add_series")} が作った索引`),
+    ).toEqual([ts("add_series")]);
+  });
+
+  test("baseline と、migration 名でないものは落とさない（fixture）", () => {
+    expect(pinnedMigrationNames(`const dir = "${BASELINE_DIR_NAME}";`)).toEqual(
+      [],
+    );
+    expect(pinnedMigrationNames("_prisma_migrations テーブル")).toEqual([]);
+    expect(pinnedMigrationNames("const name = 'rehearsal_fixture';")).toEqual(
+      [],
+    );
+    // 桁数が違えば migration 名ではない。
+    expect(pinnedMigrationNames('"2026080600000_short"')).toEqual([]);
+  });
+
+  test("baseline 以外の migration 名を書いている箇所が無い", () => {
     const offenders: string[] = [];
 
-    for (const file of listTestFiles(TESTS_ROOT)) {
-      const names = pinnedMigrationReferences(readFileSync(file, "utf8"));
+    for (const file of scannedFiles()) {
+      const names = pinnedMigrationNames(readFileSync(file, "utf8"));
       if (names.length === 0) continue;
-      const rel = file.replaceAll("\\", "/").split("__tests__/")[1] ?? file;
-      offenders.push(`${rel} :: ${[...new Set(names)].join(", ")}`);
+      offenders.push(
+        `${relative(ROOT, file).replaceAll("\\", "/")} :: ${names.join(", ")}`,
+      );
     }
 
-    expect(offenders).toEqual([]);
+    expect({
+      offenders,
+      hint:
+        offenders.length > 0
+          ? "migration 履歴は baseline へ畳まれるので、名前で指すと存在しないものを指す文章になる。由来を残したいなら『どの migration がやったか』ではなく『何が起きたか』を書く"
+          : "",
+    }).toEqual({ offenders: [], hint: "" });
   });
 });

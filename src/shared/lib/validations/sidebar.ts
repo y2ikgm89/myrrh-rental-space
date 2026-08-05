@@ -140,8 +140,7 @@ export type TryParseSidebarWidgetsResult =
  * Strict parse for admin paths — no silent fallback.
  *
  * `title` に `.trim()` を課す前（#1815 以前）に保存された空白だけのタイトルは、
- * migration `20260802120000_canonicalize_stored_text_whitespace` が一度だけ
- * 正規化して消してある。**その救済をここに常設しない** — 読み取り側で黙って
+ * 一度きりの正規化 migration で消してある。**その救済をここに常設しない** — 読み取り側で黙って
  * 直すと、管理画面の「保存されているウィジェット設定が不正です」警告が
  * 意味を失い、汚れた行は保存されたまま残り続ける。
  */

@@ -840,9 +840,8 @@ async function seedSpaceCategories() {
  * イベントカテゴリー。**「未分類」は本番でも必要**。
  *
  * `Event.categoryId` は必須（`onDelete: Restrict`）なので、カテゴリーが 1 件も
- * 無い DB では管理画面からイベントを作れない。以前は
- * `20260722235352_add_event_category` migration の `INSERT` が投入していたが、
- * migration 履歴を畳むと消えるのでここへ移した。
+ * 無い DB では管理画面からイベントを作れない。以前は migration の `INSERT` が
+ * 投入していたが、migration 履歴を畳むと消えるのでここへ移した。
  *
  * @param includeDemoCategories dev だけ true。本番は「未分類」のみ投入し、
  *   実際のカテゴリーは管理画面から作ってもらう（架空のカテゴリー名を本番に置かない）。

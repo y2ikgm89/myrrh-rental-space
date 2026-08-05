@@ -1,8 +1,9 @@
 // =============================================================================
-// Refund Actor Type（`refunds.refundedByType` の VARCHAR 値 — Prisma enum ではない）
+// Refund Actor Type（PG enum `refunded_by_type` = schema.prisma の `RefundedByType`）
 //
-// DB 側の CHECK 制約 `refunds_refundedByType_check` と application 側の enum を
-// 二重防御する。返金の起点 (誰が発火したか) を AuditLog metadata と併用する。
+// 値域の SSoT は DB の enum 型。ここはラベルと導出集合を持つだけで、値の追加は
+// `ALTER TYPE ... ADD VALUE` を伴う。返金の起点 (誰が発火したか) を AuditLog
+// metadata と併用する。
 //
 // 独立モジュールで宣言する理由: `helpers.ts` は `./guards` 経由で Prisma 生成
 // enums (SocialPlatform 含む多数) を transitive に load する。webhook / refund

@@ -1,7 +1,7 @@
 /**
  * Hero `videoUrl` → `video` migration semantics test
  *
- * `prisma/migrations/20260523163310_section_hero_video_url_to_video/migration.sql` の
+ * hero セクションの `videoUrl` を `video` へ寄せた migration の
  * PL/pgSQL JSONB rename ロジックを PostgreSQL に依存せず純粋 JS で再現し、
  * data-preserving 動作を契約として検証する。
  *
