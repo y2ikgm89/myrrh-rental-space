@@ -127,7 +127,7 @@ export async function clearGbpAuthState(): Promise<void> {
   await prisma.settingsGoogleBusinessProfile.update({
     where: { id },
     data: {
-      googleBusinessProfileAuth: Prisma.JsonNull,
+      googleBusinessProfileAuth: Prisma.DbNull,
       googleBusinessProfileEnabled: false,
     },
   });

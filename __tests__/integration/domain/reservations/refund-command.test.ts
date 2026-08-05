@@ -189,7 +189,9 @@ async function createPaidReservationFixture(
       startTime,
       endTime,
       status: "CONFIRMED",
-      totalPrice: totalPriceWithTax,
+      // `total_price` は税抜。本番 3 経路とも `with_tax = total + tax` で
+      // 組み立てており、20260805180000 の CHECK がその等式を固定している。
+      totalPrice: basePrice,
       basePrice,
       rateBreakdownJson: {
         schemaVersion: 1,
@@ -547,7 +549,9 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         startTime: new Date("2027-06-01T09:00:00+09:00"),
         endTime: new Date("2027-06-01T11:00:00+09:00"),
         status: "CONFIRMED",
-        totalPrice: totalPriceWithTax,
+        // `total_price` は税抜。本番 3 経路とも `with_tax = total + tax` で
+        // 組み立てており、20260805180000 の CHECK がその等式を固定している。
+        totalPrice: basePrice,
         basePrice,
         rateBreakdownJson: {
           schemaVersion: 1,

@@ -106,7 +106,7 @@ export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
 /**
  * `SettingsCommerce.refundPolicy` (Json?) を書き込む。
  *
- * - `policy === null` → `Prisma.JsonNull` を書き込み「policy 未設定」に戻す
+ * - `policy === null` → `Prisma.DbNull`（SQL NULL）を書き込み「policy 未設定」に戻す
  *   (cancellation-side-effects の unset = 残額全額自動返金)。
  * - `policy` が RefundPolicy shape → `asPrismaInputJsonValue` で JSON 化して write。
  *   resolveRefundPolicy 側の境界 check (hoursBefore >= 0, refundRate finite,
@@ -122,7 +122,7 @@ export async function updateRefundPolicy(
   const updateData = {
     refundPolicy:
       data.policy === null
-        ? Prisma.JsonNull
+        ? Prisma.DbNull
         : asPrismaInputJsonValue(data.policy, "返金ポリシーの形式が不正です"),
   };
 
