@@ -61,9 +61,24 @@ reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 S
   bun scripts/migration-preconditions.ts --url postgresql://...
   ```
 
-  **未適用 migration の DDL からプローブを導出する**ので、覆う範囲が制約の集合から
-  離れない。違反があれば制約名・行数・要件を名指しして exit 1、分類できない文や
-  プローブ未実装の文が残っていても exit 1（黙って飛ばさない）。
+  **未適用 migration を 1 つのトランザクションで実際に流し、必ず巻き戻す。**
+  判定は PostgreSQL の実挙動そのもので、落ちるなら**失敗した文と本当のエラー
+  （SQLSTATE 付き）**が出る。
+
+  前身は SQL を分類してプローブを組み立てる実装だった。多角レビュー 2 巡で
+  **21 件の取りこぼし**が出た（素通り 9・通る migration を止める誤検知 12）。
+  `NOT VALID` / `USING` 句 / `ATTACH PARTITION` / `CREATE TABLE AS SELECT` /
+  `varchar` の末尾空白 / 合成既定値の型 …… PostgreSQL の意味論を手で書き写す限り
+  収束しない。**写経に戻さないこと。**
+
+  巻き戻しの担保は 3 段: ①トランザクション制御と `CONCURRENTLY` が 1 文でもあれば
+  **何も実行せずに**止める（包み用の `BEGIN` / `COMMIT` / `END` のみ読み飛ばす）
+  ②実行は interactive transaction 内だけで、最後に必ず例外を投げる
+  ③テーブル数・制約数・index 数・履歴行数を前後で照合する。
+
+  見ないもの: シーケンスの採番は巻き戻らない。未適用が複数あるとき 1 つの
+  トランザクションで流すので、「前の migration が commit 済みであることに依存する文」
+  はここでだけ落ちうる。
 
   本番の Cloud Run Job（`terraform/cloud_run_migrate_job.tf`）は
   `migration-preconditions.ts && prisma migrate deploy` を実行する。**migrate を
@@ -74,9 +89,9 @@ reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 S
   `locations.special_holidays` に JSON null が残った DB で「0 件」と出たうえで
   migration が落ちた。人が書く一覧は覆うべき集合から必ず離れる。
   gate は `__tests__/unit/architecture/migration-preconditions.test.ts`
-  （全文が分類済み + 既存テーブルへの検査は全部プローブを持つ）と
-  `__tests__/integration/prisma/migration-preconditions-detect-violations.test.ts`
-  （プローブが実 DB で違反行を数える）
+  （文の切り出し + 巻き戻せない文を実行しない + 接続先解決）と
+  `__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`
+  （実 DB で落ちる/通るの終了コードと、DB が変わっていないこと）
 
 `.squawk.toml` の `assume_in_transaction` はこの実態に合わせて `false`。
 
