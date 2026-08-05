@@ -5,6 +5,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   ErrorCategory,
@@ -37,12 +38,22 @@ import { WAITLIST_OFFER_TTL_MS } from "./waitlist-offer-constants";
 export async function offerNextWaitlistEntryCommand(
   tx: {
     readonly eventRegistration: {
-      findFirst(args: object): Promise<{
+      findFirst(args: {
+        where: Prisma.EventRegistrationWhereInput;
+        orderBy?: Prisma.EventRegistrationOrderByWithRelationInput;
+        select: Prisma.EventRegistrationSelect;
+      }): Promise<{
         id: string;
         email: string | null;
       } | null>;
-      updateMany(args: object): Promise<{ count: number }>;
-      findUnique(args: object): Promise<{
+      updateMany(args: {
+        where: Prisma.EventRegistrationWhereInput;
+        data: Prisma.EventRegistrationUncheckedUpdateManyInput;
+      }): Promise<{ count: number }>;
+      findUnique(args: {
+        where: Prisma.EventRegistrationWhereUniqueInput;
+        select: Prisma.EventRegistrationSelect;
+      }): Promise<{
         id: string;
         email: string | null;
         offeredAt: Date | null;

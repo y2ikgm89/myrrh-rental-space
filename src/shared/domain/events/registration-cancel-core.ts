@@ -8,6 +8,7 @@ import {
   CANCELLABLE_REGISTRATION_STATUSES,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { offerNextWaitlistEntryCommand } from "./waitlist-commands";
 
 /**
@@ -45,14 +46,24 @@ import { offerNextWaitlistEntryCommand } from "./waitlist-commands";
 
 export interface ApplyEventRegistrationCancellationTx {
   readonly eventRegistration: {
-    updateMany(args: object): Promise<{ count: number }>;
+    updateMany(args: {
+      where: Prisma.EventRegistrationWhereInput;
+      data: Prisma.EventRegistrationUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
     // offerNextWaitlistEntryCommand に tx をそのまま渡すために必要な最小構造
     // （実装は呼ばないが、findFirst と揃えることで real Prisma tx との構造互換を保つ）。
-    findFirst(args: object): Promise<{
+    findFirst(args: {
+      where: Prisma.EventRegistrationWhereInput;
+      orderBy?: Prisma.EventRegistrationOrderByWithRelationInput;
+      select: Prisma.EventRegistrationSelect;
+    }): Promise<{
       id: string;
       email: string | null;
     } | null>;
-    findUnique(args: object): Promise<{
+    findUnique(args: {
+      where: Prisma.EventRegistrationWhereUniqueInput;
+      select: Prisma.EventRegistrationSelect;
+    }): Promise<{
       id: string;
       email: string | null;
       offeredAt: Date | null;

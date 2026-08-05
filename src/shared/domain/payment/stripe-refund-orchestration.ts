@@ -126,8 +126,13 @@ export function isRefundSettledSuccess(status: string | null): boolean {
 type RefundStatusUpdateClient = {
   refund: {
     updateMany: (args: {
-      where: { stripeRefundId: string; status: string };
-      data: { status: string };
+      // Prisma の Input 型と交差させる。「status 列だけ・この 2 条件だけ」という
+      // 絞り込みを保ったまま、列名が変わったらコンパイルで落とす。
+      where: Prisma.RefundWhereInput & {
+        stripeRefundId: string;
+        status: string;
+      };
+      data: Prisma.RefundUncheckedUpdateManyInput & { status: string };
     }) => Promise<{ count: number }>;
   };
 };
@@ -160,8 +165,11 @@ export async function applyConfirmedRefundStatus(
 type RefundSettlementClaimClient = {
   refund: {
     updateMany: (args: {
-      where: { stripeRefundId: string; status: { notIn: string[] } };
-      data: { status: string };
+      where: Prisma.RefundWhereInput & {
+        stripeRefundId: string;
+        status: { notIn: string[] };
+      };
+      data: Prisma.RefundUncheckedUpdateManyInput & { status: string };
     }) => Promise<{ count: number }>;
   };
 };
