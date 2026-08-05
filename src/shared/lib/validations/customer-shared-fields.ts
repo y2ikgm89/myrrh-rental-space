@@ -17,12 +17,27 @@ import { z } from "zod";
  * `label` は表示用ラベル ("姓" / "名")。error は `${label}は必須です` /
  * `${label}は50文字以内で入力してください` に統一する。
  */
+/** 姓・名それぞれの上限。 */
+export const PERSON_NAME_MAX_LENGTH = 50;
+
+/**
+ * 「姓 + 半角空白 + 名」で組んだ表示名の上限。
+ *
+ * `inquiries.name` のように姓名を 1 列へ連結して保存する箇所がある。**姓と名の
+ * 上限をそのまま列長にすると 1 文字足りない** — 区切りの空白ぶんが入らず、
+ * 上限いっぱいの氏名で 22001 になり、問い合わせ送信が 500 で失われる。
+ * （`receipts.recipient_name` が VarChar(100) で同じ壊れ方をして Text へ移した）
+ */
+export const FULL_NAME_MAX_LENGTH = PERSON_NAME_MAX_LENGTH * 2 + 1;
+
 export function personNameFieldSchema(label: string) {
   return z
     .string()
     .trim()
     .min(1, { error: `${label}は必須です` })
-    .max(50, { error: `${label}は50文字以内で入力してください` });
+    .max(PERSON_NAME_MAX_LENGTH, {
+      error: `${label}は${PERSON_NAME_MAX_LENGTH}文字以内で入力してください`,
+    });
 }
 
 /**

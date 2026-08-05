@@ -399,10 +399,10 @@ enum HolidayMode {
 
 model User {
   id               String   @id @default(uuid(7)) @db.Uuid
-  email            String   @unique
-  name             String
+  email            String   @unique @db.VarChar(254)
+  name             String   @db.Text
   emailVerified    Boolean  @default(false) @map("email_verified")
-  image            String?
+  image            String?  @db.Text
   role             Role     @default(USER)
   /// Google Workspace グループ同期でダッシュボード利用可否を表す。
   /// false のとき管理ログイン拒否・通知先/担当候補から除外（ロール履歴は保持）。
@@ -423,23 +423,23 @@ model User {
   pageAssignments UserPageAssignment[]
 
   // FK: createdBy / resolvedBy / deletedBy リレーション
-  createdCommentThreads      EditorCommentThread[] @relation("CommentThreadCreator")
-  resolvedCommentThreads     EditorCommentThread[] @relation("CommentThreadResolver")
-  createdEditorComments      EditorComment[]       @relation("EditorCommentCreator")
-  deletedEditorComments      EditorComment[]       @relation("EditorCommentDeleter")
+  createdCommentThreads       EditorCommentThread[] @relation("CommentThreadCreator")
+  resolvedCommentThreads      EditorCommentThread[] @relation("CommentThreadResolver")
+  createdEditorComments       EditorComment[]       @relation("EditorCommentCreator")
+  deletedEditorComments       EditorComment[]       @relation("EditorCommentDeleter")
   // Inquiry Overhaul Phase 1: 旧 1:1 の replyMessage/repliedBy を廃止。
   // 複数返信スレッド (InquiryReply) と担当者アサイン (Inquiry.assignee) に分割し、
   // status 変更履歴・添付・内部メモの author も User FK として持つ。
-  assignedInquiries          Inquiry[]             @relation("InquiryAssignee")
-  authoredInquiryReplies     InquiryReply[]        @relation("InquiryReplyAuthor")
-  uploadedInquiryAttachments InquiryAttachment[]   @relation("InquiryAttachmentUploadedByUser")
-  authoredInquiryNotes       InquiryInternalNote[] @relation("InquiryInternalNoteAuthor")
-  reservationDeletions       Reservation[]         @relation("ReservationDeletions")
-  deletedReservationSeries   ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
-  eventDeletions             Event[]               @relation("EventDeletions")
-  createdBlockTemplates      BlockTemplate[]       @relation("BlockTemplateCreator")
-  repliedSpaceReviews        SpaceReview[]         @relation("SpaceReviewReplyAuthor")
-  priceOverriddenReservations Reservation[]        @relation("ReservationPriceOverrides")
+  assignedInquiries           Inquiry[]             @relation("InquiryAssignee")
+  authoredInquiryReplies      InquiryReply[]        @relation("InquiryReplyAuthor")
+  uploadedInquiryAttachments  InquiryAttachment[]   @relation("InquiryAttachmentUploadedByUser")
+  authoredInquiryNotes        InquiryInternalNote[] @relation("InquiryInternalNoteAuthor")
+  reservationDeletions        Reservation[]         @relation("ReservationDeletions")
+  deletedReservationSeries    ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
+  eventDeletions              Event[]               @relation("EventDeletions")
+  createdBlockTemplates       BlockTemplate[]       @relation("BlockTemplateCreator")
+  repliedSpaceReviews         SpaceReview[]         @relation("SpaceReviewReplyAuthor")
+  priceOverriddenReservations Reservation[]         @relation("ReservationPriceOverrides")
 
   // OR検索用インデックス
   @@index([name])
@@ -461,15 +461,15 @@ model UserPageAssignment {
 model Account {
   id                    String    @id @default(uuid(7)) @db.Uuid
   userId                String    @map("user_id") @db.Uuid
-  accountId             String    @map("account_id") // Better Auth: ユーザーID or プロバイダーのアカウントID
-  providerId            String    @map("provider_id") // Better Auth: "credential" or "google" etc.
+  accountId             String    @map("account_id") @db.Text // Better Auth: ユーザーID or プロバイダーのアカウントID
+  providerId            String    @map("provider_id") @db.Text // Better Auth: "credential" or "google" etc.
   accessToken           String?   @map("access_token") @db.Text
   refreshToken          String?   @map("refresh_token") @db.Text
   idToken               String?   @map("id_token") @db.Text
   accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(6)
   refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(6)
-  scope                 String?
-  password              String? // Better Auth: credential provider のパスワード（scrypt hash）
+  scope                 String?   @db.Text
+  password              String?   @db.Text // Better Auth: credential provider のパスワード（scrypt hash）
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -481,11 +481,11 @@ model Account {
 
 model Session {
   id        String   @id @default(uuid(7)) @db.Uuid
-  token     String   @unique
+  token     String   @unique @db.Text
   userId    String   @map("user_id") @db.Uuid
   expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address") @db.Text
+  userAgent String?  @map("user_agent") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -497,8 +497,8 @@ model Session {
 
 model Verification {
   id         String   @id @default(uuid(7)) @db.Uuid
-  identifier String
-  value      String
+  identifier String   @db.Text
+  value      String   @db.Text
   expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -516,20 +516,20 @@ model Location {
   // slug / name の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
   // 値を永久に予約しないため partial index。SpaceCategory.name と同型の fix）。
   slug            String  @db.VarChar(255)
-  name            String
+  name            String  @db.Text
   description     String? @db.Text
-  address         String
-  postalCode      String? @map("postal_code")
-  prefecture      String?
-  city            String?
-  streetAddress   String? @map("street_address")
-  buildingName    String? @map("building_name")
+  address         String  @db.Text
+  postalCode      String? @map("postal_code") @db.VarChar(10)
+  prefecture      String? @db.VarChar(20)
+  city            String? @db.VarChar(100)
+  streetAddress   String? @map("street_address") @db.VarChar(200)
+  buildingName    String? @map("building_name") @db.VarChar(200)
   /// 交通案内（最寄り駅・路線・徒歩分数等）。1 行 = 1 経路の構造化配列。
   /// 旧 access String 列（改行区切り）を 2026-05-01 に Json 配列化（破壊的変更）。
   accessLines     Json    @default("[]") @map("access_lines")
   parkingInfo     String? @map("parking_info") @db.Text
   amenities       Json    @default("{}")
-  imageUrl        String  @map("image_url")
+  imageUrl        String  @map("image_url") @db.Text
   imageUrls       Json    @default("[]") @map("image_urls")
   businessHours   Json?   @map("business_hours")
   specialHolidays Json?   @map("special_holidays")
@@ -537,12 +537,12 @@ model Location {
   // MEO（Local SEO）— Settings から移管
   latitude              Float?
   longitude             Float?
-  googleBusinessPlaceId String? @map("google_business_place_id")
-  googleReviewUrl       String? @map("google_review_url")
+  googleBusinessPlaceId String? @map("google_business_place_id") @db.Text
+  googleReviewUrl       String? @map("google_review_url") @db.Text
   priceRange            String? @map("price_range") @db.VarChar(100)
-  paymentAccepted       String? @map("payment_accepted")
-  phoneNumber           String? @map("phone_number")
-  email                 String?
+  paymentAccepted       String? @map("payment_accepted") @db.Text
+  phoneNumber           String? @map("phone_number") @db.VarChar(30)
+  email                 String? @db.VarChar(254)
 
   // GBP Sync
   gbpSyncEnabled Boolean   @default(true) @map("gbp_sync_enabled")
@@ -583,10 +583,10 @@ model Location {
 
 model SpaceCategory {
   id          String   @id @default(uuid(7)) @db.Uuid
-  name        String // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証。一意性は下記 @@unique(where: isActive) 参照）
+  name        String   @db.Text // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証。一意性は下記 @@unique(where: isActive) 参照）
   description String?  @db.Text
-  icon        String? // アイコン名（任意）
-  color       String? // テーマカラー（任意）
+  icon        String?  @db.Text // アイコン名（任意）
+  color       String?  @db.Text // テーマカラー（任意）
   sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -609,8 +609,8 @@ model Space {
   id                   String    @id @default(uuid(7)) @db.Uuid
   // slug の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
   // 値を永久に予約しないため partial index。Location.slug / SpaceCategory.name と同型）。
-  slug                 String
-  name                 String
+  slug                 String    @db.Text
+  name                 String    @db.Text
   /// Lexical EditorState JSON（正本）
   descriptionJson      Json      @map("description_json")
   /// Lexical → 公開表示用 HTML キャッシュ（SanitizedHtml で出力）
@@ -624,7 +624,7 @@ model Space {
   /// 面積（㎡×100、例: 2550 = 25.5㎡）
   area                 Int?
   hourlyPrice          Int       @map("hourly_price")
-  mainImageUrl         String    @map("main_image_url")
+  mainImageUrl         String    @map("main_image_url") @db.Text
   gallery              Json      @default("[]")
   /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
   /// JSON 配列 `{ name: string; iconName: string }[]`。
@@ -642,13 +642,13 @@ model Space {
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // SEO設定
-  metaDescription String? @map("meta_description")
-  metaKeywords    String? @map("meta_keywords")
+  metaDescription String? @map("meta_description") @db.Text
+  metaKeywords    String? @map("meta_keywords") @db.Text
 
   // OGP設定
-  ogpTitle       String? @map("ogp_title")
-  ogpDescription String? @map("ogp_description")
-  ogpImageUrl    String? @map("ogp_image_url")
+  ogpTitle       String? @map("ogp_title") @db.Text
+  ogpDescription String? @map("ogp_description") @db.Text
+  ogpImageUrl    String? @map("ogp_image_url") @db.Text
 
   // 割引設定（Enum化）
   discountType             DiscountType             @default(NONE) @map("discount_type")
@@ -851,10 +851,10 @@ model Reservation {
   rateBreakdownJson      Json    @map("rate_breakdown_json")
 
   // 税情報（予約時点の値を記録）
-  taxRateType       TaxRateType @map("tax_rate_type") // 適用された税率タイプ（NOT NULL、snapshot）
-  taxRate           Int         @map("tax_rate") // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
-  taxAmount         Int         @map("tax_amount") // 税額（円、NOT NULL）
-  totalPriceWithTax Int         @map("total_price_with_tax") // 税込み合計（円、NOT NULL）
+  taxRateType         TaxRateType @map("tax_rate_type") // 適用された税率タイプ（NOT NULL、snapshot）
+  taxRate             Int         @map("tax_rate") // 適用税率（%、whole integer、例: 10 = 10%）（NOT NULL、snapshot）
+  taxAmount           Int         @map("tax_amount") // 税額（円、NOT NULL）
+  totalPriceWithTax   Int         @map("total_price_with_tax") // 税込み合計（円、NOT NULL）
   /// 管理者が計算値を手動上書きした場合の実行者（audit 目的）。null = 上書きなし。
   ///
   /// **FK を張る。** 上書き額は返金額・領収書金額の根拠なので「誰が決めたか」は
@@ -862,19 +862,19 @@ model Reservation {
   /// 消えても ID 文字列だけが残り、**存在しない人を指したまま**になる。
   /// `deletedById` / `repliedById` と同じ `onDelete: SetNull` に揃え、
   /// 「消えた＝辿れない」を NULL で正直に表す。
-  priceOverriddenById String?   @map("price_overridden_by_id") @db.Uuid
+  priceOverriddenById String?     @map("price_overridden_by_id") @db.Uuid
 
   // Google Calendar Sync
-  googleCalendarEventId String?   @map("google_calendar_event_id") // 共有カレンダーのイベントID
+  googleCalendarEventId String?   @map("google_calendar_event_id") @db.Text // 共有カレンダーのイベントID
   calendarSyncedAt      DateTime? @map("calendar_synced_at") @db.Timestamptz(6) // 最終同期日時
   calendarSyncError     String?   @map("calendar_sync_error") @db.Text // 同期エラーメッセージ
 
   // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
-  guestLastName     String?       @map("guest_last_name")
-  guestFirstName    String?       @map("guest_first_name")
-  guestEmail        String?       @map("guest_email")
-  guestPhone        String?       @map("guest_phone")
-  guestCompanyName  String?       @map("guest_company_name")
+  guestLastName     String?       @map("guest_last_name") @db.VarChar(50)
+  guestFirstName    String?       @map("guest_first_name") @db.VarChar(50)
+  guestEmail        String?       @map("guest_email") @db.VarChar(254)
+  guestPhone        String?       @map("guest_phone") @db.VarChar(30)
+  guestCompanyName  String?       @map("guest_company_name") @db.VarChar(100)
   guestCustomerType CustomerType? @map("guest_customer_type")
 
   // Relations
@@ -906,9 +906,9 @@ model Reservation {
   /// Stripe Checkout Session の id。`@unique` は「同じ session が別の予約に紐づく」
   /// silent bug を防ぐ。EventRegistration 側は最初から `@unique` で、そのコメントは
   /// 「Reservation 側と同型」と書いていたが、実際にはこちら側だけ制約が無かった。
-  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id")
+  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id") @db.Text
   /// Stripe PaymentIntent の id。返金の idempotency key としても参照するため一意。
-  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id")
+  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id") @db.Text
   paidAt                  DateTime?     @map("paid_at") @db.Timestamptz(6)
   /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
   /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
@@ -965,17 +965,17 @@ model Reservation {
 
 model Customer {
   id                     String              @id @default(uuid(7)) @db.Uuid
-  lastName               String              @map("last_name")
-  firstName              String              @map("first_name")
-  lastNameKana           String?             @map("last_name_kana") // 姓カナ（任意）
-  firstNameKana          String?             @map("first_name_kana") // 名カナ（任意）
-  companyName            String?             @map("company_name") // 会社名・団体名（法人の場合）
+  lastName               String              @map("last_name") @db.VarChar(50)
+  firstName              String              @map("first_name") @db.VarChar(50)
+  lastNameKana           String?             @map("last_name_kana") @db.VarChar(50) // 姓カナ（任意）
+  firstNameKana          String?             @map("first_name_kana") @db.VarChar(50) // 名カナ（任意）
+  companyName            String?             @map("company_name") @db.VarChar(100) // 会社名・団体名（法人の場合）
   customerType           CustomerType        @default(PERSONAL) @map("customer_type")
-  email                  String
-  emailCanonical         String              @map("email_canonical")
-  phoneNumber            String?             @map("phone_number")
-  postalCode             String?             @map("postal_code") @db.VarChar(8) // 郵便番号 "123-4567" 等
-  prefecture             String?             @db.VarChar(10) // 都道府県（PREFECTURES SSoT）
+  email                  String              @db.VarChar(254)
+  emailCanonical         String              @map("email_canonical") @db.VarChar(254)
+  phoneNumber            String?             @map("phone_number") @db.VarChar(30)
+  postalCode             String?             @map("postal_code") @db.VarChar(10) // 郵便番号 "123-4567" 等
+  prefecture             String?             @db.VarChar(20) // 都道府県（PREFECTURES SSoT）
   city                   String?             @db.VarChar(100) // 市区町村
   streetAddress          String?             @map("street_address") @db.VarChar(200) // 町名・番地
   building               String?             @db.VarChar(200) // 建物名・部屋番号
@@ -1002,7 +1002,7 @@ model Customer {
   /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
   flaggedForReviewAt     DateTime?           @map("flagged_for_review_at") @db.Timestamptz(6)
-  flagReasons            String[]            @default([]) @map("flag_reasons")
+  flagReasons            String[]            @default([]) @map("flag_reasons") @db.Text
   /// STATE-03: 匿名化 (anonymize) 実施時刻。非 null = 匿名化済み。
   /// 決済歴 (Receipt 発行済) のある Customer は物理削除できないため
   /// (Receipt.reservation は onDelete: Restrict)、PII を placeholder に置換して
@@ -1083,8 +1083,8 @@ model PendingCustomerEmailChange {
   id                String    @id @default(uuid(7)) @db.Uuid
   customerId        String    @map("customer_id") @db.Uuid
   customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  newEmail          String    @map("new_email") @db.VarChar(320)
-  newEmailCanonical String    @map("new_email_canonical") @db.VarChar(320)
+  newEmail          String    @map("new_email") @db.VarChar(254)
+  newEmailCanonical String    @map("new_email_canonical") @db.VarChar(254)
   tokenHash         String    @unique @map("token_hash") @db.VarChar(64) // sha256 hex
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
   consumedAt        DateTime? @map("consumed_at") @db.Timestamptz(6)
@@ -1106,7 +1106,7 @@ model PendingCustomerMerge {
   id               String    @id @default(uuid(7)) @db.Uuid
   targetCustomerId String    @map("target_customer_id") @db.Uuid
   sourceCustomerId String    @map("source_customer_id") @db.Uuid
-  guestEmail       String    @map("guest_email") @db.VarChar(320)
+  guestEmail       String    @map("guest_email") @db.VarChar(254)
   tokenHash        String    @unique @map("token_hash") @db.VarChar(64)
   expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
   consumedAt       DateTime? @map("consumed_at") @db.Timestamptz(6)
@@ -1127,9 +1127,9 @@ model PendingCustomerMerge {
 
 model Coupon {
   id          String  @id @default(uuid(7)) @db.Uuid
-  code        String  @unique // クーポンコード (大文字英数字)
-  name        String // 管理用名称
-  description String? // 説明
+  code        String  @unique @db.Text // クーポンコード (大文字英数字)
+  name        String  @db.Text // 管理用名称
+  description String? @db.Text // 説明
 
   // 割引設定
   type          CouponType
@@ -1172,13 +1172,13 @@ model Inquiry {
   id            String        @id @default(uuid(7)) @db.Uuid
   /// ユーザー可視の受付番号 (INQ-XXXXXXXX)。application 層で採番、UNIQUE 制約 + retry。
   receiptNumber String        @unique @map("receipt_number") @db.VarChar(20)
-  name          String
-  companyName   String?       @map("company_name") // 会社名・団体名（法人の場合）
+  name          String        @db.VarChar(101)
+  companyName   String?       @map("company_name") @db.VarChar(100) // 会社名・団体名（法人の場合）
   customerType  CustomerType? @map("customer_type")
-  email         String
+  email         String        @db.VarChar(254)
   /// 任意入力の連絡先電話番号 (public フォーム + 会員 prefill 対応)
-  phoneNumber   String?       @map("phone_number")
-  subject       String
+  phoneNumber   String?       @map("phone_number") @db.VarChar(30)
+  subject       String        @db.VarChar(200)
   message       String        @db.Text
   status        InquiryStatus @default(NEW)
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1274,7 +1274,7 @@ model InquiryAttachment {
   /// 特定の返信への添付なら非 null (返信削除で cascade 削除)
   replyId              String?  @map("reply_id") @db.Uuid
   /// R2 object key (UNIQUE)。physical uniqueness の source of truth。
-  r2Key                String   @unique @map("r2_key")
+  r2Key                String   @unique @map("r2_key") @db.Text
   mimeType             String   @map("mime_type") @db.VarChar(100)
   sizeBytes            Int      @map("size_bytes")
   filename             String   @db.VarChar(255)
@@ -1341,8 +1341,8 @@ model InquiryTagOnInquiry {
 
 model News {
   id                 String       @id @default(uuid(7)) @db.Uuid
-  slug               String       @unique
-  title              String
+  slug               String       @unique @db.Text
+  title              String       @db.Text
   contentHtml        String       @map("content_html") @db.Text // HTMLキャッシュ（公開表示用）
   contentJson        Json?        @map("content_json") // Lexical EditorState JSON（プライマリ）
   isPublished        Boolean      @default(false) @map("is_published")
@@ -1353,13 +1353,13 @@ model News {
   updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // SEO設定
-  metaDescription String? @map("meta_description")
-  metaKeywords    String? @map("meta_keywords")
+  metaDescription String? @map("meta_description") @db.Text
+  metaKeywords    String? @map("meta_keywords") @db.Text
 
   // OGP設定
-  ogpTitle       String? @map("ogp_title")
-  ogpDescription String? @map("ogp_description")
-  ogpImageUrl    String? @map("ogp_image_url")
+  ogpTitle       String? @map("ogp_title") @db.Text
+  ogpDescription String? @map("ogp_description") @db.Text
+  ogpImageUrl    String? @map("ogp_image_url") @db.Text
 
   // OR検索用インデックス
   @@index([title])
@@ -1377,10 +1377,10 @@ model AnnouncementBar {
   /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
   /// `{_key,_type:"iconInline",name}` の discriminated union を順次配置する。
   message      Json      @default("[]")
-  linkUrl      String?   @map("link_url")
-  linkText     String?   @map("link_text")
-  bgColor      String?   @map("bg_color") // カスタム背景色 (hex)
-  textColor    String?   @map("text_color") // カスタム文字色 (hex)
+  linkUrl      String?   @map("link_url") @db.Text
+  linkText     String?   @map("link_text") @db.Text
+  bgColor      String?   @map("bg_color") @db.Text // カスタム背景色 (hex)
+  textColor    String?   @map("text_color") @db.Text // カスタム文字色 (hex)
   isActive     Boolean   @default(true) @map("is_active")
   displayOrder Int       @default(0) @map("display_order")
   startAt      DateTime? @map("start_at") @db.Timestamptz(6)
@@ -1400,19 +1400,19 @@ model AnnouncementBar {
 
 model Post {
   id                 String       @id @default(uuid(7)) @db.Uuid
-  title              String
+  title              String       @db.Text
   // 一意性は下記 @@unique(where: deletedAt is null) 参照（Event/FaqCategory と同型）
-  slug               String
+  slug               String       @db.Text
   excerpt            String       @db.Text
   contentHtml        String       @map("content_html") @db.Text // HTMLキャッシュ（公開表示用）
   contentJson        Json?        @map("content_json") // Lexical EditorState JSON（プライマリ）
-  thumbnailUrl       String       @map("thumbnail_url")
-  ogpImageUrl        String?      @map("ogp_image_url")
+  thumbnailUrl       String       @map("thumbnail_url") @db.Text
+  ogpImageUrl        String?      @map("ogp_image_url") @db.Text
   categoryId         String       @map("category_id") @db.Uuid
-  metaDescription    String?      @map("meta_description")
-  metaKeywords       String?      @map("meta_keywords")
-  ogpTitle           String?      @map("ogp_title")
-  ogpDescription     String?      @map("ogp_description")
+  metaDescription    String?      @map("meta_description") @db.Text
+  metaKeywords       String?      @map("meta_keywords") @db.Text
+  ogpTitle           String?      @map("ogp_title") @db.Text
+  ogpDescription     String?      @map("ogp_description") @db.Text
   publishedAt        DateTime?    @map("published_at") @db.Timestamptz(6)
   status             PostStatus   @default(DRAFT)
   viewCount          Int          @default(0) @map("view_count") // 公開ページでの閲覧回数（集計値、localStorage で dedup）
@@ -1461,12 +1461,12 @@ model PostTagOnPost {
 
 model PostCategory {
   id              String   @id @default(uuid(7)) @db.Uuid
-  name            String   @unique
-  slug            String   @unique
+  name            String   @unique @db.Text
+  slug            String   @unique @db.Text
   description     String?  @db.Text
-  metaTitle       String?  @map("meta_title")
+  metaTitle       String?  @map("meta_title") @db.Text
   metaDescription String?  @map("meta_description") @db.Text
-  ogpImageUrl     String?  @map("ogp_image_url")
+  ogpImageUrl     String?  @map("ogp_image_url") @db.Text
   order           Int      @default(0)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1480,12 +1480,12 @@ model PostCategory {
 
 model PostTag {
   id              String   @id @default(uuid(7)) @db.Uuid
-  name            String   @unique
-  slug            String   @unique
+  name            String   @unique @db.Text
+  slug            String   @unique @db.Text
   description     String?  @db.Text
-  metaTitle       String?  @map("meta_title")
+  metaTitle       String?  @map("meta_title") @db.Text
   metaDescription String?  @map("meta_description") @db.Text
-  ogpImageUrl     String?  @map("ogp_image_url")
+  ogpImageUrl     String?  @map("ogp_image_url") @db.Text
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1501,13 +1501,13 @@ model PostTag {
 
 model Page {
   id              String    @id @default(uuid(7)) @db.Uuid
-  slug            String    @unique
-  title           String
-  metaDescription String?   @map("meta_description")
-  metaKeywords    String?   @map("meta_keywords")
-  ogpTitle        String?   @map("ogp_title")
-  ogpDescription  String?   @map("ogp_description")
-  ogpImageUrl     String?   @map("ogp_image_url")
+  slug            String    @unique @db.Text
+  title           String    @db.Text
+  metaDescription String?   @map("meta_description") @db.Text
+  metaKeywords    String?   @map("meta_keywords") @db.Text
+  ogpTitle        String?   @map("ogp_title") @db.Text
+  ogpDescription  String?   @map("ogp_description") @db.Text
+  ogpImageUrl     String?   @map("ogp_image_url") @db.Text
   isPublished     Boolean   @default(true) @map("is_published")
   publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
   isActive        Boolean   @default(true) @map("is_active")
@@ -1561,7 +1561,7 @@ model NavigationItem {
   /// テキスト + アイコンの混在を任意位置で表現する SSoT。空配列 [] は許容しない（空ナビ防止は admin form 層で）。
   /// icon-only モードは禁止（NN/g 準拠 — 必ず text token と併記、SR は text のみ読み上げ）。
   label      Json
-  url        String
+  url        String         @db.Text
   isExternal Boolean        @default(false) @map("is_external")
   order      Int
   isActive   Boolean        @default(true) @map("is_active")
@@ -1580,7 +1580,7 @@ model NavigationItem {
 model SocialLink {
   id            String         @id @default(uuid(7)) @db.Uuid
   platform      SocialPlatform
-  url           String
+  url           String         @db.Text
   order         Int
   isActive      Boolean        @default(true) @map("is_active")
   showOnDesktop Boolean        @default(true) @map("show_on_desktop") // デスクトップで表示
@@ -1598,10 +1598,10 @@ model SocialLink {
 
 model FaqCategory {
   id          String    @id @default(uuid(7)) @db.Uuid
-  name        String
-  slug        String // 一意性は下記 @@unique(where: deletedAt is null) 参照
+  name        String    @db.Text
+  slug        String    @db.Text // 一意性は下記 @@unique(where: deletedAt is null) 参照
   description String?   @db.Text
-  icon        String? // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
+  icon        String?   @db.Text // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
   order       Int       @default(0)
   isActive    Boolean   @default(true) @map("is_active")
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -1629,7 +1629,7 @@ model FaqCategory {
 model FaqItem {
   id              String    @id @default(uuid(7)) @db.Uuid
   categoryId      String    @map("category_id") @db.Uuid
-  question        String
+  question        String    @db.Text
   answer          String    @db.Text // 回答（プレーンテキスト、改行保持）
   order           Int       @default(0)
   isPublished     Boolean   @default(true) @map("is_published")
@@ -1664,7 +1664,7 @@ model FaqItem {
 // ==============================================
 
 model SettingsAnnouncementCarousel {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1675,9 +1675,9 @@ model SettingsAnnouncementCarousel {
   showArrows        Boolean                    @default(true) @map("show_arrows")
   showIndicator     Boolean                    @default(true) @map("show_indicator")
   designStyle       AnnouncementBarDesignStyle @default(SOLID) @map("design_style")
-  bgColor           String?                    @map("bg_color")
-  textColor         String?                    @map("text_color")
-  stripeColor       String?                    @map("stripe_color")
+  bgColor           String?                    @map("bg_color") @db.Text
+  textColor         String?                    @map("text_color") @db.Text
+  stripeColor       String?                    @map("stripe_color") @db.Text
   stripeAnimation   Boolean                    @default(false) @map("stripe_animation")
   gradientAnimation Boolean                    @default(false) @map("gradient_animation")
   glassAnimation    Boolean                    @default(false) @map("glass_animation")
@@ -1687,7 +1687,7 @@ model SettingsAnnouncementCarousel {
 }
 
 model SettingsSystem {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1695,15 +1695,15 @@ model SettingsSystem {
   maintenanceMessage      String? @map("maintenance_message") @db.Text
   cookieConsentEnabled    Boolean @default(false) @map("cookie_consent_enabled")
   cookieConsentMessage    String? @map("cookie_consent_message") @db.Text
-  cookieConsentAcceptText String? @map("cookie_consent_accept_text")
-  cookieConsentRejectText String? @map("cookie_consent_reject_text")
-  cookieConsentPolicyUrl  String? @map("cookie_consent_policy_url")
+  cookieConsentAcceptText String? @map("cookie_consent_accept_text") @db.Text
+  cookieConsentRejectText String? @map("cookie_consent_reject_text") @db.Text
+  cookieConsentPolicyUrl  String? @map("cookie_consent_policy_url") @db.Text
 
   @@map("settings_system")
 }
 
 model SettingsSeo {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1712,41 +1712,41 @@ model SettingsSeo {
   // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
   // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
   // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
-  siteName               String? @map("site_name")
+  siteName               String? @map("site_name") @db.Text
   siteDescription        String? @map("site_description") @db.Text
-  faviconUrl             String  @default("") @map("favicon_url")
-  defaultOgpImageUrl     String? @map("default_ogp_image_url")
-  headerLogoUrl          String? @map("header_logo_url")
-  footerLogoUrl          String? @map("footer_logo_url")
-  footerCopyright        String? @map("footer_copyright")
+  faviconUrl             String  @default("") @map("favicon_url") @db.Text
+  defaultOgpImageUrl     String? @map("default_ogp_image_url") @db.Text
+  headerLogoUrl          String? @map("header_logo_url") @db.Text
+  footerLogoUrl          String? @map("footer_logo_url") @db.Text
+  footerCopyright        String? @map("footer_copyright") @db.Text
   useHeaderLogo          Boolean @default(true) @map("use_header_logo")
   useFooterLogo          Boolean @default(true) @map("use_footer_logo")
-  defaultMetaDescription String? @map("default_meta_description")
-  defaultMetaKeywords    String? @map("default_meta_keywords")
-  defaultOgpTitle        String? @map("default_ogp_title")
-  defaultOgpDescription  String? @map("default_ogp_description")
+  defaultMetaDescription String? @map("default_meta_description") @db.Text
+  defaultMetaKeywords    String? @map("default_meta_keywords") @db.Text
+  defaultOgpTitle        String? @map("default_ogp_title") @db.Text
+  defaultOgpDescription  String? @map("default_ogp_description") @db.Text
 
   @@map("settings_seo")
 }
 
 model SettingsAnalytics {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   analyticsType         AnalyticsType? @map("analytics_type")
-  googleAnalyticsId     String?        @map("google_analytics_id")
-  googleTagManagerId    String?        @map("google_tag_manager_id")
-  googleSearchConsoleId String?        @map("google_search_console_id")
-  bingWebmasterToolsId  String?        @map("bing_webmaster_tools_id")
-  gaPropertyId          String?        @map("ga_property_id")
-  microsoftClarityId    String?        @map("microsoft_clarity_id")
+  googleAnalyticsId     String?        @map("google_analytics_id") @db.Text
+  googleTagManagerId    String?        @map("google_tag_manager_id") @db.Text
+  googleSearchConsoleId String?        @map("google_search_console_id") @db.Text
+  bingWebmasterToolsId  String?        @map("bing_webmaster_tools_id") @db.Text
+  gaPropertyId          String?        @map("ga_property_id") @db.Text
+  microsoftClarityId    String?        @map("microsoft_clarity_id") @db.Text
 
   @@map("settings_analytics")
 }
 
 model SettingsLayout {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1756,18 +1756,18 @@ model SettingsLayout {
   contentWidthCustom    Int?                 @map("content_width_custom")
   headerScrollBehavior  HeaderScrollBehavior @default(ALWAYS_VISIBLE) @map("header_scroll_behavior")
   headerBackgroundMode  HeaderBackgroundMode @default(SOLID) @map("header_background_mode")
-  themeColor            String               @default("#fafafa") @map("theme_color")
-  footerTagline         String?              @map("footer_tagline")
-  footerNavigationLabel String               @default("Navigation") @map("footer_navigation_label")
-  footerContactLabel    String               @default("Contact") @map("footer_contact_label")
-  footerHoursLabel      String               @default("Hours") @map("footer_hours_label")
+  themeColor            String               @default("#fafafa") @map("theme_color") @db.Text
+  footerTagline         String?              @map("footer_tagline") @db.Text
+  footerNavigationLabel String               @default("Navigation") @map("footer_navigation_label") @db.Text
+  footerContactLabel    String               @default("Contact") @map("footer_contact_label") @db.Text
+  footerHoursLabel      String               @default("Hours") @map("footer_hours_label") @db.Text
   footerShowSocialLinks Boolean              @default(true) @map("footer_show_social_links")
 
   @@map("settings_layout")
 }
 
 model SettingsSidebar {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1781,13 +1781,13 @@ model SettingsSidebar {
 }
 
 model SettingsOrganization {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  businessName        String?   @map("business_name")
-  businessNameKana    String?   @map("business_name_kana")
-  representativeName  String?   @map("representative_name")
+  businessName        String?   @map("business_name") @db.Text
+  businessNameKana    String?   @map("business_name_kana") @db.Text
+  representativeName  String?   @map("representative_name") @db.Text
   /// 設立日。**瞬間ではなく暦日**なので `date`（`BlockedDate.startDate` /
   /// `SpaceRatePlan.effectiveFrom` と同じ）。timestamptz だと「どの時点か」を
   /// 保持してしまい、表示側が UTC で読むか JST で読むかで日付が 1 日ずれうる。
@@ -1797,18 +1797,18 @@ model SettingsOrganization {
   /// （`$queryRaw`）はローカル深夜を返す**ので、そちら経由で読むなら
   /// `toISOString()` を通さず日付文字列のまま扱うこと。
   establishedDate     DateTime? @map("established_date") @db.Date
-  registrationNumber  String?   @map("registration_number")
-  invoiceNumber       String?   @map("invoice_number")
+  registrationNumber  String?   @map("registration_number") @db.Text
+  invoiceNumber       String?   @map("invoice_number") @db.Text
   businessDescription String?   @map("business_description") @db.Text
 
-  phoneNumber   String? @map("phone_number")
-  faxNumber     String? @map("fax_number")
-  email         String?
-  postalCode    String? @map("postal_code")
-  prefecture    String?
-  city          String?
-  streetAddress String? @map("street_address")
-  buildingName  String? @map("building_name")
+  phoneNumber   String? @map("phone_number") @db.VarChar(30)
+  faxNumber     String? @map("fax_number") @db.VarChar(30)
+  email         String? @db.VarChar(254)
+  postalCode    String? @map("postal_code") @db.VarChar(10)
+  prefecture    String? @db.VarChar(20)
+  city          String? @db.VarChar(100)
+  streetAddress String? @map("street_address") @db.VarChar(200)
+  buildingName  String? @map("building_name") @db.VarChar(200)
 
   businessHours Json?   @map("business_hours")
   holidayNotice String? @map("holiday_notice") @db.Text
@@ -1817,15 +1817,15 @@ model SettingsOrganization {
   transferGuidance String? @map("transfer_guidance") @db.Text
 
   // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
-  senderEmail  String? @map("sender_email")
-  senderName   String? @map("sender_name")
-  replyToEmail String? @map("reply_to_email")
+  senderEmail  String? @map("sender_email") @db.VarChar(254)
+  senderName   String? @map("sender_name") @db.Text
+  replyToEmail String? @map("reply_to_email") @db.VarChar(254)
 
   @@map("settings_organization")
 }
 
 model SettingsCommerce {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1844,7 +1844,7 @@ model SettingsCommerce {
 }
 
 model SettingsNotification {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1858,14 +1858,14 @@ model SettingsNotification {
   notifyEventCancellation         Boolean @default(true) @map("notify_event_cancellation")
   notifyEventReminder             Boolean @default(false) @map("notify_event_reminder")
 
-  notificationStaffIds       String[] @default([]) @map("notification_staff_ids")
-  notificationEmailAddresses String[] @default([]) @map("notification_email_addresses")
+  notificationStaffIds       String[] @default([]) @map("notification_staff_ids") @db.Text
+  notificationEmailAddresses String[] @default([]) @map("notification_email_addresses") @db.Text
 
   @@map("settings_notification")
 }
 
 model SettingsReservation {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1882,17 +1882,17 @@ model SettingsReservation {
 }
 
 model SettingsStripe {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
-  stripePublishableKey     String?           @map("stripe_publishable_key")
+  stripePublishableKey     String?           @map("stripe_publishable_key") @db.Text
   stripeSecretKey          String?           @map("stripe_secret_key") @db.Text
   stripeWebhookSecret      String?           @map("stripe_webhook_secret") @db.Text
-  stripeAccountId          String?           @map("stripe_account_id")
-  stripeCurrency           String            @default("jpy") @map("stripe_currency")
-  stripePaymentMethodTypes String[]          @default(["card"]) @map("stripe_payment_method_types")
+  stripeAccountId          String?           @map("stripe_account_id") @db.Text
+  stripeCurrency           String            @default("jpy") @map("stripe_currency") @db.Text
+  stripePaymentMethodTypes String[]          @default(["card"]) @map("stripe_payment_method_types") @db.Text
   stripeLastTestedAt       DateTime?         @map("stripe_last_tested_at") @db.Timestamptz(6)
   stripeConnectionStatus   ConnectionStatus? @map("stripe_connection_status")
 
@@ -1900,7 +1900,7 @@ model SettingsStripe {
 }
 
 model SettingsResend {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1913,11 +1913,11 @@ model SettingsResend {
 }
 
 model SettingsTurnstile {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  turnstileSiteKey          String?           @map("turnstile_site_key")
+  turnstileSiteKey          String?           @map("turnstile_site_key") @db.Text
   turnstileSecretKey        String?           @map("turnstile_secret_key") @db.Text
   turnstileLastTestedAt     DateTime?         @map("turnstile_last_tested_at") @db.Timestamptz(6)
   turnstileConnectionStatus ConnectionStatus? @map("turnstile_connection_status")
@@ -1926,7 +1926,7 @@ model SettingsTurnstile {
 }
 
 model SettingsGoogleMaps {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1938,13 +1938,13 @@ model SettingsGoogleMaps {
 }
 
 model SettingsGoogleCalendar {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   googleCalendarEnabled            Boolean            @default(false) @map("google_calendar_enabled")
   googleCalendarServiceAccountJson String?            @map("google_calendar_service_account_json") @db.Text
-  googleCalendarId                 String?            @map("google_calendar_id")
+  googleCalendarId                 String?            @map("google_calendar_id") @db.Text
   googleCalendarLastTestedAt       DateTime?          @map("google_calendar_last_tested_at") @db.Timestamptz(6)
   googleCalendarConnectionStatus   ConnectionStatus?  @map("google_calendar_connection_status")
   googleCalendarReminderMinutes    Int?               @map("google_calendar_reminder_minutes")
@@ -1956,8 +1956,8 @@ model SettingsGoogleCalendar {
   googleCalendarLastSyncedAt       DateTime?          @map("google_calendar_last_synced_at") @db.Timestamptz(6)
   eventImportEnabled               Boolean            @default(false) @map("event_import_enabled")
   eventImportSyncToken             String?            @map("event_import_sync_token") @db.Text
-  googleCalendarWebhookChannelId   String?            @map("google_calendar_webhook_channel_id")
-  googleCalendarWebhookResourceId  String?            @map("google_calendar_webhook_resource_id")
+  googleCalendarWebhookChannelId   String?            @map("google_calendar_webhook_channel_id") @db.Text
+  googleCalendarWebhookResourceId  String?            @map("google_calendar_webhook_resource_id") @db.Text
   googleCalendarWebhookExpiration  DateTime?          @map("google_calendar_webhook_expiration") @db.Timestamptz(6)
   googleCalendarWebhookToken       String?            @map("google_calendar_webhook_token") @db.Text
 
@@ -1965,7 +1965,7 @@ model SettingsGoogleCalendar {
 }
 
 model SettingsGoogleBusinessProfile {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1976,21 +1976,21 @@ model SettingsGoogleBusinessProfile {
 }
 
 model SettingsInstagram {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   instagramAccessToken    String?   @map("instagram_access_token") @db.Text
   instagramTokenExpiresAt DateTime? @map("instagram_token_expires_at") @db.Timestamptz(6)
-  instagramUserId         String?   @map("instagram_user_id")
-  instagramUsername       String?   @map("instagram_username")
-  instagramAccountType    String?   @map("instagram_account_type")
+  instagramUserId         String?   @map("instagram_user_id") @db.Text
+  instagramUsername       String?   @map("instagram_username") @db.Text
+  instagramAccountType    String?   @map("instagram_account_type") @db.Text
 
   @@map("settings_instagram")
 }
 
 model SettingsSwitchbot {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -2006,7 +2006,7 @@ model SettingsSwitchbot {
 }
 
 model SettingsFeatures {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -2020,7 +2020,7 @@ model SettingsFeatures {
 }
 
 model SettingsDataRetention {
-  id        String   @id @default("singleton")
+  id        String   @id @default("singleton") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -2041,13 +2041,13 @@ model SettingsDataRetention {
 /// Instagram投稿のキャッシュ
 model InstagramPost {
   id           String             @id @default(uuid(7)) @db.Uuid
-  postId       String             @unique @map("post_id") // Instagram投稿ID
-  postUrl      String             @map("post_url") // 投稿URL
-  mediaUrl     String?            @map("media_url") // メディアURL
-  thumbnailUrl String?            @map("thumbnail_url") // サムネイルURL
+  postId       String             @unique @map("post_id") @db.Text // Instagram投稿ID
+  postUrl      String             @map("post_url") @db.Text // 投稿URL
+  mediaUrl     String?            @map("media_url") @db.Text // メディアURL
+  thumbnailUrl String?            @map("thumbnail_url") @db.Text // サムネイルURL
   caption      String?            @db.Text // キャプション
   mediaType    InstagramMediaType @map("media_type")
-  permalink    String // 永続リンク
+  permalink    String             @db.Text // 永続リンク
   sortOrder    Int                @default(0) @map("sort_order")
   createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -2134,8 +2134,8 @@ model AuditLog {
   /// 参照の健全性は __tests__/integration/prisma/append-only-fk-actions.test.ts が守る。
   userId        String?     @map("user_id") @db.Uuid
   action        AuditAction // 操作種別
-  resource      String // 対象リソース種別 ('space', 'blog' 等)
-  resourceId    String?     @map("resource_id") // 対象リソースID
+  resource      String      @db.Text // 対象リソース種別 ('space', 'blog' 等)
+  resourceId    String?     @map("resource_id") @db.Text // 対象リソースID
   oldValue      Json?       @map("old_value") // 変更前の値（UPDATE時）
   newValue      Json?       @map("new_value") // 変更後の値 or 作成値
   metadata      Json? // 追加情報（IPアドレス、UserAgent等）
@@ -2156,11 +2156,11 @@ model AuditLog {
 /// メディアファイル管理
 model Media {
   id          String @id @default(uuid(7)) @db.Uuid
-  filename    String // 元のファイル名
-  storagePath String @map("storage_path") // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
-  url         String // 公開URL
-  bucket      String // ストレージ prefix（`STORAGE_PREFIXES` の 4 値: `spaces` / `posts` / `site` / `media`）
-  mimeType    String @map("mime_type") // MIME type
+  filename    String @db.Text // 元のファイル名
+  storagePath String @map("storage_path") @db.Text // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
+  url         String @db.Text // 公開URL
+  bucket      String @db.Text // ストレージ prefix（`STORAGE_PREFIXES` の 4 値: `spaces` / `posts` / `site` / `media`）
+  mimeType    String @map("mime_type") @db.Text // MIME type
   size        Int // ファイルサイズ（bytes）
   width       Int? // 画像幅（px）
   height      Int? // 画像高さ（px）
@@ -2168,8 +2168,8 @@ model Media {
   // 分類・検索用
   type        MediaType // メディア種別
   usage       MediaUsage @default(GENERAL) // 用途
-  alt         String? // 代替テキスト
-  title       String? // タイトル
+  alt         String?    @db.Text // 代替テキスト
+  title       String?    @db.Text // タイトル
   description String?    @db.Text // 説明
   tags        Json       @default("[]") // タグ配列
 
@@ -2247,7 +2247,7 @@ model TermsAgreement {
   /// 「誰が同意したか」という証跡そのものを消すため、trigger の拒否が正しい。
   /// 詳細は AuditLog.userId のコメントと 20260803030000 の migration を参照。
   customerId      String?    @map("customer_id") @db.Uuid
-  guestEmail      String?    @map("guest_email") @db.VarChar(255)
+  guestEmail      String?    @map("guest_email") @db.VarChar(254)
   contentSnapshot String     @map("content_snapshot") @db.Text // 同意時 HTML 完全保存
   contentHash     String     @map("content_hash") @db.VarChar(64) // sha256(contentSnapshot)
   agreedAt        DateTime   @default(now()) @map("agreed_at") @db.Timestamptz(6)
@@ -2266,7 +2266,7 @@ model TermsAgreement {
   ///
   /// かつては 1 を軽視して `@db.Uuid` にしており、規約同意付きのイベント申込が
   /// P2007 で必ず失敗していた（#1747）。
-  resourceId      String?    @map("resource_id")
+  resourceId      String?    @map("resource_id") @db.Text
   ipAddress       String?    @map("ip_address") @db.VarChar(45)
   userAgent       String?    @map("user_agent") @db.Text
 
@@ -2291,8 +2291,8 @@ model TermsAgreement {
 /// エディタコメントスレッド（Lexical MarkNodeに紐づく）
 model EditorCommentThread {
   id          String              @id @default(uuid(7)) @db.Uuid
-  markId      String              @map("mark_id") // Lexical MarkNode ID（エディタ内での一意識別子）
-  contentType String              @map("content_type") // コンテンツタイプ: "post" | "news" | "page" | "faq"
+  markId      String              @map("mark_id") @db.Text // Lexical MarkNode ID（エディタ内での一意識別子）
+  contentType String              @map("content_type") @db.Text // コンテンツタイプ: "post" | "news" | "page" | "faq"
   contentId   String              @map("content_id") @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
   quotedText  String              @map("quoted_text") @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
@@ -2343,7 +2343,7 @@ model EditorComment {
 /// エディタブロックテンプレート（再利用可能なブロック）
 model BlockTemplate {
   id          String   @id @default(uuid(7)) @db.Uuid
-  name        String // テンプレート名
+  name        String   @db.Text // テンプレート名
   description String?  @db.Text // 説明
   nodeJson    Json     @map("node_json") // Lexical SerializedEditorState JSON
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2403,7 +2403,7 @@ model EventTimeSlot {
   startAt               DateTime @map("start_at") @db.Timestamptz(6)
   endAt                 DateTime @map("end_at") @db.Timestamptz(6)
   capacity              Int
-  googleCalendarEventId String?  @map("google_calendar_event_id")
+  googleCalendarEventId String?  @map("google_calendar_event_id") @db.Text
   createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -2426,10 +2426,10 @@ model EventTimeSlot {
 
 model EventCategory {
   id          String   @id @default(uuid(7)) @db.Uuid
-  name        String
+  name        String   @db.Text
   description String?  @db.Text
-  icon        String?
-  color       String?
+  icon        String?  @db.Text
+  color       String?  @db.Text
   sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2458,12 +2458,12 @@ model Event {
   descriptionHtml      String            @map("description_html") @db.Text
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
   descriptionPlainText String            @map("description_plain_text") @db.Text
-  thumbnailUrl         String?           @map("thumbnail_url")
-  ogpImageUrl          String?           @map("ogp_image_url")
-  ogpTitle             String?           @map("ogp_title")
-  ogpDescription       String?           @map("ogp_description")
+  thumbnailUrl         String?           @map("thumbnail_url") @db.Text
+  ogpImageUrl          String?           @map("ogp_image_url") @db.Text
+  ogpTitle             String?           @map("ogp_title") @db.Text
+  ogpDescription       String?           @map("ogp_description") @db.Text
   metaDescription      String?           @map("meta_description") @db.Text
-  metaKeywords         String?           @map("meta_keywords")
+  metaKeywords         String?           @map("meta_keywords") @db.Text
   /// 号室・フロア・補足情報または外部会場名。
   /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
   /// 両方 null のときは外部会場名として使う。
@@ -2585,8 +2585,8 @@ model EventRegistration {
   ticketId        String             @map("ticket_id") @db.Uuid
   name            String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
-  email           String?            @db.VarChar(255)
-  phone           String?            @db.VarChar(20)
+  email           String?            @db.VarChar(254)
+  phone           String?            @db.VarChar(30)
   note            String?            @db.Text
   quantity        Int                @default(1)
   status          RegistrationStatus @default(CONFIRMED)
@@ -2616,10 +2616,10 @@ model EventRegistration {
   paymentStatus           PaymentStatus @default(UNPAID) @map("payment_status")
   // Stripe Checkout Session の id。@unique で「同じ session が別 registration に紐づく」
   // silent bug を防ぐ (Reservation 側と同型)。
-  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id")
+  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id") @db.Text
   // Stripe PaymentIntent の id。session が payment_intent に紐付いた後の webhook で
   // 保存。@unique で refund の idempotency key 用途にも使う。
-  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id")
+  stripePaymentIntentId   String?       @unique @map("stripe_payment_intent_id") @db.Text
   // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
   paidAmount              Int?          @map("paid_amount")
@@ -2692,7 +2692,7 @@ model Refund {
   /// 管理者入力の理由 (顧客通知メール文面にも掲載予定)
   reason              String?        @db.Text
   /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
-  stripeRefundId      String         @unique @map("stripe_refund_id")
+  stripeRefundId      String         @unique @map("stripe_refund_id") @db.Text
   /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
   refundedByType      RefundedByType @map("refunded_by_type")
   /// Stripe Refund.status: "pending" | "requires_action" | "succeeded" | "failed" | "canceled"。
@@ -2841,16 +2841,16 @@ enum SmartLockPasscodeStatus {
 model SmartLockDevice {
   id                 String              @id @default(uuid(7)) @db.Uuid
   locationId         String              @map("location_id") @db.Uuid
-  deviceId           String              @unique @map("device_id") // SwitchBot 側の device ID（MAC アドレス）
-  deviceName         String              @map("device_name")
+  deviceId           String              @unique @map("device_id") @db.Text // SwitchBot 側の device ID（MAC アドレス）
+  deviceName         String              @map("device_name") @db.Text
   deviceType         SmartLockDeviceType @map("device_type")
   isActive           Boolean             @default(true) @map("is_active")
   /// パッド → ペア錠（錠ロールの SmartLockDevice）。錠側では null。
   pairedLockDeviceId String?             @map("paired_lock_device_id") @db.Uuid
   /// webhook / status 由来（錠ロール）。正規化: LOCKED|UNLOCKED|JAMMED
-  lastLockState      String?             @map("last_lock_state")
+  lastLockState      String?             @map("last_lock_state") @db.Text
   /// Pro/Lock のみ。正規化: OPEN|CLOSE。Lite は常に null
-  lastDoorState      String?             @map("last_door_state")
+  lastDoorState      String?             @map("last_door_state") @db.Text
   lastBattery        Int?                @map("last_battery")
   lastStateAt        DateTime?           @map("last_state_at") @db.Timestamptz(6)
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2877,15 +2877,15 @@ model SmartLockPasscode {
   /// encrypt(purpose: "switchbot-guest-passcode") 済み。平文は DB に保持しない。
   passcodeCiphertext       String                  @map("passcode_ciphertext") @db.Text
   /// createKey 呼出の同期レスポンス（相関確認用、keyId ではない）
-  switchbotCommandId       String?                 @map("switchbot_command_id")
+  switchbotCommandId       String?                 @map("switchbot_command_id") @db.Text
   /// deleteKey 呼出の同期レスポンス commandId（無い場合あり）
-  switchbotDeleteCommandId String?                 @map("switchbot_delete_command_id")
+  switchbotDeleteCommandId String?                 @map("switchbot_delete_command_id") @db.Text
   /// Device List keyList[].id（deleteKey に必須）
-  switchbotKeyId           String?                 @map("switchbot_key_id")
+  switchbotKeyId           String?                 @map("switchbot_key_id") @db.Text
   /// パスコード有効期間（予約時間 ± switchbotPasscodeBufferMinutes）
   startTime                DateTime                @map("start_time") @db.Timestamptz(6)
   endTime                  DateTime                @map("end_time") @db.Timestamptz(6)
-  failureReason            String?                 @map("failure_reason")
+  failureReason            String?                 @map("failure_reason") @db.Text
   confirmedAt              DateTime?               @map("confirmed_at") @db.Timestamptz(6)
   /// REVOKE_PENDING 開始時刻（stale 判定用）
   revokeRequestedAt        DateTime?               @map("revoke_requested_at") @db.Timestamptz(6)
