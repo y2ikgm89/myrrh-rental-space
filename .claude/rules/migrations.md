@@ -55,8 +55,28 @@ reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 S
 
   **代償**: 包むと失敗時の表示が実際の違反ではなく
   `current transaction is aborted, commands ignored until end of transaction block`
-  になる（実測）。そのため migration ヘッダに**適用前に本番で流す確認クエリ**を
-  必ず書く。原因はそちらで特定する
+  になる（実測）。原因の特定は `bun scripts/migration-preconditions.ts` で行う。
+
+  ```sh
+  bun scripts/migration-preconditions.ts --url postgresql://...
+  ```
+
+  **未適用 migration の DDL からプローブを導出する**ので、覆う範囲が制約の集合から
+  離れない。違反があれば制約名・行数・要件を名指しして exit 1、分類できない文や
+  プローブ未実装の文が残っていても exit 1（黙って飛ばさない）。
+
+  本番の Cloud Run Job（`terraform/cloud_run_migrate_job.tf`）は
+  `migration-preconditions.ts && prisma migrate deploy` を実行する。**migrate を
+  始める前**に落ちるので `_prisma_migrations` に失敗が残らない。
+
+  **ヘッダに確認クエリを手で書かない。** 以前はそれが唯一の守りだったが、
+  `20260805180000` のヘッダは 23 本の制約のうち 3 本しか見ておらず、
+  `locations.special_holidays` に JSON null が残った DB で「0 件」と出たうえで
+  migration が落ちた。人が書く一覧は覆うべき集合から必ず離れる。
+  gate は `__tests__/unit/architecture/migration-preconditions.test.ts`
+  （全文が分類済み + 既存テーブルへの検査は全部プローブを持つ）と
+  `__tests__/integration/prisma/migration-preconditions-detect-violations.test.ts`
+  （プローブが実 DB で違反行を数える）
 
 `.squawk.toml` の `assume_in_transaction` はこの実態に合わせて `false`。
 

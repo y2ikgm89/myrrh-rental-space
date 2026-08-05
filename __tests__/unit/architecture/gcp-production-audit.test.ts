@@ -1297,13 +1297,15 @@ describe("GCP production audit model", () => {
   });
 
   test("requires Cloud Run migrate Job to run the canonical Prisma deploy command", () => {
-    expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND).toEqual(["bunx"]);
+    expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND).toEqual(["sh"]);
     expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS).toEqual([
-      "--bun",
-      "prisma",
-      "migrate",
-      "deploy",
+      "-c",
+      "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy",
     ]);
+    // `;` に緩めると違反があっても migrate が走る。短絡であることを名指しで固定する。
+    expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS.join(" ")).toContain(
+      "migration-preconditions.ts &&",
+    );
 
     expect(
       readCloudRunContainerCommandErrors(
@@ -1360,8 +1362,8 @@ describe("GCP production audit model", () => {
         },
       ),
     ).toEqual([
-      'prisma-migrate command must be ["bunx"], got ["node"]',
-      'prisma-migrate args must be ["--bun","prisma","migrate","deploy"], got ["scripts/unsafe.js"]',
+      'prisma-migrate command must be ["sh"], got ["node"]',
+      'prisma-migrate args must be ["-c","bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"], got ["scripts/unsafe.js"]',
     ]);
 
     expect(

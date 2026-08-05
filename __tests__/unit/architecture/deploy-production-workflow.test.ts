@@ -398,9 +398,11 @@ describe("production deploy workflow", () => {
     expect(cloudRunMigrateJobTf).toMatch(
       /env[\s\S]*name\s*=\s*"DATABASE_URL"[\s\S]*secret_key_ref[\s\S]*google_secret_manager_secret\.secret\["DATABASE_URL"\]/,
     );
-    expect(cloudRunMigrateJobTf).toContain('command = ["bunx"]');
+    // 適用前チェック → migrate。順序と短絡の固定は
+    // `deploy-packaging-contract.test.ts` が持つ（Dockerfile 側との一致も含めて）。
+    expect(cloudRunMigrateJobTf).toContain('command = ["sh"]');
     expect(cloudRunMigrateJobTf).toContain(
-      'args    = ["--bun", "prisma", "migrate", "deploy"]',
+      '"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"',
     );
     expect(cloudRunMigrateJobTf).toContain("parallelism = 1");
     expect(cloudRunMigrateJobTf).toContain("task_count  = 1");

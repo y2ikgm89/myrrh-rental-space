@@ -210,12 +210,12 @@ export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS = [
   { name: "DATABASE_URL", version: "1" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];
 
-export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND = ["bunx"] as const;
+// 適用前チェック → migrate。`&&` の短絡が要点で、`;` に変えると違反があっても
+// migrate が走り、`_prisma_migrations` に失敗が残って以降のデプロイが全部止まる。
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND = ["sh"] as const;
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS = [
-  "--bun",
-  "prisma",
-  "migrate",
-  "deploy",
+  "-c",
+  "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy",
 ] as const;
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_TASK_COUNT = 1;
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_PARALLELISM = 1;
