@@ -167,13 +167,14 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
    ```
    （CI required gate と同一コマンド）
 3. **広域**: `bun run e2e`（全 project）。デバッグは `bun run e2e:ui`。
-4. **CI での扱い**: chromium-smoke のみ毎 push required。広域 E2E / visual / Lighthouse は
-   PR head branch を `codex/full-ci/` で始めるか workflow_dispatch `run_full_ci=true` の opt-in
-   （`.github/workflows/ci.yml`）。ただし **prefix 経路の起動実績はゼロ**（2026-07-31 時点、
-   PR #673〜#1679 を走査）なので、実務では manual dispatch を使う:
+4. **CI での扱い**: chromium-smoke のみ毎 push required。広域 E2E は main の
+   nightly（`.github/workflows/ci.yml` の `schedule` cron、03:00 JST）で自動実行される。
+   visual / Lighthouse は nightly 非対象で、いずれも任意実行は manual dispatch:
    ```sh
    gh workflow run ci.yml --ref <branch> -f run_full_ci=true
    ```
+   （`codex/full-ci/` prefix で起動する経路は ci.yml から撤去済み。起動実績が
+   ゼロだったため — ci.yml のコメントに経緯が残っている）
    smoke 以外に足した spec は毎 push では走らない —
    マージ前に full CI か手元の広域実行で緑を確認する。
 

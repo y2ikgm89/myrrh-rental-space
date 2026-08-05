@@ -19,9 +19,10 @@ paths: ["prisma/**"]
 - `db:push` / `db:reset` / `migrate reset` / `db pull` はユーザーの明示依頼時のみ
 - **`prisma db pull` は CHECK 制約・constraint trigger を黙って落とす**。
   `blocked_dates_scope_target_check` や `events_schedule_integrity_check` trigger 等の
-  手書き不変条件は baseline `00000000000000_init` にのみ存在する
-- モデル名とテーブル名は `@@map` で乖離している（AuditLog → audit_logs 等、
-  Better Auth 系は単数形）。migration SQL を書く・検証する際は schema.prisma と突合する
+  手書き不変条件は schema.prisma で表現できず、SSoT は
+  `prisma/baseline/invariants.sql`（baseline migration はそこからの生成物）
+- モデル名とテーブル名は `@@map` で乖離している（AuditLog → audit_logs 等）。
+  migration SQL を書く・検証する際は schema.prisma と突合する
 
 ## migration は原子的ではない（文の順序が正しさの一部）
 
@@ -35,20 +36,17 @@ index だけ失敗して **CREATE TABLE は残った**。
 
 - **失敗しうる文を、それが置き換える対象を DROP する前に置く。** 「古い制約を DROP →
   新しい制約を CREATE」の順で書くと、CREATE が既存データ違反で落ちたときに
-  **どちらの制約も無い状態**で止まる。実例: 20260803070000 は
-  `DROP INDEX terms_documents_slug_key` の後に `CREATE UNIQUE INDEX
-reservations_stripeCheckoutSessionId_key` を置いており、本番に重複 Stripe ID が
-  あると terms_documents の slug 一意性が失われたまま停止する
+  **どちらの制約も無い状態**で止まる（DROP は通り、CREATE だけ落ちるため）
 - 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加）を含む migration は、
   **適用前に違反行が 0 件であることを本番で確認する**
 - **既存データに依存して失敗しうる DDL を複数文含む migration は `BEGIN;` / `COMMIT;` で
   包む**（Prisma 公式の opt-in。`CREATE INDEX CONCURRENTLY` はトランザクション内で
   使えない点に注意）。対象は `ADD CONSTRAINT` (CHECK / UNIQUE / FOREIGN KEY) /
   `CREATE UNIQUE INDEX` / `ALTER COLUMN ... TYPE` / `SET NOT NULL`。
-  gate は `__tests__/unit/architecture/migration-atomicity.test.ts`（20260803140000
-  以降が対象。それ以前は絶対規約 #7 で編集できないため境界を切ってある）。
-  境界直前の 20260803120000 / 20260803130000 は規約を書く前に merge されており、
-  gate 内の `PRE_DEPLOY_CHECKS` に**適用前の確認内容**を残してある
+  gate は `__tests__/unit/architecture/migration-atomicity.test.ts`。
+  **免除は baseline `00000000000000_init` の 1 本だけ**で、日付境界も allowlist も
+  意図的に置いていない（baseline は必ず空の DB に対して走るので既存行が無い、
+  という理由の免除であって「古いから」ではない）
 
   包まないと、本番データ次第で前半だけ適用された状態で止まり、`_prisma_migrations` に
   失敗が記録されて**以降のデプロイが全部ブロック**される。復旧は本番 DB の手作業になる。

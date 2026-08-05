@@ -68,7 +68,7 @@ export const <camel>Metadata: SectionMetadata = {
 
 1. schema と metadata を import
 2. `definitions` レコードにエントリ追加 (key = type 文字列、`type` / `configSchema` / `metadata`)
-3. ファイル冒頭と definitions 直上の「全 22 セクション定義」コメントの数を更新
+3. ファイル冒頭と definitions 直上のセクション定義数コメントを追加後の実数に合わせる
 
 ## Step 4: validations 層 (SectionType 定数 + typed getter)
 
@@ -155,7 +155,7 @@ page-section action が全 type 共通で行う。
 
 | テスト                                                       | 更新内容                                                                                                                                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `__tests__/unit/domain/sections/registry.test.ts`            | `toHaveLength(22)` と「全カテゴリの合計件数が 22 件」の数を +1、`expectedTypes` 配列に type 追加、該当カテゴリの `toContain` テストに追加                                 |
+| `__tests__/unit/domain/sections/registry.test.ts`            | `toHaveLength(...)` と全カテゴリ合計件数の期待値を追加後の実数へ、`expectedTypes` 配列に type 追加、該当カテゴリの `toContain` テストに追加                               |
 | `__tests__/unit/shared/lib/sections/page-templates.test.ts`  | orphan gate (`no orphans`) は Step 6 実施で自動 pass。page-specific にした場合は「gated to their templates」の not.toContain 検証に追加を検討                             |
 | `__tests__/integration/sections/page-defaults.test.ts`       | 自動走査 (registry 整合 / order 重複 / canonical config)。DEFAULT_PAGE_SECTIONS を触った場合に fail しないこと                                                            |
 | `__tests__/unit/forms/section-config-empty-optional.test.ts` | 全定義を自動列挙し空 FormData で parseWithZod する。defaults 契約を満たせば自動 pass。discriminated union schema にした場合のみ page-hero と同様の variant 個別対応が必要 |
