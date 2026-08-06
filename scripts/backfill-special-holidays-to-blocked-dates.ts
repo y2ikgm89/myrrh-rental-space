@@ -15,16 +15,26 @@
  *
  *   1. このスクリプトを `--apply` で流す
  *   2. **その直後に** contract デプロイ（列の DROP）を実行する
+ *   3. **さらに CDN を purge する**（`bun scripts/verify-cloudflare-purge.ts` が
+ *      `SITE_WIDE_CDN_TAGS` で purge_by_tags を発火する。同等の手段でもよい）
  *
- * この順序には理由がある。**このスクリプトは Next.js の Data Cache を無効化できない。**
- * `invalidateSiteWideCache` は `updateTag` を使っており Server Action 専用で、
- * 単体プロセスから呼ぶと throw する（`src/shared/lib/cache/site-wide.ts`）。
- * 管理画面から休業日を登録する経路はこれを通るが、ここは通れない。
+ * **このスクリプトはキャッシュを 1 層も無効化できない。** 管理画面から休業日を
+ * 登録する経路は `invalidateSiteWideCache` を通り、Next.js の Data Cache と
+ * Cloudflare のタグ purge を両方叩くが、ここは通れない —
+ * `updateTag` は Server Action 専用で、単体プロセスから呼ぶと throw する
+ * （`src/shared/lib/cache/site-wide.ts`）。
  *
- * 直後にデプロイすれば Cloud Run のインスタンスが入れ替わり Data Cache は空になるので、
- * 移した休業日は次のリクエストから JSON-LD に載る。**逆順（デプロイ → backfill）や、
- * デプロイを伴わない単独実行では、移した休業日が公開ページに出るまで
- * `cacheLife` の期限切れを待つことになる。**
+ * 層ごとに事情が違う:
+ *
+ * | 層 | このスクリプト単独では | 解消手段 |
+ * | --- | --- | --- |
+ * | Next.js Data Cache | 無効化できない | 手順 2 のデプロイ（インスタンス入替で空になる） |
+ * | Cloudflare edge | 無効化できない | 手順 3 の purge |
+ *
+ * **手順 3 を省くと、デプロイしても最大 2 時間は古い JSON-LD が配信され続ける。**
+ * 公開ページの `Cache-Control` は `s-maxage=3600, stale-while-revalidate=3600`
+ * （`next.config.ts`）で、デプロイ workflow に purge の手順は無い。
+ * 「デプロイすれば次のリクエストから載る」は origin の話であって edge の話ではない。
  *
  * ## 使い方
  *
@@ -257,8 +267,10 @@ export async function run(argv: readonly string[]): Promise<number> {
     );
     if (apply && created > 0) {
       console.info(
-        "[backfill] このスクリプトは Next.js の Data Cache を無効化できない。" +
-          "続けて contract デプロイを実行すること（インスタンスが入れ替わり Data Cache が空になる）。",
+        "[backfill] キャッシュはこのスクリプトからは 1 層も無効化できない。続けて " +
+          "(1) contract デプロイ（origin の Data Cache が空になる） " +
+          "(2) CDN purge（bun scripts/verify-cloudflare-purge.ts 等） " +
+          "を実行すること。(2) を省くと最大 2 時間は古い JSON-LD が edge から配信される。",
       );
     }
     return skipped.length > 0 ? 1 : 0;
