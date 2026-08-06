@@ -70,13 +70,31 @@ function localMigrationSqlPaths(): string[] {
 
 /**
  * 最初の非コメント行の手前までをヘッダとして返す。
- * migration は `--` 行コメントが主で、ブロックコメントは現状ほぼ無い。
+ *
+ * 現状の migration は `--` 行コメントだけを使っているが、**ブロックコメント
+ * （スラッシュ + アスタリスクで開き、閉じるまで）も最後まで読む**。初版は開始行
+ * だけを積んで次の行で break していたため、ブロックコメントで書いた確認クエリを
+ * 1 文字も見ずに緑を返していた
+ * （Codex が PR #1998 で指摘、実測で再現）。「稀だから」で片方だけ扱うと、
+ * その書き方に切り替えた瞬間に gate が黙って空振りする。
  */
 export function extractHeaderCommentText(sql: string): string {
   const headerLines: string[] = [];
+  let inBlockComment = false;
 
   for (const line of sql.split("\n")) {
     const trimmed = line.trim();
+
+    if (inBlockComment) {
+      headerLines.push(line);
+      const close = trimmed.indexOf("*/");
+      if (close === -1) continue;
+      inBlockComment = false;
+      // 閉じた後ろに SQL が続いていれば、そこがヘッダの終わり。
+      if (trimmed.slice(close + 2).trim().length > 0) break;
+      continue;
+    }
+
     if (trimmed.length === 0) {
       headerLines.push(line);
       continue;
@@ -87,10 +105,13 @@ export function extractHeaderCommentText(sql: string): string {
     }
     if (trimmed.startsWith("/*")) {
       headerLines.push(line);
-      if (!trimmed.includes("*/")) {
-        // 閉じるまでヘッダに含める（baseline 等で稀）
+      const close = trimmed.indexOf("*/");
+      if (close === -1) {
+        inBlockComment = true;
         continue;
       }
+      if (trimmed.slice(close + 2).trim().length > 0) break;
+      continue;
     }
     break;
   }
@@ -99,19 +120,63 @@ export function extractHeaderCommentText(sql: string): string {
 }
 
 /**
+ * ヘッダの各行から、コメント記号を落とした本文を取り出す。
+ *
+ * `--` 行コメントとブロックコメントの両方を扱う。ブロック内の装飾アスタリスク
+ * （JSDoc 風）も落とすので、どちらの書き方でも同じ判定になる。
+ */
+export function headerCommentBodyLines(header: string): string[] {
+  const bodies: string[] = [];
+  let inBlockComment = false;
+
+  for (const raw of header.split("\n")) {
+    let line = raw.trim();
+
+    if (inBlockComment) {
+      const close = line.indexOf("*/");
+      if (close !== -1) {
+        line = line.slice(0, close);
+        inBlockComment = false;
+      }
+      bodies.push(line.replace(/^\*+\s?/u, "").trim());
+      continue;
+    }
+
+    if (line.startsWith("--")) {
+      bodies.push(line.replace(/^--\s?/u, "").trim());
+      continue;
+    }
+
+    if (line.startsWith("/*")) {
+      const close = line.indexOf("*/");
+      if (close === -1) {
+        inBlockComment = true;
+        bodies.push(line.slice(2).trim());
+        continue;
+      }
+      bodies.push(line.slice(2, close).trim());
+      continue;
+    }
+
+    // ヘッダ抽出済みなので、ここに来るのは空行だけ。
+  }
+
+  return bodies;
+}
+
+/**
  * ヘッダコメント内の手書き「適用前確認 SELECT」。
  *
  * - 節見出し `適用前…確認クエリ`
- * - コメント行先頭が `SELECT` / `UNION ALL SELECT` の実行例
+ * - コメント行**本文の先頭**が `SELECT` / `UNION ALL SELECT` の実行例
  *   （本文中に SELECT と書くだけの説明は対象外）
  */
 export function hasManualPrecheckInHeader(header: string): boolean {
-  if (/適用前.*確認クエリ/u.test(header)) return true;
+  const bodies = headerCommentBodyLines(header);
 
-  for (const line of header.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("--")) continue;
-    const body = trimmed.replace(/^--\s?/u, "").trimStart();
+  if (/適用前.*確認クエリ/u.test(bodies.join("\n"))) return true;
+
+  for (const body of bodies) {
     if (/^SELECT\b/iu.test(body)) return true;
     if (/^UNION\s+ALL\s+SELECT\b/iu.test(body)) return true;
   }
@@ -194,6 +259,90 @@ COMMIT;
 
     expect(hasManualPrecheckInHeader(extractHeaderCommentText(afterBody))).toBe(
       false,
+    );
+  });
+
+  test("ブロックコメントのヘッダも最後まで読む（初版はここが空振りしていた）", () => {
+    const blockBad = `/*
+ * 説明
+ *
+ * ## 適用前に本番で流す確認クエリ
+ *
+ *   SELECT count(*) FROM t WHERE a > b;
+ */
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+COMMIT;
+`;
+
+    // 初版は開始行だけを積んで次の行で break していたため "/*" しか残らなかった。
+    const header = extractHeaderCommentText(blockBad);
+    expect(header.split("\n").length).toBeGreaterThan(1);
+    expect(header).toContain("SELECT count(*)");
+    expect(hasManualPrecheckInHeader(header)).toBe(true);
+
+    // 見出しが無く SELECT 行だけのブロックコメントも落とす（装飾 `*` を剥がす）。
+    const blockBareSelect = `/*
+ * 既存行を数える:
+ *   SELECT count(*) FROM coupons WHERE valid_from > valid_until;
+ */
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+COMMIT;
+`;
+
+    expect(
+      hasManualPrecheckInHeader(extractHeaderCommentText(blockBareSelect)),
+    ).toBe(true);
+
+    // `*` を付けない書き方でも同じ。
+    const blockNoStars = `/*
+  適用前に流す確認クエリ:
+    SELECT count(*) FROM t;
+*/
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+COMMIT;
+`;
+
+    expect(
+      hasManualPrecheckInHeader(extractHeaderCommentText(blockNoStars)),
+    ).toBe(true);
+
+    // 正しく rehearsal を指しているブロックコメントは通す。
+    const blockGood = `/*
+ * 既存行の違反は rehearsal（migration-preconditions.ts）が migrate 前に落とす。
+ */
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+COMMIT;
+`;
+
+    expect(hasManualPrecheckInHeader(extractHeaderCommentText(blockGood))).toBe(
+      false,
+    );
+
+    // ブロックが閉じた後ろに SQL が続く場合、そこでヘッダは終わる。
+    const inlineBlock = `/* 説明 */ CREATE TABLE "t" ("id" text);
+--   SELECT count(*) FROM t;
+`;
+
+    expect(
+      hasManualPrecheckInHeader(extractHeaderCommentText(inlineBlock)),
+    ).toBe(false);
+
+    // `--` とブロックコメントが混在するヘッダも両方読む。
+    const mixed = `-- 先頭は行コメント
+/*
+ *   SELECT count(*) FROM t;
+ */
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+COMMIT;
+`;
+
+    expect(hasManualPrecheckInHeader(extractHeaderCommentText(mixed))).toBe(
+      true,
     );
   });
 
