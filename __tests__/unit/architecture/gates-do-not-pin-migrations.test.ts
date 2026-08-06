@@ -27,7 +27,8 @@
  * | --- | --- |
  * | `src` / `scripts` / `__tests__` | 実行されるコード |
  * | `prisma`（`migrations/` を除く） | schema.prisma・seed.ts・baseline 入力 |
- * | `.claude` / `.github` | エージェントと CI への**指示**。誤った前提で作業させる |
+ * | `.claude` / `.agents` / `CLAUDE.md` / `AGENTS.md` | エージェントへの**指示**。誤った前提で作業させる |
+ * | `.github` | CI への指示 |
  *
  * `prisma/migrations/**` は対象外 — ディレクトリ名そのものが timestamp であり、
  * 中身は絶対規約 #7 で編集できない。`docs/**` も対象外で、こちらは**日付入りの
@@ -77,7 +78,12 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
   { dir: "prisma", glob: "*.{ts,prisma}" },
   { dir: "prisma/baseline", glob: "*.{sql,json}" },
   { dir: ".claude", glob: "**/*.md" },
+  { dir: ".agents", glob: "**/*.md" },
   { dir: ".github", glob: "**/*.{yml,yaml,md}" },
+  // repo 直下の **agent 方針の SSoT**。`.claude` / `.agents` だけを見て
+  // ここを外すと、一番読まれる 2 ファイルが消えた migration を名指ししても緑になる。
+  // glob は top-level 限定なので node_modules を歩かない。
+  { dir: ".", glob: "{CLAUDE,AGENTS}.md" },
 ];
 
 function scannedFiles(): string[] {

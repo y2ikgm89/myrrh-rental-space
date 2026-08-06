@@ -4,6 +4,15 @@ import { join, relative } from "node:path";
 import { expectRecord } from "../helpers/type-assertions";
 import { collectSourceFiles } from "../helpers/architecture-fs";
 import {
+  ScriptKind,
+  ScriptTarget,
+  createSourceFile,
+  forEachChild,
+  isJsxOpeningElement,
+  isJsxSelfClosingElement,
+  type Node,
+} from "typescript";
+import {
   readDatabaseInvariants,
   readPlpgsqlFunction,
   readPrismaSchema,
@@ -92,36 +101,43 @@ const REACT_COMPILER_MEMO_EXEMPT_FILES = [
 ];
 /** TS / TSX / CSS を再帰収集（design token 廃止の横断 grep 用） */
 /**
- * `<input` / `<textarea` の開始位置から **本当の opening タグ終端**までを返す。
+ * `.tsx` の中の `<input>` / `<textarea>` の **opening タグ**を AST で拾う。
  *
- * 正規表現の lazy match（`<input\b[\s\S]*?>`）は使えない。JSX の attribute には
+ * ## 正規表現でも手書きスキャナでもいけない
+ *
+ * 最初は `/<input\b[\s\S]*?>/` の lazy match だった。JSX の attribute には
  * `onChange={(e) => …}` のようにアロー関数が入り、その `>` でタグが途中で切れる。
- * 切れた先にある className を検査が一切見なくなるので、**違反が緑のまま通る**。
+ * 実測で 283 タグ中 18 タグが切り詰められ、うち 1 件は className が切れた先にあって
+ * **違反が緑のまま通っていた**。
  *
- * `{}` の深度と引用符（`'` / `"` / テンプレート）の外にある `>` だけを終端とみなす。
+ * 次に `{}` の深度と引用符を追う手書きスキャナにしたが、それも足りない。
+ * `onChange={() => /}/.test(v)}` のように**正規表現リテラルの中の `}`** があると
+ * 深度が負に振れ、本当の `>` を終端と認識できずファイル末尾まで走る。すると
+ * 後続の無関係な `text-base` を飲み込んで、やはり違反を免除する（Codex 指摘）。
+ * コメント内の括弧も同じ。
+ *
+ * 字句を自前で数える限りこの手の穴は残る。**TypeScript の parser に読ませる。**
  */
-function openingTag(source: string, start: number): string {
-  let depth = 0;
-  let quote: string | null = null;
-  for (let i = start; i < source.length; i += 1) {
-    const ch = source[i];
-    if (quote !== null) {
-      if (ch === "\\") {
-        i += 1;
-        continue;
+function jsxInputOpeningTags(source: string, file: string): string[] {
+  const sourceFile = createSourceFile(
+    file,
+    source,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.TSX,
+  );
+  const out: string[] = [];
+  const walk = (node: Node): void => {
+    if (isJsxOpeningElement(node) || isJsxSelfClosingElement(node)) {
+      const name = node.tagName.getText(sourceFile);
+      if (name === "input" || name === "textarea") {
+        out.push(node.getText(sourceFile));
       }
-      if (ch === quote) quote = null;
-      continue;
     }
-    if (ch === '"' || ch === "'" || ch === "`") {
-      quote = ch;
-      continue;
-    }
-    if (ch === "{") depth += 1;
-    else if (ch === "}") depth -= 1;
-    else if (ch === ">" && depth === 0) return source.slice(start, i + 1);
-  }
-  return source.slice(start);
+    forEachChild(node, walk);
+  };
+  forEachChild(sourceFile, walk);
+  return out;
 }
 
 /**
@@ -3308,6 +3324,46 @@ describe("architecture boundaries", () => {
     // 必ず zoom される。SSoT パターンは `text-base md:text-sm` — mobile は 16px を
     // 強制し、md+ でデザイン通り 14px に戻す。該当 primitive: Input / Textarea /
     // CommandInput (admin + public 各々)。
+    test("タグの切り出しが「通ってはいけない書き方」で壊れない（fixture）", () => {
+      const tagsOf = (code: string): string[] =>
+        jsxInputOpeningTags(code, "fixture.tsx");
+
+      // 手書きスキャナが壊れた形。正規表現リテラル内の `}` で深度が負に振れ、
+      // 本当の `>` を見失ってファイル末尾まで走っていた（Codex 指摘）。
+      const withRegexLiteral = [
+        '<input onChange={() => /}/.test(v)} className="text-sm" />',
+        'const later = "text-base";',
+      ].join("\n");
+      const regexTags = tagsOf(withRegexLiteral);
+      expect(regexTags).toHaveLength(1);
+      // 後続の text-base を飲み込んでいない = 免除が起きない。
+      expect(/\btext-base\b/u.test(regexTags[0] ?? "")).toBe(false);
+      expect(/\btext-sm\b/u.test(regexTags[0] ?? "")).toBe(true);
+
+      // コメント内の閉じ括弧も同じ理由で壊す材料になる。
+      const withComment = [
+        "<textarea",
+        "  onBlur={() => {",
+        "    // 閉じ括弧 } を含むコメント",
+        "  }}",
+        '  className="text-sm"',
+        "/>",
+      ].join("\n");
+      const commentTags = tagsOf(withComment);
+      expect(commentTags).toHaveLength(1);
+      expect(/\btext-sm\b/u.test(commentTags[0] ?? "")).toBe(true);
+
+      // アロー関数の `>` でも切れない（元の lazy match が壊れた形）。
+      expect(
+        tagsOf(
+          '<input onChange={(e) => setX(e)} className="text-base md:text-sm" />',
+        ),
+      ).toHaveLength(1);
+
+      // input / textarea 以外は拾わない。
+      expect(tagsOf('<div className="text-sm" />')).toEqual([]);
+    });
+
     test("JSX 内の <input> / <textarea> は text-sm を単独指定しない", () => {
       const files = collectSourceFiles(SRC_ROOT).filter((file) =>
         file.endsWith(".tsx"),
@@ -3317,12 +3373,11 @@ describe("architecture boundaries", () => {
       // 途中で切れる。実測では input/textarea の 18 タグが切り詰められており、
       // うち 1 件（EmailChips.tsx の text-sm 単独指定）は className が切れた側に
       // あったため **この gate が現に違反を通していた**。
-      // brace 深度と引用符を追って本当の終端を求める。
+      // 終端の判定は TypeScript の parser に任せる（下の jsxInputOpeningTags）。
       const offenders: string[] = [];
       for (const file of files) {
         const source = readFileSync(file, "utf8");
-        for (const open of source.matchAll(/<(?:input|textarea)\b/gu)) {
-          const tag = openingTag(source, open.index);
+        for (const tag of jsxInputOpeningTags(source, file)) {
           if (!/\btext-sm\b/u.test(tag)) continue;
           if (/\btext-base\b/u.test(tag)) continue;
           offenders.push(relative(ROOT, file));
