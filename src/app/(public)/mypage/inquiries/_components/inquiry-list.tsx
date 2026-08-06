@@ -3,17 +3,14 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 import { Badge } from "@/public/components/design-system/badge";
 import { Stack } from "@/public/components/design-system/stack";
 import { INQUIRY_STATUS_CONFIG } from "./inquiry-status";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface InquiryItem {
   readonly id: string;
   /** "INQ-XXXXXXXX" 形式の受付番号。問い合わせ先での照合キー。 */
   readonly receiptNumber: string;
   readonly subject: string;
-  /**
-   * Prisma InquiryStatus 由来だが、UI 側では NEW/IN_PROGRESS/RESOLVED/CLOSED に加えて
-   * FLAGGED/SPAM も届く可能性がある。config lookup で `??` fallback するため string 型で受ける。
-   */
-  readonly status: string;
+  readonly status: InquiryStatus;
   /** スタッフ返信件数。0 なら「返信あり」バッジを出さない。 */
   readonly replyCount: number;
   readonly createdAt: string;

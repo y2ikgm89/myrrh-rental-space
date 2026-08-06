@@ -19,6 +19,7 @@ import {
   jstDayEndInstantExclusive,
   jstDayStartInstant,
 } from "@/shared/lib/date-format";
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   CalendarView,
   CalendarDateRange,
@@ -398,7 +399,7 @@ export function getEventsForDay(
  *   ではない (shadcn destructive variant 意味論 + Apple HIG systemGray)
  * - NO_SHOW のみ destructive (赤) — ネガティブな確定 outcome で要フォロー
  */
-export function getStatusColorClass(status: string): string {
+export function getStatusColorClass(status: ReservationStatus): string {
   switch (status) {
     case "PENDING":
       return "bg-warning/15 border-l-warning text-foreground hover:bg-warning/25";
@@ -410,8 +411,10 @@ export function getStatusColorClass(status: string): string {
       return "bg-destructive/15 border-l-destructive text-foreground hover:bg-destructive/25";
     case "CANCELLED":
       return "bg-muted/40 border-l-muted-foreground text-foreground hover:bg-muted/60";
-    default:
-      return "bg-muted/40 border-l-muted-foreground text-foreground hover:bg-muted/60";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
 }
 

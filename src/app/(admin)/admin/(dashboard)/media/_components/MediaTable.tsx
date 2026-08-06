@@ -18,7 +18,10 @@ import { formatBytes } from "@/admin/lib/utils";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { USAGE_LABELS } from "./constants";
 import { createCopyUrlHandler, useDeleteMedia } from "./hooks";
-import { isValidMediaUsage } from "@/admin/lib/validations/media";
+import {
+  isValidMediaUsage,
+  type MediaType,
+} from "@/admin/lib/validations/media";
 import {
   Table,
   TableBody,
@@ -45,7 +48,7 @@ const TYPE_ICONS = {
   OTHER: IconFile,
 } as const;
 
-function hasTypeIcon(type: string): type is keyof typeof TYPE_ICONS {
+function hasTypeIcon(type: MediaType): type is keyof typeof TYPE_ICONS {
   return type in TYPE_ICONS;
 }
 

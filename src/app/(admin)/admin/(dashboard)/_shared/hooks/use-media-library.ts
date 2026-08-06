@@ -14,6 +14,7 @@ import type {
   MediaPagination,
   GetMediaResult,
 } from "@/admin/types/media-picker";
+import { MediaTypeEnum } from "@/admin/lib/validations/media";
 
 /** `GET /admin/api/media` の応答検証（`GetMediaResult` と対応）。 */
 const mediaDataSchema = z.object({
@@ -24,7 +25,7 @@ const mediaDataSchema = z.object({
   size: z.number(),
   width: z.number().nullable(),
   height: z.number().nullable(),
-  type: z.string(),
+  type: MediaTypeEnum,
   usage: z.string(),
   alt: z.string().nullable(),
   title: z.string().nullable(),

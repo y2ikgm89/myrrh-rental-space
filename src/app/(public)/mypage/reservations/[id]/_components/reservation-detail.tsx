@@ -31,7 +31,10 @@ import { TransferAccountsSection } from "@/public/components/transfer-accounts-s
 import type { TransferAccountPublicDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
-import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
@@ -50,7 +53,7 @@ interface ReservationDetailData {
   readonly id: string;
   readonly startTime: string;
   readonly endTime: string;
-  readonly status: string;
+  readonly status: ReservationStatus;
   readonly totalPrice: number | null;
   readonly basePrice: number | null;
   readonly paymentStatus: PaymentStatus;
