@@ -108,7 +108,10 @@ const { DEFAULT_TAX_SETTINGS } = await import("@/shared/lib/pricing/tax");
 
 type SpaceProp = NonNullable<Parameters<typeof SpaceEditForm>[0]["space"]>;
 
-function buildSpace(facilitiesUnreadable: boolean): SpaceProp {
+function buildSpace(unreadable: {
+  facilities: boolean;
+  gallery: boolean;
+}): SpaceProp {
   return {
     id: "11111111-1111-4111-8111-111111111111",
     slug: "space",
@@ -124,7 +127,8 @@ function buildSpace(facilitiesUnreadable: boolean): SpaceProp {
     mainImageUrl: "https://example.com/i.jpg",
     gallery: [],
     facilities: [],
-    facilitiesUnreadable,
+    facilitiesUnreadable: unreadable.facilities,
+    galleryUnreadable: unreadable.gallery,
     businessHours: null,
     isPublished: true,
     publishedAt: null,
@@ -149,7 +153,7 @@ function buildSpace(facilitiesUnreadable: boolean): SpaceProp {
   };
 }
 
-describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
+describe("SpaceEditForm — 保存値の読み取り失敗ガード", () => {
   let root: Root | undefined;
   let container: HTMLDivElement | undefined;
 
@@ -168,7 +172,10 @@ describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
     container = undefined;
   });
 
-  function renderForm(facilitiesUnreadable: boolean): HTMLDivElement {
+  function renderForm(unreadable: {
+    facilities: boolean;
+    gallery: boolean;
+  }): HTMLDivElement {
     const el = document.createElement("div");
     document.body.appendChild(el);
     container = el;
@@ -177,7 +184,7 @@ describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
     act(() => {
       localRoot.render(
         <SpaceEditForm
-          space={buildSpace(facilitiesUnreadable)}
+          space={buildSpace(unreadable)}
           mode="edit"
           availableLocations={[]}
           availableCategories={[]}
@@ -199,14 +206,14 @@ describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
   }
 
   test("設備リストが読めた場合は警告を出さず保存できる", () => {
-    const el = renderForm(false);
+    const el = renderForm({ facilities: false, gallery: false });
 
     expect(el.textContent).not.toContain("保存されている設備リストが不正です");
     expect(findButtonByText(el, "変更を保存")?.disabled).toBe(false);
   });
 
   test("設備リストが読めなかった場合は警告を出して保存を止める", () => {
-    const el = renderForm(true);
+    const el = renderForm({ facilities: true, gallery: false });
 
     expect(el.textContent).toContain("保存されている設備リストが不正です");
     // 空配列で上書きされるのを防ぐため、送信ボタン自体を無効化する。
@@ -214,7 +221,7 @@ describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
   });
 
   test("「設備リストを空にする」を了承すると保存が解禁される", () => {
-    const el = renderForm(true);
+    const el = renderForm({ facilities: true, gallery: false });
 
     const resetButton = findButtonByText(el, "設備リストを空にする");
     expect(resetButton).toBeDefined();
@@ -227,8 +234,45 @@ describe("SpaceEditForm — 設備リスト読み取り失敗ガード", () => {
     expect(findButtonByText(el, "変更を保存")?.disabled).toBe(false);
   });
 
+  test("ギャラリーが読めなかった場合も警告を出して保存を止める", () => {
+    // 設備と同じ形の欠陥。写真 1 件につき hidden input 1 つなので、読めなかった
+    // ぶんは「無い」として送り返され、無関係な項目の保存で恒久的に消える。
+    const el = renderForm({ facilities: false, gallery: true });
+
+    expect(el.textContent).toContain("保存されているギャラリーが不正です");
+    expect(findButtonByText(el, "変更を保存")?.disabled).toBe(true);
+  });
+
+  test("「ギャラリーを空にする」を了承すると保存が解禁される", () => {
+    const el = renderForm({ facilities: false, gallery: true });
+
+    const resetButton = findButtonByText(el, "ギャラリーを空にする");
+    expect(resetButton).toBeDefined();
+    expect(findButtonByText(el, "変更を保存")?.disabled).toBe(true);
+
+    act(() => {
+      resetButton?.click();
+    });
+
+    expect(findButtonByText(el, "変更を保存")?.disabled).toBe(false);
+  });
+
+  test("片方だけ了承しても、もう片方が読めていなければ保存は止まったまま", () => {
+    const el = renderForm({ facilities: true, gallery: true });
+
+    act(() => {
+      findButtonByText(el, "設備リストを空にする")?.click();
+    });
+    expect(findButtonByText(el, "変更を保存")?.disabled).toBe(true);
+
+    act(() => {
+      findButtonByText(el, "ギャラリーを空にする")?.click();
+    });
+    expect(findButtonByText(el, "変更を保存")?.disabled).toBe(false);
+  });
+
   test("Ctrl+S も読み取り失敗中は送信しない", () => {
-    const el = renderForm(true);
+    const el = renderForm({ facilities: true, gallery: false });
 
     const form = el.querySelector("form");
     expect(form).not.toBeNull();

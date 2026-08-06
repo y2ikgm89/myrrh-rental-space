@@ -344,6 +344,12 @@ export type SpaceWithStats = {
    * hidden input で書き戻す作りなので、無関係な項目の保存で設備が消えるため）。
    */
   facilitiesUnreadable: boolean;
+  /**
+   * DB のギャラリーが 1 件も読めなかった。設備と同じ理由で編集フォームは保存を止める
+   * （読んだ写真をそのまま hidden input で書き戻す作りなので、無関係な項目の保存で
+   * 写真が消える。管理者にも顧客にも通知は出ない）。
+   */
+  galleryUnreadable: boolean;
   businessHours: BusinessHours | null;
   isPublished: boolean;
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */

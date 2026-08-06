@@ -6,7 +6,11 @@ import Link from "next/link";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
   Label,
   SubmitButton,
@@ -27,7 +31,7 @@ import {
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
-import { parseGallery } from "@/shared/lib/validations/gallery";
+import { tryParseGallery } from "@/shared/lib/validations/gallery";
 import type {
   getEventById,
   getLocationsForEvent,
@@ -191,6 +195,17 @@ export function EventForm({
     undefined,
   );
 
+  // 保存されているギャラリーが 1 件も読めないとき、そのまま編集させると
+  // **写真 1 件につき hidden input 1 つ**という作りのせいで「無い」として送り返され、
+  // 無関係な項目の保存で恒久的に消える。管理者にも顧客にも通知は出ない。
+  // 読めなかった間は保存を止め、操作者が消失を了承したときだけ解禁する
+  // （スペース編集の設備リスト・ギャラリーと同型）。
+  // mount 時に凍結して、保存後の router.refresh() で警告と了承状態がぶれないようにする。
+  const galleryParse = tryParseGallery(event?.gallery);
+  const [storedGalleryInvalid] = useState(!galleryParse.success);
+  const [galleryResetConfirmed, setGalleryResetConfirmed] = useState(false);
+  const saveBlockedByGallery = storedGalleryInvalid && !galleryResetConfirmed;
+
   const [form, fields] = useForm({
     id: isEdit ? `event-edit-${event?.id ?? ""}` : "event-create",
     lastResult,
@@ -216,7 +231,7 @@ export function EventForm({
           ogpDescription: event.ogpDescription ?? "",
           metaDescription: event.metaDescription ?? "",
           metaKeywords: event.metaKeywords ?? "",
-          gallery: parseGallery(event.gallery),
+          gallery: galleryParse.success ? galleryParse.data : [],
           tickets:
             event.tickets.length > 0
               ? event.tickets.map((t) => ({
@@ -534,11 +549,42 @@ export function EventForm({
         </TabsContent>
       </Tabs>
 
+      {storedGalleryInvalid && (
+        <Alert variant="destructive">
+          <IconAlertTriangle aria-hidden="true" />
+          <AlertTitle>保存されているギャラリーが不正です</AlertTitle>
+          <AlertDescription>
+            <p>
+              データベース上のギャラリーを読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
+            </p>
+            <p>
+              ギャラリーを空にすると保存できるようになります（保存すると、読み込めなかった写真は失われます）。
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setGalleryResetConfirmed(true);
+              }}
+              disabled={isPending || galleryResetConfirmed}
+            >
+              ギャラリーを空にする
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
           <Link href="/admin/events">キャンセル</Link>
         </Button>
-        <SubmitButton isPending={isPending} label={isEdit ? "更新" : "作成"} />
+        <SubmitButton
+          isPending={isPending}
+          label={isEdit ? "更新" : "作成"}
+          disabled={saveBlockedByGallery}
+        />
       </div>
     </form>
   );
