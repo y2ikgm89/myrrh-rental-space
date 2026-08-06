@@ -186,7 +186,7 @@ ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_content_json_objec
 ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 
--- ===== plpgsql 関数 (14) =====
+-- ===== plpgsql 関数 (15) =====
 --
 -- trigger 関数と、その本体から呼ばれる検査関数。**本体はテキスト**なので、
 -- 列や型を rename しても自動追随しない（rename する migration 側で作り直す）。
@@ -515,6 +515,16 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.prevent_append_only_truncate()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RAISE EXCEPTION '% is append-only; TRUNCATE is not allowed', TG_TABLE_NAME
+    USING ERRCODE = 'integrity_constraint_violation';
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.prevent_audit_logs_mutation()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -605,9 +615,10 @@ $function$;
 
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE USING gist (space_id WITH =, tstzrange(start_time, end_time, '[)'::text) WITH &&) WHERE (((deleted_at IS NULL) AND (status = ANY (ARRAY['PENDING'::reservation_status, 'CONFIRMED'::reservation_status]))));
 
--- ===== trigger (16) =====
+-- ===== trigger (20) =====
 
 CREATE TRIGGER audit_logs_no_delete BEFORE DELETE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
+CREATE TRIGGER audit_logs_no_truncate BEFORE TRUNCATE ON public.audit_logs FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
 CREATE TRIGGER audit_logs_no_update BEFORE UPDATE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
 CREATE CONSTRAINT TRIGGER event_registrations_capacity_check AFTER INSERT OR UPDATE OF slot_id, ticket_id, status, quantity ON public.event_registrations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_registration_capacity();
 CREATE CONSTRAINT TRIGGER event_tickets_capacity_check AFTER UPDATE OF capacity ON public.event_tickets DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_ticket_capacity_not_exceeded();
@@ -617,9 +628,12 @@ CREATE CONSTRAINT TRIGGER event_time_slots_space_is_free_check AFTER INSERT OR U
 CREATE CONSTRAINT TRIGGER events_schedule_integrity_check AFTER INSERT OR UPDATE OF schedule_mode, deleted_at, registration_deadline ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_event();
 CREATE CONSTRAINT TRIGGER events_space_is_free_check AFTER INSERT OR UPDATE OF space_id, status, deleted_at ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_space_is_free();
 CREATE TRIGGER inquiry_status_history_no_delete BEFORE DELETE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
+CREATE TRIGGER inquiry_status_history_no_truncate BEFORE TRUNCATE ON public.inquiry_status_history FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
 CREATE TRIGGER inquiry_status_history_no_update BEFORE UPDATE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
 CREATE TRIGGER refunds_no_delete BEFORE DELETE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
+CREATE TRIGGER refunds_no_truncate BEFORE TRUNCATE ON public.refunds FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
 CREATE TRIGGER refunds_no_update BEFORE UPDATE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
 CREATE CONSTRAINT TRIGGER reservations_no_event_slot_overlap_check AFTER INSERT OR UPDATE OF space_id, start_time, end_time, status, deleted_at ON public.reservations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_reservation_no_event_slot_overlap();
 CREATE TRIGGER terms_agreements_no_delete BEFORE DELETE ON public.terms_agreements FOR EACH ROW EXECUTE FUNCTION prevent_terms_agreements_mutation();
+CREATE TRIGGER terms_agreements_no_truncate BEFORE TRUNCATE ON public.terms_agreements FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
 CREATE TRIGGER terms_agreements_no_update BEFORE UPDATE ON public.terms_agreements FOR EACH ROW EXECUTE FUNCTION prevent_terms_agreements_mutation();
