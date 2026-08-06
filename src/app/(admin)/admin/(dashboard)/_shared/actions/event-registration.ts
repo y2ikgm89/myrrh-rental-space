@@ -59,6 +59,11 @@ import {
   walkInRegistrationSchema,
 } from "@/shared/lib/validations/event-registration-onsite";
 
+import {
+  updateRegistrationSchema,
+  type UpdateRegistrationInput,
+} from "@/admin/lib/validations/event-registration-update";
+
 const eventRegistrationIdSchema = entityIdSchema("EventRegistration");
 const eventIdSchema = entityIdSchema("Event");
 
@@ -231,35 +236,6 @@ export async function toggleEventRegistrationCheckIn(
 // =============================================================================
 // 参加登録編集 (update)
 // =============================================================================
-
-const updateRegistrationSchema = z.object({
-  registrationId: eventRegistrationIdSchema,
-  name: z.string().trim().min(1, "氏名を入力してください").max(100),
-  email: z
-    .string()
-    .trim()
-    .max(255)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v))
-    .pipe(
-      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
-    ),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  note: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v)),
-  quantity: z.number().int().min(1).max(100),
-});
-
-export type UpdateRegistrationInput = z.input<typeof updateRegistrationSchema>;
 
 export async function updateEventRegistration(
   input: UpdateRegistrationInput,

@@ -493,9 +493,13 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     exportName: "publicEventRegistrationSchema",
     field: "name",
   }),
-  // 3 つの入口がある。公開申込のほかに受付の当日参加 / 代行登録があり、
-  // 後ろ 2 つは `.max(255)` で**列（254）より 1 文字広かった**。
+  // 4 つの入口がある。公開申込・受付の当日参加 / 代行登録・管理画面の編集。
+  // 公開申込を除く 3 つが `.max(255)` で**列（254）より 1 文字広かった**。
   // 255 文字ちょうどのアドレスが Zod を通り、INSERT で 22001 → 500 になっていた。
+  //
+  // 編集の schema は `"use server"` ファイルの中にあり **export できない位置**
+  // だったので、ここから probe できず 1 本だけ取り残された。probe に載せられない
+  // 位置に検証を置かない、という制約でもある（`@/admin/lib/validations` へ移した）。
   "EventRegistration.email": validated(
     {
       module: `${SHARED}/event-registration`,
@@ -514,6 +518,13 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     {
       module: `${SHARED}/event-registration-onsite`,
       exportName: "adminProxyRegistrationSchema",
+      field: "email",
+      maxLength: 254,
+      sample: emailOfLength,
+    },
+    {
+      module: `${ADMIN}/event-registration-update`,
+      exportName: "updateRegistrationSchema",
       field: "email",
       maxLength: 254,
       sample: emailOfLength,
