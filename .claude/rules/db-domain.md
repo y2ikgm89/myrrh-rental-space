@@ -96,7 +96,10 @@ Prisma query の順で書く（詳細は caching ルール）。
   | `refunds`                | `prevent_refunds_mutation`                | `myrrh.refund_mutation_bypass`（`seed`）                           |
   | `inquiry_status_history` | `prevent_inquiry_status_history_mutation` | `myrrh.inquiry_status_history_mutation_bypass`（`seed` / `purge`） |
 
-  bypass GUC は seed と data-retention purge の専用口で、テストや fixture から使わない。
+  bypass GUC を立ててよい場所は `architecture-boundaries.test.ts` が**ファイル単位で
+  固定**している（増やすのも消し忘れるのも赤くなる）。現状は data-retention purge と
+  実 DB 統合テストの cleanup helper 1 本だけ。**新しい場所から立てない** —
+  E2E fixture や spec から直接触ると gate が落ちる。
   **「E2E が作った行だから消してよい」は成立しない** — E2E の復元 hook が
   `inquiryStatusHistory.deleteMany` を呼んで広域 run を落とした実例がある
   （#1772 → #1781。gate: `__tests__/unit/architecture/inquiry-status-history-append-only.test.ts`）。
