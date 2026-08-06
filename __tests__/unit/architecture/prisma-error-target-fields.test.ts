@@ -9,7 +9,7 @@
  * **判定が黙って常に false になる**。false になった先は「P2002 を握り潰して
  * idempotent に扱う」経路なので、握り潰しが止まって throw に変わる。
  *
- * 実害の記録: 物理列名を snake_case へ寄せた 20260804110000〜20260804150000 で、
+ * 実害の記録: 物理列名を snake_case へ寄せたとき、
  * adapter-pg が返す `constraint.fields` が `stripe_refund_id` になったのに
  * 呼び出し側は `"stripeRefundId"` のままだった。返金の冪等性チェック 2 本
  * （`payment-claim-orchestration.ts` / `stripe-refund-orchestration.ts`）が

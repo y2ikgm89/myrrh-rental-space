@@ -68,7 +68,7 @@ afterAll(async () => {
 describe("singleton 行モデルの DB ガード", () => {
   test("schema.prisma から singleton モデルを検出できている", () => {
     // 抽出が壊れて 0 件になると以降の test が空回りで緑になる（vacuous pass 防止）。
-    // 20260805150000 で ReceiptSequence が年キーへ移り、singleton ではなくなった
+    // ReceiptSequence は年キーへ移り、singleton ではなくなった
     // （21 → 20）。Settings 系を新設したときはこの下限も上げる。
     expect(singletonModels.length).toBeGreaterThanOrEqual(20);
   });

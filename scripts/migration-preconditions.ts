@@ -56,8 +56,12 @@
  *    包み用の `BEGIN` / `COMMIT` / `END` だけは読み飛ばす
  * 2. 実行は Prisma の interactive transaction（単一コネクション）内だけ。
  *    最後に必ず例外を投げて巻き戻す
- * 3. **事後照合**: テーブル数・制約数・`_prisma_migrations` の行数を前後で比べ、
- *    変わっていたら大声で失敗する
+ * 3. **事後照合**: `information_schema.columns`（列の型・長さ・既定値・NULL 許可）と
+ *    `pg_get_constraintdef` / `pg_indexes.indexdef`（制約・index の定義そのもの）を
+ *    それぞれ md5 に畳んだ構造ハッシュ、および `_prisma_migrations` の行数を前後で比べ、
+ *    変わっていたら大声で失敗する。**件数だけの比較では「本数は同じだが定義が
+ *    入れ替わった」drift（例: CHECK を 1 本 DROP して別の CHECK を 1 本 ADD）を
+ *    見逃す**ので、定義の中身まで畳んだハッシュにしている
  *
  * ## この方法が見ないもの
  *
@@ -68,7 +72,12 @@
  *   ことに依存する文」（`ALTER TYPE … ADD VALUE` の直後にその値を使う等）は
  *   ここでだけ落ちうる
  * - ロックと所要時間は本番の migrate と同じだけかかる（同じ DDL を流すため）。
- *   `lock_timeout` / `statement_timeout` を掛けてあるので、待たされ続けはしない
+ *   `lock_timeout` / `statement_timeout` を掛けてあるので、無期限に待たされ続けは
+ *   しない。ただし `statement_timeout` はリハーサル全体の上限
+ *   （`REHEARSAL_TIMEOUT_MS`）と同じ値にしているので、正当に長時間かかる DDL
+ *   （大テーブルの書換等）を artificial に短く切ることはしない。ここで
+ *   `statement_timeout` が発火するなら、**本番の `prisma migrate deploy` も同じ SQL を
+ *   同じデータに対して流す以上、同じだけ時間が掛かる**（リハーサル固有の制限ではない）
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -83,6 +92,12 @@ const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 const REHEARSAL_TIMEOUT_MS = 600_000;
 /** ロック待ちの上限。本番のトラフィックを長く止めない。 */
 const LOCK_TIMEOUT = "10s";
+/**
+ * 1 文あたりの上限。`REHEARSAL_TIMEOUT_MS` と同じ値にしてあるので、正当に
+ * 長時間かかる DDL を artificial に短く切ることはない。発火するなら本番の
+ * `prisma migrate deploy` も同じだけ時間が掛かる（リハーサル固有の制限ではない）。
+ */
+const STATEMENT_TIMEOUT = `${Math.floor(REHEARSAL_TIMEOUT_MS / 1000)}s`;
 
 // ---------------------------------------------------------------------------
 // SQL の分割
@@ -301,48 +316,100 @@ export function pendingStatements(
 // DB とのやり取り
 // ---------------------------------------------------------------------------
 
-/** 巻き戻し確認用の指紋。適用が漏れれば必ずどれかが動く。 */
+/**
+ * 巻き戻し確認用の指紋。適用が漏れれば必ずどれかが動く。
+ *
+ * 以前はテーブル数・制約数・index 数の**件数**だけを比べていた。件数一致は
+ * 「CHECK を 1 本 DROP して別の CHECK を 1 本 ADD」のような**本数が変わらない
+ * drift を見逃す**。列・制約・index の**定義そのもの**を畳んだ md5 に置き換えて、
+ * 内容が 1 バイトでも変われば必ずハッシュが変わるようにした。
+ */
 interface Fingerprint {
-  readonly tables: number;
-  readonly constraints: number;
-  readonly indexes: number;
+  /** `information_schema.columns` の (table, column, type, length, precision, default, nullable) を畳んだ md5。 */
+  readonly columnsHash: string;
+  /** 制約ごとの `<table>.<constraint>|pg_get_constraintdef(...)` を畳んだ md5。 */
+  readonly constraintsHash: string;
+  /** index ごとの `<table>.<index>|indexdef` を畳んだ md5。 */
+  readonly indexesHash: string;
   readonly history: number;
 }
 
+/** `public` スキーマのユーザーテーブル数。空 DB 判定にだけ使う（指紋そのものではない）。 */
+async function countPublicTables(prisma: PrismaClient): Promise<number> {
+  const [row] = await prisma.$queryRawUnsafe<{ tables: bigint }[]>(
+    `SELECT COUNT(*) AS tables FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relkind = 'r'`,
+  );
+  return Number(row?.tables ?? 0);
+}
+
 async function readFingerprint(prisma: PrismaClient): Promise<Fingerprint> {
-  const [counts] = await prisma.$queryRawUnsafe<
-    { tables: bigint; constraints: bigint; indexes: bigint }[]
+  const [row] = await prisma.$queryRawUnsafe<
+    {
+      columns_hash: string;
+      constraints_hash: string;
+      indexes_hash: string;
+    }[]
   >(
-    `SELECT
-       (SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public' AND c.relkind = 'r') AS tables,
-       (SELECT COUNT(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
-         WHERE n.nspname = 'public') AS constraints,
-       (SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public' AND c.relkind = 'i') AS indexes`,
+    `WITH col_agg AS (
+       SELECT coalesce(string_agg(
+         table_name || '|' || column_name || '|' || data_type || '|' ||
+         coalesce(character_maximum_length::text, '') || '|' ||
+         coalesce(numeric_precision::text, '') || '|' ||
+         coalesce(column_default, '') || '|' || is_nullable,
+         E'\n' ORDER BY table_name, column_name
+       ), '') AS agg
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+     ),
+     constraint_agg AS (
+       -- pg_get_constraintdef は制約の本文しか返さない（表名・制約名を含まない）ので、
+       -- 中身が同じ制約を別の表へ付け替える drift を見分けるために表名・制約名を前置する。
+       SELECT coalesce(string_agg(
+         t.relname || '.' || c.conname || '|' || pg_get_constraintdef(c.oid),
+         E'\n' ORDER BY t.relname || '.' || c.conname
+       ), '') AS agg
+       FROM pg_constraint c
+       JOIN pg_namespace n ON n.oid = c.connamespace
+       JOIN pg_class t ON t.oid = c.conrelid
+       WHERE n.nspname = 'public'
+     ),
+     index_agg AS (
+       SELECT coalesce(string_agg(
+         tablename || '.' || indexname || '|' || indexdef,
+         E'\n' ORDER BY tablename || '.' || indexname
+       ), '') AS agg
+       FROM pg_indexes
+       WHERE schemaname = 'public'
+     )
+     SELECT
+       md5((SELECT agg FROM col_agg)) AS columns_hash,
+       md5((SELECT agg FROM constraint_agg)) AS constraints_hash,
+       md5((SELECT agg FROM index_agg)) AS indexes_hash`,
   );
   let history = 0;
   try {
-    const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+    const [historyRow] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
       `SELECT COUNT(*) AS n FROM _prisma_migrations`,
     );
-    history = Number(row?.n ?? 0);
+    history = Number(historyRow?.n ?? 0);
   } catch {
     history = -1;
   }
   return {
-    tables: Number(counts?.tables ?? 0),
-    constraints: Number(counts?.constraints ?? 0),
-    indexes: Number(counts?.indexes ?? 0),
+    columnsHash: row?.columns_hash ?? "",
+    constraintsHash: row?.constraints_hash ?? "",
+    indexesHash: row?.indexes_hash ?? "",
     history,
   };
 }
 
 function sameFingerprint(before: Fingerprint, after: Fingerprint): boolean {
   return (
-    before.tables === after.tables &&
-    before.constraints === after.constraints &&
-    before.indexes === after.indexes &&
+    before.columnsHash === after.columnsHash &&
+    before.constraintsHash === after.constraintsHash &&
+    before.indexesHash === after.indexesHash &&
     before.history === after.history
   );
 }
@@ -438,6 +505,21 @@ export interface RehearsalFailure {
   readonly error: string;
 }
 
+/**
+ * `lock_timeout` / `statement_timeout` が発火したエラーか。
+ *
+ * どちらも「このリハーサルだから遅い」わけではなく、本番の `prisma migrate deploy`
+ * が同じ SQL を同じデータに対して流せば同じだけ時間が掛かる（`statement_timeout` は
+ * `REHEARSAL_TIMEOUT_MS` と同じ値）。運用者がリハーサルの不具合だと誤解しないよう、
+ * その旨を追記する。
+ */
+export function isTimeoutError(message: string): boolean {
+  return (
+    /\b(55P03|57014)\b/u.test(message) ||
+    /canceling statement due to (lock|statement) timeout/iu.test(message)
+  );
+}
+
 /** リハーサル本体。必ず巻き戻す。 */
 async function rehearse(
   prisma: PrismaClient,
@@ -459,6 +541,9 @@ async function rehearse(
       async (tx) => {
         await tx.$executeRawUnsafe(
           `SET LOCAL lock_timeout = '${LOCK_TIMEOUT}'`,
+        );
+        await tx.$executeRawUnsafe(
+          `SET LOCAL statement_timeout = '${STATEMENT_TIMEOUT}'`,
         );
         for (const step of steps) {
           try {
@@ -522,8 +607,9 @@ export async function run(argv: readonly string[]): Promise<number> {
   });
 
   try {
+    const tablesBefore = await countPublicTables(prisma);
     const before = await readFingerprint(prisma);
-    const history = await readMigrationHistory(prisma, before.tables);
+    const history = await readMigrationHistory(prisma, tablesBefore);
     if (!history.ok) {
       console.error(`[migration-preconditions] ${history.reason}`);
       return 1;
@@ -562,8 +648,10 @@ export async function run(argv: readonly string[]): Promise<number> {
     if (!sameFingerprint(before, after)) {
       console.error(
         "[migration-preconditions] 巻き戻しが効いていない。" +
-          `テーブル ${before.tables}→${after.tables} / 制約 ${before.constraints}→${after.constraints} / ` +
-          `index ${before.indexes}→${after.indexes} / 履歴 ${before.history}→${after.history}。` +
+          `列定義ハッシュ ${before.columnsHash}→${after.columnsHash} / ` +
+          `制約定義ハッシュ ${before.constraintsHash}→${after.constraintsHash} / ` +
+          `index 定義ハッシュ ${before.indexesHash}→${after.indexesHash} / ` +
+          `履歴 ${before.history}→${after.history}。` +
           "DB の状態を確認すること",
       );
       return 1;
@@ -575,6 +663,13 @@ export async function run(argv: readonly string[]): Promise<number> {
           `  ${failure.sql.slice(0, 400)}\n` +
           `  → ${failure.error}`,
       );
+      if (isTimeoutError(failure.error)) {
+        console.error(
+          "[migration-preconditions] lock_timeout / statement_timeout の発火は" +
+            "このリハーサル固有の制限ではない。本番の prisma migrate deploy も" +
+            "同じ SQL を同じデータに対して流す以上、同じだけ時間が掛かる",
+        );
+      }
       console.error(
         "[migration-preconditions] データの是正は正規のドメインコマンド経由で行う" +
           "（migration 内で直さない）",

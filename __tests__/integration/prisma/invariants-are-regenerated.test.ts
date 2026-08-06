@@ -7,7 +7,7 @@
  * 「DB の不変条件はこうなっている」として読む。ところが再生成を強制する仕組みが
  * 無かったため、**静かに古くなる**。
  *
- * 実際に起きたこと: 20260805160000 で `customers.email_canonical` を text から
+ * 実際に起きたこと: `customers.email_canonical` を text から
  * varchar(254) へ寄せた。CHECK の中身は変えていないが、PostgreSQL が返す式は
  * `btrim(email_canonical)` から `btrim((email_canonical)::text)` に変わる。
  * `invariants.sql` は再生成されず、4 つの PR をまたいで古い綴りのまま残った。

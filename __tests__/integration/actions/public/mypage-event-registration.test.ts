@@ -205,7 +205,7 @@ mock.module("@/shared/domain/features/check", () => ({
 // テストデータ
 // =============================================================================
 
-// EventRegistration.id は uuid（20260804000000 で cuid から統一）
+// EventRegistration.id は uuid（ID 形式は cuid から uuid へ統一済み）
 // （prisma/schema.prisma の EventRegistration モデル参照）
 const VALID_REGISTRATION_ID = "2ea99a40-e250-4d13-873d-6f3a45ed97ad";
 const IMPORT_PATH = "@/app/(public)/_shared/actions/event-registration";

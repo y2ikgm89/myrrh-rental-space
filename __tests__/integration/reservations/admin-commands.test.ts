@@ -168,7 +168,7 @@ async function createAdminReservationFixture(opts?: {
 /**
  * `adminUserId` に使う管理者を実在させる。
  *
- * 20260805120000 で `reservations.price_overridden_by_id` に FK を張るまで、この
+ * `reservations.price_overridden_by_id` に FK を張るまで、この
  * テストは **`users` に存在しない ID** を書き込んでいた。FK が無いので通っており、
  * 「実行者を記録している」という assertion は**辿れない文字列**を突き合わせていた
  * だけだった。実在する行を指してはじめて「後から誰か引ける」の検査になる。

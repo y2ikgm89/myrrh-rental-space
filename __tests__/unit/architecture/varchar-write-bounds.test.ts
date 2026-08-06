@@ -609,7 +609,7 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     exportName: "transferAccountFormSchema",
     field: "note",
   }),
-  // --- 連絡先・住所（20260805160000 で値域を 1 つに揃えた列） -------------
+  // --- 連絡先・住所（値域を 1 つに揃えた列） -----------------------------
   //
   // 列長はドメインごとに「アプリが受理する最長」で揃えてある。個々の欄がそれより
   // 狭い場合は maxLength で実測値を明示する（列に余白があること自体は問題ではない

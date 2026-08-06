@@ -444,7 +444,7 @@ describe("display order surfaces clean-break contract", () => {
     ]) {
       // **migration 履歴のテキストを見ない。** 索引は rename されうるので、
       // 「どこかに CREATE UNIQUE INDEX がある」は現在の契約の証明にならない。
-      // 実際 20260805090000 が 23 本の索引を rename した時点で、履歴には
+      // 実際、索引 23 本をまとめて rename した時点で、履歴には
       // 旧名の CREATE 文と新名の ALTER 文が別々に存在する状態になった。
       // 守りたいのは「今この unique 索引が宣言されていること」なので schema を見る。
       expect(schema).toContain(indexName);

@@ -7,7 +7,7 @@
  * この判定は adapter-pg が返すエラーメタデータの中身と突き合わせる。**中身を
  * 手で書いた fixture で検査しても、fixture が現実からずれた瞬間に意味を失う。**
  *
- * 実害の記録: 物理列名を snake_case へ寄せた 20260804110000〜20260804150000 で
+ * 実害の記録: 物理列名を snake_case へ寄せたとき、
  * adapter-pg が返す `constraint.fields` が `stripe_refund_id` になったが、
  * 単体テストの fixture は `["stripeRefundId"]` を焼いたままだった。結果、
  *
