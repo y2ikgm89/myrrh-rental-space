@@ -3,6 +3,11 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { DomainError } from "@/shared/domain/domain-error";
+import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
+import {
+  checkSpaceOverlap,
+  isActiveEventStatus,
+} from "@/shared/domain/spaces/overlap";
 import { generateSlug } from "@/shared/lib/slug";
 import {
   buildParagraphEditorStateJson,
@@ -46,6 +51,7 @@ export async function upsertEventFromCalendar(data: {
       select: {
         id: true,
         status: true,
+        spaceId: true,
         registrations: {
           where: { status: { not: RegistrationStatus.CANCELLED } },
           select: { id: true },
@@ -71,7 +77,30 @@ export async function upsertEventFromCalendar(data: {
       };
     }
 
-    await prisma.$transaction(async (tx) => {
+    const outcome = await prisma.$transaction(async (tx) => {
+      // GCal 側の時刻変更は、その枠が押さえている Space を別の時間帯へ動かす書込。
+      // 管理画面の書込経路（`updateEventCommand`）と同じく、advisory lock を取って
+      // 移動先が空いていることを確かめる。取らないと、予約や他イベントの上へ
+      // 静かに重ねられる（DB の CONSTRAINT TRIGGER は COMMIT 時に 23P01 を上げるが、
+      // cron が 1 件の予定で落ちるのは望ましくない）。
+      // Space を持たない外部会場イベント（import 直後は常にこれ）は占有しないので素通り。
+      if (existingEvent.spaceId && isActiveEventStatus(existingEvent.status)) {
+        await lockSpaceForTransaction(tx, existingEvent.spaceId);
+        const overlap = await checkSpaceOverlap(
+          {
+            spaceId: existingEvent.spaceId,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            // 動かす当人だけを外す。同じイベントの他の枠は検査対象に残す。
+            excludeEventSlotId: existingSlot.id,
+          },
+          tx,
+        );
+        if (overlap.hasOverlap) {
+          return "space_conflict" as const;
+        }
+      }
+
       await tx.event.update({
         where: { id: existingSlot.eventId, deletedAt: null },
         data: {
@@ -102,7 +131,15 @@ export async function upsertEventFromCalendar(data: {
           lastSlotEndAt: aggregate._max.endAt ?? null,
         },
       });
+      return "updated" as const;
     });
+    if (outcome === "space_conflict") {
+      return {
+        id: existingSlot.eventId,
+        action: "skipped" as const,
+        reason: "space_conflict",
+      };
+    }
     return { id: existingSlot.eventId, action: "updated" as const };
   }
 

@@ -136,7 +136,8 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
         } else if (upsertResult.action === "updated") {
           result.updated++;
         } else {
-          // published / active registrations 保護による skip。失敗扱いにしない。
+          // published / active registrations 保護、または移動先の Space が
+          // 空いていないことによる skip。失敗扱いにしない。
           result.skipped++;
           logger.info("Calendar event import skipped", {
             googleCalendarEventId: event.id,

@@ -2410,10 +2410,12 @@ model EventTimeSlot {
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
 
-  /// 同一イベントで同時刻スロット二重登録を防ぐ
+  /// 同一イベントで**開始時刻が同値**のスロットを二重登録するのを防ぐ。
+  /// 時間帯の重なり（10:00-12:00 と 11:00-13:00）はここでは見えない。それは
+  /// CONSTRAINT TRIGGER check_event_slot_space_is_free() が Space 単位で見る。
   @@unique([eventId, startAt])
   /// 手書き index。
-  /// CONSTRAINT TRIGGER check_event_slot_no_reservation_overlap() のクロステーブル
+  /// CONSTRAINT TRIGGER check_event_slot_space_is_free() のクロステーブル
   /// range クエリ (startAt, endAt) を高速化する。DROP されると deferred trigger が劣化するため
   /// diff engine に既存物として認識させる目的の宣言。
   @@index([startAt, endAt], map: "event_time_slots_time_range_idx")
@@ -2538,7 +2540,7 @@ model Event {
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_slug_trgm_idx")
   /// 手書き partial index。
-  /// CONSTRAINT TRIGGER check_event_no_reservation_overlap() のクロステーブルクエリを高速化する。
+  /// CONSTRAINT TRIGGER check_event_space_is_free() のクロステーブルクエリを高速化する。
   /// partialIndexes preview feature は @@index の where にも対応する（@@unique 専用ではない、
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。

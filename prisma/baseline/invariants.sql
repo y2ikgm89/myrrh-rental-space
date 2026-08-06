@@ -187,43 +187,6 @@ ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_pos
 -- trigger 関数と、その本体から呼ばれる検査関数。**本体はテキスト**なので、
 -- 列や型を rename しても自動追随しない（rename する migration 側で作り直す）。
 
-CREATE OR REPLACE FUNCTION public.check_event_no_reservation_overlap()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-  conflicting_reservation_id VARCHAR;
-  conflicting_slot_id VARCHAR;
-BEGIN
-  -- spaceId null (外部会場) / soft-deleted / 非 active status は検査対象外
-  IF NEW.space_id IS NULL
-     OR NEW.deleted_at IS NOT NULL
-     OR NEW.status NOT IN ('DRAFT', 'PUBLISHED') THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT r.id, ets.id
-    INTO conflicting_reservation_id, conflicting_slot_id
-  FROM event_time_slots ets
-  JOIN reservations r
-    ON r.space_id = NEW.space_id
-   AND r.deleted_at IS NULL
-   AND r.status IN ('PENDING', 'CONFIRMED')
-   AND ets.start_at < r.end_time
-   AND ets.end_at > r.start_time
-  WHERE ets.event_id = NEW.id
-  LIMIT 1;
-
-  IF conflicting_reservation_id IS NOT NULL THEN
-    RAISE EXCEPTION 'Event slot % overlaps with reservation % on space %',
-      conflicting_slot_id, conflicting_reservation_id, NEW.space_id
-      USING ERRCODE = 'exclusion_violation';
-  END IF;
-
-  RETURN NEW;
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.check_event_schedule_integrity("targetEventId" uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -310,40 +273,111 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.check_event_slot_no_reservation_overlap()
+CREATE OR REPLACE FUNCTION public.check_event_slot_space_is_free()
  RETURNS trigger
  LANGUAGE plpgsql
 AS $function$
 DECLARE
   event_space_id UUID;
   event_status TEXT;
-  event_deleted_at TIMESTAMP;
-  conflicting_reservation_id VARCHAR;
+  event_deleted_at TIMESTAMPTZ;
+  conflict_kind TEXT;
+  conflicting_id UUID;
 BEGIN
   SELECT space_id, status::text, deleted_at
     INTO event_space_id, event_status, event_deleted_at
   FROM events
   WHERE id = NEW.event_id;
 
-  -- spaceId null (外部会場) / soft-deleted event / 非 active status は検査対象外
+  -- space_id null (外部会場) / soft-deleted event / 非 active status は Space を占有しない
   IF event_space_id IS NULL
      OR event_deleted_at IS NOT NULL
      OR event_status NOT IN ('DRAFT', 'PUBLISHED') THEN
     RETURN NEW;
   END IF;
 
-  SELECT r.id INTO conflicting_reservation_id
-  FROM reservations r
-  WHERE r.space_id = event_space_id
-    AND r.deleted_at IS NULL
-    AND r.status IN ('PENDING', 'CONFIRMED')
-    AND r.start_time < NEW.end_at
-    AND r.end_time > NEW.start_at
+  SELECT kind, id INTO conflict_kind, conflicting_id
+  FROM (
+    SELECT 'reservation' AS kind, r.id AS id
+    FROM reservations r
+    WHERE r.space_id = event_space_id
+      AND r.deleted_at IS NULL
+      AND r.status IN ('PENDING', 'CONFIRMED')
+      AND r.start_time < NEW.end_at
+      AND r.end_time > NEW.start_at
+    UNION ALL
+    -- 自分自身だけを外す。同じイベントの他の枠は外さない —
+    -- 同一イベント内の重なりも、同じ部屋の二重押さえであることに変わりはない。
+    SELECT 'event slot' AS kind, other.id AS id
+    FROM event_time_slots other
+    JOIN events other_event ON other_event.id = other.event_id
+    WHERE other.id <> NEW.id
+      AND other_event.space_id = event_space_id
+      AND other_event.deleted_at IS NULL
+      AND other_event.status IN ('DRAFT', 'PUBLISHED')
+      AND other.start_at < NEW.end_at
+      AND other.end_at > NEW.start_at
+  ) AS occupancies
   LIMIT 1;
 
-  IF conflicting_reservation_id IS NOT NULL THEN
-    RAISE EXCEPTION 'EventTimeSlot time overlaps with reservation % on space %',
-      conflicting_reservation_id, event_space_id
+  IF conflicting_id IS NOT NULL THEN
+    RAISE EXCEPTION 'EventTimeSlot % overlaps with % % on space %',
+      NEW.id, conflict_kind, conflicting_id, event_space_id
+      USING ERRCODE = 'exclusion_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.check_event_space_is_free()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  own_slot_id UUID;
+  conflict_kind TEXT;
+  conflicting_id UUID;
+BEGIN
+  IF NEW.space_id IS NULL
+     OR NEW.deleted_at IS NOT NULL
+     OR NEW.status NOT IN ('DRAFT', 'PUBLISHED') THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT slot_id, kind, id INTO own_slot_id, conflict_kind, conflicting_id
+  FROM (
+    SELECT ets.id AS slot_id, 'reservation' AS kind, r.id AS id
+    FROM event_time_slots ets
+    JOIN reservations r
+      ON r.space_id = NEW.space_id
+     AND r.deleted_at IS NULL
+     AND r.status IN ('PENDING', 'CONFIRMED')
+     AND ets.start_at < r.end_time
+     AND ets.end_at > r.start_time
+    WHERE ets.event_id = NEW.id
+    UNION ALL
+    -- other_event が NEW 自身のこともある（AFTER trigger なので events は既に新しい値）。
+    -- そのとき拾うのは「自イベント配下の枠どうしの重なり」で、
+    -- space_id が NULL のあいだに作られた並行トラックに Space を割り当てた場合がこれ。
+    SELECT ets.id AS slot_id, 'event slot' AS kind, other.id AS id
+    FROM event_time_slots ets
+    JOIN event_time_slots other
+      ON other.id <> ets.id
+     AND other.start_at < ets.end_at
+     AND other.end_at > ets.start_at
+    JOIN events other_event
+      ON other_event.id = other.event_id
+     AND other_event.space_id = NEW.space_id
+     AND other_event.deleted_at IS NULL
+     AND other_event.status IN ('DRAFT', 'PUBLISHED')
+    WHERE ets.event_id = NEW.id
+  ) AS occupancies
+  LIMIT 1;
+
+  IF conflicting_id IS NOT NULL THEN
+    RAISE EXCEPTION 'EventTimeSlot % overlaps with % % on space %',
+      own_slot_id, conflict_kind, conflicting_id, NEW.space_id
       USING ERRCODE = 'exclusion_violation';
   END IF;
 
@@ -478,10 +512,10 @@ ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_e
 
 CREATE TRIGGER audit_logs_no_delete BEFORE DELETE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
 CREATE TRIGGER audit_logs_no_update BEFORE UPDATE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
-CREATE CONSTRAINT TRIGGER event_time_slots_no_reservation_overlap_check AFTER INSERT OR UPDATE OF event_id, start_at, end_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_no_reservation_overlap();
 CREATE CONSTRAINT TRIGGER event_time_slots_schedule_integrity_check AFTER INSERT OR DELETE OR UPDATE OF event_id, start_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_slot();
-CREATE CONSTRAINT TRIGGER events_no_reservation_overlap_check AFTER INSERT OR UPDATE OF space_id, status, deleted_at ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_no_reservation_overlap();
+CREATE CONSTRAINT TRIGGER event_time_slots_space_is_free_check AFTER INSERT OR UPDATE OF event_id, start_at, end_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_space_is_free();
 CREATE CONSTRAINT TRIGGER events_schedule_integrity_check AFTER INSERT OR UPDATE OF schedule_mode, deleted_at, registration_deadline ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_event();
+CREATE CONSTRAINT TRIGGER events_space_is_free_check AFTER INSERT OR UPDATE OF space_id, status, deleted_at ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_space_is_free();
 CREATE TRIGGER inquiry_status_history_no_delete BEFORE DELETE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
 CREATE TRIGGER inquiry_status_history_no_update BEFORE UPDATE ON public.inquiry_status_history FOR EACH ROW EXECUTE FUNCTION prevent_inquiry_status_history_mutation();
 CREATE TRIGGER refunds_no_delete BEFORE DELETE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
