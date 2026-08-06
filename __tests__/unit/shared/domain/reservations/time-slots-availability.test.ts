@@ -171,4 +171,46 @@ describe("getAvailableTimeSlots cross-midnight occupancy", () => {
     expect(map["15:00"]).toBe(false);
     expect(map["16:00"]).toBe(true);
   });
+
+  test("スロットの途中から始まる占有も、そのスロットを塞ぐ（開始分だけを見ない）", async () => {
+    // 旧実装は「スロットの**開始分**が占有窓の内側か」だけを見ていた。
+    // 占有 10:30–11:30 に対して 10:00 のスロット (10:00–11:00) は
+    // `10:00 >= 10:30` が偽なので**空きとして出ていた**。顧客はそれを選べてしまい、
+    // 送信して初めて EXCLUDE 制約に弾かれる（CX-1: 空き枠の真実）。
+    mockGetReservationsForDateQuery.mockResolvedValue([
+      {
+        startTime: new Date("2030-01-07T10:30:00+09:00"),
+        endTime: new Date("2030-01-07T11:30:00+09:00"),
+      },
+    ]);
+
+    const slots = await getAvailableTimeSlots("space-1", MONDAY);
+    const map = slotAvailability(slots);
+
+    expect(map["09:00"]).toBe(true);
+    // 10:00–11:00 は 10:30–11:30 と重なる
+    expect(map["10:00"]).toBe(false);
+    // 11:00–12:00 も 11:30 まで重なる
+    expect(map["11:00"]).toBe(false);
+    // 12:00 以降は接しない
+    expect(map["12:00"]).toBe(true);
+  });
+
+  test("境界が接するだけのスロットは塞がない（半開区間）", async () => {
+    mockGetReservationsForDateQuery.mockResolvedValue([
+      {
+        startTime: new Date("2030-01-07T14:00:00+09:00"),
+        endTime: new Date("2030-01-07T15:00:00+09:00"),
+      },
+    ]);
+
+    const slots = await getAvailableTimeSlots("space-1", MONDAY);
+    const map = slotAvailability(slots);
+
+    // 13:00–14:00 は終端が占有の開始に接するだけ
+    expect(map["13:00"]).toBe(true);
+    expect(map["14:00"]).toBe(false);
+    // 15:00–16:00 は始端が占有の終端に接するだけ
+    expect(map["15:00"]).toBe(true);
+  });
 });
