@@ -15,6 +15,7 @@ import {
 } from "@/shared/domain/customers/queries";
 import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/payloads";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
+import { CUSTOMER_EMAIL_DELIVERY_REASON_MAX_LENGTH } from "@/shared/lib/validations/customer-email-limits";
 
 const GUEST_EMAIL_DUPLICATE_MESSAGE =
   "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。";
@@ -407,7 +408,8 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
     data: {
       emailDeliveryStatus: status,
       emailDeliveryUpdatedAt: new Date(),
-      emailDeliveryReason: reason?.slice(0, 500) ?? null,
+      emailDeliveryReason:
+        reason?.slice(0, CUSTOMER_EMAIL_DELIVERY_REASON_MAX_LENGTH) ?? null,
     },
   });
 

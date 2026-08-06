@@ -29,11 +29,11 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Client } from "pg";
 
 import {
-  NUMERIC_COLUMN_DOMAINS,
+  COMPOSITE_PROBE_DEFAULTS,
   boundaryValues,
   columnKey,
   constraintNameFor,
-  readNumericColumns,
+  numericBoundaryTargets,
   type NumericColumn,
   type NumericDomain,
 } from "../../support/numeric-column-domains";
@@ -51,27 +51,18 @@ afterAll(async () => {
   await client.end();
 });
 
-const BY_KEY = new Map<string, NumericColumn>(
-  readNumericColumns().map((c) => [columnKey(c), c]),
-);
-
-/** 宣言 → (列, 値域)。宣言側に schema.prisma に無いキーがあれば undefined になる。 */
-const TARGETS: readonly (readonly [
-  string,
-  NumericColumn | undefined,
-  NumericDomain,
-])[] = Object.entries(NUMERIC_COLUMN_DOMAINS).map(([k, domain]) => [
-  k,
-  BY_KEY.get(k),
-  domain,
-]);
+const TARGETS = numericBoundaryTargets();
 
 /** 実 DB から制約定義（`CHECK (...)`）と列の型を読む。 */
 async function loadConstraint(
   table: string,
   constraintName: string,
-  column: string,
-): Promise<{ readonly definition: string; readonly dataType: string } | null> {
+  column: NumericColumn,
+  key: string,
+): Promise<{
+  readonly definition: string;
+  readonly dataTypes: ReadonlyMap<string, string>;
+} | null> {
   // **`::text` を外さない。** `conname` は `name` 型（63 バイト）なので、
   // 素の `conname = $2` は**引数側も 63 バイトへ切り詰めてから**比較する。
   // 実測: 76 文字の名前で引いたとき、DB 側の切り詰め済み名と一致してしまい
@@ -88,15 +79,25 @@ async function loadConstraint(
   const definition = def.rows[0]?.def;
   if (definition === undefined) return null;
 
-  const type = await client.query<{ readonly data_type: string }>(
-    `SELECT data_type FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
-    [table, column],
-  );
-  const dataType = type.rows[0]?.data_type;
-  if (dataType === undefined) return null;
+  const probeDefaults = COMPOSITE_PROBE_DEFAULTS[key];
+  const columns =
+    probeDefaults === undefined
+      ? [column.column]
+      : [...new Set([column.column, ...Object.keys(probeDefaults)])];
 
-  return { definition, dataType };
+  const dataTypes = new Map<string, string>();
+  for (const col of columns) {
+    const type = await client.query<{ readonly data_type: string }>(
+      `SELECT data_type FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+      [table, col],
+    );
+    const dataType = type.rows[0]?.data_type;
+    if (dataType === undefined) return null;
+    dataTypes.set(col, dataType);
+  }
+
+  return { definition, dataTypes };
 }
 
 /**
@@ -105,20 +106,55 @@ async function loadConstraint(
  * 一時表の列名は本物と同じにする。そうしないと写した式が解決できない。
  */
 async function accepts(
-  column: string,
-  dataType: string,
+  column: NumericColumn,
+  dataTypes: ReadonlyMap<string, string>,
   definition: string,
   value: number,
+  key: string,
 ): Promise<boolean> {
+  const probeDefaults = COMPOSITE_PROBE_DEFAULTS[key];
+  const columns =
+    probeDefaults === undefined
+      ? [column.column]
+      : [...new Set([column.column, ...Object.keys(probeDefaults)])];
+
   await client.query("BEGIN");
   try {
-    await client.query(
-      `CREATE TEMP TABLE probe ("${column}" ${dataType}) ON COMMIT DROP`,
-    );
+    const colDefs = columns
+      .map((col) => {
+        const type = dataTypes.get(col);
+        if (type === undefined) {
+          throw new Error(`probe column type missing: ${col}`);
+        }
+        return `"${col}" ${type}`;
+      })
+      .join(", ");
+    await client.query(`CREATE TEMP TABLE probe (${colDefs}) ON COMMIT DROP`);
     await client.query(
       `ALTER TABLE probe ADD CONSTRAINT probe_c ${definition}`,
     );
-    await client.query(`INSERT INTO probe ("${column}") VALUES ($1)`, [value]);
+
+    const insertCols = columns.map((col) => `"${col}"`).join(", ");
+    const insertParams: unknown[] = [];
+    const valueExprs: string[] = [];
+    for (const col of columns) {
+      const val =
+        col === column.column
+          ? value
+          : probeDefaults !== undefined && col in probeDefaults
+            ? probeDefaults[col]
+            : 0;
+      if (val === null) {
+        valueExprs.push("NULL");
+      } else {
+        insertParams.push(val);
+        valueExprs.push(`$${insertParams.length}`);
+      }
+    }
+    await client.query(
+      `INSERT INTO probe (${insertCols}) VALUES (${valueExprs.join(", ")})`,
+      insertParams,
+    );
     return true;
   } catch {
     return false;
@@ -161,21 +197,23 @@ describe("宣言した値域が実 DB で効いている", () => {
       const loaded = await loadConstraint(
         column.table,
         constraintName,
-        column.column,
+        column,
+        k,
       );
       if (!loaded) {
         failures.push(`${k}: ${constraintName} を実 DB から読めない`);
         continue;
       }
 
-      const { accepted, rejected } = boundaryValues(domain);
+      const { accepted, rejected } = boundaryValues(domain, k);
       for (const value of accepted) {
         if (
           !(await accepts(
-            column.column,
-            loaded.dataType,
+            column,
+            loaded.dataTypes,
             loaded.definition,
             value,
+            k,
           ))
         ) {
           failures.push(`${k}: ${value} が弾かれた（通るべき値）`);
@@ -183,12 +221,7 @@ describe("宣言した値域が実 DB で効いている", () => {
       }
       for (const value of rejected) {
         if (
-          await accepts(
-            column.column,
-            loaded.dataType,
-            loaded.definition,
-            value,
-          )
+          await accepts(column, loaded.dataTypes, loaded.definition, value, k)
         ) {
           failures.push(`${k}: ${value} が通った（弾くべき値）`);
         }
