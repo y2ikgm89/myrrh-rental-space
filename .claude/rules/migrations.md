@@ -37,12 +37,13 @@ index だけ失敗して **CREATE TABLE は残った**。
 - **失敗しうる文を、それが置き換える対象を DROP する前に置く。** 「古い制約を DROP →
   新しい制約を CREATE」の順で書くと、CREATE が既存データ違反で落ちたときに
   **どちらの制約も無い状態**で止まる（DROP は通り、CREATE だけ落ちるため）
-- 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加）を含む migration は、
-  **適用前に違反行が 0 件であることを本番で確認する**
-- **既存データに依存して失敗しうる DDL を複数文含む migration は `BEGIN;` / `COMMIT;` で
-  包む**（Prisma 公式の opt-in。`CREATE INDEX CONCURRENTLY` はトランザクション内で
-  使えない点に注意）。対象は `ADD CONSTRAINT` (CHECK / UNIQUE / FOREIGN KEY) /
-  `CREATE UNIQUE INDEX` / `ALTER COLUMN ... TYPE` / `SET NOT NULL`。
+- 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加等）を含む migration は、
+  **適用前に `bun scripts/migration-preconditions.ts` のリハーサルで落ちるか確認する**
+  （ヘッダに確認 SELECT を手で書かない — 下記）
+- **baseline 以外で 2 文以上を持つ migration は `BEGIN;` / `COMMIT;` で包む**
+  （Prisma 公式の opt-in。`CREATE INDEX CONCURRENTLY` はトランザクション内で
+  使えない点に注意）。「既存データに依存する DDL かどうか」の人力分類は
+  分類漏れが必ず出るのでやめ、**文数だけ**で判定する。
   gate は `__tests__/unit/architecture/migration-atomicity.test.ts`。
   **免除は baseline `00000000000000_init` の 1 本だけ**で、日付境界も allowlist も
   意図的に置いていない（baseline は必ず空の DB に対して走るので既存行が無い、
@@ -72,7 +73,9 @@ index だけ失敗して **CREATE TABLE は残った**。
   巻き戻しの担保は 3 段: ①トランザクション制御と `CONCURRENTLY` が 1 文でもあれば
   **何も実行せずに**止める（包み用の `BEGIN` / `COMMIT` / `END` のみ読み飛ばす）
   ②実行は interactive transaction 内だけで、最後に必ず例外を投げる
-  ③テーブル数・制約数・index 数・履歴行数を前後で照合する。
+  ③列・制約・index の**定義そのもの**を畳んだ構造ハッシュ（md5）と
+  `_prisma_migrations` 行数を前後で照合する（件数だけの比較では CHECK の
+  入れ替え drift を見逃す）。
 
   見ないもの: シーケンスの採番は巻き戻らない。未適用が複数あるとき 1 つの
   トランザクションで流すので、「前の migration が commit 済みであることに依存する文」
@@ -82,11 +85,15 @@ index だけ失敗して **CREATE TABLE は残った**。
   `migration-preconditions.ts && prisma migrate deploy` を実行する。**migrate を
   始める前**に落ちるので `_prisma_migrations` に失敗が残らない。
 
-  **ヘッダに確認クエリを手で書かない。** 以前はそれが唯一の守りだったが、
-  `20260805180000` のヘッダは 23 本の制約のうち 3 本しか見ておらず、
+  **ヘッダに確認クエリを手で書かない。** コメントの SELECT は誰も流さない。
+  適用前の既存行チェックは上記リハーサルが担う。以前はヘッダが唯一の守りだったが、
+  jsonb 形状 CHECK を入れた migration のヘッダは 23 本の制約のうち 3 本しか見ておらず、
   `locations.special_holidays` に JSON null が残った DB で「0 件」と出たうえで
   migration が落ちた。人が書く一覧は覆うべき集合から必ず離れる。
-  gate は `__tests__/unit/architecture/migration-preconditions.test.ts`
+  gate は `__tests__/unit/architecture/migration-header-has-no-manual-precheck.test.ts`
+  （既に書かれた分は編集不能なので**件数を固定**する ratchet。増えれば新規、
+  減れば baseline へ畳んだ合図で、どちらも落ちる）、
+  `__tests__/unit/architecture/migration-preconditions.test.ts`
   （文の切り出し + 巻き戻せない文を実行しない + 接続先解決）と
   `__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`
   （実 DB で落ちる/通るの終了コードと、DB が変わっていないこと）
