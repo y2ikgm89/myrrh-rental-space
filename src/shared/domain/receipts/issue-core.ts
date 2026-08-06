@@ -9,7 +9,6 @@ import {
   claimNextSerialNo,
   type ReceiptTx,
 } from "@/shared/domain/receipts/serial";
-import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type ReceiptIssueOptions = {
@@ -167,11 +166,21 @@ async function resolveEventRegistrationIssue(
   // `getPublicTaxSettings()` は `"use cache"` の読み取りなので使わない —
   // 証跡に焼く値を、キャッシュが古いかもしれない経路から取らない。
   // 予約の書込経路（`reservations/customer-commands.ts`）と同じく tx 内で直に読む。
+  // 設定行が無ければ**既定値へ落とさず失敗させる**。適格請求書の税率区分は
+  // append-only の証跡に焼かれて後から直せないので、推測値を書くより設定不備として
+  // 明示的に落ちる方がよい（カレンダー取込が「未分類」カテゴリーの不在で失敗させるのと
+  // 同じ判断）。既定値を import しないので、この経路が enum の module graph を
+  // 広げることもない。
   const commerce = await tx.settingsCommerce.findFirst({
     select: { taxStandardRate: true },
   });
-  const taxRate =
-    commerce?.taxStandardRate ?? DEFAULT_TAX_SETTINGS.standardRate;
+  if (!commerce) {
+    throw new DomainError(
+      "税率設定が見つからないため、領収書を発行できません",
+      "VALIDATION",
+    );
+  }
+  const taxRate = commerce.taxStandardRate;
   const taxExcludedAmount = Math.floor((amount * 100) / (100 + taxRate));
   const taxAmount = amount - taxExcludedAmount;
 
