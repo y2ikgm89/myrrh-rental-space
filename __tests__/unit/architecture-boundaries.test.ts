@@ -3,6 +3,11 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { expectRecord } from "../helpers/type-assertions";
 import { collectSourceFiles } from "../helpers/architecture-fs";
+import {
+  readDatabaseInvariants,
+  readPlpgsqlFunction,
+  readPrismaSchema,
+} from "../support/prisma-sources";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
@@ -117,6 +122,194 @@ function openingTag(source: string, start: number): string {
     else if (ch === ">" && depth === 0) return source.slice(start, i + 1);
   }
   return source.slice(start);
+}
+
+/**
+ * append-only な証跡テーブルのうち、**書き換えてよい列**の宣言。
+ *
+ * ここが唯一の手書きで、内容は「業務としてどの列を可変にするか」という意思表示。
+ * その意思どおりに DB trigger が**他のすべての列を固定できているか**は
+ * `mutableColumnsOf()` が trigger 本文とモデル宣言の差分で確かめる。
+ * 列を足して trigger の固定リストに並べ忘れると、差分が増えてここと一致しなくなる。
+ */
+const DECLARED_MUTABLE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
+  // Stripe の非同期返金（konbini / customer_balance）は作成直後 "pending" を返し、
+  // 後日 refund.updated webhook が確定させる。金額も対象も不変のまま status だけ動く。
+  refunds: ["status"],
+};
+
+/** `prevent_<table>_mutation` trigger を持つ表。 */
+function appendOnlyTables(): string[] {
+  return [
+    ...new Set(
+      [
+        ...readDatabaseInvariants().matchAll(
+          /FUNCTION\s+public\.prevent_(\w+)_mutation\b/gu,
+        ),
+      ]
+        .map((match) => match[1])
+        .filter((table): table is string => table !== undefined),
+    ),
+  ].sort();
+}
+
+/** `@@map` の逆引き（物理表名 → モデル名）。 */
+function modelByTable(): Map<string, string> {
+  const out = new Map<string, string>();
+  let model: string | null = null;
+  for (const raw of readPrismaSchema().split(/\r?\n/u)) {
+    const open = /^\s*model\s+(\w+)\s*\{/u.exec(raw);
+    if (open?.[1]) {
+      model = open[1];
+      continue;
+    }
+    if (/^\s*\}/u.test(raw)) {
+      model = null;
+      continue;
+    }
+    const mapped = model ? /@@map\("([^"]+)"\)/u.exec(raw) : null;
+    if (model && mapped?.[1]) out.set(mapped[1], model);
+  }
+  return out;
+}
+
+function delegateOf(model: string): string {
+  return `${model[0]?.toLowerCase() ?? ""}${model.slice(1)}`;
+}
+
+/**
+ * append-only な証跡テーブルの Prisma delegate 名。
+ *
+ * **手で並べない。** DB 側の trigger（SSoT は `prisma/baseline/invariants.sql`）から
+ * 表名を導き、`@@map` を逆に引く。append-only な表を増やせば自動で対象になる。
+ */
+function appendOnlyDelegates(): string[] {
+  const models = modelByTable();
+  return appendOnlyTables()
+    .map((table) => {
+      const model = models.get(table);
+      // 表名からモデルを引けない = @@map が変わったか trigger が増えた。
+      // 「読めなかった＝対象外」にすると守りが黙って消えるので落とす。
+      expect({ table, model: model ?? null }).toEqual({
+        table,
+        model: model ?? "@@map から引けなかった",
+      });
+      return delegateOf(model ?? "");
+    })
+    .sort();
+}
+
+function tableOfDelegate(delegate: string): string {
+  for (const [table, model] of modelByTable()) {
+    if (delegateOf(model) === delegate) return table;
+  }
+  return delegate;
+}
+
+/** モデルが持つ物理列名（スカラーのみ）。 */
+function columnsOfTable(table: string): string[] {
+  const model = modelByTable().get(table);
+  if (model === undefined) return [];
+  const lines = readPrismaSchema().split(/\r?\n/u);
+  const start = lines.findIndex((line) =>
+    new RegExp(`^\\s*model\\s+${model}\\s*\\{`, "u").test(line),
+  );
+  const out: string[] = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const raw = lines[i] ?? "";
+    if (/^\s*\}/u.test(raw)) break;
+    const line = raw.replace(/\/\/.*$/u, "");
+    const decl = /^\s*(\w+)\s+(\w+)(\[\])?(\?)?\s*(.*)$/u.exec(line);
+    if (!decl?.[1] || !decl[2]) continue;
+    const attrs = decl[5] ?? "";
+    // リレーションフィールドは物理列ではない。
+    if (/@relation\(/u.test(attrs) && !/@map\(/u.test(attrs)) continue;
+    const mapped = /@map\("([^"]+)"\)/u.exec(attrs);
+    out.push(
+      mapped?.[1] ?? decl[1].replaceAll(/(?<!^)(?=[A-Z])/gu, "_").toLowerCase(),
+    );
+  }
+  return out;
+}
+
+/** trigger が固定していない = 書き換えられる列。 */
+function mutableColumnsOf(table: string): string[] {
+  const body = readPlpgsqlFunction(`prevent_${table}_mutation`);
+  // 免除分岐が無い trigger は無条件で RAISE する = 可変列ゼロ。
+  if (!/TG_OP\s*=\s*'UPDATE'/u.test(body)) return [];
+  const pinned = new Set(
+    [...body.matchAll(/NEW\.(\w+)\s*(?:=|IS NOT DISTINCT FROM)\s*OLD\.\1\b/gu)]
+      .map((match) => match[1])
+      .filter((column): column is string => column !== undefined),
+  );
+  return columnsOfTable(table)
+    .filter((column) => !pinned.has(column))
+    .sort();
+}
+
+/** `(` の位置から対応する `)` までを返す（引用符とネストを追う）。 */
+function balanced(source: string, openParen: number): string {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = openParen; i < source.length; i += 1) {
+    const ch = source[i];
+    if (quote !== null) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if (ch === "(" || ch === "{" || ch === "[") depth += 1;
+    else if (ch === ")" || ch === "}" || ch === "]") {
+      depth -= 1;
+      if (depth === 0) return source.slice(openParen, i + 1);
+    }
+  }
+  return source.slice(openParen);
+}
+
+/** 引数式の `data: { … }` が書いているトップレベルのキー名。 */
+function dataKeys(args: string): string[] {
+  const at = args.search(/\bdata\s*:\s*\{/u);
+  if (at === -1) return [];
+  const body = balanced(args, args.indexOf("{", at));
+  const out: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let token = "";
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i] ?? "";
+    if (quote !== null) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{" || ch === "(" || ch === "[") {
+      depth += 1;
+      continue;
+    }
+    if (ch === "}" || ch === ")" || ch === "]") {
+      depth -= 1;
+      continue;
+    }
+    if (depth !== 1) continue;
+    if (ch === ":") {
+      const key = /(\w+)\s*$/u.exec(token)?.[1];
+      if (key) out.push(key);
+      token = "";
+      continue;
+    }
+    if (ch === ",") {
+      token = "";
+      continue;
+    }
+    token += ch;
+  }
+  return out;
 }
 
 function collectStyleSourceFiles(dir: string): string[] {
@@ -439,40 +632,152 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("TermsAgreement は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
-    // TermsAgreement は法務証跡なので append-only。事後改竄を ESLint/test 双方で
-    // 物理的に塞ぐ。Prisma の update / updateMany / delete / deleteMany / upsert /
-    // を src/ 配下から grep gate する。tx.termsAgreement.* も同型で塞ぐ
-    // （interactive transaction 経由の改竄経路）。restore など意図的な再有効化は
-    // 別 model (TermsDocument) の操作で行うので本 gate は termsAgreement のみ。
-    const files = collectSourceFiles(SRC_ROOT);
-    const offenders = collectNonCommentOffenders(
-      files,
-      /\b(?:prisma|tx)\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
-    );
-    expect(offenders).toEqual([]);
-  });
+  describe("append-only な証跡テーブル", () => {
+    // 対象は**手で並べない**。DB 側の `prevent_<table>_mutation` trigger 関数から
+    // 導き、`@@map` を逆に引いて Prisma の delegate 名にする。append-only な表を
+    // 増やせば、この gate は自動でそれも見る。
+    //
+    // 3 本を手でコピーしていた頃、Refund だけ `\b(?:prisma|tx)` の `tx` が欠けており
+    // `tx.refund.deleteMany(...)` が素通りしていた。inquiry_status_history に至っては
+    // src 全域の gate が 1 本も無かった（専用テストは e2e/ しか走査していない）。
+    // **同じ規約を複数箇所に手で書くと、必ずどれかがずれる。**
+    const delegates = appendOnlyDelegates();
 
-  test("AuditLog は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
-    // AuditLog は hash chain 保護された証跡レコードなので append-only。
-    // TermsAgreement と同型の grep gate で事後改竄経路を塞ぐ。
-    const files = collectSourceFiles(SRC_ROOT);
-    const offenders = collectNonCommentOffenders(
-      files,
-      /\b(?:prisma|tx)\.auditLog\.(update|updateMany|delete|deleteMany|upsert)\b/u,
-    );
-    expect(offenders).toEqual([]);
-  });
+    test("append-only trigger の bypass GUC を立てる場所を固定する", () => {
+      // trigger には `current_setting('myrrh.<x>_mutation_bypass')` の免除口がある。
+      // **どこからでも立てられるなら append-only は成立しない。** 規約（散文）は
+      // 「seed と data-retention purge の専用口」と書いていたが、それを確かめる機構は
+      // 1 本も無く、実際には integration test の cleanup helper も立てていた。
+      // 散文を実態に合わせるのではなく、実態を**機械で固定**する。
+      const allowed = [
+        // 保持期限を過ぎた問い合わせ履歴の物理削除（業務要件）。
+        "src/shared/domain/data-retention/commands.ts",
+        // 実 DB 統合テストの後片付け。Refund は Restrict FK を持つので、これが
+        // 無いとテスト DB に証跡行が溜まり続ける。**ここ 1 ファイルだけ**。
+        "__tests__/helpers/refund-test-cleanup.ts",
+      ];
 
-  test("Refund は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
-    // Refund は決済証跡 child record なので append-only。DB trigger と src grep gate
-    // の二重防御。integration test の cleanup のみ bypass GUC 経由で deleteMany 可。
-    const files = collectSourceFiles(SRC_ROOT);
-    const offenders = collectNonCommentOffenders(
-      files,
-      /prisma\.refund\.(update|updateMany|delete|deleteMany|upsert)\b/u,
-    );
-    expect(offenders).toEqual([]);
+      const pattern = /set_config\(\s*['"`]myrrh\.\w+_mutation_bypass['"`]/u;
+      const roots = ["src", "scripts", "__tests__", "e2e", "prisma"];
+      const found: string[] = [];
+      for (const root of roots) {
+        const glob = new Bun.Glob("**/*.{ts,tsx,sql}");
+        for (const file of glob.scanSync({
+          cwd: join(ROOT, root),
+          absolute: true,
+        })) {
+          if (pattern.test(readFileSync(file, "utf8"))) {
+            found.push(relative(ROOT, file).replaceAll("\\", "/"));
+          }
+        }
+      }
+
+      // 許可の増減の両方を落とす。entry が実在しなくなったら stale として赤くする
+      // （消し忘れた許可は、後から同じ path を作れば黙って通る穴になる）。
+      expect(found.sort()).toEqual([...allowed].sort());
+    });
+
+    test("解析器が「通ってはいけない書き方」を実際に拾う（fixture）", () => {
+      // data の中身を読む部分。ここが空を返すと「可変列しか書いていない」と
+      // 誤読して素通りするので、代表的な書き方で実際に読めることを固定する。
+      expect(
+        dataKeys(`({ where: { id }, data: { status: "succeeded" } })`),
+      ).toEqual(["status"]);
+      expect(
+        dataKeys(`({ where: { id }, data: { amount: 0, status: s } })`),
+      ).toEqual(["amount", "status"]);
+      // ネストした object / 関数呼び出しの中のキーを拾わない。
+      expect(dataKeys(`({ data: { status: pick({ amount: 1 }) } })`)).toEqual([
+        "status",
+      ]);
+      // spread は静的に読めない → キー 0 件 = 違反として扱われる側へ落ちる。
+      expect(dataKeys(`({ data: { ...patch } })`)).toEqual([]);
+      expect(dataKeys(`({ where: { id } })`)).toEqual([]);
+
+      // 呼び出しの括弧を正しく閉じられること（閉じ損ねると次の呼び出しまで
+      // 巻き込んで判定が壊れる）。
+      expect(balanced(`f({ a: (1 + 2) }) ; g({ b: 3 })`, 1)).toBe(
+        "({ a: (1 + 2) })",
+      );
+    });
+
+    test("対象テーブルを DB trigger から導けている（gate 自体が空振りしていない）", () => {
+      expect(delegates.length).toBeGreaterThanOrEqual(4);
+      expect(delegates).toContain("auditLog");
+      expect(delegates).toContain("termsAgreement");
+      expect(delegates).toContain("refund");
+      expect(delegates).toContain("inquiryStatusHistory");
+    });
+
+    test("trigger が可変列以外をすべて名指しで固定している", () => {
+      // trigger 本文の免除分岐は `NEW.<col> = OLD.<col>` を**手で並べている**。
+      // 列を足したのに並べ忘れると、その列は黙って書き換え可能になる。
+      // 「モデルの列 − trigger が固定した列」が宣言した可変列と一致することを見る。
+      for (const table of appendOnlyTables()) {
+        expect({
+          table,
+          mutable: mutableColumnsOf(table),
+        }).toEqual({
+          table,
+          mutable: [...(DECLARED_MUTABLE_COLUMNS[table] ?? [])],
+        });
+      }
+    });
+
+    for (const delegate of delegates) {
+      const mutable = DECLARED_MUTABLE_COLUMNS[tableOfDelegate(delegate)] ?? [];
+
+      test(`${delegate} の DELETE/upsert を src 以下で禁止`, () => {
+        const offenders = collectNonCommentOffenders(
+          collectSourceFiles(SRC_ROOT),
+          new RegExp(
+            `\\b(?:prisma|tx)\\.${delegate}\\.(delete|deleteMany|upsert)\\b`,
+            "u",
+          ),
+        );
+        expect(offenders).toEqual([]);
+      });
+
+      if (mutable.length === 0) {
+        test(`${delegate} の UPDATE を src 以下で禁止（可変列が無い）`, () => {
+          const offenders = collectNonCommentOffenders(
+            collectSourceFiles(SRC_ROOT),
+            new RegExp(
+              `\\b(?:prisma|tx)\\.${delegate}\\.(update|updateMany)\\b`,
+              "u",
+            ),
+          );
+          expect(offenders).toEqual([]);
+        });
+        continue;
+      }
+
+      test(`${delegate} の UPDATE は可変列 (${mutable.join(", ")}) しか書かない`, () => {
+        const offenders: string[] = [];
+        const call = new RegExp(
+          `\\b(?:prisma|tx)\\.${delegate}\\.(?:update|updateMany)\\s*\\(`,
+          "gu",
+        );
+        for (const file of collectSourceFiles(SRC_ROOT)) {
+          const source = readFileSync(file, "utf8");
+          for (const hit of source.matchAll(call)) {
+            const args = balanced(source, hit.index + hit[0].length - 1);
+            const written = dataKeys(args);
+            const extra = written.filter((key) => !mutable.includes(key));
+            if (written.length === 0 || extra.length > 0) {
+              offenders.push(
+                `${relative(ROOT, file).replaceAll("\\", "/")} :: ${
+                  written.length === 0
+                    ? "data を静的に読めない"
+                    : extra.join(", ")
+                }`,
+              );
+            }
+          }
+        }
+        expect(offenders).toEqual([]);
+      });
+    }
   });
 
   test("TERMS_AGREEMENT_CONTEXT VARCHAR ラベルは src 以下に残さない (TermsScope enum へ移行済み)", () => {
