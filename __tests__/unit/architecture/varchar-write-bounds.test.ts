@@ -288,17 +288,9 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     255,
     "RRULE は UI の選択肢から `buildRRule` が組み立てる。手入力経路が無い",
   ),
-  "ReservationSeries.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
-  ),
   "ReservationSeries.googleCalendarMasterEventId": generated(
     1024,
     "Google Calendar API が返す eventId。RFC 上 1024 を超えない",
-  ),
-  "Reservation.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
   ),
 
   // --- Customer ---------------------------------------------------------
@@ -552,10 +544,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     maxLength: 20,
     sample: digits,
   }),
-  "EventRegistration.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
-  ),
 
   // --- 決済・会計 --------------------------------------------------------
   "Refund.status": generated(

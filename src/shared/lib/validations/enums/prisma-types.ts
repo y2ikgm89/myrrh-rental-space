@@ -52,6 +52,7 @@ export {
   BlockedDateScope,
   BlockedDateType,
   RefundedByType,
+  CancelledBy,
   TransferAccountType,
   DiscountCombinationMode,
   AnnouncementBarAnimation,

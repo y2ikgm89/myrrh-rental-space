@@ -116,7 +116,6 @@ const SHAPES: Readonly<Record<string, Shape>> = {
   "Event.gallery": "array",
   "Location.accessLines": "array",
   "Location.imageUrls": "array",
-  "Location.specialHolidays": "array",
   "Media.tags": "array",
   "NavigationItem.label": "array",
   "SettingsCommerce.durationDiscountRules": "array",

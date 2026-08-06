@@ -9,6 +9,7 @@ describe("one-time backfill clean-break contract", () => {
       "backfill-page-hero-buttons.ts",
       "migrate-gallery-images-to-media.ts",
       "update-access-sections.ts",
+      "backfill-special-holidays-to-blocked-dates.ts",
     ];
 
     for (const script of removedScripts) {

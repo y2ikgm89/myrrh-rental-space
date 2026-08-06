@@ -92,9 +92,8 @@ export function buildLocationLocalBusinessJsonLdData(
     convertToOpeningHoursSpecification(location.businessHours) ?? undefined;
 
   // 休業日の出どころは BlockedDate（scope=LOCATION）。**予約を実際に止める仕組みと
-  // 同じものを読む。** 以前は `Location.specialHolidays` という別の列を読んでいたが、
-  // そちらは予約可否に一切効かず、管理画面には「休業する日を個別に登録します」と
-  // 書かれていた。検索結果には休業と出るのに予約は取れる、という食い違いだった。
+  // 同じものを読む。** 管理画面には「休業する日を個別に登録します」と
+  // 書かれており、検索結果と予約可否の食い違いを防ぐ。
   const specialOpeningHoursSpecification =
     location.blockedDates.length > 0
       ? location.blockedDates.map((blocked) => ({
