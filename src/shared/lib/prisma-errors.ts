@@ -17,9 +17,9 @@ import { isRecord } from "@/shared/lib/serialize";
  *
  * ## driver は **物理列名**を返す（Prisma の field 名ではない）
  *
- * 呼び出し側は Prisma の field 名（`stripeRefundId`）で書く。アプリの他の API と
- * 語彙を揃えるためで、そちらが正しい。**ただし adapter-pg が返すのは物理列名**
- * （`stripe_refund_id`）なので、この関数が両者を橋渡しする。
+ * 呼び出し側は **`Model.field`**（例: `Refund.stripeRefundId`）で書く。
+ * 同名 field が複数モデルにあっても取り違えないため。**adapter-pg が返すのは
+ * 物理列名**（`stripe_refund_id`）なので、この関数が両者を橋渡しする。
  *
  * 実測（test DB, Prisma 7.8.0 + @prisma/adapter-pg）:
  *
@@ -34,17 +34,32 @@ import { isRecord } from "@/shared/lib/serialize";
  * `__tests__/unit/architecture/prisma-naming-conventions.test.ts` が全 77 モデルに
  * 対して機械強制している不変条件で、さらに
  * `__tests__/unit/architecture/prisma-error-target-fields.test.ts` が
- * **この関数の呼び出し側リテラルが実在する field であること**を schema.prisma と
- * 突き合わせる。
+ * **この関数の呼び出し側リテラルが実在する Model.field であること**を
+ * schema.prisma と突き合わせる。
  *
  * @param error - catch した任意 error
  * @param targetField - 特定 field (`@unique` の対象) の制約違反のみ検出したい場合、
- *                     その **Prisma field 名**。省略時は任意の unique 制約違反を true 判定。
+ *                     **`Model.field`**（Prisma field 名）。省略時は任意の unique 制約違反を true 判定。
  * @returns P2002 (かつ optional target field) の unique 制約違反なら true
  */
 /** Prisma の field 名 → 物理列名。schema.prisma 全列で成り立つことをゲートが強制する。 */
 function toPhysicalColumnName(field: string): string {
   return field.replaceAll(/(?<!^)(?=[A-Z])/gu, "_").toLowerCase();
+}
+
+/** `Refund.stripeRefundId` → `{ model: "Refund", field: "stripeRefundId" }`。 */
+function resolveTargetField(targetField: string): {
+  readonly model: string | undefined;
+  readonly field: string;
+} {
+  const separator = targetField.indexOf(".");
+  if (separator === -1) {
+    return { model: undefined, field: targetField };
+  }
+  return {
+    model: targetField.slice(0, separator),
+    field: targetField.slice(separator + 1),
+  };
 }
 
 export function isPrismaUniqueConstraintError(
@@ -55,14 +70,27 @@ export function isPrismaUniqueConstraintError(
   if (error["code"] !== "P2002") return false;
   if (targetField === undefined) return true;
 
+  const { model, field } = resolveTargetField(targetField);
+  if (field.length === 0) return false;
+
   const meta = error["meta"];
   if (!isRecord(meta)) return false;
+
+  // meta.modelName があるとき Model 修飾と食い違えば false（取り違えを握り潰さない）。
+  const modelName = meta["modelName"];
+  if (
+    model !== undefined &&
+    typeof modelName === "string" &&
+    modelName !== model
+  ) {
+    return false;
+  }
 
   // Legacy shape (Prisma 6 rust engine / SQL Server 系):
   //   meta: { target: ["id"] } または meta: { target: "Refund_stripeRefundId_key" }
   const target = meta["target"];
-  if (Array.isArray(target) && target.includes(targetField)) return true;
-  if (typeof target === "string" && target.includes(targetField)) return true;
+  if (Array.isArray(target) && target.includes(field)) return true;
+  if (typeof target === "string" && target.includes(field)) return true;
 
   // Prisma 7 + `@prisma/adapter-pg` shape:
   //   meta: {
@@ -90,7 +118,7 @@ export function isPrismaUniqueConstraintError(
   if (!isRecord(constraint)) return false;
   const fields = constraint["fields"];
   if (!Array.isArray(fields)) return false;
-  return fields.includes(toPhysicalColumnName(targetField));
+  return fields.includes(toPhysicalColumnName(field));
 }
 
 /**

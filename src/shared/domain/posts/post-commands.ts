@@ -32,7 +32,7 @@ const POST_SLUG_CONFLICT_MESSAGE = getSlugErrorMessage({
 });
 
 function rethrowPostSlugConflict(error: unknown): never {
-  if (isPrismaUniqueConstraintError(error, "slug")) {
+  if (isPrismaUniqueConstraintError(error, "Post.slug")) {
     throw new DomainError(POST_SLUG_CONFLICT_MESSAGE, "CONFLICT");
   }
   throw error;

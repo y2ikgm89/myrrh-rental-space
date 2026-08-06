@@ -120,13 +120,13 @@ function rethrowAsDuplicateError(
   error: unknown,
   data: LocationFormData,
 ): never {
-  if (isPrismaUniqueConstraintError(error, "slug")) {
+  if (isPrismaUniqueConstraintError(error, "Location.slug")) {
     throw new DomainError(
       `スラッグ "${data.slug}" は既に使用されています`,
       "DUPLICATE",
     );
   }
-  if (isPrismaUniqueConstraintError(error, "name")) {
+  if (isPrismaUniqueConstraintError(error, "Location.name")) {
     throw new DomainError(
       `名前 "${data.name}" は既に使用されています`,
       "DUPLICATE",

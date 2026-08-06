@@ -197,7 +197,8 @@ export async function applyStripeChargeRefundIdempotent(input: {
         refundedByType,
       });
     } catch (error) {
-      if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) throw error;
+      if (!isPrismaUniqueConstraintError(error, "Refund.stripeRefundId"))
+        throw error;
     }
   }
 

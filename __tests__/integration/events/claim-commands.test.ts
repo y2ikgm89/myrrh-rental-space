@@ -52,7 +52,7 @@ async function resolveFallbackCategoryId(): Promise<string> {
     });
     return created.id;
   } catch (err) {
-    if (!isPrismaUniqueConstraintError(err, "name")) throw err;
+    if (!isPrismaUniqueConstraintError(err, "EventCategory.name")) throw err;
 
     const won = await prisma.eventCategory.findFirst({
       where: { name: "未分類", isActive: true },

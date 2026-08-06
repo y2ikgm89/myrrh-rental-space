@@ -149,7 +149,7 @@ export async function createPageCommand(
 
     return page;
   } catch (error) {
-    if (isPrismaUniqueConstraintError(error, "slug")) {
+    if (isPrismaUniqueConstraintError(error, "Page.slug")) {
       throw new DomainError(
         getSlugErrorMessage({
           type: "conflict",

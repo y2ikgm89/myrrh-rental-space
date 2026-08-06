@@ -677,7 +677,7 @@ export async function restoreEventCommand(id: string): Promise<void> {
         "CONFLICT",
       );
     }
-    if (isPrismaUniqueConstraintError(err, "slug")) {
+    if (isPrismaUniqueConstraintError(err, "Event.slug")) {
       throw new DomainError(EVENT_SLUG_RESTORE_CONFLICT_MESSAGE, "CONFLICT");
     }
     throw err;
