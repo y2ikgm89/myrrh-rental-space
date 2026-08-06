@@ -22,7 +22,7 @@ export type MediaData = {
   size: number;
   width: number | null;
   height: number | null;
-  type: string;
+  type: MediaType;
   usage: string;
   alt: string | null;
   title: string | null;

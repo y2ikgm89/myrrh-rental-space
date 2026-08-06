@@ -15,10 +15,11 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { customerInquiryReplySchema } from "@/shared/lib/validations/inquiry";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { replyToInquiryAction } from "../../../_shared/actions/inquiry";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface InquiryReplyFormProps {
   readonly inquiryId: string;
-  readonly status: string;
+  readonly status: InquiryStatus;
   readonly turnstileSiteKey: string | null;
 }
 

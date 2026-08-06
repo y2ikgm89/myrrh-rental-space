@@ -1,6 +1,10 @@
 import "server-only";
 
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  PaymentStatus,
+  RegistrationStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import type { NotificationType } from "@/shared/lib/validations/enums/helpers";
 import {
@@ -23,7 +27,7 @@ import {
 } from "@/shared/domain/payment/payment-status-guards";
 
 export type PaidClaimMissCurrentState = {
-  status: string;
+  status: ReservationStatus | RegistrationStatus;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
 };
@@ -50,7 +54,7 @@ export async function handlePaidClaimMissWithOrphanRefund(input: {
   entityId: string;
   webhookPaymentIntentId: string | null;
   current: PaidClaimMissCurrentState | null;
-  cancelledStatus: string;
+  cancelledStatus: ReservationStatus | RegistrationStatus;
   operation: string;
   refundOrphan: (args: {
     stripePaymentIntentId: string;

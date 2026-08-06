@@ -15,7 +15,7 @@ function transformMedia(media: {
   size: number;
   width: number | null;
   height: number | null;
-  type: string;
+  type: MediaType;
   usage: MediaUsage;
   alt: string | null;
   title: string | null;

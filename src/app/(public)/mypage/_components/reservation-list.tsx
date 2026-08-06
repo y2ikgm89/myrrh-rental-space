@@ -1,13 +1,16 @@
 import { Button } from "@/public/components/design-system/button";
 import { Stack } from "@/public/components/design-system/stack";
 import { ReservationCard } from "./reservation-card";
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 interface Reservation {
   readonly id: string;
   readonly startTime: string;
   readonly endTime: string;
-  readonly status: string;
+  readonly status: ReservationStatus;
   readonly totalPrice: number | null;
   readonly paymentStatus: PaymentStatus;
   readonly notes: string | null;

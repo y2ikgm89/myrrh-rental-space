@@ -143,7 +143,7 @@ function MediaThumbnail({ item }: { item: MediaData }) {
   }
 }
 
-function TypeBadge({ type }: { type: string }) {
+function TypeBadge({ type }: { type: MediaType }) {
   const mediaType = isValidMediaType(type) ? type : MediaType.OTHER;
   const config = TYPE_CONFIG[mediaType];
 

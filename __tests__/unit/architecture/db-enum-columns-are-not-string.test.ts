@@ -45,9 +45,6 @@ import { readPrismaSchema } from "../../support/prisma-sources";
  *
  * ratchet ではなく恒久的な除外なので、**別の一覧にする**。混ぜると「いつか直る」
  * ように見えて、実際には永遠に減らない entry がベースラインに居座る。
- *
- * 実 DB 射影だが本 PR では未着手のものは、path 粒度の stale 検査を維持したまま
- * `ratchet:` 理由で一時登録する（field 名 wholesale 除外の代替）。
  */
 const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
   [
@@ -79,28 +76,12 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "Terms.type は String 列（旧 TermsType enum 廃止）。規約種別のフォーム値",
   ],
   [
-    "src/app/(admin)/admin/(dashboard)/_shared/lib/calendar/calendar-domain.ts::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
     "src/app/(admin)/admin/(dashboard)/_shared/lib/notification-helpers.ts::type",
     "Notification.type は String 列（Prisma enum ではない）。通知テンプレ種別",
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/queries/notification.ts::type",
     "Notification.type は String 列（Prisma enum ではない）。通知クエリの絞り込み",
-  ],
-  [
-    "src/app/(admin)/admin/(dashboard)/_shared/types/media-picker.ts::type",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(admin)/admin/(dashboard)/media/_components/MediaGrid.tsx::type",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(admin)/admin/(dashboard)/media/_components/MediaTable.tsx::type",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
   ],
   [
     "src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/SectionTypeIcon.tsx::type",
@@ -115,36 +96,8 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "Section.type は String 列（Prisma enum ではない）。ピッカーの種別",
   ],
   [
-    "src/app/(public)/mypage/_components/reservation-card.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(public)/mypage/_components/reservation-list.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(public)/mypage/events/_components/event-registration-list.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(public)/mypage/inquiries/_components/inquiry-list.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(public)/mypage/inquiries/[id]/_components/inquiry-reply-form.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/app/(public)/mypage/reservations/[id]/_components/reservation-detail.tsx::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
     "src/shared/domain/events/payment-commands.ts::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
-    "src/shared/domain/media/queries.ts::type",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+    "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
   ],
   [
     "src/shared/domain/notifications/admin-queries.ts::type",
@@ -155,16 +108,12 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "advisory lock の scope キー文字列。BlockedDate.scope 等の Prisma enum とは無関係",
   ],
   [
-    "src/shared/domain/payment/payment-claim-orchestration.ts::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
-  ],
-  [
     "src/shared/domain/payment/stripe-refund-orchestration.ts::status",
     "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
   ],
   [
     "src/shared/domain/reservations/payment-commands.ts::status",
-    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+    "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
   ],
   [
     "src/shared/domain/sections/admin-queries.ts::type",

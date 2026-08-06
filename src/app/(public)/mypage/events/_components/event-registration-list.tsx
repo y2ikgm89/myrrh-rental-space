@@ -26,6 +26,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
   type EventFormatValue,
+  type EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isEventVirtualAccessible } from "@/shared/lib/events/venue";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -45,7 +46,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 export interface EventRegistrationListItem {
   readonly id: string;
   readonly quantity: number;
-  readonly status: string;
+  readonly status: RegistrationStatus;
   readonly cancelledAt: string | null;
   readonly createdAt: string;
   readonly waitlistedAt: string | null;
@@ -63,7 +64,7 @@ export interface EventRegistrationListItem {
     readonly startTime: string;
     readonly endTime: string;
     readonly location: string | null;
-    readonly status: string;
+    readonly status: EventStatus;
     /** Phase B.1: 参加 URL 表示可否の判定に使う（isEventVirtualAccessible）。 */
     readonly format: EventFormatValue;
     /** オンライン会議 URL。ONLINE/HYBRID + write-back 未反映時は null。 */
