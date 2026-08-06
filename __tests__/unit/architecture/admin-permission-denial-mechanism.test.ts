@@ -112,7 +112,10 @@ describe("管理画面の権限拒否は notFound() で表現する", () => {
  * 劣化する。`redirects()` は公式 "Execution order"（headers → redirects → proxy →
  * filesystem routes）でレンダリング前に走るので実 308 を返せる。
  *
- * 残る 2 件は DB / 実行時条件に依存し config で表現できないため凍結する。
+ * ここに残すのは DB / 実行時条件に依存し config で表現できないものだけ。**件数は
+ * 書かない**（数は drift する）。載せた entry が本当に今も `redirect()` を呼んで
+ * いるかは下の staleness test が実測する — 移行や削除が済んだ entry を消し忘れると、
+ * 後から同じパスへ `redirect()` が戻ったときに黙って免除してしまう。
  */
 const CONDITIONAL_PAGE_REDIRECT_ALLOWLIST: readonly string[] = [
   // slug から編集ページへ解決する動的エイリアス
@@ -121,21 +124,47 @@ const CONDITIONAL_PAGE_REDIRECT_ALLOWLIST: readonly string[] = [
   "src/app/(admin)/admin/(dashboard)/settings/integrations/page.tsx",
 ];
 
+/** dashboard 配下で `redirect()` を呼んでいる page.tsx（repo 相対・`/` 区切り）。 */
+function dashboardPagesCallingRedirect(): string[] {
+  const glob = new Glob("src/app/(admin)/admin/(dashboard)/**/page.tsx");
+  return [...glob.scanSync(root)]
+    .map((p) => p.split(sep).join("/"))
+    .filter((rel) => {
+      const source = stripComments(
+        readFileSync(join(root, ...rel.split("/")), "utf8"),
+      );
+      return /\bredirect\s*\(/u.test(source);
+    })
+    .sort((a, b) => a.localeCompare(b));
+}
+
 describe("admin の静的エイリアスは next.config redirects で表現する", () => {
-  test("dashboard の page.tsx は redirect() を呼ばない（allowlist 除く）", () => {
+  test("走査対象の page.tsx が実在する（gate が空振りしていない）", () => {
     const glob = new Glob("src/app/(admin)/admin/(dashboard)/**/page.tsx");
-    const offenders = [...glob.scanSync(root)]
-      .map((p) => p.split(sep).join("/"))
-      .filter((rel) => {
-        const source = stripComments(
-          readFileSync(join(root, ...rel.split("/")), "utf8"),
-        );
-        return /\bredirect\s*\(/u.test(source);
-      })
-      .filter((rel) => !CONDITIONAL_PAGE_REDIRECT_ALLOWLIST.includes(rel))
-      .sort((a, b) => a.localeCompare(b));
+    expect([...glob.scanSync(root)].length).toBeGreaterThan(10);
+  });
+
+  test("dashboard の page.tsx は redirect() を呼ばない（allowlist 除く）", () => {
+    const offenders = dashboardPagesCallingRedirect().filter(
+      (rel) => !CONDITIONAL_PAGE_REDIRECT_ALLOWLIST.includes(rel),
+    );
 
     expect(offenders).toEqual([]);
+  });
+
+  test("allowlist の entry は今も redirect() を呼んでいる（陳腐化した免除を残さない）", () => {
+    const actual = new Set(dashboardPagesCallingRedirect());
+    const stale = CONDITIONAL_PAGE_REDIRECT_ALLOWLIST.filter(
+      (rel) => !actual.has(rel),
+    );
+
+    expect({
+      stale,
+      hint:
+        stale.length > 0
+          ? "この entry はもう redirect() を呼んでいない（移行済み or 削除済み）。allowlist から外す。残すと、後から同じパスへ redirect() が戻ったときに黙って免除される"
+          : "",
+    }).toEqual({ stale: [], hint: "" });
   });
 
   test("エイリアスは proxy が surface 判定の後に処理する", () => {

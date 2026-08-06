@@ -20,12 +20,6 @@ const SUBMIT_BUTTON_IMPL = join(
   "SubmitButton.tsx",
 );
 
-/**
- * SubmitButton 適用対象外（複合条件 disabled 等）。
- * これらのファイルは `<Button type="submit" disabled={complexCondition}>` を保持する
- */
-const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([]);
-
 /** JSX / HTML で submit を直指定している疑い（実装ファイルは除外） */
 const SUBMIT_ATTR_PATTERNS: RegExp[] = [
   /<Button[^>]*\btype="submit"/,
@@ -58,13 +52,13 @@ describe("admin submit button pattern", () => {
     expect(existsSync(ADMIN_APP_ROOT)).toBe(true);
 
     const files = collectTsxFiles(ADMIN_APP_ROOT);
+    // 走査が 0 件に落ちると違反ゼロと区別が付かない（vacuous pass 防止）。
+    expect(files.length).toBeGreaterThan(50);
+
     const violations: string[] = [];
 
     for (const filePath of files) {
       if (filePath === SUBMIT_BUTTON_IMPL) {
-        continue;
-      }
-      if (SUBMIT_BUTTON_ALLOWLIST.has(filePath)) {
         continue;
       }
       const text = readFileSync(filePath, "utf8");
