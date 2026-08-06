@@ -186,10 +186,76 @@ ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_content_json_objec
 ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 
--- ===== plpgsql 関数 (10) =====
+-- ===== plpgsql 関数 (14) =====
 --
 -- trigger 関数と、その本体から呼ばれる検査関数。**本体はテキスト**なので、
 -- 列や型を rename しても自動追随しない（rename する migration 側で作り直す）。
+
+CREATE OR REPLACE FUNCTION public.assert_event_capacity_not_exceeded(target_slot_id uuid, target_ticket_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  slot_capacity INTEGER;
+  slot_confirmed INTEGER;
+  ticket_capacity INTEGER;
+  ticket_confirmed INTEGER;
+BEGIN
+  SELECT capacity INTO slot_capacity
+  FROM event_time_slots WHERE id = target_slot_id;
+
+  -- 枠が消えている（親イベントの cascade 削除中など）なら見るものが無い。
+  IF slot_capacity IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT COALESCE(SUM(quantity), 0) INTO slot_confirmed
+  FROM event_registrations
+  WHERE slot_id = target_slot_id AND status = 'CONFIRMED';
+
+  IF slot_confirmed > slot_capacity THEN
+    RAISE EXCEPTION
+      'EventTimeSlot % capacity exceeded: confirmed % > capacity %',
+      target_slot_id, slot_confirmed, slot_capacity
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF target_ticket_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT capacity INTO ticket_capacity
+  FROM event_tickets WHERE id = target_ticket_id;
+
+  -- capacity NULL = 枚数無制限（枠の定員だけが効く）。
+  IF ticket_capacity IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT COALESCE(SUM(quantity), 0) INTO ticket_confirmed
+  FROM event_registrations
+  WHERE slot_id = target_slot_id
+    AND ticket_id = target_ticket_id
+    AND status = 'CONFIRMED';
+
+  IF ticket_confirmed > ticket_capacity THEN
+    RAISE EXCEPTION
+      'EventTicket % capacity exceeded on slot %: confirmed % > capacity %',
+      target_ticket_id, target_slot_id, ticket_confirmed, ticket_capacity
+      USING ERRCODE = 'check_violation';
+  END IF;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.check_event_registration_capacity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  PERFORM assert_event_capacity_not_exceeded(NEW.slot_id, NEW.ticket_id);
+  RETURN NEW;
+END;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.check_event_schedule_integrity("targetEventId" uuid)
  RETURNS void
@@ -273,6 +339,16 @@ BEGIN
     PERFORM "check_event_schedule_integrity"(OLD.event_id);
   END IF;
 
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.check_event_slot_capacity_not_exceeded()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  PERFORM assert_event_capacity_not_exceeded(NEW.id, NULL);
   RETURN NEW;
 END;
 $function$;
@@ -385,6 +461,23 @@ BEGIN
       USING ERRCODE = 'exclusion_violation';
   END IF;
 
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.check_event_ticket_capacity_not_exceeded()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  affected_slot_id UUID;
+BEGIN
+  FOR affected_slot_id IN
+    SELECT DISTINCT slot_id FROM event_registrations
+    WHERE ticket_id = NEW.id AND status = 'CONFIRMED'
+  LOOP
+    PERFORM assert_event_capacity_not_exceeded(affected_slot_id, NEW.id);
+  END LOOP;
   RETURN NEW;
 END;
 $function$;
@@ -512,10 +605,13 @@ $function$;
 
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE USING gist (space_id WITH =, tstzrange(start_time, end_time, '[)'::text) WITH &&) WHERE (((deleted_at IS NULL) AND (status = ANY (ARRAY['PENDING'::reservation_status, 'CONFIRMED'::reservation_status]))));
 
--- ===== trigger (13) =====
+-- ===== trigger (16) =====
 
 CREATE TRIGGER audit_logs_no_delete BEFORE DELETE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
 CREATE TRIGGER audit_logs_no_update BEFORE UPDATE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
+CREATE CONSTRAINT TRIGGER event_registrations_capacity_check AFTER INSERT OR UPDATE OF slot_id, ticket_id, status, quantity ON public.event_registrations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_registration_capacity();
+CREATE CONSTRAINT TRIGGER event_tickets_capacity_check AFTER UPDATE OF capacity ON public.event_tickets DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_ticket_capacity_not_exceeded();
+CREATE CONSTRAINT TRIGGER event_time_slots_capacity_check AFTER UPDATE OF capacity ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_capacity_not_exceeded();
 CREATE CONSTRAINT TRIGGER event_time_slots_schedule_integrity_check AFTER INSERT OR DELETE OR UPDATE OF event_id, start_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_slot();
 CREATE CONSTRAINT TRIGGER event_time_slots_space_is_free_check AFTER INSERT OR UPDATE OF event_id, start_at, end_at ON public.event_time_slots DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_slot_space_is_free();
 CREATE CONSTRAINT TRIGGER events_schedule_integrity_check AFTER INSERT OR UPDATE OF schedule_mode, deleted_at, registration_deadline ON public.events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_event_schedule_integrity_from_event();
