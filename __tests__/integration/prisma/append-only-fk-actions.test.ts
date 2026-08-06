@@ -242,13 +242,22 @@ describe("append-only テーブルへの FK 参照アクション", () => {
          VALUES ($1,'probe','probe','append-only-merge@example.test','append-only-merge@example.test',now())`,
         [customerId],
       );
+      const termsSuffix = crypto.randomUUID().slice(0, 8);
       const terms = await client.query<{ readonly id: string }>(
-        `SELECT "id" FROM "terms_documents" LIMIT 1`,
+        `INSERT INTO "terms_documents" (
+           "id","type","slug","title",content_json,content_html,display_order,updated_at
+         ) VALUES (
+           gen_random_uuid(), 'TERMS_OF_SERVICE', $1,
+           'Append Only Terms Probe', '{}'::jsonb, '',
+           -1000000 - floor(random() * 1000000)::int, now()
+         )
+         RETURNING id::text AS id`,
+        [`append-only-probe-${termsSuffix}`],
       );
       const termsId = terms.rows[0]?.id;
       if (termsId === undefined) {
         throw new Error(
-          "terms_documents が空です。seed 済みの test DB が必要です",
+          "terms_documents の probe 行を INSERT できませんでした",
         );
       }
       await client.query(
