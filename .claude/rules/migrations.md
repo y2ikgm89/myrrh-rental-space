@@ -87,11 +87,12 @@ index だけ失敗して **CREATE TABLE は残った**。
 
   **ヘッダに確認クエリを手で書かない。** コメントの SELECT は誰も流さない。
   適用前の既存行チェックは上記リハーサルが担う。以前はヘッダが唯一の守りだったが、
-  `20260805180000` のヘッダは 23 本の制約のうち 3 本しか見ておらず、
+  jsonb 形状 CHECK を入れた migration のヘッダは 23 本の制約のうち 3 本しか見ておらず、
   `locations.special_holidays` に JSON null が残った DB で「0 件」と出たうえで
   migration が落ちた。人が書く一覧は覆うべき集合から必ず離れる。
   gate は `__tests__/unit/architecture/migration-header-has-no-manual-precheck.test.ts`
-  （origin/main 上の不変 migration を除外し、新規分だけ走査）、
+  （既に書かれた分は編集不能なので**件数を固定**する ratchet。増えれば新規、
+  減れば baseline へ畳んだ合図で、どちらも落ちる）、
   `__tests__/unit/architecture/migration-preconditions.test.ts`
   （文の切り出し + 巻き戻せない文を実行しない + 接続先解決）と
   `__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`
