@@ -11,7 +11,10 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { planBackfill } from "../../../scripts/backfill-special-holidays-to-blocked-dates";
+import {
+  parseCalendarDate,
+  planBackfill,
+} from "../../../scripts/backfill-special-holidays-to-blocked-dates";
 
 describe("特別休業日の移行計画", () => {
   test("YYYY-MM-DD だけを単日の休業として移す", () => {
@@ -63,5 +66,55 @@ describe("特別休業日の移行計画", () => {
       { slug: "shibuya", value: "null" },
       { slug: "shinjuku", value: '{"not":"an array"}' },
     ]);
+  });
+
+  test("形は合っていても暦に無い日付は移さない（黙って別の日にしない）", () => {
+    // `new Date("2026-02-30T00:00:00.000Z")` は例外を投げず **3 月 2 日**になる。
+    // 形の検査だけ通すと、違う日を休業日にしたうえで誰も気づけない。
+    // `2026-13-01` は Invalid Date になり、そのまま渡せばループ途中で落ちて
+    // 「一部だけ入った」状態になる。
+    const { rows, skipped } = planBackfill([
+      {
+        id: "loc-1",
+        slug: "shibuya",
+        specialHolidays: [
+          "2026-02-30",
+          "2026-13-01",
+          "2026-02-29", // 2026 は閏年ではない
+          "2026-00-10",
+          "2026-01-32",
+          "2028-02-29", // 2028 は閏年なので通る
+        ],
+      },
+    ]);
+
+    expect(rows).toEqual([
+      { locationId: "loc-1", slug: "shibuya", date: "2028-02-29" },
+    ]);
+    expect(skipped.map((s) => s.value)).toEqual([
+      '"2026-02-30"',
+      '"2026-13-01"',
+      '"2026-02-29"',
+      '"2026-00-10"',
+      '"2026-01-32"',
+    ]);
+  });
+});
+
+describe("parseCalendarDate", () => {
+  test("実在する日付は UTC 深夜の Date になる（@db.Date の保持規約）", () => {
+    expect(parseCalendarDate("2026-01-01")?.toISOString()).toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+    expect(parseCalendarDate("2028-02-29")?.toISOString()).toBe(
+      "2028-02-29T00:00:00.000Z",
+    );
+  });
+
+  test("正規化で別の日になる値・Invalid Date になる値は null", () => {
+    expect(parseCalendarDate("2026-02-30")).toBeNull();
+    expect(parseCalendarDate("2026-13-01")).toBeNull();
+    expect(parseCalendarDate("2026-1-1")).toBeNull();
+    expect(parseCalendarDate("")).toBeNull();
   });
 });
