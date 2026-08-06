@@ -47,8 +47,10 @@ import { ensureUniqueSlug } from "./event-slug";
 import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
 import {
   checkSpaceOverlap,
+  findOverlappingSlotPair,
   isActiveEventStatus,
 } from "@/shared/domain/spaces/overlap";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
   isPrismaExclusionConstraintError,
   isPrismaUniqueConstraintError,
@@ -202,6 +204,29 @@ function assertEventScheduleInvariant(data: EventCommandInput): void {
 }
 
 /**
+ * この書込で Space を押さえにいく枠**どうし**が重なっていないことを確かめる。
+ *
+ * `checkSpaceOverlap` は既に DB にあるものとしか比べられず、自イベント配下の枠は
+ * 母集合から外れる（create は行がまだ無い / update は `excludeEventId`）。
+ * そのため同一イベント内の重なりはここでしか止まらない。
+ *
+ * 止めないと DB 側の `check_event_slot_space_is_free` が COMMIT 時に
+ * 23P01 を上げ、管理画面には生の PostgreSQL エラーが出る。
+ * **Space を占有するときだけ**呼ぶ — 外部会場（spaceId null）は同時刻の
+ * 並行トラックを持ってよく、DB 側も同じ条件で短絡する。
+ */
+function assertSlotsDoNotOverlapEachOther(
+  slots: readonly { startAt: Date; endAt: Date }[],
+): void {
+  const pair = findOverlappingSlotPair(slots);
+  if (!pair) return;
+  throw new DomainError(
+    `スロットの時間帯が重なっています（${formatDateTimeShort(pair.first.startAt)} と ${formatDateTimeShort(pair.second.startAt)}）。同じスペースを同時に押さえることはできません。`,
+    "VALIDATION",
+  );
+}
+
+/**
  * scheduleMode と meetingProvider の互換性を強制 (Codex PR #1149 P1 fix)。
  *
  * TIMED_ENTRY (日時選択制) はスロット単位で GCal event が作成され、それぞれ独立した
@@ -301,8 +326,9 @@ export async function createEventCommand(data: EventCommandInput) {
     // Event が spaceId を持つ場合、advisory lock で Space スケジュール空間を直列化して
     // 各スロットが Reservation / 他 Event と重複しないことを確認する。
     // Codex P2 #1019 (comment 3566931086): CANCELLED / ARCHIVED は Space を占有しない
-    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡: migration 20260713044626)。
+    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡する)。
     if (data.spaceId && isActiveEventStatus(data.status)) {
+      assertSlotsDoNotOverlapEachOther(data.slots);
       await lockSpaceForTransaction(tx, data.spaceId);
       for (const slot of data.slots) {
         const overlap = await checkSpaceOverlap(
@@ -461,10 +487,11 @@ export async function updateEventCommand(
     // 各スロットが Reservation / 他 Event と重複しないことを確認する。
     // excludeEventId で自イベントの既存スロットは除外 (slot 差分同期の前提)。
     // Codex P2 #1019 (comment 3566931086): CANCELLED / ARCHIVED は Space を占有しない
-    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡: migration 20260713044626)。
+    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡する)。
     // これにより「PUBLISHED → CANCELLED を保存したいがレガシー重複データが
     // 存在するため CONFLICT で拒否される」正当遷移の誤 block を防ぐ。
     if (data.spaceId && isActiveEventStatus(data.status)) {
+      assertSlotsDoNotOverlapEachOther(data.slots);
       await lockSpaceForTransaction(tx, data.spaceId);
       for (const slot of data.slots) {
         const overlap = await checkSpaceOverlap(
@@ -603,6 +630,7 @@ export async function restoreEventCommand(id: string): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       if (event.spaceId && isActiveEventStatus(event.status)) {
+        assertSlotsDoNotOverlapEachOther(event.slots);
         await lockSpaceForTransaction(tx, event.spaceId);
         for (const slot of event.slots) {
           const overlap = await checkSpaceOverlap(
@@ -750,6 +778,7 @@ export async function publishEventCommand(id: string) {
       // 並行する予約 create との間で Space の二重占有が生じうる（DEFERRABLE constraint
       // trigger は COMMIT 時発火のためこの tx 内 catch では捕捉できず、直列化でしか防げない）。
       if (event.spaceId) {
+        assertSlotsDoNotOverlapEachOther(event.slots);
         await lockSpaceForTransaction(tx, event.spaceId);
         for (const slot of event.slots) {
           const overlap = await checkSpaceOverlap(
@@ -950,6 +979,7 @@ export async function duplicateEventCommand(id: string) {
     // 検査対象に含める (source.status が CANCELLED/ARCHIVED なら checkSpaceOverlap 側の
     // ACTIVE_EVENT_STATUSES 判定で自動的に対象外になる)。
     if (source.spaceId) {
+      assertSlotsDoNotOverlapEachOther(source.slots);
       await lockSpaceForTransaction(tx, source.spaceId);
       for (const slot of source.slots) {
         const overlap = await checkSpaceOverlap(

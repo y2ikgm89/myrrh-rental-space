@@ -38,7 +38,8 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-const { checkSpaceOverlap } = await import("@/shared/domain/spaces/overlap");
+const { checkSpaceOverlap, findOverlappingSlotPair } =
+  await import("@/shared/domain/spaces/overlap");
 
 const SPACE_ID = "space-1";
 const START = new Date("2026-06-01T01:00:00.000Z");
@@ -257,5 +258,57 @@ describe("checkSpaceOverlap", () => {
         endTime: END,
       });
     });
+  });
+});
+
+/**
+ * `checkSpaceOverlap` が見られない唯一の組 — 同じリクエストで一緒に入ってくる枠どうし。
+ *
+ * create は自イベントの行がまだ無く、update は `excludeEventId` で自イベントを
+ * 母集合から外すので、この重なりは構造上どちらのクエリにも映らない。
+ */
+describe("findOverlappingSlotPair", () => {
+  const at = (hour: number): Date =>
+    new Date(`2026-06-01T${String(hour).padStart(2, "0")}:00:00.000Z`);
+
+  test("重なる 2 枠を見つける（開始時刻は違う = @@unique では拾えない形）", () => {
+    const first = { startAt: at(10), endAt: at(12) };
+    const second = { startAt: at(11), endAt: at(13) };
+
+    expect(findOverlappingSlotPair([first, second])).toEqual({ first, second });
+  });
+
+  test("隣接（前の終了 = 次の開始）は重なりではない", () => {
+    expect(
+      findOverlappingSlotPair([
+        { startAt: at(10), endAt: at(12) },
+        { startAt: at(12), endAt: at(14) },
+      ]),
+    ).toBeNull();
+  });
+
+  test("入力順に依存しない（後ろの枠が前の枠を包む場合も見つける）", () => {
+    const first = { startAt: at(11), endAt: at(12) };
+    const second = { startAt: at(9), endAt: at(15) };
+
+    expect(findOverlappingSlotPair([first, second])).toEqual({ first, second });
+  });
+
+  test("3 件以上でも、隣り合わない組の重なりを見つける", () => {
+    const first = { startAt: at(9), endAt: at(10) };
+    const middle = { startAt: at(12), endAt: at(13) };
+    const second = { startAt: at(9), endAt: at(11) };
+
+    expect(findOverlappingSlotPair([first, middle, second])).toEqual({
+      first,
+      second,
+    });
+  });
+
+  test("0 件・1 件は重なりようがない", () => {
+    expect(findOverlappingSlotPair([])).toBeNull();
+    expect(
+      findOverlappingSlotPair([{ startAt: at(10), endAt: at(12) }]),
+    ).toBeNull();
   });
 });

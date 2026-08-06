@@ -58,7 +58,13 @@ function getAggregateQuantitySum(aggregate: object): number {
  * - DB にあるが inputs に含まれない → 申込があれば DomainError、なければ delete
  *
  * interactive transaction 内から呼ぶこと（tx を渡す）。
- * 重複時刻は DB の @@unique([eventId, startAt]) が最終防衛線。
+ *
+ * **時間帯の重なりはここでは見ない。** `@@unique([eventId, startAt])` が拾えるのは
+ * 開始時刻が同値のときだけで、10:00-12:00 と 11:00-13:00 は素通りする。
+ * Space を占有するイベント（spaceId 非 null かつ status ∈ {DRAFT, PUBLISHED}）では
+ * 呼出側 `commands.ts` の `assertSlotsDoNotOverlapEachOther` が入口で弾き、
+ * DB の `check_event_slot_space_is_free` が最終防衛線になる。
+ * 外部会場（spaceId null）は同時刻の並行トラックを持ってよいので、どちらも短絡する。
  *
  * 削除されたスロットが `googleCalendarEventId` を持っていた場合、そのまま
  * DB から消すと GCal 側にイベントが孤児として残る (outbound gap)。呼出側

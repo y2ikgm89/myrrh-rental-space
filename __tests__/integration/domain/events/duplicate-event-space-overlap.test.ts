@@ -9,10 +9,11 @@
  * 複製元が DRAFT/PUBLISHED であれば複製直後に「同一 Space・同一時間帯の
  * アクティブなイベントが 2 件」という状態が overlap 検査なしで成立してしまう。
  *
- * DB 側の CONSTRAINT TRIGGER (migration 20260713044626 /
- * 20260713060100 等) は Reservation ⇔ Event のクロステーブル重複のみを検査し、
- * Event 同士の重複は一切検査しないため、この欠落は DB レベルでも防がれない
- * （アプリケーション層の checkSpaceOverlap が唯一の防衛線）。
+ * 現在は DB 側の CONSTRAINT TRIGGER (`check_event_slot_space_is_free` /
+ * `check_event_space_is_free`、実体は `prisma/baseline/invariants.sql`) が
+ * Event 同士の重複も拒否する（`cross-table-overlap-triggers.test.ts` が実測）。
+ * ただしそこで出るのは生の 23P01 なので、管理者に理由を返すのは依然として
+ * アプリ層の `checkSpaceOverlap` の役目であり、ここはその層を固定する。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が

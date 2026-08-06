@@ -103,6 +103,26 @@ mock.module("@generated/prisma/enums", () => ({
   RegistrationStatus,
 }));
 
+const mockLockSpaceForTransaction = mock<(...args: unknown[]) => Promise<void>>(
+  () => Promise.resolve(),
+);
+type OverlapResult =
+  | { hasOverlap: false }
+  | { hasOverlap: true; type: "reservation" | "event"; conflictId: string };
+const mockCheckSpaceOverlap = mock<
+  (...args: unknown[]) => Promise<OverlapResult>
+>(() => Promise.resolve({ hasOverlap: false }));
+
+mock.module("@/shared/domain/reservations/space-locks", () => ({
+  lockSpaceForTransaction: mockLockSpaceForTransaction,
+}));
+
+mock.module("@/shared/domain/spaces/overlap", () => ({
+  checkSpaceOverlap: mockCheckSpaceOverlap,
+  isActiveEventStatus: (status: string) =>
+    status === EventStatus.DRAFT || status === EventStatus.PUBLISHED,
+}));
+
 import {
   cancelImportedEventFromCalendar,
   upsertEventFromCalendar,
@@ -116,6 +136,11 @@ describe("upsertEventFromCalendar", () => {
     mockEventUpdate.mockClear();
     mockEventUpdateMany.mockClear();
     mockEventTimeSlotFindFirst.mockClear();
+    // create/update/aggregate も毎回クリアする。これが無いと「呼ばれていない」の
+    // assertion が前のテストの呼出を拾って落ちる（実際に落ちた）。
+    mockEventTimeSlotCreate.mockClear();
+    mockEventTimeSlotUpdate.mockClear();
+    mockEventTimeSlotAggregate.mockClear();
     mockEventCategoryFindFirst.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
     mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
@@ -130,6 +155,11 @@ describe("upsertEventFromCalendar", () => {
     // 新規作成分岐（既存スロットなし）のフォールバックカテゴリー解決を既定で成功させる。
     mockEventCategoryFindFirst.mockImplementation(() =>
       Promise.resolve({ id: "fallback-category-1" }),
+    );
+    mockLockSpaceForTransaction.mockClear();
+    mockCheckSpaceOverlap.mockClear();
+    mockCheckSpaceOverlap.mockImplementation(() =>
+      Promise.resolve({ hasOverlap: false }),
     );
   });
 
@@ -157,6 +187,66 @@ describe("upsertEventFromCalendar", () => {
       // 1 回目 = event 本体更新、2 回目 = firstSlotStartAt/lastSlotEndAt 同期
       expect(mockEventUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("Space を持つイベントは、移動先が埋まっていれば上書きせず skipped: space_conflict", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
+      );
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.DRAFT,
+          spaceId: "space-1",
+          registrations: [],
+        }),
+      );
+      mockCheckSpaceOverlap.mockImplementation(() =>
+        Promise.resolve({
+          hasOverlap: true,
+          type: "reservation",
+          conflictId: "res-1",
+        }),
+      );
+
+      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
+
+      expect(result).toEqual({
+        id: "event-1",
+        action: "skipped",
+        reason: "space_conflict",
+      });
+      // 押さえ直しの検査より先に advisory lock を取る（他の書込経路と同じ順序）。
+      expect(mockLockSpaceForTransaction).toHaveBeenCalled();
+      expect(mockEventUpdate).not.toHaveBeenCalled();
+      expect(mockEventTimeSlotUpdate).not.toHaveBeenCalled();
+    });
+
+    test("Space を持つイベントでも、移動先が空いていれば更新する（自スロットは検査対象から外す）", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
+      );
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.DRAFT,
+          spaceId: "space-1",
+          registrations: [],
+        }),
+      );
+
+      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
+
+      expect(result).toMatchObject({ id: "event-1", action: "updated" });
+      expect(mockCheckSpaceOverlap).toHaveBeenCalledWith(
+        expect.objectContaining({
+          spaceId: "space-1",
+          startTime: CALENDAR_INPUT.startTime,
+          endTime: CALENDAR_INPUT.endTime,
+          excludeEventSlotId: "slot-1",
+        }),
+        expect.anything(),
+      );
     });
 
     test("PUBLISHED イベントは上書きせず action: skipped を返す", async () => {

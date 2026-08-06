@@ -10,10 +10,11 @@ import type { PrismaTransactionClient } from "@/shared/lib/reservation/types";
  *
  * DRAFT / PUBLISHED のみが Space を占有し、CANCELLED / ARCHIVED は占有しない。
  * この定義は DB 側の CONSTRAINT TRIGGER
- * (`check_event_slot_no_reservation_overlap` /
- *  `check_reservation_no_event_slot_overlap`, migration 20260713044626)
- * の `event_status NOT IN ('DRAFT', 'PUBLISHED') → return NEW` 短絡と揃える。
- * ここを変えた場合は migration 側 SQL の status リストも同時に更新すること。
+ * (`check_event_slot_space_is_free` / `check_event_space_is_free` /
+ *  `check_reservation_no_event_slot_overlap`、実体は
+ *  `prisma/baseline/invariants.sql`)
+ * の `status NOT IN ('DRAFT', 'PUBLISHED') → return NEW` 短絡と揃える。
+ * ここを変えた場合は DB 側の status リストも同時に更新すること。
  */
 export const ACTIVE_EVENT_STATUSES: readonly EventStatus[] = [
   EventStatus.DRAFT,
@@ -131,4 +132,39 @@ export async function checkSpaceOverlap(
   }
 
   return { hasOverlap: false };
+}
+
+/** `findOverlappingSlotPair` が受ける最小の枠。 */
+export type SlotInterval = { readonly startAt: Date; readonly endAt: Date };
+
+/**
+ * 書込もうとしている枠**どうし**が重なっていないかを見る。
+ *
+ * `checkSpaceOverlap` は「既に DB にあるもの」としか比べない。イベントの書込経路は
+ * 自イベント配下の枠を母集合から外す（create は行がまだ無い、update は
+ * `excludeEventId` で外す）ので、**同じリクエストで一緒に入ってくる枠どうしの
+ * 重なりだけは構造上どうやっても見えない**。ここがその 1 箇所。
+ *
+ * 呼ぶのは Space を占有するときだけ（`spaceId` があり status が
+ * {@link ACTIVE_EVENT_STATUSES}）。外部会場（spaceId null）のイベントは
+ * 同時刻の並行トラックを持ってよく、DB 側の
+ * `check_event_slot_space_is_free` も同じ条件で短絡する。
+ *
+ * 判定は他の層と同じ半開区間（隣接は重なりではない）。
+ */
+export function findOverlappingSlotPair(
+  slots: readonly SlotInterval[],
+): { readonly first: SlotInterval; readonly second: SlotInterval } | null {
+  for (let i = 0; i < slots.length; i += 1) {
+    const first = slots[i];
+    if (!first) continue;
+    for (let j = i + 1; j < slots.length; j += 1) {
+      const second = slots[j];
+      if (!second) continue;
+      if (first.startAt < second.endAt && first.endAt > second.startAt) {
+        return { first, second };
+      }
+    }
+  }
+  return null;
 }
