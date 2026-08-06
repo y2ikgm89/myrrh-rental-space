@@ -14,7 +14,8 @@
  * つまり**どの列のどの行が原因か、その場では分からない**。
  *
  * だから狭める migration は「適用前に本番で流す確認クエリ」をヘッダに書く。
- * 問題は、それが**手書きの散文**だったこと。20260805160000 は 45 列を狭めながら
+ * 問題は、それが**手書きの散文**だったこと。文字列列の値域を揃えた migration は
+ * 45 列を狭めながら
  * 確認クエリは 5 列ぶんしか無く、しかも `inquiries.name` を新しい上限 101 ではなく
  * `> 100` で数えていた（Codex が PR #1947 で指摘）。
  * **「確認しました」と書いてあるのに 11% しか見ていない。**
@@ -113,7 +114,7 @@ const SAMPLE_MISSING = [
   'ALTER TABLE "locations" ALTER COLUMN "email" SET DATA TYPE VARCHAR(254);',
 ].join("\n");
 
-/** 20260805160000 が実際に踏んだ形: 上限だけが古い。 */
+/** 実際に踏んだ形: 上限だけが古い。 */
 const SAMPLE_WRONG_LIMIT = [
   "--   SELECT 'inquiries.name' AS col, count(*) FROM inquiries WHERE length(name) > 100;",
   'ALTER TABLE "inquiries" ALTER COLUMN "name" SET DATA TYPE VARCHAR(101);',

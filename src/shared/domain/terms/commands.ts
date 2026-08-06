@@ -90,7 +90,7 @@ async function ensureSlugAvailable(
   // 判定の母集合を DB 制約と同じにする。`terms_documents_slug_active_key` は
   // `WHERE "deletedAt" IS NULL` の partial unique なので、削除済み文書は slug を
   // 手放している。ここで削除済みまで数えると DB は許すのにアプリだけが CONFLICT を
-  // 返し、partial unique 化した意味が無くなる（20260803070000）。
+  // 返し、partial unique 化した意味が無くなる。
   const existing = await prisma.termsDocument.findFirst({
     where: {
       slug,

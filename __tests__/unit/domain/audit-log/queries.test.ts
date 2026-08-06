@@ -67,7 +67,7 @@ const mockTransaction = mock(
 
 /**
  * `AuditLog.userId` は user への FK を持たない論理参照になったため
- * （20260803030000: 証跡テーブルを FK の参照アクションで書き換えさせない）、
+ * （証跡テーブルを FK の参照アクションで書き換えさせないため）、
  * 実行ユーザーの検索と表示はどちらも user への別クエリになる。
  */
 const mockUserFindMany = mock<

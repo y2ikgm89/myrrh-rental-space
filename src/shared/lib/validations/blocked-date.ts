@@ -2,7 +2,7 @@
  * 臨時休業 / 急な休み（BlockedDate）のバリデーションスキーマ
  *
  * 設計方針:
- * - `scope` / `type` は **Prisma enum**（20260805110000 で VARCHAR から移行）。
+ * - `scope` / `type` は **Prisma enum**（VARCHAR から移行済み）。
  *   `z.enum()` には生成された enum オブジェクトをそのまま渡す。
  *   **`blocked_date_scope` の宣言順が cascade の優先順位そのもの**なので、
  *   値を並べ替えると全社休業日よりスペース単位の休業が優先される

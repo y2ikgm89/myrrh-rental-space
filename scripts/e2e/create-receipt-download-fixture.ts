@@ -122,9 +122,9 @@ async function main(): Promise<void> {
     const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
 
     // taxRateType/taxRate/taxAmount/totalPriceWithTax/rateBreakdownJson は
-    // SpaceRatePlan 導入 (migration 20260714111408) で NOT NULL 化された。この
-    // fixture は rate plan resolver を経由しない直接 insert のため、同 migration
-    // の backfill と同じ legacy パターンでスナップショットを埋める。
+    // SpaceRatePlan の導入時に NOT NULL 化された。この fixture は rate plan
+    // resolver を経由しない直接 insert のため、そのときの backfill と同じ
+    // legacy パターンでスナップショットを埋める。
     const totalPrice = 6000;
     const taxRate = 10;
     const taxAmount = Math.round((totalPrice * taxRate) / 100);

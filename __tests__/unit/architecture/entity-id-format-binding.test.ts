@@ -7,10 +7,10 @@
  *   実在する申込 ID を全て拒否していた
  * - #1747 — `TermsAgreement.resourceId` が `@db.Uuid` で、規約同意付きの
  *   イベント申込が P2007 で必ず失敗していた（公開フォームが丸ごと壊れていた）
- * - 20260726030000 — 同じ理由で `AdminNotification.resourceId` を uuid → varchar へ
+ * - 同じ理由で `AdminNotification.resourceId` を uuid → varchar へ
  *   広げる migration が必要になった
  *
- * 20260804000000 で cuid の 5 モデルを uuid へ寄せ、混在そのものを無くした。
+ * cuid だった 5 モデルを uuid へ寄せ、混在そのものを無くした。
  * **この gate はその状態を固定する**もので、`@default(cuid())` のモデルが 1 つでも
  * 戻ると落ちる。形式が 1 つである限り、上のバグ class は構造的に起こらない。
  *

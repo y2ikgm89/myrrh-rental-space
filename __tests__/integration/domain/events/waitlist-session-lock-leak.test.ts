@@ -11,7 +11,7 @@
  * 修正後は 1 candidate の処理を savepoint（ネスト `$transaction`）に隔離し、
  * 失敗しても外側 tx は健全なまま継続 → release が正常に実行される。
  *
- * `EventRegistration.id/slotId/ticketId` は uuid（20260804000000 で統一。以前は
+ * `EventRegistration.id/slotId/ticketId` は uuid（ID 形式は統一済み。以前は
  * ない）で、不正な型を渡しても Postgres は単に「一致なし」を返すだけで例外を
  * 投げないため（実測確認済み）、現実的な入力データだけで candidate 処理中の
  * DB エラーを再現することはできない。そのためこのテストは2部構成:
