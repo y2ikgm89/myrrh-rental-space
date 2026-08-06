@@ -183,6 +183,17 @@ const prismaSpaceReview = {
 const prismaEventRegistration = {
   updateMany: mockEventRegistrationUpdateMany,
 };
+// 短命トークン台帳。匿名化が実アドレスの残骸を消すため行ごと削除する。
+const mockPendingEmailChangeDeleteMany = mock(() =>
+  Promise.resolve({ count: 0 }),
+);
+const mockPendingMergeDeleteMany = mock(() => Promise.resolve({ count: 0 }));
+const prismaPendingCustomerEmailChange = {
+  deleteMany: mockPendingEmailChangeDeleteMany,
+};
+const prismaPendingCustomerMerge = {
+  deleteMany: mockPendingMergeDeleteMany,
+};
 
 type TxShape = {
   customer: typeof prismaCustomer;
@@ -194,6 +205,8 @@ type TxShape = {
   inquiryAttachment: typeof prismaInquiryAttachment;
   spaceReview: typeof prismaSpaceReview;
   eventRegistration: typeof prismaEventRegistration;
+  pendingCustomerEmailChange: typeof prismaPendingCustomerEmailChange;
+  pendingCustomerMerge: typeof prismaPendingCustomerMerge;
 };
 
 const txShape: TxShape = {
@@ -206,6 +219,8 @@ const txShape: TxShape = {
   inquiryAttachment: prismaInquiryAttachment,
   spaceReview: prismaSpaceReview,
   eventRegistration: prismaEventRegistration,
+  pendingCustomerEmailChange: prismaPendingCustomerEmailChange,
+  pendingCustomerMerge: prismaPendingCustomerMerge,
 };
 
 mock.module("@/shared/lib/r2/client", () => ({

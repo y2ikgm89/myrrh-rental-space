@@ -193,6 +193,27 @@ export async function anonymizeCustomerCommand(input: {
       },
     });
 
+    // 短命トークン台帳にも素のメールアドレスが載る。**これらは行ごと消す。**
+    //
+    // 消える経路が 2 つしか無く、どちらも匿名化では発火しない:
+    //   - 同じ customerId が再リクエストしたときの deleteMany（退会後は起きない）
+    //   - Customer の物理削除に対する onDelete: Cascade（退会は匿名化であって削除ではない）
+    //
+    // 残すと `customerId` で JOIN するだけで元のアドレスが復元でき、
+    // 「退会したのに消えていない」状態になる。`consumedAt` の有無は問わない —
+    // 使用済みでも未使用でも、載っているのは実アドレスそのもの。
+    await tx.pendingCustomerEmailChange.deleteMany({
+      where: { customerId: existing.id },
+    });
+    await tx.pendingCustomerMerge.deleteMany({
+      where: {
+        OR: [
+          { targetCustomerId: existing.id },
+          { sourceCustomerId: existing.id },
+        ],
+      },
+    });
+
     // Better Auth 側 User (顧客ログイン用) を明示削除する。
     // Session / Account は User に対して onDelete: Cascade のため連鎖削除される。
     // Reservation / AuditLog の userId は User に対して onDelete: SetNull のため

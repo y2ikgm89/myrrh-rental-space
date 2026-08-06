@@ -196,11 +196,15 @@ const prismaReservation = { updateMany: mockReservationUpdateMany };
 const prismaEventRegistration = {
   updateMany: mockEventRegistrationUpdateMany,
 };
+// 匿名化は統合トークン台帳の行も消す（source / target のどちらで参照されていても）。
+const mockPendingMergeDeleteMany = mock(() => Promise.resolve({ count: 0 }));
+const prismaPendingMerge = { deleteMany: mockPendingMergeDeleteMany };
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     customer: prismaCustomer,
     pendingCustomerEmailChange: prismaPending,
+    pendingCustomerMerge: prismaPendingMerge,
     user: prismaUser,
     inquiry: prismaInquiry,
     inquiryReply: prismaInquiryReply,
@@ -211,6 +215,7 @@ mock.module("@/shared/db/prisma", () => ({
       fn: (tx: {
         customer: typeof prismaCustomer;
         pendingCustomerEmailChange: typeof prismaPending;
+        pendingCustomerMerge: typeof prismaPendingMerge;
         user: typeof prismaUser;
         inquiry: typeof prismaInquiry;
         inquiryReply: typeof prismaInquiryReply;
@@ -222,6 +227,7 @@ mock.module("@/shared/db/prisma", () => ({
       fn({
         customer: prismaCustomer,
         pendingCustomerEmailChange: prismaPending,
+        pendingCustomerMerge: prismaPendingMerge,
         user: prismaUser,
         inquiry: prismaInquiry,
         inquiryReply: prismaInquiryReply,
