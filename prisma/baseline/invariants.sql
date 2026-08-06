@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (155) =====
+-- ===== CHECK 制約 (156) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -117,6 +117,7 @@ ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_amount_derivation_ch
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_total_derivation_check" CHECK ((total_price_with_tax = (total_price + tax_amount)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_order_check" CHECK ((start_time < end_time));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_total_price_breakdown_check" CHECK ((total_price = (GREATEST(0, (((base_price - COALESCE(coupon_discount_amount, 0)) - COALESCE(duration_discount_amount, 0)) - COALESCE(space_discount_amount, 0))) + COALESCE(manual_adjustment_amount, 0))));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_version_non_negative_check" CHECK ((version >= 0));
 ALTER TABLE "sections" ADD CONSTRAINT "sections_config_object_check" CHECK ((jsonb_typeof(config) = 'object'::text));
 ALTER TABLE "sections" ADD CONSTRAINT "sections_order_position_check" CHECK ((("order" >= '-1'::integer) OR ("order" <= '-1000000'::integer)));
@@ -186,7 +187,7 @@ ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_content_json_objec
 ALTER TABLE "terms_documents" ADD CONSTRAINT "terms_documents_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "transfer_accounts" ADD CONSTRAINT "transfer_accounts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 
--- ===== plpgsql 関数 (15) =====
+-- ===== plpgsql 関数 (16) =====
 --
 -- trigger 関数と、その本体から呼ばれる検査関数。**本体はテキスト**なので、
 -- 列や型を rename しても自動追随しない（rename する migration 側で作り直す）。
@@ -244,6 +245,38 @@ BEGIN
       target_ticket_id, target_slot_id, ticket_confirmed, ticket_capacity
       USING ERRCODE = 'check_violation';
   END IF;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.assert_refund_total_within_paid()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  paid INTEGER;
+  refunded INTEGER;
+BEGIN
+  IF NEW.status IN ('failed', 'canceled') THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.reservation_id IS NOT NULL THEN
+    SELECT total_price_with_tax INTO paid FROM reservations WHERE id = NEW.reservation_id;
+    SELECT COALESCE(SUM(amount), 0) INTO refunded FROM refunds
+      WHERE reservation_id = NEW.reservation_id AND status NOT IN ('failed', 'canceled');
+  ELSIF NEW.event_registration_id IS NOT NULL THEN
+    SELECT paid_amount INTO paid FROM event_registrations WHERE id = NEW.event_registration_id;
+    SELECT COALESCE(SUM(amount), 0) INTO refunded FROM refunds
+      WHERE event_registration_id = NEW.event_registration_id AND status NOT IN ('failed', 'canceled');
+  ELSE
+    RETURN NEW;
+  END IF;
+
+  IF paid IS NOT NULL AND refunded > paid THEN
+    RAISE EXCEPTION 'refund total % exceeds paid amount % (refund %)', refunded, paid, NEW.id
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
 END;
 $function$;
 
@@ -615,7 +648,7 @@ $function$;
 
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE USING gist (space_id WITH =, tstzrange(start_time, end_time, '[)'::text) WITH &&) WHERE (((deleted_at IS NULL) AND (status = ANY (ARRAY['PENDING'::reservation_status, 'CONFIRMED'::reservation_status]))));
 
--- ===== trigger (20) =====
+-- ===== trigger (21) =====
 
 CREATE TRIGGER audit_logs_no_delete BEFORE DELETE ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION prevent_audit_logs_mutation();
 CREATE TRIGGER audit_logs_no_truncate BEFORE TRUNCATE ON public.audit_logs FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
@@ -633,6 +666,7 @@ CREATE TRIGGER inquiry_status_history_no_update BEFORE UPDATE ON public.inquiry_
 CREATE TRIGGER refunds_no_delete BEFORE DELETE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
 CREATE TRIGGER refunds_no_truncate BEFORE TRUNCATE ON public.refunds FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
 CREATE TRIGGER refunds_no_update BEFORE UPDATE ON public.refunds FOR EACH ROW EXECUTE FUNCTION prevent_refunds_mutation();
+CREATE CONSTRAINT TRIGGER refunds_total_within_paid_check AFTER INSERT OR UPDATE OF amount, status, reservation_id, event_registration_id ON public.refunds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION assert_refund_total_within_paid();
 CREATE CONSTRAINT TRIGGER reservations_no_event_slot_overlap_check AFTER INSERT OR UPDATE OF space_id, start_time, end_time, status, deleted_at ON public.reservations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_reservation_no_event_slot_overlap();
 CREATE TRIGGER terms_agreements_no_delete BEFORE DELETE ON public.terms_agreements FOR EACH ROW EXECUTE FUNCTION prevent_terms_agreements_mutation();
 CREATE TRIGGER terms_agreements_no_truncate BEFORE TRUNCATE ON public.terms_agreements FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();
