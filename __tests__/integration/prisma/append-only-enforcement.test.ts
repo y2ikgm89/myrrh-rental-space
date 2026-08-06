@@ -121,6 +121,11 @@ async function attemptAfterSeedingOneRow(
   let message = NOT_REJECTED;
   try {
     await client.query(insertOneRow(table));
+    // refunds 等に DEFERRABLE CONSTRAINT TRIGGER が載っていると、INSERT の
+    // pending trigger events が残ったまま TRUNCATE すると
+    // 「cannot TRUNCATE … because it has pending trigger events」で先に落ち、
+    // append-only 拒否メッセージを検証できない。破壊的 SQL の前に即時発火させる。
+    await client.query("SET CONSTRAINTS ALL IMMEDIATE");
     if (bypass !== undefined) {
       await client.query(`SELECT set_config($1, 'purge', true)`, [bypass]);
     }
