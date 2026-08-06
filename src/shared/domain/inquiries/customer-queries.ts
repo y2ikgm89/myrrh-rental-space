@@ -9,6 +9,7 @@ import {
 } from "./queries";
 import type { InquiryAttachmentItem, InquiryReplyItem } from "./types";
 import type { Prisma } from "@generated/prisma/client";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const CUSTOMER_INQUIRY_LIST_SELECT = {
   id: true,
@@ -48,7 +49,7 @@ export type CustomerInquiryListItem = {
   id: string;
   receiptNumber: string;
   subject: string;
-  status: string;
+  status: InquiryStatus;
   createdAt: Date;
   updatedAt: Date;
   replyCount: number;
@@ -82,7 +83,7 @@ export type CustomerInquiryDetail = {
   phoneNumber: string | null;
   subject: string;
   message: string;
-  status: string;
+  status: InquiryStatus;
   createdAt: Date;
   updatedAt: Date;
   replies: InquiryReplyItem[];

@@ -5,11 +5,14 @@ import {
   type ReservationDeadlineSettingsInput,
 } from "@/shared/domain/reservations/reservation-card-deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  PaymentStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 export function buildReservationListItems<
   T extends {
-    readonly status: string;
+    readonly status: ReservationStatus;
     readonly startTime: Date;
     readonly paymentStatus: PaymentStatus;
     readonly couponDiscountAmount?: number | null;
