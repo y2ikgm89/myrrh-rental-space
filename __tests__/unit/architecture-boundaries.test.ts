@@ -1662,17 +1662,9 @@ describe("architecture boundaries", () => {
     expect(existsSync(AUTH_ROUTE_FILE)).toBe(false);
   });
 
-  test("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タグ文字列を直書きしない", () => {
-    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
-      (file) => !file.endsWith(join("shared", "lib", "constants", "cache.ts")),
-    );
-    const offenders = collectNonCommentOffenders(
-      sourceFiles,
-      /\b(?:cacheTag|updateTag|revalidateTag)\(\s*["'][^"']+["']/u,
-    );
-
-    expect(offenders).toEqual([]);
-  });
+  // cache tag literal drift gate は
+  // __tests__/unit/architecture/cache-tag-literals.test.ts に移動（AST 化し
+  // template literal / 複数行呼出も検出するよう強化。旧 regex 版は削除済み）。
 
   test("SPACE_RATE_PLANS cache tag は cacheTag producer を持つ（rate-plan-queries.ts の getSpaceRatePlans）", () => {
     const source = readFileSync(SPACE_RATE_PLAN_QUERIES_FILE, "utf8");
@@ -2973,57 +2965,11 @@ describe("architecture boundaries", () => {
     });
   });
 
-  describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () => {
-    // `sendEmail` の idempotencyKey は同一予約が短時間に複数回同種イベントを起こす
-    // ケース (SUPER_ADMIN restore で CANCELLED→CONFIRMED 巻き戻し、PENDING→CONFIRMED
-    // への status flip 後の再送、etc.) で Resend が `invalid_idempotent_request` により
-    // silent drop してしまうため、常に **entity id + monotonic version discriminator**
-    // (icsSequence / newStatus / action / batchNonce / refundId 等) を含める SSoT 契約。
-    //
-    // sendReservationConfirmationEmail が discriminator を欠いていた回帰 (Cluster H #16)
-    // の再発防止として、reservation-emails.ts の全 `sendXxxEmail` 関数の
-    // idempotencyKey template literal が 2 つ以上の `${...}` 補間を持つことを強制する。
-    test("reservation-emails.ts の全 sendXxxEmail idempotencyKey は entity id + version discriminator を含む", () => {
-      const RESERVATION_EMAILS_FILE = join(
-        SRC_ROOT,
-        "shared",
-        "lib",
-        "email",
-        "reservation-emails.ts",
-      );
-      const source = readFileSync(RESERVATION_EMAILS_FILE, "utf8");
-
-      // sender 関数 (`export async function sendXxxEmail`) の名前と、その関数 body 内の
-      // 最初の `idempotencyKey:` 割当を抽出する。個々の sender は sendEmail の
-      // 呼出 1 回に対応し、idempotencyKey は 1 つだけを持つ設計。
-      const SENDER_RE =
-        /export\s+async\s+function\s+(send[A-Za-z]+Email|send[A-Za-z]+Notification)\s*\(/g;
-      const IDEMPOTENCY_RE = /idempotencyKey:\s*`([^`]+)`/g;
-
-      const senderNames: string[] = [];
-      for (const match of source.matchAll(SENDER_RE)) {
-        if (match[1]) senderNames.push(match[1]);
-      }
-      // sanity: sender 関数が見つからないと gate が silently vacuous になる。
-      expect(senderNames.length).toBeGreaterThan(0);
-
-      const violations: string[] = [];
-      for (const match of source.matchAll(IDEMPOTENCY_RE)) {
-        const template = match[1] ?? "";
-        // template 内の `${...}` 補間数を数える。entity id 1 つだけだと
-        // discriminator を欠く silent drop 回帰 (Cluster H #16) に該当する。
-        const interpolations = template.match(/\$\{[^}]+\}/g) ?? [];
-        if (interpolations.length < 2) {
-          violations.push(template);
-        }
-      }
-
-      expect(
-        violations,
-        `reservation-emails.ts に idempotencyKey が entity id 単独 (\`prefix/\${id}\` 形式) の sender が残っています: ${violations.join(", ")}. 同一予約の短時間内の再送 (SUPER_ADMIN restore, PENDING→CONFIRMED flip, etc.) で Resend が invalid_idempotent_request を返し silent drop します。icsSequence / newStatus / action / batchNonce / refundId 等の monotonic discriminator を追加してください (Cluster H #16 再発防止)。`,
-      ).toEqual([]);
-    });
-  });
+  // reservation-emails.ts idempotencyKey drift gate (Cluster H #16) は
+  // __tests__/unit/architecture/reservation-email-idempotency.test.ts に移動
+  // （sender ごとの slice-until-next-sender 方式に強化。旧ファイル全体
+  // matchAll 版は sender と idempotencyKey の対応付けが甘く、実質検査に
+  // なっていなかったため削除済み）。
 
   describe("reservation overlap SSoT (shared/domain 全域)", () => {
     // `checkSpaceOverlap` (Reservation + Event 両方の overlap をチェックする関数、
@@ -3106,68 +3052,11 @@ describe("architecture boundaries", () => {
     });
   });
 
-  describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制する (OAUTH-BETTER-AUTH-01 再発防止)", () => {
-    // MypageAuthGate は Server Component 描画層のみカバー。Server Action
-    // (mypage / claim / session-owner cancel) は独立の request context のため、
-    // getCustomerByUserId で解決した customer に対し assertCustomerActive を
-    // 呼ばない限り、停止/BLACKLIST 顧客の書込を通してしまう。
-    // 各 Server Action で customer.id 解決直後に assertCustomerActive を呼ぶこと
-    // を drift gate として強制する。
-    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive 系 gate も呼ぶ", () => {
-      const targets = collectSourceFiles(PUBLIC_APP_ROOT).filter((file) => {
-        // Server Action = `"use server"` directive を含むファイル。
-        if (!/(?:^|[\\/])[^\\/]+\.ts$/u.test(file)) return false;
-        const source = readFileSync(file, "utf8");
-        if (!/^\s*["']use server["']/mu.test(source)) return false;
-        return /\bgetCustomerByUserId\b/u.test(source);
-      });
-
-      // 存在確認: gate が 0 件と誤検知するのを防ぐため、少なくとも 1 ファイル
-      // が対象 pattern に該当していることを確認する。
-      expect(targets.length).toBeGreaterThan(0);
-
-      const offenders = targets
-        .filter((file) => {
-          const source = readFileSync(file, "utf8");
-          // guest-token 経路は assertGuestTokenCustomerGates が active (+ 任意で再同意) を内包。
-          return (
-            !/\bassertCustomerActive\b/u.test(source) &&
-            !/\bassertGuestTokenCustomerGates\b/u.test(source)
-          );
-        })
-        .map((file) => relative(ROOT, file));
-
-      expect(
-        offenders,
-        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive または assertGuestTokenCustomerGates を呼ぶこと (OAUTH-BETTER-AUTH-01)。`,
-      ).toEqual([]);
-    });
-
-    // claim/reservation, claim/event-registration は ensureCustomerLinked から
-    // 直接 customer を得るため getCustomerByUserId を呼ばない。個別に強制する。
-    test("(public)/claim/**/_actions/*.ts は assertCustomerActive を呼ぶ", () => {
-      const CLAIM_ACTION_FILES = [
-        join(PUBLIC_APP_ROOT, "claim", "reservation", "_actions", "claim.ts"),
-        join(
-          PUBLIC_APP_ROOT,
-          "claim",
-          "event-registration",
-          "_actions",
-          "claim.ts",
-        ),
-      ];
-      const offenders = CLAIM_ACTION_FILES.filter((file) => {
-        expect(existsSync(file)).toBe(true);
-        const source = readFileSync(file, "utf8");
-        return !/\bassertCustomerActive\b/u.test(source);
-      }).map((file) => relative(ROOT, file));
-
-      expect(
-        offenders,
-        `(public)/claim/**/_actions/*.ts で assertCustomerActive の呼出が漏れています (OAUTH-BETTER-AUTH-01)。ensureCustomerLinked 直後に呼ぶこと。`,
-      ).toEqual([]);
-    });
-  });
+  // Customer.isActive / BLACKLIST gate (OAUTH-BETTER-AUTH-01) は
+  // __tests__/unit/architecture/assert-customer-active-server-actions.test.ts
+  // に移動（AST で exported async function 単位に判定するよう強化。旧
+  // ファイル単位 grep 版は `.tsx` を対象外にする filter バグと、同一ファイル内
+  // 複数関数を区別できない穴を持っていたため削除済み）。
 
   describe("ReservationSeries キャッシュ無効化の SSoT (CRITIC-5 再発防止)", () => {
     // `invalidateReservationCaches(reservationId, customerId, ...)` の第一引数
