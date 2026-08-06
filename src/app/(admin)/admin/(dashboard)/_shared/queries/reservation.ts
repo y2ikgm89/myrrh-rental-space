@@ -4,6 +4,7 @@ import type {
   PaymentStatus,
   TaxRateType,
   CustomerType,
+  CancelledBy,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
@@ -50,7 +51,7 @@ export type ReservationWithRelations = {
   paidAt: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;
-  cancelledByType: string | null;
+  cancelledByType: CancelledBy | null;
   guestLastName: string | null;
   guestFirstName: string | null;
   guestEmail: string | null;

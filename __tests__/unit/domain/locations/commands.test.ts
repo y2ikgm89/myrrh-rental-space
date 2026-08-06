@@ -127,7 +127,6 @@ const VALID_FORM_DATA = {
     { url: "https://media.example.com/locations/image2.jpg" },
   ],
   businessHours: VALID_BUSINESS_HOURS,
-  specialHolidays: null,
   latitude: null,
   longitude: null,
   googleBusinessPlaceId: null,

@@ -16,6 +16,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import { CancelledBy } from "@/shared/lib/validations/enums/prisma-types";
+
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
   process.env["DATABASE_URL"] = TEST_DB_URL;
@@ -121,7 +123,10 @@ async function createReservation(params: {
       guestFirstName: "太郎",
       guestEmail: `guest-${crypto.randomUUID()}@example.com`,
       ...(params.status === "CANCELLED"
-        ? { cancelledAt: new Date(), cancelledByType: "CUSTOMER" }
+        ? {
+            cancelledAt: new Date(),
+            cancelledByType: CancelledBy.CUSTOMER_MYPAGE,
+          }
         : {}),
     },
     select: { id: true },

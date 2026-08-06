@@ -185,18 +185,34 @@ describeMaybe("Event online format (integration)", () => {
 
   describe("DB CHECK 制約 event_online_meeting_url_required", () => {
     test("CHECK: ONLINE + MANUAL + meetingUrl null → DB reject", async () => {
-      // 注意: `expect(promise).rejects.*` は実 DB の複数 await を経て解決する
-      // Promise（Prisma の `PrismaPromise`）に対して機能しない（bun 1.3.14 実測、
-      // `blacklist-guard.test.ts` と同じ既知の問題）。明示的な try/catch で検証する。
+      // `events_schedule_integrity_check` が commit 時に slot 数を検証するため、
+      // 生の `prisma.event.create` だけでは CHECK 以前に別理由で落ちうる。
+      // event + slot を同一 tx で作りつつ meetingUrl 欠落で CHECK を狙う。
       let thrown: unknown = null;
       try {
-        await prisma.event.create({
-          data: {
-            ...baseEventData("check-violation"),
-            format: EVENT_FORMAT.ONLINE,
-            meetingProvider: MEETING_PROVIDER.MANUAL,
-            meetingUrl: null,
-          },
+        await createEventWithSlotAndTicket({
+          ...baseEventData("check-violation"),
+          format: EVENT_FORMAT.ONLINE,
+          meetingProvider: MEETING_PROVIDER.MANUAL,
+          meetingUrl: null,
+        });
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain(
+        "event_online_meeting_url_required",
+      );
+    });
+
+    test("CHECK: ONLINE + MANUAL + meetingUrl 空文字 → DB reject", async () => {
+      let thrown: unknown = null;
+      try {
+        await createEventWithSlotAndTicket({
+          ...baseEventData("check-violation-empty-url"),
+          format: EVENT_FORMAT.ONLINE,
+          meetingProvider: MEETING_PROVIDER.MANUAL,
+          meetingUrl: "",
         });
       } catch (err) {
         thrown = err;
