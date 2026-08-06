@@ -76,13 +76,6 @@ function toLocationData(data: LocationFormData) {
     imageUrl: data.imageUrl,
     imageUrls: data.imageUrls.map((image) => image.url),
     businessHours: businessHoursToJson(data.businessHours ?? null),
-    specialHolidays:
-      data.specialHolidays && data.specialHolidays.length > 0
-        ? asPrismaInputJsonValue(
-            data.specialHolidays,
-            "specialHolidays が不正です",
-          )
-        : Prisma.DbNull,
     latitude: data.latitude ?? null,
     longitude: data.longitude ?? null,
     googleBusinessPlaceId: data.googleBusinessPlaceId || null,

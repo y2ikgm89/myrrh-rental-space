@@ -41,7 +41,7 @@ const BASE_LOCATION: LocationForSeo = {
   buildingName: "本館ビル",
   imageUrl: "/images/honkan.jpg",
   businessHours: null,
-  specialHolidays: null,
+  blockedDates: [],
   amenities: null,
   latitude: 35.6595,
   longitude: 139.7004,

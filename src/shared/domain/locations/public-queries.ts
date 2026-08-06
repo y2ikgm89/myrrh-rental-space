@@ -119,7 +119,11 @@ export type LocationForAccess = {
   readonly amenities: unknown;
   readonly imageUrl: string;
   readonly businessHours: unknown;
-  readonly specialHolidays: unknown;
+  /** `toPlainArray` を通るので Date ではなく直列化済みの文字列で出る。 */
+  readonly blockedDates: readonly {
+    readonly startDate: string;
+    readonly endDate: string;
+  }[];
   readonly phoneNumber: string | null;
   readonly email: string | null;
   readonly latitude: number | null;
@@ -164,7 +168,10 @@ export async function getPublishedLocationsForAccess(
           amenities: true,
           imageUrl: true,
           businessHours: true,
-          specialHolidays: true,
+          blockedDates: {
+            select: { startDate: true, endDate: true },
+            orderBy: { startDate: "asc" },
+          },
           phoneNumber: true,
           email: true,
           latitude: true,
@@ -216,7 +223,11 @@ export type LocationForSeo = {
   readonly paymentAccepted: string | null;
   readonly imageUrl: string;
   readonly businessHours: unknown;
-  readonly specialHolidays: unknown;
+  /** `toPlainArray` を通るので Date ではなく直列化済みの文字列で出る。 */
+  readonly blockedDates: readonly {
+    readonly startDate: string;
+    readonly endDate: string;
+  }[];
   readonly amenities: unknown;
 };
 
@@ -258,7 +269,10 @@ export async function getPublishedLocationsForSeo(
           paymentAccepted: true,
           imageUrl: true,
           businessHours: true,
-          specialHolidays: true,
+          blockedDates: {
+            select: { startDate: true, endDate: true },
+            orderBy: { startDate: "asc" },
+          },
           amenities: true,
         },
       }),

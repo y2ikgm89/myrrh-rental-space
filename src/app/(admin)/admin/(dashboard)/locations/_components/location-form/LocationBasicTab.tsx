@@ -49,8 +49,6 @@ export function LocationBasicTab({
   setIsPublished,
   businessHours,
   setBusinessHours,
-  specialHolidays,
-  setSpecialHolidays,
   accessLinesList,
   imageUrlsList,
   accessLinesDndContextId,
@@ -370,8 +368,6 @@ export function LocationBasicTab({
       <LocationBusinessHoursCard
         businessHours={businessHours}
         onBusinessHoursChange={setBusinessHours}
-        specialHolidays={specialHolidays}
-        onSpecialHolidaysChange={setSpecialHolidays}
         disabled={isPending}
       />
 

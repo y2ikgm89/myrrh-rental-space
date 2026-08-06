@@ -10,7 +10,6 @@ import type {
 import {
   parseBusinessHours,
   parseStringArray,
-  parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
 import { paginate } from "@/shared/lib/pagination";
 
@@ -42,7 +41,6 @@ function formatLocation(location: {
   imageUrl: string;
   imageUrls: Prisma.JsonValue | null;
   businessHours: Prisma.JsonValue | null;
-  specialHolidays: Prisma.JsonValue | null;
   latitude: number | null;
   longitude: number | null;
   googleBusinessPlaceId: string | null;
@@ -81,7 +79,6 @@ function formatLocation(location: {
     imageUrl: location.imageUrl,
     imageUrls: parseStringArray(location.imageUrls),
     businessHours: parseBusinessHours(location.businessHours),
-    specialHolidays: parseStringArrayOrNull(location.specialHolidays),
     latitude: location.latitude,
     longitude: location.longitude,
     googleBusinessPlaceId: location.googleBusinessPlaceId,
@@ -122,7 +119,6 @@ const LOCATION_FULL_SELECT = {
   imageUrl: true,
   imageUrls: true,
   businessHours: true,
-  specialHolidays: true,
   latitude: true,
   longitude: true,
   googleBusinessPlaceId: true,
