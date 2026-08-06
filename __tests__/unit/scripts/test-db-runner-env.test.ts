@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  assertRequiredTestDatabaseUrl,
+  resolveTestDatabaseUrlForRunner,
   buildSerialDbTestSet,
   fileContentNeedsSerialDbExecution,
   findSelectedSerialDbTests,
@@ -25,15 +25,15 @@ describe("test DB runner env", () => {
 
   test("allows non-DB test selections without TEST_DATABASE_URL", () => {
     expect(
-      assertRequiredTestDatabaseUrl({
+      resolveTestDatabaseUrlForRunner({
         selectedSerialDbTests: [],
         testDatabaseUrl: undefined,
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({});
   });
 
   test("uses docker-compose test-db default when selected serial DB tests lack TEST_DATABASE_URL", () => {
-    const result = assertRequiredTestDatabaseUrl({
+    const result = resolveTestDatabaseUrlForRunner({
       selectedSerialDbTests: [
         "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
       ],
@@ -41,7 +41,6 @@ describe("test DB runner env", () => {
     });
 
     expect(result).toEqual({
-      ok: true,
       url: "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
       source: "default-local",
     });
@@ -49,7 +48,7 @@ describe("test DB runner env", () => {
 
   test("allows selected serial DB tests when TEST_DATABASE_URL is set", () => {
     expect(
-      assertRequiredTestDatabaseUrl({
+      resolveTestDatabaseUrlForRunner({
         selectedSerialDbTests: [
           "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
         ],
@@ -57,7 +56,6 @@ describe("test DB runner env", () => {
           "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       }),
     ).toEqual({
-      ok: true,
       url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       source: "env",
     });

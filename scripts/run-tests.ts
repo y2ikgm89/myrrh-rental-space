@@ -47,9 +47,9 @@
 import pLimit from "p-limit";
 import { resolveTestConcurrency } from "./test-runner-concurrency";
 import {
-  assertRequiredTestDatabaseUrl,
   findSelectedSerialDbTests,
   isSerialDbTest,
+  resolveTestDatabaseUrlForRunner,
 } from "./test-db-runner-env";
 
 interface FileResult {
@@ -103,17 +103,13 @@ for (const arg of args) {
 files.sort();
 
 const selectedSerialDbTests = findSelectedSerialDbTests(files);
-const testDatabaseUrlCheck = assertRequiredTestDatabaseUrl({
+const testDatabaseUrl = resolveTestDatabaseUrlForRunner({
   selectedSerialDbTests,
   testDatabaseUrl: process.env["TEST_DATABASE_URL"],
 });
-if (!testDatabaseUrlCheck.ok) {
-  console.error(testDatabaseUrlCheck.message);
-  process.exit(1);
-}
-if (testDatabaseUrlCheck.url !== undefined) {
-  process.env["TEST_DATABASE_URL"] = testDatabaseUrlCheck.url;
-  if (testDatabaseUrlCheck.source === "default-local") {
+if (testDatabaseUrl.url !== undefined) {
+  process.env["TEST_DATABASE_URL"] = testDatabaseUrl.url;
+  if (testDatabaseUrl.source === "default-local") {
     console.info(
       "[run-tests] TEST_DATABASE_URL is not set; using docker-compose test-db default.",
     );

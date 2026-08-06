@@ -172,26 +172,23 @@ export async function run(argv: readonly string[]): Promise<number> {
   });
 
   try {
-    // 列は schema.prisma から外してあるので raw で読む。
-    // エイリアスも snake_case のままにする。camelCase の引用識別子を生 SQL に
-    // 書くと `raw-sql-column-names` gate が落ちる（出力名か列参照かを静的に
-    // 区別できないため。gate を緩めるより TS 側で受け直す）。
-    const rows = await prisma.$queryRaw<
-      { id: string; slug: string; special_holidays: unknown }[]
-    >`
-      SELECT id::text AS id, slug, special_holidays
-      FROM locations
-      WHERE special_holidays IS NOT NULL
-        AND jsonb_typeof(special_holidays) = 'array'
-        AND jsonb_array_length(special_holidays) > 0
-      ORDER BY slug
-    `;
+    // 列はまだ schema.prisma に残っている（P9 の DROP COLUMN まで）。
+    // client 経由で読めば raw SQL も `raw-sql-column-names` gate 回避も要らない。
+    const rows = await prisma.location.findMany({
+      select: { id: true, slug: true, specialHolidays: true },
+      orderBy: { slug: "asc" },
+    });
 
-    const locations: RawLocationHolidays[] = rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      specialHolidays: row.special_holidays,
-    }));
+    const locations: RawLocationHolidays[] = rows
+      .filter(
+        (row) =>
+          Array.isArray(row.specialHolidays) && row.specialHolidays.length > 0,
+      )
+      .map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        specialHolidays: row.specialHolidays,
+      }));
 
     const { rows: planned, skipped } = planBackfill(locations);
 

@@ -19,22 +19,27 @@ export function isSerialDbTest(file: string): boolean {
   return isSerialDbTestPath(file, SERIAL_DB_TESTS);
 }
 
-type TestDatabaseUrlCheckResult =
-  | { ok: true; url?: string; source?: "env" | "default-local" }
-  | { ok: false; message: string };
+type TestDatabaseUrlResolution = {
+  url?: string;
+  source?: "env" | "default-local";
+};
 
 export function findSelectedSerialDbTests(files: readonly string[]): string[] {
   return files.filter((file) => isSerialDbTest(file));
 }
 
-export function assertRequiredTestDatabaseUrl({
+/**
+ * 選択された serial DB テストがあるときだけ TEST_DATABASE_URL を解決する。
+ * 解決に失敗する経路は無い（未設定なら docker-compose test-db 既定値）。
+ */
+export function resolveTestDatabaseUrlForRunner({
   selectedSerialDbTests,
   testDatabaseUrl,
 }: {
   selectedSerialDbTests: readonly string[];
   testDatabaseUrl: string | undefined;
-}): TestDatabaseUrlCheckResult {
-  if (selectedSerialDbTests.length === 0) return { ok: true };
+}): TestDatabaseUrlResolution {
+  if (selectedSerialDbTests.length === 0) return {};
 
-  return { ok: true, ...resolveTestDatabaseUrl(testDatabaseUrl) };
+  return resolveTestDatabaseUrl(testDatabaseUrl);
 }
