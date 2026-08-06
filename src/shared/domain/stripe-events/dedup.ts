@@ -43,7 +43,7 @@ export async function claimStripeEventForProcessing(input: {
     });
     return "claimed";
   } catch (error) {
-    if (isPrismaUniqueConstraintError(error, "id")) {
+    if (isPrismaUniqueConstraintError(error, "StripeEvent.id")) {
       const existing = await prisma.stripeEvent.findUnique({
         where: { id: input.eventId },
         select: { processedAt: true },

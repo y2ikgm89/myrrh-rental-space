@@ -1,6 +1,6 @@
 /**
- * `isPrismaUniqueConstraintError(error, "field")` の第 2 引数が実在する Prisma field で
- * あることを schema.prisma と突き合わせる。
+ * `isPrismaUniqueConstraintError(error, "Model.field")` の第 2 引数が
+ * schema.prisma に実在する **モデル修飾付き** field であることを突き合わせる。
  *
  * ## なぜ要るのか
  *
@@ -15,24 +15,34 @@
  * （`payment-claim-orchestration.ts` / `stripe-refund-orchestration.ts`）が
  * 常に false を返す状態になり、**Stripe の webhook 再送が無限リトライになる**。
  *
- * 当時の検査体制で捕まえられなかった理由:
+ * ## 過去の vacuous 欠陥（今回潰す）
  *
- * | 検査 | なぜ素通りしたか |
- * | --- | --- |
- * | 型検査 | 引数は `string`。何を渡しても通る |
- * | 生 SQL ゲート | SQL リテラルしか見ない。エラーメタデータ経路は対象外 |
- * | 単体テスト | fixture に `fields: ["stripeRefundId"]` と旧名を焼いていた |
- * | 統合テスト | 返金の重複 INSERT を実際に起こす経路が無かった |
+ * 1. `collectColumns()` が field 名だけで畳み、同名列が複数モデルにあると後勝ち
+ * 2. 正規表現が「第 2 引数が StringLiteral」の形しか拾わず、定数・変数・改行を
+ *    **無言で母集団から落とす** → 未知 field ゼロで緑
  *
- * **「アプリ側は無変更で済む」という当時の判断が誤りだった**ことの再発防止として、
- * 物理名が絡む文字列引数を schema.prisma に結び付ける。
+ * AST で CallExpression を拾い、第 2 引数が StringLiteral でないものは違反。
+ * キーは `Model.field`。物理名一致は helper の snake_case 前提と突合する。
  */
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import {
+  createSourceFile,
+  forEachChild,
+  isCallExpression,
+  isIdentifier,
+  isStringLiteral,
+  ScriptKind,
+  ScriptTarget,
+  type Node,
+} from "typescript";
 
 import { readPrismaSchema } from "../../support/prisma-sources";
+
+const ROOT = join(import.meta.dir, "../../..");
+const SRC = join(ROOT, "src");
 
 const SCALAR_TYPES = new Set([
   "String",
@@ -46,10 +56,10 @@ const SCALAR_TYPES = new Set([
   "Bytes",
 ]);
 
-function walk(dir: string): string[] {
+function walkFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return walk(path);
+    if (entry.isDirectory()) return walkFiles(path);
     return /\.tsx?$/u.test(entry.name) ? [path] : [];
   });
 }
@@ -60,7 +70,7 @@ function toSnakeCase(name: string): string {
 
 const schema = readPrismaSchema();
 
-/** field 名 → 物理列名。同名 field が複数モデルにあっても物理名は一致する規約。 */
+/** `Model.field` → 物理列名。同名 field でもモデルが違えば別エントリ。 */
 function collectColumns(): Map<string, string> {
   const modelNames = new Set(
     [...schema.matchAll(/^model (\w+) \{/gmu)].map((m) => m[1] ?? ""),
@@ -70,9 +80,10 @@ function collectColumns(): Map<string, string> {
   );
   const out = new Map<string, string>();
 
-  for (const match of schema.matchAll(/^model \w+ \{([\s\S]*?)^\}/gmu)) {
-    const body = match[1];
-    if (body === undefined) continue;
+  for (const match of schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gmu)) {
+    const model = match[1];
+    const body = match[2];
+    if (model === undefined || body === undefined) continue;
     for (const line of body.split(/\r?\n/u)) {
       const column = /^ {2}(\w+)\s+(\w+)/u.exec(line);
       if (!column) continue;
@@ -80,7 +91,10 @@ function collectColumns(): Map<string, string> {
       if (field === undefined || type === undefined) continue;
       if (modelNames.has(type)) continue;
       if (!SCALAR_TYPES.has(type) && !enumNames.has(type)) continue;
-      out.set(field, /@map\("([^"]+)"\)/u.exec(line)?.[1] ?? field);
+      out.set(
+        `${model}.${field}`,
+        /@map\("([^"]+)"\)/u.exec(line)?.[1] ?? field,
+      );
     }
   }
   return out;
@@ -88,47 +102,97 @@ function collectColumns(): Map<string, string> {
 
 const columns = collectColumns();
 
-/** `isPrismaUniqueConstraintError(x, "field")` のリテラル第 2 引数を拾う。 */
-const CALL_WITH_LITERAL =
-  /isPrismaUniqueConstraintError\(\s*[^,()]+,\s*"([^"]+)"\s*\)/gu;
+type CallSite =
+  | {
+      readonly kind: "literal";
+      readonly file: string;
+      readonly target: string;
+    }
+  | {
+      readonly kind: "unresolved";
+      readonly file: string;
+    };
 
-type CallSite = { readonly file: string; readonly field: string };
+function collectCallSites(file: string): CallSite[] {
+  const text = readFileSync(file, "utf8");
+  const source = createSourceFile(
+    file,
+    text,
+    ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ScriptKind.TSX : ScriptKind.TS,
+  );
+  const rel = relative(ROOT, file).replaceAll("\\", "/");
+  const out: CallSite[] = [];
 
-const callSites: CallSite[] = walk("src").flatMap((file) =>
-  [...readFileSync(file, "utf8").matchAll(CALL_WITH_LITERAL)]
-    .map((m) => m[1])
-    .filter((field): field is string => field !== undefined)
-    .map((field) => ({ file: file.replaceAll("\\", "/"), field })),
+  const visit = (node: Node): void => {
+    if (
+      isCallExpression(node) &&
+      isIdentifier(node.expression) &&
+      node.expression.text === "isPrismaUniqueConstraintError"
+    ) {
+      const targetArg = node.arguments[1];
+      if (targetArg === undefined) {
+        // targetField 省略は任意 unique 検出。gate 対象外。
+      } else if (isStringLiteral(targetArg)) {
+        out.push({ kind: "literal", file: rel, target: targetArg.text });
+      } else {
+        out.push({ kind: "unresolved", file: rel });
+      }
+    }
+    forEachChild(node, visit);
+  };
+  forEachChild(source, visit);
+  return out;
+}
+
+const callSites = walkFiles(SRC).flatMap(collectCallSites);
+const literalSites = callSites.filter(
+  (site): site is Extract<CallSite, { kind: "literal" }> =>
+    site.kind === "literal",
 );
+const unresolvedSites = callSites.filter((site) => site.kind === "unresolved");
 
 describe("isPrismaUniqueConstraintError の target field", () => {
   test("走査が空振りしていない", () => {
-    // 呼び出しを拾えなくなると違反ゼロで緑になる。
-    // 実測: 呼び出し 8 箇所 / 全 970 列を field 名で畳んで 486 種。
     expect(callSites.length).toBeGreaterThan(5);
     expect(columns.size).toBeGreaterThan(300);
   });
 
-  test("すべて schema.prisma に実在する field を指している", () => {
-    const unknown = callSites
-      .filter((site) => !columns.has(site.field))
-      .map((site) => `${site.file}: "${site.field}" は schema.prisma に無い`);
+  test("AST で見つけた呼び出しはすべて StringLiteral 第 2 引数に解決できる", () => {
+    // 定数・変数・テンプレは母集団から黙って消えない。等式で vacuous を防ぐ。
+    expect(callSites.length).toBe(literalSites.length);
+    expect(unresolvedSites).toEqual([]);
+  });
+
+  test("すべて Model.field 形式で schema.prisma に実在する", () => {
+    const unknown = literalSites
+      .filter((site) => !columns.has(site.target))
+      .map(
+        (site) =>
+          `${site.file}: "${site.target}" は schema.prisma に無い（Model.field 必須）`,
+      );
     expect(unknown).toEqual([]);
   });
 
   test("物理列名が field 名の snake_case と一致する（helper の変換前提）", () => {
-    // helper は adapter-pg が返す物理列名を `snake_case(field)` で復元する。
-    // その前提が崩れた列を引数に取ると、判定が黙って false になる。
-    const mismatched = callSites
+    const mismatched = literalSites
       .filter((site) => {
-        const physical = columns.get(site.field);
-        return physical !== undefined && physical !== toSnakeCase(site.field);
+        const physical = columns.get(site.target);
+        const field = site.target.split(".")[1];
+        return (
+          physical !== undefined &&
+          field !== undefined &&
+          physical !== toSnakeCase(field)
+        );
       })
-      .map(
-        (site) =>
-          `${site.file}: "${site.field}" の物理名は "${columns.get(site.field)}" で、` +
-          `snake_case("${site.field}") = "${toSnakeCase(site.field)}" と一致しない`,
-      );
+      .map((site) => {
+        const field = site.target.split(".")[1] ?? "";
+        return (
+          `${site.file}: "${site.target}" の物理名は "${columns.get(site.target)}" で、` +
+          `snake_case("${field}") = "${toSnakeCase(field)}" と一致しない`
+        );
+      });
     expect(mismatched).toEqual([]);
   });
 });

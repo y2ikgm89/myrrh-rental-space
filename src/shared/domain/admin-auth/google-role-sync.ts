@@ -409,7 +409,7 @@ async function upsertEnabledDashboardUser(
 
     return toAdminAuthUser(created);
   } catch (error) {
-    if (!isPrismaUniqueConstraintError(error, "email")) {
+    if (!isPrismaUniqueConstraintError(error, "User.email")) {
       throw error;
     }
 

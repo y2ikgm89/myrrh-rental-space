@@ -22,7 +22,7 @@ mock.module("@/shared/lib/prisma-errors", () => ({
       "code" in error &&
       (error as { code: string }).code === "P2002"
     ) {
-      return field === undefined || field === "id";
+      return field === undefined || field === "StripeEvent.id";
     }
     return false;
   },

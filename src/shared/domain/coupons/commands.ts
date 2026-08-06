@@ -26,7 +26,7 @@ async function ensureCouponExists(
  * 事前 findUnique チェックは TOCTOU race を防げないため使わない。
  */
 function rethrowAsCouponCodeConflict(error: unknown): never {
-  if (isPrismaUniqueConstraintError(error, "code")) {
+  if (isPrismaUniqueConstraintError(error, "Coupon.code")) {
     throw new DomainError(
       "このクーポンコードは既に使用されています",
       "CONFLICT",

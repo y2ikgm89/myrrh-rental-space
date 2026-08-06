@@ -25,7 +25,8 @@ mock.module("@/shared/lib/prisma-errors", () => ({
   isPrismaUniqueConstraintError: (error: unknown, field: string) =>
     error instanceof Error &&
     error.message.includes("P2002") &&
-    error.message.includes(field),
+    (error.message.includes(field) ||
+      error.message.includes(field.split(".").at(-1) ?? field)),
 }));
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),

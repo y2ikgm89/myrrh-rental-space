@@ -1,5 +1,5 @@
 /**
- * 返金の重複 INSERT が `isPrismaUniqueConstraintError(err, "stripeRefundId")` で
+ * 返金の重複 INSERT が `isPrismaUniqueConstraintError(err, "Refund.stripeRefundId")` で
  * 検出できることを**実 DB に対して**確かめる。
  *
  * ## なぜ実 DB でなければならないのか
@@ -173,10 +173,10 @@ describeMaybe("返金の重複検出（実 DB）", () => {
     await prisma.$disconnect();
   });
 
-  test("同じ stripeRefundId の 2 回目の create を field 名で検出できる", async () => {
-    // **呼び出し側はアプリの語彙（Prisma field 名）で書く。**
+  test("同じ stripeRefundId の 2 回目の create を Model.field で検出できる", async () => {
+    // **呼び出し側はアプリの語彙（Model.field）で書く。**
     // 物理列名 `stripe_refund_id` への変換は helper の責務。
-    const observed = await detectDuplicate("stripeRefundId");
+    const observed = await detectDuplicate("Refund.stripeRefundId");
 
     // 「2 回目が落ちなかった」と「落ちたが検出できなかった」を取り違えない
     expect(observed.rawError).not.toBeNull();
@@ -184,7 +184,7 @@ describeMaybe("返金の重複検出（実 DB）", () => {
   }, 30_000);
 
   test("別 field を指定した場合は検出しない（silent skip を作らない）", async () => {
-    const observed = await detectDuplicate("reservationId");
+    const observed = await detectDuplicate("Refund.reservationId");
 
     expect(observed.rawError).not.toBeNull();
     expect(observed.detected).toBe(false);

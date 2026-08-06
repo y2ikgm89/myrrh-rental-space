@@ -272,7 +272,7 @@ export async function createRefundRecordIdempotent(
     await tx.refund.create({ data });
     await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${validatedSavepoint}`);
   } catch (error) {
-    if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) {
+    if (!isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")) {
       throw error;
     }
     await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${validatedSavepoint}`);
