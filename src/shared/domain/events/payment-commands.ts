@@ -6,6 +6,7 @@ import {
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { readStandardTaxRateUncached } from "@/shared/domain/settings/queries/tax-rate-snapshot";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   assertOnlinePaymentAvailable,
@@ -682,6 +683,10 @@ export async function recordManualEventPaymentCommand(data: {
     );
   }
 
+  // webhook 経路（`claimEventRegistrationAsPaid`）と同じく、決済確定の瞬間の
+  // 標準税率を刻む。読めなければ null のまま（発行側が設定へ落ちる）。
+  const taxRate = await readStandardTaxRateUncached();
+
   const claimed = await prisma.eventRegistration.updateMany({
     where: {
       id: data.registrationId,
@@ -692,6 +697,7 @@ export async function recordManualEventPaymentCommand(data: {
       paymentStatus: PaymentStatus.PAID,
       paidAmount: data.amount,
       paidAt: new Date(),
+      ...(taxRate !== null ? { taxRate } : {}),
     },
   });
   if (claimed.count === 0) {

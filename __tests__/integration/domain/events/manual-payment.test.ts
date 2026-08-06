@@ -167,6 +167,12 @@ describeMaybe("recordManualEventPaymentCommand", () => {
       expect(updated.paymentStatus).toBe("PAID");
       expect(updated.paidAmount).toBe(1000);
       expect(updated.paidAt).not.toBeNull();
+      // 決済確定の瞬間の標準税率を刻む（領収書の税率区分の根拠）。設定値と一致する
+      // ことまで見る — 定数を書くと、設定を変えたときにここだけ嘘になる。
+      const commerce = await prisma.settingsCommerce.findFirstOrThrow({
+        select: { taxStandardRate: true },
+      });
+      expect(updated.taxRate).toBe(commerce.taxStandardRate);
 
       const receipt = await prisma.receipt.findUnique({
         where: { eventRegistrationId: registrationId },

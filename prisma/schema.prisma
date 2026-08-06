@@ -2633,6 +2633,12 @@ model EventRegistration {
   // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
   paidAmount              Int?          @map("paid_amount")
+  /// 決済確定時点で適用されていた標準税率（%）。領収書の税率区分の根拠。
+  /// `paid_amount` は `ticket.price × quantity` で税率が関与しない（チケット価格は
+  /// 税込入力）ので、これは「決済に使った税率」ではなく「その取引の日の税率」。
+  /// null = 刻む前の行、または決済確定時に設定行を読めなかった行。読み手は
+  /// 設定から読み直す（`receipts/issue-core.ts`）。値域は DB CHECK で 0..100。
+  taxRate                 Int?          @map("tax_rate")
   paidAt                  DateTime?     @map("paid_at") @db.Timestamptz(6)
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)

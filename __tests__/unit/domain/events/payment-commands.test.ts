@@ -154,8 +154,16 @@ await installPrismaEnumsMock({
   PaymentStatus,
   RegistrationStatus,
 });
+// 決済確定時に標準税率を刻むための読み取り（`readStandardTaxRateUncached`）。
+// 無いと claim 系が TypeError で落ち、消費されなかった mock の戻り値が
+// 後続テストへずれ込む（実際にそうなった）。
+const mockCommerceFindFirst = mock(() =>
+  Promise.resolve({ taxStandardRate: 10 }),
+);
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
+    settingsCommerce: { findFirst: mockCommerceFindFirst },
     eventRegistration: {
       findUnique: mockRegFindUnique,
       findFirst: mockRegFindFirst,
