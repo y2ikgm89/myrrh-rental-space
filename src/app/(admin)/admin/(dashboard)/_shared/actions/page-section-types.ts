@@ -12,6 +12,11 @@ export type PageSectionData = {
   pageId: string;
   type: string;
   config: SectionConfig;
+  /**
+   * DB の設定が読めず既定値へ落ちた。編集画面はこの間 保存を止める
+   * （そのまま保存すると本物の設定が既定値で上書きされて復旧不能になる）。
+   */
+  configUnreadable: boolean;
   order: number;
   isActive: boolean;
   createdAt: Date;

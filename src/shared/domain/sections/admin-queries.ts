@@ -20,10 +20,23 @@ const ADMIN_SECTION_SELECT = {
   updatedAt: true,
 } as const satisfies Prisma.SectionSelect;
 
-function parseSectionConfig(type: string, config: unknown): SectionConfig {
+/**
+ * 保存されている設定を読む。**読めなかったことを潰さない。**
+ *
+ * 既定値へ差し替えるだけだと、編集画面は初期値を表示し、管理者が無関係な 1 項目を
+ * 直して保存した時点で**本物の設定が既定値で上書きされて復旧不能**になる。
+ * 顧客からは「昨日まであった案内文が消えた」「トップの画像が変わった」に見える。
+ *
+ * 公開描画は今までどおり既定値に落ちてよい（描けないより出す方がよい）。
+ * 差し替えたことを `unreadable` で伝え、**編集経路だけが保存を止める**。
+ */
+function parseSectionConfig(
+  type: string,
+  config: unknown,
+): { readonly config: SectionConfig; readonly unreadable: boolean } {
   const result = validateSectionConfig(type, config);
   if (result.success) {
-    return result.data;
+    return { config: result.data, unreadable: false };
   }
 
   const fallback =
@@ -32,7 +45,7 @@ function parseSectionConfig(type: string, config: unknown): SectionConfig {
   if (!fallback) {
     throw new Error("セクション設定の初期化に失敗しました");
   }
-  return fallback;
+  return { config: fallback, unreadable: true };
 }
 
 function toSectionData(section: {
@@ -45,9 +58,12 @@ function toSectionData(section: {
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const parsed = parseSectionConfig(section.type, section.config);
   return {
     ...section,
-    config: parseSectionConfig(section.type, section.config),
+    config: parsed.config,
+    /** DB の設定が読めず既定値へ落ちた（編集画面はこの間 保存を止める） */
+    configUnreadable: parsed.unreadable,
   };
 }
 

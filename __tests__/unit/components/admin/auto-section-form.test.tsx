@@ -181,6 +181,7 @@ function buildFeaturesSection(): PageSectionData {
     type: "features",
     // items 配列は空 (default []) — AutoArrayField が「追加」ボタンのみ描画
     config: featuresConfigSchema.parse({}),
+    configUnreadable: false,
     order: 0,
     isActive: true,
     createdAt: new Date("2024-01-01T00:00:00.000Z"),
