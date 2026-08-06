@@ -1,7 +1,8 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
+import { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
+import { DomainError } from "@/shared/domain/domain-error";
 import {
   parseDataRetentionConfig,
   type DataRetentionConfig,
@@ -261,12 +262,6 @@ export async function purgeExpiredInquiries(
   return result.count;
 }
 
-const ANONYMIZED_EMAIL_DOMAIN = "myrrh-anon.invalid";
-
-function buildAnonymizedEmail(): string {
-  return `anonymized-${randomUUID()}@${ANONYMIZED_EMAIL_DOMAIN}`;
-}
-
 /**
  * status=INACTIVE かつ最終アクティビティが `months` を経過した Customer の PII を匿名化する。
  *
@@ -297,16 +292,24 @@ function buildAnonymizedEmail(): string {
  * - stale-high (`lastReservationAt < cutoff` だが実は recent 予約あり): **保持**
  * - fresh installed customer (createdAt >= cutoff): 保持
  *
- * ## 匿名化仕様
+ * ## 匿名化は `anonymizeCustomerCommand` に委譲する
  *
- * - email / emailCanonical は non-routable な `anonymized-<uuid>@myrrh-anon.invalid` に置換
- *   （UNIQUE 制約を破壊しないため per-record で uuid を発行、複数レコードで衝突しない）
- * - phoneNumber / postalCode / prefecture / city / streetAddress / building は NULL 化
- * - lastName / firstName は保持（予約明細の表示用。氏名単体では容易に個人特定できない）
- * - 二度目以降の実行で再匿名化しないよう `email NOT LIKE 'anonymized-%'` で除外
+ * 以前はここに**独自の update** を書いていた。同じ「顧客を匿名化する」なのに
+ * 契約が食い違っていた:
+ *
+ * - `anonymizedAt` / `anonymizedReason` を刻まなかった（＝匿名化済みかどうかを
+ *   他の経路から判定できず、冪等判定を `email NOT LIKE 'anonymized-%'` という
+ *   **placeholder の綴り**に頼っていた）
+ * - `lastNameKana` / `firstNameKana` / `companyName` / `notes` / `isActive` /
+ *   `marketingOptIn` / `phoneContactOptIn` / `userId` を残した
+ * - Better Auth の User を消さず、連携 Inquiry も匿名化しなかった
+ * - placeholder の綴りも `anonymized-<uuid>@myrrh-anon.invalid` と
+ *   `deleted+<id>@anonymized.local` で 2 種類あった
+ *
+ * **同じ意味の操作を 2 本持つと、必ず片方だけ育つ。** 実装を 1 本にした。
  *
  * Customer は他テーブルとの参照が多く（Reservation.customerId 等）、完全削除は
- * attribution 破壊を招く。PII 匿名化で個情法 22 条の目的達成しつつ会計参照を保持する。
+ * attribution 破壊を招く。PII 匿名化で個情法 22 条の目的を達成しつつ会計参照を保持する。
  */
 export async function anonymizeInactiveCustomers(
   now: Date,
@@ -317,7 +320,9 @@ export async function anonymizeInactiveCustomers(
   const targets = await prisma.customer.findMany({
     where: {
       status: CustomerStatus.INACTIVE,
-      email: { not: { startsWith: "anonymized-" } },
+      // 冪等判定は placeholder の綴りではなく証跡列で行う。綴りに頼ると、
+      // placeholder の形式を変えた瞬間に全件が再匿名化対象になる。
+      anonymizedAt: null,
       createdAt: { lt: cutoff },
       // 予約の実履歴を relation filter で直接問う (cached stat は使わない)。
       // cutoff より新しい endTime を持つ予約が 1 件でもある customer は「dormant」ではない。
@@ -328,25 +333,20 @@ export async function anonymizeInactiveCustomers(
 
   if (targets.length === 0) return 0;
 
-  // per-record で UUID を発行するため updateMany を使えない（同一 email になり
-  // emailCanonical UNIQUE 違反）。逐次 update で個別匿名化する。
   let updated = 0;
   for (const target of targets) {
-    const anonymizedEmail = buildAnonymizedEmail();
-    await prisma.customer.update({
-      where: { id: target.id },
-      data: {
-        email: anonymizedEmail,
-        emailCanonical: anonymizedEmail.toLowerCase(),
-        phoneNumber: null,
-        postalCode: null,
-        prefecture: null,
-        city: null,
-        streetAddress: null,
-        building: null,
-      },
-    });
-    updated += 1;
+    try {
+      await anonymizeCustomerCommand({
+        customerId: target.id,
+        reason: "data-retention",
+      });
+      updated += 1;
+    } catch (error) {
+      // 直前の findMany から実行までの間に別経路が匿名化した場合は CONFLICT。
+      // cron 全体を止める理由にはならないので、その 1 件だけ飛ばす。
+      if (error instanceof DomainError && error.code === "CONFLICT") continue;
+      throw error;
+    }
   }
   return updated;
 }
