@@ -9,6 +9,7 @@ import {
   claimNextSerialNo,
   type ReceiptTx,
 } from "@/shared/domain/receipts/serial";
+import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type ReceiptIssueOptions = {
@@ -155,7 +156,22 @@ async function resolveEventRegistrationIssue(
   const amount = registration.paidAmount ?? 0;
   assertPositiveAmount(amount, "申込");
 
-  const taxRate = 10;
+  // 税率は設定から読む。**直書きしない。**
+  //
+  // Receipt は append-only の証跡で、発行時に焼いた税率がそのまま適格請求書の
+  // 税率区分・税額欄になる。ここに 10 を直書きしていたため、管理画面で標準税率を
+  // 8% や 12% に変えても、イベント参加費の領収書だけが「10% 適用」と印字し続けていた
+  // （予約側は `reservation.taxRate` のスナップショットを使っていたので影響なし）。
+  // 出た紙は後から直せない。
+  //
+  // `getPublicTaxSettings()` は `"use cache"` の読み取りなので使わない —
+  // 証跡に焼く値を、キャッシュが古いかもしれない経路から取らない。
+  // 予約の書込経路（`reservations/customer-commands.ts`）と同じく tx 内で直に読む。
+  const commerce = await tx.settingsCommerce.findFirst({
+    select: { taxStandardRate: true },
+  });
+  const taxRate =
+    commerce?.taxStandardRate ?? DEFAULT_TAX_SETTINGS.standardRate;
   const taxExcludedAmount = Math.floor((amount * 100) / (100 + taxRate));
   const taxAmount = amount - taxExcludedAmount;
 
