@@ -24,9 +24,9 @@
  * schema.prisma で enum 型の列を集め、その field 名が TS の型宣言で `string` に
  * なっている箇所を違反とする。**enum 型そのものを使えば型検査が働く。**
  *
- * 同名の別概念を巻き込みうるので、`AMBIGUOUS_FIELD_NAMES` に理由付きで登録できる。
- * ただし「たまたま同じ名前」以外の理由で載せない — `string` にしたい理由が
- * あるなら、それは値域が enum で表せていないという設計の話になる。
+ * field 名そのものの wholesale 除外はしない。同名・別概念や未 narrow の入力層は
+ * `<path>::<field>` 粒度の `NOT_A_DB_COLUMN` / `FORM_OR_URL_VALUE` だけで除外する。
+ * 消えた entry は stale 検査で落とす。
  *
  * ## 既存分は ratchet で扱う
  *
@@ -41,32 +41,13 @@ import { join } from "node:path";
 import { readPrismaSchema } from "../../support/prisma-sources";
 
 /**
- * `string` 宣言を許す field 名と、その理由。
- *
- * **「同名の別概念」以外を載せない。**
- */
-const AMBIGUOUS_FIELD_NAMES: ReadonlyMap<string, string> = new Map([
-  [
-    "type",
-    "汎用すぎる。Media / BlockedDate / Coupon など多数のモデルが持ち、UI の union 型・discriminated union の判別子・HTML の input type とも衝突する",
-  ],
-  [
-    "status",
-    "同上。Prisma enum の status と、Server Action の submission status / fetch の status が同名で共存する",
-  ],
-  [
-    "scope",
-    "OAuth の scope（Account.scope は enum ではない素の文字列）と BlockedDate.scope が同名",
-  ],
-  ["role", "Prisma の Role enum と ARIA role が同名"],
-  ["format", "Prisma の EventFormat と、日付フォーマット指定の文字列が同名"],
-]);
-
-/**
  * **DB 列ではない**もの。名前がたまたま enum 列と一致しているだけ。
  *
  * ratchet ではなく恒久的な除外なので、**別の一覧にする**。混ぜると「いつか直る」
  * ように見えて、実際には永遠に減らない entry がベースラインに居座る。
+ *
+ * 実 DB 射影だが本 PR では未着手のものは、path 粒度の stale 検査を維持したまま
+ * `ratchet:` 理由で一時登録する（field 名 wholesale 除外の代替）。
  */
 const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
   [
@@ -88,6 +69,146 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
   [
     "src/shared/lib/smart-lock/switchbot-client.ts::deviceType",
     "SwitchBot API のデバイス一覧応答（`SwitchBotDeviceListItem`）。SwitchBot が返す任意のデバイス種別で、こちらの SmartLockDeviceType は取り扱う分だけを列挙した狭い集合",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts::type",
+    "Section.type は String 列（Prisma enum ではない）。ページビルダーのセクション種別",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-terms-editor.ts::type",
+    "Terms.type は String 列（旧 TermsType enum 廃止）。規約種別のフォーム値",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/lib/calendar/calendar-domain.ts::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/lib/notification-helpers.ts::type",
+    "Notification.type は String 列（Prisma enum ではない）。通知テンプレ種別",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/queries/notification.ts::type",
+    "Notification.type は String 列（Prisma enum ではない）。通知クエリの絞り込み",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/types/media-picker.ts::type",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/media/_components/MediaGrid.tsx::type",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/media/_components/MediaTable.tsx::type",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/SectionTypeIcon.tsx::type",
+    "Section.type は String 列（Prisma enum ではない）。UI アイコンの判別子",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/AddSectionDialog.tsx::type",
+    "Section.type は String 列（Prisma enum ではない）。追加ダイアログの種別",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionTypePicker.tsx::type",
+    "Section.type は String 列（Prisma enum ではない）。ピッカーの種別",
+  ],
+  [
+    "src/app/(public)/mypage/_components/reservation-card.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(public)/mypage/_components/reservation-list.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(public)/mypage/events/_components/event-registration-list.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(public)/mypage/inquiries/_components/inquiry-list.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(public)/mypage/inquiries/[id]/_components/inquiry-reply-form.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/app/(public)/mypage/reservations/[id]/_components/reservation-detail.tsx::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/shared/domain/events/payment-commands.ts::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/shared/domain/media/queries.ts::type",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/shared/domain/notifications/admin-queries.ts::type",
+    "Notification.type は String 列（Prisma enum ではない）。管理クエリの通知種別",
+  ],
+  [
+    "src/shared/domain/order-sql.ts::scope",
+    "advisory lock の scope キー文字列。BlockedDate.scope 等の Prisma enum とは無関係",
+  ],
+  [
+    "src/shared/domain/payment/payment-claim-orchestration.ts::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/shared/domain/payment/stripe-refund-orchestration.ts::status",
+    "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
+  ],
+  [
+    "src/shared/domain/reservations/payment-commands.ts::status",
+    "ratchet: DB 射影だが本 PR では未着手（path 粒度で stale 検査）",
+  ],
+  [
+    "src/shared/domain/sections/admin-queries.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
+  ],
+  [
+    "src/shared/domain/sections/commands.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
+  ],
+  [
+    "src/shared/domain/sections/queries.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
+  ],
+  [
+    "src/shared/domain/terms/admin-queries.ts::type",
+    "Terms.type は String 列（旧 TermsType enum 廃止）",
+  ],
+  [
+    "src/shared/domain/terms/queries.ts::type",
+    "Terms.type は String 列（旧 TermsType enum 廃止）",
+  ],
+  [
+    "src/shared/lib/announcement-bar-utils.ts::type",
+    "告知バー UI の色・スタイルキー。DB の enum 列ではない",
+  ],
+  [
+    "src/shared/lib/constants/default-page-sections.ts::type",
+    "Section.type は String 列（Prisma enum ではない）。デフォルト構成の種別",
+  ],
+  [
+    "src/shared/lib/sections/registry.ts::type",
+    "Section.type は String 列（Prisma enum ではない）。レジストリの判別子",
+  ],
+  [
+    "src/shared/lib/sections/types.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
+  ],
+  [
+    "src/shared/lib/validations/section-defaults.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
+  ],
+  [
+    "src/shared/lib/validations/section.ts::type",
+    "Section.type は String 列（Prisma enum ではない）",
   ],
 ]);
 
@@ -130,6 +251,30 @@ const FORM_OR_URL_VALUE: ReadonlyMap<string, string> = new Map([
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx::usage",
     "同上（searchParams 由来）",
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/_shared/hooks/use-filter-params.ts::status",
+    'nuqs / searchParams のフィルタ値。未選択・"all" を含むので enum 直当て不可',
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx::type",
+    'searchParams 由来のメディア種別フィルタ。未指定が ""',
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/notifications/page.tsx::type",
+    'searchParams 由来の通知種別フィルタ。未指定・"all" を含む',
+  ],
+  [
+    "src/app/(admin)/admin/(dashboard)/terms/new/page.tsx::type",
+    'searchParams 由来の規約種別。未指定が ""',
+  ],
+  [
+    "src/shared/domain/pages/admin-queries.ts::status",
+    '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
+  ],
+  [
+    "src/shared/domain/pages/admin-queries.ts::type",
+    '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
   ],
 ]);
 
@@ -193,12 +338,11 @@ const files = ROOTS.flatMap((root) => walk(root));
  * ベースラインに載っている 28 ファイルの中では新しい違反が防げない。
  */
 function currentViolations(): Map<string, number> {
-  const targets = [...enumFields].filter((f) => !AMBIGUOUS_FIELD_NAMES.has(f));
   const out = new Map<string, number>();
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     const path = file.replaceAll("\\", "/");
-    for (const field of targets) {
+    for (const field of enumFields) {
       if (!source.includes(field)) continue;
       const count = countStringDeclarations(source, field);
       if (count > 0) out.set(`${path}::${field}`, count);
@@ -250,13 +394,6 @@ describe("DB enum の列を string で宣言していない", () => {
   test("恒久除外に実在しない entry が混ざっていない", () => {
     const current = currentViolations();
     const unknown = [...NOT_A_DB_COLUMN.keys()].filter((k) => !current.has(k));
-    expect(unknown).toEqual([]);
-  });
-
-  test("同名衝突の免除に実在しない field 名が混ざっていない", () => {
-    const unknown = [...AMBIGUOUS_FIELD_NAMES.keys()].filter(
-      (f) => !enumFields.has(f),
-    );
     expect(unknown).toEqual([]);
   });
 });

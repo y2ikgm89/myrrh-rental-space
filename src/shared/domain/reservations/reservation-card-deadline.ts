@@ -1,13 +1,18 @@
 import { isWithinDeadline } from "./deadline";
 import { isReservationEditableForCustomerSelfServe } from "./edit-eligibility";
-import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ReservationStatus,
+  type PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 /** 一覧カードのキャンセル表示と同じステータス集合（詳細の CANCELLABLE と一致） */
-const MODIFIABLE_STATUSES = new Set(["PENDING", "CONFIRMED"]);
+const MODIFIABLE_STATUSES = new Set<ReservationStatus>([
+  ReservationStatus.PENDING,
+  ReservationStatus.CONFIRMED,
+]);
 
 export interface ReservationCardDeadlineInput {
-  readonly status: string;
+  readonly status: ReservationStatus;
   readonly startTime: Date;
   readonly paymentStatus: PaymentStatus;
   readonly couponDiscountAmount?: number | null;
@@ -35,7 +40,7 @@ export function getReservationCardDeadlineState(
 } {
   const isModifiable = MODIFIABLE_STATUSES.has(reservation.status);
   const canModify = isReservationEditableForCustomerSelfServe({
-    status: reservation.status as ReservationStatus,
+    status: reservation.status,
     paymentStatus: reservation.paymentStatus,
     discountAmounts: {
       ...(reservation.couponDiscountAmount !== undefined

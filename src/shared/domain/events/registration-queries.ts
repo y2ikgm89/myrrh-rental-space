@@ -11,7 +11,10 @@ import {
 } from "@/shared/lib/events/venue";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  EventFormatValue,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
@@ -483,7 +486,7 @@ type CustomerEventRegistrationRow = {
     readonly title: string;
     readonly slug: string;
     readonly addressDetail: string | null;
-    readonly status: string;
+    readonly status: EventStatus;
     readonly format: EventFormatValue;
     readonly meetingUrl: string | null;
     readonly location: { readonly name: string } | null;
