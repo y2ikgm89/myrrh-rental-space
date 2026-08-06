@@ -19,6 +19,7 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       gallery: [],
       facilities: [],
       facilitiesUnreadable: false,
+      galleryUnreadable: false,
       businessHours: null,
       isPublished: true,
       publishedAt: null,

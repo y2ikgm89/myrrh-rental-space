@@ -6,7 +6,7 @@ import {
   parseBusinessHours,
   tryParseFacilities,
 } from "@/shared/lib/json-validators";
-import { parseGallery } from "@/shared/lib/validations/gallery";
+import { tryParseGallery } from "@/shared/lib/validations/gallery";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import {
   getValidDiscountType,
@@ -59,6 +59,9 @@ function formatSpaceToPlain(s: {
   // 編集フォームは読んだ設備をそのまま hidden input で書き戻すため、
   // 「読めなかった」を空配列に潰すと無関係な項目の保存で設備が消える。
   const facilitiesParse = tryParseFacilities(s.facilities);
+  // ギャラリーも同じ。編集フォームは写真 1 件につき hidden input 1 つなので、
+  // 読めなかったぶんは「無い」として送り返され、次の保存で恒久的に消える。
+  const galleryParse = tryParseGallery(s.gallery);
 
   return {
     id: s.id,
@@ -73,7 +76,9 @@ function formatSpaceToPlain(s: {
     area: s.area != null ? s.area / 100 : null,
     hourlyPrice: s.hourlyPrice,
     mainImageUrl: s.mainImageUrl,
-    gallery: parseGallery(s.gallery),
+    gallery: galleryParse.success ? galleryParse.data : [],
+    /** DB のギャラリーが 1 件も読めなかった（編集フォームはこの間 保存を止める） */
+    galleryUnreadable: !galleryParse.success,
     facilities: facilitiesParse.success ? facilitiesParse.data : [],
     /** DB の設備リストが 1 件も読めなかった（編集フォームはこの間 保存を止める） */
     facilitiesUnreadable: !facilitiesParse.success,

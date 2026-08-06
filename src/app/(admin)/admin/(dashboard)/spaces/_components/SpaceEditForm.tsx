@@ -23,7 +23,6 @@ import { useBeforeUnload } from "@/admin/components/editor/inline/hooks";
 import { createSpaceAction, updateSpaceAction } from "@/admin/actions/space";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
-import { parseGallery } from "@/shared/lib/validations/gallery";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
 import {
   DiscountType,
@@ -162,8 +161,15 @@ export function SpaceEditForm({
   );
   const [facilitiesResetConfirmed, setFacilitiesResetConfirmed] =
     useState(false);
+  // ギャラリーも同じ形の欠陥だった。写真 1 件につき hidden input 1 つなので、
+  // 読めなかったぶんは「無い」として送り返され、次の保存で恒久的に消える。
+  // 管理者にも顧客にも通知は出ない。
+  const [storedGalleryInvalid] = useState(space?.galleryUnreadable ?? false);
+  const [galleryResetConfirmed, setGalleryResetConfirmed] = useState(false);
   const saveBlockedByFacilities =
     storedFacilitiesInvalid && !facilitiesResetConfirmed;
+  const saveBlockedByGallery = storedGalleryInvalid && !galleryResetConfirmed;
+  const saveBlocked = saveBlockedByFacilities || saveBlockedByGallery;
 
   const [isPublished, setIsPublished] = useState<boolean>(
     space?.isPublished ?? false,
@@ -212,7 +218,7 @@ export function SpaceEditForm({
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
-      gallery: parseGallery(space?.gallery),
+      gallery: space?.gallery ?? [],
     },
   });
 
@@ -263,6 +269,11 @@ export function SpaceEditForm({
 
   // 読めなかった設備が失われることを了承して保存を解禁する。設備には既定値が
   // 無いので、サイドバー設定の「デフォルトにリセット」に当たる操作は空リスト化。
+  // 読めなかった写真が失われることを了承して保存を解禁する。
+  const clearUnreadableGallery = () => {
+    setGalleryResetConfirmed(true);
+  };
+
   const clearUnreadableFacilities = () => {
     setFacilities([]);
     setFacilitiesResetConfirmed(true);
@@ -270,7 +281,7 @@ export function SpaceEditForm({
 
   const triggerSave = useEffectEvent(() => {
     // Ctrl+S の requestSubmit() は disabled な送信ボタンを迂回してしまう。
-    if (saveBlockedByFacilities) return;
+    if (saveBlocked) return;
     const formEl = document.getElementById(form.id);
     if (formEl instanceof HTMLFormElement) {
       formEl.requestSubmit();
@@ -442,6 +453,31 @@ export function SpaceEditForm({
         </Alert>
       )}
 
+      {storedGalleryInvalid && (
+        <Alert variant="destructive">
+          <IconAlertTriangle aria-hidden="true" />
+          <AlertTitle>保存されているギャラリーが不正です</AlertTitle>
+          <AlertDescription>
+            <p>
+              データベース上のギャラリーを読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
+            </p>
+            <p>
+              ギャラリーを空にすると保存できるようになります（保存すると、読み込めなかった写真は失われます）。
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={clearUnreadableGallery}
+              disabled={isPending || galleryResetConfirmed}
+            >
+              ギャラリーを空にする
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {form.errors && form.errors.length > 0 && (
         <div
           className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
@@ -607,7 +643,7 @@ export function SpaceEditForm({
             isPending={isPending}
             label={isEdit ? "変更を保存" : "スペースを作成"}
             pendingLabel={isEdit ? "保存中..." : "作成中..."}
-            disabled={saveBlockedByFacilities}
+            disabled={saveBlocked}
           />
         </div>
       </div>
