@@ -671,6 +671,9 @@ describe("architecture boundaries", () => {
         // 実 DB 統合テストの後片付け。Refund は Restrict FK を持つので、これが
         // 無いとテスト DB に証跡行が溜まり続ける。**ここ 1 ファイルだけ**。
         "__tests__/helpers/refund-test-cleanup.ts",
+        // CASCADE 免除の根拠を bypass 有り/無しで実測する probe。
+        // ここが無いと CASCADE_ALLOWED は「載せただけ」の unproven-exemption になる。
+        "__tests__/integration/prisma/append-only-fk-actions.test.ts",
       ];
 
       const pattern = /set_config\(\s*['"`]myrrh\.\w+_mutation_bypass['"`]/u;

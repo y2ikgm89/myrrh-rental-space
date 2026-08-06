@@ -15,9 +15,18 @@
  * schema.prisma を読んでも append-only trigger は見えない（Prisma DSL で表現できない）ため
  * 気づけない。型でも lint でも検出できないので DB カタログを直接見るしかない。
  *
- * ON DELETE CASCADE は「行を消す」であって UPDATE ではないので対象外にしている。
- * inquiry_status_history.inquiryId がそれで、データ保持 purge が bypass GUC を立てた
- * 状態でだけ通る正規経路（DELETE trigger 側が governs する）。
+ * **ON DELETE CASCADE も同じ壊れ方をする。** 「行を消す」であって UPDATE ではないが、
+ * この DB の append-only trigger は BEFORE UPDATE だけでなく **BEFORE DELETE にも
+ * 張られている**（`audit_logs_no_delete` 等）。親の削除が cascade で子の DELETE を
+ * 呼び、そこで RAISE EXCEPTION になって親の削除ごと巻き戻る。
+ *
+ * 旧版はここを無条件に対象外としていた。除外の理由（「DELETE ではないから」）が
+ * この DB の実態と食い違っていたので、**参照先が BEFORE DELETE trigger を持つかを
+ * カタログから読んで条件化**する。
+ *
+ * 唯一の例外は `inquiry_status_history.inquiry_id` で、データ保持 purge が bypass GUC を
+ * 立てた状態でだけ通る正規経路。**その正当性は散文ではなく実挙動で固定する** —
+ * bypass 有りで親を消せること / 無しでは同じ削除が落ちることの 2 本。
  *
  * 対象テーブルは `prevent_%_mutation` trigger 関数から動的に発見する。**新しい
  * append-only テーブルを足した人が何も登録しなくても自動で対象に入る**（allowlist 方式だと
@@ -45,6 +54,18 @@ const ACTION_LABEL: Record<string, string> = {
 const UPDATES_THE_CHILD_ON_DELETE = new Set(["n", "d"]);
 const UPDATES_THE_CHILD_ON_UPDATE = new Set(["c", "n", "d"]);
 
+/**
+ * 参照先が BEFORE DELETE trigger を持つとき、CASCADE も同じ壊れ方をする。
+ * 親の削除が子の DELETE を呼び、trigger で落ちて親ごと巻き戻る。
+ */
+const DELETES_THE_CHILD_ON_DELETE = new Set(["c"]);
+
+/**
+ * 例外として許す (テーブル, FK 制約) の組。**理由は下の実挙動テストが担保する。**
+ * ここへ足すだけでは通らない — 「bypass 有りで消せる / 無しで落ちる」の 2 本が要る。
+ */
+const CASCADE_ALLOWED = new Set(["inquiry_status_history.inquiry_id"]);
+
 let client: Client;
 
 beforeAll(async () => {
@@ -70,6 +91,47 @@ async function findAppendOnlyTables(): Promise<string[]> {
       ORDER BY rel.relname`,
   );
   return result.rows.map((row) => row.relname);
+}
+
+/**
+ * 行レベル BEFORE DELETE trigger を持つテーブル。
+ *
+ * tgtype のビット: 1=ROW / 2=BEFORE / 8=DELETE。**散文で「DELETE trigger もある」と
+ * 書く代わりにカタログから読む** — 片方だけ変わったときに気づけるように。
+ */
+async function findTablesWithBeforeDeleteTrigger(): Promise<Set<string>> {
+  const result = await client.query<{ readonly relname: string }>(
+    `SELECT DISTINCT rel.relname
+       FROM pg_trigger trg
+       JOIN pg_class rel ON rel.oid = trg.tgrelid
+       JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+      WHERE NOT trg.tgisinternal
+        AND ns.nspname = 'public'
+        AND (trg.tgtype & 1) <> 0
+        AND (trg.tgtype & 2) <> 0
+        AND (trg.tgtype & 8) <> 0`,
+  );
+  return new Set(result.rows.map((row) => row.relname));
+}
+
+/** FK が張られている列名（複合キーは想定しない。1 列前提が崩れたら落ちる）。 */
+async function fkColumn(child: string, conname: string): Promise<string> {
+  const result = await client.query<{ readonly attname: string }>(
+    `SELECT att.attname
+       FROM pg_constraint con
+       JOIN pg_class rel ON rel.oid = con.conrelid
+       JOIN pg_attribute att ON att.attrelid = con.conrelid
+                            AND att.attnum = ANY(con.conkey)
+      WHERE rel.relname = $1 AND con.conname = $2`,
+    [child, conname],
+  );
+  const names = result.rows.map((row) => row.attname);
+  if (names.length !== 1) {
+    throw new Error(
+      `${child}.${conname} は単一列の FK ではない: ${names.join(", ")}`,
+    );
+  }
+  return names[0] ?? "";
 }
 
 describe("append-only テーブルへの FK 参照アクション", () => {
@@ -105,22 +167,31 @@ describe("append-only テーブルへの FK 参照アクション", () => {
       [tables],
     );
 
-    const violations = offenders.rows
-      .filter(
-        (row) =>
-          UPDATES_THE_CHILD_ON_DELETE.has(row.del) ||
-          UPDATES_THE_CHILD_ON_UPDATE.has(row.upd),
-      )
-      .map(
-        (row) =>
-          `${row.child}.${row.conname}: ON UPDATE ${ACTION_LABEL[row.upd]} / ON DELETE ${ACTION_LABEL[row.del]}`,
+    const withBeforeDelete = await findTablesWithBeforeDeleteTrigger();
+
+    const violations: string[] = [];
+    for (const row of offenders.rows) {
+      const updatesChild =
+        UPDATES_THE_CHILD_ON_DELETE.has(row.del) ||
+        UPDATES_THE_CHILD_ON_UPDATE.has(row.upd);
+      // 参照先が BEFORE DELETE trigger を持つときだけ CASCADE も違反に数える。
+      const deletesChild =
+        DELETES_THE_CHILD_ON_DELETE.has(row.del) &&
+        withBeforeDelete.has(row.child) &&
+        !CASCADE_ALLOWED.has(
+          `${row.child}.${await fkColumn(row.child, row.conname)}`,
+        );
+      if (!updatesChild && !deletesChild) continue;
+      violations.push(
+        `${row.child}.${row.conname}: ON UPDATE ${ACTION_LABEL[row.upd]} / ON DELETE ${ACTION_LABEL[row.del]}`,
       );
+    }
 
     expect({
       violations,
       hint:
         violations.length > 0
-          ? "append-only テーブルへ UPDATE を発行する参照アクションです。親の削除/更新が trigger に弾かれて丸ごと rollback します。FK を外して論理参照にするか、NO ACTION / RESTRICT へ倒してください"
+          ? "append-only テーブルの行を UPDATE または DELETE する参照アクションです。親の削除/更新が trigger に弾かれて丸ごと rollback します。FK を外して論理参照にするか、NO ACTION / RESTRICT へ倒してください（CASCADE を許すなら CASCADE_ALLOWED へ足し、bypass 有無の実挙動テストも書くこと）"
           : "",
     }).toEqual({ violations: [], hint: "" });
   });
@@ -197,5 +268,55 @@ describe("append-only テーブルへの FK 参照アクション", () => {
     }
 
     expect({ setupOk, failure }).toEqual({ setupOk: true, failure: null });
+  });
+
+  /**
+   * `inquiry_status_history.inquiry_id` の CASCADE 免除は、**理由の散文ではなく
+   * 実挙動で担保する。** 「purge は bypass GUC を立てるから正規経路」という説明は、
+   * 実際に bypass 有りで通り・無しで落ちることを見て初めて成立する。
+   */
+  async function deleteInquiryWithHistory(
+    bypass: boolean,
+  ): Promise<string | null> {
+    await client.query("BEGIN");
+    let failure: string | null = null;
+    try {
+      const inquiry = await client.query<{ readonly id: string }>(
+        `INSERT INTO "inquiries" ("id",receipt_number,"name","email","subject","message",updated_at)
+         VALUES (gen_random_uuid(), 'FK-' || substr(gen_random_uuid()::text, 1, 8),
+                 'probe', 'fk-cascade-probe@example.test', '件名', '本文', now())
+         RETURNING id::text AS id`,
+      );
+      const inquiryId = inquiry.rows[0]?.id;
+      if (inquiryId === undefined) throw new Error("inquiry を作れなかった");
+      await client.query(
+        `INSERT INTO "inquiry_status_history" ("id",inquiry_id,from_status,to_status,created_at)
+         VALUES (gen_random_uuid(), $1, 'NEW', 'IN_PROGRESS', now())`,
+        [inquiryId],
+      );
+      if (bypass) {
+        await client.query(
+          `SELECT set_config('myrrh.inquiry_status_history_mutation_bypass', 'purge', true)`,
+        );
+      }
+      await client.query(`DELETE FROM "inquiries" WHERE "id" = $1`, [
+        inquiryId,
+      ]);
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    } finally {
+      await client.query("ROLLBACK");
+    }
+    return failure;
+  }
+
+  test("免除の根拠 1: bypass GUC を立てれば、履歴を持つ inquiry を cascade で消せる", async () => {
+    expect(await deleteInquiryWithHistory(true)).toBeNull();
+  });
+
+  test("免除の根拠 2: bypass 無しでは同じ削除が append-only trigger で落ちる", async () => {
+    const failure = await deleteInquiryWithHistory(false);
+    expect(failure).toContain("append-only");
+    expect(failure).toContain("DELETE");
   });
 });
