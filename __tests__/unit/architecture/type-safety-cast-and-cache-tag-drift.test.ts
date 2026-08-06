@@ -6,8 +6,8 @@
  *    持たない場合、`INVALIDATION_ONLY` allowlist に明示的に載せる（管理系リストで
  *    意図的に「無効化のみ・キャッシュ producer なし」としているタグ集合の drift 検知）
  *
- * 2490 行あった `architecture-boundaries.test.ts` の末尾 3 describe を per-concern に
- * 分離した際にここに切り出した (元 tree ではまとめて `conform FieldMetadata generic
+ * `architecture-boundaries.test.ts` の末尾の describe 群を per-concern に
+ * 分離した際にここへ切り出した (元 tree ではまとめて `conform FieldMetadata generic
  * invariance gate` describe に同居していた)。
  */
 
