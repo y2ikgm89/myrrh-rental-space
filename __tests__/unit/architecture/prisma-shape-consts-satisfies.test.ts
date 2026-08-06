@@ -15,7 +15,7 @@
  * ## 判定
  *
  * 名前に `Select` / `Where` / `Include`（大文字小文字・SCREAMING_SNAKE 含む）を持つ
- * module-level の `const X = {` を対象にし、その閉じ行が `satisfies Prisma.` を
+ * module-level / 関数ローカルの `const X = {` を対象にし、その閉じ行が `satisfies Prisma.` を
  * 含むことを要求する。`as const satisfies Prisma.X` でも `satisfies Prisma.X` でもよい。
  *
  * **`as const` を外さないこと。** `as const` 無しの `satisfies` は `{ id: true }` を
@@ -33,9 +33,21 @@ import { describe, expect, test } from "bun:test";
 
 const DOMAIN_ROOT = join(process.cwd(), "src", "shared", "domain");
 
-/** 名前に Select / Where / Include を含む module-level const 宣言。 */
-const SHAPE_CONST =
-  /^(?:export )?const ([A-Za-z0-9_]*(?:[Ss]elect|SELECT|[Ww]here|WHERE|[Ii]nclude|INCLUDE)[A-Za-z0-9_]*) = \{[ \t]*\r?$/gmu;
+/** shape const 名: Select / Where / Include を**部分文字列**として含む（単体の `where` は除外）。 */
+const SHAPE_NAME =
+  "[A-Za-z0-9_]*(?:[Ss]elect|SELECT|[Ww]here|WHERE|[Ii]nclude|INCLUDE)[A-Za-z0-9_]+|[A-Za-z0-9_]+(?:[Ss]elect|SELECT|[Ww]here|WHERE|[Ii]nclude|INCLUDE)[A-Za-z0-9_]*";
+
+/** 複数行の shape const 宣言（先頭に空白可）。 */
+const MULTILINE_SHAPE_CONST = new RegExp(
+  `^[ \\t]*(?:export )?const (${SHAPE_NAME}) = \\{[ \\t]*\\r?$`,
+  "gmu",
+);
+
+/** 1 行完結の shape const（satisfies の有無は問わず検出）。 */
+const ONE_LINE_SHAPE_CONST = new RegExp(
+  `^[ \\t]*(?:export )?const (${SHAPE_NAME}) = \\{[\\s\\S]*?\\}[ \\t]*(?:as const[ \\t]*)?(?:satisfies Prisma\\.[^;]+)?;[ \\t]*\\r?$`,
+  "gmu",
+);
 
 function listTypeScriptFiles(dir: string): string[] {
   const out: string[] = [];
@@ -54,30 +66,55 @@ type ShapeConst = {
   readonly file: string;
   readonly name: string;
   readonly closing: string;
+  readonly scope: "module" | "local";
 };
 
+function declIndent(line: string): string {
+  return /^[ \t]*/u.exec(line)?.[0] ?? "";
+}
+
 /**
- * 宣言から**列 0 で閉じる行**までを 1 つの const と見なす。module-level の宣言だけを
- * 対象にしているので、入れ子のオブジェクトは必ずインデントされており誤検出しない。
+ * 宣言から**同じインデントで閉じる行**までを 1 つの const と見なす。
+ * 入れ子オブジェクトは必ず深いインデントなので、浅い `}` だけを拾う。
  */
 function collectShapeConsts(file: string): ShapeConst[] {
   const source = readFileSync(file, "utf8");
   const lines = source.split(/\r?\n/u);
   const found: ShapeConst[] = [];
+  const seenAt = new Set<number>();
 
-  for (const match of source.matchAll(SHAPE_CONST)) {
+  for (const match of source.matchAll(MULTILINE_SHAPE_CONST)) {
     const name = match[1];
-    if (name === undefined) continue;
+    if (name === undefined || match.index === undefined) continue;
+    seenAt.add(match.index);
     const declLine = source.slice(0, match.index).split(/\r?\n/u).length - 1;
+    const decl = lines[declLine] ?? "";
+    const indent = declIndent(decl);
     const closing = lines
       .slice(declLine + 1)
-      .find((line) => line.startsWith("}"));
+      .find((line) => line.startsWith(`${indent}}`));
     found.push({
       file: file.replaceAll("\\", "/").split("src/shared/domain/")[1] ?? file,
       name,
       closing: closing ?? "(閉じ行が見つからない)",
+      scope: indent.length === 0 ? "module" : "local",
     });
   }
+
+  for (const match of source.matchAll(ONE_LINE_SHAPE_CONST)) {
+    const name = match[1];
+    if (name === undefined || match.index === undefined) continue;
+    if (seenAt.has(match.index)) continue;
+    const declLine = source.slice(0, match.index).split(/\r?\n/u).length - 1;
+    const line = lines[declLine] ?? "";
+    found.push({
+      file: file.replaceAll("\\", "/").split("src/shared/domain/")[1] ?? file,
+      name,
+      closing: line.trim(),
+      scope: declIndent(line).length === 0 ? "module" : "local",
+    });
+  }
+
   return found;
 }
 
@@ -86,8 +123,14 @@ const shapeConsts =
 
 describe("domain の Prisma shape const", () => {
   test("対象が実在する（gate 自体が空振りしていない）", () => {
-    // 検出数が 0 に落ちたら、命名規約が変わったか走査先が壊れている。
-    expect(shapeConsts.length).toBeGreaterThan(40);
+    const moduleLevel = shapeConsts.filter((c) => c.scope === "module").length;
+    const local = shapeConsts.filter((c) => c.scope === "local").length;
+    expect({ total: shapeConsts.length, moduleLevel, local }).toEqual({
+      total: moduleLevel + local,
+      moduleLevel: 55,
+      local: 3,
+    });
+    expect(shapeConsts.length).toBeGreaterThan(50);
   });
 
   test("すべて satisfies Prisma.<型> を持つ", () => {

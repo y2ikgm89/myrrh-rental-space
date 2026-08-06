@@ -12,6 +12,7 @@ import {
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { SidebarWidget } from "@/shared/lib/validations/sidebar";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+import { Prisma } from "@generated/prisma/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,7 +72,7 @@ export async function getSidebarData(
   const publishedWhere = {
     status: PostStatus.PUBLISHED,
     deletedAt: null,
-  };
+  } satisfies Prisma.PostWhereInput;
 
   const postSelect = {
     id: true,
@@ -80,7 +81,7 @@ export async function getSidebarData(
     publishedAt: true,
     thumbnailUrl: true,
     category: { select: { name: true, slug: true } },
-  } as const;
+  } as const satisfies Prisma.PostSelect;
 
   const [recentRaw, popularRaw, categoriesRaw, tagsRaw] = await Promise.all([
     needRecent
