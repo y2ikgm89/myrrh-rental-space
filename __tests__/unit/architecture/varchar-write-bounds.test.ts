@@ -234,6 +234,8 @@ const SHARED = "@/shared/lib/validations";
 const ADMIN = "@/admin/lib/validations";
 const SETTINGS =
   "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas";
+const EVENT_FORM =
+  "@/app/(admin)/admin/(dashboard)/events/_components/event-form-schema";
 
 /** 数字のみ（郵便番号など）のサンプル。 */
 const digits = (len: number): string => "1".repeat(len);
@@ -332,8 +334,12 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     field: "building",
   }),
   "Customer.emailDeliveryReason": generated(
-    255,
+    500,
     "Resend の bounce/complaint webhook 由来の理由文字列を切り詰めて保存する",
+    {
+      module: "@/shared/lib/validations/customer-email-limits",
+      exportName: "CUSTOMER_EMAIL_DELIVERY_REASON_MAX_LENGTH",
+    },
   ),
   "Customer.anonymizedReason": generated(
     50,
@@ -379,7 +385,7 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   ),
   "InquiryStatusHistory.reason": generated(
     200,
-    "管理画面のステータス変更理由。`inquiryStatusUpdateSchema` の .max(200) を通る",
+    "利用者入力ではなく、commands / bulk-status-commands が書くアプリ内リテラルのみ（creation / reply-advance / customer-reply-reopen 等）",
   ),
   "InquiryAttachment.mimeType": generated(
     100,
@@ -479,11 +485,19 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
       exportName: "EVENT_SLUG_MAX_LENGTH",
     },
   ),
-  "Event.addressDetail": generated(
-    200,
-    "`eventFormSchema` の .max(200) を通る",
-  ),
-  "Event.meetingUrl": generated(500, "`eventFormSchema` の .max(500) を通る"),
+  "Event.addressDetail": validated({
+    module: EVENT_FORM,
+    exportName: "eventFormSchema",
+    field: "addressDetail",
+    maxLength: 200,
+  }),
+  "Event.meetingUrl": validated({
+    module: EVENT_FORM,
+    exportName: "eventFormSchema",
+    field: "meetingUrl",
+    maxLength: 500,
+    sample: (len) => `https://example.com/${"a".repeat(Math.max(len - 20, 1))}`,
+  }),
   "EventTicket.name": generated(
     100,
     "`eventFormSchema` のチケット名 .max(100)",

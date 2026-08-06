@@ -15,7 +15,7 @@
  * 誰も見ていない」を見逃す。
  */
 
-import { readPrismaSchema } from "./prisma-sources";
+import { readDatabaseInvariants, readPrismaSchema } from "./prisma-sources";
 
 export interface NumericColumn {
   readonly model: string;
@@ -119,12 +119,160 @@ export const POSTGRES_IDENTIFIER_MAX_BYTES = 63;
  * **勝手に足せない** — 下の長さ検査が「収まらないのに override が無い」を落とし、
  * 逆に「収まるのに override がある」も落とす。
  */
-const CONSTRAINT_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+/**
+ * PostgreSQL の識別子上限を超える既定制約名の短縮 override。
+ * 複合 CHECK 用の別名は {@link COMPOSITE_CONSTRAINT_NAME_OVERRIDES}。
+ */
+const LENGTH_CONSTRAINT_NAME_OVERRIDES: Readonly<Record<string, string>> = {
   "SettingsGoogleCalendar.googleCalendarReminderMinutes":
     "settings_google_calendar_reminder_minutes_non_negative_check",
   "SettingsSwitchbot.switchbotPasscodeBufferMinutes":
     "settings_switchbot_passcode_buffer_minutes_non_negative_check",
 };
+
+/** 複数列 CHECK の実制約名（`<表>_<列>_` 命名ではない）。 */
+const COMPOSITE_CONSTRAINT_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+  "Reservation.basePrice": "reservations_money_non_negative_check",
+  "Reservation.couponDiscountAmount": "reservations_money_non_negative_check",
+  "Reservation.durationDiscountAmount": "reservations_money_non_negative_check",
+  "Reservation.spaceDiscountAmount": "reservations_money_non_negative_check",
+  "Reservation.totalPriceWithTax": "reservations_money_non_negative_check",
+  "Reservation.manualAdjustmentAmount":
+    "reservations_total_price_breakdown_check",
+  "Coupon.minReservationAmount": "coupons_amount_bounds_check",
+  "Coupon.maxDiscountAmount": "coupons_amount_bounds_check",
+  "Coupon.usageCount": "coupons_usage_range_check",
+  "Coupon.usageLimit": "coupons_usage_range_check",
+  "Receipt.amount": "receipts_money_non_negative_check",
+  "Receipt.taxAmount": "receipts_tax_within_amount_check",
+};
+
+const CONSTRAINT_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+  ...LENGTH_CONSTRAINT_NAME_OVERRIDES,
+  ...COMPOSITE_CONSTRAINT_NAME_OVERRIDES,
+};
+
+/**
+ * 複合 CHECK を probe するとき、対象列以外に INSERT へ入れる既定値。
+ *
+ * 一時表は制約式が参照する列名をすべて持つ必要がある。兄弟列は「境界試験の対象
+ * 外」なので、ここで宣言した安全な値を使う。
+ */
+export const COMPOSITE_PROBE_DEFAULTS: Readonly<
+  Record<string, Readonly<Record<string, number | null>>>
+> = {
+  "Reservation.basePrice": {
+    total_price: 0,
+    tax_amount: 0,
+    total_price_with_tax: 0,
+    coupon_discount_amount: null,
+    duration_discount_amount: null,
+    space_discount_amount: null,
+  },
+  "Reservation.couponDiscountAmount": {
+    base_price: 0,
+    total_price: 0,
+    tax_amount: 0,
+    total_price_with_tax: 0,
+    duration_discount_amount: null,
+    space_discount_amount: null,
+  },
+  "Reservation.durationDiscountAmount": {
+    base_price: 0,
+    total_price: 0,
+    tax_amount: 0,
+    total_price_with_tax: 0,
+    coupon_discount_amount: null,
+    space_discount_amount: null,
+  },
+  "Reservation.spaceDiscountAmount": {
+    base_price: 0,
+    total_price: 0,
+    tax_amount: 0,
+    total_price_with_tax: 0,
+    coupon_discount_amount: null,
+    duration_discount_amount: null,
+  },
+  "Reservation.totalPriceWithTax": {
+    base_price: 0,
+    total_price: 0,
+    tax_amount: 0,
+    coupon_discount_amount: null,
+    duration_discount_amount: null,
+    space_discount_amount: null,
+  },
+  "Reservation.manualAdjustmentAmount": {
+    base_price: 100,
+    total_price: 100,
+    coupon_discount_amount: null,
+    duration_discount_amount: null,
+    space_discount_amount: null,
+  },
+  "Coupon.minReservationAmount": {
+    max_discount_amount: null,
+  },
+  "Coupon.maxDiscountAmount": {
+    min_reservation_amount: null,
+  },
+  "Coupon.usageCount": {
+    usage_limit: null,
+  },
+  "Coupon.usageLimit": {
+    usage_count: 0,
+  },
+  "Receipt.amount": {
+    tax_amount: 0,
+  },
+  "Receipt.taxAmount": {
+    amount: 100,
+  },
+};
+
+/** 複合 CHECK 上の列だけ、素の domain では足りない境界値。 */
+const BOUNDARY_OVERRIDES: Readonly<
+  Record<
+    string,
+    {
+      readonly accepted: readonly number[];
+      readonly rejected: readonly number[];
+    }
+  >
+> = {
+  "Reservation.manualAdjustmentAmount": {
+    accepted: [0],
+    rejected: [-101],
+  },
+  "Receipt.taxAmount": {
+    accepted: [0, 50],
+    rejected: [101],
+  },
+};
+
+/** `<表>_<列>_` で始まる 1 列専用 CHECK があるか。複合 CHECK の列名言及だけでは true にしない。 */
+export function hasDedicatedNumericCheck(c: NumericColumn): boolean {
+  const prefix = `${c.table}_${c.column}_`;
+  const bucket = readChecksByTable().get(c.table);
+  if (!bucket) return false;
+  for (const name of bucket.keys()) {
+    if (name.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
+/** invariants.sql から `<表> → (制約名 → 式)` を導く。 */
+export function readChecksByTable(): Map<string, Map<string, string>> {
+  const out = new Map<string, Map<string, string>>();
+  const pattern =
+    /ALTER TABLE "([a-z_]+)" ADD CONSTRAINT "([a-z_]+)" CHECK \((.*)\);/gu;
+  for (const m of readDatabaseInvariants().matchAll(pattern)) {
+    const [, table, name, expr] = m;
+    if (!table || !name || !expr) continue;
+    const bucket = out.get(table) ?? new Map<string, string>();
+    bucket.set(name, expr);
+    out.set(table, bucket);
+  }
+  return out;
+}
 
 /** override を使わずに導いた既定名。長さ検査用。 */
 export function defaultConstraintNameFor(
@@ -146,7 +294,7 @@ export function constraintNameFor(
 }
 
 export function constraintNameOverrideKeys(): readonly string[] {
-  return Object.keys(CONSTRAINT_NAME_OVERRIDES);
+  return Object.keys(LENGTH_CONSTRAINT_NAME_OVERRIDES);
 }
 
 /**
@@ -268,6 +416,20 @@ export const NUMERIC_COLUMN_DOMAINS: Readonly<Record<string, NumericDomain>> = {
   "EventRegistration.icsSequence": nonNegative,
   "EventRegistration.paidAmount": nonNegative,
   "Receipt.revision": nonNegative,
+
+  // --- 複合 CHECK で覆われる列（`<表>_<列>_` 専用 CHECK は無い） ----------------
+  "Reservation.basePrice": nonNegative,
+  "Reservation.couponDiscountAmount": nonNegative,
+  "Reservation.durationDiscountAmount": nonNegative,
+  "Reservation.spaceDiscountAmount": nonNegative,
+  "Reservation.totalPriceWithTax": nonNegative,
+  "Reservation.manualAdjustmentAmount": nonNegative,
+  "Coupon.minReservationAmount": nonNegative,
+  "Coupon.maxDiscountAmount": positive,
+  "Coupon.usageCount": nonNegative,
+  "Coupon.usageLimit": positive,
+  "Receipt.amount": nonNegative,
+  "Receipt.taxAmount": nonNegative,
 };
 
 /**
@@ -286,10 +448,16 @@ export const UNBOUNDED_NUMERIC_COLUMNS: Readonly<Record<string, string>> = {};
  * **両方を見る。** `rejected` だけだと `CHECK (false)` でも緑になり、
  * `accepted` だけだと `CHECK (true)` でも緑になる。
  */
-export function boundaryValues(domain: NumericDomain): {
+export function boundaryValues(
+  domain: NumericDomain,
+  key?: string,
+): {
   readonly accepted: readonly number[];
   readonly rejected: readonly number[];
 } {
+  if (key !== undefined && key in BOUNDARY_OVERRIDES) {
+    return BOUNDARY_OVERRIDES[key]!;
+  }
   switch (domain.kind) {
     case "range":
       return {
@@ -313,6 +481,22 @@ export function boundaryValues(domain: NumericDomain): {
         rejected: [domain.min - 1, REORDER_SCRATCH_CEILING + 1],
       };
   }
+}
+
+/** integration 側が境界値を確かめる `(key, 列, 値域)` の一覧。 */
+export function numericBoundaryTargets(): readonly (readonly [
+  string,
+  NumericColumn | undefined,
+  NumericDomain,
+])[] {
+  const byKey = new Map(
+    readNumericColumns().map((c) => [columnKey(c), c] as const),
+  );
+  return Object.entries(NUMERIC_COLUMN_DOMAINS).map(([k, domain]) => [
+    k,
+    byKey.get(k),
+    domain,
+  ]);
 }
 
 /** 値域から migration が付けた制約名を導く。 */
