@@ -364,12 +364,19 @@ export async function applyChargeRefundIdempotent(input: {
     currency,
     latestRefund,
     createRefundRecord: async (refundData) => {
-      await prisma.refund.create({
-        data: {
+      await prisma.$transaction(async (tx) => {
+        await acquirePaymentRefundAdvisoryLock(
+          tx,
+          "reservation",
           reservationId,
-          ...refundData,
-        },
-      });
+        );
+        await tx.refund.create({
+          data: {
+            reservationId,
+            ...refundData,
+          },
+        });
+      }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
     },
     updatePaymentStatus: async (newStatus) => {
       await prisma.reservation.updateMany({

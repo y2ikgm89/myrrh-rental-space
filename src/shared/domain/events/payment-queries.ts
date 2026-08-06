@@ -341,12 +341,19 @@ export async function applyEventChargeRefundIdempotent(input: {
     currency,
     latestRefund,
     createRefundRecord: async (refundData) => {
-      await prisma.refund.create({
-        data: {
-          eventRegistrationId: registrationId,
-          ...refundData,
-        },
-      });
+      await prisma.$transaction(async (tx) => {
+        await acquirePaymentRefundAdvisoryLock(
+          tx,
+          "event-registration",
+          registrationId,
+        );
+        await tx.refund.create({
+          data: {
+            eventRegistrationId: registrationId,
+            ...refundData,
+          },
+        });
+      }, PAYMENT_REFUND_PERSIST_TRANSACTION_OPTIONS);
     },
     updatePaymentStatus: async (newStatus) => {
       await prisma.eventRegistration.updateMany({

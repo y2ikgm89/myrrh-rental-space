@@ -150,6 +150,16 @@ export async function createAdminReservationCommand(input: {
       : pricing.totalPriceWithTax;
   const priceOverriddenById =
     input.totalPrice != null ? input.adminUserId : null;
+  const clampedBreakdown = Math.max(
+    0,
+    pricing.basePrice -
+      (pricing.couponDiscountAmount ?? 0) -
+      (pricing.durationDiscountAmount ?? 0) -
+      (pricing.spaceDiscountAmount ?? 0),
+  );
+  const manualAdjustmentAmount = finalTotalPrice - clampedBreakdown;
+  const manualAdjustmentAmountOrNull =
+    manualAdjustmentAmount === 0 ? null : manualAdjustmentAmount;
 
   const reservation = await prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);
@@ -193,6 +203,7 @@ export async function createAdminReservationCommand(input: {
         taxAmount: finalTaxAmount,
         totalPriceWithTax: finalTotalPriceWithTax,
         priceOverriddenById,
+        manualAdjustmentAmount: manualAdjustmentAmountOrNull,
         couponId: pricing.appliedCoupon?.id ?? null,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
@@ -397,6 +408,17 @@ export async function updateAdminReservationCommand(
   // silently 消えてしまっていた)。実際の書込みは下記 tx 内の data で条件分岐する。
   const finalTotalPrice = input.totalPrice ?? pricing.totalPrice;
 
+  const clampedBreakdown = Math.max(
+    0,
+    pricing.basePrice -
+      (pricing.couponDiscountAmount ?? 0) -
+      (pricing.durationDiscountAmount ?? 0) -
+      (pricing.spaceDiscountAmount ?? 0),
+  );
+  const manualAdjustmentAmount = finalTotalPrice - clampedBreakdown;
+  const manualAdjustmentAmountOrNull =
+    manualAdjustmentAmount === 0 ? null : manualAdjustmentAmount;
+
   const chargeAffectingChange =
     currentReservation.spaceId !== input.spaceId ||
     currentReservation.startTime.getTime() !== startDateTime.getTime() ||
@@ -511,6 +533,7 @@ export async function updateAdminReservationCommand(
         ...(input.totalPrice != null && {
           priceOverriddenById: input.adminUserId,
         }),
+        manualAdjustmentAmount: manualAdjustmentAmountOrNull,
         couponId: newCouponId,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,

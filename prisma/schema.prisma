@@ -862,7 +862,12 @@ model Reservation {
   /// 消えても ID 文字列だけが残り、**存在しない人を指したまま**になる。
   /// `deletedById` / `repliedById` と同じ `onDelete: SetNull` に揃え、
   /// 「消えた＝辿れない」を NULL で正直に表す。
-  priceOverriddenById String?     @map("price_overridden_by_id") @db.Uuid
+  priceOverriddenById String? @map("price_overridden_by_id") @db.Uuid
+  /// 管理者が総額を直接上書きしたときの差額。null = 上書きなし。
+  /// `price_overridden_by_id` が「誰が」、この列が「いくら」。
+  /// DB CHECK `reservations_total_price_breakdown_check` が
+  /// `total_price = GREATEST(0, base - 割引) + coalesce(manual_adjustment, 0)` を強制する。
+  manualAdjustmentAmount Int? @map("manual_adjustment_amount")
 
   // Google Calendar Sync
   googleCalendarEventId String?   @map("google_calendar_event_id") @db.Text // 共有カレンダーのイベントID

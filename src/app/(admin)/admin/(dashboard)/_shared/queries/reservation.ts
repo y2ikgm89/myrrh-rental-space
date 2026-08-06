@@ -33,6 +33,8 @@ export type ReservationWithRelations = {
   couponDiscountAmount: number | null;
   durationDiscountAmount: number | null;
   spaceDiscountAmount: number | null;
+  /** 管理者の総額上書き差額。null = 上書きなし（detail のみ）。 */
+  manualAdjustmentAmount?: number | null;
   taxRateType: TaxRateType | null;
   taxRate: number | null;
   taxAmount: number | null;

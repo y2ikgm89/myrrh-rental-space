@@ -323,6 +323,7 @@ export async function getReservationByIdQuery(id: string) {
       couponDiscountAmount: true,
       durationDiscountAmount: true,
       spaceDiscountAmount: true,
+      manualAdjustmentAmount: true,
       // 税情報（予約時点の値を記録）。populate 経路は customer-commands.ts
       // (顧客セルフ変更経路) のみで、admin 経路は書き込まないため null が普通。
       // 表示側で null 判定して条件付きで描画する（customer-facing detail と同型）。

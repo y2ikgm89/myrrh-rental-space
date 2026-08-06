@@ -115,6 +115,7 @@ function PriceBreakdown({
     couponDiscountAmount,
     durationDiscountAmount,
     spaceDiscountAmount,
+    manualAdjustmentAmount,
     totalPrice,
     taxRateType,
     taxRate,
@@ -157,6 +158,16 @@ function PriceBreakdown({
           <div className="flex items-baseline justify-between py-2">
             <dt className="text-muted-foreground">クーポン割引</dt>
             <dd className="text-success">−{formatPrice(couponDiscount)}</dd>
+          </div>
+        )}
+        {manualAdjustmentAmount != null && (
+          <div className="flex items-baseline justify-between py-2">
+            <dt className="text-muted-foreground">手動調整</dt>
+            <dd className={manualAdjustmentAmount > 0 ? "" : "text-success"}>
+              {manualAdjustmentAmount > 0
+                ? `+${formatPrice(manualAdjustmentAmount)}`
+                : `−${formatPrice(-manualAdjustmentAmount)}`}
+            </dd>
           </div>
         )}
         <div className="flex items-baseline justify-between py-2">
