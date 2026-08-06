@@ -187,7 +187,6 @@ function buildFallbackLocation(
     amenities: {},
     imageUrl: "",
     businessHours: null,
-    blockedDates: [],
     phoneNumber: info.phone,
     email: info.email,
     latitude: null,

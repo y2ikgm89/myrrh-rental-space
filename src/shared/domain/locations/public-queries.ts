@@ -3,6 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
@@ -119,11 +120,6 @@ export type LocationForAccess = {
   readonly amenities: unknown;
   readonly imageUrl: string;
   readonly businessHours: unknown;
-  /** `toPlainArray` を通るので Date ではなく直列化済みの文字列で出る。 */
-  readonly blockedDates: readonly {
-    readonly startDate: string;
-    readonly endDate: string;
-  }[];
   readonly phoneNumber: string | null;
   readonly email: string | null;
   readonly latitude: number | null;
@@ -168,10 +164,6 @@ export async function getPublishedLocationsForAccess(
           amenities: true,
           imageUrl: true,
           businessHours: true,
-          blockedDates: {
-            select: { startDate: true, endDate: true },
-            orderBy: { startDate: "asc" },
-          },
           phoneNumber: true,
           email: true,
           latitude: true,
@@ -282,7 +274,47 @@ export async function getPublishedLocationsForSeo(
     operationName: "getPublishedLocationsForSeo",
   });
 
-  return toPlainArray(locations);
+  // **GLOBAL の休業日も混ぜる。** `Location.blockedDates` は `locationId` で
+  // 結ぶので、全社休業（`locationId = null`）は 1 件も入ってこない。
+  // 予約可否（`availability.ts`）は GLOBAL を全拠点の休業として扱うので、
+  // ここで混ぜないと **予約は止まっているのに検索結果は通常営業と出る**。
+  const globalClosures = await safeFetch({
+    fetch: () =>
+      prisma.blockedDate.findMany({
+        where: { scope: BLOCKED_DATE_SCOPE.GLOBAL },
+        select: { startDate: true, endDate: true },
+        orderBy: { startDate: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedLocationsForSeo:global",
+  });
+
+  return toPlainArray(
+    locations.map((location) => ({
+      ...location,
+      // 同じ期間が LOCATION と GLOBAL の両方にあると JSON-LD へ重複して出るので畳む。
+      blockedDates: dedupeClosures([
+        ...location.blockedDates,
+        ...globalClosures,
+      ]),
+    })),
+  );
+}
+
+/** 同じ期間の休業を 1 件に畳んで開始日順に並べる。 */
+function dedupeClosures<T extends { startDate: Date; endDate: Date }>(
+  closures: readonly T[],
+): T[] {
+  const byRange = new Map<string, T>();
+  for (const closure of closures) {
+    const key = `${closure.startDate.toISOString()}..${closure.endDate.toISOString()}`;
+    if (!byRange.has(key)) byRange.set(key, closure);
+  }
+  return [...byRange.values()].sort(
+    (a, b) => a.startDate.getTime() - b.startDate.getTime(),
+  );
 }
 
 /**
