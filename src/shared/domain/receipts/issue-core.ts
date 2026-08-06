@@ -134,6 +134,7 @@ async function resolveEventRegistrationIssue(
       id: true,
       name: true,
       paidAmount: true,
+      taxRate: true,
       paymentStatus: true,
       event: { select: { title: true } },
       customer: {
@@ -155,32 +156,32 @@ async function resolveEventRegistrationIssue(
   const amount = registration.paidAmount ?? 0;
   assertPositiveAmount(amount, "申込");
 
-  // 税率は設定から読む。**直書きしない。**
+  // 税率は**決済確定時に刻んだ値**を使う。直書きしない。
   //
   // Receipt は append-only の証跡で、発行時に焼いた税率がそのまま適格請求書の
-  // 税率区分・税額欄になる。ここに 10 を直書きしていたため、管理画面で標準税率を
-  // 8% や 12% に変えても、イベント参加費の領収書だけが「10% 適用」と印字し続けていた
-  // （予約側は `reservation.taxRate` のスナップショットを使っていたので影響なし）。
-  // 出た紙は後から直せない。
+  // 税率区分・税額欄になる。適格請求書に要るのは「取引年月日時点の税率」なので、
+  // 発行時点の設定ではなく `registration.taxRate`（決済確定時のスナップショット）が
+  // 根拠になる。決済と発行が離れる経路（取りこぼし救済 cron・再発行・後追い発行）で
+  // 標準税率が変わっていても、その取引の税率で印字される。
   //
-  // `getPublicTaxSettings()` は `"use cache"` の読み取りなので使わない —
-  // 証跡に焼く値を、キャッシュが古いかもしれない経路から取らない。
-  // 予約の書込経路（`reservations/customer-commands.ts`）と同じく tx 内で直に読む。
-  // 設定行が無ければ**既定値へ落とさず失敗させる**。適格請求書の税率区分は
-  // append-only の証跡に焼かれて後から直せないので、推測値を書くより設定不備として
-  // 明示的に落ちる方がよい（カレンダー取込が「未分類」カテゴリーの不在で失敗させるのと
-  // 同じ判断）。既定値を import しないので、この経路が enum の module graph を
-  // 広げることもない。
-  const commerce = await tx.settingsCommerce.findFirst({
-    select: { taxStandardRate: true },
-  });
-  if (!commerce) {
+  // 刻む前の行と、決済確定時に設定行を読めなかった行だけ設定へ落ちる。そこも
+  // **既定値へは落とさない** — 推測値を証跡に焼くより、設定不備として明示的に
+  // 落ちる方がよい（カレンダー取込が「未分類」カテゴリーの不在で失敗させるのと同じ判断）。
+  // `getPublicTaxSettings()` は `"use cache"` なので使わない。
+  const taxRate =
+    registration.taxRate ??
+    (
+      await tx.settingsCommerce.findFirst({
+        select: { taxStandardRate: true },
+      })
+    )?.taxStandardRate ??
+    null;
+  if (taxRate === null) {
     throw new DomainError(
       "税率設定が見つからないため、領収書を発行できません",
       "VALIDATION",
     );
   }
-  const taxRate = commerce.taxStandardRate;
   const taxExcludedAmount = Math.floor((amount * 100) / (100 + taxRate));
   const taxAmount = amount - taxExcludedAmount;
 

@@ -50,8 +50,14 @@ await installPrismaEnumsMock({
   PaymentStatus,
   RegistrationStatus,
 });
+// 決済確定時に標準税率を刻む読み取り（`readStandardTaxRateUncached`）。
+const mockCommerceFindFirst = mock(() =>
+  Promise.resolve({ taxStandardRate: 10 }),
+);
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
+    settingsCommerce: { findFirst: mockCommerceFindFirst },
     eventRegistration: {
       findUnique: mockRegFindUnique,
       updateMany: mockRegUpdateMany,

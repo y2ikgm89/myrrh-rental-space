@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (154) =====
+-- ===== CHECK 制約 (155) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -53,6 +53,7 @@ ALTER TABLE "event_categories" ADD CONSTRAINT "event_categories_sort_order_posit
 ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_ics_sequence_non_negative_check" CHECK ((ics_sequence >= 0));
 ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_paid_amount_non_negative_check" CHECK ((paid_amount >= 0));
 ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_quantity_positive" CHECK ((quantity >= 1));
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_tax_rate_range_check" CHECK (((tax_rate IS NULL) OR ((tax_rate >= 0) AND (tax_rate <= 100))));
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_capacity_positive_or_null" CHECK (((capacity IS NULL) OR (capacity >= 1)));
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_price_non_negative" CHECK ((price >= 0));
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));

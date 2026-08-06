@@ -7,6 +7,7 @@ import {
   RefundedByType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
+import { readStandardTaxRateUncached } from "@/shared/domain/settings/queries/tax-rate-snapshot";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   applyStripeChargeRefundIdempotent,
@@ -46,15 +47,23 @@ export async function claimEventRegistrationAsPaid(
   registrationId: string,
   data: { stripePaymentIntentId: string | null },
 ): Promise<boolean> {
+  // 決済確定の瞬間の標準税率を刻む。領収書はこれを税率区分の根拠にする。
+  // 読めなければ null のまま進める — webhook を失敗させて
+  // 「入金済みなのに確定しない」状態を作る方が害が大きい（発行側が設定へ落ちる）。
+  const taxRate = await readStandardTaxRateUncached();
+
   const result = await prisma.eventRegistration.updateMany({
     where: {
       id: registrationId,
       status: RegistrationStatus.CONFIRMED,
       paymentStatus: { in: [...PAYMENT_STATUSES_CLAIMABLE_FOR_PAID] },
     },
-    data: buildPaidClaimUpdateData({
-      stripePaymentIntentId: data.stripePaymentIntentId,
-    }),
+    data: {
+      ...buildPaidClaimUpdateData({
+        stripePaymentIntentId: data.stripePaymentIntentId,
+      }),
+      ...(taxRate !== null ? { taxRate } : {}),
+    },
   });
 
   if (result.count > 0) {
