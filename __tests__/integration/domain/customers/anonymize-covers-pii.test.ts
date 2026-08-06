@@ -58,6 +58,7 @@ const TOKEN = `pii${crypto.randomUUID().replaceAll("-", "").slice(0, 13)}`;
 
 const created = {
   customerId: "",
+  mergeTargetCustomerId: "",
   reservationId: "",
   registrationId: "",
   eventId: "",
@@ -217,6 +218,43 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
       select: { id: true },
     });
     created.registrationId = registration.id;
+
+    // 短命トークン台帳。期限切れで消える仕組みは無く、消えるのは
+    // 「同じ customerId の再リクエスト」「Customer の物理削除」「匿名化」の 3 経路だけ。
+    // 退会は物理削除ではないので、匿名化が消さなければ実アドレスが残り続ける。
+    await prisma.pendingCustomerEmailChange.create({
+      data: {
+        customerId: created.customerId,
+        newEmail: `${TOKEN}@example.com`,
+        newEmailCanonical: `${TOKEN}@example.com`,
+        tokenHash: `a${TOKEN}`.padEnd(64, "0").slice(0, 64),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    // 統合は 2 つの Customer を指す。source 側に紐づく行も消えることを見たいので、
+    // 対象顧客を **source** に置く（target は別の顧客）。
+    // 統合先のアドレスに TOKEN を混ぜない。混ぜると、匿名化されない**別の顧客**の
+    // 行が走査に引っかかり、「消えていない」と読み違える（実際に一度そうなった）。
+    const otherEmail = `merge-target-${crypto.randomUUID()}@example.com`;
+    const mergeTarget = await prisma.customer.create({
+      data: {
+        lastName: "統合先",
+        firstName: "太郎",
+        email: otherEmail,
+        emailCanonical: otherEmail,
+      },
+      select: { id: true },
+    });
+    created.mergeTargetCustomerId = mergeTarget.id;
+    await prisma.pendingCustomerMerge.create({
+      data: {
+        targetCustomerId: mergeTarget.id,
+        sourceCustomerId: created.customerId,
+        guestEmail: `${TOKEN}@example.com`,
+        tokenHash: `b${TOKEN}`.padEnd(64, "0").slice(0, 64),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
   });
 
   afterAll(async () => {
@@ -236,6 +274,9 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     await prisma.space.deleteMany({ where: { id: created.spaceId } });
     await prisma.location.deleteMany({ where: { id: created.locationId } });
     await prisma.customer.deleteMany({ where: { id: created.customerId } });
+    await prisma.customer.deleteMany({
+      where: { id: created.mergeTargetCustomerId },
+    });
     await prisma.$disconnect();
   });
 
@@ -246,6 +287,8 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     expect(holders).toEqual([
       "customers",
       "event_registrations",
+      "pending_customer_email_changes",
+      "pending_customer_merges",
       "reservations",
     ]);
   });
