@@ -7,8 +7,8 @@
  * その上限で止まる」ことを確かめる。**元の値どうしを連結した結果**は見ない。
  * 連結は上限を足し算するので、両方が上限いっぱいだと必ず溢れる。
  *
- * 溢れた先は PostgreSQL の 22001 で、`DomainError` ではないので
- * `executeAdminMutationResult` の変換に乗らず 500 になる。**操作者には理由が出ない。**
+ * 溢れた先は、VarChar なら PostgreSQL の 22001、Text でも Zod `.max()` が
+ * 以後の編集を全部ブロックする。どちらも操作者には理由が出にくい。
  *
  * 実際に踏んだもの:
  *
@@ -19,28 +19,23 @@
  * | `inquiries.name` VarChar(100) | 姓(50) + 空白 + 名(50) | 101 |
  * | `events.title` VarChar(200) | `${title}（コピー）` | 205 |
  * | `events.slug` VarChar(100) | `${slug}-copy` + `-2` | 107 |
+ * | `spaces.name` Text + Zod.max(100) | `${name}（コピー）` | 105 |
+ * | `spaces.slug` Text + Zod.max(100) | `${slug}-copy` + `-2` | 107 |
  *
- * 前 2 者は列を `@db.Text` にして解消。後ろ 3 者は
+ * 前 2 者は列を `@db.Text` にして解消。後ろは
  * `src/shared/lib/text/bounded-append.ts` で**元の値を詰めてから**連結する。
- *
- * ## この gate は約束の履行である
- *
- * `varchar-write-bounds` の docblock は長らく「派生値を VarChar 列へ書く形の検出は
- * **別 gate で扱う**」と書いたまま、その gate が存在しなかった。散文で批判を
- * かわして実装が無い状態で、実際に上の 2 件（`events.title` / `events.slug`）が
- * 生きたまま残っていた。
  *
  * ## 見えるもの / 見えないもの
  *
  * **見える**: `prisma.<model>.create/update/upsert({ data: { <field>: `...` } })` の
- * 形で、`<field>` が `@db.VarChar(n)` の列であるもの。
+ * 形で、`<field>` が `@db.VarChar(n)` **または** Zod 側に上限がある Text 列
+ * （`ZOD_BOUNDED_TEXT`）であるもの。
  *
  * **見えない**: いったん変数や関数呼び出しを経由する形
- * （`const slug = f(\`${a}-copy\`)` → `slug,`）。実際 `events.slug` はこの形で、
- * この gate では捕まえられなかった — 見つけたのは人間の目視である。
+ * （`const slug = f(\`${a}-copy\`)` → `slug,`）。実際 `events.slug` / `spaces.slug`
+ * はこの形で、この gate では捕まえられない — 見つけたのは人間の目視である。
  * 静的に追うには型情報つきの解析が要るので、**ここで嘘をつかないために明記する。**
- * その穴は `bounded-append.ts` を通す規律と、`varchar-write-bounds` の
- * `source` 付き契約（上限を定数に縛る）で埋めている。
+ * その穴は `bounded-append.ts` を通す規律で埋めている。
  */
 
 import { readFileSync } from "node:fs";
@@ -50,6 +45,10 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import { readPrismaSchema } from "../../support/prisma-sources";
+import {
+  SPACE_NAME_MAX_LENGTH,
+  SPACE_SLUG_MAX_LENGTH,
+} from "@/shared/lib/validations/space-limits";
 
 const ROOT = process.cwd();
 
@@ -82,7 +81,19 @@ function varCharFieldsByPrismaAccessor(): Map<string, number> {
   return out;
 }
 
-const VARCHAR = varCharFieldsByPrismaAccessor();
+/**
+ * Zod 側に上限がある Text 列。VarChar ではないので schema 走査では拾えないが、
+ * 連結溢れの実害（以後の編集が `.max()` で止まる）は同じ。
+ */
+const ZOD_BOUNDED_TEXT = new Map<string, number>([
+  ["space.name", SPACE_NAME_MAX_LENGTH],
+  ["space.slug", SPACE_SLUG_MAX_LENGTH],
+]);
+
+const BOUNDED = new Map<string, number>([
+  ...varCharFieldsByPrismaAccessor(),
+  ...ZOD_BOUNDED_TEXT,
+]);
 
 const WRITE_CALL =
   /\b(?:prisma|tx)\.(\w+)\.(?:create|update|upsert|updateMany|createMany)\s*\(/gu;
@@ -128,9 +139,8 @@ function scanTrackedSources(): Finding[] {
       const args = callArguments(source, openParen);
       if (!accessor || args === null) continue;
 
-      // `field: \`` の形（テンプレートリテラルを直接渡している）だけを見る。
       for (const assign of args.matchAll(/(\w+)\s*:\s*`/gu)) {
-        const limit = VARCHAR.get(`${accessor}.${assign[1] ?? ""}`);
+        const limit = BOUNDED.get(`${accessor}.${assign[1] ?? ""}`);
         if (limit === undefined) continue;
         findings.push({
           file,
@@ -148,23 +158,21 @@ const FINDINGS = scanTrackedSources();
 
 describe("上限のある列への連結書込", () => {
   test("gate が空振りしていない（前提の自己検査）", () => {
-    // schema のパースが壊れると以降が全部 vacuous に通る。
-    expect(VARCHAR.size).toBeGreaterThan(50);
-    // 既知の列で accessor の綴りを固定する（モデル名の camelCase 変換の検査）。
-    expect(VARCHAR.get("event.title")).toBe(200);
-    expect(VARCHAR.get("inquiry.name")).toBe(101);
+    expect(BOUNDED.size).toBeGreaterThan(50);
+    expect(BOUNDED.get("event.title")).toBe(200);
+    expect(BOUNDED.get("inquiry.name")).toBe(101);
+    expect(BOUNDED.get("space.name")).toBe(SPACE_NAME_MAX_LENGTH);
+    expect(BOUNDED.get("space.slug")).toBe(SPACE_SLUG_MAX_LENGTH);
 
-    // 走査そのものが動いていること。見本を食わせて拾えるか確かめる
-    // （実データが 0 件でも成立する形にする）。
     const sample = "await prisma.event.create({ data: { title: `x${y}` } });";
     const openParen = sample.indexOf("(");
     expect(callArguments(sample, openParen)).toContain("title: `x${y}`");
   });
 
-  test("テンプレートリテラルを VarChar 列へ直接書いていない", () => {
+  test("テンプレートリテラルを上限のある列へ直接書いていない", () => {
     const offenders = FINDINGS.map(
       (f) =>
-        `${f.file}:${f.line} — ${f.target} は VarChar(${f.limit})。` +
+        `${f.file}:${f.line} — ${f.target} は上限 ${f.limit}。` +
         `連結結果は元の値の上限の和になるので、` +
         `src/shared/lib/text/bounded-append.ts の appendWithinLimit で詰めてから渡す`,
     );

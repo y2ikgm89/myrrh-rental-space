@@ -72,6 +72,10 @@ mock.module("@/shared/db/prisma", () => ({
 
 const { duplicateSpaceCommand } =
   await import("@/shared/domain/spaces/commands");
+const { spaceFormBaseSchema, spaceSlugSchema } =
+  await import("@/admin/lib/validations/space");
+const { SPACE_NAME_MAX_LENGTH, SPACE_SLUG_MAX_LENGTH } =
+  await import("@/shared/lib/validations/space-limits");
 
 const SOURCE_SPACE = {
   slug: "test",
@@ -167,6 +171,29 @@ describe("duplicateSpaceCommand", () => {
         data: expect.objectContaining({ slug: "test-copy-4" }),
       }),
     );
+  });
+
+  test("上限いっぱいの name/slug を複製してもフォーム上限に収まる", async () => {
+    const longName = "あ".repeat(SPACE_NAME_MAX_LENGTH);
+    const longSlug = "a".repeat(SPACE_SLUG_MAX_LENGTH);
+    mockFindUnique.mockResolvedValueOnce({
+      ...SOURCE_SPACE,
+      name: longName,
+      slug: longSlug,
+    });
+
+    await duplicateSpaceCommand("00000000-0000-0000-0000-000000000099");
+
+    const data = mockCreate.mock.calls[0]?.[0]?.data as {
+      name: string;
+      slug: string;
+    };
+    expect(data.name.length).toBeLessThanOrEqual(SPACE_NAME_MAX_LENGTH);
+    expect(data.slug.length).toBeLessThanOrEqual(SPACE_SLUG_MAX_LENGTH);
+    expect(spaceFormBaseSchema.shape.name.safeParse(data.name).success).toBe(
+      true,
+    );
+    expect(spaceSlugSchema.safeParse(data.slug).success).toBe(true);
   });
 
   test("非存在 ID は DomainError NOT_FOUND をスロー", async () => {

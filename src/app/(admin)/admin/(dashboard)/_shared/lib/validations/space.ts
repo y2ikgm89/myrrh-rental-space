@@ -20,6 +20,10 @@ import {
   gallerySchema,
   type GalleryItem,
 } from "@/shared/lib/validations/gallery";
+import {
+  SPACE_NAME_MAX_LENGTH,
+  SPACE_SLUG_MAX_LENGTH,
+} from "@/shared/lib/validations/space-limits";
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -105,7 +109,9 @@ export const spaceSlugSchema = z
   .string()
   .trim()
   .min(1, { error: "スラッグを入力してください" })
-  .max(100, { error: "スラッグは100文字以内で入力してください" })
+  .max(SPACE_SLUG_MAX_LENGTH, {
+    error: `スラッグは${SPACE_SLUG_MAX_LENGTH}文字以内で入力してください`,
+  })
   .regex(/^[a-z0-9-]+$/, {
     error: "スラッグは小文字英数字とハイフンのみ使用可能です",
   });
@@ -147,7 +153,9 @@ export const spaceFormBaseSchema = z
       .string()
       .trim()
       .min(1, { error: "名前を入力してください" })
-      .max(100, { error: "名前は100文字以内で入力してください" }),
+      .max(SPACE_NAME_MAX_LENGTH, {
+        error: `名前は${SPACE_NAME_MAX_LENGTH}文字以内で入力してください`,
+      }),
     descriptionJson: lexicalJsonSchema,
     addressDetail: z.preprocess(
       (value) => {

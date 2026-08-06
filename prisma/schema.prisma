@@ -2513,9 +2513,12 @@ model Event {
 
   /// 開催形態 (Phase B.1)。OFFLINE = 既存の物理会場のみ運用と同一 (デフォルト)。
   format          EventFormat     @default(OFFLINE)
-  /// オンライン会議 URL。ONLINE/HYBRID + MANUAL provider では必須 (DB CHECK
-  /// event_online_meeting_url_required で担保)。GOOGLE_MEET provider では
-  /// 発行前は null、発行後に write-back される。公開ページ・JSON-LD には出力しない。
+  /// オンライン会議 URL。ONLINE/HYBRID + MANUAL provider では必須。
+  /// DB CHECK `event_online_meeting_url_required` は非 NULL しか見ておらず、
+  /// 空文字は通す（アプリ層の `startsWith('https://')` が通常経路を守る）。
+  /// 空文字拒否への CHECK 強化は計画ダウンタイム migration（P9）で行う。
+  /// GOOGLE_MEET provider では発行前は null、発行後に write-back される。
+  /// 公開ページ・JSON-LD には出力しない。
   meetingUrl      String?         @map("meeting_url") @db.VarChar(500)
   /// meetingUrl の発行元。
   meetingProvider MeetingProvider @default(MANUAL) @map("meeting_provider")

@@ -27,6 +27,14 @@ import {
   type GalleryItem,
 } from "@/shared/lib/validations/gallery";
 import { facilitiesSchema } from "@/shared/lib/json-validators";
+import {
+  appendSlugWithinLimit,
+  appendWithinLimit,
+} from "@/shared/lib/text/bounded-append";
+import {
+  SPACE_NAME_MAX_LENGTH,
+  SPACE_SLUG_BASE_MAX_LENGTH,
+} from "@/shared/lib/validations/space-limits";
 
 type SpaceCommandInput = {
   slug: string;
@@ -384,7 +392,11 @@ export async function duplicateSpaceCommand(
     throw new DomainError("スペースが見つかりません", "NOT_FOUND");
   }
 
-  const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+  // `-copy` / `（コピー）` を足してもフォーム上限に収まるようベースを詰める。
+  // Text 列なので 22001 にはならないが、溢れさせると以後の編集が Zod で全部止まる。
+  const slug = await ensureUniqueSlug(
+    appendSlugWithinLimit(source.slug, "-copy", SPACE_SLUG_BASE_MAX_LENGTH),
+  );
   const sourceGalleryResult = gallerySchema.safeParse(source.gallery);
   if (!sourceGalleryResult.success) {
     throw new DomainError("gallery が不正です", "VALIDATION");
@@ -408,7 +420,7 @@ export async function duplicateSpaceCommand(
   const created = await prisma.space.create({
     data: {
       slug,
-      name: `${source.name}（コピー）`,
+      name: appendWithinLimit(source.name, "（コピー）", SPACE_NAME_MAX_LENGTH),
       descriptionJson: asPrismaInputJsonValue(
         source.descriptionJson,
         "descriptionJson が不正です",
