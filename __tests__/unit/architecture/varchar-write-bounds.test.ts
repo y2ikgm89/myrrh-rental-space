@@ -342,10 +342,18 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   "Customer.suppressedEmailHash": generated(64, "SHA-256 hex = 64 文字固定"),
 
   // --- Pending*（トークン系） -------------------------------------------
-  "PendingCustomerEmailChange.newEmail": generated(
-    254,
-    "`emailFieldSchema`（RFC 5321 の 254 上限）を通った値のみ",
-  ),
+  // 唯一の書込経路はマイページの初回 email 登録
+  // （`mypage/_shared/actions/profile.ts` → `requestCustomerEmailChangeCommand`）で、
+  // 通るのは `emailFieldSchema` ではなく `customerProfileSchema.email`。
+  // **この欄には `.max()` が無かった** ので「helper を通った値のみ」という
+  // generated の申告は成立していなかった。実際に上限で止まることを probe で見る。
+  "PendingCustomerEmailChange.newEmail": validated({
+    module: `${SHARED}/customer-profile`,
+    exportName: "customerProfileSchema",
+    field: "email",
+    maxLength: 254,
+    sample: emailOfLength,
+  }),
   "PendingCustomerEmailChange.newEmailCanonical": generated(
     254,
     "上の値を正規化（小文字化）したもの。長さは増えない",
@@ -485,14 +493,32 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     exportName: "publicEventRegistrationSchema",
     field: "name",
   }),
-  "EventRegistration.email": validated({
-    module: `${SHARED}/event-registration`,
-    exportName: "publicEventRegistrationSchema",
-    field: "email",
-    // RFC 5321 の 254。列（255）より 1 文字狭い側で止まる
-    maxLength: 254,
-    sample: (len) => `${"a".repeat(Math.max(len - 12, 1))}@example.com`,
-  }),
+  // 3 つの入口がある。公開申込のほかに受付の当日参加 / 代行登録があり、
+  // 後ろ 2 つは `.max(255)` で**列（254）より 1 文字広かった**。
+  // 255 文字ちょうどのアドレスが Zod を通り、INSERT で 22001 → 500 になっていた。
+  "EventRegistration.email": validated(
+    {
+      module: `${SHARED}/event-registration`,
+      exportName: "publicEventRegistrationSchema",
+      field: "email",
+      maxLength: 254,
+      sample: emailOfLength,
+    },
+    {
+      module: `${SHARED}/event-registration-onsite`,
+      exportName: "walkInRegistrationSchema",
+      field: "email",
+      maxLength: 254,
+      sample: emailOfLength,
+    },
+    {
+      module: `${SHARED}/event-registration-onsite`,
+      exportName: "adminProxyRegistrationSchema",
+      field: "email",
+      maxLength: 254,
+      sample: emailOfLength,
+    },
+  ),
   "EventRegistration.phone": validated({
     module: `${SHARED}/event-registration`,
     exportName: "publicEventRegistrationSchema",

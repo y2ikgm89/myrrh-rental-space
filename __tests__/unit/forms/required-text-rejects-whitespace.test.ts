@@ -28,6 +28,7 @@ import { facilitiesSchema } from "@/shared/lib/json-validators";
 import { field } from "@/shared/lib/sections/field-registry";
 import { getZodConstraint } from "@conform-to/zod/v4";
 import { adminProxyRegistrationSchema } from "@/shared/lib/validations/event-registration-onsite";
+import { EMAIL_MAX_LENGTH } from "@/shared/lib/validations/customer-shared-fields";
 
 /** 見た目が空になる入力。半角・全角・改行・タブ・NBSP を網羅する。 */
 const BLANK_INPUTS = [
@@ -212,16 +213,20 @@ describe("必須 email の未入力メッセージ", () => {
 
 /**
  * `.pipe()` は ZodString のチェーンを閉じるので conform が長さ制約を拾えなくなる。
- * 実測で `.trim().min(1).max(255).pipe(z.email())` は `{required:true}` だけを返し、
- * 入力欄から `maxlength="255"` が消えていた。判定は公式の top-level `z.email()` を
+ * 実測で `.trim().min(1).max(…).pipe(z.email())` は `{required:true}` だけを返し、
+ * 入力欄から `maxlength` が消えていた。判定は公式の top-level `z.email()` を
  * `.refine()` に載せて借りる（`isEmailFormat`）。
+ *
+ * 上限は `EMAIL_MAX_LENGTH`（= `event_registrations.email` の列長 254）。
+ * ここは以前 255 を pin しており、**列より 1 文字広い値を「維持すべき契約」として
+ * 固定していた**（255 文字のアドレスは Zod を通って INSERT で 22001 → 500）。
  */
 describe("email の HTML 制約が conform に届く", () => {
   test("proxy 登録の email は minLength / maxLength を保つ", () => {
     expect(getZodConstraint(adminProxyRegistrationSchema)["email"]).toEqual({
       required: true,
       minLength: 1,
-      maxLength: 255,
+      maxLength: EMAIL_MAX_LENGTH,
     });
   });
 

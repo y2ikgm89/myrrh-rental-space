@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { optionalPhoneNumberSchema } from "./customer-shared-fields";
+import {
+  EMAIL_MAX_LENGTH,
+  optionalPhoneNumberSchema,
+} from "./customer-shared-fields";
 import {
   customerTypeSchema,
   companyNameSchema,
@@ -31,10 +34,21 @@ export const customerProfileSchema = z
     // 既に email が設定済みの顧客は Server Action 側で入力を拒否する
     // (email 変更は verification 経由の Better Auth changeEmail が canonical で、
     // これは PR#15 の scope 外)。
+    //
+    // **上限は列長と揃える。** ここだけ `.max()` が無く、255 文字以上のアドレスは
+    // Zod を通って `pending_customer_email_changes.new_email`（VarChar(254)）への
+    // INSERT で 22001 になっていた。呼出側の catch は DomainError 以外を握り潰して
+    // 「確認メールの送信に失敗しました」しか出さないので、顧客は理由を知れないまま
+    // 何度やっても同じ結果になる — email が無いとマイページから予約履歴・領収書に
+    // 辿り着けないので、**詰み状態を解消する唯一の入口が永久に塞がる**。
     email: z
       .union([
         z.literal(""),
-        z.email({ error: "有効なメールアドレスを入力してください" }),
+        z
+          .email({ error: "有効なメールアドレスを入力してください" })
+          .max(EMAIL_MAX_LENGTH, {
+            error: `メールアドレスは${EMAIL_MAX_LENGTH}文字以内で入力してください`,
+          }),
       ])
       .optional(),
     /**

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { isEmailFormat } from "@/shared/lib/validations/customer-shared-fields";
+import {
+  EMAIL_MAX_LENGTH,
+  isEmailFormat,
+} from "@/shared/lib/validations/customer-shared-fields";
 
 import { entityIdSchema } from "@/shared/lib/validations/entity-id";
 
@@ -33,13 +36,28 @@ const onsiteRegistrationBase = {
   quantity: z.coerce.number().int().min(1).max(100).default(1),
 };
 
+/**
+ * 上限は `event_registrations.email` の列長（`VarChar(254)`）と同じ 254。
+ *
+ * 255 にしていたため、255 文字ちょうどのアドレスは Zod を通って INSERT で
+ * PostgreSQL 22001（value too long）になっていた。**22001 は DomainError では
+ * ないので `executeAdminMutationResult` の変換に乗らず 500 になり、画面には理由が
+ * 出ない。** 受付列で参加者が待たされたまま、何度押しても登録できない。
+ *
+ * 値そのものは `emailFieldSchema`（`customer-shared-fields`）と同じ 254 だが、
+ * ここは 2 つの理由でその helper をそのまま使えない:
+ * 当日参加は任意（`.optional()`）、代行登録は必須（`.min(1)` の文言が要る）。
+ * 数だけは `EMAIL_MAX_LENGTH` として 1 箇所から引く。
+ */
 export const walkInRegistrationSchema = z.object({
   ...onsiteRegistrationBase,
   // 受付係が代行入力するため任意。空文字は null 扱い
   email: z
     .string()
     .trim()
-    .max(255)
+    .max(EMAIL_MAX_LENGTH, {
+      error: `メールアドレスは${EMAIL_MAX_LENGTH}文字以内で入力してください`,
+    })
     .optional()
     .refine((v) => !v || isEmailFormat(v), {
       error: "メールアドレスの形式が不正です",
@@ -53,8 +71,10 @@ export const adminProxyRegistrationSchema = z.object({
     .string()
     .trim()
     .min(1, "メールアドレスを入力してください")
-    .max(255)
-    // `.pipe()` にすると conform が maxLength を拾えず maxlength="255" が消える。
+    .max(EMAIL_MAX_LENGTH, {
+      error: `メールアドレスは${EMAIL_MAX_LENGTH}文字以内で入力してください`,
+    })
+    // `.pipe()` にすると conform が maxLength を拾えず maxlength が消える。
     .refine(isEmailFormat, { error: "メールアドレスの形式が不正です" }),
 });
 
