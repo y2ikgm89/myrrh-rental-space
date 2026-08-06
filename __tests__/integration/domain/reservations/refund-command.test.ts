@@ -134,6 +134,9 @@ type ReservationFixture = {
 let nextFixtureSortOrder = Math.floor(Date.now() / 1000);
 let stripeRefundCounter = 0;
 
+/** 予約の税率。fixture はアプリと同じ向き（税抜 → round）で税額を導く。 */
+const TAX_RATE_PERCENT = 10;
+
 async function createPaidReservationFixture(
   totalPriceWithTax: number,
   paymentStatus: (typeof PaymentStatus)[keyof typeof PaymentStatus] = PaymentStatus.PAID,
@@ -179,8 +182,19 @@ async function createPaidReservationFixture(
   const startTime = new Date(`2027-04-01T09:00:00+09:00`);
   const endTime = new Date(`2027-04-01T11:00:00+09:00`);
 
-  const taxAmount = Math.floor((totalPriceWithTax * 10) / 110);
-  const basePrice = totalPriceWithTax - taxAmount;
+  // 税額はアプリの書込経路と同じ向きで導く（**税抜から round**）。
+  // `floor(税込 * 10 / 110)` で作ると `reservations_tax_amount_derivation_check`
+  // （`tax_amount = round(total_price * tax_rate / 100)`）を満たさない行になる。
+  // つまり fixture が**アプリの決して作れないデータ**を書いていた。
+  const basePrice = Math.round(
+    (totalPriceWithTax * 100) / (100 + TAX_RATE_PERCENT),
+  );
+  const taxAmount = Math.round((basePrice * TAX_RATE_PERCENT) / 100);
+  if (basePrice + taxAmount !== totalPriceWithTax) {
+    throw new Error(
+      `税込 ${totalPriceWithTax} 円は税抜からの導出で再現できない（${basePrice} + ${taxAmount}）。fixture の金額を選び直す`,
+    );
+  }
 
   const reservation = await prisma.reservation.create({
     data: {
@@ -540,8 +554,12 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       select: { id: true },
     });
     const totalPriceWithTax = 3000;
-    const taxAmount = Math.floor((totalPriceWithTax * 10) / 110);
-    const basePrice = totalPriceWithTax - taxAmount;
+    // helper と同じ向き（税抜から round）で導く。floor で税込から逆算すると
+    // `reservations_tax_amount_derivation_check` を満たさない行になる。
+    const basePrice = Math.round(
+      (totalPriceWithTax * 100) / (100 + TAX_RATE_PERCENT),
+    );
+    const taxAmount = Math.round((basePrice * TAX_RATE_PERCENT) / 100);
     const reservation = await prisma.reservation.create({
       data: {
         customerId: customer.id,

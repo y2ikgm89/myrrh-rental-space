@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (152) =====
+-- ===== CHECK 制約 (154) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -99,6 +99,7 @@ ALTER TABLE "receipts" ADD CONSTRAINT "receipts_money_non_negative_check" CHECK 
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_revision_non_negative_check" CHECK ((revision >= 0));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_target_exclusive_check" CHECK ((NOT ((reservation_id IS NOT NULL) AND (event_registration_id IS NOT NULL))));
 ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
+ALTER TABLE "receipts" ADD CONSTRAINT "receipts_tax_within_amount_check" CHECK ((tax_amount <= amount));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_amount_positive_check" CHECK ((amount >= 1));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_status_check" CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('requires_action'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('canceled'::character varying)::text])));
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_target_check" CHECK ((((reservation_id IS NOT NULL) AND (event_registration_id IS NULL)) OR ((reservation_id IS NULL) AND (event_registration_id IS NOT NULL))));
@@ -111,6 +112,7 @@ ALTER TABLE "reservations" ADD CONSTRAINT "reservations_money_non_negative_check
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_number_of_guests_positive_check" CHECK (((number_of_guests IS NULL) OR (number_of_guests >= 1)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_rate_breakdown_object_check" CHECK ((jsonb_typeof(rate_breakdown_json) = 'object'::text));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_recurrence_instance_index_non_negative_check" CHECK ((recurrence_instance_index >= 0));
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_amount_derivation_check" CHECK (((tax_amount)::numeric = round((((total_price)::numeric * (tax_rate)::numeric) / (100)::numeric))));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_rate_range_check" CHECK (((tax_rate >= 0) AND (tax_rate <= 100)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tax_total_derivation_check" CHECK ((total_price_with_tax = (total_price + tax_amount)));
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_order_check" CHECK ((start_time < end_time));

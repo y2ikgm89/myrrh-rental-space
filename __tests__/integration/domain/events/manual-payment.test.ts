@@ -6,6 +6,8 @@
  * CANCELLED ケースはレビュー Important #1（status: CONFIRMED ガード追加）に伴う新規ケース。
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
+import { ensureCommerceSettings } from "../../../support/commerce-settings";
 import { EventScheduleMode, EventStatus } from "@generated/prisma/enums";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
@@ -123,6 +125,8 @@ async function cleanupFixture(eventId: string): Promise<void> {
 describeMaybe("recordManualEventPaymentCommand", () => {
   beforeAll(async () => {
     ({ prisma } = await import("@/shared/db/prisma"));
+    // CI の test DB は未 seed。設定行が要る経路なので自分で用意する。
+    await ensureCommerceSettings(prisma);
     ({ recordManualEventPaymentCommand } =
       await import("@/shared/domain/events/payment-commands"));
 

@@ -155,7 +155,32 @@ async function resolveEventRegistrationIssue(
   const amount = registration.paidAmount ?? 0;
   assertPositiveAmount(amount, "申込");
 
-  const taxRate = 10;
+  // 税率は設定から読む。**直書きしない。**
+  //
+  // Receipt は append-only の証跡で、発行時に焼いた税率がそのまま適格請求書の
+  // 税率区分・税額欄になる。ここに 10 を直書きしていたため、管理画面で標準税率を
+  // 8% や 12% に変えても、イベント参加費の領収書だけが「10% 適用」と印字し続けていた
+  // （予約側は `reservation.taxRate` のスナップショットを使っていたので影響なし）。
+  // 出た紙は後から直せない。
+  //
+  // `getPublicTaxSettings()` は `"use cache"` の読み取りなので使わない —
+  // 証跡に焼く値を、キャッシュが古いかもしれない経路から取らない。
+  // 予約の書込経路（`reservations/customer-commands.ts`）と同じく tx 内で直に読む。
+  // 設定行が無ければ**既定値へ落とさず失敗させる**。適格請求書の税率区分は
+  // append-only の証跡に焼かれて後から直せないので、推測値を書くより設定不備として
+  // 明示的に落ちる方がよい（カレンダー取込が「未分類」カテゴリーの不在で失敗させるのと
+  // 同じ判断）。既定値を import しないので、この経路が enum の module graph を
+  // 広げることもない。
+  const commerce = await tx.settingsCommerce.findFirst({
+    select: { taxStandardRate: true },
+  });
+  if (!commerce) {
+    throw new DomainError(
+      "税率設定が見つからないため、領収書を発行できません",
+      "VALIDATION",
+    );
+  }
+  const taxRate = commerce.taxStandardRate;
   const taxExcludedAmount = Math.floor((amount * 100) / (100 + taxRate));
   const taxAmount = amount - taxExcludedAmount;
 

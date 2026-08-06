@@ -209,6 +209,40 @@ describe("値域 CHECK 制約", () => {
     );
   });
 
+  test("予約の税額が税率から導かれない値だと拒否される", async () => {
+    // 税抜 10,000 円・税率 10% なら税額は 1,000 円。3,000 円を入れる。
+    // 税込は 13,000 円にして `reservations_tax_total_derivation_check`
+    // （total_price_with_tax = total_price + tax_amount）は満たすようにする —
+    // そうしないと、どちらの CHECK で落ちたのか区別が付かない。
+    await expectRejectedBy(
+      "reservations_tax_amount_derivation_check",
+      `INSERT INTO "reservations" (
+         "id",space_id,customer_id,start_time,end_time,"status",payment_status,
+         base_price,total_price,rate_breakdown_json,tax_rate_type,tax_rate,
+         tax_amount,total_price_with_tax,created_at,updated_at
+       ) VALUES (
+         gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}',
+         now(), now() + interval '1 hour', 'PENDING', 'UNPAID',
+         10000, 10000, '{}'::jsonb, 'STANDARD', 10, 3000, 13000, now(), now()
+       )`,
+    );
+  });
+
+  test("領収書の税額が総額を超えられない", async () => {
+    // PDF は税抜対象額を `amount - tax_amount` で毎回導出するので、
+    // 超えた行は負の税抜金額を印字する。
+    await expectRejectedBy(
+      "receipts_tax_within_amount_check",
+      `INSERT INTO "receipts" (
+         "id",serial_no,reservation_id,recipient_name,
+         "amount",tax_amount,tax_rate,issuer_snapshot,updated_at
+       ) VALUES (
+         gen_random_uuid(), 'PROBE-' || substr(gen_random_uuid()::text, 1, 8),
+         '${ABSENT_UUID_A}', 'probe', 100, 200, 10, '{}'::jsonb, now()
+       )`,
+    );
+  });
+
   test("スペースの定員を 0 にできない", async () => {
     await expectRejectedBy(
       "spaces_capacity_positive_check",
