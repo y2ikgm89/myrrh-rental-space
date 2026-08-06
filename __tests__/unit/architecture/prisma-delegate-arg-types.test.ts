@@ -327,6 +327,7 @@ describe("手書き構造型の Prisma 引数は公式 Input 型で受ける", (
     ).toEqual([]);
   });
 
+  // src 全ファイルの AST 走査。CI の per-file 並列負荷下で 5s default を超えうるため 30s。
   test("src に Prisma 型検査を無効化する引数宣言が無い", () => {
     const offenders = sourceFiles(SRC).flatMap((file) => collect(file));
 
@@ -337,5 +338,5 @@ describe("手書き構造型の Prisma 引数は公式 Input 型で受ける", (
           ? "手書きの最小構造型でも引数は Prisma.<Model>WhereInput / <Model>UncheckedUpdateManyInput 等で受ける。`object` にすると存在しない列を where に書いてもコンパイルが通り、実行時に PrismaClientValidationError で 500 になる"
           : "",
     }).toEqual({ offenders: [], hint: "" });
-  });
+  }, 30_000);
 });
