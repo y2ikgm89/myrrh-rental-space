@@ -85,6 +85,12 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
   （DB 含む監視用、`APP_SURFACE=admin` のみ・public は 404）—
   `src/app/api/live/route.ts` / `src/app/api/health/route.ts`
 
+## 品質の物差し（KGI）
+
+品質の物差しは「テストが緑」ではなく、**顧客が遭わない 7 つの約束**
+（CX-1..CX-7）。詳細と「報酬ハッキングの温床」6 種の定義は
+`.claude/rules/customer-experience-kgi.md`。ゲートが緑でも CX が破れるなら未完了。
+
 ## 絶対規約
 
 アーキテクチャ規約の多くは `__tests__/unit/architecture-boundaries.test.ts` と ESLint が

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 describe("one-time backfill clean-break contract", () => {
-  test("does not keep historical one-off data repair scripts", () => {
+  test("does not keep the three retired one-off data repair scripts", () => {
     const removedScripts = [
       "backfill-page-hero-buttons.ts",
       "migrate-gallery-images-to-media.ts",

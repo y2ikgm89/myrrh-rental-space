@@ -173,8 +173,6 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
    ```sh
    gh workflow run ci.yml --ref <branch> -f run_full_ci=true
    ```
-   （`codex/full-ci/` prefix で起動する経路は ci.yml から撤去済み。起動実績が
-   ゼロだったため — ci.yml のコメントに経緯が残っている）
    smoke 以外に足した spec は毎 push では走らない —
    マージ前に full CI か手元の広域実行で緑を確認する。
 

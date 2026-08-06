@@ -1599,8 +1599,8 @@ describe("architecture boundaries", () => {
       if (providedRequired.length === 0) continue;
 
       // このファイルが required context を提供している → paths filter を検査。
-      // `on:` block 内の `paths:` (含む `paths-ignore:`) を検出。
-      // 簡易 parser: `pull_request:` の直下 (~10 lines) に `paths:` があるか。
+      // 行単位の文字列一致であり、`on:` の YAML 構造は見ていない
+      // （ネスト・アンカー・別キー配下の paths は拾えない。js-yaml は依存に無い）。
       const onBlockMatch = source.match(/^on:\s*\n([\s\S]*?)(?=^\S)/mu);
       const onBlock = onBlockMatch?.[1] ?? "";
       if (/^\s+paths(-ignore)?:\s*$/mu.test(onBlock)) {

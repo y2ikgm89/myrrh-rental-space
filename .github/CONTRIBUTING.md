@@ -166,7 +166,7 @@ PR template（[`pull_request_template.md`](./pull_request_template.md)）を埋�
 
 ## 品質ゲート
 
-CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（E2E / Visual / Lighthouse）は `codex/full-ci/` で始まる PR branch、または `workflow_dispatch` の `run_full_ci=true` で opt-in。
+CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（広域 E2E / Visual / Lighthouse）は `workflow_dispatch` の `run_full_ci=true` で opt-in（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）。広域 E2E は main の nightly でも自動実行される。
 
 ## セキュリティ
 
