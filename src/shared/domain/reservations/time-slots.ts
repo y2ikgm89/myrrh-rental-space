@@ -28,6 +28,7 @@ import type { TimeSlot } from "@/shared/lib/reservation/types";
 import {
   parseTime,
   generateSlotsFromBusinessHours,
+  deriveSlotIntervalMinutes,
 } from "@/shared/lib/reservation/time-slots-utils";
 
 /**
@@ -101,6 +102,9 @@ export async function getAvailableTimeSlots(
   // datetime は UTC 保存だが、スロットラベル (BusinessHours 設定) は
   // JST wall-clock。Cloud Run (UTC) で `.getHours()` を使うと 9 時間ずれる
   // ため JST 固定の `getJstMinutesOfDay` SSoT で照合する。
+  // スロットが覆う長さ。隣接するラベルの差から取る（設定で 30 分刻みにも 60 分刻みにも
+  // なるため、定数を書くと片方でずれる）。
+  const slotInterval = deriveSlotIntervalMinutes(slots);
   const occupiedWindows = [...reservations, ...eventSlots];
   for (const window of occupiedWindows) {
     // 半開区間 overlap: この JST カレンダー日と交差しない占有は skip
@@ -123,11 +127,16 @@ export async function getAvailableTimeSlots(
 
     for (const slot of slots) {
       const slotParsed = parseTime(slot.time);
-      const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
-      if (
-        slotMinutes >= displayStartMinutes &&
-        slotMinutes < displayEndMinutes
-      ) {
+      const slotStart = slotParsed.hour * 60 + slotParsed.minute;
+      const slotEnd = slotStart + slotInterval;
+      // **区間どうしの交差**で判定する。開始分が窓の内側かどうかだけを見ると、
+      // 「窓より前に始まって窓に食い込むスロット」を空きとして出してしまう。
+      // 例: 占有 10:30–11:30 / 1 時間刻みなら、10:00 のスロット (10:00–11:00) は
+      // 明らかに重なっているのに `10:00 >= 10:30` が偽で空き表示になる。
+      // 顧客はそれを選べてしまい、送信して初めて EXCLUDE 制約に弾かれる。
+      // 判定は占有側と同じ半開区間 `start < end && end > start`
+      // （境界が接するだけのスロットは重複ではない）。
+      if (slotStart < displayEndMinutes && slotEnd > displayStartMinutes) {
         slot.available = false;
       }
     }
