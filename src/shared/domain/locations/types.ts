@@ -18,7 +18,6 @@ type LocationRecord = {
   imageUrl: string;
   imageUrls: string[];
   businessHours: BusinessHours | null;
-  specialHolidays: string[] | null;
   latitude: number | null;
   longitude: number | null;
   googleBusinessPlaceId: string | null;
@@ -78,7 +77,6 @@ export type LocationData = {
   readonly imageUrl: string;
   readonly imageUrls: unknown;
   readonly businessHours: unknown;
-  readonly specialHolidays: unknown;
   readonly latitude: number | null;
   readonly longitude: number | null;
   readonly googleBusinessPlaceId: string | null;

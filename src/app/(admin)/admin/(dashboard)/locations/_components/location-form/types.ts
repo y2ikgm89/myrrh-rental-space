@@ -45,8 +45,6 @@ export type LocationBasicTabProps = {
   setIsPublished: (value: boolean) => void;
   businessHours: BusinessHours | null;
   setBusinessHours: (value: BusinessHours | null) => void;
-  specialHolidays: readonly string[];
-  setSpecialHolidays: Dispatch<SetStateAction<readonly string[]>>;
   accessLinesList: FieldMetadata<
     NonNullable<LocationFormInput["accessLines"]>[number],
     LocationFormInput,

@@ -157,18 +157,6 @@ export const locationFormBaseSchema = z.strictObject({
     }
     return value;
   }, businessHoursWeekSchema.nullable().optional()),
-  specialHolidays: z.preprocess((value) => {
-    if (typeof value === "string") {
-      if (value === "" || value === "null") return null;
-      try {
-        const parsed: unknown = JSON.parse(value);
-        return parsed;
-      } catch {
-        return null;
-      }
-    }
-    return value;
-  }, z.array(z.string()).nullable().optional()),
   // MEO フィールド (conform FormData transit 対応 preprocess)
   latitude: z
     .preprocess(
@@ -295,7 +283,6 @@ export const defaultLocationFormValues: LocationFormInput = {
   imageUrl: "",
   imageUrls: [],
   businessHours: null,
-  specialHolidays: null,
   latitude: null,
   longitude: null,
   googleBusinessPlaceId: "",

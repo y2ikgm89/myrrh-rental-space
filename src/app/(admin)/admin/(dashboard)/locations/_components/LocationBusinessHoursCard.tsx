@@ -65,16 +65,12 @@ function setDay(
 type LocationBusinessHoursCardProps = {
   businessHours: BusinessHours | null;
   onBusinessHoursChange: (next: BusinessHours) => void;
-  specialHolidays: readonly string[];
-  onSpecialHolidaysChange: (next: readonly string[]) => void;
   disabled?: boolean;
 };
 
 export function LocationBusinessHoursCard({
   businessHours,
   onBusinessHoursChange,
-  specialHolidays,
-  onSpecialHolidaysChange,
   disabled = false,
 }: LocationBusinessHoursCardProps) {
   const handleIsOpenChange = (day: WeekdayKey, isOpen: boolean) => {
@@ -123,20 +119,6 @@ export function LocationBusinessHoursCard({
         slots: current.slots.filter((_, i) => i !== slotIndex),
       }),
     );
-  };
-
-  const handleAddHoliday = () => {
-    onSpecialHolidaysChange([...specialHolidays, ""]);
-  };
-
-  const handleHolidayChange = (index: number, value: string) => {
-    onSpecialHolidaysChange(
-      specialHolidays.map((date, i) => (i === index ? value : date)),
-    );
-  };
-
-  const handleRemoveHoliday = (index: number) => {
-    onSpecialHolidaysChange(specialHolidays.filter((_, i) => i !== index));
   };
 
   return (
@@ -297,53 +279,6 @@ export function LocationBusinessHoursCard({
               );
             })
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>特別休業日</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            年末年始等、通常の営業曜日設定とは別に休業する日を個別に登録します。
-          </p>
-          <div className="space-y-2">
-            {specialHolidays.map((date, index) => (
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => handleHolidayChange(index, e.target.value)}
-                  className="w-48"
-                  disabled={disabled}
-                  aria-label={`特別休業日${index + 1}`}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveHoliday(index)}
-                  disabled={disabled}
-                  className="h-8 w-8"
-                  aria-label={`特別休業日${index + 1}を削除`}
-                >
-                  <IconX className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddHoliday}
-            disabled={disabled}
-          >
-            <IconPlus className="mr-1 h-4 w-4" />
-            休業日を追加
-          </Button>
         </CardContent>
       </Card>
     </>

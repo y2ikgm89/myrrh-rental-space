@@ -213,10 +213,10 @@ export function parseFacilities(value: unknown): FacilityItem[] {
 /**
  * unknown値をstring[] | nullに安全に変換
  *
- * nullableな配列フィールド用（specialHolidays 等）
+ * nullable な配列フィールド用
  *
  * @example
- * const holidays = parseStringArrayOrNull(location.specialHolidays)
+ * const tags = parseStringArrayOrNull(media.tags)
  */
 export function parseStringArrayOrNull(value: unknown): string[] | null {
   if (value === null || value === undefined) return null;

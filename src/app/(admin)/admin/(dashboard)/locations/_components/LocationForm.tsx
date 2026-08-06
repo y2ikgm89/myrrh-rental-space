@@ -119,19 +119,9 @@ export function LocationForm({
       parseBusinessHours(location?.businessHours) ??
       (isEdit ? null : DEFAULT_BUSINESS_HOURS),
   );
-  const [specialHolidays, setSpecialHolidays] = useState<readonly string[]>(
-    () => location?.specialHolidays ?? [],
-  );
   const businessHoursPayload = businessHours
     ? JSON.stringify(businessHours)
     : "";
-  // 「休業日を追加」で挿入される空エントリは送信前に除外する（未入力のまま保存すると
-  // location-json-ld.ts の validFrom/validThrough に空文字列がそのまま出力される）。
-  const nonEmptySpecialHolidays = specialHolidays.filter((date) => date !== "");
-  const specialHolidaysPayload =
-    nonEmptySpecialHolidays.length > 0
-      ? JSON.stringify(nonEmptySpecialHolidays)
-      : "";
 
   const boundAction =
     isEdit && location?.id
@@ -302,11 +292,6 @@ export function LocationForm({
         name={fields.businessHours.name}
         value={businessHoursPayload}
       />
-      <input
-        type="hidden"
-        name={fields.specialHolidays.name}
-        value={specialHolidaysPayload}
-      />
       {BUSINESS_ATTRIBUTE_OPTIONS.map((attr) => (
         <input
           key={attr.key}
@@ -363,8 +348,6 @@ export function LocationForm({
             setIsPublished={setIsPublished}
             businessHours={businessHours}
             setBusinessHours={setBusinessHours}
-            specialHolidays={specialHolidays}
-            setSpecialHolidays={setSpecialHolidays}
             accessLinesList={accessLinesList}
             imageUrlsList={imageUrlsList}
             accessLinesDndContextId={accessLinesDndContextId}

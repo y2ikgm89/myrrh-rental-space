@@ -16,10 +16,8 @@ import {
   type LocationForSeo,
 } from "@/shared/domain/locations/public-queries";
 import { omitUndefined } from "@/shared/lib/serialize";
-import {
-  parseBusinessAttributes,
-  parseStringArray,
-} from "@/shared/lib/json-validators";
+import { parseBusinessAttributes } from "@/shared/lib/json-validators";
+import { formatJstDateOnly } from "@/shared/lib/date-format";
 import {
   convertToOpeningHoursSpecification,
   ATTR_LABELS,
@@ -93,13 +91,16 @@ export function buildLocationLocalBusinessJsonLdData(
   const openingHoursSpecification =
     convertToOpeningHoursSpecification(location.businessHours) ?? undefined;
 
-  const specialHolidayDates = parseStringArray(location.specialHolidays);
+  // 休業日の出どころは BlockedDate（scope=LOCATION）。**予約を実際に止める仕組みと
+  // 同じものを読む。** 以前は `Location.specialHolidays` という別の列を読んでいたが、
+  // そちらは予約可否に一切効かず、管理画面には「休業する日を個別に登録します」と
+  // 書かれていた。検索結果には休業と出るのに予約は取れる、という食い違いだった。
   const specialOpeningHoursSpecification =
-    specialHolidayDates.length > 0
-      ? specialHolidayDates.map((date) => ({
+    location.blockedDates.length > 0
+      ? location.blockedDates.map((blocked) => ({
           "@type": "OpeningHoursSpecification" as const,
-          validFrom: date,
-          validThrough: date,
+          validFrom: formatJstDateOnly(blocked.startDate),
+          validThrough: formatJstDateOnly(blocked.endDate),
           opens: "00:00",
           closes: "00:00",
         }))
