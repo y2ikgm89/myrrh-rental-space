@@ -181,6 +181,22 @@ const prismaUser = {
   update: mockUserUpdate,
 };
 
+// 匿名化は参照先の PII も消す（Reservation.guest* / EventRegistration.*）。
+// 実際に消えることは実 DB で
+// `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が
+// 全テーブル走査で確かめる。ここは呼ばれることと where だけを見る。
+const mockReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+const mockEventRegistrationUpdateMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
+
+const prismaReservation = { updateMany: mockReservationUpdateMany };
+const prismaEventRegistration = {
+  updateMany: mockEventRegistrationUpdateMany,
+};
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     customer: prismaCustomer,
@@ -189,6 +205,8 @@ mock.module("@/shared/db/prisma", () => ({
     inquiry: prismaInquiry,
     inquiryReply: prismaInquiryReply,
     inquiryAttachment: prismaInquiryAttachment,
+    reservation: prismaReservation,
+    eventRegistration: prismaEventRegistration,
     $transaction: <T>(
       fn: (tx: {
         customer: typeof prismaCustomer;
@@ -197,6 +215,8 @@ mock.module("@/shared/db/prisma", () => ({
         inquiry: typeof prismaInquiry;
         inquiryReply: typeof prismaInquiryReply;
         inquiryAttachment: typeof prismaInquiryAttachment;
+        reservation: typeof prismaReservation;
+        eventRegistration: typeof prismaEventRegistration;
       }) => Promise<T>,
     ) =>
       fn({
@@ -206,6 +226,8 @@ mock.module("@/shared/db/prisma", () => ({
         inquiry: prismaInquiry,
         inquiryReply: prismaInquiryReply,
         inquiryAttachment: prismaInquiryAttachment,
+        reservation: prismaReservation,
+        eventRegistration: prismaEventRegistration,
       }),
   },
 }));

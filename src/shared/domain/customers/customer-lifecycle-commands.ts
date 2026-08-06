@@ -40,8 +40,24 @@ import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/
  * (Session / Account が onDelete: Cascade で連鎖削除、以降ログイン不可)。
  *
  * Reservation / Receipt / Inquiry / SpaceReview / EventRegistration /
- * TermsAgreement は削除せず customerId 参照を維持する。JOIN で PII に到達しても
- * 全て redacted 値になる。
+ * TermsAgreement は削除せず customerId 参照を維持する。**参照先が持つ PII も
+ * 同じ tx で消す**:
+ *
+ * - `Reservation` の `guestLastName` / `guestFirstName` / `guestEmail` /
+ *   `guestPhone` / `guestCompanyName` → null。公開の予約作成は**ログイン顧客でも
+ *   無条件に**これらへ実名・メール・電話・会社名を書くので、Customer 側だけ
+ *   redact しても JOIN で素の PII に到達できてしまう
+ * - `EventRegistration` の `name` は placeholder、`email` / `phone` / `note` → null。
+ *   こちらは `customerId` が `onDelete: SetNull` の弱い参照で、退会後も申込者の
+ *   氏名・連絡先が残っていた
+ * - `Inquiry` は `anonymizeInquiryInTx` で連鎖匿名化する（下記）
+ *
+ * TermsAgreement は append-only なので触らない（同意の証跡として `guestEmail` が
+ * 残る。法的保存義務が redaction より優先する領域）。
+ *
+ * **この列挙は散文なので必ず drift する。** 実際の網羅は
+ * `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が
+ * schema から「顧客 PII を持つ列」を導いて突き合わせる。
  *
  * AuditLog: action=UPDATE / resource=customer / oldValue には PII を含めず
  * `{ hadUserId }` のみ、newValue は `{ anonymizedAt, anonymizedReason }`、
@@ -149,6 +165,31 @@ export async function anonymizeCustomerCommand(input: {
         ...(preservedSuppressionHash !== null
           ? { suppressedEmailHash: preservedSuppressionHash }
           : {}),
+      },
+    });
+
+    // 参照先が持つ PII を同じ tx で消す。Customer 側だけ redact しても、
+    // Reservation.guest* / EventRegistration.* に素の氏名・メール・電話が残っていれば
+    // JOIN 一発で到達できる（公開の予約作成はログイン顧客でも guest* を埋める）。
+    await tx.reservation.updateMany({
+      where: { customerId: existing.id },
+      data: {
+        guestLastName: null,
+        guestFirstName: null,
+        guestEmail: null,
+        guestPhone: null,
+        guestCompanyName: null,
+      },
+    });
+
+    // `name` は NOT NULL なので placeholder を入れる（Customer 側と同じ文言）。
+    await tx.eventRegistration.updateMany({
+      where: { customerId: existing.id },
+      data: {
+        name: CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME,
+        email: null,
+        phone: null,
+        note: null,
       },
     });
 
