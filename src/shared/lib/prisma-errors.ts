@@ -27,7 +27,7 @@ import { isRecord } from "@/shared/lib/serialize";
  *
  * 橋渡しを怠ると **無言で常に false** になる。P2002 を握り潰すはずの経路が
  * throw に変わり、Stripe の webhook 再送が無限リトライになる（KGI: 返金が
- * 正しく一度だけ行われる）。実際 20260804110000〜20260804150000 の列 rename で
+ * 正しく一度だけ行われる）。実際、物理列名を snake_case へ寄せた rename で
  * この経路が壊れ、**単体テストは fixture に旧名を焼いてあったため緑のままだった**。
  *
  * 物理名は「field 名の snake_case」と等しい。これは思い込みではなく

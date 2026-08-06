@@ -166,7 +166,7 @@ const breakingFixtures: ReadonlyArray<{
   // enum の rename。**この 2 つは長期間 grep から漏れていた**（Codex #1924 P1）。
   // 旧 revision は生成済み client が持つ旧型名・旧値をそのまま送るため、
   // 計画ダウンタイム無しで migrate が走ると `invalid input value for enum` になる。
-  // 20260804085847 が実際にこの状態で書かれていた。
+  // 実際にこの状態で書かれた migration が履歴にある。
   {
     name: "ALTER TYPE ... RENAME VALUE（旧 revision が旧値を送って落ちる）",
     sql: `ALTER TYPE "DiscountType" RENAME VALUE 'none' TO 'NONE';`,

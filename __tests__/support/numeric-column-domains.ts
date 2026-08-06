@@ -106,8 +106,8 @@ export function columnKey(c: NumericColumn): string {
  * PostgreSQL の識別子上限（バイト）。
  *
  * **超えた分は黙って切り捨てられる。** エラーも警告も出ないので、長い名前は
- * 「付けたつもりの名前と実際の名前が違う」状態を作る。実際 20260805130000 の
- * 初版が 2 本これを踏み、`pg_constraint` 側では 63 バイトに切られていた。
+ * 「付けたつもりの名前と実際の名前が違う」状態を作る。実際、値域 CHECK を入れた
+ * migration の初版が 2 本これを踏み、`pg_constraint` 側では 63 バイトに切られていた。
  */
 export const POSTGRES_IDENTIFIER_MAX_BYTES = 63;
 
