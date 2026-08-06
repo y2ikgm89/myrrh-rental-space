@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (151) =====
+-- ===== CHECK 制約 (152) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -169,6 +169,7 @@ ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_end_time_format_check" CHECK (((end_time IS NULL) OR ((end_time)::text ~ '^([01][0-9]|2[0-3]|24):[0-5][0-9]$'::text)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_hourly_price_non_negative_check" CHECK (((hourly_price)::numeric >= (0)::numeric));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_start_time_format_check" CHECK (((start_time IS NULL) OR ((start_time)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_time_of_day_order_check" CHECK (((start_time IS NULL) OR (end_time IS NULL) OR ((start_time)::text < (end_time)::text)));
 ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_rating_range_check" CHECK (((rating >= 1) AND (rating <= 5)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_area_positive_check" CHECK (((area IS NULL) OR (area > 0)));
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_business_hours_object_check" CHECK (((business_hours IS NULL) OR (jsonb_typeof(business_hours) = 'object'::text)));

@@ -32,10 +32,89 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { Client } from "pg";
 import { resolveTestDatabaseUrl } from "../../../scripts/test-db-url";
+import {
+  ORDER_CONSTRAINTS,
+  type TemporalOrderPairKey,
+} from "../../support/temporal-order-constraints";
 
 /** FK 先を用意しないための、実在しないことが保証された UUID。 */
 const ABSENT_UUID_A = "00000000-0000-4000-8000-0000000000aa";
 const ABSENT_UUID_B = "00000000-0000-4000-8000-0000000000bb";
+
+/**
+ * 期間の組ごとの「逆転した行」。**制約 1 本につき 1 本の INSERT。**
+ *
+ * 型が `Record<TemporalOrderPairKey, string>` なので、
+ * `__tests__/support/temporal-order-constraints.ts` に組を足して
+ * ここへ probe を書き忘れると **tsc:test がコンパイルエラーで落ちる**。
+ * 以前は宣言 8 本に対して probe が 4 本しか無く、残り 4 本
+ * （`event_time_slots` / `space_rate_plans` の effective_range /
+ * `announcement_bars` / `events` の slot span）は述語を `CHECK (true)` に
+ * 書き換えても静的ゲート 4 本ごと緑のまま通っていた。
+ *
+ * **どの probe も「その制約でだけ落ちる」ことを実測してある**（9 本の順序制約を
+ * 全部 DROP したうえで同じ INSERT を流し、落ちる理由が FK 違反か、あるいは
+ * 通ることを確認した）。`reservations` だけは CHECK を外すと EXCLUDE 制約の
+ * `tstzrange(start_time, end_time, '[)')` の構築で落ちるが、タプル単位の CHECK は
+ * index への挿入より先に評価されるので、制約がある状態では CHECK 側が勝つ。
+ */
+const REVERSED_ROW_PROBES: Record<TemporalOrderPairKey, string> = {
+  "Reservation.start_time": `
+    INSERT INTO "reservations" (
+      "id",space_id,customer_id,start_time,end_time,"status",payment_status,
+      base_price,total_price,rate_breakdown_json,tax_rate_type,tax_rate,
+      tax_amount,total_price_with_tax,created_at,updated_at
+    ) VALUES (
+      gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}',
+      TIMESTAMPTZ '2099-02-01 12:00+09', TIMESTAMPTZ '2099-02-01 11:00+09',
+      'PENDING', 'UNPAID', 0, 0, '{}'::jsonb, 'STANDARD', 10, 0, 0, now(), now()
+    )`,
+  "EventTimeSlot.start_at": `
+    INSERT INTO "event_time_slots" ("id",event_id,start_at,end_at,"capacity",updated_at)
+    VALUES (gen_random_uuid(), '${ABSENT_UUID_A}',
+            TIMESTAMPTZ '2099-02-01 12:00+09', TIMESTAMPTZ '2099-02-01 11:00+09', 5, now())`,
+  "SpaceRatePlan.effective_from": `
+    INSERT INTO "space_rate_plans" ("id",space_id,"name",hourly_price,
+                                    effective_from,effective_to,updated_at)
+    VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 'probe', 1000,
+            DATE '2099-02-01', DATE '2099-01-01', now())`,
+  "SpaceRatePlan.start_time": `
+    INSERT INTO "space_rate_plans" ("id",space_id,"name",hourly_price,
+                                    start_time,end_time,updated_at)
+    VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 'probe', 1000,
+            '18:00', '09:00', now())`,
+  "BlockedDate.start_date": `
+    INSERT INTO "blocked_dates" ("id","scope",start_date,end_date,"type",created_by,updated_at)
+    VALUES (gen_random_uuid(), 'GLOBAL', DATE '2099-01-10', DATE '2099-01-01',
+            'OTHER', '${ABSENT_UUID_A}', now())`,
+  "Coupon.valid_from": `
+    INSERT INTO "coupons" ("id","code","name","type",discount_value,valid_from,valid_until,updated_at)
+    VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
+            'probe', 'FIXED_AMOUNT', 100,
+            TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
+  // display_order を明示する。既定値のままだと seed 済みのローカル DB で
+  // `announcement_bars_display_order_key`（unique）と衝突し、CHECK を外しても
+  // 別の理由で落ちる probe になる（CI の未 seed DB では起きない差）。
+  // 負の待避域（`display_order <= -1000000`）は position CHECK が許している。
+  "AnnouncementBar.start_at": `
+    INSERT INTO "announcement_bars" ("id",display_order,start_at,end_at,updated_at)
+    VALUES (gen_random_uuid(), -1999999,
+            TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
+  "Event.first_slot_start_at": `
+    INSERT INTO "events" (
+      "id","title","slug",description_json,description_html,description_plain_text,
+      schedule_mode,category_id,first_slot_start_at,last_slot_end_at,updated_at
+    ) VALUES (
+      gen_random_uuid(), 'probe', 'probe-' || gen_random_uuid()::text,
+      '{}'::jsonb, '', '', 'SINGLE_OCCURRENCE', '${ABSENT_UUID_A}',
+      TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now()
+    )`,
+  "SmartLockPasscode.start_time": `
+    INSERT INTO "smart_lock_passcodes" ("id",reservation_id,device_id,passcode_ciphertext,
+                                        start_time,end_time,updated_at)
+    VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}', 'probe',
+            TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
+};
 
 let client: Client;
 
@@ -221,29 +300,13 @@ describe("値域 CHECK 制約", () => {
     );
   });
 
-  test("期間の列は逆転した値を受け付けない（向きの実測）", async () => {
+  test("期間の列は逆転した値を受け付けない（宣言した全 9 組の向きの実測）", async () => {
     // 名前と参照列だけを見る静的ゲート（temporal-order-constraints）は
     // `<=` と `>=` を取り違えても通る。**向きはここで実際に入れて確かめる。**
-    await expectRejectedBy(
-      "blocked_dates_date_order_check",
-      `INSERT INTO "blocked_dates" ("id","scope",start_date,end_date,"type",created_by,updated_at)
-       VALUES (gen_random_uuid(), 'GLOBAL', DATE '2099-01-10', DATE '2099-01-01',
-               'OTHER', '${ABSENT_UUID_A}', now())`,
-    );
-    await expectRejectedBy(
-      "coupons_validity_order_check",
-      `INSERT INTO "coupons" ("id","code","name","type",discount_value,valid_from,valid_until,updated_at)
-       VALUES (gen_random_uuid(), 'PROBE' || substr(gen_random_uuid()::text, 1, 8),
-               'probe', 'FIXED_AMOUNT', 100,
-               TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
-    );
-    await expectRejectedBy(
-      "smart_lock_passcodes_window_order_check",
-      `INSERT INTO "smart_lock_passcodes" ("id",reservation_id,device_id,passcode_ciphertext,
-                                           start_time,end_time,updated_at)
-       VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', '${ABSENT_UUID_B}', 'probe',
-               TIMESTAMPTZ '2099-02-01 00:00+09', TIMESTAMPTZ '2099-01-01 00:00+09', now())`,
-    );
+    for (const [pair, constraint] of Object.entries(ORDER_CONSTRAINTS)) {
+      const sql = REVERSED_ROW_PROBES[pair as TemporalOrderPairKey];
+      await expectRejectedBy(constraint, sql);
+    }
   });
 
   test("予約とイベント申込の両方を指す領収書を作れない", async () => {
