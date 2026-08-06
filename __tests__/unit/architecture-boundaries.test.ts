@@ -1328,28 +1328,36 @@ describe("architecture boundaries", () => {
       "google_iap_web_cloud_run_service_iam_member",
     ];
 
+    const importBlockRe = /import\s*\{([\s\S]*?)\n\}/gu;
+    const resourceDeclRe = /^resource\s+"([^"]+)"\s+"([^"]+)"/gmu;
     const offenders: string[] = [];
     for (const file of tfFiles) {
       const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
-      for (const resourceType of IMPORT_REQUIRED_RESOURCE_TYPES) {
-        // `resource "<type>"` が宣言されているか (行頭・空白許容、# コメント除外)。
-        const resourcePattern = new RegExp(
-          `^resource\\s+"${resourceType}"\\s`,
-          "mu",
-        );
-        if (!resourcePattern.test(source)) continue;
-
-        // 同一 file 内に `import {` から始まり `to = <type>` を含む block が
-        // 存在するか。for_each 版は `to = <type>.<name>[each.key]` 形式に、
-        // 単一 resource 版は `to = <type>.<name>` 形式になるため type 名の
-        // 部分文字列一致で拾える。
-        const importPattern = new RegExp(
-          `import\\s*\\{[\\s\\S]*?to\\s*=\\s*${resourceType}\\b`,
+      const importBodies = [...source.matchAll(importBlockRe)].map(
+        (block) => block[1] ?? "",
+      );
+      for (const match of source.matchAll(resourceDeclRe)) {
+        const resourceType = match[1] ?? "";
+        const resourceName = match[2] ?? "";
+        if (
+          !(IMPORT_REQUIRED_RESOURCE_TYPES as readonly string[]).includes(
+            resourceType,
+          )
+        ) {
+          continue;
+        }
+        const expectedTo = `${resourceType}.${resourceName}`;
+        const escapedTo = expectedTo.replaceAll(".", "\\.");
+        const toPattern = new RegExp(
+          `to\\s*=\\s*${escapedTo}(?:\\[[^\\]]+\\])?\\b`,
           "u",
         );
-        if (!importPattern.test(source)) {
+        const hasMatchingImport = importBodies.some((body) =>
+          toPattern.test(body),
+        );
+        if (!hasMatchingImport) {
           offenders.push(
-            `terraform/${file}: resource "${resourceType}" is declared but no matching import{} block found (add one to avoid 409 on fresh-state apply)`,
+            `terraform/${file}: resource "${resourceType}" "${resourceName}" is declared but no import{} block with to = ${expectedTo} found (add one to avoid 409 on fresh-state apply)`,
           );
         }
       }
@@ -1434,7 +1442,7 @@ describe("architecture boundaries", () => {
       const importBlocks = source.matchAll(importBlockRe);
       for (const block of importBlocks) {
         const body = block[1] ?? "";
-        const toMatch = body.match(/to\s*=\s*(cloudflare_[a-z_]+)/u);
+        const toMatch = body.match(/to\s*=\s*(cloudflare_[a-z0-9_]+)/u);
         const idMatch = body.match(/id\s*=\s*"([^"]+)"/u);
         if (!toMatch || !idMatch) continue;
         const resourceType = toMatch[1];
@@ -1445,7 +1453,12 @@ describe("architecture boundaries", () => {
         const rule = CLOUDFLARE_IMPORT_ID_PATTERNS.find(
           (r) => r.resourceType === resourceType,
         );
-        if (!rule) continue; // まだ table に無い CF resource type は skip (追加時にここへ登録)
+        if (!rule) {
+          offenders.push(
+            `terraform/${file}: ${resourceType} import block has no CLOUDFLARE_IMPORT_ID_PATTERNS entry (register the type before adding import blocks)`,
+          );
+          continue;
+        }
         if (!rule.pattern.test(idNormalized)) {
           offenders.push(
             `terraform/${file}: ${resourceType} import id "${idString}" does not match provider v5 format "${rule.docsFormat}"`,
@@ -1629,8 +1642,36 @@ describe("architecture boundaries", () => {
     );
 
     // runner に付与されてはいけない role (F1 起点):
-    expect(source).not.toMatch(/^\s*roles\/resourcemanager\.projectIamAdmin/mu);
-    expect(source).not.toMatch(/^\s*roles\/iam\.serviceAccountAdmin/mu);
+    // 行頭 anchor だけだと `--role="roles/..."` を見逃す。設計メモの # コメント行は
+    // 剥がしてから `--role="..."` と BOOTSTRAP_RUNNER_ROLES の全要素を収集し、
+    // forbidden set との積集合で判定する (コメント strip 必須 — 剥がさないと
+    // 履歴コメント内の `--role=` 引用が false positive になる)。
+    const stripHashComments = (shellSource: string): string =>
+      shellSource
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("#"))
+        .join("\n");
+    const stripped = stripHashComments(source);
+    const FORBIDDEN_RUNNER_ROLES = new Set([
+      "roles/resourcemanager.projectIamAdmin",
+      "roles/iam.serviceAccountAdmin",
+    ]);
+    const rolesFromFlags = [
+      ...(stripped.matchAll(/--role="([^"]+)"/gu) ?? []),
+    ].map((match) => match[1] ?? "");
+    const bootstrapRolesBlock = stripped.match(
+      /BOOTSTRAP_RUNNER_ROLES="([\s\S]*?)"/u,
+    );
+    const rolesFromBootstrap = bootstrapRolesBlock
+      ? bootstrapRolesBlock[1]
+          .replaceAll("\\", "")
+          .split(/\s+/u)
+          .filter((role) => role.startsWith("roles/"))
+      : [];
+    const forbiddenGranted = [...rolesFromFlags, ...rolesFromBootstrap].filter(
+      (role) => FORBIDDEN_RUNNER_ROLES.has(role),
+    );
+    expect(forbiddenGranted).toEqual([]);
 
     // runtime-sa / build-sa への project-level 直接 grants:
     expect(source).toContain('serviceAccount:${RUNTIME_SA}"');
