@@ -85,6 +85,20 @@ mock.module("@/shared/lib/r2/delete", () => ({
     mockDeleteObjectsFromBucket(bucket, keys),
 }));
 
+// 匿名化の実装は 1 本（`anonymizeCustomerCommand`）。ここでは「委譲していること」
+// だけを見る。何が消えるかは
+// `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が実 DB で確かめる。
+const mockAnonymizeCustomerCommand = mock<
+  (input: {
+    customerId: string;
+    reason: string;
+  }) => Promise<{ customerId: string }>
+>((input) => Promise.resolve({ customerId: input.customerId }));
+
+mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
+  anonymizeCustomerCommand: mockAnonymizeCustomerCommand,
+}));
+
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => {}),
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API", DATABASE: "DATABASE" },
@@ -101,6 +115,8 @@ const {
   anonymizeInactiveCustomers,
   runDataRetentionPurge,
 } = await import("@/shared/domain/data-retention/commands");
+
+const { DomainError } = await import("@/shared/domain/domain-error");
 
 const NOW = new Date("2027-01-15T00:00:00Z");
 
@@ -172,6 +188,10 @@ describe("parseDataRetentionConfig", () => {
 
 describe("purge commands", () => {
   beforeEach(() => {
+    mockAnonymizeCustomerCommand.mockClear();
+    mockAnonymizeCustomerCommand.mockImplementation((input) =>
+      Promise.resolve({ customerId: input.customerId }),
+    );
     mockSessionDeleteMany.mockClear();
     mockSessionDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
@@ -295,45 +315,59 @@ describe("purge commands", () => {
     expect(mockDeleteObjectsFromBucket).toHaveBeenCalledTimes(1);
   });
 
-  test("anonymizeInactiveCustomers は per-record で個別 update を発行し、email を anonymized-<uuid> 形式に置換する", async () => {
+  test("anonymizeInactiveCustomers は独自 update を持たず anonymizeCustomerCommand へ委譲する", async () => {
+    // 「顧客を匿名化する」実装を 2 本持つと、必ず片方だけ育つ。実際に
+    // anonymizedAt を刻まない・対象列が少ない・placeholder の綴りが違う、の
+    // 3 点でずれていた。ここでは **customer.update を自分で呼ばないこと** と
+    // **1 件ごとに command を呼ぶこと** を固定する。
     mockCustomerFindMany.mockImplementation(() =>
       Promise.resolve([{ id: "cust-1" }, { id: "cust-2" }]),
     );
-    const updated = await anonymizeInactiveCustomers(NOW, 84);
-    expect(updated).toBe(2);
-    expect(mockCustomerUpdate).toHaveBeenCalledTimes(2);
 
-    const emails = mockCustomerUpdate.mock.calls.map((call) => {
-      const args = call[0];
-      const data = args.data as Record<string, unknown>;
-      return String(data["email"]);
-    });
-    // 全 email が anonymized- で始まり、@myrrh-anon.invalid で終わる
-    for (const email of emails) {
-      expect(email.startsWith("anonymized-")).toBe(true);
-      expect(email.endsWith("@myrrh-anon.invalid")).toBe(true);
-    }
-    // per-record で異なる UUID を発行しているので、複数レコード間で email が衝突しない
-    expect(new Set(emails).size).toBe(emails.length);
+    const updated = await anonymizeInactiveCustomers(NOW, 84);
+
+    expect(updated).toBe(2);
+    expect(mockCustomerUpdate).not.toHaveBeenCalled();
+    expect(mockAnonymizeCustomerCommand).toHaveBeenCalledTimes(2);
+    expect(
+      mockAnonymizeCustomerCommand.mock.calls.map((call) => call[0]),
+    ).toEqual([
+      { customerId: "cust-1", reason: "data-retention" },
+      { customerId: "cust-2", reason: "data-retention" },
+    ]);
   });
 
-  test("anonymizeInactiveCustomers は phoneNumber / postalCode 等の PII を NULL 化し、氏名は保持する", async () => {
+  test("別経路が先に匿名化していた 1 件だけを飛ばし、cron 全体は止めない", async () => {
+    mockCustomerFindMany.mockImplementation(() =>
+      Promise.resolve([{ id: "cust-1" }, { id: "cust-2" }]),
+    );
+    mockAnonymizeCustomerCommand.mockImplementation((input) => {
+      if (input.customerId === "cust-1") {
+        return Promise.reject(
+          new DomainError("この顧客は既に匿名化済みです", "CONFLICT"),
+        );
+      }
+      return Promise.resolve({ customerId: input.customerId });
+    });
+
+    expect(await anonymizeInactiveCustomers(NOW, 84)).toBe(1);
+  });
+
+  test("CONFLICT 以外の失敗は握りつぶさない", async () => {
     mockCustomerFindMany.mockImplementation(() =>
       Promise.resolve([{ id: "cust-1" }]),
     );
-    await anonymizeInactiveCustomers(NOW, 84);
-    const args = mockCustomerUpdate.mock.calls[0]?.[0];
-    if (!args) throw new Error("customer update was not called");
-    const data = args.data as Record<string, unknown>;
-    expect(data["phoneNumber"]).toBeNull();
-    expect(data["postalCode"]).toBeNull();
-    expect(data["prefecture"]).toBeNull();
-    expect(data["city"]).toBeNull();
-    expect(data["streetAddress"]).toBeNull();
-    expect(data["building"]).toBeNull();
-    // 予約明細の表示用に氏名は明示的に触らない
-    expect("lastName" in data).toBe(false);
-    expect("firstName" in data).toBe(false);
+    mockAnonymizeCustomerCommand.mockImplementation(() =>
+      Promise.reject(new DomainError("顧客が見つかりません", "NOT_FOUND")),
+    );
+
+    let thrown: unknown = null;
+    try {
+      await anonymizeInactiveCustomers(NOW, 84);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(DomainError);
   });
 
   test("runDataRetentionPurge は 6 purge を全て呼び、結果を集約する", async () => {
@@ -391,6 +425,10 @@ function extractCutoffFromCall(
 
 describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
   beforeEach(() => {
+    mockAnonymizeCustomerCommand.mockClear();
+    mockAnonymizeCustomerCommand.mockImplementation((input) =>
+      Promise.resolve({ customerId: input.customerId }),
+    );
     mockSessionDeleteMany.mockClear();
     mockSessionDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
@@ -448,6 +486,10 @@ describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
 
 describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564883654 → #3564905126)", () => {
   beforeEach(() => {
+    mockAnonymizeCustomerCommand.mockClear();
+    mockAnonymizeCustomerCommand.mockImplementation((input) =>
+      Promise.resolve({ customerId: input.customerId }),
+    );
     mockCustomerFindMany.mockClear();
     mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
     mockCustomerUpdate.mockClear();
@@ -463,7 +505,7 @@ describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564
     const args = call[0] as {
       where: {
         status: string;
-        email: { not: { startsWith: string } };
+        anonymizedAt: null;
         createdAt: { lt: Date };
         reservations: { none: { endTime: { gte: Date } } };
         // 明示的に「使わない」ことを固定するため、OR と lastReservationAt は存在しない
@@ -472,9 +514,10 @@ describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564
       };
     };
 
-    // 1) status / email フィルタ
+    // 1) status / 冪等判定。**placeholder の綴りではなく証跡列で判定する**
+    //    （綴りに頼ると、形式を変えた瞬間に全件が再匿名化対象になる）。
     expect(args.where.status).toBe("INACTIVE");
-    expect(args.where.email.not.startsWith).toBe("anonymized-");
+    expect(args.where.anonymizedAt).toBeNull();
 
     // 2) createdAt: fresh install 直後の customer を除外
     expect(args.where.createdAt.lt).toBeInstanceOf(Date);
