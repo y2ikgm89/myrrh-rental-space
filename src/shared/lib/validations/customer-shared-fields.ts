@@ -30,6 +30,22 @@ export const PERSON_NAME_MAX_LENGTH = 50;
  */
 export const FULL_NAME_MAX_LENGTH = PERSON_NAME_MAX_LENGTH * 2 + 1;
 
+/**
+ * メールアドレスの上限。**DB の列長そのもの。**
+ *
+ * メールアドレスを保持する 12 列（`customers.email` / `event_registrations.email` /
+ * `reservations.guest_email` / `pending_customer_email_changes.new_email` ほか）は
+ * すべて `VarChar(254)` で揃っている。RFC 5321 の forward-path 上限 256 バイトから
+ * 山括弧 2 つを引いた値でもある。
+ *
+ * **緩めた schema が実際に 500 を起こしていた。** 受付の当日参加 / 代行登録が
+ * `.max(255)` だったため、255 文字ちょうどのアドレスは Zod を通って INSERT で
+ * PostgreSQL 22001（value too long）になっていた。22001 は DomainError ではないので
+ * 変換に乗らず 500 になり、画面には理由が出ない。値を 1 箇所に置いて、
+ * 「helper を使わない事情がある schema」からもこの数だけは引けるようにする。
+ */
+export const EMAIL_MAX_LENGTH = 254;
+
 export function personNameFieldSchema(label: string) {
   return z
     .string()
@@ -75,15 +91,20 @@ export const emailFieldSchema = z
   .string({ error: "有効なメールアドレスを入力してください" })
   .trim()
   // RFC 5321 の上限（forward-path 256 バイトから山括弧 2 つを引いた 254）。
-  // **DB 側の最狭列に収まる値でもある** — event_registrations.email と
-  // terms_agreements.guestEmail は VarChar(255) で、上限が無いと長いアドレスが
-  // P2000 になる（領収書の列で実際に起きた形と同じ）。
+  // **DB 側の列長そのものでもある** — メールアドレスを保持する 12 列
+  // （`customers.email` / `event_registrations.email` / `reservations.guest_email` /
+  // `terms_agreements.guest_email` ほか）はすべて `VarChar(254)` で揃っている。
+  // つまり 1 文字でも緩めると DB が受け取れない値を通すことになり、書込は
+  // PostgreSQL 22001（value too long）になる。**22001 は DomainError ではないので
+  // 変換に乗らず 500 になり、利用者には理由が出ない。**
   //
   // `.trim()` より後ろに置くこと（実測: 逆順だと空白込みで数え、見た目 254 文字の
   // 貼り付けが弾かれる）。`.refine()` との前後は制約出力に影響しない（実測）が、
   // 上の docblock のとおり `.pipe()` に置き換えるとチェーンが閉じて
   // `getZodConstraint` が `maxLength` を落とす。
-  .max(254, { error: "メールアドレスは254文字以内で入力してください" })
+  .max(EMAIL_MAX_LENGTH, {
+    error: `メールアドレスは${EMAIL_MAX_LENGTH}文字以内で入力してください`,
+  })
   .refine(isEmailFormat, { error: "有効なメールアドレスを入力してください" });
 
 /**
