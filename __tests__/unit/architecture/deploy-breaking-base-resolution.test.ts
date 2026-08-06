@@ -27,11 +27,16 @@
  * | tag が SHA 形でない / commit が無い | 履歴全体 + 計画ダウンタイム。窓を狭めない |
  */
 
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-import { readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
@@ -63,6 +68,49 @@ let work: string;
 let firstSha = "";
 let headSha = "";
 
+function bashExecutable(): string {
+  if (process.platform === "win32") {
+    for (const candidate of [
+      "C:/Program Files/Git/usr/bin/bash.exe",
+      "C:/Program Files/Git/bin/bash.exe",
+    ]) {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return "bash";
+}
+
+function toBashPath(entry: string): string {
+  if (process.platform !== "win32") {
+    return entry;
+  }
+  const normalized = entry.replace(/\\/g, "/");
+  const drive = /^([A-Za-z]):\//u.exec(normalized);
+  if (drive) {
+    return `/${drive[1].toLowerCase()}/${normalized.slice(3)}`;
+  }
+  return normalized;
+}
+
+/** bash 実行用 PATH。stub gcloud + Git usr/bin のみ（実 SDK を PATH から完全排除）。 */
+function pathWithStub(binDir: string): string {
+  if (process.platform === "win32") {
+    return [toBashPath(binDir), "/usr/bin", "/mingw64/bin", "/cmd"].join(":");
+  }
+  return [binDir, "/usr/bin", "/bin"].join(":");
+}
+
+/** spawn 用 env。worktree 実行時に GIT_DIR が残っていると temp repo の git が壊れる。 */
+function isolatedEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
+  const env = { ...process.env, ...extra };
+  delete env["GIT_DIR"];
+  delete env["GIT_WORK_TREE"];
+  delete env["GIT_COMMON_DIR"];
+  return env;
+}
+
 /** `gcloud` を差し替えた環境で base 解決部分を走らせる。 */
 function run(gcloudStub: string): Outcome {
   const binDir = join(work, "bin");
@@ -75,35 +123,39 @@ function run(gcloudStub: string): Outcome {
   );
 
   const script = [
+    `export PATH="${pathWithStub(binDir)}"`,
     "set -euo pipefail",
     baseResolutionScript(),
     `printf 'RESULT base=%s breaking=%s\\n' "\${BASE_SHA}" "\${BREAKING_MIGRATION_DEPLOY}"`,
   ].join("\n");
 
-  const proc = Bun.spawnSync(["bash", "-c", script], {
+  const proc = Bun.spawnSync([bashExecutable(), "-c", script], {
     cwd: join(work, "repo"),
-    env: {
-      ...process.env,
-      PATH: `${binDir}:${process.env["PATH"] ?? ""}`,
+    env: isolatedEnv({
+      PATH: pathWithStub(binDir),
       SERVICE_NAME: "myrrh-public",
       PROJECT_ID: "test-project",
       REGION: "asia-northeast1",
       GITHUB_SHA: headSha,
-    },
+    }),
   });
 
   const stdout = proc.stdout.toString();
+  const stderr = proc.stderr.toString();
   const match = /RESULT base=(\S*) breaking=(\S*)/u.exec(stdout);
   return {
     code: proc.exitCode ?? -1,
     base: match?.[1] ?? "",
     breaking: match?.[2] ?? "",
-    stderr: proc.stderr.toString(),
+    stderr,
   };
 }
 
 function git(...args: string[]): string {
-  const proc = Bun.spawnSync(["git", ...args], { cwd: join(work, "repo") });
+  const proc = Bun.spawnSync(["git", ...args], {
+    cwd: join(work, "repo"),
+    env: isolatedEnv({ LEFTHOOK: "0" }),
+  });
   return proc.stdout.toString().trim();
 }
 
