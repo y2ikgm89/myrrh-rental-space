@@ -23,6 +23,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
+import { ensureCommerceSettings } from "../../../support/commerce-settings";
 import {
   EventScheduleMode,
   EventStatus,
@@ -73,6 +75,8 @@ const DEFAULT_RESERVATION_PRICING = {
 describeMaybe("領収書の導出フィールド長", () => {
   beforeAll(async () => {
     ({ prisma } = await import("@/shared/db/prisma"));
+    // CI の test DB は未 seed。設定行が要る経路なので自分で用意する。
+    await ensureCommerceSettings(prisma);
     ({ issueReceiptForReservation, issueReceiptForEventRegistration } =
       await import("@/shared/domain/receipts/issue"));
     await prisma.$queryRaw`SELECT 1`;

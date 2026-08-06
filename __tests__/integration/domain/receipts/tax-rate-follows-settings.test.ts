@@ -36,6 +36,8 @@ import {
   test,
 } from "bun:test";
 
+import { ensureCommerceSettings } from "../../../support/commerce-settings";
+
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
   process.env["DATABASE_URL"] = TEST_DB_URL;
@@ -60,6 +62,8 @@ const PAID_AMOUNT = 3000;
 describeMaybe("イベント参加費の領収書の税率", () => {
   beforeAll(async () => {
     ({ prisma } = await import("@/shared/db/prisma"));
+    // CI の test DB は未 seed。設定行が要る経路なので自分で用意する。
+    await ensureCommerceSettings(prisma);
     ({ issueReceiptForEventRegistration } =
       await import("@/shared/domain/receipts/issue"));
 
