@@ -33,6 +33,14 @@ const mockExecuteRefund = mock<
 
 const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
 
+const mockCreateNotificationCommand = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: mockCreateNotificationCommand,
+}));
+
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
   normalizeError: (err: unknown) =>
@@ -51,6 +59,10 @@ import {
   AUTO_REFUND_SKIP_REASON,
   runAutoRefundOnCancel,
 } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 const ENTITY_ID = "ent-001";
 const START_TIME = new Date("2099-01-01T10:00:00Z");
@@ -77,6 +89,7 @@ describe("runAutoRefundOnCancel", () => {
     mockSettingsCommerceFindUnique.mockReset();
     mockExecuteRefund.mockReset();
     mockLogError.mockReset();
+    mockCreateNotificationCommand.mockReset();
     mockSettingsCommerceFindUnique.mockResolvedValue(null);
     mockExecuteRefund.mockResolvedValue({
       refundAmount: 5000,
@@ -107,7 +120,7 @@ describe("runAutoRefundOnCancel", () => {
     expect(mockExecuteRefund).not.toHaveBeenCalled();
   });
 
-  test("invalid policy → policyInvalid skip + logError", async () => {
+  test("invalid policy → policyInvalid skip + logError + admin notification", async () => {
     mockSettingsCommerceFindUnique.mockResolvedValue({
       refundPolicy: { tiers: "broken", defaultRefundRate: 0 },
     });
@@ -118,6 +131,12 @@ describe("runAutoRefundOnCancel", () => {
     expect(outcome.reason).toBe(AUTO_REFUND_SKIP_REASON.POLICY_INVALID);
     expect(mockExecuteRefund).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledTimes(1);
+    expect(mockCreateNotificationCommand).toHaveBeenCalledWith({
+      type: NOTIFICATION_TYPE.REFUND_POLICY_INVALID,
+      title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.REFUND_POLICY_INVALID],
+      message: expect.stringContaining(ENTITY_ID),
+      resourceId: ENTITY_ID,
+    });
   });
 
   test("policy refundRate=0% → policyRefundRateZero skip", async () => {

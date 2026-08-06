@@ -26,6 +26,8 @@
  * ```
  */
 
+import { formatJstDateString } from "@/shared/lib/date-format";
+
 // =============================================================================
 // Type Utilities
 // =============================================================================
@@ -328,7 +330,7 @@ export function formatSerializedDate(
  * ```
  */
 export function toDateString(date: Date): string {
-  return date.toISOString().split("T")[0] ?? "";
+  return formatJstDateString(date);
 }
 
 /** `input[type="date"]` の value として許容される YYYY-MM-DD 形式かどうか */

@@ -47,6 +47,7 @@ type UncoveredFk = {
  *
  * 複合 FK は列順まで一致する必要がある（索引は先頭列プレフィクスからしか使えない）。
  * `indkey` の先頭 N 要素と `conkey` を突き合わせることでそれを表現している。
+ * 無効/未 ready 索引は対象外とし、nullable 列の部分索引は述語一致まで要求する。
  */
 async function findUncoveredForeignKeys(): Promise<UncoveredFk[]> {
   const result = await client.query<UncoveredFk>(
@@ -65,7 +66,23 @@ async function findUncoveredForeignKeys(): Promise<UncoveredFk[]> {
         AND NOT EXISTS (
           SELECT 1 FROM pg_index i
            WHERE i.indrelid = con.conrelid
+             AND i.indisvalid
+             AND i.indisready
              AND (i.indkey::int2[])[0:array_length(con.conkey, 1) - 1] = con.conkey
+             AND (
+               i.indpred IS NULL
+               OR pg_get_expr(i.indpred, i.indrelid) = (
+                 SELECT '(' || string_agg(
+                          format('%s IS NOT NULL', att.attname),
+                          ' AND ' ORDER BY k.ord
+                        ) || ')'
+                   FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
+                   JOIN pg_attribute att
+                     ON att.attrelid = con.conrelid
+                    AND att.attnum = k.attnum
+                  WHERE NOT att.attnotnull
+               )
+             )
         )
       ORDER BY src.relname, cols`,
   );

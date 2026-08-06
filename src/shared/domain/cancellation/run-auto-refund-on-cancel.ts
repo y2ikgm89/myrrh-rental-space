@@ -21,6 +21,11 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 /** Machine-readable skip reason codes (reservation + event 共通 SSoT)。 */
 export const AUTO_REFUND_SKIP_REASON = {
@@ -127,6 +132,26 @@ export async function runAutoRefundOnCancel(
           },
         },
       );
+      try {
+        await createNotificationCommand({
+          type: NOTIFICATION_TYPE.REFUND_POLICY_INVALID,
+          title:
+            NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.REFUND_POLICY_INVALID],
+          message: `返金ポリシー JSON が不正なため自動返金をスキップしました（${entityId}）。parseReason: ${resolution.reason}`,
+          resourceId: entityId,
+        });
+      } catch (notifyErr) {
+        const normalized = normalizeError(notifyErr);
+        logError(normalized, {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation,
+            entityId,
+            reason: "refundPolicyInvalidNotificationFailed",
+          },
+        });
+      }
       return {
         status: "skipped",
         reason: AUTO_REFUND_SKIP_REASON.POLICY_INVALID,
