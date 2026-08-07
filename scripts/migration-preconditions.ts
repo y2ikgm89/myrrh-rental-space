@@ -979,25 +979,57 @@ export function isExecutedAssertion(statement: string): boolean {
   return /^DO\b/iu.test(sql) && /\bRAISE\s+EXCEPTION\b/iu.test(sql);
 }
 
-/** 文が名指ししている識別子（小文字化・引用符外し済み）。 */
-export function namedIdentifiers(statement: string): Set<string> {
-  const names = new Set<string>();
-  for (const match of normalize(statement).matchAll(new RegExp(IDENT, "gu"))) {
-    names.add(bareIdent(match[0]));
+/**
+ * 検査が名指ししている対象。
+ *
+ * 表は素の識別子で、列は **`表.列` の組**でしか数えない。ばらばらの識別子で
+ * 照合すると、`locations` を引きつつ `events.memo` だけを見る検査が
+ * `locations.memo` の DROP を免除する（実測された指摘）。組で持てば、
+ * その検査が本当に `locations.memo` に触れたときだけ効く。
+ *
+ * **別名は数えない。** `FROM locations l WHERE l.memo …` は `l.memo` としか
+ * 読めないので、検査は表名で書く（`locations.memo`）。読み違えるくらいなら
+ * 書き方を狭めるほうがいい——外したときの帰結が「黙って消える」なので。
+ */
+export function assertionCoverage(statement: string): {
+  readonly tables: ReadonlySet<string>;
+  readonly pairs: ReadonlySet<string>;
+} {
+  const sql = normalize(statement);
+  const tables = new Set<string>();
+  const pairs = new Set<string>();
+
+  for (const match of sql.matchAll(new RegExp(IDENT, "gu"))) {
+    tables.add(bareIdent(match[0]));
   }
-  return names;
+  for (const match of sql.matchAll(
+    new RegExp(String.raw`(${IDENT})\s*\.\s*(${IDENT})`, "gu"),
+  )) {
+    const table = match[1];
+    const column = match[2];
+    if (table !== undefined && column !== undefined) {
+      pairs.add(`${bareIdent(table)}.${bareIdent(column)}`);
+    }
+  }
+
+  return { tables, pairs };
 }
 
 /**
  * その migration 内で**確実に新しく作られた**表・列を覚える（消しても失うものが無い）。
  *
- * `IF NOT EXISTS` が付いたものは覚えない。既存があれば何もしない構文なので、
- * 「作った」と「元からあった」を区別できない。区別できないものを「作った」側に
- * 倒すと、既存の本番データを持つ列がそのまま免除される。
+ * 覚えないもの:
  *
- * public 以外の schema 修飾も覚えない。この道具は public schema しか相手にして
- * いないので、`CREATE TABLE archive.audit_logs` を覚えると、後から
- * `DROP TABLE public.audit_logs` した時に「さっき作ったやつ」と取り違える。
+ * - `IF NOT EXISTS` 付き。既存があれば何もしない構文なので「作った」と
+ *   「元からあった」を区別できない。区別できないものを「作った」側に倒すと、
+ *   本番データを持つ列がそのまま免除される
+ * - public 以外の schema 修飾。この道具は public schema しか相手にしていないので、
+ *   `CREATE TABLE archive.audit_logs` を覚えると、後から
+ *   `DROP TABLE public.audit_logs` した時に「さっき作ったやつ」と取り違える
+ * - `TEMP` / `TEMPORARY`。SQL に schema が書かれないのに `pg_temp` へ作られるので、
+ *   `CREATE TEMP TABLE audit_logs` を覚えると `DROP TABLE public.audit_logs` が
+ *   免除される。`DROP TABLE audit_logs` が一時表と public のどちらを指すかは
+ *   静的には決まらないので、覚えない側（＝引き継ぎを要求する側）に倒す
  */
 function rememberCreated(statement: string, into: Set<string>): void {
   const sql = normalize(statement);
@@ -1005,7 +1037,7 @@ function rememberCreated(statement: string, into: Set<string>): void {
   const created = new RegExp(
     // 末尾に `\b` は置かない。引用識別子は `"` で終わるので、直後が `(` だと
     // 語境界にならず 1 件も当たらない（`CREATE TABLE "t" (…)` がまさにその形）。
-    String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:(${IDENT})\s*\.\s*)?(${IDENT})`,
+    String.raw`^CREATE\s+(?:UNLOGGED\s+)?TABLE\s+(?:(${IDENT})\s*\.\s*)?(${IDENT})`,
     "iu",
   ).exec(sql);
   const table = created?.[2];
@@ -1066,10 +1098,13 @@ export interface PlannedRefusal {
  * 破壊が許されるのは次のいずれか。どれでもなければ `refusals` に出る。
  *
  * 1. **同じ migration の中で作った**表・列を消す（失うものが無い）
- * 2. **先行する検査が対象を名指ししている**。`DO $$ … RAISE EXCEPTION … $$` が
- *    表名と列名の**両方**に触れていること。単に「検査が 1 つある」では足りず、
- *    列名だけでも足りない——前者は無関係な表の破壊を全部免許し、後者は
- *    `events.memo` を見た検査が `locations.memo` の DROP を通した
+ * 2. **先行する検査が対象を名指ししている**。列を消すなら
+ *    `DO $$ … RAISE EXCEPTION … $$` の中に **`locations.special_holidays` の形で**
+ *    現れていること（表を消すなら表名だけでよい）。緩めると素通りする:
+ *    「検査が 1 つある」だけでは無関係な表の破壊を全部免許し、表名と列名が
+ *    ばらばらに現れれば足りるとすると、`locations` を引きつつ `events.memo` だけを
+ *    見る検査が `locations.memo` の DROP を通す。別名（`FROM locations l`）は
+ *    数えない——`l.memo` としか読めないので
  * 3. `HANDOVERS` に対象の登録がある。リハーサル中にその SQL を流して 0 を確かめる
  *
  * ## この関数が見ないもの
@@ -1088,7 +1123,8 @@ export function planMigration(
   const steps: PlannedStatement[] = [];
   const refusals: PlannedRefusal[] = [];
 
-  const guarded = new Set<string>();
+  const guardedTables = new Set<string>();
+  const guardedPairs = new Set<string>();
   const created = new Set<string>();
 
   for (const sql of splitStatements(migrationSql)) {
@@ -1114,15 +1150,17 @@ export function planMigration(
       const needed: Handover[] = [];
       let refused = false;
       for (const target of targets) {
-        const [table = target, column = target] = target.includes(".")
-          ? target.split(".")
-          : [target, target];
+        const [table = target] = target.split(".");
         // 表ごと同じ migration で作ったなら、その列を消しても失うものが無い。
         if (created.has(target) || created.has(table)) continue;
-        // 検査は**表と列の両方**を名指ししていること。列名だけで照合すると、
-        // 別の表の同名列を見た検査が無関係な破壊を免除する（`events.memo` を
-        // 見た検査が `locations.memo` の DROP を通していた）。
-        if (guarded.has(table) && guarded.has(column)) continue;
+        // 検査は対象を**組で**名指ししていること。ばらばらの識別子で照合すると、
+        // `locations` を引きつつ `events.memo` だけを見る検査が
+        // `locations.memo` の DROP を免除する。
+        if (target.includes(".")) {
+          if (guardedPairs.has(target)) continue;
+        } else if (guardedTables.has(table)) {
+          continue;
+        }
         const handover = handovers.find((entry) => entry.target === target);
         if (handover === undefined) {
           refusals.push({
@@ -1143,7 +1181,9 @@ export function planMigration(
     }
 
     if (isExecutedAssertion(sql)) {
-      for (const name of namedIdentifiers(sql)) guarded.add(name);
+      const coverage = assertionCoverage(sql);
+      for (const name of coverage.tables) guardedTables.add(name);
+      for (const pair of coverage.pairs) guardedPairs.add(pair);
     }
     rememberCreated(sql, created);
 

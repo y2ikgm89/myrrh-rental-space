@@ -19,8 +19,9 @@
  * 破壊が許されるのは次のいずれかで、どれでもなければ `refusals` に出る。
  *
  * 1. 同じ migration の中で**確実に**作った表・列を消す（失うものが無い）。
- *    `IF NOT EXISTS` 付き・public 以外の schema は「作った」に数えない
- * 2. 先行する `DO $$ … RAISE EXCEPTION … $$` が**表名と列名の両方**を名指ししている
+ *    `IF NOT EXISTS` 付き・public 以外の schema・`TEMP` は「作った」に数えない
+ * 2. 先行する `DO $$ … RAISE EXCEPTION … $$` が対象を名指ししている。列を消すなら
+ *    `locations.special_holidays` の形で（表を消すなら表名だけでよい）
  * 3. `HANDOVERS` に対象の登録がある（リハーサル中に SQL を流して 0 を確かめる）
  *
  * ## 分けて書かない理由
@@ -172,17 +173,54 @@ describe("破壊的 migration は実行される前提検査を伴う", () => {
   });
 
   test("2. 検査は対象を名指ししていなければ効かない", () => {
-    // 前に置かれ、対象を名指ししていれば通る。
+    // 前に置かれ、対象を `表.列` の形で名指ししていれば通る。
     const guarded = `BEGIN;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM locations WHERE special_holidays IS NOT NULL) THEN
+  IF EXISTS (SELECT 1 FROM locations WHERE locations.special_holidays IS NOT NULL) THEN
     RAISE EXCEPTION '未移送';
   END IF;
 END $$;
 ALTER TABLE "locations" DROP COLUMN "special_holidays";
 COMMIT;`;
     expect(handoverRefusals(guarded, NO_HANDOVERS)).toEqual([]);
+
+    // **表名と列名がばらばらに現れるだけでは足りない。** `locations` を引きつつ
+    // `events.memo` だけを見る検査が `locations.memo` の DROP を免除していた。
+    const looselyNamed = `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM locations WHERE (SELECT count(*) FROM events WHERE events.memo IS NOT NULL) > 0) THEN
+    RAISE EXCEPTION 'events.memo が残っている';
+  END IF;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "memo";
+COMMIT;`;
+    expect(handoverRefusals(looselyNamed, NO_HANDOVERS)).toHaveLength(1);
+
+    // **別名は数えない**（`l.memo` としか読めない）。
+    const aliased = `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM locations l WHERE l.memo IS NOT NULL) THEN
+    RAISE EXCEPTION '未移送';
+  END IF;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "memo";
+COMMIT;`;
+    expect(handoverRefusals(aliased, NO_HANDOVERS)).toHaveLength(1);
+
+    // 表ごと消すなら、表名の名指しで足りる。
+    const wholeTable = `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM legacy_holidays) THEN
+    RAISE EXCEPTION 'legacy_holidays に行が残っている';
+  END IF;
+END $$;
+DROP TABLE "legacy_holidays";
+COMMIT;`;
+    expect(handoverRefusals(wholeTable, NO_HANDOVERS)).toEqual([]);
 
     // **無関係な表の検査では免除されない。** 前身は「検査が 1 つあれば以降すべて
     // 免除」で、同じ migration の別の表の破壊まで通していた。
@@ -197,12 +235,11 @@ ALTER TABLE "locations" DROP COLUMN "special_holidays";
 COMMIT;`;
     expect(handoverRefusals(unrelated, NO_HANDOVERS)).toHaveLength(1);
 
-    // **別の表の同名列を見た検査では免除されない。** 列名だけで照合していた頃は、
-    // `events.memo` を見た検査が `locations.memo` の DROP を通していた。
+    // **別の表の同名列を見た検査では免除されない。**
     const sameColumnOtherTable = `BEGIN;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM events WHERE memo IS NOT NULL) THEN
+  IF EXISTS (SELECT 1 FROM events WHERE events.memo IS NOT NULL) THEN
     RAISE EXCEPTION 'events.memo が残っている';
   END IF;
 END $$;
@@ -317,6 +354,25 @@ ALTER TABLE "locations" DROP COLUMN "a", DROP COLUMN "b";`,
         NO_HANDOVERS,
       ),
     ).toHaveLength(1);
+
+    // **一時表は public に作られない。** SQL に schema が書かれないので、
+    // 覚えると `DROP TABLE public.audit_logs` まで免除される。
+    expect(
+      handoverRefusals(
+        `CREATE TEMP TABLE "audit_logs" ("id" uuid);
+DROP TABLE public.audit_logs;`,
+        NO_HANDOVERS,
+      ),
+    ).toHaveLength(1);
+
+    // UNLOGGED は public の実表なので、作ったものとして数える。
+    expect(
+      handoverRefusals(
+        `CREATE UNLOGGED TABLE "tmp_unlogged" ("id" uuid);
+DROP TABLE "tmp_unlogged";`,
+        NO_HANDOVERS,
+      ),
+    ).toEqual([]);
 
     // **別 schema に作った表は、public の同名表の免除にならない。**
     expect(
