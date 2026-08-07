@@ -272,7 +272,7 @@ COMMIT;`,
         `BEGIN;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "note" IS NOT NULL AND "note" <> 'n') THEN
+  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "${CHILD}"."note" IS NOT NULL AND "${CHILD}"."note" <> 'n') THEN
     RAISE EXCEPTION '移送していない note がある';
   END IF;
 END $$;
@@ -344,7 +344,7 @@ COMMIT;`,
         `BEGIN;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "note" IS NULL) THEN
+  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "${CHILD}"."note" IS NULL) THEN
     RAISE EXCEPTION '空の note がある';
   END IF;
 END $$;
