@@ -65,12 +65,15 @@
  *
  * ## この方法が見ないもの
  *
- * - **データの消失は見ない。** ここが証明するのは「この SQL はエラーにならない」
- *   ことだけで、**破壊はエラーではない**。`DROP COLUMN` / `DROP TABLE` /
- *   `TRUNCATE` は満杯のテーブルに対しても成功するので、移送が終わっていない列を
- *   落とす migration も**ここは緑で通る**。緑を「落として安全」と読まないこと。
- *   破壊的文の前提は migration 自身が `DO $$ … RAISE EXCEPTION … $$` で持ち、
- *   それを `destructive-migration-has-executed-assertion.test.ts` が強制する
+ * - **リハーサル自体はデータの消失を見ない。** 流して確かめられるのは
+ *   「この SQL はエラーにならない」ことだけで、**破壊はエラーではない**。
+ *   `DROP COLUMN` / `DROP TABLE` / `TRUNCATE` は満杯のテーブルに対しても成功する。
+ *   だから破壊的文は別立てで扱う（`planMigration`）。対象を名指しする
+ *   `DO $$ … RAISE EXCEPTION … $$` を migration 自身が持つか、`HANDOVERS` に
+ *   登録があること。登録があるぶんは**リハーサルの途中で**その SQL を流し、
+ *   0 でなければそこで止める。どちらも無い破壊は 1 文も実行せずに拒否する
+ * - 検査や `countUnhandedOver` の**中身**が正しいかは見ない。対象を名指ししつつ
+ *   何も確かめない検査を書けば通る（静的には判定できない）
  * - **シーケンスの採番は巻き戻らない**（`nextval` は非トランザクション）。
  *   migration が identity 列を埋めると、その分だけ採番が進む
  * - 未適用が複数あるとき、それらを**1 つの**トランザクションで流す。実際は
@@ -282,86 +285,46 @@ export function readMigrations(dir: string = MIGRATIONS_DIR): Migration[] {
     });
 }
 
-// ---------------------------------------------------------------------------
-// 破壊的な文
-// ---------------------------------------------------------------------------
-
-/**
- * 行を失わせる文か。
- *
- * 文の**先頭の動詞**で判定する。部分一致にすると
- * `CREATE TRIGGER … BEFORE TRUNCATE ON t` が破壊に見える（実測: TRUNCATE を禁じる
- * trigger を定義した migration 1 本が素朴な grep に 6 回当たり、全部が防御の定義だった）。
- */
-export function isDestructiveStatement(statement: string): boolean {
-  const sql = statement.replace(/\s+/gu, " ").trim();
-  if (/^TRUNCATE\b/iu.test(sql)) return true;
-  if (/^DROP\s+TABLE\b/iu.test(sql)) return true;
-  // `ALTER TABLE` は 1 文に複数アクションを持てるので、先頭を固定したうえで
-  // 文中の DROP COLUMN を見る。DROP CONSTRAINT は行を消さないので対象外。
-  if (/^ALTER\s+TABLE\b[\s\S]*\bDROP\s+COLUMN\b/iu.test(sql)) return true;
-  return false;
-}
-
-/**
- * **実行される**検査か。
- *
- * `DO $$ … RAISE EXCEPTION … $$` だけを数える。`CREATE FUNCTION … RAISE EXCEPTION`
- * は関数を**定義する**だけで、その migration の中では 1 度も評価されない。
- */
-export function isExecutedAssertion(statement: string): boolean {
-  const sql = statement.replace(/\s+/gu, " ").trim();
-  return /^DO\b/iu.test(sql) && /\bRAISE\s+EXCEPTION\b/iu.test(sql);
-}
-
-/** 実行される検査より前に現れた破壊的文。 */
-export function unassertedDestructiveStatements(sql: string): string[] {
-  const offenders: string[] = [];
-  let asserted = false;
-
-  for (const statement of splitStatements(sql)) {
-    if (isExecutedAssertion(statement)) {
-      asserted = true;
-      continue;
-    }
-    if (isDestructiveStatement(statement) && !asserted) {
-      offenders.push(statement.replace(/\s+/gu, " ").trim());
-    }
-  }
-
-  return offenders;
-}
-
 export interface PendingStatement {
   readonly migration: string;
   readonly sql: string;
+  /**
+   * この文を実行する**前に**確かめる引き継ぎ。
+   *
+   * リハーサルの途中で評価する。適用前のスナップショットで評価すると、
+   * 先行する未適用 migration が表を作った／列名を変えた後の状態を見られず、
+   * 「まだ無い」として黙って飛ばすことになる。
+   */
+  readonly handovers: readonly Handover[];
+}
+
+export interface Refusal {
+  readonly migration: string;
+  readonly sql: string;
+  readonly kind: "rehearsal" | "handover";
+  readonly reason: string;
 }
 
 /** 未適用 migration の、実行すべき文を順に並べる。 */
 export function pendingStatements(
   migrations: readonly Migration[],
   applied: ReadonlySet<string>,
+  handovers: readonly Handover[] = HANDOVERS,
 ): {
   readonly steps: readonly PendingStatement[];
-  readonly blocked: readonly {
-    readonly migration: string;
-    readonly sql: string;
-    readonly reason: string;
-  }[];
+  readonly blocked: readonly Refusal[];
 } {
   const steps: PendingStatement[] = [];
-  const blocked: { migration: string; sql: string; reason: string }[] = [];
+  const blocked: Refusal[] = [];
 
   for (const migration of migrations) {
     if (applied.has(migration.name)) continue;
-    for (const sql of splitStatements(migration.sql)) {
-      const step = planStep(sql);
-      if (step.kind === "skip") continue;
-      if (step.kind === "blocked") {
-        blocked.push({ migration: migration.name, sql, reason: step.reason });
-        continue;
-      }
-      steps.push({ migration: migration.name, sql });
+    const plan = planMigration(migration.sql, handovers);
+    for (const step of plan.steps) {
+      steps.push({ migration: migration.name, ...step });
+    }
+    for (const refusal of plan.refusals) {
+      blocked.push({ migration: migration.name, ...refusal });
     }
   }
 
@@ -398,31 +361,6 @@ async function countPublicTables(prisma: PrismaClient): Promise<number> {
        WHERE n.nspname = 'public' AND c.relkind = 'r'`,
   );
   return Number(row?.tables ?? 0);
-}
-
-/** いま存在する表（`t`）と列（`t.c`）。これから作られるものを数えないために要る。 */
-async function readExistingTargets(
-  prisma: PrismaClient,
-): Promise<ReadonlySet<string>> {
-  const rows = await prisma.$queryRawUnsafe<
-    { table_name: string; column_name: string | null }[]
-  >(
-    `SELECT c.relname AS table_name, a.attname AS column_name
-       FROM pg_class c
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-       LEFT JOIN pg_attribute a
-         ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-       WHERE n.nspname = 'public' AND c.relkind = 'r'`,
-  );
-
-  const targets = new Set<string>();
-  for (const row of rows) {
-    targets.add(row.table_name);
-    if (row.column_name !== null) {
-      targets.add(`${row.table_name}.${row.column_name}`);
-    }
-  }
-  return targets;
 }
 
 async function readFingerprint(prisma: PrismaClient): Promise<Fingerprint> {
@@ -601,8 +539,16 @@ export function isTimeoutError(message: string): boolean {
   );
 }
 
-/** リハーサル本体。必ず巻き戻す。 */
-async function rehearse(
+/**
+ * リハーサル本体。必ず巻き戻す。
+ *
+ * 破壊的文の**直前**に、その文に紐づいた引き継ぎを評価する。ここで評価するのは、
+ * 適用前のスナップショットでは答えが出ないから。移送先の表を作るのが同じ未適用の
+ * 束に入っていれば「まだ無い」となり、先行 migration が列名を変えていれば
+ * 「その名前の列は無い」となって、どちらも黙って飛ばすことになる。
+ * リハーサルの途中なら、その文が実際に走る直前と同じ状態を見られる。
+ */
+export async function rehearse(
   prisma: PrismaClient,
   steps: readonly PendingStatement[],
 ): Promise<RehearsalFailure | null> {
@@ -627,6 +573,32 @@ async function rehearse(
           `SET LOCAL statement_timeout = '${STATEMENT_TIMEOUT}'`,
         );
         for (const step of steps) {
+          for (const handover of step.handovers) {
+            let gap: number;
+            try {
+              gap = readGapCount(
+                await tx.$queryRawUnsafe<Record<string, unknown>[]>(
+                  handover.countUnhandedOver,
+                ),
+              );
+            } catch (error) {
+              // 確かめられなかったことと、確かめて 0 だったことは違う。
+              throw new Done({
+                migration: step.migration,
+                sql: step.sql,
+                error:
+                  `${handover.target} の引き継ぎを確かめられない（${describeError(error)}）。` +
+                  `HANDOVERS の countUnhandedOver を直す`,
+              });
+            }
+            if (gap > 0) {
+              throw new Done({
+                migration: step.migration,
+                sql: step.sql,
+                error: `${handover.what}（${gap} 件）→ ${handover.remedy}`,
+              });
+            }
+          }
           try {
             await tx.$executeRawUnsafe(step.sql);
           } catch (error) {
@@ -748,110 +720,429 @@ export const HANDOVERS: readonly Handover[] = [
   },
 ];
 
-/** 破壊的文が消す対象（表なら `t`、列なら `t.c`）。 */
-export function destructionTargets(statement: string): string[] {
-  const sql = statement.replace(/\s+/gu, " ").trim();
-  const ident = String.raw`"?([A-Za-z_][A-Za-z0-9_]*)"?`;
+// ---------------------------------------------------------------------------
+// 破壊的な文
+// ---------------------------------------------------------------------------
 
-  const truncate = new RegExp(
-    String.raw`^TRUNCATE\s+(?:TABLE\s+)?${ident}`,
-    "iu",
-  ).exec(sql);
-  if (truncate?.[1] !== undefined) return [truncate[1]];
+/**
+ * コメントと文字列リテラルを潰す。
+ *
+ * 潰さないと両方向に壊れる。`ADD COLUMN note text DEFAULT 'do not DROP COLUMN x'`
+ * が破壊に見え（編集できない migration でデプロイが恒久停止する）、
+ * `DO $$ BEGIN -- RAISE EXCEPTION 'あとで書く' … END $$` が検査に見える
+ * （以降の破壊が全部免許される）。どちらも実測で確認した。
+ *
+ * ドル引用符の中身は**保持したうえで再帰的に潰す**。中の DDL を見たいからで、
+ * 中のコメントに騙されたくないからでもある。引用識別子はそのまま残す（名前なので要る）。
+ */
+export function stripNoise(sql: string): string {
+  let out = "";
+  let index = 0;
 
-  const dropTable = new RegExp(
-    String.raw`^DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?${ident}`,
-    "iu",
-  ).exec(sql);
-  if (dropTable?.[1] !== undefined) return [dropTable[1]];
+  while (index < sql.length) {
+    const pair = sql.slice(index, index + 2);
 
-  const alter = new RegExp(
-    String.raw`^ALTER\s+TABLE\s+(?:ONLY\s+)?${ident}\s`,
-    "iu",
-  ).exec(sql);
-  const table = alter?.[1];
-  if (table === undefined) return [];
+    if (pair === "--") {
+      const newline = sql.indexOf("\n", index);
+      out += " ";
+      index = newline === -1 ? sql.length : newline;
+      continue;
+    }
 
-  // `ALTER TABLE` は 1 文に複数のアクションを持てる。
+    if (pair === "/*") {
+      // PostgreSQL の block comment は入れ子になる。
+      let depth = 1;
+      index += 2;
+      while (index < sql.length && depth > 0) {
+        if (sql.startsWith("/*", index)) {
+          depth += 1;
+          index += 2;
+        } else if (sql.startsWith("*/", index)) {
+          depth -= 1;
+          index += 2;
+        } else {
+          index += 1;
+        }
+      }
+      out += " ";
+      continue;
+    }
+
+    const char = sql.charAt(index);
+
+    if (char === "'") {
+      const escapeString = /[Ee]$/u.test(out);
+      index += 1;
+      while (index < sql.length) {
+        const inner = sql.charAt(index);
+        if (escapeString && inner === "\\") {
+          index += 2;
+          continue;
+        }
+        if (inner === "'") {
+          if (sql.charAt(index + 1) === "'") {
+            index += 2;
+            continue;
+          }
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      out += "''";
+      continue;
+    }
+
+    if (char === '"') {
+      out += char;
+      index += 1;
+      while (index < sql.length) {
+        const inner = sql.charAt(index);
+        out += inner;
+        index += 1;
+        if (inner === '"') {
+          if (sql.charAt(index) === '"') {
+            out += '"';
+            index += 1;
+            continue;
+          }
+          break;
+        }
+      }
+      continue;
+    }
+
+    const dollar = /^\$[A-Za-z_]*\$/u.exec(sql.slice(index));
+    const tag = dollar?.[0];
+    if (tag !== undefined) {
+      const close = sql.indexOf(tag, index + tag.length);
+      const end = close === -1 ? sql.length : close;
+      out += tag + stripNoise(sql.slice(index + tag.length, end)) + tag;
+      index = close === -1 ? sql.length : close + tag.length;
+      continue;
+    }
+
+    out += char;
+    index += 1;
+  }
+
+  return out;
+}
+
+/** 1 行に潰した、コメント・文字列抜きの SQL。判定はすべてこれに対して行う。 */
+function normalize(statement: string): string {
+  return stripNoise(statement).replace(/\s+/gu, " ").trim();
+}
+
+/**
+ * 識別子。引用符つき（内部に空白・ドット・非 ASCII を含みうる）と裸の両方。
+ *
+ * PostgreSQL は**裸の識別子を小文字に畳む**。`ALTER TABLE Locations` が消すのは
+ * `locations` で、`pg_class.relname` もそう返す。畳まないと名前が一致しない。
+ */
+const IDENT = String.raw`(?:"(?:[^"]|"")*"|[\p{L}_][\p{L}\p{N}_$]*)`;
+
+function bareIdent(raw: string): string {
+  return raw.startsWith('"')
+    ? raw.slice(1, -1).replace(/""/gu, '"')
+    : raw.toLowerCase();
+}
+
+/**
+ * `[ONLY] [schema.]name [*]` の並びから表名を取り出す。読めなければ**空**。
+ *
+ * public 以外の schema 修飾は読めない扱いにする。この道具は public schema しか
+ * 相手にしていないので、修飾つきを素通しすると別 schema の表を同名の public 表と
+ * 取り違える。読めないものは呼び出し側が拒否に倒す。
+ */
+export function parseTableList(list: string): string[] {
+  const names: string[] = [];
+  for (const item of list.split(",")) {
+    const match = new RegExp(
+      String.raw`^\s*(?:ONLY\s+)?(?:(${IDENT})\s*\.\s*)?(${IDENT})\s*\*?\s*$`,
+      "iu",
+    ).exec(item);
+    const schema = match?.[1];
+    const name = match?.[2];
+    if (name === undefined) return [];
+    if (schema !== undefined && bareIdent(schema) !== "public") return [];
+    names.push(bareIdent(name));
+  }
+  return names;
+}
+
+/**
+ * `ALTER TABLE` の DROP アクションのうち、**列**を落とすもの。
+ *
+ * `COLUMN` は省略できる（`ALTER TABLE t DROP c` は有効な SQL）。`DROP` で始まる
+ * 他のアクション（CONSTRAINT / DEFAULT / NOT NULL / EXPRESSION / IDENTITY）は
+ * 行も値も消さないので除く。
+ */
+function dropColumnNames(normalized: string): string[] {
   return [
-    ...sql.matchAll(
+    ...normalized.matchAll(
       new RegExp(
-        String.raw`\bDROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?${ident}`,
+        String.raw`\bDROP\s+(?!CONSTRAINT\b|DEFAULT\b|NOT\b|EXPRESSION\b|IDENTITY\b)(?:COLUMN\s+)?(?:IF\s+EXISTS\s+)?(${IDENT})`,
         "giu",
       ),
     ),
-  ].flatMap((match) =>
-    match[1] === undefined ? [] : [`${table}.${match[1]}`],
-  );
+  ].flatMap((match) => (match[1] === undefined ? [] : [bareIdent(match[1])]));
 }
 
 /**
- * 引き継ぎ先が定義されていない破壊。
+ * 行や値を失わせる文か。
  *
- * migration 内に実行される検査があるものは著者の答えを採る。無いものは
- * `HANDOVERS` に登録が要る。**どちらも無ければここに出る**——「見なかった」で
- * 通す道を残さないための一覧で、gate（unit）もデプロイ経路も同じ関数を呼ぶ。
+ * 文の**先頭の動詞**で見る。部分一致にすると `CREATE TRIGGER … BEFORE TRUNCATE ON t`
+ * が破壊に見える（実測: TRUNCATE を禁じる trigger を定義した migration 1 本が
+ * 素朴な grep に 6 回当たり、全部が防御の定義だった）。
+ *
+ * `DO $$ … $$` の中に静的に書いた破壊も数える。中は plpgsql なので対象を
+ * 読み切れないが、「見えないから無い」にはしない——`destructionTargets` が空を
+ * 返し、呼び出し側が拒否に倒す。
  */
-export function destructionsWithoutHandover(
-  migrations: readonly Migration[],
-  handovers: readonly Handover[] = HANDOVERS,
-): { migration: string; target: string }[] {
-  const known = new Set(handovers.map((entry) => entry.target));
-  return migrations.flatMap(({ name, sql }) =>
-    unassertedDestructiveStatements(sql)
-      .flatMap((statement) => destructionTargets(statement))
-      .filter((target) => !known.has(target))
-      .map((target) => ({ migration: name, target })),
-  );
+export function isDestructiveStatement(statement: string): boolean {
+  const sql = normalize(statement);
+  if (/^TRUNCATE\b/iu.test(sql)) return true;
+  if (/^DROP\s+(?:TABLE|SCHEMA)\b/iu.test(sql)) return true;
+  // WHERE の無い DELETE は表を空にする。条件付きは著者の検査の領分。
+  if (/^DELETE\s+FROM\b/iu.test(sql) && !/\bWHERE\b/iu.test(sql)) return true;
+  if (/^ALTER\s+TABLE\b/iu.test(sql) && dropColumnNames(sql).length > 0) {
+    return true;
+  }
+  if (/^DO\b/iu.test(sql)) {
+    return (
+      /\bTRUNCATE\b/iu.test(sql) ||
+      /\bDROP\s+(?:TABLE|SCHEMA)\b/iu.test(sql) ||
+      dropColumnNames(sql).length > 0
+    );
+  }
+  return false;
 }
 
 /**
- * 未適用の破壊について、引き継ぎが済んでいるかを DB に訊く。
+ * 破壊的文が消す対象（表なら `t`、列なら `t.c`）。
  *
- * 対象がまだ存在しない DB（新規構築＝本番切替の経路）では数えない。
- * これから作られる列に値があるはずがない。
+ * **空を返したら「破壊ではない」ではない。** `isDestructiveStatement` が真なのに
+ * ここが空なら「消すのは分かるが何を消すか読めない」で、呼び出し側は拒否に倒す。
+ * 2 つのパーサが食い違ったとき黙って通す道を残さないための約束で、実際に
+ * `ALTER TABLE public.t DROP COLUMN c` がその形で両方の関門から消えていた。
  */
-async function pendingHandoverGaps(
-  prisma: PrismaClient,
-  migrations: readonly Migration[],
-  applied: ReadonlySet<string>,
-  existing: ReadonlySet<string>,
-): Promise<string[]> {
-  const gaps: string[] = [];
+export function destructionTargets(statement: string): string[] {
+  const sql = normalize(statement);
 
-  for (const migration of migrations) {
-    if (applied.has(migration.name)) continue;
-    for (const statement of unassertedDestructiveStatements(migration.sql)) {
-      for (const target of destructionTargets(statement)) {
-        if (!existing.has(target)) continue;
-        const handover = HANDOVERS.find((entry) => entry.target === target);
-        if (handover === undefined) {
-          gaps.push(
-            `${migration.name}: ${target} を消すが引き継ぎ先が未定義。` +
-              "HANDOVERS に登録するか、migration 内に DO $$ … RAISE EXCEPTION … $$ を置く",
-          );
-          continue;
-        }
-        try {
-          const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
-            handover.countUnhandedOver,
-          );
-          const n = Number(row?.n ?? 0);
-          if (n > 0) {
-            gaps.push(
-              `${migration.name}: ${handover.what}（${n} 件）→ ${handover.remedy}`,
-            );
-          }
-        } catch (error) {
-          gaps.push(
-            `${migration.name}: ${target} の引き継ぎを確かめられない（${describeError(error)}）`,
-          );
-        }
-      }
-    }
+  const truncate = new RegExp(
+    String.raw`^TRUNCATE\s+(?:TABLE\s+)?(.*?)(?:\s+(?:RESTART|CONTINUE)\s+IDENTITY)?(?:\s+(?:CASCADE|RESTRICT))?$`,
+    "iu",
+  ).exec(sql);
+  if (truncate?.[1] !== undefined) return parseTableList(truncate[1]);
+
+  const dropTable = new RegExp(
+    String.raw`^DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(.*?)(?:\s+(?:CASCADE|RESTRICT))?$`,
+    "iu",
+  ).exec(sql);
+  if (dropTable?.[1] !== undefined) return parseTableList(dropTable[1]);
+
+  if (/^DELETE\s+FROM\b/iu.test(sql) && !/\bWHERE\b/iu.test(sql)) {
+    const deleteAll = new RegExp(
+      String.raw`^DELETE\s+FROM\s+(?:ONLY\s+)?(.*?)\s*$`,
+      "iu",
+    ).exec(sql);
+    if (deleteAll?.[1] !== undefined) return parseTableList(deleteAll[1]);
   }
 
-  return gaps;
+  const alter = new RegExp(
+    String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(${IDENT})\s*\.\s*)?(${IDENT})\s*\*?\s`,
+    "iu",
+  ).exec(sql);
+  const schema = alter?.[1];
+  const table = alter?.[2];
+  if (table === undefined) return [];
+  if (schema !== undefined && bareIdent(schema) !== "public") return [];
+
+  return dropColumnNames(sql).map((column) => `${bareIdent(table)}.${column}`);
+}
+
+/**
+ * **実行される**検査か。
+ *
+ * `DO $$ … RAISE EXCEPTION … $$` だけを数える。`CREATE FUNCTION … RAISE EXCEPTION`
+ * は関数を**定義する**だけで、その migration の中では 1 度も評価されない。
+ */
+export function isExecutedAssertion(statement: string): boolean {
+  const sql = normalize(statement);
+  return /^DO\b/iu.test(sql) && /\bRAISE\s+EXCEPTION\b/iu.test(sql);
+}
+
+/** 文が名指ししている識別子（小文字化・引用符外し済み）。 */
+export function namedIdentifiers(statement: string): Set<string> {
+  const names = new Set<string>();
+  for (const match of normalize(statement).matchAll(new RegExp(IDENT, "gu"))) {
+    names.add(bareIdent(match[0]));
+  }
+  return names;
+}
+
+/** その migration 内で新しく作られた表・列を覚える（消しても失うものが無い）。 */
+function rememberCreated(statement: string, into: Set<string>): void {
+  const sql = normalize(statement);
+
+  // `IF NOT EXISTS` は既存を温存するので「新しく作った」とは言えない。
+  const created = new RegExp(
+    // 末尾に `\b` は置かない。引用識別子は `"` で終わるので、直後が `(` だと
+    // 語境界にならず 1 件も当たらない（`CREATE TABLE "t" (…)` がまさにその形）。
+    String.raw`^CREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?TABLE\s+(?:(${IDENT})\s*\.\s*)?(${IDENT})`,
+    "iu",
+  ).exec(sql);
+  const table = created?.[2];
+  if (table !== undefined && !/\bIF\s+NOT\s+EXISTS\b/iu.test(sql)) {
+    into.add(bareIdent(table));
+    return;
+  }
+
+  const altered = new RegExp(
+    String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(${IDENT})\s*\.\s*)?(${IDENT})\s`,
+    "iu",
+  ).exec(sql);
+  const alteredTable = altered?.[2];
+  if (alteredTable === undefined) return;
+  for (const match of sql.matchAll(
+    new RegExp(
+      String.raw`\bADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(${IDENT})`,
+      "giu",
+    ),
+  )) {
+    const column = match[1];
+    if (column !== undefined) {
+      into.add(`${bareIdent(alteredTable)}.${bareIdent(column)}`);
+    }
+  }
+}
+
+export interface PlannedStatement {
+  readonly sql: string;
+  readonly handovers: readonly Handover[];
+}
+
+export interface PlannedRefusal {
+  readonly sql: string;
+  readonly kind: "rehearsal" | "handover";
+  readonly reason: string;
+}
+
+/**
+ * 1 本の migration を読み、各文に「実行前に確かめる引き継ぎ」を付ける。
+ *
+ * **CI の gate も、デプロイ経路も、fixture もこの関数だけを呼ぶ。** 以前は
+ * 静的 gate とデプロイ経路が別々に判定していて、`ALTER TABLE public.t DROP COLUMN c`
+ * のように片方だけが見落とす形が実在した（`.claude/rules/testing-unit.md` の 4 点目）。
+ *
+ * 破壊が許されるのは次のいずれか。どれでもなければ `refusals` に出る。
+ *
+ * 1. **同じ migration の中で作った**表・列を消す（失うものが無い）
+ * 2. **先行する検査が対象を名指ししている**。`DO $$ … RAISE EXCEPTION … $$` が
+ *    その表名・列名に触れていること。単に「検査が 1 つある」では足りない——
+ *    無関係な表の検査で以降の破壊が全部免許されていた
+ * 3. `HANDOVERS` に対象の登録がある。リハーサル中にその SQL を流して 0 を確かめる
+ *
+ * ## この関数が見ないもの
+ *
+ * - 検査や `countUnhandedOver` の**中身**が正しいか。対象を名指ししつつ何も
+ *   確かめない検査を書けば通る（静的には判定できない）
+ * - `WHERE` 付きの `DELETE` / `UPDATE` による値の消失。条件次第で失われるかが
+ *   決まるので、そこは著者の検査の領分
+ * - `ALTER COLUMN … TYPE … USING <式>` による切り捨て
+ * - `EXECUTE '…'` で組み立てた動的な破壊（`DO` ブロックごと拒否に倒す）
+ */
+export function planMigration(
+  migrationSql: string,
+  handovers: readonly Handover[] = HANDOVERS,
+): { steps: PlannedStatement[]; refusals: PlannedRefusal[] } {
+  const steps: PlannedStatement[] = [];
+  const refusals: PlannedRefusal[] = [];
+
+  const guarded = new Set<string>();
+  const created = new Set<string>();
+
+  for (const sql of splitStatements(migrationSql)) {
+    const step = planStep(sql);
+    if (step.kind === "blocked") {
+      refusals.push({ sql, kind: "rehearsal", reason: step.reason });
+      continue;
+    }
+
+    if (isDestructiveStatement(sql)) {
+      const targets = destructionTargets(sql);
+      if (targets.length === 0) {
+        refusals.push({
+          sql,
+          kind: "handover",
+          reason:
+            "破壊的だが何を消すか読み取れない。素の表名で書く" +
+            "（schema 修飾・DO ブロック内の破壊・動的 SQL は読めない）",
+        });
+        continue;
+      }
+
+      const needed: Handover[] = [];
+      let refused = false;
+      for (const target of targets) {
+        const [table = target, column = target] = target.includes(".")
+          ? target.split(".")
+          : [target, target];
+        // 表ごと同じ migration で作ったなら、その列を消しても失うものが無い。
+        if (created.has(target) || created.has(table)) continue;
+        if (guarded.has(column)) continue;
+        const handover = handovers.find((entry) => entry.target === target);
+        if (handover === undefined) {
+          refusals.push({
+            sql,
+            kind: "handover",
+            reason:
+              `${target} を消すが引き継ぎの確認が無い。` +
+              "対象を名指しする DO $$ … RAISE EXCEPTION … $$ を前に置くか、HANDOVERS に登録する",
+          });
+          refused = true;
+          continue;
+        }
+        needed.push(handover);
+      }
+      if (refused) continue;
+      if (step.kind === "run") steps.push({ sql, handovers: needed });
+      continue;
+    }
+
+    if (isExecutedAssertion(sql)) {
+      for (const name of namedIdentifiers(sql)) guarded.add(name);
+    }
+    rememberCreated(sql, created);
+
+    if (step.kind === "run") steps.push({ sql, handovers: [] });
+  }
+
+  return { steps, refusals };
+}
+
+/**
+ * 引き継がれていない件数。**読み取れなければ投げる。**
+ *
+ * `row?.n ?? 0` で済ませると、0 行・NULL・非数値を返す SQL が「0 件＝安全」に
+ * 化けて破壊を通す。確かめられなかったことと、確かめて 0 だったことは違う。
+ */
+export function readGapCount(rows: readonly Record<string, unknown>[]): number {
+  if (rows.length !== 1) {
+    throw new Error(`1 行を返していない（${rows.length} 行）`);
+  }
+  const value = rows[0]?.["n"];
+  const parsed =
+    typeof value === "bigint" || typeof value === "number"
+      ? Number(value)
+      : typeof value === "string" && /^\d+$/u.test(value)
+        ? Number(value)
+        : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`n が有限の非負数でない（${String(value)}）`);
+  }
+  return parsed;
 }
 
 export async function run(argv: readonly string[]): Promise<number> {
@@ -881,16 +1172,18 @@ export async function run(argv: readonly string[]): Promise<number> {
       history.applied,
     );
 
-    // **何も実行する前に**止める。1 文でも巻き戻せないものがあれば、
-    // 途中まで流してから気づくのでは遅い。
+    // **何も実行する前に**止める。1 文でも巻き戻せないもの・引き継ぎの確認が
+    // 無い破壊があれば、途中まで流してから気づくのでは遅い。
     if (blocked.length > 0) {
       for (const entry of blocked) {
+        const label =
+          entry.kind === "rehearsal" ? "リハーサル不可" : "引き継ぎ未定義";
         console.error(
-          `[migration-preconditions] リハーサル不可 ${entry.migration}: ${entry.reason}\n  ${entry.sql.slice(0, 160)}`,
+          `[migration-preconditions] ${label} ${entry.migration}: ${entry.reason}\n  ${entry.sql.slice(0, 160)}`,
         );
       }
       console.error(
-        "[migration-preconditions] この migration は流して確かめられない。適用前の確認は手作業になる",
+        "[migration-preconditions] この migration は適用前に確かめられない。適用しない",
       );
       return 1;
     }
@@ -898,24 +1191,6 @@ export async function run(argv: readonly string[]): Promise<number> {
     if (steps.length === 0) {
       console.info("[migration-preconditions] 未適用の migration は無い");
       return 0;
-    }
-
-    // リハーサルは「エラーにならない」しか見ない。**破壊はエラーではない**ので、
-    // ここを通さないと DROP COLUMN が緑のまま黙って値を消す。
-    const gaps = await pendingHandoverGaps(
-      prisma,
-      readMigrations(parseMigrationsDir(argv)),
-      history.applied,
-      await readExistingTargets(prisma),
-    );
-    if (gaps.length > 0) {
-      for (const gap of gaps) {
-        console.error(`[migration-preconditions] 引き継ぎ未了 ${gap}`);
-      }
-      console.error(
-        "[migration-preconditions] 破壊的な migration の前提が満たされていない。適用しない",
-      );
-      return 1;
     }
 
     console.info(
