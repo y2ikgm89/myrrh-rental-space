@@ -31,14 +31,19 @@ function adminRoutePagePath(href: string): string {
 /**
  * href から解決した page.tsx が存在しない entry。
  *
- * **存在判定は差し込める。** 既定は実ファイルだが、fixture は合成した述語を渡して
+ * **存在判定は必須引数で受ける（既定値を置かない）。** fixture は合成した述語を渡して
  * 「今この checkout に何があるか」から切り離す。実ファイルに依存した fixture は、
  * 無関係な route 移動で落ちるうえ、gate の判定そのものを確かめていない
  * （Codex が PR #2019 で指摘）。
+ *
+ * 既定を `existsSync` にすると、**実走査だけが既定を通り fixture は誰もそこを
+ * 通らない**。既定の配線が壊れても fixture は緑のままで、この変更が潰そうとした
+ * 「繋ぎ方が検証されない」状態がそのまま残る（Codex が PR #2020 で指摘）。
+ * 依存は呼び出し側の境界で明示する。
  */
 export function missingRoutePages(
   entries: readonly { readonly label: string; readonly href: string }[],
-  pageExists: (pagePath: string) => boolean = existsSync,
+  pageExists: (pagePath: string) => boolean,
 ) {
   return entries
     .map((entry) => ({
@@ -121,7 +126,7 @@ describe("admin navigation route contract", () => {
       })),
     );
 
-    expect(missingRoutePages(sidebarEntries)).toEqual([]);
+    expect(missingRoutePages(sidebarEntries, existsSync)).toEqual([]);
   });
 
   test("command palette links point at existing App Router pages", () => {
@@ -136,6 +141,6 @@ describe("admin navigation route contract", () => {
       })),
     ];
 
-    expect(missingRoutePages(commandPaletteEntries)).toEqual([]);
+    expect(missingRoutePages(commandPaletteEntries, existsSync)).toEqual([]);
   });
 });
