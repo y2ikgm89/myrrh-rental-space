@@ -156,6 +156,47 @@ function collectViolations(): Violation[] {
 }
 
 describe("prisma interactive $transaction: no Promise.all", () => {
+  test("検出できる形・できない形（fixture）", () => {
+    // interactive tx の callback 内は違反。
+    expect(
+      findPromiseAllInInteractiveTransactions(
+        "await prisma.$transaction(async (tx) => { await Promise.all([a(tx), b(tx)]); });",
+      ),
+    ).toHaveLength(1);
+    expect(
+      findPromiseAllInInteractiveTransactions(
+        "await prisma.$transaction(async (tx) => { await Promise.allSettled([a(tx)]); });",
+      ),
+    ).toHaveLength(1);
+
+    // tx の**外**の Promise.all は違反ではない（並行してよい）。
+    expect(
+      findPromiseAllInInteractiveTransactions(
+        "await Promise.all([a(), b()]); await prisma.$transaction(async (tx) => { await a(tx); });",
+      ),
+    ).toEqual([]);
+
+    // 逐次 await は違反ではない。
+    expect(
+      findPromiseAllInInteractiveTransactions(
+        "await prisma.$transaction(async (tx) => { await a(tx); await b(tx); });",
+      ),
+    ).toEqual([]);
+
+    // コメント内の言及は数えない。
+    expect(
+      findPromiseAllInInteractiveTransactions(
+        "await prisma.$transaction(async (tx) => { /* Promise.all([a]) は禁止 */ await a(tx); });",
+      ),
+    ).toEqual([]);
+  });
+
+  test("走査対象が実在する（gate が空振りしていない）", () => {
+    expect(
+      SCAN_ROOTS.flatMap((dir) => collectSourceFiles(dir)).length,
+    ).toBeGreaterThan(50);
+  });
+
   test("src/shared/domain|db の interactive tx callback 内に Promise.all/allSettled がない", () => {
     const violations = collectViolations();
 

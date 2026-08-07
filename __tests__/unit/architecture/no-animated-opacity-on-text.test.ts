@@ -71,7 +71,34 @@ function findViolations(): Violation[] {
   return violations;
 }
 
+/** 1 行が違反か（純粋判定。fixture はこれを直接叩く）。 */
+export function isPulsingTextLine(line: string): boolean {
+  return PULSING_TEXT.test(line);
+}
+
 describe("テキストに opacity アニメーションを掛けない (WCAG 2.1 SC 1.4.3)", () => {
+  test("検出できる形・できない形（fixture）", () => {
+    // 順序はどちらでも違反。
+    expect(
+      isPulsingTextLine('<p className="animate-pulse text-foreground" />'),
+    ).toBe(true);
+    expect(
+      isPulsingTextLine(
+        '<p className="text-muted-foreground animate-pulse" />',
+      ),
+    ).toBe(true);
+    // 前景色を伴わない skeleton は対象外（矩形は Incidental）。
+    expect(isPulsingTextLine('<div className="animate-pulse rounded" />')).toBe(
+      false,
+    );
+    // 静的な前景色だけも対象外。
+    expect(isPulsingTextLine('<p className="text-foreground" />')).toBe(false);
+  });
+
+  test("走査対象が実在する（gate が空振りしていない）", () => {
+    expect(listSourceFiles().length).toBeGreaterThan(100);
+  });
+
   test("animate-pulse と前景色ユーティリティが同一要素に同居しない", () => {
     const violations = findViolations().map(
       ({ file, line, snippet }) => `${file}:${String(line)} ${snippet}`,
