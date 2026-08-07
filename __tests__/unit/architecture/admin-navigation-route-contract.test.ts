@@ -28,15 +28,24 @@ function adminRoutePagePath(href: string): string {
   return join(ADMIN_DASHBOARD_ROOT, ...relativePath.split("/"), "page.tsx");
 }
 
-function missingRoutePages(
+/**
+ * href から解決した page.tsx が存在しない entry。
+ *
+ * **存在判定は差し込める。** 既定は実ファイルだが、fixture は合成した述語を渡して
+ * 「今この checkout に何があるか」から切り離す。実ファイルに依存した fixture は、
+ * 無関係な route 移動で落ちるうえ、gate の判定そのものを確かめていない
+ * （Codex が PR #2019 で指摘）。
+ */
+export function missingRoutePages(
   entries: readonly { readonly label: string; readonly href: string }[],
+  pageExists: (pagePath: string) => boolean = existsSync,
 ) {
   return entries
     .map((entry) => ({
       ...entry,
       pagePath: adminRoutePagePath(entry.href),
     }))
-    .filter(({ pagePath }) => !existsSync(pagePath));
+    .filter(({ pagePath }) => !pageExists(pagePath));
 }
 
 describe("admin navigation route contract", () => {
@@ -52,17 +61,47 @@ describe("admin navigation route contract", () => {
       join(ADMIN_DASHBOARD_ROOT, "spaces", "page.tsx"),
     );
 
+    // 存在判定は合成した述語で差し込む（実ファイルに依存させない）。
+    const present = new Set([
+      join(ADMIN_DASHBOARD_ROOT, "spaces", "page.tsx"),
+      join(ADMIN_DASHBOARD_ROOT, "page.tsx"),
+    ]);
+    const pageExists = (pagePath: string): boolean => present.has(pagePath);
+
     // **実在しない href は欠落として拾う**（これが拾えないと gate は空振りする）。
     expect(
-      missingRoutePages([
-        { label: "probe", href: "/admin/does-not-exist-probe" },
-      ]),
+      missingRoutePages(
+        [{ label: "probe", href: "/admin/does-not-exist-probe" }],
+        pageExists,
+      ),
     ).toHaveLength(1);
 
     // 実在する href は拾わない。
     expect(
-      missingRoutePages([{ label: "spaces", href: "/admin/spaces" }]),
+      missingRoutePages(
+        [{ label: "spaces", href: "/admin/spaces" }],
+        pageExists,
+      ),
     ).toEqual([]);
+
+    // query 付きでも同じ page.tsx へ解決してから判定する。
+    expect(
+      missingRoutePages(
+        [{ label: "categories", href: "/admin/spaces?tab=categories" }],
+        pageExists,
+      ),
+    ).toEqual([]);
+
+    // 混在時は欠落しているものだけを返す。
+    expect(
+      missingRoutePages(
+        [
+          { label: "spaces", href: "/admin/spaces" },
+          { label: "probe", href: "/admin/does-not-exist-probe" },
+        ],
+        pageExists,
+      ).map((entry) => entry.label),
+    ).toEqual(["probe"]);
 
     // admin 以外の href は解決させない（黙って通さない）。
     expect(() => adminRoutePagePath("/mypage")).toThrow();

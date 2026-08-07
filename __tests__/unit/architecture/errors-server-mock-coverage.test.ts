@@ -42,42 +42,52 @@ function isCompleteErrorsServerMock(source: string): boolean {
   );
 }
 
+/**
+ * その **1 ファイルが違反か**（gate 本体と fixture はここだけを通す）。
+ *
+ * 3 条件（対象 module の mock である / safeFetch に触れる / 完全 mock でない）を
+ * 個別に fixture すると、**繋ぎ方が壊れても fixture は緑のまま**になる
+ * （Codex が PR #2019 で指摘）。合成後の判定を 1 つ export する。
+ */
+export function isPartialErrorsServerMock(source: string): boolean {
+  if (!ERRORS_SERVER_MOCK_RE.test(source)) return false;
+  if (!source.includes("safeFetch")) return false;
+  return !isCompleteErrorsServerMock(source);
+}
+
 describe("errors/server mock.module coverage", () => {
   test("検出できる形・できない形（fixture）", () => {
     const partial =
       'mock.module("@/shared/lib/errors/server", () => ({ safeFetch }));';
 
     // safeFetch だけの部分 mock は違反。
-    expect(ERRORS_SERVER_MOCK_RE.test(partial)).toBe(true);
-    expect(partial.includes("safeFetch")).toBe(true);
-    expect(isCompleteErrorsServerMock(partial)).toBe(false);
+    expect(isPartialErrorsServerMock(partial)).toBe(true);
 
     // 免除の 3 形。
+    expect(isPartialErrorsServerMock(`${partial} criticalFetch`)).toBe(false);
+    expect(isPartialErrorsServerMock(`${partial} ...actual`)).toBe(false);
     expect(
-      isCompleteErrorsServerMock(`${partial}
-criticalFetch`),
-    ).toBe(true);
+      isPartialErrorsServerMock(`${partial} installErrorsServerMock`),
+    ).toBe(false);
+
+    // safeFetch に触れない mock は対象外（この gate の関心事ではない）。
     expect(
-      isCompleteErrorsServerMock(`${partial}
-...actual`),
-    ).toBe(true);
+      isPartialErrorsServerMock(
+        'mock.module("@/shared/lib/errors/server", () => ({ logError }));',
+      ),
+    ).toBe(false);
+
+    // 別モジュールの mock は対象外。
     expect(
-      isCompleteErrorsServerMock(`${partial}
-installErrorsServerMock`),
-    ).toBe(true);
+      isPartialErrorsServerMock(
+        'mock.module("@/shared/lib/other", () => ({ safeFetch }));',
+      ),
+    ).toBe(false);
 
     // **既知の限界（docstring 参照）**: コメントで触れるだけでも免除される。
     // 直せない事実をここで固定し、直したつもりにならないようにする。
     expect(
-      isCompleteErrorsServerMock(`// criticalFetch は別経路
-${partial}`),
-    ).toBe(true);
-
-    // 別モジュールの mock は対象外。
-    expect(
-      ERRORS_SERVER_MOCK_RE.test(
-        'mock.module("@/shared/lib/other", () => ({}));',
-      ),
+      isPartialErrorsServerMock(`// criticalFetch は別経路 ${partial}`),
     ).toBe(false);
   });
 
@@ -89,10 +99,7 @@ ${partial}`),
     const offenders: string[] = [];
 
     for (const file of collectSourceFiles(TESTS_ROOT)) {
-      const source = readFileSync(file, "utf8");
-      if (!ERRORS_SERVER_MOCK_RE.test(source)) continue;
-      if (!source.includes("safeFetch")) continue;
-      if (isCompleteErrorsServerMock(source)) continue;
+      if (!isPartialErrorsServerMock(readFileSync(file, "utf8"))) continue;
 
       offenders.push(relative(ROOT, file).replaceAll("\\", "/"));
     }

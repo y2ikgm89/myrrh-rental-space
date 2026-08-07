@@ -35,33 +35,55 @@ function hasAccessibleName(tag: string): boolean {
   return /\s(?:aria-label|aria-labelledby)=/u.test(tag);
 }
 
+/**
+ * そのソースにある「アクセシブルネームを持たない `<SelectTrigger>`」。
+ *
+ * **gate 本体と fixture は必ずこの合成後の判定を通す。** 部品
+ * （`selectTriggerTags` / `hasAccessibleName`）を個別に fixture すると、
+ * 両者を繋ぐ filter が壊れても fixture は緑のままになる（Codex が PR #2019 で指摘）。
+ */
+export function unnamedSelectTriggers(source: string): string[] {
+  return selectTriggerTags(source).filter((tag) => !hasAccessibleName(tag));
+}
+
 describe("admin filter select accessibility", () => {
   test("検出できる形・できない形（fixture）", () => {
     // 属性なしは違反。
-    const bare = selectTriggerTags('<SelectTrigger className="w-40">');
-    expect(bare).toHaveLength(1);
-    expect(hasAccessibleName(bare[0] ?? "")).toBe(false);
+    expect(unnamedSelectTriggers('<SelectTrigger className="w-40">')).toEqual([
+      '<SelectTrigger className="w-40">',
+    ]);
 
     // aria-label / aria-labelledby のどちらでも名前が付く。
     expect(
-      hasAccessibleName('<SelectTrigger aria-label="ステータス で絞り込む">'),
-    ).toBe(true);
+      unnamedSelectTriggers(
+        '<SelectTrigger aria-label="ステータス で絞り込む">',
+      ),
+    ).toEqual([]);
     expect(
-      hasAccessibleName('<SelectTrigger aria-labelledby="status-label">'),
-    ).toBe(true);
+      unnamedSelectTriggers('<SelectTrigger aria-labelledby="status-label">'),
+    ).toEqual([]);
 
     // **属性名の前方一致で誤魔化せない。**
-    expect(hasAccessibleName('<SelectTrigger data-aria-label="x">')).toBe(
-      false,
-    );
+    expect(
+      unnamedSelectTriggers('<SelectTrigger data-aria-label="x">'),
+    ).toHaveLength(1);
 
     // 複数行に跨る tag も 1 件として拾う。
     expect(
-      selectTriggerTags('<SelectTrigger\n  className="w-40"\n  id="s"\n>'),
+      unnamedSelectTriggers('<SelectTrigger\n  className="w-40"\n  id="s"\n>'),
     ).toHaveLength(1);
 
     // 別コンポーネントは拾わない。
-    expect(selectTriggerTags('<SelectTriggerLike aria-label="x">')).toEqual([]);
+    expect(unnamedSelectTriggers('<SelectTriggerLike aria-label="x">')).toEqual(
+      [],
+    );
+
+    // 名前付きと名前なしが混在するとき、名前なしだけを拾う。
+    expect(
+      unnamedSelectTriggers(
+        '<SelectTrigger aria-label="a">\n<SelectTrigger className="b">',
+      ),
+    ).toEqual(['<SelectTrigger className="b">']);
   });
 
   test("走査対象が実在する（gate が空振りしていない）", () => {
@@ -70,16 +92,11 @@ describe("admin filter select accessibility", () => {
 
   test("filter SelectTrigger controls expose an accessible name", () => {
     const violations = collectFilterFiles(ADMIN_DASHBOARD_ROOT).flatMap(
-      (filePath) => {
-        const source = readFileSync(filePath, "utf8");
-
-        return selectTriggerTags(source)
-          .filter((tag) => !hasAccessibleName(tag))
-          .map((tag) => ({
-            file: relative(process.cwd(), filePath),
-            tag,
-          }));
-      },
+      (filePath) =>
+        unnamedSelectTriggers(readFileSync(filePath, "utf8")).map((tag) => ({
+          file: relative(process.cwd(), filePath),
+          tag,
+        })),
     );
 
     expect(violations).toEqual([]);
