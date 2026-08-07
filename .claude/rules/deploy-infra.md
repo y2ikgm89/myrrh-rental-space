@@ -38,10 +38,15 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
   - `scripts/migration-preconditions.ts` の `HANDOVERS` 登録。commit 済みの
     migration は絶対規約 #7 で編集できないので、後から前提を足せないぶんはここへ書く
 
-  どちらも無い破壊は `destructive-migration-has-executed-assertion.test.ts` が CI で
-  落とし、デプロイ経路（migrator ステージ）でも `HANDOVERS` の SQL が実際に流れて、
-  0 でなければ `migrate deploy` を始めない。`HANDOVERS` の SQL が状態に応じて
-  答えることは `__tests__/integration/prisma/migration-handovers.test.ts` が実 DB で
+  判定は `planMigration` ただ 1 つで、CI の
+  `destructive-migration-has-executed-assertion.test.ts` もデプロイ経路も同じ関数を呼ぶ
+  （分けて書いた前身は `ALTER TABLE public.t DROP COLUMN c` が**両方の関門から
+  同時に消えて**いた）。検査も登録も無い破壊は 1 文も実行せずに拒否する。登録が
+  あるぶんは**リハーサルの途中**——その破壊的文が走る直前——で SQL を流し、0 でなければ
+  そこで止める。適用前のスナップショットで評価すると、移送先を作るのが同じ未適用の束に
+  入っていたり先行 migration が列名を変えていたりしたときに黙って飛ばすことになる。
+  `HANDOVERS` の SQL が状態に応じて答えること・読めない答えを 0 件扱いしないことは
+  `__tests__/integration/prisma/migration-handovers.test.ts` が実 DB で
   固定する。ヘッダが指すスクリプトが実在することは
   `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
   （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）

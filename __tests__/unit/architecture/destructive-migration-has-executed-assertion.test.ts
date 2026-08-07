@@ -15,69 +15,151 @@
  *
  * ## 何を強制するか
  *
- * 破壊的文は、次の**どちらか**を持つ。片方も無いものはここに出る。
+ * 判定は `planMigration` ただ 1 つで、**この gate もデプロイ経路もそれを呼ぶ**。
+ * 破壊が許されるのは次のいずれかで、どれでもなければ `refusals` に出る。
  *
- * 1. migration 内の `DO $$ … RAISE EXCEPTION … $$`。破壊的文より**前**に置く。
- *    同じ `BEGIN … COMMIT` の中なので、raise すれば何も落ちない。リハーサルが
- *    この検査ごと流すので、**ダウンタイム窓が開く前**に止まり `_prisma_migrations`
- *    に失敗が残らない
- * 2. `scripts/migration-preconditions.ts` の `HANDOVERS` 登録。commit 済みの
- *    migration は編集できない（絶対規約 #7）ので、1 を後から足せないぶんはここへ書く。
- *    デプロイ経路が実際にその SQL を流し、0 でなければ適用しない
+ * 1. 同じ migration の中で作った表・列を消す（失うものが無い）
+ * 2. 先行する `DO $$ … RAISE EXCEPTION … $$` が**その対象を名指ししている**
+ * 3. `HANDOVERS` に対象の登録がある（リハーサル中に SQL を流して 0 を確かめる）
  *
- * 順序を見るのは、後ろに置いた検査が役に立たないから。消える列を参照する検査は
- * DROP の後では書けない。
+ * ## 分けて書かない理由
  *
- * ## なぜ「値がまだあるか」で代替しないのか
- *
- * expand/contract では、値を別の表へ**移し終えた後も元の列は埋まったまま**で、
- * そこを DROP するのが contract そのものになる。汎用の「値があるか」で止めると、
- * 正しく移送を終えたデプロイを恒久的に止める。本当の前提は「移送先に入っているか」で、
- * それは著者にしか書けない。だから 1（著者が書く）と 2（著者が書けないぶんを
- * 登録する）に分ける。
+ * 前身は静的 gate（`destructionsWithoutHandover`）とデプロイ経路
+ * （`pendingHandoverGaps`）が別々に判定していた。多角監査で
+ * `ALTER TABLE public.locations DROP COLUMN "special_holidays"` が
+ * **両方の関門から同時に消える**ことが実測で出た（対象が読めず、対象ループが
+ * 1 周も回らない）。判定を 1 つにすれば、この種の乖離は構造的に起こらない
+ * （`.claude/rules/testing-unit.md` の 4 点目）。
  *
  * ## この gate が見ないもの
  *
- * - `ALTER COLUMN … TYPE … USING <式>` による切り捨て。式次第で無言に失われるが、
- *   「narrowing かどうか」は PostgreSQL の意味論の写経になり収束しない
- *   （`migration-preconditions.ts` の docstring 参照）
- * - `DO` ブロック内の `EXECUTE '…'` で組み立てた動的な破壊
- * - 検査や `countUnhandedOver` の**中身**が正しいか。空振りする SQL を書けば通る。
- *   `HANDOVERS` のぶんは実 DB で流して答えが返ることを
- *   `__tests__/integration/prisma/migration-handovers.test.ts` が確かめる
+ * - 検査や `countUnhandedOver` の**中身**。対象を名指ししつつ何も確かめない
+ *   検査を書けば通る。`HANDOVERS` のぶんは実 DB で答えが状態に応じて変わることを
+ *   `__tests__/integration/prisma/migration-handovers.test.ts` が固定する
+ * - `WHERE` 付きの `DELETE` / `UPDATE` による値の消失（条件が失うものを決める）
+ * - `ALTER COLUMN … TYPE … USING <式>` による切り捨て
  */
 
 import { describe, expect, test } from "bun:test";
 import {
   destructionTargets,
-  destructionsWithoutHandover,
   HANDOVERS,
+  isDestructiveStatement,
+  planMigration,
   readMigrations,
-  unassertedDestructiveStatements,
+  stripNoise,
 } from "../../../scripts/migration-preconditions";
+
+/** その migration が拒否される理由（引き継ぎ関係のみ）。 */
+function handoverRefusals(sql: string, handovers = HANDOVERS): string[] {
+  return planMigration(sql, handovers)
+    .refusals.filter((refusal) => refusal.kind === "handover")
+    .map((refusal) => refusal.reason);
+}
+
+const NO_HANDOVERS: typeof HANDOVERS = [];
 
 describe("破壊的 migration は実行される前提検査を伴う", () => {
   test("走査対象が実在する（gate が空振りしていない）", () => {
     expect(readMigrations().length).toBeGreaterThan(0);
   });
 
-  test("検出できる形・できない形（fixture）", () => {
-    const drop = `BEGIN;
-ALTER TABLE "locations" DROP COLUMN "special_holidays";
-COMMIT;`;
+  test("1. 素の破壊形を落とす", () => {
+    for (const sql of [
+      `ALTER TABLE "locations" DROP COLUMN "special_holidays";`,
+      `TRUNCATE TABLE "audit_logs";`,
+      `DROP TABLE "legacy_holidays";`,
+      // WHERE の無い DELETE は表を空にする。
+      `DELETE FROM "locations";`,
+      // DROP SCHEMA は対象を読み取れないので「読めない」で落ちる。
+      `DROP SCHEMA "public" CASCADE;`,
+    ]) {
+      expect(handoverRefusals(sql, NO_HANDOVERS), sql).toHaveLength(1);
+    }
+  });
 
-    // 1. 新しく検出したい形が落ちる。
-    expect(unassertedDestructiveStatements(drop)).toHaveLength(1);
-
-    // 2. 兄弟の破壊形も落とす。
+  test("1. 対象を取り違える／見落とす形を落とす（監査で実測された穴）", () => {
+    // schema 修飾。前身は「破壊的」と判定しながら対象が空になり、静的 gate も
+    // デプロイ経路も同時に素通しした。
     expect(
-      unassertedDestructiveStatements(`TRUNCATE TABLE "audit_logs";`),
-    ).toHaveLength(1);
+      destructionTargets(
+        `ALTER TABLE public.locations DROP COLUMN "special_holidays"`,
+      ),
+    ).toEqual(["locations.special_holidays"]);
     expect(
-      unassertedDestructiveStatements(`DROP TABLE "legacy_holidays";`),
-    ).toHaveLength(1);
+      destructionTargets(
+        `ALTER TABLE "public"."locations" DROP COLUMN "special_holidays"`,
+      ),
+    ).toEqual(["locations.special_holidays"]);
 
-    // 3-a. 検査が**前**にあれば通る。
+    // IF EXISTS / ONLY を表名と読まない。
+    expect(
+      destructionTargets(
+        `ALTER TABLE IF EXISTS "locations" DROP COLUMN "memo"`,
+      ),
+    ).toEqual(["locations.memo"]);
+    expect(destructionTargets(`TRUNCATE ONLY "audit_logs"`)).toEqual([
+      "audit_logs",
+    ]);
+
+    // 複数対象。前身は先頭 1 つしか見ていなかった。
+    expect(
+      destructionTargets(`TRUNCATE "audit_logs", "terms_agreements"`),
+    ).toEqual(["audit_logs", "terms_agreements"]);
+    expect(destructionTargets(`DROP TABLE "legacy_a", "legacy_b"`)).toEqual([
+      "legacy_a",
+      "legacy_b",
+    ]);
+    expect(
+      destructionTargets(
+        `ALTER TABLE "locations" DROP CONSTRAINT "c", DROP COLUMN IF EXISTS "a", DROP COLUMN "b"`,
+      ),
+    ).toEqual(["locations.a", "locations.b"]);
+
+    // `COLUMN` は省略できる。
+    expect(destructionTargets(`ALTER TABLE "locations" DROP "memo"`)).toEqual([
+      "locations.memo",
+    ]);
+
+    // 裸の識別子は PostgreSQL が小文字へ畳む。
+    expect(
+      destructionTargets(`ALTER TABLE Locations DROP COLUMN Memo`),
+    ).toEqual(["locations.memo"]);
+
+    // 引用識別子は [A-Za-z_] に収まらなくてよい。
+    expect(
+      destructionTargets(`ALTER TABLE "locations" DROP COLUMN "特別休業日"`),
+    ).toEqual(["locations.特別休業日"]);
+    expect(
+      destructionTargets(`ALTER TABLE "locations" DROP COLUMN "2fa_secret"`),
+    ).toEqual(["locations.2fa_secret"]);
+
+    // public 以外の schema は読めない扱い（存在確認が public しか見ていない）。
+    expect(
+      destructionTargets(`ALTER TABLE other.locations DROP COLUMN "memo"`),
+    ).toEqual([]);
+
+    // どれも「破壊的」と判定されること自体は変わらない。
+    for (const sql of [
+      `ALTER TABLE public.locations DROP COLUMN "special_holidays"`,
+      `ALTER TABLE other.locations DROP COLUMN "memo"`,
+      `TRUNCATE ONLY "audit_logs"`,
+      `ALTER TABLE "locations" DROP "memo"`,
+    ]) {
+      expect(isDestructiveStatement(sql), sql).toBe(true);
+    }
+  });
+
+  test("1. DO ブロックの中に隠した破壊も落とす", () => {
+    const hidden = `DO $$ BEGIN ALTER TABLE "locations" DROP COLUMN "memo"; END $$;`;
+    expect(isDestructiveStatement(hidden)).toBe(true);
+    // 中は plpgsql なので対象を読み切れない。読めないものは拒否に倒す。
+    expect(destructionTargets(hidden)).toEqual([]);
+    expect(handoverRefusals(hidden, NO_HANDOVERS)).toHaveLength(1);
+  });
+
+  test("2. 検査は対象を名指ししていなければ効かない", () => {
+    // 前に置かれ、対象を名指ししていれば通る。
     const guarded = `BEGIN;
 DO $$
 BEGIN
@@ -87,82 +169,117 @@ BEGIN
 END $$;
 ALTER TABLE "locations" DROP COLUMN "special_holidays";
 COMMIT;`;
-    expect(unassertedDestructiveStatements(guarded)).toEqual([]);
+    expect(handoverRefusals(guarded, NO_HANDOVERS)).toEqual([]);
 
-    // 3-b. 検査が**後**なら守っていない（消える列は後からは参照できない）。
-    const guardedTooLate = `BEGIN;
-ALTER TABLE "locations" DROP COLUMN "special_holidays";
-DO $$ BEGIN RAISE EXCEPTION '手遅れ'; END $$;
-COMMIT;`;
-    expect(unassertedDestructiveStatements(guardedTooLate)).toHaveLength(1);
-
-    // 3-c. TRUNCATE を**禁じる** trigger の定義は破壊ではない。
-    expect(
-      unassertedDestructiveStatements(
-        `CREATE TRIGGER audit_logs_no_truncate BEFORE TRUNCATE ON audit_logs
-           FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();`,
-      ),
-    ).toEqual([]);
-
-    // 3-d. DROP CONSTRAINT は行を消さない。
-    expect(
-      unassertedDestructiveStatements(
-        `ALTER TABLE "locations" DROP CONSTRAINT "locations_special_holidays_array_check";`,
-      ),
-    ).toEqual([]);
-
-    // 3-e. **関数の定義は検査ではない。** RAISE EXCEPTION を含んでいても、
-    // その migration の中では 1 度も評価されない。
-    const definesButDoesNotRun = `CREATE FUNCTION guard() RETURNS trigger LANGUAGE plpgsql AS $function$
+    // **無関係な表の検査では免除されない。** 前身は「検査が 1 つあれば以降すべて
+    // 免除」で、同じ migration の別の表の破壊まで通していた。
+    const unrelated = `BEGIN;
+DO $$
 BEGIN
-  RAISE EXCEPTION 'nope';
+  IF EXISTS (SELECT 1 FROM events WHERE 1 = 0) THEN
+    RAISE EXCEPTION '別の話';
+  END IF;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "special_holidays";
+COMMIT;`;
+    expect(handoverRefusals(unrelated, NO_HANDOVERS)).toHaveLength(1);
+
+    // 検査が**後**なら守っていない（消える列は後からは参照できない）。
+    const tooLate = `BEGIN;
+ALTER TABLE "locations" DROP COLUMN "special_holidays";
+DO $$ BEGIN RAISE EXCEPTION 'special_holidays が手遅れ'; END $$;
+COMMIT;`;
+    expect(handoverRefusals(tooLate, NO_HANDOVERS)).toHaveLength(1);
+
+    // **関数の定義は検査ではない。** RAISE EXCEPTION を含んでいても、
+    // その migration の中では 1 度も評価されない。
+    const definesOnly = `CREATE FUNCTION guard() RETURNS trigger LANGUAGE plpgsql AS $function$
+BEGIN
+  RAISE EXCEPTION 'special_holidays';
 END;
 $function$;
 ALTER TABLE "locations" DROP COLUMN "special_holidays";`;
-    expect(unassertedDestructiveStatements(definesButDoesNotRun)).toHaveLength(
-      1,
-    );
+    expect(handoverRefusals(definesOnly, NO_HANDOVERS)).toHaveLength(1);
+
+    // **コメントの中の RAISE EXCEPTION は検査ではない。**
+    const commentedOut = `BEGIN;
+DO $$
+BEGIN
+  -- RAISE EXCEPTION 'special_holidays の移送確認をあとで書く';
+  PERFORM 1;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "special_holidays";
+COMMIT;`;
+    expect(handoverRefusals(commentedOut, NO_HANDOVERS)).toHaveLength(1);
   });
 
-  test("消える対象を取り違えない（fixture）", () => {
+  test("3. 正当な形は通る", () => {
+    // TRUNCATE を**禁じる** trigger の定義は破壊ではない。
     expect(
-      destructionTargets(
-        `ALTER TABLE "locations" DROP COLUMN "special_holidays"`,
+      handoverRefusals(
+        `CREATE TRIGGER audit_logs_no_truncate BEFORE TRUNCATE ON audit_logs
+           FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate();`,
+        NO_HANDOVERS,
       ),
-    ).toEqual(["locations.special_holidays"]);
+    ).toEqual([]);
 
-    // 1 文に複数アクション。DROP CONSTRAINT は対象ではない。
+    // DROP CONSTRAINT / DROP DEFAULT / DROP NOT NULL は行も値も消さない。
     expect(
-      destructionTargets(
-        `ALTER TABLE "locations" DROP CONSTRAINT "c", DROP COLUMN IF EXISTS "a", DROP COLUMN "b"`,
+      handoverRefusals(
+        `ALTER TABLE "locations" DROP CONSTRAINT "locations_special_holidays_array_check";
+ALTER TABLE "locations" ALTER COLUMN "memo" DROP DEFAULT;
+ALTER TABLE "locations" ALTER COLUMN "memo" DROP NOT NULL;`,
+        NO_HANDOVERS,
       ),
-    ).toEqual(["locations.a", "locations.b"]);
+    ).toEqual([]);
 
-    expect(destructionTargets(`TRUNCATE TABLE "audit_logs"`)).toEqual([
-      "audit_logs",
-    ]);
+    // **文字列リテラルの中の DROP COLUMN は破壊ではない。** 追加しかしない
+    // migration が恒久的に止まると、編集できないので復旧できない。
     expect(
-      destructionTargets(`DROP TABLE IF EXISTS "legacy_holidays"`),
-    ).toEqual(["legacy_holidays"]);
+      handoverRefusals(
+        `ALTER TABLE "spaces" ADD COLUMN "note" text DEFAULT 'do not DROP COLUMN hourly_price';`,
+        NO_HANDOVERS,
+      ),
+    ).toEqual([]);
+
+    // 条件付きの DELETE は対象外（条件が失うものを決めるので著者の領分）。
+    expect(
+      handoverRefusals(
+        `DELETE FROM "locations" WHERE "is_active" = false;`,
+        NO_HANDOVERS,
+      ),
+    ).toEqual([]);
+
+    // 同じ migration の中で作った表・列は、消しても失うものが無い。
+    expect(
+      handoverRefusals(
+        `CREATE TABLE "tmp_move" ("id" uuid);
+DROP TABLE "tmp_move";`,
+        NO_HANDOVERS,
+      ),
+    ).toEqual([]);
+    expect(
+      handoverRefusals(
+        `ALTER TABLE "locations" ADD COLUMN "tmp" text;
+ALTER TABLE "locations" DROP COLUMN "tmp";`,
+        NO_HANDOVERS,
+      ),
+    ).toEqual([]);
+    // ただし `IF NOT EXISTS` は既存を温存するので「作った」とは言えない。
+    expect(
+      handoverRefusals(
+        `CREATE TABLE IF NOT EXISTS "tmp_move" ("id" uuid);
+DROP TABLE "tmp_move";`,
+        NO_HANDOVERS,
+      ),
+    ).toHaveLength(1);
   });
 
-  test("引き継ぎ先の無い破壊を検出する（fixture）", () => {
-    const migrations = [
-      {
-        // timestamp 形の名前は使わない（`gates-do-not-pin-migrations.test.ts` 参照）。
-        name: "handover_fixture",
-        sql: `ALTER TABLE "locations" DROP COLUMN "memo";`,
-      },
-    ];
+  test("HANDOVERS の登録は対象が一致したときだけ効く（fixture）", () => {
+    const sql = `ALTER TABLE "locations" DROP COLUMN "memo";`;
 
-    // 登録が無ければ落ちる。
-    expect(destructionsWithoutHandover(migrations, [])).toEqual([
-      { migration: "handover_fixture", target: "locations.memo" },
-    ]);
-
-    // 登録があれば通る。
     expect(
-      destructionsWithoutHandover(migrations, [
+      handoverRefusals(sql, [
         {
           target: "locations.memo",
           what: "メモが消える",
@@ -172,9 +289,8 @@ ALTER TABLE "locations" DROP COLUMN "special_holidays";`;
       ]),
     ).toEqual([]);
 
-    // 別の対象の登録では通らない（target 一致を見ている）。
     expect(
-      destructionsWithoutHandover(migrations, [
+      handoverRefusals(sql, [
         {
           target: "locations.other",
           what: "別物",
@@ -183,22 +299,49 @@ ALTER TABLE "locations" DROP COLUMN "special_holidays";`;
         },
       ]),
     ).toHaveLength(1);
+
+    // 登録が当たった文には、リハーサルで流す SQL が付く。
+    const planned = planMigration(sql, [
+      {
+        target: "locations.memo",
+        what: "メモが消える",
+        countUnhandedOver: "SELECT 0 AS n",
+        remedy: "bun scripts/x.ts",
+      },
+    ]);
+    expect(planned.steps.map((step) => step.handovers.length)).toEqual([1]);
   });
 
-  test("すべての破壊に、実行される前提検査がある", () => {
-    const offenders = destructionsWithoutHandover(readMigrations());
+  test("stripNoise はコメント・文字列だけを潰し、識別子を残す", () => {
+    expect(stripNoise(`SELECT 'a -- b' FROM "t--u"`)).toBe(
+      `SELECT '' FROM "t--u"`,
+    );
+    expect(stripNoise(`SELECT 1 /* /* 入れ子 */ まだコメント */ , 2`)).toBe(
+      "SELECT 1   , 2",
+    );
+    expect(stripNoise(`SELECT E'\\'' , 'x'`)).toBe("SELECT E'' , ''");
+    // ドル引用符の中身は残す（中の DDL を見る）が、中のコメントは潰す。
+    expect(stripNoise(`DO $$ BEGIN -- x\n TRUNCATE t; END $$`)).toBe(
+      "DO $$ BEGIN  \n TRUNCATE t; END $$",
+    );
+  });
 
-    expect(
-      offenders.map(({ migration, target }) => `${migration}: ${target}`),
-    ).toEqual([]);
+  test("実在するすべての migration で、破壊に引き継ぎの確認がある", () => {
+    const offenders = readMigrations().flatMap(({ name, sql }) =>
+      planMigration(sql)
+        .refusals.filter((refusal) => refusal.kind === "handover")
+        .map((refusal) => `${name}: ${refusal.reason}`),
+    );
+
+    expect(offenders).toEqual([]);
   });
 
   test("HANDOVERS は実在する対象と手順だけを持つ", () => {
     // 登録が陳腐化して「もう誰も落とさない対象」を守り続けていないこと。
     const destroyed = new Set(
       readMigrations().flatMap(({ sql }) =>
-        unassertedDestructiveStatements(sql).flatMap((statement) =>
-          destructionTargets(statement),
+        planMigration(sql).steps.flatMap((step) =>
+          step.handovers.map((handover) => handover.target),
         ),
       ),
     );
