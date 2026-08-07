@@ -35,10 +35,10 @@ import {
 import {
   BreadcrumbJsonLd,
   ProductJsonLd,
-} from "../../_shared/components/seo/json-ld";
-import { Container } from "../../_shared/components/design-system/container";
-import { SiteCTA } from "../../_shared/components/layouts/site-cta";
-import { Breadcrumb } from "../../_shared/components/layouts/breadcrumb";
+} from "@/public/components/seo/json-ld";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 import { SpaceInfo } from "./_components/space-info";
 import { ReservationWidget } from "./_components/reservation-widget";
