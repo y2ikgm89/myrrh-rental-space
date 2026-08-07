@@ -22,6 +22,13 @@
  * `_shared/` という**文字列**で判定すると後ろ 2 つを誤検出する（実測: 文字列一致だと
  * 20 件ヒットするが、alias 対象へ解決するのは 4 行だけ）。import 元ディレクトリからの
  * 相対解決を実際に計算し、`(public)/_shared/` に着地するものだけを違反にする。
+ *
+ * ## 免除するのは「内側からの相対 import」だけ
+ *
+ * `_shared` の中のファイルが兄弟を相対で指すのは正しい形なので免除する。
+ * ただし**ファイルごと走査から外してはいけない** — 内側のファイルが
+ * `@/app/(public)/_shared/…` の旧 alias 形を使ったとき、前身は弾いていたのに
+ * 通ってしまう。免除は specifier 単位で、相対 import にだけ効かせる。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -78,8 +85,15 @@ export function aliasBypassingSharedImports(
 
   // **`_shared` の内側から兄弟を指す相対 import は正しい形**。守りたいのは
   // 「外から中へ入るとき alias を使う」であって、中の相互参照ではない。
-  // ここを外すと `_shared` 内の 28 ファイルが自分自身への alias を強要される。
-  if (isInside(aliasedSharedDir, fileAbsolutePath)) return offenders;
+  // これを免除しないと `_shared` 内の 28 ファイルが自分自身への alias を強要される。
+  //
+  // ただし免除するのは**相対 import だけ**。ファイルごと走査から外すと、
+  // 内側のファイルが `@/app/(public)/_shared/…` の旧 alias 形を使っても通って
+  // しまい、前身が弾いていた形を取りこぼす（Codex が PR #2015 で指摘）。
+  const fileIsInsideAliasedShared = isInside(
+    aliasedSharedDir,
+    fileAbsolutePath,
+  );
 
   for (const line of source.split("\n")) {
     const trimmed = line.trim();
@@ -94,6 +108,8 @@ export function aliasBypassingSharedImports(
         continue;
       }
       if (!specifier.startsWith(".")) continue;
+      // 免除はここだけ（相対 import かつ、書いている側が `_shared` の内側）。
+      if (fileIsInsideAliasedShared) continue;
 
       const resolved = path.resolve(fromDir, specifier);
       if (isInside(aliasedSharedDir, resolved)) offenders.push(specifier);
@@ -135,6 +151,16 @@ describe("public path alias hygiene", () => {
         ALIASED_SHARED,
       ),
     ).toEqual([]);
+
+    // **免除は相対 import だけ。** 内側のファイルでも旧 alias 形は違反のまま
+    // （ファイルごと走査から外すと、前身が弾いていた形を取りこぼす）。
+    expect(
+      aliasBypassingSharedImports(
+        insideShared,
+        'import { P } from "@/app/(public)/_shared/lib/p";',
+        ALIASED_SHARED,
+      ),
+    ).toEqual(["@/app/(public)/_shared/lib/p"]);
 
     // 同じ `_shared/` という綴りでも、別ディレクトリへ着地するなら違反ではない。
     const mypage = path.join(publicAppRoot, "mypage", "settings", "page.tsx");
