@@ -117,7 +117,9 @@ export function EventListFilters({
                 handleTabChange(tab);
               }}
               className={cn(
-                "group whitespace-nowrap px-4 py-2.5 text-sm tracking-[0.08em] outline-none transition-colors",
+                // タブ内部の padding は viewport 端の safe-area と無関係なので
+                // container-padding token は使わず、px-4 と同値の arbitrary value で表現
+                "group whitespace-nowrap px-[1rem] py-2.5 text-sm tracking-[0.08em] outline-none transition-colors",
                 "text-muted-foreground hover:text-foreground",
                 "data-[state=active]:text-accent",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",

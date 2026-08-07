@@ -29,7 +29,9 @@ export function CalendarMonthNav({
       <button
         type="button"
         onClick={onToday}
-        className="inline-flex h-11 items-center border border-border px-4 text-xs tracking-eyebrow text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        // ボタン内部の padding は viewport 端の safe-area と無関係なので
+        // container-padding token は使わず、px-4 と同値の arbitrary value で表現
+        className="inline-flex h-11 items-center border border-border px-[1rem] text-xs tracking-eyebrow text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         今月
       </button>
