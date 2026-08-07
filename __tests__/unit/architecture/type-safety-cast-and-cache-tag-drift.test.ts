@@ -19,7 +19,32 @@ import { collectSourceFiles } from "../../helpers/architecture-fs";
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
 
+/** `as unknown as FieldMetadata` の二重 cast を含むか。 */
+export function hasFieldMetadataDoubleCast(source: string): boolean {
+  return /as\s+unknown\s+as\s+FieldMetadata\b/u.test(source);
+}
+
 describe("type-safety casts / cache-tag drift", () => {
+  test("検出できる形・できない形（fixture）", () => {
+    expect(
+      hasFieldMetadataDoubleCast("const f = x as unknown as FieldMetadata;"),
+    ).toBe(true);
+    // 改行を挟んでも同じ cast。
+    expect(
+      hasFieldMetadataDoubleCast("const f = x as unknown as\n  FieldMetadata;"),
+    ).toBe(true);
+    // 単発 cast はこの gate の対象外（別 gate が見る）。
+    expect(hasFieldMetadataDoubleCast("const f = x as FieldMetadata;")).toBe(
+      false,
+    );
+    // 名前が前方一致するだけの型は拾わない。
+    expect(
+      hasFieldMetadataDoubleCast(
+        "const f = x as unknown as FieldMetadataLike;",
+      ),
+    ).toBe(false);
+  });
+
   test("`as unknown as FieldMetadata` cast は typed-input-control helper 内部のみ許可", () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}");
     const allowedFile = join(
@@ -29,16 +54,20 @@ describe("type-safety casts / cache-tag drift", () => {
       "conform",
       "typed-input-control.ts",
     );
-    const pattern = /as\s+unknown\s+as\s+FieldMetadata\b/;
+    const scanned: string[] = [];
     const offenders: string[] = [];
     for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
       const abs = join(SRC_ROOT, rel);
+      scanned.push(abs);
       if (abs === allowedFile) continue;
-      const content = readFileSync(abs, "utf-8");
-      if (pattern.test(content)) {
+      if (hasFieldMetadataDoubleCast(readFileSync(abs, "utf-8"))) {
         offenders.push(relative(ROOT, abs));
       }
     }
+    // 走査が 0 件に落ちると違反ゼロと区別が付かない。
+    // 免除ファイルが走査対象に居ることも確かめる（改名すると免除が空を切る）。
+    expect(scanned.length).toBeGreaterThan(100);
+    expect(scanned).toContain(allowedFile);
     expect(offenders).toEqual([]);
   }, 30000);
 

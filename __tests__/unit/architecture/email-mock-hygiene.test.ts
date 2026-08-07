@@ -40,22 +40,61 @@ function isAllowedPartialEmailMock(file: string): boolean {
   );
 }
 
+/**
+ * 共有 mock を使わない `send` / `lib-dispatch` の部分 mock か（純粋判定）。
+ *
+ * 共有ヘルパー（`installEmailLibDispatchMock` /
+ * `createEmailLibDispatchMockModule`）を通していれば免除。
+ */
+export function usesPartialEmailMock(source: string): boolean {
+  const usesPartialSendMock =
+    source.includes('mock.module("@/shared/lib/email/send"') &&
+    !source.includes("installEmailLibDispatchMock");
+  const usesPartialLibDispatchMock =
+    source.includes(`mock.module("${EMAIL_LIB_DISPATCH}"`) &&
+    !source.includes("installEmailLibDispatchMock") &&
+    !source.includes("createEmailLibDispatchMockModule");
+  return usesPartialSendMock || usesPartialLibDispatchMock;
+}
+
 describe("email mock hygiene", () => {
+  test("検出できる形・できない形（fixture）", () => {
+    const sendMock = 'mock.module("@/shared/lib/email/send", () => ({}));';
+    const dispatchMock = `mock.module("${EMAIL_LIB_DISPATCH}", () => ({}));`;
+
+    expect(usesPartialEmailMock(sendMock)).toBe(true);
+    expect(usesPartialEmailMock(dispatchMock)).toBe(true);
+
+    // 共有ヘルパー経由なら免除。
+    expect(
+      usesPartialEmailMock(`installEmailLibDispatchMock();
+${sendMock}`),
+    ).toBe(false);
+    expect(
+      usesPartialEmailMock(
+        `createEmailLibDispatchMockModule();
+${dispatchMock}`,
+      ),
+    ).toBe(false);
+
+    // 別モジュールの mock は対象外。
+    expect(
+      usesPartialEmailMock('mock.module("@/shared/lib/other", () => ({}));'),
+    ).toBe(false);
+  });
+
+  test("走査対象が実在する（gate が空振りしていない）", () => {
+    const files = testRoots.flatMap((root) => collectTestFiles(root));
+    expect(files.length).toBeGreaterThan(50);
+  });
+
   test("domain/integration テストは lib-dispatch 共有 mock を使い send の部分 mock を避ける", () => {
     const offenders: string[] = [];
 
     for (const root of testRoots) {
       for (const file of collectTestFiles(root)) {
         if (isAllowedPartialEmailMock(file)) continue;
-        const source = readFileSync(file, "utf8");
-        const usesPartialSendMock =
-          source.includes('mock.module("@/shared/lib/email/send"') &&
-          !source.includes("installEmailLibDispatchMock");
-        const usesPartialLibDispatchMock =
-          source.includes(`mock.module("${EMAIL_LIB_DISPATCH}"`) &&
-          !source.includes("installEmailLibDispatchMock") &&
-          !source.includes("createEmailLibDispatchMockModule");
-        if (usesPartialSendMock || usesPartialLibDispatchMock) {
+        if (usesPartialEmailMock(readFileSync(file, "utf8"))) {
           offenders.push(file);
         }
       }

@@ -43,6 +43,48 @@ function isCompleteErrorsServerMock(source: string): boolean {
 }
 
 describe("errors/server mock.module coverage", () => {
+  test("検出できる形・できない形（fixture）", () => {
+    const partial =
+      'mock.module("@/shared/lib/errors/server", () => ({ safeFetch }));';
+
+    // safeFetch だけの部分 mock は違反。
+    expect(ERRORS_SERVER_MOCK_RE.test(partial)).toBe(true);
+    expect(partial.includes("safeFetch")).toBe(true);
+    expect(isCompleteErrorsServerMock(partial)).toBe(false);
+
+    // 免除の 3 形。
+    expect(
+      isCompleteErrorsServerMock(`${partial}
+criticalFetch`),
+    ).toBe(true);
+    expect(
+      isCompleteErrorsServerMock(`${partial}
+...actual`),
+    ).toBe(true);
+    expect(
+      isCompleteErrorsServerMock(`${partial}
+installErrorsServerMock`),
+    ).toBe(true);
+
+    // **既知の限界（docstring 参照）**: コメントで触れるだけでも免除される。
+    // 直せない事実をここで固定し、直したつもりにならないようにする。
+    expect(
+      isCompleteErrorsServerMock(`// criticalFetch は別経路
+${partial}`),
+    ).toBe(true);
+
+    // 別モジュールの mock は対象外。
+    expect(
+      ERRORS_SERVER_MOCK_RE.test(
+        'mock.module("@/shared/lib/other", () => ({}));',
+      ),
+    ).toBe(false);
+  });
+
+  test("走査対象が実在する（gate が空振りしていない）", () => {
+    expect(collectSourceFiles(TESTS_ROOT).length).toBeGreaterThan(100);
+  });
+
   test("safeFetch-only partial mock.module は禁止（criticalFetch 欠落で import 失敗する）", () => {
     const offenders: string[] = [];
 

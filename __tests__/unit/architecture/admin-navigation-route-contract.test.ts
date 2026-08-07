@@ -40,6 +40,40 @@ function missingRoutePages(
 }
 
 describe("admin navigation route contract", () => {
+  test("href → page.tsx の解決と欠落検出（fixture）", () => {
+    // ルート・サブルート・query 付きの解決。
+    expect(adminRoutePagePath("/admin")).toBe(
+      join(ADMIN_DASHBOARD_ROOT, "page.tsx"),
+    );
+    expect(adminRoutePagePath("/admin/spaces")).toBe(
+      join(ADMIN_DASHBOARD_ROOT, "spaces", "page.tsx"),
+    );
+    expect(adminRoutePagePath("/admin/spaces?tab=categories")).toBe(
+      join(ADMIN_DASHBOARD_ROOT, "spaces", "page.tsx"),
+    );
+
+    // **実在しない href は欠落として拾う**（これが拾えないと gate は空振りする）。
+    expect(
+      missingRoutePages([
+        { label: "probe", href: "/admin/does-not-exist-probe" },
+      ]),
+    ).toHaveLength(1);
+
+    // 実在する href は拾わない。
+    expect(
+      missingRoutePages([{ label: "spaces", href: "/admin/spaces" }]),
+    ).toEqual([]);
+
+    // admin 以外の href は解決させない（黙って通さない）。
+    expect(() => adminRoutePagePath("/mypage")).toThrow();
+  });
+
+  test("走査対象が空でない（gate が空振りしていない）", () => {
+    expect(
+      SIDEBAR_GROUPS.flatMap((group) => group.items).length,
+    ).toBeGreaterThan(5);
+  });
+
   test("sidebar links point at existing App Router pages", () => {
     const sidebarEntries = SIDEBAR_GROUPS.flatMap((group) =>
       group.items.map((item) => ({
