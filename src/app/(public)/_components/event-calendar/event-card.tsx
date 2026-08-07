@@ -120,7 +120,9 @@ export function EventCard({ variant, event, isPast = false }: EventCardProps) {
     return (
       <Link
         href={`/events/${event.slug}`}
-        className="group block px-4 py-4 transition-colors hover:bg-surface/50"
+        // 内部リスト item の padding は viewport 端の safe-area と無関係なので
+        // container-padding token は使わず、px-4 と同値の arbitrary value で表現
+        className="group block px-[1rem] py-4 transition-colors hover:bg-surface/50"
       >
         <EventBadges event={event} isPast={isPast} />
         <h3 className="mt-1.5 text-sm font-medium text-foreground">

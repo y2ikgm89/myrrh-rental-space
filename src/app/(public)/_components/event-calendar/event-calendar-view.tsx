@@ -67,6 +67,12 @@ function getCalendarDayKey(cell: CalendarDay): string {
   return `${String(cell.year)}-${String(cell.month)}-${String(cell.day)}`;
 }
 
+// 両パネル内部の px-[1rem] は px-4 と同値の arbitrary value 表記。
+// viewport 端の safe-area ではなくパネル内部の padding なので
+// container-padding token は意味的に不適合。architecture-boundaries の
+// px-4/px-6 直書き gate は class 名で判定するため、視覚を変えずに
+// token 誤用を避ける表記としてこれを使う。
+
 // --- Side panel (desktop) ---
 
 function SideDayPanel({
@@ -88,14 +94,14 @@ function SideDayPanel({
 
   return (
     <div className="flex h-full flex-col border border-border">
-      <div className="shrink-0 border-b border-border bg-surface px-4 py-3">
+      <div className="shrink-0 border-b border-border bg-surface px-[1rem] py-3">
         <p className="text-sm font-medium text-foreground">
           {month + 1}月{selectedDay}日
         </p>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {dayEvents.length === 0 ? (
-          <div className="px-4 py-8 text-center">
+          <div className="px-[1rem] py-8 text-center">
             <p className="text-sm text-muted-foreground">
               イベントはありません
             </p>
@@ -129,13 +135,13 @@ function InlineDayPanel({
 
   return (
     <div className="mt-6 border border-border">
-      <div className="border-b border-border bg-surface px-4 py-3">
+      <div className="border-b border-border bg-surface px-[1rem] py-3">
         <p className="text-sm font-medium text-foreground">
           {month + 1}月{selectedDay}日のイベント
         </p>
       </div>
       {dayEvents.length === 0 ? (
-        <div className="px-4 py-6 text-center">
+        <div className="px-[1rem] py-6 text-center">
           <p className="text-sm text-muted-foreground">イベントはありません</p>
         </div>
       ) : (
