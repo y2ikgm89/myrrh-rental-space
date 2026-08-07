@@ -65,6 +65,12 @@
  *
  * ## この方法が見ないもの
  *
+ * - **データの消失は見ない。** ここが証明するのは「この SQL はエラーにならない」
+ *   ことだけで、**破壊はエラーではない**。`DROP COLUMN` / `DROP TABLE` /
+ *   `TRUNCATE` は満杯のテーブルに対しても成功するので、移送が終わっていない列を
+ *   落とす migration も**ここは緑で通る**。緑を「落として安全」と読まないこと。
+ *   破壊的文の前提は migration 自身が `DO $$ … RAISE EXCEPTION … $$` で持ち、
+ *   それを `destructive-migration-has-executed-assertion.test.ts` が強制する
  * - **シーケンスの採番は巻き戻らない**（`nextval` は非トランザクション）。
  *   migration が identity 列を埋めると、その分だけ採番が進む
  * - 未適用が複数あるとき、それらを**1 つの**トランザクションで流す。実際は
