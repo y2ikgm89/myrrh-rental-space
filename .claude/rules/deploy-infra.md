@@ -30,6 +30,13 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
 
 <!-- breaking-triggers:end -->
 
+- **デプロイ前に、未適用 migration のヘッダに書かれた手順を実行する。** 破壊的 DDL は
+  「先にデータを移してから DROP する」前提で書かれていることがあり、その手順は
+  migration のヘッダにしか無い（migration は絶対規約 #7 で編集できないので、
+  書かれた指示は永久に残る）。飛ばして適用すると、そこで消えるのは移し損ねたデータ
+  そのものになる。ヘッダが指すスクリプトが実在することは
+  `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
+  （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）
 - 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
 - **Cloud Run ownership (Phase 6b clean-break)**:
   - Terraform = shape (memory/cpu/probes/ingress/SA) + env/secrets + IAP/IAM
