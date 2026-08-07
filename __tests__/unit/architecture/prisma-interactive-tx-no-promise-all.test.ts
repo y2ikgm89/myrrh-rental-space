@@ -107,7 +107,16 @@ function findInteractiveTxCallbackBody(
   return { start: braceIdx, end: endBrace };
 }
 
-function findPromiseAllInInteractiveTransactions(raw: string): Violation[] {
+/**
+ * interactive tx の callback 内にある Promise.all/allSettled（純粋判定）。
+ *
+ * gate 本体と fixture はどちらもこの関数を通す。**export しておく** — 判定を
+ * ファイル私有のままにすると、fixture が何を確かめているのかを外から追えない
+ * （.claude/rules/testing-unit.md の gate 契約。Codex が PR #2019 で指摘）。
+ */
+export function findPromiseAllInInteractiveTransactions(
+  raw: string,
+): Violation[] {
   const src = blankComments(raw);
   const violations: Violation[] = [];
   const txRe = /\$transaction\s*\(/gu;
