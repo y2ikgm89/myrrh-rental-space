@@ -20,41 +20,20 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { join } from "node:path";
+
+import { trackedTextFiles } from "../../support/tracked-files";
 
 const ROOT = process.cwd();
 
 /**
- * **バイナリだけを挙げ、それ以外は全部見る。** 逆（テキスト拡張子の許可リスト）に
- * すると新しい種類が黙って対象外になる — 最初の版が実際にそうで、`.sh` 5 件・
- * `.prisma` 2 件・`.toml` 1 件が走査されていなかった（Codex の指摘）。
- *
- * 挙げ漏れたバイナリは「テキストとして読めない」で落ちる = 気づける。
- * 挙げ漏れたテキストは黙って素通りする = 気づけない。落ちる側に倒す。
+ * 走査対象とバイナリ拡張子の一覧は `__tests__/support/tracked-files.ts` が SSoT。
+ * 同じ一覧を 2 箇所に書くと片方だけ更新されるので、共有ヘルパーへ寄せてある。
  */
-const BINARY_EXTENSIONS = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".avif",
-  ".ico",
-  ".pdf",
-  ".zip",
-  ".gz",
-  ".woff",
-  ".woff2",
-  ".ttf",
-  ".otf",
-  ".eot",
-  ".mp4",
-  ".webm",
-  ".mp3",
-  ".wav",
-]);
+function trackedFiles(): string[] {
+  return trackedTextFiles(ROOT);
+}
 
 /** tab / LF / CR は通常のテキストなので除く。それ以外の C0 と DEL を見る。 */
 function findControlCharacters(source: string): readonly number[] {
@@ -65,35 +44,6 @@ function findControlCharacters(source: string): readonly number[] {
     if ((code < 0x20 && !isAllowed) || code === 0x7f) found.push(code);
   }
   return found;
-}
-
-/**
- * **走査対象は git に聞く。ディレクトリを列挙しない。**
- *
- * 拡張子の許可リストを反転させた（#1864）のに、ディレクトリ側は列挙のままだった。
- * 同じ欠陥が 1 階層上に残っていたことになる。実測: tracked 3,687 件のうち
- * `SCAN_DIRS` が覆っていたのは 3,455 件で、`eslint-rules/` 6 件・`.github/` 21 件・
- * `terraform/` 24 件・`docs/` 65 件などが素通りしていた。lint ルール本体
- * （正規表現を書く場所＝この gate が生まれた原因と同じ種類のコード）が
- * 対象外だったのが端的に悪い。
- *
- * tracked file は「コミットされる ＝ レビューされるべきもの」と過不足なく一致し、
- * ビルド成果物と依存は .gitignore で構造的に外れる。新しいディレクトリを足しても
- * 何もしなくて済む。
- */
-function trackedFiles(): string[] {
-  const stdout = execFileSync("git", ["ls-files", "-z"], {
-    cwd: ROOT,
-    maxBuffer: 32 * 1024 * 1024,
-  }).toString("utf8");
-
-  return (
-    stdout
-      // NUL は**実文字を書かない**（この gate 自身の指針）。
-      .split(String.fromCharCode(0))
-      .filter((entry) => entry.length > 0)
-      .filter((entry) => !BINARY_EXTENSIONS.has(extname(entry).toLowerCase()))
-  );
 }
 
 describe("source files stay text", () => {

@@ -28,46 +28,42 @@
  * テストの**中身**が主張どおりかまでは見ない（静的には確かめられない）。
  * ここが保証するのは「名前が解決すること」だけで、それ以上を主張しない。
  *
- * ## 走査対象
+ * ## 走査対象は git に聞く
  *
- * `__tests__/**` 自身は**対象外**。テスト間の相互参照には「この形は禁止」を
- * 示すための架空パスが混ざりうるうえ、消えた gate を名指しして「もう無い」と
- * 書く clean-break テストが成立しなくなる。守りたいのは
- * **実装・設定・エージェント指示から張られたポインタ**なので、そちらだけを見る。
+ * 初版は `src` / `scripts` / `prisma` / `.claude` … とディレクトリを列挙していた。
+ * その結果 `Dockerfile` / `eslint.config.mjs` / `lefthook.yml` /
+ * `.github/CODEOWNERS` / `.codex/rules/default.rules` にある**実在するポインタを
+ * 1 件も見ていなかった**（Codex が PR #2010 で指摘）。この repo は同じ失敗を
+ * `source-files-are-text` でも踏んでいる — **手書きのディレクトリ一覧は必ず漏れる**。
+ *
+ * tracked file 全体を見て、次の 2 つだけ外す:
+ *
+ * - `__tests__/**` — テスト間の相互参照には「この形は禁止」を示す架空パスが
+ *   混ざりうるうえ、消えた gate を名指しして「もう無い」と書く clean-break
+ *   テストが成立しなくなる
+ * - `docs/**` — 日付入りの記録。当時の事実を書いたもので、指示ではない
+ *   （`gates-do-not-pin-migrations` と同じ線引き）
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+
+import { trackedTextFiles } from "../../support/tracked-files";
 
 const ROOT = process.cwd();
 
 /** `__tests__/…/<name>.test.ts` / `.test.tsx` の参照。 */
 const TEST_FILE_REFERENCE = /__tests__\/[A-Za-z0-9_./()@-]+\.test\.tsx?/gu;
 
-const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
-  { dir: "src", glob: "**/*.{ts,tsx,css}" },
-  { dir: "scripts", glob: "**/*.{ts,sh}" },
-  { dir: "prisma", glob: "*.{ts,prisma}" },
-  { dir: ".claude", glob: "**/*.md" },
-  { dir: ".agents", glob: "**/*.md" },
-  { dir: ".github", glob: "**/*.{yml,yaml,md}" },
-  { dir: ".", glob: "{CLAUDE,AGENTS}.md" },
-];
+/** 参照が古びてよい場所。理由は docstring 参照。 */
+const EXCLUDED_PREFIXES = ["__tests__/", "docs/"] as const;
 
 function scannedFiles(): string[] {
-  const out: string[] = [];
-  for (const entry of SCAN) {
-    const glob = new Bun.Glob(entry.glob);
-    for (const file of glob.scanSync({
-      cwd: join(ROOT, entry.dir),
-      absolute: true,
-    })) {
-      out.push(file);
-    }
-  }
-  return out;
+  return trackedTextFiles(ROOT).filter(
+    (file) => !EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)),
+  );
 }
 
 /** そのテキストが指しているテストファイル（repo 相対・重複排除）。 */
@@ -81,18 +77,8 @@ export function referencedTestPaths(source: string): string[] {
 
 describe("散文が指す gate は実在する", () => {
   test("走査対象が実在する（gate 自体が空振りしていない）", () => {
-    const files = scannedFiles();
-    expect(files.length).toBeGreaterThan(1000);
-    for (const entry of SCAN) {
-      const glob = new Bun.Glob(entry.glob);
-      const count = [
-        ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
-      ].length;
-      expect({ dir: entry.dir, empty: count === 0 }).toEqual({
-        dir: entry.dir,
-        empty: false,
-      });
-    }
+    // git 呼び出しが壊れると 0 件で緑になる。
+    expect(scannedFiles().length).toBeGreaterThan(1000);
   });
 
   test("参照の抽出が効いている（fixture）", () => {
@@ -125,9 +111,7 @@ describe("散文が指す gate は実在する", () => {
         (path) => !existsSync(join(ROOT, path)),
       );
       if (missing.length === 0) continue;
-      offenders.push(
-        `${relative(ROOT, file).replaceAll("\\", "/")} :: ${missing.join(", ")}`,
-      );
+      offenders.push(`${file} :: ${missing.join(", ")}`);
     }
 
     expect({
