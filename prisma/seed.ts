@@ -994,7 +994,8 @@ const SEED_DEMO_RESERVATION_MARKER = "[SEED-DEMO]";
  * `.claude/rules/db-domain.md`）。seed からその module を import できない —
  * `import "server-only"` を持ち、バンドラーの外では必ず throw するため。
  * 値がずれると「ロックを取っているのに直列化されない」という最悪の壊れ方をするので、
- * `__tests__/unit/architecture/seed-space-lock-namespace.test.ts` が一致を強制する。
+ * `__tests__/unit/architecture/seed-reservation-rebuild-safety.test.ts` の
+ * 「advisory lock の namespace が domain 側と一致する」が一致を強制する。
  */
 const SEED_SPACE_LOCK_NAMESPACE = 728351;
 
