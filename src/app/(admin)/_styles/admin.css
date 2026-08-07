@@ -144,7 +144,8 @@
    * 実際の比率が分からない」ため、減光は必ずこのトークン 1 本で表現する。
    *
    * 実測（sRGB 変換 → WCAG 相対輝度。値は
-   * `admin-sidebar-contrast.test.ts` が admin.css を読んで機械検証する）:
+   * `__tests__/unit/architecture/admin-feature-disabled-contrast.test.ts` が
+   * admin.css を読んで機械検証する）:
    *   #858d99 on --color-sidebar-bg (#0a121f)          = 5.60:1
    *   #858d99 on nav hover (nav-hover を bg に合成 #161d2a) = 5.01:1 */
   --color-sidebar-text-disabled: oklch(0.64 0.02 260);

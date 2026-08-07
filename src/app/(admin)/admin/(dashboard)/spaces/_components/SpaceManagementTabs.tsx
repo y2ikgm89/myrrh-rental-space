@@ -78,7 +78,7 @@ export function SpaceManagementTabs({
                       （sidebar と同じグループ opacity の畳み込み。sidebar は
                       ダークテーマで余裕があるため専用トークンで減光できるが、
                       この明色テーマには減光に使える幅が無い）。
-                      検証: `__tests__/unit/architecture/admin-sidebar-contrast.test.ts` */}
+                      検証: `__tests__/unit/architecture/admin-feature-disabled-contrast.test.ts` */}
                   <span>{label}</span>
                   {showDisabledBadge && featureModule !== undefined && (
                     <AdminNavFeatureDisabledIndicator

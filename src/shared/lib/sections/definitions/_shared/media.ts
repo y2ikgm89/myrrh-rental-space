@@ -9,10 +9,9 @@
  * 公開側は各 item の `detectMediaSourceType(url)` で runtime に image / video を
  * 派生し、`<Image>` / `<VideoPlayer>` を出し分ける。
  *
- * 2026-05-31 PR: 単一 group (`createMediaGroupSchema`) からクリーンブレイクで配列化。
- * 旧形式 `{ url, alt, caption }` の既存 DB データは
- * `scripts/migrate-hero-background-media-to-array.ts` で配列へ一括変換する
- * （コードに互換シムは残さない）。
+ * 単一 group (`createMediaGroupSchema`) からクリーンブレイクで配列化した。
+ * 旧形式 `{ url, alt, caption }` の既存 DB データは data migration で配列へ
+ * 寄せ済み（コードに互換シムは残さない）。
  *
  * `createImageGroupSchema` (image 単独・単一) との使い分け:
  * - `createMediaArraySchema`: hero 系（背景に動画も許容 + スライドショー）
