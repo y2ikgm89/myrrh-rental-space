@@ -123,6 +123,17 @@ function isLiteralViolation(arg: Expression): boolean {
 
 function collect(file: string): Violation[] {
   const text = FIXTURE.get(file) ?? readFileSync(file, "utf8");
+
+  // 呼出名が本文に 1 つも無いファイルは parse しない。**取りこぼしは起きない** —
+  // 下の walk は `isIdentifier(node.expression)` で callee 名を見るので、
+  // 検出対象の呼出はソースにその名前が必ず現れる（別名 import は元々対象外）。
+  //
+  // 500 ファイル超を全部 AST にすると CI（ローカルより遅い）で 5 秒の既定
+  // per-test timeout を超え、実際に 2 つの PR が落ちた。
+  if (![...TARGET_FUNCTION_NAMES].some((name) => text.includes(name))) {
+    return [];
+  }
+
   const source = createSourceFile(
     file,
     text,
@@ -273,5 +284,7 @@ describe("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タ
           ? "cacheTag/updateTag/revalidateTag のタグは CACHE_TAGS.<NAME> または getCacheTag.<domain>.<fn>(...) を経由すること。文字列/テンプレートリテラルの直書きは producer とのタグ drift を静的検出できなくする。"
           : "",
     }).toEqual({ offenders: [], hint: "" });
-  });
+    // src 全体を走査するので既定の 5000ms では CI（ローカルより 2〜3 倍遅い）で
+    // 足りない。同型の `prisma-delegate-arg-types.test.ts` と同じ上限にする。
+  }, 30_000);
 });
