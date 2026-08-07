@@ -42,6 +42,7 @@
  * Env:
  *   TEST_DATABASE_URL  実 DB integration 用。未設定時は docker-compose test-db 既定値。
  *   TEST_PARALLEL      並列度の手動上書き (default: CI min(cpu, 4), local min(cpu, 8))
+ *   TEST_TIMEOUT       per-test timeout の手動上書き (default: DEFAULT_TEST_TIMEOUT_MS)
  */
 
 import pLimit from "p-limit";
@@ -51,6 +52,13 @@ import {
   isSerialDbTest,
   resolveTestDatabaseUrlForRunner,
 } from "./test-db-runner-env";
+
+/**
+ * per-test timeout の既定値。bun の既定 5000ms は使わない（理由は spawn 箇所の注釈）。
+ * `TEST_TIMEOUT` で上書きできるが、**この値が唯一の決定**で、呼び出し側の
+ * entry point ごとに別の値を渡さない。
+ */
+const DEFAULT_TEST_TIMEOUT_MS = 30_000;
 
 interface FileResult {
   file: string;
@@ -164,13 +172,34 @@ async function runOne(file: string): Promise<FileResult> {
   //   テストのみで、内部実装の dev assertion / 詳細 stack に依存しない。
   // - 本番ランタイムは Next.js build 経由で同 `production` 条件が解決されるため、
   //   テストと本番のバイナリは整合 (`.prod.mjs` を共通参照)。
-  // TEST_TIMEOUT: bun test の per-test default（既定 5000ms）。Windows worktree や
-  // type-check 直後の FS 走査 gate では 5s を超えやすいため、pre-push 等で延長する。
-  const timeoutMs = process.env["TEST_TIMEOUT"]?.trim();
-  const bunTestArgs = ["bun", "test", "--conditions", "production"];
-  if (timeoutMs && Number.parseInt(timeoutMs, 10) > 0) {
-    bunTestArgs.push("--timeout", timeoutMs);
-  }
+  // per-test timeout は **必ず明示する**（bun の既定 5000ms は使わない）。
+  //
+  // このランナーは 1 ファイル 1 サブプロセスを並列で回す（既定 CI 4 / ローカル 8）。
+  // FS を全走査する architecture gate は単独なら 1 秒台でも、並列時の競合で数倍に
+  // 伸びる。実測: `admin-dashboard-shell` は単独 1.0s に対し 809 ファイル並列で 16.4s、
+  // CI でも `cache-tag-literals` が 5.7s で既定を超えて落ちた（PR #2002）。
+  // 5s は **hung test の検知**であって性能予算ではないので、検知力を残したまま
+  // 競合ぶんの余裕を取る。
+  //
+  // 以前この値は lefthook の pre-push だけが `TEST_TIMEOUT=30000` で渡しており、
+  // 同じテストが pre-push では 30s・CI (`bun run test:all`) では 5s という
+  // 食い違いがあった。**決定はランナーに 1 つだけ置く**（env は上書き用に残す）。
+  const timeoutOverride = Number.parseInt(
+    process.env["TEST_TIMEOUT"]?.trim() ?? "",
+    10,
+  );
+  const timeoutMs =
+    Number.isFinite(timeoutOverride) && timeoutOverride > 0
+      ? timeoutOverride
+      : DEFAULT_TEST_TIMEOUT_MS;
+  const bunTestArgs = [
+    "bun",
+    "test",
+    "--conditions",
+    "production",
+    "--timeout",
+    String(timeoutMs),
+  ];
   bunTestArgs.push(file);
   const proc = Bun.spawn(bunTestArgs, {
     stdout: "pipe",
