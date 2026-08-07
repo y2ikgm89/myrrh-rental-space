@@ -18,8 +18,9 @@
  * 判定は `planMigration` ただ 1 つで、**この gate もデプロイ経路もそれを呼ぶ**。
  * 破壊が許されるのは次のいずれかで、どれでもなければ `refusals` に出る。
  *
- * 1. 同じ migration の中で作った表・列を消す（失うものが無い）
- * 2. 先行する `DO $$ … RAISE EXCEPTION … $$` が**その対象を名指ししている**
+ * 1. 同じ migration の中で**確実に**作った表・列を消す（失うものが無い）。
+ *    `IF NOT EXISTS` 付き・public 以外の schema は「作った」に数えない
+ * 2. 先行する `DO $$ … RAISE EXCEPTION … $$` が**表名と列名の両方**を名指ししている
  * 3. `HANDOVERS` に対象の登録がある（リハーサル中に SQL を流して 0 を確かめる）
  *
  * ## 分けて書かない理由
@@ -156,6 +157,18 @@ describe("破壊的 migration は実行される前提検査を伴う", () => {
     // 中は plpgsql なので対象を読み切れない。読めないものは拒否に倒す。
     expect(destructionTargets(hidden)).toEqual([]);
     expect(handoverRefusals(hidden, NO_HANDOVERS)).toHaveLength(1);
+
+    // **動的 SQL は中身が文字列なので stripNoise が潰す。** 潰した結果
+    // 「何も破壊しない DO ブロック」に見えるので、EXECUTE があれば読めない扱い。
+    const dynamic = `DO $$ BEGIN EXECUTE 'TRUNCATE audit_logs'; END $$;`;
+    expect(isDestructiveStatement(dynamic)).toBe(true);
+    expect(destructionTargets(dynamic)).toEqual([]);
+    expect(handoverRefusals(dynamic, NO_HANDOVERS)).toHaveLength(1);
+
+    // 破壊を含まない DO ブロックは通る（EXECUTE も破壊語も無い）。
+    expect(
+      handoverRefusals(`DO $$ BEGIN PERFORM 1; END $$;`, NO_HANDOVERS),
+    ).toEqual([]);
   });
 
   test("2. 検査は対象を名指ししていなければ効かない", () => {
@@ -183,6 +196,21 @@ END $$;
 ALTER TABLE "locations" DROP COLUMN "special_holidays";
 COMMIT;`;
     expect(handoverRefusals(unrelated, NO_HANDOVERS)).toHaveLength(1);
+
+    // **別の表の同名列を見た検査では免除されない。** 列名だけで照合していた頃は、
+    // `events.memo` を見た検査が `locations.memo` の DROP を通していた。
+    const sameColumnOtherTable = `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM events WHERE memo IS NOT NULL) THEN
+    RAISE EXCEPTION 'events.memo が残っている';
+  END IF;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "memo";
+COMMIT;`;
+    expect(handoverRefusals(sameColumnOtherTable, NO_HANDOVERS)).toHaveLength(
+      1,
+    );
 
     // 検査が**後**なら守っていない（消える列は後からは参照できない）。
     const tooLate = `BEGIN;
@@ -270,6 +298,31 @@ ALTER TABLE "locations" DROP COLUMN "tmp";`,
       handoverRefusals(
         `CREATE TABLE IF NOT EXISTS "tmp_move" ("id" uuid);
 DROP TABLE "tmp_move";`,
+        NO_HANDOVERS,
+      ),
+    ).toHaveLength(1);
+    expect(
+      handoverRefusals(
+        `ALTER TABLE "locations" ADD COLUMN IF NOT EXISTS "memo" text;
+ALTER TABLE "locations" DROP COLUMN "memo";`,
+        NO_HANDOVERS,
+      ),
+    ).toHaveLength(1);
+    // `IF NOT EXISTS` は**アクションごと**に付く。同じ文の別アクションに
+    // 付いた 1 つが、他の列まで免除しない。
+    expect(
+      handoverRefusals(
+        `ALTER TABLE "locations" ADD COLUMN IF NOT EXISTS "a" text, ADD COLUMN "b" text;
+ALTER TABLE "locations" DROP COLUMN "a", DROP COLUMN "b";`,
+        NO_HANDOVERS,
+      ),
+    ).toHaveLength(1);
+
+    // **別 schema に作った表は、public の同名表の免除にならない。**
+    expect(
+      handoverRefusals(
+        `CREATE TABLE archive.audit_logs ("id" uuid);
+DROP TABLE public.audit_logs;`,
         NO_HANDOVERS,
       ),
     ).toHaveLength(1);
