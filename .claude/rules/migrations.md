@@ -102,8 +102,18 @@ index だけ失敗して **CREATE TABLE は残った**。
 
 ## squawk（migration lint）
 
-- 意図的な破壊変更は SQL 文の**直前 1 行**に `-- squawk-ignore <rule名>` を書いて通す
-  （rule 名必須。複数列の DROP は ALTER TABLE 文を列ごとに分割して per-column で ignore）
+- 免除は 2 形。文単位は SQL 文の**直前 1 行**に `-- squawk-ignore <rule名>`、
+  ファイル単位はファイル冒頭に `-- squawk-ignore-file <rule名>[, <rule名>]`
+  （どちらも rule 名必須）。複数列の DROP を文単位で通すなら ALTER TABLE 文を
+  列ごとに分割する
+- **免除したら、その SQL は必ず破壊的 DDL 判定に引っかかること。** squawk が見て
+  いるのは「ローリング切替窓で旧 revision が壊れたスキーマを叩く」危険で、黙らせて
+  よいのは**その窓が別の仕組みで塞がれているとき**だけ。この repo でその仕組みは
+  deploy-production.yml の計画ダウンタイムなので、免除と発火が食い違うと窓が開いた
+  ままになる。散文ではなく
+  `__tests__/unit/architecture/migration-squawk-ignore-is-breaking.test.ts` が強制する
+  （実際、`ALTER TYPE ... RENAME VALUE` だけの migration が当時の grep に
+  引っかからず、ダウンタイム無しでデプロイされる状態で 1 本すり抜けていた）
 - npm ラッパー squawk-cli は spawn 失敗時 exit 0 の偽陰性があるため使わない
   （`SQUAWK_BIN` で公式バイナリを指定可能）
 
