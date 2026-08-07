@@ -30,13 +30,22 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
 
 <!-- breaking-triggers:end -->
 
-- **デプロイ前に、未適用 migration のヘッダに書かれた手順を実行する。** 破壊的 DDL は
-  「先にデータを移してから DROP する」前提で書かれていることがあり、その手順は
-  migration のヘッダにしか無い（migration は絶対規約 #7 で編集できないので、
-  書かれた指示は永久に残る）。飛ばして適用すると、そこで消えるのは移し損ねたデータ
-  そのものになる。ヘッダが指すスクリプトが実在することは
+- **破壊的 DDL の前提は、散文ではなく実行される形で持つ。** 破壊的 DDL は
+  「先にデータを移してから DROP する」前提で書かれていることがあり、その手順を
+  migration のヘッダにだけ書くと、飛ばして適用したときに消えるのは移し損ねた
+  データそのものになる（散文は誰も実行しない）。前提は次のどちらかで持つ:
+  - migration 内の `DO $$ … RAISE EXCEPTION … $$`。破壊的文より**前**に置く
+  - `scripts/migration-preconditions.ts` の `HANDOVERS` 登録。commit 済みの
+    migration は絶対規約 #7 で編集できないので、後から前提を足せないぶんはここへ書く
+
+  どちらも無い破壊は `destructive-migration-has-executed-assertion.test.ts` が CI で
+  落とし、デプロイ経路（migrator ステージ）でも `HANDOVERS` の SQL が実際に流れて、
+  0 でなければ `migrate deploy` を始めない。`HANDOVERS` の SQL が状態に応じて
+  答えることは `__tests__/integration/prisma/migration-handovers.test.ts` が実 DB で
+  固定する。ヘッダが指すスクリプトが実在することは
   `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
   （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）
+
 - 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
 - **Cloud Run ownership (Phase 6b clean-break)**:
   - Terraform = shape (memory/cpu/probes/ingress/SA) + env/secrets + IAP/IAM
