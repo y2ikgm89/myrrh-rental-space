@@ -36,6 +36,18 @@
  * その痕跡）。それは import グラフ全体に追随する手作業の一覧で、
  * **必ず drift する**。6 箇所すべて mock を削除して解消した。
  *
+ * ## 時刻に依存する値を固定したいときは
+ *
+ * **止めるのは時計であって formatter ではない。** `setSystemTime`（`bun:test`）で
+ * 固定し、`afterAll` で `setSystemTime()` に戻す。
+ *
+ * formatter を差し替えて固定すると、上の 2 つの代償を引き受けたうえに、
+ * **本当に時計を読んでいるのは呼び出し側**だという事実が隠れる。実測:
+ * `receipts/serial.ts` の `getJstYear()` は `formatJstDateString(new Date())` で
+ * 現在年を採る。formatter mock がそれを間接的に固定していたので、mock を外した
+ * 時点で「2027 年に入ったら落ちる」テストになった（レビュー指摘、PR #2004）。
+ * `serial.test.ts` は now を JST 2026-07-27 に固定して解決している。
+ *
  * ## この gate が見るもの / 見ないもの
  *
  * **見る**: `date-format` の `mock.module` が 0 件であること。そして全
