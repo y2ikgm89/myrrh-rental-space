@@ -111,6 +111,30 @@ export async function run(argv: readonly string[]): Promise<number> {
   });
 
   try {
+    // **列がまだあることを先に確かめる。**
+    //
+    // このスクリプトは「列を DROP する migration の適用前」にしか意味が無い。
+    // 適用後に流すと `SELECT special_holidays` が Prisma の P2010 として
+    // 生のスタックごと出るだけで、「順番を間違えた」ことが読み取れない。
+    // 一度きりの本番作業なので、間違いは読める形で止める。
+    const [columnPresence] = await prisma.$queryRaw<{ present: bigint }[]>`
+      SELECT count(*) AS present
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'locations'
+        AND column_name = 'special_holidays'
+    `;
+    if (Number(columnPresence?.present ?? 0) === 0) {
+      console.error(
+        "[backfill] locations.special_holidays がこの DB に存在しない。",
+      );
+      console.error(
+        "[backfill] 列を DROP する migration が既に適用されている。" +
+          "このスクリプトは適用**前**にしか使えない（移し損ねた値は復元できない）。",
+      );
+      return 1;
+    }
+
     // 列は schema.prisma から外してあるので raw で読む。
     // エイリアスも snake_case のままにする。camelCase の引用識別子を生 SQL に
     // 書くと `raw-sql-column-names` gate が落ちる（出力名か列参照かを静的に
