@@ -35,6 +35,7 @@ import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import type { RateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
+import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { claimCouponUsage, ensureNoOverlap } from "./payloads";
 import { ensureDateNotBlocked } from "./availability";
 import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
@@ -332,7 +333,7 @@ export interface CancelReservationSeriesInput {
   /** this-only / this-and-following で必須。基準となる instance の Reservation.id。 */
   fromInstanceId?: string;
   cancellationReason?: string;
-  cancelledByType: string;
+  cancelledByType: CancelledByType;
   /**
    * どこから / 誰がキャンセルしたか (per-instance 副作用の AuditLog channel + 通知
    * タイトル分岐に伝播)。admin / customer-mypage / customer-token を受け付ける

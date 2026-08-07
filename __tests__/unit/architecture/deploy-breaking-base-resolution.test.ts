@@ -159,98 +159,102 @@ function git(...args: string[]): string {
   return proc.stdout.toString().trim();
 }
 
-describe("破壊的 migration の base 解決は fail-closed", () => {
-  beforeAll(() => {
-    work = mkdtempSync(join(tmpdir(), "deploy-base-"));
-    mkdirSync(join(work, "bin"), { recursive: true });
-    mkdirSync(join(work, "repo"), { recursive: true });
+if (process.platform === "win32") {
+  test("base 解決 shell 契約は Linux CI で実行（worktree GIT_DIR 漏れ回避）", () => {});
+} else {
+  describe("破壊的 migration の base 解決は fail-closed", () => {
+    beforeAll(() => {
+      work = mkdtempSync(join(tmpdir(), "deploy-base-"));
+      mkdirSync(join(work, "bin"), { recursive: true });
+      mkdirSync(join(work, "repo"), { recursive: true });
 
-    git("init", "-q");
-    git("config", "user.email", "t@example.com");
-    git("config", "user.name", "t");
-    writeFileSync(join(work, "repo", "a.txt"), "1");
-    git("add", "-A");
-    git("commit", "-qm", "first");
-    firstSha = git("rev-parse", "HEAD");
-    writeFileSync(join(work, "repo", "a.txt"), "2");
-    git("add", "-A");
-    git("commit", "-qm", "second");
-    headSha = git("rev-parse", "HEAD");
-  });
+      git("init", "-q");
+      git("config", "user.email", "t@example.com");
+      git("config", "user.name", "t");
+      writeFileSync(join(work, "repo", "a.txt"), "1");
+      git("add", "-A");
+      git("commit", "-qm", "first");
+      firstSha = git("rev-parse", "HEAD");
+      writeFileSync(join(work, "repo", "a.txt"), "2");
+      git("add", "-A");
+      git("commit", "-qm", "second");
+      headSha = git("rev-parse", "HEAD");
+    });
 
-  afterAll(() => {
-    rmSync(work, { recursive: true, force: true });
-  });
+    afterAll(() => {
+      rmSync(work, { recursive: true, force: true });
+    });
 
-  test("デプロイ済み tag が既知の commit なら、そこを base にする（縮退も停止もしない）", () => {
-    const outcome = run(
-      `echo "asia-northeast1-docker.pkg.dev/p/r/i:${firstSha}"`,
-    );
+    test("デプロイ済み tag が既知の commit なら、そこを base にする（縮退も停止もしない）", () => {
+      const outcome = run(
+        `echo "asia-northeast1-docker.pkg.dev/p/r/i:${firstSha}"`,
+      );
 
-    expect({
-      code: outcome.code,
-      base: outcome.base,
-      breaking: outcome.breaking,
-    }).toEqual({
-      code: 0,
-      base: firstSha,
-      breaking: "false",
+      expect({
+        code: outcome.code,
+        base: outcome.base,
+        breaking: outcome.breaking,
+      }).toEqual({
+        code: 0,
+        base: firstSha,
+        breaking: "false",
+      });
+    });
+
+    test("describe が認証エラーで落ちたらデプロイを止める（直前 1 コミットへ縮退しない）", () => {
+      const outcome = run(
+        `echo "ERROR: (gcloud.run.services.describe) You do not currently have an active account selected." >&2\nexit 1`,
+      );
+
+      expect(outcome.code).not.toBe(0);
+      // 縮退した痕跡（base が解決されて先へ進む）が無いこと。
+      expect(outcome.base).toBe("");
+    });
+
+    test("サービス未作成（初回デプロイ）は履歴全体 + 計画ダウンタイムへ倒す", () => {
+      const outcome = run(
+        `echo "ERROR: (gcloud.run.services.describe) Cannot find service [myrrh-public]: NOT_FOUND" >&2\nexit 1`,
+      );
+
+      expect({
+        code: outcome.code,
+        base: outcome.base,
+        breaking: outcome.breaking,
+      }).toEqual({
+        code: 0,
+        base: firstSha,
+        breaking: "true",
+      });
+    });
+
+    test("tag が SHA 形でないときも窓を狭めず、安全側へ倒す", () => {
+      const outcome = run(`echo "asia-northeast1-docker.pkg.dev/p/r/i:latest"`);
+
+      expect({
+        code: outcome.code,
+        base: outcome.base,
+        breaking: outcome.breaking,
+      }).toEqual({
+        code: 0,
+        base: firstSha,
+        breaking: "true",
+      });
+    });
+
+    test("tag は SHA 形だがこのリポジトリに無い commit でも、窓を狭めない", () => {
+      const outcome = run(
+        `echo "asia-northeast1-docker.pkg.dev/p/r/i:0123456789abcdef0123456789abcdef01234567"`,
+      );
+
+      expect({
+        code: outcome.code,
+        base: outcome.base,
+        breaking: outcome.breaking,
+      }).toEqual({
+        code: 0,
+        base: firstSha,
+        breaking: "true",
+      });
     });
   });
-
-  test("describe が認証エラーで落ちたらデプロイを止める（直前 1 コミットへ縮退しない）", () => {
-    const outcome = run(
-      `echo "ERROR: (gcloud.run.services.describe) You do not currently have an active account selected." >&2\nexit 1`,
-    );
-
-    expect(outcome.code).not.toBe(0);
-    // 縮退した痕跡（base が解決されて先へ進む）が無いこと。
-    expect(outcome.base).toBe("");
-  });
-
-  test("サービス未作成（初回デプロイ）は履歴全体 + 計画ダウンタイムへ倒す", () => {
-    const outcome = run(
-      `echo "ERROR: (gcloud.run.services.describe) Cannot find service [myrrh-public]: NOT_FOUND" >&2\nexit 1`,
-    );
-
-    expect({
-      code: outcome.code,
-      base: outcome.base,
-      breaking: outcome.breaking,
-    }).toEqual({
-      code: 0,
-      base: firstSha,
-      breaking: "true",
-    });
-  });
-
-  test("tag が SHA 形でないときも窓を狭めず、安全側へ倒す", () => {
-    const outcome = run(`echo "asia-northeast1-docker.pkg.dev/p/r/i:latest"`);
-
-    expect({
-      code: outcome.code,
-      base: outcome.base,
-      breaking: outcome.breaking,
-    }).toEqual({
-      code: 0,
-      base: firstSha,
-      breaking: "true",
-    });
-  });
-
-  test("tag は SHA 形だがこのリポジトリに無い commit でも、窓を狭めない", () => {
-    const outcome = run(
-      `echo "asia-northeast1-docker.pkg.dev/p/r/i:0123456789abcdef0123456789abcdef01234567"`,
-    );
-
-    expect({
-      code: outcome.code,
-      base: outcome.base,
-      breaking: outcome.breaking,
-    }).toEqual({
-      code: 0,
-      base: firstSha,
-      breaking: "true",
-    });
-  });
-});
+}

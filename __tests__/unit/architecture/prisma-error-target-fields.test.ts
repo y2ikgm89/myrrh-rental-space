@@ -9,7 +9,7 @@
  * **判定が黙って常に false になる**。false になった先は「P2002 を握り潰して
  * idempotent に扱う」経路なので、握り潰しが止まって throw に変わる。
  *
- * 実害の記録: 物理列名を snake_case へ寄せた 20260804110000〜20260804150000 で、
+ * 実害の記録: 物理列名を snake_case へ寄せたとき、
  * adapter-pg が返す `constraint.fields` が `stripe_refund_id` になったのに
  * 呼び出し側は `"stripeRefundId"` のままだった。返金の冪等性チェック 2 本
  * （`payment-claim-orchestration.ts` / `stripe-refund-orchestration.ts`）が
@@ -113,8 +113,18 @@ type CallSite =
       readonly file: string;
     };
 
+/** この名前を本文に持たないファイルは、呼び出しを持ちようがない。 */
+const CALLEE = "isPrismaUniqueConstraintError";
+
 function collectCallSites(file: string): CallSite[] {
   const text = readFileSync(file, "utf8");
+
+  // 呼出名が無いファイルは parse しない。**取りこぼしは起きない** — 下の visit は
+  // `node.expression.text === CALLEE` で判定するので、対象呼出はソースにこの名前が
+  // 必ず現れる。全 src を AST にすると CI で 5 秒の既定 per-test timeout に迫る
+  // （同型の `cache-tag-literals` は実際に超えて落ちた）。
+  if (!text.includes(CALLEE)) return [];
+
   const source = createSourceFile(
     file,
     text,
@@ -129,7 +139,7 @@ function collectCallSites(file: string): CallSite[] {
     if (
       isCallExpression(node) &&
       isIdentifier(node.expression) &&
-      node.expression.text === "isPrismaUniqueConstraintError"
+      node.expression.text === CALLEE
     ) {
       const targetArg = node.arguments[1];
       if (targetArg === undefined) {

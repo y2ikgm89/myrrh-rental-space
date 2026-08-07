@@ -9,8 +9,8 @@
  * `reservation_series_space_dtstart_active_unique`（soft-delete 済み系列が
  * (spaceId, dtstart) を恒久占有しないための partial UNIQUE）は raw SQL でだけ
  * 存在し schema.prisma に宣言が無かったため、生成のたびに DROP が提案され、
- * 20260730115734 / 20260731135410 の 2 本では作者が手作業でその行を削って
- * いた（両 migration 冒頭の NOTE コメントが証跡）。**1 度削り忘れれば本番の
+ * 少なくとも 2 本の migration では作者が手作業でその行を削って
+ * いた（該当 migration 冒頭の NOTE コメントが証跡）。**1 度削り忘れれば本番の
  * 一意性不変条件が無言で消える。**
  *
  * drift は type-check でも lint でも build でも検出できない。Prisma 自身に

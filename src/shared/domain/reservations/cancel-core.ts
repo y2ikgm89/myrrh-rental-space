@@ -185,7 +185,7 @@ export interface ApplyBulkCancellationTx {
 
 export type BulkCancelOptions = {
   cancellationReason?: string;
-  cancelledByType: string;
+  cancelledByType: CancelledByType;
   now: Date;
 };
 

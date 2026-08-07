@@ -6,7 +6,33 @@
  * `__tests__/integration/domain/receipts/serial-per-year.test.ts` が実 DB で見る。
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  setSystemTime,
+  test,
+} from "bun:test";
+
+/**
+ * `claimNextSerialNo` は `getJstYear()` 経由で**現在時刻**から年を採る。
+ * 固定しないと 2027 年に入った瞬間このファイルが落ちる（実測: 期待
+ * `2026-000005` に対し `2027-000005`）。
+ *
+ * 止めるのは時計であって formatter ではない。`formatJstDateString` を差し替えると
+ * JST/UTC の取り違えを隠すうえ、`date-format` の export を足すたび無関係な
+ * テストが道連れになる（`date-format-not-mocked.test.ts` 参照）。
+ */
+beforeAll(() => {
+  setSystemTime(new Date("2026-07-27T12:00:00+09:00"));
+});
+
+afterAll(() => {
+  setSystemTime();
+});
 
 const mockTxExecuteRaw = mock(() => Promise.resolve(undefined));
 const mockTxQueryRaw = mock<(...args: unknown[]) => Promise<unknown>>(() =>
@@ -28,10 +54,6 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     $transaction: async () => undefined,
   },
-}));
-
-mock.module("@/shared/lib/date-format", () => ({
-  formatJstDateString: () => "2026-07-27",
 }));
 
 const {
@@ -145,7 +167,7 @@ describe("receipt serial kernel", () => {
     mockFindUnique.mockResolvedValue({ nextNo: 5 });
     mockUpdate.mockResolvedValue({ nextNo: 6 });
 
-    // formatJstDateString の mock は 2026-07-27 を返す。
+    // 時計は JST 2026-07-27 に固定してある（ファイル冒頭の beforeAll）。
     expect(await claimNextSerialNo(makeTx())).toBe("2026-000005");
     expect(mockFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { year: 2026 } }),

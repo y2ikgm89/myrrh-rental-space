@@ -20,7 +20,7 @@
  * postgres service は migrate deploy だけで seed が無い**ため 0 行にマッチして
  * INSERT 自体が起きず、CI でだけ落ちた。
  *
- * これらは 20260803050000 以前は Zod と domain のコードだけが守っており、DB は
+ * これらは値域 CHECK を入れるまで Zod と domain のコードだけが守っており、DB は
  * 負の金額も 200% の税率も受理していた。同種の CHECK は Event 系と space_rate_plans に
  * 既にあり、予約・スペース・クーポン・返金・領収書の側だけが素通しだった。
  *
@@ -285,7 +285,7 @@ describe("値域 CHECK 制約", () => {
   test("0 円の返金を記録できない", async () => {
     await expectRejectedBy(
       "refunds_amount_positive_check",
-      // id は明示する。20260803090000 で DB 側 DEFAULT を外し Prisma 側採番へ寄せたため。
+      // id は明示する。DB 側 DEFAULT は外してあり、採番は Prisma 側が持つため。
       `INSERT INTO "refunds" ("id",reservation_id,"amount",refunded_by_type,stripe_refund_id)
        VALUES (gen_random_uuid(), '${ABSENT_UUID_A}', 0, 'ADMIN', 'probe_' || gen_random_uuid()::text)`,
     );
@@ -308,8 +308,8 @@ describe("値域 CHECK 制約", () => {
     );
     expect(rows.rows[0]?.n ?? 0).toBeGreaterThan(0);
 
-    // 以前は 6 つの設定表に同じ値域の CHECK を手書きしていた。20260805100000 で
-    // `connection_status` enum 型へ寄せたので、**拒否するのは CHECK ではなく型**。
+    // 以前は 6 つの設定表に同じ値域の CHECK を手書きしていた。今は
+    // `connection_status` enum 型へ寄せてあるので、**拒否するのは CHECK ではなく型**。
     // 制約名ではなく型名で照合する（保護は弱まっていない — 型は 6 表で共有される
     // 1 つの定義なので、値を足すときに 1 箇所しか触れない）。
     await expectRejectedBy(

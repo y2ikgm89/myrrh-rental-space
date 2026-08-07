@@ -49,6 +49,8 @@ import {
   constraintNameFor,
   constraintNameOverrideKeys,
   defaultConstraintNameFor,
+  hasDedicatedNumericCheck,
+  readChecksByTable,
   readNumericColumns,
   type NumericColumn,
 } from "../../support/numeric-column-domains";
@@ -78,32 +80,11 @@ const REORDER_COMMAND_FILES: readonly string[] = [
 ];
 
 /** その表の CHECK 制約（制約名 → 式）。 */
-function checksByTable(): Map<string, Map<string, string>> {
-  const out = new Map<string, Map<string, string>>();
-  const pattern =
-    /ALTER TABLE "([a-z_]+)" ADD CONSTRAINT "([a-z_]+)" CHECK \((.*)\);/gu;
-  for (const m of INVARIANTS.matchAll(pattern)) {
-    const [, table, name, expr] = m;
-    if (!table || !name || !expr) continue;
-    const bucket = out.get(table) ?? new Map<string, string>();
-    bucket.set(name, expr);
-    out.set(table, bucket);
-  }
-  return out;
-}
+const CHECKS = readChecksByTable();
 
-const CHECKS = checksByTable();
-
-/** その列を式の中で参照している CHECK があるか。 */
-function isCoveredByCheck(c: NumericColumn): boolean {
-  const bucket = CHECKS.get(c.table);
-  if (!bucket) return false;
-  const referenced = new RegExp(
-    `(?:^|[^a-z_"])"?${c.column}"?(?:$|[^a-z_"])`,
-    "u",
-  );
-  for (const expr of bucket.values()) if (referenced.test(expr)) return true;
-  return false;
+/** 1 列専用 CHECK（`<表>_<列>_` 命名）で覆われているか。複合 CHECK の列名言及だけでは true にしない。 */
+function isCoveredByDedicatedCheck(c: NumericColumn): boolean {
+  return hasDedicatedNumericCheck(c);
 }
 
 const key = (c: NumericColumn): string => columnKey(c);
@@ -115,11 +96,14 @@ describe("数値列の値域", () => {
     expect(CHECKS.size).toBeGreaterThan(30);
     // 母集合と制約の突き合わせが機能していることを、既存の 1 本で確かめる。
     const taxRate = COLUMNS.find((c) => key(c) === "Reservation.taxRate");
-    expect(taxRate && isCoveredByCheck(taxRate)).toBe(true);
+    expect(taxRate && isCoveredByDedicatedCheck(taxRate)).toBe(true);
   });
 
   test("すべての数値列が CHECK に覆われている", () => {
-    const unprotected = COLUMNS.filter((c) => !isCoveredByCheck(c))
+    const unprotected = COLUMNS.filter(
+      (c) =>
+        !isCoveredByDedicatedCheck(c) && !(key(c) in NUMERIC_COLUMN_DOMAINS),
+    )
       .filter((c) => !(key(c) in UNBOUNDED_NUMERIC_COLUMNS))
       .map((c) => `${key(c)} (${c.table}.${c.column}) に値域 CHECK が無い`);
 
@@ -259,6 +243,23 @@ describe("数値列の値域", () => {
       });
 
     expect(ungrounded).toEqual([]);
+  });
+
+  test("複合 CHECK の列は NUMERIC_COLUMN_DOMAINS に宣言されている", () => {
+    const compositeOnly = COLUMNS.filter(
+      (c) =>
+        !hasDedicatedNumericCheck(c) &&
+        !(key(c) in UNBOUNDED_NUMERIC_COLUMNS) &&
+        [...(readChecksByTable().get(c.table)?.values() ?? [])].some((expr) =>
+          new RegExp(`(?:^|[^a-z_"])"?${c.column}"?(?:$|[^a-z_"])`, "u").test(
+            expr,
+          ),
+        ),
+    ).map((c) => key(c));
+
+    expect(compositeOnly.length).toBeGreaterThan(10);
+    const missing = compositeOnly.filter((k) => !(k in NUMERIC_COLUMN_DOMAINS));
+    expect(missing).toEqual([]);
   });
 
   test("同じ列を二重に宣言していない", () => {

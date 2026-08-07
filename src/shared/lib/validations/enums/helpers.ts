@@ -35,6 +35,7 @@ import {
   DayOfWeek,
   HolidayMode,
   EmailDeliveryStatus,
+  CancelledBy,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -733,22 +734,17 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
  *
  * 新規書き込みは経路別 (`CUSTOMER_MYPAGE` / `CUSTOMER_TOKEN` / `SYSTEM`) を必ず指定する。
  * legacy 値 `CUSTOMER` は一度きりの backfill で `CUSTOMER_MYPAGE` へ寄せ済み
- * （現行 DB に `CUSTOMER` の行は無い）。
+ * （現行 DB に `CUSTOMER` の行は無い）。値域 SSoT は PG enum `cancelled_by`
+ * （schema.prisma `CancelledBy`）。
  */
-export const CANCELLED_BY = {
-  CUSTOMER_MYPAGE: "CUSTOMER_MYPAGE",
-  CUSTOMER_TOKEN: "CUSTOMER_TOKEN",
-  ADMIN: "ADMIN",
-  SYSTEM: "SYSTEM",
-} as const;
-
-export type CancelledByType = (typeof CANCELLED_BY)[keyof typeof CANCELLED_BY];
+export { CancelledBy as CANCELLED_BY };
+export type CancelledByType = CancelledBy;
 
 export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
-  [CANCELLED_BY.CUSTOMER_MYPAGE]: "顧客（マイページ）",
-  [CANCELLED_BY.CUSTOMER_TOKEN]: "顧客（メールリンク）",
-  [CANCELLED_BY.ADMIN]: "管理者",
-  [CANCELLED_BY.SYSTEM]: "システム（自動）",
+  [CancelledBy.CUSTOMER_MYPAGE]: "顧客（マイページ）",
+  [CancelledBy.CUSTOMER_TOKEN]: "顧客（メールリンク）",
+  [CancelledBy.ADMIN]: "管理者",
+  [CancelledBy.SYSTEM]: "システム（自動）",
 };
 
 // Refund Actor Type (`refunds.refundedByType`) は `./refund-attribution` に分離した。

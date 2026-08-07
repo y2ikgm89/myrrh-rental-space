@@ -6,6 +6,7 @@ import {
   RESERVATION_BADGE_VARIANTS,
   PAYMENT_BADGE_VARIANTS,
 } from "../../../_components/reservation-badge-variants";
+import { CancelledBy } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
@@ -70,7 +71,7 @@ interface ReservationDetailData {
   readonly spaceDiscountAmount: number | null;
   readonly cancellationReason: string | null;
   readonly cancelledAt: string | null;
-  readonly cancelledByType: string | null;
+  readonly cancelledByType: CancelledBy | null;
   readonly spaceId: string;
   readonly space: Space;
 }

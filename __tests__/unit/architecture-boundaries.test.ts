@@ -3370,8 +3370,10 @@ describe("AuditLog resource文字列の統一 (event-registration)", () => {
   });
 });
 
-// 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
-// 分離済み (2490 行 → 2263 行にスリム化。merge conflict hotspot 緩和が目的)。
+// このファイルの末尾にあった describe 群は per-concern に分離済み
+// (目的は merge conflict hotspot の緩和)。**行数は書かない** — 分離時の行数を
+// 書いてあったが、その後の追加で分離前より長くなり、読む人には「スリムなまま」に
+// 見える嘘になっていた。今の長さを知りたいなら数えれば出る。
 // 引継ぎ先:
 //   - __tests__/unit/architecture/prisma-import-boundary.test.ts
 //     (Prisma gateway / singleton / server-only import gates)

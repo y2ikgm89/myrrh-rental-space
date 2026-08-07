@@ -290,7 +290,7 @@ async function createPaidReservationFixture(
       endTime,
       status: "CANCELLED",
       // `total_price` は税抜。本番 3 経路とも `with_tax = total + tax` で
-      // 組み立てており、20260805180000 の CHECK がその等式を固定している。
+      // 組み立てており、`reservations_total_price_breakdown_check` がその等式を固定している。
       totalPrice: basePrice,
       basePrice,
       rateBreakdownJson: {

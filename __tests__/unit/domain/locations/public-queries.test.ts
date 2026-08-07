@@ -59,7 +59,6 @@ const RAW_LOCATION = {
   amenities: {},
   imageUrl: "https://example.com/a.jpg",
   businessHours: null,
-  specialHolidays: null,
   phoneNumber: null,
   email: null,
   latitude: null,

@@ -234,6 +234,8 @@ const SHARED = "@/shared/lib/validations";
 const ADMIN = "@/admin/lib/validations";
 const SETTINGS =
   "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas";
+const EVENT_FORM =
+  "@/app/(admin)/admin/(dashboard)/events/_components/event-form-schema";
 
 /** 数字のみ（郵便番号など）のサンプル。 */
 const digits = (len: number): string => "1".repeat(len);
@@ -286,17 +288,9 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     255,
     "RRULE は UI の選択肢から `buildRRule` が組み立てる。手入力経路が無い",
   ),
-  "ReservationSeries.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
-  ),
   "ReservationSeries.googleCalendarMasterEventId": generated(
     1024,
     "Google Calendar API が返す eventId。RFC 上 1024 を超えない",
-  ),
-  "Reservation.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
   ),
 
   // --- Customer ---------------------------------------------------------
@@ -332,8 +326,12 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     field: "building",
   }),
   "Customer.emailDeliveryReason": generated(
-    255,
+    500,
     "Resend の bounce/complaint webhook 由来の理由文字列を切り詰めて保存する",
+    {
+      module: "@/shared/lib/validations/customer-email-limits",
+      exportName: "CUSTOMER_EMAIL_DELIVERY_REASON_MAX_LENGTH",
+    },
   ),
   "Customer.anonymizedReason": generated(
     50,
@@ -379,7 +377,7 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   ),
   "InquiryStatusHistory.reason": generated(
     200,
-    "管理画面のステータス変更理由。`inquiryStatusUpdateSchema` の .max(200) を通る",
+    "利用者入力ではなく、commands / bulk-status-commands が書くアプリ内リテラルのみ（creation / reply-advance / customer-reply-reopen 等）",
   ),
   "InquiryAttachment.mimeType": generated(
     100,
@@ -479,11 +477,19 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
       exportName: "EVENT_SLUG_MAX_LENGTH",
     },
   ),
-  "Event.addressDetail": generated(
-    200,
-    "`eventFormSchema` の .max(200) を通る",
-  ),
-  "Event.meetingUrl": generated(500, "`eventFormSchema` の .max(500) を通る"),
+  "Event.addressDetail": validated({
+    module: EVENT_FORM,
+    exportName: "eventFormSchema",
+    field: "addressDetail",
+    maxLength: 200,
+  }),
+  "Event.meetingUrl": validated({
+    module: EVENT_FORM,
+    exportName: "eventFormSchema",
+    field: "meetingUrl",
+    maxLength: 500,
+    sample: (len) => `https://example.com/${"a".repeat(Math.max(len - 20, 1))}`,
+  }),
   "EventTicket.name": generated(
     100,
     "`eventFormSchema` のチケット名 .max(100)",
@@ -538,10 +544,6 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     maxLength: 20,
     sample: digits,
   }),
-  "EventRegistration.cancelledByType": generated(
-    20,
-    "`CancelledByType` の TS union（最長 CUSTOMER = 8 文字）からのみ書かれる",
-  ),
 
   // --- 決済・会計 --------------------------------------------------------
   "Refund.status": generated(
@@ -609,7 +611,7 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     exportName: "transferAccountFormSchema",
     field: "note",
   }),
-  // --- 連絡先・住所（20260805160000 で値域を 1 つに揃えた列） -------------
+  // --- 連絡先・住所（値域を 1 つに揃えた列） -----------------------------
   //
   // 列長はドメインごとに「アプリが受理する最長」で揃えてある。個々の欄がそれより
   // 狭い場合は maxLength で実測値を明示する（列に余白があること自体は問題ではない

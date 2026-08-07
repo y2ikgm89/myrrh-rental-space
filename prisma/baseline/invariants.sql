@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (156) =====
+-- ===== CHECK 制約 (155) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -60,7 +60,7 @@ ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_sort_order_position_ch
 ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_unit_size_positive" CHECK ((unit_size >= 1));
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_capacity_positive" CHECK ((capacity >= 1));
 ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_time_order" CHECK ((start_at < end_at));
-ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::event_format) OR (meeting_provider = 'GOOGLE_MEET'::meeting_provider) OR (meeting_url IS NOT NULL)));
+ALTER TABLE "events" ADD CONSTRAINT "event_online_meeting_url_required" CHECK (((format = 'OFFLINE'::event_format) OR (meeting_provider = 'GOOGLE_MEET'::meeting_provider) OR ((meeting_url IS NOT NULL) AND ((meeting_url)::text ~ '^https://'::text))));
 ALTER TABLE "events" ADD CONSTRAINT "events_description_json_object_check" CHECK ((jsonb_typeof(description_json) = 'object'::text));
 ALTER TABLE "events" ADD CONSTRAINT "events_gallery_array_check" CHECK (((gallery IS NULL) OR (jsonb_typeof(gallery) = 'array'::text)));
 ALTER TABLE "events" ADD CONSTRAINT "events_slot_span_order_check" CHECK (((first_slot_start_at IS NULL) OR (last_slot_end_at IS NULL) OR (first_slot_start_at <= last_slot_end_at)));
@@ -80,7 +80,6 @@ ALTER TABLE "locations" ADD CONSTRAINT "locations_image_urls_array_check" CHECK 
 ALTER TABLE "locations" ADD CONSTRAINT "locations_latitude_range_check" CHECK (((latitude >= ('-90'::integer)::double precision) AND (latitude <= (90)::double precision)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_longitude_range_check" CHECK (((longitude >= ('-180'::integer)::double precision) AND (longitude <= (180)::double precision)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
-ALTER TABLE "locations" ADD CONSTRAINT "locations_special_holidays_array_check" CHECK (((special_holidays IS NULL) OR (jsonb_typeof(special_holidays) = 'array'::text)));
 ALTER TABLE "media" ADD CONSTRAINT "media_height_non_negative_check" CHECK ((height >= 0));
 ALTER TABLE "media" ADD CONSTRAINT "media_size_non_negative_check" CHECK ((size >= 0));
 ALTER TABLE "media" ADD CONSTRAINT "media_tags_array_check" CHECK (((tags IS NULL) OR (jsonb_typeof(tags) = 'array'::text)));
@@ -170,7 +169,7 @@ ALTER TABLE "smart_lock_passcodes" ADD CONSTRAINT "smart_lock_passcodes_window_o
 ALTER TABLE "social_links" ADD CONSTRAINT "social_links_order_position_check" CHECK ((("order" >= 0) OR ("order" <= '-1000000'::integer)));
 ALTER TABLE "space_categories" ADD CONSTRAINT "space_categories_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_effective_range_check" CHECK (((effective_from IS NULL) OR (effective_to IS NULL) OR (effective_from <= effective_to)));
-ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_end_time_format_check" CHECK (((end_time IS NULL) OR ((end_time)::text ~ '^([01][0-9]|2[0-3]|24):[0-5][0-9]$'::text)));
+ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_end_time_format_check" CHECK (((end_time IS NULL) OR ((end_time)::text ~ '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'::text)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_hourly_price_non_negative_check" CHECK (((hourly_price)::numeric >= (0)::numeric));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_start_time_format_check" CHECK (((start_time IS NULL) OR ((start_time)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)));
 ALTER TABLE "space_rate_plans" ADD CONSTRAINT "space_rate_plans_time_of_day_order_check" CHECK (((start_time IS NULL) OR (end_time IS NULL) OR ((start_time)::text < (end_time)::text)));

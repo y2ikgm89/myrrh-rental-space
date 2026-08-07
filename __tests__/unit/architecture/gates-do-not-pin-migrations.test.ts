@@ -1,5 +1,6 @@
 /**
- * **コードも指示も migration ディレクトリを名前で指してはいけない**（baseline を除く）。
+ * **コードも指示も migration を名指ししてはいけない**（baseline を除く）。
+ * ディレクトリ名でも、14 桁 timestamp 単体でも同じ。
  *
  * ## なぜ
  *
@@ -16,10 +17,17 @@
  *
  * ## 何を見るか
  *
- * `\d{14}_<name>` の形の名前が、走査対象のどこかに現れたら違反。**コメントも見る**
- * （前身はコメントを落としていたが、畳み込み後に残る drift はまさにコメントの中にある）。
+ * 14 桁 `YYYYMMDDHHMMSS` の timestamp が、走査対象のどこかに現れたら違反。
+ * `_<name>` は**付いていなくてもよい**。**コメントも見る**（前身はコメントを
+ * 落としていたが、畳み込み後に残る drift はまさにコメントの中にある）。
  *
- * 唯一の免除は baseline `00000000000000_init`。畳んだ結果が書かれる先で、パスが変わらない。
+ * **`_<name>` を必須にしていたのが穴だった。** 「◯◯ で列を rename した」のように
+ * timestamp だけで名指しする書き方はディレクトリ名と同じだけ宙に浮くのに、前身の
+ * 正規表現は 1 件も拾えなかった。走査対象に実在したのは、ほぼ全部がこの形。
+ *
+ * 日付として成立しない 14 桁（fixture の連番など）は migration 名ではないので対象外。
+ * baseline `00000000000000_init` も月が `00` で成立しないため、免除を書かずに外れる
+ * （免除を置くと到達しない分岐になる）。
  *
  * ## 走査対象と、対象外にした理由
  *
@@ -68,8 +76,15 @@ const ROOT = process.cwd();
 /** 畳んでも残る唯一の migration 名。 */
 const BASELINE_DIR_NAME = "00000000000000_init";
 
-/** 14 桁 timestamp + `_` + 名前。引用符もパスも問わず、コメントの中も見る。 */
-const MIGRATION_NAME = /\b\d{14}_[a-z0-9]+(?:_[a-z0-9]+)*/gu;
+/**
+ * 14 桁 `YYYYMMDDHHMMSS`（`_<name>` は任意）。引用符もパスも問わず、コメントの中も見る。
+ *
+ * 月・日・時・分・秒の範囲まで見るので、日付として成立しない 14 桁の連番は拾わない。
+ * 末尾の `(?![0-9])` は、15 桁以上の数字列から先頭 14 桁を切り出さないため
+ * （`\b` は前側にしか効かない）。
+ */
+const MIGRATION_NAME =
+  /\b\d{4}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?:[01]\d|2[0-3])[0-5]\d[0-5]\d(?![0-9])(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?/gu;
 
 const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
   { dir: "src", glob: "**/*.{ts,tsx}" },
@@ -100,11 +115,15 @@ function scannedFiles(): string[] {
   return out;
 }
 
-/** そのテキストが名指ししている非 baseline の migration 名。 */
+/**
+ * そのテキストが名指ししている migration（ディレクトリ名でも timestamp 単体でも）。
+ *
+ * baseline を弾く分岐は置かない。`00000000000000` は日付として成立しないので
+ * `MIGRATION_NAME` が最初から拾わない。分岐を書くと到達しないコードになる。
+ */
 export function pinnedMigrationNames(source: string): string[] {
   const found = new Set<string>();
   for (const match of source.matchAll(MIGRATION_NAME)) {
-    if (match[0] === BASELINE_DIR_NAME) continue;
     found.add(match[0]);
   }
   return [...found];
@@ -131,7 +150,8 @@ describe("コードも指示も migration を名指ししない", () => {
     // このファイル自身も走査対象なので、fixture の migration 名は**実行時に組み立てる**。
     // ソースに 14 桁の名前をリテラルで置くと、この gate が自分を違反として数える。
     // 免除を作る代わりにこうする（免除は「これは fixture だから」の抜け道になる）。
-    const ts = (suffix: string): string => `2026${"0101000000"}_${suffix}`;
+    const stamp = `2026${"0101000000"}`;
+    const ts = (suffix: string): string => `${stamp}_${suffix}`;
 
     // 引用符が隣接しない形（前身の正規表現はこれを取りこぼしていた）。
     expect(
@@ -147,6 +167,14 @@ describe("コードも指示も migration を名指ししない", () => {
     expect(
       pinnedMigrationNames(`// 実体は ${ts("add_series")} が作った索引`),
     ).toEqual([ts("add_series")]);
+    // **`_<name>` の無い timestamp 単体**（前身が構造的に見られなかった形）。
+    expect(pinnedMigrationNames(`// ${stamp} で列を rename した`)).toEqual([
+      stamp,
+    ]);
+    // 範囲を「A〜B」で書く形も両端を拾う。
+    expect(
+      pinnedMigrationNames(`// ${stamp}〜2026${"0102000000"} の列 rename`),
+    ).toEqual([stamp, `2026${"0102000000"}`]);
   });
 
   test("baseline と、migration 名でないものは落とさない（fixture）", () => {
@@ -159,6 +187,21 @@ describe("コードも指示も migration を名指ししない", () => {
     );
     // 桁数が違えば migration 名ではない。
     expect(pinnedMigrationNames('"2026080600000_short"')).toEqual([]);
+    // 14 桁でも日付として成立しなければ migration 名ではない（fixture の連番等）。
+    expect(pinnedMigrationNames(`const id = "1234${"5678901234"}";`)).toEqual(
+      [],
+    );
+    expect(pinnedMigrationNames(`const t = "2026${"1301000000"}";`)).toEqual(
+      [],
+    );
+    expect(pinnedMigrationNames(`const t = "2026${"0132000000"}";`)).toEqual(
+      [],
+    );
+    expect(pinnedMigrationNames(`const t = "2026${"0101250000"}";`)).toEqual(
+      [],
+    );
+    // 15 桁以上の数字列の一部を切り出さない。
+    expect(pinnedMigrationNames(`const n = 2026${"01010000001"};`)).toEqual([]);
   });
 
   test("baseline 以外の migration 名を書いている箇所が無い", () => {

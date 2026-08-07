@@ -557,7 +557,9 @@ export async function getCustomerEventRegistrations(
   readonly now: Date;
 }> {
   const now = new Date();
-  const baseEventWhere = { deletedAt: null } as const;
+  const baseEventWhere = {
+    deletedAt: null,
+  } as const satisfies Prisma.EventWhereInput;
 
   const [activeRows, pastRows] = await Promise.all([
     prisma.eventRegistration.findMany({

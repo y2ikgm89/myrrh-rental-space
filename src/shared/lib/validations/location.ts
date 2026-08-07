@@ -225,7 +225,7 @@ export const locationFormBaseSchema = z.strictObject({
   email: z
     .email({ error: "有効なメールアドレスを入力してください" })
     // RFC 5321 の上限。**この欄だけ上限が無かった**（実測）ため、
-    // `locations.email` に VarChar(254) を付ける 20260805160000 と同時に足す。
+    // `locations.email` に VarChar(254) を付けるのと同時に足す。
     // 列だけ狭めると、長い値が画面に理由の出ない 500 として返る。
     .max(254, { error: "メールアドレスは254文字以内で入力してください" })
     .nullable()

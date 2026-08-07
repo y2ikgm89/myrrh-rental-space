@@ -11,8 +11,8 @@
  *   (private match が同 tag を継承しない設計)
  * - `/sitemap.xml` は SITEMAP tag exclusive & 単一 source entry (last-match-wins 上書き bug 防止)
  *
- * 2490 行あった `architecture-boundaries.test.ts` の末尾 3 describe を per-concern に
- * 分離した際にここに切り出した。
+ * `architecture-boundaries.test.ts` の末尾の describe 群を per-concern に
+ * 分離した際にここへ切り出した。
  */
 
 import { describe, expect, test } from "bun:test";

@@ -45,22 +45,17 @@ import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards"
 import {
   PAYMENT_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
-  CANCELLED_BY,
   CANCELLED_BY_LABELS,
+  type CancelledByType,
   TAX_RATE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { isValidTaxRateType } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeFull } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 
-function getCancelledByLabel(cancelledByType: string | null): string {
+function getCancelledByLabel(cancelledByType: CancelledByType | null): string {
   if (cancelledByType == null) return "不明";
-  for (const key of Object.values(CANCELLED_BY)) {
-    if (key === cancelledByType) {
-      return CANCELLED_BY_LABELS[key];
-    }
-  }
-  return "不明";
+  return CANCELLED_BY_LABELS[cancelledByType] ?? "不明";
 }
 
 const PAYMENT_BADGE_VARIANTS: Record<

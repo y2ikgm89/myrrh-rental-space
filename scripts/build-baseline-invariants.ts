@@ -7,7 +7,7 @@
  * が生成 DDL の後ろに連結し、5 つのゲートが `readDatabaseInvariants()` で読む。
  *
  * 初版は pg_catalog センサス差分から**手で起こした**。その結果、物理列名を
- * snake_case へ寄せた 20260804110000〜20260804150000 の後も旧名
+ * snake_case へ寄せた後も旧名
  * （`"spaceId"` / `"startAt"` / `"EventScheduleMode"` …）を抱えたまま残り、
  *
  *   - それを読むゲートは**存在しない列名**を検査する空の検査になった

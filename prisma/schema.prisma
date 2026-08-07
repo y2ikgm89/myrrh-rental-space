@@ -253,6 +253,16 @@ enum RefundedByType {
   @@map("refunded_by_type")
 }
 
+/// キャンセルを実行した主体。予約・系列・イベント申込の cancelled_by_type 列。
+enum CancelledBy {
+  CUSTOMER_MYPAGE
+  CUSTOMER_TOKEN
+  ADMIN
+  SYSTEM
+
+  @@map("cancelled_by")
+}
+
 /// 振込先の口座種別。顧客が振込先として見る値。
 ///
 /// 以前は VARCHAR で **DB 側に制約が 1 つも無かった**。
@@ -531,8 +541,7 @@ model Location {
   amenities       Json    @default("{}")
   imageUrl        String  @map("image_url") @db.Text
   imageUrls       Json    @default("[]") @map("image_urls")
-  businessHours   Json?   @map("business_hours")
-  specialHolidays Json?   @map("special_holidays")
+  businessHours Json? @map("business_hours")
 
   // MEO（Local SEO）— Settings から移管
   latitude              Float?
@@ -781,10 +790,10 @@ model ReservationSeries {
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType             String?   @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
-  cancellationReason          String?   @map("cancellation_reason") @db.Text
-  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz(6)
-  deletedById                 String?   @map("deleted_by_id") @db.Uuid
+  cancelledByType    CancelledBy? @map("cancelled_by_type")
+  cancellationReason String?      @map("cancellation_reason") @db.Text
+  deletedAt          DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  deletedById        String?      @map("deleted_by_id") @db.Uuid
   /// Google Calendar 側の recurring master event ID (Phase B.2.1 Task 5 で追加)。
   /// null = 未同期 or Google Calendar 無効。bulk cancel の series-level GCal 操作
   /// (deleteGcalMaster / patchGcalMasterUntil) が非 null 時のみ発火する。
@@ -926,7 +935,7 @@ model Reservation {
   // Cancellation tracking
   cancellationReason String?   @map("cancellation_reason") @db.Text
   cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType    String?   @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancelledByType CancelledBy? @map("cancelled_by_type")
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0) @map("ics_sequence")
@@ -2258,7 +2267,7 @@ model TermsAgreement {
   /// terms_agreements へ UPDATE を発行し append-only trigger に弾かれて
   /// 顧客マージ（`tx.customer.delete`）を必ず失敗させていた。NULL 化は
   /// 「誰が同意したか」という証跡そのものを消すため、trigger の拒否が正しい。
-  /// 詳細は AuditLog.userId のコメントと 20260803030000 の migration を参照。
+  /// 詳細は AuditLog.userId のコメントを参照。
   customerId      String?    @map("customer_id") @db.Uuid
   guestEmail      String?    @map("guest_email") @db.VarChar(254)
   contentSnapshot String     @map("content_snapshot") @db.Text // 同意時 HTML 完全保存
@@ -2274,7 +2283,7 @@ model TermsAgreement {
   ///    （`AuditLog.resourceId` と同じ扱い）。全 ID が uuid に揃った今でも、
   ///    FK を張らないポインタに型を付けると次に別種のリソースを指した瞬間に壊れる
   /// 2. この表は append-only（`prevent_terms_agreements_mutation`）なので、
-  ///    20260804000000 の ID 統一より前に書かれた行は **cuid のまま残っている**。
+  ///    ID を uuid へ統一する前に書かれた行は **cuid のまま残っている**。
   ///    証跡は書き換えない方針なので、`@db.Uuid` へ narrow すると既存行が読めなくなる
   ///
   /// かつては 1 を軽視して `@db.Uuid` にしており、規約同意付きのイベント申込が
@@ -2610,7 +2619,7 @@ model EventRegistration {
   status          RegistrationStatus @default(CONFIRMED)
   customerId      String?            @map("customer_id") @db.Uuid
   cancelledAt     DateTime?          @map("cancelled_at") @db.Timestamptz(6)
-  cancelledByType String?            @map("cancelled_by_type") @db.VarChar(20) // 値域は CANCELLED_BY (SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancelledByType CancelledBy? @map("cancelled_by_type")
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
   attendedAt      DateTime?          @map("attended_at") @db.Timestamptz(6)
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2753,7 +2762,7 @@ model Receipt {
   // **長さ制約を付けない。** どちらも他レコードからの導出値で、導出元
   // （Event.title は 200 文字、Customer.lastName/firstName は無制限 TEXT）より
   // 短い上限を置くと P2000 で領収書発行が落ちる。会計証跡を黙って切り詰めた PDF は
-  // 落ちるより悪いので、上限は入力側の Zod に置く（20260803040000 参照）。
+  // 落ちるより悪いので、上限は入力側の Zod に置く。
   recipientName       String             @map("recipient_name") @db.Text
   subject             String             @default("スペース利用料として") @db.Text
   amount              Int
@@ -2818,7 +2827,7 @@ model AdminNotification {
   /// 1 モデルの型で縛ると次に別種のリソースを指した瞬間に壊れる
   /// （`AuditLog.resourceId` / `TermsAgreement.resourceId` と同じ扱い）。
   /// かつて `@db.Uuid` だった頃は Event の deep link が常に死んでいた
-  /// （20260726030000 で varchar へ広げた）。統一前に書かれた行には cuid が残る。
+  /// （その後 varchar へ広げた）。統一前に書かれた行には cuid が残る。
   resourceId   String?  @map("resource_id") @db.VarChar(36)
   isRead       Boolean  @default(false) @map("is_read")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

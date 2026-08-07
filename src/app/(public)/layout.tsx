@@ -125,7 +125,8 @@ export async function generateMetadata(): Promise<Metadata> {
   // `getFeatureModulesSettings` を呼ぶため、`await connection()` で runtime resume を
   // 強制しないと build 時 placeholder DATABASE_URL の fallback (posts OFF) が静的シェルに
   // 焼き込まれる (rule .claude/rules/caching.md `build prerender の焼き込み防止` 参照)。
-  // 同 pattern: generateViewport の footerSettings.themeColor 解決 (下 121 行〜)。
+  // 同 pattern: このファイルの `generateViewport` が footerSettings.themeColor を
+  // 解決するところ。
   // posts OFF 時に `/feed.xml` が 404 を返す構造 (feed.xml/route.ts) と integrity 維持。
   // PWA manifest は公開 root metadata からだけ明示リンクし、IAP-protected admin root
   // では取得自体を発生させない。

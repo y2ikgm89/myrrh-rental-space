@@ -27,10 +27,6 @@ mock.module("@/shared/lib/validations/enums/helpers", () => ({
     ReservationStatus.CONFIRMED,
   ],
 }));
-mock.module("@/shared/lib/date-format", () => ({
-  MS_PER_DAY: 86_400_000,
-  formatJstDateString: (d: Date) => d.toISOString().slice(0, 10),
-}));
 mock.module("@/shared/lib/pagination", () => ({
   calcTotalPages: (total: number, limit: number) => Math.ceil(total / limit),
   paginate: (opts: { page?: number; limit?: number }) => {

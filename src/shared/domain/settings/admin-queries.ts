@@ -307,7 +307,7 @@ function parseTaxDisplayMode(value: string | null): TaxDisplayMode {
 /**
  * DB の `connection_status` 列を型付き値へ narrow する。
  *
- * **引数を `string` にしてはいけない。** 20260805100000 で値を大文字へ寄せたとき、
+ * **引数を `string` にしてはいけない。** enum 化で値を大文字へ寄せたとき、
  * ここが `value === "connected"` のままだったため型検査を素通りし、
  * `isGoogleCalendarEnabled()` が常に false を返して**カレンダー連携が無言で止まる**
  * ところだった（`string` と文字列リテラルの比較は合法なので tsc は何も言わない）。

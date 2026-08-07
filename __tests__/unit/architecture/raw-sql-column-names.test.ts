@@ -1,28 +1,19 @@
 /**
- * 生 SQL の列参照が、変換済みテーブルの**現在の**物理名と食い違っていないか。
+ * 生 SQL の列参照が、schema.prisma が導く**現在の**物理名と食い違っていないか。
  *
  * ## なぜ要るのか
  *
- * 721 列を snake_case へ寄せる作業は 7 本の PR に割れていて、その途中は
- * **変換済みのテーブルと未変換のテーブルが同居する**。`"createdAt"` は 60 表以上に
- * あるので、`users` を変換した後の生 SQL は `users.created_at` と
- * `posts."createdAt"` を同時に書くことになる。取り違えても:
- *
- * - Prisma client 経由の型検査には出ない（生 SQL は素の文字列）
- * - unit テストは Prisma を mock するので走らない
- * - 実 DB に当たったときだけ `column "createdAt" does not exist` で落ちる
- *
- * つまり **統合テストか E2E が偶然その文を通らない限り本番まで生き残る**。
+ * 721 列を snake_case へ寄せる作業は完了しているが、生 SQL は Prisma client の型検査を
+ * 通らない。`"createdAt"` のような camelCase 引用識別子が残ると、実 DB に当たったときだけ
+ * `column "createdAt" does not exist` で落ちる — unit テスト（Prisma mock）や E2E が
+ * その文を通らない限り本番まで生き残る。
  *
  * ## 判定
  *
- * SQL リテラルが言及するテーブルを拾い、**それが全部変換済みなら**、その中の
- * camelCase の引用識別子（`"createdAt"`）を違反とする。1 つでも未変換テーブルが
- * 混ざる文（JOIN など）は判定を保留する — その camelCase が未変換側の列である
- * 可能性を否定できないため。**曖昧なら黙る**方に倒している。
- *
- * 「変換済み」は schema.prisma から導く（全列の物理名が snake_case）。
- * 変換の進捗を別リストで持たないので、リストの更新漏れで検査が止まる余地が無い。
+ * SQL リテラルが言及するテーブルを拾い、**schema.prisma に存在する表**なら、その中の
+ * camelCase 引用識別子（`"createdAt"`）を違反とする。
+ * システムカタログ（`pg_*` / `information_schema.*` / `_prisma_migrations`）だけを
+ * 触る文は schema 外テーブルとして許可する。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -33,17 +24,12 @@ import { readPrismaSchema } from "../../support/prisma-sources";
 
 const ROOTS = ["src", "prisma", "scripts", "e2e", "__tests__"] as const;
 
-const SCALAR_TYPES = new Set([
-  "String",
-  "Int",
-  "BigInt",
-  "Float",
-  "Decimal",
-  "Boolean",
-  "DateTime",
-  "Json",
-  "Bytes",
-]);
+/** schema 外テーブル参照として許可する接頭辞 / 名前。 */
+const UNKNOWN_TABLE_ALLOWLIST = [
+  /^pg_/u,
+  /^information_schema\./u,
+  /^_prisma_migrations$/u,
+] as const;
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -55,45 +41,22 @@ function walk(dir: string): string[] {
 
 const schema = readPrismaSchema();
 
-type Table = {
-  readonly model: string;
-  readonly table: string;
-  readonly converted: boolean;
-};
-
-function parseTables(): Map<string, Table> {
-  const modelNames = new Set(
-    [...schema.matchAll(/^model (\w+) \{/gmu)].map((m) => m[1] ?? ""),
-  );
-  const enumNames = new Set(
-    [...schema.matchAll(/^enum (\w+) \{/gmu)].map((m) => m[1] ?? ""),
-  );
-  const out = new Map<string, Table>();
-
-  for (const match of schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gmu)) {
-    const model = match[1];
-    const body = match[2];
-    if (model === undefined || body === undefined) continue;
+function parseKnownTables(): Set<string> {
+  const out = new Set<string>();
+  for (const match of schema.matchAll(/^model \w+ \{([\s\S]*?)^\}/gmu)) {
+    const body = match[1];
+    if (body === undefined) continue;
     const table = /@@map\("([^"]+)"\)/u.exec(body)?.[1];
-    if (table === undefined) continue;
-
-    let converted = true;
-    for (const line of body.split(/\r?\n/u)) {
-      const column = /^ {2}(\w+)\s+(\w+)/u.exec(line);
-      if (!column) continue;
-      const [, field, type] = column;
-      if (field === undefined || type === undefined) continue;
-      if (modelNames.has(type)) continue;
-      if (!SCALAR_TYPES.has(type) && !enumNames.has(type)) continue;
-      const physical = /@map\("([^"]+)"\)/u.exec(line)?.[1] ?? field;
-      if (/[A-Z]/u.test(physical)) converted = false;
-    }
-    out.set(table, { model, table, converted });
+    if (table !== undefined) out.add(table);
   }
   return out;
 }
 
-const tables = parseTables();
+const knownTables = parseKnownTables();
+
+function isAllowedUnknownTable(name: string): boolean {
+  return UNKNOWN_TABLE_ALLOWLIST.some((pattern) => pattern.test(name));
+}
 
 /**
  * テンプレートリテラルを 1 つ読み切る。`${...}` の中は SQL ではないので飛ばす
@@ -214,13 +177,27 @@ function violations(): string[] {
   const out: string[] = [];
   for (const { file, sql: raw } of literals) {
     const sql = stripSqlValues(raw);
-    const mentioned = [...sql.matchAll(TABLE_MENTION)]
-      .map((m) => m[1])
-      .filter((name): name is string => name !== undefined)
-      .map((name) => tables.get(name));
+    const mentioned = [
+      ...new Set(
+        [...sql.matchAll(TABLE_MENTION)]
+          .map((m) => m[1])
+          .filter((name): name is string => name !== undefined),
+      ),
+    ];
 
     if (mentioned.length === 0) continue;
-    if (mentioned.some((t) => t === undefined || !t.converted)) continue;
+
+    if (
+      mentioned.some(
+        (name) => !knownTables.has(name) && !isAllowedUnknownTable(name),
+      )
+    ) {
+      // 表名が特定できない（JOIN 先の alias / 誤検出 / 文字列中の断片）は判定保留。
+      continue;
+    }
+
+    const schemaTables = mentioned.filter((name) => knownTables.has(name));
+    if (schemaTables.length === 0) continue;
 
     const stale = [
       ...new Set([...sql.matchAll(CAMEL_IDENTIFIER)].map((m) => m[1])),
@@ -228,8 +205,7 @@ function violations(): string[] {
     for (const name of stale) {
       out.push(
         `${file.replaceAll("\\", "/")}: "${name}" — ` +
-          `この文が触る表（${[...new Set(mentioned.map((t) => t?.table))].join(", ")}）は` +
-          `変換済みなので物理名は snake_case のはず`,
+          `この文が触る表（${schemaTables.join(", ")}）は snake_case 物理名のはず`,
       );
     }
   }
@@ -246,10 +222,10 @@ describe("生 SQL の列名", () => {
   });
 
   test("schema の解析が機能している", () => {
-    expect(tables.size).toBeGreaterThan(50);
+    expect(knownTables.size).toBeGreaterThan(50);
   });
 
-  test("変換済みテーブルを触る生 SQL に camelCase の列参照が残っていない", () => {
+  test("schema 上の表を触る生 SQL に camelCase の列参照が残っていない", () => {
     expect(violations()).toEqual([]);
   });
 });
