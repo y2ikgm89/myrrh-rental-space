@@ -719,9 +719,15 @@ gcloud run jobs create prisma-migrate \
   --args=-c,"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"
 ```
 
-`scripts/migration-preconditions.ts` derives, from the SQL of every unapplied
-migration, a probe for the rows that would make it fail, and exits non-zero
-before `prisma migrate deploy` starts. Failing first matters: a migration that
+`scripts/migration-preconditions.ts` runs every unapplied statement inside one
+transaction and always rolls it back, so PostgreSQL itself decides whether the
+migration would fail and you get the failing statement with its real SQLSTATE. It
+exits non-zero before `prisma migrate deploy` starts.
+
+It proves the SQL does not error — **not** that no data is lost. `DROP COLUMN`
+succeeds against a full table, so a green rehearsal is not permission to drop.
+Destructive statements carry their own `DO $$ … RAISE EXCEPTION … $$` check,
+enforced by `destructive-migration-has-executed-assertion.test.ts`. Failing first matters: a migration that
 dies partway is recorded in `_prisma_migrations` and blocks every later deploy
 until someone repairs the production database by hand. The `&&` is load-bearing
 — with `;` the migrate runs regardless.
