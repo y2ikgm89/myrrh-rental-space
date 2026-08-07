@@ -23,17 +23,22 @@ const workflow = readFileSync(
 );
 
 /**
- * Extract the POSIX ERE pattern from the `grep -Eiq '...'` invocation in
- * deploy-production.yml so the test always reflects what the workflow will
- * actually run. Fails loudly if the pattern moves or the extraction breaks.
+ * Extract the POSIX ERE pattern from the `grep -Ei '...' > /dev/null`
+ * invocation in deploy-production.yml so the test always reflects what the
+ * workflow will actually run. Fails loudly if the pattern moves or the
+ * extraction breaks.
+ *
+ * **`-q` を含まない形に固定していることに意味がある。** `-q` へ戻すと
+ * ここで抽出が失敗して落ちる。理由は下の SIGPIPE の test を参照。
  */
 function extractBreakingMigrationPattern(): string {
-  const match = workflow.match(/grep -Eiq '(?<pattern>[^']+)'/u);
+  const match = workflow.match(/grep -Ei '(?<pattern>[^']+)' > \/dev\/null/u);
   const pattern = match?.groups?.["pattern"];
   if (!pattern) {
     throw new Error(
       "Could not extract breaking-migration grep pattern from deploy-production.yml. " +
-        "If the grep call moved or its quoting changed, update this test.",
+        "If the grep call moved or its quoting changed, update this test. " +
+        "`grep -q` へ戻した場合は pipefail × SIGPIPE で fail-open するので戻さない。",
     );
   }
   return pattern;
@@ -82,6 +87,96 @@ function detectsBreaking(sql: string): boolean {
   return normalizeMigrationSql(sql).some((statement) =>
     breakingRegex.test(statement),
   );
+}
+
+/**
+ * workflow の検出パイプラインを **原文のまま** 抜き出す。
+ *
+ * 上の fixture 群は POSIX ERE を JS の RegExp へ翻訳して評価している。翻訳は
+ * 正規表現の当たり外れは見られるが、**シェルの都合で判定が反転する失敗**は
+ * 原理的に再現できない。実際に起きたのがそれで、`grep -q` が最初のマッチで
+ * 即 exit した結果、上流の `tr` が閉じたパイプへ書いて SIGPIPE（rc=141）で
+ * 死に、`set -euo pipefail` がそれをパイプライン全体の status に昇格させて
+ * `if` が「不一致」を選んでいた。翻訳側の fixture は全部緑のままだった。
+ *
+ * そこでこのブロックだけは workflow の文字列をそのまま bash に流す。書き写した
+ * 複製ではなく実走査と同じ 1 本の文字列を評価するので、パイプラインの綴りが
+ * 変われば必ずここに出る。
+ */
+function extractDetectionPipeline(): string {
+  const match = workflow.match(
+    /if (?<pipeline>sed 's\/--\.\*\$\/\/' "\$\{migration_file\}"[\s\S]*?> \/dev\/null); then/u,
+  );
+  const pipeline = match?.groups?.["pipeline"];
+  if (!pipeline) {
+    throw new Error(
+      "deploy-production.yml から破壊的 migration の検出パイプラインを抽出できませんでした。" +
+        "パイプラインの綴りを変えたなら、この抽出も追随させる（黙って抽出を諦めると gate が空回りする）。",
+    );
+  }
+  return pipeline;
+}
+
+const detectionPipeline = extractDetectionPipeline();
+
+/** Linux のパイプバッファ既定値。これを超えた残余が SIGPIPE を引き起こす。 */
+const PIPE_BUFFER_BYTES = 65_536;
+
+/**
+ * workflow のパイプラインを実 bash で走らせ、breaking mode に入るかを返す。
+ *
+ * SQL は stdin 経由で渡して bash 側の `mktemp` に書く。パスを引数で渡すと
+ * MSYS のパス変換が挟まって Windows ローカルだけ壊れる。
+ */
+function runWorkflowDetection(sql: string): string {
+  const bash = Bun.which("bash");
+  if (!bash) {
+    throw new Error(
+      "bash が見つからないため workflow の検出パイプラインを実行できません。" +
+        "この検査は silent skip させない（GitHub Actions の ubuntu runner にも " +
+        "ローカルの MINGW64 にも bash はある）。",
+    );
+  }
+
+  const script = [
+    "set -euo pipefail",
+    'migration_file="$(mktemp)"',
+    "trap 'rm -f \"${migration_file}\"' EXIT",
+    'cat > "${migration_file}"',
+    `if ${detectionPipeline}; then`,
+    "  printf BREAKING",
+    "else",
+    "  printf SAFE",
+    "fi",
+  ].join("\n");
+
+  const result = Bun.spawnSync({
+    cmd: [bash, "-c", script],
+    stdin: new TextEncoder().encode(sql),
+  });
+
+  const stdout = new TextDecoder().decode(result.stdout).trim();
+  if (result.exitCode !== 0 || (stdout !== "BREAKING" && stdout !== "SAFE")) {
+    throw new Error(
+      `検出パイプラインの実行に失敗しました (exit ${String(result.exitCode)}): ` +
+        `stdout=${stdout} stderr=${new TextDecoder().decode(result.stderr).trim()}`,
+    );
+  }
+  return stdout;
+}
+
+/** 破壊的パターンを 1 つも含まない padding を、指定バイト数以上まで積む。 */
+function safePadding(minimumBytes: number): string {
+  const statements: string[] = [];
+  let bytes = 0;
+  let index = 0;
+  while (bytes < minimumBytes) {
+    const statement = `CREATE INDEX "idx_padding_${String(index)}" ON "padding_table" ("column_${String(index)}");\n`;
+    statements.push(statement);
+    bytes += statement.length; // ASCII のみなので文字数 = バイト数
+    index += 1;
+  }
+  return statements.join("");
 }
 
 const breakingFixtures: ReadonlyArray<{
@@ -393,6 +488,42 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     expect(workflow).toContain("sed 's/--.*$//' \"${migration_file}\"");
     expect(workflow).toContain("tr '\\n' ' '");
     expect(workflow).toContain("tr ';' '\\n'");
+  });
+
+  describe("実 bash でパイプラインを流す（pipefail × SIGPIPE の fail-open 回帰）", () => {
+    test("出力は捨てるだけで、grep に早期 exit させない", () => {
+      // `-q` は最初のマッチで grep を終わらせる。上流の `tr` が閉じたパイプに
+      // 書くと SIGPIPE で死に、pipefail がそれをパイプライン全体の status に
+      // するので、`if` は**マッチしたのに**「不一致」を選ぶ。
+      expect(detectionPipeline).toContain("> /dev/null");
+      expect(detectionPipeline).not.toContain("-Eiq");
+    });
+
+    // 以下 3 本は組で意味を持つ。1 本目が「判定が実際に動いている」ことを、
+    // 3 本目が「サイズを増やしただけで発動しない」ことを示すので、2 本目の
+    // 緑が抽出失敗や常時 SAFE による空回りでないと言える。
+    test("自己検査: 小さい破壊的 migration は検出される", () => {
+      expect(
+        runWorkflowDetection('ALTER TABLE "users" DROP COLUMN "foo";\n'),
+      ).toBe("BREAKING");
+    });
+
+    test("破壊的文の後ろにパイプバッファ超の出力が続いても検出される", () => {
+      // fail-open の条件はファイルサイズそのものではなく「最初のマッチ以降に
+      // 残る出力が 64 KiB を超えるか」。破壊的文を先頭に置くのが最悪形で、
+      // 実測ではこの形が rc=141 で素通りしていた。
+      const sql =
+        'ALTER TABLE "users" DROP COLUMN "foo";\n' +
+        safePadding(PIPE_BUFFER_BYTES * 4);
+      expect(runWorkflowDetection(sql)).toBe("BREAKING");
+    });
+
+    test("パイプバッファ超でも安全な migration は計画ダウンタイムに入れない", () => {
+      // 見逃しを潰すために「常に BREAKING」へ倒すのは修正ではない。
+      expect(runWorkflowDetection(safePadding(PIPE_BUFFER_BYTES * 4))).toBe(
+        "SAFE",
+      );
+    });
   });
 
   for (const fixture of breakingFixtures) {

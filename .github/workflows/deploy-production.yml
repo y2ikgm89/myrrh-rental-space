@@ -378,6 +378,18 @@ jobs:
           #   2. 改行を空白に潰して文の途中の折返しを繋ぐ
           #   3. `;` で分割して 1 文 1 行にする
           #      — 隣接する無関係な文どうしが `.*` で繋がる誤検知を防ぐ
+          #
+          # **`grep -q` を使ってはならない。** この step は `set -euo pipefail` 下に
+          # あり、`-q` は最初のマッチで即 exit する。上流の `tr` が閉じたパイプへ
+          # 書き込むと SIGPIPE で死に（rc=141）、`pipefail` がそれをパイプライン
+          # 全体の status に昇格させるので、`if` は **マッチしたのに「不一致」と
+          # 評価する** = 破壊的 migration が計画ダウンタイム無しで本番に出る。
+          # 発火条件は「最初のマッチ以降に残る出力がパイプバッファ（64 KiB）を
+          # 超えるか」で、ファイルの大きさと当たり位置に依存する間欠 fail-open に
+          # なる。実測: 破壊的文を先頭に置いた 318 KiB の migration が現に
+          # rc=141 で素通りした（先頭 37 バイトのものは正しく検出された）。
+          # 代わりに `-q` を外して出力を `/dev/null` へ捨てる。grep が入力を
+          # 最後まで読み切るので SIGPIPE が起きない。
           if ((${#changed_migrations[@]} > 0)); then
             for migration_file in "${changed_migrations[@]}"; do
               # 削除された migration は diff に出るが実体が無い（通常は起きない）
@@ -385,7 +397,7 @@ jobs:
               if sed 's/--.*$//' "${migration_file}" \
                 | tr '\n' ' ' \
                 | tr ';' '\n' \
-                | grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|DROP[[:space:]]+DEFAULT|TYPE))|ALTER[[:space:]]+TYPE[[:space:]]+.*(RENAME[[:space:]]+VALUE|RENAME[[:space:]]+TO)|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE'; then
+                | grep -Ei 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|DROP[[:space:]]+CONSTRAINT|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO|ALTER[[:space:]]+COLUMN[[:space:]]+.*(SET[[:space:]]+NOT[[:space:]]+NULL|DROP[[:space:]]+DEFAULT|TYPE))|ALTER[[:space:]]+TYPE[[:space:]]+.*(RENAME[[:space:]]+VALUE|RENAME[[:space:]]+TO)|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE' > /dev/null; then
                 BREAKING_MIGRATION_DEPLOY="true"
                 printf 'Breaking migration deploy mode enabled by: %s\n' "${migration_file}"
               fi
