@@ -29,6 +29,14 @@ For human onboarding — setup, common commands, repo layout — see
   CLI tools, or cloud services. `resolve-library-id` then `query-docs`.
 - Never print, copy, or commit secret values. Treat non-example `.env*` files
   as protected.
+- Task tool: `subagent_type` is a single enum value — concatenations like
+  `generalPurpose|shell` fail schema validation (`Invalid enum value`) before
+  the subagent launches. Run subagents in parallel by emitting multiple Task
+  calls in one message, each with its own `subagent_type`. `model` accepts only
+  the slugs listed in the current Task tool schema ("composer" means
+  `composer-2.5-fast`) and must be omitted when `resume` is set. Violations are
+  denied by the preToolUse hook `.cursor/hooks/validate-task-call.ps1` — on
+  deny, retry immediately with the corrected value from its agent_message.
 
 ## Learned User Preferences
 
