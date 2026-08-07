@@ -93,13 +93,6 @@ mock.module("@/shared/lib/csv", () => ({
     mockGenerateCsv(...args),
 }));
 
-mock.module("@/shared/lib/date-format", () => ({
-  formatJstDateString: (date: Date) => "2026-07-22",
-  formatJstYmd: (date: Date) => "2026-07-22",
-  formatJstYmdHm: (date: Date) => "2026-07-22 10:00",
-  formatTimeShort: (date: Date) => "10:00",
-}));
-
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
   RESERVATION_STATUS_LABELS: { confirmed: "確認済", completed: "完了" },
   PAYMENT_STATUS_LABELS: { paid: "支払済", pending: "未支払" },

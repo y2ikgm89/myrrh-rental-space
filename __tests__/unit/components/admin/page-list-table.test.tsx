@@ -244,13 +244,6 @@ mock.module("@/admin/components/ui/Pagination", () => ({
   Pagination: () => <nav aria-label="pagination" />,
 }));
 
-mock.module("@/shared/lib/date-format", () => ({
-  formatDateTimeShort: () => "2026/01/01",
-  // security-alerts.ts → notifications/commands.ts が MS_PER_DAY を要求する
-  // （mock.module は完全モックのため未列挙 export は他 import からも欠落扱いになる）
-  MS_PER_DAY: 24 * 60 * 60 * 1000,
-}));
-
 mock.module(
   "@/app/(admin)/admin/(dashboard)/pages/_components/PageActions",
   () => ({

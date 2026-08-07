@@ -30,10 +30,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/date-format", () => ({
-  formatJstDateString: () => "2026-07-27",
-}));
-
 const {
   acquireReceiptAdvisoryLock,
   claimNextSerialNo,

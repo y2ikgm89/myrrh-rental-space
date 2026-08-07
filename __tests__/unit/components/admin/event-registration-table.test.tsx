@@ -33,11 +33,6 @@ mock.module("sonner", () => ({
   },
 }));
 
-mock.module("@/shared/lib/date-format", () => ({
-  formatDateTimeShort: (value: string | Date) => `fmt:${String(value)}`,
-  MS_PER_DAY: 24 * 60 * 60 * 1000,
-}));
-
 mock.module("@/admin/components/status-badges", () => ({
   RegistrationStatusBadge: ({ status }: { status: string }) => (
     <span>{status}</span>
@@ -233,7 +228,8 @@ describe("EventRegistrationTable", () => {
     const text = container?.textContent ?? "";
     expect(text).toContain("出欠");
     expect(text).toContain("出席済");
-    expect(text).toContain("fmt:2026-07-10T01:30:00.000Z");
+    // UTC 01:30 は JST 10:30。実 formatter を使うので時差の取り違えも落ちる。
+    expect(text).toContain("2026/07/10 10:30");
     expect(text).toContain("未出席");
   });
 

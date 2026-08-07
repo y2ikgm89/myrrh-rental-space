@@ -26,10 +26,6 @@ mock.module("sonner", () => ({
   toast: { error: mock(), success: mock() },
 }));
 
-mock.module("@/shared/lib/date-format", () => ({
-  formatDateTimeFull: (value: string | Date) => `fmt:${String(value)}`,
-}));
-
 mock.module("@/shared/lib/pricing/format", () => ({
   formatPrice: (value: number) => `${value}円`,
 }));
