@@ -990,6 +990,12 @@ export function isExecutedAssertion(statement: string): boolean {
  * **別名は数えない。** `FROM locations l WHERE l.memo …` は `l.memo` としか
  * 読めないので、検査は表名で書く（`locations.memo`）。読み違えるくらいなら
  * 書き方を狭めるほうがいい——外したときの帰結が「黙って消える」なので。
+ *
+ * ただし `public.locations.special_holidays` のように schema まで書いた検査は
+ * **正しい**ので、隣り合う組を全部拾う（`public.locations` と
+ * `locations.special_holidays`）。素朴な非重複走査だと前者だけを拾って後者を
+ * 落とし、正しい検査を持つ migration を止める。編集できない migration で
+ * それが起きるとデプロイが恒久的に止まる。
  */
 export function assertionCoverage(statement: string): {
   readonly tables: ReadonlySet<string>;
@@ -1002,14 +1008,18 @@ export function assertionCoverage(statement: string): {
   for (const match of sql.matchAll(new RegExp(IDENT, "gu"))) {
     tables.add(bareIdent(match[0]));
   }
-  for (const match of sql.matchAll(
-    new RegExp(String.raw`(${IDENT})\s*\.\s*(${IDENT})`, "gu"),
-  )) {
+  // `a.b.c` から `a.b` と `b.c` の両方を拾うため、次の走査開始位置を
+  // 「1 つ目の識別子の直後」へ戻す（既定の非重複走査では `b.c` が消える）。
+  const qualified = new RegExp(String.raw`(${IDENT})\s*\.\s*(${IDENT})`, "gu");
+  let match = qualified.exec(sql);
+  while (match !== null) {
     const table = match[1];
     const column = match[2];
     if (table !== undefined && column !== undefined) {
       pairs.add(`${bareIdent(table)}.${bareIdent(column)}`);
+      qualified.lastIndex = match.index + table.length;
     }
+    match = qualified.exec(sql);
   }
 
   return { tables, pairs };
