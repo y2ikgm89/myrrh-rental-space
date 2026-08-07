@@ -899,6 +899,11 @@ function dropColumnNames(normalized: string): string[] {
  * `DO $$ … $$` の中に静的に書いた破壊も数える。中は plpgsql なので対象を
  * 読み切れないが、「見えないから無い」にはしない——`destructionTargets` が空を
  * 返し、呼び出し側が拒否に倒す。
+ *
+ * `DO` ブロックの `EXECUTE` は**中身を見ずに**破壊として扱う。動的 SQL の本体は
+ * 文字列リテラルなので `stripNoise` が潰し、`EXECUTE 'TRUNCATE audit_logs'` が
+ * 「何も破壊しない DO ブロック」に見える。潰さない選択肢は取れない——潰さないと
+ * 今度は無害な文字列が破壊に化ける。読めないものは読めないと認めて拒否に倒す。
  */
 export function isDestructiveStatement(statement: string): boolean {
   const sql = normalize(statement);
@@ -911,6 +916,7 @@ export function isDestructiveStatement(statement: string): boolean {
   }
   if (/^DO\b/iu.test(sql)) {
     return (
+      /\bEXECUTE\b/iu.test(sql) ||
       /\bTRUNCATE\b/iu.test(sql) ||
       /\bDROP\s+(?:TABLE|SCHEMA)\b/iu.test(sql) ||
       dropColumnNames(sql).length > 0
@@ -982,11 +988,20 @@ export function namedIdentifiers(statement: string): Set<string> {
   return names;
 }
 
-/** その migration 内で新しく作られた表・列を覚える（消しても失うものが無い）。 */
+/**
+ * その migration 内で**確実に新しく作られた**表・列を覚える（消しても失うものが無い）。
+ *
+ * `IF NOT EXISTS` が付いたものは覚えない。既存があれば何もしない構文なので、
+ * 「作った」と「元からあった」を区別できない。区別できないものを「作った」側に
+ * 倒すと、既存の本番データを持つ列がそのまま免除される。
+ *
+ * public 以外の schema 修飾も覚えない。この道具は public schema しか相手にして
+ * いないので、`CREATE TABLE archive.audit_logs` を覚えると、後から
+ * `DROP TABLE public.audit_logs` した時に「さっき作ったやつ」と取り違える。
+ */
 function rememberCreated(statement: string, into: Set<string>): void {
   const sql = normalize(statement);
 
-  // `IF NOT EXISTS` は既存を温存するので「新しく作った」とは言えない。
   const created = new RegExp(
     // 末尾に `\b` は置かない。引用識別子は `"` で終わるので、直後が `(` だと
     // 語境界にならず 1 件も当たらない（`CREATE TABLE "t" (…)` がまさにその形）。
@@ -994,8 +1009,14 @@ function rememberCreated(statement: string, into: Set<string>): void {
     "iu",
   ).exec(sql);
   const table = created?.[2];
-  if (table !== undefined && !/\bIF\s+NOT\s+EXISTS\b/iu.test(sql)) {
-    into.add(bareIdent(table));
+  if (table !== undefined) {
+    const schema = created?.[1];
+    if (
+      !/\bIF\s+NOT\s+EXISTS\b/iu.test(sql) &&
+      (schema === undefined || bareIdent(schema) === "public")
+    ) {
+      into.add(bareIdent(table));
+    }
     return;
   }
 
@@ -1003,16 +1024,22 @@ function rememberCreated(statement: string, into: Set<string>): void {
     String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(${IDENT})\s*\.\s*)?(${IDENT})\s`,
     "iu",
   ).exec(sql);
+  const alteredSchema = altered?.[1];
   const alteredTable = altered?.[2];
   if (alteredTable === undefined) return;
+  if (alteredSchema !== undefined && bareIdent(alteredSchema) !== "public") {
+    return;
+  }
+  // `IF NOT EXISTS` は**アクションごと**に付く。文全体で見ると、同じ
+  // `ALTER TABLE` の別のアクションに付いた 1 つが全部を免除してしまう。
   for (const match of sql.matchAll(
     new RegExp(
-      String.raw`\bADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(${IDENT})`,
+      String.raw`\bADD\s+COLUMN\s+(IF\s+NOT\s+EXISTS\s+)?(${IDENT})`,
       "giu",
     ),
   )) {
-    const column = match[1];
-    if (column !== undefined) {
+    const column = match[2];
+    if (match[1] === undefined && column !== undefined) {
       into.add(`${bareIdent(alteredTable)}.${bareIdent(column)}`);
     }
   }
@@ -1040,8 +1067,9 @@ export interface PlannedRefusal {
  *
  * 1. **同じ migration の中で作った**表・列を消す（失うものが無い）
  * 2. **先行する検査が対象を名指ししている**。`DO $$ … RAISE EXCEPTION … $$` が
- *    その表名・列名に触れていること。単に「検査が 1 つある」では足りない——
- *    無関係な表の検査で以降の破壊が全部免許されていた
+ *    表名と列名の**両方**に触れていること。単に「検査が 1 つある」では足りず、
+ *    列名だけでも足りない——前者は無関係な表の破壊を全部免許し、後者は
+ *    `events.memo` を見た検査が `locations.memo` の DROP を通した
  * 3. `HANDOVERS` に対象の登録がある。リハーサル中にその SQL を流して 0 を確かめる
  *
  * ## この関数が見ないもの
@@ -1091,7 +1119,10 @@ export function planMigration(
           : [target, target];
         // 表ごと同じ migration で作ったなら、その列を消しても失うものが無い。
         if (created.has(target) || created.has(table)) continue;
-        if (guarded.has(column)) continue;
+        // 検査は**表と列の両方**を名指ししていること。列名だけで照合すると、
+        // 別の表の同名列を見た検査が無関係な破壊を免除する（`events.memo` を
+        // 見た検査が `locations.memo` の DROP を通していた）。
+        if (guarded.has(table) && guarded.has(column)) continue;
         const handover = handovers.find((entry) => entry.target === target);
         if (handover === undefined) {
           refusals.push({
