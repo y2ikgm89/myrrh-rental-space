@@ -3,6 +3,16 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import {
+  PIPE_BUFFER_BYTES,
+  detectsBreaking,
+  extractBreakingMigrationPattern,
+  extractDetectionPipeline,
+  posixEreToJsRegExp,
+  readDeployWorkflow,
+  runWorkflowDetection,
+} from "../../support/breaking-migration-pattern";
+
 // Regression gate for MIG-EXPAND-01
 // (deploy-safety finding, PR fix/breaking-migration-detection-regex).
 //
@@ -17,71 +27,27 @@ import { describe, expect, test } from "bun:test";
 //   3. TYPE     — ALTER COLUMN ... TYPE (full table rewrite + AccessExclusiveLock)
 //   4. NOT NULL — ALTER COLUMN ... SET NOT NULL (full table scan under lock)
 
-const workflow = readFileSync(
-  join(process.cwd(), ".github", "workflows", "deploy-production.yml"),
-  "utf8",
-);
-
-/**
- * Extract the POSIX ERE pattern from the `grep -Eiq '...'` invocation in
- * deploy-production.yml so the test always reflects what the workflow will
- * actually run. Fails loudly if the pattern moves or the extraction breaks.
- */
-function extractBreakingMigrationPattern(): string {
-  const match = workflow.match(/grep -Eiq '(?<pattern>[^']+)'/u);
-  const pattern = match?.groups?.["pattern"];
-  if (!pattern) {
-    throw new Error(
-      "Could not extract breaking-migration grep pattern from deploy-production.yml. " +
-        "If the grep call moved or its quoting changed, update this test.",
-    );
-  }
-  return pattern;
-}
-
-/**
- * Translate the POSIX ERE pattern to a JavaScript RegExp so bun test can
- * evaluate fixtures the same way `grep -Ei` would on Cloud Build.
- * Only `[[:space:]]` is used in the source pattern; expand more classes if
- * new ones are added.
- */
-function posixEreToJsRegExp(pattern: string): RegExp {
-  const translated = pattern.replaceAll("[[:space:]]", "\\s");
-  return new RegExp(translated, "i");
-}
-
-const breakingPattern = extractBreakingMigrationPattern();
+// workflow を読む知識（パターン抽出・パイプライン抽出・bash 実行）は
+// `__tests__/support/breaking-migration-pattern.ts` に一本化してある。
+// ここに複製を置くと、片方だけ直したときにもう片方が黙って古いままになる。
+const workflow = readDeployWorkflow();
+const breakingPattern = extractBreakingMigrationPattern(workflow);
 const breakingRegex = posixEreToJsRegExp(breakingPattern);
 
-/**
- * Mirror the workflow's pre-grep normalization:
- *
- *     sed 's/--.*$//' file | tr '\n' ' ' | tr ';' '\n'
- *
- * grep matches **line by line**, so a statement wrapped across lines —
- *
- *     ALTER TABLE "terms_agreements"
- *       ALTER COLUMN "resourceId" SET DATA TYPE TEXT;
- *
- * — satisfies the pattern on neither line and slips through entirely. That is
- * not hypothetical: a merged migration that split `ALTER TABLE` from
- * `ALTER COLUMN ... SET DATA TYPE` across lines returned rc=1 against the old
- * single-`grep` call, so it would have deployed without downtime mode.
- *
- * Splitting on `;` matters just as much as joining lines: without it, two
- * unrelated adjacent statements get bridged by `.*` and produce false
- * positives (e.g. `ALTER TABLE a ADD COLUMN b;` followed by anything
- * containing `TYPE`).
- */
-function normalizeMigrationSql(sql: string): string[] {
-  return sql.replace(/--.*$/gmu, "").replaceAll("\n", " ").split(";");
-}
+const detectionPipeline = extractDetectionPipeline(workflow);
 
-/** grep が行ごとに評価するのと同じく、正規化後の各文に対して照合する。 */
-function detectsBreaking(sql: string): boolean {
-  return normalizeMigrationSql(sql).some((statement) =>
-    breakingRegex.test(statement),
-  );
+/** 破壊的パターンを 1 つも含まない padding を、指定バイト数以上まで積む。 */
+function safePadding(minimumBytes: number): string {
+  const statements: string[] = [];
+  let bytes = 0;
+  let index = 0;
+  while (bytes < minimumBytes) {
+    const statement = `CREATE INDEX "idx_padding_${String(index)}" ON "padding_table" ("column_${String(index)}");\n`;
+    statements.push(statement);
+    bytes += statement.length; // ASCII のみなので文字数 = バイト数
+    index += 1;
+  }
+  return statements.join("");
 }
 
 const breakingFixtures: ReadonlyArray<{
@@ -395,15 +361,57 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
     expect(workflow).toContain("tr ';' '\\n'");
   });
 
+  describe("実 bash でパイプラインを流す（pipefail × SIGPIPE の fail-open 回帰）", () => {
+    test("出力は捨てるだけで、grep に早期 exit させない", () => {
+      // `-q` は最初のマッチで grep を終わらせる。上流の `tr` が閉じたパイプに
+      // 書くと SIGPIPE で死に、pipefail がそれをパイプライン全体の status に
+      // するので、`if` は**マッチしたのに**「不一致」を選ぶ。
+      expect(detectionPipeline).toContain("> /dev/null");
+      expect(detectionPipeline).not.toContain("-Eiq");
+    });
+
+    // 以下 3 本は組で意味を持つ。1 本目が「判定が実際に動いている」ことを、
+    // 3 本目が「サイズを増やしただけで発動しない」ことを示すので、2 本目の
+    // 緑が抽出失敗や常時 SAFE による空回りでないと言える。
+    test("自己検査: 小さい破壊的 migration は検出される", () => {
+      expect(
+        runWorkflowDetection(
+          'ALTER TABLE "users" DROP COLUMN "foo";\n',
+          detectionPipeline,
+        ),
+      ).toBe("BREAKING");
+    });
+
+    test("破壊的文の後ろにパイプバッファ超の出力が続いても検出される", () => {
+      // fail-open の条件はファイルサイズそのものではなく「最初のマッチ以降に
+      // 残る出力が 64 KiB を超えるか」。破壊的文を先頭に置くのが最悪形で、
+      // 実測ではこの形が rc=141 で素通りしていた。
+      const sql =
+        'ALTER TABLE "users" DROP COLUMN "foo";\n' +
+        safePadding(PIPE_BUFFER_BYTES * 4);
+      expect(runWorkflowDetection(sql, detectionPipeline)).toBe("BREAKING");
+    });
+
+    test("パイプバッファ超でも安全な migration は計画ダウンタイムに入れない", () => {
+      // 見逃しを潰すために「常に BREAKING」へ倒すのは修正ではない。
+      expect(
+        runWorkflowDetection(
+          safePadding(PIPE_BUFFER_BYTES * 4),
+          detectionPipeline,
+        ),
+      ).toBe("SAFE");
+    });
+  });
+
   for (const fixture of breakingFixtures) {
     test(`detects breaking: ${fixture.name}`, () => {
-      expect(detectsBreaking(fixture.sql)).toBe(true);
+      expect(detectsBreaking(fixture.sql, breakingRegex)).toBe(true);
     });
   }
 
   for (const fixture of safeFixtures) {
     test(`does not flag safe: ${fixture.name}`, () => {
-      expect(detectsBreaking(fixture.sql)).toBe(false);
+      expect(detectsBreaking(fixture.sql, breakingRegex)).toBe(false);
     });
   }
   test("運用者向けドキュメントの発動条件一覧が workflow と完全一致する", () => {
