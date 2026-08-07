@@ -185,6 +185,20 @@ ALTER TABLE "locations" DROP COLUMN "special_holidays";
 COMMIT;`;
     expect(handoverRefusals(guarded, NO_HANDOVERS)).toEqual([]);
 
+    // **schema まで書いた検査は正しいので通す。** 隣り合う組を全部拾わないと
+    // `public.locations` だけを見て `locations.special_holidays` を落とし、
+    // 正しい検査を持つ migration を止める（編集できないと恒久停止になる）。
+    const schemaQualified = `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.locations WHERE public.locations.special_holidays IS NOT NULL) THEN
+    RAISE EXCEPTION '未移送';
+  END IF;
+END $$;
+ALTER TABLE "locations" DROP COLUMN "special_holidays";
+COMMIT;`;
+    expect(handoverRefusals(schemaQualified, NO_HANDOVERS)).toEqual([]);
+
     // **表名と列名がばらばらに現れるだけでは足りない。** `locations` を引きつつ
     // `events.memo` だけを見る検査が `locations.memo` の DROP を免除していた。
     const looselyNamed = `BEGIN;
