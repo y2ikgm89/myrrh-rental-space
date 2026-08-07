@@ -17,7 +17,7 @@ export default function FaqLoading() {
           <Skeleton className="h-8 w-32" variant="text" />
           <Skeleton className="h-4 w-64" variant="text" />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
           <Skeleton className="h-11 w-32" />
           <Skeleton className="h-11 w-32" />
         </div>
