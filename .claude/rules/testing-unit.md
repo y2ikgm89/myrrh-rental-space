@@ -58,10 +58,11 @@ paths:
 型チェック（`bun run type-check` の tsc:test）のみ。命名は `*.test.ts`
 （`*.spec.ts` は Playwright 用で runner に拾われない）。
 
-## gate を触るときは 3 方向を fixture に固定する
+## gate を触るときに固定すること
 
 `expect(offenders).toEqual([])` 型の gate（`__tests__/unit/architecture/**` の大半）を
-**新規に書くとき・広げるとき・狭めるとき**は、次の 3 つを fixture で固定する。
+**新規に書くとき・広げるとき・狭めるとき**は、次の 3 方向を fixture で固定し、
+さらに **4. fixture と実走査が同じ経路を通ること**を満たす。
 1 つでも欠けると、直したつもりの gate が別方向に穴を開ける。
 
 1. **新しく検出したい形が落ちる**
@@ -82,6 +83,32 @@ paths:
 
 **免除（allowlist / early return / skip）を足すときは、免除の粒度を必ず書く。**
 「このファイルは対象外」と「この行は対象外」は別物で、前者はたいてい広すぎる。
+
+### 4. fixture が通る経路と、実走査が通る経路を同じにする
+
+上の 3 方向を書いても、**fixture と実走査が別の道を通っていれば何も保証されない**。
+同じ gate に対して 3 往復の指摘を受けた原因はすべてこれだった:
+
+| 分岐のさせ方                                        | 何が検証されなくなるか                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 部品を個別に fixture し、実走査は inline で合成する | **合成部分**（`selectTriggerTags` と `hasAccessibleName` を繋ぐ filter）。壊れても fixture は緑   |
+| 判定に既定引数を置き、fixture だけが引数を渡す      | **既定の配線**。`pageExists = existsSync` は実走査だけが通り、fixture は誰も通らない              |
+| ファイル単位の early return で免除する              | **免除されたファイルの残りの判定**。`_shared` 内を丸ごと外したら、そこの旧 alias 形も一緒に外れた |
+
+対処は 1 つ: **合成後の判定を 1 つの関数にまとめて export し、gate 本体も fixture も
+それだけを呼ぶ。** 外部依存（ファイルシステム等）は**必須引数**で受け、実走査の
+呼び出し側で明示的に渡す。既定値を置くと、その既定を通るのは実走査だけになる。
+
+```ts
+// 判定は純粋・必須引数。fixture も gate 本体もこれを呼ぶ。
+export function missingRoutePages(
+  entries: readonly Entry[],
+  pageExists: (pagePath: string) => boolean,
+) { … }
+
+// 実走査の境界でだけ依存を注入する。
+expect(missingRoutePages(sidebarEntries, existsSync)).toEqual([]);
+```
 
 ### 絞り込みを撤回してよい
 
