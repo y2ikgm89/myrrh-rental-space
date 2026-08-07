@@ -314,6 +314,93 @@ describe("schema.prisma の物理名", () => {
   });
 });
 
+/** 既存モデルの並び順列名。rename は計画ダウンタイム PR まで現状追認する。 */
+const ORDER_FIELD_GRANDFATHER: Readonly<
+  Record<"sortOrder" | "displayOrder" | "order", readonly string[]>
+> = {
+  sortOrder: [
+    "Location",
+    "SpaceCategory",
+    "InstagramPost",
+    "EventCategory",
+    "EventTicket",
+    "TransferAccount",
+  ],
+  displayOrder: ["AnnouncementBar", "TermsDocument"],
+  order: [
+    "PostCategory",
+    "Section",
+    "NavigationItem",
+    "SocialLink",
+    "FaqCategory",
+    "FaqItem",
+  ],
+};
+
+function orderFieldViolations(): string[] {
+  const violations: string[] = [];
+  const allowed = new Map<string, "sortOrder" | "displayOrder" | "order">();
+
+  for (const [field, modelNames] of Object.entries(ORDER_FIELD_GRANDFATHER)) {
+    for (const modelName of modelNames) {
+      allowed.set(modelName, field as "sortOrder" | "displayOrder" | "order");
+    }
+  }
+
+  for (const model of models) {
+    for (const column of model.columns) {
+      if (
+        column.field !== "sortOrder" &&
+        column.field !== "displayOrder" &&
+        column.field !== "order"
+      ) {
+        continue;
+      }
+      const expected = allowed.get(model.name);
+      if (expected === undefined) {
+        violations.push(
+          `${model.name}.${column.field}: 新規モデルの並び順列は sortOrder のみ（rename は別 PR）`,
+        );
+        continue;
+      }
+      if (expected !== column.field) {
+        violations.push(
+          `${model.name}.${column.field}: grandfather では ${expected} であるべき`,
+        );
+      }
+    }
+  }
+
+  const staleGrandfather: string[] = [];
+  for (const [field, modelNames] of Object.entries(ORDER_FIELD_GRANDFATHER) as [
+    "sortOrder" | "displayOrder" | "order",
+    readonly string[],
+  ][]) {
+    for (const modelName of modelNames) {
+      const model = models.find((m) => m.name === modelName);
+      if (
+        model === undefined ||
+        !model.columns.some((column) => column.field === field)
+      ) {
+        staleGrandfather.push(`${modelName}.${field}`);
+      }
+    }
+  }
+  violations.push(
+    ...staleGrandfather.map(
+      (entry) => `${entry}: grandfather に載っているが schema に存在しない`,
+    ),
+  );
+
+  return violations;
+}
+
+describe("schema.prisma の並び順列名", () => {
+  test("新規モデルは sortOrder のみ（既存 14 モデルは grandfather）", () => {
+    expect(orderFieldViolations()).toEqual([]);
+  });
+});
+
 describe("toSnakeCase", () => {
   test("camelCase を snake_case にする", () => {
     expect(toSnakeCase("ogpImageUrl")).toBe("ogp_image_url");

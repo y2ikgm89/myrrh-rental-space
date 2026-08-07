@@ -5,6 +5,7 @@
  */
 
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { formatJstDateOnly } from "@/shared/lib/date-format";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
@@ -95,8 +96,7 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
 
   // foundingDate: ISO 8601形式
   const foundingDate = settings?.establishedDate
-    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
-      undefined)
+    ? formatJstDateOnly(settings.establishedDate)
     : undefined;
 
   const openingHoursSpecification =

@@ -207,4 +207,65 @@ describe("String 列の宣言", () => {
 
     expect(stale).toEqual([]);
   });
+
+  test("列名から機械的に帰属できる String 列は値域宣言に載っている", () => {
+    const membersByDomain = new Map<string, Set<string>>();
+    for (const [domain, members] of Object.entries(VALUE_DOMAINS)) {
+      membersByDomain.set(domain, new Set(members));
+    }
+
+    const COLUMN_NAME_RULES: Readonly<
+      Record<
+        string,
+        {
+          readonly fieldPattern: RegExp;
+          readonly valueDomain: keyof typeof VALUE_DOMAINS;
+        }
+      >
+    > = {
+      email: {
+        fieldPattern: /(^|[a-z])[Ee]mail$/u,
+        valueDomain: "メールアドレス（RFC 5321 の 254）",
+      },
+      phone: {
+        fieldPattern: /(^|[a-z])(phoneNumber|phone|faxNumber|fax)$/u,
+        valueDomain: "電話番号",
+      },
+      postalCode: {
+        fieldPattern: /(^|[a-z])postalCode$/u,
+        valueDomain: "郵便番号",
+      },
+      prefecture: {
+        fieldPattern: /(^|[a-z])prefecture$/u,
+        valueDomain: "都道府県",
+      },
+      city: {
+        fieldPattern: /(^|[a-z])city$/u,
+        valueDomain: "市区町村",
+      },
+      streetAddress: {
+        fieldPattern: /(^|[a-z])streetAddress$/u,
+        valueDomain: "町名番地",
+      },
+      building: {
+        fieldPattern: /(^|[a-z])(buildingName|building)$/u,
+        valueDomain: "建物名",
+      },
+    };
+
+    const failures: string[] = [];
+    for (const column of COLUMNS) {
+      const columnKey = key(column);
+      for (const rule of Object.values(COLUMN_NAME_RULES)) {
+        if (!rule.fieldPattern.test(column.field)) continue;
+        const domainMembers = membersByDomain.get(rule.valueDomain);
+        if (domainMembers?.has(columnKey)) continue;
+        failures.push(
+          `${columnKey}: 列名 ${column.field} は「${rule.valueDomain}」値域に載せる`,
+        );
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
 });

@@ -390,7 +390,7 @@ describe("architecture boundaries", () => {
     // 壊す。複数モデル横断の論理種別等の共有 SSoT は shared/domain 側に置く。
     const offenders = collectNonCommentOffenders(
       collectSourceFiles(join(SRC_ROOT, "shared")),
-      /from\s+["']@\/(?:admin|public)(?:\/|["'])/u,
+      /(?:from\s+["']@\/(?:admin|public)(?:\/|["'])|import\s*\(\s*["']@\/(?:admin|public)\/)/u,
     );
 
     expect(offenders).toEqual([]);
@@ -848,10 +848,13 @@ describe("architecture boundaries", () => {
       join(PUBLIC_APP_ROOT, "_shared", "components", "sections"),
       join(PUBLIC_APP_ROOT, "_shared", "components", "page-hero"),
     ];
+    const missingRoots = sectionRoots
+      .filter((dir) => !existsSync(dir))
+      .map((dir) => relative(ROOT, dir));
+    expect(missingRoots).toEqual([]);
+
     const files = [
-      ...sectionRoots
-        .filter((dir) => existsSync(dir))
-        .flatMap((dir) => collectSourceFiles(dir)),
+      ...sectionRoots.flatMap((dir) => collectSourceFiles(dir)),
       ...topLevelPublicComponentFiles,
     ];
     const px4 = collectNonCommentOffenders(files, /\bpx-4\b/u);
@@ -2619,6 +2622,7 @@ describe("architecture boundaries", () => {
 
     const findMissingTimeZone = (source: string): number[] => {
       const offenders: number[] = [];
+      CALL_PATTERN.lastIndex = 0;
       let match: RegExpExecArray | null;
       while ((match = CALL_PATTERN.exec(source)) !== null) {
         const bodyStart = match.index + match[0].length;
@@ -2630,17 +2634,21 @@ describe("architecture boundaries", () => {
           else if (c === ")") depth--;
           pos++;
         }
-        const body = source.slice(bodyStart, pos - 1);
-        if (!OPTIONS_PATTERN.test(body)) continue;
-        if (TIMEZONE_PATTERN.test(body)) continue;
-        const lineNum = source.slice(0, match.index).split(/\r?\n/u).length;
-        offenders.push(lineNum);
+        const body = source.slice(bodyStart, pos - 1).trim();
+        // 引数なし / locale のみ（数値通貨整形等）は options 検査対象外。
+        if (body.length === 0 || !body.includes(",")) continue;
+        if (!OPTIONS_PATTERN.test(body) || !TIMEZONE_PATTERN.test(body)) {
+          const lineNum = source.slice(0, match.index).split(/\r?\n/u).length;
+          offenders.push(lineNum);
+        }
       }
       return offenders;
     };
 
+    const DATE_FORMAT_SSOT = join(SRC_ROOT, "shared", "lib", "date-format.ts");
     const offenders: string[] = [];
     for (const file of collectSourceFiles(SRC_ROOT)) {
+      if (file === DATE_FORMAT_SSOT) continue;
       const source = readFileSync(file, "utf8");
       for (const line of findMissingTimeZone(source)) {
         offenders.push(`${relative(ROOT, file)}:${line}`);
@@ -2663,7 +2671,7 @@ describe("architecture boundaries", () => {
     );
     const offenders = collectNonCommentOffenders(
       sourceFiles,
-      /\.toISOString\(\)\.slice\(\s*0\s*,\s*10\s*\)|\.toISOString\(\)\.substring\(\s*0\s*,\s*10\s*\)/u,
+      /\.toISOString\(\)\.(?:slice\(\s*0\s*,\s*10\s*\)|substring\(\s*0\s*,\s*10\s*\)|split\(\s*["']T["']\s*\)\[\s*0\s*\])/u,
     );
 
     expect(offenders).toEqual([]);
@@ -2861,19 +2869,14 @@ describe("architecture boundaries", () => {
       expect(files.length).toBeGreaterThan(0);
 
       for (const file of files) {
-        const content = readFileSync(join(ROOT, file), "utf8");
-        // JSX 内で {event.meetingUrl} や {meetingUrl} を直接 render している行を検出
-        // マイページ (mypage/events/[registrationId]) は許可 (登録者限定なので render OK)
-        const forbiddenPatterns = [
-          /\{event\.meetingUrl\}/,
-          /\{meetingUrl\}/, // destructure された変数の直接 render
-        ];
-        for (const pattern of forbiddenPatterns) {
-          expect(
-            content,
-            `${file}: 公開ページで meetingUrl を JSX render するのは禁止 (登録完了者のみ開示)`,
-          ).not.toMatch(pattern);
-        }
+        const offenders = collectNonCommentOffenders(
+          [join(ROOT, file)],
+          /\bmeetingUrl\b/u,
+        );
+        expect(
+          offenders,
+          `${file}: 公開ページで meetingUrl を JSX render するのは禁止 (登録完了者のみ開示)`,
+        ).toEqual([]);
       }
     });
   });
@@ -3071,12 +3074,13 @@ describe("architecture boundaries", () => {
 
       // sanity: allowlist file 自体が対象 pattern を含むこと（refactor で表現が
       // 変わり gate が silently vacuous になるのを防ぐ）。
-      const allowlistSource = [...ALLOWLIST]
-        .map((file) => readFileSync(file, "utf8"))
-        .join("\n");
-      expect(PATTERNS.some((pattern) => pattern.test(allowlistSource))).toBe(
-        true,
-      );
+      for (const file of ALLOWLIST) {
+        const source = readFileSync(file, "utf8");
+        expect(
+          PATTERNS.some((pattern) => pattern.test(source)),
+          `${relative(ROOT, file)} は allowlist だが version 述語/increment pattern が検出されない（gate が vacuous）`,
+        ).toBe(true);
+      }
 
       const offenders = collectSourceFiles(RESERVATIONS_DOMAIN_ROOT)
         .filter((file) => !ALLOWLIST.has(file))

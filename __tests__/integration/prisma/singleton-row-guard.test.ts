@@ -73,55 +73,43 @@ describe("singleton 行モデルの DB ガード", () => {
     expect(singletonModels.length).toBeGreaterThanOrEqual(20);
   });
 
-  test("全 singleton テーブルに id='singleton' の CHECK 制約がある", async () => {
-    const missing: string[] = [];
+  test("全 singleton テーブルで 2 行目 INSERT が拒否される", async () => {
+    const failures: string[] = [];
+
     for (const { model, table } of singletonModels) {
-      const result = await client.query<{ readonly def: string }>(
-        `SELECT pg_get_constraintdef(con.oid) AS def
-           FROM pg_constraint con
-           JOIN pg_class rel ON rel.oid = con.conrelid
-           JOIN pg_namespace ns ON ns.oid = rel.relnamespace
-          WHERE con.contype = 'c'
-            AND ns.nspname = 'public'
-            AND rel.relname = $1
-            AND pg_get_constraintdef(con.oid) ILIKE $2`,
-        [table, `%'${SINGLETON_ID}'%`],
-      );
-      if (result.rowCount === 0) missing.push(`${model} (${table})`);
+      await client.query("BEGIN");
+      let rejection: string | null = null;
+      try {
+        await client.query(
+          `INSERT INTO "${table}" ("id", created_at, updated_at)
+           VALUES ($1, now(), now())`,
+          ["not-singleton"],
+        );
+      } catch (error) {
+        // `expect(promise).rejects` は実 DB 統合テストで bun 1.3.14 がハングするため
+        // try/catch で受ける（プロジェクト既知の罠）。
+        rejection = error instanceof Error ? error.message : String(error);
+      } finally {
+        await client.query("ROLLBACK");
+      }
+
+      if (rejection === null) {
+        failures.push(`${model} (${table}): 2 行目 INSERT が通った`);
+        continue;
+      }
+      if (!rejection.includes(`${table}_singleton_check`)) {
+        failures.push(
+          `${model} (${table}): 拒否理由が singleton CHECK ではない — ${rejection}`,
+        );
+      }
     }
 
     expect({
-      missing,
+      failures,
       hint:
-        missing.length > 0
+        failures.length > 0
           ? `新しい singleton モデルには ALTER TABLE "<table>" ADD CONSTRAINT "<table>_singleton_check" CHECK ("id" = 'singleton'); を追加する migration が必要です`
           : "",
-    }).toEqual({ missing: [], hint: "" });
-  });
-
-  test("2 行目の INSERT が実際に拒否される", async () => {
-    // 代表として 1 テーブルで実 INSERT を試す。制約定義の存在確認だけだと
-    // 「制約はあるが述語が間違っていて素通り」を検出できない。
-    const target = singletonModels.find((m) => m.table === "settings_system");
-    expect(target).toBeDefined();
-
-    await client.query("BEGIN");
-    let rejection: string | null = null;
-    try {
-      await client.query(
-        `INSERT INTO "settings_system" ("id", created_at, updated_at)
-         VALUES ($1, now(), now())`,
-        ["not-singleton"],
-      );
-    } catch (error) {
-      // `expect(promise).rejects` は実 DB 統合テストで bun 1.3.14 がハングするため
-      // try/catch で受ける（プロジェクト既知の罠）。
-      rejection = error instanceof Error ? error.message : String(error);
-    } finally {
-      // 制約違反で abort 済みでも ROLLBACK は安全（テスト DB を汚さない）
-      await client.query("ROLLBACK");
-    }
-
-    expect(rejection).toMatch(/settings_system_singleton_check/u);
+    }).toEqual({ failures: [], hint: "" });
   });
 });
