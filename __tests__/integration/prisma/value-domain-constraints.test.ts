@@ -169,6 +169,82 @@ function reservationInsert(overrides: {
     )`;
 }
 
+/**
+ * SQL が**通る**ことを確かめる。
+ *
+ * 拒否側だけを確かめると「何でも落とす制約」でもテストが緑になるので、
+ * 通ってよい値が通ることまで見て初めて範囲が確定する。
+ */
+async function expectAccepted(sql: string): Promise<void> {
+  await client.query("BEGIN");
+  let message = "";
+  try {
+    await client.query(sql);
+  } catch (error) {
+    message = error instanceof Error ? error.message : String(error);
+  } finally {
+    await client.query("ROLLBACK");
+  }
+  expect(message).toBe("");
+}
+
+/**
+ * 料金プランの必須列を全部埋めたうえで、終端時刻だけを差し替える。
+ *
+ * **拒否の確認には親行が要らない。** CHECK は FK より先に評価されるので、
+ * 実在しない `space_id` でも書式違反ならそこで落ちる（他の probe と同じ理由）。
+ */
+function ratePlanInsert(overrides: { readonly endTime: string }): string {
+  return `
+    INSERT INTO "space_rate_plans" (
+      "id",space_id,"name",hourly_price,days_of_week,holiday_mode,
+      start_time,end_time,created_at,updated_at
+    ) VALUES (
+      gen_random_uuid(), '${ABSENT_UUID_A}', 'probe', 0,
+      '{}'::"day_of_week"[], 'ANY', '09:00', ${overrides.endTime}, now(), now()
+    )`;
+}
+
+/**
+ * 通る側の確認は**親行が要る**（CHECK を抜けた先で FK が待っている）。
+ *
+ * CI の test DB は未 seed なので既存行を拾えない。拠点 → スペース → 料金プランを
+ * 1 文の CTE で作る（`expectAccepted` が丸ごと巻き戻す）。拠点は
+ * `locations_active_sort_order_key`（`is_active` の partial unique）を避けるため
+ * 非公開で作る。
+ */
+function ratePlanInsertWithParents(overrides: {
+  readonly startTime: string;
+  readonly endTime: string;
+}): string {
+  return `
+    WITH loc AS (
+      INSERT INTO "locations" (
+        "id","slug","name","address",image_url,sort_order,is_active,updated_at
+      ) VALUES (
+        gen_random_uuid(), 'probe-' || gen_random_uuid()::text, 'probe',
+        'probe', 'https://example.test/probe.png', 0, false, now()
+      ) RETURNING "id"
+    ), sp AS (
+      INSERT INTO "spaces" (
+        "id","slug","name",description_json,description_html,description_plain_text,
+        "capacity",hourly_price,main_image_url,updated_at,location_id
+      ) SELECT
+        gen_random_uuid(), 'probe-' || gen_random_uuid()::text, 'probe',
+        '{}'::jsonb, '<p>probe</p>', 'probe', 1, 0,
+        'https://example.test/probe.png', now(), loc."id"
+      FROM loc RETURNING "id"
+    )
+    INSERT INTO "space_rate_plans" (
+      "id",space_id,"name",hourly_price,days_of_week,holiday_mode,
+      start_time,end_time,created_at,updated_at
+    ) SELECT
+      gen_random_uuid(), sp."id", 'probe', 0,
+      '{}'::"day_of_week"[], 'ANY', ${overrides.startTime}, ${overrides.endTime},
+      now(), now()
+    FROM sp`;
+}
+
 /** スペースの必須列を全部埋めたうえで、指定の列だけを違反値にする。 */
 function spaceInsert(overrides: {
   readonly capacity?: string;
@@ -355,5 +431,87 @@ describe("値域 CHECK 制約", () => {
          0, 10, '{}'::jsonb, now()
        )`,
     );
+  });
+
+  /**
+   * 料金プランの終端時刻は半開区間のセンチネル `24:00` だけを許す。
+   *
+   * `24:01`〜`24:59` は「時刻として存在しないのに、辞書順では `24:00` より後ろ」
+   * という最悪の値で、`start <= t AND t < end` の判定を素通りしたうえで
+   * どの実時刻とも噛み合わない。書式 CHECK が `24` を特別扱いする以上、
+   * **`24:00` だけ**を通すことは実際に入れて確かめる（正規表現を読むだけでは
+   * `24:[0-5][0-9]` と `24:00` を取り違えても気づけない）。
+   */
+  test("料金プランの終端時刻は 24:00 のみで、24:01 以降は入らない", async () => {
+    await expectRejectedBy(
+      "space_rate_plans_end_time_format_check",
+      ratePlanInsert({ endTime: "'24:01'" }),
+    );
+    await expectRejectedBy(
+      "space_rate_plans_end_time_format_check",
+      ratePlanInsert({ endTime: "'24:59'" }),
+    );
+    await expectRejectedBy(
+      "space_rate_plans_end_time_format_check",
+      ratePlanInsert({ endTime: "'25:00'" }),
+    );
+  });
+
+  test("料金プランの終端時刻 24:00 と通常の時刻は通る（gate が広すぎないこと）", async () => {
+    // 拒否だけを確かめると「全部落とす CHECK」でもテストが通る。
+    // **通ってよい値が通ること**まで見て初めて範囲が確定する。
+    // `start_time` は組ごとに変える。`00:00` は書式としては正当だが
+    // `09:00` とは組めない（順序 CHECK が別に効く）ので、開始を NULL にして
+    // **書式の可否だけ**を切り出す。
+    const accepted: readonly { startTime: string; endTime: string }[] = [
+      { startTime: "'09:00'", endTime: "'24:00'" },
+      { startTime: "'09:00'", endTime: "'23:59'" },
+      { startTime: "NULL", endTime: "'00:00'" },
+      { startTime: "'09:00'", endTime: "NULL" },
+    ];
+    for (const row of accepted) {
+      await expectAccepted(ratePlanInsertWithParents(row));
+    }
+  });
+
+  /**
+   * キャンセル実行者の種別は PG enum（`cancelled_by`）。
+   *
+   * VARCHAR の頃は綴り違いが黙って保存され、集計や表示の分岐から漏れた。
+   * 型で拒否されることを 3 表すべてで確かめる — 列を enum へ寄せる migration は
+   * 表ごとに `ALTER COLUMN ... TYPE` を並べるので、**1 表だけ書き漏らしても
+   * schema.prisma 側の型は揃って見える**。
+   */
+  test("cancelled_by_type に enum 外の値を入れられない（3 表とも）", async () => {
+    await expectRejectedBy(
+      "cancelled_by",
+      `UPDATE "reservations" SET cancelled_by_type = 'CUSTOMER'
+       WHERE "id" = '${ABSENT_UUID_A}'`,
+    );
+    await expectRejectedBy(
+      "cancelled_by",
+      `UPDATE "reservation_series" SET cancelled_by_type = 'customer_mypage'
+       WHERE "id" = '${ABSENT_UUID_A}'`,
+    );
+    await expectRejectedBy(
+      "cancelled_by",
+      `UPDATE "event_registrations" SET cancelled_by_type = 'STAFF'
+       WHERE "id" = '${ABSENT_UUID_A}'`,
+    );
+  });
+
+  test("cancelled_by の 4 値はすべて受け付ける（gate が広すぎないこと）", async () => {
+    for (const value of [
+      "CUSTOMER_MYPAGE",
+      "CUSTOMER_TOKEN",
+      "ADMIN",
+      "SYSTEM",
+    ]) {
+      // 0 行 UPDATE でも列の型解決は起きるので、enum に無い値なら失敗する。
+      await expectAccepted(
+        `UPDATE "reservations" SET cancelled_by_type = '${value}'
+         WHERE "id" = '${ABSENT_UUID_A}'`,
+      );
+    }
   });
 });
