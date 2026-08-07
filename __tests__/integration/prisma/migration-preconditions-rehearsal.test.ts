@@ -262,11 +262,20 @@ COMMIT;`,
       expect(result).toEqual({ code: 0, unchanged: true });
     });
 
-    test("列を消して同名で作り直す", async () => {
+    test("列を消して同名で作り直す（検査を伴えば通る）", async () => {
       // Prisma が型変更で出す形。分類実装は合成列が実列と衝突して壊れていた。
+      //
+      // 同名で作り直しても**旧い値は消える**ので、破壊として扱う。著者が
+      // `DO $$ … RAISE EXCEPTION … $$` を置いていれば、その判断を採って通す。
       await seed(`('a','x',1,'n')`);
       const result = await check(
         `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "note" IS NOT NULL AND "note" <> 'n') THEN
+    RAISE EXCEPTION '移送していない note がある';
+  END IF;
+END $$;
 ALTER TABLE "${CHILD}" DROP COLUMN "note", ADD COLUMN "note" integer NOT NULL DEFAULT 0;
 ALTER TABLE "${CHILD}" ADD CONSTRAINT "${CHILD}_note_check" CHECK ("note" >= 0);
 COMMIT;`,
@@ -302,6 +311,47 @@ SAVEPOINT s1;`,
         `CREATE INDEX CONCURRENTLY "${CHILD}_code_idx" ON "${CHILD}"("code");`,
       );
       expect(result).toEqual({ code: 1, unchanged: true });
+    });
+  });
+
+  describe("破壊は、検査も引き継ぎ登録も無ければ止める", () => {
+    // **リハーサルだけでは足りないことの証明。** 下の SQL は PostgreSQL 的には
+    // 何のエラーも起こさない——だから旧実装は 0 を返して通していた。消えるのは
+    // データだけで、それはエラーではない（CX-3）。
+    test("検査を持たない DROP COLUMN は 1", async () => {
+      await seed(`('a','x',1,'n')`);
+      const result = await check(
+        `BEGIN;
+ALTER TABLE "${CHILD}" DROP COLUMN "note";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 1, unchanged: true });
+    });
+
+    test("検査を持たない TRUNCATE は 1", async () => {
+      await seed(`('a','x',1,'n')`);
+      const result = await check(
+        `BEGIN;
+TRUNCATE TABLE "${CHILD}";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 1, unchanged: true });
+    });
+
+    test("検査を前に置けば通る", async () => {
+      await seed(`('a','x',1,'n')`);
+      const result = await check(
+        `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "note" IS NULL) THEN
+    RAISE EXCEPTION '空の note がある';
+  END IF;
+END $$;
+ALTER TABLE "${CHILD}" DROP COLUMN "note";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 0, unchanged: true });
     });
   });
 });

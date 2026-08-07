@@ -1,5 +1,5 @@
 /**
- * 破壊的な文を持つ migration は、**実行される**前提検査を先に持つ gate。
+ * 破壊的な文を持つ migration は、**実行される**前提検査を持つ gate。
  *
  * ## なぜ要るか
  *
@@ -15,23 +15,26 @@
  *
  * ## 何を強制するか
  *
- * 破壊的文より**前**に、`DO $$ … RAISE EXCEPTION … $$` の実行される検査を置く。
- * 同じ `BEGIN … COMMIT` の中なので、raise すれば何も落ちない。リハーサルが
- * この検査ごと流すので、**ダウンタイム窓が開く前**に止まり `_prisma_migrations` に
- * 失敗が残らない。前例は「重なった枠が残っていないことを assert するだけ」の
- * migration で、そのヘッダ自身が結論を書いている——人が読んで手で流す前提の検査は、
- * 流し忘れた瞬間に「検査したつもり」になる。**実行される形に置き換える。**
+ * 破壊的文は、次の**どちらか**を持つ。片方も無いものはここに出る。
+ *
+ * 1. migration 内の `DO $$ … RAISE EXCEPTION … $$`。破壊的文より**前**に置く。
+ *    同じ `BEGIN … COMMIT` の中なので、raise すれば何も落ちない。リハーサルが
+ *    この検査ごと流すので、**ダウンタイム窓が開く前**に止まり `_prisma_migrations`
+ *    に失敗が残らない
+ * 2. `scripts/migration-preconditions.ts` の `HANDOVERS` 登録。commit 済みの
+ *    migration は編集できない（絶対規約 #7）ので、1 を後から足せないぶんはここへ書く。
+ *    デプロイ経路が実際にその SQL を流し、0 でなければ適用しない
  *
  * 順序を見るのは、後ろに置いた検査が役に立たないから。消える列を参照する検査は
  * DROP の後では書けない。
  *
- * ## 検査は著者にしか書けない
+ * ## なぜ「値がまだあるか」で代替しないのか
  *
- * 「データの移送先が埋まっている」は authoring 時にしか存在しない知識で、
- * `migration-preconditions.ts` 側の汎用機構では代替できない。汎用の
- * 「この列にまだ値があるか」は **「まだ移していない」と「移し終えて元を消して
- * いないだけ」を区別できず**、正当なデプロイを止める。だから gate は
- * 「検査があること」だけを強制し、中身は migration の著者が書く。
+ * expand/contract では、値を別の表へ**移し終えた後も元の列は埋まったまま**で、
+ * そこを DROP するのが contract そのものになる。汎用の「値があるか」で止めると、
+ * 正しく移送を終えたデプロイを恒久的に止める。本当の前提は「移送先に入っているか」で、
+ * それは著者にしか書けない。だから 1（著者が書く）と 2（著者が書けないぶんを
+ * 登録する）に分ける。
  *
  * ## この gate が見ないもの
  *
@@ -39,89 +42,19 @@
  *   「narrowing かどうか」は PostgreSQL の意味論の写経になり収束しない
  *   （`migration-preconditions.ts` の docstring 参照）
  * - `DO` ブロック内の `EXECUTE '…'` で組み立てた動的な破壊
- * - 検査の**中身**が正しいか。空振りする検査を書けば通る
- *
- * ## 既に書かれてしまったものをどう扱うか
- *
- * commit 済みの `prisma/migrations/*.sql` は編集できない（絶対規約 #7）。名前や
- * 日付で allowlist に載せることも `gates-do-not-pin-migrations.test.ts` が禁じている
- * （履歴は baseline へ畳まれるので、名前は畳んだ瞬間に嘘になる）。そこで
- * **件数だけを固定**する ratchet にする。新しく書けば増えて落ち、baseline へ
- * 畳めば減って落ちる。
+ * - 検査や `countUnhandedOver` の**中身**が正しいか。空振りする SQL を書けば通る。
+ *   `HANDOVERS` のぶんは実 DB で流して答えが返ることを
+ *   `__tests__/integration/prisma/migration-handovers.test.ts` が確かめる
  */
 
 import { describe, expect, test } from "bun:test";
 import {
+  destructionTargets,
+  destructionsWithoutHandover,
+  HANDOVERS,
   readMigrations,
-  splitStatements,
+  unassertedDestructiveStatements,
 } from "../../../scripts/migration-preconditions";
-
-/**
- * 実行される検査を持たないまま破壊的文を含む migration の本数。
- *
- * 減らす方向にしか動かせない。内訳は「列の移送をヘッダの散文で指示していた 1 本」。
- */
-const GRANDFATHERED_UNASSERTED_DESTRUCTIVE = 1;
-
-/**
- * 文の**先頭の動詞**で破壊を判定する。
- *
- * 部分一致にすると `CREATE TRIGGER … BEFORE TRUNCATE ON t` が破壊に見える。
- * 実測では、TRUNCATE を禁じる trigger を定義した migration 1 本が素朴な
- * `TRUNCATE` grep に 6 回当たり、**全部が防御の定義**だった。
- */
-export function isDestructiveStatement(statement: string): boolean {
-  const sql = statement.replace(/\s+/gu, " ").trim();
-  if (/^TRUNCATE\b/iu.test(sql)) return true;
-  if (/^DROP\s+TABLE\b/iu.test(sql)) return true;
-  // `ALTER TABLE` は 1 文に複数アクションを持てるので、先頭を固定したうえで
-  // 文中の DROP COLUMN を見る。DROP CONSTRAINT は行を消さないので対象外。
-  if (/^ALTER\s+TABLE\b[\s\S]*\bDROP\s+COLUMN\b/iu.test(sql)) return true;
-  return false;
-}
-
-/**
- * **実行される**検査か。
- *
- * `DO $$ … RAISE EXCEPTION … $$` だけを数える。`CREATE FUNCTION … RAISE EXCEPTION`
- * は関数を**定義する**だけで、その migration の中では 1 度も評価されない。
- * 区別しないと、trigger 関数を定義したついでに列を落とす migration が
- * 「検査済み」に見える。
- */
-export function isExecutedAssertion(statement: string): boolean {
-  const sql = statement.replace(/\s+/gu, " ").trim();
-  return /^DO\b/iu.test(sql) && /\bRAISE\s+EXCEPTION\b/iu.test(sql);
-}
-
-/**
- * 実行される検査より前に現れた破壊的文を返す。
- *
- * gate 本体も fixture も**この関数だけ**を呼ぶ。部品を個別に fixture して実走査で
- * 合成すると、合成部分（順序の判定）が誰にも検証されない
- * （`.claude/rules/testing-unit.md` の 4 点目）。
- */
-export function unassertedDestructiveStatements(sql: string): string[] {
-  const offenders: string[] = [];
-  let asserted = false;
-
-  for (const statement of splitStatements(sql)) {
-    if (isExecutedAssertion(statement)) {
-      asserted = true;
-      continue;
-    }
-    if (isDestructiveStatement(statement) && !asserted) {
-      offenders.push(statement.replace(/\s+/gu, " ").trim());
-    }
-  }
-
-  return offenders;
-}
-
-function migrationsWithUnassertedDestruction(): string[] {
-  return readMigrations()
-    .filter(({ sql }) => unassertedDestructiveStatements(sql).length > 0)
-    .map(({ name }) => `prisma/migrations/${name}/migration.sql`);
-}
 
 describe("破壊的 migration は実行される前提検査を伴う", () => {
   test("走査対象が実在する（gate が空振りしていない）", () => {
@@ -191,14 +124,95 @@ ALTER TABLE "locations" DROP COLUMN "special_holidays";`;
     );
   });
 
-  test("実行される検査を伴わない破壊的 migration は増えていない", () => {
-    const offenders = migrationsWithUnassertedDestruction();
+  test("消える対象を取り違えない（fixture）", () => {
+    expect(
+      destructionTargets(
+        `ALTER TABLE "locations" DROP COLUMN "special_holidays"`,
+      ),
+    ).toEqual(["locations.special_holidays"]);
+
+    // 1 文に複数アクション。DROP CONSTRAINT は対象ではない。
+    expect(
+      destructionTargets(
+        `ALTER TABLE "locations" DROP CONSTRAINT "c", DROP COLUMN IF EXISTS "a", DROP COLUMN "b"`,
+      ),
+    ).toEqual(["locations.a", "locations.b"]);
+
+    expect(destructionTargets(`TRUNCATE TABLE "audit_logs"`)).toEqual([
+      "audit_logs",
+    ]);
+    expect(
+      destructionTargets(`DROP TABLE IF EXISTS "legacy_holidays"`),
+    ).toEqual(["legacy_holidays"]);
+  });
+
+  test("引き継ぎ先の無い破壊を検出する（fixture）", () => {
+    const migrations = [
+      {
+        // timestamp 形の名前は使わない（`gates-do-not-pin-migrations.test.ts` 参照）。
+        name: "handover_fixture",
+        sql: `ALTER TABLE "locations" DROP COLUMN "memo";`,
+      },
+    ];
+
+    // 登録が無ければ落ちる。
+    expect(destructionsWithoutHandover(migrations, [])).toEqual([
+      { migration: "handover_fixture", target: "locations.memo" },
+    ]);
+
+    // 登録があれば通る。
+    expect(
+      destructionsWithoutHandover(migrations, [
+        {
+          target: "locations.memo",
+          what: "メモが消える",
+          countUnhandedOver: "SELECT 0 AS n",
+          remedy: "bun scripts/x.ts",
+        },
+      ]),
+    ).toEqual([]);
+
+    // 別の対象の登録では通らない（target 一致を見ている）。
+    expect(
+      destructionsWithoutHandover(migrations, [
+        {
+          target: "locations.other",
+          what: "別物",
+          countUnhandedOver: "SELECT 0 AS n",
+          remedy: "bun scripts/x.ts",
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+
+  test("すべての破壊に、実行される前提検査がある", () => {
+    const offenders = destructionsWithoutHandover(readMigrations());
 
     expect(
-      offenders.length,
-      offenders.length > GRANDFATHERED_UNASSERTED_DESTRUCTIVE
-        ? `破壊的文の前に DO $$ … RAISE EXCEPTION … $$ を置くこと:\n  ${offenders.join("\n  ")}`
-        : `baseline へ畳んだなら ${GRANDFATHERED_UNASSERTED_DESTRUCTIVE} を下げる:\n  ${offenders.join("\n  ")}`,
-    ).toBe(GRANDFATHERED_UNASSERTED_DESTRUCTIVE);
+      offenders.map(({ migration, target }) => `${migration}: ${target}`),
+    ).toEqual([]);
+  });
+
+  test("HANDOVERS は実在する対象と手順だけを持つ", () => {
+    // 登録が陳腐化して「もう誰も落とさない対象」を守り続けていないこと。
+    const destroyed = new Set(
+      readMigrations().flatMap(({ sql }) =>
+        unassertedDestructiveStatements(sql).flatMap((statement) =>
+          destructionTargets(statement),
+        ),
+      ),
+    );
+
+    expect(
+      HANDOVERS.map(({ target }) => target).filter(
+        (target) => !destroyed.has(target),
+      ),
+    ).toEqual([]);
+
+    for (const entry of HANDOVERS) {
+      // 手順は「実行できるコマンド」で書く。散文に戻さない。
+      expect(entry.remedy).toMatch(/\b(?:bun|bunx|psql)\b/u);
+      expect(entry.countUnhandedOver).toMatch(/\bAS n\b/u);
+    }
   });
 });

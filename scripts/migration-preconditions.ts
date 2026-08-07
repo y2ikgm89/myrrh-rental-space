@@ -282,6 +282,56 @@ export function readMigrations(dir: string = MIGRATIONS_DIR): Migration[] {
     });
 }
 
+// ---------------------------------------------------------------------------
+// 破壊的な文
+// ---------------------------------------------------------------------------
+
+/**
+ * 行を失わせる文か。
+ *
+ * 文の**先頭の動詞**で判定する。部分一致にすると
+ * `CREATE TRIGGER … BEFORE TRUNCATE ON t` が破壊に見える（実測: TRUNCATE を禁じる
+ * trigger を定義した migration 1 本が素朴な grep に 6 回当たり、全部が防御の定義だった）。
+ */
+export function isDestructiveStatement(statement: string): boolean {
+  const sql = statement.replace(/\s+/gu, " ").trim();
+  if (/^TRUNCATE\b/iu.test(sql)) return true;
+  if (/^DROP\s+TABLE\b/iu.test(sql)) return true;
+  // `ALTER TABLE` は 1 文に複数アクションを持てるので、先頭を固定したうえで
+  // 文中の DROP COLUMN を見る。DROP CONSTRAINT は行を消さないので対象外。
+  if (/^ALTER\s+TABLE\b[\s\S]*\bDROP\s+COLUMN\b/iu.test(sql)) return true;
+  return false;
+}
+
+/**
+ * **実行される**検査か。
+ *
+ * `DO $$ … RAISE EXCEPTION … $$` だけを数える。`CREATE FUNCTION … RAISE EXCEPTION`
+ * は関数を**定義する**だけで、その migration の中では 1 度も評価されない。
+ */
+export function isExecutedAssertion(statement: string): boolean {
+  const sql = statement.replace(/\s+/gu, " ").trim();
+  return /^DO\b/iu.test(sql) && /\bRAISE\s+EXCEPTION\b/iu.test(sql);
+}
+
+/** 実行される検査より前に現れた破壊的文。 */
+export function unassertedDestructiveStatements(sql: string): string[] {
+  const offenders: string[] = [];
+  let asserted = false;
+
+  for (const statement of splitStatements(sql)) {
+    if (isExecutedAssertion(statement)) {
+      asserted = true;
+      continue;
+    }
+    if (isDestructiveStatement(statement) && !asserted) {
+      offenders.push(statement.replace(/\s+/gu, " ").trim());
+    }
+  }
+
+  return offenders;
+}
+
 export interface PendingStatement {
   readonly migration: string;
   readonly sql: string;
@@ -348,6 +398,31 @@ async function countPublicTables(prisma: PrismaClient): Promise<number> {
        WHERE n.nspname = 'public' AND c.relkind = 'r'`,
   );
   return Number(row?.tables ?? 0);
+}
+
+/** いま存在する表（`t`）と列（`t.c`）。これから作られるものを数えないために要る。 */
+async function readExistingTargets(
+  prisma: PrismaClient,
+): Promise<ReadonlySet<string>> {
+  const rows = await prisma.$queryRawUnsafe<
+    { table_name: string; column_name: string | null }[]
+  >(
+    `SELECT c.relname AS table_name, a.attname AS column_name
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       LEFT JOIN pg_attribute a
+         ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+       WHERE n.nspname = 'public' AND c.relkind = 'r'`,
+  );
+
+  const targets = new Set<string>();
+  for (const row of rows) {
+    targets.add(row.table_name);
+    if (row.column_name !== null) {
+      targets.add(`${row.table_name}.${row.column_name}`);
+    }
+  }
+  return targets;
 }
 
 async function readFingerprint(prisma: PrismaClient): Promise<Fingerprint> {
@@ -599,6 +674,186 @@ function parseMigrationsDir(argv: readonly string[]): string {
   return at === -1 ? MIGRATIONS_DIR : (argv[at + 1] ?? MIGRATIONS_DIR);
 }
 
+/**
+ * 破壊の**引き継ぎ先**。
+ *
+ * ## なぜ登録制なのか
+ *
+ * 破壊的文が安全かどうかは「その列にまだ値があるか」では決まらない。
+ * expand/contract では、値を別の表へ**移し終えた後も元の列は埋まったまま**で、
+ * そこを DROP するのが contract そのものだからだ（`special_holidays` →
+ * `blocked_dates` がまさにそれで、移送スクリプトは元列を空にしない）。
+ * 汎用の「値があるか」を使うと、正しく移送を終えたデプロイを恒久的に止める。
+ *
+ * 本当の前提は「**移送先に入っているか**」で、これは migration の著者にしか
+ * 書けない。著者が `DO $$ … RAISE EXCEPTION … $$` を migration 内に置いた場合は
+ * それが答えになる（リハーサルがその検査ごと流す）。置けなかった場合——
+ * commit 済みの migration は編集できない（絶対規約 #7）——ぶんを、ここに書く。
+ *
+ * ## 何が起きたか
+ *
+ * 移送の実行を **migration ヘッダの散文**で指示したまま `DROP COLUMN` する
+ * migration が 1 本あり、本番に未適用だった。散文は誰も実行しないので、
+ * 流せば移し損ねた休業日が黙って消える（CX-3）。ヘッダに書いたことは
+ * 「書いた」以上の意味を持たない。実行される形に移す。
+ *
+ * ## 書き方
+ *
+ * `countUnhandedOver` は **1 行 1 列 `n`** を返す SQL。0 でなければデプロイを
+ * 止める。数えるのは「引き継がれていない件数」であって「残っている件数」ではない。
+ */
+export interface Handover {
+  /** 破壊の対象。表なら `t`、列なら `t.c`。 */
+  readonly target: string;
+  /** 引き継がれていない件数を数える SQL（1 行 1 列 `n`）。 */
+  readonly countUnhandedOver: string;
+  /** 0 でなかったとき、顧客が何を失うか。 */
+  readonly what: string;
+  /** 直す手順。**実行できるコマンド**で書く。 */
+  readonly remedy: string;
+}
+
+export const HANDOVERS: readonly Handover[] = [
+  {
+    target: "locations.special_holidays",
+    what: "拠点の特別休業日が BlockedDate に無いまま消える",
+    // jsonb_array_elements_text は配列以外で落ちるので、CASE で空配列に寄せる
+    // （CASE は選ばれた枝しか評価しない）。日付として読めない値は
+    // `start_date = NULL` になり、どの行にも一致せず「未引き継ぎ」に数える——
+    // 移送スクリプトもそれを飛ばすので、消える側の値であることは変わらない。
+    // `String.raw` は必須。素のテンプレートリテラルだと `\d` が `d` に潰れ、
+    // 日付が 1 件も読めなくなって全件を「未引き継ぎ」と報告する。
+    countUnhandedOver: String.raw`
+      WITH entries AS (
+        SELECT l.id AS location_id, d.day AS day
+        FROM locations l
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+          CASE WHEN jsonb_typeof(l.special_holidays) = 'array'
+               THEN l.special_holidays ELSE '[]'::jsonb END
+        ) AS d(day)
+      )
+      SELECT count(*) AS n
+      FROM entries e
+      WHERE NOT EXISTS (
+        SELECT 1 FROM blocked_dates b
+        WHERE b.scope = 'LOCATION'
+          AND b.location_id = e.location_id
+          AND b.start_date = (CASE WHEN e.day ~ '^\d{4}-\d{2}-\d{2}$'
+                                   THEN e.day::date ELSE NULL END)
+          AND b.end_date = (CASE WHEN e.day ~ '^\d{4}-\d{2}-\d{2}$'
+                                 THEN e.day::date ELSE NULL END)
+      )`,
+    remedy:
+      "bun scripts/backfill-special-holidays-to-blocked-dates.ts --actor <userId> --apply",
+  },
+];
+
+/** 破壊的文が消す対象（表なら `t`、列なら `t.c`）。 */
+export function destructionTargets(statement: string): string[] {
+  const sql = statement.replace(/\s+/gu, " ").trim();
+  const ident = String.raw`"?([A-Za-z_][A-Za-z0-9_]*)"?`;
+
+  const truncate = new RegExp(
+    String.raw`^TRUNCATE\s+(?:TABLE\s+)?${ident}`,
+    "iu",
+  ).exec(sql);
+  if (truncate?.[1] !== undefined) return [truncate[1]];
+
+  const dropTable = new RegExp(
+    String.raw`^DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?${ident}`,
+    "iu",
+  ).exec(sql);
+  if (dropTable?.[1] !== undefined) return [dropTable[1]];
+
+  const alter = new RegExp(
+    String.raw`^ALTER\s+TABLE\s+(?:ONLY\s+)?${ident}\s`,
+    "iu",
+  ).exec(sql);
+  const table = alter?.[1];
+  if (table === undefined) return [];
+
+  // `ALTER TABLE` は 1 文に複数のアクションを持てる。
+  return [
+    ...sql.matchAll(
+      new RegExp(
+        String.raw`\bDROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?${ident}`,
+        "giu",
+      ),
+    ),
+  ].flatMap((match) =>
+    match[1] === undefined ? [] : [`${table}.${match[1]}`],
+  );
+}
+
+/**
+ * 引き継ぎ先が定義されていない破壊。
+ *
+ * migration 内に実行される検査があるものは著者の答えを採る。無いものは
+ * `HANDOVERS` に登録が要る。**どちらも無ければここに出る**——「見なかった」で
+ * 通す道を残さないための一覧で、gate（unit）もデプロイ経路も同じ関数を呼ぶ。
+ */
+export function destructionsWithoutHandover(
+  migrations: readonly Migration[],
+  handovers: readonly Handover[] = HANDOVERS,
+): { migration: string; target: string }[] {
+  const known = new Set(handovers.map((entry) => entry.target));
+  return migrations.flatMap(({ name, sql }) =>
+    unassertedDestructiveStatements(sql)
+      .flatMap((statement) => destructionTargets(statement))
+      .filter((target) => !known.has(target))
+      .map((target) => ({ migration: name, target })),
+  );
+}
+
+/**
+ * 未適用の破壊について、引き継ぎが済んでいるかを DB に訊く。
+ *
+ * 対象がまだ存在しない DB（新規構築＝本番切替の経路）では数えない。
+ * これから作られる列に値があるはずがない。
+ */
+async function pendingHandoverGaps(
+  prisma: PrismaClient,
+  migrations: readonly Migration[],
+  applied: ReadonlySet<string>,
+  existing: ReadonlySet<string>,
+): Promise<string[]> {
+  const gaps: string[] = [];
+
+  for (const migration of migrations) {
+    if (applied.has(migration.name)) continue;
+    for (const statement of unassertedDestructiveStatements(migration.sql)) {
+      for (const target of destructionTargets(statement)) {
+        if (!existing.has(target)) continue;
+        const handover = HANDOVERS.find((entry) => entry.target === target);
+        if (handover === undefined) {
+          gaps.push(
+            `${migration.name}: ${target} を消すが引き継ぎ先が未定義。` +
+              "HANDOVERS に登録するか、migration 内に DO $$ … RAISE EXCEPTION … $$ を置く",
+          );
+          continue;
+        }
+        try {
+          const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+            handover.countUnhandedOver,
+          );
+          const n = Number(row?.n ?? 0);
+          if (n > 0) {
+            gaps.push(
+              `${migration.name}: ${handover.what}（${n} 件）→ ${handover.remedy}`,
+            );
+          }
+        } catch (error) {
+          gaps.push(
+            `${migration.name}: ${target} の引き継ぎを確かめられない（${describeError(error)}）`,
+          );
+        }
+      }
+    }
+  }
+
+  return gaps;
+}
+
 export async function run(argv: readonly string[]): Promise<number> {
   const url = resolveUrl(argv, process.env);
   if (url === null) {
@@ -643,6 +898,24 @@ export async function run(argv: readonly string[]): Promise<number> {
     if (steps.length === 0) {
       console.info("[migration-preconditions] 未適用の migration は無い");
       return 0;
+    }
+
+    // リハーサルは「エラーにならない」しか見ない。**破壊はエラーではない**ので、
+    // ここを通さないと DROP COLUMN が緑のまま黙って値を消す。
+    const gaps = await pendingHandoverGaps(
+      prisma,
+      readMigrations(parseMigrationsDir(argv)),
+      history.applied,
+      await readExistingTargets(prisma),
+    );
+    if (gaps.length > 0) {
+      for (const gap of gaps) {
+        console.error(`[migration-preconditions] 引き継ぎ未了 ${gap}`);
+      }
+      console.error(
+        "[migration-preconditions] 破壊的な migration の前提が満たされていない。適用しない",
+      );
+      return 1;
     }
 
     console.info(
