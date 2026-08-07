@@ -22,33 +22,45 @@
  * `customers` を参照する）を落としていた。DB から採る側がそれを検出して落ちた。
  * 母集合を転記しない理由がそのまま出た形なので、記録として残す。
  *
- * ## 一覧を書かず、DB から母集合を採る
+ * ## 件数の増減ではなく、置いた行そのものを追う
  *
- * 消えうる表の一覧を手で書くと、その一覧が drift する
- * （`anonymize-covers-pii.test.ts` と同じ理由）。ここでは `pg_constraint` から
- * **`customers` を CASCADE で参照している表**を引く。新しい子が増えたら
- * 「fixture が覆っていない」と言って落ちる。
+ * 最初は「target を指す行が増えたか」で移動を判定していた。それでは
+ * `pending_customer_merges` を判定できない —— 置いた行は最初から
+ * `targetCustomerId` で target を指しているので、**削除されても、削除されずに
+ * `sourceCustomerId` だけ付け替わっても、target を指す行数は変わらない**
+ * （レビュー指摘）。宣言が `dropped` のまま実装が「消さずに残す」へ変わっても
+ * 緑になる、つまり検査になっていなかった。
  *
- * ## 各表について「移った」か「消えると決めた」かを固定する
+ * だから置いた行の主キーを控え、**その行が残っているか / どの顧客を指しているか**
+ * を直接見る。`moved` なら残っていて target を指す。`dropped` なら消えている。
  *
- * 観測した振る舞いと `DISPOSITIONS` の宣言が一致することを見る。移るはずの表が
- * 消えるようになったら落ちるし、消えると決めた表が黙って増えても落ちる。
+ * ## この検査が証明しないこと
  *
- * **この検査が証明しないこと**: 消えると決めた判断がプロダクトとして正しいこと。
- * そこは人が決める。ここが保証するのは「決めていないものが消えていない」だけ。
+ * 消えると決めた判断がプロダクトとして正しいこと。そこは人が決める。ここが
+ * 保証するのは「決めていないものが消えていない」だけ。
  *
  * == 実行条件 ==
- * `bun run test:integration`（test-db を自動起動 + migrate deploy）。
+ * `TEST_DATABASE_URL` 設定時のみ実行（`bun run test:integration` が docker-compose の
+ * 既定値を注入する）。**未設定なら `DATABASE_URL` へフォールバックしない** —
+ * この検査は後片付けで顧客・スペース・拠点を削除するので、開発 DB に向いたまま
+ * 走ると実データを壊す。CI は必ず設定するため、skip が失敗を隠す経路にはならない。
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { mergeCustomerCommand } =
-  await import("@/shared/domain/customers/customer-lifecycle-commands");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
+
+type PrismaModule = typeof import("@/shared/db/prisma");
+type LifecycleModule =
+  typeof import("@/shared/domain/customers/customer-lifecycle-commands");
+
+let prisma: PrismaModule["prisma"];
+let mergeCustomerCommand: LifecycleModule["mergeCustomerCommand"];
 
 /** 統合で source の行がどうなるか。 */
 type Disposition = "moved" | "dropped";
@@ -72,11 +84,24 @@ const DISPOSITIONS: Readonly<Record<string, Disposition>> = {
   pending_customer_merges: "dropped",
 };
 
-/** 1 つの表が `customers` を複数列で参照しうる（`pending_customer_merges`）。 */
 interface CascadeChild {
   readonly table: string;
+  /** 1 つの表が `customers` を複数列で参照しうる（`pending_customer_merges`）。 */
   readonly columns: readonly string[];
 }
+
+const unique = (): string => crypto.randomUUID();
+
+const created: {
+  locationId?: string;
+  spaceId?: string;
+  sourceId?: string;
+  targetId?: string;
+} = {};
+
+let children: CascadeChild[] = [];
+/** 物理テーブル名 → この検査が置いた行の主キー。 */
+const seeded = new Map<string, string>();
 
 /** `customers.id` を CASCADE で参照している表（＝ source 削除で消える表）。 */
 async function cascadeChildren(): Promise<CascadeChild[]> {
@@ -96,6 +121,7 @@ async function cascadeChildren(): Promise<CascadeChild[]> {
        AND c.confdeltype = 'c'
        AND n.nspname = 'public'
      ORDER BY 1`;
+
   const byTable = new Map<string, string[]>();
   for (const row of rows) {
     const columns = byTable.get(row.table_name) ?? [];
@@ -105,207 +131,234 @@ async function cascadeChildren(): Promise<CascadeChild[]> {
   return [...byTable].map(([table, columns]) => ({ table, columns }));
 }
 
-const unique = (): string => crypto.randomUUID();
+/**
+ * 置いた行の現在の姿。消えていれば `null`、残っていれば各参照列の値。
+ *
+ * 主キーで引くので、「消えた」と「残ったまま参照だけ変わった」を取り違えない。
+ */
+async function seededRow(
+  child: CascadeChild,
+): Promise<Record<string, string | null> | null> {
+  const id = seeded.get(child.table);
+  if (id === undefined) return null;
+  const columns = child.columns.map((column) => `"${column}"`).join(", ");
+  const rows = await prisma.$queryRawUnsafe<Record<string, string | null>[]>(
+    `SELECT ${columns} FROM "${child.table}" WHERE "id" = $1`,
+    id,
+  );
+  return rows[0] ?? null;
+}
 
-const created: {
-  locationId?: string;
-  spaceId?: string;
-  sourceId?: string;
-  targetId?: string;
-} = {};
+describeMaybe("顧客の統合は、決めていないものを消さない", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ mergeCustomerCommand } =
+      await import("@/shared/domain/customers/customer-lifecycle-commands"));
 
-let children: CascadeChild[] = [];
+    children = await cascadeChildren();
 
-beforeAll(async () => {
-  children = await cascadeChildren();
-
-  const location = await prisma.location.create({
-    data: {
-      name: `merge-loc-${unique()}`,
-      slug: `merge-loc-${unique()}`,
-      address: "東京都渋谷区1-1-1",
-      imageUrl: "/images/seed/location-main.svg",
-      accessLines: [],
-      imageUrls: [],
-      isActive: false,
-    },
-    select: { id: true },
-  });
-  created.locationId = location.id;
-
-  const space = await prisma.space.create({
-    data: {
-      name: `merge-space-${unique()}`,
-      slug: `merge-space-${unique()}`,
-      descriptionJson: {},
-      descriptionHtml: "<p>統合テスト用</p>",
-      descriptionPlainText: "統合テスト用",
-      mainImageUrl: "/images/seed/space-main.svg",
-      hourlyPrice: 1000,
-      capacity: 4,
-      locationId: location.id,
-      isActive: false,
-    },
-    select: { id: true },
-  });
-  created.spaceId = space.id;
-
-  const makeCustomer = async (label: string): Promise<string> => {
-    const email = `merge-${label}-${unique()}@example.com`;
-    const customer = await prisma.customer.create({
+    const location = await prisma.location.create({
       data: {
-        lastName: "統合",
-        firstName: label,
-        email,
-        emailCanonical: email,
+        name: `merge-loc-${unique()}`,
+        slug: `merge-loc-${unique()}`,
+        address: "東京都渋谷区1-1-1",
+        imageUrl: "/images/seed/location-main.svg",
+        accessLines: [],
+        imageUrls: [],
+        isActive: false,
       },
       select: { id: true },
     });
-    return customer.id;
-  };
-  created.sourceId = await makeCustomer("source");
-  created.targetId = await makeCustomer("target");
+    created.locationId = location.id;
 
-  // 各 CASCADE 子に source の行を 1 件ずつ置く。
-  const reservation = await prisma.reservation.create({
-    data: {
-      spaceId: space.id,
-      customerId: created.sourceId,
-      startTime: new Date("2026-09-01T01:00:00Z"),
-      endTime: new Date("2026-09-01T03:00:00Z"),
-      basePrice: 2000,
-      totalPrice: 2000,
-      rateBreakdownJson: {},
-      taxRateType: "STANDARD",
-      taxRate: 10,
-      taxAmount: 200,
-      totalPriceWithTax: 2200,
-    },
-    select: { id: true },
+    const space = await prisma.space.create({
+      data: {
+        name: `merge-space-${unique()}`,
+        slug: `merge-space-${unique()}`,
+        descriptionJson: {},
+        descriptionHtml: "<p>統合テスト用</p>",
+        descriptionPlainText: "統合テスト用",
+        mainImageUrl: "/images/seed/space-main.svg",
+        hourlyPrice: 1000,
+        capacity: 4,
+        locationId: location.id,
+        isActive: false,
+      },
+      select: { id: true },
+    });
+    created.spaceId = space.id;
+
+    const makeCustomer = async (label: string): Promise<string> => {
+      const email = `merge-${label}-${unique()}@example.com`;
+      const customer = await prisma.customer.create({
+        data: {
+          lastName: "統合",
+          firstName: label,
+          email,
+          emailCanonical: email,
+        },
+        select: { id: true },
+      });
+      return customer.id;
+    };
+    created.sourceId = await makeCustomer("source");
+    created.targetId = await makeCustomer("target");
+
+    // 各 CASCADE 子に source の行を 1 件ずつ置き、主キーを控える。
+    const reservation = await prisma.reservation.create({
+      data: {
+        spaceId: space.id,
+        customerId: created.sourceId,
+        startTime: new Date("2026-09-01T01:00:00Z"),
+        endTime: new Date("2026-09-01T03:00:00Z"),
+        basePrice: 2000,
+        totalPrice: 2000,
+        rateBreakdownJson: {},
+        taxRateType: "STANDARD",
+        taxRate: 10,
+        taxAmount: 200,
+        totalPriceWithTax: 2200,
+      },
+      select: { id: true },
+    });
+    seeded.set("reservations", reservation.id);
+
+    const series = await prisma.reservationSeries.create({
+      data: {
+        spaceId: space.id,
+        customerId: created.sourceId,
+        rrule: "FREQ=WEEKLY;COUNT=1",
+        dtstart: new Date("2026-09-01T01:00:00Z"),
+        duration: 120,
+        instanceCount: 1,
+        templateData: {},
+        agreementSnapshot: [],
+      },
+      select: { id: true },
+    });
+    seeded.set("reservation_series", series.id);
+
+    const review = await prisma.spaceReview.create({
+      data: {
+        spaceId: space.id,
+        customerId: created.sourceId,
+        reservationId: reservation.id,
+        rating: 5,
+      },
+      select: { id: true },
+    });
+    seeded.set("space_reviews", review.id);
+
+    const pendingMerge = await prisma.pendingCustomerMerge.create({
+      data: {
+        sourceCustomerId: created.sourceId,
+        targetCustomerId: created.targetId,
+        guestEmail: `merge-req-${unique()}@example.com`,
+        tokenHash: unique().replaceAll("-", "").padEnd(64, "0").slice(0, 64),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    seeded.set("pending_customer_merges", pendingMerge.id);
+
+    const newEmail = `merge-pending-${unique()}@example.com`;
+    const pendingEmail = await prisma.pendingCustomerEmailChange.create({
+      data: {
+        customerId: created.sourceId,
+        newEmail,
+        newEmailCanonical: newEmail,
+        tokenHash: unique().replaceAll("-", "").padEnd(64, "0").slice(0, 64),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    seeded.set("pending_customer_email_changes", pendingEmail.id);
   });
 
-  await prisma.reservationSeries.create({
-    data: {
-      spaceId: space.id,
-      customerId: created.sourceId,
-      rrule: "FREQ=WEEKLY;COUNT=1",
-      dtstart: new Date("2026-09-01T01:00:00Z"),
-      duration: 120,
-      instanceCount: 1,
-      templateData: {},
-      agreementSnapshot: [],
-    },
-  });
-
-  await prisma.spaceReview.create({
-    data: {
-      spaceId: space.id,
-      customerId: created.sourceId,
-      reservationId: reservation.id,
-      rating: 5,
-    },
-  });
-
-  await prisma.pendingCustomerMerge.create({
-    data: {
-      sourceCustomerId: created.sourceId,
-      targetCustomerId: created.targetId,
-      guestEmail: `merge-req-${unique()}@example.com`,
-      tokenHash: unique().replaceAll("-", "").padEnd(64, "0").slice(0, 64),
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-    },
-  });
-
-  const newEmail = `merge-pending-${unique()}@example.com`;
-  await prisma.pendingCustomerEmailChange.create({
-    data: {
-      customerId: created.sourceId,
-      newEmail,
-      newEmailCanonical: newEmail,
-      tokenHash: unique().replaceAll("-", "").padEnd(64, "0").slice(0, 64),
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-    },
-  });
-});
-
-afterAll(async () => {
-  // source は merge で消えている。target 側に付け替わった行は target ごと消す。
-  for (const id of [created.targetId, created.sourceId]) {
-    if (id !== undefined) {
-      await prisma.customer.deleteMany({ where: { id } });
+  afterAll(async () => {
+    // source は merge で消えている。target 側に付け替わった行は target ごと消す。
+    for (const id of [created.targetId, created.sourceId]) {
+      if (id !== undefined) {
+        await prisma.customer.deleteMany({ where: { id } });
+      }
     }
-  }
-  if (created.spaceId !== undefined) {
-    await prisma.space.deleteMany({ where: { id: created.spaceId } });
-  }
-  if (created.locationId !== undefined) {
-    await prisma.location.deleteMany({ where: { id: created.locationId } });
-  }
-  await prisma.$disconnect();
-});
+    if (created.spaceId !== undefined) {
+      await prisma.space.deleteMany({ where: { id: created.spaceId } });
+    }
+    if (created.locationId !== undefined) {
+      await prisma.location.deleteMany({ where: { id: created.locationId } });
+    }
+    await prisma.$disconnect();
+  });
 
-/** その表で、指定 customer を参照している行数。 */
-async function countFor(
-  child: CascadeChild,
-  customerId: string,
-): Promise<number> {
-  const predicate = child.columns
-    .map((column) => `"${column}" = $1`)
-    .join(" OR ");
-  const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
-    `SELECT COUNT(*) AS n FROM "${child.table}" WHERE ${predicate}`,
-    customerId,
-  );
-  return Number(row?.n ?? 0);
-}
-
-describe("顧客の統合は、決めていないものを消さない", () => {
   test("fixture が CASCADE 子を全部覆っている（母集合の自己検査）", () => {
     // 一覧を手で書かず DB から採る。新しい子が増えたらここで気づける。
     expect(children.length).toBeGreaterThan(0);
 
-    const covered = new Set(Object.keys(DISPOSITIONS));
-    const uncovered = children
+    const declared = new Set(Object.keys(DISPOSITIONS));
+    const undeclared = children
       .map((child) => child.table)
-      .filter((table) => !covered.has(table))
+      .filter((table) => !declared.has(table))
       .map(
         (table) =>
           `${table}: customers を CASCADE で参照しているのに、統合時の扱いが宣言されていない。` +
           `付け替えるなら mergeCustomerCommand に足し、消してよいなら理由つきで DISPOSITIONS に置く`,
       );
-    expect(uncovered).toEqual([]);
+    expect(undeclared).toEqual([]);
 
-    const stale = [...covered]
+    const stale = [...declared]
       .filter((table) => !children.some((child) => child.table === table))
       .map((table) => `${table}: もう CASCADE 子ではない。宣言を外すこと`);
     expect(stale).toEqual([]);
+
+    // 宣言だけあって行を置いていないと、下の検査が空振りする。
+    const unseeded = children
+      .map((child) => child.table)
+      .filter((table) => !seeded.has(table))
+      .map((table) => `${table}: fixture が行を置いていない`);
+    expect(unseeded).toEqual([]);
   });
 
-  test("統合前は、全部の子に source の行がある（検査が空振りしていない）", async () => {
-    const missing: string[] = [];
+  test("統合前は、置いた行がすべて source を指している（検査が空振りしていない）", async () => {
+    const wrong: string[] = [];
     for (const child of children) {
-      const n = await countFor(child, created.sourceId ?? "");
-      if (n === 0) missing.push(`${child.table}: source の行が無い`);
+      const row = await seededRow(child);
+      if (row === null) {
+        wrong.push(`${child.table}: 置いた行が見つからない`);
+        continue;
+      }
+      if (!Object.values(row).includes(created.sourceId ?? "")) {
+        wrong.push(`${child.table}: 置いた行が source を指していない`);
+      }
     }
-    expect(missing).toEqual([]);
+    expect(wrong).toEqual([]);
   });
 
   test("統合すると、宣言どおりに移るか消えるかする", async () => {
-    const before = new Map<string, number>();
-    for (const child of children) {
-      before.set(child.table, await countFor(child, created.targetId ?? ""));
-    }
-
     await mergeCustomerCommand(created.sourceId ?? "", created.targetId ?? "");
 
     const observed: Record<string, Disposition> = {};
+    const anomalies: string[] = [];
     for (const child of children) {
-      const onTarget = await countFor(child, created.targetId ?? "");
-      const gained = onTarget - (before.get(child.table) ?? 0);
-      observed[child.table] = gained > 0 ? "moved" : "dropped";
+      const row = await seededRow(child);
+      if (row === null) {
+        // 主キーで引いて無い＝本当に消えた。件数では区別できない状態。
+        observed[child.table] = "dropped";
+        continue;
+      }
+      observed[child.table] = "moved";
+      if (!Object.values(row).includes(created.targetId ?? "")) {
+        anomalies.push(
+          `${child.table}: 行は残っているが target を指していない（${JSON.stringify(row)}）`,
+        );
+      }
     }
 
-    // 宣言と観測が一致すること。移るはずが消えるようになったらここで落ちる。
+    // 残った行は target を指していること（宙に浮いた行を moved と数えない）。
+    expect(anomalies).toEqual([]);
+
+    // 宣言と観測が一致すること。移るはずが消えるようになったらここで落ちるし、
+    // 消えると決めた表が消えなくなってもここで落ちる。
     expect(observed).toEqual(
       Object.fromEntries(
         children.map((child) => [
@@ -321,7 +374,14 @@ describe("顧客の統合は、決めていないものを消さない", () => {
     // （＝この検査の母集合から漏れている）ということ。
     const leftovers: string[] = [];
     for (const child of children) {
-      const n = await countFor(child, created.sourceId ?? "");
+      const predicate = child.columns
+        .map((column) => `"${column}" = $1`)
+        .join(" OR ");
+      const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+        `SELECT COUNT(*) AS n FROM "${child.table}" WHERE ${predicate}`,
+        created.sourceId ?? "",
+      );
+      const n = Number(row?.n ?? 0);
       if (n > 0)
         leftovers.push(`${child.table}: ${n} 行が source を指したまま`);
     }
