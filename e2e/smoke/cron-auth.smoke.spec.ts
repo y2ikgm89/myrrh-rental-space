@@ -16,7 +16,7 @@ import { test, expect } from "../fixtures/e2e-test";
  * ## 除外
  * - 「正しい Cloud Scheduler service account 発行の OIDC token → 200」は
  *   本物の Google OIDC 署名鍵を要求するため E2E では検証しない
- *   (unit `__tests__/unit/shared/lib/cron-auth.test.ts` で verifyToken 差し替えパスを網羅済)
+ *   (unit `__tests__/unit/lib/cron-auth-oidc.test.ts` で verifyToken 差し替えパスを網羅済)
  *
  * ## 対象 endpoint (representative subset, 全 endpoint は同一 authorizeCronRequest を通る)
  * - /api/cron/pending-reservation-expire

@@ -104,7 +104,7 @@ docker compose up -d test-db
 bun run test:integration
 
 # Single file
-bun scripts/run-tests.ts __tests__/integration/path/to/file.test.ts
+bun scripts/run-tests.ts __tests__/integration/<path>.test.ts
 ```
 
 `bun run setup` copies `.env.example` → `.env.local` when missing; that file
