@@ -63,11 +63,17 @@ describe("admin clean-break dead code boundaries", () => {
     // 検知できないため禁止。Server Action を本物呼び出しする integration test、
     // または production schema を import する unit test に置き換えること。
     const dir = filePath("__tests__/integration/actions/admin");
-    if (!existsSync(dir)) return;
+    // 走査根が消えたら**落ちる**。早期 return にすると、ディレクトリの移動や改名で
+    // 収集 0 件になり、違反ゼロと区別が付かないまま緑を返す。
+    expect(existsSync(dir)).toBe(true);
+
+    const entries = readdirSync(dir).filter((entry) =>
+      entry.endsWith(".test.ts"),
+    );
+    expect(entries.length).toBeGreaterThan(0);
 
     const offenders: string[] = [];
-    for (const entry of readdirSync(dir)) {
-      if (!entry.endsWith(".test.ts")) continue;
+    for (const entry of entries) {
       const source = readFileSync(join(dir, entry), "utf8");
       if (/\bz\.object\s*\(/.test(source)) {
         offenders.push(entry);
