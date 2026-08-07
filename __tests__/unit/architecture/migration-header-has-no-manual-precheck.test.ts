@@ -16,6 +16,18 @@
  * （未適用 DDL を実際に流して必ず巻き戻す）。本番デプロイでは
  * `prisma migrate deploy` の**前**に走る。
  *
+ * ただしリハーサルが証明するのは **「この SQL はエラーにならない」だけ**で、
+ * 破壊はエラーではない（`DROP COLUMN` は満杯のテーブルにも成功する）。破壊的文の
+ * 前提は `destructive-migration-has-executed-assertion.test.ts` が別に強制する。
+ *
+ * ## SELECT 形だけでなくコマンド形も禁じる
+ *
+ * 初版は**手書きの確認 SELECT** だけを見ていた。実測すると、破壊的 migration の
+ * ヘッダに書かれた `適用前: bun scripts/…--apply`（移送スクリプトを流せという指示）は
+ * 判定 `false` ですり抜けていた。**コマンド形のほうが悪質**で、SELECT なら少なくとも
+ * 「何を見るか」が残るのに対し、コマンドは流し忘れがそのまま無言の破壊になる。
+ * どちらも「人が読んで手で流す前提の検査」であり、同じ欠陥。
+ *
  * ## 既に書かれてしまったものをどう扱うか
  *
  * commit 済みの `prisma/migrations/*.sql` は編集できない（絶対規約 #7、
@@ -49,11 +61,16 @@ const ROOT = process.cwd();
 const MIGRATIONS_DIR = join(ROOT, "prisma", "migrations");
 
 /**
- * ヘッダに手書きの確認 SELECT を持ったまま**直せない** migration の本数。
+ * ヘッダに手書きの「適用前にこれを流せ」を持ったまま**直せない** migration の本数。
  *
  * 減らす方向にしか動かせない。増えたらそれは新しく書かれたということ。
+ *
+ * **4 → 5 は新しく書かれたからではなく、検出側を広げたから。** SELECT 形しか
+ * 見ていなかった判定にコマンド形を足した結果、前から存在していた 1 本
+ * （移送スクリプトの実行を散文で指示していた破壊的 migration）が新たに見えた。
+ * 定数を上げるのはこの一度きりで、以降は減らす方向にしか動かさない。
  */
-const GRANDFATHERED_MANUAL_PRECHECKS = 4;
+const GRANDFATHERED_MANUAL_PRECHECKS = 5;
 
 function localMigrationSqlPaths(): string[] {
   return readdirSync(MIGRATIONS_DIR)
@@ -165,11 +182,22 @@ export function headerCommentBodyLines(header: string): string[] {
 }
 
 /**
- * ヘッダコメント内の手書き「適用前確認 SELECT」。
+ * 実行できるコマンドの名前。
+ *
+ * `bunx` は `\bbun\b` に当たらないので、長いものから明示的に並べる。
+ */
+const RUNNABLE_COMMAND = /\b(?:bunx|bun|npx|npm|pnpm|yarn|psql|prisma)\b/u;
+
+/**
+ * ヘッダコメント内の手書き「適用前にこれを流せ」。
  *
  * - 節見出し `適用前…確認クエリ`
  * - コメント行**本文の先頭**が `SELECT` / `UNION ALL SELECT` の実行例
  *   （本文中に SELECT と書くだけの説明は対象外）
+ * - コメント行**本文の先頭**が `適用前` で、かつ実行できるコマンド名を含む
+ *   （`適用前: bun scripts/…`）。散文の途中に出る「適用前」は対象外——実測で、
+ *   「違反行があれば次の書込まで残る。適用前…」のように折返しで現れる説明が
+ *   2 本あり、これらは指示ではない
  */
 export function hasManualPrecheckInHeader(header: string): boolean {
   const bodies = headerCommentBodyLines(header);
@@ -179,6 +207,7 @@ export function hasManualPrecheckInHeader(header: string): boolean {
   for (const body of bodies) {
     if (/^SELECT\b/iu.test(body)) return true;
     if (/^UNION\s+ALL\s+SELECT\b/iu.test(body)) return true;
+    if (/^適用前/u.test(body) && RUNNABLE_COMMAND.test(body)) return true;
   }
 
   return false;
@@ -227,6 +256,42 @@ ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
     expect(
       hasManualPrecheckInHeader(extractHeaderCommentText(bareSelect)),
     ).toBe(true);
+
+    // **コマンド形**（初版がすり抜けさせていた形）。SELECT を 1 文字も含まない。
+    const preApplyCommand = `-- P9: 計画ダウンタイム付き schema 契約
+--
+-- 適用前: bun scripts/backfill-special-holidays-to-blocked-dates.ts --apply
+BEGIN;
+ALTER TABLE "locations" DROP COLUMN "special_holidays";
+`;
+
+    expect(
+      hasManualPrecheckInHeader(extractHeaderCommentText(preApplyCommand)),
+    ).toBe(true);
+
+    // 自動で走る仕組みへの**参照**は指示ではない（リハーサルは pipeline が流す）。
+    const refersToAutomatedStep = `-- リハーサル: bun scripts/migration-preconditions.ts
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+`;
+
+    expect(
+      hasManualPrecheckInHeader(
+        extractHeaderCommentText(refersToAutomatedStep),
+      ),
+    ).toBe(false);
+
+    // 散文の途中に出る「適用前」も指示ではない（実在ヘッダに 2 本ある折返し）。
+    const proseMentionsPreApply = `-- 違反行があれば次の書込まで残る。適用前に bun で流す運用に戻さないこと。
+BEGIN;
+ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
+`;
+
+    expect(
+      hasManualPrecheckInHeader(
+        extractHeaderCommentText(proseMentionsPreApply),
+      ),
+    ).toBe(false);
 
     const good = `-- 既存行の違反は rehearsal（migration-preconditions.ts）が migrate 前に落とす。
 BEGIN;
