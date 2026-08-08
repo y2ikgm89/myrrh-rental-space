@@ -202,4 +202,43 @@ describe("CheckInClient", () => {
     expect(container?.textContent).toContain("当日参加");
     expect(container?.textContent).toMatch(/3\s*\/\s*3\s*名チェック済/u);
   });
+
+  test("参加者 props が更新されても開いているダイアログが閉じない", async () => {
+    // 一覧の同期を `key` 付け替えによる remount で行うと、同じ subtree にある
+    // ダイアログの開閉状態と `useActionState` の結果まで捨てられる。代行登録 /
+    // 当日参加は成功時に必ず新しい参加者一覧を返すので、**成功したときに限って**
+    // 成功ハンドラが発火せず、完了トーストも `router.refresh()` も実行されない
+    // （実測: nightly の `events-proxy-registration` が 7 連続失敗）。
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      renderClient(root, [makeAttendee()]);
+    });
+
+    const proxyTrigger = [
+      ...(container?.querySelectorAll("button") ?? []),
+    ].find((button) => button.textContent === "代行登録");
+    expect(proxyTrigger).toBeDefined();
+
+    await act(async () => {
+      proxyTrigger?.click();
+    });
+    expect(container?.textContent).toContain("事前代行登録");
+
+    // サーバーから新しい参加者一覧が届く（＝代行登録が成功したときに起きること）
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      renderClient(root, [
+        makeAttendee(),
+        makeAttendee({
+          id: "6a95721c-bd35-4206-87fa-fa0102fb5f88",
+          name: "当日参加",
+          email: null,
+          quantity: 1,
+        }),
+      ]);
+    });
+
+    expect(container?.textContent).toContain("当日参加");
+    expect(container?.textContent).toContain("事前代行登録");
+  });
 });

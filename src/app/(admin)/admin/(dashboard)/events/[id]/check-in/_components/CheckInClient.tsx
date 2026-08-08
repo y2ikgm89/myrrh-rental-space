@@ -50,50 +50,77 @@ type Props = {
   readonly slots: SlotInfo[];
 };
 
+/**
+ * 出席打刻のローカル上書き（registration id → 出席日時 / 未出席なら null）。
+ *
+ * 一覧そのものを state に写し取らない。かつては `useState(initialAttendees)` で
+ * 写し取り、サーバーから新しい props が届いたら **`key` を付け替えて subtree ごと
+ * remount** することで同期していた。だがその remount は、同じ subtree にある
+ * **ダイアログの開閉状態と `useActionState` の結果を道連れに捨てる**。
+ *
+ * 代行登録 / 当日参加は成功すると `invalidateEventCaches()` により新しい参加者
+ * 一覧が返るので `key` が必ず変わる。つまり**成功したときに限って**
+ * `ProxyRegistrationDialog` / `WalkInDialog` が unmount され、
+ * `lastResult` を見て発火するはずの成功ハンドラが**一度も呼ばれない**。
+ * 完了トーストも `router.refresh()` も実行されず、ダイアログは「成功したから」
+ * ではなく「state が消えたから」閉じていた（実測: nightly の
+ * `events-proxy-registration` が 7 連続失敗。登録自体は毎回成功していた）。
+ *
+ * 打刻だけを id 単位の上書きとして持ち、表示はサーバー props から**導出**する。
+ * 新しい props はそのまま反映されるので、remount も同期用 effect も要らない。
+ */
+type AttendanceOverrides = ReadonlyMap<string, string | null>;
+
 export function CheckInClient({
   eventId,
   initialAttendees,
   tickets,
   slots,
 }: Props) {
-  return (
-    <CheckInClientState
-      key={getAttendeeSnapshotKey(initialAttendees)}
-      eventId={eventId}
-      initialAttendees={initialAttendees}
-      tickets={tickets}
-      slots={slots}
-    />
-  );
-}
-
-function getAttendeeSnapshotKey(attendees: readonly Attendee[]) {
-  return JSON.stringify(
-    attendees.map((attendee) => [
-      attendee.id,
-      attendee.attendedAt,
-      attendee.quantity,
-      attendee.name,
-      attendee.email,
-      attendee.phone,
-      attendee.ticket.id,
-      attendee.ticket.name,
-    ]),
-  );
-}
-
-function CheckInClientState({
-  eventId,
-  initialAttendees,
-  tickets,
-  slots,
-}: Props) {
   const router = useRouter();
-  const [attendees, setAttendees] = useState<Attendee[]>(initialAttendees);
+  const [attendanceOverrides, setAttendanceOverrides] =
+    useState<AttendanceOverrides>(() => new Map());
   const [query, setQuery] = useState("");
   const [walkInOpen, setWalkInOpen] = useState(false);
   const [proxyOpen, setProxyOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const attendees: Attendee[] = initialAttendees.map((attendee) =>
+    attendanceOverrides.has(attendee.id)
+      ? {
+          ...attendee,
+          attendedAt: attendanceOverrides.get(attendee.id) ?? null,
+        }
+      : attendee,
+  );
+
+  function overrideAttendance(
+    registrationId: string,
+    attendedAt: string | null,
+  ) {
+    setAttendanceOverrides((prev) =>
+      new Map(prev).set(registrationId, attendedAt),
+    );
+  }
+
+  /** 上書きを捨ててサーバー値へ戻す（打刻失敗時のロールバック）。 */
+  function dropAttendanceOverride(registrationId: string) {
+    setAttendanceOverrides((prev) => {
+      if (!prev.has(registrationId)) return prev;
+      const next = new Map(prev);
+      next.delete(registrationId);
+      return next;
+    });
+  }
+
+  /**
+   * 明示的な再読込ではローカル上書きを捨てる。
+   * 「取り直したのに自分の古い打刻が勝つ」を防ぐ（サーバーが真とする操作）。
+   */
+  function handleManualRefresh() {
+    setAttendanceOverrides(new Map());
+    router.refresh();
+  }
 
   const totalQuantity = attendees.reduce((sum, a) => sum + a.quantity, 0);
   const attendedQuantity = attendees.reduce(
@@ -116,15 +143,12 @@ function CheckInClientState({
   function handleToggle(registrationId: string) {
     const target = attendees.find((a) => a.id === registrationId);
     if (!target) return;
-    const previousAttendedAt = target.attendedAt;
-    const willAttend = previousAttendedAt === null;
-    const optimisticAt = willAttend ? new Date().toISOString() : null;
+    const willAttend = target.attendedAt === null;
 
     // 楽観更新
-    setAttendees((prev) =>
-      prev.map((a) =>
-        a.id === registrationId ? { ...a, attendedAt: optimisticAt } : a,
-      ),
+    overrideAttendance(
+      registrationId,
+      willAttend ? new Date().toISOString() : null,
     );
 
     startTransition(async () => {
@@ -134,29 +158,16 @@ function CheckInClientState({
         attended: willAttend,
       });
       if (isMutationError(result)) {
-        // ロールバック
-        setAttendees((prev) =>
-          prev.map((a) =>
-            a.id === registrationId
-              ? { ...a, attendedAt: previousAttendedAt }
-              : a,
-          ),
-        );
+        // 上書きを捨ててサーバー値へ戻す
+        dropAttendanceOverride(registrationId);
         toast.error(result.error);
         return;
       }
-      // server canonical 値で確定
-      setAttendees((prev) =>
-        prev.map((a) =>
-          a.id === registrationId
-            ? {
-                ...a,
-                attendedAt: result.attendedAt
-                  ? result.attendedAt.toString()
-                  : null,
-              }
-            : a,
-        ),
+      // server canonical 値で確定（この action は cache を無効化しないので、
+      // 打刻の記録はこのローカル上書きだけが持つ）
+      overrideAttendance(
+        registrationId,
+        result.attendedAt ? result.attendedAt.toString() : null,
       );
       toast.success(
         willAttend ? "出席を記録しました" : "出席を取り消しました",
@@ -214,7 +225,7 @@ function CheckInClientState({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.refresh()}
+              onClick={handleManualRefresh}
               disabled={isPending}
               aria-label="一覧を再取得"
             >
