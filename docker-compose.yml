@@ -22,7 +22,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: myrrh_rental
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PG18 の `PGDATA` は `/var/lib/postgresql/18/docker`（メジャー版ごとのサブ
+      # ディレクトリ）で、image の `VOLUME` も `/var/lib/postgresql` に変わった。
+      # 17 以前の `/var/lib/postgresql/data` に付けると**この volume は実データを
+      # 覆わず**、クラスタは匿名 volume に入る → `down` して `up` すると黙って
+      # 空の DB が初期化される。17 以前は逆（`/var/lib/postgresql` に付けると
+      # 永続しない）だったので、上げるときに必ず踏む。
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -40,7 +46,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: myrrh_test
     volumes:
-      - postgres_test_data:/var/lib/postgresql/data
+      # マウント先が `/var/lib/postgresql` である理由は db service 側のコメント参照。
+      - postgres_test_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d myrrh_test"]
       interval: 10s
