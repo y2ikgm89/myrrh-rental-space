@@ -17,6 +17,14 @@ function read(relativePath: string): string {
 }
 
 describe("Prisma の宣言", () => {
+  test("走査対象が空でない（schema が読めていることの確認）", () => {
+    // 読めなければ read() が throw するが、**空ファイルは throw しない**。
+    // 行が 0 本なら offenders も必ず空になり、緑が「違反なし」を意味しなくなる。
+    expect(read("prisma/schema.prisma").split("\n").length).toBeGreaterThan(
+      100,
+    );
+  });
+
   test("`@db.JsonB` を書かない（PostgreSQL では既定なので常に冗長）", () => {
     // 実測: 注釈ありの schema と全削除した schema で
     // `prisma migrate diff --from-schema … --to-schema … --script` が
