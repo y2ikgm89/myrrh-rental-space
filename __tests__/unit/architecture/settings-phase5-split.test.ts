@@ -57,6 +57,12 @@ describe("settings phase 5 schema split", () => {
     );
   }, 30_000);
 
+  test("走査根が生きている（消えると offenders が必ず空になる）", () => {
+    // `listSourceFiles` は存在しないディレクトリで空配列を返す。`src` の解決が
+    // 壊れると offenders も必ず空になり、緑が「違反なし」を意味しなくなる。
+    expect(listSourceFiles(join(root, "src")).length).toBeGreaterThan(500);
+  });
+
   test("src must not reference prisma.settings", () => {
     const offenders: string[] = [];
 

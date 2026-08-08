@@ -39,6 +39,22 @@ function hasReadActionExport(source: string): boolean {
 }
 
 describe("admin read boundaries", () => {
+  test("走査根が生きている（消えると offenders が必ず空になる）", () => {
+    // `collectSourceFiles` は存在しないディレクトリで空配列を返す。ルートが
+    // rename / 移動されると offenders も必ず空になり、**緑が「違反なし」を
+    // 意味しなくなる**。件数の下限をここで固定して、0 件と compliant を分ける。
+    const actionRoot = path.join(
+      adminRoot,
+      "admin",
+      "(dashboard)",
+      "_shared",
+      "actions",
+    );
+
+    expect(collectSourceFiles(adminRoot).length).toBeGreaterThan(100);
+    expect(collectSourceFiles(actionRoot).length).toBeGreaterThan(10);
+  });
+
   test("admin app の server/client 実装に read 用 admin actions import を残さない", () => {
     const files = collectSourceFiles(adminRoot).filter((file) => {
       return !file.includes(`${path.sep}_shared${path.sep}actions${path.sep}`);
