@@ -983,3 +983,81 @@ jobs:
           name: api-docs
           path: docs/api/
           retention-days: 90
+
+  # nightly (schedule) の結果を **人が見える場所へ出す** 唯一の経路。
+  #
+  # nightly を入れた理由は「main の失敗が誰にも見られず滞留する事故」の防止だった
+  # のに、失敗しても通知が無いため nightly 自体が 8/1〜8/7 の 7 連続で赤のまま
+  # 誰にも見られていなかった。PR が無いので `gh pr list` にも出ず、Actions の
+  # 一覧を能動的に見に行くまで気付けない。
+  #
+  # 失敗したら Issue を立て（既に開いていればコメントを足し）、復旧したら同じ
+  # Issue に復旧を記録して閉じる。**自己解消する**ので、開いている Issue の存在
+  # そのものが「いま nightly が赤」を意味する。
+  nightly-result:
+    name: Nightly result notice
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      [
+        changes,
+        migration-safety,
+        dependency-audit,
+        lint-format,
+        type-check,
+        unit-tests,
+        smoke-e2e,
+        e2e-tests,
+        build,
+      ]
+    if: ${{ always() && github.event_name == 'schedule' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Report nightly result
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て上の env 経由で受け取る。
+          title="Nightly CI failure"
+          failed=$(printf '%s' "$NEEDS_JSON" \
+            | jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")')
+
+          # タイトル完全一致で既存 Issue を引く（label を先に作る必要が無い）。
+          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を挟まない）。
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "[.[] | select(.title == \"$title\")][0].number // empty")
+
+          if [ -n "$failed" ]; then
+            body=$(printf '%s\n' \
+              "nightly (schedule) が失敗しました。" \
+              "" \
+              "- run: $RUN_URL" \
+              "- commit: \`$COMMIT_SHA\`" \
+              "- 失敗した job: $failed")
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "$body"
+              echo "commented on #$existing"
+            else
+              gh issue create --title "$title" --body "$body"
+              echo "created a new issue"
+            fi
+            exit 0
+          fi
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "nightly が復旧しました（$RUN_URL）。"
+            gh issue close "$existing"
+            echo "closed #$existing"
+          else
+            echo "nightly green, nothing to report"
+          fi

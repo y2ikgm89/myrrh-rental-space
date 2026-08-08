@@ -133,17 +133,17 @@ squash merge）。「進めて」等の明示承認は**不要**。gate はい�
 Actions UI での Deploy Production は、ユーザーが明示したとき、またはリリースを
 まとめて出すときだけ行う。
 
-| Gate            | 内容                                                                          | 該当/fail 時             |
-| --------------- | ----------------------------------------------------------------------------- | ------------------------ |
-| 1. branch       | main 直編集なら `<type>/<topic>` へ切替                                       | 自動切替                 |
-| 2. 停止例外     | 下記の停止例外に該当しないか scan                                             | 該当すれば停止           |
-| 3. 検証         | `bun run validate && bun run build` exit 0                                    | 停止                     |
-| 4. commit       | 明示ファイル指定 + Conventional Commits + Co-Authored-By                      | 停止                     |
-| 5. push         | `git push -u origin <branch>`（lefthook pre-push 通過）                       | 停止                     |
-| 6. PR           | `gh pr create --base main`（Summary + Test plan）                             | 停止                     |
-| 7. auto-merge   | `gh pr merge --auto --squash --delete-branch` 予約 → 即次タスク               | 停止                     |
-| 8. CI fail 検知 | 通知 or 次セッション開始時の `gh pr list` で検出                              | root cause fix → 再 push |
-| 9. sync         | 次セッション開始時 or 明示 `git pull --ff-only`。gone branch は `/clean_gone` | -                        |
+| Gate            | 内容                                                                            | 該当/fail 時             |
+| --------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| 1. branch       | main 直編集なら `<type>/<topic>` へ切替                                         | 自動切替                 |
+| 2. 停止例外     | 下記の停止例外に該当しないか scan                                               | 該当すれば停止           |
+| 3. 検証         | `bun run validate && bun run build` exit 0                                      | 停止                     |
+| 4. commit       | 明示ファイル指定 + Conventional Commits + Co-Authored-By                        | 停止                     |
+| 5. push         | `git push -u origin <branch>`（lefthook pre-push 通過）                         | 停止                     |
+| 6. PR           | `gh pr create --base main`（Summary + Test plan）                               | 停止                     |
+| 7. auto-merge   | `gh pr merge --auto --squash --delete-branch` 予約 → 即次タスク                 | 停止                     |
+| 8. CI fail 検知 | PR は `gh pr list`、**nightly は `gh issue list`**（赤なら Issue が開いている） | root cause fix → 再 push |
+| 9. sync         | 次セッション開始時 or 明示 `git pull --ff-only`。gone branch は `/clean_gone`   | -                        |
 
 **PR 粒度**: 1 PR = 1 logical change、soft limit 300 行 / 10 file。同一 file の fix-of-fix で対象 PR が
 まだ未 merge なら新規 PR を作らず同 branch に追加 commit（push 前に `gh pr view <N> --json state` で
