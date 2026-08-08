@@ -65,12 +65,15 @@ const MIGRATIONS_DIR = join(ROOT, "prisma", "migrations");
  *
  * 減らす方向にしか動かせない。増えたらそれは新しく書かれたということ。
  *
- * **4 → 5 は新しく書かれたからではなく、検出側を広げたから。** SELECT 形しか
- * 見ていなかった判定にコマンド形を足した結果、前から存在していた 1 本
- * （移送スクリプトの実行を散文で指示していた破壊的 migration）が新たに見えた。
- * 定数を上げるのはこの一度きりで、以降は減らす方向にしか動かさない。
+ * **5 → 0 は履歴を baseline へ畳んだから。** 該当の 5 本はすべて畳んだ先に
+ * 吸収され、生成される baseline はヘッダに散文を持たない。以降 0 から増えたら、
+ * それは新しく手書きされたということ。
+ *
+ * （かつて 4 → 5 に上げたのは検出側を広げたためで、新しく書かれたからではない。
+ * SELECT 形しか見ていなかった判定にコマンド形を足した結果、前から存在していた
+ * 1 本が新たに見えた。上げたのはその一度きり。）
  */
-const GRANDFATHERED_MANUAL_PRECHECKS = 5;
+const GRANDFATHERED_MANUAL_PRECHECKS = 0;
 
 function localMigrationSqlPaths(): string[] {
   return readdirSync(MIGRATIONS_DIR)

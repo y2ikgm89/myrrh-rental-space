@@ -685,40 +685,18 @@ export interface Handover {
   readonly remedy: string;
 }
 
-export const HANDOVERS: readonly Handover[] = [
-  {
-    target: "locations.special_holidays",
-    what: "拠点の特別休業日が BlockedDate に無いまま消える",
-    // jsonb_array_elements_text は配列以外で落ちるので、CASE で空配列に寄せる
-    // （CASE は選ばれた枝しか評価しない）。日付として読めない値は
-    // `start_date = NULL` になり、どの行にも一致せず「未引き継ぎ」に数える——
-    // 移送スクリプトもそれを飛ばすので、消える側の値であることは変わらない。
-    // `String.raw` は必須。素のテンプレートリテラルだと `\d` が `d` に潰れ、
-    // 日付が 1 件も読めなくなって全件を「未引き継ぎ」と報告する。
-    countUnhandedOver: String.raw`
-      WITH entries AS (
-        SELECT l.id AS location_id, d.day AS day
-        FROM locations l
-        CROSS JOIN LATERAL jsonb_array_elements_text(
-          CASE WHEN jsonb_typeof(l.special_holidays) = 'array'
-               THEN l.special_holidays ELSE '[]'::jsonb END
-        ) AS d(day)
-      )
-      SELECT count(*) AS n
-      FROM entries e
-      WHERE NOT EXISTS (
-        SELECT 1 FROM blocked_dates b
-        WHERE b.scope = 'LOCATION'
-          AND b.location_id = e.location_id
-          AND b.start_date = (CASE WHEN e.day ~ '^\d{4}-\d{2}-\d{2}$'
-                                   THEN e.day::date ELSE NULL END)
-          AND b.end_date = (CASE WHEN e.day ~ '^\d{4}-\d{2}-\d{2}$'
-                                 THEN e.day::date ELSE NULL END)
-      )`,
-    remedy:
-      "bun scripts/backfill-special-holidays-to-blocked-dates.ts --actor <userId> --apply",
-  },
-];
+/**
+ * 現在は 0 件。
+ *
+ * 唯一の登録だった `locations.special_holidays` は、その `DROP COLUMN` を持つ
+ * migration ごと baseline へ畳んだ時点で対象が消えた（畳んだ先の baseline は
+ * 空の DB にしか流れないので、引き継ぐ既存行が存在しない）。
+ *
+ * **空であることは仕組みが無いことを意味しない。** 0 でなければ止まる枝も、
+ * 答えが読めなければ止まる枝も、`__tests__/integration/prisma/migration-handovers.test.ts`
+ * が見本の表（`handover_probe`）に対して実 DB で毎回実行している。
+ */
+export const HANDOVERS: readonly Handover[] = [];
 
 // ---------------------------------------------------------------------------
 // 破壊的な文
