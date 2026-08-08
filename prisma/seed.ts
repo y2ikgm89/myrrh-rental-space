@@ -3098,45 +3098,9 @@ async function seedDevCustomerAndReservations() {
     },
   });
 
-  // 2.5) TermsAgreement: dev customer の LOGIN_SIGNUP scope 再同意を済ませる。
-  // reagree gate (`assertLoginSignupReagreed`) は contentHash 一致を要求するため、
-  // 現行 TermsDocument の sha256(contentHtml) で最新の同意レコードを upsert する。
-  // E2E の mutation (返信・キャンセル等) が gate で fail しないための前提。
-  {
-    const { createHash } = await import("node:crypto");
-    const loginSignupDocs = await prisma.termsDocument.findMany({
-      where: {
-        deletedAt: null,
-        isPublished: true,
-        scopes: { has: TermsScope.LOGIN_SIGNUP },
-      },
-      select: { id: true, contentHtml: true },
-    });
-    for (const doc of loginSignupDocs) {
-      const contentHash = createHash("sha256")
-        .update(doc.contentHtml)
-        .digest("hex");
-      const existing = await prisma.termsAgreement.findFirst({
-        where: {
-          customerId: customer.id,
-          termsId: doc.id,
-          scope: TermsScope.LOGIN_SIGNUP,
-          contentHash,
-        },
-      });
-      if (!existing) {
-        await prisma.termsAgreement.create({
-          data: {
-            termsId: doc.id,
-            customerId: customer.id,
-            scope: TermsScope.LOGIN_SIGNUP,
-            contentSnapshot: doc.contentHtml,
-            contentHash,
-          },
-        });
-      }
-    }
-  }
+  // 規約同意は **`seedTermsDocuments()` の後**に別関数で行う（下記
+  // `seedDevCustomerTermsAgreements`）。ここで records を作ろうとすると、
+  // 新品の DB では TermsDocument がまだ 1 件も無いので**黙って 0 件**になる。
 
   // 3) 予約 4 件（status × paymentStatus の主要カバレッジ）
   //
@@ -3761,6 +3725,82 @@ async function seedTermsDocuments() {
 
   console.log(
     `✅ Seeded terms documents (${created} created, ${SEED_TERMS_DOCUMENTS.length - created} already present)`,
+  );
+}
+
+/**
+ * dev customer の LOGIN_SIGNUP scope 再同意を済ませる（**dev seed 限定**）。
+ *
+ * reagree gate（`assertLoginSignupReagreed`）は contentHash の一致を要求するので、
+ * 現行 `TermsDocument` の `sha256(contentHtml)` で同意レコードを作る。これが無いと
+ * マイページは中身の代わりに「利用規約の再同意」画面を出し、認証済み customer 系の
+ * spec が軒並み落ちる。
+ *
+ * **`seedTermsDocuments()` の直後に呼ぶこと。** 元はこの処理が
+ * `seedDevCustomerAndReservations()`（Phase 5）の中にあり、`seedTermsDocuments()`
+ * は Phase 6 だった。つまり新品の DB では規約が 1 件も無い状態で `findMany` して
+ * **黙って 0 件**になり、同意レコードが作られない。CI はたまたま seed を 2 回
+ * 流していた（job step と Playwright の webServer chain）ため、2 周目に規約が
+ * 存在して埋まり、この穴が 1 度も表面化していなかった。実測: 重複を外した途端に
+ * 認証済み customer の 23 spec が再同意画面で落ちた（run 31283788048）。
+ * 同じ理由で、**まっさらな環境に `bun run setup` した開発者**もこの壁を踏む。
+ */
+async function seedDevCustomerTermsAgreements() {
+  const { createHash } = await import("node:crypto");
+
+  const customer = await prisma.customer.findFirst({
+    where: { email: DEV_CUSTOMER_EMAIL, userId: { not: null } },
+    select: { id: true },
+  });
+  if (!customer) {
+    seedPreconditionFailed(
+      `${DEV_CUSTOMER_EMAIL} の Customer が無い（seedDevCustomerAndReservations が先に走る）`,
+    );
+  }
+
+  const loginSignupDocs = await prisma.termsDocument.findMany({
+    where: {
+      deletedAt: null,
+      isPublished: true,
+      scopes: { has: TermsScope.LOGIN_SIGNUP },
+    },
+    select: { id: true, contentHtml: true },
+  });
+  if (loginSignupDocs.length === 0) {
+    // 0 件で素通りすると「同意済みのつもりで壁に当たる」状態を静かに作る。
+    seedPreconditionFailed(
+      "LOGIN_SIGNUP scope の TermsDocument が 1 件も無い（seedTermsDocuments が先に走る）",
+    );
+  }
+
+  let created = 0;
+  for (const doc of loginSignupDocs) {
+    const contentHash = createHash("sha256")
+      .update(doc.contentHtml)
+      .digest("hex");
+    const existing = await prisma.termsAgreement.findFirst({
+      where: {
+        customerId: customer.id,
+        termsId: doc.id,
+        scope: TermsScope.LOGIN_SIGNUP,
+        contentHash,
+      },
+    });
+    if (existing) continue;
+    await prisma.termsAgreement.create({
+      data: {
+        termsId: doc.id,
+        customerId: customer.id,
+        scope: TermsScope.LOGIN_SIGNUP,
+        contentSnapshot: doc.contentHtml,
+        contentHash,
+      },
+    });
+    created += 1;
+  }
+
+  console.log(
+    `✅ Seeded dev customer terms agreements (${created} created, ${loginSignupDocs.length - created} already present)`,
   );
 }
 
@@ -6140,6 +6180,9 @@ async function seedDev() {
   await seedPages();
   await seedFaq();
   await seedTermsDocuments();
+  // **必ず seedTermsDocuments() の後**。規約が 1 件も無い状態で同意を作ろうとすると
+  // 黙って 0 件になり、マイページが「利用規約の再同意」画面に固定される。
+  await seedDevCustomerTermsAgreements();
   await seedBlogTags();
   await seedBlog();
 
@@ -6160,7 +6203,8 @@ async function seedDev() {
   await seedBlockTemplates();
   await seedUserPageAssignments();
 
-  // Phase 10: 監査・規約同意・レートリミット・Instagram
+  // Phase 10: 監査ログ・エディタコメント・Instagram
+  // （規約同意は Phase 6 の `seedTermsDocuments()` 直後。レートリミットは seed しない）
   await seedAuditLog();
   await seedEditorComments();
   await seedInstagramPosts();
