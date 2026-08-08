@@ -265,7 +265,7 @@ ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (true);
     // **コマンド形**（初版がすり抜けさせていた形）。SELECT を 1 文字も含まない。
     const preApplyCommand = `-- P9: 計画ダウンタイム付き schema 契約
 --
--- 適用前: bun scripts/backfill-special-holidays-to-blocked-dates.ts --apply
+-- 適用前: bun scripts/backfill-example.ts --apply
 BEGIN;
 ALTER TABLE "locations" DROP COLUMN "special_holidays";
 `;
