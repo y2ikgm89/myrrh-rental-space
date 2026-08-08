@@ -33,21 +33,21 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
 - **破壊的 DDL の前提は、散文ではなく実行される形で持つ。** 破壊的 DDL は
   「先にデータを移してから DROP する」前提で書かれていることがあり、その手順を
   migration のヘッダにだけ書くと、飛ばして適用したときに消えるのは移し損ねた
-  データそのものになる（散文は誰も実行しない）。前提は次のどちらかで持つ:
-  - migration 内の `DO $$ … RAISE EXCEPTION … $$`。破壊的文より**前**に置く
-  - `scripts/migration-preconditions.ts` の `HANDOVERS` 登録。commit 済みの
-    migration は絶対規約 #7 で編集できないので、後から前提を足せないぶんはここへ書く
+  データそのものになる（散文は誰も実行しない）。前提は
+  **migration 内の `DO $$ … RAISE EXCEPTION … $$`** で持つ。破壊的文より**前**に置けば、
+  `scripts/migration-preconditions.ts` のリハーサルがその検査ごと流すので必ず実行される。
 
-  判定は `planMigration` ただ 1 つで、CI の
-  `destructive-migration-has-executed-assertion.test.ts` もデプロイ経路も同じ関数を呼ぶ
-  （分けて書いた前身は `ALTER TABLE public.t DROP COLUMN c` が**両方の関門から
-  同時に消えて**いた）。検査も登録も無い破壊は 1 文も実行せずに拒否する。登録が
-  あるぶんは**リハーサルの途中**——その破壊的文が走る直前——で SQL を流し、0 でなければ
-  そこで止める。適用前のスナップショットで評価すると、移送先を作るのが同じ未適用の束に
-  入っていたり先行 migration が列名を変えていたりしたときに黙って飛ばすことになる。
-  `HANDOVERS` の SQL が状態に応じて答えること・読めない答えを 0 件扱いしないことは
-  `__tests__/integration/prisma/migration-handovers.test.ts` が実 DB で
-  固定する。ヘッダが指すスクリプトが実在することは
+  **前提の有無を静的に判定する道具は置かない。** かつては migration SQL を分類して
+  「破壊的文には検査か登録が要る」を強制する 450 行の分類器（`planMigration` /
+  `HANDOVERS`）があったが、これは同ファイルが「収束しない」と結論した写経そのもので、
+  5 回の連続レビューで塞ぎ続けることになった（schema 修飾・一時表・`EXECUTE`・
+  `IF NOT EXISTS`・検査スコープ）。しかも分類器自身が「対象を名指ししつつ何も
+  確かめない検査を書けば通る」と認めていた——静的には判定できないものを判定させていた。
+
+  破壊的 DDL は代わりに **squawk**（`ban-drop-column` 等を error にする。通すには
+  `-- squawk-ignore <rule>` の明示が要り、人のレビュー対象になる）と
+  **デプロイの計画ダウンタイムモード**（上記）の 2 つが見る。どちらも vendor / infra 側の
+  仕組みで、自前の SQL 解析を持たない。ヘッダが指すスクリプトが実在することは
   `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
   （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）
 
