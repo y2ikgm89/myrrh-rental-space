@@ -140,9 +140,16 @@ variable "cloud_run_secret_versions" {
   description = "Cloud Run env で pin する Secret Manager version の map (secret_id → version string)"
   type        = map(string)
   default = {
-    # v1 = Neon direct（migrate 用に DIRECT_URL secret へ退避済み）。
-    # v2 = Neon pooled (`-pooler`)。Cloud Run runtime は v2 を pin。
-    DATABASE_URL                       = "2"
+    # `DATABASE_URL` secret は **pooled 接続だけ**を入れる（runtime 専用）。
+    # migrate job は `DIRECT_URL` secret を使うので、この secret に direct を
+    # 混ぜない——混ぜると「意味を version 番号で区別する」ことになり、切替のたびに
+    # pin の張り替えが要る。張り替え忘れは migrate が旧 DB を見て exit 0 で
+    # 黙って終わる形になるので、役割ごとに secret を分けてある。
+    #
+    # v1 = 旧 DB の direct（歴史的経緯。もう誰も参照しない）
+    # v2 = 旧 DB の pooled（切り戻し用に残す）
+    # v3 = 新しい空 DB の pooled ← WP24 切替でここへ進む
+    DATABASE_URL                       = "3"
     BETTER_AUTH_SECRET                 = "1"
     ENCRYPTION_KEY                     = "1"
     SECONDARY_ENCRYPTION_KEYS          = "1"

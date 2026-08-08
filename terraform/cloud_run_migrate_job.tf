@@ -60,25 +60,30 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
         }
 
         # Neon 公式: prisma migrate は direct 接続。
-        # - DIRECT_URL: prisma.config.ts datasource（必須）
-        # - DATABASE_URL: versions/1 = Neon direct（runtime の v2 pooler と分離）
+        #
+        # **`DATABASE_URL` は注入しない。** `prisma/schema.prisma` の datasource は
+        # `url` を持たず、接続先は `prisma.config.ts` が組み立てる。その解決順は
+        # `DIRECT_URL` → `DATABASE_URL` で、direct が入っていれば `DATABASE_URL` は
+        # 一度も読まれない（`scripts/migration-preconditions.ts` の `resolveUrl` も同順）。
+        #
+        # 以前は「migrate は direct が要る」という理由で `DATABASE_URL` にも direct を
+        # 入れていたが、そのために **1 つの secret へ direct と pooled という別物を
+        # 詰め、version 番号だけで区別する**形になっていた（v1=direct / v2=pooled）。
+        # 意味を番号に持たせると、切替のたびに Terraform 側の pin を張り替える必要が
+        # 生まれ、**張り替え忘れると migrate が旧 DB を見て exit 0 で黙って終わる**。
+        # 役割ごとに secret を分けて、その失敗モードごと無くす。
+        #
+        # - DIRECT_URL   : direct 接続。**migrate job だけ**が使う
+        # - DATABASE_URL : pooled 接続。**Cloud Run runtime だけ**が使う
+        #
         # @see https://neon.com/docs/guides/prisma-migrations
         env {
           name = "DIRECT_URL"
           value_source {
             secret_key_ref {
+              # WP24 切替: v2 = 新しい空 DB の direct。旧 DB は v1 に残す（切り戻し用）。
               secret  = google_secret_manager_secret.secret["DIRECT_URL"].secret_id
-              version = "1"
-            }
-          }
-        }
-        env {
-          name = "DATABASE_URL"
-          value_source {
-            secret_key_ref {
-              secret = google_secret_manager_secret.secret["DATABASE_URL"].secret_id
-              # runtime の pooler pin (v2) ではなく、direct の v1 を明示。
-              version = "1"
+              version = "2"
             }
           }
         }
