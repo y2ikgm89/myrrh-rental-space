@@ -19,7 +19,7 @@
 | `ip-address`                    | ^10.2.0           | socks-proxy-agent transitive                                        |
 | `picomatch`                     | ^4.0.4            | micromatch / tooling transitive                                     |
 | `tmp`                           | ^0.2.7            | playwright / tooling の insecure tmp 回避                           |
-| `playwright-core`               | ~1.61.1           | `@playwright/test` と lockstep（E2E runner SSoT）                   |
+| `playwright-core`               | ~1.62.1           | `@playwright/test` と lockstep（E2E runner SSoT）                   |
 | `uuid`                          | ^11.1.1           | google-auth / tooling transitive                                    |
 | `ws`                            | ^8.21.0           | dev tooling WebSocket transitive                                    |
 | `happy-dom`                     | ^20.11.0          | bun unit test DOM（jsdom より軽量）。`import from "jsdom"` は未使用 |

@@ -187,7 +187,7 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
 
   | 手段                                              | 可否 | 理由                                                                                                                                         |
   | ------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-  | Playwright named lock（`test(…, { lock })`）      | ❌   | **stable 未リリース**。1.61.1 / 1.62.1 の `TestDetails` は `annotation` / `tag` のみ。alpha は pin しない                                    |
+  | Playwright named lock（`test(…, { lock })`）      | ❌   | **stable 未リリース**。1.62.1（本 repo pin）の `TestDetails` は `annotation` / `tag` のみ。alpha は pin しない                               |
   | per-request の E2E ヘッダー上書き（#1693 と同型） | ❌   | feature 解決は `'use cache'` の内側で走る（`getPublicNavigation` は `"use cache"` 後に `getFeatureFilterContext()`）。`headers()` を呼べない |
   | 所有の排他分割                                    | ✅   | 交わらなければ並走しても互いの検証対象を書き換えない                                                                                         |
 
@@ -380,7 +380,8 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   同 branch の内容で人間名義の PR を作り直して checks を通すこと
   （恒久解は PAT / GitHub App token の導入だが secret 追加が必要）
 - ローカルで CI と同じ描画を得たいときは Playwright 公式 Docker イメージ
-  （`mcr.microsoft.com/playwright:v1.61.1-noble`）を使う
+  （`mcr.microsoft.com/playwright:v1.62.1-noble`）を使う。タグと pin の一致は
+  `__tests__/unit/architecture/playwright-docker-image-tag.test.ts` が機械強制する
 
 ## seed 契約
 

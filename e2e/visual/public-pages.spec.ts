@@ -37,7 +37,7 @@ import { urls } from "../fixtures";
  * 再生成は `workflow_dispatch` の `update_visual_baseline=true` で行い、
  * CI が別 branch + auto-PR を作る（required checks を通してから merge する）。
  * ローカルで CI と同じ描画を得たい場合は Playwright 公式 Docker イメージ
- * (`mcr.microsoft.com/playwright:v1.61.1-noble`) を使う。
+ * (`mcr.microsoft.com/playwright:v1.62.1-noble`) を使う。
  * CI / レビュー時の差分は playwright-report で確認。
  */
 
