@@ -17,8 +17,10 @@
  * `prisma migrate deploy` の**前**に走る。
  *
  * ただしリハーサルが証明するのは **「この SQL はエラーにならない」だけ**で、
- * 破壊はエラーではない（`DROP COLUMN` は満杯のテーブルにも成功する）。破壊的文の
- * 前提は `destructive-migration-has-executed-assertion.test.ts` が別に強制する。
+ * 破壊はエラーではない（`DROP COLUMN` は満杯のテーブルにも成功する）。破壊的 DDL は
+ * squawk（`ban-drop-column` 等）とデプロイの計画ダウンタイムモードが見る。
+ * migration 自身が `DO $$ … RAISE EXCEPTION … $$` を書けば、リハーサルが
+ * それごと流すので検査は実行される（`migration-preconditions-rehearsal.test.ts`）。
  *
  * ## SELECT 形だけでなくコマンド形も禁じる
  *

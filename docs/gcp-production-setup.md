@@ -726,8 +726,10 @@ exits non-zero before `prisma migrate deploy` starts.
 
 It proves the SQL does not error — **not** that no data is lost. `DROP COLUMN`
 succeeds against a full table, so a green rehearsal is not permission to drop.
-Destructive statements carry their own `DO $$ … RAISE EXCEPTION … $$` check,
-enforced by `destructive-migration-has-executed-assertion.test.ts`. Failing first matters: a migration that
+Destructive DDL is caught by squawk (`ban-drop-column` and friends, which require
+an explicit `-- squawk-ignore`) and by the deploy's planned-downtime mode. When a
+migration carries its own `DO $$ … RAISE EXCEPTION … $$` check, the rehearsal runs
+it, so the check is executed rather than merely written down. Failing first matters: a migration that
 dies partway is recorded in `_prisma_migrations` and blocks every later deploy
 until someone repairs the production database by hand. The `&&` is load-bearing
 — with `;` the migrate runs regardless.

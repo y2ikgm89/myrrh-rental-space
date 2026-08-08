@@ -314,31 +314,36 @@ SAVEPOINT s1;`,
     });
   });
 
-  describe("破壊は、検査も引き継ぎ登録も無ければ止める", () => {
-    // **リハーサルだけでは足りないことの証明。** 下の SQL は PostgreSQL 的には
-    // 何のエラーも起こさない——だから旧実装は 0 を返して通していた。消えるのは
-    // データだけで、それはエラーではない（CX-3）。
-    test("検査を持たない DROP COLUMN は 1", async () => {
-      await seed(`('a','x',1,'n')`);
+  describe("migration 自身が持つ検査は、実行される", () => {
+    // **破壊的変更の前提はここで持つ。** かつては SQL を静的に分類して
+    // 「破壊的文には検査が要る」を強制する道具があったが、それは同 script が
+    // 「収束しない」と結論した写経そのもので、5 回のレビューで塞ぎ続けることに
+    // なった。破壊的 DDL は squawk（`ban-drop-column` 等）とデプロイの計画
+    // ダウンタイムモードが見る。**この script が保証するのは 1 点だけ**——
+    // migration が `DO $$ … RAISE EXCEPTION … $$` を書いたなら、それは
+    // 「書いてあるだけ」にはならず、migrate の前に実際に評価される。
+    //
+    // リハーサルが破壊そのものを止めないことは下の 3 本目が示す。それは既知で、
+    // header の「この方法が見ないもの」に書いてある（破壊はエラーではない）。
+
+    test("成り立たない検査は migrate 前に落ちる（1・DB は不変）", async () => {
+      // note が NULL の行を残したまま「NULL があれば止める」検査を置く。
+      await seed(`('a','x',1,NULL)`);
       const result = await check(
         `BEGIN;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM "${CHILD}" WHERE "${CHILD}"."note" IS NULL) THEN
+    RAISE EXCEPTION '空の note がある';
+  END IF;
+END $$;
 ALTER TABLE "${CHILD}" DROP COLUMN "note";
 COMMIT;`,
       );
       expect(result).toEqual({ code: 1, unchanged: true });
     });
 
-    test("検査を持たない TRUNCATE は 1", async () => {
-      await seed(`('a','x',1,'n')`);
-      const result = await check(
-        `BEGIN;
-TRUNCATE TABLE "${CHILD}";
-COMMIT;`,
-      );
-      expect(result).toEqual({ code: 1, unchanged: true });
-    });
-
-    test("検査を前に置けば通る", async () => {
+    test("成り立つ検査は通る（0・DB は不変）", async () => {
       await seed(`('a','x',1,'n')`);
       const result = await check(
         `BEGIN;
@@ -348,6 +353,19 @@ BEGIN
     RAISE EXCEPTION '空の note がある';
   END IF;
 END $$;
+ALTER TABLE "${CHILD}" DROP COLUMN "note";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 0, unchanged: true });
+    });
+
+    test("検査を書かなければ、破壊はここでは止まらない（0）", async () => {
+      // この script の守備範囲を正直に固定する。`DROP COLUMN` は満杯の表でも
+      // 成功するのでリハーサルは 0 を返す。止めるのは squawk の
+      // `ban-drop-column` と、デプロイの計画ダウンタイムモード。
+      await seed(`('a','x',1,'n')`);
+      const result = await check(
+        `BEGIN;
 ALTER TABLE "${CHILD}" DROP COLUMN "note";
 COMMIT;`,
       );
