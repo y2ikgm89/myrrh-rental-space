@@ -14,13 +14,26 @@ describe("one-time backfill clean-break contract", () => {
    * migration ヘッダだけが残った。migration は絶対規約 #7 で編集できないので、
    * 直せるのはスクリプト側だけだった）。
    *
-   * ここに載せてよいのは「本番で流し終えた」ことが確認できたものだけ。
+   * ここに載せてよいのは「もう誰も実行できない／実行する必要が無い」ことが
+   * 確認できたものだけ。判定は 2 通りある:
+   *
+   * 1. **本番で流し終えた**
+   * 2. **流す対象そのものが存在しなくなった**
+   *
+   * `backfill-special-holidays-to-blocked-dates.ts` は 2 で消えた。移送元の
+   * `locations.special_holidays` は schema.prisma にも baseline にも `src/` にも
+   * 1 件も残っておらず（実測 0）、それを DROP する migration は baseline へ
+   * 畳まれてヘッダごと消えている。本番は新しい空の DB へ切り替える方針なので、
+   * 移送すべきデータも生まれない。**実行すると「列がこの DB に存在しない」で
+   * 落ちるだけのスクリプト**になっていた。
+   *
    * 参照が残ったまま消えていないかは
    * `migration-referenced-scripts-exist.test.ts` が別途強制する。
    */
   test("does not keep the retired one-off data repair scripts", () => {
     const removedScripts = [
       "backfill-page-hero-buttons.ts",
+      "backfill-special-holidays-to-blocked-dates.ts",
       "migrate-gallery-images-to-media.ts",
       "update-access-sections.ts",
     ];
