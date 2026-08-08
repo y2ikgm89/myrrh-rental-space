@@ -23,7 +23,7 @@ import {
  *   別 project には効かない
  * - **Playwright の named test lock**（`test("...", { lock: "..." })`）— ファイル・
  *   worker・project を跨いで排他する公式機能だが、**stable 未リリース**。
- *   1.61.1（本 repo pin）にも 1.62.1（最新 stable）にも存在せず、
+ *   1.62.1（本 repo pin・執筆時点の最新 stable）にも存在せず、
  *   `TestDetails` は `annotation` / `tag` のみ。alpha を pin する選択は取らない
  * - **per-request の E2E ヘッダー上書き**（admin identity の `x-e2e-admin-identity`
  *   と同型）— feature 解決は `'use cache'` の内側で走る（`getPublicNavigation` は
