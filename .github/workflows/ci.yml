@@ -787,22 +787,30 @@ jobs:
           retention-days: 30
 
   visual-regression:
-    name: Visual Regression (opt-in)
+    name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # opt-in 実行条件:
+    # 実行条件:
+    # - **nightly の schedule**（main、18:00 UTC = 03:00 JST）
     # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
     # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
-    # branch prefix 経路の起動実績はゼロ = 実質 workflow_dispatch 専用
-    # （根拠は e2e-tests job のコメント）。
-    # baseline regeneration は意図的な workflow_dispatch でのみ実行する（main push
-    # 自動 regeneration は破壊的変更時に baseline を silent 上書きする risk のため廃止）。
+    #
+    # 手動 dispatch だけに頼っていた間、この job は **8 日間 1 度も走っていなかった**
+    # （最後の dispatch は 2026-08-01、baseline の最終生成は 07-31）。その間の公開ページ
+    # 変更は視覚回帰が一度も検証されず、8 日ぶりに回したら locator の strict mode
+    # violation でスナップショットを 1 枚も撮れない状態になっていた（PR #2060）。
+    # e2e-tests を nightly に入れたのと同じ理由で schedule を正規の起動経路に据える。
+    #
+    # baseline regeneration は意図的な workflow_dispatch でのみ実行する（自動
+    # regeneration は破壊的変更時に baseline を silent 上書きする risk のため）。
+    # schedule では `inputs.update_visual_baseline` が空文字なので比較モードになる。
     # 再生成 baseline は main へ直接 push せず別 branch + auto-PR を作成し、
     # branch protection の required status checks を通過させてから merge する。
     permissions:
       contents: write # auto-PR 用 branch push
       pull-requests: write # auto-PR 作成
     if: |
+      github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
@@ -1008,6 +1016,7 @@ jobs:
         unit-tests,
         smoke-e2e,
         e2e-tests,
+        visual-regression,
         build,
       ]
     if: ${{ always() && github.event_name == 'schedule' }}
