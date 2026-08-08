@@ -581,6 +581,21 @@ const eslintConfig = defineConfig([
   // Prettier（末尾: 競合ルール無効化）
   prettier,
 
+  // 走査して「違反 0 件」を assert する gate に、走査規模の下限を要求する。
+  //
+  // 実測: collector を 0 件化すると 4 件中 3 件が pass した——gate が完全に
+  // 空振りしながら緑だった。「調べて違反が無かった」と「調べる対象が無かった」を
+  // 区別できないのが欠陥で、走査すること自体は欠陥ではない（150 本中 145 本は
+  // 直接 assert 型か、既に規模の自己検査／見本を持っている）。
+  {
+    name: "architecture-gates/scan-must-not-be-silently-empty",
+    files: ["__tests__/unit/architecture/**/*.{ts,tsx}"],
+    plugins: { local: localPlugin },
+    rules: {
+      "local/gate-scan-must-not-be-silently-empty": "error",
+    },
+  },
+
   // React のレンダー純粋性ルールを、**意図的に不純なテストダブル**にだけ外す。
   //
   // 対象は Lexical エディタの mount error boundary を検証する 2 本。ここで使う
