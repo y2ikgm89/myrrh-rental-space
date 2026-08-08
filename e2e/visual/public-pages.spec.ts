@@ -72,15 +72,30 @@ const installHermeticNetwork = async (page: Page) => {
   });
 };
 
+/**
+ * 見出しは **`main` landmark でスコープする**。
+ *
+ * フッター（`contentinfo`）はセクション見出しに `<h2>` を使っており、ページの
+ * `<h1>` と同名になることがある。ページ全体から `getByRole("heading")` を引くと
+ * その 2 件に一致して strict mode violation になり、**スナップショットを 1 枚も
+ * 撮る前に**テストが落ちる。実測（full CI dispatch 31275121357）: フッターに
+ * `<h2>お問い合わせ</h2>` が増えた時点で contact が
+ * `resolved to 2 elements` で失敗した。
+ *
+ * 対象は常にページ本体の見出しなので、`main` に閉じるのが本来の意図。
+ * 規約は `.claude/rules/testing-e2e.md`（landmark の role でスコープしてから
+ * テキストを見る）。
+ */
 const preparePageForVisualSnapshot = async (
   page: Page,
   headingName: string | RegExp,
 ) => {
-  await expect(page.getByRole("main")).toBeVisible();
+  const main = page.getByRole("main");
+  await expect(main).toBeVisible();
   const heading =
     typeof headingName === "string"
-      ? page.getByRole("heading", { name: headingName, exact: true })
-      : page.getByRole("heading", { name: headingName });
+      ? main.getByRole("heading", { name: headingName, exact: true })
+      : main.getByRole("heading", { name: headingName });
   await expect(heading).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 };
