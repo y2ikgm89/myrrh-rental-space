@@ -122,6 +122,54 @@ ALTER TABLE "locations" ADD CONSTRAINT "c" CHECK ("x" >= 0);`,
         expect(planStep(sql).kind, sql).toBe("run");
       }
     });
+  });
+
+  /**
+   * squawk にも計画ダウンタイム判定にも該当しない一括削除。
+   *
+   * この 4 形は**リハーサルでも止まらない**——流して巻き戻せてしまうので
+   * 「通った」と報告し、本番の migrate が本当に実行する。実測で確認した穴で、
+   * `irreversibleDataLoss` はそこだけを塞ぐ。
+   *
+   * 判定は `planStep` 経由で確かめる。デプロイ経路（`pendingStatements`）も
+   * `planStep` を呼ぶので、fixture と実走査が同じ関数を通る。
+   */
+  describe("網にかからない一括削除を拒否する", () => {
+    test("TRUNCATE / WHERE 無し DELETE / DROP SCHEMA / 動的 SQL は blocked", () => {
+      for (const sql of [
+        'TRUNCATE "audit_logs"',
+        'TRUNCATE TABLE "audit_logs" CASCADE',
+        'DELETE FROM "reservations"',
+        'DELETE FROM ONLY "reservations"',
+        'DROP SCHEMA "public" CASCADE',
+        "DO $$ BEGIN EXECUTE 'TRUNCATE audit_logs'; END $$",
+      ]) {
+        expect(planStep(sql).kind, sql).toBe("blocked");
+      }
+    });
+
+    test("条件付きの削除と、対象を名指しする検査は通る", () => {
+      // 何が消えるかは条件次第なので、そこは著者の検査の領分。
+      for (const sql of [
+        'DELETE FROM "reservations" WHERE "id" = \'r1\'',
+        'UPDATE "t" SET "x" = 1',
+        // 検査そのもの。EXECUTE を含まないので通る。
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM t) THEN RAISE EXCEPTION 'x'; END IF; END $$",
+      ]) {
+        expect(planStep(sql).kind, sql).toBe("run");
+      }
+    });
+
+    test("TRUNCATE を禁じる trigger の定義は破壊ではない", () => {
+      // 素朴な部分一致だと、防御の定義そのものが破壊に見える。
+      // baseline はこの形を 4 つ持っているので、当たると baseline が流せなくなる。
+      expect(
+        planStep(
+          'CREATE TRIGGER "audit_logs_no_truncate" BEFORE TRUNCATE ON "audit_logs" ' +
+            "FOR EACH STATEMENT EXECUTE FUNCTION prevent_append_only_truncate()",
+        ).kind,
+      ).toBe("run");
+    });
 
     test("この repo の migration に blocked が無い", () => {
       // あると「流して確かめられない」ので適用前確認が手作業に戻る。
