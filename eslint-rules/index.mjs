@@ -6,6 +6,7 @@
  * under the `local` prefix.
  */
 
+import gateScanMustNotBeSilentlyEmpty from "./gate-scan-must-not-be-silently-empty.mjs";
 import noRawUpdatetagForCdnMappedCacheTag from "./no-raw-updatetag-for-cdn-mapped-cache-tag.mjs";
 import requireTrimmedText from "./require-trimmed-text.mjs";
 import seedRespectsUniqueConstraints from "./seed-respects-unique-constraints.mjs";
@@ -17,6 +18,7 @@ const plugin = {
     version: "0.0.1",
   },
   rules: {
+    "gate-scan-must-not-be-silently-empty": gateScanMustNotBeSilentlyEmpty,
     "no-raw-updatetag-for-cdn-mapped-cache-tag":
       noRawUpdatetagForCdnMappedCacheTag,
     "require-trimmed-text": requireTrimmedText,

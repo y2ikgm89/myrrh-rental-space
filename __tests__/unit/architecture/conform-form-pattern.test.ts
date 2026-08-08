@@ -153,6 +153,12 @@ function toRepoPath(absolute: string): string {
 }
 
 describe("conform form pattern", () => {
+  test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
+    // 収集が黙って 0 件になると violations も必ず空になり、緑が「違反なし」を
+    // 意味しなくなる（local/gate-scan-must-not-be-silently-empty が強制）。
+    expect(collectTsxFiles(APP_ROOT).length).toBeGreaterThan(20);
+  });
+
   test("helper と app root が存在する（rename を silent green にしない）", () => {
     expect(existsSync(APP_ROOT)).toBe(true);
     expect(existsSync(HELPER)).toBe(true);

@@ -26,6 +26,13 @@ function lineNumberFor(source: string, index: number): number {
 }
 
 describe("dialog accessible name contract", () => {
+  test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
+    // 収集が黙って 0 件になると offenders も必ず空になり、緑が「違反なし」を
+    // 意味しなくなる。件数の下限をここで固定する
+    // （local/gate-scan-must-not-be-silently-empty が強制）。
+    expect(collectTsxFiles(APP_ROOT).length).toBeGreaterThan(10);
+  });
+
   test("DialogContent and AlertDialogContent expose an accessible name in the content subtree", () => {
     expect(existsSync(APP_ROOT)).toBe(true);
 

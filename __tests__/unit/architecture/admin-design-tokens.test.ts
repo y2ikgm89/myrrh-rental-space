@@ -41,6 +41,13 @@ function collectTsxFiles(dir: string): string[] {
 }
 
 describe("admin design tokens", () => {
+  test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
+    // 収集が黙って 0 件になると offenders も必ず空になり、緑が「違反なし」を
+    // 意味しなくなる。件数の下限をここで固定する
+    // （local/gate-scan-must-not-be-silently-empty が強制）。
+    expect(collectTsxFiles(ADMIN_APP_ROOT).length).toBeGreaterThan(20);
+  });
+
   test("管理画面に禁止パレット相当のユーティリティクラスが含まれない", () => {
     // admin route group の rename/消滅を silent green で見逃さない hard-fail
     expect(existsSync(ADMIN_APP_ROOT)).toBe(true);

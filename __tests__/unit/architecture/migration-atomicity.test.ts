@@ -111,6 +111,12 @@ export function isWrapped(statements: readonly string[]): boolean {
 }
 
 describe("migration の原子性", () => {
+  test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
+    // 収集が黙って 0 件になると offenders も必ず空になり、緑が「違反なし」を
+    // 意味しなくなる（local/gate-scan-must-not-be-silently-empty が強制）。
+    expect(migrationDirs().length).toBeGreaterThan(0);
+  });
+
   test("免除は baseline だけ（空の DB に走るので既存行が無い）", () => {
     // 免除を「古い migration」へ広げないための固定。baseline 以外に免除は無い。
     const dirs = migrationDirs();

@@ -33,6 +33,12 @@ function lineNumberFor(source: string, index: number): number {
 }
 
 describe("public dialog footer stays pinned outside the scroll area", () => {
+  test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
+    // 収集が黙って 0 件になると offenders も必ず空になり、緑が「違反なし」を
+    // 意味しなくなる（local/gate-scan-must-not-be-silently-empty が強制）。
+    expect(collectTsxFiles(PUBLIC_APP_ROOT).length).toBeGreaterThan(5);
+  });
+
   test("DialogContent exposes a footer prop rendered after the scrollable children and before the close button", () => {
     const source = readFileSync(DIALOG_FILE, "utf8");
 

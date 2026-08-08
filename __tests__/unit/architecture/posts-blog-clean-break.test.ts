@@ -69,6 +69,10 @@ describe("posts public URL clean break", () => {
       ? readdirSync(snapshotsDir)
       : [];
 
+    // snapshots dir が rename / 移動すると `snapshotNames` が空になり、
+    // 下の「legacy な posts-* が無い」が**見ずに**成立する。
+    expect(snapshotNames.length).toBeGreaterThan(0);
+
     expect(visualSpec).toContain('"blog-list.png"');
     expect(visualSpec).not.toContain('"posts-list.png"');
 

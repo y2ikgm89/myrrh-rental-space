@@ -91,6 +91,12 @@ export function duplicateTimestamps(dirs: readonly string[]): string[] {
 }
 
 describe("prisma migration directory structure", () => {
+  test("走査対象が空でない（見本は判定を、これは走査を守る）", () => {
+    // 見本は「判定が壊れていない」ことしか示さない。実走査が 0 件になると
+    // 実データ側の assert が黙って緑になるので、規模の下限を別に置く。
+    expect(listMigrationDirs().length).toBeGreaterThan(0);
+  });
+
   test("判定が見本で正しく動く（自己検査）", () => {
     // fixture の 14 桁は**日付として成立しない**値を使う。実在しそうな
     // timestamp を書くと gates-do-not-pin-migrations が「migration の名指し」
