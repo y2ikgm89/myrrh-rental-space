@@ -23,6 +23,7 @@
 | `uuid`                          | ^11.1.1           | google-auth / tooling transitive                                    |
 | `ws`                            | ^8.21.0           | dev tooling WebSocket transitive                                    |
 | `happy-dom`                     | ^20.11.0          | bun unit test DOM（jsdom より軽量）。`import from "jsdom"` は未使用 |
+| `nanoid`                        | ^3.3.17           | postcss 経由。GHSA-2v37-7h3g-55p8（size 0 で無限ループ）回避        |
 
 Exact pin（`packageManager` / TypeScript 等）は `package.json` トップレベルの
 `devDependencies` / `dependencies` が SSoT。overrides は transitive のみ。
