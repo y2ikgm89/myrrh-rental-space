@@ -9,6 +9,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
+import { definite } from "../../../support/definite";
 
 const RegistrationStatus = {
   PENDING: "PENDING",
@@ -79,8 +80,10 @@ describe("getWaitlistQueue pagination", () => {
     const call = mockFindMany.mock.calls[0]?.[0] as
       { skip?: number; take?: number } | undefined;
     expect(call).toBeDefined();
-    expect(call!.skip).toBe(0);
-    expect(call!.take).toBe(WAITLIST_QUEUE_PER_PAGE);
+    expect(definite(call, "findMany の引数").skip).toBe(0);
+    expect(definite(call, "findMany の引数").take).toBe(
+      WAITLIST_QUEUE_PER_PAGE,
+    );
   });
 
   test("page=3 指定で skip が (page-1)*perPage になる", async () => {
@@ -89,8 +92,8 @@ describe("getWaitlistQueue pagination", () => {
 
     const call = mockFindMany.mock.calls[0]?.[0] as
       { skip?: number; take?: number } | undefined;
-    expect(call!.skip).toBe(40);
-    expect(call!.take).toBe(20);
+    expect(definite(call, "findMany の引数").skip).toBe(40);
+    expect(definite(call, "findMany の引数").take).toBe(20);
   });
 
   test("戻り値に total/page/perPage/totalPages が含まれる", async () => {

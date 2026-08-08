@@ -14,6 +14,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { z } from "zod";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -592,14 +593,12 @@ describe("deleteReviewReply", () => {
 describe("idSchema バリデーション（単体）", () => {
   describe("正常系", () => {
     test("有効な UUID v4 で通過する", () => {
-      const { z } = require("zod");
       const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
       const result = idSchema.safeParse(VALID_UUID);
       expect(result.success).toBe(true);
     });
 
     test("異なる有効な UUID でも通過する", () => {
-      const { z } = require("zod");
       const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
       const anotherUuid = "123e4567-e89b-12d3-a456-426614174000";
       const result = idSchema.safeParse(anotherUuid);
@@ -611,7 +610,6 @@ describe("idSchema バリデーション（単体）", () => {
     test.each(INVALID_UUIDS)(
       "不正な値 '%s' で失敗しエラーメッセージを含む",
       (invalidId) => {
-        const { z } = require("zod");
         const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
         const result = idSchema.safeParse(invalidId);
         expect(result.success).toBe(false);

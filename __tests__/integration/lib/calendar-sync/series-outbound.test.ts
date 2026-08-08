@@ -34,6 +34,7 @@ import type {
   CalendarEventInstance,
   CalendarEventParams,
 } from "@/shared/lib/google-calendar/types";
+import { definite } from "../../../support/definite";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -453,11 +454,17 @@ describeMaybe(
             instances: [
               {
                 id: "master-partial_20280104T100000Z",
-                startTime: fixture.instances[0]!.startTime,
+                startTime: definite(
+                  fixture.instances[0],
+                  "fixture.instances[0]",
+                ).startTime,
               },
               {
                 id: "master-partial_20280111T100000Z",
-                startTime: fixture.instances[1]!.startTime,
+                startTime: definite(
+                  fixture.instances[1],
+                  "fixture.instances[1]",
+                ).startTime,
               },
             ],
           }),
@@ -531,11 +538,13 @@ describeMaybe(
         const gcalInstances = [
           {
             id: "master-xyz_20280104T100000Z",
-            startTime: fixture.instances[0]!.startTime,
+            startTime: definite(fixture.instances[0], "fixture.instances[0]")
+              .startTime,
           },
           {
             id: "master-xyz_20280111T100000Z",
-            startTime: fixture.instances[1]!.startTime,
+            startTime: definite(fixture.instances[1], "fixture.instances[1]")
+              .startTime,
           },
           // 3 件目は startTime を 1 分ずらして一致しない状態にする
           {
@@ -553,7 +562,7 @@ describeMaybe(
         // GCAL-AUDIT-06: 未マッチの reservationId を呼出側 (syncReservationSeriesToCalendar /
         // retryFailedSeriesCalendarSyncs) が calendarSyncError マーキングに使う。
         expect(result.unmatchedReservationIds).toEqual([
-          fixture.instances[2]!.id,
+          definite(fixture.instances[2], "fixture.instances[2]").id,
         ]);
 
         const updated = await prisma.reservation.findMany({

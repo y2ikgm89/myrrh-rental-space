@@ -11,6 +11,8 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { definite } from "../../../support/definite";
+
 const mockReservationCount = mock<(...args: unknown[]) => Promise<number>>(() =>
   Promise.resolve(0),
 );
@@ -59,19 +61,19 @@ describe("getReservationStatsQuery — JST 窓計算", () => {
     // noShow, todayCount, thisWeekCount] → todayCount は index 6
     expect(mockReservationCount.mock.calls.length).toBe(8);
     const args = extractCountCall(6);
-    const gte = args.where.startTime?.gte;
-    const lt = args.where.startTime?.lt;
+    const gte = definite(args.where.startTime?.gte, "where.startTime.gte");
+    const lt = definite(args.where.startTime?.lt, "where.startTime.lt");
     expect(gte).toBeInstanceOf(Date);
     expect(lt).toBeInstanceOf(Date);
 
     // JST 00:00 = UTC 前日 15:00 (JST=UTC+9)。process TZ が何であれ成立する。
-    expect(gte!.getUTCHours()).toBe(15);
-    expect(gte!.getUTCMinutes()).toBe(0);
-    expect(gte!.getUTCSeconds()).toBe(0);
-    expect(gte!.getUTCMilliseconds()).toBe(0);
+    expect(gte.getUTCHours()).toBe(15);
+    expect(gte.getUTCMinutes()).toBe(0);
+    expect(gte.getUTCSeconds()).toBe(0);
+    expect(gte.getUTCMilliseconds()).toBe(0);
 
     // lt は gte + 24h
-    expect(lt!.getTime() - gte!.getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(lt.getTime() - gte.getTime()).toBe(24 * 60 * 60 * 1000);
   });
 
   test("thisWeekCount の startTime.gte は JST の日曜 00:00 (= UTC 土曜 15:00)", async () => {
@@ -79,14 +81,17 @@ describe("getReservationStatsQuery — JST 窓計算", () => {
 
     // thisWeekCount は index 7
     const args = extractCountCall(7);
-    const weekStart = args.where.startTime?.gte;
+    const weekStart = definite(
+      args.where.startTime?.gte,
+      "週の where.startTime.gte",
+    );
     expect(weekStart).toBeInstanceOf(Date);
 
     // JST の日曜 00:00 = UTC の土曜 15:00
-    expect(weekStart!.getUTCHours()).toBe(15);
-    expect(weekStart!.getUTCDay()).toBe(6); // Saturday in UTC = Sunday in JST
-    expect(weekStart!.getUTCMinutes()).toBe(0);
-    expect(weekStart!.getUTCSeconds()).toBe(0);
+    expect(weekStart.getUTCHours()).toBe(15);
+    expect(weekStart.getUTCDay()).toBe(6); // Saturday in UTC = Sunday in JST
+    expect(weekStart.getUTCMinutes()).toBe(0);
+    expect(weekStart.getUTCSeconds()).toBe(0);
   });
 
   test("weekStart は todayStart 以下 (今日が日曜なら等しい)", async () => {
@@ -94,15 +99,21 @@ describe("getReservationStatsQuery — JST 窓計算", () => {
 
     const today = extractCountCall(6);
     const week = extractCountCall(7);
-    const todayStart = today.where.startTime?.gte;
-    const weekStart = week.where.startTime?.gte;
+    const todayStart = definite(
+      today.where.startTime?.gte,
+      "当日の where.startTime.gte",
+    );
+    const weekStart = definite(
+      week.where.startTime?.gte,
+      "週の where.startTime.gte",
+    );
     expect(todayStart).toBeInstanceOf(Date);
     expect(weekStart).toBeInstanceOf(Date);
 
-    expect(weekStart!.getTime()).toBeLessThanOrEqual(todayStart!.getTime());
+    expect(weekStart.getTime()).toBeLessThanOrEqual(todayStart.getTime());
     // 週の期間内 (0-6 日前)
     const daysBefore =
-      (todayStart!.getTime() - weekStart!.getTime()) / (24 * 60 * 60 * 1000);
+      (todayStart.getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000);
     expect(daysBefore).toBeGreaterThanOrEqual(0);
     expect(daysBefore).toBeLessThan(7);
   });

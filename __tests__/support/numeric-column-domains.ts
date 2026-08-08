@@ -16,6 +16,7 @@
  */
 
 import { readDatabaseInvariants, readPrismaSchema } from "./prisma-sources";
+import { definite } from "./definite";
 
 export interface NumericColumn {
   readonly model: string;
@@ -456,7 +457,7 @@ export function boundaryValues(
   readonly rejected: readonly number[];
 } {
   if (key !== undefined && key in BOUNDARY_OVERRIDES) {
-    return BOUNDARY_OVERRIDES[key]!;
+    return definite(BOUNDARY_OVERRIDES[key], `BOUNDARY_OVERRIDES[${key}]`);
   }
   switch (domain.kind) {
     case "range":

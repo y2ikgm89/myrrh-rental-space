@@ -40,6 +40,7 @@ import {
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
+import { definite } from "../../../support/definite";
 
 // preload の DATABASE_URL 上書きを、gateway import 前に実 TEST_DB へ向け直す。
 // interactive tx の並行度は refund-command test と同じ 20/60s に揃える (advisory lock
@@ -450,7 +451,7 @@ describeMaybe(
           where: { reservationId },
         });
         expect(refunds).toHaveLength(1);
-        const refund = refunds[0]!;
+        const refund = definite(refunds[0], "refunds[0]");
         expect(refund.amount).toBe(5000);
         expect(refund.refundedByType).toBe(REFUNDED_BY_TYPE.AUTO_ON_CANCEL);
         expect(refund.reservationId).toBe(reservationId);
@@ -482,7 +483,7 @@ describeMaybe(
           where: { reservationId },
         });
         expect(refunds).toHaveLength(1);
-        expect(refunds[0]!.amount).toBe(5000);
+        expect(definite(refunds[0], "refunds[0]").amount).toBe(5000);
       } finally {
         await cleanup();
       }
@@ -509,8 +510,8 @@ describeMaybe(
         });
         expect(refunds).toHaveLength(1);
         // 168h tier 外れ (100h < 168h) → 72h tier match → 50% = 2500
-        expect(refunds[0]!.amount).toBe(2500);
-        expect(refunds[0]!.refundedByType).toBe(
+        expect(definite(refunds[0], "refunds[0]").amount).toBe(2500);
+        expect(definite(refunds[0], "refunds[0]").refundedByType).toBe(
           REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
         );
 
@@ -576,7 +577,10 @@ describeMaybe(
           },
         );
         expect(cancellationAudits).toHaveLength(1);
-        const auditInput = cancellationAudits[0]![0] as {
+        const auditInput = definite(
+          cancellationAudits[0],
+          "cancellationAudits[0]",
+        )[0] as {
           metadata: { wasPaid: boolean; requiresRefund: boolean };
         };
         expect(auditInput.metadata.wasPaid).toBe(true);
@@ -623,7 +627,7 @@ describeMaybe(
           where: { reservationId },
         });
         expect(refunds).toHaveLength(1);
-        const refund = refunds[0]!;
+        const refund = definite(refunds[0], "refunds[0]");
         expect(refund.amount).toBe(4000);
         expect(refund.refundedByType).toBe(REFUNDED_BY_TYPE.AUTO_ON_CANCEL);
         expect(refund.reservationId).toBe(reservationId);
@@ -657,7 +661,10 @@ describeMaybe(
           },
         );
         expect(cancellationAudits).toHaveLength(1);
-        const auditInput = cancellationAudits[0]![0] as {
+        const auditInput = definite(
+          cancellationAudits[0],
+          "cancellationAudits[0]",
+        )[0] as {
           metadata: {
             wasPaid: boolean;
             requiresRefund: boolean;

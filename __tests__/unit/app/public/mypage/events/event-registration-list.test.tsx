@@ -19,6 +19,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { installJSDOMForTests } from "../../../../../setup-dom";
+import { definite } from "../../../../../support/definite";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
@@ -252,7 +253,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
     const links = container.querySelectorAll<HTMLAnchorElement>(
       `a[href="${MEETING_URL}"]`,
     );
-    return links.length > 0 ? links[0]! : null;
+    return links.length > 0 ? definite(links[0], "links[0]") : null;
   }
 
   function detailLink(): HTMLAnchorElement | null {

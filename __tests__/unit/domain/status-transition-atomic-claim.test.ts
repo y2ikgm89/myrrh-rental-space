@@ -24,6 +24,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { definite } from "../../support/definite";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 
@@ -84,7 +85,7 @@ describe("status transition commands use atomic-claim updateMany + status guard"
         // Line-comments referencing the OLD pattern (`// 旧実装は tx.inquiry.update`)
         // are stripped first so the drift-gate does not fail on documentation
         // of what was fixed.
-        const bodyNoComments = body!
+        const bodyNoComments = definite(body, "コマンドの本文")
           .split(/\r?\n/)
           .map((line) => {
             const idx = line.indexOf("//");
@@ -103,7 +104,7 @@ describe("status transition commands use atomic-claim updateMany + status guard"
         // The updateMany WHERE must include a status predicate somewhere in
         // the body. This is a soft check but catches accidental "updateMany
         // without status guard" regressions.
-        expect(/status\s*:/.test(body!)).toBe(true);
+        expect(/status\s*:/.test(definite(body, "コマンドの本文"))).toBe(true);
       });
     }
   }

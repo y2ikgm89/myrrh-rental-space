@@ -214,10 +214,10 @@ beforeEach(async () => {
   );
   mockInvalidateReservationCaches.mockClear();
   mockInvalidateReservationSeriesCaches.mockClear();
-  const module =
+  const actionModule =
     await import("@/app/(public)/mypage/_shared/actions/reservation-series");
   cancelReservationSeriesCustomerAction =
-    module.cancelReservationSeriesCustomerAction as typeof cancelReservationSeriesCustomerAction;
+    actionModule.cancelReservationSeriesCustomerAction as typeof cancelReservationSeriesCustomerAction;
 });
 
 describe("cancelReservationSeriesCustomerAction (Phase B.2.1 Task A)", () => {

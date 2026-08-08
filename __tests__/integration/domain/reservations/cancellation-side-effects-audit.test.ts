@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
 import { installEmailRenderContextMock } from "../../../support/email-render-context-mock";
+import { definite } from "../../../support/definite";
 
 // ---------------------------------------------------------------------------
 // Facade / external module mocks (順序: mock.module 宣言 → dynamic import)
@@ -220,6 +221,29 @@ function baseInput() {
   };
 }
 
+/**
+ * キャンセルの監査ログ。**無ければ「何が無かったか」を名乗って落ちる。**
+ *
+ * 以前は各テストで `expect(audit).toBeDefined()` を書いたうえで
+ * `audit!.metadata!.sideEffects!` と辿っていた。実際に無かったときに出るのは
+ * `Cannot read properties of undefined` だけで、audit / metadata / sideEffects の
+ * どれが欠けたのか読めない。3 段に分けて名前を付ける。
+ */
+function requireCancellationAudit(): AuditCallArg {
+  return definite(findCancellationAudit(), "キャンセルの監査ログ");
+}
+
+function requireCancellationMetadata() {
+  return definite(requireCancellationAudit().metadata, "監査ログの metadata");
+}
+
+function requireCancellationSideEffects() {
+  return definite(
+    requireCancellationMetadata().sideEffects,
+    "監査ログの metadata.sideEffects",
+  );
+}
+
 function findCancellationAudit(): AuditCallArg | undefined {
   const call = mockCreateAuditLogRecord.mock.calls.find(
     ([input]) =>
@@ -294,13 +318,11 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    expect(audit).toBeDefined();
-    const meta = audit!.metadata!;
+    const meta = requireCancellationMetadata();
     expect(meta.wasPaid).toBe(false);
     expect(meta.requiresRefund).toBe(false);
 
-    const eff = meta.sideEffects!;
+    const eff = definite(meta.sideEffects, "監査ログの metadata.sideEffects");
     expect(eff.refund).toEqual({ status: "skipped", reason: "notPaid" });
     expect(eff.gcal).toEqual({ status: "skipped", reason: "noEventId" });
     expect(eff.customerEmail?.status).toBe("ok");
@@ -329,12 +351,10 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    expect(audit).toBeDefined();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
 
-    expect(audit!.metadata!.wasPaid).toBe(true);
-    expect(audit!.metadata!.requiresRefund).toBe(true);
+    expect(requireCancellationMetadata().wasPaid).toBe(true);
+    expect(requireCancellationMetadata().requiresRefund).toBe(true);
     expect(eff.refund?.status).toBe("ok");
     expect(eff.gcal?.status).toBe("ok");
     expect(eff.customerEmail?.status).toBe("ok");
@@ -357,8 +377,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.customerEmail).toEqual({
       status: "skipped",
       reason: "disabled_or_suppressed",
@@ -384,8 +403,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.customerEmail).toEqual({
       status: "error",
       reason: "Resend rate limit",
@@ -411,8 +429,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.gcal).toEqual({
       status: "error",
       reason: "429 quota exceeded",
@@ -443,8 +460,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     });
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.customerEmail).toEqual({
       status: "skipped",
       reason: "suppressed_by_bulk",
@@ -473,8 +489,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.smartLock?.status).toBe("error");
     expect(eff.smartLock?.reason).toBe("SwitchBot 401 unauthorized");
   });
@@ -490,8 +505,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     await applyCancellationSideEffects(baseInput());
     await drainSideEffects();
 
-    const audit = findCancellationAudit();
-    const eff = audit!.metadata!.sideEffects!;
+    const eff = requireCancellationSideEffects();
     expect(eff.notification?.status).toBe("error");
     expect(eff.notification?.reason).toBe("prisma pool exhausted");
     // 他 effect は継続
