@@ -134,13 +134,12 @@ mock.module("@/shared/lib/errors/server", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
   claimEventRegistrationAsPaid,
   claimEventRegistrationAsFailed,
   finalizeSettledEventRegistrationRefund,
 } = await import("@/shared/domain/events/payment-queries");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const { REFUNDED_BY_TYPE } =
   await import("@/shared/lib/validations/enums/refund-attribution");
 

@@ -72,9 +72,9 @@ import {
   EMAIL_SEND_CONTEXT,
   REMINDER_RENDER_CONTEXT,
 } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import type { ReminderEmailData } from "@/shared/lib/email/types";
 
 const REMINDER_WINDOW = "2099-01-02";

@@ -28,7 +28,7 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
 }));
 
 import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendContactAdminNotification } from "@/shared/lib/email/contact-emails";
 import type { ContactEmailData } from "@/shared/lib/email/types";
 

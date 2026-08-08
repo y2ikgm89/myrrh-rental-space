@@ -23,15 +23,14 @@ mock.module("@/shared/lib/env/server", () => ({
   isLocalhostUrl: () => false,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { proxy } = await import("@/proxy");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const { createCancelToken } =
   await import("@/shared/lib/reservation-cancel-token");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const { createEventRegistrationPaymentToken } =
   await import("@/shared/lib/tokens/event-registration-payment-token");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } =
   await import("@/shared/lib/constants/event-registration-payment-token-cookie-name");
 

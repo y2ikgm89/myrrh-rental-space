@@ -61,12 +61,12 @@ import {
   RENDER_CONTEXT,
   RENDER_CONTEXT_WITH_ICAL,
 } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import {
   sendEventReminderEmail,
   sendEventCancelledToAllParticipants,
 } from "@/shared/lib/email/event-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { EventFormat } from "@/shared/lib/validations/enums/prisma-types";
 
 const REMINDER_DATA = {

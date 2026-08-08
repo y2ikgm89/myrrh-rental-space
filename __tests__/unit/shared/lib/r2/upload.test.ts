@@ -46,7 +46,6 @@ mock.module("@/shared/lib/r2/delete", () => ({
   deleteFiles: mock(async () => ({ success: true })),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   uploadFile,
   uploadFiles,

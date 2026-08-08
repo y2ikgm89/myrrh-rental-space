@@ -31,7 +31,7 @@ mock.module("@/shared/emails/contact-confirmation", () => ({
 }));
 
 import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendContactConfirmationEmail } from "@/shared/lib/email/contact-emails";
 import type { ContactEmailData } from "@/shared/lib/email/types";
 

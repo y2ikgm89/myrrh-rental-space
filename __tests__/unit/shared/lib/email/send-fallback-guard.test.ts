@@ -58,7 +58,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 }));
 
 import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendEmail } from "@/shared/lib/email/send";
 
 const VALID_PAYLOAD = {

@@ -255,7 +255,6 @@ mock.module("@/shared/lib/reservation-status-token", () => ({
   STATUS_TOKEN_LIFETIME_MS: 90 * 24 * 60 * 60 * 1000,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
   createCheckoutSessionCommand,
   recordManualReservationPaymentCommand,
@@ -263,7 +262,7 @@ const {
   refundOrphanedStripePaymentForCancelledReservation,
   refundCheckoutAmountMismatchForReservation,
 } = await import("@/shared/domain/reservations/payment-commands");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const {
   MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,

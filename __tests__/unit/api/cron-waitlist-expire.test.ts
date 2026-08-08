@@ -100,7 +100,7 @@ const mockSendEventWaitlistOffered = mock<
 // 実体のままでも壊れないが、テスト側で「メール送信 mock が呼ばれ終わるまで
 // 確実に待つ」ための決定的な待ち合わせポイントが無いと race になる
 // （event-waitlist-register.test.ts と同じ理由・同じパターン）。
-let firedPromises: Promise<unknown>[] = [];
+const firedPromises: Promise<unknown>[] = [];
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
     firedPromises.push(promise.catch(() => undefined));

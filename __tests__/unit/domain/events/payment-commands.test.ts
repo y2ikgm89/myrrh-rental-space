@@ -227,7 +227,6 @@ mock.module("@/shared/lib/receipt-download-token", () => ({
   createReceiptDownloadToken: () => "RECEIPT_TOKEN",
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
   createEventCheckoutSessionCommand,
   createWaitlistOfferCheckoutSessionCommand,

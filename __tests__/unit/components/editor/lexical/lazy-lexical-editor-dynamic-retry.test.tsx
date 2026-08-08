@@ -134,7 +134,7 @@ async function waitForText(
         `waitForText timed out after ${timeoutMs}ms waiting for: ${text}`,
       );
     }
-    // eslint-disable-next-line no-await-in-loop -- ポーリングのため意図的に逐次 await
+
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });

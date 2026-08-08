@@ -39,7 +39,7 @@ import {
   INQUIRY_ADMIN_DELIVERY,
   RENDER_CONTEXT,
 } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
 import type { ReviewReplyEmailData } from "@/shared/lib/email/types";
 

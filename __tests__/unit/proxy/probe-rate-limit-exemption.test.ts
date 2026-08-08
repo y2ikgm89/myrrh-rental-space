@@ -22,7 +22,6 @@ mock.module("@/shared/lib/rate-limit", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { proxy } = await import("@/proxy");
 
 describe("proxy probe rate-limit exemptions", () => {

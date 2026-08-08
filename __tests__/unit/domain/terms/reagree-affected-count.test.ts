@@ -44,7 +44,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first
 import { getReagreeAffectedCustomerCount } from "@/shared/domain/terms/admin-queries";
 
 const TERMS_ID = "doc-terms";

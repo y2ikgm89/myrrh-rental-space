@@ -20,7 +20,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { hasTermsAgreementRecorded } =
   await import("@/shared/domain/terms/queries");
 

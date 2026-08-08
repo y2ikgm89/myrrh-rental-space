@@ -1254,7 +1254,7 @@ describe("updateAdminReservationCommand", () => {
 
       // 各テストはbeforeEach で mock.clear() されるため、updateMany は1回だけ呼ばれる
       expect(mockTxReservationUpdateMany.mock.calls.length).toBeGreaterThan(0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const updateCall = (
         mockTxReservationUpdateMany.mock.calls as any
       )[0]?.[0];

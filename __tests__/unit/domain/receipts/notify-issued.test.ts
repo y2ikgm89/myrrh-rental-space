@@ -39,7 +39,6 @@ installEmailLibDispatchMock({
   sendReceiptIssuedEmail: mockSendReceiptIssuedEmail,
 });
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   notifyReceiptIssuedForEventRegistration,
   notifyReceiptIssuedForReservation,

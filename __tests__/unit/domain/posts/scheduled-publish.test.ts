@@ -22,7 +22,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   findRecentlyDueScheduledPostSlugs,
   POSTS_SCHEDULED_PUBLISH_LOOKBACK_MINUTES,
