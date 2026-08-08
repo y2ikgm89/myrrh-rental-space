@@ -41,8 +41,10 @@ permissions:
   contents: read
 
 env:
-  # service postgres image は Docker Hub (`postgres:16`) ではなく
-  # `public.ecr.aws/docker/library/postgres:16` を使う。
+  # service postgres image は Docker Hub (`postgres:18`) ではなく
+  # `public.ecr.aws/docker/library/postgres:18` を使う。
+  # バージョンは**本番 Neon（18 系）と docker-compose.yml に揃える**。
+  # 三者がずれると環境差の切り分けができなくなる。
   # Docker Hub 匿名 pull は hosted runner で timeout / rate-limit flake が出るため
   # （認証不要の AWS Public ECR Official Images ミラー）。
   # https://gallery.ecr.aws/docker/library/postgres
@@ -160,9 +162,17 @@ jobs:
           # outputs.migrations_files に載り、squawk が実体の無いファイルを読んで落ちる。
           # 削除された migration は lint しようが無いので、そもそも列挙させない。
           # https://github.com/dorny/paths-filter
+          # `.squawk.toml` も trigger に含める。設定（`pg_version` や除外ルール）だけを
+          # 変えた PR で squawk job が走らないと、**設定変更が一度も検証されないまま
+          # main に入る**。次に migration を足した誰かが、無関係な PR で初めて壊れを踏む。
+          # 設定変更時に走るのは下の Self-test gate（fixture で unsafe→検出 /
+          # safe→通過 / ignored→通過 を実証する）で、そこが実質の検証になる。
+          # `migrations_files` に `.squawk.toml` が載っても `lint-migrations.ts` は
+          # migration SQL 以外を無視するので無害（実測済み）。
           filters: |
             migrations:
               - added|modified: 'prisma/migrations/**/migration.sql'
+              - added|modified: '.squawk.toml'
 
       - name: Setup Bun
         if: steps.filter.outputs.migrations == 'true'
@@ -290,7 +300,7 @@ jobs:
     needs: [changes]
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -331,7 +341,7 @@ jobs:
     # branch protection required status checks に含める。
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -471,7 +481,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -720,7 +730,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -796,7 +806,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

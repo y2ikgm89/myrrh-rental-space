@@ -31,6 +31,24 @@
  *
  * enum の**値の順序**を見るのが重要。PostgreSQL は enum を宣言順でソートするので、
  * 順序が変わると `ORDER BY <enum列>` の結果が黙って変わる。
+ *
+ * ## 環境をまたいで比べるときは PostgreSQL のバージョンを先に見る
+ *
+ * このセンサスは `pg_constraint` を contype で絞らずに全件読む。**PostgreSQL 17 から
+ * NOT NULL 制約が `pg_constraint` に行として載る**ため、16 と 18 を比べると
+ * スキーマが同一でも constraints だけが数百件ずれる。extension も本体に付随して
+ * 上がる（`btree_gist` 1.7 → 1.8）。
+ *
+ * 実測（2026-08-08、本番切替の検証）: ローカル PG 16.11 と本番 Neon PG 18.4 で
+ * constraints が 321 対 909（+588、**全件が NOT NULL**）、extension が 1 件。
+ * tables / columns / indexes / triggers / functions / enums / sequences は完全一致だった。
+ *
+ * つまり **差分が「NOT NULL 制約」と「extension のバージョン」だけなら等価**。
+ * それ以外が 1 件でも出たら本物の drift。まず両側で `select version()` を取ること。
+ *
+ * この食い違いを踏んだので、`docker-compose.yml` と CI の postgres image は本番と
+ * 同じ 18 系に揃えた。**揃っている前提を壊さないこと** — ローカルだけ上げ下げすると
+ * ここの比較が再び嘘をつく。
  */
 
 import { PrismaPg } from "@prisma/adapter-pg";

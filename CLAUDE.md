@@ -7,7 +7,8 @@
 
 - Bun 1.3.14（`packageManager` が SSoT）/ TypeScript 6.0.3（exact pin）
 - Next.js 16 App Router（`cacheComponents: true` = PPR + `"use cache"`、React Compiler、typedRoutes）
-- React 19 / Prisma 7 + PostgreSQL 16（client は `generated/prisma` に生成、git 管理外）
+- React 19 / Prisma 7 + PostgreSQL 18（本番 Neon / ローカル / CI すべて 18 系に揃える。
+  client は `generated/prisma` に生成、git 管理外）
 - Tailwind v4 CSS-first（`tailwind.config.*` なし）/ conform + Zod 4 / Better Auth（顧客のみ）
 - テスト: bun test（`scripts/run-tests.ts` 経由必須）+ Playwright
 

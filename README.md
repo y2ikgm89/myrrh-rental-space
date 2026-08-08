@@ -10,7 +10,7 @@ services — the public storefront and the admin dashboard — split by the
 - **Next.js 16** App Router — PPR + `"use cache"` (`cacheComponents: true`),
   React Compiler, typedRoutes
 - **React 19** / **Tailwind v4** (CSS-first, no `tailwind.config`)
-- **Prisma 7** + **PostgreSQL 16** — client is generated to `generated/prisma`
+- **Prisma 7** + **PostgreSQL 18** — client is generated to `generated/prisma`
   (git-ignored)
 - **Better Auth** (customers) / **Cloud Run IAP** (admin only)
 - Tests: **`bun test`** through `scripts/run-tests.ts` + **Playwright**
