@@ -34,7 +34,6 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
-import { definite } from "../../support/definite";
 
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 const DIR_NAME_PATTERN = /^(\d{14})_([a-z0-9]+(?:_[a-z0-9]+)*)$/u;
@@ -52,34 +51,79 @@ function listMigrationDirs(): string[] {
     .sort(); // string sort matches Prisma's apply order
 }
 
+/**
+ * 名前が書式に合わないディレクトリ。
+ *
+ * **判定は純粋関数として持つ。** 実ディレクトリを直接 filter していると、
+ * migration を baseline へ畳んで 1 本になった瞬間に「見る対象が無い」状態と
+ * 「違反が無い」状態が区別できなくなる。
+ */
+export function malformedDirNames(dirs: readonly string[]): string[] {
+  return dirs.filter((name) => !DIR_NAME_PATTERN.test(name));
+}
+
+/**
+ * 重複した 14 桁 timestamp を持つディレクトリの組。
+ *
+ * **ここが空振りしていた。** 前身は実ディレクトリを走査する for ループだけを
+ * 持ち、`for (let i = 1; i < timestamps.length; i++)` は migration が 1 本に
+ * 畳まれた時点で**本体を 1 度も実行しなくなった**。それでもテストは緑を返す
+ * ——「比較して重複が無かった」と「比較する相手がいなかった」を区別できない。
+ *
+ * 判定を切り出して見本で固定する。実対象が 0 本でも、この関数が壊れれば落ちる。
+ */
+export function duplicateTimestamps(dirs: readonly string[]): string[] {
+  const seen = new Map<string, string>();
+  const duplicates: string[] = [];
+
+  for (const name of dirs) {
+    const stamp = DIR_NAME_PATTERN.exec(name)?.[1];
+    if (stamp === undefined) continue;
+    const first = seen.get(stamp);
+    if (first === undefined) {
+      seen.set(stamp, name);
+      continue;
+    }
+    duplicates.push(`${first} と ${name} が同じ ${stamp} を持つ`);
+  }
+
+  return duplicates;
+}
+
 describe("prisma migration directory structure", () => {
+  test("判定が見本で正しく動く（自己検査）", () => {
+    // fixture の 14 桁は**日付として成立しない**値を使う。実在しそうな
+    // timestamp を書くと gates-do-not-pin-migrations が「migration の名指し」
+    // として落とす（畳めば名前は嘘になるため）。
+    // 1. 検出したい形が落ちる
+    expect(
+      duplicateTimestamps(["99999999999999_a", "99999999999999_b"]),
+    ).toEqual([
+      "99999999999999_a と 99999999999999_b が同じ 99999999999999 を持つ",
+    ]);
+    expect(malformedDirNames(["99999999999999_A_Bad"])).toEqual([
+      "99999999999999_A_Bad",
+    ]);
+
+    // 2. 正当な形は通る
+    expect(
+      duplicateTimestamps(["99999999999999_a", "99999999999998_b"]),
+    ).toEqual([]);
+    expect(
+      malformedDirNames(["00000000000000_init", "99999999999999_add_thing"]),
+    ).toEqual([]);
+
+    // 3. **1 本しか無くても判定は成立する**（前身はここで空振りしていた）
+    expect(duplicateTimestamps(["00000000000000_init"])).toEqual([]);
+    expect(duplicateTimestamps([])).toEqual([]);
+  });
+
   test("每 migration ディレクトリ名は <14-digit-timestamp>_<snake-case> 書式", () => {
-    const dirs = listMigrationDirs();
-    const offenders = dirs.filter((name) => !DIR_NAME_PATTERN.test(name));
-    expect(offenders).toEqual([]);
+    expect(malformedDirNames(listMigrationDirs())).toEqual([]);
   });
 
   test("14-digit timestamp が重複していない（壁時計の厳密な単調増加は検証しない）", () => {
-    const dirs = listMigrationDirs();
-    const timestamps = dirs.map((name) => {
-      const match = DIR_NAME_PATTERN.exec(name);
-      expect(match).not.toBeNull();
-      return definite(
-        definite(match, "timestamp の一致")[1],
-        "timestamp の 1 群",
-      );
-    });
-
-    // 一覧はすでに文字列順（= 14 桁固定長なので数値順と一致）にソート済み。
-    // ここで検出できるのは隣接 2 件の timestamp が完全一致する「重複」だけ。
-    for (let i = 1; i < timestamps.length; i++) {
-      const previous = definite(timestamps[i - 1], `timestamps[${i - 1}]`);
-      const current = definite(timestamps[i], `timestamps[${i}]`);
-      expect(
-        current > previous,
-        `重複した migration timestamp: ${dirs[i]} と ${dirs[i - 1]} が同じ ${current} を持つ`,
-      ).toBe(true);
-    }
+    expect(duplicateTimestamps(listMigrationDirs())).toEqual([]);
   });
 
   test("各 migration ディレクトリに migration.sql が存在する", () => {
