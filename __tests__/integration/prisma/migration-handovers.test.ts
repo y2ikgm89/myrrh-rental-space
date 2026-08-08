@@ -25,10 +25,12 @@
  * 2 と 3 は**デプロイ経路と同じ `rehearse` を呼んで**確かめる。判定を書き写すと、
  * 書き写した側だけが緑になる（`.claude/rules/testing-unit.md` の 4 点目）。
  *
- * ## 消える列を、消えた後の DB でどう試すか
+ * ## `HANDOVERS` が空でも、ここは空振りしない
  *
- * test DB は `migrate deploy` 済みなので `locations.special_holidays` は既に無い。
- * トランザクションの中で列を作り直し、見本を入れ、数え、**必ず巻き戻す**。
+ * 1 と 4 は登録があるぶんだけを見るので、登録が 0 件なら何も見ない。
+ * 2 と 3 —— 仕組みそのもの —— は登録に依らず、このファイルが自前で立てる
+ * 見本の表（`handover_probe`）に対して毎回実行する。登録が空になったときに
+ * 検査ごと空振りする作りにはしない。
  *
  * == 実行条件 ==
  * `bun run test:integration`（test-db を自動起動 + migrate deploy）。
@@ -49,7 +51,6 @@ import { PrismaClient } from "@generated/prisma/client";
 import {
   HANDOVERS,
   pendingStatements,
-  readGapCount,
   rehearse,
   type Handover,
 } from "../../../scripts/migration-preconditions";
@@ -66,36 +67,13 @@ const { url } = resolveTestDatabaseUrl(process.env["TEST_DATABASE_URL"]);
  * `HANDOVERS` に足すときはここにも足す。足さなければ下のテストが落ちる——
  * 登録だけ増えて「実 DB で答えるか」を誰も確かめない状態を作らないため。
  */
-const COVERED = ["locations.special_holidays"];
+const COVERED: readonly string[] = [];
 
 /** 引き継ぎの見本用。migration が触る表とは別に立てる。 */
 const PROBE = "handover_probe";
 const PROBE_COUNT = `SELECT count(*) AS n FROM "${PROBE}" WHERE "note" IS NOT NULL`;
 
 let prisma: PrismaClient;
-
-/** 巻き戻し専用。これを投げてトランザクションを終える。 */
-class Rollback extends Error {}
-
-type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
-
-/** 見本を置いて数えて、**必ず**巻き戻す。 */
-async function measure<T>(seed: (tx: Tx) => Promise<T>): Promise<T | null> {
-  let captured: T | null = null;
-  try {
-    await prisma.$transaction(async (tx) => {
-      captured = await seed(tx);
-      throw new Rollback();
-    });
-  } catch (error) {
-    if (!(error instanceof Rollback)) throw error;
-  }
-  return captured;
-}
-
-async function count(tx: Tx, sql: string): Promise<number> {
-  return readGapCount(await tx.$queryRawUnsafe<Record<string, unknown>[]>(sql));
-}
 
 function probeHandover(countUnhandedOver: string): Handover {
   return {
@@ -149,81 +127,9 @@ describe("HANDOVERS は実 DB で答え、答えを受けて止まる", () => {
   });
 
   test("登録 1 件ごとに、このファイルに見本がある", () => {
-    expect(HANDOVERS.length).toBeGreaterThan(0);
     expect(HANDOVERS.map(({ target }) => target).toSorted()).toEqual(
       [...COVERED].toSorted(),
     );
-  });
-
-  test("locations.special_holidays: 未移送なら数え、移送済みなら 0", async () => {
-    const handover = HANDOVERS.find(
-      (entry) => entry.target === "locations.special_holidays",
-    );
-    expect(handover).toBeDefined();
-    if (handover === undefined) return;
-
-    const measured = await measure(async (tx) => {
-      // 列を作り直す。p9 が落としたのと同じ形。
-      await tx.$executeRawUnsafe(
-        `ALTER TABLE "locations" ADD COLUMN "special_holidays" JSONB`,
-      );
-
-      const locationId = "00000000-0000-4000-8000-00000000c001";
-      const userId = "00000000-0000-4000-8000-00000000c002";
-      await tx.$executeRawUnsafe(
-        `INSERT INTO "users" (id, email, name, updated_at)
-           VALUES ($1::uuid, 'handover@example.test', '引き継ぎ検査', NOW())`,
-        userId,
-      );
-      // sort_order は `locations_active_sort_order_key`（有効な拠点で一意）に
-      // 効く。既定の 0 は既存行が使っているので、衝突しない値を明示する。
-      await tx.$executeRawUnsafe(
-        `INSERT INTO "locations" (id, slug, name, address, image_url, sort_order, updated_at)
-           VALUES ($1::uuid, 'handover-probe', '引き継ぎ検査', '住所', '/x.png', 990001, NOW())`,
-        locationId,
-      );
-
-      // 1. 列はあるが空 → 数えるものが無い。
-      const empty = await count(tx, handover.countUnhandedOver);
-
-      // 2. 未移送の日付を置く。読めない値も混ぜる（移送スクリプトが飛ばす側）。
-      await tx.$executeRawUnsafe(
-        `UPDATE "locations" SET special_holidays = '["2099-01-01", "こわれた値"]'::jsonb
-           WHERE id = $1::uuid`,
-        locationId,
-      );
-      const unhanded = await count(tx, handover.countUnhandedOver);
-
-      // 3. 読める側を BlockedDate へ移す。読めない値は移せないので残る。
-      await tx.$executeRawUnsafe(
-        `INSERT INTO "blocked_dates"
-           (id, scope, location_id, start_date, end_date, type, reason, created_by, updated_at)
-           VALUES (gen_random_uuid(), 'LOCATION', $1::uuid, DATE '2099-01-01', DATE '2099-01-01',
-                   'HOLIDAY', '特別休業日', $2::uuid, NOW())`,
-        locationId,
-        userId,
-      );
-      const handedOver = await count(tx, handover.countUnhandedOver);
-
-      return { empty, unhanded, handedOver };
-    });
-
-    expect(measured).toEqual({
-      empty: 0,
-      // 2 件とも未引き継ぎ。
-      unhanded: 2,
-      // 移せた 1 件が減り、読めない 1 件は残る（消える値として報告され続ける）。
-      handedOver: 1,
-    });
-  }, 30_000);
-
-  test("巻き戻っている（locations に列を残していない）", async () => {
-    const [present] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
-      `SELECT count(*) AS n FROM information_schema.columns
-         WHERE table_schema = 'public' AND table_name = 'locations'
-           AND column_name = 'special_holidays'`,
-    );
-    expect(Number(present?.n ?? 0)).toBe(0);
   });
 
   test("引き継ぎが残っていれば、破壊的文を実行せずに止める", async () => {
