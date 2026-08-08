@@ -43,6 +43,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import { definite } from "../../support/definite";
 
 const ROOT = process.cwd();
 const RESERVATION_EMAILS_FILE = join(
@@ -115,7 +116,11 @@ describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () =
       }`,
     );
     expect(singleInterpolation).toHaveLength(1);
-    expect(senderViolation(singleInterpolation[0]!)).not.toBeNull();
+    expect(
+      senderViolation(
+        definite(singleInterpolation[0], "singleInterpolation[0]"),
+      ),
+    ).not.toBeNull();
 
     // idempotencyKey が 1 つも無い。
     const missingKey = sliceSenders(
@@ -124,7 +129,9 @@ describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () =
       }`,
     );
     expect(missingKey).toHaveLength(1);
-    expect(senderViolation(missingKey[0]!)).not.toBeNull();
+    expect(
+      senderViolation(definite(missingKey[0], "missingKey[0]")),
+    ).not.toBeNull();
 
     // 複数 sender があり、片方だけ discriminator を欠く場合、その sender だけ
     // 落ちる（slice が sender 単位で正しく分離されていることの証明）。
@@ -137,8 +144,8 @@ describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () =
       }`,
     );
     expect(mixed).toHaveLength(2);
-    expect(senderViolation(mixed[0]!)).toBeNull();
-    expect(senderViolation(mixed[1]!)).not.toBeNull();
+    expect(senderViolation(definite(mixed[0], "mixed[0]"))).toBeNull();
+    expect(senderViolation(definite(mixed[1], "mixed[1]"))).not.toBeNull();
   });
 
   test("通ってよい書き方は落ちない（fixture）", () => {
@@ -150,7 +157,9 @@ describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () =
       }`,
     );
     expect(twoInterpolations).toHaveLength(1);
-    expect(senderViolation(twoInterpolations[0]!)).toBeNull();
+    expect(
+      senderViolation(definite(twoInterpolations[0], "twoInterpolations[0]")),
+    ).toBeNull();
 
     const threeInterpolations = sliceSenders(
       `export async function sendBarNotification(data) {
@@ -160,7 +169,11 @@ describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () =
       }`,
     );
     expect(threeInterpolations).toHaveLength(1);
-    expect(senderViolation(threeInterpolations[0]!)).toBeNull();
+    expect(
+      senderViolation(
+        definite(threeInterpolations[0], "threeInterpolations[0]"),
+      ),
+    ).toBeNull();
   });
 
   test("reservation-emails.ts の全 sendXxxEmail idempotencyKey は entity id + version discriminator を含む", () => {

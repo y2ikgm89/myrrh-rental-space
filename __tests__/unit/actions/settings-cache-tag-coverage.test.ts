@@ -32,6 +32,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { definite } from "../../support/definite";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 
@@ -177,7 +178,7 @@ describe("settings update actions cover every backing cache tag", () => {
 
       const missing: string[] = [];
       for (const tag of requiredTags) {
-        if (!body!.includes(`CACHE_TAGS.${tag}`)) {
+        if (!definite(body, "action の本文").includes(`CACHE_TAGS.${tag}`)) {
           missing.push(tag);
         }
       }

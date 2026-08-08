@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import { splitStatements } from "../../../scripts/migration-preconditions";
+import { definite } from "../../support/definite";
 
 /**
  * baseline 以外で 2 文以上を持つ migration は `BEGIN` / `COMMIT` で包むことの gate。
@@ -101,8 +102,11 @@ function statementKind(statement: string): StatementKind {
  */
 export function isWrapped(statements: readonly string[]): boolean {
   if (statements.length < 2) return false;
-  if (statementKind(statements[0]!) !== "BEGIN") return false;
-  if (statementKind(statements.at(-1)!) !== "COMMIT") return false;
+  if (statementKind(definite(statements[0], "statements[0]")) !== "BEGIN")
+    return false;
+  if (statementKind(definite(statements.at(-1), "最後の文")) !== "COMMIT") {
+    return false;
+  }
   return statements.slice(1, -1).every((s) => statementKind(s) === "OTHER");
 }
 

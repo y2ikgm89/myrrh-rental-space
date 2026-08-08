@@ -22,6 +22,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { definite } from "../../support/definite";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 
@@ -73,13 +74,21 @@ describe("inquiry status change actions notify customer symmetrically (single vs
 
     test(`${t.file} :: ${t.fn} fires sendInquiryStatusNotificationToAll`, () => {
       expect(body).not.toBeNull();
-      expect(body!.includes("sendInquiryStatusNotificationToAll(")).toBe(true);
+      expect(
+        definite(body, "action の本文").includes(
+          "sendInquiryStatusNotificationToAll(",
+        ),
+      ).toBe(true);
     });
 
     test(`${t.file} :: ${t.fn} gates the notification on RESOLVED or CLOSED`, () => {
       expect(body).not.toBeNull();
-      expect(/InquiryStatus\.RESOLVED/.test(body!)).toBe(true);
-      expect(/InquiryStatus\.CLOSED/.test(body!)).toBe(true);
+      expect(
+        /InquiryStatus\.RESOLVED/.test(definite(body, "action の本文")),
+      ).toBe(true);
+      expect(
+        /InquiryStatus\.CLOSED/.test(definite(body, "action の本文")),
+      ).toBe(true);
     });
   }
 });

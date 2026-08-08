@@ -34,6 +34,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
+import { definite } from "../../support/definite";
 
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 const DIR_NAME_PATTERN = /^(\d{14})_([a-z0-9]+(?:_[a-z0-9]+)*)$/u;
@@ -63,14 +64,17 @@ describe("prisma migration directory structure", () => {
     const timestamps = dirs.map((name) => {
       const match = DIR_NAME_PATTERN.exec(name);
       expect(match).not.toBeNull();
-      return match![1]!;
+      return definite(
+        definite(match, "timestamp の一致")[1],
+        "timestamp の 1 群",
+      );
     });
 
     // 一覧はすでに文字列順（= 14 桁固定長なので数値順と一致）にソート済み。
     // ここで検出できるのは隣接 2 件の timestamp が完全一致する「重複」だけ。
     for (let i = 1; i < timestamps.length; i++) {
-      const previous = timestamps[i - 1]!;
-      const current = timestamps[i]!;
+      const previous = definite(timestamps[i - 1], `timestamps[${i - 1}]`);
+      const current = definite(timestamps[i], `timestamps[${i}]`);
       expect(
         current > previous,
         `重複した migration timestamp: ${dirs[i]} と ${dirs[i - 1]} が同じ ${current} を持つ`,

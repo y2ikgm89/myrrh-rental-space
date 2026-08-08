@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { readAllMigrationSql } from "../../support/prisma-sources";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { definite } from "../../support/definite";
 
 describe("ReservationSeries schema invariants", () => {
   test("Reservation.couponId は nullable (Codex #3599414656 fix)", async () => {
@@ -18,7 +19,7 @@ describe("ReservationSeries schema invariants", () => {
       /model Reservation \{[\s\S]*?@@map\("reservations"\)\s*\}/,
     );
     expect(reservationBlock).not.toBeNull();
-    expect(reservationBlock![0]).toMatch(
+    expect(definite(reservationBlock, "Reservation ブロック")[0]).toMatch(
       /couponId\s+String\?\s+(?:@map\("\w+"\)\s+)?@db\.Uuid/,
     );
   });
@@ -56,7 +57,12 @@ describe("ReservationSeries schema invariants", () => {
       "@@index([customerId])",
       "@@index([createdAt])",
       "@@index([deletedAt])",
-    ].filter((declaration) => !seriesBlock![0].includes(declaration));
+    ].filter(
+      (declaration) =>
+        !definite(seriesBlock, "ReservationSeries ブロック")[0].includes(
+          declaration,
+        ),
+    );
 
     expect(missing).toEqual([]);
   });

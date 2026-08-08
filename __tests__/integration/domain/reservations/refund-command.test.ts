@@ -27,6 +27,7 @@ import {
   test,
 } from "bun:test";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
+import { definite, nthCall } from "../../../support/definite";
 
 // グローバル preload が DATABASE_URL をダミー値に固定するため、gateway を読む前に
 // 実テスト DB へ向け直す (静的 import は gateway を引かないためこの代入は動的 import
@@ -316,7 +317,7 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         where: { reservationId },
       });
       expect(refunds).toHaveLength(1);
-      const refund = refunds[0]!;
+      const refund = definite(refunds[0], "refunds[0]");
       expect(refund.amount).toBe(5000);
       expect(refund.refundedByType).toBe(REFUNDED_BY_TYPE.ADMIN);
       expect(refund.reason).toBeNull();
@@ -329,7 +330,11 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
 
       // AuditLog record
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         userId: string;
         resource: string;
         resourceId: string;
@@ -382,8 +387,8 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         where: { reservationId },
       });
       expect(refunds).toHaveLength(1);
-      expect(refunds[0]!.status).toBe("pending");
-      expect(refunds[0]!.amount).toBe(5000);
+      expect(definite(refunds[0], "refunds[0]").status).toBe("pending");
+      expect(definite(refunds[0], "refunds[0]").amount).toBe(5000);
 
       // 最も重要な不変条件: Stripe が未確定の間、paymentStatus は PAID のまま
       // (REFUNDED に false-positive で遷移していない)。
@@ -424,16 +429,16 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         orderBy: { createdAt: "asc" },
       });
       expect(refunds).toHaveLength(2);
-      expect(refunds[0]!.amount).toBe(2000);
-      expect(refunds[0]!.reason).toBe("顧客都合");
-      expect(refunds[1]!.amount).toBe(3000);
+      expect(definite(refunds[0], "refunds[0]").amount).toBe(2000);
+      expect(definite(refunds[0], "refunds[0]").reason).toBe("顧客都合");
+      expect(definite(refunds[1], "refunds[1]").amount).toBe(3000);
 
       // Stripe idempotency key: 累積後 total を key に含める (2000, 5000)
       expect(mockRefundsCreate).toHaveBeenCalledTimes(2);
-      const opts1 = mockRefundsCreate.mock.calls[0]![1] as {
+      const opts1 = nthCall(mockRefundsCreate, 0, "mockRefundsCreate")[1] as {
         idempotencyKey?: string;
       };
-      const opts2 = mockRefundsCreate.mock.calls[1]![1] as {
+      const opts2 = nthCall(mockRefundsCreate, 1, "mockRefundsCreate")[1] as {
         idempotencyKey?: string;
       };
       expect(opts1.idempotencyKey).toBe(
@@ -624,7 +629,11 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).toMatchObject({
@@ -645,7 +654,11 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).not.toHaveProperty("ip");
@@ -666,7 +679,11 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).not.toHaveProperty("ip");
@@ -723,7 +740,7 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         where: { reservationId },
       });
       expect(refunds).toHaveLength(1);
-      expect(refunds[0]!.amount).toBe(3000);
+      expect(definite(refunds[0], "refunds[0]").amount).toBe(3000);
 
       // Stripe 呼出「回数」は固定できない。Phase B は advisory lock を保持する tx の
       // 外にあり lock は tx スコープのため、Phase A を通過した本数だけ Phase B に

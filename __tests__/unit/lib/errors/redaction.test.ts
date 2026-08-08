@@ -5,6 +5,7 @@ import {
   redactRequestUrl,
   redactString,
 } from "@/shared/lib/errors/redaction";
+import { definite } from "../../../support/definite";
 
 describe("redactString", () => {
   test("masks email addresses", () => {
@@ -302,9 +303,11 @@ describe("redactContext", () => {
     const result = redactContext({
       items: [{ email: "alice@example.com" }, { code: 42 }, { flag: true }],
     }) as { items: Array<Record<string, unknown>> };
-    expect(result.items[0]!["email"]).toBe("[REDACTED:email]");
-    expect(result.items[1]!["code"]).toBe(42);
-    expect(result.items[2]!["flag"]).toBe(true);
+    expect(definite(result.items[0], "result.items[0]")["email"]).toBe(
+      "[REDACTED:email]",
+    );
+    expect(definite(result.items[1], "result.items[1]")["code"]).toBe(42);
+    expect(definite(result.items[2], "result.items[2]")["flag"]).toBe(true);
   });
 
   test("converts bigint to its string form (JSON-safe)", () => {

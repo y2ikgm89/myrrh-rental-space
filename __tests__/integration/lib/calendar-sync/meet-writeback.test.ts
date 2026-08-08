@@ -34,6 +34,7 @@ import type {
   EventFormatValue,
   MeetingProviderValue,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { definite } from "../../../support/definite";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -340,7 +341,9 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     // Task 5 の select 拡張 + 本 task の mapping 拡張が実際に meetingProvider を運ぶことの証明。
     expect(contexts[0]?.meetingProvider).toBe("GOOGLE_MEET");
 
-    const result = await syncEventToCalendar(contexts[0]!);
+    const result = await syncEventToCalendar(
+      definite(contexts[0], "contexts[0]"),
+    );
 
     expect(result).toEqual({ success: true, eventId: "gcal-meet-1" });
     expect(mockCreate).toHaveBeenCalledWith(expect.any(Object), {
@@ -374,7 +377,9 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     );
 
     const contexts = await getEventSlotsForCalendarSync(eventId);
-    const result = await syncEventToCalendar(contexts[0]!);
+    const result = await syncEventToCalendar(
+      definite(contexts[0], "contexts[0]"),
+    );
 
     expect(result).toEqual({ success: true, eventId: "gcal-manual-1" });
     expect(mockCreate).toHaveBeenCalledWith(expect.any(Object), {
@@ -412,7 +417,7 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     );
 
     const contexts = await getEventSlotsForCalendarSync(eventId);
-    await syncEventToCalendar(contexts[0]!);
+    await syncEventToCalendar(definite(contexts[0], "contexts[0]"));
 
     const updatedEvent = await prisma.event.findUniqueOrThrow({
       where: { id: eventId },
@@ -433,7 +438,9 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     );
 
     const contexts = await getEventSlotsForCalendarSync(eventId);
-    const result = await syncEventToCalendar(contexts[0]!);
+    const result = await syncEventToCalendar(
+      definite(contexts[0], "contexts[0]"),
+    );
 
     expect(result.success).toBe(false);
 
@@ -512,7 +519,9 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
 
     try {
       const contexts = await getEventSlotsForCalendarSync(eventId);
-      const result = await syncEventToCalendar(contexts[0]!);
+      const result = await syncEventToCalendar(
+        definite(contexts[0], "contexts[0]"),
+      );
 
       // 外側の sync は成功を返す（内側の write-back エラーをサイレント化）
       expect(result.success).toBe(true);
@@ -555,7 +564,7 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     );
 
     const contexts = await getEventSlotsForCalendarSync(eventId);
-    await syncEventToCalendar(contexts[0]!);
+    await syncEventToCalendar(definite(contexts[0], "contexts[0]"));
 
     const updatedEvent = await prisma.event.findUniqueOrThrow({
       where: { id: eventId },

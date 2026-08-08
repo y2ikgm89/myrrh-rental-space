@@ -14,6 +14,7 @@ import {
   ReservationStatus,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { definite } from "../../support/definite";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -602,7 +603,9 @@ describeMaybe(
           const rejected = results.filter((r) => r.status === "rejected");
           expect(fulfilled).toHaveLength(1);
           expect(rejected).toHaveLength(1);
-          const err = (rejected[0]! as PromiseRejectedResult).reason;
+          const err = (
+            definite(rejected[0], "rejected[0]") as PromiseRejectedResult
+          ).reason;
           expect(err).toBeInstanceOf(DomainError);
           expect((err as DomainError).code).toBe("CONFLICT");
         } finally {

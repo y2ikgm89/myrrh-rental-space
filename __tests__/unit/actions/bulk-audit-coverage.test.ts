@@ -19,6 +19,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { definite } from "../../support/definite";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 
@@ -114,7 +115,7 @@ describe("bulk admin actions emit per-id AuditLog", () => {
         const body = extractFunctionBody(source, name);
         expect(body).not.toBeNull();
         const hasMarker = PER_ID_AUDIT_MARKERS.some((marker) =>
-          body!.includes(marker),
+          definite(body, "action の本文").includes(marker),
         );
         expect(hasMarker).toBe(true);
       });

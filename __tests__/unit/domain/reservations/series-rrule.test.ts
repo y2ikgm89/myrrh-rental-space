@@ -6,6 +6,7 @@ import {
   validateRruleForSeries,
   rebuildRruleWithUntil,
 } from "@/shared/domain/reservations/series-rrule";
+import { definite } from "../../../support/definite";
 
 // 2026-07-21 は火曜日（UTC）。BYDAY=TU の RRULE と一致させるため
 // dtstart は実際の火曜日を使う（brief 原案の 07-22 は水曜日で BYDAY=TU と
@@ -27,7 +28,7 @@ describe("expandInstances", () => {
       new Date("2027-01-01T00:00:00Z"),
     );
     expect(dates).toHaveLength(10);
-    expect(dates[0]!.getTime()).toBe(dtstart.getTime());
+    expect(definite(dates[0], "dates[0]").getTime()).toBe(dtstart.getTime());
   });
 
   test("upTo 境界で truncate", () => {

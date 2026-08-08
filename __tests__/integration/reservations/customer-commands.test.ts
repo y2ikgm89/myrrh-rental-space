@@ -18,6 +18,7 @@ import {
   PaymentStatus,
   ReservationStatus,
 } from "@generated/prisma/enums";
+import { definite } from "../../support/definite";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -568,9 +569,11 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
         const failures = [firstResult, secondResult].filter((r) => !r.success);
         expect(successes).toHaveLength(1);
         expect(failures).toHaveLength(1);
-        expect(failures[0]!.success ? "" : failures[0]!.error).toContain(
-          "予約情報が別のデバイスまたはタブで変更されました",
-        );
+        expect(
+          definite(failures[0], "failures[0]").success
+            ? ""
+            : definite(failures[0], "failures[0]").error,
+        ).toContain("予約情報が別のデバイスまたはタブで変更されました");
       } finally {
         await fixture.cleanup();
       }

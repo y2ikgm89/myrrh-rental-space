@@ -23,6 +23,7 @@ import {
 } from "bun:test";
 import { EventScheduleMode, EventStatus } from "@generated/prisma/enums";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
+import { nthCall } from "../../../support/definite";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -295,7 +296,11 @@ describeMaybe("event registration refund commands (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).toMatchObject({
@@ -316,7 +321,11 @@ describeMaybe("event registration refund commands (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).not.toHaveProperty("ip");
@@ -337,7 +346,11 @@ describeMaybe("event registration refund commands (integration)", () => {
       });
 
       expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
-      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+      const auditInput = nthCall(
+        mockCreateAuditLogRecord,
+        0,
+        "mockCreateAuditLogRecord",
+      )[0] as {
         metadata: Record<string, unknown>;
       };
       expect(auditInput.metadata).not.toHaveProperty("ip");
