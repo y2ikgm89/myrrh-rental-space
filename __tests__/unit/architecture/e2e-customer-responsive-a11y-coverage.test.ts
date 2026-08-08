@@ -21,6 +21,15 @@ function readSpec(relativePath: string): string {
 }
 
 describe("customer responsive and a11y E2E coverage", () => {
+  test("走査対象が空でない（一覧を空にすると gate が無効化される）", () => {
+    // 対象はリテラル配列。空にすると flatMap が 1 度も回らず緑を返す。
+    expect(CUSTOMER_COVERAGE_SPECS.length).toBeGreaterThan(0);
+    expect(CUSTOMER_ROUTE_URL_KEYS.length).toBeGreaterThan(0);
+    for (const specPath of CUSTOMER_COVERAGE_SPECS) {
+      expect(readSpec(specPath).length).toBeGreaterThan(0);
+    }
+  });
+
   test("authenticated customer shell specs cover every primary customer URL fixture", () => {
     const missing = CUSTOMER_COVERAGE_SPECS.flatMap((specPath) => {
       const source = readSpec(specPath);
