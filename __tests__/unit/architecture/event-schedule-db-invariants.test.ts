@@ -9,14 +9,6 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SCHEMA = join(ROOT, "prisma", "schema.prisma");
-const BASELINE_MIGRATION = join(
-  ROOT,
-  "prisma",
-  "migrations",
-  "00000000000000_init",
-  "migration.sql",
-);
-
 function read(path: string): string {
   return readFileSync(path, "utf8");
 }

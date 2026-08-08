@@ -26,10 +26,8 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
 }));
 
 import {
-  ADMIN_DELIVERY,
   EMAIL_SEND_CONTEXT,
   INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
 } from "./_email-test-fixtures";
 
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";

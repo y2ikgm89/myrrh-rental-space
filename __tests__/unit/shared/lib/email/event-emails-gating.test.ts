@@ -25,12 +25,7 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
+import { ADMIN_DELIVERY, EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 
 import { sendEventAdminNotification } from "@/shared/lib/email/event-emails";
 

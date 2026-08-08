@@ -133,8 +133,6 @@ type ReservationFixture = {
 // unique constraint 衝突する。beforeAll でも残留を掃除する二重防御。
 // Date.now() ms は INT 範囲 (max 2147483647) を超えるため秒単位で正規化。
 let nextFixtureSortOrder = Math.floor(Date.now() / 1000);
-let stripeRefundCounter = 0;
-
 /** 予約の税率。fixture はアプリと同じ向き（税抜 → round）で税額を導く。 */
 const TAX_RATE_PERCENT = 10;
 
@@ -285,10 +283,8 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
   beforeEach(async () => {
     mockRefundsCreate.mockReset();
     mockCreateAuditLogRecord.mockReset();
-    stripeRefundCounter = 0;
-    // 各 test の Stripe refund id が unique になる counter (@unique(stripeRefundId) の衝突回避)
+    // Stripe refund id は crypto.randomUUID() で unique にする（@unique(stripeRefundId) の衝突回避）
     mockRefundsCreate.mockImplementation((_args, _opts) => {
-      stripeRefundCounter++;
       return Promise.resolve({
         id: `re_test_${crypto.randomUUID()}`,
         status: "succeeded",
@@ -364,7 +360,6 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     // 変更しない」ことを実 DB で検証する (unit mock では tx/lock 自体をフェイクする
     // ため、他の書込経路との real race や append-only trigger の実挙動は確認できない)。
     mockRefundsCreate.mockImplementation((_args, _opts) => {
-      stripeRefundCounter++;
       return Promise.resolve({
         id: `re_test_pending_${crypto.randomUUID()}`,
         status: "pending",

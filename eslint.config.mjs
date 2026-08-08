@@ -118,7 +118,7 @@ const eslintConfig = defineConfig([
       "react-hooks/void-use-memo": "error",
 
       // Import
-      "import-x/no-anonymous-default-export": "warn",
+      "import-x/no-anonymous-default-export": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -127,15 +127,15 @@ const eslintConfig = defineConfig([
       ],
 
       // Console
-      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+      "no-console": ["error", { allow: ["warn", "error", "info"] }],
 
       // jsx-a11y
-      "jsx-a11y/alt-text": ["warn", { elements: ["img"], img: ["Image"] }],
-      "jsx-a11y/aria-props": "warn",
-      "jsx-a11y/aria-proptypes": "warn",
-      "jsx-a11y/aria-unsupported-elements": "warn",
-      "jsx-a11y/role-has-required-aria-props": "warn",
-      "jsx-a11y/role-supports-aria-props": "warn",
+      "jsx-a11y/alt-text": ["error", { elements: ["img"], img: ["Image"] }],
+      "jsx-a11y/aria-props": "error",
+      "jsx-a11y/aria-proptypes": "error",
+      "jsx-a11y/aria-unsupported-elements": "error",
+      "jsx-a11y/role-has-required-aria-props": "error",
+      "jsx-a11y/role-supports-aria-props": "error",
     },
   },
 
@@ -260,10 +260,13 @@ const eslintConfig = defineConfig([
     rules: {
       // Allow unused parameters prefixed with underscore (common pattern for HOF callbacks)
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
+          // `const { omitted, ...rest } = obj` は「キーを除く」ための公式イディオム。
+          // ESLint の `ignoreRestSiblings` がそのためにある。
+          ignoreRestSiblings: true,
         },
       ],
 
@@ -593,6 +596,35 @@ const eslintConfig = defineConfig([
     plugins: { local: localPlugin },
     rules: {
       "local/gate-scan-must-not-be-silently-empty": "error",
+    },
+  },
+
+  // 本番向けの 2 ルールを、**それを模す側**では外す。
+  //
+  // - `@eslint-react/no-unnecessary-use-prefix`: `mock.module()` が hook を差し替える
+  //   ときは `useQueryState` のように**実物と同じ名前**でないと差し替えが成立しない。
+  //   rule が守るのは「hook でないものを use* と名付けない」で、ここは hook の
+  //   代替物そのもの
+  // - `@next/next/no-img-element`: `next/image` を模す test double は素の `<img>` で
+  //   なければ模したことにならない。rule の根拠（本番の LCP / 転送量）は
+  //   テストに存在しない
+  //
+  // どちらも**満たすと検証対象が消える**種類。ファイル群を名指しせず
+  // `__tests__/**` 単位にしているのは、hook / 画像の mock がツリー全体に散るため。
+  //  を差し替えて「logger が実際に呼んだか」を確かめるテスト。
+  // 対象そのものなので no-console は満たしようがない。
+  {
+    name: "logger-test/console-is-the-subject",
+    files: ["__tests__/unit/lib/logger.test.ts"],
+    rules: { "no-console": "off" },
+  },
+
+  {
+    name: "test-doubles/production-only-rules",
+    files: ["__tests__/**/*.{ts,tsx}"],
+    rules: {
+      "@eslint-react/no-unnecessary-use-prefix": "off",
+      "@next/next/no-img-element": "off",
     },
   },
 

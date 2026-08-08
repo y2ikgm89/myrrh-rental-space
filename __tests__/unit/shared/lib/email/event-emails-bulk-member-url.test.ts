@@ -150,12 +150,7 @@ mock.module("@/shared/emails/event-updated-notification", () => ({
   EventUpdatedNotificationEmail: mockEventUpdatedNotificationEmail,
 }));
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
+import { EMAIL_SEND_CONTEXT, RENDER_CONTEXT } from "./_email-test-fixtures";
 
 import {
   sendEventCancelledToAllParticipants,

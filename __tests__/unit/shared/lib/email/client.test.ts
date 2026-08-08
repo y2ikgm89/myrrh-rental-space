@@ -33,13 +33,6 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getDecryptedResendApiKey: async () => null,
 }));
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
-
 describe("resolveSenderEmailAddress", () => {
   test("env EMAIL_FROM のみ設定時、env 値を返す", async () => {
     await withEnv({ EMAIL_FROM: "env@myrrh.example.com" }, async () => {

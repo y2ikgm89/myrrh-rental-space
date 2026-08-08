@@ -114,7 +114,7 @@ mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(async () => undefined),
   createErrorLogger: mock(() => mock(async () => undefined)),
   normalizeError: mock((e) => e),
-  getErrorMessage: mock((e) => "error"),
+  getErrorMessage: mock((_e) => "error"),
   ReservationOverlapError: class {},
   isReservationOverlapError: mock(() => false),
   parseCloudTraceContext: mock(() => ({})),

@@ -3,7 +3,6 @@ import {
   EVENT_FORMAT,
   EVENT_FORMAT_VALUES,
   EVENT_FORMAT_TO_SCHEMA_ORG,
-  MEETING_PROVIDER,
   MEETING_PROVIDER_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
 

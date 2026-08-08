@@ -6,7 +6,6 @@ import {
   customConfigSchema,
   conceptConfigSchema,
   spaceListConfigSchema,
-  spaceShowcaseConfigSchema,
   newsListConfigSchema,
   postListConfigSchema,
   faqListConfigSchema,
@@ -17,17 +16,13 @@ import {
   contactFormConfigSchema,
   mapConfigSchema,
   embedConfigSchema,
-  instagramConfigSchema,
-  // CRUD schemas
+  instagramConfigSchema, // CRUD schemas
   createSectionSchema,
   updateSectionSchema,
-  updateSectionOrderSchema,
-  // Validators
-  validateSectionConfig,
-  // Type guards
+  updateSectionOrderSchema, // Validators
+  validateSectionConfig, // Type guards
   isHeroConfig,
-  isCtaConfig,
-  // Helpers
+  isCtaConfig, // Helpers
   parseHeroHeight,
   parseSpaceLayout,
   parseNewsLayout,

@@ -8,16 +8,6 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
 });
 
-function Passthrough({
-  children,
-  ...props
-}: {
-  children?: ReactNode;
-  [key: string]: unknown;
-}) {
-  return <div {...props}>{children}</div>;
-}
-
 // `@/admin/components/ui` barrel の全 export を stub する。
 // `mock.module` は registered に対して **完全モック**として上書きするため、
 // 一部だけ含めると後続テスト / 連鎖 import で

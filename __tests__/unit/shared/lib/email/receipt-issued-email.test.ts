@@ -35,12 +35,7 @@ mock.module("@/shared/emails/receipt-issued", () => ({
   ReceiptIssuedEmail: mockReceiptIssuedEmail,
 }));
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
+import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 
 import {
   buildReceiptIssuedIdempotencyKey,

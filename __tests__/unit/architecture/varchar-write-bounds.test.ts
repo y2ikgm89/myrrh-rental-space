@@ -216,10 +216,6 @@ function validated(...probes: Probe[]): Contract {
   return { kind: "validated", probes };
 }
 
-function enumerated(module: string, exportName: string): Contract {
-  return { kind: "enumerated", module, exportName };
-}
-
 function generated(
   maxLength: number,
   why: string,

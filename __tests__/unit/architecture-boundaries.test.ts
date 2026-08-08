@@ -55,22 +55,6 @@ function expectRecordFieldArray(data: unknown, field: string): void {
   const value = data[field];
   expect(Array.isArray(value)).toBe(true);
 }
-const CALENDAR_SYNC_CRON_ROUTE_FILE = join(
-  SRC_ROOT,
-  "app",
-  "api",
-  "cron",
-  "calendar-sync",
-  "route.ts",
-);
-const INSTAGRAM_REFRESH_CRON_ROUTE_FILE = join(
-  SRC_ROOT,
-  "app",
-  "api",
-  "cron",
-  "instagram-refresh",
-  "route.ts",
-);
 const GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE = join(
   SRC_ROOT,
   "app",
@@ -1114,7 +1098,13 @@ describe("architecture boundaries", () => {
     expectRecord(scripts);
     const validateSource = readFileSync(VALIDATE_SCRIPT_FILE, "utf8");
 
-    expect(scripts["lint"]).toBe("eslint . --concurrency 4");
+    // `--max-warnings 0` は契約の一部。ESLint の "warn" は**誰も強制しない**ので、
+    // 落ちない指摘として無限に溜まる（実測: 118 件が `__tests__` に溜まっていた）。
+    // config 側では warn を全廃したが、外した瞬間にまた溜まりはじめるので入口でも固定する。
+    expect(scripts["lint"]).toBe("eslint . --concurrency 4 --max-warnings 0");
+    expect(scripts["lint:files"]).toBe(
+      "eslint --concurrency 4 --max-warnings 0",
+    );
     expect(scripts["validate"]).toBe("bun scripts/validate.ts");
     expect(validateSource).toContain('name: "type-check"');
     expect(validateSource).toContain('command: ["bun", "run", "type-check"]');

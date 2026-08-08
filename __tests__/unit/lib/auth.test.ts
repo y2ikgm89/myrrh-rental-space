@@ -9,14 +9,8 @@
 
 import { describe, test, expect } from "bun:test";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import {
-  getCustomerSessionUser,
-  type CustomerSession,
-} from "@/shared/lib/customer-auth";
-import {
-  getAdminSessionUser,
-  type AdminSession,
-} from "@/shared/domain/admin-auth/session";
+import { getCustomerSessionUser } from "@/shared/lib/customer-auth";
+import { getAdminSessionUser } from "@/shared/domain/admin-auth/session";
 import { Role } from "@generated/prisma/enums";
 
 // モックセッション型

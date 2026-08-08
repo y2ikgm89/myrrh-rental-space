@@ -46,10 +46,6 @@ describe("section configSchema: 空欄/デフォルト保存（conform 整合）
       });
       if (submission.status !== "success") {
         // 失敗時はどのフィールドが弾かれたか可視化する
-        console.log(
-          `${def.type} errors:`,
-          JSON.stringify(submission.reply().error),
-        );
       }
       expect(submission.status).toBe("success");
     });
@@ -63,10 +59,6 @@ describe("section configSchema: 空欄/デフォルト保存（conform 整合）
         schema: def.configSchema,
       });
       if (submission.status !== "success") {
-        console.log(
-          `page-hero(${variant}) errors:`,
-          JSON.stringify(submission.reply().error),
-        );
       }
       expect(submission.status).toBe("success");
     });

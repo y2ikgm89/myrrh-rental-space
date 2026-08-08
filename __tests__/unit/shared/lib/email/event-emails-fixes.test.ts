@@ -55,9 +55,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 }));
 
 import {
-  ADMIN_DELIVERY,
   EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
   RENDER_CONTEXT,
   RENDER_CONTEXT_WITH_ICAL,
 } from "./_email-test-fixtures";

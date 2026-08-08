@@ -24,10 +24,7 @@ import {
   validateDurationDiscountRules,
   parseDurationDiscountRules,
 } from "@/shared/lib/pricing/discount";
-import type {
-  TaxSettings,
-  DurationDiscountRule,
-} from "@/shared/lib/pricing/types";
+import type { TaxSettings } from "@/shared/lib/pricing/types";
 
 // TaxRateType / TaxDisplayMode は @generated/prisma/enums から re-export
 // テスト内では文字列リテラルを使用する

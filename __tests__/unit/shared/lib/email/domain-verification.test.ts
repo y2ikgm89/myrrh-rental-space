@@ -22,13 +22,6 @@ mock.module("@/shared/lib/email/client", () => ({
 
 const EMAIL_TRANSPORT_CONTEXT = { resendApiKey: "re_test_key" } as const;
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
-
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 
 function listOf(domains: DomainEntry[]): ListResult {

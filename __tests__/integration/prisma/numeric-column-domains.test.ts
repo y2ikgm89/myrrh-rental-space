@@ -31,11 +31,9 @@ import { Client } from "pg";
 import {
   COMPOSITE_PROBE_DEFAULTS,
   boundaryValues,
-  columnKey,
   constraintNameFor,
   numericBoundaryTargets,
   type NumericColumn,
-  type NumericDomain,
 } from "../../support/numeric-column-domains";
 import { resolveTestDatabaseUrl } from "../../../scripts/test-db-url";
 

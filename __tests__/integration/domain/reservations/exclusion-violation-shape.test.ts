@@ -20,10 +20,6 @@ if (TEST_DB_URL) {
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-function isRecordLike(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 type PrismaModule = typeof import("@/shared/db/prisma");
 let prisma: PrismaModule["prisma"];
 
@@ -121,22 +117,6 @@ describeMaybe("EXCLUDE 制約違反エラーの実測", () => {
       }
 
       expect(thrown).not.toBeNull();
-      const err = thrown as Record<string, unknown>;
-      // 実測結果をそのまま記録する（診断目的）。
-      console.log("[exclusion-violation-shape]", {
-        constructorName: err.constructor?.name,
-        name: (err as { name?: unknown }).name,
-        code: (err as { code?: unknown }).code,
-        message:
-          typeof (err as { message?: unknown }).message === "string"
-            ? (err as { message: string }).message.slice(0, 200)
-            : undefined,
-        ownKeys: Object.keys(err),
-        cause: err["cause"],
-        causeKeys: isRecordLike(err["cause"])
-          ? Object.keys(err["cause"] as Record<string, unknown>)
-          : undefined,
-      });
     } finally {
       await prisma.reservation.deleteMany({ where: { spaceId: space.id } });
       await prisma.space.deleteMany({ where: { id: space.id } });

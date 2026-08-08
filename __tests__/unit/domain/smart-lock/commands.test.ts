@@ -223,12 +223,6 @@ const DEVICE_ROW_ID = "cccccccc-0000-0000-0000-000000000000";
 const PAIRED_LOCK_ID = "dddddddd-0000-0000-0000-000000000000";
 const SWITCHBOT_DEVICE_ID = "AA:BB:CC:DD:EE:FF";
 const SWITCHBOT_LOCK_ID = "11:22:33:44:55:66";
-const CREDENTIALS = {
-  openToken: "token",
-  secretKey: "secret",
-  passcodeBufferMinutes: 15,
-};
-
 beforeEach(() => {
   mockFindUniqueSpace.mockReset();
   mockFindUniqueDevice.mockReset();
