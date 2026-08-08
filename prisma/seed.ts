@@ -47,7 +47,6 @@ import {
   parsePrismaInputJson,
 } from "@/shared/db/prisma-input-json";
 import { hashPassword } from "better-auth/crypto";
-import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
 import {
   buildInitialFeatureModules,
   parseDisabledFeatureModulesEnv,
@@ -73,6 +72,21 @@ import { SEED_TERMS_DOCUMENTS } from "./seed-terms-documents";
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
  * 改行は単一段落に折り畳む（seed 簡易版）。
  */
+/**
+ * dev seed の前提が崩れていることを、成功で終わらせずに知らせる。
+ *
+ * ここに来るのは「先に走る phase が作るはずのものが無い」ときだけ。黙って
+ * `return` すると seed は最後まで走って `✨ Seed completed successfully!` を出し、
+ * 中身が歯抜けの DB が残る。壊れたことに気付くのは E2E が**関係の無い場所**で
+ * 落ちたときで、そこから原因に辿り着くのは高くつく。前提が崩れた地点で止める。
+ *
+ * 戻り型が `never` なので、呼び出した後の分岐で値が narrow される
+ * （`if (!x) { seedPreconditionFailed(...) }` の後で `x` は非 null）。
+ */
+function seedPreconditionFailed(detail: string): never {
+  throw new Error(`seed の前提が満たされていません: ${detail}`);
+}
+
 function buildSeedDescription(text: string) {
   const collapsed = text.replace(/\s+/g, " ").trim();
   const descriptionJsonString = buildParagraphEditorStateJson(collapsed);
@@ -1291,8 +1305,9 @@ async function ensureFixtureSpace(spec: FixtureSpaceSpec) {
     select: { id: true },
   });
   if (!location) {
-    console.log(`⚠️ No location found for ${spec.slug}. Skipping.`);
-    return;
+    seedPreconditionFailed(
+      `fixture space ${spec.slug} に割り当てる Location が無い（seedLocations が先に走る）`,
+    );
   }
 
   // `Space.slug` は Prisma 上 unique ではない（soft-delete 済み行の値を永久に
@@ -2035,10 +2050,9 @@ async function seedInquiryOperationalFixtures(): Promise<void> {
     select: { id: true },
   });
   if (!staffAuthor) {
-    console.log(
-      "⚠️ admin@example.com not found; skipping inquiry operational fixtures.",
+    seedPreconditionFailed(
+      "admin@example.com が無い（seedAdmin が先に走る）— 問い合わせの運用 fixture を作れない",
     );
-    return;
   }
 
   const resolvedInquiry = await findInquiryByEmailSubject(
@@ -2334,8 +2348,9 @@ async function seedReservations() {
   const coupons = await prisma.coupon.findMany({ where: { isActive: true } });
 
   if (spaces.length === 0 || customers.length === 0) {
-    console.log("⚠️ No spaces or customers found. Skipping reservations seed.");
-    return;
+    seedPreconditionFailed(
+      `デモ予約の相手が無い（spaces=${String(spaces.length)} / customers=${String(customers.length)}）— seedSpaces と seedCustomers が先に走る`,
+    );
   }
 
   const welcomeCoupon = coupons.find((c) => c.code === "WELCOME10");
@@ -3027,8 +3042,9 @@ async function seedDevCustomerAndReservations() {
     select: { id: true },
   });
   if (!user) {
-    console.log("⚠️ Dev customer user not found after upsert. Skipping.");
-    return;
+    seedPreconditionFailed(
+      `${DEV_CUSTOMER_EMAIL} の User が upsert 直後に見つからない`,
+    );
   }
 
   // 2) Customer を upsert（mypage layout の `ensureCustomerLinked` と互換）
@@ -3105,10 +3121,9 @@ async function seedDevCustomerAndReservations() {
     select: { id: true, hourlyPrice: true, name: true },
   });
   if (!space) {
-    console.log(
-      `⚠️ No active space found for dev customer reservations. Skipping.`,
+    seedPreconditionFailed(
+      "dev customer のデモ予約に使える公開スペースが無い（seedSpaces が先に走る）",
     );
-    return;
   }
 
   const now = new Date();
@@ -3228,8 +3243,8 @@ async function seedDevCustomerAndReservations() {
     select: { id: true },
   });
   if (!staffAuthor) {
-    console.log(
-      "⚠️ admin@example.com not found; skipping inquiry reply seed for dev customer fixtures.",
+    seedPreconditionFailed(
+      "admin@example.com が無い（seedAdmin が先に走る）— dev customer の返信スレッド fixture を作れない",
     );
   }
   let inquiryCreated = 0;
@@ -3264,7 +3279,7 @@ async function seedDevCustomerAndReservations() {
       );
     }
 
-    if (fixture.status === "RESOLVED" && staffAuthor) {
+    if (fixture.status === "RESOLVED") {
       await ensureInquiryReply({
         inquiryId: inquiry.id,
         authorType: "STAFF",
@@ -3605,8 +3620,49 @@ async function seedNews() {
 async function seedPages() {
   const { bootstrapSystemPagesCommand } =
     await import("@/shared/domain/pages/system-pages-commands");
+  const { SYSTEM_PAGES } = await import("@/shared/lib/validations/page");
+  const { DEFAULT_PAGE_SECTIONS } =
+    await import("@/shared/lib/constants/default-page-sections");
+
   await bootstrapSystemPagesCommand(prisma);
-  console.log("✅ System pages ensured");
+
+  // `bootstrapSystemPagesCommand` は per-page の失敗を握って続行する。起動時の
+  // instrumentation（`src/instrumentation.ts`）から呼ばれる関数で、DB が一時的に
+  // 落ちていてもアプリの起動までは止めない、という可用性の判断が入っている
+  // （その契約は `system-pages-commands.test.ts` が固定している）。
+  //
+  // だが seed から呼ぶと、同じ握りが「歯抜けの DB を成功として残す」に化ける。
+  // 本番切替は seed を 1 回流すだけなので、セクションが 1 つも無い公開ページが
+  // そのまま世に出る。握りを剥がす代わりに、**作られた結果をここで確かめる**。
+  const slugs = SYSTEM_PAGES.map((page) => page.slug);
+  const pages = await prisma.page.findMany({
+    where: { slug: { in: slugs } },
+    select: { slug: true, sections: { select: { id: true }, take: 1 } },
+  });
+  const sectionCountBySlug = new Map(
+    pages.map((page) => [page.slug, page.sections.length]),
+  );
+
+  const missingPages = slugs.filter((slug) => !sectionCountBySlug.has(slug));
+  if (missingPages.length > 0) {
+    seedPreconditionFailed(
+      `システムページが作られていない: ${missingPages.join(", ")}`,
+    );
+  }
+
+  // 既定セクションを持たない slug は「0 件が正しい」ので対象外にする。
+  const emptyPages = slugs.filter(
+    (slug) =>
+      (DEFAULT_PAGE_SECTIONS[slug]?.length ?? 0) > 0 &&
+      sectionCountBySlug.get(slug) === 0,
+  );
+  if (emptyPages.length > 0) {
+    seedPreconditionFailed(
+      `システムページにセクションが 1 つも無い: ${emptyPages.join(", ")}`,
+    );
+  }
+
+  console.log(`✅ System pages ensured (${String(slugs.length)} pages)`);
 }
 
 // =============================================================================
@@ -3843,8 +3899,9 @@ async function seedFaq(overridePublished?: boolean) {
 async function seedBlog() {
   const author = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!author) {
-    console.log("⚠️ No admin user found. Skipping blog seed.");
-    return;
+    seedPreconditionFailed(
+      "role=ADMIN の User が無い（seedAdmin が先に走る）— ブログ記事の著者を決められない",
+    );
   }
 
   // Create categories (未分類はマイグレーションで作成済み)
@@ -3890,8 +3947,9 @@ async function seedBlog() {
   });
 
   if (!caseStudyCategory || !tipsCategory) {
-    console.log("⚠️ Categories not found. Skipping blog posts.");
-    return;
+    seedPreconditionFailed(
+      "ブログカテゴリ（case-study / tips）が無い — 直前の createMany が作るはずのもの",
+    );
   }
 
   const posts: (Prisma.PostUncheckedCreateInput & { tagNames: string[] })[] = [
@@ -4294,92 +4352,6 @@ async function seedSocialLinks() {
       });
       console.log(`✅ Created social link: ${link.platform}`);
     }
-  }
-}
-
-// =============================================================================
-// System Page Sections (All Pages including Homepage)
-// =============================================================================
-
-async function seedSystemPageSections() {
-  // Seed homepage sections (linked to Page record with slug "home")
-  const homePage = await prisma.page.findUnique({
-    where: { slug: "home" },
-    select: { id: true },
-  });
-
-  if (!homePage) {
-    console.log(
-      "⚠️ Homepage Page record not found, skipping homepage sections",
-    );
-  } else {
-    const existingHomepageCount = await prisma.section.count({
-      where: { pageId: homePage.id },
-    });
-    if (existingHomepageCount > 0) {
-      console.log("⏭️ Homepage sections already exist");
-    } else {
-      const homeSections = DEFAULT_PAGE_SECTIONS["home"];
-      if (homeSections) {
-        for (const section of homeSections) {
-          await prisma.section.create({
-            data: {
-              pageId: homePage.id,
-              type: section.type,
-              config: section.config,
-              order: section.order,
-              isActive: section.isActive,
-            },
-          });
-        }
-        console.log("✅ Created homepage sections");
-      }
-    }
-  }
-
-  // Seed system page sections (for pages that exist in Page table)
-  const systemPageSlugs = [
-    "about",
-    "contact",
-    "faq",
-    "news",
-    "blog",
-    "events",
-    "reservation",
-    "spaces",
-  ];
-
-  let createdCount = 0;
-  for (const slug of systemPageSlugs) {
-    const page = await prisma.page.findFirst({ where: { slug } });
-    if (!page) continue;
-
-    const existingCount = await prisma.section.count({
-      where: { pageId: page.id },
-    });
-    if (existingCount > 0) continue;
-
-    const defaults = DEFAULT_PAGE_SECTIONS[slug];
-    if (!defaults || defaults.length === 0) continue;
-
-    for (const section of defaults) {
-      await prisma.section.create({
-        data: {
-          pageId: page.id,
-          type: section.type,
-          config: section.config,
-          order: section.order,
-          isActive: section.isActive,
-        },
-      });
-    }
-    createdCount++;
-  }
-
-  if (createdCount > 0) {
-    console.log(`✅ Created sections for ${createdCount} system pages`);
-  } else {
-    console.log("⏭️ System page sections already exist or no pages found");
   }
 }
 
@@ -4949,8 +4921,9 @@ async function seedSpaceReviews() {
   });
 
   if (completedReservations.length === 0) {
-    console.log("⚠️ No completed reservations. Skipping space reviews seed.");
-    return;
+    seedPreconditionFailed(
+      "COMPLETED の予約が 1 件も無い（seedReservations が先に走る）— レビューを紐付けられない",
+    );
   }
 
   const replyAuthor = await prisma.user.findFirst({
@@ -5053,10 +5026,9 @@ async function seedPublicReviewE2EFixture() {
   ]);
 
   if (!space || !customer) {
-    console.log(
-      `⚠️ ${REVIEW_E2E_SPACE_SLUG} or dev customer missing. Skipping public review E2E fixture.`,
+    seedPreconditionFailed(
+      `${REVIEW_E2E_SPACE_SLUG} または dev customer が無い — 公開レビューの E2E fixture を作れない`,
     );
-    return;
   }
 
   const notes = "[E2E] public review fixture";
@@ -5264,8 +5236,9 @@ async function seedAdminNotifications() {
   );
 
   if (notifications.length === 0) {
-    console.log("⚠️ No dependencies found for admin notifications.");
-    return;
+    seedPreconditionFailed(
+      "管理者通知が指す先（予約・問い合わせ・レビュー等）が 1 件も無い",
+    );
   }
 
   await prisma.adminNotification.createMany({
@@ -5641,8 +5614,9 @@ async function seedAuditLog() {
     select: { id: true },
   });
   if (!admin) {
-    console.log("⚠️ No admin user found. Skipping audit log seed.");
-    return;
+    seedPreconditionFailed(
+      "ADMIN / SUPER_ADMIN の User が無い（seedAdmin が先に走る）— 監査ログの actor を決められない",
+    );
   }
 
   const firstPost = await prisma.post.findFirst({
@@ -5843,8 +5817,9 @@ async function seedEditorComments() {
     select: { id: true },
   });
   if (!admin) {
-    console.log("⚠️ No admin user found. Skipping editor comments seed.");
-    return;
+    seedPreconditionFailed(
+      "ADMIN / SUPER_ADMIN の User が無い（seedAdmin が先に走る）— エディターコメントの作成者を決められない",
+    );
   }
 
   const posts = await prisma.post.findMany({
@@ -5855,10 +5830,9 @@ async function seedEditorComments() {
   // noUncheckedIndexedAccess 下で posts[0..2] を narrow するため分割代入ガードで取り出す
   const [post0, post1, post2] = posts;
   if (!post0 || !post1 || !post2) {
-    console.log(
-      "⚠️ Fewer than 3 posts available. Skipping editor comments seed.",
+    seedPreconditionFailed(
+      "ブログ記事が 3 件未満（seedBlog が 6 件作る）— エディターコメントの対象を決められない",
     );
-    return;
   }
 
   // EditorCommentStatus 全 3 値: ACTIVE / RESOLVED / DELETED
@@ -6046,8 +6020,9 @@ async function seedUserPageAssignments() {
     select: { id: true },
   });
   if (!editor) {
-    console.log("⚠️ No EDITOR user found. Skipping user page assignments.");
-    return;
+    seedPreconditionFailed(
+      "EDITOR ロールの User が無い（seedStaffUsers が先に走る）— ページ権限を割り当てられない",
+    );
   }
 
   const assignablePages = await prisma.page.findMany({
@@ -6139,7 +6114,6 @@ async function seedDev() {
   await seedNavigation();
   await seedAnnouncementBar();
   await seedSocialLinks();
-  await seedSystemPageSections();
 
   // Phase 8: イベント
   await seedEventCategories();
@@ -6204,7 +6178,6 @@ async function seedProduction(email: string | undefined, name: string) {
   // お知らせ帯・SNSリンクは実在の URL・公開時点の運用告知が前提のデータのため、
   // 架空データを本番に投入しない（管理画面 /admin/settings/appearance から
   // 実際の値で作成する）。
-  await seedSystemPageSections();
   await seedBlockTemplates();
 
   console.log("");
