@@ -13,10 +13,7 @@ const root = process.cwd();
 const envExamplePath = join(root, ".env.example");
 const envLocalPath = join(root, ".env.local");
 
-type CommandRunner = (
-  command: readonly string[],
-  env?: Readonly<Record<string, string>>,
-) => number;
+type CommandRunner = (command: readonly string[]) => number;
 
 function applyEnvFile(path: string): void {
   const content = readFileSync(path, "utf8");
@@ -46,14 +43,11 @@ export function ensureEnvLocal(): "created" | "exists" {
   return "created";
 }
 
-function runInherited(
-  command: readonly string[],
-  env?: Readonly<Record<string, string>>,
-): number {
+function runInherited(command: readonly string[]): number {
   const proc = Bun.spawnSync([...command], {
     stdout: "inherit",
     stderr: "inherit",
-    env: env ? { ...process.env, ...env } : process.env,
+    env: process.env,
   });
   return proc.exitCode;
 }
@@ -69,7 +63,6 @@ export function runSetup(runner: CommandRunner = runInherited): number {
   const steps: readonly (readonly [
     label: string,
     command: readonly string[],
-    env?: Readonly<Record<string, string>>,
   ])[] = [
     [
       "Starting PostgreSQL (db + test-db)",
@@ -87,28 +80,12 @@ export function runSetup(runner: CommandRunner = runInherited): number {
     ],
     ["Generating Prisma client", ["bun", "run", "db:generate"]],
     ["Applying migrations", ["bunx", "--bun", "prisma", "migrate", "deploy"]],
-    [
-      "Seeding database",
-      ["bun", "run", "db:seed"],
-      // `.env.local` には surface を選ぶために `APP_SURFACE` を入れるのが普通で、
-      // その値は上の `applyEnvFile` でこのプロセスの env に載る。ところが seed の
-      // 安全ガード（`prisma/seed-safety.ts` の secondary gate）は `APP_SURFACE` が
-      // 立っていることを「デプロイされたプロセス」の印と見て `--dev` を拒否する。
-      // 結果、**標準的な `.env.local` を持つ環境では `bun run setup` が必ず
-      // seed で落ちる**（しかも seed は最終 step なので、そこまでの migrate は
-      // 済んでいて「半分できた」状態が残る）。
-      //
-      // setup-local は定義上ローカル専用で、直前に localhost の Docker Postgres を
-      // `--wait` 付きで起動している。この 1 呼び出しに限って印を外す。
-      // **ガードを無効化するわけではない** — DATABASE_URL が本番に見えるなら
-      // primary gate（`looksLikeProductionDatabaseUrl`）が依然として拒否する。
-      { APP_SURFACE: "" },
-    ],
+    ["Seeding database", ["bun", "run", "db:seed"]],
   ];
 
-  for (const [label, command, env] of steps) {
+  for (const [label, command] of steps) {
     console.info(`[setup] ${label}...`);
-    const exitCode = runner(command, env);
+    const exitCode = runner(command);
     if (exitCode !== 0) {
       console.error(`[setup] Failed: ${label}`);
       return exitCode;
