@@ -51,6 +51,11 @@ const CHILD = "rehearsal_child";
 
 let prisma: PrismaClient;
 let workDir: string;
+/** 履歴照合のテストで書き換える前の値。afterEach が必ずここへ戻す。 */
+let initChecksum = "";
+
+/** 履歴照合テストが差し込む行の id（afterEach が必ず消す）。 */
+const HISTORY_PROBE_ID = "history-mismatch-probe";
 
 function migrationDir(sql: string): string {
   const root = mkdtempSync(join(workDir, "mig-"));
@@ -97,10 +102,27 @@ beforeAll(async () => {
     `CREATE TABLE "${CHILD}" ("id" text, "code" text, "total" integer, "note" text)`,
   );
   await prisma.$executeRawUnsafe(`INSERT INTO "${PARENT}" VALUES ('p1')`);
+
+  const rows = await prisma.$queryRawUnsafe<{ checksum: string }[]>(
+    `SELECT checksum FROM _prisma_migrations WHERE migration_name = '00000000000000_init'`,
+  );
+  initChecksum = rows[0]?.checksum ?? "";
 });
 
 afterEach(async () => {
   await prisma.$executeRawUnsafe(`DELETE FROM "${CHILD}"`);
+  // 履歴の書き換えは**毎テスト後に必ず**戻す。try/finally だと setup が落ちた回で
+  // 入らず、共有 test DB を壊したまま次のファイルへ持ち越す。
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM _prisma_migrations WHERE id = $1`,
+    HISTORY_PROBE_ID,
+  );
+  if (initChecksum !== "") {
+    await prisma.$executeRawUnsafe(
+      `UPDATE _prisma_migrations SET checksum = $1 WHERE migration_name = '00000000000000_init'`,
+      initChecksum,
+    );
+  }
 });
 
 afterAll(async () => {
@@ -423,5 +445,39 @@ COMMIT;`,
       );
       expect(result).toEqual({ code: 0, unchanged: true });
     });
+  });
+});
+
+/**
+ * 履歴照合は**リハーサルより前**に効く。Prisma がここを一切見ないため、
+ * これが無いと切替の失敗が `No pending migrations to apply.` + exit 0 で
+ * 成功として表示される（公式明記 + 実測済み）。
+ */
+describe("履歴が repo と別系譜なら、リハーサル以前に止める", () => {
+  const HARMLESS = `CREATE TABLE "rehearsal_new_parent" ("id" text);`;
+
+  test("DB にあって repo に無い migration があると 1 を返し、DB は変わらない", async () => {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO _prisma_migrations
+         (id, checksum, migration_name, started_at, finished_at, applied_steps_count)
+       VALUES ($1, 'deadbeef', 'probe_only_in_db', now(), now(), 1)`,
+      HISTORY_PROBE_ID,
+    );
+
+    // 渡す migration 自体は通る内容。止まる理由は中身ではなく履歴。
+    expect(await check(HARMLESS)).toEqual({ code: 1, unchanged: true });
+  });
+
+  test("適用済み migration の checksum が実ファイルと食い違うと 1 を返す", async () => {
+    await prisma.$executeRawUnsafe(
+      `UPDATE _prisma_migrations SET checksum = 'tampered'
+        WHERE migration_name = '00000000000000_init'`,
+    );
+
+    expect(await check(HARMLESS)).toEqual({ code: 1, unchanged: true });
+  });
+
+  test("履歴に手を加えなければ通る（この gate が常時赤ではないこと）", async () => {
+    expect(await check(HARMLESS)).toEqual({ code: 0, unchanged: true });
   });
 });

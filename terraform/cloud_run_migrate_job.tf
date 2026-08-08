@@ -43,8 +43,12 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
         # 控えで、Cloud Run Job はこの command/args で上書きする。両方が同じ順序を持つことは
         # `deploy-packaging-contract.test.ts` が固定する）。
         #
-        # `migration-preconditions.ts` は未適用 migration の DDL から違反行プローブを導出し、
-        # 1 件でも当たれば非 0 で終わる。migrate を**始める前**に落ちるので
+        # `migration-preconditions.ts` は 2 つを見て、どちらかが崩れていれば非 0 で終わる。
+        # ①DB の migration 履歴が repo と同じ系譜か（Prisma はここを見ない。接続先が
+        # 旧 DB のままでも `No pending migrations to apply.` を exit 0 で返すので、
+        # **切替の失敗が成功として表示される**）②未適用 migration を実際に 1 つの
+        # トランザクションで流して必ず巻き戻す（落ちるなら失敗した文と PostgreSQL の
+        # 本当のエラーが出る）。どちらも migrate を**始める前**に落ちるので
         # `_prisma_migrations` に失敗が残らず、以降のデプロイがブロックされない。
         command = ["sh"]
         args = [

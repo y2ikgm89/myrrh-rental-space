@@ -1,8 +1,22 @@
 /**
- * 未適用 migration を**本当に流してから巻き戻す**ことで、既存の行に当たって
- * 落ちるかどうかを適用前に確かめる。
+ * migrate を始める前に 2 つを確かめる。
  *
- * ## 何を防ぐのか
+ * 1. **DB の履歴が repo と同じ系譜を指しているか。** Prisma はここを一切見ない
+ *    （公式の記述と実測は `historyMismatches` の docstring にある）
+ * 2. **未適用 migration を本当に流してから巻き戻す**ことで、既存の行に当たって
+ *    落ちるかどうかを適用前に確かめる
+ *
+ * ## 1 が無いと、切替の失敗が成功として表示される
+ *
+ * 本番を新しい空の DB へ切り替えるとき、secret の張り替えが効いておらず接続先が
+ * **旧 DB のまま**だと、`prisma migrate deploy` は `No pending migrations to apply.`
+ * を exit 0 で返す。baseline は 1 文も流れないのにデプロイは成功扱いで終わり、
+ * 誰も気付かない。実測（2026-08-08 の本番 DB）: `_prisma_migrations` に 81 行あって
+ * repo には baseline 1 本しか無い状態で、`prisma migrate status` は
+ * `Database schema is up to date!` を返した。実際の schema は列名が旧 camelCase の
+ * ままで、trigger が 8 本・関数が 6 本・enum が 5 個欠けていた。
+ *
+ * ## 2 が何を防ぐのか
  *
  * この repo の migration は `BEGIN; … COMMIT;` で包む契約になっている
  * （`.claude/rules/migrations.md`）。包まないと部分適用のまま止まるからだが、
@@ -107,6 +121,7 @@
  *   同じデータに対して流す以上、同じだけ時間が掛かる**（リハーサル固有の制限ではない）
  */
 
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -403,6 +418,70 @@ export function pendingStatements(
   return { steps, blocked };
 }
 
+/** `_prisma_migrations` に適用済みとして記録されている 1 行。 */
+export interface AppliedMigration {
+  readonly name: string;
+  readonly checksum: string;
+}
+
+export interface HistoryMismatch {
+  readonly migration: string;
+  readonly reason: string;
+}
+
+/**
+ * DB の履歴と repo の migration が**同じ系譜を指しているか**を確かめる。
+ *
+ * ここを見ないと、**切替の失敗が成功として表示される**。Prisma 公式は
+ * `migrate deploy` について「applied migration がローカルに無いことでは警告せず、
+ * drift も検出しない」と明記していて、実測もそのとおりだった:
+ *
+ * | 仕込んだ状態                                    | `migrate status` | `migrate deploy`                       |
+ * | ----------------------------------------------- | ---------------- | -------------------------------------- |
+ * | `_prisma_migrations` に repo に無い行を 1 つ足す | exit 0・無警告   | exit 0「No pending migrations to apply」 |
+ * | 適用済み行の `checksum` を書き換える            | exit 0・無警告   | exit 0（未適用が無いと照合されない）   |
+ *
+ * この 2 つが揃うのが、本番を新しい空 DB へ切り替える作業の最悪の失敗モード。
+ * secret の張り替えが効いておらず接続先が**旧 DB のまま**だと、baseline は 1 文も
+ * 流れないのに「No pending migrations to apply.」で成功扱いになり、誰も気付かない。
+ * 実測（2026-08-08 の本番 DB）: `_prisma_migrations` に 81 行あり repo には
+ * baseline 1 本しか無い状態で、`migrate status` は `Database schema is up to date!`
+ * を返していた。実際の schema は列名が旧 camelCase のままだった。
+ *
+ * checksum は migration.sql の SHA-256 hex（`_prisma_migrations.checksum` と一致する
+ * ことを実測で確認済み。utf8 文字列で読んでも raw buffer で読んでも同じ値になる）。
+ */
+export function historyMismatches(
+  migrations: readonly Migration[],
+  applied: readonly AppliedMigration[],
+): readonly HistoryMismatch[] {
+  const sqlByName = new Map(
+    migrations.map((migration) => [migration.name, migration.sql]),
+  );
+  const mismatches: HistoryMismatch[] = [];
+
+  for (const entry of applied) {
+    const sql = sqlByName.get(entry.name);
+    if (sql === undefined) {
+      mismatches.push({
+        migration: entry.name,
+        reason:
+          "DB に適用済みとして記録されているが、repo の prisma/migrations に無い",
+      });
+      continue;
+    }
+    const actual = createHash("sha256").update(sql).digest("hex");
+    if (actual !== entry.checksum) {
+      mismatches.push({
+        migration: entry.name,
+        reason: `checksum が食い違う（記録 ${entry.checksum} / 実ファイル ${actual}）`,
+      });
+    }
+  }
+
+  return mismatches;
+}
+
 // ---------------------------------------------------------------------------
 // DB とのやり取り
 // ---------------------------------------------------------------------------
@@ -506,7 +585,7 @@ function sameFingerprint(before: Fingerprint, after: Fingerprint): boolean {
 }
 
 type History =
-  | { readonly ok: true; readonly applied: ReadonlySet<string> }
+  | { readonly ok: true; readonly applied: readonly AppliedMigration[] }
   | { readonly ok: false; readonly reason: string };
 
 /**
@@ -521,13 +600,18 @@ async function readMigrationHistory(
   tables: number,
 ): Promise<History> {
   try {
-    const rows = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
-      `SELECT migration_name FROM _prisma_migrations
+    const rows = await prisma.$queryRawUnsafe<
+      { migration_name: string; checksum: string }[]
+    >(
+      `SELECT migration_name, checksum FROM _prisma_migrations
         WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
     );
     return {
       ok: true,
-      applied: new Set(rows.map((row) => row.migration_name)),
+      applied: rows.map((row) => ({
+        name: row.migration_name,
+        checksum: row.checksum,
+      })),
     };
   } catch (error) {
     if (tables > 0) {
@@ -541,7 +625,7 @@ async function readMigrationHistory(
     console.info(
       "[migration-preconditions] 空の DB（テーブルも履歴も無い）— 全 migration を対象にする",
     );
-    return { ok: true, applied: new Set() };
+    return { ok: true, applied: [] };
   }
 }
 
@@ -711,9 +795,27 @@ export async function run(argv: readonly string[]): Promise<number> {
       return 1;
     }
 
+    // 履歴照合だけは **repo の** prisma/migrations を見る。`--migrations` は
+    // リハーサル対象を差し替えるための入口（統合テストが合成 migration を流すのに
+    // 使う）であって、「この DB がどの系譜に属するか」とは無関係だから。
+    const mismatches = historyMismatches(readMigrations(), history.applied);
+    if (mismatches.length > 0) {
+      for (const mismatch of mismatches) {
+        console.error(
+          `[migration-preconditions] 履歴の食い違い ${mismatch.migration}: ${mismatch.reason}`,
+        );
+      }
+      console.error(
+        "[migration-preconditions] この DB は repo の migration 履歴と別系譜。" +
+          "`prisma migrate deploy` はこの状態でも `No pending migrations to apply.` を " +
+          "exit 0 で返すので、**適用したつもりのまま何も変わらない**。接続先を確かめること",
+      );
+      return 1;
+    }
+
     const { steps, blocked } = pendingStatements(
       readMigrations(parseMigrationsDir(argv)),
-      history.applied,
+      new Set(history.applied.map((entry) => entry.name)),
     );
 
     // **何も実行する前に**止める。巻き戻せない文が 1 つでもあれば、途中まで
