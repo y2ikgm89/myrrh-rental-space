@@ -1,9 +1,18 @@
 # Docker Compose - Myrrh Rental Space 開発環境
-# PostgreSQL 16 for local development
+#
+# PostgreSQL 18 — **本番 Neon（18.4）と同じ系に揃えてある**。ここと
+# `.github/workflows/ci.yml` の ECR ミラー image は必ず同時に動かすこと。片方だけ
+# 上げると「ローカルと CI と本番が三者三様」になり、環境差の切り分けができなくなる。
+#
+# **16 から上げたときは volume を作り直す。** PostgreSQL のデータディレクトリは
+# メジャーバージョン間で互換性が無く、16 のデータが入った volume では 18 が起動しない
+# （`database files are incompatible with server`）。
+#
+#   docker compose down -v && bun run setup
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: myrrh-postgres
     restart: unless-stopped
     ports:
@@ -21,7 +30,7 @@ services:
       retries: 5
 
   test-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: myrrh-postgres-test
     restart: unless-stopped
     ports:

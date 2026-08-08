@@ -1,7 +1,7 @@
 // ==============================================
 // Myrrh Rental Space - Prisma Schema
 // ==============================================
-// Prisma 7 + PostgreSQL 16
+// Prisma 7 + PostgreSQL 18
 
 generator client {
   provider        = "prisma-client"

@@ -17,8 +17,10 @@
 #   将来マルチインスタンス化（高トラフィックでロック競合が問題化）した場合は、
 #   require-concurrent-index-creation 等の lock 系を再有効化して再評価する。
 
-# 本番 / CI の Postgres バージョン（cloudbuild.yaml・ci.yml ともに postgres:16）
-pg_version = "16.0"
+# 本番 / CI の Postgres バージョン。**本番 Neon（18.4）・docker-compose・ci.yml の
+# 三者と必ず揃える**。squawk はバージョンでルールの適用可否を変えるため、ここだけ
+# 古いままだと「本番では危険な DDL」を安全と判定しうる。
+pg_version = "18.0"
 
 # **Prisma は PostgreSQL の migration をトランザクションで包まない。**
 # 公式 (Prisma Migrate DX primitives):
