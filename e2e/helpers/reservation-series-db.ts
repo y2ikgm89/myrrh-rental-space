@@ -9,7 +9,7 @@
  *     Prisma facade は `server-only` 付きで import できない。DATABASE_URL は
  *     Bun が `.env` から自動注入するため追加設定は不要。
  *   - **read-only に徹する**。fixture の作成は
- *     `scripts/e2e/create-recurring-series-fixture.ts`（子プロセス）が担い、
+ *     `e2e/helpers/reservation-series-fixture.ts` が担い、
  *     変異は SUT 側の UI action に任せる。
  *
  * @module e2e/helpers/reservation-series-db

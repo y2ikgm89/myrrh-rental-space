@@ -58,7 +58,8 @@
  *
  * `e2e/helpers/refund-policy-bulk-cancel-fixture.ts` が完結して owns:
  *   - Settings.refundPolicy を { tiers[168h → 50%], defaultRefundRate: 100 } に mutate
- *   - dev customer + coworking-space に 3 CONFIRMED PAID reservations を seed
+ *   - 専有スペース（`spaceFixtures.seriesRefundSpaceSlug`）に 3 CONFIRMED PAID
+ *     reservations を purge → 再作成
  *   - afterAll で fixture + Settings を restore
  *
  * Settings singleton を mutate するため `test.describe.serial` で他 spec との

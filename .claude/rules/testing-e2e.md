@@ -212,10 +212,25 @@ Next.js では `loading.tsx` のセグメント境界に加え、`generateViewpo
   `e2e/fixtures/test-data.ts` の `spaceFixtures` と二重定義になるので、
   `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が一致を強制する。
 
-  なお **fixture が実行のたびにスペースを新規作成する形にはしない**。
-  `create-recurring-series-fixture.ts` 等がその形で、後始末が無いため行が際限なく
-  溜まる（実測: ローカル test DB に `claim-space-*` / `e2e-recurring-space-*` が数百行）。
-  seed の 1 行を marker 付きで使い回すほうが冪等で観測もしやすい。
+  なお **fixture が実行のたびにスペースを新規作成する形にはしない**。後始末が無いため
+  行が際限なく溜まる（実測: ローカル test DB に `claim-space-*` /
+  `e2e-recurring-space-*` が数百行）。専有スペースを seed に 1 つ置き、fixture は
+  その**中身だけ**を purge → 再作成する（`e2e/helpers/reservation-series-fixture.ts`）。
+  gate: `e2e-fixture-space-ownership.test.ts` の
+  「fixture が使い捨てのスペース / 拠点を作っていない」。走査範囲は
+  `scripts/e2e/*.ts` **と** `e2e/helpers/*-fixture.ts` の両方 — 置き場所ではなく
+  「DB へ書く fixture かどうか」で決める（`scripts/e2e` だけを見ていた頃、
+  `refund-policy-bulk-cancel-fixture.ts` が共有 `coworking-space` に PAID 予約を
+  作っていたのを一度も報告できていなかった）。
+
+- **fixture が書く jsonb の形は「実 DB に流して」確かめる。** 型でも正規表現でも
+  `Json` 列の中身は保証できない。`reservation_series.agreement_snapshot` は
+  `jsonb_typeof(...) = 'array'` の CHECK を持つが、WP18-23 でそれが入ったとき
+  fixture 側は `{ agreements: [] }` を書いたままで、**nightly が 7 連続で赤になるまで
+  誰も気付かなかった**（2026-08-01〜08-07）。fixture の payload 生成を純粋関数に
+  切り出し、その出力を実 DB へ insert する統合テストを置く
+  （`__tests__/integration/e2e/reservation-series-fixture-shape.test.ts`）。
+  同じ drift が **PR 時点の `test:integration`** で落ちる。
 
 - **seed が spec に見せるデータは `orderBy` 無しの `findFirst` / `findMany` で選ばない。**
   Postgres の返却順は保証が無いので、`spaceIndex` や「最初のスペース」が run ごとに
