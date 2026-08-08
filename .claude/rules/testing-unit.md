@@ -54,9 +54,31 @@ paths:
 
 ## 静的ゲートの分担
 
-`__tests__/**` は ESLint 対象外。テストコードの静的ゲートは tsconfig.test.json の
-型チェック（`bun run type-check` の tsc:test）のみ。命名は `*.test.ts`
+`__tests__/**` は **`src/` と同じ ESLint ルールが効く**（`bun run validate` /
+CI の Lint & Format / lefthook のすべて）。加えて tsconfig.test.json の型チェック
+（`bun run type-check` の tsc:test）。命名は `*.test.ts`
 （`*.spec.ts` は Playwright 用で runner に拾われない）。
+
+**かつては `globalIgnores` で丸ごと外れていた。** 28,000 行超が無検査で、
+対象に入れた瞬間に **`no-non-null-assertion` が 110 件・`no-explicit-any` が 6 件**
+出た——どちらも絶対規約 #6 が「0 件強制」と宣言しているルール。規約の穴ではなく
+規約の**適用範囲**の穴で、ゲートは自分が見ていない範囲を報告しない。
+
+テスト側の 2 つの制約:
+
+- **型付き lint（`projectService: true`）は `__tests__` に効かせない。**
+  効かせると ESLint がヒープを 4GB 使い切って FATAL ERROR で落ちる（実測）。
+  `typescript-type-checked-*` の 2 ブロックが `__tests__/**` を `ignores` する
+- **`!` の代わりに `__tests__/support/definite.ts` を使う。**
+  `definite(value, what)` / `nthCall(mock, n, what)`。`rows[0]!.amount` は実際に
+  空だったとき `Cannot read properties of undefined` としか言わないが、
+  `definite(rows[0], "refunds[0]")` なら何が無かったかが出る
+
+ルールを外すのはファイル名指し + `eslint.config.mjs` に理由を書く形だけ
+（インライン `eslint-disable` にすると、外していること自体が設定から見えなくなる）。
+現在の唯一の例外は Lexical mount error boundary のテストダブル 2 本で、
+「レンダー中に throw する」「リトライで別 identity になる」ことが検証対象なので
+`react-hooks/globals` / `@eslint-react/static-components` を**満たすと検証が消える**。
 
 ## gate を触るときに固定すること
 

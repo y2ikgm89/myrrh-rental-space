@@ -507,15 +507,25 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
 
     // prisma.event.updateMany（writeBackMeetingUrl の実装、Codex P1 fix で
     // first-write-wins のため updateMany に変更済）を throw させる
-    const originalUpdateMany = prisma.event.updateMany;
+    // 差し替えの型は delegate から引く。`any` にすると、writeBackMeetingUrl が
+    // updateMany の引数の形を変えてもこのテストは通り続ける。
+    type EventUpdateMany = typeof prisma.event.updateMany;
+    const originalUpdateMany = prisma.event.updateMany.bind(prisma.event);
     let writeBackAttempted = false;
-    prisma.event.updateMany = mock(async (params: any) => {
-      if (params.data?.meetingUrl) {
+    // `mock()` で包まない——このテストが見るのは呼び出し回数ではなく
+    // `writeBackAttempted` なので、包むと Prisma の generic delegate 型と
+    // 合わせるためだけに cast が要る。
+    // 引数に注釈を書かない。Prisma の delegate は generic 署名なので、
+    // 非 generic な注釈を付けると assignable にならない。文脈型から引かせる。
+    const failingUpdateMany: EventUpdateMany = (params) => {
+      const data = params.data;
+      if (!Array.isArray(data) && data.meetingUrl !== undefined) {
         writeBackAttempted = true;
         throw new Error("Database connection timeout during write-back");
       }
-      return originalUpdateMany.call(prisma.event, params);
-    }) as any;
+      return originalUpdateMany(params);
+    };
+    prisma.event.updateMany = failingUpdateMany;
 
     try {
       const contexts = await getEventSlotsForCalendarSync(eventId);
