@@ -15,11 +15,14 @@
  * 式 index 用に書いたプローブが最適化で**式を一度も評価していなかった**ことで、
  * 道具が「確認した」と言いながら何も見ていなかった。写経はやめた。
  *
- * ## だからここで見るのは 3 つだけ
+ * ## だからここで見るのは 4 つだけ
  *
  * 1. 文の切り出しが壊れていない（`$$ … $$` / `E'…'`）
  * 2. **巻き戻せない文を実行しない**（トランザクション制御 / `CONCURRENTLY`）
  * 3. 接続先の解決が `prisma.config.ts` と同じ（migrate と別の DB を見ない）
+ * 4. **DB の履歴が repo と同じ系譜を指している**。Prisma はここを一切見ない
+ *    （公式が「ローカルに無い applied migration では警告しない・drift も検出しない」
+ *    と明記。実測でも repo 外の行があろうと checksum が食い違おうと exit 0 で通る）
  *
  * 2 番が最重要。`COMMIT PREPARED` や `SAVEPOINT` を実行してしまうと、
  * リハーサルのつもりが**本当に適用**される。実挙動は
@@ -27,10 +30,14 @@
  * 実 DB で確かめる（落ちる migration・通る migration・巻き戻しの検証）。
  */
 
+import { createHash } from "node:crypto";
+
 import { describe, expect, test } from "bun:test";
 
 import {
   describeError,
+  historyMismatches,
+  type Migration,
   pendingStatements,
   planStep,
   readMigrations,
@@ -244,5 +251,88 @@ ALTER TABLE "locations" ADD CONSTRAINT "c" CHECK ("x" >= 0);`,
       );
       expect(describeError(new Error(""))).toBe("（エラーメッセージなし）");
     });
+  });
+});
+
+/**
+ * `historyMismatches` は「DB の履歴が repo と同じ系譜か」だけを見る。
+ *
+ * ここが無いと、本番を新しい空 DB へ切り替える作業で**失敗が成功として表示される**。
+ * 実測（2026-08-08）: 本番 DB は `_prisma_migrations` に 81 行あり repo には
+ * baseline 1 本しか無いのに、`prisma migrate status` は `Database schema is up to
+ * date!`、`migrate deploy` は `No pending migrations to apply.` を **exit 0** で返した。
+ * checksum を書き換えても同じだった。Prisma 公式もそう書いている。
+ */
+describe("履歴が repo と同じ系譜を指しているか", () => {
+  const sha = (sql: string) => createHash("sha256").update(sql).digest("hex");
+
+  // fixture の名前に timestamp 形を使わない（`gates-do-not-pin-migrations.test.ts`）。
+  // `historyMismatches` は名前を Map のキーとしてしか見ないので、形は判定に無関係。
+  const REPO: readonly Migration[] = [
+    { name: "00000000000000_init", sql: "CREATE TABLE a ();" },
+    { name: "fixture_add_b", sql: "CREATE TABLE b ();" },
+  ];
+  const appliedAs = (name: string, sql: string) => ({
+    name,
+    checksum: sha(sql),
+  });
+
+  test("DB にあって repo に無い migration を落とす（畳んだ baseline を旧 DB に当てた形）", () => {
+    const mismatches = historyMismatches(REPO, [
+      appliedAs("00000000000000_init", "CREATE TABLE a ();"),
+      {
+        name: "fixture_only_in_db",
+        checksum: sha("CREATE TABLE gone ();"),
+      },
+    ]);
+
+    expect(mismatches.map((entry) => entry.migration)).toEqual([
+      "fixture_only_in_db",
+    ]);
+    expect(mismatches[0]?.reason).toContain("repo の prisma/migrations に無い");
+  });
+
+  test("同名でも checksum が食い違えば落とす", () => {
+    const mismatches = historyMismatches(REPO, [
+      { name: "00000000000000_init", checksum: sha("CREATE TABLE other ();") },
+    ]);
+
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0]?.migration).toBe("00000000000000_init");
+    expect(mismatches[0]?.reason).toContain("checksum が食い違う");
+  });
+
+  test("空の DB は通る（履歴が 1 行も無い＝これから baseline を流す）", () => {
+    expect(historyMismatches(REPO, [])).toEqual([]);
+  });
+
+  test("一部だけ適用済みでも、記録が実ファイルと一致していれば通る", () => {
+    expect(
+      historyMismatches(REPO, [
+        appliedAs("00000000000000_init", "CREATE TABLE a ();"),
+      ]),
+    ).toEqual([]);
+  });
+
+  test("全部適用済みで一致していれば通る", () => {
+    expect(
+      historyMismatches(REPO, [
+        appliedAs("00000000000000_init", "CREATE TABLE a ();"),
+        appliedAs("fixture_add_b", "CREATE TABLE b ();"),
+      ]),
+    ).toEqual([]);
+  });
+
+  test("実 repo の migrations を自分自身と照合すると通る（checksum 計算の自己検査）", () => {
+    // fixture の合成文字列だけで固定すると、`readMigrations` が返す `sql` と
+    // `_prisma_migrations.checksum` の計算が食い違っていても気づけない。
+    // 実ファイルを通す経路をここで 1 本持つ。
+    const selfApplied = MIGRATIONS.map((migration) => ({
+      name: migration.name,
+      checksum: sha(migration.sql),
+    }));
+
+    expect(historyMismatches(MIGRATIONS, selfApplied)).toEqual([]);
+    expect(selfApplied.length).toBeGreaterThan(0);
   });
 });

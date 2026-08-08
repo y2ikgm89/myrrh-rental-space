@@ -162,7 +162,18 @@ squawk 実行・本番 seed の一回限り実行、を証明する。
 `prisma migrate deploy` は **`No pending migrations to apply.`** を返して exit 0 する。
 つまり**適用は無言の no-op になり、DB は畳む前のスキーマのまま残る**。畳んだ後の
 ローカル test DB も同じ理由で作り直しが要る（`test:db:migrate` だけでは古い
-スキーマが残る）。
+スキーマが残る）。Prisma 公式も `migrate deploy` について「ローカルに無い applied
+migration では警告しない・drift も検出しない」と明記している。
+
+**Prisma は止めないが、`scripts/migration-preconditions.ts` が止める。**
+`historyMismatches` が ①DB の `_prisma_migrations` にあって repo に無い migration
+②同名なのに checksum が実ファイルと食い違う migration を非 0 で拒否する
+（checksum は migration.sql の SHA-256 hex）。migrate job は migrate より**前**に
+これを走らせるので、接続先が旧 DB のままの切替は `No pending migrations to apply.`
+に到達せずに止まる。gate は
+`__tests__/unit/architecture/migration-preconditions.test.ts`（fixture で 3 方向）と
+`__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`（実 DB で
+未知 migration・checksum 改竄・正常の 3 本）。
 
 ### 道具
 
