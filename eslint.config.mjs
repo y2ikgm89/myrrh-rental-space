@@ -63,6 +63,25 @@ const publicDbRestrictedImports = [
 ];
 
 const eslintConfig = defineConfig([
+  // 免除が陳腐化したら落とす（ESLint 公式の linterOptions）。
+  //
+  // 規約を「守っている」ことの証拠は、規約そのものより免除の側に出る。
+  // `eslint-disable` は書いた時点の理由でしか正当化されず、対象コードが直った後も
+  // 残り続ける——そして残った免除は「このルールはここでは成り立たない」と主張し続ける。
+  // それを人手で棚卸しするのは、免除の数だけ drift 源を抱えるのと同じ。
+  //
+  // `files` を付けない config オブジェクトは全ファイルに適用される（flat config の仕様）。
+  {
+    name: "linter-options/stale-exemptions-fail",
+    linterOptions: {
+      // 効いていない `eslint-disable` を落とす。
+      reportUnusedDisableDirectives: "error",
+      // 効いていないインライン設定コメント（`/* eslint rule: ... */`）を落とす。
+      // 既定は "off" なので明示が要る。
+      reportUnusedInlineConfigs: "error",
+    },
+  },
+
   // @eslint-react: ESLint 10 ネイティブ React ルール（TypeScript 最適化プリセット）
   // プリセットが plugins / rules / settings をセットで定義するため単体エントリとして展開
   reactPlugin.configs["recommended-typescript"],
