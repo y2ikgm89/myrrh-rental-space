@@ -190,9 +190,12 @@ const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
 // (claim) + tx.reservation.findUniqueOrThrow (claim 成功後の icsSequence 別 SELECT)。
 // 既定は count:1 (claim 成功) / icsSequence:1。version conflict (count:0) を検証する
 // テストは mockImplementationOnce で count:0 に差し替える。
-const mockTxReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
-  Promise.resolve({ count: 1 }),
-);
+// 引数型を宣言する。`() => …` にすると `mock.calls` が空タプルになり、
+// 「どんな data で呼ばれたか」を型安全に読めない（下の guest* 保持テストが
+// それを読む）。
+const mockTxReservationUpdateMany = mock<
+  (args: { data: Record<string, unknown> }) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 // Return type is intentionally `unknown` so tests can swap in either the
 // bare `{ icsSequence }` shape (updateAdminReservationCommand path) or a
 // full reservation shape (updateReservationStatusCommand tx reload path)
@@ -324,6 +327,7 @@ import {
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { validateStatusTransition } from "@/shared/domain/reservations/status";
 import { DomainError } from "@/shared/domain/domain-error";
+import { nthCall } from "../../../support/definite";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1252,13 +1256,14 @@ describe("updateAdminReservationCommand", () => {
     test("guest* フィールドを省略すると updateMany の data に guest* キーが含まれない（既存値を保持）", async () => {
       await updateAdminReservationCommand("res-1", validInput);
 
-      // 各テストはbeforeEach で mock.clear() されるため、updateMany は1回だけ呼ばれる
-      expect(mockTxReservationUpdateMany.mock.calls.length).toBeGreaterThan(0);
-
-      const updateCall = (
-        mockTxReservationUpdateMany.mock.calls as any
-      )[0]?.[0];
-      expect(updateCall?.data).toBeDefined();
+      // 各テストは beforeEach で mock.clear() されるため、updateMany は 1 回だけ呼ばれる。
+      // 呼ばれていなければ nthCall が「1 回目の呼び出しが無い」で落ちる。
+      const updateCall = nthCall(
+        mockTxReservationUpdateMany,
+        0,
+        "tx.reservation.updateMany",
+      )[0];
+      expect(updateCall.data).toBeDefined();
       expect(updateCall.data).not.toHaveProperty("guestLastName");
       expect(updateCall.data).not.toHaveProperty("guestCustomerType");
     });

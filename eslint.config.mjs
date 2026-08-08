@@ -161,6 +161,7 @@ const eslintConfig = defineConfig([
         {
           name: "typescript-type-checked-wiring",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          ignores: ["__tests__/**"],
           languageOptions: {
             parserOptions: {
               projectService: true,
@@ -176,6 +177,7 @@ const eslintConfig = defineConfig([
           // は P2〜P4 で個別に段階導入する。
           name: "typescript-type-checked-rules-p0-p1",
           files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
+          ignores: ["__tests__/**"],
           rules: {
             "@typescript-eslint/await-thenable": "error",
             "@typescript-eslint/no-array-delete": "error",
@@ -579,6 +581,33 @@ const eslintConfig = defineConfig([
   // Prettier（末尾: 競合ルール無効化）
   prettier,
 
+  // React のレンダー純粋性ルールを、**意図的に不純なテストダブル**にだけ外す。
+  //
+  // 対象は Lexical エディタの mount error boundary を検証する 2 本。ここで使う
+  // 偽コンポーネントは「レンダー中に throw する」「リトライで別 identity の
+  // コンポーネントになる」ことが仕事で、**満たしたら検証対象が消える**:
+  //
+  // - `react-hooks/globals`: `mountCount += 1` を消せない。テストが assert して
+  //   いるのは「リトライ後に子が再マウントされたか」で、throw するレンダーでは
+  //   `useEffect` が発火しないため、レンダー中の副作用以外に観測手段が無い
+  // - `@eslint-react/static-components`: 動的 import のリトライが**新しい
+  //   コンポーネント identity** を返すことそのものが検証対象
+  //
+  // ルールが守るのは本番のレンダー純粋性で、この 2 ファイルは本番へ 1 行も出ない。
+  // **ファイルを名指しで、理由をここに書いて外す。** インラインの
+  // `eslint-disable` にすると、外していること自体が設定から見えなくなる。
+  {
+    name: "lexical-mount-error-boundary-test-doubles",
+    files: [
+      "__tests__/unit/components/editor/lexical/lexical-mount-error-boundary.test.tsx",
+      "__tests__/unit/components/editor/lexical/lazy-lexical-editor-dynamic-retry.test.tsx",
+    ],
+    rules: {
+      "react-hooks/globals": "off",
+      "@eslint-react/static-components": "off",
+    },
+  },
+
   // グローバル除外
   globalIgnores([
     ".next/**",
@@ -586,7 +615,6 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "generated/**",
-    "__tests__/**",
     // .claude は設定・スキル・git worktree 置き場で lint 対象外。worktree 内に
     // 別 tsconfig が同梱されると `eslint .` 時に typescript-eslint が
     // tsconfigRootDir を一意に決められず全ファイル parse error になるため必須。
