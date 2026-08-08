@@ -39,10 +39,20 @@
  * 2. 集合が空であることを assert する（`toEqual([])` / `toHaveLength(0)`）
  * 3. **規模の下限を 1 つも assert していない**
  *
- * 3 の充足として認めるのは `toBeGreaterThan(n)` / `toBeGreaterThanOrEqual(n)` /
- * `toContain(…)` の 3 つ。ファイル単位で見る——guard は「走査が空でない」ことを
- * 示す専用の test として書かれるのが実際の形で、どの式がどの集合を指すかまでは
- * 静的に追わない。**追えると誤解させるより、粗いと書いておくほうがいい。**
+ * 3 の充足として認めるのは **1 以上の下限を証明する数値 assert だけ**:
+ *
+ *   - `toBeGreaterThan(n)`（n >= 0。`> 0` は「1 件以上」を意味する）
+ *   - `toBeGreaterThanOrEqual(n)`（n >= 1）
+ *
+ * `toContain(…)` は認めない。初版は認めていたが、**受け手を見ないので
+ * `expect(source).toContain("<html")` のような無関係な文字列検査でも
+ * ファイル全体が「guard あり」になった**（Codex 指摘、実例
+ * `next-error-boundary-contract.test.ts`）。`toBeGreaterThanOrEqual(0)` も
+ * 常に真なので認めない。`.not.` を挟んだ否定形も数えない。
+ *
+ * ファイル単位で見る点は変えない——guard は「走査が空でない」ことを示す専用の
+ * test として書かれるのが実際の形で、どの式がどの集合を指すかまでは静的に
+ * 追わない。**追えると誤解させるより、粗いと書いておくほうがいい。**
  *
  * `readFileSync` は対象に入れない。固定パスを読む gate は、パスが消えれば
  * throw するので黙って緑にならない。
@@ -54,12 +64,28 @@ const SCAN_CALLEES = new Set(["readdirSync", "globSync", "globSync"]);
 /** 集合が空であることの assert。 */
 const EMPTY_MATCHERS = new Set(["toEqual", "toStrictEqual", "toHaveLength"]);
 
-/** 規模の下限として認める matcher。 */
-const SIZE_MATCHERS = new Set([
-  "toBeGreaterThan",
-  "toBeGreaterThanOrEqual",
-  "toContain",
+/**
+ * 規模の下限を証明する matcher と、その最小しきい値。
+ *
+ * `toBeGreaterThan(0)` は「1 件以上」。`toBeGreaterThanOrEqual(0)` は常に真なので
+ * 下限を証明しない。
+ */
+const SIZE_MATCHER_MIN_THRESHOLD = new Map([
+  ["toBeGreaterThan", 0],
+  ["toBeGreaterThanOrEqual", 1],
 ]);
+
+/** `expect(x).not.toBeGreaterThan(0)` のような否定形か。 */
+function isNegated(callee) {
+  let node = callee;
+  while (node.type === "MemberExpression") {
+    if (node.property.type === "Identifier" && node.property.name === "not") {
+      return true;
+    }
+    node = node.object;
+  }
+  return false;
+}
 
 function calleeName(node) {
   if (node.type === "Identifier") return node.name;
@@ -115,8 +141,15 @@ const rule = {
           return;
         }
 
-        if (SIZE_MATCHERS.has(name)) {
-          hasSizeGuard = true;
+        const threshold = SIZE_MATCHER_MIN_THRESHOLD.get(name);
+        if (threshold !== undefined) {
+          const arg = node.arguments[0];
+          const proves =
+            arg !== undefined &&
+            arg.type === "Literal" &&
+            typeof arg.value === "number" &&
+            arg.value >= threshold;
+          if (proves && !isNegated(node.callee)) hasSizeGuard = true;
           return;
         }
 
