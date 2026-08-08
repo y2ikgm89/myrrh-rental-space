@@ -4,6 +4,7 @@ import {
   evaluateSeedSafety,
   isLocalhostDatabaseUrl,
   looksLikeProductionDatabaseUrl,
+  type SeedSafetyEnv,
 } from "../../../prisma/seed-safety";
 
 const LOCAL_URL =
@@ -50,13 +51,7 @@ describe("seed-safety DATABASE_URL helpers", () => {
   });
 });
 
-const baseLocalEnv = {
-  databaseUrl: LOCAL_URL,
-  nodeEnv: "development" as string | undefined,
-  appSurface: undefined as string | undefined,
-  e2eRuntime: undefined as string | undefined,
-  ci: undefined as string | undefined,
-};
+const baseLocalEnv = { databaseUrl: LOCAL_URL };
 
 describe("evaluateSeedSafety", () => {
   test("allows --dev only against safe local DATABASE_URL", () => {
@@ -70,60 +65,42 @@ describe("evaluateSeedSafety", () => {
     expect(
       evaluateSeedSafety({
         argv: ["--dev"],
-        env: { ...baseLocalEnv, nodeEnv: undefined },
+        env: baseLocalEnv,
       }),
     ).toEqual({ ok: true, mode: "dev" });
   });
 
-  test("refuses --dev when APP_SURFACE is set without E2E_RUNTIME/CI", () => {
-    const surfaceRefuse = evaluateSeedSafety({
-      argv: ["--dev"],
-      env: {
-        ...baseLocalEnv,
-        appSurface: "public",
-      },
+  /**
+   * 2026-08-09 に廃止した二段目のガードの回帰。
+   *
+   * かつては `APP_SURFACE` / `NODE_ENV=production` が立っていると、`E2E_RUNTIME=1` か
+   * `CI=true` でない限り **localhost でも**拒否していた。だが
+   * `looksLikeProductionDatabaseUrl` の最終行が `!isLocalhostDatabaseUrl(...)` である以上、
+   * 一段目を通った時点で localhost は確定しており、二段目に守るものは無かった。
+   *
+   * 実害だけがあった: `APP_SURFACE` は public / admin のどちらを見るかを決める env で、
+   * ローカルの `.env.local` に置くのは正当な構成（`.claude/rules/app-structure.md`）。
+   * `scripts/setup-local.ts` はその `.env.local` をプロセス env に載せてから `db:seed` を
+   * 呼ぶので、**`bun run setup` が最終 step で必ず落ちていた**。
+   *
+   * 判定材料が接続先だけになったことは `SeedSafetyEnv` の形で型が保証する
+   * （プロセスの env はもう渡せない）。
+   */
+  test("判定材料は接続先だけ — プロセスの env は受け取らない", () => {
+    const env: SeedSafetyEnv = { databaseUrl: LOCAL_URL };
+    expect(Object.keys(env)).toEqual(["databaseUrl"]);
+    expect(evaluateSeedSafety({ argv: ["--dev"], env })).toEqual({
+      ok: true,
+      mode: "dev",
     });
-    expect(surfaceRefuse.ok).toBe(false);
-    if (!surfaceRefuse.ok) {
-      expect(surfaceRefuse.error).toContain("APP_SURFACE");
-    }
-  });
-
-  test("allows localhost --dev when APP_SURFACE is set with E2E_RUNTIME=1 (Playwright)", () => {
-    expect(
-      evaluateSeedSafety({
-        argv: ["--dev"],
-        env: {
-          ...baseLocalEnv,
-          appSurface: "public",
-          e2eRuntime: "1",
-        },
-      }),
-    ).toEqual({ ok: true, mode: "dev" });
-  });
-
-  test("allows localhost --dev when APP_SURFACE is set with CI=true", () => {
-    expect(
-      evaluateSeedSafety({
-        argv: ["--dev"],
-        env: {
-          ...baseLocalEnv,
-          nodeEnv: "production",
-          appSurface: "admin",
-          ci: "true",
-        },
-      }),
-    ).toEqual({ ok: true, mode: "dev" });
   });
 
   test("refuses --dev against Neon / Cloud SQL DATABASE_URL", () => {
     const neonRefuse = evaluateSeedSafety({
       argv: [],
       env: {
-        ...baseLocalEnv,
         databaseUrl:
           "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
-        e2eRuntime: "1",
       },
     });
     expect(neonRefuse.ok).toBe(false);
@@ -137,11 +114,8 @@ describe("evaluateSeedSafety", () => {
       evaluateSeedSafety({
         argv: ["--production", "owner@example.com", "Owner"],
         env: {
-          ...baseLocalEnv,
           databaseUrl:
             "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
-          nodeEnv: "production",
-          appSurface: "admin",
         },
       }),
     ).toEqual({ ok: true, mode: "production" });
@@ -152,11 +126,8 @@ describe("evaluateSeedSafety", () => {
     const mixed = evaluateSeedSafety({
       argv: ["--production", "--reset", "owner@example.com"],
       env: {
-        ...baseLocalEnv,
         databaseUrl:
           "postgresql://user:pass@ep-x.us-east-2.aws.neon.tech/neondb",
-        nodeEnv: "production",
-        appSurface: "admin",
       },
     });
     expect(mixed.ok).toBe(false);

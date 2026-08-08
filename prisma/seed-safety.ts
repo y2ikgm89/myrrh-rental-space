@@ -1,25 +1,35 @@
 /**
  * Seed CLI fail-closed safety (pure, no Prisma / server-only imports).
  *
- * `--dev` (default) must never run against a production-looking
- * DATABASE_URL or inside a deployed runtime (NODE_ENV=production / APP_SURFACE).
- * `--production` is the only intentional prod bootstrap path and cannot combine
- * with `--reset`.
+ * **判定するのは接続先だけ。** `--dev` は localhost の DATABASE_URL にしか流さない。
+ * `--production` が唯一の意図的な本番 bootstrap 経路で、`--reset` とは併用できない。
+ *
+ * ## プロセスの env で判定しない（2026-08-09 に廃止）
+ *
+ * かつては「`NODE_ENV=production` か `APP_SURFACE` が立っていたら、`E2E_RUNTIME=1` か
+ * `CI=true` でない限り拒否する」という二段目のガードがあった。**これは構造的に
+ * 何も守っていなかった。**
+ *
+ * `looksLikeProductionDatabaseUrl` の最終行が `!isLocalhostDatabaseUrl(...)` なので、
+ * 一段目を通った時点で **localhost であることが既に保証されている**。二段目の
+ * 「localhost かつ E2E/CI」という条件は前半が常に真で、実際には
+ * 「E2E_RUNTIME か CI が無ければ拒否」だけが効いていた。localhost の DB に本番データは
+ * 無いのだから、そこに守るものは無い。
+ *
+ * 一方で実害は確実にあった。`APP_SURFACE` は public / admin のどちらを見るかを決める
+ * env で、ローカルの `.env.local` に置くのは正当な構成
+ * （`.claude/rules/app-structure.md`）。`scripts/setup-local.ts` はその `.env.local` を
+ * 自分のプロセス env に載せてから `db:seed` を呼ぶので、**`bun run setup` が最終 step で
+ * 必ず落ちていた**（migrate まで済んだ「半分できた」状態が残る）。
+ *
+ * 守る対象が無く、正当な経路だけを止めるガードは残さない。多層防御にもならない
+ * ——層が増えたのではなく、一段目の結論を言い換えただけだったため。
  */
 
 export type SeedCliMode = "dev" | "production";
 
 export type SeedSafetyEnv = {
   readonly databaseUrl: string | undefined;
-  readonly nodeEnv: string | undefined;
-  readonly appSurface: string | undefined;
-  /**
-   * Playwright webServer / local E2E sets `E2E_RUNTIME=1` with localhost DB.
-   * Deployed Cloud Run never sets this (and must not).
-   */
-  readonly e2eRuntime: string | undefined;
-  /** GitHub Actions / CI runners (`CI=true`). */
-  readonly ci: string | undefined;
 };
 
 export type SeedSafetyResult =
@@ -131,33 +141,17 @@ export function evaluateSeedSafety(input: {
     };
   }
 
-  // Primary gate: never --dev/--reset against prod-looking DATABASE_URL
-  // (including cloud-sql-proxy on loopback via /cloudsql/ query + prod markers).
+  // 唯一の gate: `--dev` を本番に見える DATABASE_URL へ流さない。
+  // `looksLikeProductionDatabaseUrl` は最終行が `!isLocalhostDatabaseUrl(...)` なので
+  // **localhost 以外を全部拒否する allowlist**。前段の blocklist（`/cloudsql/` /
+  // `.neon.tech` / prod marker）は「localhost に見えるが実は本番」（cloud-sql-proxy
+  // 等）を捕まえる補強で、allowlist を置き換えるものではない。
   if (looksLikeProductionDatabaseUrl(databaseUrl)) {
     return {
       ok: false,
       error:
         "Refusing seed --dev/--reset: DATABASE_URL looks like a production database (Cloud SQL / Neon / non-localhost / prod marker). Point DATABASE_URL at localhost, or use --production for intentional prod bootstrap.",
     };
-  }
-
-  // Secondary gate: APP_SURFACE / NODE_ENV=production usually mean a deployed
-  // process. Allow only when DB is loopback AND (E2E_RUNTIME=1 or CI=true),
-  // which is how Playwright smoke / GitHub Actions seed local Postgres while
-  // setting APP_SURFACE=public|admin. Cloud Run never sets E2E_RUNTIME.
-  const deployedRuntimeMarker =
-    env.nodeEnv === "production" || Boolean(env.appSurface?.trim());
-  if (deployedRuntimeMarker) {
-    const localE2eOrCi =
-      isLocalhostDatabaseUrl(databaseUrl) &&
-      (env.e2eRuntime === "1" || env.ci === "true");
-    if (!localE2eOrCi) {
-      return {
-        ok: false,
-        error:
-          "Refusing seed --dev/--reset: NODE_ENV=production or APP_SURFACE is set outside local E2E/CI. Use --production for intentional prod bootstrap, or unset those env vars for local/dev (or set E2E_RUNTIME=1 against localhost).",
-      };
-    }
   }
 
   return { ok: true, mode };

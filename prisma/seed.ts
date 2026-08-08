@@ -6203,13 +6203,7 @@ async function main() {
   const args = process.argv.slice(2);
   const safety = evaluateSeedSafety({
     argv: args,
-    env: {
-      databaseUrl: process.env["DATABASE_URL"],
-      nodeEnv: process.env["NODE_ENV"],
-      appSurface: process.env["APP_SURFACE"],
-      e2eRuntime: process.env["E2E_RUNTIME"],
-      ci: process.env["CI"],
-    },
+    env: { databaseUrl: process.env["DATABASE_URL"] },
   });
   if (!safety.ok) {
     console.error(`❌ ${safety.error}`);
