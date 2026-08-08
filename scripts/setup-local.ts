@@ -58,18 +58,96 @@ function runInherited(
   return proc.exitCode;
 }
 
-export function runSetup(runner: CommandRunner = runInherited): number {
-  const envState = ensureEnvLocal();
-  // Existing .env.local is auto-loaded by Bun at process start; a file created
-  // in this run was applied inside ensureEnvLocal().
-  if (envState === "exists") {
-    applyEnvFile(envLocalPath);
-  }
+/** コマンドの stdout を取る（失敗したら null）。 */
+export type CommandCapture = (command: readonly string[]) => string | null;
 
+function captureInherited(command: readonly string[]): string | null {
+  const proc = Bun.spawnSync([...command], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  });
+  if (proc.exitCode !== 0) return null;
+  return new TextDecoder().decode(proc.stdout).trim();
+}
+
+export interface ComposeDatabaseTarget {
+  readonly port: string;
+  readonly database: string;
+}
+
+/**
+ * この setup が起動したコンテナの接続先を **compose に訊いて**取る。
+ *
+ * 値をここに書き写すと `docker-compose.yml` と二重管理になり、片方だけ動いたときに
+ * 気づけない。port と database 名は compose 自身に答えさせる。
+ */
+export function resolveComposeDatabaseTarget(
+  capture: CommandCapture,
+): ComposeDatabaseTarget | null {
+  // `docker compose port db 5432` → "0.0.0.0:5432"
+  const mapped = capture(["docker", "compose", "port", "db", "5432"]);
+  const port = mapped?.split(":").at(-1)?.trim();
+  const database = capture([
+    "docker",
+    "compose",
+    "exec",
+    "-T",
+    "db",
+    "printenv",
+    "POSTGRES_DB",
+  ])?.trim();
+  if (!port || !database) return null;
+  return { port, database };
+}
+
+/**
+ * `DATABASE_URL` が **この setup が起動した Docker Postgres** を指しているか。
+ *
+ * seed の deployed-runtime ガード（`prisma/seed-safety.ts`）を外す前に必ず通す。
+ * ガードは `APP_SURFACE` の有無で「デプロイされたプロセス」を推定するが、それは
+ * **loopback トンネル / プロキシ越しの本番 DB を止める最後の砦**でもある。
+ *
+ * 実測: `postgresql://user:pass@localhost:55432/neondb` は host が loopback で
+ * path に prod marker が無いため、`looksLikeProductionDatabaseUrl` が **false** を返して
+ * 一段目を素通りする。つまり **「loopback だから安全」は成り立たない**。
+ * port と database 名まで一致して初めて、印を外してよい相手だと言える。
+ */
+export function targetsSetupManagedDatabase(
+  databaseUrl: string | undefined,
+  target: ComposeDatabaseTarget | null,
+): boolean {
+  if (!databaseUrl || !target) return false;
+  try {
+    const url = new URL(databaseUrl);
+    const host = url.hostname.toLowerCase();
+    const isLoopback =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "[::1]";
+    if (!isLoopback) return false;
+
+    const port = url.port === "" ? "5432" : url.port;
+    const database = url.pathname.replace(/^\//u, "");
+    return port === target.port && database === target.database;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 依存はすべて**必須引数**で受ける。既定値を置くと「実走査だけが通る配線」ができ、
+ * テストがその経路を一度も踏まなくなる（`.claude/rules/testing-unit.md`）。
+ */
+export function runSetup(
+  runner: CommandRunner,
+  capture: CommandCapture,
+  readDatabaseUrl: () => string | undefined,
+): number {
   const steps: readonly (readonly [
     label: string,
     command: readonly string[],
-    env?: Readonly<Record<string, string>>,
   ])[] = [
     [
       "Starting PostgreSQL (db + test-db)",
@@ -87,32 +165,51 @@ export function runSetup(runner: CommandRunner = runInherited): number {
     ],
     ["Generating Prisma client", ["bun", "run", "db:generate"]],
     ["Applying migrations", ["bunx", "--bun", "prisma", "migrate", "deploy"]],
-    [
-      "Seeding database",
-      ["bun", "run", "db:seed"],
-      // `.env.local` には surface を選ぶために `APP_SURFACE` を入れるのが普通で、
-      // その値は上の `applyEnvFile` でこのプロセスの env に載る。ところが seed の
-      // 安全ガード（`prisma/seed-safety.ts` の secondary gate）は `APP_SURFACE` が
-      // 立っていることを「デプロイされたプロセス」の印と見て `--dev` を拒否する。
-      // 結果、**標準的な `.env.local` を持つ環境では `bun run setup` が必ず
-      // seed で落ちる**（しかも seed は最終 step なので、そこまでの migrate は
-      // 済んでいて「半分できた」状態が残る）。
-      //
-      // setup-local は定義上ローカル専用で、直前に localhost の Docker Postgres を
-      // `--wait` 付きで起動している。この 1 呼び出しに限って印を外す。
-      // **ガードを無効化するわけではない** — DATABASE_URL が本番に見えるなら
-      // primary gate（`looksLikeProductionDatabaseUrl`）が依然として拒否する。
-      { APP_SURFACE: "" },
-    ],
   ];
 
-  for (const [label, command, env] of steps) {
+  for (const [label, command] of steps) {
     console.info(`[setup] ${label}...`);
-    const exitCode = runner(command, env);
+    const exitCode = runner(command);
     if (exitCode !== 0) {
       console.error(`[setup] Failed: ${label}`);
       return exitCode;
     }
+  }
+
+  // seed だけは他の step と違い、**接続先を確かめてから**でないと呼べない。
+  //
+  // `.env.local` には surface を選ぶために `APP_SURFACE` を入れるのが普通で、その値は
+  // 上の `applyEnvFile` でこのプロセスの env に載る。seed の安全ガード
+  // （`prisma/seed-safety.ts`）はそれを「デプロイされたプロセス」の印と見て `--dev` を
+  // 拒否するため、外さないと `bun run setup` が最終 step で必ず落ちる。
+  //
+  // だが**無条件に外してはいけない**。その印は
+  // **loopback トンネル / プロキシ越しの本番 DB を止める最後の砦**でもある
+  // （`postgresql://user:pass@localhost:55432/neondb` は host が loopback で path に
+  //  prod marker が無く、`looksLikeProductionDatabaseUrl` を素通りする＝実測済み）。
+  // 外してよいのは、**この setup が起動したコンテナ**を指していると確かめた時だけ。
+  console.info("[setup] Seeding database...");
+  const target = resolveComposeDatabaseTarget(capture);
+  // `.env.local` を env に載せた**後**に読む（`ensureEnvLocal` / `applyEnvFile` の後）。
+  // 値を引数で受け取ると、この順序が呼び出し側の都合で崩れる。
+  if (!targetsSetupManagedDatabase(readDatabaseUrl(), target)) {
+    console.error("[setup] Failed: Seeding database");
+    console.error(
+      "[setup] DATABASE_URL が、この setup で起動した Docker Postgres を指していません。",
+    );
+    console.error(
+      `[setup]   期待: localhost:${target?.port ?? "<compose の port>"}/${target?.database ?? "<compose の POSTGRES_DB>"}`,
+    );
+    console.error(
+      "[setup] seed はローカル開発 DB の作り直しです。別の DB（トンネル / プロキシ越しの本番を含む）を指したままでは実行しません。",
+    );
+    return 1;
+  }
+
+  const seedExitCode = runner(["bun", "run", "db:seed"], { APP_SURFACE: "" });
+  if (seedExitCode !== 0) {
+    console.error("[setup] Failed: Seeding database");
+    return seedExitCode;
   }
 
   console.info(
@@ -122,5 +219,16 @@ export function runSetup(runner: CommandRunner = runInherited): number {
 }
 
 if (import.meta.main) {
-  process.exit(runSetup());
+  // env ファイルの用意は `runSetup` の外でやる。中に置くと、step の配線を
+  // テストするだけで `.env.local` を作る / 読む副作用が付いてくる。
+  const envState = ensureEnvLocal();
+  // Existing .env.local is auto-loaded by Bun at process start; a file created
+  // in this run was applied inside ensureEnvLocal().
+  if (envState === "exists") {
+    applyEnvFile(envLocalPath);
+  }
+
+  process.exit(
+    runSetup(runInherited, captureInherited, () => process.env["DATABASE_URL"]),
+  );
 }
