@@ -395,8 +395,21 @@ describe("production deploy workflow", () => {
       join(process.cwd(), "terraform", "cloud_run_migrate_job.tf"),
       "utf8",
     );
+    // migrate job は **`DIRECT_URL` だけ**を注入する。`prisma/schema.prisma` の
+    // datasource は `url` を持たず、`prisma.config.ts` が `DIRECT_URL` →
+    // `DATABASE_URL` の順で解決するので、direct が入っていれば `DATABASE_URL` は
+    // 一度も読まれない。
+    //
+    // 以前は `DATABASE_URL` にも direct を入れていたが、そのために **1 つの
+    // secret へ direct と pooled という別物を詰め、version 番号だけで区別する**
+    // 形になっていた。意味を番号に持たせると、DB を切り替えるたびに pin の
+    // 張り替えが要り、**忘れると migrate が旧 DB を見て exit 0 で黙って終わる**。
     expect(cloudRunMigrateJobTf).toMatch(
-      /env[\s\S]*name\s*=\s*"DATABASE_URL"[\s\S]*secret_key_ref[\s\S]*google_secret_manager_secret\.secret\["DATABASE_URL"\]/,
+      /env[\s\S]*name\s*=\s*"DIRECT_URL"[\s\S]*secret_key_ref[\s\S]*google_secret_manager_secret\.secret\["DIRECT_URL"\]/,
+    );
+    // `DATABASE_URL`（pooled）は runtime 専用。migrate job へ注入し直さない。
+    expect(cloudRunMigrateJobTf).not.toMatch(
+      /name\s*=\s*"DATABASE_URL"\s*value_source/,
     );
     // 適用前チェック → migrate。順序と短絡の固定は
     // `deploy-packaging-contract.test.ts` が持つ（Dockerfile 側との一致も含めて）。
