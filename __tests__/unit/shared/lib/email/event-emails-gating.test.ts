@@ -31,7 +31,7 @@ import {
   INQUIRY_ADMIN_DELIVERY,
   RENDER_CONTEXT,
 } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendEventAdminNotification } from "@/shared/lib/email/event-emails";
 
 const DATA = {

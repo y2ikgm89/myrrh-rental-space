@@ -27,7 +27,6 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
 

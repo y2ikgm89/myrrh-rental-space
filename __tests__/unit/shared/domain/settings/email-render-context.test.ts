@@ -101,7 +101,6 @@ mock.module("@/shared/domain/settings/transfer-account-queries", () => ({
     Promise.resolve("お振込の際は予約番号をご記入ください。"),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   getEventEmailRenderContext,
   getReservationEmailRenderContext,

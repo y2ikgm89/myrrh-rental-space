@@ -102,7 +102,6 @@ mock.module("@/shared/emails/reservation-status-changed", () => ({
   ReservationStatusChangedEmail: mockReservationStatusChangedEmail,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationConfirmationEmail,
   sendReservationUpdatedEmail,

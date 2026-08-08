@@ -70,18 +70,17 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationCancelledEmail,
   sendReservationAdminNotification,
 } from "@/shared/lib/email/reservation-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendEventRegistrationCancelled } from "@/shared/lib/email/event-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import type { ReservationEmailData } from "@/shared/lib/email/types";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { EventFormat } from "@/shared/lib/validations/enums/prisma-types";
 
 const RESERVATION_BASE: ReservationEmailData = {

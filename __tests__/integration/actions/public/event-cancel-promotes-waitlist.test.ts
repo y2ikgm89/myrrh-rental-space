@@ -176,7 +176,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 // cancelEventRegistration は完了を待たない。テスト側で
 // `await Promise.all(firedPromises)` することで決定的に完了を待ち合わせる
 // （event-waitlist-register.test.ts と同じ理由・同じパターン）。
-let firedPromises: Promise<unknown>[] = [];
+const firedPromises: Promise<unknown>[] = [];
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
     firedPromises.push(promise.catch(() => undefined));

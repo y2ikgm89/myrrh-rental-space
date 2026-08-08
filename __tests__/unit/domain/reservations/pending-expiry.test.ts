@@ -65,7 +65,6 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { HIGH: "HIGH", LOW: "LOW" },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
   expireStalePendingReservationsCommand,
   PENDING_RESERVATION_EXPIRY_MINUTES,

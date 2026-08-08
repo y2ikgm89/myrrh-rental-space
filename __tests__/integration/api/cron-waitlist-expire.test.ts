@@ -112,7 +112,7 @@ installEmailLibDispatchMock({
 // fireAndForget を「発火した Promise を配列に集める」だけの同期的な mock に
 // 差し替える。ループ内のメール送信 fireAndForget はレスポンス完了を待たないため、
 // テスト側で `await Promise.all(firedPromises)` して決定的に完了を待ち合わせる。
-let firedPromises: Promise<unknown>[] = [];
+const firedPromises: Promise<unknown>[] = [];
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
     firedPromises.push(promise.catch(() => undefined));

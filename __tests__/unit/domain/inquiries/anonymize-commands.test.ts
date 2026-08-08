@@ -86,7 +86,6 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { anonymizeInquiryCommand } from "@/shared/domain/inquiries/anonymize-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 

@@ -155,7 +155,6 @@ mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { applyCalendarTimeChange, cancelReservationFromCalendar } =
   await import("@/shared/domain/reservations/calendar-sync-inbound-mutations");
 

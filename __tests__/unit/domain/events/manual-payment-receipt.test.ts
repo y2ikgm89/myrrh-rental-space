@@ -119,10 +119,9 @@ mock.module("@/shared/lib/validations/enums/refund-attribution", () => ({
   REFUNDED_BY_TYPE: { ADMIN: "ADMIN" },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { recordManualEventPaymentCommand } =
   await import("@/shared/domain/events/payment-commands");
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const {
   MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,

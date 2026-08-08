@@ -13,7 +13,6 @@ mock.module("@/shared/lib/env/server", () => ({
   isLocalhostUrl: () => false,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { proxy } = await import("@/proxy");
 
 describe("proxy public surface routing", () => {

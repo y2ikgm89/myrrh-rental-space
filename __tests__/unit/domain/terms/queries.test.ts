@@ -37,7 +37,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 
 const CANCELLATION_DOC: TermsDocRow = {

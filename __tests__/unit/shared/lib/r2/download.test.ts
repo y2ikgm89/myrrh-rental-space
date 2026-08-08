@@ -30,7 +30,6 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   getObjectStream,
   buildAttachmentContentDisposition,

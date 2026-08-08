@@ -38,7 +38,6 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
-// eslint-disable-next-line import-x/first
 import { deleteFile, deleteFiles } from "@/shared/lib/r2/delete";
 
 beforeEach(() => {

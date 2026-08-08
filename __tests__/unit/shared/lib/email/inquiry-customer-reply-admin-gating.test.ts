@@ -31,7 +31,7 @@ import {
   INQUIRY_ADMIN_DELIVERY,
   RENDER_CONTEXT,
 } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendInquiryCustomerReplyAdminEmail } from "@/shared/lib/email/inquiry-emails";
 import type { InquiryCustomerReplyAdminEmailData } from "@/shared/lib/email/types";
 

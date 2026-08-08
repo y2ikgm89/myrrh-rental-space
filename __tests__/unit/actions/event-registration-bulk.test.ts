@@ -20,7 +20,7 @@ mock.module("@/shared/lib/rate-limit", () => ({
 mock.module("server-only", () => ({}));
 
 type AdminUserLike = { id: string };
-let currentUser: AdminUserLike = { id: "admin-1" };
+const currentUser: AdminUserLike = { id: "admin-1" };
 
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: async <T>(options: {

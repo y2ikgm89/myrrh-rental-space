@@ -80,7 +80,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede import
 const {
   offerNextWaitlistEntryCommand,
   WAITLIST_OFFER_TTL_MS,

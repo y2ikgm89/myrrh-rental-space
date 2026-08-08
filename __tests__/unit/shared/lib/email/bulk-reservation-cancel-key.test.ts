@@ -56,12 +56,11 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendBulkAdminNotification,
   sendBulkReservationCancelledEmail,
 } from "@/shared/lib/email/reservation-emails";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import type { BulkReservationCancelledEmailData } from "@/shared/lib/email/types";
 
 const SERIES_ID = "33333333-3333-4333-8333-333333333333";

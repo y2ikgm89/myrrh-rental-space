@@ -20,9 +20,8 @@ mock.module("@/shared/lib/email/client", () => ({
   getFromAddress: mockGetFromAddress,
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { EMAIL_SEND_CONTEXT } from "../shared/lib/email/_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 const { sendEmail } = await import("@/shared/lib/email/send");
 
 const ENABLED_CONTEXT = EMAIL_SEND_CONTEXT;

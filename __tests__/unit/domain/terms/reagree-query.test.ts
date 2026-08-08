@@ -51,7 +51,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
 
 const CUSTOMER_ID = "cus-1";

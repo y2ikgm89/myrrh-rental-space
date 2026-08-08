@@ -26,7 +26,6 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: { event: { findFirst: mockFindFirst } },
 }));
 
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { getEventCancelledNotificationPayload } from "@/shared/domain/events/email-queries";
 
 beforeEach(() => {

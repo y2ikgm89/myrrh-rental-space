@@ -48,7 +48,7 @@ mock.module("@/shared/emails/event-reminder", () => ({
 }));
 
 import { EMAIL_SEND_CONTEXT, RENDER_CONTEXT } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import {
   sendEventRegistrationConfirmation,
   sendEventReminderEmail,

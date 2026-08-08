@@ -84,7 +84,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 // 3. テスト対象 import
 import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
-// eslint-disable-next-line import-x/first -- mock.module must precede imports
+
 import { sendEmail, hashForKey } from "@/shared/lib/email/send";
 import type { EmailSendContext } from "@/shared/lib/email/types";
 
