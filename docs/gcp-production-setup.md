@@ -727,7 +727,10 @@ exits non-zero before `prisma migrate deploy` starts.
 It proves the SQL does not error — **not** that no data is lost. `DROP COLUMN`
 succeeds against a full table, so a green rehearsal is not permission to drop.
 Destructive DDL is caught by squawk (`ban-drop-column` and friends, which require
-an explicit `-- squawk-ignore`) and by the deploy's planned-downtime mode. When a
+an explicit `-- squawk-ignore-file <rule>`) and by the deploy's planned-downtime
+mode. Forms that neither of those covers — `TRUNCATE`, `DELETE` without a `WHERE`,
+`DROP SCHEMA`, and dynamic SQL in a `DO` block — are refused outright by
+`irreversibleDataLoss`, which has no exemption path. When a
 migration carries its own `DO $$ … RAISE EXCEPTION … $$` check, the rehearsal runs
 it, so the check is executed rather than merely written down. Failing first matters: a migration that
 dies partway is recorded in `_prisma_migrations` and blocks every later deploy

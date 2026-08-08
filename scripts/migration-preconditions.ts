@@ -80,9 +80,14 @@
  *
  *   1. **squawk**（`.squawk.toml`）— `ban-drop-column` / `ban-drop-table` /
  *      `renaming-*` / `changing-column-type` を error にする。通すには SQL に
- *      `-- squawk-ignore <rule>` を明示する必要があり、それは人のレビュー対象になる
+ *      `-- squawk-ignore-file <rule>` を明示する必要があり、それは人のレビュー対象になる
  *   2. **デプロイの計画ダウンタイムモード**（`deploy-production.yml`）— 破壊的 DDL を
  *      検出すると両サービスを停止してから migrate する
+ *
+ *   **ただしその 2 つの網に一切かからない破壊がある**（`TRUNCATE` / WHERE 無しの
+ *   `DELETE` / `DROP SCHEMA` / 動的 SQL）。そこだけは `irreversibleDataLoss` が
+ *   文の先頭の動詞で拒否する——免除の入口を持たない。対象が何かは読まないので、
+ *   削除した分類器とは別物。
  *
  *   移送先へ入ったことを確かめたいなら、**migration 自身が
  *   `DO $$ … RAISE EXCEPTION … $$` を持つ**。リハーサルはそれごと流すので、
@@ -258,6 +263,62 @@ export function rehearsalBlocker(statement: string): string | null {
   return null;
 }
 
+/**
+ * migration に書いてはいけない一括データ削除。**免除の入口を持たない。**
+ *
+ * ## なぜ別枠が要るか
+ *
+ * 破壊的 DDL は squawk と計画ダウンタイムモードが見る、というのがこの script の
+ * 立場だが、**その 2 つの網に一切かからない破壊がある**:
+ *
+ * | 文 | squawk | deploy の正規表現 |
+ * | --- | --- | --- |
+ * | `TRUNCATE t` | 該当ルール無し（`ban-truncate-cascade` は除外済み・CASCADE 限定） | 無し |
+ * | `DELETE FROM t`（WHERE 無し） | DML は対象外 | 無し |
+ * | `DROP SCHEMA s CASCADE` | `ban-drop-database` は DATABASE のみ | 無し |
+ *
+ * リハーサルも止めない——**これらはエラーにならない**。流して巻き戻せてしまうので
+ * 「通った」と報告し、本番の migrate が本当に実行する。実測で確認した穴で、
+ * 呼び出しを外すと実 DB のテストが 3 本落ちる。
+ *
+ * ## 静的分類器に戻したわけではない
+ *
+ * ここがやるのは **文の先頭の動詞を見て拒否する**ことだけ。消える対象が何かは
+ * 読まないし、検査との照合も、免除の登録も、同一 migration 内で作った表の追跡も
+ * しない——それが「収束しない」と結論した写経の中身だった。
+ *
+ * **免除は無い。** 一括削除が本当に要るなら migration ではなくドメインコマンドで
+ * 行う（`.claude/rules/migrations.md`: migration 内の自動データ修復は禁止）。
+ * 条件付きの `DELETE ... WHERE` は通す——何が消えるかは条件次第で、そこは
+ * 著者の検査（`DO $$ … RAISE EXCEPTION … $$`）の領分。
+ *
+ * ## 動的 SQL
+ *
+ * `DO $$ … EXECUTE … $$` は中身が文字列なので、何を実行するか静的に読めない。
+ * 読めないものは拒否に倒す。`RAISE EXCEPTION 'EXECUTE するな'` のように文字列へ
+ * `EXECUTE` と書いた検査も巻き込むが、それは**誤って止まる**だけで、
+ * 黙って通るのとは非対称。文言を変えれば通る。
+ *
+ * `CREATE TRIGGER … EXECUTE FUNCTION f()` は文の先頭が `DO` ではないので当たらない
+ * （baseline はこの形を 21 個持っている）。
+ */
+export function irreversibleDataLoss(statement: string): string | null {
+  const sql = statement.replace(/\s+/gu, " ").trim();
+  if (/^TRUNCATE\b/iu.test(sql)) {
+    return "TRUNCATE は表を空にする。squawk にも計画ダウンタイム判定にも該当しないので、ここで止める";
+  }
+  if (/^DELETE\s+FROM\b/iu.test(sql) && !/\bWHERE\b/iu.test(sql)) {
+    return "WHERE の無い DELETE は表を空にする。条件付きにするか、ドメインコマンドで行う";
+  }
+  if (/^DROP\s+SCHEMA\b/iu.test(sql)) {
+    return "DROP SCHEMA は配下を丸ごと消す。squawk にも計画ダウンタイム判定にも該当しない";
+  }
+  if (/^DO\b/iu.test(sql) && /\bEXECUTE\b/iu.test(sql)) {
+    return "DO ブロックの EXECUTE は動的 SQL で、何を実行するか静的に読めない";
+  }
+  return null;
+}
+
 export type RehearsalStep =
   | { readonly kind: "skip" }
   | { readonly kind: "run" }
@@ -268,6 +329,8 @@ export function planStep(statement: string): RehearsalStep {
   if (TRANSACTION_WRAPPER.test(sql)) return { kind: "skip" };
   const blocker = rehearsalBlocker(sql);
   if (blocker !== null) return { kind: "blocked", reason: blocker };
+  const dataLoss = irreversibleDataLoss(sql);
+  if (dataLoss !== null) return { kind: "blocked", reason: dataLoss };
   return { kind: "run" };
 }
 

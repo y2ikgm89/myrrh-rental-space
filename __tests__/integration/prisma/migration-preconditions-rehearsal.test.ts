@@ -372,4 +372,56 @@ COMMIT;`,
       expect(result).toEqual({ code: 0, unchanged: true });
     });
   });
+
+  /**
+   * squawk にも計画ダウンタイム判定にも該当しない一括削除。
+   *
+   * **リハーサルだけでは足りない唯一の残り。** 下の SQL は PostgreSQL 的には
+   * 何のエラーも起こさないので、流して巻き戻せば「通った」になる。そして本番の
+   * migrate が本当に実行して、行が消える（CX-3 / CX-4）。だから `planStep` が
+   * 実行前に拒否する。`unchanged: true` は行数を含む指紋の一致なので、
+   * **行が残っていることの証明**でもある。
+   */
+  describe("網にかからない一括削除は 1 文も実行せずに拒否する", () => {
+    test("TRUNCATE は 1（行は残る）", async () => {
+      await seed(`('a','x',1,'n'), ('b','y',2,'n')`);
+      const result = await check(
+        `BEGIN;
+TRUNCATE TABLE "${CHILD}";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 1, unchanged: true });
+    });
+
+    test("WHERE の無い DELETE は 1（行は残る）", async () => {
+      await seed(`('a','x',1,'n'), ('b','y',2,'n')`);
+      const result = await check(
+        `BEGIN;
+DELETE FROM "${CHILD}";
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 1, unchanged: true });
+    });
+
+    test("DO ブロックの動的 SQL は 1（読めないものは拒否に倒す）", async () => {
+      await seed(`('a','x',1,'n')`);
+      const result = await check(
+        `BEGIN;
+DO $$ BEGIN EXECUTE 'TRUNCATE TABLE "${CHILD}"'; END $$;
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 1, unchanged: true });
+    });
+
+    test("条件付きの DELETE は通る（0）", async () => {
+      // 何が消えるかは条件次第。そこは著者の検査の領分で、一律には止めない。
+      await seed(`('a','x',1,'n'), ('b','y',2,'n')`);
+      const result = await check(
+        `BEGIN;
+DELETE FROM "${CHILD}" WHERE "id" = 'a';
+COMMIT;`,
+      );
+      expect(result).toEqual({ code: 0, unchanged: true });
+    });
+  });
 });

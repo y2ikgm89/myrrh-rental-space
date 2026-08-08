@@ -45,9 +45,16 @@ ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... 
   確かめない検査を書けば通る」と認めていた——静的には判定できないものを判定させていた。
 
   破壊的 DDL は代わりに **squawk**（`ban-drop-column` 等を error にする。通すには
-  `-- squawk-ignore <rule>` の明示が要り、人のレビュー対象になる）と
+  `-- squawk-ignore-file <rule>` の明示が要り、人のレビュー対象になる）と
   **デプロイの計画ダウンタイムモード**（上記）の 2 つが見る。どちらも vendor / infra 側の
-  仕組みで、自前の SQL 解析を持たない。ヘッダが指すスクリプトが実在することは
+  仕組みで、自前の SQL 解析を持たない。
+
+  **その 2 つの網にかからない破壊だけは別枠**。`TRUNCATE` / WHERE 無しの `DELETE` /
+  `DROP SCHEMA` / `DO … EXECUTE …`（動的 SQL）は squawk にも上記の正規表現にも
+  該当せず、リハーサルも通してしまう（エラーにならないため）。
+  `scripts/migration-preconditions.ts` の `irreversibleDataLoss` が**文の先頭の動詞
+  だけ**を見て拒否する。消える対象は読まない・検査との照合もしない・**免除の入口も
+  無い**（一括削除が要るならドメインコマンドで行う）。ヘッダが指すスクリプトが実在することは
   `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
   （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）
 
