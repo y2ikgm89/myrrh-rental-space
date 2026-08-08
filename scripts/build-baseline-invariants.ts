@@ -238,13 +238,17 @@ async function main(argv: readonly string[]): Promise<number> {
 
   // 生成が空振りしていないことを確かめる。空のファイルを書くと、baseline から
   // 不変条件が丸ごと消えたまま「生成できた」と report してしまう。
-  const checks = (sql.match(/^ALTER TABLE .* ADD CONSTRAINT/gmu) ?? []).length;
+  // `ADD CONSTRAINT` は CHECK だけでなく EXCLUDE も含む。**`CHECK=` と名乗ると
+  // 生成物の CHECK 見出し件数と 1 ずれる**（EXCLUDE 制約が 1 本ある）。
+  // 名前が数えているものと違うことを言わないよう `constraints` にする。
+  const constraints = (sql.match(/^ALTER TABLE .* ADD CONSTRAINT/gmu) ?? [])
+    .length;
   const functions = (sql.match(/^CREATE OR REPLACE FUNCTION/gmu) ?? []).length;
   const triggers = (sql.match(/^CREATE (?:CONSTRAINT )?TRIGGER/gmu) ?? [])
     .length;
-  if (checks < 50 || functions < 5 || triggers < 5) {
+  if (constraints < 50 || functions < 5 || triggers < 5) {
     console.error(
-      `[invariants] 生成結果が少なすぎる（CHECK=${checks} 関数=${functions} trigger=${triggers}）。` +
+      `[invariants] 生成結果が少なすぎる（制約=${constraints} 関数=${functions} trigger=${triggers}）。` +
         "空の DB を指していないか確認すること",
     );
     return 1;
@@ -252,7 +256,7 @@ async function main(argv: readonly string[]): Promise<number> {
 
   writeFileSync(out, sql, { encoding: "utf8" });
   console.error(
-    `[invariants] ${out} を生成: CHECK=${checks} 関数=${functions} trigger=${triggers}`,
+    `[invariants] ${out} を生成: 制約=${constraints} 関数=${functions} trigger=${triggers}`,
   );
   return 0;
 }
