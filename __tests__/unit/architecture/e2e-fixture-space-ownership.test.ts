@@ -38,6 +38,8 @@ import { spaceFixtures } from "../../../e2e/fixtures/test-data";
 const FIXTURE_OWNED_KEYS = new Set([
   "passcodeRevealSpaceSlug",
   "guestReservationSpaceSlug",
+  "recurringSeriesSpaceSlug",
+  "seriesRefundSpaceSlug",
 ]);
 
 const FIXTURE_OWNED_SLUGS = Object.entries(spaceFixtures)
@@ -47,17 +49,54 @@ const FIXTURE_OWNED_SLUGS = Object.entries(spaceFixtures)
 const root = process.cwd();
 const SEED = join(root, "prisma/seed.ts");
 const FIXTURE = join(root, "scripts/e2e/create-passcode-reveal-fixture.ts");
+const REFUND_FIXTURE = join(
+  root,
+  "e2e/helpers/refund-policy-bulk-cancel-fixture.ts",
+);
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-/** `scripts/e2e/*.ts` の一覧（repo 相対）。 */
-function listFixtureScripts(): string[] {
-  return readdirSync(join(root, "scripts/e2e"))
+/**
+ * DB へ直接書く fixture ソースの一覧（repo 相対）。
+ *
+ * `scripts/e2e/` だけを見ていた頃は、**同じことを `e2e/helpers/` でやっている
+ * fixture が丸ごと走査外**だった。実際 `refund-policy-bulk-cancel-fixture.ts` は
+ * 共有の `coworking-space` に PAID 予約を作っていたが、gate はそれを一度も
+ * 報告していない。置き場所ではなく「DB へ書く fixture かどうか」で範囲を決める。
+ */
+function listFixtureSources(): string[] {
+  const scripts = readdirSync(join(root, "scripts/e2e"))
     .filter((name) => name.endsWith(".ts"))
-    .map((name) => `scripts/e2e/${name}`)
-    .sort();
+    .map((name) => `scripts/e2e/${name}`);
+  const helpers = readdirSync(join(root, "e2e/helpers"))
+    .filter((name) => name.endsWith("-fixture.ts"))
+    .map((name) => `e2e/helpers/${name}`);
+  return [...scripts, ...helpers].sort();
+}
+
+/**
+ * 「実行のたびにスペース / 拠点を新規作成する」形になっている fixture を返す。
+ *
+ * 後始末が無いので行が際限なく溜まる（実測: ローカル test DB に
+ * `e2e-recurring-space-*` / `claim-space-*` が数百行）。専有スペースは seed が
+ * 1 つだけ用意し、fixture はその**中身**だけを purge → 再作成する。
+ *
+ * 判定は純粋関数にして合成 fixture で固定する（実ファイルへの注入 probe だと
+ * 「今このリポジトリで落ちること」しか示せない）。
+ */
+export function fixtureSpaceCreations(
+  sources: readonly { readonly file: string; readonly source: string }[],
+): string[] {
+  return sources
+    .filter(({ source }) =>
+      /\b(?:prisma|client)\.(?:space|location)\.create\(/u.test(source),
+    )
+    .map(
+      ({ file }) =>
+        `${file}: fixture がスペース / 拠点を新規作成している。seed の専有スペース（spaceFixtures）を purge → 再作成する形にすること`,
+    );
 }
 
 /** `const NAME = "value";` の value を取り出す。 */
@@ -126,7 +165,7 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
   });
 
   test("fixture は slug を直書きせず spaceFixtures を参照する", () => {
-    const violations = listFixtureScripts()
+    const violations = listFixtureSources()
       .filter((file) => {
         const source = read(file);
         return FIXTURE_OWNED_SLUGS.some((slug) => source.includes(`"${slug}"`));
@@ -138,6 +177,9 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
 
     expect(violations).toEqual([]);
     expect(read(FIXTURE)).toContain("spaceFixtures.passcodeRevealSpaceSlug");
+    expect(read(REFUND_FIXTURE)).toContain(
+      "spaceFixtures.seriesRefundSpaceSlug",
+    );
   });
 
   test("共有スペースに予約を作る fixture が残っていない", () => {
@@ -145,11 +187,11 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
     // 作ると EXCLUDE 制約 `reservations_no_active_time_overlap_excl` で
     // 2 回目以降が落ちる（claim fixture は spec 本体から呼ばれ CI は retries: 2
     // なので、1 度残ると 3 attempt すべてが fixture 生成エラーになる）。
-    const violations = listFixtureScripts()
+    const violations = listFixtureSources()
       .filter((file) => {
         const source = read(file);
         return (
-          /prisma\.reservation\.create\(/u.test(source) &&
+          /\b(?:prisma|client)\.reservation\.create(?:Many)?\(/u.test(source) &&
           source.includes(`"${spaceFixtures.publicReservableSpaceSlug}"`)
         );
       })
@@ -159,6 +201,44 @@ describe("時刻依存 E2E fixture の専有スペース", () => {
       );
 
     expect(violations).toEqual([]);
+  });
+
+  test("fixture が使い捨てのスペース / 拠点を作っていない", () => {
+    expect(
+      fixtureSpaceCreations(
+        listFixtureSources().map((file) => ({ file, source: read(file) })),
+      ),
+    ).toEqual([]);
+  });
+
+  test("使い捨てスペース検出の見本（gate の判別力）", () => {
+    // 1. 新しく検出したい形が落ちる
+    expect(
+      fixtureSpaceCreations([
+        { file: "a.ts", source: "await prisma.space.create({ data: {} });" },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      fixtureSpaceCreations([
+        { file: "b.ts", source: "await client.location.create({ data: {} });" },
+      ]),
+    ).toHaveLength(1);
+    // 2. 正当な形は通る（予約や顧客の作成は fixture の本業）
+    expect(
+      fixtureSpaceCreations([
+        {
+          file: "c.ts",
+          source:
+            "await client.reservation.create({});await client.customer.create({});",
+        },
+      ]),
+    ).toEqual([]);
+    // 3. 参照だけ（purge / lookup）は通る
+    expect(
+      fixtureSpaceCreations([
+        { file: "d.ts", source: "await client.space.findFirst({});" },
+      ]),
+    ).toEqual([]);
   });
 
   test("fixture は空きスペースを探さない（探索方式へ逆戻りしていない）", () => {

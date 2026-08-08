@@ -154,6 +154,23 @@ export const spaceFixtures = {
    * `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts` が機械強制する。
    */
   guestReservationSpaceSlug: "e2e-guest-reservation-fixture",
+  /**
+   * 定期予約の 3 択キャンセル spec（`create-recurring-reservation.spec.ts`）が
+   * **専有する**非公開スペース。
+   *
+   * この spec は series を丸ごとキャンセルするため fixture を破壊的に消費する。
+   * 以前は fixture script が実行のたびに Location / Space / Customer ごと新規作成して
+   * いたが、後始末が無いので行が際限なく溜まっていた。専有スペースの中身だけを
+   * 毎回 purge → 再作成する形にして有界にした。
+   */
+  recurringSeriesSpaceSlug: "e2e-recurring-series-fixture",
+  /**
+   * series bulk-cancel の返金ポリシー spec（E2E-01）が**専有する**非公開スペース。
+   *
+   * `recurringSeriesSpaceSlug` と分ける。両 spec は同じ `chromium-admin` project で
+   * 並走しうるので、相乗りさせると purge が相手の fixture ごと消す。
+   */
+  seriesRefundSpaceSlug: "e2e-series-refund-fixture",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */
@@ -172,7 +189,7 @@ export const ratePlanFixtures = {
   holidayPlanName: "祝日料金",
 } as const;
 
-// ReservationSeries の E2E fixture は seed 契約を持たない。
-// `create-recurring-reservation.spec.ts` は series を破壊的にキャンセルするため、
-// 共有 seed 行では retry・再実行ができない。実行のたびに
-// `scripts/e2e/create-recurring-series-fixture.ts` が専用 Space ごと作り直す。
+// ReservationSeries の行そのものは seed しない。series を消費する spec は fixture を
+// 破壊的にキャンセルするため、共有 seed 行では retry・再実行ができない。seed が
+// 用意するのは上の 2 つの専有スペースだけで、series と instance は
+// `e2e/helpers/reservation-series-fixture.ts` が実行のたびに purge → 再作成する。

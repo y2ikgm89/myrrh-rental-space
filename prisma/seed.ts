@@ -1085,6 +1085,26 @@ const E2E_PASSCODE_FIXTURE_SPACE_SLUG = "e2e-passcode-fixture";
 const E2E_GUEST_RESERVATION_FIXTURE_SPACE_SLUG =
   "e2e-guest-reservation-fixture";
 
+/**
+ * 定期予約（`ReservationSeries`）の 3 択キャンセル spec が専有するスペース。
+ *
+ * この spec は series を**破壊的に消費する**ので、fixture は実行のたびに作り直す
+ * 必要がある。以前は fixture script が Location / Space / Customer ごと新規作成
+ * していたが、後始末が無いため行が際限なく溜まっていた（実測: ローカル test DB に
+ * `e2e-recurring-space-*` が数百行）。専有スペースを 1 つ置き、その中身だけを
+ * 毎回消して作り直す形にすると、行数が有界になり EXCLUDE 制約とも無縁になる。
+ */
+const E2E_RECURRING_SERIES_FIXTURE_SPACE_SLUG = "e2e-recurring-series-fixture";
+
+/**
+ * series bulk-cancel の返金ポリシー spec（E2E-01）が専有するスペース。
+ *
+ * 上と別スペースにする。両 spec は同じ `chromium-admin` project で**並走しうる**ので、
+ * 相乗りさせると「自分の残骸を消す」purge が相手の fixture ごと消してしまう
+ * （1 fixture 1 スペースの所有分割）。
+ */
+const E2E_SERIES_REFUND_FIXTURE_SPACE_SLUG = "e2e-series-refund-fixture";
+
 /** 上記スペースに紐づく Pad デバイスの SwitchBot 側 ID（`deviceId` は @unique）。 */
 const E2E_PASSCODE_FIXTURE_DEVICE_ID = "e2e-passcode-fixture-keypad";
 
@@ -1113,6 +1133,18 @@ const E2E_FIXTURE_SPACES = [
     name: "[E2E] ゲスト予約検証用スペース",
     description:
       "ゲスト予約系 E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+  },
+  {
+    slug: E2E_RECURRING_SERIES_FIXTURE_SPACE_SLUG,
+    name: "[E2E] 定期予約検証用スペース",
+    description:
+      "定期予約の 3 択キャンセル E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+  },
+  {
+    slug: E2E_SERIES_REFUND_FIXTURE_SPACE_SLUG,
+    name: "[E2E] 定期予約返金検証用スペース",
+    description:
+      "series bulk-cancel の返金ポリシー E2E fixture が専有する非公開スペース。公開一覧には出ません。",
   },
 ] as const satisfies readonly FixtureSpaceSpec[];
 
@@ -3214,11 +3246,12 @@ async function seedDevCustomerAndReservations() {
     });
   }
 
-  // 5) ReservationSeries は seed しない。
-  //    `create-recurring-reservation.spec.ts` は series を丸ごとキャンセルするため
-  //    共有 seed 行では retry・再実行ができない（初回失敗が永続失敗に化ける）。
-  //    fixture は `scripts/e2e/create-recurring-series-fixture.ts` が実行のたびに
-  //    専用 Space ごと作る。
+  // 5) ReservationSeries 本体は seed しない。
+  //    series を消費する spec（3 択キャンセル / bulk-cancel 返金）は fixture を
+  //    **破壊的に消費する**ので、共有 seed 行では retry・再実行ができない
+  //    （初回失敗が永続失敗に化ける）。seed が用意するのは専有スペースだけで
+  //    （`E2E_FIXTURE_SPACES`）、その中身は `e2e/helpers/reservation-series-fixture.ts`
+  //    が実行のたびに purge → 再作成する。
 
   // 6) Inquiry を 2 件 seed（NEW + RESOLVED、customerId 紐付け）
   const inquiryFixtures: Array<{
