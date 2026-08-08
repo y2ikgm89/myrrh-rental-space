@@ -37,7 +37,6 @@ import {
 import type {
   DurationDiscountRule,
   SpaceDiscountSettings,
-  PriceCalculationParams,
   PriceCalculation,
   TaxSettings,
 } from "@/shared/lib/pricing/types";

@@ -47,7 +47,6 @@ import { describe, expect, test } from "bun:test";
 import {
   ScriptKind,
   ScriptTarget,
-  SyntaxKind,
   createSourceFile,
   forEachChild,
   isCallExpression,

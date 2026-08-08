@@ -67,8 +67,17 @@ CI の Lint & Format / lefthook のすべて）。加えて tsconfig.test.json �
 テスト側の 2 つの制約:
 
 - **型付き lint（`projectService: true`）は `__tests__` に効かせない。**
-  効かせると ESLint がヒープを 4GB 使い切って FATAL ERROR で落ちる（実測）。
-  `typescript-type-checked-*` の 2 ブロックが `__tests__/**` を `ignores` する
+  `typescript-type-checked-*` の 2 ブロックが `__tests__/**` を `ignores` する。
+
+  理由は**実測した時間コスト**。`--concurrency 4`（`bun run lint` と同じ条件）で
+  効かせると **10 分を超えても終わらない**。現状の `bun run validate` は全体で
+  約 100 秒なので、テストコードだけのために 6 倍以上の悪化になる。
+
+  （当初は「ヒープ 4GB 枯渇で落ちる」と記録していたが、それは
+  `--concurrency` を付けずに単一プロセスで動かした副産物だった。
+  `eslint .` を素で叩くと `src` だけでも同じく OOM する。**測り方が理由を
+  作っていた**ので、実際の入口と同じ条件で測り直した）
+
 - **`!` の代わりに `__tests__/support/definite.ts` を使う。**
   `definite(value, what)` / `nthCall(mock, n, what)`。`rows[0]!.amount` は実際に
   空だったとき `Cannot read properties of undefined` としか言わないが、

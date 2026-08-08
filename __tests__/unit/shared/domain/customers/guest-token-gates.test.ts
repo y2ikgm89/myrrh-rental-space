@@ -12,10 +12,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 mock.module("server-only", () => ({}));
 
-const mockAssertCustomerActive = mock((customerId: string) =>
+const mockAssertCustomerActive = mock((_customerId: string) =>
   Promise.resolve(undefined as void),
 );
-const mockAssertLoginSignupReagreed = mock((customerId: string) =>
+const mockAssertLoginSignupReagreed = mock((_customerId: string) =>
   Promise.resolve(undefined as void),
 );
 

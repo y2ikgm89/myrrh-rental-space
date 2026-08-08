@@ -50,12 +50,7 @@ mock.module("@/shared/emails/welcome", () => ({
   WelcomeEmail: () => null,
 }));
 
-import {
-  ADMIN_DELIVERY,
-  EMAIL_SEND_CONTEXT,
-  INQUIRY_ADMIN_DELIVERY,
-  RENDER_CONTEXT,
-} from "./_email-test-fixtures";
+import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 
 import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
 

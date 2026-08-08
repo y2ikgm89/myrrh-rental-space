@@ -1,9 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-import {
-  ReservationStatus,
-  EventStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // checkSpaceOverlap の where 句構築を固定化する（旧 checkReservationOverlapQuery の
 // overlap.test.ts を継承・拡張。Reservation 側に加えて Event 側の where 句・

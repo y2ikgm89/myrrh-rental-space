@@ -102,10 +102,19 @@ index だけ失敗して **CREATE TABLE は残った**。
 
 ## squawk（migration lint）
 
-- 免除は 2 形。文単位は SQL 文の**直前 1 行**に `-- squawk-ignore <rule名>`、
-  ファイル単位はファイル冒頭に `-- squawk-ignore-file <rule名>[, <rule名>]`
-  （どちらも rule 名必須）。複数列の DROP を文単位で通すなら ALTER TABLE 文を
-  列ごとに分割する
+- **免除はファイル単位の 1 形だけ**。ファイル冒頭に
+  `-- squawk-ignore-file <rule名>[, <rule名>]`（rule 名必須）。
+  文単位の `-- squawk-ignore <rule名>` は**使わない**——
+  `migration-squawk-ignore-is-breaking.test.ts` が拒否する。
+
+  （以前ここは「免除は 2 形」と書いていたが、AGENTS.md は
+  「declared **only** with `-- squawk-ignore-file`」と書いており、gate は両形を
+  通していた。**強制されない規約が 2 つに割れていた。** ファイル単位に寄せた
+  理由は可視性で、SQL の冒頭に出るぶんレビューで最初に目に入る。安全性の差では
+  ないので、どちらかに決めて強制することが要点。なお gate の**検出**は両形の
+  ままにしてある——文単位を検出から外すと、書かれたときに破壊的 DDL 判定を
+  すり抜けて計画ダウンタイム無しでデプロイされる）
+
 - **免除したら、その SQL は必ず破壊的 DDL 判定に引っかかること。** squawk が見て
   いるのは「ローリング切替窓で旧 revision が壊れたスキーマを叩く」危険で、黙らせて
   よいのは**その窓が別の仕組みで塞がれているとき**だけ。この repo でその仕組みは

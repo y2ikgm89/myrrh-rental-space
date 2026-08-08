@@ -26,8 +26,6 @@ mock.module("@/shared/db/prisma", () => ({
 
 const { bulkToggleActiveCouponsCommand, bulkDeleteCouponsCommand } =
   await import("@/shared/domain/coupons/bulk-commands");
-const { DomainError } = await import("@/shared/domain/domain-error");
-
 const COUPON_A = {
   id: "11111111-1111-4111-8111-111111111111",
   code: "SAVE10",

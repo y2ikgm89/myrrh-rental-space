@@ -46,7 +46,6 @@ import { finalizeLexicalExportedHtml } from "@/shared/lib/html/lexical-content-h
 
 import { INSPECTABLE_NODE_TYPES_FROM_REGISTRY } from "@/admin/components/editor/lexical/config/inspector-registry";
 import { REGISTRY_DIALOG_IDS } from "@/admin/components/editor/lexical/config/dialog-registry";
-import { EDITOR_TRANSFORMERS } from "@/admin/components/editor/lexical/MarkdownTransformers";
 
 // 挿入経路の実体（4ファイル分）を dialogId / id 抽出のために読む
 import { STRUCTURE_INSERT_ITEMS } from "@/admin/components/editor/lexical/config/insert-items/structure";

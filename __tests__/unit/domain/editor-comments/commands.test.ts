@@ -57,7 +57,6 @@ import {
   deleteThreadCommand,
   deleteCommentCommand,
 } from "@/shared/domain/editor-comments/commands";
-import { DomainError } from "@/shared/domain/domain-error";
 
 // テスト用定数
 const USER_ID = "user-1";

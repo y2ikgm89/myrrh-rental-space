@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect, mock } from "bun:test";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import {
   checkBotHeuristics,
   checkEmailRateLimit,

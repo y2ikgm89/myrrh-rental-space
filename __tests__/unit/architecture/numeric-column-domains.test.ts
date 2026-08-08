@@ -54,11 +54,8 @@ import {
   readNumericColumns,
   type NumericColumn,
 } from "../../support/numeric-column-domains";
-import { readDatabaseInvariants } from "../../support/prisma-sources";
 
 const COLUMNS = readNumericColumns();
-const INVARIANTS = readDatabaseInvariants();
-
 /**
  * `buildUuidOrderSqlFragments` を使って order 列を書き換えるコマンド。
  *

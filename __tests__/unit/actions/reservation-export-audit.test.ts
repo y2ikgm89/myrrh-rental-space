@@ -118,7 +118,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 mock.module("@/shared/lib/route-responses", () => ({
   jsonError: (message: string, status: number) =>
     new Response(JSON.stringify({ error: message }), { status }),
-  getRouteErrorStatus: (message: string) => 403,
+  getRouteErrorStatus: (_message: string) => 403,
 }));
 
 const { GET } = await import("@/app/api/admin/export/reservations/route");

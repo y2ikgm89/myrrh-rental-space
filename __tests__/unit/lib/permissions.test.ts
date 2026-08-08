@@ -336,7 +336,7 @@ describe("ROLE_PERMISSIONS integrity", () => {
   test("権限キーは正しい形式（resource:action）", () => {
     const permissionKeyRegex = /^[a-zA-Z]+:[a-z]+$/;
 
-    for (const [role, permissions] of Object.entries(ROLE_PERMISSIONS)) {
+    for (const [_role, permissions] of Object.entries(ROLE_PERMISSIONS)) {
       for (const permission of permissions) {
         expect(permission).toMatch(permissionKeyRegex);
       }

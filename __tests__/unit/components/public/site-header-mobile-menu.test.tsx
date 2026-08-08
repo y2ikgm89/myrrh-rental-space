@@ -3,8 +3,6 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
 
-/* eslint-disable @eslint-react/no-unnecessary-use-prefix -- Next hook exports are mocked by their real API names. */
-
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
   configurable: true,

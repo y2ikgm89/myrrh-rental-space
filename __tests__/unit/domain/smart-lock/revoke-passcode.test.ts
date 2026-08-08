@@ -141,8 +141,6 @@ const {
   revokeExpiredSmartLockPasscodes,
   confirmRevokeByKeyAbsence,
   expireStaleRevokePendingSmartLockPasscodes,
-  expireStalePendingSmartLockPasscodes,
-  recoverPendingPasscodeViaDeviceList,
   STALE_PENDING_THRESHOLD_MINUTES,
 } = await import("@/shared/domain/smart-lock/revoke-passcode");
 

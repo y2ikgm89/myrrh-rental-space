@@ -41,7 +41,15 @@ import { migrationDirs, readMigrationSql } from "../../support/prisma-sources";
  */
 const BASELINE_DIR = "00000000000000_init";
 
+/**
+ * 免除の検出。**文単位（`-- squawk-ignore`）とファイル単位（`-- squawk-ignore-file`）の
+ * 両方を拾う。** 片方しか見ないと、見ていない形の免除が下の破壊的 DDL 判定を
+ * すり抜けて計画ダウンタイム無しでデプロイされる。
+ */
 const SQUAWK_IGNORE = /^\s*--\s*squawk-ignore(?:-file)?\s+(\S+)/gmu;
+
+/** 文単位の免除（`-file` が付かない形）。この repo では禁止。 */
+const STATEMENT_SCOPED_IGNORE = /^\s*--\s*squawk-ignore(?!-file)\s+\S+/gmu;
 
 const detector = loadBreakingMigrationDetector();
 
@@ -122,6 +130,43 @@ describe("squawk を免除した migration", () => {
           `ダウンタイム無しでデプロイされ、旧 revision が壊れたスキーマを叩く`,
       );
     expect(violations).toEqual([]);
+  });
+
+  test("免除はファイル単位の形だけ（文単位は使わない）", () => {
+    // AGENTS.md の契約は `-- squawk-ignore-file <rule>` **だけ**。散文がそう
+    // 言っているのに gate が両形を通していたので、`.claude/rules/migrations.md`
+    // には「免除は 2 形」と書かれていた——**強制されない規約が 2 つに割れていた**。
+    //
+    // ファイル単位に寄せる理由は可視性。SQL の冒頭に出るので、レビューで
+    // 「この migration は意図的に破壊的だ」が最初に目に入る。文単位は本文中に
+    // 紛れる。安全性の差ではないので、**どちらかに決めて強制する**ことが要点。
+    //
+    // 検出（`SQUAWK_IGNORE`）は両形のままにしてある。文単位を検出から外すと、
+    // 書かれたときに下の破壊的 DDL 判定をすり抜けてしまう。
+    const offenders = migrationDirs()
+      .filter((dir) => dir !== BASELINE_DIR)
+      .filter(
+        (dir) =>
+          [...readMigrationSql(dir).matchAll(STATEMENT_SCOPED_IGNORE)].length >
+          0,
+      );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("文単位の形を実際に検出できる（見本での自己検査）", () => {
+    const statementScoped = `-- squawk-ignore ban-drop-column
+ALTER TABLE "t" DROP COLUMN "c";`;
+    const fileScoped = `-- squawk-ignore-file ban-drop-column
+ALTER TABLE "t" DROP COLUMN "c";`;
+
+    expect([...statementScoped.matchAll(STATEMENT_SCOPED_IGNORE)]).toHaveLength(
+      1,
+    );
+    expect([...fileScoped.matchAll(STATEMENT_SCOPED_IGNORE)]).toHaveLength(0);
+    // 検出側はどちらも拾う（すり抜けさせない）
+    expect([...statementScoped.matchAll(SQUAWK_IGNORE)]).toHaveLength(1);
+    expect([...fileScoped.matchAll(SQUAWK_IGNORE)]).toHaveLength(1);
   });
 
   test("baseline を免除の対象に数えない", () => {

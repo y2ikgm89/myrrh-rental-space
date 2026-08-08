@@ -61,14 +61,6 @@ function listFixtureScripts(): string[] {
 }
 
 /** `const NAME = "value";` の value を取り出す。 */
-function readStringConst(source: string, name: string): string {
-  const match = new RegExp(`const ${name} = "([^"]+)";`, "u").exec(source);
-  if (!match?.[1]) {
-    throw new Error(`${name} の宣言が見つかりません`);
-  }
-  return match[1];
-}
-
 /** `const NAME = [ "a", "b" ] as const;` の要素を取り出す。 */
 function readStringArrayConst(source: string, name: string): string[] {
   const block = new RegExp(
