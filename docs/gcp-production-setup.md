@@ -327,8 +327,20 @@ gcloud services enable \
   iam.googleapis.com \
   sts.googleapis.com \
   iamcredentials.googleapis.com \
-  cloudidentity.googleapis.com
+  cloudidentity.googleapis.com \
+  compute.googleapis.com \
+  serviceusage.googleapis.com \
+  logging.googleapis.com \
+  monitoring.googleapis.com
 ```
+
+`compute` is required by the admin load balancer (global address, serverless
+NEG, managed certificate) documented below; `logging` / `monitoring` by the
+alert policies in `infra/monitoring/`. `scripts/bootstrap-terraform.sh` keeps
+its own `REQUIRED_APIS` list and the two are **not** identical — this list
+additionally has `sts` (WIF token exchange), `cloudidentity` (Google Groups
+reads) and `runapps`. Enabling is idempotent, so run this block even when
+bootstrap has already been executed.
 
 ## Artifact Registry
 
@@ -629,7 +641,7 @@ prevented** from touching secret values, via the F1 closure landed in the
   the primary control is the structural closure, so skipping is safe.
 
 The runner's remaining role set (see `terraform/README.md` §
-"Bootstrap-owned layout" for the full list) covers only resource-shape CRUD
+「現在の bootstrap-owned レイアウト」for the full list) covers only resource-shape CRUD
 for Cloud Run / Cloud Scheduler / Artifact Registry / Cloud Build worker
 pool / WIF / LB / IAP / Service Usage plus the custom Secret Manager role —
 no path to Secret Manager IAM policies remains.
@@ -1297,13 +1309,25 @@ SERVICE_URL="$PUBLIC_DOMAIN" \
 REGION="$REGION" \
 CRON_SERVICE_ACCOUNT_EMAIL="$SCHEDULER_SA" \
 CRON_OIDC_AUDIENCE="$PUBLIC_DOMAIN" \
-bash scripts/setup-cloud-scheduler.sh
+terraform -chdir=terraform apply
 ```
 
-The setup script uses Cloud Scheduler's official OIDC flags:
-`--oidc-service-account-email` and `--oidc-token-audience`. The app verifies
-the token signature, expected audience, and exact service account email before
-running any cron handler logic.
+Cloud Scheduler jobs are **Terraform-managed** — `locals.cron_jobs` in
+`terraform/cloud_scheduler.tf` is the SSoT and `google_cloud_scheduler_job.job`
+iterates it. There is no setup script.
+
+Adding a job takes two merges:
+
+1. Add the entry to `local.cron_jobs` and merge — `terraform apply` creates it.
+2. After that apply succeeds, add the same name to `local.imported_cron_jobs`
+   in a follow-up PR. That is the state-rebuild defence; doing both in one PR
+   makes the first apply try to import a job that does not exist yet.
+
+OIDC comes from the resource's own `oidc_token` block (`service_account_email`
+= the scheduler SA, `audience` = the public origin), which is Cloud Scheduler's
+official mechanism. The app verifies the token signature, expected audience,
+and exact service account email before running any cron handler logic — see
+`authorizeCronRequest()`.
 
 ## Production verification
 
@@ -1423,7 +1447,7 @@ Expected results:
   not use `latest` for production.
 - The audit checks `required Secret Manager accessor IAM is least privilege`
   with `gcloud secrets get-iam-policy`, and checks
-  `project IAM has no broad Secret Manager accessor grants` on the project IAM
+  `project IAM has no unexpected Secret Manager accessor grants` on the project IAM
   policy. Required runtime secrets must have only `$RUNTIME_SA` as
   `roles/secretmanager.secretAccessor`; `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
   must have only `$RUNTIME_SA` and `$BUILD_SA`. Remove any default Cloud Build
@@ -1435,7 +1459,8 @@ Expected results:
   `gcloud storage buckets get-iam-policy`. The checks
   `Artifact Registry repository writer is limited to build service account`,
   `Cloud Run deploy admin grants are limited to build service account`,
-  `runtime service account actAs grant is limited to build service account`,
+  `runtime service account actAs grant is limited to build + terraform-runner
+service accounts`,
   `runtime service account tokenCreator grants are absent`,
   and `Cloud Build source bucket objectViewer is limited to build service account`
   must pass. The only expected member for those exact deployment
@@ -1481,7 +1506,7 @@ Expected results:
   canonical Cloud Run runtime env values,
   required Secret Manager versions are enabled,
   required Secret Manager accessor IAM is least privilege,
-  project IAM has no broad Secret Manager accessor grants,
+  project IAM has no unexpected Secret Manager accessor grants,
   legacy Cloud Build
   triggers/connections, or live HTTP behavior, the admin site may be protected
   but the GCP posture is not the final production baseline.

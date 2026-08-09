@@ -194,7 +194,7 @@ describe("GCP production setup runbook", () => {
       "required Secret Manager accessor IAM is least privilege",
     );
     expect(runbook).toContain(
-      "project IAM has no broad Secret Manager accessor grants",
+      "project IAM has no unexpected Secret Manager accessor grants",
     );
     expect(runbook).toContain("`gcloud secrets versions describe`");
     expect(runbook).toContain("`gcloud secrets get-iam-policy`");
@@ -214,8 +214,10 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain(
       "Cloud Run deploy admin grants are limited to build service account",
     );
-    expect(runbook).toContain(
-      "runtime service account actAs grant is limited to build service account",
+    // 実 check 名は `scripts/audit-gcp-production-iap.ts` の addCheck が SSoT。
+    // markdown 側は折り返されるので改行を跨いで見る。
+    expect(runbook).toMatch(
+      /runtime service account actAs grant is limited to build \+ terraform-runner\s+service accounts/u,
     );
     expect(runbook).toContain(
       "runtime service account tokenCreator grants are absent",
