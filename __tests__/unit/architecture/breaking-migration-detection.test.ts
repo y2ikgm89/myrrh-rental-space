@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, test } from "bun:test";
 
 import {
@@ -226,15 +223,20 @@ const safeFixtures: ReadonlyArray<{
  *
  * 手で保守する対応表は置かない。前版は語だけを平坦に抜き出していたため、
  * `RENAME TO` が `ALTER TABLE ...` の下にネストしている事実が落ち、
- * ドキュメントは「RENAME TO は停止する」と読める形になっていた。実際には
+ * 「RENAME TO は停止する」と読める形になっていた。実際には
  * `ALTER INDEX ... RENAME TO`（Prisma が index の `map` 変更で出す）は
- * **発動しない**（実測で確認）。4 つのドキュメントが揃って同じ誤りを書いても、
- * 語の一致しか見ない検査では気づけない。
+ * **発動しない**（実測で確認）。語の一致しか見ない検査では気づけない。
  *
  * 正規表現の入れ子（`ALTER TABLE .*( … | ALTER COLUMN .*( … ) )`）をそのまま
  * 前置詞として畳み込み、`ALTER TABLE ... ALTER COLUMN ... TYPE` のような
- * 完全修飾の表記を作る。これでドキュメント側は導出結果と集合一致するだけでよく、
- * 対応表の drift という失敗モード自体が無くなる。
+ * 完全修飾の表記を作る。運用者へ発動条件を書き出すときは、この導出結果を
+ * そのまま使う（手書きの対応表を置くと必ず drift する）。
+ *
+ * **かつてはこの導出結果を運用者向けドキュメント（`AGENTS.md` /
+ * `.claude/rules/{deploy-infra,migrations}.md` / `.claude/skills/deploy-debug`）
+ * の `breaking-triggers` ブロックと集合一致で突き合わせていた。** それらの
+ * ドキュメントを repo から外したので、突き合わせ先は無くなっている。発動条件の
+ * SSoT は `.github/workflows/deploy-production.yml` の正規表現ただ 1 つ。
  */
 function splitTopLevelAlternatives(pattern: string): string[] {
   const parts: string[] = [];
@@ -279,59 +281,6 @@ function deriveTriggerProse(pattern: string): string[] {
 
   return items;
 }
-
-const TRIGGER_BLOCK_START = "<!-- breaking-triggers:start -->";
-const TRIGGER_BLOCK_END = "<!-- breaking-triggers:end -->";
-
-/**
- * ドキュメント中の marker で囲まれた列挙を、` / ` 区切りの集合として取り出す。
- *
- * **本文全体を走査しない。** 例えば migrations.md は squawk 節や
- * 「既存 migration 編集禁止」節でも `DROP COLUMN` に言及するので、
- * 全文から語を拾うと「余分な語」の検出が誤検知だらけになる。
- * 列挙だけを marker で切り出せば、集合の完全一致で比較できる。
- */
-function readTriggerBlock(relativePath: string): string[] {
-  const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
-  const start = doc.indexOf(TRIGGER_BLOCK_START);
-  const end = doc.indexOf(TRIGGER_BLOCK_END);
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error(
-      `${relativePath} に ${TRIGGER_BLOCK_START} / ${TRIGGER_BLOCK_END} の対が見つかりません。` +
-        "発動条件の列挙は marker で囲む（全文走査だと他文脈の DDL 言及と区別できない）。",
-    );
-  }
-  return doc
-    .slice(start + TRIGGER_BLOCK_START.length, end)
-    .replace(/\s+/gu, " ")
-    .split("/")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
-}
-
-/**
- * 発動条件を「網羅的な一覧」として書いている文書。
- *
- * **AGENTS.md はここに入る。** 一度は「列挙しない側」に分類したが、実際の本文は
- * 全条件を並べていた。列挙を持つ文書を弱い検査（ポインタの有無だけ）に置くと、
- * workflow に条件が増えたとき「`deploy-production.yml` と書いてあるから合格」に
- * なってしまい、ルート指示がまた古いまま残る。**列挙しているなら網羅検査に載せる。**
- */
-const TRIGGER_LIST_DOCS: readonly string[] = [
-  "AGENTS.md",
-  ".claude/rules/deploy-infra.md",
-  ".claude/rules/migrations.md",
-  ".claude/skills/deploy-debug/SKILL.md",
-];
-
-/**
- * 発動条件を列挙はしないが breaking mode に言及する文書。列挙を持たせると
- * 必ず drift するので、**SSoT の場所を指していること**だけを求める。
- * （AGENTS.md は以前「`ALTER COLUMN TYPE` は計画ダウンタイムを発動しない
- * （DROP/RENAME だけ）」と**事実と逆**のことを書いていた。）
- */
-const SSOT_POINTER_DOCS: readonly string[] = ["CLAUDE.md"];
-const SSOT_POINTER = "deploy-production.yml";
 
 describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
   test("pattern is present in deploy-production.yml", () => {
@@ -414,50 +363,17 @@ describe("breaking migration detection regex (MIG-EXPAND-01)", () => {
       expect(detectsBreaking(fixture.sql, breakingRegex)).toBe(false);
     });
   }
-  test("運用者向けドキュメントの発動条件一覧が workflow と完全一致する", () => {
+  test("発動条件は前置詞を畳み込んだ完全修飾で導出される", () => {
     const derived = deriveTriggerProse(breakingPattern).sort();
     // 導出が壊れて空になると以降が空回りで緑になる（vacuous pass 防止）
     expect(derived.length).toBeGreaterThan(5);
-    // 前置詞が畳み込まれていること（平坦化への逆戻りを検出）
+    // 前置詞が畳み込まれていること（平坦化への逆戻りを検出）。
+    // 平坦化すると `RENAME TO` が単独の条件に見え、発動しない
+    // `ALTER INDEX ... RENAME TO` まで「停止する」と読める形になる。
     expect(derived).toContain("ALTER TABLE ... RENAME TO");
     expect(derived).toContain("ALTER TABLE ... ALTER COLUMN ... TYPE");
-
-    // 不足だけでなく余分も見る。条件を減らしたのにドキュメントに残すと、
-    // 運用者は「まだ停止する」と誤読して不要な計画停止を組む。
-    const mismatches: string[] = [];
-    for (const relativePath of TRIGGER_LIST_DOCS) {
-      const documented = readTriggerBlock(relativePath).sort();
-      if (JSON.stringify(documented) !== JSON.stringify(derived)) {
-        const missing = derived.filter((item) => !documented.includes(item));
-        const extra = documented.filter((item) => !derived.includes(item));
-        mismatches.push(
-          `${relativePath}: 不足=[${missing.join(", ")}] 余分=[${extra.join(", ")}]`,
-        );
-      }
-    }
-
-    expect({
-      mismatches,
-      hint:
-        mismatches.length > 0
-          ? "deploy-production.yml の正規表現を変えたら、各ドキュメントの breaking-triggers ブロックも導出結果と同じ集合にする。不足は「停止しない」と誤読させ、余分は不要な計画停止を組ませる"
-          : "",
-    }).toEqual({ mismatches: [], hint: "" });
-  });
-
-  test("列挙を持たない文書は SSoT の場所を指している", () => {
-    // ここに一覧を書くと必ず drift するので、指す先だけを固定する。
-    const missingPointer = SSOT_POINTER_DOCS.filter((relativePath) => {
-      const doc = readFileSync(join(process.cwd(), relativePath), "utf8");
-      return !doc.includes(SSOT_POINTER);
-    });
-
-    expect({
-      missingPointer,
-      hint:
-        missingPointer.length > 0
-          ? `breaking mode に触れる文書は発動条件を列挙せず ${SSOT_POINTER} を指す`
-          : "",
-    }).toEqual({ missingPointer: [], hint: "" });
+    // 前置詞を落とした素の語が単独の条件として残っていないこと
+    expect(derived).not.toContain("RENAME TO");
+    expect(derived).not.toContain("TYPE");
   });
 });
