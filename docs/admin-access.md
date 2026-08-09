@@ -94,6 +94,29 @@ Remove access in this order:
 
 Group removal is first because IAP blocks the request before the app runs.
 
+What the app then does with the local staff record:
+
+- **Offboarding disables the dashboard; it does not wipe the role.** When the
+  app syncs an existing dashboard user and no admin role group matches, it sets
+  `User.dashboardEnabled` to `false` and keeps the previous role for audit
+  history (`revokeDashboardAccess` in
+  `src/shared/domain/admin-auth/google-role-sync.ts`; it only fires when the
+  stored role is a dashboard role). Login and sync then resolve to nothing, but
+  the staff list and detail keep showing the person with a disabled badge — a
+  removed account is **expected** to stay in the list. Assignment pickers do
+  exclude it: notification recipients (`src/shared/domain/users/queries.ts`) and
+  inquiry assignees (`src/shared/domain/inquiries/queries.ts`) both filter
+  `dashboardEnabled: true`.
+- **The sync only runs on the person's own admin request.** Removing the group
+  membership does not flip the local record right away — nothing re-reads
+  Google Groups until that account hits an admin route again. IAP already
+  refuses the request, so access stops immediately; only the staff-list display
+  lags.
+- **Last admin is protected.** A sync that would leave zero `dashboardEnabled`
+  users with `SUPER_ADMIN` or `ADMIN` is refused, the prior state is kept, and a
+  HIGH-severity audit/error log is written. Add the replacement admin **before**
+  removing the last one.
+
 ## Change an email address
 
 Email changes cross both identity systems. Treat them as remove-and-add:
@@ -105,11 +128,6 @@ Email changes cross both identity systems. Treat them as remove-and-add:
 5. Remove the old account from all admin role groups.
 6. Suspend or delete the old Cloud Identity account if it should no longer
    exist.
-
-グループから外しても、app 側の staff レコードは**その場では**「無効（グループ
-未所属）」に変わらない。Google Group の同期は**本人の admin リクエスト**でしか
-走らないため、退職者が二度とアクセスしなければレコードは有効表示のまま残る。
-IAP 側で拒否されるのでアクセスは即座に止まるが、staff 一覧の表示だけは遅れる。
 
 ## Verify production access
 

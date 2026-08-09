@@ -271,7 +271,7 @@ jobs:
             echo ""
             echo "## References"
             echo ""
-            echo "- Design: docs/superpowers/specs/2026-07-25-abolish-main-terraform-health-design.md"
+            echo "- ADR: docs/adr/0002-abolish-main-terraform-health-gate.md"
             echo "- Nightly drift detection: \`.github/workflows/terraform-drift.yml\`"
           } > "${BODY_FILE}"
 

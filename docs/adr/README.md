@@ -25,9 +25,10 @@
 (`docs/architecture/decisions/0001`-`0028`) は commit 8ebd49c2d で全削除済みで、
 番号は現行系列と対応しない。
 
-| #                                    | Title                            | Status   | Date       |
-| ------------------------------------ | -------------------------------- | -------- | ---------- |
-| [0001](0001-single-env-terraform.md) | Single-env Terraform (prod only) | Accepted | 2026-07-14 |
+| #                                                  | Title                             | Status   | Date       |
+| -------------------------------------------------- | --------------------------------- | -------- | ---------- |
+| [0001](0001-single-env-terraform.md)               | Single-env Terraform (prod only)  | Accepted | 2026-07-14 |
+| [0002](0002-abolish-main-terraform-health-gate.md) | Main Terraform Health gate の廃止 | Accepted | 2026-07-25 |
 
 ## Template
 

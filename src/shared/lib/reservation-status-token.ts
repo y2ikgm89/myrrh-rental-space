@@ -15,6 +15,11 @@ import { isRecord } from "@/shared/lib/serialize";
  * 完了・キャンセル・claim トークンとは `purpose` を分け、verify 側で purpose を
  * 明示検証する。ステータス URL はメール経由で長期間残りやすいため、万一漏れても
  * キャンセル操作や完了ページ用トークンには流用できないようにする狙い。
+ *
+ * ゲストの予約**変更**（`/reservation/status/edit`）もこのトークンを流用し、
+ * 編集専用トークンは作らない — ハブ (`/reservation/status`) を SSoT にするため。
+ * キャンセルだけ別の短命トークンを持つ既存方針はそのまま維持する（誤操作の
+ * 影響が不可逆なので、変更より露出期間を短くしたい）。
  */
 
 const PURPOSE = "reservation-status";
