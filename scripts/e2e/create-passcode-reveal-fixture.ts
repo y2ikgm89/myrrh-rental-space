@@ -68,7 +68,7 @@ async function main(): Promise<void> {
 
     // SwitchBot の有効化は **seed の宣言**（`seedSettings`）が持つ。ここで
     // singleton を書き換えると復元されず、seed が作れる状態と DB が恒久的に
-    // 食い違う（`.claude/rules/testing-e2e.md`「グローバル状態の復元」）。
+    // 食い違う（E2E のグローバル状態は必ず復元する規約）。
     // 無効なままなら `getPasscodeRevealState` が `unavailable` を返すので、
     // 分かりにくい失敗にならないよう明示的に落とす。
     const switchbot = await prisma.settingsSwitchbot.findUnique({

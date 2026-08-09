@@ -28,7 +28,7 @@ test.describe("customer merge — self-serve flow", () => {
   // 付け替える。戻さないと (1) mypage の統合バナーが他 spec から消えたまま、
   // (2) seed が marker 予約を作り直して dev customer の予約履歴が run ごとに
   // 1 件ずつ増え続ける。beforeAll の冪等化だけでは (2) は戻らないため、
-  // 復元は無条件に hook で行う（規約: `.claude/rules/testing-e2e.md`）。
+  // 復元は無条件に hook で行う。
   test.afterEach(async () => {
     await restoreGuestCustomerFixture();
   });
@@ -50,8 +50,7 @@ test.describe("customer merge — self-serve flow", () => {
     ).toBeVisible();
     // `getByText` は React streaming の hidden staging copy にも一致し
     // strict-mode violation になる（CI run 30621350538）。この `<p>` は role も
-    // id も持たないため `visibleByText` で表示中の 1 本に絞る
-    // （規約: `.claude/rules/testing-e2e.md`「id セレクタ禁止」）。
+    // id も持たないため `visibleByText` で表示中の 1 本に絞る（id セレクタは禁止）。
     await expect(visibleByText(page, "統合対象の履歴（概算）")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "確認メールを送信" }),

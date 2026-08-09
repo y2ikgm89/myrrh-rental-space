@@ -19,8 +19,8 @@ import { join } from "node:path";
  * stylesheet 待ち + バッチで in-place と差し替えるため、boundary の内側にある DOM は
  * 一時的に 2 箇所へ同時に存在する。ページ本体は `loading.tsx` と root layout の
  * `<Suspense>`（`generateViewport` 公式 opt-in）の内側にあるので、外殻をどこに
- * 置いても二重化そのものは消えない。E2E 側の対処が SSoT:
- * `.claude/rules/testing-e2e.md` の「id セレクタ禁止」。
+ * 置いても二重化そのものは消えない。E2E 側の対処が SSoT:「id セレクタ禁止」
+ * （eslint.config.mjs の no-restricted-syntax が強制）。
  *
  * 汎用の「1 ファイル内で id 重複禁止」は排他的な三項分岐（例:
  * `profile-form.tsx` の `profile-email-help`）で偽陽性になるため採らない。

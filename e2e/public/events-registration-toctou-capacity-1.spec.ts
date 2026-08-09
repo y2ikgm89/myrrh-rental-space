@@ -27,8 +27,7 @@ import {
  * `pg_advisory_xact_lock(728350, hashtext(eventId))` が read-before-write の
  * TOCTOU race を直列化することを検証する。
  *
- * 期待挙動 (SSoT: `src/shared/domain/events/registration-commands.ts` +
- * `.claude/rules/business-domain.md` 予約・イベント定員セクション):
+ * 期待挙動 (SSoT: `src/shared/domain/events/registration-commands.ts`):
  *
  * 1. ちょうど 1 件のリクエストが CONFIRMED として成功し、UI に
  *    「お申し込みを受け付けました」が表示される
@@ -272,7 +271,7 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
  * 直上のコメントが述べる最悪ケース（3 × 45s + 3.1s + 30s = 168s）にすら
  * 届いておらず、本体 timeout（= page ごと閉じられて診断が失われる）を招きうる形だった。
  *
- * 本体を timeout させないことは `.claude/rules/testing-e2e.md` の要求で、
+ * 本体を timeout させないことは E2E の要求で、
  * timeout すると `finally` の `context.close()` と `describeMainContent` の診断が
  * どちらも死ぬ。ここが定数から導出されていれば、待ちを 1 つ足したときに
  * 自動で追随する。

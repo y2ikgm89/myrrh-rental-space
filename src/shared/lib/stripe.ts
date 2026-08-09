@@ -114,7 +114,7 @@ export function createStripeClient(secretKey: string): AsyncOnlyStripe {
 
 /**
  * DB設定（管理画面）を優先し、なければ環境変数からStripeクライアントを取得
- * （Settings is canonical、`.claude/rules/integrations.md`参照）
+ * （Settings is canonical）
  * @param dbSecretKey - DBから取得した暗号化されたシークレットキー
  * @returns Stripeクライアントと設定元
  */

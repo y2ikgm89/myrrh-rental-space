@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { formatJstDateString } from "@/shared/lib/date-format";
 
 /**
- * advisory lock 採番 namespace (`.claude/rules/db-domain.md` の registry と一致)。
+ * advisory lock 採番 namespace。
  * 予約/申込単位ロック (hashtext(entityId)) と ReceiptSequence 単一行ロック
  * (hashtext("receipt-sequence")) の両方で共有する。
  */
@@ -25,7 +25,7 @@ export async function acquireReceiptAdvisoryLock(
 /**
  * JST の年を返す (「YYYY-XXXXXX」serialNo の年ロールオーバー判定用)。
  *
- * 業務日付規約は JST-based (`.claude/rules/business-domain.md`) のため、
+ * 業務日付規約は JST-based のため、
  * getUTCFullYear() や getFullYear() (server-local) は Cloud Run (TZ=UTC) 上で
  * 「JST 00:00–08:59 on Jan 1 は UTC 前年」の 9h ずれを起こす。
  */

@@ -3,8 +3,7 @@
  *
  * ReservationSeries 作成・一括キャンセルは複数 instance への書込を伴うため、同一
  * series への並行操作を interactive tx 単位でシリアライズする必要がある
- * （`.claude/rules/db-domain.md` advisory lock registry 728357、
- * `src/shared/domain/reservations/series-advisory-lock.ts`）。
+ * （`src/shared/domain/reservations/series-advisory-lock.ts`）。
  *
  * 本テストは実 Postgres 上で同一 key に対する 2 並行 tx を投げ、後発 tx の
  * lock 取得が先発 tx の完了後になる（= 直列化されている）ことを検証する

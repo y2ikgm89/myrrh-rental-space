@@ -513,7 +513,7 @@ const rule = {
 
             for (const group of relevant) {
               // **その値自体を upsert の where キーにする**のは規約が名指しして
-              // いる安全な形（`.claude/rules/migrations.md`）。キーが一致して
+              // いる安全な形。キーが一致して
               // いれば既存行は update されるだけで、衝突しようがない。
               if (
                 call.method === "upsert" &&

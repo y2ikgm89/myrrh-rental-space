@@ -22,7 +22,7 @@ type InvalidateReviewCachesOptions = {
  * stale で配信され続ける。SPACES と slug 詳細タグを `invalidateSiteWideCache`
  * 経由に切り替え、updateTag (Next.js Data Cache) + queueTagPurge (Cloudflare
  * CDN) + sitemap 自動 co-purge を一括発火する
- * (SSoT: `.claude/rules/caching.md`、reference: event-cache.ts の
+ * (SSoT: `src/shared/lib/cache/site-wide.ts`、reference: event-cache.ts の
  * CACHE-INVALIDATE-04 と同型)。REVIEWS / CUSTOMERS は
  * `NEXTJS_TAGS_WITHOUT_CDN_MAPPING` の admin-only tag のため raw `updateTag`
  * のまま。

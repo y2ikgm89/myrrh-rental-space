@@ -50,7 +50,7 @@ const rule = {
     ],
     messages: {
       cdnMappedRaw:
-        "CACHE_TAGS.{{key}} は NEXTJS_TAG_TO_CDN_TAG に登録されている CDN-mapped タグです。raw {{callee}}() は Next.js Data Cache しか無効化せず Cloudflare CDN 側の HTML が古いままになります。invalidateSiteWideCache([CACHE_TAGS.{{key}}]) (Server Action) / invalidateSiteWideCacheFromRouteHandler([CACHE_TAGS.{{key}}]) (Route Handler / cron) を経由してください。SSoT: src/shared/lib/cache/site-wide.ts / .claude/rules/caching.md",
+        "CACHE_TAGS.{{key}} は NEXTJS_TAG_TO_CDN_TAG に登録されている CDN-mapped タグです。raw {{callee}}() は Next.js Data Cache しか無効化せず Cloudflare CDN 側の HTML が古いままになります。invalidateSiteWideCache([CACHE_TAGS.{{key}}]) (Server Action) / invalidateSiteWideCacheFromRouteHandler([CACHE_TAGS.{{key}}]) (Route Handler / cron) を経由してください。SSoT: src/shared/lib/cache/site-wide.ts",
     },
   },
   create(context) {

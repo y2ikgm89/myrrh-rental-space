@@ -18,7 +18,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 // raw updateTag では Cloudflare edge に伝播せず (数時間の s-maxage の間)
 // 旧カテゴリ名 / 並び順 / 公開状態が配信され続ける silent stale が発生する。
 // invalidateSiteWideCache 経由で updateTag (Next.js Data Cache) + queueTagPurge
-// (Cloudflare CDN) + Sitemap 自動 purge を一括発火する (SSoT: .claude/rules/caching.md)。
+// (Cloudflare CDN) + Sitemap 自動 purge を一括発火する (SSoT: src/shared/lib/cache/site-wide.ts)。
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";

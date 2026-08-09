@@ -68,7 +68,6 @@ import { urls } from "../../fixtures";
  * - `src/app/(public)/mypage/layout.tsx` MypageAuthGate
  * - `src/shared/domain/customers/guard.ts` isCustomerActiveForMypage
  * - `src/app/(public)/login/_components/suspended-notice.tsx`
- * - `.claude/rules/testing-e2e.md`
  */
 
 const execFileAsync = promisify(execFile);
@@ -132,7 +131,7 @@ async function signInBlacklistUser(
 }
 
 // dev-customer の共有 storageState を無効化して独立 BLACKLIST User で挙動を検証する。
-// (rule `.claude/rules/testing-e2e.md` §認証: 顧客テストは既定で storageState 適用済み)
+// (顧客テストは既定で storageState 適用済みのため、明示的に空へ上書きする)
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("Stage A: BLACKLIST customer /mypage layout gate", () => {

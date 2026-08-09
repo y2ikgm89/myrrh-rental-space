@@ -28,7 +28,7 @@ import { expect, test, type Locator, type Page } from "../fixtures/e2e-test";
  *
  * ## リトライの置き場所
  *
- * `.claude/rules/testing-e2e.md` の「リトライはナビゲーションの内側で行う」に従い、
+ * 「リトライはナビゲーションの内側で行う」に従い、
  * **1 attempt ごとに `load()` からやり直し、各 attempt にリトライする web-first
  * assertion を与える**。`expect.poll` の predicate に `goto` を入れる形は禁止。
  *
@@ -70,7 +70,7 @@ export const TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS = 15_000;
  * トークン待ちの assertion だけなので、`load()` の中で `goto` や click が 1 回でも
  * 固まると **test 本体の予算を丸ごと食い潰す**。そうなると page ごと閉じられ、
  * 2 回目の attempt も失敗時の診断も失われる
- * （`.claude/rules/testing-e2e.md`「test 本体を timeout させない」）。
+ * （「test 本体を timeout させない」）。
  *
  * 呼び出し側に「全部の呼び出しに timeout を書け」と要求する形は必ず書き漏れる
  * （実測: 予約 smoke の `loadAndFillForm` は `goto` だけ縛って click / press /

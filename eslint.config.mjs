@@ -35,9 +35,9 @@ const legacyPrismaRestrictedImport = {
 
 // db barrel `@/shared/db`（現在 index.ts は存在しない）は db 層（src/shared/db/**）の
 // 外から import 禁止。利用側は `@/shared/db/prisma` を直接 import する。
-// このバレル import 禁止自体は ESLint 固有の予防ガードであり、.claude/rules/db-domain.md
-// が説明するのは別の制約（architecture-boundaries.test.ts の placement-gate
-// ALLOWLIST による prisma.<model>.<method> 呼出し可能箇所の制限）。
+// このバレル import 禁止自体は ESLint 固有の予防ガードで、db 層の配置制約
+// （architecture-boundaries.test.ts の placement-gate ALLOWLIST による
+// prisma.<model>.<method> 呼出し可能箇所の制限）とは別物。
 const dbBarrelRestrictedImport = {
   name: "@/shared/db",
   message:
@@ -271,7 +271,7 @@ const eslintConfig = defineConfig([
       ],
 
       // 型アサーション規律の構造固定（type 情報不要な構文ルール）。
-      // 方針の SSoT は .claude/rules/type-safety.md。`as` 型アサーションの
+      // `as` 型アサーションの
       // SSoT helper 集約は __tests__/unit/architecture-boundaries.test.ts の
       // grep gate が担保し、こちらは「非null assertion 禁止」「angle-bracket
       // assertion 禁止」を lint で前倒し検出する ratchet（現状 0 違反）。
@@ -489,7 +489,6 @@ const eslintConfig = defineConfig([
   },
 
   // E2E 規約 (Playwright 公式の DISCOURAGED パターンを機械ブロック)
-  // SSoT: .claude/rules/testing-e2e.md
   // - waitForTimeout: 公式 "discouraged for production use ... inherently flaky"
   // - waitForLoadState("networkidle"): 公式 "DISCOURAGED. Don't use for testing,
   //   rely on web assertions to assess readiness instead."
@@ -510,18 +509,18 @@ const eslintConfig = defineConfig([
         {
           selector: "CallExpression[callee.property.name='waitForTimeout']",
           message:
-            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。SSoT: .claude/rules/testing-e2e.md",
+            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。",
         },
         {
           selector:
             "CallExpression[callee.property.name='waitForLoadState'] > Literal[value='networkidle']",
           message:
-            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。SSoT: .claude/rules/testing-e2e.md",
+            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。",
         },
         {
           selector: "CallExpression[callee.property.name='waitForURL']",
           message:
-            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。SSoT: .claude/rules/testing-e2e.md",
+            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。",
         },
         {
           // `if ((await x.count()) > 0) { ... }` 条件アサーション禁止。
@@ -530,7 +529,7 @@ const eslintConfig = defineConfig([
           selector:
             "IfStatement[test.type='BinaryExpression'][test.operator='>'][test.right.value=0] AwaitExpression > CallExpression[callee.property.name='count']",
           message:
-            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/testing-e2e.md",
+            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。",
         },
         {
           // `#id` だけでなく修飾付き (`form#event-create` / `div > #x`) も弾く。
@@ -538,7 +537,7 @@ const eslintConfig = defineConfig([
           // 直前が引用符 / `=` でない `#` に限定する。
           selector: `CallExpression[callee.property.name='locator'] > Literal[value=/(^|[^"'=])#/]`,
           message:
-            "CSS の id セレクタ（'#id' / 'form#id'）は React streaming の hidden staging copy も掴み strict-mode violation を起こす。getByRole('main') / getByRole('region', { name }) 等の role locator（a11y ツリー非公開要素を除外）に置換し、role が無い要素だけ visibleById()（.filter({ visible: true })）を使ってください。SSoT: .claude/rules/testing-e2e.md",
+            "CSS の id セレクタ（'#id' / 'form#id'）は React streaming の hidden staging copy も掴み strict-mode violation を起こす。getByRole('main') / getByRole('region', { name }) 等の role locator（a11y ツリー非公開要素を除外）に置換し、role が無い要素だけ visibleById()（.filter({ visible: true })）を使ってください。",
         },
       ],
     },

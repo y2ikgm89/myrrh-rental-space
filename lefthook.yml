@@ -82,7 +82,7 @@ pre-push:
     # per-concern 分割 test 群）を同時に走らせる。run-tests.ts はディレクトリ引数を
     # 再帰的に展開するため、architecture/ 以下の全 gate が pre-push で強制される。
     # 素の bun test 禁止（mock.module() のプロセスグローバル干渉 / Lexical 循環 import の
-    # TDZ を runner の --conditions production が回避する。.claude/rules/testing-unit.md）
+    # TDZ を runner の --conditions production が回避する）
     - name: architecture-boundaries
       # per-test timeout はここで渡さない。ランナー (scripts/run-tests.ts) の
       # DEFAULT_TEST_TIMEOUT_MS が唯一の決定で、pre-push と CI で同じ値になる。

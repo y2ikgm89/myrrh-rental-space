@@ -75,7 +75,7 @@ bun run lint:files -- path/to/changed.ts
 
 Then run `bun run validate` (type-check + lint only, **not** tests) before
 commit; `bun run validate && bun run build` before push (see
-[CLAUDE.md](CLAUDE.md)).
+[`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)).
 
 ## Common commands
 
@@ -152,9 +152,7 @@ Implementation: `src/app/api/live/route.ts`, `src/app/api/health/route.ts`.
 
 ## Where to look next
 
-- Working with an agent (Claude Code): [CLAUDE.md](CLAUDE.md)
 - Human contributor setup & workflow: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
-- Topic-specific guardrails: [`.claude/rules/`](.claude/rules/)
-- Multi-step workflows (migrations, adding a section, deploy debugging):
-  [`.claude/skills/`](.claude/skills/)
+- Enforced guardrails: [`__tests__/unit/architecture/`](__tests__/unit/architecture/)
+  and [`eslint.config.mjs`](eslint.config.mjs)
 - Production runbook: [docs/gcp-production-setup.md](docs/gcp-production-setup.md)

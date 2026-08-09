@@ -14,7 +14,6 @@
  *
  * Rule 実装本体: `eslint-rules/no-raw-updatetag-for-cdn-mapped-cache-tag.mjs`
  * SSoT: `src/shared/lib/constants/cdn-cache-tags.ts` NEXTJS_TAG_TO_CDN_TAG
- * .claude/rules/caching.md
  */
 
 import { describe, expect, test } from "bun:test";

@@ -11,8 +11,7 @@ test.describe.configure({ mode: "serial" });
 // 出欠トグルは seed 申込行の `attendedAt` を書き換える共有グローバル状態の変更。
 // 最後のテストは本文内で「記録 → 取消」まで戻すが、途中の assertion 失敗・timeout で
 // 打刻が残ると、同 spec の「未出席」表示・CSV の出席日時・当日受付の集計が汚染される
-// （seed は run 中に戻さない）。復元は無条件に hook で行う
-// （規約: `.claude/rules/testing-e2e.md`）。
+// （seed は run 中に戻さない）。復元は無条件に hook で行う。
 test.afterEach(async () => {
   await clearEventCheckInsBySlug(eventFixtures.timedEntrySlug);
 });

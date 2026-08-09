@@ -55,8 +55,7 @@ type Props = {
 
 // JST-DRIFT-04: timeZone 未指定だと SSR 側 (Cloud Run UTC) と CSR 側 (browser 局所 tz)
 // で表示日時が異なる可能性があり、React hydration mismatch と管理者向け slot 表示の
-// JST ずれを同時に起こす silent bug。date-format.ts の SSoT 契約 (.claude/rules/type-safety.md)
-// に従い明示的に JST 固定。
+// JST ずれを同時に起こす silent bug。date-format.ts の SSoT 契約に従い明示的に JST 固定。
 function formatSlotLabel(startAt: string, endAt: string): string {
   const start = new Date(startAt);
   const end = new Date(endAt);

@@ -35,7 +35,7 @@ import { Glob } from "bun";
  *
  * 既存違反は `PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST` に凍結する。新規追加は fail。
  * 解消したら allowlist から削除する（残したままだと stale として fail する）。
- * allowlist を触る PR は同時 OPEN 1 本まで（`.claude/rules/architecture-allowlist.md`）。
+ * allowlist を触る PR は同時 OPEN 1 本まで（衝突すると解消済み判定が食い違うため）。
  */
 
 const root = process.cwd();

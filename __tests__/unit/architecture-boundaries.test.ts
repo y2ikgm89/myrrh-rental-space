@@ -843,7 +843,7 @@ describe("architecture boundaries", () => {
   });
 
   test("shared/lib → shared/domain import は allowlist 凍結（新規 lib→domain 禁止 ratchet）", () => {
-    // CLAUDE.md: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
+    // アーキテクチャ規約: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
     // 解消可能な lib→domain は ALLOWLIST から削除する（ratchet）。
     // 残件は framework lifecycle adapter のみを意図的に残す（下記コメント参照）。
     // 新規 lib→domain と「解消済みだが allowlist 残留」の両方を fail する。
@@ -2253,8 +2253,8 @@ describe("architecture boundaries", () => {
   // を「import 文の `{...}` 内部改行のみ空白化」してから line 評価する。
   //
   // admin scope は対象外: admin layout が PR #604 で `generateViewport + connection() +
-  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/app-structure.md` の
-  // 「cacheComponents + strict-dynamic CSP」節)。runtime nonce で全 chunk 保護されるため
+  // <Suspense><html>` により全 71 route を `ƒ` 化済 (cacheComponents + strict-dynamic
+  // CSP)。runtime nonce で全 chunk 保護されるため
   // admin client が zod を value-import しても CSP block は起きない。
 
   /**
@@ -2663,7 +2663,7 @@ describe("architecture boundaries", () => {
   });
 
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
-    // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
+    // SDK 境界 cast の helper 強制
     // - LocationSchema.parse (googleapis Schema$Location)
     // - CreateEmailOptionsSchema.parse (resend CreateEmailOptions)
     // - toAppRoute / safeToAppRoute (Next.js Route<string>)
@@ -2686,7 +2686,7 @@ describe("architecture boundaries", () => {
 
   test("Phase 1 Prisma JSON cast は asPrismaInputJsonValue helper 経由（as Prisma.(Input)?Json* 直書き 0 件）", () => {
     // Prisma JSON 型 — `as Prisma.InputJsonValue` / `as Prisma.JsonArray` / `as Prisma.JsonObject` / `as Prisma.JsonValue`
-    // の直書きは禁止（方針: .claude/rules/type-safety.md）。
+    // の直書きは禁止。
     // helper: asPrismaInputJsonValue / parsePrismaInputJson / clonePrismaInputJson (@/shared/db/prisma-input-json)
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
@@ -2745,8 +2745,8 @@ describe("architecture boundaries", () => {
   });
 
   // 「廃止済の型安全 ledger / assertion-bans を再導入しない」gate は削除した。
-  // 検査対象だった `.claude/rules/type-safety*` を repo から外したため、旧ファイルの
-  // 不在も後継 SSoT の存在も確かめようがない。型アサーション方針そのものは
+  // 検査対象だった型安全ルール文書を repo から外したため、旧ファイルの不在も
+  // 後継 SSoT の存在も確かめようがない。型アサーション方針そのものは
   // 下の `as` 禁止 gate 群（SSoT helper 経由のみ許可）が構造的に強制している。
 
   test("Phase 4 で PortableTextBlock[] 化済の long-form フィールドは schema で string を受け付けない", async () => {
@@ -3109,7 +3109,7 @@ describe("architecture boundaries", () => {
   });
 
   describe("実 DB integration テストの serial bucket 自動検出 (TEST-01 再発防止)", () => {
-    // `.claude/rules/testing-unit.md` の SSoT 契約:「新規の実 DB テストは
+    // SSoT 契約:「新規の実 DB テストは
     // TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを持てば serial bucket に
     // 自動入る（未検出だと parallel bucket に入り共有 DB で競合する）」。
     // __tests__/integration 配下で
@@ -3152,7 +3152,7 @@ describe("architecture boundaries", () => {
 
       expect(
         unregistered,
-        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが serial bucket 自動検出対象外。TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを追加するか scripts/serial-db-test-detection.ts の FORCE_INCLUDE に登録してください (未検出だと silent skip + parallel race)。詳細は .claude/rules/testing-unit.md`,
+        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが serial bucket 自動検出対象外。TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを追加するか scripts/serial-db-test-detection.ts の FORCE_INCLUDE に登録してください (未検出だと silent skip + parallel race)`,
       ).toEqual([]);
     });
   });

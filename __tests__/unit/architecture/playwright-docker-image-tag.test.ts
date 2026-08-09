@@ -20,7 +20,7 @@
  * ## 走査範囲
  *
  * 置き場所で範囲を決めない。追跡されているテキストファイル全体から
- * `mcr.microsoft.com/playwright:v…` を拾う（`.claude/rules` と `e2e/` だけを
+ * `mcr.microsoft.com/playwright:v…` を拾う（特定のディレクトリだけを
  * 見ていると、3 箇所目が増えたときに黙って見逃す）。
  */
 
@@ -99,7 +99,7 @@ export function mismatchedImageReferences(
  * 専用の経路になり、誰も検証しない。`package.json` を読む実装に戻しても、
  * 今日は宣言と lock が一致しているので部品の fixture は全部緑のままになる。
  *
- * `.claude/rules/testing-unit.md`「fixture が通る経路と、実走査が通る経路を同じに
+ * 「fixture が通る経路と、実走査が通る経路を同じに
  * する」に従い、**実走査も fixture もこの関数だけを呼ぶ**。外部依存（lock の中身・
  * 走査したソース）は必須引数で受け、既定値を置かない（既定を通るのは実走査だけに
  * なるため）。

@@ -19,7 +19,7 @@ import { describe, expect, test } from "bun:test";
  *
  * ## なぜ「復元 hook を足す」ではないのか
  *
- * `.claude/rules/testing-e2e.md` が記録しているとおり、本体が timeout すると
+ * 実測が記録しているとおり、本体が timeout すると
  * page も context も閉じられ、hook は走っても仕事ができない（run 30672479398）。
  * **書き換え自体をやめて seed の宣言に移す**ほうが構造的に強い。
  * fixture 側は「前提が満たされているか」を確認して、駄目なら名指しで落とす。

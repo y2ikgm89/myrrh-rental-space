@@ -24,7 +24,7 @@
  *
  * ## アーキテクチャ境界
  *
- * CLAUDE.md のアーキテクチャ境界「app 層からの Prisma 直 import 禁止」
+ * アーキテクチャ境界「app 層からの Prisma 直 import 禁止」
  * 規約を遵守し、`pg_try_advisory_lock` raw query は
  * `@/shared/domain/calendar-sync/locks` helper に集約済 (route handler は
  * domain layer 経由でロックを取得/解放する)。

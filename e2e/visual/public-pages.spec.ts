@@ -83,8 +83,7 @@ const installHermeticNetwork = async (page: Page) => {
  * `resolved to 2 elements` で失敗した。
  *
  * 対象は常にページ本体の見出しなので、`main` に閉じるのが本来の意図。
- * 規約は `.claude/rules/testing-e2e.md`（landmark の role でスコープしてから
- * テキストを見る）。
+ * 規約は landmark の role でスコープしてからテキストを見ること。
  */
 const preparePageForVisualSnapshot = async (
   page: Page,

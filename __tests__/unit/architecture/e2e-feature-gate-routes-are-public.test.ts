@@ -175,7 +175,7 @@ describe("feature-module OFF gate は未認証で到達できるルートだけ�
 });
 
 /**
- * gate 自身の検出力を fixture で固定する（`.claude/rules/testing-unit.md`）。
+ * gate 自身の検出力を fixture で固定する。
  *
  * 実ファイルへ違反を注入する probe は「今このリポジトリで落ちること」しか示さない。
  * 上の 2 test と**同じ判定関数**へ合成文字列を流し、

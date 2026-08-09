@@ -12,8 +12,7 @@ import { entityIdSchema } from "@/shared/lib/validations/entity-id";
  * Server Action（`createWalkInRegistration` / `createAdminProxyRegistration`）と、
  * それを submit する client component（`WalkInDialog` / `ProxyRegistrationDialog`）の
  * **両方**が参照する。action 本体は `"use server"` ファイルにあり async 関数しか
- * export できないため、schema はここに置く
- * （配置規約は `.claude/rules/forms-mutations.md`）。
+ * export できないため、schema はここに置く。
  *
  * ## 2 つのフォームで email の扱いが違う
  *

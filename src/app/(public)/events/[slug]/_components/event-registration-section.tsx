@@ -27,7 +27,7 @@ interface EventRegistrationSectionShellProps {
  * なお React streaming 中の一時的な DOM 二重化（完了した boundary が hidden な
  * staging container と in-place の両方に存在する期間）は、外殻の位置では解消しない。
  * ページ本体は `loading.tsx` と root layout の `<Suspense>` の内側にあるため。
- * E2E 側の規約は `.claude/rules/testing-e2e.md`「id セレクタ禁止」を参照。
+ * E2E 側の「id セレクタ禁止」は eslint.config.mjs の no-restricted-syntax が強制する。
  */
 export function EventRegistrationSectionShell({
   children,

@@ -1004,8 +1004,7 @@ const SEED_DEMO_RESERVATION_MARKER = "[SEED-DEMO]";
 /**
  * Space スケジュール空間の advisory lock namespace。
  *
- * SSoT は `src/shared/domain/reservations/space-locks.ts`（採番レジストリは
- * `.claude/rules/db-domain.md`）。seed からその module を import できない —
+ * SSoT は `src/shared/domain/reservations/space-locks.ts`。seed からその module を import できない —
  * `import "server-only"` を持ち、バンドラーの外では必ず throw するため。
  * 値がずれると「ロックを取っているのに直列化されない」という最悪の壊れ方をするので、
  * `__tests__/unit/architecture/seed-reservation-rebuild-safety.test.ts` の
@@ -2838,9 +2837,8 @@ async function seedReservations() {
   ];
 
   // 削除と再作成は **1 つの transaction 内で、対象スペースの advisory lock を
-  // 取ってから**行う。この関数は空き枠を動かすので、絶対規約
-  // （`.claude/rules/business-domain.md`）の「可用性に影響する全書込経路は
-  // `lockSpaceForTransaction` を先取する」に該当する。
+  // 取ってから**行う。この関数は空き枠を動かすので、「可用性に影響する全書込経路は
+  // `lockSpaceForTransaction` を先取する」という絶対規約に該当する。
   //
   // tx の外で消すと、削除から再作成までの隙間で枠が空く。served な dev / staging に
   // 対して seed を回すと、その隙間に入った予約が EXCLUDE 制約

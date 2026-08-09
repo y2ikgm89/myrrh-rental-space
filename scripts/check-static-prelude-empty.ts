@@ -120,7 +120,7 @@ function main(): void {
         detail,
         "",
         "対処: 該当 route を動的レンダリングに opt-in する（Server Component 冒頭で `await connection()`）。",
-        "SSoT: .claude/rules/app-structure.md の「cacheComponents + strict-dynamic CSP」",
+        "SSoT: __tests__/unit/architecture/csp-nonce-prelude-gate.test.ts（cacheComponents + strict-dynamic CSP）",
       ].join("\n"),
     );
   }

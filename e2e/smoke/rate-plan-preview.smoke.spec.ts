@@ -26,8 +26,8 @@ import { visibleById } from "../helpers/streaming-safe-locators";
  * `prisma/seed.ts` の `seedReservations` はデモ予約を実行時点から最大 +30 日の
  * 範囲にのみ生成するため、それより十分先の日付を選んで衝突を避ける。
  *
- * Playwright project: chromium-smoke（`.claude/skills/e2e-authoring` の
- * 配置ルール — 公開・未認証・setup 非依存のためこの project に適合）。
+ * Playwright project: chromium-smoke（公開・未認証・setup 非依存のため
+ * この project に適合）。
  *
  * CalendarPicker は ReservationFormSection 経由で `E2E_FIXED_NOW_ISO` を
  * 消費するため、page.clock.install と SSR の minDate 計算が整合する。

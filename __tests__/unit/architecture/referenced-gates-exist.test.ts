@@ -30,9 +30,9 @@
  *
  * ## 走査対象は git に聞く
  *
- * 初版は `src` / `scripts` / `prisma` / `.claude` … とディレクトリを列挙していた。
+ * 初版は `src` / `scripts` / `prisma` … とディレクトリを列挙していた。
  * その結果 `Dockerfile` / `eslint.config.mjs` / `lefthook.yml` /
- * `.github/CODEOWNERS` / `.codex/rules/default.rules` にある**実在するポインタを
+ * `.github/CODEOWNERS` にある**実在するポインタを
  * 1 件も見ていなかった**（Codex が PR #2010 で指摘）。この repo は同じ失敗を
  * `source-files-are-text` でも踏んでいる — **手書きのディレクトリ一覧は必ず漏れる**。
  *

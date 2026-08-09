@@ -1,6 +1,6 @@
 /**
  * Names of the env vars `validateProductionEnv()` rejects outside the
- * localhost E2E runtime exception (see `.claude/rules/security-auth.md`).
+ * localhost E2E runtime exception.
  *
  * Kept in its own dependency-free file — not inside `server.ts` — so that
  * `__tests__/unit/lib/env/server-production-env.test.ts` can import just the

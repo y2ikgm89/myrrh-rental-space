@@ -6,7 +6,7 @@ import { z } from "zod";
  * Server Action (`cancelReservationSeriesAction`) と、それを submit する
  * client component (`SeriesInfoSection`) の **両方**が参照する。
  * action 本体は `"use server"` ファイルにあり async 関数しか export できないため、
- * schema はここに置く（配置規約は `.claude/rules/forms-mutations.md`）。
+ * schema はここに置く。
  *
  * Google Calendar 業界標準の 3 スコープ:
  *   - `this-only`           この予約のみ

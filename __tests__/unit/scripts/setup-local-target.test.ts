@@ -138,8 +138,7 @@ describe("compose への問い合わせ", () => {
 
 /**
  * 判定が正しくても、`runSetup` がそれを通っていなければ何も守らない。
- * fixture と実走査が同じ経路を通ることを、ここで固定する
- * （`.claude/rules/testing-unit.md` の 4 番）。
+ * fixture と実走査が同じ経路を通ることを、ここで固定する。
  */
 describe("runSetup の配線", () => {
   const composeCapture = (command: readonly string[]): string =>

@@ -5,8 +5,6 @@
  *
  * 配列形式 `$transaction([...])` は ESLint（eslint.config.mjs）が拒否。
  * 本 gate はその interactive callback 側を補完する。
- *
- * @see .claude/rules/db-domain.md §トランザクション
  */
 
 import { readFileSync } from "node:fs";
@@ -112,7 +110,7 @@ function findInteractiveTxCallbackBody(
  *
  * gate 本体と fixture はどちらもこの関数を通す。**export しておく** — 判定を
  * ファイル私有のままにすると、fixture が何を確かめているのかを外から追えない
- * （.claude/rules/testing-unit.md の gate 契約。Codex が PR #2019 で指摘）。
+ * （gate 契約。Codex が PR #2019 で指摘）。
  */
 export function findPromiseAllInInteractiveTransactions(
   raw: string,

@@ -206,8 +206,7 @@ export async function expireWaitlistOfferCommand(data: {
  * まとめて処理する。呼び出し側 (route.ts) は候補を eventId でグルーピングし、
  * event ごとにこの関数を呼ぶ。
  *
- * **advisory lock の二重使い分け**（`.claude/rules/business-domain.md` 「Waitlist FIFO
- * promote」節 / `waitlist-locks.ts` の JSDoc と同じ契約）:
+ * **advisory lock の二重使い分け**（`waitlist-locks.ts` の JSDoc と同じ契約）:
  * - 728354 (`WAITLIST_PROMOTE_LOCK_NAMESPACE`, session lock): この event の走査
  *   バッチ全体を他プロセス（別 cron 起動・手動再実行の重複）と直列化する。session
  *   lock は物理 connection scope のため、acquire ($transaction 開始直後) → 全

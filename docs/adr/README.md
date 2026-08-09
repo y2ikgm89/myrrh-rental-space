@@ -16,8 +16,8 @@
   スケール変化時 / チーム拡大時など)
 - **security posture** の設計選択 (bootstrap-owned IAM の SSoT 契約など)
 
-小さな実装選択 (関数命名 / file 配置) や、`.claude/rules/*.md` でカバー済の
-運用ルールは ADR にしない。
+小さな実装選択 (関数命名 / file 配置) や、gate (`__tests__/unit/architecture/**`)
+で機械的に強制済の運用ルールは ADR にしない。
 
 ## Index
 

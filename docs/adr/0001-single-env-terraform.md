@@ -81,5 +81,5 @@ Migration triggers のいずれか発火時は、multi-env 化の設計として
   closure / strict blocking gate)
 - `terraform/README.md` — Phase 進捗 / bootstrap-owns-all-project-IAM 契約 /
   Custom role lifecycle
-- `.claude/rules/deploy-infra.md` — 手動 `workflow_dispatch` デプロイ / breaking
-  migration mode の挙動
+- `.github/workflows/deploy-production.yml` — 手動 `workflow_dispatch` デプロイ /
+  breaking migration mode の挙動

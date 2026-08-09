@@ -39,7 +39,7 @@ import { test, expect } from "../fixtures/e2e-test";
  * E2E から実 retry を走らせるには (a) Cloud Scheduler 発行済 OIDC 署名鍵、
  * (b) Google Calendar API モック用の production-code 側テスト double 差し込み口が
  * 両方必要になり、本リポジトリでは意図的に E2E に導入していない
- * (`E2E_RUNTIME` は cron 認可を bypass しない契約: `.claude/rules/security-auth.md`)。
+ * (`E2E_RUNTIME` は cron 認可を bypass しない契約)。
  *
  * ## Placement
  *

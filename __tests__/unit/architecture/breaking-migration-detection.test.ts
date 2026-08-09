@@ -232,11 +232,10 @@ const safeFixtures: ReadonlyArray<{
  * 完全修飾の表記を作る。運用者へ発動条件を書き出すときは、この導出結果を
  * そのまま使う（手書きの対応表を置くと必ず drift する）。
  *
- * **かつてはこの導出結果を運用者向けドキュメント（`AGENTS.md` /
- * `.claude/rules/{deploy-infra,migrations}.md` / `.claude/skills/deploy-debug`）
- * の `breaking-triggers` ブロックと集合一致で突き合わせていた。** それらの
- * ドキュメントを repo から外したので、突き合わせ先は無くなっている。発動条件の
- * SSoT は `.github/workflows/deploy-production.yml` の正規表現ただ 1 つ。
+ * **かつてはこの導出結果を、運用者向けドキュメント 4 本の `breaking-triggers`
+ * ブロックと集合一致で突き合わせていた。** それらのドキュメントを repo から
+ * 外したので、突き合わせ先は無くなっている。発動条件の SSoT は
+ * `.github/workflows/deploy-production.yml` の正規表現ただ 1 つ。
  */
 function splitTopLevelAlternatives(pattern: string): string[] {
   const parts: string[] = [];

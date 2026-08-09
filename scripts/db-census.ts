@@ -7,8 +7,7 @@
  * 作るか」を証明できなければ実行してはいけない。`prisma migrate diff` は
  * schema.prisma で表現できる範囲しか見ないため、CHECK 制約・EXCLUDE 制約・
  * CONSTRAINT TRIGGER・plpgsql 関数・partial index という**この repo の不変条件の
- * 大半**を素通りする。`prisma db pull` に至っては黙って落とす
- * （.claude/rules/migrations.md）。
+ * 大半**を素通りする。`prisma db pull` に至っては黙って落とす。
  *
  * そこで pg_catalog を直接読み、両 DB のセンサスを突き合わせる。
  *

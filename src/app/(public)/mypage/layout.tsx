@@ -13,7 +13,7 @@
  *   キャンセル継続の intentional half-gate）。新規予約は `/reservation` の
  *   `requireFeatureEnabled("reservation")` で 404。`/mypage/events` のみ events gate あり。
  *
- * 設計（rule .claude/rules/caching.md「build prerender の焼き込み防止」canonical）:
+ * 設計（「build prerender の焼き込み防止」の canonical 例）:
  * - 認証 + Prisma 直呼び出し (requireMypageSession / ensureCustomerLinked) + headers
  *   等の dynamic API 処理は **MypageAuthGate async SC に隔離**し、冒頭で `await connection()`
  *   を呼んで build prerender skip を保証する。

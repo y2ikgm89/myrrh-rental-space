@@ -1,5 +1,5 @@
 /**
- * `.claude/rules/type-safety.md` の SectionConfig gate:
+ * SectionConfig gate:
  * `as SectionConfig` 直 cast は section registry 経由の narrow を bypass するため
  * `src/` 全体で 0 件を強制する。
  *
@@ -19,7 +19,7 @@ export function hasSectionConfigWideningCast(source: string): boolean {
   return /\bas\s+SectionConfig\b/u.test(source);
 }
 
-describe("SectionConfig union widening cast 構造解消済（方針: .claude/rules/type-safety.md）", () => {
+describe("SectionConfig union widening cast 構造解消済", () => {
   test("検出できる形・できない形（fixture）", () => {
     expect(
       hasSectionConfigWideningCast("const c = raw as SectionConfig;"),

@@ -67,8 +67,6 @@ export type ExecuteAdminMutationResultOptions<TData> =
  * 順序を変えると下記 silent regression が発生する:
  * - 1 を 2 より後に置く → 未認証で DB lookup（DoS / cache-layer poisoning 経路）
  * - 6 を 7 より後に置く → 監査書き込み失敗で cache invalidation が skip → 公開ページ stale
- *
- * @see .claude/rules/forms-mutations.md — executeAdminMutationResult 実行順序契約
  */
 export async function executeAdminMutationResult<TData>(
   options: ExecuteAdminMutationResultOptions<TData>,
