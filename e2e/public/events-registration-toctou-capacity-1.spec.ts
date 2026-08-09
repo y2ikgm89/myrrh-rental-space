@@ -10,6 +10,11 @@ import {
   type Page,
 } from "../fixtures/e2e-test";
 import { uniqueEmail } from "../fixtures";
+import {
+  acquireTurnstileToken,
+  TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS,
+  TURNSTILE_TOKEN_MAX_ATTEMPTS,
+} from "../helpers/turnstile";
 
 /**
  * イベント参加申込 - capacity=1 の TOCTOU 直列化検証 (E2E-P2-03)
@@ -46,11 +51,15 @@ import { uniqueEmail } from "../fixtures";
  * - Turnstile は E2E で「always passes」テストキー
  *   (`playwright.config.ts` の `NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"` /
  *   `TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"`) が
- *   環境変数に注入されており、実 widget が成功トークンを hidden input へ書き込む
- *   のを `expect(turnstileToken input).not.toHaveValue("")` で待つ
+ *   環境変数に注入されており、実 widget が成功トークンを hidden input へ書き込むのを待つ。
+ *   待ちは `acquireTurnstileToken`（`e2e/helpers/turnstile.ts`）に委ねる —— challenge が
+ *   一度も来ずに widget が黙って止まる CI 実測の壊れ方があり、その document は
+ *   自己回復しないのでページごと作り直す必要がある（理由は同ヘルパーの docstring）
  * - `test.describe.configure({ retries: 0 })`: 「1 件だけ勝つ」strict 契約は
  *   retry で緑になる状況を許容しない。retry で fixture 再作成しても、初回失敗の
- *   原因が「実は 2 件成功していた」だった場合、その時点でバグとして落ちる必要がある
+ *   原因が「実は 2 件成功していた」だった場合、その時点でバグとして落ちる必要がある。
+ *   **この制約が掛かるのは submit 以降**で、`prepareAttempt` 内のトークン取得は
+ *   申込レコードを 1 件も作らないため、そこでのページ再作成は契約を弱めない
  */
 
 const execFileAsync = promisify(execFile);
@@ -59,6 +68,14 @@ const CONCURRENT_ATTEMPTS = 3;
 // `checkBotHeuristics` の MIN_FORM_FILL_TIME_MS (=3000ms、action-helpers.ts) を
 // 上回るバッファ。form mount から submit までにこの時間を確保する。
 const FORM_FILL_MIN_MS = 3100;
+
+// 待ち時間はすべて定数にする。test timeout を手書きの数値ではなくここから導出し、
+// 「最悪ケースの合計 > test timeout」で本体が timeout する事故を構造的に防ぐ。
+const SECTION_VISIBLE_TIMEOUT_MS = 15_000;
+const SUBMIT_ENABLED_TIMEOUT_MS = 15_000;
+const OUTCOME_TIMEOUT_MS = 30_000;
+/** `bun scripts/e2e/create-toctou-capacity-one-fixture.ts` の起動 + 実行ぶん（生成 / 集計の 2 回）。 */
+const FIXTURE_SCRIPT_BUDGET_MS = 15_000;
 
 interface ToctouFixture {
   readonly eventSlug: string;
@@ -120,32 +137,35 @@ function registrationSection(page: Page) {
   return page.getByRole("region", { name: "お申し込み" });
 }
 
-async function prepareAttempt(
-  browser: Browser,
+/**
+ * 申込フォームを**まっさらな状態から**開いて全項目を埋める。
+ *
+ * `acquireTurnstileToken` が Turnstile の stall を検出したときはページごと作り直すため、
+ * この関数は何度呼ばれても同じ結果になるよう `goto` から始める（リロードで
+ * フォーム入力は消えるので、埋め直しもここに含める）。
+ */
+async function loadAndFillForm(
+  page: Page,
   fixture: ToctouFixture,
   index: number,
-): Promise<PreparedAttempt> {
-  const context = await browser.newContext();
-  await primeRequestContext(context);
-
-  const page = await context.newPage();
+  email: string,
+): Promise<void> {
   await page.goto(`/events/${fixture.eventSlug}`);
 
   const registerSection = registrationSection(page);
-  await expect(registerSection).toBeVisible({ timeout: 15_000 });
+  await expect(registerSection).toBeVisible({
+    timeout: SECTION_VISIBLE_TIMEOUT_MS,
+  });
 
   const nameInput = registerSection.getByLabel("お名前");
   const emailInput = registerSection.getByLabel("メールアドレス");
-  const submitButton = registerSection.getByRole("button", {
-    name: "申し込む",
-  });
 
   await expect(nameInput).toBeEditable();
   await expect(emailInput).toBeEditable();
 
-  const email = uniqueEmail(`e2e-toctou-${String(index + 1)}`);
-  await nameInput.fill(`E2E TOCTOU 参加者 ${String(index + 1)}`);
-  await expect(nameInput).toHaveValue(`E2E TOCTOU 参加者 ${String(index + 1)}`);
+  const name = `E2E TOCTOU 参加者 ${String(index + 1)}`;
+  await nameInput.fill(name);
+  await expect(nameInput).toHaveValue(name);
   await emailInput.fill(email);
   await expect(emailInput).toHaveValue(email);
 
@@ -159,13 +179,31 @@ async function prepareAttempt(
     await box.check();
     await expect(box).toBeChecked();
   }
+}
+
+async function prepareAttempt(
+  browser: Browser,
+  fixture: ToctouFixture,
+  index: number,
+): Promise<PreparedAttempt> {
+  const context = await browser.newContext();
+  await primeRequestContext(context);
+
+  const page = await context.newPage();
+  const email = uniqueEmail(`e2e-toctou-${String(index + 1)}`);
 
   // Turnstile 実 widget (test key) の onSuccess が hidden input を埋めるのを待つ。
-  const turnstileTokenInput = page.locator('input[name="turnstileToken"]');
-  await expect(turnstileTokenInput).not.toHaveValue("", { timeout: 15_000 });
+  // challenge が一度も来ない document は自己回復しないので、そのときは
+  // フォームごと開き直す（`e2e/helpers/turnstile.ts`）。ここはまだ submit 前で
+  // 申込レコードを 1 件も作らないため、作り直しても「1 件だけ勝つ」契約に触れない。
+  await acquireTurnstileToken(page, {
+    load: () => loadAndFillForm(page, fixture, index, email),
+  });
 
   // すべての前提が揃うと送信ボタンが有効化される。
-  await expect(submitButton).toBeEnabled({ timeout: 15_000 });
+  await expect(
+    registrationSection(page).getByRole("button", { name: "申し込む" }),
+  ).toBeEnabled({ timeout: SUBMIT_ENABLED_TIMEOUT_MS });
 
   return { context, page, email };
 }
@@ -213,7 +251,9 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
   // (CI run 30631140902 の切り分けには artifact の ARIA スナップショットを
   // 掘る必要があった)。失敗時は main の実テキストを添えてログだけで判る形にする。
   try {
-    await expect(success.or(soldOut)).toBeVisible({ timeout: 30_000 });
+    await expect(success.or(soldOut)).toBeVisible({
+      timeout: OUTCOME_TIMEOUT_MS,
+    });
   } catch (cause) {
     throw new Error(
       "申込結果が success (お申し込みを受け付けました) にも sold-out (満員 alert) にも " +
@@ -226,16 +266,32 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
   return "sold-out";
 }
 
+/**
+ * 内部待機の最悪ケース合計。**手書きの数値を置かない** —— 以前の 120_000 は
+ * 直上のコメントが述べる最悪ケース（3 × 45s + 3.1s + 30s = 168s）にすら
+ * 届いておらず、本体 timeout（= page ごと閉じられて診断が失われる）を招きうる形だった。
+ *
+ * 本体を timeout させないことは `.claude/rules/testing-e2e.md` の要求で、
+ * timeout すると `finally` の `context.close()` と `describeMainContent` の診断が
+ * どちらも死ぬ。ここが定数から導出されていれば、待ちを 1 つ足したときに
+ * 自動で追随する。
+ */
+const PREPARE_ATTEMPT_WORST_CASE_MS =
+  TURNSTILE_TOKEN_MAX_ATTEMPTS *
+    (SECTION_VISIBLE_TIMEOUT_MS + TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS) +
+  SUBMIT_ENABLED_TIMEOUT_MS;
+
+const TEST_TIMEOUT_MS =
+  FIXTURE_SCRIPT_BUDGET_MS * 2 +
+  CONCURRENT_ATTEMPTS * PREPARE_ATTEMPT_WORST_CASE_MS +
+  FORM_FILL_MIN_MS +
+  OUTCOME_TIMEOUT_MS;
+
 test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => {
-  // 既定の 30s では足りない。spec 自身の内部待機だけで超過する:
-  //   prepareAttempt × 3（各: goto + セクション可視化 15s + Turnstile token 15s +
-  //   submit 有効化 15s）→ bot heuristic の FORM_FILL_MIN_MS 3.1s →
-  //   3 並列 submit の classifyOutcome 30s
-  // 実測 (CI run 30621350538) では本体を抜ける前に 30s を使い切り、
-  // `finally` の context.close で `Test ended` になっていた。
-  //
   // retries: 0 は維持する（「1 件だけ勝つ」strict 契約は retry で緑にしない）。
-  test.describe.configure({ retries: 0, timeout: 120_000 });
+  // 正常時の実測は 13.4 秒（CI run 31288341839 attempt 2）で、TEST_TIMEOUT_MS は
+  // 全 attempt が Turnstile stall を踏み抜いた場合にだけ消費される上限。
+  test.describe.configure({ retries: 0, timeout: TEST_TIMEOUT_MS });
 
   test("同時申込 3 件のうち正確に 1 件のみが CONFIRMED になる", async ({
     browser,
