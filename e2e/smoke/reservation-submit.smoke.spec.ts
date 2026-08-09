@@ -62,7 +62,7 @@ const COMPLETE_URL = /\/reservation\/complete/u;
  *
  * `goto` にも明示的に渡す —— Playwright Test の `navigationTimeout` / `actionTimeout`
  * は既定 0（無制限）で、遅い 1 回が test 本体の予算を丸ごと食い潰しうる
- * （`.claude/rules/testing-e2e.md`「test 本体を timeout させない」）。
+ * （「test 本体を timeout させない」）。
  */
 const STEP_TIMEOUT_MS = 20_000;
 
@@ -198,7 +198,7 @@ const ACQUIRE_TOKEN_WORST_CASE_MS =
  * 内部待機の最悪ケース合計。**手書きの数値を置かない** —— 旧 `120_000` は
  * `loadAndFillForm` を 2 回走らせうる形にした時点で最悪ケースに届かなくなる。
  *
- * 本体を timeout させないことは `.claude/rules/testing-e2e.md` の要求
+ * 本体を timeout させないことは E2E の要求
  * （timeout すると page ごと閉じられ、失敗時の screenshot / trace も失われる）。
  * ここが定数から導出されていれば、待ちを 1 つ足したときに自動で追随する。
  *

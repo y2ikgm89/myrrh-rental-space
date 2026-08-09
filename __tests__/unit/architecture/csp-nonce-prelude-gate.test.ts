@@ -22,7 +22,7 @@ import { describe, expect, test } from "bun:test";
  * に一本化した。このテストは、その gate が build スクリプトから外れていないことだけを
  * 見る（gate 本体は build 時に実行される）。
  *
- * SSoT: `.claude/rules/app-structure.md`「cacheComponents + strict-dynamic CSP」
+ * 契約: cacheComponents + strict-dynamic CSP 下で static prelude は空であること。
  */
 
 const GATE_SCRIPT = "bun scripts/check-static-prelude-empty.ts";

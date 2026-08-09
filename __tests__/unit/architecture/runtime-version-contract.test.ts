@@ -70,7 +70,7 @@ function readDevcontainerBunVersion(): string {
 }
 
 describe("runtime version contract", () => {
-  // CLAUDE.md の Bun pin SSoT は packageManager + engines.bun の2フィールド。
+  // Bun pin の SSoT は packageManager + engines.bun の2フィールド。
   // engines.bun 単独のドリフトは他のテストで検知できていなかった（Phase C 監査で判明）。
   test("engines.bun matches packageManager", () => {
     expect(readEnginesBunVersion()).toBe(readPackageManagerBunVersion());

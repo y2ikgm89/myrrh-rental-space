@@ -33,7 +33,7 @@ import "server-only";
  *   され得るため、`pg_advisory_unlock` が silent-false を返してロックが元 connection に
  *   leak し、そのイベントの waitlist promotion が pool 再利用まで止まる。
  *
- * (namespace registry は `.claude/rules/db-domain.md` を SSoT とし、728354 を採番済み)
+ * (advisory lock namespace の SSoT はこの module の定数。728350 / 728354 を採番済み)
  */
 
 export const WAITLIST_XACT_LOCK_NAMESPACE = 728350 as const;

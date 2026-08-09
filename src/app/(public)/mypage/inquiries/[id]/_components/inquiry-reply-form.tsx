@@ -98,7 +98,7 @@ function InquiryReplyFormInner({
   // Turnstile 検証失敗になる。**conform のフィールドには触れない** — トークン欄は
   // widget が `response-field-name` で所有しており、書き戻すと再バリデーションが
   // サーバーの form-level エラーを上書きして消す
-  // （詳細は turnstile-widget.tsx / .claude/rules/forms-mutations.md）。
+  // （詳細は turnstile-widget.tsx）。
   const turnstileResetForResultRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (!lastResult) return;

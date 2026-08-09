@@ -116,8 +116,7 @@ async function createLinkedCustomer(userIdSuffix: string) {
 describe("claimReservationForCustomer", () => {
   beforeAll(async () => {
     // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ。
-    // .claude/rules/testing-unit.md の規約、registration-overbooking.test.ts /
-    // space-overlap-concurrency.test.ts と同型）。
+    // registration-overbooking.test.ts / space-overlap-concurrency.test.ts と同型）。
     await prisma.$queryRaw`SELECT 1`;
   });
 

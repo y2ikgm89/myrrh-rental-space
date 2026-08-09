@@ -18,8 +18,8 @@
  *
  * ## 2 が何を防ぐのか
  *
- * この repo の migration は `BEGIN; … COMMIT;` で包む契約になっている
- * （`.claude/rules/migrations.md`）。包まないと部分適用のまま止まるからだが、
+ * この repo の migration は `BEGIN; … COMMIT;` で包む契約になっている。
+ * 包まないと部分適用のまま止まるからだが、
  * 包むと**失敗の表示が原因を指さなくなる**。実際に出るのは
  *
  *   ERROR: current transaction is aborted, commands ignored until end of
@@ -303,7 +303,7 @@ export function rehearsalBlocker(statement: string): string | null {
  * しない——それが「収束しない」と結論した写経の中身だった。
  *
  * **免除は無い。** 一括削除が本当に要るなら migration ではなくドメインコマンドで
- * 行う（`.claude/rules/migrations.md`: migration 内の自動データ修復は禁止）。
+ * 行う（migration 内の自動データ修復は禁止）。
  * 条件付きの `DELETE ... WHERE` は通す——何が消えるかは条件次第で、そこは
  * 著者の検査（`DO $$ … RAISE EXCEPTION … $$`）の領分。
  *

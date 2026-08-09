@@ -15,7 +15,7 @@
  * `inquiry_status_history` は append-only trigger (`prevent_inquiry_status_history_mutation`)
  * で DELETE が拒否される。親 `Inquiry` の削除は Cascade で子へ DELETE を伝播するため
  * **同じく落ちる**。bypass GUC は seed / data-retention purge の専用口でテストからは
- * 使わない規約（.claude/rules/db-domain.md）なので、後始末は soft-delete で行い行は残す。
+ * 使わない規約なので、後始末は soft-delete で行い行は残す。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が

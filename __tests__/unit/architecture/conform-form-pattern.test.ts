@@ -31,7 +31,7 @@
  *
  * 手書きの `useState` + `if (!name) toast.error(...)` は、Zod schema と検証を
  * 二重管理し、field-level エラー表示と `aria-invalid` / `aria-describedby` を
- * 落とす。house pattern は conform + Zod（`.claude/rules/forms-mutations.md`）。
+ * 落とす。house pattern は conform + Zod。
  *
  * こちらは **ratchet**。allowlist は現在 **空**（全フォーム移行済み）で、
  * 新しい手書きフォームが入った時点で落ちる。
@@ -182,7 +182,7 @@ describe("conform form pattern", () => {
    *
    * 静的解析では「どの hook がどの `<form>` に対応するか」を追えない。
    * **誤検出は正しいコードを書けなくする**ので、そちらを避けて範囲を狭めた。
-   * 部分的な漏れは `.claude/rules/forms-mutations.md` とレビューで見る。
+   * 部分的な漏れはレビューで見る。
    */
   test("conform + <form action> のファイルは auto-reset の guard を持つ", () => {
     const violations: string[] = [];

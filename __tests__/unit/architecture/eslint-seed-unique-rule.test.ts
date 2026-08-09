@@ -369,7 +369,7 @@ describe("seed の一意制約 rule — AST 版の 3 巡目に塞いだ 3 つ", 
   });
 
   test("⑨ その値自体を upsert の where キーにする形は通す", () => {
-    // 規約が名指ししている安全な形（`.claude/rules/migrations.md`）。
+    // 規約が名指ししている安全な形。
     // キーが一致していれば既存行は update されるだけで衝突しえない。
     expect(
       messageIds(`

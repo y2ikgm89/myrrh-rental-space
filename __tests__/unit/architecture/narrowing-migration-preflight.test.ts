@@ -10,7 +10,7 @@
  *
  * ただし落ちるのは**デプロイの最中**で、しかも BEGIN/COMMIT で包んでいると
  * PostgreSQL のエラーは実際の違反ではなく
- * `current transaction is aborted...` になる（`.claude/rules/migrations.md` の実測）。
+ * `current transaction is aborted...` になる（実測）。
  * つまり**どの列のどの行が原因か、その場では分からない**。
  *
  * だから狭める migration は「適用前に本番で流す確認クエリ」をヘッダに書く。

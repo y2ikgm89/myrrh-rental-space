@@ -6,7 +6,7 @@ import { isCommentableContentType } from "@/admin/types/editor-comment";
  *
  * Server Action（`createCommentThread` / `addComment`）が参照する。action 本体は
  * `"use server"` ファイルにあり async 関数しか export できないため、schema は
- * ここに置く（配置規約は `.claude/rules/forms-mutations.md`）。
+ * ここに置く。
  *
  * 公開側と共有しない admin リソーススキーマなので、`post` / `faq` / `space` 等と
  * 同じこのディレクトリに置く。`src/shared/lib/validations/` に置けないのは

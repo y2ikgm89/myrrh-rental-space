@@ -19,7 +19,7 @@ import {
  *    in-flight の render promise を共有する（request coalescing）。
  * 3. `updateMany({ where: { id, usedAt: null } })` で単発 claim する。
  *    更新できたのは 1 リクエストだけなので、これが単発性の正本
- *    (`.claude/rules/business-domain.md` の「updateMany の WHERE で claim」パターン)。
+ *    (「updateMany の WHERE で claim」パターン)。
  *
  * ## なぜ tx 内 render をやめたか（本番 500 の実因）
  * 旧実装は advisory lock + `usedAt` 再 fetch + **render** + UPDATE を 1 つの

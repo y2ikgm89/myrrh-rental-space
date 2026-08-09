@@ -6,7 +6,7 @@ import { z } from "zod";
  * Server Action (`requestReceiptResendAction`) と、それを submit する client
  * component (`ReceiptResendForm`) の **両方**が参照する。action 本体は
  * `"use server"` ファイルにあり async 関数しか export できないため、schema は
- * ここに置く（配置規約は `.claude/rules/forms-mutations.md`）。
+ * ここに置く。
  *
  * bot 対策の 2 フィールドは公開フォーム共通の形に合わせてある:
  *

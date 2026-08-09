@@ -17,8 +17,6 @@ test.skip(
  *
  * 拠点・カテゴリ・設備・並び順・収容人数・空き時間帯はすべて単一の「検索条件」
  * モーダルの中にあり、自動では開かない。
- *
- * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 test.describe("/spaces facet filter — URL 双方向反映", () => {

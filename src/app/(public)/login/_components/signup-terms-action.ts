@@ -40,7 +40,7 @@ const inputSchema = z.object({
  *
  * 防御層: rate limit + Cloudflare Turnstile (未認証公開フォームの SSoT 規律)。
  * OAuth provider 側に PKCE + state があるため悪用リスクは低いが、
- * `.claude/rules/forms-mutations.md` の公開フォーム guard 規律に準拠する。
+ * 公開フォームの guard 規律（rate limit → Turnstile → 本処理の順）に準拠する。
  */
 export async function setSignupTermsAgreementCookie(input: {
   termsIds: readonly string[];

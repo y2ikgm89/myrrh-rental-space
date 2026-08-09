@@ -4,8 +4,6 @@
  * 動的に一意な値が必要な test data（email / phone / slug 等）は
  * `factories.ts` を使う。本ファイルは並列実行で衝突しない静的
  * データ（seed 由来の管理者メールアドレス、ルート URL）のみを置く。
- *
- * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 /** IAP ローカルテスト用の管理者メールアドレス */

@@ -17,7 +17,6 @@ import {
 
 /**
  * Payment refund advisory lock namespaces.
- * `.claude/rules/db-domain.md` registry と一致。
  */
 export const PAYMENT_REFUND_LOCK_NAMESPACE = {
   reservation: 728355,

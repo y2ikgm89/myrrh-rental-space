@@ -36,7 +36,7 @@ import { definite } from "../../support/definite";
  * 包むと、失敗時に Prisma が出すのは実際の違反ではなく
  * 「current transaction is aborted, commands ignored until end of transaction block」
  * になる（実測）。原因の特定は `bun scripts/migration-preconditions.ts` のリハーサルで行う
- * （ヘッダに手書きの確認クエリを書くのは禁止 — `.claude/rules/migrations.md`）。
+ * （ヘッダに手書きの確認クエリを書くのは禁止）。
  * 「部分適用を残さない」方が「エラーメッセージが親切」より価値が高いという判断。
  *
  * ## 適用範囲

@@ -1,6 +1,5 @@
 /**
- * `.claude/rules/forms-mutations.md` §公開フォーム action — 予約 / イベント申込の
- * 4 段 guard 順序契約:
+ * 公開フォーム action — 予約 / イベント申込の 4 段 guard 順序契約:
  *
  *   checkActionRateLimit → checkEmailRateLimit → checkBotHeuristics → validateTurnstile
  *

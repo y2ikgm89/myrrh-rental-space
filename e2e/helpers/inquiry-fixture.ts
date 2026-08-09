@@ -1,8 +1,7 @@
 /**
  * お問い合わせスレッドのグローバル可変状態を seed 直後の形へ戻す helper。
  *
- * 復元は **必ず `afterEach` / `afterAll` から呼ぶ**
- * （規約: `.claude/rules/testing-e2e.md`）。
+ * 復元は **必ず `afterEach` / `afterAll` から呼ぶ**。
  *
  * @module e2e/helpers/inquiry-fixture
  */

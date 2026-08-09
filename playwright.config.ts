@@ -50,7 +50,6 @@ const e2eWebServerCommand = [
  * Playwright E2E テスト設定
  *
  * 公式準拠の **storage state + setup project** ＋ **fullyParallel** パターン。
- * 規約 SSoT は `.claude/rules/testing-e2e.md`。
  *
  * Project 構成:
  *   - setup-customer / setup-admin → 認証してストレージ保存

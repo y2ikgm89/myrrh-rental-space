@@ -1,8 +1,8 @@
 # Contributing to Myrrh Rental Space
 
-このドキュメントは開発者向けのクイックスタートです。ハードルール・エージェント作業の正本は
-[CLAUDE.md](../CLAUDE.md) と [`.claude/rules/`](../.claude/rules/) です。
-[AGENTS.md](../AGENTS.md) は CLAUDE.md へのポインタ兼補助メモです。
+このドキュメントは開発者向けのクイックスタートです。ハードルールの正本は散文ではなく
+**CI で強制される gate**（`eslint.config.mjs` / `__tests__/unit/architecture/**` /
+`.github/workflows/ci.yml`）です。
 
 ## 開発環境セットアップ
 
@@ -174,12 +174,14 @@ CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./w
 
 ## ハードルール
 
-ハードルールの SSoT は [CLAUDE.md](../CLAUDE.md) と [`.claude/rules/`](../.claude/rules/) です。
-本 CONTRIBUTING には複製しません（drift 防止）。エージェント向け補助は [AGENTS.md](../AGENTS.md) を参照。
+ハードルールの SSoT は [`eslint.config.mjs`](../eslint.config.mjs) と
+[`__tests__/unit/architecture/`](../__tests__/unit/architecture/) の gate 群です。
+本 CONTRIBUTING には複製しません（drift 防止）— 散文で書くと必ず実装からずれるため、
+「守らせたい規約は gate にする」のがこのリポジトリの方針です。
 
 ## 質問・サポート
 
-- プロジェクト固有の疑問: [CLAUDE.md](../CLAUDE.md) + [`.claude/rules/`](../.claude/rules/) を先に読む
-- 人間向けセットアップ: [README.md](../README.md)（本ドキュメント）
-- 実装パターン・設計の「なぜ」: CLAUDE.md / `.claude/rules/` を参照。ライブラリ API は公式 docs を直接参照
+- プロジェクト固有の疑問: 該当 gate（`__tests__/unit/architecture/**`）の冒頭 JSDoc を先に読む
+- 人間向けセットアップ: [README.md](../README.md)
+- 実装パターン・設計の「なぜ」: 各モジュール冒頭の JSDoc を参照。ライブラリ API は公式 docs を直接参照
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡

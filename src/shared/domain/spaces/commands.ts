@@ -223,7 +223,7 @@ export async function updateSpaceCommand(
 
   // Capture oldSlug + apply update atomically so a concurrent admin rename
   // can't slip in between the findUnique and the update.
-  // Per CLAUDE.md: array form $transaction is banned; use interactive form.
+  // Architecture rule: array form $transaction is banned; use interactive form.
   return prisma.$transaction(async (tx) => {
     // このスペースに対する locationId 読取〜smartLockDeviceId 更新の判定を、
     // setSpaceSmartLockDeviceCommand（同じ 728352 lock namespace）と直列化する。

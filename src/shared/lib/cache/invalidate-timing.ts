@@ -22,7 +22,7 @@ import {
  * ## なぜ「常に after」ではないか
  *
  * Server Action では invalidate が **即時**でなければ read-your-own-writes が壊れる
- * （`.claude/rules/caching.md` の呼び分け契約）。action のレスポンス後に tag が
+ * （Server Action と render フェーズの呼び分け契約）。action のレスポンス後に tag が
  * 期限切れになると、その action が誘発する再レンダーが古い値を読み得る。
  * よって「まず即時実行を試し、render フェーズ由来の throw のときだけ after へ逃がす」。
  *

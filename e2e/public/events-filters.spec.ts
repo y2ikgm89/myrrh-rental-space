@@ -14,8 +14,6 @@ test.skip(
  * 責務: `eventsListSearchParamsParsers` の URL → UI 双方向反映を pin する。
  * tab/q/categoryId の Prisma 変換ロジックは
  * `__tests__/unit/domain/events/public-queries.test.ts` が担当。
- *
- * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 test.describe("/events findability — URL 双方向反映", () => {

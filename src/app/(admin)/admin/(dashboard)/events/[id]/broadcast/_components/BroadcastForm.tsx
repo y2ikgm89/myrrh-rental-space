@@ -25,7 +25,7 @@ type BroadcastFormProps = {
  * 部分適用する。
  *
  * 成功検出は `resetForm: true` の action と組で `lastResult.initialValue === null`
- * を見る (`.claude/rules/forms-mutations.md` の client 側定型を SSoT 参照)。
+ * を見る (conform + Server Action の house pattern における client 側の定型)。
  * 成功後は toast で通知しつつ form は自動 reset される (subject/body が空に戻る)。
  */
 export function BroadcastForm({

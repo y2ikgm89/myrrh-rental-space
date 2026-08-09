@@ -20,8 +20,6 @@ test.skip(
  * - パフォーマンス（LCP / TTFB / TBT）→ Lighthouse CI
  * - axe 違反 → `e2e/a11y/axe-public-pages.spec.ts`
  * - ビジュアル → `e2e/visual/public-pages.spec.ts`
- *
- * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 // =============================================================================

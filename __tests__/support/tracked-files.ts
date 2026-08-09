@@ -8,9 +8,9 @@ import { extname } from "node:path";
  *
  * - `source-files-are-text` は `SCAN_DIRS` 方式のとき tracked 3,687 件のうち
  *   3,455 件しか覆えず、`eslint-rules/` `.github/` `terraform/` `docs/` が素通りしていた
- * - `referenced-gates-exist` は `src` / `scripts` / `prisma` / `.claude` を列挙したため、
- *   `Dockerfile` / `eslint.config.mjs` / `lefthook.yml` / `.github/CODEOWNERS` /
- *   `.codex/rules/default.rules` に実在するポインタを 1 件も見ていなかった（Codex 指摘）
+ * - `referenced-gates-exist` は `src` / `scripts` / `prisma` などを列挙したため、
+ *   `Dockerfile` / `eslint.config.mjs` / `lefthook.yml` / `.github/CODEOWNERS`
+ *   に実在するポインタを 1 件も見ていなかった（Codex 指摘）
  *
  * tracked file は「コミットされる ＝ レビューされるべきもの」と過不足なく一致し、
  * ビルド成果物と依存は .gitignore で構造的に外れる。新しいディレクトリや設定ファイルを

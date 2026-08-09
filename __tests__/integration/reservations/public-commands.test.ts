@@ -112,8 +112,7 @@ async function createSpaceFixture(hourlyPrice = 1000): Promise<SpaceFixture> {
 
 /**
  * Commerce / reservation singletons を既知値へ揃える（schema の @default と同値なので他テストへの
- * 副作用ゼロ。real-DB serial bucket は同時に 1 ファイルしか走らないため race もない
- * — .claude/rules/testing-unit.md 参照）。
+ * 副作用ゼロ。real-DB serial bucket は同時に 1 ファイルしか走らないため race もない）。
  */
 async function ensureKnownSettings(): Promise<void> {
   const commerceData = {

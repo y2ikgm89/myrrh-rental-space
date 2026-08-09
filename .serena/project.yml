@@ -79,9 +79,7 @@ initial_prompt: |
   ## Serena の使い分け（必読）
 
   Claude Code の Read / Edit / Grep / Glob を **canonical 経路** として使う。
-  理由: `.claude/rules/**/*.md` の path-scoped auto-load を Read trigger 前提に
-  設計しているため、Serena の "Read FORBIDDEN" 規律は本プロジェクトでは
-  適用しない。
+  Serena の "Read FORBIDDEN" 規律は本プロジェクトでは適用しない。
 
   ### Serena を優先する場面（LSP-backed の精度が活きる）
 
@@ -100,8 +98,8 @@ initial_prompt: |
 
   - `read_memory` は **現タスクに直接関連するもののみ**（公式 read_memory 注記準拠）。
     現在 active な memory は `design-system` のみ（公開ページ UI / typography / OKLCH 等）。
-    その他のドメインは `.claude/rules/**` の path-scoped auto-load を一次経路とする。
-  - `write_memory` は **user 明示要求時のみ**。`.claude/rules/**` が SSoT のため二重化を避ける
+    その他のドメインはコード本体と gate（`__tests__/unit/architecture/**`）を一次経路とする。
+  - `write_memory` は **user 明示要求時のみ**。コードと gate が SSoT のため二重化を避ける
   - `_archive/` / dated snapshot は `ignored_memory_patterns` で自動除外
   - `design-system` は `read_only_memory_patterns` で agent 上書きを防止
 
@@ -109,7 +107,7 @@ initial_prompt: |
 
   `no-onboarding` mode で自動起動を停止。2026-05-15 cleanup で stale memory 15 件削除済、
   残るは `design-system.md` + `MEMORY.md` index のみ。新しい architecture が定着したら
-  まず `.claude/rules/**` に rule docs として codify、Serena memory への二重化は SSoT 違反。
+  まず gate（`__tests__/unit/architecture/**`）として codify、Serena memory への二重化は SSoT 違反。
 
 # list of mode names that are to be activated by default, overriding the setting in the global configuration.
 # The full set of modes to be activated is base_modes (from global config) + default_modes + added_modes.

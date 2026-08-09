@@ -122,4 +122,4 @@ enabling allowlist rules.
 | ------------------------- | ------------------------------------------------------------ |
 | Path token crypto purpose | `SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken`         |
 | Proxy rate limit          | `infraEndpointRateLimiter` in `src/shared/lib/rate-limit.ts` |
-| Security accepted risk    | `.claude/rules/security-auth.md` (SwitchBot webhook section) |
+| Security accepted risk    | "WAF / IP allowlist note" section above                      |

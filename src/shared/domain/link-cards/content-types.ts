@@ -31,7 +31,7 @@ export const LINK_CARD_TYPE_LABELS: Record<LinkCardContentType, string> = {
 /**
  * LinkCardContentType → 対応する Feature Module のマッピング。
  *
- * 公開ルートは `requireFeatureEnabled` で 404 ガードされるため（`.claude/rules/app-structure.md`）、
+ * 公開ルートは `requireFeatureEnabled` で 404 ガードされるため、
  * Feature Module が OFF の content-type は「サイト内」タブの選択肢・挿入項目から
  * 除外する（無効な種別を新規に選べてしまう insert 経路側の bug 修正、M 級）。
  * 公開 HTML 描画 (`resolveInternalLinkCards` / `resolveLinkCardsByType`) でも

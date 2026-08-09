@@ -13,7 +13,7 @@ import { ratePlanFixtures, spaceFixtures, urls } from "../../fixtures";
  * 前提の健全性チェックとして確認する。
  *
  * Playwright project: chromium-admin（`e2e/authenticated/admin/*.spec.ts` →
- * storageState 経由の IAP 模擬管理者、`.claude/skills/e2e-authoring` 準拠）。
+ * storageState 経由の IAP 模擬管理者）。
  * 単一 test 内で create → edit → delete を直列に行うため、他 test との共有状態や
  * 並列実行の順序依存はない（自己完結・自己後片付け）。
  *
@@ -38,7 +38,7 @@ const ADMIN_ROUTE_TIMEOUT = 20000;
 // 全 admin mutation 共通）や permission チェックを含む admin mutation の往復が
 // 既定 5000ms を超えることがある。
 //
-// **判定に toast を使わない**（`.claude/rules/testing-e2e.md`）。sonner の toast は
+// **判定に toast を使わない**。sonner の toast は
 // 一定時間で自動的に消える一時 UI で、mutation の往復が伸びた回に取り逃す。実測:
 // run 30635688437 で `getByText("料金プランを更新しました")` が 15s で
 // `element(s) not found`。判定は**一覧に反映された永続状態**で行う（この spec は
@@ -50,8 +50,7 @@ const MUTATION_SETTLE_TIMEOUT = 15000;
  *
  * mutation 後の `router.refresh()` が返す RSC ツリーだけを見ると、
  * 「その応答では新しいが、次の**新規リクエスト**では古い」ケース（cache tag の
- * 無効化漏れ）を素通ししてしまう。判定は必ず**リロード後の一覧**で行う
- * （`.claude/rules/testing-e2e.md`「保存完了の判定に toast を使わない」節）。
+ * 無効化漏れ）を素通ししてしまう。判定は必ず**リロード後の一覧**で行う。
  *
  * `expect.poll` で回さないのは、このフォームが楽観ロック（`expectedUpdatedAt`）を
  * 持たず、`invalidateSpaceRatePlansCache`（`updateTag`）が Server Action 内で

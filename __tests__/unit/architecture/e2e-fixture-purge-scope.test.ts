@@ -22,8 +22,8 @@ import { describe, expect, test } from "bun:test";
  *
  * それだと「別 worker が落とした残骸」を誰も回収しなくなる。作成から一定時間が
  * 経った行だけを消せば、同時実行中の行には構造的に触れず、残骸は次回以降に
- * 必ず回収される。spec 側に `afterAll` を足す案が採れない理由は
- * `.claude/rules/testing-e2e.md`（本体 timeout で page ごと閉じられる）にある。
+ * 必ず回収される。spec 側に `afterAll` を足す案が採れないのは、本体が timeout
+ * すると page ごと閉じられて hook が仕事をできないため。
  *
  * ## 走査範囲
  *

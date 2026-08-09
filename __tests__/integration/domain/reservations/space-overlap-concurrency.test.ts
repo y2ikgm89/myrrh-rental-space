@@ -5,7 +5,7 @@
  * （src/shared/domain/reservations/space-locks.ts、`pg_advisory_xact_lock(728351, hashtext(spaceId))`）
  * による直列化が無いと、同一スペース・重複時間帯への同時申込が全部「空きあり」を
  * 観測して通過し、複数の CONFIRMED 予約が作成される（ダブルブッキング）TOCTOU 競合になる
- * （`.claude/rules/business-domain.md`「予約の同時実行制御」）。
+ * （「予約の同時実行制御」）。
  *
  * 既存の commands.test.ts の同等テストは Prisma を丸ごと mock しており、
  * 「advisory lock の SQL 文字列が $executeRaw に渡された」ことしか検証できない。

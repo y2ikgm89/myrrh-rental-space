@@ -33,7 +33,7 @@ import {
  *
  * 実際の transaction 開始・lock acquire/release・状態遷移は
  * `expireAndPromoteWaitlistForEventCommand`（server-only ドメイン層）に集約する。
- * `src/app/*` から Prisma を直接 import しない CLAUDE.md 規約のため、この Route
+ * `src/app/*` から Prisma を直接 import しない規約のため、この Route
  * Handler 自体は Prisma に触れない。cron 経路は auth / feature gate / event 単位
  * グルーピング / cache invalidation / エラーハンドリングのみを担う
  * （`event-reminder` / `pending-reservation-expire` と同型の薄い cron shape）。

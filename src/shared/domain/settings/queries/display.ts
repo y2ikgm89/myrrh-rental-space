@@ -164,7 +164,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
  * invalidation pulley に乗せる（updateBasicInfo の afterSuccess で自動 revalidate）。
  *
  * 呼び出し元は必ず Route Handler の `await connection()` の後に呼ぶ
- * (rule .claude/rules/caching.md)。generateMetadata / layout 本体・
+ * (build prerender の焼き込み防止)。generateMetadata / layout 本体・
  * Web App Manifest route からは呼ばない（build-time prerender 汚染の構造的回避）。
  */
 export async function getFaviconUrl(): Promise<string> {

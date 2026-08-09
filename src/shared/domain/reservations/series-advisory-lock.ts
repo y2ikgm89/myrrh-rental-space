@@ -10,8 +10,7 @@ type SeriesLockClient = {
 /**
  * ReservationSeries 単位 advisory lock。
  *
- * namespace 728357 は `.claude/rules/db-domain.md` の advisory lock registry で
- * Phase B.2 用に予約済（Phase B.1 spec で予告済）。ReservationSeries 作成・
+ * namespace 728357 は Phase B.2 用に採番済（Phase B.1 spec で予告済）。ReservationSeries 作成・
  * 一括キャンセル等、series 全体にまたがる書込を interactive tx 単位でシリアライズする。
  *
  * 既存の `lockSpaceForTransaction`（728351、Space 単位、`src/shared/domain/reservations/space-locks.ts`）

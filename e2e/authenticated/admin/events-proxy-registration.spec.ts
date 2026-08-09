@@ -31,8 +31,7 @@ const PROXY_REGISTRATION_EMAIL = "proxy@example.com";
 // 実際に消費する（`invalidateEventCaches()` 経由で公開側の残り枠表示にも出る）。
 // serial の retry は describe を先頭からやり直すため、残したままだと 2 周目に
 // 「代行登録テスト太郎 の出席を記録」が 2 件一致して strict mode violation になり、
-// retry が構造的に成功しなくなる。復元は無条件に hook で行う
-// （規約: `.claude/rules/testing-e2e.md`）。
+// retry が構造的に成功しなくなる。復元は無条件に hook で行う。
 test.afterEach(async () => {
   await deleteEventRegistrationsByEmail(PROXY_REGISTRATION_EMAIL);
 });

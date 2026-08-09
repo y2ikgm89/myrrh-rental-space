@@ -124,7 +124,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // 動的解決する。`getFeedAlternates` は内部で `'use cache' + safeFetch` を持つ
   // `getFeatureModulesSettings` を呼ぶため、`await connection()` で runtime resume を
   // 強制しないと build 時 placeholder DATABASE_URL の fallback (posts OFF) が静的シェルに
-  // 焼き込まれる (rule .claude/rules/caching.md `build prerender の焼き込み防止` 参照)。
+  // 焼き込まれる (`build prerender の焼き込み防止` — 同型: app/sitemap.ts / app/icon/route.tsx)。
   // 同 pattern: このファイルの `generateViewport` が footerSettings.themeColor を
   // 解決するところ。
   // posts OFF 時に `/feed.xml` が 404 を返す構造 (feed.xml/route.ts) と integrity 維持。
@@ -200,7 +200,7 @@ export async function generateViewport(): Promise<Viewport> {
  */
 async function DynamicContent(): Promise<ReactElement> {
   // `getCookieConsentSettings` / `getAnalyticsConfig` は `'use cache' + safeFetch` 構造のため、
-  // rule .claude/rules/caching.md に従い `await connection()` で build prerender skip。
+  // `build prerender の焼き込み防止` に従い `await connection()` で build prerender skip。
   await connection();
   const [cookieSettings, analyticsConfig, headersList] = await Promise.all([
     getCookieConsentSettings(),

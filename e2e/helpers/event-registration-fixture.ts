@@ -4,7 +4,7 @@
  * `EventRegistration` は共有 test DB のグローバル状態で、公開側の残り枠表示・
  * 管理側の申込一覧 / 当日受付・CSV エクスポートが同じ行を読む。復元は
  * **必ず `afterEach` / `afterAll` から呼ぶ**（test 本体の try/finally は setup 段階の
- * throw で入らない。規約: `.claude/rules/testing-e2e.md`）。
+ * throw で入らない）。
  *
  * UI 経由ではなく DB を直接戻すのは、test 本体が timeout すると page ごと閉じられて
  * hook から画面操作ができないため。

@@ -41,7 +41,7 @@ import { resolveTestDatabaseUrl } from "../test-db-url";
  *
  * spec 側に `afterAll` を足す形は採らない — 本体が timeout すると page も
  * context も閉じられ、hook は走っても仕事ができない
- * （`.claude/rules/testing-e2e.md`、run 30672479398）。入口 purge なら
+ * （run 30672479398）。入口 purge なら
  * timeout しても次回に回収される。
  *
  * **ただし purge は「古い行」だけを対象にする。** `playwright.config.ts` は

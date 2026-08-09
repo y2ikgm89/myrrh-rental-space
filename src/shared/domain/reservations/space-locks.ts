@@ -14,8 +14,6 @@ type SpaceLockClient = {
  * いずれも read-before-write のため、同一 Space に対する全 mutation を tx 単位で
  * 順序付ける必要がある。namespace 728351 は業務上「Space スケジュール空間」で
  * 共有され、Reservation と EventTimeSlot の write path はどちらもこの lock を先取する。
- *
- * (namespace registry は `.claude/rules/db-domain.md` の advisory lock 一覧参照)
  */
 export async function lockSpaceForTransaction(
   tx: SpaceLockClient,

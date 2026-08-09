@@ -31,7 +31,7 @@ test.describe.configure({ mode: "serial" });
 // 下の `postedReply` がいずれ strict mode violation になる）、status が
 // RESOLVED → IN_PROGRESS へ reopen される（seed の inquiry 作成は「無ければ作る」
 // だけで status を書き戻さないため「解決済」fixture が IN_PROGRESS で固定化する）。
-// 復元は無条件に hook で行う（規約: `.claude/rules/testing-e2e.md`）。
+// 復元は無条件に hook で行う。
 // 規約同意 gate が作りうる `TermsAgreement` は append-only の証跡なので戻さない。
 test.afterEach(async () => {
   await restoreDevCustomerResolvedInquiry();

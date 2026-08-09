@@ -7,7 +7,7 @@ import { isRecord } from "@/shared/lib/serialize";
  *
  * `error.code === "P2002"` の判定。target field 制約付き検出も option 経由でサポート。
  * Prisma の値 (`Prisma.PrismaClientKnownRequestError` 等) は re-export 禁止のため
- * (`.claude/rules/db-domain.md` の gateway 契約: `Prisma.JsonNull` の identity 比較が
+ * (Prisma gateway 契約: `Prisma.JsonNull` の identity 比較が
  * runtime 間で壊れる)、runtime shape check で判定する。
  *
  * ## 用途

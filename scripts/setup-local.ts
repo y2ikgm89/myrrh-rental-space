@@ -138,7 +138,7 @@ export function targetsSetupManagedDatabase(
 
 /**
  * 依存はすべて**必須引数**で受ける。既定値を置くと「実走査だけが通る配線」ができ、
- * テストがその経路を一度も踏まなくなる（`.claude/rules/testing-unit.md`）。
+ * テストがその経路を一度も踏まなくなる。
  */
 export function runSetup(
   runner: CommandRunner,

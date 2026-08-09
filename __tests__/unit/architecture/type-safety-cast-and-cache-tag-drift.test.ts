@@ -1,5 +1,5 @@
 /**
- * `.claude/rules/type-safety.md` 由来の 2 gate:
+ * 型安全方針由来の 2 gate:
  *
  * 1. `as unknown as FieldMetadata` cast は `typed-input-control.ts` 内部だけ許可
  * 2. `updateTag` / `revalidateTag` に渡す `CACHE_TAGS.*` は `cacheTag` producer を
