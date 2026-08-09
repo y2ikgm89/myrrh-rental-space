@@ -101,18 +101,36 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
   { dir: ".", glob: "{CLAUDE,AGENTS}.md" },
 ];
 
+/**
+ * 走査から外すディレクトリ。
+ *
+ * `.claude/worktrees/` は**別のチェックアウト**（この repo の worktree 運用が置く
+ * 場所で `.gitignore` 済み）。`.claude` を `**\/*.md` で再帰するとそこへ降りてしまい、
+ * **他の作業ツリーの `docs/**`** を自分の違反として報告する。実測（2026-08-09）:
+ * 並行セッションが worktree を持っている間だけ pre-push が落ちた。
+ * 追跡対象でないものは見ない。
+ */
+const EXCLUDED_DIRS: readonly string[] = [join(ROOT, ".claude", "worktrees")];
+
+/** `file` が `excludedDirs` のいずれかの**配下**か（純粋関数）。 */
+export function isUnderExcludedDir(
+  file: string,
+  excludedDirs: readonly string[],
+): boolean {
+  const normalize = (path: string): string => path.replaceAll("\\", "/");
+  const target = normalize(file);
+  return excludedDirs.some((dir) => target.startsWith(`${normalize(dir)}/`));
+}
+
+function filesUnder(entry: (typeof SCAN)[number]): string[] {
+  const glob = new Bun.Glob(entry.glob);
+  return [
+    ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
+  ].filter((file) => !isUnderExcludedDir(file, EXCLUDED_DIRS));
+}
+
 function scannedFiles(): string[] {
-  const out: string[] = [];
-  for (const entry of SCAN) {
-    const glob = new Bun.Glob(entry.glob);
-    for (const file of glob.scanSync({
-      cwd: join(ROOT, entry.dir),
-      absolute: true,
-    })) {
-      out.push(file);
-    }
-  }
-  return out;
+  return SCAN.flatMap(filesUnder);
 }
 
 /**
@@ -134,16 +152,41 @@ describe("コードも指示も migration を名指ししない", () => {
     const files = scannedFiles();
     expect(files.length).toBeGreaterThan(1000);
     // 各ルートが 1 件も拾えていない、を個別に弾く（1 つ壊れても総数で隠れないように）。
+    // 除外後の件数で見る（除外が広すぎてルートごと空になったらここで落ちる）。
     for (const entry of SCAN) {
-      const glob = new Bun.Glob(entry.glob);
-      const count = [
-        ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
-      ].length;
-      expect({ dir: entry.dir, empty: count === 0 }).toEqual({
-        dir: entry.dir,
-        empty: false,
-      });
+      expect({ dir: entry.dir, empty: filesUnder(entry).length === 0 }).toEqual(
+        {
+          dir: entry.dir,
+          empty: false,
+        },
+      );
     }
+  });
+
+  test("別の作業ツリーは走査しない（除外の粒度）", () => {
+    const excluded = ["/repo/.claude/worktrees"];
+
+    // 1. 別チェックアウトの中身は見ない
+    expect(
+      isUnderExcludedDir("/repo/.claude/worktrees/x/docs/a.md", excluded),
+    ).toBe(true);
+    // 2. 本来の走査対象は見る
+    expect(
+      isUnderExcludedDir("/repo/.claude/rules/testing-e2e.md", excluded),
+    ).toBe(false);
+    // 3. 名前が似ているだけのパスを巻き込まない
+    expect(isUnderExcludedDir("/repo/docs/worktrees-guide.md", excluded)).toBe(
+      false,
+    );
+    expect(
+      isUnderExcludedDir("/repo/.claude/worktrees-notes.md", excluded),
+    ).toBe(false);
+    // 4. Windows のパス区切りでも同じ判定になる
+    expect(
+      isUnderExcludedDir("C:\\repo\\.claude\\worktrees\\x\\docs\\a.md", [
+        "C:\\repo\\.claude\\worktrees",
+      ]),
+    ).toBe(true);
   });
 
   test("通ってはいけない書き方が実際に落ちる（fixture）", () => {
