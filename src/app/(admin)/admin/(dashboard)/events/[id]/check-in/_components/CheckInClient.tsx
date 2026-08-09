@@ -104,6 +104,27 @@ export function CheckInClient({
   }
 
   /**
+   * 楽観更新を**厳密に取り消す**（打刻失敗時のロールバック）。
+   *
+   * 値を書き戻すだけでは足りない。上書きが**無かった**行に上書きを作ってしまうと、
+   * その後サーバーから新しい props が来ても（ダイアログ成功後の `router.refresh()`、
+   * 別の管理者の打刻）**古い値で覆い続ける** — 一覧を props から導出する設計が
+   * そこだけ効かなくなる。無かったなら「無い」に戻す。
+   */
+  function restoreAttendance(
+    registrationId: string,
+    hadOverride: boolean,
+    previousOverride: string | null,
+  ) {
+    setAttendanceOverrides((prev) => {
+      const next = new Map(prev);
+      if (hadOverride) next.set(registrationId, previousOverride);
+      else next.delete(registrationId);
+      return next;
+    });
+  }
+
+  /**
    * 明示的な再読込ではローカル上書きを捨てる。
    * 「取り直したのに自分の古い打刻が勝つ」を防ぐ（サーバーが真とする操作）。
    */
@@ -133,12 +154,14 @@ export function CheckInClient({
   function handleToggle(registrationId: string) {
     const target = attendees.find((a) => a.id === registrationId);
     if (!target) return;
-    // 失敗時に戻す先は**いま画面に出ている値**。この action は cache を無効化
+    const willAttend = target.attendedAt === null;
+    // 失敗したら「楽観更新の直前の状態」へ戻す。この action は cache を無効化
     // しないので `initialAttendees` は最初の打刻より前のまま止まっており、
-    // 「上書きを消してサーバー props に戻す」と 2 回目の失敗が 1 回目の成功まで
-    // 巻き戻して、**永続状態の逆**を表示してしまう。
-    const previousAttendedAt = target.attendedAt;
-    const willAttend = previousAttendedAt === null;
+    // 単に上書きを消すと 2 回目の失敗が 1 回目の成功まで巻き戻して**永続状態の
+    // 逆**を表示する。かといって値だけ書き戻すと、上書きが無かった行に上書きを
+    // 作ってしまい、以後サーバー props を覆い続ける。**在/無ごと**覚える。
+    const hadOverride = attendanceOverrides.has(registrationId);
+    const previousOverride = attendanceOverrides.get(registrationId) ?? null;
 
     // 楽観更新
     overrideAttendance(
@@ -153,8 +176,7 @@ export function CheckInClient({
         attended: willAttend,
       });
       if (isMutationError(result)) {
-        // 直前の実効値へ戻す（サーバー props へは戻さない — 上のコメント参照）
-        overrideAttendance(registrationId, previousAttendedAt);
+        restoreAttendance(registrationId, hadOverride, previousOverride);
         toast.error(result.error);
         return;
       }
