@@ -73,9 +73,13 @@ Default staff identity policy:
 4. Send the common admin URL to the user.
 5. Ask the user to open the admin URL. On first access, the app creates or
    updates the local staff record from Google Group membership.
+6. **Editor の場合のみ** — 本人が 1 度アクセスしてレコードができた後に
+   `/admin/staff/{id}` を開き、編集を許可するページを割り当てる。割り当てが 0 件の
+   editor はログインとメディアアップロードはできるが、どのページも編集できない。
 
-Do not create staff from the app. The staff page is a synced record view, not
-the source of access.
+アクセス権そのものは app から作れない（グループ所属が正）。ただし staff 詳細
+ページは上記のページ割り当てという**書き込み UI** を持つので、「同期された閲覧
+専用ビュー」ではない。
 
 ## Remove a staff member
 
@@ -101,6 +105,11 @@ Email changes cross both identity systems. Treat them as remove-and-add:
 5. Remove the old account from all admin role groups.
 6. Suspend or delete the old Cloud Identity account if it should no longer
    exist.
+
+グループから外しても、app 側の staff レコードは**その場では**「無効（グループ
+未所属）」に変わらない。Google Group の同期は**本人の admin リクエスト**でしか
+走らないため、退職者が二度とアクセスしなければレコードは有効表示のまま残る。
+IAP 側で拒否されるのでアクセスは即座に止まるが、staff 一覧の表示だけは遅れる。
 
 ## Verify production access
 

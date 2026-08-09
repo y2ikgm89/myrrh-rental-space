@@ -6,7 +6,7 @@
     "src/app/(public)/_shared/actions/**/*.ts"
   ],
   "entryPointStrategy": "expand",
-  "out": "docs/api",
+  "out": ".typedoc/api",
   "plugin": ["typedoc-plugin-markdown"],
   "excludePrivate": true,
   "excludeProtected": true,

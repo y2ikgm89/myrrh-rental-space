@@ -17,11 +17,11 @@ backend、`terraform/*.tf` は flat 構造を維持する。
 
 ## Rationale
 
-- **3x GCP コスト**: Cloud Run min=0 でも Cloud SQL instance / Secret Manager
-  metadata (16 secrets × 3 env) / Load Balancer forwarding rule + static IP
+- **3x GCP コスト**: Cloud Run min=0 でも Secret Manager metadata
+  (16 secrets × 3 env) / Load Balancer forwarding rule + static IP
   (admin service 用) / Cloud Scheduler jobs (13 crons × 3 env) で数千円/月の
-  下限コストが発生する。dev/staging は idle 時間が長いにもかかわらず、
-  Cloud SQL は provisioned charging のため実質全額 pay になる
+  下限コストが発生する。DB は外部 SaaS (Neon) なので GCP 側の DB コストは無いが、
+  env ごとに branch を持てば同じ構図になる
 - **DNS / IAP OAuth / Cloudflare 設定複製コスト**: admin service は
   Load Balancer + Google-managed SSL + IAP OAuth client + Cloudflare DNS proxy
   を必要とし、これを env ごとに複製すると OAuth consent screen の再承認 /
@@ -34,8 +34,10 @@ backend、`terraform/*.tf` は flat 構造を維持する。
   compliance-required audit env) がいずれも該当しない
 - **pre-prod validation は既に担保**: `docker compose up -d test-db`
   (localhost:5433) + `bun run build:skip-env` + `bun run test:integration` で
-  ローカル validation、CI で `terraform plan` + `terraform validate` +
-  tfsec / tflint、手動 `workflow_dispatch` デプロイ時に breaking migration mode
+  ローカル validation、PR CI (`.github/workflows/terraform.yml`) で
+  `terraform fmt -check` + `terraform init -backend=false` +
+  `terraform validate` + Trivy (HIGH/CRITICAL で fail) + TFLint、
+  手動 `workflow_dispatch` デプロイ時に breaking migration mode
   (DROP/RENAME 検出時の 310s drain 付きデプロイ) が動く。staging env なしでも
   「本番に壊れた config が入る」経路は塞がっている
 

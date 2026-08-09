@@ -126,7 +126,7 @@ terraform/trivy.sarif
 .react-email/
 
 # ─── Generated API docs (TypeDoc) ────────────────────────────────────────────
-docs/api/
+.typedoc/
 
 # ─── Section Architecture Phase B: migration audit log (ephemeral) ───────────
 prisma/migrations/section-design-migration-log.json

@@ -36,6 +36,9 @@ generated
 docs/
 *.md
 
+# TypeDoc 生成物 (`bun run docs`)
+.typedoc/
+
 # Docker / Compose (image 内には不要)
 Dockerfile
 docker-compose*.yml

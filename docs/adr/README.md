@@ -64,7 +64,9 @@ Decision を選んだ理由の bullet list。定量的根拠 (コスト / パフ
 
 ## Related
 
-- memory / rules / skills / 他 ADR への link
+- 関連 PR / commit、該当 gate (`__tests__/unit/architecture/**`)、
+  運用文書 index ([`../README.md`](../README.md))、他 ADR への link
+- repo 外 (session memory / エージェント設定) は書かない — 削除・移動で追跡不能になる
 ```
 
 ## Lifecycle
