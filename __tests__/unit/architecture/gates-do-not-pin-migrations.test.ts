@@ -36,6 +36,7 @@
  * | `src` / `scripts` / `__tests__` | 実行されるコード |
  * | `prisma`（`migrations/` を除く） | schema.prisma・seed.ts・baseline 入力 |
  * | `.github` | CI への指示 |
+ * | `docs`（記録の 3 置き場を除く） | 人が従う runbook・ADR・alerting |
  *
  * かつてはエージェントへの**指示**（リポジトリ直下のルート指示と rules / skills 群）も
  * 走査していた。誤った前提で作業させるからだが、それらを repo から外したので対象から
@@ -43,8 +44,14 @@
  * migration 名は、コードと同じだけ人を誤らせる。
  *
  * `prisma/migrations/**` は対象外 — ディレクトリ名そのものが timestamp であり、
- * 中身は絶対規約 #7 で編集できない。`docs/**` も対象外で、こちらは**日付入りの
- * 記録**（調査ログ・設計 spec）だから。記録は当時の事実を書いたもので、指示ではない。
+ * 中身は絶対規約 #7 で編集できない。
+ *
+ * `docs/` はかつて**丸ごと**対象外だった。理由は「日付入りの記録だから」で、それ自体は
+ * 正しいが、当てはまるのは `superpowers/` `audits/` `investigation/` の 3 つだけ。
+ * 残りの docs（runbook・ADR・alerting）は人が従う指示で、そこに畳んだ migration の
+ * 名前が残っていれば src と同じだけ人を誤らせる。**上の段落が「指示は走査対象に
+ * 戻せ」と言っているのに、docs の指示だけがその外に置かれていた。** 3 つの置き場を
+ * 名指しで外す形にして揃える（区別は `docs/README.md`）。
  *
  * ## 代わりに使うもの（`__tests__/support/prisma-sources.ts`）
  *
@@ -97,11 +104,32 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
   { dir: "prisma", glob: "*.{ts,prisma}" },
   { dir: "prisma/baseline", glob: "*.{sql,json}" },
   { dir: ".github", glob: "**/*.{yml,yaml,md}" },
+  // docs のうち**指示**の側。記録（下の EXCLUDED）は除く。
+  { dir: "docs", glob: "**/*.md" },
 ];
+
+/**
+ * 日付入りの記録。当時の事実を書いたもので、指示ではない。
+ *
+ * かつては `docs/**` を丸ごと外していたが、docs には runbook・ADR・alerting と
+ * いった**人が従う指示**も同居している。畳んだ migration の名前は、そこに
+ * 書かれていればコードと同じだけ人を誤らせる。除外の根拠が当てはまる 3 つの
+ * 置き場だけを外す（区別は `docs/README.md`）。
+ */
+const EXCLUDED_DOC_PREFIXES = [
+  join("docs", "superpowers"),
+  join("docs", "audits"),
+  join("docs", "investigation"),
+] as const;
 
 function filesUnder(entry: (typeof SCAN)[number]): string[] {
   const glob = new Bun.Glob(entry.glob);
-  return [...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true })];
+  return [
+    ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
+  ].filter((file) => {
+    const rel = relative(ROOT, file);
+    return !EXCLUDED_DOC_PREFIXES.some((prefix) => rel.startsWith(prefix));
+  });
 }
 
 function scannedFiles(): string[] {
