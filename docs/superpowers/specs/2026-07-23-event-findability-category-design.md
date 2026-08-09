@@ -173,14 +173,15 @@ CREATE INDEX "events_categoryId_idx" ON "events"("categoryId");
 
 確認済みの実ファイル対応（`space-categories`/`space-category` を `event-categories`/`event-category` に置換）:
 
-| 役割                 | SpaceCategory（既存・ミラー元）                                                                                                           | EventCategory（新規）                                                             |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| ドメインコマンド     | `src/shared/domain/space-categories/commands.ts`                                                                                          | `src/shared/domain/event-categories/commands.ts`                                  |
-| Zod スキーマ         | `src/shared/lib/validations/space-category.ts`                                                                                            | `src/shared/lib/validations/event-category.ts`                                    |
-| Server Action        | `src/app/(admin)/admin/(dashboard)/_shared/actions/space-category.ts`                                                                     | `.../_shared/actions/event-category.ts`                                           |
-| Admin queries        | `src/app/(admin)/admin/(dashboard)/_shared/queries/space-category.ts`                                                                     | `.../_shared/queries/event-category.ts`                                           |
-| 管理画面 UI          | `src/app/(admin)/admin/(dashboard)/space-categories/_components/{CategoryForm,CategoryTable,CreateCategoryDialog,CategoryActionCell}.tsx` | `.../event-categories/_components/{同名}.tsx`                                     |
-| Event フォーム内タブ | `spaces/_components/CategoryTabContent.tsx`（`SpaceEditForm` 内）                                                                         | `events/_components/CategoryTabContent.tsx`（`EventForm` 内、必須 select として） |
+| 役割                    | SpaceCategory（既存・ミラー元）                                                                                                           | EventCategory（新規）                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ドメインコマンド        | `src/shared/domain/space-categories/commands.ts`                                                                                          | `src/shared/domain/event-categories/commands.ts`                      |
+| Zod スキーマ            | `src/shared/lib/validations/space-category.ts`                                                                                            | `src/shared/lib/validations/event-category.ts`                        |
+| Server Action           | `src/app/(admin)/admin/(dashboard)/_shared/actions/space-category.ts`                                                                     | `.../_shared/actions/event-category.ts`                               |
+| Admin queries           | `src/app/(admin)/admin/(dashboard)/_shared/queries/space-category.ts`                                                                     | `.../_shared/queries/event-category.ts`                               |
+| 管理画面 UI             | `src/app/(admin)/admin/(dashboard)/space-categories/_components/{CategoryForm,CategoryTable,CreateCategoryDialog,CategoryActionCell}.tsx` | `.../event-categories/_components/{同名}.tsx`                         |
+| 管理画面ルート          | `/admin/spaces` の `categories` タブに埋め込み（専用 page.tsx なし）                                                                      | `events/categories/page.tsx`（専用ルート `/admin/events/categories`） |
+| フォーム内の必須 select | `spaces/_components/SpaceEditForm.tsx` の `details` タブ                                                                                  | `events/_components/EventBasicFields.tsx`（`EventForm` 内）           |
 
 コマンド層は `ensureNameAvailable`（`findFirst` + `isActive:true` スコープの一意性チェック）、`create`（`buildOrderScopeLockSql` advisory lock 下で末尾採番）、`updateOrder`（`buildUuidOrderSqlFragments` の 2 段 UPDATE）、`delete`/`updateActive`（`_count.events` ガード）を `SpaceCategory` からそのまま移植する。
 
