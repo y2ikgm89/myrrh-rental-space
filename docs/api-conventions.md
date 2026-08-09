@@ -73,8 +73,3 @@ JSON ではない成功レスポンス（CSV ダウンロード、redirect、画
 存在しない ID に対しては 404 を返す。ただし**推測可能な ID**（連番など）を
 受ける route では、認可チェックより前に rate limiter を通す。認可の前に
 「存在するかどうか」を答えると、ID を総当たりされたときに列挙に使える。
-
-## 参照
-
-- 実装: [`src/shared/lib/route-responses.ts`](../src/shared/lib/route-responses.ts)
-- 変換テーブルのテスト: [`__tests__/unit/lib/route-responses.test.ts`](../__tests__/unit/lib/route-responses.test.ts)

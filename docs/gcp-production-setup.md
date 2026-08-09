@@ -664,7 +664,7 @@ apply`.
 
 ### Adding a new secret
 
-Phase 6b: Cloud Run runtime env/secrets の SSoT は Terraform。`cloudbuild.yaml`
+Cloud Run runtime env/secrets の SSoT は Terraform。`cloudbuild.yaml`
 の deploy step は `--set-env-vars` / `--set-secrets` を持たない。
 
 1. Add the secret name to `terraform/secrets.tf` `runtime_secrets` (or
@@ -725,7 +725,7 @@ Create the job once (bootstrap). After Terraform adoption, recurring deploys
 update **only the image tag** in `cloudbuild.yaml` Step 4
 (`:migrate-${SHORT_SHA}`). Memory, CPU, tasks, command/args, service account,
 and the `DIRECT_URL` secret binding are owned by
-`terraform/cloud_run_migrate_job.tf` (Phase 6b).
+`terraform/cloud_run_migrate_job.tf`.
 
 Bootstrap create (one-time; prefer Terraform import afterward):
 
@@ -1079,6 +1079,10 @@ Required contract:
 
 - DNS for `admin.myrrh-jp.com` points to the global external HTTPS load
   balancer, not to a direct Cloud Run `run.app` URL.
+  These records are declared by `terraform/cloudflare_dns.tf` (`admin_a` /
+  `admin_aaaa`). What follows is the contract they must satisfy, not a manual
+  procedure — change them through Terraform.
+
 - Cloudflare DNS must contain exactly one DNS-only A record:
   `admin.myrrh-jp.com -> 8.233.111.15`, with `proxied=false`. Do not orange-cloud
   this record; Google-managed certificate provisioning needs the hostname to
@@ -1182,11 +1186,9 @@ resource
 `iap_web/cloud_run-${REGION}/services/${ADMIN_SERVICE_NAME}:getIamPolicy` and
 does not depend on local `gcloud iap web --resource-type=cloud-run` support.
 
-Operational rule:
+Operational rule (infrastructure side only — staff onboarding / offboarding is
+[`docs/admin-access.md`](admin-access.md)):
 
-- staff should use Google accounts;
-- a non-Gmail address is fine only if it is a Google account or managed through
-  Google Workspace / Cloud Identity;
 - do not grant `allUsers` or `allAuthenticatedUsers` to the admin service;
 - do not grant `roles/iap.httpsResourceAccessor` directly to `user:*` members
   in production;
@@ -1432,7 +1434,7 @@ Expected results:
   Recurring Cloud Build deploys update Cloud Run **image only** via
   `gcloud run services update --image` (plus `--scaling=auto` to clear breaking
   quiesce). Runtime env, secrets, and service shape (memory/cpu/probes/ingress/
-  SA) are Terraform SSoT (Phase 6b); deploy steps must not use `--set-env-vars` /
+  SA) are Terraform SSoT; deploy steps must not use `--set-env-vars` /
   `--set-secrets`, and must not rely on
   legacy `--update-*` / `--remove-*` drift cleanup.
   Legacy clean-break names `CRON_SECRET`, `ADMIN_LOGIN_TOKEN`,
@@ -1519,9 +1521,10 @@ The current `cloudbuild.yaml` already handles:
 - Artifact Registry image push;
 - dedicated migrator image;
 - Cloud Run Job update and execution for `bunx --bun prisma migrate deploy`;
-- public and admin Cloud Run deploys with service account, probes, env vars,
-  secrets, public `--ingress=all`, admin
-  `--ingress=internal-and-cloud-load-balancing`, and admin `--no-default-url`.
+- public and admin Cloud Run **image-only** updates. Service account, probes,
+  env vars, secrets, ingress (`--ingress=all` for public,
+  `--ingress=internal-and-cloud-load-balancing` for admin) and
+  `--no-default-url` are Terraform SSoT and are never passed by Cloud Build.
   Recurring deploys do not mutate admin IAP.
 - fail-fast validation for admin `IAP_JWT_AUDIENCE` and the four admin role
   group emails. Initial `SUPER_ADMIN` creation is synced from the super-admin
@@ -1579,20 +1582,15 @@ above as the desired target state, not as proof of the current project state.
 ## Alerting
 
 Cloud Monitoring alert policies and their supporting log-based metrics live
-under `infra/monitoring/`, with a one-page runbook at
-[`docs/observability/alerting.md`](observability/alerting.md). Five signals
-are wired: ReportedErrorEvent burst, severity=CRITICAL, `/api/health` 5xx,
-cron OIDC / config failure, and Prisma pool acquire-timeout. Any change to
-the runtime emit path (severity mapping, log message text, cron gate return
-codes) must ship together with the matching YAML update.
+under `infra/monitoring/`. The signals, thresholds, apply commands, and the
+runtime coupling rules are documented in
+[`docs/observability/alerting.md`](observability/alerting.md) — that file is the
+SSoT, so it is not summarised here.
 
 ## Dead resource cleanup
 
-`CRON_SECRET` (Secret Manager) and
-`calendar-sync@myrrh-rental-space.iam.gserviceaccount.com` (service account)
-are orphaned after the Cloud Scheduler OIDC migration and the Google Calendar
-OAuth removal, respectively. The Claude harness cannot execute the delete
-verbs (`secretmanager.secrets.delete`, `iam.serviceAccounts.delete`) — a
-project owner must run them from a workstation. The pre-delete audit, exact
-delete commands, and post-delete verification live in the checklist at
-[`docs/runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md).
+Orphaned resources left behind by past migrations are deleted through the
+checklist at
+[`docs/runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md),
+which owns the inventory, the pre-delete audit, the exact delete commands, and
+the post-delete verification.

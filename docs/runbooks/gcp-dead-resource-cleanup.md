@@ -316,10 +316,10 @@ bun run gcp:audit-production-iap
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                                                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | Confirm admin UI has webhook secret → merge TF forget PR first → then `gcloud secrets delete RESEND_WEBHOOK_SECRET` (deleting SM while still in TF config recreates an empty container on next apply) |
-| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | After Phase C deploy is green, merge required (`validateProductionEnv` fail-closed) follow-up. Do **not** rotate `versions/1` casually (changes hash space).                                          |
+| Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | TF forget は merge 済（`terraform/secrets.tf` の `removed` block）。残るのは `gcloud secrets delete RESEND_WEBHOOK_SECRET` のみ                              |
+| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | After Phase C deploy is green, merge required (`validateProductionEnv` fail-closed) follow-up. Do **not** rotate `versions/1` casually (changes hash space). |
 
 ## Why the Claude harness cannot run the deletes
 

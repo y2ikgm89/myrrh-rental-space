@@ -47,10 +47,10 @@
  * 中身は絶対規約 #7 で編集できない。
  *
  * `docs/` はかつて**丸ごと**対象外だった。理由は「日付入りの記録だから」で、それ自体は
- * 正しいが、当てはまるのは `superpowers/` `audits/` `investigation/` の 3 つだけ。
+ * 正しいが、当てはまるのは `superpowers/` と `audits/` の 2 つだけ。
  * 残りの docs（runbook・ADR・alerting）は人が従う指示で、そこに畳んだ migration の
  * 名前が残っていれば src と同じだけ人を誤らせる。**上の段落が「指示は走査対象に
- * 戻せ」と言っているのに、docs の指示だけがその外に置かれていた。** 3 つの置き場を
+ * 戻せ」と言っているのに、docs の指示だけがその外に置かれていた。** 2 つの置き場を
  * 名指しで外す形にして揃える（区別は `docs/README.md`）。
  *
  * ## 代わりに使うもの（`__tests__/support/prisma-sources.ts`）
@@ -113,13 +113,12 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
  *
  * かつては `docs/**` を丸ごと外していたが、docs には runbook・ADR・alerting と
  * いった**人が従う指示**も同居している。畳んだ migration の名前は、そこに
- * 書かれていればコードと同じだけ人を誤らせる。除外の根拠が当てはまる 3 つの
+ * 書かれていればコードと同じだけ人を誤らせる。除外の根拠が当てはまる 2 つの
  * 置き場だけを外す（区別は `docs/README.md`）。
  */
 const EXCLUDED_DOC_PREFIXES = [
   join("docs", "superpowers"),
   join("docs", "audits"),
-  join("docs", "investigation"),
 ] as const;
 
 function filesUnder(entry: (typeof SCAN)[number]): string[] {
