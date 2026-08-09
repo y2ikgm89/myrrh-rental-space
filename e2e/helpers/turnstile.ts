@@ -41,10 +41,11 @@ import { expect, test, type Locator, type Page } from "../fixtures/e2e-test";
  * であって、**送信前のトークン取得**にはその制約は掛からない（申込レコードは
  * まだ 1 件も作られていない）。
  *
- * **現在の利用者は `events-registration-toctou-capacity-1` のみ**。
- * `reservation-submit.smoke` は同じ露出を持つが、`load()` が予約ウィザードの
- * step 1〜3 をやり直す形になり required gate への変更規模が別物になるため、
- * 別 PR で配線する。
+ * `reservation-submit.smoke` 側は**毎 push の required gate**（`chromium-smoke`）
+ * なので、踏むと全 PR が止まる。同 spec の `load()` は予約ウィザードの
+ * step 1〜3（日付・時間帯の選択と step 3 の入力）をやり直す —— リロードで
+ * reducer 上の選択もフォーム入力も消えるため、埋め直しまで含めないと
+ * 「何度呼んでも同じ結果」にならない。
  *
  * @see https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
  */
