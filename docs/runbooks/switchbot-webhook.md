@@ -6,7 +6,8 @@ SwitchBot sends `changeReport` events to the public Cloud Run service at:
 POST https://<public-domain>/api/webhooks/switchbot/<path-token>
 ```
 
-The path token is stored encrypted as `settings_switchbot.switchbotWebhookPathToken`.
+The path token is stored encrypted in `settings_switchbot.switchbot_webhook_path_token`
+(Prisma: `SettingsSwitchbot.switchbotWebhookPathToken`, single row with id `"singleton"`).
 SwitchBot does **not** provide inbound webhook signature verification, so authorization
 is path-token based (timing-safe compare) plus `deviceMac` tenant binding.
 
@@ -22,11 +23,19 @@ Implementation:
 | Payload kind   | `context` signal                                          | Handler                                                                           |
 | -------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | Command result | `eventName` + `result` (`success` / `failed` / `timeout`) | `processSwitchBotChangeReport` — createKey / deleteKey outcomes (webhook-primary) |
-| Lock state     | `lockState` string                                        | `processSwitchBotLockStateReport` — lock/door/battery updates                     |
+| Lock state     | `lockState` string                                        | `processSwitchBotLockStateReport` — lockState / battery / lastStateAt のみ更新    |
 
-Unknown `deviceMac` values are logged and acknowledged with `{ handled: false }`
-(no 404 — avoids leaking token validity). Invalid JSON returns 400; wrong/missing
-token returns 404.
+ドア開閉状態 (`lastDoorState`) は webhook では更新されない。route の
+`lockStateContextSchema` は `doorState` を持たず、ハンドラにも渡らない。更新経路は
+管理画面のスマートロック端末一覧「状態を更新」(`refreshSmartLockDeviceState` →
+`GET /devices/{id}/status`) だけで、LOCK_LITE は doorState 非対応なので常に null。
+
+Unknown `deviceMac` values are logged and acknowledged with
+`{ "received": true, "handled": false }`. ここで 404 を返さないのは token の有効性を
+隠すためではない — path token の検証は body を読む前に終わっているので、この時点の
+呼び出し元は既に有効な token を持っている。404 にすると「どの deviceMac が登録済みか」
+を教えることになり、加えて SwitchBot 側の再送を誘発する。Invalid JSON returns 400;
+wrong/missing token returns 404.
 
 ## Register webhook (admin flow)
 
@@ -42,7 +51,9 @@ Steps:
 3. Server flow:
    - `ensureSwitchBotWebhookPathToken()` — mint token if missing (24-byte base64url).
    - `setupWebhook(credentials, url)` — SwitchBot API `POST /webhook/setupWebhook` with `deviceList: "ALL"`.
-4. Success toast: 「Webhookを登録しました」. The webhook URL is **not** returned in the UI (redaction).
+4. 成功表示は**トーストではない** — SwitchBot カード内 Webhook ブロックのインライン
+   バナーに「Webhookを登録しました」が出る（同画面の他操作は `toast.error` を使うので、
+   トーストを探すと見落とす）。webhook URL は UI に返さない（redaction）。
 
 If registration fails, fix credentials/connectivity and retry **Webhookを登録**.
 Existing path token is reused until rotation.
@@ -72,14 +83,24 @@ poll is a secondary path.
 
 1. Confirm webhook is registered (admin SwitchBot section).
 2. Check application logs for `operation: "switchbotWebhook"` / passcode confirmation timeouts.
-3. Stale pending records may be cleared by cron (`expire-stale-pending`); webhook delay tolerance is ~30 minutes.
-4. Re-register webhook if SwitchBot still points at an old URL after failed rotation.
+3. Stale pending records are cleared by the `smart-lock-cleanup` cron
+   (`GET /api/cron/smart-lock-cleanup`, 15 分ごと — `terraform/cloud_scheduler.tf`)。
+   PENDING は 30 分 (`STALE_PENDING_THRESHOLD_MINUTES`) 経過で FAILED、
+   REVOKE_PENDING は 30 分経過で CONFIRMED へ戻る。cron 間隔が 15 分なので確定は
+   最大 45 分後。
+4. SwitchBot 側の登録 URL は**アプリからは確認できない**（`queryWebhookUrls` は
+   クライアントに実装だけあって未配線、path token も UI 非表示）。同一 URL の再登録は
+   冪等なので、判断がつかないならまず **Webhookを登録** を実行する。どうしても現状を
+   見たい場合は SwitchBot アプリ、または Open Token / Secret Key で
+   `POST https://api.switch-bot.com/v1.1/webhook/queryWebhook` を手動実行する。
 
 ### Webhook returns 404
 
 - Path token mismatch (rotated URL not registered on SwitchBot side).
 - SwitchBot integration disabled or token cleared.
-- Wrong service (admin surface does not expose this route on public hostname).
+- SwitchBot に登録した URL が公開ホスト以外を指している。ただしその場合は 404 ではなく
+  IAP のリダイレクト / 403 になる（`/api/webhooks/*` に surface 分離のゲートは無い）。
+  404 が出ている時点で原因は上の 2 つに絞られる。
 
 Fix: save credentials → **Webhookを登録** (or rotate if token compromise suspected).
 
@@ -97,9 +118,19 @@ misconfigured retry storm. Check `X-RateLimit-*` headers and Cloud Logging.
 
 ### Clearing SwitchBot integration
 
-`clearSwitchBotSettings` best-effort `deleteWebhook` before nulling credentials and
-`switchbotWebhookPathToken`. If credentials were already lost, old webhook entries may
-remain on SwitchBot until manually removed in the SwitchBot app.
+`clearSwitchBotSettings` は**破壊的操作**で、「webhook を解除して credentials を消す」
+だけではない。資格情報が復号できる場合:
+
+1. CONFIRMED のパスコードを SwitchBot `deleteKey` で**全件物理失効**させる
+   — 利用中の顧客が解錠できなくなる。
+2. PENDING / REVOKE_PENDING が未解決のまま残っていると
+   「未解決のパスコードが残っているため連携をクリアできません」等で**中断**する。
+   数分待って再実行するか、`smart-lock-cleanup` の stale 処理（30 分）を待つ。
+3. 全パスコードが解消されてから best-effort `deleteWebhook` → credentials と
+   `switchbotWebhookPathToken` の null 化に進む。
+
+資格情報が既に失われている場合は失効処理を丸ごとスキップして即クリアするため、
+SwitchBot 側の webhook 登録と物理パスコードが残置される（SwitchBot アプリで手動削除）。
 
 ## WAF / IP allowlist note
 
@@ -118,8 +149,15 @@ enabling allowlist rules.
 
 ## Related env / infra
 
-| Item                      | Location                                                     |
-| ------------------------- | ------------------------------------------------------------ |
-| Path token crypto purpose | `SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken`         |
-| Proxy rate limit          | `infraEndpointRateLimiter` in `src/shared/lib/rate-limit.ts` |
-| Security accepted risk    | "WAF / IP allowlist note" section above                      |
+| Item                      | Location                                                                |
+| ------------------------- | ----------------------------------------------------------------------- |
+| Path token crypto purpose | `SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken`                    |
+| Proxy rate limit          | `infraEndpointRateLimiter` in `src/shared/lib/rate-limit.ts`            |
+| Security accepted risk    | "WAF / IP allowlist note" section above                                 |
+| Webhook URL のホスト      | `NEXT_PUBLIC_APP_URL`（未設定時 `NEXT_PUBLIC_BASE_URL`）→ `getAppUrl()` |
+
+`NEXT_PUBLIC_*` は build 時に焼き込まれる。公開ドメインを変更したら、再ビルド・
+再デプロイした**あとで** **Webhookを登録** をやり直すこと。やり直さないと SwitchBot 側に
+到達不能な旧 URL が残る。しかも `deleteWebhook` に渡す URL は常に**現在の**
+`getAppUrl()` から組み立てられるので、旧ドメインの登録はアプリからは二度と解除できない
+（SwitchBot アプリで手動削除する）。
