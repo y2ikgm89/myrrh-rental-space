@@ -91,6 +91,26 @@ export function mismatchedImageReferences(
   return out;
 }
 
+/**
+ * lock の解決 → 参照の突き合わせを **1 本の純粋関数**にまとめたもの。
+ *
+ * 部品（`resolvedPlaywrightVersion` / `mismatchedImageReferences`）を個別に
+ * fixture すると、**合成部分**——「どの版数を比較相手に渡すか」——だけが実走査
+ * 専用の経路になり、誰も検証しない。`package.json` を読む実装に戻しても、
+ * 今日は宣言と lock が一致しているので部品の fixture は全部緑のままになる。
+ *
+ * `.claude/rules/testing-unit.md`「fixture が通る経路と、実走査が通る経路を同じに
+ * する」に従い、**実走査も fixture もこの関数だけを呼ぶ**。外部依存（lock の中身・
+ * 走査したソース）は必須引数で受け、既定値を置かない（既定を通るのは実走査だけに
+ * なるため）。
+ */
+export function staleImageReferences(
+  bunLock: string,
+  sources: readonly { readonly file: string; readonly source: string }[],
+): string[] {
+  return mismatchedImageReferences(resolvedPlaywrightVersion(bunLock), sources);
+}
+
 /** 参照が何件見つかったか（gate が空振りしていないことの自己検査に使う）。 */
 export function countImageReferences(
   sources: readonly { readonly file: string; readonly source: string }[],
@@ -108,13 +128,23 @@ function scannedSources(): { file: string; source: string }[] {
   }));
 }
 
-describe("Playwright の Docker イメージ参照", () => {
-  const pinned = resolvedPlaywrightVersion(
-    readFileSync(join(ROOT, "bun.lock"), "utf8"),
-  );
+function readBunLock(): string {
+  return readFileSync(join(ROOT, "bun.lock"), "utf8");
+}
 
+/** 見本用の lock 断片（解決済みエントリの形）。 */
+function lockFixture(version: string): string {
+  return `    "@playwright/test": ["@playwright/test@${version}", "", {}, "sha512-x"],`;
+}
+
+/** 見本用の docs 断片（イメージタグの案内）。 */
+function imageFixture(version: string): string {
+  return `mcr.microsoft.com/playwright:v${version}-noble`;
+}
+
+describe("Playwright の Docker イメージ参照", () => {
   test("解決済み版数の読み取りが壊れていない", () => {
-    expect(pinned).toMatch(/^\d+\.\d+\.\d+/u);
+    expect(resolvedPlaywrightVersion(readBunLock())).toMatch(/^\d+\.\d+\.\d+/u);
 
     // 解決済みエントリを読む
     expect(
@@ -143,32 +173,48 @@ describe("Playwright の Docker イメージ参照", () => {
     expect(countImageReferences(scannedSources())).toBeGreaterThan(0);
   });
 
-  test("すべての参照が pin と一致する", () => {
-    expect(mismatchedImageReferences(pinned, scannedSources())).toEqual([]);
+  test("すべての参照が lock の解決済み版数と一致する", () => {
+    // **実走査も見本も `staleImageReferences` だけを通す。** 部品を別々に呼ぶと
+    // 「lock の版数を比較相手に渡す」合成部分が実走査専用の経路になる。
+    expect(staleImageReferences(readBunLock(), scannedSources())).toEqual([]);
   });
 
   test("判定の見本（gate の判別力）", () => {
-    // 見本の文字列は**連結して組み立てる**。リテラルで書くとこのファイル自身が
-    // 実走査に拾われ、gate が自分の fixture を違反として報告してしまう
-    // （走査対象を「このファイル以外」に狭める免除より、当たらない形で書くほうが
-    // 免除の粒度を説明せずに済む）。
-    const image = (version: string) =>
-      `mcr.microsoft.com/playwright:v${version}-noble`;
+    // 見本の文字列は**組み立てる**。リテラルで書くとこのファイル自身が実走査に
+    // 拾われ、gate が自分の fixture を違反として報告してしまう（走査対象を
+    // 「このファイル以外」に狭める免除より、当たらない形で書くほうがよい）。
 
-    const stale = [{ file: "a.md", source: image("1.61.1") }];
-    const current = [{ file: "b.md", source: image("1.62.1") }];
-    const unrelated = [
-      { file: "c.md", source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble" },
-    ];
-
-    // 1. 取り残された参照が落ちる
-    expect(mismatchedImageReferences("1.62.1", stale)).toHaveLength(1);
-    // 2. 一致する参照は通る
-    expect(mismatchedImageReferences("1.62.1", current)).toEqual([]);
+    // 1. **lock だけが進んだ**ケースが落ちる（この PR の主眼）。
+    //    比較相手を `package.json` の宣言に戻す退行は、ここで赤になる。
+    expect(
+      staleImageReferences(lockFixture("1.62.9"), [
+        { file: "a.md", source: imageFixture("1.62.1") },
+      ]),
+    ).toHaveLength(1);
+    // 2. lock と案内が一致していれば通る
+    expect(
+      staleImageReferences(lockFixture("1.62.9"), [
+        { file: "b.md", source: imageFixture("1.62.9") },
+      ]),
+    ).toEqual([]);
     // 3. 別のイメージは対象外
-    expect(mismatchedImageReferences("1.62.1", unrelated)).toEqual([]);
-    // 4. 空振り検出そのものの見本
-    expect(countImageReferences(current)).toBe(1);
-    expect(countImageReferences(unrelated)).toBe(0);
+    expect(
+      staleImageReferences(lockFixture("1.62.9"), [
+        { file: "c.md", source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble" },
+      ]),
+    ).toEqual([]);
+    // 4. lock が読めない入力は黙って通さない（0 件と区別する）
+    expect(() =>
+      staleImageReferences('  "@playwright/test": "~1.62.1",', []),
+    ).toThrow();
+    // 5. 空振り検出そのものの見本
+    expect(
+      countImageReferences([{ file: "d.md", source: imageFixture("1.62.9") }]),
+    ).toBe(1);
+    expect(
+      countImageReferences([
+        { file: "e.md", source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble" },
+      ]),
+    ).toBe(0);
   });
 });
