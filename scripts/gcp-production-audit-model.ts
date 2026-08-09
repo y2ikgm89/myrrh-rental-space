@@ -183,8 +183,10 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
 ] as const;
 
 export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
-  // Neon pooled runtime URL (Secret Manager DATABASE_URL versions/2).
-  { name: "DATABASE_URL", version: "2" },
+  // Neon pooled runtime URL。version は `terraform/variables.tf` の
+  // `cloud_run_secret_versions` が SSoT で、両者の一致は
+  // `__tests__/unit/architecture/gcp-production-audit-terraform-sync.test.ts` が強制する。
+  { name: "DATABASE_URL", version: "3" },
   { name: "BETTER_AUTH_SECRET", version: "1" },
   { name: "ENCRYPTION_KEY", version: "1" },
   { name: "SECONDARY_ENCRYPTION_KEYS", version: "1" },
@@ -204,11 +206,28 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   { name: "SUPPRESSION_HASH_SECRET", version: "1" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];
 
+// migrate Job は Neon **direct** だけを見る。`prisma.config.ts` の解決順が
+// `DIRECT_URL` → `DATABASE_URL` なので、direct が入っていれば `DATABASE_URL` は
+// 一度も読まれない。version は `terraform/cloud_run_migrate_job.tf` が SSoT。
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS = [
-  // Neon direct: DIRECT_URL:1 + DATABASE_URL:1 (not runtime pooler v2).
-  { name: "DIRECT_URL", version: "1" },
-  { name: "DATABASE_URL", version: "1" },
+  { name: "DIRECT_URL", version: "2" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];
+
+/**
+ * migrate Job に**あってはならない** env。
+ *
+ * かつては「migrate は direct が要る」という理由で `DATABASE_URL` にも direct を
+ * 入れていた。その形は 1 つの secret へ direct と pooled という別物を詰め、
+ * **version 番号だけで意味を区別する**ことになる。切替のたびに pin の張り替えが要り、
+ * 張り替え忘れると migrate が旧 DB を見て `No pending migrations to apply.` を
+ * exit 0 で返す — **切替の失敗が成功として表示される**。役割ごとに secret を分けて
+ * その失敗モードごと無くしたので、`DATABASE_URL` の再混入は検出して落とす。
+ *
+ * @see terraform/cloud_run_migrate_job.tf
+ */
+export const FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES = [
+  "DATABASE_URL",
+] as const;
 
 // 適用前チェック → migrate。`&&` の短絡が要点で、`;` に変えると違反があっても
 // migrate が走り、`_prisma_migrations` に失敗が残って以降のデプロイが全部止まる。

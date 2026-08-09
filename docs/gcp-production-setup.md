@@ -517,11 +517,15 @@ history. Use stdin from a secure local prompt or your password manager.
 
 Required by production startup:
 
-- `DATABASE_URL` (Neon: pooled `-pooler` host for Cloud Run runtime; pin versions/2)
-- `DIRECT_URL` (Neon: direct host for `prisma-migrate` Job / Prisma CLI; pin versions/1)
+- `DATABASE_URL` (Neon: pooled `-pooler` host, **Cloud Run runtime only**; pinned
+  to versions/3 — v2 is the previous database, kept for rollback)
+- `DIRECT_URL` (Neon: direct host, **`prisma-migrate` Job / Prisma CLI only**;
+  pinned to versions/2 — v1 is the previous database, kept for rollback)
 - `BETTER_AUTH_SECRET`
 - `ENCRYPTION_KEY`
+- `SECONDARY_ENCRYPTION_KEYS`
 - `AUDIT_LOG_HMAC_KEY`
+- `SUPPRESSION_HASH_SECRET`
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
@@ -542,7 +546,15 @@ revision at runtime:
 
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
 
-Create each secret once:
+The secret **containers** are declared by `terraform/secrets.tf` (`runtime_secrets`
+/ `build_secrets`), and the version each Cloud Run revision pins is declared by
+`terraform/variables.tf` `cloud_run_secret_versions` (runtime) and
+`terraform/cloud_run_migrate_job.tf` (`DIRECT_URL`, migrate Job only). Those two
+files are the SSoT — `scripts/gcp-production-audit-model.ts` mirrors them and
+`__tests__/unit/architecture/gcp-production-audit-terraform-sync.test.ts` fails
+when the mirror drifts. Only putting the **values** in is an operator step.
+
+Create each secret once (bootstrap, before the first `terraform apply`):
 
 ```bash
 for name in \
@@ -550,7 +562,9 @@ for name in \
   DIRECT_URL \
   BETTER_AUTH_SECRET \
   ENCRYPTION_KEY \
+  SECONDARY_ENCRYPTION_KEYS \
   AUDIT_LOG_HMAC_KEY \
+  SUPPRESSION_HASH_SECRET \
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
   R2_ACCOUNT_ID \
   R2_ACCESS_KEY_ID \
@@ -698,7 +712,7 @@ key.
 Create the job once (bootstrap). After Terraform adoption, recurring deploys
 update **only the image tag** in `cloudbuild.yaml` Step 4
 (`:migrate-${SHORT_SHA}`). Memory, CPU, tasks, command/args, service account,
-and `DATABASE_URL` secret binding are owned by
+and the `DIRECT_URL` secret binding are owned by
 `terraform/cloud_run_migrate_job.tf` (Phase 6b).
 
 Bootstrap create (one-time; prefer Terraform import afterward):
@@ -714,7 +728,7 @@ gcloud run jobs create prisma-migrate \
   --parallelism=1 \
   --max-retries=0 \
   --task-timeout=600s \
-  --set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1 \
+  --set-secrets=DIRECT_URL=DIRECT_URL:2 \
   --command=sh \
   --args=-c,"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"
 ```
@@ -737,12 +751,21 @@ dies partway is recorded in `_prisma_migrations` and blocks every later deploy
 until someone repairs the production database by hand. The `&&` is load-bearing
 — with `;` the migrate runs regardless.
 
-Cloud Run resolves environment variable secrets at instance startup. Pin the
-migrate Job to Neon **direct** secrets (`DIRECT_URL:1` and `DATABASE_URL:1`);
-runtime Cloud Run services pin pooled `DATABASE_URL:2`. Do not use `latest` in
-production. The production audit checks `Cloud Run migrate Job env is canonical`
-and fails if either secret is missing, set as a plain value, or references a
-non-pinned Secret Manager version.
+Cloud Run resolves environment variable secrets at instance startup. The migrate
+Job binds **only** `DIRECT_URL` (pinned `DIRECT_URL:2`, Neon direct host);
+`DATABASE_URL` is deliberately **not** injected into the Job, because
+`prisma.config.ts` resolves `DIRECT_URL` → `DATABASE_URL` in that order and never
+reads the second when the first is set. Runtime Cloud Run services pin pooled
+`DATABASE_URL:3`. Do not use `latest` in production.
+
+Do not put a direct URL back into `DATABASE_URL` "because migrate needs direct".
+That packs two different hosts into one secret and leaves the **version number**
+carrying the meaning, so every database switch needs both pins re-pointed — and a
+forgotten pin makes the migrate Job read the old database, where Prisma reports
+`No pending migrations to apply.` and exits 0. A failed switch then looks like a
+successful one. The production audit checks `Cloud Run migrate Job env is
+canonical` and fails if `DIRECT_URL` is missing, set as a plain value, references
+a non-pinned version, or if `DATABASE_URL` reappears on the Job.
 The audit also checks `Cloud Run migrate Job command is canonical` and fails if
 the Job no longer runs the precondition check before `prisma migrate deploy`.
 The audit also checks `Cloud Run migrate Job execution config is canonical` and
@@ -1377,9 +1400,10 @@ Expected results:
   `Cloud Run migrate Job execution config is canonical`; the public service,
   admin service, and migrate Job must all run as `$RUNTIME_SA`, not the Compute
   Engine default service account, and the migrate Job must bind `DIRECT_URL`
-  from `DIRECT_URL:1` and `DATABASE_URL` from `DATABASE_URL:1` (Neon direct;
-  not the runtime pooler pin) while running
-  `bunx --bun prisma migrate deploy` as one task, one parallel task, no retries,
+  from `DIRECT_URL:2` (Neon direct; `DATABASE_URL` must be absent from the Job)
+  while running
+  `sh -c "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"`
+  as one task, one parallel task, no retries,
   600 second task timeout, 1 vCPU, and 1Gi memory.
   Recurring Cloud Build deploys update Cloud Run **image only** via
   `gcloud run services update --image` (plus `--scaling=auto` to clear breaking
@@ -1392,8 +1416,11 @@ Expected results:
   runtime env.
 - The audit checks `required Secret Manager versions are enabled` using
   `gcloud secrets versions describe` metadata only. Every production secret
-  referenced by Cloud Run must point at the pinned numeric version `1`, and that
-  version must report `state=ENABLED`; do not use `latest` for production.
+  referenced by Cloud Run must point at the numeric version listed for it in
+  `scripts/gcp-production-audit-model.ts` `REQUIRED_CLOUD_RUN_SECRET_ENV_REFS`
+  (which mirrors `terraform/variables.tf` `cloud_run_secret_versions`; most are
+  `1`, `DATABASE_URL` is `3`), and that version must report `state=ENABLED`; do
+  not use `latest` for production.
 - The audit checks `required Secret Manager accessor IAM is least privilege`
   with `gcloud secrets get-iam-policy`, and checks
   `project IAM has no broad Secret Manager accessor grants` on the project IAM
@@ -1513,9 +1540,11 @@ The audited production target posture is:
    `run.googleapis.com/default-url-disabled` set to `true`;
 10. public, admin, and migrate Cloud Run resources all use `$RUNTIME_SA` as
     their service identity;
-11. the migrate Job runs `bunx --bun prisma migrate deploy` with `DATABASE_URL`
-    bound from Secret Manager version `1`, one task, one parallel task, no
-    retries, a 600 second task timeout, 1 vCPU, and 1Gi memory;
+11. the migrate Job runs
+    `sh -c "bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"`
+    with `DIRECT_URL` bound from Secret Manager version `2` and no `DATABASE_URL`
+    binding, one task, one parallel task, no retries, a 600 second task timeout,
+    1 vCPU, and 1Gi memory;
 12. `bun run gcp:audit-production-iap` is the gate for proving the live posture
     still matches this target after infrastructure changes.
 
