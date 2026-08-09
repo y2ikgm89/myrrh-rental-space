@@ -3,7 +3,7 @@
 - 起票: 2026-07-26
 - 方針: 公式・本リポジトリ推奨に沿い、後方互換 shim なし
 - 破壊的変更: 許可済み
-- 前提: `2026-07-26-payment-off-receipt-guest-status-design.md`（ゲスト `/reservation/status`・領収書通知）
+- 前提: ゲスト `/reservation/status` と領収書通知が先行して実装済みであること
 
 ## 1. 目標
 

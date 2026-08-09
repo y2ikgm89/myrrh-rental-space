@@ -16,13 +16,13 @@
 ## 調査で確定した事実 (前提)
 
 - **`TermsDocument` は versioning していない**。同一 `id` を上書き更新する SSoT モデルで、履歴は `TermsAgreement.contentSnapshot` (同意時 HTML 全文) + `contentHash: sha256(contentSnapshot)` (`prisma/schema.prisma:1770-1771`) が担っている
-- **`TermsAgreement` は append-only**。update/updateMany/delete/deleteMany/upsert は src 全域で grep gate 禁止 (rule §9 + [`db-domain.md`](../../../.claude/rules/db-domain.md#不変レコードシングルトン))。再同意は必ず「新規 insert」で表現する
+- **`TermsAgreement` は append-only**。update/updateMany/delete/deleteMany/upsert は src 全域で grep gate 禁止 (当時の rule §9「不変レコードシングルトン」)。再同意は必ず「新規 insert」で表現する
 - **`TermsAgreement` は `(termsId, scope, agreedAt)` の複合レコード**。同一 `termsId` でも scope 違いは独立した契約として扱う。よって「予約フォームで RESERVATION scope 同意した」ことは LOGIN_SIGNUP scope 契約の代替にはならない
 - **既存 gate `assertAllRequiredTermsAgreed` は 4 経路で稼働中**: RESERVATION / INQUIRY / EVENT_REGISTRATION / RESERVATION_SERIES scope で「client claim 集合 ⊇ サーバー側 required 集合」を強制 (`src/shared/lib/terms-consent-gate.ts`, `src/shared/domain/terms/queries.ts`)。**LOGIN_SIGNUP scope の gate は初回 cookie 消費のみで、以後は無い**
 - **既存 SSoT: `getRequiredTermsByScope(scope)`** が `scopes: { has: scope }` で ARRAY contains 検索する SSoT (`src/shared/domain/terms/queries.ts:207-232`)。'use cache' 経由
 - **`MypageAuthGate` (async SC)** は `await connection()` 冒頭 → `verifyCustomerSession` → `ensureCustomerLinked` → isActive check → email 未登録 redirect の順に gate 判定を積んでおり、そこに新規 gate を追加できる余地がある (`src/app/(public)/mypage/layout.tsx:50-81`)
 - **mypage 配下の page 群** (現存): `/mypage`, `/mypage/events`, `/mypage/inquiries`, `/mypage/inquiries/[id]`, `/mypage/reservations/[id]`, `/mypage/reservations/[id]/edit`, `/mypage/settings`
-- **cookie mutation は Server Component から不可** (Next.js 公式 canonical、[`app-structure.md`](../../../.claude/rules/app-structure.md))。ただし本設計では cookie を触らない (cookie 経路は初回 signup 専用)
+- **cookie mutation は Server Component から不可** (Next.js 公式 canonical)。ただし本設計では cookie を触らない (cookie 経路は初回 signup 専用)
 - **PII を含むクエリは `"use cache"` 禁止** ([[project_cache-pii-leak-projectwide-audit-2026-06-17]])。customer 単位の再同意判定は生 Prisma で書く
 
 ## 外部検証
