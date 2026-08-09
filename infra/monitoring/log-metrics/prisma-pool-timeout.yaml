@@ -1,7 +1,26 @@
-# Counts Prisma "connection pool exhausted" / "acquire timeout" errors emitted
-# by the runtime. Prisma surfaces P2024 and P2028 for the pool exhaustion /
-# transaction-scope timeout paths, plus the raw error message
-# "Timed out fetching a new connection from the connection pool" from pg-pool.
+# Counts connection-pool acquire timeouts emitted by the runtime.
+#
+# The strings below are MEASURED, not assumed. This app runs Prisma 7 with the
+# `@prisma/adapter-pg` driver adapter, so the pool is node-postgres' `pg.Pool`
+# and the Rust query engine's pool is not in the path. That means the Prisma
+# pool errors — `P2024` / `P2028` and the message
+# "Timed out fetching a new connection from the connection pool" — are never
+# produced here. A filter written against them matches nothing, and the alert
+# that depends on it can never fire.
+#
+# What actually reaches the logs (reproduced against a socket that accepts but
+# never completes the Postgres handshake, so no database is required):
+#
+#   acquire deadline exceeded  -> Error "timeout exceeded when trying to connect"
+#   connect deadline exceeded  -> Error "Connection terminated due to connection timeout"
+#
+# Neither carries a `code`, so only the message text is matchable. The fourth
+# branch catches the idle-client / transaction-connection paths, which
+# `logPoolError` in `src/shared/db/prisma.ts` tags with
+# `context.operation = "prismaPool"`.
+#
+# `__tests__/unit/db/prisma-pool-timeout-signal.test.ts` re-runs that
+# reproduction and fails if a pg / Prisma upgrade changes the wording.
 #
 # Apply with:
 #   gcloud logging metrics create prisma_pool_timeout \
@@ -11,10 +30,10 @@ filter: |-
   resource.type="cloud_run_revision"
   resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
   (
-    textPayload:"Timed out fetching a new connection from the connection pool"
-    OR jsonPayload.message:"Timed out fetching a new connection from the connection pool"
-    OR jsonPayload.message:"P2024"
-    OR jsonPayload.message:"P2028"
+    textPayload:"timeout exceeded when trying to connect"
+    OR jsonPayload.message:"timeout exceeded when trying to connect"
+    OR jsonPayload.message:"Connection terminated due to connection timeout"
+    OR jsonPayload.context.operation="prismaPool"
   )
 
 description: |-

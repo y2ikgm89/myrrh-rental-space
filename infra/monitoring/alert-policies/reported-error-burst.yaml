@@ -6,8 +6,9 @@
 # operations. > 20 events / 5 min sustained for two windows is the smallest
 # signal that is worth waking someone.
 #
-# Apply with:
-#   gcloud alpha monitoring policies create \
+# Apply with (the `alpha` surface is no longer needed — `monitoring policies`
+# is GA, and the alpha component is not installed by default):
+#   gcloud monitoring policies create \
 #     --policy-from-file=infra/monitoring/alert-policies/reported-error-burst.yaml
 #
 # Update by policy display-name — see docs/observability/alerting.md.

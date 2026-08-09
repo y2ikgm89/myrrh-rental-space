@@ -21,7 +21,8 @@ documentation:
        `(httpRequest.status=401 OR httpRequest.status=500)`
     2. Compare `CRON_OIDC_AUDIENCE` and `CRON_SERVICE_ACCOUNT_EMAIL` in the
        running revision against the Cloud Scheduler job config
-       (`scripts/setup-cloud-scheduler.sh`).
+       (`terraform/cloud_scheduler.tf` — `locals.cron_jobs` and the
+       `oidc_token` block are the SSoT).
     3. Runbook: docs/gcp-production-setup.md → "Cron / Cloud Scheduler".
   mimeType: "text/markdown"
 
