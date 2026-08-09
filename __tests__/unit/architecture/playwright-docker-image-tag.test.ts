@@ -1,6 +1,6 @@
 /**
- * ドキュメントが指す Playwright 公式 Docker イメージのタグが、`package.json` の
- * pin と一致していることの gate。
+ * ドキュメントが指す Playwright 公式 Docker イメージのタグが、**実際に install
+ * される** Playwright の版数（`bun.lock` の解決済みエントリ）と一致していることの gate。
  *
  * ## なぜ
  *
@@ -11,6 +11,11 @@
  * baseline を作る（visual regression では即座に偽の差分になる）。
  *
  * 版数を定数にできない場所（散文・JSDoc）なので、**一致を機械で見る**。
+ *
+ * 比較相手は `package.json` の宣言（`~1.62.1`）**ではない**。Renovate の
+ * `lockFileMaintenance`（weekly / automerge）は lock だけを 1.62.x の後続へ
+ * 進められるので、宣言を見ていると「宣言が動いていないから docs も正しい」と
+ * 誤判定する。CI が実際に入れる版数＝lock の解決済みエントリを見る。
  *
  * ## 走査範囲
  *
@@ -27,23 +32,38 @@ import { trackedTextFiles } from "../../support/tracked-files";
 
 const ROOT = process.cwd();
 
-/** `mcr.microsoft.com/playwright:v1.62.1-noble` のような参照を拾う。 */
+/**
+ * `mcr.microsoft.com/playwright:v<version>-noble` の形の参照を拾う。
+ *
+ * ここに具体的な版数を書かない — このファイル自身が実走査の対象なので、
+ * 例示のつもりの版数が「取り残された参照」として報告される。
+ */
 const IMAGE_REFERENCE = /mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-/gu;
 
-/** `package.json` の `@playwright/test` pin から版数だけを取り出す。 */
-export function pinnedPlaywrightVersion(packageJson: string): string {
-  const parsed: unknown = JSON.parse(packageJson);
-  const dev =
-    typeof parsed === "object" && parsed !== null && "devDependencies" in parsed
-      ? (parsed as { devDependencies: Record<string, string> }).devDependencies
-      : {};
-  const range = dev["@playwright/test"];
-  if (typeof range !== "string") {
-    throw new Error("@playwright/test が devDependencies にない");
-  }
-  const version = /(\d+\.\d+\.\d+)/u.exec(range)?.[1];
+/**
+ * `bun.lock` から **実際に install される** `@playwright/test` の版数を取り出す。
+ *
+ * `package.json` の宣言（`~1.62.1`）を読むと、Renovate の
+ * `lockFileMaintenance`（`.github/renovate.json5`、weekly / automerge）が
+ * lock だけを 1.62.x の後続へ進めたときに**宣言は動かない**。docs のイメージ
+ * タグは「CI が入れる Playwright」と揃っていないと意味が無いので、範囲の下限
+ * ではなく解決済みの版数を見る。
+ *
+ * lock は JSONC なので JSON.parse は使わず、解決済みエントリの形
+ * （`"@playwright/test": ["@playwright/test@1.62.1", …]`）を直接読む。
+ * 同じファイルには宣言側の `"@playwright/test": "~1.62.1"` も現れるので、
+ * **配列 + `name@version` の形**でしか一致しないようにしてある。
+ */
+export function resolvedPlaywrightVersion(bunLock: string): string {
+  const match =
+    /"@playwright\/test":\s*\[\s*"@playwright\/test@(\d+\.\d+\.\d+[^"]*)"/u.exec(
+      bunLock,
+    );
+  const version = match?.[1];
   if (!version) {
-    throw new Error(`@playwright/test の pin から版数を取れない: ${range}`);
+    throw new Error(
+      "bun.lock に @playwright/test の解決済みエントリが見つからない",
+    );
   }
   return version;
 }
@@ -89,17 +109,33 @@ function scannedSources(): { file: string; source: string }[] {
 }
 
 describe("Playwright の Docker イメージ参照", () => {
-  const pinned = pinnedPlaywrightVersion(
-    readFileSync(join(ROOT, "package.json"), "utf8"),
+  const pinned = resolvedPlaywrightVersion(
+    readFileSync(join(ROOT, "bun.lock"), "utf8"),
   );
 
-  test("pin の読み取りが壊れていない", () => {
-    expect(pinned).toMatch(/^\d+\.\d+\.\d+$/u);
+  test("解決済み版数の読み取りが壊れていない", () => {
+    expect(pinned).toMatch(/^\d+\.\d+\.\d+/u);
+
+    // 解決済みエントリを読む
     expect(
-      pinnedPlaywrightVersion(
-        '{"devDependencies":{"@playwright/test":"~1.62.1"}}',
+      resolvedPlaywrightVersion(
+        '  "@playwright/test": ["@playwright/test@1.62.3", "", {}, "sha512-x"],',
       ),
-    ).toBe("1.62.1");
+    ).toBe("1.62.3");
+
+    // **宣言側の範囲は拾わない。** ここを取り違えると lock だけが進んだときに
+    // 「宣言は 1.62.1 のままなので docs も 1.62.1 で正しい」と誤判定する。
+    expect(() =>
+      resolvedPlaywrightVersion('        "@playwright/test": "~1.62.1",'),
+    ).toThrow();
+
+    // 宣言と解決済みが同居していても解決済みを選ぶ
+    expect(
+      resolvedPlaywrightVersion(
+        '        "@playwright/test": "~1.62.1",\n' +
+          '    "@playwright/test": ["@playwright/test@1.62.9", "", {}, "sha512-y"],',
+      ),
+    ).toBe("1.62.9");
   });
 
   test("参照が 1 件以上見つかる（gate が空振りしていない）", () => {
