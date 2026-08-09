@@ -375,13 +375,12 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: bunx --bun prisma generate
 
-      - name: Run database migrations
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma migrate deploy
-
-      - name: Seed test database
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma db seed
+      # migrate / seed はここでやらない。Playwright の webServer chain
+      # (`playwright.config.ts`) が `test:db:migrate` → `bun prisma/seed.ts --dev` を
+      # **毎回実行する**ので、先に流しても同じ DB を 2 度作り直すだけになる
+      # (`prisma db seed` は引数なし = dev モードで、chain の `--dev` と同一経路)。
+      # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
+      # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
 
       - name: Build application
         if: needs.changes.outputs.code == 'true'
@@ -513,11 +512,12 @@ jobs:
       - name: Generate Prisma client
         run: bunx --bun prisma generate
 
-      - name: Run database migrations
-        run: bunx --bun prisma migrate deploy
-
-      - name: Seed test database
-        run: bunx --bun prisma db seed
+      # migrate / seed はここでやらない。Playwright の webServer chain
+      # (`playwright.config.ts`) が `test:db:migrate` → `bun prisma/seed.ts --dev` を
+      # **毎回実行する**ので、先に流しても同じ DB を 2 度作り直すだけになる
+      # (`prisma db seed` は引数なし = dev モードで、chain の `--dev` と同一経路)。
+      # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
+      # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
 
       - name: Build application
         run: bun run build:skip-env:prepared
@@ -755,6 +755,11 @@ jobs:
       - name: Generate Prisma client
         run: bunx --bun prisma generate
 
+      # この 2 step が要るのは **Lighthouse job だけ**。lhci は
+      # `scripts/lhci-start.ts` (`next start` + readiness poll のみ) でサーバーを
+      # 起動し、Playwright の webServer chain を通らないため、DB の準備はここでしか
+      # 行われない。E2E / smoke / visual の 3 job では chain が同じことをするので
+      # 置いていない。
       - name: Run database migrations
         run: bunx --bun prisma migrate deploy
 
@@ -843,11 +848,12 @@ jobs:
       - name: Generate Prisma client
         run: bunx --bun prisma generate
 
-      - name: Run database migrations
-        run: bunx --bun prisma migrate deploy
-
-      - name: Seed test database
-        run: bunx --bun prisma db seed
+      # migrate / seed はここでやらない。Playwright の webServer chain
+      # (`playwright.config.ts`) が `test:db:migrate` → `bun prisma/seed.ts --dev` を
+      # **毎回実行する**ので、先に流しても同じ DB を 2 度作り直すだけになる
+      # (`prisma db seed` は引数なし = dev モードで、chain の `--dev` と同一経路)。
+      # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
+      # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
 
       - name: Build application
         run: bun run build:skip-env:prepared

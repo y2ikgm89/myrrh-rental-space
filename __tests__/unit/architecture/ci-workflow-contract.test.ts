@@ -123,17 +123,51 @@ describe("CI workflow contract", () => {
     expect(bundleAnalysisJob).not.toContain("Generate Prisma client");
   });
 
-  test("uses prepared skip-env builds after E2E jobs generate and seed Prisma", () => {
-    for (const jobName of ["smoke-e2e", "e2e-tests", "visual-regression"]) {
+  test("prepared skip-env build を使う job は自分で Prisma client を生成する", () => {
+    // `build:skip-env:prepared` は `prisma generate` を**含まない**（"prepared" の意味）。
+    // 生成 step を job から落とすと、build が生成済み client を前提に落ちる。
+    for (const jobName of [
+      "smoke-e2e",
+      "e2e-tests",
+      "visual-regression",
+      "lighthouse-ci",
+    ]) {
       const job = extractJob(jobName);
 
-      expect(job).toContain("Generate Prisma client");
-      expect(job).toContain("Seed test database");
       expect(job).toContain("run: bun run build:skip-env:prepared");
+      expect(job).toContain("Generate Prisma client");
       expect(job).not.toContain("run: bun run build:skip-env\n");
     }
 
     const bundleSizeDiffJob = extractJob("bundle-size-diff");
     expect(bundleSizeDiffJob).toContain('build-script: "build:skip-env"');
+  });
+
+  test("Playwright webServer を使う job は migrate / seed を二重に流さない", () => {
+    // chain（`playwright.config.ts`）が `test:db:migrate` →
+    // `bun prisma/seed.ts --dev` を**毎回**実行する。job 側にも置くと同じ DB を
+    // 2 度作り直すだけになる（`prisma db seed` は引数なし = dev モードで同一経路）。
+    for (const jobName of ["smoke-e2e", "e2e-tests", "visual-regression"]) {
+      const job = extractJob(jobName);
+
+      expect(job).not.toContain("run: bunx --bun prisma migrate deploy");
+      expect(job).not.toContain("run: bunx --bun prisma db seed");
+    }
+
+    // Lighthouse は chain を通らない（`scripts/lhci-start.ts` は `next start` と
+    // readiness poll だけ）ので、この 2 step が**唯一の DB 準備**。外すと
+    // 空の DB に対して計測することになる。
+    const lighthouseJob = extractJob("lighthouse-ci");
+    expect(lighthouseJob).toContain("run: bunx --bun prisma migrate deploy");
+    expect(lighthouseJob).toContain("run: bunx --bun prisma db seed");
+
+    // **依存している側だけでなく、依存されている側も見る。** chain から seed が
+    // 消えたら「どちらにも無い」状態になるので、ここで落とす。
+    const playwrightConfig = readFileSync(
+      join(process.cwd(), "playwright.config.ts"),
+      "utf8",
+    );
+    expect(playwrightConfig).toContain("bun run test:db:migrate");
+    expect(playwrightConfig).toContain("bun prisma/seed.ts --dev");
   });
 });
