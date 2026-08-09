@@ -116,11 +116,9 @@ documentation:
   - changed-files:
       - any-glob-to-any-file:
           - "**/*.md"
+          # `**/*.md` に包含されるが残す — docs/ に図版など非 markdown を置いた
+          # ときに無言でラベルが付かなくなるのを防ぐ。
           - "docs/**"
-          - "README.md"
-          - ".github/CONTRIBUTING.md"
-          - ".github/SECURITY.md"
-          - "CHANGELOG.md"
 
 # ============================================================================
 # セキュリティ

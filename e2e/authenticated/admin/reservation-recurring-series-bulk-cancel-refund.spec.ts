@@ -66,7 +66,7 @@
  * 並列干渉を隔離する (rules `testing-e2e.md` §並列化)。
  *
  * @see PR #1179 / PR #1201 (PERF-02-FIX)
- * @see docs/audits/2026-07-18-mypage-implementation-audit.md
+ * @see docs/audits/mypage-audit-2026-07-18.md
  */
 
 import { test, expect } from "../../fixtures/e2e-test";

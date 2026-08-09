@@ -27,8 +27,10 @@ import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
  *   boundary に flip して mypage が表示されない。Next.js 公式 canonical pattern (Server Action +
  *   Client Component) に従い隔離する。
  *
- *   - 公式: docs/01-app/02-guides/data-security.mdx "BAD: Triggering Mutation During Rendering"
- *   - 公式 e2e: test/e2e/app-dir/phase-changes/app/cookies/action-to-render
+ *   - 公式: https://nextjs.org/docs/app/guides/data-security
+ *     "Avoiding side-effects during rendering" (`// BAD: Triggering a mutation during rendering`)
+ *   - 公式 e2e: vercel/next.js の
+ *     `test/e2e/app-dir/phase-changes/app/cookies/action-to-render`
  *
  * 法務的順序保証: `recordTermsAgreementsCommand` を await した後に cookie を削除する。
  * 旧版は cookie を先に消していたため、記録失敗時に同意 evidence が永久消失していた
