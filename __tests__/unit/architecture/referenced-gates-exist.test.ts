@@ -41,8 +41,20 @@
  * - `__tests__/**` — テスト間の相互参照には「この形は禁止」を示す架空パスが
  *   混ざりうるうえ、消えた gate を名指しして「もう無い」と書く clean-break
  *   テストが成立しなくなる
- * - `docs/**` — 日付入りの記録。当時の事実を書いたもので、指示ではない
+ * - `docs/superpowers/**` `docs/audits/**` `docs/investigation/**` — 日付入りの
+ *   記録。当時の事実を書いたもので、指示ではない
  *   （`gates-do-not-pin-migrations` と同じ線引き）
+ *
+ * ## 「docs は記録だから」を docs 全体に広げない
+ *
+ * 初版は `docs/` を丸ごと外していた。だが docs 配下には runbook・ADR・alerting と
+ * いった**人が従う指示**が同居していて、そこに実在しない gate 名を書けば
+ * 上の docstring が説明した実害がそのまま起きる。除外の根拠（記録である）が
+ * 当てはまるのは 3 つの置き場だけなので、そこだけ外す。
+ *
+ * 狭める前に実測した: 指示側の 5 参照は 0 件破損、記録側の 151 参照は 20 件破損。
+ * つまりこの線引きは今日そのまま通り、以後は指示文書だけが守られる。
+ * 置き場の区別は `docs/README.md` が説明する。
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -58,7 +70,19 @@ const ROOT = process.cwd();
 const TEST_FILE_REFERENCE = /__tests__\/[A-Za-z0-9_./()@-]+\.test\.tsx?/gu;
 
 /** 参照が古びてよい場所。理由は docstring 参照。 */
-const EXCLUDED_PREFIXES = ["__tests__/", "docs/"] as const;
+const EXCLUDED_PREFIXES = [
+  "__tests__/",
+  "docs/superpowers/",
+  "docs/audits/",
+  "docs/investigation/",
+] as const;
+
+/** 除外が広がりすぎて指示文書ごと落ちていないことの見張り。 */
+const SCANNED_DOC_SAMPLES = [
+  "docs/runbooks/encryption-key-rotation.md",
+  "docs/observability/alerting.md",
+  "docs/adr/README.md",
+] as const;
 
 function scannedFiles(): string[] {
   return trackedTextFiles(ROOT).filter(
@@ -78,7 +102,18 @@ export function referencedTestPaths(source: string): string[] {
 describe("散文が指す gate は実在する", () => {
   test("走査対象が実在する（gate 自体が空振りしていない）", () => {
     // git 呼び出しが壊れると 0 件で緑になる。
-    expect(scannedFiles().length).toBeGreaterThan(1000);
+    const files = scannedFiles();
+    expect(files.length).toBeGreaterThan(1000);
+
+    // 除外は「記録の置き場」だけ。指示文書まで巻き込むと、この gate は
+    // docs に対して何も言わない状態へ静かに戻る。
+    const scanned = new Set(files);
+    for (const doc of SCANNED_DOC_SAMPLES) {
+      expect({ doc, scanned: scanned.has(doc) }).toEqual({
+        doc,
+        scanned: true,
+      });
+    }
   });
 
   test("参照の抽出が効いている（fixture）", () => {

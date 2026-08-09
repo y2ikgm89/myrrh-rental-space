@@ -6,8 +6,9 @@
 - **現行の手順・決定** — 今の本番と一致していることが求められる。ずれていたら
   バグとして直す。
 - **日付入りの記録** — 書かれた時点の事実。当時の PR や調査の記録であって、
-  今の仕様書ではない。**現行との一致を求めない**（`__tests__/unit/architecture/`
-  の gate 群が `docs/**` を検査対象から外しているのはこの性質のため）。
+  今の仕様書ではない。**現行との一致を求めない**（`superpowers/` / `audits/` /
+  `investigation/` の 3 つが `referenced-gates-exist` と
+  `gates-do-not-pin-migrations` の検査対象外なのはこの性質のため）。
 
 ## 現行の手順・決定
 
@@ -28,13 +29,12 @@
 
 ## 日付入りの記録
 
-| 置き場               | 中身                                                |
-| -------------------- | --------------------------------------------------- |
-| `superpowers/specs/` | 実装前の設計文書（`YYYY-MM-DD-<topic>-design.md`）  |
-| `superpowers/plans/` | 実装計画とタスク分解（`YYYY-MM-DD-<topic>.md`）     |
-| `audits/`            | 監査の記録                                          |
-| `investigation/`     | 単発の調査ログ                                      |
-| `AUDIT_REPORT.md`    | 2026-07-29 時点の全コードベース監査スナップショット |
+| 置き場               | 中身                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `superpowers/specs/` | 実装前の設計文書（`YYYY-MM-DD-<topic>-design.md`）     |
+| `superpowers/plans/` | 実装計画とタスク分解（`YYYY-MM-DD-<topic>.md`）        |
+| `audits/`            | 監査の記録（全コードベース監査のスナップショット含む） |
+| `investigation/`     | 単発の調査ログ                                         |
 
 読むときの注意:
 
@@ -55,5 +55,11 @@
 
 現行の手順を足したら、この README の表にも 1 行足すこと。ここに載っていない
 運用文書は、実質的に誰にも見つけられない。
+
+この 3 つの置き場（`superpowers/` / `audits/` / `investigation/`）は
+`referenced-gates-exist` と `gates-do-not-pin-migrations` の**検査対象外**。
+それ以外の docs 配下は検査される — 「これは X.test.ts が検証する」「migration
+YYYYMMDDHHMMSS が作った」と書いたら、実在すること・畳んでも嘘にならないことが
+求められる。**現行の手順を記録の置き場に置かない**こと。
 
 `docs/api/` は TypeDoc の生成物（git 管理外）。手で置いたものではない。
