@@ -25,6 +25,11 @@ import {
  * `CancellationReasonDialog.tsx` と同型の「プリセット + 自由入力」パターン。
  * 件名 (Input) + 本文 (Textarea) の2フィールドを持つ点がキャンセル理由ダイアログ
  * (自由入力1フィールド) との違い。
+ *
+ * **`EMAIL_TEMPLATE_REGISTRY` からのテンプレート選択にはしない。** 既存テンプレートは
+ * 全て `reservationId` / `eventDate` 等のドメイン固有引数を要求する取引メールで、
+ * 任意の顧客集合へ送るマーケティング用途には引数を埋められない。プリセットを
+ * 「レジストリ選択に置き換える」提案は、この点を先に解決してから。
  */
 
 const BODY_PRESETS = [

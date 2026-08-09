@@ -37,6 +37,16 @@ interface CustomerBulkActionsProps {
   onClear: () => void;
 }
 
+/**
+ * 顧客一括操作バー（テーブル選択時にフローティング表示）。
+ *
+ * 有効化/無効化・ステータス変更・匿名化・一括メール送信で `useTransition` を
+ * **1 つだけ共有する**（操作ごとに分けない）。バー内の全トリガーが
+ * `disabled={isPending}` で、`AnonymizeCustomerConfirmDialog` /
+ * `CustomerBulkEmailDialog` にも同じ `isPending` を渡すため、実行中に別操作を
+ * 開始できず共有でも実害が無い。`ReservationBulkActions.tsx` も単一 useTransition。
+ * 分割する場合は、この disabled 伝搬をトリガー単位に置き換えてから行うこと。
+ */
 export function CustomerBulkActions({
   selectedIds,
   onClear,

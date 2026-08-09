@@ -265,10 +265,14 @@ guest連絡先編集は他フィールドと同じ `updateReservationFormSchema`
   `eventRegistrations: CustomerEventRegistrationRecord[]` を追加（既存フィールドの型は変更しない
   加算のみのため非破壊）。`CustomerDetail.tsx` に既存の予約履歴カードと同型の
   「イベント参加履歴」カードを追加。
-- `CustomerBulkActions.tsx` に一括メール送信を追加。テンプレート選択（`EMAIL_TEMPLATE_REGISTRY` から）
-  または自由文（ユーザー決定）を選べるダイアログとし、`marketingOptIn: true` の選択顧客のみを送信対象と
-  する（同意ゲート）。自由文はプレーンテキストとしてエスケープ描画し、既存のブランド付きメールレイアウト内に
+- `CustomerBulkActions.tsx` に一括メール送信を追加。ダイアログは「定型文プリセット + 自由入力」
+  （`CancellationReasonDialog` / `RefundDialog` の `REASON_PRESETS` 方式）とし、自由文で送れること
+  （ユーザー決定）は維持する。`marketingOptIn: true` の選択顧客のみを送信対象とする（同意ゲート）。
+  自由文はプレーンテキストとしてエスケープ描画し、既存のブランド付きメールレイアウト内に
   埋め込む（raw HTML 注入は許可しない、XSS/なりすまし対策）。
+  - **実装時訂正**: 当初案の「テンプレート選択（`EMAIL_TEMPLATE_REGISTRY` から）」は却下した。
+    当時 26 種あった既存テンプレートは全て `reservationId` / `eventDate` 等のドメイン固有引数を
+    要求する取引メールで、任意の顧客集合へ送るマーケティング用途には引数を埋められない。
 
 ### エラー処理
 
