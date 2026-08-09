@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(bun run validate)",
+      "Bash(bun run type-check)",
+      "Bash(bun run lint:files *)",
+      "Bash(bun run test:unit)",
+      "Bash(bun run test:integration)",
+      "Bash(bun run test *)",
+      "Bash(bun scripts/run-tests.ts *)",
+      "Bash(bun run db:generate)",
+      "Bash(bun run format:check)",
+      "Bash(bunx playwright test *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.test)",
+      "Read(./.env.development)",
+      "Read(./.env.production)",
+      "Read(./playwright/.auth/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-verification-bypass.mjs"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
