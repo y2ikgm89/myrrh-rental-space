@@ -62,6 +62,35 @@ const TURNSTILE_TOKEN_FIELD_NAME = "turnstileToken";
 /** 1 回の `load()` あたりのトークン待ち（既定）。 */
 export const TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS = 15_000;
 
+/**
+ * `load()` の中の**遷移** 1 回あたりの上限（既定）。
+ *
+ * Playwright Test の `navigationTimeout` / `actionTimeout` は**既定 0（無制限）**で、
+ * `playwright.config.ts` もどちらも設定していない。`attemptTimeoutMs` が縛るのは
+ * トークン待ちの assertion だけなので、`load()` の中で `goto` や click が 1 回でも
+ * 固まると **test 本体の予算を丸ごと食い潰す**。そうなると page ごと閉じられ、
+ * 2 回目の attempt も失敗時の診断も失われる
+ * （`.claude/rules/testing-e2e.md`「test 本体を timeout させない」）。
+ *
+ * 呼び出し側に「全部の呼び出しに timeout を書け」と要求する形は必ず書き漏れる
+ * （実測: 予約 smoke の `loadAndFillForm` は `goto` だけ縛って click / press /
+ * fill / check の 10 箇所が無制限のままだった）ので、**page の既定値**として
+ * 一括で掛ける。
+ */
+export const TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS = 10_000;
+
+/**
+ * `load()` の中の**アクション**（click / press / fill / check）1 回あたりの上限（既定）。
+ *
+ * ページが描画済みなら実測はミリ秒オーダーなので 100 倍以上の余裕がある。
+ * `expect` 既定の 5 秒まで詰めると、負荷の高い runner で click の actionability
+ * 待ち（可視・安定・pointer events 受理）が一時的に伸びたときに偽の失敗を生む
+ * ——「固まったら速く報告する」ことと「遅いだけの回を落とさない」ことの折衷で
+ * `STEP_TIMEOUT_MS`（20 秒）の半分に置く。余裕は上限の大きさではなく回数
+ * （`maxAttempts`）で持つ方針。
+ */
+export const TURNSTILE_LOAD_ACTION_TIMEOUT_MS = 10_000;
+
 /** `load()` をやり直す上限（既定 2 = 1 回だけ作り直す）。 */
 export const TURNSTILE_TOKEN_MAX_ATTEMPTS = 2;
 
@@ -86,6 +115,10 @@ export interface AcquireTurnstileTokenOptions {
   readonly attemptTimeoutMs?: number;
   /** `load()` の実行回数上限。既定 {@link TURNSTILE_TOKEN_MAX_ATTEMPTS}。 */
   readonly maxAttempts?: number;
+  /** `load()` 中の遷移 1 回の上限。既定 {@link TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS}。 */
+  readonly loadNavigationTimeoutMs?: number;
+  /** `load()` 中のアクション 1 回の上限。既定 {@link TURNSTILE_LOAD_ACTION_TIMEOUT_MS}。 */
+  readonly loadActionTimeoutMs?: number;
 }
 
 /**
@@ -102,6 +135,35 @@ export async function acquireTurnstileToken(
   const attemptTimeoutMs =
     options.attemptTimeoutMs ?? TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS;
   const maxAttempts = options.maxAttempts ?? TURNSTILE_TOKEN_MAX_ATTEMPTS;
+
+  // `load()` の中の遷移・アクションを page の既定値で一括して縛る（理由は
+  // `TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS` の docstring）。呼び出し側が個々の
+  // 呼び出しに `{ timeout }` を書いていればそちらが優先される。
+  page.setDefaultNavigationTimeout(
+    options.loadNavigationTimeoutMs ?? TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS,
+  );
+  page.setDefaultTimeout(
+    options.loadActionTimeoutMs ?? TURNSTILE_LOAD_ACTION_TIMEOUT_MS,
+  );
+  try {
+    return await acquireWithBoundedLoads(page, options, {
+      attemptTimeoutMs,
+      maxAttempts,
+    });
+  } finally {
+    // helper の外の挙動を黙って変えない。0 = `playwright.config.ts` の既定
+    // （どちらも未設定 = 無制限）へ戻す。
+    page.setDefaultNavigationTimeout(0);
+    page.setDefaultTimeout(0);
+  }
+}
+
+async function acquireWithBoundedLoads(
+  page: Page,
+  options: AcquireTurnstileTokenOptions,
+  resolved: { readonly attemptTimeoutMs: number; readonly maxAttempts: number },
+): Promise<number> {
+  const { attemptTimeoutMs, maxAttempts } = resolved;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     await options.load();

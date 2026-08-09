@@ -4,6 +4,7 @@ import { pickBookableDateInNextMonth } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
 import {
   acquireTurnstileToken,
+  TURNSTILE_LOAD_ACTION_TIMEOUT_MS,
   TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS,
   TURNSTILE_TOKEN_MAX_ATTEMPTS,
 } from "../helpers/turnstile";
@@ -163,13 +164,27 @@ async function loadAndFillForm(
  * `loadAndFillForm` 1 回ぶんの最悪ケース。**手書きの数値を置かない** —— 関数内の
  * bounded な待ちを 1 本ずつ数え上げる。待ちを足したらここにも足す。
  */
+/**
+ * click / press / fill / check が 1 つ上限に達したときの追加分。
+ *
+ * これらは `{ timeout }` を個別に持たない。`acquireTurnstileToken` が page の既定
+ * action timeout として一括で縛る（縛らないと 1 回の遅い操作が test 本体の予算を
+ * 食い潰し、この **required gate** が固まったまま数分報告しない、Codex #2072 の指摘）。
+ *
+ * **全 13 アクションぶんを合算はしない。** 1 つでも上限に達した時点で例外が伝播して
+ * test はそこで終わるので、上限に達しうるのは高々 1 回。合算すると required gate の
+ * timeout が 10 分になり、報告がかえって遅くなる。
+ */
+const LOAD_BOUND_SLACK_MS = TURNSTILE_LOAD_ACTION_TIMEOUT_MS;
+
 const LOAD_WORST_CASE_MS =
   STEP_TIMEOUT_MS + // goto: スペース詳細
   STEP_TIMEOUT_MS + // 予約ウィザードへの遷移確定
   STEP_TIMEOUT_MS + // step 2「日時選択」group の可視化
   STEP_TIMEOUT_MS + // 月送りボタンの可視化
   STEP_TIMEOUT_MS + // 対象日セルの可視化
-  STEP_TIMEOUT_MS; // step=3 への遷移確定
+  STEP_TIMEOUT_MS + // step=3 への遷移確定
+  LOAD_BOUND_SLACK_MS;
 
 /**
  * トークン取得の最悪ケース。`acquireTurnstileToken` は attempt ごとに `load()` から
