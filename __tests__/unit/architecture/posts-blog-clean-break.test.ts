@@ -78,7 +78,7 @@ describe("posts public URL clean break", () => {
 
     // baseline の**存在**は要求しない。baseline は CI の
     // workflow_dispatch(update_visual_baseline=true) が生成する成果物であり、
-    // 再生成待ちの間は空になる（testing-e2e.md § visual regression）。
+    // 再生成待ちの間は空になる。
     // ここで固定したいのは「legacy な posts-* 命名が残っていないこと」。
     expect(
       snapshotNames.filter((name) => name.startsWith("posts-list")),

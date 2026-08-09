@@ -184,23 +184,30 @@ describe("Playwright の Docker イメージ参照", () => {
     // 拾われ、gate が自分の fixture を違反として報告してしまう（走査対象を
     // 「このファイル以外」に狭める免除より、当たらない形で書くほうがよい）。
 
+    // `file` は `staleImageReferences` / `countImageReferences` の判定に使われない
+    // ラベル。**`.md` で終わる名前を使わない** — 実在しない doc を名指しした形になり、
+    // `src-doc-pointers-resolve` と同じ「宙吊り参照」に見える。免除を置く代わりに、
+    // 形で fixture と分かる名前にする（`gates-do-not-pin-migrations` と同じ流儀）。
     // 1. **lock だけが進んだ**ケースが落ちる（この PR の主眼）。
     //    比較相手を `package.json` の宣言に戻す退行は、ここで赤になる。
     expect(
       staleImageReferences(lockFixture("1.62.9"), [
-        { file: "a.md", source: imageFixture("1.62.1") },
+        { file: "fixture-stale", source: imageFixture("1.62.1") },
       ]),
     ).toHaveLength(1);
     // 2. lock と案内が一致していれば通る
     expect(
       staleImageReferences(lockFixture("1.62.9"), [
-        { file: "b.md", source: imageFixture("1.62.9") },
+        { file: "fixture-match", source: imageFixture("1.62.9") },
       ]),
     ).toEqual([]);
     // 3. 別のイメージは対象外
     expect(
       staleImageReferences(lockFixture("1.62.9"), [
-        { file: "c.md", source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble" },
+        {
+          file: "fixture-other-image",
+          source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble",
+        },
       ]),
     ).toEqual([]);
     // 4. lock が読めない入力は黙って通さない（0 件と区別する）
@@ -209,11 +216,16 @@ describe("Playwright の Docker イメージ参照", () => {
     ).toThrow();
     // 5. 空振り検出そのものの見本
     expect(
-      countImageReferences([{ file: "d.md", source: imageFixture("1.62.9") }]),
+      countImageReferences([
+        { file: "fixture-counted", source: imageFixture("1.62.9") },
+      ]),
     ).toBe(1);
     expect(
       countImageReferences([
-        { file: "e.md", source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble" },
+        {
+          file: "fixture-uncounted",
+          source: "mcr.microsoft.com/dotnet/sdk:v1.61.1-noble",
+        },
       ]),
     ).toBe(0);
   });

@@ -16,8 +16,8 @@ import { join, relative, sep } from "node:path";
  * `fullyParallel: true` + 共有 test DB という構成上、この汚染は spec 単位では
  * 検出できない。したがって「復元は必ず hook で行う」を静的に強制する。
  *
- * マーカーは「`fullyParallel` を describe 単位で打ち消す宣言」。testing-e2e.md の
- * 規約上、シングルトン行を mutate する describe は順序固定が必須なので、これが
+ * マーカーは「`fullyParallel` を describe 単位で打ち消す宣言」。シングルトン行を
+ * mutate する describe は順序固定が必須（並列だと他 spec と踏み合う）なので、これが
  * 「グローバル可変状態を触る spec」の実質的な検出条件になる（bun 側の
  * `serial-db-test-detection.ts` が content marker + opt-out で serial bucket を
  * 判定するのと同型）。

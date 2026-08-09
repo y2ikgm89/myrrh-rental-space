@@ -63,7 +63,8 @@
  *   - afterAll で fixture + Settings を restore
  *
  * Settings singleton を mutate するため `test.describe.serial` で他 spec との
- * 並列干渉を隔離する (rules `testing-e2e.md` §並列化)。
+ * 並列干渉を隔離する。復元を hook で行うことは
+ * `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が強制する。
  *
  * @see PR #1179 / PR #1201 (PERF-02-FIX)
  * @see docs/audits/mypage-audit-2026-07-18.md

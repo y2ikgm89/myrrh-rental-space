@@ -124,7 +124,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
   });
 
   /**
-   * 根本原因調査（task-1-report.md 追記参照）: `updateEventRegistrationCommand` は
+   * 根本原因: `updateEventRegistrationCommand` は
    * fire-and-forget 副作用を一切持たない純粋な Prisma ドメインコマンドのため、
    * cancel 系コマンド（`applyCancellationSideEffects` の detached promise）向けの
    * 「1s sleep で pool drain」パターンはそもそも適用対象外だった（前実装者の誤流用）。

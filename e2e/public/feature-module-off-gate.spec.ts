@@ -105,7 +105,8 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  * - シングルトン行 mutation のため `test.describe.configure({ mode: "default" })`
  *   で順序を固定する（`test.describe.serial` は使わない — 理由は describe 直上）。
  * - 管理面へのアクセスは storageState ではなく webServer env
- *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬 (rules の testing-e2e.md 参照)。
+ *   `ADMIN_TEST_IAP_EMAIL` による IAP 模擬（`getTestIapEmail` in
+ *   `src/shared/domain/admin-auth/session.ts` が loopback Host 等の条件下でのみ読む）。
  *   `chromium` project は setup-admin dependency を持たないため、spec 側で
  *   `ensureAdminUser()` を明示する。復元 hook が `browser.newPage()` で開く
  *   context だけは fixture の client IP 割当が効かないので
@@ -115,7 +116,8 @@ import { ensureAdminUser } from "../helpers/ensure-admin-user";
  *   (`updateFeatureModulesCommand` が persist 前に `normalizeFeatureModules` を
  *   適用する write-side SSoT)。所有範囲を依存カスケード閉包で取るのはこのため。
  * - APP_SURFACE=public で webServer が起動している場合、proxy が /admin を 404 に
- *   するため spec 全体を skip する (rules の app-structure.md 参照)。ローカル
+ *   するため spec 全体を skip する（`src/proxy.ts` の
+ *   `PUBLIC_SURFACE_BLOCKED_PATH_PREFIXES`）。ローカル
  *   既定と CI の chromium project は APP_SURFACE=admin で動作する。
  */
 

@@ -74,8 +74,7 @@ const DISABLED_BADGE_LABEL = "非公開";
 /**
  * 復元対象は **この spec が所有する module だけ** に限定する。
  *
- * `testing-e2e.md` は「復元は触った 1 件ではなく対象全件を既定値に揃える」と
- * 定めているが、あれは `feature-module-off-gate.spec.ts` —— 対象 5 module の
+ * 一般則は「復元は触った 1 件ではなく対象全件を既定値に揃える」だが、あれは `feature-module-off-gate.spec.ts` —— 対象 5 module の
  * **唯一の所有者** —— に向けた規約。本 spec が同じことをすると害になる:
  *
  * `feature-module-off-gate.spec.ts` は `chromium` project、本 spec は
@@ -113,7 +112,7 @@ const OWNED_MODULE_LABELS = Object.values(OWNED_FEATURE_MODULES);
  * Card は `rounded-md` なので `div.rounded-lg` は行だけに一致する。
  *
  * `.filter({ visible: true })` は React streaming の hidden staging copy を
- * 落とすため (rules の testing-e2e.md「id セレクタ禁止」と同じ理由。CSS
+ * 落とすため（「id セレクタ禁止」と同じ理由。CSS
  * セレクタは a11y ツリー非公開の複製にも一致する)。
  */
 function moduleSwitch(page: Page, moduleLabel: string): Locator {
