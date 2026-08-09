@@ -35,6 +35,7 @@ import {
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_MAX_RETRIES,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_MEMORY_LIMIT,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_PARALLELISM,
+  FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_TASK_COUNT,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_TIMEOUT_SECONDS,
@@ -1049,7 +1050,7 @@ describe("GCP production audit model", () => {
 
   test("requires Cloud Run services to bind every production secret env var to the pinned version", () => {
     expect(REQUIRED_CLOUD_RUN_SECRET_ENV_REFS).toEqual([
-      { name: "DATABASE_URL", version: "2" },
+      { name: "DATABASE_URL", version: "3" },
       { name: "BETTER_AUTH_SECRET", version: "1" },
       { name: "ENCRYPTION_KEY", version: "1" },
       { name: "SECONDARY_ENCRYPTION_KEYS", version: "1" },
@@ -1156,144 +1157,80 @@ describe("GCP production audit model", () => {
     ]);
   });
 
-  test("requires Cloud Run migrate Job to bind DIRECT_URL and DATABASE_URL to direct secret versions", () => {
+  test("requires Cloud Run migrate Job to bind only DIRECT_URL to the direct secret version", () => {
     expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS).toEqual([
-      { name: "DIRECT_URL", version: "1" },
-      { name: "DATABASE_URL", version: "1" },
+      { name: "DIRECT_URL", version: "2" },
     ]);
+    expect(FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES).toEqual(["DATABASE_URL"]);
+
+    const migrateJobConfig = {
+      serviceName: "prisma-migrate",
+      expectedEnv: {},
+      requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
+      forbiddenEnvNames: FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
+    };
+    const migrateJobDescription = (
+      env: readonly Record<string, unknown>[],
+    ): unknown => {
+      return {
+        spec: {
+          template: { spec: { template: { spec: { containers: [{ env }] } } } },
+        },
+      };
+    };
 
     expect(
       readCloudRunRuntimeEnvErrors(
-        {
-          spec: {
-            template: {
-              spec: {
-                template: {
-                  spec: {
-                    containers: [
-                      {
-                        env: [
-                          {
-                            name: "DIRECT_URL",
-                            valueFrom: {
-                              secretKeyRef: {
-                                name: "DIRECT_URL",
-                                key: "1",
-                              },
-                            },
-                          },
-                          {
-                            name: "DATABASE_URL",
-                            valueFrom: {
-                              secretKeyRef: {
-                                name: "DATABASE_URL",
-                                key: "1",
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-            },
+        migrateJobDescription([
+          {
+            name: "DIRECT_URL",
+            valueFrom: { secretKeyRef: { name: "DIRECT_URL", key: "2" } },
           },
-        },
-        {
-          serviceName: "prisma-migrate",
-          expectedEnv: {},
-          requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
-        },
+        ]),
+        migrateJobConfig,
       ),
     ).toEqual([]);
 
     expect(
       readCloudRunRuntimeEnvErrors(
-        {
-          spec: {
-            template: {
-              spec: {
-                template: {
-                  spec: {
-                    containers: [
-                      {
-                        env: [
-                          {
-                            name: "DIRECT_URL",
-                            valueFrom: {
-                              secretKeyRef: {
-                                name: "DIRECT_URL",
-                                key: "1",
-                              },
-                            },
-                          },
-                          {
-                            name: "DATABASE_URL",
-                            valueFrom: {
-                              secretKeyRef: {
-                                name: "DATABASE_URL",
-                                key: "latest",
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-            },
+        migrateJobDescription([
+          {
+            name: "DIRECT_URL",
+            valueFrom: { secretKeyRef: { name: "DIRECT_URL", key: "1" } },
           },
-        },
-        {
-          serviceName: "prisma-migrate",
-          expectedEnv: {},
-          requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
-        },
+        ]),
+        migrateJobConfig,
       ),
     ).toEqual([
-      "prisma-migrate DATABASE_URL must reference Secret Manager version 1",
+      "prisma-migrate DIRECT_URL must reference Secret Manager version 2",
     ]);
+
+    // 旧 DB を指したまま `No pending migrations to apply.` で exit 0 になる形へ
+    // 戻していないこと。`DATABASE_URL` の再混入はここで落ちる。
+    expect(
+      readCloudRunRuntimeEnvErrors(
+        migrateJobDescription([
+          {
+            name: "DIRECT_URL",
+            valueFrom: { secretKeyRef: { name: "DIRECT_URL", key: "2" } },
+          },
+          {
+            name: "DATABASE_URL",
+            valueFrom: { secretKeyRef: { name: "DATABASE_URL", key: "1" } },
+          },
+        ]),
+        migrateJobConfig,
+      ),
+    ).toEqual(["prisma-migrate DATABASE_URL must be removed"]);
 
     expect(
       readCloudRunRuntimeEnvErrors(
-        {
-          spec: {
-            template: {
-              spec: {
-                template: {
-                  spec: {
-                    containers: [
-                      {
-                        env: [
-                          {
-                            name: "DIRECT_URL",
-                            value: "not-a-secret-ref",
-                          },
-                          {
-                            name: "DATABASE_URL",
-                            value: "not-a-secret-ref",
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          serviceName: "prisma-migrate",
-          expectedEnv: {},
-          requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
-        },
+        migrateJobDescription([
+          { name: "DIRECT_URL", value: "not-a-secret-ref" },
+        ]),
+        migrateJobConfig,
       ),
-    ).toEqual([
-      "prisma-migrate DIRECT_URL must be bound from Secret Manager",
-      "prisma-migrate DATABASE_URL must be bound from Secret Manager",
-    ]);
+    ).toEqual(["prisma-migrate DIRECT_URL must be bound from Secret Manager"]);
   });
 
   test("requires Cloud Run migrate Job to run the canonical Prisma deploy command", () => {

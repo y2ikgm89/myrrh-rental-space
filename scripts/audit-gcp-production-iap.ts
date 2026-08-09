@@ -16,6 +16,7 @@ import {
   getProductionHttpAuditTargets,
   readAmbiguousAdminRolePrincipalErrors,
   getExpectedSecretManagerSecretAccessorMembers,
+  FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
@@ -758,7 +759,10 @@ async function main(): Promise<void> {
       serviceName: migrateJobName,
       expectedEnv: {},
       requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
-      forbiddenEnvNames: forbiddenCloudRunRuntimeEnvNames,
+      forbiddenEnvNames: [
+        ...forbiddenCloudRunRuntimeEnvNames,
+        ...FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
+      ],
     },
   );
   addCheck(

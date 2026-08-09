@@ -277,9 +277,13 @@ describe("GCP production setup runbook", () => {
   });
 
   test("pins Cloud Run migrate Job environment secrets to numeric versions", () => {
-    expect(runbook).toContain(
-      "--set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1",
-    );
+    // migrate Job は direct だけを見る。`DATABASE_URL` を混ぜる形へ戻すと、
+    // 意味が version 番号に乗り、pin の張り替え忘れで旧 DB を指したまま
+    // `No pending migrations to apply.` が exit 0 で返る。
+    // 実体の SSoT は `terraform/cloud_run_migrate_job.tf`（同期は
+    // `__tests__/unit/architecture/gcp-production-audit-terraform-sync.test.ts`）。
+    expect(runbook).toContain("--set-secrets=DIRECT_URL=DIRECT_URL:2");
+    expect(runbook).not.toContain("DATABASE_URL=DATABASE_URL:1");
     expect(runbook).toContain("--command=sh");
     expect(runbook).toContain(
       '--args=-c,"bun scripts/migration-preconditions.ts && bunx --bun prisma migrate deploy"',
