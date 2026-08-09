@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/e2e-test";
 import {
   acquireTurnstileToken,
+  TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS,
   TURNSTILE_TOKEN_MAX_ATTEMPTS,
   turnstileTokenInput,
 } from "../helpers/turnstile";
@@ -63,8 +64,13 @@ const STALLED_LOADS = 1;
  */
 const ATTEMPT_TIMEOUT_MS = 10_000;
 
-/** 遷移・hydration ぶんの固定オーバーヘッド見積り。 */
-const NAVIGATION_BUDGET_MS = 20_000;
+/**
+ * 遷移ぶんの上限。**見積りではなく実際に効いている bound を使う。**
+ * `acquireTurnstileToken` が page の既定 navigation timeout として掛けるので、
+ * ここに同じ値を足せば予算が実際の上限を覆う（`load()` は `goto` 1 回だけ）。
+ */
+const NAVIGATION_BUDGET_MS =
+  TURNSTILE_TOKEN_MAX_ATTEMPTS * TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS;
 
 test.describe("Turnstile トークン取得の stall 回復", () => {
   // 待ちが `TURNSTILE_TOKEN_MAX_ATTEMPTS` 回発生する（1 回目は必ず空振り）。

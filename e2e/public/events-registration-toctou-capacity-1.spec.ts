@@ -12,6 +12,7 @@ import {
 import { uniqueEmail } from "../fixtures";
 import {
   acquireTurnstileToken,
+  TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS,
   TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS,
   TURNSTILE_TOKEN_MAX_ATTEMPTS,
 } from "../helpers/turnstile";
@@ -276,9 +277,23 @@ async function classifyOutcome(page: Page): Promise<"success" | "sold-out"> {
  * どちらも死ぬ。ここが定数から導出されていれば、待ちを 1 つ足したときに
  * 自動で追随する。
  */
+/**
+ * `load()` の中の遷移・アクションが 1 つ上限に達したときの追加分。
+ *
+ * `acquireTurnstileToken` が page の既定 timeout としてこれらを縛る（縛らないと
+ * 1 回の遅い操作が test 本体の予算を食い潰す、Codex #2071/#2072 の指摘）。
+ *
+ * **全操作ぶんを合算はしない。** 1 つでも上限に達した時点で例外が伝播して test は
+ * そこで終わるので、上限に達しうるのは高々 1 回。全部を足すと（実測 13.4 秒の test に）
+ * 12 分の timeout を与えることになり、固まったときの報告がかえって遅くなる。
+ */
+const LOAD_BOUND_SLACK_MS = TURNSTILE_LOAD_NAVIGATION_TIMEOUT_MS;
+
+const LOAD_WORST_CASE_MS = SECTION_VISIBLE_TIMEOUT_MS + LOAD_BOUND_SLACK_MS;
+
 const PREPARE_ATTEMPT_WORST_CASE_MS =
   TURNSTILE_TOKEN_MAX_ATTEMPTS *
-    (SECTION_VISIBLE_TIMEOUT_MS + TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS) +
+    (LOAD_WORST_CASE_MS + TURNSTILE_TOKEN_ATTEMPT_TIMEOUT_MS) +
   SUBMIT_ENABLED_TIMEOUT_MS;
 
 const TEST_TIMEOUT_MS =
