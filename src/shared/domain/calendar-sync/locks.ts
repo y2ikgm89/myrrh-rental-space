@@ -42,7 +42,9 @@ import { prisma } from "@/shared/db/prisma";
  * 他の用途と衝突しないよう固定値を割り当てる。将来別の cron / webhook で
  * 排他ロックが必要になった場合は別 ID を採番する。
  */
-export const CALENDAR_SYNC_LOCK_ID = 728349;
+import { CALENDAR_SYNC_LOCK_ID } from "@/shared/domain/advisory-lock-namespaces";
+
+export { CALENDAR_SYNC_LOCK_ID };
 
 /**
  * Calendar Sync 用 advisory lock を非ブロッキングで取得する。

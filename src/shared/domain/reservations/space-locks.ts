@@ -1,4 +1,5 @@
 import "server-only";
+import { SPACE_SCHEDULE_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 type SpaceLockClient = {
   readonly $executeRaw: (
@@ -19,7 +20,7 @@ export async function lockSpaceForTransaction(
   tx: SpaceLockClient,
   spaceId: string,
 ): Promise<void> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(728351::int4, hashtext(${spaceId}))`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SPACE_SCHEDULE_LOCK_NAMESPACE}::int4, hashtext(${spaceId}))`;
 }
 
 /** 複数 Space への cancel / bulk write 前に id 昇順で 728351 を取得（deadlock 予防）。 */

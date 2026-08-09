@@ -147,7 +147,7 @@ export async function createWalkInRegistrationCommand(data: {
  * | email          | 任意 (null 許容)                 | 必須 (呼出側 Zod で強制)         |
  * | 確認メール送信   | 送らない (walk-in 契約)          | 送る (呼出側 action で fire)    |
  * | customerId     | null                            | null                           |
- * | 定員 TOCTOU 防止 | pg_advisory_xact_lock(728350)   | 同 (共通契約)                   |
+ * | 定員 TOCTOU 防止 | `lockEventRegistrationForTransaction` | 同 (共通契約)             |
  *
  * `createWalkInRegistrationCommand` と大部分の実装が共通だが、下記の理由で
  * 別 command として並置している (共通化はしない):
@@ -169,7 +169,7 @@ export async function createAdminProxyRegistrationCommand(data: {
   return prisma.$transaction(
     async (tx) => {
       // 定員 TOCTOU 防止: createWalkInRegistrationCommand と同じ event 単位の
-      // advisory xact lock (728350) を先頭で取得。walk-in / 公開申込と直列化される。
+      // advisory xact lock を先頭で取得。walk-in / 公開申込と直列化される。
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${data.eventId}))`;
 
       const event = await tx.event.findFirst({

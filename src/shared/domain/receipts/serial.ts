@@ -8,7 +8,9 @@ import { formatJstDateString } from "@/shared/lib/date-format";
  * 予約/申込単位ロック (hashtext(entityId)) と ReceiptSequence 単一行ロック
  * (hashtext("receipt-sequence")) の両方で共有する。
  */
-export const RECEIPT_LOCK_NAMESPACE = 728353;
+import { RECEIPT_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
+
+export { RECEIPT_LOCK_NAMESPACE };
 
 export type ReceiptTx = Parameters<
   Parameters<typeof prisma.$transaction>[0]

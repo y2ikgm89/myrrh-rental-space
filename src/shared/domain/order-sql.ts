@@ -3,7 +3,7 @@ import "server-only";
 import { Prisma } from "@generated/prisma/client";
 
 const TEMP_ORDER_BASE = -1_000_000;
-const ORDER_SCOPE_LOCK_NAMESPACE = 728351;
+import { SPACE_SCHEDULE_LOCK_NAMESPACE as ORDER_SCOPE_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 /**
  * Unique order indexes cannot tolerate direct swaps such as 0 <-> 1.

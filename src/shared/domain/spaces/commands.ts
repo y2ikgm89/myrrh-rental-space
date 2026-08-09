@@ -35,6 +35,7 @@ import {
   SPACE_NAME_MAX_LENGTH,
   SPACE_SLUG_BASE_MAX_LENGTH,
 } from "@/shared/lib/validations/space-limits";
+import { SPACE_DEVICE_CONSISTENCY_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 type SpaceCommandInput = {
   slug: string;
@@ -226,11 +227,11 @@ export async function updateSpaceCommand(
   // Architecture rule: array form $transaction is banned; use interactive form.
   return prisma.$transaction(async (tx) => {
     // このスペースに対する locationId 読取〜smartLockDeviceId 更新の判定を、
-    // setSpaceSmartLockDeviceCommand（同じ 728352 lock namespace）と直列化する。
+    // setSpaceSmartLockDeviceCommand（同じ namespace）と直列化する。
     // ロックなしでは、直後の findUnique と update の間に他のリクエストが
     // smartLockDeviceId を書き換えても検知できず、異なる拠点のデバイスを
     // 残したまま上書きしてしまう（Codexレビュー指摘 P2, PR#929）。
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728352::int4, hashtext(${id}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SPACE_DEVICE_CONSISTENCY_LOCK_NAMESPACE}::int4, hashtext(${id}))`;
 
     const before = await tx.space.findUnique({
       where: { id, isActive: true },

@@ -453,7 +453,9 @@ describe("display order surfaces clean-break contract", () => {
     expect(migration.length).toBeGreaterThan(0);
 
     expect(helper).toContain("const TEMP_ORDER_BASE = -1_000_000;");
-    expect(helper).toContain("const ORDER_SCOPE_LOCK_NAMESPACE = 728351;");
+    // 番号そのものは `src/shared/domain/advisory-lock-namespaces.ts` が SSoT。
+    // ここは「helper が自前で採番していないこと」だけを見る。
+    expect(helper).toContain('from "@/shared/domain/advisory-lock-namespaces"');
     expect(helper).toContain("buildUuidOrderSqlFragments");
     // 全 ID が uuid に統一された (PR #1908) ので、キャスト無しの text 版は削除した。
     // 再導入すると bind parameter が `unknown` のまま文脈依存で解決される状態に戻る。

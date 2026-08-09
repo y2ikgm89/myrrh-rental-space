@@ -14,13 +14,17 @@ import {
   normalizeError,
   type ErrorSeverity as ErrorSeverityType,
 } from "@/shared/lib/errors/server";
+import {
+  EVENT_REGISTRATION_REFUND_LOCK_NAMESPACE,
+  RESERVATION_REFUND_LOCK_NAMESPACE,
+} from "@/shared/domain/advisory-lock-namespaces";
 
 /**
  * Payment refund advisory lock namespaces.
  */
 export const PAYMENT_REFUND_LOCK_NAMESPACE = {
-  reservation: 728355,
-  "event-registration": 728356,
+  reservation: RESERVATION_REFUND_LOCK_NAMESPACE,
+  "event-registration": EVENT_REGISTRATION_REFUND_LOCK_NAMESPACE,
 } as const;
 
 export type PaymentRefundEntityKind =

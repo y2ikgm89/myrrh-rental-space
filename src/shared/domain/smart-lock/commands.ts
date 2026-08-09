@@ -22,6 +22,7 @@ import {
   isSmartLockPadDeviceType,
   SMART_LOCK_BODY_DEVICE_TYPES,
 } from "@/shared/lib/validations/enums/helpers";
+import { SPACE_DEVICE_CONSISTENCY_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -512,7 +513,7 @@ export async function setSpaceSmartLockDeviceCommand(
     // updateSpaceCommand の拠点変更判定（同じ 728352 lock namespace）と直列化する。
     // ロックなしでは、この読取と update の間に拠点変更が挟まった場合、
     // 異なる拠点のデバイスが残ってしまう（Codexレビュー指摘 P2, PR#929）。
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728352::int4, hashtext(${spaceId}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SPACE_DEVICE_CONSISTENCY_LOCK_NAMESPACE}::int4, hashtext(${spaceId}))`;
 
     const space = await tx.space.findUnique({
       where: { id: spaceId },
