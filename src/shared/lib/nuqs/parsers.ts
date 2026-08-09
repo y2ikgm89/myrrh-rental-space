@@ -768,6 +768,11 @@ export async function loadAdminEventSearchParams(
 // 管理画面: イベントカテゴリ
 // ============================================================
 
+/**
+ * キーに `cat*` のような prefix を付けない。専用ルート (`/admin/events/categories`) で
+ * 単独の URL を持つため、同一 URL に他のタブの query key が同居しない。
+ * prefix が要るのは `/admin/spaces` のような埋め込みタブ構成の方。
+ */
 export const adminEventCategorySearchParamsParsers = {
   search: parseAsQuery,
   includeInactive: parseAsBoolean.withDefault(false),

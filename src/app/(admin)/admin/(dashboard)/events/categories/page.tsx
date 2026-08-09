@@ -1,3 +1,13 @@
+/**
+ * /admin/events/categories — イベントカテゴリー管理
+ *
+ * `/admin/spaces` のような**ページ内タブ埋め込みにはしない**。`/admin/events` は
+ * URL query key `tab` を既にステータス絞り込み (open/past/draft/cancelled/all) に
+ * 使っており、カテゴリー管理を同じ `tab` に相乗りさせると 2 つの意味が衝突する。
+ * 同じ `/admin/events` 配下の `seo/page.tsx` と同じ「ハブの直下に独立ルートを足す」形。
+ * （`/admin/posts` はカテゴリー管理をタブ埋め込みにしているが、あちらの `tab` は
+ * 分類軸専用で衝突しない。）
+ */
 import { Suspense } from "react";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";

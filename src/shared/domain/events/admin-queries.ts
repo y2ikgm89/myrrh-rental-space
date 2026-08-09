@@ -247,6 +247,15 @@ export async function getLocationsForEvent() {
   });
 }
 
+/**
+ * EventForm の必須 select 用のカテゴリー一覧。
+ *
+ * 公開ページ用の `getActiveEventCategories()` は再利用しない。あちらは
+ * `"use cache"` + `cacheLife` + `cacheTag` を持ち、さらに `safeFetch({ fallback: [] })`
+ * で包まれているため **DB 障害時に例外ではなく空配列を返す**。管理フォームに流用すると
+ * 障害時に `EventBasicFields.tsx` の「カテゴリーが登録されていません」分岐へ落ち、
+ * 実際には存在するカテゴリーを「未登録」と誤表示する。
+ */
 export async function getCategoriesForEvent() {
   return prisma.eventCategory.findMany({
     where: { isActive: true },
