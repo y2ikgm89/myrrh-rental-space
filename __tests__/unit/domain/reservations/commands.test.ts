@@ -328,6 +328,7 @@ import { createPublicReservationCommand } from "@/shared/domain/reservations/pub
 import { validateStatusTransition } from "@/shared/domain/reservations/status";
 import { DomainError } from "@/shared/domain/domain-error";
 import { nthCall } from "../../../support/definite";
+import { SPACE_SCHEDULE_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -609,7 +610,11 @@ describe("createAdminReservationCommand", () => {
         .find((sql) => sql.includes("pg_advisory_xact_lock"));
 
       expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
-      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
+      // bind は [namespace, key] の順（namespace は採番 SSoT から来る定数）。
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(
+        SPACE_SCHEDULE_LOCK_NAMESPACE,
+      );
+      expect(mockExecuteRaw.mock.calls[0]?.[2]).toBe(validInput.spaceId);
     });
 
     test("CONFIRMED ステータスでも作成可能", async () => {
@@ -2623,7 +2628,11 @@ describe("createPublicReservationCommand", () => {
         .find((sql) => sql.includes("pg_advisory_xact_lock"));
 
       expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
-      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
+      // bind は [namespace, key] の順（namespace は採番 SSoT から来る定数）。
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(
+        SPACE_SCHEDULE_LOCK_NAMESPACE,
+      );
+      expect(mockExecuteRaw.mock.calls[0]?.[2]).toBe(validInput.spaceId);
     });
 
     test("ステータスは常に CONFIRMED（Stripe なし自動確定）", async () => {

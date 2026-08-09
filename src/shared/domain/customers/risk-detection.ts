@@ -10,6 +10,7 @@ import {
   RISK_FLAG_REASON,
   type RiskFlagReason,
 } from "@/shared/lib/validations/enums/helpers";
+import { CUSTOMER_FLAG_REASONS_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 export type { RiskFlagReason };
 export { RISK_FLAG_REASON };
@@ -254,7 +255,8 @@ const RISK_SCAN_OWNED_REASONS: readonly RiskFlagReason[] = [
  * 同じ顧客を触る）が両方とも古い配列から `nextReasons` を計算し、後勝ちの
  * `updateMany` が先勝ちの結果を lost update で潰しうる — 本関数が防ごうとしている
  * 「他 cron 所有の理由コードを消す」問題を、頻度は下がるが形を変えて
- * 再発させてしまう。lock は `db-domain.md` の採番レジストリに準拠。
+ * 再発させてしまう。namespace の採番は
+ * `src/shared/domain/advisory-lock-namespaces.ts` が SSoT。
  */
 export async function reconcileFlagReasonsCommand(
   customerId: string,
@@ -266,7 +268,7 @@ export async function reconcileFlagReasonsCommand(
   const ownedSet = new Set<string>(params.ownedReasons);
 
   return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728358::int4, hashtext(${customerId}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${CUSTOMER_FLAG_REASONS_LOCK_NAMESPACE}::int4, hashtext(${customerId}))`;
 
     const existing = await tx.customer.findUnique({
       where: { id: customerId },

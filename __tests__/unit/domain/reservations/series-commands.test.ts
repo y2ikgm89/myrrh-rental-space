@@ -155,6 +155,10 @@ import {
   type CreateReservationSeriesInput,
   type ReservationSeriesTemplateData,
 } from "@/shared/domain/reservations/series-commands";
+import {
+  RESERVATION_SERIES_LOCK_NAMESPACE,
+  SPACE_SCHEDULE_LOCK_NAMESPACE,
+} from "@/shared/domain/advisory-lock-namespaces";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -271,8 +275,17 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
     const firstCallSql = mockExecuteRaw.mock.calls[0]?.[0]?.join("");
     const secondCallSql = mockExecuteRaw.mock.calls[1]?.[0]?.join("");
-    expect(firstCallSql).toContain("728357");
-    expect(secondCallSql).toContain("728351");
+    // namespace は bind されるので SQL 本文には出ない。取得順序だけを見る
+    // （値は採番 SSoT が持ち、リテラル直書きは
+    // `__tests__/unit/architecture/advisory-lock-namespace-registry.test.ts` が禁じる）。
+    expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(
+      RESERVATION_SERIES_LOCK_NAMESPACE,
+    );
+    expect(mockExecuteRaw.mock.calls[1]?.[1]).toBe(
+      SPACE_SCHEDULE_LOCK_NAMESPACE,
+    );
+    expect(firstCallSql).toContain("pg_advisory_xact_lock");
+    expect(secondCallSql).toContain("pg_advisory_xact_lock");
 
     // overlap 事前 check は 3 instance 分
     expect(mockEnsureNoOverlap).toHaveBeenCalledTimes(3);
@@ -313,13 +326,14 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     const seriesId = seriesCreateArgs.data["id"];
     expect(typeof seriesId).toBe("string");
 
-    // pg_advisory_xact_lock(728357, hashtext(${key})) の第 2 引数 = key
+    // bind は [namespace, key] の順。key = seriesId。
     const seriesLockCall = mockExecuteRaw.mock.calls[0];
     expect(seriesLockCall).toBeDefined();
-    expect(seriesLockCall?.[1]).toBe(seriesId);
+    expect(seriesLockCall?.[1]).toBe(RESERVATION_SERIES_LOCK_NAMESPACE);
+    expect(seriesLockCall?.[2]).toBe(seriesId);
 
     // 旧実装の `${spaceId}:${customerId}` (":" を含む文字列) ではないこと
-    expect(String(seriesLockCall?.[1])).not.toContain(":");
+    expect(String(seriesLockCall?.[2])).not.toContain(":");
   });
 
   test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit + validity)", async () => {

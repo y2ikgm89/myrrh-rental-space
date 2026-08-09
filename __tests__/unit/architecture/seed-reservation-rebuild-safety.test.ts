@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import { SPACE_SCHEDULE_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 /**
  * デモ予約の作り直しが、**served な dev / staging DB でも安全**であることを
@@ -21,7 +22,6 @@ import { describe, expect, test } from "bun:test";
 
 const root = process.cwd();
 const SEED = join(root, "prisma/seed.ts");
-const SPACE_LOCKS = join(root, "src/shared/domain/reservations/space-locks.ts");
 
 function seedReservationsBody(): string {
   const source = readFileSync(SEED, "utf8");
@@ -76,20 +76,17 @@ describe("デモ予約の作り直しの安全性", () => {
 
   test("advisory lock の namespace が domain 側と一致する", () => {
     const seed = readFileSync(SEED, "utf8");
-    const domain = readFileSync(SPACE_LOCKS, "utf8");
 
     const seedNamespace = /const SEED_SPACE_LOCK_NAMESPACE = (\d+);/u.exec(
       seed,
     );
-    const domainNamespace = /pg_advisory_xact_lock\((\d+)::int4/u.exec(domain);
-
-    if (!seedNamespace?.[1] || !domainNamespace?.[1]) {
-      throw new Error("advisory lock namespace の宣言が見つかりません");
+    if (!seedNamespace?.[1]) {
+      throw new Error("seed の advisory lock namespace 宣言が見つかりません");
     }
 
     // ずれると「ロックを取っているのに直列化されない」という最悪の壊れ方をする。
     // seed は `space-locks.ts` を import できない（`import "server-only"`）ので
-    // 値の一致はここでしか守れない。
-    expect(seedNamespace[1]).toBe(domainNamespace[1]);
+    // 値の一致はここでしか守れない。突き合わせ先は採番の SSoT。
+    expect(Number(seedNamespace[1])).toBe(SPACE_SCHEDULE_LOCK_NAMESPACE);
   });
 });

@@ -5,7 +5,7 @@ import { isRecord } from "@/shared/lib/serialize";
 export const AUDIT_LOG_CHAIN_VERSION = 1;
 export const AUDIT_LOG_HASH_ALGORITHM = "HMAC-SHA256";
 export const AUDIT_LOG_GENESIS_HASH = "0".repeat(64);
-export const AUDIT_LOG_CHAIN_LOCK_KEY = 6_029_451_381_908_262_157n;
+export { AUDIT_LOG_CHAIN_LOCK_KEY } from "@/shared/domain/advisory-lock-namespaces";
 
 export type AuditLogHashPayload = {
   version: number;

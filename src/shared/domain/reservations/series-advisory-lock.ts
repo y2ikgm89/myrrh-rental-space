@@ -1,4 +1,5 @@
 import "server-only";
+import { RESERVATION_SERIES_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 type SeriesLockClient = {
   readonly $executeRaw: (
@@ -33,5 +34,5 @@ export async function lockReservationSeriesForTransaction(
   tx: SeriesLockClient,
   seriesKey: string,
 ): Promise<void> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(728357::int4, hashtext(${seriesKey})::int4)`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RESERVATION_SERIES_LOCK_NAMESPACE}::int4, hashtext(${seriesKey})::int4)`;
 }

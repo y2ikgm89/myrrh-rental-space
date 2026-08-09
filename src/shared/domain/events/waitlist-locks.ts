@@ -36,8 +36,14 @@ import "server-only";
  * (advisory lock namespace の SSoT はこの module の定数。728350 / 728354 を採番済み)
  */
 
-export const WAITLIST_XACT_LOCK_NAMESPACE = 728350 as const;
-export const WAITLIST_PROMOTE_LOCK_NAMESPACE = 728354 as const;
+import {
+  EVENT_REGISTRATION_LOCK_NAMESPACE,
+  WAITLIST_PROMOTE_LOCK_NAMESPACE,
+} from "@/shared/domain/advisory-lock-namespaces";
+
+/** 採番の SSoT は `advisory-lock-namespaces.ts`。ここは歴史的な別名を保つだけ。 */
+const WAITLIST_XACT_LOCK_NAMESPACE = EVENT_REGISTRATION_LOCK_NAMESPACE;
+export { WAITLIST_XACT_LOCK_NAMESPACE, WAITLIST_PROMOTE_LOCK_NAMESPACE };
 
 /**
  * イベント単位の申込定員直列化ロック（xact scope）。
