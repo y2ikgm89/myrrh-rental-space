@@ -7,24 +7,13 @@ file is only for adding, removing, and verifying people.
 Last target update: 2026-07-05.
 Last live verification: 2026-07-05, after the admin custom-domain cutover.
 
-Official references checked for this runbook:
+Official references specific to this runbook (Cloud Run / IAP / Cloud Identity
+の基盤側 reference は [`gcp-production-setup.md`](gcp-production-setup.md) が持つ):
 
-- Cloud Run direct IAP:
-  <https://cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run>
-- Cloud Run ingress:
-  <https://cloud.google.com/run/docs/securing/ingress>
-- Cloud Run custom domains:
-  <https://cloud.google.com/run/docs/mapping-custom-domains>
-- IAP access management:
-  <https://cloud.google.com/iap/docs/managing-access>
 - IAP signed headers:
   <https://cloud.google.com/iap/docs/signed-headers-howto>
 - Google Groups IAM best practices:
   <https://cloud.google.com/iam/docs/groups-best-practices>
-- Cloud Identity groups:
-  <https://cloud.google.com/identity/docs/groups>
-- Cloud Identity Groups API setup:
-  <https://cloud.google.com/identity/docs/how-to/setup>
 - Google Admin 2-Step Verification:
   <https://support.google.com/a/answer/175197>
 

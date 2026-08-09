@@ -43,7 +43,7 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloud_run_admin.tf`          | Phase 6a: admin service skeleton                                                                                          |
 | `cloud_run_migrate_job.tf`    | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                           |
 | `lb_admin.tf`                 | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                               |
-| `iap.tf`                      | Phase 7: IAP OAuth client + resource IAM binding                                                                          |
+| `iap.tf`                      | Phase 7: IAP resource IAM binding のみ（OAuth brand / client は Console 管理・Terraform 非宣言）                          |
 | `cloudflare_provider.tf`      | Phase 8 Foundation: Cloudflare provider (`~> 5`) の宣言のみ                                                               |
 | `cloudflare_dns.tf`           | Phase 8 Phase 2a: 8 DNS records (admin A/AAAA、rental-space CNAME、SES MX/SPF/DKIM、GSC TXT × 2) を import block で adopt |
 | `cloudflare_zone_settings.tf` | Phase 8 Phase 2a: 25 zone settings (security 8 / perf 6 / cache 4 / privacy 7) を import block で adopt                   |

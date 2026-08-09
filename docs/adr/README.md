@@ -21,6 +21,10 @@
 
 ## Index
 
+採番は 2026-07-14 に 0001 から振り直した。旧系列
+(`docs/architecture/decisions/0001`-`0028`) は commit 8ebd49c2d で全削除済みで、
+番号は現行系列と対応しない。
+
 | #                                    | Title                            | Status   | Date       |
 | ------------------------------------ | -------------------------------- | -------- | ---------- |
 | [0001](0001-single-env-terraform.md) | Single-env Terraform (prod only) | Accepted | 2026-07-14 |

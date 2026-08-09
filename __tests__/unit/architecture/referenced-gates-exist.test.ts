@@ -41,7 +41,7 @@
  * - `__tests__/**` — テスト間の相互参照には「この形は禁止」を示す架空パスが
  *   混ざりうるうえ、消えた gate を名指しして「もう無い」と書く clean-break
  *   テストが成立しなくなる
- * - `docs/superpowers/**` `docs/audits/**` `docs/investigation/**` — 日付入りの
+ * - `docs/superpowers/**` `docs/audits/**` — 日付入りの
  *   記録。当時の事実を書いたもので、指示ではない
  *   （`gates-do-not-pin-migrations` と同じ線引き）
  *
@@ -50,7 +50,7 @@
  * 初版は `docs/` を丸ごと外していた。だが docs 配下には runbook・ADR・alerting と
  * いった**人が従う指示**が同居していて、そこに実在しない gate 名を書けば
  * 上の docstring が説明した実害がそのまま起きる。除外の根拠（記録である）が
- * 当てはまるのは 3 つの置き場だけなので、そこだけ外す。
+ * 当てはまるのは 2 つの置き場だけなので、そこだけ外す。
  *
  * 狭める前に実測した: 指示側の 5 参照は 0 件破損、記録側の 151 参照は 20 件破損。
  * つまりこの線引きは今日そのまま通り、以後は指示文書だけが守られる。
@@ -74,7 +74,6 @@ const EXCLUDED_PREFIXES = [
   "__tests__/",
   "docs/superpowers/",
   "docs/audits/",
-  "docs/investigation/",
 ] as const;
 
 /** 除外が広がりすぎて指示文書ごと落ちていないことの見張り。 */

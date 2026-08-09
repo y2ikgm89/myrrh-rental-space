@@ -244,8 +244,10 @@ describe("GCP production setup runbook", () => {
   });
 
   test("production audit runbook rejects legacy Cloud Run runtime env names", () => {
-    // Phase 6b: recurring deploys update image only; shape/env/secrets are TF.
-    expect(runbook).toContain("Terraform SSoT (Phase 6b)");
+    // 恒常デプロイは image のみ更新し、shape/env/secrets は Terraform が持つ。
+    // 完了済み移行フェーズの番号 (旧「Phase 6b」) は pin しない — 番号は
+    // terraform/README.md の進捗表が持ち、runbook 側では読む人の役に立たない。
+    expect(runbook).toContain("Terraform SSoT");
     expect(runbook).toContain("gcloud run services update --image");
     expect(runbook).toContain("must not use `--set-env-vars`");
     expect(runbook).toContain("`--set-secrets`");

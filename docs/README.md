@@ -6,9 +6,7 @@
 - **現行の手順・決定** — 今の本番と一致していることが求められる。ずれていたら
   バグとして直す。
 - **日付入りの記録** — 書かれた時点の事実。当時の PR や調査の記録であって、
-  今の仕様書ではない。**現行との一致を求めない**（`superpowers/` / `audits/` /
-  `investigation/` の 3 つが `referenced-gates-exist` と
-  `gates-do-not-pin-migrations` の検査対象外なのはこの性質のため）。
+  今の仕様書ではない。**現行との一致を求めない**。
 
 ## 現行の手順・決定
 
@@ -29,12 +27,11 @@
 
 ## 日付入りの記録
 
-| 置き場               | 中身                                                   |
-| -------------------- | ------------------------------------------------------ |
-| `superpowers/specs/` | 実装前の設計文書（`YYYY-MM-DD-<topic>-design.md`）     |
-| `superpowers/plans/` | 実装計画とタスク分解（`YYYY-MM-DD-<topic>.md`）        |
-| `audits/`            | 監査の記録（全コードベース監査のスナップショット含む） |
-| `investigation/`     | 単発の調査ログ                                         |
+| 置き場               | 中身                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| `superpowers/specs/` | 実装前の設計文書（`YYYY-MM-DD-<topic>-design.md`）           |
+| `superpowers/plans/` | 実装計画とタスク分解（`YYYY-MM-DD-<topic>.md`）              |
+| `audits/`            | 監査・調査の記録（全コードベース監査のスナップショット含む） |
 
 読むときの注意:
 
@@ -67,7 +64,7 @@ git log --all --diff-filter=D -- docs/superpowers/plans/<file>
 git show <sha>^:docs/superpowers/plans/<file>
 ```
 
-`audits/` と `investigation/` はこの lifecycle の対象外（実装計画ではなく調査結果
+`audits/` はこの lifecycle の対象外（実装計画ではなく調査結果
 なので、実装が終わっても内容が古びない）。**ADR は削除しない**
 （[`adr/README.md`](adr/README.md) の明文規約）。
 
@@ -79,13 +76,13 @@ git show <sha>^:docs/superpowers/plans/<file>
 | 人が実行する運用手順                | `runbooks/<topic>.md`                                   |
 | 実装前の設計                        | `superpowers/specs/YYYY-MM-DD-<topic>-design.md`        |
 | 実装計画                            | `superpowers/plans/YYYY-MM-DD-<topic>.md`               |
-| 調査ログ・監査結果                  | `investigation/` / `audits/`                            |
+| 調査ログ・監査結果                  | `audits/`                                               |
 
 現行の手順を足したら、この README の表にも 1 行足すこと。ここに載っていない
 運用文書は、実質的に誰にも見つけられない。
 
-この 3 つの置き場（`superpowers/` / `audits/` / `investigation/`）は
-`referenced-gates-exist` と `gates-do-not-pin-migrations` の**検査対象外**。
+この 2 つの置き場（`superpowers/` / `audits/`）は `referenced-gates-exist` と
+`gates-do-not-pin-migrations` の**検査対象外**。
 それ以外の docs 配下は検査される — 「これは X.test.ts が検証する」「migration
 YYYYMMDDHHMMSS が作った」と書いたら、実在すること・畳んでも嘘にならないことが
 求められる。**現行の手順を記録の置き場に置かない**こと。

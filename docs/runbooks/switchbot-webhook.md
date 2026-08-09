@@ -153,7 +153,6 @@ enabling allowlist rules.
 | ------------------------- | ----------------------------------------------------------------------- |
 | Path token crypto purpose | `SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken`                    |
 | Proxy rate limit          | `infraEndpointRateLimiter` in `src/shared/lib/rate-limit.ts`            |
-| Security accepted risk    | "WAF / IP allowlist note" section above                                 |
 | Webhook URL のホスト      | `NEXT_PUBLIC_APP_URL`（未設定時 `NEXT_PUBLIC_BASE_URL`）→ `getAppUrl()` |
 
 `NEXT_PUBLIC_*` は build 時に焼き込まれる。公開ドメインを変更したら、再ビルド・
