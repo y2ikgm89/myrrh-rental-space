@@ -638,6 +638,14 @@ const manualPaymentSchema = z.object({
 
 export type ManualPaymentInput = z.input<typeof manualPaymentSchema>;
 
+/**
+ * 管理者による手動入金記録（現金・銀行振込等、Stripe を経由しない入金の事後記録）。
+ *
+ * 支払方法 (CASH/BANK_TRANSFER/OTHER) とメモは AuditLog の `metadata` にのみ残す —
+ * 専用カラムは追加しない。金額側の永続化方針（既存列の再利用と、列を足す条件）は
+ * `recordManualEventPaymentCommand`
+ * (`src/shared/domain/events/payment-commands.ts`) の doc を参照。
+ */
 export async function recordManualEventPayment(
   input: ManualPaymentInput,
 ): Promise<
