@@ -24,17 +24,16 @@
 /prisma/migrations/ @y2ikgm89
 
 # 認証 / RBAC コア
-/src/shared/lib/admin-auth.ts @y2ikgm89
+/src/shared/domain/admin-auth/ @y2ikgm89
 /src/shared/lib/customer-auth.ts @y2ikgm89
 /src/shared/lib/admin-roles.ts @y2ikgm89
-/src/admin/lib/action-auth.ts @y2ikgm89
-/src/admin/lib/admin-action.ts @y2ikgm89
-/src/admin/lib/permissions.ts @y2ikgm89
+/src/app/(admin)/admin/(dashboard)/_shared/lib/action-auth.ts @y2ikgm89
+/src/app/(admin)/admin/(dashboard)/_shared/lib/admin-action.ts @y2ikgm89
+/src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts @y2ikgm89
 
 # Prisma gateway（client-safe 型のみ re-export）
 /src/shared/lib/validations/enums/prisma-types.ts @y2ikgm89
 /src/shared/db/prisma.ts @y2ikgm89
-/src/shared/db/create-app-prisma-client.ts @y2ikgm89
 
 # Stripe / Webhook / Cron — 決済と外部連携
 /src/app/api/webhooks/ @y2ikgm89
@@ -54,7 +53,7 @@
 # ===========================================================================
 
 /.github/ @y2ikgm89
-/SECURITY.md @y2ikgm89
+/.github/SECURITY.md @y2ikgm89
 /cloudbuild.yaml @y2ikgm89
 /next.config.ts @y2ikgm89
 /tsconfig.json @y2ikgm89
