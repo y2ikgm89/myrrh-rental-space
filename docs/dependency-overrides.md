@@ -1,29 +1,64 @@
 # Bun dependency overrides
 
-`package.json` の `overrides` は transitive 依存のセキュリティ修正・
-再現性確保のための pin 表。追加時は rationale をこの表に 1 行追記する。
+`package.json` の `overrides` は transitive 依存のセキュリティ修正・再現性確保のための
+pin 表。この表は required status check **`Dependency Audit (bun audit)`**
+（`.github/workflows/ci.yml` の `bun audit --prod --audit-level=high`）を緑に保つための
+集合であり、`package.json` の `overrides` が SSoT、本表はその**説明**にあたる。
 
-| Package                         | Pin               | Rationale                                                           |
-| ------------------------------- | ----------------- | ------------------------------------------------------------------- |
-| `@grpc/grpc-js`                 | ^1.14.4           | GCP client transitive; protobuf/grpc CVE 回避                       |
-| `pg`                            | ^8.22.0           | Prisma `@prisma/adapter-pg` と同一 major の安定版                   |
-| `protobufjs`                    | ^8.6.5            | `@grpc/grpc-js` 経由の protobuf 系 CVE 回避                         |
-| `minimatch` / `brace-expansion` | ^10.2.5 / ^5.0.7  | glob 系 ReDoS 回避（eslint / tooling 経由）                         |
-| `fast-uri`                      | ^3.1.2            | ajv 経由 URI parse の既知修正取り込み                               |
-| `postcss`                       | ^8.5.16           | Tailwind v4 / Next 16 toolchain 互換                                |
-| `hono` / `@hono/node-server`    | ^4.12.27 / ^2.0.6 | better-auth / tooling transitive の CVE 回避                        |
-| `qs`                            | ^6.15.3           | express 系 transitive prototype pollution 回避                      |
-| `@tootallnate/once`             | ^3.0.1            | http-proxy-agent transitive                                         |
-| `basic-ftp`                     | ^6.0.1            | @google-cloud/storage transitive                                    |
-| `flatted`                       | ^3.4.2            | eslint flat config transitive                                       |
-| `ip-address`                    | ^10.2.0           | socks-proxy-agent transitive                                        |
-| `picomatch`                     | ^4.0.4            | micromatch / tooling transitive                                     |
-| `tmp`                           | ^0.2.7            | playwright / tooling の insecure tmp 回避                           |
-| `playwright-core`               | ~1.62.1           | `@playwright/test` と lockstep（E2E runner SSoT）                   |
-| `uuid`                          | ^11.1.1           | google-auth / tooling transitive                                    |
-| `ws`                            | ^8.21.0           | dev tooling WebSocket transitive                                    |
-| `happy-dom`                     | ^20.11.0          | bun unit test DOM（jsdom より軽量）。`import from "jsdom"` は未使用 |
-| `nanoid`                        | ^3.3.17           | postcss 経由。GHSA-2v37-7h3g-55p8（size 0 で無限ループ）回避        |
+ゲートが赤くなったときの手順:
 
-Exact pin（`packageManager` / TypeScript 等）は `package.json` トップレベルの
-`devDependencies` / `dependencies` が SSoT。overrides は transitive のみ。
+1. `bun audit --prod` で advisory と影響範囲を確認する
+2. `package.json` の `overrides` を上げる（`bun install` で `bun.lock` も更新）
+3. **同じ commit で本表の Pin 列と経路を更新する**
+4. `bun run validate` を通す
+
+Pin と表の整合は
+[`__tests__/unit/architecture/dependency-overrides-doc.test.ts`](../__tests__/unit/architecture/dependency-overrides-doc.test.ts)
+が機械的に強制する（過去、表に書かずに 3 件が追加され、6 件が版ずれのまま残った）。
+
+「経路」列は `bun why <package>` の実測。**どこから引かれているか**が分かると、
+その pin を外してよいか・上げると何が壊れうるかを推測ではなく確認で判断できる。
+
+| Package             | Pin      | 経路 (`bun why` 実測)                                                       |
+| ------------------- | -------- | --------------------------------------------------------------------------- |
+| `@grpc/grpc-js`     | ^1.14.4  | `google-gax` → `@google-analytics/data`                                     |
+| `pg`                | ^8.22.0  | `@prisma/adapter-pg`（`better-auth` の optional peer でもある）             |
+| `protobufjs`        | ^8.7.1   | `@grpc/proto-loader` / `proto3-json-serializer` → `google-gax`              |
+| `minimatch`         | ^10.2.5  | `@eslint/config-array` / `@typescript-eslint/typescript-estree` → `eslint`  |
+| `fast-uri`          | ^3.1.5   | `ajv` → `@prisma/dev`(prisma) / `eslint`                                    |
+| `postcss`           | ^8.5.18  | `next` / `sanitize-html` / `@tailwindcss/postcss`                           |
+| `hono`              | ^4.12.34 | `@prisma/dev` → `prisma`                                                    |
+| `qs`                | ^6.15.3  | `googleapis-common` → `googleapis`／`body-parser` → `express` → `@lhci/cli` |
+| `@tootallnate/once` | ^3.0.1   | `http-proxy-agent`（proxy スタック）                                        |
+| `@hono/node-server` | ^2.0.12  | `@prisma/dev` → `prisma`                                                    |
+| `basic-ftp`         | ^6.0.1   | `get-uri` → `pac-proxy-agent` → `proxy-agent` → `@lhci/cli`                 |
+| `flatted`           | ^3.4.2   | `flat-cache` → `file-entry-cache` → `eslint`（キャッシュ層）                |
+| `ip-address`        | ^10.2.0  | `socks` → `socks-proxy-agent`                                               |
+| `picomatch`         | ^4.0.4   | `micromatch` / `tinyglobby` / `fdir`                                        |
+| `tmp`               | ^0.2.7   | `exceljs`／`@lhci/cli`・`external-editor`                                   |
+| `playwright-core`   | ~1.62.1  | `playwright` → `@playwright/test`（E2E runner と lockstep）                 |
+| `brace-expansion`   | ^5.0.8   | `minimatch` のみ                                                            |
+| `uuid`              | ^11.1.1  | `exceljs`／`@lhci/cli`                                                      |
+| `ws`                | ^8.21.0  | `happy-dom` → `@lexical/headless`／`lighthouse`・`socket.io-adapter`        |
+| `happy-dom`         | ^20.11.0 | `@lexical/headless` の内部フォールバック DOM                                |
+| `undici`            | ^7.28.0  | `jsdom`                                                                     |
+| `sharp`             | ^0.35.0  | `next` の optionalDependency（画像処理）                                    |
+| `valibot`           | ^1.4.2   | `@prisma/dev` → `prisma`／`@t3-oss/env-core`                                |
+| `nanoid`            | ^3.3.17  | `postcss`（GHSA-2v37-7h3g-55p8: size 0 で無限ループ）                       |
+
+## 誤解しやすい 2 件
+
+- **`happy-dom` はテスト用の DOM ではない。** リポジトリのコードは
+  テスト・本番とも JSDOM を明示的に使う（`__tests__/setup-dom.ts`、
+  `src/shared/lib/lexical-headless-dom-environment.ts`）。`@lexical/html` は完全な DOM 実装を
+  前提にしており、happy-dom 側の既知バグを踏むため意図的に避けている。この pin は
+  `@lexical/headless` が引く transitive の解決版を固定するためだけにある。
+- **`jsdom` は直接依存**（`package.json` の `dependencies`）であって override 対象ではない。
+  override しているのはその transitive の `undici`。
+
+## overrides の適用範囲
+
+`overrides` は **transitive のみ**を対象にする。直接依存のバージョンは
+`dependencies` / `devDependencies` が SSoT。bun 本体のバージョンは
+トップレベルの `packageManager`（同値を `engines.bun` にも置く）が SSoT で、
+どちらも overrides では動かさない。
