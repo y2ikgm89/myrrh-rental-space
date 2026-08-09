@@ -5,6 +5,10 @@
  * calendar / list / toggle は event-calendar section の variant で表現。
  * list variant の tab/検索/カテゴリー絞り込みのため searchParams を
  * SectionStack に forward する(`spaces/page.tsx` と同型)。
+ *
+ * `spaces/page.tsx` と同型なのは searchParams forward だけで、`PageLayout` /
+ * `SiteCTA` は意図的に持たない。「中間挿入 / SiteCTA なし」は検索性向上の際にも
+ * 再検討したうえで維持した方針で、spec の非ゴールにも SiteCTA 追加は含まれない。
  */
 
 import type { Metadata } from "next";

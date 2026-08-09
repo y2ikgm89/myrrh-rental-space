@@ -231,6 +231,14 @@ export const eventsListSearchParams = createSearchParamsCache(
 );
 ```
 
+> **実装時の訂正**: 上の例示コードのうち `EVENT_LIST_TABS` / `EventListTab` /
+> `isEventListTab` は `src/app/(public)/_shared/lib/search-params.ts` ではなく
+> **`src/shared/domain/events/event-list-tab.ts`（shared 側）** に置いた。依存方向は
+> `app → shared` の一方向で `src/shared/domain/*` から `src/app/(public)/*` を
+> import できないため、shared からも参照する型を app 配下に定義すると依存が逆流する
+> （`src/shared/domain/spaces/space-sort.ts` と同型の配置理由）。
+> `search-params.ts` は shared からの re-export のみを持つ。
+
 クライアント側（新設する events 版 filter bar コンポーネント）は `useQueryStates(eventsListSearchParamsParsers, {history:"replace", shallow:false})`。facet 変更時は `page:1` を同時セット。**タブ切替時は `q`/`categoryId` を保持する**（`filter-bar.tsx` が個別 facet 変更時に他 facet を保持する既存流儀を踏襲。admin `EventTabs.tsx` の全リセット方式とは意図的に異なる — 公開側は「タブも 1 つの facet」という一貫したメンタルモデルにする）。
 
 **データ取得**: `src/shared/domain/events/public-queries.ts` に新設:
