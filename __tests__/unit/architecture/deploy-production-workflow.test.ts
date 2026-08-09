@@ -535,7 +535,8 @@ describe("production deploy workflow", () => {
 describe("Main Terraform Health gate (abolished)", () => {
   test("does not ship the obsolete PR-blocking health workflow", () => {
     // 手動デプロイモデルでは merge ≠ deploy のため、前回 deploy 失敗で全 PR を
-    // block する gate は廃止 (2026-07-25 design)。
+    // block する gate は廃止
+    // (docs/adr/0002-abolish-main-terraform-health-gate.md)。
     expect(
       existsSync(
         join(
