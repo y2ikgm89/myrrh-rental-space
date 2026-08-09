@@ -623,6 +623,14 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
  * claim 成功後は `issueReceiptForEventRegistration` を await し、成功時のみ
  * `notifyReceiptIssuedForEventRegistration` を fire-and-forget する。領収書失敗でも
  * PAID は維持し、`receiptWarning` で部分失敗を返す（reservation 手動入金と同契約）。
+ *
+ * **この機能のために Prisma schema は変更しない。** 金額は Stripe webhook 経路
+ * (`claimEventRegistrationAsPaid`) と同じ `paymentStatus` / `paidAmount` / `paidAt` /
+ * `taxRate` を再利用し、支払方法 (CASH/BANK_TRANSFER/OTHER) とメモは action 層で
+ * AuditLog の `metadata` にのみ残す — 専用カラムは追加しない
+ * (`refundEventRegistrationPaymentCommand` が reason/actorType を metadata に記録するのと
+ * 同型)。支払方法別の集計を SQL で直接取りたくなった時点で、初めて additive migration を
+ * 検討する。それ以外の理由で列を足さない。
  */
 export type ManualEventPaymentResult = {
   registrationId: string;
