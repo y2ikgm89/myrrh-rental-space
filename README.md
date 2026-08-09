@@ -152,7 +152,7 @@ Implementation: `src/app/api/live/route.ts`, `src/app/api/health/route.ts`.
 
 ## Where to look next
 
-- Working with an agent (Claude Code / Codex): [CLAUDE.md](CLAUDE.md)
+- Working with an agent (Claude Code): [CLAUDE.md](CLAUDE.md)
 - Human contributor setup & workflow: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
 - Topic-specific guardrails: [`.claude/rules/`](.claude/rules/)
 - Multi-step workflows (migrations, adding a section, deploy debugging):

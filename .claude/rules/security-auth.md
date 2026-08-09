@@ -1,121 +1,89 @@
 ---
 paths:
-  [
-    "src/proxy.ts",
-    "src/shared/lib/iap/**",
-    "src/shared/lib/customer-auth.ts",
-    "src/shared/lib/admin-permissions.ts",
-    "src/shared/lib/admin-roles.ts",
-    "src/shared/lib/admin-resources.ts",
-    "src/shared/lib/rate-limit.ts",
-    "src/shared/lib/turnstile*.ts",
-    "src/shared/lib/crypto.ts",
-    "src/shared/lib/cron-auth.ts",
-    "src/shared/lib/e2e-runtime.ts",
-    "src/shared/domain/admin-auth/**",
-    "src/shared/lib/env/**",
-  ]
+  - "src/app/api/**"
+  - "src/proxy.ts"
+  - "src/shared/lib/crypto.ts"
+  - "src/shared/lib/crypto-purposes.ts"
+  - "src/shared/lib/csp/**"
+  - "src/shared/lib/rate-limit.ts"
+  - "src/shared/lib/cron-auth.ts"
+  - "src/shared/lib/customer-auth*.ts"
+  - "src/shared/lib/admin-*.ts"
+  - "src/shared/domain/admin-auth/**"
+  - "src/shared/lib/env/**"
 ---
 
-# 認証・認可・セキュリティ
+# 認証・認可・秘密情報
 
-## 認証は 2 系統（混ぜない）
+## 2 つの認証系
 
-- **顧客** = Better Auth（`src/shared/lib/customer-auth.ts`、basePath `/api/customer-auth`）。
-  Prisma adapter には `prisma` singleton を渡す（`db-domain` ルール参照）。
-  `deleteUser.beforeDelete` → Customer anonymize / 確認メール送信は Better Auth 公式どおり
-  auth config 内に置き、domain を呼ぶ（`LIB_TO_DOMAIN` の恒久 adapter。DI shim で
-  allowlist を空にしない）
-- **管理** = Cloud Run IAP のみ（`x-goog-iap-jwt-assertion` JWT を audience/issuer 検証）。
-  Better Auth の admin instance・管理ログインフォームの再導入はテストで禁止。
-  IAP identity は Google Workspace グループ所属から Role へ同期される。
-  session / login audit の SSoT は `src/shared/domain/admin-auth/session.ts`
-  （`getCurrentAdminUser` / `verifyAdminSession`）。
-  role group env は **4 つ全設定か全未設定のみ**（部分設定は admin ログイン全滅）
+| 対象     | 仕組み                                                                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 管理画面 | Cloud Run direct IAP + Google Group（super-admins / admins / editors / viewers）。IAP を通っても、同じメールアドレスのスタッフ user が DB に無ければ入れない |
+| 顧客     | Better Auth（`/api/customer-auth/*`）                                                                                                                        |
 
-## 管理 RBAC
+管理側に Better Auth の admin instance を再導入しない（ゲートで固定）。
+公開サーフェスの `/admin/*` は 404 を返す（`src/proxy.ts`）。
+ローカルは `ADMIN_TEST_IAP_EMAIL` で IAP を bypass する。
 
-- アクセス可否は `DASHBOARD_ROLES`（SUPER_ADMIN/ADMIN/EDITOR/VIEWER）が SSoT
-- 権限は `${Resource}:${Action}` 形式の PermissionKey × ROLE_PERMISSIONS。
-  EDITOR は独立 resource 権限を持たず userPageAssignment（page UUID 単位）で gate される。
-  resource-level gate の SSoT は `src/shared/domain/admin-auth/resource-access.ts` の
-  `userHasResourceAccess`（admin mutation + public preview 双方）。
-  admin mutation の追加時は `executeAdminMutationResult` の permission 段を必ず通す
+RBAC の SSoT は `src/shared/lib/admin-permissions.ts` の `ROLE_PERMISSIONS`
+（`` `${Resource}:${Action}` `` のキー）。権限キーの実在は
+`__tests__/unit/architecture/permission-keys-exist.test.ts` が検証する。
+Server Action の認可は自分で書かず `executeAdminMutationResult` に載せる
+（順序契約は `.claude/rules/forms-mutations.md`）。
 
-## rate limit / クライアント IP
+## レート制限
 
-- InMemory store は **Cloud Run max instance=1 前提**（`cloudbuild.yaml` の
-  `_MAX_INSTANCES: "1"` で固定）。rate-limit 用 Redis / 分散 store は製品決定で
-  **使わない**（`RATE_LIMIT_BACKEND` は `"in-memory"` のみ）。エッジ防御は
-  Cloudflare Turnstile / WAF。`MAX_INSTANCES_HINT>1` は startup fail-closed
-- 本番のクライアント IP は `cf-connecting-ip` + `x-cloudflare-origin-secret` の
-  timing-safe 比較成功時のみ信頼。XFF fallback は非本番/localhost 専用
-- パス別の limiter 振分は `checkRateLimit()` が SSoT
-- 予約・イベント申込作成は IP 単位（`checkActionRateLimit`）に加え、顧客(メール)
-  単位の第二防壁を `checkEmailRateLimit` で重ねる。同一人物が複数IPから同じ
-  メールで大量作成するケースは IP 単位だけでは防げないため
+`src/shared/lib/rate-limit.ts` に用途別の limiter がある
+（`apiRateLimiter` / `formSubmitRateLimiter` / `reservationSubmitRateLimiter` /
+`*ByEmailRateLimiter` など）。
 
-## SwitchBot webhook（accepted risk）
+**推測可能な ID（連番や短い token）を受け取る経路では、認証確認より前に
+rate limiter を置く。** 後ろに置くと ID 総当たりの DoS ベクタになる。
+E2E ではテストごとに一意の client IP を割り当てる fixture を使う。
 
-- SwitchBot 公式 webhook は path token（`/api/webhooks/switchbot/[token]`）で認可する。
-  HMAC 署名ヘッダはベンダー契約に無いため未実装（無理に足しても検証できない）
-- Feature Module ではなく Settings（外部連携）ゲート。管理 nav では feature OFF 時も
-  メニューを残し「非公開」badge を表示する（公開ナビ prune のみ）
+## トークンと暗号
 
-## Turnstile
+`src/shared/lib/crypto.ts` の `encrypt` / `decrypt` は **purpose ごとに鍵を
+派生する**（HKDF）。purpose 文字列は `crypto-purposes.ts` の
+`SETTINGS_CRYPTO_PURPOSES` に集約し、呼び出し側でインライン直書きしない。
+重複は `__tests__/unit/architecture/crypto-purpose-registry.test.ts` が検出する。
 
-- 共通入口は `validateTurnstile`（expectedAction binding・remoteip・idempotency_key）。
-  action 識別子は `TURNSTILE_ACTIONS`（client-safe）が SSoT
-- secret は DB（暗号化）優先 → env。**本番は未設定でも fail-closed**（dev はスキップ）。
-  ローカルで通っても本番で止まり得ることに注意
+暗号文には purpose が埋め込まれているので、**検証側で purpose を明示的に
+チェックする**こと（別 purpose のトークンを流用されないため）。
 
-## CSP / ヘッダー
+ゲスト操作用トークン（予約 claim / イベント申込 claim / ステータス確認 /
+waitlist offer / 決済）はそれぞれ専用の cookie 名と TTL を持つ。
+一覧は `src/shared/lib/constants/*-cookie-name*.ts`。
 
-- CSP nonce は proxy が生成し x-nonce で伝播。strict-dynamic のため全 route ƒ 必須
-  （詳細は app-structure ルール）
-- 新しい外部スクリプト/埋め込み/ビーコン先の追加は proxy.ts の CSP
-  （connect-src / img-src）と `src/shared/lib/constants/frame-sources.ts`（frame-src +
-  埋め込み URL 検証で共用）の**両方**を更新する
+## cron / webhook
 
-### inline style の扱い（script とは別ルール）
+- cron route は `src/shared/lib/cron-auth.ts` の helper 経由で **OIDC** 検証する
+  （`__tests__/unit/architecture/cron-oidc-clean-break.test.ts`）。
+- Cloud Scheduler の job 定義は `terraform/cloud_scheduler.tf` と
+  `REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS` が完全同期している必要がある。
+- webhook はヘッダーも Zod で検証する（Google Calendar webhook route が実例）。
+- Stripe の webhook 検証は **async 版のみ**。`constructEvent` /
+  `generateTestHeaderString`（sync 版）は Bun の Web Crypto 環境で throw する。
+  型封印は `src/shared/lib/stripe.ts` の `AsyncOnlyStripe`、機械ブロックは ESLint。
 
-CSP3 では **style 属性に nonce を付けられない**（許可手段は `'unsafe-inline'` か
-`'unsafe-hashes'` + hash のみ / W3C CSP3 §8.3・MDN style-src-attr）。実際に出る style 属性は
-next/image や Radix など framework / ライブラリ内部由来で**列挙不能**のため、
-`style-src-attr` は `'unsafe-inline'` 単独にしている。hash を混ぜると CSP3 の規定で
-`'unsafe-inline'` が無視されるので混在させない。リスクは CSS に限定され（スクリプト実行は不可）、
-CSS 由来の情報窃取に必要な外部読み込みは img-src / font-src / connect-src で塞いだままにする。
+## CSP
 
-`<style>` 要素は nonce を維持する。nonce を渡す経路は 2 つ:
+`script-src 'self' 'nonce-…' 'strict-dynamic'`。`style-src` の
+`unsafe-inline` は公式に正しい設定（再検討不要）。inline style のハッシュは
+`src/shared/lib/csp/inline-style-hashes.ts`。
 
-- server 生成の `<style>` → `NonceStyleBlock`
-- ライブラリが実行時に注入する `<style>` → `RegisterStyleNonce` が `get-nonce` の
-  `setNonce()` に per-request nonce を渡す（Radix scroll lock が使う
-  `react-style-singleton` がこれを読む）。両 root layout の Suspense 内に置くこと
+static prelude が空でないと本番の JS が全ブロックされる。詳細は
+`.claude/rules/app-structure.md`。
 
-nonce API を持たない `sonner` だけは内容一致 hash で通す。SSoT は
-`src/shared/lib/csp/inline-style-hashes.ts`、drift gate は
-`__tests__/unit/architecture/csp-inline-style-hashes.test.ts`
-（sonner を上げると hash がずれるので、この unit テストが先に落ちる）。
-実挙動の gate は smoke の「CSP violation が console に出ない」と
-`e2e/authenticated/admin/csp-inline-style.spec.ts`。
+## 環境変数
 
-## cron 認可 / E2E ゲート / 暗号化
+`@t3-oss/env-nextjs` で `src/shared/lib/env/{server,client}.ts` に集約。
+`process.env` を直接読まない。`.env*` はコミット禁止（pre-commit がブロック）。
+本番専用 secret（`ENCRYPTION_KEY` / `AUDIT_LOG_HMAC_KEY` / Cloudflare 本番
+トークン）はローカルでは空で構わない。
 
-- cron route は Cloud Scheduler の OIDC Bearer token を検証
-  （CRON_SERVICE_ACCOUNT_EMAIL / CRON_OIDC_AUDIENCE、config 欠損は fail-closed 500）
-- E2E バイパス（`E2E_RUNTIME` / `NEXT_PUBLIC_ENABLE_E2E_LOGIN` / `ADMIN_TEST_IAP_EMAIL`）は
-  localhost env URL **かつ** リクエスト Host（`Host` / 任意の `X-Forwarded-Host`）が
-  loopback（localhost / 127.0.0.1 / ::1）である AND 条件。非 production の
-  `ADMIN_TEST_IAP_EMAIL` も Host loopback 必須。`validateProductionEnv()` が本番で
-  throw する。**`CI=true` をバイパス条件にしない**
-- E2E で複数 role を扱う場合は `x-e2e-admin-identity` ヘッダーで identity を選ぶ
-  （SSoT: `src/shared/domain/admin-auth/e2e-identity.ts`）。上記 AND 条件に
-  `E2E_RUNTIME=1` を追加した、既定経路より 1 段厳しいゲート。ヘッダーが運ぶのは
-  **固定ラベルのみ**（email 直指定は解決しない）で、未知ラベルは既定 identity へ
-  fallback せず null にする（fail-closed）。**DB 上の User.role を実行時に
-  書き換えて role を切り替えない** — `fullyParallel` な spec 間に漏れる
-- 暗号化は kid 一致必須（ENCRYPTION_KEY_ID 変更で旧データ復号 throw）。
-  本番必須シークレット検証は instrumentation `register()` 起動時実行が契約
-  （module load 時に移すとローカル build が壊れる）
-- serverEnv は module load 時 snapshot。runtime の env 動的変更は反映されない
+## 監査ログ
+
+`audit_logs` は DB trigger で追記専用。`resource` 文字列は kebab-case に統一
+（例: `event-registration`。`eventRegistration` は不可）。

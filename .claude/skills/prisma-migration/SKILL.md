@@ -1,139 +1,97 @@
 ---
 name: prisma-migration
-description: prisma/schema.prisma の変更から Prisma migration の生成 (prisma migrate dev)・squawk lint・実 DB 検証・デプロイ影響確認までの完全手順。DB schema 変更、モデル/列/enum の追加・削除・リネーム、index/CHECK 制約の変更、expand/contract 分割の判断、breaking migration による計画ダウンタイム確認、seed・E2E fixture 整合が必要なときに使う。migration SQL のセルフレビュー checklist と PostgreSQL 固有の落とし穴 (ALTER TYPE, jsonb) を含む。
+description: Prisma のスキーマを変更して migration を追加する一連の手順。列やテーブルの追加・変更・削除、enum の変更、DB 制約 / trigger の追加、squawk ゲートへの対応、計画ダウンタイムの要否判断に使う。
 ---
 
-# Prisma migration 完全手順
+# migration を追加する
 
-schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確認の順に進める。
+方針の SSoT は `.claude/rules/migrations.md`。ここは**順番**を示す。
 
-常設規約 (重複記載しない — 必ず先に参照):
+## 1. 変更の性質を先に決める
 
-- 禁止事項・squawk 配置・breaking デプロイ連動・seed 契約: rules の `migrations.md`
-- Prisma gateway の単一 singleton (`prisma`) と `server-only` 境界: rules の `db-domain.md`
-- 生成型の流通経路 (enums gateway・JSON helper): rules の `type-safety.md`
-- 実 DB 統合テストの書き方 (serial bucket は自動検出): rules の `testing-unit.md`
+| 変更                                                                                                                                                        | 影響                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 列・テーブルの追加、index 追加、`NOT NULL` でない列                                                                                                         | 通常デプロイ                                              |
+| `DROP COLUMN` / `DROP TABLE` / `DROP TYPE` / `RENAME` / `ALTER COLUMN … TYPE` / `SET NOT NULL` / `DROP DEFAULT` / `DROP CONSTRAINT` / `ALTER TYPE … RENAME` | **計画ダウンタイム**（両サービス scale 0 + 310 秒 drain） |
 
-## 0. 事前判断
+破壊的な変更を「無停止でやる」ことはできない。分割して安全な形
+（新列追加 → 二重書き → 読み替え → 旧列削除）にするか、計画ダウンタイムを
+受け入れるかを先に決める。
 
-- `prisma/schema.prisma` に触れる変更は原則 migration 必須。`bun run db:push` は
-  プロトタイピング専用、`db:reset` / `migrate reset` / `db pull` はユーザー明示依頼時のみ。
-- **schema 変更を伴う作業の完了条件は「migration がローカル DB に適用済み」**。
-  type-check / build / test が全緑でも schema と DB の drift は検出できない
-  (テストは mock と生成型しか見ない)。
-- 破壊的変更 (DROP / RENAME) を含むかを最初に見積もる → ステップ 5 の判断基準へ。
+CHECK / EXCLUDE / plpgsql 関数 / trigger は Prisma のスキーマ言語で表現できない。
+`prisma/baseline/invariants.sql` に相当するものを migration SQL に直接書く。
 
-## 1. schema.prisma 編集 → クライアント生成
+## 2. schema を編集する
 
-1. `prisma/schema.prisma` を編集する。注意点:
-   - datasource ブロックに url は無い。`DATABASE_URL` は `prisma.config.ts` の
-     `env("DATABASE_URL")` が供給する (Bun が `.env` / `.env.local` を自動ロード)。
-   - 物理名はモデル・enum とも `@@map` 済み。テーブルは
-     snake_case 複数形が既定で、単数形になるのは 1 行しか持たない設定 singleton
-     (`settings_*`。`invariants.sql` の `*_singleton_check` が SSoT) だけ。
-     `media` (不可算) と `inquiry_status_history` (履歴ログの集合名詞) が例外。
-     この規約は `__tests__/unit/architecture/prisma-naming-conventions.test.ts` が強制する。
-   - 部分 unique index は previewFeatures `partialIndexes` で表現できる
-     (例: `locations` の `@@unique([sortOrder], map: ..., where: { isActive: true })`)。
-2. `bun run db:generate` で client を再生成し、型エラーの波及を確認する。
-3. 新 enum / モデル型を app 層 (`src/app/*`) に流す場合は
-   `src/shared/lib/validations/enums/prisma-types.ts` (enums gateway) 経由にする。
+`prisma/schema.prisma`。命名規約（列 snake_case + `@map`、enum 型 snake_case
 
-## 2. migration 生成
+- `@@map`、enum 値 UPPER_SNAKE、テーブルは集合=複数形 / 設定=単数形）は
+  免除なしで強制される。
 
-ローカル dev DB が必要: `docker compose up -d db` (port 5432 / DB `myrrh_rental`)。
+## 3. migration を生成する
 
-- **単純な additive 変更**: `bun run db:migrate --name <name>`
-  (実体は `bunx --bun prisma migrate dev`。生成と適用を同時に行う)。
-- **データ移行・rename・backfill を含む変更**:
-  `bun run db:migrate --create-only --name <name>` で SQL だけ生成し、
-  **適用前に** SQL を意図通りに編集 (Prisma は semantic rename を推論せず
-  DROP+ADD を出力する) → `bun run db:migrate` で適用する。
-- `migrate dev` は対話プロンプト (drift 検出時の reset 確認等) を出すことがある。
-  非対話環境で刺さる場合は無理に流さず、ユーザーに対話実行を依頼する。
-
-修正のルール:
-
-- **一度適用した migration の SQL を書き換えると checksum drift になり、次回
-  `migrate dev` が reset を要求する**。修正は新 timestamp の別ディレクトリで
-  新規 migration として作り直す (古い未コミット dir は削除してよい)。
-- コミット済み migration の編集は pre-commit (`scripts/check-protected-files.sh`) が
-  ブロックする。新規追加 (git status A) のみ許可。
-
-## 3. migration SQL セルフレビュー checklist
-
-生成 / 編集した `migration.sql` を必ず読み、`migration-reviewer` subagent
-(`.claude/agents/migration-reviewer.md`) のチェックリスト項目 4-6（@@map 整合・
-baseline 手書き不変条件の保全・PostgreSQL enum/NOT NULL 化/jsonb 変換の落とし穴、
-実例つき）を自己チェックする。§8 で同 subagent に正式レビューを依頼する前の
-セルフチェックとして使う。
-
-## 4. squawk lint
-
+```sh
+bun run db:migrate --name <snake_case_name>
 ```
+
+shadow DB の適用順は**ディレクトリ名の文字列順**。既存の最大 timestamp より
+前の値を手で書かない。
+
+## 4. 生成された SQL を整える
+
+- **2 文以上なら先頭に `BEGIN;`、末尾に `COMMIT;` を足す。** Prisma は包まない。
+- 意図した DDL だけが入っているか読む（Prisma が余計な rename を出すことがある）。
+- **ヘッダに「適用前にこれを流してください」の SELECT やコマンドを書かない。**
+- 列を狭めるなら、狭める**すべての**列について
+  `-- SELECT '<table>.<column>' AS col, count(*) FROM <table> WHERE length(<column>) > <上限>`
+  の形をコメントで残す。
+- migration の中でデータを黙って修復・切り詰めしない。
+
+## 5. ローカルで確かめる
+
+```sh
 bun scripts/lint-migrations.ts prisma/migrations/<dir>/migration.sql
+bun scripts/migration-preconditions.ts
 ```
 
-有効 rule・ignore コメントの配置ルールは `migration-reviewer` チェックリスト項目 1 を参照。
+`lint-migrations` が破壊的変更を指摘したら、それは正しい。意図的なら SQL 先頭に
+`-- squawk-ignore-file <rule>` を書く（そう書いた migration が本当に計画
+ダウンタイムでデプロイされることをゲートが突き合わせる）。
 
-- ゲート自体の動作確認: `bun scripts/lint-migrations.ts --selftest`
-  (`scripts/lint-migrations.fixtures/` の unsafe / safe / ignored で検証)。
+`migration-preconditions` は未適用 DDL を実際に流して巻き戻す。
+ここで落ちたら、そのまま本番でも落ちる。
 
-## 5. breaking 判定と expand/contract の判断基準
+## 6. テストとゲート
 
-自動 breaking デプロイモードの発動条件・挙動（`_BREAKING_MIGRATION_DEPLOY` /
-scaling=0 停止 + 310 秒 drain）は rules の `migrations.md`（デプロイとの連動）を参照。
+```sh
+bun run test:db:migrate
+bun run test:integration
+bun scripts/run-tests.ts __tests__/unit/architecture
+bun run validate
+```
 
-判断基準:
+スキーマを触ると連動して落ちやすいゲート:
 
-1. **ダウンタイム不可 (通常運用)** → expand/contract に分割する:
-   - expand PR: 新列/新テーブル追加 + 新旧二重 write (+read は新→旧 fallback)。
-     additive なので squawk も breaking grep も通る。
-   - デプロイ完了後の contract PR: 旧参照コードを全除去 → 最後に DROP migration。
-2. **ダウンタイム許容 (リリース前・アクティブユーザー無し等)** → big-bang 1 PR。
-   自動ダウンタイムモードが安全弁になるが、**ユーザーの明示承認を得てから**行う。
-3. どちらでも **DROP を含む PR の前提**: 旧列/テーブルへの参照が `origin/main` に
-   残っていないことを Grep で全確認する。dead な設定でも明示 `select` に列名が
-   残っていれば旧 revision が 500 を返す。ローカルが stale な可能性があるため
-   `git fetch origin main` 後に `git show origin/main:<file>` で実体確認する。
+- `__tests__/unit/architecture/prisma-naming-conventions.test.ts`
+- `__tests__/unit/architecture/db-enum-columns-are-not-string.test.ts`
+- `__tests__/unit/architecture/string-column-declarations.test.ts` /
+  `varchar-write-bounds.test.ts` / `numeric-column-domains.test.ts`
+- `__tests__/unit/architecture/entity-reference-columns.test.ts` /
+  `entity-id-format-binding.test.ts`
+- `__tests__/unit/architecture/jsonb-column-shapes.test.ts`
+- `__tests__/unit/architecture/temporal-order-constraints.test.ts`
+- `__tests__/unit/architecture/migration-atomicity.test.ts` ほか migration 系
 
-## 6. テスト・検証
+`prisma/seed.ts` の判定キーが一意制約とずれると ESLint が落とす。
 
-順に実行し、実出力で確認する:
+## 7. デプロイ
 
-1. `bun run test:db:migrate` — テスト DB へ `prisma migrate deploy`
-   (TEST_DATABASE_URL 未設定なら docker compose `test-db`
-   (localhost:5433 / `myrrh_test`) を自動起動)。**空 DB からの全 migration 再生**
-   が通ることの確認を兼ねる。
-2. 影響ドメインの統合テスト: `bun scripts/run-tests.ts __tests__/integration/<対象>`
-   (CHECK 制約・トリガーに触れた場合は該当の実 DB テスト、例:
-   `__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts`)。
-3. `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts`
-   — db script 文字列・Prisma 境界規約の固定検証。
-4. `bun run validate` — type-check + lint (**テストは含まれない**ので 2-3 と併用)。
-5. 完了報告前に、dev DB へ適用済みか `bun run db:migrate` が
-   "already in sync" 相当で終わることを確認 (未適用ならユーザーに対話実行を依頼)。
+`main` にマージしても本番には出ない。反映は Deploy Production の手動 dispatch。
+破壊的なら計画ダウンタイムモードの step が出ることを build ログで確認する。
+落ちたときは `.claude/skills/deploy-debug/`。
 
-## 7. seed / E2E fixture 整合
+## やってはいけない復旧
 
-- 新モデル・新列は `prisma/seed.ts` への反映要否を判断する (モードの契約は
-  rules の `migrations.md`)。
-- feature module を追加した場合は `src/shared/lib/features/registry.ts` の
-  `FEATURE_MODULES_LIST` に id を追加する。seed の `buildInitialFeatureModules` が
-  全 key explicit で `Settings.featureModules` を初期化する契約
-  (既存 install の toggle は re-seed で上書きしない create-only 経路)。
-- seed のデモデータは `e2e/fixtures/test-data.ts` と slug・ステータスで
-  二重定義結合している。seed データを変えたら対応 fixture / spec を同時更新する。
-- 反映後は `bun run db:seed` を再実行し冪等に通ることを確認する。
-
-## 8. レビューとコミット
-
-1. merge 前に **migration-reviewer subagent** (`.claude/agents/migration-reviewer.md`)
-   へ新規 migration ディレクトリ (または schema diff) を渡し、squawk / breaking 判定 /
-   @@map 整合 / 手書き不変条件 / expand-contract 妥当性の所見を得る。
-2. コミットは `prisma/schema.prisma` + 新規 migration ディレクトリ + 生成型に依存する
-   コード変更を同一 commit にまとめる (migration だけ先行させない)。
-3. **main への merge では本番は動かない**。Cloud Run も prisma-migrate Job も、
-   Deploy Production の手動 `workflow_dispatch` でしか走らない (CLAUDE.md 絶対規約 #11)。
-   破壊的 DDL を含む PR には「デプロイ実行時に計画ダウンタイムが入る」ことを明記し、
-   実行するかどうかはユーザーに確認する。
+失敗した migration の SQL を書き換えて再実行する（pre-commit がブロックする）。
+`P3009` で詰まったら `prisma migrate resolve --rolled-back <name>` のうえで
+**新しい** migration を足す。

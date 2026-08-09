@@ -1,262 +1,99 @@
 ---
 paths:
-  [
-    "src/app/(admin)/**",
-    "src/app/(public)/**",
-    "src/shared/lib/forms/**",
-    "src/shared/lib/validations/**",
-    "src/shared/lib/mutation-result.ts",
-  ]
+  - "src/app/**/_actions/**"
+  - "src/app/**/actions/**"
+  - "src/app/**/_components/**/*.tsx"
+  - "src/shared/lib/forms/**"
+  - "src/shared/lib/action-helpers.ts"
+  - "src/shared/lib/mutation-result.ts"
+  - "src/shared/lib/conform/**"
 ---
 
-# フォーム（conform + Zod 4）とサーバーミューテーション
+# フォームと mutation
 
-## 共通基盤
+## 戻り値の形
 
-- Server Action 統合の SSoT は `executeConformMutation(formData, schema, handler)`
-  （`src/shared/lib/forms/conform-action.ts`、React 19 `useActionState` 互換）
-- conform の Zod 統合 import は必ず `@conform-to/zod/v4` サブパス（bare は禁止）
-- mutation の戻り値は `MutationResult<T>`、判別は `isMutationError()`
+```ts
+type MutationError = {
+  readonly error: string;
+  readonly code?: string;
+  readonly fieldErrors?: Record<string, string[]>;
+};
+type MutationResult<T = null> = T | MutationError;
+```
 
-## 空入力の罠（最頻出バグ）
+`{ success: boolean }` 形式の legacy wrapper は**再導入しない**（Server Action
+も route handler も。動的走査のゲートがある）。判定は `isMutationError`、
+生成は `createMutationError` / `createValidationMutationError`。
 
-`parseWithZod` は空入力を **undefined に変換**する。必須 `z.string()` / `z.boolean()` の
-ままだと空欄保存・Switch OFF 保存が全弾きになる。
+`"use server"` のファイルに **async でない export を置かない**。1 つでもあると
+同じファイルの Server Action が全部壊れる（build と単体テストは通り、本番だけ
+落ちる）。強制は `__tests__/unit/architecture/use-server-exports.test.ts`。
 
-- 任意テキスト → `optionalText(max)`、Switch → `switchBoolean()`（`.default(false)`）、
-  永続化前の空→null は `emptyToNull()`（いずれも
-  `_shared/actions/settings/schemas/form-schema-helpers.ts`）
-- `switchBoolean` を `z.preprocess` に書き換えない（実 boolean true を破壊する）
-- この契約は `__tests__/unit/forms/*-empty-optional.test.ts` が
-  「実体スキーマ × FormData × parseWithZod」の実測で固定している。
-  スキーマをテスト内にインライン再宣言して object 入力で検証しない
+## 管理画面の mutation
 
-## クライアント側の定型
+`executeAdminMutationResult`（`src/app/(admin)/admin/(dashboard)/_shared/lib/admin-action.ts`）
+で包む。**実行順序が契約**:
 
-`useForm<z.input<typeof Schema>>`（明示 generic）+ `import type { z }`（value import
-しない）+ `constraint: getZodConstraint(schema)` + `onValidate: parseWithZod` +
-`shouldValidate: "onBlur"` + `shouldRevalidate: "onInput"`。
-成功検出は resetForm の設定で変わる: `resetForm: true` → `lastResult.initialValue === null`、
-`resetForm: false` → `lastResult.status === "success"`。
+1. `checkAdminAuth()` — 認証（DB lookup より前）
+2. `resolveResourceId(user)` — 認証後に resourceId を解決
+3. `hasPermission()` — RBAC
+4. `userHasResourceAccess()` — EDITOR の `userPageAssignment`（opt-in）
+5. `execute(user)` — DB mutation（`DomainError` は `MutationError` に自動変換）
+6. `await afterSuccess(data)` — cache 無効化などクリティカルな副作用
+7. `fireAndForget(logAction)` — 監査ログ（非ブロッキング）
 
-## React 19 の form auto-reset がサーバーのエラーを消す（最重要）
+1 を後ろへ動かすと未認証で DB lookup が走る（DoS 経路）。6 と 7 を入れ替えると
+監査書き込みの失敗で cache 無効化が skip され、公開ページが stale になる。
 
-React 19 は `action` prop に渡した関数が resolve した時点でフォームを自動リセットする
-（公式 Server Functions:「React handles the submission and automatically resets the form
-upon success」）。`useActionState` の action は **throw せず `SubmissionResult` を返す**ため、
-**サーバーが form-level エラーを返した応答もリセット対象**になる。
+## 公開フォームの Server Action
 
-リセットで input が空になると conform は空の FormData で再検証し、その field errors が
-**サーバーのメッセージを上書きして消す**。実測（CI run 30695870083 の trace）: VIEWER の
-顧客作成でサーバーが `customerのcreate権限がありません` を返し
-`aria-describedby="customer-create-error"` まで付いた +76ms 後の状態から、+236ms でその
-表示が消え、空欄由来の `Invalid input: expected string, received undefined` だけが残った。
-**利用者は理由を知れないまま入力も全て失う。** 公開側では「このタイムスロットは満員です」
-等の DomainError が同じ経路で消える。
+予約・イベント申込は 4 段 guard を**この順**で通す。安い検査を先に置く不変契約で、
+`__tests__/unit/architecture/public-mutation-guard-order.test.ts` が
+handler 本体を静的解析して固定している。
 
-対策は conform の `onSubmit` から自分で action を呼ぶこと:
+```
+checkActionRateLimit → checkEmailRateLimit → checkBotHeuristics → validateTurnstile
+```
 
-```tsx
-const [lastResult, action] = useActionState(submitX, undefined);
+順序を変えると Turnstile トークンの消費タイミングがずれ、email の第二防壁も
+迂回できるようになる。
+
+## クライアント側（conform + Zod）
+
+テキスト入力を持つフォームは **conform + Zod**。素の `useState` +
+`if (!name) toast.error(...)` は Zod schema と検証を二重管理し、field-level の
+エラー表示と `aria-invalid` / `aria-describedby` を落とす。allowlist は空。
+
+**React 19 の form auto-reset を止める。** `action` prop に渡した関数が resolve
+した時点でフォームが自動リセットされ、サーバーが返した form-level エラーが
+空の再検証で上書きされて消える（実測: 権限拒否メッセージが 236ms で消えた）。
+
+```ts
 const [form, fields] = useForm({
-  lastResult,
-  onSubmit: dispatchWithoutFormReset(action), // src/shared/lib/forms/conform-submit.ts
+  onSubmit: dispatchWithoutFormReset(dispatch), // src/shared/lib/forms/conform-submit.ts
   // ...
 });
-return (
-  <form {...getFormProps(form)} action={action}>
-    …
-  </form>
-);
 ```
 
-- conform の `onSubmit` は「client 検証を通過 **かつ** intent submission ではない」ときだけ
-  呼ばれる公式の拡張点（`createFormContext` が `formData.has(INTENT)` で除外する）
-- react-dom の form action listener は `nativeEvent.defaultPrevented` を先に見て
-  `startHostTransition(…, null, formData)`（action = null）で抜けるため、
-  **preventDefault 済みの submit で action が二重に走ることはない**
-- **`action` prop は外さない。** `getFormProps` が返すのは id / onSubmit / noValidate /
-  aria 属性だけで **`method` を含まない**。外すと SSR された form は action も method も
-  持たず、hydration 前に submit した利用者は**ネイティブ GET** で現在の URL に飛ばされ、
-  氏名・メールアドレス・電話番号が**クエリ文字列に載って履歴とアクセスログに残る**
-- ref の capture 等で helper に渡せないときは同じ処理を `onSubmit(event, { formData })` の
-  inline で書く（`CreatePageDialog` が実例。ref を触る関数を helper に渡すと
-  `react-hooks/refs` が「render 中に ref を読みうる」で落ちる）
-- 一括置換で拾えない配線に注意。`action={isInteractive ? formAction : undefined}` の
-  条件式は `action={<識別子>}` の grep をすり抜け、公開の問い合わせフォームだけが
-  取り残された（#1802）
+ref の capture 等で helper に載せられない場合は `onSubmit(event, { formData })`
+を inline で書き、`event.preventDefault()` を必ず添える。
+**`action` prop は外さない** — `getFormProps` は `method` を返さないので、
+外すと hydration 前の submit がネイティブ GET になり入力内容が URL に載る。
 
-gate: `__tests__/unit/architecture/conform-form-pattern.test.ts`（**allowlist なし**）。
-落とせるのは「conform + Server Action のファイルに guard が **1 つも無い**」場合と
-「hook を別名 import して検出不能にした」場合。**1 ファイル内の複数フォームで一部だけ
-guard を欠く形は検出できない** — 件数比較を 3 通り（`<form action>` タグ数 / `useForm`
-設定数 / `useActionState` 数）試したが、いずれも正当なコード（条件分岐で 2 つの
-`<form>` を描画する / client-only の conform 設定が同居する / 複数 Dialog が共通の
-Form コンポーネントに action を渡す）を誤検出したため断念した。**そこはレビューで見る。**
+`useForm` / `useActionState` に別名を付けない（ゲートが数えられなくなる）。
 
-## サーバーの拒否を捨てない
+## 検証スキーマ
 
-`executeConformMutation` を通す action の結果を `const [_state, formAction] = useActionState(…)`
-で捨てると、**サーバーが返した拒否理由を画面に出す手段が無くなる**。実例: 繰返し予約の
-3 択キャンセルは権限拒否・ドメインエラー・楽観ロック競合のすべてが**無言**で、操作者には
-「押したのに何も起きない」としか見えなかった（#1803 で修正）。
+- 必須テキストは `z.string().trim().min(1)`。**順序が本体** —
+  `.min(1).trim()` は `"   "` を通して `""` を保存する。ESLint
+  `local/require-trimmed-text` が強制。機械生成値（token / id / slug）だけ
+  行単位 disable + 理由。
+- 書き込みと読み出しで schema を共用しているとき、後から制約を厳しくすると
+  既存行が読めなくなる。配列を一括検証していると**コレクション全体が無言で
+  消える**。
 
-入力が hidden だけのフォームでも `useForm` に載せ、`form.allErrors` をまとめて描画する。
-form-level と field-level を分ける意味があるのは、利用者が個々の欄を直せるときだけ。
+## 保存できたかの判定
 
-## 手書きフォームを増やさない
-
-`useState` + `if (!name) toast.error(…)` は Zod schema と検証を二重管理し、field-level
-エラー表示と `aria-invalid` / `aria-describedby` を落とす。**テキスト入力を持つフォームは
-conform を使う**（`<input>` は `type` 省略時 HTML 既定で `text` なので、これも対象）。
-
-既存の逸脱 5 件は上記 gate の allowlist に「なぜ移行できないか」付きで固定してある。
-**allowlist は減る方向にしか動かさない** — 移行が済んだ entry を消し忘れると、後から
-conform を外したときに残骸が黙って免除する（gate 側で検出するようにしてある）。
-
-conform 化が不要なのは「client validation する入力が無い」ケースだけ:
-`redirect` しか返さない OAuth 開始フォーム、hidden token だけを POST する Server
-Component（`receipts/[serialNo]/download`。JS 無効時の動作と token を URL に残さない
-設計が意図的なので client component 化しない）、select / toggle しか持たないダイアログ。
-
-## admin mutation
-
-- 標準ラッパーは `executeAdminMutationResult`（`@/admin/lib/admin-action`）。
-  実行順序 checkAdminAuth → resolveResourceId → hasPermission → userHasResourceAccess →
-  execute → afterSuccess → logAction は**不変契約**（順序変更はセキュリティ/キャッシュの
-  silent regression）
-- execute 内で throw した `DomainError` は自動で MutationError に変換される
-- legacy wrapper（`createSuccess(` / `type ActionResult` / `executeAdminMutation(`）の
-  再導入はテストで即 fail
-- admin action ファイルは Prisma を直 import しない（thin action）。強制は
-  `__tests__/unit/architecture/prisma-import-boundary.test.ts` が **src 全体を走査**して
-  行う（`from` も `await import(...)` も見る）。**登録する配列は無い** — 手書きの
-  ファイル一覧は移動・改名で黙って空振りするので廃止した
-
-## 公開フォーム action
-
-handler 冒頭で `checkActionRateLimit(formSubmitRateLimiter)` →
-`validateTurnstile({ token, expectedAction: TURNSTILE_ACTIONS.* })` の順に実行する。
-Turnstile token は一度の検証で消費されるため、結果を受けたら widget を張り直す
-（`ref.current?.reset()`）。**トークン欄はアプリ側で持たない** — `TurnstileWidget` が
-Cloudflare 公式の `response-field-name` で `turnstileToken` の hidden input を
-自前で描画・更新する。`<form>` 送信ではなく引数でトークンを渡す画面（ダイアログ内の
-キャンセル・ログイン等）だけ `onVerify` を使う。
-
-**`useInputControl(fields.turnstileToken)` を復活させてはいけない。** conform 管理下の
-フィールドに書き戻すと 2 つの実害が出る:
-
-1. reject 応答後に `change("")` すると `shouldRevalidate: "onInput"` の再バリデーションが
-   走り、**サーバーが返した form-level エラーを client 検証結果で上書きして消す**。
-   「このタイムスロットは満員です」がユーザーに一度も表示されなくなる
-2. `useInputControl` の戻り値は毎レンダー新しいオブジェクトなので effect の依存に
-   入れると無限ループになる（PR #1758）
-
-予約(reservation)・イベント申込(event-registration)は専用のIP単位リミッター
-（`reservationSubmitRateLimiter` / `eventRegistrationSubmitRateLimiter`、
-`formSubmitRateLimiter` からは分離済み）を使い、上記2つの間に
-`checkEmailRateLimit(<domain>ByEmailRateLimiter, data.email)` →
-`checkBotHeuristics({ honeypot, formRenderedAt })` を追加で挟む
-（`checkActionRateLimit` → `checkEmailRateLimit` → `checkBotHeuristics` →
-`validateTurnstile`）。DB/外部API呼び出しを伴わない最安チェックを先に置く順序。
-`checkEmailRateLimit` は同一人物が複数IPから同じメールで大量作成するケースを防ぐ
-顧客単位の第二防壁（`cancelByReservationRateLimiter` と同型の設計）。
-honeypot フィールドは Zod スキーマ上では検証エラーにしない（`website` のような
-実在しない項目名を装い、botに何が原因か開示しないため）。フォーム側は視覚的に
-隠した hidden input（`aria-hidden` + `tabIndex={-1}` + 画面外配置）と、フォーム
-初回マウント時刻を埋め込む hidden input の2つを追加する。全公開フォームへの
-一般化はしていない（対象は予約・イベント申込のみ、他フォームへの適用は個別に検討する）。
-
-## スキーマ配置
-
-**制約**（守る）と **新規の置き先**（選ぶ）を分ける。既存ファイルを選好に合わせて
-動かさない — 動かす理由になるのは制約違反だけ。
-
-（この段落は 4 度書き直している。「中身の列挙」「公開側が使うか」「最も下の層の
-利用者」はいずれも実在するファイルを取りこぼし、「最も内側に置く」は逆に
-`seo` / `transfer-account` など 6 件へ無用な移動を指示した。列挙も最適化も誤る。）
-
-### 制約: 全利用者から import できる位置に置く
-
-到達可能性を決めているのは 2 つだけ:
-
-- `src/shared/**` は `@/admin` / `@/public` を import できない（依存方向。テストが強制）
-- `(public)` と `(admin)` は互いを import しない（Multiple Root Layouts。現状 0 件）
-
-したがって **`src/shared/**` か両 surface が使うなら `src/shared/lib/validations/` 以外に
-置けない**。それ以外はどこでも成立するので、次の選好で決める。
-
-### 新規の置き先
-
-| 利用者                       | 置き場                                                              |
-| ---------------------------- | ------------------------------------------------------------------- |
-| `src/shared/**` / 両 surface | `src/shared/lib/validations/`（制約）                               |
-| `(public)` の複数箇所        | `src/shared/lib/validations/`（public 側に共有 validations は無い） |
-| `(admin)` の複数箇所         | `(dashboard)/_shared/lib/validations/`                              |
-| 設定画面のフォーム           | `_shared/actions/settings/schemas/`                                 |
-| 1 画面だけ                   | コンポーネント隣接の `*-form-schema.ts`                             |
-
-`src/shared/lib/validations/` の 41 モジュールのうち 16 件は `src/shared/**` の利用者を
-持たず、13 件は複数の app が共有している（`section-parsers` は public 10 箇所、
-`event-registration` は public 7 箇所、`review` は public + admin）。うち 6 件
-（`seo` / `transfer-account` / `business-hours` / `receipt-reissue` /
-`reservation-series` / `event-registration-onsite`）は admin だけが使うが、**制約は
-満たしているので動かさない**。
-
-`src/shared/lib` は `src/shared/domain` を import できない（ratchet で凍結）。domain の
-型ガードや enum が要るスキーマはこの制約で `shared/lib/validations/` に置けない。
-利用者が admin だけなら `(dashboard)/_shared/lib/validations/` に置き、`@/admin/types/*` の
-re-export 経由で参照する（`editor-comment` が実例）。
-
-`"use server"` ファイルは async 関数以外を export できないので、Server Action の入力
-スキーマも上のいずれかに切り出して両側から参照する。
-
-Zod 4 のメッセージは `{ error: "..." }` 形式、日付は `z.iso.date()` /
-`z.iso.datetime()`。
-
-## 必須テキストは `.trim()` を先に通す
-
-`z.string().min(1)` は**空白 1 文字を通す**。ユーザーが自由入力する項目でこれをやると
-見た目が空の値が保存され、その先の副作用まで走る。実測: 公開問い合わせの
-`subject` / `message` は空白だけの送信が通り、管理者宛の通知メールまで飛んでいた。
-記事タイトル・FAQ の質問文・スペース名も同じ状態だった（#1815 / #1818）。
-
-UI 側で `value.trim().length === 0` を見て送信ボタンを disabled にするのは
-**schema に無い保証を画面に置く**ことになる。実際 `inquiry-reply` は conform 化で
-そのガードを落とした瞬間に空白送信が通るようになった（#1814）。
-
-`.trim()` は Zod 4 では `ZodString` の flag であって transform ではないので、
-input / output はどちらも `string` のまま。conform の `submission.value` の型は動かない。
-
-**順序が本体。** `.trim()` は `$ZodCheckOverwrite` で、check は宣言順に走る。
-つまり `z.string().min(1).trim()` は**空白を含んだ値**に `min(1)` を当てて通し、
-その後で空文字に潰す。実測:
-
-```
-z.string().trim().min(1).safeParse("   ")  → 拒否
-z.string().min(1).trim().safeParse("   ")  → 通過、data === ""
-```
-
-`.trim()` は必ず `.string()` の直後に置く（`.max()` / `.regex()` / `.refine()` も
-同じ理由で trim より後ろでなければならない）。
-
-**線引きは「誰がその値を作るか」**:
-
-| 値の出どころ                                                                      | 扱い           |
-| --------------------------------------------------------------------------------- | -------------- |
-| 人がフォームに入力・貼り付ける（タイトル / slug / クーポンコード / API トークン） | `.trim()` する |
-| 機械が渡す（URL param / Turnstile / 生成 ID / env / webhook / `<select>` の値）   | trim しない    |
-
-slug も `.trim()` する側。pattern 検証があるのは「trim が**無害**」な理由であって
-「**不要**」な理由ではなく、実際 `" my-post "` は「小文字英数字とハイフンのみ」という
-入力内容と噛み合わないエラーになっていた。
-
-gate: ESLint の `local/require-trimmed-text`（`eslint-rules/require-trimmed-text.mjs`）。
-`z.string()` から呼び出しチェーンを AST で辿るので、**構文の形と順序の両方**を見る。
-例外は中央の一覧ではなく、その行の `eslint-disable-next-line local/require-trimmed-text --
-<理由>` で表明する。
-
-（旧 `required-text-is-trimmed.test.ts` は正規表現 3 本で `.trim()` の**有無だけ**を
-見ており、順序を検査できず — つまり gate が赤い開発者が末尾に `.trim()` を足すと
-緑になったうえで空文字が保存される — さらに 24 通りの書き方のうち 18 通りを
-取りこぼしていたため廃止した。）
+toast や pending 解除で「保存成功」を判定しない（楽観ロック競合で toast が
+出ないことがある）。判定はリロード後の永続化状態で行う。

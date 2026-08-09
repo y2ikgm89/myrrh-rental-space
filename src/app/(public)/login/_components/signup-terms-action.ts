@@ -39,8 +39,8 @@ const inputSchema = z.object({
  * `recordTermsAgreementsCommand` を呼ぶ。
  *
  * 防御層: rate limit + Cloudflare Turnstile (未認証公開フォームの SSoT 規律)。
- * OAuth provider 側に PKCE + state があるため悪用リスクは低いが、CLAUDE.md
- * 「未認証公開フォーム必須」ハードルールに準拠する。
+ * OAuth provider 側に PKCE + state があるため悪用リスクは低いが、
+ * `.claude/rules/forms-mutations.md` の公開フォーム guard 規律に準拠する。
  */
 export async function setSignupTermsAgreementCookie(input: {
   termsIds: readonly string[];

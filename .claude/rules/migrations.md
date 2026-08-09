@@ -1,283 +1,130 @@
 ---
-paths: ["prisma/**"]
+paths:
+  - "prisma/**"
+  - "scripts/lint-migrations.ts"
+  - "scripts/migration-preconditions.ts"
+  - "scripts/db-census.ts"
+  - ".squawk.toml"
 ---
 
-# Prisma schema・migration・seed
+# Prisma migration
 
-## 基本フロー
+対象 PostgreSQL は **18**（本番 Neon / `docker-compose.yml` / CI / `.squawk.toml`
+`pg_version` の 4 箇所が揃っている必要がある）。`prisma/migrations/` は
+baseline `00000000000000_init` に畳んである。DB の不変条件（CHECK / EXCLUDE /
+関数 / trigger）は Prisma のスキーマ言語で表現できないため
+`prisma/baseline/invariants.sql` が SSoT。
 
-1. `prisma/schema.prisma` を変更 → `bun run db:generate`
-2. `bun run db:migrate --name <name>` で migration 生成・適用
-3. `bun scripts/lint-migrations.ts prisma/migrations/<dir>/migration.sql` で squawk lint
-4. テスト DB へは `bun run test:db:migrate`
+## 変えてはいけない前提
 
-## 禁止・制約
+- **既存の migration SQL を編集しない。** `scripts/check-protected-files.sh` が
+  pre-commit で変更（`diff-filter=M`）をブロックする。新規追加（`A`）は通る。
+  直したいことがあれば必ず次の migration を足す。
+- **migration の中で自動データ修復をしない。** 連絡先や会計の証跡を黙って
+  切り詰める・埋めると、そのデータは二度と戻らない。落ちるのが正しい。
+- **migration 名を他のファイルに書かない。** 履歴は baseline へ畳まれるので、
+  名指しは畳んだ瞬間に嘘になる（`__tests__/unit/architecture/gates-do-not-pin-migrations.test.ts`）。
+  免除が要るときはファイル名ではなく件数の ratchet にする。
 
-- **既存の `prisma/migrations/*/migration.sql` は編集禁止**。pre-commit
-  （`scripts/check-protected-files.sh`）が改変（diff-filter=M）をブロックする。
-  修正は新規 migration の追加のみ
-- `db:push` / `db:reset` / `migrate reset` / `db pull` はユーザーの明示依頼時のみ
-- **`prisma db pull` は CHECK 制約・constraint trigger を黙って落とす**。
-  `blocked_dates_scope_target_check` や `events_schedule_integrity_check` trigger 等の
-  手書き不変条件は schema.prisma で表現できず、SSoT は
-  `prisma/baseline/invariants.sql`（baseline migration はそこからの生成物）
-- モデル名とテーブル名は `@@map` で乖離している（AuditLog → audit_logs 等）。
-  migration SQL を書く・検証する際は schema.prisma と突合する
+## 書き方
 
-## migration は原子的ではない（文の順序が正しさの一部）
+```sh
+bun run db:migrate --name <snake_case_name>
+```
 
-**Prisma は PostgreSQL の migration をトランザクションで包まない。** 公式は
-「PostgreSQL: You can opt-in by adding `BEGIN;` and `COMMIT;` … By default, Migrate
-does not wrap migrations in a transaction」と明記している。実測でも、
-CREATE TABLE → INSERT → 失敗する CREATE UNIQUE INDEX を 1 ファイルに並べると
-index だけ失敗して **CREATE TABLE は残った**。
+- ディレクトリ名は `<14 桁 timestamp>_<snake_case>`。同じ timestamp の重複は
+  `__tests__/unit/architecture/migration-timestamp-monotonic.test.ts` が落とす。
+- **2 文以上の migration は自分で `BEGIN;` / `COMMIT;` で包む。**
+  Prisma は PostgreSQL の migration をトランザクションで包まない（公式仕様、
+  実測でも失敗した `CREATE TABLE` が残った）。包まないと部分適用のまま
+  `_prisma_migrations` に失敗が記録され、以降のデプロイが全部止まる。
+  強制は `__tests__/unit/architecture/migration-atomicity.test.ts`。baseline だけが免除（空 DB に走るので
+  既存行が無い）。
+- `CREATE INDEX CONCURRENTLY` はトランザクション内で使えない。使うなら
+  その文だけ別 migration に分ける。
+- **ヘッダに「適用前に本番で流してください」の SELECT やコマンドを書かない。**
+  人が読んで手で流す前提の検査は流されないまま「確認済み」と誤読される。
+  強制は `__tests__/unit/architecture/migration-header-has-no-manual-precheck.test.ts`（件数 ratchet）。
 
-つまり **途中で失敗した migration は部分適用のまま残る**。帰結:
+## 適用前のリハーサル
 
-- **失敗しうる文を、それが置き換える対象を DROP する前に置く。** 「古い制約を DROP →
-  新しい制約を CREATE」の順で書くと、CREATE が既存データ違反で落ちたときに
-  **どちらの制約も無い状態**で止まる（DROP は通り、CREATE だけ落ちるため）
-- 既存データに依存して失敗しうる DDL（UNIQUE / CHECK の追加等）を含む migration は、
-  **適用前に `bun scripts/migration-preconditions.ts` のリハーサルで落ちるか確認する**
-  （ヘッダに確認 SELECT を手で書かない — 下記）
-- **baseline 以外で 2 文以上を持つ migration は `BEGIN;` / `COMMIT;` で包む**
-  （Prisma 公式の opt-in。`CREATE INDEX CONCURRENTLY` はトランザクション内で
-  使えない点に注意）。「既存データに依存する DDL かどうか」の人力分類は
-  分類漏れが必ず出るのでやめ、**文数だけ**で判定する。
-  gate は `__tests__/unit/architecture/migration-atomicity.test.ts`。
-  **免除は baseline `00000000000000_init` の 1 本だけ**で、日付境界も allowlist も
-  意図的に置いていない（baseline は必ず空の DB に対して走るので既存行が無い、
-  という理由の免除であって「古いから」ではない）
+```sh
+bun scripts/migration-preconditions.ts            # .env.local の DB
+bun scripts/migration-preconditions.ts --url postgresql://...
+```
 
-  包まないと、本番データ次第で前半だけ適用された状態で止まり、`_prisma_migrations` に
-  失敗が記録されて**以降のデプロイが全部ブロック**される。復旧は本番 DB の手作業になる。
+未適用の DDL を 1 トランザクションで実際に流して必ず巻き戻す。既存行に当たって
+落ちるかどうかを PostgreSQL 自身に判定させる（静的分類は収束しないことが実測で
+確定している）。同時に、DB の migration 履歴が repo と同じ系譜かも照合する
+（`prisma migrate deploy` はここを見ないので、接続先が別 DB でも
+`No pending migrations to apply.` を exit 0 で返す）。
 
-  **代償**: 包むと失敗時の表示が実際の違反ではなく
-  `current transaction is aborted, commands ignored until end of transaction block`
-  になる（実測）。原因の特定は `bun scripts/migration-preconditions.ts` で行う。
+リハーサルが証明するのは「この SQL がエラーにならない」ことだけ。**破壊は
+エラーではない**（満杯のテーブルでも `DROP COLUMN` は成功する）。破壊の側は
+squawk と計画ダウンタイムモードが見る。
 
-  ```sh
-  bun scripts/migration-preconditions.ts --url postgresql://...
-  ```
+## squawk（CI の migration-safety job）
 
-  **未適用 migration を 1 つのトランザクションで実際に流し、必ず巻き戻す。**
-  判定は PostgreSQL の実挙動そのもので、落ちるなら**失敗した文と本当のエラー
-  （SQLSTATE 付き）**が出る。
+`scripts/lint-migrations.ts` が変更された `prisma/migrations/**/migration.sql`
+を squawk にかける。守っている事故は 1 つだけ — **Cloud Run のローリング切替窓
+（migrate 完了〜新リビジョン ready）で旧コードが破壊済みの新スキーマを叩いて
+500 になる**こと。ロック/型スタイル系のルールは単一インスタンス構成では過剰
+なので `.squawk.toml` で外してある。
 
-  前身は SQL を分類してプローブを組み立てる実装だった。多角レビュー 2 巡で
-  **21 件の取りこぼし**が出た（素通り 9・通る migration を止める誤検知 12）。
-  `NOT VALID` / `USING` 句 / `ATTACH PARTITION` / `CREATE TABLE AS SELECT` /
-  `varchar` の末尾空白 / 合成既定値の型 …… PostgreSQL の意味論を手で書き写す限り
-  収束しない。**写経に戻さないこと。**
+意図的に破壊的な migration を通すときは、SQL 先頭に
+`-- squawk-ignore-file <rule>`（または該当文の直前に `-- squawk-ignore <rule>`）
+を書く。パス allowlist は存在しない（入口が 2 つあると見えない方が使われる）。
+書いた migration が本当に計画ダウンタイム付きでデプロイされることは
+`__tests__/unit/architecture/migration-squawk-ignore-is-breaking.test.ts` が workflow の正規表現と突き合わせて
+強制する。**散文で「安全だ」と主張しても通らない。**
 
-  巻き戻しの担保は 3 段: ①トランザクション制御と `CONCURRENTLY` が 1 文でもあれば
-  **何も実行せずに**止める（包み用の `BEGIN` / `COMMIT` / `END` のみ読み飛ばす）
-  ②実行は interactive transaction 内だけで、最後に必ず例外を投げる
-  ③列・制約・index の**定義そのもの**を畳んだ構造ハッシュ（md5）と
-  `_prisma_migrations` 行数を前後で照合する（件数だけの比較では CHECK の
-  入れ替え drift を見逃す）。
+```sh
+bun scripts/lint-migrations.ts prisma/migrations/<dir>/migration.sql
+bun scripts/lint-migrations.ts --selftest    # ゲート自体の検証
+```
 
-  見ないもの: シーケンスの採番は巻き戻らない。未適用が複数あるとき 1 つの
-  トランザクションで流すので、「前の migration が commit 済みであることに依存する文」
-  はここでだけ落ちうる。
+baseline だけが squawk の対象外。理由は「古いから」ではなく、空 DB に走るので
+旧 revision も既存行も存在せず全ルールが構造的に非該当だから。**この免除を
+2 本目以降に広げない。**
 
-  本番の Cloud Run Job（`terraform/cloud_run_migrate_job.tf`）は
-  `migration-preconditions.ts && prisma migrate deploy` を実行する。**migrate を
-  始める前**に落ちるので `_prisma_migrations` に失敗が残らない。
+## 破壊的 migration = 計画ダウンタイム
 
-  **ヘッダに確認クエリを手で書かない。** コメントの SELECT は誰も流さない。
-  適用前の既存行チェックは上記リハーサルが担う。以前はヘッダが唯一の守りだったが、
-  jsonb 形状 CHECK を入れた migration のヘッダは 23 本の制約のうち 3 本しか見ておらず、
-  `locations.special_holidays` に JSON null が残った DB で「0 件」と出たうえで
-  migration が落ちた。人が書く一覧は覆うべき集合から必ず離れる。
-  gate は `__tests__/unit/architecture/migration-header-has-no-manual-precheck.test.ts`
-  （既に書かれた分は編集不能なので**件数を固定**する ratchet。増えれば新規、
-  減れば baseline へ畳んだ合図で、どちらも落ちる）、
-  `__tests__/unit/architecture/migration-preconditions.test.ts`
-  （文の切り出し + 巻き戻せない文を実行しない + 接続先解決）と
-  `__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`
-  （実 DB で落ちる/通るの終了コードと、DB が変わっていないこと）
-
-`.squawk.toml` の `assume_in_transaction` はこの実態に合わせて `false`。
-
-## squawk（migration lint）
-
-- **免除はファイル単位の 1 形だけ**。ファイル冒頭に
-  `-- squawk-ignore-file <rule名>[, <rule名>]`（rule 名必須）。
-  文単位の `-- squawk-ignore <rule名>` は**使わない**——
-  `migration-squawk-ignore-is-breaking.test.ts` が拒否する。
-
-  （以前ここは「免除は 2 形」と書いていたが、AGENTS.md は
-  「declared **only** with `-- squawk-ignore-file`」と書いており、gate は両形を
-  通していた。**強制されない規約が 2 つに割れていた。** ファイル単位に寄せた
-  理由は可視性で、SQL の冒頭に出るぶんレビューで最初に目に入る。安全性の差では
-  ないので、どちらかに決めて強制することが要点。なお gate の**検出**は両形の
-  ままにしてある——文単位を検出から外すと、書かれたときに破壊的 DDL 判定を
-  すり抜けて計画ダウンタイム無しでデプロイされる）
-
-- **免除したら、その SQL は必ず破壊的 DDL 判定に引っかかること。** squawk が見て
-  いるのは「ローリング切替窓で旧 revision が壊れたスキーマを叩く」危険で、黙らせて
-  よいのは**その窓が別の仕組みで塞がれているとき**だけ。この repo でその仕組みは
-  deploy-production.yml の計画ダウンタイムなので、免除と発火が食い違うと窓が開いた
-  ままになる。散文ではなく
-  `__tests__/unit/architecture/migration-squawk-ignore-is-breaking.test.ts` が強制する
-  （実際、`ALTER TYPE ... RENAME VALUE` だけの migration が当時の grep に
-  引っかからず、ダウンタイム無しでデプロイされる状態で 1 本すり抜けていた）
-- npm ラッパー squawk-cli は spawn 失敗時 exit 0 の偽陰性があるため使わない
-  （`SQUAWK_BIN` で公式バイナリを指定可能）
-
-## デプロイとの連動（重要）
-
-migration に下記のいずれかが含まれると、deploy workflow が自動的に breaking migration
-mode に入り、public/admin 両サービスを scaling=0 停止 + 310 秒 drain する
-（**計画ダウンタイム発生**）。Cloud Run のローリング窓を保つには expand/contract 分割を優先する。
+本番デプロイ（`.github/workflows/deploy-production.yml` の手動 dispatch）は、
+適用対象の SQL が下記のいずれかを含むと公開・管理の両サービスを scale 0 にして
+310 秒 drain する。判定の SSoT は workflow 内の正規表現で、この列挙はそこから
+導出した集合と一致することを `__tests__/unit/architecture/breaking-migration-detection.test.ts` が強制する。
 
 <!-- breaking-triggers:start -->
 
-ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... RENAME COLUMN / ALTER TABLE ... RENAME TO / ALTER TABLE ... ALTER COLUMN ... SET NOT NULL / ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT / ALTER TABLE ... ALTER COLUMN ... TYPE / ALTER TYPE ... RENAME VALUE / ALTER TYPE ... RENAME TO / DROP TABLE / DROP TYPE
+ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT /
+ALTER TABLE ... ALTER COLUMN ... SET NOT NULL /
+ALTER TABLE ... ALTER COLUMN ... TYPE /
+ALTER TABLE ... DROP COLUMN /
+ALTER TABLE ... DROP CONSTRAINT /
+ALTER TABLE ... RENAME COLUMN /
+ALTER TABLE ... RENAME TO /
+ALTER TYPE ... RENAME TO /
+ALTER TYPE ... RENAME VALUE /
+DROP TABLE /
+DROP TYPE
 
 <!-- breaking-triggers:end -->
 
-**この一覧の SSoT は `.github/workflows/deploy-production.yml` の grep 正規表現**で、
-`__tests__/unit/architecture/breaking-migration-detection.test.ts` が発火/非発火の両方を
-fixture で固定している。判定に迷ったらそのテストの fixture を見る（散文の列挙は
-過去に 2 度 drift した — `DROP CONSTRAINT` と `ALTER COLUMN ... TYPE` が長期間欠けていた）。
+`ALTER INDEX ... RENAME TO`（Prisma が index の `map` 変更で出す）は**発動しない**。
 
-`ALTER COLUMN ... TYPE` / `SET NOT NULL` はテーブル全体書換 + 排他ロックのため、
-`DROP DEFAULT` は「旧 revision の Prisma Client がその列を INSERT に含めない」ため
-destructive 扱い（migrate は新 revision のデプロイより先に走る）。
+## 列を狭めるとき
 
-## migration-history baseline reset（clean-break 例外）
+`text → varchar(n)` や `varchar(m) → varchar(n)` は既存値が n を超えると落ちる。
+狭めるすべての列について、`<table>.<column>` と `> <新しい上限>` を同じコメント行に
+書く形が `__tests__/unit/architecture/narrowing-migration-preflight.test.ts` の契約（一部の列だけ書いて
+「確認済み」にするのを防ぐため）。上限そのものは Prisma schema と
+`__tests__/unit/architecture/varchar-write-bounds.test.ts` / `__tests__/unit/architecture/string-column-declarations.test.ts` が見ている。
 
-通常の migration 作業ではない。ユーザーが既存データの全損を明示承認し、本番を新しい
-空の Neon database/branch へ切替する場合のみ有効。適用前に: 現行 schema からの
-baseline 生成・手書き SQL 不変条件と本番初期データの保全・空 DB への
-`prisma migrate deploy` 成功・`schema.prisma` との diff が空であることの確認・
-squawk 実行・本番 seed の一回限り実行、を証明する。
+## スキーマの現況を見る
 
-**既に migrate 済みの DB に baseline reset を適用しない。Prisma は止めてくれない。**
-実測（2026-08-04、99 本を畳んだ直後の test DB）: `_prisma_migrations` に 99 行あり、
-`00000000000000_init` の checksum が記録値 `9265c27f…` と実ファイル `f2b99ab4…` で
-食い違っているのに、`prisma migrate status` は **`Database schema is up to date!`**、
-`prisma migrate deploy` は **`No pending migrations to apply.`** を返して exit 0 する。
-つまり**適用は無言の no-op になり、DB は畳む前のスキーマのまま残る**。畳んだ後の
-ローカル test DB も同じ理由で作り直しが要る（`test:db:migrate` だけでは古い
-スキーマが残る）。Prisma 公式も `migrate deploy` について「ローカルに無い applied
-migration では警告しない・drift も検出しない」と明記している。
+```sh
+bun scripts/db-census.ts            # 列・制約・index・trigger の棚卸し
+```
 
-**Prisma は止めないが、`scripts/migration-preconditions.ts` が止める。**
-`historyMismatches` が ①DB の `_prisma_migrations` にあって repo に無い migration
-②同名なのに checksum が実ファイルと食い違う migration を非 0 で拒否する
-（checksum は migration.sql の SHA-256 hex）。migrate job は migrate より**前**に
-これを走らせるので、接続先が旧 DB のままの切替は `No pending migrations to apply.`
-に到達せずに止まる。gate は
-`__tests__/unit/architecture/migration-preconditions.test.ts`（fixture で 3 方向）と
-`__tests__/integration/prisma/migration-preconditions-rehearsal.test.ts`（実 DB で
-未知 migration・checksum 改竄・正常の 3 本）。
-
-### 道具
-
-- `scripts/build-baseline-migration.ts` — `extensions.sql` + `migrate diff` +
-  `invariants.sql` を連結して 1 本の baseline を作る。空出力・`CREATE TABLE` /
-  `CREATE TYPE` の件数不一致・**データ投入文の消失**を拒否する
-- `scripts/db-census.ts` — pg_catalog を突き合わせて等価性を証明する。
-  `--expect prisma/baseline/accepted-drift.json` で承認済み差分のみを許し、
-  承認していない差分が 1 本でもあれば失敗する
-
-### Prisma DSL で表現できない不変条件
-
-CHECK / EXCLUDE / plpgsql 関数 / trigger / extension は `migrate diff` の出力に
-**一切含まれない**。SSoT は `prisma/baseline/{extensions,invariants}.sql` で、
-テストからは `__tests__/support/prisma-sources.ts` の `readDatabaseInvariants()` で読む。
-**テストが migration を名前で指してはいけない**（畳めば消える）。
-`gates-do-not-pin-migrations.test.ts` が 0 件を強制する。
-
-## seed（prisma/seed.ts）
-
-- 2 モード: 既定 dev（冪等・IAP 用固定スタッフ + デモデータ + 全 feature ON）/
-  `--production [email] [name]`（本番テンプレート）。
-  **`--reset` は廃止した** — 呼び出し元が 1 つも無く、`clearAllData` の削除順が
-  `onDelete: Restrict` の FK（Receipt / Refund → Reservation・EventRegistration、
-  BlockedDate → User）と append-only trigger（terms_agreements）に追随できておらず、
-  3 系統で壊れていた。同じことは `bun run db:reset`
-  （`prisma migrate reset --force` + seed）がより確実に行う。
-  フラグは**明示的に拒否**する（黙って dev に落とさない）
-- Prisma 7 は `migrate reset` 後に自動 seed しない（`db:reset` script が明示実行する）
-- seed は feature module の全 key を explicit に設定する契約、および E2E fixture
-  （`e2e/fixtures/test-data.ts`）と slug・ステータスで二重定義結合している。
-  seed のデータ変更は対応 fixture/spec の同時更新が必須
-
-### seed の存在判定と一意列（ESLint `local/seed-respects-unique-constraints` が機械強制）
-
-- **存在判定キーは schema が強制する unique と噛み合わせる。** ずれていると
-  再実行が P2002 で中断し、seed は `main().catch` で `process.exit(1)` するので
-  **以降の phase が丸ごと走らない**。Playwright の webServer chain は
-  seed → build → start なので、ローカル E2E スイートごと起動しなくなる。
-  実測: `seedNavigation` が `(type, url)` で判定していたが制約は
-  `@@unique([type, order])` で、url だけずれた行があると同じ order を create して
-  衝突した（`Unique constraint failed on the fields: (type, "order")`）
-- **unique に参加する列へリテラルを create しない。** 宣言順や配列 index から
-  literal で書くと、管理画面の並び替え・追加で既存行がその値を占有した瞬間に壊れる。
-  `max + 1` で採番する（`seedSpaceCategories` が手本）か、その値自体を upsert の
-  where キーにする（`seedNavigation`）。どの列が unique かは gate が schema から読む
-- **partial unique（`@@unique([...], where: { deletedAt: null })` 等）の存在判定は
-  述語を where に含める。** 母集合を制約に揃えないと、削除済み行を「存在する」と
-  数えて create をスキップしたり、位置列が衝突したりする
-- **リテラルを守れるのは「そのキー空間を空にする削除」だけ。** 直前に
-  `deleteMany` があるだけでは足りない — フィルタ付きの削除は母集合の一部しか
-  消さない。証明になるのは①条件なしの削除、②削除の `where` が一意グループの列を
-  **過不足なく** create と同じ式で固定している場合の 2 つだけ。単一列の unique では
-  その列自身を固定する必要がある（「自分以外の列」が空集合になり、判定が無条件
-  true に潰れるため）。where が変数・spread なら**解析できない＝安全ではない**
-- **この規約は正規表現ではなく AST で強制している。** 前身は seed.ts を grep する
-  テストで、位置・スコープ・入れ子を見られないため 5 回広げた末に 1 回のレビューで
-  穴が 3 つ出た（変数 where を全削除と同一視・単一列で無条件 true・免除が関数単位で
-  漏れる）。`require-trimmed-text` が同じ理由で grep から移ったのと同型。
-  **順序・スコープ・入れ子を含む不変条件に正規表現を使わない**
-- **本番 seed と共用する関数では、宣言済みの構造列だけを reconcile する。**
-  `isActive` / `isPublished` を書き始めると `--production` 再実行が管理画面の編集を
-  踏み潰す。`seedNavigation(reconcile)` のように dev/prod で挙動を分ける
-
-### 「あれば skip」が使えるのは自己完結した行だけ
-
-存在確認して skip する冪等化は、その行の内容が**自分の宣言だけで決まる**ときに限り
-正しい。次のどちらかに当たる行では、skip は「古い値を保存する」に変わる:
-
-| 行の性質                       | skip すると起きること                                                                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `now` からの相対で時刻を決める | 初回 seed の暦日に貼り付く。実測: `daysOffset: 0` の「本日のご予約」が 2 か月前の日付のまま残り、**未来のデモ予約が 0 件**の DB になっていた                       |
-| 他の行から値を導出する         | 導出元だけが動いて drift する。実測: `seedSpaces` の reconcile 後も料金プランが古い `hourlyPrice × 1.3` のまま残り、税込実額を assert する required smoke が落ちる |
-
-対処は**毎 run 引き直す**こと。時刻相対の集合は「消してから作る」
-（`seedReservations`）、導出値は `updateMany` で宣言値へ寄せる
-（`seedSpaceRatePlans`）。gate は
-`__tests__/unit/architecture/seed-demo-reservation-rebuild.test.ts` と
-`seed-derived-value-reconcile.test.ts`。
-
-**この壊れ方は CI では絶対に出ない。** CI は毎回まっさらな DB に seed するので
-相対時刻も導出値も必ず正しい。壊れるのは開発機と staging の**長生きした DB** だけで、
-しかも「seed は冪等」という前提のせいで疑われない。実測（2026-08-02 のローカル
-test DB）: marker 付き 20 件の裏に marker 導入前の旧デモ行が併存し、marker 行自体も
-2 か月前の日付だった。**marker 方式の導入それ自体が、既存 DB では
-「全エントリが無い」判定になって重複を生む**点にも注意する。
-
-削除の順序も正しさの一部。`reservations_no_active_time_overlap_excl` は
-DEFERRABLE ではないので、作る前に消しきる。
-
-### 会計証跡が付いた行は seed が消さない
-
-`Receipt` / `Refund` は予約・イベント申込を `onDelete: Restrict` で参照する
-（「領収書がある予約/申込は物理削除不可」= 会計証跡保護）。seed の「作り直し」が
-そこへ踏み込むと P2003 で中断し、`main().catch` の `process.exit(1)` で以降の
-phase が丸ごと走らなくなる。dev / staging で Stripe のテスト決済を 1 度通すだけで
-この状態になる。
-
-**「証跡付きだけ残して他を消す」では解けない** — 残した申込が参照する
-`slotId` / `ticketId` の FK も `RESTRICT` なので、次はそちらが落ちる。
-証跡がある単位（event 単位）で作り直しを見送り、理由を名指しでログに出す。
-
-**予約側は逆に行単位で選り分けられる**。残った予約が参照するのは Space / Customer
-（`Cascade`）と Coupon / User / ReservationSeries（`SetNull`）だけで `Restrict` が
-1 本も無く、`seedReservations` はそれらを消さないため連鎖が起きない。
-「event は単位で見送り、reservation は行で選り分け」の差は FK の onDelete が決めている
-——**関数ごとに参照先を確認してから決める**こと。
+ローカル PG と本番 Neon で `NOT NULL` の件数がずれて見えることがある
+（PG17 以降は `pg_constraint` にも載るため）。差がそこだけなら等価。

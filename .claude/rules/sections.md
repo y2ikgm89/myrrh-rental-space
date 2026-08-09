@@ -1,64 +1,77 @@
 ---
 paths:
-  [
-    "src/shared/lib/sections/**",
-    "src/shared/lib/portable-text/**",
-    "src/shared/lib/validations/section*.ts",
-    "src/shared/domain/sections/**",
-    "src/app/(public)/_shared/components/sections/**",
-  ]
+  - "src/shared/lib/sections/**"
+  - "src/shared/lib/validations/section*.ts"
+  - "src/shared/lib/constants/default-page-sections.ts"
+  - "src/shared/domain/sections/**"
+  - "src/shared/domain/pages/**"
+  - "src/app/(public)/_shared/components/sections/**"
+  - "src/app/(admin)/admin/(dashboard)/pages/**"
 ---
 
-# セクションシステム（動的ページ構成）
+# ページとセクション（CMS）
 
-## 登録と SSoT
+**公開ページはすべて `Page` + `Section[]` + `SectionRenderer` で構成する。**
+ページ専用のトピックファイルは作らない。セクションは 23 型。
 
-- セクション定義は `src/shared/lib/sections/registry.ts` の definitions レコードに集約。
-  1 定義 = `definitions/<type>/schema.ts`（configSchema）+ `metadata.ts`（SectionMetadata）の
-  組で登録（新規追加の完全手順は `add-section` skill）
-- `SectionType` 文字列値の SSoT は `src/shared/lib/validations/section.ts`。
-  同ファイルは re-export shell であり inline schema 定義の再導入は禁止
-- DB の `Section.type` は素の VarChar(64)（enum なし）。未登録 type は
-  SectionRenderer の default 分岐で **silent に非表示**になる
+| 役割                      | 場所                                                                |
+| ------------------------- | ------------------------------------------------------------------- |
+| セクション型の SSoT       | `src/shared/lib/validations/section.ts` の `SectionType`            |
+| 定義（schema + metadata） | `src/shared/lib/sections/definitions/<type>/`                       |
+| レジストリ                | `src/shared/lib/sections/registry.ts`（`sectionDefinitions`）       |
+| テンプレート              | `src/shared/lib/sections/page-templates.ts`（`PAGE_TEMPLATES`）     |
+| 初期セクション            | `src/shared/lib/constants/default-page-sections.ts`                 |
+| 描画                      | `src/app/(public)/_shared/components/sections/section-renderer.tsx` |
 
-## 全スキーマの契約: safeParse({}) が必ず成功する
+## どのページにどの型を置けるか
 
-全フィールドが `.default()` / `.prefault()` を持つこと。defaults 生成
-（`createPageSectionCommand`）と render fallback がこの契約に依存する。
+`PageTemplate.allowedSectionTypes` は **computed 値**で、
+`UNIVERSAL_SECTION_TYPES`（hero zone / content / media の純プレゼンテーション系）
+＋ そのテンプレートの `additionalSectionTypes` の和。
 
-- フィールドは `field-registry.ts` の `field.*` ヘルパーで定義（Zod registry 登録で
-  管理画面フォームが自動生成される。group は content / design / advanced）
-- `field.array` の `.default([])` は `.min()/.max()` を fallback 経路で skip する
-- `.prefault({})` の group schema は zod-introspection が unwrap する前提
+`additionalSectionTypes` には **universal でないものだけ**を書く。listing
+（`space-list` / `news-list` など）・form（`contact-form` /
+`reservation-form`）・`event-calendar`・`location-list` は page-specific 扱いで、
+テンプレートが明示的に opt-in したときだけ追加できる。「予約ページに
+`space-list` を足して二重表示」のような UX バグを AddSectionDialog の段階で
+構造的に防ぐための設計で、registry と SectionRenderer は 23 型すべてに対応した
+まま。
 
-## CSP / bundle 境界
+機能モジュールが OFF のときは、その module の `sectionTypes` /
+`templates` が `getFeatureFilterContext()` 経由で除外され、ページ作成は
+`assertPageTemplateEnabled` で fail-closed になる。
 
-- portable-text と page-hero の barrel から Zod schema 値を re-export しない
-  （deep-import 指示、テスト強制）
-- `src/app/(public)` の `'use client'` ファイルは Zod-heavy 6 module の value-import 禁止
-  （type-only import のみ可）。新規 Zod-heavy 公開 module は
-  ZOD_HEAVY_DENY_MODULES への 1 行追加が必要
+## セクション型を足すとき
 
-## page-hero の不変条件
+1. `SectionType` に値を追加（kebab-case）
+2. `SECTION_TYPE_VALUES` にも追加（Zod の `z.enum` がこの配列を見る）
+3. `src/shared/lib/sections/definitions/<type>/` に `schema.ts` と
+   `metadata.ts` を追加
+4. `registry.ts` の import と `sectionDefinitions` に登録
+5. `section-renderer.tsx` に `case` を追加
+6. どのテンプレートで使えるかを `page-templates.ts` で決める
+   （universal かどうか）
+7. 機能モジュールに紐づくなら `features/registry.ts` の `sectionTypes` にも
 
-1 ページ 1 つのみ（重複 create は CONFLICT）/ order は -1 sentinel 固定で常に先頭 /
-個別削除・複製不可 / reorder でも -1 維持。
+`__tests__/unit/architecture/section-registry-clean-break.test.ts` が
+互換 wrapper の再導入を落とす。
 
-## デフォルトとテンプレート
+## 気をつけること
 
-- `DEFAULT_PAGE_SECTIONS`（11 slug）は render fallback + 起動時の冪等補充
-  （`ensurePageSectionsCommand`、不足 type のみ）+ PAGE_TEMPLATES の供給源。
-  DB に section が 1 件でもあれば fallback は混ざらない
-- PAGE_TEMPLATES は UNIVERSAL_SECTION_TYPES + additionalSectionTypes の opt-in 制
-  （listing/form/calendar 系は page-specific）。server 側 create も同じ許可 floor を強制。
-  requiredSectionTypes のセクションは削除不可
-- drift gate: registry 定義数（現在 23）/ DEFAULT_PAGE_SECTIONS の schema 適合・
-  order 重複なし / required ⊆ defaultSections をテストが固定。定義の増減時は
-  これらのテストも更新する
+- **barrel から schema の「値」を re-export しない。** `'use client'` 側から
+  Zod が value import され、static prelude に載って CSP nonce gap を作る
+  （`.claude/rules/app-structure.md`）。`portable-text` と `page-hero` の
+  barrel に専用ゲートがある。
+- 見出し・リンクテキスト・本文は素の `string` ではなく
+  `PortableTextSpan[]` / `PortableTextBlock[]`。schema が `string` を受け付け
+  ないことをゲートが固定している。
+- `SectionConfig` の判別 union を widening cast で潰さない。
+- **`page-hero` 以外のセクションは複製できる**（`duplicatePageSectionCommand`）。
+  slug など「データ由来だけ」で DOM id を組み立てると複製後に衝突する。
+- `Section` の並び替えは `order-sql.ts` の一時値退避パターンを使う
+  （`.claude/rules/db-domain.md`）。
 
-## レンダリングと余白
+## 公開ページを 1 つ足すとき
 
-- SectionRenderer（Server Component）は `await connection()` 後に type で switch。
-  disabled feature module の type は早期 null
-- セクション間の上下余白の SSoT は SectionStack の gap のみ。
-  **各セクションに上下 padding を持たせない**（二重余白/ゼロ余白が再発する）
+`Page` レコード + セクションのほかに、chrome（header/footer の扱い）・
+`noindex` の要否・route 単位の `loading` / `error` 上書きの 3 点を確認する。
