@@ -183,5 +183,6 @@ CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./w
 
 - プロジェクト固有の疑問: 該当 gate（`__tests__/unit/architecture/**`）の冒頭 JSDoc を先に読む
 - 人間向けセットアップ: [README.md](../README.md)
+- 運用手順・本番セットアップ・ADR: [docs/README.md](../docs/README.md)（現行の手順と日付入りの記録の見分け方もここ）
 - 実装パターン・設計の「なぜ」: 各モジュール冒頭の JSDoc を参照。ライブラリ API は公式 docs を直接参照
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡
