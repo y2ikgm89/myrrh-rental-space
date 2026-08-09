@@ -17,7 +17,8 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 - CI の毎 push required gate は chromium-smoke のみ（APP_SURFACE=public と admin の 2 回）。
   **広域 E2E は main の nightly（`schedule`、18:00 UTC = 03:00 JST）で自動実行される。**
   加えて `gh workflow run ci.yml --ref <branch> -f run_full_ci=true` で任意に回せる。
-  visual・Lighthouse は nightly に含まれず手動 dispatch 専用。
+  **visual regression も nightly に含まれる**（比較モード。baseline の再生成だけは
+  `update_visual_baseline=true` の明示 dispatch 専用）。Lighthouse だけが手動 dispatch 専用。
   **PR を出すだけでは広域 E2E は走らない** — マージ前に確認したいときは明示的に
   dispatch する。
   かつて `codex/full-ci/` prefix の PR branch で起動する条件があったが起動実績ゼロ

@@ -169,7 +169,8 @@ count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLi
 3. **広域**: `bun run e2e`（全 project）。デバッグは `bun run e2e:ui`。
 4. **CI での扱い**: chromium-smoke のみ毎 push required。広域 E2E は main の
    nightly（`.github/workflows/ci.yml` の `schedule` cron、03:00 JST）で自動実行される。
-   visual / Lighthouse は nightly 非対象で、いずれも任意実行は manual dispatch:
+   **visual regression も nightly に含まれる**（比較モード）。Lighthouse だけが
+   nightly 非対象。任意実行はどちらも manual dispatch:
    ```sh
    gh workflow run ci.yml --ref <branch> -f run_full_ci=true
    ```
