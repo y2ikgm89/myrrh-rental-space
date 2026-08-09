@@ -88,7 +88,7 @@ export async function validateTurnstile(
 ): Promise<TurnstileResult> {
   // E2E bypass: localhost env URLs + E2E_RUNTIME=1 + production build +
   // リクエスト Host が loopback の AND のみ許可
-  // (`isE2ESecurityBypassAllowed`、`security-auth.md` rule 準拠)。
+  // (`isE2ESecurityBypassAllowed` が 4 条件すべてを AND で検査する)。
   // E2E webServer は next start (production build) で起動し、Turnstile 秘密鍵は
   // env / DB 未設定のため、bypass しないと production の fail-closed 分岐に落ちて
   // 全 form action が「セキュリティ検証が必要」エラーで通らない。

@@ -4,7 +4,7 @@
  * @description
  * Lexical エディタの右サイドバー（ブロック設定 / インスペクター）。
  * WordPress Gutenberg 風のプロパティ編集 UI。開閉は InspectorSidebarProvider +
- * useInspectorSidebar（localStorage 永続化・ツールバー・Ctrl+Shift+0）。詳細は lexical-patterns.md。
+ * useInspectorSidebar（localStorage 永続化・ツールバー・Ctrl+Shift+0）。
  */
 
 // Components

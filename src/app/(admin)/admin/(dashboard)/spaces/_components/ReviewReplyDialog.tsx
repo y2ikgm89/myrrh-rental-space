@@ -6,7 +6,7 @@
  * `useForm` (RHF + `zodResolver`) → `useActionState` + `useForm`
  * (@conform-to/react) clean break 移行。parent component が `open` /
  * `onOpenChange` / `reviewId` / `initialReplyBody` を保持し、本 Dialog 内で
- * `useActionState` を回す controlled パターン (`dialogs.md` Variant B)。
+ * `useActionState` を回す controlled パターン。
  *
  * `replyToReviewCommand` は upsert なので create / edit は同 action で処理
  * (`hasExistingReply` で UI 文言のみ切替)。`deleteReviewReply` は form 経由

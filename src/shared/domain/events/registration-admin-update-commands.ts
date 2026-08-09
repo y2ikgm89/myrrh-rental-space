@@ -11,7 +11,8 @@ import { lockEventRegistrationForTransaction } from "./waitlist-locks";
  * quantity 変更は定員再判定が必要なため、createWalkInRegistrationCommand と同じ
  * advisory lock（728350, hashtext(eventId)）を取得した tx 内で処理する。
  * WAITLISTED_OFFERED 中の quantity 変更は禁止（updateMany WHERE で status 別に
- * claim 済みの状態を破壊するため、business-domain.md の既存不変条件）。
+ * claim 済みの状態を破壊するため）。実 DB での検証は
+ * `__tests__/integration/domain/events/update-registration-command.test.ts`。
  * CANCELLED/EXPIRED な登録は編集不可（updateMany WHERE で最終ガード）。
  */
 export async function updateEventRegistrationCommand(data: {

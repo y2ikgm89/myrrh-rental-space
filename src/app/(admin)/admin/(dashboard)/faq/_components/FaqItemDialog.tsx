@@ -5,7 +5,7 @@
  *
  * 質問の作成・編集を Dialog で行う共用コンポーネント。parent component
  * (`FaqCategoryDetailView`) が `editingItem` + `open` state を保持し、本 Dialog
- * に `open` / `onOpenChange` を渡す controlled パターン (`dialogs.md` Variant B)。
+ * に `open` / `onOpenChange` を渡す controlled パターン。
  *
  * - parent が `item={undefined}` で create、`item={item}` で edit を選択
  * - `useActionState` を本 Dialog 内で持ち、success 検知 → `onOpenChange(false)` は
