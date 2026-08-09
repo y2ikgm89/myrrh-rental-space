@@ -14,7 +14,7 @@ import { MaintenancePage } from "./maintenance-page";
  *
  * `getMaintenanceSettings()` は `'use cache' + criticalFetch`。DB 失敗は throw し
  * Data Cache に載せない。layout 本体直配置だと build prerender 時に失敗しうるため、
- * canonical pattern（rule caching.md）: `<Suspense>` 境界内で `await connection()` を
+ * canonical pattern: `<Suspense>` 境界内で `await connection()` を
  * 呼ぶ async SC から呼び出す → build prerender skip / runtime resume で実 DB から resolve。
  *
  * SYS-4 fail-closed: 取得失敗時は call site で maintenance ON 扱い（キャッシュ外）。

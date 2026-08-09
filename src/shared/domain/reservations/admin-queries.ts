@@ -480,7 +480,9 @@ export async function getReservationStatsQuery() {
   // setHours(0, 0, 0, 0) / setDate(getDate() - getDay()) を使うと JST 00:00-09:00
   // の予約が "今日" から漏れて "昨日" にカウントされる silent bug になる (JST=UTC+9)。
   // `+09:00` offset 付き ISO 文字列を new Date() に渡す方式は
-  // reservation-reminder cron と同型 (business-domain.md の JST SSoT ルール準拠)。
+  // reservation-reminder cron と同型。JST SSoT は
+  // `__tests__/unit/architecture-boundaries.test.ts` が強制する
+  // (datetime-local の naive parse 禁止 / Intl の timeZone 指定必須)。
   // parseJstDateOnly は `@db.Date` 保存用に「JST 日付を UTC 深夜として」返す
   // 関数なので startTime (DateTime) の窓境界には流用できない。
   const now = new Date();

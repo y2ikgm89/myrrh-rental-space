@@ -7,7 +7,7 @@
  * /admin/faq/[categoryId]（詳細）の両方から起動される。parent component
  * (`FaqCategoryListView` / `FaqCategoryActionCell` / `FaqCategoryDetailView`) が
  * `open` state を保持し、本 Dialog に `open` / `onOpenChange` を渡す controlled
- * パターン (`dialogs.md` Variant B)。
+ * パターン。
  *
  * - parent が `category={undefined}` で create、`category={category}` で edit を選択
  * - `useActionState` を本 Dialog 内で持ち、success 検知 → `onOpenChange(false)` は

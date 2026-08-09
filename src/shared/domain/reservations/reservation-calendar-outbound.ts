@@ -600,7 +600,8 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
   // Promise.all で並列化する。sequential await だと 52-instance の年 series で
   // Cloud Run→Neon RTT を 52 回積み上げ ~500ms-1.5s の空 latency が admin action
   // (T10 admin proxy registration 経路含む) の完了時間に乗っていた。
-  // db-domain.md 「tx 内 Promise.all 禁止」ルールは interactive tx callback 内の
+  // 「interactive tx callback 内で Promise.all 禁止」
+  // (`__tests__/unit/architecture/prisma-interactive-tx-no-promise-all.test.ts`) は
   // 話で、ここは tx 外の独立 write なので Prisma pool の並列 acquire で問題なし。
   const results = await Promise.all(
     reservations.map(async (r) => {
