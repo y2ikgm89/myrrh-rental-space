@@ -388,16 +388,16 @@ error code 分岐を検討する。
 
 - 元コード:
   - Customer path:
-    - [src/shared/domain/reservations/customer-commands.ts:157-441](src/shared/domain/reservations/customer-commands.ts:157)
-    - [src/app/(public)/mypage/_shared/actions/reservation.ts:158-307](<src/app/(public)/mypage/_shared/actions/reservation.ts:158>)
+    - `src/shared/domain/reservations/customer-commands.ts:157-441`
+    - `src/app/(public)/mypage/_shared/actions/reservation.ts:158-307`
     - [src/app/(public)/mypage/reservations/[id]/edit/_components/edit-reservation-form.tsx](<src/app/(public)/mypage/reservations/[id]/edit/_components/edit-reservation-form.tsx>)
-    - [src/shared/lib/validations/customer-reservation.ts](src/shared/lib/validations/customer-reservation.ts)
+    - `src/shared/lib/validations/customer-reservation.ts`
   - Admin path:
-    - [src/shared/domain/reservations/admin-commands.ts:406-449](src/shared/domain/reservations/admin-commands.ts:406)
-    - [src/app/(admin)/admin/(dashboard)/reservations/_components/reservation-form-schema.ts:187-201](<src/app/(admin)/admin/(dashboard)/reservations/_components/reservation-form-schema.ts:187>)
-    - [src/app/(admin)/admin/(dashboard)/reservations/_components/ReservationEditForm.tsx](<src/app/(admin)/admin/(dashboard)/reservations/_components/ReservationEditForm.tsx>)
+    - `src/shared/domain/reservations/admin-commands.ts:406-449`
+    - `src/app/(admin)/admin/(dashboard)/reservations/_components/reservation-form-schema.ts:187-201`
+    - `src/app/(admin)/admin/(dashboard)/reservations/_components/ReservationEditForm.tsx`
     - [src/app/(admin)/admin/(dashboard)/reservations/[id]/edit/page.tsx](<src/app/(admin)/admin/(dashboard)/reservations/[id]/edit/page.tsx>)
-    - [src/app/(admin)/admin/(dashboard)/_shared/actions/reservation/admin.ts](<src/app/(admin)/admin/(dashboard)/_shared/actions/reservation/admin.ts>)
+    - `src/app/(admin)/admin/(dashboard)/_shared/actions/reservation/admin.ts`
 - 楽観制御の公式挙動:
   - Rails ActiveRecord `optimistic_locking`: <https://api.rubyonrails.org/classes/ActiveRecord/Locking/Optimistic.html>
     (`lock_version` int、`.save` で auto increment、bulk `.update_all` は対象外)

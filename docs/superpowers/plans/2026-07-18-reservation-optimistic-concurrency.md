@@ -1257,8 +1257,7 @@ gh pr create --base main --title "feat(reservations): add optimistic concurrency
 - 非 form path (cron / payment / calendar-sync / cancel-core 等) は Rails `.update_all` / Hibernate native query と同型で touch しない (§3.1.1 spec)
 - CONFLICT は form 上の警告帯に「予約情報が別のデバイス/画面で変更されました」を表示
 
-設計: [docs/superpowers/specs/2026-07-18-reservation-optimistic-concurrency-design.md](docs/superpowers/specs/2026-07-18-reservation-optimistic-concurrency-design.md)
-実装計画: [docs/superpowers/plans/2026-07-18-reservation-optimistic-concurrency.md](docs/superpowers/plans/2026-07-18-reservation-optimistic-concurrency.md)
+設計: `docs/superpowers/specs/2026-07-18-reservation-optimistic-concurrency-design.md`
 
 ## Test plan
 
