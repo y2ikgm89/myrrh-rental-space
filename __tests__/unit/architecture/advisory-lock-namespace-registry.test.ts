@@ -26,7 +26,9 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { AUDIT_LOG_CHAIN_LOCK_KEY as REGISTRY_AUDIT_LOG_CHAIN_LOCK_KEY } from "@/shared/domain/advisory-lock-namespaces";
 import { ADVISORY_LOCK_NAMESPACES } from "@/shared/domain/advisory-lock-namespaces";
+import { AUDIT_LOG_CHAIN_LOCK_KEY } from "@/shared/domain/audit-log/hash-chain-core";
 
 import { trackedTextFiles } from "../../support/tracked-files";
 
@@ -67,6 +69,21 @@ describe("advisory lock namespace の採番は SSoT が持つ", () => {
         "SELECT pg_advisory_xact_lock(${SPACE_SCHEDULE_LOCK_NAMESPACE}::int4, hashtext(x))",
       ),
     ).toEqual([]);
+  });
+
+  /**
+   * 監査ログ chain の鍵だけは連番と別系統なので、上の「リテラル直書き禁止」では
+   * 守れない（`pg_advisory_xact_lock(bigint)` の 1 引数形で、値は定数経由）。
+   * レジストリが広告する鍵と、実際に PostgreSQL が掴む鍵が同一であることを見る。
+   */
+  test("監査ログ chain の鍵はレジストリと同一の実体", () => {
+    expect(AUDIT_LOG_CHAIN_LOCK_KEY).toBe(REGISTRY_AUDIT_LOG_CHAIN_LOCK_KEY);
+    expect(
+      readFileSync(
+        join(ROOT, "src/shared/domain/audit-log/hash-chain-core.ts"),
+        "utf8",
+      ),
+    ).toContain('from "@/shared/domain/advisory-lock-namespaces"');
   });
 
   test("採番に重複が無い", () => {

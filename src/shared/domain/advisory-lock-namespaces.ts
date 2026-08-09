@@ -74,8 +74,9 @@ export const CUSTOMER_FLAG_REASONS_LOCK_NAMESPACE = 728358;
  * 監査ログの hash chain。上の連番とは別系統の int8 単一キー
  * （`pg_advisory_xact_lock(bigint)` の 1 引数形）。
  *
- * 実体は `src/shared/domain/audit-log/hash-chain-core.ts` が持つ。ここには
- * 採番の衝突を見るためだけに載せる。
+ * `audit-log/hash-chain-core.ts` はこれを re-export するだけで、自前の定義を
+ * 持たない。2 箇所に書くと「レジストリが広告している鍵」と「実際に
+ * PostgreSQL が掴む鍵」がずれても誰も気づけない。
  */
 export const AUDIT_LOG_CHAIN_LOCK_KEY = 6_029_451_381_908_262_157n;
 
