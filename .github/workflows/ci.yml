@@ -1044,26 +1044,35 @@ jobs:
           # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
           # 値は全て上の env 経由で受け取る。
           title="Nightly CI failure"
+          # **この workflow が作った Issue だけ**を対象にするための marker。
+          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
+          # 立てたときにそれへ失敗コメントを足し、緑になった瞬間に**他人の Issue を
+          # 閉じて**しまう。marker は本文に埋めるので label の事前作成が要らず、
+          # 誰かがタイトルを変えても（marker が残る限り）追跡が切れない。
+          marker="<!-- nightly-ci-status: do not remove (owned by ci.yml / nightly-result) -->"
           failed=$(printf '%s' "$NEEDS_JSON" \
             | jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")')
 
-          # タイトル完全一致で既存 Issue を引く（label を先に作る必要が無い）。
-          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を挟まない）。
-          existing=$(gh issue list --state open --limit 100 --json number,title \
-            --jq "[.[] | select(.title == \"$title\")][0].number // empty")
+          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
+          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
+          existing=$(gh issue list --state open --limit 100 --json number,body \
+            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
 
           if [ -n "$failed" ]; then
-            body=$(printf '%s\n' \
+            report=$(printf '%s\n' \
               "nightly (schedule) が失敗しました。" \
               "" \
               "- run: $RUN_URL" \
               "- commit: \`$COMMIT_SHA\`" \
               "- 失敗した job: $failed")
             if [ -n "$existing" ]; then
-              gh issue comment "$existing" --body "$body"
+              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
+              # 重ねる必要が無い）。
+              gh issue comment "$existing" --body "$report"
               echo "commented on #$existing"
             else
-              gh issue create --title "$title" --body "$body"
+              gh issue create --title "$title" \
+                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
               echo "created a new issue"
             fi
             exit 0
