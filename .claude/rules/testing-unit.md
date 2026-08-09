@@ -1,149 +1,83 @@
 ---
 paths:
-  [
-    "__tests__/**",
-    "scripts/run-tests.ts",
-    "scripts/test-db-runner-env.ts",
-    "scripts/test-db-url.ts",
-    "scripts/migrate-test-db.ts",
-    "bunfig.toml",
-  ]
+  - "__tests__/**"
+  - "scripts/run-tests.ts"
+  - "scripts/serial-db-test-detection.ts"
+  - "scripts/migrate-test-db.ts"
+  - "bunfig.toml"
 ---
 
-# unit / integration テスト（bun test）
+# 単体・統合テスト
 
-## 実行は必ず runner 経由
+`bun test` を **`scripts/run-tests.ts`（per-file 隔離ランナー）経由でのみ**動かす。
 
-`bun scripts/run-tests.ts <path...>`（`test:unit` / `test:integration` の実体）。
-各 `*.test.ts` を独立した `bun test --conditions production` サブプロセスで起動する。
-
-- 素の `bun test <dir>` 禁止: `mock.module()` の process-global live binding が
-  ファイル間干渉する
-- `--conditions production` がないと Lexical（全 14 @lexical パッケージ）の
-  循環 ESM import が TDZ violation で落ちる
-- coverage を bunfig.toml に常設しない（per-file runner と干渉し不正確）。
-  必要時は単発 `bun test --coverage <file>` を参考値として使う
-
-## mock パターン
-
-- `mock.module()` を先に宣言し、テスト対象は宣言後に `await import(...)` で
-  動的 import する（静的 import は mock 適用前に評価される）
-- preload（`__tests__/setup.ts`）が server-only の no-op 化・DATABASE_URL のダミー固定・
-  暗号化キー mock を行う。共有ヘルパーは `__tests__/mocks/`（例:
-  `errors-server` の `installErrorsServerMock`）。それ以外はファイルローカルの
-  `mock.module()` が現行スタイル
-- JSDOM が必要なテストは `installJSDOMForTests()` を beforeEach で再適用できる
-
-## 実 DB 統合テスト（要 Postgres）
-
-- 新規の実 DB テストは `process.env["TEST_DATABASE_URL"]` または
-  `process.env["DATABASE_URL"] = process.env["TEST_DATABASE_URL"] …` を
-  ファイル先頭付近に書けば `scripts/serial-db-test-detection.ts` が serial bucket に
-  **自動検出**する（`mock.module("@/shared/db/prisma")` するファイルは除外）。
-  マーカーが効かない edge case のみ `SERIAL_DB_TEST_FORCE_INCLUDE` に opt-in 登録
-- preload が DATABASE_URL をダミーに固定するため、prisma gateway を
-  **動的 import する前に** `process.env.DATABASE_URL` を TEST_DATABASE_URL で上書きする
-  （gateway は module load 時 snapshot を読む）
-- afterAll で `prisma.$disconnect()`（しないとサブプロセスがハング）
-- TEST_DATABASE_URL 未設定での直接実行は describe.skip で **silent skip** される
-  （runner 経由なら docker compose の既定値 localhost:5433/myrrh_test が自動注入）
-- 並行競合の再現テストは beforeAll で warmup 並行バーストが必要
-  （cold connection では競合が偶発的に直列化して隠れる）
-- 遅いテストは `test(name, fn, 30_000)` のように第 3 引数で per-test timeout を
-  明示上書きする（既定 5000ms）
-
-## 静的ゲートの分担
-
-`__tests__/**` は **`src/` と同じ ESLint ルールが効く**（`bun run validate` /
-CI の Lint & Format / lefthook のすべて）。加えて tsconfig.test.json の型チェック
-（`bun run type-check` の tsc:test）。命名は `*.test.ts`
-（`*.spec.ts` は Playwright 用で runner に拾われない）。
-
-**かつては `globalIgnores` で丸ごと外れていた。** 28,000 行超が無検査で、
-対象に入れた瞬間に **`no-non-null-assertion` が 110 件・`no-explicit-any` が 6 件**
-出た——どちらも絶対規約 #6 が「0 件強制」と宣言しているルール。規約の穴ではなく
-規約の**適用範囲**の穴で、ゲートは自分が見ていない範囲を報告しない。
-
-テスト側の 2 つの制約:
-
-- **型付き lint（`projectService: true`）は `__tests__` に効かせない。**
-  `typescript-type-checked-*` の 2 ブロックが `__tests__/**` を `ignores` する。
-
-  理由は**実測した時間コスト**。`--concurrency 4`（`bun run lint` と同じ条件）で
-  効かせると **10 分を超えても終わらない**。現状の `bun run validate` は全体で
-  約 100 秒なので、テストコードだけのために 6 倍以上の悪化になる。
-
-  （当初は「ヒープ 4GB 枯渇で落ちる」と記録していたが、それは
-  `--concurrency` を付けずに単一プロセスで動かした副産物だった。
-  `eslint .` を素で叩くと `src` だけでも同じく OOM する。**測り方が理由を
-  作っていた**ので、実際の入口と同じ条件で測り直した）
-
-- **`!` の代わりに `__tests__/support/definite.ts` を使う。**
-  `definite(value, what)` / `nthCall(mock, n, what)`。`rows[0]!.amount` は実際に
-  空だったとき `Cannot read properties of undefined` としか言わないが、
-  `definite(rows[0], "refunds[0]")` なら何が無かったかが出る
-
-ルールを外すのはファイル名指し + `eslint.config.mjs` に理由を書く形だけ
-（インライン `eslint-disable` にすると、外していること自体が設定から見えなくなる）。
-現在の唯一の例外は Lexical mount error boundary のテストダブル 2 本で、
-「レンダー中に throw する」「リトライで別 identity になる」ことが検証対象なので
-`react-hooks/globals` / `@eslint-react/static-components` を**満たすと検証が消える**。
-
-## gate を触るときに固定すること
-
-`expect(offenders).toEqual([])` 型の gate（`__tests__/unit/architecture/**` の大半）を
-**新規に書くとき・広げるとき・狭めるとき**は、次の 3 方向を fixture で固定し、
-さらに **4. fixture と実走査が同じ経路を通ること**を満たす。
-1 つでも欠けると、直したつもりの gate が別方向に穴を開ける。
-
-1. **新しく検出したい形が落ちる**
-2. **前から検出していた形を今も落とす**
-3. **正当な形が通る**
-
-2 と 3 は「直す側」が最も飛ばしやすい。実測で起きた:
-
-| 抜けた方向 | 何が起きたか                                                                                                                                                                                                     |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2          | `public-path-alias-hygiene` に相対 import の検出を足したとき、`_shared` 内のファイルを**丸ごと走査から外した**。前身が弾いていた `@/app/(public)/_shared/…` 形が通るようになった（Codex が指摘するまで気づかず） |
-| 3          | 同じ gate で、`_shared` 内の兄弟 relative import まで違反にして 28 ファイルを誤検出した                                                                                                                          |
-| 3          | `errors-server-mock-coverage` の免除を「呼び出し本体だけ」に絞ったら、docstring 内の同じ呼び出しに正規表現が当たる形・spread 変数名が `actual` でない形など、**正当な 3 ファイルを誤検出**した（撤回した）       |
-
-**判定ロジックは純粋関数として export し、fixture は合成文字列で書く。** 実ファイルへ
-違反を注入する probe は「今このリポジトリで落ちること」しか示さず、リファクタで
-壊れても気づけない。fixture なら CI が毎回検証する。
-
-**免除（allowlist / early return / skip）を足すときは、免除の粒度を必ず書く。**
-「このファイルは対象外」と「この行は対象外」は別物で、前者はたいてい広すぎる。
-
-### 4. fixture が通る経路と、実走査が通る経路を同じにする
-
-上の 3 方向を書いても、**fixture と実走査が別の道を通っていれば何も保証されない**。
-同じ gate に対して 3 往復の指摘を受けた原因はすべてこれだった:
-
-| 分岐のさせ方                                        | 何が検証されなくなるか                                                                            |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 部品を個別に fixture し、実走査は inline で合成する | **合成部分**（`selectTriggerTags` と `hasAccessibleName` を繋ぐ filter）。壊れても fixture は緑   |
-| 判定に既定引数を置き、fixture だけが引数を渡す      | **既定の配線**。`pageExists = existsSync` は実走査だけが通り、fixture は誰も通らない              |
-| ファイル単位の early return で免除する              | **免除されたファイルの残りの判定**。`_shared` 内を丸ごと外したら、そこの旧 alias 形も一緒に外れた |
-
-対処は 1 つ: **合成後の判定を 1 つの関数にまとめて export し、gate 本体も fixture も
-それだけを呼ぶ。** 外部依存（ファイルシステム等）は**必須引数**で受け、実走査の
-呼び出し側で明示的に渡す。既定値を置くと、その既定を通るのは実走査だけになる。
-
-```ts
-// 判定は純粋・必須引数。fixture も gate 本体もこれを呼ぶ。
-export function missingRoutePages(
-  entries: readonly Entry[],
-  pageExists: (pagePath: string) => boolean,
-) { … }
-
-// 実走査の境界でだけ依存を注入する。
-expect(missingRoutePages(sidebarEntries, existsSync)).toEqual([]);
+```sh
+bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts   # 1 ファイル
+bun run test:unit                                            # __tests__/unit 全部
+bun run test:integration                                     # test-db に migrate してから
+bun run test:all
 ```
 
-### 絞り込みを撤回してよい
+- **素の `bun test <path>` は禁止。** `mock.module()` はプロセスグローバルに
+  live binding を残す公式仕様で、ランナーはファイルごとに別プロセスを起動して
+  それを物理的に断ち切っている。Lexical の循環 import による TDZ も
+  ランナーの `--conditions production` が回避している。
+- **親ディレクトリ指定も禁止**（`__tests__/unit` / `__tests__/integration` の
+  トップレベルを除く）。同じ理由。
+- per-test timeout は `run-tests.ts` の `DEFAULT_TEST_TIMEOUT_MS`（30s）が
+  唯一の決定。呼び出し側で別の値を渡さない（pre-push と CI で値がずれる）。
 
-正当な形を誤検出する判定は、入れないほうがよい。**抜けたときの帰結が「黙って通る」
-ではなく「別のところで大声で落ちる」なら、壊れやすい判定を足すより
-docstring に範囲を正直に書いて留める**（`errors-server-mock-coverage` がその例）。
-「gate があること」自体は目的ではない。
+## 実 DB を使う統合テスト
+
+別インスタンス（`test-db`、既定 5433）に対して走る。`test:integration` /
+`test:all` は先に migrate を当てる。
+
+`scripts/serial-db-test-detection.ts` が `__tests__/integration/**` を走査し、
+`TEST_DATABASE_URL` / `DATABASE_URL` の上書きマーカーを持つファイルを
+**直列バケット**に振り分ける（`prisma` を `mock.module` するファイルは除外）。
+マーカーが無いと並列実行されて書き込みが競合する。`describeMaybe` パターンを
+使う新しい実 DB テストは、マーカーを付けるか `FORCE_INCLUDE` に登録する。
+
+実 DB テストで踏みやすいもの:
+
+- `expect(promise).rejects` が Bun 1.3.14 でハングする。`try` / `catch` で書く。
+- `fireAndForget` を連続で呼ぶテストは Prisma の pool を占有し、2 回目が
+  `maxWait` timeout になる。間に短い sleep を挟んで drain する。
+- `orderBy` を付けない `findMany` は物理行順。UPDATE で変わるので、共有 DB で
+  全件の順序を assert しない。
+- 0 件ヒットの DELETE / UPDATE は行レベル trigger を発火させない。
+  「実 DB で通った」の証拠にならない。
+- `DEFERRABLE` な制約と Prisma の個別 autocommit の組み合わせで、期待した順序に
+  ならないことがある。
+
+## ゲート（`__tests__/unit/architecture/`）を書くとき
+
+このリポジトリの規約はほぼ全部ここで機械強制している。書き足すときの決まり:
+
+1. **走査して「違反 0 件」を assert するゲートには fixture を添える。**
+   走査対象が 0 件でも緑になるので、「調べて違反が無かった」と「調べる対象が
+   無かった」を区別できない。ESLint の
+   `local/gate-scan-must-not-be-silently-empty` が構造的に強制する。
+2. **fixture は実装を変異させて落ちることを確認するまで無検証。**
+   「通ってはいけない書き方」を実際に食わせる。
+3. **正規表現でチェーンの順序は見られない。** 末尾への `.trim()` 追記のような
+   順序の問題は AST（`typescript` の parser）で見る。正規表現を 2 回広げたら
+   それが AST へ移る合図。
+4. **静的ゲートの走査範囲を規約の記述場所に合わせない。** `src` 全体を見る。
+   手書きのディレクトリ一覧は必ず漏れる。
+5. **migration 名・ファイル名を allowlist に書かない。** 履歴は baseline へ
+   畳まれるので名指しは嘘になる。件数の ratchet にする。
+6. 自己検査を実データ件数で書かない。正しい状態変化で落ちる。見本入力で見る。
+7. 「これは `X.test.ts` が検証する」と書くなら `X.test.ts` は実在すること
+   （`__tests__/unit/architecture/referenced-gates-exist.test.ts`）。
+
+## モック
+
+- 時計を読まない純粋モジュールを `mock.module` しない。`mock.module` は
+  完全置換なので、無関係なテストを壊し JST/UTC のバグを隠す。
+- 共通モジュールに export を足したら、それを `mock.module` している箇所を
+  全部洗い出して同時に更新する（欠けると transitive に読む全テストが落ちる）。
+  グローバルなモックは `__tests__/setup.ts`。
+- ロックやトランザクションの外にある外部 API 呼び出しについて、並行テストで
+  呼び出し回数を固定 assert しない（必ず flaky になる）。idempotency key の
+  一致と遅延プローブで表現する。

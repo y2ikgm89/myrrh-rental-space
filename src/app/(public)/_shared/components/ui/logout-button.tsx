@@ -5,7 +5,7 @@
  *
  * - `signOut({ fetchOptions: { onSuccess } })` で Set-Cookie による session 破棄後に redirect
  * - `router.refresh()` で PPR の server-side session キャッシュを無効化
- * - variant で site-header の desktop/mobile スタイルに追従（CLAUDE.md の tracking/uppercase トークン統一）
+ * - variant で site-header の desktop/mobile スタイルに追従（`.claude/rules/frontend-ui.md` のデザイントークン統一）
  *
  * @see https://www.better-auth.com/docs/basic-usage#sign-out-user
  * @see https://web.dev/articles/sign-out-best-practices

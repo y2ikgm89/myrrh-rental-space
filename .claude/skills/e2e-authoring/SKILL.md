@@ -1,194 +1,108 @@
 ---
 name: e2e-authoring
-description: 新しい Playwright E2E spec を追加・修正するときに使う手順書。配置先ディレクトリと project (smoke / public / a11y / authenticated / visual) の判断基準、prisma/seed.ts と e2e/fixtures の seed 契約、storageState と IAP 模擬による認証、page.clock.install と E2E_FIXED_NOW_ISO による時刻凍結、axe / keyboard navigation の a11y パターン、visual regression の baseline 更新、focused project から広域への実行手順をカバーする。E2E テスト・スモークテスト・アクセシビリティ検証の新規作成時はまずこれを読む。
+description: Playwright の E2E テストを新しく書く / 既存の spec を直す手順。どの project に置くか、fixture の使い方、認証状態、テストデータの作り方、落ちたときの調べ方を扱う。
 ---
 
-# E2E spec 執筆手順
+# E2E を書く
 
-常設規約（project 構成・ESLint 禁止 API・命名・webServer 挙動・並列化・visual 方針）は
-rules の `testing-e2e.md` を参照。`*.test.ts` との命名分離は rules の `testing-unit.md` を参照。
-本 skill は「新しい spec を 1 本書いて緑にする」までの手順と判断基準に絞る。
+禁止 API とロケーターの方針は `.claude/rules/testing-e2e.md`（ESLint が機械
+ブロックする）。ここは**新しい spec を足すときの手順**。
 
-## Step 1: 配置先を決める
+## 1. 置き場と project を決める
 
-認証要否 → 目的の順で判断する。ディレクトリが project を決める（`playwright.config.ts` の testMatch）。
+| ディレクトリ                  | project                                    | 認証                                   |
+| ----------------------------- | ------------------------------------------ | -------------------------------------- |
+| `e2e/smoke/*.smoke.spec.ts`   | `chromium-smoke`                           | なし（毎 push の必須ゲート、3 分未満） |
+| `e2e/public/`                 | `chromium`                                 | なし                                   |
+| `e2e/authenticated/customer/` | `chromium-customer`                        | 顧客                                   |
+| `e2e/authenticated/admin/`    | `chromium-admin` / `chromium-admin-viewer` | 管理者                                 |
+| `e2e/mobile/`                 | `chromium-*-mobile` / `webkit-*-mobile`    | project 依存                           |
+| `e2e/a11y/`                   | `chromium`                                 | なし                                   |
+| `e2e/visual/`                 | `chromium-visual`                          | —                                      |
 
-| ディレクトリ                               | project               | 用途・判断基準                                                                                                                |
-| ------------------------------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `e2e/smoke/*.smoke.spec.ts`                | chromium-smoke        | critical path のみ。毎 push の CI required gate（< 3 分）。未認証・setup 非依存が前提。**追加は慎重に**（全 push が遅くなる） |
-| `e2e/public/*.spec.ts`                     | chromium              | 未認証の公開ページ・API・管理 IAP 境界（未認証側から見た /admin の挙動含む）                                                  |
-| `e2e/a11y/*.spec.ts`                       | chromium              | axe スキャン・キーボード操作（→ Step 6）                                                                                      |
-| `e2e/authenticated/customer/*.spec.ts`     | chromium-customer     | 顧客ログイン済みが前提の画面（マイページ・予約・レビュー等）                                                                  |
-| `e2e/authenticated/admin/*.spec.ts`        | chromium-admin        | 管理画面（IAP 模擬・SUPER_ADMIN。→ Step 3）                                                                                   |
-| `e2e/authenticated/admin-viewer/*.spec.ts` | chromium-admin-viewer | 管理画面を VIEWER role で見る RBAC 境界（→ Step 3）                                                                           |
-| `e2e/visual/*.spec.ts`                     | chromium-visual       | visual regression（opt-in。→ Step 7）                                                                                         |
+**smoke に足すのは慎重に。** 毎 push の必須ゲートで、3 分の予算を共有している。
 
-- 命名は `*.spec.ts`（smoke のみ `*.smoke.spec.ts`）。それ以外の suffix は testMatch に一致せず**実行されない**。
-- 複数 spec で共有するヘルパーは `e2e/helpers/`（例: `admin-auth.ts`）、単一フロー内の共有は
-  spec 隣接ファイル（例: `e2e/authenticated/customer/reservation-test-helpers.ts`。`.spec.ts` を付けない）。
-- **`test` / `expect` / 型は `e2e/fixtures/e2e-test.ts` から import する**
-  （`import { test, expect } from "../fixtures/e2e-test";`）。`@playwright/test` の
-  直 import は gate が禁止する — 共有 test が rate limit 用の client IP を
-  テストごとに配っており、別の `test` を掴むとその spec だけ割当が消えるため。
-  詳細は rules の `testing-e2e.md`。
+## 2. import は fixture から
 
-## Step 2: テストデータを決める（seed 契約）
+```ts
+import { test, expect } from "../fixtures/e2e-test";
+```
 
-webServer が毎回 `bun prisma/seed.ts --dev` を実行するため、spec は seed 済みデータを前提にできる。
+`e2e/**` から `@playwright/test` を直接 import してよいのは
+`e2e/fixtures/e2e-test.ts` だけ（`__tests__/unit/architecture/e2e-client-ip-allocation.test.ts`
+が強制）。この fixture がテストごとに一意な client IP を全リクエストに載せる
+ので、レート制限を人が気にする必要は無い。
 
-1. **静的データは `e2e/fixtures` barrel から import する**（`e2e/fixtures/index.ts` が
-   `test-data.ts` と `factories.ts` を re-export）。URL をハードコードせず `urls` 定数を使う。
-   - `urls` — 公開/マイページ/管理の全ルート定数
-   - `testUsers.admin` — IAP 模擬用管理者（`superadmin@example.com` / SUPER_ADMIN）
-   - `spaceFixtures.publicReservableSpaceSlug` = `coworking-space`
-   - `eventFixtures` — `yoga-mindfulness-workshop`（単発）/ `photography-workshop`（時間指定入場）
-   - `reviewFixtures.publicReviewSpaceSlug`
-2. **並列実行で衝突し得る値（email / phone）は factory で動的生成する**:
-   `e2e/fixtures/factories.ts` の `uniqueEmail()` / `uniquePhone()` /
-   `inquiryFactory.build(overrides)`。新 factory を足すときも `build(overrides?)` パターンに従う。
-3. **seed 側を変更するときは二重定義の同時更新が必須**: fixture の slug 等は
-   `prisma/seed.ts` と `e2e/fixtures/test-data.ts` の 2 箇所で結合している。
-   片方だけ変えると spec が silent に対象を見失う。
-4. 顧客テストの主体は seed の dev customer（`dev-customer@example.com`、予約履歴付き）。
+**`test.use({ extraHTTPHeaders })` を書かない。** option ごと置き換わって
+client IP が消える。ヘッダーを足したいときは fixture 側に option を追加する
+（`adminIdentity` がその例）。
 
-## Step 3: 認証を決める
+## 3. ロケーターは role で書く
 
-- **未認証**（smoke / public / a11y / visual）: 何もしない。
-- **顧客**: `e2e/authenticated/customer/` に置くだけで storageState
-  （`playwright/.auth/customer.json`）が適用される。setup は `e2e/auth/customer.setup.ts` が
-  `/login` の「テスト顧客でログイン」ボタン（`src/app/(public)/login/_components/dev-login-button.tsx`）を
-  1 度クリックして保存する。spec 側に追加コードは不要。
-- **管理者**: `e2e/authenticated/admin/` に置く。**storage state に app session cookie は
-  入っていない** — 認証の実体は webServer env `ADMIN_TEST_IAP_EMAIL` による IAP 模擬。
-  cookie の存在を前提にした設計・アサーションを書かない。
-  - spec 内で管理ユーザーの存在/状態を保証するには `e2e/helpers/ensure-admin-user.ts` の
-    `ensureAdminUser()`（`scripts/e2e/ensure-admin-user.ts` を spawn して
-    E2E 用 admin ユーザー群を upsert）。
-  - **SUPER_ADMIN 以外の role を試すときは専用 project を足す**。
-    `chromium-admin-viewer` のように `use: { adminIdentity: "<label>" }` を
-    付けると `x-e2e-admin-identity` ヘッダーが載り、そのラベル専用ユーザーとして
-    解決される（ラベル→email の SSoT は
-    `src/shared/domain/admin-auth/e2e-identity.ts`）。spec は
-    `e2e/authenticated/admin-viewer/` のように project の testMatch に合う
-    ディレクトリへ置く。**共有 User 行の `role` を実行時に書き換えない**
-    （fullyParallel な他 spec に漏れる）。
-  - setup 相当を自前でやるなら `e2e/helpers/admin-auth.ts` の
-    `signInAsAdmin(page)`。
-- 顧客ログインバイパスは `src/shared/lib/e2e-runtime.ts` の
-  `isCustomerE2ELoginEnabled(headers)`（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` AND
-  localhost env URL の `isLocalProductionE2EEnv()` AND リクエスト Host が loopback）
-  で成立している。この env を staging / production に伝播させない（rules の
-  `security-auth.md` 参照）。
+```ts
+await expect(page.getByRole("heading", { name: "予約" })).toBeVisible();
+await expect(page).toHaveURL(/\/reservation/);
+```
 
-## Step 4: 時刻を凍結する（時刻依存 UI のみ）
+`locator("#id")` は React streaming の hidden staging copy も掴んで strict-mode
+violation になる。role が無い要素だけ `visibleById()`
+（`e2e/helpers/streaming-safe-locators.ts`）。
 
-- サーバー側: webServer env `E2E_FIXED_NOW_ISO`（既定 `2026-07-04T03:00:00.000Z`、
-  `playwright.config.ts`）。ただし自動で全サーバー時刻が固定されるわけではなく、
-  時刻依存のサーバーコンポーネントが `serverEnv.E2E_RUNTIME === "1"` のときに読む
-  **opt-in 配線**（実例: `src/app/(public)/_components/EventCalendarSection.tsx` の
-  `initialNowIso`）。新しい時刻依存 UI をテストするなら、コンポーネント側に同種の配線が
-  あるか先に確認する。
-- ブラウザ側: `page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") })` を
-  **`page.goto` より前に**呼び、サーバーと同一時刻にする。
-  実例: `e2e/public/events-calendar.spec.ts`。
-- 時刻を独自にずらす場合は `E2E_FIXED_NOW_ISO` を env で上書きし、clock.install も
-  同じ値にする（片方だけ変えると server/client の日付表示が乖離する）。
+待ちは web-first assertion のみ。`waitForTimeout` / `networkidle` /
+`waitForURL` は lint エラー。
 
-## Step 5: spec 本体を書く
+## 4. テストデータ
 
-ロケーター・待機の規約と禁止 API（`page.waitForTimeout` / `networkidle` / `page.waitForURL` /
-count 条件アサーション）は rules の `testing-e2e.md` を参照。ESLint の
-`e2e-playwright-discouraged` ブロック（`eslint.config.mjs`）が error で機械検出する。
+- 固定データは seed 由来のものを `e2e/fixtures/test-data.ts` から使う。
+- 都度作るものは `e2e/fixtures/factories.ts` と `e2e/helpers/*-fixture.ts`。
+- 直接 DB を触るときは `e2e/helpers/e2e-prisma.ts`。
+- **グローバル状態（サイト設定・機能 ON/OFF など）を変えたら `afterEach` で
+  戻す。** `try` / `finally` は setup 側で落ちると入らない。
+- 共有シングルトンは「どの spec がその設定を所有するか」を分割して排他する。
 
-- **お手本にする実例**:
-  - ナビゲーション確定: `expect(page).toHaveURL(...)` polling — `e2e/auth/customer.setup.ts`
-  - `getByRole`（tab / grid / gridcell / heading）+ キーボード操作 — `e2e/public/events-calendar.spec.ts`
-  - factory + フォーム送信 — `e2e/public/contact.spec.ts`（`inquiryFactory.build()`）
-  - seed-driven の認証済み一覧検証 — `e2e/authenticated/customer/inquiries.spec.ts`
-- **シングルトン mutation は直列化する**: `fullyParallel: true` のため、Setting 等の
-  シングルトン行を書き換える describe は `test.describe.serial` で囲む。
-  手本: `e2e/authenticated/admin/settings.spec.ts` の「サイト名 mutation - 並列化禁止」。
-  読み取り専用テストまで serial に巻き込まない（describe を分ける）。
-- **APP_SURFACE 分岐**: ローカル既定は admin（`playwright.config.ts` 冒頭 `??= "admin"`）。
-  public surface でしか成立しない検証（公開トップ `/` の描画、public での /admin 404 等）は
-  `process.env["APP_SURFACE"]` を読んで `test.skip` または分岐する。
-  実例: `e2e/a11y/axe-public-pages.spec.ts`（homepage を public 以外 skip）、
-  `e2e/smoke/auth.smoke.spec.ts`（public なら /admin が 404 を expect）。
+## 5. 条件つき assertion を書かない
 
-## Step 6（該当時）: a11y spec パターン
+```ts
+// NG — 要素が無いと assertion が走らず silent pass する
+if ((await locator.count()) > 0) {
+  await expect(locator).toBeVisible();
+}
+```
 
-- **axe スキャン**: `@axe-core/playwright` の `AxeBuilder` を
-  `withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])` で使い、サードパーティ iframe
-  （Google Maps / YouTube / Instagram）を `.exclude()` した上で、impact が
-  serious / critical の違反のみを fail にする。`e2e/a11y/axe-public-pages.spec.ts` の
-  `buildAxeScanner` / `isBlocking` / `formatAxeViolations` を踏襲する
-  （assertion message に整形済み違反一覧を渡すのが規約）。
-- **キーボード操作**: Tab 到達は `e2e/a11y/keyboard-navigation.spec.ts` の
-  `tabUntilFocused` パターン（上限付き Tab ループ + `expect(target).toBeFocused()`）。
-- animation 起因の flake 回避に `beforeEach` で
-  `page.emulateMedia({ reducedMotion: "reduce" })` を入れる。
+seed で保証されているなら無条件に assert する。保証されていない optional UI
+なら、そのテストごと消す。ESLint が上記の形をブロックする。
 
-## Step 7（該当時）: visual spec
+`fill()` した文字列を `getByText()` で待たない（入力欄自身にマッチして通り、
+送信失敗を隠す）。保存完了を toast で判定しない（楽観ロック競合で出ない）。
 
-`PLAYWRIGHT_VISUAL=1` opt-in・baseline 運用は rules の `testing-e2e.md` を参照。
-**canonical baseline は CI Ubuntu の `*-linux.png` のみ**（`*-win32.png` は 2026-07-31 に廃止、
-`posts-blog-clean-break.test.ts` が commit を機械的に拒否する）。
+## 6. 網羅ゲートに登録する
 
-1. `e2e/visual/` に追加し、describe 冒頭に opt-in ガードを置く
-   （`test.skip(!VISUAL_ENABLED, ...)` — `e2e/visual/public-pages.spec.ts` 参照）。
-2. スクリーンショット前に main + heading の可視化と `document.fonts.ready` を待つ
-   （同 spec の `preparePageForVisualSnapshot`）。
-3. `toHaveScreenshot` は `fullPage: true` / `animations: "disabled"` /
-   動的要素（announcement / `time, [datetime]` / instagram）の `mask` /
-   `maxDiffPixelRatio: 0.01` / `timeout`（既定 5s は full-page の収束に短い）を指定する。
-   外部由来のゆらぎは `beforeEach` で断つ（現状 Turnstile のみ abort。**画像は route で
-   差し替えない** — seed はローカル SVG で `/_next/image` を経由しないため無意味）。
-4. baseline の生成・更新は **CI でのみ**行う:
-   `gh workflow run ci.yml --ref main -f update_visual_baseline=true`。
-   ローカルで `--update-snapshots` した結果は commit しない（CI と描画が一致せず必ず落ちる）。
-   CI は `ci/visual-baseline-<run_id>` branch と auto-PR を作るが、`GITHUB_TOKEN` 製の PR は
-   **workflow が起動しない**ため required checks が付かない。PR を close → reopen するか、
-   同 branch の内容で自分名義の PR を作り直して checks を通すこと。
+公開・顧客・管理それぞれに「主要 URL がレスポンシブ / a11y の spec に
+現れていること」を見るゲートがある（例:
+`__tests__/unit/architecture/e2e-public-responsive-a11y-coverage.test.ts`）。
+公開ページを足したら、その URL キーも spec 側に足す。
 
-## Step 8: 実行して検証する
+## 7. 走らせる
 
-前提: Docker が動いていること（test DB は `bun run test:db:migrate` が
-`docker compose up --wait test-db` で localhost:5433 を自動起動）。ポート 3000 は空ける
-（`reuseExistingServer: false`。dev サーバーと共存不可、初回はビルド込みで長い）。
+```sh
+bunx playwright test --project=chromium-smoke
+bunx playwright test e2e/public/my-new.spec.ts --project=chromium
+bun scripts/run-tests.ts __tests__/unit/architecture   # E2E 契約ゲート
+```
 
-1. **focused project から**（webServer 起動は共通なので 1 spec でも数分かかる）:
-   ```sh
-   bunx playwright test --project=chromium-customer e2e/authenticated/customer/my-new.spec.ts
-   ```
-2. **surface 依存があれば両 surface で**:
-   ```sh
-   APP_SURFACE=public bunx playwright test --project=chromium-smoke
-   APP_SURFACE=admin bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts --grep "管理入口"
-   ```
-   （CI required gate と同一コマンド）
-3. **広域**: `bun run e2e`（全 project）。デバッグは `bun run e2e:ui`。
-4. **CI での扱い**: chromium-smoke のみ毎 push required。広域 E2E は main の
-   nightly（`.github/workflows/ci.yml` の `schedule` cron、03:00 JST）で自動実行される。
-   **visual regression も nightly に含まれる**（比較モード）。Lighthouse だけが
-   nightly 非対象。任意実行はどちらも manual dispatch:
-   ```sh
-   gh workflow run ci.yml --ref <branch> -f run_full_ci=true
-   ```
-   smoke 以外に足した spec は毎 push では走らない —
-   マージ前に full CI か手元の広域実行で緑を確認する。
+webServer chain は Stripe fixture → build → start。ローカル初回は build の
+ぶん時間がかかる。
 
-## チェックリスト
+## 8. 落ちたら
 
-- [ ] 配置ディレクトリと project の対応が正しい（Step 1 の表）。命名は `*.spec.ts`
-- [ ] URL / テストデータは `e2e/fixtures` 経由。一意性が要る値は factory
-- [ ] seed を変えた場合、`prisma/seed.ts` と `e2e/fixtures/test-data.ts` を同時更新した
-- [ ] `bun run lint` が緑（禁止 API は ESLint が検出）
-- [ ] 時刻依存なら `page.clock.install` が `page.goto` より**前**、値はサーバーと同一
-- [ ] シングルトンを mutate する describe は `test.describe.serial`
-- [ ] admin spec で session cookie を前提にしていない
-- [ ] public surface 限定の検証に `APP_SURFACE` ガードがある
-- [ ] `playwright.config.ts` を触った場合:
-      `bun scripts/run-tests.ts __tests__/unit/architecture/playwright-e2e-webserver-env.test.ts`
-      が緑（config は文字列レベルで pin されている）
-- [ ] focused project で実行ログを確認した（skip のまま緑を「通った」と言わない。
-      特に visual は `PLAYWRIGHT_VISUAL=1` なしだと全 skip で緑になる）
+推測でログを読む前に artifact を取る。
+
+```sh
+gh run view <run-id> --log-failed
+gh run download <run-id>
+bunx playwright show-trace <trace.zip>
+```
+
+多段フォームの障害は直列に出るので、CI は 1 回に 1 つしか見せない。
+ローカルで通し切るほうが速い（専用 DB に隔離・`TEST_DATABASE_URL` 明示・
+MSYS のパス変換抑止・事前 build して `CI=1`）。

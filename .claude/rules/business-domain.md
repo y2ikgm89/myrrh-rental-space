@@ -1,85 +1,79 @@
 ---
 paths:
-  [
-    "src/shared/domain/reservations/**",
-    "src/shared/domain/events/**",
-    "src/shared/domain/coupons/**",
-    "src/shared/domain/terms/**",
-    "src/shared/lib/date-format.ts",
-    "src/shared/lib/pricing/**",
-  ]
+  - "src/shared/domain/**"
+  - "src/app/(public)/reservation/**"
+  - "src/app/(public)/events/**"
+  - "src/app/(public)/mypage/**"
+  - "src/app/(admin)/admin/(dashboard)/reservations/**"
+  - "src/app/(admin)/admin/(dashboard)/events/**"
 ---
 
-# 予約・イベント・ビジネス不変条件
+# 業務ドメイン
 
-## 予約の同時実行制御（最重要）
+レンタルスペースの予約と、スペースで開催するイベントの申込。決済は Stripe。
+ドメインロジックは `src/shared/domain/<領域>/` に置き、`queries` / `commands` /
+`admin-*` / `public-*` / `customer-*` で読み書きと呼び出し元を分ける。
 
-- 空き確認は read-before-write のため、可用性に影響する**全書込経路**は
-  `prisma.$transaction` 内で `lockSpaceForTransaction(tx, spaceId)` を
-  overlap チェック・書込より先に取得する（`src/shared/domain/reservations/space-locks.ts`）。
-  Reservation と Event (EventTimeSlot) の書込は同一 Space namespace (728351) を共有する
-- 重複判定の SSoT は `checkSpaceOverlap`（`src/shared/domain/spaces/overlap.ts`）:
-  Reservation・EventTimeSlot 双方を同一 Space namespace で検査する。Reservation 側は
-  deletedAt null + status ∈ {PENDING, CONFIRMED}、Event 側は EventStatus ∈
-  {DRAFT, PUBLISHED} が対象。両側とも**半開区間 `start < end AND end > start`**で判定。
-  lt/gt を lte/gte に変えると隣接予約が誤検出になる（テストが where 句を pin）
+## 予約
 
-## イベント定員（TOCTOU 防止）
+`ReservationStatus`: `PENDING` / `CONFIRMED` / `COMPLETED` / `CANCELLED` /
+`NO_SHOW`。
 
-- 申込 create は interactive tx 冒頭で `pg_advisory_xact_lock(728350, hashtext(eventId))`、
-  残枠は **CONFIRMED 申込の quantity 合計**のみで判定
-- tx 内のクエリは逐次 await（理由は db-domain ルールの「トランザクション」参照）
+- **重複予約は 2 段で防ぐ。** space 単位の advisory lock
+  (`lockSpaceForTransaction`) と、DB の EXCLUDE 制約
+  `reservations_no_active_time_overlap_excl`（`deleted_at IS NULL` かつ
+  `status IN (PENDING, CONFIRMED)` の範囲）。
+  **可用性に影響する全書込経路が lock を通る**のが不変条件で、
+  カレンダー同期からの inbound 書き込みも例外ではない。
+- 楽観ロック（`Reservation.version`）を書くのは
+  `customer-commands.ts` と `admin-commands.ts` の 2 ファイルだけ。
+  form 由来の更新経路に限定する契約。
+- 定期予約（`ReservationSeries`）のキャッシュ無効化で、`reservationId` の
+  スロットに `seriesId` を渡さない。
+- 重複判定の helper に `Only` サフィックスの派生を作らない（SSoT が割れる）。
 
-## Waitlist FIFO promote
+## イベント
 
-- 満員時の申込は `status: WAITLISTED` で create。`waitlistedAt` を tx 内 `now` で設定
-  (FIFO 用の ordering key)
-- 誰かがキャンセルすると `applyEventRegistrationCancellation` 完了直後に同一 tx 内で
-  `offerNextWaitlistEntryCommand(tx, {slotId, ticketId, now})` が呼ばれ、同じ
-  (slotId, ticketId) の WAITLISTED を `waitlistedAt ASC LIMIT 1` で選定して
-  updateMany WHERE claim で `WAITLISTED_OFFERED` に昇格 + `offeredAt = now`,
-  `expiresAt = now + 24h` を設定する。**別 tx で呼ぶと race する** ため必ず tx 内
-- cron `/api/cron/waitlist-expire` は hourly に `status: WAITLISTED_OFFERED AND expiresAt < now`
-  を updateMany claim で `EXPIRED` に、その後 event 単位で 728354 session lock を握って
-  空いた枠に次の WAITLISTED を再度 promote する。**session lock は commit で自動解放
-  されない** ため release を finally で必ず呼ぶ
-- session lock は物理 connection scope のため、cron 側は acquire → work → release を
-  同じ `$transaction` callback または dedicated non-pooled client 経由で呼ぶ (pooled client
-  で分けて呼ぶと `pg_advisory_unlock` が silent-false を返して leak する)
-- WAITLISTED_OFFERED 中の quantity 変更は禁止 (`updateMany` の WHERE で status で claim 済み
-  のため意味的に不整合)、変更したい場合は「キャンセル → 再 waitlist 登録」を促す
+- 在庫（定員）と waitlist を持つ。申込は数量つきで、CHECK 制約で
+  `quantity >= 1` / 金額と税率の範囲が固定されている。
+- `meetingUrl`（オンライン開催の URL）は **CONFIRMED のときだけ**返す
+  fail-closed。公開側の query / JSX に載せない（専用ゲートあり）。
+- 監査ログの `resource` は `event-registration`（kebab-case）。
 
-## 二重副作用防止 = 「updateMany の WHERE で claim」パターン
+## 決済・返金
 
-キャンセル（status ∈ CANCELLABLE）/ 決済確定（paymentStatus ∈ {UNPAID, PENDING}）/
-リマインダー（reminderSentAt: null、失敗時 release）はすべて claim の count で
-メール送信・クーポン戻し等の副作用を gate する。count=0 なら skip。
-クーポン usageCount の decrement（`gt: 0` ガード付き）は claim 成功後の同一 tx 内。
-この構造を tx 外に切り出さない。
+- Stripe の非同期返金（コンビニ / 銀行振込 = `konbini` /
+  `customer_balance`）は作成直後 `pending` を返し、後日 `refund.updated`
+  webhook で確定する。**status を見ずに完了扱いにしない。**
+  `refunds` テーブルは追記専用で、可変列は `status` だけ。
+- 同一予約の返金は `pg_advisory_xact_lock` で直列化する（over-refund 防止）。
+- 領収書は予約 / イベント申込のどちらか片方にしか紐づかない
+  （CHECK `receipts_target_exclusive_check`）。
 
-## 臨時休業（BlockedDate）
+## 証跡
 
-- GLOBAL / LOCATION / SPACE の 3 階層 **additive** cascade（override なし）
-- `ensureDateNotBlocked` は公開予約経路のみ（tx 外プリチェック + tx 内の 2 回）。
-  **admin 経路は override 許容のため意図的に呼ばない**。安易に足さない・削らない
+監査ログ・利用規約同意・問い合わせステータス履歴・返金は DB trigger で
+追記専用。UPDATE / DELETE の経路を足さない（`.claude/rules/db-domain.md`）。
 
-## 日付・時刻（JST 規約）
+## 機能モジュール
 
-- `@db.Date` 列は「JST カレンダー日付を UTC 深夜で保持」。変換は
-  `parseJstDateOnly` / `formatJstDateOnly`、時刻付き UTC → JST 日付は `formatJstDateString`
-- 表示は `src/shared/lib/date-format.ts` の `timeZone: "Asia/Tokyo"` 固定 formatter のみ。
-  date-fns `format()` 直呼びはサーバー UTC で 9 時間ずれる silent bug
-- datetime-local 入力の JST 固定 parse は `parseDateTimeLocalAsJst`（+09:00 付与）。
-  `new Date(\`${date}T${time}:00\`)` は server-local parse なので規約を混在させない
+サイト単位の ON/OFF は `src/shared/lib/features/registry.ts` の
+`FEATURE_MODULES_LIST` が SSoT（`spaces` / `reservation` / `events` / `posts` /
+`news` / `faq` / `access` / `contact` / `reviews` / `payment` /
+`data-retention`）。値は `SettingsFeatures.featureModules` の JSON 列に持ち、
+キーが欠けていれば fail-closed（`false`）。
 
-## 税・規約同意・DB 制約
+追加時に同時更新する 5 点はそのファイルの docstring に書いてある。
+OFF の機能は公開ルートで `requireFeatureEnabled` により `notFound()` になり、
+nav / sitemap / セクション追加ダイアログ / ページテンプレートからも外れる。
 
-- 税計算は経路で単位（% vs 割合）と丸め（round vs floor)が異なる。
-  税関連の変更時は単位・丸め・書込経路の有無を必ず突合する
-- 必須規約同意が `assertAllRequiredTermsAgreed` で **server-side 強制**されるのは
-  RESERVATION / INQUIRY / EVENT_REGISTRATION の 3 経路（client gate のみは禁止）。
-  LOGIN_SIGNUP は署名 cookie 経由の同意証跡記録のみでこの gate を通らない
-- Prisma DSL で表現できない不変条件（CHECK / EXCLUDE / plpgsql 関数 / DEFERRABLE
-  constraint trigger）の SSoT は `prisma/baseline/invariants.sql`。baseline migration は
-  そこからの生成物なので直接編集しない（絶対規約 #7）。テストからは
-  `__tests__/support/prisma-sources.ts` の `readDatabaseInvariants()` で読む
+## 定期実行
+
+`src/app/api/cron/*` に 23 本。認証は OIDC（`.claude/rules/security-auth.md`）。
+route を足したら Cloud Scheduler 側と同期する
+（`.claude/rules/deploy-infra.md`）。
+
+## 日時
+
+営業時間・締切・リマインダーはすべて JST 前提。`date-format.ts` を通す
+（`.claude/rules/type-safety.md`）。祝日は `@holiday-jp/holiday_jp`。

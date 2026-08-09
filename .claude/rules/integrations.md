@@ -1,94 +1,79 @@
 ---
 paths:
-  [
-    "src/shared/lib/email/**",
-    "src/shared/emails/**",
-    "src/shared/lib/stripe.ts",
-    "src/shared/lib/r2/**",
-    "src/shared/lib/google-api/**",
-    "src/shared/lib/calendar-sync/**",
-    "src/shared/lib/instagram/**",
-    "src/shared/lib/google-business-profile/**",
-    "src/shared/lib/analytics/**",
-    "src/shared/lib/ical/**",
-    "src/app/api/webhooks/**",
-    "src/app/api/webhooks/switchbot/**",
-    "src/app/api/cron/**",
-    "src/shared/domain/settings/**",
-  ]
+  - "src/shared/lib/stripe*.ts"
+  - "src/shared/lib/cloudflare.ts"
+  - "src/shared/lib/r2/**"
+  - "src/shared/lib/google-*/**"
+  - "src/shared/lib/calendar*/**"
+  - "src/shared/lib/instagram/**"
+  - "src/shared/lib/email/**"
+  - "src/shared/emails/**"
+  - "src/shared/domain/payment/**"
+  - "src/shared/domain/refund/**"
+  - "src/shared/domain/calendar-sync/**"
+  - "src/shared/domain/instagram/**"
+  - "src/shared/domain/google-business-profile/**"
+  - "src/app/api/webhooks/**"
+  - "src/app/api/cron/**"
 ---
 
 # 外部連携
 
-## メール（Resend）
-
-- 送信の SSoT は `sendEmail()`（`src/shared/lib/email/send.ts`）。from は自動注入
-  （env `EMAIL_FROM` 優先 → DB 設定。`EMAIL_FROM` は秘密キーではないため下記
-  「API キーの優先順（DB優先）」の対象外で、この env 優先が正）、replyTo は
-  payload 明示 → DB 設定（env 層なし）。リトライは rate_limit / server error 系のみ最大 3 回
-- `idempotencyKey` は `<event-type>/<entity-id>` 形式でほぼ全送信に指定する
-- API キー未設定・suppression 該当時は例外でなく `{ok: false, reason: "disabled"}` の
-  silent no-op。呼び出し側は "disabled" と "error" を区別する
-- suppression は Customer レコードのみ追跡（スタッフ/システム宛先は素通り）
-- テンプレート追加は component + fixture + `_registry`（satisfies で網羅強制）の
-  3 点セット（手順は `add-email-template` skill）
+API キーやトークンは `SettingsFeatures` 系の singleton テーブルに purpose 別の
+派生鍵で暗号化して保存する（`.claude/rules/security-auth.md`）。
+新しい連携を足すときは `SETTINGS_CRYPTO_PURPOSES` に一意な purpose を登録する。
 
 ## Stripe
 
-- **Bun では sync `constructEvent` が throw する** → `constructEventAsync` のみ
-  （AsyncOnlyStripe 型封印 + ESLint の 2 段防御）
-- webhook の状態遷移は `claimReservationAs*` の「updateMany WHERE 排他 claim」で
-  副作用を gate する。findUnique → update の 2 ステップに書き換えない
-  （並行配信でメール二重送信 race が再発）
+- **webhook 検証は async 版のみ。** `constructEvent` /
+  `generateTestHeaderString`（sync 版）は Bun の Web Crypto 環境で throw する。
+  型封印は `src/shared/lib/stripe.ts` の `AsyncOnlyStripe`、直接呼び出しの
+  機械ブロックは ESLint。
+- SDK 呼び出しには request timeout を設定する
+  （`__tests__/unit/architecture/stripe-request-timeout.test.ts`）。
+- 非同期返金（`konbini` / `customer_balance`）は作成直後 `pending` を返す。
+  `refund.updated` / `refund.failed` の webhook 購読が Stripe 側に必要。
+  詳細は `.claude/rules/business-domain.md`。
 
-## API キーの優先順（DB優先で統一、Settings is canonical）
+## Google Calendar
 
-Resend / Stripe / Turnstile secret / Google Maps は全て **DB優先** →
-env はフォールバック（PR #878 で確定した「Settings is canonical」に統一、2026-07-06）。
-env 側は `cloudbuild.yaml` に配線されておらず本番では常に undefined
-（ローカル開発の利便性のためのフォールバックとしてのみ機能する）。
-新しい統合キーを追加する際もこのパターンに従うこと（`domain/settings/turnstile.ts` の
-`resolveTurnstileVerifyContext()` をお手本にする）。
+- 双方向同期。inbound（Google → DB）の書き込みも space 単位の advisory lock を
+  通す。sync token を失うと全件再同期になるので、失敗時の扱いに注意。
+- webhook route はヘッダーを Zod schema で検証する。
+- サービスアカウント JSON は共有の validation helper 経由で検証する
+  （直接 `JSON.parse` しない）。
+- iCal フィード配信は全廃済み。再導入しない。
 
-Webhook 署名秘密 (`stripeWebhookSecret` / `resendWebhookSecret`) も同様に Tier 2
-(DB 暗号化 + admin UI からの rotate/test) で管理する。route handler は
-`getResendWebhookSecret()` / `settings.stripeWebhookSecret` 経由で解決し、
-env はローカル開発 fallback のみ ([[project_integration-secrets-two-tier-split-2026-07-06]])。
+## Cloudflare
 
-## R2（Cloudflare、S3 互換）
+- CDN の purge は `src/shared/lib/cache/site-wide.ts` 経由
+  （`.claude/rules/caching.md`）。`invalidateSiteWideCache` を通さない
+  `updateTag` は CDN を古いまま残す。
+- Turnstile: 公開フォームの最後の guard。widget が render 済みなのに
+  challenge が来ず空トークンで止まることがある（E2E の既知の罠）。
+- R2: 公開メディアは CDN 配信 URL（`buildPublicUrl`）。**お問い合わせの添付は
+  private バケットのみ**で、`buildPublicUrl` を呼ばない（専用ゲートあり）。
 
-- アップロードは magic-byte 検出 MIME で Content-Type / 拡張子を確定する fail-closed 設計
-  （クライアント申告の file.type を信用しない）。per-type サイズ上限あり
-- `isR2Configured()` は 5 env 全部の AND。client は遅延初期化
-  （import 安全・credentials 欠損は呼び出し時 throw）
+## メール（Resend + React Email）
 
-## Google 系
+- テンプレートは `src/shared/emails/<name>.tsx` と、プレビュー用の
+  `<name>.fixture.ts` を対で置く。登録は `src/shared/emails/_registry/`。
+- ローカルプレビュー: `bun run email:dev`（<http://localhost:3030>）。
+- 予約確認メールに領収書 CTA を入れない、パスコードをテンプレートに載せない、
+  といった個別の clean-break ゲートがある。テンプレートを触る前に
+  `__tests__/unit/emails/` を見る。
+- 送信の冪等性はメール種別ごとに担保する
+  （`__tests__/unit/architecture/reservation-email-idempotency.test.ts`）。
 
-- Calendar / Business Profile / GA Data API の呼び出しは `withGoogleApiRetry` で包む
-  （429/500/503 と特定 403 reason・一時ネットワークエラーのみリトライ）
-- GCal 同期のループ防止は「予約ID:」「イベントID:」の**文字列一致**に依存。
-  この書式の変更は outbound/inbound/sync/テストの同時更新必須
-- calendar-sync の session-level lock は max instance=1 前提。
-  外部 API 呼び出しを `$transaction` で包んで xact lock 化するのは禁止 anti-pattern
-- Instagram / Google Business Profile は OAuth token lifecycle
-  （refresh cron / location-sync）を持つ。public surface では OAuth callback は 404
+## Instagram / Google Business Profile
 
-## cron（src/app/api/cron/\*）
+OAuth トークンは DB に暗号化保存し、cron でリフレッシュする。
+`googleapis` の型（`Schema$Location`）は `z.custom` helper 経由で受ける
+（`.claude/rules/type-safety.md`）。
 
-Cloud Scheduler の OIDC Bearer token 検証（fail-closed。詳細は security-auth ルール）が必須。
-feature module OFF のジョブは早期 return。新規追加は `add-cron-job` skill 参照。
+## cron / webhook route の作法
 
-## SwitchBot（スマートロック）
-
-- Webhook 認可は path token（`/api/webhooks/switchbot/[token]`）+ deviceMac 照合。
-  公式 API に HMAC 署名ヘッダ契約が無いため HMAC 検証は未実装（accepted risk。
-  ベンダーが公式サポートするまで追加しない）
-- Feature Module ではなく Settings（外部連携）ゲート。管理 nav では feature OFF 時も
-  メニューを残し「非公開」badge を表示する（公開ナビ prune のみ）
-- Open Token / Secret Key は Settings 暗号化保管（DB 優先）。詳細は security-auth ルール
-
-## その他
-
-- ical-generator は server-only（client からは `@/shared/lib/ical/urls` サブパスのみ）
-- GA4/GTM/Clarity は cookie 同意 "accepted" 時のみ、CSP nonce 付きで出力
-- 新しい外部通信先は proxy.ts の CSP と frame-sources.ts の両方を更新（詳細は security-auth ルール）
+- 認証は共有 helper 経由（cron は OIDC、webhook は署名検証）。
+- `{ success: boolean }` の legacy payload を返さない。
+- Prisma を直接 import しない。`shared/domain` を経由する。
+- route を足したら Cloud Scheduler 側と同期する（`.claude/rules/deploy-infra.md`）。

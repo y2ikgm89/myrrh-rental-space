@@ -1,59 +1,60 @@
 ---
-paths: ["**/*.ts", "**/*.tsx"]
+paths:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "scripts/**/*.ts"
 ---
 
-# 型安全性
+# 型安全
 
-strict フラグと 2 段構えのゲート（ESLint + `architecture-boundaries.test.ts` の grep gate）で
-型の抜け穴を機械封鎖している。**lint 緑でも unit テストで落ちる**規約に注意。
+TypeScript 6 / `strict` に加えて `noUncheckedIndexedAccess` ・
+`exactOptionalPropertyTypes` ・ `erasableSyntaxOnly` ・
+`noPropertyAccessFromIndexSignature` ・ `verbatimModuleSyntax` が有効。
+typed ESLint（`no-unsafe-*` / `no-floating-promises` / `no-misused-promises` /
+`restrict-template-expressions` など）もフルセットで error。
 
-## tsconfig（緩和禁止）
+## 使わないもの
 
-- `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` +
-  `erasableSyntaxOnly` + `noPropertyAccessFromIndexSignature` + `noImplicitOverride` +
-  `verbatimModuleSyntax` すべて有効
-- `erasableSyntaxOnly` により TS の `enum` / `namespace` / parameter properties は
-  コンパイルエラー。enum 値は Prisma 生成の const オブジェクトを使う
-- `exactOptionalPropertyTypes`: optional プロパティへ `undefined` を明示代入しない
-  （`page?: number | undefined` のような明示 union が必要な場合がある）
-- `noPropertyAccessFromIndexSignature`: index signature 由来はブラケット記法
-  （例 `packageJson["scripts"]`）
-- tsc:app（tsconfig.json）は `__tests__` を検査しない。テスト側の型エラーは
-  tsconfig.test.json を使う tsc:test でのみ検出される（`bun run type-check` が両方走らせる）
+- **非 null assertion `!`** — ESLint error。
+- **`as` 型アサーション**（literal narrowing を除く）。call-site の
+  `as unknown as X` / `as Record<string, unknown>` / `as { … }` / `as never` /
+  `as Prisma.(Input)?Json*` は 0 件が現状値で、ゲートが増加を落とす。
+- angle-bracket 形式のアサーション。
+- `@ts-ignore` / `@ts-expect-error` / `any`（`scripts/` を含む）。
+- `JSON.parse(JSON.stringify(...))` による型逃がし。
 
-## 0 件強制される cast（grep gate）
+## 代わりに通す SSoT helper
 
-`src/`（一部は `scripts/` も）で以下は 0 件を `architecture-boundaries.test.ts` が強制:
+| 境界                          | helper                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| unknown → object              | `isRecord`（段階的 narrowing）                                                                                |
+| Prisma の JSON 列             | `asPrismaInputJsonValue` / `parsePrismaInputJson` / `clonePrismaInputJson`（`@/shared/db/prisma-input-json`） |
+| googleapis `Schema$Location`  | `src/shared/lib/google-business-profile/schemas.ts`                                                           |
+| resend `CreateEmailOptions`   | `src/shared/lib/email/schemas.ts`                                                                             |
+| Next.js `Route<string>`       | `toAppRoute` / `safeToAppRoute`（`src/shared/lib/routes/to-app-route.ts`）                                    |
+| conform の generic invariance | `typed-input-control` helper                                                                                  |
 
-- `as any` / `: any` / `<any>` / `Promise<any>` / `Record<string, any>` / `@ts-ignore` / `@ts-expect-error`
-- `as Prisma.InputJsonValue` 等の Prisma JSON 直 cast →
-  `src/shared/db/prisma-input-json.ts` の `parsePrismaInputJson` 系 helper を使う
-- `as Record<string, unknown>` → `src/shared/lib/serialize.ts` の `isRecord` を使う
-- `as {`（構造 cast）→ 許可は `src/shared/lib/conform/typed-input-control.ts` のみ
-- `as never` / `as SectionConfig` / literal union cast（`as TermsScope` 等）
-- `as unknown as FieldMetadata` → typed-input-control.ts のみ許可
+helper の内部に `z.custom<T>()` が 1 箇所だけあるのが許される形で、呼び出し側の
+cast は 0 件。強制は `__tests__/unit/architecture-boundaries.test.ts` と
+`__tests__/unit/architecture/type-safety-cast-and-cache-tag-drift.test.ts`。
 
-non-null assertion（`!`）と angle-bracket assertion は ESLint error（`as` スタイルのみ許可）。
+`SectionConfig` のような判別 union を widening cast で潰さない
+（`__tests__/unit/architecture/section-config-widening-cast.test.ts`）。
 
-## Prisma 型の流通経路
+## 日時
 
-- `@generated/prisma` の直 import は `src/shared/db` / `src/shared/domain` /
-  `src/shared/lib/validations/enums/`（gateway）の 3 箇所のみ
-- app 層は gateway（`prisma-types.ts` の enum 値・型、`guards.ts` の `isValid*`、
-  `helpers.ts` の `getValid*` / `parse*Filter`）を経由する
-- gateway は `@generated/prisma/enums`（値）と `@generated/prisma/browser`（型のみ）から
-  しか import できない。`client` entry の import・`Prisma` の値 re-export は禁止
-  （`Prisma.JsonNull` の identity 比較が runtime 間で壊れるため）
+`src/shared/lib/date-format.ts` が JST の SSoT。
 
-## React / Zod
+- `Intl.DateTimeFormat` / `toLocale*String` は `timeZone` 指定必須。
+- `new Date(`${date}T${time}`)` の naive parse は禁止（`datetime-local` の値を
+  ローカルタイムゾーン依存で解釈してしまう）。
+- `toISOString().slice(0, 10)` / `.split("T")[0]` のような UTC 前提の日付切り出しは禁止。
+- `date-format` モジュールを `mock.module` で差し替えない
+  （`__tests__/unit/architecture/date-format-not-mocked.test.ts`）。
 
-- React Compiler 前提のため `react` からの `forwardRef` / `useMemo` / `useCallback` の
-  import は禁止（唯一の例外: lexical-draggable-block-plugin.ts。`@lexical/react` 由来の
-  パターンのため同ファイルは react-hooks/refs・@eslint-react/use-state・
-  @eslint-react/web-api-no-leaked-event-listener・no-restricted-imports の
-  4 ルールを ESLint 設定で除外している）
-- Zod 4: エラーメッセージは `{ error: "..." }` 形式、日付は `z.iso.date()` /
-  `z.iso.datetime()` のトップレベル形式を使う
+## 型ではなく仕組みで守っているもの
 
-検証: `bun run type-check` と
-`bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts`
+- Zod の `.max()` は union の中にあると `getZodConstraint` が拾えない。
+  上限の有無を確かめたいときは制約の申告ではなく `safeParse` の挙動で見る。
+- Prisma の生成型を手で写した const は `satisfies` で受ける
+  （`__tests__/unit/architecture/prisma-shape-consts-satisfies.test.ts`）。

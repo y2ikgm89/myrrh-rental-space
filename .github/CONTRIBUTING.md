@@ -10,7 +10,7 @@
 
 - **Bun** — `package.json#packageManager` で固定。`bun upgrade` で揃える
 - **Node.js** 20+ — 一部 CLI ツール
-- **PostgreSQL** 16 — ローカル DB（Docker Compose 推奨）
+- **PostgreSQL** 18 — ローカル DB（Docker Compose 推奨。本番 Neon / CI と同一系）
 - **Git** 2.40+
 
 ### 初期セットアップ
@@ -58,10 +58,10 @@ bun run dev
 
 ## ブランチ戦略
 
-**Trunk-based development + continuous deployment** を採用しています。
+**Trunk-based development** を採用しています（本番反映だけは手動 dispatch）。
 
 ```
-main                       ← 本番反映（Cloud Run へ自動 deploy）
+main                       ← リリース対象（本番反映は手動 dispatch。マージでは deploy されない）
 feature/*, fix/*, chore/*  ← PR ベースで main にマージ
 ```
 

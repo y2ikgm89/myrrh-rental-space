@@ -1,106 +1,116 @@
 ---
 paths:
-  [
-    "Dockerfile",
-    "cloudbuild.yaml",
-    ".github/workflows/**",
-    "docker-compose.yml",
-    ".dockerignore",
-    "scripts/bun-ci-install.sh",
-  ]
+  - "terraform/**"
+  - ".github/workflows/**"
+  - "cloudbuild.yaml"
+  - "Dockerfile"
+  - "infra/**"
+  - "scripts/bootstrap-terraform.sh"
+  - "scripts/audit-gcp-production-iap.ts"
+  - "scripts/gcp-production-audit-model.ts"
 ---
 
-# デプロイ・インフラ（Cloud Build / Cloud Run）
+# デプロイと基盤
 
-## デプロイ経路
+GCP プロジェクト `myrrh-rental-space` / リージョン `asia-northeast1`。
+1 つのイメージを 2 つの Cloud Run サービスに配る。
 
-- **本番デプロイは手動**（deploy-production.yml の `workflow_dispatch` のみ →
-  `gcloud beta builds submit`）。`main` merge だけでは本番は更新されない
-- workflow が「現行 Cloud Run image tag 〜 HEAD」の migration diff を grep し、下記の
-  DDL を検出すると自動で breaking migration mode（両サービス scaling=0 + 310 秒 drain =
-  計画ダウンタイム）に切り替わる。`ALTER COLUMN ... TYPE` と `SET NOT NULL` は
-  Postgres がテーブル全体書換 + 排他ロックを取るため、`DROP DEFAULT` は旧 revision の
-  Prisma Client がその列を INSERT に含めないため destructive 扱い。
-  **SSoT は deploy-production.yml の正規表現**で、発火/非発火の両方を
-  `__tests__/unit/architecture/breaking-migration-detection.test.ts` が fixture で固定している
+| サービス                   | 役割                               | 入口                                        |
+| -------------------------- | ---------------------------------- | ------------------------------------------- |
+| `myrrh-rental-space`       | 公開サイト（`APP_SURFACE=public`） | `rental-space.myrrh-jp.com`                 |
+| `myrrh-rental-space-admin` | 管理画面（`APP_SURFACE=admin`）    | `admin.myrrh-jp.com` + Cloud Run direct IAP |
+
+Bun のバージョンは `package.json` の `packageManager` と `engines.bun` の
+2 フィールドが SSoT。Dockerfile / devcontainer / CI はこの pin に追従する
+（`__tests__/unit/architecture/runtime-version-contract.test.ts`）。
+
+## 本番反映は手動だけ
+
+`main` へのマージでは Cloud Run に何も出ない。反映は GitHub Actions の
+**Deploy Production**（`.github/workflows/deploy-production.yml`）を
+`workflow_dispatch` で実行する。ref は `main` のみ。順序は
+
+1. `terraform-apply`（IAM の前提を先に作る）
+2. `deploy`（Cloud Build → Artifact Registry → Cloud Run）
+
+migrate は Cloud Run Job として新リビジョンのデプロイ**より先**に走る。
+破壊的 DDL を含むと両サービスを scale 0 にして 310 秒 drain する計画
+ダウンタイムモードに入る。発動条件は下記のいずれかで、判定の SSoT は workflow
+内の正規表現。この列挙がそこから導出した集合と一致することは
+`__tests__/unit/architecture/breaking-migration-detection.test.ts` が強制する。
 
 <!-- breaking-triggers:start -->
 
-ALTER TABLE ... DROP COLUMN / ALTER TABLE ... DROP CONSTRAINT / ALTER TABLE ... RENAME COLUMN / ALTER TABLE ... RENAME TO / ALTER TABLE ... ALTER COLUMN ... SET NOT NULL / ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT / ALTER TABLE ... ALTER COLUMN ... TYPE / ALTER TYPE ... RENAME VALUE / ALTER TYPE ... RENAME TO / DROP TABLE / DROP TYPE
+ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT /
+ALTER TABLE ... ALTER COLUMN ... SET NOT NULL /
+ALTER TABLE ... ALTER COLUMN ... TYPE /
+ALTER TABLE ... DROP COLUMN /
+ALTER TABLE ... DROP CONSTRAINT /
+ALTER TABLE ... RENAME COLUMN /
+ALTER TABLE ... RENAME TO /
+ALTER TYPE ... RENAME TO /
+ALTER TYPE ... RENAME VALUE /
+DROP TABLE /
+DROP TYPE
 
 <!-- breaking-triggers:end -->
 
-- **破壊的 DDL の前提は、散文ではなく実行される形で持つ。** 破壊的 DDL は
-  「先にデータを移してから DROP する」前提で書かれていることがあり、その手順を
-  migration のヘッダにだけ書くと、飛ばして適用したときに消えるのは移し損ねた
-  データそのものになる（散文は誰も実行しない）。前提は
-  **migration 内の `DO $$ … RAISE EXCEPTION … $$`** で持つ。破壊的文より**前**に置けば、
-  `scripts/migration-preconditions.ts` のリハーサルがその検査ごと流すので必ず実行される。
+migration 側の書き方は `.claude/rules/migrations.md`。
 
-  **前提の有無を静的に判定する道具は置かない。** かつては migration SQL を分類して
-  「破壊的文には検査か登録が要る」を強制する 450 行の分類器（`planMigration` /
-  `HANDOVERS`）があったが、これは同ファイルが「収束しない」と結論した写経そのもので、
-  5 回の連続レビューで塞ぎ続けることになった（schema 修飾・一時表・`EXECUTE`・
-  `IF NOT EXISTS`・検査スコープ）。しかも分類器自身が「対象を名指ししつつ何も
-  確かめない検査を書けば通る」と認めていた——静的には判定できないものを判定させていた。
+## Terraform の 4 つの契約
 
-  破壊的 DDL は代わりに **squawk**（`ban-drop-column` 等を error にする。通すには
-  `-- squawk-ignore-file <rule>` の明示が要り、人のレビュー対象になる）と
-  **デプロイの計画ダウンタイムモード**（上記）の 2 つが見る。どちらも vendor / infra 側の
-  仕組みで、自前の SQL 解析を持たない。
+いずれも `__tests__/unit/architecture-boundaries.test.ts` が機械強制する。
+再検討する前に、まずそこの test 名とコメントを読むこと。
 
-  **その 2 つの網にかからない破壊だけは別枠**。`TRUNCATE` / WHERE 無しの `DELETE` /
-  `DROP SCHEMA` / `DO … EXECUTE …`（動的 SQL）は squawk にも上記の正規表現にも
-  該当せず、リハーサルも通してしまう（エラーにならないため）。
-  `scripts/migration-preconditions.ts` の `irreversibleDataLoss` が**文の先頭の動詞
-  だけ**を見て拒否する。消える対象は読まない・検査との照合もしない・**免除の入口も
-  無い**（一括削除が要るならドメインコマンドで行う）。ヘッダが指すスクリプトが実在することは
-  `__tests__/unit/architecture/migration-referenced-scripts-exist.test.ts` が強制する
-  （一度きりのスクリプトを消してよいのは**本番で流し終えた後**）
+1. **project-level IAM は bootstrap が全部持つ（F1 structural closure）。**
+   `terraform/*.tf` に project-level IAM binding とサービスアカウントの
+   metadata を宣言しない。必要な grant は `scripts/bootstrap-terraform.sh`
+   側に足す。
+2. **既存 GCP リソースには同一ファイル内に `import{}` block を置く。**
+   無いと Deploy Production が 409 で落ちる。
+3. **Cloudflare provider v5 の import ID はリソース種別ごとの公式フォーマット
+   に一致させる。** ここのずれで 2026-07-14 に 4 連続でデプロイが落ちている。
+4. **Cloud Scheduler の cron job は
+   `terraform/cloud_scheduler.tf` と `REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS`
+   を完全同期する。** 片方だけ足すと job が存在しないまま緑になる。
 
-- 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
-- **Cloud Run ownership (Phase 6b clean-break)**:
-  - Terraform = shape (memory/cpu/probes/ingress/SA) + env/secrets + IAP/IAM
-  - Cloud Build = `gcloud run services update --image` + `--scaling=auto`
-    （breaking quiesce 復帰用）。`gcloud run deploy` で shape を再適用しない
-  - migrate Job も同様: CB は image のみ、shape/DATABASE_URL は Terraform
+secret を消すときは 3 段階（state から orphan 化 → `gcloud` で削除 →
+`removed` block）。単純に消すと main のデプロイが壊れる。
 
-## Dockerfile（6 ステージ、順序に意味がある）
+その他の機械強制:
 
-- base → deps → builder-base → builder → migrator → **runner（必ず末尾）**。
-  `docker build` は `--target` 未指定で末尾ステージをビルドするため、
-  末尾に別ステージを足すと service に誤ったイメージが入る事故になる
-- migrate Job は **migrator ステージ**（完全な node_modules）のイメージを使う。
-  runner（pruned）を指定すると bunx の実行時再 DL で prisma.config.ts が
-  ロードできず migrate が exit(1) する
-- `NEXT_PUBLIC_*` はビルド時にクライアント JS へインライン化されるため
-  builder-base で **ARG → ENV 変換が必須**（ARG のままでは空文字が焼き込まれる）。
-  \_NEXT_PUBLIC_BASE_URL / \_NEXT_PUBLIC_APP_URL / \_NEXT_PUBLIC_TURNSTILE_SITE_KEY の
-  substitutions に空デフォルトを復活させない（GA_MEASUREMENT_ID のみ optional で空可）
-- ビルドは DB 非接続（placeholder DATABASE_URL）。runner の Prisma prune ガードが
-  Prisma minor bump で fail したら prune リストを更新する（握りつぶさない）
+- `cloudbuild.yaml` の `substitutions` に定義した key は必ず body で参照する
+  （未参照だと Cloud Build が `INVALID_ARGUMENT`）。
+- `branch-protection.json` の required context に対応する workflow は
+  path filter を持たない（filter で skip されると required check が
+  `MISSING` のまま永久に埋まらない）。
+- Cloud Run deploy は Server Actions の暗号鍵を build 時だけでなく
+  **runtime にも**注入する。
 
-## env / バージョン契約
+## CI（`.github/workflows/ci.yml`）
 
-- `SKIP_ENV_VALIDATION` は build / CI 専用。本番 runtime に設定すると
-  `validateProductionEnv()` の本番必須チェックが丸ごと無効化される
-- Bun バージョンは package.json `packageManager` / Dockerfile FROM / .devcontainer の
-  3 箇所同時更新（`runtime-version-contract.test.ts` が不一致で fail）
-- bunfig.toml の `[run] noOrphans` は Lexical TDZ regression のため有効化禁止
+`changes` job が変更範囲を検出し、必須ゲートを回す:
+`migration-safety` / `dependency-audit` / `lint-format` / `type-check` /
+`unit-tests` / `smoke-e2e` / `build`。
 
-## ヘルスチェック
+重い job（広域 E2E・Visual・Lighthouse）は `workflow_dispatch` の
+`run_full_ci=true` で opt-in。広域 E2E と Visual は main の nightly
+（18:00 UTC = 03:00 JST）でも自動実行される。
 
-- startup/liveness probe は `/api/live`（**外部依存ゼロ**）。DB チェックを足すと
-  DB 一時断でコンテナが kill され連鎖障害になる。DB 疎通は `/api/health` の責務
-  （`APP_SURFACE=admin` のみ。public は 404 で匿名 DB probe を拒否）
+```sh
+gh workflow run ci.yml --ref <branch> -f run_full_ci=true
+```
 
-## ローカル環境
+shell の落とし穴: GitHub Actions の既定 shell は `pipefail` が無い。
+判定に使うパイプラインは `set -o pipefail` を明示し、`grep -q` は
+SIGPIPE でマッチを不一致に反転させるので使わない
+（`__tests__/unit/architecture/workflow-shell-pipefail.test.ts`）。
 
-- `docker compose up -d db` = 開発 DB（5432 / myrrh_rental）、
-  `test-db`（5433 / myrrh_test）は `bun run test:db:migrate`
-  （test:integration の前段）が自動起動
-- 本番相当ビルドの再現は `bun run build:skip-env`
-- CI/Docker の install は `scripts/bun-ci-install.sh`（リトライ + キャッシュ消去 +
-  network-concurrency 4 の耐 flake 版）に統一されている
-- Lighthouse CI（.lighthouserc.json のバジェット）は workflow_dispatch の
-  `run_full_ci=true` でのみ実行する（`gh workflow run ci.yml --ref <branch> -f run_full_ci=true`）
+## 監査
+
+```sh
+bun run gcp:audit-production-iap    # IAP / IAM の実構成を宣言と突き合わせる
+```
+
+運用手順の正本は `docs/gcp-production-setup.md` と `docs/runbooks/`。
+デプロイが落ちたときの切り分けは `.claude/skills/deploy-debug/`。

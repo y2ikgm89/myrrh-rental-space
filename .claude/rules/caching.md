@@ -1,55 +1,71 @@
 ---
 paths:
-  [
-    "src/shared/domain/**",
-    "src/shared/lib/cache/**",
-    "src/shared/lib/constants/cache.ts",
-    "src/shared/lib/constants/cdn-cache-tags.ts",
-    "src/shared/lib/cloudflare.ts",
-    "next.config.ts",
-  ]
+  - "src/shared/lib/cache/**"
+  - "src/shared/lib/constants/cache.ts"
+  - "src/shared/lib/constants/cdn-cache-tags.ts"
+  - "src/shared/domain/**/queries.ts"
+  - "src/shared/domain/**/*-queries.ts"
+  - "src/app/**/_actions/**"
+  - "src/app/api/**"
 ---
 
-# キャッシュ設計
+# キャッシュ（2 層）
 
-2 系統ある: Next.js Data Cache（`CACHE_TAGS`）と Cloudflare CDN（`CDN_CACHE_TAGS`）。
-どちらもタグの文字列直書きは ESLint + テストで禁止。
+| 層                 | 何                                           | タグの SSoT                                                         |
+| ------------------ | -------------------------------------------- | ------------------------------------------------------------------- |
+| Next.js Data Cache | `"use cache"` + `cacheTag()` / `cacheLife()` | `CACHE_TAGS` / `getCacheTag`（`src/shared/lib/constants/cache.ts`） |
+| Cloudflare CDN     | HTTP `Cache-Tag` ヘッダー + purge by tag     | `CDN_CACHE_TAGS`（`src/shared/lib/constants/cdn-cache-tags.ts`）    |
 
-## Next.js 側（src/shared/lib/constants/cache.ts）
+**この 2 つは別物。**片方だけ無効化すると、オリジンは新しいのに CDN が古い
+HTML を返し続ける。
 
-- `CACHE_TAGS` / 階層は `getCacheTag` / 期間は `CACHE_LIFE` を必ず経由
-- 無効化の呼び分け（間違えると runtime throw）:
-  - Server Action → `invalidateSiteWideCache`（updateTag・read-your-own-writes）
-  - Route Handler / cron → `invalidateSiteWideCacheFromRouteHandler`
-    （revalidateTag `{expire: 0}`）。**updateTag は Route Handler で throw する**
-- 新しいタグの追加は 2 つの drift gate を通す必要がある
-  （producer 必須 or INVALIDATION_ONLY リスト明記、CDN mapping or allowlist 明記）。
-  手順は `add-cache-tag` skill を参照
+## 書き方
 
-## Cloudflare CDN 側（cdn-cache-tags.ts / next.config.ts）
+```ts
+async function getPosts() {
+  "use cache";
+  cacheTag(CACHE_TAGS.POSTS);
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  // ...
+}
+```
 
-- `CDN_CACHE_TAGS`（全値 `-v1` suffix）+ `joinCacheTags`（Cloudflare 制約を throw で強制）
-- next.config.ts 内の `Cache-Tag` 値に raw string literal を書くと ESLint error
-- per-collection の Cache-Tag には `SITE_WIDE_CDN_TAGS` 全量のインラインが必須。
-  Next.js の headers() は同一キーを **REPLACE**（append 不可）するため、省略すると
-  site-wide purge がその collection に届かなくなる
-- purge の credential は env-only（`CLOUDFLARE_ZONE_ID` / `CLOUDFLARE_API_TOKEN`）。
-  未設定時は全 purge 関数が `{success: true}` の **silent no-op**
+- **タグ名の文字列直書きは lint エラー。** `cacheTag` / `updateTag` /
+  `revalidateTag` の第 1 引数は `CACHE_TAGS` か `getCacheTag` 経由にする。
+- `cacheLife` は `CACHE_LIFE`（`PUBLIC_CONTENT` = hours / `STATIC_SETTINGS` =
+  days / `DYNAMIC_DATA` = minutes / `METADATA` = hours / `MAX`）から選ぶ。
+  cron や webhook の非同期再検証は `MAX`。
+- `SPACE_RATE_PLANS` のように id を取るタグは関数形（`CACHE_TAGS.X(id)`）。
+  この形は CDN マッピングの対象外であることが明示されている。
 
-## Cache-Control の SSoT は next.config.ts headers()
+## 無効化
 
-- last-match-wins 前提で blanket `/:path*` の public 値を先頭、
-  /admin /reservation /mypage /login /preview /contact /api の `private, no-store` を
-  後置する。**順序も値もテストで固定**されている
-- blanket public は撤去不可: 公開ページは全て `await connection()` で完全動的のため
-  Next.js 自身は no-store を emit し、blanket の上書きで初めて CDN キャッシュが成立する
-- Route Handler の Response に書いた Cache-Control は next.config に上書きされて inert
-  （precedence: proxy.ts > next.config > Route Handler、実証済み）
-- private route は Cache-Tag を emit してはならない（テストで強制）
+`NEXTJS_TAG_TO_CDN_TAG` に載っているタグは、raw `updateTag` /
+`revalidateTag` では **Next.js 側しか消えない**。必ず
 
-## build prerender の焼き込み防止
+- Server Action から → `invalidateSiteWideCache([CACHE_TAGS.X])`
+- Route Handler / cron から → `invalidateSiteWideCacheFromRouteHandler([...])`
 
-`'use cache'` + `safeFetch`（fallback 付き）のクエリを layout 本体・generateMetadata・
-sitemap から直接呼ぶと、build 時の placeholder DATABASE_URL による fallback 値
-（null / 空 Map）が静的シェルに焼き込まれ、CDN HIT で恒久汚染される。
-必ず「Suspense 内の async Server Component + 冒頭 `await connection()`」に隔離する。
+を使う。ESLint `local/no-raw-updatetag-for-cdn-mapped-cache-tag` が強制し、
+マッピングの drift は
+`__tests__/unit/architecture/eslint-cdn-mapped-tag-rule.test.ts` が検出する。
+`src/shared/lib/cache/site-wide.ts` だけが例外（このルールが誘導する先だから）。
+
+管理画面の mutation では、無効化を `executeAdminMutationResult` の
+`afterSuccess` に置く。監査ログ（fire-and-forget）より**前**に await される
+契約で、逆にすると監査書き込みの失敗で公開ページが stale のまま残る。
+
+## CDN タグのバージョン
+
+`CDN_CACHE_TAGS` の値は全て `-v1` サフィックス付き。互換性を壊す変更をする
+ときは `-v2` を併記して `s-maxage` 1 回分の窓のあいだ両方を出し、窓が過ぎたら
+`-v1` を落とす。1 つの破壊的変更でサイト全体を flush しないための決まり。
+
+Cloudflare 側の制約: タグは印字可能 ASCII のみ・空白とカンマ不可・1 タグ
+1024 文字まで・`Cache-Tag` ヘッダー全体で 16 KB まで。
+
+## `next.config.ts` の headers
+
+`Cache-Control` の catch-all を先頭に置き、認証系・PII を含む route を
+後勝ちで `no-store` にする。`Cache-Tag` の値はリテラルではなく
+`joinCacheTags()` 経由（`next-config-cache-tag-ssot` の ESLint ルール）。

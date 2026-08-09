@@ -113,14 +113,13 @@ jobs:
           # 公式 README がこの negation の落とし穴と `every` による回避を明記している。
           # https://github.com/dorny/paths-filter
           predicate-quantifier: "every"
-          # Runtime に影響しない project docs / Codex agent config は重い app CI を回さない。
+          # Runtime に影響しない project docs / エージェント設定は重い app CI を回さない。
           # .github/workflows/** と .github/actions/** は意図的に除外しない。
           filters: |
             code:
               - '!**/*.md'
               - '!docs/**'
-              - '!.agents/**'
-              - '!.codex/**'
+              - '!.claude/**'
               - '!.mcp.json'
               - '!.serena/memories/**'
               - '!.github/CODEOWNERS'

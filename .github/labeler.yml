@@ -118,6 +118,7 @@ documentation:
           - "**/*.md"
           - "docs/**"
           - "AGENTS.md"
+          - "CLAUDE.md"
           - "README.md"
           - ".github/CONTRIBUTING.md"
           - ".github/SECURITY.md"
@@ -126,9 +127,9 @@ documentation:
 agent-instructions:
   - changed-files:
       - any-glob-to-any-file:
-          - ".agents/**"
-          - ".codex/**"
+          - ".claude/**"
           - "AGENTS.md"
+          - "CLAUDE.md"
 
 # ============================================================================
 # セキュリティ

@@ -1,7 +1,0 @@
-interface:
-  display_name: "Type Safety"
-  short_description: "Strict TS, Zod, Prisma typing"
-  default_prompt: "Use $type-safety when changing schemas, casts, Conform fields, Prisma JSON, or generated enums."
-
-policy:
-  allow_implicit_invocation: true

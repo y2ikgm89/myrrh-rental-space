@@ -1,15 +1,48 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(bun run validate)",
+      "Bash(bun run type-check)",
+      "Bash(bun run lint)",
+      "Bash(bun run lint:files *)",
+      "Bash(bun run format:check)",
+      "Bash(bun run db:generate)",
+      "Bash(bun run test *)",
+      "Bash(bun run test:unit)",
+      "Bash(bun run test:integration)",
+      "Bash(bun scripts/run-tests.ts *)",
+      "Bash(bun scripts/lint-migrations.ts *)",
+      "Bash(bun scripts/migration-preconditions.ts *)",
+      "Bash(bun scripts/db-census.ts *)",
+      "Bash(bun scripts/check-static-prelude-empty.ts)",
+      "Bash(bunx playwright test *)",
+      "Bash(bunx playwright show-trace *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)"
+    ],
+    "ask": [
+      "Bash(bun run db:reset*)",
+      "Bash(bun run db:push*)",
+      "Bash(gh workflow run *)",
+      "Bash(gcloud *)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Edit(prisma/migrations/**)"
+    ],
     "deny": [
-      "Bash(printenv *)",
-      "Bash(env *)",
-      "Bash(cat .env*)",
-      "Bash(head .env*)",
-      "Bash(tail .env*)",
-      "Bash(less .env*)",
-      "Bash(bat .env*)",
-      "Bash(grep * .env*)",
-      "Read(**/.env*)"
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.development)",
+      "Read(./.env.test)",
+      "Read(./.env.production)",
+      "Read(./terraform/*.tfvars)",
+      "Read(./playwright/.auth/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(rm -rf *)"
     ]
   }
 }

@@ -1,49 +1,51 @@
 ---
 paths:
-  [
-    "__tests__/unit/architecture-boundaries.test.ts",
-    "__tests__/unit/architecture/**",
-  ]
+  - "__tests__/unit/architecture/**"
+  - "__tests__/unit/architecture-boundaries.test.ts"
+  - "eslint.config.mjs"
+  - "eslint-rules/**"
 ---
 
-# architecture allowlist 並列 PR
+# allowlist と免除の扱い
 
-`__tests__/unit/architecture-boundaries.test.ts` の ratchet allowlist
-（特に `LIB_TO_DOMAIN_IMPORT_ALLOWLIST`）は **単一の配列リテラル** のため、
-複数 PR が同時に行を削除すると merge のたびに `DIRTY` / `CONFLICTING` になる。
+ゲートの allowlist（`ALLOWLIST` / `*_EXEMPT` / `eslint-disable` /
+`-- squawk-ignore`）は、規約そのものより drift しやすい。**規約を守っている
+ことの証拠は、規約の側ではなく免除の側に出る。**
 
-## 並列ルール
+## 触るときの手続き
 
-- **allowlist 行を増減する PR は同時に OPEN 1 本まで**。次の allowlist PR は
-  前 PR が main に merge されてから切る
-- 並列してよいのは allowlist を触らない変更だけ（例: domain 内のファイル分割、
-  pure helper の移動で allowlist 行が変わらないもの）
-- lib→domain 解消を複数 seam で進めたいときも、allowlist 編集は **直列**。
-  実装 worktree を先に用意しても、push / PR 作成は前件 merge 後に行う
+- **allowlist を触る PR は同時 OPEN 1 本まで。** 複数を並行させると、片方の
+  マージでもう片方の entry が失効しても誰も気付かない。
+- entry を足すときは「**なぜここでは規約が成り立たないのか**」を書く。
+  「まだ直していない」は理由にならない。直してから消す。
+- entry が今も違反していることを検査する（移行済みの entry を消し忘れると、
+  allowlist が「ここは対象外」と主張し続ける）。
+- 免除を消す方向にしか動かない ratchet として設計する。件数で固定するのが
+  一番安全（増えたら落ちる／減らしたら定数を下げる 1 行が要る）。
 
-## 競合が起きたときの解消
+## 免除の入口は 1 つに絞る
 
-1. 対象 branch で `git fetch origin main && git merge origin/main`
-2. allowlist は **削除の union**（両側で消した行をすべて消す）。cleared 済み行を
-   復活させない
-3. 実装側の import は「この PR の意図」と「main の新しい正規 path」を両立させる
-   （例: domain dispatch + 別 PR で移った maintenance / turnstile inject）
-4. rematch 後に `architecture-boundaries` + `bun run validate`、push、auto-merge 継続
+入口が 2 つあると、必ず**見えない方**が使われる。
+migration の squawk 免除でパス allowlist を廃して
+`-- squawk-ignore-file <rule>`（SQL 本文に理由が残る）だけにしたのはこの理由。
 
-## 恒久 adapter（解消対象外）
+## ESLint 側
 
-`LIB_TO_DOMAIN_IMPORT_ALLOWLIST` の一部は「未移行の借り」ではなく **framework
-lifecycle の正規 composition** として残す:
+- `reportUnusedDisableDirectives` / `reportUnusedInlineConfigs` は `error`。
+  効かなくなった `eslint-disable` は落ちる。
+- **ファイル単位の off は `eslint.config.mjs` に理由付きで書く。**
+  インラインの `eslint-disable-next-line` は、pre-commit の `--fix` が
+  `ESLINT_SKIP_TYPE_CHECK=1`（型付きルール自体を読み込まない）で走るたびに
+  「unused disable directive」として自動削除されて安定しない。実際に CI を
+  落としたことがある。
+- テストダブルの側で本番向けルールを外すのは正当（満たすと検証対象が消える種類）。
+  その場合もファイル群を名指しし、理由を config に書く。
 
-| エントリ           | 理由                                                                                                                                                                                                                         |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `customer-auth.ts` | Better Auth 公式は `deleteUser.beforeDelete` 等を `betterAuth()` config 内に置く。domain（anonymize / email dispatch）呼び出しは config 縁で行うのが正しい。BA 工場を domain に移すと framework adapter が domain を汚染する |
+## 「除外されている」は安全の証明ではない
 
-管理 IAP session（旧 `admin-auth.ts`）と resource-access は
-`src/shared/domain/admin-auth/` へ移済み。`customer-auth.ts` を allowlist から
-外すために DI shim や互換 re-export を足さない（clean-break 禁止）。
+テストや gate に理由付きの除外があるとき、それは「なぜ落ちるか」の説明であって
+「壊れていない」ことの証明ではない。契約に依存している側を実際に開いて確かめる。
 
-## 将来の構造改善（任意）
-
-衝突頻度が高いなら、allowlist を 1 行 1 エントリのテキスト / 1 ファイル 1 エントリに
-分離すると git merge が自動解決しやすくなる。それまでは上記の直列運用を守る。
+subagent や静的走査が「未使用 / dead」と言ってきたら、削除の前に必ず
+`Grep` で再確認する。別ディレクトリのテスト群・runbook 中の言及・
+rotation 用の lazy な export を見落としやすい。
