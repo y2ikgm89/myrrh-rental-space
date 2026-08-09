@@ -87,4 +87,6 @@ git show <sha>^:docs/superpowers/plans/<file>
 YYYYMMDDHHMMSS が作った」と書いたら、実在すること・畳んでも嘘にならないことが
 求められる。**現行の手順を記録の置き場に置かない**こと。
 
-`docs/api/` は TypeDoc の生成物（git 管理外）。手で置いたものではない。
+`bun run docs` (TypeDoc) の出力先は `.typedoc/api/`（git 管理外）。docs/ の中には
+生成物を置かない — TypeDoc の `cleanOutputDir` は既定 true なので、出力先を docs/ の
+中に置いたまま設定を 1 つ間違えると、手書きの文書ごと消える。

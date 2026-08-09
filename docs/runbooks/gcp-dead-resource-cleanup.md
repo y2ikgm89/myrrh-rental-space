@@ -77,14 +77,17 @@ Terraform / Cloud Build binding.
 #   __tests__/unit/architecture/env-example-clean-break.test.ts
 #   __tests__/unit/architecture/deploy-production-workflow.test.ts
 #   scripts/audit-gcp-production-iap.ts (forbidden-names list)
+#   terraform/README.md               — 「関連 runbook」から本 runbook へのリンク
 # Any hit outside that set (src/**, cloudbuild.yaml, terraform/**, .env*, etc.) means
 # the secret is still wired somewhere — STOP and re-audit before deleting.
 rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' CRON_SECRET
 
 # Explicit "must not appear here" checks (any hit blocks deletion):
+# 実 config だけを見る。散文（.md）は「消したことを書いた記録」なので必ず当たり、
+# ここに含めると停止条件が永久に成立してしまう。
 rg CRON_SECRET src/
 rg CRON_SECRET cloudbuild.yaml
-rg CRON_SECRET terraform/
+rg CRON_SECRET terraform/ --glob '!**/*.md'
 ```
 
 ```powershell
@@ -93,7 +96,7 @@ rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' CRON_SECRET
 
 rg CRON_SECRET src/
 rg CRON_SECRET cloudbuild.yaml
-rg CRON_SECRET terraform/
+rg CRON_SECRET terraform/ --glob '!**/*.md'
 ```
 
 If any hit lands outside the allowed set, stop. Either the OIDC migration
@@ -102,18 +105,27 @@ delete the secret until the reference is removed.
 
 ### Pre-delete verification (Cloud Run runtime env, 0 bindings expected)
 
+`|| echo "clean"` は使わない — `gcloud` 自体が失敗しても出力が空になり、
+`grep` が空振りして `clean` が出る（fail-open）。終了コードを明示的に見る。
+
 ```bash
+TMP=$(mktemp)
+
 gcloud run services describe myrrh-rental-space \
   --project="$PROJECT_ID" \
   --region=asia-northeast1 \
   --format='value(spec.template.spec.containers[0].env[].name,spec.template.spec.containers[0].env[].valueFrom.secretKeyRef.name)' \
-  | tr ',' '\n' | grep -F CRON_SECRET || echo "clean"
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F CRON_SECRET "$TMP" && { echo "STILL BOUND — do not delete"; exit 1; }
+echo "clean"
 
 gcloud run services describe myrrh-rental-space-admin \
   --project="$PROJECT_ID" \
   --region=asia-northeast1 \
   --format='value(spec.template.spec.containers[0].env[].name,spec.template.spec.containers[0].env[].valueFrom.secretKeyRef.name)' \
-  | tr ',' '\n' | grep -F CRON_SECRET || echo "clean"
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F CRON_SECRET "$TMP" && { echo "STILL BOUND — do not delete"; exit 1; }
+echo "clean"
 ```
 
 Both invocations must print `clean`. The production audit
@@ -161,7 +173,7 @@ bun run gcp:audit-production-iap
 
 The `calendar-sync@myrrh-rental-space.iam.gserviceaccount.com` service account
 was created during an earlier Google Calendar OAuth design that has since been
-retired (see `project_ical-feed-removal-gcal-ssot-2026-06-24`). Two-way
+retired. Two-way
 Google Calendar sync now runs from the Cloud Scheduler cron
 `/api/cron/calendar-sync`, which is invoked by
 `myrrh-rental-space-scheduler@…` with an OIDC token — not by the
@@ -179,12 +191,13 @@ The literal service-account email must not appear anywhere in tracked
 sources:
 
 ```bash
-# Full repository scan — must return NO matches.
-rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' 'calendar-sync@'
+# 実 config だけを見る。`terraform/README.md` と `docs/gcp-production-setup.md` は
+# 本 runbook へのリンクとして SA 名を書いているので、散文を含めると必ず当たる。
+rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' --glob '!**/*.md' 'calendar-sync@'
 
 # Explicit sub-scope confirmations (all must be empty):
 rg 'calendar-sync@' src/
-rg 'calendar-sync@' terraform/
+rg 'calendar-sync@' terraform/ --glob '!**/*.md'
 rg 'calendar-sync@' scripts/
 rg 'calendar-sync@' cloudbuild.yaml
 ```
@@ -211,6 +224,7 @@ lists it:
 
 ```bash
 CALENDAR_SYNC_SA="calendar-sync@${PROJECT_ID}.iam.gserviceaccount.com"
+TMP=$(mktemp)
 
 # SA-scoped IAM policy: no members should exist except default managed bindings.
 gcloud iam service-accounts get-iam-policy "$CALENDAR_SYNC_SA" \
@@ -220,12 +234,16 @@ gcloud iam service-accounts get-iam-policy "$CALENDAR_SYNC_SA" \
 gcloud projects get-iam-policy "$PROJECT_ID" \
   --flatten="bindings[].members" \
   --format='value(bindings.role,bindings.members)' \
-  | grep -F "$CALENDAR_SYNC_SA" || echo "clean"
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F "$CALENDAR_SYNC_SA" "$TMP" && { echo "STILL REFERENCED — do not delete"; exit 1; }
+echo "clean"
 
 # Cloud Scheduler jobs: none should invoke Cloud Run as calendar-sync@.
 gcloud scheduler jobs list --project="$PROJECT_ID" --location=asia-northeast1 \
   --format='value(name,httpTarget.oidcToken.serviceAccountEmail)' \
-  | grep -F "$CALENDAR_SYNC_SA" || echo "clean"
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F "$CALENDAR_SYNC_SA" "$TMP" && { echo "STILL REFERENCED — do not delete"; exit 1; }
+echo "clean"
 ```
 
 ```powershell
@@ -266,10 +284,18 @@ gcloud iam service-accounts delete `
   --project=$env:PROJECT_ID
 ```
 
-Confirm interactively. Deletion is soft for 30 days — the SA moves to
-`state=DISABLED` and can be undeleted with
+Confirm interactively. Deletion is soft for 30 days: the SA disappears from
+`gcloud iam service-accounts list` (it does **not** show as
+`state=DISABLED`), and it can be undeleted with
 `gcloud iam service-accounts undelete <UNIQUE_ID>` during that window.
 After 30 days the delete becomes permanent.
+
+**削除前に numeric unique ID を控えること。** 削除後に ID を引く手段が無い
+（`gcloud iam service-accounts list` に `--show-deleted` フラグは存在しない）。
+
+```bash
+gcloud iam service-accounts describe "$CALENDAR_SYNC_SA"   --project="$PROJECT_ID" --format='value(uniqueId)'
+```
 
 ### Post-delete verification
 
@@ -306,8 +332,10 @@ bun run gcp:audit-production-iap
   destroy.
 - **`calendar-sync@` SA**: within 30 days, recover with
   `gcloud iam service-accounts undelete <UNIQUE_ID> --project="$PROJECT_ID"`.
-  The unique ID is printed in the deletion output and is also visible in
-  `gcloud iam service-accounts list --show-deleted`. After 30 days,
+  The unique ID must have been captured **before** deleting (see the delete
+  step) — `gcloud iam service-accounts list` has no `--show-deleted` flag, so
+  after deletion the only remaining source is the Cloud Audit Log entry for
+  the `DeleteServiceAccount` call. After 30 days,
   recreate with
   `gcloud iam service-accounts create calendar-sync
 --project="$PROJECT_ID"` — the numeric unique ID will differ, so any
@@ -316,10 +344,10 @@ bun run gcp:audit-production-iap
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                                                        |
-| ---------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | TF forget は merge 済（`terraform/secrets.tf` の `removed` block）。残るのは `gcloud secrets delete RESEND_WEBHOOK_SECRET` のみ                              |
-| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | After Phase C deploy is green, merge required (`validateProductionEnv` fail-closed) follow-up. Do **not** rotate `versions/1` casually (changes hash space). |
+| Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | TF forget は merge 済（`terraform/secrets.tf` の `removed` block）。残るのは `gcloud secrets delete RESEND_WEBHOOK_SECRET` のみ   |
+| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
 
 ## Why the Claude harness cannot run the deletes
 
