@@ -1,6 +1,6 @@
 ---
 name: new-migration
-description: Prisma の schema を変えて migration を追加する手順。db:migrate と --create-only の使い分け、squawk と破壊的 DDL の扱い、本番リハーサルを止めてしまう SQL、VARCHAR を狭めるときの追加要件、invariants の再生成、検証コマンドまで。DB スキーマを触るとき・migration を足すときに使う。
+description: DB スキーマを変えるとき（Prisma migration の追加・修正、テーブルや列の追加、型や制約の変更）に使う。schema.prisma の編集からマイグレーション生成（db:migrate / --create-only）、squawk と破壊的 DDL の扱い、本番リハーサルを止めてしまう SQL、VARCHAR を狭めるときの追加要件、invariants の再生成、検証コマンドまでの手順。
 ---
 
 # migration を追加する
