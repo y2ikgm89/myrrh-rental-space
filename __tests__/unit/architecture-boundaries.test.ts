@@ -2744,27 +2744,10 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("廃止済の型安全 ledger / assertion-bans を再導入しない（方針は .claude/rules/type-safety.md に集約）", () => {
-    // 2026-05-18 に旧 .claude/rules/type-safety/{documented-exceptions-ledger,assertion-bans}.md を廃止。
-    // SDK / Prisma JSON / Route cast の構造解消 + RHF 完全削除に伴い、型アサーション方針は
-    // .claude/rules/type-safety.md（単一ファイル）に一本化済み。旧ファイルの復活を gate する。
-    const retiredDocs = [
-      join(
-        ROOT,
-        ".claude",
-        "rules",
-        "type-safety",
-        "documented-exceptions-ledger.md",
-      ),
-      join(ROOT, ".claude", "rules", "type-safety", "assertion-bans.md"),
-    ];
-
-    expect(retiredDocs.filter(existsSync)).toEqual([]);
-    // 後継 SSoT は存在すること
-    expect(existsSync(join(ROOT, ".claude", "rules", "type-safety.md"))).toBe(
-      true,
-    );
-  });
+  // 「廃止済の型安全 ledger / assertion-bans を再導入しない」gate は削除した。
+  // 検査対象だった `.claude/rules/type-safety*` を repo から外したため、旧ファイルの
+  // 不在も後継 SSoT の存在も確かめようがない。型アサーション方針そのものは
+  // 下の `as` 禁止 gate 群（SSoT helper 経由のみ許可）が構造的に強制している。
 
   test("Phase 4 で PortableTextBlock[] 化済の long-form フィールドは schema で string を受け付けない", async () => {
     const { validateSectionConfig } =
