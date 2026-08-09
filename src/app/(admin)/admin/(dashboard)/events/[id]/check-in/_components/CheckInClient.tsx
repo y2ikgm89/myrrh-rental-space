@@ -103,16 +103,6 @@ export function CheckInClient({
     );
   }
 
-  /** 上書きを捨ててサーバー値へ戻す（打刻失敗時のロールバック）。 */
-  function dropAttendanceOverride(registrationId: string) {
-    setAttendanceOverrides((prev) => {
-      if (!prev.has(registrationId)) return prev;
-      const next = new Map(prev);
-      next.delete(registrationId);
-      return next;
-    });
-  }
-
   /**
    * 明示的な再読込ではローカル上書きを捨てる。
    * 「取り直したのに自分の古い打刻が勝つ」を防ぐ（サーバーが真とする操作）。
@@ -143,7 +133,12 @@ export function CheckInClient({
   function handleToggle(registrationId: string) {
     const target = attendees.find((a) => a.id === registrationId);
     if (!target) return;
-    const willAttend = target.attendedAt === null;
+    // 失敗時に戻す先は**いま画面に出ている値**。この action は cache を無効化
+    // しないので `initialAttendees` は最初の打刻より前のまま止まっており、
+    // 「上書きを消してサーバー props に戻す」と 2 回目の失敗が 1 回目の成功まで
+    // 巻き戻して、**永続状態の逆**を表示してしまう。
+    const previousAttendedAt = target.attendedAt;
+    const willAttend = previousAttendedAt === null;
 
     // 楽観更新
     overrideAttendance(
@@ -158,8 +153,8 @@ export function CheckInClient({
         attended: willAttend,
       });
       if (isMutationError(result)) {
-        // 上書きを捨ててサーバー値へ戻す
-        dropAttendanceOverride(registrationId);
+        // 直前の実効値へ戻す（サーバー props へは戻さない — 上のコメント参照）
+        overrideAttendance(registrationId, previousAttendedAt);
         toast.error(result.error);
         return;
       }

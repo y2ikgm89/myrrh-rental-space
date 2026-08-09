@@ -241,4 +241,40 @@ describe("CheckInClient", () => {
     expect(container?.textContent).toContain("当日参加");
     expect(container?.textContent).toContain("事前代行登録");
   });
+
+  test("打刻が成功した後に失敗しても、成功した打刻まで巻き戻さない", async () => {
+    // 打刻 action は cache を無効化しないので `initialAttendees` は最初の打刻より
+    // 前のまま止まる。失敗時に上書きを**消して**サーバー props に戻すと、
+    // 2 回目の失敗が 1 回目の成功まで巻き戻し、**永続状態の逆**を表示する。
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      renderClient(root, [makeAttendee({ attendedAt: null })]);
+    });
+    expect(container?.textContent).toContain("未出席");
+
+    // 1 回目: 成功して「出席済」になる
+    toggleMock.mockResolvedValue({
+      registrationId: "60e01261-0546-4528-8a03-68d37a9d9568",
+      attendedAt: new Date("2026-07-05T00:00:00.000Z"),
+      changed: true,
+    });
+    const toggleButton = () =>
+      [...(container?.querySelectorAll("button") ?? [])].find((button) =>
+        button.getAttribute("aria-label")?.startsWith("佐藤花子 の出席を"),
+      );
+    await act(async () => {
+      toggleButton()?.click();
+    });
+    expect(container?.textContent).toContain("出席済");
+
+    // 2 回目: 失敗する（取消しようとしてサーバーが拒否）
+    toggleMock.mockResolvedValue({ error: "一時的なエラー" });
+    await act(async () => {
+      toggleButton()?.click();
+    });
+
+    // 永続状態は「出席済」のままなので、表示も「出席済」に戻るべき
+    expect(container?.textContent).toContain("出席済");
+    expect(container?.textContent).not.toContain("未出席");
+  });
 });
