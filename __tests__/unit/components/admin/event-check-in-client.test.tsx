@@ -277,4 +277,35 @@ describe("CheckInClient", () => {
     expect(container?.textContent).toContain("出席済");
     expect(container?.textContent).not.toContain("未出席");
   });
+
+  test("上書きの無い行の打刻が失敗しても、その後のサーバー props を覆わない", async () => {
+    // 失敗時に「値だけ」を書き戻すと、上書きが無かった行に上書きが生まれる。
+    // 以後サーバーから新しい props が来ても（ダイアログ成功後の router.refresh、
+    // 別の管理者の打刻）古い値で覆い続け、props から導出する設計がそこだけ効かなくなる。
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      renderClient(root, [makeAttendee({ attendedAt: null })]);
+    });
+
+    toggleMock.mockResolvedValue({ error: "一時的なエラー" });
+    await act(async () => {
+      [...(container?.querySelectorAll("button") ?? [])]
+        .find((button) =>
+          button.getAttribute("aria-label")?.startsWith("佐藤花子 の出席を"),
+        )
+        ?.click();
+    });
+    expect(container?.textContent).toContain("未出席");
+
+    // 別の管理者が打刻し、その結果がサーバー props として届く
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      renderClient(root, [
+        makeAttendee({ attendedAt: "2026-07-06T00:00:00.000Z" }),
+      ]);
+    });
+
+    expect(container?.textContent).toContain("出席済");
+    expect(container?.textContent).not.toContain("未出席");
+  });
 });
