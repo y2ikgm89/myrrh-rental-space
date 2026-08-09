@@ -10,7 +10,7 @@
  * 前提を確かめられないまま進む。
  *
  * 実際、前身は `__tests__` しか見ておらず、畳み込みの後も schema.prisma の索引コメント・
- * seed.ts・src・deploy-production.yml・migration-reviewer.md に消えた名前が生き残っていた。
+ * seed.ts・src・deploy-production.yml・エージェント設定に消えた名前が生き残っていた。
  * 「ゲートの走査範囲を規約の置き場に合わせると、規約に書かれていない置き場を丸ごと
  * 見逃す」の実例。**件数はここに書かない**（数は必ず drift する。それが分かるのが
  * この gate の走査結果で、走らせれば出る）。

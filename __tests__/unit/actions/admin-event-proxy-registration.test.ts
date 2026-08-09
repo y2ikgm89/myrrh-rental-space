@@ -120,7 +120,7 @@ mock.module("@/shared/lib/async-utils", () => ({
   },
 }));
 
-// mock.module 宣言後に動的 import する（testing-unit.md）
+// mock.module 宣言後に動的 import する（静的 import だと mock 適用前に解決される）
 const { createAdminProxyRegistration } =
   await import("@/admin/actions/event-registration");
 

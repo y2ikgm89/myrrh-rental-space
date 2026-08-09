@@ -13,7 +13,7 @@
  *     (webServer の Prisma facade は `server-only` で import できない)
  *   - Settings は singleton のため mutation 前に既存 refundPolicy を snapshot し、
  *     afterAll で restore する (fullyParallel 時の他 spec 汚染を防ぐ、
- *     rules `testing-e2e.md` §並列化)
+ *     復元の hook 化は `__tests__/unit/architecture/e2e-global-state-restore.test.ts` が強制)
  *   - 予約は **この spec が専有するスペース** (`spaceFixtures.seriesRefundSpaceSlug`)
  *     に作る。共有スペースに作ると EXCLUDE 制約
  *     `reservations_no_active_time_overlap_excl` で他 fixture と衝突しうるし、

@@ -15,7 +15,7 @@ import { describe, expect, test } from "bun:test";
 
 const ROOT = process.cwd();
 
-/** 4 段 pipeline を持つ公開 mutation の SSoT（forms-mutations.md と同期） */
+/** 4 段 pipeline を持つ公開 mutation の SSoT（このリストが正本） */
 const PUBLIC_MUTATION_GUARD_PIPELINES = [
   {
     file: join(
