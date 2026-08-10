@@ -49,18 +49,52 @@ export const BINARY_EXTENSIONS: ReadonlySet<string> = new Set([
   ".wav",
 ]);
 
-/** git が追跡しているテキストファイル（repo 相対・POSIX 区切り）。 */
-export function trackedTextFiles(root: string): string[] {
-  const stdout = execFileSync("git", ["ls-files", "-z"], {
-    cwd: root,
-    maxBuffer: 32 * 1024 * 1024,
-  }).toString("utf8");
+/**
+ * `git ls-files -z` の生出力を一覧にする。**切断されていたら落とす。**
+ *
+ * ## なぜ検出が要るのか
+ *
+ * `-z` の出力は必ず NUL 終端。途中で切れたまま `split` すると、最後の要素が
+ * **不完全なパス**になる（`split` は終端が無くても残りを 1 要素として返す）。
+ *
+ * 実際に起きた（CI の Unit Tests、2026-08-10）: `src/app/(publi` が返り、
+ * `advisory-lock-namespace-registry` が
+ * `ENOENT: no such file or directory` で落ちた。原因が「読み取りの切断」だと
+ * 分かるまで、テストの中身を疑うことになる。
+ *
+ * さらに悪いのは**件数が黙って減る**こと。この一覧を使う gate は
+ * `expect(files.length).toBeGreaterThan(500)` のような下限しか持たないので、
+ * 3,600 件が 2,000 件になっても下限は通る。読まずに名前だけ見る判定を足した
+ * 瞬間に、走査漏れが無言で成立する。
+ *
+ * ここで落とせば、少なくとも**何が起きたかを名指しできる**。切断そのものの
+ * 原因（ランタイム側の読み取り）は再現できていないので、直したふりはしない。
+ */
+export function parseTrackedFiles(stdout: Buffer): string[] {
+  if (stdout.length > 0 && stdout.at(-1) !== 0) {
+    const tail = stdout.subarray(Math.max(0, stdout.length - 60)).toString();
+    throw new Error(
+      `git ls-files -z の出力が NUL で終わっていません（読み取りが途中で切れた）。` +
+        `件数と最後のパスが信用できないので中断します。末尾: ${JSON.stringify(tail)}`,
+    );
+  }
 
   return (
     stdout
+      .toString("utf8")
       // NUL は**実文字を書かない**（source-files-are-text の指針）。
       .split(String.fromCharCode(0))
       .filter((entry) => entry.length > 0)
       .filter((entry) => !BINARY_EXTENSIONS.has(extname(entry).toLowerCase()))
+  );
+}
+
+/** git が追跡しているテキストファイル（repo 相対・POSIX 区切り）。 */
+export function trackedTextFiles(root: string): string[] {
+  return parseTrackedFiles(
+    execFileSync("git", ["ls-files", "-z"], {
+      cwd: root,
+      maxBuffer: 32 * 1024 * 1024,
+    }),
   );
 }
