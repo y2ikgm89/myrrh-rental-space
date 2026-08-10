@@ -5,19 +5,6 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const APP_ROOT = join(ROOT, "src", "app");
 const GLOBAL_ERROR_FILE = join(APP_ROOT, "global-error.tsx");
-/**
- * `next/error` の `ErrorInfo` は 16.2 → 16.3 で shape が変わる
- * (`error: Error`→`unknown` / `unstable_retry`→`retry`)。差分をこの 1 ファイルに
- * 閉じ込めておかないと、bump のたびに error boundary 全件を触ることになる。
- */
-const SEAM_FILE = join(
-  ROOT,
-  "src",
-  "shared",
-  "lib",
-  "errors",
-  "error-boundary-props.ts",
-);
 
 function collectErrorFiles(dir: string): string[] {
   const out: string[] = [];
@@ -28,21 +15,6 @@ function collectErrorFiles(dir: string): string[] {
     if (entry.isDirectory()) {
       out.push(...collectErrorFiles(path));
     } else if (entry.isFile() && entry.name === "error.tsx") {
-      out.push(path);
-    }
-  }
-
-  return out;
-}
-
-function collectSourceFiles(dir: string): string[] {
-  const out: string[] = [];
-
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...collectSourceFiles(path));
-    } else if (entry.isFile() && /\.tsx?$/u.test(entry.name)) {
       out.push(path);
     }
   }
@@ -105,19 +77,5 @@ describe("Next.js App Router error boundary contract", () => {
     expect(source).toContain("errorBoundaryRetry");
     expect(source).not.toContain('from "next/error"');
     expect(source).toMatch(/<h[12]\b|<Heading\s+level=\{?1\}?/u);
-  });
-
-  test("the Next.js retry prop rename is referenced only inside the seam", () => {
-    expect(existsSync(SEAM_FILE)).toBe(true);
-    expect(readFileSync(SEAM_FILE, "utf8")).toContain("unstable_retry");
-
-    const offenders = collectSourceFiles(join(ROOT, "src"))
-      .filter((filePath) => filePath !== SEAM_FILE)
-      .filter((filePath) =>
-        readFileSync(filePath, "utf8").includes("unstable_retry"),
-      )
-      .map((filePath) => relative(ROOT, filePath));
-
-    expect(offenders).toEqual([]);
   });
 });

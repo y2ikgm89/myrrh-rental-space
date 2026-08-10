@@ -1,9 +1,9 @@
 /**
- * error boundary の Next.js バージョン seam テスト
+ * error boundary seam のテスト
  *
- * `next/error` の `ErrorInfo` は 16.2 → 16.3 で shape が変わる
- * (`error: Error`→`unknown` / `unstable_retry`→`retry`)。この seam が両方を
- * 受理し続けることが、34 個の error boundary を触らずに bump できる前提になる。
+ * seam の仕事は 2 つ。Next 16.3.0 の `retry` を 34 個の boundary へ素通しする
+ * 単一入口であることと、`ErrorInfo["error"]` が `unknown` である前提で digest を
+ * 取り出すこと。
  */
 
 import { describe, test, expect } from "bun:test";
@@ -13,21 +13,7 @@ import {
 } from "@/shared/lib/errors/error-boundary-props";
 
 describe("errorBoundaryRetry", () => {
-  test("Next 16.2 の unstable_retry を使う", () => {
-    let called = 0;
-    const retry = errorBoundaryRetry({
-      error: new Error("boom"),
-      unstable_retry: () => {
-        called += 1;
-      },
-    });
-
-    retry();
-
-    expect(called).toBe(1);
-  });
-
-  test("Next 16.3 の retry を使う", () => {
+  test("Next が渡した retry をそのまま返す（包まない・飲まない）", () => {
     let called = 0;
     const retry = errorBoundaryRetry({
       error: new Error("boom"),
@@ -39,25 +25,6 @@ describe("errorBoundaryRetry", () => {
     retry();
 
     expect(called).toBe(1);
-  });
-
-  test("両方ある場合は新しい retry を優先する", () => {
-    const calls: string[] = [];
-    const retry = errorBoundaryRetry({
-      error: new Error("boom"),
-      retry: () => calls.push("retry"),
-      unstable_retry: () => calls.push("unstable_retry"),
-    });
-
-    retry();
-
-    expect(calls).toEqual(["retry"]);
-  });
-
-  test("どちらも無ければ関数を返す（再試行ボタンを無反応にしない）", () => {
-    expect(typeof errorBoundaryRetry({ error: new Error("boom") })).toBe(
-      "function",
-    );
   });
 });
 
