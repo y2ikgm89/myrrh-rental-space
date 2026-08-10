@@ -83,6 +83,8 @@ import { join, relative } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { trackedTextFiles } from "../../support/tracked-files";
+
 const ROOT = process.cwd();
 
 /** 畳んでも残る唯一の migration 名。 */
@@ -120,19 +122,42 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
  * 書かれていればコードと同じだけ人を誤らせる。除外の根拠が当てはまる 2 つの
  * 置き場だけを外す（区別は `docs/README.md`）。
  */
-const EXCLUDED_DOC_PREFIXES = [
-  join("docs", "superpowers"),
-  join("docs", "audits"),
-] as const;
+const EXCLUDED_DOC_PREFIXES = ["docs/superpowers/", "docs/audits/"] as const;
+
+/**
+ * **走査対象は git に聞く。ディレクトリを列挙しない**（`support/tracked-files` の指針）。
+ *
+ * 以前は `Bun.Glob().scanSync()` でファイルシステムを直接歩いていたが、Bun.Glob は
+ * `.gitignore` を見ない。`.claude/worktrees/` は gitignore 済みなのに走査対象に入り、
+ * 並行セッションが worktree を 1 つ作っただけでこの gate が赤くなっていた。実測では
+ * その worktree の `node_modules` 配下の README（依存が変更履歴に書いている日時）と、
+ * `docs` ディレクトリのコピーが offenders に並んだ。
+ *
+ * 依存の README が拾われるだけでなく、**worktree の中では `EXCLUDED_DOC_PREFIXES` が
+ * 効かない**（相対パスが `.claude/worktrees/…/docs/audits/…` になり `docs/audits/` で
+ * 始まらない）。つまり本体では正しく除外されている記録が、コピー側からだけ違反として出る。
+ *
+ * git に聞けば ignore 済みのものは構造的に外れる。除外リストを足して塞ぐと、
+ * `.worktrees/` / `worktrees/`（同じく gitignore 済み）を書き忘れて同じことが起きる。
+ */
+let trackedCache: readonly string[] | undefined;
+
+function trackedFiles(): readonly string[] {
+  trackedCache ??= trackedTextFiles(ROOT);
+  return trackedCache;
+}
 
 function filesUnder(entry: (typeof SCAN)[number]): string[] {
-  const glob = new Bun.Glob(entry.glob);
-  return [
-    ...glob.scanSync({ cwd: join(ROOT, entry.dir), absolute: true }),
-  ].filter((file) => {
-    const rel = relative(ROOT, file);
-    return !EXCLUDED_DOC_PREFIXES.some((prefix) => rel.startsWith(prefix));
-  });
+  // `git ls-files` は repo 相対 POSIX を返すので、パターン側も同じ形に組む。
+  const glob = new Bun.Glob(
+    entry.dir === "." ? entry.glob : `${entry.dir}/${entry.glob}`,
+  );
+  return trackedFiles()
+    .filter((rel) => glob.match(rel))
+    .filter(
+      (rel) => !EXCLUDED_DOC_PREFIXES.some((prefix) => rel.startsWith(prefix)),
+    )
+    .map((rel) => join(ROOT, rel));
 }
 
 function scannedFiles(): string[] {
