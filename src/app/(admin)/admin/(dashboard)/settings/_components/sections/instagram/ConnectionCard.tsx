@@ -83,6 +83,11 @@ export function ConnectionCard({
   } | null>(null);
 
   const handleOAuthConnect = () => {
+    // 遷移先は内部ページではなく Route Handler で、`https://www.instagram.com/oauth/authorize`
+    // へ 302 する（src/app/api/instagram/oauth/authorize/route.ts）。App Router の
+    // クライアントルーターは RSC ペイロードを取りに行くので、`router.push()` では
+    // このクロスオリジンのリダイレクトを辿れない。ここはフルページ遷移でなければならない。
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 外部 OAuth へ 302 する Route Handler が遷移先で、router.push() では辿れない
     window.location.href = "/api/instagram/oauth/authorize";
   };
 
