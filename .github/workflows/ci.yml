@@ -570,15 +570,29 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+  # lint-format / type-check には **needs を張らない**。理由は 2 つあり、
+  # どちらも速度より先に正しさの問題。
+  #
+  # 1. `needs.lint-format.result == 'success'` を条件にすると、lint が落ちた PR で
+  #    この job は **skip** される。GitHub 公式は「A job is skipped by a conditional →
+  #    The job reports "Success"」と明記しており、required check の合格状態は
+  #    `success` / `skipped` / `neutral`。つまり required の
+  #    "Build (env validation)" が **一度もビルドせずに緑**になる。
+  # 2. その条件を成立させるための `always()` が `cancel-in-progress` を無効にする。
+  #    公式: cancel 時に running job の `if` は再評価され「`if: always()` would
+  #    evaluate to true and the job continues to run」。実測（run 31343600498）では
+  #    Unit Tests が cancelled になった後も build は 3m50 走り切っていた。
+  #
+  # 待ち時間の節約は PUBLIC リポジトリでは意味を持たない（標準 runner の minutes は
+  # "free and unlimited"）。代償はクリティカルパス +5 分だった。
   build:
     name: Build (env validation)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes, lint-format, type-check]
+    needs: [changes]
     if: |
-      always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      (github.event_name == 'pull_request' ||
-       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
@@ -618,11 +632,15 @@ jobs:
     name: Bundle Size Diff (PR comment)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes, lint-format, type-check]
+    needs: [changes]
     # PR のみ実行（base vs head の gzipped size 差分を sticky comment）。
     # docs/rule-only PR は changes.code=false で skip (bundle 影響なしのため正)。
+    #
+    # build job と同じ理由で lint-format / type-check には needs を張らない。
+    # ここは required check ですらないのに、`always()` のせいで cancel が効かず
+    # 実測（run 31343600498）で **superseded 済みの commit に 8m01 かけて
+    # sticky comment を投稿**していた。PR に古い数字が残る原因そのもの。
     if: |
-      always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
       github.event_name == 'pull_request' &&
       needs.changes.outputs.code == 'true'
     permissions:
