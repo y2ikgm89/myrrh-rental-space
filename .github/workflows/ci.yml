@@ -392,6 +392,17 @@ jobs:
       # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
       # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
 
+      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
+      # variant を分けるのは `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` でビルドするから
+      # （`NEXT_PUBLIC_*` は build 時にバンドルへ焼き込まれるので、env validation
+      # 側のビルド成果とは別物になる）。
+      - name: Cache Turbopack build cache
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-smoke-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
+
       - name: Build application
         if: needs.changes.outputs.code == 'true'
         run: bun run build:skip-env:prepared
@@ -622,18 +633,46 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
-      # **`.next/cache` の restore/save は置かない。実測で純損だった。**
+      # ---------------------------------------------------------------------
+      # Turbopack build キャッシュ（`.next/cache/turbopack`）。**ここが SSoT**。
+      # smoke-e2e / bundle-size-diff の同名 step はこの説明を参照している。
       #
-      # 効果:  cold build 114s → `.next/cache` だけ復元した build 105s（-9s）
-      # コスト: restore 17s + post save 16s = 33s（この job の実測 step 時間）
+      # Next.js 16.3.0 で `turbopackFileSystemCacheForBuild` が dev/build とも
+      # 既定 true になった。公式は「効かせるには `.next/cache` を build 間で
+      # 保持する必要があり、CI では明示的な設定が要る。保持できないなら
+      # 無駄な書き込みを避けるため無効化を推奨」と書いている。保持する側を取る。
       #
-      # キャッシュの中身は CI で 490 KB しかなく、ビルドはどのみち cold compile に
-      # なる。9 秒のために 33 秒払っていたので、置かないほうが速い。
-      # 同じ理由で smoke-e2e / e2e-tests / bundle-analysis / lighthouse-ci /
-      # visual-regression からも外し、composite action ごと削除した。
+      # 実測（ローカル・`bun run build:skip-env`）:
       #
-      # 唯一 bundle-size-diff だけ残してある（base と head で 2 回ビルドする一方、
-      # あちらの restore は実測 2s なので収支が逆になる）。
+      # | 条件                        | 所要   |
+      # | --------------------------- | ------ |
+      # | cold（キャッシュ無し）      | 112.1s |
+      # | warm（無変更）              |  31.9s |
+      # | warm（ソース 3 ファイル変更）|  66.1s |
+      #
+      # キャッシュ実体は 723 MB。**出力が cold と変わらないことは対照実験で確認済み**
+      # — warm↔cold のファイルサイズ多重集合の差は 198 行 / 63 バイトで、
+      # cold↔cold（196 行 / 61 バイト）と同じ。差はチャンク名長の非決定性であって
+      # キャッシュ由来の陳腐化ではない。
+      #
+      # **鍵にソースのハッシュを入れない。** 公式例は
+      # `hashFiles('**.[jt]s','**.[jt]sx')` + restore-keys だが、それだと
+      # コミットごとに ~300 MB の新エントリができる。当リポジトリの Actions
+      # キャッシュは既に 10.01 GB / 113 件で上限に張り付いており、その速度で
+      # 積むと bun-deps(883 MB) や playwright(364 MB) まで LRU で落ちる。
+      # 依存と設定だけを鍵にして **variant ごと 1 エントリ**に固定する。
+      # 完全一致のみ（restore-keys 無し）なので、hit した run は save もしない。
+      #
+      # 代償はソース drift。上表のとおり drift しても cold より 41% 速い。
+      # drift が効かなくなったら、そのときに鍵へ回転要素を足す判断をする。
+      # ---------------------------------------------------------------------
+      - name: Cache Turbopack build cache
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-envcheck-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
+
       - name: Build with env validation
         if: needs.changes.outputs.code == 'true'
         run: bun run build
@@ -698,18 +737,13 @@ jobs:
           restore-keys: |
             bun-deps-${{ runner.os }}-
 
-      # ここだけ `.next/cache` を残す。他の job では純損だったが（build の実測:
-      # 効果 -9s に対し restore+save 33s）、この job は base と head で **2 回**
-      # ビルドし、しかも restore の実測が 2s と桁違いに安いので収支が逆になる。
-      # 他所へコピーしないこと — 収支は「ビルド回数」と「restore の実測」で決まる。
-      - name: Setup Next.js cache
+      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
+      # この job は base と head で 2 回ビルドするので、1 run 内でも 2 回効く。
+      - name: Cache Turbopack build cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-${{ hashFiles('next.config.*', 'tsconfig*.json', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.css') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-
-            nextjs-${{ runner.os }}-
+          key: nextjs-sizediff-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
 
       # preactjs/compressed-size-action:
       # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
