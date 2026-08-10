@@ -15,6 +15,19 @@
     矛盾した指示は Claude がどちらかを恣意的に選ぶ
   - 読み込まれたかは `/context` の Memory files で確認できる
   - 設計意図と、意図的に置いていないものの一覧は `.claude/README.md`
+
+  「重複しているから削る」を憶測でやらないこと:
+
+  - 「頼まれたことをやる」「証拠を出す」「破壊的操作は確認する」は Claude Code 組み込みの
+    system prompt と内容が重なる。**それでも残す。** subagent は "the agent's own system
+    prompt, not the full Claude Code system prompt" で動くが CLAUDE.md は読み込まれる
+    （Explore と Plan は除く）。この層だけが subagent まで届く
+  - 削ってよいかを確かめる公式の手順は 2 つ。`/doctor` の trim 提案と、実際に挙動が
+    変わるかの観察（"test changes by observing whether Claude's behavior actually
+    shifts"）。どちらも踏まずに削らない
+  - 逆に、散文で「X は存在しない」と書く場面がある（例: `docs/runbooks/` の
+    「再暗号化ツールは無い」）。**名前の実在を機械検査する gate をここに当てない** —
+    存在しないことを伝える文を消させることになる
 -->
 
 # myrrh-rental-space
@@ -40,7 +53,8 @@ CONTRIBUTING はそれを意図的に複製していない（drift 防止）。
 ## 検証
 
 `bun run validate` は **type-check と lint だけ**で、テストを含まない（実行時に
-自分でそう表示する）。
+自分でそう表示する。この範囲は
+`__tests__/unit/scripts/validate-runner.test.ts` が固定している）。
 
 | いつ                     | 何を走らせるか                                                                      |
 | ------------------------ | ----------------------------------------------------------------------------------- |
@@ -141,13 +155,8 @@ gate が落ちたら、まず **gate の主張が正しいか**を読んで判�
 型のエスケープハッチ（`as any` / `@ts-ignore`）はこの repo で実質使われていない。
 足すなら 1 行に限定し、理由を隣に書く。
 
-## エージェント設定の置き場
+## エージェント設定
 
-| 置き場                  | 中身                                                       |
-| ----------------------- | ---------------------------------------------------------- |
-| このファイル            | 毎セッション効く事実と規約                                 |
-| `.claude/rules/`        | パス限定の規約（該当ファイルを開いたときだけ読み込まれる） |
-| `.claude/skills/`       | 手順書（呼ばれたときだけ読み込まれる）                     |
-| `.claude/settings.json` | permissions と hook の配線                                 |
-| `.claude/hooks/`        | 決定論的な禁止（指示ではなく強制）                         |
-| `.claude/README.md`     | 上記の設計意図と、変更するときの注意                       |
+置き場・設計意図・意図的に置いていないものは
+[`.claude/README.md`](.claude/README.md)。規約を足すときは、まず gate にできないかを
+考える。
