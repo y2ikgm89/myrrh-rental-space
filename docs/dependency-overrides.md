@@ -2,12 +2,17 @@
 
 `package.json` の `overrides` は transitive 依存のセキュリティ修正・再現性確保のための
 pin 表。この表は required status check **`Dependency Audit (bun audit)`**
-（`.github/workflows/ci.yml` の `bun audit --prod --audit-level=high`）を緑に保つための
+（`.github/workflows/ci.yml` の `bun audit --audit-level=high`）を緑に保つための
 集合であり、`package.json` の `overrides` が SSoT、本表はその**説明**にあたる。
+
+**dev 依存も対象に含む。** この表には元から `minimatch`（eslint 経由）や `basic-ftp`
+（`@lhci/cli` 経由）のような dev 専用 pin が入っており、それらを足したのは
+`chore(quality): Phase 1 SSoT 強化 + dev 依存脆弱性削減` (#45) だった。つまり
+「dev の advisory も潰す」が最初からの運用で、gate 側だけが `--prod` で狭かった。
 
 ゲートが赤くなったときの手順:
 
-1. `bun audit --prod` で advisory と影響範囲を確認する
+1. `bun audit` で advisory と影響範囲を確認する
 2. `package.json` の `overrides` を上げる（`bun install` で `bun.lock` も更新）
 3. **同じ commit で本表の Pin 列と経路を更新する**
 4. `bun run validate` を通す
@@ -33,7 +38,7 @@ Pin と表の整合は
 | `@hono/node-server` | ^2.0.12  | `@prisma/dev` → `prisma`                                                    |
 | `basic-ftp`         | ^6.0.1   | `get-uri` → `pac-proxy-agent` → `proxy-agent` → `@lhci/cli`                 |
 | `flatted`           | ^3.4.2   | `flat-cache` → `file-entry-cache` → `eslint`（キャッシュ層）                |
-| `ip-address`        | ^10.2.0  | `socks` → `socks-proxy-agent`                                               |
+| `ip-address`        | ^10.5.0  | `socks` → `socks-proxy-agent`                                               |
 | `picomatch`         | ^4.0.4   | `micromatch` / `tinyglobby` / `fdir`                                        |
 | `tmp`               | ^0.2.7   | `exceljs`／`@lhci/cli`・`external-editor`                                   |
 | `playwright-core`   | ~1.62.1  | `playwright` → `@playwright/test`（E2E runner と lockstep）                 |
@@ -45,6 +50,10 @@ Pin と表の整合は
 | `sharp`             | ^0.35.0  | `next` の optionalDependency（画像処理）                                    |
 | `valibot`           | ^1.4.2   | `@prisma/dev` → `prisma`／`@t3-oss/env-core`                                |
 | `nanoid`            | ^3.3.17  | `postcss`（GHSA-2v37-7h3g-55p8: size 0 で無限ループ）                       |
+| `js-yaml`           | ^3.15.1  | `@lhci/utils` → `@lhci/cli`                                                 |
+| `body-parser`       | ^1.20.6  | `express` → `@lhci/cli`                                                     |
+| `socket.io-parser`  | ^4.2.7   | `socket.io` → `react-email`                                                 |
+| `@babel/core`       | ^7.29.7  | `eslint-plugin-react-hooks`                                                 |
 
 ## 誤解しやすい 2 件
 
