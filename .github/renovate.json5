@@ -49,12 +49,16 @@
       platformAutomerge: true,
     },
     // ----- Next.js エコシステム (同期更新) -----
+    // next 本体と同じ版数で出るパッケージは 1 つの PR にまとめる。package.json では
+    // これらを exact pin しているので、別々の PR で入ると版がずれた窓ができる。
+    // 実害の例: @next/eslint-plugin-next 16.3.0 の新ルールが単独で先に入ると、
+    // 無関係な PR の lint が突然落ちる。
     {
       description: "Group Next.js core packages",
       matchPackageNames: [
         "next",
         "@next/third-parties",
-        "@next/bundle-analyzer",
+        "@next/eslint-plugin-next",
       ],
       groupName: "next.js",
       matchUpdateTypes: ["minor", "patch"],
