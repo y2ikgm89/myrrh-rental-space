@@ -9,7 +9,8 @@ paths:
 ## 走らせ方
 
 `scripts/run-tests.ts` が唯一の入口。ファイル単位でサブプロセスに隔離し、
-`--conditions production` と 30 秒 timeout を付けて起動する。
+`--conditions production` と 30 秒 timeout、それに **DOM の要否で選んだ bunfig** を
+付けて起動する。
 
 ```bash
 bun run test -- __tests__/unit/<path>.test.ts   # 単一ファイル
@@ -21,6 +22,18 @@ bun scripts/run-tests.ts __tests__/unit/architecture  # ディレクトリ（再
 - ディレクトリ指定は**禁止ではない**。pre-push 自身が `__tests__/unit/architecture`
   をディレクトリで渡している。
 - `bun run test:unit -- <file>` では絞れない（引数が追記されるだけ）。
+
+## `ReferenceError: window is not defined` が出たら
+
+`__tests__/unit` は **JSDOM の preload 抜き**が既定で、DOM が要るものだけが例外。
+このエラーが直し方を指してくれないので、ここに書いておく。
+
+- 直すのは **`scripts/test-runner-bunfig.ts` の `DOM_REQUIRED_*` に足す**こと。
+  既定の側を戻さない。`.test.tsx` は自動で DOM が付くので、足すのは `.ts` のとき。
+- **落ちるぶんには安全**（DOM が無ければ必ず落ちる）。危ないのは
+  `typeof window === "undefined"` のように**落ちずに分岐だけ反転する**コードで、
+  module load 時に評価されるガードを読むテストは自分で例外リストへ入れる。
+  判断の根拠と実測はあのファイルの冒頭 JSDoc。
 
 ## 型情報を使う lint は `__tests__/**` に効かない
 
