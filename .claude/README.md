@@ -66,6 +66,14 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
   なり、毎回のレイテンシだけが増える。
 - **commit / PR 用の skill** — 汎用の手順であり、リポジトリ固有の要点（push は
   300 秒以上、PR 前に `validate && build`）は `CLAUDE.md` に 2 行で足りる。
+- **`REVIEW.md`** — レビューの nit 上限や再レビューの収束ルールを書ける公式機構
+  だが、読むのは Team / Enterprise 向けのマネージド Code Review だけ。ローカルの
+  `/code-review` は **`REVIEW.md` を読まない**ので、今このリポジトリに置いても
+  何も起きない。Code Review を有効化したときに初めて意味を持つ。
+- **`output-styles/`** — 作るなら `keep-coding-instructions: true` を必ず付ける。
+  カスタム output style は既定で「**変更をどうスコープするか・どう検証するか**」
+  という Claude Code 組み込みのソフトウェアエンジニアリング指示ごと落とす。
+  ここが抜けると、`CLAUDE.md` に何を書いても土台が消える。
 
 ## 長く自律実行させるとき
 
@@ -89,6 +97,16 @@ Without a check it can run, 'looks done' is the only signal available"。
 4 が効くのは、**作業したモデル自身に採点させない**から。ただし公式が警告している
 とおり、指摘を探せと言われたレビュアーは健全な実装にも何か見つけるので、
 「正しさか要件に効くものだけを挙げよ」と条件を付けて呼ぶこと。
+`/code-review` は effort を下げるほど「確信のあるものだけ」を返す。
+
+subagent を回すときは frontmatter の `maxTurns` でターン数の上限を切れる。
+`tools` / `disallowedTools` で読み取り専用にもできる（組み込みの Explore と Plan は
+Write と Edit を拒否した read-only 構成）。
+
+skill を足したら、効いているかは**思い込みでなく比較で**確かめる。公式の言い方では
+「skill が起動したことは、Claude がそれを見つけた証拠であって、意図どおり動いた証拠
+ではない」。同じプロンプトを skill 有り / 無しの**新しいセッション**で走らせて比べる
+（`skill-creator` プラグインがこの比較を自動化する）。
 
 ## 変えるとき
 
