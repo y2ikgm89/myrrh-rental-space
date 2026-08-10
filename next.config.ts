@@ -172,8 +172,11 @@ const nextConfig: NextConfig = {
     // build 側は `.next/cache` が run をまたいで保持されて初めて効く。CI 側の
     // キャッシュ設定は `.github/workflows/ci.yml`（実測値もそこに書いてある）。
     //
-    // ローカル切り分け用の kill switch。**dev と build の両方**を落とす
+    // kill switch。**dev と build の両方**を落とす
     // （build だけ残ると「切ったつもりで効いている」状態になる）。
+    // 用途は 2 つ: ローカルでの切り分けと、`.next/cache` を run 間で保持しない
+    // ビルド環境。後者は Dockerfile の builder-base が ENV で立てている
+    // （理由はそちらのコメント）。
     ...(process.env["NEXT_DISABLE_TURBOPACK_FS_CACHE"] === "1" && {
       turbopackFileSystemCacheForDev: false,
       turbopackFileSystemCacheForBuild: false,
