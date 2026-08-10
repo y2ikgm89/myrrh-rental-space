@@ -1319,7 +1319,7 @@ describe("POST /api/webhooks/stripe", () => {
     // constructEvent は **インスタンスメソッド** `stripeClient.webhooks.*`
     const realStripe = new Stripe("sk_test_dummy_fixture", {
       // ルート (`src/shared/lib/stripe.ts`) と同じ apiVersion ピン留め
-      apiVersion: "2026-06-24.dahlia",
+      apiVersion: "2026-07-29.dahlia",
       typescript: true,
     });
 
