@@ -764,8 +764,14 @@ jobs:
       # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
       # 参照: https://github.com/preactjs/compressed-size-action
       # SHA 直 pin（公式 security best practice。tag force-push 攻撃対策）
+      #
+      # **末尾コメントのタグ名に `v` を付けない。** この action のバージョンタグは
+      # `2.10.0` 形式で、`v2.10.0` は存在しない（`v` 付きは `v1` / `v2` の移動タグのみ）。
+      # Renovate は末尾コメントを現在版として読むため、実在しないタグを書くと
+      # `Could not determine new digest for update` で lookup が落ち、この action だけ
+      # 更新対象から永久に外れる（2026-08-11、Renovate 有効化直後に実際に発生）。
       - name: Compressed size diff
-        uses: preactjs/compressed-size-action@f322c295dde06a1cb7ccaef105732dd8a726d1d9 # v2.10.0
+        uses: preactjs/compressed-size-action@f322c295dde06a1cb7ccaef105732dd8a726d1d9 # 2.10.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           build-script: "build:skip-env"
