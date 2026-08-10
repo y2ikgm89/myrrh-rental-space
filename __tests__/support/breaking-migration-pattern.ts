@@ -17,6 +17,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { bashExecutable } from "./bash";
+
 export function readDeployWorkflow(): string {
   return readFileSync(
     join(process.cwd(), ".github", "workflows", "deploy-production.yml"),
@@ -81,14 +83,9 @@ export function extractDetectionPipeline(workflow: string): string {
  * MSYS のパス変換が挟まって Windows ローカルだけ壊れる。
  */
 export function runWorkflowDetection(sql: string, pipeline: string): string {
-  const bash = Bun.which("bash");
-  if (!bash) {
-    throw new Error(
-      "bash が見つからないため workflow の検出パイプラインを実行できません。" +
-        "この検査は silent skip させない（GitHub Actions の ubuntu runner にも " +
-        "ローカルの MINGW64 にも bash はある）。",
-    );
-  }
+  // `Bun.which("bash")` は使わない。Windows では WSL のランチャーを掴み、
+  // `migration_file="$(mktemp)"` が無言で空になる（`__tests__/support/bash.ts` に実測）。
+  const bash = bashExecutable();
 
   const script = [
     "set -euo pipefail",
