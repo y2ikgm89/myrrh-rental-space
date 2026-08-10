@@ -93,7 +93,7 @@ export const STRIPE_REQUEST_TIMEOUT_MS = 20_000;
 export function createStripeClient(secretKey: string): AsyncOnlyStripe {
   const client = new Stripe(secretKey, {
     // stripe@22 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
-    apiVersion: "2026-06-24.dahlia",
+    apiVersion: "2026-07-29.dahlia",
     typescript: true,
     // **上限を明示する。** 未指定だと SDK 既定の長い待ちに従うが、返金は
     // `refundReservationPaymentCommand` の advisory lock（728355）を握った

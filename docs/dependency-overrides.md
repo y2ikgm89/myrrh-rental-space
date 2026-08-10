@@ -41,7 +41,7 @@ Pin と表の整合は
 | `uuid`              | ^11.1.1  | `exceljs`／`@lhci/cli`                                                      |
 | `ws`                | ^8.21.0  | `happy-dom` → `@lexical/headless`／`lighthouse`・`socket.io-adapter`        |
 | `happy-dom`         | ^20.11.0 | `@lexical/headless` の内部フォールバック DOM                                |
-| `undici`            | ^7.28.0  | `jsdom`                                                                     |
+| `undici`            | ^8.9.0   | `jsdom`（jsdom 30 が `^8.9.0` を要求。7 系に留めると range 違反）           |
 | `sharp`             | ^0.35.0  | `next` の optionalDependency（画像処理）                                    |
 | `valibot`           | ^1.4.2   | `@prisma/dev` → `prisma`／`@t3-oss/env-core`                                |
 | `nanoid`            | ^3.3.17  | `postcss`（GHSA-2v37-7h3g-55p8: size 0 で無限ループ）                       |

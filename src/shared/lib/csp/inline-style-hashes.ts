@@ -34,7 +34,7 @@ export const EMPTY_STYLE_HASH =
 
 /** SHA-256(base64) of the CSS `sonner` injects at module evaluation time. */
 export const SONNER_STYLE_HASH =
-  "'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY='";
+  "'sha256-StEaX+se6YS7pqjzrzMIA0KaX9zF/8zAhvQXZAe5epY='";
 
 /** `style-src` に追加する hash-source（順序は CSP header の出力順）。 */
 export const STYLE_ELEMENT_HASHES = [
