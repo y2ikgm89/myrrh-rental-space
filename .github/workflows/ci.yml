@@ -381,10 +381,6 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-playwright-chromium
 
-      - name: Setup Next.js cache
-        if: needs.changes.outputs.code == 'true'
-        uses: ./.github/actions/setup-next-cache
-
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
         run: bunx --bun prisma generate
@@ -525,9 +521,6 @@ jobs:
           # webkit-*-mobile project (e2e/mobile/*.spec.ts) はこの job でのみ実行される。
           browsers: "chromium webkit"
 
-      - name: Setup Next.js cache
-        uses: ./.github/actions/setup-next-cache
-
       - name: Generate Prisma client
         run: bunx --bun prisma generate
 
@@ -629,10 +622,18 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
-      - name: Setup Next.js cache
-        if: needs.changes.outputs.code == 'true'
-        uses: ./.github/actions/setup-next-cache
-
+      # **`.next/cache` の restore/save は置かない。実測で純損だった。**
+      #
+      # 効果:  cold build 114s → `.next/cache` だけ復元した build 105s（-9s）
+      # コスト: restore 17s + post save 16s = 33s（この job の実測 step 時間）
+      #
+      # キャッシュの中身は CI で 490 KB しかなく、ビルドはどのみち cold compile に
+      # なる。9 秒のために 33 秒払っていたので、置かないほうが速い。
+      # 同じ理由で smoke-e2e / e2e-tests / bundle-analysis / lighthouse-ci /
+      # visual-regression からも外し、composite action ごと削除した。
+      #
+      # 唯一 bundle-size-diff だけ残してある（base と head で 2 回ビルドする一方、
+      # あちらの restore は実測 2s なので収支が逆になる）。
       - name: Build with env validation
         if: needs.changes.outputs.code == 'true'
         run: bun run build
@@ -697,6 +698,10 @@ jobs:
           restore-keys: |
             bun-deps-${{ runner.os }}-
 
+      # ここだけ `.next/cache` を残す。他の job では純損だったが（build の実測:
+      # 効果 -9s に対し restore+save 33s）、この job は base と head で **2 回**
+      # ビルドし、しかも restore の実測が 2s と桁違いに安いので収支が逆になる。
+      # 他所へコピーしないこと — 収支は「ビルド回数」と「restore の実測」で決まる。
       - name: Setup Next.js cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
@@ -737,9 +742,6 @@ jobs:
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
-
-      - name: Setup Next.js cache
-        uses: ./.github/actions/setup-next-cache
 
       # Next.js 16 公式の Turbopack-native bundle analyzer
       # 結果は .next/diagnostics/analyze に出力される
@@ -791,9 +793,6 @@ jobs:
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
-
-      - name: Setup Next.js cache
-        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -884,9 +883,6 @@ jobs:
 
       - name: Setup Playwright Chromium
         uses: ./.github/actions/setup-playwright-chromium
-
-      - name: Setup Next.js cache
-        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
