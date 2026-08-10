@@ -178,13 +178,22 @@ const nextConfig: NextConfig = {
       turbopackFileSystemCacheForDev: false,
       turbopackFileSystemCacheForBuild: false,
     }),
-    // NOTE: experimental.cachedNavigations はあえて有効化しない（cacheComponents 必須の opt-in 実験機能）。
-    // 有効化すると cacheComponents 下で searchParams のみのソフトナビ（管理タブの ?tab= 切替等）の
-    // コンテンツが「一手前のタブのまま残る」stale を起こす。これは Next.js 16 の既知 OPEN
-    // フレームワークバグで、nuqs（shallow:false→router.replace）も <Suspense key={tab}> も無罪、
-    // 原因は Next 側のルーターキャッシュ層。F5（完全ナビ）では正しく表示されるのが切り分けの証左。
+    // **この `false` は消せない。** 16.3.0 は `cacheComponents` が有効で
+    // `cachedNavigations` が未設定なら、自動で true にする
+    // （`next/dist/server/config.js`: `if (config.cacheComponents && (config.experimental
+    //  .cachedNavigations === undefined || …)) { config.experimental.cachedNavigations = true }`）。
+    // 16.3.0-preview.10 までは既定 false だったので、ここにはコメントしか無かった。
+    // その状態で 16.3.0 へ上げた結果、コメントは「有効化しない」と書いたまま実際は
+    // 有効になっていた（PR #2107）。散文では止まらないので明示値に変える。
+    //
+    // 有効だと cacheComponents 下で searchParams のみのソフトナビ（管理タブの ?tab= 切替等）の
+    // コンテンツが「一手前のタブのまま残る」stale を起こす。nuqs（shallow:false→router.replace）も
+    // <Suspense key={tab}> も無罪で、原因は Next 側のルーターキャッシュ層。
+    // F5（完全ナビ）では正しく表示されるのが切り分けの証左。
     // 参照（いずれも未修正 OPEN）: vercel/next.js#86577 / #88535, 47ng/nuqs#1273
-    // 上流修正（Vercel 担当者が next@canary で類似ルータバグ修正済と言及）が安定版に入ったら再評価する。
+    // 上流が修正したら、消すのではなく true にして再評価する。
+    // 解決後の値は `__tests__/unit/architecture/next-config-cached-navigations-off.test.ts` が見る。
+    cachedNavigations: false,
     // ナビゲーション後のフォーカス管理改善（active element を blur、ブラウザ標準挙動に準拠）
     appNewScrollHandler: true,
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
