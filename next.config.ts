@@ -194,18 +194,16 @@ const nextConfig: NextConfig = {
     // 上流が修正したら、消すのではなく true にして再評価する。
     // 解決後の値は `__tests__/unit/architecture/next-config-cached-navigations-off.test.ts` が見る。
     cachedNavigations: false,
-    // ナビゲーション後のフォーカス管理改善（active element を blur、ブラウザ標準挙動に準拠）
-    appNewScrollHandler: true,
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
     // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
     globalNotFound: true,
-    // NOTE: experimental.optimizePackageImports は Next.js 16 で削除済み。
-    // Next.js 16 から Turbopack が dev/build 両方で安定版デフォルト化し、
-    // Turbopack は import を自動解析・最適化するため本設定は完全に inert。
-    // 公式: "if you are using Turbopack, it automatically analyzes and optimizes
-    //        imports, so this configuration is not required"
-    // 公式: "Starting with Next.js 16, Turbopack is stable and used by default
-    //        for both `next dev` and `next build`"
+    // NOTE: experimental.optimizePackageImports はあえて指定しない。
+    // 「削除されたから」ではない — 16.3.0 にも実在する（型・zod スキーマ・docs の
+    // いずれにも現存）。指定しない理由は Turbopack では不要だから。
+    // 公式（16.3.0 同梱 docs / 01-app/02-guides/local-development.md）:
+    //   "Turbopack automatically analyzes imports and optimizes them.
+    //    It does not require this configuration."
+    // 同梱 docs は node_modules/next/dist/docs 配下にあり、next のバージョンと一致する。
   },
 
   async headers() {
