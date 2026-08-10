@@ -23,6 +23,15 @@
     "schedule:weekdays",
     "helpers:pinGitHubActionDigests",
   ],
+  // Mend ホスト版は「All repositories」でインストールすると**組織既定が `silent`** になり、
+  // 解析は毎回走るのにブランチ・PR・Dependency Dashboard を一切作らない
+  // （結果は developer.mend.io の "Pending Approval" に溜まるだけ）。
+  // 実測 2026-08-11: 有効化後 1 時間でジョブは全て DONE、更新候補 45 件超を検出済み、
+  // GitHub 側の書き込みは 0 件だった。
+  //
+  // 組織設定の `Disable Repo-level Override` が OFF なので、この repo 側の指定が優先される。
+  // ポータルのトグルではなくここで持つ（設定はコードに置き、レビュー可能にする方針）。
+  mode: "full",
   labels: ["dependencies", "automated"],
   prConcurrentLimit: 10,
   prHourlyLimit: 4,
@@ -187,6 +196,24 @@
       groupName: "github-actions",
       automerge: true,
       platformAutomerge: true,
+    },
+    // ----- overrides は親が宣言した range の内側に留める -----
+    {
+      description: "Keep overrides inside their parent's declared range",
+      matchDepTypes: ["overrides"],
+      matchUpdateTypes: ["major"],
+      // `docs/dependency-overrides.md` の pin 表の契約は「親パッケージが宣言した
+      // range の内側で、advisory を回避できる最小の版に留める」こと。major を跨ぐと
+      // その契約が壊れる — 例えば `js-yaml` を v4 にすると `@lhci/utils` の
+      // `^3.13.1` を外れるが、bun の override は range を置換するので**強制的に
+      // 適用されてしまう**（型検査にもテストにも出ず、Lighthouse CI の実行時に初めて壊れる）。
+      //
+      // 実測 2026-08-11: 初回スキャンで js-yaml v4/v5・body-parser v2・@babel/core v8・
+      // nanoid v4/v5/v6・uuid v12/13/14・fast-uri v4 の 8 件以上が候補に挙がった。
+      //
+      // 消さずに Dependency Dashboard には出す。親側が major を上げて override も
+      // 追随すべきになったとき、チェックボックスから起こせる状態を残す。
+      dependencyDashboardApproval: true,
     },
     // ----- DB migration 系は慎重に -----
     {
