@@ -28,7 +28,6 @@
  */
 
 import {
-  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -39,6 +38,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
+import { bashExecutable } from "../../support/bash";
 
 /** workflow の `Submit Cloud Build` step から base 解決部分だけを切り出す。 */
 function baseResolutionScript(): string {
@@ -67,20 +68,6 @@ type Outcome = { code: number; base: string; breaking: string; stderr: string };
 let work: string;
 let firstSha = "";
 let headSha = "";
-
-function bashExecutable(): string {
-  if (process.platform === "win32") {
-    for (const candidate of [
-      "C:/Program Files/Git/usr/bin/bash.exe",
-      "C:/Program Files/Git/bin/bash.exe",
-    ]) {
-      if (existsSync(candidate)) {
-        return candidate;
-      }
-    }
-  }
-  return "bash";
-}
 
 function toBashPath(entry: string): string {
   if (process.platform !== "win32") {
