@@ -59,8 +59,11 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
 
 増やせば効くわけではないので、理由つきで見送っている。
 
-- **カスタム subagent（`agents/`）** — 組み込みの Explore / Plan / general-purpose で
-  足りている。専用エージェントは、同じ役割を繰り返し必要としてから作る。
+- **カスタム subagent（`agents/`）** — 公式の作成トリガーは「**同じ指示の同じ種類の
+  ワーカーを繰り返し spawn しているとき**」。今のところこのリポジトリでそれは起きて
+  いない。組み込みの Explore / Plan / general-purpose で足りる。
+  ただし **Explore と Plan は CLAUDE.md を読み込まない**（general-purpose は読む）。
+  規約の判断が要る調べ物を Explore に投げると、この repo の前提を知らないまま答える。
 - **PostToolUse の自動整形 hook** — lefthook pre-commit の `eslint --fix` と
   `prettier --write` が既に staged ファイルを直す。編集のたびに走らせると二重管理に
   なり、毎回のレイテンシだけが増える。
@@ -74,6 +77,32 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
   カスタム output style は既定で「**変更をどうスコープするか・どう検証するか**」
   という Claude Code 組み込みのソフトウェアエンジニアリング指示ごと落とす。
   ここが抜けると、`CLAUDE.md` に何を書いても土台が消える。
+
+## 並列で動かすとき
+
+公式は並列化を 4 つに分けている。**同じファイルを触る作業を分けるのは subagent では
+なく worktree** で、subagent は「本会話を汚さずに調べ物をさせる」ための道具。
+
+| したいこと                           | 使うもの                                                     | 現状             |
+| ------------------------------------ | ------------------------------------------------------------ | ---------------- |
+| 自分で複数セッションを回す           | `claude --worktree <name>`                                   | **設定済み**     |
+| 独立タスクを渡して後で見る           | `claude agents`（agent view / research preview）             | 追加設定は不要   |
+| 大きな変更を分割して並列に編集させる | `/batch`（5〜30 の worktree 隔離 subagent が各々 PR を開く） | 追加設定は不要   |
+| 本会話を汚さずに調べ物をさせる       | subagent                                                     | 組み込みで足りる |
+
+「設定済み」の中身は `.worktreeinclude`（`.env*` / `generated/` /
+`playwright/.auth/` を運ぶ）と、`.gitignore` の `.claude/worktrees/`。
+
+- **新しい worktree の初期化は `bun install` だけ。** `node_modules` は運ばれないが、
+  `postinstall` が prisma generate まで済ませる。
+- **`worktree.baseRef` の既定は `"fresh"`** — リポジトリの既定ブランチ（`main`）から
+  切る。feature ブランチで作業中に subagent を worktree 隔離すると、**その subagent は
+  作業中のコミットを見ない**。作業中のコードに働かせたいときだけ `settings.json` に
+  `{"worktree": {"baseRef": "head"}}` を置く。既定のままにしてあるのは、どちらが
+  正しいかが使い方で変わるため。
+- **agent teams は experimental で既定無効**。teammate ごとに別の Claude インスタンスに
+  なるのでコストが高く、worktree による隔離もしない（ファイルの所有を自分で分ける
+  必要がある）。個人開発では上の 3 つで足りる。
 
 ## 長く自律実行させるとき
 
