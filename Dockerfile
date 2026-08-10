@@ -26,7 +26,21 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     SKIP_ENV_VALIDATION=true \
     STANDALONE=true \
+    NEXT_DISABLE_TURBOPACK_FS_CACHE=1 \
     DATABASE_URL=postgresql://build:build@localhost:5432/build
+
+# NEXT_DISABLE_TURBOPACK_FS_CACHE は next.config.ts の kill switch で、Turbopack の
+# ファイルシステムキャッシュ (dev / build 両方) を落とす。Docker ビルドでは書いても
+# 次回読まれないため切る:
+#   - `.dockerignore` が `.next` を除外するので builder は毎回 cold から始まる
+#   - runner が builder から拾うのは public / .next/standalone / .next/static だけで
+#     `.next/cache` は運ばない
+#   - cloudbuild.yaml が push するのは runner / migrate タグで、builder レイヤは出ない
+# 公式 (同梱 docs の turbopackFileSystemCache ページ):
+#   "If your build environment never preserves `.next/cache`, set
+#    `turbopackFileSystemCacheForBuild: false` to skip writing a cache that will not be read."
+# 将来 Cloud Build 側で `.next/cache` を持ち回るなら、この 1 行を消すだけで戻る。
+# CI (GitHub Actions) は別経路で、`.next/cache` を run 間で保持しているため対象外。
 
 # DATABASE_URL は build 専用プレースホルダ。prisma.config.ts の env("DATABASE_URL") が
 # config ロード時に eager 解決するため db:generate / next build に必須だが、ビルドは
