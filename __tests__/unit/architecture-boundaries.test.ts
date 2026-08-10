@@ -1036,11 +1036,23 @@ describe("architecture boundaries", () => {
     expect(scripts["test:integration"]).toBe(
       "bun run db:generate && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
     );
+    // unit と integration は **1 回の run-tests 呼び出し**に渡す。分けて 2 回呼ぶと
+    // integration の serial DB バケットが unit の完了を待ってから始まり、その間
+    // 並列バケットが空く。1 回にまとめると両バケットが重なる（runner が
+    // serial / parallel を並列に動かす設計）。実測 347s → 216s。
     expect(scripts["test:all"]).toBe(
-      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
+      "bun run db:generate && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/unit __tests__/integration",
     );
     expect(scripts["test:all"]).not.toContain("bun run test:unit");
     expect(scripts["test:all"]).not.toContain("bun run test:integration");
+
+    // 上の完全一致は書き換えれば通る。**この test の名前が主張している不変条件**
+    // （integration は migrate の後）を、順序そのものとしても検査しておく。
+    const testAll = String(scripts["test:all"]);
+    expect(testAll.indexOf("test:db:migrate")).toBeGreaterThanOrEqual(0);
+    expect(testAll.indexOf("test:db:migrate")).toBeLessThan(
+      testAll.indexOf("__tests__/integration"),
+    );
   });
 
   test("db:reset は Prisma v7 の明示 seed workflow を使う", () => {
