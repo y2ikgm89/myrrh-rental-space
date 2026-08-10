@@ -25,12 +25,28 @@ on:
         required: false
         default: false
 
-# 同一ブランチ・同一イベントタイプで進行中の run があれば cancel。
+# 同一イベントタイプで進行中の run があれば cancel（feature branch のみ）。
 # event_name を group に含めることで workflow_dispatch (手動 trigger) と push (auto)
 # が独立 group となり、互いに cancel し合わない（race condition 回避）。
 # main は履歴保持のため cancel しない、feature branch は PR push のたびに前 run を捨てる。
+#
+# **push だけ commit 単位の group にする。** ref 単位にすると main への push が
+# すべて同じ group に入り、「main は cancel しない」設定と噛み合って run が
+# **job を 1 つも実行しないまま捨てられる**。公式:
+#
+# > any existing `pending` job or workflow in the same concurrency group will be
+# > canceled and the new queued job or workflow will take its place
+#
+# つまり保持される pending は 1 本だけで、3 本目の push が 2 本目を追い出す。
+# 実測: PR を 3 本続けてマージしたとき、2 本目のマージ commit の run が
+# jobs=0 のまま cancelled になった（直近 100 run で同じ形が 6 件）。
+#
+# `queue: max`（pending を最大 100 本保持）は使えない — 公式が
+# `cancel-in-progress: true` との併用を validation error と定めており、
+# ここは PR で true に評価される式だから。commit 単位の group なら
+# PR 側のキャンセル挙動を一切変えずに取りこぼしだけが消える。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # Workflow-level の最小権限 default。
