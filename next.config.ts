@@ -150,8 +150,10 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ["image/avif", "image/webp"],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // deviceSizes / imageSizes は 16.3.0 の既定に任せる。
+    // Next.js 16 は `imageSizes` の既定から `16` を落としており、ここで戻していたのは
+    // 公式アップグレードガイドの「16px 画像が要るなら」スニペットの丸写しだった。
+    // 実際には 16px 以下の画像はこのリポジトリに無い（`<Image>` の最小 width は 32）。
   },
 
   // Production optimizations
