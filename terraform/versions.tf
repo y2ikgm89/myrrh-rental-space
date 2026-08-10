@@ -102,7 +102,7 @@ terraform {
     # 参考: https://developers.cloudflare.com/terraform/advanced-topics/version-5-upgrade/
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5.22"
+      version = "~> 5.23"
     }
   }
 }
