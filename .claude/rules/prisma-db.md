@@ -14,8 +14,10 @@ migration を新しく作る手順は `/new-migration` skill にある。ここ�
 build でも検出できず、次の `prisma migrate dev` が意図しない DDL（典型は手書きの
 partial UNIQUE を DROP INDEX する）を混ぜ込む。捕まえるのは実 DB gate だけ。
 
-強制: `__tests__/integration/prisma/schema-migration-drift.test.ts`
-（`bun run test:integration` でのみ走る）
+強制: `__tests__/integration/prisma/schema-migration-drift.test.ts`。ローカルでは
+`bun run test:integration`、CI では **required check の Unit Tests job**（`test:all` が
+postgres service に対して `__tests__/integration` まで回す）。**pre-push では走らない**
+ので、ローカルではずれたまま push できて CI で落ちる。
 
 ## migration ファイル
 
@@ -30,9 +32,14 @@ partial UNIQUE を DROP INDEX する）を混ぜ込む。捕まえるのは実 D
 
 ## 接続先
 
-Prisma CLI の接続先は `DIRECT_URL` が最優先、次に `DATABASE_URL`。
-`db:push` / `db:reset` には破壊的操作ガードがあるが、**`db:migrate` には無い**。
-流す前に接続先を確かめる。
+Prisma CLI の接続先は `DIRECT_URL` が最優先、次に `DATABASE_URL`。`.env.local` に
+本番の `DIRECT_URL` が残っていれば、`DATABASE_URL` がローカルでも本番に当たる。
+
+`db:push` / `db:reset` / `db:migrate` の 3 つは
+`scripts/assert-destructive-db-target.ts` が前段で接続先を検査し、本番に見えるなら
+中止する（`migrate dev` も対象 — Prisma 公式が "intended for development with a
+disposable database" と書き、drift 検出時に reset を促すため）。
+強制: `__tests__/unit/architecture/destructive-db-guard.test.ts`
 
 ## seed
 

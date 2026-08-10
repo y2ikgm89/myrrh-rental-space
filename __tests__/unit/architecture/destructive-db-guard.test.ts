@@ -22,12 +22,33 @@ import {
  * さらに Prisma CLI の datasource は `prisma.config.ts` が **`DIRECT_URL` 優先**で
  * 解決する。`DATABASE_URL` だけを見るガードは、`.env.local` に本番の `DIRECT_URL` が
  * 残っている状況で素通りする。
+ *
+ * ## なぜ `db:migrate` も対象なのか
+ *
+ * 当初この gate は `db:reset` / `db:push` の 2 つだけを見ていた。`migrate dev` は
+ * 「作る」側なので破壊的ではない、という直感に合うが、**Prisma 公式の記述はそう
+ * 言っていない**:
+ *
+ * > `prisma migrate dev` is intended for development with a **disposable database**.
+ * > If it detects a schema drift or migration history conflict, **you will be
+ * > prompted to reset your database**.
+ *
+ * > Prisma Migrate may prompt a database reset, **which drops and recreates the
+ * > database, leading to data loss**. This occurs explicitly with
+ * > `prisma migrate reset` or when **`prisma migrate dev` detects database drift**.
+ *
+ * つまり `migrate dev` は `migrate reset` と同じ破壊クラスにいる。しかも drift を
+ * 直すために最初に叩かれるコマンドがこれで、接続先は `DIRECT_URL` 優先。
+ * 3 つの入口のうち**一番危ないものだけが素通り**していた。
+ *
+ * ガードが止めるのは本番に見える接続先だけ（Cloud SQL / Neon / 非 localhost /
+ * prod marker）なので、ローカル開発の `migrate dev` は従来どおり通る。
  */
 
 const root = process.cwd();
 
 describe("破壊的 DB 操作のガード", () => {
-  test("db:reset / db:push はガードを前段に置いている", () => {
+  test("db:reset / db:push / db:migrate はガードを前段に置いている", () => {
     const pkg: unknown = JSON.parse(
       readFileSync(join(root, "package.json"), "utf8"),
     );
@@ -42,7 +63,7 @@ describe("破壊的 DB 操作のガード", () => {
     }
     const scripts: Record<string, unknown> = { ...pkg.scripts };
 
-    for (const name of ["db:reset", "db:push"]) {
+    for (const name of ["db:reset", "db:push", "db:migrate"]) {
       const script = scripts[name];
       expect(typeof script).toBe("string");
       const value = String(script);

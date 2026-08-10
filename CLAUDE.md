@@ -82,8 +82,9 @@ CONTRIBUTING はそれを意図的に複製していない（drift 防止）。
 - `bun run db:seed` を単体で叩くと失敗する。`.env.local` の `APP_SURFACE` を seed の
   安全ガードが「デプロイされたプロセス」の印と見るため。ローカル再構築は
   `bun run setup` か `bun run db:reset`。
-- `bun run db:migrate` には破壊的操作ガードが**無い**（`db:push` / `db:reset` にはある）。
-  Prisma CLI の接続先は `DIRECT_URL` が最優先。走らせる前に接続先を確かめる。
+- `bun run test -- <file>` は Prisma client を作り直さない（`test:unit` /
+  `test:integration` / `test:all` は作り直す）。`schema.prisma` を触った直後は先に
+  `bun run db:generate`。忘れると古い client のまま緑になり、落ちるのは pre-push。
 - `bun run e2e` は既存サーバーを再利用しない。手動起動中の dev サーバーが 3000 を
   占有していると必ず落ちる。
 - `bun run format` は引数なしだとリポジトリ全体を書き換える。触ったファイルだけ渡す。
