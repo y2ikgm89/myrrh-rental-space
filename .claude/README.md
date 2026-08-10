@@ -9,6 +9,7 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
 | `../CLAUDE.md`           | 毎セッション、全文                           | 追跡     |
 | `rules/*.md`             | `paths:` に一致するファイルを開いたときだけ  | 追跡     |
 | `skills/*/SKILL.md`      | description のみ常時、本文は呼ばれたときだけ | 追跡     |
+| `agents/*.md`            | description のみ常時、本文は delegate 時だけ | 追跡     |
 | `settings.json`          | 起動時（permissions / hook の配線）          | 追跡     |
 | `hooks/*.mjs`            | 該当イベントごとにサブプロセスで実行         | 追跡     |
 | `settings.local.json`    | 個人用の上書き。秘密値はここ                 | **無視** |
@@ -55,15 +56,40 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
   WSL ランチャ（`C:\WINDOWS\system32\bash.exe`）に解決され、Windows パスを渡すと
   壊れるため。`bun` はこのリポジトリの必須ツールで PATH にある。
 
+## `agents/` に 1 本だけある理由
+
+公式の作成トリガーは "Define a custom subagent when you **keep spawning the same
+kind of worker with the same instructions**"。このリポジトリではそれが起きている。
+
+- リポジトリ全体を対象にした調査を実測したとき、返ってきた 169 件の主張のうち
+  **CONFIRMED 103 / IMPRECISE 63 / REFUTED 3** — 約 4 割がそのままでは不正確だった。
+  誤りは形が偏る（「使われていない」の過剰主張、走査範囲の申告漏れ、根拠の無い断定）
+- 組み込みの **Explore と Plan は CLAUDE.md を読み込まない**（general-purpose は
+  読む）。規約の判断が要る調べ物を Explore に投げると、この repo の前提を知らないまま
+  答える
+
+`codebase-investigator` はこの 2 つを同時に埋める。読み取り専用
+（`tools: Read, Grep, Glob, Bash` — Edit と Write を持たない）で、system prompt が
+`path:line` の提示と未確認範囲の申告を要求する。
+
+**消してよい条件**: 調査の不正確率が下がらない、または誰も delegate しなくなったとき。
+効いているかは公式の skill eval と同じやり方で測る — 同じ質問をこの subagent 有り /
+無しで別セッションに投げて比べる。
+
+<!--
+  agents/ を新規に作った直後だけ、Claude Code の再起動が要る。ファイル watcher が
+  covers するのはセッション開始時に存在していたディレクトリだけなので、
+  「そのスコープで最初の 1 本」は再起動しないと読み込まれない。
+-->
+
 ## 意図的に置いていないもの
 
 増やせば効くわけではないので、理由つきで見送っている。
 
-- **カスタム subagent（`agents/`）** — 公式の作成トリガーは「**同じ指示の同じ種類の
-  ワーカーを繰り返し spawn しているとき**」。今のところこのリポジトリでそれは起きて
-  いない。組み込みの Explore / Plan / general-purpose で足りる。
-  ただし **Explore と Plan は CLAUDE.md を読み込まない**（general-purpose は読む）。
-  規約の判断が要る調べ物を Explore に投げると、この repo の前提を知らないまま答える。
+- **2 本目以降の subagent** — `agents/` にあるのは `codebase-investigator` 1 本だけ
+  （理由は下記）。検証役は別に作っていない。差分のレビューは `/code-review` が、
+  主張の相互検証は dynamic workflow が既に担っており、どちらも呼び出しごとに
+  プロンプトが変わるので固定した定義にする意味が薄い。
 - **PostToolUse の自動整形 hook** — lefthook pre-commit の `eslint --fix` と
   `prettier --write` が既に staged ファイルを直す。編集のたびに走らせると二重管理に
   なり、毎回のレイテンシだけが増える。
