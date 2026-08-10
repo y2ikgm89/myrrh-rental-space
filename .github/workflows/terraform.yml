@@ -132,7 +132,7 @@ jobs:
           category: trivy
 
       - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4.1.1
+        uses: terraform-linters/setup-tflint@6e1e0642c0289bd619021bf6b34e3c08ed1e005a # v6.3.0
         with:
           # 2026-07-16 (PR #1149): `latest` が sigstore-go bundle.TlogEntries で
           # nil pointer panic を起こす TFLint リリース (regression window
@@ -148,7 +148,7 @@ jobs:
       # 変われば取り直す。cache hit 時の `tflint --init` は署名検証を含めて
       # 外部へ出ないため、下のリトライは cache miss のときの保険になる。
       - name: Cache TFLint plugins
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.tflint.d/plugins
           key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}

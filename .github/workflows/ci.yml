@@ -109,11 +109,11 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Filter paths
         id: filter
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           # base は PR base / main push 時は前 commit (paths-filter default)。
           #
@@ -163,11 +163,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Detect changed migrations
         id: filter
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           # shell: シェルエスケープ済みのファイル一覧を outputs.migrations_files に出力
           list-files: shell
@@ -232,7 +232,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -277,7 +277,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -297,7 +297,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -330,7 +330,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -371,7 +371,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -398,7 +398,7 @@ jobs:
       # 側のビルド成果とは別物になる）。
       - name: Cache Turbopack build cache
         if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
           key: nextjs-smoke-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
@@ -521,7 +521,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
@@ -627,7 +627,7 @@ jobs:
     steps:
       - name: Checkout
         if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
@@ -676,7 +676,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Cache Turbopack build cache
         if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
           key: nextjs-envcheck-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
@@ -723,7 +723,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # preactjs/compressed-size-action は内部で `bun install --frozen-lockfile`
       # （= `bun ci` の同義 alias、Bun 公式 docs）を呼ぶため、先に Bun を PATH
@@ -738,7 +738,7 @@ jobs:
           bun-version-file: package.json
 
       - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
@@ -748,7 +748,7 @@ jobs:
       # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
       # この job は base と head で 2 回ビルドするので、1 run 内でも 2 回効く。
       - name: Cache Turbopack build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
           key: nextjs-sizediff-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
@@ -780,7 +780,7 @@ jobs:
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
@@ -831,7 +831,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
@@ -918,7 +918,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
@@ -1064,7 +1064,7 @@ jobs:
       github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
