@@ -228,7 +228,14 @@ jobs:
           #
           # **title に日付や run id を混ぜてはならない。** 混ぜると解消 run が
           # 別 title になり既存 Issue へ辿り着けず、増える一方になる（旧実装）。
-          title="Terraform drift detected"
+          #
+          # **赤 2 種類を 1 本の Issue で追跡するので、title は両方を覆う文言に
+          # する。** 「drift を検知した」と書くと、drift 検知そのものが失敗した
+          # ケース（drift の有無が **分からない**）で嘘になる。実例: #2132 は
+          # 請求先アカウント停止で `terraform init` が落ちた run が立てたもので、
+          # drift の有無は一度も判定できていないのに title は「detected」だった。
+          # どちらの赤かは本文の 1 行目が書き分ける。
+          title="Terraform drift check is not green"
           # **この workflow が作った Issue だけ**を対象にするための marker。
           # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
           # 立てたときにそれへコメントを足し、緑になった瞬間に**他人の Issue を
