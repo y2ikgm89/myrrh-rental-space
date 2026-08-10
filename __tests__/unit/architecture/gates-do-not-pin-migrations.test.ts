@@ -37,11 +37,12 @@
  * | `prisma`（`migrations/` を除く） | schema.prisma・seed.ts・baseline 入力 |
  * | `.github` | CI への指示 |
  * | `docs`（記録の 3 置き場を除く） | 人が従う runbook・ADR・alerting |
+ * | `CLAUDE.md` / `.claude` | エージェントへの指示 |
  *
- * かつてはエージェントへの**指示**（リポジトリ直下のルート指示と rules / skills 群）も
- * 走査していた。誤った前提で作業させるからだが、それらを repo から外したので対象から
- * 落とした。**再び追加するときは走査対象にも戻すこと** — 指示文書の中の消えた
- * migration 名は、コードと同じだけ人を誤らせる。
+ * エージェントへの**指示**（リポジトリ直下のルート指示と rules / skills 群）は、
+ * それらが repo から外れていた間だけ対象から落としていた。**戻ってきたので走査対象にも
+ * 戻した** — 指示文書の中の消えた migration 名は、コードと同じだけ人を誤らせる。
+ * 置き場の説明は `.claude/README.md`。
  *
  * `prisma/migrations/**` は対象外 — ディレクトリ名そのものが timestamp であり、
  * 中身は絶対規約 #7 で編集できない。
@@ -106,6 +107,9 @@ const SCAN: readonly { readonly dir: string; readonly glob: string }[] = [
   { dir: ".github", glob: "**/*.{yml,yaml,md}" },
   // docs のうち**指示**の側。記録（下の EXCLUDED）は除く。
   { dir: "docs", glob: "**/*.md" },
+  // エージェントへの指示。docstring の「戻ってきたので走査対象にも戻した」の実体。
+  { dir: ".", glob: "CLAUDE.md" },
+  { dir: ".claude", glob: "**/*.md" },
 ];
 
 /**

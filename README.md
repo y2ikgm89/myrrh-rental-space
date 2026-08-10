@@ -74,7 +74,7 @@ bun run lint:files -- path/to/changed.ts
 ```
 
 Then run `bun run validate` (type-check + lint only, **not** tests) before
-commit; `bun run validate && bun run build` before push (see
+commit, and `bun run validate && bun run build` before opening a PR (see
 [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)).
 
 ## Common commands
@@ -119,9 +119,10 @@ bun scripts/run-tests.ts __tests__/integration/<path>.test.ts
 includes `TEST_DATABASE_URL` for the local test database. Override it if your
 Docker port mapping differs.
 
-Before committing: `bun run validate && bun run build`. Push runs a lefthook
-pre-push hook (type-check + architecture-boundaries) that takes ~80–110s, so
-`git push` needs at least a 3-minute tool timeout.
+Before committing: `bun run validate`. Before opening a PR: `bun run validate &&
+bun run build`. Push runs a lefthook pre-push hook (type-check +
+architecture-boundaries) that takes ~80–110s, so `git push` needs at least a
+3-minute tool timeout.
 
 ## Health endpoints
 

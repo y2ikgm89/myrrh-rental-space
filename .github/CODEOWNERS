@@ -60,3 +60,9 @@
 /eslint.config.mjs @y2ikgm89
 /playwright.config.ts @y2ikgm89
 /.lighthouserc.json @y2ikgm89
+
+# エージェント設定 — 全セッションの挙動を決めるので、コードと同じレビューを通す。
+# 公式の推奨: "Keep CLAUDE.md under 200 lines, give it an owner, and review
+# changes to it like code."
+/CLAUDE.md @y2ikgm89
+/.claude/ @y2ikgm89
