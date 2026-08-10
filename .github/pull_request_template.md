@@ -41,6 +41,7 @@
 
 - [ ] `bun run lint` / `bun run test:unit`（`__tests__/unit/architecture/**` の gate 群）が緑
 - [ ] 新しい SSoT 定数を導入した場合、参照側のコメント・gate を更新した
+- [ ] コマンド・検証手順・境界規約を変えた場合、`CLAUDE.md` と `.claude/rules/` の該当記述を更新した
 - [ ] 破壊的変更がある場合、`CODEOWNERS` の対象 owner レビューを依頼した
 - [ ] セキュリティに関わる変更（認証 / 決済 / 暗号化 / API route）がある場合、`/security-review` でレビュー済み
 - [ ] DB 変更がある場合、migration diff を PR description に貼った
