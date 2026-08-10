@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Checkout
         # SHA 直 pin（公式 security best practice。tag force-push 攻撃 + codeload 404 outage 対策）
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # rhysd/actionlint v1.7.12 を SHA256 検証付きで取得して直接実行する。
       # 旧方式 `bash <(curl ...main/scripts/download-actionlint.bash)` は
