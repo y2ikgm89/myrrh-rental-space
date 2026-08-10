@@ -665,6 +665,14 @@ jobs:
       #
       # 代償はソース drift。上表のとおり drift しても cold より 41% 速い。
       # drift が効かなくなったら、そのときに鍵へ回転要素を足す判断をする。
+      #
+      # **キャッシュはブランチにスコープされる。** PR run が作ったものは main の run
+      # から見えない。この設定を触った PR は「PR run は miss（cold + save）→ merge 後の
+      # main run も miss → 3 本目でようやく hit」の順になるので、**最初の run が速く
+      # ないことを効果の否定と読まない。** warm を測るなら
+      # `gh workflow run ci.yml --ref main`（dispatch は push と別 concurrency group
+      # なので互いに cancel しない）。ただし dispatch は build job を回さない
+      # （下の `if:` が pull_request と main push だけ）。
       # ---------------------------------------------------------------------
       - name: Cache Turbopack build cache
         if: needs.changes.outputs.code == 'true'

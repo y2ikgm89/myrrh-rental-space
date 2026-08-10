@@ -90,6 +90,9 @@ CONTRIBUTING はそれを意図的に複製していない（drift 防止）。
 - `bun run format` は引数なしだとリポジトリ全体を書き換える。触ったファイルだけ渡す。
 - `ESLINT_SKIP_TYPE_CHECK=1` を自分で付けない。型情報を使う lint が丸ごと無効になる。
   設定してよいのは lefthook pre-commit だけ。
+- **ESLint に `--cache` を足さない。** 型情報を使うルールで、**他ファイルの型変化が
+  原因の違反を見逃す**（実証: 依存側だけを `Promise` 返しに変えると
+  `no-floating-promises` が `--cache` ありで緑・無しで赤）。速度目的でも不可。
 - 新しい worktree では先に `bun install`。`.worktreeinclude` が運ぶのは `.env*` /
   `generated/` / `playwright/.auth/` だけで `node_modules` は入らない
   （`postinstall` が prisma generate まで済ませる）。
