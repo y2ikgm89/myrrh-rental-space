@@ -58,13 +58,10 @@ jobs:
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # 失敗通知は `deploy-result` job が持つ。この job に `issues: write` は要らない。
     permissions:
       contents: read
       id-token: write
-      # 失敗時に GitHub Issue を auto-open するため (最後の step 参照)。
-      # PR #1097-#1101 の 4 連続 apply failure が silent に累積して user 検知
-      # まで ~2 時間 lag した saga への対策。
-      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -203,83 +200,6 @@ jobs:
           # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
           # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
           TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
-
-      # ---- Failure notification (2026-07-14 追加、apply silent failure 対策) ----
-      #
-      # terraform-plan / terraform-apply が失敗した場合、GitHub Issue を auto-open。
-      # `terraform-drift.yml` の drift 検知 issue と同じ pattern (label /
-      # body format / gh CLI で一貫させる)。
-      #
-      # 背景: PR #1097-#1101 で 4 連続の terraform-apply 失敗 (Cloudflare v5 ruleset
-      # 導入時の import ID 不備) が silent に累積、user 検知まで ~2 時間 lag。
-      # Deploy Production は手動のみのため、失敗可視化は本 Issue が SSoT
-      # (旧 Main Terraform Health PR gate は 2026-07-25 に廃止)。
-      #
-      # 重複 issue 防止: `deploy-broken` label + 同一 SHA の未 close issue が
-      # あれば skip (idempotent)。
-      - name: Open apply failure issue
-        # 前段 step (Terraform plan / Terraform apply) いずれかが失敗した時のみ発火。
-        # `${{ failure() }}` は job 内で以前の step が failed かをチェックする。
-        if: ${{ failure() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Idempotent label create
-          gh label create deploy-broken \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Manual Deploy Production terraform-apply or deploy step failure" \
-            --color "b60205" 2>/dev/null || true
-
-          # 同 SHA の未 close issue が既にあれば skip
-          EXISTING="$(gh issue list \
-            --repo "${GITHUB_REPOSITORY}" \
-            --label deploy-broken \
-            --state open \
-            --json title \
-            --jq '.[] | select(.title | contains("'"${GITHUB_SHA:0:8}"'")) | .title' \
-            | head -1 || true)"
-          if [ -n "${EXISTING}" ]; then
-            echo "Existing open issue for SHA ${GITHUB_SHA:0:8} — skip (${EXISTING})"
-            exit 0
-          fi
-
-          TODAY="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          TITLE="[deploy-broken] terraform-apply failed on main (${GITHUB_SHA:0:8})"
-
-          BODY_FILE="$(mktemp)"
-          {
-            echo "**Deploy Production terraform-apply failure** on main at \`${TODAY}\` UTC."
-            echo ""
-            echo "- Failing SHA: \`${GITHUB_SHA}\`"
-            echo "- Actions run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- Job: \`terraform-apply\` (deploy-production.yml)"
-            echo ""
-            echo "## Impact"
-            echo ""
-            echo "- \`deploy\` job is BLOCKED (Codex F6 strict gate)"
-            echo "- Cloud Run 新 revision は deploy されない (build & migrate も skipped)"
-            echo "- PR auto-merge は止まらない (手動デプロイモデル; Main Terraform Health 廃止済)"
-            echo ""
-            echo "## Recovery"
-            echo ""
-            echo "1. Actions run の log で失敗原因を特定 (\`Terraform plan\` step 出力を確認)"
-            echo "2. 修正 PR を作成して main へ merge"
-            echo "3. Actions → Deploy Production を手動実行して復旧確認"
-            echo "4. 復旧確認できたら本 issue を close"
-            echo ""
-            echo "## References"
-            echo ""
-            echo "- ADR: docs/adr/0002-abolish-main-terraform-health-gate.md"
-            echo "- Nightly drift detection: \`.github/workflows/terraform-drift.yml\`"
-          } > "${BODY_FILE}"
-
-          gh issue create \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${TITLE}" \
-            --label "deploy-broken" \
-            --body-file "${BODY_FILE}"
 
   deploy:
     name: Cloud Build Deploy
@@ -445,3 +365,121 @@ jobs:
             --region="${REGION}" \
             --config=cloudbuild.yaml \
             --substitutions="${SUBSTITUTIONS}"
+
+  # 手動デプロイの結果を **人が見える場所へ出す** 唯一の経路。
+  #
+  # 旧実装は terraform-apply job の中の step (`Open apply failure issue`) で、
+  # **開くことしかしなかった**。そのため:
+  #
+  #   - 復旧しても閉じないので Issue が永久に残る。実測 2026-08-11 時点で
+  #     `[deploy-broken] ...` の open が 7 件 / closed が 0 件。うち 6 件は
+  #     07-19 のもので、08-08 の success で復旧済み = 現状を 1 件も表して
+  #     いなかった。
+  #   - title に SHA を埋めていたので、復旧 run は別 title になり既存 Issue に
+  #     辿り着けない。失敗のたびに新しい Issue が増えるだけだった (07-19 に 6 件)。
+  #   - 通知が terraform-apply job の中にあったので、**deploy job の失敗は
+  #     一切通知されなかった**。実測: 08-07 と 07-24 x2 の failure run は
+  #     いずれも terraform-apply が success / deploy が failure で、対応する
+  #     Issue が存在しない。
+  #
+  # 現行は ci.yml の `nightly-result` と同じ形にする。失敗したら Issue を立て
+  # (既に開いていればコメントを足し)、復旧したら同じ Issue に復旧を記録して
+  # 閉じる。**自己解消する**ので、開いている Issue の存在そのものが
+  # 「いま Deploy Production が赤」を意味する。
+  #
+  # 強制: `__tests__/unit/architecture/status-notifier-self-resolves.test.ts`
+  deploy-result:
+    name: Deploy result notice
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [terraform-apply, deploy]
+    # `always()` が無いと **緑の run で job ごと skip され、閉じる経路が消える**。
+    #
+    # repository / ref ガードは前段 job と同一にする。ここだけ緩めると、main
+    # 以外の ref へ dispatch したときに前段が両方 skipped になり、それを
+    # 「緑」と読んで**開いている Issue を閉じてしまう**。
+    if: ${{ always() && github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Report deploy result
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て上の env 経由で受け取る。
+          #
+          # **title に SHA や run id を混ぜてはならない。** 混ぜると復旧 run が
+          # 別 title になり、既存 Issue へ辿り着けず増える一方になる（旧実装）。
+          title="Deploy Production failure"
+          # **この workflow が作った Issue だけ**を対象にするための marker。
+          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
+          # 立てたときにそれへ失敗コメントを足し、緑になった瞬間に**他人の Issue を
+          # 閉じて**しまう。marker は本文に埋めるので、誰かがタイトルを変えても
+          # （marker が残る限り）追跡が切れない。
+          marker="<!-- deploy-production-status: do not remove (owned by deploy-production.yml / deploy-result) -->"
+
+          # **「failure でない = 緑」ではない。** `needs.<job>.result` は failure 以外に
+          # cancelled を取る。timeout で打ち切られた job を緑と読まないよう、
+          # 「success でも skipped でもないものは失敗」と裏返す。値の名前を列挙
+          # しないので、将来 result に新しい値が増えても取りこぼさない。
+          #
+          # `skipped` の明示除外は必須。terraform-apply が失敗すると deploy は
+          # skipped になるが、その run は terraform-apply の failure で既に赤と
+          # 判定される。除外を外すと復旧不能な二重計上になる。
+          failed=$(printf '%s' "$NEEDS_JSON" \
+            | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
+
+          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
+          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
+          existing=$(gh issue list --state open --limit 100 --json number,body \
+            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
+
+          if [ -n "$failed" ]; then
+            report=$(printf '%s\n' \
+              "Deploy Production (workflow_dispatch) が失敗しました。" \
+              "" \
+              "- run: $RUN_URL" \
+              "- commit: \`$COMMIT_SHA\`" \
+              "- 失敗した job: $failed" \
+              "" \
+              "失敗している間、Cloud Run の新 revision は出ません（build / migrate も走らない）。" \
+              "" \
+              "1. 上の run の log で原因を特定する" \
+              "2. 修正 PR を main へ merge する" \
+              "3. Actions → Deploy Production を手動実行する" \
+              "" \
+              "次に緑になった run が本 Issue を自動で閉じます（手で閉じる必要はありません）。")
+            if [ -n "$existing" ]; then
+              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
+              # 重ねる必要が無い）。
+              gh issue comment "$existing" --body "$report"
+              echo "commented on #$existing"
+            else
+              # label は人が絞り込むための補助。追跡は marker が持つので、
+              # label 作成が失敗しても契約は壊れない。
+              gh label create deploy-broken \
+                --description "Deploy Production failure (self-resolving; owned by deploy-result)" \
+                --color "b60205" 2>/dev/null || true
+              gh issue create --title "$title" --label deploy-broken \
+                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
+              echo "created a new issue"
+            fi
+            exit 0
+          fi
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Deploy Production が復旧しました（$RUN_URL）。"
+            gh issue close "$existing"
+            echo "closed #$existing"
+          else
+            echo "deploy green, nothing to report"
+          fi

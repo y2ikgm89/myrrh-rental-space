@@ -25,7 +25,7 @@ merge は deploy を起こさなくなった。この結合はもう成立しな
 2. `.github/branch-protection.json` と live branch protection から
    `Main Terraform Health` を除去
 3. 失敗の可視化は Deploy Production 側に残す
-   （`Open apply failure issue` → `deploy-broken` label）
+   （`deploy-result` job → `deploy-broken` label）
 4. PR 時の `Terraform / validate` は infra の required check として維持
 
 ## Rejected Alternatives
@@ -39,16 +39,18 @@ merge は deploy を起こさなくなった。この結合はもう成立しな
 
 ## 復旧モデル
 
-| 状況                                             | 手順                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------- |
-| 手動 Deploy Production が terraform-apply で失敗 | 修正を PR にして main へ merge し、Deploy Production を再実行   |
-| 直近 deploy の状態を知りたい                     | Actions → Deploy Production の run 履歴 / `deploy-broken` issue |
+| 状況                                             | 手順                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------ |
+| 手動 Deploy Production が terraform-apply で失敗 | 修正を PR にして main へ merge し、Deploy Production を再実行            |
+| 直近 deploy の状態を知りたい                     | `deploy-broken` issue が開いていれば赤（`deploy-result` が自己解消する） |
 
 ## Related
 
-- `.github/workflows/deploy-production.yml`（`Open apply failure issue` step が
-  この ADR を参照する）
+- `.github/workflows/deploy-production.yml`（`deploy-result` job が失敗を
+  Issue 化し、復旧時に自分で閉じる）
 - `.github/workflows/terraform-drift.yml`（nightly の drift 検出）
 - 該当 gate: `__tests__/unit/architecture/deploy-production-workflow.test.ts`
   （廃止済みであることを固定する）
+- 該当 gate: `__tests__/unit/architecture/status-notifier-self-resolves.test.ts`
+  （通知が自己解消することを固定する）
 - [ADR 0001](0001-single-env-terraform.md) — 単一 env 構成
