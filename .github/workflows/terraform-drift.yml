@@ -23,7 +23,8 @@ name: Terraform Drift Detection
 # 通知:
 #   - GITHUB_STEP_SUMMARY に diff 全文を貼る (Actions run 画面で即読める)
 #   - drift.plan (binary) + drift.txt (text) を artifact 化 (30d retention)
-#   - exit 2 (diff detected) → gh issue create で auto-open (label: drift-detection)
+#   - drift の有無は `drift-result` job が Issue 1 本で追跡する。開いていれば
+#     「いま drift がある (または drift 検知が壊れている)」、閉じていれば緑。
 
 on:
   schedule:
@@ -35,11 +36,12 @@ on:
 
 # id-token: WIF impersonation (terraform-runner SA) — read-only plan のみ
 # contents: read: checkout
-# issues: write: drift 検知時に gh issue create で auto-open
+#
+# `issues: write` は通知を持つ `drift-result` job 側だけに置く。plan を走らせる
+# job に Issue 書き込み権限を渡さない。
 permissions:
   contents: read
   id-token: write
-  issues: write
 
 env:
   TF_VERSION: 1.15.8
@@ -59,6 +61,12 @@ jobs:
     if: github.repository == 'y2ikgm89/myrrh-rental-space'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    # 判定材料を後段の `drift-result` job へ渡す。job が途中で落ちた場合は空に
+    # なるが、その run は `needs.drift-detect.result` 側で赤と判定される。
+    outputs:
+      exitcode: ${{ steps.plan.outputs.exitcode }}
+      changes: ${{ steps.render.outputs.changes }}
 
     steps:
       - name: Checkout
@@ -127,9 +135,19 @@ jobs:
           fi
 
       - name: Render plan to text
+        id: render
         working-directory: ${{ env.TF_WORKING_DIR }}
         shell: bash
-        run: terraform show -no-color drift.plan > drift.txt
+        run: |
+          set -euo pipefail
+          terraform show -no-color drift.plan > drift.txt
+          # "Plan: N to add, M to change, K to destroy." を Issue 本文用に取り出す。
+          # drift 無し (exit 0) の run ではこの行が出ないので空になる。
+          #
+          # `grep -m1` を使い**パイプを挟まない**。`grep | head -n 1` は
+          # pipefail 下で SIGPIPE (rc=141) を拾いうる。
+          changes="$(grep -m1 -E '^Plan:' drift.txt || true)"
+          echo "changes=${changes}" >> "$GITHUB_OUTPUT"
 
       - name: Upload drift artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -157,65 +175,131 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # exit 2 (drift detected) 時のみ Issue を auto-open。
-      # gh CLI は runner に pre-installed。GH_TOKEN は `permissions: issues: write`
-      # で発行された `github.token` を使う (secrets.GITHUB_TOKEN と等価)。
-      #
-      # drift-detection label は初回実行時に存在しない可能性があるため、
-      # `gh label create ... || true` で idempotent に用意してから issue 作成。
-      #
-      # Issue body 上限は 65,536 char (GitHub API 仕様)。drift.txt が大きい
-      # ケース (44 resource 全 recreate 相当) でも安全に収まるよう先頭 55,000 char
-      # に truncate し、超過分は artifact 参照へ誘導する。
-      - name: Open drift issue
-        if: steps.plan.outputs.exitcode == '2'
-        working-directory: ${{ env.TF_WORKING_DIR }}
+  # drift の状態を **人が見える場所へ出す** 唯一の経路。
+  #
+  # 旧実装は `drift-detect` job 内の `Open drift issue` step で、`exit 2` の
+  # ときに Issue を開くだけだった。そのため:
+  #
+  #   - 閉じる経路が無いので、drift が解消しても Issue が残る。
+  #   - title が `[drift] YYYY-MM-DD ...` と日付入りで重複抑止も無いため、
+  #     drift が続けば**毎晩 1 件ずつ増える**。
+  #   - `drift-detect` job 自体の失敗 (plan error / 認証切れ) は
+  #     `steps.plan.outputs.exitcode == '2'` に一致しないので **完全に無通知**
+  #     だった。drift の有無が分からない状態こそ知りたいのに黙っていた。
+  #
+  # deploy-production.yml の `deploy-result` / ci.yml の `nightly-result` と
+  # 同じ形にする。**自己解消する**ので、開いている Issue の存在そのものが
+  # 「いま drift がある、または drift 検知が壊れている」を意味する。
+  #
+  # 本文に plan 全文を貼らない。1 晩 1 Issue から「1 本の Issue にコメント追記」
+  # へ変わったので、毎晩 55,000 字を積むと読めなくなる。diff 全文は run の
+  # Summary tab と artifact にあるので、そこへリンクする。
+  #
+  # 強制: `__tests__/unit/architecture/status-notifier-self-resolves.test.ts`
+  drift-result:
+    name: Drift result notice
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [drift-detect]
+    # `always()` が無いと **drift の無い run で job ごと skip され、閉じる経路が
+    # 消える**。repository ガードは drift-detect と同一にする。ここだけ緩めると
+    # fork 側の scheduled 誤発火で前段が skipped になり、それを「緑」と読んで
+    # 開いている Issue を閉じてしまう。
+    if: ${{ always() && github.repository == 'y2ikgm89/myrrh-rental-space' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Report drift result
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          PLAN_EXITCODE: ${{ needs.drift-detect.outputs.exitcode }}
+          PLAN_CHANGES: ${{ needs.drift-detect.outputs.changes }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-          # Idempotent label create (label が既存でも fail しないよう `|| true`)
-          gh label create drift-detection \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Terraform state drift detected by nightly cron" \
-            --color "d73a4a" 2>/dev/null || true
 
-          TODAY="$(date -u +%Y-%m-%d)"
-          # "Plan: N to add, M to change, K to destroy." 行から件数を抽出。
-          # ゼロ件でこの step が走ることは exit code guard で防いでいるが、
-          # parse 失敗時も title は生成できるよう fallback を用意。
-          CHANGES_LINE="$(grep -E '^Plan:' drift.txt | head -n 1 || true)"
-          if [ -z "${CHANGES_LINE}" ]; then
-            CHANGES_LINE="Plan: (unable to parse change count from drift.txt)"
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て上の env 経由で受け取る。
+          #
+          # **title に日付や run id を混ぜてはならない。** 混ぜると解消 run が
+          # 別 title になり既存 Issue へ辿り着けず、増える一方になる（旧実装）。
+          title="Terraform drift detected"
+          # **この workflow が作った Issue だけ**を対象にするための marker。
+          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
+          # 立てたときにそれへコメントを足し、緑になった瞬間に**他人の Issue を
+          # 閉じて**しまう。
+          marker="<!-- terraform-drift-status: do not remove (owned by terraform-drift.yml / drift-result) -->"
+
+          # 赤は 2 種類ある。どちらも「いま緑ではない」ので同じ Issue で追跡する。
+          #
+          #   1. drift 検知そのものが失敗した — drift の有無が **分からない**
+          #   2. plan が exit 2 を返した — drift が **ある**
+          #
+          # 1 の判定は「success でも skipped でもないものは失敗」と裏返す。
+          # `== "failure"` だけを見ると、timeout で打ち切られた job (cancelled) を
+          # 緑と読んでしまう。
+          broken=$(printf '%s' "$NEEDS_JSON" \
+            | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
+
+          if [ -n "$broken" ]; then
+            report=$(printf '%s\n' \
+              "**drift 検知そのものが失敗しました。** drift があるかどうかは分かりません。" \
+              "" \
+              "- run: $RUN_URL" \
+              "- 失敗した job: $broken" \
+              "" \
+              "run の log で原因を特定してください（plan error / WIF 認証 / provider API のいずれか）。" \
+              "次に drift 無しで完走した run が本 Issue を自動で閉じます。")
+          elif [ "$PLAN_EXITCODE" = "2" ]; then
+            report=$(printf '%s\n' \
+              "**Terraform drift を検知しました。**" \
+              "" \
+              "- ${PLAN_CHANGES:-Plan: (件数を drift.txt から読み取れませんでした)}" \
+              "- run: $RUN_URL — Summary tab に diff 全文があります" \
+              "- artifact: \`terraform-drift-$RUN_ID\`（30d retention / \`drift.txt\`）" \
+              "" \
+              "1. Summary tab か artifact の \`drift.txt\` で差分を確認する" \
+              "2. Console / gcloud での正当な変更が Terraform 側に無いなら、module へ足す PR を出す" \
+              "3. 意図しない変更なら Console / gcloud で戻すか、次の apply で上書きする" \
+              "" \
+              "次に drift の無い run が本 Issue を自動で閉じます（手で閉じる必要はありません）。")
+          else
+            report=""
           fi
-          TITLE="[drift] ${TODAY} terraform plan detected changes"
 
-          BODY_FILE="$(mktemp)"
-          {
-            echo "**Drift detected** by scheduled Terraform plan (\`${TODAY}\` UTC)."
-            echo ""
-            echo "- ${CHANGES_LINE}"
-            echo "- Workflow run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- Artifact (30d retention): \`terraform-drift-${GITHUB_RUN_ID}\`"
-            echo ""
-            echo "## Investigation"
-            echo ""
-            echo "1. Download the artifact from the workflow run above and inspect \`drift.txt\`."
-            echo "2. If a legitimate Console/gcloud change is missing from Terraform, add it to the module (and open a PR to reconcile config)."
-            echo "3. If unauthorized, revert via Console/gcloud or \`terraform apply\` on next PR merge."
-            echo "4. Close this issue once the state reconciles (next nightly run will confirm no drift)."
-            echo ""
-            echo "## Plan output (truncated to 55,000 chars)"
-            echo ""
-            echo '```hcl'
-            head -c 55000 drift.txt
-            echo ''
-            echo '```'
-          } > "${BODY_FILE}"
+          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
+          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
+          existing=$(gh issue list --state open --limit 100 --json number,body \
+            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
 
-          gh issue create \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${TITLE}" \
-            --label "drift-detection" \
-            --body-file "${BODY_FILE}"
+          if [ -n "$report" ]; then
+            if [ -n "$existing" ]; then
+              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
+              # 重ねる必要が無い）。
+              gh issue comment "$existing" --body "$report"
+              echo "commented on #$existing"
+            else
+              # label は人が絞り込むための補助。追跡は marker が持つので、
+              # label 作成が失敗しても契約は壊れない。
+              gh label create drift-detection \
+                --description "Terraform state drift (self-resolving; owned by drift-result)" \
+                --color "d73a4a" 2>/dev/null || true
+              gh issue create --title "$title" --label drift-detection \
+                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
+              echo "created a new issue"
+            fi
+            exit 0
+          fi
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Terraform drift が解消しました（$RUN_URL）。"
+            gh issue close "$existing"
+            echo "closed #$existing"
+          else
+            echo "no drift, nothing to report"
+          fi

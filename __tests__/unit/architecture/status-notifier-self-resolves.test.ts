@@ -26,9 +26,9 @@
  * 3. `gh issue create --title` に渡る値が run ごとに変わらない — SHA や run id
  *    を混ぜると復旧 run が既存 Issue に辿り着けない
  *
- * `toJSON(needs)` を持たない通知は対象外。例えば `terraform-drift.yml` は
- * plan の exit code だけを見る単独 job で、「いま緑か」を知らない。集計して
- * いない job に閉じる責務は負わせられない。
+ * `toJSON(needs)` を持たない job は対象外。集計していない job は「いま緑か」を
+ * 知らないので、閉じる責務を負わせられない。**現時点で該当する job は無い** —
+ * Issue を立てる job は 3 つとも needs を集計する形に揃えてある。
  *
  * # 粗さ
  *
@@ -182,7 +182,7 @@ const notifiers = collectNotifiers();
 describe("status notifier の自己解消契約", () => {
   test("走査が status notifier を実際に見つけている", () => {
     // 走査が壊れて 0 件になると、以降の gate が空振りで緑になる。
-    expect(notifiers.length).toBeGreaterThanOrEqual(2);
+    expect(notifiers.length).toBeGreaterThanOrEqual(3);
 
     const names = notifiers.map(
       (notifier) => `${notifier.source} :: ${notifier.job}`,
@@ -190,6 +190,9 @@ describe("status notifier の自己解消契約", () => {
     expect(names).toContain(".github/workflows/ci.yml :: nightly-result");
     expect(names).toContain(
       ".github/workflows/deploy-production.yml :: deploy-result",
+    );
+    expect(names).toContain(
+      ".github/workflows/terraform-drift.yml :: drift-result",
     );
   });
 
@@ -252,32 +255,38 @@ describe("契約判定の見本", () => {
 });
 
 /**
- * 「notifier が他の全 job を見る」は **deploy-production.yml 限定**の要求。
- * ci.yml の `nightly-result` は schedule での結果だけを見るので、schedule では
- * 走らない job（`docs` / `bundle-analysis` / `lighthouse-ci` /
- * `bundle-size-diff`）を意図的に needs から外している。全 workflow へ一般化
- * すると、その正しい除外を落としてしまう。
+ * 「notifier が他の全 job を見る」は、**全 job が同じ trigger で走る workflow**
+ * だけに課せる要求。下の 2 つがそれで、除外してよい job が構造的に無い。
  *
- * deploy-production.yml は全 job が同じ workflow_dispatch で走るため、除外の
- * 余地が無い。取りこぼしは実際に起きている（08-07 / 07-24 x2 の deploy 失敗が
- * 無通知だった）ので、job を足したときに needs へ足し忘れる形をここで止める。
+ * ci.yml は該当しない。`nightly-result` は schedule での結果を見るので、
+ * schedule では走らない job（`docs` / `bundle-analysis` / `lighthouse-ci` /
+ * `bundle-size-diff`）を意図的に needs から外している。一般化すると、その
+ * 正しい除外を落としてしまう。
+ *
+ * 取りこぼしは実際に起きている（deploy-production.yml で 08-07 と 07-24 x2 の
+ * deploy 失敗が無通知だった。通知が terraform-apply job の中にあったため）。
+ * job を足したときに needs へ足し忘れる形をここで止める。
  */
-describe("deploy-production.yml の通知は全 job を見る", () => {
-  test("notifier の needs が他の全 job を含む", () => {
-    const jobs = readWorkflowJobs("deploy-production.yml");
-    expect(jobs.size).toBeGreaterThan(1);
+describe("全 job が同じ trigger で走る workflow の通知は全 job を見る", () => {
+  const workflowFileNames = ["deploy-production.yml", "terraform-drift.yml"];
 
-    const notifier = notifiers.find(
-      (candidate) =>
-        candidate.source === ".github/workflows/deploy-production.yml",
-    );
-    expect(notifier).toBeDefined();
+  test.each(workflowFileNames)(
+    "%s の notifier が他の全 job を含む",
+    (fileName) => {
+      const jobs = readWorkflowJobs(fileName);
+      expect(jobs.size).toBeGreaterThan(1);
 
-    const watched = new Set(notifier?.needs ?? []);
-    const unwatched = [...jobs.keys()].filter(
-      (name) => name !== notifier?.job && !watched.has(name),
-    );
+      const notifier = notifiers.find(
+        (candidate) => candidate.source === `.github/workflows/${fileName}`,
+      );
+      expect(notifier).toBeDefined();
 
-    expect(unwatched).toEqual([]);
-  });
+      const watched = new Set(notifier?.needs ?? []);
+      const unwatched = [...jobs.keys()].filter(
+        (name) => name !== notifier?.job && !watched.has(name),
+      );
+
+      expect(unwatched).toEqual([]);
+    },
+  );
 });
