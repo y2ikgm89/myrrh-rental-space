@@ -168,7 +168,7 @@
     "picomatch": "^4.0.4",
     "tmp": "^0.2.7",
     "playwright-core": "~1.62.1",
-    "brace-expansion": "^5.0.8",
+    "brace-expansion": "^5.0.9",
     "uuid": "^11.1.1",
     "ws": "^8.21.0",
     "happy-dom": "^20.11.0",
