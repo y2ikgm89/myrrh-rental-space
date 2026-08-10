@@ -46,6 +46,7 @@
  */
 
 import pLimit from "p-limit";
+import { noDomBunfigArgs } from "./test-runner-bunfig";
 import { resolveTestConcurrency } from "./test-runner-concurrency";
 import {
   findSelectedSerialDbTests,
@@ -192,9 +193,13 @@ async function runOne(file: string): Promise<FileResult> {
     Number.isFinite(timeoutOverride) && timeoutOverride > 0
       ? timeoutOverride
       : DEFAULT_TEST_TIMEOUT_MS;
+  // DOM 不要のツリーは JSDOM preload 抜きの bunfig で起動する（判定と実測は
+  // `test-runner-bunfig.ts` の docstring）。**等号形でしか効かない**ので、
+  // フラグの組み立てはあちらの定数に閉じ込めてある。
   const bunTestArgs = [
     "bun",
     "test",
+    ...noDomBunfigArgs(file),
     "--conditions",
     "production",
     "--timeout",
