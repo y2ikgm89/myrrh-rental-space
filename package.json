@@ -155,7 +155,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "pg": "^8.22.0",
     "protobufjs": "^8.7.1",
-    "minimatch": "^10.2.5",
+    "minimatch": "^10.2.6",
     "fast-uri": "^3.1.5",
     "postcss": "^8.5.18",
     "hono": "^4.12.34",
