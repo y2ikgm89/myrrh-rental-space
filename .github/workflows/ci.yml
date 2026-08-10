@@ -240,6 +240,13 @@ jobs:
 
       # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容。
       #
+      # **`--prod` は付けない。** 付けると dev 依存ツリー（`@lhci/cli` / `typedoc` /
+      # `react-email` / `eslint-plugin-react-hooks`）の advisory を一切見なくなる。
+      # 実測（2026-08-11）: `--prod` 付きが "No vulnerabilities found" の状態で
+      # 素の `bun audit` は 9 件（high 4）を報告していた。`docs/dependency-overrides.md`
+      # の pin 表には元から dev 専用 pin（`minimatch` / `basic-ftp` 等）が入っており、
+      # 「dev も潰す」が運用の実態。gate だけがそれより狭く、差分が無言で溜まっていた。
+      #
       # `set -euo pipefail` は必須。`run:` の既定 shell は非 Windows で `bash -e {0}` と
       # 定義されており `-o pipefail` を含まない（`shell: bash` を明示した場合のみ
       # `bash --noprofile --norc -eo pipefail {0}` になる）。pipefail 無しでは
@@ -254,7 +261,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: |
           set -euo pipefail
-          bun audit --prod --audit-level=high 2>&1 | tee audit-report.txt
+          bun audit --audit-level=high 2>&1 | tee audit-report.txt
 
       - name: Upload audit report
         if: needs.changes.outputs.code == 'true' && always()
