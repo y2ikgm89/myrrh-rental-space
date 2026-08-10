@@ -85,7 +85,12 @@ terraform {
     }
     # Cloudflare provider — Phase 8 (myrrh-jp.com zone を Terraform 化).
     #
-    # `~> 5` = v5 major に pin (5.x の範囲で minor bump は許可、v6 major bump は拒否)。
+    # `~> 5.22` = v5 major に pin (5.x の範囲で minor bump は許可、v6 major bump は拒否)。
+    #
+    # **`~> 5` と書かない。** 意味は同じだが、Renovate の `rangeStrategy: "bump"` は
+    # 1 要素の `~> 5` を bump できず `>= 5.23.0` へ書き換えてしまい、**上限が消える**
+    # (2026-08-11、PR #2142 で実際に生成された)。`google` 側の `~> 7.40` のように
+    # 2 要素で書いておけば `~> 5.23` の形で bump され、v6 拒否が維持される。
     # v5 は v4 からの完全な breaking rewrite:
     #   - 全 resource が個別属性ベースに分解 (例:
     #     `cloudflare_zone_settings_override` → `cloudflare_zone_setting × N`)
@@ -97,7 +102,7 @@ terraform {
     # 参考: https://developers.cloudflare.com/terraform/advanced-topics/version-5-upgrade/
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5"
+      version = "~> 5.22"
     }
   }
 }
