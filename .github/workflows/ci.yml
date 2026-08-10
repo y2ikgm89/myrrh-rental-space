@@ -551,8 +551,14 @@ jobs:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
 
+      # `--fail-on-flaky-tests` は nightly / opt-in の広域 E2E にだけ付ける。
+      # CI は retries を持つので、1 回目に落ちて 2 回目に通ったテストは緑になる。
+      # それは required check（smoke-e2e）では正しい挙動 — merge を止めたくない。
+      # だが広域 E2E は「壊れかけを見つける」ための夜間実行なので、隠れた flake を
+      # 可視化する側に倒す。公式 CLI: "Fail if any test is flagged as flaky"。
+      # required の smoke-e2e には**付けない**（付けると flake で merge が止まる）。
       - name: Run E2E tests
-        run: bunx playwright test
+        run: bunx playwright test --fail-on-flaky-tests
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -1087,8 +1093,18 @@ jobs:
           # 閉じて**しまう。marker は本文に埋めるので label の事前作成が要らず、
           # 誰かがタイトルを変えても（marker が残る限り）追跡が切れない。
           marker="<!-- nightly-ci-status: do not remove (owned by ci.yml / nightly-result) -->"
+          # **「failure でない = 緑」ではない。** `needs.<job>.result` は failure 以外にも
+          # cancelled を取る。timeout で打ち切られた job や、実行中に停止された job は
+          # cancelled になるので、`== "failure"` だけを見ると一番知りたい失敗を緑と読む。
+          #
+          # 判定は「success でも skipped でもないものは失敗」と裏返す。値の名前を
+          # 列挙しないので、将来 result に新しい値が増えても取りこぼさない。
+          #
+          # `skipped` の明示除外は必須。schedule では build が skip される
+          # （build の if は pull_request / push-main 限定）。除外を外すと nightly が
+          # 毎晩赤になる。
           failed=$(printf '%s' "$NEEDS_JSON" \
-            | jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")')
+            | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
           # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
           # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
