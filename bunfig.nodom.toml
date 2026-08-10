@@ -1,0 +1,5 @@
+# DOM を必要としないテスト用の bunfig。
+[test]
+preload = ["./__tests__/setup.ts"]
+root = "./__tests__"
+timeout = 5000
