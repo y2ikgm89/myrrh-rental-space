@@ -30,6 +30,7 @@
 | [0001](0001-single-env-terraform.md)                      | Single-env Terraform (prod only)                 | Accepted | 2026-07-14 |
 | [0002](0002-abolish-main-terraform-health-gate.md)        | Main Terraform Health gate の廃止                | Accepted | 2026-07-25 |
 | [0003](0003-stay-on-deprecated-react-email-components.md) | deprecated な `@react-email/components` に留まる | Accepted | 2026-08-11 |
+| [0004](0004-accept-soft-404-under-streaming.md)           | streaming 下の soft 404 を受け入れる             | Accepted | 2026-08-11 |
 
 ## Template
 
