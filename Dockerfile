@@ -147,41 +147,31 @@ COPY --from=builder /app/public ./public
 RUN mkdir -p .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# @prisma/client runtime（WASM ランタイムエンジン）
-COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-# Cloud Run runner で未参照の Prisma client 成果物を削除:
-# - PostgreSQL 以外の WASM query_compiler（adapter-pg は postgresql のみ dynamic import）
-# - source maps（production で不要）
-# - Edge runtime 用 wasm-compiler-edge（Cloud Run + Bun では未参照）
-# - Browser stub（runtime/index-browser.* と root の index-browser.js / edge.*）
-# - generator-build/（`prisma generate` 専用、runner で未起動）
+# Prisma runtime は standalone のトレースが既に含んでいる。**node_modules を手で
+# 足さない。** Next.js 公式は standalone を「node_modules を入れずにそれ単体で
+# デプロイできるもの」と定義しており、取りこぼしがあるときの公式の直し方も
+# `outputFileTracingIncludes` であって Dockerfile の COPY ではない。
 #
-# prune は Prisma 内部の runtime ファイル名（無保証・minor bump で変わりうる）に依存する。
-# 末尾の `test -f` で、生成 client が dynamic import する postgresql query_compiler の存在を
-# ビルド時に保証する。将来 Prisma がレイアウトを変えて必要ファイルが消えた場合、silent に
-# 壊れた image を出荷せず**ビルドを fail**させて顕在化させるためのガード。
+# 実測（Prisma 7.9.1 / adapter-pg / moduleFormat cjs）: `.next/standalone/node_modules/@prisma`
+# には client（package.json + runtime/client.js + query_compiler_fast_bg.postgresql の
+# .js と .wasm-base64.js）と client-runtime-utils だけが入る = 5MB。生成 client の
+# dynamic import は 3 つとも**文字列リテラル**なので nft が追える。adapter-pg 側は
+# server bundle に取り込まれ、その `require("pg")` の先だけがトレースされる。
 #
+# 以前はここで `node_modules/@prisma` を丸ごと COPY してから未参照ファイルを
+# `rm` していたが、(1) CLI 専用の studio-core / engines / dev 等 95MB を持ち込み、
+# (2) レイヤーは加算なので後段の `rm` は image を 1 バイトも縮めていなかった
+# （COPY レイヤー 179MB に対し prune レイヤーは 24.6kB の whiteout のみ）。
+#
+# 下の `test -f` は「トレースが落ちたら image を出荷せずビルドを fail させる」ガード。
 # **拡張子は schema.prisma の `moduleFormat` に従属する**（generator が
 # cjs → `.js` / esm → `.mjs` を specifier に焼き込む）。現在は cjs なので `.js` を検査する。
-# generator を esm に戻すなら、この 2 行も `.mjs` に戻すこと。
 # 整合は __tests__/unit/architecture/prisma-client-module-format.test.ts が機械照合する。
-RUN find ./node_modules/@prisma/client/runtime \
-    \( -name 'query_compiler_*.cockroachdb.*' \
-    -o -name 'query_compiler_*.mysql.*' \
-    -o -name 'query_compiler_*.sqlite.*' \
-    -o -name 'query_compiler_*.sqlserver.*' \
-    -o -name '*.map' \
-    -o -name 'index-browser.*' \
-    -o -name 'wasm-compiler-edge.*' \) \
-    -delete && \
-    rm -rf ./node_modules/@prisma/client/generator-build && \
-    rm -f ./node_modules/@prisma/client/edge.js \
-          ./node_modules/@prisma/client/edge.d.ts \
-          ./node_modules/@prisma/client/index-browser.js && \
+RUN test -f ./node_modules/@prisma/client/runtime/client.js && \
     test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.js && \
     test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.js
-# runner は Cloud Run service 専用。ランタイムは @prisma/client（上でコピー）＋ generated のみ
-# 参照し、Prisma CLI（node_modules/prisma）も prisma/ ソース（schema / migrations）も使わない。
+# runner は Cloud Run service 専用。Prisma CLI（node_modules/prisma）も prisma/ ソース
+# （schema / migrations）も使わない。
 # migrate deploy は専用の migrator ステージ（上記 Stage 4・完全な node_modules）が担う。
 
 USER nextjs
