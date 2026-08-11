@@ -119,6 +119,8 @@ function TransferAccountFormDialog({
     }
   }, [lastResult, isEdit, onOpenChange, router]);
 
+  const formErrors = form.errors;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -207,6 +209,16 @@ function TransferAccountFormDialog({
             />
             <Label htmlFor={fields.isActive.id}>有効にする</Label>
           </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
         </form>
         <DialogFooter>
           <Button

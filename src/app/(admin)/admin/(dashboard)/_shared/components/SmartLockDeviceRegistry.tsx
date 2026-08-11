@@ -498,6 +498,8 @@ function SmartLockDeviceDialog({
     }
   }, [lastResult, router, isEdit]);
 
+  const formErrors = form.errors;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -653,6 +655,16 @@ function SmartLockDeviceDialog({
               </p>
             </div>
           </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
         </form>
 
         <DialogFooter>

@@ -1,3 +1,53 @@
+/**
+ * 管理画面の conform フォームが「form-level エラー」を画面に出すことを強制する gate。
+ *
+ * ## なぜ
+ *
+ * `executeConformMutation` は handler が失敗すると
+ * `submission.reply({ formErrors: [error] })` を返す。この `formErrors` は
+ * `fields.<name>.errors` には現れず、`form.errors` / `form.allErrors` を描画して
+ * いる場所にしか出ない。描画していないコンポーネントでは、権限拒否・機能制限
+ * (`assertAdminFeatureCreateAllowed`)・slug 重複といった保存失敗が
+ * **画面上まったく無言**になる。管理者からは「押したのに何も起きない」に見えるので
+ * 押し直され、重複登録や二重キャンセルに直結する。
+ *
+ * 実際に main へ入っていた: 予約シリーズのキャンセル失敗が無言だった件（修正済み）に
+ * 加えて、振込先口座 / 振込案内文 / お知らせバー / ナビゲーション / SNS リンク /
+ * 投稿カテゴリー / 投稿タグ / 臨時休業 / スマートロックデバイスの 9 フォーム。
+ * 同じ指摘が 2 回出たので gate 化する。
+ *
+ * ## 何を見るか
+ *
+ * 1. `useForm(` を呼ぶ `(admin)/admin/(dashboard)` 配下の .tsx が、
+ *    `form.errors` か `form.allErrors` を参照していること。
+ * 2. `form.errors && form.errors.length > 0` を JSX 条件へ直接書く形は、
+ *    その近傍に `role="alert"` / `aria-live` があること（支援技術への通知）。
+ *
+ * ## 直し方
+ *
+ * form の末尾に、既存 50 箇所と同じ形を足す:
+ *
+ * ```tsx
+ * const formErrors = form.errors;
+ * // ...
+ * {formErrors && formErrors.length > 0 && (
+ *   <div id={form.errorId} role="alert" className="...text-destructive">
+ *     {formErrors.join(", ")}
+ *   </div>
+ * )}
+ * ```
+ *
+ * ## 既知の粗さ
+ *
+ * grep 相当の静的検査で、AST も到達性も見ていない。
+ *
+ * - 2. は `const formErrors = form.errors;` を経由する形（本リポジトリの多数派）を
+ *   追えない。宣言と描画が離れるため近傍窓に入らない。全描画箇所へ `role="alert"` を
+ *   強制したくなったら、正規表現を広げずに AST へ移すこと
+ *   （`.claude/rules/architecture-gates.md`）。
+ * - 1. は `useForm` を呼ぶファイルと描画するファイルが分かれると誤検出する。
+ *   現在そのような分割は 0 件。
+ */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -32,6 +82,16 @@ function lineNumberFor(source: string, index: number): number {
   return source.slice(0, index).split(/\r?\n/u).length;
 }
 
+/** conform の `useForm` を駆動しているソースか。 */
+function drivesConformForm(source: string): boolean {
+  return source.includes("useForm(");
+}
+
+/** form-level エラー（`formErrors`）を描画に流しているソースか。 */
+function rendersFormLevelErrors(source: string): boolean {
+  return source.includes("form.errors") || source.includes("form.allErrors");
+}
+
 describe("admin form error notifications", () => {
   test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
     // 収集が黙って 0 件になると offenders も必ず空になり、緑が「違反なし」を
@@ -40,17 +100,69 @@ describe("admin form error notifications", () => {
     expect(collectTsxFiles(ADMIN_DASHBOARD_ROOT).length).toBeGreaterThan(20);
   });
 
+  test("判定関数は「落ちるべき形」と「落ちてはいけない形」を区別する", () => {
+    const missing = `
+      const [form, fields] = useForm({ lastResult });
+      return <form {...getFormProps(form)}>{fields.name.errors}</form>;
+    `;
+    const viaLocalConst = `
+      const [form, fields] = useForm({ lastResult });
+      const formErrors = form.errors;
+      return <form {...getFormProps(form)}>{formErrors?.join(", ")}</form>;
+    `;
+    const viaAllErrors = `
+      const [form] = useForm({ lastResult });
+      const messages = Object.values(form.allErrors).flat();
+      return <form {...getFormProps(form)}>{messages}</form>;
+    `;
+
+    expect(drivesConformForm(missing)).toBe(true);
+    expect(rendersFormLevelErrors(missing)).toBe(false);
+
+    expect(rendersFormLevelErrors(viaLocalConst)).toBe(true);
+    expect(rendersFormLevelErrors(viaAllErrors)).toBe(true);
+
+    // useForm を呼ばないコンポーネントは対象外
+    expect(drivesConformForm("return <p>{fields.name.errors}</p>;")).toBe(
+      false,
+    );
+  });
+
+  test("conform フォームは form-level エラーを描画に流している", () => {
+    expect(existsSync(ADMIN_DASHBOARD_ROOT)).toBe(true);
+
+    const drivers: string[] = [];
+    const violations: string[] = [];
+
+    for (const filePath of collectTsxFiles(ADMIN_DASHBOARD_ROOT)) {
+      const source = readFileSync(filePath, "utf8");
+      if (!drivesConformForm(source)) continue;
+
+      drivers.push(filePath);
+      if (!rendersFormLevelErrors(source)) {
+        violations.push(relative(ROOT, filePath));
+      }
+    }
+
+    // 走査規模の下限。`useForm` の呼び出しが検出できなくなると violations も
+    // 必ず空になるため、緑が「違反なし」を意味しなくなる。
+    expect(drivers.length).toBeGreaterThan(40);
+    expect(violations).toEqual([]);
+  });
+
   test("form-level Conform errors are announced to assistive technology", () => {
     expect(existsSync(ADMIN_DASHBOARD_ROOT)).toBe(true);
 
     const violations: string[] = [];
     const marker = "form.errors && form.errors.length > 0";
+    let markerHits = 0;
 
     for (const filePath of collectTsxFiles(ADMIN_DASHBOARD_ROOT)) {
       const source = readFileSync(filePath, "utf8");
       let index = source.indexOf(marker);
 
       while (index >= 0) {
+        markerHits += 1;
         const errorBlock = source.slice(index, index + 700);
         if (!/role="alert"|aria-live=/u.test(errorBlock)) {
           violations.push(
@@ -61,6 +173,9 @@ describe("admin form error notifications", () => {
       }
     }
 
+    // marker の書き方が変わると走査が 0 件になり、緑が「違反なし」を意味しなく
+    // なる。この形を使うファイルは現在 6 本。
+    expect(markerHits).toBeGreaterThan(3);
     expect(violations).toEqual([]);
   });
 });
