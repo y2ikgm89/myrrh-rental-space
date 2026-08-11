@@ -227,8 +227,12 @@ describe("TypeScript toolchain compatibility", () => {
     const buildCommand =
       dockerfile.match(/FROM builder-base AS builder(?<command>[\s\S]*?)\n\n#/u)
         ?.groups?.["command"] ?? "";
+    // runner ステージの base image は変わりうる（Bun → Node に変えた実績がある）。
+    // `FROM base AS runner` 決め打ちで拾うと、base を変えた瞬間に抽出が空文字列へ落ち、
+    // 下の `not.toContain` が**何も検査しないまま緑**になる。ステージ名だけで拾い、
+    // 空でないことを先に主張する。
     const runnerStageEnv =
-      dockerfile.match(/FROM base AS runner[\s\S]*?ENV (?<env>[\s\S]*?)\n\n/u)
+      dockerfile.match(/^FROM .* AS runner$[\s\S]*?ENV (?<env>[\s\S]*?)\n\n/mu)
         ?.groups?.["env"] ?? "";
 
     expect(buildStageEnv).not.toContain("BETTER_AUTH_SECRET");
@@ -237,6 +241,8 @@ describe("TypeScript toolchain compatibility", () => {
     expect(match?.[1]).toBeString();
     expect(match?.[1]).not.toBe("better-auth-secret-key");
     expect(match?.[1]?.length).toBeGreaterThanOrEqual(32);
+    // 抽出が空なら以降の主張は無意味なので、先に走査規模を固定する。
+    expect(runnerStageEnv).toContain("NODE_ENV=production");
     expect(runnerStageEnv).not.toContain("BETTER_AUTH_SECRET");
   });
 });
