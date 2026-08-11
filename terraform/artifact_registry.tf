@@ -54,11 +54,14 @@ resource "google_artifact_registry_repository" "docker" {
   #
   # **稼働中の image を消さないことの担保:**
   #
-  # 1. GCP の仕様で **KEEP は DELETE より優先される**。`keep-recent-versions`
+  # 1. **DELETE 側に年齢条件が付いている**（tag なし 7 日 / それ以外 30 日）。
+  #    keep 枠から溢れても、**30 日以内の image はどの DELETE 条件にも一致
+  #    しない**。これが主たる防御。
+  # 2. GCP の仕様で **KEEP は DELETE より優先される**。`keep-recent-versions`
   #    に入る version は、下の DELETE 条件に一致しても消えない。
-  # 2. image は Deploy Production でしか push されない（cloudbuild.yaml は
-  #    この workflow からのみ起動する）。したがって **最新 = 現行リビジョン**
-  #    であり、現行 image が「最新 30 件」から漏れることは無い。
+  # 3. image は Deploy Production でしか push されない（cloudbuild.yaml は
+  #    この workflow からのみ起動する）。デプロイは手動のみなので、放置期間に
+  #    勝手に version が増えて枠を押し出すことも無い。
   #
   # Cloud Run のリビジョンは image を digest で参照するため、参照先を消すと
   # スケールアップもロールバックも不能になる。上の 2 点がそれを防いでいる。
@@ -79,11 +82,31 @@ resource "google_artifact_registry_repository" "docker" {
     id     = "keep-recent-versions"
     action = "KEEP"
 
-    # 1 デプロイ 2 version なので、30 で概ね **15 デプロイ分**のロールバック余地。
-    # 減らすと削減額はほぼ変わらないまま復旧手段だけが痩せるので、ここは
-    # ケチらない。
+    # 1 デプロイ 2 version なので 10 = **5 デプロイ分**。
+    #
+    # **keep_count は主たる防御ではない。** 稼働中 image を守っているのは主に
+    # 下の DELETE 側の**年齢条件**で、keep 枠から溢れても 30 日以内の image は
+    # 消えない。keep_count はその二次的な保険。
+    #
+    # 深いロールバック余地を積む意味は薄い:
+    #
+    # - デプロイは `workflow_dispatch` の**手動のみ**（push-to-main の自動
+    #   デプロイは gate で禁止）。人が意図して実行し結果を見ているので、
+    #   「N デプロイ後に過去のデプロイが悪かったと気付く」事故が起きない。
+    #   戻す先は実質「いまやったデプロイの 1 つ前」。
+    # - migration があるので、image だけ戻しても DB は戻らない。破壊的 DDL を
+    #   含むデプロイ以降は image のロールバック自体が成立しない。
+    # - image には build 時に `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` が焼き込まれ
+    #   ている。世代を積むことは**鍵入り image の保管数を増やす**ことでもある。
+    #   鍵をローテートしても古い image の旧鍵は残る。
+    #
+    # 下限を決めているのは失敗デプロイのバースト。Cloud Build は Step 3 で
+    # push した後 Step 6 のデプロイで落ちうるので、**失敗しても image は増える**。
+    # 実測 2026-08-11: image を push した失敗の連続は **最大 2 回**（7/24）。
+    # 7/19 の 6 連続失敗は terraform-apply 段階で deploy job ごと skip されて
+    # いるため image を増やしていない。10 はその 2.5 倍の余裕にあたる。
     most_recent_versions {
-      keep_count = 30
+      keep_count = 10
     }
   }
 
