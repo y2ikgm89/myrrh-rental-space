@@ -30,7 +30,7 @@ interface UseKanaInputReturn {
     onCompositionStart: () => void;
     onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => void;
     onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onInput: (e: React.FormEvent<HTMLInputElement>) => void;
+    onInput: (e: React.InputEvent<HTMLInputElement>) => void;
   };
 }
 
@@ -138,7 +138,7 @@ export function useKanaInput(
     lastHiraganaRef.current = "";
   };
 
-  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+  const handleInput = (e: React.InputEvent<HTMLInputElement>) => {
     const target = e.currentTarget;
     const currentValue = target.value;
 

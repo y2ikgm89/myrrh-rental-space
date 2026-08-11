@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
   useId,
-  type FormEvent,
+  type SubmitEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -181,7 +181,7 @@ export function EmailSection({
   const flushEmailChipsDraft = (): boolean =>
     emailChipsRef.current?.flushDraft() ?? true;
 
-  const handleSubmitCapture = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmitCapture = (event: SubmitEvent<HTMLFormElement>) => {
     if (!flushEmailChipsDraft()) {
       event.preventDefault();
     }

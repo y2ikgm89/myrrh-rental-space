@@ -9,7 +9,7 @@
  * 合成して渡す。
  */
 
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type SubmitEvent } from "react";
 import { getFormProps } from "@conform-to/react";
 import { tv } from "tailwind-variants";
 import {
@@ -222,7 +222,7 @@ export function SettingsDialog<
 
   // Conform 公式パターンに合わせて実 <form> を置く。ただし server action submit
   // ではなく親 hook の imperative save を呼ぶため、native navigation は必ず止める。
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     injected.form.onSubmit(event);
     const preventedByConform = event.defaultPrevented;
     event.preventDefault();

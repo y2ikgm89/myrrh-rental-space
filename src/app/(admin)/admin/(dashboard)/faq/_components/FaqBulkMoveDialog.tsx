@@ -38,7 +38,7 @@ export function FaqBulkMoveDialog({
   const [targetCategoryId, setTargetCategoryId] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!targetCategoryId) {
       toast.error("移動先カテゴリを選択してください");
