@@ -45,7 +45,7 @@ export function AssignedPagesSection({
   const allSelected =
     pages.length > 0 && pages.every((page) => selectedIds.includes(page.id));
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     startTransition(async () => {
       const result = await setAssignedPageIdsForUserAction(userId, selectedIds);

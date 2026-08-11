@@ -54,7 +54,7 @@ export function FaqItemMoveDialog({
 
   const targetOptions = categories.filter((c) => c.id !== currentCategoryId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!targetCategoryId) {
       toast.error("移動先カテゴリを選択してください");

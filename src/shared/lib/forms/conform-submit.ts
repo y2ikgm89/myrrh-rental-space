@@ -1,4 +1,9 @@
 import { startTransition } from "react";
+// `FormEvent` は @types/react では deprecated（`SubmitEvent` へ誘導される）だが、
+// ここは conform の `useForm({ onSubmit })` に渡すハンドラで、conform 側の型が
+// `(event: React.FormEvent<HTMLFormElement>, context) => void` を要求する。
+// ハンドラ引数は反変なので `SubmitEvent` に狭めると代入できなくなる。
+// conform が型を更新するまでは合わせる。
 import type { FormEvent } from "react";
 
 /**
