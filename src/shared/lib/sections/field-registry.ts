@@ -488,7 +488,6 @@ export const field = {
    */
   dynamicSelect(label: string, opts: DynamicSelectOpts) {
     return z
-      .string()
       .uuid()
       .or(z.literal(""))
       .default("")

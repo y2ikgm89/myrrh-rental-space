@@ -14,7 +14,7 @@ export const googleServiceAccountCredentialsSchema = z
       .string({ error: "private_key が必要です" })
       .min(1, { error: "private_key が必要です" }),
   })
-  .passthrough();
+  .loose();
 
 export type GoogleServiceAccountCredentials = z.output<
   typeof googleServiceAccountCredentialsSchema
