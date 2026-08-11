@@ -47,8 +47,10 @@ export function TransferAccountsSection({
     shouldRevalidate: "onInput",
   });
 
+  // 成功の合図は `initialValue === null`（`resetForm: true` の reply は `status` を
+  // 持たない。同ファイル群の他セクションと同じ idiom）。
   useEffect(() => {
-    if (lastResult?.status === "success") {
+    if (lastResult && lastResult.initialValue === null) {
       toast.success("振込案内文を保存しました");
       router.refresh();
     }
