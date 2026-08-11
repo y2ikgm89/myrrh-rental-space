@@ -38,11 +38,32 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
       "COPY scripts/migration-preconditions.ts ./scripts/migration-preconditions.ts",
     );
     expect(dockerfile).toContain("COPY tsconfig.json ./");
-    expect(dockerfile).toContain("FROM base AS runner");
+    expect(dockerfile).toMatch(/FROM node:\d+-alpine AS runner/u);
     // runner must remain last so bare `docker build .` yields the service image
     expect(dockerfile.lastIndexOf("FROM deps AS migrator")).toBeLessThan(
-      dockerfile.lastIndexOf("FROM base AS runner"),
+      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
     );
+  });
+
+  test("runner は Node で起動する（Bun だと jsdom を読む経路が必ず落ちる）", () => {
+    // Next の require-hook が `Module._resolveFilename` を差し替えた状態の Bun では、
+    // ESM 内の `createRequire(import.meta.url)` 由来 require が parent 無しで渡り、
+    // `css-tree/lib/data-patch.js` の `require('../data/patch.json')` が
+    // `Cannot find module '../data/patch.json' from ''` で失敗する
+    // （oven-sh/bun#13076）。公開ページの本文が SSR HTML から消え、admin の Lexical
+    // 保存が例外になっていた実害がある。
+    //
+    // **base image と CMD の両方を見る。** `oven/bun` の `node` は bun 本体への
+    // symlink なので、base を戻したまま CMD だけ node にしても Bun が動いてしまう。
+    const dockerfile = read("Dockerfile");
+    const runnerStage = dockerfile.slice(
+      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
+    );
+
+    expect(runnerStage).toContain('CMD ["node", "server.js"]');
+    expect(runnerStage).not.toContain('CMD ["bun"');
+    // runner ステージが bun image から派生していないこと
+    expect(runnerStage).not.toMatch(/^FROM (base|oven\/bun)/mu);
   });
 
   test("Cloud Run Job が適用前チェックを migrate より前に実行する", () => {
