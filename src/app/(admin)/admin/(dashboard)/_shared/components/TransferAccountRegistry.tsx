@@ -104,8 +104,13 @@ function TransferAccountFormDialog({
     shouldRevalidate: "onInput",
   });
 
+  // 成功の合図は `initialValue === null`。`executeConformMutation` は成功時に
+  // `submission.reply({ resetForm: true })` を返し、その戻り値は
+  // `{ initialValue: null }` **だけ**で `status` を持たない
+  // （`__tests__/unit/lib/forms/conform-action.test.ts` が固定している）。
+  // `status === "success"` で見ると永久に発火しない。
   useEffect(() => {
-    if (lastResult?.status === "success") {
+    if (lastResult && lastResult.initialValue === null) {
       toast.success(
         isEdit ? "振込先口座を更新しました" : "振込先口座を追加しました",
       );

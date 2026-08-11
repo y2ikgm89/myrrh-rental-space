@@ -127,8 +127,12 @@ export function RecurringReservationForm({
     shouldRevalidate: "onInput",
   });
 
+  // 成功の合図は `initialValue === null`。`executeConformMutation` は成功時に
+  // `submission.reply({ resetForm: true })` を返し、その戻り値は `status` を持たない
+  // （`__tests__/unit/lib/forms/conform-action.test.ts` が固定している）。
+  // `status === "success"` で見ると、予約が実際に作られてもトーストも遷移も出ない。
   useEffect(() => {
-    if (!lastResult || lastResult.status !== "success") return;
+    if (!lastResult || lastResult.initialValue !== null) return;
     const message =
       "successMessage" in lastResult &&
       typeof lastResult.successMessage === "string"
