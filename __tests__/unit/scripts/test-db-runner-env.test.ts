@@ -41,7 +41,7 @@ describe("test DB runner env", () => {
     });
 
     expect(result).toEqual({
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       source: "default-local",
     });
   });
@@ -52,11 +52,13 @@ describe("test DB runner env", () => {
         selectedSerialDbTests: [
           "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
         ],
+        // 既定値と別 database 名にする。同じ文字列だと、実装が env を捨てて既定に
+        // 落ちていてもこのテストは通ってしまう。
         testDatabaseUrl:
-          "postgresql://postgres:postgres@localhost:5433/myrrh_test",
+          "postgresql://postgres:postgres@localhost:5433/myrrh_test_env",
       }),
     ).toEqual({
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test_env",
       source: "env",
     });
   });

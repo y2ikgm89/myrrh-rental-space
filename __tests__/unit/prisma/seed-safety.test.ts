@@ -6,8 +6,7 @@ import {
   looksLikeProductionDatabaseUrl,
 } from "../../../prisma/seed-safety";
 
-const LOCAL_URL =
-  "postgresql://postgres:postgres@localhost:5432/myrrh_rental?schema=public";
+const LOCAL_URL = "postgresql://postgres:postgres@localhost:5432/myrrh_rental";
 
 describe("seed-safety DATABASE_URL helpers", () => {
   test("isLocalhostDatabaseUrl accepts only loopback hosts", () => {

@@ -90,7 +90,7 @@ describe("seed のガードを外してよい相手かの判定", () => {
     // 127.0.0.1 表記・port 省略（既定 5432）も同じ相手。
     expect(
       targetsSetupManagedDatabase(
-        "postgresql://postgres:postgres@127.0.0.1:5432/myrrh_rental?schema=public",
+        "postgresql://postgres:postgres@127.0.0.1:5432/myrrh_rental?sslmode=disable",
         COMPOSE,
       ),
     ).toBe(true);
