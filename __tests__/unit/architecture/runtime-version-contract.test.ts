@@ -11,10 +11,6 @@ const bunCiInstallScript = readFileSync(
   "utf8",
 );
 const bunfig = readFileSync(join(process.cwd(), "bunfig.toml"), "utf8");
-const devcontainer = readFileSync(
-  join(process.cwd(), ".devcontainer", "devcontainer.json"),
-  "utf8",
-);
 const dockerfile = readFileSync(join(process.cwd(), "Dockerfile"), "utf8");
 
 function readPackageManagerBunVersion(): string {
@@ -57,18 +53,6 @@ function readDockerfileBunVersion(): string {
   return match.groups["version"];
 }
 
-function readDevcontainerBunVersion(): string {
-  const match = /^\s+"version": "(?<version>\d+\.\d+\.\d+)"$/mu.exec(
-    devcontainer,
-  );
-
-  if (!match?.groups?.["version"]) {
-    throw new Error("devcontainer must pin the Bun feature version as x.y.z");
-  }
-
-  return match.groups["version"];
-}
-
 describe("runtime version contract", () => {
   // Bun pin の SSoT は packageManager + engines.bun の2フィールド。
   // engines.bun 単独のドリフトは他のテストで検知できていなかった（Phase C 監査で判明）。
@@ -78,10 +62,6 @@ describe("runtime version contract", () => {
 
   test("Docker Bun runtime matches packageManager", () => {
     expect(readDockerfileBunVersion()).toBe(readPackageManagerBunVersion());
-  });
-
-  test("devcontainer Bun runtime matches packageManager", () => {
-    expect(readDevcontainerBunVersion()).toBe(readPackageManagerBunVersion());
   });
 
   test("Bun runtime docs do not keep stale 1.3.13-only assumptions", () => {

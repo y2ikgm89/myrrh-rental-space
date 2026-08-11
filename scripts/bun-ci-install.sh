@@ -22,7 +22,7 @@
 #   resilient: bounded retries, and on retry a cleared download cache + reduced
 #   network concurrency so the large tarball gets a stable, uncontended stream
 #   instead of competing with 48 concurrent downloads. Bun runtime version is
-#   pinned by package.json#packageManager and mirrored by Docker/devcontainer.
+#   pinned by package.json#packageManager and mirrored by the Dockerfile.
 #
 # Override the attempt count with BUN_INSTALL_ATTEMPTS (default 3). A genuine,
 # non-transient failure still fails the build loudly after the last attempt.

@@ -69,7 +69,6 @@ cloudbuild.yaml
 .agents/
 .codex/
 .cursor/
-.devcontainer/
 
 # Misc
 *.log
