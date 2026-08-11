@@ -9,45 +9,33 @@
  * 呼び出し側の契約は **`Model.field`**（例: `Refund.stripeRefundId`）。
  */
 import { describe, test, expect } from "bun:test";
+import { uniqueConstraintError } from "../../helpers/prisma-errors";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 
 describe("isPrismaUniqueConstraintError", () => {
-  test("code=P2002 + target field 一致 (array target) で true", () => {
-    const error = {
-      code: "P2002",
-      meta: { target: ["stripeRefundId"] },
-    };
-    expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
-      true,
-    );
-  });
-
-  test("code=P2002 + target field 一致 (string target — SQL Server 系) で true", () => {
-    const error = {
-      code: "P2002",
-      meta: { target: "Refund_stripeRefundId_key" },
-    };
-    expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
-      true,
-    );
-  });
-
-  test("code=P2002 + target field 不一致で false (別 unique 制約を silent skip しない)", () => {
-    const error = {
-      code: "P2002",
-      meta: { target: ["email"] },
-    };
-    expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
-      false,
-    );
-  });
-
   test("code=P2002 で targetField 省略時は任意の unique 制約違反で true", () => {
-    const error = {
-      code: "P2002",
-      meta: { target: ["email"] },
-    };
-    expect(isPrismaUniqueConstraintError(error)).toBe(true);
+    expect(
+      isPrismaUniqueConstraintError(uniqueConstraintError(["email"])),
+    ).toBe(true);
+  });
+
+  test("v6 (Rust engine) の meta.target 形状は判定しない", () => {
+    // Prisma 7 + adapter-pg では `meta.target` は出ない（実 DB で create /
+    // createMany / update / upsert / $transaction / 複合 unique / partial unique
+    // index の 7 形を確認）。互換 fallback を足し戻すと、`target` を持つ別種の
+    // error まで unique 違反として飲み込む側にしか転ばないため、false を固定する。
+    expect(
+      isPrismaUniqueConstraintError(
+        { code: "P2002", meta: { target: ["stripeRefundId"] } },
+        "Refund.stripeRefundId",
+      ),
+    ).toBe(false);
+    expect(
+      isPrismaUniqueConstraintError(
+        { code: "P2002", meta: { target: "Refund_stripeRefundId_key" } },
+        "Refund.stripeRefundId",
+      ),
+    ).toBe(false);
   });
 
   test("code=P2002 だが meta 欠損 + targetField 指定で false", () => {
@@ -57,7 +45,7 @@ describe("isPrismaUniqueConstraintError", () => {
     );
   });
 
-  test("code=P2002 だが meta.target 欠損 + targetField 指定で false", () => {
+  test("code=P2002 だが driverAdapterError 欠損 + targetField 指定で false", () => {
     const error = { code: "P2002", meta: {} };
     expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
       false,
@@ -65,7 +53,10 @@ describe("isPrismaUniqueConstraintError", () => {
   });
 
   test("別 code (P2003 foreign key violation 等) で false", () => {
-    const error = { code: "P2003", meta: { target: ["stripeRefundId"] } };
+    const error = {
+      ...uniqueConstraintError(["stripe_refund_id"], "Refund"),
+      code: "P2003",
+    };
     expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
       false,
     );
@@ -95,33 +86,13 @@ describe("isPrismaUniqueConstraintError", () => {
     expect(isPrismaUniqueConstraintError(true)).toBe(false);
   });
 
-  test("実 Prisma error 形状 (postgres, array target) で正しく判定", () => {
-    const error = {
-      name: "PrismaClientKnownRequestError",
-      code: "P2002",
-      clientVersion: "7.0.0",
-      meta: {
-        modelName: "Refund",
-        target: ["stripeRefundId"],
-      },
-      message: "Unique constraint failed on the fields: (`stripeRefundId`)",
-    };
-    expect(isPrismaUniqueConstraintError(error, "Refund.stripeRefundId")).toBe(
-      true,
-    );
-  });
-
   test("Model 修飾が meta.modelName と食い違うと false", () => {
-    const error = {
-      code: "P2002",
-      meta: {
-        modelName: "Refund",
-        target: ["stripeRefundId"],
-      },
-    };
-    expect(isPrismaUniqueConstraintError(error, "Coupon.stripeRefundId")).toBe(
-      false,
-    );
+    expect(
+      isPrismaUniqueConstraintError(
+        uniqueConstraintError(["stripe_refund_id"], "Refund"),
+        "Coupon.stripeRefundId",
+      ),
+    ).toBe(false);
   });
 
   test("Prisma 7 + adapter-pg 形状 (driverAdapterError.cause.constraint.fields) で正しく判定", () => {

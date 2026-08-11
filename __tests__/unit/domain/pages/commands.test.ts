@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 
 // Prisma モック関数（mock.module より前に定義 — TDZ 回避）
 const mockPageFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
@@ -342,10 +343,7 @@ describe("createPageCommand", () => {
     });
 
     test("create 時の slug unique 制約違反 (P2002) は CONFLICT に変換する", async () => {
-      mockPageCreate.mockRejectedValue({
-        code: "P2002",
-        meta: { target: ["slug"] },
-      });
+      mockPageCreate.mockRejectedValue(uniqueConstraintError(["slug"], "Page"));
 
       await expect(createPageCommand(VALID_CREATE_INPUT)).rejects.toMatchObject(
         { code: "CONFLICT" },

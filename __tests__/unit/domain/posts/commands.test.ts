@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // Prisma モック関数（mock.module より先に定義）
@@ -412,10 +413,9 @@ describe("createPost", () => {
     });
 
     test("slug の P2002 は CONFLICT に変換する", async () => {
-      mockPostCreate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["slug"] },
-      });
+      mockPostCreate.mockRejectedValueOnce(
+        uniqueConstraintError(["slug"], "Post"),
+      );
 
       await expect(createPost(VALID_CREATE_INPUT)).rejects.toMatchObject({
         code: "CONFLICT",
@@ -625,10 +625,9 @@ describe("updatePostSettings", () => {
     });
 
     test("slug の P2002 は CONFLICT に変換する", async () => {
-      mockPostUpdate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["slug"] },
-      });
+      mockPostUpdate.mockRejectedValueOnce(
+        uniqueConstraintError(["slug"], "Post"),
+      );
 
       await expect(
         updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // InquiryStatus 定数（FLAGGED / SPAM 追加後の 6 値）
@@ -1244,11 +1245,11 @@ describe("inquiries/commands", () => {
     });
 
     describe("receiptNumber collision retry", () => {
-      test("P2002 (receiptNumber target) で最大 5 回まで retry する", async () => {
+      test("P2002 (receiptNumber) で最大 5 回まで retry する", async () => {
         // 4 回 collision → 5 回目で成功
         const collision = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          { code: "P2002", meta: { target: ["receiptNumber"] } },
+          uniqueConstraintError(["receipt_number"], "Inquiry"),
         );
         mockInquiryCreate
           .mockRejectedValueOnce(collision)
@@ -1272,7 +1273,7 @@ describe("inquiries/commands", () => {
       test("5 回連続 collision で UNEXPECTED エラーをスローする", async () => {
         const collision = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          { code: "P2002", meta: { target: ["receiptNumber"] } },
+          uniqueConstraintError(["receipt_number"], "Inquiry"),
         );
         mockInquiryCreate
           .mockRejectedValueOnce(collision)
@@ -1291,10 +1292,10 @@ describe("inquiries/commands", () => {
         expect(mockInquiryCreate).toHaveBeenCalledTimes(5);
       });
 
-      test("P2002 でも target が receiptNumber でない場合は retry せず throw", async () => {
+      test("P2002 でも receiptNumber 以外の unique 制約なら retry せず throw", async () => {
         const otherUniqueError = new PrismaClientKnownRequestError(
           "unique constraint failed",
-          { code: "P2002", meta: { target: ["email"] } },
+          uniqueConstraintError(["email"], "Inquiry"),
         );
         mockInquiryCreate.mockRejectedValueOnce(otherUniqueError);
 

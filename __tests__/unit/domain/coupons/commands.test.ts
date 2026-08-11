@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 
 const CouponType = {
   PERCENTAGE: "PERCENTAGE",
@@ -77,10 +78,7 @@ const VALID_COUPON_DATA = {
   canCombineWithDurationDiscount: false,
 } satisfies Parameters<typeof createCoupon>[0];
 
-const P2002_CODE_ERROR = {
-  code: "P2002",
-  meta: { target: ["code"] },
-};
+const P2002_CODE_ERROR = uniqueConstraintError(["code"], "Coupon");
 
 describe("coupons/commands", () => {
   beforeEach(() => {
@@ -178,10 +176,9 @@ describe("coupons/commands", () => {
       });
 
       test("P2002 だが code 以外の unique 制約はそのまま再スローする", async () => {
-        mockCouponCreate.mockRejectedValueOnce({
-          code: "P2002",
-          meta: { target: ["otherField"] },
-        });
+        mockCouponCreate.mockRejectedValueOnce(
+          uniqueConstraintError(["other_field"], "Coupon"),
+        );
 
         await expect(createCoupon(VALID_COUPON_DATA)).rejects.toMatchObject({
           code: "P2002",

@@ -86,13 +86,7 @@ export function isPrismaUniqueConstraintError(
     return false;
   }
 
-  // Legacy shape (Prisma 6 rust engine / SQL Server 系):
-  //   meta: { target: ["id"] } または meta: { target: "Refund_stripeRefundId_key" }
-  const target = meta["target"];
-  if (Array.isArray(target) && target.includes(field)) return true;
-  if (typeof target === "string" && target.includes(field)) return true;
-
-  // Prisma 7 + `@prisma/adapter-pg` shape:
+  // Prisma 7 + `@prisma/adapter-pg` の**唯一の** shape:
   //   meta: {
   //     modelName: "StripeEvent",
   //     driverAdapterError: {
@@ -104,11 +98,17 @@ export function isPrismaUniqueConstraintError(
   //       }
   //     }
   //   }
-  // legacy shape に fallthrough させず driverAdapterError.cause.constraint.fields
-  // まで潜って比較する (この経路が壊れると webhook / refund の idempotency chokepoint
-  // が silent に 500 で throw して Stripe 再送の無限リトライを引き起こす)。
+  // driverAdapterError.cause.constraint.fields まで潜って比較する (この経路が壊れると
+  // webhook / refund の idempotency chokepoint が silent に 500 で throw して
+  // Stripe 再送の無限リトライを引き起こす)。
   //
   // **`fields` は物理列名**。field 名のまま比較すると camelCase の列で必ず false。
+  //
+  // v6 (Rust engine) の `meta.target` は **adapter 経由では一度も現れない**。実 DB
+  // (Prisma 7.9.1 + adapter-pg) で create / createMany / update / upsert /
+  // $transaction / 複合 unique / partial unique index の 7 形すべてを流し、いずれも
+  // `target` 不在・`constraint.fields` 有りだった。fallback を足し戻すと、`target`
+  // を持つ**別種の** error まで unique 違反として飲み込む側にしか転ばない。
   const driverAdapterError = meta["driverAdapterError"];
   if (!isRecord(driverAdapterError)) return false;
   const cause = driverAdapterError["cause"];

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 
 mock.module("server-only", () => ({}));
 
@@ -93,10 +94,9 @@ describe("syncAdminAuthUserFromGoogleGroups create race", () => {
     };
 
     mockFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(racedUser);
-    mockUserCreate.mockRejectedValueOnce({
-      code: "P2002",
-      meta: { target: ["email"] },
-    });
+    mockUserCreate.mockRejectedValueOnce(
+      uniqueConstraintError(["email"], "User"),
+    );
     mockUserUpdate.mockResolvedValueOnce(enabledUser);
 
     const result = await syncAdminAuthUserFromGoogleGroups("admin@example.com");
