@@ -49,7 +49,7 @@ describe("route-responses", () => {
   test("jsonValidationError は最初の issue を返す", async () => {
     const schema = z.object({
       name: z.string().min(1, { error: "名前は必須です" }),
-      email: z.string().email({ error: "メールアドレスが不正です" }),
+      email: z.email({ error: "メールアドレスが不正です" }),
     });
     const result = schema.safeParse({ name: "", email: "invalid" });
     if (result.success) {

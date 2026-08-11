@@ -88,7 +88,7 @@ export type ExecuteConformMutationOptions = {
  * }
  * ```
  */
-export async function executeConformMutation<TSchema extends z.ZodTypeAny>(
+export async function executeConformMutation<TSchema extends z.ZodType>(
   formData: FormData,
   schema: TSchema,
   handler: ConformHandler<z.output<TSchema>>,

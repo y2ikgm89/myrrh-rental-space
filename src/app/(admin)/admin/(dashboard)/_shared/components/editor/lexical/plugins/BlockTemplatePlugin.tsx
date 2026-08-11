@@ -57,7 +57,7 @@ const serializedNodeSchema = z
     type: z.string(),
     version: z.number(),
   })
-  .passthrough();
+  .loose();
 
 const serializedNodeArraySchema = z.array(serializedNodeSchema);
 
