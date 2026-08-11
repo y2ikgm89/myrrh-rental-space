@@ -14,7 +14,8 @@
  * FormData には seriesId / fromInstanceId / scope を hidden で埋め込む。
  */
 
-import { useActionState, type ReactElement } from "react";
+import { useActionState, useEffect, type ReactElement } from "react";
+import { toast } from "sonner";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
@@ -157,6 +158,24 @@ function CancelForm({
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
+
+  // 成功の合図は `initialValue === null`（`resetForm: true` の reply は `status` を
+  // 持たない）。`cancelReservationSeriesAction` は「N 件の予約をキャンセルしました」を
+  // `successMessage` で返しているのに、以前はそれを読む側が居らず**何件消えたのかが
+  // 誰にも表示されていなかった**。
+  //
+  // 再取得はしない。action の `invalidateReservationSeriesCaches` が `updateTag` を
+  // 呼んでおり、Server Action の応答で当該ルートが更新されるため `router.refresh()`
+  // は二重取得になる。
+  useEffect(() => {
+    if (!lastResult || lastResult.initialValue !== null) return;
+    const message =
+      "successMessage" in lastResult &&
+      typeof lastResult.successMessage === "string"
+        ? lastResult.successMessage
+        : "予約をキャンセルしました";
+    toast.success(message);
+  }, [lastResult]);
 
   // 入力は hidden のみなので、form-level と field-level を分けて出す意味がない。
   // `superRefine` が返す `fromInstanceId` の欠落も同じ場所にまとめて見せる。
