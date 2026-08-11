@@ -18,7 +18,6 @@ import {
 } from "@/admin/components/ui";
 import { DraftRecoveryBanner } from "@/admin/components/editor/lexical/parts/DraftRecoveryBanner";
 import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
-import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
 import { useBeforeUnload } from "@/admin/components/editor/inline/hooks";
 import { createSpaceAction, updateSpaceAction } from "@/admin/actions/space";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
@@ -199,12 +198,6 @@ export function SpaceEditForm({
     boundAction,
     undefined,
   );
-
-  useEffect(() => {
-    if (lastResult?.status === "success") {
-      clearDraft(autoSaveKey);
-    }
-  }, [lastResult, autoSaveKey]);
 
   const [form, fields] = useForm({
     id: isEdit ? `space-edit-${space?.id ?? ""}` : "space-create",
