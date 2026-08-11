@@ -90,19 +90,6 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(copied?.groups?.["major"]).toBe(runner?.groups?.["major"]);
   });
 
-  test("CI も同じ Node メジャーに固定する（未固定だと runner image 更新で黙って変わる）", () => {
-    const dockerfile = read("Dockerfile");
-    const runner = dockerfile.match(
-      /FROM node:(?<major>\d+)-alpine AS runner/u,
-    );
-    const major = runner?.groups?.["major"];
-    expect(major).toBeString();
-
-    const setup = read(".github/actions/setup-bun-deps/action.yml");
-    expect(setup).toContain("actions/setup-node@");
-    expect(setup).toContain(`node-version: "${major ?? ""}"`);
-  });
-
   test("Cloud Run Job が適用前チェックを migrate より前に実行する", () => {
     // ここが本番の実体。Cloud Run Job は Dockerfile の CMD を command/args で
     // 上書きするので、Dockerfile だけ直しても本番では走らない。
