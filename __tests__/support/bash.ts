@@ -1,65 +1,114 @@
 /**
  * テストから bash を起動するときの実行ファイル解決。
  *
- * ## なぜ `Bun.which("bash")` ではだめか
+ * ## 解決できない bash がある
  *
  * Windows + WSL のマシンでは `Bun.which("bash")` が
- * **`C:\WINDOWS\system32\bash.exe`（WSL のランチャー）** を返す。`C:\Windows\System32`
- * は常に PATH にあり、Git の `bin` より前に来ることが多いので、これは例外的な構成では
- * なく既定の結果になる。
+ * **`C:\WINDOWS\system32\bash.exe`（WSL のランチャー）** を返すことがある。
+ * `C:\Windows\System32` は常に PATH にあり Git の `bin` より前に来ることが多いので、
+ * これは例外的な構成ではなく既定の結果になる。
  *
  * この bash を Bun から spawn すると、**代入内のコマンド置換が黙って空になる**。
- * 実測（`bash.exe -c` を Bun.spawnSync で起動）:
+ * 実測（`bash.exe -c` を `Bun.spawnSync` で起動）:
  *
- * | script                          | 結果       |
- * | ------------------------------- | ---------- |
- * | `mktemp`                        | パスが出る |
- * | `x="$(echo hi)"; echo "[$x]"`   | `[]`       |
- * | `x="$(mktemp)"; echo "[$x]"`    | `[]`       |
- * | `echo "[$(echo hi)]"`（インライン） | `[hi]`     |
+ * | script                          | WSL bash | Git Bash |
+ * | ------------------------------- | -------- | -------- |
+ * | `mktemp`                        | パスが出る | パスが出る |
+ * | `x="$(echo hi)"; echo "[$x]"`   | `[]`     | `[hi]`   |
+ * | `echo "[$(echo hi)]"`（インライン） | `[hi]`   | `[hi]`   |
  *
- * つまり `mktemp` 固有ではなく置換一般の破綻で、しかも **exit code は 0**。呼び出し側は
+ * `mktemp` 固有ではなく置換一般の破綻で、しかも **exit code は 0**。呼び出し側は
  * 空変数を掴んだまま先へ進み、`cat > ""` のような**原因と無関係なエラー**を見ることになる。
- * Git Bash（`C:/Program Files/Git/...`）では上記すべてが正しく動く。
  *
- * CI の ubuntu runner と lefthook（Git Bash 経由）では踏まないため、
- * **手元の PowerShell から回したときだけ赤くなる**という一番誤診しやすい形になる。
+ * ## だからパスではなく振る舞いで選ぶ
  *
- * ## 何をするか
+ * 最初の実装は Git Bash の既定インストール先 3 つを直書きして、そこに無ければ throw
+ * していた。**これは Git for Windows をユーザー領域や Scoop、任意のディレクトリへ
+ * 入れている環境を壊す** — PATH には動く bash があるのに、既知パスに無いという理由だけで
+ * 落ちる（#2114 のレビュー指摘）。
  *
- * win32 では Git Bash だけを受け付け、無ければ**理由つきで throw する**。
- * WSL の bash に黙ってフォールバックしない — 静かに壊れるより止まるほうがよい。
+ * 代わりに、候補を実際に起動して**依存している性質そのもの**を確かめる。
+ * `x="$(printf ok)"` が `ok` を返せば採用、返さなければ次の候補へ。これなら
+ * インストール先を問わず動き、WSL のランチャーは名前ではなく挙動で外れる。
  */
 
 import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
-/** Git for Windows の bash。`usr/bin` 側が coreutils と同居する本体。 */
-const WINDOWS_BASH_CANDIDATES = [
+/**
+ * 依存している性質だけを試すスクリプト。**インライン展開ではなく代入**にすること
+ * （WSL bash が壊すのは代入側で、インラインは通ってしまう）。
+ */
+const PROBE_SCRIPT = 'x="$(printf ok)"; printf %s "$x"';
+
+/** Git for Windows の既定インストール先。PATH と `git` から辿れなかったときの保険。 */
+const WINDOWS_GIT_BASH_FALLBACKS = [
   "C:/Program Files/Git/usr/bin/bash.exe",
   "C:/Program Files/Git/bin/bash.exe",
   "C:/Program Files (x86)/Git/bin/bash.exe",
 ] as const;
 
-export function bashExecutable(): string {
-  if (process.platform === "win32") {
-    for (const candidate of WINDOWS_BASH_CANDIDATES) {
-      if (existsSync(candidate)) return candidate;
-    }
-    throw new Error(
-      "Windows で Git Bash が見つかりません。" +
-        `探した場所: ${WINDOWS_BASH_CANDIDATES.join(", ")}。` +
-        "PATH 上の bash は WSL のランチャーであることが多く、コマンド置換が" +
-        "無言で空になるため使いません（この module の冒頭 JSDoc に実測）。" +
-        "Git for Windows を入れるか、上の候補にパスを追加してください。",
+function isUsable(candidate: string): boolean {
+  try {
+    const result = Bun.spawnSync({ cmd: [candidate, "-c", PROBE_SCRIPT] });
+    return (
+      result.exitCode === 0 &&
+      new TextDecoder().decode(result.stdout).trim() === "ok"
     );
+  } catch {
+    return false;
+  }
+}
+
+function candidatePaths(): string[] {
+  const found: string[] = [];
+  const add = (path: string | null | undefined): void => {
+    if (path && !found.includes(path)) found.push(path);
+  };
+
+  add(Bun.which("bash"));
+
+  if (process.platform === "win32") {
+    // `git` の隣を辿る。既定以外（ユーザー領域 / Scoop / 任意のディレクトリ）へ
+    // 入れていても、git が PATH にあれば bash も同じツリーに居る。
+    const git = Bun.which("git");
+    if (git) {
+      const gitDir = dirname(git);
+      for (const relative of [
+        ["..", "bin"],
+        ["..", "usr", "bin"],
+        ["..", "..", "bin"],
+        ["..", "..", "usr", "bin"],
+      ]) {
+        add(resolve(gitDir, ...relative, "bash.exe"));
+      }
+    }
+    for (const fallback of WINDOWS_GIT_BASH_FALLBACKS) add(fallback);
   }
 
-  const onPath = Bun.which("bash");
-  if (!onPath) {
-    throw new Error(
-      "bash が見つからないためテストを実行できません。" +
-        "この検査は silent skip させない（GitHub Actions の ubuntu runner には bash がある）。",
-    );
+  return found.filter((path) => existsSync(path));
+}
+
+let resolved: string | undefined;
+
+export function bashExecutable(): string {
+  if (resolved !== undefined) return resolved;
+
+  const candidates = candidatePaths();
+  for (const candidate of candidates) {
+    if (isUsable(candidate)) {
+      resolved = candidate;
+      return candidate;
+    }
   }
-  return onPath;
+
+  throw new Error(
+    "コマンド置換が動く bash が見つからないためテストを実行できません。" +
+      `試した候補: ${candidates.length > 0 ? candidates.join(", ") : "（候補なし）"}。` +
+      "Windows では PATH 上の bash が WSL のランチャーで、" +
+      '`x="$(printf ok)"` が無言で空になることがあります' +
+      "（この module の冒頭 JSDoc に実測）。Git for Windows を入れるか、" +
+      "その bash を PATH に載せてください。" +
+      "この検査は silent skip させない（CI の ubuntu runner には bash がある）。",
+  );
 }
