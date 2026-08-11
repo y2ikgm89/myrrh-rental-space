@@ -112,7 +112,7 @@
   "overrides": {
     "@babel/core": "^7.29.7",
     "@grpc/grpc-js": "^1.14.4",
-    "@hono/node-server": "^2.0.12",
+    "@hono/node-server": "^2.1.0",
     "@tootallnate/once": "^3.0.1",
     "basic-ftp": "^6.0.1",
     "body-parser": "^1.20.6",
