@@ -39,10 +39,18 @@ resource "google_artifact_registry_repository" "docker" {
   # 100 件超、保管料が **9 日で ¥1,479**（月換算 約 ¥5,000 / 年 約 ¥60,000）
   # に達していた。Cloud Run に次ぐ 2 番目の費目。
   #
-  # 1 デプロイで version が 2〜3 個増える:
-  #   `:${SHORT_SHA}`         アプリ本体     約 132 MB
-  #   `:migrate-${SHORT_SHA}` migration 用   約 429 MB  ← 本体の 3 倍
-  #   `:${SHORT_SHA}cache`    build cache    約 136 MB
+  # 1 デプロイで増える version は **2 個**（cloudbuild.yaml Step 2 / 2b）:
+  #
+  #   digest 1  tag `${SHORT_SHA}` と `cache`   約 132 MB  `--target=runner`
+  #   digest 2  tag `migrate-${SHORT_SHA}`      約 429 MB  `--target=migrator`
+  #
+  # **`cache` は別 image ではない。** Step 2 が runner を `-t :${SHORT_SHA}`
+  # と `-t :cache` の 2 つで tag するだけなので、**同一 digest に tag が 2 つ**
+  # 付く。移動 tag なので、次のデプロイで新しい runner 側へ移る。
+  #
+  # migrator が本体の 3 倍あるのは意図的な設計で、Prisma CLI と migration 一式を
+  # 実行時 image から外して runner を 132 MB に保っている。同梱すると Cloud Run
+  # が常時 429 MB の image を起動することになる。
   #
   # **稼働中の image を消さないことの担保:**
   #
@@ -55,6 +63,13 @@ resource "google_artifact_registry_repository" "docker" {
   # Cloud Run のリビジョンは image を digest で参照するため、参照先を消すと
   # スケールアップもロールバックも不能になる。上の 2 点がそれを防いでいる。
   #
+  # **ただし `delete-untagged` はこの担保の外にある。** tag なし digest は
+  # 「同一 commit を再デプロイした」ときに生まれる — 新しい build に
+  # `${SHORT_SHA}` tag が移り、前の digest が tag を失う。そのとき、**移る前に
+  # 作られた Cloud Run リビジョンはその digest を参照したまま**なので、消すと
+  # そのリビジョンへは戻れなくなる。`older_than` の 7 日はそのための猶予で、
+  # 完全な保証ではない。実際の削除対象は下記 dry run のログで確認すること。
+  #
   # **まず dry run で入れる。** `cleanup_policy_dry_run = true` の間は削除が
   # 起きず、対象だけが Artifact Registry のログに出る。実際の削除対象に稼働中
   # digest が含まれないことを確認してから、別 PR で false にする。
@@ -64,7 +79,7 @@ resource "google_artifact_registry_repository" "docker" {
     id     = "keep-recent-versions"
     action = "KEEP"
 
-    # 1 デプロイ 2〜3 version なので、30 で概ね 10 デプロイ分のロールバック余地。
+    # 1 デプロイ 2 version なので、30 で概ね **15 デプロイ分**のロールバック余地。
     # 減らすと削減額はほぼ変わらないまま復旧手段だけが痩せるので、ここは
     # ケチらない。
     most_recent_versions {
@@ -76,8 +91,12 @@ resource "google_artifact_registry_repository" "docker" {
     id     = "delete-untagged"
     action = "DELETE"
 
-    # tag が外れた digest は何からも参照されない。実測でも `migrate-*` の
-    # 付け替えで生じた孤児が複数残っていた。
+    # 同一 commit の再デプロイで tag が新しい digest へ移り、前の digest が
+    # 孤児になる。実測 2026-08-11 時点でも 7/24 のリトライ由来の孤児が
+    # 複数残っていた（132.7 MB と 429.5 MB の対）。
+    #
+    # **「tag が無い = 誰も参照していない」ではない。** 上の注記のとおり、
+    # tag が移る前に作られた Cloud Run リビジョンは digest 参照を保持している。
     condition {
       tag_state  = "UNTAGGED"
       older_than = "604800s" # 7d
