@@ -76,7 +76,13 @@ export class CustomTableCellNode extends TableCellNode {
   // CustomTableCellNode であれば `element.style.backgroundColor` を読んで
   // cellBackgroundColorState を復元する。CustomHeadingNode.importDOM() と同一パターン。
   static override importDOM(): DOMConversionMap | null {
-    const base = TableCellNode.importDOM();
+    // 親の converter の取得元が `TableCellNode.importDOM()` ではなく $config() な理由は
+    // CustomHeadingNode.importDOM() の同項コメントを参照（0.49 の $config() 移行で、
+    // 静的 importDOM は登録時に生やされる遅延生成になった）。
+    // $config() の戻り型は converter を literal（0 引数）として推論するため、
+    // DOMConversionMap（= 引数付きの契約型）で受け直す。
+    const base: DOMConversionMap | undefined =
+      TableCellNode.prototype.$config().tablecell?.importDOM;
     if (!base) return null;
 
     const result: DOMConversionMap = {};

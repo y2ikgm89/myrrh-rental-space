@@ -113,11 +113,17 @@ describe("getRegisteredLexicalNodeTypes", () => {
     expect(types.has("callout")).toBe(true);
   });
 
-  test("node replacement の元クラス（heading/table/table-cell）は withKlass 側の type と同一に解決される", () => {
+  test("node replacement は replace 側と withKlass 側の両方の type を登録済みとして数える", () => {
     const types = getRegisteredLexicalNodeTypes();
+    // replace 側（Lexical が registry のキーに使う type）
     expect(types.has("heading")).toBe(true);
     expect(types.has("table")).toBe(true);
     expect(types.has("tablecell")).toBe(true);
+    // withKlass 側。保存される EditorState JSON はこちらの type で書かれるため、
+    // 欠けると「自分で保存した本文」が未登録扱いになり破損扱いで弾かれる。
+    expect(types.has("custom-heading")).toBe(true);
+    expect(types.has("custom-table")).toBe(true);
+    expect(types.has("custom-tablecell")).toBe(true);
   });
 
   test("未登録の type は含まない", () => {
