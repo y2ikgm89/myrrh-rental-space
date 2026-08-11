@@ -15,6 +15,7 @@ import { getTitleClasses } from "@/public/components/sections/section-style-help
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedRawEmbedHtml } from "@/shared/lib/html/sanitize";
 import type { EmbedConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -94,9 +95,8 @@ export function EmbedSection({
             </div>
           ) : config.embedCode ? (
             <SanitizedHtml
-              html={config.embedCode}
+              sanitizedHtml={sanitizeRenderedRawEmbedHtml(config.embedCode)}
               className={cn("overflow-hidden", radiusClass, aspectClass)}
-              restrictIframeHostnames
             />
           ) : (
             <div

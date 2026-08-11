@@ -16,6 +16,7 @@ import {
 } from "@/public/lib/seo/metadata-factory";
 import { getOrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
@@ -163,7 +164,9 @@ export async function PostDetailPageContent({
         })}
       >
         <Prose variant="editorial" className="max-w-none">
-          <SanitizedHtml html={resolvedContentHtml} />
+          <SanitizedHtml
+            sanitizedHtml={sanitizeRenderedContentHtml(resolvedContentHtml)}
+          />
         </Prose>
         <ArticleFooter
           url={articleUrl}

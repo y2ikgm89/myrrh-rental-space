@@ -9,6 +9,7 @@ import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
@@ -248,7 +249,11 @@ export default async function EventDetailPage({
       >
         {event.descriptionHtml.trim() !== "" ? (
           <Prose variant="editorial" className="max-w-none">
-            <SanitizedHtml html={resolvedDescriptionHtml} />
+            <SanitizedHtml
+              sanitizedHtml={sanitizeRenderedContentHtml(
+                resolvedDescriptionHtml,
+              )}
+            />
           </Prose>
         ) : null}
 

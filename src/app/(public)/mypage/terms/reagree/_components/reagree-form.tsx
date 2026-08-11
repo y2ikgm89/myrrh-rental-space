@@ -106,7 +106,7 @@ export function ReagreeForm({
             </h2>
             <div className="max-h-72 overflow-y-auto border border-border/60 bg-background p-3 text-sm">
               <SanitizedHtml
-                html={term.contentHtml}
+                sanitizedHtml={term.contentHtml}
                 className="prose prose-sm max-w-none"
               />
             </div>
@@ -122,7 +122,7 @@ export function ReagreeForm({
                 </summary>
                 <div className="max-h-72 overflow-y-auto border-t border-border/40 bg-background p-3">
                   <SanitizedHtml
-                    html={term.previousSnapshot}
+                    sanitizedHtml={term.previousSnapshot}
                     className="prose prose-sm max-w-none"
                   />
                 </div>

@@ -78,9 +78,7 @@ export const DOM_REQUIRED_PREFIXES = [
 ] as const;
 
 /** DOM が要る単独ファイル。DOMPurify は jsdom の `window` が無いと初期化できない。 */
-export const DOM_REQUIRED_FILES = [
-  "__tests__/unit/lib/html/sanitize-dompurify-html.test.ts",
-] as const;
+export const DOM_REQUIRED_FILES = [] as const;
 
 /** DOM 抜きの bunfig。cwd（repo root）からの相対で解決される。 */
 export const NO_DOM_BUNFIG_PATH = "bunfig.nodom.toml";

@@ -5,6 +5,7 @@ import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
 import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
@@ -71,7 +72,9 @@ export async function TermsDetailPageContent({
       })}
     >
       <Prose variant="editorial" className="max-w-none">
-        <SanitizedHtml html={terms.contentHtml} />
+        <SanitizedHtml
+          sanitizedHtml={sanitizeRenderedContentHtml(terms.contentHtml)}
+        />
       </Prose>
     </ArticleLayout>
   );

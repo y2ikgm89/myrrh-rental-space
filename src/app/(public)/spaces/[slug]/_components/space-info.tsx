@@ -1,5 +1,6 @@
 import { IconMapPin } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { parseFacilities } from "@/shared/lib/json-validators";
 import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
@@ -76,7 +77,11 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
             このスペースについて
           </h2>
           <div className="mt-8 [&_p]:text-base [&_p]:leading-[2] [&_p]:text-foreground [&_p+p]:mt-6">
-            <SanitizedHtml html={resolvedDescriptionHtml} />
+            <SanitizedHtml
+              sanitizedHtml={sanitizeRenderedContentHtml(
+                resolvedDescriptionHtml,
+              )}
+            />
           </div>
         </section>
       ) : null}

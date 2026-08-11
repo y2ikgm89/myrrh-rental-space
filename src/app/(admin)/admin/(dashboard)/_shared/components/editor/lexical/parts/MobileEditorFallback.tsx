@@ -86,7 +86,7 @@ export function MobileEditorFallback({
               見出し・リンク・muted テキストは容易に AA を割る。読み取り専用で
               あることは直前の説明文が伝えている。 */}
           <div className="prose prose-sm pointer-events-none max-w-none">
-            <SanitizedHtml html={previewHtml} />
+            <SanitizedHtml sanitizedHtml={previewHtml} />
           </div>
         </div>
       ) : null}

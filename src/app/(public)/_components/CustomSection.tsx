@@ -19,6 +19,7 @@ import { cn } from "@/shared/lib/cn";
 import type { CustomConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedRawEmbedHtml } from "@/shared/lib/html/sanitize";
 
 const MAX_WIDTH_MAP = {
   sm: "max-w-2xl",
@@ -67,9 +68,8 @@ export function CustomSection({
           <ScrollReveal>
             <SectionTextBox style={style}>
               <SanitizedHtml
-                html={config.body}
+                sanitizedHtml={sanitizeRenderedRawEmbedHtml(config.body)}
                 className="prose prose-neutral max-w-none"
-                restrictIframeHostnames
               />
             </SectionTextBox>
           </ScrollReveal>

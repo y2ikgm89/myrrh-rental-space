@@ -30,9 +30,14 @@ import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 type SpaceDetailProps = {
   space: SpaceWithStats;
+  /** サーバーで sanitize 済みの説明文 HTML（client component なのでここでは sanitize しない） */
+  sanitizedDescriptionHtml: string;
 };
 
-export function SpaceDetail({ space }: SpaceDetailProps) {
+export function SpaceDetail({
+  space,
+  sanitizedDescriptionHtml,
+}: SpaceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -130,7 +135,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             label="説明"
             value={
               <SanitizedHtml
-                html={space.descriptionHtml}
+                sanitizedHtml={sanitizedDescriptionHtml}
                 className="prose prose-sm max-w-none"
               />
             }
