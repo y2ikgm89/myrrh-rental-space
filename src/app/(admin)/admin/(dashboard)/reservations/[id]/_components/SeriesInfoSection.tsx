@@ -161,8 +161,17 @@ function CancelForm({
 
   // 成功の合図は `initialValue === null`（`resetForm: true` の reply は `status` を
   // 持たない）。`cancelReservationSeriesAction` は「N 件の予約をキャンセルしました」を
-  // `successMessage` で返しているのに、以前はそれを読む側が居らず**何件消えたのかが
-  // 誰にも表示されていなかった**。
+  // `successMessage` で返しているのに、以前はそれを読む側が居らず何件消えたのかが
+  // 誰にも表示されていなかった。
+  //
+  // **`series-all` scope ではこの toast は出ない。**（ブラウザ実測 2026-08-12）
+  // あの scope だけ `series.cancelledAt` が立ち、同じ応答で `isSeriesCancelled` が
+  // true になって `CancelForm` 3 本ごとアンマウントされるため、effect が走る前に
+  // この component が消える。`this-only`（1 件）と `this-and-following`（3 件）は
+  // フォームが残るので発火することを確認済み。
+  // series-all の側は「この series は既にキャンセル済み (日付)」の表示と button の
+  // 消滅が同じ情報を持つので、toast のためだけに action state を親へ持ち上げる
+  // 構造変更はしていない。
   //
   // 再取得はしない。action の `invalidateReservationSeriesCaches` が `updateTag` を
   // 呼んでおり、Server Action の応答で当該ルートが更新されるため `router.refresh()`
