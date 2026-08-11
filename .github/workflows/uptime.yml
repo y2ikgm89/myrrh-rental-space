@@ -1,0 +1,265 @@
+name: Uptime
+
+# 公開サイトが生きているかを外から叩いて確かめる、唯一の経路。
+#
+# 背景: 2026-08-10〜11 に GCP の請求先アカウント閉鎖で本番が **約 7 時間** 503 を
+# 返し続けたが、誰も気付かなかった。気付いたのは別件で `terraform-drift.yml` を
+# 手動実行したときの偶然。
+#
+# 既存の監視では構造的に拾えない:
+#
+#   - `terraform-drift.yml` が見ているのは **terraform state** であって
+#     サイトの生死ではない。Cloud Run だけが壊れる障害（OOM / bad deploy /
+#     Cloudflare の origin 設定ミス / Neon 障害）では **緑のまま**。
+#   - `ci.yml` の nightly はリポジトリのコードしか見ない。本番に触れない。
+#
+# **この workflow の信号は Issue であって、Actions の履歴ではない。**
+# 開いている Issue の存在そのものが「いまサイトが落ちている」を意味する
+# （`ci.yml` の `nightly-result` が定めた契約と同じ）。
+#
+# ---- この監視の限界（誇張しないこと）----
+#
+# GitHub Actions の `schedule` は公式に次の制約がある:
+#
+#   "The schedule event can be delayed during periods of high loads of GitHub
+#    Actions workflow runs. High load times include the start of every hour.
+#    If the load is sufficiently high enough, some queued jobs may be dropped."
+#   https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+#
+# つまり **これはページャーではない**。実効的な検知は 10〜40 分程度で、run が
+# 丸ごと落とされることもある。「7 時間気付かない」を「1 時間以内に気付く」に
+# 変えるための安全網であって、SLA を守る仕組みではない。
+#
+# 秒単位の検知が要るなら Cloudflare Health Checks（有料プラン機能・Terraform
+# 管理下）か外部の監視サービスを入れること。ここを cron で詰めても届かない。
+#
+# **既知の失敗モード**: public リポジトリでは「60 日間リポジトリ活動が無いと
+# scheduled workflow が自動的に無効化される」(同上・公式)。無効化されても
+# 通知は出ないので、開発が止まった期間はこの監視も止まっていると考えること。
+
+on:
+  schedule:
+    # 10 分間隔。ただし **毎時 0 分を避ける** — 公式が高負荷時間帯として
+    # "the start of every hour" を名指ししており、そこは遅延と破棄が起きやすい。
+    # `*/10` だと :00 に当たるので `5-59/10` にして :05/:15/:25/:35/:45/:55 に置く。
+    - cron: "5-59/10 * * * *"
+  workflow_dispatch:
+
+# 遅延で run が重なったとき、2 つの run が同時に「Issue が無い」と判定して
+# **重複作成する**のを防ぐ。
+#
+# `cancel-in-progress` は **false でなければならない**。true にすると古い run が
+# cancelled になり、`always()` で走る通知側が `needs.probe.result == "cancelled"`
+# を赤と読んで **誤検知する**。1 回の probe は 1 分程度なので、キューが積み上がる
+# 心配はない。
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  # 監視対象は **`/api/live` だけ**。理由は probe step のコメント参照。
+  #
+  # 管理画面 (admin.myrrh-jp.com) は internal LB + IAP なので GitHub Actions
+  # からは認証なしに到達できず、ここからは監視できない。
+  LIVE_URL: https://rental-space.myrrh-jp.com/api/live
+
+jobs:
+  probe:
+    name: Probe public site
+    # fork へ転送されたリポジトリでの誤発火を防ぐ（他 workflow と同一 pattern）。
+    if: github.repository == 'y2ikgm89/myrrh-rental-space'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # 判定結果は **job の成否ではなく output で渡す**。このリポジトリでは
+    # 「Issue が信号」であって Actions の履歴は信号ではない。落ちている間ずっと
+    # 赤い run を並べても意味が無いし、履歴が読めなくなる。
+    #
+    # job 自体が落ちた場合（runner 障害など）は通知側が
+    # `needs.probe.result` で拾う。2 軸なのは `terraform-drift.yml` と同型。
+    outputs:
+      up: ${{ steps.probe.outputs.up }}
+      detail: ${{ steps.probe.outputs.detail }}
+
+    steps:
+      - name: Probe public endpoints
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # **叩くのは `/api/live` だけ。** 公開ページ (`/`) は監視に使えない。
+          # 実測 2026-08-11 のレスポンスヘッダー:
+          #
+          #   /api/live  Cache-Control: private, no-store
+          #              cf-cache-status: DYNAMIC   ← 毎回 origin まで届く
+          #
+          #   /          Cache-Control: s-maxage=3600, stale-while-revalidate=3600
+          #              cf-cache-status: HIT       ← エッジのキャッシュ
+          #              x-nextjs-postponed: 1      ← PPR
+          #
+          # `/` を叩くと **偽の緑**を作る経路が 2 つできる:
+          #
+          #   1. origin が死んでも Cloudflare が最大 2 時間 200 を返し続ける
+          #      (s-maxage 1h + stale-while-revalidate 1h)。
+          #   2. `cacheComponents: true` (PPR) なので、静的シェルを 200 で流した
+          #      後に動的描画が失敗しても **ステータスは 200 のまま**。実際、
+          #      存在しないパスも 200 を返す（後述）。
+          #
+          # 「DB 障害も拾いたい」という動機で `/` を足したくなるが、上の 2 つに
+          # よって **拾えないうえに嘘の緑を出す**。足さない。
+          #
+          # ---- この probe が **カバーしないもの** ----
+          #
+          # `/api/live` は外部依存に触れない設計（src/app/api/live/route.ts）で、
+          # プロセスがイベントループに応答できることしか示さない。**DB (Neon) が
+          # 落ちていても 200 を返す。** DB 疎通を含む health check は
+          # `/api/health` にあるが admin surface 限定で、ここからは到達できない。
+          #
+          # DB 障害まで見たいなら、この cron を増やすのではなく、公開 surface に
+          # 疎通確認付きの health endpoint を足すか、Cloudflare Health Checks を
+          # 使うこと。ここで無理に近似すると偽の緑になる。
+          #
+          # ---- リトライ ----
+          #
+          # **1 回の失敗で赤にしない。** 瞬断や cold start で単発の失敗は普通に
+          # 起きる。3 回連続で 200 以外だったときだけ down と判定する。これは
+          # 失敗を握りつぶしているのではなく、1 サンプルが証拠として不足して
+          # いるという話。
+          code=""
+
+          for attempt in 1 2 3; do
+            code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 "$LIVE_URL" 2>/dev/null)" || code="000"
+            printf 'attempt %s: HTTP %s\n' "$attempt" "$code"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep 10
+            fi
+          done
+
+          if [ "$code" = "200" ]; then
+            echo "up=true" >> "$GITHUB_OUTPUT"
+            echo "detail=" >> "$GITHUB_OUTPUT"
+          else
+            echo "up=false" >> "$GITHUB_OUTPUT"
+            echo "detail=/api/live が 3 回連続で HTTP ${code}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 失敗したら Issue を立て（既に開いていればコメントを足し）、復旧したら同じ
+  # Issue に復旧を記録して閉じる。**自己解消する**ので、開いている Issue の存在
+  # そのものが「いまサイトが落ちている」を意味する。
+  #
+  # 強制: `__tests__/unit/architecture/status-notifier-self-resolves.test.ts`
+  uptime-result:
+    name: Uptime result notice
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [probe]
+    # `always()` が無いと **サイトが生きている run で job ごと skip され、
+    # 閉じる経路が消える**。repository ガードは probe と同一にする。ここだけ
+    # 緩めると、fork 側で probe が skipped になったのを「緑」と読んで開いている
+    # Issue を閉じてしまう。
+    if: ${{ always() && github.repository == 'y2ikgm89/myrrh-rental-space' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Report uptime result
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          PROBE_UP: ${{ needs.probe.outputs.up }}
+          PROBE_DETAIL: ${{ needs.probe.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て上の env 経由で受け取る。
+          #
+          # **title に時刻や run id を混ぜてはならない。** 混ぜると復旧 run が
+          # 別 title になり既存 Issue へ辿り着けず、増える一方になる。
+          title="Public site is down"
+          # **この workflow が作った Issue だけ**を対象にするための marker。
+          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
+          # 立てたときにそれへコメントを足し、緑になった瞬間に**他人の Issue を
+          # 閉じて**しまう。
+          marker="<!-- uptime-status: do not remove (owned by uptime.yml / uptime-result) -->"
+
+          # 赤は 2 種類ある。どちらも「いま緑と言えない」ので同じ Issue で追う。
+          #
+          #   1. probe job 自体が落ちた — サイトの生死が **確認できていない**
+          #   2. probe が down と判定した — サイトが落ちている
+          #
+          # 1 の判定は「success でも skipped でもないものは失敗」と裏返す。
+          # `== "failure"` だけを見ると、timeout で打ち切られた job (cancelled) を
+          # 緑と読んでしまう。
+          broken=$(printf '%s' "$NEEDS_JSON" \
+            | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
+
+          if [ -n "$broken" ]; then
+            report=$(printf '%s\n' \
+              "**監視そのものが失敗しました。** サイトが生きているかどうかは分かりません。" \
+              "" \
+              "- run: $RUN_URL" \
+              "- 失敗した job: $broken")
+          elif [ "$PROBE_UP" != "true" ]; then
+            report=$(printf '%s\n' \
+              "**公開サイトが応答しません。**" \
+              "" \
+              "- ${PROBE_DETAIL:-(詳細を取得できませんでした)}" \
+              "- run: $RUN_URL" \
+              "" \
+              "3 回連続で 200 以外だったため down と判定しています。" \
+              "\`/api/live\` は \`no-store\` で Cloudflare を素通りする（cf-cache-status: DYNAMIC）ため、" \
+              "これは origin (Cloud Run) が応答していないことを意味します。" \
+              "" \
+              "1. https://rental-space.myrrh-jp.com/ を直接開いて表示を確認する" \
+              "2. Cloudflare ではなく Google のエラーページが出るなら Cloud Run 側" \
+              "3. GCP の請求先アカウントが有効か確認する（2026-08-10 の停止原因）" \
+              "" \
+              "なお本監視は **DB 疎通を見ていません**。\`/api/live\` は外部依存に触れない" \
+              "設計なので、Neon が落ちていてもこの Issue は立ちません。" \
+              "" \
+              "復旧すると本 Issue は自動で閉じます（手で閉じる必要はありません）。")
+          else
+            report=""
+          fi
+
+          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
+          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
+          existing=$(gh issue list --state open --limit 100 --json number,body \
+            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
+
+          if [ -n "$report" ]; then
+            if [ -n "$existing" ]; then
+              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
+              # 重ねる必要が無い）。
+              gh issue comment "$existing" --body "$report"
+              echo "commented on #$existing"
+            else
+              # label は人が絞り込むための補助。追跡は marker が持つので、
+              # label 作成が失敗しても契約は壊れない。
+              gh label create uptime \
+                --description "Public site is unreachable (self-resolving; owned by uptime-result)" \
+                --color "b60205" 2>/dev/null || true
+              gh issue create --title "$title" --label uptime \
+                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
+              echo "created a new issue"
+            fi
+            exit 0
+          fi
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "公開サイトが復旧しました（$RUN_URL）。"
+            gh issue close "$existing"
+            echo "closed #$existing"
+          else
+            echo "site is up, nothing to report"
+          fi

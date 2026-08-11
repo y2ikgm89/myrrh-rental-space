@@ -182,7 +182,7 @@ const notifiers = collectNotifiers();
 describe("status notifier の自己解消契約", () => {
   test("走査が status notifier を実際に見つけている", () => {
     // 走査が壊れて 0 件になると、以降の gate が空振りで緑になる。
-    expect(notifiers.length).toBeGreaterThanOrEqual(3);
+    expect(notifiers.length).toBeGreaterThanOrEqual(4);
 
     const names = notifiers.map(
       (notifier) => `${notifier.source} :: ${notifier.job}`,
@@ -194,6 +194,7 @@ describe("status notifier の自己解消契約", () => {
     expect(names).toContain(
       ".github/workflows/terraform-drift.yml :: drift-result",
     );
+    expect(names).toContain(".github/workflows/uptime.yml :: uptime-result");
   });
 
   test("失敗で開いた Issue を復旧時に自分で閉じる", () => {
@@ -268,7 +269,11 @@ describe("契約判定の見本", () => {
  * job を足したときに needs へ足し忘れる形をここで止める。
  */
 describe("全 job が同じ trigger で走る workflow の通知は全 job を見る", () => {
-  const workflowFileNames = ["deploy-production.yml", "terraform-drift.yml"];
+  const workflowFileNames = [
+    "deploy-production.yml",
+    "terraform-drift.yml",
+    "uptime.yml",
+  ];
 
   test.each(workflowFileNames)(
     "%s の notifier が他の全 job を含む",
