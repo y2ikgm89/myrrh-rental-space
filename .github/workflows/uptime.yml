@@ -168,10 +168,15 @@ jobs:
       contents: read
       issues: write
     steps:
-      - name: Report uptime result
+      # ローカル action (`uses: ./…`) を使うため checkout が要る。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Decide uptime status
+        id: status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て env 経由で受け取る。
           NEEDS_JSON: ${{ toJSON(needs) }}
           PROBE_UP: ${{ needs.probe.outputs.up }}
           PROBE_DETAIL: ${{ needs.probe.outputs.detail }}
@@ -179,18 +184,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
-          # 値は全て上の env 経由で受け取る。
-          #
-          # **title に時刻や run id を混ぜてはならない。** 混ぜると復旧 run が
-          # 別 title になり既存 Issue へ辿り着けず、増える一方になる。
-          title="Public site is down"
-          # **この workflow が作った Issue だけ**を対象にするための marker。
-          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
-          # 立てたときにそれへコメントを足し、緑になった瞬間に**他人の Issue を
-          # 閉じて**しまう。
-          marker="<!-- uptime-status: do not remove (owned by uptime.yml / uptime-result) -->"
 
           # 赤は 2 種類ある。どちらも「いま緑と言えない」ので同じ Issue で追う。
           #
@@ -204,62 +197,56 @@ jobs:
             | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
           if [ -n "$broken" ]; then
-            report=$(printf '%s\n' \
-              "**監視そのものが失敗しました。** サイトが生きているかどうかは分かりません。" \
-              "" \
-              "- run: $RUN_URL" \
-              "- 失敗した job: $broken")
-          elif [ "$PROBE_UP" != "true" ]; then
-            report=$(printf '%s\n' \
-              "**公開サイトが応答しません。**" \
-              "" \
-              "- ${PROBE_DETAIL:-(詳細を取得できませんでした)}" \
-              "- run: $RUN_URL" \
-              "" \
-              "3 回連続で 200 以外だったため down と判定しています。" \
-              "\`/api/live\` は \`no-store\` で Cloudflare を素通りする（cf-cache-status: DYNAMIC）ため、" \
-              "これは origin (Cloud Run) が応答していないことを意味します。" \
-              "" \
-              "1. https://rental-space.myrrh-jp.com/ を直接開いて表示を確認する" \
-              "2. Cloudflare ではなく Google のエラーページが出るなら Cloud Run 側" \
-              "3. GCP の請求先アカウントが有効か確認する（2026-08-10 の停止原因）" \
-              "" \
-              "なお本監視は **DB 疎通を見ていません**。\`/api/live\` は外部依存に触れない" \
-              "設計なので、Neon が落ちていてもこの Issue は立ちません。" \
-              "" \
-              "復旧すると本 Issue は自動で閉じます（手で閉じる必要はありません）。")
-          else
-            report=""
-          fi
-
-          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
-          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
-          existing=$(gh issue list --state open --limit 100 --json number,body \
-            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
-
-          if [ -n "$report" ]; then
-            if [ -n "$existing" ]; then
-              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
-              # 重ねる必要が無い）。
-              gh issue comment "$existing" --body "$report"
-              echo "commented on #$existing"
-            else
-              # label は人が絞り込むための補助。追跡は marker が持つので、
-              # label 作成が失敗しても契約は壊れない。
-              gh label create uptime \
-                --description "Public site is unreachable (self-resolving; owned by uptime-result)" \
-                --color "b60205" 2>/dev/null || true
-              gh issue create --title "$title" --label uptime \
-                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
-              echo "created a new issue"
-            fi
+            {
+              echo "report<<__NOTICE_EOF__"
+              printf '%s\n' \
+                "**監視そのものが失敗しました。** サイトが生きているかどうかは分かりません。" \
+                "" \
+                "- run: $RUN_URL" \
+                "- 失敗した job: $broken"
+              echo "__NOTICE_EOF__"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "公開サイトが復旧しました（$RUN_URL）。"
-            gh issue close "$existing"
-            echo "closed #$existing"
-          else
-            echo "site is up, nothing to report"
+          if [ "$PROBE_UP" != "true" ]; then
+            {
+              echo "report<<__NOTICE_EOF__"
+              printf '%s\n' \
+                "**公開サイトが応答しません。**" \
+                "" \
+                "- ${PROBE_DETAIL:-(詳細を取得できませんでした)}" \
+                "- run: $RUN_URL" \
+                "" \
+                "3 回連続で 200 以外だったため down と判定しています。" \
+                "\`/api/live\` は \`no-store\` で Cloudflare を素通りする（cf-cache-status: DYNAMIC）ため、" \
+                "これは origin (Cloud Run) が応答していないことを意味します。" \
+                "" \
+                "1. https://rental-space.myrrh-jp.com/ を直接開いて表示を確認する" \
+                "2. Cloudflare ではなく Google のエラーページが出るなら Cloud Run 側" \
+                "3. GCP の請求先アカウントが有効か確認する（2026-08-10 の停止原因）" \
+                "" \
+                "なお本監視は **DB 疎通を見ていません**。\`/api/live\` は外部依存に触れない" \
+                "設計なので、Neon が落ちていてもこの Issue は立ちません。" \
+                "" \
+                "復旧すると本 Issue は自動で閉じます（手で閉じる必要はありません）。"
+              echo "__NOTICE_EOF__"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # 空文字 = 緑。status-notice はこれを見て Issue を閉じる。
+          echo "report=" >> "$GITHUB_OUTPUT"
+
+      - name: Notify uptime status
+        uses: ./.github/actions/status-notice
+        with:
+          # **title に時刻や run id を混ぜてはならない。** 混ぜると復旧 run が
+          # 別 title になり既存 Issue へ辿り着けず、増える一方になる。
+          title: Public site is down
+          marker: "<!-- uptime-status: do not remove (owned by uptime.yml / uptime-result) -->"
+          report: ${{ steps.status.outputs.report }}
+          recovered-message: 公開サイトが復旧しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
+          label: uptime
+          label-description: Public site is unreachable (self-resolving; owned by uptime-result)
+          github-token: ${{ secrets.GITHUB_TOKEN }}

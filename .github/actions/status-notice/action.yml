@@ -1,0 +1,112 @@
+name: Status notice
+description: 失敗を GitHub Issue として開き、復旧したら同じ Issue を閉じる（自己解消型の通知）。
+
+# 「開いている Issue の存在そのものが『いま赤』を意味する」という契約の**唯一の
+# 実装**。ci.yml / deploy-production.yml / terraform-drift.yml / uptime.yml の
+# 4 つの通知が同じ shell を持っていたので、ここへ集約した。
+#
+# **契約が gate による強制から構造的な保証に変わる。** 実装が 1 つしか無ければ、
+# 4 箇所のうち 1 箇所だけ直し忘れて挙動がずれる、という事故が起きない。
+#
+# 呼び出し側の責務は **「いま赤か」を決めて `report` を組み立てること**だけ。
+# 赤の判定基準は通知ごとに違う（job の結果だけを見るもの、plan の exit code も
+# 見るもの、probe の結果も見るもの）ので、そこは呼び出し側に残す。
+#
+# 呼び出し側が守るべきこと（gate が検査する）:
+#
+#   - job の `if:` に `always()` を入れる。無いと緑の run で job ごと skip され、
+#     **閉じる経路が消える**。
+#   - `title` を run ごとに変えない。SHA や日付を混ぜると復旧 run が別 title に
+#     なり既存 Issue へ辿り着けず、増える一方になる。
+#
+# 強制: `__tests__/unit/architecture/status-notifier-self-resolves.test.ts`
+
+inputs:
+  title:
+    description: Issue のタイトル。**run ごとに変わってはならない**（SHA や日付を混ぜない）。
+    required: true
+  marker:
+    description: >
+      この通知が作った Issue だけを見分けるための HTML コメント。本文に埋め込み、
+      突き合わせもこれで行う。タイトルで突き合わせると、人や別の automation が
+      同名の Issue を立てたときにそれへコメントを足し、緑になった瞬間に他人の
+      Issue を閉じてしまう。**run ごとに変わってはならない**。
+    required: true
+  report:
+    description: >
+      赤のときの本文。**空文字なら緑**と解釈し、開いている Issue を閉じる。
+      「いま赤か」の判定は呼び出し側が行う。
+    required: true
+  recovered-message:
+    description: 復旧時に Issue へ残すコメント。
+    required: true
+  github-token:
+    # 平文スカラーに `: ` を含めると YAML がマッピングとして解釈して壊れるため
+    # クォートする（`issues: write` の記述で実際に踏んだ）。
+    description: "gh CLI が使う token。`issues: write` 権限が必要。"
+    required: true
+  label:
+    description: 付ける label。人が絞り込むための補助で、追跡は marker が持つ。空なら付けない。
+    required: false
+    default: ""
+  label-description:
+    description: label を新規作成するときの説明。
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Open, comment, or close the status issue
+      shell: bash
+      env:
+        # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+        # 値は全て env 経由で受け取る。
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ github.repository }}
+        NOTICE_TITLE: ${{ inputs.title }}
+        NOTICE_MARKER: ${{ inputs.marker }}
+        NOTICE_REPORT: ${{ inputs.report }}
+        NOTICE_RECOVERED: ${{ inputs.recovered-message }}
+        NOTICE_LABEL: ${{ inputs.label }}
+        NOTICE_LABEL_DESCRIPTION: ${{ inputs.label-description }}
+      run: |
+        set -euo pipefail
+
+        # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
+        # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
+        existing=$(gh issue list --state open --limit 100 --json number,body \
+          --jq "[.[] | select((.body // \"\") | contains(\"$NOTICE_MARKER\"))][0].number // empty")
+
+        if [ -n "$NOTICE_REPORT" ]; then
+          if [ -n "$existing" ]; then
+            # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
+            # 重ねる必要が無い）。
+            gh issue comment "$existing" --body "$NOTICE_REPORT"
+            echo "commented on #$existing"
+            exit 0
+          fi
+
+          if [ -n "$NOTICE_LABEL" ]; then
+            # label 作成が失敗しても契約は壊れない（追跡は marker が持つ）ので
+            # 握りつぶしてよい。初回実行時は label が存在しないため冪等に用意する。
+            gh label create "$NOTICE_LABEL" \
+              --description "$NOTICE_LABEL_DESCRIPTION" \
+              --color "b60205" 2>/dev/null || true
+            gh issue create --title "$NOTICE_TITLE" --label "$NOTICE_LABEL" \
+              --body "$(printf '%s\n\n%s\n' "$NOTICE_MARKER" "$NOTICE_REPORT")"
+          else
+            gh issue create --title "$NOTICE_TITLE" \
+              --body "$(printf '%s\n\n%s\n' "$NOTICE_MARKER" "$NOTICE_REPORT")"
+          fi
+          echo "created a new issue"
+          exit 0
+        fi
+
+        if [ -n "$existing" ]; then
+          gh issue comment "$existing" --body "$NOTICE_RECOVERED"
+          gh issue close "$existing"
+          echo "closed #$existing"
+        else
+          echo "green, nothing to report"
+        fi
