@@ -115,6 +115,8 @@ export function NavigationFormDialog({
     }
   }, [lastResult, isEdit, onOpenChange, onSuccess]);
 
+  const formErrors = form.errors;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -237,6 +239,16 @@ export function NavigationFormDialog({
 
             {/* Hidden: type */}
             <input type="hidden" name={fields.type.name} value={initialType} />
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -325,6 +337,8 @@ export function SocialLinkFormDialog({
       void onSuccess();
     }
   }, [lastResult, isEdit, onOpenChange, onSuccess]);
+
+  const formErrors = form.errors;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -438,6 +452,16 @@ export function SocialLinkFormDialog({
                 />
               </div>
             </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

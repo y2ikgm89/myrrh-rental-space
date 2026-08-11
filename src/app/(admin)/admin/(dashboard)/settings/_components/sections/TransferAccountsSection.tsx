@@ -56,6 +56,8 @@ export function TransferAccountsSection({
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   return (
     <div className="space-y-8">
       <TransferAccountRegistry accounts={accounts} />
@@ -79,6 +81,17 @@ export function TransferAccountsSection({
             </p>
           ))}
         </div>
+
+        {formErrors && formErrors.length > 0 && (
+          <div
+            id={form.errorId}
+            role="alert"
+            className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            {formErrors.join(", ")}
+          </div>
+        )}
+
         <SubmitButton
           form={form.id}
           isPending={isPending}
