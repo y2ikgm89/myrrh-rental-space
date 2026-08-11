@@ -11,7 +11,7 @@ describe("migrate test DB script", () => {
   test("uses docker-compose test-db default when TEST_DATABASE_URL is missing", () => {
     expect(resolveTestDatabaseUrlForMigration(undefined)).toEqual({
       ok: true,
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       source: "default-local",
     });
   });
@@ -19,11 +19,11 @@ describe("migrate test DB script", () => {
   test("trims TEST_DATABASE_URL before using it", () => {
     expect(
       resolveTestDatabaseUrlForMigration(
-        "  postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public  ",
+        "  postgresql://postgres:postgres@localhost:5433/myrrh_test  ",
       ),
     ).toEqual({
       ok: true,
-      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       source: "env",
     });
   });
@@ -38,13 +38,16 @@ describe("migrate test DB script", () => {
             "postgresql://postgres:postgres@localhost:5433/myrrh_test",
           PATH: "bin",
         },
-        "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+        // 引数のほうが env の TEST_DATABASE_URL より優先されることを見たいので、
+        // 両者は別 database 名にしておく（同じ文字列だと、実装が env を読んでいても
+        // このテストは通ってしまう）。
+        "postgresql://postgres:postgres@localhost:5433/myrrh_test_resolved",
       ),
     ).toMatchObject({
       DATABASE_URL:
-        "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+        "postgresql://postgres:postgres@localhost:5433/myrrh_test_resolved",
       DIRECT_URL:
-        "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+        "postgresql://postgres:postgres@localhost:5433/myrrh_test_resolved",
       TEST_DATABASE_URL:
         "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       PATH: "bin",

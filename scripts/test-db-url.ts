@@ -1,5 +1,5 @@
 export const DEFAULT_LOCAL_TEST_DATABASE_URL =
-  "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public";
+  "postgresql://postgres:postgres@localhost:5433/myrrh_test";
 
 export function resolveTestDatabaseUrl(testDatabaseUrl: string | undefined): {
   readonly url: string;
