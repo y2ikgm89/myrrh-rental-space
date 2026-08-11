@@ -11,7 +11,7 @@
 #
 # Note: `[run] noOrphans` は Lexical の dynamic import 経路で TDZ regression
 # を起こすため未採用。Bun runtime version は package.json#packageManager に
-# 一本化し、Docker / devcontainer / CI はその pin に追従する。
+# 一本化し、Docker / CI はその pin に追従する。
 
 [test]
 # テストファイルのプリロード（DOM 環境 + グローバル設定）
