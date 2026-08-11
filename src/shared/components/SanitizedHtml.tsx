@@ -3,7 +3,17 @@
 /**
  * SanitizedHtml
  *
- * DOMPurify でサニタイズした HTML を表示する Client Component。
+ * **サーバーで sanitize 済みの** HTML を表示し、client 側の挙動を hydrate する
+ * Client Component。**このコンポーネントは sanitize しない**（prop 名が契約）。
+ *
+ * 以前はここで `isomorphic-dompurify` を呼んでいたが、それは SSR のたびに jsdom を
+ * リクエスト経路へ引き込む。Next の require-hook 下の Bun では jsdom のロードが必ず
+ * 失敗するため（`css-tree` の ESM が `createRequire(import.meta.url)` を使う）、
+ * この component の SSR だけが落ちて本文が server HTML から丸ごと消えていた。
+ * sanitize は jsdom 非依存の `sanitize-html` でサーバー側に移した。
+ * 呼び出し側は `@/shared/lib/html/sanitize` の
+ * `sanitizeRenderedContentHtml` / `sanitizeRenderedRawEmbedHtml` を通す。
+ *
  * h2 / h3 には rehype-slug 互換の `id` 属性を自動付与し、目次（ArticleTableOfContents）
  * のアンカーリンクが機能するようにする（業界標準: GitHub / Notion / WordPress）。
  *
@@ -15,37 +25,21 @@
  * curation icon は保存時に server enrich + sanitize 済み SVG として contentHtml に含まれる。
  * JS 無効でも表示可能（装飾 icon は aria-hidden）。
  *
- * @security XSS 対策済み — DOMPurify による厳格なサニタイズ
+ * @security sanitize 済みの入力を前提にする。sanitize は呼び出し側（サーバー）の責務。
  */
 
 import { useEffect, useRef } from "react";
 import { injectHeadingAnchors } from "@/shared/lib/html/extract-headings";
-import {
-  LEXICAL_CURATED_ICON_SVG_TAGS,
-  LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES,
-  LEXICAL_DOMPURIFY_SVG_ATTRIBUTES,
-} from "@/shared/lib/html/lexical-html-sanitize-config";
-import { sanitizeDomPurifyHtml } from "@/shared/lib/html/sanitize-dompurify-html";
-
-export const SANITIZE_OPTIONS = {
-  ADD_TAGS: ["iframe", ...LEXICAL_CURATED_ICON_SVG_TAGS],
-  ADD_ATTR: [
-    ...LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES,
-    ...LEXICAL_DOMPURIFY_SVG_ATTRIBUTES,
-  ],
-  ALLOW_DATA_ATTR: true,
-  ALLOWED_URI_REGEXP:
-    /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-};
 
 interface SanitizedHtmlProps {
-  html: string;
-  className?: string;
   /**
-   * true のとき Lexical 保存時と同じ iframe ホスト allowlist を適用する。
-   * CustomSection / EmbedSection の raw embed HTML 向け。
+   * **サーバーで sanitize 済みの** HTML。呼び出し側が
+   * `sanitizeRenderedContentHtml` / `sanitizeRenderedRawEmbedHtml`
+   * （`@/shared/lib/html/sanitize`）を通してから渡すこと。
+   * このコンポーネントは sanitize しない。
    */
-  restrictIframeHostnames?: boolean;
+  sanitizedHtml: string;
+  className?: string;
 }
 
 /**
@@ -139,16 +133,11 @@ function attachBrokenImageFallback(root: HTMLElement): () => void {
 }
 
 export function SanitizedHtml({
-  html,
+  sanitizedHtml,
   className,
-  restrictIframeHostnames = false,
 }: SanitizedHtmlProps) {
-  // DOMPurify でサニタイズ → heading に id 自動付与（決定論的、SSR/Client で同一結果）
-  const cleanHtml = sanitizeDomPurifyHtml(html, {
-    ...SANITIZE_OPTIONS,
-    restrictIframeHostnames,
-  });
-  const withAnchors = injectHeadingAnchors(cleanHtml);
+  // heading に id 自動付与（決定論的、SSR/Client で同一結果）
+  const withAnchors = injectHeadingAnchors(sanitizedHtml);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

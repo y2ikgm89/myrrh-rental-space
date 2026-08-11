@@ -7,6 +7,7 @@ import { getSpaceById } from "@/admin/queries/space";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import type { Metadata } from "next";
 
@@ -76,7 +77,12 @@ export default async function SpaceDetailPage({ params }: PageProps) {
         </>
       }
     >
-      <SpaceDetail space={space} />
+      <SpaceDetail
+        space={space}
+        sanitizedDescriptionHtml={sanitizeRenderedContentHtml(
+          space.descriptionHtml,
+        )}
+      />
     </AdminDetailLayout>
   );
 }

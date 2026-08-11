@@ -15,6 +15,7 @@ import {
 import { getOrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { resolveInternalLinkCards } from "@/shared/domain/link-cards/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/domain/spaces/resolve-space-card-embeds";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
@@ -148,7 +149,9 @@ export async function NewsDetailPageContent({
         })}
       >
         <Prose variant="editorial" className="max-w-none">
-          <SanitizedHtml html={resolvedContentHtml} />
+          <SanitizedHtml
+            sanitizedHtml={sanitizeRenderedContentHtml(resolvedContentHtml)}
+          />
         </Prose>
         <ArticleFooter url={articleUrl} title={newsItem.title} />
       </ArticleLayout>

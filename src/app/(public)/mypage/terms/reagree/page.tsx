@@ -21,6 +21,7 @@ import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/querie
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { sanitizeRenderedContentHtml } from "@/shared/lib/html/sanitize";
 import { ReagreeForm } from "./_components/reagree-form";
 import { sanitizeReturnTo } from "./_lib/sanitize-return-to";
 
@@ -42,7 +43,18 @@ export default async function TermsReagreePage({
   const params = await searchParams;
   const returnTo = sanitizeReturnTo(params["returnTo"]);
 
-  const pending = await getReagreeRequiredTermsForCustomer(customer.id);
+  const rawPending = await getReagreeRequiredTermsForCustomer(customer.id);
+  // client component へ渡す前にサーバーで sanitize する（jsdom をリクエスト経路へ
+  // 引き込まないため、sanitize は必ずサーバー側で済ませる）
+  const pending = rawPending.map((term) => ({
+    ...term,
+    contentHtml: sanitizeRenderedContentHtml(term.contentHtml),
+    // previousSnapshot は optional property。undefined を明示代入すると
+    // exactOptionalPropertyTypes に弾かれるので、値があるときだけ差し替える。
+    ...(typeof term.previousSnapshot === "string"
+      ? { previousSnapshot: sanitizeRenderedContentHtml(term.previousSnapshot) }
+      : {}),
+  }));
   if (pending.length === 0) {
     redirect(toAppRoute(returnTo));
   }
