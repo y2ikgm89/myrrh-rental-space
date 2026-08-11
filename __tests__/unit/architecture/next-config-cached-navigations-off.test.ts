@@ -5,8 +5,9 @@
  *
  * `cachedNavigations` が有効だと、`cacheComponents` 下で searchParams だけが変わる
  * ソフトナビ（管理タブの `?tab=` 切替等）のコンテンツが「一手前のタブのまま残る」
- * stale を起こす。上流の未修正バグ（vercel/next.js#86577 / #88535、いずれも OPEN）で、
- * アプリ側では回避できない。
+ * stale を起こす。上流の未修正バグ（vercel/next.js#86577、2026-08-11 時点で OPEN）で、
+ * アプリ側では回避できない。nuqs 側（47ng/nuqs#1273）は 2.9.0 で修正済みなので、
+ * 残っているのは Next 側だけ。経緯は `next.config.ts` の同項コメント。
  *
  * この gate は実際に main へ漏れた欠陥に対して置いている。16.3.0-preview.10 までは
  * 既定 false だったので `next.config.ts` には「あえて有効化しない」というコメントしか
