@@ -195,7 +195,17 @@ const nextConfig: NextConfig = {
     // コンテンツが「一手前のタブのまま残る」stale を起こす。nuqs（shallow:false→router.replace）も
     // <Suspense key={tab}> も無罪で、原因は Next 側のルーターキャッシュ層。
     // F5（完全ナビ）では正しく表示されるのが切り分けの証左。
-    // 参照（いずれも未修正 OPEN）: vercel/next.js#86577 / #88535, 47ng/nuqs#1273
+    // **残っている未修正は Next 側 1 件だけ**（2026-08-11 実測）:
+    //   vercel/next.js#86577 "[cacheComponents] Activity component route preservation
+    //   causes significant breakage in application logic, UI behavior and E2E tests" — OPEN。
+    //
+    // かつて併記していた 2 件は、もう根拠にならない:
+    //   - 47ng/nuqs#1273 は 2026-06-25 に CLOSED。nuqs 2.9.0 の
+    //     「stale URL value when revisiting a page under Next.js cacheComponents」で修正済み。
+    //   - vercel/next.js#88535 は issues / pulls とも 404 で参照できない
+    //     （隣接する #88533 / #88534 は取得できるので API 側の問題ではない）。
+    //     辿れない番号は再評価の材料にならないので落とした。
+    //
     // 上流が修正したら、消すのではなく true にして再評価する。
     // 解決後の値は `__tests__/unit/architecture/next-config-cached-navigations-off.test.ts` が見る。
     cachedNavigations: false,
