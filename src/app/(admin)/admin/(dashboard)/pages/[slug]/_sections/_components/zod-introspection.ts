@@ -1,13 +1,22 @@
 /**
  * Zod 4 スキーマ introspection ヘルパー
  *
- * Zod 内部構造（_zod.def）にアクセスするため `isRecord()` 型ガードで
- * ランタイム安全にプロパティを読み取る（`as` アサーション不使用）。
+ * 判別は classic クラスへの `instanceof`、値の取り出しは公開アクセサ
+ * （`.shape` / `.unwrap()` / `.element` / `.options` / `.def`）だけで行う。
+ *
+ * **内部プロパティ `_zod.def` は使わない。** Zod の公式ドキュメントは
+ * `_zod` を「Zod 4 のスキーマかどうかを判別する目印」としてしか案内しておらず、
+ * その下の構造に安定の約束が無い。`schema.def` は同じオブジェクトを指す公開
+ * プロパティで（実測: `schema.def === schema._zod.def`）、しかも型が付く。
+ *
+ * 例外は配列の min / max だけ。公開アクセサ `ZodArray.minLength` は
+ * `z.array(x).min(1)` の後でも `null` を返す（実測）ため使えず、`def.checks` を
+ * `z.core.$ZodCheckMinLength` / `$ZodCheckMaxLength` で判別して読む。
+ * `zod/v4/core` は library author 向けの公式サブパスで、`z.core` から届く。
  */
 
 import { z } from "zod";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
-import { isRecord } from "@/shared/lib/serialize";
 import type { FieldMeta } from "@/shared/lib/sections/field-registry";
 
 // ─────────────────────────────────────────────────────────────
@@ -36,79 +45,37 @@ export interface ArrayItemFieldInfo {
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Zod スキーマから ZodObject の shape を取得する。
- * ZodDefault / ZodOptional / ZodPrefault 等のラッパーを再帰的にアンラップする。
+ * `default` / `optional` / `prefault` を 1 段だけ外す。他は `undefined`（再帰の終端）。
  *
- * `createImageGroupSchema` / `createMediaGroupSchema` 等の `z.object(...).prefault({}).register(...)`
- * factory パターンは `_zod.def.type === "prefault"` で wrap されるため、明示的に unwrap しないと
- * AutoGroupField の sub-shape introspection が undefined を返して sub-fields が描画されない silent bug。
+ * `createImageGroupSchema` / `createMediaGroupSchema` 等の
+ * `z.object(...).prefault({}).register(...)` factory は prefault で包まれるため、
+ * ここを辿らないと sub-shape が取れず sub-fields が描画されない silent bug になる。
+ *
+ * `.unwrap()` の戻り型は core の `$ZodType` なので、classic として扱うために
+ * `instanceof z.ZodType` で受け直す（`as` を使わずに型を確定させるため）。
  */
-export function getZodObjectShape(
-  schema: z.ZodType,
-): Record<string, z.ZodType> | undefined {
-  // Direct object — has .shape
-  if (hasShape(schema)) {
-    return schema.shape;
+function unwrapWrapper(schema: z.ZodType): z.ZodType | undefined {
+  if (
+    schema instanceof z.ZodDefault ||
+    schema instanceof z.ZodOptional ||
+    schema instanceof z.ZodPrefault
+  ) {
+    const inner = schema.unwrap();
+    return inner instanceof z.ZodType ? inner : undefined;
   }
-
-  const def = getZodDef(schema);
-  if (!def) return undefined;
-
-  const type = def["type"];
-
-  // ZodDefault → innerType
-  if (type === "default" && isZodType(def["innerType"])) {
-    return getZodObjectShape(def["innerType"]);
-  }
-
-  // ZodOptional → innerType
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return getZodObjectShape(def["innerType"]);
-  }
-
-  // ZodPrefault → innerType（`createMediaGroupSchema` / `createImageGroupSchema` 等で必須）
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return getZodObjectShape(def["innerType"]);
-  }
-
   return undefined;
 }
 
 /**
- * unknown 値が z.ZodType っぽいかどうかを判定する。
- * _zod プロパティと description プロパティの存在で判定する。
+ * Zod スキーマから ZodObject の shape を取得する。
+ * ZodDefault / ZodOptional / ZodPrefault のラッパーを再帰的にアンラップする。
  */
-export function isZodType(value: unknown): value is z.ZodType {
-  if (typeof value !== "object" || value === null) return false;
-  // Zod 4 のスキーマは _zod プロパティを持つ
-  return "_zod" in value;
-}
-
-/**
- * Zod スキーマの _zod.def を安全に取得する。
- */
-export function getZodDef(
+export function getZodObjectShape(
   schema: z.ZodType,
-): Record<string, unknown> | undefined {
-  const raw: unknown = schema;
-  if (!isRecord(raw)) return undefined;
-  const zod: unknown = raw["_zod"];
-  if (!isRecord(zod)) return undefined;
-  const def: unknown = zod["def"];
-  if (!isRecord(def)) return undefined;
-  return def;
-}
-
-/**
- * ZodObject の shape プロパティがあるか型安全にチェック。
- */
-export function hasShape(
-  schema: z.ZodType,
-): schema is z.ZodType & { shape: Record<string, z.ZodType> } {
-  const raw: unknown = schema;
-  if (!isRecord(raw)) return false;
-  const shape: unknown = raw["shape"];
-  return typeof shape === "object" && shape !== null;
+): Record<string, z.ZodType> | undefined {
+  if (schema instanceof z.ZodObject) return schema.shape;
+  const inner = unwrapWrapper(schema);
+  return inner ? getZodObjectShape(inner) : undefined;
 }
 
 /**
@@ -123,70 +90,26 @@ export function hasShape(
  * フォールバックを持つ。
  */
 export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
-  // Direct registry lookup
   const meta = fieldRegistry.get(schema);
   if (meta) return meta;
 
-  const def = getZodDef(schema);
-  if (!def) return undefined;
-
-  const type = def["type"];
-
-  // ZodDefault → check innerType
-  if (type === "default" && isZodType(def["innerType"])) {
-    return extractFieldMetaDeep(def["innerType"]);
-  }
-
-  // ZodOptional → check innerType
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return extractFieldMetaDeep(def["innerType"]);
-  }
-
-  // ZodPrefault → check innerType
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return extractFieldMetaDeep(def["innerType"]);
-  }
-
-  return undefined;
+  const inner = unwrapWrapper(schema);
+  return inner ? extractFieldMetaDeep(inner) : undefined;
 }
 
 /**
- * ZodDefault / ZodOptional / ZodPrefault をアンラップして select フィールドの enum 値を取得する。
+ * select フィールドの enum 値を取得する。
+ * ZodDefault / ZodOptional / ZodPrefault をアンラップする
+ * （`z.enum(...).prefault(...)` を辿らないと空配列を返す silent bug）。
  *
- * `getZodObjectShape` / `extractFieldMetaDeep` と同じく `prefault` を unwrap しないと
- * `z.enum(...).prefault(...)` でラップされた select が空配列を返す silent bug。
+ * 値は `.options` ではなく `def.entries` のキーから取る。`field.select()` が渡すのは
+ * 文字列タプルなので両者は一致するが、`.options` の型は `EnumValue[]`（number を含む）
+ * で戻り値の `string[]` と噛み合わない。
  */
 export function getSelectOptions(schema: z.ZodType): string[] {
-  const def = getZodDef(schema);
-  if (!def) return [];
-
-  const type = def["type"];
-
-  // ZodEnum → entries
-  if (type === "enum") {
-    const entries = def["entries"];
-    if (typeof entries === "object" && entries !== null) {
-      return Object.keys(entries);
-    }
-    return [];
-  }
-
-  // ZodDefault → innerType
-  if (type === "default" && isZodType(def["innerType"])) {
-    return getSelectOptions(def["innerType"]);
-  }
-
-  // ZodOptional → innerType
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return getSelectOptions(def["innerType"]);
-  }
-
-  // ZodPrefault → innerType
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return getSelectOptions(def["innerType"]);
-  }
-
-  return [];
+  if (schema instanceof z.ZodEnum) return Object.keys(schema.def.entries);
+  const inner = unwrapWrapper(schema);
+  return inner ? getSelectOptions(inner) : [];
 }
 
 /**
@@ -196,44 +119,20 @@ export function getSelectOptions(schema: z.ZodType): string[] {
 export function getArrayItemShape(
   schema: z.ZodType,
 ): Record<string, z.ZodType> | undefined {
-  const def = getZodDef(schema);
-  if (!def) return undefined;
-
-  const type = def["type"];
-
-  // ZodArray → element
-  if (type === "array") {
-    const element = def["element"];
-    if (isZodType(element) && hasShape(element)) {
-      return element.shape;
-    }
-    return undefined;
+  if (schema instanceof z.ZodArray) {
+    const element = schema.element;
+    return element instanceof z.ZodObject ? element.shape : undefined;
   }
-
-  // ZodDefault → innerType
-  if (type === "default" && isZodType(def["innerType"])) {
-    return getArrayItemShape(def["innerType"]);
-  }
-
-  // ZodOptional → innerType
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return getArrayItemShape(def["innerType"]);
-  }
-
-  // ZodPrefault → innerType
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return getArrayItemShape(def["innerType"]);
-  }
-
-  return undefined;
+  const inner = unwrapWrapper(schema);
+  return inner ? getArrayItemShape(inner) : undefined;
 }
 
 /**
  * ZodArray の min / max 制約を取得する。
  *
- * `field.array({ min, max })` で登録された制約は `_zod.def.checks` 配列に
- * `{ _zod: { def: { check: "min_length" | "max_length", value: number } } }`
- * として格納される。
+ * `field.array({ min, max })` の制約は `def.checks` に `$ZodCheckMinLength` /
+ * `$ZodCheckMaxLength` として積まれる。公開アクセサ `.minLength` / `.maxLength` は
+ * `z.array(x).min(1)` の後でも `null` のままなので使えない（実測）。
  */
 export interface ArrayConstraints {
   readonly min?: number;
@@ -241,60 +140,26 @@ export interface ArrayConstraints {
 }
 
 export function getArrayConstraints(schema: z.ZodType): ArrayConstraints {
-  const def = getZodDef(schema);
-  if (!def) return {};
-
-  const type = def["type"];
-
-  // ZodDefault → innerType
-  if (type === "default" && isZodType(def["innerType"])) {
-    return getArrayConstraints(def["innerType"]);
+  if (!(schema instanceof z.ZodArray)) {
+    const inner = unwrapWrapper(schema);
+    return inner ? getArrayConstraints(inner) : {};
   }
 
-  // ZodOptional → innerType
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return getArrayConstraints(def["innerType"]);
-  }
+  let min: number | undefined;
+  let max: number | undefined;
 
-  // ZodPrefault → innerType
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return getArrayConstraints(def["innerType"]);
-  }
-
-  // ZodArray → checks 配列を walk
-  if (type === "array") {
-    const checks = def["checks"];
-    if (!Array.isArray(checks)) return {};
-
-    let min: number | undefined;
-    let max: number | undefined;
-
-    for (const check of checks) {
-      if (!isRecord(check)) continue;
-      // ZodCheck は ZodType と同じく `_zod.def` を持つ（型は異なるが構造は共通）
-      const zodMeta = check["_zod"];
-      if (!isRecord(zodMeta)) continue;
-      const checkDef = zodMeta["def"];
-      if (!isRecord(checkDef)) continue;
-      const kind = checkDef["check"];
-      // Zod 4: min_length は `minimum`、max_length は `maximum` キーで値を持つ
-      if (kind === "min_length" && typeof checkDef["minimum"] === "number") {
-        min = checkDef["minimum"];
-      } else if (
-        kind === "max_length" &&
-        typeof checkDef["maximum"] === "number"
-      ) {
-        max = checkDef["maximum"];
-      }
+  for (const check of schema.def.checks ?? []) {
+    if (check instanceof z.core.$ZodCheckMinLength) {
+      min = check._zod.def.minimum;
+    } else if (check instanceof z.core.$ZodCheckMaxLength) {
+      max = check._zod.def.maximum;
     }
-
-    return {
-      ...(min !== undefined && { min }),
-      ...(max !== undefined && { max }),
-    };
   }
 
-  return {};
+  return {
+    ...(min !== undefined && { min }),
+    ...(max !== undefined && { max }),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -304,19 +169,14 @@ export function getArrayConstraints(schema: z.ZodType): ArrayConstraints {
 /**
  * Zod 4 の `z.discriminatedUnion()` 情報。
  *
- * `_zod.def`:
- *  - `type: "union"`
- *  - `discriminator: string` （例: "variant"）
- *  - `options: ZodObject[]` （各 variant schema）
- *  - `inclusive: true`
- *
- * 各 option の `.shape[discriminator]` は `z.literal(...)` で `_zod.def.values: [literalValue]`。
+ * `discriminator` は `def.discriminator`、variant は `.options`、各 variant の
+ * 判別値は `option.shape[discriminator]`（`ZodLiteral`）の `.values`（Set）から取る。
  */
 export interface DiscriminatedUnionInfo {
   readonly discriminator: string;
   readonly options: ReadonlyArray<{
     readonly value: string;
-    readonly schema: z.ZodType & { shape: Record<string, z.ZodType> };
+    readonly schema: z.ZodObject;
   }>;
   readonly meta: FieldMeta | undefined;
 }
@@ -326,7 +186,7 @@ export interface DiscriminatedUnionInfo {
  * ZodDefault / ZodOptional / ZodPrefault でラップされていても unwrap して再帰探索する。
  *
  * page-hero `backgroundMedia` のような `z.discriminatedUnion(...).prefault({...})`
- * を unwrap しないと info が null 返りで variant select が出ない silent bug。
+ * を unwrap しないと info が undefined 返りで variant select が出ない silent bug。
  *
  * **FieldMeta は unwrap の外側で登録されている。** `.register(fieldRegistry, …)` は
  * ラッパー側に付くので、再帰で内側へ降りてから `fieldRegistry.get` を呼ぶと
@@ -338,51 +198,26 @@ export function extractDiscriminatedUnionInfo(
   outerMeta?: FieldMeta,
 ): DiscriminatedUnionInfo | undefined {
   const registeredMeta = outerMeta ?? fieldRegistry.get(schema);
-  const def = getZodDef(schema);
-  if (!def) return undefined;
 
-  const type = def["type"];
-
-  // ZodDefault → unwrap
-  if (type === "default" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
+  if (!(schema instanceof z.ZodDiscriminatedUnion)) {
+    const inner = unwrapWrapper(schema) ?? unwrapPipeOutput(schema);
+    return inner
+      ? extractDiscriminatedUnionInfo(inner, registeredMeta)
+      : undefined;
   }
 
-  // ZodOptional → unwrap
-  if (type === "optional" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
-  }
-
-  // ZodPrefault → unwrap
-  if (type === "prefault" && isZodType(def["innerType"])) {
-    return extractDiscriminatedUnionInfo(def["innerType"], registeredMeta);
-  }
-
-  // ZodPipe（`z.preprocess` の実体）→ 出力側へ unwrap。
-  // page-hero は `safeParse({})` を成立させるため union を preprocess で包んでいる
-  // （schema.ts の JSDoc 参照）。ここを辿らないと variant の select が描画されない。
-  if (type === "pipe" && isZodType(def["out"])) {
-    return extractDiscriminatedUnionInfo(def["out"], registeredMeta);
-  }
-
-  // discriminated union: type === "union" + discriminator が string
-  if (type !== "union") return undefined;
-  const discriminator = def["discriminator"];
-  if (typeof discriminator !== "string") return undefined;
-
-  const rawOptions = def["options"];
-  if (!Array.isArray(rawOptions)) return undefined;
-
+  const discriminator = schema.def.discriminator;
   const options: DiscriminatedUnionInfo["options"][number][] = [];
-  for (const option of rawOptions) {
-    if (!isZodType(option) || !hasShape(option)) continue;
-    const literalSchema = option.shape[discriminator];
-    if (!literalSchema) continue;
-    const literalDef = getZodDef(literalSchema);
-    if (!literalDef || literalDef["type"] !== "literal") continue;
-    const values = literalDef["values"];
-    if (!Array.isArray(values) || typeof values[0] !== "string") continue;
-    options.push({ value: values[0], schema: option });
+
+  for (const option of schema.options) {
+    if (!(option instanceof z.ZodObject)) continue;
+    // `ZodObject` の既定 shape は `Record<string, any>` なので、要素を直接読むと
+    // `any` が漏れる。戻り型が確定している `getZodObjectShape` を通して封じる。
+    const literal = getZodObjectShape(option)?.[discriminator];
+    if (!(literal instanceof z.ZodLiteral)) continue;
+    const [value] = literal.values;
+    if (typeof value !== "string") continue;
+    options.push({ value, schema: option });
   }
 
   if (options.length === 0) return undefined;
@@ -392,6 +227,19 @@ export function extractDiscriminatedUnionInfo(
     options,
     meta: registeredMeta,
   };
+}
+
+/**
+ * `z.preprocess` の実体である ZodPipe の出力側を返す。
+ *
+ * page-hero は `safeParse({})` を成立させるため union を preprocess で包んでいる
+ * （schema.ts の JSDoc 参照）。ここを辿らないと variant の select が描画されない。
+ * 他の helper は pipe を辿らない（辿るのは discriminated union の探索だけ）。
+ */
+function unwrapPipeOutput(schema: z.ZodType): z.ZodType | undefined {
+  if (!(schema instanceof z.ZodPipe)) return undefined;
+  const out = schema.def.out;
+  return out instanceof z.ZodType ? out : undefined;
 }
 
 /**
@@ -475,7 +323,8 @@ function extractDiscriminatedUnionFields(
 
   // Active variant の他フィールド（discriminator 自身を除外）
   const variantFields: FieldInfo[] = [];
-  for (const [key, fieldSchema] of Object.entries(activeOption.schema.shape)) {
+  const variantShape = getZodObjectShape(activeOption.schema) ?? {};
+  for (const [key, fieldSchema] of Object.entries(variantShape)) {
     if (key === discriminator) continue;
     const fieldMeta = extractFieldMetaDeep(fieldSchema);
     if (fieldMeta) {
