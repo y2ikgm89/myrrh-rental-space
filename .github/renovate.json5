@@ -116,6 +116,25 @@
       groupName: "typescript",
       matchUpdateTypes: ["minor", "patch"],
     },
+    // typescript の major は PR を作らせず Dashboard のチェックボックスに留める。
+    //
+    // typescript-eslint の peer は 8.67.0 / canary いずれも `>=4.8.4 <6.1.0` で
+    // TypeScript 7 を許さず、`scripts/ensure-typescript-toolchain.ts` が
+    // 「インストール済み typescript-eslint が申告する範囲」を読んで範囲外なら throw する。
+    // これを `bun run build` と `bun run type-check` の両方が入口で呼ぶため、
+    // TS 7 の PR は必ず落ちる（PR #2168 で実際に落ちた）。
+    // 放置すると TS の新版が出るたびに、構造的に通らない PR が CI を 1 回ずつ消費する。
+    //
+    // 解除条件は typescript-eslint の peer range が 7.x を含むこと。それだけ。
+    // gate 側は範囲をハードコードしていないので、peer が動けば設定変更なしで通る。
+    // なお TypeScript 6.x は 6.0.3 が最終版で 6.1 は存在しないため、
+    // 6.0.3（現在の pin）と 7.x の間に中間ステップは無い。
+    {
+      description: "TypeScript major stays behind Dashboard approval",
+      matchPackageNames: ["typescript"],
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+    },
     // ----- Prisma エコシステム -----
     {
       description: "Group Prisma packages",
