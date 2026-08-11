@@ -72,9 +72,10 @@ describe("Prisma client module format contract", () => {
 
   test("Dockerfile runner guard checks the extension moduleFormat actually emits", () => {
     // generator は moduleFormat から query_compiler の specifier 拡張子を決める
-    // （cjs → .js / esm → .mjs）。Dockerfile の prune guard はその「生成 client が
-    // dynamic import する実ファイル」の存在を保証するのが役目なので、両者がずれると
-    // guard は使われないファイルを見張ることになり、本来の目的を果たさなくなる。
+    // （cjs → .js / esm → .mjs）。Dockerfile runner の `test -f` は「生成 client が
+    // dynamic import する実ファイルを standalone のトレースが確かに含めた」ことを
+    // ビルド時に保証するのが役目なので、両者がずれると guard は使われないファイルを
+    // 見張ることになり、本来の目的を果たさなくなる。
     const generatorBlock = readGeneratorBlock();
     const expectedExtension = /moduleFormat\s*=\s*"cjs"/.test(generatorBlock)
       ? "js"
