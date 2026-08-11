@@ -15,6 +15,16 @@ runs:
       with:
         bun-version-file: package.json
 
+    # `next build` の bin は `#!/usr/bin/env node` なので、build は runner image に
+    # 載っている Node で走らせないと「CI で緑になった build」と「出荷される build」が
+    # 別ランタイムになる。runner は Dockerfile の `node:24-alpine`（Stage 5）なので
+    # ここも 24 に固定する。ピンを外すと GitHub の runner image 更新で黙って
+    # 別メジャーになる。
+    - name: Setup Node
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: "24"
+
     - name: Cache Bun dependencies
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:

@@ -1,7 +1,7 @@
 # syntax=docker.io/docker/dockerfile:1
 #
-# ビルドは Bun（package.json の packageManager と一致）。
-# **実行（runner）だけ Node**。理由は Stage 5 のコメントに書いてある。
+# 依存解決とスクリプト実行は Bun（package.json の packageManager と一致）。
+# **`next build` と実行（runner）は Node**。理由は Stage 2 / Stage 5 のコメント。
 # https://bun.sh/guides/ecosystem/docker
 # https://github.com/vercel/next.js/tree/canary/examples/with-docker
 
@@ -19,6 +19,22 @@ RUN sh ./scripts/bun-ci-install.sh && \
 
 # --- Stage 2: Build Prep ---
 FROM base AS builder-base
+
+# `next build` を実 Node で走らせる。
+#
+# `oven/bun:*-alpine` の `node` は `/usr/local/bun-node-fallback-bin/node` で、実体は
+# Bun 本体（実測: `node -e "process.versions.bun"` が 1.3.14 を返す）。`next` の bin は
+# `#!/usr/bin/env node` なので、何もしないと **本番 image の build だけ Bun ランタイム**に
+# なる。CI は ubuntu の実 Node で build しているため、緑になった build と出荷される
+# build が別ランタイムという状態だった。
+#
+# Bun と Node の差は落ちずに出力だけ変わることがある（#2182: SSR が 200 のまま本文だけ
+# 欠けた）。prerender で同じことが起きると build は成功し、壊れた静的 HTML が出荷される。
+#
+# `/usr/local/bin` は PATH 上で fallback より前なのでこの COPY だけで置き換わる。
+# runner ステージと同じ `node:24-alpine` から取るのでバージョンも一致する。
+COPY --from=node:24-alpine /usr/local/bin/node /usr/local/bin/node
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/generated ./generated
 COPY . .

@@ -66,6 +66,43 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(runnerStage).not.toMatch(/^FROM (base|oven\/bun)/mu);
   });
 
+  test("next build も runner と同じ Node で走る（builder に実 Node を持ち込む）", () => {
+    // `oven/bun:*-alpine` の `node` は Bun 本体（`/usr/local/bun-node-fallback-bin/node`）。
+    // `next` の bin は `#!/usr/bin/env node` なので、実 Node を置かない限り本番 image の
+    // build だけ Bun ランタイムになる。CI は実 Node で build しているため、
+    // 「緑になった build」と「出荷される build」が別ランタイムになる。
+    // Bun と Node の差は落ちずに出力だけ変わることがある（#2182）。
+    const dockerfile = read("Dockerfile");
+    const builderStage = dockerfile.slice(
+      dockerfile.indexOf("FROM base AS builder-base"),
+      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
+    );
+
+    const copied = builderStage.match(
+      /COPY --from=node:(?<major>\d+)-alpine \/usr\/local\/bin\/node \/usr\/local\/bin\/node/u,
+    );
+    expect(copied?.groups?.["major"]).toBeString();
+
+    // runner と同じメジャーであること。片方だけ上がると build と実行が食い違う。
+    const runner = dockerfile.match(
+      /FROM node:(?<major>\d+)-alpine AS runner/u,
+    );
+    expect(copied?.groups?.["major"]).toBe(runner?.groups?.["major"]);
+  });
+
+  test("CI も同じ Node メジャーに固定する（未固定だと runner image 更新で黙って変わる）", () => {
+    const dockerfile = read("Dockerfile");
+    const runner = dockerfile.match(
+      /FROM node:(?<major>\d+)-alpine AS runner/u,
+    );
+    const major = runner?.groups?.["major"];
+    expect(major).toBeString();
+
+    const setup = read(".github/actions/setup-bun-deps/action.yml");
+    expect(setup).toContain("actions/setup-node@");
+    expect(setup).toContain(`node-version: "${major ?? ""}"`);
+  });
+
   test("Cloud Run Job が適用前チェックを migrate より前に実行する", () => {
     // ここが本番の実体。Cloud Run Job は Dockerfile の CMD を command/args で
     // 上書きするので、Dockerfile だけ直しても本番では走らない。
