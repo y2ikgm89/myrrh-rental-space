@@ -1124,10 +1124,15 @@ jobs:
       contents: read
       issues: write
     steps:
-      - name: Report nightly result
+      # ローカル action (`uses: ./…`) を使うため checkout が要る。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Decide nightly status
+        id: status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て env 経由で受け取る。
           NEEDS_JSON: ${{ toJSON(needs) }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
@@ -1135,15 +1140,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
-          # 値は全て上の env 経由で受け取る。
-          title="Nightly CI failure"
-          # **この workflow が作った Issue だけ**を対象にするための marker。
-          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
-          # 立てたときにそれへ失敗コメントを足し、緑になった瞬間に**他人の Issue を
-          # 閉じて**しまう。marker は本文に埋めるので label の事前作成が要らず、
-          # 誰かがタイトルを変えても（marker が残る限り）追跡が切れない。
-          marker="<!-- nightly-ci-status: do not remove (owned by ci.yml / nightly-result) -->"
           # **「failure でない = 緑」ではない。** `needs.<job>.result` は failure 以外にも
           # cancelled を取る。timeout で打ち切られた job や、実行中に停止された job は
           # cancelled になるので、`== "failure"` だけを見ると一番知りたい失敗を緑と読む。
@@ -1157,35 +1153,29 @@ jobs:
           failed=$(printf '%s' "$NEEDS_JSON" \
             | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
-          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
-          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
-          existing=$(gh issue list --state open --limit 100 --json number,body \
-            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
+          if [ -z "$failed" ]; then
+            # 空文字 = 緑。status-notice はこれを見て Issue を閉じる。
+            echo "report=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          if [ -n "$failed" ]; then
-            report=$(printf '%s\n' \
+          # 複数行を step output で渡す公式の書き方（delimiter 付き heredoc）。
+          {
+            echo "report<<__NOTICE_EOF__"
+            printf '%s\n' \
               "nightly (schedule) が失敗しました。" \
               "" \
               "- run: $RUN_URL" \
               "- commit: \`$COMMIT_SHA\`" \
-              "- 失敗した job: $failed")
-            if [ -n "$existing" ]; then
-              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
-              # 重ねる必要が無い）。
-              gh issue comment "$existing" --body "$report"
-              echo "commented on #$existing"
-            else
-              gh issue create --title "$title" \
-                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
-              echo "created a new issue"
-            fi
-            exit 0
-          fi
+              "- 失敗した job: $failed"
+            echo "__NOTICE_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "nightly が復旧しました（$RUN_URL）。"
-            gh issue close "$existing"
-            echo "closed #$existing"
-          else
-            echo "nightly green, nothing to report"
-          fi
+      - name: Notify nightly status
+        uses: ./.github/actions/status-notice
+        with:
+          title: Nightly CI failure
+          marker: "<!-- nightly-ci-status: do not remove (owned by ci.yml / nightly-result) -->"
+          report: ${{ steps.status.outputs.report }}
+          recovered-message: nightly が復旧しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
+          github-token: ${{ secrets.GITHUB_TOKEN }}

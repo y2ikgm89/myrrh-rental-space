@@ -17,31 +17,35 @@
  *
  * # 何を見るか
  *
- * `toJSON(needs)` で **自 workflow の job 結果を集計する job**（= status
- * notifier）を全 workflow から拾い、次を検査する:
+ * Issue の開閉そのものは `.github/actions/status-notice` に集約してある。
+ * **実装が 1 つしか無いので、4 箇所のうち 1 箇所だけ直し忘れる形の drift は
+ * 構造的に起きない。** この gate が見るのは、その前提が崩れていないことと、
+ * 呼び出し側にしか書けない 2 点:
  *
- * 1. `if:` に `always()` がある — 無いと緑の run で job ごと skip され、
- *    閉じる経路が消える
- * 2. `gh issue create` と `gh issue close` の両方がある — 開けるなら閉じられる
- * 3. `gh issue create --title` に渡る値が run ごとに変わらない — SHA や run id
- *    を混ぜると復旧 run が既存 Issue に辿り着けない
+ * 1. 共有 action に `gh issue create` と `gh issue close` の両方がある
+ *    — 開けるなら閉じられる（実装が 1 つなので 1 回検査すれば足りる）
+ * 2. status notifier の job が **その共有 action を使っている**
+ *    — 自前で Issue を触り始めたら 1 の保証が効かなくなる
+ * 3. job の `if:` に `always()` がある
+ *    — 無いと緑の run で job ごと skip され、閉じる経路が消える
+ * 4. action へ渡す `title` が run ごとに変わらない
+ *    — SHA や日付を混ぜると復旧 run が既存 Issue に辿り着けない
  *
- * `toJSON(needs)` を持たない job は対象外。集計していない job は「いま緑か」を
- * 知らないので、閉じる責務を負わせられない。**現時点で該当する job は無い** —
- * Issue を立てる job は 3 つとも needs を集計する形に揃えてある。
+ * status notifier は `toJSON(needs)` で **自 workflow の job 結果を集計する
+ * job** として拾う。集計していない job は「いま緑か」を知らないので、閉じる
+ * 責務を負わせられない。現時点で該当する job は無い（Issue を立てる job は
+ * 4 つとも needs を集計する形に揃えてある）。
  *
  * # 粗さ
  *
- * 検査は job の YAML 構造と `run:` の**文字列**に対して行う。`gh issue close`
- * が実際に緑の分岐で呼ばれるか（順序・条件）までは見ていない。既存 Issue の
- * 突き合わせが marker で行われているかも見ていない。そこは手本の
- * `ci.yml` の `nightly-result` を読んで揃えること。
+ * 検査は YAML の構造に対して行う。共有 action の内部で `gh issue close` が
+ * 実際に緑の分岐で呼ばれるか（順序・条件）までは見ていない。呼び出し側が
+ * 渡す `report` が正しく「空文字 = 緑」を表しているかも見ていない。
  *
  * # 直し方
  *
- * `.github/workflows/ci.yml` の `nightly-result` が手本。失敗したら Issue を
- * 立て（既に開いていればコメントを足し）、復旧したら同じ Issue に復旧を記録
- * して閉じる。
+ * `.github/workflows/ci.yml` の `nightly-result` が手本。赤かどうかを決めて
+ * `report` を組み立て、`./.github/actions/status-notice` に渡すだけでよい。
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -53,10 +57,13 @@ type NotifierJob = {
   readonly job: string;
   readonly condition: string;
   readonly needs: readonly string[];
-  readonly script: string;
+  readonly usesSharedNotice: boolean;
+  readonly title: string | null;
 };
 
-const WORKFLOWS_DIR = join(process.cwd(), ".github", "workflows");
+const GITHUB_DIR = join(process.cwd(), ".github");
+const WORKFLOWS_DIR = join(GITHUB_DIR, "workflows");
+const SHARED_NOTICE_PATH = "./.github/actions/status-notice";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -68,14 +75,19 @@ function readStringArray(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
-/** job 配下の `run:` を全部つないだもの。 */
-function readScript(job: Record<string, unknown>): string {
+function readSteps(job: Record<string, unknown>): Record<string, unknown>[] {
   const steps = job["steps"];
-  if (!Array.isArray(steps)) return "";
-  return steps
-    .filter(isRecord)
-    .map((step) => (typeof step["run"] === "string" ? step["run"] : ""))
-    .join("\n");
+  return Array.isArray(steps) ? steps.filter(isRecord) : [];
+}
+
+/** 共有 action を呼ぶ step（無ければ null） */
+function findSharedNoticeStep(
+  job: Record<string, unknown>,
+): Record<string, unknown> | null {
+  for (const step of readSteps(job)) {
+    if (step["uses"] === SHARED_NOTICE_PATH) return step;
+  }
+  return null;
 }
 
 function readWorkflowJobs(
@@ -112,46 +124,27 @@ function collectNotifiers(): NotifierJob[] {
   for (const fileName of listWorkflowFileNames()) {
     for (const [name, job] of readWorkflowJobs(fileName)) {
       if (!isStatusNotifier(job)) continue;
+      const noticeStep = findSharedNoticeStep(job);
+      const inputs = noticeStep === null ? null : noticeStep["with"];
+      const title = isRecord(inputs) ? inputs["title"] : null;
       notifiers.push({
         source: `.github/workflows/${fileName}`,
         job: name,
         condition: typeof job["if"] === "string" ? job["if"] : "",
         needs: readStringArray(job["needs"]),
-        script: readScript(job),
+        usesSharedNotice: noticeStep !== null,
+        title: typeof title === "string" ? title : null,
       });
     }
   }
   return notifiers;
 }
 
-/**
- * `gh issue create --title <arg>` に渡る値を、単純な `VAR="literal"` 代入まで
- * 遡って解決する。解決できない形（env 経由など）は raw のまま返すので、展開を
- * 含んだままなら判定は違反側へ倒れる（fail-closed）。
- */
-function resolveIssueTitles(script: string): string[] {
-  const assignments = new Map<string, string>();
-  for (const match of script.matchAll(
-    /^\s*([A-Za-z_][A-Za-z0-9_]*)=("[^"\n]*"|'[^'\n]*')\s*$/gmu,
-  )) {
-    assignments.set(match[1] ?? "", (match[2] ?? "").slice(1, -1));
-  }
-
-  const titles: string[] = [];
-  for (const match of script.matchAll(
-    /--title\s+("[^"\n]*"|'[^'\n]*'|\S+)/gu,
-  )) {
-    const raw = (match[1] ?? "").replace(/^["']|["']$/gu, "");
-    const name = /^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?$/u.exec(raw)?.[1];
-    titles.push(name === undefined ? raw : (assignments.get(name) ?? raw));
-  }
-  return titles;
-}
-
 /** 自己解消契約を満たさない点を列挙する。空配列 = 契約成立。 */
 function findContractViolations(notifier: {
   readonly condition: string;
-  readonly script: string;
+  readonly usesSharedNotice: boolean;
+  readonly title: string | null;
 }): string[] {
   const violations: string[] = [];
 
@@ -160,24 +153,50 @@ function findContractViolations(notifier: {
       "if: に always() が無い — 緑の run で job ごと skip され、閉じる経路が消える",
     );
   }
-  if (!notifier.script.includes("gh issue create")) {
-    violations.push("gh issue create が無い — 失敗が可視化されない");
+
+  if (!notifier.usesSharedNotice) {
+    violations.push(
+      `${SHARED_NOTICE_PATH} を使っていない — Issue の開閉を自前で書くと、実装が 1 つであることによる保証が効かなくなる`,
+    );
+    // action を使っていない以上、title の検査は意味を持たない。
+    return violations;
   }
-  if (!notifier.script.includes("gh issue close")) {
-    violations.push("gh issue close が無い — 一度開いた Issue が永久に残る");
-  }
-  for (const title of resolveIssueTitles(notifier.script)) {
-    if (title.includes("$")) {
-      violations.push(
-        `Issue title が run ごとに変わる (${title}) — 復旧 run が既存 Issue に辿り着けない`,
-      );
-    }
+
+  if (notifier.title === null || notifier.title.length === 0) {
+    violations.push("title を渡していない");
+  } else if (
+    notifier.title.includes("$") ||
+    notifier.title.includes("${{") ||
+    /\d{4}-\d{2}-\d{2}/u.test(notifier.title)
+  ) {
+    violations.push(
+      `title が run ごとに変わる (${notifier.title}) — 復旧 run が既存 Issue に辿り着けない`,
+    );
   }
 
   return violations;
 }
 
 const notifiers = collectNotifiers();
+
+describe("共有 status-notice action", () => {
+  const actionSource = readFileSync(
+    join(GITHUB_DIR, "actions", "status-notice", "action.yml"),
+    "utf8",
+  );
+
+  test("開くだけでなく閉じる", () => {
+    // 実装は 1 つしか無いので、ここが契約の本体。
+    expect(actionSource).toContain("gh issue create");
+    expect(actionSource).toContain("gh issue close");
+  });
+
+  test("空の report を緑として扱う入口がある", () => {
+    // 呼び出し側は「空文字 = 緑」でしか復旧を伝えられない。
+    expect(actionSource).toContain("NOTICE_REPORT");
+    expect(actionSource).toContain('if [ -n "$NOTICE_REPORT" ]');
+  });
+});
 
 describe("status notifier の自己解消契約", () => {
   test("走査が status notifier を実際に見つけている", () => {
@@ -197,7 +216,7 @@ describe("status notifier の自己解消契約", () => {
     expect(names).toContain(".github/workflows/uptime.yml :: uptime-result");
   });
 
-  test("失敗で開いた Issue を復旧時に自分で閉じる", () => {
+  test("共有 action 経由で、緑の run でも走り、run 不変の title を渡す", () => {
     const offenders = notifiers.flatMap((notifier) =>
       findContractViolations(notifier).map(
         (violation) => `${notifier.source} :: ${notifier.job} — ${violation}`,
@@ -211,26 +230,18 @@ describe("status notifier の自己解消契約", () => {
 describe("契約判定の見本", () => {
   const sound = {
     condition: "always() && github.repository == 'y2ikgm89/myrrh-rental-space'",
-    script: [
-      'title="Deploy Production failure"',
-      'gh issue create --title "$title" --body "$marker"',
-      'gh issue close "$existing"',
-    ].join("\n"),
+    usesSharedNotice: true,
+    title: "Deploy Production failure",
   };
 
   test("手本の形は落ちない", () => {
     expect(findContractViolations(sound)).toEqual([]);
   });
 
-  test("復旧時に閉じない形は落ちる", () => {
-    const openOnly = {
-      ...sound,
-      script: sound.script.replace(/^gh issue close.*$/mu, ""),
-    };
-
-    expect(findContractViolations(openOnly)).toEqual([
-      expect.stringContaining("gh issue close"),
-    ]);
+  test("共有 action を使わない形は落ちる", () => {
+    expect(
+      findContractViolations({ ...sound, usesSharedNotice: false }),
+    ).toEqual([expect.stringContaining(SHARED_NOTICE_PATH)]);
   });
 
   test("緑の run で走らない形は落ちる", () => {
@@ -243,21 +254,26 @@ describe("契約判定の見本", () => {
     // 旧 deploy-production.yml の `Open apply failure issue` が持っていた形。
     const perRunTitle = {
       ...sound,
-      script: sound.script.replace(
-        'title="Deploy Production failure"',
-        'title="[deploy-broken] terraform-apply failed on main (${GITHUB_SHA:0:8})"',
-      ),
+      title:
+        "[deploy-broken] terraform-apply failed on main (${{ github.sha }})",
     };
 
     expect(findContractViolations(perRunTitle)).toEqual([
       expect.stringContaining("run ごとに変わる"),
     ]);
   });
+
+  test("title に日付を混ぜる形は落ちる", () => {
+    // 旧 terraform-drift.yml の `Open drift issue` が持っていた形。
+    expect(
+      findContractViolations({ ...sound, title: "[drift] 2026-08-11 changes" }),
+    ).toEqual([expect.stringContaining("run ごとに変わる")]);
+  });
 });
 
 /**
  * 「notifier が他の全 job を見る」は、**全 job が同じ trigger で走る workflow**
- * だけに課せる要求。下の 2 つがそれで、除外してよい job が構造的に無い。
+ * だけに課せる要求。下の 3 つがそれで、除外してよい job が構造的に無い。
  *
  * ci.yml は該当しない。`nightly-result` は schedule での結果を見るので、
  * schedule では走らない job（`docs` / `bundle-analysis` / `lighthouse-ci` /

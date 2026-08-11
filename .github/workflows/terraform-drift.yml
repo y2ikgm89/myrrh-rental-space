@@ -210,10 +210,15 @@ jobs:
       contents: read
       issues: write
     steps:
-      - name: Report drift result
+      # ローカル action (`uses: ./…`) を使うため checkout が要る。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Decide drift status
+        id: status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て env 経由で受け取る。
           NEEDS_JSON: ${{ toJSON(needs) }}
           PLAN_EXITCODE: ${{ needs.drift-detect.outputs.exitcode }}
           PLAN_CHANGES: ${{ needs.drift-detect.outputs.changes }}
@@ -222,25 +227,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
-          # 値は全て上の env 経由で受け取る。
-          #
-          # **title に日付や run id を混ぜてはならない。** 混ぜると解消 run が
-          # 別 title になり既存 Issue へ辿り着けず、増える一方になる（旧実装）。
-          #
-          # **赤 2 種類を 1 本の Issue で追跡するので、title は両方を覆う文言に
-          # する。** 「drift を検知した」と書くと、drift 検知そのものが失敗した
-          # ケース（drift の有無が **分からない**）で嘘になる。実例: #2132 は
-          # 請求先アカウント停止で `terraform init` が落ちた run が立てたもので、
-          # drift の有無は一度も判定できていないのに title は「detected」だった。
-          # どちらの赤かは本文の 1 行目が書き分ける。
-          title="Terraform drift check is not green"
-          # **この workflow が作った Issue だけ**を対象にするための marker。
-          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
-          # 立てたときにそれへコメントを足し、緑になった瞬間に**他人の Issue を
-          # 閉じて**しまう。
-          marker="<!-- terraform-drift-status: do not remove (owned by terraform-drift.yml / drift-result) -->"
 
           # 赤は 2 種類ある。どちらも「いま緑ではない」ので同じ Issue で追跡する。
           #
@@ -254,59 +240,56 @@ jobs:
             | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
           if [ -n "$broken" ]; then
-            report=$(printf '%s\n' \
-              "**drift 検知そのものが失敗しました。** drift があるかどうかは分かりません。" \
-              "" \
-              "- run: $RUN_URL" \
-              "- 失敗した job: $broken" \
-              "" \
-              "run の log で原因を特定してください（plan error / WIF 認証 / provider API のいずれか）。" \
-              "次に drift 無しで完走した run が本 Issue を自動で閉じます。")
-          elif [ "$PLAN_EXITCODE" = "2" ]; then
-            report=$(printf '%s\n' \
-              "**Terraform drift を検知しました。**" \
-              "" \
-              "- ${PLAN_CHANGES:-Plan: (件数を drift.txt から読み取れませんでした)}" \
-              "- run: $RUN_URL — Summary tab に diff 全文があります" \
-              "- artifact: \`terraform-drift-$RUN_ID\`（30d retention / \`drift.txt\`）" \
-              "" \
-              "1. Summary tab か artifact の \`drift.txt\` で差分を確認する" \
-              "2. Console / gcloud での正当な変更が Terraform 側に無いなら、module へ足す PR を出す" \
-              "3. 意図しない変更なら Console / gcloud で戻すか、次の apply で上書きする" \
-              "" \
-              "次に drift の無い run が本 Issue を自動で閉じます（手で閉じる必要はありません）。")
-          else
-            report=""
-          fi
-
-          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
-          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
-          existing=$(gh issue list --state open --limit 100 --json number,body \
-            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
-
-          if [ -n "$report" ]; then
-            if [ -n "$existing" ]; then
-              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
-              # 重ねる必要が無い）。
-              gh issue comment "$existing" --body "$report"
-              echo "commented on #$existing"
-            else
-              # label は人が絞り込むための補助。追跡は marker が持つので、
-              # label 作成が失敗しても契約は壊れない。
-              gh label create drift-detection \
-                --description "Terraform state drift (self-resolving; owned by drift-result)" \
-                --color "d73a4a" 2>/dev/null || true
-              gh issue create --title "$title" --label drift-detection \
-                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
-              echo "created a new issue"
-            fi
+            {
+              echo "report<<__NOTICE_EOF__"
+              printf '%s\n' \
+                "**drift 検知そのものが失敗しました。** drift があるかどうかは分かりません。" \
+                "" \
+                "- run: $RUN_URL" \
+                "- 失敗した job: $broken" \
+                "" \
+                "run の log で原因を特定してください（plan error / WIF 認証 / provider API のいずれか）。" \
+                "次に drift 無しで完走した run が本 Issue を自動で閉じます。"
+              echo "__NOTICE_EOF__"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "Terraform drift が解消しました（$RUN_URL）。"
-            gh issue close "$existing"
-            echo "closed #$existing"
-          else
-            echo "no drift, nothing to report"
+          if [ "$PLAN_EXITCODE" = "2" ]; then
+            {
+              echo "report<<__NOTICE_EOF__"
+              printf '%s\n' \
+                "**Terraform drift を検知しました。**" \
+                "" \
+                "- ${PLAN_CHANGES:-Plan: (件数を drift.txt から読み取れませんでした)}" \
+                "- run: $RUN_URL — Summary tab に diff 全文があります" \
+                "- artifact: \`terraform-drift-$RUN_ID\`（30d retention / \`drift.txt\`）" \
+                "" \
+                "1. Summary tab か artifact の \`drift.txt\` で差分を確認する" \
+                "2. Console / gcloud での正当な変更が Terraform 側に無いなら、module へ足す PR を出す" \
+                "3. 意図しない変更なら Console / gcloud で戻すか、次の apply で上書きする" \
+                "" \
+                "次に drift の無い run が本 Issue を自動で閉じます（手で閉じる必要はありません）。"
+              echo "__NOTICE_EOF__"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # 空文字 = 緑。status-notice はこれを見て Issue を閉じる。
+          echo "report=" >> "$GITHUB_OUTPUT"
+
+      - name: Notify drift status
+        uses: ./.github/actions/status-notice
+        with:
+          # **title に日付や run id を混ぜてはならない。** 混ぜると解消 run が
+          # 別 title になり既存 Issue へ辿り着けず、増える一方になる。
+          #
+          # 赤 2 種類を 1 本の Issue で追跡するので、title は両方を覆う文言に
+          # する。どちらの赤かは本文の 1 行目が書き分ける。
+          title: Terraform drift check is not green
+          marker: "<!-- terraform-drift-status: do not remove (owned by terraform-drift.yml / drift-result) -->"
+          report: ${{ steps.status.outputs.report }}
+          recovered-message: Terraform drift が解消しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
+          label: drift-detection
+          label-description: Terraform state drift (self-resolving; owned by drift-result)
+          github-token: ${{ secrets.GITHUB_TOKEN }}

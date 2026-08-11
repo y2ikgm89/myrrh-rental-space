@@ -403,29 +403,21 @@ jobs:
       contents: read
       issues: write
     steps:
-      - name: Report deploy result
+      # ローカル action (`uses: ./…`) を使うため checkout が要る。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Decide deploy status
+        id: status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
+          # 値は全て env 経由で受け取る。
           NEEDS_JSON: ${{ toJSON(needs) }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-
-          # 式展開を run に直接埋めない（script injection 対策・公式 hardening）。
-          # 値は全て上の env 経由で受け取る。
-          #
-          # **title に SHA や run id を混ぜてはならない。** 混ぜると復旧 run が
-          # 別 title になり、既存 Issue へ辿り着けず増える一方になる（旧実装）。
-          title="Deploy Production failure"
-          # **この workflow が作った Issue だけ**を対象にするための marker。
-          # タイトルだけで突き合わせると、人や別の automation が同名の Issue を
-          # 立てたときにそれへ失敗コメントを足し、緑になった瞬間に**他人の Issue を
-          # 閉じて**しまう。marker は本文に埋めるので、誰かがタイトルを変えても
-          # （marker が残る限り）追跡が切れない。
-          marker="<!-- deploy-production-status: do not remove (owned by deploy-production.yml / deploy-result) -->"
 
           # **「failure でない = 緑」ではない。** `needs.<job>.result` は failure 以外に
           # cancelled を取る。timeout で打ち切られた job を緑と読まないよう、
@@ -438,13 +430,16 @@ jobs:
           failed=$(printf '%s' "$NEEDS_JSON" \
             | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')
 
-          # 検索 API ではなく一覧 + jq で突き合わせる（部分一致・インデックス遅延を
-          # 挟まない）。判定は **marker を本文に持つこと**で、タイトルは補助。
-          existing=$(gh issue list --state open --limit 100 --json number,body \
-            --jq "[.[] | select((.body // \"\") | contains(\"$marker\"))][0].number // empty")
+          if [ -z "$failed" ]; then
+            # 空文字 = 緑。status-notice はこれを見て Issue を閉じる。
+            echo "report=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          if [ -n "$failed" ]; then
-            report=$(printf '%s\n' \
+          # 複数行を step output で渡す公式の書き方（delimiter 付き heredoc）。
+          {
+            echo "report<<__NOTICE_EOF__"
+            printf '%s\n' \
               "Deploy Production (workflow_dispatch) が失敗しました。" \
               "" \
               "- run: $RUN_URL" \
@@ -457,29 +452,19 @@ jobs:
               "2. 修正 PR を main へ merge する" \
               "3. Actions → Deploy Production を手動実行する" \
               "" \
-              "次に緑になった run が本 Issue を自動で閉じます（手で閉じる必要はありません）。")
-            if [ -n "$existing" ]; then
-              # marker は Issue 本文だけが持つ（追跡は本文で行うので、コメントに
-              # 重ねる必要が無い）。
-              gh issue comment "$existing" --body "$report"
-              echo "commented on #$existing"
-            else
-              # label は人が絞り込むための補助。追跡は marker が持つので、
-              # label 作成が失敗しても契約は壊れない。
-              gh label create deploy-broken \
-                --description "Deploy Production failure (self-resolving; owned by deploy-result)" \
-                --color "b60205" 2>/dev/null || true
-              gh issue create --title "$title" --label deploy-broken \
-                --body "$(printf '%s\n\n%s\n' "$marker" "$report")"
-              echo "created a new issue"
-            fi
-            exit 0
-          fi
+              "次に緑になった run が本 Issue を自動で閉じます（手で閉じる必要はありません）。"
+            echo "__NOTICE_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "Deploy Production が復旧しました（$RUN_URL）。"
-            gh issue close "$existing"
-            echo "closed #$existing"
-          else
-            echo "deploy green, nothing to report"
-          fi
+      - name: Notify deploy status
+        uses: ./.github/actions/status-notice
+        with:
+          # **title に SHA や run id を混ぜてはならない。** 混ぜると復旧 run が
+          # 別 title になり、既存 Issue へ辿り着けず増える一方になる（旧実装）。
+          title: Deploy Production failure
+          marker: "<!-- deploy-production-status: do not remove (owned by deploy-production.yml / deploy-result) -->"
+          report: ${{ steps.status.outputs.report }}
+          recovered-message: Deploy Production が復旧しました（${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}）。
+          label: deploy-broken
+          label-description: Deploy Production failure (self-resolving; owned by deploy-result)
+          github-token: ${{ secrets.GITHUB_TOKEN }}
