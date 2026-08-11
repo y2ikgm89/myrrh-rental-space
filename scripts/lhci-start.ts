@@ -75,7 +75,12 @@ async function waitForServerReady(server: {
 
 applyLhciProductionFallbacks();
 
-const server = Bun.spawn(["bunx", "--bun", "next", "start"], {
+// `--bun` は付けない。**計測対象は本番と同じランタイムでなければ意味がない**。
+// runner は `node:24-alpine` 上で `node server.js`（Dockerfile Stage 5）なので、
+// ここも `next` の shebang (`#!/usr/bin/env node`) どおり Node で起動させる。
+// `--bun` は runner が Bun だった頃の名残で、Bun と Node は落ちずに出力だけ
+// 食い違うことがあるため（#2182）、そのまま残すと本番に無い挙動を計測しうる。
+const server = Bun.spawn(["bunx", "next", "start"], {
   stdout: "inherit",
   stderr: "inherit",
   env: process.env,
