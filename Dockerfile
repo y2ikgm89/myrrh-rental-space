@@ -1,8 +1,9 @@
 # syntax=docker.io/docker/dockerfile:1
 #
-# ビルド・実行とも Bun（package.json の packageManager と一致）
-# standalone の server.js は Node API 互換のため Bun でそのまま起動可能
+# ビルドは Bun（package.json の packageManager と一致）。
+# **実行（runner）だけ Node**。理由は Stage 5 のコメントに書いてある。
 # https://bun.sh/guides/ecosystem/docker
+# https://github.com/vercel/next.js/tree/canary/examples/with-docker
 
 FROM oven/bun:1.3.14-alpine AS base
 WORKDIR /app
@@ -126,7 +127,28 @@ CMD ["sh", "-c", "bun scripts/migration-preconditions.ts && bunx --bun prisma mi
 
 # --- Stage 5: Runner (Cloud Run service) ---
 # Dockerfile 末尾 = `docker build` の既定ターゲット。cloudbuild は `--target=runner` で明示選択。
-FROM base AS runner
+#
+# **runner だけ Node で動かす**（build は Bun のまま）。理由は 2 つ。
+#
+# 1. Next.js が前提にしているのは Node で、公式 with-docker の例も node:alpine。
+#    standalone の `server.js` は Next 自身の Node サーバーなのでそのまま動く。
+# 2. Bun で動かすと jsdom を読む経路が必ず落ちる。Next の `require-hook` が
+#    `Module._resolveFilename` を差し替えた状態の Bun では、ESM 内の
+#    `createRequire(import.meta.url)` 由来 require が `parent === undefined` で渡り、
+#    `css-tree/lib/data-patch.js` の `require('../data/patch.json')` が
+#    `Cannot find module '../data/patch.json' from ''` で失敗する
+#    （Bun 既知未修正 https://github.com/oven-sh/bun/issues/13076）。
+#    公開ページの本文が SSR HTML から消え、admin の Lexical 保存が例外になっていた。
+#
+# **`oven/bun` を base にしたまま `CMD ["node", ...]` にしても直らない。** あのイメージの
+# `/usr/local/bun-node-fallback-bin/node` は bun 本体への symlink で、`node` と書いても
+# Bun が動く。ランタイムを変えるには base image を変えるしかない。
+#
+# CI（GitHub Actions）は実 Node を持つので `bun run start` → `next start` が Node で走る。
+# つまり従来は CI=Node / 本番=Bun という食い違いがあり、それがこの欠陥を隠していた。
+# runner を Node にすると E2E と本番のランタイムが一致する。
+FROM node:24-alpine AS runner
+WORKDIR /app
 
 RUN apk add --no-cache libc6-compat && \
     addgroup --system --gid 1001 nodejs && \
@@ -176,4 +198,4 @@ RUN test -f ./node_modules/@prisma/client/runtime/client.js && \
 
 USER nextjs
 EXPOSE 8080
-CMD ["bun", "server.js"]
+CMD ["node", "server.js"]
