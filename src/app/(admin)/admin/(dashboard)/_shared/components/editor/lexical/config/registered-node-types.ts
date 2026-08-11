@@ -46,8 +46,15 @@ export function getRegisteredLexicalNodeTypes(): Set<string> {
   const types = new Set<string>(IMPLICIT_LEXICAL_NODE_TYPES);
   for (const entry of EDITOR_NODES) {
     if (typeof entry === "object") {
-      // node replacement エントリ: { replace, with, withKlass }
-      types.add((entry.withKlass ?? entry.replace).getType());
+      // node replacement エントリ: { replace, with, withKlass }。
+      // Lexical が registry のキーに使うのは `replace` 側の type で（createEditor は
+      // `klass = options.replace` とし、withKlass は replaceWithKlass に別途持つ）、
+      // withKlass 側は EDITOR_NODES に素のエントリとしても並んでいる。保存済み JSON
+      // には両方の type が現れうるため、どちらも登録済みとして数える。
+      types.add(entry.replace.getType());
+      if (entry.withKlass) {
+        types.add(entry.withKlass.getType());
+      }
     } else {
       types.add(entry.getType());
     }

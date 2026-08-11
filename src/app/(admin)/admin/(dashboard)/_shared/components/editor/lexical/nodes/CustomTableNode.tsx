@@ -8,7 +8,6 @@ import {
   $create,
   $getState,
   $setState,
-  type DOMConversionMap,
   type DOMExportOutput,
   type EditorConfig,
   type LexicalEditor,
@@ -180,10 +179,6 @@ export class CustomTableNode extends TableNode {
       this._applyAttributes(result.element);
     }
     return result;
-  }
-
-  static override importDOM(): DOMConversionMap | null {
-    return TableNode.importDOM();
   }
 }
 

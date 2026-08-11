@@ -62,6 +62,11 @@ function buildMultiColumnTableJson(): string {
       root.clear();
 
       const table = $createCustomTableNode();
+      // 列幅を明示する。Lexical 0.49（facebook/lexical#8850）から `<colgroup>` は
+      // 列幅が未定義のとき出力されなくなったため、幅を与えないと下の
+      // `toContain("<colgroup>")` が「happy-dom の querySelector バグ」ではなく
+      // 「colgroup をそもそも作っていない」で落ちて、検出対象がすり替わる。
+      table.setColWidths([75, 75, 75]);
       const headerRow = $createTableRowNode();
       for (const text of ["列A", "列B", "列C"]) {
         const cell = $createCustomTableCellNode(TableCellHeaderStates.ROW);

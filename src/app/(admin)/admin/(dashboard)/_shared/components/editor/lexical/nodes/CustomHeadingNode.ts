@@ -68,7 +68,15 @@ export class CustomHeadingNode extends HeadingNode {
   }
 
   static override importDOM(): DOMConversionMap | null {
-    const base = HeadingNode.importDOM();
+    // Lexical 0.49 で組み込みノードが $config() プロトコルへ移行し、静的 importDOM()
+    // は「登録時に getStaticNodeConfig() がクラスへ生やす」遅延生成になった。
+    // そのため `HeadingNode.importDOM` は生成が走るまで undefined で、参照は登録順に
+    // 依存する（型も optional になる）。$config() 側は this.config() に literal を
+    // 渡すだけの純粋な宣言なので、順序に依存しないこちらから converter を取る。
+    // $config() の戻り型は converter を literal（0 引数）として推論するため、
+    // DOMConversionMap（= 引数付きの契約型）で受け直す。
+    const base: DOMConversionMap | undefined =
+      HeadingNode.prototype.$config().heading?.importDOM;
     if (!base) return null;
 
     const result: DOMConversionMap = {};
