@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { uniqueConstraintError } from "../../../helpers/prisma-errors";
 
 // Prisma モック関数（mock.module より先に定義）
 const mockLocationFindUnique = mock<
@@ -319,10 +320,9 @@ describe("createLocation", () => {
 
   describe("重複エラー（TOCTOU 耐性: catch ベースで検出する）", () => {
     test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
-      mockLocationCreate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["slug"] },
-      });
+      mockLocationCreate.mockRejectedValueOnce(
+        uniqueConstraintError(["slug"], "Location"),
+      );
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
         code: "DUPLICATE",
@@ -331,10 +331,9 @@ describe("createLocation", () => {
     });
 
     test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
-      mockLocationCreate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["name"] },
-      });
+      mockLocationCreate.mockRejectedValueOnce(
+        uniqueConstraintError(["name"], "Location"),
+      );
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
         code: "DUPLICATE",
@@ -349,7 +348,7 @@ describe("createLocation", () => {
     });
 
     test("slug/name 以外の unique 制約違反はそのまま re-throw する", async () => {
-      const otherError = { code: "P2002", meta: { target: ["sortOrder"] } };
+      const otherError = uniqueConstraintError(["sort_order"], "Location");
       mockLocationCreate.mockRejectedValueOnce(otherError);
 
       await expect(createLocation(VALID_FORM_DATA)).rejects.toBe(otherError);
@@ -459,10 +458,9 @@ describe("updateLocation", () => {
   describe("重複エラー（TOCTOU 耐性: catch ベースで検出する）", () => {
     test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-      mockLocationUpdate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["slug"] },
-      });
+      mockLocationUpdate.mockRejectedValueOnce(
+        uniqueConstraintError(["slug"], "Location"),
+      );
 
       await expect(
         updateLocation(LOCATION_ID, VALID_FORM_DATA),
@@ -474,10 +472,9 @@ describe("updateLocation", () => {
 
     test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-      mockLocationUpdate.mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["name"] },
-      });
+      mockLocationUpdate.mockRejectedValueOnce(
+        uniqueConstraintError(["name"], "Location"),
+      );
 
       await expect(
         updateLocation(LOCATION_ID, VALID_FORM_DATA),

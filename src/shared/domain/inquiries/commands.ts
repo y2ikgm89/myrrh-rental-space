@@ -11,6 +11,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { INQUIRY_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
@@ -534,14 +535,12 @@ export async function createInquiryCommand(
         },
       };
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        const target = error.meta?.["target"];
-        if (Array.isArray(target) && target.includes("receiptNumber")) {
-          continue;
-        }
+      // 受付番号だけを再採番する。他の unique 違反まで retry すると、同じ失敗を
+      // 5 回繰り返してから別 error に化ける。判定は `isPrismaUniqueConstraintError`
+      // に寄せる（adapter-pg が返すのは物理列名なので、生の meta を直に読むと
+      // 一致しない）。
+      if (isPrismaUniqueConstraintError(error, "Inquiry.receiptNumber")) {
+        continue;
       }
       throw error;
     }
