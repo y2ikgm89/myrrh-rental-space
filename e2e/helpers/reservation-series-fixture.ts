@@ -179,19 +179,26 @@ async function resolveFixtureSpaceId(spaceSlug: string): Promise<string> {
  *
  * `Customer.email` は unique ではない（seed は同じメールで会員行とゲスト行を作る）
  * ので `upsert` は使えない。email で 1 件に固定するので行は増えない。
+ *
+ * **ゲスト（`userId: null`）であること**が「マイページ一覧に出ない」の実体。
+ * 上の `SERIES_FIXTURE_CUSTOMER_EMAIL` の JSDoc に、共有 customer へ寄せると
+ * 何が壊れるかを実測付きで書いてある。
  */
-async function resolveFixtureCustomerId(): Promise<string> {
+export async function resolveGuestFixtureCustomerId(spec: {
+  readonly email: string;
+  readonly lastName: string;
+  readonly firstName: string;
+}): Promise<string> {
   const client = getE2EPrismaClient();
   const existing = await client.customer.findFirst({
-    where: { email: SERIES_FIXTURE_CUSTOMER_EMAIL },
+    where: { email: spec.email },
     select: { id: true, userId: true },
   });
   if (existing) {
-    // **ゲストであること**が「マイページに出ない」の実体。会員に紐づけ直されたら
-    // 顧客側 spec の一覧汚染が復活するので、静かに続けず落とす。
+    // 会員に紐づけ直されたら顧客側 spec の一覧汚染が復活するので、静かに続けず落とす。
     if (existing.userId !== null) {
       throw new Error(
-        `${SERIES_FIXTURE_CUSTOMER_EMAIL} が User に紐づいている。この fixture の予約はマイページ一覧に出てはいけない（顧客側 spec の先頭一致を奪う）。`,
+        `${spec.email} が User に紐づいている。この fixture の予約はマイページ一覧に出てはいけない（顧客側 spec の先頭一致を奪う）。`,
       );
     }
     return existing.id;
@@ -199,14 +206,22 @@ async function resolveFixtureCustomerId(): Promise<string> {
 
   const created = await client.customer.create({
     data: {
-      email: SERIES_FIXTURE_CUSTOMER_EMAIL,
-      emailCanonical: SERIES_FIXTURE_CUSTOMER_EMAIL,
-      lastName: "定期予約E2E",
-      firstName: "太郎",
+      email: spec.email,
+      emailCanonical: spec.email,
+      lastName: spec.lastName,
+      firstName: spec.firstName,
     },
     select: { id: true },
   });
   return created.id;
+}
+
+async function resolveFixtureCustomerId(): Promise<string> {
+  return resolveGuestFixtureCustomerId({
+    email: SERIES_FIXTURE_CUSTOMER_EMAIL,
+    lastName: "定期予約E2E",
+    firstName: "太郎",
+  });
 }
 
 /**

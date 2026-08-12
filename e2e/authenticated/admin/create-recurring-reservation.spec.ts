@@ -19,6 +19,11 @@
  * （`spaceFixtures.recurringSeriesSpaceSlug`）を purge → 再作成する。
  * スペース自体は seed が 1 つだけ用意するので行数は有界で、専有なので
  * EXCLUDE 制約でも他 spec と衝突しない。
+ *
+ * **フォーム送信 test は別スペースを専有する**
+ * （`spaceFixtures.recurringCreateSpaceSlug`）。`fullyParallel: true` なので
+ * 同一ファイル内の test も worker をまたいで並走し、相乗りさせると
+ * 一方の入口 purge が他方の series を消す。
  */
 
 import { test, expect } from "../../fixtures/e2e-test";
@@ -26,6 +31,10 @@ import { spaceFixtures } from "../../fixtures/test-data";
 import { visibleByText } from "../../helpers/streaming-safe-locators";
 import { isReservationSeriesCancelled } from "../../helpers/reservation-series-db";
 import { createReservationSeriesFixture } from "../../helpers/reservation-series-fixture";
+import {
+  prepareRecurringCreateFixture,
+  readRecurringCreateResult,
+} from "../../helpers/recurring-create-fixture";
 
 /** RRULE（WEEKLY BYDAY=TU COUNT=3）。UI の「毎週火曜 / 全 3 回」表示に対応する。 */
 const RRULE = "FREQ=WEEKLY;BYDAY=TU;COUNT=3";
@@ -44,6 +53,17 @@ const START_TIMES = [0, 1, 2].map(
 
 const HOURLY_PRICE = 3000;
 const TAX_RATE = 10;
+
+/**
+ * フォーム送信 test の初回開催日（火曜）。3 択キャンセル test の `DTSTART`
+ * （2027-05-04）とは別スペース・別日にして、DB を目視したときも取り違えない。
+ */
+const SUBMIT_FIRST_DATE = "2027-06-01";
+const SUBMIT_START_TIME = "10:00";
+const SUBMIT_END_TIME = "12:00";
+/** 既定値（毎週 / インターバル 1 / 回数 4）に「火」を足した結果。 */
+const SUBMIT_EXPECTED_RRULE = "FREQ=WEEKLY;INTERVAL=1;BYDAY=TU;COUNT=4";
+const SUBMIT_EXPECTED_INSTANCES = 4;
 
 test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
   test("form が表示され、繰返し設定 fields が render される (smoke)", async ({
@@ -153,5 +173,58 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
     await expect(
       page.getByRole("button", { name: "定期予約すべてをキャンセル" }),
     ).not.toBeVisible();
+  });
+
+  test("フォーム送信で series と instance が作られる", async ({ page }) => {
+    // 専有スペースを空にして、フォームの顧客検索で引けるゲスト顧客を揃える。
+    // series 自体はここでは作らない — 作るのがフォームで、それが検証対象。
+    const fixture = await prepareRecurringCreateFixture();
+
+    await page.goto("/admin/reservations/new-recurring");
+    await expect(
+      page.getByRole("heading", { name: "繰返し予約作成" }),
+    ).toBeVisible();
+
+    // スペース。非公開スペースは選択肢の表示名に「（非公開）」が付くので、
+    // seed の名前は accessible name の**部分一致**で引く（getByRole の既定）。
+    await page.getByRole("combobox", { name: "スペース *" }).click();
+    await page.getByRole("option", { name: fixture.spaceName }).click();
+
+    await page.getByLabel("初回開催日 *").fill(SUBMIT_FIRST_DATE);
+
+    await page.getByRole("combobox", { name: "開始時間 *" }).click();
+    await page.getByRole("option", { name: SUBMIT_START_TIME }).click();
+    await page.getByRole("combobox", { name: "終了時間 *" }).click();
+    await page.getByRole("option", { name: SUBMIT_END_TIME }).click();
+
+    // 顧客（既存選択のみ。`allowNewCustomer={false}`）。
+    await page
+      .getByPlaceholder("名前、メール、電話番号で検索...")
+      .fill(fixture.customerEmail);
+    await page.getByRole("button", { name: fixture.customerEmail }).click();
+    await expect(page.getByText("選択中の顧客")).toBeVisible();
+
+    // 繰返し設定は既定が「毎週 / インターバル 1 / 回数 4」。WEEKLY は曜日が
+    // 1 つ以上必要なので火曜だけ足す（初回開催日と揃える）。
+    await page.getByRole("checkbox", { name: "火" }).check();
+
+    await page.getByRole("button", { name: "繰返し予約を作成" }).click();
+
+    // 成否は DB で判定する。トーストや pending 状態は Server Action の完了より
+    // 先に消えうるので「押せた」ことしか証明しない。
+    await expect
+      .poll(
+        async () =>
+          (await readRecurringCreateResult(fixture.spaceId)).instanceCount,
+        { timeout: 15_000, intervals: [500, 1000, 2000] },
+      )
+      .toBe(SUBMIT_EXPECTED_INSTANCES);
+
+    const result = await readRecurringCreateResult(fixture.spaceId);
+    expect(result.seriesCount).toBe(1);
+    expect(result.rrules).toEqual([SUBMIT_EXPECTED_RRULE]);
+
+    // 成功ハンドラ（`initialValue === null` を見る）が発火して一覧へ戻る。
+    await expect(page).toHaveURL(/\/admin\/reservations(?:\?|$)/u);
   });
 });
