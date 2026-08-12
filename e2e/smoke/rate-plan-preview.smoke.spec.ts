@@ -5,7 +5,7 @@ import {
   pickBookableDate,
 } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
-import { installFrozenClock } from "../helpers/frozen-clock";
+import { installFixedDate } from "../helpers/fixed-date";
 
 /**
  * Smoke: 予約プレビュー - 週末料金プラン反映（Task 16）
@@ -31,7 +31,8 @@ import { installFrozenClock } from "../helpers/frozen-clock";
  * この project に適合）。
  *
  * CalendarPicker は ReservationFormSection 経由で `E2E_FIXED_NOW_ISO` を
- * 消費するため、page.clock.install と SSR の minDate 計算が整合する。
+ * 消費するため、`installFixedDate` と SSR の minDate 計算が整合する
+ * （**タイマーは止めない**。理由は `e2e/helpers/fixed-date.ts`）。
  *
  * 解消済みの過去の既知問題（Task 16 follow-up fix）: 以前は
  * `e2e/authenticated/admin/space-rate-plan-crud.spec.ts` がこの spec と同一の
@@ -46,32 +47,6 @@ import { installFrozenClock } from "../helpers/frozen-clock";
 /** 週末料金プランが適用される曜日（`ratePlanFixtures.weekendPlanName` の daysOfWeek）。 */
 const FRIDAY = 5;
 
-/**
- * **`page.clock.install` と rAF 駆動のスムーススクロールは併用できない。**
- *
- * 公開面は `LenisProvider` が GSAP ticker（= `requestAnimationFrame` /
- * `performance.now`）で Lenis を回している。偽時計はその時間源ごと止めるため、
- * 一度始まったスクロールの easing が**永久に完了しない** — `<html>` に
- * `lenis-scrolling` が張り付いたまま、スクロール位置が中途半端な値で漂う。
- *
- * その状態で Playwright の座標クリック（`scrollIntoViewIfNeeded` → 座標算出 →
- * dispatch）を撃つと、算出と dispatch の間にページが動いてリンクを外し、
- * **エラーも出ないまま遷移だけ起きない**。実測（CI run 31578113849）:
- * `toHaveURL(/\/reservation\?spaceId=/)` が 15 秒 33 回とも
- * `class="lenis lenis-scrolling"` のまま失敗。同じリンクを押す他 2 spec
- * （`reservation-submit.smoke` / `reservation-flow`）は clock を使わないので
- * 落ちていない。
- *
- * ローカル A/B（`window.scrollTo` 後に 5 秒観測）:
- * clock あり → `lenis-scrolling` のまま（settled=false, scrollY=1201）/
- * clock なし → 正常停止（settled=true, scrollY=0）。
- *
- * `reducedMotion: "reduce"` は**アプリ自身の既存の分岐**を使う
- * （`LenisProvider` が `prefersReducedMotion()` で初期化を見送る）。テスト専用の
- * 逃げ道ではなく、実在するユーザー設定での経路。
- *
- * 強制: `__tests__/unit/architecture/e2e-clock-requires-reduced-motion.test.ts`
- */
 test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () => {
   test("金曜 19:00-21:00 を選択すると週末料金がプレビュー価格に反映される", async ({
     page,
@@ -81,8 +56,8 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     const dateOnly = pickBookableDate({ weekday: FRIDAY });
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。
-    // page.goto より前に呼ぶ（時刻凍結の規約）。
-    await installFrozenClock(page, bookableDateClockTime(dateOnly));
+    // page.goto より前に呼ぶ（SSR の minDate と client の「今日」を揃えるため）。
+    await installFixedDate(page, bookableDateClockTime(dateOnly));
 
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,

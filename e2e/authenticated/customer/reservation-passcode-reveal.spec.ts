@@ -3,7 +3,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { test, expect } from "../../fixtures/e2e-test";
 
-import { installFrozenClock } from "../../helpers/frozen-clock";
+import { installFixedDate } from "../../helpers/fixed-date";
 /**
  * マイページ — SwitchBot 解錠番号表示 E2E (Phase 7 PR12)
  *
@@ -39,7 +39,7 @@ test.describe("マイページ — 解錠番号表示", () => {
   test("表示ボタンで passcode 平文が reveal される", async ({ page }) => {
     const fixture = await createPasscodeRevealFixture();
 
-    await installFrozenClock(page, new Date(fixture.fixedNowIso));
+    await installFixedDate(page, new Date(fixture.fixedNowIso));
 
     await page.goto(`/mypage/reservations/${fixture.reservationId}`);
 

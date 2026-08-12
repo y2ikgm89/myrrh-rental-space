@@ -1,10 +1,10 @@
 import { expect, test } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
-import { installFrozenClock } from "../helpers/frozen-clock";
+import { installFixedDate } from "../helpers/fixed-date";
 test.describe("イベント一覧 - カレンダー表示", () => {
   test("日付グリッドを選択状態とキーボードで操作できる", async ({ page }) => {
-    await installFrozenClock(page, new Date("2026-07-04T03:00:00.000Z"));
+    await installFixedDate(page, new Date("2026-07-04T03:00:00.000Z"));
     await page.goto(urls.events);
 
     await page.getByRole("tab", { name: "カレンダー" }).click();
