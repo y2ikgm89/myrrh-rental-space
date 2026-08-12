@@ -194,17 +194,25 @@ test.describe.serial("サイト名 mutation - 並列化禁止", () => {
     await input.fill(value);
     await page.getByRole("button", { name: "基本情報を保存" }).click();
 
-    await expect
-      .poll(
-        async () => {
-          await page.reload();
-          return page
-            .getByRole("textbox", { name: SITE_NAME_LABEL })
-            .inputValue();
-        },
-        { timeout: SAVE_TIMEOUT_MS },
-      )
-      .toBe(value);
+    // **`expect.poll` は使わない。** poll は予算切れの瞬間に進行中の predicate を
+    // 見捨てるので、`page.reload()` だけが in-flight で残り、次の遷移
+    // （このあとの `afterEach` の `goto` や次の反復）と衝突して
+    // `Navigation to X is interrupted by another navigation to X` になる。
+    // 自前ループなら 1 反復を必ず最後まで await するので孤児が残らない。
+    // 強制: `__tests__/unit/architecture/e2e-poll-predicate-retries.test.ts`
+    const deadline = Date.now() + SAVE_TIMEOUT_MS;
+    for (;;) {
+      await page.reload();
+      const current = await page
+        .getByRole("textbox", { name: SITE_NAME_LABEL })
+        .inputValue();
+      if (current === value) return;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `サイト名の保存が永続化されなかった（最後に読めた値: ${current} / 期待: ${value}）`,
+        );
+      }
+    }
   }
 
   // 共有 Settings singleton を汚染したまま他 spec に渡さない。test 本体の

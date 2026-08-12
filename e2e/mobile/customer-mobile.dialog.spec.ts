@@ -25,7 +25,27 @@ async function expectDialogCanCloseAndReopenFromTouchTrigger(
   await closeDialogWithEscape(dialog);
 }
 
+/**
+ * Escape でダイアログを閉じる。
+ *
+ * **押す前に必ずダイアログ本体へフォーカスを戻す。** `keyboard.press` は
+ * **フォーカスされているフレーム**にキーを届けるので、focus がダイアログ内の
+ * cross-origin iframe（このダイアログは Turnstile ウィジェットを含む）にあると、
+ * keydown は iframe 側の document に落ちて、親 document で待つ Radix の dismiss
+ * ハンドラまで来ない。ダイアログは開いたままになる。
+ *
+ * 実測（webkit、`about:blank` の iframe を挿して focus させた再現）:
+ * `document.activeElement` が IFRAME のときだけ
+ * `expect(dialog).not.toBeVisible()` が 100% 失敗する。CI では Turnstile の
+ * iframe が `Tab` より先に載った run だけ落ちるため flaky に見えていた
+ * （run 31567495891 の trace に `challenges.cloudflare.com` の frame snapshot が
+ * `Tab` の 22ms 前から存在する）。**アプリ側では直せない** — cross-origin frame は
+ * キーイベントを親へ渡さないため。テスト側でキーの宛先を確定させる。
+ *
+ * ダイアログ本体は Radix が `tabindex="-1"` を付けるのでフォーカスできる。
+ */
 async function closeDialogWithEscape(dialog: Locator) {
+  await dialog.focus();
   await dialog.page().keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
 }
@@ -64,8 +84,7 @@ test.describe("customer mobile dialog interactions", () => {
     await expect(cancelTrigger).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(dialog).not.toBeVisible();
+    await closeDialogWithEscape(dialog);
     await expect(cancelTrigger).toBeFocused();
   });
 });

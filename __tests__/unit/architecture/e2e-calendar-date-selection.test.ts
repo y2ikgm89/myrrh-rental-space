@@ -50,8 +50,17 @@ const ORDINAL_ON_GRIDCELL =
 /** カレンダーを操作している spec の marker。 */
 const TOUCHES_CALENDAR = /reservation-calendar|getByRole\(\s*["']gridcell["']/u;
 
-/** 時刻を固定している spec の marker。 */
-const INSTALLS_CLOCK = /page\.clock\.install\(/u;
+/**
+ * 時刻を固定している spec の marker。
+ *
+ * spec が直接 `page.clock.install` を呼ぶことは
+ * `__tests__/unit/architecture/e2e-clock-must-not-freeze-timers.test.ts` が
+ * 禁止しており（時間を止めると Next の client 遷移が確定しない）、入口は
+ * `installFixedDate()` に一本化されている。**両方の綴りを見る** — helper 名だけに
+ * すると、helper を経由しない直呼びを「固定していない」と誤判定する
+ * （禁止済みだが、この gate の主張とは別軸）。
+ */
+const INSTALLS_CLOCK = /page\.clock\.install\(|installFixedDate\(/u;
 
 /** 予約フォームを実際に送信している spec の marker。 */
 const SUBMITS_RESERVATION = /name: "予約を確定する"/u;

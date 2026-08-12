@@ -5,6 +5,7 @@ import {
   pickBookableDate,
 } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
+import { installFixedDate } from "../helpers/fixed-date";
 
 /**
  * Smoke: 予約プレビュー - 週末料金プラン反映（Task 16）
@@ -30,7 +31,8 @@ import { visibleById } from "../helpers/streaming-safe-locators";
  * この project に適合）。
  *
  * CalendarPicker は ReservationFormSection 経由で `E2E_FIXED_NOW_ISO` を
- * 消費するため、page.clock.install と SSR の minDate 計算が整合する。
+ * 消費するため、`installFixedDate` と SSR の minDate 計算が整合する
+ * （**タイマーは止めない**。理由は `e2e/helpers/fixed-date.ts`）。
  *
  * 解消済みの過去の既知問題（Task 16 follow-up fix）: 以前は
  * `e2e/authenticated/admin/space-rate-plan-crud.spec.ts` がこの spec と同一の
@@ -54,8 +56,8 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     const dateOnly = pickBookableDate({ weekday: FRIDAY });
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。
-    // page.goto より前に呼ぶ（時刻凍結の規約）。
-    await page.clock.install({ time: bookableDateClockTime(dateOnly) });
+    // page.goto より前に呼ぶ（SSR の minDate と client の「今日」を揃えるため）。
+    await installFixedDate(page, bookableDateClockTime(dateOnly));
 
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
@@ -68,6 +70,7 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
       .getByRole("main")
       .getByRole("link", { name: "Reserve this space" });
     await expect(reserveButton).toBeVisible({ timeout: 5000 });
+
     await reserveButton.click();
 
     await expect(page).toHaveURL(/\/reservation\?spaceId=[^&]+$/u, {

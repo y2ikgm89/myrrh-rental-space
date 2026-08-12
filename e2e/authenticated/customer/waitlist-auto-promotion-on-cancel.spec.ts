@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { test, expect } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 
+import { installFixedDate } from "../../helpers/fixed-date";
 /**
  * イベント waitlist FIFO 自動昇格 - 顧客認証済み state E2E (E2E-P2-02)
  *
@@ -114,7 +115,7 @@ test.describe("マイページ - イベント waitlist 自動昇格 (キャン�
   test("先行 CONFIRMED のキャンセルで dev customer 申込が WAITLISTED_OFFERED に遷移し UI に反映される", async ({
     page,
   }) => {
-    await page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") });
+    await installFixedDate(page, new Date("2026-07-04T03:00:00.000Z"));
 
     const fixture = await createWaitlistTestFixture();
 

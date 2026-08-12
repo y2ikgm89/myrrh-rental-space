@@ -87,9 +87,14 @@ test.describe("admin 顧客 — 匿名化", () => {
     await page.goto(
       `${ADMIN_CUSTOMERS_PATH}?search=${encodeURIComponent(anonymizedEmail)}`,
     );
-    await expect(page.getByText(anonymizedEmail)).toBeVisible({
-      timeout: 15000,
-    });
+    // placeholder email は `<a href="mailto:...">` なので **role locator で掴む**。
+    // `getByText` は React streaming の hidden staging copy にも一致し、
+    // strict-mode violation になる（実測: CI run 31574950334 で
+    // `resolved to 2 elements`、うち 1 つは "hidden"）。role エンジンは既定で
+    // `includeHidden: false` なので staging copy を構造的に除外する。
+    await expect(page.getByRole("link", { name: anonymizedEmail })).toBeVisible(
+      { timeout: 15000 },
+    );
     await expect(page.getByText(fixture.displayName)).toHaveCount(0);
   });
 });

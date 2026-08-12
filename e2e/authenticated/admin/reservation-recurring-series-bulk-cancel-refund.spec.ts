@@ -86,12 +86,14 @@ const REFUND_PIPELINE_TIMEOUT_MS = 3 * 20_000 + 15_000;
 /**
  * この test の予算。
  *
- * 上の poll は **直列に 2 回**走る（series の soft-delete → per-instance の監査ログ）。
- * 予算を 1 回分から導くと、1 つ目が長引いたときに 2 つ目が自分の timeout に到達する
- * 前に test ごと落ちる。両方が上限まで使う最悪ケースを覆う必要がある。
- * `POLL_COUNT` は下の `expect.poll` の数と一致させること。
+ * 上の poll は **直列に 3 回**走る（series の soft-delete → series-level の監査ログ
+ * → per-instance の監査ログ）。予算を 1 回分から導くと、1 つ目が長引いたときに
+ * 2 つ目が自分の timeout に到達する前に test ごと落ちる。全部が上限まで使う
+ * 最悪ケースを覆う必要がある。
+ * `POLL_COUNT` は下の `expect.poll` の数と一致させること
+ * （強制: `__tests__/unit/architecture/stripe-request-timeout.test.ts`）。
  */
-const POLL_COUNT = 2;
+const POLL_COUNT = 3;
 const NAVIGATION_AND_ASSERTION_BUDGET_MS = 30_000;
 const TEST_TIMEOUT_MS =
   POLL_COUNT * REFUND_PIPELINE_TIMEOUT_MS + NAVIGATION_AND_ASSERTION_BUDGET_MS;
@@ -165,11 +167,25 @@ test.describe
     // series 単位 AuditLog: applyBulkCancellationSideEffects Step 4 が
     // resource="reservation_series", newValue.scope="series-all", cancelledIds を
     // 記録することを確認
+    //
+    // **1 回読みでは足りない。** per-instance と同じく `fireAndForget` →
+    // `after()` 経由で書かれるため、Server Action の応答より**後**に landing する
+    // （Next.js 16 の `after()` は response 送出後に走る）。実測: CI run
+    // 31574950334 で `Received: null`（リトライでは通るので flaky として現れた）。
+    await expect
+      .poll(
+        async () =>
+          (await findSeriesCancellationAudit(fixture.seriesId)) !== null,
+        {
+          timeout: REFUND_PIPELINE_TIMEOUT_MS,
+          intervals: [500, 1000, 2000],
+          message:
+            "series-level AuditLog (resource=reservation_series) が書かれていること",
+        },
+      )
+      .toBe(true);
+
     const seriesAudit = await findSeriesCancellationAudit(fixture.seriesId);
-    expect(
-      seriesAudit,
-      "series-level AuditLog (resource=reservation_series) が書かれていること",
-    ).not.toBeNull();
     expect(seriesAudit?.scope).toBe("series-all");
     expect(seriesAudit?.cancelledIdsCount).toBe(fixture.instanceIds.length);
 
