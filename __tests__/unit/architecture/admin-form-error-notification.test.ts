@@ -20,8 +20,8 @@
  *
  * 1. `useForm(` を呼ぶ `(admin)/admin/(dashboard)` 配下の .tsx が、
  *    `form.errors` か `form.allErrors` を参照していること。
- * 2. `form.errors && form.errors.length > 0` を JSX 条件へ直接書く形は、
- *    その近傍に `role="alert"` / `aria-live` があること（支援技術への通知）。
+ * 2. form-level エラーを JSX 条件に持ち込んでいる**全ブロック**（現在 58 箇所）が、
+ *    その近傍に `role="alert"` / `aria-live` を持つこと（支援技術への通知）。
  *
  * ## 直し方
  *
@@ -41,9 +41,10 @@
  *
  * grep 相当の静的検査で、AST も到達性も見ていない。
  *
- * - 2. は `const formErrors = form.errors;` を経由する形（本リポジトリの多数派）を
- *   追えない。宣言と描画が離れるため近傍窓に入らない。全描画箇所へ `role="alert"` を
- *   強制したくなったら、正規表現を広げずに AST へ移すこと
+ * - 2. が受け付ける識別子は `form.errors` / `form.allErrors` / `formErrors` /
+ *   `errorMessages` の 4 種だけ。**別名のローカル変数に入れると検査を素通りする。**
+ *   実測（2026-08-12）ではこの 4 種で 58 ブロックすべてを拾えており、違反 0 件。
+ *   次に取りこぼしが出たら、正規表現をこれ以上広げずに AST へ移すこと
  *   （`.claude/rules/architecture-gates.md`）。
  * - 1. は `useForm` を呼ぶファイルと描画するファイルが分かれると誤検出する。
  *   現在そのような分割は 0 件。
@@ -91,6 +92,16 @@ function drivesConformForm(source: string): boolean {
 function rendersFormLevelErrors(source: string): boolean {
   return source.includes("form.errors") || source.includes("form.allErrors");
 }
+
+/**
+ * form-level エラーを JSX の条件に持ち込んでいる箇所。
+ *
+ * `const formErrors = form.errors;` を挟む書き方（本リポジトリの多数派）も拾えるよう、
+ * 受け付ける識別子を実際に使われている 4 種に限定して列挙する。
+ * `fields.<name>.errors`（field-level）は識別子が違うので入らない。
+ */
+const FORM_LEVEL_ERROR_RENDER =
+  /\{\s*(?:form\.errors|form\.allErrors|formErrors|errorMessages)[^\n]*&&[^\n]*\(/gu;
 
 describe("admin form error notifications", () => {
   test("走査対象が空でない（0 件と「違反なし」を分ける）", () => {
@@ -154,28 +165,29 @@ describe("admin form error notifications", () => {
     expect(existsSync(ADMIN_DASHBOARD_ROOT)).toBe(true);
 
     const violations: string[] = [];
-    const marker = "form.errors && form.errors.length > 0";
-    let markerHits = 0;
+    let blocks = 0;
 
     for (const filePath of collectTsxFiles(ADMIN_DASHBOARD_ROOT)) {
       const source = readFileSync(filePath, "utf8");
-      let index = source.indexOf(marker);
 
-      while (index >= 0) {
-        markerHits += 1;
-        const errorBlock = source.slice(index, index + 700);
-        if (!/role="alert"|aria-live=/u.test(errorBlock)) {
+      for (const match of source.matchAll(FORM_LEVEL_ERROR_RENDER)) {
+        const index = match.index ?? 0;
+        blocks += 1;
+        // 条件行から描画要素の属性までを含む窓。既存 58 ブロックの最長でも
+        // 300 文字未満だが、余裕を持たせる。
+        if (
+          !/role="alert"|aria-live=/u.test(source.slice(index, index + 500))
+        ) {
           violations.push(
             `${relative(ROOT, filePath)}:${lineNumberFor(source, index)}`,
           );
         }
-        index = source.indexOf(marker, index + marker.length);
       }
     }
 
-    // marker の書き方が変わると走査が 0 件になり、緑が「違反なし」を意味しなく
-    // なる。この形を使うファイルは現在 6 本。
-    expect(markerHits).toBeGreaterThan(3);
+    // 走査規模の下限。正規表現が実際の書き方から外れると走査が 0 件になり、
+    // 緑が「違反なし」を意味しなくなる。現在 58 ブロック。
+    expect(blocks).toBeGreaterThan(40);
     expect(violations).toEqual([]);
   });
 });
