@@ -111,3 +111,17 @@ css-tree 3.2.1 / jsdom 30.0.1 とも最新で、バージョンを上げて逃�
 - Next の Bun Adapter が Next.js 公式 org から公開される
 - happy-dom の更新後に `__tests__/unit/components/editor/lexical` が緑になる
   （`createHeadlessJsdom()` を 5 行差し替えて回せば 30 秒で判定できる）
+
+## Related
+
+- [csstree/csstree#371](https://github.com/csstree/csstree/pull/371) — Alternatives の
+  「css-tree を upstream で直す」を実際に提出したもの（2026-08-12）。`lib/data-patch.js` と
+  `lib/version.js` の相対 require を `fileURLToPath(new URL(…, import.meta.url))` にし、
+  生成される `cjs/*.cjs` は patch 前と同一に保つ。**待つだけで、追う作業はしない** —
+  upstream の master は 2026-03-05 を最後に動いておらず、同じ箇所を直す
+  [#352](https://github.com/csstree/csstree/pull/352) は 2025-09-15 から maintainer 応答が無い。
+  **マージされても本 ADR の決定は変わらない**（Bun へ戻す理由が別に無いため）。
+  fork のブランチ `fix/absolute-path-for-createrequire-json` は PR の head なので消さない
+- [oven-sh/bun#13076](https://github.com/oven-sh/bun/issues/13076) — 根本原因。Bun 自身が
+  `confirmed bug` とラベル付けしたまま 2024-08-04 から open で、最新の 1.3.14
+  （2026-05-13）でも再現する
