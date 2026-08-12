@@ -90,6 +90,22 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(copied?.groups?.["major"]).toBe(runner?.groups?.["major"]);
   });
 
+  test("CI も同じ Node メジャーに固定する（未固定だと runner image 更新で黙って変わる）", () => {
+    // ubuntu-latest の既定 Node は 22.23.1（actions/runner-images の
+    // Ubuntu2404-Readme で確認）。本番 runner は Dockerfile の `node:24-alpine`。
+    // 固定しないと CI が本番と別メジャーで `next build` し続ける。
+    const dockerfile = read("Dockerfile");
+    const runner = dockerfile.match(
+      /FROM node:(?<major>\d+)-alpine AS runner/u,
+    );
+    const major = runner?.groups?.["major"];
+    expect(major).toBeString();
+
+    const setup = read(".github/actions/setup-bun-deps/action.yml");
+    expect(setup).toContain("actions/setup-node@");
+    expect(setup).toContain(`node-version: "${major ?? ""}"`);
+  });
+
   test("Cloud Run Job が適用前チェックを migrate より前に実行する", () => {
     // ここが本番の実体。Cloud Run Job は Dockerfile の CMD を command/args で
     // 上書きするので、Dockerfile だけ直しても本番では走らない。
