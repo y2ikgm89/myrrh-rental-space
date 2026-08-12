@@ -553,13 +553,37 @@ export async function getReservationStatsQuery() {
   };
 }
 
+/**
+ * 管理画面の予約フォーム（新規 / 編集 / 繰返し）と一覧フィルターに出すスペース候補。
+ *
+ * **`isPublished` では絞らない。** 管理画面の予約経路は非公開スペースへの予約を
+ * 意図的に許容している（`previewReservationPricing` の `requirePublished` は
+ * admin 側の 2 経路で `false`、`createAdminReservationCommand` /
+ * `updateAdminReservationCommand` の空間検索も `where: { id, isActive: true }`）。
+ * 「公開停止中だが電話予約は受ける」スペースを管理者が扱えることが要件。
+ *
+ * かつてここだけ `isPublished: true` で絞っていたため、書き込み側が受け付ける
+ * スペースを選択肢が出さないという食い違いがあり、次の 3 つが壊れていた:
+ *
+ * 1. 非公開スペースの既存予約を編集フォームで開くと、選択中のスペースが候補に
+ *    無いので Select が placeholder（未選択）表示になる
+ * 2. 一覧のスペース絞り込みに出ないので、一覧に**表示されている**予約を絞り込めない
+ * 3. カレンダー（`getSpacesForCalendarQuery`）には出るのに作成フォームには出ない
+ *
+ * 公開面の予約フォームは別経路（`(public)` の action が `requirePublished: true`）
+ * なので、ここを緩めても公開側の予約可否は変わらない。
+ *
+ * `isPublished` を select するのは、UI 側が非公開スペースに印を付けるため
+ * （`spaceOptionLabel`）。印が無いと、公開中のスペースと見分けが付かない。
+ */
 export async function getSpacesForReservationQuery() {
   return toPlainArray(
     await prisma.space.findMany({
-      where: { isActive: true, isPublished: true },
+      where: { isActive: true },
       select: {
         id: true,
         name: true,
+        isPublished: true,
         hourlyPrice: true,
         discountType: true,
         discountValue: true,

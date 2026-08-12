@@ -44,6 +44,7 @@ import { CustomerSelector } from "./CustomerSelector";
 import { RecurrenceFields, type RecurrenceState } from "./RecurrenceFields";
 import { RecurrencePreview } from "./RecurrencePreview";
 import {
+  spaceOptionLabel,
   type SpaceOption,
   type SelectedCustomer,
   TIME_OPTIONS,
@@ -225,7 +226,7 @@ export function RecurringReservationForm({
                 <SelectContent>
                   {spaces.map((space) => (
                     <SelectItem key={space.id} value={space.id}>
-                      {space.name}
+                      {spaceOptionLabel(space)}
                     </SelectItem>
                   ))}
                 </SelectContent>

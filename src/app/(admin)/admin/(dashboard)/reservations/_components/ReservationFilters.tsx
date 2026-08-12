@@ -13,9 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { spaceOptionLabel } from "./reservation-form-helpers";
 
 type ReservationFiltersProps = {
-  spaces: { id: string; name: string }[];
+  spaces: { id: string; name: string; isPublished: boolean }[];
 };
 
 /**
@@ -69,7 +70,7 @@ export function ReservationFilters({ spaces }: ReservationFiltersProps) {
             <SelectItem value="all">全スペース</SelectItem>
             {spaces.map((space) => (
               <SelectItem key={space.id} value={space.id}>
-                {space.name}
+                {spaceOptionLabel(space)}
               </SelectItem>
             ))}
           </SelectContent>

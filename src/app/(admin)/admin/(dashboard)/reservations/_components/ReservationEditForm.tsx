@@ -61,7 +61,7 @@ import {
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { updateReservationFormSchema } from "./reservation-form-schema";
-import { type SpaceOption } from "./reservation-form-helpers";
+import { spaceOptionLabel, type SpaceOption } from "./reservation-form-helpers";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
 type ReservationEditFormProps = {
@@ -306,7 +306,7 @@ export function ReservationEditForm({
                 <SelectContent>
                   {spaces.map((space) => (
                     <SelectItem key={space.id} value={space.id}>
-                      {space.name}
+                      {spaceOptionLabel(space)}
                     </SelectItem>
                   ))}
                 </SelectContent>
