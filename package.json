@@ -118,7 +118,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.12.1",
+    "@axe-core/playwright": "^4.13.0",
     "@eslint-react/eslint-plugin": "^5.18.4",
     "@lhci/cli": "^0.15.1",
     "@next/eslint-plugin-next": "16.3.0",
