@@ -9,6 +9,22 @@ function read(rel: string): string {
   return readFileSync(join(root, ...rel.split("/")), "utf8");
 }
 
+/**
+ * runner ステージの `FROM` と、builder が実 Node を持ち込む `COPY`。
+ *
+ * **タグは major だけを見て、後ろの `.minor.patch` は任意にする。** Renovate は
+ * Docker タグを patch まで固定してくるので（`node:24-alpine` →
+ * `node:24.19.0-alpine`、PR #2184）、`\d+-alpine` 決め打ちだと**不変条件を満たす
+ * 更新まで落とす**。ここが守りたいのは「builder / runner / CI が同じ Node major」
+ * であって、タグの綴りではない。
+ *
+ * 逆に緩めすぎないこと — major が読めない形（`node:latest-alpine` /
+ * `node:24-slim`）は引き続き一致しない。判別力は「Node タグの見本」test が固定する。
+ */
+const RUNNER_FROM = /FROM node:(?<major>\d+)(?:\.\d+)*-alpine AS runner/u;
+const BUILDER_NODE_COPY =
+  /COPY --from=node:(?<major>\d+)(?:\.\d+)*-alpine \/usr\/local\/bin\/node \/usr\/local\/bin\/node/u;
+
 describe("deploy packaging contract (Phase 6b clean-break)", () => {
   test("prisma CLI is a production dependency for the migrator image", () => {
     const pkg = JSON.parse(read("package.json")) as {
@@ -38,10 +54,10 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
       "COPY scripts/migration-preconditions.ts ./scripts/migration-preconditions.ts",
     );
     expect(dockerfile).toContain("COPY tsconfig.json ./");
-    expect(dockerfile).toMatch(/FROM node:\d+-alpine AS runner/u);
+    expect(dockerfile).toMatch(RUNNER_FROM);
     // runner must remain last so bare `docker build .` yields the service image
     expect(dockerfile.lastIndexOf("FROM deps AS migrator")).toBeLessThan(
-      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
+      dockerfile.search(RUNNER_FROM),
     );
   });
 
@@ -56,9 +72,7 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     // **base image と CMD の両方を見る。** `oven/bun` の `node` は bun 本体への
     // symlink なので、base を戻したまま CMD だけ node にしても Bun が動いてしまう。
     const dockerfile = read("Dockerfile");
-    const runnerStage = dockerfile.slice(
-      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
-    );
+    const runnerStage = dockerfile.slice(dockerfile.search(RUNNER_FROM));
 
     expect(runnerStage).toContain('CMD ["node", "server.js"]');
     expect(runnerStage).not.toContain('CMD ["bun"');
@@ -75,29 +89,46 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     const dockerfile = read("Dockerfile");
     const builderStage = dockerfile.slice(
       dockerfile.indexOf("FROM base AS builder-base"),
-      dockerfile.search(/FROM node:\d+-alpine AS runner/u),
+      dockerfile.search(RUNNER_FROM),
     );
 
-    const copied = builderStage.match(
-      /COPY --from=node:(?<major>\d+)-alpine \/usr\/local\/bin\/node \/usr\/local\/bin\/node/u,
-    );
+    const copied = builderStage.match(BUILDER_NODE_COPY);
     expect(copied?.groups?.["major"]).toBeString();
 
     // runner と同じメジャーであること。片方だけ上がると build と実行が食い違う。
-    const runner = dockerfile.match(
-      /FROM node:(?<major>\d+)-alpine AS runner/u,
-    );
+    const runner = dockerfile.match(RUNNER_FROM);
     expect(copied?.groups?.["major"]).toBe(runner?.groups?.["major"]);
+  });
+
+  test("Node タグの見本（major の読み取りが緩みすぎていない）", () => {
+    // patch 固定（Renovate の既定）も素の major も同じ major を返すこと。
+    expect(
+      "FROM node:24-alpine AS runner".match(RUNNER_FROM)?.groups?.["major"],
+    ).toBe("24");
+    expect(
+      "FROM node:24.19.0-alpine AS runner".match(RUNNER_FROM)?.groups?.[
+        "major"
+      ],
+    ).toBe("24");
+    expect(
+      "COPY --from=node:24.19.0-alpine /usr/local/bin/node /usr/local/bin/node".match(
+        BUILDER_NODE_COPY,
+      )?.groups?.["major"],
+    ).toBe("24");
+
+    // major が読めない / alpine でない形は引き続き一致しない
+    // （一致してしまうと `major` が undefined のまま CI 側の照合が空振りする）。
+    expect("FROM node:latest-alpine AS runner").not.toMatch(RUNNER_FROM);
+    expect("FROM node:24-slim AS runner").not.toMatch(RUNNER_FROM);
+    expect("FROM oven/bun:1.3.14-alpine AS runner").not.toMatch(RUNNER_FROM);
   });
 
   test("CI も同じ Node メジャーに固定する（未固定だと runner image 更新で黙って変わる）", () => {
     // ubuntu-latest の既定 Node は 22.23.1（actions/runner-images の
-    // Ubuntu2404-Readme で確認）。本番 runner は Dockerfile の `node:24-alpine`。
+    // Ubuntu2404-Readme で確認）。本番 runner のメジャーは Dockerfile が正本。
     // 固定しないと CI が本番と別メジャーで `next build` し続ける。
     const dockerfile = read("Dockerfile");
-    const runner = dockerfile.match(
-      /FROM node:(?<major>\d+)-alpine AS runner/u,
-    );
+    const runner = dockerfile.match(RUNNER_FROM);
     const major = runner?.groups?.["major"];
     expect(major).toBeString();
 
