@@ -42,6 +42,7 @@ import { CustomerSelector } from "./CustomerSelector";
 import {
   RESERVATION_STATUS_OPTIONS,
   TIME_OPTIONS,
+  spaceOptionLabel,
   type SpaceOption,
   type SelectedCustomer,
   type NewCustomerData,
@@ -283,7 +284,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 <SelectContent>
                   {spaces.map((space) => (
                     <SelectItem key={space.id} value={space.id}>
-                      {space.name}
+                      {spaceOptionLabel(space)}
                     </SelectItem>
                   ))}
                 </SelectContent>

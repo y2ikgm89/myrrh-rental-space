@@ -11,11 +11,26 @@ import {
 export type SpaceOption = {
   id: string;
   name: string;
+  isPublished: boolean;
   hourlyPrice: number;
   discountType: DiscountType;
   discountValue: number | null;
   durationDiscountOverride: DurationDiscountOverride;
 };
+
+/**
+ * スペース選択肢の表示名。非公開スペースには印を付ける。
+ *
+ * 管理画面の予約は非公開スペースにも作れる（`getSpacesForReservationQuery` の
+ * JSDoc 参照）。印が無いと、公開中のスペースと区別できないまま「公開されている
+ * つもりで」予約を入れられる。予約フォーム 3 種と一覧フィルターで同じ表記にする。
+ */
+export function spaceOptionLabel(space: {
+  name: string;
+  isPublished: boolean;
+}): string {
+  return space.isPublished ? space.name : `${space.name}（非公開）`;
+}
 
 export type SelectedCustomer = {
   id: string;
