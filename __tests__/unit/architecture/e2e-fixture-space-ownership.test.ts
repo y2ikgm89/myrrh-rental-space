@@ -40,6 +40,7 @@ const FIXTURE_OWNED_KEYS = new Set([
   "guestReservationSpaceSlug",
   "recurringSeriesSpaceSlug",
   "seriesRefundSpaceSlug",
+  "recurringCreateSpaceSlug",
 ]);
 
 const FIXTURE_OWNED_SLUGS = Object.entries(spaceFixtures)

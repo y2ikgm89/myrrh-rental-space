@@ -1104,6 +1104,22 @@ const E2E_RECURRING_SERIES_FIXTURE_SPACE_SLUG = "e2e-recurring-series-fixture";
  */
 const E2E_SERIES_REFUND_FIXTURE_SPACE_SLUG = "e2e-series-refund-fixture";
 
+/**
+ * 繰返し予約**フォーム送信**の E2E が専有するスペース。
+ *
+ * 上の 2 つと分ける理由は同じ「1 fixture 1 スペース」。この spec はフォームから
+ * series を作るので、実行のたびに予約行が増える。専有スペースにしておけば
+ * 実行前 purge が他 spec の fixture を巻き込まず、EXCLUDE 制約
+ * `reservations_no_active_time_overlap_excl` とも無縁になる
+ * （`create-recurring-reservation.spec.ts` の 3 択キャンセル test と**並走する** —
+ * `playwright.config.ts` は `fullyParallel: true` で、同一ファイル内の test も
+ * worker をまたいで同時に走る）。
+ *
+ * 非公開のままで良い。管理画面の予約フォームは `isActive` だけで候補を出すので
+ * （`getSpacesForReservationQuery`）、公開しなくても選択できる。
+ */
+const E2E_RECURRING_CREATE_FIXTURE_SPACE_SLUG = "e2e-recurring-create-fixture";
+
 /** 上記スペースに紐づく Pad デバイスの SwitchBot 側 ID（`deviceId` は @unique）。 */
 const E2E_PASSCODE_FIXTURE_DEVICE_ID = "e2e-passcode-fixture-keypad";
 
@@ -1144,6 +1160,12 @@ const E2E_FIXTURE_SPACES = [
     name: "[E2E] 定期予約返金検証用スペース",
     description:
       "series bulk-cancel の返金ポリシー E2E fixture が専有する非公開スペース。公開一覧には出ません。",
+  },
+  {
+    slug: E2E_RECURRING_CREATE_FIXTURE_SPACE_SLUG,
+    name: "[E2E] 定期予約作成検証用スペース",
+    description:
+      "繰返し予約フォーム送信の E2E が専有する非公開スペース。公開一覧には出ません。",
   },
 ] as const satisfies readonly FixtureSpaceSpec[];
 

@@ -169,6 +169,18 @@ export const spaceFixtures = {
    * 並走しうるので、相乗りさせると purge が相手の fixture ごと消す。
    */
   seriesRefundSpaceSlug: "e2e-series-refund-fixture",
+  /**
+   * 繰返し予約**フォーム送信** spec（`create-recurring-reservation.spec.ts` の
+   * 送信 test）が**専有する**非公開スペース。
+   *
+   * 3 択キャンセル test と同じファイルにあるが、`fullyParallel: true` なので
+   * 同一ファイル内の test も worker をまたいで並走する。相乗りさせると
+   * 実行前 purge が相手の series ごと消す。
+   *
+   * 非公開のままで良い — 管理画面の予約フォームは `isActive` だけで候補を出す
+   * （`getSpacesForReservationQuery`）。
+   */
+  recurringCreateSpaceSlug: "e2e-recurring-create-fixture",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */
