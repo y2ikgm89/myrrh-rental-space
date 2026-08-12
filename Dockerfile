@@ -32,7 +32,9 @@ FROM base AS builder-base
 # 欠けた）。prerender で同じことが起きると build は成功し、壊れた静的 HTML が出荷される。
 #
 # `/usr/local/bin` は PATH 上で fallback より前なのでこの COPY だけで置き換わる。
-# runner ステージと同じ `node:24-alpine` から取るのでバージョンも一致する。
+# **タグは下の runner ステージと同じものを使う**（バージョンが一致する）。ずれると
+# build と実行が別ランタイムになるので、メジャーの一致は
+# `__tests__/unit/architecture/deploy-packaging-contract.test.ts` が機械強制する。
 COPY --from=node:24-alpine /usr/local/bin/node /usr/local/bin/node
 
 COPY --from=deps /app/node_modules ./node_modules
