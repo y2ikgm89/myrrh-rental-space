@@ -50,8 +50,17 @@ const ORDINAL_ON_GRIDCELL =
 /** カレンダーを操作している spec の marker。 */
 const TOUCHES_CALENDAR = /reservation-calendar|getByRole\(\s*["']gridcell["']/u;
 
-/** 時刻を固定している spec の marker。 */
-const INSTALLS_CLOCK = /page\.clock\.install\(/u;
+/**
+ * 時刻を固定している spec の marker。
+ *
+ * spec が直接 `page.clock.install` を呼ぶことは
+ * `__tests__/unit/architecture/e2e-clock-requires-reduced-motion.test.ts` が
+ * 禁止しており（偽時計は rAF 駆動のスムーススクロールを永久に止めるため）、
+ * 入口は `installFrozenClock()` に一本化されている。**両方の綴りを見る** —
+ * helper 名だけにすると、helper を経由しない直呼びを「固定していない」と
+ * 誤判定する（禁止済みだが、この gate の主張とは別軸）。
+ */
+const INSTALLS_CLOCK = /page\.clock\.install\(|installFrozenClock\(/u;
 
 /** 予約フォームを実際に送信している spec の marker。 */
 const SUBMITS_RESERVATION = /name: "予約を確定する"/u;

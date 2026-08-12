@@ -1,4 +1,6 @@
-import type { Page } from "@playwright/test";
+// `@playwright/test` を直接 import してよいのは共有 test 定義だけ
+// （`__tests__/unit/architecture/e2e-client-ip-allocation.test.ts`）。型も例外にしない。
+import type { Page } from "../fixtures/e2e-test";
 
 /**
  * 時刻を固定し、**同時に rAF 駆動のスムーススクロールを無効化する**。
