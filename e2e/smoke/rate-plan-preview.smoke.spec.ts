@@ -5,6 +5,7 @@ import {
   pickBookableDate,
 } from "../helpers/reservation-date";
 import { visibleById } from "../helpers/streaming-safe-locators";
+import { installFrozenClock } from "../helpers/frozen-clock";
 
 /**
  * Smoke: 予約プレビュー - 週末料金プラン反映（Task 16）
@@ -45,6 +46,32 @@ import { visibleById } from "../helpers/streaming-safe-locators";
 /** 週末料金プランが適用される曜日（`ratePlanFixtures.weekendPlanName` の daysOfWeek）。 */
 const FRIDAY = 5;
 
+/**
+ * **`page.clock.install` と rAF 駆動のスムーススクロールは併用できない。**
+ *
+ * 公開面は `LenisProvider` が GSAP ticker（= `requestAnimationFrame` /
+ * `performance.now`）で Lenis を回している。偽時計はその時間源ごと止めるため、
+ * 一度始まったスクロールの easing が**永久に完了しない** — `<html>` に
+ * `lenis-scrolling` が張り付いたまま、スクロール位置が中途半端な値で漂う。
+ *
+ * その状態で Playwright の座標クリック（`scrollIntoViewIfNeeded` → 座標算出 →
+ * dispatch）を撃つと、算出と dispatch の間にページが動いてリンクを外し、
+ * **エラーも出ないまま遷移だけ起きない**。実測（CI run 31578113849）:
+ * `toHaveURL(/\/reservation\?spaceId=/)` が 15 秒 33 回とも
+ * `class="lenis lenis-scrolling"` のまま失敗。同じリンクを押す他 2 spec
+ * （`reservation-submit.smoke` / `reservation-flow`）は clock を使わないので
+ * 落ちていない。
+ *
+ * ローカル A/B（`window.scrollTo` 後に 5 秒観測）:
+ * clock あり → `lenis-scrolling` のまま（settled=false, scrollY=1201）/
+ * clock なし → 正常停止（settled=true, scrollY=0）。
+ *
+ * `reducedMotion: "reduce"` は**アプリ自身の既存の分岐**を使う
+ * （`LenisProvider` が `prefersReducedMotion()` で初期化を見送る）。テスト専用の
+ * 逃げ道ではなく、実在するユーザー設定での経路。
+ *
+ * 強制: `__tests__/unit/architecture/e2e-clock-requires-reduced-motion.test.ts`
+ */
 test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () => {
   test("金曜 19:00-21:00 を選択すると週末料金がプレビュー価格に反映される", async ({
     page,
@@ -55,7 +82,7 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。
     // page.goto より前に呼ぶ（時刻凍結の規約）。
-    await page.clock.install({ time: bookableDateClockTime(dateOnly) });
+    await installFrozenClock(page, bookableDateClockTime(dateOnly));
 
     await page.goto(
       `${urls.spaces}/${spaceFixtures.publicReservableSpaceSlug}`,
@@ -68,6 +95,7 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
       .getByRole("main")
       .getByRole("link", { name: "Reserve this space" });
     await expect(reserveButton).toBeVisible({ timeout: 5000 });
+
     await reserveButton.click();
 
     await expect(page).toHaveURL(/\/reservation\?spaceId=[^&]+$/u, {

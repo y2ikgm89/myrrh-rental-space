@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { test, expect } from "../../fixtures/e2e-test";
 import { urls } from "../../fixtures";
 
+import { installFrozenClock } from "../../helpers/frozen-clock";
 /**
  * イベント キャンセル待ち（waitlist）- 顧客認証済み state E2E
  *
@@ -67,7 +68,7 @@ test.describe("イベント詳細 - 満員時のキャンセル待ち登録フ�
   test("満員イベントに「キャンセル待ちに登録する」フォームが表示され、規約同意で送信可能になる", async ({
     page,
   }) => {
-    await page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") });
+    await installFrozenClock(page, new Date("2026-07-04T03:00:00.000Z"));
 
     const fixture = await createWaitlistTestFixture();
 
@@ -127,7 +128,7 @@ test.describe("マイページ - イベント申込のキャンセル待ち状�
   test("これからタブにキャンセル待ちバッジが表示され、キャンセル確認ダイアログが開く", async ({
     page,
   }) => {
-    await page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") });
+    await installFrozenClock(page, new Date("2026-07-04T03:00:00.000Z"));
 
     const fixture = await createWaitlistTestFixture();
 
