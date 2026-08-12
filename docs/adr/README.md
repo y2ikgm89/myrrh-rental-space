@@ -25,12 +25,13 @@
 (`docs/architecture/decisions/0001`-`0028`) は commit 8ebd49c2d で全削除済みで、
 番号は現行系列と対応しない。
 
-| #                                                         | Title                                            | Status   | Date       |
-| --------------------------------------------------------- | ------------------------------------------------ | -------- | ---------- |
-| [0001](0001-single-env-terraform.md)                      | Single-env Terraform (prod only)                 | Accepted | 2026-07-14 |
-| [0002](0002-abolish-main-terraform-health-gate.md)        | Main Terraform Health gate の廃止                | Accepted | 2026-07-25 |
-| [0003](0003-stay-on-deprecated-react-email-components.md) | deprecated な `@react-email/components` に留まる | Accepted | 2026-08-11 |
-| [0004](0004-accept-soft-404-under-streaming.md)           | streaming 下の soft 404 を受け入れる             | Accepted | 2026-08-11 |
+| #                                                          | Title                                            | Status   | Date       |
+| ---------------------------------------------------------- | ------------------------------------------------ | -------- | ---------- |
+| [0001](0001-single-env-terraform.md)                       | Single-env Terraform (prod only)                 | Accepted | 2026-07-14 |
+| [0002](0002-abolish-main-terraform-health-gate.md)         | Main Terraform Health gate の廃止                | Accepted | 2026-07-25 |
+| [0003](0003-stay-on-deprecated-react-email-components.md)  | deprecated な `@react-email/components` に留まる | Accepted | 2026-08-11 |
+| [0004](0004-accept-soft-404-under-streaming.md)            | streaming 下の soft 404 を受け入れる             | Accepted | 2026-08-11 |
+| [0005](0005-node-runtime-for-next-server-bun-elsewhere.md) | Next サーバーだけ Node、それ以外は Bun           | Accepted | 2026-08-12 |
 
 ## Template
 
