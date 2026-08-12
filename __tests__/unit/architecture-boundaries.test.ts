@@ -1113,9 +1113,29 @@ describe("architecture boundaries", () => {
     // `--max-warnings 0` は契約の一部。ESLint の "warn" は**誰も強制しない**ので、
     // 落ちない指摘として無限に溜まる（実測: 118 件が `__tests__` に溜まっていた）。
     // config 側では warn を全廃したが、外した瞬間にまた溜まりはじめるので入口でも固定する。
-    expect(scripts["lint"]).toBe("eslint . --concurrency 4 --max-warnings 0");
+    //
+    // `--concurrency 2` は CI の実メモリから決めた値で、速度の最適値ではない。
+    // ESLint 10 の `--concurrency` は worker_threads だが `new Worker()` に
+    // `resourceLimits` を渡していないため、workflow env の
+    // `NODE_OPTIONS=--max-old-space-size=4096` が **isolate ごと**に効き、
+    // メモリは worker 数に比例する。実測（2026-08-12、3458 ファイル）:
+    //
+    //   worker 数 | peak node RSS | ローカル所要
+    //   ----------|---------------|-------------
+    //   4         | **15.28 GB**  | 101.9s
+    //   3         | ≒11.4 GB      | 114.7s
+    //   2         | ≒7.6 GB       | 147.4s
+    //   auto(=16) | —             | 165.0s（型付き lint は worker ごとに TS
+    //             |               | プログラムを作り直すので増やすほど遅い）
+    //
+    // GitHub の標準 runner は 16 GB。`4` は上限の 95% で走っており、Node 22 → 24 の
+    // V8 差でそれを越えて Lint & Format が SIGTERM(143) で 2/2 再現的に死んだ。
+    // per-isolate の cap を 2560 / 1536 MB へ絞る方向は ERR_WORKER_OUT_OF_MEMORY で
+    // 落ちるため使えない（worker は本当に 4 GB 近く要る）。
+    // `3` でも 71% で、今回死んだのと同じ「上限すれすれ」に戻る。
+    expect(scripts["lint"]).toBe("eslint . --concurrency 2 --max-warnings 0");
     expect(scripts["lint:files"]).toBe(
-      "eslint --concurrency 4 --max-warnings 0",
+      "eslint --concurrency 2 --max-warnings 0",
     );
     expect(scripts["validate"]).toBe("bun scripts/validate.ts");
     expect(validateSource).toContain('name: "type-check"');
