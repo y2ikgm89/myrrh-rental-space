@@ -165,11 +165,25 @@ test.describe
     // series 単位 AuditLog: applyBulkCancellationSideEffects Step 4 が
     // resource="reservation_series", newValue.scope="series-all", cancelledIds を
     // 記録することを確認
+    //
+    // **1 回読みでは足りない。** per-instance と同じく `fireAndForget` →
+    // `after()` 経由で書かれるため、Server Action の応答より**後**に landing する
+    // （Next.js 16 の `after()` は response 送出後に走る）。実測: CI run
+    // 31574950334 で `Received: null`（リトライでは通るので flaky として現れた）。
+    await expect
+      .poll(
+        async () =>
+          (await findSeriesCancellationAudit(fixture.seriesId)) !== null,
+        {
+          timeout: REFUND_PIPELINE_TIMEOUT_MS,
+          intervals: [500, 1000, 2000],
+          message:
+            "series-level AuditLog (resource=reservation_series) が書かれていること",
+        },
+      )
+      .toBe(true);
+
     const seriesAudit = await findSeriesCancellationAudit(fixture.seriesId);
-    expect(
-      seriesAudit,
-      "series-level AuditLog (resource=reservation_series) が書かれていること",
-    ).not.toBeNull();
     expect(seriesAudit?.scope).toBe("series-all");
     expect(seriesAudit?.cancelledIdsCount).toBe(fixture.instanceIds.length);
 
