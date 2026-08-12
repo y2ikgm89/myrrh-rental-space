@@ -560,6 +560,48 @@ async function readModuleState(
 }
 
 /**
+ * features ページを開き直しながら、読み取り値が期待値になるまで待つ。
+ *
+ * ## `expect.poll` を使ってはいけない
+ *
+ * poll は予算が尽きた瞬間に**進行中の callback を見捨てる**。callback の中に
+ * `page.goto` があると遷移だけが in-flight で残り、呼び出し側の retry が撃つ
+ * 次の `goto` と衝突して
+ * `Navigation to X is interrupted by another navigation to X` になる。
+ *
+ * `SETTINGS_NAVIGATION_TIMEOUT_MS`（30 秒）は `PERSIST_TIMEOUT_MS`（15 秒）より
+ * **長い**ので、遅い遷移が 1 回あればこの形に構造的に必ず落ちる。実測
+ * （CI run 31566511073 の `contact OFF`）: attempt 1 の poll が孤児の `goto` を
+ * 残したまま失格 → attempt 2 の `goto` がそれに割り込まれて throw →
+ * `afterEach` の復元が中止され、共有 DB が `contact=false` のまま残り、
+ * `afterAll` が汚染を検出して落ちた。
+ *
+ * 自前ループなら 1 反復を必ず最後まで await するので孤児が残らない。期限は
+ * **反復と反復の間**でだけ見る（反復の途中では打ち切らない）。
+ */
+async function reloadUntil(
+  page: Page,
+  read: () => Promise<string | null>,
+  expected: string,
+  message: string,
+): Promise<void> {
+  const deadline = Date.now() + PERSIST_TIMEOUT_MS;
+  let last: string | null = null;
+
+  // 期限が既に過ぎていても最低 1 回は読む（0 回で失敗させない）。
+  for (;;) {
+    await openFeatureSettings(page);
+    last = await read();
+    if (last === expected) return;
+    if (Date.now() >= deadline) break;
+  }
+
+  throw new Error(
+    `${message}（最後に読めた値: ${String(last)} / 期待: ${expected}）`,
+  );
+}
+
+/**
  * module を指定状態にして**永続化まで**見届ける。
  *
  * 判定は toast ではなくリロード後の `aria-checked`（`SAVE_ATTEMPTS` 参照）。
@@ -588,18 +630,12 @@ async function setFeatureModule(
         moduleSaveButton(page, moduleLabel),
       );
 
-      await expect
-        .poll(
-          async () => {
-            await openFeatureSettings(page);
-            return readModuleState(page, moduleLabel);
-          },
-          {
-            timeout: PERSIST_TIMEOUT_MS,
-            message: `feature module "${moduleLabel}" を ${desired} にする保存が永続化されなかった（楽観ロック競合の可能性）`,
-          },
-        )
-        .toBe(desired);
+      await reloadUntil(
+        page,
+        () => readModuleState(page, moduleLabel),
+        desired,
+        `feature module "${moduleLabel}" を ${desired} にする保存が永続化されなかった（楽観ロック競合の可能性）`,
+      );
       return;
     } catch (error) {
       // 1 回目は競合・遅延しうる。再読込すれば expectedUpdatedAt も更新されるので
@@ -672,19 +708,12 @@ async function restoreFeatureModuleBaseline(page: Page): Promise<void> {
         moduleSaveButton(page, SAVE_ANCHOR_LABEL),
       );
 
-      await expect
-        .poll(
-          async () => {
-            await openFeatureSettings(page);
-            return readBaselineState(page);
-          },
-          {
-            timeout: PERSIST_TIMEOUT_MS,
-            message:
-              "feature module の基準状態への復元が永続化されなかった（楽観ロック競合の可能性）",
-          },
-        )
-        .toBe(EXPECTED_BASELINE_STATE);
+      await reloadUntil(
+        page,
+        () => readBaselineState(page),
+        EXPECTED_BASELINE_STATE,
+        "feature module の基準状態への復元が永続化されなかった（楽観ロック競合の可能性）",
+      );
       return;
     } catch (error) {
       // 1 回目は競合・遅延しうる。再読込すれば expectedUpdatedAt も更新されるので
