@@ -30,6 +30,45 @@ export function createLintFormatPlan(): LintFormatPlan {
   };
 }
 
+/**
+ * 子プロセスの出力を **行が出た瞬間に** 転送する。
+ *
+ * 以前は `new Response(proc.stdout).text()` で全部バッファし、両方が終わってから
+ * まとめて流していた。並列に走る 2 つの出力が混ざらない利点はあるが、**プロセスが
+ * 途中で殺されると出力が丸ごと失われる**。CI で `lint-format` が SIGTERM(143) で
+ * 落ちたとき、ESLint 側のメッセージが 1 行も残らず原因が特定できなかった
+ * （2026-08-12、Lint & Format が 2/2 で再現的に死亡）。
+ *
+ * 行頭に `[name]` を付けて即時転送すれば、混ざっても読めるうえに死んでも残る。
+ */
+async function pipeLines(
+  stream: ReadableStream<Uint8Array> | null,
+  name: string,
+  sink: { write: (chunk: string) => unknown },
+  collected: string[],
+): Promise<void> {
+  if (stream === null) return;
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for await (const chunk of stream) {
+    const text = decoder.decode(chunk, { stream: true });
+    collected.push(text);
+    buffer += text;
+
+    let newlineIndex = buffer.indexOf("\n");
+    while (newlineIndex >= 0) {
+      sink.write(`[${name}] ${buffer.slice(0, newlineIndex)}\n`);
+      buffer = buffer.slice(newlineIndex + 1);
+      newlineIndex = buffer.indexOf("\n");
+    }
+  }
+
+  // 改行で終わらない末尾も落とさない
+  if (buffer.length > 0) sink.write(`[${name}] ${buffer}\n`);
+}
+
 async function runCommand(
   name: string,
   command: readonly string[],
@@ -38,17 +77,19 @@ async function runCommand(
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+  const [, , exitCode] = await Promise.all([
+    pipeLines(proc.stdout, name, process.stdout, stdoutChunks),
+    pipeLines(proc.stderr, name, process.stderr, stderrChunks),
     proc.exited,
   ]);
-  return { name, exitCode, stdout, stderr };
-}
-
-function flushResult(result: CommandResult): void {
-  if (result.stdout.length > 0) process.stdout.write(result.stdout);
-  if (result.stderr.length > 0) process.stderr.write(result.stderr);
+  return {
+    name,
+    exitCode,
+    stdout: stdoutChunks.join(""),
+    stderr: stderrChunks.join(""),
+  };
 }
 
 export async function runLintFormatPlan(
@@ -64,8 +105,8 @@ export async function runLintFormatPlan(
 
 if (import.meta.main) {
   const startedAt = performance.now();
-  const { exitCode, results } = await runLintFormatPlan(createLintFormatPlan());
-  for (const result of results) flushResult(result);
+  // 出力は runCommand が逐次流している（ここでまとめて流すと二重になる）。
+  const { exitCode } = await runLintFormatPlan(createLintFormatPlan());
   const elapsedSeconds = ((performance.now() - startedAt) / 1000).toFixed(1);
   console.info(`[lint-format] finished in ${elapsedSeconds}s`);
   process.exit(exitCode);
