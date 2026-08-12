@@ -35,7 +35,7 @@ FROM base AS builder-base
 # **タグは下の runner ステージと同じものを使う**（バージョンが一致する）。ずれると
 # build と実行が別ランタイムになるので、メジャーの一致は
 # `__tests__/unit/architecture/deploy-packaging-contract.test.ts` が機械強制する。
-COPY --from=node:24-alpine /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:24.19.0-alpine /usr/local/bin/node /usr/local/bin/node
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/generated ./generated
@@ -165,7 +165,7 @@ CMD ["sh", "-c", "bun scripts/migration-preconditions.ts && bunx --bun prisma mi
 # CI（GitHub Actions）は実 Node を持つので `bun run start` → `next start` が Node で走る。
 # つまり従来は CI=Node / 本番=Bun という食い違いがあり、それがこの欠陥を隠していた。
 # runner を Node にすると E2E と本番のランタイムが一致する。
-FROM node:24-alpine AS runner
+FROM node:24.19.0-alpine AS runner
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat && \
