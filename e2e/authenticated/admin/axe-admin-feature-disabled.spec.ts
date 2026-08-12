@@ -50,8 +50,9 @@ import { visibleById } from "../../helpers/streaming-safe-locators";
  *   `OWNED_MODULE_LABELS` のコメント参照）。
  * - 保存の成否を **クライアント状態で判定しない**（toast も pending 解除も
  *   信頼できない。実測の根拠は `applyFeatureModules` のコメント）。
- *   **リロード後も状態が保たれているか**という永続化の実体だけを
- *   `expect.poll` で確認し、競合したら読み直してやり直す。
+ *   **リロード後も状態が保たれているか**という永続化の実体だけを確認し、
+ *   競合したら読み直してやり直す（`expect.poll` は使わない。理由は
+ *   `applyFeatureModules` の JSDoc）。
  * - 対象 module は `faq`（sidebar）と `access`（スペース管理タブ）。
  *   `e2e/public/feature-module-off-gate.spec.ts` が触る 5 module
  *   (contact / posts / reservation / events / spaces) と重ならないものを選び、
@@ -141,80 +142,94 @@ async function openFeatureSettings(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
+/** 1 回の保存が遅いローカル production build でも 2 回はやり直せる幅。 */
+const APPLY_FEATURE_MODULES_TIMEOUT_MS = 120_000;
+
 /**
  * 指定した module 群を目的の ON/OFF に揃え、**リロード後も保たれている**ことまで
  * 確認する。楽観ロック競合で保存が弾かれた場合は読み直して再試行する。
+ *
+ * **`expect.poll` は使わない。** poll は予算が尽きた瞬間に進行中の predicate を
+ * 見捨てるので、この predicate が持つ 2 回の `openFeatureSettings`（= `page.goto`）
+ * が in-flight のまま残り、次の遷移と衝突して
+ * `Navigation to X is interrupted by another navigation to X` になる。
+ * 同型の欠陥が `feature-module-off-gate.spec.ts` で実際に CI を落としている
+ * （run 31566511073）。自前ループなら 1 反復を必ず最後まで await するので
+ * 孤児が残らない。強制:
+ * `__tests__/unit/architecture/e2e-poll-predicate-retries.test.ts`
  */
 async function applyFeatureModules(
   page: Page,
   desired: ReadonlyMap<string, boolean>,
 ): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        await openFeatureSettings(page);
+  const deadline = Date.now() + APPLY_FEATURE_MODULES_TIMEOUT_MS;
 
-        let changed = false;
-        for (const [label, enabled] of desired) {
-          const toggle = moduleSwitch(page, label);
-          await expect(toggle).toBeVisible();
-          const target = enabled ? "true" : "false";
-          if ((await toggle.getAttribute("aria-checked")) !== target) {
-            await toggle.click();
-            await expect(toggle).toHaveAttribute("aria-checked", target);
-            changed = true;
-          }
-        }
+  const attempt = async (): Promise<boolean> => {
+    await openFeatureSettings(page);
 
-        if (changed) {
-          const save = saveButton(page);
+    let changed = false;
+    for (const [label, enabled] of desired) {
+      const toggle = moduleSwitch(page, label);
+      await expect(toggle).toBeVisible();
+      const target = enabled ? "true" : "false";
+      if ((await toggle.getAttribute("aria-checked")) !== target) {
+        await toggle.click();
+        await expect(toggle).toHaveAttribute("aria-checked", target);
+        changed = true;
+      }
+    }
 
-          // **Server Action がサーバー側で完走した**ことを待つ。これを待たずに
-          // reload すると in-flight の Server Action が中断され、Prisma の書込は
-          // コミット済みなのに `afterSuccess` の `updateTag` まで到達しない。
-          //
-          // 「完了」をクライアント状態で待ってはいけない:
-          //  - 成功 toast を待つ → 楽観ロック競合時は error toast になりタイムアウト。
-          //    競合以外の form エラーでは `FeatureModulesForm` の useEffect が
-          //    どちらの toast も出さず、無言で終わる
-          //  - pending 解除 (`toBeEnabled`) を待つ → 成功時 useEffect が
-          //    `router.refresh()` を呼ぶため、その transition が終わるまで
-          //    isPending が解除されないことがある
-          //  - **pending 開始 (`toBeDisabled`) を待つのも不可** → disabled は
-          //    isPending の間しか存在しない一過性の状態なので、保存が速く終わると
-          //    窓を取り逃して偽の失敗になる（実測 run 30688324782: 15 秒間 34 回
-          //    ポーリングして一度も観測できず、復元に失敗して連鎖的に落ちた）
-          //
-          // POST 応答は**必ず発生する事象**なので取り逃しがなく、返った時点で
-          // サーバー側は `afterSuccess` まで完了している。
-          await Promise.all([
-            page.waitForResponse(
-              (response) =>
-                response.request().method() === "POST" &&
-                new URL(response.url()).pathname === FEATURES_SETTINGS_PATH,
-              { timeout: 15000 },
-            ),
-            save.click(),
-          ]);
-        }
+    if (changed) {
+      const save = saveButton(page);
 
-        // 永続化の実体をリロード後の DOM で確認する
-        await openFeatureSettings(page);
-        for (const [label, enabled] of desired) {
-          const actual = await moduleSwitch(page, label).getAttribute(
-            "aria-checked",
-          );
-          if (actual !== (enabled ? "true" : "false")) return false;
-        }
-        return true;
-      },
-      {
-        // 1 回の保存が遅いローカル production build でも 2 回はやり直せる幅。
-        timeout: 120000,
-        intervals: [1000, 2000, 3000, 5000],
-      },
-    )
-    .toBe(true);
+      // **Server Action がサーバー側で完走した**ことを待つ。これを待たずに
+      // reload すると in-flight の Server Action が中断され、Prisma の書込は
+      // コミット済みなのに `afterSuccess` の `updateTag` まで到達しない。
+      //
+      // 「完了」をクライアント状態で待ってはいけない:
+      //  - 成功 toast を待つ → 楽観ロック競合時は error toast になりタイムアウト。
+      //    競合以外の form エラーでは `FeatureModulesForm` の useEffect が
+      //    どちらの toast も出さず、無言で終わる
+      //  - pending 解除 (`toBeEnabled`) を待つ → 成功時 useEffect が
+      //    `router.refresh()` を呼ぶため、その transition が終わるまで
+      //    isPending が解除されないことがある
+      //  - **pending 開始 (`toBeDisabled`) を待つのも不可** → disabled は
+      //    isPending の間しか存在しない一過性の状態なので、保存が速く終わると
+      //    窓を取り逃して偽の失敗になる（実測 run 30688324782: 15 秒間 34 回
+      //    ポーリングして一度も観測できず、復元に失敗して連鎖的に落ちた）
+      //
+      // POST 応答は**必ず発生する事象**なので取り逃しがなく、返った時点で
+      // サーバー側は `afterSuccess` まで完了している。
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            new URL(response.url()).pathname === FEATURES_SETTINGS_PATH,
+          { timeout: 15000 },
+        ),
+        save.click(),
+      ]);
+    }
+
+    // 永続化の実体をリロード後の DOM で確認する
+    await openFeatureSettings(page);
+    for (const [label, enabled] of desired) {
+      const actual = await moduleSwitch(page, label).getAttribute(
+        "aria-checked",
+      );
+      if (actual !== (enabled ? "true" : "false")) return false;
+    }
+    return true;
+  };
+
+  for (;;) {
+    if (await attempt()) return;
+    if (Date.now() >= deadline) break;
+  }
+
+  throw new Error(
+    "feature module の指定状態がリロード後も保たれなかった（楽観ロック競合の可能性）",
+  );
 }
 
 /** 本 spec が OFF にした module だけを既定値 (ON) に戻す */

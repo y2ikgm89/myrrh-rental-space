@@ -97,45 +97,156 @@ function extractPollPredicates(source: string): string[] {
  */
 const NAVIGATION_IN_PREDICATE = /\.(?:goto|reload|goBack|goForward)\s*\(/u;
 
+/**
+ * predicate が **helper 経由**で遷移していないかも見る。
+ *
+ * 直接の `.goto(` だけを見ると**この gate が対象にしている欠陥そのものを
+ * 見逃す**。実際に落ちた形は
+ * `expect.poll(async () => { await openFeatureSettings(page); ... })` で、
+ * predicate の字面に `.goto(` は 1 度も出てこない。
+ *
+ * ## 粗さ（承知のうえ）
+ *
+ * **同一ファイル・1 段だけ**辿る。別ファイルから import した helper や、
+ * helper がさらに別の helper を呼ぶ 2 段以上は追わない。ここを完全にやるなら
+ * AST + import 解決が要るが、実際に踏んだ形（spec 内 helper の 1 段）は
+ * これで塞がる。取りこぼしが出たら正規表現を広げずに AST へ移すこと。
+ */
+function navigatingHelperNames(source: string): string[] {
+  const names: string[] = [];
+  const declaration = /(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/gu;
+
+  for (const match of source.matchAll(declaration)) {
+    const name = match[1];
+    if (name === undefined) continue;
+    const body = extractFunctionBody(source, match.index ?? 0);
+    if (NAVIGATION_IN_PREDICATE.test(body)) names.push(name);
+  }
+
+  return names;
+}
+
+/** 関数シグネチャの後ろの `{ ... }` を波括弧の深さで切り出す。 */
+function extractFunctionBody(source: string, signatureStart: number): string {
+  // 引数の分割代入（`function f({ a })`）を本体と取り違えないよう、
+  // 引数リストを閉じてから最初の `{` を本体の開始とみなす。
+  let depth = 0;
+  let paramsEnd = -1;
+  for (let i = source.indexOf("(", signatureStart); i < source.length; i += 1) {
+    const char = source[i];
+    if (char === "(") depth += 1;
+    else if (char === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        paramsEnd = i;
+        break;
+      }
+    }
+  }
+  if (paramsEnd === -1) return "";
+
+  const open = source.indexOf("{", paramsEnd);
+  if (open === -1) return "";
+
+  depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(open, i + 1);
+    }
+  }
+  return "";
+}
+
+/** predicate が直接 / helper 経由で遷移していれば、その呼び出し名を返す。 */
+function navigationCallInPredicate(
+  predicate: string,
+  helpers: readonly string[],
+): string | null {
+  const direct = NAVIGATION_IN_PREDICATE.exec(predicate);
+  if (direct) return direct[0];
+
+  for (const name of helpers) {
+    if (new RegExp(`\\b${name}\\s*\\(`, "u").test(predicate)) {
+      return `${name}()`;
+    }
+  }
+  return null;
+}
+
 describe("expect.poll の predicate はリトライする待ちを使う", () => {
   test("poll の中で遷移していない（孤児の navigation を残さない）", () => {
     const offenders = listE2ESpecs().flatMap((rel) => {
       const source = readFileSync(join(root, ...rel.split("/")), "utf8");
-      return extractPollPredicates(source)
-        .filter((predicate) => NAVIGATION_IN_PREDICATE.test(predicate))
-        .map(
-          (predicate) =>
-            `${rel}: expect.poll の predicate が ${NAVIGATION_IN_PREDICATE.exec(predicate)?.[0] ?? "?"} を呼んでいる`,
-        );
+      const helpers = navigatingHelperNames(source);
+      return extractPollPredicates(source).flatMap((predicate) => {
+        const call = navigationCallInPredicate(predicate, helpers);
+        return call === null
+          ? []
+          : [`${rel}: expect.poll の predicate が ${call} を呼んでいる`];
+      });
     });
 
     expect(offenders).toEqual([]);
   });
 
   test("遷移検出の見本（gate の判別力）", () => {
-    // 1. 落ちるべき形
-    expect(
-      extractPollPredicates(
-        `await expect.poll(async () => { await page.goto(PATH); return read(); }).toBe(x);`,
-      ).filter((p) => NAVIGATION_IN_PREDICATE.test(p)),
-    ).toHaveLength(1);
-    expect(
-      extractPollPredicates(
-        `await expect.poll(async () => { await page.reload(); return read(); }).toBe(x);`,
-      ).filter((p) => NAVIGATION_IN_PREDICATE.test(p)),
-    ).toHaveLength(1);
+    const detect = (source: string): (string | null)[] => {
+      const helpers = navigatingHelperNames(source);
+      return extractPollPredicates(source)
+        .map((predicate) => navigationCallInPredicate(predicate, helpers))
+        .filter((call) => call !== null);
+    };
 
-    // 2. 落ちてはいけない形（DB / API を読むだけの predicate は poll の正しい用途）
+    // 1. 直接の遷移は落ちる
     expect(
-      extractPollPredicates(
-        `await expect.poll(() => isReservationSeriesCancelled(id)).toBe(true);`,
-      ).filter((p) => NAVIGATION_IN_PREDICATE.test(p)),
+      detect(
+        `await expect.poll(async () => { await page.goto(PATH); return read(); }).toBe(x);`,
+      ),
+    ).toEqual([".goto("]);
+    expect(
+      detect(
+        `await expect.poll(async () => { await page.reload(); return read(); }).toBe(x);`,
+      ),
+    ).toEqual([".reload("]);
+
+    // 2. **helper 経由も落ちる。** これが実際に落ちた形（CI run 31566511073）で、
+    //    predicate の字面には `.goto(` が 1 度も出てこない。直接呼び出しだけを
+    //    見る gate は、自分が対象にしている欠陥を素通りさせる。
+    expect(
+      detect(
+        `async function openFeatureSettings(page: Page): Promise<void> {
+           await page.goto(FEATURES_SETTINGS_PATH, { timeout: NAV_MS });
+         }
+         await expect.poll(async () => {
+           await openFeatureSettings(page);
+           return readModuleState(page, label);
+         }, { timeout: PERSIST_MS }).toBe(desired);`,
+      ),
+    ).toEqual(["openFeatureSettings()"]);
+
+    // 3. 遷移しない helper 経由は通る（helper 呼び出し一般を禁止しない）
+    expect(
+      detect(
+        `async function readModuleState(page: Page) {
+           return page.getByRole("switch").getAttribute("aria-checked");
+         }
+         await expect.poll(() => readModuleState(page)).toBe("true");`,
+      ),
     ).toEqual([]);
-    // 3. poll の**外**の遷移は対象外（自前ループの正しい形）
+
+    // 4. DB / API を読むだけの predicate は poll の正しい用途
     expect(
-      extractPollPredicates(
-        `await page.goto(PATH); await expect.poll(() => read()).toBe(x);`,
-      ).filter((p) => NAVIGATION_IN_PREDICATE.test(p)),
+      detect(
+        `await expect.poll(() => isReservationSeriesCancelled(id)).toBe(true);`,
+      ),
+    ).toEqual([]);
+
+    // 5. poll の**外**の遷移は対象外（自前ループの正しい形）
+    expect(
+      detect(`await page.goto(PATH); await expect.poll(() => read()).toBe(x);`),
     ).toEqual([]);
   });
 

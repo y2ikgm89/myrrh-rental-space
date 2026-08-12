@@ -541,9 +541,12 @@ function moduleSaveButton(page: Page, moduleLabel: string): Locator {
  * 詰まっているときは throw しうる。ループの外で呼ぶと 1 回の遅延で
  * `restoreFeatureModuleBaseline` が中止され、共有 DB が OFF のまま残る。
  */
-async function openFeatureSettings(page: Page): Promise<void> {
+async function openFeatureSettings(
+  page: Page,
+  navigationTimeoutMs: number = SETTINGS_NAVIGATION_TIMEOUT_MS,
+): Promise<void> {
   await page.goto(FEATURES_SETTINGS_PATH, {
-    timeout: SETTINGS_NAVIGATION_TIMEOUT_MS,
+    timeout: navigationTimeoutMs,
   });
   await expect(
     page.getByRole("heading", { name: "機能モジュール", level: 1 }),
@@ -576,8 +579,17 @@ async function readModuleState(
  * `afterEach` の復元が中止され、共有 DB が `contact=false` のまま残り、
  * `afterAll` が汚染を検出して落ちた。
  *
- * 自前ループなら 1 反復を必ず最後まで await するので孤児が残らない。期限は
- * **反復と反復の間**でだけ見る（反復の途中では打ち切らない）。
+ * 自前ループなら 1 反復を必ず最後まで await するので孤児が残らない。
+ *
+ * ## 反復ごとの遷移を残り予算まで切り詰める
+ *
+ * 期限を反復の**後ろ**でだけ見ると、1 回の遅い遷移が
+ * `SETTINGS_NAVIGATION_TIMEOUT_MS`（30 秒）まで走って `PERSIST_TIMEOUT_MS`
+ * （15 秒）を超過しうる。すると `SETTINGS_BUDGET_MS`（attempt あたり
+ * 遷移 + 永続化）から導いた `TEST_TIMEOUT_MS` が嘘になり、test 本体が timeout →
+ * page ごと閉じられて `afterEach` の復元が効かない —— **直そうとしている
+ * 壊れ方そのもの**に戻る。各反復の遷移上限を残り予算にすることで、
+ * `reloadUntil` 全体が `PERSIST_TIMEOUT_MS` + 最後の読み取り時間で収まる。
  */
 async function reloadUntil(
   page: Page,
@@ -588,12 +600,13 @@ async function reloadUntil(
   const deadline = Date.now() + PERSIST_TIMEOUT_MS;
   let last: string | null = null;
 
-  // 期限が既に過ぎていても最低 1 回は読む（0 回で失敗させない）。
+  // 入口では残りが `PERSIST_TIMEOUT_MS` なので、必ず 1 回は読む。
   for (;;) {
-    await openFeatureSettings(page);
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    await openFeatureSettings(page, remaining);
     last = await read();
     if (last === expected) return;
-    if (Date.now() >= deadline) break;
   }
 
   throw new Error(
