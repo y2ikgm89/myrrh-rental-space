@@ -182,6 +182,51 @@ describe("getClientIp", () => {
     }
   });
 
+  test("ローテーション中: 新旧どちらの origin secret でも cf-connecting-ip を信頼する", () => {
+    // Cloudflare の Transform Rule と Cloud Run の revision は同時に切り替えられない。
+    // 集合で受理できないと片側だけ新値の窓ができ、その間 `extractClientIp` が
+    // 全 request に "unknown" を返して rate-limit が単一バケットに collapse する。
+    const OLD = "0123456789abcdef0123456789abcdef";
+    const NEW = "fedcba9876543210fedcba9876543210";
+    const originalNodeEnv = readEnv("NODE_ENV");
+    const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    setEnv("NODE_ENV", "production");
+    setEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", `${NEW},${OLD}`);
+    try {
+      for (const sent of [OLD, NEW]) {
+        const req = createRequest({
+          "cf-connecting-ip": "198.51.100.10",
+          "x-cloudflare-origin-secret": sent,
+          host: "rental-space.myrrh-jp.com",
+        });
+        expect(getClientIp(req)).toBe("198.51.100.10");
+      }
+    } finally {
+      restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", originalSecret);
+    }
+  });
+
+  test("ローテーション完了後: 落とした旧 secret はもう信頼しない", () => {
+    const OLD = "0123456789abcdef0123456789abcdef";
+    const NEW = "fedcba9876543210fedcba9876543210";
+    const originalNodeEnv = readEnv("NODE_ENV");
+    const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    setEnv("NODE_ENV", "production");
+    setEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", NEW);
+    try {
+      const req = createRequest({
+        "cf-connecting-ip": "198.51.100.10",
+        "x-cloudflare-origin-secret": OLD,
+        host: "rental-space.myrrh-jp.com",
+      });
+      expect(getClientIp(req)).toBe("unknown");
+    } finally {
+      restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", originalSecret);
+    }
+  });
+
   test("production では origin secret 一致時だけ cf-connecting-ip を使用する", () => {
     const originalNodeEnv = readEnv("NODE_ENV");
     const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");

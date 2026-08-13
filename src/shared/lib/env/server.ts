@@ -289,8 +289,29 @@ export const serverEnv = createEnv({
       .optional(),
     // eslint-disable-next-line local/require-trimmed-text -- 同上
     CLOUDFLARE_API_TOKEN: z.string().min(40).optional(),
-    // eslint-disable-next-line local/require-trimmed-text -- 同上
-    CLOUDFLARE_ORIGIN_HEADER_SECRET: z.string().min(32).optional(),
+    /**
+     * `x-cloudflare-origin-secret` として **受理してよい値の集合**（カンマ区切り）。
+     *
+     * 通常は 1 個。ローテーション中だけ「新,旧」の 2 個にする。集合にしないと
+     * Cloudflare 側と Cloud Run 側を同時に切り替えられず、必ずミスマッチ窓ができて
+     * その間 rate-limit が全 request 単一バケットに collapse する
+     * （`shared/lib/rate-limit.ts` の `acceptedOriginSecrets` 参照）。
+     *
+     * 各要素は 32 文字以上。空要素は許さない（`",,"` のような取りこぼしを弾く）。
+     */
+    CLOUDFLARE_ORIGIN_HEADER_SECRET: z
+      .string()
+      .refine(
+        (raw) => {
+          const parts = raw.split(",").map((value) => value.trim());
+          return parts.length > 0 && parts.every((value) => value.length >= 32);
+        },
+        {
+          error:
+            "CLOUDFLARE_ORIGIN_HEADER_SECRET must be a comma-separated list of secrets, each at least 32 chars (rotation uses two entries)",
+        },
+      )
+      .optional(),
 
     // Runtime scaling hints
     //

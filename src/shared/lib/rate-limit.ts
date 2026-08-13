@@ -141,7 +141,8 @@ export function createRateLimiter(
  * ⚠ セキュリティ前提（重要・infra 依存）:
  * `cf-connecting-ip` / `x-forwarded-for` / `x-real-ip` はいずれも origin 直到達時に
  * クライアントが詐称可能なヘッダ。本番では Cloudflare Transform Rule 等で
- * `x-cloudflare-origin-secret` に `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同じ値を注入し、
+ * `x-cloudflare-origin-secret` を注入し、`CLOUDFLARE_ORIGIN_HEADER_SECRET`
+ * （受理してよい値の集合。ローテーション中だけ 2 個になる）のいずれかと
  * timing-safe 比較に成功した場合だけ `cf-connecting-ip` を信頼する。
  *
  * `x-forwarded-for` / `x-real-ip` は Cloudflare が既存 XFF を保持・追記するため、
@@ -154,16 +155,49 @@ function isProductionRuntime(): boolean {
   return process.env["NODE_ENV"] === "production";
 }
 
+/**
+ * `CLOUDFLARE_ORIGIN_HEADER_SECRET` は **受理してよい値の集合**（カンマ区切り）。
+ *
+ * ローテーション中だけ 2 個になる。1 個しか受理できないと、Cloudflare 側の
+ * Transform Rule と Cloud Run の revision を同時に切り替えられない以上、
+ * 必ずミスマッチ窓ができる。その窓では `extractClientIp` が全 request に対して
+ * `"unknown"` を返すので、**サイト全体が単一の rate-limit バケットに collapse する**
+ * （＝自傷的な締め出し）。旧 rotation 手順が「数分待ち」と書いていたのはこの窓のこと。
+ *
+ * 集合にしておけば「新旧どちらも受理する状態」を挟めるので、窓は無くなる。
+ * 手順は `terraform/variables.tf` の rotation 節。
+ *
+ * **Cloudflare が注入する値は常に 1 個**で、こちらとは別の GitHub Secret
+ * (`CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`) から供給される。ここを集合にしても
+ * 注入側が曖昧になることはない。
+ */
+function acceptedOriginSecrets(): readonly string[] {
+  const raw = process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function hasTrustedCloudflareOriginHeader(
   getHeader: (name: string) => string | null,
 ): boolean {
   if (!isProductionRuntime()) return true;
 
-  const expected = process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
-  if (!expected) return false;
+  const accepted = acceptedOriginSecrets();
+  if (accepted.length === 0) return false;
 
   const actual = getHeader(TRUSTED_PROXY_SECRET_HEADER);
-  return actual !== null && timingSafeEqualStrings(actual, expected);
+  if (actual === null) return false;
+
+  // 早期 return しない。一致した位置で処理時間が変わると、どの候補に当たったかが
+  // 漏れる（`timingSafeEqualStrings` 自体の定時間性だけでは足りない）。
+  let matched = false;
+  for (const expected of accepted) {
+    if (timingSafeEqualStrings(actual, expected)) matched = true;
+  }
+  return matched;
 }
 
 function canUseDevelopmentProxyFallback(host: string | null): boolean {
