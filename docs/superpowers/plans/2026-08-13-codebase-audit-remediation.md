@@ -70,23 +70,23 @@
 
 | 区分              | 件数 |
 | ----------------- | ---: |
-| 済                |   15 |
+| 済                |   16 |
 | 進行中 / 部分対応 |    1 |
-| 未着手            |  117 |
+| 未着手            |  116 |
 | 合計              |  133 |
 
 > この表は §6 の台帳の「状態」列から導く。台帳は 済 / 未 の 2 値なので、
-> 済 16 件のうち **F-01 だけを「部分対応」へ移して**上の 3 区分にしている
+> 済 17 件のうち **F-01 だけを「部分対応」へ移して**上の 3 区分にしている
 > （漏洩経路は塞いだが残件がある。§3.3）。**手で数え直さない** — 以前この表は
 > 台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
 
-**高 11 件のうち 9 件が済、1 件が部分対応、1 件が未着手。**「全件対応済み」ではない。
+**高 11 件のうち 10 件が済、1 件が部分対応、未着手は 0 件。**「全件対応済み」ではない。
 
 | 状態     | 指摘                                                                           |
 | -------- | ------------------------------------------------------------------------------ |
-| 済       | F-02 / F-03 / F-04 / F-06 / F-07 / F-08 / F-09 / F-10 / F-11                   |
+| 済       | F-02 / F-03 / F-04 / F-05 / F-06 / F-07 / F-08 / F-09 / F-10 / F-11            |
 | 部分対応 | **F-01** — 漏洩経路は塞いだが、artifact 296 件が残存し鍵ローテーションも未実施 |
-| 未着手   | **F-05**（配列アイテムのエラーが出ず保存が無反応）                             |
+| 未着手   | （高重要度に未着手は無し）                                                     |
 
 ### 3.2 マージ済 PR との対応
 
@@ -133,6 +133,7 @@
 | #2235         | **F-11**    | GCal 増分同期が削除イベントを取りこぼしていた                                                                                          |
 | #2237         | F-10 / F-48 | checkout の idempotency key を試行ごとに一意にする                                                                                     |
 | #2243         | **F-09**    | 自動再計算する 2 経路が `manual_adjustment_amount` を残して CHECK 違反を起こしていた                                                   |
+| #2245         | **F-05**    | 配列アイテムのエラーキーが conform の field name と食い違い、保存が無反応になっていた                                                  |
 | #2244         | **F-08**    | メディア削除の使用中判定が JSONB 列で恒偽だったのを生 SQL へ移した                                                                     |
 
 > **ID の訂正**: この表は当初 #2223 を F-36、#2226 を F-131、#2235 を F-09 としていたが、
@@ -235,13 +236,13 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ### フェーズ 2 — 高の残り（5 件）
 
-| 指摘                                                                                                                              | 内容                                                                                                                          | 状態   |
-| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------ |
-| [F-10](../../audits/2026-08-12-codebase-audit-findings.md#f-10) / [F-48](../../audits/2026-08-12-codebase-audit-findings.md#f-48) | Stripe Checkout の idempotency key が予約 ID / 申込 ID 固定で、24 時間以内の再決済が必ず失敗する                              | 済     |
-| [F-11](../../audits/2026-08-12-codebase-audit-findings.md#f-11)                                                                   | GCal 上で予約イベントを削除しても予約がキャンセルされず、syncToken だけ進んで永久に取りこぼす                                 | 済     |
-| [F-09](../../audits/2026-08-12-codebase-audit-findings.md#f-09)                                                                   | GCal 逆流の時間変更が `manualAdjustmentAmount` を残したまま `totalPrice` を書き換え、CHECK 制約違反で双方向同期が永久に詰まる | 済     |
-| [F-08](../../audits/2026-08-12-codebase-audit-findings.md#f-08)                                                                   | メディア削除の参照検査が JSON 列に効かず、セクションで使用中の画像を R2 ごと消せる                                            | 済     |
-| [F-05](../../audits/2026-08-12-codebase-audit-findings.md#f-05)                                                                   | `formatZodFieldErrors` が conform と違う path 表記を作り、配列アイテムのエラーが表示されないまま保存が無反応になる            | 未着手 |
+| 指摘                                                                                                                              | 内容                                                                                                                          | 状態 |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---- |
+| [F-10](../../audits/2026-08-12-codebase-audit-findings.md#f-10) / [F-48](../../audits/2026-08-12-codebase-audit-findings.md#f-48) | Stripe Checkout の idempotency key が予約 ID / 申込 ID 固定で、24 時間以内の再決済が必ず失敗する                              | 済   |
+| [F-11](../../audits/2026-08-12-codebase-audit-findings.md#f-11)                                                                   | GCal 上で予約イベントを削除しても予約がキャンセルされず、syncToken だけ進んで永久に取りこぼす                                 | 済   |
+| [F-09](../../audits/2026-08-12-codebase-audit-findings.md#f-09)                                                                   | GCal 逆流の時間変更が `manualAdjustmentAmount` を残したまま `totalPrice` を書き換え、CHECK 制約違反で双方向同期が永久に詰まる | 済   |
+| [F-08](../../audits/2026-08-12-codebase-audit-findings.md#f-08)                                                                   | メディア削除の参照検査が JSON 列に効かず、セクションで使用中の画像を R2 ごと消せる                                            | 済   |
+| [F-05](../../audits/2026-08-12-codebase-audit-findings.md#f-05)                                                                   | `formatZodFieldErrors` が conform と違う path 表記を作り、配列アイテムのエラーが表示されないまま保存が無反応になる            | 済   |
 
 [F-11](../../audits/2026-08-12-codebase-audit-findings.md#f-11) と [F-09](../../audits/2026-08-12-codebase-audit-findings.md#f-09) は同じ経路（§4-G）なので、片方を直すときにもう片方の前提を壊さないか確認する。
 
@@ -276,7 +277,7 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-02](../../audits/2026-08-12-codebase-audit-findings.md#f-02)   | 高     | 済   | `prisma/schema.prisma:2589`                                                                                   | EventTicket.unitSize（1チケット=N名）を価格計算も定員計算も一切参照しておらず、4名枠チケットが人数分だけ多重課金される                                          |
 | [F-03](../../audits/2026-08-12-codebase-audit-findings.md#f-03)   | 高     | 済   | `src/app/(admin)/admin/(dashboard)/_shared/actions/media.ts:24`                                               | Server Action の既定 1MB body 上限が、5MB/50MB 前提のメディアアップロードを無言で 413 にする                                                                    |
 | [F-04](../../audits/2026-08-12-codebase-audit-findings.md#f-04)   | 高     | 済   | `src/app/(admin)/admin/(dashboard)/_shared/actions/reservation/series.ts:69`                                  | 繰返し予約は全 instance に初回分の料金をコピーするため、祝日/曜日別レートプランがある日の請求額が誤る                                                           |
-| [F-05](../../audits/2026-08-12-codebase-audit-findings.md#f-05)   | 高     | 未   | `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form/helpers.ts:53`        | formatZodFieldErrors が conform と違う path 表記を作り、配列アイテムのエラーが表示されないまま保存が無反応になる                                                |
+| [F-05](../../audits/2026-08-12-codebase-audit-findings.md#f-05)   | 高     | 済   | `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form/helpers.ts:53`        | formatZodFieldErrors が conform と違う path 表記を作り、配列アイテムのエラーが表示されないまま保存が無反応になる                                                |
 | [F-06](../../audits/2026-08-12-codebase-audit-findings.md#f-06)   | 高     | 済   | `src/shared/domain/events/unpaid-expiry.ts:42`                                                                | 当日参加(walk-in)・管理者代行の有料チケット申込を未決済期限切れ cron が 60 分後に自動キャンセルする                                                             |
 | [F-07](../../audits/2026-08-12-codebase-audit-findings.md#f-07)   | 高     | 済   | `src/shared/domain/events/unpaid-expiry.ts:40`                                                                | konbini / 銀行振込を選ぶと有料イベント申込は必ず自動キャンセル→支払後に自動返金される                                                                           |
 | [F-08](../../audits/2026-08-12-codebase-audit-findings.md#f-08)   | 高     | 済   | `src/shared/domain/media/references.ts:98`                                                                    | メディア削除の参照検査が JSON 列に効かず、セクションで使用中の画像を R2 ごと消せる                                                                              |

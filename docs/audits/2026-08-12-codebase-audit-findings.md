@@ -222,7 +222,7 @@ none。\_\_tests\_\_/unit/domain/reservations/series-commands.test.ts は templa
 |        |                                                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------ |
 | 深刻度 | 高                                                                                                     |
-| 状態   | 未着手                                                                                                 |
+| 状態   | 済 — #2245（conform の `formatPaths` を使う。form レベルのエラー描画は未着手）                         |
 | 箇所   | `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form/helpers.ts:53` |
 | 領域   | エディタ内部                                                                                           |
 
