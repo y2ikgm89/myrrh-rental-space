@@ -92,13 +92,22 @@ function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
       paymentFailedAt: { lt: cutoff },
     },
     // 本列の導入前に FAILED になった行は `paymentFailedAt` が null のまま残る。
-    // 放置すると枠を永久に握るので、従来どおり `updatedAt` で回収する。
+    // 放置すると枠を永久に握るので、この枝で回収する。
+    //
+    // 基準は `createdAt`。`updatedAt` を使うと上と同じ livelock が legacy 行に残る
+    // （calendar-sync リトライが 15 分ごとに更新するため cutoff に到達しない）。
+    // `createdAt` は `@default(now())` で以後変化せず、必ず値を持つ。
+    // この枝に入るのは「列の導入より前に失敗した行」だけなので `createdAt` は
+    // 常に cutoff より過去にあり、判定は決定的になる。
+    //
+    // migration でバックフィルしないのは、data repair を migration に入れない
+    // というリポジトリの規約による（`.claude/skills/new-migration`）。
     // 新規の FAILED は必ず `paymentFailedAt` を持つので、この枝は既存行が
     // 掃けた時点で削除してよい。
     {
       paymentStatus: PaymentStatus.FAILED,
       paymentFailedAt: null,
-      updatedAt: { lt: cutoff },
+      createdAt: { lt: cutoff },
     },
   ];
 }

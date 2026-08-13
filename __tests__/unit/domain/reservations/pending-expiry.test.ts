@@ -123,10 +123,11 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
         paymentFailedAt: { lt: expect.any(Date) },
       },
       {
-        // 列の導入前からある FAILED 行の回収（掃けたら削除してよい）
+        // 列の導入前からある FAILED 行の回収（掃けたら削除してよい）。
+        // `updatedAt` ではなく `createdAt`。前者だと legacy 行にだけ livelock が残る。
         paymentStatus: PaymentStatus.FAILED,
         paymentFailedAt: null,
-        updatedAt: { lt: expect.any(Date) },
+        createdAt: { lt: expect.any(Date) },
       },
     ]);
 

@@ -450,13 +450,23 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
     }
   });
 
-  test("予約: 列の導入前からある FAILED（paymentFailedAt が null）も回収される", async () => {
+  test("予約: 列の導入前からある FAILED（paymentFailedAt が null）も、行が更新され続けても回収される", async () => {
+    // legacy 行の枝を `updatedAt` にすると、まさに直そうとしている livelock が
+    // legacy 行にだけ残る。`createdAt` は不変なので calendar-sync リトライに影響されない。
     const { reservationId, cleanup } = await createReservation({
       stripePaymentIntentId: null,
       paymentStatus: PaymentStatus.FAILED,
       paymentFailedAt: null,
     });
     try {
+      // legacy 行なので作成時刻も過去にする（`createdAt` は @default(now()) で
+      // 以後変化しないため、fixture 側で明示的に倒す必要がある）。
+      await prisma.$executeRaw`UPDATE "reservations" SET "created_at" = ${LONG_AGO} WHERE "id" = ${reservationId}::uuid`;
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: { calendarSyncError: "GCal unavailable" },
+      });
+
       await expireStalePendingReservationsCommand();
 
       const after = await prisma.reservation.findUniqueOrThrow({
