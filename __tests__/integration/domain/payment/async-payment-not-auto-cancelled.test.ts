@@ -268,6 +268,10 @@ async function createReservation(opts: {
     select: { id: true },
   });
 
+  // `updatedAt` は @updatedAt なので Prisma 経由では過去に倒せない。
+  // FAILED 枝は `updatedAt` を見るため、fixture 側でも合わせる。
+  await prisma.$executeRaw`UPDATE "reservations" SET "updated_at" = ${opts.age ?? LONG_AGO} WHERE "id" = ${reservation.id}::uuid`;
+
   return {
     reservationId: reservation.id,
     cleanup: async () => {
@@ -388,6 +392,31 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
         select: { status: true },
       });
       expect(after.status).toBe(ReservationStatus.CANCELLED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("予約: 失敗した直後の FAILED は残す（再決済の猶予を潰さない）", async () => {
+    // `claimReservationAsFailed` は paymentStatus しか書かない。Stripe session の
+    // expires_at は checkout 開始 + 60 分なので、`paymentInitiatedAt` を基準にすると
+    // FAILED が書かれた瞬間に回収対象になり、FAILED → PENDING の再決済導線が使えない。
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: null,
+      paymentStatus: PaymentStatus.FAILED,
+      // 決済開始は十分前だが、失敗したのは「たった今」
+      age: new Date(),
+    });
+    try {
+      await prisma.$executeRaw`UPDATE "reservations" SET "payment_initiated_at" = ${LONG_AGO} WHERE "id" = ${reservationId}::uuid`;
+
+      await expireStalePendingReservationsCommand();
+
+      const after = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(ReservationStatus.CONFIRMED);
     } finally {
       await cleanup();
     }

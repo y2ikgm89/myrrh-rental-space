@@ -116,8 +116,11 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
         paymentInitiatedAt: { lt: expect.any(Date) },
       },
       {
+        // FAILED だけ `updatedAt` を見る。`claimReservationAsFailed` は
+        // `paymentInitiatedAt` を触らないため、それを基準にすると FAILED が
+        // 書かれた瞬間に回収対象になり再決済の猶予が消える。
         paymentStatus: PaymentStatus.FAILED,
-        paymentInitiatedAt: { lt: expect.any(Date) },
+        updatedAt: { lt: expect.any(Date) },
       },
     ]);
 
