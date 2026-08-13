@@ -33,6 +33,30 @@ interface ExpireUnpaidEventRegistrationsResult {
   readonly total: number;
 }
 
+/**
+ * PENDING の枝だけ `stripePaymentIntentId: null` を要求する。
+ *
+ * PENDING で `stripePaymentIntentId` が入っているのは、非同期決済
+ * （konbini / customer_balance）の `checkout.session.completed` が
+ * `payment_status !== "paid"` で届き、`saveEventRegistrationPaymentIntentId` が
+ * PaymentIntent だけ保存した状態に限られる（同関数は paymentStatus=PENDING の行しか
+ * 更新しない。カード決済は completed 時点で `payment_status === "paid"` なので
+ * fulfill 経路に入りここを通らない）。
+ *
+ * この状態は「客が払込票を受け取り、これから支払う」であって放置ではない。
+ * ここを cron が CANCELLED にすると、数日後にコンビニで支払った時点で
+ * `async_payment_succeeded` が届き、キャンセル済みの申込に対する自動返金が走る。
+ * 席も失われ、入金と返金の履歴だけが残る。
+ *
+ * 席が永久に埋まることはない: 払込票が期限切れになると Stripe が
+ * `checkout.session.async_payment_failed` を送り、`claimEventRegistrationAsFailed`
+ * が FAILED に落とすので、下の FAILED の枝がその後で回収する。
+ *
+ * `createEventCheckoutSessionCommand` の再決済 claim は
+ * `stripePaymentIntentId` を null に戻す。これがないと、非同期決済が失敗したあと
+ * カードで再決済して離脱した行に前回の PaymentIntent が残り、この判定が誤って
+ * 「支払い中」と見なして fail-safe を素通りさせる。
+ */
 function staleRegistrationCandidateWhere(cutoff: Date) {
   return {
     status: RegistrationStatus.CONFIRMED,
@@ -48,6 +72,7 @@ function staleRegistrationCandidateWhere(cutoff: Date) {
       },
       {
         paymentStatus: PaymentStatus.PENDING,
+        stripePaymentIntentId: null,
         updatedAt: { lt: cutoff },
       },
       {
@@ -58,6 +83,7 @@ function staleRegistrationCandidateWhere(cutoff: Date) {
   };
 }
 
+/** 候補抽出と同じ述語を claim 側でも再強制する（`staleRegistrationCandidateWhere` 参照）。 */
 function staleRegistrationClaimWhere(registrationId: string, cutoff: Date) {
   return {
     id: registrationId,
@@ -72,6 +98,7 @@ function staleRegistrationClaimWhere(registrationId: string, cutoff: Date) {
       },
       {
         paymentStatus: PaymentStatus.PENDING,
+        stripePaymentIntentId: null,
         updatedAt: { lt: cutoff },
       },
       {
