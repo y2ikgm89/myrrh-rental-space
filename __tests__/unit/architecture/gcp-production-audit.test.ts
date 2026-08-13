@@ -1064,9 +1064,9 @@ describe("GCP production audit model", () => {
       { name: "R2_INQUIRIES_BUCKET_NAME", version: "1" },
       { name: "CLOUDFLARE_ZONE_ID", version: "1" },
       { name: "CLOUDFLARE_API_TOKEN", version: "1" },
-      // ローテーション段 1（version 2 = `新値,旧値`）。terraform/variables.tf の
+      // ローテーション完了（version 3 = 新値のみ）。terraform/variables.tf の
       // pin と一致することは gcp-production-audit-terraform-sync.test.ts が別途見る。
-      { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "2" },
+      { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "3" },
       { name: "GOOGLE_CLIENT_ID", version: "1" },
       { name: "GOOGLE_CLIENT_SECRET", version: "1" },
       { name: "SUPPRESSION_HASH_SECRET", version: "1" },
