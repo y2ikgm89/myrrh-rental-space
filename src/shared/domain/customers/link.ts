@@ -82,7 +82,7 @@ export async function ensureCustomerLinked(user: {
         customerId: customer.id,
         customerName: customer.lastName ?? user.name ?? "お客様",
         customerEmail: user.email,
-        loginUrl: `${getAppUrl()}/mypage`,
+        mypageUrl: `${getAppUrl()}/mypage`,
       }),
       { operation: "sendWelcomeEmail", category: ErrorCategory.EXTERNAL_API },
     );

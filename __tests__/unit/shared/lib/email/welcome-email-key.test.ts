@@ -7,7 +7,7 @@
  *
  * 旧実装は `welcome/<sha256(customerEmail)>` を key にしていたため、顧客が
  * delete-account → 24h 内に同じメールアドレスで re-signup すると、payload
- * (customerName / freshly-issued loginUrl 等) が異なるまま同一キーで送信され、
+ * (customerName / freshly-issued mypageUrl 等) が異なるまま同一キーで送信され、
  * 新規登録の welcome メールが silent drop していた（RESEND-AUDIT L5）。
  *
  * この drift gate は以下を強制する:
@@ -61,7 +61,7 @@ function lastKey(): string | undefined {
 const BASE = {
   customerName: "山田太郎",
   customerEmail: "customer@example.com",
-  loginUrl: "https://example.com/mypage",
+  mypageUrl: "https://example.com/mypage",
 } as const;
 
 beforeEach(() => {

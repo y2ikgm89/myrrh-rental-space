@@ -12,19 +12,26 @@ import {
 
 type Props = {
   customerName: string;
-  loginUrl: string;
+  /**
+   * 遷移先の完全な URL。**テンプレート側でパスを継ぎ足さない。**
+   *
+   * 旧名は `loginUrl` で、テンプレートが `${loginUrl}/mypage` を組み立てていた。
+   * 呼び出し側（`customers/link.ts`）は既に `/mypage` まで含めた URL を渡して
+   * いたため、実際に送られるボタンの href は `/mypage/mypage`（404）だった。
+   * fixture だけがサイトルートを渡していたのでプレビューは正しく見え、
+   * 本番送信だけが壊れていた。
+   */
+  mypageUrl: string;
   siteName: string;
   footer: EmailFooterData;
 };
 
 export function WelcomeEmail({
   customerName,
-  loginUrl,
+  mypageUrl,
   siteName,
   footer,
 }: Props) {
-  const mypageUrl = `${loginUrl}/mypage`;
-
   return (
     <EmailLayout preview={`${siteName}へようこそ`} footer={footer}>
       <Text style={heading}>{siteName}へようこそ</Text>
