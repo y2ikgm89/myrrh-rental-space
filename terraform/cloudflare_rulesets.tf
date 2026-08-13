@@ -70,10 +70,10 @@
 #    `new,<無関係な値>` を配って Cloudflare の送る値が受理されなくなり、
 #    この手順が避けようとしている collapse をその場で起こす。
 #
-#    **いま動いている revision が参照している version** から取る:
-#      pinned=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" #        --format='value(spec.template.spec.containers[0].env)' #        | tr ',' '
-' | grep CLOUDFLARE_ORIGIN_HEADER_SECRET)   # → version を読む
-#      old=$(gcloud secrets versions access "$pinned" --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET)
+#    **いま動いている revision が参照している version** から取る。まず version を読む:
+#      gcloud run services describe "$SERVICE_NAME" --region="$REGION" --format=json | jq -r '.spec.template.spec.containers[0].env[] | select(.name=="CLOUDFLARE_ORIGIN_HEADER_SECRET") | .valueFrom.secretKeyRef.key'
+#    その番号で旧 value を取る:
+#      old=$(gcloud secrets versions access "<番号>" --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET)
 #
 #    `variables.tf` の map と食い違ったら、map を編集したまま deploy していない。
 #    先にそれを解消する（動いている revision が正）。
