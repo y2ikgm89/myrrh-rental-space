@@ -59,8 +59,9 @@ export const PENDING_RESERVATION_EXPIRY_MINUTES = 60;
  *   `paymentStatus` しか更新しないので、この枝が無いと**枠が恒久的に埋まったままになる**
  *   （イベント側 `unpaid-expiry.ts` には元から FAILED の枝がある。予約側だけ欠けていた）。
  *
- * どの枝も `paymentInitiatedAt` で判定する。再 checkout のたびに refresh されるため、
- * 「最後に決済を始めてから何分経ったか」を正しく表す。
+ * PENDING の 2 枝は `paymentInitiatedAt` で判定する（再 checkout のたびに refresh され、
+ * 「最後に決済を始めてから何分経ったか」を表す）。FAILED の枝だけ `updatedAt` を使う
+ * 理由は該当箇所のコメントを参照。
  */
 function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
   return [
@@ -76,7 +77,17 @@ function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
     },
     {
       paymentStatus: PaymentStatus.FAILED,
-      paymentInitiatedAt: { lt: cutoff },
+      // ここだけ `updatedAt` で見る。`claimReservationAsFailed` は
+      // `buildFailedClaimUpdateData()` の `{ paymentStatus: FAILED }` しか書かず
+      // `paymentInitiatedAt` を触らない。Stripe session の `expires_at` は
+      // checkout 開始 + PENDING_RESERVATION_EXPIRY_MINUTES に揃えてあるので、
+      // `checkout.session.expired` が届く時点で `paymentInitiatedAt` は既に
+      // cutoff を過ぎている。それを基準にすると FAILED が書かれた瞬間に回収対象になり、
+      // `createCheckoutSessionCommand` が用意している FAILED → PENDING の再決済導線が
+      // 使えなくなる。`updatedAt` は @updatedAt なので FAILED の書込で更新され、
+      // 「失敗してから何分経ったか」を表す（イベント側 `unpaid-expiry.ts` の
+      // FAILED 枝と同じ基準）。
+      updatedAt: { lt: cutoff },
     },
   ];
 }
