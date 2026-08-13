@@ -21,10 +21,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@generated/prisma/client";
-import type {
-  CustomerType,
-  TaxRateType,
-} from "@/shared/lib/validations/enums/prisma-types";
+import type { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
@@ -33,10 +30,19 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllRequiredTermsAgreed } from "@/shared/domain/terms/queries";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { formatJstDateString } from "@/shared/lib/date-format";
-import type { RateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
+import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
+import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import { resolveRateBreakdown } from "@/shared/lib/pricing/rate-plan-resolver";
+import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
-import { claimCouponUsage, ensureNoOverlap } from "./payloads";
+import {
+  buildPricingSettings,
+  claimCouponUsage,
+  ensureNoOverlap,
+  getReservationSettings,
+  validateCoupon,
+} from "./payloads";
 import { ensureDateNotBlocked } from "./availability";
 import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import {
@@ -59,27 +65,16 @@ import {
 /**
  * series 作成時に各 instance へ複製されるテンプレート値。
  *
- * 各 instance は series 全体で duration が固定（spec 非ゴール: per-instance
- * duration variation は Phase B.2.1 以降）であるため、価格（rate plan 解決結果）も
- * 全 instance で同一という前提を置く。呼出側（Task 18 以降の admin action）が
- * 事前に 1 回分の pricing を解決し、そのまま渡す。
- *
- * `couponDiscountAmount` を含めない: Codex fix（coupon は series row のみ保持）に
- * 合わせ、instance 側は常に `couponId: null` のため、クーポン由来の割引内訳を
- * instance 単位で持たせると「couponId が無いのに couponDiscountAmount がある」
- * という不整合を生む。coupon 割引は `totalPrice`（割引後価格）に織込み済みで、
- * 内訳の可視性は series 行の `templateData` スナップショットで担保する。
+ * **価格はここに含めない。** duration は series 全体で固定（spec 非ゴール:
+ * per-instance duration variation は Phase B.2.1 以降）だが、単価は固定ではない —
+ * `SpaceRatePlan` は曜日・時間帯・祝日・有効期間で変わるため、同じ duration でも
+ * instance ごとに金額が変わりうる。旧実装は呼出側が 1 回分の pricing を解決して
+ * それを全 instance へリテラルコピーしており、2 回目以降が誤った金額になっていた
+ * （`rateBreakdownJson` に至っては 1 回目の日付が全行に焼き込まれていた）。
+ * 現在は `createReservationSeriesCommand` が instance ごとに
+ * `calculateReservationPricing` を呼ぶ。
  */
 export interface ReservationSeriesTemplateData {
-  totalPrice: number;
-  basePrice: number;
-  rateBreakdownJson: RateBreakdown;
-  taxRateType: TaxRateType;
-  taxRate: number;
-  taxAmount: number;
-  totalPriceWithTax: number;
-  durationDiscountAmount?: number | null;
-  spaceDiscountAmount?: number | null;
   notes?: string | null;
   guestLastName?: string | null;
   guestFirstName?: string | null;
@@ -92,7 +87,18 @@ export interface ReservationSeriesTemplateData {
 export interface CreateReservationSeriesInput {
   spaceId: string;
   customerId: string;
-  couponId?: string | null;
+  /**
+   * 未検証のクーポンコード。**割引は初回 instance にだけ適用する。**
+   *
+   * usage 消費は series 全体で 1 回（`claimCouponUsage` を 1 度だけ呼ぶ）で、
+   * 最低利用額の判定も初回 instance の `basePrice` で行う。したがって割引も
+   * 1 回分でなければ「1 usage で N 回割引」になる。旧実装は割引後価格を全
+   * instance へコピーしていたため、実質 N 回効いていた。
+   *
+   * 無効なコードは `validateCoupon` が `DomainError` を投げる（単発の
+   * `createAdminReservationCommand` と同じ挙動。黙って割引なしで作成しない）。
+   */
+  couponCode?: string | null;
   rrule: string;
   dtstart: Date;
   /** 1 instance あたりの予約時間（分）。series 全体で固定。 */
@@ -112,6 +118,19 @@ export interface CreateReservationSeriesResult {
   series: { id: string; instanceCount: number };
   instanceIds: string[];
 }
+
+/**
+ * `locationId` は blocked-date 判定用、残りは pricing 用。
+ * pricing 側の 5 列は `previewReservationPricing` / `admin-commands.ts` と同一。
+ */
+const SERIES_SPACE_SELECT = {
+  locationId: true,
+  hourlyPrice: true,
+  discountType: true,
+  discountValue: true,
+  durationDiscountOverride: true,
+  taxRateType: true,
+} as const satisfies Prisma.SpaceSelect;
 
 /** series 作成時に `ReservationSeries.agreementSnapshot` へ保存する fingerprint 形式。 */
 interface AgreementSnapshotEntry {
@@ -146,11 +165,15 @@ export async function createReservationSeriesCommand(
     endTime: new Date(startTime.getTime() + input.duration * 60_000),
   }));
 
-  // rateBreakdownJson の JSON narrow は全 instance で同一値のため 1 回だけ実行する。
-  const rateBreakdownJsonValue = asPrismaInputJsonValue(
-    input.templateData.rateBreakdownJson,
-    "料金内訳の生成に失敗しました",
-  );
+  // `validateRruleForSeries` は instance 0 個を reject 済みなので必ず存在するが、
+  // 型の上では optional なので明示的に取り出す。
+  const firstWindow = instanceWindows[0];
+  if (!firstWindow) {
+    throw new DomainError(
+      "instance が 0 個。RRULE を再確認してください",
+      "VALIDATION",
+    );
+  }
 
   // series.id を tx 外で事前生成する。理由:
   // (1) advisory lock 728357 の key を series 単位に統一するため (cancel/update
@@ -166,10 +189,59 @@ export async function createReservationSeriesCommand(
   //     というチキンエッグになる (Task 10 踏襲)。
   const seriesId = randomUUID();
 
-  const space = await prisma.space.findUniqueOrThrow({
-    where: { id: input.spaceId },
-    select: { locationId: true },
+  // rate plan / スペース / 商取引設定はいずれも read-only なので tx の外で取る
+  // （advisory lock の保持時間を伸ばさない。単発経路 `admin-commands.ts` と同型）。
+  const [space, ratePlans, commerceSettings] = await Promise.all([
+    prisma.space.findUnique({
+      where: { id: input.spaceId },
+      select: SERIES_SPACE_SELECT,
+    }),
+    getSpaceRatePlans(input.spaceId),
+    getReservationSettings(),
+  ]);
+
+  if (!space) {
+    throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  const pricingSpace = {
+    hourlyPrice: space.hourlyPrice,
+    discountType: space.discountType,
+    discountValue: space.discountValue,
+    durationDiscountOverride: space.durationDiscountOverride,
+    taxRateType: space.taxRateType,
+  };
+  const pricingSettings = buildPricingSettings(commerceSettings);
+
+  // クーポンの最低利用額判定は rate plan 適用後の実 basePrice で行う（各予約
+  // コマンドと同型）。series では **初回 instance の basePrice** を基準にする —
+  // usage 消費も割引適用も初回 1 回だけなので、判定基準もそこに揃える。
+  const firstRateBreakdown = resolveRateBreakdown({
+    ratePlans,
+    spaceHourlyPrice: space.hourlyPrice,
+    startDateTime: firstWindow.startTime,
+    endDateTime: firstWindow.endTime,
+    holidayJudge: isJapaneseHoliday,
   });
+  const validatedCoupon = await validateCoupon(
+    input.couponCode,
+    firstRateBreakdown.totalBasePrice,
+  );
+
+  // **instance ごとに解決する。** `SpaceRatePlan` は曜日・時間帯・祝日・有効期間で
+  // 単価を変えるため、同じ duration でも日付が違えば金額が違う。
+  const instancePricings = instanceWindows.map((window) => ({
+    window,
+    pricing: calculateReservationPricing({
+      startDateTime: window.startTime,
+      endDateTime: window.endTime,
+      space: pricingSpace,
+      ratePlans,
+      reservationSettings: pricingSettings,
+      coupon: window.index === 0 ? validatedCoupon : null,
+      holidayJudge: isJapaneseHoliday,
+    }),
+  }));
 
   return await prisma.$transaction(async (tx) => {
     // series 単位 lock (728357) → Space 単位 lock (728351、既存契約) の順で取得する。
@@ -235,11 +307,12 @@ export async function createReservationSeriesCommand(
     }
 
     // coupon usage increment（series 全体で 1 usage）。validity / min amount /
-    // usageLimit を同一 UPDATE WHERE で強制する。
-    if (input.couponId) {
+    // usageLimit を同一 UPDATE WHERE で強制する。割引が効くのも初回 instance の
+    // 1 回だけなので、1 usage と 1 割引が対応する。
+    if (validatedCoupon) {
       await claimCouponUsage(tx, {
-        couponId: input.couponId,
-        basePrice: input.templateData.basePrice,
+        couponId: validatedCoupon.id,
+        basePrice: firstRateBreakdown.totalBasePrice,
         now: input.now,
       });
     }
@@ -249,7 +322,7 @@ export async function createReservationSeriesCommand(
         id: seriesId,
         spaceId: input.spaceId,
         customerId: input.customerId,
-        couponId: input.couponId ?? null,
+        couponId: validatedCoupon?.id ?? null,
         rrule: input.rrule,
         dtstart: input.dtstart,
         duration: input.duration,
@@ -271,13 +344,26 @@ export async function createReservationSeriesCommand(
     // (Event slot 重複防止) が各行に対して自動的に効く（defense-in-depth、上の
     // アプリ層 pre-check が主防衛線）。
     const reservationData: Prisma.ReservationCreateManyInput[] =
-      instanceWindows.map((window) => ({
+      instancePricings.map(({ window, pricing }) => ({
         spaceId: input.spaceId,
         customerId: input.customerId,
         // Codex fix: instance は couponId を持たない（coupon は series row のみ）。
         // this-only キャンセル時に既存 applyBulkCancellation の coupon decrement 経路
         // （instance couponId 判定）が自動 skip され、残り instance の割引を守る。
         couponId: null,
+        // 割引額は **必ず itemize する**。`reservations_total_price_breakdown_check`
+        // が `total_price = GREATEST(0, base_price - coupon - duration - space)
+        // + manual_adjustment` を強制するため、割引後の total_price を書きながら
+        // 内訳列を空にすると 23514 で reject される。
+        //
+        // 旧実装はまさにこれをやっていた（割引後 totalPrice を全 instance へコピー
+        // しつつ couponDiscountAmount を持たせない設計）。結果、**割引が実際に効く
+        // クーポンを指定した繰返し予約は作成そのものが失敗していた**。
+        // 割引が 0 円のクーポン（あるいはクーポン無し）でだけ通っていた。
+        //
+        // `couponId` が null で `couponDiscountAmount` が正、という組合せを禁じる
+        // 制約は無い（`reservations_money_non_negative_check` は非負のみ）。
+        couponDiscountAmount: pricing.couponDiscountAmount,
         seriesId: series.id,
         recurrenceInstanceIndex: window.index,
         startTime: window.startTime,
@@ -285,16 +371,20 @@ export async function createReservationSeriesCommand(
         // spec risk-5: admin 作成の series は CONFIRMED + 後払い運用（paymentStatus は
         // Prisma default の UNPAID のまま、明示指定しない）。
         status: ReservationStatus.CONFIRMED,
-        totalPrice: input.templateData.totalPrice,
-        basePrice: input.templateData.basePrice,
-        rateBreakdownJson: rateBreakdownJsonValue,
-        taxRateType: input.templateData.taxRateType,
-        taxRate: input.templateData.taxRate,
-        taxAmount: input.templateData.taxAmount,
-        totalPriceWithTax: input.templateData.totalPriceWithTax,
-        durationDiscountAmount:
-          input.templateData.durationDiscountAmount ?? null,
-        spaceDiscountAmount: input.templateData.spaceDiscountAmount ?? null,
+        // その instance 自身の日時で解決した金額。rate plan（曜日 / 時間帯 / 祝日 /
+        // 有効期間）が効くので instance ごとに異なりうる。
+        totalPrice: pricing.totalPrice,
+        basePrice: pricing.basePrice,
+        rateBreakdownJson: asPrismaInputJsonValue(
+          pricing.rateBreakdown,
+          "料金内訳の生成に失敗しました",
+        ),
+        taxRateType: pricing.taxRateType,
+        taxRate: pricing.taxRate,
+        taxAmount: pricing.taxAmount,
+        totalPriceWithTax: pricing.totalPriceWithTax,
+        durationDiscountAmount: pricing.durationDiscountAmount ?? null,
+        spaceDiscountAmount: pricing.spaceDiscountAmount ?? null,
         notes: input.templateData.notes ?? null,
         guestLastName: input.templateData.guestLastName ?? null,
         guestFirstName: input.templateData.guestFirstName ?? null,

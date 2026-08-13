@@ -32,7 +32,6 @@ import {
   cancelReservationSeriesCommand,
   createReservationSeriesCommand,
 } from "@/shared/domain/reservations/series-commands";
-import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import { syncReservationSeriesToCalendar } from "@/shared/domain/reservations/reservation-calendar-outbound";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -64,25 +63,10 @@ export async function createRecurringReservationAction(
       (endTime.getTime() - dtstart.getTime()) / 60_000,
     );
 
-    // 単発予約と同じ pricing preview で 1 instance 分の price を確定 → templateData に流用
-    // (全 instance で duration + rate plan 同一の前提、spec §7)。
-    const preview = await previewReservationPricing(
-      {
-        spaceId: data.spaceId,
-        startDateTime: dtstart,
-        endDateTime: endTime,
-        ...(data.couponCode && data.couponCode !== ""
-          ? { couponCode: data.couponCode }
-          : {}),
-      },
-      { requirePublished: false },
-    );
-    if (!preview) {
-      return {
-        ok: false,
-        error: "スペース情報の取得に失敗しました。空き状況をご確認ください。",
-      };
-    }
+    // 料金はここで確定しない。`SpaceRatePlan` は曜日・時間帯・祝日・有効期間で
+    // 単価を変えるため、instance ごとに金額が変わりうる。全 instance の日時を
+    // 知っているのは RRULE を展開したあとの command だけなので、そちらに委ねる。
+    // 旧実装はここで 1 回だけ pricing を解決し、全 instance へコピーしていた。
 
     // RRULE 組み立て (COUNT / UNTIL は endMode で分岐)
     const rrule = buildRruleString({
@@ -107,21 +91,11 @@ export async function createRecurringReservationAction(
         const series = await createReservationSeriesCommand({
           spaceId: data.spaceId,
           customerId: data.customerId,
-          couponId: preview.appliedCoupon?.id ?? null,
+          couponCode: data.couponCode || null,
           rrule,
           dtstart,
           duration,
-          templateData: {
-            totalPrice: preview.totalPrice,
-            basePrice: preview.basePrice,
-            rateBreakdownJson: preview.rateBreakdown,
-            taxRateType: preview.taxRateType,
-            taxRate: preview.taxRate,
-            taxAmount: preview.taxAmount,
-            totalPriceWithTax: preview.totalPriceWithTax,
-            durationDiscountAmount: preview.durationDiscountAmount,
-            spaceDiscountAmount: preview.spaceDiscountAmount,
-          },
+          templateData: {},
           agreements: [],
           skipCustomerTerms: true,
           now: new Date(),

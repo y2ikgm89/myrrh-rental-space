@@ -27,9 +27,42 @@ const mockSettingsFindUniqueOrThrow = mock<
   (args: Record<string, unknown>) => Promise<{ maxRecurrenceInstances: number }>
 >(() => Promise.resolve({ maxRecurrenceInstances: 26 }));
 
-const mockSpaceFindUniqueOrThrow = mock<
-  (args: Record<string, unknown>) => Promise<{ locationId: string | null }>
->(() => Promise.resolve({ locationId: "loc-1" }));
+const SPACE_ROW = {
+  locationId: "loc-1",
+  hourlyPrice: 2500,
+  discountType: null,
+  discountValue: null,
+  durationDiscountOverride: null,
+  taxRateType: "STANDARD",
+};
+
+const mockSpaceFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<typeof SPACE_ROW | null>
+>(() => Promise.resolve(SPACE_ROW));
+
+const mockCommerceSettingsFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<null>
+>(() => Promise.resolve(null));
+
+const VALID_COUPON = {
+  id: "coupon-1",
+  code: "SERIES500",
+  name: "series test",
+  type: "FIXED_AMOUNT",
+  discountValue: 500,
+  maxDiscountAmount: null,
+  canCombineWithDurationDiscount: true,
+  isActive: true,
+  validFrom: new Date("2020-01-01T00:00:00Z"),
+  validUntil: null,
+  usageLimit: null,
+  usageCount: 0,
+  minReservationAmount: null,
+};
+
+const mockCouponFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<typeof VALID_COUPON | null>
+>(() => Promise.resolve(VALID_COUPON));
 
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>
@@ -90,7 +123,9 @@ const mockTransaction = mock<
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settingsReservation: { findUniqueOrThrow: mockSettingsFindUniqueOrThrow },
-    space: { findUniqueOrThrow: mockSpaceFindUniqueOrThrow },
+    space: { findUnique: mockSpaceFindUnique },
+    settingsCommerce: { findUnique: mockCommerceSettingsFindUnique },
+    coupon: { findUnique: mockCouponFindUnique },
     $transaction: mockTransaction,
   },
 }));
@@ -103,6 +138,13 @@ const mockEnsureNoOverlap = mock<
 >(() => Promise.resolve());
 mock.module("@/shared/domain/reservations/payloads", () => ({
   ensureNoOverlap: mockEnsureNoOverlap,
+}));
+
+const mockGetSpaceRatePlans = mock<(spaceId: string) => Promise<unknown[]>>(
+  () => Promise.resolve([]),
+);
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: mockGetSpaceRatePlans,
 }));
 
 const mockAssertTermsAgreed = mock<
@@ -170,21 +212,8 @@ const SERIES_ID = "33333333-3333-4333-8333-333333333333";
 const DTSTART = new Date("2026-07-21T10:00:00Z"); // 火曜日
 const NOW = new Date("2026-07-17T00:00:00Z");
 
-const templateData: ReservationSeriesTemplateData = {
-  totalPrice: 5000,
-  basePrice: 5000,
-  rateBreakdownJson: {
-    schemaVersion: 1,
-    segments: [],
-    totalHours: 2,
-    totalBasePrice: 5000,
-    holidayFlags: {},
-  },
-  taxRateType: "STANDARD" as ReservationSeriesTemplateData["taxRateType"],
-  taxRate: 10,
-  taxAmount: 500,
-  totalPriceWithTax: 5500,
-};
+// 価格は command が instance ごとに解決するので、テンプレートには含めない。
+const templateData: ReservationSeriesTemplateData = {};
 
 function baseCreateInput(
   overrides?: Partial<CreateReservationSeriesInput>,
@@ -204,7 +233,10 @@ function baseCreateInput(
 
 function resetAllMocks(): void {
   mockSettingsFindUniqueOrThrow.mockReset();
-  mockSpaceFindUniqueOrThrow.mockReset();
+  mockSpaceFindUnique.mockReset();
+  mockCommerceSettingsFindUnique.mockReset();
+  mockCouponFindUnique.mockReset();
+  mockGetSpaceRatePlans.mockReset();
   mockBlockedDateFindFirst.mockReset();
   mockExecuteRaw.mockReset();
   mockSeriesCreate.mockReset();
@@ -225,7 +257,10 @@ function resetAllMocks(): void {
   mockSettingsFindUniqueOrThrow.mockResolvedValue({
     maxRecurrenceInstances: 26,
   });
-  mockSpaceFindUniqueOrThrow.mockResolvedValue({ locationId: "loc-1" });
+  mockSpaceFindUnique.mockResolvedValue(SPACE_ROW);
+  mockCommerceSettingsFindUnique.mockResolvedValue(null);
+  mockCouponFindUnique.mockResolvedValue(VALID_COUPON);
+  mockGetSpaceRatePlans.mockResolvedValue([]);
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockExecuteRaw.mockResolvedValue(undefined);
   mockSeriesCreate.mockResolvedValue({ id: SERIES_ID, instanceCount: 3 });
@@ -300,7 +335,7 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
 
   test("instance は couponId=null が強制される（series 側に couponId があっても）", async () => {
     await createReservationSeriesCommand(
-      baseCreateInput({ couponId: "coupon-1" }),
+      baseCreateInput({ couponCode: VALID_COUPON.code }),
     );
 
     const createManyArgs = mockReservationCreateMany.mock.calls[0]?.[0] as {
@@ -336,9 +371,9 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(String(seriesLockCall?.[2])).not.toContain(":");
   });
 
-  test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit + validity)", async () => {
+  test("coupon usage 加算: couponCode 指定時は $executeRaw で atomic claim (usageLimit + validity)", async () => {
     await createReservationSeriesCommand(
-      baseCreateInput({ couponId: "coupon-1" }),
+      baseCreateInput({ couponCode: VALID_COUPON.code }),
     );
     // advisory lock 2 回 (728357, 728351) + coupon claim 1 回 = 3 回
     expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
@@ -355,9 +390,9 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("coupon usage 加算: couponId 未指定なら $executeRaw は advisory lock 2 回のみ", async () => {
+  test("coupon usage 加算: couponCode 未指定なら $executeRaw は advisory lock 2 回のみ", async () => {
     await createReservationSeriesCommand(baseCreateInput());
-    // couponId なしなら coupon claim SQL は発行されない
+    // couponCode なしなら coupon claim SQL は発行されない
     expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });
@@ -372,8 +407,94 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     });
 
     await expect(
-      createReservationSeriesCommand(baseCreateInput({ couponId: "coupon-1" })),
+      createReservationSeriesCommand(
+        baseCreateInput({ couponCode: VALID_COUPON.code }),
+      ),
     ).rejects.toThrow("クーポンが利用できません");
+  });
+
+  // -------------------------------------------------------------------------
+  // instance ごとの料金解決（旧実装は 1 回目の金額を全 instance にコピーしていた）
+  // -------------------------------------------------------------------------
+
+  /**
+   * 2 回目以降にだけ効く期間限定 rate plan。
+   *
+   * DTSTART は JST 2026-07-21(火) 19:00 で、`FREQ=WEEKLY;BYDAY=TU;COUNT=3` の
+   * instance は 7/21・7/28・8/4。`effectiveFrom = 7/28` にすることで
+   * 「1 回目だけ素の hourlyPrice、2 回目以降は plan 単価」という差を作る。
+   * 旧実装は 1 回目の解決結果を全 instance にコピーしていたため、この差が消える。
+   */
+  const LATE_RATE_PLAN = {
+    id: "plan-late",
+    name: "8月からの値上げ",
+    hourlyPrice: 5000,
+    daysOfWeek: [],
+    holidayMode: "ANY",
+    startTime: null,
+    endTime: null,
+    effectiveFrom: new Date("2026-07-28T00:00:00.000Z"),
+    effectiveTo: null,
+    updatedAt: new Date("2026-07-01T00:00:00.000Z"),
+  };
+
+  function createdRows(): Record<string, unknown>[] {
+    const args = mockReservationCreateMany.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>[];
+    };
+    return args.data;
+  }
+
+  test("rate plan が日付で変わるとき、instance ごとに金額を解決する（1 回目のコピーではない）", async () => {
+    mockGetSpaceRatePlans.mockResolvedValue([LATE_RATE_PLAN]);
+
+    await createReservationSeriesCommand(baseCreateInput());
+
+    const rows = createdRows();
+    expect(rows).toHaveLength(3);
+    // 1 回目 (7/21) は plan の effectiveFrom 前なので space.hourlyPrice 2500 x 2h
+    expect(rows[0]?.["basePrice"]).toBe(5000);
+    // 2 回目以降 (7/28, 8/4) は plan の 5000 x 2h
+    expect(rows[1]?.["basePrice"]).toBe(10000);
+    expect(rows[2]?.["basePrice"]).toBe(10000);
+    expect(rows[0]?.["totalPrice"]).toBe(5000);
+    expect(rows[1]?.["totalPrice"]).toBe(10000);
+  });
+
+  test("rateBreakdownJson も instance ごとに作る（1 回目の日付が全行に焼き付かない）", async () => {
+    mockGetSpaceRatePlans.mockResolvedValue([LATE_RATE_PLAN]);
+
+    await createReservationSeriesCommand(baseCreateInput());
+
+    const rows = createdRows();
+    const firstSegments = (
+      rows[0]?.["rateBreakdownJson"] as {
+        segments: { fromIso: string }[];
+      }
+    ).segments;
+    const secondSegments = (
+      rows[1]?.["rateBreakdownJson"] as {
+        segments: { fromIso: string }[];
+      }
+    ).segments;
+
+    expect(firstSegments[0]?.fromIso).toContain("2026-07-21");
+    expect(secondSegments[0]?.fromIso).toContain("2026-07-28");
+  });
+
+  test("クーポン割引は初回 instance にだけ効く（usage 消費が series で 1 回なので）", async () => {
+    await createReservationSeriesCommand(
+      baseCreateInput({ couponCode: VALID_COUPON.code }),
+    );
+
+    const rows = createdRows();
+    // space.hourlyPrice 2500 x 2h = 5000。FIXED_AMOUNT 500 引き。
+    expect(rows[0]?.["totalPrice"]).toBe(4500);
+    expect(rows[1]?.["totalPrice"]).toBe(5000);
+    expect(rows[2]?.["totalPrice"]).toBe(5000);
+    // basePrice（割引前）は全 instance 同じ日時条件なので一致する
+    expect(rows[0]?.["basePrice"]).toBe(5000);
+    expect(rows[1]?.["basePrice"]).toBe(5000);
   });
 
   test("termsAgreement N 行: recordTermsAgreements の返り値から agreementSnapshot を N 件構築する", async () => {
