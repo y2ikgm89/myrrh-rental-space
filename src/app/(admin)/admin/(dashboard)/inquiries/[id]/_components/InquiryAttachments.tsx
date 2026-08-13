@@ -19,8 +19,10 @@ import {
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InquiryAttachmentItem } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
-
-const ALLOWED_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+import {
+  INQUIRY_ATTACHMENT_ACCEPT,
+  INQUIRY_ATTACHMENT_MAX_SIZE_BYTES,
+} from "@/shared/lib/r2/inquiry-attachment";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) {
@@ -50,6 +52,21 @@ export function InquiryAttachments({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // 送信前に弾く。Server Action の `bodySizeLimit` を超えるとフレームワークが
+    // request 自体を reject するため、action は返らず `isMutationError` にも
+    // 到達せず、**画面には何も出ない**（下の toast も出ない）。
+    // `next.config.ts` の上限はこの値より上に取ってあるので、ここが最初の関門になる。
+    if (file.size > INQUIRY_ATTACHMENT_MAX_SIZE_BYTES) {
+      const maxMB = Math.round(
+        INQUIRY_ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024),
+      );
+      toast.error(`ファイルサイズは${String(maxMB)}MB以下にしてください`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);
@@ -144,7 +161,7 @@ export function InquiryAttachments({
             <input
               ref={fileInputRef}
               type="file"
-              accept={ALLOWED_ACCEPT}
+              accept={INQUIRY_ATTACHMENT_ACCEPT}
               className="hidden"
               onChange={handleFileChange}
               disabled={isUploading}

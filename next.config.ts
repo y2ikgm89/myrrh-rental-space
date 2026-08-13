@@ -7,6 +7,7 @@ import {
   joinCacheTags,
   type CdnTagValue,
 } from "./src/shared/lib/constants/cdn-cache-tags";
+import { SERVER_ACTION_BODY_SIZE_LIMIT_BYTES } from "./src/shared/lib/r2/inquiry-attachment";
 
 type RemotePattern = NonNullable<
   NonNullable<NextConfig["images"]>["remotePatterns"]
@@ -212,6 +213,23 @@ const nextConfig: NextConfig = {
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
     // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
     globalNotFound: true,
+    // Server Action の request body 上限。**既定は 1MB**（16.3.0 同梱 docs
+    // `01-app/03-api-reference/05-config/01-next-config-js/serverActions.md`:
+    // "the maximum size of the request body sent to a Server Action is 1MB"）。
+    //
+    // お問い合わせ添付（`uploadInquiryAttachment`）は Server Action で File を
+    // 受け取り、アプリ側は PDF 10MB / 画像 5MB まで受け付ける建て付けになって
+    // いた。既定のままだと 1MB を超えた時点でフレームワークが request を弾き、
+    // action は返らないので `MutationResult` も toast も出ず**無言で失敗**する。
+    //
+    // 値は書き写さず SSoT から導出する（`INQUIRY_ATTACHMENT_MAX_SIZE_BYTES` +
+    // multipart のオーバーヘッド）。per-MIME 上限を動かしたらここも一緒に動く。
+    //
+    // 管理画面のメディアアップロードは Route Handler（`/admin/api/media`）なので
+    // この上限の対象外。動画 50MB を通しているのはそちら。
+    serverActions: {
+      bodySizeLimit: SERVER_ACTION_BODY_SIZE_LIMIT_BYTES,
+    },
     // NOTE: experimental.optimizePackageImports はあえて指定しない。
     // 「削除されたから」ではない — 16.3.0 にも実在する（型・zod スキーマ・docs の
     // いずれにも現存）。指定しない理由は Turbopack では不要だから。
