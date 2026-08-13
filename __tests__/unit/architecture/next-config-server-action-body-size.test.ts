@@ -5,9 +5,9 @@
  * ## なぜ
  *
  * この gate は実際に main へ漏れた欠陥に対して置いている。
- * `uploadInquiryAttachment` は Server Action で `File` を受け取り、アプリ側は
- * PDF 10MB / 画像 5MB まで受け付ける建て付けだった。一方 `bodySizeLimit` は
- * 未設定で、Next の既定は 1MB（16.3.0 同梱 docs
+ * `uploadInquiryAttachment` と `uploadMedia` は Server Action で `File` を
+ * 受け取り、アプリ側は動画 50MB / 音声 20MB / PDF 10MB / 画像 5MB まで受け付ける
+ * 建て付けだった。一方 `bodySizeLimit` は未設定で、Next の既定は 1MB（16.3.0 同梱 docs
  * `01-app/03-api-reference/05-config/01-next-config-js/serverActions.md`:
  * "the maximum size of the request body sent to a Server Action is 1MB"）。
  *
@@ -28,7 +28,7 @@
  * `1024 * 1024` を使って超過時に `ApiError(413, "Body exceeded ... limit.")` を投げる。
  * したがって gate が見るのは「明示値が入っていて、かつ十分大きいこと」になる。
  *
- * 比較相手は SSoT の `INQUIRY_ATTACHMENT_MAX_SIZE_BYTES`。数値を書き写さないので、
+ * 比較相手は SSoT の `LARGEST_UPLOAD_BYTES`。数値を書き写さないので、
  * per-MIME 上限（`MEDIA_MAX_SIZE_BYTES`）を動かせばこの gate の期待値も一緒に動く。
  *
  * 見本は一時ディレクトリの実 config を同じ loader に通して作る。
@@ -44,6 +44,10 @@
  * （`src/shared/lib/r2/inquiry-attachment.ts`）が導出元なので、そこが
  * 追随できていない理由を先に読む。**期待値の側を下げて通さない** — 下げた瞬間に
  * 「正当なアップロードが無言で失敗する」状態へ戻る。
+ *
+ * **`bodySizeLimit` を特定経路の上限から導かない。** 一度それをやって
+ * 問い合わせ添付（10MB）基準にした結果、同じ Server Action 経路のメディア
+ * アップロード（動画 50MB）が無言で 413 のまま残った。
  */
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -52,7 +56,14 @@ import { join } from "node:path";
 
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { INQUIRY_ATTACHMENT_MAX_SIZE_BYTES } from "@/shared/lib/r2/inquiry-attachment";
+import { MEDIA_MAX_SIZE_BYTES } from "@/shared/lib/r2/media-size";
+
+/**
+ * Server Action で受けうる最大ファイル。**問い合わせ添付ではなくメディア全体の
+ * 最大値**（動画 50MB）。`uploadMedia` も Server Action で、client 3 箇所から
+ * 呼ばれる（同名の Route Handler は存在するが GET しか使われていない）。
+ */
+const LARGEST_UPLOAD_BYTES = Math.max(...Object.values(MEDIA_MAX_SIZE_BYTES));
 
 /** request 時に当たる既定（`action-handler.js`）。config には現れない。 */
 const NEXT_RUNTIME_DEFAULT_BYTES = 1024 * 1024;
@@ -108,7 +119,7 @@ describe("next.config: Server Action bodySizeLimit", () => {
     // 数値で持つ（`'12mb'` のような文字列だとここで比較できず、
     // 「設定はあるが小さい」を見逃す）。
     expect(typeof limit).toBe("number");
-    expect(limit).toBeGreaterThanOrEqual(INQUIRY_ATTACHMENT_MAX_SIZE_BYTES);
+    expect(limit).toBeGreaterThanOrEqual(LARGEST_UPLOAD_BYTES);
   });
 
   test("見本: 未設定は解決後も undefined のまま（= 実行時に 1MB が当たる、落ちるべき形）", async () => {
@@ -121,9 +132,7 @@ describe("next.config: Server Action bodySizeLimit", () => {
     // 形にはできず、上の本番 assert（number であること）が唯一の関門になる。
     expect(config.experimental.serverActions?.bodySizeLimit).toBeUndefined();
     // かつ、実行時に当たる既定はアプリの受け入れ上限に足りない（gate の存在理由）。
-    expect(INQUIRY_ATTACHMENT_MAX_SIZE_BYTES).toBeGreaterThan(
-      NEXT_RUNTIME_DEFAULT_BYTES,
-    );
+    expect(LARGEST_UPLOAD_BYTES).toBeGreaterThan(NEXT_RUNTIME_DEFAULT_BYTES);
   });
 
   test("見本: 明示値は loader を素通りする（落ちてはいけない形）", async () => {

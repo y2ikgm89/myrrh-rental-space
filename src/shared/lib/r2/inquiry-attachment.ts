@@ -55,14 +55,22 @@ export const INQUIRY_ATTACHMENT_ACCEPT =
 /**
  * Server Action の `bodySizeLimit` に使う値（bytes）。
  *
+ * **問い合わせ添付の上限ではなく `MEDIA_MAX_SIZE_BYTES` 全体の最大値**（現状は
+ * 動画の 50MB）から導く。Server Action で File を受ける経路は問い合わせ添付だけ
+ * ではない — `uploadMedia`（`admin/actions/media.ts`）も Server Action で、
+ * MediaUploadDialog / ImageDropPlugin / use-media-upload の 3 箇所から呼ばれる。
+ *
+ * 同じ機能の Route Handler (`/admin/api/media`) も存在するが **client は GET しか
+ * 叩いておらず**、アップロードは Server Action 側を通る。「メディアは Route Handler
+ * だからこの上限の対象外」と読むと、動画 50MB / 音声 20MB が無言で 413 になる。
+ *
  * multipart/form-data は boundary・part header・他フィールドの分だけ実サイズを
  * 超える。公式ドキュメントは「typical multipart uploads で 10〜20 KB 程度を
  * 見込め」としているので、余裕を持って 64 KB を足す。
  *
- * この値が上限として見えることは無い（client 側が
- * `INQUIRY_ATTACHMENT_MAX_SIZE_BYTES` で先に弾き、超えた分は server の
- * command が MIME 別上限で弾いて理由付きのエラーを返す）。ここは
+ * この値が上限として見えることは無い（client 側が各経路の上限で先に弾き、
+ * 超えた分は server が MIME 別上限で弾いて理由付きのエラーを返す）。ここは
  * 「正当なアップロードがフレームワークに無言で落とされない」ための下限。
  */
 export const SERVER_ACTION_BODY_SIZE_LIMIT_BYTES =
-  INQUIRY_ATTACHMENT_MAX_SIZE_BYTES + 64 * 1024;
+  Math.max(...Object.values(MEDIA_MAX_SIZE_BYTES)) + 64 * 1024;
