@@ -6,7 +6,7 @@
  * テーブル選択時にフローティング表示
  */
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { FloatingBulkActionBar } from "@/admin/components/FloatingBulkActionBar";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import {
   bulkUpdatePagePublished,
   bulkDeletePages,
@@ -31,6 +32,7 @@ interface BulkActionsProps {
 export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleBulkPublish = (publish: boolean) => {
     startTransition(async () => {
@@ -55,62 +57,75 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
       const result = await bulkDeletePages(selectedSlugs);
       if (isMutationError(result)) {
         toast.error(result.error);
+        setDeleteOpen(false);
         return;
       }
 
       toast.success(`${result.deletedCount}件のページを削除しました`);
+      setDeleteOpen(false);
       onClear();
       router.refresh();
     });
   };
 
   return (
-    <FloatingBulkActionBar
-      selectedCount={selectedSlugs.length}
-      onClear={onClear}
-      isPending={isPending}
-    >
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleBulkPublish(true)}
-        disabled={isPending}
+    <>
+      <FloatingBulkActionBar
+        selectedCount={selectedSlugs.length}
+        onClear={onClear}
+        isPending={isPending}
       >
-        {isPending ? (
-          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-        ) : (
-          <IconEye className="h-4 w-4 mr-1" />
-        )}
-        一括公開
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleBulkPublish(true)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <IconEye className="h-4 w-4 mr-1" />
+          )}
+          一括公開
+        </Button>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleBulkPublish(false)}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-        ) : (
-          <IconEyeOff className="h-4 w-4 mr-1" />
-        )}
-        一括非公開
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleBulkPublish(false)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <IconEyeOff className="h-4 w-4 mr-1" />
+          )}
+          一括非公開
+        </Button>
 
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={handleBulkDelete}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-        ) : (
-          <IconTrash className="h-4 w-4 mr-1" />
-        )}
-        一括削除
-      </Button>
-    </FloatingBulkActionBar>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setDeleteOpen(true)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <IconTrash className="h-4 w-4 mr-1" />
+          )}
+          一括削除
+        </Button>
+      </FloatingBulkActionBar>
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`${selectedSlugs.length}件のページを削除しますか？`}
+        description="公開ページから消え、管理画面の一覧からも見えなくなります。この操作は管理画面から取り消せません。"
+        onConfirm={handleBulkDelete}
+        isPending={isPending}
+      />
+    </>
   );
 }

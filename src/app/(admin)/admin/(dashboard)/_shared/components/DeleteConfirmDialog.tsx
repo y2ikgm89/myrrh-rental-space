@@ -18,6 +18,15 @@ type DeleteConfirmDialogProps = {
   title?: string;
   description?: string;
   itemName?: string;
+  /**
+   * 実行ボタンの文言。既定は「削除」。
+   *
+   * このダイアログは削除以外の「取り消せない操作」にも使う（イベントの一括
+   * キャンセル、申込の一括キャンセル）。既定のままだと "キャンセルしますか？"
+   * と尋ねながら実行ボタンが「削除」になり、しかも横の離脱ボタンも
+   * 「キャンセル」なので、どちらが何をするのか読み取れなくなる。
+   */
+  confirmLabel?: string;
   onConfirm: () => void;
   isPending?: boolean;
 };
@@ -42,6 +51,7 @@ export function DeleteConfirmDialog({
   title,
   description,
   itemName,
+  confirmLabel = "削除",
   onConfirm,
   isPending = false,
 }: DeleteConfirmDialogProps) {
@@ -66,7 +76,7 @@ export function DeleteConfirmDialog({
             disabled={isPending}
             className={buttonVariants({ variant: "destructive" })}
           >
-            {isPending ? "削除中..." : "削除"}
+            {isPending ? `${confirmLabel}中...` : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
