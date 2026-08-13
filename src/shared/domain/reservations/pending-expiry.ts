@@ -76,6 +76,23 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
         in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
       paymentStatus: PaymentStatus.PENDING,
+      // PENDING で `stripePaymentIntentId` が入っているのは、非同期決済
+      // （konbini / customer_balance）の `checkout.session.completed` が
+      // `payment_status !== "paid"` で届き、`savePaymentIntentId` が PaymentIntent
+      // だけ保存した状態に限られる（カード決済は completed 時点で "paid" なので
+      // fulfill 経路に入りここを通らない）。これは「客が払込票を受け取り、これから
+      // 支払う」であって放置ではない。ここで CANCELLED にすると、数日後に支払われた
+      // 時点で `async_payment_succeeded` が届き、キャンセル済み予約への自動返金が
+      // 走る。枠も失われ、入金と返金の履歴だけが残る。
+      //
+      // 枠が永久に埋まることはない: 払込票が期限切れになると Stripe が
+      // `checkout.session.async_payment_failed` を送り `claimReservationAsFailed` が
+      // FAILED に落とすので、通常の failed 経路で回収される。
+      //
+      // `createCheckoutSessionCommand` の再決済 claim は `stripePaymentIntentId` を
+      // null に戻す。これがないと、非同期決済が失敗したあとカードで再決済して離脱した
+      // 予約に前回の PaymentIntent が残り、この判定が誤って「支払い中」と見なす。
+      stripePaymentIntentId: null,
       paymentInitiatedAt: { lt: cutoff },
     },
     select: {
@@ -113,6 +130,10 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           },
           paymentStatus: PaymentStatus.PENDING,
+          // 候補抽出と同じ述語を claim でも再強制する。候補 select から
+          // claim までの間に非同期決済の `checkout.session.completed` が届いて
+          // PaymentIntent が入った行を、ここで取りこぼさないため。
+          stripePaymentIntentId: null,
           paymentInitiatedAt: { lt: cutoff },
         },
         data: {

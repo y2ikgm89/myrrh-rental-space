@@ -194,7 +194,14 @@ export async function createEventCheckoutSessionCommand(input: {
       status: RegistrationStatus.CONFIRMED,
       paymentStatus: { in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT] },
     },
-    data: { paymentStatus: PaymentStatus.PENDING },
+    // `stripePaymentIntentId` は「この行の**現在の**決済試行の PaymentIntent」を
+    // 意味する。再決済に入る時点で前回の試行は終わっているので null に戻す。
+    // 残すと (a) fail-safe cron が「非同期決済が進行中」と誤判定して未払いの席を
+    // 解放しなくなり（`unpaid-expiry.ts` の PENDING 述語）、(b) PaymentIntent
+    // 逆引きが現在の試行ではない決済に紐づく。再決済元は UNPAID / FAILED のみ
+    // (`PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT`) なので、捨てるのは成立して
+    // いない決済の ID。
+    data: { paymentStatus: PaymentStatus.PENDING, stripePaymentIntentId: null },
   });
   if (claimed.count === 0) {
     throw new DomainError(
@@ -417,7 +424,9 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
       status: RegistrationStatus.WAITLISTED_OFFERED,
       paymentStatus: { in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT] },
     },
-    data: { paymentStatus: PaymentStatus.PENDING },
+    // 通常申込の claim と同じ理由で前回試行の PaymentIntent を捨てる
+    // （理由は同ファイル `createEventCheckoutSessionCommand` 側のコメント）。
+    data: { paymentStatus: PaymentStatus.PENDING, stripePaymentIntentId: null },
   });
   if (claimed.count === 0) {
     throw new DomainError(

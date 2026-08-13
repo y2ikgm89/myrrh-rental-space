@@ -227,6 +227,14 @@ export async function createCheckoutSessionCommand(input: {
     data: {
       paymentStatus: PaymentStatus.PENDING,
       paymentInitiatedAt: claimedAt,
+      // `stripePaymentIntentId` は「この予約の**現在の**決済試行の PaymentIntent」を
+      // 意味する。再決済に入る時点で前回の試行は終わっているので null に戻す。
+      // 残すと (a) fail-safe cron が「非同期決済が進行中」と誤判定して枠を解放
+      // しなくなり（`pending-expiry.ts` の述語）、(b) PaymentIntent 逆引きが現在の
+      // 試行ではない決済に紐づく。再決済元は UNPAID / FAILED のみ
+      // (`PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT`) なので、捨てるのは成立して
+      // いない決済の ID。
+      stripePaymentIntentId: null,
     },
   });
   if (claimed.count === 0) {
