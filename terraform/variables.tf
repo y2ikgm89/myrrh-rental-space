@@ -162,7 +162,7 @@ variable "cloud_run_secret_versions" {
     R2_PUBLIC_URL                      = "1"
     CLOUDFLARE_ZONE_ID                 = "1"
     CLOUDFLARE_API_TOKEN               = "1"
-    CLOUDFLARE_ORIGIN_HEADER_SECRET    = "1"
+    CLOUDFLARE_ORIGIN_HEADER_SECRET    = "2"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
     # Phase C (2026-07-24): Phase B で versions/1 ENABLED 確認済み → Cloud Run 配線。

@@ -200,7 +200,8 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   { name: "R2_INQUIRIES_BUCKET_NAME", version: "1" },
   { name: "CLOUDFLARE_ZONE_ID", version: "1" },
   { name: "CLOUDFLARE_API_TOKEN", version: "1" },
-  { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "1" },
+  // ローテーション段 1: version 2 は `新値,旧値`。段 3 で新値のみへ上げ直す。
+  { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "2" },
   { name: "GOOGLE_CLIENT_ID", version: "1" },
   { name: "GOOGLE_CLIENT_SECRET", version: "1" },
   { name: "SUPPRESSION_HASH_SECRET", version: "1" },
