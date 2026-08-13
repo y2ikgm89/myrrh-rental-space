@@ -473,7 +473,7 @@ where: { config: { string_contains: url } },
 |        |                                                                         |
 | ------ | ----------------------------------------------------------------------- |
 | 深刻度 | 高                                                                      |
-| 状態   | 未着手                                                                  |
+| 状態   | 済 — #2243（GCal 逆流と顧客セルフ変更の両経路。実 DB の CHECK で検証）  |
 | 箇所   | `src/shared/domain/reservations/calendar-sync-inbound-mutations.ts:300` |
 | 領域   | 予約（未読分）                                                          |
 

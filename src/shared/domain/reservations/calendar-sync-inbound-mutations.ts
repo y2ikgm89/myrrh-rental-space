@@ -307,6 +307,14 @@ export async function applyCalendarTimeChange(input: {
         couponDiscountAmount: pricing.couponDiscountAmount,
         taxAmount,
         totalPriceWithTax: pricing.totalPrice + taxAmount,
+        // `total_price` を自動計算値で書き直す以上、手動調整分も必ず一緒に消す。
+        // CHECK `reservations_total_price_breakdown_check` は
+        // `total_price = GREATEST(0, base - 各割引) + COALESCE(manual_adjustment_amount, 0)`
+        // なので、admin が金額を上書きした予約（manual_adjustment_amount ≠ 0）を
+        // ここで時間変更すると 23514 で tx が abort する。abort は inbound sync 全体を
+        // 止める（token が進まず同じ変更が再配信され続ける）ので、通知も出ない。
+        // `priceOverriddenById: null` と同じ意図＝「自動再計算に戻す」。
+        manualAdjustmentAmount: null,
         priceOverriddenById: null,
         couponId: pricing.appliedCoupon?.id ?? null,
         calendarSyncedAt: new Date(),
