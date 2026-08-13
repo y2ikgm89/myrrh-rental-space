@@ -154,6 +154,20 @@ export function EventRegistrationTable({
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
+  // 検索・絞り込み・ページ移動で registrations が入れ替わっても selectedIds は
+  // ローカル state に残るため、次の一括操作で「画面に見えていない過去選択の申込」
+  // まで対象になる。一括キャンセルは Stripe 返金・繰り上げ当選・参加者への通知
+  // メールを発火するので、見えない行が混ざると取り返しがつかない。
+  //
+  // 他の管理テーブル（PostTable / CouponTable 等）と同じく、可視 id との積集合
+  // だけを一括操作と全選択判定に渡す（React 公式の "render 中に derived 値を
+  // 計算する" パターン。effect 内 setState は @eslint-react/set-state-in-effect
+  // が禁じている）。
+  const visibleIdSet = new Set(registrations.map((r) => r.id));
+  const effectiveSelectedIds = [...selectedIds].filter((id) =>
+    visibleIdSet.has(id),
+  );
+
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -167,10 +181,10 @@ export function EventRegistrationTable({
   }
 
   function toggleSelectAll() {
-    setSelectedIds((prev) =>
-      prev.size === registrations.length
+    setSelectedIds(
+      effectiveSelectedIds.length === registrations.length
         ? new Set()
-        : new Set(registrations.map((r) => r.id)),
+        : visibleIdSet,
     );
   }
 
@@ -292,7 +306,7 @@ export function EventRegistrationTable({
                   <Checkbox
                     checked={
                       registrations.length > 0 &&
-                      selectedIds.size === registrations.length
+                      effectiveSelectedIds.length === registrations.length
                     }
                     onCheckedChange={toggleSelectAll}
                     aria-label="全選択"
@@ -456,7 +470,7 @@ export function EventRegistrationTable({
 
       <EventRegistrationBulkActions
         eventId={eventId}
-        selectedIds={[...selectedIds]}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds(new Set())}
       />
     </div>

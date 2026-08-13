@@ -33,6 +33,7 @@ export function EventBulkActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleBulkPublish = (publish: boolean) => {
     startTransition(async () => {
@@ -83,10 +84,12 @@ export function EventBulkActions({
       const result = await bulkSoftDeleteEvents(selectedIds);
       if (isMutationError(result)) {
         toast.error(result.error);
+        setDeleteOpen(false);
         return;
       }
 
       toast.success(`${result.count}件のイベントを削除しました`);
+      setDeleteOpen(false);
       onClear();
       router.refresh();
     });
@@ -141,7 +144,7 @@ export function EventBulkActions({
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleBulkDelete}
+          onClick={() => setDeleteOpen(true)}
           disabled={isPending}
         >
           {isPending ? (
@@ -158,7 +161,17 @@ export function EventBulkActions({
         onOpenChange={setCancelOpen}
         title={`${selectedIds.length}件のイベントをキャンセルしますか？`}
         description="キャンセルすると参加者に通知メールが送信されます。この操作は取り消せません。"
+        confirmLabel="イベントをキャンセル"
         onConfirm={handleBulkCancel}
+        isPending={isPending}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`${selectedIds.length}件のイベントを削除しますか？`}
+        description="公開ページから消え、管理画面の一覧からも見えなくなります。申込済みの参加者には通知されません。この操作は管理画面から取り消せません。"
+        onConfirm={handleBulkDelete}
         isPending={isPending}
       />
     </>
