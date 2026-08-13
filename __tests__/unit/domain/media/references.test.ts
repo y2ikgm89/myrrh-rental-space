@@ -13,9 +13,15 @@ const mockSpaceFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
 const mockEventFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
-const mockSectionFindFirst = mock<
-  () => Promise<Record<string, unknown> | null>
->(() => Promise.resolve(null));
+/**
+ * JSONB 列の走査は Prisma の `string_contains` では恒偽になるため生 SQL に
+ * 移してある（`findJsonColumnUsages`）。ここではその戻り値の形だけを注入する。
+ * **SQL 自体の正しさはこのテストでは分からない** — 実 DB で判定するのは
+ * `__tests__/integration/domain/media/reference-scan-json-columns.test.ts`。
+ */
+const mockQueryRaw = mock<
+  () => Promise<{ kind: string; label: string | null }[]>
+>(() => Promise.resolve([]));
 const mockSettingsSeoFindFirst = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
@@ -43,13 +49,13 @@ mock.module("@/shared/db/prisma", () => ({
     news: { findFirst: mockNewsFindFirst },
     space: { findFirst: mockSpaceFindFirst },
     event: { findFirst: mockEventFindFirst },
-    section: { findFirst: mockSectionFindFirst },
     settingsSeo: { findFirst: mockSettingsSeoFindFirst },
     termsDocument: { findFirst: mockTermsFindFirst },
     location: { findFirst: mockLocationFindFirst },
     page: { findFirst: mockPageFindFirst },
     postCategory: { findFirst: mockPostCategoryFindFirst },
     postTag: { findFirst: mockPostTagFindFirst },
+    $queryRaw: mockQueryRaw,
   },
 }));
 
@@ -63,7 +69,7 @@ function resetAllMocks(): void {
   mockNewsFindFirst.mockReset();
   mockSpaceFindFirst.mockReset();
   mockEventFindFirst.mockReset();
-  mockSectionFindFirst.mockReset();
+  mockQueryRaw.mockReset();
   mockSettingsSeoFindFirst.mockReset();
   mockTermsFindFirst.mockReset();
   mockLocationFindFirst.mockReset();
@@ -75,7 +81,7 @@ function resetAllMocks(): void {
   mockNewsFindFirst.mockResolvedValue(null);
   mockSpaceFindFirst.mockResolvedValue(null);
   mockEventFindFirst.mockResolvedValue(null);
-  mockSectionFindFirst.mockResolvedValue(null);
+  mockQueryRaw.mockResolvedValue([]);
   mockSettingsSeoFindFirst.mockResolvedValue(null);
   mockTermsFindFirst.mockResolvedValue(null);
   mockLocationFindFirst.mockResolvedValue(null);
@@ -105,7 +111,7 @@ describe("findMediaUrlUsages", () => {
     mockSpaceFindFirst
       .mockResolvedValueOnce({ name: "Studio A" })
       .mockResolvedValueOnce(null);
-    mockSectionFindFirst.mockResolvedValueOnce({ id: "sec-1" });
+    mockQueryRaw.mockResolvedValueOnce([{ kind: "section", label: null }]);
 
     const labels = await findMediaUrlUsages(MEDIA_URL);
 
@@ -141,7 +147,7 @@ describe("findMediaUrlUsages", () => {
     mockEventFindFirst
       .mockResolvedValueOnce({ title: "E1" })
       .mockResolvedValueOnce({ title: "E2" });
-    mockSectionFindFirst.mockResolvedValueOnce({ id: "sec" });
+    mockQueryRaw.mockResolvedValueOnce([{ kind: "section", label: null }]);
 
     const labels = await findMediaUrlUsages(MEDIA_URL);
 
