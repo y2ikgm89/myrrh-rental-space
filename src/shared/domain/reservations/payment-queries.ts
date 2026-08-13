@@ -227,7 +227,16 @@ export async function claimReservationAsFailed(
         notIn: [...PAYMENT_STATUSES_EXCLUDED_FROM_FAILED_CLAIM_RESERVATION],
       },
     },
-    data: buildFailedClaimUpdateData(),
+    data: {
+      ...buildFailedClaimUpdateData(),
+      // 予約だけが持つ列。fail-safe cron が FAILED の枠を解放する猶予の起点で、
+      // 「決済が失敗した時刻」を `updatedAt` から独立して記録する
+      // （`calendar-sync-retry` が 15 分ごとに行を書き直すため `updatedAt` は使えない。
+      // 理由は schema の `paymentFailedAt` の doc comment）。
+      // 共有の `buildFailedClaimUpdateData()` に入れないのは、EventRegistration に
+      // この列が無いため（あちらは churn 源が無く `updatedAt` で足りる）。
+      paymentFailedAt: new Date(),
+    },
   });
 
   if (result.count > 0) {

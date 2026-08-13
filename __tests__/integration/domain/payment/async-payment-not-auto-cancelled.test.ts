@@ -211,6 +211,7 @@ async function createReservation(opts: {
   readonly stripePaymentIntentId: string | null;
   readonly age?: Date;
   readonly paymentStatus?: (typeof PaymentStatus)[keyof typeof PaymentStatus];
+  readonly paymentFailedAt?: Date | null;
 }): Promise<{ reservationId: string; cleanup: Cleanup }> {
   const suffix = crypto.randomUUID();
   const startTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -261,6 +262,7 @@ async function createReservation(opts: {
       status: ReservationStatus.CONFIRMED,
       paymentStatus: opts.paymentStatus ?? PaymentStatus.PENDING,
       paymentInitiatedAt: opts.age ?? LONG_AGO,
+      paymentFailedAt: opts.paymentFailedAt ?? null,
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: opts.stripePaymentIntentId,
       ...RESERVATION_PRICING,
@@ -383,6 +385,7 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
     const { reservationId, cleanup } = await createReservation({
       stripePaymentIntentId: `pi_failed_${crypto.randomUUID()}`,
       paymentStatus: PaymentStatus.FAILED,
+      paymentFailedAt: LONG_AGO,
     });
     try {
       await expireStalePendingReservationsCommand();
@@ -398,18 +401,15 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
   });
 
   test("予約: 失敗した直後の FAILED は残す（再決済の猶予を潰さない）", async () => {
-    // `claimReservationAsFailed` は paymentStatus しか書かない。Stripe session の
-    // expires_at は checkout 開始 + 60 分なので、`paymentInitiatedAt` を基準にすると
-    // FAILED が書かれた瞬間に回収対象になり、FAILED → PENDING の再決済導線が使えない。
+    // 決済開始も行の更新も十分前だが、失敗したのは「たった今」。
+    // `paymentInitiatedAt` や `updatedAt` を基準にすると即座に回収対象になり、
+    // FAILED → PENDING の再決済導線が使えない。
     const { reservationId, cleanup } = await createReservation({
       stripePaymentIntentId: null,
       paymentStatus: PaymentStatus.FAILED,
-      // 決済開始は十分前だが、失敗したのは「たった今」
-      age: new Date(),
+      paymentFailedAt: new Date(),
     });
     try {
-      await prisma.$executeRaw`UPDATE "reservations" SET "payment_initiated_at" = ${LONG_AGO} WHERE "id" = ${reservationId}::uuid`;
-
       await expireStalePendingReservationsCommand();
 
       const after = await prisma.reservation.findUniqueOrThrow({
@@ -417,6 +417,63 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
         select: { status: true },
       });
       expect(after.status).toBe(ReservationStatus.CONFIRMED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("予約: FAILED 中に行が更新され続けても期限は来る（calendar-sync リトライの livelock）", async () => {
+    // `calendar-sync-retry` は 15 分ごとに `calendarSyncError` を書き直す。
+    // `updatedAt` を基準にすると Google Calendar が落ちている間 cutoff に到達せず、
+    // 枠を永久に握り続ける。`paymentFailedAt` は行の更新では動かない。
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: null,
+      paymentStatus: PaymentStatus.FAILED,
+      paymentFailedAt: LONG_AGO,
+    });
+    try {
+      // リトライ相当の書き込み（`updatedAt` が現在時刻になる）
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: { calendarSyncError: "GCal unavailable" },
+      });
+
+      await expireStalePendingReservationsCommand();
+
+      const after = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(ReservationStatus.CANCELLED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("予約: 列の導入前からある FAILED（paymentFailedAt が null）も、行が更新され続けても回収される", async () => {
+    // legacy 行の枝を `updatedAt` にすると、まさに直そうとしている livelock が
+    // legacy 行にだけ残る。`createdAt` は不変なので calendar-sync リトライに影響されない。
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: null,
+      paymentStatus: PaymentStatus.FAILED,
+      paymentFailedAt: null,
+    });
+    try {
+      // legacy 行なので作成時刻も過去にする（`createdAt` は @default(now()) で
+      // 以後変化しないため、fixture 側で明示的に倒す必要がある）。
+      await prisma.$executeRaw`UPDATE "reservations" SET "created_at" = ${LONG_AGO} WHERE "id" = ${reservationId}::uuid`;
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: { calendarSyncError: "GCal unavailable" },
+      });
+
+      await expireStalePendingReservationsCommand();
+
+      const after = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(ReservationStatus.CANCELLED);
     } finally {
       await cleanup();
     }

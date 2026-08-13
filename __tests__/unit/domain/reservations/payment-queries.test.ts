@@ -497,7 +497,13 @@ describe("reservations/payment-queries", () => {
               ],
             },
           }),
-          data: { paymentStatus: PaymentStatus.FAILED },
+          // `paymentFailedAt` は fail-safe cron が FAILED の枠を解放する猶予の起点。
+          // ここで書かないと `pending-expiry` の FAILED 枝が legacy fallback
+          // （`updatedAt` 基準）に落ち、calendar-sync リトライで期限が来なくなる。
+          data: {
+            paymentStatus: PaymentStatus.FAILED,
+            paymentFailedAt: expect.any(Date),
+          },
         }),
       );
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);

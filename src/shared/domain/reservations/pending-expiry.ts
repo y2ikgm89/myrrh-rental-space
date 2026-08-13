@@ -60,8 +60,8 @@ export const PENDING_RESERVATION_EXPIRY_MINUTES = 60;
  *   （イベント側 `unpaid-expiry.ts` には元から FAILED の枝がある。予約側だけ欠けていた）。
  *
  * PENDING の 2 枝は `paymentInitiatedAt` で判定する（再 checkout のたびに refresh され、
- * 「最後に決済を始めてから何分経ったか」を表す）。FAILED の枝だけ `updatedAt` を使う
- * 理由は該当箇所のコメントを参照。
+ * 「最後に決済を始めてから何分経ったか」を表す）。FAILED は専用列 `paymentFailedAt` で
+ * 判定する（理由は該当箇所のコメント）。
  */
 function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
   return [
@@ -75,19 +75,39 @@ function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
       stripePaymentIntentId: { not: null },
       paymentInitiatedAt: { lt: asyncCutoff },
     },
+    // FAILED は「失敗してから何分経ったか」で見る。基準に何を使うかは 2 回間違えた:
+    //
+    // - `paymentInitiatedAt`: Stripe session の `expires_at` は checkout 開始 +
+    //   PENDING_RESERVATION_EXPIRY_MINUTES に揃えてあるので、
+    //   `checkout.session.expired` が届く時点で既に cutoff を過ぎている。
+    //   FAILED が書かれた瞬間に回収対象になり、`createCheckoutSessionCommand` が
+    //   用意している FAILED → PENDING の再決済導線が使えない。
+    // - `updatedAt`: 「行が最後に触られた時刻」であって失敗時刻ではない。
+    //   `calendar-sync-retry` cron が 15 分ごとに `calendarSyncError` を書き直すため、
+    //   Google Calendar が落ちている間 60 分の cutoff に永久に到達せず枠を握り続ける。
+    //
+    // 専用列 `paymentFailedAt` を見る。書き込むのは `claimReservationAsFailed` だけ。
     {
       paymentStatus: PaymentStatus.FAILED,
-      // ここだけ `updatedAt` で見る。`claimReservationAsFailed` は
-      // `buildFailedClaimUpdateData()` の `{ paymentStatus: FAILED }` しか書かず
-      // `paymentInitiatedAt` を触らない。Stripe session の `expires_at` は
-      // checkout 開始 + PENDING_RESERVATION_EXPIRY_MINUTES に揃えてあるので、
-      // `checkout.session.expired` が届く時点で `paymentInitiatedAt` は既に
-      // cutoff を過ぎている。それを基準にすると FAILED が書かれた瞬間に回収対象になり、
-      // `createCheckoutSessionCommand` が用意している FAILED → PENDING の再決済導線が
-      // 使えなくなる。`updatedAt` は @updatedAt なので FAILED の書込で更新され、
-      // 「失敗してから何分経ったか」を表す（イベント側 `unpaid-expiry.ts` の
-      // FAILED 枝と同じ基準）。
-      updatedAt: { lt: cutoff },
+      paymentFailedAt: { lt: cutoff },
+    },
+    // 本列の導入前に FAILED になった行は `paymentFailedAt` が null のまま残る。
+    // 放置すると枠を永久に握るので、この枝で回収する。
+    //
+    // 基準は `createdAt`。`updatedAt` を使うと上と同じ livelock が legacy 行に残る
+    // （calendar-sync リトライが 15 分ごとに更新するため cutoff に到達しない）。
+    // `createdAt` は `@default(now())` で以後変化せず、必ず値を持つ。
+    // この枝に入るのは「列の導入より前に失敗した行」だけなので `createdAt` は
+    // 常に cutoff より過去にあり、判定は決定的になる。
+    //
+    // migration でバックフィルしないのは、data repair を migration に入れない
+    // というリポジトリの規約による（`.claude/skills/new-migration`）。
+    // 新規の FAILED は必ず `paymentFailedAt` を持つので、この枝は既存行が
+    // 掃けた時点で削除してよい。
+    {
+      paymentStatus: PaymentStatus.FAILED,
+      paymentFailedAt: null,
+      createdAt: { lt: cutoff },
     },
   ];
 }
