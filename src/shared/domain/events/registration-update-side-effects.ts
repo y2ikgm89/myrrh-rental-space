@@ -34,6 +34,7 @@ export async function applyEventRegistrationSelfServeUpdateSideEffects(input: {
     eventEndTime: Date;
     ticketName: string;
     ticketUnitPrice: number;
+    ticketUnitSize: number;
   };
   newValues: {
     name: string;
@@ -61,6 +62,7 @@ export async function applyEventRegistrationSelfServeUpdateSideEffects(input: {
           eventEndTime: input.emailContext.eventEndTime,
           ticketName: input.emailContext.ticketName,
           ticketUnitPrice: input.emailContext.ticketUnitPrice,
+          ticketUnitSize: input.emailContext.ticketUnitSize,
           quantity: input.newValues.quantity,
           updatedAt: input.payload.updatedAt,
         },

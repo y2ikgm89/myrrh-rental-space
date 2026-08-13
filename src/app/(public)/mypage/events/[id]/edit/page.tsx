@@ -70,6 +70,7 @@ export default async function MypageEventRegistrationEditPage({
           eventTitle={registration.event.title}
           ticketName={registration.ticket.name}
           ticketUnitPrice={registration.ticket.price}
+          ticketUnitSize={registration.ticket.unitSize}
           slotStartAt={registration.slot.startAt.toISOString()}
           slotEndAt={registration.slot.endAt.toISOString()}
           quantityEditable={eligibility.quantityEditable}

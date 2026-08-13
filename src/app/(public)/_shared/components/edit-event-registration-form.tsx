@@ -26,12 +26,15 @@ import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { eventRegistrationEditSchema } from "@/shared/lib/validations/event-registration";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import type { z } from "zod";
+import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charge";
 
 interface EditEventRegistrationFormProps {
   readonly registrationId: string;
   readonly eventTitle: string;
   readonly ticketName: string;
   readonly ticketUnitPrice: number;
+  /** `EventTicket.unitSize`。price は unitSize 名分の値段なので合計に要る。 */
+  readonly ticketUnitSize: number;
   readonly slotStartAt: string;
   readonly slotEndAt: string;
   readonly quantityEditable: boolean;
@@ -57,6 +60,7 @@ export function EditEventRegistrationForm({
   eventTitle,
   ticketName,
   ticketUnitPrice,
+  ticketUnitSize,
   slotStartAt,
   slotEndAt,
   quantityEditable,
@@ -163,7 +167,12 @@ export function EditEventRegistrationForm({
           </DetailRow>
           <DetailRow label="チケット">{ticketName}</DetailRow>
           <DetailRow label="合計金額（参考）">
-            {formatPrice(ticketUnitPrice * quantity)}
+            {formatPrice(
+              eventTicketChargeAmount(
+                { price: ticketUnitPrice, unitSize: ticketUnitSize },
+                quantity,
+              ),
+            )}
           </DetailRow>
         </dl>
         <p className="mt-4 text-sm text-muted-foreground">

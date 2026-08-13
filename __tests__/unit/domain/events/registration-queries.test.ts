@@ -6,7 +6,7 @@ type RegistrationEmailRow = {
   eventId: string;
   slotId: string;
   quantity: number;
-  ticket: { price: number; name?: string };
+  ticket: { price: number; unitSize: number; name?: string };
   slot: {
     startAt: Date;
     endAt: Date;
@@ -126,7 +126,7 @@ describe("event registration query slot consistency", () => {
       slotId: "slot-selected",
       quantity: 2,
       status: RegistrationStatus.CONFIRMED,
-      ticket: { price: 1500 },
+      ticket: { price: 1500, unitSize: 1 },
       slot: {
         startAt: selectedStart,
         endAt: selectedEnd,
@@ -156,7 +156,7 @@ describe("event registration query slot consistency", () => {
       confirmedCount: 6,
       format: "OFFLINE",
       meetingUrl: null,
-      ticketUnitPrice: 1500,
+      ticketTotalPrice: 3000,
       quantity: 2,
     });
     expect(mockRegistrationAggregate).toHaveBeenCalledWith({
@@ -177,7 +177,7 @@ describe("event registration query slot consistency", () => {
       slotId: "slot-selected",
       quantity: 1,
       status: RegistrationStatus.WAITLISTED,
-      ticket: { price: 1500 },
+      ticket: { price: 1500, unitSize: 1 },
       slot: {
         startAt: selectedStart,
         endAt: selectedEnd,
@@ -210,7 +210,7 @@ describe("event registration query slot consistency", () => {
       slotId: "slot-selected",
       quantity: 1,
       status: RegistrationStatus.CONFIRMED,
-      ticket: { price: 1500 },
+      ticket: { price: 1500, unitSize: 1 },
       slot: {
         startAt: selectedStart,
         endAt: selectedEnd,
@@ -325,7 +325,7 @@ describe("event registration query slot consistency", () => {
       offeredAt: null,
       expiresAt: null,
       paymentStatus: "UNPAID",
-      ticket: { price: 3000, name: "一般チケット" },
+      ticket: { price: 3000, unitSize: 1, name: "一般チケット" },
       slotId: "slot-1",
       ticketId: "ticket-1",
       slot: { startAt, endAt },
@@ -355,7 +355,7 @@ describe("event registration query slot consistency", () => {
       },
       select: expect.objectContaining({
         id: true,
-        ticket: { select: { price: true, name: true } },
+        ticket: { select: { price: true, name: true, unitSize: true } },
       }),
     });
     expect(detail?.ticketName).toBe("一般チケット");
@@ -388,7 +388,7 @@ describe("event registration query slot consistency", () => {
         offeredAt: null,
         expiresAt: null,
         paymentStatus: "UNPAID",
-        ticket: { price: 1000 },
+        ticket: { price: 1000, unitSize: 1 },
         ticketId: "ticket-1",
         slot: {
           startAt: new Date("2026-08-01T01:00:00.000Z"),

@@ -202,6 +202,7 @@ export async function updateGuestEventRegistrationAction(
             eventEndTime: registration.slot.endAt,
             ticketName: registration.ticket.name,
             ticketUnitPrice: registration.ticket.price,
+            ticketUnitSize: registration.ticket.unitSize,
           },
           newValues: {
             name: data.name,

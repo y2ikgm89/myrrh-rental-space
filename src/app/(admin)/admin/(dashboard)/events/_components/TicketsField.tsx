@@ -329,7 +329,7 @@ export function TicketsField({
 
         {ticketFields.length > 1 && (
           <p className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            区分が複数あるため、各区分の <strong>枠数</strong>{" "}
+            区分が複数あるため、各区分の <strong>受付人数</strong>{" "}
             は必須です（受付できる人数を区分ごとに分配する必要があります）。
           </p>
         )}
@@ -536,7 +536,7 @@ function TicketRow({
 
         <div>
           <Label htmlFor={t.capacity.id}>
-            枠数{" "}
+            受付人数{" "}
             {capacityRequired ? (
               <span aria-hidden="true" className="text-destructive">
                 *

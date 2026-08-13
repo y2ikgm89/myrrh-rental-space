@@ -60,6 +60,10 @@ import {
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
 } from "@/shared/domain/receipts/manual-payment-warnings";
 import { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } from "@/shared/domain/events/payment-expiry-constants";
+import {
+  eventTicketChargeAmount,
+  eventTicketUnitCount,
+} from "@/shared/lib/pricing/event-ticket-charge";
 
 /**
  * EventRegistration の Stripe Checkout Session を作成する (PR#10)。
@@ -107,7 +111,7 @@ export async function createEventCheckoutSessionCommand(input: {
       status: true,
       paymentStatus: true,
       stripeCheckoutSessionId: true,
-      ticket: { select: { name: true, price: true } },
+      ticket: { select: { name: true, price: true, unitSize: true } },
       event: { select: { title: true } },
     },
   });
@@ -142,7 +146,10 @@ export async function createEventCheckoutSessionCommand(input: {
     );
   }
 
-  const totalAmount = registration.ticket.price * registration.quantity;
+  const totalAmount = eventTicketChargeAmount(
+    registration.ticket,
+    registration.quantity,
+  );
   if (totalAmount <= 0) {
     throw new DomainError("無料チケットは決済できません", "VALIDATION");
   }
@@ -220,7 +227,7 @@ export async function createEventCheckoutSessionCommand(input: {
       email: true,
       name: true,
       quantity: true,
-      ticket: { select: { name: true, price: true } },
+      ticket: { select: { name: true, price: true, unitSize: true } },
       event: { select: { title: true, slug: true } },
     },
   });
@@ -233,8 +240,10 @@ export async function createEventCheckoutSessionCommand(input: {
     throw new DomainError("チケット料金が設定されていません", "VALIDATION");
   }
 
-  const authoritativeTotal =
-    authoritative.ticket.price * authoritative.quantity;
+  const authoritativeTotal = eventTicketChargeAmount(
+    authoritative.ticket,
+    authoritative.quantity,
+  );
 
   let createdSessionId: string | null = null;
 
@@ -259,7 +268,13 @@ export async function createEventCheckoutSessionCommand(input: {
                 currency,
               ),
             },
-            quantity: authoritative.quantity,
+            // Stripe に渡すのは **チケット枚数**。`unit_amount` が
+            // `unitSize` 名分の単価なので、ここに参加人数を入れると
+            // unitSize 倍の請求になる。
+            quantity: eventTicketUnitCount(
+              authoritative.quantity,
+              authoritative.ticket.unitSize,
+            ),
           },
         ],
         metadata: {
@@ -445,7 +460,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
       email: true,
       quantity: true,
       expiresAt: true,
-      ticket: { select: { name: true, price: true } },
+      ticket: { select: { name: true, price: true, unitSize: true } },
       event: { select: { title: true, slug: true } },
     },
   });
@@ -507,8 +522,10 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     );
   }
 
-  const authoritativeTotal =
-    authoritative.ticket.price * authoritative.quantity;
+  const authoritativeTotal = eventTicketChargeAmount(
+    authoritative.ticket,
+    authoritative.quantity,
+  );
 
   let createdSessionId: string | null = null;
 
@@ -535,7 +552,13 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
                 currency,
               ),
             },
-            quantity: authoritative.quantity,
+            // Stripe に渡すのは **チケット枚数**。`unit_amount` が
+            // `unitSize` 名分の単価なので、ここに参加人数を入れると
+            // unitSize 倍の請求になる。
+            quantity: eventTicketUnitCount(
+              authoritative.quantity,
+              authoritative.ticket.unitSize,
+            ),
           },
         ],
         metadata: {
@@ -676,7 +699,7 @@ export async function recordManualEventPaymentCommand(data: {
       stripeCheckoutSessionId: true,
       customerId: true,
       quantity: true,
-      ticket: { select: { price: true } },
+      ticket: { select: { price: true, unitSize: true } },
     },
   });
   if (!existing) {
@@ -689,7 +712,10 @@ export async function recordManualEventPaymentCommand(data: {
     );
   }
 
-  const chargeBase = existing.ticket.price * existing.quantity;
+  const chargeBase = eventTicketChargeAmount(
+    existing.ticket,
+    existing.quantity,
+  );
   if (chargeBase <= 0) {
     throw new DomainError("無料チケットは手動入金記録できません", "VALIDATION");
   }
@@ -1098,7 +1124,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
         paymentStatus: true,
         paidAmount: true,
         quantity: true,
-        ticket: { select: { price: true } },
+        ticket: { select: { price: true, unitSize: true } },
       },
     });
 
@@ -1117,7 +1143,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     const expectedAmount =
       registration.paidAmount != null && registration.paidAmount > 0
         ? registration.paidAmount
-        : registration.ticket.price * registration.quantity;
+        : eventTicketChargeAmount(registration.ticket, registration.quantity);
 
     if (expectedAmount <= 0) {
       return { outcome: "not_applicable" as const };

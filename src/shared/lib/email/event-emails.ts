@@ -63,6 +63,7 @@ import type {
   EventEmailRenderContext,
   EventUpdatedNotificationPayload,
 } from "./types";
+import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charge";
 
 // =============================================================================
 // Event Registration Emails
@@ -507,6 +508,8 @@ type EventRegistrationUpdatedData = {
   eventEndTime: Date;
   ticketName: string;
   ticketUnitPrice: number;
+  /** `EventTicket.unitSize`。price は unitSize 名分の値段なので合計に要る。 */
+  ticketUnitSize: number;
   quantity: number;
   /** CAS 成功時刻。idempotencyKey 用。 */
   updatedAt: Date;
@@ -526,7 +529,12 @@ export async function sendEventRegistrationUpdated(
   const startTime = formatTimeShort(data.eventStartTime);
   const endTime = formatTimeShort(data.eventEndTime);
   const footer = await getEmailFooterData();
-  const totalPrice = formatPrice(data.ticketUnitPrice * data.quantity);
+  const totalPrice = formatPrice(
+    eventTicketChargeAmount(
+      { price: data.ticketUnitPrice, unitSize: data.ticketUnitSize },
+      data.quantity,
+    ),
+  );
   const eventRegistrationHubUrl = buildEventRegistrationHubUrl(
     data.customerId,
     data.registrationId,

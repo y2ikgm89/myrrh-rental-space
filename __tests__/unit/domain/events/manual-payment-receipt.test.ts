@@ -135,7 +135,7 @@ function unpaidRegistration(
     stripeCheckoutSessionId: null,
     customerId: null,
     quantity: 1,
-    ticket: { price: 1000 },
+    ticket: { price: 1000, unitSize: 1 },
     ...overrides,
   };
 }
