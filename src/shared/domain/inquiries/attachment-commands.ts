@@ -14,6 +14,11 @@ import {
   truncateFilename,
 } from "@/shared/lib/r2/filename";
 import { MEDIA_MAX_SIZE_BYTES } from "@/shared/lib/r2/media-size";
+import {
+  INQUIRY_ATTACHMENT_ALLOWED_MIME_TYPES,
+  INQUIRY_ATTACHMENT_MAX_SIZE_BYTES,
+  type InquiryAttachmentMimeType,
+} from "@/shared/lib/r2/inquiry-attachment";
 import { putPrivateObject } from "@/shared/lib/r2/upload";
 import {
   logError,
@@ -22,41 +27,13 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 
-/**
- * お問い合わせ添付として許可する MIME（inquiry-overhaul completion design §6.4）。
- * 画像 3 種 + PDF のみ。動画・音声・GIF・SVG は非対応（`media-magic-bytes` の
- * 汎用一覧からさらに絞り込む — 添付は「見積書 PDF / 現地写真」用途に限定する）。
- */
-export const INQUIRY_ATTACHMENT_ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-] as const satisfies readonly SupportedMediaMimeType[];
-
-type InquiryAttachmentMimeType =
-  (typeof INQUIRY_ATTACHMENT_ALLOWED_MIME_TYPES)[number];
-
 function isAllowedInquiryAttachmentMime(
   mime: SupportedMediaMimeType,
 ): mime is InquiryAttachmentMimeType {
-  switch (mime) {
-    case "image/jpeg":
-    case "image/png":
-    case "image/webp":
-    case "application/pdf":
-      return true;
-    default:
-      return false;
-  }
+  return INQUIRY_ATTACHMENT_ALLOWED_MIME_TYPES.some(
+    (allowed) => allowed === mime,
+  );
 }
-
-/** 事前ガード用の aggregate 上限（許可 MIME 中の最大 = PDF の 10MB）。 */
-const AGGREGATE_MAX_SIZE_BYTES = Math.max(
-  ...INQUIRY_ATTACHMENT_ALLOWED_MIME_TYPES.map(
-    (mime) => MEDIA_MAX_SIZE_BYTES[mime],
-  ),
-);
 
 export type InquiryAttachmentUploader =
   { type: "STAFF"; userId: string } | { type: "CUSTOMER"; customerId: string };
@@ -136,8 +113,8 @@ export async function uploadInquiryAttachmentCommand(
     }
   }
 
-  if (input.file.size > AGGREGATE_MAX_SIZE_BYTES) {
-    const maxMB = Math.round(AGGREGATE_MAX_SIZE_BYTES / (1024 * 1024));
+  if (input.file.size > INQUIRY_ATTACHMENT_MAX_SIZE_BYTES) {
+    const maxMB = Math.round(INQUIRY_ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024));
     throw new DomainError(
       `ファイルサイズは${maxMB}MB以下にしてください`,
       "VALIDATION",
