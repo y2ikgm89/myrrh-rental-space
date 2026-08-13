@@ -316,7 +316,18 @@ export async function createCheckoutSessionCommand(input: {
         success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
         cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
       },
-      { idempotencyKey: `checkout/reservation/${reservationId}/pending-claim` },
+      {
+        // **key は payload と一緒に動かす。** `expires_at` は claim 時刻由来なので
+        // 再 checkout のたびに変わる。key を予約 ID で固定すると、24 時間以内の
+        // 再試行で Stripe が「同じ key に違う parameters」として 400
+        // (`idempotency_error`) を返し、**顧客が支払えなくなる**。
+        // 逆に偶然 `expires_at` まで一致した場合は初回の session がそのまま返り、
+        // 既に期限切れの URL を掴ませる。どちらに転んでも壊れる。
+        //
+        // key の役目は「1 回の呼び出しのリトライで session を二重に作らない」こと。
+        // `expiresAt` は 1 回の呼び出しの中では不変なので、その役目は保たれる。
+        idempotencyKey: `checkout/reservation/${reservationId}/${String(expiresAt)}`,
+      },
     );
     createdSessionId = session.id;
 

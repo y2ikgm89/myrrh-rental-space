@@ -388,7 +388,11 @@ describe("reservations/payment-commands", () => {
           customer_email: "booked-address@example.com",
         }),
         {
-          idempotencyKey: `checkout/reservation/${RESERVATION_ID}/pending-claim`,
+          // key は payload と一緒に動く（`expires_at` は claim 時刻由来）。
+          // 固定にすると 24h 以内の再 checkout が Stripe の 400 で弾かれる。
+          idempotencyKey: expect.stringMatching(
+            /^checkout\/reservation\/[0-9a-f-]+\/[0-9]+$/,
+          ),
         },
       );
     });
@@ -536,7 +540,11 @@ describe("reservations/payment-commands", () => {
           ],
         }),
         {
-          idempotencyKey: `checkout/reservation/${RESERVATION_ID}/pending-claim`,
+          // key は payload と一緒に動く（`expires_at` は claim 時刻由来）。
+          // 固定にすると 24h 以内の再 checkout が Stripe の 400 で弾かれる。
+          idempotencyKey: expect.stringMatching(
+            /^checkout\/reservation\/[0-9a-f-]+\/[0-9]+$/,
+          ),
         },
       );
     });
