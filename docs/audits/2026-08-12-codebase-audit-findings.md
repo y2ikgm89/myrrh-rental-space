@@ -401,12 +401,12 @@ in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
 
 <sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-指摘台帳133-件) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
-|        |                                            |
-| ------ | ------------------------------------------ |
-| 深刻度 | 高                                         |
-| 状態   | 未着手                                     |
-| 箇所   | `src/shared/domain/media/references.ts:98` |
-| 領域   | メディア・R2・OAuth                        |
+|        |                                                                                      |
+| ------ | ------------------------------------------------------------------------------------ |
+| 深刻度 | 高                                                                                   |
+| 状態   | 済 — #2244（JSON 列の走査を生 SQL へ移した。削除順の入替は採らず、理由を PR に記載） |
+| 箇所   | `src/shared/domain/media/references.ts:98`                                           |
+| 領域   | メディア・R2・OAuth                                                                  |
 
 #### 起きること
 
