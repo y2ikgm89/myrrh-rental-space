@@ -6,6 +6,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prisma } from "@/shared/db/prisma";
 import { RESERVATION_WRITE_TX_OPTIONS } from "@/shared/db/transaction-options";
+import { asyncPaymentFailsafeCutoff } from "@/shared/domain/payment/async-payment-expiry";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import {
   ErrorCategory,
@@ -35,6 +36,51 @@ import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-lock
  */
 export const PENDING_RESERVATION_EXPIRY_MINUTES = 60;
 
+/**
+ * 決済が成立しないまま枠を握っている予約の枝。
+ *
+ * `reservations_no_active_time_overlap_excl` は `status ∈ {PENDING, CONFIRMED}` で
+ * 枠を占有する。**`paymentStatus` は見ていない。** したがって決済が終端に落ちても
+ * `status` を動かさない限り枠は空かない。ここが唯一その責務を負う。
+ *
+ * - **PENDING（通常）**: カード決済の離脱など。`PENDING_RESERVATION_EXPIRY_MINUTES`。
+ * - **PENDING（非同期決済の待機中）**: `stripePaymentIntentId` が入っているのは
+ *   konbini / customer_balance の `checkout.session.completed` が
+ *   `payment_status !== "paid"` で届き `savePaymentIntentId` が PaymentIntent だけ
+ *   保存した状態に限られる（カード決済は completed 時点で "paid" なので fulfill 経路に
+ *   入りここを通らない）。「客が払込票を受け取り、これから支払う」であって放置ではない。
+ *   60 分で CANCELLED にすると、数日後に支払われた時点で `async_payment_succeeded` が
+ *   届き、キャンセル済み予約への自動返金が走る。枠も失われ、入金と返金の履歴だけが残る。
+ *   ただし**無条件には除外しない**。fail-safe cron の存在理由は「webhook が届かなくても
+ *   在庫を解放する」ことなので、webhook が書き込む列を根拠に永久除外すると成立しない。
+ *   長いが有限の `ASYNC_PAYMENT_FAILSAFE_EXPIRY_DAYS` を当てる。
+ * - **FAILED**: `checkout.session.expired` / `async_payment_failed` の webhook が
+ *   `claimReservationAsFailed` 経由で書き込む終端。`buildFailedClaimUpdateData()` は
+ *   `paymentStatus` しか更新しないので、この枝が無いと**枠が恒久的に埋まったままになる**
+ *   （イベント側 `unpaid-expiry.ts` には元から FAILED の枝がある。予約側だけ欠けていた）。
+ *
+ * どの枝も `paymentInitiatedAt` で判定する。再 checkout のたびに refresh されるため、
+ * 「最後に決済を始めてから何分経ったか」を正しく表す。
+ */
+function stalePaymentBranches(cutoff: Date, asyncCutoff: Date) {
+  return [
+    {
+      paymentStatus: PaymentStatus.PENDING,
+      stripePaymentIntentId: null,
+      paymentInitiatedAt: { lt: cutoff },
+    },
+    {
+      paymentStatus: PaymentStatus.PENDING,
+      stripePaymentIntentId: { not: null },
+      paymentInitiatedAt: { lt: asyncCutoff },
+    },
+    {
+      paymentStatus: PaymentStatus.FAILED,
+      paymentInitiatedAt: { lt: cutoff },
+    },
+  ];
+}
+
 interface ExpiredReservationLog {
   readonly id: string;
   readonly customerId: string;
@@ -48,8 +94,8 @@ interface ExpirePendingReservationsResult {
 }
 
 /**
- * `paymentStatus = PENDING` のまま `PENDING_RESERVATION_EXPIRY_MINUTES` を超えた予約を
- * CANCELLED に遷移させて空き枠（DB EXCLUDE 制約）を解放する。
+ * 決済が成立しないまま期限を過ぎた予約を CANCELLED に遷移させ、
+ * 空き枠（DB EXCLUDE 制約）を解放する。対象の枝は `stalePaymentBranches` が持つ。
  *
  * claim 成功後の副作用（SSoT = `applyCancellationSideEffects`）:
  * - クーポン usageCount の戻し（tx 内で完了済み）
@@ -66,7 +112,9 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   const cutoff = new Date(
     now.getTime() - PENDING_RESERVATION_EXPIRY_MINUTES * MS_PER_MINUTE,
   );
-  const cancellationReason = `PENDING が ${PENDING_RESERVATION_EXPIRY_MINUTES} 分を経過したため自動キャンセル`;
+  const asyncCutoff = asyncPaymentFailsafeCutoff(now);
+  const cancellationReason =
+    "決済が成立しないまま期限を経過したため自動キャンセル";
 
   // 1) 対象候補を select（副作用・監査用メタを確保）
   const candidates = await prisma.reservation.findMany({
@@ -75,25 +123,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       status: {
         in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
-      paymentStatus: PaymentStatus.PENDING,
-      // PENDING で `stripePaymentIntentId` が入っているのは、非同期決済
-      // （konbini / customer_balance）の `checkout.session.completed` が
-      // `payment_status !== "paid"` で届き、`savePaymentIntentId` が PaymentIntent
-      // だけ保存した状態に限られる（カード決済は completed 時点で "paid" なので
-      // fulfill 経路に入りここを通らない）。これは「客が払込票を受け取り、これから
-      // 支払う」であって放置ではない。ここで CANCELLED にすると、数日後に支払われた
-      // 時点で `async_payment_succeeded` が届き、キャンセル済み予約への自動返金が
-      // 走る。枠も失われ、入金と返金の履歴だけが残る。
-      //
-      // 枠が永久に埋まることはない: 払込票が期限切れになると Stripe が
-      // `checkout.session.async_payment_failed` を送り `claimReservationAsFailed` が
-      // FAILED に落とすので、通常の failed 経路で回収される。
-      //
-      // `createCheckoutSessionCommand` の再決済 claim は `stripePaymentIntentId` を
-      // null に戻す。これがないと、非同期決済が失敗したあとカードで再決済して離脱した
-      // 予約に前回の PaymentIntent が残り、この判定が誤って「支払い中」と見なす。
-      stripePaymentIntentId: null,
-      paymentInitiatedAt: { lt: cutoff },
+      OR: stalePaymentBranches(cutoff, asyncCutoff),
     },
     select: {
       id: true,
@@ -129,12 +159,10 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
           status: {
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           },
-          paymentStatus: PaymentStatus.PENDING,
-          // 候補抽出と同じ述語を claim でも再強制する。候補 select から
-          // claim までの間に非同期決済の `checkout.session.completed` が届いて
-          // PaymentIntent が入った行を、ここで取りこぼさないため。
-          stripePaymentIntentId: null,
-          paymentInitiatedAt: { lt: cutoff },
+          // 候補抽出と同じ述語を claim でも再強制する。候補 select から claim までの
+          // 間に非同期決済の `checkout.session.completed` が届いて PaymentIntent が
+          // 入った行を、ここで取りこぼさないため。
+          OR: stalePaymentBranches(cutoff, asyncCutoff),
         },
         data: {
           status: ReservationStatus.CANCELLED,

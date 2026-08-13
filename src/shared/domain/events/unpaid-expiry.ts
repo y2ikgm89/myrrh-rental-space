@@ -8,6 +8,7 @@ import { prisma } from "@/shared/db/prisma";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { offerNextWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "@/shared/domain/events/waitlist-locks";
+import { asyncPaymentFailsafeCutoff } from "@/shared/domain/payment/async-payment-expiry";
 import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import {
@@ -34,7 +35,7 @@ interface ExpireUnpaidEventRegistrationsResult {
 }
 
 /**
- * PENDING の枝だけ `stripePaymentIntentId: null` を要求する。
+ * 未決済の枝の組み立て。PENDING を「非同期決済の待機中」とそれ以外に分ける。
  *
  * PENDING で `stripePaymentIntentId` が入っているのは、非同期決済
  * （konbini / customer_balance）の `checkout.session.completed` が
@@ -44,20 +45,48 @@ interface ExpireUnpaidEventRegistrationsResult {
  * fulfill 経路に入りここを通らない）。
  *
  * この状態は「客が払込票を受け取り、これから支払う」であって放置ではない。
- * ここを cron が CANCELLED にすると、数日後にコンビニで支払った時点で
+ * 60 分で CANCELLED にすると、数日後にコンビニで支払った時点で
  * `async_payment_succeeded` が届き、キャンセル済みの申込に対する自動返金が走る。
  * 席も失われ、入金と返金の履歴だけが残る。
  *
- * 席が永久に埋まることはない: 払込票が期限切れになると Stripe が
- * `checkout.session.async_payment_failed` を送り、`claimEventRegistrationAsFailed`
- * が FAILED に落とすので、下の FAILED の枝がその後で回収する。
+ * だからといって**無条件に除外はしない**。正常系では払込票の失効時に
+ * `checkout.session.async_payment_failed` が届いて FAILED に落ち、下の FAILED の枝が
+ * 回収するが、fail-safe cron の存在理由は「その webhook が届かないときでも在庫を
+ * 解放する」ことにある。webhook が書き込む列を根拠に永久除外すると fail-safe が
+ * 成立しない。よって非同期決済の枝にも
+ * `ASYNC_PAYMENT_FAILSAFE_EXPIRY_DAYS` という**長いが有限の** cutoff を当てる。
  *
  * `createEventCheckoutSessionCommand` の再決済 claim は
  * `stripePaymentIntentId` を null に戻す。これがないと、非同期決済が失敗したあと
- * カードで再決済して離脱した行に前回の PaymentIntent が残り、この判定が誤って
- * 「支払い中」と見なして fail-safe を素通りさせる。
+ * カードで再決済して離脱した行に前回の PaymentIntent が残り、通常の 60 分ではなく
+ * 14 日待たされる。
  */
-function staleRegistrationCandidateWhere(cutoff: Date) {
+function unpaidBranches(cutoff: Date, asyncCutoff: Date) {
+  return [
+    {
+      paymentStatus: PaymentStatus.UNPAID,
+      createdAt: { lt: cutoff },
+    },
+    // 通常の PENDING（カード決済の離脱など）: 60 分
+    {
+      paymentStatus: PaymentStatus.PENDING,
+      stripePaymentIntentId: null,
+      updatedAt: { lt: cutoff },
+    },
+    // 非同期決済の待機中: webhook が来なかったときの backstop としてのみ回収する
+    {
+      paymentStatus: PaymentStatus.PENDING,
+      stripePaymentIntentId: { not: null },
+      updatedAt: { lt: asyncCutoff },
+    },
+    {
+      paymentStatus: PaymentStatus.FAILED,
+      updatedAt: { lt: cutoff },
+    },
+  ];
+}
+
+function staleRegistrationCandidateWhere(cutoff: Date, asyncCutoff: Date) {
   return {
     status: RegistrationStatus.CONFIRMED,
     paymentStatus: {
@@ -65,47 +94,23 @@ function staleRegistrationCandidateWhere(cutoff: Date) {
     },
     ticket: { price: { gt: 0 } },
     event: { deletedAt: null },
-    OR: [
-      {
-        paymentStatus: PaymentStatus.UNPAID,
-        createdAt: { lt: cutoff },
-      },
-      {
-        paymentStatus: PaymentStatus.PENDING,
-        stripePaymentIntentId: null,
-        updatedAt: { lt: cutoff },
-      },
-      {
-        paymentStatus: PaymentStatus.FAILED,
-        updatedAt: { lt: cutoff },
-      },
-    ],
+    OR: unpaidBranches(cutoff, asyncCutoff),
   };
 }
 
 /** 候補抽出と同じ述語を claim 側でも再強制する（`staleRegistrationCandidateWhere` 参照）。 */
-function staleRegistrationClaimWhere(registrationId: string, cutoff: Date) {
+function staleRegistrationClaimWhere(
+  registrationId: string,
+  cutoff: Date,
+  asyncCutoff: Date,
+) {
   return {
     id: registrationId,
     status: RegistrationStatus.CONFIRMED,
     paymentStatus: {
       in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
     },
-    OR: [
-      {
-        paymentStatus: PaymentStatus.UNPAID,
-        createdAt: { lt: cutoff },
-      },
-      {
-        paymentStatus: PaymentStatus.PENDING,
-        stripePaymentIntentId: null,
-        updatedAt: { lt: cutoff },
-      },
-      {
-        paymentStatus: PaymentStatus.FAILED,
-        updatedAt: { lt: cutoff },
-      },
-    ],
+    OR: unpaidBranches(cutoff, asyncCutoff),
   };
 }
 
@@ -124,9 +129,10 @@ export async function expireStaleUnpaidEventRegistrationsCommand(): Promise<Expi
   const cutoff = new Date(
     now.getTime() - UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES * MS_PER_MINUTE,
   );
+  const asyncCutoff = asyncPaymentFailsafeCutoff(now);
 
   const candidates = await prisma.eventRegistration.findMany({
-    where: staleRegistrationCandidateWhere(cutoff),
+    where: staleRegistrationCandidateWhere(cutoff, asyncCutoff),
     select: {
       id: true,
       eventId: true,
@@ -163,7 +169,7 @@ export async function expireStaleUnpaidEventRegistrationsCommand(): Promise<Expi
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${candidate.eventId}))`;
 
       const updateResult = await tx.eventRegistration.updateMany({
-        where: staleRegistrationClaimWhere(candidate.id, cutoff),
+        where: staleRegistrationClaimWhere(candidate.id, cutoff, asyncCutoff),
         data: {
           status: RegistrationStatus.CANCELLED,
           cancelledAt: now,

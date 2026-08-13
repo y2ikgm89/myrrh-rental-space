@@ -57,8 +57,11 @@ let prisma: PrismaModule["prisma"];
 let expireStaleUnpaidEventRegistrationsCommand: UnpaidExpiryModule["expireStaleUnpaidEventRegistrationsCommand"];
 let expireStalePendingReservationsCommand: PendingExpiryModule["expireStalePendingReservationsCommand"];
 
-/** cutoff (60 分) より確実に古い時刻 */
+/** 通常 cutoff (60 分) より古いが、非同期決済の backstop (14 日) よりは新しい */
 const LONG_AGO = new Date(Date.now() - 6 * 60 * 60 * 1000);
+
+/** 非同期決済の backstop (14 日) すら過ぎた時刻 */
+const VERY_LONG_AGO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
 const RESERVATION_PRICING = {
   basePrice: 1000,
@@ -104,6 +107,7 @@ async function withRollback<T>(
 
 async function createEventRegistration(opts: {
   readonly stripePaymentIntentId: string | null;
+  readonly age?: Date;
 }): Promise<{ registrationId: string; cleanup: Cleanup }> {
   const suffix = crypto.randomUUID();
   const start = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -195,7 +199,7 @@ async function createEventRegistration(opts: {
     });
 
     // `updatedAt` は @updatedAt なので Prisma 経由では過去に倒せない。
-    await prisma.$executeRaw`UPDATE "event_registrations" SET "updated_at" = ${LONG_AGO} WHERE "id" = ${registration.id}::uuid`;
+    await prisma.$executeRaw`UPDATE "event_registrations" SET "updated_at" = ${opts.age ?? LONG_AGO} WHERE "id" = ${registration.id}::uuid`;
 
     return registration.id;
   });
@@ -205,6 +209,8 @@ async function createEventRegistration(opts: {
 
 async function createReservation(opts: {
   readonly stripePaymentIntentId: string | null;
+  readonly age?: Date;
+  readonly paymentStatus?: (typeof PaymentStatus)[keyof typeof PaymentStatus];
 }): Promise<{ reservationId: string; cleanup: Cleanup }> {
   const suffix = crypto.randomUUID();
   const startTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -253,8 +259,8 @@ async function createReservation(opts: {
       startTime,
       endTime,
       status: ReservationStatus.CONFIRMED,
-      paymentStatus: PaymentStatus.PENDING,
-      paymentInitiatedAt: LONG_AGO,
+      paymentStatus: opts.paymentStatus ?? PaymentStatus.PENDING,
+      paymentInitiatedAt: opts.age ?? LONG_AGO,
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: opts.stripePaymentIntentId,
       ...RESERVATION_PRICING,
@@ -360,6 +366,64 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
         select: { status: true },
       });
       expect(after.status).toBe(ReservationStatus.CANCELLED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  // --- 以下 3 件は Codex レビュー (PR #2215) で指摘された 2 点への回帰テスト ---
+
+  test("予約: FAILED は枠を解放する（webhook が終端に落としたあと誰も回収しない穴）", async () => {
+    // `claimReservationAsFailed` は paymentStatus しか動かさない。EXCLUDE 制約は
+    // status で枠を押さえるので、この枝が無いと枠が恒久的に埋まったままになる。
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: `pi_failed_${crypto.randomUUID()}`,
+      paymentStatus: PaymentStatus.FAILED,
+    });
+    try {
+      await expireStalePendingReservationsCommand();
+
+      const after = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(ReservationStatus.CANCELLED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("予約: 非同期決済でも backstop を超えたら CANCELLED になる（永久除外しない）", async () => {
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: `pi_async_${crypto.randomUUID()}`,
+      age: VERY_LONG_AGO,
+    });
+    try {
+      await expireStalePendingReservationsCommand();
+
+      const after = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(ReservationStatus.CANCELLED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("イベント申込: 非同期決済でも backstop を超えたら CANCELLED になる（永久除外しない）", async () => {
+    const { registrationId, cleanup } = await createEventRegistration({
+      stripePaymentIntentId: `pi_async_${crypto.randomUUID()}`,
+      age: VERY_LONG_AGO,
+    });
+    try {
+      await expireStaleUnpaidEventRegistrationsCommand();
+
+      const after = await prisma.eventRegistration.findUniqueOrThrow({
+        where: { id: registrationId },
+        select: { status: true },
+      });
+      expect(after.status).toBe(RegistrationStatus.CANCELLED);
     } finally {
       await cleanup();
     }

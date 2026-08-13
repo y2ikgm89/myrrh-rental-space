@@ -88,21 +88,47 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockApplyCancellationSideEffects.mockResolvedValue(undefined);
   });
 
-  test("predicate: paymentStatus=PENDING + status ∈ {PENDING, CONFIRMED} + paymentInitiatedAt < cutoff", async () => {
+  test("predicate: status ∈ {PENDING, CONFIRMED} + 未決済 3 分岐（通常 PENDING / 非同期決済 / FAILED）", async () => {
     await expireStalePendingReservationsCommand();
 
-    expect(mockReservationFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          deletedAt: null,
-          status: {
-            in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
-          },
-          paymentStatus: PaymentStatus.PENDING,
-          paymentInitiatedAt: expect.objectContaining({ lt: expect.any(Date) }),
-        }),
-      }),
-    );
+    const where = mockReservationFindMany.mock.calls[0]?.[0]?.["where"] as {
+      deletedAt: null;
+      status: { in: readonly string[] };
+      OR: readonly Record<string, unknown>[];
+    };
+
+    expect(where.deletedAt).toBeNull();
+    expect(where.status).toEqual({
+      in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+    });
+
+    // 3 分岐がすべて存在すること。EXCLUDE 制約は status だけで枠を押さえるので、
+    // FAILED の枝が欠けると枠が恒久的に埋まる（Codex P1 レビュー指摘）。
+    expect(where.OR).toEqual([
+      {
+        paymentStatus: PaymentStatus.PENDING,
+        stripePaymentIntentId: null,
+        paymentInitiatedAt: { lt: expect.any(Date) },
+      },
+      {
+        paymentStatus: PaymentStatus.PENDING,
+        stripePaymentIntentId: { not: null },
+        paymentInitiatedAt: { lt: expect.any(Date) },
+      },
+      {
+        paymentStatus: PaymentStatus.FAILED,
+        paymentInitiatedAt: { lt: expect.any(Date) },
+      },
+    ]);
+
+    // 非同期決済の枝は通常より必ず古い cutoff を使う（backstop であって同じ 60 分ではない）。
+    const normalCutoff = (
+      where.OR[0]?.["paymentInitiatedAt"] as { lt: Date }
+    ).lt.getTime();
+    const asyncCutoff = (
+      where.OR[1]?.["paymentInitiatedAt"] as { lt: Date }
+    ).lt.getTime();
+    expect(asyncCutoff).toBeLessThan(normalCutoff);
   });
 
   test("空の候補セットなら early return: transaction / side effects とも未呼出", async () => {
@@ -138,8 +164,13 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
           status: {
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           },
-          paymentStatus: PaymentStatus.PENDING,
-          paymentInitiatedAt: expect.objectContaining({ lt: expect.any(Date) }),
+          // claim 側も候補抽出と同じ 3 分岐を再強制する（select と claim の間に
+          // webhook が届いて状態が変わった行を取りこぼさないため）。
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              paymentStatus: PaymentStatus.FAILED,
+            }),
+          ]),
         }),
         data: expect.objectContaining({
           status: ReservationStatus.CANCELLED,
