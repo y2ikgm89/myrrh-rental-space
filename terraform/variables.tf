@@ -242,7 +242,20 @@ variable "cloudflare_account_id" {
 # 「反映されない」と誤診する原因になる。
 #
 # 0. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
-#    旧 value 取得: `gcloud secrets versions access latest --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET`
+#
+#    旧 value は **`latest` から取らない。** Cloud Run は version を pin しているので
+#    `latest` は「いま受理されている値」とは限らない（中断したローテーションが
+#    version を残していれば別物になる）。それを `$old` に使うと、第 1 段で
+#    `new,<無関係な値>` を配って Cloudflare の送る値が受理されなくなり、
+#    この手順が避けようとしている collapse をその場で起こす。
+#
+#    **いま動いている revision が参照している version** から取る:
+#      pinned=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" #        --format='value(spec.template.spec.containers[0].env)' #        | tr ',' '
+' | grep CLOUDFLARE_ORIGIN_HEADER_SECRET)   # → version を読む
+#      old=$(gcloud secrets versions access "$pinned" --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET)
+#
+#    `variables.tf` の map と食い違ったら、map を編集したまま deploy していない。
+#    先にそれを解消する（動いている revision が正）。
 #
 # 1. **origin を両受理にする**（Cloudflare はまだ旧値を送る。挙動は変わらない）
 #    a. `printf '%s' "$new,$old" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
