@@ -57,22 +57,30 @@
 # （カンマ区切り）なので、「新旧どちらも受理する」状態を挟めば窓は消える。
 # Cloudflare が注入する値は常に 1 個で、別の GH Secret から供給される。
 #
-# 0. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
+# **`cloud_run_secret_versions` の pin を必ず一緒に上げる。** Cloud Run は
+# `latest` ではなく明示 version を pin しているので、Secret Manager に version を
+# 足しただけでは runtime は古い値のまま。deploy しても何も変わらず、
+# 「反映されない」と誤診する原因になる。
 #
-# 1. **origin を両受理にする**（Cloudflare はまだ旧値を送る）
-#    `printf '%s' "$new,$old" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
-#    → Deploy Production を実行。新 revision が新旧どちらも受理する。
-#    ここまでで挙動は変わらない（旧値のリクエストが通り続ける）。
+# 0. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
+#    旧 value 取得: `gcloud secrets versions access latest --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET`
+#
+# 1. **origin を両受理にする**（Cloudflare はまだ旧値を送る。挙動は変わらない）
+#    a. `printf '%s' "$new,$old" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
+#       → 返ってきた version 番号を控える
+#    b. この map の `CLOUDFLARE_ORIGIN_HEADER_SECRET` を その番号へ bump して main へ push
+#    c. Deploy Production を実行（terraform apply が pin を張り替え、新 revision が両受理になる）
 #
 # 2. **Cloudflare を新値へ切り替える**
-#    `printf '%s' "$new" | gh secret set CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`
-#    → Deploy Production を実行（terraform apply が Transform Rule を同期）。
+#    a. `printf '%s' "$new" | gh secret set CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`
+#    b. Deploy Production を実行（terraform apply が Transform Rule を同期）
 #    origin は両方受理しているので、この切替に窓は無い。
 #
 # 3. **旧値を落とす**
-#    `printf '%s' "$new" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
-#    → Deploy Production を実行。旧値は以後受理されない。
-#    旧 Secret Manager version の disable は運用判断（ロールバック余地を残すなら残す）。
+#    a. `printf '%s' "$new" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
+#    b. この map を その番号へ bump して main へ push
+#    c. Deploy Production を実行。旧値は以後受理されない。
+#    旧 version の disable は運用判断（ロールバック余地を残すなら残す）。
 #
 # **各段のあとに検証する。** 本番へ `x-cloudflare-origin-secret` 無しで直接到達し、
 # rate-limit が効く（＝ `"unknown"` に落ちていない）ことを確認してから次へ進む。
