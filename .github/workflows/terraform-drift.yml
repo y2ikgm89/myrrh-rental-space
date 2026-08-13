@@ -22,7 +22,8 @@ name: Terraform Drift Detection
 #
 # 通知:
 #   - GITHUB_STEP_SUMMARY に diff 全文を貼る (Actions run 画面で即読める)
-#   - drift.plan (binary) + drift.txt (text) を artifact 化 (30d retention)
+#   - drift.txt (text) のみ artifact 化 (30d retention)。binary plan は
+#     sensitive 値を平文で持つため artifact に載せない (下の plan step 参照)
 #   - drift の有無は `drift-result` job が Issue 1 本で追跡する。開いていれば
 #     「いま drift がある (または drift 検知が壊れている)」、閉じていれば緑。
 
@@ -103,7 +104,14 @@ jobs:
 
       # -detailed-exitcode: 0=no changes / 1=error / 2=changes present
       # -lock=false: state file lock を取らない (read-only plan、apply と race しない)
-      # -out=drift.plan: 後段の show / artifact 化のため binary 保存
+      # -out=drift.plan: 後段の `terraform show` で text 化するための一時保存。
+      #   **artifact には載せない。** binary plan は sensitive 値を平文で保持する
+      #   (terraform plan の公式仕様。
+      #   https://developer.hashicorp.com/terraform/cli/commands/plan の `-out` 節が
+      #   "will be saved in cleartext in the plan file" と明記)。この job は
+      #   `TF_VAR_cloudflare_origin_header_secret` を渡しているため、載せると
+      #   本番共有 secret が public repo の artifact から取得可能になる。
+      #   機械強制: __tests__/unit/architecture/deploy-plan-artifact-no-binary.test.ts
       - name: Terraform plan (drift detection)
         id: plan
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -153,9 +161,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: terraform-drift-${{ github.run_id }}
-          path: |
-            terraform/drift.plan
-            terraform/drift.txt
+          # binary plan (`terraform/drift.plan`) は sensitive 値を平文で持つので
+          # 載せない。追加すると deploy-plan-artifact-no-binary gate が落ちる。
+          path: terraform/drift.txt
           retention-days: 30
           if-no-files-found: error
 
