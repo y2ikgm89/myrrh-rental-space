@@ -88,7 +88,32 @@ function unpaidBranches(cutoff: Date, asyncCutoff: Date) {
 }
 
 /**
- * この cron が回収してよいのは **ONLINE 経由の申込だけ**。
+ * fail-safe の対象に入れてよい「経路」の枝。
+ *
+ * 基本は ONLINE 経由の申込だけ。当日受付（WALK_IN）と管理者代行（ADMIN_PROXY）は
+ * Stripe checkout を持たない（集金は現地現金・請求書）ので、「放置された checkout を
+ * 回収する」という cron の前提が成立せず、時間で回収する意味が無い。
+ *
+ * **ただし checkout を開いた行は経路を問わず対象にする。** 管理画面の「Stripe決済」は
+ * `isManuallyPayable`（CONFIRMED + UNPAID + session 無し）でしか出し分けておらず、
+ * `createEventCheckoutSessionCommand` も source を見ないので、当日受付の行に対しても
+ * 決済リンクを作れる。それが放置されると `checkout.session.expired` が FAILED に
+ * 落とすが `status` は CONFIRMED のままで、`buildFailedClaimUpdateData()` は
+ * `paymentStatus` しか触らないので `stripeCheckoutSessionId` は残る。
+ * source だけで除外すると、この行の席が**永久に解放されない**（Codex P1、PR #2228）。
+ *
+ * webhook が書き込む列を「除外の根拠」にすると fail-safe が成立しなくなるが、
+ * ここでは逆に**対象へ入れる根拠**として使っているので、その懸念は当たらない。
+ */
+function reclaimableSourceBranches() {
+  return [
+    { source: EventRegistrationSource.ONLINE },
+    { stripeCheckoutSessionId: { not: null } },
+  ];
+}
+
+/**
+ * この cron が回収してよいのは **ONLINE 経由か、checkout を開いた申込だけ**。
  *
  * `EventRegistration` の既定は `status = CONFIRMED` / `paymentStatus = UNPAID` で、
  * 当日受付（WALK_IN）も管理者代行（ADMIN_PROXY）も同じ形になる。`ticket.price > 0`
@@ -106,13 +131,15 @@ function unpaidBranches(cutoff: Date, asyncCutoff: Date) {
 function staleRegistrationCandidateWhere(cutoff: Date, asyncCutoff: Date) {
   return {
     status: RegistrationStatus.CONFIRMED,
-    source: EventRegistrationSource.ONLINE,
     paymentStatus: {
       in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
     },
     ticket: { price: { gt: 0 } },
     event: { deletedAt: null },
-    OR: unpaidBranches(cutoff, asyncCutoff),
+    AND: [
+      { OR: reclaimableSourceBranches() },
+      { OR: unpaidBranches(cutoff, asyncCutoff) },
+    ],
   };
 }
 
@@ -125,11 +152,13 @@ function staleRegistrationClaimWhere(
   return {
     id: registrationId,
     status: RegistrationStatus.CONFIRMED,
-    source: EventRegistrationSource.ONLINE,
     paymentStatus: {
       in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
     },
-    OR: unpaidBranches(cutoff, asyncCutoff),
+    AND: [
+      { OR: reclaimableSourceBranches() },
+      { OR: unpaidBranches(cutoff, asyncCutoff) },
+    ],
   };
 }
 

@@ -89,6 +89,9 @@ async function withRollback<T>(
 async function createRegistration(opts: {
   readonly source: (typeof EventRegistrationSource)[keyof typeof EventRegistrationSource];
   readonly attended: boolean;
+  /** 管理画面から Stripe 決済リンクを作った行を再現する。 */
+  readonly stripeCheckoutSessionId?: string | null;
+  readonly paymentStatus?: (typeof PaymentStatus)[keyof typeof PaymentStatus];
 }): Promise<{ registrationId: string; cleanup: Cleanup }> {
   const suffix = crypto.randomUUID();
   const start = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -167,7 +170,8 @@ async function createRegistration(opts: {
         source: opts.source,
         // 現地集金・請求書払いの実際の形。既定と同じ値を明示している。
         status: RegistrationStatus.CONFIRMED,
-        paymentStatus: PaymentStatus.UNPAID,
+        paymentStatus: opts.paymentStatus ?? PaymentStatus.UNPAID,
+        stripeCheckoutSessionId: opts.stripeCheckoutSessionId ?? null,
         attendedAt: opts.attended ? new Date() : null,
       },
       select: { id: true },
@@ -178,8 +182,9 @@ async function createRegistration(opts: {
       });
     });
 
-    // UNPAID の枝は `createdAt` を見る。`@default(now())` なので raw で過去へ倒す。
-    await prisma.$executeRaw`UPDATE "event_registrations" SET "created_at" = ${LONG_AGO} WHERE "id" = ${registration.id}::uuid`;
+    // UNPAID の枝は `createdAt`、PENDING / FAILED の枝は `updatedAt` を見る。
+    // どちらも Prisma 経由では過去に倒せないので raw で書く。
+    await prisma.$executeRaw`UPDATE "event_registrations" SET "created_at" = ${LONG_AGO}, "updated_at" = ${LONG_AGO} WHERE "id" = ${registration.id}::uuid`;
 
     return registration.id;
   });
@@ -236,6 +241,26 @@ describeMaybe("未決済 fail-safe cron は場外集金の申込を消さない"
       await expireStaleUnpaidEventRegistrationsCommand();
 
       expect(await statusOf(registrationId)).toBe(RegistrationStatus.CONFIRMED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("当日受付でも Stripe 決済リンクを作って放置されたら回収される", async () => {
+    // 管理画面の「Stripe決済」は source を見ずに出せる（`isManuallyPayable` は
+    // CONFIRMED + UNPAID + session 無しでしか判定しない）。放置されると
+    // `checkout.session.expired` が FAILED に落とすが status は CONFIRMED のまま。
+    // source だけで除外すると、この席が永久に解放されない（Codex P1, PR #2228）。
+    const { registrationId, cleanup } = await createRegistration({
+      source: EventRegistrationSource.WALK_IN,
+      attended: false,
+      stripeCheckoutSessionId: `cs_test_${crypto.randomUUID()}`,
+      paymentStatus: PaymentStatus.FAILED,
+    });
+    try {
+      await expireStaleUnpaidEventRegistrationsCommand();
+
+      expect(await statusOf(registrationId)).toBe(RegistrationStatus.CANCELLED);
     } finally {
       await cleanup();
     }
