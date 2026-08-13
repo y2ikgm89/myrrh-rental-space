@@ -297,7 +297,8 @@ export type WelcomeEmailData = {
   customerId: string;
   customerName: string;
   customerEmail: string;
-  loginUrl: string;
+  /** マイページの完全な URL。テンプレートはこれをそのまま href にする。 */
+  mypageUrl: string;
 };
 
 /**

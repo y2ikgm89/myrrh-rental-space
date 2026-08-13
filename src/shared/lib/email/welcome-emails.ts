@@ -17,7 +17,7 @@ export async function sendWelcomeEmail(
         subject: `【${footer.siteName}】ご登録ありがとうございます`,
         react: WelcomeEmail({
           customerName: data.customerName,
-          loginUrl: data.loginUrl,
+          mypageUrl: data.mypageUrl,
           siteName: footer.siteName,
           footer,
         }),
