@@ -79,10 +79,25 @@ export async function fetchCalendarChanges(
       for (const event of response.data.items ?? []) {
         if (!event.id) continue;
 
-        // 予約システムで作成されたイベントのみを対象（descriptionに予約IDが含まれる）
+        // 予約システムで作成されたイベントかは description のマーカーで粗く振るう。
+        //
+        // **削除だけはマーカーで振るえない。** 増分同期（syncToken 指定）で
+        // 削除されたイベントは最小フィールドだけの resource として返り、
+        // `status: "cancelled"` は入るが `description` は入らない。
+        // マーカーを入口条件にすると削除が 1 件も通らず、しかも
+        // `nextSyncToken` は前進するので**二度と再取得されない**。
+        // GCal で消された予約が DB では CONFIRMED のまま残り、枠が塞がったまま
+        // 顧客への通知も返金も走らない。
+        //
+        // 取りこぼす方向に倒せないので、cancelled は無条件に通す。
+        // 「本当に自分たちの予約か」は消費側 `processCalendarChange` が
+        // `getReservationByCalendarEventId`（= DB の googleCalendarEventId）で
+        // 判定しており、そちらが正本。マーカーはあくまで DB 照会を減らす近道で、
+        // 無関係なイベントが通っても `not_found` で捨てられる。
+        const isCancelled = event.status === "cancelled";
         const isReservationEvent = event.description?.includes("予約ID:");
 
-        if (isReservationEvent) {
+        if (isReservationEvent || isCancelled) {
           const change: CalendarChange = {
             eventId: event.id,
             status:
