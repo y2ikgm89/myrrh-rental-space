@@ -127,7 +127,7 @@ describe("domain の Prisma shape const", () => {
     const local = shapeConsts.filter((c) => c.scope === "local").length;
     expect({ total: shapeConsts.length, moduleLevel, local }).toEqual({
       total: moduleLevel + local,
-      moduleLevel: 55,
+      moduleLevel: 56,
       local: 3,
     });
     expect(shapeConsts.length).toBeGreaterThan(50);

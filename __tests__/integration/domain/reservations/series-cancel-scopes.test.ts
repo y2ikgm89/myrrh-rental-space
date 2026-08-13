@@ -22,12 +22,17 @@
  * import 時の `process.env.DATABASE_URL` を読むため、動的 import より前に上書きする。
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import {
-  CouponType,
-  ReservationStatus,
-  TaxRateType,
-} from "@generated/prisma/enums";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { CouponType, ReservationStatus } from "@generated/prisma/enums";
+
+// `getSpaceRatePlans` は `"use cache"` producer なので、Next の cacheComponents
+// runtime 外（この bun test プロセス）では `cacheLife() is only available with
+// the cacheComponents config` で必ず throw する。本ファイルの検証対象は
+// キャンセル scope と coupon usage の戻しであって rate plan 解決ロジックではないため、モックして迂回する
+// （blacklist-guard.test.ts / space-overlap-concurrency.test.ts と同型）。
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: () => Promise.resolve([]),
+}));
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -43,22 +48,6 @@ type SeriesCommandsModule =
 let prisma: PrismaModule["prisma"];
 let createReservationSeriesCommand: SeriesCommandsModule["createReservationSeriesCommand"];
 let cancelReservationSeriesCommand: SeriesCommandsModule["cancelReservationSeriesCommand"];
-
-const TEMPLATE_DATA = {
-  totalPrice: 5000,
-  basePrice: 5000,
-  rateBreakdownJson: {
-    schemaVersion: 1 as const,
-    segments: [],
-    totalHours: 2,
-    totalBasePrice: 5000,
-    holidayFlags: {},
-  },
-  taxRateType: TaxRateType.STANDARD,
-  taxRate: 10,
-  taxAmount: 500,
-  totalPriceWithTax: 5500,
-};
 
 const REQUEST_CONTEXT = { ip: "203.0.113.10", userAgent: "Mozilla/5.0 (Test)" };
 
@@ -142,6 +131,7 @@ async function ensureSettings(maxRecurrenceInstances = 26): Promise<void> {
 
 async function createCouponFixture(): Promise<{
   couponId: string;
+  couponCode: string;
   cleanup: () => Promise<void>;
 }> {
   const suffix = crypto
@@ -149,9 +139,10 @@ async function createCouponFixture(): Promise<{
     .replace(/-/g, "")
     .slice(0, 10)
     .toUpperCase();
+  const code = `SERIESCANCEL${suffix}`;
   const coupon = await prisma.coupon.create({
     data: {
-      code: `SERIESCANCEL${suffix}`,
+      code,
       name: "Series cancel test coupon",
       type: CouponType.FIXED_AMOUNT,
       discountValue: 500,
@@ -161,6 +152,7 @@ async function createCouponFixture(): Promise<{
   });
   return {
     couponId: coupon.id,
+    couponCode: code,
     cleanup: async () => {
       await prisma.coupon.deleteMany({ where: { id: coupon.id } });
     },
@@ -173,16 +165,16 @@ type SeriesFixture = { seriesId: string; instanceIds: string[] };
 async function createSeriesFixture(
   spaceId: string,
   customerId: string,
-  opts: { dtstart: Date; count: number; couponId?: string | null },
+  opts: { dtstart: Date; count: number; couponCode?: string | null },
 ): Promise<SeriesFixture> {
   const result = await createReservationSeriesCommand({
     spaceId,
     customerId,
-    couponId: opts.couponId ?? null,
+    couponCode: opts.couponCode ?? null,
     rrule: `FREQ=WEEKLY;BYDAY=TU;COUNT=${String(opts.count)}`,
     dtstart: opts.dtstart,
     duration: 120,
-    templateData: TEMPLATE_DATA,
+    templateData: {},
     agreements: [],
     now: new Date(),
   });
@@ -318,7 +310,7 @@ describeMaybe(
           {
             dtstart: new Date("2027-11-02T10:00:00.000Z"),
             count: 3,
-            couponId: couponFixture.couponId,
+            couponCode: couponFixture.couponCode,
           },
         );
 
@@ -383,7 +375,7 @@ describeMaybe(
           {
             dtstart: new Date("2027-11-30T10:00:00.000Z"),
             count: 2,
-            couponId: couponFixture.couponId,
+            couponCode: couponFixture.couponCode,
           },
         );
         const target = instanceIds[0];
@@ -423,7 +415,7 @@ describeMaybe(
         const { seriesId } = await createSeriesFixture(spaceId, customerId, {
           dtstart: new Date("2027-12-07T10:00:00.000Z"),
           count: 2,
-          couponId: couponFixture.couponId,
+          couponCode: couponFixture.couponCode,
         });
 
         await cancelReservationSeriesCommand({

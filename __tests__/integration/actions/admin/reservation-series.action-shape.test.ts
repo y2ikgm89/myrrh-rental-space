@@ -2,7 +2,7 @@
  * 繰返し予約 Server Action — action shape & schema 統合テスト
  *
  * **scope**: `createRecurringReservationAction` の input validation /
- * pricing preview → RRULE 組み立て → domain command への引数伝搬 /
+ * RRULE 組み立て → domain command への引数伝搬 /
  * **conform へ返す `SubmissionResult` の形**を実 import で検証する。
  * `executeAdminMutationResult` は mock しており auth / RBAC / cache 無効化の中身 /
  * 監査ログは検証しない（`_executeAdminMutationResult-rbac.test.ts` を参照）。
@@ -37,40 +37,13 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
   getMaxRecurrenceInstances: mockGetMaxRecurrenceInstances,
 }));
 
-type PreviewResult = {
-  totalPrice: number;
-  basePrice: number;
-  rateBreakdown: unknown;
-  taxRateType: string;
-  taxRate: number;
-  taxAmount: number;
-  totalPriceWithTax: number;
-  durationDiscountAmount: number;
-  spaceDiscountAmount: number;
-  appliedCoupon: { id: string } | null;
+type CreateSeriesArgs = {
+  rrule: string;
+  dtstart: Date;
+  duration: number;
+  couponCode: string | null;
+  templateData: Record<string, unknown>;
 };
-
-const previewValue: PreviewResult = {
-  totalPrice: 6000,
-  basePrice: 6000,
-  rateBreakdown: [],
-  taxRateType: "STANDARD",
-  taxRate: 10,
-  taxAmount: 600,
-  totalPriceWithTax: 6600,
-  durationDiscountAmount: 0,
-  spaceDiscountAmount: 0,
-  appliedCoupon: null,
-};
-
-const mockPreview = mock<() => Promise<PreviewResult | null>>(() =>
-  Promise.resolve(previewValue),
-);
-mock.module("@/shared/domain/reservations/pricing-preview", () => ({
-  previewReservationPricing: mockPreview,
-}));
-
-type CreateSeriesArgs = { rrule: string; dtstart: Date; duration: number };
 const mockCreateSeries = mock<
   (args: CreateSeriesArgs) => Promise<{
     series: { id: string; instanceCount: number };
@@ -188,9 +161,7 @@ describe("createRecurringReservationAction (action shape)", () => {
   beforeEach(() => {
     executeOptions = undefined;
     executeShouldFail = false;
-    mockPreview.mockClear();
     mockCreateSeries.mockClear();
-    mockPreview.mockImplementation(() => Promise.resolve(previewValue));
   });
 
   test("正常系: RRULE を組み立てて command へ渡し、conform には successMessage 付きの成功 reply を返す", async () => {
@@ -216,27 +187,33 @@ describe("createRecurringReservationAction (action shape)", () => {
     );
   });
 
-  test("pricing preview が null なら form-level error として返す（command は呼ばない）", async () => {
-    mockPreview.mockImplementation(() => Promise.resolve(null));
-
-    const result = await createRecurringReservationAction(
+  test("料金は action で確定しない: templateData に価格を載せず couponCode をそのまま渡す", async () => {
+    await createRecurringReservationAction(
       undefined,
-      buildFormData(),
+      buildFormData({ couponCode: "SERIES500" }),
     );
 
-    expect(mockCreateSeries).not.toHaveBeenCalled();
-    expect(result.error?.[""]).toEqual([
-      "スペース情報の取得に失敗しました。空き状況をご確認ください。",
-    ]);
+    const args = mockCreateSeries.mock.calls[0]?.[0];
+    // 旧実装は action 側で pricing preview を 1 回だけ解決し、その結果を
+    // templateData に載せて全 instance へコピーさせていた。rate plan は
+    // 日付で変わるので、解決できるのは全 instance の日時を知る command だけ。
+    expect(args?.templateData).toEqual({});
+    // クーポンは検証済み id ではなくコードのまま渡す（検証と適用は command 側）。
+    expect(args?.couponCode).toBe("SERIES500");
   });
 
-  test("WEEKLY で曜日未選択は field error（command も preview も呼ばない）", async () => {
+  test("couponCode 未入力は null として渡す（空文字を流さない）", async () => {
+    await createRecurringReservationAction(undefined, buildFormData());
+
+    expect(mockCreateSeries.mock.calls[0]?.[0]?.couponCode).toBeNull();
+  });
+
+  test("WEEKLY で曜日未選択は field error（command を呼ばない）", async () => {
     const result = await createRecurringReservationAction(
       undefined,
       buildFormData({ byday: "" }),
     );
 
-    expect(mockPreview).not.toHaveBeenCalled();
     expect(mockCreateSeries).not.toHaveBeenCalled();
     expect(result.error?.["byday"]).toEqual([
       "曜日を 1 つ以上選択してください",

@@ -28,8 +28,17 @@
  * import 時の `process.env.DATABASE_URL` を読むため、動的 import より前に上書きする。
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { EventStatus, TaxRateType } from "@generated/prisma/enums";
+
+// `getSpaceRatePlans` は `"use cache"` producer なので、Next の cacheComponents
+// runtime 外（この bun test プロセス）では `cacheLife() is only available with
+// the cacheComponents config` で必ず throw する。本ファイルの検証対象は
+// 重複検出と advisory lock による直列化であって rate plan 解決ロジックではないため、モックして迂回する
+// （blacklist-guard.test.ts / space-overlap-concurrency.test.ts と同型）。
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: () => Promise.resolve([]),
+}));
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -200,7 +209,7 @@ describeMaybe(
             rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=3",
             dtstart,
             duration: 120,
-            templateData: TEMPLATE_DATA,
+            templateData: {},
             agreements: [],
             now: new Date(),
           });
@@ -244,7 +253,7 @@ describeMaybe(
             rrule: "FREQ=DAILY;COUNT=3",
             dtstart,
             duration: 1500,
-            templateData: TEMPLATE_DATA,
+            templateData: {},
             agreements: [],
             now: new Date(),
           });
@@ -320,7 +329,7 @@ describeMaybe(
             rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=2",
             dtstart,
             duration: 120,
-            templateData: TEMPLATE_DATA,
+            templateData: {},
             agreements: [],
             now: new Date(),
           });
@@ -368,7 +377,7 @@ describeMaybe(
           rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=3",
           dtstart,
           duration: 120,
-          templateData: TEMPLATE_DATA,
+          templateData: {},
           agreements: [],
           now: new Date(),
         });
