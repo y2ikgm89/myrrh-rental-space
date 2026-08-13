@@ -192,7 +192,7 @@ export async function registerForEvent(
             );
             if (!event) return;
 
-            const ticketTotalPrice = event.ticketUnitPrice * event.quantity;
+            const ticketTotalPrice = event.ticketTotalPrice;
             const paymentEnabled = await isFeatureEnabled("payment");
             const paymentCheckoutUrl =
               !customerId && paymentEnabled && ticketTotalPrice > 0

@@ -261,7 +261,7 @@ function checkoutInitialRead(overrides: Record<string, unknown> = {}) {
     status: RegistrationStatus.CONFIRMED,
     paymentStatus: PaymentStatus.UNPAID,
     stripeCheckoutSessionId: null,
-    ticket: { name: "Standard Ticket", price: 5000 },
+    ticket: { name: "Standard Ticket", price: 5000, unitSize: 1 },
     event: { title: "Test Event" },
     ...overrides,
   };
@@ -275,7 +275,7 @@ function checkoutAuthoritative(overrides: Record<string, unknown> = {}) {
     email: "customer@example.com",
     name: "Test Customer",
     quantity: 1,
-    ticket: { name: "Standard Ticket", price: 5000 },
+    ticket: { name: "Standard Ticket", price: 5000, unitSize: 1 },
     event: { title: "Test Event", slug: "test-event" },
     ...overrides,
   };
@@ -302,7 +302,7 @@ function authoritative(overrides: Record<string, unknown> = {}) {
     email: "waitlisted@example.com",
     quantity: 2,
     expiresAt: futureExpiresAt(),
-    ticket: { name: "Test Ticket", price: 3000 },
+    ticket: { name: "Test Ticket", price: 3000, unitSize: 1 },
     event: { title: "Test Event", slug: "test-event" },
     ...overrides,
   };
@@ -648,7 +648,9 @@ describe("events/payment-commands", () => {
     // ── VALIDATION: free ticket ────────────────────────────────────────────────
     test("VALIDATION: 無料チケット (price 0) は DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
       mockRegFindUnique.mockResolvedValueOnce(
-        checkoutInitialRead({ ticket: { name: "Free Ticket", price: 0 } }),
+        checkoutInitialRead({
+          ticket: { name: "Free Ticket", price: 0, unitSize: 1 },
+        }),
       );
 
       const error = await createEventCheckoutSessionCommand({
@@ -722,6 +724,46 @@ describe("events/payment-commands", () => {
           stripeCheckoutSessionId: CHECKOUT_SESSION_ID,
           paidAmount: 5000,
         }),
+      });
+    });
+
+    test("unitSize > 1: Stripe には枚数を渡し、請求額は price × 枚数（人数倍にしない）", async () => {
+      // 管理画面のプリセット「グループ (4名)」= price 18000 / unitSize 4。
+      // 旧実装は line_items.quantity に参加人数を入れていたため、
+      // 4 名申込で 18000 × 4 = 72,000 円を請求していた。
+      const groupTicket = {
+        name: "グループ (4名)",
+        price: 18000,
+        unitSize: 4,
+      };
+      mockRegFindUnique
+        .mockResolvedValueOnce(
+          checkoutInitialRead({ quantity: 4, ticket: groupTicket }),
+        )
+        .mockResolvedValueOnce(
+          checkoutAuthoritative({ quantity: 4, ticket: groupTicket }),
+        );
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+
+      const sessionArgs = mockCheckoutSessionCreate.mock.calls[0]?.[0] as {
+        line_items: { price_data: { unit_amount: number }; quantity: number }[];
+      };
+      expect(sessionArgs.line_items[0]?.price_data.unit_amount).toBe(18000);
+      // 参加人数 4 ではなく、必要枚数 ceil(4 / 4) = 1。
+      expect(sessionArgs.line_items[0]?.quantity).toBe(1);
+
+      // DB に記録する paidAmount も同じ額でなければ、返金・入金照合が食い違う。
+      const settleCall = mockRegUpdateMany.mock.calls[1]?.[0];
+      expect(settleCall).toMatchObject({
+        data: expect.objectContaining({ paidAmount: 18000 }),
       });
     });
 
@@ -921,7 +963,7 @@ describe("events/payment-commands", () => {
         paymentStatus: PaymentStatus.PAID,
         paidAmount: 5000,
         quantity: 1,
-        ticket: { price: 5000 },
+        ticket: { price: 5000, unitSize: 1 },
       });
 
       const result =
@@ -992,7 +1034,7 @@ describe("events/payment-commands", () => {
         stripeCheckoutSessionId: null,
         customerId: CUSTOMER_ID,
         quantity: 1,
-        ticket: { price: 5000 },
+        ticket: { price: 5000, unitSize: 1 },
         ...overrides,
       };
     }
@@ -1038,7 +1080,7 @@ describe("events/payment-commands", () => {
 
     test("無料チケット (price × quantity <= 0) は VALIDATION で拒否", async () => {
       mockRegFindUnique.mockResolvedValueOnce(
-        unpaidRegistration({ ticket: { price: 0 } }),
+        unpaidRegistration({ ticket: { price: 0, unitSize: 1 } }),
       );
 
       const error = await recordManualEventPaymentCommand({

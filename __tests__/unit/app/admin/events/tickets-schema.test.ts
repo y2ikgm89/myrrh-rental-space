@@ -127,10 +127,10 @@ describe("event-form-schema tickets: native FormData round-trip", () => {
     expect(result.status).toBe("error");
     if (result.status !== "error") return;
     expect(result.error?.["tickets[0].capacity"]).toEqual([
-      "区分が複数のときは枠数を入力してください",
+      "区分が複数のときは受付人数を入力してください",
     ]);
     expect(result.error?.["tickets[1].capacity"]).toEqual([
-      "区分が複数のときは枠数を入力してください",
+      "区分が複数のときは受付人数を入力してください",
     ]);
   });
 

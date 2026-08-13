@@ -16,6 +16,7 @@ import type {
   EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
+import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charge";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -219,7 +220,7 @@ const EVENT_REGISTRATION_SELF_SERVE_EDIT_SELECT = {
   status: true,
   paymentStatus: true,
   slot: { select: { startAt: true, endAt: true } },
-  ticket: { select: { name: true, price: true } },
+  ticket: { select: { name: true, price: true, unitSize: true } },
   event: { select: { title: true } },
 } as const satisfies Prisma.EventRegistrationSelect;
 
@@ -269,7 +270,7 @@ export async function getEventRegistrationForGuestStatus(
       status: true,
       quantity: true,
       paymentStatus: true,
-      ticket: { select: { price: true, name: true } },
+      ticket: { select: { price: true, name: true, unitSize: true } },
       slot: { select: { startAt: true, endAt: true } },
       receipt: { select: { serialNo: true } },
       event: {
@@ -301,7 +302,10 @@ export async function getEventRegistrationForGuestStatus(
     paymentStatus: registration.paymentStatus,
     ticketName: registration.ticket.name,
     ticketUnitPrice: registration.ticket.price,
-    ticketTotalPrice: registration.ticket.price * registration.quantity,
+    ticketTotalPrice: eventTicketChargeAmount(
+      registration.ticket,
+      registration.quantity,
+    ),
     slot: registration.slot,
     receiptSerialNo: registration.receipt?.serialNo ?? null,
     event: {
@@ -328,7 +332,8 @@ export async function getEventRegistrationDetailsForEmail(
   readonly confirmedCount: number;
   readonly format: EventFormatValue;
   readonly meetingUrl: string | null;
-  readonly ticketUnitPrice: number;
+  /** チケット単価 x 必要枚数。`unitSize` を織り込んだ確定額。 */
+  readonly ticketTotalPrice: number;
   readonly quantity: number;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
@@ -339,7 +344,7 @@ export async function getEventRegistrationDetailsForEmail(
       slotId: true,
       quantity: true,
       status: true,
-      ticket: { select: { price: true } },
+      ticket: { select: { price: true, unitSize: true } },
       slot: {
         select: {
           startAt: true,
@@ -385,7 +390,10 @@ export async function getEventRegistrationDetailsForEmail(
       registration.status === RegistrationStatus.CONFIRMED
         ? registration.event.meetingUrl
         : null,
-    ticketUnitPrice: registration.ticket.price,
+    ticketTotalPrice: eventTicketChargeAmount(
+      registration.ticket,
+      registration.quantity,
+    ),
     quantity: registration.quantity,
   };
 }
@@ -429,6 +437,7 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   ticket: {
     select: {
       price: true,
+      unitSize: true,
     },
   },
   // slotId / ticketId は mypage の waitlist 順位計算 (bulk lookup) 用。
@@ -474,6 +483,7 @@ type CustomerEventRegistrationRow = {
   readonly paymentStatus: PaymentStatus;
   readonly ticket: {
     readonly price: number;
+    readonly unitSize: number;
   };
   readonly slotId: string;
   readonly ticketId: string;
@@ -506,7 +516,7 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
     expiresAt: row.expiresAt,
     paymentStatus: row.paymentStatus,
     ticketUnitPrice: row.ticket.price,
-    ticketTotalPrice: row.ticket.price * row.quantity,
+    ticketTotalPrice: eventTicketChargeAmount(row.ticket, row.quantity),
     slotId: row.slotId,
     ticketId: row.ticketId,
     event: {
@@ -614,6 +624,7 @@ export async function getCustomerEventRegistrationDetail(
         select: {
           price: true,
           name: true,
+          unitSize: true,
         },
       },
     },

@@ -96,7 +96,7 @@ const ticketInputSchema = z.strictObject({
   capacity: z
     .number()
     .int()
-    .min(1, { error: "枠数は1以上です" })
+    .min(1, { error: "受付人数は1以上です" })
     .nullable()
     .default(null),
   unitSize: z
@@ -110,10 +110,10 @@ const ticketsSchema = z
   .array(ticketInputSchema)
   .min(1, { error: "区分を少なくとも1つ登録してください" })
   /**
-   * 区分が複数あるときは枠数 (capacity) を必須化。
+   * 区分が複数あるときは受付人数 (capacity) を必須化。
    *
-   * 単一区分なら基本情報の定員 (Event.capacity) を全枠数として使えるが、
-   * 複数区分のときは各区分の枠数を明示しないと「どの区分から何人受け入れるか」
+   * 単一区分なら基本情報の定員 (Event.capacity) をそのまま使えるが、
+   * 複数区分のときは各区分の受付人数を明示しないと「どの区分から何人受け入れるか」
    * が決まらず公開申込フォームで在庫管理ができない (Eventbrite / Peatix と同 UX)。
    */
   .superRefine((tickets, ctx) => {
@@ -122,7 +122,7 @@ const ticketsSchema = z
       if (ticket.capacity == null) {
         ctx.addIssue({
           code: "custom",
-          message: "区分が複数のときは枠数を入力してください",
+          message: "区分が複数のときは受付人数を入力してください",
           path: [index, "capacity"],
         });
       }

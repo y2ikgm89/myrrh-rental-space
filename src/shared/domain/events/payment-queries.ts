@@ -31,6 +31,7 @@ import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charge";
 
 /**
  * EventRegistration の Stripe webhook から呼ばれる atomic PAID 遷移。
@@ -177,7 +178,7 @@ export async function getEventRegistrationCheckoutExpectedAmount(
     select: {
       paidAmount: true,
       quantity: true,
-      ticket: { select: { price: true } },
+      ticket: { select: { price: true, unitSize: true } },
     },
   });
   if (!registration) return null;
@@ -186,7 +187,10 @@ export async function getEventRegistrationCheckoutExpectedAmount(
     return registration.paidAmount;
   }
 
-  const computed = registration.ticket.price * registration.quantity;
+  const computed = eventTicketChargeAmount(
+    registration.ticket,
+    registration.quantity,
+  );
   return computed > 0 ? computed : null;
 }
 
