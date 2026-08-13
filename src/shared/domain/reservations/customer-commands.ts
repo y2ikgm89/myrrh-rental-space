@@ -596,6 +596,14 @@ async function updateReservationCommand(input: {
         // 過去に admin が override した予約が編集された場合も含め、常に「手動上書き
         // なし」に戻す（admin override の履歴が新しい自動計算額に紐付いたまま残る
         // stale 表示を防ぐ）。
+        //
+        // 金額そのものである `manual_adjustment_amount` を落とすと表示が stale に
+        // なるどころか書込自体が通らない。CHECK
+        // `reservations_total_price_breakdown_check` が
+        // `total_price = GREATEST(0, base - 各割引) + COALESCE(manual_adjustment_amount, 0)`
+        // を要求するので、自動計算値を `total_price` に書きながら旧調整額を残すと
+        // 23514 で tx が abort する。2 つを揃えて消すのが「手動上書きなし」の実体。
+        manualAdjustmentAmount: null,
         priceOverriddenById: null,
         // best 併用でクーポンが落ちた場合は appliedCoupon=null。usage は作成時に
         // claim 済みのためここでは増減しないが、参照と割引額は pricing SSoT に揃える。
