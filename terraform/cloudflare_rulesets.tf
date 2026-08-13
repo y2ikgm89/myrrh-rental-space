@@ -46,15 +46,36 @@
 # - **rule 構造 (expression / operation / header name) + value 全て drift-detect 有効**
 #   (Phase 2b の `lifecycle.ignore_changes = [rules]` を撤去)
 #
-# ## Rotation 手順 (完全 IaC、`variables.tf` の cloudflare_origin_header_secret 参照)
+# ## Rotation 手順（無停止・3 段、`variables.tf` にも同じ節がある）
 #
-# 1. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
-# 2. Secret Manager に新 version 追加:
-#    `printf '%s' "$new_value" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
-# 3. Cloud Run 新 revision deploy (新 Secret Manager version を参照)
-# 4. **数分待ち** (旧 revision draining 中に header ずれると rate-limit 誤 block 発火)
-# 5. GH Secret 更新: `printf '%s' "$new_value" | gh secret set CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`
-# 6. 次回 push で `terraform apply` が Cloudflare Transform Rule を自動同期
+# **同時に切り替えようとしない。** Cloudflare の Transform Rule と Cloud Run の
+# revision は原子的に切り替えられないので、片側だけ新値になった瞬間が必ずできる。
+# その窓では origin 側の照合が外れ、`extractClientIp` が全 request に `"unknown"` を
+# 返す ＝ サイト全体が単一の rate-limit バケットに collapse する（自傷的な締め出し）。
+#
+# origin 側の `CLOUDFLARE_ORIGIN_HEADER_SECRET` は**受理してよい値の集合**
+# （カンマ区切り）なので、「新旧どちらも受理する」状態を挟めば窓は消える。
+# Cloudflare が注入する値は常に 1 個で、別の GH Secret から供給される。
+#
+# 0. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
+#
+# 1. **origin を両受理にする**（Cloudflare はまだ旧値を送る）
+#    `printf '%s' "$new,$old" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
+#    → Deploy Production を実行。新 revision が新旧どちらも受理する。
+#    ここまでで挙動は変わらない（旧値のリクエストが通り続ける）。
+#
+# 2. **Cloudflare を新値へ切り替える**
+#    `printf '%s' "$new" | gh secret set CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`
+#    → Deploy Production を実行（terraform apply が Transform Rule を同期）。
+#    origin は両方受理しているので、この切替に窓は無い。
+#
+# 3. **旧値を落とす**
+#    `printf '%s' "$new" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
+#    → Deploy Production を実行。旧値は以後受理されない。
+#    旧 Secret Manager version の disable は運用判断（ロールバック余地を残すなら残す）。
+#
+# **各段のあとに検証する。** 本番へ `x-cloudflare-origin-secret` 無しで直接到達し、
+# rate-limit が効く（＝ `"unknown"` に落ちていない）ことを確認してから次へ進む。
 # -----------------------------------------------------------------------------
 
 # ============================================================================
