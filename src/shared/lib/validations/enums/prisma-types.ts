@@ -61,6 +61,7 @@ export {
   EventStatus,
   EventScheduleMode,
   RegistrationStatus,
+  EventRegistrationSource,
   AuditAction,
   EditorCommentStatus,
   MediaType,
