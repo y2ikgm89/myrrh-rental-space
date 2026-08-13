@@ -33,38 +33,39 @@ pin 表。この表は required status check **`Dependency Audit (bun audit)`**
 「経路」列は `bun why <package>` の実測。**どこから引かれているか**が分かると、
 その pin を外してよいか・上げると何が壊れうるかを推測ではなく確認で判断できる。
 
-| Package             | 経路 (`bun why` 実測)                                                       |
-| ------------------- | --------------------------------------------------------------------------- |
-| `@grpc/grpc-js`     | `google-gax` → `@google-analytics/data`                                     |
-| `pg`                | `@prisma/adapter-pg`（`better-auth` の optional peer でもある）             |
-| `protobufjs`        | `@grpc/proto-loader` / `proto3-json-serializer` → `google-gax`              |
-| `minimatch`         | `@eslint/config-array` / `@typescript-eslint/typescript-estree` → `eslint`  |
-| `fast-uri`          | `ajv` → `@prisma/dev`(prisma) / `eslint`                                    |
-| `postcss`           | `next` / `sanitize-html` / `@tailwindcss/postcss`                           |
-| `hono`              | `@prisma/dev` → `prisma`                                                    |
-| `qs`                | `googleapis-common` → `googleapis`／`body-parser` → `express` → `@lhci/cli` |
-| `@tootallnate/once` | `http-proxy-agent`（proxy スタック）                                        |
-| `@hono/node-server` | `@prisma/dev` → `prisma`                                                    |
-| `basic-ftp`         | `get-uri` → `pac-proxy-agent` → `proxy-agent` → `@lhci/cli`                 |
-| `flatted`           | `flat-cache` → `file-entry-cache` → `eslint`（キャッシュ層）                |
-| `ip-address`        | `socks` → `socks-proxy-agent`                                               |
-| `picomatch`         | `micromatch` / `tinyglobby` / `fdir`                                        |
-| `tmp`               | `exceljs`／`@lhci/cli`・`external-editor`                                   |
-| `playwright-core`   | `playwright` → `@playwright/test`（E2E runner と lockstep）                 |
-| `brace-expansion`   | `minimatch` のみ                                                            |
-| `uuid`              | `exceljs`／`@lhci/cli`                                                      |
-| `ws`                | `happy-dom` → `@lexical/headless`／`lighthouse`・`socket.io-adapter`        |
-| `happy-dom`         | `@lexical/headless` の内部フォールバック DOM                                |
-| `undici`            | `jsdom`（jsdom 30 は `undici ^8.9.0` を要求。7 系に留めると range 違反）    |
-| `sharp`             | `next` の optionalDependency（画像処理）                                    |
-| `valibot`           | `@prisma/dev` → `prisma`／`@t3-oss/env-core`                                |
-| `nanoid`            | `postcss`（GHSA-2v37-7h3g-55p8: size 0 で無限ループ）                       |
-| `js-yaml`           | `@lhci/utils` → `@lhci/cli`                                                 |
-| `body-parser`       | `express` → `@lhci/cli`                                                     |
-| `socket.io-parser`  | `socket.io` → `react-email`                                                 |
-| `@babel/core`       | `eslint-plugin-react-hooks`                                                 |
+| Package               | 経路 (`bun why` 実測)                                                       |
+| --------------------- | --------------------------------------------------------------------------- |
+| `@grpc/grpc-js`       | `google-gax` → `@google-analytics/data`                                     |
+| `pg`                  | `@prisma/adapter-pg`（`better-auth` の optional peer でもある）             |
+| `protobufjs`          | `@grpc/proto-loader` / `proto3-json-serializer` → `google-gax`              |
+| `minimatch`           | `@eslint/config-array` / `@typescript-eslint/typescript-estree` → `eslint`  |
+| `fast-uri`            | `ajv` → `@prisma/dev`(prisma) / `eslint`                                    |
+| `postcss`             | `next` / `sanitize-html` / `@tailwindcss/postcss`                           |
+| `hono`                | `@prisma/dev` → `prisma`                                                    |
+| `qs`                  | `googleapis-common` → `googleapis`／`body-parser` → `express` → `@lhci/cli` |
+| `@tootallnate/once`   | `http-proxy-agent`（proxy スタック）                                        |
+| `@hono/node-server`   | `@prisma/dev` → `prisma`                                                    |
+| `basic-ftp`           | `get-uri` → `pac-proxy-agent` → `proxy-agent` → `@lhci/cli`                 |
+| `flatted`             | `flat-cache` → `file-entry-cache` → `eslint`（キャッシュ層）                |
+| `ip-address`          | `socks` → `socks-proxy-agent`                                               |
+| `picomatch`           | `micromatch` / `tinyglobby` / `fdir`                                        |
+| `tmp`                 | `exceljs`／`@lhci/cli`・`external-editor`                                   |
+| `playwright-core`     | `playwright` → `@playwright/test`（E2E runner と lockstep）                 |
+| `brace-expansion`     | `minimatch` のみ                                                            |
+| `uuid`                | `exceljs`／`@lhci/cli`                                                      |
+| `ws`                  | `happy-dom` → `@lexical/headless`／`lighthouse`・`socket.io-adapter`        |
+| `happy-dom`           | `@lexical/headless` の内部フォールバック DOM                                |
+| `undici`              | `jsdom`（jsdom 30 は `undici ^8.9.0` を要求。7 系に留めると range 違反）    |
+| `sharp`               | `next` の optionalDependency（画像処理）                                    |
+| `valibot`             | `@prisma/dev` → `prisma`／`@t3-oss/env-core`                                |
+| `nanoid`              | `postcss`（GHSA-2v37-7h3g-55p8: size 0 で無限ループ）                       |
+| `js-yaml`             | `@lhci/utils` → `@lhci/cli`                                                 |
+| `body-parser`         | `express` → `@lhci/cli`                                                     |
+| `socket.io-parser`    | `socket.io` → `react-email`                                                 |
+| `@babel/core`         | `eslint-plugin-react-hooks`                                                 |
+| `@puppeteer/browsers` | `puppeteer-core` → `lighthouse` → `@lhci/cli`                               |
 
-## 誤解しやすい 2 件
+## 誤解しやすい 3 件
 
 - **`happy-dom` はテスト用の DOM ではない。** リポジトリのコードは
   テスト・本番とも JSDOM を明示的に使う（`__tests__/setup-dom.ts`、
@@ -73,6 +74,21 @@ pin 表。この表は required status check **`Dependency Audit (bun audit)`**
   `@lexical/headless` が引く transitive の解決版を固定するためだけにある。
 - **`jsdom` は直接依存**（`package.json` の `dependencies`）であって override 対象ではない。
   override しているのはその transitive の `undici`。
+- **`@puppeteer/browsers` は「脆弱な package を上げる」pin ではなく「脆弱な package を
+  木から落とす」pin。** advisory が出たのは `extract-zip`（GHSA-jmr9-qjv8-65gv、
+  symlink path traversal、high）だが、**`extract-zip` には修正版が存在しない**
+  （影響範囲 `<=2.0.1` で、npm 上の最新も 2.0.1）。したがって `extract-zip` を直接
+  pin しても解消できない。`@puppeteer/browsers` は 3.x で `extract-zip` への依存を
+  やめている（3.2.0 の依存は `modern-tar` と `yargs` のみ）ので、親を上げることで
+  `extract-zip` が木から消える。
+  `puppeteer-core@24` は `@puppeteer/browsers` を**完全固定**で要求するため、これは
+  意図的に固定を跨ぐ override である。互換性は実測で確認した: puppeteer-core が
+  `@puppeteer/browsers` から import する 13 個の名前は 3.2.0 にすべて存在し、
+  Node での `import("puppeteer-core")` も成功する。加えて Lighthouse CI は
+  `chrome-launcher` で既存 Chrome を検出する構成（`.lighthouserc.json` に
+  `chromePath` の指定は無い）で、`@puppeteer/browsers` のブラウザ取得経路を使わない。
+  `@lhci/cli` が `lighthouse` を、`lighthouse` が `puppeteer-core` を完全固定して
+  いるため、上流の更新で解消できる見込みが立つまではこの pin を外せない。
 
 ## overrides の適用範囲
 
