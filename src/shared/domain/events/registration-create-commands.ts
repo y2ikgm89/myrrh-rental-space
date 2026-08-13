@@ -11,6 +11,7 @@ import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { lockEventRegistrationForTransaction } from "./waitlist-locks";
+import { EventRegistrationSource } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
@@ -168,6 +169,9 @@ export async function createEventRegistrationCommand(data: {
           note: data.note ?? null,
           quantity: data.quantity,
           customerId: data.customerId ?? null,
+          // 公開申込フォーム経由。Stripe checkout を前提とするので未決済
+          // fail-safe cron の対象になる（`unpaid-expiry.ts`）。
+          source: EventRegistrationSource.ONLINE,
         },
         select: {
           id: true,

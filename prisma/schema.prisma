@@ -365,6 +365,32 @@ enum RegistrationStatus {
   @@map("registration_status")
 }
 
+/// 申込がどの経路で作られたか。**未決済 fail-safe cron の対象を決める。**
+///
+/// cron は「Stripe checkout を開いたまま離脱した席」を解放するためのもので、
+/// 判定材料は `paymentStatus = UNPAID` + 経過時間しか無い。ところが
+/// `EventRegistration` の既定は `status = CONFIRMED` / `paymentStatus = UNPAID`
+/// なので、**現地で現金を受け取った当日受付も同じ形**になり、有料チケットなら
+/// 60 分で自動キャンセルされていた（出席打刻済みでも、キャンセル通知メールが飛び、
+/// 物理的に埋まっている席へキャンセル待ちが繰り上がる）。
+///
+/// 会員 / ゲストの別では区別できない。公開申込のゲストも `customerId = null` になる。
+///
+/// - ONLINE: 公開申込フォーム経由（キャンセル待ちの繰り上げ確定を含む）。
+///   Stripe checkout を前提とするので fail-safe cron の対象。
+/// - WALK_IN: 当日受付。集金は現地で、記録は手動入金で行う。cron の対象外。
+/// - ADMIN_PROXY: 管理者による代行の事前登録。集金は請求書等の場外。cron の対象外。
+///
+/// 既定を ONLINE にしてあるのは、指定を忘れた経路が「従来どおり cron の対象」に
+/// 落ちるようにするため（忘れた側が席を握り続ける方向には倒れない）。
+enum EventRegistrationSource {
+  ONLINE
+  WALK_IN
+  ADMIN_PROXY
+
+  @@map("event_registration_source")
+}
+
 /// Resend Webhook (email.bounced / email.complained) で観測された配信状態。
 /// Gmail Feb 2024 / Yahoo bulk sender 要件 (complaint rate < 0.3%) 対応で、
 /// HARD_BOUNCED / COMPLAINED 宛先には送信前に suppress する。
@@ -2630,6 +2656,8 @@ model EventRegistration {
   note            String?            @db.Text
   quantity        Int                @default(1)
   status          RegistrationStatus @default(CONFIRMED)
+  /// 作成経路。未決済 fail-safe cron の対象可否を決める（enum 側のコメント参照）。
+  source          EventRegistrationSource @default(ONLINE)
   customerId      String?            @map("customer_id") @db.Uuid
   cancelledAt     DateTime?          @map("cancelled_at") @db.Timestamptz(6)
   cancelledByType CancelledBy? @map("cancelled_by_type")

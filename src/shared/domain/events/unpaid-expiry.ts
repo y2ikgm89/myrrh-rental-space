@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  EventRegistrationSource,
   PaymentStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
@@ -86,9 +87,26 @@ function unpaidBranches(cutoff: Date, asyncCutoff: Date) {
   ];
 }
 
+/**
+ * この cron が回収してよいのは **ONLINE 経由の申込だけ**。
+ *
+ * `EventRegistration` の既定は `status = CONFIRMED` / `paymentStatus = UNPAID` で、
+ * 当日受付（WALK_IN）も管理者代行（ADMIN_PROXY）も同じ形になる。`ticket.price > 0`
+ * の条件は無料チケットしか守らないので、**有料イベントの当日受付は 60 分で自動
+ * キャンセルされていた** — 出席打刻済みでもキャンセル通知メールが飛び、物理的に
+ * 埋まっている席へキャンセル待ちが繰り上がる。
+ *
+ * この 2 経路は Stripe checkout を持たない（集金は現地現金・請求書）。放置された
+ * checkout を回収するという cron の前提が最初から成立しないので、時間で回収する
+ * 意味が無い。未回収の席は作った管理者が畳む。
+ *
+ * webhook が書き込む列（`stripePaymentIntentId` 等）と違い、`source` は作成時に
+ * 確定して以後動かない事実なので、**恒久的に除外して問題ない**。
+ */
 function staleRegistrationCandidateWhere(cutoff: Date, asyncCutoff: Date) {
   return {
     status: RegistrationStatus.CONFIRMED,
+    source: EventRegistrationSource.ONLINE,
     paymentStatus: {
       in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
     },
@@ -107,6 +125,7 @@ function staleRegistrationClaimWhere(
   return {
     id: registrationId,
     status: RegistrationStatus.CONFIRMED,
+    source: EventRegistrationSource.ONLINE,
     paymentStatus: {
       in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
     },

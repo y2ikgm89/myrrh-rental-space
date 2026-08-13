@@ -12,6 +12,7 @@ import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { WAITLIST_OFFER_TTL_MS } from "./waitlist-offer-constants";
 import { recordTermsAgreements } from "@/shared/domain/terms/commands";
+import { EventRegistrationSource } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Register a customer to the waitlist for a specific (event, slot, ticket) combination.
@@ -157,6 +158,9 @@ export async function registerWaitlistEntryCommand(data: {
           note: data.note ?? null,
           quantity: data.quantity,
           customerId: data.customerId ?? null,
+          // 公開フォーム経由。繰り上げ当選の確定は Stripe checkout を通るので
+          // ONLINE のままでよい（`unpaid-expiry.ts` の対象）。
+          source: EventRegistrationSource.ONLINE,
           status: RegistrationStatus.WAITLISTED,
           waitlistedAt: now,
         },

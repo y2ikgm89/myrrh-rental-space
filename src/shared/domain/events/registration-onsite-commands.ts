@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import {
+  EventRegistrationSource,
   EventStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
@@ -117,6 +118,10 @@ export async function createWalkInRegistrationCommand(data: {
           note: data.note ?? null,
           quantity: data.quantity,
           customerId: null,
+          // 現地で集金するので Stripe checkout は存在しない。未決済 fail-safe cron
+          // の対象から外す（`unpaid-expiry.ts`）。ここを ONLINE のままにすると、
+          // 有料チケットの当日受付が 60 分で自動キャンセルされる。
+          source: EventRegistrationSource.WALK_IN,
           attendedAt: new Date(),
         },
         select: {
@@ -258,6 +263,8 @@ export async function createAdminProxyRegistrationCommand(data: {
           note: data.note ?? null,
           quantity: data.quantity,
           customerId: null,
+          // 集金は請求書等の場外。walk-in と同じく fail-safe cron の対象外。
+          source: EventRegistrationSource.ADMIN_PROXY,
           // walk-in と対称: admin proxy は「事前登録」なので出席は打たない。
           // 当日 CheckInClient から出席トグルを別途叩く。
           attendedAt: null,

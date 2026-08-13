@@ -48,6 +48,10 @@ import { readPrismaSchema } from "../../support/prisma-sources";
  */
 const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
   [
+    "src/shared/db/prisma.ts::source",
+    "`logPoolError(source: string)` の引数。pool エラーの発生元を表す自由文字列で、EventRegistration.source（申込の作成経路）とは無関係",
+  ],
+  [
     "src/shared/lib/turnstile.ts::action",
     "Cloudflare Turnstile の検証応答（`VerifyTurnstileResult`）。値域は Cloudflare が決めるので AuditAction とは無関係",
   ],
