@@ -266,12 +266,20 @@ describeMaybe("自動返金コマンドは実 DB に Refund 行を書く", () =>
     }
   });
 
-  test("金額不一致: 同じ stripeRefundId で 2 回走っても Refund は 1 件のまま", async () => {
+  test("金額不一致: 予約がまだ対象のまま stripeRefundId が衝突しても、savepoint で握りつぶして 1 件に収める", async () => {
+    // **`already_refunded` の早期 return では savepoint 経路に到達しない。**
+    // prepare トランザクションが `paymentStatus === REFUNDED` を見て抜けるため、
+    // 単に 2 回呼ぶだけでは `createRefundRecordIdempotent` が走らない（Codex P2）。
+    //
+    // ここでは「予約はまだ返金対象のまま、同じ stripeRefundId の Refund だけが
+    // 先に存在する」状態を作る。webhook が Stripe の refund を先に記録したあとで
+    // このコマンドが走る競合に相当する。コマンドは最後まで進み、
+    // `refund.create` が `Refund.stripeRefundId` の unique 違反で落ちて
+    // `ROLLBACK TO SAVEPOINT` される — そこを通ることを見ている。
     const paymentIntentId = `pi_mismatch_dup_${crypto.randomUUID()}`;
-    nextStripeRefund = {
-      id: `re_mismatch_dup_${crypto.randomUUID()}`,
-      status: "succeeded",
-    };
+    const collidingRefundId = `re_mismatch_dup_${crypto.randomUUID()}`;
+    nextStripeRefund = { id: collidingRefundId, status: "succeeded" };
+
     const { reservationId, cleanup } = await createReservationFixture({
       status: ReservationStatus.PENDING,
       paymentStatus: PaymentStatus.PENDING,
@@ -279,21 +287,34 @@ describeMaybe("自動返金コマンドは実 DB に Refund 行を書く", () =>
     });
 
     try {
-      await refundCheckoutAmountMismatchForReservation({
+      // 先客。金額はコマンドが書こうとする値とわざと変えて、
+      // 「握りつぶした側が残る（上書きしない）」ことも見えるようにする。
+      await prisma.refund.create({
+        data: {
+          reservationId,
+          amount: TOTAL_WITH_TAX,
+          stripeRefundId: collidingRefundId,
+          refundedByType: "AUTO_AMOUNT_MISMATCH",
+          status: "pending",
+          reason: "先に webhook が記録した行",
+        },
+      });
+
+      const result = await refundCheckoutAmountMismatchForReservation({
         reservationId,
         stripePaymentIntentId: paymentIntentId,
         capturedAppAmount: TOTAL_WITH_TAX,
       });
 
-      // webhook の再配送。1 回目で REFUNDED になっているので早期に抜ける。
-      const second = await refundCheckoutAmountMismatchForReservation({
-        reservationId,
-        stripePaymentIntentId: paymentIntentId,
-        capturedAppAmount: TOTAL_WITH_TAX,
-      });
-      expect(second.outcome).toBe("already_refunded");
+      // unique 違反を握りつぶしたあとも tx は生きていて、後続の
+      // paymentStatus 更新まで到達する。
+      expect(result.outcome).toBe("refunded");
 
-      expect(await refundRowsOf(reservationId)).toHaveLength(1);
+      const rows = await refundRowsOf(reservationId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.stripeRefundId).toBe(collidingRefundId);
+
+      expect(await paymentStatusOf(reservationId)).toBe(PaymentStatus.REFUNDED);
     } finally {
       await cleanup();
     }
@@ -362,7 +383,7 @@ describeMaybe("自動返金コマンドは実 DB に Refund 行を書く", () =>
     }
   });
 
-  test("orphan: 2 回目は already_refunded で Refund を増やさない", async () => {
+  test("orphan: 2 回目は prepare 段で already_refunded に抜ける（Refund を増やさない）", async () => {
     const paymentIntentId = `pi_orphan_dup_${crypto.randomUUID()}`;
     nextStripeRefund = {
       id: `re_orphan_dup_${crypto.randomUUID()}`,
