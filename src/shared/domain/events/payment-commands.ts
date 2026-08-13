@@ -294,7 +294,10 @@ export async function createEventCheckoutSessionCommand(input: {
         cancel_url: `${appUrl}/events/registrations/payment-result?payment=cancelled&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
       },
       {
-        idempotencyKey: `checkout/event-registration/${registrationId}/pending-claim`,
+        // key は payload と一緒に動かす（理由は予約側 `reservations/payment-commands.ts`
+        // の同項コメント）。`expires_at` は claim 時刻由来で毎回変わるため、
+        // 固定 key だと 24 時間以内の再 checkout が Stripe の 400 で弾かれる。
+        idempotencyKey: `checkout/event-registration/${registrationId}/${String(expiresAt)}`,
       },
     );
     createdSessionId = session.id;

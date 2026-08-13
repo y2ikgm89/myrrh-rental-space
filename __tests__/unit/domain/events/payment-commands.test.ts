@@ -62,7 +62,10 @@ const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>(
     }),
 );
 const mockCheckoutSessionCreate = mock<
-  (args: Record<string, unknown>) => Promise<{ id: string; url: string | null }>
+  (
+    args: Record<string, unknown>,
+    options?: { idempotencyKey?: string },
+  ) => Promise<{ id: string; url: string | null }>
 >(() =>
   Promise.resolve({
     id: "cs_test_waitlist",
@@ -765,6 +768,36 @@ describe("events/payment-commands", () => {
       expect(settleCall).toMatchObject({
         data: expect.objectContaining({ paidAmount: 18000 }),
       });
+    });
+
+    test("idempotency key は expires_at と一緒に動く（再 checkout が 400 で弾かれない）", async () => {
+      // `expires_at` は claim 時刻由来なので再 checkout のたびに変わる。
+      // key を registration ID で固定すると、Stripe が「同じ key に違う
+      // parameters」として 400 (idempotency_error) を返し、24 時間以内の
+      // 再試行で**顧客が支払えなくなる**。偶然 expires_at まで一致した場合は
+      // 初回の（既に期限切れの）session がそのまま返る。
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+
+      const call = mockCheckoutSessionCreate.mock.calls[0];
+      const sessionArgs = call?.[0] as { expires_at?: number } | undefined;
+      const options = call?.[1] as { idempotencyKey?: string } | undefined;
+
+      expect(sessionArgs?.expires_at).toEqual(expect.any(Number));
+      // 送った payload の可変部分が key に載っていること。
+      expect(options?.idempotencyKey).toContain(
+        String(sessionArgs?.expires_at),
+      );
     });
 
     test("Stripe session に expires_at (cron cutoff と同期) が指定される", async () => {
