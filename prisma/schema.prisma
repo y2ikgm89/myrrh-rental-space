@@ -931,6 +931,19 @@ model Reservation {
   /// 決済を開始したケース (createdAt < cutoff だが checkout はまだ生きている) を誤爆
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
   paymentInitiatedAt      DateTime?     @map("payment_initiated_at") @db.Timestamptz(6)
+  /// paymentStatus が FAILED に遷移した時刻。fail-safe cron
+  /// (`/api/cron/pending-reservation-expire`) が FAILED の枠を解放する猶予の起点に使う。
+  ///
+  /// 専用列を持つ理由: `updatedAt` は「行が最後に触られた時刻」であって「決済が失敗した
+  /// 時刻」ではない。`calendar-sync-retry` cron は 15 分ごとに `calendarSyncError` を
+  /// 書き直すため、Google Calendar が落ちている間 `updatedAt` が更新され続け、60 分の
+  /// cutoff に永久に到達しない（枠を握ったままになる）。`paymentInitiatedAt` も使えない
+  /// — checkout 開始時刻なので、Stripe session の expires_at と同値になり、FAILED が
+  /// 書かれた時点で既に cutoff を過ぎている（= 再決済の猶予がゼロになる）。
+  ///
+  /// EventRegistration 側は `updatedAt` のままでよい。`calendarSyncError` に相当する列も
+  /// 周期的に書き直す経路も持たないため、同じ livelock が成立しない。
+  paymentFailedAt         DateTime?     @map("payment_failed_at") @db.Timestamptz(6)
 
   // Cancellation tracking
   cancellationReason String?   @map("cancellation_reason") @db.Text

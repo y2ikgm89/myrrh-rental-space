@@ -88,7 +88,7 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockApplyCancellationSideEffects.mockResolvedValue(undefined);
   });
 
-  test("predicate: status ∈ {PENDING, CONFIRMED} + 未決済 3 分岐（通常 PENDING / 非同期決済 / FAILED）", async () => {
+  test("predicate: status ∈ {PENDING, CONFIRMED} + 未決済 4 分岐（通常 PENDING / 非同期決済 / FAILED / 旧 FAILED）", async () => {
     await expireStalePendingReservationsCommand();
 
     const where = mockReservationFindMany.mock.calls[0]?.[0]?.["where"] as {
@@ -102,7 +102,7 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
       in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
     });
 
-    // 3 分岐がすべて存在すること。EXCLUDE 制約は status だけで枠を押さえるので、
+    // 全分岐が存在すること。EXCLUDE 制約は status だけで枠を押さえるので、
     // FAILED の枝が欠けると枠が恒久的に埋まる（Codex P1 レビュー指摘）。
     expect(where.OR).toEqual([
       {
@@ -116,10 +116,16 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
         paymentInitiatedAt: { lt: expect.any(Date) },
       },
       {
-        // FAILED だけ `updatedAt` を見る。`claimReservationAsFailed` は
-        // `paymentInitiatedAt` を触らないため、それを基準にすると FAILED が
-        // 書かれた瞬間に回収対象になり再決済の猶予が消える。
+        // FAILED は専用列で見る。`paymentInitiatedAt` だと FAILED が書かれた瞬間に
+        // 回収対象になり再決済の猶予が消え、`updatedAt` だと calendar-sync リトライが
+        // 15 分ごとに更新するため cutoff に到達しない。
         paymentStatus: PaymentStatus.FAILED,
+        paymentFailedAt: { lt: expect.any(Date) },
+      },
+      {
+        // 列の導入前からある FAILED 行の回収（掃けたら削除してよい）
+        paymentStatus: PaymentStatus.FAILED,
+        paymentFailedAt: null,
         updatedAt: { lt: expect.any(Date) },
       },
     ]);
