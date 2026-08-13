@@ -217,16 +217,22 @@ const nextConfig: NextConfig = {
     // `01-app/03-api-reference/05-config/01-next-config-js/serverActions.md`:
     // "the maximum size of the request body sent to a Server Action is 1MB"）。
     //
-    // お問い合わせ添付（`uploadInquiryAttachment`）は Server Action で File を
-    // 受け取り、アプリ側は PDF 10MB / 画像 5MB まで受け付ける建て付けになって
-    // いた。既定のままだと 1MB を超えた時点でフレームワークが request を弾き、
-    // action は返らないので `MutationResult` も toast も出ず**無言で失敗**する。
+    // Server Action で File を受ける経路は 2 つある。どちらも既定のままだと
+    // 1MB を超えた時点でフレームワークが request を弾き、action は返らないので
+    // `MutationResult` も toast も出ず**無言で失敗**する。
     //
-    // 値は書き写さず SSoT から導出する（`INQUIRY_ATTACHMENT_MAX_SIZE_BYTES` +
+    //   - `uploadInquiryAttachment` — PDF 10MB / 画像 5MB
+    //   - `uploadMedia`（`admin/actions/media.ts`）— 動画 50MB / 音声 20MB。
+    //     `MediaUploadDialog` / `ImageDropPlugin` / `use-media-upload` の 3 箇所から呼ぶ
+    //
+    // **`/admin/api/media` の Route Handler は数えない。** 同じ機能の POST が
+    // 実在するが client は GET しか叩いておらず、アップロードは Server Action 側を
+    // 通る。「メディアは Route Handler だから対象外」と読むと動画が 413 になる
+    // （一度そう書いて、実際に 10MB 上限のまま放置した）。
+    //
+    // 値は書き写さず SSoT から導出する（`MEDIA_MAX_SIZE_BYTES` **全体の最大値** +
     // multipart のオーバーヘッド）。per-MIME 上限を動かしたらここも一緒に動く。
-    //
-    // 管理画面のメディアアップロードは Route Handler（`/admin/api/media`）なので
-    // この上限の対象外。動画 50MB を通しているのはそちら。
+    // **特定経路の上限から導き直さない。** それが上の取りこぼしの作り方だった。
     serverActions: {
       bodySizeLimit: SERVER_ACTION_BODY_SIZE_LIMIT_BYTES,
     },
