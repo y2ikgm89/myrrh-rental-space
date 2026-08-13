@@ -172,6 +172,10 @@ const { AutoSectionForm } =
   await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form");
 const { featuresConfigSchema } =
   await import("@/shared/lib/sections/definitions/features/schema");
+const { ctaConfigSchema } =
+  await import("@/shared/lib/sections/definitions/cta/schema");
+const { formatZodFieldErrors } =
+  await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form/helpers");
 import type { PageSectionData } from "@/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types";
 
 function buildFeaturesSection(): PageSectionData {
@@ -181,6 +185,21 @@ function buildFeaturesSection(): PageSectionData {
     type: "features",
     // items 配列は空 (default []) — AutoArrayField が「追加」ボタンのみ描画
     config: featuresConfigSchema.parse({}),
+    configUnreadable: false,
+    order: 0,
+    isActive: true,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  };
+}
+
+/** buttons 配列を持つ section。url は必須かつ内部パスのみ許可される。 */
+function buildCtaSection(): PageSectionData {
+  return {
+    id: "section-cta-id",
+    pageId: "page-test-id",
+    type: "cta",
+    config: ctaConfigSchema.parse({}),
     configUnreadable: false,
     order: 0,
     isActive: true,
@@ -250,5 +269,67 @@ describe("AutoSectionForm", () => {
     // item が 1 件追加され、空プレースホルダーが消える
     expect(container.textContent).not.toContain("アイテムが追加されていません");
     expect(container.textContent).toContain("#1");
+  });
+
+  // 配列アイテムのエラーキーが、conform が実際に描画する input の `name` と
+  // 一致することを固定する。
+  //
+  // 壊れていたとき: `formatZodFieldErrors` が zod の path `["buttons",0,"url"]` を
+  // `buttons.0.url` にしていた。conform の name は `buttons[0].url` なので
+  // `field.errors` は空のままで、エラーは 1 文字も描画されない。さらに conform は
+  // status !== "success" で submit を止めるため **保存ボタンが無反応**になる。
+  // 画面には「未保存の変更があります」だけが残り、原因を示すものが何も無い。
+  //
+  // 期待値は**描画された DOM から取る**。両側を手で書くと、同じ思い込みで
+  // 両方書けてしまい drift を検出できない（それが元の欠陥の作られ方だった）。
+  //
+  // なお submit を流して「エラー文言が出ること」までは、この環境では見られない。
+  // jsdom 側の制約で `new FormData(form)` が空を返し、form 内に 25 個の input が
+  // あっても conform の `parse` に何も渡らないため、検証が常に成功してしまう。
+  test("配列アイテムのエラーキーが conform の field name と一致する", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const localRoot = createRoot(container);
+    root = localRoot;
+
+    act(() => {
+      localRoot.render(
+        <AutoSectionForm
+          section={buildCtaSection()}
+          onSave={() => undefined}
+          isPending={false}
+        />,
+      );
+    });
+
+    // ボタンを 1 件追加して、配列アイテムの input を描画させる。
+    const addButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("追加"),
+    );
+    act(() => {
+      addButton?.click();
+    });
+
+    const renderedName = Array.from(
+      container.querySelectorAll<HTMLInputElement>("input[name]"),
+    )
+      .map((input) => input.name)
+      .find((name) => name.endsWith("url"));
+    // gate 自体が空振りしていないこと（描画されていなければ以降は無意味）。
+    expect(renderedName).toBeDefined();
+    if (renderedName === undefined) return;
+
+    // 同じ入力を schema に流して、エラーキーを作らせる。
+    const invalid = {
+      ...ctaConfigSchema.parse({}),
+      buttons: [{ url: "https://example.com" }],
+    };
+    const result = ctaConfigSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    expect(Object.keys(formatZodFieldErrors(result.error))).toContain(
+      renderedName,
+    );
   });
 });
