@@ -578,15 +578,29 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   return createResponse(req, pathname);
 }
 
+/**
+ * **`missing` で prefetch を除外しない。**
+ *
+ * かつてここには
+ * `missing: [{ header: "next-router-prefetch" }, { header: "purpose", value: "prefetch" }]`
+ * が入っていた。Next の matcher における `missing` は「そのヘッダが無いときだけ
+ * middleware を走らせる」という意味なので、**リクエストにヘッダを 1 本足すだけで
+ * この関数のガードが丸ごと飛ぶ**。飛ぶのは次の全部:
+ *
+ * - `isBlockedOnPublicSurface` による surface 分離（public サービス上の
+ *   `/admin` `/api/admin` `/api/health` 等の 404）。両 surface は**同一ビルド**で
+ *   `APP_SURFACE` は Cloud Run の runtime 変数なので、public のデプロイにも
+ *   admin のルートは存在する。ここの 404 が唯一の分離。
+ * - `/api/**` の rate limit（webhook / cron バケットを含む）
+ * - `createResponse` が付ける CSP を含むセキュリティヘッダ
+ * - guest / claim token の cookie 移送と admin alias の redirect
+ *
+ * prefetch は Next のルーターが `<Link>` に対して出すもので、`/api/**` は叩かない。
+ * つまり除外しても rate limit の消費は減らず、**得られるものが無い**。
+ * 素通しできる経路だけが残る。
+ */
 export const config = {
   matcher: [
-    {
-      source:
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
   ],
 };
