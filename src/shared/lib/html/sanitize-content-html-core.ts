@@ -48,6 +48,8 @@ const LEXICAL_ALLOWED_TAGS = [
   "iframe",
   "audio",
   "button",
+  "sub",
+  "sup",
   "abbr",
   ...LEXICAL_CURATED_ICON_SVG_TAGS,
 ] as const;
@@ -84,6 +86,7 @@ export function sanitizeLexicalContentHtml(html: string): string {
       col: ["style"],
       details: ["open"],
       abbr: ["tabindex"],
+      button: ["type"],
       iframe: [...IFRAME_ATTRIBUTES],
       audio: ["src", "controls", "preload"],
       ...LEXICAL_CURATED_ICON_SVG_ATTRIBUTES,
@@ -109,6 +112,13 @@ export function sanitizeLexicalContentHtml(html: string): string {
           },
         };
       },
+      button: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          type: "button",
+        },
+      }),
     },
     disallowedTagsMode: "discard",
     enforceHtmlBoundary: true,
