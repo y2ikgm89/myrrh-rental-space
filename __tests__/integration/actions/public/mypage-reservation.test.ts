@@ -35,6 +35,26 @@ import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch
 // =============================================================================
 
 // server-only モック
+// メンテナンス判定は書込の前段ガード（監査 F-38）。実装は fail-closed で、
+// 設定が読めないと true（＝ブロック）を返すため、テストでは明示的に「通す」。
+// メンテナンス判定は書込の前段ガード（監査 F-38）。実装は fail-closed で、
+// 設定が読めないと true（＝ブロック）を返すため、テストでは明示的に切り替える。
+let maintenanceModeOn = false;
+const MAINTENANCE_MESSAGE =
+  "只今メンテナンス中のため、操作を受け付けておりません。しばらくお待ちください。";
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() =>
+    Promise.resolve(
+      maintenanceModeOn
+        ? { ok: false as const, error: MAINTENANCE_MESSAGE }
+        : { ok: true as const },
+    ),
+  ),
+  getPublicMaintenanceBlockMutation: mock(() =>
+    Promise.resolve(maintenanceModeOn ? { error: MAINTENANCE_MESSAGE } : null),
+  ),
+}));
+
 mock.module("server-only", () => ({}));
 
 // next/headers モック
@@ -1203,5 +1223,26 @@ describe("updateReservationAction", () => {
 
       expect(result.success).toBe(false);
     });
+  });
+});
+
+describe("メンテナンスモード（監査 F-38）", () => {
+  // MaintenanceGate は描画層しか塞がない。モード ON の直前にページを開いていた
+  // 会員（や Server Action を直接叩く相手）は、旧実装だと書込を実行できた。
+  // cancel は applyCancellationSideEffects まで到達し、書込凍結中に Stripe 返金・
+  // GCal 削除・メール・監査ログが発火する。
+  test("cancelReservationAction はメンテナンス中に実行されない", async () => {
+    maintenanceModeOn = true;
+    mockCancelCustomerReservation.mockClear();
+    try {
+      const { cancelReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+      const result = await cancelReservationAction(VALID_RESERVATION_ID, null);
+
+      expect(result).not.toBeNull();
+      expect(mockCancelCustomerReservation).not.toHaveBeenCalled();
+    } finally {
+      maintenanceModeOn = false;
+    }
   });
 });
