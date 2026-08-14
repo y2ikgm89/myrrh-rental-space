@@ -69,19 +69,29 @@ export function AutoGroupField<TForm extends Record<string, unknown>>({
           )}
         />
       </button>
-      {isOpen && (
-        <CardContent className="pt-0 space-y-4">
-          {subFields.map((subField) => {
-            const subFieldMeta = fieldset[subField.key];
-            if (!subFieldMeta) return null;
-            return renderField(
-              subField,
-              subFieldMeta,
-              groupDefaultValue[subField.key],
-            );
-          })}
-        </CardContent>
-      )}
+      {/*
+        折りたたみは**表示だけ**の操作。unmount してはいけない（監査 F-35）。
+
+        conform は送信時の FormData から payload を組む。input が DOM から消えると
+        `image.url` / `image.alt` が 1 件も入らず、schema 側の `.prefault({})` が
+        `{url:"",alt:""}` を補って **parse は成功する**。つまり
+        `submission.status === "success"` のまま `onSave` まで到達し、選択済みの
+        画像 URL が空文字で上書き保存される。エラーも警告も出ないので、admin は
+        画像が消えた理由を知る手がかりが無い。
+
+        Tabs 側で `forceMount` を選んだのと同じ理由。
+      */}
+      <CardContent className="pt-0 space-y-4" hidden={!isOpen}>
+        {subFields.map((subField) => {
+          const subFieldMeta = fieldset[subField.key];
+          if (!subFieldMeta) return null;
+          return renderField(
+            subField,
+            subFieldMeta,
+            groupDefaultValue[subField.key],
+          );
+        })}
+      </CardContent>
     </Card>
   );
 }

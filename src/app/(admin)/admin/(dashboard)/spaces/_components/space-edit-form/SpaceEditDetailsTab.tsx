@@ -63,6 +63,13 @@ export function SpaceEditDetailsTab({
   availableSmartLockDevices,
   fields,
 }: SpaceEditDetailsTabProps) {
+  // 設備は配列。`errors` は**この field 自身**のエラーしか持たないので、
+  // 子要素（`facilities[0].name` 等）で落ちると画面に何も出ないまま保存が
+  // 止まる（監査 F-29）。`allErrors` は子孫ぶんも含む。
+  const facilityErrors = Object.values(fields.facilities.allErrors).flat();
+  const facilityErrorText =
+    facilityErrors.length > 0 ? facilityErrors.join(", ") : null;
+
   return (
     <TabsContent
       value="details"
@@ -139,11 +146,9 @@ export function SpaceEditDetailsTab({
                       onAddFacility();
                     }
                   }}
-                  aria-invalid={fields.facilities.errors ? true : undefined}
+                  aria-invalid={facilityErrorText ? true : undefined}
                   aria-describedby={
-                    fields.facilities.errors
-                      ? fields.facilities.errorId
-                      : undefined
+                    facilityErrorText ? fields.facilities.errorId : undefined
                   }
                 />
               </div>
@@ -191,12 +196,12 @@ export function SpaceEditDetailsTab({
                 ))}
               </div>
             )}
-            {fields.facilities.errors && (
+            {facilityErrorText && (
               <p
                 id={fields.facilities.errorId}
                 className="text-sm text-destructive"
               >
-                {fields.facilities.errors.join(", ")}
+                {facilityErrorText}
               </p>
             )}
           </CardContent>

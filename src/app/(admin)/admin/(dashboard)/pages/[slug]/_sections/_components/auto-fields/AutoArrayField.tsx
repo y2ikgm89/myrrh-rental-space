@@ -21,6 +21,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   getArrayConstraints,
   getArrayItemShape,
+  getSelectInitialValue,
   extractFieldMetaDeep,
 } from "../zod-introspection";
 import type { ArrayItemFieldInfo } from "../zod-introspection";
@@ -73,23 +74,23 @@ export function AutoArrayField<TForm extends Record<string, unknown>>({
   })();
 
   // 新しいアイテムのデフォルト値を生成
+  // - select は **`""` を入れない**（監査 F-34）。enum は `""` を
+  //   拒否し、`ZodDefault` は input===undefined のときしか発火しないので、
+  //   1 件追加しただけでそのセクション全体が保存不能になる（しかも無言）。
   // - boolean / number は空文字列で初期化 (schema preprocess が default 適用に委ねる)
-  // - portable-text 系は空配列
-  // - その他 string 系は空文字列
+  // - portable-text 系・その他 string 系も空文字列
   const createEmptyItem = (): Record<string, string | null | undefined> => {
     const empty: Record<string, string | null | undefined> = {};
     for (const f of itemFields) {
-      if (f.meta) {
-        switch (f.meta.fieldType) {
-          case "portable-text-inline":
-          case "portable-text-block":
-            empty[f.key] = "";
-            break;
-          default:
-            empty[f.key] = "";
+      switch (f.meta?.fieldType) {
+        case "select": {
+          const initial = getSelectInitialValue(f.schema);
+          // 候補が取れないときはキーごと入れない（ZodDefault に任せる）。
+          if (initial !== undefined) empty[f.key] = initial;
+          break;
         }
-      } else {
-        empty[f.key] = "";
+        default:
+          empty[f.key] = "";
       }
     }
     return empty;

@@ -67,8 +67,13 @@ const coerceBoolean = (value: unknown): boolean =>
  */
 const facilitiesFormSchema = z.preprocess((value) => {
   if (value === undefined || value === null || value === "") return [];
-  if (!isUnknownArray(value)) return value;
-  return value
+  // **同名 input がちょうど 1 件のとき、FormData.getAll ではなく単一値で届く。**
+  // 配列でなければ 1 要素として扱う（監査 F-29）。旧実装はそのまま返しており、
+  // `facilitiesSchema`（array）が文字列を拒否 → submission.status="error"。
+  // しかもエラーキーは子要素側なので、画面には何も出ない。設備 0 件・2 件以上は
+  // 通るため、管理者からは「保存ボタンが効かない」としか見えなかった。
+  const items = isUnknownArray(value) ? value : [value];
+  return items
     .map((item) => {
       if (typeof item === "string") {
         const trimmed = item.trim();
