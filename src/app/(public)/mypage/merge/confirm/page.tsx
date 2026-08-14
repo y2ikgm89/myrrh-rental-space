@@ -19,6 +19,7 @@ import {
   publicQueryRateLimiter,
 } from "@/shared/lib/rate-limit";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { mergeConfirmWarningText } from "@/app/(public)/mypage/_shared/merge-query";
 import { ConfirmMergeForm } from "./_components/confirm-merge-form";
 
 export const metadata: Metadata = {
@@ -45,7 +46,9 @@ export default async function MergeConfirmPage({
   const rawToken = resolvedSearchParams["token"];
   const token = typeof rawToken === "string" ? rawToken : null;
   const rawError = resolvedSearchParams["error"];
-  const actionError = typeof rawError === "string" ? rawError : null;
+  const rawActionError = typeof rawError === "string" ? rawError : null;
+  const actionError = mergeConfirmWarningText(rawActionError);
+  const showRetry = rawActionError !== "rate_limit";
 
   if (!token) {
     return <InvalidLinkView />;
@@ -59,7 +62,7 @@ export default async function MergeConfirmPage({
       return (
         <InvalidLinkView
           message={actionError ?? undefined}
-          showRetry={actionError !== "rate_limit"}
+          showRetry={showRetry}
         />
       );
     }
@@ -103,9 +106,7 @@ function Layout({
             className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             role="alert"
           >
-            {actionError === "rate_limit"
-              ? "リクエストが多すぎます。しばらく経ってから再度お試しください。"
-              : actionError}
+            {actionError}
           </div>
         ) : null}
         {children}

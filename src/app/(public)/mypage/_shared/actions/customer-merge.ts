@@ -43,12 +43,14 @@ import {
 } from "@/shared/lib/rate-limit";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import {
+  classifyCustomerMergeConfirmError,
+  MERGE_SUCCESS_QUERY_KEY,
+  MERGE_SUCCESS_SENTINEL,
+} from "@/app/(public)/mypage/_shared/merge-query";
 
 const MERGE_VERIFICATION_SENT_MESSAGE =
   "確認メールを送信しました。メールに記載された URL をクリックして統合を完了してください。";
-
-const MERGE_SUCCESS_MESSAGE =
-  "履歴の統合が完了しました。マイページからご確認ください。";
 
 function hasTrustedEmailProvider(providers: readonly string[]): boolean {
   return CUSTOMER_TRUSTED_PROVIDERS.some((provider) =>
@@ -187,11 +189,7 @@ export async function confirmCustomerMergeAction(
     await assertLoginSignupReagreed(customer.id);
   } catch (error) {
     if (error instanceof DomainError) {
-      redirect(
-        toAppRoute(
-          `/mypage/merge/confirm?error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(token)}`,
-        ),
-      );
+      redirectMergeConfirmError(error, token);
     }
     throw error;
   }
@@ -240,17 +238,22 @@ export async function confirmCustomerMergeAction(
 
     redirect(
       toAppRoute(
-        `/mypage?mergeSuccess=${encodeURIComponent(MERGE_SUCCESS_MESSAGE)}`,
+        `/mypage?${MERGE_SUCCESS_QUERY_KEY}=${MERGE_SUCCESS_SENTINEL}`,
       ),
     );
   } catch (error) {
     if (error instanceof DomainError) {
-      redirect(
-        toAppRoute(
-          `/mypage/merge/confirm?error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(token)}`,
-        ),
-      );
+      redirectMergeConfirmError(error, token);
     }
     throw error;
   }
+}
+
+function redirectMergeConfirmError(error: DomainError, token: string): never {
+  const sentinel = classifyCustomerMergeConfirmError(error);
+  redirect(
+    toAppRoute(
+      `/mypage/merge/confirm?error=${sentinel}&token=${encodeURIComponent(token)}`,
+    ),
+  );
 }
