@@ -117,13 +117,6 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  // HTTP-03: per-serialNo rate limit (10/hour)。findReceiptForDownload (DB read) より
-  // 先に in-memory bucket でカットオフし、brute-force 探索 × usedAt 焼き潰しの単価を下げる。
-  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
-  if (!rateLimit.success) {
-    return new Response("Too many requests", { status: 429 });
-  }
-
   const receipt = await findReceiptForDownload(serialNo);
   if (!receipt) {
     return new Response("Not found", { status: 404 });
@@ -136,6 +129,15 @@ export async function GET(
     null;
   if (!customer || ownerId === null || ownerId !== customer.id) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // HTTP-03 / F-113: per-serialNo rate limit (10/hour)。ownership 通過後にだけ
+  // consume する。認証済み非所有者が他人の serialNo を連投して shared bucket
+  // (POST token 経路と共有) を焼き切るのを防ぐ。findReceiptForDownload は
+  // serialNo unique の 1 行 read なので、前倒しのコスト削減効果は小さい。
+  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
+  if (!rateLimit.success) {
+    return new Response("Too many requests", { status: 429 });
   }
 
   // CRITIC-2: session cookie + ownership が揃っていても、
