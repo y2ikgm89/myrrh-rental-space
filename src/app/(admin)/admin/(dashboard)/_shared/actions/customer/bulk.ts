@@ -13,8 +13,8 @@ import {
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { createMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { DomainError } from "@/shared/domain/domain-error";
 import { sendCustomerBroadcast } from "@/shared/domain/email/dispatch";
 import { customerBroadcastRateLimiter } from "@/shared/lib/rate-limit";
 import {
@@ -245,9 +245,10 @@ const broadcastCustomersSchema = z.object({
  * Phase 4 顧客管理強化 (Task 10): 選択顧客への一括メール送信 Server Action。
  *
  * `broadcastEventAction`（event-broadcast.ts、T12）と同じ設計判断を踏襲する:
- * - rate limit は `customerBroadcastRateLimiter` を「管理操作単位」の固定トークン
- *   (`"customer-broadcast"`) でチェックする。管理者 IP は変わり得るため IP 単位でなく
- *   操作単位の第二防壁で十分 (`executeAdminMutationResult` の RBAC + AuditLog と多層防御)。
+ * - rate limit は `executeAdminMutationResult` の execute 内（認証 + RBAC 通過後）で
+ *   `customerBroadcastRateLimiter` を「管理操作単位」の固定トークン
+ *   (`"customer-broadcast"`) でチェックする。認証前に消費すると `customer:update` を
+ *   持たない VIEWER/EDITOR が共有バケットを焼き、ADMIN を 1 時間止められる。
  * - AuditLog は `executeAdminMutationResult` 内の自動 `logAction`
  *   (resource:customer action:update) に任せる。件名/本文は個人情報増加を避けるため
  *   metadata に含めない (Resend dashboard 側で確認する運用)。
@@ -270,15 +271,17 @@ export async function broadcastCustomersAction(
   });
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  const rateLimit = await checkActionRateLimit({
-    check: (_token) => customerBroadcastRateLimiter.check("customer-broadcast"),
-  });
-  if (!rateLimit.success) return createMutationError(rateLimit.error);
-
   return executeAdminMutationResult({
     resource: "customer",
     action: "update",
     execute: async () => {
+      const rateLimit = await checkActionRateLimit({
+        check: (_token) =>
+          customerBroadcastRateLimiter.check("customer-broadcast"),
+      });
+      if (!rateLimit.success) {
+        throw new DomainError(rateLimit.error);
+      }
       const broadcastNonce = randomUUID();
       const result = await sendCustomerBroadcast(parsed.data.customerIds, {
         subject: parsed.data.subject,

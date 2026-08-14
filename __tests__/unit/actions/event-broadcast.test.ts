@@ -52,6 +52,7 @@ mock.module("@/shared/lib/rate-limit", () => ({
 
 const { broadcastEventAction } =
   await import("@/admin/actions/event-broadcast");
+const { isDomainError } = await import("@/shared/domain/domain-error");
 const { eventBroadcastSchema } =
   await import("@/shared/lib/validations/event-broadcast");
 
@@ -151,10 +152,20 @@ describe("broadcastEventAction", () => {
     expect(result).toMatchObject({ status: "error" });
   });
 
-  test("rate limit 超過時は executeAdminMutationResult を呼ばない", async () => {
+  test("rate limit 超過時も executeAdminMutationResult を呼ぶ", async () => {
     mockCheckActionRateLimit.mockResolvedValue({
       success: false,
       error: "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+    });
+    mockExecuteAdminMutationResult.mockImplementation(async (options) => {
+      try {
+        return await options.execute();
+      } catch (error) {
+        if (isDomainError(error)) {
+          return { error: error.message, code: error.code };
+        }
+        throw error;
+      }
     });
 
     const result = await broadcastEventAction(
@@ -162,7 +173,24 @@ describe("broadcastEventAction", () => {
       undefined,
       buildFormData("s", "b"),
     );
-    expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalled();
+    expect(mockSendEventBroadcast).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ status: "error" });
+  });
+
+  test("権限拒否のときは rate limit を消費しない", async () => {
+    mockExecuteAdminMutationResult.mockResolvedValue({
+      error: "eventのupdate権限がありません",
+    });
+
+    const result = await broadcastEventAction(
+      VALID_EVENT_ID,
+      undefined,
+      buildFormData("s", "b"),
+    );
+
+    expect(mockCheckActionRateLimit).not.toHaveBeenCalled();
+    expect(mockSendEventBroadcast).not.toHaveBeenCalled();
     expect(result).toMatchObject({ status: "error" });
   });
 
@@ -175,7 +203,11 @@ describe("broadcastEventAction", () => {
       await limiter.check("ignored-token");
       return { success: true };
     });
-    mockExecuteAdminMutationResult.mockResolvedValue({ ok: true });
+    mockSendEventBroadcast.mockResolvedValue({ ok: true, sent: 0, skipped: 0 });
+    mockExecuteAdminMutationResult.mockImplementation(async (options) => {
+      const data = await options.execute();
+      return data;
+    });
 
     await broadcastEventAction(
       VALID_EVENT_ID,

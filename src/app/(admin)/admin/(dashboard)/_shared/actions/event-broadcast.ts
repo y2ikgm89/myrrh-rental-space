@@ -23,12 +23,14 @@ const eventIdSchema = entityIdSchema("Event");
  *
  * 実行順序:
  *   1. eventId の Zod 検証
- *   2. `checkActionRateLimit(eventBroadcastRateLimiter)` — eventId 単位の第二防壁
- *      (executeAdminMutationResult 内の RBAC + IAP と多層防御)
+ *   2. `executeConformMutation` で件名 / 本文を検証
  *   3. `executeAdminMutationResult`(resource: "event", action: "update") で
- *      RBAC + AuditLog を経由
- *   4. `sendEventBroadcast` を呼んで参加者全員に fan-out
- *   5. 成功時は `submission.reply()` (resetForm) を返す — 呼出側は `initialValue`
+ *      認証 + RBAC + AuditLog を経由
+ *   4. `checkActionRateLimit(eventBroadcastRateLimiter)` — 権限通過後の
+ *      eventId 単位の第二防壁。認証前に消費すると `event:update` を持たない
+ *      アカウントが共有バケットを焼ける
+ *   5. `sendEventBroadcast` を呼んで参加者全員に fan-out
+ *   6. 成功時は `submission.reply()` (resetForm) を返す — 呼出側は `initialValue`
  *      null で success を検出する
  *
  * broadcastNonce は `crypto.randomUUID` で action 実行ごとに生成 (Resend の
@@ -53,19 +55,6 @@ export async function broadcastEventAction(
   }
   const validId = idParsed.data;
 
-  // rate limit は executeAdminMutationResult より前 (IP でなく eventId をキーにする
-  // 独立防壁のため IP 取得コスト無し・fail-closed)。expensive-admin ではなく専用の
-  // eventBroadcastRateLimiter を使う。
-  const rateLimit = await checkActionRateLimit({
-    check: (_token) => eventBroadcastRateLimiter.check(validId),
-  });
-  if (!rateLimit.success) {
-    return {
-      status: "error",
-      error: { "": [rateLimit.error] },
-    } satisfies SubmissionResult;
-  }
-
   return executeConformMutation(
     formData,
     eventBroadcastSchema,
@@ -75,6 +64,12 @@ export async function broadcastEventAction(
         action: "update",
         resourceId: validId,
         execute: async () => {
+          const rateLimit = await checkActionRateLimit({
+            check: (_token) => eventBroadcastRateLimiter.check(validId),
+          });
+          if (!rateLimit.success) {
+            throw new DomainError(rateLimit.error);
+          }
           const broadcastNonce = randomUUID();
           const payload = await getEventBroadcastPayload(validId);
           if (!payload) {
