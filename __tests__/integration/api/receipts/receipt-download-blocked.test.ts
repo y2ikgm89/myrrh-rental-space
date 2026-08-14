@@ -71,7 +71,7 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
       Promise.resolve({ ip: "127.0.0.1", userAgent: "test-user-agent" }),
     );
 
-    // HTTP-03: per-serialNo rate limiter が session 経路 GET 冒頭で叩かれる。
+    // HTTP-03: per-serialNo rate limiter は session 経路 GET の ownership 通過後に叩かれる。
     // check() は默认で success=true を返す stub にしておく (429 発火は別 test)。
     mock.module("@/shared/lib/rate-limit", () => ({
       receiptDownloadBySerialNoRateLimiter: {
@@ -308,6 +308,27 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
     }));
     mock.module("@/shared/lib/customer-auth", () => ({
       getCustomerSession: mock(() => Promise.resolve(null)),
+    }));
+
+    const { GET } = await import("@/app/api/receipts/[serialNo]/pdf/route");
+    const res = await GET(makeRequest(), makeParams());
+
+    expect(res.status).toBe(404);
+    expect(rateLimitCheckSpy).not.toHaveBeenCalled();
+  });
+
+  test("HTTP-03: 他人の serialNo への GET は shared per-serialNo bucket を消費しない (F-113)", async () => {
+    // 認証済みでも非所有者なら rate limiter を消費してはならない。ownership より前に
+    // consume すると、任意の顧客 session で他人の serialNo を連投するだけで
+    // GET/POST 共有バケットを焼き切れる (F-113)。
+    const rateLimitCheckSpy = mock(() => Promise.resolve({ success: true }));
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: { check: rateLimitCheckSpy },
+    }));
+    mock.module("@/shared/domain/customers/queries", () => ({
+      getCustomerByUserId: mock(() =>
+        Promise.resolve({ id: "cust-other", userId: USER_ID }),
+      ),
     }));
 
     const { GET } = await import("@/app/api/receipts/[serialNo]/pdf/route");
