@@ -1,37 +1,29 @@
 /**
- * expireAndPromoteWaitlistForEventCommand の session lock (728354) leak 実 DB 回帰テスト。
+ * expireAndPromoteWaitlistForEventCommand の waitlist promote lock 実 DB 回帰テスト。
  *
- * 修正前は candidate ループ内のエラーが savepoint なしで tx を直接 abort させて
- * いたため、Postgres がトランザクションを aborted 状態にし、finally 内の
- * `releaseWaitlistPromoteSessionLock` も同じトランザクションで実行しようとして
- * 25P02 (current transaction is aborted) で失敗していた。session lock は
- * commit/rollback で自動解放されないため、release が失敗すると物理コネクションが
- * pool に返却されるまでその event の waitlist promote が止まっていた。
+ * かつて 728354 session lock を interactive tx の同一接続で acquire / release
+ * していた。ITX timeout 後の finally release は P2028 で失敗し、session lock は
+ * プール接続に残る。別接続の tryAcquire は false のまま、その event の promote
+ * が止まる。
  *
- * 修正後は 1 candidate の処理を savepoint（ネスト `$transaction`）に隔離し、
- * 失敗しても外側 tx は健全なまま継続 → release が正常に実行される。
+ * 現行は DB row lease（`events.waitlist_promote_leased_until`）。acquire は
+ * `UPDATE ... WHERE` で原子的。ITX が timeout / rollback すれば未コミットの
+ * lease は消える。コミット済み stale lease は TTL で自己回復する。
  *
- * `EventRegistration.id/slotId/ticketId` は uuid（ID 形式は統一済み。以前は
- * ない）で、不正な型を渡しても Postgres は単に「一致なし」を返すだけで例外を
- * 投げないため（実測確認済み）、現実的な入力データだけで candidate 処理中の
- * DB エラーを再現することはできない。そのためこのテストは2部構成:
- *   1. 実関数の正常系（healthy candidate の expire + FIFO promote）の回帰ガード
- *   2. 修正が依拠する「ネスト $transaction 失敗後も session lock は release
- *      される」というメカニズム自体を、実際のロック関数 + 本物の SQL エラー
- *      （`SELECT 1/0`）で直接検証する
+ * **閉じた印**: 外側 ITX timeout のあと、**別接続**の tryAcquire は true。
+ * session lock 実装に戻すと false のまま赤になる。
  *
- * **実測上の注意（このテスト設計で踏んだ罠）**: leak 検知に
- * `pg_try_advisory_lock` の再取得可否は使えない。advisory lock は session
- * （= 物理コネクション）単位で reentrant なため、Prisma の pool が「リークした
- * のと同じコネクション」を次のクエリに再利用すると、そのセッション自身は
- * 自分が既に持つロックの再取得に常に成功し、leak を見逃す（実測で偽陰性を
- * 確認済み）。確実な検証は `pg_locks` システムビューを直接見る。
+ * `EventRegistration.id/slotId/ticketId` は uuid で、不正な型を渡しても
+ * Postgres は「一致なし」を返すだけなので、candidate 処理中の DB エラーは
+ * `SELECT 1/0` で再現する。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行。
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@generated/prisma/client";
 import {
   EventScheduleMode,
   EventStatus,
@@ -53,9 +45,15 @@ type WaitlistLocksModule =
 
 let prisma: PrismaModule["prisma"];
 let expireAndPromoteWaitlistForEventCommand: WaitlistOfferCommandsModule["expireAndPromoteWaitlistForEventCommand"];
-let tryAcquireWaitlistPromoteSessionLock: WaitlistLocksModule["tryAcquireWaitlistPromoteSessionLock"];
-let releaseWaitlistPromoteSessionLock: WaitlistLocksModule["releaseWaitlistPromoteSessionLock"];
+let tryAcquireWaitlistPromoteLease: WaitlistLocksModule["tryAcquireWaitlistPromoteLease"];
+let releaseWaitlistPromoteLease: WaitlistLocksModule["releaseWaitlistPromoteLease"];
 let testCategoryId: string;
+
+function createOtherConnection(): PrismaClient {
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString: TEST_DB_URL }),
+  });
+}
 
 async function createTestEvent(): Promise<{
   eventId: string;
@@ -96,16 +94,14 @@ async function createTestEvent(): Promise<{
 }
 
 describeMaybe(
-  "expireAndPromoteWaitlistForEventCommand の session lock leak 防止",
+  "expireAndPromoteWaitlistForEventCommand の waitlist promote lease",
   () => {
     beforeAll(async () => {
       ({ prisma } = await import("@/shared/db/prisma"));
       ({ expireAndPromoteWaitlistForEventCommand } =
         await import("@/shared/domain/events/waitlist-offer-commands"));
-      ({
-        tryAcquireWaitlistPromoteSessionLock,
-        releaseWaitlistPromoteSessionLock,
-      } = await import("@/shared/domain/events/waitlist-locks"));
+      ({ tryAcquireWaitlistPromoteLease, releaseWaitlistPromoteLease } =
+        await import("@/shared/domain/events/waitlist-locks"));
       await prisma.$queryRaw`SELECT 1`;
 
       const category = await prisma.eventCategory.create({
@@ -123,7 +119,7 @@ describeMaybe(
       await prisma.$disconnect();
     });
 
-    test("正常系: 期限切れ WAITLISTED_OFFERED を EXPIRED にし、session lock は release される", async () => {
+    test("正常系: 期限切れ WAITLISTED_OFFERED を EXPIRED にし、lease は release される", async () => {
       const { eventId, slotId, ticketId } = await createTestEvent();
 
       try {
@@ -165,71 +161,70 @@ describeMaybe(
         });
         expect(healthyRow.status).toBe(RegistrationStatus.EXPIRED);
 
-        const heldLocks = await prisma.$queryRaw<
-          readonly { readonly granted: boolean }[]
-        >`
-          SELECT granted FROM pg_locks
-          WHERE locktype = 'advisory'
-            AND classid = 728354
-            AND objid = hashtext(${eventId})::int
-        `;
-        expect(heldLocks).toEqual([]);
+        const reacquired = await tryAcquireWaitlistPromoteLease(
+          prisma,
+          eventId,
+        );
+        expect(reacquired).toBe(true);
+        await releaseWaitlistPromoteLease(prisma, eventId);
       } finally {
         await prisma.eventRegistration.deleteMany({ where: { eventId } });
         await prisma.event.deleteMany({ where: { id: eventId } });
       }
     }, 30_000);
 
-    test("メカニズム: ネスト $transaction 内の本物の SQL エラーは savepoint で吸収され、外側 tx はそのまま session lock を release できる", async () => {
-      const eventId = `mechanism-${crypto.randomUUID()}`;
+    test("メカニズム: ネスト $transaction 内の本物の SQL エラーは savepoint で吸収され、外側 tx はそのまま継続できる", async () => {
       let candidateErrorCaught = false;
 
       await prisma.$transaction(async (tx) => {
-        const acquired = await tryAcquireWaitlistPromoteSessionLock(
-          tx,
-          eventId,
-        );
-        expect(acquired).toBe(true);
-
         try {
-          // 修正後の実装と同じ形: 1 candidate 相当の処理をネスト $transaction
-          // （savepoint）に隔離する。JS の throw ではなく `SELECT 1/0`
-          // （division by zero, 22012）で本物の Postgres エラーを起こす —
-          // JS throw だけでは Postgres 側の transaction は abort しない
-          // （実測確認済み。aborted 状態を作れるのは実際に失敗した SQL 文のみ）。
-          try {
-            await tx.$transaction(async (tx2) => {
-              await tx2.$queryRaw`SELECT 1/0`;
-            });
-          } catch {
-            candidateErrorCaught = true;
-          }
-
-          // savepoint rollback 後も外側 tx が健全であることの直接証拠:
-          // 同じ tx で追加のクエリが正常に実行できる（aborted なら 25P02 で落ちる）。
-          const stillHealthy = await tx.$queryRaw<
-            readonly { readonly ok: number }[]
-          >`SELECT 1 AS ok`;
-          expect(stillHealthy[0]?.ok).toBe(1);
-        } finally {
-          await releaseWaitlistPromoteSessionLock(tx, eventId);
+          await tx.$transaction(async (tx2) => {
+            await tx2.$queryRaw`SELECT 1/0`;
+          });
+        } catch {
+          candidateErrorCaught = true;
         }
+
+        const stillHealthy = await tx.$queryRaw<
+          readonly { readonly ok: number }[]
+        >`SELECT 1 AS ok`;
+        expect(stillHealthy[0]?.ok).toBe(1);
       });
 
       expect(candidateErrorCaught).toBe(true);
-
-      // 本体の主張: pg_locks を直接見て leak していないことを確認する。
-      // `pg_try_advisory_lock` の再取得可否は session-reentrant のため使えない
-      // （pool が同一物理コネクションを再利用すると偽陰性になる。実測確認済み）。
-      const heldLocks = await prisma.$queryRaw<
-        readonly { readonly granted: boolean }[]
-      >`
-        SELECT granted FROM pg_locks
-        WHERE locktype = 'advisory'
-          AND classid = 728354
-          AND objid = hashtext(${eventId})::int
-      `;
-      expect(heldLocks).toEqual([]);
     });
+
+    test("outer ITX timeout 後、別接続の tryAcquire は true", async () => {
+      const { eventId } = await createTestEvent();
+      // 共有 singleton は timeout 後に接続を破棄することがあり、session lock
+      // leak を見逃す。専用クライアント 2 本で「別接続」を固定する。
+      const holder = createOtherConnection();
+      const other = createOtherConnection();
+
+      try {
+        await expect(
+          holder.$transaction(
+            async (tx) => {
+              const acquired = await tryAcquireWaitlistPromoteLease(
+                tx,
+                eventId,
+              );
+              expect(acquired).toBe(true);
+              await tx.$executeRaw`SELECT pg_sleep(2)`;
+            },
+            { timeout: 1000 },
+          ),
+        ).rejects.toThrow();
+
+        const reacquired = await tryAcquireWaitlistPromoteLease(other, eventId);
+        expect(reacquired).toBe(true);
+        await releaseWaitlistPromoteLease(other, eventId);
+      } finally {
+        await holder.$disconnect();
+        await other.$disconnect();
+        await prisma.eventRegistration.deleteMany({ where: { eventId } });
+        await prisma.event.deleteMany({ where: { id: eventId } });
+      }
+    }, 15_000);
   },
 );

@@ -33,6 +33,8 @@
  * `CALENDAR_SYNC` だけが session lock（`pg_try_advisory_lock` +
  * 明示 unlock）。それ以外は全て xact lock で、tx 終了時に自動解放される。
  * session lock は rollback でも解放されないので、取得側が unlock を持つ。
+ * waitlist promote は 728354 session lock をやめ、`events.waitlist_promote_leased_until`
+ * の row lease に移した。番号は再利用しない。
  */
 
 /** calendar-sync cron の多重起動防止（**session lock**。明示 unlock が要る）。 */
@@ -55,7 +57,11 @@ export const SPACE_DEVICE_CONSISTENCY_LOCK_NAMESPACE = 728352;
 /** 領収書連番の採番（ReceiptSequence 単一行 + 予約単位）。 */
 export const RECEIPT_LOCK_NAMESPACE = 728353;
 
-/** イベントキャンセル待ちの promote（**session lock**）。key = eventId。 */
+/**
+ * イベントキャンセル待ちの promote。session lock としては使わない
+ * （row lease `events.waitlist_promote_leased_until` に移行済み）。
+ * 番号は再利用しない。
+ */
 export const WAITLIST_PROMOTE_LOCK_NAMESPACE = 728354;
 
 /** 予約単位の refund 直列化（over-refund / idempotency 破壊の防止）。 */
