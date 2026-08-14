@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  22 |  35 |  57 |
-| 合計   |  97 |  35 | 132 |
+| 低     |  23 |  34 |  57 |
+| 合計   |  98 |  34 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 35 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 34 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -132,6 +132,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-76](2026-08-12-codebase-audit-findings.md#f-76)   | 低     | #2292                                      | extractImportSpecifiers が走査前にコメントを除去。JSDoc @example の import は辺にならない                        | —                                                                                       |
 | [F-84](2026-08-12-codebase-audit-findings.md#f-84)   | 低     | #2293                                      | mobile project gate が file-scope APP_SURFACE skip を CI の project×surface と突合する。F-84 形の fixture を追加 | CI の public step は F-16 が既に入れていた                                              |
 | [F-95](2026-08-12-codebase-audit-findings.md#f-95)   | 低     | #2294                                      | GCal 設定保存で NOTIFICATION_SETTINGS も無効化。coverage gate に 2 列を追加                                      | —                                                                                       |
+| [F-91](2026-08-12-codebase-audit-findings.md#f-91)   | 低     | #2297                                      | spawnSync の `exitCode=null` を `?? 1` で失敗へ倒す。`process.exit(null)` の偽成功を止める                       | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
