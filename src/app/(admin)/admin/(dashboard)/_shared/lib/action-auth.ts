@@ -20,7 +20,7 @@ import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-acces
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
-import { logUserAction, logPermissionDenied } from "@/admin/lib/audit";
+import { logUserAction, recordPermissionDenied } from "@/admin/lib/audit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
@@ -93,7 +93,7 @@ export async function checkPermission(
   const { user } = auth;
 
   if (!hasPermission(user.role, resource, action)) {
-    void logPermissionDenied(user.id, resource, action);
+    recordPermissionDenied(user.id, resource, action);
     return {
       success: false,
       error: { error: `${resource}の${action}権限がありません` },
@@ -119,7 +119,7 @@ export async function checkResourceAccess(
 
   if (isEditorRole(user.role)) {
     if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
-      void logPermissionDenied(user.id, resource, action, resourceId);
+      recordPermissionDenied(user.id, resource, action, resourceId);
       return {
         success: false,
         error: { error: "このリソースへのアクセス権がありません" },

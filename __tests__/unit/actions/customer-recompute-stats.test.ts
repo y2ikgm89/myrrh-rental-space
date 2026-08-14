@@ -73,7 +73,7 @@ mock.module("@/shared/lib/admin-role-guards", () => ({
 }));
 
 mock.module("@/admin/lib/audit", () => ({
-  logPermissionDenied: mock(() => undefined),
+  recordPermissionDenied: mock(() => undefined),
 }));
 
 mock.module("@/shared/lib/cache/batcher", () => ({

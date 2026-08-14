@@ -146,7 +146,23 @@ claim は payloads.ts:207 の単一 atomic UPDATE で堅い(WHERE に is\_active
 
 管理画面 72 個の page.tsx のうち page 境界で resource 権限を取るのは 14 個で、残りは @/admin/queries/\* の loader 側 guard に依存する設計(page-auth.ts の JSDoc が明言)。今回 exports 数と guard 数の突合は取れている(customer.ts は exports=4/guards=5)が、loader を通らずに props で Client Component へ渡る PII 経路(例: customers/\[id\]/\_components/CustomerDetail.tsx)は authz 観点が「ページ側の描画時ガードは未走査」と申告したまま。
 
-- **関連指摘**: [F-92](../../audits/2026-08-12-codebase-audit-findings.md#f-92) / [F-102](../../audits/2026-08-12-codebase-audit-findings.md#f-102) / [F-115](../../audits/2026-08-12-codebase-audit-findings.md#f-115)
+- **関連指摘**: F-92 / F-102 / F-115（いずれも #2270 で解消。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
+- **構造としての残りは無い（2026-08-14 実測）**: 監査が名指しした
+  `customers/[id]/_components/CustomerDetail.tsx` の経路は、`page.tsx` /
+  `generateMetadata` の両方が `@/admin/queries/customer` の `getCustomerById` を
+  通り、その先頭が `requireAdminPermission("customer", "read")` を呼んでいる
+  （`_shared/queries/customer.ts:33`）。「未走査だから穴かもしれない」であって、
+  穴が実在するという主張ではなかった。
+
+  `(dashboard)` 配下 71 個の `page.tsx` を走査したところ、loader も
+  `requireAdmin*` も通さずに `@/shared/domain/**` を直に読むのは 4 個
+  （`locations/new` / `news/new` / `terms/new` / `spaces`）。読んでいるのは
+  組織設定・レイアウト設定・機能フラグだけで、PII も resource スコープの
+  データも含まない。**確認された欠陥はゼロ。**
+
+  この走査は gate にしていない。`admin-page-auth-before-suspense.test.ts` が
+  新規ページ向けの ratchet として既にあり、実際に漏れた欠陥が無い以上、
+  関門を 1 つ増やすコストに見合わない。
 
 ### H. Google Calendar 逆流×金額×クーポン
 
@@ -264,7 +280,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-89](../../audits/2026-08-12-codebase-audit-findings.md#f-89)   | 低     | `prisma/seed.ts:829`                                                                                          | seedSpaceCategories が本番再実行でスペースカテゴリーの説明・アイコン・色を宣言値へ戻す                                                                          |
 | [F-90](../../audits/2026-08-12-codebase-audit-findings.md#f-90)   | 低     | `prisma/seed.ts:4314`                                                                                         | seedNavigation の (type, order) 一致判定が、管理画面の削除・並び替え後に別項目を指し、本番でナビゲーションが重複する                                            |
 | [F-91](../../audits/2026-08-12-codebase-audit-findings.md#f-91)   | 低     | `scripts/migrate-test-db.ts:83`                                                                               | Bun.spawnSync().exitCode is null on signal-kill, so `process.exit(run())` turns a killed `prisma migrate deploy` into exit 0                                    |
-| [F-92](../../audits/2026-08-12-codebase-audit-findings.md#f-92)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/command-palette/search.ts:38`                              | command palette の検索が EDITOR の userPageAssignment 絞り込みを迂回し、全ページのタイトル/slug を返す                                                          |
 | [F-93](../../audits/2026-08-12-codebase-audit-findings.md#f-93)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/customer/bulk.ts:274`                                      | 顧客一括メールの rate limit が認証前かつ全体で 1 バケットのため、低権限アカウントが機能を 1 時間停止できる                                                      |
 | [F-94](../../audits/2026-08-12-codebase-audit-findings.md#f-94)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts:217`                                     | 管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げず、待機列が永久に stall する                                                                             |
 | [F-95](../../audits/2026-08-12-codebase-audit-findings.md#f-95)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts:101`                           | Google Calendar 設定保存が NOTIFICATION\_SETTINGS を無効化せず、.ics 添付／カレンダー追加リンクの OFF が数日反映されない                                        |
@@ -274,7 +289,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-99](../../audits/2026-08-12-codebase-audit-findings.md#f-99)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/FindReplacePlugin.tsx:212`       | 「全置換」が自己重複する検索語で余分な置換を行い本文を壊す                                                                                                      |
 | [F-100](../../audits/2026-08-12-codebase-audit-findings.md#f-100) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/KeyboardShortcutsPlugin.tsx:170` | Ctrl+Shift+数字 の見出し / リスト ショートカットが一切効かない                                                                                                  |
 | [F-101](../../audits/2026-08-12-codebase-audit-findings.md#f-101) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/PasteUrlPlugin.tsx:74`           | 空段落への URL 単独ペースト（OGP カード / YouTube 等の自動埋め込み）が発火しない                                                                                |
-| [F-102](../../audits/2026-08-12-codebase-audit-findings.md#f-102) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/queries/_helpers.ts:68`                                            | 権限拒否の監査ログが after() に登録されない裸の detached promise で、notFound() 直前に投げっぱなしにされる                                                      |
 | [F-104](../../audits/2026-08-12-codebase-audit-findings.md#f-104) | 低     | `src/app/(public)/_shared/hooks/use-format-price.ts:20`                                                       | 公開面の税込表示が Space.taxRateType を無視して常に標準税率で計算するため、予約確認画面の金額と実際の請求額が食い違う                                           |
 | [F-105](../../audits/2026-08-12-codebase-audit-findings.md#f-105) | 低     | `src/app/(public)/[...segments]/page.tsx:72`                                                                  | post-list / news-list の archive レイアウトを /blog・/news 以外のページに置くと、検索とページ送りが恒久的に効かない                                             |
 | [F-106](../../audits/2026-08-12-codebase-audit-findings.md#f-106) | 低     | `src/app/(public)/events/waitlist/checkout/route.ts:63`                                                       | 繰上げ当選の残り 30 分未満クリックが「システムエラー」表示＋CRITICAL アラートになる                                                                             |
@@ -285,7 +299,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-111](../../audits/2026-08-12-codebase-audit-findings.md#f-111) | 低     | `src/app/api/calendar/reservation/[id]/route.ts:117`                                                          | メールの .ics リンクを踏んだ直後 30 分間、ログイン済み顧客はマイページから別予約の .ics を取得できず 401 になる                                                 |
 | [F-113](../../audits/2026-08-12-codebase-audit-findings.md#f-113) | 低     | `src/app/api/receipts/[serialNo]/pdf/route.ts:122`                                                            | 認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）                                                                              |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                                                                    | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                           |
-| [F-115](../../audits/2026-08-12-codebase-audit-findings.md#f-115) | 低     | `src/shared/domain/admin-search/queries.ts:149`                                                               | コマンドパレット検索が EDITOR の userPageAssignment スコープを無視して全 page を返す                                                                            |
 | [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118) | 低     | `src/shared/domain/events/payment-queries.ts:241`                                                             | 論理削除されたイベントの返金が charge.refunded で無言で捨てられ、PAID のまま残る                                                                                |
 | [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`                                                               | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                              |
 | [F-120](../../audits/2026-08-12-codebase-audit-findings.md#f-120) | 低     | `src/shared/domain/events/waitlist-offer-commands.ts:335`                                                     | waitlist promote の session lock (728354) は interactive tx が timeout すると finally でも release できず、その event の繰上げが止まる                          |

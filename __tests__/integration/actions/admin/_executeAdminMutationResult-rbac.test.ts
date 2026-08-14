@@ -19,7 +19,7 @@
  *
  *   - role=ADMIN: command 実行 + afterSuccess 発火 + 監査ログ書込
  *   - role=VIEWER (permission denied): command 非実行 + afterSuccess 非発火 +
- *     logPermissionDenied 発火
+ *     recordPermissionDenied 発火
  *   - 未認証 (checkAdminAuth fail): command 非実行 + afterSuccess 非発火
  *
  * が回帰検出可能となる。代表 action は 1 件のみで十分 — ラッパー本体の挙動は
@@ -54,10 +54,10 @@ mock.module("@/admin/lib/action-auth", () => ({
   logAction: mockLogAction,
 }));
 
-const mockLogPermissionDenied = mock(async () => {});
+const mockRecordPermissionDenied = mock(async () => {});
 
 mock.module("@/admin/lib/audit", () => ({
-  logPermissionDenied: mockLogPermissionDenied,
+  recordPermissionDenied: mockRecordPermissionDenied,
 }));
 
 // fireAndForget は production では非同期に await せず投げ捨てる契約だが、
@@ -118,7 +118,7 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
   beforeEach(() => {
     mockCheckAdminAuth.mockClear();
     mockLogAction.mockClear();
-    mockLogPermissionDenied.mockClear();
+    mockRecordPermissionDenied.mockClear();
     mockUpdateTag.mockClear();
     mockDeleteCouponCommand.mockClear();
   });
@@ -161,10 +161,10 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
     );
 
     // permission denied は発火していない
-    expect(mockLogPermissionDenied).not.toHaveBeenCalled();
+    expect(mockRecordPermissionDenied).not.toHaveBeenCalled();
   });
 
-  test("role=VIEWER: RBAC で拒否 → command 非実行 → cache 非更新 → logPermissionDenied 発火", async () => {
+  test("role=VIEWER: RBAC で拒否 → command 非実行 → cache 非更新 → recordPermissionDenied 発火", async () => {
     mockCheckAdminAuth.mockImplementationOnce(async () => ({
       success: true,
       user: {
@@ -191,8 +191,8 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
     expect(mockLogAction).not.toHaveBeenCalled();
 
     // permission denied が記録されている
-    expect(mockLogPermissionDenied).toHaveBeenCalledTimes(1);
-    expect(mockLogPermissionDenied).toHaveBeenCalledWith(
+    expect(mockRecordPermissionDenied).toHaveBeenCalledTimes(1);
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
       "viewer-user-id",
       "coupon",
       "delete",
@@ -216,7 +216,7 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
     expect(mockCheckAdminAuth).toHaveBeenCalledTimes(1);
 
     // 認証失敗時は RBAC まで到達しないため、permission denied も発火しない
-    expect(mockLogPermissionDenied).not.toHaveBeenCalled();
+    expect(mockRecordPermissionDenied).not.toHaveBeenCalled();
 
     // domain command / cache invalidation / 監査ログは全て非発火
     expect(mockDeleteCouponCommand).not.toHaveBeenCalled();

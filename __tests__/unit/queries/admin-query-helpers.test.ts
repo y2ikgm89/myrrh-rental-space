@@ -8,7 +8,7 @@ const mockVerifyAdminSession = mock(async () => ADMIN_USER);
 const mockHasPermission = mock(() => true);
 const mockIsEditorRole = mock(() => false);
 const mockUserHasResourceAccess = mock(async () => true);
-const mockLogPermissionDenied = mock(async () => {});
+const mockRecordPermissionDenied = mock(async () => {});
 const mockHeaders = mock(async () => new Headers());
 
 mock.module("next/navigation", () => ({
@@ -59,8 +59,9 @@ mock.module("@/shared/lib/admin-permissions", () => ({
 }));
 
 mock.module("@/admin/lib/audit", () => ({
-  logPermissionDenied: (...args: Parameters<typeof mockLogPermissionDenied>) =>
-    mockLogPermissionDenied(...args),
+  recordPermissionDenied: (
+    ...args: Parameters<typeof mockRecordPermissionDenied>
+  ) => mockRecordPermissionDenied(...args),
 }));
 
 const { requireAdminPermission, requireAdminResourcePermission } =
@@ -73,14 +74,14 @@ describe("admin query helpers", () => {
     mockHasPermission.mockReset();
     mockIsEditorRole.mockReset();
     mockUserHasResourceAccess.mockReset();
-    mockLogPermissionDenied.mockReset();
+    mockRecordPermissionDenied.mockReset();
     mockHeaders.mockReset();
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
     mockHasPermission.mockReturnValue(true);
     mockIsEditorRole.mockReturnValue(false);
     mockUserHasResourceAccess.mockResolvedValue(true);
-    mockLogPermissionDenied.mockResolvedValue(undefined);
+    mockRecordPermissionDenied.mockResolvedValue(undefined);
     mockHeaders.mockResolvedValue(new Headers());
   });
 
@@ -99,7 +100,7 @@ describe("admin query helpers", () => {
     );
 
     expect(notFoundCalls).toBe(1);
-    expect(mockLogPermissionDenied).toHaveBeenCalledWith(
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
       VIEWER_USER.id,
       "auditLog",
       "read",
@@ -122,7 +123,7 @@ describe("admin query helpers", () => {
       "read",
       "page-3",
     );
-    expect(mockLogPermissionDenied).toHaveBeenCalledWith(
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
       EDITOR_USER.id,
       "page",
       "read",

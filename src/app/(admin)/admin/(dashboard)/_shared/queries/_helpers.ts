@@ -2,7 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { logPermissionDenied } from "@/admin/lib/audit";
+import { recordPermissionDenied } from "@/admin/lib/audit";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
@@ -65,7 +65,7 @@ export async function requireAdminPermission(
   const user = await verifyAdminSession();
 
   if (!hasPermission(user.role, resource, action)) {
-    void logPermissionDenied(user.id, resource, action);
+    recordPermissionDenied(user.id, resource, action);
     denyAdminAccess();
   }
 
@@ -85,7 +85,7 @@ export async function requireAdminResourcePermission(
   }
 
   if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
-    void logPermissionDenied(user.id, resource, action, resourceId);
+    recordPermissionDenied(user.id, resource, action, resourceId);
     denyAdminAccess();
   }
 

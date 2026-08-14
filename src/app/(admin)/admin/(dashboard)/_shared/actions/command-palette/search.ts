@@ -10,7 +10,10 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   searchByResource,
   SEARCHABLE_RESOURCES,
+  type AdminSearchScope,
 } from "@/shared/domain/admin-search/queries";
+import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import type { SearchResultGroup } from "@/shared/lib/command-palette-types";
 
 type SearchPayload = { groups: SearchResultGroup[] };
@@ -38,8 +41,15 @@ export async function searchAdminResources(
     hasPermission(auth.user.role, r, "read"),
   );
 
+  // EDITOR は割当ページしか読めない。`hasPermission` は resource 種別しか見ないので、
+  // ここで id 集合を解決して検索側へ渡す（監査 F-92 / F-115）。渡さないと、
+  // 割当外の未公開ドラフトやゴミ箱送りページのタイトルと slug が露出する。
+  const scope: AdminSearchScope = isEditorRole(auth.user.role)
+    ? { allowedPageIds: await getAssignedPageIdsForUser(auth.user.id) }
+    : {};
+
   const settled = await Promise.allSettled(
-    allowed.map((resource) => searchByResource(resource, trimmed)),
+    allowed.map((resource) => searchByResource(resource, trimmed, scope)),
   );
 
   const groups: SearchResultGroup[] = [];

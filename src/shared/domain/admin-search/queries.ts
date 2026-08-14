@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { PAGES_MANAGED_ELSEWHERE } from "@/shared/domain/pages/admin-queries";
 import type {
   SearchResultGroup,
   SearchResultItem,
@@ -143,9 +144,30 @@ async function searchNews(query: string): Promise<SearchResultItem[]> {
   }));
 }
 
-async function searchPages(query: string): Promise<SearchResultItem[]> {
+/**
+ * コマンドパレットのページ検索。
+ *
+ * **一覧経路と同じ絞り込みを掛ける**（監査 F-92 / F-115）。ここだけが
+ * assignment も `isActive` も `PAGES_MANAGED_ELSEWHERE` も見ていなかったため、
+ * EDITOR に**割当外の未公開ドラフト・ゴミ箱送りページのタイトルと slug**
+ * （= 将来の公開 URL）が露出していた。クリック先の `/admin/pages/<slug>` は
+ * `requireAdminResourcePermission` で notFound になるので、存在秘匿の方針とも
+ * 矛盾していた。
+ */
+async function searchPages(
+  query: string,
+  scope: AdminSearchScope,
+): Promise<SearchResultItem[]> {
+  // EDITOR に割当が 1 件も無いなら検索する対象が無い。
+  if (scope.allowedPageIds && scope.allowedPageIds.length === 0) return [];
+
   const rows = await prisma.page.findMany({
     where: {
+      isActive: true,
+      slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
+      ...(scope.allowedPageIds
+        ? { id: { in: [...scope.allowedPageIds] } }
+        : {}),
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, title: true, slug: true },
@@ -285,7 +307,10 @@ const SEARCH_BY_RESOURCE = {
   coupon: searchCoupons,
   location: searchLocations,
 } satisfies Partial<
-  Record<Resource, (q: string) => Promise<SearchResultItem[]>>
+  Record<
+    Resource,
+    (q: string, scope: AdminSearchScope) => Promise<SearchResultItem[]>
+  >
 >;
 
 type SearchableResource = keyof typeof SEARCH_BY_RESOURCE;
@@ -296,12 +321,24 @@ function isSearchableResource(
   return resource in SEARCH_BY_RESOURCE;
 }
 
+/**
+ * 検索結果に掛ける呼び出し元スコープ。
+ *
+ * 「EDITOR かどうか」ではなく**解決済みの id 集合**を受け取る。role を渡すと
+ * 各 search 関数が独自に解決することになり、一覧経路との差が再び生まれる。
+ */
+export type AdminSearchScope = {
+  /** EDITOR のとき閲覧を許された page の id。`undefined` は制限なし。 */
+  readonly allowedPageIds?: readonly string[] | undefined;
+};
+
 export async function searchByResource(
   resource: Resource,
   query: string,
+  scope: AdminSearchScope = {},
 ): Promise<SearchResultGroup> {
   if (!isSearchableResource(resource)) return { resource, items: [] };
-  const items = await SEARCH_BY_RESOURCE[resource](query);
+  const items = await SEARCH_BY_RESOURCE[resource](query, scope);
   return { resource, items };
 }
 

@@ -147,9 +147,23 @@ export async function logUserAction(
 // =============================================================================
 
 /**
- * 権限不足を記録
+ * 権限不足を記録する（非ブロッキング）。
+ *
+ * # なぜ `void promise` ではなく void 関数なのか
+ *
+ * 呼び出し側 6 箇所すべてが `void logPermissionDenied(...)` だった（監査 F-102）。
+ * `void` は**待たない**ことしか表明しておらず、reject を捨てる。
+ *
+ * 監査行の書込 (`createAuditLog`) は自前で try/catch 済みなので残る。捨てられて
+ * いたのは**後段の `notifyPermissionDeniedSpikeIfNeeded`**（同一ユーザーの権限拒否
+ * スパイク ＝ 権限の総当たりを検知して運用へ通知する経路）で、ここが落ちると
+ * **通知も痕跡も何も残らない**。攻撃の兆候だけが黙って消える。
+ *
+ * そこで async を export せず、`fireAndForget` で包んだ**void 関数だけ**を出す。
+ * 「待たない」は関数の型で表現され、失敗は `logError` に必ず残る。呼び出し側で
+ * `void` を書ける形に戻さないこと — 戻した瞬間、6 箇所の握り潰しが復活する。
  */
-export async function logPermissionDenied(
+export function recordPermissionDenied(
   userId: string,
   resource: string,
   // **`AuditAction` ではない。** DB の `audit_logs.action` に入るのは
@@ -157,16 +171,26 @@ export async function logPermissionDenied(
   // （`"create"` / `"read"` …）。metadata に記録するだけなので型が違う。
   action: Action,
   resourceId?: string,
-): Promise<void> {
-  await createAuditLog({
-    userId,
-    action: AuditAction.PERMISSION_DENIED,
-    resource,
-    resourceId,
-    metadata: { attemptedAction: action },
-  });
+): void {
+  fireAndForget(
+    (async () => {
+      await createAuditLog({
+        userId,
+        action: AuditAction.PERMISSION_DENIED,
+        resource,
+        resourceId,
+        metadata: { attemptedAction: action },
+      });
 
-  await notifyPermissionDeniedSpikeIfNeeded(userId);
+      await notifyPermissionDeniedSpikeIfNeeded(userId);
+    })(),
+    {
+      operation: "recordPermissionDenied",
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { resource, resourceId, userId, attemptedAction: action },
+    },
+  );
 }
 
 // =============================================================================
