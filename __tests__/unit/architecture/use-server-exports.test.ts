@@ -37,9 +37,30 @@ function collectSourceFiles(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-function isUseServerFile(source: string): boolean {
-  const head = source.trimStart().slice(0, 40);
-  return head.startsWith('"use server"') || head.startsWith("'use server'");
+/**
+ * Directive Prologue は**コメントを跨いで成立する**（監査 F-14）。
+ *
+ * 旧実装は `source.trimStart().slice(0, 40)` が `"use server"` で始まることを
+ * 要求していた。このリポジトリで一般的な JSDoc（`/**\n * 顧客 Server Actions。\n *​/`）
+ * を先頭に足して directive をその下へ移すと、Next.js / SWC は依然として Server
+ * Action file として扱うのに、**この gate の母集合から丸ごと落ちる**。
+ *
+ * その状態で `export const ANONYMIZED_CUSTOMER_FIELDS = [...]`
+ * （2026-07-30 に実際に起きた欠陥そのもの）を足すと、gate も `next build` も unit も
+ * 緑のまま本番へ出て、**そのファイル内の Server Action が全て 500 になる**
+ * （`A "use server" file can only export async functions, found object.`）。
+ *
+ * 先頭の空白・行コメント・ブロックコメントを飛ばしてから directive を見る。
+ */
+export function isUseServerFile(source: string): boolean {
+  const withoutLeadingTrivia = source.replace(
+    /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*/u,
+    "",
+  );
+  return (
+    withoutLeadingTrivia.startsWith('"use server"') ||
+    withoutLeadingTrivia.startsWith("'use server'")
+  );
 }
 
 /**
@@ -61,6 +82,31 @@ describe('"use server" export contract', () => {
     isUseServerFile(readFileSync(file, "utf8")),
   );
 
+  test("判定できる形・できない形（fixture）", () => {
+    expect(isUseServerFile('"use server";\nexport async function f() {}')).toBe(
+      true,
+    );
+    expect(isUseServerFile("'use server';\n")).toBe(true);
+
+    // 監査 F-14: 先頭 JSDoc の下に directive がある形。Next は Server Action file と
+    // して扱うので、gate の母集合にも入らなければならない。
+    expect(
+      isUseServerFile(
+        '/**\n * 顧客 Server Actions。\n */\n\n"use server";\n\nexport async function f() {}',
+      ),
+    ).toBe(true);
+    // 行コメントでも同じ。
+    expect(isUseServerFile('// 顧客 Server Actions\n"use server";\n')).toBe(
+      true,
+    );
+
+    // directive が無いファイルは対象外のまま。
+    expect(isUseServerFile('import "server-only";\n')).toBe(false);
+    // コメント内の言及だけでは対象にしない。
+    expect(
+      isUseServerFile('/** "use server" の話 */\nexport const x = 1;'),
+    ).toBe(false);
+  });
   test("scans a meaningful number of use-server files", () => {
     // 収集が壊れた（走査パス / 判定ロジックの変化）ことを 0 件で見逃さない
     expect(files.length).toBeGreaterThan(50);

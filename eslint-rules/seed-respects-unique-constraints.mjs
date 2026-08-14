@@ -53,6 +53,29 @@ import {
   readUniqueGroups,
 } from "./prisma-schema.mjs";
 
+/**
+ * 「その行が既に在るか」を判定する読み取り（監査 F-17）。
+ *
+ * 旧実装は `findFirst` だけを見ていたが、**元の欠陥は `findUnique` だった**
+ * （`prisma/seed.ts` のコメントが記録している）。partialIndexes preview により
+ * 生成 client の `WhereUniqueInput` は partial unique の列を**単独 unique キーとして
+ * 受け付ける**ので、`findFirst({ where: { slug, deletedAt: null } })` を
+ * `findUnique({ where: { slug } })` に戻すと ESLint は緑のまま通る。
+ *
+ * 実 DB にソフトデリート済みの同 slug 行があると、`where: { deletedAt: null }` の
+ * partial index の母集合**外**の行を「存在する」と判定して create をスキップし、
+ * 新品でない DB でカテゴリーが欠けたまま seed が完走する。
+ *
+ * `findMany` / `count` も同じ用途で書けるので同列に扱う。
+ */
+const PROBE_METHODS = new Set([
+  "findFirst",
+  "findFirstOrThrow",
+  "findUnique",
+  "findUniqueOrThrow",
+  "findMany",
+  "count",
+]);
 const WRITE_METHODS = new Set(["create", "createMany", "upsert"]);
 
 /**
@@ -358,9 +381,9 @@ const rule = {
       unprovableDeletion:
         "{{model}}.{{field}} のリテラル {{value}} を守る deleteMany の where を静的に解析できない（変数・spread・computed）。条件なしの削除にするか、where をオブジェクトリテラルで書いて一意グループ ({{group}}) を固定すること",
       missingPredicate:
-        '{{model}}.findFirst の where に "{{field}}" が無い。({{group}}) の unique は {{field}} 条件の partial index なので、判定の母集合を制約の述語に揃える必要がある',
+        '{{model}} の存在判定 ({{method}}) の where に "{{field}}" が無い。({{group}}) の unique は {{field}} 条件の partial index なので、判定の母集合を制約の述語に揃える必要がある',
       predicateValueMismatch:
-        '{{model}}.findFirst の "{{field}}" が制約の述語と違う（宣言 {{declared}} / probe {{actual}}）。母集合が反転すると有効な行を見落とし、conflict する create に進む',
+        '{{model}} の存在判定 ({{method}}) の "{{field}}" が制約の述語と違う（宣言 {{declared}} / probe {{actual}}）。母集合が反転すると有効な行を見落とし、conflict する create に進む',
     },
   },
 
@@ -457,7 +480,7 @@ const rule = {
           return;
         }
 
-        if (call.method === "findFirst") {
+        if (PROBE_METHODS.has(call.method)) {
           checkProbe(node, call);
         }
       },
@@ -606,6 +629,7 @@ const rule = {
               messageId: "missingPredicate",
               data: {
                 model: call.model,
+                method: call.method,
                 field,
                 group: group.fields.join(", "),
               },
@@ -616,7 +640,13 @@ const rule = {
             context.report({
               node: whereProperty.value,
               messageId: "predicateValueMismatch",
-              data: { model: call.model, field, declared, actual },
+              data: {
+                model: call.model,
+                method: call.method,
+                field,
+                declared,
+                actual,
+              },
             });
           }
         }
