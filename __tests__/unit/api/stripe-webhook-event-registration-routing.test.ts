@@ -84,7 +84,11 @@ const mockApplyChargeRefundIdempotent = mock<
     reservationId: string;
     chargeAmount: number;
     amountRefunded: number;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => Promise<void>
 >(() => Promise.resolve());
 const mockSendReservationConfirmationEmail =
@@ -250,7 +254,11 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     chargeAmount: number;
     amountRefunded: number;
     currency: string;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => mockApplyChargeRefundIdempotent(input),
   getReservationCheckoutExpectedAmount: () => Promise.resolve(5000),
   finalizeSettledReservationRefund: () => Promise.resolve(false),

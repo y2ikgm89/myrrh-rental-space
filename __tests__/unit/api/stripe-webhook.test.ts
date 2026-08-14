@@ -101,7 +101,11 @@ const mockApplyChargeRefundIdempotent = mock<
     reservationId: string;
     chargeAmount: number;
     amountRefunded: number;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => Promise<void>
 >(() => Promise.resolve());
 const mockGetReservationCheckoutExpectedAmount = mock<
@@ -120,7 +124,11 @@ const mockApplyEventChargeRefundIdempotent = mock<
     registrationId: string;
     chargeAmount: number;
     amountRefunded: number;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => Promise<void>
 >(() => Promise.resolve());
 
@@ -244,7 +252,11 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     chargeAmount: number;
     amountRefunded: number;
     currency: string;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => mockApplyChargeRefundIdempotent(input),
   getReservationCheckoutExpectedAmount: (id: string) =>
     mockGetReservationCheckoutExpectedAmount(id),
@@ -275,7 +287,11 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
     chargeAmount: number;
     amountRefunded: number;
     currency: string;
-    latestRefund: { id: string; amount: number } | null;
+    latestRefund: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
   findWaitlistOfferRegistrationNeedingRefundAfterPaidSession: () =>
@@ -476,7 +492,11 @@ function makeChargeRefundedEvent(
     amount?: number;
     amountRefunded?: number;
     currency?: string;
-    latestRefund?: { id: string; amount: number } | null;
+    latestRefund?: {
+      id: string;
+      amount: number;
+      metadata?: Record<string, string | undefined> | null;
+    } | null;
   } = {},
 ): StripeWebhookEvent {
   const {
@@ -1178,6 +1198,33 @@ describe("POST /api/webhooks/stripe", () => {
       currency: "usd",
       latestRefund: { id: "re_test_usd", amount: 5000 },
     });
+  });
+
+  test("charge.refunded (ADMIN attribution) → latestRefund.metadata.initiator を helper に転送する", async () => {
+    const event = makeChargeRefundedEvent("pi-admin-refund-123", {
+      amount: 5000,
+      amountRefunded: 5000,
+      latestRefund: {
+        id: "re_test_admin",
+        amount: 5000,
+        metadata: { initiator: "ADMIN" },
+      },
+    });
+    mockConstructEvent.mockResolvedValue(event);
+    mockFindReservationByPaymentIntent.mockResolvedValue({
+      id: "res-admin-1",
+      paymentStatus: "PAID",
+    });
+
+    const response = await POST(makeRequest("body"));
+    expect(response.status).toBe(200);
+    expect(mockApplyChargeRefundIdempotent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        latestRefund: expect.objectContaining({
+          metadata: { initiator: "ADMIN" },
+        }),
+      }),
+    );
   });
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
