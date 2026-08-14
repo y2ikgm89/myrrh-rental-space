@@ -7,6 +7,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
+  criticalFetch,
   ErrorCategory,
   ErrorSeverity,
   safeFetch,
@@ -212,6 +213,10 @@ export async function getPublishedTermsByType(
  *
  * 公開 4 経路 (/login signup, /reservation, /contact, /events 申込) はすべて
  * 本関数を呼び出して required terms を取得する。
+ *
+ * 空配列は「必須規約が未設定」の正当値。`safeFetch({ fallback: [] })` だと
+ * fetch 失敗も未設定と誤認して consent-gate が no-op になる。`criticalFetch`
+ * で throw し、Data Cache には成功結果だけを書く（features.ts と同じ契約）。
  */
 export async function getRequiredTermsByScope(
   scope: TermsScope,
@@ -220,7 +225,7 @@ export async function getRequiredTermsByScope(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.TERMS);
 
-  const result = await safeFetch({
+  const result = await criticalFetch({
     fetch: () =>
       prisma.termsDocument.findMany({
         where: {
@@ -230,9 +235,7 @@ export async function getRequiredTermsByScope(
         orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_REQUIRED_SELECT,
       }),
-    fallback: [],
     category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
     operationName: "getRequiredTermsByScope",
     context: { scope },
   });

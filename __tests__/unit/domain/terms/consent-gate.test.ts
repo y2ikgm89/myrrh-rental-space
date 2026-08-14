@@ -36,13 +36,27 @@ afterEach(() => {
 });
 
 describe("assertAllRequiredTermsAgreed", () => {
-  test("required が空のときは validate を通す (no-op)", async () => {
+  test("必須規約が未設定（query が空配列）のときは validate を通す (no-op)", async () => {
+    // 空配列は「規約未設定」の正当値。fetch 失敗は query が throw する
+    // （required-terms-by-scope.test.ts）。ここでは未設定だけを意味する。
     getRequiredTermsByScopeMock.mockResolvedValueOnce([]);
     const result = await assertAllRequiredTermsAgreed({
       scope: TermsScope.RESERVATION,
       agreedTermsIds: [],
     });
     expect(result.matchedTermsIds).toEqual([]);
+  });
+
+  test("getRequiredTermsByScope の例外は握らず伝播する", async () => {
+    getRequiredTermsByScopeMock.mockRejectedValueOnce(
+      new Error("DB unreachable"),
+    );
+    await expect(
+      assertAllRequiredTermsAgreed({
+        scope: TermsScope.RESERVATION,
+        agreedTermsIds: [],
+      }),
+    ).rejects.toThrow("DB unreachable");
   });
 
   test("client が全 required を網羅していれば通す (subset 一致)", async () => {
