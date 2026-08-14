@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 11 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 10 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -305,19 +305,18 @@ gate を広げる修正は「gate だけ直して終わり」にならない前�
 
 ID をクリックすると全文（起きること / 直し方 / 該当箇所 / 到達経路 / 既存の検査 / 反証官による訂正）に飛ぶ。
 
-| ID                                                                | 深刻度 | 箇所                                                         | 内容                                                                                                                                                 |
-| ----------------------------------------------------------------- | ------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`              | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                   |
-| [F-121](../../audits/2026-08-12-codebase-audit-findings.md#f-121) | 低     | `src/shared/domain/faq/item-bulk-commands.ts:98`             | bulkMoveFaqItems だけが lock 取得後のカテゴリ再確認を欠き、削除済みカテゴリ配下に生きた FAQ が孤児化して 30 日後に cascade で消える                  |
-| [F-122](../../audits/2026-08-12-codebase-audit-findings.md#f-122) | 低     | `src/shared/domain/inquiries/bulk-status-commands.ts:74`     | bulk ステータス変更の TOCTOU フォールバックが他管理者の遷移を自分の成果と誤認し、append-only な状態履歴に偽の行を書く                                |
-| [F-124](../../audits/2026-08-12-codebase-audit-findings.md#f-124) | 低     | `src/shared/domain/reservations/reminder-commands.ts:39`     | reminderSentAt が日付に紐づかない永続ラッチのため、リマインダ送信後に日時変更すると新しい日のリマインダが二度と送られない                            |
-| [F-125](../../audits/2026-08-12-codebase-audit-findings.md#f-125) | 低     | `src/shared/domain/slugs/validation.ts:82`                   | metadata ルート名（apple-icon / opengraph-image / twitter-image）が予約 slug に無く、その slug のページは作成できるのに公開 URL で永久に表示されない |
-| [F-126](../../audits/2026-08-12-codebase-audit-findings.md#f-126) | 低     | `src/shared/emails/delete-account-verification.tsx:63`       | アカウント削除の確認メールが「有効期限 1時間」と書くが実際は 24 時間                                                                                 |
-| [F-127](../../audits/2026-08-12-codebase-audit-findings.md#f-127) | 低     | `src/shared/lib/analytics/ga-data-api.ts:121`                | GA4 Data API の retry が実質 no-op — gRPC Status を HTTP status として読むため一時障害で即失敗する                                                   |
-| [F-128](../../audits/2026-08-12-codebase-audit-findings.md#f-128) | 低     | `src/shared/lib/csv.ts:38`                                   | escapeCsvField の引用判定に \\r が無く、レコード区切りが \\r\\n のため裸の CR を含むフィールドで CSV の行が割れて列がずれる                          |
-| [F-129](../../audits/2026-08-12-codebase-audit-findings.md#f-129) | 低     | `src/shared/lib/email/receipt-emails.ts:61`                  | 領収書メールの発行日だけが機械形式 (2026-07-26)。PDF・マイページ・プレビューは和暦表記                                                               |
-| [F-131](../../audits/2026-08-12-codebase-audit-findings.md#f-131) | 低     | `src/shared/lib/r2/delete.ts:8`                              | R2 一括削除が 1000 件で分割されず、保持期限 purge が一度に 1000 件超の添付を消そうとすると全件が R2 に永久に残る                                     |
-| [F-132](../../audits/2026-08-12-codebase-audit-findings.md#f-132) | 低     | `src/shared/lib/sections/definitions/page-hero/schema.ts:53` | page-hero の images 重複チェックが field 側に付いていて path が二重になり、エラーが誰にも届かない                                                    |
+| ID                                                                | 深刻度 | 箇所                                                         | 内容                                                                                                                                |
+| ----------------------------------------------------------------- | ------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`              | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                  |
+| [F-121](../../audits/2026-08-12-codebase-audit-findings.md#f-121) | 低     | `src/shared/domain/faq/item-bulk-commands.ts:98`             | bulkMoveFaqItems だけが lock 取得後のカテゴリ再確認を欠き、削除済みカテゴリ配下に生きた FAQ が孤児化して 30 日後に cascade で消える |
+| [F-122](../../audits/2026-08-12-codebase-audit-findings.md#f-122) | 低     | `src/shared/domain/inquiries/bulk-status-commands.ts:74`     | bulk ステータス変更の TOCTOU フォールバックが他管理者の遷移を自分の成果と誤認し、append-only な状態履歴に偽の行を書く               |
+| [F-124](../../audits/2026-08-12-codebase-audit-findings.md#f-124) | 低     | `src/shared/domain/reservations/reminder-commands.ts:39`     | reminderSentAt が日付に紐づかない永続ラッチのため、リマインダ送信後に日時変更すると新しい日のリマインダが二度と送られない           |
+| [F-126](../../audits/2026-08-12-codebase-audit-findings.md#f-126) | 低     | `src/shared/emails/delete-account-verification.tsx:63`       | アカウント削除の確認メールが「有効期限 1時間」と書くが実際は 24 時間                                                                |
+| [F-127](../../audits/2026-08-12-codebase-audit-findings.md#f-127) | 低     | `src/shared/lib/analytics/ga-data-api.ts:121`                | GA4 Data API の retry が実質 no-op — gRPC Status を HTTP status として読むため一時障害で即失敗する                                  |
+| [F-128](../../audits/2026-08-12-codebase-audit-findings.md#f-128) | 低     | `src/shared/lib/csv.ts:38`                                   | escapeCsvField の引用判定に \\r が無く、レコード区切りが \\r\\n のため裸の CR を含むフィールドで CSV の行が割れて列がずれる         |
+| [F-129](../../audits/2026-08-12-codebase-audit-findings.md#f-129) | 低     | `src/shared/lib/email/receipt-emails.ts:61`                  | 領収書メールの発行日だけが機械形式 (2026-07-26)。PDF・マイページ・プレビューは和暦表記                                              |
+| [F-131](../../audits/2026-08-12-codebase-audit-findings.md#f-131) | 低     | `src/shared/lib/r2/delete.ts:8`                              | R2 一括削除が 1000 件で分割されず、保持期限 purge が一度に 1000 件超の添付を消そうとすると全件が R2 に永久に残る                    |
+| [F-132](../../audits/2026-08-12-codebase-audit-findings.md#f-132) | 低     | `src/shared/lib/sections/definitions/page-hero/schema.ts:53` | page-hero の images 重複チェックが field 側に付いていて path が二重になり、エラーが誰にも届かない                                   |
 
 ---
 
