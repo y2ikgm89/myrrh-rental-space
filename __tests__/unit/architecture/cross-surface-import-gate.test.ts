@@ -22,19 +22,55 @@ function collectSourceFiles(dir: string): string[] {
   return files;
 }
 
-/** そのソースが禁止 alias を import しているか（コメント行は数えない）。 */
+/**
+ * 禁止 surface を指す綴りの一覧（監査 F-12）。
+ *
+ * 旧実装は `from "@/admin/…"` の 1 形だけを見ており、**同じ越境を 2 通りの書き方で
+ * 素通り**させていた:
+ *
+ * - `await import("@/admin/lib/permissions")` — `from` を含まないので不一致
+ * - `import … from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions"` —
+ *   `@/*` alias（tsconfig の 4 本目）経由なので `@/admin` に一致しない
+ *
+ * どちらも public surface のモジュールグラフに admin 専用コードを引き込む。
+ * `.claude/rules/src-boundaries.md` はこの gate を「相互 import 禁止の強制手段」と
+ * 名指ししているので、規約は守られていると読まれ続けていた。
+ */
+function forbiddenSpecifierPrefixes(
+  forbiddenAlias: "@/public" | "@/admin",
+): readonly string[] {
+  return forbiddenAlias === "@/admin"
+    ? ["@/admin", "@/app/(admin)"]
+    : ["@/public", "@/app/(public)"];
+}
+
+/** import / export / 動的 import / require の**どれでも**モジュール指定子を拾う。 */
+const MODULE_SPECIFIER =
+  /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"']+)["']/gu;
+
+/** そのソースが禁止 surface を import しているか（コメント行は数えない）。 */
 export function importsForbiddenAlias(
   source: string,
   forbiddenAlias: "@/public" | "@/admin",
 ): boolean {
-  const pattern = new RegExp(
-    `from\\s+["']${forbiddenAlias.replace("/", "\\/")}(?:\\/|["'])`,
-    "u",
-  );
+  const prefixes = forbiddenSpecifierPrefixes(forbiddenAlias);
   return source.split("\n").some((line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false;
-    return pattern.test(line);
+    for (const match of line.matchAll(MODULE_SPECIFIER)) {
+      const specifier = match[1];
+      if (specifier === undefined) continue;
+      // 前方一致するだけの別 alias（`@/publicity/…`）は拾わない。
+      if (
+        prefixes.some(
+          (prefix) =>
+            specifier === prefix || specifier.startsWith(`${prefix}/`),
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
   });
 }
 
@@ -69,6 +105,38 @@ describe("cross-surface import gate", () => {
     // 相手側の alias は各テストの対象外。
     expect(
       importsForbiddenAlias('import { W } from "@/shared/lib/w";', "@/public"),
+    ).toBe(false);
+
+    // --- 監査 F-12 で素通りしていた 2 形 ---
+    // 動的 import（`from` を含まない）。
+    expect(
+      importsForbiddenAlias(
+        'const { hasPermission } = await import("@/admin/lib/permissions");',
+        "@/admin",
+      ),
+    ).toBe(true);
+    expect(importsForbiddenAlias('require("@/public/lib/x")', "@/public")).toBe(
+      true,
+    );
+    // `@/*` alias 経由の直書き（`@/admin` に一致しない綴り）。
+    expect(
+      importsForbiddenAlias(
+        'import { ROLE_PERMISSIONS } from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions";',
+        "@/admin",
+      ),
+    ).toBe(true);
+    expect(
+      importsForbiddenAlias(
+        'const m = await import("@/app/(public)/_shared/lib/y");',
+        "@/public",
+      ),
+    ).toBe(true);
+    // 広げても、無関係な surface は拾わない。
+    expect(
+      importsForbiddenAlias(
+        'import { Z } from "@/app/(public)/_shared/lib/z";',
+        "@/admin",
+      ),
     ).toBe(false);
   });
 
