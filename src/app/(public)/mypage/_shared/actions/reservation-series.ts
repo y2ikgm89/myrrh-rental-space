@@ -33,6 +33,7 @@ import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { invalidateReservationSeriesCaches } from "@/shared/lib/cache/reservation-cache";
+import { getPublicMaintenanceBlockMutation } from "@/shared/domain/settings/maintenance-guard";
 
 const seriesIdSchema = z.uuid({ error: "series id が不正です" });
 
@@ -41,6 +42,15 @@ export async function cancelReservationSeriesCustomerAction(
   cancellationReason: string | null = null,
   turnstileToken?: string,
 ): Promise<MutationResult<{ cancelledCount: number }>> {
+  // メンテナンス中は公開側の書込を止める（監査 F-38）。MaintenanceGate は
+  // **描画層しか塞がない**ので、直前にページを開いていた会員（や Server Action を
+  // 直接叩く相手）は素通りしていた。cancel は applyCancellationSideEffects まで
+  // 到達し、書込凍結中に Stripe 返金・GCal 削除・メール・監査ログが発火する。
+  // ゲストのメールリンク経路（runGuestTokenMutation）は必ずブロックしており、
+  // 会員側だけが通るという非対称な状態だった。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 

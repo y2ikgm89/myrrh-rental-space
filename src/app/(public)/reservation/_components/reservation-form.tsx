@@ -1,5 +1,6 @@
 "use client";
 
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import {
   useActionState,
   useEffect,
@@ -55,6 +56,14 @@ import {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+
+/**
+ * クーポンコード入力から料金プレビュー再取得までの待ち時間（ms）。
+ *
+ * 打鍵ごとに投げると公開クエリのレート上限（60 秒 / 30 リクエスト、IP 単位）を
+ * 食い潰す（監査 F-39）。コードを打ち切るまで待つ。
+ */
+const COUPON_PRICING_DEBOUNCE_MS = 400;
 
 const ALL_STEPS = [
   { number: 1, label: "スペース選択" },
@@ -283,6 +292,7 @@ export function ReservationForm({
 
   const [pricePreview, setPricePreview] =
     useState<ReservationPricingResult | null>(null);
+  const [pricingFailed, setPricingFailed] = useState(false);
   const [, startPricingTransition] = useTransition();
   const requestIdRef = useRef(0);
 
@@ -301,7 +311,14 @@ export function ReservationForm({
   // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
   // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
   // スペース・日時が揃うたびにサーバーへ問い合わせる。
-  const couponCode = fields.couponCode.value?.trim() ?? "";
+  // conform の `value` は打鍵ごとに更新される。そのまま effect 依存に置くと
+  // 1 打鍵ごとに Server Action が飛び、公開クエリのレート上限（30 回/分/IP）を
+  // 食い潰して**料金表示と時間枠取得の両方が壊れる**（監査 F-39）。
+  // スペース・日時は「選択して確定する」入力なので即時のままでよい。
+  const couponCode = useDebouncedValue(
+    fields.couponCode.value?.trim() ?? "",
+    COUPON_PRICING_DEBOUNCE_MS,
+  );
   // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
   // stale-response race を防ぐ（レビュー指摘）。
   useEffect(() => {
@@ -316,6 +333,8 @@ export function ReservationForm({
       );
       if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
+      // null は「取得できなかった」。黙って価格を消さず、失敗として出す（監査 F-39）。
+      setPricingFailed(result === null);
     });
   }, [previewSpaceId, previewStartIso, previewEndIso, couponCode]);
 
@@ -614,6 +633,8 @@ export function ReservationForm({
             endTime: endTime ?? "",
             guests: state.guests,
             price,
+            // 条件が揃っているのに価格が無いなら、取得に失敗している。
+            priceUnavailable: pricingWindow !== null && pricingFailed,
             originalPrice: basePrice,
             spaceDiscountAmount: pricingWindow
               ? (pricePreview?.spaceDiscountAmount ?? 0)

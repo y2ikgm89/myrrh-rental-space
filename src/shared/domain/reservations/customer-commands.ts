@@ -33,6 +33,7 @@ import {
   guestCountCapacityError,
 } from "./payloads";
 import {
+  CUSTOMER_EDITABLE_PAYMENT_STATUSES,
   isReservationEditableForCustomerSelfServe,
   type EditEligibilityReason,
 } from "./edit-eligibility";
@@ -571,7 +572,9 @@ async function updateReservationCommand(input: {
       where: {
         id: reservationId,
         deletedAt: null,
-        paymentStatus: PaymentStatus.UNPAID,
+        // eligibility と同じ集合を使う（監査 F-62）。写経すると、開けるのに
+        // 保存だけ失敗する状態に戻る。
+        paymentStatus: { in: [...CUSTOMER_EDITABLE_PAYMENT_STATUSES] },
         version: updateInput.version,
       },
       data: {

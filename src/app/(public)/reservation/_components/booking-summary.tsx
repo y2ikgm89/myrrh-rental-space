@@ -20,6 +20,15 @@ interface BookingSummaryProps {
   readonly endTime: string;
   readonly guests: number;
   readonly price: number | null;
+  /**
+   * 料金プレビューの取得に失敗したか。
+   *
+   * `price === null` には「まだ条件が揃っていない」と「取得に失敗した」の 2 つが
+   * あり、旧実装はどちらも**価格ブロックごと非表示**にしていた。レート上限に
+   * 当たった利用者は、金額が一切表示されないまま「予約を確定する」を押すことに
+   * なる（監査 F-39）。失敗は失敗として出す。
+   */
+  readonly priceUnavailable?: boolean;
   readonly originalPrice?: number | null;
   readonly spaceDiscountAmount?: number;
   readonly durationDiscountAmount?: number;
@@ -70,6 +79,7 @@ export function BookingSummary({
   endTime,
   guests,
   price,
+  priceUnavailable = false,
   originalPrice = null,
   spaceDiscountAmount = 0,
   durationDiscountAmount = 0,
@@ -103,6 +113,8 @@ export function BookingSummary({
               {formatTotal(price)}
             </p>
           </div>
+        ) : priceUnavailable ? (
+          <p className="text-sm text-destructive">料金を計算できませんでした</p>
         ) : null}
       </div>
 

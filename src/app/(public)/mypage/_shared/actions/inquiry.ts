@@ -27,6 +27,7 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { checkPublicSiteWritable } from "@/shared/domain/settings/maintenance-guard";
 
 export async function replyToInquiryAction(
   _prev: SubmissionResult | undefined,
@@ -36,6 +37,11 @@ export async function replyToInquiryAction(
     formData,
     customerInquiryReplySchema,
     async (data) => {
+      // メンテナンス中は書込を止める（監査 F-38）。conform 経路なので
+      // formError として返す。rate limit より前。
+      const writable = await checkPublicSiteWritable();
+      if (!writable.ok) return { ok: false, error: writable.error };
+
       const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
       if (!rateLimit.success) return { ok: false, error: rateLimit.error };
 

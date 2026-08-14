@@ -32,6 +32,13 @@ import {
 // モック設定（import より前に配置）
 // =============================================================================
 
+// メンテナンス判定は書込の前段ガード（監査 F-38）。実装は fail-closed で、
+// 設定が読めないと true（＝ブロック）を返すため、テストでは明示的に「通す」。
+mock.module("@/shared/domain/settings/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 mock.module("server-only", () => ({}));
 
 mock.module("next/headers", () => ({

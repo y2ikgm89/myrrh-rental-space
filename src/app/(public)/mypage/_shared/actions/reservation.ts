@@ -65,6 +65,10 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { z } from "zod";
+import {
+  checkPublicSiteWritable,
+  getPublicMaintenanceBlockMutation,
+} from "@/shared/domain/settings/maintenance-guard";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 
@@ -79,6 +83,15 @@ const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 export async function startCheckoutSessionAction(
   reservationId: string,
 ): Promise<MutationResult<{ sessionUrl: string | null }>> {
+  // メンテナンス中は公開側の書込を止める（監査 F-38）。MaintenanceGate は
+  // **描画層しか塞がない**ので、直前にページを開いていた会員（や Server Action を
+  // 直接叩く相手）は素通りしていた。cancel は applyCancellationSideEffects まで
+  // 到達し、書込凍結中に Stripe 返金・GCal 削除・メール・監査ログが発火する。
+  // ゲストのメールリンク経路（runGuestTokenMutation）は必ずブロックしており、
+  // 会員側だけが通るという非対称な状態だった。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
@@ -121,6 +134,15 @@ export async function cancelReservationAction(
   cancellationReason: string | null = null,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
+  // メンテナンス中は公開側の書込を止める（監査 F-38）。MaintenanceGate は
+  // **描画層しか塞がない**ので、直前にページを開いていた会員（や Server Action を
+  // 直接叩く相手）は素通りしていた。cancel は applyCancellationSideEffects まで
+  // 到達し、書込凍結中に Stripe 返金・GCal 削除・メール・監査ログが発火する。
+  // ゲストのメールリンク経路（runGuestTokenMutation）は必ずブロックしており、
+  // 会員側だけが通るという非対称な状態だった。rate limit より前に置く。
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
@@ -210,6 +232,11 @@ export async function updateReservationAction(
       // を厳守する。Turnstile 検証は DB / 外部 API を触らない最安のチェックなので、
       // session 取得 (Better Auth cookie parse + Customer 引き当て) より前に置き、
       // bot による認証済み経路 hitting を早期遮断する。
+      // メンテナンス中は書込を止める（監査 F-38）。conform 経路なので
+      // formError として返す。rate limit より前。
+      const writable = await checkPublicSiteWritable();
+      if (!writable.ok) return { ok: false, error: writable.error };
+
       const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
       if (!rateLimit.success) {
         return { ok: false, error: "リクエストが多すぎます" };
