@@ -143,7 +143,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-96](2026-08-12-codebase-audit-findings.md#f-96)   | 低     | #2300                                      | FigmaNode の exportDOM がラベルを可視 `<p>` と iframe title に出す                                               | —                                                                                       |
 | [F-97](2026-08-12-codebase-audit-findings.md#f-97)   | 低     | #2300                                      | MapEmbed も同様。`[data-map]` CSS を足して公開地図の UA 既定 300x150 を止める                                    | —                                                                                       |
 | [F-100](2026-08-12-codebase-audit-findings.md#f-100) | 低     | #2301                                      | 見出し / リスト / インスペクター / ヘルプの数字・記号ショートカットを event.code で判定する                      | —                                                                                       |
-| [F-101](2026-08-12-codebase-audit-findings.md#f-101) | 低     | —                                          | root 直下の空段落を URL ペースト対象にする。ネストした空段落では発火しない                                       | —                                                                                       |
+| [F-101](2026-08-12-codebase-audit-findings.md#f-101) | 低     | #2304                                      | root 直下の空段落を URL ペースト対象にする。ネストした空段落では発火しない                                       | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
