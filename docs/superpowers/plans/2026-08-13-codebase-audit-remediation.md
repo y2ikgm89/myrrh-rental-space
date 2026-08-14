@@ -96,9 +96,13 @@
 
 以下は**個別の指摘を全部潰しても解消しない**。次に機能を足したときに同じ形で再発する。
 
-**閉じたもの: G / H / I。** 各節の末尾に「構造としての残りは無い」根拠を書いてある
+**閉じたもの: E / G / H / I。** 各節の末尾に「構造としての残りは無い」根拠を書いてある
 （実測を伴わない「たぶん大丈夫」は書かない — G は 71 個の `page.tsx` を走査して
-確認した）。残っているのは A〜F と J。
+確認した）。残っているのは A / B / C / D / F / J。
+
+**「関連指摘が全部済」は「穴が閉じた」ではない。** §4 の前提がまさにそれで、
+B / D / F は関連指摘を全件クローズしたあとも構造としては残っている（各節に実測を
+書いた）。この 3 つは台帳（§6）に行が無いので、見落としやすい。
 
 ### A. テストが固定しているのは「配線」であって「振る舞い」ではない ★最優先
 
@@ -120,7 +124,13 @@
 
 cacheTag() producer と next.config.ts の Cache-Tag ヘッダが独立した 2 つの SSoT になっており、対応を検査する gate が無い。証拠: src/shared/domain/events/public-queries.ts:97 は `cacheTag(EVENTS, LOCATIONS, SPACES)` を宣言するのに、next.config.ts:289 の /events は EVENTS\_CACHE\_TAG のみ。gate \_\_tests\_\_/unit/architecture/next-config-cache-tag-emission.test.ts の JSDoc を読むと、検査しているのは SITE\_WIDE\_CDN\_TAGS の inline 有無と PRIVATE\_NO\_TAG\_PREFIXES だけで、producer 側 cacheTag との突合は範囲外。指摘20・21・22 は 3 件の別バグではなく、この 1 つの穴の 3 つの症状。
 
-- **関連指摘**: [F-18](../../audits/2026-08-12-codebase-audit-findings.md#f-18) / [F-73](../../audits/2026-08-12-codebase-audit-findings.md#f-73) / [F-88](../../audits/2026-08-12-codebase-audit-findings.md#f-88)
+- **関連指摘**: F-18 / F-73 / F-88（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
+- **構造としては残っている（2026-08-14 実測）**: 症状 3 件は塞いだが、**2 つの SSoT を
+  突き合わせる gate は今も無い**。`__tests__/unit/architecture/` で `cacheTag` に触れる
+  gate は `cache-tag-literals.test.ts`（リテラル直書きの禁止）と
+  `type-safety-cast-and-cache-tag-drift.test.ts`（cast の drift）の 2 本だけで、
+  どちらも「producer の `cacheTag(...)` と `next.config.ts` のヘッダが対応しているか」
+  は見ていない。新しい public ページを足すと同じ形で再発する。
 
 ### C. イベント×定員×金額×決済
 
@@ -132,19 +142,34 @@ EventTicket.unitSize が DB と admin フォームにしか存在せず、価格
 
 cron は features を gate するが Stripe webhook は gate しない。証拠: src/app/api/cron/unpaid-event-registration-expire/route.ts:35 と waitlist-expire/route.ts:54 は `isFeatureEnabled('events')` が false なら skip する一方、`grep -rn isFeatureEnabled src/app/api/webhooks/` は 0 件。events モジュールを OFF にした瞬間、未払い申込の期限切れとキャンセル待ちオファーの失効が止まり、決済 webhook だけが動き続ける。api-cron-webhooks 観点は cron 側を、payment 観点は webhook 側を見ており、非対称は両者の境界に落ちる。
 
-- **関連指摘**: [F-65](../../audits/2026-08-12-codebase-audit-findings.md#f-65) / [F-103](../../audits/2026-08-12-codebase-audit-findings.md#f-103) / [F-133](../../audits/2026-08-12-codebase-audit-findings.md#f-133)
+- **関連指摘**: F-65 / F-103 / F-133（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
+- **構造としては残っている（2026-08-14 実測）**: 3 件はいずれも「フラグの読み方」を
+  直したもので、**非対称そのものは手つかず**。`grep -rn isFeatureEnabled src/app/api/webhooks/`
+  は今も **0 件**で、events モジュールを OFF にすると cron だけ止まり決済 webhook は
+  動き続ける。
 
 ### E. 顧客匿名化×メール×領収書×監査ログ
 
 data-retention/commands.ts:339 が anonymizeCustomerCommand を呼んで Customer.email を non-routable な placeholder に置換するが、Reservation / Receipt / AuditLog / EventRegistration 側に残る PII と表示経路は誰も突き合わせていない。指摘25(リマインダが placeholder 宛に送る)はその一断面で、同じ構造が受領書 PDF の宛名、監査ログの actor 表示、mypage の履歴表示にもある。
 
-- **関連指摘**: [F-44](../../audits/2026-08-12-codebase-audit-findings.md#f-44) / [F-52](../../audits/2026-08-12-codebase-audit-findings.md#f-52) / [F-112](../../audits/2026-08-12-codebase-audit-findings.md#f-112) / [F-116](../../audits/2026-08-12-codebase-audit-findings.md#f-116) / [F-117](../../audits/2026-08-12-codebase-audit-findings.md#f-117)
+- **関連指摘**: F-44 / F-52 / F-112 / F-116 / F-117（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
+- **構造としての残りは無い（2026-08-14 実測）**: 突き合わせの主体ができた。
+  `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が、各 PII 項目に
+  一意のトークンを入れて匿名化し、`to_jsonb(row)::text` で**全テーブルを走査**して
+  生き残った表を列挙する。**列の一覧を持たない**ので drift しない — 新しい表に PII を
+  持たせて匿名化の配線を忘れたら、その表の名前が出て落ちる。残ってよいのは
+  `terms_agreements`（append-only の同意証跡）だけで、それも積極的に固定してある。
 
 ### F. クーポン claim/release の分散
 
 claim は payloads.ts:207 の単一 atomic UPDATE で堅い(WHERE に is\_active/usage\_limit/valid\_from/valid\_until/min\_reservation\_amount を再強制)のに対し、release は cancel-core.ts:157 / lifecycle-commands.ts:144,455 / pending-expiry.ts:133 / series-commands.ts:408 / admin-commands.ts:586 / calendar-sync-inbound-mutations.ts:108 の 6 ファイルに散在。Stripe の非同期決済(checkout.session.async\_payment\_succeeded)が pending-expiry の release 後に着弾する順序は、payment 観点も reservations 観点も検証していない。
 
-- **関連指摘**: [F-58](../../audits/2026-08-12-codebase-audit-findings.md#f-58) / [F-59](../../audits/2026-08-12-codebase-audit-findings.md#f-59) / [F-60](../../audits/2026-08-12-codebase-audit-findings.md#f-60)
+- **関連指摘**: F-58 / F-59 / F-60（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
+- **構造としては残っている（2026-08-14 実測）**: 3 件は admin の予約編集経路を直した
+  もので、分散そのものは変わっていない。`usageCount: { decrement` を持つ
+  `src/shared/domain/` 配下のファイルは今も **6 本**。非同期決済
+  (`checkout.session.async_payment_succeeded`) が pending-expiry の release 後に
+  着弾する順序も未検証のまま。
 
 ### G. 認可×Server Component 描画
 
@@ -209,7 +234,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 ### フェーズ 2 — 済んだ修正の取りこぼし
 
 台帳には載らない小さな残件が 2 つある。どちらも本体は解決済みで、**何が残っているかは
-[対処の記録 §2](../../audits/2026-08-12-codebase-audit-progress.md#2-済んだ指摘17-件) の
+[対処の記録 §2](../../audits/2026-08-12-codebase-audit-progress.md#2-済んだ指摘) の
 「残件」列が SSoT**。ここには写さない（写した瞬間から食い違う）。
 
 手が空いたときに、その列を見て潰す。
@@ -217,7 +242,17 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 ### フェーズ 3 — 構造の穴（§4）
 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
-次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
+残りの A は台帳にある F-56 / F-78 / F-80 / F-118。
+
+**B / D / F は台帳に行が無い。** 関連指摘は全件クローズしたが、構造としては残って
+いる（§4 の各節に実測を書いた）。台帳を消化しても自動では消えないので、着手する
+なら明示的に拾う:
+
+| 穴  | 残っている作業                                                              |
+| --- | --------------------------------------------------------------------------- |
+| B   | producer の `cacheTag(...)` と `next.config.ts` のヘッダを突き合わせる gate |
+| D   | Stripe webhook 側の feature gate（cron との非対称の解消）                   |
+| F   | クーポン release の集約と、非同期決済 × pending-expiry の順序検証           |
 
 ### フェーズ 4 — 中
 
@@ -242,7 +277,8 @@ A（決済に mock を挟まない層）が最優先。#2229 に続けて金額�
    「テストは通ったが欠陥を捕まえていない」形になる（実際、この監査で見つかった欠陥の
    うち複数は、既存テストが**壊れた挙動のほうを固定していた**）。
 2. **欠陥を固定していた既存テストは、主張を反転する**（弱めない・消さない）。
-   実測でこの形が 8 本あった。
+   珍しい形ではない — この監査では繰り返し出た。件数はここに書かない（書くと
+   更新のたびにずれる）。
 3. gate を足すのは、**実際に起きた欠陥**に対してだけ。足すときは元の欠陥の形を fixture に
    入れる。合成形だけだと、その欠陥を素通りする gate ができる（F-26 の gate の初版が
    実際にそうなり、変異検査で見つかった）。
