@@ -70,6 +70,7 @@ type FailedReservation = {
   guestEmail: string | null;
   googleCalendarEventId: string | null;
   calendarSyncError: string | null;
+  seriesId: string | null;
   space: { name: string; lineAddress: string };
   customer: { firstName: string; lastName: string; email: string };
 };
@@ -197,6 +198,7 @@ function baseReservation(
     guestEmail: null,
     googleCalendarEventId: null,
     calendarSyncError: "create failed: quota exceeded",
+    seriesId: null,
     space: { name: "Space A", lineAddress: "東京都渋谷区" },
     customer: {
       firstName: "太郎",
@@ -266,7 +268,8 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
   });
 
   test("series-child は createCalendarEvent を呼ばず fetchEventInstances + writeBack のみ", async () => {
-    // 前提: standalone pool は空 (getFailedCalendarSyncReservations が seriesId:null で除外)
+    // 前提: standalone pool は空。eventId 未発行の series-child は
+    // retryFailedStandaloneCalendarSyncs 側で除外される（GCAL-RETRY-07）。
     mockGetFailedReservations.mockResolvedValue([]);
     mockGetFailedSeriesIds.mockResolvedValue(["series-001"]);
     mockGetSeriesMaster.mockResolvedValue("gcal-master-001");
@@ -291,6 +294,64 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
     expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
   });
 
+  // GCAL-RETRY-07（監査 F-61）: eventId を持つ series-child は update / delete を
+  // 再試行できる。旧実装は where 句の `seriesId: null` でここを丸ごと落としており、
+  // series pool（`googleCalendarEventId: null` 要求）と master pool
+  // （typed prefix 要求）にも該当しないため、3 pool すべてから漏れていた。
+  test("eventId を持つ series-child の delete 失敗は再試行される", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        id: "res-series-child",
+        status: "CANCELLED",
+        seriesId: "series-001",
+        googleCalendarEventId: "gcal-master-001_20260501T010000Z",
+        calendarSyncError: "gcal_delete_failed: 503 backend error",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    // create は master の RRULE 展開と二重になるので絶対に呼ばない。
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("eventId を持つ series-child の update 失敗も再試行される", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        id: "res-series-child",
+        status: "CONFIRMED",
+        seriesId: "series-001",
+        googleCalendarEventId: "gcal-master-001_20260501T010000Z",
+        calendarSyncError: "update failed: 429 rate limited",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("eventId 未発行の series-child は standalone create に回さない", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        id: "res-series-child",
+        seriesId: "series-001",
+        googleCalendarEventId: null,
+        calendarSyncError: "create failed: quota exceeded",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    // ここで create を呼ぶと master の RRULE 展開と時刻二重の招待になる。
+    expect(mockCreate).not.toHaveBeenCalled();
+    // total にも数えない（この行を担当するのは series pool 側）。
+    expect(result).toEqual({ total: 0, succeeded: 0, failed: 0 });
+  });
   test("series の master 未永続 → syncReservationSeriesToCalendar で master 再作成を試みる (成功時)", async () => {
     mockGetFailedSeriesIds.mockResolvedValue(["series-orphan"]);
     mockGetSeriesMaster.mockResolvedValue(null);

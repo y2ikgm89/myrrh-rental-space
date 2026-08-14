@@ -393,6 +393,15 @@ export async function retryFailedSyncs(): Promise<{
  * - `googleCalendarEventId` 有り + `GCAL_DELETE_FAILED_PREFIX` エラー → delete
  *   (`deleteCalendarSync`)。CANCELLED のまま GCal 上にイベントが残っている状態。
  * - `googleCalendarEventId` 有り + それ以外のエラー → update (`updateCalendarSync`)
+ *
+ * GCAL-RETRY-07: series-child に回してはいけないのは **create だけ**。
+ * `createCalendarEvent` は RRULE 無しの単発イベントを作るので、master の RRULE 展開と
+ * 時刻二重の招待になり、series-all の master 削除でも孤児化する。update / delete は
+ * 既存 child event を対象にするので衝突しない。
+ *
+ * 判定はこの 1 箇所だけに置く。`getFailedCalendarSyncReservations` の where 句へ
+ * 移すと（旧実装の `seriesId: null`）update / delete まで一緒に落ち、3 pool すべてから
+ * 漏れる（監査 F-61）。
  */
 async function retryFailedStandaloneCalendarSyncs(): Promise<{
   total: number;
@@ -401,10 +410,18 @@ async function retryFailedStandaloneCalendarSyncs(): Promise<{
 }> {
   const failedReservations = await getFailedCalendarSyncReservations();
 
+  // series-child の create だけを外す。残りの pool は retryFailedSeriesCalendarSyncs
+  // （master 未永続の series）と retryFailedSeriesMasterOperations（master 操作）が持つ。
+  const retryable = failedReservations.filter(
+    (reservation) =>
+      reservation.googleCalendarEventId !== null ||
+      reservation.seriesId === null,
+  );
+
   let succeeded = 0;
   let failed = 0;
 
-  for (const reservation of failedReservations) {
+  for (const reservation of retryable) {
     const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
     const syncData = omitUndefined({
       reservationId: reservation.id,
@@ -443,7 +460,7 @@ async function retryFailedStandaloneCalendarSyncs(): Promise<{
   }
 
   return {
-    total: failedReservations.length,
+    total: retryable.length,
     succeeded,
     failed,
   };

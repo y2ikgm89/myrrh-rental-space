@@ -18,6 +18,9 @@ const RegistrationStatus = {
 const mockEventFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
+const mockEventFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
+  () => Promise.resolve(null),
+);
 const mockEventFindMany = mock<() => Promise<{ slug: string }[]>>(() =>
   Promise.resolve([]),
 );
@@ -83,6 +86,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     event: {
       findFirst: mockEventFindFirst,
+      findUnique: mockEventFindUnique,
       findMany: mockEventFindMany,
       create: mockEventCreate,
       update: mockEventUpdate,
@@ -375,8 +379,20 @@ describe("cancelImportedEventFromCalendar", () => {
   beforeEach(() => {
     mockEventTimeSlotFindFirst.mockClear();
     mockEventUpdateMany.mockClear();
+    mockEventFindUnique.mockClear();
     mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
     mockEventUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
+    // 反映してよい既定形（DRAFT・有効な申込なし）。公開中 / 申込ありのガードは
+    // 実 DB で見る（__tests__/integration/domain/events/calendar-cancel-guard.test.ts）。
+    mockEventFindUnique.mockImplementation(() =>
+      Promise.resolve({
+        id: "event-1",
+        title: "Imported Event",
+        status: EventStatus.DRAFT,
+        deletedAt: null,
+        registrations: [],
+      }),
+    );
   });
 
   test("対象スロットが無い場合は cancelled: false を返す", async () => {
