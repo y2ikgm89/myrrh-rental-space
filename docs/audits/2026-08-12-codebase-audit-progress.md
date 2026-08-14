@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  27 |  30 |  57 |
-| 合計   | 102 |  30 | 132 |
+| 低     |  32 |  25 |  57 |
+| 合計   | 107 |  25 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 30 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 25 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -115,7 +115,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-15](2026-08-12-codebase-audit-findings.md#f-15)   | 中     | #2282                                      | 透過ヘッダーの負マージンを `margin-top` にし、camelCase の許可を外す                                             | —                                                                                       |
 | [F-51](2026-08-12-codebase-audit-findings.md#f-51)   | 中     | #2282                                      | FAQ の閲覧・投票が `updated_at` を触らないようにする                                                             | 列は足していない（PR 本文に理由）                                                       |
 | [F-71](2026-08-12-codebase-audit-findings.md#f-71)   | 中     | #2282                                      | bot 判定をサーバー発行の purpose 付きトークンに置き換える                                                        | 公開フォーム 4 本。E2E gate の理由 1 つが解消                                           |
-| [F-19](2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `fix/audit-wave-1`                         | 本番 seed は SEO / 組織 / 予約 singleton の update を空にする                                                    | F-86 / F-89 / F-90 は同ファイルのため未着手                                             |
+| [F-19](2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `fix/audit-wave-1`                         | 本番 seed は SEO / 組織 / 予約 singleton の update を空にする                                                    | —                                                                                       |
 | [F-42](2026-08-12-codebase-audit-findings.md#f-42)   | 中     | `fix/audit-wave-1`                         | 監査 CSV は期間必須・90 日・`take+1`。超過は 409。並びは `sequence asc`                                          | 管理画面の CSV リンクは期間未指定のまま 400 になる（UI 必須化は別件）                   |
 | [F-47](2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `fix/audit-wave-1`                         | チケット定員 floor をスロットごとの CONFIRMED 最大合計と比較する                                                 | —                                                                                       |
 | [F-56](2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `fix/audit-wave-1`                         | 非整数アプリ金額は typed error。webhook は 2xx + CRITICAL + 管理者通知                                           | 端数 USD は Stripe 上だけ返り DB は PAID のまま（minor-unit 移行は範囲外）              |
@@ -135,6 +135,11 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-91](2026-08-12-codebase-audit-findings.md#f-91)   | 低     | #2297                                      | spawnSync の `exitCode=null` を `?? 1` で失敗へ倒す。`process.exit(null)` の偽成功を止める                       | —                                                                                       |
 | [F-85](2026-08-12-codebase-audit-findings.md#f-85)   | 低     | #2295                                      | 型リテラル引数は where/data/select 等をプロパティ単位で Prisma 型必須に。全 params を見る                        | —                                                                                       |
 | [F-93](2026-08-12-codebase-audit-findings.md#f-93)   | 低     | #2296                                      | 一括配信の rate limit を認証 + RBAC 通過後へ移し、低権限による共有バケット消費を止めた                           | —                                                                                       |
+| [F-99](2026-08-12-codebase-audit-findings.md#f-99)   | 低     | #2298                                      | 検索・全置換の再開を `index + searchText.length` にし、自己重複語の過剰置換を止めた                              | —                                                                                       |
+| [F-77](2026-08-12-codebase-audit-findings.md#f-77)   | 低     | #2302                                      | 数値列母集合に BigInt を含め、AuditLog.sequence に positive CHECK を付けた                                       | —                                                                                       |
+| [F-86](2026-08-12-codebase-audit-findings.md#f-86)   | 低     | #2299                                      | navigation reconcile gate がコメントを落としてから `key:` 位置だけを見る                                         | —                                                                                       |
+| [F-89](2026-08-12-codebase-audit-findings.md#f-89)   | 低     | #2299                                      | 本番 seed はスペースカテゴリーの description / icon / color を書き戻さない                                       | —                                                                                       |
+| [F-90](2026-08-12-codebase-audit-findings.md#f-90)   | 低     | #2299                                      | 本番 navigation seed は空テーブルの初回だけ create。欠けた order を埋めない                                      | —                                                                                       |
 | [F-96](2026-08-12-codebase-audit-findings.md#f-96)   | 低     | #2300                                      | FigmaNode の exportDOM がラベルを可視 `<p>` と iframe title に出す                                               | —                                                                                       |
 | [F-97](2026-08-12-codebase-audit-findings.md#f-97)   | 低     | #2300                                      | MapEmbed も同様。`[data-map]` CSS を足して公開地図の UA 既定 300x150 を止める                                    | —                                                                                       |
 
