@@ -268,8 +268,12 @@ async function handleEvent(
 async function handleBounced(
   event: ResendWebhookEvent,
 ): Promise<EventHandlerResult> {
-  const recipients = event.data.to ?? [];
-  if (recipients.length === 0) {
+  const recipients = recipientsForAttributedSuppression(
+    event.data.to ?? [],
+    "resendWebhook.handleBounced",
+    event.data.email_id ?? null,
+  );
+  if (recipients === null) {
     return { processed: 0, failed: 0, appliedStatus: null };
   }
 
@@ -312,8 +316,12 @@ async function handleBounced(
 async function handleComplained(
   event: ResendWebhookEvent,
 ): Promise<EventHandlerResult> {
-  const recipients = event.data.to ?? [];
-  if (recipients.length === 0) {
+  const recipients = recipientsForAttributedSuppression(
+    event.data.to ?? [],
+    "resendWebhook.handleComplained",
+    event.data.email_id ?? null,
+  );
+  if (recipients === null) {
     return { processed: 0, failed: 0, appliedStatus: null };
   }
 
@@ -370,8 +378,12 @@ async function handleFailed(
     return { processed: 0, failed: 0, appliedStatus: null };
   }
 
-  const recipients = event.data.to ?? [];
-  if (recipients.length === 0) {
+  const recipients = recipientsForAttributedSuppression(
+    event.data.to ?? [],
+    "resendWebhook.handleFailed",
+    event.data.email_id ?? null,
+  );
+  if (recipients === null) {
     return { processed: 0, failed: 0, appliedStatus: null };
   }
 
@@ -399,8 +411,12 @@ async function handleFailed(
 async function handleSuppressed(
   event: ResendWebhookEvent,
 ): Promise<EventHandlerResult> {
-  const recipients = event.data.to ?? [];
-  if (recipients.length === 0) {
+  const recipients = recipientsForAttributedSuppression(
+    event.data.to ?? [],
+    "resendWebhook.handleSuppressed",
+    event.data.email_id ?? null,
+  );
+  if (recipients === null) {
     return { processed: 0, failed: 0, appliedStatus: null };
   }
 
@@ -422,6 +438,39 @@ async function handleSuppressed(
     failed,
     appliedStatus: EmailDeliveryStatus.HARD_BOUNCED,
   };
+}
+
+/**
+ * Resend の bounce / complaint / failed / suppressed payload は、どの宛先が
+ * 失敗したかを識別しない。`data.to` が 2 件以上のときに全員を抑止すると、
+ * バウンスしていない通知アドレスまで永久に除外される（F-114）。
+ * 帰属できるのは length === 1 のときだけ。空配列は従来どおり no-op。
+ */
+function recipientsForAttributedSuppression(
+  recipients: readonly string[],
+  operation: string,
+  emailId: string | null,
+): readonly string[] | null {
+  if (recipients.length === 1) {
+    return recipients;
+  }
+  if (recipients.length !== 0) {
+    logError(
+      new Error(
+        "Resend webhook recipients are not uniquely attributable; skipping suppression",
+      ),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation,
+          emailId,
+          recipientCount: recipients.length,
+        },
+      },
+    );
+  }
+  return null;
 }
 
 /**
