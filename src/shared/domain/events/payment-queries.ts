@@ -234,8 +234,10 @@ export async function findEventRegistrationForReceiptNotify(
 }
 
 /**
- * stripePaymentIntentId で EventRegistration を検索
+ * stripePaymentIntentId で EventRegistration を検索する
  * (`findReservationByPaymentIntent` の event 対称版)。
+ * webhook の決済主体同定であり公開可否判定ではないので、親 event の
+ * deletedAt では除外しない。
  */
 export async function findEventRegistrationByPaymentIntent(
   paymentIntentId: string,
@@ -243,7 +245,6 @@ export async function findEventRegistrationByPaymentIntent(
   return prisma.eventRegistration.findFirst({
     where: {
       stripePaymentIntentId: paymentIntentId,
-      event: { deletedAt: null },
     },
     select: { id: true, paymentStatus: true, paidAmount: true },
   });

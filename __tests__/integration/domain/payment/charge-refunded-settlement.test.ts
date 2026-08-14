@@ -48,6 +48,17 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: () => Promise.resolve(),
 }));
 
+const mockLogError = mock((..._args: unknown[]) => undefined);
+const mockCreateNotificationCommand = mock(() => Promise.resolve());
+const actualErrors = await import("@/shared/lib/errors/server");
+mock.module("@/shared/lib/errors/server", () => ({
+  ...actualErrors,
+  logError: mockLogError,
+}));
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: mockCreateNotificationCommand,
+}));
+
 type PrismaModule = typeof import("@/shared/db/prisma");
 type PaymentQueriesModule =
   typeof import("@/shared/domain/reservations/payment-queries");
@@ -288,6 +299,38 @@ describeMaybe("charge.refunded は Stripe の実 status で確定を判断する
       // ここでしか確かめられない。
       expect(await refundRowsOf(reservationId)).toHaveLength(1);
       expect(await paymentStatusOf(reservationId)).toBe(PaymentStatus.REFUNDED);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("USD 1250 cents は float を書かず throw もしない (CRITICAL)", async () => {
+    const { reservationId, cleanup } = await createPaidReservationFixture();
+    const stripeRefundId = `re_usd_frac_${crypto.randomUUID()}`;
+    mockLogError.mockClear();
+    mockCreateNotificationCommand.mockClear();
+
+    try {
+      await applyChargeRefundIdempotent({
+        reservationId,
+        chargeAmount: 5000,
+        amountRefunded: 1250,
+        currency: "usd",
+        latestRefund: {
+          id: stripeRefundId,
+          amount: 1250,
+          status: "succeeded",
+          metadata: null,
+        },
+      });
+
+      expect(await refundRowsOf(reservationId)).toEqual([]);
+      expect(await paymentStatusOf(reservationId)).toBe(PaymentStatus.PAID);
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "NonIntegerAppAmountError" }),
+        expect.objectContaining({ severity: "CRITICAL" }),
+      );
+      expect(mockCreateNotificationCommand).toHaveBeenCalled();
     } finally {
       await cleanup();
     }
