@@ -30,6 +30,9 @@ const GATE_SCRIPT = "bun scripts/check-static-prelude-empty.ts";
 /** `next build` を実行するすべての entry point。ここを増やしたら gate も足す。 */
 const BUILD_SCRIPTS = ["build", "build:skip-env:next"] as const;
 
+/** `next build` トークン。コマンド先頭も拾う。 */
+const RUNS_NEXT_BUILD = /(?:^|\s)next build(?:\s|$)/u;
+
 function readScripts(): Record<string, string> {
   const parsed: unknown = JSON.parse(
     readFileSync(join(process.cwd(), "package.json"), "utf8"),
@@ -62,11 +65,23 @@ describe("CSP nonce prelude gate", () => {
 
   test("gate を通す build entry point を数え漏らしていない", () => {
     const runsNextBuild = Object.entries(scripts)
-      .filter(([, command]) => / next build(\s|$)/u.test(command))
+      .filter(([, command]) => RUNS_NEXT_BUILD.test(command))
       .map(([name]) => name)
       .sort();
 
     // `next experimental-analyze` は bundle 解析専用で prerender 成果物を作らないため対象外。
     expect(runsNextBuild).toEqual([...BUILD_SCRIPTS].sort());
+  });
+
+  test("先頭が next build の script も母集合に入る", () => {
+    // 判定の見本。先頭スペース必須の旧 regex はこれを取りこぼす。
+    const startsWithNextBuild = "next build --experimental-build-mode compile";
+    const midCommand =
+      "bun run toolchain:check && next build && bun scripts/check-static-prelude-empty.ts";
+    const analyzeOnly = "next experimental-analyze --output";
+
+    expect(RUNS_NEXT_BUILD.test(startsWithNextBuild)).toBe(true);
+    expect(RUNS_NEXT_BUILD.test(midCommand)).toBe(true);
+    expect(RUNS_NEXT_BUILD.test(analyzeOnly)).toBe(false);
   });
 });
