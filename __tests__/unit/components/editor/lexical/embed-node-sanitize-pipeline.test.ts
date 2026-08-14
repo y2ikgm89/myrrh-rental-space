@@ -7,6 +7,8 @@ import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
 import { editorTheme } from "@/admin/components/editor/lexical/theme";
 import { $createYouTubeNode } from "@/admin/components/editor/lexical/nodes/YouTubeNode";
 import { $createAudioNode } from "@/admin/components/editor/lexical/nodes/AudioNode";
+import { $createFigmaNode } from "@/admin/components/editor/lexical/nodes/FigmaNode";
+import { $createMapEmbedNode } from "@/admin/components/editor/lexical/nodes/MapEmbedNode";
 import { $createRubyNode } from "@/admin/components/editor/lexical/nodes/RubyNode";
 import { $createCollapsibleContainerNode } from "@/admin/components/editor/lexical/nodes/CollapsibleContainerNode";
 import { $createCollapsibleItemNode } from "@/admin/components/editor/lexical/nodes/CollapsibleItemNode";
@@ -39,6 +41,16 @@ function renderToFinalHtml(build: () => void): string {
   const rawHtml = renderEditorStateJsonToHtmlCore(json);
   return finalizeLexicalExportedHtml(rawHtml);
 }
+
+function queryExported(html: string, selector: string): Element | null {
+  return new DOMParser()
+    .parseFromString(html, "text/html")
+    .querySelector(selector);
+}
+
+const FIGMA_EMBED_URL =
+  "https://www.figma.com/embed?embed_host=share&url=https%3A%2F%2Fwww.figma.com%2Ffile%2Fabc";
+const MAP_EMBED_URL = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3";
 
 describe("埋め込み系 node の保存パイプライン round-trip", () => {
   test("YouTubeNode の iframe が保存後 HTML に残る", () => {
@@ -94,5 +106,63 @@ describe("埋め込み系 node の保存パイプライン round-trip", () => {
     expect(html).toContain("<rt");
     expect(html).toContain("漢字");
     expect(html).toContain("かんじ");
+  });
+
+  test("FigmaNode のラベルは可視テキストと iframe title として残る", () => {
+    const html = renderToFinalHtml(() => {
+      $getRoot().append(
+        $createFigmaNode({ embedUrl: FIGMA_EMBED_URL, label: "プロトタイプ" }),
+      );
+    });
+    const labelEl = queryExported(html, "[data-figma-label-text]");
+    expect(labelEl?.tagName).toBe("P");
+    expect(labelEl?.textContent).toBe("プロトタイプ");
+    expect(
+      queryExported(html, "[data-figma]")?.getAttribute("data-figma-label"),
+    ).toBe("プロトタイプ");
+    expect(
+      queryExported(html, "[data-figma] iframe")?.getAttribute("title"),
+    ).toBe("プロトタイプ");
+  });
+
+  test("FigmaNode はラベル無しでも iframe に既定 title を付ける", () => {
+    const html = renderToFinalHtml(() => {
+      $getRoot().append($createFigmaNode({ embedUrl: FIGMA_EMBED_URL }));
+    });
+    expect(queryExported(html, "[data-figma-label-text]")).toBeNull();
+    expect(
+      queryExported(html, "[data-figma] iframe")?.getAttribute("title"),
+    ).toBe("Figma デザイン");
+  });
+
+  test("MapEmbedNode のラベルは可視テキストと iframe title として残る", () => {
+    const html = renderToFinalHtml(() => {
+      $getRoot().append($createMapEmbedNode(MAP_EMBED_URL, "アクセスマップ"));
+    });
+    const labelEl = queryExported(html, "[data-map-label-text]");
+    expect(labelEl?.tagName).toBe("P");
+    expect(labelEl?.textContent).toBe("アクセスマップ");
+    expect(
+      queryExported(html, "[data-map]")?.getAttribute("data-map-label"),
+    ).toBe("アクセスマップ");
+    expect(
+      queryExported(html, "[data-map] iframe")?.getAttribute("title"),
+    ).toBe("アクセスマップ");
+  });
+
+  test("MapEmbedNode はラベル無しでも iframe に既定 title を付ける", () => {
+    const html = renderToFinalHtml(() => {
+      $getRoot().append($createMapEmbedNode(MAP_EMBED_URL));
+    });
+    expect(queryExported(html, "[data-map-label-text]")).toBeNull();
+    expect(
+      queryExported(html, "[data-map] iframe")?.getAttribute("title"),
+    ).toBe("Google マップ");
+  });
+
+  test("lexical-content.css に [data-map] の埋め込み規則がある", async () => {
+    const css = await Bun.file("src/shared/styles/lexical-content.css").text();
+    expect(css).toMatch(/\[data-map\]\s*\{/);
+    expect(css).toMatch(/\[data-map\]\s*>\s*iframe\s*\{/);
   });
 });

@@ -90,10 +90,18 @@ export class FigmaNode extends DecoratorNode<ReactElement | null> {
 
   override exportDOM(): DOMExportOutput {
     const wrapper = document.createElement("div");
+    const label = $getState(this, figmaLabelState);
     wrapper.setAttribute("data-figma", "true");
-    wrapper.setAttribute("data-figma-label", $getState(this, figmaLabelState));
+    wrapper.setAttribute("data-figma-label", label);
+    if (label) {
+      const labelEl = document.createElement("p");
+      labelEl.setAttribute("data-figma-label-text", "");
+      labelEl.textContent = label;
+      wrapper.appendChild(labelEl);
+    }
     const iframe = document.createElement("iframe");
     iframe.setAttribute("src", $getState(this, figmaEmbedUrlState));
+    iframe.setAttribute("title", label || "Figma デザイン");
     iframe.setAttribute("allow", "fullscreen");
     iframe.setAttribute("loading", "lazy");
     wrapper.appendChild(iframe);

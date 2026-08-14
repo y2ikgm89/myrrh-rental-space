@@ -1688,7 +1688,7 @@ details[data-collapsible-item]
 }
 
 /* --------------------------------------------------------------------------
- * 1i. Embeds — YouTube, X (Twitter), Instagram, Spotify, Figma, Vimeo
+ * 1i. Embeds — YouTube, X (Twitter), Instagram, Spotify, Figma, Vimeo, Map
  *
  * data-youtube: YouTube container
  * data-x-tweet: X (Twitter) container
@@ -1696,6 +1696,7 @@ details[data-collapsible-item]
  * data-spotify: Spotify container
  * data-figma: Figma container
  * data-vimeo: Vimeo container
+ * data-map: Google Maps container
  * -------------------------------------------------------------------------- */
 
 /* ---- YouTube ---- */
@@ -1795,6 +1796,23 @@ details[data-collapsible-item]
   inset: 0;
   width: 100%;
   height: 100%;
+  border-radius: 0;
+  border: 0;
+}
+
+/* ---- Map ---- */
+
+[data-map] {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+[data-map] > iframe {
+  aspect-ratio: 16 / 9;
+  width: 100%;
   border-radius: 0;
   border: 0;
 }
