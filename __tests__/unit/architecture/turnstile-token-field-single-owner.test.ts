@@ -63,8 +63,13 @@ describe("Turnstile トークン欄の所有者は常に 1 つ", () => {
     // `z.string()` のスキーマが送信を全弾きする（実例: PR #1763 の予約フォーム）。
     // field と widget は別ファイルにありうるので、ファイル単位の突合ではなく
     // 「自前 field を持つ画面が存在しないこと」自体を固定する。
-    const owners = [...new Glob(PUBLIC_TSX_GLOB).scanSync({ cwd: REPO_ROOT })]
-      .map((relativePath) => relativePath.replaceAll("\\", "/"))
+    const scanned = [
+      ...new Glob(PUBLIC_TSX_GLOB).scanSync({ cwd: REPO_ROOT }),
+    ].map((relativePath) => relativePath.replaceAll("\\", "/"));
+    // 走査規模の下限（監査 F-13）。glob が 0 件を返しても `toEqual([])` は緑になる。
+    expect(scanned.length).toBeGreaterThan(50);
+
+    const owners = scanned
       .filter((relativePath) =>
         readSource(relativePath).includes("fields.turnstileToken"),
       )

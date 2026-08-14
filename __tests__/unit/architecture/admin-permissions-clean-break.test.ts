@@ -60,10 +60,17 @@ describe("admin permissions clean break", () => {
     const forbidden = new Set<string>(PURE_RBAC_EXPORTS);
     const offenders: string[] = [];
 
-    for (const file of [
+    const scanned = [
       ...collectSourceFiles(SRC_ROOT),
       ...collectSourceFiles(TEST_ROOT),
-    ]) {
+    ];
+    // 走査規模の下限（監査 F-13）。glob が 0 件を返しても `toEqual([])` は緑になる。
+    // `src/` + `__tests__/` は 4 桁ファイルあるので 300 は十分に緩い。
+    // しきい値は**数値リテラルで書く** — local/gate-scan-must-not-be-silently-empty は
+    // 識別子を追わないので、定数に切り出すと下限が無いものとして扱われる。
+    expect(scanned.length).toBeGreaterThan(300);
+
+    for (const file of scanned) {
       const source = readSource(file);
       for (const match of source.matchAll(importPattern)) {
         const members = match.groups?.["members"] ?? "";

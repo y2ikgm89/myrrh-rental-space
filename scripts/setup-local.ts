@@ -116,7 +116,9 @@ export function resolveComposeDatabaseTarget(
 export function targetsSetupManagedDatabase(
   databaseUrl: string | undefined,
   target: ComposeDatabaseTarget | null,
-): boolean {
+  // `undefined` では必ず false を返すので、通った側は string だと言い切れる。
+  // 呼び出し側はこの値を migrate / seed の `DATABASE_URL` / `DIRECT_URL` に固定する。
+): databaseUrl is string {
   if (!databaseUrl || !target) return false;
   try {
     const url = new URL(databaseUrl);
@@ -145,38 +147,82 @@ export function runSetup(
   capture: CommandCapture,
   readDatabaseUrl: () => string | undefined,
 ): number {
+  console.info("[setup] Starting PostgreSQL (db + test-db)...");
+  const composeExitCode = runner([
+    "docker",
+    "compose",
+    "up",
+    "-d",
+    "--wait",
+    "--wait-timeout",
+    "60",
+    "db",
+    "test-db",
+  ]);
+  if (composeExitCode !== 0) {
+    console.error("[setup] Failed: Starting PostgreSQL (db + test-db)");
+    return composeExitCode;
+  }
+
+  // **接続先の確定は DB を触る前**（migrate も seed も、この後ろ）。
+  //
+  // 旧実装はこの判定を seed の直前だけに置いていた（監査 F-23）。`migrate deploy` は
+  // その手前で `process.env` をそのまま引き継いで起動しており、`.env.local` に本番の
+  // `DIRECT_URL` が残っている開発者が `bun run setup` を叩くと、
+  // `prisma.config.ts` の `resolvePrismaCliDatasourceUrl()` が `DIRECT_URL` を最優先で
+  // 返すため、**リポジトリの pending migration が全件そのまま本番へ入る**。
+  //
+  // 本番の migrate は Cloud Run migrator Job だけが実行し、その CMD は
+  // `bun scripts/migration-preconditions.ts &&` でリハーサルと履歴照合を先に通す。
+  // 破壊的 DDL のときは deploy 側が両サービスを scaling=0 にしてから流す。setup 経路は
+  // そのどちらも通らないので、DROP COLUMN が計画ダウンタイム無しで本番に入り、
+  // 旧 revision が壊れたスキーマを叩いて 500 になる。しかも seed 側の照合は
+  // その後にしか走らないので、止められるのは seed だけで migration は適用済みだった。
+  const target = resolveComposeDatabaseTarget(capture);
+  // `.env.local` を env に載せた**後**に読む（`ensureEnvLocal` / `applyEnvFile` の後）。
+  // 値を引数で受け取ると、この順序が呼び出し側の都合で崩れる。
+  const databaseUrl = readDatabaseUrl();
+  if (!targetsSetupManagedDatabase(databaseUrl, target)) {
+    console.error("[setup] Failed: Resolving database target");
+    console.error(
+      "[setup] DATABASE_URL が、この setup で起動した Docker Postgres を指していません。",
+    );
+    console.error(
+      `[setup]   期待: localhost:${target?.port ?? "<compose の port>"}/${target?.database ?? "<compose の POSTGRES_DB>"}`,
+    );
+    console.error(
+      "[setup] setup は migrate と seed でローカル開発 DB を作り直します。別の DB（トンネル / プロキシ越しの本番を含む）を指したままでは実行しません。",
+    );
+    return 1;
+  }
+
+  // ここに来た時点で `databaseUrl` は compose の DB だと確かめ済み。
+  // **Prisma CLI は `DIRECT_URL` を最優先で見る**ので、`DATABASE_URL` だけ正しくても
+  // 足りない。両方を確定済みの値に固定して spawn する
+  // （`scripts/migrate-test-db.ts` の `createPrismaMigrateEnv` と同じ方針）。
+  const pinnedDatabaseEnv = {
+    DATABASE_URL: databaseUrl,
+    DIRECT_URL: databaseUrl,
+  } as const;
+
   const steps: readonly (readonly [
     label: string,
     command: readonly string[],
   ])[] = [
-    [
-      "Starting PostgreSQL (db + test-db)",
-      [
-        "docker",
-        "compose",
-        "up",
-        "-d",
-        "--wait",
-        "--wait-timeout",
-        "60",
-        "db",
-        "test-db",
-      ],
-    ],
     ["Generating Prisma client", ["bun", "run", "db:generate"]],
     ["Applying migrations", ["bunx", "--bun", "prisma", "migrate", "deploy"]],
   ];
 
   for (const [label, command] of steps) {
     console.info(`[setup] ${label}...`);
-    const exitCode = runner(command);
+    const exitCode = runner(command, pinnedDatabaseEnv);
     if (exitCode !== 0) {
       console.error(`[setup] Failed: ${label}`);
       return exitCode;
     }
   }
 
-  // seed だけは他の step と違い、**接続先を確かめてから**でないと呼べない。
+  // seed には接続先の固定に加えて、もう 1 つ外すものがある。
   //
   // `.env.local` には surface を選ぶために `APP_SURFACE` を入れるのが普通で、その値は
   // 上の `applyEnvFile` でこのプロセスの env に載る。seed の安全ガード
@@ -189,24 +235,10 @@ export function runSetup(
   //  prod marker が無く、`looksLikeProductionDatabaseUrl` を素通りする＝実測済み）。
   // 外してよいのは、**この setup が起動したコンテナ**を指していると確かめた時だけ。
   console.info("[setup] Seeding database...");
-  const target = resolveComposeDatabaseTarget(capture);
-  // `.env.local` を env に載せた**後**に読む（`ensureEnvLocal` / `applyEnvFile` の後）。
-  // 値を引数で受け取ると、この順序が呼び出し側の都合で崩れる。
-  if (!targetsSetupManagedDatabase(readDatabaseUrl(), target)) {
-    console.error("[setup] Failed: Seeding database");
-    console.error(
-      "[setup] DATABASE_URL が、この setup で起動した Docker Postgres を指していません。",
-    );
-    console.error(
-      `[setup]   期待: localhost:${target?.port ?? "<compose の port>"}/${target?.database ?? "<compose の POSTGRES_DB>"}`,
-    );
-    console.error(
-      "[setup] seed はローカル開発 DB の作り直しです。別の DB（トンネル / プロキシ越しの本番を含む）を指したままでは実行しません。",
-    );
-    return 1;
-  }
-
-  const seedExitCode = runner(["bun", "run", "db:seed"], { APP_SURFACE: "" });
+  const seedExitCode = runner(["bun", "run", "db:seed"], {
+    ...pinnedDatabaseEnv,
+    APP_SURFACE: "",
+  });
   if (seedExitCode !== 0) {
     console.error("[setup] Failed: Seeding database");
     return seedExitCode;

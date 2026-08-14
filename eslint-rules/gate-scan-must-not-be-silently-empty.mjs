@@ -59,7 +59,11 @@
  */
 
 /** ディレクトリを走査する（＝結果が空になりうる）呼び出し。 */
-const SCAN_CALLEES = new Set(["readdirSync", "globSync", "globSync"]);
+// `scanSync` は `new Bun.Glob(...).scanSync(...)`。旧実装は `"globSync"` を 2 回
+// 書いており（Set なので実効 2 件）、Bun.Glob の走査を認識できていなかった。
+// 結果、下限 assert の欠落は「手で守ること」として
+// `.claude/rules/architecture-gates.md` に委ねられていた（監査 F-13）。
+const SCAN_CALLEES = new Set(["readdirSync", "globSync", "scanSync"]);
 
 /** 集合が空であることの assert。 */
 const EMPTY_MATCHERS = new Set(["toEqual", "toStrictEqual", "toHaveLength"]);
@@ -69,6 +73,11 @@ const EMPTY_MATCHERS = new Set(["toEqual", "toStrictEqual", "toHaveLength"]);
  *
  * `toBeGreaterThan(0)` は「1 件以上」。`toBeGreaterThanOrEqual(0)` は常に真なので
  * 下限を証明しない。
+ *
+ * **しきい値は数値リテラルで書くこと。** 識別子（`MIN_SCANNED_FILES` 等）は
+ * 追わない — 定数に切り出されると値が判定できず、下限が無いものとして報告する。
+ * スコープ解決を足せば追えるが、それは「下限がいくつか」を読む人から隠すのと
+ * 引き換えになる。リテラルのほうが、落ちた人がその場で判断できる。
  */
 const SIZE_MATCHER_MIN_THRESHOLD = new Map([
   ["toBeGreaterThan", 0],

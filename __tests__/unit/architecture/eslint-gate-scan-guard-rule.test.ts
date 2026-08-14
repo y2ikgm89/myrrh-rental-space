@@ -45,6 +45,14 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
         expect(files.filter(bad)).toEqual([]);
       `,
     },
+    // Bun.Glob().scanSync も走査。下限があれば通る。
+    {
+      code: `
+        const files = [...new Bun.Glob("**/*.ts").scanSync(root)];
+        expect(files.length).toBeGreaterThan(10);
+        expect(files.filter(bad)).toEqual([]);
+      `,
+    },
     // 走査していない（固定パスを読むだけ）gate は対象外。
     // パスが消えれば readFileSync が throw するので黙って緑にならない。
     {
@@ -98,6 +106,25 @@ ruleTester.run("gate-scan-must-not-be-silently-empty", rule, {
       code: `
         const specs = globSync("e2e/**/*.spec.ts");
         expect(specs.filter(bad)).toStrictEqual([]);
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // Bun.Glob().scanSync（監査 F-13）。旧実装は SCAN_CALLEES に "globSync" を
+    // 2 回書いており、この形を認識できずに素通りさせていた。
+    {
+      code: `
+        const files = [...new Bun.Glob("e2e/**/*.ts").scanSync(root)];
+        expect(files.filter(bad)).toEqual([]);
+      `,
+      errors: [{ messageId: "missingScanGuard" }],
+    },
+    // しきい値が識別子だと下限を証明できない（値が読めないため）。
+    {
+      code: `
+        const MIN = 10;
+        const files = readdirSync(root);
+        expect(files.length).toBeGreaterThan(MIN);
+        expect(files.filter(bad)).toEqual([]);
       `,
       errors: [{ messageId: "missingScanGuard" }],
     },
