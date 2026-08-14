@@ -174,10 +174,7 @@ export default async function ReservationDetailPage({
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
     : undefined;
-
-  const paymentFeatureEnabled = await isFeatureEnabled("payment");
   const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
-    paymentFeatureEnabled,
     paymentStatus: getValidPaymentStatus(reservation.paymentStatus),
   });
 

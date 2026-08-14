@@ -8,10 +8,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
 import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
 import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
-import {
-  requireFeatureEnabled,
-  isFeatureEnabled,
-} from "@/shared/domain/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { resolveTransferAccountsForCustomerDisplay } from "@/shared/domain/settings/transfer-account-queries";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
@@ -144,9 +141,7 @@ export default async function GuestReservationStatusPage({
   const now = reservationDeadlineNow();
   const address = reservation.space.location?.address ?? null;
   const paymentStatus = getValidPaymentStatus(reservation.paymentStatus);
-  const paymentFeatureEnabled = await isFeatureEnabled("payment");
   const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
-    paymentFeatureEnabled,
     paymentStatus,
   });
   const reservationStatusLabel = isValidReservationStatus(reservation.status)

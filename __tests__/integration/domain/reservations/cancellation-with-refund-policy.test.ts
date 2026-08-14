@@ -85,7 +85,12 @@ mock.module("@/shared/lib/stripe", () => ({
 }));
 
 // Settings row 依存を回避 (Stripe credentials は fake)。
+const actualAvailability = await import("@/shared/domain/payment/availability");
+// `mock.module` は完全置換。src 側で import が 1 本増えるだけで
+// `Export named ... not found` になるので実モジュールを spread する
+// (.claude/rules/testing.md)。
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualAvailability,
   assertOnlinePaymentAvailable: () =>
     Promise.resolve({
       stripeSecretKey: "sk_test_dummy",

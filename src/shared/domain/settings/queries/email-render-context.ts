@@ -26,7 +26,7 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
-import { isFeatureEnabled } from "@/shared/domain/features/check";
+import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import {
   getTransferGuidance,
   listActiveTransferAccounts,
@@ -92,14 +92,16 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 }
 
 async function resolveTransferEmailFields(): Promise<{
-  paymentFeatureEnabled: boolean;
+  onlinePaymentAvailable: boolean;
   transferAccounts: TransferAccountEmailDisplay[];
   transferGuidance: string | null;
 }> {
-  const paymentFeatureEnabled = await isFeatureEnabled("payment");
-  if (paymentFeatureEnabled) {
+  // feature が ON かではなく、**実際に Checkout が使えるか**で判断する。
+  // credentials 欠損時に振込先まで消すと、メールに支払手段が 1 つも載らない（監査 F-133）。
+  const onlinePaymentAvailable = await isOnlinePaymentAvailable();
+  if (onlinePaymentAvailable) {
     return {
-      paymentFeatureEnabled,
+      onlinePaymentAvailable,
       transferAccounts: [],
       transferGuidance: null,
     };
@@ -111,7 +113,7 @@ async function resolveTransferEmailFields(): Promise<{
   ]);
 
   return {
-    paymentFeatureEnabled,
+    onlinePaymentAvailable,
     transferAccounts: accounts.map((account) => ({
       bankName: account.bankName,
       branchName: account.branchName,
@@ -135,7 +137,7 @@ export async function getEventEmailRenderContext(): Promise<EventEmailRenderCont
     organizer,
     transferAccounts: transferFields.transferAccounts,
     transferGuidance: transferFields.transferGuidance,
-    paymentFeatureEnabled: transferFields.paymentFeatureEnabled,
+    onlinePaymentAvailable: transferFields.onlinePaymentAvailable,
   };
 }
 
@@ -162,7 +164,7 @@ export async function getReservationEmailRenderContext(): Promise<ReservationEma
       : undefined,
     transferAccounts: transferFields.transferAccounts,
     transferGuidance: transferFields.transferGuidance,
-    paymentFeatureEnabled: transferFields.paymentFeatureEnabled,
+    onlinePaymentAvailable: transferFields.onlinePaymentAvailable,
   };
 }
 

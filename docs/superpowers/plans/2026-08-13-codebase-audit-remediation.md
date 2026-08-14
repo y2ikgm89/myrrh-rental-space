@@ -195,7 +195,7 @@ A（決済に mock を挟まない層）が最優先。#2229 に続けて金額�
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（54 件）
+### フェーズ 5 — 低（53 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -303,7 +303,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-130](../../audits/2026-08-12-codebase-audit-findings.md#f-130) | 低     | `src/shared/lib/html/sanitize-content-html-core.ts:10`                                                        | 下付き・上付き文字が sanitize allowlist に無く、公開ページで書式が消える                                                                                        |
 | [F-131](../../audits/2026-08-12-codebase-audit-findings.md#f-131) | 低     | `src/shared/lib/r2/delete.ts:8`                                                                               | R2 一括削除が 1000 件で分割されず、保持期限 purge が一度に 1000 件超の添付を消そうとすると全件が R2 に永久に残る                                                |
 | [F-132](../../audits/2026-08-12-codebase-audit-findings.md#f-132) | 低     | `src/shared/lib/sections/definitions/page-hero/schema.ts:53`                                                  | page-hero の images 重複チェックが field 側に付いていて path が二重になり、エラーが誰にも届かない                                                               |
-| [F-133](../../audits/2026-08-12-codebase-audit-findings.md#f-133) | 低     | `src/shared/lib/settings/transfer-account-gate.ts:14`                                                         | 振込先フォールバックが業務層だけを見るため、payment ON × Stripe credentials 欠損で支払手段がゼロになる                                                          |
 
 ---
 

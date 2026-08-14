@@ -222,7 +222,7 @@ export async function sendEventRegistrationConfirmation(
 
   const paymentStatus = data.paymentStatus ?? "UNPAID";
   const showTransferAccounts = shouldShowTransferAccounts({
-    paymentFeatureEnabled: renderContext.paymentFeatureEnabled,
+    onlinePaymentAvailable: renderContext.onlinePaymentAvailable,
     paymentStatus,
     activeAccountCount: renderContext.transferAccounts.length,
   });
