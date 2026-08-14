@@ -191,7 +191,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（51 件）
+### フェーズ 4 — 中（48 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
@@ -245,9 +245,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-52](../../audits/2026-08-12-codebase-audit-findings.md#f-52)   | 中     | `src/shared/domain/inquiries/anonymize-commands.ts:83`                                                        | 匿名化が Inquiry.subject（自由記入 200 文字）を消さず、GDPR 相当の削除後も件名の PII が残り続ける                                                               |
 | [F-53](../../audits/2026-08-12-codebase-audit-findings.md#f-53)   | 中     | `src/shared/domain/pages/system-pages-commands.ts:40`                                                         | システムページから削除したセクションが、編集画面を開くたび／管理サービス起動のたびに初期デモ文言つきで復活する                                                  |
 | [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:195`                                                | 非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る                                                                             |
-| [F-58](../../audits/2026-08-12-codebase-audit-findings.md#f-58)   | 中     | `src/shared/domain/reservations/admin-commands.ts:377`                                                        | 管理者の予約編集が、消費済みクーポンを now 基準で再検証するため、クーポンが期限切れ/上限到達した瞬間にその予約が永久に編集不能になる                            |
-| [F-59](../../audits/2026-08-12-codebase-audit-findings.md#f-59)   | 中     | `src/shared/domain/reservations/admin-commands.ts:586`                                                        | updateAdminReservationCommand に終端ステータスのガードが無く、CANCELLED 予約の編集でクーポンの二重解放・解放されない再 claim が起きる                           |
-| [F-60](../../audits/2026-08-12-codebase-audit-findings.md#f-60)   | 中     | `src/shared/domain/reservations/admin-commands.ts:503`                                                        | admin 予約編集の updateMany に status 述語が無く、cancel 経路は version を進めないためキャンセル済み予約が復活する                                              |
 | [F-61](../../audits/2026-08-12-codebase-audit-findings.md#f-61)   | 中     | `src/shared/domain/reservations/calendar-sync.ts:134`                                                         | series instance の GCal update/delete 失敗が 3 つの retry pool すべてから漏れ、恒久的に取り残される                                                             |
 | [F-62](../../audits/2026-08-12-codebase-audit-findings.md#f-62)   | 中     | `src/shared/domain/reservations/customer-commands.ts:574`                                                     | paymentStatus=FAILED の予約は編集画面が開けるのに保存が必ず失敗し、誤ったエラー文言で永久に変更できない                                                         |
 | [F-63](../../audits/2026-08-12-codebase-audit-findings.md#f-63)   | 中     | `src/shared/domain/sections/commands.ts:218`                                                                  | テンプレート必須セクションを複製できてしまい、複製後は削除も非表示もできず公開ページに二重表示が固定される                                                      |

@@ -8,9 +8,11 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
-import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import {
+  CREATABLE_RESERVATION_STATUSES,
+  TERMINAL_RESERVATION_STATUSES,
+} from "@/shared/lib/validations/enums/helpers";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
-import { validateStatusTransition } from "./status";
 import {
   resolveOrCreateCustomer,
   type CustomerData,
@@ -21,6 +23,7 @@ import {
   getReservationSettings,
   guestCountCapacityError,
   validateCoupon,
+  resolveAppliedCoupon,
   claimCouponUsage,
   ensureNoOverlap,
   incrementCustomerReservationStats,
@@ -313,6 +316,8 @@ export async function updateAdminReservationCommand(
         // 税額 recalc に必要な予約時点のスナップショット (Codex P2 #1038 対応)。
         // taxRate/taxRateType の変更経路は本 command のスコープ外 (別 UI で管理)。
         taxRate: true,
+        // 適用済みクーポンの code。再送された code と同一かの判定に使う（F-58）。
+        coupon: { select: { code: true } },
         customer: { select: CUSTOMER_SELECT },
       },
     }),
@@ -338,6 +343,23 @@ export async function updateAdminReservationCommand(
     throw new DomainError(capacityError, "VALIDATION");
   }
 
+  // 終端ステータスの予約はそもそも編集させない（監査 F-59）。
+  //
+  // 旧実装のガードは「遷移するとき」しか見ていないため、CANCELLED のまま保存できた。
+  // そこでクーポン欄を変えると、既に解放済みの usageCount をもう一度 decrement し、
+  // **他人の予約 1 件分の使用が帳簿から消える**（usageLimit=100 のクーポンが 101 回
+  // 使える状態になる）。逆にコードを入れると、キャンセル済み予約には解放経路が
+  // 無いので恒久 leak になる。
+  //
+  // 内容編集は非終端のみ、復元は restoreReservationStatusCommand 経由、という
+  // 既存の役割分担に合わせる。
+  if (TERMINAL_RESERVATION_STATUSES.includes(currentReservation.status)) {
+    throw new DomainError(
+      "キャンセル・完了・無断キャンセルの予約は編集できません。ステータスを戻す場合は予約詳細画面の復元から行ってください。",
+      "VALIDATION",
+    );
+  }
+
   // CANCELLED/COMPLETED/NO_SHOW への遷移は返金・キャンセルメール等の副作用チェーン
   // （applyCancellationSideEffects 等）を経由しないため、この編集フォームからは許可しない。
   // 終端ステータスへの変更は予約詳細画面の専用ステータス変更経路から行う。
@@ -351,7 +373,13 @@ export async function updateAdminReservationCommand(
     );
   }
 
-  validateStatusTransition(currentReservation.status, input.status);
+  // `validateStatusTransition` はここでは呼ばない。上の 2 つの gate により
+  // 到達しうる (from, to) は現在 status ∈ {PENDING, CONFIRMED} × 入力 status ∈
+  // {PENDING, CONFIRMED} の 4 通りだけで、`RESERVATION_STATUS_TRANSITIONS` は
+  // その全てを許可している（同値は `from === to` で早期 return）。つまり
+  // **決して throw しない検証**になる。遷移可否の権威は書込の WHERE 述語
+  // （下の updateMany）に置く。lifecycle-commands.ts 側は終端への遷移も扱うので
+  // そちらでは引き続き必要。
 
   await ensureNoOverlap({
     spaceId: input.spaceId,
@@ -374,10 +402,24 @@ export async function updateAdminReservationCommand(
     holidayJudge: isJapaneseHoliday,
   });
 
-  const validatedCoupon = await validateCoupon(
-    input.couponCode,
-    rateBreakdownForCoupon.totalBasePrice,
-  );
+  // 適用済みクーポンが再送されただけなら、利用可否を再検証しない（監査 F-58）。
+  // `ReservationEditForm` は `reservation.coupon?.code` を prefill して常に再送するため、
+  // 再検証すると「クーポンを配り切った」「有効期限が来た」という**正常な運用の結果**
+  // として、そのクーポンを使った全予約が編集不能になる。エラー文言は
+  // 「無効なクーポンコードです」で、管理者が触ってすらいない項目を指す。
+  const requestedCouponCode = input.couponCode?.trim().toUpperCase() ?? "";
+  const appliedCouponId = currentReservation.couponId;
+  const couponResent =
+    appliedCouponId !== null &&
+    requestedCouponCode !== "" &&
+    requestedCouponCode === currentReservation.coupon?.code;
+
+  const validatedCoupon = couponResent
+    ? await resolveAppliedCoupon(appliedCouponId)
+    : await validateCoupon(
+        input.couponCode,
+        rateBreakdownForCoupon.totalBasePrice,
+      );
   const pricing = calculateReservationPricing({
     startDateTime,
     endDateTime,
@@ -505,6 +547,18 @@ export async function updateAdminReservationCommand(
         id,
         deletedAt: null,
         version: input.version,
+        // 終端ステータスへ落ちた行を掴まない（監査 F-60）。
+        //
+        // status は tx の外・advisory lock の外で読んでおり、その後 tx 開始までに
+        // GCal 逆流のキャンセル / mypage キャンセル / pending-expiry cron が
+        // status=CANCELLED を書きうる。これらは**設計上 version を進めない**ので
+        // version 述語では検出できず、この updateMany が CANCELLED を CONFIRMED へ
+        // 戻してしまう。cancelledAt / cancellationReason は data に無いため残り、
+        // 「CONFIRMED なのにキャンセル理由が入っている」行になる。顧客には既に
+        // キャンセルメールが届いており、管理者には何のエラーも出ない。
+        //
+        // 遷移可否の権威はここ（WHERE 述語）に置く。
+        status: { in: [...CREATABLE_RESERVATION_STATUSES] },
         // customer-commands.ts と同型: 課金要素の変更は UNPAID/FAILED のみ atomic claim。
         // checkout が UNPAID→PENDING に遷移した race では count=0 → CONFLICT。
         ...(chargeAffectingChange && {

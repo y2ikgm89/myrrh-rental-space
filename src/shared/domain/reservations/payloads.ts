@@ -195,6 +195,40 @@ export async function validateCoupon(
 }
 
 /**
+ * **既にこの予約へ適用済み**のクーポンを、利用可否の再検証なしで解決する。
+ *
+ * `validateCoupon` が見る有効期限・利用上限・`isActive` は「これから新しく使えるか」の
+ * 条件であって、「既に使った予約を編集してよいか」の条件ではない。編集のたびに
+ * 再検証すると、**クーポンを配り切った瞬間・有効期限が来た瞬間に、そのクーポンを
+ * 使った全予約が管理画面から編集不能になる**（監査 F-58）。しかもエラー文言は
+ * 「無効なクーポンコードです」で、管理者が触ってすらいない項目を指す。
+ *
+ * 割引額そのものは呼び出し側が新しい料金に対して計算し直す。金額を据え置くと、
+ * 日時変更で base が下がったときに割引が総額を超えうるため。
+ *
+ * @returns 該当行が無ければ null（クーポンが物理削除された等）
+ */
+export async function resolveAppliedCoupon(
+  couponId: string,
+  tx?: Tx,
+): Promise<ValidatedCoupon> {
+  const coupon = await (tx ?? prisma).coupon.findUnique({
+    where: { id: couponId },
+  });
+  if (!coupon) return null;
+
+  return {
+    id: coupon.id,
+    code: coupon.code,
+    name: coupon.name,
+    type: coupon.type,
+    discountValue: coupon.discountValue,
+    maxDiscountAmount: coupon.maxDiscountAmount,
+    canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
+  };
+}
+
+/**
  * Coupon.usageCount の atomic claim。
  *
  * pre-tx の `validateCoupon` 通過後でも、tx 内で isActive / usageLimit /
