@@ -306,6 +306,7 @@ const anonymizeInquiryReasonSchema = z.enum(
 // (Next.js の制約)、非公開の module-local 定数として保持する。
 const ANONYMIZED_INQUIRY_FIELDS = [
   "name",
+  "subject",
   "email",
   "phoneNumber",
   "companyName",

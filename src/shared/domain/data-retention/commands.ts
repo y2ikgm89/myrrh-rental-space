@@ -169,6 +169,8 @@ export async function anonymizeExpiredGuestReservations(
       guestEmail: null,
       guestPhone: null,
       guestCompanyName: null,
+      // 自由記入の「備考」にも PII が入る（監査 F-116）。退会経路と揃える。
+      notes: null,
     },
   });
   return result.count;
