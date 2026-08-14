@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import type { z } from "zod";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
@@ -176,6 +177,10 @@ const { ctaConfigSchema } =
   await import("@/shared/lib/sections/definitions/cta/schema");
 const { formatZodFieldErrors } =
   await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form/helpers");
+const { getArrayItemShape, getSelectOptions } =
+  await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/zod-introspection");
+const { conceptConfigSchema } =
+  await import("@/shared/lib/sections/definitions/concept/schema");
 import type { PageSectionData } from "@/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types";
 
 function buildFeaturesSection(): PageSectionData {
@@ -200,6 +205,21 @@ function buildCtaSection(): PageSectionData {
     pageId: "page-test-id",
     type: "cta",
     config: ctaConfigSchema.parse({}),
+    configUnreadable: false,
+    order: 0,
+    isActive: true,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  };
+}
+
+/** group フィールド（画像グループ）を持つ section。 */
+function buildConceptSection(): PageSectionData {
+  return {
+    id: "section-concept-id",
+    pageId: "page-test-id",
+    type: "concept",
+    config: conceptConfigSchema.parse({}),
     configUnreadable: false,
     order: 0,
     isActive: true,
@@ -269,6 +289,101 @@ describe("AutoSectionForm", () => {
     // item が 1 件追加され、空プレースホルダーが消える
     expect(container.textContent).not.toContain("アイテムが追加されていません");
     expect(container.textContent).toContain("#1");
+  });
+
+  // 配列アイテムを追加したとき、select フィールドに `""` を入れないことを固定する。
+  //
+  // 壊れていたとき（監査 F-34）: `createEmptyItem()` が itemFields 全キーに `""` を
+  // 入れていた。`z.enum(...).default(...)` の `ZodDefault` は input が `undefined`
+  // のときしか発火しないので、`""` は enum に素通りして `safeParse` が失敗する。
+  // conform は `status !== "success"` で submit を止めるため、ボタンを 1 件足した
+  // だけで**そのセクション全体が保存不能**になる。エラーキーは
+  // `buttons.0.variant` で conform の name と一致せず、画面には何も出ない。
+  test("配列アイテム追加時、select には有効な enum 値が入る", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const localRoot = createRoot(container);
+    root = localRoot;
+
+    act(() => {
+      localRoot.render(
+        <AutoSectionForm
+          section={buildCtaSection()}
+          onSave={() => undefined}
+          isPending={false}
+        />,
+      );
+    });
+
+    const addButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("追加"),
+    );
+    expect(addButton).toBeDefined();
+
+    act(() => {
+      addButton?.click();
+    });
+
+    // 期待値は**スキーマから取る**。両側を手で書くと同じ思い込みで書けてしまう。
+    const buttonsSchema = ctaConfigSchema.shape["buttons"];
+    expect(buttonsSchema).toBeDefined();
+    const itemShape = getArrayItemShape(buttonsSchema as z.ZodType);
+    expect(itemShape).toBeDefined();
+    const variantSchema = itemShape?.["variant"];
+    expect(variantSchema).toBeDefined();
+    const allowed = getSelectOptions(variantSchema as z.ZodType);
+    expect(allowed.length).toBeGreaterThan(0);
+
+    const variantInput = container.querySelector<HTMLInputElement>(
+      'input[name="buttons[0].variant"]',
+    );
+    expect(variantInput).not.toBeNull();
+    // ここが "" だと enum に弾かれ、保存ボタンが無反応になる。
+    // input が無いときも `""` になるので、その場合もここで落ちる。
+    expect(allowed).toContain(variantInput?.value ?? "");
+  });
+
+  // group を折りたたんでも input が DOM に残ることを固定する。
+  //
+  // 壊れていたとき（監査 F-35）: `{isOpen && (<CardContent …>)}` で unmount して
+  // いた。conform は送信時の FormData から payload を組むので、折りたたんだまま
+  // 保存すると `image.url` / `image.alt` が 1 件も入らない。schema 側の
+  // `.prefault({})` が `{url:"",alt:""}` を補って **parse は成功する**ため、
+  // `submission.status === "success"` のまま onSave に到達し、**選択済みの画像 URL が
+  // 空文字で上書き保存される**。エラーも警告も出ない。
+  test("group を折りたたんでも sub-field の input は DOM に残る", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const localRoot = createRoot(container);
+    root = localRoot;
+
+    act(() => {
+      localRoot.render(
+        <AutoSectionForm
+          section={buildConceptSection()}
+          onSave={() => undefined}
+          isPending={false}
+        />,
+      );
+    });
+
+    const countGroupInputs = () =>
+      container?.querySelectorAll('[name^="image."]').length ?? 0;
+
+    // 前提: 展開状態では sub-field が描画されている（gate が空振りしていない）。
+    expect(countGroupInputs()).toBeGreaterThan(0);
+
+    const toggle = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("画像"),
+    );
+    expect(toggle).toBeDefined();
+
+    act(() => {
+      toggle?.click();
+    });
+
+    // 折りたたみは表示だけの操作。input は残る。
+    expect(countGroupInputs()).toBeGreaterThan(0);
   });
 
   // 配列アイテムのエラーキーが、conform が実際に描画する input の `name` と

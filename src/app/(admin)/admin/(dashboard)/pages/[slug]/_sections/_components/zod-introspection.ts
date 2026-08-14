@@ -113,6 +113,35 @@ export function getSelectOptions(schema: z.ZodType): string[] {
 }
 
 /**
+ * select フィールドの初期値を決める。
+ *
+ * 配列アイテムを新規追加するとき、select のキーに `""` を入れてはいけない
+ * （監査 F-34）。`z.enum(...).default(...)` の `ZodDefault` は **input が
+ * `undefined` のときしか発火しない**ので、`""` は enum に素通りして
+ * `safeParse` が失敗する。conform の `submission.status` は `"error"` になり、
+ * `onSave` が呼ばれないまま **保存ボタンが完全に無反応**になる。エラーキーは
+ * `"buttons.0.variant"` で conform のフィールド名 `"buttons[0].variant"` と
+ * 一致せず、`form.errors` の描画箇所も無いので画面には何も出ない。
+ *
+ * 返すのは schema の default。無ければ先頭 option。どちらも無ければ `undefined`
+ * （キーを入れず `ZodDefault` に任せる）。**先頭 option まで落とすのは意図的** —
+ * 「見えている選択肢」と「保存される値」を一致させるため。undefined のままだと
+ * プレースホルダー表示なのに保存後は default が入り、admin から見て値が化ける。
+ */
+export function getSelectInitialValue(schema: z.ZodType): string | undefined {
+  if (schema instanceof z.ZodDefault) {
+    const fallback: unknown = schema.def.defaultValue;
+    if (typeof fallback === "string") return fallback;
+  }
+  const inner = unwrapWrapper(schema);
+  if (inner) {
+    const fromInner = getSelectInitialValue(inner);
+    if (fromInner !== undefined) return fromInner;
+  }
+  return getSelectOptions(schema)[0];
+}
+
+/**
  * ZodArray から配列要素の ZodObject shape を取得する。
  * ZodDefault / ZodOptional / ZodPrefault でラップされていても unwrap する。
  */

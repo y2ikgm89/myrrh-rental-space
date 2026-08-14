@@ -395,6 +395,44 @@ describe("spaceFormSchema", () => {
       expect(result.success).toBe(true);
     });
 
+    test("FormData 由来の JSON 文字列 1 件（配列でない）でも通る", () => {
+      // 監査 F-29。同名 input がちょうど 1 件のとき、`FormData.getAll` ではなく
+      // 単一値として届く。旧実装はそのまま返しており array schema が文字列を
+      // 拒否 → **設備 1 件のスペースだけが保存不能**（しかも画面は無反応）。
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        facilities: JSON.stringify({ name: "WiFi", iconName: "IconWifi" }),
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.facilities).toEqual([
+        { name: "WiFi", iconName: "IconWifi" },
+      ]);
+    });
+
+    test("JSON 文字列 2 件（配列）はこれまでどおり通る", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        facilities: [
+          JSON.stringify({ name: "WiFi", iconName: "IconWifi" }),
+          JSON.stringify({ name: "プロジェクター", iconName: "" }),
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.facilities).toHaveLength(2);
+    });
+
+    test("単一の壊れた JSON 文字列は空配列になる（throw しない）", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        facilities: "not-json",
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.facilities).toEqual([]);
+    });
+
     test("name 重複はエラー（uniqueness 契約）", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
