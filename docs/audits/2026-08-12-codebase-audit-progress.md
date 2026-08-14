@@ -56,7 +56,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-41](2026-08-12-codebase-audit-findings.md#f-41)   | 中     | #2234                 | `purpose: prefetch` で proxy のガードが素通りするのを封鎖                                        | —                                                                                           |
 | [F-48](2026-08-12-codebase-audit-findings.md#f-48)   | 中     | #2237                 | イベント checkout も同じ idempotency key 方式へ                                                  | —                                                                                           |
 | [F-50](2026-08-12-codebase-audit-findings.md#f-50)   | 中     | #2257                 | 管理画面が読む返金累計から failed / canceled を除外（ドメイン・DB と同じ SSoT を使う）           | —                                                                                           |
-| [F-52](2026-08-12-codebase-audit-findings.md#f-52)   | 中     | ★PR                   | 問い合わせの件名も匿名化する（氏名で検索してヒットしなくなる）                                   | —                                                                                           |
+| [F-52](2026-08-12-codebase-audit-findings.md#f-52)   | 中     | #2264                 | 問い合わせの件名も匿名化する（氏名で検索してヒットしなくなる）                                   | —                                                                                           |
 | [F-54](2026-08-12-codebase-audit-findings.md#f-54)   | 中     | #2256                 | charge.refunded が Stripe の実 status を Refund 行へ渡すようにし、既定値へ落ちる経路を型で塞いだ | —                                                                                           |
 | [F-55](2026-08-12-codebase-audit-findings.md#f-55)   | 中     | #2256                 | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
 | efund.updated に一本化                               | —      |
@@ -67,7 +67,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-66](2026-08-12-codebase-audit-findings.md#f-66)   | 中     | #2261                 | サイドバーを publicPostsWhere() に寄せ、予約公開の記事を出さない                                 | —                                                                                           |
 | [F-67](2026-08-12-codebase-audit-findings.md#f-67)   | 中     | #2263                 | 再発行の絞り込みを「生きたパスコードが無い」に直す（REVOKED 行で除外されない）                   | —                                                                                           |
 | [F-68](2026-08-12-codebase-audit-findings.md#f-68)   | 中     | #2263                 | 拠点変更で Pad を外したときもパスコードを失効する                                                | —                                                                                           |
-| [F-116](2026-08-12-codebase-audit-findings.md#f-116) | 低     | ★PR                   | 予約の自由記述「備考」を匿名化とデータ保持 purge の両方で消す                                    | —                                                                                           |
+| [F-116](2026-08-12-codebase-audit-findings.md#f-116) | 低     | #2264                 | 予約の自由記述「備考」を匿名化とデータ保持 purge の両方で消す                                    | —                                                                                           |
 | [F-70](2026-08-12-codebase-audit-findings.md#f-70)   | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
