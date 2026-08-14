@@ -55,7 +55,8 @@ function runInherited(
     stderr: "inherit",
     env: env ? { ...process.env, ...env } : process.env,
   });
-  return proc.exitCode;
+  // signal kill は exitCode=null。process.exit(null) は 0 になるので失敗へ倒す。
+  return proc.exitCode ?? 1;
 }
 
 /** コマンドの stdout を取る（失敗したら null）。 */

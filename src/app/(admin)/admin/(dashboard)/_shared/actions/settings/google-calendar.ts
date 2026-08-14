@@ -7,6 +7,7 @@
  */
 
 import type { SubmissionResult } from "@conform-to/react";
+import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -98,7 +99,16 @@ export async function updateGoogleCalendarSettings(
           });
           return null;
         },
-        afterSuccess: refreshIntegrationSettings,
+        afterSuccess: () => {
+          // icalAttachmentEnabled / addToCalendarLinksEnabled は
+          // getCalendarEmailSettings が NOTIFICATION_SETTINGS + STATIC_SETTINGS
+          // ("days") で読む。INTEGRATION_SETTINGS だけだとメール・完了ページの
+          // .ics / カレンダー追加リンクが stale のまま残る (F-95)。
+          updateTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
+          invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+            skipCdnPurge: true,
+          });
+        },
       });
       if (isMutationError(result)) {
         return { ok: false, error: result.error };
