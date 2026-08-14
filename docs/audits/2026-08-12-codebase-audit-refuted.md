@@ -1,4 +1,4 @@
-# コードベース監査 2026-08-12 — 棄却した指摘（61 件）
+# コードベース監査 2026-08-12 — 棄却した指摘（62 件）
 
 > 未着手の一覧と計画は [2026-08-13-codebase-audit-remediation.md](../superpowers/plans/2026-08-13-codebase-audit-remediation.md)、確定した指摘は [2026-08-12-codebase-audit-findings.md](2026-08-12-codebase-audit-findings.md)、対処の記録は [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)。
 > 検出エージェントが挙げたが、独立した反証エージェントが**成立しない**と判定したもの。
@@ -1384,5 +1384,28 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 ### 棄却理由
 
 第4次で反証。conform の onUpdate は毎レンダー Object.assign(latestOptions, options) で defaultValue を最新 props に更新し（node\_modules/@conform-to/dom/dist/form.mjs:485-487）、成功時の initialValue === null は report() → reset() → createFormMeta(latestOptions, true) を通って initialValue を現在の defaultValue から作り直す（同 :438-440 と :6-10）。updateTaxSettings は afterSuccess で invalidateSiteWideCache を呼ぶため updateTag が pathWasRevalidated を立て、Server Action の応答に更新後の commerceUpdatedAt を載せた flight data が同梱される。よって hidden input は再シードされ、2 回目の保存も CAS に一致する。「conform は id が変わらないと defaultValue を再同期しない」という第3次の前提が誤りだった。
+
+---
+
+## R-62
+
+**F-94 は R-03 の再掲である。管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げないのは、WAITLISTED_OFFERED 専用の意図的分離であり、独立欠陥ではない**
+
+<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md#f-94) ／ [R-03](#r-03)</sub>
+
+- **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts`
+- **領域**: イベント（決済・繰上げ）
+
+### 棄却理由
+
+フェーズ 5 着手時に現行コードで再確認した。[F-94](2026-08-12-codebase-audit-findings.md#f-94) が名指しする経路は [R-03](#r-03) と同じ `adminExpireWaitlistOfferAction` → `expireWaitlistOfferCommand` である。
+
+(1) 「WAITLISTED を手動 expire する別欠陥」ではない。WaitlistQueueTable の「期限切れにする」は `WAITLISTED_OFFERED` だけに出る。WAITLISTED 行にあるのは「今すぐ繰り上げ」である。
+
+(2) 在庫は CONFIRMED だけを数える。OFFERED / EXPIRED は席を押さえていない。失われるのはその 1 回分の FIFO 送りだけで、待機列そのものは止まらない。同じ画面に手動 promote がある。
+
+(3) JSDoc が cron 経路（`expireAndPromoteWaitlistForEventCommand`）と admin 手動 expire を意図的に分けている。容量超過の override promote を expire したあと自動再 promote すると、その override を取り消せなくなる。
+
+指摘自身の反証官も「製品意図の確認が先で、実装欠陥として無条件に直す対象ではない」と書いていた。同じ仮説を低に下げて台帳に残すのは再掲なので、確定から外してここに移す。実装しない。
 
 ---

@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  16 |  42 |  58 |
-| 合計   |  91 |  42 | 133 |
+| 低     |  16 |  41 |  57 |
+| 合計   |  91 |  41 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 42 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。
+**高 11 件・中 64 件は全件クローズ。**残りは低 41 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -125,7 +125,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-80](2026-08-12-codebase-audit-findings.md#f-80)   | 低     | `fix/audit-wave-1`                         | import 必須母集合に Cloudflare を入れ、inquiries bucket に `import {}` を足す                            | 全 resource 反転 + EXEMPT は未着手                                                      |
 | [F-118](2026-08-12-codebase-audit-findings.md#f-118) | 低     | `fix/audit-wave-1`                         | webhook 照合から `deletedAt` を外す（公開可否ではない）                                                  | 管理画面の返金 UI 述語は未変更                                                          |
 | [F-120](2026-08-12-codebase-audit-findings.md#f-120) | 低     | `fix/audit-wave-1`                         | waitlist promote を session lock から `waitlist_promote_leased_until` 行リースへ                         | 728354 は採番済みのまま残し、再利用しない                                               |
-| [F-87](2026-08-12-codebase-audit-findings.md#f-87)   | 低     | `fix/audit-f87-cron-oidc-metric`           | cron_oidc_failure を 401 と config fail-closed (CRITICAL+AUTHORIZATION) に限定。汎用 cron 500 は数えない | —                                                                                       |
+| [F-87](2026-08-12-codebase-audit-findings.md#f-87)   | 低     | #2288                                      | cron_oidc_failure を 401 と config fail-closed (CRITICAL+AUTHORIZATION) に限定。汎用 cron 500 は数えない | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
