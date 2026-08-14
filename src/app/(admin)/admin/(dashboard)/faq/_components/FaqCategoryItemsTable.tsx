@@ -11,6 +11,7 @@
  * プレビューサイドシートは廃止（edit Dialog が直接開くため不要）。
  */
 
+import { buildReorderPayload } from "./reorder-payload";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -66,7 +67,6 @@ type FaqCategoryItemsTableProps = {
   readonly currentSortBy: AdminFaqItemSortBy;
   readonly currentSortOrder: SortOrder;
   readonly reorderEnabled: boolean;
-  readonly startIndex: number;
   readonly onEditItem: (item: FaqItemWithCategory) => void;
   /** feature OFF 時は未指定（EmptyState の作成 CTA も出さない） */
   readonly onAddItem?: () => void;
@@ -195,7 +195,6 @@ export function FaqCategoryItemsTable({
   currentSortBy,
   currentSortOrder,
   reorderEnabled,
-  startIndex,
   onEditItem,
   onAddItem,
 }: FaqCategoryItemsTableProps) {
@@ -245,10 +244,8 @@ export function FaqCategoryItemsTable({
     setItems(reordered);
 
     startTransition(async () => {
-      const orderedItems = reordered.map((item, index) => ({
-        id: item.id,
-        order: startIndex + index,
-      }));
+      // 今このページが占めている order の値そのものを並べ替える（監査 F-32）。
+      const orderedItems = buildReorderPayload(items, reordered);
       const result = await reorderFaqItems(categoryId, orderedItems);
       if (isMutationError(result)) {
         toast.error(result.error);

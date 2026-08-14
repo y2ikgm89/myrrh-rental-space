@@ -111,6 +111,7 @@ export async function fulfillReservationPaymentAtomically(
     startTime: reservation.startTime,
     endTime: reservation.endTime,
     totalPrice: reservation.totalPrice,
+    totalPriceWithTax: reservation.totalPriceWithTax,
     location: reservation.space.location?.name,
     notes: reservation.notes ?? undefined,
     icsSequence: reservation.icsSequence,

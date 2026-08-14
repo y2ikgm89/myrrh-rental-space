@@ -90,7 +90,7 @@ const RESERVATION_BASE: ReservationEmailData = {
   spaceName: "会議室A",
   startTime: new Date("2099-01-01T01:00:00Z"),
   endTime: new Date("2099-01-01T03:00:00Z"),
-  totalPrice: 5000,
+  totalPriceWithTax: 5000,
   icsSequence: 0,
 };
 

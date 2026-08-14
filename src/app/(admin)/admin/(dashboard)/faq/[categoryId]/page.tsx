@@ -94,7 +94,6 @@ async function CategoryDetailContent({
     !params.search &&
     params.status === "all" &&
     params.quickFilter === "all";
-  const startIndex = (page - 1) * params.perPage;
 
   return (
     <div className="space-y-6">
@@ -116,7 +115,6 @@ async function CategoryDetailContent({
         currentSortBy={params.sortBy}
         currentSortOrder={params.sortOrder}
         reorderEnabled={reorderEnabled}
-        startIndex={startIndex}
         totalItems={total}
         allowCreate={allowCreate}
       />

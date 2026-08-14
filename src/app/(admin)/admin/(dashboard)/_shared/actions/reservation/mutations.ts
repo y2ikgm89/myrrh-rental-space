@@ -247,7 +247,9 @@ export const updateReservationStatus = async (
                 spaceName: payloadData.spaceName,
                 startTime: payloadData.startTime,
                 endTime: payloadData.endTime,
-                totalPrice: payloadData.totalPrice,
+                // メール本文は税込（監査 F-74）。
+
+                totalPriceWithTax: payloadData.totalPriceWithTax,
                 oldStatus: result.previousStatus,
                 newStatus: status,
                 icsSequence: payloadData.icsSequence,
@@ -348,7 +350,9 @@ export const restoreReservationStatus = async (
         spaceName: payloadData.spaceName,
         startTime: payloadData.startTime,
         endTime: payloadData.endTime,
-        totalPrice: payloadData.totalPrice,
+        // メール本文は税込（監査 F-74）。
+
+        totalPriceWithTax: payloadData.totalPriceWithTax,
         oldStatus: result.previousStatus,
         newStatus: result.targetStatus,
         icsSequence: payloadData.icsSequence,

@@ -23,6 +23,7 @@ const payload = {
   startTime: START_TIME,
   endTime: END_TIME,
   totalPrice: 5000,
+  totalPriceWithTax: 5000,
   icsSequence: 0,
 };
 

@@ -463,7 +463,9 @@ export async function updateReservationAction(
                       spaceName: payloadData.spaceName,
                       startTime: payloadData.startTime,
                       endTime: payloadData.endTime,
-                      totalPrice: payloadData.totalPrice,
+                      // メール本文は税込（監査 F-74）。
+
+                      totalPriceWithTax: payloadData.totalPriceWithTax,
                       oldStatus: previousStatus,
                       newStatus,
                       icsSequence: payloadData.icsSequence,
