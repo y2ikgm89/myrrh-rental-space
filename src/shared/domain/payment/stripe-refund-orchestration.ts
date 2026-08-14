@@ -126,6 +126,24 @@ export function isRefundSettledSuccess(status: string | null): boolean {
   return status === "succeeded";
 }
 
+/**
+ * Stripe Refund.status のうち、**もう非終端へは戻らない**値。
+ *
+ * `claimRefundSettlement` の冪等性ゲートと
+ * `applyConfirmedRefundStatus` の巻き戻し拒否が同じ集合を見る必要があるため、
+ * ここを SSoT にする。片方だけ書き換えると、確定済みの返金が再 claim 可能な
+ * 状態に戻る。
+ */
+export const TERMINAL_REFUND_STATUSES: readonly string[] = [
+  "succeeded",
+  "failed",
+  "canceled",
+];
+
+export function isTerminalRefundStatus(status: string): boolean {
+  return TERMINAL_REFUND_STATUSES.includes(status);
+}
+
 type RefundStatusUpdateClient = {
   refund: {
     updateMany: (args: {
@@ -147,10 +165,24 @@ type RefundStatusUpdateClient = {
  * 他列を書き換える経路は物理的に存在しない。
  *
  * `where.status: "succeeded"` を含めない代わりに現在値を渡し `updateMany` の
- * WHERE claim で「まだ確定していない行のみ」に限定する（既に "succeeded" /
- * "failed" 等に確定済みの行を webhook の再送・順序前後で誤って再書込みしない）。
+ * WHERE claim で「呼び出し元が読んだ状態から動いていない行のみ」に限定する
+ * （並行書込との競合を防ぐ）。
  *
- * @returns 実際に更新された行数 (0 なら該当行が既に別の状態に確定済み、または不在)
+ * それとは別に、**終端状態からの巻き戻しを拒否する**。Stripe は refund.updated の
+ * 配送順を保証せず、こちら側の dedup も `"retry_unprocessed"` で処理途中に落ちた
+ * 古い event の再実行を許すため、`succeeded` 確定後に古い `pending` が届く経路が
+ * 実在する。WHERE の現在値一致だけでは通ってしまい、確定済みの行が非終端へ戻る。
+ * そうなると `finalizeSettled*Refund` の
+ * `aggregate({ where: { status: "succeeded" } })` からその返金額が脱落して
+ * **全額返金済みなのに PARTIALLY_REFUNDED で確定し、返金完了メールの金額も過小**に
+ * なる。`failed` / `canceled` からの巻き戻しは、手動対応が必要なインシデントの
+ * 記録を消してしまう（監査 F-57）。
+ *
+ * 終端 → 終端（例: `succeeded` → `failed`）は通す。Stripe が後から失敗を確定させる
+ * ことはあり、その記録は追随すべきだから。
+ *
+ * @returns 実際に更新された行数 (0 なら該当行が既に別の状態に確定済み、
+ *          巻き戻しとして拒否された、または不在)
  */
 export async function applyConfirmedRefundStatus(
   client: RefundStatusUpdateClient,
@@ -158,6 +190,13 @@ export async function applyConfirmedRefundStatus(
   previousStatus: string,
   newStatus: string,
 ): Promise<number> {
+  if (
+    isTerminalRefundStatus(previousStatus) &&
+    !isTerminalRefundStatus(newStatus)
+  ) {
+    return 0;
+  }
+
   const result = await client.refund.updateMany({
     where: { stripeRefundId, status: previousStatus },
     data: { status: newStatus },
@@ -205,7 +244,7 @@ export async function claimRefundSettlement(
   const result = await tx.refund.updateMany({
     where: {
       stripeRefundId,
-      status: { notIn: ["succeeded", "failed", "canceled"] },
+      status: { notIn: [...TERMINAL_REFUND_STATUSES] },
     },
     data: { status: "succeeded" },
   });
