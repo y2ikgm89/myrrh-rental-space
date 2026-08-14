@@ -55,6 +55,9 @@ import { Glob } from "bun";
  *
  * ## 走査の限界
  *
+ * 母集合の入口はクラス集合の包含（並び順に依存しない）。操作列は
+ * `className` リテラルと `cn()` の文字列引数を見る。`cn()` の変数引数は見えない。
+ *
  * JSX の AST ではなくテキストの `<div>` 対応数えなので、
  * コメントや文字列リテラルの中に `<div>` / `</div>` を書くと深さがずれる。
  * 自己閉じ `<div … />` と開始タグ内の JSX 式（`onClick={() => …}`）は
@@ -67,6 +70,13 @@ const ADMIN_DASHBOARD_GLOB = "src/app/(admin)/admin/(dashboard)/**/*.tsx";
 /** ページヘッダーのラッパー（h1 + 操作列を横並びにする house pattern）。 */
 const HEADER_CLASSNAME = "flex flex-col gap-4 sm:flex-row sm:items-center";
 
+/**
+ * house pattern のクラス集合。並び順に依存しない。
+ * `flex` は `flex-col` / `sm:flex-row` の部分一致では足りない（トークン境界）。
+ */
+const HEADER_CLASS_LOOKAHEAD =
+  /(?=[^>]*(?:^|[\s"'`])flex(?:[\s"'`]|$))(?=[^>]*(?:^|[\s"'`])flex-col(?:[\s"'`]|$))(?=[^>]*(?:^|[\s"'`])gap-4(?:[\s"'`]|$))(?=[^>]*(?:^|[\s"'`])sm:flex-row(?:[\s"'`]|$))(?=[^>]*(?:^|[\s"'`])sm:items-center(?:[\s"'`]|$))/u;
+
 /** `<div` / `</div` のトークン。 */
 const DIV_TOKEN_SOURCE = "<\\/?div\\b";
 
@@ -78,9 +88,30 @@ function globalRegExp(source: string): RegExp {
   return new RegExp(source, "gu");
 }
 
-/** `className="… flex … gap-2 …"` の操作列（クラスの並び順に依存しない）。 */
-const ACTION_CLASSNAME =
-  /className=\{?"(?=[^"]*\bflex\b)(?=[^"]*\bgap-2\b)[^"]*"/u;
+/** 操作列のクラス集合。並び順に依存しない。 */
+const ACTION_CLASS_LOOKAHEAD =
+  /(?=(?:[^\s]*\s)*flex(?:\s|$))(?=(?:[^\s]*\s)*gap-2(?:\s|$))/u;
+
+/**
+ * `className` リテラル、または `cn()` の文字列引数を結合した値。
+ * 変数引数は見えない。
+ */
+function classNameAttr(
+  tag: string,
+): { raw: string; classes: string } | undefined {
+  const cn = /className=\{cn\(([^)]*)\)\}?/u.exec(tag);
+  if (cn) {
+    const args = cn[1];
+    const literals = [...args.matchAll(/["']([^"']*)["']/gu)].map(
+      (match) => match[1],
+    );
+    return { raw: `className={cn(${args})}`, classes: literals.join(" ") };
+  }
+
+  const literal = /className=\{?"([^"]*)"/u.exec(tag);
+  if (!literal) return undefined;
+  return { raw: literal[0], classes: literal[1] };
+}
 
 type DivKind = "open" | "close" | "self";
 
@@ -167,7 +198,7 @@ function headerBlocks(source: string): HeaderBlock[] {
 
   for (const [position, token] of tokens.entries()) {
     if (token.kind !== "open") continue;
-    if (!source.slice(token.start, token.after).includes(HEADER_CLASSNAME)) {
+    if (!HEADER_CLASS_LOOKAHEAD.test(source.slice(token.start, token.after))) {
       continue;
     }
 
@@ -231,10 +262,11 @@ export function scanHeaderActionRows(
       headerCount += 1;
 
       for (const tag of block.childTags) {
-        const actionRow = ACTION_CLASSNAME.exec(tag);
+        const actionRow = classNameAttr(tag);
         if (!actionRow) continue;
-        if (actionRow[0].includes("flex-wrap")) continue;
-        violations.push(`${file}: ${actionRow[0]}`);
+        if (!ACTION_CLASS_LOOKAHEAD.test(actionRow.classes)) continue;
+        if (actionRow.classes.includes("flex-wrap")) continue;
+        violations.push(`${file}: ${actionRow.raw}`);
       }
     }
   }
@@ -451,5 +483,33 @@ describe("gate の判定（fixture）", () => {
     });
 
     expect(scan.violations).toEqual([]);
+  });
+
+  test("並び順が違うヘッダーも母集合に入れて未対応な操作列を落とす", () => {
+    const scan = scanFixture({
+      "faq/page.tsx": `
+        <div className="flex flex-col gap-4 sm:items-center sm:flex-row sm:justify-between">
+          <div><h1>FAQ</h1></div>
+          <div className="flex gap-2"><Button>新規作成</Button></div>
+        </div>`,
+    });
+
+    expect(scan.violations).toEqual(['faq/page.tsx: className="flex gap-2"']);
+    expect(scan.headerCount).toBe(1);
+  });
+
+  test("cn() で組んだ操作列も落とす", () => {
+    const scan = scanFixture({
+      "inquiries/page.tsx": `
+        ${HEADER_OPEN}
+          <div><h1>問い合わせ</h1></div>
+          <div className={cn("flex gap-2")}><Button>新規作成</Button></div>
+        </div>`,
+    });
+
+    expect(scan.violations).toEqual([
+      'inquiries/page.tsx: className={cn("flex gap-2")}',
+    ]);
+    expect(scan.headerCount).toBe(1);
   });
 });
