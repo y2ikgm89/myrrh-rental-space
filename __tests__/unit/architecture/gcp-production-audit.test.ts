@@ -40,7 +40,8 @@ import {
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_TASK_COUNT,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_TIMEOUT_SECONDS,
   REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
-  getExpectedSecretManagerSecretAccessorMembers,
+  ALL_AUDITED_SECRET_ENV_REFS,
+  getAllowedSecretManagerSecretAccessorMembers,
   readIamPolicyMembersForRole,
   readIamRoleMembershipErrors,
   readProjectSecretManagerAccessorErrors,
@@ -1429,6 +1430,97 @@ describe("GCP production audit model", () => {
     ).toEqual(["DATABASE_URL Secret Manager version 1 metadata is missing"]);
   });
 
+  // 監査 F-22: denylist は「知っている悪い role」しか止められない。
+  // デプロイが権限不足で落ちたときの定番対処
+  // （`add-iam-policy-binding … --role=roles/editor`）を打っても errors に出ず、
+  // 監査は PASS を表示し続けていた。実際にはこの SA は main への push で WIF 経由に
+  // impersonate でき、project 全体の書込権を持つと任意 image を runtime SA で
+  // デプロイできる → runtime SA は project-level secretAccessor を持つので全 secret
+  // が読める。allowlist に反転する。
+  test("build SA の project-level role は allowlist で判定する", () => {
+    const buildSa =
+      "myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com";
+    const member = `serviceAccount:${buildSa}`;
+    const requiredBindings = [
+      { role: "roles/cloudbuild.builds.builder", members: [member] },
+      { role: "roles/logging.logWriter", members: [member] },
+    ];
+
+    // 許可された role だけなら通る。
+    expect(
+      readBuildServiceAccountProjectIamRoleErrors(
+        {
+          bindings: [
+            ...requiredBindings,
+            { role: "roles/secretmanager.secretAccessor", members: [member] },
+          ],
+        },
+        buildSa,
+      ),
+    ).toEqual([]);
+
+    // **旧 denylist が素通りさせていた role**。
+    for (const role of [
+      "roles/editor",
+      "roles/owner",
+      "roles/iam.serviceAccountAdmin",
+      "roles/resourcemanager.projectIamAdmin",
+      "roles/secretmanager.admin",
+    ]) {
+      expect(
+        readBuildServiceAccountProjectIamRoleErrors(
+          { bindings: [...requiredBindings, { role, members: [member] }] },
+          buildSa,
+        ),
+      ).toEqual([`${role} must not be project-level for ${member}`]);
+    }
+
+    // 必須 role の欠落は従来どおり検出する。
+    expect(
+      readBuildServiceAccountProjectIamRoleErrors(
+        { bindings: [{ role: "roles/logging.logWriter", members: [member] }] },
+        buildSa,
+      ),
+    ).toEqual([`roles/cloudbuild.builds.builder missing for ${member}`]);
+
+    // 他 SA の role は巻き込まない。
+    expect(
+      readBuildServiceAccountProjectIamRoleErrors(
+        {
+          bindings: [
+            ...requiredBindings,
+            { role: "roles/editor", members: ["serviceAccount:other@x.iam"] },
+          ],
+        },
+        buildSa,
+      ),
+    ).toEqual([]);
+  });
+
+  // 監査 F-20: secret を触る check の母集合に DIRECT_URL が入っていなかった。
+  test("secret 監査の母集合は terraform の runtime_secrets を覆う", () => {
+    const secretsTf = readFileSync(
+      join(process.cwd(), "terraform", "secrets.tf"),
+      "utf8",
+    );
+    const block = /runtime_secrets\s*=\s*\[([\s\S]*?)\]/u.exec(secretsTf);
+    expect(block).not.toBeNull();
+    const declared = [...(block?.[1] ?? "").matchAll(/"([A-Z0-9_]+)"/gu)].map(
+      (m) => m[1] ?? "",
+    );
+    // 走査規模の下限（正規表現が壊れて 0 件になっても通らないように）。
+    expect(declared.length).toBeGreaterThan(15);
+
+    const audited = new Set<string>(
+      ALL_AUDITED_SECRET_ENV_REFS.map((ref) => ref.name),
+    );
+    const missing = declared.filter((name) => !audited.has(name));
+
+    // secrets.tf に entry を足した時点でここが落ちる。
+    expect(missing).toEqual([]);
+    // DIRECT_URL が母集合に入っていること（元の欠陥そのものの形）。
+    expect(audited.has("DIRECT_URL")).toBe(true);
+  });
   test("requires Secret Manager accessor IAM to stay secret-level and least privilege", () => {
     const runtimeMember =
       "serviceAccount:myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com";
@@ -1455,14 +1547,14 @@ describe("GCP production audit model", () => {
     ]);
 
     expect(
-      getExpectedSecretManagerSecretAccessorMembers({
+      getAllowedSecretManagerSecretAccessorMembers({
         secretName: "DATABASE_URL",
         runtimeServiceAccount: runtimeMember.slice("serviceAccount:".length),
         buildServiceAccount: buildMember.slice("serviceAccount:".length),
       }),
     ).toEqual([runtimeMember]);
     expect(
-      getExpectedSecretManagerSecretAccessorMembers({
+      getAllowedSecretManagerSecretAccessorMembers({
         secretName: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
         runtimeServiceAccount: runtimeMember.slice("serviceAccount:".length),
         buildServiceAccount: buildMember.slice("serviceAccount:".length),
@@ -1481,7 +1573,7 @@ describe("GCP production audit model", () => {
         },
         {
           secretName: "DATABASE_URL",
-          expectedMembers: [runtimeMember],
+          allowedMembers: [runtimeMember],
         },
       ),
     ).toEqual([]);
@@ -1506,15 +1598,26 @@ describe("GCP production audit model", () => {
         },
         {
           secretName: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
-          expectedMembers: [buildMember, runtimeMember],
+          allowedMembers: [buildMember, runtimeMember],
         },
       ),
+      // 監査 F-21: **missing は検査しない**。secret-level binding を作る手段が
+      // リポジトリに無い以上、「無いこと」は違反ではない。検出するのは
+      // 「在ってはいけない member が付いていること」と IAM Conditions だけ。
     ).toEqual([
-      `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY roles/secretmanager.secretAccessor missing ${buildMember}`,
-      `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY roles/secretmanager.secretAccessor missing ${runtimeMember}`,
       `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY roles/secretmanager.secretAccessor unexpected ${defaultBuildMember}`,
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY roles/secretmanager.secretAccessor must not use IAM Conditions",
     ]);
+
+    // 空 policy（bootstrap だけを流した正規手順の状態）は違反ではない。
+    // 旧実装はここで 18 件の missing を出し、運用者を「project-level を消す」
+    // という**サービス起動不能になる操作**へ誘導していた。
+    expect(
+      readSecretManagerSecretAccessorPolicyErrors(
+        { bindings: [] },
+        { secretName: "DATABASE_URL", allowedMembers: [runtimeMember] },
+      ),
+    ).toEqual([]);
     expect(
       readUnexpectedSecretManagerSecretAccessorMembers(
         {
