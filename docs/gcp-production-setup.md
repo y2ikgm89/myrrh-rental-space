@@ -1558,10 +1558,16 @@ The audited production target posture is:
    `roles/run.admin`, runtime service account `roles/iam.serviceAccountUser`,
    and Cloud Build source bucket `roles/storage.objectViewer`; runtime service
    account `roles/iam.serviceAccountTokenCreator` has no members;
-8. Secret Manager accessor grants are secret-level only: runtime secrets allow
-   `$RUNTIME_SA`, `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` allows `$RUNTIME_SA` and
-   `$BUILD_SA`, and project-level `roles/secretmanager.secretAccessor` is
-   absent;
+8. Secret Manager accessor grants come from the **project-level** bindings that
+   `scripts/bootstrap-terraform.sh` creates for `$RUNTIME_SA` and `$BUILD_SA`
+   (this is the SSoT; `secret_iam.tf` was removed in the 2026-07-14 F1 refactor
+   and no per-secret binding is created anywhere in the repo). The audit
+   therefore only rejects **unexpected** per-secret members and IAM Conditions —
+   an empty per-secret policy is normal. **Do not remove the project-level
+   `roles/secretmanager.secretAccessor` binding**: it is the runtime service
+   account's only accessor, and Cloud Run resolves secrets at instance startup,
+   so removing it makes the next revision fail to start. Terraform does not
+   declare it, so `terraform apply` will not restore it (audit finding F-21);
 9. public Cloud Run keeps `run.googleapis.com/ingress` and
    `run.googleapis.com/ingress-status` set to `all`; admin Cloud Run keeps both
    annotations set to `internal-and-cloud-load-balancing` and

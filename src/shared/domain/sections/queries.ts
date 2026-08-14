@@ -128,11 +128,18 @@ export async function getPageSectionsWithFallback(
 ): Promise<readonly PublicSection[]> {
   if (!slugParamSchema.safeParse(slug).success) return [];
 
+  // フォールバックは「Page 行がまだ無い」ときだけ（監査 F-64）。
+  //
+  // 旧実装は 0 件も fallback の条件にしていた。`getPageSections` は
+  // `isActive: true` で絞るので、管理者が全セクションを**非表示にした**ページも
+  // 0 件になり、コード同梱のデモ文言（会社概要 hero + デモ本文 + CTA）が
+  // 公開面に復帰していた。編集画面には「非表示」と表示されているので、
+  // 管理者は何が起きているか説明できず、**最低 1 本を表示に戻す以外に
+  // 空ページにする手段が無い**。
+  //
+  // Page 行があるなら 0 件は 0 件。公開ページは空セクションで描く。
   const page = await getPublicPage(slug);
-  if (page) {
-    const sections = await getPageSections(page.id);
-    if (sections.length > 0) return sections;
-  }
+  if (page) return getPageSections(page.id);
 
   return getDefaultSections(slug);
 }
