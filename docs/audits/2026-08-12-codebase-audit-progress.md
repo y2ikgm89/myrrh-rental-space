@@ -58,9 +58,9 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-55](2026-08-12-codebase-audit-findings.md#f-55) | 中     | #2256                 | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
 | efund.updated に一本化                             | —      |
 | [F-57](2026-08-12-codebase-audit-findings.md#f-57) | 中     | #2259                 | 終端状態 (succeeded / failed / canceled) の Refund.status を非終端へ巻き戻さない                 | —                                                                                           |
-| [F-58](2026-08-12-codebase-audit-findings.md#f-58) | 中     | ★PR                   | 適用済みクーポンの再送では利用可否を再検証しない（配り切り・期限切れで編集不能にならない）       | —                                                                                           |
-| [F-59](2026-08-12-codebase-audit-findings.md#f-59) | 中     | ★PR                   | 終端ステータスの予約を編集できないようにし、クーポン usageCount の二重解放を止めた               | —                                                                                           |
-| [F-60](2026-08-12-codebase-audit-findings.md#f-60) | 中     | ★PR                   | 書込の WHERE に status 述語を足し、直前にキャンセルされた行を掴まない                            | —                                                                                           |
+| [F-58](2026-08-12-codebase-audit-findings.md#f-58) | 中     | #2262                 | 適用済みクーポンの再送では利用可否を再検証しない（配り切り・期限切れで編集不能にならない）       | —                                                                                           |
+| [F-59](2026-08-12-codebase-audit-findings.md#f-59) | 中     | #2262                 | 終端ステータスの予約を編集できないようにし、クーポン usageCount の二重解放を止めた               | —                                                                                           |
+| [F-60](2026-08-12-codebase-audit-findings.md#f-60) | 中     | #2262                 | 書込の WHERE に status 述語を足し、直前にキャンセルされた行を掴まない                            | —                                                                                           |
 | [F-66](2026-08-12-codebase-audit-findings.md#f-66) | 中     | #2261                 | サイドバーを publicPostsWhere() に寄せ、予約公開の記事を出さない                                 | —                                                                                           |
 | [F-70](2026-08-12-codebase-audit-findings.md#f-70) | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
