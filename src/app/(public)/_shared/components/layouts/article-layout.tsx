@@ -100,7 +100,12 @@ export function ArticleLayout({
   const heroBlock = hero ? <div className="mb-12">{hero}</div> : null;
 
   const body = (
-    <div className={cn("min-w-0", widthStyles?.className)}>
+    // 幅は `style` で渡す。className に `max-w-[<px>]` を組み立てると Tailwind の
+    // スキャナが拾えず、CSS ルールが生成されない（監査 F-75）。
+    <div
+      className={cn("min-w-0", widthStyles?.className)}
+      style={widthStyles?.style}
+    >
       {heroPosition === "in-grid" ? heroBlock : null}
       {mobileToc ? <div className="lg:hidden">{mobileToc}</div> : null}
       {children}

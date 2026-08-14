@@ -151,14 +151,13 @@ export async function getEventBroadcastPayload(
   if (!event) return null;
 
   const totalRegistrations = event.registrations.length;
-  const recipients = event.registrations.filter(
+  const withEmail = event.registrations.filter(
     (r): r is typeof r & { email: string } => r.email !== null,
   );
-  const skipped = totalRegistrations - recipients.length;
 
   const unresolvedEmails = [
     ...new Set(
-      recipients
+      withEmail
         .filter((r) => r.customerId === null)
         .map((r) => normalizeEmailForIdentity(r.email)),
     ),
@@ -173,6 +172,54 @@ export async function getEventBroadcastPayload(
   const customerIdByEmail = new Map(
     customersByEmail.map((c) => [c.emailCanonical, c.id]),
   );
+
+  // **配信停止を守れる相手にしか送らない**（監査 F-45）。
+  //
+  // 一斉配信のメールには List-Unsubscribe / List-Unsubscribe-Post: One-Click と
+  // 本文の「配信停止はこちら」が付く。押すと `marketingOptIn=false` になり、
+  // 確認画面は「今後、運営からのお知らせ・キャンペーンメールは配信されません」と
+  // 表示する。ところが旧実装の where は `status=CONFIRMED` だけで、次の配信でまた
+  // 届いていた。顧客一斉配信（`findCustomersForBroadcast`）は `marketingOptIn: true`
+  // で絞っており、非対称だった。
+  //
+  // Gmail / Yahoo の bulk sender 要件（配信停止を honor すること）を満たさないと、
+  // spam 報告 → COMPLAINED → `getSuppressedEmailSet` 経由で**予約確認や領収書など
+  // 取引メールまで全停止**する。
+  //
+  // Customer に解決できない walk-in / ゲストも送らない。unsubscribe URL を出せない
+  // ＝ 押されても記録できない相手に、守れない配信停止を提示しないため。
+  // 「ヘッダを出せるか」と「送ってよいか」を 1 つの述語に揃える。
+  const candidateCustomerIds = [
+    ...new Set(
+      withEmail
+        .map(
+          (r) =>
+            r.customerId ??
+            customerIdByEmail.get(normalizeEmailForIdentity(r.email)) ??
+            null,
+        )
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const optedInCustomerIds = new Set(
+    candidateCustomerIds.length > 0
+      ? (
+          await prisma.customer.findMany({
+            where: { id: { in: candidateCustomerIds }, marketingOptIn: true },
+            select: { id: true },
+          })
+        ).map((c) => c.id)
+      : [],
+  );
+
+  const recipients = withEmail.filter((r) => {
+    const customerId =
+      r.customerId ??
+      customerIdByEmail.get(normalizeEmailForIdentity(r.email)) ??
+      null;
+    return customerId !== null && optedInCustomerIds.has(customerId);
+  });
+  const skipped = totalRegistrations - recipients.length;
 
   return {
     eventId,

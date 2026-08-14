@@ -8,6 +8,7 @@
 import Image from "next/image";
 import type { ReactElement } from "react";
 import { IconBrandInstagram, IconPlayerPlay } from "@tabler/icons-react";
+import { resolveInstagramTileImageUrl } from "@/shared/lib/instagram/tile-image";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
@@ -74,50 +75,53 @@ export function InstagramSection({
               GAP_MAP[parseGapSize(config.gap)],
             )}
           >
-            {displayPosts.map((post) => (
-              <a
-                key={post.id}
-                href={post.postUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="group relative block aspect-square overflow-hidden bg-muted"
-              >
-                {post.mediaUrl ? (
-                  <Image
-                    src={post.mediaUrl}
-                    alt={post.caption ?? "Instagram投稿"}
-                    fill
-                    className="object-cover transition-opacity duration-300 group-hover:opacity-85"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
+            {displayPosts.map((post) => {
+              const imageUrl = resolveInstagramTileImageUrl(post);
+              return (
+                <a
+                  key={post.id}
+                  href={post.postUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative block aspect-square overflow-hidden bg-muted"
+                >
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={post.caption ?? "Instagram投稿"}
+                      fill
+                      className="object-cover transition-opacity duration-300 group-hover:opacity-85"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <IconBrandInstagram
+                        className="h-8 w-8 text-muted-foreground/40"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+
+                  {/* Hover overlay with Instagram icon */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-foreground/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                     <IconBrandInstagram
-                      className="h-8 w-8 text-muted-foreground/40"
+                      className="h-8 w-8 text-background"
                       aria-hidden="true"
                     />
                   </div>
-                )}
 
-                {/* Hover overlay with Instagram icon */}
-                <div className="absolute inset-0 flex items-center justify-center bg-foreground/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <IconBrandInstagram
-                    className="h-8 w-8 text-background"
-                    aria-hidden="true"
-                  />
-                </div>
-
-                {/* Video indicator */}
-                {post.mediaType === "VIDEO" && (
-                  <div className="absolute right-2 top-2">
-                    <IconPlayerPlay
-                      className="h-5 w-5 text-background drop-shadow-md"
-                      aria-hidden="true"
-                    />
-                  </div>
-                )}
-              </a>
-            ))}
+                  {/* Video indicator */}
+                  {post.mediaType === "VIDEO" && (
+                    <div className="absolute right-2 top-2">
+                      <IconPlayerPlay
+                        className="h-5 w-5 text-background drop-shadow-md"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                </a>
+              );
+            })}
           </div>
         </ScrollReveal>
       )}
