@@ -133,12 +133,12 @@ describeMaybe("既定セクションは復活しない", () => {
     ({ ensureSystemPageCommand } =
       await import("@/shared/domain/pages/commands"));
 
-    const page = await prisma.page.findUnique({
-      where: { slug: "about" },
-      select: { id: true },
-    });
-    if (!page) throw new Error("about ページが seed されていません");
-    aboutPageId = page.id;
+    // **seed に依存しない。** CI の test-db は migrate だけで seed されないことが
+    // あり、`about` が無いと beforeAll ごと落ちる（実測）。`ensureSystemPageCommand`
+    // は Page 行が無ければ作って既定セクションを流すので、ここで前提を自分で作る。
+    const ensured = await ensureSystemPageCommand("about");
+    if (!ensured) throw new Error("about はシステムページ定義に無い");
+    aboutPageId = ensured.page.id;
     originalSections = await readAboutSections();
     expect(originalSections.length).toBeGreaterThan(0);
   });
@@ -183,20 +183,21 @@ describeMaybe("既定セクションは復活しない", () => {
     }
   });
 
-  test("Page 行が無い slug では既定セクションに落ちる（従来どおり）", async () => {
+  test("fallback 自体は生きている", async () => {
+    // `home` は `DEFAULT_PAGE_SECTIONS` にエントリがある。Page 行が無ければ
+    // fallback が返し、あればその行が返る。**どちらでも空にならない**ことを見る
+    // （fallback を消すと、Page 行が無い環境でここが空になる）。
     const sections = await getPageSectionsWithFallback("home");
 
-    // fallback 自体は生きている（gate が空振りしていない）。
-    expect(Array.isArray(sections)).toBe(true);
+    expect(sections.length).toBeGreaterThan(0);
   });
 
   test("必須セクションは複製できない（F-63）", async () => {
-    const contact = await prisma.page.findUnique({
-      where: { slug: "contact" },
-      select: { id: true, template: true },
-    });
-    expect(contact).not.toBeNull();
-    if (!contact) return;
+    // ここも seed に依存しない。
+    const ensured = await ensureSystemPageCommand("contact");
+    expect(ensured).not.toBeNull();
+    if (!ensured) return;
+    const contact = { id: ensured.page.id };
 
     const required = await prisma.section.findFirst({
       where: { pageId: contact.id, type: "contact-form" },
