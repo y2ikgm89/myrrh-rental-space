@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (155) =====
+-- ===== CHECK 制約 (156) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -39,6 +39,7 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_algorithm_check" CHECK 
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_hash_key_id_check" CHECK (((hash_key_id)::text ~ '^[A-Za-z0-9_-]{1,32}$'::text));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_metadata_object_check" CHECK (((metadata IS NULL) OR (jsonb_typeof(metadata) = 'object'::text)));
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_previous_hash_hex_check" CHECK ((previous_hash ~ '^[0-9a-f]{64}$'::text));
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_sequence_positive_check" CHECK ((sequence > 0));
 ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_node_json_object_check" CHECK ((jsonb_typeof(node_json) = 'object'::text));
 ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_date_order_check" CHECK ((start_date <= end_date));
 ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_scope_target_check" CHECK (((((scope)::text = 'SPACE'::text) AND (space_id IS NOT NULL) AND (location_id IS NULL)) OR (((scope)::text = 'LOCATION'::text) AND (location_id IS NOT NULL) AND (space_id IS NULL)) OR (((scope)::text = 'GLOBAL'::text) AND (space_id IS NULL) AND (location_id IS NULL))));

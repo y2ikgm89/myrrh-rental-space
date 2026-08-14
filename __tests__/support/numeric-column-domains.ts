@@ -31,7 +31,7 @@ function snakeCase(name: string): string {
 }
 
 /**
- * schema.prisma の Int / Float / Decimal 列を物理名つきで集める。
+ * schema.prisma の Int / BigInt / Float / Decimal 列を物理名つきで集める。
  *
  * **単一実装にする。** unit 側と integration 側で別々にパースすると、片方だけが
  * 壊れたときに両者の食い違いが「対象 0 件」として静かに通る。integration 側は
@@ -79,9 +79,8 @@ export function readNumericColumns(): NumericColumn[] {
     }
     if (!model) continue;
 
-    const decl = /^\s*(\w+)\s+(Int|Float|Decimal)(\[\])?\??\s*(.*)$/u.exec(
-      line,
-    );
+    const decl =
+      /^\s*(\w+)\s+(Int|BigInt|Float|Decimal)(\[\])?\??\s*(.*)$/u.exec(line);
     if (!decl?.[1]) continue;
     // スカラー配列は要素ごとの値域を CHECK で書けないので対象外
     // （現状 schema に数値配列は 1 本も無い。増えたら自己検査が気づく）。
@@ -381,6 +380,7 @@ export const NUMERIC_COLUMN_DOMAINS: Readonly<Record<string, NumericDomain>> = {
   "SettingsReservation.cancellationDeadlineHours": positive,
   "SettingsReservation.modificationDeadlineHours": positive,
   "ReceiptSequence.nextNo": positive, // 1-indexed
+  "AuditLog.sequence": positive, // 1-indexed chain position
 
   // --- 並び順の位置（退避領域つき） ---------------------------------
   "Location.sortOrder": position(),
