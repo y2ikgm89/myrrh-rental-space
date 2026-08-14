@@ -191,11 +191,11 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（44 件）
+### フェーズ 4 — 中（43 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（58 件）
+### フェーズ 5 — 低（57 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -240,7 +240,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `src/shared/domain/events/event-slot-sync-commands.ts:176`                                                    | EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位                                                                    |
 | [F-49](../../audits/2026-08-12-codebase-audit-findings.md#f-49)   | 中     | `src/shared/domain/events/payment-queries.ts:428`                                                             | 非同期返金の確定処理が AUTO\_ON\_CANCEL を「常に全額」と決め打ちし、ポリシー按分の部分返金を REFUNDED に確定させる                                              |
 | [F-51](../../audits/2026-08-12-codebase-audit-findings.md#f-51)   | 中     | `src/shared/domain/faq/analytics-commands.ts:12`                                                              | 公開 FAQ の閲覧・投票が updatedAt を更新するため、鮮度チェック cron と管理画面の「未更新」指標が恒久的に 0 になる                                               |
-| [F-52](../../audits/2026-08-12-codebase-audit-findings.md#f-52)   | 中     | `src/shared/domain/inquiries/anonymize-commands.ts:83`                                                        | 匿名化が Inquiry.subject（自由記入 200 文字）を消さず、GDPR 相当の削除後も件名の PII が残り続ける                                                               |
 | [F-53](../../audits/2026-08-12-codebase-audit-findings.md#f-53)   | 中     | `src/shared/domain/pages/system-pages-commands.ts:40`                                                         | システムページから削除したセクションが、編集画面を開くたび／管理サービス起動のたびに初期デモ文言つきで復活する                                                  |
 | [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:195`                                                | 非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る                                                                             |
 | [F-61](../../audits/2026-08-12-codebase-audit-findings.md#f-61)   | 中     | `src/shared/domain/reservations/calendar-sync.ts:134`                                                         | series instance の GCal update/delete 失敗が 3 つの retry pool すべてから漏れ、恒久的に取り残される                                                             |
@@ -294,7 +293,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-113](../../audits/2026-08-12-codebase-audit-findings.md#f-113) | 低     | `src/app/api/receipts/[serialNo]/pdf/route.ts:122`                                                            | 認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）                                                                              |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                                                                    | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                           |
 | [F-115](../../audits/2026-08-12-codebase-audit-findings.md#f-115) | 低     | `src/shared/domain/admin-search/queries.ts:149`                                                               | コマンドパレット検索が EDITOR の userPageAssignment スコープを無視して全 page を返す                                                                            |
-| [F-116](../../audits/2026-08-12-codebase-audit-findings.md#f-116) | 低     | `src/shared/domain/customers/customer-lifecycle-commands.ts:177`                                              | 予約の自由記述「備考」が匿名化でもデータ保持 purge でも消えない                                                                                                 |
 | [F-117](../../audits/2026-08-12-codebase-audit-findings.md#f-117) | 低     | `src/shared/domain/customers/link.ts:131`                                                                     | 管理者による「顧客の紐づけ解除」は顧客の次回ログインで自動的に巻き戻り、問い合わせ本文と添付がマイページに復帰する                                              |
 | [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118) | 低     | `src/shared/domain/events/payment-queries.ts:241`                                                             | 論理削除されたイベントの返金が charge.refunded で無言で捨てられ、PAID のまま残る                                                                                |
 | [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`                                                               | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                              |

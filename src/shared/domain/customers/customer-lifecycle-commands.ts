@@ -179,6 +179,9 @@ export async function anonymizeCustomerCommand(input: {
         guestEmail: null,
         guestPhone: null,
         guestCompanyName: null,
+        // 自由記入の「備考」にも第三者を含む PII が入る（監査 F-116）。
+        // 管理画面の予約詳細・CSV エクスポート・GCal の description に載り続ける。
+        notes: null,
       },
     });
 

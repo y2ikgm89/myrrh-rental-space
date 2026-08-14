@@ -47,6 +47,12 @@ export type AnonymizeInquiryReason =
   "customer-requested" | "admin-purge" | "data-retention" | "customer-cascade";
 
 const INQUIRY_ANONYMIZE_PLACEHOLDER_NAME = "削除済み";
+/**
+ * 件名も自由記入（最大 200 文字）で、実際に氏名や電話番号が書かれる。
+ * 匿名化後も管理画面の詳細・一覧に出るうえ、検索が subject を contains で引くため
+ * **氏名で検索してヒットしてしまう**（監査 F-52）。
+ */
+const INQUIRY_ANONYMIZE_PLACEHOLDER_SUBJECT = "この内容は匿名化されました";
 const INQUIRY_ANONYMIZE_PLACEHOLDER_MESSAGE = "この内容は匿名化されました";
 const INQUIRY_ANONYMIZE_PLACEHOLDER_REPLY_BODY = "この内容は匿名化されました";
 
@@ -77,6 +83,7 @@ export async function anonymizeInquiryInTx(
     where: { id: input.inquiryId },
     data: {
       name: INQUIRY_ANONYMIZE_PLACEHOLDER_NAME,
+      subject: INQUIRY_ANONYMIZE_PLACEHOLDER_SUBJECT,
       email: buildAnonymizedInquiryEmail(input.inquiryId),
       phoneNumber: null,
       companyName: null,

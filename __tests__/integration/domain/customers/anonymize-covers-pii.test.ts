@@ -60,6 +60,7 @@ const created = {
   customerId: "",
   mergeTargetCustomerId: "",
   reservationId: "",
+  inquiryId: "",
   registrationId: "",
   eventId: "",
   spaceId: "",
@@ -157,10 +158,27 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
         guestEmail: `${TOKEN}@example.com`,
         guestPhone: TOKEN,
         guestCompanyName: `社${TOKEN}`,
+        // 自由記入の備考。第三者の氏名・電話が書かれる（監査 F-116）。
+        notes: `備考${TOKEN}`,
       },
       select: { id: true },
     });
     created.reservationId = reservation.id;
+    // 問い合わせも連鎖匿名化の対象。件名も自由記入（200 文字）で、実際に
+    // 氏名や電話番号が書かれる（監査 F-52）。
+    const inquiry = await prisma.inquiry.create({
+      data: {
+        receiptNumber: `INQ${TOKEN.slice(0, 12)}`,
+        customerId: created.customerId,
+        name: `姓名${TOKEN}`,
+        email: `${TOKEN}@example.com`,
+        phoneNumber: TOKEN,
+        subject: `件名${TOKEN}`,
+        message: `本文${TOKEN}`,
+      },
+      select: { id: true },
+    });
+    created.inquiryId = inquiry.id;
 
     const category = await prisma.eventCategory.create({
       data: {
@@ -268,6 +286,10 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     await prisma.eventCategory.deleteMany({
       where: { id: created.categoryId },
     });
+    await prisma.inquiryReply.deleteMany({
+      where: { inquiryId: created.inquiryId },
+    });
+    await prisma.inquiry.deleteMany({ where: { id: created.inquiryId } });
     await prisma.reservation.deleteMany({
       where: { id: created.reservationId },
     });
@@ -287,6 +309,7 @@ describeMaybe("匿名化は参照先の PII も消す", () => {
     expect(holders).toEqual([
       "customers",
       "event_registrations",
+      "inquiries",
       "pending_customer_email_changes",
       "pending_customer_merges",
       "reservations",
