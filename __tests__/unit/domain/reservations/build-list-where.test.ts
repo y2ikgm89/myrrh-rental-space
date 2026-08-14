@@ -35,7 +35,14 @@ mock.module("@/shared/lib/pagination", () => ({
     return { skip: (page - 1) * limit, take: limit, page, limit };
   },
 }));
+// `mock.module` は完全置換なので、実モジュールを spread してから必要な export だけ
+// 差し替える（`.claude/rules/testing.md`）。部分だけ返すと、被テストモジュールの
+// import グラフが少し伸びただけで `Export named 'X' not found` になる。
+// 実際に起きた: `admin-queries` に import が 1 本増え、
+// `prisma-errors` 経由で `isRecord` に到達した瞬間にこのファイルが落ちた。
+const actualSerialize = await import("@/shared/lib/serialize");
 mock.module("@/shared/lib/serialize", () => ({
+  ...actualSerialize,
   toPlainArray: <T>(v: T) => v,
   toPlainObject: <T>(v: T) => v,
 }));
