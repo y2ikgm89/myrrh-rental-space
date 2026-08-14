@@ -121,12 +121,12 @@ describe("予約カレンダーの日付選択", () => {
     //
     // 1. `clock.install` は時間を止めるので Turnstile の challenge が進まず、
     //    hidden input が空のままになる（run 30728829959）
-    // 2. `ReservationForm` は `useState(() => Date.now())` で `formRenderedAt` を
-    //    **ブラウザの時計**から、**フォームの初回マウント時**に焼き込む。
-    //    `checkBotHeuristics` はそれをサーバーの実時刻と引き算するので、未来へ
-    //    固定していると差が負になり全送信が bot 判定で弾かれる（run 30731786539:
-    //    step 3 に「セキュリティ検証に失敗しました」が出たまま完了 URL に届かず
-    //    timeout）。**途中で `setSystemTime` に戻しても遅い** — 値はもう焼かれている
+    // 2. ~~bot 判定がブラウザ時計との引き算だった~~ — **監査 F-71 で解消済み**。
+    //    `formRenderToken` はサーバーが発行して自分の時計とだけ突き合わせるので、
+    //    ブラウザの時計を固定しても bot 判定には影響しない（run 30731786539 の
+    //    「セキュリティ検証に失敗しました」はこの経路だった）。
+    //
+    // 1 が残っている限り、この gate は要る。
     const violations = listSpecFiles()
       .filter((file) => {
         const source = read(file);
@@ -134,7 +134,7 @@ describe("予約カレンダーの日付選択", () => {
       })
       .map(
         (file) =>
-          `${file}: 予約フォームを送信する spec で時計を固定している。formRenderedAt はフォーム初回マウント時にブラウザ時計から焼かれ、bot 判定はサーバー時刻と引き算するので必ず弾かれる。pickBookableDateInNextMonth() + 月送りを使うこと`,
+          `${file}: 予約フォームを送信する spec で時計を固定している。Turnstile の challenge が進まず hidden input が空のままになる。pickBookableDateInNextMonth() + 月送りを使うこと`,
       );
 
     expect(violations).toEqual([]);

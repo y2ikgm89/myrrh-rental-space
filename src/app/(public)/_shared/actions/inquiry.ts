@@ -60,7 +60,7 @@ export async function submitInquiry(
 
     const botCheck = checkBotHeuristics({
       honeypot: data.website,
-      formRenderedAt: data.formRenderedAt,
+      formRenderToken: data.formRenderToken,
     });
     if (!botCheck.success) {
       return { ok: false, error: botCheck.error };

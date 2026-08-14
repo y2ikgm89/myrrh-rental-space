@@ -30,6 +30,7 @@ import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
+import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
@@ -62,6 +63,7 @@ export function ContactFormSection({
   const formCard = (
     <ScrollReveal delay={variant === "split" ? 0.3 : 0.2}>
       <PublicInquiryFormCard
+        formRenderToken={createFormRenderToken()}
         mode="live"
         formId={`public-inquiry-form-${sectionId}`}
         turnstileSiteKey={turnstileSiteKey}

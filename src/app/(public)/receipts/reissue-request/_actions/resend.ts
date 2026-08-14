@@ -70,7 +70,7 @@ export async function requestReceiptResendAction(
     // Zod parse は wrapper が先に済ませる（上記 JSDoc の階層 2）。handler は 1 と
     // 3 以降を担う。IP rate-limit を schema より後に置いても、DB / 外部 API を
     // 叩く前に落ちる点は変わらない。
-    async ({ serialNo, email, website, formRenderedAt, turnstileToken }) => {
+    async ({ serialNo, email, website, formRenderToken, turnstileToken }) => {
       // 1. IP rate-limit
       const ipRateLimit = await checkActionRateLimit(
         receiptResendRequestRateLimiter,
@@ -82,7 +82,7 @@ export async function requestReceiptResendAction(
       // 3. Bot heuristics (DB/外部 API 呼出なし・軽い順に並べる)
       const botCheck = checkBotHeuristics({
         honeypot: website,
-        formRenderedAt,
+        formRenderToken,
       });
       if (!botCheck.success) {
         return { ok: false, error: botCheck.error };

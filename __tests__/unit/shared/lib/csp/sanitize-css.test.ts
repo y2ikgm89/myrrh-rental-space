@@ -13,12 +13,27 @@ describe("sanitize-css", () => {
     expect(sanitizeCss(rule)).toBe(rule);
   });
 
-  test("buildDataStyleRule allows marginTop for main shell", () => {
+  test("buildDataStyleRule rejects camelCase property names", () => {
+    // 監査 F-15: キーは変換せずそのまま `<style>` へ出るので、camelCase を通すと
+    // ブラウザが宣言を丸ごと破棄する。型検査も lint もビルドも通り、
+    // **壊れているのは公開画面だけ**という silent bug になる。
+    expect(() =>
+      buildDataStyleRule("main-shell", {
+        marginTop: "calc(var(--header-height, 0px) * -1)",
+      }),
+    ).toThrow();
+  });
+
+  test("buildDataStyleRule allows margin-top for main shell", () => {
     const rule = buildDataStyleRule("main-shell", {
       [CSS_VAR.containerSite]: "72rem",
-      marginTop: "calc(var(--header-height, 0px) * -1)",
+      "margin-top": "calc(var(--header-height, 0px) * -1)",
     });
-    expect(rule).toContain("marginTop:");
+    // 監査 F-15: camelCase を出していた頃はブラウザが宣言を破棄していた。
+    // 旧テストは壊れた出力を `toContain("marginTop:")` で固定していたため、
+    // 直しても直さなくても緑のままだった。
+    expect(rule).toContain("margin-top: calc(");
+    expect(rule).not.toContain("marginTop");
     expect(sanitizeCss(rule)).toBe(rule);
   });
 

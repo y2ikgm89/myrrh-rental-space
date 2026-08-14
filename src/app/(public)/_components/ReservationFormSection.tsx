@@ -46,6 +46,7 @@ import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice"
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { serverEnv } from "@/shared/lib/env/server";
+import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 interface ReservationFormSectionProps {
   readonly config: ReservationFormConfig;
@@ -154,6 +155,7 @@ export async function ReservationFormSection({
 
       <div className="mx-auto max-w-4xl">
         <ReservationForm
+          formRenderToken={createFormRenderToken()}
           key={initialSpaceId ?? ""}
           locations={locations}
           businessHours={businessHours}

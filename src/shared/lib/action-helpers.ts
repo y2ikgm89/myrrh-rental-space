@@ -8,6 +8,7 @@
  */
 
 import "server-only";
+import { readFormRenderElapsedMs } from "@/shared/lib/tokens/form-render-token";
 import type { ZodError } from "zod";
 import { normalizeEmailForIdentity } from "./email/normalize-email";
 import { getClientIpFromHeaders } from "./rate-limit";
@@ -73,19 +74,28 @@ const MIN_FORM_FILL_TIME_MS = 3000;
 const BOT_DETECTED_ERROR =
   "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。";
 
+/**
+ * @param formRenderToken サーバーが発行した purpose 付きトークン（監査 F-71）。
+ *   **クライアントの `Date.now()` は使わない。** 端末の時計が進んでいると
+ *   「サーバー時刻 − クライアント時刻」が負になり、実際に 2 分かけて入力した
+ *   利用者が必ず bot 判定で拒否されていた（押し直しても同じ）。逆に遅れている
+ *   端末では差が過大になり、時間トラップが常に素通りする。
+ */
 export function checkBotHeuristics(params: {
   readonly honeypot: string | undefined;
-  readonly formRenderedAt: number | undefined;
+  readonly formRenderToken: string | undefined;
 }): BotCheckResult {
   if (params.honeypot) {
     return { success: false, error: BOT_DETECTED_ERROR };
   }
 
-  if (
-    params.formRenderedAt !== undefined &&
-    Date.now() - params.formRenderedAt < MIN_FORM_FILL_TIME_MS
-  ) {
-    return { success: false, error: BOT_DETECTED_ERROR };
+  if (params.formRenderToken !== undefined) {
+    const elapsedMs = readFormRenderElapsedMs(params.formRenderToken);
+    // `null` は復号失敗・期限切れ・形式不正＝**判定不能**。bot 扱いにはしない。
+    // 時間トラップの目的は速すぎる送信を弾くことで、遅い送信ではない。
+    if (elapsedMs !== null && elapsedMs < MIN_FORM_FILL_TIME_MS) {
+      return { success: false, error: BOT_DETECTED_ERROR };
+    }
   }
 
   return { success: true };

@@ -43,6 +43,11 @@ export interface RequiredInquiryTerm {
 }
 
 type PublicInquiryFormCardProps = {
+  /**
+   * サーバーが発行した bot 判定用トークン（監査 F-71）。
+   * クライアントの時計は使わない。Server Component の親から渡す。
+   */
+  readonly formRenderToken: string;
   readonly mode?: PublicInquiryFormMode;
   readonly turnstileSiteKey?: string | null;
   /**
@@ -88,6 +93,7 @@ const OFFLINE_ERROR_MESSAGE =
   "ネットワーク接続がありません。接続を確認してから再度送信してください。";
 
 export function PublicInquiryFormCard({
+  formRenderToken,
   mode = "live",
   turnstileSiteKey = null,
   defaults,
@@ -105,7 +111,6 @@ export function PublicInquiryFormCard({
   const turnstileRef = useRef<TurnstileInstance>(null);
   // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
   // Server Action側で送信までの経過時間が短すぎないか検証する。
-  const [formRenderedAt] = useState(() => Date.now());
   const isInteractive = mode === "live";
   const hasPrefilledIdentity =
     defaults !== undefined &&
@@ -299,8 +304,8 @@ export function PublicInquiryFormCard({
           />
           <input
             type="hidden"
-            name={fields.formRenderedAt.name}
-            value={formRenderedAt}
+            name={fields.formRenderToken.name}
+            value={formRenderToken}
           />
           {/* bot対策のhoneypot: 実在しない項目("website")を装う。人には見えず、
               機械的にフォームを埋めるbotだけが入力してしまう。 */}

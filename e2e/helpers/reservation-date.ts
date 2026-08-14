@@ -150,7 +150,9 @@ export function pickBookableDateInNextMonth(): string {
  * 1. **Turnstile が解けない。** `clock.install` は時間を止めるので、widget の
  *    challenge が進まず hidden input が空のままになる（実測 run 30728829959:
  *    `expect(locator).not.toHaveValue("")` が 20 秒待って失敗）
- * 2. **bot 判定に落ちる。** `ReservationForm` は `useState(() => Date.now())` で
+ * 2. ~~**bot 判定に落ちる。**~~ 監査 F-71 で解消済み（`formRenderToken` はサーバーが
+ *    発行し、サーバー自身の時計とだけ突き合わせる）。以下は当時の記録:
+ *    `ReservationForm` は `useState(() => Date.now())` で
  *    `formRenderedAt` を**ブラウザの時計**から焼き込む。これは step 3 ではなく
  *    **フォームの初回マウント時**、つまり日付を選ぶより前に確定する。Server Action の
  *    `checkBotHeuristics` はそれをサーバーの実時刻と引き算する

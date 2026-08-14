@@ -24,7 +24,10 @@ const SAFE_DECL_VALUE = z
   );
 
 const DeclarationsSchema = z.record(
-  z.union([CSS_VAR_NAME, z.literal("marginTop"), z.literal("margin-top")]),
+  // camelCase は**許可しない**（監査 F-15）。キーは変換せずそのまま `<style>` へ
+  // 出るので、`marginTop:` を通すとブラウザが宣言を破棄する（型検査も lint も
+  // ビルドも通り、壊れているのは公開画面だけになる）。
+  z.union([CSS_VAR_NAME, z.literal("margin-top")]),
   SAFE_DECL_VALUE,
 );
 

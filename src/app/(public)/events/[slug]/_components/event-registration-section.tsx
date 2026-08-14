@@ -6,6 +6,7 @@ import {
   loadEventRegistrationContext,
   type PublishedEventDetail,
 } from "./event-registration-context";
+import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 /** 申込セクションへのアンカー ID の SSoT（info panel の「申し込む」リンク先）。 */
 export const REGISTER_ANCHOR_ID = "event-register";
@@ -71,6 +72,7 @@ export async function EventRegistrationSection({
       ) : null}
       {canRegister ? (
         <EventRegistrationForm
+          formRenderToken={createFormRenderToken()}
           key={event.id}
           eventId={event.id}
           turnstileSiteKey={context.turnstileSiteKey}

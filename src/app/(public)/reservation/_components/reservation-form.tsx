@@ -159,6 +159,11 @@ interface RequiredTerm {
 }
 
 interface ReservationFormProps {
+  /**
+   * サーバーが発行した bot 判定用トークン（監査 F-71）。
+   * クライアントの時計は使わない。Server Component の親から渡す。
+   */
+  readonly formRenderToken: string;
   readonly locations: readonly LocationWithSpaces[];
   readonly businessHours: BusinessHours | null;
   readonly turnstileSiteKey: string | null;
@@ -174,6 +179,7 @@ interface ReservationFormProps {
 }
 
 export function ReservationForm({
+  formRenderToken,
   locations,
   businessHours,
   turnstileSiteKey,
@@ -220,7 +226,6 @@ export function ReservationForm({
   );
   // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
   // Server Action側で送信までの経過時間が短すぎないか検証する。
-  const [formRenderedAt] = useState(() => Date.now());
   const [isFetchingSlots, startSlotTransition] = useTransition();
   const [blockedRanges, setBlockedRanges] = useState<
     readonly BlockedDateRange[]
@@ -588,8 +593,8 @@ export function ReservationForm({
         />
         <input
           type="hidden"
-          name={fields.formRenderedAt.name}
-          value={formRenderedAt}
+          name={fields.formRenderToken.name}
+          value={formRenderToken}
         />
         {/* bot対策のhoneypot: 実在しない項目("website")を装う。人には見えず、
             機械的にフォームを埋めるbotだけが入力してしまう。 */}

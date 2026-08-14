@@ -14,6 +14,7 @@ import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
 import { ReceiptResendForm } from "./_components/receipt-resend-form";
+import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 /**
  * ゲスト向け領収書再送信リクエストページ (RECEIPT-RESEND-P1)。
@@ -94,6 +95,7 @@ export default async function ReceiptReissueRequestPage({
       </div>
 
       <ReceiptResendForm
+        formRenderToken={createFormRenderToken()}
         turnstileSiteKey={turnstileSiteKey}
         {...(serialNo !== undefined ? { initialSerialNo: serialNo } : {})}
       />

@@ -369,7 +369,13 @@ async function MainShellResolved({
   const shellCss = buildDataStyleRule(MAIN_SHELL_STYLE_ID, {
     [CSS_VAR.containerSite]: getContainerSiteCss(layoutSettings),
     ...(isTransparent && {
-      marginTop: "calc(var(--header-height, 0px) * -1)",
+      // **ハイフン形で書く**（監査 F-15）。`buildDataStyleRule` はキーを変換せず
+      // そのまま `<style>` へ連結するので、`marginTop:` と書くと CSS の
+      // プロパティ名として解釈されず、ブラウザが宣言を丸ごと破棄する。
+      // その結果 hero が透過ヘッダーの下に潜り込まず、打ち消し用の
+      // `margin-top: var(--header-height, 64px)`（public.css）だけが残って
+      // 非 hero ページの先頭にヘッダー高さぶんの空白帯が出ていた。
+      "margin-top": "calc(var(--header-height, 0px) * -1)",
     }),
   });
 

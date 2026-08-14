@@ -110,7 +110,7 @@ export async function registerForEvent(
 
       const botCheck = checkBotHeuristics({
         honeypot: data.website,
-        formRenderedAt: data.formRenderedAt,
+        formRenderToken: data.formRenderToken,
       });
       if (!botCheck.success) {
         return { ok: false, error: botCheck.error };
@@ -340,7 +340,7 @@ export async function registerForEventWaitlist(
 
       const botCheck = checkBotHeuristics({
         honeypot: data.website,
-        formRenderedAt: data.formRenderedAt,
+        formRenderToken: data.formRenderToken,
       });
       if (!botCheck.success) {
         return { ok: false, error: botCheck.error };

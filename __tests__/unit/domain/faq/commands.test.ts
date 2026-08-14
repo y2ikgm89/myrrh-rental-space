@@ -1148,59 +1148,53 @@ describe("updateFaqItemPublished", () => {
 // =============================================================================
 
 describe("voteFaqItemHelpful", () => {
+  // 投票は `@updatedAt` を迂回するため raw SQL で書く（監査 F-51）。
+  // 「実際に updated_at が動かないこと」は実 DB で固定してある
+  // （__tests__/integration/domain/faq/analytics-do-not-touch-updated-at.test.ts）。
+  // ここでは SQL の骨格だけを見る。
+  function lastRawSql(): string {
+    const call = mockExecuteRaw.mock.calls.at(-1);
+    return (call?.[0] ?? []).join("?");
+  }
+
   beforeEach(() => {
-    mockFaqItemUpdateMany.mockReset();
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(1);
   });
 
   describe("正常系", () => {
-    test("helpful 投票で helpfulCount を increment する", async () => {
-      mockFaqItemUpdateMany.mockResolvedValue({ count: 1 });
-
+    test("helpful 投票で helpful_count を increment する", async () => {
       const result = await voteFaqItemHelpful(ITEM_ID, "helpful");
 
       expect(result).toEqual({ voted: true });
-      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: ITEM_ID, isPublished: true, deletedAt: null },
-          data: { helpfulCount: { increment: 1 } },
-        }),
-      );
+      expect(lastRawSql()).toContain('"helpful_count" = "helpful_count" + 1');
+      // ここに updated_at が混ざると鮮度判定が潰れる。
+      expect(lastRawSql()).not.toContain("updated_at");
     });
 
-    test("not-helpful 投票で notHelpfulCount を increment する", async () => {
-      mockFaqItemUpdateMany.mockResolvedValue({ count: 1 });
-
+    test("not-helpful 投票で not_helpful_count を increment する", async () => {
       const result = await voteFaqItemHelpful(ITEM_ID, "not-helpful");
 
       expect(result).toEqual({ voted: true });
-      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: { notHelpfulCount: { increment: 1 } },
-        }),
+      expect(lastRawSql()).toContain(
+        '"not_helpful_count" = "not_helpful_count" + 1',
       );
+      expect(lastRawSql()).not.toContain("updated_at");
     });
 
     test("対象が見つからない場合 voted: false を返す", async () => {
-      mockFaqItemUpdateMany.mockResolvedValue({ count: 0 });
+      mockExecuteRaw.mockResolvedValue(0);
 
       const result = await voteFaqItemHelpful("non-existent", "helpful");
 
       expect(result).toEqual({ voted: false });
     });
 
-    test("非公開項目は updateMany の where で除外される", async () => {
-      mockFaqItemUpdateMany.mockResolvedValue({ count: 0 });
-
+    test("非公開・削除済みは WHERE で除外される", async () => {
       await voteFaqItemHelpful(ITEM_ID, "helpful");
 
-      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            isPublished: true,
-            deletedAt: null,
-          }),
-        }),
-      );
+      expect(lastRawSql()).toContain('"is_published" = TRUE');
+      expect(lastRawSql()).toContain('"deleted_at" IS NULL');
     });
   });
 });

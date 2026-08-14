@@ -181,7 +181,7 @@ type InquiryInputShape = {
   turnstileToken?: string;
   agreedTermsIds?: readonly string[];
   website?: string;
-  formRenderedAt?: number;
+  formRenderToken?: string;
 };
 
 const VALID_INPUT: InquiryInputShape = {
@@ -214,8 +214,8 @@ function inputToFormData(input: InquiryInputShape): FormData {
   if (input.website !== undefined) {
     fd.append("website", input.website);
   }
-  if (input.formRenderedAt !== undefined) {
-    fd.append("formRenderedAt", String(input.formRenderedAt));
+  if (input.formRenderToken !== undefined) {
+    fd.append("formRenderToken", input.formRenderToken);
   }
   for (const id of input.agreedTermsIds ?? []) {
     fd.append("agreedTermsIds", id);
@@ -617,7 +617,7 @@ describe("submitInquiry", () => {
       expect(result.success).toBe(true);
     });
 
-    test("website / formRenderedAt は省略可能", async () => {
+    test("website / formRenderToken は省略可能", async () => {
       const { publicInquirySchema } =
         await import("@/shared/lib/validations/inquiry");
 
