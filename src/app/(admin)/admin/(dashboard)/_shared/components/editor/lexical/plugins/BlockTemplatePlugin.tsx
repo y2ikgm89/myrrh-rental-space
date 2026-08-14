@@ -10,6 +10,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $serializeNodeDeep } from "../lib/serialize-node-deep";
 import {
   $getSelection,
   $isRangeSelection,
@@ -178,7 +179,7 @@ function SaveTemplateDialog({
         const root = $getRoot();
         for (const child of root.getChildren()) {
           if (topLevelNodes.has(child.getKey())) {
-            serializedNodes.push(child.exportJSON());
+            serializedNodes.push($serializeNodeDeep(child));
           }
         }
       }
@@ -186,7 +187,9 @@ function SaveTemplateDialog({
       if (serializedNodes.length === 0) {
         // 選択がない場合は全ブロックを保存
         const root = $getRoot();
-        serializedNodes = root.getChildren().map((child) => child.exportJSON());
+        serializedNodes = root
+          .getChildren()
+          .map((child) => $serializeNodeDeep(child));
       }
 
       if (serializedNodes.length === 0) {
