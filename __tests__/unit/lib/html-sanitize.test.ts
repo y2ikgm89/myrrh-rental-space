@@ -131,4 +131,32 @@ describe("sanitizeContentHtml", () => {
     expect(result).toContain('aria-hidden="true"');
     expect(result).toContain('role="tabpanel"');
   });
+
+  test('Lexical の <button type="button"> は type を保持する', () => {
+    const result = sanitizeContentHtml(
+      '<button type="button" role="tab">タブ</button>',
+    );
+    expect(result).toContain("<button");
+    expect(result).toMatch(/type="button"/);
+    expect(result).not.toMatch(/type="submit"/);
+  });
+
+  test('Lexical の <button type="submit"> と type 無しは type="button" に書き換える', () => {
+    const submit = sanitizeContentHtml(
+      '<button type="submit" role="tab">送信</button>',
+    );
+    expect(submit).toContain("<button");
+    expect(submit).toMatch(/type="button"/);
+    expect(submit).not.toMatch(/type="submit"/);
+
+    const missing = sanitizeContentHtml('<button role="tab">タブ</button>');
+    expect(missing).toContain("<button");
+    expect(missing).toMatch(/type="button"/);
+  });
+
+  test("<sub> / <sup> は sanitize 後も残る", () => {
+    const result = sanitizeContentHtml("<p>H<sub>2</sub>O / x<sup>2</sup></p>");
+    expect(result).toContain("<sub>2</sub>");
+    expect(result).toContain("<sup>2</sup>");
+  });
 });
