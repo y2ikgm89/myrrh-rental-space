@@ -47,8 +47,10 @@ describe("formatReservationConfirmTotal", () => {
     expect(standardRetaxed).toBe("¥11,000（税込）");
 
     const label = formatReservationConfirmTotal(reducedPreview);
-    expect(label).toBe(formatPrice(reducedPreview.totalPriceWithTax));
-    expect(label).toBe("¥10,800");
+    expect(label).toBe(
+      `${formatPrice(reducedPreview.totalPriceWithTax)}（税込）`,
+    );
+    expect(label).toBe("¥10,800（税込）");
     expect(label).not.toBe(standardRetaxed);
     expect(label).not.toContain("11,000");
   });

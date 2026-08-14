@@ -12,5 +12,5 @@ export type ReservationConfirmPricePreview = {
 export function formatReservationConfirmTotal(
   preview: ReservationConfirmPricePreview,
 ): string {
-  return formatPrice(preview.totalPriceWithTax);
+  return `${formatPrice(preview.totalPriceWithTax)}（税込）`;
 }
