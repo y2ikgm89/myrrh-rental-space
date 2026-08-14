@@ -11,6 +11,10 @@ import {
 import { Heading } from "@/public/components/design-system/heading";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { formatMonthDayWithWeekday } from "@/shared/lib/date-format";
+import {
+  formatReservationConfirmTotal,
+  type ReservationConfirmPricePreview,
+} from "./format-reservation-confirm-total";
 
 interface BookingSummaryProps {
   readonly locationName: string;
@@ -20,6 +24,8 @@ interface BookingSummaryProps {
   readonly endTime: string;
   readonly guests: number;
   readonly price: number | null;
+  /** サーバー税込合計。あれば確認合計はこちらを formatPrice する（F-104）。 */
+  readonly confirmPricing?: ReservationConfirmPricePreview | null;
   /**
    * 料金プレビューの取得に失敗したか。
    *
@@ -79,6 +85,7 @@ export function BookingSummary({
   endTime,
   guests,
   price,
+  confirmPricing = null,
   priceUnavailable = false,
   originalPrice = null,
   spaceDiscountAmount = 0,
@@ -87,13 +94,18 @@ export function BookingSummary({
   showOriginalPrice = false,
   onEdit,
 }: BookingSummaryProps): ReactElement {
-  const { formatTotal } = useFormatPrice();
+  const { formatTotal, formatRaw } = useFormatPrice();
   const durationLabel = formatDurationLabel(startTime, endTime);
 
   const totalDiscount = spaceDiscountAmount + durationDiscountAmount;
   const hasDiscount = totalDiscount > 0 && originalPrice != null;
+  const exclusiveTotal = confirmPricing?.totalPrice ?? price;
   const showStrikeThrough =
-    hasDiscount && showOriginalPrice && originalPrice !== price;
+    hasDiscount && showOriginalPrice && originalPrice !== exclusiveTotal;
+  const confirmTotalLabel =
+    confirmPricing != null
+      ? formatReservationConfirmTotal(confirmPricing)
+      : formatRaw(price);
 
   return (
     <div className="border border-border px-6 py-6 sm:px-8 sm:py-7">
@@ -110,7 +122,7 @@ export function BookingSummary({
               </p>
             ) : null}
             <p className="text-xl font-light text-accent">
-              {formatTotal(price)}
+              {confirmTotalLabel}
             </p>
           </div>
         ) : priceUnavailable ? (
