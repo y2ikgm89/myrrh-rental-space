@@ -233,6 +233,10 @@ export function SectionListSidebar({
                 const isRequired =
                   requiredSectionTypes?.has(section.type) ?? false;
                 const canToggleActive = !isPageHero && !isRequired;
+                // 複製・削除・表示切替は**同じ述語**で揃える（監査 F-63）。
+                // 複製だけ許すと、必須型が 2 本に増えたあと削除も非表示も
+                // CONFLICT になり、管理画面から戻す手段が無くなる。
+                const canDuplicate = !isPageHero && !isRequired;
                 const disableToggleActiveReason = isPageHero
                   ? "ヒーローは非表示にできません"
                   : isRequired
@@ -248,7 +252,7 @@ export function SectionListSidebar({
                     onToggleActive={() => handleToggle(section.id)}
                     onDuplicate={() => handleDuplicate(section.id)}
                     onDelete={() => handleDelete(section.id)}
-                    canDuplicate={!isPageHero}
+                    canDuplicate={canDuplicate}
                     canDelete={!isPageHero}
                     canDrag={!isPageHero}
                     canToggleActive={canToggleActive}
