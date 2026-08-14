@@ -157,6 +157,7 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
 
 mock.module("@/shared/domain/reservations/payloads", () => ({
   fetchReservationEmailData: mock(() => Promise.resolve(null)),
+  releaseCouponUsage: mock(() => Promise.resolve()),
 }));
 
 mock.module(
