@@ -105,6 +105,22 @@ mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
   EmailDeliveryStatus,
 }));
 
+type LogErrorOptions = {
+  category?: string;
+  severity?: string;
+  context?: Record<string, unknown>;
+};
+const mockLogError = mock<(error: unknown, options?: LogErrorOptions) => void>(
+  () => undefined,
+);
+
+const actualErrors = await import("@/shared/lib/errors/server");
+mock.module("@/shared/lib/errors/server", () => ({
+  ...actualErrors,
+  logError: (error: unknown, options?: LogErrorOptions) =>
+    mockLogError(error, options),
+}));
+
 const { POST } = await import("@/app/api/webhooks/resend/route");
 
 // -----------------------------------------------------------------------------
@@ -143,10 +159,32 @@ function makeRequestWithSvixHeaders(onText: () => Promise<string>): Request {
   return request;
 }
 
+function expectNoSuppressionOnMultiRecipient(emailId: string | null) {
+  expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
+  expect(invalidateCalls).toHaveLength(0);
+  const skipCalls = mockLogError.mock.calls.filter(([, options]) => {
+    const context = options?.context;
+    return (
+      options?.category === "EXTERNAL_API" &&
+      options?.severity === "MEDIUM" &&
+      context?.["recipientCount"] === 2 &&
+      context?.["emailId"] === emailId
+    );
+  });
+  expect(skipCalls.length).toBeGreaterThanOrEqual(1);
+  const context = skipCalls[0]?.[1]?.context;
+  expect(context).toEqual({
+    operation: expect.any(String),
+    emailId,
+    recipientCount: 2,
+  });
+}
+
 function resetMocks() {
   mockUpdateCustomerEmailDeliveryStatusByEmail.mockClear();
   mockInvalidateSiteWide.mockClear();
   mockVerify.mockClear();
+  mockLogError.mockClear();
   invalidateCalls.length = 0;
   webhookConstructorCalls.length = 0;
   updateImpl = async () => 1;
@@ -369,14 +407,11 @@ describe("POST /api/webhooks/resend", () => {
       }),
     );
 
-    // b@example.com は必ず処理されている（loop が中断されていない）。
-    expect(processed).toEqual(["b@example.com"]);
-    // Resend 再配信を促す（domain 側 notIn 保護節が成功済み recipient を no-op にする）。
-    expect(response.status).toBe(500);
-    // 2 件呼ばれている（1 件目の throw は catch されて 2 件目に進んでいる）。
-    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
-      2,
-    );
+    // to.length !== 1 ではどの宛先が申告したか分からないので抑止しない。
+    // throw する impl でも update に届かないため 200 ack。
+    expect(processed).toEqual([]);
+    expect(response.status).toBe(200);
+    expectNoSuppressionOnMultiRecipient("email_5");
   });
 
   test("M3: 全 recipient が正常なら 200 を返し、cache invalidation が発火する", async () => {
@@ -392,7 +427,8 @@ describe("POST /api/webhooks/resend", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockInvalidateSiteWide).toHaveBeenCalled();
+    expect(mockInvalidateSiteWide).not.toHaveBeenCalled();
+    expectNoSuppressionOnMultiRecipient(null);
   });
 
   // -----------------------------------------------------------------
@@ -504,19 +540,9 @@ describe("POST /api/webhooks/resend", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(applied).toEqual([
-      {
-        email: "a@example.com",
-        status: EmailDeliveryStatus.HARD_BOUNCED,
-        reason: "invalid_recipient",
-      },
-      {
-        email: "b@example.com",
-        status: EmailDeliveryStatus.HARD_BOUNCED,
-        reason: "invalid_recipient",
-      },
-    ]);
-    expect(mockInvalidateSiteWide).toHaveBeenCalled();
+    expect(applied).toEqual([]);
+    expect(mockInvalidateSiteWide).not.toHaveBeenCalled();
+    expectNoSuppressionOnMultiRecipient("email_failed_1");
   });
 
   test("L3: email.failed + reached_daily_quota は抑止せず 200 ack のみ", async () => {
@@ -663,11 +689,9 @@ describe("POST /api/webhooks/resend", () => {
       }),
     );
 
-    expect(processed).toEqual(["b@example.com"]);
-    expect(response.status).toBe(500);
-    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
-      2,
-    );
+    expect(processed).toEqual([]);
+    expect(response.status).toBe(200);
+    expectNoSuppressionOnMultiRecipient(null);
   });
 
   // H4 regression guard: DB (Settings.resendWebhookSecret canonical) にも
