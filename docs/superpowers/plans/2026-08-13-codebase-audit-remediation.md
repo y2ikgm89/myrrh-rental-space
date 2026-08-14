@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 24 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 23 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -310,7 +310,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-98](../../audits/2026-08-12-codebase-audit-findings.md#f-98)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/TabTitleNode.tsx:84`     | TabTitleNode の exportDOM が type 無しの \<button\> を出し、sanitize allowlist も type を通さないため再同意フォーム内で暗黙の submit ボタンになる    |
 | [F-101](../../audits/2026-08-12-codebase-audit-findings.md#f-101) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/PasteUrlPlugin.tsx:74` | 空段落への URL 単独ペースト（OGP カード / YouTube 等の自動埋め込み）が発火しない                                                                     |
 | [F-104](../../audits/2026-08-12-codebase-audit-findings.md#f-104) | 低     | `src/app/(public)/_shared/hooks/use-format-price.ts:20`                                             | 公開面の税込表示が Space.taxRateType を無視して常に標準税率で計算するため、予約確認画面の金額と実際の請求額が食い違う                                |
-| [F-105](../../audits/2026-08-12-codebase-audit-findings.md#f-105) | 低     | `src/app/(public)/[...segments]/page.tsx:72`                                                        | post-list / news-list の archive レイアウトを /blog・/news 以外のページに置くと、検索とページ送りが恒久的に効かない                                  |
 | [F-106](../../audits/2026-08-12-codebase-audit-findings.md#f-106) | 低     | `src/app/(public)/events/waitlist/checkout/route.ts:63`                                             | 繰上げ当選の残り 30 分未満クリックが「システムエラー」表示＋CRITICAL アラートになる                                                                  |
 | [F-107](../../audits/2026-08-12-codebase-audit-findings.md#f-107) | 低     | `src/app/(public)/mypage/_shared/actions/customer-merge.ts:243`                                     | 顧客履歴の統合が完了しても成功メッセージが表示されない（`mergeSuccess` を描画する側が存在しない）                                                    |
 | [F-108](../../audits/2026-08-12-codebase-audit-findings.md#f-108) | 低     | `src/app/(public)/mypage/_shared/actions/profile.ts:199`                                            | 初回メール登録の「確認メールを送信しました」が画面に出ず、利用者は認証リンクを踏む必要に気付けない                                                   |

@@ -46,12 +46,18 @@ interface NewsListSectionProps {
   readonly config: NewsListConfig;
   readonly style: SectionStylePayload;
   readonly mode: NewsListMode;
+  /**
+   * archive Pagination の path。埋め込みページで `/news` へ飛ばないようにする。
+   * 未指定時は `/`（home）。呼び出し側は catalogBasePathFromPageSlug を渡す。
+   */
+  readonly catalogBasePath?: string;
 }
 
 export function NewsListSection({
   config,
   style,
   mode,
+  catalogBasePath = "/",
 }: NewsListSectionProps): ReactElement {
   if (mode.kind === "archive") {
     const preservedQuery: Record<string, string | undefined> = {};
@@ -69,7 +75,7 @@ export function NewsListSection({
           <Pagination
             currentPage={mode.currentPage}
             totalPages={mode.totalPages}
-            basePath="/news"
+            basePath={catalogBasePath}
             {...(Object.keys(preservedQuery).length > 0
               ? { preservedQuery }
               : {})}

@@ -157,7 +157,9 @@ interface SectionRendererProps {
   readonly inquiryDefaults?: InquiryDefaults;
 }
 
-/** pageSlug → 公開 URL path（home は `/`、未指定は従来どおり `/spaces`）。 */
+/** pageSlug → 公開 URL path（home は `/`、未指定は従来どおり `/spaces`）。
+ * space-list catalog と post-list / news-list archive の Pagination が共有する。
+ */
 function catalogBasePathFromPageSlug(pageSlug: string | undefined): string {
   if (pageSlug === undefined) return "/spaces";
   if (pageSlug === "home") return "/";
@@ -355,6 +357,7 @@ export async function SectionRenderer({
           <NewsListSection
             config={config}
             style={resolved}
+            catalogBasePath={catalogBasePathFromPageSlug(pageSlug)}
             mode={{
               kind: "archive",
               items: newsResult.items,
@@ -399,6 +402,7 @@ export async function SectionRenderer({
           <PostListSection
             config={config}
             style={resolved}
+            catalogBasePath={catalogBasePathFromPageSlug(pageSlug)}
             mode={{
               kind: "archive",
               posts: postsResult.posts,

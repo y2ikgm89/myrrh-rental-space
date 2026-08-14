@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { verifyAdminSession } from "@/shared/domain/admin-auth/session";
@@ -12,6 +13,7 @@ import { PreviewBanner } from "@/public/components/ui/preview-banner";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<SearchParams>;
 }
 
 export const metadata: Metadata = {
@@ -21,6 +23,7 @@ export const metadata: Metadata = {
 
 export default async function ManagedPagePreviewPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
   const user = await verifyAdminSession();
@@ -51,7 +54,11 @@ export default async function ManagedPagePreviewPage({
   return (
     <>
       <PreviewBanner />
-      <ManagedPageSections sections={activeSections} pageSlug={page.slug} />
+      <ManagedPageSections
+        sections={activeSections}
+        pageSlug={page.slug}
+        searchParams={searchParams}
+      />
     </>
   );
 }
