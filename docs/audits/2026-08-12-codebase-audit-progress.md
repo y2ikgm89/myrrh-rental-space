@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  34 |  23 |  57 |
-| 合計   | 109 |  23 | 132 |
+| 低     |  38 |  19 |  57 |
+| 合計   | 113 |  19 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 23 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 19 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -143,6 +143,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-96](2026-08-12-codebase-audit-findings.md#f-96)   | 低     | #2300                                      | FigmaNode の exportDOM がラベルを可視 `<p>` と iframe title に出す                                               | —                                                                                       |
 | [F-97](2026-08-12-codebase-audit-findings.md#f-97)   | 低     | #2300                                      | MapEmbed も同様。`[data-map]` CSS を足して公開地図の UA 既定 300x150 を止める                                    | —                                                                                       |
 | [F-100](2026-08-12-codebase-audit-findings.md#f-100) | 低     | #2301                                      | 見出し / リスト / インスペクター / ヘルプの数字・記号ショートカットを event.code で判定する                      | —                                                                                       |
+| [F-98](2026-08-12-codebase-audit-findings.md#f-98)   | 低     | #2303                                      | TabTitleNode の exportDOM と Lexical sanitize が button type を `"button"` に固定する                            | sanitizeRawEmbedHtml の type/disabled は未変更                                          |
+| [F-130](2026-08-12-codebase-audit-findings.md#f-130) | 低     | #2303                                      | LEXICAL_ALLOWED_TAGS に sub / sup を追加。公開ページで下付き・上付きが残る                                       | ツールバーボタンは残置                                                                  |
+| [F-101](2026-08-12-codebase-audit-findings.md#f-101) | 低     | #2304                                      | root 直下の空段落を URL ペースト対象にする。ネストした空段落では発火しない                                       | —                                                                                       |
+| [F-106](2026-08-12-codebase-audit-findings.md#f-106) | 低     | #2305                                      | 繰上げ当選の残り 30 分未満を `reason=too-late` に振り、CRITICAL と期限切れ画面を出さない                         | —                                                                                       |
 | [F-104](2026-08-12-codebase-audit-findings.md#f-104) | 低     | #2306                                      | 予約確認の合計を `pricePreview.totalPriceWithTax` + `formatPrice` で描く。STANDARD 再課税をやめた                | SpaceCard / JSON-LD / `resolvePublicDisplayPrice` は範囲外                              |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）

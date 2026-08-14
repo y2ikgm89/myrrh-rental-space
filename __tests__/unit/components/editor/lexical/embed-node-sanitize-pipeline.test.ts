@@ -14,6 +14,10 @@ import { $createCollapsibleContainerNode } from "@/admin/components/editor/lexic
 import { $createCollapsibleItemNode } from "@/admin/components/editor/lexical/nodes/CollapsibleItemNode";
 import { $createCollapsibleTitleNode } from "@/admin/components/editor/lexical/nodes/CollapsibleTitleNode";
 import { $createCollapsibleContentNode } from "@/admin/components/editor/lexical/nodes/CollapsibleContentNode";
+import { $createTabsContainerNode } from "@/admin/components/editor/lexical/nodes/TabsContainerNode";
+import { $createTabListNode } from "@/admin/components/editor/lexical/nodes/TabListNode";
+import { $createTabTitleNode } from "@/admin/components/editor/lexical/nodes/TabTitleNode";
+import { $createTabPanelNode } from "@/admin/components/editor/lexical/nodes/TabPanelNode";
 
 /**
  * 保存パイプライン（$generateHtmlFromNodes → enrich → sanitize）を通しても
@@ -164,5 +168,28 @@ describe("埋め込み系 node の保存パイプライン round-trip", () => {
     const css = await Bun.file("src/shared/styles/lexical-content.css").text();
     expect(css).toMatch(/\[data-map\]\s*\{/);
     expect(css).toMatch(/\[data-map\]\s*>\s*iframe\s*\{/);
+  });
+
+  test('TabTitleNode の button は type="button" のまま残る', () => {
+    const html = renderToFinalHtml(() => {
+      const container = $createTabsContainerNode();
+      const tabList = $createTabListNode();
+      const title = $createTabTitleNode(0, true);
+      const titleParagraph = $createParagraphNode();
+      titleParagraph.append($createTextNode("タブ"));
+      title.append(titleParagraph);
+      tabList.append(title);
+
+      const panel = $createTabPanelNode(0, true);
+      const panelParagraph = $createParagraphNode();
+      panelParagraph.append($createTextNode("内容"));
+      panel.append(panelParagraph);
+
+      container.append(tabList, panel);
+      $getRoot().append(container);
+    });
+    const button = queryExported(html, 'button[role="tab"]');
+    expect(button).not.toBeNull();
+    expect(button?.getAttribute("type")).toBe("button");
   });
 });
