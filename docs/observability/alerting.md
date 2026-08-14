@@ -8,13 +8,13 @@ either has no upstream signal today or is monitored by another surface
 
 ## Signals
 
-| Signal                      | Config file                                                 | Threshold    | Rationale                                                                                                     |
-| --------------------------- | ----------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| ReportedErrorEvent burst    | `infra/monitoring/alert-policies/reported-error-burst.yaml` | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state                                            |
-| Log severity CRITICAL       | `infra/monitoring/alert-policies/severity-critical.yaml`    | any 1 log    | Mostly hand-picked failures, but `criticalFetch` also promotes any settings-read error (see Runtime coupling) |
-| `/api/health` 5xx           | `infra/monitoring/alert-policies/health-probe-5xx.yaml`     | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404                                 |
-| Cron OIDC / config failure  | `infra/monitoring/alert-policies/cron-oidc-failure.yaml`    | > 3 / 15 min | An invalid OIDC token (401) is logged at WARNING only — nothing else would surface it                         |
-| Prisma pool acquire-timeout | `infra/monitoring/alert-policies/prisma-pool-timeout.yaml`  | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load                                               |
+| Signal                      | Config file                                                 | Threshold    | Rationale                                                                                                       |
+| --------------------------- | ----------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| ReportedErrorEvent burst    | `infra/monitoring/alert-policies/reported-error-burst.yaml` | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state                                              |
+| Log severity CRITICAL       | `infra/monitoring/alert-policies/severity-critical.yaml`    | any 1 log    | Mostly hand-picked failures, but `criticalFetch` also promotes any settings-read error (see Runtime coupling)   |
+| `/api/health` 5xx           | `infra/monitoring/alert-policies/health-probe-5xx.yaml`     | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404                                   |
+| Cron OIDC / config failure  | `infra/monitoring/alert-policies/cron-oidc-failure.yaml`    | > 3 / 15 min | 401 on `/api/cron/*`, or authorizeCronRequest CRITICAL+AUTHORIZATION config-missing 500 — not generic cron 500s |
+| Prisma pool acquire-timeout | `infra/monitoring/alert-policies/prisma-pool-timeout.yaml`  | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load                                                 |
 
 `/api/live` is intentionally excluded — it is the Cloud Run startup / liveness
 probe and is contracted to be DB-free. Alerting on it would create a feedback
@@ -119,11 +119,16 @@ gcloud monitoring policies update "$POLICY_NAME" \
   `src/shared/domain/settings/queries/{features,site}.ts`. A transient database
   error on a page render therefore pages someone.
 - `authorizeCronRequest()` fails closed with 401 (bad OIDC token) or 500
-  (missing `CRON_OIDC_AUDIENCE` / `CRON_SERVICE_ACCOUNT_EMAIL`). Both fall
-  under the `cron_oidc_failure` metric filter, but they are not equally
-  visible elsewhere: the 401 paths log at MEDIUM (= WARNING), so this alert is
-  their only signal, while the config-missing 500 path also logs at CRITICAL
-  and therefore reaches `severity-critical` as well.
+  (missing `CRON_OIDC_AUDIENCE` / `CRON_SERVICE_ACCOUNT_EMAIL`). The
+  `cron_oidc_failure` metric counts those two emit sites only: Cloud Run
+  request logs with `httpRequest.status=401` on `/api/cron/*`, plus the
+  config-missing structured log (`severity="CRITICAL"` and
+  `jsonPayload.category="AUTHORIZATION"`). Generic cron handler 500s are
+  excluded so they cannot open the "cron OIDC failure" incident. The 401
+  paths log at MEDIUM (= WARNING), so this alert is their only signal; the
+  config-missing 500 path also logs at CRITICAL and therefore reaches
+  `severity-critical` as well. Handler 500s that log HIGH still reach
+  `reported-error-burst`.
 - Pool acquire timeouts surface as plain `Error`s from node-postgres, because
   this app uses the `@prisma/adapter-pg` driver adapter and never touches the
   Rust query engine's pool. The measured messages are

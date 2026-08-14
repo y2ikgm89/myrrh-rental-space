@@ -1,7 +1,11 @@
-# Alert when /api/cron/* requests fail authorization or the fail-closed cron
-# config check. Cloud Scheduler retries silently, so without an alert a
+# Alert when /api/cron/* requests fail OIDC authorization or the fail-closed
+# cron-config check. Cloud Scheduler retries silently, so without an alert a
 # permanently misconfigured cron job would just stop running with no signal.
 # Depends on `infra/monitoring/log-metrics/cron-oidc-failure.yaml`.
+#
+# This policy is OIDC / cron-config only. Generic cron handler 500s
+# (external API, Prisma, etc.) do not increment cron_oidc_failure — they
+# surface via reported-error-burst or severity-critical.
 
 displayName: "myrrh-rental-space: cron OIDC failure"
 combiner: OR
@@ -14,16 +18,21 @@ documentation:
     fail-closed cron-config check. Silent failures here mean scheduled jobs
     stopped running with no other symptom.
 
+    This alert does **not** fire on generic cron handler 500s (Instagram sync,
+    Prisma, mail, …). Those stay on reported-error-burst / severity-critical.
+
     Diagnose:
 
-    1. Cloud Logging: filter on
-       `httpRequest.requestUrl=~"/api/cron/"` +
-       `(httpRequest.status=401 OR httpRequest.status=500)`
+    1. Cloud Logging: either
+       `httpRequest.requestUrl=~"/api/cron/"` + `httpRequest.status=401`
+       (bad / missing OIDC token) or
+       `severity="CRITICAL"` + `jsonPayload.category="AUTHORIZATION"`
+       (missing `CRON_OIDC_AUDIENCE` / `CRON_SERVICE_ACCOUNT_EMAIL`).
     2. Compare `CRON_OIDC_AUDIENCE` and `CRON_SERVICE_ACCOUNT_EMAIL` in the
        running revision against the Cloud Scheduler job config
        (`terraform/cloud_scheduler.tf` — `locals.cron_jobs` and the
        `oidc_token` block are the SSoT).
-    3. Runbook: docs/gcp-production-setup.md → "Cron / Cloud Scheduler".
+    3. Runbook: docs/gcp-production-setup.md → "Cloud Scheduler".
   mimeType: "text/markdown"
 
 conditions:
