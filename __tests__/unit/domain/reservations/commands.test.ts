@@ -1152,8 +1152,14 @@ describe("updateAdminReservationCommand", () => {
       ).rejects.toThrow("指定されたスペースが見つかりません");
     });
 
-    test("無効なステータス遷移でエラー", async () => {
-      // 既存ステータスが COMPLETED → PENDING への遷移は不可
+    test("終端ステータスの予約は編集できない", async () => {
+      // 監査 F-59: 旧実装のガードは「遷移するとき」しか見ていなかったため、
+      // 終端ステータスのまま保存でき、解放済みのクーポン usageCount を
+      // もう一度 decrement できた。現在は入口で弾く。
+      //
+      // 実 DB での帰結（usageCount が動かないこと）は
+      // __tests__/integration/domain/reservations/admin-edit-coupon-and-terminal.test.ts
+      // が固定している。ここでは入口 gate が発火することだけを見る。
       mockReservationFindUnique.mockImplementation(() =>
         Promise.resolve({
           id: "res-1",
@@ -1174,7 +1180,9 @@ describe("updateAdminReservationCommand", () => {
           ...validInput,
           status: ReservationStatus.PENDING,
         }),
-      ).rejects.toThrow("このステータスからは変更できません");
+      ).rejects.toThrow(
+        "キャンセル・完了・無断キャンセルの予約は編集できません",
+      );
     });
 
     test("終端ステータス(CANCELLED)への変更を拒否", async () => {
