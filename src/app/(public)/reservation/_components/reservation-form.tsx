@@ -45,6 +45,7 @@ import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
+import { formatReservationConfirmTotal } from "./format-reservation-confirm-total";
 import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
@@ -344,7 +345,16 @@ export function ReservationForm({
   }, [previewSpaceId, previewStartIso, previewEndIso, couponCode]);
 
   const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
-  const price = pricingWindow ? (pricePreview?.totalPrice ?? null) : null;
+  const price = pricingWindow
+    ? (pricePreview?.totalPriceWithTax ?? null)
+    : null;
+  const confirmPricing =
+    pricingWindow && pricePreview != null
+      ? {
+          totalPrice: pricePreview.totalPrice,
+          totalPriceWithTax: pricePreview.totalPriceWithTax,
+        }
+      : null;
 
   const isStep1Complete = state.locationId != null && state.spaceId != null;
   const isStep2Complete =
@@ -528,7 +538,9 @@ export function ReservationForm({
             <div className="flex items-center gap-3">
               {config.price != null ? (
                 <span className="text-lg font-light text-accent">
-                  {formatPrice(config.price)}
+                  {confirmPricing != null
+                    ? formatReservationConfirmTotal(confirmPricing)
+                    : formatPrice(config.price)}
                 </span>
               ) : null}
               {config.onNext ? (
@@ -638,6 +650,7 @@ export function ReservationForm({
             endTime: endTime ?? "",
             guests: state.guests,
             price,
+            confirmPricing,
             // 条件が揃っているのに価格が無いなら、取得に失敗している。
             priceUnavailable: pricingWindow !== null && pricingFailed,
             originalPrice: basePrice,
