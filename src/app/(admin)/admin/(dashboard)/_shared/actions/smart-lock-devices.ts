@@ -100,12 +100,23 @@ export async function updateSmartLockDevice(
             data.deviceId,
             data.deviceType,
           );
-          return updateSmartLockDeviceCommand(parsedDevice.data, {
-            deviceId: data.deviceId,
-            deviceName: data.deviceName,
-            deviceType: data.deviceType,
-            isActive: data.isActive,
-          });
+          const updated = await updateSmartLockDeviceCommand(
+            parsedDevice.data,
+            {
+              deviceId: data.deviceId,
+              deviceName: data.deviceName,
+              deviceType: data.deviceType,
+              isActive: data.isActive,
+            },
+          );
+
+          // 編集ダイアログの isActive スイッチも、一覧のトグルと同じ状態変化を
+          // 起こす。ここで失効させないと、発行済みパスコードが物理 Keypad 上で
+          // 全予約の endTime まで生き続ける（監査 F-24）。
+          if (updated.deactivated) {
+            await revokePasscodesAfterPadDeactivated(parsedDevice.data);
+          }
+          return { id: updated.id };
         },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.SPACES);

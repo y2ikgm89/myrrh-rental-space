@@ -27,6 +27,7 @@ import {
   updateSpaceCommand,
   updateSpacePublishedCommand,
 } from "@/shared/domain/spaces/commands";
+import { revokePasscodesAfterSpaceUnbound } from "@/shared/domain/smart-lock/assignment-side-effects";
 import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import {
   spaceFormSchema,
@@ -184,7 +185,16 @@ export async function updateSpaceAction(
         resourceId: id,
         execute: async () => {
           const commandInput = buildSpaceCommandInput(data);
-          return updateSpaceCommand(id, commandInput);
+          const updated = await updateSpaceCommand(id, commandInput);
+
+          // 拠点変更で Pad を外したときは、`setSpaceSmartLockDevice(spaceId, null)`
+          // と同じ失効を走らせる。ここで失効しないと、旧拠点の物理 Keypad が
+          // 全既存予約の終了時刻まで顧客のコードで開き続ける（監査 F-68）。
+          // 顧客は新拠点へ案内されており、旧拠点は第三者に引き渡し済みかもしれない。
+          if (updated.smartLockUnbound) {
+            await revokePasscodesAfterSpaceUnbound(id);
+          }
+          return updated;
         },
         afterSuccess: (r) => {
           revalidateSpaces([{ id: r.id, slug: r.slug, oldSlug: r.oldSlug }]);

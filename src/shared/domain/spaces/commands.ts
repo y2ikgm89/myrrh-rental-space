@@ -207,7 +207,13 @@ export async function createSpaceCommand(
 export async function updateSpaceCommand(
   id: string,
   input: SpaceCommandInput,
-): Promise<{ id: string; slug: string; oldSlug: string }> {
+): Promise<{
+  id: string;
+  slug: string;
+  oldSlug: string;
+  /** 拠点変更で Pad の割当を外したか（呼び出し側がパスコード失効を走らせる）。 */
+  smartLockUnbound: boolean;
+}> {
   assertAllowedSpaceImages(input);
   // Validation queries can run outside the transaction (each is a single read).
   const existingSpace = await ensureSpaceExists(id);
@@ -235,7 +241,7 @@ export async function updateSpaceCommand(
 
     const before = await tx.space.findUnique({
       where: { id, isActive: true },
-      select: { slug: true, locationId: true },
+      select: { slug: true, locationId: true, smartLockDeviceId: true },
     });
     if (!before) {
       throw new DomainError("スペースが見つかりません", "NOT_FOUND");
@@ -257,7 +263,17 @@ export async function updateSpaceCommand(
       },
       select: { id: true, slug: true },
     });
-    return { id: row.id, slug: row.slug, oldSlug: before.slug };
+    return {
+      id: row.id,
+      slug: row.slug,
+      oldSlug: before.slug,
+      // 拠点変更で Pad を外したことを呼び出し側へ伝える。ここで伝えないと、
+      // 発行済みパスコードがどの副作用経路からも到達不能になり、**旧拠点の
+      // 物理 Keypad が全既存予約の終了時刻まで顧客のコードで開き続ける**
+      // （監査 F-68）。`setSpaceSmartLockDevice(spaceId, null)` は失効するので、
+      // 同じ状態変化なのに 2 経路で挙動が食い違っていた。
+      smartLockUnbound: isLocationChanging && before.smartLockDeviceId !== null,
+    };
   });
 }
 

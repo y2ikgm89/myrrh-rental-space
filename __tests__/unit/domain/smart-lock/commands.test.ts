@@ -13,7 +13,11 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
 
-type SpaceRow = { id: string; locationId: string };
+type SpaceRow = {
+  id: string;
+  locationId: string;
+  smartLockDeviceId?: string | null;
+};
 type DeviceRow = {
   id: string;
   locationId: string;
@@ -289,6 +293,7 @@ describe("setSpaceSmartLockDeviceCommand", () => {
     mockFindUniqueSpace.mockResolvedValue({
       id: SPACE_ID,
       locationId: LOCATION_A,
+      smartLockDeviceId: null,
     });
     mockFindUniqueDevice.mockResolvedValue(null);
 
@@ -302,6 +307,7 @@ describe("setSpaceSmartLockDeviceCommand", () => {
     mockFindUniqueSpace.mockResolvedValue({
       id: SPACE_ID,
       locationId: LOCATION_A,
+      smartLockDeviceId: null,
     });
     mockFindUniqueDevice.mockResolvedValue({
       id: DEVICE_ID,
@@ -319,6 +325,7 @@ describe("setSpaceSmartLockDeviceCommand", () => {
     mockFindUniqueSpace.mockResolvedValue({
       id: SPACE_ID,
       locationId: LOCATION_A,
+      smartLockDeviceId: null,
     });
     mockFindUniqueDevice.mockResolvedValue({
       id: DEVICE_ID,
@@ -336,6 +343,7 @@ describe("setSpaceSmartLockDeviceCommand", () => {
     mockFindUniqueSpace.mockResolvedValue({
       id: SPACE_ID,
       locationId: LOCATION_A,
+      smartLockDeviceId: null,
     });
     mockFindUniqueDevice.mockResolvedValue({
       id: DEVICE_ID,
@@ -345,7 +353,11 @@ describe("setSpaceSmartLockDeviceCommand", () => {
 
     const result = await setSpaceSmartLockDeviceCommand(SPACE_ID, DEVICE_ID);
 
-    expect(result).toEqual({ id: SPACE_ID, smartLockDeviceId: DEVICE_ID });
+    expect(result).toEqual({
+      id: SPACE_ID,
+      smartLockDeviceId: DEVICE_ID,
+      previousSmartLockDeviceId: null,
+    });
     expect(mockUpdateSpace).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: SPACE_ID },
@@ -358,11 +370,16 @@ describe("setSpaceSmartLockDeviceCommand", () => {
     mockFindUniqueSpace.mockResolvedValue({
       id: SPACE_ID,
       locationId: LOCATION_A,
+      smartLockDeviceId: null,
     });
 
     const result = await setSpaceSmartLockDeviceCommand(SPACE_ID, null);
 
-    expect(result).toEqual({ id: SPACE_ID, smartLockDeviceId: null });
+    expect(result).toEqual({
+      id: SPACE_ID,
+      smartLockDeviceId: null,
+      previousSmartLockDeviceId: null,
+    });
     expect(mockFindUniqueDevice).not.toHaveBeenCalled();
     expect(mockUpdateSpace).toHaveBeenCalledWith(
       expect.objectContaining({

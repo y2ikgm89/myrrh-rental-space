@@ -126,7 +126,22 @@ export function issuePasscodesAfterSpaceBound(spaceId: string): void {
           spaceId,
           status: ReservationStatus.CONFIRMED,
           endTime: { gt: now },
-          smartLockPasscodes: { none: {} },
+          // 「行が 1 件も無い」ではなく「**生きた**パスコードが無い」で絞る。
+          // revoke は行を消さず status=REVOKED を残すので、`none: {}` だと
+          // 一度解除したスペースに Pad を付け直しても、REVOKED 行が残っている予約は
+          // 対象から外れ、**顧客が当日ドアを開けられない**（監査 F-67）。
+          // 失効側の `findFutureConfirmedReservationIdsForSpace` は status を見ており、
+          // 発行側だけが非対称だった。
+          smartLockPasscodes: {
+            none: {
+              status: {
+                in: [
+                  SmartLockPasscodeStatus.CONFIRMED,
+                  SmartLockPasscodeStatus.PENDING,
+                ],
+              },
+            },
+          },
         },
         select: {
           id: true,
