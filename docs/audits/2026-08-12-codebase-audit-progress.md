@@ -101,9 +101,9 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-53](2026-08-12-codebase-audit-findings.md#f-53)   | 中     | #2278                 | 既定セクションを流すのは Page 行の新規作成時だけにする                                           | —                                                                                           |
 | [F-63](2026-08-12-codebase-audit-findings.md#f-63)   | 中     | #2278                 | 必須セクションの複製を削除・表示切替と同じ述語で止める（UI も揃える）                            | 既に重複がある DB の是正は別途                                                              |
 | [F-64](2026-08-12-codebase-audit-findings.md#f-64)   | 中     | #2278                 | 既定セクションへの fallback を「Page 行が無い」ときだけに限定                                    | —                                                                                           |
-| [F-12](2026-08-12-codebase-audit-findings.md#f-12)   | 中     | #2280                 | 越境 import の検出を動的 import と `@/app/(admin)` 綴りまで広げる                                | —                                                                                           |
-| [F-14](2026-08-12-codebase-audit-findings.md#f-14)   | 中     | #2280                 | `use server` の判定を先頭コメントを飛ばした directive 一致にする                                 | —                                                                                           |
-| [F-17](2026-08-12-codebase-audit-findings.md#f-17)   | 中     | #2280                 | seed の存在判定 lint を findUnique 等まで広げ、露出した seed の実違反 4 件を直す                 | —                                                                                           |
+| [F-20](2026-08-12-codebase-audit-findings.md#f-20)   | 中     | #2281                 | secret 監査の母集合に DIRECT_URL を入れ、terraform との照合テストを足す                          | 実 GCP 未実行（PR 本文に明記）                                                              |
+| [F-21](2026-08-12-codebase-audit-findings.md#f-21)   | 中     | #2281                 | secret-level を「許容」に変え、runbook §8 を bootstrap の実態に揃える                            | 同上                                                                                        |
+| [F-22](2026-08-12-codebase-audit-findings.md#f-22)   | 中     | #2281                 | build SA の project-level role を allowlist 判定にする                                           | 同上                                                                                        |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 

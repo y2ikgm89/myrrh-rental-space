@@ -15,10 +15,11 @@ import {
   getIapCloudRunServiceIamPolicyUrl,
   getProductionHttpAuditTargets,
   readAmbiguousAdminRolePrincipalErrors,
-  getExpectedSecretManagerSecretAccessorMembers,
+  getAllowedSecretManagerSecretAccessorMembers,
   FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND,
+  ALL_AUDITED_SECRET_ENV_REFS,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
   REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
   readBroadProjectIamDeployGrantErrors,
@@ -796,7 +797,7 @@ async function main(): Promise<void> {
   );
 
   const secretVersionResults = await Promise.all(
-    REQUIRED_CLOUD_RUN_SECRET_ENV_REFS.map(async (ref) => {
+    ALL_AUDITED_SECRET_ENV_REFS.map(async (ref) => {
       const result = await tryRunGcloudJsonAsync([
         "secrets",
         "versions",
@@ -828,7 +829,7 @@ async function main(): Promise<void> {
   );
 
   const secretAccessorPolicyResults = await Promise.all(
-    REQUIRED_CLOUD_RUN_SECRET_ENV_REFS.map(async (ref) => {
+    ALL_AUDITED_SECRET_ENV_REFS.map(async (ref) => {
       const result = await tryRunGcloudJsonAsync([
         "secrets",
         "get-iam-policy",
@@ -837,7 +838,7 @@ async function main(): Promise<void> {
         projectId,
         "--format=json",
       ]);
-      const expectedMembers = getExpectedSecretManagerSecretAccessorMembers({
+      const allowedMembers = getAllowedSecretManagerSecretAccessorMembers({
         secretName: ref.name,
         runtimeServiceAccount,
         buildServiceAccount,
@@ -845,13 +846,13 @@ async function main(): Promise<void> {
       const errors = result.ok
         ? readSecretManagerSecretAccessorPolicyErrors(result.value, {
             secretName: ref.name,
-            expectedMembers,
+            allowedMembers,
           })
         : [`${ref.name} Secret Manager IAM policy describe failed`];
       const unexpectedMembers = result.ok
         ? readUnexpectedSecretManagerSecretAccessorMembers(
             result.value,
-            expectedMembers,
+            allowedMembers,
           )
         : [];
       const removalCommands = formatSecretManagerSecretAccessorRemovalCommands(

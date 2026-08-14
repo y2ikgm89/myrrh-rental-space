@@ -107,7 +107,8 @@ export async function bootstrapSystemPagesCommand(
           });
         }
 
-        await ensurePageSectionsCommand(db, existingPage.id, definition.slug);
+        // 既存ページには既定セクションを流さない（監査 F-53）。詳しい理由は
+        // `pages/commands.ts` の `ensureSystemPageCommand` に書いてある。
         continue;
       }
 
