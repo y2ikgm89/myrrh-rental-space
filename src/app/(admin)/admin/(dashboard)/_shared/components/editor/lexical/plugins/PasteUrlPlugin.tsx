@@ -8,7 +8,6 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
   COMMAND_PRIORITY_LOW,
   PASTE_COMMAND,
 } from "lexical";
@@ -16,6 +15,7 @@ import { useEffect } from "react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { ogpPreviewResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { logger } from "@/shared/lib/errors/logger-core";
+import { $isEmptyRootLevelBlock } from "../config/is-empty-root-level-block";
 import {
   detectPasteEmbed,
   type PasteEmbedMatch,
@@ -68,13 +68,7 @@ export function PasteUrlPlugin() {
         if (!$isRangeSelection(selection) || !selection.isCollapsed())
           return false;
         const node = selection.anchor.getNode();
-        const parent = node.getParent();
-        const isEmptyParagraph =
-          parent != null &&
-          $isRootOrShadowRoot(parent.getParent()) &&
-          node.getTextContent() === "";
-
-        if (!isEmptyParagraph) return false;
+        if (!$isEmptyRootLevelBlock(node)) return false;
 
         event.preventDefault();
 

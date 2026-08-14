@@ -17,6 +17,7 @@ import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 import { TermsConsentChecklist } from "@/public/components/forms/TermsConsentChecklist";
 import { BookingSummary } from "./booking-summary";
+import type { ReservationConfirmPricePreview } from "./format-reservation-confirm-total";
 import { RefundPolicyNotice } from "@/public/components/ui/refund-policy-notice";
 import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 
@@ -56,6 +57,7 @@ interface CustomerStepProps {
     readonly endTime: string;
     readonly guests: number;
     readonly price: number | null;
+    readonly confirmPricing?: ReservationConfirmPricePreview | null;
     /** 料金プレビューの取得に失敗したか（監査 F-39）。 */
     readonly priceUnavailable?: boolean;
     readonly originalPrice: number | null;
@@ -125,6 +127,9 @@ export function CustomerStep({
         endTime={summary.endTime}
         guests={summary.guests}
         price={summary.price}
+        {...(summary.confirmPricing !== undefined
+          ? { confirmPricing: summary.confirmPricing }
+          : {})}
         {...(summary.priceUnavailable !== undefined
           ? { priceUnavailable: summary.priceUnavailable }
           : {})}

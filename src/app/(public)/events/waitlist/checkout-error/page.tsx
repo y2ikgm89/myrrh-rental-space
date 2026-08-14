@@ -8,6 +8,10 @@ import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getBusinessInfo } from "@/public/data/business";
 import { requireFeatureEnabled } from "@/shared/domain/features/check";
+import {
+  WAITLIST_CHECKOUT_ISSUE_REASONS,
+  type WaitlistCheckoutIssueReason,
+} from "@/shared/domain/events/classify-waitlist-offer-checkout-error";
 
 // トークンゲート系ページの兄弟（expired/confirm と同方針）。検索結果に出さない。
 export const metadata: Metadata = {
@@ -15,12 +19,44 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const CHECKOUT_ISSUE_REASONS = ["conflict", "system"] as const;
-type CheckoutIssueReason = (typeof CHECKOUT_ISSUE_REASONS)[number];
-const CHECKOUT_ISSUE_REASON_SET = new Set<string>(CHECKOUT_ISSUE_REASONS);
+const CHECKOUT_ISSUE_REASON_SET = new Set<string>(
+  WAITLIST_CHECKOUT_ISSUE_REASONS,
+);
 
-function isCheckoutIssueReason(value: unknown): value is CheckoutIssueReason {
+function isCheckoutIssueReason(
+  value: unknown,
+): value is WaitlistCheckoutIssueReason {
   return typeof value === "string" && CHECKOUT_ISSUE_REASON_SET.has(value);
+}
+
+function checkoutErrorCopy(reason: WaitlistCheckoutIssueReason): {
+  heading: string;
+  message: string;
+} {
+  switch (reason) {
+    case "conflict":
+      return {
+        heading: "お支払い手続きを確認しています",
+        message:
+          "この繰り上げ当選のお支払い手続きは、別のタブまたはウィンドウで既に開始されている可能性があります。そちらの画面で決済を完了してください。",
+      };
+    case "too-late":
+      return {
+        heading: "お支払いを開始できません",
+        message:
+          "確定期限までの残り時間が短いため、決済を開始できません。まもなく期限切れとなり、次の待機者へ繰り上がります。",
+      };
+    case "system":
+      return {
+        heading: "エラーが発生しました",
+        message:
+          "お支払い手続きの開始中に問題が発生しました。招待の有効期限が切れたわけではありません。時間をおいて改めてお試しいただくか、お手数ですが下記までお問い合わせください。",
+      };
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
 }
 
 interface PageProps {
@@ -39,6 +75,8 @@ interface PageProps {
  *   - `reason=conflict`: `DomainError(code: "CONFLICT")`。既に別のタブ/
  *     ウィンドウで決済処理が claim 済み（例: 同じメールのリンクを 2 か所で開いた）。
  *     「期限切れ」ではなく「進行中」であることを伝える。
+ *   - `reason=too-late`: 確定期限の残りが Stripe Checkout の 30 分下限未満。
+ *     期限切れ画面には送らず、まもなく次の待機者へ繰り上がることを伝える。
  *   - `reason=system`（既定値・fallback）: Stripe 未設定・支払方法未有効化・
  *     チケット価格欠落・Stripe API 呼出自体の失敗など、運営側の設定不備や
  *     インフラ障害。顧客の操作や招待の有効期限とは無関係であることを伝え、
@@ -57,24 +95,13 @@ export default async function WaitlistCheckoutErrorPage({
 
   const sp = await searchParams;
   const rawReason = sp["reason"];
-  const reason: CheckoutIssueReason = isCheckoutIssueReason(rawReason)
+  const reason: WaitlistCheckoutIssueReason = isCheckoutIssueReason(rawReason)
     ? rawReason
     : "system";
 
   const { email: contactEmail } = await getBusinessInfo();
 
-  const copy =
-    reason === "conflict"
-      ? {
-          heading: "お支払い手続きを確認しています",
-          message:
-            "この繰り上げ当選のお支払い手続きは、別のタブまたはウィンドウで既に開始されている可能性があります。そちらの画面で決済を完了してください。",
-        }
-      : {
-          heading: "エラーが発生しました",
-          message:
-            "お支払い手続きの開始中に問題が発生しました。招待の有効期限が切れたわけではありません。時間をおいて改めてお試しいただくか、お手数ですが下記までお問い合わせください。",
-        };
+  const copy = checkoutErrorCopy(reason);
 
   return (
     <PageLayout variant="form">

@@ -20,6 +20,7 @@ import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlis
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";
 import { createWaitlistOfferCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";
+import { classifyWaitlistOfferCheckoutError } from "@/shared/domain/events/classify-waitlist-offer-checkout-error";
 import { DomainError } from "@/shared/domain/domain-error";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { publicQueryRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
@@ -31,38 +32,6 @@ import {
 
 const EXPIRED_PATH = "/events/waitlist/expired";
 const CHECKOUT_ERROR_PATH = "/events/waitlist/checkout-error";
-
-/**
- * `createWaitlistOfferCheckoutSessionCommand` が投げる `VALIDATION` の中で
- * 「対象がもう WAITLISTED_OFFERED ではない」(= genuine expiry と同義。
- * EXPIRED 化済み / 既に CONFIRMED 済み / CANCELLED 済み等) ことを示すメッセージ。
- * 同コマンドの他の `VALIDATION`（Stripe 未設定・支払方法未有効化・チケット価格
- * 欠落・確定期限情報欠落）は運営側の設定不備/データ異常であり、genuine expiry
- * と混同してはならない（`payment-commands.ts` の該当 throw 箇所参照。
- * `DomainError` はメッセージ以外に細分コードを持たないため、ここでの文字列一致は
- * 意図的な密結合 — メッセージ文言を変える場合はこの定数も合わせて更新する）。
- */
-const OFFER_NOT_ACTIVE_MESSAGE =
-  "この繰り上げ当選は確定待ちの状態ではありません";
-
-/**
- * Codex P1-A（PR#1080 レビュー）: `createWaitlistOfferCheckoutSessionCommand` が
- * authoritative 再読み込み後に「offer 自身の expiresAt が既に過去」を検出した
- * ときに投げる `VALIDATION` メッセージ。cron がまだ EXPIRED 化していない場合や
- * Stripe `expires_at` の 30 分下限フロアで session だけが生き残っている場合に
- * 到達する、genuine expiry の一種（`OFFER_NOT_ACTIVE_MESSAGE` と同じ
- * EXPIRED_PATH へ誘導すべきで、CHECKOUT_ERROR_PATH の「system」扱いにしてはならない）。
- */
-const OFFER_EXPIRED_MESSAGE = "この繰り上げ当選は既に期限切れです";
-
-function isGenuineOfferExpiry(error: DomainError): boolean {
-  if (error.code === "NOT_FOUND") return true;
-  return (
-    error.code === "VALIDATION" &&
-    (error.message === OFFER_NOT_ACTIVE_MESSAGE ||
-      error.message === OFFER_EXPIRED_MESSAGE)
-  );
-}
 
 export async function GET(request: Request): Promise<NextResponse> {
   await connection();
@@ -118,38 +87,30 @@ export async function GET(request: Request): Promise<NextResponse> {
     // EXPIRED_PATH 等の内部ソフトリダイレクトの 302 とは意図的に区別する。
     return NextResponse.redirect(session.url, 303);
   } catch (error) {
-    // DomainError は 3 種類に区別してソフトランディングへ振り分ける（final
-    // review I2 — 旧実装は全 DomainError を一律 expired に丸めており、
-    // 「別タブで決済処理が進行中」や「Stripe 未設定」を「招待が期限切れ」と
-    // 誤表示していた）。想定外の非 DomainError 例外はそのまま投げて 500 で可視化する
-    // （Task 8 の既存方針を踏襲）。
+    // DomainError は classifyWaitlistOfferCheckoutError で expired /
+    // conflict / too-late / system に振り分ける。想定外の非 DomainError
+    // 例外はそのまま投げて 500 で可視化する。
     if (error instanceof DomainError) {
-      if (isGenuineOfferExpiry(error)) {
+      const disposition = classifyWaitlistOfferCheckoutError(error);
+      if (disposition.destination === "expired") {
         return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
       }
 
-      if (error.code === "CONFLICT") {
-        // 既に別のタブ/ウィンドウが claim 済み（決済処理が進行中）。
-        const url = new URL(CHECKOUT_ERROR_PATH, request.url);
-        url.searchParams.set("reason", "conflict");
-        return NextResponse.redirect(url, 302);
+      // system 以外（conflict / too-late）は想定内の業務条件なので CRITICAL
+      // にしない。too-late を expired に丸めると「既に期限切れ」と誤案内する。
+      if (disposition.severity === ErrorSeverity.CRITICAL) {
+        logError(error, {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.CRITICAL,
+          context: {
+            operation: "waitlistOfferCheckoutRedirect",
+            registrationId: verified.registrationId,
+            domainErrorCode: error.code,
+          },
+        });
       }
-
-      // 上記以外（Stripe 未設定・支払方法未有効化・チケット価格欠落・確定期限
-      // 情報欠落・Stripe API 呼出自体の失敗等）は運営側の設定不備/インフラ障害。
-      // 「期限切れ」と誤表示すると顧客にもサポートにも実態が伝わらないため、
-      // CRITICAL で可視化した上でソフトランディングへ誘導する。
-      logError(error, {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.CRITICAL,
-        context: {
-          operation: "waitlistOfferCheckoutRedirect",
-          registrationId: verified.registrationId,
-          domainErrorCode: error.code,
-        },
-      });
       const url = new URL(CHECKOUT_ERROR_PATH, request.url);
-      url.searchParams.set("reason", "system");
+      url.searchParams.set("reason", disposition.reason);
       return NextResponse.redirect(url, 302);
     }
     throw error;
