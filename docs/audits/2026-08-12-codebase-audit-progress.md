@@ -130,7 +130,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-79](2026-08-12-codebase-audit-findings.md#f-79)   | 低     | #2290                                      | required-check path filter gate を Bun.YAML.parse にし、flow 形式 `paths: [terraform/**]` も検出する             | —                                                                                       |
 | [F-81](2026-08-12-codebase-audit-findings.md#f-81)   | 低     | #2291                                      | header 母集合をクラス集合の lookahead に。操作列は `cn()` の文字列引数も見る                                     | —                                                                                       |
 | [F-76](2026-08-12-codebase-audit-findings.md#f-76)   | 低     | #2292                                      | extractImportSpecifiers が走査前にコメントを除去。JSDoc @example の import は辺にならない                        | —                                                                                       |
-| [F-84](2026-08-12-codebase-audit-findings.md#f-84)   | 低     | —                                          | mobile project gate が file-scope APP_SURFACE skip を CI の project×surface と突合する。F-84 形の fixture を追加 | CI の public step は F-16 が既に入れていた                                              |
+| [F-84](2026-08-12-codebase-audit-findings.md#f-84)   | 低     | #2293                                      | mobile project gate が file-scope APP_SURFACE skip を CI の project×surface と突合する。F-84 形の fixture を追加 | CI の public step は F-16 が既に入れていた                                              |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
