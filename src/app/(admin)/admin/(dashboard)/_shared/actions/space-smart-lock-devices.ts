@@ -22,7 +22,11 @@ const deviceIdSchema = uuidIdSchema("スマートロックデバイス").nullabl
  * 同一 Location 配下の登録簿から最大 1 台を選ぶだけのシンプルな参照更新のため、
  * conform の FormData 経由ではなく直接引数で呼び出す（削除/トグルアクションと同じパターン）。
  *
- * 解除時は将来 CONFIRMED 予約のパスコードを失効し、新規割当時は未発行分を best-effort issue する。
+ * 割当が変わったら、**まず旧デバイスのパスコードを失効してから**新デバイス分を
+ * best-effort issue する。`deviceId === null` かどうかで分岐すると、Pad A → Pad B の
+ * 直接付け替え（UI は 1 回の保存でこれができる）で旧 Pad のコードが生き残り、
+ * 予約者が「予約していない旧ドアを開けられる／実際のドアを開けられない」状態になる
+ * （監査 F-25）。
  */
 export async function setSpaceSmartLockDevice(
   spaceId: string,
@@ -39,13 +43,19 @@ export async function setSpaceSmartLockDevice(
     action: "update",
     resourceId: parsedSpace.data,
     execute: async () => {
-      const result = await setSpaceSmartLockDeviceCommand(
-        parsedSpace.data,
-        parsedDevice.data,
-      );
-      if (parsedDevice.data === null) {
+      const { previousSmartLockDeviceId, ...result } =
+        await setSpaceSmartLockDeviceCommand(
+          parsedSpace.data,
+          parsedDevice.data,
+        );
+
+      const assignmentChanged = previousSmartLockDeviceId !== parsedDevice.data;
+
+      // 旧デバイスがあったなら、付け替えでも解除でも先に失効する。
+      if (assignmentChanged && previousSmartLockDeviceId !== null) {
         await revokePasscodesAfterSpaceUnbound(parsedSpace.data);
-      } else {
+      }
+      if (assignmentChanged && parsedDevice.data !== null) {
         issuePasscodesAfterSpaceBound(parsedSpace.data);
       }
       return result;

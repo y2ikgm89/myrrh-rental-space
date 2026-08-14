@@ -254,10 +254,20 @@ export async function createSmartLockDeviceCommand(
 export async function updateSmartLockDeviceCommand(
   id: string,
   data: SmartLockDeviceCommandInput,
-): Promise<{ id: string }> {
+): Promise<{
+  id: string;
+  /**
+   * この更新で有効 → 無効に落ちたか。呼び出し側がトグル経路と同じ失効副作用を
+   * 走らせるために使う。これが無いと、編集ダイアログの isActive スイッチで
+   * 無効化したときだけ**発行済みパスコードが物理 Keypad 上で生き続ける**
+   * （監査 F-24）。顧客側の表示は「解錠番号は使えません」になるので、
+   * 開くコードが野放しであることを誰も検知できない。
+   */
+  deactivated: boolean;
+}> {
   const existing = await prisma.smartLockDevice.findUnique({
     where: { id },
-    select: { id: true, locationId: true },
+    select: { id: true, locationId: true, isActive: true },
   });
   if (!existing) {
     throw new DomainError(
@@ -282,7 +292,7 @@ export async function updateSmartLockDeviceCommand(
         ...(pairedLockDeviceId !== undefined && { pairedLockDeviceId }),
       },
     });
-    return { id };
+    return { id, deactivated: existing.isActive && !data.isActive };
   });
 }
 
@@ -508,7 +518,16 @@ export async function toggleSmartLockDeviceActiveCommand(
 export async function setSpaceSmartLockDeviceCommand(
   spaceId: string,
   deviceId: string | null,
-): Promise<{ id: string; smartLockDeviceId: string | null }> {
+): Promise<{
+  id: string;
+  smartLockDeviceId: string | null;
+  /**
+   * 変更前の割当。呼び出し側が「解除と付け替えを対称に扱う」ために使う。
+   * これが無いと `deviceId === null` かどうかでしか分岐できず、A → B の
+   * 直接付け替えで旧 Pad のパスコードが失効されない（監査 F-25）。
+   */
+  previousSmartLockDeviceId: string | null;
+}> {
   return prisma.$transaction(async (tx) => {
     // updateSpaceCommand の拠点変更判定（同じ 728352 lock namespace）と直列化する。
     // ロックなしでは、この読取と update の間に拠点変更が挟まった場合、
@@ -517,7 +536,7 @@ export async function setSpaceSmartLockDeviceCommand(
 
     const space = await tx.space.findUnique({
       where: { id: spaceId },
-      select: { id: true, locationId: true },
+      select: { id: true, locationId: true, smartLockDeviceId: true },
     });
     if (!space) {
       throw new DomainError("スペースが見つかりません", "NOT_FOUND");
@@ -550,7 +569,11 @@ export async function setSpaceSmartLockDeviceCommand(
       data: { smartLockDeviceId: deviceId },
     });
 
-    return { id: spaceId, smartLockDeviceId: deviceId };
+    return {
+      id: spaceId,
+      smartLockDeviceId: deviceId,
+      previousSmartLockDeviceId: space.smartLockDeviceId,
+    };
   });
 }
 
