@@ -101,6 +101,12 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-53](2026-08-12-codebase-audit-findings.md#f-53)   | 中     | #2278                 | 既定セクションを流すのは Page 行の新規作成時だけにする                                           | —                                                                                           |
 | [F-63](2026-08-12-codebase-audit-findings.md#f-63)   | 中     | #2278                 | 必須セクションの複製を削除・表示切替と同じ述語で止める（UI も揃える）                            | 既に重複がある DB の是正は別途                                                              |
 | [F-64](2026-08-12-codebase-audit-findings.md#f-64)   | 中     | #2278                 | 既定セクションへの fallback を「Page 行が無い」ときだけに限定                                    | —                                                                                           |
+| [F-20](2026-08-12-codebase-audit-findings.md#f-20)   | 中     | #2281                 | secret 監査の母集合に DIRECT_URL を入れ、terraform との照合テストを足す                          | 実 GCP 未実行（PR 本文に明記）                                                              |
+| [F-21](2026-08-12-codebase-audit-findings.md#f-21)   | 中     | #2281                 | secret-level を「許容」に変え、runbook §8 を bootstrap の実態に揃える                            | 同上                                                                                        |
+| [F-22](2026-08-12-codebase-audit-findings.md#f-22)   | 中     | #2281                 | build SA の project-level role を allowlist 判定にする                                           | 同上                                                                                        |
+| [F-15](2026-08-12-codebase-audit-findings.md#f-15)   | 中     | #2282                 | 透過ヘッダーの負マージンを `margin-top` にし、camelCase の許可を外す                             | —                                                                                           |
+| [F-51](2026-08-12-codebase-audit-findings.md#f-51)   | 中     | #2282                 | FAQ の閲覧・投票が `updated_at` を触らないようにする                                             | 列は足していない（PR 本文に理由）                                                           |
+| [F-71](2026-08-12-codebase-audit-findings.md#f-71)   | 中     | #2282                 | bot 判定をサーバー発行の purpose 付きトークンに置き換える                                        | 公開フォーム 4 本。E2E gate の理由 1 つが解消                                               |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
