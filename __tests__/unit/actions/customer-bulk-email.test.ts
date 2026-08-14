@@ -57,6 +57,7 @@ mock.module("@/shared/lib/rate-limit", () => ({
 
 const { broadcastCustomersAction } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer/bulk");
+const { isDomainError } = await import("@/shared/domain/domain-error");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 // bulk.ts の他の export が使う既存 fixture 規約
@@ -72,9 +73,16 @@ describe("broadcastCustomersAction", () => {
     mockCheckActionRateLimit.mockImplementation(
       async () => ({ success: true }) as const,
     );
-    mockExecuteAdminMutationResult.mockImplementation(async (options) =>
-      options.execute({ id: "admin-1" }),
-    );
+    mockExecuteAdminMutationResult.mockImplementation(async (options) => {
+      try {
+        return await options.execute({ id: "admin-1" });
+      } catch (error) {
+        if (isDomainError(error)) {
+          return { error: error.message, code: error.code };
+        }
+        throw error;
+      }
+    });
   });
 
   test("空文字の subject は VALIDATION エラーになる", async () => {
@@ -111,7 +119,23 @@ describe("broadcastCustomersAction", () => {
 
     expect(isMutationError(result)).toBe(true);
     expect(mockSendCustomerBroadcast).not.toHaveBeenCalled();
-    expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalled();
+  });
+
+  test("権限拒否のときは rate limit を消費しない", async () => {
+    mockExecuteAdminMutationResult.mockImplementation(async () => ({
+      error: "customerのupdate権限がありません",
+    }));
+
+    const result = await broadcastCustomersAction(
+      [CUSTOMER_ID_1],
+      "お知らせ",
+      "本文です",
+    );
+
+    expect(isMutationError(result)).toBe(true);
+    expect(mockCheckActionRateLimit).not.toHaveBeenCalled();
+    expect(mockSendCustomerBroadcast).not.toHaveBeenCalled();
   });
 
   test("正しい入力で sendCustomerBroadcast を呼び sent/excluded を返す", async () => {
