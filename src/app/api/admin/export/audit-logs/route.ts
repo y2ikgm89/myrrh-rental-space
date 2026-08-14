@@ -4,7 +4,12 @@ import { checkPermission } from "@/admin/lib/action-auth";
 import { getAuditLogsForExport } from "@/shared/domain/audit-log/queries";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { generateCsv } from "@/shared/lib/csv";
-import { formatJstDateString, formatJstYmdHm } from "@/shared/lib/date-format";
+import {
+  formatJstDateString,
+  formatJstYmdHm,
+  MS_PER_DAY,
+  parseJstDateOnly,
+} from "@/shared/lib/date-format";
 import {
   AUDIT_ACTION_LABELS,
   getAuditActionFilterOrAll,
@@ -22,29 +27,45 @@ const NO_STORE_HEADERS = {
   "Cache-Control": "private, no-store",
 };
 
-const auditLogExportQuerySchema = z.object({
-  action: z.string().optional().default(""),
-  resource: z.string().trim().max(100).optional().default(""),
-  userId: z.uuid().or(z.literal("")).optional().default(""),
-  dateFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "開始日の形式が不正です" })
-    .or(z.literal(""))
-    .optional()
-    .default(""),
-  dateTo: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "終了日の形式が不正です" })
-    .or(z.literal(""))
-    .optional()
-    .default(""),
-  search: z.string().trim().max(200).optional().default(""),
-  ipAddress: z.string().trim().max(64).optional().default(""),
-  securityOnly: z
-    .enum(["1", "true", "on"])
-    .optional()
-    .transform((value) => value !== undefined),
-});
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const AUDIT_LOG_EXPORT_MAX_WINDOW_DAYS = 90;
+
+const auditLogExportQuerySchema = z
+  .object({
+    action: z.string().optional().default(""),
+    resource: z.string().trim().max(100).optional().default(""),
+    userId: z.uuid().or(z.literal("")).optional().default(""),
+    dateFrom: z
+      .string()
+      .regex(DATE_ONLY_PATTERN, { error: "開始日の形式が不正です" }),
+    dateTo: z
+      .string()
+      .regex(DATE_ONLY_PATTERN, { error: "終了日の形式が不正です" }),
+    search: z.string().trim().max(200).optional().default(""),
+    ipAddress: z.string().trim().max(64).optional().default(""),
+    securityOnly: z
+      .enum(["1", "true", "on"])
+      .optional()
+      .transform((value) => value !== undefined),
+  })
+  .refine((data) => data.dateFrom <= data.dateTo, {
+    error: "終了日は開始日以降にしてください",
+    path: ["dateTo"],
+  })
+  .refine(
+    (data) => {
+      const from = parseJstDateOnly(data.dateFrom);
+      const to = parseJstDateOnly(data.dateTo);
+      return (
+        (to.getTime() - from.getTime()) / MS_PER_DAY <=
+        AUDIT_LOG_EXPORT_MAX_WINDOW_DAYS
+      );
+    },
+    {
+      error: "エクスポート期間は90日以内にしてください",
+      path: ["dateTo"],
+    },
+  );
 
 function stringifyAuditJson(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -86,8 +107,6 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const filters = {
-      page: 1,
-      perPage: 10_000,
       action: getAuditActionFilterOrAll(validated.data.action),
       resource: validated.data.resource,
       userId: validated.data.userId,
@@ -98,7 +117,29 @@ export async function GET(request: Request): Promise<Response> {
       securityOnly: validated.data.securityOnly,
     };
 
-    const logs = await getAuditLogsForExport(filters);
+    const result = await getAuditLogsForExport(filters);
+    if (result.truncated) {
+      await createAuditLogRecord({
+        userId: auth.user.id,
+        action: AuditAction.EXPORT,
+        resource: "auditLog",
+        metadata: {
+          format: "csv",
+          truncated: true,
+          totalCount: result.totalCount,
+          filters,
+        },
+      });
+      return Response.json(
+        {
+          error: "該当件数が上限を超えています。期間を絞って再実行してください",
+          totalCount: result.totalCount,
+        },
+        { status: 409, headers: NO_STORE_HEADERS },
+      );
+    }
+
+    const logs = result.logs;
 
     const csv = generateCsv(logs, [
       { header: "Sequence", accessor: (log) => log.sequence },

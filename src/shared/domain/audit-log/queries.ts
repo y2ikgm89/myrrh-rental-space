@@ -47,6 +47,15 @@ export type AuditLogFilters = {
   securityOnly?: boolean | undefined;
 };
 
+export type AuditLogExportFilters = Omit<
+  Required<AuditLogFilters>,
+  "page" | "perPage"
+>;
+
+export type AuditLogExportResult =
+  | { truncated: true; totalCount: number }
+  | { truncated: false; logs: AuditLogItem[] };
+
 export type AuditLogResult = {
   logs: AuditLogItem[];
   total: number;
@@ -152,7 +161,7 @@ async function findActorIdsMatching(search: string): Promise<string[]> {
 }
 
 function buildAuditLogWhere(
-  filters: Required<AuditLogFilters>,
+  filters: AuditLogExportFilters,
   actorIdsMatchingSearch: readonly string[],
 ): AuditLogWhere {
   const where: AuditLogWhere = {};
@@ -289,8 +298,8 @@ export async function getAuditLogs(
 }
 
 export async function getAuditLogsForExport(
-  filters: Required<AuditLogFilters>,
-): Promise<AuditLogItem[]> {
+  filters: AuditLogExportFilters,
+): Promise<AuditLogExportResult> {
   const search = (filters.search ?? "").trim();
   const where = buildAuditLogWhere(
     filters,
@@ -299,11 +308,19 @@ export async function getAuditLogsForExport(
   const logs = await prisma.auditLog.findMany({
     where,
     select: auditLogSelect,
-    orderBy: { createdAt: "asc" },
-    take: AUDIT_LOG_EXPORT_LIMIT,
+    orderBy: { sequence: "asc" },
+    take: AUDIT_LOG_EXPORT_LIMIT + 1,
   });
 
-  return toPlainObject(await attachActors(logs));
+  if (logs.length > AUDIT_LOG_EXPORT_LIMIT) {
+    const totalCount = await prisma.auditLog.count({ where });
+    return { truncated: true, totalCount };
+  }
+
+  return {
+    truncated: false,
+    logs: toPlainObject(await attachActors(logs)),
+  };
 }
 
 export async function getAuditLogStats(): Promise<AuditLogStats> {
