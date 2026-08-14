@@ -69,7 +69,10 @@ const STRIPE_SETTINGS = {
   stripePaymentMethodTypes: ["card"],
 };
 
+const actualAvailability = await import("@/shared/domain/payment/availability");
+// `mock.module` は完全置換。実モジュールを spread する（`.claude/rules/testing.md`）。
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualAvailability,
   assertOnlinePaymentAvailable: () => Promise.resolve(STRIPE_SETTINGS),
   assertStripeCredentialsConfigured: () => Promise.resolve(STRIPE_SETTINGS),
 }));

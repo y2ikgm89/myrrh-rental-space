@@ -77,7 +77,7 @@ export type EventEmailRenderContext = {
   readonly organizer: IcalOrganizerSettings;
   readonly transferAccounts: readonly TransferAccountEmailDisplay[];
   readonly transferGuidance: string | null;
-  readonly paymentFeatureEnabled: boolean;
+  readonly onlinePaymentAvailable: boolean;
 };
 
 /** 予約メールのキャンセル/変更期限（SettingsReservation 由来）。 */
@@ -106,7 +106,7 @@ export type ReservationEmailRenderContext = {
   readonly cancellationPolicyUrl: string | undefined;
   readonly transferAccounts: readonly TransferAccountEmailDisplay[];
   readonly transferGuidance: string | null;
-  readonly paymentFeatureEnabled: boolean;
+  readonly onlinePaymentAvailable: boolean;
 };
 
 /** 管理者向けイベント通知メールの宛先（domain が resolve して lib に渡す）。 */

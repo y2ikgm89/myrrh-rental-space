@@ -108,7 +108,6 @@ export default async function MypageEventRegistrationDetailPage({
   ]);
 
   const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
-    paymentFeatureEnabled: paymentEnabled,
     paymentStatus: getValidPaymentStatus(registration.paymentStatus),
   });
 

@@ -10,7 +10,7 @@ describe("shouldShowTransferAccounts", () => {
   test("payment ON では非表示", () => {
     expect(
       shouldShowTransferAccounts({
-        paymentFeatureEnabled: true,
+        onlinePaymentAvailable: true,
         paymentStatus: "UNPAID",
         activeAccountCount: 2,
       }),
@@ -20,7 +20,7 @@ describe("shouldShowTransferAccounts", () => {
   test("payment OFF + UNPAID + active 口座ありで表示", () => {
     expect(
       shouldShowTransferAccounts({
-        paymentFeatureEnabled: false,
+        onlinePaymentAvailable: false,
         paymentStatus: "UNPAID",
         activeAccountCount: 1,
       }),
@@ -30,7 +30,7 @@ describe("shouldShowTransferAccounts", () => {
   test("payment OFF + FAILED + active 口座ありで表示", () => {
     expect(
       shouldShowTransferAccounts({
-        paymentFeatureEnabled: false,
+        onlinePaymentAvailable: false,
         paymentStatus: "FAILED",
         activeAccountCount: 1,
       }),
@@ -40,7 +40,7 @@ describe("shouldShowTransferAccounts", () => {
   test("payment OFF + PAID では非表示", () => {
     expect(
       shouldShowTransferAccounts({
-        paymentFeatureEnabled: false,
+        onlinePaymentAvailable: false,
         paymentStatus: "PAID",
         activeAccountCount: 1,
       }),
@@ -50,7 +50,7 @@ describe("shouldShowTransferAccounts", () => {
   test("active 口座 0 件では非表示", () => {
     expect(
       shouldShowTransferAccounts({
-        paymentFeatureEnabled: false,
+        onlinePaymentAvailable: false,
         paymentStatus: "UNPAID",
         activeAccountCount: 0,
       }),

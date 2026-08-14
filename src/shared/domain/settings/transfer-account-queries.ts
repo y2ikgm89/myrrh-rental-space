@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { shouldShowTransferAccounts } from "@/shared/lib/settings/transfer-account-gate";
+import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { TransferAccountType } from "@/shared/lib/validations/enums/helpers";
 import type { Prisma } from "@generated/prisma/client";
@@ -122,17 +123,26 @@ function toPublicDisplay(
   };
 }
 
+/**
+ * 呼び出し側は `paymentStatus` だけを渡す。
+ *
+ * 「オンライン決済が使えるか」の判定はここで閉じる（監査 F-133）。呼び出し側に
+ * 渡させると `isFeatureEnabled("payment")`（業務層だけ）を渡す事故が起きる —
+ * 実際に 4 経路すべてがそうなっていた。
+ */
 export async function resolveTransferAccountsForCustomerDisplay(input: {
-  paymentFeatureEnabled: boolean;
   paymentStatus: PaymentStatus;
 }): Promise<{
   accounts: TransferAccountPublicDisplay[];
   guidance: string | null;
 } | null> {
-  const activeCount = await countActiveTransferAccounts();
+  const [activeCount, onlinePaymentAvailable] = await Promise.all([
+    countActiveTransferAccounts(),
+    isOnlinePaymentAvailable(),
+  ]);
   if (
     !shouldShowTransferAccounts({
-      paymentFeatureEnabled: input.paymentFeatureEnabled,
+      onlinePaymentAvailable,
       paymentStatus: input.paymentStatus,
       activeAccountCount: activeCount,
     })

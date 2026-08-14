@@ -156,7 +156,7 @@ describe("getEventEmailRenderContext()", () => {
         },
       ],
       transferGuidance: "お振込の際は予約番号をご記入ください。",
-      paymentFeatureEnabled: false,
+      onlinePaymentAvailable: false,
     });
   });
 });
@@ -187,7 +187,7 @@ describe("getReservationEmailRenderContext()", () => {
         },
       ],
       transferGuidance: "お振込の際は予約番号をご記入ください。",
-      paymentFeatureEnabled: false,
+      onlinePaymentAvailable: false,
     });
   });
 

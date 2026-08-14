@@ -55,7 +55,10 @@ mock.module("@/shared/lib/stripe", () => ({
   }),
 }));
 
+const actualAvailability = await import("@/shared/domain/payment/availability");
+// `mock.module` は完全置換。実モジュールを spread する（`.claude/rules/testing.md`）。
 mock.module("@/shared/domain/payment/availability", () => ({
+  ...actualAvailability,
   assertOnlinePaymentAvailable: () =>
     Promise.resolve({
       stripeSecretKey: "sk_test_dummy",

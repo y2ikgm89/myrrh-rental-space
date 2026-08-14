@@ -7,10 +7,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { StatusHubInvalidLinkView } from "@/public/components/status-hub/status-hub-invalid-link-view";
 import { StatusHubShell } from "@/public/components/status-hub/status-hub-shell";
 import { StatusHubTooManyRequestsView } from "@/public/components/status-hub/status-hub-too-many-requests-view";
-import {
-  isFeatureEnabled,
-  requireFeatureEnabled,
-} from "@/shared/domain/features/check";
+import { requireFeatureEnabled } from "@/shared/domain/features/check";
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForGuestStatus } from "@/shared/domain/events/registration-queries";
@@ -120,9 +117,7 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
   }
 
   const paymentStatus = getValidPaymentStatus(registration.paymentStatus);
-  const paymentFeatureEnabled = await isFeatureEnabled("payment");
   const transferDisplay = await resolveTransferAccountsForCustomerDisplay({
-    paymentFeatureEnabled,
     paymentStatus,
   });
   const receiptDownloadHref = registration.receiptSerialNo
