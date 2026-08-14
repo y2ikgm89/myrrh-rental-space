@@ -4,6 +4,7 @@ import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { CALENDAR_EVENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/calendar-token-cookie-names";
 
 const REGISTRATION_ID = "reg-456";
+const OTHER_REGISTRATION_ID = "reg-789";
 
 let mockCookieValue: string | undefined;
 
@@ -96,6 +97,84 @@ describe("GET /api/calendar/event/[registrationId]", () => {
       { params: Promise.resolve({ registrationId: REGISTRATION_ID }) },
     );
     expect(res.status).toBe(401);
+  });
+
+  test("drops a mismatched event cookie and serves the session-owned registration", async () => {
+    const cookieDelete = mock(() => undefined);
+    mockCookieValue = createCalendarToken("event", REGISTRATION_ID);
+    mock.module("next/headers", () => ({
+      cookies: mock(() =>
+        Promise.resolve({
+          get: (name: string) =>
+            name === CALENDAR_EVENT_TOKEN_COOKIE_NAME &&
+            mockCookieValue !== undefined
+              ? { value: mockCookieValue }
+              : undefined,
+          delete: cookieDelete,
+        }),
+      ),
+    }));
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() =>
+        Promise.resolve({ user: { id: "user-1" } }),
+      ),
+    }));
+    mock.module("@/shared/domain/customers/queries", () => ({
+      getCustomerByUserId: mock(() => Promise.resolve({ id: "cust-1" })),
+    }));
+    const getEventRegistrationForCalendar = mock(
+      (args: { registrationId: string; customerId?: string }) => {
+        if (
+          args.registrationId === OTHER_REGISTRATION_ID &&
+          args.customerId === "cust-1"
+        ) {
+          return Promise.resolve({
+            id: OTHER_REGISTRATION_ID,
+            eventTitle: "別ワークショップ",
+            customerName: "山田 太郎",
+            startTime: new Date("2026-05-02T10:00:00+09:00"),
+            endTime: new Date("2026-05-02T12:00:00+09:00"),
+            location: "東京",
+            quantity: 1,
+            icsSequence: 0,
+            status: "CONFIRMED",
+            format: "OFFLINE" as const,
+            meetingUrl: null,
+          });
+        }
+        return Promise.resolve(null);
+      },
+    );
+    mock.module("@/shared/domain/events/registration-queries", () => ({
+      getEventRegistrationForCalendar,
+    }));
+    mock.module("@/shared/domain/settings/queries/organization", () => ({
+      getIcalOrganizer: mock(() =>
+        Promise.resolve({
+          name: "Myrrh Rental Space",
+          email: "noreply@example.com",
+        }),
+      ),
+    }));
+
+    const { GET } =
+      await import("@/app/api/calendar/event/[registrationId]/route");
+    const res = await GET(
+      new Request(
+        `http://localhost/api/calendar/event/${OTHER_REGISTRATION_ID}`,
+      ),
+      { params: Promise.resolve({ registrationId: OTHER_REGISTRATION_ID }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain(
+      `UID:event-registration-${OTHER_REGISTRATION_ID}@`,
+    );
+    expect(getEventRegistrationForCalendar).toHaveBeenCalledWith({
+      registrationId: OTHER_REGISTRATION_ID,
+      customerId: "cust-1",
+    });
+    expect(cookieDelete).toHaveBeenCalled();
   });
 
   test("accepts a valid guest cookie token without session", async () => {

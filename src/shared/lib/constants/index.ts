@@ -24,5 +24,7 @@ export { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "./event-registratio
 export { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "./event-registration-payment-token-cookie-name";
 export {
   CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+  CALENDAR_RESERVATION_TOKEN_COOKIE_PATH,
   CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_PATH,
 } from "./calendar-token-cookie-names";
