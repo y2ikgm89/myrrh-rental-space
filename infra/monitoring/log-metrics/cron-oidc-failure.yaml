@@ -1,8 +1,19 @@
 # Counts /api/cron/* requests rejected by our OIDC bearer token gate
-# (authorizeCronRequest). We hit this via 401 responses whose Cloud Run
-# request log is scoped to the /api/cron path prefix, plus our own 500
-# fail-closed emissions when CRON_OIDC_AUDIENCE or CRON_SERVICE_ACCOUNT_EMAIL
-# is missing at runtime.
+# (authorizeCronRequest). Two emit sites, and only those two:
+#
+#   1. HTTP 401 on /api/cron/* — missing / invalid / wrong-SA bearer token.
+#      The 401 paths log at MEDIUM (= WARNING), so the request log is the
+#      only countable signal.
+#   2. authorizeCronRequest's fail-closed 500 when CRON_OIDC_AUDIENCE or
+#      CRON_SERVICE_ACCOUNT_EMAIL is missing. That path logs
+#      ErrorSeverity.CRITICAL + ErrorCategory.AUTHORIZATION (the only
+#      CRITICAL+AUTHORIZATION site). We match the structured log, not
+#      httpRequest.status=500 — generic cron handler 500s (Instagram /
+#      Prisma / etc.) must not increment this metric.
+#
+# Generic cron handler 500s are out of scope here. They already reach
+# reported-error-burst (HIGH) and/or severity-critical (CRITICAL) via
+# their own log lines. Do not fold them into cron_oidc_failure.
 #
 # Apply with:
 #   gcloud logging metrics create cron_oidc_failure \
@@ -11,12 +22,23 @@
 filter: |-
   resource.type="cloud_run_revision"
   resource.labels.service_name="myrrh-rental-space"
-  httpRequest.requestUrl=~"/api/cron/"
-  (httpRequest.status=401 OR httpRequest.status=500)
+  (
+    (
+      httpRequest.requestUrl=~"/api/cron/"
+      httpRequest.status=401
+    )
+    OR
+    (
+      severity="CRITICAL"
+      jsonPayload.category="AUTHORIZATION"
+    )
+  )
 
 description: |-
-  Count of /api/cron/* requests that failed the OIDC bearer token gate or the
-  cron-config fail-closed check. Feeds the cron-oidc-failure alert policy.
+  Count of /api/cron/* OIDC bearer-token rejections (401) and
+  authorizeCronRequest config-missing fail-closed emissions (CRITICAL +
+  AUTHORIZATION). Generic cron handler 500s are excluded. Feeds the
+  cron-oidc-failure alert policy.
 
 metricDescriptor:
   metricKind: DELTA
