@@ -7,6 +7,7 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
@@ -15,13 +16,19 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { requireSystemPagePublished } from "@/shared/domain/pages/require-published-server";
 
+interface AboutPageProps {
+  readonly searchParams: Promise<SearchParams>;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
 
   return generatePageMetadata("about");
 }
 
-export default async function AboutPage(): Promise<ReactElement> {
+export default async function AboutPage({
+  searchParams,
+}: AboutPageProps): Promise<ReactElement> {
   await connection();
   await requireSystemPagePublished("about");
 
@@ -29,7 +36,11 @@ export default async function AboutPage(): Promise<ReactElement> {
 
   return (
     <PageLayout variant="content" cta={<SiteCTA />}>
-      <SectionStack sections={sections} pageSlug="about" />
+      <SectionStack
+        sections={sections}
+        pageSlug="about"
+        searchParams={searchParams}
+      />
     </PageLayout>
   );
 }

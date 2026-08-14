@@ -10,11 +10,16 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+
+interface HomePageProps {
+  readonly searchParams: Promise<SearchParams>;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -22,10 +27,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("home");
 }
 
-export default async function HomePage(): Promise<ReactElement> {
+export default async function HomePage({
+  searchParams,
+}: HomePageProps): Promise<ReactElement> {
   await connection();
 
   const sections = await getPageSectionsWithFallback("home");
 
-  return <SectionStack sections={sections} pageSlug="home" />;
+  return (
+    <SectionStack
+      sections={sections}
+      pageSlug="home"
+      searchParams={searchParams}
+    />
+  );
 }

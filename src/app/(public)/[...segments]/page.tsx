@@ -13,6 +13,7 @@
  */
 
 import type { Metadata } from "next";
+import type { SearchParams } from "nuqs/server";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
@@ -23,6 +24,7 @@ import { ManagedPageSections } from "@/public/components/pages/ManagedPageSectio
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
+  searchParams: Promise<SearchParams>;
 }
 
 export async function generateMetadata({
@@ -49,7 +51,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function DynamicPage({ params }: PageProps) {
+export default async function DynamicPage({ params, searchParams }: PageProps) {
   await connection();
 
   const { segments } = await params;
@@ -69,7 +71,11 @@ export default async function DynamicPage({ params }: PageProps) {
               { name: page.title, url: `/${slug}` },
             ]}
           />
-          <ManagedPageSections sections={sections} pageSlug={slug} />
+          <ManagedPageSections
+            sections={sections}
+            pageSlug={slug}
+            searchParams={searchParams}
+          />
         </>
       );
     }

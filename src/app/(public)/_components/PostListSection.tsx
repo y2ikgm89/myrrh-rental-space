@@ -58,12 +58,18 @@ interface PostListSectionProps {
   readonly config: PostListConfig;
   readonly style: SectionStylePayload;
   readonly mode: PostListMode;
+  /**
+   * archive Pagination の path。埋め込みページで `/blog` へ飛ばないようにする。
+   * 未指定時は `/`（home）。呼び出し側は catalogBasePathFromPageSlug を渡す。
+   */
+  readonly catalogBasePath?: string;
 }
 
 export function PostListSection({
   config,
   style,
   mode,
+  catalogBasePath = "/",
 }: PostListSectionProps): ReactElement {
   if (mode.kind === "archive") {
     const hasFilters = Boolean(mode.query);
@@ -86,7 +92,7 @@ export function PostListSection({
             <Pagination
               currentPage={mode.currentPage}
               totalPages={mode.totalPages}
-              basePath="/blog"
+              basePath={catalogBasePath}
               {...(Object.keys(preservedQuery).length > 0
                 ? { preservedQuery }
                 : {})}
