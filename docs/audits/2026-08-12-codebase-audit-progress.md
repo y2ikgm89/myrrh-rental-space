@@ -149,7 +149,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-106](2026-08-12-codebase-audit-findings.md#f-106) | 低     | #2305                                      | 繰上げ当選の残り 30 分未満を `reason=too-late` に振り、CRITICAL と期限切れ画面を出さない                         | —                                                                                       |
 | [F-104](2026-08-12-codebase-audit-findings.md#f-104) | 低     | #2306                                      | 予約確認の合計を `pricePreview.totalPriceWithTax` + `formatPrice` で描く。STANDARD 再課税をやめた                | SpaceCard / JSON-LD / `resolvePublicDisplayPrice` は範囲外                              |
 | [F-105](2026-08-12-codebase-audit-findings.md#f-105) | 低     | #2307                                      | custom / home / about / preview から archive の searchParams を通し、Pagination を page slug 相対にする          | `/blog`・`/news` 本体は当初から forward 済み                                            |
-| [F-111](2026-08-12-codebase-audit-findings.md#f-111) | 低     |                                            | cookie の target mismatch / expiry で 401/410 せず、cookie を捨てて session + 所有権へ                           | —                                                                                       |
+| [F-111](2026-08-12-codebase-audit-findings.md#f-111) | 低     | #2309                                      | cookie の target mismatch / expiry で 401/410 せず、cookie を捨てて session + 所有権へ                           | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
