@@ -780,7 +780,7 @@ async function seedLocations(overridePublished?: boolean) {
 // Space Categories
 // =============================================================================
 
-async function seedSpaceCategories() {
+async function seedSpaceCategories(reconcile = true) {
   // sortOrder は fixture に書かない: create 時に max+1 を都度採番するため
   // 配列の宣言順がそのまま表示順になる（無条件 @unique 衝突を構造的に回避）。
   const categories = [
@@ -820,11 +820,18 @@ async function seedSpaceCategories() {
   // 無効化済み行が既に別の sortOrder を占有している状況の re-seed で
   // P2002 衝突を起こしうる（`createSpaceCategory` ドメインコマンドと同様に
   // 都度 max+1 を計算して採番する）。
+  //
+  // **本番 seed（`seedSpaceCategories(false)`）は既存行に触らない。**
+  // description / icon / color を宣言値へ戻さない。dev だけが収束させる。
   for (const cat of categories) {
     const existing = await prisma.spaceCategory.findFirst({
       where: { name: cat.name, isActive: true },
     });
     if (existing) {
+      if (!reconcile) {
+        console.log(`⏭️ Skipped existing space category: ${cat.name}`);
+        continue;
+      }
       // Re-seed 時は sortOrder を上書きしない（無条件 @unique 衝突回避）。
       await prisma.spaceCategory.update({
         where: { id: existing.id },
@@ -4278,6 +4285,19 @@ const SEED_NAVIGATION_GROUPS = [
  *   `seedLocations(false)` / `seedFaq(false)` と同じ dev/prod 分離の形。
  */
 async function seedNavigation(reconcile = true) {
+  // 本番（reconcile=false）は空テーブルの初回投入だけ create する。
+  // 欠けた (type, order) を埋め直すと、管理画面の削除+並び替え後に
+  // 宣言配列の末尾項目が重複する。
+  if (!reconcile) {
+    const existingCount = await prisma.navigationItem.count();
+    if (existingCount !== 0) {
+      console.log(
+        `⏭️ Skipped existing navigation items (${existingCount.toString()} already exist)`,
+      );
+      return;
+    }
+  }
+
   for (const group of SEED_NAVIGATION_GROUPS) {
     for (const item of group.items) {
       // label は PortableTextSpan[]（テキスト + アイコン混在の token 配列）。
@@ -4302,7 +4322,7 @@ async function seedNavigation(reconcile = true) {
       // seed が置くのは全て内部パス（`/spaces` 等）なので `isExternal: false`、
       // トップレベル項目なので `parentId: null` が宣言値。
       const declaredContent = {
-        label,
+        label: label,
         url: item.url,
         isExternal: false,
         isActive: true,
@@ -6261,7 +6281,7 @@ async function seedProduction(email: string | undefined, name: string) {
 
   // Phase 2: マスターデータ（下書きとして作成 — 管理画面で実際の情報に更新後に公開する）
   await seedLocations(false);
-  await seedSpaceCategories();
+  await seedSpaceCategories(false);
 
   // Phase 3: スペース（下書きとして作成 — 管理画面で内容更新後に公開する）
   await seedSpaces(false);

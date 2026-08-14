@@ -53,6 +53,24 @@ function declarableColumns(): string[] {
     .filter((name) => !/^(parent|children)$/u.test(name));
 }
 
+/**
+ * コメントに列名があるだけでは宣言したことにならない。
+ * `//` と `/* *\/` を落としてから、キー位置 (`name:`) だけを見る。
+ */
+function stripDeclaredComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//gu, "").replace(/\/\/.*$/gmu, "");
+}
+
+function missingDeclaredColumns(
+  declaredBlock: string,
+  columns: readonly string[],
+): string[] {
+  const code = stripDeclaredComments(declaredBlock);
+  return columns.filter(
+    (column) => !new RegExp(`\\b${column}\\s*:`, "u").test(code),
+  );
+}
+
 describe("ナビゲーションの reconcile", () => {
   test("宣言内容を create と update で共有している", () => {
     const body = seedNavigationBody();
@@ -76,11 +94,26 @@ describe("ナビゲーションの reconcile", () => {
     // gate が空振りしていないこと（schema の読み取りが腐ると空配列になる）。
     expect(columns.length).toBeGreaterThan(0);
 
-    const missing = columns.filter(
-      (column) => !new RegExp(`\\b${column}\\b`, "u").test(String(declared[1])),
-    );
+    expect(missingDeclaredColumns(String(declared[1]), columns)).toEqual([]);
+  });
 
-    expect(missing).toEqual([]);
+  test("コメントに列名があるだけでは宣言したことにならない", () => {
+    // F-86: ブレース内コメントに 3 キーを書くだけで素通りしていた形。
+    const commentOnly = `
+        label: label,
+        url: item.url,
+        // isExternal / isActive / parentId は管理画面の編集を尊重するため戻さない
+    `;
+
+    expect(
+      missingDeclaredColumns(commentOnly, [
+        "parentId",
+        "label",
+        "url",
+        "isExternal",
+        "isActive",
+      ]),
+    ).toEqual(["parentId", "isExternal", "isActive"]);
   });
 
   test("本番の再実行は既存行を書き換えない", () => {
@@ -95,5 +128,11 @@ describe("ナビゲーションの reconcile", () => {
     );
     if (!prod) throw new Error("seedProduction が見つかりません");
     expect(prod[0]).toContain("seedNavigation(false)");
+
+    // F-90: 欠けた (type, order) を本番で create しない。
+    // 空テーブルの初回投入だけが create してよい。
+    expect(body).toContain("if (!reconcile)");
+    expect(body).toContain("prisma.navigationItem.count()");
+    expect(body).toMatch(/existingCount\s*(?:=== 0|!== 0|> 0)/u);
   });
 });
