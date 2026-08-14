@@ -271,7 +271,7 @@ describe("event registration query slot consistency", () => {
     expect(rows[0]?.event.location).toBe("青山");
   });
 
-  test("findEventRegistrationsForReminderWindow は CONFIRMED + 未送信 + 窓内 + email あり + 未削除イベントで絞り込む", async () => {
+  test("findEventRegistrationsForReminderWindow は CONFIRMED + 未送信 + 窓内 + email あり + 未削除イベント + 非匿名化顧客で絞り込む", async () => {
     const start = new Date("2026-07-15T00:00:00.000Z");
     const end = new Date("2026-07-15T23:59:59.999Z");
     mockRegistrationFindMany.mockImplementationOnce(() => Promise.resolve([]));
@@ -286,6 +286,8 @@ describe("event registration query slot consistency", () => {
         email: { not: null },
         event: { deletedAt: null },
         slot: { startAt: { gte: start, lte: end } },
+        // 監査 F-112: 匿名化済み顧客は宛先を持たない（placeholder は MX の無い .local）。
+        OR: [{ customerId: null }, { customer: { anonymizedAt: null } }],
       },
       select: {
         id: true,

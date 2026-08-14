@@ -21,6 +21,7 @@ const mockCustomerFindUnique = mock<
   () => Promise<{
     id: string;
     emailDeliveryStatus: EmailDeliveryStatus;
+    suppressedEmailHash: string | null;
   } | null>
 >(() => Promise.resolve(null));
 
@@ -31,6 +32,7 @@ const mockCustomerUpdate = mock<
       emailDeliveryStatus: EmailDeliveryStatus;
       emailDeliveryUpdatedAt: Date;
       emailDeliveryReason: null;
+      suppressedEmailHash: null;
     };
   }) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "customer-1" }));
@@ -94,6 +96,7 @@ describe("resetCustomerEmailDeliveryStatusCommand", () => {
       mockCustomerFindUnique.mockResolvedValueOnce({
         id: CUSTOMER_ID,
         emailDeliveryStatus: EmailDeliveryStatus.HARD_BOUNCED,
+        suppressedEmailHash: null,
       });
 
       const result = await resetCustomerEmailDeliveryStatusCommand(CUSTOMER_ID);
@@ -112,6 +115,7 @@ describe("resetCustomerEmailDeliveryStatusCommand", () => {
       mockCustomerFindUnique.mockResolvedValueOnce({
         id: CUSTOMER_ID,
         emailDeliveryStatus: EmailDeliveryStatus.COMPLAINED,
+        suppressedEmailHash: null,
       });
 
       const result = await resetCustomerEmailDeliveryStatusCommand(CUSTOMER_ID);
@@ -124,6 +128,7 @@ describe("resetCustomerEmailDeliveryStatusCommand", () => {
       mockCustomerFindUnique.mockResolvedValueOnce({
         id: CUSTOMER_ID,
         emailDeliveryStatus: EmailDeliveryStatus.SOFT_BOUNCED,
+        suppressedEmailHash: null,
       });
 
       const result = await resetCustomerEmailDeliveryStatusCommand(CUSTOMER_ID);
@@ -134,16 +139,32 @@ describe("resetCustomerEmailDeliveryStatusCommand", () => {
   });
 
   describe("冪等 no-op", () => {
-    test("既に OK ならば update を呼ばず previous: OK を返す", async () => {
+    test("既に OK かつ hash 抑制も無ければ update を呼ばず previous: OK を返す", async () => {
       mockCustomerFindUnique.mockResolvedValueOnce({
         id: CUSTOMER_ID,
         emailDeliveryStatus: EmailDeliveryStatus.OK,
+        suppressedEmailHash: null,
       });
 
       const result = await resetCustomerEmailDeliveryStatusCommand(CUSTOMER_ID);
 
       expect(result).toEqual({ previous: EmailDeliveryStatus.OK });
       expect(mockCustomerUpdate).not.toHaveBeenCalled();
+    });
+
+    // 監査 F-44: 統合・匿名化で持ち越された hash は status に現れないため、
+    // status だけで no-op を判定すると**復旧経路が 1 つも無くなる**。
+    test("status が OK でも hash 抑制があればリセットする", async () => {
+      mockCustomerFindUnique.mockResolvedValueOnce({
+        id: CUSTOMER_ID,
+        emailDeliveryStatus: EmailDeliveryStatus.OK,
+        suppressedEmailHash: "a".repeat(64),
+      });
+
+      const result = await resetCustomerEmailDeliveryStatusCommand(CUSTOMER_ID);
+
+      expect(result).toEqual({ previous: EmailDeliveryStatus.OK });
+      expect(mockCustomerUpdate).toHaveBeenCalledTimes(1);
     });
   });
 

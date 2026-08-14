@@ -259,6 +259,9 @@ export async function getCustomerById(
     marketingOptIn: customer.marketingOptIn,
     phoneContactOptIn: customer.phoneContactOptIn,
     emailDeliveryStatus: customer.emailDeliveryStatus,
+    // hash 経路の抑制は `emailDeliveryStatus` に現れない。**管理者から見えないと
+    // 復旧できない**ので、hash 値そのものは出さずに有無だけ渡す（監査 F-44）。
+    emailSuppressedByHash: customer.suppressedEmailHash !== null,
     userId: customer.userId,
     flaggedForReviewAt: customer.flaggedForReviewAt?.toISOString() ?? null,
     flagReasons: customer.flagReasons,

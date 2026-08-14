@@ -413,8 +413,9 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
           </CardContent>
         </Card>
 
-        {/* メール配信状態（HARD_BOUNCED / COMPLAINED / SOFT_BOUNCED のときのみ表示） */}
-        {customer.emailDeliveryStatus !== EmailDeliveryStatus.OK ? (
+        {/* メール配信状態。status 経路と hash 経路のどちらかで抑制されていれば出す */}
+        {customer.emailDeliveryStatus !== EmailDeliveryStatus.OK ||
+        customer.emailSuppressedByHash ? (
           <Card className="border-warning/40">
             <CardHeader>
               <CardTitle>メール配信</CardTitle>
@@ -425,6 +426,12 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                   現在:{" "}
                   {EMAIL_DELIVERY_STATUS_LABELS[customer.emailDeliveryStatus]}
                 </p>
+                {customer.emailSuppressedByHash ? (
+                  <p className="text-warning text-sm">
+                    過去のアドレスの抑制が持ち越されています（統合・匿名化由来）。
+                    解除するとこの持ち越しも消えます。
+                  </p>
+                ) : null}
                 <p className="text-muted-foreground text-sm">
                   Resend Webhook
                   が観測したバウンス・苦情申告のため、この顧客宛の

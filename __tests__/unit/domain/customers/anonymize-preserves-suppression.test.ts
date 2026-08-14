@@ -364,7 +364,10 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     );
   });
 
-  test("OK 状態の Customer を anonymize しても suppressedEmailHash は書き込まれない", async () => {
+  // 監査 F-112 でこの主張は反転した。placeholder は MX の無い `.local` なので、
+  // suppression に載せないと退会後のリマインダが必ず hard bounce し、その後は
+  // cron が claim を解放し続けるループになる。
+  test("OK 状態でも placeholder 自身の hash が suppressedEmailHash に入る", async () => {
     mockCustomerFindUnique.mockResolvedValueOnce({
       id: CUSTOMER_ID,
       userId: null,
@@ -379,12 +382,14 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
       reason: "customer-requested",
     });
 
+    // 実アドレスの suppression を持ち越したわけではない。
     expect(result.preservedSuppression).toBe(false);
 
     const data = extractUpdateCallData(mockCustomerUpdate);
     expect(data).not.toBeNull();
-    // suppressedEmailHash key は data payload に含まれない (spread で省略)
-    expect(data?.["suppressedEmailHash"]).toBeUndefined();
+    expect(data?.["suppressedEmailHash"]).toBe(
+      hashSuppressedEmailCandidate(`deleted+${CUSTOMER_ID}@anonymized.local`),
+    );
   });
 
   test("COMPLAINED の Customer を anonymize すると hash が保存される (COMPLAINED も抑制対象)", async () => {
@@ -410,7 +415,7 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     );
   });
 
-  test("SOFT_BOUNCED は抑制対象ではないため suppressedEmailHash は書き込まれない", async () => {
+  test("SOFT_BOUNCED は持ち越さないが、placeholder 自身の hash は入る", async () => {
     // SOFT_BOUNCED は一時的な失敗のため suppression 対象外
     // (getSuppressedEmailSet の where 条件と一致することを担保する)。
     mockCustomerFindUnique.mockResolvedValueOnce({
@@ -427,9 +432,12 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
       reason: "customer-requested",
     });
 
+    // SOFT_BOUNCED は一時的な失敗なので実アドレスの持ち越しはしない。
     expect(result.preservedSuppression).toBe(false);
     const data = extractUpdateCallData(mockCustomerUpdate);
-    expect(data?.["suppressedEmailHash"]).toBeUndefined();
+    expect(data?.["suppressedEmailHash"]).toBe(
+      hashSuppressedEmailCandidate(`deleted+${CUSTOMER_ID}@anonymized.local`),
+    );
   });
 
   test("anonymize 前の emailCanonical hash が sendEmail 側の hashSuppressedEmailCandidate と一致する (semantic 等価性を pin)", async () => {

@@ -638,6 +638,10 @@ export async function findReservationsForReminderWindow(
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       deletedAt: null,
       reminderSentAt: null,
+      // 匿名化済み顧客は宛先を持たない（placeholder は MX の無い `.local`）。
+      // 母集合から外さないと、送信境界で suppressed になるたびに cron が claim を
+      // 解放し、同じウィンドウの間ずっと再試行を繰り返す（監査 F-112）。
+      customer: { anonymizedAt: null },
     },
     select: {
       id: true,

@@ -90,6 +90,14 @@ export type CustomerWithReservationsAndAccount = Serialized<
      * OK にリセットできる (RESEND-AUDIT M8)。
      */
     emailDeliveryStatus: EmailDeliveryStatus;
+    /**
+     * suppressedEmailHash 経路で抑制されているか（hash 値そのものは出さない）。
+     *
+     * 統合・匿名化で持ち越された hash は `emailDeliveryStatus` に現れないため、
+     * これが無いと管理者は「なぜメールが届かないのか」を画面から知りようがない
+     * （監査 F-44）。
+     */
+    emailSuppressedByHash: boolean;
   }
 >;
 
