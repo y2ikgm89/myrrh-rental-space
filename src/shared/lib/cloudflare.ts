@@ -95,10 +95,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+type CallPurgeApiOptions = {
+  retry?: boolean;
+  signal?: AbortSignal;
+};
+
 async function callPurgeApi(
   zoneId: string,
   apiToken: string,
   body: Record<string, unknown>,
+  options?: CallPurgeApiOptions,
 ): Promise<PurgeResult> {
   // Zone ID は env schema で 32-char hex を regex 検証済み。
   // ここでの追加検証は冗長なので削除。SSRF 対策のため URL API で path をエスケープ。
@@ -107,7 +113,10 @@ async function callPurgeApi(
     "https://api.cloudflare.com",
   );
 
-  for (let attempt = 0; attempt <= PURGE_API_MAX_RETRIES; attempt++) {
+  const maxRetries = options?.retry === false ? 0 : PURGE_API_MAX_RETRIES;
+  const signal = options?.signal ?? AbortSignal.timeout(10000);
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(apiUrl.toString(), {
         method: "POST",
@@ -116,7 +125,7 @@ async function callPurgeApi(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10000),
+        signal,
       });
 
       // 認証・認可エラーは retry しても回復しないため即時失敗
@@ -291,8 +300,9 @@ export async function callPurgeApiPublic(
   zoneId: string,
   apiToken: string,
   body: Record<string, unknown>,
+  options?: CallPurgeApiOptions,
 ): Promise<PurgeResult> {
-  return callPurgeApi(zoneId, apiToken, body);
+  return callPurgeApi(zoneId, apiToken, body, options);
 }
 
 // ============================================================
