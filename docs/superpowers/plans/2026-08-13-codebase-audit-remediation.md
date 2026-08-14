@@ -191,7 +191,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（55 件）
+### フェーズ 4 — 中（54 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
@@ -242,7 +242,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-46](../../audits/2026-08-12-codebase-audit-findings.md#f-46)   | 中     | `src/shared/domain/events/event-calendar-import-commands.ts:216`                                              | Google Calendar 側でイベントを消すと、公開済み・申込ありのイベントまで無条件に CANCELLED にされる                                                               |
 | [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `src/shared/domain/events/event-slot-sync-commands.ts:176`                                                    | EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位                                                                    |
 | [F-49](../../audits/2026-08-12-codebase-audit-findings.md#f-49)   | 中     | `src/shared/domain/events/payment-queries.ts:428`                                                             | 非同期返金の確定処理が AUTO\_ON\_CANCEL を「常に全額」と決め打ちし、ポリシー按分の部分返金を REFUNDED に確定させる                                              |
-| [F-50](../../audits/2026-08-12-codebase-audit-findings.md#f-50)   | 中     | `src/shared/domain/events/registration-queries.ts:85`                                                         | 管理画面の返金残額が failed / canceled な Refund 行も合算し、返金再試行の導線を塞ぐ                                                                             |
 | [F-51](../../audits/2026-08-12-codebase-audit-findings.md#f-51)   | 中     | `src/shared/domain/faq/analytics-commands.ts:12`                                                              | 公開 FAQ の閲覧・投票が updatedAt を更新するため、鮮度チェック cron と管理画面の「未更新」指標が恒久的に 0 になる                                               |
 | [F-52](../../audits/2026-08-12-codebase-audit-findings.md#f-52)   | 中     | `src/shared/domain/inquiries/anonymize-commands.ts:83`                                                        | 匿名化が Inquiry.subject（自由記入 200 文字）を消さず、GDPR 相当の削除後も件名の PII が残り続ける                                                               |
 | [F-53](../../audits/2026-08-12-codebase-audit-findings.md#f-53)   | 中     | `src/shared/domain/pages/system-pages-commands.ts:40`                                                         | システムページから削除したセクションが、編集画面を開くたび／管理サービス起動のたびに初期デモ文言つきで復活する                                                  |

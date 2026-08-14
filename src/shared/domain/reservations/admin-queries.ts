@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { MS_PER_DAY, formatJstDateString } from "@/shared/lib/date-format";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
@@ -387,7 +388,14 @@ export async function getReservationByIdQuery(id: string) {
       // 済み累積額) を計算するために必要。events 側の getEventRegistrations
       // (registration-queries.ts) と同型の select。amount 合計は呼び出し側
       // (ReservationDetail.tsx) で reduce する。
+      //
+      // failed / canceled な返金は「返金済み額」ではない。ここで絞らないと
+      // RefundDialog が嘘の累積額・残額を表示し、正当な返金額の入力を拒否する。
+      // ドメイン側・DB 側と同じ SSoT を使う。
       refunds: {
+        where: {
+          status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+        },
         select: {
           amount: true,
         },
