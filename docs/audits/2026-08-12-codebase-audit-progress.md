@@ -130,7 +130,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-79](2026-08-12-codebase-audit-findings.md#f-79)   | 低     | #2290                                      | required-check path filter gate を Bun.YAML.parse にし、flow 形式 `paths: [terraform/**]` も検出する     | —                                                                                       |
 | [F-81](2026-08-12-codebase-audit-findings.md#f-81)   | 低     | #2291                                      | header 母集合をクラス集合の lookahead に。操作列は `cn()` の文字列引数も見る                             | —                                                                                       |
 | [F-76](2026-08-12-codebase-audit-findings.md#f-76)   | 低     | #2292                                      | extractImportSpecifiers が走査前にコメントを除去。JSDoc @example の import は辺にならない                | —                                                                                       |
-| [F-95](2026-08-12-codebase-audit-findings.md#f-95)   | 低     | —                                          | GCal 設定保存で NOTIFICATION_SETTINGS も無効化。coverage gate に 2 列を追加                              | —                                                                                       |
+| [F-95](2026-08-12-codebase-audit-findings.md#f-95)   | 低     | #2294                                      | GCal 設定保存で NOTIFICATION_SETTINGS も無効化。coverage gate に 2 列を追加                              | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
