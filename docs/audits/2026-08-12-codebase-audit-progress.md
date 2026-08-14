@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  41 |  16 |  57 |
-| 合計   | 116 |  16 | 132 |
+| 低     |  43 |  14 |  57 |
+| 合計   | 118 |  14 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 16 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 14 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -150,6 +150,8 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-104](2026-08-12-codebase-audit-findings.md#f-104) | 低     | #2306                                      | 予約確認の合計を `pricePreview.totalPriceWithTax` + `formatPrice` で描く。STANDARD 再課税をやめた                | SpaceCard / JSON-LD / `resolvePublicDisplayPrice` は範囲外                              |
 | [F-105](2026-08-12-codebase-audit-findings.md#f-105) | 低     | #2307                                      | custom / home / about / preview から archive の searchParams を通し、Pagination を page slug 相対にする          | `/blog`・`/news` 本体は当初から forward 済み                                            |
 | [F-113](2026-08-12-codebase-audit-findings.md#f-113) | 低     | #2308                                      | GET の DL rate limit を ownership 通過後に移し、他人の serialNo で共有バケットを焼けなくした                     | POST は token 検証後のまま                                                              |
+| [F-107](2026-08-12-codebase-audit-findings.md#f-107) | 低     | #2312                                      | 統合成功を `?merged=ok` にし、`/mypage` が定数文言の FlashMessage を出す                                         | —                                                                                       |
+| [F-109](2026-08-12-codebase-audit-findings.md#f-109) | 低     | #2312                                      | confirm の `error` をセンチネル対応表だけから引き、未知値は既定文言。生クエリは出さない                          | —                                                                                       |
 | [F-111](2026-08-12-codebase-audit-findings.md#f-111) | 低     | #2309                                      | cookie の target mismatch / expiry で 401/410 せず、cookie を捨てて session + 所有権へ                           | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
