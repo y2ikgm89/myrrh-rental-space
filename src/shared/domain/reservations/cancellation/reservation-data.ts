@@ -77,7 +77,7 @@ export function buildEmailPayload(
     spaceName: reservation.space.name,
     startTime: reservation.startTime,
     endTime: reservation.endTime,
-    totalPrice: reservation.totalPrice,
+    totalPriceWithTax: reservation.totalPriceWithTax,
     ...(notes !== undefined && { notes }),
     ...(location !== undefined && { location }),
     icsSequence: reservation.icsSequence,

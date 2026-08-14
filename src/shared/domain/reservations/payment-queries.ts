@@ -45,6 +45,8 @@ const PAYMENT_EMAIL_SELECT = {
   startTime: true,
   endTime: true,
   totalPrice: true,
+  // メール本文は税込を出す（監査 F-74）。
+  totalPriceWithTax: true,
   notes: true,
   paymentStatus: true,
   status: true,

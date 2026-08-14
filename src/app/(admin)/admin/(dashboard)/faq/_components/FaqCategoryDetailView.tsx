@@ -34,7 +34,6 @@ type FaqCategoryDetailViewProps = {
   readonly currentSortBy: AdminFaqItemSortBy;
   readonly currentSortOrder: SortOrder;
   readonly reorderEnabled: boolean;
-  readonly startIndex: number;
   readonly totalItems: number;
   /** feature OFF 時は質問の新規追加を出さない（編集は可） */
   readonly allowCreate?: boolean;
@@ -47,7 +46,6 @@ export function FaqCategoryDetailView({
   currentSortBy,
   currentSortOrder,
   reorderEnabled,
-  startIndex,
   totalItems,
   allowCreate = true,
 }: FaqCategoryDetailViewProps) {
@@ -123,7 +121,6 @@ export function FaqCategoryDetailView({
         currentSortBy={currentSortBy}
         currentSortOrder={currentSortOrder}
         reorderEnabled={reorderEnabled}
-        startIndex={startIndex}
         onEditItem={handleEditItem}
         {...(allowCreate ? { onAddItem: handleAddItem } : {})}
       />

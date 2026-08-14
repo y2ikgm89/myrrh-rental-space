@@ -36,7 +36,7 @@ export interface BuildRruleInput {
   byday?: readonly Weekday[];
   /** COUNT (COUNT と UNTIL は排他、COUNT を優先)。 */
   count?: number;
-  /** UNTIL の日付部分 (`YYYY-MM-DD`)。時刻部は末尾 T000000Z 固定 (JST 起点日の UTC 深夜)。 */
+  /** UNTIL の日付部分 (`YYYY-MM-DD`)。時刻部は JST のその日の終わり (T145959Z)。 */
   until?: string;
 }
 
@@ -45,7 +45,7 @@ export interface BuildRruleInput {
  *
  * output 例:
  *   - `FREQ=WEEKLY;INTERVAL=1;BYDAY=TU,TH;COUNT=10`
- *   - `FREQ=DAILY;INTERVAL=2;UNTIL=20260901T000000Z`
+ *   - `FREQ=DAILY;INTERVAL=2;UNTIL=20260901T145959Z`
  *
  * 契約:
  *   - `INTERVAL` は常に出力 (省略時の暗黙 1 に依存させない)
@@ -70,10 +70,20 @@ export function buildRruleString(input: BuildRruleInput): string {
 }
 
 /**
- * `YYYY-MM-DD` を RFC 5545 UNTIL 形式 (`YYYYMMDDT000000Z`) に変換する。
- * JST カレンダー日付を UTC 深夜起点で解釈する series 契約に整合させる
- * (validation 側 `series-rrule.ts` と同じ zoning)。
+ * `YYYY-MM-DD`（JST の暦日）を RFC 5545 UNTIL 形式に変換する。
+ *
+ * **その日の終わり**を指す（監査 F-36）。旧実装は `T000000Z` で、これは
+ * JST 09:00 を意味していた。UNTIL は inclusive な上限なので、終了日当日の
+ * occurrence が JST 09:00 より後（既定営業時間 09:00-21:00 の実質すべての枠）だと
+ * rrule が除外し、**終了日当日の 1 件が必ず落ちる**。
+ *
+ * 「毎週火曜 10:00-12:00、終了日 2026-09-29」を 9/1 起点で作ると、UI の
+ * RecurrencePreview は 5 件（9/1・9/8・9/15・9/22・9/29）と表示するのに、実際は
+ * 4 件しか作られない。エラーも警告も出ず「4 件の予約を作成しました」とだけ出るので、
+ * 顧客は最終日の予約があると思って来訪する（その枠は他の予約に取られうる）。
+ *
+ * JST 23:59:59 = UTC 14:59:59。
  */
 function formatUntil(isoDate: string): string {
-  return `${isoDate.replaceAll("-", "")}T000000Z`;
+  return `${isoDate.replaceAll("-", "")}T145959Z`;
 }

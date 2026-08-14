@@ -216,7 +216,8 @@ export async function sendReservationConfirmationEmail(
             reservationDate,
             startTime,
             endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            // 税込（監査 F-74）。公開ページ・領収書・Stripe charge と同じ数字。
+            totalPrice: formatPrice(data.totalPriceWithTax, "未設定"),
             reservationId: data.reservationId.slice(0, 8).toUpperCase(),
             notes: data.notes,
             addToCalendarLinks,
@@ -366,7 +367,8 @@ export async function sendReservationUpdatedEmail(
             reservationDate,
             startTime,
             endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            // 税込（監査 F-74）。公開ページ・領収書・Stripe charge と同じ数字。
+            totalPrice: formatPrice(data.totalPriceWithTax, "未設定"),
             reservationId: data.reservationId.slice(0, 8).toUpperCase(),
             notes: data.notes,
             addToCalendarLinks,
@@ -582,7 +584,8 @@ export async function sendReservationStatusChangedEmail(
             reservationDate,
             startTime,
             endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            // 税込（監査 F-74）。公開ページ・領収書・Stripe charge と同じ数字。
+            totalPrice: formatPrice(data.totalPriceWithTax, "未設定"),
             reservationId: data.reservationId.slice(0, 8).toUpperCase(),
             newStatus: data.newStatus,
             location: data.location,
@@ -709,7 +712,8 @@ export async function sendReservationAdminNotification(
             reservationDate,
             startTime,
             endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
+            // 税込（監査 F-74）。公開ページ・領収書・Stripe charge と同じ数字。
+            totalPrice: formatPrice(data.totalPriceWithTax, "未設定"),
             reservationId: data.reservationId.slice(0, 8).toUpperCase(),
             adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
             footer,
