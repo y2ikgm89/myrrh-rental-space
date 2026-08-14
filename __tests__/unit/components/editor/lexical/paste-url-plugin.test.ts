@@ -1,15 +1,34 @@
 /**
- * PasteUrlPlugin の埋め込み種別判定ロジックのテスト
+ * PasteUrlPlugin の埋め込み種別判定と空段落ゲートのテスト
  *
  * @description `PasteUrlPlugin` は "use client" + useEffect の React component
- * のため直接 unit test しづらい。埋め込み種別判定を抽出した純粋関数
- * `detectPasteEmbed`（config/paste-embed-detector.ts）を検証することで、
- * PasteUrlPlugin の実質的な挙動（YouTube/Vimeo/Spotify/Figma を優先判定し、
- * どれにもマッチしない場合は OGP フェッチにフォールバックする）を担保する。
+ * のため直接 unit test しづらい。埋め込み種別判定は `detectPasteEmbed`、
+ * 空段落ゲートは `$isEmptyRootLevelBlock` に抽出して検証する。
  */
 
 import { describe, expect, test } from "bun:test";
+import { createHeadlessEditor } from "@lexical/headless";
+import { $createQuoteNode, QuoteNode } from "@lexical/rich-text";
+import { $createParagraphNode, $getRoot, type LexicalNode } from "lexical";
+import { $isEmptyRootLevelBlock } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/config/is-empty-root-level-block";
 import { detectPasteEmbed } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/config/paste-embed-detector";
+
+function readEmptyRootLevelBlock(build: () => LexicalNode): boolean {
+  const editor = createHeadlessEditor({
+    nodes: [QuoteNode],
+    onError: (error) => {
+      throw error;
+    },
+  });
+  let result = false;
+  editor.update(
+    () => {
+      result = $isEmptyRootLevelBlock(build());
+    },
+    { discrete: true },
+  );
+  return result;
+}
 
 describe("detectPasteEmbed", () => {
   test("YouTube の通常URLをYouTubeと判定する", () => {
@@ -72,5 +91,25 @@ describe("detectPasteEmbed", () => {
     // YouTubeの?v=パターンにマッチするURLで確認する
     const result = detectPasteEmbed("https://www.youtube.com/watch?v=abc123");
     expect(result?.type).toBe("youtube");
+  });
+});
+
+describe("$isEmptyRootLevelBlock", () => {
+  test("root 直下の空 ParagraphNode（element-type anchor）は対象になる", () => {
+    const isEmpty = readEmptyRootLevelBlock(() => {
+      const paragraph = $createParagraphNode();
+      $getRoot().append(paragraph);
+      return paragraph;
+    });
+    expect(isEmpty).toBe(true);
+  });
+
+  test("ネストした空段落は対象にならない", () => {
+    const isEmpty = readEmptyRootLevelBlock(() => {
+      const nested = $createParagraphNode();
+      $getRoot().append($createQuoteNode().append(nested));
+      return nested;
+    });
+    expect(isEmpty).toBe(false);
   });
 });

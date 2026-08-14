@@ -82,6 +82,7 @@ export class TabTitleNode extends ElementNode {
     const tabIndex = $getState(this, tabTitleIndexState);
     const isActive = $getState(this, tabTitleActiveState);
     const element = document.createElement("button");
+    element.setAttribute("type", "button");
     element.setAttribute("role", "tab");
     element.setAttribute("data-tab-index", String(tabIndex));
     element.setAttribute("aria-selected", String(isActive));
