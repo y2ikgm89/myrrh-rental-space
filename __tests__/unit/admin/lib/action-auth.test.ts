@@ -7,7 +7,7 @@ const mockLogUserAction = mock();
 mock.module("@/admin/lib/audit", () => ({
   logUserAction: (...args: Parameters<typeof mockLogUserAction>) =>
     mockLogUserAction(...args),
-  logPermissionDenied: mock(),
+  recordPermissionDenied: mock(),
 }));
 
 const { logAction } = await import("@/admin/lib/action-auth");

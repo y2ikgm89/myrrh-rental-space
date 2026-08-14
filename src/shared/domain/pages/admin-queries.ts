@@ -6,7 +6,13 @@ import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { PageAssignmentOption, PageData, PageListResult } from "./types";
 
-const PAGES_MANAGED_ELSEWHERE = ["posts", "news", "terms"];
+/**
+ * 専用画面で管理する slug（ページ一覧・検索の両方から外す）。
+ *
+ * コマンドパレット側でも同じ集合を使うので export する。写経すると片方だけ
+ * 変わって、一覧に出ないページが検索には出る（監査 F-92 / F-115）。
+ */
+export const PAGES_MANAGED_ELSEWHERE = ["posts", "news", "terms"];
 
 export type { PageAssignmentOption };
 

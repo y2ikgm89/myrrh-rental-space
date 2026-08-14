@@ -6,7 +6,7 @@ import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";
-import { logPermissionDenied } from "@/admin/lib/audit";
+import { recordPermissionDenied } from "@/admin/lib/audit";
 import { isDomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { withPurgeBatch } from "@/shared/lib/cache/batcher";
@@ -93,7 +93,7 @@ export async function executeAdminMutationResult<TData>(
 
   // 3. RBAC 権限チェック
   if (!hasPermission(user.role, options.resource, options.action)) {
-    void logPermissionDenied(
+    recordPermissionDenied(
       user.id,
       options.resource,
       options.action,
@@ -113,7 +113,7 @@ export async function executeAdminMutationResult<TData>(
       resourceId,
     );
     if (!allowed) {
-      void logPermissionDenied(
+      recordPermissionDenied(
         user.id,
         options.resource,
         options.action,
