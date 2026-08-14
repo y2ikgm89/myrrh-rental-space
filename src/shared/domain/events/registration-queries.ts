@@ -665,6 +665,9 @@ export async function findEventRegistrationsForReminderWindow(
       email: { not: null },
       event: { deletedAt: null },
       slot: { startAt: { gte: startOfWindow, lte: endOfWindow } },
+      // 予約側と同じ理由（監査 F-112）。匿名化済み顧客は宛先を持たない。
+      // `customerId` は nullable なので「顧客が居ない申込」は除外しない。
+      OR: [{ customerId: null }, { customer: { anonymizedAt: null } }],
     },
     select: {
       id: true,

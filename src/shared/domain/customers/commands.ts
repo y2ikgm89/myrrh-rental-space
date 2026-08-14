@@ -440,14 +440,24 @@ export async function resetCustomerEmailDeliveryStatusCommand(
 ): Promise<{ previous: EmailDeliveryStatus }> {
   const existing = await prisma.customer.findUnique({
     where: { id: customerId },
-    select: { id: true, emailDeliveryStatus: true },
+    select: {
+      id: true,
+      emailDeliveryStatus: true,
+      suppressedEmailHash: true,
+    },
   });
 
   if (!existing) {
     throw new DomainError("顧客が見つかりません", "NOT_FOUND");
   }
 
-  if (existing.emailDeliveryStatus === EmailDeliveryStatus.OK) {
+  // `suppressedEmailHash` にもリセット経路を与える（監査 F-44）。
+  // 旧実装は status だけを見ていたため、hash 経路で抑制されている顧客は
+  // status が OK のままで、管理画面から復旧する手段が 1 つも無かった。
+  if (
+    existing.emailDeliveryStatus === EmailDeliveryStatus.OK &&
+    existing.suppressedEmailHash === null
+  ) {
     return { previous: EmailDeliveryStatus.OK };
   }
 
@@ -457,6 +467,7 @@ export async function resetCustomerEmailDeliveryStatusCommand(
       emailDeliveryStatus: EmailDeliveryStatus.OK,
       emailDeliveryUpdatedAt: new Date(),
       emailDeliveryReason: null,
+      suppressedEmailHash: null,
     },
   });
 

@@ -191,11 +191,11 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（43 件）
+### フェーズ 4 — 中（42 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（57 件）
+### フェーズ 5 — 低（56 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -234,7 +234,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-39](../../audits/2026-08-12-codebase-audit-findings.md#f-39)   | 中     | `src/app/(public)/reservation/_components/reservation-form.tsx:304`                                           | クーポンコードの 1 打鍵ごとに料金プレビュー Server Action が飛び、公開クエリのレート上限（30回/分/IP）を食い潰して料金表示と時間枠取得が壊れる                  |
 | [F-42](../../audits/2026-08-12-codebase-audit-findings.md#f-42)   | 中     | `src/shared/domain/audit-log/queries.ts:303`                                                                  | 監査ログ CSV エクスポートが 10,000 件で無言に打ち切られ、しかも古い順なので直近の証跡が欠落する                                                                 |
 | [F-43](../../audits/2026-08-12-codebase-audit-findings.md#f-43)   | 中     | `src/shared/domain/cancellation/run-auto-refund-on-cancel.ts:164`                                             | キャンセル時の自動返金額を総額から計算し、既存の部分返金を差し引かないため返金が丸ごとスキップされる                                                            |
-| [F-44](../../audits/2026-08-12-codebase-audit-findings.md#f-44)   | 中     | `src/shared/domain/customers/customer-lifecycle-commands.ts:407`                                              | ゲスト履歴統合で会員自身のメールが恒久 suppression され、管理画面から復旧できない                                                                               |
 | [F-45](../../audits/2026-08-12-codebase-audit-findings.md#f-45)   | 中     | `src/shared/domain/events/email-queries.ts:141`                                                               | イベント一斉配信が marketingOptIn を無視するため、One-Click 配信停止を押しても次の配信が届く                                                                    |
 | [F-46](../../audits/2026-08-12-codebase-audit-findings.md#f-46)   | 中     | `src/shared/domain/events/event-calendar-import-commands.ts:216`                                              | Google Calendar 側でイベントを消すと、公開済み・申込ありのイベントまで無条件に CANCELLED にされる                                                               |
 | [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `src/shared/domain/events/event-slot-sync-commands.ts:176`                                                    | EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位                                                                    |
@@ -289,7 +288,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-109](../../audits/2026-08-12-codebase-audit-findings.md#f-109) | 低     | `src/app/(public)/mypage/merge/confirm/page.tsx:108`                                                          | /mypage/merge/confirm がクエリ `error` の中身を検証せずページ自身の警告文として描画する                                                                         |
 | [F-110](../../audits/2026-08-12-codebase-audit-findings.md#f-110) | 低     | `src/app/(public)/mypage/settings/_components/profile-form.tsx:114`                                           | 初回メールアドレス登録で「確認メールを送信しました」が捨てられ、「プロフィールを更新しました」と表示されるため利用者が登録を完了できない                        |
 | [F-111](../../audits/2026-08-12-codebase-audit-findings.md#f-111) | 低     | `src/app/api/calendar/reservation/[id]/route.ts:117`                                                          | メールの .ics リンクを踏んだ直後 30 分間、ログイン済み顧客はマイページから別予約の .ics を取得できず 401 になる                                                 |
-| [F-112](../../audits/2026-08-12-codebase-audit-findings.md#f-112) | 低     | `src/app/api/cron/reservation-reminder/route.ts:62`                                                           | 退会（匿名化）済み顧客の予約でリマインダ cron が placeholder アドレス宛に送信し、確実に hard bounce する                                                        |
 | [F-113](../../audits/2026-08-12-codebase-audit-findings.md#f-113) | 低     | `src/app/api/receipts/[serialNo]/pdf/route.ts:122`                                                            | 認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）                                                                              |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                                                                    | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                           |
 | [F-115](../../audits/2026-08-12-codebase-audit-findings.md#f-115) | 低     | `src/shared/domain/admin-search/queries.ts:149`                                                               | コマンドパレット検索が EDITOR の userPageAssignment スコープを無視して全 page を返す                                                                            |

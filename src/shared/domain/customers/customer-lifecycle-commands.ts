@@ -160,11 +160,21 @@ export async function anonymizeCustomerCommand(input: {
         userId: null,
         anonymizedAt,
         anonymizedReason: input.reason,
-        // suppression 対象でなければ NULL のまま (通常 Customer が anonymize
-        // される多数派経路)。suppressedEmailHash は書き換え専用 (再設定なし)。
-        ...(preservedSuppressionHash !== null
-          ? { suppressedEmailHash: preservedSuppressionHash }
-          : {}),
+        // **匿名化した顧客は宛先にしない。**
+        //
+        // placeholder は `@anonymized.local`（RFC 6762 の予約 TLD で MX を持たない）
+        // なので、送れば必ず hard bounce する。ここで suppression に載せないと、
+        // 退会後も未来の予約が残っているとリマインダ cron が placeholder 宛に送り、
+        // bounce → webhook が HARD_BOUNCED を書く → 以後 `reason="suppressed"` で
+        // cron が claim を解放し続ける、というループになる（監査 F-112）。
+        //
+        // 旧アドレスの suppression を持ち越す必要があるならそれを優先する
+        // （実アドレスの hash のほうが情報量が多い）。持ち越しが無い場合でも
+        // placeholder 自身の hash を入れて、`getSuppressedEmailSet` の母集合に
+        // 必ず入るようにする。
+        suppressedEmailHash:
+          preservedSuppressionHash ??
+          hashSuppressedEmailCandidate(anonymizedEmail.emailCanonical),
       },
     });
 
@@ -346,16 +356,20 @@ export async function mergeCustomerCommand(
         : null;
 
   const targetOwnHash = hashSuppressedEmailCandidate(target.emailCanonical);
-  const targetAlreadySuppressed = isSuppressedDeliveryStatus(
-    target.emailDeliveryStatus,
-  );
 
   const shouldPreserveOnTarget =
     sourceSuppressionHash !== null &&
     target.suppressedEmailHash === null &&
-    // target 自身の canonical email が既に SUPPRESSED_EMAILS で拾える場合は
-    // 別ソースの hash を書く意味が薄い (かつ hash が一致するなら no-op)。
-    !(targetAlreadySuppressed && sourceSuppressionHash === targetOwnHash);
+    // **同じアドレスなら書かない。** `targetAlreadySuppressed` の有無を条件に
+    // 入れていたため、「ゲスト行が bounce → 同じアドレスで会員登録 → 履歴統合」
+    // という正常な流れで、**会員の現用アドレスの hash が恒久 suppression として
+    // 焼かれていた**（監査 F-44）。統合でゲスト行は消えるので
+    // `emailDeliveryStatus` 経路の抑制は解けるのに、hash 経路だけが残り、
+    // 以後その会員宛のメールが全部無言で drop される。
+    //
+    // 同一アドレスの抑制は target 自身の `emailDeliveryStatus` で表現でき、
+    // そちらは管理画面からリセットできる。hash 側にはリセット経路が無い。
+    sourceSuppressionHash !== targetOwnHash;
 
   return prisma.$transaction(async (tx) => {
     // interactive tx は単一コネクション。Promise.all での並行発行は禁止。
