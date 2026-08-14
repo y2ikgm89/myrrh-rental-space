@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 38 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 37 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -307,7 +307,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 
 | ID                                                                | 深刻度 | 箇所                                                                                                          | 内容                                                                                                                                                 |
 | ----------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-76](../../audits/2026-08-12-codebase-audit-findings.md#f-76)   | 低     | `__tests__/helpers/architecture-fs.ts:41`                                                                     | module-reachability の import 抽出正規表現が JSDoc 例示コードを実 import として辺に加える                                                            |
 | [F-77](../../audits/2026-08-12-codebase-audit-findings.md#f-77)   | 低     | `__tests__/support/numeric-column-domains.ts:82`                                                              | 数値列の母集合が BigInt を落とし、AuditLog.sequence が実際に無制約のまま緑                                                                           |
 | [F-84](../../audits/2026-08-12-codebase-audit-findings.md#f-84)   | 低     | `__tests__/unit/architecture/playwright-mobile-device-projects.test.ts:90`                                    | 「実行対象ゼロの dead project を禁じる」と謳う gate が、実際にはファイル一致しか見ておらず 0 テスト実行を見逃す                                      |
 | [F-85](../../audits/2026-08-12-codebase-audit-findings.md#f-85)   | 低     | `__tests__/unit/architecture/prisma-delegate-arg-types.test.ts:192`                                           | prisma-delegate-arg-types は引数のどこかに Prisma. があれば通すので、手書き where が Prisma.Select と同居すると素通りする                            |
