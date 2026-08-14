@@ -112,6 +112,15 @@ export function ProfileForm({
   // (conform v1.19 submission.mjs:144、`reply({ resetForm: true })` の
   // `{ initialValue: null }` とは区別される)
   const showSuccess = lastResult?.status === "success";
+  // conform-action の successMessage は SubmissionResult に spread される拡張
+  // フィールド。公式型と両立するのは in + typeof だけ（admin の
+  // RecurringReservationForm / SeriesInfoSection と同型）。
+  const successMessage =
+    lastResult !== undefined &&
+    "successMessage" in lastResult &&
+    typeof lastResult.successMessage === "string"
+      ? lastResult.successMessage
+      : "プロフィールを更新しました";
   const formErrorMessage =
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
 
@@ -142,7 +151,7 @@ export function ProfileForm({
           className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
           role="status"
         >
-          プロフィールを更新しました
+          {successMessage}
         </div>
       )}
 
