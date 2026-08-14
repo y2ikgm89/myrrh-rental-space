@@ -61,9 +61,20 @@ import {
 } from "@/shared/domain/receipts/manual-payment-warnings";
 import { UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES } from "@/shared/domain/events/payment-expiry-constants";
 import {
+  WAITLIST_OFFER_EXPIRED_MESSAGE,
+  WAITLIST_OFFER_NOT_ACTIVE_MESSAGE,
+  WAITLIST_OFFER_TOO_LATE_MESSAGE,
+} from "@/shared/domain/events/waitlist-offer-checkout-messages";
+import {
   eventTicketChargeAmount,
   eventTicketUnitCount,
 } from "@/shared/lib/pricing/event-ticket-charge";
+
+export {
+  WAITLIST_OFFER_EXPIRED_MESSAGE,
+  WAITLIST_OFFER_NOT_ACTIVE_MESSAGE,
+  WAITLIST_OFFER_TOO_LATE_MESSAGE,
+};
 
 /**
  * EventRegistration の Stripe Checkout Session を作成する (PR#10)。
@@ -396,10 +407,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
   }
 
   if (registration.status !== RegistrationStatus.WAITLISTED_OFFERED) {
-    throw new DomainError(
-      "この繰り上げ当選は確定待ちの状態ではありません",
-      "VALIDATION",
-    );
+    throw new DomainError(WAITLIST_OFFER_NOT_ACTIVE_MESSAGE, "VALIDATION");
   }
 
   const stripeSettings = await assertOnlinePaymentAvailable();
@@ -497,15 +505,15 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
   // EXPIRED 遷移になり、支払い済みなのに確定できない money-handling 事故になる
   // （PR#1080 Codex P1-A レビュー）。ここで claim 直後に再検証し、既に期限切れ
   // なら PENDING を UNPAID に revert して（cron の通常 EXPIRED 化に委ねる）
-  // Stripe セッションを作らない。エラーメッセージは checkout route.ts の
-  // `isGenuineOfferExpiry` allowlist と密結合（変更時は両方更新する）。
+  // Stripe セッションを作らない。メッセージは
+  // `WAITLIST_OFFER_EXPIRED_MESSAGE`（classify の genuine expiry と SSoT）。
   const now = new Date();
   if (authoritative.expiresAt.getTime() <= now.getTime()) {
     await revertCheckoutPendingToUnpaid(
       (args) => prisma.eventRegistration.updateMany(args),
       { entityId: registrationId },
     );
-    throw new DomainError("この繰り上げ当選は既に期限切れです", "VALIDATION");
+    throw new DomainError(WAITLIST_OFFER_EXPIRED_MESSAGE, "VALIDATION");
   }
 
   // Stripe Checkout Session の expires_at は作成時刻から最短 30 分。offer 残りが
@@ -519,10 +527,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
       (args) => prisma.eventRegistration.updateMany(args),
       { entityId: registrationId },
     );
-    throw new DomainError(
-      "確定期限までの残り時間が短いため、決済を開始できません。期限切れ後に次の待機者へ繰り上がります。",
-      "VALIDATION",
-    );
+    throw new DomainError(WAITLIST_OFFER_TOO_LATE_MESSAGE, "VALIDATION");
   }
 
   const authoritativeTotal = eventTicketChargeAmount(
