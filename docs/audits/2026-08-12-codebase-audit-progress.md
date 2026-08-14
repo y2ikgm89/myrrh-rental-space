@@ -56,7 +56,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-54](2026-08-12-codebase-audit-findings.md#f-54) | 中     | #2256                 | charge.refunded が Stripe の実 status を Refund 行へ渡すようにし、既定値へ落ちる経路を型で塞いだ | —                                                                                           |
 | [F-55](2026-08-12-codebase-audit-findings.md#f-55) | 中     | #2256                 | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
 | efund.updated に一本化                             | —      |
-| [F-57](2026-08-12-codebase-audit-findings.md#f-57) | 中     | ★PR                   | 終端状態 (succeeded / failed / canceled) の Refund.status を非終端へ巻き戻さない                 | —                                                                                           |
+| [F-57](2026-08-12-codebase-audit-findings.md#f-57) | 中     | #2259                 | 終端状態 (succeeded / failed / canceled) の Refund.status を非終端へ巻き戻さない                 | —                                                                                           |
 | [F-70](2026-08-12-codebase-audit-findings.md#f-70) | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
