@@ -292,4 +292,19 @@ describe("bulkMoveFaqItems", () => {
       bulkMoveFaqItems(["item-1"], "non-existent"),
     ).rejects.toBeInstanceOf(DomainError);
   });
+
+  test("lock 取得後に削除済みカテゴリを再確認し、NOT_FOUND で移動しない", async () => {
+    mockFaqItemUpdateMany.mockResolvedValue({ count: 1 });
+    mockFaqCategoryFindFirst.mockImplementation(() => {
+      const locked = mockExecuteRaw.mock.calls.length > 0;
+      return Promise.resolve(locked ? null : { id: "category-2" });
+    });
+
+    await expect(
+      bulkMoveFaqItems(["item-1"], "category-2"),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(mockFaqItemUpdateMany).not.toHaveBeenCalled();
+  });
 });
