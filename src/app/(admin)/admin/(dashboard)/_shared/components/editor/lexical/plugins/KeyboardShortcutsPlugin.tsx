@@ -25,6 +25,7 @@ import {
   UNGROUP_GROUP_COMMAND,
 } from "./GroupPlugin";
 import { $getSelectionBlockNodes } from "../lib/selection-helpers";
+import { matchDigitSymbolShortcut } from "../lib/match-digit-symbol-shortcut";
 import { IconKeyboard } from "@tabler/icons-react";
 import {
   Dialog,
@@ -158,40 +159,47 @@ export function KeyboardShortcutsPlugin({
 
         if (!isCtrl || !event.shiftKey) return false;
 
-        // Ctrl+Shift+0: ブロック設定パネル（インスペクター）開閉
-        if (event.key === "0" || event.key === "Numpad0") {
-          if (!isInspectorAvailable) return false;
-          event.preventDefault();
-          toggleInspector();
-          return true;
-        }
-
-        // Ctrl+Shift+1~6: 見出し
-        if (event.key >= "1" && event.key <= "6") {
-          event.preventDefault();
-          const tag = `h${event.key}`;
-          if (!isHeadingTag(tag)) return false;
-          editor.update(() => {
-            const selection = $getSelection();
-            if ($isRangeSelection(selection)) {
-              $setBlocksType(selection, () => $createHeadingNode(tag));
+        const digitSymbol = matchDigitSymbolShortcut(event);
+        if (digitSymbol) {
+          switch (digitSymbol.type) {
+            case "inspector": {
+              if (!isInspectorAvailable) return false;
+              event.preventDefault();
+              toggleInspector();
+              return true;
             }
-          });
-          return true;
-        }
-
-        // Ctrl+Shift+7: 番号付きリスト
-        if (event.key === "7") {
-          event.preventDefault();
-          editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
-          return true;
-        }
-
-        // Ctrl+Shift+8: 箇条書き
-        if (event.key === "8") {
-          event.preventDefault();
-          editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
-          return true;
+            case "heading": {
+              event.preventDefault();
+              const tag = `h${digitSymbol.level}`;
+              if (!isHeadingTag(tag)) return false;
+              editor.update(() => {
+                const selection = $getSelection();
+                if ($isRangeSelection(selection)) {
+                  $setBlocksType(selection, () => $createHeadingNode(tag));
+                }
+              });
+              return true;
+            }
+            case "ordered-list": {
+              event.preventDefault();
+              editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+              return true;
+            }
+            case "unordered-list": {
+              event.preventDefault();
+              editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+              return true;
+            }
+            case "help": {
+              event.preventDefault();
+              setShowHelp(true);
+              return true;
+            }
+            default: {
+              const _exhaustive: never = digitSymbol;
+              return _exhaustive;
+            }
+          }
         }
 
         // Ctrl+Shift+K: リンク挿入
@@ -232,13 +240,6 @@ export function KeyboardShortcutsPlugin({
           editor.dispatchCommand(OPEN_GROUP_DIALOG_COMMAND, {
             targetNodeKeys: keys,
           });
-          return true;
-        }
-
-        // Ctrl+Shift+/: ショートカット一覧
-        if (event.key === "/") {
-          event.preventDefault();
-          setShowHelp(true);
           return true;
         }
 
