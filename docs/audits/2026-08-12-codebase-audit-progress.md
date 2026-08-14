@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  39 |  18 |  57 |
-| 合計   | 114 |  18 | 132 |
+| 低     |  41 |  16 |  57 |
+| 合計   | 116 |  16 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 18 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 16 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -149,6 +149,8 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-106](2026-08-12-codebase-audit-findings.md#f-106) | 低     | #2305                                      | 繰上げ当選の残り 30 分未満を `reason=too-late` に振り、CRITICAL と期限切れ画面を出さない                         | —                                                                                       |
 | [F-104](2026-08-12-codebase-audit-findings.md#f-104) | 低     | #2306                                      | 予約確認の合計を `pricePreview.totalPriceWithTax` + `formatPrice` で描く。STANDARD 再課税をやめた                | SpaceCard / JSON-LD / `resolvePublicDisplayPrice` は範囲外                              |
 | [F-105](2026-08-12-codebase-audit-findings.md#f-105) | 低     | #2307                                      | custom / home / about / preview から archive の searchParams を通し、Pagination を page slug 相対にする          | `/blog`・`/news` 本体は当初から forward 済み                                            |
+| [F-107](2026-08-12-codebase-audit-findings.md#f-107) | 低     | `fix/audit-merge-query-sentinels`          | 統合成功を `?merged=ok` にし、`/mypage` が定数文言の FlashMessage を出す                                         | —                                                                                       |
+| [F-109](2026-08-12-codebase-audit-findings.md#f-109) | 低     | `fix/audit-merge-query-sentinels`          | confirm の `error` をセンチネル対応表だけから引き、未知値は既定文言。生クエリは出さない                          | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 

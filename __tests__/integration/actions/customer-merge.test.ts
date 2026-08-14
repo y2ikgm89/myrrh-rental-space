@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { DomainError } from "@/shared/domain/domain-error";
 import { installEmailLibDispatchMock } from "../../support/email-lib-dispatch-mock";
 
 mock.module("server-only", () => ({}));
@@ -190,5 +191,28 @@ describe("customer-merge actions", () => {
     );
     expect(mockConsumeMerge).toHaveBeenCalledWith("raw-token", "member-1");
     expect(mockUpdateTag).toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith("/mypage?merged=ok");
+    const redirected = String(mockRedirect.mock.calls[0]?.[0] ?? "");
+    expect(redirected).not.toContain("mergeSuccess");
+    expect(redirected).not.toMatch(/[^\x00-\x7F]/u);
+  });
+
+  test("confirmCustomerMergeAction redirects DomainError to an error sentinel", async () => {
+    const domainMessage =
+      "確認 URL が無効か有効期限が切れています。マイページから再度統合をリクエストしてください。";
+    mockConsumeMerge.mockRejectedValueOnce(
+      new DomainError(domainMessage, "VALIDATION"),
+    );
+    const formData = new FormData();
+    formData.set("token", "raw-token");
+    await expect(confirmCustomerMergeAction(formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    const redirected = String(mockRedirect.mock.calls[0]?.[0] ?? "");
+    expect(redirected).toMatch(/\/mypage\/merge\/confirm\?/u);
+    expect(redirected).toMatch(/[?&]error=invalid(?:&|$)/u);
+    expect(redirected).toContain("token=raw-token");
+    expect(redirected).not.toContain(domainMessage);
+    expect(redirected).not.toContain(encodeURIComponent(domainMessage));
   });
 });
