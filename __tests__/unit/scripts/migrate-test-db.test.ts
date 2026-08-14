@@ -78,4 +78,16 @@ describe("migrate test DB script", () => {
     expect(exitCode).toBe(0);
     expect(calls).toEqual([]);
   });
+
+  test("treats a null spawn exit as failure, not success", () => {
+    // Bun.spawnSync().exitCode is null on POSIX signal-kill.
+    // process.exit(null) exits 0, so the injected runner must not collapse to 0.
+    const exitCode = ensureDefaultLocalTestDatabase(
+      "default-local",
+      () => null as unknown as number,
+    );
+
+    expect(exitCode).not.toBe(0);
+    expect(exitCode).toBe(1);
+  });
 });
