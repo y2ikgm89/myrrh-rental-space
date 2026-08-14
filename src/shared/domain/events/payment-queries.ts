@@ -13,6 +13,7 @@ import {
   applyStripeChargeRefundIdempotent,
   buildChargeRefundPaymentStatusWhere,
   handlePaidClaimMissWithOrphanRefund,
+  type ChargeRefundLatestRefund,
 } from "@/shared/domain/payment/payment-claim-orchestration";
 import {
   buildFailedClaimUpdateData,
@@ -321,15 +322,7 @@ export async function applyEventChargeRefundIdempotent(input: {
   readonly chargeAmount: number;
   readonly amountRefunded: number;
   readonly currency: string;
-  readonly latestRefund: {
-    readonly id: string;
-    readonly amount: number;
-    /**
-     * Stripe refund.metadata.initiator: app 側 refund path が仕込んだ RefundedByType。
-     * webhook が先着した race で attribution 復元用。無ければ "STRIPE_DASHBOARD" fallback。
-     */
-    readonly metadata?: Record<string, string | undefined> | null | undefined;
-  } | null;
+  readonly latestRefund: ChargeRefundLatestRefund | null;
 }): Promise<void> {
   const {
     registrationId,
@@ -344,6 +337,10 @@ export async function applyEventChargeRefundIdempotent(input: {
     amountRefunded,
     currency,
     latestRefund,
+    logContext: {
+      operation: "applyEventChargeRefundIdempotent",
+      entityId: registrationId,
+    },
     createRefundRecord: async (refundData) => {
       await prisma.$transaction(async (tx) => {
         await acquirePaymentRefundAdvisoryLock(

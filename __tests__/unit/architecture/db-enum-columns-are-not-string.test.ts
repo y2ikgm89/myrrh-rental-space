@@ -112,6 +112,10 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "advisory lock の scope キー文字列。BlockedDate.scope 等の Prisma enum とは無関係",
   ],
   [
+    "src/shared/domain/payment/payment-claim-orchestration.ts::status",
+    "`charge.refunded` が運ぶ Stripe Refund.status。Refund.status 列は VARCHAR で Prisma enum ではない",
+  ],
+  [
     "src/shared/domain/payment/stripe-refund-orchestration.ts::status",
     "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
   ],

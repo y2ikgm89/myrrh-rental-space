@@ -12,6 +12,7 @@ import {
   applyStripeChargeRefundIdempotent,
   buildChargeRefundPaymentStatusWhere,
   handlePaidClaimMissWithOrphanRefund,
+  type ChargeRefundLatestRefund,
 } from "@/shared/domain/payment/payment-claim-orchestration";
 import {
   buildFailedClaimUpdateData,
@@ -340,24 +341,16 @@ export async function claimReservationAsRefunded(
  * @param input.amountRefunded      `charge.amount_refunded` (累積返金額、Stripe unit_amount 単位)
  * @param input.currency            `charge.currency` (ISO 4217、Refund.amount を app 単位で
  *                                  保存するための逆変換に使用)
- * @param input.latestRefund        `charge.refunds?.data[0]` から取り出した最新 refund の id と amount
+ * @param input.latestRefund        `charge.refunds?.data[0]` から取り出した最新 refund
  *                                  (webhook payload の refunds は default で 10 件まで含まれる;
- *                                  無い場合は paymentStatus 遷移のみで Refund child 書込は skip)
+ *                                  無い場合は何もしない — どの refund が確定したか判定できないため)
  */
 export async function applyChargeRefundIdempotent(input: {
   readonly reservationId: string;
   readonly chargeAmount: number;
   readonly amountRefunded: number;
   readonly currency: string;
-  readonly latestRefund: {
-    readonly id: string;
-    readonly amount: number;
-    /**
-     * Stripe refund.metadata.initiator: app 側 refund path が仕込んだ RefundedByType。
-     * webhook が先着した race で attribution 復元用。無ければ "STRIPE_DASHBOARD" fallback。
-     */
-    readonly metadata?: Record<string, string | undefined> | null | undefined;
-  } | null;
+  readonly latestRefund: ChargeRefundLatestRefund | null;
 }): Promise<void> {
   const {
     reservationId,
@@ -372,6 +365,10 @@ export async function applyChargeRefundIdempotent(input: {
     amountRefunded,
     currency,
     latestRefund,
+    logContext: {
+      operation: "applyChargeRefundIdempotent",
+      entityId: reservationId,
+    },
     createRefundRecord: async (refundData) => {
       await prisma.$transaction(async (tx) => {
         await acquirePaymentRefundAdvisoryLock(

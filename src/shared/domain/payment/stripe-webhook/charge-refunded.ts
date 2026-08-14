@@ -53,6 +53,10 @@ export async function handleChargeRefunded(
     ? {
         id: latestRefundData.id,
         amount: latestRefundData.amount,
+        // Stripe の実 status をそのまま運ぶ。ここで捨てると Refund 行が
+        // 未確定の返金を "succeeded" として記録し、paymentStatus も終端へ
+        // 焼かれて戻せなくなる（監査 F-54 / F-55）。
+        status: latestRefundData.status,
         // metadata.initiator: app 側 refund path が仕込んだ RefundedByType を復元し
         // て、webhook 先着 race で attribution が "STRIPE_DASHBOARD" と mislabel
         // されるのを防ぐ。metadata が空 / 未知値なら fallback で STRIPE_DASHBOARD。

@@ -191,7 +191,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（57 件）
+### フェーズ 4 — 中（55 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
@@ -246,8 +246,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-51](../../audits/2026-08-12-codebase-audit-findings.md#f-51)   | 中     | `src/shared/domain/faq/analytics-commands.ts:12`                                                              | 公開 FAQ の閲覧・投票が updatedAt を更新するため、鮮度チェック cron と管理画面の「未更新」指標が恒久的に 0 になる                                               |
 | [F-52](../../audits/2026-08-12-codebase-audit-findings.md#f-52)   | 中     | `src/shared/domain/inquiries/anonymize-commands.ts:83`                                                        | 匿名化が Inquiry.subject（自由記入 200 文字）を消さず、GDPR 相当の削除後も件名の PII が残り続ける                                                               |
 | [F-53](../../audits/2026-08-12-codebase-audit-findings.md#f-53)   | 中     | `src/shared/domain/pages/system-pages-commands.ts:40`                                                         | システムページから削除したセクションが、編集画面を開くたび／管理サービス起動のたびに初期デモ文言つきで復活する                                                  |
-| [F-54](../../audits/2026-08-12-codebase-audit-findings.md#f-54)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:194`                                                | charge.refunded 経路の Refund 行が Stripe の実 status を記録せず既定値 "succeeded" で焼かれ、未確定・失敗返金が「返金済み」として確定する                       |
-| [F-55](../../audits/2026-08-12-codebase-audit-findings.md#f-55)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:210`                                                | charge.refunded が未確定 (pending) の返金でも paymentStatus を確定させ、返金失敗後も戻らない                                                                    |
 | [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:195`                                                | 非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る                                                                             |
 | [F-57](../../audits/2026-08-12-codebase-audit-findings.md#f-57)   | 中     | `src/shared/domain/payment/stripe-webhook/refund-status-updated.ts:92`                                        | refund.updated の順序前後で確定済み Refund.status が succeeded から pending へ巻き戻り、以後の返金確定判定が過小になる                                          |
 | [F-58](../../audits/2026-08-12-codebase-audit-findings.md#f-58)   | 中     | `src/shared/domain/reservations/admin-commands.ts:377`                                                        | 管理者の予約編集が、消費済みクーポンを now 基準で再検証するため、クーポンが期限切れ/上限到達した瞬間にその予約が永久に編集不能になる                            |

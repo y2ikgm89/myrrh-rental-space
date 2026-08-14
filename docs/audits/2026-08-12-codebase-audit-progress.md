@@ -20,39 +20,42 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | ------ | --: | --: | --: |
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
-| 中     |   7 |  57 |  64 |
+| 中     |   9 |  55 |  64 |
 | 低     |   0 |  58 |  58 |
-| 合計   |  18 | 115 | 133 |
+| 合計   |  20 | 113 | 133 |
 
-**高 11 件は全件クローズ。**残りは中 57 件・低 58 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。
+**高 11 件は全件クローズ。**残りは中 55 件・低 58 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
 
 ---
 
-## 2. 済んだ指摘（18 件）
+## 2. 済んだ指摘（20 件）
 
-| ID                                                 | 深刻度 | PR                    | 何をしたか                                                                                     | 残件                                                                                        |
-| -------------------------------------------------- | ------ | --------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [F-01](2026-08-12-codebase-audit-findings.md#f-01) | 高     | #2214 / #2218         | binary plan を artifact から除去。gate をパス包含判定に                                        | 鍵ローテーションは段 3 まで完了（§3）。旧 version 1・2 の無効化のみ運用判断で保留           |
-| [F-02](2026-08-12-codebase-audit-findings.md#f-02) | 高     | #2224                 | 価格式に `unitSize` を反映（`price × ceil(人数 / unitSize)`）                                  | 定員側は `quantity = 人数` 解釈の確定により対処不要                                         |
-| [F-03](2026-08-12-codebase-audit-findings.md#f-03) | 高     | #2227 → #2240 / #2242 | `bodySizeLimit` を `MEDIA_MAX_SIZE_BYTES` 全体の最大値から導く                                 | `use-media-upload.ts` / `MediaUploadDialog.tsx` は catch を持たず、transport 失敗は今も無言 |
-| [F-04](2026-08-12-codebase-audit-findings.md#f-04) | 高     | #2223                 | 繰返し予約の金額を instance ごとに解決                                                         | —                                                                                           |
-| [F-05](2026-08-12-codebase-audit-findings.md#f-05) | 高     | #2245                 | conform の `formatPaths` を使い、配列アイテムのエラーキーを揃える                              | form レベルのエラー描画は未着手                                                             |
-| [F-06](2026-08-12-codebase-audit-findings.md#f-06) | 高     | #2228                 | 当日受付・管理者代行を未決済期限切れの対象から除外                                             | —                                                                                           |
-| [F-07](2026-08-12-codebase-audit-findings.md#f-07) | 高     | #2215 / #2217 / #2230 | 非同期決済の除外を有限化し、場外集金の申込を期限対象に戻す                                     | —                                                                                           |
-| [F-08](2026-08-12-codebase-audit-findings.md#f-08) | 高     | #2244                 | メディア使用中判定の JSON 列走査を生 SQL へ移す                                                | 削除順の入替は採らず、理由を PR に記載                                                      |
-| [F-09](2026-08-12-codebase-audit-findings.md#f-09) | 高     | #2243                 | 自動再計算する 2 経路で `manual_adjustment_amount` を消す                                      | —                                                                                           |
-| [F-10](2026-08-12-codebase-audit-findings.md#f-10) | 高     | #2237                 | checkout の idempotency key を payload と一緒に動かす                                          | —                                                                                           |
-| [F-11](2026-08-12-codebase-audit-findings.md#f-11) | 高     | #2235                 | GCal 増分同期が削除イベントを取りこぼしていたのを直す                                          | —                                                                                           |
-| [F-16](2026-08-12-codebase-audit-findings.md#f-16) | 中     | #2255                 | 公開 surface の E2E step を足し、/ を踏まない 2 本の file スコープ skip を削除。29 test が復活 | —                                                                                           |
-| [F-30](2026-08-12-codebase-audit-findings.md#f-30) | 中     | #2226                 | イベント一括削除に確認ダイアログ                                                               | —                                                                                           |
-| [F-31](2026-08-12-codebase-audit-findings.md#f-31) | 中     | #2226                 | 一括操作の対象を可視選択のみに限定                                                             | —                                                                                           |
-| [F-33](2026-08-12-codebase-audit-findings.md#f-33) | 中     | #2227                 | 問い合わせ添付に `bodySizeLimit` を効かせる                                                    | —                                                                                           |
-| [F-41](2026-08-12-codebase-audit-findings.md#f-41) | 中     | #2234                 | `purpose: prefetch` で proxy のガードが素通りするのを封鎖                                      | —                                                                                           |
-| [F-48](2026-08-12-codebase-audit-findings.md#f-48) | 中     | #2237                 | イベント checkout も同じ idempotency key 方式へ                                                | —                                                                                           |
-| [F-70](2026-08-12-codebase-audit-findings.md#f-70) | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                    | —                                                                                           |
+| ID                                                 | 深刻度 | PR                    | 何をしたか                                                                                       | 残件                                                                                        |
+| -------------------------------------------------- | ------ | --------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| [F-01](2026-08-12-codebase-audit-findings.md#f-01) | 高     | #2214 / #2218         | binary plan を artifact から除去。gate をパス包含判定に                                          | 鍵ローテーションは段 3 まで完了（§3）。旧 version 1・2 の無効化のみ運用判断で保留           |
+| [F-02](2026-08-12-codebase-audit-findings.md#f-02) | 高     | #2224                 | 価格式に `unitSize` を反映（`price × ceil(人数 / unitSize)`）                                    | 定員側は `quantity = 人数` 解釈の確定により対処不要                                         |
+| [F-03](2026-08-12-codebase-audit-findings.md#f-03) | 高     | #2227 → #2240 / #2242 | `bodySizeLimit` を `MEDIA_MAX_SIZE_BYTES` 全体の最大値から導く                                   | `use-media-upload.ts` / `MediaUploadDialog.tsx` は catch を持たず、transport 失敗は今も無言 |
+| [F-04](2026-08-12-codebase-audit-findings.md#f-04) | 高     | #2223                 | 繰返し予約の金額を instance ごとに解決                                                           | —                                                                                           |
+| [F-05](2026-08-12-codebase-audit-findings.md#f-05) | 高     | #2245                 | conform の `formatPaths` を使い、配列アイテムのエラーキーを揃える                                | form レベルのエラー描画は未着手                                                             |
+| [F-06](2026-08-12-codebase-audit-findings.md#f-06) | 高     | #2228                 | 当日受付・管理者代行を未決済期限切れの対象から除外                                               | —                                                                                           |
+| [F-07](2026-08-12-codebase-audit-findings.md#f-07) | 高     | #2215 / #2217 / #2230 | 非同期決済の除外を有限化し、場外集金の申込を期限対象に戻す                                       | —                                                                                           |
+| [F-08](2026-08-12-codebase-audit-findings.md#f-08) | 高     | #2244                 | メディア使用中判定の JSON 列走査を生 SQL へ移す                                                  | 削除順の入替は採らず、理由を PR に記載                                                      |
+| [F-09](2026-08-12-codebase-audit-findings.md#f-09) | 高     | #2243                 | 自動再計算する 2 経路で `manual_adjustment_amount` を消す                                        | —                                                                                           |
+| [F-10](2026-08-12-codebase-audit-findings.md#f-10) | 高     | #2237                 | checkout の idempotency key を payload と一緒に動かす                                            | —                                                                                           |
+| [F-11](2026-08-12-codebase-audit-findings.md#f-11) | 高     | #2235                 | GCal 増分同期が削除イベントを取りこぼしていたのを直す                                            | —                                                                                           |
+| [F-16](2026-08-12-codebase-audit-findings.md#f-16) | 中     | #2255                 | 公開 surface の E2E step を足し、/ を踏まない 2 本の file スコープ skip を削除。29 test が復活   | —                                                                                           |
+| [F-30](2026-08-12-codebase-audit-findings.md#f-30) | 中     | #2226                 | イベント一括削除に確認ダイアログ                                                                 | —                                                                                           |
+| [F-31](2026-08-12-codebase-audit-findings.md#f-31) | 中     | #2226                 | 一括操作の対象を可視選択のみに限定                                                               | —                                                                                           |
+| [F-33](2026-08-12-codebase-audit-findings.md#f-33) | 中     | #2227                 | 問い合わせ添付に `bodySizeLimit` を効かせる                                                      | —                                                                                           |
+| [F-41](2026-08-12-codebase-audit-findings.md#f-41) | 中     | #2234                 | `purpose: prefetch` で proxy のガードが素通りするのを封鎖                                        | —                                                                                           |
+| [F-48](2026-08-12-codebase-audit-findings.md#f-48) | 中     | #2237                 | イベント checkout も同じ idempotency key 方式へ                                                  | —                                                                                           |
+| [F-54](2026-08-12-codebase-audit-findings.md#f-54) | 中     | ★PR                   | charge.refunded が Stripe の実 status を Refund 行へ渡すようにし、既定値へ落ちる経路を型で塞いだ | —                                                                                           |
+| [F-55](2026-08-12-codebase-audit-findings.md#f-55) | 中     | ★PR                   | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
+| efund.updated に一本化                             | —      |
+| [F-70](2026-08-12-codebase-audit-findings.md#f-70) | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
