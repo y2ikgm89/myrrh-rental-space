@@ -192,9 +192,9 @@ describe("customer-merge actions", () => {
     expect(mockConsumeMerge).toHaveBeenCalledWith("raw-token", "member-1");
     expect(mockUpdateTag).toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith("/mypage?merged=ok");
-    const redirected = String(mockRedirect.mock.calls[0]?.[0] ?? "");
-    expect(redirected).not.toContain("mergeSuccess");
-    expect(redirected).not.toMatch(/[^\x00-\x7F]/u);
+    expect(mockRedirect).not.toHaveBeenCalledWith(
+      expect.stringContaining("mergeSuccess"),
+    );
   });
 
   test("confirmCustomerMergeAction redirects DomainError to an error sentinel", async () => {
@@ -208,11 +208,14 @@ describe("customer-merge actions", () => {
     await expect(confirmCustomerMergeAction(formData)).rejects.toThrow(
       "NEXT_REDIRECT",
     );
-    const redirected = String(mockRedirect.mock.calls[0]?.[0] ?? "");
-    expect(redirected).toMatch(/\/mypage\/merge\/confirm\?/u);
-    expect(redirected).toMatch(/[?&]error=invalid(?:&|$)/u);
-    expect(redirected).toContain("token=raw-token");
-    expect(redirected).not.toContain(domainMessage);
-    expect(redirected).not.toContain(encodeURIComponent(domainMessage));
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/mypage/merge/confirm?error=invalid&token=raw-token",
+    );
+    expect(mockRedirect).not.toHaveBeenCalledWith(
+      expect.stringContaining(domainMessage),
+    );
+    expect(mockRedirect).not.toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent(domainMessage)),
+    );
   });
 });
