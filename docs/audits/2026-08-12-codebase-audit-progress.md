@@ -76,7 +76,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-116](2026-08-12-codebase-audit-findings.md#f-116) | 低     | #2264                 | 予約の自由記述「備考」を匿名化とデータ保持 purge の両方で消す                                    | —                                                                                           |
 | [F-70](2026-08-12-codebase-audit-findings.md#f-70)   | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
-| [F-133](2026-08-12-codebase-audit-findings.md#f-133) | 低 | ★PR | 振込先の表示判定を isOnlinePaymentAvailable() に寄せ、支払手段ゼロを防ぐ | — |
+| [F-133](2026-08-12-codebase-audit-findings.md#f-133) | 低 | #2268 | 振込先の表示判定を isOnlinePaymentAvailable() に寄せ、支払手段ゼロを防ぐ | — |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
