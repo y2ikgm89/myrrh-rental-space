@@ -263,11 +263,17 @@ export async function createStripeRefundOrThrow(input: {
 /**
  * Refund 行 insert の belt-and-suspenders パターン。
  * webhook 先着 race で `stripeRefundId` unique 衝突時は savepoint rollback して tx 継続。
+ *
+ * `status` を型で必須にしている。schema の `@default("succeeded")` に任せると、
+ * 未確定 (pending) の返金が「返金済み」として記録され、後続の
+ * `claimRefundSettlement` が非終端状態を見つけられず返金完了メールと AuditLog が
+ * 丸ごと欠落する（監査 F-54 が実際にこの形で起きた）。既定値へ落ちる経路を
+ * コンパイル時に塞ぐ。
  */
 export async function createRefundRecordIdempotent(
   tx: RefundTransactionClient,
   savepointName: string,
-  data: Prisma.RefundUncheckedCreateInput,
+  data: Prisma.RefundUncheckedCreateInput & { status: string },
 ): Promise<void> {
   const validatedSavepoint = assertValidSavepointName(savepointName);
   try {

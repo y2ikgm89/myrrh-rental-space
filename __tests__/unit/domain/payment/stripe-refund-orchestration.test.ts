@@ -98,6 +98,7 @@ describe("stripe-refund-orchestration kernel", () => {
       amount: 1000,
       stripeRefundId: "re_test_1",
       refundedByType: "ADMIN",
+      status: "succeeded",
     });
 
     expect(mockExecuteRawUnsafe).toHaveBeenCalledWith(
