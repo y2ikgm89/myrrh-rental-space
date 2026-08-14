@@ -3,7 +3,8 @@
  *
  * アクセス権限の判定:
  *   1. HttpOnly cookie `calendar-event-token` がある場合: HMAC 検証成功で許可
- *      (invalid / expired token は path validation より先に拒否)
+ *      (invalid token は path validation より先に拒否)
+ *      (expired / target mismatch は cookie を捨てて session + 所有権へ)
  *      (ゲスト = 確認メールの「iCal (.ics)」リンク経路)
  *      メールリンクは初回のみ `?token=` を含み、proxy が cookie へ転写して
  *      クエリを除去した URL へ redirect する（URL / アクセスログ残留を遮断）。
@@ -29,7 +30,10 @@ import {
   type EventCalendarParams,
 } from "@/shared/lib/ical";
 import { getAppHost } from "@/shared/lib/constants";
-import { CALENDAR_EVENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/calendar-token-cookie-names";
+import {
+  CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_PATH,
+} from "@/shared/lib/constants/calendar-token-cookie-names";
 import {
   calendarTokenFingerprint,
   verifyCalendarToken,
@@ -50,6 +54,26 @@ const paramSchema = z.object({
     .min(1, { error: "Invalid registration id" })
     .max(40, { error: "Invalid registration id" }),
 });
+
+async function authorizeViaCustomerSession(): Promise<
+  { customerId: string } | NextResponse
+> {
+  const session = await getCustomerSession();
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) {
+    return new NextResponse("Customer not found", { status: 404 });
+  }
+  return { customerId: customer.id };
+}
+
+function isSessionDenied(
+  value: { customerId: string } | NextResponse,
+): value is NextResponse {
+  return value instanceof NextResponse;
+}
 
 export async function GET(
   _request: Request,
@@ -73,15 +97,11 @@ export async function GET(
     let verifiedTokenFingerprint: string | undefined;
 
     if (token === null) {
-      const session = await getCustomerSession();
-      if (!session) {
-        return new NextResponse("Unauthorized", { status: 401 });
+      const sessionAuth = await authorizeViaCustomerSession();
+      if (isSessionDenied(sessionAuth)) {
+        return sessionAuth;
       }
-      const customer = await getCustomerByUserId(session.user.id);
-      if (!customer) {
-        return new NextResponse("Customer not found", { status: 404 });
-      }
-      lookupCustomerId = customer.id;
+      lookupCustomerId = sessionAuth.customerId;
     } else {
       const result = verifyCalendarToken(token, "event");
       if (!result.valid) {
@@ -97,14 +117,24 @@ export async function GET(
             },
           },
         );
-        return new NextResponse(
-          result.reason === "expired" ? "Token expired" : "Invalid token",
-          { status: result.reason === "expired" ? 410 : 401 },
-        );
+        if (result.reason !== "expired") {
+          return new NextResponse("Invalid token", { status: 401 });
+        }
+        // expired cookie をロックにしない。捨てて session + 所有権へ。
+        cookieStore.delete({
+          name: CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+          path: CALENDAR_EVENT_TOKEN_COOKIE_PATH,
+        });
+        const sessionAuth = await authorizeViaCustomerSession();
+        if (isSessionDenied(sessionAuth)) {
+          return sessionAuth;
+        }
+        lookupCustomerId = sessionAuth.customerId;
+      } else {
+        verifiedTokenTargetId = result.targetId;
+        verifiedTokenFingerprint = calendarTokenFingerprint(token);
+        lookupCustomerId = undefined;
       }
-      verifiedTokenTargetId = result.targetId;
-      verifiedTokenFingerprint = calendarTokenFingerprint(token);
-      lookupCustomerId = undefined;
     }
 
     // 2. パスパラメータ検証
@@ -117,6 +147,7 @@ export async function GET(
 
     if (verifiedTokenTargetId !== undefined) {
       if (verifiedTokenTargetId !== registrationId) {
+        // 別申込向け cookie をロックにしない。捨てて session + 所有権へ。
         logError(normalizeError(new Error("Calendar token target mismatch")), {
           category: ErrorCategory.AUTHORIZATION,
           severity: ErrorSeverity.MEDIUM,
@@ -127,7 +158,16 @@ export async function GET(
             payloadRegistrationId: verifiedTokenTargetId,
           },
         });
-        return new NextResponse("Invalid token", { status: 401 });
+        cookieStore.delete({
+          name: CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+          path: CALENDAR_EVENT_TOKEN_COOKIE_PATH,
+        });
+        verifiedTokenTargetId = undefined;
+        const sessionAuth = await authorizeViaCustomerSession();
+        if (isSessionDenied(sessionAuth)) {
+          return sessionAuth;
+        }
+        lookupCustomerId = sessionAuth.customerId;
       }
     }
 

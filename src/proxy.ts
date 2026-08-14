@@ -16,7 +16,9 @@ import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/res
 import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-status-token-cookie-name";
 import {
   CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
+  CALENDAR_RESERVATION_TOKEN_COOKIE_PATH,
   CALENDAR_EVENT_TOKEN_COOKIE_NAME,
+  CALENDAR_EVENT_TOKEN_COOKIE_PATH,
 } from "@/shared/lib/constants/calendar-token-cookie-names";
 import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlist-offer-token-cookie-name";
 import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
@@ -312,13 +314,13 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     pathname: "/api/calendar/reservation/",
     cookieName: CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
     match: "prefix",
-    cookiePath: "/api/calendar/reservation",
+    cookiePath: CALENDAR_RESERVATION_TOKEN_COOKIE_PATH,
   },
   {
     pathname: "/api/calendar/event/",
     cookieName: CALENDAR_EVENT_TOKEN_COOKIE_NAME,
     match: "prefix",
-    cookiePath: "/api/calendar/event",
+    cookiePath: CALENDAR_EVENT_TOKEN_COOKIE_PATH,
   },
 ];
 
