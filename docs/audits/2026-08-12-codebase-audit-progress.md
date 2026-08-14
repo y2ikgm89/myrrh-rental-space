@@ -156,7 +156,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-114](2026-08-12-codebase-audit-findings.md#f-114) | 低     | #2310                                      | `to.length !== 1` の bounce / complaint / failed / suppressed では抑止しない。breadcrumb のみ残して 200 ack      | —                                                                                       |
 | [F-108](2026-08-12-codebase-audit-findings.md#f-108) | 低     | #2311                                      | profile-form が action の `successMessage` を表示する（初回メール登録の確認案内）                                | —                                                                                       |
 | [F-110](2026-08-12-codebase-audit-findings.md#f-110) | 低     | #2311                                      | 同上（固定文言「プロフィールを更新しました」で successMessage を捨てない）                                       | —                                                                                       |
-| [F-121](2026-08-12-codebase-audit-findings.md#f-121) | 低     | —                                          | bulkMoveFaqItems のカテゴリ再確認を lock 取得直後へ移し、削除済みカテゴリ配下への移動を止めた                    | trash-cleanup の WHERE は足していない                                                   |
+| [F-121](2026-08-12-codebase-audit-findings.md#f-121) | 低     | #2313                                      | bulkMoveFaqItems のカテゴリ再確認を lock 取得直後へ移し、削除済みカテゴリ配下への移動を止めた                    | trash-cleanup の WHERE は足していない                                                   |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
