@@ -28,6 +28,8 @@ export type FailedCalendarSyncReservation = {
   guestEmail: string | null;
   googleCalendarEventId: string | null;
   calendarSyncError: string | null;
+  /** series-child かどうか。create を回してよいかの判定に使う（GCAL-RETRY-07）。 */
+  seriesId: string | null;
   space: {
     name: string;
     lineAddress: string;
@@ -60,12 +62,36 @@ export type CalendarSyncReservationRecord = {
   };
 };
 
+/*
+ * GCAL-WRITEBACK-01: 以下 4 つの write-back は `update` + `deletedAt: null` では
+ * なく `updateMany`（deletedAt 述語なし）で書く。
+ *
+ * これらが書き込むのは**外部システムで既に起きたこと**の記録であって、予約が
+ * 生きているかどうかとは無関係。`deletedAt: null` を付けると、soft-delete 済みの
+ * 行に対して 0 件マッチ → P2025 になり、**成功した GCal 操作が「失敗」として
+ * 記録される**。
+ *
+ * 実際に主経路で起きていた（監査 F-123）: admin が GCal 同期済み予約を削除すると
+ * `deleteReservationCommand` が先に `deletedAt` を commit し、その後の
+ * `afterSuccess` で GCal 削除が走る。削除自体は成功するのに直後の
+ * `clearReservationCalendarEvent` が P2025 で落ち、catch の
+ * `markReservationCalendarSyncError` も同じ述語でまた落ちるので、監査 metadata
+ * には「gcal 削除失敗」だけが残る。この監査 metadata は
+ * 「完了表示と実挙動の乖離を support 起点で観測する」ために置かれたもの
+ * （`cancellation/apply-instance-side-effects.ts` の CRITIC-6）で、主経路で
+ * 毎回反転させると信号として死ぬ。
+ *
+ * 4 つとも同じ形にしてある。到達するのは今のところ 2 つだけだが、片方だけ
+ * `update` のまま残すと「こちらが正しい形」に見えて次の人が戻す。
+ * `reminder-commands.ts` が同じ罠を `updateMany` で回避済み。
+ */
+
 export async function markReservationCalendarSyncSuccess(input: {
   reservationId: string;
   eventId: string;
 }): Promise<void> {
-  await prisma.reservation.update({
-    where: { id: input.reservationId, deletedAt: null },
+  await prisma.reservation.updateMany({
+    where: { id: input.reservationId },
     data: {
       googleCalendarEventId: input.eventId,
       calendarSyncedAt: new Date(),
@@ -77,8 +103,8 @@ export async function markReservationCalendarSyncSuccess(input: {
 export async function markReservationCalendarSyncUpdated(
   reservationId: string,
 ): Promise<void> {
-  await prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+  await prisma.reservation.updateMany({
+    where: { id: reservationId },
     data: {
       calendarSyncedAt: new Date(),
       calendarSyncError: null,
@@ -90,8 +116,8 @@ export async function markReservationCalendarSyncError(input: {
   reservationId: string;
   error: string;
 }): Promise<void> {
-  await prisma.reservation.update({
-    where: { id: input.reservationId, deletedAt: null },
+  await prisma.reservation.updateMany({
+    where: { id: input.reservationId },
     data: {
       calendarSyncError: input.error,
     },
@@ -101,8 +127,8 @@ export async function markReservationCalendarSyncError(input: {
 export async function clearReservationCalendarEvent(
   reservationId: string,
 ): Promise<void> {
-  await prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+  await prisma.reservation.updateMany({
+    where: { id: reservationId },
     data: {
       googleCalendarEventId: null,
       calendarSyncError: null,
@@ -113,11 +139,28 @@ export async function clearReservationCalendarEvent(
 export async function getFailedCalendarSyncReservations(
   limit: number = 50,
 ): Promise<FailedCalendarSyncReservation[]> {
-  // GCAL-RETRY-04: seriesId != null の instance は standalone retry pool から除外する。
+  // GCAL-RETRY-04: 危険なのは series-child に対する **standalone create** だけ。
   // 単発の syncReservationToCalendar (RRULE 無し createCalendarEvent) を series-child に
   // 適用すると master 側の RRULE 展開と時刻二重の GCal 招待になり、series-all bulk cancel
-  // で master 削除しても孤児化する。series 側は retryFailedSeriesCalendarSyncs 経由で
-  // fetchEventInstances + write-back のみを再試行する。
+  // で master 削除しても孤児化する。
+  //
+  // GCAL-RETRY-07: そのため旧実装は where 句で `seriesId: null` を要求していたが、
+  // それは create 以外も一緒に落としていた（監査 F-61）。eventId を持つ series-child は
+  // **既存 child event への update / delete** なので master の RRULE 展開とは衝突しない。
+  // にもかかわらず 3 pool 全部から漏れていた:
+  //
+  // - standalone pool: この `seriesId: null` で除外
+  // - series pool (`getFailedCalendarSyncSeriesIds`): `googleCalendarEventId: null` を
+  //   要求するので、eventId が残っている行は対象外
+  // - series master pool: `gcal_series_master_*` prefix しか拾わない
+  //
+  // 結果、this-only キャンセルの GCal 削除が 503/429 で失敗すると、キャンセル済み
+  // 予約の child event が共有カレンダーに恒久的に残り、スタッフはその枠を埋まって
+  // いると誤認し続けた。自動復旧は起こらず、`calendarSyncError` を表示する admin
+  // 画面も無いので検知経路も無い。
+  //
+  // create を回さない判定は呼び出し側 (`retryFailedStandaloneCalendarSyncs`) の
+  // 1 箇所に置く。where 句と分岐の両方に置くと、どちらが契約なのか読めなくなる。
   //
   // GCAL-RETRY-05: `googleCalendarEventId: null` 固定だった旧 where 句は create 失敗
   // (eventId 未発行) しか拾えず、update / delete 失敗 (eventId は既存のまま) を
@@ -131,7 +174,6 @@ export async function getFailedCalendarSyncReservations(
     where: {
       calendarSyncError: { not: null },
       deletedAt: null,
-      seriesId: null,
       OR: [
         { status: { in: [...ACTIVE_RESERVATION_STATUSES] } },
         {
@@ -150,6 +192,7 @@ export async function getFailedCalendarSyncReservations(
       guestEmail: true,
       googleCalendarEventId: true,
       calendarSyncError: true,
+      seriesId: true,
       space: {
         select: {
           name: true,
@@ -179,6 +222,7 @@ export async function getFailedCalendarSyncReservations(
     guestEmail: r.guestEmail,
     googleCalendarEventId: r.googleCalendarEventId,
     calendarSyncError: r.calendarSyncError,
+    seriesId: r.seriesId,
     space: {
       name: r.space.name,
       lineAddress: formatSpaceLineAddress(

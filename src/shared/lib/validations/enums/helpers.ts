@@ -784,6 +784,8 @@ export const NOTIFICATION_TYPE = {
   SECURITY_AUDIT_INTEGRITY_FAILED: "security_audit_integrity_failed",
   /** 返金ポリシー JSON 不正で auto-refund がスキップされた */
   REFUND_POLICY_INVALID: "refund_policy_invalid",
+  /** GCal 側の削除を検知したが、公開中 or 申込ありのため反映しなかった */
+  EVENT_CALENDAR_CANCEL_BLOCKED: "event_calendar_cancel_blocked",
 } as const;
 
 export type NotificationType =
@@ -824,6 +826,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "管理者ロール変更",
   [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "監査ログ改ざん検出",
   [NOTIFICATION_TYPE.REFUND_POLICY_INVALID]: "返金ポリシー設定エラー",
+  [NOTIFICATION_TYPE.EVENT_CALENDAR_CANCEL_BLOCKED]: "カレンダー削除の未反映",
 };
 
 /**
@@ -861,6 +864,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "IconUserCheck",
   [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "IconAlertTriangle",
   [NOTIFICATION_TYPE.REFUND_POLICY_INVALID]: "IconAlertTriangle",
+  [NOTIFICATION_TYPE.EVENT_CALENDAR_CANCEL_BLOCKED]: "IconAlertTriangle",
 };
 
 // =============================================================================
@@ -944,6 +948,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "secondary",
   [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "destructive",
   [NOTIFICATION_TYPE.REFUND_POLICY_INVALID]: "destructive",
+  [NOTIFICATION_TYPE.EVENT_CALENDAR_CANCEL_BLOCKED]: "warning",
 };
 
 // =============================================================================

@@ -19,7 +19,41 @@ import {
   EventStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { ensureUniqueSlug } from "./event-slug";
+
+/**
+ * GCal 側の削除を Event へ反映しなかった理由。
+ *
+ * `upsertEventFromCalendar` の skip 理由と同じ語彙にしてある — 同じ判断を
+ * 別の名前で呼ぶと、2 経路が同じガードを持っていることが読めなくなる。
+ */
+export type EventCancelBlockedReason =
+  "published_event_protected" | "has_active_registrations";
+
+const CANCEL_BLOCKED_REASON_TEXT: Record<EventCancelBlockedReason, string> = {
+  published_event_protected: "公開中のため",
+  has_active_registrations: "有効な申込があるため",
+};
+
+async function notifyEventCalendarCancelBlocked(input: {
+  eventId: string;
+  eventTitle: string;
+  reason: EventCancelBlockedReason;
+}): Promise<void> {
+  await createNotificationCommand({
+    type: NOTIFICATION_TYPE.EVENT_CALENDAR_CANCEL_BLOCKED,
+    title:
+      NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_CALENDAR_CANCEL_BLOCKED],
+    message: `Google カレンダー上で「${input.eventTitle}」が削除されましたが、${CANCEL_BLOCKED_REASON_TEXT[input.reason]}イベントは中止していません。中止する場合は管理画面から操作してください。`,
+    resourceType: "event",
+    resourceId: input.eventId,
+  });
+}
 
 export async function upsertEventFromCalendar(data: {
   googleCalendarEventId: string;
@@ -206,12 +240,58 @@ export async function upsertEventFromCalendar(data: {
  */
 export async function cancelImportedEventFromCalendar(
   googleCalendarEventId: string,
-): Promise<{ cancelled: boolean }> {
+): Promise<{ cancelled: boolean; blockedReason?: EventCancelBlockedReason }> {
   const slot = await prisma.eventTimeSlot.findFirst({
     where: { googleCalendarEventId },
     select: { eventId: true },
   });
   if (!slot) return { cancelled: false };
+
+  // `upsertEventFromCalendar` と同じガードを掛ける（監査 F-46）。
+  //
+  // 以前はここが `googleCalendarEventId` からの逆引きだけで、status も申込も
+  // 見ずに CANCELLED へ遷移させていた。upsert 側は published_event_protected /
+  // has_active_registrations で明示的に skip しているのに、cancel 側にだけ
+  // 対称のガードが無かった。
+  //
+  // GCal は削除済みイベントの description を返さないので、ループ防止マーカーは
+  // 効かない。つまり**アプリが作って outbound で GCal へ出したイベント**を
+  // スタッフが GCal 上で消しただけで、公開中・申込 30 件のイベントが
+  // CANCELLED になりえた。しかも JSDoc どおり参加者通知は発火しないので、
+  // 申込者は中止を知らされないまま公開ページからイベントが消える。
+  const event = await prisma.event.findUnique({
+    where: { id: slot.eventId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      deletedAt: true,
+      registrations: {
+        where: { status: { not: RegistrationStatus.CANCELLED } },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+  if (!event || event.deletedAt !== null) return { cancelled: false };
+
+  const blockedReason: EventCancelBlockedReason | null =
+    event.status === EventStatus.PUBLISHED
+      ? "published_event_protected"
+      : event.registrations.length > 0
+        ? "has_active_registrations"
+        : null;
+
+  if (blockedReason) {
+    // 黙って skip すると、GCal 上は消えているのにアプリ側は公開されたまま、
+    // という食い違いが誰にも見えない。運用が判断できるよう通知を上げる。
+    await notifyEventCalendarCancelBlocked({
+      eventId: event.id,
+      eventTitle: event.title,
+      reason: blockedReason,
+    });
+    return { cancelled: false, blockedReason };
+  }
 
   const claim = await prisma.event.updateMany({
     where: {
