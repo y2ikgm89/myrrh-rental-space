@@ -12,7 +12,7 @@ import { z } from "zod";
  *
  * - `website` — honeypot。フォームに実在しない項目名を装い、bot が機械的に
  *   埋めやすい名前にする（OWASP Automated Threats Handbook 推奨）
- * - `formRenderedAt` — 表示から 3 秒未満の送信を弾く時間トラップ。FormData から
+ * - `formRenderToken` — 表示から 3 秒未満の送信を弾く時間トラップ。FormData から
  *   来る値は文字列なので `z.coerce.number()` で受ける
  *
  * どちらも **Zod ではエラーにしない**。validation エラーとして出すと bot に
@@ -29,7 +29,7 @@ export const receiptResendRequestSchema = z.object({
     .email({ error: "メールアドレスの形式が正しくありません" })
     .max(255, { error: "メールアドレスは255文字以内で入力してください" }),
   website: z.string().optional(),
-  formRenderedAt: z.coerce.number().int().nonnegative().optional(),
+  formRenderToken: z.string().optional(),
   turnstileToken: z.string().optional(),
 });
 

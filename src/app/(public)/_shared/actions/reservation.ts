@@ -96,7 +96,7 @@ export async function submitReservation(
 
       const botCheck = checkBotHeuristics({
         honeypot: data.website,
-        formRenderedAt: data.formRenderedAt,
+        formRenderToken: data.formRenderToken,
       });
       if (!botCheck.success) {
         return { ok: false, error: botCheck.error };

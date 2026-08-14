@@ -145,7 +145,7 @@ function validInput(overrides: Record<string, string> = {}): FormData {
   formData.set("serialNo", SERIAL_NO);
   formData.set("email", CUSTOMER_EMAIL);
   formData.set("website", "");
-  formData.set("formRenderedAt", String(Date.now() - 10_000));
+  formData.set("formRenderToken", String(Date.now() - 10_000));
   formData.set("turnstileToken", "test-token");
   for (const [key, value] of Object.entries(overrides)) {
     formData.set(key, value);

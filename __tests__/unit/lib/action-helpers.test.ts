@@ -11,6 +11,7 @@ import {
   isTransientError,
   withRetry,
 } from "@/shared/lib/action-helpers";
+import { createFormRenderToken } from "@/shared/lib/tokens/form-render-token";
 
 describe("action-helpers", () => {
   describe("extractFieldErrors", () => {
@@ -104,18 +105,35 @@ describe("action-helpers", () => {
   });
 
   describe("checkBotHeuristics", () => {
-    test("honeypot空 + formRenderedAtが十分過去 → success", () => {
+    /**
+     * `msAgo` ミリ秒前にサーバーが発行したトークンを作る。
+     *
+     * **クライアントの時計は一切登場しない**（監査 F-71）。旧実装は
+     * 「サーバー時刻 − クライアント時刻」を見ており、端末の時計が進んでいる
+     * 利用者は実際に 2 分かけて入力しても必ず bot 判定で拒否されていた。
+     */
+    function tokenIssuedMsAgo(msAgo: number): string {
+      const originalNow = Date.now;
+      Date.now = () => originalNow() - msAgo;
+      try {
+        return createFormRenderToken();
+      } finally {
+        Date.now = originalNow;
+      }
+    }
+
+    test("honeypot空 + トークンが十分過去 → success", () => {
       const result = checkBotHeuristics({
         honeypot: "",
-        formRenderedAt: Date.now() - 10_000,
+        formRenderToken: tokenIssuedMsAgo(10_000),
       });
       expect(result).toEqual({ success: true });
     });
 
-    test("honeypotが未入力(undefined) + formRenderedAt未指定 → success", () => {
+    test("honeypotが未入力(undefined) + トークン未指定 → success", () => {
       const result = checkBotHeuristics({
         honeypot: undefined,
-        formRenderedAt: undefined,
+        formRenderToken: undefined,
       });
       expect(result).toEqual({ success: true });
     });
@@ -123,35 +141,44 @@ describe("action-helpers", () => {
     test("honeypotに値が入っている → bot判定でfailure", () => {
       const result = checkBotHeuristics({
         honeypot: "http://spam.example.com",
-        formRenderedAt: Date.now() - 10_000,
+        formRenderToken: tokenIssuedMsAgo(10_000),
       });
       expect(result.success).toBe(false);
     });
 
-    test("formRenderedAtから3秒未満での送信 → bot判定でfailure", () => {
+    test("トークン発行から3秒未満での送信 → bot判定でfailure", () => {
       const result = checkBotHeuristics({
         honeypot: "",
-        formRenderedAt: Date.now() - 500,
+        formRenderToken: tokenIssuedMsAgo(500),
       });
       expect(result.success).toBe(false);
     });
 
-    test("formRenderedAtがちょうど3秒以上前 → success", () => {
+    test("トークン発行がちょうど3秒以上前 → success", () => {
       const result = checkBotHeuristics({
         honeypot: "",
-        formRenderedAt: Date.now() - 3_000,
+        formRenderToken: tokenIssuedMsAgo(3_000),
       });
       expect(result.success).toBe(true);
+    });
+
+    test("復号できないトークンは判定不能として通す（bot 扱いにしない）", () => {
+      // 鍵ローテーション直後や壊れた値で、正当な利用者を締め出さない。
+      // 時間トラップの目的は「速すぎる送信を弾く」ことで、判定できない送信を
+      // 弾くことではない（監査 F-71）。
+      expect(
+        checkBotHeuristics({ honeypot: "", formRenderToken: "not-a-token" }),
+      ).toEqual({ success: true });
     });
 
     test("honeypotとtimingの両方に問題があっても同じエラーメッセージを返す(理由を開示しない)", () => {
       const honeypotResult = checkBotHeuristics({
         honeypot: "filled",
-        formRenderedAt: Date.now() - 10_000,
+        formRenderToken: tokenIssuedMsAgo(10_000),
       });
       const timingResult = checkBotHeuristics({
         honeypot: "",
-        formRenderedAt: Date.now(),
+        formRenderToken: tokenIssuedMsAgo(0),
       });
       expect(honeypotResult.success).toBe(false);
       expect(timingResult.success).toBe(false);

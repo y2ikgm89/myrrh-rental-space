@@ -330,9 +330,9 @@ test.describe("イベント参加申込 - capacity=1 TOCTOU (E2E-P2-03)", () => 
       // page.waitForTimeout は banned のため Node.js の setTimeout で sleep する。
       //
       // 基準は「最後に用意したページ」でなければならない。閾値はサーバーが
-      // `Date.now() - formRenderedAt` で測り、`formRenderedAt` は各ページの
-      // client mount 時刻 (`useState(() => Date.now())`、event-registration-form.tsx) の
-      // ため、3 本のうち最も新しいページが最短の fill 時間になる。
+      // `formRenderToken` の発行時刻から測る（監査 F-71 以降、クライアントの
+      // 時計は使わない）。トークンは各ページの**描画時**に発行されるため、
+      // 3 本のうち最も新しいページが最短の fill 時間になる。
       // 以前は「最初の attempt の開始時刻」を基準にしており、3 本を直列に用意する
       // 時点でその経過は必ず 3.1s を超えるため **この待機は常にスキップされていた**。
       // prepareAttempt の戻り時刻は必ず formRenderedAt より後なので、そこから

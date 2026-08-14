@@ -21,6 +21,11 @@ import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { requestReceiptResendAction } from "../_actions/resend";
 
 interface Props {
+  /**
+   * サーバーが発行した bot 判定用トークン（監査 F-71）。
+   * クライアントの時計は使わない。Server Component の親から渡す。
+   */
+  readonly formRenderToken: string;
   readonly turnstileSiteKey: string | null;
   readonly initialSerialNo?: string;
 }
@@ -35,17 +40,17 @@ interface Props {
  *
  * ## Bot 対策
  *  - honeypot (`website` フィールド): 視覚的に隠した hidden input。bot はそこに入力しがち
- *  - formRenderedAt: マウント時刻を hidden field に埋め、submit までの時間で bot 判定
+ *  - formRenderToken: マウント時刻を hidden field に埋め、submit までの時間で bot 判定
  *  - Turnstile: Cloudflare の bot 緩和
  */
 export function ReceiptResendForm({
+  formRenderToken,
   turnstileSiteKey,
   initialSerialNo,
 }: Props) {
   const turnstileRef = useRef<TurnstileInstance>(null);
   // 時間トラップの基準時刻。初回レンダーで固定する（`useEffect` で入れると
   // hydration 後の 1 フレーム分だけ未設定になり、その間の submit が素通りする）。
-  const [formRenderedAt] = useState(() => Date.now());
   const [lastResult, formAction, isPending] = useActionState(
     requestReceiptResendAction,
     undefined,
@@ -156,8 +161,8 @@ export function ReceiptResendForm({
 
         <input
           type="hidden"
-          name={fields.formRenderedAt.name}
-          value={formRenderedAt}
+          name={fields.formRenderToken.name}
+          value={formRenderToken}
         />
         {/* Honeypot: 視覚的に隠した hidden input。bot はここに入力してしまう */}
         <input
