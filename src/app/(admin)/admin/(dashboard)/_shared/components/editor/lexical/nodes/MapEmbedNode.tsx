@@ -145,9 +145,16 @@ export class MapEmbedNode extends DecoratorNode<ReactElement> {
     const div = document.createElement("div");
     const label = $getState(this, mapLabelState);
     div.setAttribute("data-map", "true");
-    if (label) div.setAttribute("data-map-label", label);
+    if (label) {
+      div.setAttribute("data-map-label", label);
+      const labelEl = document.createElement("p");
+      labelEl.setAttribute("data-map-label-text", "");
+      labelEl.textContent = label;
+      div.appendChild(labelEl);
+    }
     const iframe = document.createElement("iframe");
     iframe.setAttribute("src", $getState(this, embedUrlState));
+    iframe.setAttribute("title", label || "Google マップ");
     iframe.setAttribute("loading", "lazy");
     iframe.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
     div.appendChild(iframe);

@@ -94,6 +94,16 @@ describe("数値列の値域", () => {
     // 母集合と制約の突き合わせが機能していることを、既存の 1 本で確かめる。
     const taxRate = COLUMNS.find((c) => key(c) === "Reservation.taxRate");
     expect(taxRate && isCoveredByDedicatedCheck(taxRate)).toBe(true);
+    // BigInt を母集合から落とすと AuditLog.sequence が黙って対象外になる（F-77）。
+    const sequence = COLUMNS.find((c) => key(c) === "AuditLog.sequence");
+    expect(sequence).toBeDefined();
+    expect(NUMERIC_COLUMN_DOMAINS["AuditLog.sequence"]?.kind).toBe("positive");
+    expect(
+      sequence &&
+        CHECKS.get(sequence.table)?.has(
+          constraintNameFor(sequence, { kind: "positive" }),
+        ),
+    ).toBe(true);
   });
 
   test("すべての数値列が CHECK に覆われている", () => {
