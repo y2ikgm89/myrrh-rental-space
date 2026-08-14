@@ -566,11 +566,11 @@ type CancelSeriesTx = {
       // 列名が変わったらコンパイルで落とすため（`object` や素の手書き形では
       // 列の drift が実行時の PrismaClientValidationError まで出ない）。
       where: Prisma.ReservationWhereUniqueInput & { id: string };
-      select: { seriesId: true; startTime: true };
+      select: Prisma.ReservationSelect;
     }) => Promise<{ seriesId: string | null; startTime: Date } | null>;
     findMany: (args: {
       where: Prisma.ReservationWhereInput;
-      select: { id: true };
+      select: Prisma.ReservationSelect;
     }) => Promise<{ id: string }[]>;
   };
 };

@@ -31,10 +31,13 @@
  *
  * ## 判定
  *
- * 引数の型に `Prisma.` 修飾の型参照が 1 つも現れなければ違反。これで
- * `object` / `unknown` / `any` / `Record<string, unknown>` に加えて、
- * `{ where: { id: string } }` のような**手で書いた where の形**も落ちる
- * （手書きの形は列名 drift を検出しないので、`object` と同じ穴になる）。
+ * 型リテラル引数では `where` / `data` / `orderBy` / `select` / `include` /
+ * `cursor` の**それぞれ**に `Prisma.` 修飾の型参照を要求する。引数のどこか 1
+ * 箇所に `Prisma.` があれば通すと、手書き where が `select: Prisma.XSelect` と
+ * 同居しても素通りする。型リテラルでない引数（`object` / `unknown` /
+ * `Prisma.XFindManyArgs` 等）は引数全体を見る。全パラメータが条件を満たすこと
+ * （`params.every`）。どれか 1 つでも Prisma 型なら通すと、
+ * `findMany(args: object, opts: Prisma.SpaceSelect)` が緑になる。
  *
  * 同一ファイル内の type alias は 1 段だけ辿る。**辿れなければ通さない**
  * （「読めなかった＝安全」にすると、alias を挟むだけで素通りするため）。
@@ -184,21 +187,64 @@ function methodParameters(
   return undefined;
 }
 
-/** 引数のどれか 1 つでも Prisma の Input 型を経由していれば合格。 */
+/** Prisma が列名検査する引数プロパティ。ここだけ手書きを許すと drift が残る。 */
+const PRISMA_ARG_PROPERTIES = new Set([
+  "where",
+  "data",
+  "orderBy",
+  "select",
+  "include",
+  "cursor",
+]);
+
+/** 同一ファイル内 alias を 1 段だけ引く。辿れなければ宣言そのものを返す。 */
+function resolveAlias(
+  type: TypeNode | undefined,
+  aliases: ReadonlyMap<string, TypeNode>,
+): TypeNode | undefined {
+  if (!type) return undefined;
+  if (isTypeReferenceNode(type) && isIdentifier(type.typeName)) {
+    return aliases.get(type.typeName.text) ?? type;
+  }
+  return type;
+}
+
+/** 型リテラルなら Prisma 意味のあるプロパティ単位。それ以外は引数全体。 */
+function argumentUsesPrismaInput(
+  type: TypeNode | undefined,
+  aliases: ReadonlyMap<string, TypeNode>,
+): boolean {
+  const resolved = resolveAlias(type, aliases);
+  if (!resolved) return false;
+  if (isTypeLiteralNode(resolved)) {
+    const prismaProps: Array<TypeNode | undefined> = [];
+    for (const member of resolved.members) {
+      if (
+        !isPropertySignature(member) ||
+        !member.name ||
+        !isIdentifier(member.name)
+      ) {
+        continue;
+      }
+      if (PRISMA_ARG_PROPERTIES.has(member.name.text)) {
+        prismaProps.push(member.type);
+      }
+    }
+    if (prismaProps.length > 0) {
+      return prismaProps.every((propType) =>
+        referencesPrismaInput(resolveAlias(propType, aliases)),
+      );
+    }
+  }
+  return referencesPrismaInput(resolved);
+}
+
+/** 全引数が Prisma の Input 型を経由していれば合格。 */
 function parametersUsePrismaInput(
   params: readonly ParameterDeclaration[],
   aliases: ReadonlyMap<string, TypeNode>,
 ): boolean {
-  return params.some((param) => {
-    const declared = param.type;
-    const resolved =
-      declared &&
-      isTypeReferenceNode(declared) &&
-      isIdentifier(declared.typeName)
-        ? (aliases.get(declared.typeName.text) ?? declared)
-        : declared;
-    return referencesPrismaInput(resolved);
-  });
+  return params.every((param) => argumentUsesPrismaInput(param.type, aliases));
 }
 
 /** fixture 用の疑似ファイル内容（`analyzeSnippet` だけが書き込む）。 */
@@ -304,6 +350,18 @@ describe("手書き構造型の Prisma 引数は公式 Input 型で受ける", (
     expect(
       analyzeSnippet(
         `type A = object; interface T { readonly space: { findMany(args: A): Promise<void> } }`,
+      ),
+    ).toHaveLength(1);
+    // 手書き where と Prisma select の同居（tsc が通す混在形）。
+    expect(
+      analyzeSnippet(
+        `interface T { readonly space: { findMany(args: { where: { id: string; deletedAt: null }; select: Prisma.SpaceSelect }): Promise<void> } }`,
+      ),
+    ).toHaveLength(1);
+    // 第 2 引数の Prisma 型で第 1 引数の `object` を洗浄できない。
+    expect(
+      analyzeSnippet(
+        `interface T { readonly space: { findMany(args: object, opts: Prisma.SpaceSelect): Promise<void> } }`,
       ),
     ).toHaveLength(1);
   });
