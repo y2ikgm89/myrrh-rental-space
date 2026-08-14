@@ -98,6 +98,9 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-37](2026-08-12-codebase-audit-findings.md#f-37)   | 中     | #2276                 | Instagram の VIDEO は `thumbnailUrl` を使う（mp4 を `<Image>` に渡さない）                       | —                                                                                           |
 | [F-45](2026-08-12-codebase-audit-findings.md#f-45)   | 中     | #2276                 | イベント一斉配信で `marketingOptIn` を守り、解決できないゲストにも送らない                       | —                                                                                           |
 | [F-75](2026-08-12-codebase-audit-findings.md#f-75)   | 中     | #2276                 | 本文幅を `style` で渡す。補間 arbitrary value を止める gate も追加                               | —                                                                                           |
+| [F-38](2026-08-12-codebase-audit-findings.md#f-38)   | 中     | #2279                 | mypage の書込 5 経路にメンテナンス判定を入れ、漏れを gate で止める                               | —                                                                                           |
+| [F-39](2026-08-12-codebase-audit-findings.md#f-39)   | 中     | #2279                 | クーポン入力を 400ms 落とし、料金取得失敗を画面に出す                                            | —                                                                                           |
+| [F-62](2026-08-12-codebase-audit-findings.md#f-62)   | 中     | #2279                 | 編集可能な paymentStatus を SSoT 化し、updateMany の WHERE と揃える                              | —                                                                                           |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
