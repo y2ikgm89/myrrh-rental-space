@@ -18,7 +18,9 @@ export type FeatureModulesMap = Record<string, boolean>;
 
 export async function getFeatureModulesSettings(): Promise<FeatureModulesMap> {
   "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  // kill switch なので短命プロファイル。理由と反映上限は CACHE_LIFE.FEATURE_FLAGS の
+  // docstring（監査 F-65）。
+  cacheLife(CACHE_LIFE.FEATURE_FLAGS);
   cacheTag(CACHE_TAGS.FEATURE_MODULES);
 
   const result = await criticalFetch({

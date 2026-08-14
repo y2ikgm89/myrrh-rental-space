@@ -152,10 +152,12 @@ function textLabel(key: string, text: string): PublicNavItem["label"] {
 function renderHeader(
   mobileNavItems: readonly PublicNavItem[] = [],
   navItems: readonly PublicNavItem[] = [],
+  reservationEnabled = true,
 ): void {
   root?.render(
     <Header
       brand={brand}
+      reservationEnabled={reservationEnabled}
       navItems={navItems}
       mobileNavItems={mobileNavItems}
       scrollBehavior={HeaderScrollBehavior.ALWAYS_VISIBLE}
@@ -198,6 +200,30 @@ describe("public site header mobile menu", () => {
     container = undefined;
   });
 
+  // 監査 F-103: `/reservation` への唯一の常設導線がこのハードコード CTA なので、
+  // feature 判定が無いと reservation OFF でも全公開ページに残り、押した訪問者は
+  // soft-404 に着く。DB 由来のナビは `isUrlDisabled` で刈られている。
+  test("reservation OFF なら Reserve CTA を出さない（デスクトップ・モバイル両方）", async () => {
+    await act(async () => {
+      renderHeader([], [], false);
+    });
+
+    expect(document.querySelectorAll('a[href="/reservation"]').length).toBe(0);
+
+    await openMobileMenu();
+
+    expect(document.querySelectorAll('a[href="/reservation"]').length).toBe(0);
+  });
+
+  test("reservation ON なら Reserve CTA を出す", async () => {
+    await act(async () => {
+      renderHeader([], [], true);
+    });
+
+    expect(
+      document.querySelectorAll('a[href="/reservation"]').length,
+    ).toBeGreaterThan(0);
+  });
   test("opened mobile menu renders the Radix modal overlay and an opaque content surface", async () => {
     await act(async () => {
       renderHeader();

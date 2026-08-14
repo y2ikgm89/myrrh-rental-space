@@ -43,6 +43,30 @@ export const CACHE_LIFE = {
   DYNAMIC_DATA: "minutes",
 
   /**
+   * 機能モジュールの ON/OFF（kill switch）
+   *
+   * **STATIC_SETTINGS（days）にしてはいけない。** admin と public は別の Cloud Run
+   * サービスで、`invalidateSiteWideCache` の `updateTag` は**既定キャッシュハンドラ
+   * ＝プロセス内メモリ**にしか効かない（共有 cacheHandler は未配線）。つまり
+   * admin コンテナの無効化は public コンテナに一切届かず、public は自分の Data Cache
+   * に残った古い map を読み続ける（監査 F-65）。
+   *
+   * 具体例: 二重課金が起きて payment を OFF にしても、`requireFeatureEnabled` も
+   * `assertOnlinePaymentAvailable()` も「ON」のままで、**checkout が最大 24 時間
+   * 作られ続けた**。reservation の緊急停止も同じ。
+   *
+   * ## 反映上限（この行が SSoT）
+   *
+   * - Cloudflare edge: 保存時に `feature-modules-v1`（SITE_WIDE）を purge → 即時
+   * - public origin の Data Cache: `minutes` プロファイル ＝ **revalidate 60 秒**
+   *
+   * したがって「管理画面で OFF にしてから公開面に効くまで」の上限は**約 1 分**。
+   * 恒久策（共有 cacheHandler、または admin→public の revalidate endpoint）を
+   * 入れるまでは、この 1 分がこのシステムの kill switch の応答時間。
+   */
+  FEATURE_FLAGS: "minutes",
+
+  /**
    * メタデータ・SEO関連
    * - 公開コンテンツと同期
    */

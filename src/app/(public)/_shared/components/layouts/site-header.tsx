@@ -56,6 +56,16 @@ type HeaderAuthSlot =
 
 interface HeaderProps {
   readonly brand: SiteBrandValue;
+  /**
+   * reservation feature が有効か。
+   *
+   * `/reservation` への唯一の常設導線がこのハードコード CTA なので、feature 判定が
+   * 無いと **reservation OFF（または spaces OFF の依存カスケード）でも全公開ページの
+   * ヘッダーに「Reserve」が残り、押した訪問者は soft-404 に着く**（監査 F-103）。
+   * DB 由来のナビは `isUrlDisabled` で刈られ、`/reservation` 自体も
+   * `requireFeatureEnabled` で 404 になるのに、ここだけが規約から外れていた。
+   */
+  readonly reservationEnabled: boolean;
   readonly navItems: readonly PublicNavItem[];
   readonly mobileNavItems: readonly PublicNavItem[];
   readonly scrollBehavior: HeaderScrollBehavior;
@@ -260,6 +270,7 @@ function MobileNavItem({
 
 export function Header({
   brand,
+  reservationEnabled,
   navItems,
   mobileNavItems,
   scrollBehavior,
@@ -508,14 +519,16 @@ export function Header({
               {authSlot.loginLabel}
             </Link>
           )}
-          <Button
-            variant="editorial"
-            size="sm"
-            href="/reservation"
-            className="text-eyebrow-lg uppercase"
-          >
-            Reserve
-          </Button>
+          {reservationEnabled && (
+            <Button
+              variant="editorial"
+              size="sm"
+              href="/reservation"
+              className="text-eyebrow-lg uppercase"
+            >
+              Reserve
+            </Button>
+          )}
         </div>
 
         {/* Mobile — modal Dialog keeps the covered page inert and delegates focus/scroll management to Radix. */}
@@ -624,16 +637,18 @@ export function Header({
                       {authSlot.loginLabel}
                     </Link>
                   )}
-                  <Link
-                    href="/reservation"
-                    onClick={closeMenu}
-                    className={cn(
-                      "inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-eyebrow-lg uppercase text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
-                      MOBILE_MENU_FOCUS_CLASS,
-                    )}
-                  >
-                    Reserve
-                  </Link>
+                  {reservationEnabled && (
+                    <Link
+                      href="/reservation"
+                      onClick={closeMenu}
+                      className={cn(
+                        "inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-eyebrow-lg uppercase text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
+                        MOBILE_MENU_FOCUS_CLASS,
+                      )}
+                    >
+                      Reserve
+                    </Link>
+                  )}
                 </div>
               </nav>
             </Dialog.Content>
