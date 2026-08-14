@@ -175,6 +175,7 @@ const baseReservation = {
   totalPrice: 5000,
   notes: null,
   icsSequence: 0,
+  refunds: [],
   paymentStatus: "UNPAID",
   stripePaymentIntentId: null,
   googleCalendarEventId: null,

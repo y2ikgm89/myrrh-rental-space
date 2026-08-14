@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
 import type { SideEffectReservation } from "@/shared/domain/reservations/cancellation/types";
 
@@ -22,6 +23,13 @@ export async function fetchReservationForSideEffects(
       stripePaymentIntentId: true,
       stripeCheckoutSessionId: true,
       googleCalendarEventId: true,
+      // 返金ポリシーの取り分から差し引く既返金分（監査 F-43）。除外 status は
+      // `resolveRefundAmount` の残額計算と同じにする — 違う集合で数えると、
+      // ここで通した額が lock 内の残額チェックで弾かれる。
+      refunds: {
+        where: { status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] } },
+        select: { amount: true },
+      },
       guestLastName: true,
       guestFirstName: true,
       guestEmail: true,

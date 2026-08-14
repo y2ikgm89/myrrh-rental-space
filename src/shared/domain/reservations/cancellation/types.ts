@@ -99,6 +99,8 @@ export interface SideEffectReservation {
   endTime: Date;
   totalPrice: number | null;
   totalPriceWithTax: number | null;
+  /** 未失効の Refund 行（返金ポリシーの取り分から差し引く用。監査 F-43）。 */
+  refunds: { amount: number }[];
   notes: string | null;
   icsSequence: number;
   paymentStatus: PaymentStatus;

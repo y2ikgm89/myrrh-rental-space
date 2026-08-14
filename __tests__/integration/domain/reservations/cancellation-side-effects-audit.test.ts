@@ -187,6 +187,7 @@ function reservationFixture(overrides: ReservationOverrides = {}): unknown {
     totalPrice: overrides.totalPrice ?? null,
     notes: null,
     icsSequence: 1,
+    refunds: [],
     paymentStatus: overrides.paymentStatus ?? "UNPAID",
     stripePaymentIntentId: overrides.stripePaymentIntentId ?? null,
     googleCalendarEventId: overrides.googleCalendarEventId ?? null,

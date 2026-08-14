@@ -77,6 +77,7 @@ function baseInput(
     wasPaid: true,
     requiresRefund: true,
     chargeBase: 5000,
+    refundedSoFar: 0,
     startTime: START_TIME,
     request: REQUEST,
     executeRefund: mockExecuteRefund,
@@ -96,6 +97,49 @@ describe("runAutoRefundOnCancel", () => {
       cumulativeAmount: 5000,
       newPaymentStatus: "REFUNDED",
     });
+  });
+
+  test("既存の部分返金がある場合、ポリシーの取り分から差し引いて請求する", async () => {
+    // 監査 F-43。総額 5000 / 既返金 2000 / ポリシー 100% なら、返すのは残り 3000。
+    // 5000 を請求すると `resolveRefundAmount` が残額超過で reject し、
+    // **キャンセル分の返金が 1 円も走らない**（旧実装の挙動）。
+    mockSettingsCommerceFindUnique.mockResolvedValue({
+      refundPolicy: {
+        tiers: [{ hoursBefore: 0, refundRate: 100 }],
+        defaultRefundRate: 100,
+      },
+    });
+
+    const outcome = await runAutoRefundOnCancel(
+      baseInput({ refundedSoFar: 2000 }),
+    );
+
+    expect(outcome.status).toBe("ok");
+    expect(mockExecuteRefund).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRefund.mock.calls[0]?.[0]).toMatchObject({
+      amount: 3000,
+    });
+  });
+
+  test("ポリシー 50% で既に 50% 返金済みなら skip する", async () => {
+    // 旧実装は 2500 を請求して通し、累計 5000（100%）＝ ポリシーの倍を返していた。
+    mockSettingsCommerceFindUnique.mockResolvedValue({
+      refundPolicy: {
+        tiers: [{ hoursBefore: 0, refundRate: 50 }],
+        defaultRefundRate: 50,
+      },
+    });
+
+    const outcome = await runAutoRefundOnCancel(
+      baseInput({ refundedSoFar: 2500 }),
+    );
+
+    expect(outcome).toEqual({
+      status: "skipped",
+      reason: AUTO_REFUND_SKIP_REASON.POLICY_ALREADY_SATISFIED,
+      detail: { policyEntitlement: 2500, refundedSoFar: 2500 },
+    });
+    expect(mockExecuteRefund).not.toHaveBeenCalled();
   });
 
   test("requiresRefund=false × wasPaid=false → notPaid skip", async () => {
@@ -156,7 +200,7 @@ describe("runAutoRefundOnCancel", () => {
     expect(outcome).toMatchObject({
       status: "skipped",
       reason: AUTO_REFUND_SKIP_REASON.POLICY_REFUND_RATE_ZERO,
-      detail: { policyRefundAmount: 0 },
+      detail: { policyEntitlement: 0, refundedSoFar: 0 },
     });
     expect(mockExecuteRefund).not.toHaveBeenCalled();
   });
