@@ -95,10 +95,14 @@ export async function bulkMoveFaqItems(
 ): Promise<BulkFaqItemResult> {
   if (ids.length === 0) return { count: 0, affectedIds: [] };
 
-  await ensureFaqCategoryExists(newCategoryId);
-
   const affectedIds = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql(`faq_items:${newCategoryId}`));
+
+    // createFaqItem / updateFaqItem / restoreFaqItem と同じ理由で、移動先
+    // カテゴリの存在チェックは lock 取得後に行う（deleteFaqCategory との
+    // レースを防ぐ。lock 取得前の事前チェックだと、チェック後・lock 取得前に
+    // カテゴリが削除される check-then-act の窓が残る）。
+    await ensureFaqCategoryExists(newCategoryId);
 
     const maxOrder = await tx.faqItem.aggregate({
       where: { categoryId: newCategoryId, deletedAt: null },
