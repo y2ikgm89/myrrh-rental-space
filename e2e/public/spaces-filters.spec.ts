@@ -1,13 +1,6 @@
 import { test, expect } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
-const appSurface = process.env["APP_SURFACE"] ?? "admin";
-
-test.skip(
-  appSurface !== "public",
-  "Public /spaces facet filter spec is served only on public surface.",
-);
-
 /**
  * 公開サイト - /spaces facet 検索 UI E2E
  *

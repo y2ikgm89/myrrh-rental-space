@@ -86,9 +86,9 @@
 > 検査を待たずに先にローテーションするか。artifact の削除・鍵のローテーションはいずれも外部に影響するため、
 > こちらの指示なしには実行していない。
 
-**この判断は「検査せず先にローテーションする」で決着し、実行中。**
+**この判断は「検査せず先にローテーションする」で決着し、段 3 まで完了した。**
 段階と現在地は [対処の記録 §3](../../audits/2026-08-12-codebase-audit-progress.md#3-f-01-の鍵ローテーション段階実行中)。
-残りの段 2・3 は Cloudflare の本番設定変更と秘密情報の投入なので、**運用者が行う。**
+残るのは旧 version の無効化だけで、これは手順上「運用判断」。
 
 ---
 
@@ -173,10 +173,9 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 影響と不可逆性が大きい順。**高 11 件は全件クローズ済み**なので、残っているのは以下だけ。
 済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
-### フェーズ 1 — 鍵ローテーションの完了（§3.1）
+### フェーズ 1 — 鍵ローテーション（完了）
 
-`CLOUDFLARE_ORIGIN_HEADER_SECRET` の段 1〜3。**コードではなく運用作業**で、
-他のどれよりも先。段階と現在地は
+`CLOUDFLARE_ORIGIN_HEADER_SECRET` の段 1〜3 は完了。記録は
 [対処の記録 §3](../../audits/2026-08-12-codebase-audit-progress.md#3-f-01-の鍵ローテーション段階実行中)。
 
 ### フェーズ 2 — 済んだ修正の取りこぼし
@@ -192,10 +191,9 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（58 件）
+### フェーズ 4 — 中（57 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
-先に片付けるべきもの: **[F-16](../../audits/2026-08-12-codebase-audit-findings.md#f-16)**（公開ページ E2E 4 本が全 CI ジョブで 1 テストも実行されていない）— 検証の空振りは他の判断の前提を壊す。
 
 ### フェーズ 5 — 低（58 件）
 
@@ -216,7 +214,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-13](../../audits/2026-08-12-codebase-audit-findings.md#f-13)   | 中     | `__tests__/unit/architecture/inquiry-status-history-append-only.test.ts:41`                                   | inquiry\_status\_history の append-only gate が走査範囲外（scripts/e2e）を見ておらず、走査規模の下限も持たない                                                  |
 | [F-14](../../audits/2026-08-12-codebase-audit-findings.md#f-14)   | 中     | `__tests__/unit/architecture/use-server-exports.test.ts:41`                                                   | use-server gate は「先頭に必ず directive がある」前提で母集合を作るため、docstring を先頭に置いた "use server" ファイルが丸ごと検査対象から消える               |
 | [F-15](../../audits/2026-08-12-codebase-audit-findings.md#f-15)   | 中     | `__tests__/unit/shared/lib/csp/sanitize-css.test.ts:21`                                                       | sanitize-css.test.ts が「無効な CSS プロパティ名」を固定していて、透過ヘッダー時の main の負マージンが本番で効いていない                                        |
-| [F-16](../../audits/2026-08-12-codebase-audit-findings.md#f-16)   | 中     | `e2e/public/spaces-filters.spec.ts:6`                                                                         | 公開ページ E2E 4 本が全 CI ジョブで 1 テストも実行されない（surface 条件と実行 env の食い違い）                                                                 |
 | [F-17](../../audits/2026-08-12-codebase-audit-findings.md#f-17)   | 中     | `eslint-rules/seed-respects-unique-constraints.mjs:460`                                                       | seed の partial unique probe 検査が findFirst 限定 — 元の欠陥そのものである findUnique 形が lint を素通りする                                                   |
 | [F-18](../../audits/2026-08-12-codebase-audit-findings.md#f-18)   | 中     | `next.config.ts:243`                                                                                          | /access とカスタムページは Cache-Tag を 1 つも出さないため、メンテナンスモード等の site-wide 無効化が CDN edge に届かない                                       |
 | [F-19](../../audits/2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `prisma/seed.ts:488`                                                                                          | seedProduction の再実行が SEO 設定と送信元メール設定を管理画面編集ごと上書きする                                                                                |

@@ -568,7 +568,7 @@ jobs:
       # だが広域 E2E は「壊れかけを見つける」ための夜間実行なので、隠れた flake を
       # 可視化する側に倒す。公式 CLI: "Fail if any test is flagged as flaky"。
       # required の smoke-e2e には**付けない**（付けると flake で merge が止まる）。
-      - name: Run E2E tests
+      - name: Run E2E tests (admin surface)
         run: bunx playwright test --fail-on-flaky-tests
         env:
           CI: true
@@ -585,6 +585,37 @@ jobs:
           ADMIN_TEST_IAP_EMAIL: "superadmin@example.com"
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          SUPPRESSION_HASH_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CRON_OIDC_AUDIENCE: "http://localhost:3000"
+          CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com"
+          R2_ACCOUNT_ID: "test-r2-account"
+          R2_ACCESS_KEY_ID: "test-r2-access-key"
+          R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
+          R2_BUCKET_NAME: "test-r2-bucket"
+          R2_INQUIRIES_BUCKET_NAME: "test-r2-inquiries-bucket"
+          R2_PUBLIC_URL: "https://example.com"
+          RESEND_API_KEY: "re_test_placeholder_for_ci_e2e_only"
+          STRIPE_SECRET_KEY: "sk_test_placeholder_for_ci_e2e_only"
+          GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-e2e"
+
+      # `/` を踏む spec は admin surface では実行できない（proxy が `/admin` へ
+      # リダイレクトする）。surface は webServer プロセス単位の env なので、
+      # 1 回の playwright 実行では両立しない。**この step が無いと
+      # `e2e/public/homepage.spec.ts` と `e2e/mobile/public-mobile.*.spec.ts` は
+      # どの CI ジョブでも 1 test も走らない**（監査 F-16 の実害）。
+      # 選ぶ project は公開 surface 専用の 3 つだけ。mutator (`chromium-feature-modules`)
+      # は選ばれないので、reader との排他も不要。
+      # 強制: __tests__/unit/architecture/e2e-surface-skip-has-runner.test.ts
+      - name: Run E2E tests (public surface)
+        run: bunx playwright test --fail-on-flaky-tests --project=chromium-public-root --project=chromium-mobile --project=webkit-mobile
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          APP_SURFACE: public
+          ADMIN_APP_URL: http://localhost:3000
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           SUPPRESSION_HASH_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_OIDC_AUDIENCE: "http://localhost:3000"
