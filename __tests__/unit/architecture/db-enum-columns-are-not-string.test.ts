@@ -116,6 +116,10 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
     "`charge.refunded` が運ぶ Stripe Refund.status。Refund.status 列は VARCHAR で Prisma enum ではない",
   ],
   [
+    "src/shared/types/next-path-to-regexp.d.ts::source",
+    "path-to-regexp の `source` は URL パターン文字列。EventRegistration.source（申込の作成経路）とは無関係",
+  ],
+  [
     "src/shared/domain/payment/stripe-refund-orchestration.ts::status",
     "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
   ],
