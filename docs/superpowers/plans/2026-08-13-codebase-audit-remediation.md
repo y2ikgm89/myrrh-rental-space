@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 18 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 15 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -307,9 +307,7 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 
 | ID                                                                | 深刻度 | 箇所                                                                | 内容                                                                                                                                                 |
 | ----------------------------------------------------------------- | ------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-107](../../audits/2026-08-12-codebase-audit-findings.md#f-107) | 低     | `src/app/(public)/mypage/_shared/actions/customer-merge.ts:243`     | 顧客履歴の統合が完了しても成功メッセージが表示されない（`mergeSuccess` を描画する側が存在しない）                                                    |
 | [F-108](../../audits/2026-08-12-codebase-audit-findings.md#f-108) | 低     | `src/app/(public)/mypage/_shared/actions/profile.ts:199`            | 初回メール登録の「確認メールを送信しました」が画面に出ず、利用者は認証リンクを踏む必要に気付けない                                                   |
-| [F-109](../../audits/2026-08-12-codebase-audit-findings.md#f-109) | 低     | `src/app/(public)/mypage/merge/confirm/page.tsx:108`                | /mypage/merge/confirm がクエリ `error` の中身を検証せずページ自身の警告文として描画する                                                              |
 | [F-110](../../audits/2026-08-12-codebase-audit-findings.md#f-110) | 低     | `src/app/(public)/mypage/settings/_components/profile-form.tsx:114` | 初回メールアドレス登録で「確認メールを送信しました」が捨てられ、「プロフィールを更新しました」と表示されるため利用者が登録を完了できない             |
 | [F-111](../../audits/2026-08-12-codebase-audit-findings.md#f-111) | 低     | `src/app/api/calendar/reservation/[id]/route.ts:117`                | メールの .ics リンクを踏んだ直後 30 分間、ログイン済み顧客はマイページから別予約の .ics を取得できず 401 になる                                      |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                          | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                |

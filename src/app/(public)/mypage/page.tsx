@@ -19,6 +19,10 @@ import { Stack } from "@/public/components/design-system/stack";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { ReservationTabs } from "./_components/reservation-tabs";
 import { FlashMessage } from "./_components/flash-message";
+import {
+  isMergeSuccessQuery,
+  MERGE_SUCCESS_MESSAGE,
+} from "./_shared/merge-query";
 
 const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_RESERVATION_STATUSES);
 
@@ -35,6 +39,7 @@ export default async function MypagePage({
   const cancelledParam = sp["cancelled"];
   const justCancelledSingle = cancelledParam === "ok";
   const justCancelledSeries = cancelledParam === "series";
+  const justMerged = isMergeSuccessQuery(sp["merged"]);
 
   const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
@@ -85,6 +90,11 @@ export default async function MypagePage({
           <p className="mt-1 text-muted-foreground">
             シリーズに含まれる予約をまとめてキャンセルしました。確認メールをお送りしています。
           </p>
+        </FlashMessage>
+      )}
+      {justMerged && (
+        <FlashMessage queryKey="merged">
+          <p className="font-medium">{MERGE_SUCCESS_MESSAGE}</p>
         </FlashMessage>
       )}
       <ReservationTabs activeItems={activeItems} pastItems={pastItems} />
