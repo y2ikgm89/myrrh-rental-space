@@ -98,9 +98,11 @@ function makeCronRequest(): Request {
 function paidEventRegistrationSession(
   registrationId: string,
 ): Stripe.Checkout.Session {
+  // Stripe.Checkout.Session は 50+ 必須フィールド。subset を直接 Session に
+  // 断言すると TS2352（overlap 不足）。公式の直し方は unknown 経由
+  // （`__tests__/mocks/stripe.ts` と同じ SDK 型境界）。
   return {
     id: `cs_test_${crypto.randomUUID()}`,
-    object: "checkout.session",
     metadata: {
       type: "event-registration",
       registrationId,
@@ -109,7 +111,7 @@ function paidEventRegistrationSession(
     payment_status: "paid",
     amount_total: TICKET_PRICE,
     currency: "jpy",
-  } as Stripe.Checkout.Session;
+  } as unknown as Stripe.Checkout.Session;
 }
 
 const unusedStripeClient = {} as AsyncOnlyStripe;

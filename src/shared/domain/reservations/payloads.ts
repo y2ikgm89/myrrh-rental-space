@@ -280,9 +280,18 @@ export async function claimCouponUsage(
   }
 }
 
-/** Interactive tx client または prisma gateway（coupon.updateMany のみ使用）。 */
+/**
+ * Interactive tx / prisma gateway / 経路ごとの構造型 tx。
+ * Prisma の generic `updateMany` を Pick すると、`where` 必須の構造型
+ * （`ApplyCancellationTx` など）が代入できなくなる。
+ */
 type CouponReleaseClient = {
-  readonly coupon: Pick<Tx["coupon"], "updateMany">;
+  readonly coupon: {
+    updateMany(args: {
+      where: Prisma.CouponWhereInput;
+      data: Prisma.CouponUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
+  };
 };
 
 /**

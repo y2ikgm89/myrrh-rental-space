@@ -6,11 +6,12 @@
  */
 
 import { describe, expect, mock, test } from "bun:test";
+import type { Prisma } from "@generated/prisma/client";
 
 const mockUpdateMany = mock(
   (_args: {
-    where: { id: string; usageCount: { gt: number } };
-    data: { usageCount: { decrement: number } };
+    where: Prisma.CouponWhereInput;
+    data: Prisma.CouponUncheckedUpdateManyInput;
   }) => Promise.resolve({ count: 1 }),
 );
 
@@ -33,7 +34,7 @@ describe("releaseCouponUsage", () => {
     mockUpdateMany.mockClear();
     mockUpdateMany.mockResolvedValue({ count: 1 });
 
-    await releaseCouponUsage(makeTx() as never, {
+    await releaseCouponUsage(makeTx(), {
       couponId: "11111111-1111-1111-1111-111111111111",
     });
 

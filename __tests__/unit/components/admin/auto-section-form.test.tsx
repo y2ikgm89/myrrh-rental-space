@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import type { z } from "zod";
+import { z } from "zod";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
@@ -449,9 +449,9 @@ describe("AutoSectionForm", () => {
   });
 
   test("path 無しの Zod issue は form レベルキーに落ちる", () => {
-    const error = {
-      issues: [{ path: [], message: "form-level" }],
-    } as z.ZodError;
+    const error = new z.ZodError([
+      { code: "custom", path: [], message: "form-level" },
+    ]);
     expect(formatZodFieldErrors(error)).toEqual({ "": ["form-level"] });
   });
 });

@@ -74,14 +74,16 @@ export async function handleRefundStatusUpdated(
       settledAmount = toPersistedAppAmount(refund.amount, refund.currency);
     } catch (error) {
       if (isNonIntegerAppAmountError(error)) {
+        const entityId =
+          entity.reservationId ?? entity.eventRegistrationId ?? null;
         acknowledgeNonIntegerAppAmount(error, {
           operation: "stripeWebhookRefundStatusUpdated",
-          entityId:
-            entity.reservationId ?? entity.eventRegistrationId ?? undefined,
           stripeRefundId: refund.id,
           subject: entity.eventRegistrationId
             ? "event-registration"
             : "reservation",
+          // exactOptionalPropertyTypes: undefined を明示代入しない
+          ...(entityId ? { entityId } : {}),
         });
         return;
       }
