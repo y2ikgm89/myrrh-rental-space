@@ -70,7 +70,7 @@ export type SyncEventTicketsTx = {
   >;
   readonly eventRegistration: Pick<
     DomainTx[EventRegistrationDelegateKey],
-    "aggregate"
+    "groupBy"
   >;
 };
 
@@ -168,20 +168,24 @@ export async function syncEventTicketsCommand(
     const ticket = incoming[index];
     if (!ticket) continue;
     if (ticket.id) {
-      // null capacity = 無制限。有限定員へ下げるときだけ CONFIRMED 合計で floor を検証。
+      // null capacity = 無制限。有限定員へ下げるときだけ、スロットごとの
+      // CONFIRMED 合計の最大値で floor を検証（DB trigger と同粒度）。
       if (ticket.capacity != null) {
-        const confirmedAggregate = await tx.eventRegistration.aggregate({
+        const confirmedBySlot = await tx.eventRegistration.groupBy({
+          by: ["slotId"],
           where: {
             ticketId: ticket.id,
-            eventId,
             status: RegistrationStatus.CONFIRMED,
           },
           _sum: { quantity: true },
         });
-        const confirmedQuantity = getAggregateQuantitySum(confirmedAggregate);
+        const confirmedQuantity = confirmedBySlot.reduce(
+          (max, group) => Math.max(max, getAggregateQuantitySum(group)),
+          0,
+        );
         if (ticket.capacity < confirmedQuantity) {
           throw new DomainError(
-            `定員を確定済み申込人数（${confirmedQuantity}名）未満にはできません`,
+            `定員をあるスロットの確定済み申込人数（${confirmedQuantity}名）未満にはできません`,
             "VALIDATION",
           );
         }

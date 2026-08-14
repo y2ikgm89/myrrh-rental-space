@@ -465,12 +465,12 @@ async function seedSettings(
   await Promise.all([
     prisma.settingsOrganization.upsert({
       where: { id: "singleton" },
-      update: organizationData,
+      update: includeBusinessPlaceholders ? organizationData : {},
       create: { id: "singleton", ...organizationData },
     }),
     prisma.settingsReservation.upsert({
       where: { id: "singleton" },
-      update: reservationData,
+      update: includeBusinessPlaceholders ? reservationData : {},
       create: { id: "singleton", ...reservationData },
     }),
     prisma.settingsAnnouncementCarousel.upsert({
@@ -485,7 +485,7 @@ async function seedSettings(
     }),
     prisma.settingsSeo.upsert({
       where: { id: "singleton" },
-      update: seoData,
+      update: includeBusinessPlaceholders ? seoData : {},
       create: { id: "singleton", ...seoData },
     }),
     prisma.settingsAnalytics.upsert({

@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Waitlist promote 用 advisory lock。
+ * Waitlist promote 用ロック。
  *
  * ## Advisory lock 取得順序（deadlock 回避）
  *
@@ -14,36 +14,26 @@ import "server-only";
  * - イベント申込のみ: `728350` のみ
  *
  * - namespace 728350 (event registration xact lock) は create/cancel / 管理更新の定員 sync で使う。
- * - namespace 728354 (waitlist promote session lock) は cron が「全 slot 走査 → EXPIRED 化 → 次 promote」
- *   のバッチを event 単位で直列化するために使う。同一 event を 2 プロセスが同時に走査すると
- *   updateMany claim の順序が非決定的になる (FIFO の tie-breaker が壊れる) ため session lock で防ぐ。
- * - session lock は tx 境界を超えて存続する。commit はもちろん **rollback でも自動解放
- *   されない** → release は tx の成否に依存させず、例外発生時にも必ず通る経路
- *   （`finally`）に置いて呼ぶ必要がある。
- * - **重要 (caller の責務)**: session lock は connection scope。呼び出し側は
- *   acquire → 作業 → release の全 span を単一物理 connection に pin し、release は
- *   `finally` で呼ぶ必要がある
- *   (例: `prisma.$transaction(async (tx) => { if (!(await tryAcquire(tx, ...))) return; try { ...; } finally { await release(tx, ...); } })`)。
- *   acquire に失敗した分岐は作業を skip し release も呼ばない（release 自体は未取得時に
- *   呼んでも idempotent に安全だが、この経路では単に呼ばれない設計）。実例は
- *   `waitlist-offer-commands.ts` の `expireAndPromoteWaitlistForEventCommand` を参照
- *   （候補ごとの作業は savepoint 相当の nested `tx.$transaction` に隔離しつつ、session
- *   lock 自体は outer tx の同一 connection で acquire/release する）。
- *   pooled top-level client で acquire と release を分けて呼ぶと別 connection にルーティング
- *   され得るため、`pg_advisory_unlock` が silent-false を返してロックが元 connection に
- *   leak し、そのイベントの waitlist promotion が pool 再利用まで止まる。
+ * - waitlist promote の event 単位直列化は **DB row lease**
+ *   (`events.waitlist_promote_leased_until`)。`UPDATE ... WHERE` で原子的に取得し、
+ *   TTL 切れで自己回復する。session lock (728354) は使わない — ITX timeout 後の
+ *   `pg_advisory_unlock` が P2028 になり、プール接続に lock が残るため。
  *
- * (advisory lock namespace の SSoT はこの module の定数。728350 / 728354 を採番済み)
+ * (advisory lock namespace の SSoT はこの module の定数。728350 を使う。
+ * 728354 は採番済みのまま残し、再利用しない)
  */
 
-import {
-  EVENT_REGISTRATION_LOCK_NAMESPACE,
-  WAITLIST_PROMOTE_LOCK_NAMESPACE,
-} from "@/shared/domain/advisory-lock-namespaces";
+import { EVENT_REGISTRATION_LOCK_NAMESPACE } from "@/shared/domain/advisory-lock-namespaces";
 
 /** 採番の SSoT は `advisory-lock-namespaces.ts`。ここは歴史的な別名を保つだけ。 */
 const WAITLIST_XACT_LOCK_NAMESPACE = EVENT_REGISTRATION_LOCK_NAMESPACE;
-export { WAITLIST_XACT_LOCK_NAMESPACE, WAITLIST_PROMOTE_LOCK_NAMESPACE };
+export { WAITLIST_XACT_LOCK_NAMESPACE };
+
+/**
+ * promote バッチの ITX timeout (20s) を超える長さ。crash 後は TTL で奪える。
+ * ITX timeout 自体は変えない。
+ */
+const WAITLIST_PROMOTE_LEASE_TTL_MS = 30_000;
 
 /**
  * イベント単位の申込定員直列化ロック（xact scope）。
@@ -68,29 +58,46 @@ type LockClient = {
 };
 
 /**
- * Non-blocking session lock for waitlist promote batch.
- * Returns true if lock was acquired, false if another process holds it.
+ * Non-blocking row lease for waitlist promote batch.
+ * Returns the `leasedUntil` we wrote, or null if another process holds a live one.
  */
-export async function tryAcquireWaitlistPromoteSessionLock(
+export async function tryAcquireWaitlistPromoteLease(
   client: LockClient,
   eventId: string,
-): Promise<boolean> {
-  const rows = await client.$queryRaw<readonly { readonly locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(${WAITLIST_PROMOTE_LOCK_NAMESPACE}::int4, hashtext(${eventId})) AS locked
+  now: Date = new Date(),
+): Promise<Date | null> {
+  const leasedUntil = new Date(now.getTime() + WAITLIST_PROMOTE_LEASE_TTL_MS);
+  const rows = await client.$queryRaw<readonly { readonly id: string }[]>`
+    UPDATE events
+    SET waitlist_promote_leased_until = ${leasedUntil}
+    WHERE id = ${eventId}::uuid
+      AND (
+        waitlist_promote_leased_until IS NULL
+        OR waitlist_promote_leased_until < ${now}
+      )
+      AND id IN (
+        SELECT id FROM events
+        WHERE id = ${eventId}::uuid
+        FOR UPDATE SKIP LOCKED
+      )
+    RETURNING id
   `;
-  return rows[0]?.locked === true;
+  return rows.length === 1 ? leasedUntil : null;
 }
 
 /**
- * Release the session lock acquired with tryAcquireWaitlistPromoteSessionLock.
- * Idempotent: safe to call in finally even if the lock was never acquired
- * (Postgres returns false for a non-owned unlock but does not throw).
+ * Release only the lease we acquired. A stale finally must not clear a
+ * newer holder's `leasedUntil` after TTL self-heal.
  */
-export async function releaseWaitlistPromoteSessionLock(
+export async function releaseWaitlistPromoteLease(
   client: LockClient,
   eventId: string,
+  leasedUntil: Date,
 ): Promise<void> {
-  await client.$queryRaw<readonly { readonly unlocked: boolean }[]>`
-    SELECT pg_advisory_unlock(${WAITLIST_PROMOTE_LOCK_NAMESPACE}::int4, hashtext(${eventId})) AS unlocked
+  await client.$executeRaw`
+    UPDATE events
+    SET waitlist_promote_leased_until = NULL
+    WHERE id = ${eventId}::uuid
+      AND waitlist_promote_leased_until = ${leasedUntil}
   `;
 }

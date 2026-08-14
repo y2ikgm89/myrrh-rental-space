@@ -15,7 +15,15 @@ import {
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
-import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import {
+  isNonIntegerAppAmountError,
+  toPersistedAppAmount,
+  type NonIntegerAppAmountError,
+} from "@/shared/lib/stripe-shared";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
@@ -159,6 +167,64 @@ export async function handlePaidClaimMissWithOrphanRefund(input: {
   }
 }
 
+/**
+ * `Refund.amount` (Int) に書けない端数を webhook 500 にしない。
+ * Stripe は同じイベントを最大 3 日再送するため、CRITICAL + 管理者通知で止める。
+ */
+export function acknowledgeNonIntegerAppAmount(
+  error: NonIntegerAppAmountError,
+  context: {
+    operation: string;
+    entityId?: string;
+    stripeRefundId?: string;
+    subject: "reservation" | "event-registration";
+  },
+): void {
+  const isEvent = context.subject === "event-registration";
+  const notificationType = isEvent
+    ? NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND
+    : NOTIFICATION_TYPE.RESERVATION_REFUND;
+
+  logError(error, {
+    category: ErrorCategory.VALIDATION,
+    severity: ErrorSeverity.CRITICAL,
+    context: {
+      operation: context.operation,
+      stripeMinor: error.stripeMinor,
+      currency: error.currency,
+      appAmount: error.appAmount,
+      ...(context.entityId ? { entityId: context.entityId } : {}),
+      ...(context.stripeRefundId
+        ? { stripeRefundId: context.stripeRefundId }
+        : {}),
+    },
+  });
+
+  fireAndForget(
+    createNotificationCommand({
+      type: notificationType,
+      title: NOTIFICATION_TYPE_LABELS[notificationType],
+      message: `返金額 ${error.appAmount} ${error.currency} は整数ではないため Refund.amount に保存できません。Stripe 最小単位 ${error.stripeMinor}。管理画面と Stripe を突合してください。`,
+      ...(context.entityId
+        ? {
+            resourceType: isEvent ? "event_registration" : "reservation",
+            resourceId: context.entityId,
+          }
+        : {}),
+    }),
+    {
+      operation: `${context.operation}NonIntegerAmount`,
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.CRITICAL,
+      context: {
+        ...(context.entityId ? { entityId: context.entityId } : {}),
+        stripeMinor: error.stripeMinor,
+        currency: error.currency,
+      },
+    },
+  );
+}
+
 export type ChargeRefundLatestRefund = {
   readonly id: string;
   readonly amount: number;
@@ -227,9 +293,27 @@ export async function applyStripeChargeRefundIdempotent(input: {
     : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
   const refundStatus = latestRefund.status ?? "pending";
 
+  let persistAmount: number;
+  try {
+    persistAmount = toPersistedAppAmount(latestRefund.amount, currency);
+  } catch (error) {
+    if (isNonIntegerAppAmountError(error)) {
+      acknowledgeNonIntegerAppAmount(error, {
+        operation: input.logContext.operation,
+        entityId: input.logContext.entityId,
+        stripeRefundId: latestRefund.id,
+        subject: input.logContext.operation.includes("Event")
+          ? "event-registration"
+          : "reservation",
+      });
+      return;
+    }
+    throw error;
+  }
+
   try {
     await input.createRefundRecord({
-      amount: fromStripeUnitAmount(latestRefund.amount, currency),
+      amount: persistAmount,
       stripeRefundId: latestRefund.id,
       refundedByType,
       status: refundStatus,

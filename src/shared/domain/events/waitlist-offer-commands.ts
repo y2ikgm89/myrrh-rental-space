@@ -15,8 +15,8 @@ import {
 } from "@/shared/lib/errors/server";
 import {
   WAITLIST_XACT_LOCK_NAMESPACE,
-  tryAcquireWaitlistPromoteSessionLock,
-  releaseWaitlistPromoteSessionLock,
+  tryAcquireWaitlistPromoteLease,
+  releaseWaitlistPromoteLease,
 } from "./waitlist-locks";
 import { WAITLIST_OFFER_TTL_MS } from "./waitlist-offer-constants";
 
@@ -206,17 +206,14 @@ export async function expireWaitlistOfferCommand(data: {
  * まとめて処理する。呼び出し側 (route.ts) は候補を eventId でグルーピングし、
  * event ごとにこの関数を呼ぶ。
  *
- * **advisory lock の二重使い分け**（`waitlist-locks.ts` の JSDoc と同じ契約）:
- * - 728354 (`WAITLIST_PROMOTE_LOCK_NAMESPACE`, session lock): この event の走査
- *   バッチ全体を他プロセス（別 cron 起動・手動再実行の重複）と直列化する。session
- *   lock は物理 connection scope のため、acquire ($transaction 開始直後) → 全
- *   candidate 処理 → release (finally) を **同一 $transaction コールバック**
- *   (= 同一物理 connection) に閉じるのが呼び出し側の責務。この関数はその契約を
- *   自己完結させる（tx を外に漏らさない）。
+ * **ロックの二重使い分け**（`waitlist-locks.ts` の JSDoc と同じ契約）:
+ * - row lease (`events.waitlist_promote_leased_until`): この event の走査
+ *   バッチ全体を他プロセス（別 cron 起動・手動再実行の重複）と直列化する。
+ *   `UPDATE ... WHERE` で原子的に取得し、TTL で自己回復する。acquire / release
+ *   は作業 ITX の外（`prisma`）で行い、ITX timeout 後の P2028 に依存しない。
  * - 728350 (`WAITLIST_XACT_LOCK_NAMESPACE`, xact lock): candidate ごとに
  *   `registerWaitlistEntryCommand` / `applyEventRegistrationCancellation` と
- *   同じ namespace を再取得し、通常の申込・キャンセル経路と直列化する。728354
- *   の内側にネストしても namespace が異なるため自己デッドロックしない。
+ *   同じ namespace を再取得し、通常の申込・キャンセル経路と直列化する。
  *
  * EXPIRED 遷移は `updateMany` の WHERE (id + status:WAITLISTED_OFFERED +
  * expiresAt<now + **paymentStatus not PENDING**) で atomic claim する。
@@ -237,10 +234,20 @@ export async function expireWaitlistOfferCommand(data: {
  * `offerNextWaitlistEntryCommand` を呼び FIFO promote を試みる（`promoted: null`
  * = 待機者なし、は正常系）。
  *
- * session lock を獲得できなかった場合（他プロセスがこの event を処理中）は
- * 空の結果を返して commit する。保持していないロックを release してはいけない
- * ため、その場合は release も呼ばない。
+ * lease を獲得できなかった場合（他プロセスがこの event を処理中）は
+ * 空の結果を返す。保持していない lease を release してはいけないため、
+ * その場合は release も呼ばない。
  */
+type ExpireAndPromoteResult = {
+  expired: { id: string; name: string; email: string | null }[];
+  offered: {
+    id: string;
+    email: string | null;
+    offeredAt: Date;
+    expiresAt: Date;
+  }[];
+};
+
 export async function expireAndPromoteWaitlistForEventCommand(args: {
   eventId: string;
   candidates: readonly {
@@ -251,42 +258,38 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
     email: string | null;
   }[];
   now: Date;
-}): Promise<{
-  expired: { id: string; name: string; email: string | null }[];
-  offered: {
-    id: string;
-    email: string | null;
-    offeredAt: Date;
-    expiresAt: Date;
-  }[];
-}> {
-  return prisma.$transaction(
-    async (tx) => {
-      const expired: { id: string; name: string; email: string | null }[] = [];
-      const offered: {
-        id: string;
-        email: string | null;
-        offeredAt: Date;
-        expiresAt: Date;
-      }[] = [];
+}): Promise<ExpireAndPromoteResult> {
+  const empty: ExpireAndPromoteResult = {
+    expired: [],
+    offered: [],
+  };
 
-      const acquired = await tryAcquireWaitlistPromoteSessionLock(
-        tx,
-        args.eventId,
-      );
-      if (!acquired) {
-        return { expired, offered };
-      }
+  const leasedUntil = await tryAcquireWaitlistPromoteLease(
+    prisma,
+    args.eventId,
+    args.now,
+  );
+  if (leasedUntil === null) {
+    return empty;
+  }
 
-      try {
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const expired: { id: string; name: string; email: string | null }[] =
+          [];
+        const offered: {
+          id: string;
+          email: string | null;
+          offeredAt: Date;
+          expiresAt: Date;
+        }[] = [];
+
         for (const candidate of args.candidates) {
           // 1 candidate の処理を savepoint（Prisma のネスト $transaction）に
           // 隔離する。savepoint を使わず tx を直接 abort させると、Postgres は
-          // トランザクションを aborted 状態にし、以降の全クエリ（726354 の
-          // release も含む）が 25P02 で失敗する。session lock は commit/rollback
-          // では自動解放されないため、release が失敗すると次回 cron 実行まで
-          // (pool の idle timeout まで) その event の promote が止まる
-          // （expire-and-promote-waitlist-session-lock.test.ts が回帰ガード）。
+          // トランザクションを aborted 状態にし、以降の candidate が 25P02 で
+          // 失敗する（waitlist-session-lock-leak.test.ts が回帰ガード）。
           try {
             const result = await tx.$transaction(async (tx2) => {
               await tx2.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${args.eventId}))`;
@@ -331,14 +334,14 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
             });
           }
         }
-      } finally {
-        await releaseWaitlistPromoteSessionLock(tx, args.eventId);
-      }
 
-      return { expired, offered };
-    },
-    // 1 event に複数 candidate が溜まるケース（長時間 cron 未実行後の初回実行等）を
-    // 見込み、単発コマンド (5s/10s) より余裕を持たせる。
-    { maxWait: 5000, timeout: 20000 },
-  );
+        return { expired, offered };
+      },
+      // 1 event に複数 candidate が溜まるケース（長時間 cron 未実行後の初回実行等）を
+      // 見込み、単発コマンド (5s/10s) より余裕を持たせる。
+      { maxWait: 5000, timeout: 20000 },
+    );
+  } finally {
+    await releaseWaitlistPromoteLease(prisma, args.eventId, leasedUntil);
+  }
 }

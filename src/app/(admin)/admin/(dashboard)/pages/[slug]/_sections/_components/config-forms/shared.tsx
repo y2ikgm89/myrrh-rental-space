@@ -26,10 +26,12 @@ export function FormActions({
   isDirty,
   isPending,
   onDirtyChange,
+  errors,
 }: {
   isDirty: boolean;
   isPending: boolean;
   onDirtyChange?: ((dirty: boolean) => void) | undefined;
+  errors?: readonly string[] | undefined;
 }) {
   useEffect(() => {
     if (!isDirty) return;
@@ -45,23 +47,33 @@ export function FormActions({
   }, [isDirty, onDirtyChange]);
 
   return (
-    <div className="flex items-center justify-end gap-3">
-      {isDirty && (
-        <span className="text-sm text-warning font-medium">
-          未保存の変更があります
-        </span>
+    <div className="space-y-3">
+      {errors && errors.length > 0 && (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {errors.join(", ")}
+        </div>
       )}
-      <SubmitButton
-        isPending={isPending}
-        disabled={!isDirty}
-        label="保存"
-        pendingLabel="保存中..."
-      >
-        <>
-          <IconDeviceFloppy className="h-4 w-4 mr-2" />
-          保存
-        </>
-      </SubmitButton>
+      <div className="flex items-center justify-end gap-3">
+        {isDirty && (
+          <span className="text-sm text-warning font-medium">
+            未保存の変更があります
+          </span>
+        )}
+        <SubmitButton
+          isPending={isPending}
+          disabled={!isDirty}
+          label="保存"
+          pendingLabel="保存中..."
+        >
+          <>
+            <IconDeviceFloppy className="h-4 w-4 mr-2" />
+            保存
+          </>
+        </SubmitButton>
+      </div>
     </div>
   );
 }

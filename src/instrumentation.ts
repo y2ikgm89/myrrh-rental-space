@@ -26,12 +26,15 @@ export async function register(): Promise<void> {
       await bootstrapSystemPages();
     }
 
-    // Cloudflare credentials + tag purge startup probe (production only).
-    // Surfaces missing/malformed credentials or purge API failures as
-    // HIGH-severity logError.
+    // Sync credential check only. Canary purge is observation and must not
+    // block Cloud Run startup (probe budget ~90s).
+    const { getCloudflareCredentialsValidated } =
+      await import("@/shared/lib/cloudflare");
+    getCloudflareCredentialsValidated();
+
     const { assertCloudflareCredentials } =
       await import("@/shared/lib/cache/health");
-    await assertCloudflareCredentials();
+    void assertCloudflareCredentials();
   }
 }
 

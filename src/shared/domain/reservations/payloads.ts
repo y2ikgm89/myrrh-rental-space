@@ -280,6 +280,34 @@ export async function claimCouponUsage(
   }
 }
 
+/**
+ * Interactive tx / prisma gateway / 経路ごとの構造型 tx。
+ * Prisma の generic `updateMany` を Pick すると、`where` 必須の構造型
+ * （`ApplyCancellationTx` など）が代入できなくなる。
+ */
+type CouponReleaseClient = {
+  readonly coupon: {
+    updateMany(args: {
+      where: Prisma.CouponWhereInput;
+      data: Prisma.CouponUncheckedUpdateManyInput;
+    }): Promise<{ count: number }>;
+  };
+};
+
+/**
+ * 予約キャンセル / 期限切れ / クーポン差し替えで usageCount を 1 戻す。
+ * `gt: 0` を同一 UPDATE の WHERE に置き、0 件更新は no-op（負数にしない）。
+ */
+export async function releaseCouponUsage(
+  tx: CouponReleaseClient,
+  args: { couponId: string },
+): Promise<void> {
+  await tx.coupon.updateMany({
+    where: { id: args.couponId, usageCount: { gt: 0 } },
+    data: { usageCount: { decrement: 1 } },
+  });
+}
+
 export async function ensureNoOverlap(
   params: {
     spaceId: string;

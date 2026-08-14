@@ -149,6 +149,7 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
     discountCombinationMode: settings.discountCombinationMode ?? "best",
     showOriginalPrice: settings.showOriginalPrice ?? true,
   }),
+  releaseCouponUsage: mock(() => Promise.resolve()),
 }));
 
 mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({

@@ -17,6 +17,7 @@ import {
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
+import { releaseCouponUsage } from "@/shared/domain/reservations/payloads";
 
 /**
  * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
@@ -209,10 +210,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       }
 
       if (candidate.couponId) {
-        await tx.coupon.updateMany({
-          where: { id: candidate.couponId, usageCount: { gt: 0 } },
-          data: { usageCount: { decrement: 1 } },
-        });
+        await releaseCouponUsage(tx, { couponId: candidate.couponId });
       }
 
       return true;

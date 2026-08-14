@@ -136,6 +136,9 @@ const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
 const mockEventRegistrationAggregate = mock<
   () => Promise<{ _sum: { quantity: number | null } }>
 >(() => Promise.resolve({ _sum: { quantity: 0 } }));
+const mockEventRegistrationGroupBy = mock<
+  () => Promise<{ slotId: string; _sum: { quantity: number | null } }[]>
+>(() => Promise.resolve([]));
 
 // upsertEventFromCalendar が tx 外で呼ぶ prisma.eventTimeSlot.findFirst 用
 const mockEventTimeSlotFindFirst = mock<
@@ -189,6 +192,7 @@ type TxClient = {
   eventRegistration: {
     count: typeof mockEventRegistrationCount;
     aggregate: typeof mockEventRegistrationAggregate;
+    groupBy: typeof mockEventRegistrationGroupBy;
   };
   eventTimeSlot: {
     findMany: typeof mockEventTimeSlotFindMany;
@@ -215,6 +219,7 @@ const txStub: TxClient = {
   eventRegistration: {
     count: mockEventRegistrationCount,
     aggregate: mockEventRegistrationAggregate,
+    groupBy: mockEventRegistrationGroupBy,
   },
   eventTimeSlot: {
     findMany: mockEventTimeSlotFindMany,
@@ -773,6 +778,8 @@ describe("updateEventCommand", () => {
     mockEventRegistrationAggregate.mockImplementation(() =>
       Promise.resolve({ _sum: { quantity: 0 } }),
     );
+    mockEventRegistrationGroupBy.mockClear();
+    mockEventRegistrationGroupBy.mockImplementation(() => Promise.resolve([]));
     mockEventTimeSlotFindMany.mockClear();
     mockEventTimeSlotFindMany.mockImplementation(() => Promise.resolve([]));
     mockExecuteRaw.mockClear();
@@ -1418,8 +1425,8 @@ describe("updateEventCommand", () => {
         Promise.resolve(existingEvent),
       );
       mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
-      mockEventRegistrationAggregate.mockImplementation(() =>
-        Promise.resolve({ _sum: { quantity: 5 } }),
+      mockEventRegistrationGroupBy.mockImplementation(() =>
+        Promise.resolve([{ slotId: "slot-1", _sum: { quantity: 5 } }]),
       );
 
       await expect(
@@ -1439,7 +1446,8 @@ describe("updateEventCommand", () => {
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
-        message: "定員を確定済み申込人数（5名）未満にはできません",
+        message:
+          "定員をあるスロットの確定済み申込人数（5名）未満にはできません",
       });
       expect(mockEventTicketUpdate).not.toHaveBeenCalled();
     });
@@ -1458,8 +1466,8 @@ describe("updateEventCommand", () => {
         Promise.resolve(existingEvent),
       );
       mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
-      mockEventRegistrationAggregate.mockImplementation(() =>
-        Promise.resolve({ _sum: { quantity: 50 } }),
+      mockEventRegistrationGroupBy.mockImplementation(() =>
+        Promise.resolve([{ slotId: "slot-1", _sum: { quantity: 50 } }]),
       );
 
       await updateEventCommand("event-1", {
@@ -1477,7 +1485,66 @@ describe("updateEventCommand", () => {
         ],
       });
 
-      expect(mockEventRegistrationAggregate).not.toHaveBeenCalled();
+      expect(mockEventRegistrationGroupBy).not.toHaveBeenCalled();
+      expect(mockEventTicketUpdate).toHaveBeenCalled();
+    });
+
+    test("TIMED_ENTRY でスロット別に 8+8 確定済みでも ticket.capacity=10 に下げられる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [
+          { startAt: new Date("2024-06-15T10:00:00Z") },
+          { startAt: new Date("2024-06-15T14:00:00Z") },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
+      mockEventRegistrationGroupBy.mockImplementation(() =>
+        Promise.resolve([
+          { slotId: "slot-a", _sum: { quantity: 8 } },
+          { slotId: "slot-b", _sum: { quantity: 8 } },
+        ]),
+      );
+      // event-wide 合計 16。per-slot max は 8。誤って aggregate すると落ちる。
+      mockEventRegistrationAggregate.mockImplementation(() =>
+        Promise.resolve({ _sum: { quantity: 16 } }),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        scheduleMode: EventScheduleMode.TIMED_ENTRY,
+        slots: [
+          {
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+          {
+            startAt: new Date("2024-06-15T14:00:00Z"),
+            endAt: new Date("2024-06-15T16:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        tickets: [
+          {
+            id: "ticket-1",
+            name: "一般",
+            description: null,
+            price: 5000,
+            capacity: 10,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
       expect(mockEventTicketUpdate).toHaveBeenCalled();
     });
   });

@@ -167,6 +167,7 @@ mock.module("@/shared/domain/features/check", () => ({
 // (現状 test 対象 action は getCustomerCanCancelSeriesInFull のみ import)。
 mock.module("@/shared/domain/reservations/payloads", () => ({
   getCustomerCanCancelSeriesInFull: mockGetCustomerCanCancelSeriesInFull,
+  releaseCouponUsage: mock(() => Promise.resolve()),
 }));
 
 const mockInvalidateReservationCaches = mock(() => undefined);

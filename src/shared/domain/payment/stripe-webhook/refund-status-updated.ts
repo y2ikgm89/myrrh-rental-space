@@ -7,7 +7,11 @@ import {
   findRefundEntityByStripeRefundId,
   isRefundSettledSuccess,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
-import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import {
+  isNonIntegerAppAmountError,
+  toPersistedAppAmount,
+} from "@/shared/lib/stripe-shared";
+import { acknowledgeNonIntegerAppAmount } from "@/shared/domain/payment/payment-claim-orchestration";
 import { finalizeSettledReservationRefund } from "@/shared/domain/reservations/payment-queries";
 import { finalizeSettledEventRegistrationRefund } from "@/shared/domain/events/payment-queries";
 import {
@@ -65,7 +69,26 @@ export async function handleRefundStatusUpdated(
     // ここで事前に applyConfirmedRefundStatus を呼んでしまうと finalize 側の
     // claim が常に count=0 になり、finalize (entity 反映・完了 AuditLog・
     // 返金完了メール) が一切実行されなくなるため、succeeded 側では呼ばない。
-    const settledAmount = fromStripeUnitAmount(refund.amount, refund.currency);
+    let settledAmount: number;
+    try {
+      settledAmount = toPersistedAppAmount(refund.amount, refund.currency);
+    } catch (error) {
+      if (isNonIntegerAppAmountError(error)) {
+        const entityId =
+          entity.reservationId ?? entity.eventRegistrationId ?? null;
+        acknowledgeNonIntegerAppAmount(error, {
+          operation: "stripeWebhookRefundStatusUpdated",
+          stripeRefundId: refund.id,
+          subject: entity.eventRegistrationId
+            ? "event-registration"
+            : "reservation",
+          // exactOptionalPropertyTypes: undefined を明示代入しない
+          ...(entityId ? { entityId } : {}),
+        });
+        return;
+      }
+      throw error;
+    }
     if (entity.reservationId) {
       await finalizeSettledReservationRefund(
         entity.reservationId,

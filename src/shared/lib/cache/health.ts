@@ -50,10 +50,18 @@ export async function assertCloudflareCredentials(): Promise<void> {
       return;
     }
 
-    // Canary tag purge. Success proves credentials and API permission are usable.
-    const result = await callPurgeApiPublic(creds.zoneId, creds.apiToken, {
-      tags: [CANARY_TAG],
-    });
+    // Observation only: no Retry-After sleep, short abort. Must not block boot.
+    const result = await callPurgeApiPublic(
+      creds.zoneId,
+      creds.apiToken,
+      {
+        tags: [CANARY_TAG],
+      },
+      {
+        retry: false,
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
 
     if (result.success) {
       logger.info("Cloudflare tag purge supported on this plan");

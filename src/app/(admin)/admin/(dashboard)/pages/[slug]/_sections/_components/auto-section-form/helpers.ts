@@ -66,11 +66,14 @@ export function formatZodFieldErrors(
 ): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   for (const issue of error.issues) {
-    const key = formatPaths(
-      issue.path.map((segment) =>
-        typeof segment === "number" ? segment : String(segment),
-      ),
-    );
+    const key =
+      issue.path.length === 0
+        ? ""
+        : formatPaths(
+            issue.path.map((segment) =>
+              typeof segment === "number" ? segment : String(segment),
+            ),
+          );
     const current = errors[key];
     errors[key] =
       current === undefined ? [issue.message] : [...current, issue.message];

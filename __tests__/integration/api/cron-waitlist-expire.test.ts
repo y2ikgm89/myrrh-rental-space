@@ -6,8 +6,8 @@
  *      実 Postgres 上でも確実に EXPIRED へ遷移する。
  *   2. 同じ (slotId, ticketId) の FIFO 先頭（`waitlistedAt` 最古）の WAITLISTED が
  *      WAITLISTED_OFFERED（offeredAt 設定・expiresAt = offeredAt + 24h）に昇格する。
- *   3. advisory session lock (728354) の acquire/release が単一 $transaction 内で
- *      完結し、cron route の JSON response body が実際の処理件数と一致する。
+ *   3. waitlist promote row lease の acquire/release が作業 ITX の外で完結し、
+ *      cron route の JSON response body が実際の処理件数と一致する。
  *
  * OIDC 認可 / feature gate / next/cache invalidation は本テストの対象外（各々
  * `cron-auth-oidc.test.ts` / 他の real-DB 統合テストと同じ境界 mock パターンで

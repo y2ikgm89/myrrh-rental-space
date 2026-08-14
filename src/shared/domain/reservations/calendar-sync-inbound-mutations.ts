@@ -16,7 +16,11 @@ import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
-import { buildPricingSettings, getReservationSettings } from "./payloads";
+import {
+  buildPricingSettings,
+  getReservationSettings,
+  releaseCouponUsage,
+} from "./payloads";
 import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { lockSpaceForTransaction } from "./space-locks";
 
@@ -104,10 +108,7 @@ export async function cancelReservationFromCalendar(input: {
     });
 
     if (reservation?.couponId) {
-      await tx.coupon.updateMany({
-        where: { id: reservation.couponId, usageCount: { gt: 0 } },
-        data: { usageCount: { decrement: 1 } },
-      });
+      await releaseCouponUsage(tx, { couponId: reservation.couponId });
     }
 
     return { cancelled: true };

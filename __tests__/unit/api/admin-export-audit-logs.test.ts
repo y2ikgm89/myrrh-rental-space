@@ -70,25 +70,28 @@ describe("GET /api/admin/export/audit-logs", () => {
       success: true,
       user: { id: "user-1", role: "SUPER_ADMIN" },
     });
-    mockGetAuditLogsForExport.mockResolvedValue([
-      {
-        id: "audit-1",
-        userId: "user-1",
-        action: "UPDATE",
-        resource: "settings",
-        resourceId: null,
-        oldValue: null,
-        newValue: null,
-        metadata: { ipAddress: "203.0.113.10" },
-        createdAt: "2026-07-01T00:00:00.000Z",
-        user: { id: "user-1", name: "Admin", email: "admin@example.com" },
-      },
-    ]);
+    mockGetAuditLogsForExport.mockResolvedValue({
+      truncated: false,
+      logs: [
+        {
+          id: "audit-1",
+          userId: "user-1",
+          action: "UPDATE",
+          resource: "settings",
+          resourceId: null,
+          oldValue: null,
+          newValue: null,
+          metadata: { ipAddress: "203.0.113.10" },
+          createdAt: "2026-07-01T00:00:00.000Z",
+          user: { id: "user-1", name: "Admin", email: "admin@example.com" },
+        },
+      ],
+    });
     mockGenerateCsv.mockReturnValue("\uFEFF日時,ユーザー\r\n");
 
     const response = await GET(
       new Request(
-        "http://localhost/api/admin/export/audit-logs?action=UPDATE&resource=settings&search=admin&ipAddress=203.0.113.10&securityOnly=1",
+        "http://localhost/api/admin/export/audit-logs?action=UPDATE&resource=settings&dateFrom=2026-07-01&dateTo=2026-07-31&search=admin&ipAddress=203.0.113.10&securityOnly=1",
       ),
     );
 
@@ -104,10 +107,18 @@ describe("GET /api/admin/export/audit-logs", () => {
       expect.objectContaining({
         action: "UPDATE",
         resource: "settings",
+        dateFrom: "2026-07-01",
+        dateTo: "2026-07-31",
         search: "admin",
         ipAddress: "203.0.113.10",
         securityOnly: true,
       }),
+    );
+    expect(mockGetAuditLogsForExport.mock.calls[0]?.[0]).not.toHaveProperty(
+      "perPage",
+    );
+    expect(mockGetAuditLogsForExport.mock.calls[0]?.[0]).not.toHaveProperty(
+      "page",
     );
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -121,6 +132,69 @@ describe("GET /api/admin/export/audit-logs", () => {
             action: "UPDATE",
             resource: "settings",
           }),
+        }),
+      }),
+    );
+  });
+
+  test("dateFrom と dateTo が必須で、90 日を超える期間は 400 を返す", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "SUPER_ADMIN" },
+    });
+
+    const missingBoth = await GET(
+      new Request("http://localhost/api/admin/export/audit-logs"),
+    );
+    const missingTo = await GET(
+      new Request(
+        "http://localhost/api/admin/export/audit-logs?dateFrom=2026-07-01",
+      ),
+    );
+    const tooWide = await GET(
+      new Request(
+        "http://localhost/api/admin/export/audit-logs?dateFrom=2026-01-01&dateTo=2026-04-02",
+      ),
+    );
+
+    expect(missingBoth.status).toBe(400);
+    expect(missingTo.status).toBe(400);
+    expect(tooWide.status).toBe(400);
+    expect(missingBoth.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mockGetAuditLogsForExport).not.toHaveBeenCalled();
+    expect(mockGenerateCsv).not.toHaveBeenCalled();
+  });
+
+  test("件数が上限を超えたら部分 CSV を返さず 409 と totalCount を返す", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "SUPER_ADMIN" },
+    });
+    mockGetAuditLogsForExport.mockResolvedValue({
+      truncated: true,
+      totalCount: 25_000,
+    });
+
+    const response = await GET(
+      new Request(
+        "http://localhost/api/admin/export/audit-logs?dateFrom=2026-07-01&dateTo=2026-07-31",
+      ),
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ totalCount: 25_000 }),
+    );
+    expect(mockGenerateCsv).not.toHaveBeenCalled();
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        action: "EXPORT",
+        resource: "auditLog",
+        metadata: expect.objectContaining({
+          truncated: true,
+          totalCount: 25_000,
         }),
       }),
     );

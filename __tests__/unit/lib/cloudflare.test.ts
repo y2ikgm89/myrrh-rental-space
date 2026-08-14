@@ -69,6 +69,7 @@ const {
   purgeCloudflareCache,
   purgeCloudflareCacheByTags,
   purgeAllCloudflareCache,
+  callPurgeApiPublic,
 } = await import("@/shared/lib/cloudflare");
 
 // =============================================================================
@@ -215,6 +216,23 @@ describe("purgeCloudflareCache - retry", () => {
     expect(result.error).toContain("レート制限");
     // 初回 + 3 retries = 4 calls
     expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
+
+  test("retry: false は 429 + Retry-After でも待たず 1 回で終わる", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse({}, { status: 429, retryAfter: "120" }),
+    );
+
+    const result = await callPurgeApiPublic(
+      "a".repeat(32),
+      "test-token",
+      { tags: ["cdn-tag-purge-canary-v1"] },
+      { retry: false },
+    );
+
+    expect(result.success).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
   test("Retry-After ヘッダーがあると setTimeout に retry-after の値が渡される", async () => {

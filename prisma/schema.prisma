@@ -2582,6 +2582,10 @@ model Event {
   /// (`/api/cron/calendar-sync-retry` の retry pool 判定・admin dashboard 表示用)。
   calendarSyncError String? @map("calendar_sync_error") @db.Text
 
+  /// waitlist promote cron の row lease。null / 過去 = 未保持。未来 = 保持中。
+  /// `UPDATE ... WHERE` で原子的に取得し、TTL 切れで自己回復する。
+  waitlistPromoteLeasedUntil DateTime? @map("waitlist_promote_leased_until") @db.Timestamptz(6)
+
   /// イベントの種類・カテゴリー（必須）。EventCategory 側は onDelete: Restrict のため
   /// 紐づくイベントがある限り物理削除・非アクティブ化できない。
   categoryId String        @map("category_id") @db.Uuid

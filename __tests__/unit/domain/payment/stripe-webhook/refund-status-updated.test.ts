@@ -127,6 +127,14 @@ await installErrorsServerMock({
   logError: mockLogError,
 });
 
+const mockCreateNotificationCommand = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: (input: Record<string, unknown>) =>
+    mockCreateNotificationCommand(input),
+}));
+
 const { handleRefundStatusUpdated } =
   await import("@/shared/domain/payment/stripe-webhook/refund-status-updated");
 
@@ -150,6 +158,7 @@ describe("handleRefundStatusUpdated", () => {
     mockInvalidateReservationCache.mockClear();
     mockInvalidateEventRegistrationCache.mockClear();
     mockLogError.mockClear();
+    mockCreateNotificationCommand.mockClear();
 
     mockApplyConfirmedRefundStatus.mockResolvedValue(1);
     mockFinalizeSettledReservationRefund.mockResolvedValue(true);
@@ -203,6 +212,26 @@ describe("handleRefundStatusUpdated", () => {
       50,
       REFUNDED_BY_TYPE.ADMIN,
     );
+  });
+
+  test("USD $12.50 (=1250 cents) は finalize せず CRITICAL + 管理者通知して終わる", async () => {
+    mockFindRefundEntityByStripeRefundId.mockResolvedValueOnce({
+      status: "pending",
+      reservationId: RESERVATION_ID,
+      eventRegistrationId: null,
+      refundedByType: REFUNDED_BY_TYPE.ADMIN,
+    });
+
+    await handleRefundStatusUpdated(
+      buildRefund({ status: "succeeded", amount: 1250, currency: "usd" }),
+    );
+
+    expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "NonIntegerAppAmountError" }),
+      expect.objectContaining({ severity: "CRITICAL" }),
+    );
+    expect(mockCreateNotificationCommand).toHaveBeenCalled();
   });
 
   test("event-registration 側: succeeded に確定すると finalizeSettledEventRegistrationRefund を呼びキャッシュを無効化する", async () => {

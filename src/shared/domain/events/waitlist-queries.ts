@@ -396,7 +396,7 @@ export async function getWaitlistConfirmationEmailDetails(
  * 期限切れ（`expiresAt < now`）の WAITLISTED_OFFERED を全 event 横断で取得する。
  * `@@index([status, expiresAt])` を使うため Seq Scan にならない。呼び出し側
  * (route.ts) が eventId でグルーピングし、event 単位で
- * `expireAndPromoteWaitlistForEventCommand` に渡す（advisory session lock が
+ * `expireAndPromoteWaitlistForEventCommand` に渡す（row lease が
  * event scope のため、処理そのものは event 単位でしか行えない）。
  *
  * `paymentStatus: {not: PENDING}` (Codex review Critical #1, defense-in-depth #1):

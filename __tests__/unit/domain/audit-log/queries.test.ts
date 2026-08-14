@@ -380,14 +380,14 @@ describe("getAuditLogsForExport", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
     mockFindMany.mockResolvedValue([]);
+    mockCount.mockReset();
+    mockCount.mockResolvedValue(0);
     mockUserFindMany.mockReset();
     mockUserFindMany.mockResolvedValue([]);
   });
 
   test("export は同じ filter を使い最大 10000 件を古い順で取得する", async () => {
     await getAuditLogsForExport({
-      page: 1,
-      perPage: 20,
       action: "EXPORT",
       resource: "auditLog",
       userId: "",
@@ -404,9 +404,48 @@ describe("getAuditLogsForExport", () => {
           action: "EXPORT",
           resource: "auditLog",
         }),
-        orderBy: { createdAt: "asc" },
-        take: 10000,
+        orderBy: { sequence: "asc" },
+        take: 10001,
       }),
     );
+  });
+
+  test("LIMIT を超えたら部分結果を捨て truncated と totalCount を返す", async () => {
+    const overflowRows = Array.from({ length: 10_001 }, (_, index) =>
+      auditLogRow({
+        id: `log-${String(index)}`,
+        sequence: BigInt(index + 1),
+      }),
+    );
+    mockFindMany.mockResolvedValueOnce(overflowRows);
+    mockCount.mockResolvedValueOnce(25_000);
+
+    const result = await getAuditLogsForExport({
+      action: "EXPORT",
+      resource: "auditLog",
+      userId: "",
+      dateFrom: "2026-07-01",
+      dateTo: "2026-07-31",
+      search: "",
+      ipAddress: "",
+      securityOnly: false,
+    });
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { sequence: "asc" },
+        take: 10001,
+      }),
+    );
+    expect(mockCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          action: "EXPORT",
+          resource: "auditLog",
+        }),
+      }),
+    );
+    expect(mockUserFindMany).not.toHaveBeenCalled();
+    expect(result).toEqual({ truncated: true, totalCount: 25_000 });
   });
 });

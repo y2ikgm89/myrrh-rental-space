@@ -1306,6 +1306,65 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  // 409 を吐く resource type (Deploy Production log で確認済み or
+  // 新規 fresh-state apply で create を試みるもの)。
+  const IMPORT_REQUIRED_RESOURCE_TYPES: readonly string[] = [
+    "google_secret_manager_secret",
+    "google_cloud_scheduler_job",
+    "google_artifact_registry_repository",
+    "google_cloudbuild_worker_pool",
+    "google_cloud_run_v2_service",
+    "google_cloud_run_v2_job",
+    "google_compute_global_address",
+    "google_compute_region_network_endpoint_group",
+    "google_compute_backend_service",
+    "google_compute_url_map",
+    "google_compute_managed_ssl_certificate",
+    "google_compute_target_https_proxy",
+    "google_compute_target_http_proxy",
+    "google_compute_global_forwarding_rule",
+    "google_iam_workload_identity_pool",
+    "google_iam_workload_identity_pool_provider",
+    "google_iap_web_cloud_run_service_iam_member",
+    "cloudflare_r2_bucket",
+    "cloudflare_dns_record",
+    "cloudflare_zone_setting",
+    "cloudflare_ruleset",
+    "cloudflare_turnstile_widget",
+  ];
+
+  const findResourcesMissingImport = (
+    source: string,
+    requiredTypes: readonly string[] = IMPORT_REQUIRED_RESOURCE_TYPES,
+  ): Array<{ resourceType: string; resourceName: string }> => {
+    const importBlockRe = /import\s*\{([\s\S]*?)\n\}/gu;
+    const resourceDeclRe = /^resource\s+"([^"]+)"\s+"([^"]+)"/gmu;
+    const importBodies = [...source.matchAll(importBlockRe)].map(
+      (block) => block[1] ?? "",
+    );
+    const missing: Array<{ resourceType: string; resourceName: string }> = [];
+    for (const match of source.matchAll(resourceDeclRe)) {
+      const resourceType = match[1] ?? "";
+      const resourceName = match[2] ?? "";
+      if (!requiredTypes.includes(resourceType)) {
+        continue;
+      }
+      const expectedTo = `${resourceType}.${resourceName}`;
+      const escapedTo = expectedTo.replaceAll(".", "\\.");
+      const toPattern = new RegExp(
+        `to\\s*=\\s*${escapedTo}(?:\\[[^\\]]+\\])?\\b`,
+        "u",
+      );
+      const hasMatchingImport = importBodies.some((body) =>
+        toPattern.test(body),
+      );
+      if (!hasMatchingImport) {
+        missing.push({ resourceType, resourceName });
+      }
+    }
+    return missing;
+  };
+
   test("terraform/*.tf の pre-existing GCP resource には対応する import{} block が同一 file 内に存在する (段階 2: Deploy Production 409 対策)", () => {
     // Deploy Production log で 409 "already exists" を吐いていた pre-existing
     // GCP resource は全て Terraform 1.7+ の top-level `import {}` block で
@@ -1326,63 +1385,49 @@ describe("architecture boundaries", () => {
     const TERRAFORM_DIR = join(ROOT, "terraform");
     const tfFiles = readdirSync(TERRAFORM_DIR).filter((f) => f.endsWith(".tf"));
 
-    // 409 を吐く resource type (Deploy Production log で確認済み or
-    // 新規 fresh-state apply で create を試みるもの)。
-    const IMPORT_REQUIRED_RESOURCE_TYPES: readonly string[] = [
-      "google_secret_manager_secret",
-      "google_cloud_scheduler_job",
-      "google_artifact_registry_repository",
-      "google_cloudbuild_worker_pool",
-      "google_cloud_run_v2_service",
-      "google_cloud_run_v2_job",
-      "google_compute_global_address",
-      "google_compute_region_network_endpoint_group",
-      "google_compute_backend_service",
-      "google_compute_url_map",
-      "google_compute_managed_ssl_certificate",
-      "google_compute_target_https_proxy",
-      "google_compute_target_http_proxy",
-      "google_compute_global_forwarding_rule",
-      "google_iam_workload_identity_pool",
-      "google_iam_workload_identity_pool_provider",
-      "google_iap_web_cloud_run_service_iam_member",
-    ];
-
-    const importBlockRe = /import\s*\{([\s\S]*?)\n\}/gu;
-    const resourceDeclRe = /^resource\s+"([^"]+)"\s+"([^"]+)"/gmu;
     const offenders: string[] = [];
     for (const file of tfFiles) {
       const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
-      const importBodies = [...source.matchAll(importBlockRe)].map(
-        (block) => block[1] ?? "",
-      );
-      for (const match of source.matchAll(resourceDeclRe)) {
-        const resourceType = match[1] ?? "";
-        const resourceName = match[2] ?? "";
-        if (
-          !(IMPORT_REQUIRED_RESOURCE_TYPES as readonly string[]).includes(
-            resourceType,
-          )
-        ) {
-          continue;
-        }
+      for (const { resourceType, resourceName } of findResourcesMissingImport(
+        source,
+      )) {
         const expectedTo = `${resourceType}.${resourceName}`;
-        const escapedTo = expectedTo.replaceAll(".", "\\.");
-        const toPattern = new RegExp(
-          `to\\s*=\\s*${escapedTo}(?:\\[[^\\]]+\\])?\\b`,
-          "u",
+        offenders.push(
+          `terraform/${file}: resource "${resourceType}" "${resourceName}" is declared but no import{} block with to = ${expectedTo} found (add one to avoid 409 on fresh-state apply)`,
         );
-        const hasMatchingImport = importBodies.some((body) =>
-          toPattern.test(body),
-        );
-        if (!hasMatchingImport) {
-          offenders.push(
-            `terraform/${file}: resource "${resourceType}" "${resourceName}" is declared but no import{} block with to = ${expectedTo} found (add one to avoid 409 on fresh-state apply)`,
-          );
-        }
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  test("Cloudflare resource は import{} 無しだと offender になる（fixture）", () => {
+    const source = `
+resource "cloudflare_r2_bucket" "example" {
+  account_id = "acct"
+  name       = "example"
+}
+`;
+    expect(findResourcesMissingImport(source)).toEqual([
+      {
+        resourceType: "cloudflare_r2_bucket",
+        resourceName: "example",
+      },
+    ]);
+  });
+
+  test("Cloudflare resource は対応する import{} があれば offender にならない（fixture）", () => {
+    const source = `
+import {
+  to = cloudflare_r2_bucket.example
+  id = "acct/example/default"
+}
+
+resource "cloudflare_r2_bucket" "example" {
+  account_id = "acct"
+  name       = "example"
+}
+`;
+    expect(findResourcesMissingImport(source)).toEqual([]);
   });
 
   test("Cloudflare provider v5 の import ID は各 resource type ごとに公式 format と一致する (2026-07-14 4 連続 deploy-production 失敗の再発防止)", () => {

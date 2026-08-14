@@ -136,8 +136,12 @@ mock.module("@/shared/db/prisma", () => ({
 const mockEnsureNoOverlap = mock<
   (args: Record<string, unknown>, tx?: unknown) => Promise<void>
 >(() => Promise.resolve());
+const mockReleaseCouponUsage = mock<
+  (tx: unknown, args: { couponId: string }) => Promise<void>
+>(() => Promise.resolve());
 mock.module("@/shared/domain/reservations/payloads", () => ({
   ensureNoOverlap: mockEnsureNoOverlap,
+  releaseCouponUsage: mockReleaseCouponUsage,
 }));
 
 const mockGetSpaceRatePlans = mock<(spaceId: string) => Promise<unknown[]>>(
@@ -248,6 +252,8 @@ function resetAllMocks(): void {
   mockCouponUpdateMany.mockReset();
   mockTransaction.mockReset();
   mockEnsureNoOverlap.mockReset();
+  mockReleaseCouponUsage.mockReset();
+  mockReleaseCouponUsage.mockResolvedValue(undefined);
   mockAssertTermsAgreed.mockReset();
   mockRecordTermsAgreements.mockReset();
   mockApplyBulkCancellation.mockReset();
@@ -732,9 +738,8 @@ describe("cancelReservationSeriesCommand (Phase B.2 task 13)", () => {
         deletedById: "admin-1",
       },
     });
-    expect(mockCouponUpdateMany).toHaveBeenCalledWith({
-      where: { id: "coupon-1", usageCount: { gt: 0 } },
-      data: { usageCount: { decrement: 1 } },
+    expect(mockReleaseCouponUsage).toHaveBeenCalledWith(expect.anything(), {
+      couponId: "coupon-1",
     });
     expect(mockApplyBulkCancellationSideEffects).toHaveBeenCalledWith(
       expect.objectContaining({ scope: "series-all", seriesId: SERIES_ID }),
@@ -758,7 +763,7 @@ describe("cancelReservationSeriesCommand (Phase B.2 task 13)", () => {
       now: NOW,
     });
 
-    expect(mockCouponUpdateMany).not.toHaveBeenCalled();
+    expect(mockReleaseCouponUsage).not.toHaveBeenCalled();
   });
 
   test("既にキャンセル済 (deletedAt !== null) の series は CONFLICT", async () => {

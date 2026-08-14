@@ -77,12 +77,11 @@ export function toStripeUnitAmount(amount: number, currency: string): number {
  * Stripe unit_amount → アプリ単位金額 変換 (`toStripeUnitAmount` の逆関数)
  *
  * webhook 経由で受け取る `charge.amount` / `refund.amount` は常に Stripe 最小単位。
- * DB (`Refund.amount` 等) はアプリ単位 (JPY 円 / USD ドル) で保存するため、書込前に
- * この関数で通貨に応じた逆変換が必要。
+ * 表示・メール・UI はこの関数で通貨に応じた逆変換をする。
  *
- * `toStripeUnitAmount` が `Math.round(amount * 100)` で入力を丸めるため、逆方向は
- * 単純除算で対称。丸め漏れが問題になるケースは Stripe 側では発生しない (Stripe が
- * 整数最小単位以外を受理しない)。
+ * Stripe は整数の最小単位しか送らないが、非ゼロ小数点通貨では `/100` の結果が
+ * 整数にならないことがある（例: Dashboard で $12.50 を返すと 1250 cents → 12.5）。
+ * `Refund.amount` は Int なので、永続化には `toPersistedAppAmount` を使う。
  */
 export function fromStripeUnitAmount(
   unitAmount: number,
@@ -91,6 +90,44 @@ export function fromStripeUnitAmount(
   return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
     ? unitAmount
     : unitAmount / 100;
+}
+
+/**
+ * Stripe 最小単位を `Refund.amount` (Int) に書けるアプリ単位へ変換する。
+ * 結果が整数でなければ丸めず、typed error を投げる。
+ */
+export function toPersistedAppAmount(
+  stripeMinor: number,
+  currency: string,
+): number {
+  const appAmount = fromStripeUnitAmount(stripeMinor, currency);
+  if (!Number.isInteger(appAmount)) {
+    throw new NonIntegerAppAmountError(stripeMinor, currency, appAmount);
+  }
+  return appAmount;
+}
+
+export class NonIntegerAppAmountError extends Error {
+  readonly code = "NON_INTEGER_APP_AMOUNT" as const;
+  readonly stripeMinor: number;
+  readonly currency: string;
+  readonly appAmount: number;
+
+  constructor(stripeMinor: number, currency: string, appAmount: number) {
+    super(
+      `Refund amount ${appAmount} (${currency}) is not an integer app unit; cannot persist to Refund.amount`,
+    );
+    this.name = "NonIntegerAppAmountError";
+    this.stripeMinor = stripeMinor;
+    this.currency = currency;
+    this.appAmount = appAmount;
+  }
+}
+
+export function isNonIntegerAppAmountError(
+  error: unknown,
+): error is NonIntegerAppAmountError {
+  return error instanceof NonIntegerAppAmountError;
 }
 
 // =============================================================================

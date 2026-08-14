@@ -33,9 +33,14 @@ resource "cloudflare_r2_bucket" "myrrh_rental_space" {
 # ための設計上の隔離であり、意図的に `cloudflare_r2_custom_domain` /
 # `cloudflare_record`（public DNS）を一切紐付けない。
 #
-# 新規 bucket のため import block は不要（`terraform apply` が create する）。
+# 本番に既にある。import 無しだと fresh-state apply が create を試みて衝突する（F-80）。
 # location は既存 bucket と同じ理由で明示しない（作成後変更不可、adopt 前提の
 # 慣習に合わせて未指定のまま state に確定させる）。
+import {
+  to = cloudflare_r2_bucket.myrrh_rental_space_inquiries
+  id = "${var.cloudflare_account_id}/myrrh-rental-space-inquiries/default"
+}
+
 resource "cloudflare_r2_bucket" "myrrh_rental_space_inquiries" {
   account_id = var.cloudflare_account_id
   name       = "myrrh-rental-space-inquiries"

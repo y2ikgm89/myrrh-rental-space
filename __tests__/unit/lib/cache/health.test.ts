@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const getCloudflareCredentialsValidated = mock();
 const callPurgeApiPublic = mock();
@@ -100,6 +102,7 @@ describe("assertCloudflareCredentials", () => {
       {
         tags: ["cdn-tag-purge-canary-v1"],
       },
+      expect.objectContaining({ retry: false }),
     );
     expect(logError).toHaveBeenCalledTimes(1);
     const loggedError = logError.mock.calls[0]?.[0];
@@ -108,5 +111,17 @@ describe("assertCloudflareCredentials", () => {
       "Cloudflare tag purge startup canary failed",
     );
     expect((loggedError as Error).message).not.toContain("falling");
+  });
+});
+
+describe("instrumentation.register Cloudflare startup", () => {
+  test("does not await the Cloudflare canary on the boot path", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src/instrumentation.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("getCloudflareCredentialsValidated");
+    expect(source).not.toMatch(/await\s+assertCloudflareCredentials\s*\(/);
   });
 });

@@ -138,6 +138,7 @@ const {
   claimEventRegistrationAsPaid,
   claimEventRegistrationAsFailed,
   finalizeSettledEventRegistrationRefund,
+  findEventRegistrationByPaymentIntent,
 } = await import("@/shared/domain/events/payment-queries");
 
 const { REFUNDED_BY_TYPE } =
@@ -522,6 +523,34 @@ describe("events/payment-queries", () => {
           },
           metadata: expect.objectContaining({
             stripeRefundId: STRIPE_REFUND_ID,
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("findEventRegistrationByPaymentIntent", () => {
+    test("webhook 同定は親 event の deletedAt で除外しない", async () => {
+      mockRegFindFirst.mockResolvedValueOnce({
+        id: REGISTRATION_ID,
+        paymentStatus: PaymentStatus.PAID,
+        paidAmount: 5000,
+      });
+
+      await findEventRegistrationByPaymentIntent(PAYMENT_INTENT_ID);
+
+      expect(mockRegFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            stripePaymentIntentId: PAYMENT_INTENT_ID,
+          },
+          select: { id: true, paymentStatus: true, paidAmount: true },
+        }),
+      );
+      expect(mockRegFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            event: { deletedAt: null },
           }),
         }),
       );

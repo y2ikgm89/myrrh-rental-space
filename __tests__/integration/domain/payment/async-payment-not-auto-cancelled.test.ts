@@ -31,6 +31,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
+  CouponType,
   EventScheduleMode,
   EventStatus,
   PaymentStatus,
@@ -207,11 +208,38 @@ async function createEventRegistration(opts: {
   return { registrationId: value, cleanup };
 }
 
+async function createCoupon(opts: {
+  readonly usageCount: number;
+}): Promise<{ couponId: string; cleanup: Cleanup }> {
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+  const coupon = await prisma.coupon.create({
+    data: {
+      code: `AP${suffix}`.toUpperCase(),
+      name: `Async Pay Coupon ${suffix}`,
+      type: CouponType.FIXED_AMOUNT,
+      discountValue: 100,
+      validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      validUntil: null,
+      usageLimit: 10,
+      usageCount: opts.usageCount,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+  return {
+    couponId: coupon.id,
+    cleanup: async () => {
+      await prisma.coupon.deleteMany({ where: { id: coupon.id } });
+    },
+  };
+}
+
 async function createReservation(opts: {
   readonly stripePaymentIntentId: string | null;
   readonly age?: Date;
   readonly paymentStatus?: (typeof PaymentStatus)[keyof typeof PaymentStatus];
   readonly paymentFailedAt?: Date | null;
+  readonly couponId?: string;
 }): Promise<{ reservationId: string; cleanup: Cleanup }> {
   const suffix = crypto.randomUUID();
   const startTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -265,6 +293,7 @@ async function createReservation(opts: {
       paymentFailedAt: opts.paymentFailedAt ?? null,
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: opts.stripePaymentIntentId,
+      couponId: opts.couponId ?? null,
       ...RESERVATION_PRICING,
     },
     select: { id: true },
@@ -512,6 +541,67 @@ describeMaybe("fail-safe cron は非同期決済の確定前にキャンセル�
       expect(after.status).toBe(RegistrationStatus.CANCELLED);
     } finally {
       await cleanup();
+    }
+  });
+
+  test("予約: 非同期決済の待機中はクーポン usageCount を戻さない", async () => {
+    const { couponId, cleanup: cleanupCoupon } = await createCoupon({
+      usageCount: 1,
+    });
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: `pi_async_${crypto.randomUUID()}`,
+      couponId,
+    });
+    try {
+      await expireStalePendingReservationsCommand();
+
+      const [reservation, coupon] = await Promise.all([
+        prisma.reservation.findUniqueOrThrow({
+          where: { id: reservationId },
+          select: { status: true, paymentStatus: true },
+        }),
+        prisma.coupon.findUniqueOrThrow({
+          where: { id: couponId },
+          select: { usageCount: true },
+        }),
+      ]);
+      expect(reservation.status).toBe(ReservationStatus.CONFIRMED);
+      expect(reservation.paymentStatus).toBe(PaymentStatus.PENDING);
+      expect(coupon.usageCount).toBe(1);
+    } finally {
+      await cleanup();
+      await cleanupCoupon();
+    }
+  });
+
+  test("予約: backstop 超過後の自動キャンセルはクーポンを 1 回だけ戻す", async () => {
+    const { couponId, cleanup: cleanupCoupon } = await createCoupon({
+      usageCount: 1,
+    });
+    const { reservationId, cleanup } = await createReservation({
+      stripePaymentIntentId: `pi_async_${crypto.randomUUID()}`,
+      age: VERY_LONG_AGO,
+      couponId,
+    });
+    try {
+      await expireStalePendingReservationsCommand();
+      await expireStalePendingReservationsCommand();
+
+      const [reservation, coupon] = await Promise.all([
+        prisma.reservation.findUniqueOrThrow({
+          where: { id: reservationId },
+          select: { status: true },
+        }),
+        prisma.coupon.findUniqueOrThrow({
+          where: { id: couponId },
+          select: { usageCount: true },
+        }),
+      ]);
+      expect(reservation.status).toBe(ReservationStatus.CANCELLED);
+      expect(coupon.usageCount).toBe(0);
+    } finally {
+      await cleanup();
+      await cleanupCoupon();
     }
   });
 });

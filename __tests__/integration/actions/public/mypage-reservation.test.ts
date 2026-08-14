@@ -279,6 +279,7 @@ const mockFetchReservationEmailData = mock<
 >(() => Promise.resolve(null));
 mock.module("@/shared/domain/reservations/payloads", () => ({
   fetchReservationEmailData: mockFetchReservationEmailData,
+  releaseCouponUsage: mock(() => Promise.resolve()),
 }));
 
 // GCAL-OUTBOUND-01: updateReservationAction が成功後に GCal 同期を fireAndForget

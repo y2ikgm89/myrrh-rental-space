@@ -587,7 +587,7 @@ describe("reservations/payment-queries", () => {
       });
     });
 
-    test("deletedAt: null 条件で findFirst が呼ばれる", async () => {
+    test("webhook 同定は soft-delete 済み予約も対象にする", async () => {
       mockReservationFindFirst.mockResolvedValueOnce({
         id: RESERVATION_ID,
         paymentStatus: PaymentStatus.PAID,
@@ -599,9 +599,13 @@ describe("reservations/payment-queries", () => {
         expect.objectContaining({
           where: {
             stripePaymentIntentId: PAYMENT_INTENT_ID,
-            deletedAt: null,
           },
           select: { id: true, paymentStatus: true },
+        }),
+      );
+      expect(mockReservationFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({ deletedAt: null }),
         }),
       );
     });

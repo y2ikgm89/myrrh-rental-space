@@ -25,6 +25,7 @@ import {
   validateCoupon,
   resolveAppliedCoupon,
   claimCouponUsage,
+  releaseCouponUsage,
   ensureNoOverlap,
   incrementCustomerReservationStats,
   recomputeCustomerReservationStats,
@@ -636,10 +637,7 @@ export async function updateAdminReservationCommand(
 
     if (couponChanged) {
       if (oldCouponId) {
-        await tx.coupon.updateMany({
-          where: { id: oldCouponId, usageCount: { gt: 0 } },
-          data: { usageCount: { decrement: 1 } },
-        });
+        await releaseCouponUsage(tx, { couponId: oldCouponId });
       }
       if (newCouponId) {
         await claimCouponUsage(tx, {

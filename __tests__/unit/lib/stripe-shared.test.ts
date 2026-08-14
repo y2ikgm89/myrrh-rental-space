@@ -12,6 +12,8 @@ import {
   ZERO_DECIMAL_CURRENCIES,
   toStripeUnitAmount,
   fromStripeUnitAmount,
+  toPersistedAppAmount,
+  isNonIntegerAppAmountError,
 } from "@/shared/lib/stripe-shared";
 
 describe("Stripe unit_amount 変換", () => {
@@ -139,6 +141,51 @@ describe("Stripe unit_amount 変換", () => {
       const stripeUnitAmount = 5000;
       const appUnitAmount = fromStripeUnitAmount(stripeUnitAmount, "jpy");
       expect(appUnitAmount).toBe(5000);
+    });
+  });
+
+  describe("toPersistedAppAmount", () => {
+    test("JPY の整数最小単位はそのまま返す", () => {
+      expect(toPersistedAppAmount(5000, "jpy")).toBe(5000);
+    });
+
+    test("USD の割り切れる cents は整数ドルを返す", () => {
+      expect(toPersistedAppAmount(5000, "usd")).toBe(50);
+    });
+
+    test("USD $12.50 (=1250 cents) は Int 列に書けないので typed error を投げる", () => {
+      try {
+        toPersistedAppAmount(1250, "usd");
+        expect.unreachable("expected NonIntegerAppAmountError");
+      } catch (error) {
+        expect(isNonIntegerAppAmountError(error)).toBe(true);
+        if (isNonIntegerAppAmountError(error)) {
+          expect(error.stripeMinor).toBe(1250);
+          expect(error.currency).toBe("usd");
+          expect(error.appAmount).toBe(12.5);
+        }
+      }
+    });
+
+    test("EUR 19.99 (=1999 cents) も整数ではないので投げる", () => {
+      expect(() => toPersistedAppAmount(1999, "eur")).toThrow();
+      try {
+        toPersistedAppAmount(1999, "eur");
+      } catch (error) {
+        expect(isNonIntegerAppAmountError(error)).toBe(true);
+      }
+    });
+
+    test("Math.round せず 12.5 のまま拒否する", () => {
+      try {
+        toPersistedAppAmount(1250, "usd");
+      } catch (error) {
+        expect(isNonIntegerAppAmountError(error)).toBe(true);
+        if (isNonIntegerAppAmountError(error)) {
+          expect(error.appAmount).not.toBe(13);
+          expect(error.appAmount).not.toBe(12);
+        }
+      }
     });
   });
 });

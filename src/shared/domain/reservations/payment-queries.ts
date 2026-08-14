@@ -267,13 +267,13 @@ export async function claimReservationAsFailed(
 }
 
 /**
- * stripePaymentIntentId で予約を検索
+ * stripePaymentIntentId で予約を検索する。
+ * webhook の決済主体同定であり公開可否判定ではないので、soft-delete 済みも対象。
  */
 export async function findReservationByPaymentIntent(paymentIntentId: string) {
   return prisma.reservation.findFirst({
     where: {
       stripePaymentIntentId: paymentIntentId,
-      deletedAt: null,
     },
     select: { id: true, paymentStatus: true },
   });
