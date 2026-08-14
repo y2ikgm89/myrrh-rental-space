@@ -191,7 +191,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（52 件）
+### フェーズ 4 — 中（51 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
@@ -253,7 +253,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-63](../../audits/2026-08-12-codebase-audit-findings.md#f-63)   | 中     | `src/shared/domain/sections/commands.ts:218`                                                                  | テンプレート必須セクションを複製できてしまい、複製後は削除も非表示もできず公開ページに二重表示が固定される                                                      |
 | [F-64](../../audits/2026-08-12-codebase-audit-findings.md#f-64)   | 中     | `src/shared/domain/sections/queries.ts:131`                                                                   | 公開ページの全セクションを非表示にすると、コード同梱の初期デモセクションが公開面に復帰する                                                                      |
 | [F-65](../../audits/2026-08-12-codebase-audit-findings.md#f-65)   | 中     | `src/shared/domain/settings/queries/features.ts:21`                                                           | feature toggle が公開 Cloud Run サービスに最大24時間届かない（Data Cache はサービス跨ぎで無効化されない）                                                       |
-| [F-66](../../audits/2026-08-12-codebase-audit-findings.md#f-66)   | 中     | `src/shared/domain/sidebar/queries.ts:72`                                                                     | サイドバーの「最近の投稿／人気記事」が予約公開（未来日時）記事を公開面に露出させる                                                                              |
 | [F-67](../../audits/2026-08-12-codebase-audit-findings.md#f-67)   | 中     | `src/shared/domain/smart-lock/assignment-side-effects.ts:129`                                                 | issuePasscodesAfterSpaceBound の `none: {}` が失効済み行も数え、解除→再割当した予約にパスコードが二度と発行されない                                             |
 | [F-68](../../audits/2026-08-12-codebase-audit-findings.md#f-68)   | 中     | `src/shared/domain/spaces/commands.ts:256`                                                                    | スペースの拠点変更が smartLockDeviceId を無言で外すだけで、発行済みパスコードを失効させない                                                                     |
 | [F-69](../../audits/2026-08-12-codebase-audit-findings.md#f-69)   | 中     | `src/shared/domain/terms/queries.ts:233`                                                                      | 必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く                                                                 |

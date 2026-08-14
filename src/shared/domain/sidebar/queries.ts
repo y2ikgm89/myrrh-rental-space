@@ -2,7 +2,6 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   safeFetch,
@@ -12,6 +11,7 @@ import {
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { SidebarWidget } from "@/shared/lib/validations/sidebar";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+import { publicPostsWhere } from "@/shared/domain/posts/queries";
 import { Prisma } from "@generated/prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -69,10 +69,13 @@ export async function getSidebarData(
   const needCategories = enabledTypes.has("categories");
   const needTags = enabledTypes.has("tags");
 
-  const publishedWhere = {
-    status: PostStatus.PUBLISHED,
-    deletedAt: null,
-  } satisfies Prisma.PostWhereInput;
+  // `publicPostsWhere()` を使う。ここで status だけを見ると、**予約公開
+  // （status=PUBLISHED + 未来 publishedAt）の記事が公開日の前からサイドバーに出る**。
+  // recent は `publishedAt: desc` なので未来日時の記事が必ず先頭に来て、
+  // クリックすると `getPublishedPost` が null を返し 404 になる（監査 F-66）。
+  // posts/queries.ts の docstring が「公開 query は必ずこの helper 経由で where を
+  // 組み立てる」と宣言している契約に、sidebar だけが従っていなかった。
+  const publishedWhere = publicPostsWhere();
 
   const postSelect = {
     id: true,
