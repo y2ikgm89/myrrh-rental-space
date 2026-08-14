@@ -79,6 +79,10 @@ const SETTINGS_COLUMN_TAGS: Record<string, readonly string[]> = {
 
   // Business hours
   businessHours: ["ORGANIZATION_SETTINGS", "BUSINESS_SETTINGS"],
+
+  // Google Calendar email attachments / add-to-calendar links
+  icalAttachmentEnabled: ["NOTIFICATION_SETTINGS"],
+  addToCalendarLinksEnabled: ["NOTIFICATION_SETTINGS"],
 };
 
 type ActionSpec = {
@@ -125,6 +129,11 @@ const ACTIONS: ActionSpec[] = [
     name: "updateSearchVerification",
     file: "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/basic.ts",
     writes: ["googleSearchConsoleId", "bingWebmasterToolsId"],
+  },
+  {
+    name: "updateGoogleCalendarSettings",
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts",
+    writes: ["icalAttachmentEnabled", "addToCalendarLinksEnabled"],
   },
 ];
 
