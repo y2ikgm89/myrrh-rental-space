@@ -447,4 +447,11 @@ describe("AutoSectionForm", () => {
       renderedName,
     );
   });
+
+  test("path 無しの Zod issue は form レベルキーに落ちる", () => {
+    const error = {
+      issues: [{ path: [], message: "form-level" }],
+    } as z.ZodError;
+    expect(formatZodFieldErrors(error)).toEqual({ "": ["form-level"] });
+  });
 });

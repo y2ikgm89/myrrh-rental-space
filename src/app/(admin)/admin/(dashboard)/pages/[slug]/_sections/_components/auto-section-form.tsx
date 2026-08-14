@@ -250,6 +250,7 @@ export function AutoSectionForm({
         isDirty={isFormDirty}
         isPending={isPending}
         onDirtyChange={onDirtyChange}
+        errors={form.errors}
       />
     </form>
   );
