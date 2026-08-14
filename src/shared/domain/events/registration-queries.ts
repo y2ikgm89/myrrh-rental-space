@@ -9,6 +9,7 @@ import {
   formatEventVenue,
   formatEventVenueDisplay,
 } from "@/shared/lib/events/venue";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type {
@@ -83,7 +84,17 @@ export async function getEventRegistrations(
         paidAmount: true,
         stripePaymentIntentId: true,
         stripeCheckoutSessionId: true,
-        refunds: { select: { amount: true } },
+        // failed / canceled な返金は「返金済み額」ではない。ここで絞らないと
+        // 管理画面の残額が過少になり、返金ボタンが消えて再返金に到達できなくなる。
+        // ドメイン側 (`refundEventRegistrationPaymentCommand`) と DB 側
+        // (`assert_refund_total_within_paid`) は同じ集合を除外しているので、
+        // 除外条件は必ずこの SSoT から取る。
+        refunds: {
+          where: {
+            status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+          },
+          select: { amount: true },
+        },
         slot: {
           select: {
             startAt: true,
