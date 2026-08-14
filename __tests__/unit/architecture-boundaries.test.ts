@@ -1386,16 +1386,10 @@ describe("architecture boundaries", () => {
     const tfFiles = readdirSync(TERRAFORM_DIR).filter((f) => f.endsWith(".tf"));
 
     const offenders: string[] = [];
-    // 実 file 走査は従来どおり GCP のみ。Cloudflare は fixture で母集合に入る
-    // ことを固定する（既存の import 無し bucket をこの PR では触らない）。
-    const gcpImportRequiredTypes = IMPORT_REQUIRED_RESOURCE_TYPES.filter(
-      (resourceType) => resourceType.startsWith("google_"),
-    );
     for (const file of tfFiles) {
       const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
       for (const { resourceType, resourceName } of findResourcesMissingImport(
         source,
-        gcpImportRequiredTypes,
       )) {
         const expectedTo = `${resourceType}.${resourceName}`;
         offenders.push(
