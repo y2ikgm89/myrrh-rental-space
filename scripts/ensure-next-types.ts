@@ -20,7 +20,7 @@ function runTypegen(): void {
     stderr: "inherit",
   });
   if (!proc.success) {
-    process.exit(proc.exitCode);
+    process.exit(proc.exitCode ?? 1);
   }
 }
 

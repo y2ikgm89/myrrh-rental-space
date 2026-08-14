@@ -35,7 +35,8 @@ function runInherited(command: readonly string[]): number {
     stdout: "inherit",
     stderr: "inherit",
   });
-  return proc.exitCode;
+  // signal kill は exitCode=null。process.exit(null) は 0 になるので失敗へ倒す。
+  return proc.exitCode ?? 1;
 }
 
 export function ensureDefaultLocalTestDatabase(
@@ -47,7 +48,7 @@ export function ensureDefaultLocalTestDatabase(
   console.info(
     "[test:db:migrate] TEST_DATABASE_URL is not set; starting docker-compose test-db default.",
   );
-  const exitCode = runner(getDockerComposeTestDbCommand());
+  const exitCode = runner(getDockerComposeTestDbCommand()) ?? 1;
   if (exitCode !== 0) {
     console.error(
       "[test:db:migrate] Failed to start docker-compose test-db. Start it with `docker compose up --wait --wait-timeout 60 test-db` or set TEST_DATABASE_URL to a disposable migrated PostgreSQL database.",
@@ -80,7 +81,7 @@ function run(): number {
     stderr: "inherit",
     env: createPrismaMigrateEnv(process.env, resolved.url),
   });
-  return proc.exitCode;
+  return proc.exitCode ?? 1;
 }
 
 if (import.meta.main) {
