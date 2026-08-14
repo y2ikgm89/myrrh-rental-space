@@ -167,8 +167,8 @@ function expectNoSuppressionOnMultiRecipient(emailId: string | null) {
     return (
       options?.category === "EXTERNAL_API" &&
       options?.severity === "MEDIUM" &&
-      context?.recipientCount === 2 &&
-      context?.emailId === emailId
+      context?.["recipientCount"] === 2 &&
+      context?.["emailId"] === emailId
     );
   });
   expect(skipCalls.length).toBeGreaterThanOrEqual(1);
