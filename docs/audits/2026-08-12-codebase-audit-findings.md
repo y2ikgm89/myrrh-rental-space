@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 指摘全文（F-01〜F-133）
 
-> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、未着手の一覧と計画は [2026-08-13-codebase-audit-remediation.md](../superpowers/plans/2026-08-13-codebase-audit-remediation.md)、棄却された 61 件は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。
+> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、未着手の一覧と計画は [2026-08-13-codebase-audit-remediation.md](../superpowers/plans/2026-08-13-codebase-audit-remediation.md)、棄却された 62 件は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。
 > 本文は 2026-08-12 の監査報告からの**全項目転記**（起きること / 直し方 / 該当箇所 / 到達経路 / 既存の検査 / 反証官による訂正）。
 > **行番号は監査時点のもので、修正済みのファイルではずれている。**
 > 以前はここに状態欄を持っていたが、計画書の台帳との二重管理になって実際に食い違ったので落とした（経緯は progress 側の冒頭）。

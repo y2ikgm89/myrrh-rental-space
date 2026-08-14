@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 修正計画書
 
-> **出典**: 2026-08-12 のコードベース監査（61 観点 × 5 ラウンド、エージェント計 261、確定 133 件 / 棄却 61 件）。
+> **出典**: 2026-08-12 のコードベース監査（61 観点 × 5 ラウンド、エージェント計 261、確定 132 件 / 棄却 62 件。F-94 は R-03 の再掲として棄却へ移した）。
 > **作成**: 2026-08-13。**これは「まだやっていないこと」の一覧。**
 > **姉妹文書**: 済んだこと → [2026-08-12-codebase-audit-progress.md](../../audits/2026-08-12-codebase-audit-progress.md) ／ 指摘の全文 → [2026-08-12-codebase-audit-findings.md](../../audits/2026-08-12-codebase-audit-findings.md) ／ 棄却の記録 → [2026-08-12-codebase-audit-refuted.md](../../audits/2026-08-12-codebase-audit-refuted.md)
 > **置き場**: これは実装計画なので `docs/superpowers/plans/` に置く（[docs/README.md](../../README.md) の lifecycle 規約により、**消化しきったら削除する**）。監査記録と対処の記録は `docs/audits/` に残る。
@@ -61,7 +61,7 @@
 
 | 重大 |  高 |  中 |  低 | 棄却 |
 | ---: | --: | --: | --: | ---: |
-|    0 |  11 |  64 |  58 |   61 |
+|    0 |  11 |  64 |  57 |   62 |
 
 ---
 
@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 43 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 42 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -320,7 +320,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-90](../../audits/2026-08-12-codebase-audit-findings.md#f-90)   | 低     | `prisma/seed.ts:4314`                                                                                         | seedNavigation の (type, order) 一致判定が、管理画面の削除・並び替え後に別項目を指し、本番でナビゲーションが重複する                                            |
 | [F-91](../../audits/2026-08-12-codebase-audit-findings.md#f-91)   | 低     | `scripts/migrate-test-db.ts:83`                                                                               | Bun.spawnSync().exitCode is null on signal-kill, so `process.exit(run())` turns a killed `prisma migrate deploy` into exit 0                                    |
 | [F-93](../../audits/2026-08-12-codebase-audit-findings.md#f-93)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/customer/bulk.ts:274`                                      | 顧客一括メールの rate limit が認証前かつ全体で 1 バケットのため、低権限アカウントが機能を 1 時間停止できる                                                      |
-| [F-94](../../audits/2026-08-12-codebase-audit-findings.md#f-94)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts:217`                                     | 管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げず、待機列が永久に stall する                                                                             |
 | [F-95](../../audits/2026-08-12-codebase-audit-findings.md#f-95)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts:101`                           | Google Calendar 設定保存が NOTIFICATION\_SETTINGS を無効化せず、.ics 添付／カレンダー追加リンクの OFF が数日反映されない                                        |
 | [F-96](../../audits/2026-08-12-codebase-audit-findings.md#f-96)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/FigmaNode.ts:94`                   | FigmaNode のラベルも公開ページで消える（data-figma-label を描画する実装が無い）                                                                                 |
 | [F-97](../../audits/2026-08-12-codebase-audit-findings.md#f-97)   | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/MapEmbedNode.tsx:148`              | MapEmbedNode のラベルが公開ページに一切描画されない（data-map-label は書き込み専用で CSS も hydrate も無い）                                                    |
