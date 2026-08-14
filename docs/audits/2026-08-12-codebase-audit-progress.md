@@ -52,8 +52,8 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-33](2026-08-12-codebase-audit-findings.md#f-33) | 中     | #2227                 | 問い合わせ添付に `bodySizeLimit` を効かせる                                                      | —                                                                                           |
 | [F-41](2026-08-12-codebase-audit-findings.md#f-41) | 中     | #2234                 | `purpose: prefetch` で proxy のガードが素通りするのを封鎖                                        | —                                                                                           |
 | [F-48](2026-08-12-codebase-audit-findings.md#f-48) | 中     | #2237                 | イベント checkout も同じ idempotency key 方式へ                                                  | —                                                                                           |
-| [F-54](2026-08-12-codebase-audit-findings.md#f-54) | 中     | ★PR                   | charge.refunded が Stripe の実 status を Refund 行へ渡すようにし、既定値へ落ちる経路を型で塞いだ | —                                                                                           |
-| [F-55](2026-08-12-codebase-audit-findings.md#f-55) | 中     | ★PR                   | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
+| [F-54](2026-08-12-codebase-audit-findings.md#f-54) | 中     | #2256                 | charge.refunded が Stripe の実 status を Refund 行へ渡すようにし、既定値へ落ちる経路を型で塞いだ | —                                                                                           |
+| [F-55](2026-08-12-codebase-audit-findings.md#f-55) | 中     | #2256                 | 未確定 (pending) の返金で paymentStatus を終端へ焼かない。確定は                                 |
 | efund.updated に一本化                             | —      |
 | [F-70](2026-08-12-codebase-audit-findings.md#f-70) | 中     | #2222                 | welcome メールの CTA が `/mypage/mypage`（404）を指していた                                      | —                                                                                           |
 
