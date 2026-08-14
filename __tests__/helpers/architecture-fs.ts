@@ -36,13 +36,66 @@ export function collectSourceFiles(dir: string): string[] {
 /** import / export-from / 動的 import の specifier を抽出する。
  * `from "..."` 節（type-only 含む）・`import "..."`（副作用 import）・
  * `import("...")`（動的 import、文字列リテラルのみ）の3形をまとめて拾う。
+ * 行コメントとブロックコメント（JSDoc の @example 含む）は走査前に落とす。
+ * 文字列リテラル内の `//` / `/*` は触らない。
  */
 const IMPORT_SPECIFIER_RE =
   /(?:from\s+|^\s*import\s+|import\s*\(\s*)["']([^"']+)["']/gm;
 
+/** 行・ブロックコメントを除去する。文字列リテラル内は温存する。 */
+function stripComments(source: string): string {
+  let out = "";
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const c = source[i];
+    const next = i + 1 < n ? source[i + 1] : "";
+
+    if (c === "/" && next === "/") {
+      i += 2;
+      while (i < n && source[i] !== "\n") i += 1;
+      continue;
+    }
+    if (c === "/" && next === "*") {
+      i += 2;
+      while (i + 1 < n && !(source[i] === "*" && source[i + 1] === "/")) {
+        i += 1;
+      }
+      i = Math.min(i + 2, n);
+      out += " ";
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      out += c;
+      i += 1;
+      while (i < n) {
+        const sc = source[i];
+        out += sc;
+        if (sc === "\\") {
+          if (i + 1 < n) {
+            out += source[i + 1] ?? "";
+            i += 2;
+            continue;
+          }
+        }
+        if (sc === quote) {
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
+      continue;
+    }
+    out += c;
+    i += 1;
+  }
+  return out;
+}
+
 export function extractImportSpecifiers(content: string): string[] {
   const specifiers: string[] = [];
-  for (const match of content.matchAll(IMPORT_SPECIFIER_RE)) {
+  for (const match of stripComments(content).matchAll(IMPORT_SPECIFIER_RE)) {
     const specifier = match[1];
     if (specifier !== undefined) specifiers.push(specifier);
   }

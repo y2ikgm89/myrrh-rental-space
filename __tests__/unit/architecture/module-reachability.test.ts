@@ -17,6 +17,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildModuleGraph,
+  extractImportSpecifiers,
   findReachableFiles,
 } from "../../helpers/architecture-fs";
 
@@ -66,6 +67,27 @@ describe("module reachability", () => {
   );
   const roots = [...appRoots, ...fixedRoots];
 
+  test("fixture: JSDoc / ブロックコメントの例示 import は抽出しない", () => {
+    // 監査 F-76: 生テキスト走査だと @example の import が実辺になる。
+    const source = [
+      "/**",
+      " * @example",
+      " * ```ts",
+      ' * import { updateBasicInfo } from "@/shared/domain/settings/commands/site-chrome";',
+      " * ```",
+      " */",
+      'import { executeConformMutation } from "@/shared/lib/forms/conform-action";',
+      '/* import { leftover } from "./prismaNamespace"; */',
+      '// import { skipped } from "@/shared/lib/validations/settings";',
+      'export { ROLE_PERMISSIONS } from "@/shared/lib/admin-permissions";',
+    ].join("\n");
+
+    expect(extractImportSpecifiers(source)).toEqual([
+      "@/shared/lib/forms/conform-action",
+      "@/shared/lib/admin-permissions",
+    ]);
+  });
+
   test("sanity: root 数が想定レンジを維持している（regex 破壊の検知）", () => {
     // 実測 336（page 132 / route 76 / loading 74 / error 33 / route.tsx 6 /
     // layout.tsx 6 / not-found 3 / 他少数 + instrumentation.ts + proxy.ts）。
@@ -73,20 +95,11 @@ describe("module reachability", () => {
     expect(roots.length).toBeGreaterThanOrEqual(300);
   });
 
-  test("sanity: 解決できない import specifier は既知の非 TS 資産 / doc-comment 例のみ", () => {
+  test("sanity: 解決できない import specifier は既知の非 TS 資産のみ", () => {
     // CSS / JSON など .ts/.tsx グラフの対象外に解決される import。
     const KNOWN_UNRESOLVED_SUFFIXES = [".css", ".json"];
-    // regex ベースの抽出はコメントを除去しないため、JSDoc の使用例コードに
-    // 書かれた import 文も拾ってしまう（実 import ではない）。実測で確認済みの
-    // 2 件のみを既知false positiveとして許容する。増えたら本物の欠陥を疑う。
-    const KNOWN_DOC_COMMENT_FALSE_POSITIVES = [
-      "src/shared/lib/forms/conform-action.ts -> @/shared/lib/validations/settings",
-      "src/shared/lib/validations/enums/prisma-types.ts -> ./prismaNamespace",
-    ];
     const unexpected = graph.unresolvedSpecifiers.filter(
-      (entry) =>
-        !KNOWN_UNRESOLVED_SUFFIXES.some((suf) => entry.endsWith(suf)) &&
-        !KNOWN_DOC_COMMENT_FALSE_POSITIVES.includes(entry),
+      (entry) => !KNOWN_UNRESOLVED_SUFFIXES.some((suf) => entry.endsWith(suf)),
     );
     expect(unexpected).toEqual([]);
   });
