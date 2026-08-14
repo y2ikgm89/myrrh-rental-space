@@ -195,7 +195,7 @@ A（決済に mock を挟まない層）が最優先。#2229 に続けて金額�
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（56 件）
+### フェーズ 5 — 低（55 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -291,7 +291,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-113](../../audits/2026-08-12-codebase-audit-findings.md#f-113) | 低     | `src/app/api/receipts/[serialNo]/pdf/route.ts:122`                                                            | 認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）                                                                              |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                                                                    | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                           |
 | [F-115](../../audits/2026-08-12-codebase-audit-findings.md#f-115) | 低     | `src/shared/domain/admin-search/queries.ts:149`                                                               | コマンドパレット検索が EDITOR の userPageAssignment スコープを無視して全 page を返す                                                                            |
-| [F-117](../../audits/2026-08-12-codebase-audit-findings.md#f-117) | 低     | `src/shared/domain/customers/link.ts:131`                                                                     | 管理者による「顧客の紐づけ解除」は顧客の次回ログインで自動的に巻き戻り、問い合わせ本文と添付がマイページに復帰する                                              |
 | [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118) | 低     | `src/shared/domain/events/payment-queries.ts:241`                                                             | 論理削除されたイベントの返金が charge.refunded で無言で捨てられ、PAID のまま残る                                                                                |
 | [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`                                                               | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                              |
 | [F-120](../../audits/2026-08-12-codebase-audit-findings.md#f-120) | 低     | `src/shared/domain/events/waitlist-offer-commands.ts:335`                                                     | waitlist promote の session lock (728354) は interactive tx が timeout すると finally でも release できず、その event の繰上げが止まる                          |

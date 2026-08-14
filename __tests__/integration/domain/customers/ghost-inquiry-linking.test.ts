@@ -1,10 +1,23 @@
 /**
- * INQ-MP-01 実 DB 統合テスト: ゲスト送信 (customerId: null) のお問い合わせを
- * ensureCustomerLinked が同一 email の Customer に backfill する。
+ * 管理者が外した問い合わせの紐づけが、顧客の再ログインで復帰しないことの検証。
  *
- * ゲストがお問い合わせを送信した後で OAuth 登録した場合、`Inquiry.customerId` は
- * null のままだったため /mypage/inquiries に表示されなかった。ensureCustomerLinked
- * が Customer 作成/リンク後に updateMany で backfill する契約を、実 DB で検証する。
+ * == なぜ主張が反転したのか ==
+ *
+ * このファイルは元々、`ensureCustomerLinked` が `customerId: null` の Inquiry を
+ * 同一 email の Customer へ backfill する契約（INQ-MP-01）を固定していた。
+ * その前提は「ゲスト送信の Inquiry は `customerId: null` で保存される」だった。
+ *
+ * **その前提はもう成立しない。** `createInquiryCommand` は
+ * `resolveOrCreateGuestInquiryCustomer`（戻り値 `Promise<string>`）で必ず
+ * customer を解決するので、公開フォーム経由の問い合わせは常に `customerId` を持つ。
+ * 現在 `customerId: null` を作る書き込み経路は
+ * **管理者の「顧客の紐づけを解除」操作だけ**（`updateInquiryCustomer(id, null)`）。
+ *
+ * つまり backfill が実効していたのは「管理者の解除を打ち消すこと」だけだった。
+ * 対象の顧客が次にログインした瞬間、本文・返信スレッド・添付が黙ってマイページへ
+ * 復帰し、管理者には通知も履歴も残らない（監査 F-117）。
+ *
+ * そこで backfill を削除し、**解除が持続すること**をここで固定する。
  *
  * == 実行条件 ==
  * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
@@ -12,8 +25,9 @@
  * scripts/test-db-runner-env.ts の SERIAL_DB_TESTS に登録済 (drift gate)。
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, mock } from "bun:test";
 import { InquiryStatus } from "@generated/prisma/enums";
+import { installEmailDispatchMock } from "../../../support/email-dispatch-mock";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -22,17 +36,23 @@ if (TEST_DB_URL) {
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
+// welcome メールは fire-and-forget で走る。Next の request scope に依存させない。
+mock.module("next/cache", () => ({
+  cacheLife: () => {},
+  cacheTag: () => {},
+  revalidateTag: () => {},
+  updateTag: () => {},
+}));
+installEmailDispatchMock({
+  sendWelcomeEmail: mock(() => Promise.resolve()),
+});
+
 type PrismaModule = typeof import("@/shared/db/prisma");
 type LinkModule = typeof import("@/shared/domain/customers/link");
 
 let prisma: PrismaModule["prisma"];
 let ensureCustomerLinked: LinkModule["ensureCustomerLinked"];
 
-/**
- * PR #1282 で Inquiry.receiptNumber (@unique) が NOT NULL 化されたため、
- * fixture 毎に一意の "INQ-XXXXXXXX" を採番する（production の
- * generateReceiptNumberCandidate と同型式）。
- */
 function generateTestReceiptNumber(): string {
   const raw = crypto
     .randomUUID()
@@ -42,16 +62,17 @@ function generateTestReceiptNumber(): string {
   return `INQ-${raw}`;
 }
 
-async function createGuestInquiry(email: string): Promise<string> {
+/** 管理者が紐づけを解除した状態（= 現在 `customerId: null` を作る唯一の経路）。 */
+async function createDetachedInquiry(email: string): Promise<string> {
   const inquiry = await prisma.inquiry.create({
     data: {
       receiptNumber: generateTestReceiptNumber(),
       name: "ゲスト太郎",
       email,
       subject: "テスト",
-      message: "ゲスト送信テスト",
+      message: "紐づけ解除テスト",
       status: InquiryStatus.NEW,
-      // customerId は明示的に null (ゲスト送信を再現)
+      // 管理者が `updateInquiryCustomer(id, null)` を実行した後の状態。
     },
     select: { id: true },
   });
@@ -71,36 +92,29 @@ async function createUser(email: string): Promise<string> {
   return user.id;
 }
 
-async function cleanupInquiries(email: string): Promise<void> {
+async function cleanup(email: string, userId: string): Promise<void> {
   await prisma.inquiry.deleteMany({
     where: { email: { equals: email, mode: "insensitive" } },
   });
-}
-
-async function cleanupCustomer(userId: string): Promise<void> {
   await prisma.customer.deleteMany({ where: { userId } });
-}
-
-async function cleanupUser(userId: string): Promise<void> {
   await prisma.user.deleteMany({ where: { id: userId } });
 }
 
-describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
+describeMaybe("ensureCustomerLinked は解除された紐づけを復活させない", () => {
   beforeAll(async () => {
     ({ prisma } = await import("@/shared/db/prisma"));
     ({ ensureCustomerLinked } = await import("@/shared/domain/customers/link"));
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    prisma; // suppress unused (imported for parity with other integration tests)
+    await prisma.$queryRaw`SELECT 1`;
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  test("Customer 新規作成時に同一 email のゲスト Inquiry が backfill される", async () => {
+  test("新規 Customer 作成時に、解除済み Inquiry を拾わない", async () => {
     const suffix = crypto.randomUUID();
-    const email = `ghost-inquiry-${suffix}@example.com`;
-    const inquiryId = await createGuestInquiry(email);
+    const email = `detached-${suffix}@example.com`;
+    const inquiryId = await createDetachedInquiry(email);
     const userId = await createUser(email);
 
     try {
@@ -111,131 +125,73 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
       });
 
       expect(result.isNew).toBe(true);
-      expect(result.customer.userId).toBe(userId);
 
-      const linked = await prisma.inquiry.findUnique({
+      const inquiry = await prisma.inquiry.findUnique({
         where: { id: inquiryId },
         select: { customerId: true },
       });
-      expect(linked?.customerId).toBe(result.customer.id);
+      // 復活すると、管理者が意図的に外した本文・返信・添付がマイページへ戻る。
+      expect(inquiry?.customerId).toBeNull();
     } finally {
-      await cleanupInquiries(email);
-      await cleanupCustomer(userId);
-      await cleanupUser(userId);
+      await cleanup(email, userId);
     }
   });
 
-  test("大文字小文字の差異があっても backfill される (case-insensitive match)", async () => {
+  test("既に紐づけ済みの顧客が再ログインしても復活しない", async () => {
     const suffix = crypto.randomUUID();
-    const guestEmail = `Ghost-Case-${suffix}@Example.com`;
-    const oauthEmail = `ghost-case-${suffix}@example.com`;
-    const inquiryId = await createGuestInquiry(guestEmail);
+    const email = `detached-relogin-${suffix}@example.com`;
+    const userId = await createUser(email);
+
+    // 1 回目のログインで Customer を作る。
+    const first = await ensureCustomerLinked({
+      id: userId,
+      email,
+      name: "テスト太郎",
+    });
+    const inquiryId = await createDetachedInquiry(email);
+
+    try {
+      // 2 回目以降のログイン（既紐付けパス）。旧実装はここでも backfill していた。
+      const second = await ensureCustomerLinked({
+        id: userId,
+        email,
+        name: "テスト太郎",
+      });
+      expect(second.isNew).toBe(false);
+      expect(second.customer.id).toBe(first.customer.id);
+
+      const inquiry = await prisma.inquiry.findUnique({
+        where: { id: inquiryId },
+        select: { customerId: true },
+      });
+      expect(inquiry?.customerId).toBeNull();
+    } finally {
+      await cleanup(email, userId);
+    }
+  });
+
+  test("大文字小文字が違っても復活しない", async () => {
+    const suffix = crypto.randomUUID();
+    const inquiryEmail = `Detached-Case-${suffix}@Example.com`;
+    const oauthEmail = `detached-case-${suffix}@example.com`;
+    const inquiryId = await createDetachedInquiry(inquiryEmail);
     const userId = await createUser(oauthEmail);
 
     try {
-      const result = await ensureCustomerLinked({
+      await ensureCustomerLinked({
         id: userId,
         email: oauthEmail,
         name: "テスト太郎",
       });
 
-      const linked = await prisma.inquiry.findUnique({
+      const inquiry = await prisma.inquiry.findUnique({
         where: { id: inquiryId },
         select: { customerId: true },
       });
-      expect(linked?.customerId).toBe(result.customer.id);
+      expect(inquiry?.customerId).toBeNull();
     } finally {
-      await cleanupInquiries(guestEmail);
-      await cleanupInquiries(oauthEmail);
-      await cleanupCustomer(userId);
-      await cleanupUser(userId);
-    }
-  });
-
-  test("別 Customer に既に紐付いている Inquiry は絶対に上書きしない", async () => {
-    const suffix = crypto.randomUUID();
-    const email = `ghost-noover-${suffix}@example.com`;
-    // 事前に別の Customer に紐付いた Inquiry を作る
-    const otherCustomer = await prisma.customer.create({
-      data: {
-        lastName: "他人",
-        firstName: "花子",
-        email: `other-${suffix}@example.com`,
-        emailCanonical: `other-${suffix}@example.com`,
-      },
-      select: { id: true },
-    });
-    const linkedInquiry = await prisma.inquiry.create({
-      data: {
-        receiptNumber: generateTestReceiptNumber(),
-        name: "他人経由",
-        email, // 同じ email
-        subject: "テスト",
-        message: "既紐付け Inquiry",
-        status: InquiryStatus.NEW,
-        customerId: otherCustomer.id, // 別 Customer に紐付け済
-      },
-      select: { id: true },
-    });
-    const userId = await createUser(email);
-
-    try {
-      const result = await ensureCustomerLinked({
-        id: userId,
-        email,
-        name: "テスト太郎",
-      });
-
-      // 既紐付け Inquiry は otherCustomer のまま維持されているはず
-      const preserved = await prisma.inquiry.findUnique({
-        where: { id: linkedInquiry.id },
-        select: { customerId: true },
-      });
-      expect(preserved?.customerId).toBe(otherCustomer.id);
-      expect(preserved?.customerId).not.toBe(result.customer.id);
-    } finally {
-      await cleanupInquiries(email);
-      await cleanupCustomer(userId);
-      await cleanupUser(userId);
-      await prisma.customer.deleteMany({ where: { id: otherCustomer.id } });
-    }
-  });
-
-  test("既紐付け Customer への再ログイン時 (2 回目以降) でも backfill が走る", async () => {
-    const suffix = crypto.randomUUID();
-    const email = `ghost-relogin-${suffix}@example.com`;
-    const userId = await createUser(email);
-
-    try {
-      // 1 回目のリンク (この時点では guest Inquiry なし)
-      const firstResult = await ensureCustomerLinked({
-        id: userId,
-        email,
-        name: "テスト太郎",
-      });
-      expect(firstResult.isNew).toBe(true);
-
-      // 顧客がログイン後に別セッションから inquiry フォームを未ログインで送信
-      // (実際にはあまりない導線だが、backfill の再エントランスを保証)
-      const laterGuestInquiryId = await createGuestInquiry(email);
-
-      // 2 回目のリンク: 既紐付けなので isNew=false だが backfill も走る
-      const secondResult = await ensureCustomerLinked({
-        id: userId,
-        email,
-        name: "テスト太郎",
-      });
-      expect(secondResult.isNew).toBe(false);
-
-      const linked = await prisma.inquiry.findUnique({
-        where: { id: laterGuestInquiryId },
-        select: { customerId: true },
-      });
-      expect(linked?.customerId).toBe(secondResult.customer.id);
-    } finally {
-      await cleanupInquiries(email);
-      await cleanupCustomer(userId);
-      await cleanupUser(userId);
+      await cleanup(inquiryEmail, userId);
+      await cleanup(oauthEmail, userId);
     }
   });
 });
