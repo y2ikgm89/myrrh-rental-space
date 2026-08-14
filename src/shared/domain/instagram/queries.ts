@@ -64,6 +64,7 @@ export async function getInstagramPosts(): Promise<InstagramPostData[]> {
           postId: true,
           postUrl: true,
           mediaUrl: true,
+          thumbnailUrl: true,
           mediaType: true,
           caption: true,
           sortOrder: true,

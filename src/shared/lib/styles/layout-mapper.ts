@@ -92,10 +92,23 @@ export function resolveWidthStyles(
     return { className: "mx-auto max-w-full", style: undefined, px: null };
   }
 
+  // **ピクセル幅を className で表現しない**（監査 F-75）。
+  //
+  // `max-w-[${px}px]` はソース上にテンプレートリテラルとしてしか現れず、
+  // Tailwind v4 のスキャナは実行時の値を知り得ないので **CSS ルールが生成されない**。
+  // 実測: ビルド成果物に含まれる arbitrary な max-w は無関係な値だけで、
+  // プリセットの 640/720/800/900/1024 も SITE 側の 900〜1400 も 1 つも無かった。
+  //
+  // 結果、/blog/[slug]・/news/[slug]・/terms/[slug] の本文幅は設定値ではなく
+  // Typography の `prose` 既定（65ch）のままで、**どの値を選んでも見た目が変わらない**。
+  // 一方 admin 側のエディタは同じ SSoT の `.px` をインラインで適用するので、
+  // 「エディタでは変わるのに公開ページは変わらない」WYSIWYG 乖離になっていた。
+  //
+  // `getContainerSiteCss` と同じく、解決済みの長さを style で渡す。
   if (width === LayoutWidth.CUSTOM && customPx) {
     return {
-      className: `mx-auto max-w-[${customPx}px]`,
-      style: undefined,
+      className: "mx-auto",
+      style: { maxWidth: `${customPx}px` },
       px: customPx,
     };
   }
@@ -103,8 +116,8 @@ export function resolveWidthStyles(
   const preset = presets[width];
   if (preset.px) {
     return {
-      className: `mx-auto max-w-[${preset.px}px]`,
-      style: undefined,
+      className: "mx-auto",
+      style: { maxWidth: `${preset.px}px` },
       px: preset.px,
     };
   }

@@ -6,6 +6,11 @@ type InstagramPostRecord = {
   postId: string;
   postUrl: string;
   mediaUrl: string | null;
+  /**
+   * VIDEO 投稿の静止画。Graph API は VIDEO の mediaUrl に .mp4 を返し、
+   * 画像は 	humbnailUrl にしか無い（監査 F-37）。
+   */
+  thumbnailUrl: string | null;
   mediaType: InstagramMediaType;
   caption: string | null;
   sortOrder: number;
