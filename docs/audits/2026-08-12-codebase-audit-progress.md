@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  18 |  39 |  57 |
-| 合計   |  93 |  39 | 132 |
+| 低     |  19 |  38 |  57 |
+| 合計   |  94 |  38 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 39 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 38 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -128,6 +128,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-82](2026-08-12-codebase-audit-findings.md#f-82)   | 低     | #2289                                      | 母集合 regex を先頭の `next build` も数える形にし、その形を fixture で固定                               | —                                                                                       |
 | [F-87](2026-08-12-codebase-audit-findings.md#f-87)   | 低     | #2288                                      | cron_oidc_failure を 401 と config fail-closed (CRITICAL+AUTHORIZATION) に限定。汎用 cron 500 は数えない | —                                                                                       |
 | [F-79](2026-08-12-codebase-audit-findings.md#f-79)   | 低     | #2290                                      | required-check path filter gate を Bun.YAML.parse にし、flow 形式 `paths: [terraform/**]` も検出する     | —                                                                                       |
+| [F-81](2026-08-12-codebase-audit-findings.md#f-81)   | 低     | #2291                                      | header 母集合をクラス集合の lookahead に。操作列は `cn()` の文字列引数も見る                             | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
