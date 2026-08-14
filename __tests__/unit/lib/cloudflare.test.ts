@@ -232,6 +232,7 @@ describe("purgeCloudflareCache - retry", () => {
 
     expect(result.success).toBe(false);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
   test("Retry-After ヘッダーがあると setTimeout に retry-after の値が渡される", async () => {

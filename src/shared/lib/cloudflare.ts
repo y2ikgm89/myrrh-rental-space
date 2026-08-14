@@ -138,7 +138,7 @@ async function callPurgeApi(
 
       // 429 / 5xx は exponential backoff で retry（Retry-After header があれば尊重）
       if (response.status === 429 || response.status >= 500) {
-        if (attempt < PURGE_API_MAX_RETRIES) {
+        if (attempt < maxRetries) {
           const retryAfterMs = parseRetryAfterMs(
             response.headers.get("retry-after"),
           );
@@ -196,7 +196,7 @@ async function callPurgeApi(
             error.message.includes("ECONNRESET") ||
             error.message.includes("ETIMEDOUT")));
 
-      if ((isTimeout || isNetworkError) && attempt < PURGE_API_MAX_RETRIES) {
+      if ((isTimeout || isNetworkError) && attempt < maxRetries) {
         await sleep(purgeBackoffMs(attempt));
         continue;
       }
