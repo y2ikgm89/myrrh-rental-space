@@ -128,7 +128,10 @@ describe("domain の Prisma shape const", () => {
     expect({ total: shapeConsts.length, moduleLevel, local }).toEqual({
       total: moduleLevel + local,
       moduleLevel: 56,
-      local: 3,
+      // 2026-08-14: sidebar/queries.ts の `publishedWhere` が
+      // `publicPostsWhere()` の呼び出しに置き換わり、shape const ではなくなった
+      // （監査 F-66）。ここは母集合の drift 検出なので実数に合わせる。
+      local: 2,
     });
     expect(shapeConsts.length).toBeGreaterThan(50);
   });
