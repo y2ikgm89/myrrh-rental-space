@@ -144,7 +144,7 @@ describe("runSetup の配線", () => {
   const composeCapture = (command: readonly string[]): string =>
     command.includes("port") ? "0.0.0.0:5432" : "myrrh_rental";
 
-  test("compose の DB でなければ、seed を呼ばずに 1 を返す", () => {
+  test("compose の DB でなければ、migrate も seed も呼ばずに 1 を返す", () => {
     const commands: string[][] = [];
     const exitCode = runSetup(
       (command) => {
@@ -157,8 +157,26 @@ describe("runSetup の配線", () => {
 
     expect(exitCode).toBe(1);
     expect(commands.some((command) => command.includes("db:seed"))).toBe(false);
-    // 手前の step（compose 起動 / generate / migrate）までは通っていること。
-    expect(commands.some((command) => command.includes("migrate"))).toBe(true);
+    // **migrate も止まること**（監査 F-23）。旧実装は判定を seed の直前にしか
+    // 置いておらず、migrate は `process.env` のまま先に走っていた。
+    // `.env.local` に本番の DIRECT_URL が残っていると、prisma.config.ts が
+    // それを最優先で返すので、repo の pending migration が全件本番へ入る。
+    expect(commands.some((command) => command.includes("migrate"))).toBe(false);
+    expect(commands.some((command) => command.includes("db:generate"))).toBe(
+      false,
+    );
+    // compose の起動までは通っていること（起動しないと接続先を訊けない）。
+    expect(commands[0]).toEqual([
+      "docker",
+      "compose",
+      "up",
+      "-d",
+      "--wait",
+      "--wait-timeout",
+      "60",
+      "db",
+      "test-db",
+    ]);
   });
 
   test("compose の DB なら seed を呼び、その呼び出しだけ APP_SURFACE を外す", () => {
@@ -180,11 +198,29 @@ describe("runSetup の配線", () => {
 
     expect(exitCode).toBe(0);
     const seed = calls.find((call) => call.command.includes("db:seed"));
-    expect(seed?.env).toEqual({ APP_SURFACE: "" });
-    // 他の step には渡さない（印を外す範囲を seed 1 呼び出しに限る）。
+    expect(seed?.env).toEqual({
+      DATABASE_URL: LOCAL_OK,
+      DIRECT_URL: LOCAL_OK,
+      APP_SURFACE: "",
+    });
+
+    // DB を触る step は接続先を固定して起動する（監査 F-23）。
+    // **`DATABASE_URL` だけでは足りない** — Prisma CLI は `DIRECT_URL` を最優先で
+    // 見るので、`.env.local` の本番 DIRECT_URL がそのまま勝つ。
+    const migrate = calls.find((call) => call.command.includes("migrate"));
+    expect(migrate?.env).toEqual({
+      DATABASE_URL: LOCAL_OK,
+      DIRECT_URL: LOCAL_OK,
+    });
+
+    // APP_SURFACE を外すのは seed 1 呼び出しに限る（印は最後の砦なので広げない）。
     for (const call of calls) {
       if (call.command.includes("db:seed")) continue;
-      expect(call.env).toBeUndefined();
+      expect(call.env?.["APP_SURFACE"]).toBeUndefined();
     }
+
+    // compose 起動だけは env 固定の前（接続先を訊く相手を立ち上げる step）。
+    const composeUp = calls.find((call) => call.command.includes("up"));
+    expect(composeUp?.env).toBeUndefined();
   });
 });

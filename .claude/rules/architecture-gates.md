@@ -28,10 +28,13 @@ gate は既に大量にある。1 本増やすコストは書く時間ではな�
 2. **判定の見本（fixture）** — 「落ちるべき書き方」と「落ちてはいけない書き方」を
    両方置く。実装を変異させても落ちない fixture は、fixture ではない。
 
-ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制するが、
-**`readdirSync` と `globSync` しか走査呼び出しとして認識しない**。
-`new Bun.Glob(...).scanSync()` で走査する gate は ESLint が黙るので、下限 assert を
-自分で置くこと。
+ESLint の `local/gate-scan-must-not-be-silently-empty` がこれを強制する。
+認識する走査は `readdirSync` / `globSync` / `new Bun.Glob(...).scanSync()` と
+`git ls-files`。
+
+**しきい値は数値リテラルで書く。** 定数に切り出すと値が読めず、下限が無いものとして
+報告される（`expect(files.length).toBeGreaterThan(300)` は通るが、
+`toBeGreaterThan(MIN_FILES)` は通らない）。
 
 ## 手法の限界を認める
 
