@@ -96,6 +96,10 @@
 
 以下は**個別の指摘を全部潰しても解消しない**。次に機能を足したときに同じ形で再発する。
 
+**閉じたもの: G / H / I。** 各節の末尾に「構造としての残りは無い」根拠を書いてある
+（実測を伴わない「たぶん大丈夫」は書かない — G は 71 個の `page.tsx` を走査して
+確認した）。残っているのは A〜F と J。
+
 ### A. テストが固定しているのは「配線」であって「振る舞い」ではない ★最優先
 
 第 5 次で決済 webhook のテスト 3,421 行と本番インフラ監査 gate の中身を初めて読んだ結果、独立した 3 体のエージェントが同じ結論に達した。
@@ -215,13 +219,47 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（39 件）
+### フェーズ 4 — 中
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
+**件数は §6 の行数がそのまま答え**なのでここには書かない。
 
-### フェーズ 5 — 低（52 件）
+### フェーズ 5 — 低
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
+
+---
+
+## 5.1 進め方（実測でわかったこと）
+
+3 件ずつ束ねて 1 PR にすると回りやすい。束ね方は「同じ根を持つもの」で、ファイルの
+近さではない（例: F-43 と F-49 は別ファイルだが「AUTO_ON_CANCEL は必ず残額全額」と
+いう**同じ前提**の裏表だった）。
+
+各指摘で必ずやること:
+
+1. **変異検査**。修正を戻して、狙ったテストだけが落ちることを確認する。これをやらないと
+   「テストは通ったが欠陥を捕まえていない」形になる（実際、この監査で見つかった欠陥の
+   うち複数は、既存テストが**壊れた挙動のほうを固定していた**）。
+2. **欠陥を固定していた既存テストは、主張を反転する**（弱めない・消さない）。
+   実測でこの形が 8 本あった。
+3. gate を足すのは、**実際に起きた欠陥**に対してだけ。足すときは元の欠陥の形を fixture に
+   入れる。合成形だけだと、その欠陥を素通りする gate ができる（F-26 の gate の初版が
+   実際にそうなり、変異検査で見つかった）。
+
+### 広げた gate は、その場で実違反を出すことがある
+
+F-17 で seed の存在判定 lint を `findUnique` まで広げたところ、`prisma/seed.ts` に
+**partial unique の述語を欠いた slug 引きが 4 件**実在した（Event×3・Space×1）。
+gate を広げる修正は「gate だけ直して終わり」にならない前提で見積もる。
+
+### 実行して確かめていないもの（残っている不確かさ）
+
+- **GCP 監査（F-20〜22）は実 GCP に対して未実行。** 本番プロジェクトに `gcloud` を叩く
+  ため、判定ロジックと母集合を単体テストで固定するに留めた。次の本番監査実行時に、
+  これまで見えていなかった違反が新たに報告される可能性がある。
+- **seed の 4 件（F-17）は実行して確かめていない。** `db:reset` が破壊的なため。
+  型検査と lint は通っている。
 
 ---
 
@@ -234,24 +272,15 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 
 | ID                                                                | 深刻度 | 箇所                                                                                                          | 内容                                                                                                                                                            |
 | ----------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-12](../../audits/2026-08-12-codebase-audit-findings.md#f-12)   | 中     | `__tests__/unit/architecture/cross-surface-import-gate.test.ts:31`                                            | cross-surface import gate が `from "…"` 形しか見ず、動的 import と `@/app/(admin\|public)/…` 経路を素通しする                                                   |
-| [F-14](../../audits/2026-08-12-codebase-audit-findings.md#f-14)   | 中     | `__tests__/unit/architecture/use-server-exports.test.ts:41`                                                   | use-server gate は「先頭に必ず directive がある」前提で母集合を作るため、docstring を先頭に置いた "use server" ファイルが丸ごと検査対象から消える               |
 | [F-15](../../audits/2026-08-12-codebase-audit-findings.md#f-15)   | 中     | `__tests__/unit/shared/lib/csp/sanitize-css.test.ts:21`                                                       | sanitize-css.test.ts が「無効な CSS プロパティ名」を固定していて、透過ヘッダー時の main の負マージンが本番で効いていない                                        |
-| [F-17](../../audits/2026-08-12-codebase-audit-findings.md#f-17)   | 中     | `eslint-rules/seed-respects-unique-constraints.mjs:460`                                                       | seed の partial unique probe 検査が findFirst 限定 — 元の欠陥そのものである findUnique 形が lint を素通りする                                                   |
 | [F-19](../../audits/2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `prisma/seed.ts:488`                                                                                          | seedProduction の再実行が SEO 設定と送信元メール設定を管理画面編集ごと上書きする                                                                                |
-| [F-32](../../audits/2026-08-12-codebase-audit-findings.md#f-32)   | 中     | `src/app/(admin)/admin/(dashboard)/faq/_components/FaqCategoryItemsTable.tsx:250`                             | FAQ 質問の D&D 並び替えが「order は 0..N-1 で連続」を前提にしており、削除履歴のあるカテゴリの 2 ページ目以降で必ず失敗する                                      |
-| [F-36](../../audits/2026-08-12-codebase-audit-findings.md#f-36)   | 中     | `src/app/(admin)/admin/(dashboard)/reservations/_components/rrule-utils.ts:77`                                | 繰返し予約の「終了日」指定が UTC 深夜で切られ、終了日当日の予約が作成されない                                                                                   |
-| [F-38](../../audits/2026-08-12-codebase-audit-findings.md#f-38)   | 中     | `src/app/(public)/mypage/_shared/actions/reservation.ts:124`                                                  | メンテナンス中でもマイページ経由の予約キャンセル/変更は通り、Stripe 返金とメール送信が実行される                                                                |
-| [F-39](../../audits/2026-08-12-codebase-audit-findings.md#f-39)   | 中     | `src/app/(public)/reservation/_components/reservation-form.tsx:304`                                           | クーポンコードの 1 打鍵ごとに料金プレビュー Server Action が飛び、公開クエリのレート上限（30回/分/IP）を食い潰して料金表示と時間枠取得が壊れる                  |
 | [F-42](../../audits/2026-08-12-codebase-audit-findings.md#f-42)   | 中     | `src/shared/domain/audit-log/queries.ts:303`                                                                  | 監査ログ CSV エクスポートが 10,000 件で無言に打ち切られ、しかも古い順なので直近の証跡が欠落する                                                                 |
 | [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `src/shared/domain/events/event-slot-sync-commands.ts:176`                                                    | EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位                                                                    |
 | [F-51](../../audits/2026-08-12-codebase-audit-findings.md#f-51)   | 中     | `src/shared/domain/faq/analytics-commands.ts:12`                                                              | 公開 FAQ の閲覧・投票が updatedAt を更新するため、鮮度チェック cron と管理画面の「未更新」指標が恒久的に 0 になる                                               |
 | [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:195`                                                | 非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る                                                                             |
-| [F-62](../../audits/2026-08-12-codebase-audit-findings.md#f-62)   | 中     | `src/shared/domain/reservations/customer-commands.ts:574`                                                     | paymentStatus=FAILED の予約は編集画面が開けるのに保存が必ず失敗し、誤ったエラー文言で永久に変更できない                                                         |
 | [F-69](../../audits/2026-08-12-codebase-audit-findings.md#f-69)   | 中     | `src/shared/domain/terms/queries.ts:233`                                                                      | 必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く                                                                 |
 | [F-71](../../audits/2026-08-12-codebase-audit-findings.md#f-71)   | 中     | `src/shared/lib/action-helpers.ts:86`                                                                         | bot 判定が「クライアント時計」と「サーバー時計」を引き算するため、端末の時計が進んでいる利用者は全公開フォームを送信できない                                    |
 | [F-72](../../audits/2026-08-12-codebase-audit-findings.md#f-72)   | 中     | `src/shared/lib/cache/health.ts:53`                                                                           | 起動時の Cloudflare canary purge が最大 10 分 × 3 回スリープしうるため、Cloud Run の startup probe 予算 90 秒を超えてコンテナが起動不能になる                   |
-| [F-74](../../audits/2026-08-12-codebase-audit-findings.md#f-74)   | 中     | `src/shared/lib/email/reservation-emails.ts:219`                                                              | 予約メールの「料金」が税抜合計。実際の請求・領収書・振込額は税込                                                                                                |
 | [F-76](../../audits/2026-08-12-codebase-audit-findings.md#f-76)   | 低     | `__tests__/helpers/architecture-fs.ts:41`                                                                     | module-reachability の import 抽出正規表現が JSDoc 例示コードを実 import として辺に加える                                                                       |
 | [F-77](../../audits/2026-08-12-codebase-audit-findings.md#f-77)   | 低     | `__tests__/support/numeric-column-domains.ts:82`                                                              | 数値列の母集合が BigInt を落とし、AuditLog.sequence が実際に無制約のまま緑                                                                                      |
 | [F-78](../../audits/2026-08-12-codebase-audit-findings.md#f-78)   | 低     | `__tests__/unit/api/stripe-webhook.test.ts:104`                                                               | webhook 境界 mock の `latestRefund` 型が `metadata` を落としており、返金 attribution 復元に assertion が 1 つも無い                                             |
