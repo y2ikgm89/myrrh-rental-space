@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { CUSTOMER_EDITABLE_PAYMENT_STATUSES } from "@/shared/domain/reservations/edit-eligibility";
 
 const ReservationStatus = {
   PENDING: "PENDING",
@@ -269,14 +270,20 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
     });
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
-    // updateMany の WHERE に paymentStatus: UNPAID と version 述語が含まれることを assert
+    // updateMany の WHERE に paymentStatus 述語と version 述語が含まれることを assert。
+    //
+    // 集合は eligibility の SSoT（監査 F-62）。`UNPAID` 固定に戻すと、Checkout を
+    // 開始して離脱し FAILED になった予約が**開けるのに保存だけ失敗する**状態に戻る。
+    // PENDING / PAID を弾く TOCTOU 防御という本来の目的は保たれる。
     const call = mockReservationUpdateMany.mock.calls[0]?.[0];
     expect(call).toMatchObject({
       where: expect.objectContaining({
-        paymentStatus: "UNPAID",
+        paymentStatus: { in: [...CUSTOMER_EDITABLE_PAYMENT_STATUSES] },
         version: 0,
       }),
     });
+    expect([...CUSTOMER_EDITABLE_PAYMENT_STATUSES]).not.toContain("PENDING");
+    expect([...CUSTOMER_EDITABLE_PAYMENT_STATUSES]).not.toContain("PAID");
   });
 
   test("PAID の予約は変更不可 (キャンセル+再予約に誘導、reservation.update 未呼出) — PR#13", async () => {

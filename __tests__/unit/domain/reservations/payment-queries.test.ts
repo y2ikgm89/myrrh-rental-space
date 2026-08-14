@@ -230,6 +230,8 @@ const FULFILL_DATA = {
   startTime: new Date("2024-03-01T10:00:00Z"),
   endTime: new Date("2024-03-01T12:00:00Z"),
   totalPrice: 5000,
+  // メール本文は税込を出す（監査 F-74）。select にも入っている。
+  totalPriceWithTax: 5500,
   notes: null,
   guestEmail: null,
   paymentStatus: PaymentStatus.PAID,

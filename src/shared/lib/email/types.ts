@@ -194,7 +194,18 @@ export type ReservationEmailData = {
   spaceName: string;
   startTime: Date;
   endTime: Date;
-  totalPrice: number | null;
+  /**
+   * メール本文に出す料金（**税込**）。
+   *
+   * 旧実装は税抜の `totalPrice` を「料金:」として税抜と明示せずに出していた
+   * （監査 F-74）。公開ページも領収書 PDF も Stripe charge も税込なので、
+   * 同じ予約の金額が経路ごとに食い違う。payment feature OFF の運用では同じメールに
+   * 「お振込先」が並ぶため、**顧客はメール記載の税抜額を振り込み、税額ぶん不足する**。
+   *
+   * 返金メールだけは元から税込 (`originalTotal`) を使っており、
+   * 同一予約の中でも税抜/税込が混在していた。
+   */
+  totalPriceWithTax: number | null;
   notes?: string;
   location?: string;
   icsSequence: number;
@@ -434,7 +445,8 @@ export type StatusChangeEmailData = {
   spaceName: string;
   startTime: Date;
   endTime: Date;
-  totalPrice: number | null;
+  /** メール本文に出す料金（**税込**）。理由は `ReservationEmailData` と同じ（監査 F-74）。 */
+  totalPriceWithTax: number | null;
   oldStatus: ReservationStatus;
   newStatus: ReservationStatus;
   location?: string;

@@ -4772,6 +4772,9 @@ async function seedEvents() {
     where: {
       status: EventStatus.PUBLISHED,
       slug: { in: seedEventSlugs },
+      // `events_slug_active_key` は `where deletedAt IS NULL` の partial unique。
+      // 述語を揃えないと、ソフトデリート済みの同 slug 行を「在る」と数えてしまう。
+      deletedAt: null,
     },
     select: {
       id: true,
@@ -4846,8 +4849,11 @@ async function seedEvents() {
     lastName: true,
     firstName: true,
   });
-  const singleEvent = await prisma.event.findUnique({
-    where: { slug: "yoga-mindfulness-workshop" },
+  // partial unique（`where deletedAt IS NULL`）なので `findFirst` + 述語で引く。
+  // `findUnique({ where: { slug } })` は生成 client が受け付けてしまうが、
+  // 母集合が制約とずれる（監査 F-17）。
+  const singleEvent = await prisma.event.findFirst({
+    where: { slug: "yoga-mindfulness-workshop", deletedAt: null },
     select: {
       id: true,
       tickets: {
@@ -4892,8 +4898,8 @@ async function seedEvents() {
   // waitlist-test: capacity=1 を「1 CONFIRMED (満席) + 2 WAITLISTED (FIFO 順) +
   // 1 WAITLISTED_OFFERED (24h TTL 内)」で固定する専用 fixture。
   // `eventFixtures.waitlistTestSlug`（E2E）と管理画面キャンセル待ちキューの両方から参照する。
-  const waitlistTestEvent = await prisma.event.findUnique({
-    where: { slug: "waitlist-test" },
+  const waitlistTestEvent = await prisma.event.findFirst({
+    where: { slug: "waitlist-test", deletedAt: null },
     select: {
       id: true,
       tickets: {
@@ -5111,8 +5117,9 @@ async function seedSpaceReviews() {
 
 async function seedPublicReviewE2EFixture() {
   const [space, customer] = await Promise.all([
-    prisma.space.findUnique({
-      where: { slug: REVIEW_E2E_SPACE_SLUG },
+    // `spaces_slug_active_key` は `where isActive = true` の partial unique。
+    prisma.space.findFirst({
+      where: { slug: REVIEW_E2E_SPACE_SLUG, isActive: true },
       select: { id: true, hourlyPrice: true },
     }),
     findDevMemberCustomer({ id: true }),

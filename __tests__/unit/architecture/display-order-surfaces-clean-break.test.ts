@@ -778,7 +778,12 @@ describe("display order surfaces clean-break contract", () => {
       "useSortable({ id: item.id, disabled: !sortable || isPending })",
     );
     expect(faqItemsTable).toContain("const sortable = reorderEnabled;");
-    expect(faqItemsTable).toContain("order: startIndex + index");
+    // 監査 F-32: 旧実装は `order: startIndex + index`（ページ位置）で採番しており、
+    // 削除で order が歯抜けになったカテゴリでは 2 ページ目以降の並び替えが
+    // 1 ページ目末尾の order と衝突して**必ず失敗**していた。
+    // いま占めている order を並べ替える形に変えたので、その配線を固定する。
+    expect(faqItemsTable).toContain("buildReorderPayload(items, reordered)");
+    expect(faqItemsTable).not.toContain("startIndex");
     expect(faqCategoryPage).toContain("const reorderEnabled =");
     expect(faqCategoryPage).toContain('params.sortBy === "order"');
     expect(faqCategoryPage).toContain('params.sortOrder === "asc"');

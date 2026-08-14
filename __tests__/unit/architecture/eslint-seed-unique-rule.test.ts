@@ -459,6 +459,40 @@ describe("seed の一意制約 rule — その他の不変条件", () => {
     ).toEqual(["literalUniqueWrite"]);
   });
 
+  // 監査 F-17: **元の欠陥の形は `findUnique`** だった（`prisma/seed.ts` のコメントが
+  // 記録している）。partialIndexes preview により生成 client の WhereUniqueInput は
+  // partial unique の列を単独 unique キーとして受け付けるので、`findFirst` から
+  // `findUnique` に戻すだけで旧 rule は緑になっていた。
+  test("findUnique / findMany / count の probe でも述語の欠落を検出する", () => {
+    for (const probe of [
+      "await tx.article.findUnique({ where: { slug: input.slug } });",
+      "await tx.article.findUniqueOrThrow({ where: { slug: input.slug } });",
+      "await tx.article.findFirstOrThrow({ where: { slug: input.slug } });",
+      "await tx.article.findMany({ where: { slug: input.slug } });",
+      "await tx.article.count({ where: { slug: input.slug } });",
+    ]) {
+      expect(
+        messageIds(`
+        async function seed() {
+          ${probe}
+        }
+      `),
+      ).toEqual(["missingPredicate"]);
+    }
+  });
+
+  test("述語が揃っていれば findUnique でも通る", () => {
+    expect(
+      messageIds(`
+        async function seed() {
+          await tx.article.findUnique({
+            where: { slug: input.slug, deletedAt: null },
+          });
+        }
+      `),
+    ).toEqual([]);
+  });
+
   test("partial unique の述語が抜けた probe を検出する", () => {
     expect(
       messageIds(`

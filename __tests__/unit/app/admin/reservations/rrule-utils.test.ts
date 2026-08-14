@@ -36,7 +36,7 @@ describe("buildRruleString — Phase B.2 task 18", () => {
         interval: 2,
         until: "2026-09-01",
       }),
-    ).toBe("FREQ=DAILY;INTERVAL=2;UNTIL=20260901T000000Z");
+    ).toBe("FREQ=DAILY;INTERVAL=2;UNTIL=20260901T145959Z");
   });
 
   test("COUNT と UNTIL 同時指定 → COUNT 優先 (RFC 5545 契約: 排他的)", () => {

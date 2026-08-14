@@ -56,6 +56,8 @@ interface CustomerStepProps {
     readonly endTime: string;
     readonly guests: number;
     readonly price: number | null;
+    /** 料金プレビューの取得に失敗したか（監査 F-39）。 */
+    readonly priceUnavailable?: boolean;
     readonly originalPrice: number | null;
     readonly spaceDiscountAmount: number;
     readonly durationDiscountAmount: number;
@@ -123,6 +125,9 @@ export function CustomerStep({
         endTime={summary.endTime}
         guests={summary.guests}
         price={summary.price}
+        {...(summary.priceUnavailable !== undefined
+          ? { priceUnavailable: summary.priceUnavailable }
+          : {})}
         originalPrice={summary.originalPrice}
         spaceDiscountAmount={summary.spaceDiscountAmount}
         durationDiscountAmount={summary.durationDiscountAmount}

@@ -47,8 +47,14 @@ export type ReservationPayload = {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
-  /** 税込合計 (Stripe charge / refund 上限 SSoT)。未設定なら省略。 */
-  totalPriceWithTax?: number | null;
+  /**
+   * 税込合計 (Stripe charge / refund 上限 / 領収書 / **メール本文** の SSoT)。
+   *
+   * **省略可にしない**（監査 F-74）。optional だとメール側が税抜の `totalPrice` に
+   * fallback でき、同じ予約の金額が経路ごとに食い違う。値が無いときは `null` を
+   * 明示して「未設定」と出す。
+   */
+  totalPriceWithTax: number | null;
   notes?: string | undefined;
   location?: string | undefined;
   icsSequence: number;
@@ -420,9 +426,7 @@ export function buildPayload(params: {
     startTime: params.startTime,
     endTime: params.endTime,
     totalPrice: params.totalPrice,
-    ...(params.totalPriceWithTax != null
-      ? { totalPriceWithTax: params.totalPriceWithTax }
-      : {}),
+    totalPriceWithTax: params.totalPriceWithTax ?? null,
     notes: params.notes ?? undefined,
     location: formatSpaceLineAddress(
       params.space.location.address,
