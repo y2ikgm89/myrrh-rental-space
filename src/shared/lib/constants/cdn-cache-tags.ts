@@ -211,9 +211,39 @@ export const EVENT_PRIVATE_FIRST_SEGMENTS = [
   "cancel",
 ] as const;
 
-/** Public event detail pages — excludes {@link EVENT_PRIVATE_FIRST_SEGMENTS}. */
+/**
+ * Public event detail pages — excludes {@link EVENT_PRIVATE_FIRST_SEGMENTS}.
+ *
+ * lookahead は **セグメント境界に固定する**（`(?:/|$)`）。前方一致のままだと
+ * `cancellation-policy-seminar` / `waitlist-guide` のような正当な slug が
+ * 「cancel で始まる」だけで除外され、blanket `/:path*` しか当たらず
+ * **Cache-Tag が 1 つも付かない**。以後 site-wide の purge が届かず、最大
+ * s-maxage+SWR（2 時間）stale になる。イベント本体の編集だけは URL purge で
+ * 救われるため、「本文は即反映されるのに共通部分だけ古い」という切り分けの
+ * 難しい形で出る（監査 F-73）。
+ *
+ * event slug のバリデーションは `SLUG_REGEX` だけで予約語チェックが無いので、
+ * この slug は管理画面から普通に作成できる。
+ */
 export const EVENT_PUBLIC_DETAIL_HEADER_SOURCE =
-  `/events/:slug((?!${EVENT_PRIVATE_FIRST_SEGMENTS.join("|")})[^/]+)` as const;
+  `/events/:slug((?!(?:${EVENT_PRIVATE_FIRST_SEGMENTS.join("|")})(?:/|$))[^/]+)` as const;
+
+/**
+ * `headers()` が個別に Cache-Tag を emit している公開ルートの第 1 セグメント。
+ * catch-all の source から除外するために使う。
+ */
+export const TAGGED_PUBLIC_FIRST_SEGMENTS = [
+  "about",
+  "blog",
+  "category",
+  "tag",
+  "spaces",
+  "news",
+  "events",
+  "faq",
+  "terms",
+  "access",
+] as const;
 
 export const PRIVATE_NO_TAG_PREFIXES = [
   "/admin",
@@ -230,6 +260,36 @@ export const PRIVATE_NO_TAG_PREFIXES = [
     (segment) => `/events/${segment}` as const,
   ),
 ] as const;
+
+/** catch-all の source から外す第 1 セグメント（個別 emit 済み ∪ private ∪ Next 内部）。 */
+const CUSTOM_PAGE_EXCLUDED_SEGMENTS = [
+  ...TAGGED_PUBLIC_FIRST_SEGMENTS,
+  ...PRIVATE_NO_TAG_PREFIXES.map((prefix) => prefix.split("/")[1] ?? ""),
+  "_next",
+].filter((segment) => segment.length > 0);
+/**
+ * DB 由来のカスタムページ（`app/(public)/[...segments]`）の Cache-Tag source。
+ *
+ * このページ群には Cache-Tag が 1 つも付いていなかったため、メンテナンスモード・
+ * ナビゲーション・お知らせバー・機能モジュール等の **site-wide な変更が最大 2 時間
+ * edge に届かなかった**（監査 F-18）。`/access` も同様に列挙漏れだったので
+ * `headers()` へ追加してある。
+ *
+ * blanket `/:path*` 側に Cache-Tag を足す案は採れない。private blocklist は
+ * Cache-Control しか上書きしないので、Cache-Tag が PII パスへ継承される。
+ *
+ * 除外するもの:
+ * - 個別 emit 済みの公開ルート（{@link TAGGED_PUBLIC_FIRST_SEGMENTS}）
+ * - private prefix（{@link PRIVATE_NO_TAG_PREFIXES} の第 1 セグメント）
+ * - Next の内部パス（`_next`）
+ * - 拡張子を持つファイル（`sitemap.xml` / `robots.txt` 等。静的資産に site-wide
+ *   タグを付けると、設定変更のたびに無関係な purge が走る）
+ *
+ * catch-all は `segments.length === 1` のときだけページを返すので、単一セグメント
+ * だけを対象にする。
+ */
+export const CUSTOM_PAGE_HEADER_SOURCE =
+  `/:segment((?!(?:${CUSTOM_PAGE_EXCLUDED_SEGMENTS.join("|")})(?:/|$))[^/.]+)` as const;
 
 /**
  * Printable ASCII excluding 0x20 (space), 0x2C (comma), 0x7F (DEL).

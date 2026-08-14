@@ -191,11 +191,11 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（42 件）
+### フェーズ 4 — 中（40 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（55 件）
+### フェーズ 5 — 低（54 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -215,7 +215,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-14](../../audits/2026-08-12-codebase-audit-findings.md#f-14)   | 中     | `__tests__/unit/architecture/use-server-exports.test.ts:41`                                                   | use-server gate は「先頭に必ず directive がある」前提で母集合を作るため、docstring を先頭に置いた "use server" ファイルが丸ごと検査対象から消える               |
 | [F-15](../../audits/2026-08-12-codebase-audit-findings.md#f-15)   | 中     | `__tests__/unit/shared/lib/csp/sanitize-css.test.ts:21`                                                       | sanitize-css.test.ts が「無効な CSS プロパティ名」を固定していて、透過ヘッダー時の main の負マージンが本番で効いていない                                        |
 | [F-17](../../audits/2026-08-12-codebase-audit-findings.md#f-17)   | 中     | `eslint-rules/seed-respects-unique-constraints.mjs:460`                                                       | seed の partial unique probe 検査が findFirst 限定 — 元の欠陥そのものである findUnique 形が lint を素通りする                                                   |
-| [F-18](../../audits/2026-08-12-codebase-audit-findings.md#f-18)   | 中     | `next.config.ts:243`                                                                                          | /access とカスタムページは Cache-Tag を 1 つも出さないため、メンテナンスモード等の site-wide 無効化が CDN edge に届かない                                       |
 | [F-19](../../audits/2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `prisma/seed.ts:488`                                                                                          | seedProduction の再実行が SEO 設定と送信元メール設定を管理画面編集ごと上書きする                                                                                |
 | [F-20](../../audits/2026-08-12-codebase-audit-findings.md#f-20)   | 中     | `scripts/audit-gcp-production-iap.ts:831`                                                                     | 本番監査の Secret Manager 検査母集合が Cloud Run runtime map 由来で、direct DB 資格情報 `DIRECT_URL` が version 検査・per-secret IAM 検査から丸ごと外れている   |
 | [F-21](../../audits/2026-08-12-codebase-audit-findings.md#f-21)   | 中     | `scripts/audit-gcp-production-iap.ts:1149`                                                                    | Secret Manager accessor の期待値が三者で矛盾し、audit に従うと runtime SA の唯一の grant を剥がす手順に誘導される                                               |
@@ -249,7 +248,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-69](../../audits/2026-08-12-codebase-audit-findings.md#f-69)   | 中     | `src/shared/domain/terms/queries.ts:233`                                                                      | 必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く                                                                 |
 | [F-71](../../audits/2026-08-12-codebase-audit-findings.md#f-71)   | 中     | `src/shared/lib/action-helpers.ts:86`                                                                         | bot 判定が「クライアント時計」と「サーバー時計」を引き算するため、端末の時計が進んでいる利用者は全公開フォームを送信できない                                    |
 | [F-72](../../audits/2026-08-12-codebase-audit-findings.md#f-72)   | 中     | `src/shared/lib/cache/health.ts:53`                                                                           | 起動時の Cloudflare canary purge が最大 10 分 × 3 回スリープしうるため、Cloud Run の startup probe 予算 90 秒を超えてコンテナが起動不能になる                   |
-| [F-73](../../audits/2026-08-12-codebase-audit-findings.md#f-73)   | 中     | `src/shared/lib/constants/cdn-cache-tags.ts:215`                                                              | イベント slug が cancel/waitlist/registrations で始まると詳細ページの Cache-Tag が丸ごと消える（lookahead が前方一致）                                          |
 | [F-74](../../audits/2026-08-12-codebase-audit-findings.md#f-74)   | 中     | `src/shared/lib/email/reservation-emails.ts:219`                                                              | 予約メールの「料金」が税抜合計。実際の請求・領収書・振込額は税込                                                                                                |
 | [F-75](../../audits/2026-08-12-codebase-audit-findings.md#f-75)   | 中     | `src/shared/lib/styles/layout-mapper.ts:106`                                                                  | 記事本文の contentWidth が Tailwind に存在しないクラス名として出力され、公開ページで常に無効になる                                                              |
 | [F-76](../../audits/2026-08-12-codebase-audit-findings.md#f-76)   | 低     | `__tests__/helpers/architecture-fs.ts:41`                                                                     | module-reachability の import 抽出正規表現が JSDoc 例示コードを実 import として辺に加える                                                                       |
@@ -264,7 +262,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-85](../../audits/2026-08-12-codebase-audit-findings.md#f-85)   | 低     | `__tests__/unit/architecture/prisma-delegate-arg-types.test.ts:192`                                           | prisma-delegate-arg-types は引数のどこかに Prisma. があれば通すので、手書き where が Prisma.Select と同居すると素通りする                                       |
 | [F-86](../../audits/2026-08-12-codebase-audit-findings.md#f-86)   | 低     | `__tests__/unit/architecture/seed-navigation-reconcile.test.ts:80`                                            | navigation reconcile の列取りこぼし検査が declaredContent ブロックの平文一致 — コメントに列名があるだけで満たされる                                             |
 | [F-87](../../audits/2026-08-12-codebase-audit-findings.md#f-87)   | 低     | `infra/monitoring/log-metrics/cron-oidc-failure.yaml:15`                                                      | cron\_oidc\_failure メトリックが /api/cron/\* の 500 を無条件に数えるため、OIDC と無関係な cron 障害で「cron OIDC failure」が発火し、runbook が当直を誤誘導する |
-| [F-88](../../audits/2026-08-12-codebase-audit-findings.md#f-88)   | 低     | `next.config.ts:85`                                                                                           | /events とイベント詳細の Cache-Tag に space-v1 / location-v1 が無く、会場住所・スペース名の変更が edge に反映されない                                           |
 | [F-89](../../audits/2026-08-12-codebase-audit-findings.md#f-89)   | 低     | `prisma/seed.ts:829`                                                                                          | seedSpaceCategories が本番再実行でスペースカテゴリーの説明・アイコン・色を宣言値へ戻す                                                                          |
 | [F-90](../../audits/2026-08-12-codebase-audit-findings.md#f-90)   | 低     | `prisma/seed.ts:4314`                                                                                         | seedNavigation の (type, order) 一致判定が、管理画面の削除・並び替え後に別項目を指し、本番でナビゲーションが重複する                                            |
 | [F-91](../../audits/2026-08-12-codebase-audit-findings.md#f-91)   | 低     | `scripts/migrate-test-db.ts:83`                                                                               | Bun.spawnSync().exitCode is null on signal-kill, so `process.exit(run())` turns a killed `prisma migrate deploy` into exit 0                                    |

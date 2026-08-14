@@ -3,6 +3,7 @@ import {
   SITE_WIDE_CDN_TAGS,
   SIDEBAR_CDN_TAGS,
   CDN_CACHE_TAGS,
+  CUSTOM_PAGE_HEADER_SOURCE,
   EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
   joinCacheTags,
   type CdnTagValue,
@@ -87,6 +88,12 @@ const EVENTS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.EVENT,
   CDN_CACHE_TAGS.EVENT_CATEGORY,
   CDN_CACHE_TAGS.EVENT_WAITLIST,
+  // イベントページは会場として Location.address と Space.name を描画する
+  // (`publicEventSelect`)。producer 側は `cacheTag(EVENTS, LOCATIONS, SPACES)` を
+  // 貼っているのに emit 側に無かったため、**住所変更・スペース改名が最大 2 時間
+  // edge に届かず、来場者が古い住所を見る**（監査 F-88）。
+  CDN_CACHE_TAGS.SPACE,
+  CDN_CACHE_TAGS.LOCATION,
   ...SIDEBAR_CDN_TAGS,
 ]);
 const FAQ_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.FAQ]);
@@ -95,6 +102,8 @@ const TERMS_CACHE_TAG = joinWithSiteWide([
   ...SIDEBAR_CDN_TAGS,
 ]);
 const SITEMAP_CACHE_TAG = joinCacheTags([CDN_CACHE_TAGS.SITEMAP]);
+/** site-wide タグのみ（/access・カスタムページ）。 */
+const SITE_WIDE_ONLY_CACHE_TAG = joinWithSiteWide([]);
 
 const nextConfig: NextConfig = {
   // Turbopack / outputFileTracing の workspace root を明示固定する。
@@ -323,6 +332,19 @@ const nextConfig: NextConfig = {
       {
         source: "/terms/:path*",
         headers: [{ key: "Cache-Tag", value: TERMS_CACHE_TAG }],
+      },
+      // ============================================================
+      // 列挙漏れだった公開ルート（監査 F-18）。
+      // どちらも site-wide タグしか要らない（コンテンツ固有の purge は
+      // それぞれの URL purge が担当する）。
+      // ============================================================
+      {
+        source: "/access",
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
+      },
+      {
+        source: CUSTOM_PAGE_HEADER_SOURCE,
+        headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }],
       },
       // ============================================================
       // /sitemap.xml — site-wide auto-purge target (see site-wide.ts).
