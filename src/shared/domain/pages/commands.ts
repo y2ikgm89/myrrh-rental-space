@@ -110,7 +110,20 @@ export async function ensureSystemPageCommand(slug: string) {
       },
     }));
 
-  await ensurePageSections(page.id, definition.slug);
+  // 既定セクションを流すのは **Page 行を新規作成したときだけ**（監査 F-53）。
+  //
+  // 旧実装は既存ページでも毎回「DEFAULT_PAGE_SECTIONS にあって DB に無い type」を
+  // 欠落とみなして再作成していた。管理者が custom セクションを削除すると、
+  // 削除アクションの `revalidateTag` で編集ルートが再レンダーされ、ここが再び走って
+  // **コード同梱のデモ文言つきで復活する**。編集画面を開かなくても、admin の
+  // コールドスタート時に `bootstrapSystemPages()` が全システムページで同じことを
+  // する。公開ページに未承認の初期文言が再掲載される。
+  //
+  // 必須セクション（`isRequiredSectionForTemplate`）は削除も非表示も拒否されるので、
+  // 「既存ページで必須が欠ける」経路は無い。
+  if (!existingPage) {
+    await ensurePageSections(page.id, definition.slug);
+  }
 
   return {
     page: toPlainObject(page),

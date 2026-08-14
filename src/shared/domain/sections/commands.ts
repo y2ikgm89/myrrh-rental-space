@@ -209,7 +209,7 @@ export async function duplicatePageSectionCommand(
       config: true,
       order: true,
       isActive: true,
-      page: { select: { slug: true } },
+      page: { select: { slug: true, template: true } },
     },
   });
   if (!source) {
@@ -217,6 +217,19 @@ export async function duplicatePageSectionCommand(
   }
   if (source.type === "page-hero") {
     throw new DomainError("ヒーローは複製できません", "CONFLICT");
+  }
+  // 削除・表示切替と**同じ述語**で複製も止める（監査 F-63）。
+  //
+  // 旧実装は page-hero だけを弾いており、テンプレート必須セクション
+  // （contact-form / faq-list / reservation-form / space-list / …）は複製できた。
+  // 複製すると公開ページに問い合わせフォームが 2 つ並ぶが、削除も表示切替も
+  // `isRequiredSectionForTemplate` が型で判定するので**両方 CONFLICT**になり、
+  // 管理画面からは一切戻せない（DB を直接触るしかない）。
+  if (isRequiredSectionForTemplate(source.page.template, source.type)) {
+    throw new DomainError(
+      "このページに必須のセクションは複製できません",
+      "CONFLICT",
+    );
   }
 
   const sourcePageId = source.pageId;
