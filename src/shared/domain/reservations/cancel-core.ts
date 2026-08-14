@@ -7,6 +7,7 @@ import {
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
+import { releaseCouponUsage } from "./payloads";
 
 /**
  * 予約キャンセルの共通コア
@@ -153,10 +154,7 @@ export async function applyCancellation(
   }
 
   if (reservation.couponId) {
-    await tx.coupon.updateMany({
-      where: { id: reservation.couponId, usageCount: { gt: 0 } },
-      data: { usageCount: { decrement: 1 } },
-    });
+    await releaseCouponUsage(tx, { couponId: reservation.couponId });
   }
 
   return { success: true };

@@ -39,6 +39,7 @@ import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import {
   buildPricingSettings,
   claimCouponUsage,
+  releaseCouponUsage,
   ensureNoOverlap,
   getReservationSettings,
   validateCoupon,
@@ -494,10 +495,7 @@ export async function cancelReservationSeriesCommand(
         },
       });
       if (series.couponId) {
-        await tx.coupon.updateMany({
-          where: { id: series.couponId, usageCount: { gt: 0 } },
-          data: { usageCount: { decrement: 1 } },
-        });
+        await releaseCouponUsage(tx, { couponId: series.couponId });
       }
     }
 

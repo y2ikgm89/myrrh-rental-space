@@ -14,7 +14,12 @@ import {
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { isPrismaExclusionConstraintError } from "@/shared/lib/prisma-errors";
 import { validateStatusTransition } from "./status";
-import { CUSTOMER_SELECT, buildPayload, claimCouponUsage } from "./payloads";
+import {
+  CUSTOMER_SELECT,
+  buildPayload,
+  claimCouponUsage,
+  releaseCouponUsage,
+} from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
@@ -140,10 +145,7 @@ export async function updateReservationStatusCommand(
     }
 
     if (isCancellation && reservation.couponId !== null) {
-      await tx.coupon.updateMany({
-        where: { id: reservation.couponId, usageCount: { gt: 0 } },
-        data: { usageCount: { decrement: 1 } },
-      });
+      await releaseCouponUsage(tx, { couponId: reservation.couponId });
     }
 
     // claim の WHERE は status のみを条件にしているため、読取からこの claim までの間に
@@ -451,10 +453,7 @@ export async function deleteReservationCommand(
     });
 
     if (needsCancellationTracking && reservation.couponId) {
-      await tx.coupon.updateMany({
-        where: { id: reservation.couponId, usageCount: { gt: 0 } },
-        data: { usageCount: { decrement: 1 } },
-      });
+      await releaseCouponUsage(tx, { couponId: reservation.couponId });
     }
   }, RESERVATION_WRITE_TX_OPTIONS);
 
