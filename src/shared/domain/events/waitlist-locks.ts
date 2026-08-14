@@ -59,13 +59,13 @@ type LockClient = {
 
 /**
  * Non-blocking row lease for waitlist promote batch.
- * Returns true if the lease was acquired, false if another process holds a live one.
+ * Returns the `leasedUntil` we wrote, or null if another process holds a live one.
  */
 export async function tryAcquireWaitlistPromoteLease(
   client: LockClient,
   eventId: string,
   now: Date = new Date(),
-): Promise<boolean> {
+): Promise<Date | null> {
   const leasedUntil = new Date(now.getTime() + WAITLIST_PROMOTE_LEASE_TTL_MS);
   const rows = await client.$queryRaw<readonly { readonly id: string }[]>`
     UPDATE events
@@ -82,20 +82,22 @@ export async function tryAcquireWaitlistPromoteLease(
       )
     RETURNING id
   `;
-  return rows.length === 1;
+  return rows.length === 1 ? leasedUntil : null;
 }
 
 /**
- * Release the row lease acquired with tryAcquireWaitlistPromoteLease.
- * Idempotent: safe to call in finally even if the lease was never acquired.
+ * Release only the lease we acquired. A stale finally must not clear a
+ * newer holder's `leasedUntil` after TTL self-heal.
  */
 export async function releaseWaitlistPromoteLease(
   client: LockClient,
   eventId: string,
+  leasedUntil: Date,
 ): Promise<void> {
   await client.$executeRaw`
     UPDATE events
     SET waitlist_promote_leased_until = NULL
     WHERE id = ${eventId}::uuid
+      AND waitlist_promote_leased_until = ${leasedUntil}
   `;
 }

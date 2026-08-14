@@ -165,8 +165,9 @@ describeMaybe(
           prisma,
           eventId,
         );
-        expect(reacquired).toBe(true);
-        await releaseWaitlistPromoteLease(prisma, eventId);
+        expect(reacquired).not.toBeNull();
+        if (reacquired === null) return;
+        await releaseWaitlistPromoteLease(prisma, eventId, reacquired);
       } finally {
         await prisma.eventRegistration.deleteMany({ where: { eventId } });
         await prisma.event.deleteMany({ where: { id: eventId } });
@@ -209,7 +210,7 @@ describeMaybe(
                 tx,
                 eventId,
               );
-              expect(acquired).toBe(true);
+              expect(acquired).not.toBeNull();
               await tx.$executeRaw`SELECT pg_sleep(2)`;
             },
             { timeout: 1000 },
@@ -217,8 +218,9 @@ describeMaybe(
         ).rejects.toThrow();
 
         const reacquired = await tryAcquireWaitlistPromoteLease(other, eventId);
-        expect(reacquired).toBe(true);
-        await releaseWaitlistPromoteLease(other, eventId);
+        expect(reacquired).not.toBeNull();
+        if (reacquired === null) return;
+        await releaseWaitlistPromoteLease(other, eventId, reacquired);
       } finally {
         await holder.$disconnect();
         await other.$disconnect();

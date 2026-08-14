@@ -267,12 +267,12 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
     }[],
   };
 
-  const acquired = await tryAcquireWaitlistPromoteLease(
+  const leasedUntil = await tryAcquireWaitlistPromoteLease(
     prisma,
     args.eventId,
     args.now,
   );
-  if (!acquired) {
+  if (leasedUntil === null) {
     return empty;
   }
 
@@ -345,6 +345,6 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
       { maxWait: 5000, timeout: 20000 },
     );
   } finally {
-    await releaseWaitlistPromoteLease(prisma, args.eventId);
+    await releaseWaitlistPromoteLease(prisma, args.eventId, leasedUntil);
   }
 }
