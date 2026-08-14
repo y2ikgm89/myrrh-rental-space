@@ -238,6 +238,16 @@ export async function expireWaitlistOfferCommand(data: {
  * 空の結果を返す。保持していない lease を release してはいけないため、
  * その場合は release も呼ばない。
  */
+type ExpireAndPromoteResult = {
+  expired: { id: string; name: string; email: string | null }[];
+  offered: {
+    id: string;
+    email: string | null;
+    offeredAt: Date;
+    expiresAt: Date;
+  }[];
+};
+
 export async function expireAndPromoteWaitlistForEventCommand(args: {
   eventId: string;
   candidates: readonly {
@@ -248,23 +258,10 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
     email: string | null;
   }[];
   now: Date;
-}): Promise<{
-  expired: { id: string; name: string; email: string | null }[];
-  offered: {
-    id: string;
-    email: string | null;
-    offeredAt: Date;
-    expiresAt: Date;
-  }[];
-}> {
-  const empty = {
-    expired: [] as { id: string; name: string; email: string | null }[],
-    offered: [] as {
-      id: string;
-      email: string | null;
-      offeredAt: Date;
-      expiresAt: Date;
-    }[],
+}): Promise<ExpireAndPromoteResult> {
+  const empty: ExpireAndPromoteResult = {
+    expired: [],
+    offered: [],
   };
 
   const leasedUntil = await tryAcquireWaitlistPromoteLease(
