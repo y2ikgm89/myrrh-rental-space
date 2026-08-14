@@ -159,13 +159,39 @@ export default defineConfig<E2ETestOptions>({
      * 未認証 project: 公開ページ + 管理 IAP 境界 + a11y
      * `e2e/public/*.spec.ts` および `e2e/a11y/*.spec.ts` を対象。
      * setup spec / 認証済 / visual / smoke は明示除外。
+     *
+     * **admin surface で走る。** `/` を踏む spec はここに入れない
+     * （proxy が `/admin` へリダイレクトするため実行不能）。それらは下の
+     * 公開 surface 専用 project が単独で所有する。
      * =================================================================== */
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["chromium-feature-modules"],
       testMatch: [/e2e\/public\/.*\.spec\.ts/, /e2e\/a11y\/.*\.spec\.ts/],
-      testIgnore: /e2e\/public\/feature-module-off-gate\.spec\.ts/,
+      testIgnore: [
+        /e2e\/public\/feature-module-off-gate\.spec\.ts/,
+        /e2e\/public\/homepage\.spec\.ts/,
+      ],
+    },
+    /* ===================================================================
+     * 公開 surface 専用 project 群: **`APP_SURFACE=public` の実行でしか走らない**
+     *
+     * `/` は admin surface では `src/proxy.ts` が `/admin` へリダイレクトするため、
+     * root を踏む spec は admin surface で物理的に実行できない。surface は
+     * webServer プロセス単位の env なので、1 回の playwright 実行では
+     * admin と public を同時に満たせない。よって **CI 側で 2 step に分ける**
+     * （`.github/workflows/ci.yml` の e2e-tests job）。
+     *
+     * `chromium-feature-modules` に依存させない。`chromium-visual` と同じ理由で、
+     * public surface では proxy が `/admin/*` を 404 にするため `setup-admin` が
+     * 満たせず job ごと落ちる。public step ではこの 3 project しか選ばれず
+     * mutator が走らないので、そもそも排他が不要。
+     * =================================================================== */
+    {
+      name: "chromium-public-root",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /e2e\/public\/homepage\.spec\.ts/,
     },
     {
       name: "chromium-mobile",
@@ -174,7 +200,6 @@ export default defineConfig<E2ETestOptions>({
         isMobile: true,
         hasTouch: true,
       },
-      dependencies: ["chromium-feature-modules"],
       testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
     },
     {
@@ -185,7 +210,6 @@ export default defineConfig<E2ETestOptions>({
         isMobile: true,
         hasTouch: true,
       },
-      dependencies: ["chromium-feature-modules"],
       testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
     },
 

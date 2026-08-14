@@ -1,19 +1,19 @@
 import { test, expect } from "../fixtures/e2e-test";
 import { urls, eventCategoryFixtures } from "../fixtures";
 
-const appSurface = process.env["APP_SURFACE"] ?? "admin";
-
-test.skip(
-  appSurface !== "public",
-  "Public /events findability filter spec is served only on public surface.",
-);
-
 /**
  * 公開サイト - /events 検索性向上 UI E2E
  *
  * 責務: `eventsListSearchParamsParsers` の URL → UI 双方向反映を pin する。
  * tab/q/categoryId の Prisma 変換ロジックは
  * `__tests__/unit/domain/events/public-queries.test.ts` が担当。
+ *
+ * **`getByLabel` を使わない。** React streaming の hidden staging container が
+ * 同じ input を一時的に 2 つ存在させるため strict-mode violation になる
+ * （実測: `getByLabel('イベントを検索') resolved to 2 elements`。a11y ツリーには
+ * 1 つしか出ない）。role locator は `includeHidden: false` が既定なので
+ * staging copy を構造的に掴まない。理由の全文は
+ * `e2e/helpers/streaming-safe-locators.ts`。
  */
 
 test.describe("/events findability — URL 双方向反映", () => {
@@ -28,8 +28,12 @@ test.describe("/events findability — URL 双方向反映", () => {
       page.getByRole("button", { name: "開催予定" }),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "終了" })).toBeVisible();
-    await expect(page.getByLabel("イベントを検索")).toBeVisible();
-    await expect(page.getByLabel("カテゴリー")).toBeVisible();
+    await expect(
+      page.getByRole("searchbox", { name: "イベントを検索" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "カテゴリー" }),
+    ).toBeVisible();
   });
 
   test("?tab=past で終了タブが選択状態になる", async ({ page }) => {
@@ -52,7 +56,9 @@ test.describe("/events findability — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(urls.events);
-    const searchInput = page.getByLabel("イベントを検索");
+    const searchInput = page.getByRole("searchbox", {
+      name: "イベントを検索",
+    });
     await searchInput.fill("ヨガ");
     await expect(page).toHaveURL(/[?&]q=/);
     await expect(searchInput).toHaveValue("ヨガ");
@@ -62,7 +68,7 @@ test.describe("/events findability — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(urls.events);
-    const select = page.getByLabel("カテゴリー");
+    const select = page.getByRole("combobox", { name: "カテゴリー" });
     const optionValue = await select
       .locator("option", { hasText: eventCategoryFixtures.workshopName })
       .getAttribute("value");
