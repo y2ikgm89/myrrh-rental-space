@@ -498,18 +498,28 @@ export async function finalizeSettledReservationRefund(
     });
     const cumulativeSettled = aggregate._sum.amount ?? 0;
 
-    const isAutomatedFullRefund =
+    // **金額の判定は必ず累積で行う**（監査 F-49）。actorType では決めない。
+    //
+    // 旧実装は `AUTO_*` を「常に残額全額」と決め打ちして無条件に REFUNDED へ
+    // 確定させていた。だが AUTO_ON_CANCEL は返金ポリシーの按分（50% 等）で
+    // **部分返金になりうる**。その 1 件を REFUNDED に確定させると、残額が
+    // 残っているのに「全額返金済み」になり、以後の返金入口
+    // （PAID / PARTIALLY_REFUNDED のみ許可）が閉じて手動でも返せなくなる。
+    const willBeFullyRefunded =
+      cumulativeSettled >= reservation.totalPriceWithTax;
+
+    // 一方 **入口の paymentStatus 判定**は actorType で分ける必要が残る。
+    // 自動返金は UNPAID / PENDING からも入りうるため（capacity race・金額不一致）、
+    // 「まだ REFUNDED になっていない」ことだけを条件にする。
+    const isAutomatedRefund =
       AUTOMATED_FULL_REFUND_TYPES.includes(refundedByType);
-    const willBeFullyRefunded = isAutomatedFullRefund
-      ? true
-      : cumulativeSettled >= reservation.totalPriceWithTax;
 
     const targetPaymentStatus = willBeFullyRefunded
       ? PaymentStatus.REFUNDED
       : PaymentStatus.PARTIALLY_REFUNDED;
 
     const updated = await tx.reservation.updateMany({
-      where: isAutomatedFullRefund
+      where: isAutomatedRefund
         ? {
             id: reservationId,
             deletedAt: null,

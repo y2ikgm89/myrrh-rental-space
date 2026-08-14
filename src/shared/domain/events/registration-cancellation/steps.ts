@@ -62,6 +62,10 @@ export async function runRefundStep(args: {
     wasPaid,
     requiresRefund,
     chargeBase: registration.paidAmount,
+    refundedSoFar: registration.refunds.reduce(
+      (sum, refund) => sum + refund.amount,
+      0,
+    ),
     startTime: registration.slot.startAt,
     ...(input.refundPolicySnapshot !== undefined
       ? { refundPolicySnapshot: input.refundPolicySnapshot }

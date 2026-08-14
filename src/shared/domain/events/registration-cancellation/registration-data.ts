@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import type { SideEffectRegistration } from "@/shared/domain/events/registration-cancellation/types";
 
 export type RegistrationEmailDetails = NonNullable<
@@ -26,6 +27,11 @@ export async function fetchRegistrationForSideEffects(
       stripePaymentIntentId: true,
       stripeCheckoutSessionId: true,
       paidAmount: true,
+      // 監査 F-43。除外 status は `resolveRefundAmount` の残額計算と揃える。
+      refunds: {
+        where: { status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] } },
+        select: { amount: true },
+      },
       event: { select: { title: true } },
       slot: { select: { startAt: true } },
     },

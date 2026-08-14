@@ -48,6 +48,10 @@ export async function runRefundStep(args: {
     wasPaid,
     requiresRefund,
     chargeBase: reservation.totalPriceWithTax ?? reservation.totalPrice ?? null,
+    refundedSoFar: reservation.refunds.reduce(
+      (sum, refund) => sum + refund.amount,
+      0,
+    ),
     startTime: reservation.startTime,
     ...(input.refundPolicySnapshot !== undefined
       ? { refundPolicySnapshot: input.refundPolicySnapshot }

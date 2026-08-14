@@ -828,7 +828,10 @@ describe("reservations/payment-queries", () => {
       );
     });
 
-    test("AUTO_ON_CANCEL: 入口 paymentStatus を問わず (REFUNDED 以外なら) 無条件 REFUNDED に遷移する", async () => {
+    test("AUTO_ON_CANCEL: 入口は緩いが、金額は累積で判定する", async () => {
+      // 監査 F-49。旧実装は AUTO_* を「常に残額全額」と決め打ちして無条件に
+      // REFUNDED へ遷移させていたが、AUTO_ON_CANCEL は返金ポリシーの按分で
+      // **部分返金になりうる**。累積未到達なら PARTIALLY_REFUNDED で止める。
       mockReservationFindUnique.mockResolvedValueOnce({
         totalPriceWithTax: 10000,
       });
@@ -843,12 +846,35 @@ describe("reservations/payment-queries", () => {
       );
 
       expect(result).toBe(true);
-      // ADMIN と異なり累積額の全額到達判定はせず、単発全額返金として無条件 REFUNDED。
       expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          // 入口の緩さ（UNPAID / PENDING からも入る）は actorType で保つ。
           where: expect.objectContaining({
             paymentStatus: { not: PaymentStatus.REFUNDED },
           }),
+          // 金額の判定だけは actorType では決めない。
+          data: { paymentStatus: PaymentStatus.PARTIALLY_REFUNDED },
+        }),
+      );
+    });
+
+    test("AUTO_ON_CANCEL: 累積が総額に達したら REFUNDED", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPriceWithTax: 10000,
+      });
+      mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 10000 } });
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await finalizeSettledReservationRefund(
+        RESERVATION_ID,
+        STRIPE_REFUND_ID,
+        10000,
+        REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      );
+
+      expect(result).toBe(true);
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
           data: { paymentStatus: PaymentStatus.REFUNDED },
         }),
       );

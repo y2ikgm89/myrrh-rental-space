@@ -464,7 +464,9 @@ describe("events/payment-queries", () => {
       );
     });
 
-    test("AUTO_CAPACITY_RACE: 入口 paymentStatus を問わず (REFUNDED 以外なら) 無条件 REFUNDED に遷移する", async () => {
+    test("AUTO_CAPACITY_RACE: 入口は緩いが、金額は累積で判定する", async () => {
+      // 監査 F-49。入口の緩さ（UNPAID / PENDING からも入る）は actorType で保つが、
+      // REFUNDED / PARTIALLY_REFUNDED の判定は累積額だけで決める。
       mockRegFindUnique.mockResolvedValueOnce({ paidAmount: 10000 });
       mockRefundAggregate.mockResolvedValueOnce({ _sum: { amount: 4000 } });
 
@@ -480,7 +482,7 @@ describe("events/payment-queries", () => {
           where: expect.objectContaining({
             paymentStatus: { not: PaymentStatus.REFUNDED },
           }),
-          data: { paymentStatus: PaymentStatus.REFUNDED },
+          data: { paymentStatus: PaymentStatus.PARTIALLY_REFUNDED },
         }),
       );
     });

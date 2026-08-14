@@ -165,6 +165,7 @@ type ReservationFixture = {
   totalPrice: number | null;
   notes: string | null;
   icsSequence: number;
+  refunds: { amount: number }[];
   paymentStatus: "UNPAID" | "PAID";
   stripePaymentIntentId: string | null;
   googleCalendarEventId: string | null;
@@ -191,6 +192,7 @@ const baseReservation: ReservationFixture = {
   totalPrice: 5000,
   notes: "備考",
   icsSequence: 2,
+  refunds: [],
   paymentStatus: "UNPAID",
   stripePaymentIntentId: null,
   googleCalendarEventId: null,

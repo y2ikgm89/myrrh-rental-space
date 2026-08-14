@@ -198,6 +198,7 @@ type RegistrationFixture = {
   stripePaymentIntentId: string | null;
   stripeCheckoutSessionId: string | null;
   paidAmount: number | null;
+  refunds: { amount: number }[];
   event: { title: string };
   slot: { startAt: Date };
 };
@@ -213,6 +214,7 @@ const baseRegistration: RegistrationFixture = {
   stripePaymentIntentId: null,
   stripeCheckoutSessionId: null,
   paidAmount: null,
+  refunds: [],
   event: { title: "Test Event" },
   // 十分先の未来 (policy tier 100% 該当帯) にして「policy 未設定なら残額全額返金」
   // fallback path に流す。個別テストで override 可能。

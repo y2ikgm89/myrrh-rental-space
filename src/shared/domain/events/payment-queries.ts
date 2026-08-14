@@ -424,14 +424,17 @@ export async function finalizeSettledEventRegistrationRefund(
     });
     const cumulativeSettled = aggregate._sum.amount ?? 0;
 
-    const isAutomatedFullRefund =
+    // **金額の判定は必ず累積で行う**（監査 F-49）。actorType では決めない。
+    // 詳しい理由は reservations/payment-queries.ts の同じ箇所に書いてある。
+    const willBeFullyRefunded = cumulativeSettled >= registration.paidAmount;
+
+    // 入口の paymentStatus 判定だけは actorType で分ける（自動返金は
+    // UNPAID / PENDING からも入りうる）。
+    const isAutomatedRefund =
       AUTOMATED_FULL_REFUND_TYPES.includes(refundedByType);
-    const willBeFullyRefunded = isAutomatedFullRefund
-      ? true
-      : cumulativeSettled >= registration.paidAmount;
 
     await tx.eventRegistration.updateMany({
-      where: isAutomatedFullRefund
+      where: isAutomatedRefund
         ? {
             id: registrationId,
             paymentStatus: { not: PaymentStatus.REFUNDED },
