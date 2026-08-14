@@ -116,15 +116,19 @@ export function MediaUploadDialog({
     if (formData.title) data.append("title", formData.title);
 
     startTransition(async () => {
-      const result = await uploadMedia(data);
+      try {
+        const result = await uploadMedia(data);
 
-      if (!isMutationError(result)) {
-        toast.success("アップロードしました");
-        onUploadSuccess?.(result);
-        handleClose();
-        router.refresh();
-      } else {
-        toast.error(result.error);
+        if (!isMutationError(result)) {
+          toast.success("アップロードしました");
+          onUploadSuccess?.(result);
+          handleClose();
+          router.refresh();
+        } else {
+          toast.error(result.error);
+        }
+      } catch {
+        toast.error("アップロードに失敗しました");
       }
     });
   };

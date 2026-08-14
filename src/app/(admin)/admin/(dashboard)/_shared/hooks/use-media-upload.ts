@@ -137,6 +137,9 @@ export function useMediaUpload(): UseMediaUploadReturn {
         filename: file.name,
         ...(metadata.title !== undefined && { title: metadata.title }),
       };
+    } catch {
+      toast.error("アップロードに失敗しました");
+      return null;
     } finally {
       if (isMountedRef.current) {
         setIsUploading(false);
