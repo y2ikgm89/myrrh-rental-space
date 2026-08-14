@@ -156,7 +156,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-114](2026-08-12-codebase-audit-findings.md#f-114) | 低     | #2310                                      | `to.length !== 1` の bounce / complaint / failed / suppressed では抑止しない。breadcrumb のみ残して 200 ack      | —                                                                                       |
 | [F-108](2026-08-12-codebase-audit-findings.md#f-108) | 低     | #2311                                      | profile-form が action の `successMessage` を表示する（初回メール登録の確認案内）                                | —                                                                                       |
 | [F-110](2026-08-12-codebase-audit-findings.md#f-110) | 低     | #2311                                      | 同上（固定文言「プロフィールを更新しました」で successMessage を捨てない）                                       | —                                                                                       |
-| [F-125](2026-08-12-codebase-audit-findings.md#f-125) | 低     | `fix/audit-f125-reserved-metadata-slugs`   | `apple-icon` / `opengraph-image` / `twitter-image` を予約。静的単一セグメントルートの drift gate を追加          | —                                                                                       |
+| [F-125](2026-08-12-codebase-audit-findings.md#f-125) | 低     | #2314                                      | `apple-icon` / `opengraph-image` / `twitter-image` を予約。静的単一セグメントルートの drift gate を追加          | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
