@@ -96,13 +96,9 @@
 
 以下は**個別の指摘を全部潰しても解消しない**。次に機能を足したときに同じ形で再発する。
 
-**閉じたもの: E / G / H / I。** 各節の末尾に「構造としての残りは無い」根拠を書いてある
-（実測を伴わない「たぶん大丈夫」は書かない — G は 71 個の `page.tsx` を走査して
-確認した）。残っているのは A / B / C / D / F / J。
-
-**「関連指摘が全部済」は「穴が閉じた」ではない。** §4 の前提がまさにそれで、
-B / D / F は関連指摘を全件クローズしたあとも構造としては残っている（各節に実測を
-書いた）。この 3 つは台帳（§6）に行が無いので、見落としやすい。
+**閉じたもの: B / C / D / E / F / G / H / I / J。** 各節の末尾に根拠を書いてある
+（実測を伴わない「たぶん大丈夫」は書かない）。残っているのは A
+（webhook 境界テストの大半は今も配線 mock）。
 
 ### A. テストが固定しているのは「配線」であって「振る舞い」ではない ★最優先
 
@@ -118,35 +114,47 @@ B / D / F は関連指摘を全件クローズしたあとも構造としては�
 
 - **対処**: 金が動く経路に mock を挟まない層を作る。実 DB を使う integration の土台は既にある。
 - **着手済**: #2229。以後、金額書込の本体から順に載せる。
-- **関連指摘**: [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56) / [F-78](../../audits/2026-08-12-codebase-audit-findings.md#f-78) / [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118)（決済 webhook テストと共有 mock）、[F-20](../../audits/2026-08-12-codebase-audit-findings.md#f-20) / [F-21](../../audits/2026-08-12-codebase-audit-findings.md#f-21) / [F-22](../../audits/2026-08-12-codebase-audit-findings.md#f-22) / [F-80](../../audits/2026-08-12-codebase-audit-findings.md#f-80)（本番インフラ gate の fixture）
+- **関連指摘**: [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56) / [F-78](../../audits/2026-08-12-codebase-audit-findings.md#f-78) / [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118) / [F-80](../../audits/2026-08-12-codebase-audit-findings.md#f-80)（`fix/audit-wave-1` でクローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）、[F-20](../../audits/2026-08-12-codebase-audit-findings.md#f-20) / [F-21](../../audits/2026-08-12-codebase-audit-findings.md#f-21) / [F-22](../../audits/2026-08-12-codebase-audit-findings.md#f-22)
+- **書込層の実測（2026-08-15）**: 予約 `charge-refunded-settlement.test.ts` に USD 1250
+  cents（float を書かず 2xx+CRITICAL）を足した。イベント
+  `applyEventChargeRefundIdempotent` の実 DB は
+  `event-charge-refunded-settlement.test.ts`（JPY 整数は Refund 行、USD 1250 は
+  CRITICAL）。`stripe-webhook*.test.ts` の `mock.module` 配線テストは残っている。
 
 ### B. キャッシュ×ドメイン
 
 cacheTag() producer と next.config.ts の Cache-Tag ヘッダが独立した 2 つの SSoT になっており、対応を検査する gate が無い。証拠: src/shared/domain/events/public-queries.ts:97 は `cacheTag(EVENTS, LOCATIONS, SPACES)` を宣言するのに、next.config.ts:289 の /events は EVENTS\_CACHE\_TAG のみ。gate \_\_tests\_\_/unit/architecture/next-config-cache-tag-emission.test.ts の JSDoc を読むと、検査しているのは SITE\_WIDE\_CDN\_TAGS の inline 有無と PRIVATE\_NO\_TAG\_PREFIXES だけで、producer 側 cacheTag との突合は範囲外。指摘20・21・22 は 3 件の別バグではなく、この 1 つの穴の 3 つの症状。
 
 - **関連指摘**: F-18 / F-73 / F-88（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
-- **構造としては残っている（2026-08-14 実測）**: 症状 3 件は塞いだが、**2 つの SSoT を
-  突き合わせる gate は今も無い**。`__tests__/unit/architecture/` で `cacheTag` に触れる
-  gate は `cache-tag-literals.test.ts`（リテラル直書きの禁止）と
-  `type-safety-cast-and-cache-tag-drift.test.ts`（cast の drift）の 2 本だけで、
-  どちらも「producer の `cacheTag(...)` と `next.config.ts` のヘッダが対応しているか」
-  は見ていない。新しい public ページを足すと同じ形で再発する。
+- **構造としての残りは無い（2026-08-15 実測）**:
+  `__tests__/unit/architecture/public-cache-tag-header-pairing.test.ts` が
+  `src/shared/domain` の `cacheTag(CACHE_TAGS.*)` と `next.config.ts` の Cache-Tag
+  を突合する。下限（producer ファイル > 20、公開呼出 > 30、header > 8）と
+  赤 fixture（producer だけ / F-88 形）と緑 fixture（両側あり）がある。
+  path 正規表現の実 URL マッチまでは見ていない（JSDoc に明記）。
 
 ### C. イベント×定員×金額×決済
 
 EventTicket.unitSize が DB と admin フォームにしか存在せず、価格式にも定員式にも入っていない。db-schema 観点が価格側(指摘19)を見つけたが、定員側(registration-create-commands.ts:124 の `slot.capacity - sum(quantity)`)は誰の担当でもなかった。同一の欠落が「多重課金」と「オーバーブッキング」という別カテゴリの障害として現れるため、片方だけ直すと残る。
 
-- **関連指摘**: [F-02](../../audits/2026-08-12-codebase-audit-findings.md#f-02) / [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)
+- **関連指摘**: [F-02](../../audits/2026-08-12-codebase-audit-findings.md#f-02) / [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)（F-47 は `fix/audit-wave-1` でクローズ）
+- **構造としての残りは無い（2026-08-15 実測）**: 定員 floor は
+  `groupBy({ by: ['slotId'] })` の最大合計と `ticket.capacity` を比較する。
+  8+8 CONFIRMED / capacity=10 が通るテストがあり、event-wide aggregate に戻すと赤。
+  DB trigger は未変更（同じ粒度）。価格式の `unitSize` は F-02 済み。
 
 ### D. feature フラグ×決済×cron の非対称
 
 cron は features を gate するが Stripe webhook は gate しない。証拠: src/app/api/cron/unpaid-event-registration-expire/route.ts:35 と waitlist-expire/route.ts:54 は `isFeatureEnabled('events')` が false なら skip する一方、`grep -rn isFeatureEnabled src/app/api/webhooks/` は 0 件。events モジュールを OFF にした瞬間、未払い申込の期限切れとキャンセル待ちオファーの失効が止まり、決済 webhook だけが動き続ける。api-cron-webhooks 観点は cron 側を、payment 観点は webhook 側を見ており、非対称は両者の境界に落ちる。
 
 - **関連指摘**: F-65 / F-103 / F-133（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
-- **構造としては残っている（2026-08-14 実測）**: 3 件はいずれも「フラグの読み方」を
-  直したもので、**非対称そのものは手つかず**。`grep -rn isFeatureEnabled src/app/api/webhooks/`
-  は今も **0 件**で、events モジュールを OFF にすると cron だけ止まり決済 webhook は
-  動き続ける。
+- **構造としての残りは無い（2026-08-15 実測）**: webhook に `isFeatureEnabled` は
+  **足していない**（capture 済み session を捨てる誤修正になる）。閉じたのは復帰後の
+  回収。`cron-unpaid-event-registration-expire-events-off.test.ts` が
+  (a) OFF 中 expire は `feature_disabled`、(b) `async_payment_succeeded` が PAID、
+  (c) ON 復帰後もその行を CANCELLED にしない、を実 DB で固定する。(b) を外すと
+  stale UNPAID が CANCELLED になり赤。`src/app/api/webhooks` の
+  `isFeatureEnabled` は今も 0 件（意図どおり）。
 
 ### E. 顧客匿名化×メール×領収書×監査ログ
 
@@ -165,11 +173,11 @@ data-retention/commands.ts:339 が anonymizeCustomerCommand を呼んで Custome
 claim は payloads.ts:207 の単一 atomic UPDATE で堅い(WHERE に is\_active/usage\_limit/valid\_from/valid\_until/min\_reservation\_amount を再強制)のに対し、release は cancel-core.ts:157 / lifecycle-commands.ts:144,455 / pending-expiry.ts:133 / series-commands.ts:408 / admin-commands.ts:586 / calendar-sync-inbound-mutations.ts:108 の 6 ファイルに散在。Stripe の非同期決済(checkout.session.async\_payment\_succeeded)が pending-expiry の release 後に着弾する順序は、payment 観点も reservations 観点も検証していない。
 
 - **関連指摘**: F-58 / F-59 / F-60（全件クローズ。→ [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)）
-- **構造としては残っている（2026-08-14 実測）**: 3 件は admin の予約編集経路を直した
-  もので、分散そのものは変わっていない。`usageCount: { decrement` を持つ
-  `src/shared/domain/` 配下のファイルは今も **6 本**。非同期決済
-  (`checkout.session.async_payment_succeeded`) が pending-expiry の release 後に
-  着弾する順序も未検証のまま。
+- **構造としての残りは無い（2026-08-15 実測）**: `releaseCouponUsage` が
+  `WHERE usageCount > 0` の atomic decrement。7 箇所を置換。
+  `coupon-usage-release-helper.test.ts` が helper 外の `usageCount: { decrement`
+  を落とす（下限 + 赤/緑 fixture）。`async-payment-not-auto-cancelled.test.ts` が
+  待機中は戻さないことと、backstop 後の二重 expire が 1 回だけ戻すことを実 DB で固定。
 
 ### G. 認可×Server Component 描画
 
@@ -217,14 +225,19 @@ calendar-sync-inbound-mutations.ts:108 が GCal 起点のキャンセルで Coup
 
 advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 728354(waitlist promote session) / 728357(series) / 728349(calendar-sync) と 5 系統あり、waitlist-locks.ts の JSDoc が「常に番号降順で取得」という契約を宣言している。reservations 観点は space-locks.ts を、events は誰も見ていないため、両方を跨ぐ経路(イベント更新時のスペース重複チェック)の順序遵守は未検証。しかも session lock は connection pin を要求する契約で、pooled client で acquire/release が分かれると silent-false でリークする(JSDoc が明記)。
 
-- **関連指摘**: [F-120](../../audits/2026-08-12-codebase-audit-findings.md#f-120)
+- **関連指摘**: [F-120](../../audits/2026-08-12-codebase-audit-findings.md#f-120)（`fix/audit-wave-1` でクローズ）
+- **構造としての残りは無い（2026-08-15 実測）**: 728354 session lock をやめ、
+  `events.waitlist_promote_leased_until` の行リースにした。acquire / release は
+  作業 ITX の外。release は自分が書いた `leasedUntil` だけを消す。
+  `waitlist-session-lock-leak.test.ts` が outer ITX timeout 後、別接続の
+  `tryAcquire` が値を返すことを固定する。session lock に戻すと false のまま赤。
 
 ---
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件は全件クローズ済み**なので、残っているのは以下だけ。
-済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 43 件
+（§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
 
@@ -233,31 +246,17 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ### フェーズ 2 — 済んだ修正の取りこぼし
 
-台帳には載らない小さな残件が 2 つある。どちらも本体は解決済みで、**何が残っているかは
-[対処の記録 §2](../../audits/2026-08-12-codebase-audit-progress.md#2-済んだ指摘) の
-「残件」列が SSoT**。ここには写さない（写した瞬間から食い違う）。
-
-手が空いたときに、その列を見て潰す。
+F-03 の transport 失敗表示と F-05 の `form.errors` 描画は `fix/audit-wave-1` で閉じた。
+それ以外に残件列へ書いたものは、本体とは別件（[対処の記録 §2](../../audits/2026-08-12-codebase-audit-progress.md#2-済んだ指摘)）。
 
 ### フェーズ 3 — 構造の穴（§4）
 
-A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
-残りの A は台帳にある F-56 / F-78 / F-80 / F-118。
+A（決済に mock を挟まない層）の書込経路は `fix/audit-wave-1` で実 DB テストが
+乗った。残るのは webhook 境界の配線 mock。B / C / D / F / J は §4 に閉じた印を書いた。
 
-**B / D / F は台帳に行が無い。** 関連指摘は全件クローズしたが、構造としては残って
-いる（§4 の各節に実測を書いた）。台帳を消化しても自動では消えないので、着手する
-なら明示的に拾う:
+### フェーズ 4 — 中（完了）
 
-| 穴  | 残っている作業                                                              |
-| --- | --------------------------------------------------------------------------- |
-| B   | producer の `cacheTag(...)` と `next.config.ts` のヘッダを突き合わせる gate |
-| D   | Stripe webhook 側の feature gate（cron との非対称の解消）                   |
-| F   | クーポン release の集約と、非同期決済 × pending-expiry の順序検証           |
-
-### フェーズ 4 — 中
-
-§4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
-**件数は §6 の行数がそのまま答え**なのでここには書かない。
+中 64 件は全件クローズ。経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 5 — 低
 
@@ -308,17 +307,9 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 
 | ID                                                                | 深刻度 | 箇所                                                                                                          | 内容                                                                                                                                                            |
 | ----------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-19](../../audits/2026-08-12-codebase-audit-findings.md#f-19)   | 中     | `prisma/seed.ts:488`                                                                                          | seedProduction の再実行が SEO 設定と送信元メール設定を管理画面編集ごと上書きする                                                                                |
-| [F-42](../../audits/2026-08-12-codebase-audit-findings.md#f-42)   | 中     | `src/shared/domain/audit-log/queries.ts:303`                                                                  | 監査ログ CSV エクスポートが 10,000 件で無言に打ち切られ、しかも古い順なので直近の証跡が欠落する                                                                 |
-| [F-47](../../audits/2026-08-12-codebase-audit-findings.md#f-47)   | 中     | `src/shared/domain/events/event-slot-sync-commands.ts:176`                                                    | EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位                                                                    |
-| [F-56](../../audits/2026-08-12-codebase-audit-findings.md#f-56)   | 中     | `src/shared/domain/payment/payment-claim-orchestration.ts:195`                                                | 非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る                                                                             |
-| [F-69](../../audits/2026-08-12-codebase-audit-findings.md#f-69)   | 中     | `src/shared/domain/terms/queries.ts:233`                                                                      | 必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く                                                                 |
-| [F-72](../../audits/2026-08-12-codebase-audit-findings.md#f-72)   | 中     | `src/shared/lib/cache/health.ts:53`                                                                           | 起動時の Cloudflare canary purge が最大 10 分 × 3 回スリープしうるため、Cloud Run の startup probe 予算 90 秒を超えてコンテナが起動不能になる                   |
 | [F-76](../../audits/2026-08-12-codebase-audit-findings.md#f-76)   | 低     | `__tests__/helpers/architecture-fs.ts:41`                                                                     | module-reachability の import 抽出正規表現が JSDoc 例示コードを実 import として辺に加える                                                                       |
 | [F-77](../../audits/2026-08-12-codebase-audit-findings.md#f-77)   | 低     | `__tests__/support/numeric-column-domains.ts:82`                                                              | 数値列の母集合が BigInt を落とし、AuditLog.sequence が実際に無制約のまま緑                                                                                      |
-| [F-78](../../audits/2026-08-12-codebase-audit-findings.md#f-78)   | 低     | `__tests__/unit/api/stripe-webhook.test.ts:104`                                                               | webhook 境界 mock の `latestRefund` 型が `metadata` を落としており、返金 attribution 復元に assertion が 1 つも無い                                             |
 | [F-79](../../audits/2026-08-12-codebase-audit-findings.md#f-79)   | 低     | `__tests__/unit/architecture-boundaries.test.ts:1642`                                                         | required check の path filter gate が block 形式の `paths:` しか検出せず、事故の原型である flow 形式 `paths: [terraform/**]` を見逃す                           |
-| [F-80](../../audits/2026-08-12-codebase-audit-findings.md#f-80)   | 低     | `__tests__/unit/architecture-boundaries.test.ts:1331`                                                         | import{} block 必須判定の母集合が `google_*` 決め打ち配列で、Cloudflare resource は永久に検査されない（既に 1 件が import 無しで存在）                          |
 | [F-81](../../audits/2026-08-12-codebase-audit-findings.md#f-81)   | 低     | `__tests__/unit/architecture/admin-page-header-actions-wrap.test.ts:68`                                       | page-header 折り返し gate の母集合が class の並び順に依存する（並べ替えた新ページは永久に無検査）                                                               |
 | [F-82](../../audits/2026-08-12-codebase-audit-findings.md#f-82)   | 低     | `__tests__/unit/architecture/csp-nonce-prelude-gate.test.ts:65`                                               | CSP prelude gate の「数え漏らしていない」判定が、先頭が `next build` の script を数えない                                                                       |
 | [F-84](../../audits/2026-08-12-codebase-audit-findings.md#f-84)   | 低     | `__tests__/unit/architecture/playwright-mobile-device-projects.test.ts:90`                                    | 「実行対象ゼロの dead project を禁じる」と謳う gate が、実際にはファイル一致しか見ておらず 0 テスト実行を見逃す                                                 |
@@ -347,9 +338,7 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-111](../../audits/2026-08-12-codebase-audit-findings.md#f-111) | 低     | `src/app/api/calendar/reservation/[id]/route.ts:117`                                                          | メールの .ics リンクを踏んだ直後 30 分間、ログイン済み顧客はマイページから別予約の .ics を取得できず 401 になる                                                 |
 | [F-113](../../audits/2026-08-12-codebase-audit-findings.md#f-113) | 低     | `src/app/api/receipts/[serialNo]/pdf/route.ts:122`                                                            | 認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）                                                                              |
 | [F-114](../../audits/2026-08-12-codebase-audit-findings.md#f-114) | 低     | `src/app/api/webhooks/resend/route.ts:444`                                                                    | Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）                                                           |
-| [F-118](../../audits/2026-08-12-codebase-audit-findings.md#f-118) | 低     | `src/shared/domain/events/payment-queries.ts:241`                                                             | 論理削除されたイベントの返金が charge.refunded で無言で捨てられ、PAID のまま残る                                                                                |
 | [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`                                                               | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                              |
-| [F-120](../../audits/2026-08-12-codebase-audit-findings.md#f-120) | 低     | `src/shared/domain/events/waitlist-offer-commands.ts:335`                                                     | waitlist promote の session lock (728354) は interactive tx が timeout すると finally でも release できず、その event の繰上げが止まる                          |
 | [F-121](../../audits/2026-08-12-codebase-audit-findings.md#f-121) | 低     | `src/shared/domain/faq/item-bulk-commands.ts:98`                                                              | bulkMoveFaqItems だけが lock 取得後のカテゴリ再確認を欠き、削除済みカテゴリ配下に生きた FAQ が孤児化して 30 日後に cascade で消える                             |
 | [F-122](../../audits/2026-08-12-codebase-audit-findings.md#f-122) | 低     | `src/shared/domain/inquiries/bulk-status-commands.ts:74`                                                      | bulk ステータス変更の TOCTOU フォールバックが他管理者の遷移を自分の成果と誤認し、append-only な状態履歴に偽の行を書く                                           |
 | [F-124](../../audits/2026-08-12-codebase-audit-findings.md#f-124) | 低     | `src/shared/domain/reservations/reminder-commands.ts:39`                                                      | reminderSentAt が日付に紐づかない永続ラッチのため、リマインダ送信後に日時変更すると新しい日のリマインダが二度と送られない                                       |
