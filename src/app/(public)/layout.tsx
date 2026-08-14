@@ -20,6 +20,7 @@ import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { connection } from "next/server";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { Header } from "@/public/components/layouts/site-header";
 import { Footer } from "@/public/components/layouts/site-footer";
 import {
@@ -317,15 +318,19 @@ async function StructuredDataContent(): Promise<ReactElement> {
  */
 async function HeaderWithData(): Promise<ReactElement> {
   await connection();
-  const [headerSettings, navItems, mobileNavItems] = await Promise.all([
-    getHeaderSettings(),
-    getHeaderNavigation(),
-    getMobileHeaderNavigation(),
-  ]);
+  const [headerSettings, navItems, mobileNavItems, reservationEnabled] =
+    await Promise.all([
+      getHeaderSettings(),
+      getHeaderNavigation(),
+      getMobileHeaderNavigation(),
+      // ハードコードの Reserve CTA も DB ナビと同じ feature 判定を通す（監査 F-103）。
+      isFeatureEnabled("reservation"),
+    ]);
 
   return (
     <Header
       brand={headerSettings.brand}
+      reservationEnabled={reservationEnabled}
       navItems={navItems}
       mobileNavItems={mobileNavItems}
       scrollBehavior={headerSettings.scrollBehavior}

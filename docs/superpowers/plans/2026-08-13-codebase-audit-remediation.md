@@ -191,11 +191,11 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 A（決済に mock を挟まない層）が最優先。#2229 に続けて金額書込の本体から順に載せる。
 次に B（キャッシュタグの gate 化）— 中程度の指摘 3 件がまとめて消える。
 
-### フェーズ 4 — 中（40 件）
+### フェーズ 4 — 中（39 件）
 
 §4 のテーマに属するものはテーマ単位で。残りは §6 の台帳から個別に。
 
-### フェーズ 5 — 低（53 件）
+### フェーズ 5 — 低（52 件）
 
 上記が片付いてから。多くは UI の細部・メール文言・gate の母集合の穴で、単独では急がない。
 
@@ -244,7 +244,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-62](../../audits/2026-08-12-codebase-audit-findings.md#f-62)   | 中     | `src/shared/domain/reservations/customer-commands.ts:574`                                                     | paymentStatus=FAILED の予約は編集画面が開けるのに保存が必ず失敗し、誤ったエラー文言で永久に変更できない                                                         |
 | [F-63](../../audits/2026-08-12-codebase-audit-findings.md#f-63)   | 中     | `src/shared/domain/sections/commands.ts:218`                                                                  | テンプレート必須セクションを複製できてしまい、複製後は削除も非表示もできず公開ページに二重表示が固定される                                                      |
 | [F-64](../../audits/2026-08-12-codebase-audit-findings.md#f-64)   | 中     | `src/shared/domain/sections/queries.ts:131`                                                                   | 公開ページの全セクションを非表示にすると、コード同梱の初期デモセクションが公開面に復帰する                                                                      |
-| [F-65](../../audits/2026-08-12-codebase-audit-findings.md#f-65)   | 中     | `src/shared/domain/settings/queries/features.ts:21`                                                           | feature toggle が公開 Cloud Run サービスに最大24時間届かない（Data Cache はサービス跨ぎで無効化されない）                                                       |
 | [F-69](../../audits/2026-08-12-codebase-audit-findings.md#f-69)   | 中     | `src/shared/domain/terms/queries.ts:233`                                                                      | 必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く                                                                 |
 | [F-71](../../audits/2026-08-12-codebase-audit-findings.md#f-71)   | 中     | `src/shared/lib/action-helpers.ts:86`                                                                         | bot 判定が「クライアント時計」と「サーバー時計」を引き算するため、端末の時計が進んでいる利用者は全公開フォームを送信できない                                    |
 | [F-72](../../audits/2026-08-12-codebase-audit-findings.md#f-72)   | 中     | `src/shared/lib/cache/health.ts:53`                                                                           | 起動時の Cloudflare canary purge が最大 10 分 × 3 回スリープしうるため、Cloud Run の startup probe 予算 90 秒を超えてコンテナが起動不能になる                   |
@@ -276,7 +275,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 | [F-100](../../audits/2026-08-12-codebase-audit-findings.md#f-100) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/KeyboardShortcutsPlugin.tsx:170` | Ctrl+Shift+数字 の見出し / リスト ショートカットが一切効かない                                                                                                  |
 | [F-101](../../audits/2026-08-12-codebase-audit-findings.md#f-101) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/PasteUrlPlugin.tsx:74`           | 空段落への URL 単独ペースト（OGP カード / YouTube 等の自動埋め込み）が発火しない                                                                                |
 | [F-102](../../audits/2026-08-12-codebase-audit-findings.md#f-102) | 低     | `src/app/(admin)/admin/(dashboard)/_shared/queries/_helpers.ts:68`                                            | 権限拒否の監査ログが after() に登録されない裸の detached promise で、notFound() 直前に投げっぱなしにされる                                                      |
-| [F-103](../../audits/2026-08-12-codebase-audit-findings.md#f-103) | 低     | `src/app/(public)/_shared/components/layouts/site-header.tsx:514`                                             | サイトヘッダーの Reserve CTA が feature gate を持たず、reservation OFF で全公開ページから 404 へ誘導する                                                        |
 | [F-104](../../audits/2026-08-12-codebase-audit-findings.md#f-104) | 低     | `src/app/(public)/_shared/hooks/use-format-price.ts:20`                                                       | 公開面の税込表示が Space.taxRateType を無視して常に標準税率で計算するため、予約確認画面の金額と実際の請求額が食い違う                                           |
 | [F-105](../../audits/2026-08-12-codebase-audit-findings.md#f-105) | 低     | `src/app/(public)/[...segments]/page.tsx:72`                                                                  | post-list / news-list の archive レイアウトを /blog・/news 以外のページに置くと、検索とページ送りが恒久的に効かない                                             |
 | [F-106](../../audits/2026-08-12-codebase-audit-findings.md#f-106) | 低     | `src/app/(public)/events/waitlist/checkout/route.ts:63`                                                       | 繰上げ当選の残り 30 分未満クリックが「システムエラー」表示＋CRITICAL アラートになる                                                                             |
