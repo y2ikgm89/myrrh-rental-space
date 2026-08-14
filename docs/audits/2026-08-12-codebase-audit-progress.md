@@ -135,7 +135,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-91](2026-08-12-codebase-audit-findings.md#f-91)   | 低     | #2297                                      | spawnSync の `exitCode=null` を `?? 1` で失敗へ倒す。`process.exit(null)` の偽成功を止める                       | —                                                                                       |
 | [F-85](2026-08-12-codebase-audit-findings.md#f-85)   | 低     | #2295                                      | 型リテラル引数は where/data/select 等をプロパティ単位で Prisma 型必須に。全 params を見る                        | —                                                                                       |
 | [F-93](2026-08-12-codebase-audit-findings.md#f-93)   | 低     | #2296                                      | 一括配信の rate limit を認証 + RBAC 通過後へ移し、低権限による共有バケット消費を止めた                           | —                                                                                       |
-| [F-100](2026-08-12-codebase-audit-findings.md#f-100) | 低     |                                            | 見出し / リスト / インスペクター / ヘルプの数字・記号ショートカットを event.code で判定する                      | —                                                                                       |
+| [F-100](2026-08-12-codebase-audit-findings.md#f-100) | 低     | #2301                                      | 見出し / リスト / インスペクター / ヘルプの数字・記号ショートカットを event.code で判定する                      | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
