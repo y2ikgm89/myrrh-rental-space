@@ -141,6 +141,21 @@ export class InternalLinkCardNode extends DecoratorNode<ReactElement> {
     return false;
   }
 
+  /**
+   * block DOM を出す DecoratorNode は block として扱わせる（監査 F-26）。
+   *
+   * Lexical の DecoratorNode 既定は `isInline() === true`。inline のままだと
+   * `$insertNodes` が ParagraphNode の**子**として splice するので、exportDOM は
+   * `<p>前半<div>…</div>後半</p>` を出す。保存パイプラインの enrich が DOMParser で
+   * 再パースするため、HTML 仕様どおり `<div>` の直前で `<p>` が閉じられ、
+   * **画像より後ろの本文が `<p>` の外へ出て段落スタイルを失い、末尾に空段落が残る**。
+   * 編集画面は Lexical が DOM を programmatic に組むので再パースが起きず、
+   * 管理者には正常に見える。
+   */
+  override isInline(): false {
+    return false;
+  }
+
   override decorate(): ReactElement {
     return (
       <InternalLinkCardComponent

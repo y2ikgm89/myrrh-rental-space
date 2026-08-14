@@ -13,6 +13,7 @@ import type { RefObject } from "react";
 import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { DraggableBlockPlugin_EXPERIMENTAL } from "./lexical-draggable-block-plugin";
+import { $serializeNodeDeep } from "../lib/serialize-node-deep";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getNearestNodeFromDOMNode,
@@ -160,8 +161,9 @@ export function DraggableBlockPlugin({
     editor.update(() => {
       const node = $getNodeByKey(menu.nodeKey);
       if (!node) return;
-      const serialized = node.exportJSON();
-      const parsed = $parseSerializedNode(serialized);
+      // `exportJSON()` の children は常に空。子孫まで埋めないと枠だけの箱ができる
+      // （監査 F-28）。
+      const parsed = $parseSerializedNode($serializeNodeDeep(node));
       node.insertAfter(parsed);
     });
     setMenu(null);

@@ -27,7 +27,22 @@ export type TimelineDirection = "horizontal" | "vertical";
 // TimelineContainerNode States
 // =============================================================================
 
-export const timelineDirectionState = createState("direction", {
+/**
+ * state キーは `"direction"` にしない（監査 F-27）。
+ *
+ * `flat: true` の state は JSON の**直下**に書かれる。`SerializedElementNode` は
+ * `direction: "ltr" | "rtl" | null` を予約しており、`ElementNode.exportJSON()` は
+ * `direction: this.getDirection()` を先に置いてから `...super.exportJSON()` を
+ * spread する。つまり horizontal のとき state が ElementNode の direction を
+ * 上書きし、import 時の `.setDirection(serializedNode.direction)` が
+ * `__dir="horizontal"` を作る。
+ *
+ * vertical に戻すと state は default 扱いで JSON から消えるが、残った
+ * `__dir="horizontal"` が `direction` として書き出され、次の import で
+ * state として読み戻される。**縦に戻す手段がノードの削除しか無くなる。**
+ * エラーは出ない。
+ */
+export const timelineDirectionState = createState("timelineDirection", {
   parse: (v: unknown): TimelineDirection =>
     v === "horizontal" || v === "vertical" ? v : "vertical",
 });
