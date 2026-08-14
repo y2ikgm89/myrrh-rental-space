@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import { expectRecord } from "../helpers/type-assertions";
+import { expectRecord, isRecord } from "../helpers/type-assertions";
 import { collectSourceFiles } from "../helpers/architecture-fs";
 import {
   ScriptKind,
@@ -54,6 +54,72 @@ function expectRecordFieldArray(data: unknown, field: string): void {
   expectRecord(data);
   const value = data[field];
   expect(Array.isArray(value)).toBe(true);
+}
+
+function workflowYamlWithOn(onBlock: string): string {
+  return [
+    "name: Terraform",
+    "on:",
+    onBlock,
+    "jobs:",
+    "  validate:",
+    "    name: Terraform / validate",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - run: echo ok",
+    "",
+  ].join("\n");
+}
+
+/** PR #1103 の事故の原型。`paths:` のあとに値が続く 1 行形式。 */
+const FLOW_FORM_TERRAFORM_PATHS = workflowYamlWithOn(
+  ["  pull_request:", "    paths: [terraform/**]"].join("\n"),
+);
+
+const BLOCK_FORM_TERRAFORM_PATHS = workflowYamlWithOn(
+  ["  pull_request:", "    paths:", "      - terraform/**"].join("\n"),
+);
+
+const FLOW_FORM_PATHS_IGNORE = workflowYamlWithOn(
+  ["  pull_request:", "    paths-ignore: [docs/**]"].join("\n"),
+);
+
+const BLOCK_FORM_PATHS_IGNORE = workflowYamlWithOn(
+  ["  pull_request:", "    paths-ignore:", "      - docs/**"].join("\n"),
+);
+
+const ON_LEVEL_FLOW_PATHS = workflowYamlWithOn("  paths: [terraform/**]");
+
+const ON_LEVEL_FLOW_PATHS_IGNORE = workflowYamlWithOn(
+  "  paths-ignore: [docs/**]",
+);
+
+const NO_PATH_FILTER = workflowYamlWithOn("  pull_request:");
+
+function hasOnPathFilterKeys(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return Object.hasOwn(value, "paths") || Object.hasOwn(value, "paths-ignore");
+}
+
+/**
+ * required check を提供する workflow の `on:` に path filter があるか。
+ * `Bun.YAML.parse` で `on.paths` / `on.paths-ignore` と
+ * `on.<event>.paths` / `on.<event>.paths-ignore` を、flow / block 両方で見る。
+ */
+function workflowOnHasPathFilter(source: string): boolean {
+  const document = Bun.YAML.parse(source);
+  if (!isRecord(document)) return false;
+  const on = document["on"];
+  if (!isRecord(on)) return false;
+  if (hasOnPathFilterKeys(on)) return true;
+  return Object.values(on).some(hasOnPathFilterKeys);
+}
+
+/** F-79 以前の判定。block 形式だけ当たり、flow 形式は見逃す。 */
+function legacyBlockOnlyPathFilter(source: string): boolean {
+  const onBlockMatch = source.match(/^on:\s*\n([\s\S]*?)(?=^\S)/mu);
+  const onBlock = onBlockMatch?.[1] ?? "";
+  return /^\s+paths(-ignore)?:\s*$/mu.test(onBlock);
 }
 const GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE = join(
   SRC_ROOT,
@@ -1629,6 +1695,25 @@ resource "cloudflare_r2_bucket" "example" {
     expect(unused).toEqual([]);
   });
 
+  test("required-check path filter gate は事故の原型である flow 形式 paths: [terraform/**] を検出する (F-79)", () => {
+    expect(workflowOnHasPathFilter(FLOW_FORM_TERRAFORM_PATHS)).toBe(true);
+  });
+
+  test("required-check path filter gate は block 形式と paths-ignore も検出する", () => {
+    expect(workflowOnHasPathFilter(BLOCK_FORM_TERRAFORM_PATHS)).toBe(true);
+    expect(workflowOnHasPathFilter(FLOW_FORM_PATHS_IGNORE)).toBe(true);
+    expect(workflowOnHasPathFilter(BLOCK_FORM_PATHS_IGNORE)).toBe(true);
+    expect(workflowOnHasPathFilter(ON_LEVEL_FLOW_PATHS)).toBe(true);
+    expect(workflowOnHasPathFilter(ON_LEVEL_FLOW_PATHS_IGNORE)).toBe(true);
+    expect(workflowOnHasPathFilter(NO_PATH_FILTER)).toBe(false);
+  });
+
+  test("旧 block 専用 regex に戻すと flow 形式 fixture が落ちる（変異）", () => {
+    expect(legacyBlockOnlyPathFilter(FLOW_FORM_TERRAFORM_PATHS)).toBe(false);
+    expect(legacyBlockOnlyPathFilter(BLOCK_FORM_TERRAFORM_PATHS)).toBe(true);
+    expect(workflowOnHasPathFilter(FLOW_FORM_TERRAFORM_PATHS)).toBe(true);
+  });
+
   test("branch-protection.json の required contexts に対応する workflow は path filter を持たない (2026-07-14 PR #1103 で発覚した MISSING 検 chain の再発防止)", () => {
     // GitHub branch protection の `required_status_checks.contexts` に登録された
     // check name を提供する workflow が `on: pull_request: paths:` filter を持つと、
@@ -1680,11 +1765,8 @@ resource "cloudflare_r2_bucket" "example" {
       if (providedRequired.length === 0) continue;
 
       // このファイルが required context を提供している → paths filter を検査。
-      // 行単位の文字列一致であり、`on:` の YAML 構造は見ていない
-      // （ネスト・アンカー・別キー配下の paths は拾えない。js-yaml は依存に無い）。
-      const onBlockMatch = source.match(/^on:\s*\n([\s\S]*?)(?=^\S)/mu);
-      const onBlock = onBlockMatch?.[1] ?? "";
-      if (/^\s+paths(-ignore)?:\s*$/mu.test(onBlock)) {
+      // fixture と同じ判定関数を通す（正規表現だけに戻すと flow 形式を見逃す）。
+      if (workflowOnHasPathFilter(source)) {
         offenders.push(
           `.github/workflows/${file}: provides required check(s) [${providedRequired.join(", ")}] but has path filter in on: block — remove path filter (required check would be MISSING when paths don't match, blocking auto-merge)`,
         );
