@@ -80,7 +80,8 @@ type CloudRunSecretEnvBinding = {
 
 type SecretManagerSecretAccessorPolicyConfig = {
   secretName: string;
-  expectedMembers: readonly string[];
+  /** per-secret に付いていてよい member。無いこと自体は違反ではない（F-21）。 */
+  allowedMembers: readonly string[];
 };
 
 type SecretManagerSecretAccessorMembersConfig = {
@@ -212,6 +213,30 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
 // 一度も読まれない。version は `terraform/cloud_run_migrate_job.tf` が SSoT。
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS = [
   { name: "DIRECT_URL", version: "2" },
+] as const satisfies readonly CloudRunSecretEnvRef[];
+
+/**
+ * Secret Manager の監査母集合（監査 F-20）。
+ *
+ * 旧実装は `REQUIRED_CLOUD_RUN_SECRET_ENV_REFS`（18 件）だけをループしており、
+ * **`DIRECT_URL` が version 検査と per-secret IAM 検査から丸ごと外れていた**
+ * （Cloud Run runtime には注入しない設計なので、その配列に入っていない）。結果:
+ *
+ * - `DIRECT_URL` secret に個人アカウントの `secretAccessor` を per-secret で
+ *   付与しても永久に検出されない。同じ付与を `DATABASE_URL` にすれば検出される。
+ *   project-level を見る別 check は per-secret binding を見ないので補えない。
+ *   漏れるのは pooled ではなく **Neon direct host の本番 DB URL** で、全データへの
+ *   読み書きに直結する。
+ * - ローテーション後始末で `DIRECT_URL` の旧 version を DISABLE / DESTROY しても
+ *   「required Secret Manager versions are enabled」は緑のまま。実際に壊れるのは
+ *   次の Deploy Production の migrate-execute で、Cloud Run が instance startup に
+ *   secret を解決できず Job が起動不能になり、**デプロイ経路ごと停止する**。
+ *
+ * secret を触る check は必ずこの配列を回す。
+ */
+export const ALL_AUDITED_SECRET_ENV_REFS = [
+  ...REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
+  ...REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
 ] as const satisfies readonly CloudRunSecretEnvRef[];
 
 /**
@@ -606,29 +631,73 @@ export function readBroadProjectIamDeployGrantErrors(value: unknown): string[] {
     .sort();
 }
 
+/** IAM policy から、その member が持つ role をすべて拾う。 */
+export function readIamPolicyRolesForMember(
+  value: unknown,
+  member: string,
+): string[] {
+  if (!isRecord(value)) return [];
+  const bindings = value["bindings"];
+  if (!Array.isArray(bindings)) return [];
+
+  return [
+    ...new Set(
+      bindings.filter(isRecord).flatMap((binding) => {
+        const role = binding["role"];
+        const members = binding["members"];
+        if (typeof role !== "string" || !Array.isArray(members)) return [];
+        return members.includes(member) ? [role] : [];
+      }),
+    ),
+  ].sort();
+}
+
+/**
+ * build SA が project-level で持ってよい role（監査 F-22）。
+ *
+ * 旧実装は required 2 role の存在と forbidden 2 role の不在しか見ない **denylist**
+ * だった。デプロイが権限不足で落ちたときの定番対処
+ * （`gcloud projects add-iam-policy-binding … --role=roles/editor`）を打っても、
+ * `editor` / `owner` / `iam.serviceAccountAdmin` / `resourcemanager.projectIamAdmin`
+ * / `secretmanager.admin` はどれも errors に出ず、監査は PASS を表示し続ける。
+ *
+ * 実際には main への push で WIF 経由に impersonate できるこの SA が project 全体の
+ * 書込権を持ち、任意 image を runtime SA で Cloud Run にデプロイできる。runtime SA は
+ * project-level `secretmanager.secretAccessor` を持つので、**全 secret が読める**。
+ * `bootstrap-terraform.sh` が structural closure として設計した特権分離が丸ごと
+ * 無効化されているのに、それを証明するはずの gate が緑のままだった。
+ *
+ * denylist は「知っている悪い role」しか止められない。allowlist に反転する。
+ */
+export const ALLOWED_BUILD_SERVICE_ACCOUNT_PROJECT_ROLES = [
+  "roles/cloudbuild.builds.builder",
+  "roles/logging.logWriter",
+  "roles/secretmanager.secretAccessor",
+] as const;
+
+/** build SA が project-level で必ず持っていなければならない role。 */
+const REQUIRED_BUILD_SERVICE_ACCOUNT_PROJECT_ROLES = [
+  "roles/cloudbuild.builds.builder",
+  "roles/logging.logWriter",
+] as const;
+
 export function readBuildServiceAccountProjectIamRoleErrors(
   value: unknown,
   buildServiceAccount: string,
 ): string[] {
   const member = `serviceAccount:${buildServiceAccount}`;
-  const requiredRoles = [
-    "roles/cloudbuild.builds.builder",
-    "roles/logging.logWriter",
-  ];
-  const forbiddenBroadRoles = ["roles/iap.admin", "roles/run.admin"];
+  const heldRoles = readIamPolicyRolesForMember(value, member);
+  const allowed = new Set<string>(ALLOWED_BUILD_SERVICE_ACCOUNT_PROJECT_ROLES);
 
-  const missingRoleErrors = requiredRoles.flatMap((role) => {
-    return readIamPolicyMembersForRole(value, role).includes(member)
-      ? []
-      : [`${role} missing for ${member}`];
-  });
-  const forbiddenRoleErrors = forbiddenBroadRoles.flatMap((role) => {
-    return readIamPolicyMembersForRole(value, role).includes(member)
-      ? [`${role} must not be project-level for ${member}`]
-      : [];
-  });
+  const missingRoleErrors =
+    REQUIRED_BUILD_SERVICE_ACCOUNT_PROJECT_ROLES.flatMap((role) =>
+      heldRoles.includes(role) ? [] : [`${role} missing for ${member}`],
+    );
+  const unexpectedRoleErrors = heldRoles
+    .filter((role) => !allowed.has(role))
+    .map((role) => `${role} must not be project-level for ${member}`);
 
-  return [...missingRoleErrors, ...forbiddenRoleErrors];
+  return [...missingRoleErrors, ...unexpectedRoleErrors];
 }
 
 export function readAmbiguousAdminRolePrincipalErrors(
@@ -679,7 +748,27 @@ export function readProjectSecretManagerAccessorErrors(
     });
 }
 
-export function getExpectedSecretManagerSecretAccessorMembers(
+/**
+ * per-secret の `secretAccessor` として**許容**する member（監査 F-21）。
+ *
+ * **「期待」ではなく「許容」。** リポジトリ内に secret-level binding を作る手段は
+ * 1 つも存在しない（`gcloud secrets add-iam-policy-binding` は docs/ scripts/
+ * terraform/ のどこにも無く、`secret_iam.tf` は 2026-07-14 の F1 refactor で
+ * 削除済み）。SSoT は `bootstrap-terraform.sh` が付ける **project-level** binding。
+ *
+ * それなのに旧実装は 18 secret すべてについて secret-level の runtime member を
+ * **要求**していた。state 再構築や新環境で正規手順どおり流すと
+ * `gcloud secrets get-iam-policy DATABASE_URL` は空 policy を返し、
+ * 「required Secret Manager accessor IAM is least privilege」が 18 件の missing で
+ * FAIL する。ここで運用者が runbook §8（「project-level は absent」）を正として
+ * bootstrap が付けた project-level binding を削除すると、**それが runtime SA の
+ * 唯一の secretAccessor** なので次のリビジョンは instance startup の secret 解決に
+ * 失敗して起動できない。Terraform に宣言が無いので apply でも復旧しない。
+ *
+ * 3 つの宣言（runbook / このスクリプト / bootstrap）のうち **bootstrap を正**とし、
+ * secret-level は「在ってはいけない member を検出する」だけにした。
+ */
+export function getAllowedSecretManagerSecretAccessorMembers(
   config: SecretManagerSecretAccessorMembersConfig,
 ): string[] {
   const runtimeMember = `serviceAccount:${config.runtimeServiceAccount}`;
@@ -731,17 +820,12 @@ export function readSecretManagerSecretAccessorPolicyErrors(
     }
   }
 
-  const expectedMembers = [...config.expectedMembers].sort();
-  const expectedMemberSet = new Set(expectedMembers);
-  const missingErrors = expectedMembers.flatMap((member) => {
-    return unconditionalMembers.has(member)
-      ? []
-      : [
-          `${config.secretName} roles/secretmanager.secretAccessor missing ${member}`,
-        ];
-  });
+  // **missing は検査しない**（監査 F-21）。secret-level binding を作る手段が
+  // リポジトリに無い以上、「無いこと」は違反ではない。検出するのは
+  // 「在ってはいけない member が付いていること」だけ。
+  const allowedMemberSet = new Set([...config.allowedMembers]);
   const unexpectedErrors = [...allMembers]
-    .filter((member) => !expectedMemberSet.has(member))
+    .filter((member) => !allowedMemberSet.has(member))
     .sort()
     .map((member) => {
       return `${config.secretName} roles/secretmanager.secretAccessor unexpected ${member}`;
@@ -752,7 +836,7 @@ export function readSecretManagerSecretAccessorPolicyErrors(
       ]
     : [];
 
-  return [...missingErrors, ...unexpectedErrors, ...conditionalErrors];
+  return [...unexpectedErrors, ...conditionalErrors];
 }
 
 export function readUnexpectedSecretManagerSecretAccessorMembers(
