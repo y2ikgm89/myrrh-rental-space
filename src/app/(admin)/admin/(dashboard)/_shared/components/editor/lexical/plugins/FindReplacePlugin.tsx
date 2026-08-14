@@ -29,6 +29,10 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui";
+import {
+  findMatches as findTextMatches,
+  replaceAll,
+} from "./find-replace-text";
 
 // =============================================================================
 // Types
@@ -68,28 +72,15 @@ function findMatches(
   searchText: string,
   caseSensitive: boolean,
 ): Match[] {
-  if (!searchText) return [];
-
   const matches: Match[] = [];
-  const normalizedSearch = caseSensitive
-    ? searchText
-    : searchText.toLowerCase();
 
   for (const node of textNodes) {
-    const text = node.getTextContent();
-    const normalizedText = caseSensitive ? text : text.toLowerCase();
-
-    let startIndex = 0;
-    while (startIndex < normalizedText.length) {
-      const index = normalizedText.indexOf(normalizedSearch, startIndex);
-      if (index === -1) break;
-
-      matches.push({
-        node,
-        startOffset: index,
-        endOffset: index + searchText.length,
-      });
-      startIndex = index + 1;
+    for (const match of findTextMatches(
+      node.getTextContent(),
+      searchText,
+      caseSensitive,
+    )) {
+      matches.push({ node, ...match });
     }
   }
 
@@ -190,31 +181,15 @@ function FindIconReplacePanel({
       const root = $getRoot();
       const textNodes = getAllTextNodes(root);
 
-      // 逆順で置換（オフセットがずれないように）
       for (const node of textNodes) {
-        const text = node.getTextContent();
-        const normalizedSearch = caseSensitive
-          ? searchText
-          : searchText.toLowerCase();
-        const normalizedText = caseSensitive ? text : text.toLowerCase();
-
-        if (normalizedText.includes(normalizedSearch)) {
-          let result = "";
-          let lastIndex = 0;
-
-          let startIdx = 0;
-          while (startIdx < normalizedText.length) {
-            const index = normalizedText.indexOf(normalizedSearch, startIdx);
-            if (index === -1) break;
-
-            result += text.slice(lastIndex, index) + replaceText;
-            lastIndex = index + searchText.length;
-            startIdx = index + 1;
-          }
-          result += text.slice(lastIndex);
-
-          node.setTextContent(result);
-        }
+        node.setTextContent(
+          replaceAll(
+            node.getTextContent(),
+            searchText,
+            replaceText,
+            caseSensitive,
+          ),
+        );
       }
     });
 

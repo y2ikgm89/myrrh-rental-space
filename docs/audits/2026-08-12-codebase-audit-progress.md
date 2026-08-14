@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  28 |  29 |  57 |
-| 合計   | 103 |  29 | 132 |
+| 低     |  30 |  27 |  57 |
+| 合計   | 105 |  27 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 29 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 27 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -135,6 +135,8 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-91](2026-08-12-codebase-audit-findings.md#f-91)   | 低     | #2297                                      | spawnSync の `exitCode=null` を `?? 1` で失敗へ倒す。`process.exit(null)` の偽成功を止める                       | —                                                                                       |
 | [F-85](2026-08-12-codebase-audit-findings.md#f-85)   | 低     | #2295                                      | 型リテラル引数は where/data/select 等をプロパティ単位で Prisma 型必須に。全 params を見る                        | —                                                                                       |
 | [F-93](2026-08-12-codebase-audit-findings.md#f-93)   | 低     | #2296                                      | 一括配信の rate limit を認証 + RBAC 通過後へ移し、低権限による共有バケット消費を止めた                           | —                                                                                       |
+| [F-99](2026-08-12-codebase-audit-findings.md#f-99)   | 低     | #2298                                      | 検索・全置換の再開を `index + searchText.length` にし、自己重複語の過剰置換を止めた                              | —                                                                                       |
+| [F-77](2026-08-12-codebase-audit-findings.md#f-77)   | 低     | #2302                                      | 数値列母集合に BigInt を含め、AuditLog.sequence に positive CHECK を付けた                                       | —                                                                                       |
 | [F-86](2026-08-12-codebase-audit-findings.md#f-86)   | 低     | #2299                                      | navigation reconcile gate がコメントを落としてから `key:` 位置だけを見る                                         | —                                                                                       |
 | [F-89](2026-08-12-codebase-audit-findings.md#f-89)   | 低     | #2299                                      | 本番 seed はスペースカテゴリーの description / icon / color を書き戻さない                                       | —                                                                                       |
 | [F-90](2026-08-12-codebase-audit-findings.md#f-90)   | 低     | #2299                                      | 本番 navigation seed は空テーブルの初回だけ create。欠けた order を埋めない                                      | —                                                                                       |
