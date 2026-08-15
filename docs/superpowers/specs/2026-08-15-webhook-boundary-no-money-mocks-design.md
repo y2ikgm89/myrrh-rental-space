@@ -16,10 +16,20 @@ Stripe 決済 webhook の unit（`stripe-webhook*.test.ts`）は route を叩く
 
 ## 波
 
-1. **Stripe `charge.refunded` 書込** — attribution を実 DB で固定。配線 unit の mock 引数テストを削除。
-2. **Stripe checkout / async / expired 書込** — `claimReservationAsPaid` 等を実 DB で固定し、対応する配線 assert を削除。
-3. **他 webhook** — GCal / Resend / SwitchBot の金額・状態書込を同じ規則へ。
-4. **残りの payment unit** — webhook 以外で domain を全置換している金額書込を実 DB または注入可能な純関数テストへ移す。
+1. **Stripe `charge.refunded` 書込** — 済。
+2. **Stripe reservation / event checkout 書込** — 済。
+3. **他 webhook** — GCal / Resend / SwitchBot に決済金額・paymentStatus 書込は無い。書き換えない。
+4. **残りの payment unit** — settlement と重複する claim/save where 写経を削除。cancelled orphan と Stripe 変換は残す。
+
+## 完了条件
+
+決済金額・paymentStatus を書く経路の正本は実 DB settlement。webhook unit は route 契約だけ。GCal / Resend / SwitchBot は対象外（決済を書かない）。
+
+## 第 4 波の契約
+
+- soft-delete 済み UNPAID は `claimReservationAsPaid` しない。
+- payment-queries unit の claim/save/failed where 写経は削除する。
+- `refund.updated` / orphan の金額書込 mock 引数は呼出有無にする。USD 1250 CRITICAL と cents→app 変換は残す。
 
 ## 第 3 波の契約
 

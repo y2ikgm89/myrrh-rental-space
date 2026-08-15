@@ -291,4 +291,25 @@ describeMaybe("checkout.session は実 DB に payment 状態を書く", () => {
       await cleanup();
     }
   });
+
+  test("soft-delete 済みの UNPAID は claim しない", async () => {
+    const { reservationId, cleanup } = await createCheckoutReservationFixture();
+
+    try {
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: { deletedAt: new Date() },
+      });
+      const claimed = await claimReservationAsPaid(reservationId, {
+        stripePaymentIntentId: `pi_deleted_${crypto.randomUUID()}`,
+      });
+      const row = await paymentRowOf(reservationId);
+
+      expect(claimed).toBeNull();
+      expect(row.paymentStatus).toBe(PaymentStatus.UNPAID);
+      expect(row.stripePaymentIntentId).toBeNull();
+    } finally {
+      await cleanup();
+    }
+  });
 });
