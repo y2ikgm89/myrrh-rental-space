@@ -20,10 +20,17 @@ Stripe 決済 webhook の unit（`stripe-webhook*.test.ts`）は route を叩く
 2. **Stripe reservation / event checkout 書込** — 済。
 3. **他 webhook** — GCal / Resend / SwitchBot に決済金額・paymentStatus 書込は無い。書き換えない。
 4. **残りの payment unit** — settlement と重複する claim/save where 写経を削除。cancelled orphan と Stripe 変換は残す。
+5. **Approach A leftover** — 済。routing / orphan-claim の金額書込 mock 引数を呼出有無にした。イベント `finalizeSettledEventRegistrationRefund` の正本は実 DB。予約・イベントの finalize where 写経 unit は削除。cancelled orphan と Stripe 変換 unit は残す。
 
 ## 完了条件
 
 決済金額・paymentStatus を書く経路の正本は実 DB settlement。webhook unit は route 契約だけ。GCal / Resend / SwitchBot は対象外（決済を書かない）。
+
+## 第 5 波の契約
+
+- waitlist / mismatch / orphan-claim の金額書込 mock 引数は呼出有無にする。シナリオ unit は残す。
+- `finalizeSettledEventRegistrationRefund` の正本は実 DB 累積判定。
+- 予約・イベントの finalizeSettled where 写経 unit は削除する。cancelled orphan と USD 変換は残す。
 
 ## 第 4 波の契約
 
