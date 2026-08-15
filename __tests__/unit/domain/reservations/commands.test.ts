@@ -988,6 +988,8 @@ describe("updateAdminReservationCommand", () => {
           couponId: "old-coupon-id",
           customerId: "cust-1",
           googleCalendarEventId: null,
+          startTime: new Date("2024-06-15T09:00:00+09:00"),
+          endTime: new Date("2024-06-15T10:00:00+09:00"),
           customer: {
             firstName: "太郎",
             lastName: "山田",
