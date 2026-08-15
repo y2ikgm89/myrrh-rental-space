@@ -40,7 +40,7 @@ import {
   toFormNumberString,
   toNullableString,
 } from "./shared";
-import { collectFormDataFromContainer } from "./shared/collect-form-data";
+import { buildNewsSettingsFormData } from "./news-settings-form-data";
 
 type UseNewsEditorOptions = {
   news?: NewsData | undefined;
@@ -211,25 +211,45 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     const settingsContainer = document.querySelector<HTMLElement>(
       `[data-settings-form-container="${settingsForm.id}"]`,
     );
-    const formData =
-      settingsContainer instanceof HTMLElement
-        ? collectFormDataFromContainer(settingsContainer)
-        : new FormData();
 
-    if (!(settingsContainer instanceof HTMLElement)) {
-      for (const [key, field] of Object.entries(settingsFields)) {
-        const fieldValue = field.value;
-        if (Array.isArray(fieldValue)) {
-          formData.append(key, JSON.stringify(fieldValue));
-        } else if (typeof fieldValue === "boolean") {
-          if (fieldValue) formData.append(key, "on");
-        } else if (fieldValue != null) {
-          formData.append(key, String(fieldValue));
-        }
-      }
-    }
+    const formData = buildNewsSettingsFormData(settingsContainer, {
+      slug,
+      title,
+      isPublished: isPublishedValue,
+      publishedAt:
+        typeof settingsFields.publishedAt.value === "string"
+          ? settingsFields.publishedAt.value
+          : "",
+      contentWidth:
+        typeof settingsFields.contentWidth.value === "string"
+          ? settingsFields.contentWidth.value
+          : "",
+      contentWidthCustom:
+        typeof settingsFields.contentWidthCustom.value === "string"
+          ? settingsFields.contentWidthCustom.value
+          : "",
+      metaDescription:
+        typeof settingsFields.metaDescription.value === "string"
+          ? settingsFields.metaDescription.value
+          : "",
+      metaKeywords:
+        typeof settingsFields.metaKeywords.value === "string"
+          ? settingsFields.metaKeywords.value
+          : "",
+      ogpTitle:
+        typeof settingsFields.ogpTitle.value === "string"
+          ? settingsFields.ogpTitle.value
+          : "",
+      ogpDescription:
+        typeof settingsFields.ogpDescription.value === "string"
+          ? settingsFields.ogpDescription.value
+          : "",
+      ogpImageUrl:
+        typeof settingsFields.ogpImageUrl.value === "string"
+          ? settingsFields.ogpImageUrl.value
+          : "",
+    });
 
-    formData.set("isPublished", isPublishedValue ? "on" : "");
     const submission = parseWithZod(formData, {
       schema: newsSettingsFormSchema,
     });
