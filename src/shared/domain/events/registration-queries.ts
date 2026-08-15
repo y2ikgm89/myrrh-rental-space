@@ -26,7 +26,14 @@ export const EVENT_REGISTRATIONS_PER_PAGE = 20;
  * 管理画面イベント詳細の参加者一覧をページネーション付きで取得する。
  *
  * 申込が多いイベントでも全件をメモリに読み込まないよう `skip` / `take` で絞り、
- * 一覧総数（`total`）と確定申込数（`confirmedCount`）を count クエリで併せて返す。
+ * 一覧総数（`total`）と確定参加人数（`confirmedCount`）を併せて返す。
+ *
+ * `confirmedCount` は **CONFIRMED 申込の `quantity` 合計**であって行数ではない。
+ * `quantity` は 1 申込あたりの参加人数なので、行数を「N名」として出すと
+ * 4+3+2 名の 3 件が「3名」になる。定員の消費も DB の
+ * `assert_event_capacity_not_exceeded` も `SUM(quantity)` で数えており、
+ * このリポジトリの `confirmedCount` は一貫して人数側
+ * （`slot-queries.ts` / `getEventRegistrationDetailsForEmail`）。
  */
 export async function getEventRegistrations(
   eventId: string,
@@ -61,7 +68,7 @@ export async function getEventRegistrations(
     ...(options.status ? { status: options.status } : {}),
   };
 
-  const [registrations, total, confirmedCount] = await Promise.all([
+  const [registrations, total, confirmedQuantity] = await Promise.all([
     prisma.eventRegistration.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -104,12 +111,20 @@ export async function getEventRegistrations(
       },
     }),
     prisma.eventRegistration.count({ where }),
-    prisma.eventRegistration.count({
+    // 見出しは「参加者一覧（N名）」＝人数。行数ではなく quantity 合計で数える。
+    prisma.eventRegistration.aggregate({
       where: { ...where, status: RegistrationStatus.CONFIRMED },
+      _sum: { quantity: true },
     }),
   ]);
 
-  return { registrations, total, confirmedCount, page, perPage };
+  return {
+    registrations,
+    total,
+    confirmedCount: confirmedQuantity._sum.quantity ?? 0,
+    page,
+    perPage,
+  };
 }
 
 /**
