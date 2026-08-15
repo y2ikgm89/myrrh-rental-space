@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 棄却した指摘（62 件）
 
-> 確定 132 件 / 棄却 62 件。確定した指摘は [2026-08-12-codebase-audit-findings.md](2026-08-12-codebase-audit-findings.md)、対処の記録は [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)。未着手の台帳は無い。
+> 確定 132 件 / 棄却 62 件。確定した指摘は [2026-08-12-codebase-audit-findings.md](2026-08-12-codebase-audit-findings.md)、対処の記録は [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、計画の終了は [2026-08-15-codebase-audit-closeout.md](2026-08-15-codebase-audit-closeout.md)。未着手の台帳は無い。
 > 検出エージェントが挙げたが、独立した反証エージェントが**成立しない**と判定したもの。
 > **ここに再着手しないために残している。**同じ仮説を再提出する前に棄却理由を読むこと。
 
