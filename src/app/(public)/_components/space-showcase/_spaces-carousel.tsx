@@ -484,7 +484,11 @@ export function SpacesCarousel({
                           </div>
                           {space.hourlyPrice != null ? (
                             <p className="mt-2 text-base font-light text-accent-foreground">
-                              {formatUnit(space.hourlyPrice, "/h")}
+                              {formatUnit(
+                                space.hourlyPrice,
+                                "/h",
+                                space.taxRateType,
+                              )}
                             </p>
                           ) : null}
                         </div>
@@ -532,7 +536,13 @@ export function SpacesCarousel({
             </h3>
             {activeSpace.hourlyPrice != null ? (
               <div className="mt-3 flex items-baseline justify-center gap-4 text-base font-light md:gap-6 md:text-lg">
-                <p>{formatUnit(activeSpace.hourlyPrice, "/h")}</p>
+                <p>
+                  {formatUnit(
+                    activeSpace.hourlyPrice,
+                    "/h",
+                    activeSpace.taxRateType,
+                  )}
+                </p>
               </div>
             ) : null}
             <div className="mt-2 flex items-center justify-center gap-4 text-sm text-muted-foreground md:gap-6">

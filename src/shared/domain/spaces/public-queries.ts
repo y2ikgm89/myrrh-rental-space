@@ -23,7 +23,10 @@ import {
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
-import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ReservationStatus,
+  type TaxRateType,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_EVENT_STATUSES } from "@/shared/domain/spaces/overlap";
 import type { SpaceSort } from "@/shared/domain/spaces/space-sort";
 import {
@@ -49,6 +52,7 @@ const spaceListSelect = {
   capacity: true,
   area: true,
   hourlyPrice: true,
+  taxRateType: true,
   mainImageUrl: true,
   gallery: true,
   facilities: true,
@@ -496,6 +500,7 @@ export async function getSpaceBySlug(slug: string) {
           capacity: true,
           area: true,
           hourlyPrice: true,
+          taxRateType: true,
           mainImageUrl: true,
           gallery: true,
           facilities: true,
@@ -569,6 +574,7 @@ export async function getRelatedSpaces(
           name: true,
           capacity: true,
           hourlyPrice: true,
+          taxRateType: true,
           mainImageUrl: true,
           gallery: true,
         },
@@ -695,6 +701,7 @@ export type SpaceCardEmbedData = {
   name: string;
   capacity: number;
   hourlyPrice: number;
+  taxRateType: TaxRateType;
   mainImageUrl: string;
 };
 
@@ -724,6 +731,7 @@ export async function resolveSpaceCardEmbedData(
           name: true,
           capacity: true,
           hourlyPrice: true,
+          taxRateType: true,
           mainImageUrl: true,
         },
       }),
@@ -741,6 +749,7 @@ export async function resolveSpaceCardEmbedData(
       name: r.name,
       capacity: r.capacity,
       hourlyPrice: Number(r.hourlyPrice),
+      taxRateType: r.taxRateType,
       mainImageUrl: r.mainImageUrl,
     });
   }

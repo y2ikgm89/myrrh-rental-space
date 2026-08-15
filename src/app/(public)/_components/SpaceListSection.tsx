@@ -32,6 +32,7 @@ import {
 import { SpaceGrid } from "./space-list/space-grid";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 export type { SpaceListData };
 
@@ -53,6 +54,7 @@ interface CatalogSpace {
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly mainImageUrl: string;
   readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;

@@ -5,10 +5,12 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface MobileReserveCTAProps {
   readonly spaceId: string;
   readonly hourlyPrice: number;
+  readonly taxRateType: TaxRateType;
   /** Feature Module `reservation` が ON か */
   readonly reservationEnabled: boolean;
 }
@@ -24,6 +26,7 @@ interface MobileReserveCTAProps {
 export function MobileReserveCTA({
   spaceId,
   hourlyPrice,
+  taxRateType,
   reservationEnabled,
 }: MobileReserveCTAProps) {
   const { formatUnit } = useFormatPrice();
@@ -37,7 +40,7 @@ export function MobileReserveCTA({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 leading-tight">
           <p className="text-lg font-medium tabular-nums text-foreground">
-            {formatUnit(hourlyPrice, "/h")}
+            {formatUnit(hourlyPrice, "/h", taxRateType)}
           </p>
         </div>
         <Link

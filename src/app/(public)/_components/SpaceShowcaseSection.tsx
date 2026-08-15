@@ -9,6 +9,7 @@ import { SpacesGrid } from "./space-showcase/_spaces-grid";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 export interface ShowcaseSpaceData {
   readonly id: string;
@@ -17,6 +18,7 @@ export interface ShowcaseSpaceData {
   readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly area: number | null;
   readonly mainImageUrl: string;
   readonly gallery: readonly GalleryItem[];

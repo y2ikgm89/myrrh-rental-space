@@ -20,6 +20,7 @@ import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import type {
   DiscountType,
   DurationDiscountOverride,
+  TaxRateType,
 } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
@@ -47,6 +48,7 @@ export type SpaceOption = {
   capacity: number;
   area: number | null;
   hourlyPrice: number;
+  taxRateType: TaxRateType;
   mainImageUrl: string;
   gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
@@ -348,6 +350,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
               capacity: true,
               area: true,
               hourlyPrice: true,
+              taxRateType: true,
               mainImageUrl: true,
               gallery: true,
               facilities: true,

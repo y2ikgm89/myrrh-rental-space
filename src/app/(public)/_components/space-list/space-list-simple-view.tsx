@@ -33,6 +33,7 @@ import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers"
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { ListSectionViewAllLink } from "../_shared/list-section-view-all-link";
 
@@ -43,6 +44,7 @@ export interface SpaceListData {
   readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly area: number | null;
   readonly mainImageUrl: string;
 }
@@ -180,7 +182,7 @@ export function SpaceListSimpleView({
                   </span>
                   {space.hourlyPrice != null && (
                     <span className="text-sm font-medium text-accent">
-                      {formatUnit(space.hourlyPrice, "/h")}
+                      {formatUnit(space.hourlyPrice, "/h", space.taxRateType)}
                     </span>
                   )}
                 </div>

@@ -61,6 +61,7 @@ export async function getShowcaseSpaces(maxItems: number) {
           descriptionPlainText: true,
           capacity: true,
           hourlyPrice: true,
+          taxRateType: true,
           area: true,
           mainImageUrl: true,
           gallery: true,

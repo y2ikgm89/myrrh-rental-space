@@ -13,6 +13,7 @@ import { Badge } from "@/public/components/design-system/badge";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { getReservationPaymentDisplayCopy } from "@/shared/lib/reservation/payment-display-copy";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 // `formatTotal` の戻り値（例: `¥550（税込）`）を hero typography 用に
 // price / tax-label に分離するローカル helper。`both` mode の
@@ -33,6 +34,7 @@ interface ReservationWidgetProps {
   readonly spaceId: string;
   readonly spaceName: string;
   readonly hourlyPrice: number;
+  readonly taxRateType: TaxRateType;
   /** キャンセル無料受付の期限（予約開始の X 時間前まで）。Settings 由来の実値 */
   readonly cancellationDeadlineHours: number;
   /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
@@ -64,6 +66,7 @@ interface ReservationWidgetProps {
 export function ReservationWidget({
   spaceId,
   hourlyPrice,
+  taxRateType,
   cancellationDeadlineHours,
   cancellationPolicyUrl,
   reservationEnabled,
@@ -71,7 +74,7 @@ export function ReservationWidget({
   onlinePaymentAvailable,
 }: ReservationWidgetProps) {
   const { formatTotal, formatUnit } = useFormatPrice();
-  const hourly = splitTaxedPrice(formatTotal(hourlyPrice));
+  const hourly = splitTaxedPrice(formatTotal(hourlyPrice, taxRateType));
   const paymentCopy = getReservationPaymentDisplayCopy(onlinePaymentAvailable);
   const showCtaBlock = reservationEnabled || contactEnabled;
 
@@ -108,7 +111,7 @@ export function ReservationWidget({
           </div>
         ) : (
           <p className="text-3xl font-medium leading-none tabular-nums text-foreground">
-            {formatUnit(hourlyPrice, "/h")}
+            {formatUnit(hourlyPrice, "/h", taxRateType)}
           </p>
         )}
       </div>
