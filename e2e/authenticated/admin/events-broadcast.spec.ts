@@ -3,9 +3,12 @@
  *
  * 主に UI 表示 (件名 / 本文フィールド、対象人数、送信ボタン) の smoke と、
  * seed 由来 event の詳細から 一斉配信 リンクで遷移できることを確認する。
- * 実際のメール送信は Resend を叩かず、成功 toast 表示までを見る (本番 API キーが
- * 無い E2E 環境では sendEmail は `{ok: false, reason: "disabled"}` の silent no-op
- * になり、sendEventBroadcast も ok:true / sent:0 で返るため form reset は成立する)。
+ * 実際のメール送信は Resend を叩かない。CI の E2E step は RESEND_API_KEY に
+ * プレースホルダを入れるので transport 自体は有効だが、seed の Customer は
+ * marketingOptIn が既定の false のままで getEventBroadcastPayload の recipients が
+ * 0 件になり、sendEventBroadcast は fan-out する前に {ok:true, sent:0} を返す。
+ * 宛先 0 件なので action の「宛先があるのに sent:0 なら失敗」判定には掛からず、
+ * form reset が成立する。
  */
 
 import { test, expect, type Page } from "../../fixtures/e2e-test";
@@ -80,7 +83,7 @@ test.describe("event broadcast composer (T12)", () => {
     });
   });
 
-  test("件名と本文を入力して送信すると成功 toast が表示される (Resend disabled でも form は reset される)", async ({
+  test("件名と本文を入力して送信すると成功 toast が表示される (配信対象 0 名なので sent:0 でも成功扱い)", async ({
     page,
   }) => {
     await openTimedEntryEventBroadcast(page);
@@ -92,8 +95,8 @@ test.describe("event broadcast composer (T12)", () => {
 
     await page.getByRole("button", { name: "配信する" }).click();
 
-    // 成功 toast (sonner) — Resend API キー未設定でも sendEventBroadcast は ok:true /
-    // sent:0 で返るため form 側は success 経路を通る。
+    // 成功 toast (sonner)。上記のとおり配信対象が 0 件で sent:0 のまま成功扱いに
+    // なる経路（宛先が 1 件以上あって sent:0 なら action はエラーを返す）。
     await expect(page.getByText("一斉配信メールを送信しました")).toBeVisible({
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
