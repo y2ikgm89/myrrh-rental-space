@@ -47,6 +47,12 @@ const REASON_OPTIONS: {
   },
 ];
 
+function isAnonymizeCustomerReason(
+  value: string,
+): value is AnonymizeCustomerReason {
+  return REASON_OPTIONS.some((option) => option.value === value);
+}
+
 /**
  * STATE-03: 顧客匿名化用の確認ダイアログ (理由選択 UI 付き)。
  *
@@ -81,7 +87,9 @@ export function AnonymizeCustomerConfirmDialog({
           <Label className="text-sm font-medium">匿名化の理由</Label>
           <RadioGroup
             value={reason}
-            onValueChange={(v) => setReason(v as AnonymizeCustomerReason)}
+            onValueChange={(v) => {
+              if (isAnonymizeCustomerReason(v)) setReason(v);
+            }}
             disabled={isPending}
             aria-label="匿名化の理由"
           >

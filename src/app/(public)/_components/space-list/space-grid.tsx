@@ -3,6 +3,7 @@ import { Button } from "@/public/components/design-system/button";
 import { PublicEmptyState } from "@/public/components/ui/empty-state";
 import { SpaceCard } from "./space-card";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface Space {
   readonly id: string;
@@ -12,6 +13,7 @@ interface Space {
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly mainImageUrl: string;
   readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;
@@ -73,6 +75,7 @@ export function SpaceGrid({
             capacity={space.capacity}
             area={space.area}
             hourlyPrice={space.hourlyPrice}
+            taxRateType={space.taxRateType}
             locationName={space.location.name}
             mainImageUrl={space.mainImageUrl}
             gallery={space.gallery}

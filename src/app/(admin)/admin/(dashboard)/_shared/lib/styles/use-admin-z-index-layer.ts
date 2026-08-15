@@ -6,7 +6,7 @@ import {
   applyImperativeStyleValues,
   useImperativeCssVars,
   useImperativeStyle,
-  type ImperativeStyleValues,
+  pickImperativeStyleValues,
 } from "@/shared/lib/csp/use-imperative-style";
 import { resolveAdminZIndex, stripZIndexFromStyle } from "./z-index";
 
@@ -19,7 +19,7 @@ export function useAdminZIndexImperative<T extends HTMLElement>(
   const zIndex = resolveAdminZIndex(defaultZIndex, style);
   const extraStyle = stripZIndexFromStyle(style);
   useImperativeCssVars(ref, { [CSS_VAR.adminZIndex]: zIndex });
-  useImperativeStyle(ref, (extraStyle ?? {}) as ImperativeStyleValues);
+  useImperativeStyle(ref, pickImperativeStyleValues(extraStyle ?? {}));
 }
 
 /**
@@ -50,6 +50,6 @@ export function assignAdminZIndex<T extends HTMLElement>(
   const extraStyle = stripZIndexFromStyle(style);
   applyImperativeStyleValues(node, {
     [CSS_VAR.adminZIndex]: resolveAdminZIndex(defaultZIndex, style),
-    ...((extraStyle ?? {}) as ImperativeStyleValues),
+    ...pickImperativeStyleValues(extraStyle ?? {}),
   });
 }

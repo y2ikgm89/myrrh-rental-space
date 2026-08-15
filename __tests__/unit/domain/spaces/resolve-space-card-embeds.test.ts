@@ -62,6 +62,7 @@ describe("resolveSpaceCardEmbeds", () => {
             name: "テラス <script> ルーム",
             capacity: 8,
             hourlyPrice: 3000,
+            taxRateType: "STANDARD",
             mainImageUrl: "https://x/room.jpg",
           },
         ],
