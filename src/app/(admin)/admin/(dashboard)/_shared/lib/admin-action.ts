@@ -2,7 +2,6 @@ import "server-only";
 
 import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";
@@ -104,23 +103,24 @@ export async function executeAdminMutationResult<TData>(
     };
   }
 
-  // 4. EDITOR の resource-level access チェック
-  if (options.checkResourceAccess && isEditorRole(user.role)) {
-    const allowed = await userHasResourceAccess(
+  // 4. resource-level access チェック — EDITOR の page assignment 判定・
+  //    非 EDITOR の素通し・resourceId 欠落はすべて userHasResourceAccess が内包する
+  if (
+    options.checkResourceAccess &&
+    !(await userHasResourceAccess(
       user,
       options.resource,
       options.action,
       resourceId,
+    ))
+  ) {
+    recordPermissionDenied(
+      user.id,
+      options.resource,
+      options.action,
+      resourceId,
     );
-    if (!allowed) {
-      recordPermissionDenied(
-        user.id,
-        options.resource,
-        options.action,
-        resourceId,
-      );
-      return { error: "このリソースへのアクセス権がありません" };
-    }
+    return { error: "このリソースへのアクセス権がありません" };
   }
 
   // 5-7. 実行 + afterSuccess + 監査ログ

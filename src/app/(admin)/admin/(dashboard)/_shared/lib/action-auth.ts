@@ -17,7 +17,6 @@ import {
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { canAccessAdmin } from "@/admin/lib/permissions";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { logUserAction, recordPermissionDenied } from "@/admin/lib/audit";
@@ -117,14 +116,12 @@ export async function checkResourceAccess(
 
   const { user } = permResult;
 
-  if (isEditorRole(user.role)) {
-    if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
-      recordPermissionDenied(user.id, resource, action, resourceId);
-      return {
-        success: false,
-        error: { error: "このリソースへのアクセス権がありません" },
-      };
-    }
+  if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
+    recordPermissionDenied(user.id, resource, action, resourceId);
+    return {
+      success: false,
+      error: { error: "このリソースへのアクセス権がありません" },
+    };
   }
 
   return { success: true, user };

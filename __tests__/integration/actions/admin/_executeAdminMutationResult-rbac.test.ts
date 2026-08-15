@@ -60,6 +60,18 @@ mock.module("@/admin/lib/audit", () => ({
   recordPermissionDenied: mockRecordPermissionDenied,
 }));
 
+// step 4 の resource-level access は実物の userHasResourceAccess を通し、
+// 真の DB 境界だけを差し替える（export は getAssignedPageIdsForUser 1 本のみ）。
+const mockGetAssignedPageIdsForUser = mock(
+  async (_userId: string): Promise<string[]> => [],
+);
+
+mock.module("@/shared/domain/user-page-assignments/queries", () => ({
+  getAssignedPageIdsForUser: (
+    ...args: Parameters<typeof mockGetAssignedPageIdsForUser>
+  ) => mockGetAssignedPageIdsForUser(...args),
+}));
+
 // fireAndForget は production では非同期に await せず投げ捨てる契約だが、
 // テストでは 監査ログ Promise を確実に観測するため同期的に解決させる。
 mock.module("@/shared/lib/async-utils", () => ({
@@ -110,6 +122,7 @@ mock.module("@/shared/domain/coupons/commands", () => ({
 
 const { deleteCoupon } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/coupon");
+const { executeAdminMutationResult } = await import("@/admin/lib/admin-action");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
@@ -121,6 +134,7 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
     mockRecordPermissionDenied.mockClear();
     mockUpdateTag.mockClear();
     mockDeleteCouponCommand.mockClear();
+    mockGetAssignedPageIdsForUser.mockClear();
   });
 
   afterEach(() => {
@@ -222,5 +236,54 @@ describe("executeAdminMutationResult (end-to-end via deleteCoupon)", () => {
     expect(mockDeleteCouponCommand).not.toHaveBeenCalled();
     expect(mockUpdateTag).not.toHaveBeenCalled();
     expect(mockLogAction).not.toHaveBeenCalled();
+  });
+
+  test("role=EDITOR + checkResourceAccess: step 4 が実 predicate で発火し、割当外は execute 非実行・割当済みは実行", async () => {
+    // 同一 test 内で 2 回呼ぶため Once ではなく永続実装で差し替える
+    // （Once だと 2 回目が default の ADMIN に落ちて allow 側を証明できない）。
+    // default 実装への復帰は既存の afterEach が担う。
+    mockCheckAdminAuth.mockImplementation(async () => ({
+      success: true,
+      user: {
+        id: "editor-user-id",
+        email: "editor@example.com",
+        role: "EDITOR",
+      },
+    }));
+    mockGetAssignedPageIdsForUser.mockResolvedValue([]);
+    const execute = mock(async () => ({ ok: true }));
+
+    const denied = await executeAdminMutationResult({
+      resource: "page",
+      action: "update",
+      checkResourceAccess: true,
+      resourceId: "page-2",
+      execute,
+    });
+
+    expect(isMutationError(denied)).toBe(true);
+    if (isMutationError(denied)) {
+      expect(denied.error).toBe("このリソースへのアクセス権がありません");
+    }
+    expect(execute).not.toHaveBeenCalled();
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      "editor-user-id",
+      "page",
+      "update",
+      "page-2",
+    );
+
+    mockGetAssignedPageIdsForUser.mockResolvedValue(["page-1"]);
+
+    const allowed = await executeAdminMutationResult({
+      resource: "page",
+      action: "update",
+      checkResourceAccess: true,
+      resourceId: "page-1",
+      execute,
+    });
+
+    expect(isMutationError(allowed)).toBe(false);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });
