@@ -23,7 +23,7 @@ import { getTaxRate } from "@/shared/lib/pricing/tax";
  * spaces Feature Module OFF なら placeholder ごと除去する（404 カードを防ぐ）。
  *
  * `resolveInternalLinkCards` と同じく regex ベースの純粋 HTML 後処理として実装する。
- * 税率は `Space.taxRateType` を使う（公開 SpaceCard / useFormatPrice と同じ）。
+ * 単価はカードごとの `Space.taxRateType` で税率を決める（公開 SpaceCard と同じ）。
  */
 
 const PLACEHOLDER_RE = /<a\b[^>]*\bdata-space-card-embed\b[^>]*>\s*<\/a>/gi;
@@ -82,6 +82,7 @@ export async function resolveSpaceCardEmbeds(html: string): Promise<string> {
       resolveSpaceCardEmbedData(Array.from(ids)),
       getPublicTaxSettings(),
     ]);
+
     return html.replace(PLACEHOLDER_RE, (tag) => {
       const id = extractAttr(tag, "data-space-id");
       if (!id) return "";

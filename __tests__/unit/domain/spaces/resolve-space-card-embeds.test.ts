@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  TaxDisplayMode,
+  TaxRateType,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -62,7 +65,7 @@ describe("resolveSpaceCardEmbeds", () => {
             name: "テラス <script> ルーム",
             capacity: 8,
             hourlyPrice: 3000,
-            taxRateType: "STANDARD",
+            taxRateType: TaxRateType.STANDARD,
             mainImageUrl: "https://x/room.jpg",
           },
         ],
@@ -78,6 +81,28 @@ describe("resolveSpaceCardEmbeds", () => {
     expect(out).toContain("8名");
     expect(out).toContain("¥3,300/h（税込）");
     expect(out).not.toContain('href="#"');
+  });
+
+  test("REDUCED スペースは軽減税率で単価を描く（STANDARD 固定にしない）", async () => {
+    mockResolveSpaceCardEmbedData.mockResolvedValueOnce(
+      new Map([
+        [
+          "spc-reduced",
+          {
+            id: "spc-reduced",
+            slug: "reduced-room",
+            name: "軽減ルーム",
+            capacity: 4,
+            hourlyPrice: 3000,
+            taxRateType: TaxRateType.REDUCED,
+            mainImageUrl: "https://x/reduced.jpg",
+          },
+        ],
+      ]),
+    );
+    const out = await resolveSpaceCardEmbeds(PLACEHOLDER("spc-reduced"));
+    expect(out).toContain("¥3,240/h（税込）");
+    expect(out).not.toContain("¥3,300/h（税込）");
   });
 
   test("同一 html 内の複数プレースホルダーの id をまとめて1回で解決し、税設定取得も1回のみ", async () => {
