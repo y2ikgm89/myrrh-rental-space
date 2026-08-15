@@ -30,7 +30,9 @@ const eventIdSchema = entityIdSchema("Event");
  *      eventId 単位の第二防壁。認証前に消費すると `event:update` を持たない
  *      アカウントが共有バケットを焼ける
  *   5. `sendEventBroadcast` を呼んで参加者全員に fan-out
- *   6. 成功時は `submission.reply()` (resetForm) を返す — 呼出側は `initialValue`
+ *   6. 送信結果を検査する。**宛先が 1 件以上あるのに `sent === 0` なら成功にしない**
+ *      — `DomainError` を投げてフォーム上部にエラーを出し、件名 / 本文を残す
+ *   7. 成功時は `submission.reply()` (resetForm) を返す — 呼出側は `initialValue`
  *      null で success を検出する
  *
  * broadcastNonce は `crypto.randomUUID` で action 実行ごとに生成 (Resend の
@@ -80,6 +82,23 @@ export async function broadcastEventAction(
             body: data.body,
             broadcastNonce,
           });
+          // 送るべき相手が居たのに 1 通も送れていないなら成功にしない。
+          // sendEventBroadcast (src/shared/lib/email/event-emails.ts) は fan-out 後に
+          // 無条件で ok:true を返すので、ok だけを見ると「全通失敗」も成功になる。
+          // 判定は sent 件数に一本化し、原因 (transport 無効 / 送信失敗) は
+          // メッセージで出し分ける。transport 無効の文面は sendTemplateTestAction の
+          // disabled 分岐と同じ契約に揃える。DomainError は
+          // executeAdminMutationResult が MutationError に変換し、
+          // executeConformMutation が formErrors に載せるので、resetForm を通らず
+          // 件名 / 本文が保持される。
+          if (payload.recipients.length > 0 && sendResult.sent === 0) {
+            throw new DomainError(
+              sendResult.ok
+                ? "一斉配信メールを 1 通も送信できませんでした。時間をおいて再度お試しください。"
+                : "メール送信が無効です。連携設定（/admin/settings/integrations?tab=resend）で Resend API キーを設定するか、環境変数 RESEND_API_KEY を設定してください。",
+              "VALIDATION",
+            );
+          }
           return {
             sent: sendResult.sent,
             skipped: sendResult.skipped,

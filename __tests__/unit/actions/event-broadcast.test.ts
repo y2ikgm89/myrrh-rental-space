@@ -265,4 +265,50 @@ describe("broadcastEventAction", () => {
       }),
     );
   });
+
+  test("宛先があるのに 1 通も送れなかったら成功にしない (Resend 未設定)", async () => {
+    mockGetEventBroadcastPayload.mockResolvedValue({
+      eventId: VALID_EVENT_ID,
+      title: "Test Event",
+      slug: "test-event",
+      recipients: [
+        { id: "reg-1", email: "sato@example.com", customerId: "cus-1" },
+      ],
+      skipped: 0,
+      customerIdByEmail: new Map(),
+    });
+    // lib-dispatch は transport 無効 (RESEND_API_KEY 未設定) で ok:false / sent:0 を返す
+    mockSendEventBroadcast.mockResolvedValue({
+      ok: false,
+      sent: 0,
+      skipped: 0,
+    });
+    mockExecuteAdminMutationResult.mockImplementation(async (options) => {
+      try {
+        return await options.execute();
+      } catch (error) {
+        if (isDomainError(error)) {
+          return { error: error.message, code: error.code };
+        }
+        throw error;
+      }
+    });
+
+    const result = await broadcastEventAction(
+      VALID_EVENT_ID,
+      undefined,
+      buildFormData("件名", "本文"),
+    );
+
+    // reply({resetForm:true}) の成功 shape ({initialValue: null}) ではなく、
+    // formErrors 付きの error shape が返る
+    expect(result).toMatchObject({
+      status: "error",
+      error: {
+        "": [
+          "メール送信が無効です。連携設定（/admin/settings/integrations?tab=resend）で Resend API キーを設定するか、環境変数 RESEND_API_KEY を設定してください。",
+        ],
+      },
+    });
+  });
 });
