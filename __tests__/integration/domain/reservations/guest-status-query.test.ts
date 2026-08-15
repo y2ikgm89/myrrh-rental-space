@@ -120,6 +120,7 @@ describeMaybe("getReservationForGuestStatus", () => {
       reservation.endTime.toISOString(),
     );
     expect(result?.totalPrice).toBe(1000);
+    expect(result?.totalPriceWithTax).toBe(1100);
     expect(result?.paymentStatus).toBe(PaymentStatus.PAID);
     expect(result?.receipt?.serialNo).toBe(receipt.serialNo);
     expect(result?.customer.userId).toBeNull();

@@ -130,12 +130,12 @@ describe("action-helpers", () => {
       expect(result).toEqual({ success: true });
     });
 
-    test("honeypotが未入力(undefined) + トークン未指定 → success", () => {
+    test("honeypotが未入力(undefined) + トークン未指定 → failure（欠落を fail-open しない）", () => {
       const result = checkBotHeuristics({
         honeypot: undefined,
         formRenderToken: undefined,
       });
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(false);
     });
 
     test("honeypotに値が入っている → bot判定でfailure", () => {

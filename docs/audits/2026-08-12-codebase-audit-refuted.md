@@ -1391,14 +1391,14 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 
 **F-94 は R-03 の再掲である。管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げないのは、WAITLISTED_OFFERED 専用の意図的分離であり、独立欠陥ではない**
 
-<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md#f-94) ／ [R-03](#r-03)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [R-03](#r-03)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts`
 - **領域**: イベント（決済・繰上げ）
 
 ### 棄却理由
 
-フェーズ 5 着手時に現行コードで再確認した。[F-94](2026-08-12-codebase-audit-findings.md#f-94) が名指しする経路は [R-03](#r-03) と同じ `adminExpireWaitlistOfferAction` → `expireWaitlistOfferCommand` である。
+フェーズ 5 着手時に現行コードで再確認した。確定台帳から外した F-94 が名指しする経路は [R-03](#r-03) と同じ `adminExpireWaitlistOfferAction` → `expireWaitlistOfferCommand` である。findings.md の F-94 本文は品質 Wave で外し、本項だけを正とする。
 
 (1) 「WAITLISTED を手動 expire する別欠陥」ではない。WaitlistQueueTable の「期限切れにする」は `WAITLISTED_OFFERED` だけに出る。WAITLISTED 行にあるのは「今すぐ繰り上げ」である。
 

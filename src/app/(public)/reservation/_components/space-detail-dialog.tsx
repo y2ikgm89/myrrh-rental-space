@@ -114,7 +114,7 @@ export function SpaceDetailDialog({
                 </div>
               ) : null}
               <div className="text-base font-light text-accent">
-                {formatUnit(space.hourlyPrice, "/h")}
+                {formatUnit(space.hourlyPrice, "/h", space.taxRateType)}
               </div>
             </div>
 

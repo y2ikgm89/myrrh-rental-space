@@ -37,6 +37,14 @@ export function formatPrice(
   return formatCurrency(value);
 }
 
+/** 予約一覧の合計。永続化された税込額だけを描く。再課税しない（監査 F-104）。 */
+export function formatReservationListTotal(
+  totalPriceWithTax: number | null,
+  fallback = "未定",
+): string {
+  return formatPrice(totalPriceWithTax, fallback);
+}
+
 // ---------------------------------------------------------------------------
 // Tax-aware formatters
 // ---------------------------------------------------------------------------
@@ -80,9 +88,16 @@ export function getTaxRateLabel(
   taxRateType: TaxRateType,
   taxRate: number,
 ): string {
-  const typeLabel =
-    taxRateType === TaxRateType.REDUCED ? "軽減税率" : "標準税率";
-  return `${typeLabel}（${taxRate}%）`;
+  switch (taxRateType) {
+    case TaxRateType.STANDARD:
+      return `標準税率（${taxRate}%）`;
+    case TaxRateType.REDUCED:
+      return `軽減税率（${taxRate}%）`;
+    default: {
+      const _exhaustive: never = taxRateType;
+      return _exhaustive;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

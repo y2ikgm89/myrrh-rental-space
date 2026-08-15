@@ -301,6 +301,7 @@ export async function SectionRenderer({
         descriptionPlainText: s.descriptionPlainText,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
+        taxRateType: s.taxRateType,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
       }));
@@ -324,6 +325,7 @@ export async function SectionRenderer({
         descriptionPlainText: s.descriptionPlainText,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
+        taxRateType: s.taxRateType,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
         gallery: s.gallery,

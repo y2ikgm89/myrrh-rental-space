@@ -60,9 +60,9 @@ export const INQUIRY_ATTACHMENT_ACCEPT =
  * ではない — `uploadMedia`（`admin/actions/media.ts`）も Server Action で、
  * MediaUploadDialog / ImageDropPlugin / use-media-upload の 3 箇所から呼ばれる。
  *
- * 同じ機能の Route Handler (`/admin/api/media`) も存在するが **client は GET しか
- * 叩いておらず**、アップロードは Server Action 側を通る。「メディアは Route Handler
- * だからこの上限の対象外」と読むと、動画 50MB / 音声 20MB が無言で 413 になる。
+ * `/admin/api/media` は一覧 GET のみ。アップロードは Server Action 側を通る。
+ * 「メディアは Route Handler だからこの上限の対象外」と読むと、動画 50MB /
+ * 音声 20MB が無言で 413 になる。
  *
  * multipart/form-data は boundary・part header・他フィールドの分だけ実サイズを
  * 超える。公式ドキュメントは「typical multipart uploads で 10〜20 KB 程度を

@@ -129,6 +129,7 @@ export default async function SpaceDetailPage({
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
   const jsonLdHourlyPrice = resolvePublicDisplayPrice(
     Number(space.hourlyPrice),
+    space.taxRateType,
     taxSettings,
   );
 
@@ -329,6 +330,7 @@ export default async function SpaceDetailPage({
               spaceId={space.id}
               spaceName={space.name}
               hourlyPrice={Number(space.hourlyPrice)}
+              taxRateType={space.taxRateType}
               cancellationDeadlineHours={
                 deadlineSettings.cancellationDeadlineHours
               }
@@ -354,6 +356,7 @@ export default async function SpaceDetailPage({
       <MobileReserveCTA
         spaceId={space.id}
         hourlyPrice={Number(space.hourlyPrice)}
+        taxRateType={space.taxRateType}
         reservationEnabled={reservationEnabled}
       />
     </>

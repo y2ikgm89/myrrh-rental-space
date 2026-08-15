@@ -49,6 +49,18 @@ function isRefundSettledSuccess(status: string | null): boolean {
   return status === "succeeded";
 }
 
+const STRIPE_REFUND_STATUSES = new Set([
+  "pending",
+  "requires_action",
+  "succeeded",
+  "failed",
+  "canceled",
+]);
+
+function isStripeRefundStatus(value: unknown): value is string {
+  return typeof value === "string" && STRIPE_REFUND_STATUSES.has(value);
+}
+
 mock.module("@/shared/domain/payment/stripe-refund-orchestration", () => ({
   findRefundEntityByStripeRefundId: (stripeRefundId: string) =>
     mockFindRefundEntityByStripeRefundId(stripeRefundId),
@@ -65,6 +77,7 @@ mock.module("@/shared/domain/payment/stripe-refund-orchestration", () => ({
       newStatus,
     ),
   isRefundSettledSuccess,
+  isStripeRefundStatus,
 }));
 
 const mockFinalizeSettledReservationRefund = mock<

@@ -221,7 +221,7 @@ export function ReservationDetail({
           </DetailRow>
         )}
 
-        <DetailRow label="合計金額">
+        <DetailRow label={hasTax ? "小計（税抜）" : "合計金額"}>
           <span className="text-base font-medium">
             {formatPrice(totalPrice, "未定")}
           </span>

@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 指摘全文（F-01〜F-133）
 
-> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**確定 132 件 / 棄却 62 件。どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、棄却は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。未着手の台帳は無い。
+> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**確定 132 件 / 棄却 62 件。どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、棄却は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。未着手の台帳は無い。F-94 本文は R-62（R-03 再掲）へ移したので見出しは 132。
 > 本文は 2026-08-12 の監査報告からの**全項目転記**（起きること / 直し方 / 該当箇所 / 到達経路 / 既存の検査 / 反証官による訂正）。
 > **行番号は監査時点のもので、修正済みのファイルではずれている。**
 > 以前はここに状態欄を持っていたが、計画書の台帳との二重管理になって実際に食い違ったので落とした（経緯は progress 側の冒頭）。
@@ -12,6 +12,8 @@
 **Terraform のバイナリ plan を public リポジトリの Actions artifact に上げており、本番共有シークレット CLOUDFLARE\_ORIGIN\_HEADER\_SECRET が誰でも取得できる**
 
 <sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+
+品質 Wave（2026-08-15）: 旧 Secret Manager version の disable は運用判断。コードでは閉じた。
 
 |        |                                               |
 | ------ | --------------------------------------------- |
@@ -2673,6 +2675,8 @@ high → medium に補正。理由と事実誤認の訂正:
 
 <sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
+品質 Wave（2026-08-15）: outbound `Math.round` / USD minor-unit 移行は製品判断で閉じた。非整数は typed error のまま。
+
 |        |                                                                |
 | ------ | -------------------------------------------------------------- |
 | 深刻度 | 中                                                             |
@@ -3021,6 +3025,8 @@ none。\_\_tests\_\_/unit/domain/reservations/edit-eligibility.test.ts:49 が「
 
 <sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
+品質 Wave（2026-08-15）: 既存の重複行の DB 是正は製品判断で閉じた。新規複製は gate 済み。
+
 |        |                                              |
 | ------ | -------------------------------------------- |
 | 深刻度 | 中                                           |
@@ -3108,6 +3114,8 @@ none。\_\_tests\_\_ 配下に getPageSectionsWithFallback / getDefaultSections 
 **feature toggle が公開 Cloud Run サービスに最大24時間届かない（Data Cache はサービス跨ぎで無効化されない）**
 
 <sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+
+品質 Wave（2026-08-15）: 共有 cacheHandler / revalidate endpoint は製品判断で閉じた。kill switch は約 1 分プロファイル。
 
 |        |                                                     |
 | ------ | --------------------------------------------------- |
@@ -3814,6 +3822,8 @@ Two factual corrections to the report. (1) The chosen example is the weaker of t
 
 <sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
+品質 Wave（2026-08-15）: 全 resource 反転 + EXEMPT は製品判断で閉じた。Cloudflare 母集合追加までを完了とする。
+
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
 | 深刻度 | 低                                                    |
@@ -4467,46 +4477,6 @@ medium → low に補正。指摘の機序（認証前消費・グローバル 1
 \4. 「機能を停止できる」の新規性が小さい。3 回/1 時間のグローバル上限自体は製品判断として明文化されており（bulk.ts:248-250、rate-limit.ts:493-496）、正規の ADMIN が 3 通送っても同じロックが起きる。本指摘が足しているのは「customer:update を持たない者もその予算を消費できる」点のみ。
 
 補足（範囲外・別件）: event-broadcast.ts:57-58 のコメントは認証前配置の根拠を「IP 取得コスト無し」としているが、checkActionRateLimit は action-helpers.ts:114 で常に getClientIpFromHeaders() を呼んでから結果を捨てるため、この根拠は現実装と食い違っている。修正するなら check コールバックに token を渡さない専用ヘルパーに寄せるのが筋で、bulk.ts / event-broadcast.ts の両方に効く。
-
----
-
-### F-94
-
-**管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げず、待機列が永久に stall する**
-
-<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
-
-|        |                                                                           |
-| ------ | ------------------------------------------------------------------------- |
-| 深刻度 | 低                                                                        |
-| 箇所   | `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts:217` |
-| 領域   | admin Server Action                                                       |
-
-#### 起きること
-
-定員 10 のスロットが満席、待機列は A(先頭)/B/C。1 名キャンセルで A が WAITLISTED\_OFFERED (24h offer) になる。A が支払わないまま管理者がイベント詳細の「期限切れにする」を押す → adminExpireWaitlistOfferAction → expireWaitlistOfferCommand は A を EXPIRED にするだけで offerNextWaitlistEntryCommand を呼ばない。cron /api/cron/waitlist-expire は findExpiredWaitlistOfferCandidates が status=WAITLISTED\_OFFERED の行しか拾わないため、EXPIRED になった A は二度と走査対象にならず、B には繰り上げ当選メールが永久に届かない。offer が専有していた 1 枠は別のキャンセルが偶然起きるまで空席のまま残り、B/C にも管理者にも異常の signal は一切出ない。
-
-#### 直し方
-
-expireWaitlistOfferCommand の select に slotId / ticketId を足し、claim 成功後に同一 tx 内で offerNextWaitlistEntryCommand を呼んで promoted を戻り値に載せる（expireAndPromoteWaitlistForEventCommand と同型）。action 側は promoted があれば sendEventWaitlistOffered + fireEventWaitlistOfferedAdminNotification を発火する（adminPromoteWaitlistEntryAction の afterSuccess と同じ経路を再利用）。回帰ガードは「EXPIRED へ遷移させる全 command が offerNextWaitlistEntryCommand を呼ぶ」を見る 1 本で足りる。
-
-#### 該当箇所
-
-```
-const { registration } = await expireWaitlistOfferCommand({
-```
-
-#### 到達経路
-
-src/app/(admin)/admin/(dashboard)/events/\[id\]/waitlist/\_components/WaitlistQueueTable.tsx:176-185 (status===WAITLISTED\_OFFERED に「期限切れにする」を描画) → 同ファイル:78 handleExpire → src/app/(admin)/admin/(dashboard)/\_shared/actions/event-waitlist.ts:204 adminExpireWaitlistOfferAction → 同:217 expireWaitlistOfferCommand → src/shared/domain/events/waitlist-offer-commands.ts:154-166 (select は id/eventId/email/name/paymentStatus のみ、slotId/ticketId 無し) → 同:178-187 updateMany{status: EXPIRED} → 同:190-197 return（offerNextWaitlistEntryCommand の呼び出しが関数全体に無い） → src/shared/domain/events/waitlist-queries.ts:411-417 findExpiredWaitlistOfferCandidates は where status: WAITLISTED\_OFFERED のため EXPIRED 行を二度と拾わない → 結果: 同一 (slotId, ticketId) の FIFO 先頭 B は WAITLISTED のまま offer メールを受け取らない。対照群: 同ファイル:306 (cron) / src/shared/domain/events/unpaid-expiry.ts:152 / src/shared/domain/events/registration-cancel-core.ts:207 はいずれも claim 成功後に offerNextWaitlistEntryCommand を呼ぶ。
-
-#### 既存の検査
-
-\_\_tests\_\_/unit/domain/events/waitlist-commands.test.ts は expireWaitlistOfferCommand について paymentStatus: PENDING ガード（Codex P1-C / PR#1080）だけを検査し、promote の有無を assert していない。\_\_tests\_\_/unit/actions/admin-event-waitlist.test.ts も監査ログとメール送出の shape のみ。architecture gate に該当なし。
-
-#### 反証官による訂正
-
-high → low に補正。失敗シナリオの被害記述に 3 つの事実誤認がある。(1)「offer が専有していた 1 枠は空席のまま残る」は誤り。このコードベースの在庫会計は CONFIRMED のみを数える（slot-queries.ts:92-99 の groupBy where status: CONFIRMED、同:117/:134、public-slot-options.ts:179）。WAITLISTED\_OFFERED は在庫を 1 枠も押さえていないので、A の offer 中も EXPIRED 化後も残席は同じで、その枠は公開側で売りに出たままである。失われるのは席ではなく B の FIFO 順番だけ。(2)「永久に stall」は誤り。B は FIFO 先頭のままなので、同じ (slotId, ticketId) で次に CONFIRMED がキャンセルされれば registration-cancel-core.ts:207 が、未入金失効が起きれば unpaid-expiry.ts:152 が自動で B を promote する。stall するのは「この 1 回分の順番送り」であって待機列そのものではない。(3)「管理者にも異常の signal は一切出ない」は誤り。ボタンは待機列テーブル自身の中にあり（WaitlistQueueTable.tsx:167-175 が全 WAITLISTED 行に「今すぐ繰り上げ」を描画）、handleExpire は :88 で router.refresh() する。expire 直後に A が一覧から消え（EXPIRED は WAITLIST\_ACTIVE\_STATUSES 外、helpers.ts:671-675 / waitlist-queries.ts:185-196）、B が先頭に上がった状態が同じ画面に出る。押した本人が 1 クリックで復旧できる。場所の記述も「イベント詳細」ではなく待機列タブ (events/\[id\]/waitlist)。さらに、これがバグか仕様かは確定できない: 関数名と JSDoc が意図的に分けられており（waitlist-offer-commands.ts:117-119「called from admin manual expire only — the cron path uses expireAndPromoteWaitlistForEventCommand instead」）、admin 手動 waitlist 操作は capacity チェックを意図的に飛ばす override と明記されている（waitlist-register-commands.ts:457-461）。admin が容量超過で手動 promote した offer を expire する場合、自動 promote は「次の人に offer し直す」を強制してしまい override を取り消せなくなる。修正するなら製品意図の確認が先で、実装欠陥として無条件に直す対象ではない。指摘のうち既存カバレッジの申告（PENDING ガードと監査ログ/メール shape のみ、該当 gate 無し）は正確。
 
 ---
 

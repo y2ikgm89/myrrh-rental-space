@@ -14,11 +14,11 @@ import {
 import { useQueryState, parseAsInteger } from "nuqs";
 import { getFormProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
-import { formatPrice } from "@/shared/lib/pricing/format";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
@@ -45,7 +45,10 @@ import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
-import { formatReservationConfirmTotal } from "./format-reservation-confirm-total";
+import {
+  formatReservationConfirmTotal,
+  type ReservationConfirmPricePreview,
+} from "./format-reservation-confirm-total";
 import { StickyBottomBar } from "@/public/components/ui/sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
@@ -194,6 +197,7 @@ export function ReservationForm({
   refundPolicyLines,
   initialNowIso,
 }: ReservationFormProps): ReactElement {
+  const { displayMode } = useFormatPrice();
   const auto = resolveAutoIds(locations, initialSpaceId);
   const preSelected = auto.locationId != null && auto.spaceId != null;
   const hideStep1 = preSelected && !initialSpaceId;
@@ -499,7 +503,7 @@ export function ReservationForm({
   function renderStepNavigation(config: {
     onBack?: (() => void) | undefined;
     onNext?: (() => void) | undefined;
-    price?: number | null | undefined;
+    confirmPricing?: ReservationConfirmPricePreview | null | undefined;
   }) {
     return (
       <>
@@ -536,11 +540,12 @@ export function ReservationForm({
               <div />
             )}
             <div className="flex items-center gap-3">
-              {config.price != null ? (
+              {config.confirmPricing != null ? (
                 <span className="text-lg font-light text-accent">
-                  {confirmPricing != null
-                    ? formatReservationConfirmTotal(confirmPricing)
-                    : formatPrice(config.price)}
+                  {formatReservationConfirmTotal(
+                    config.confirmPricing,
+                    displayMode,
+                  )}
                 </span>
               ) : null}
               {config.onNext ? (
@@ -703,7 +708,7 @@ export function ReservationForm({
         {renderStepNavigation({
           onBack: hideStep1 ? undefined : () => goToStep(1),
           onNext: isStep2Complete ? advanceToStep3 : undefined,
-          price,
+          confirmPricing,
         })}
       </div>
     );

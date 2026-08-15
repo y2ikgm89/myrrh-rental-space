@@ -146,7 +146,7 @@ export function SpaceSelector({
                 </div>
                 <div className="flex items-center justify-between gap-2 @md:mt-auto">
                   <span className="text-lg font-light text-accent @md:text-xl">
-                    {formatUnit(space.hourlyPrice, "/h")}
+                    {formatUnit(space.hourlyPrice, "/h", space.taxRateType)}
                   </span>
                   <button
                     type="button"

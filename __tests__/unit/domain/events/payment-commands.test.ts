@@ -493,6 +493,23 @@ describe("events/payment-commands", () => {
       });
     });
 
+    test("idempotency key は expires_at と一緒に動く（pending-claim 固定にしない）", async () => {
+      await createWaitlistOfferCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        offerToken: OFFER_TOKEN,
+      });
+
+      const call = mockCheckoutSessionCreate.mock.calls[0];
+      const sessionArgs = call?.[0] as { expires_at?: number } | undefined;
+      const options = call?.[1] as { idempotencyKey?: string } | undefined;
+
+      expect(sessionArgs?.expires_at).toEqual(expect.any(Number));
+      expect(options?.idempotencyKey).toContain(
+        String(sessionArgs?.expires_at),
+      );
+      expect(options?.idempotencyKey).not.toContain("pending-claim");
+    });
+
     test("Stripe 呼出は claim 成功後 (claim updateMany が先、Stripe API はその後)", async () => {
       let stripeBeforeClaim = false;
       mockRegUpdateMany.mockImplementationOnce(() => {

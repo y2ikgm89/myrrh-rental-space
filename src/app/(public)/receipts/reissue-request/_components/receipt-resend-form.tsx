@@ -40,7 +40,7 @@ interface Props {
  *
  * ## Bot 対策
  *  - honeypot (`website` フィールド): 視覚的に隠した hidden input。bot はそこに入力しがち
- *  - formRenderToken: マウント時刻を hidden field に埋め、submit までの時間で bot 判定
+ *  - formRenderToken: サーバー発行の purpose 付きトークン。表示から 3 秒未満の送信を弾く
  *  - Turnstile: Cloudflare の bot 緩和
  */
 export function ReceiptResendForm({
