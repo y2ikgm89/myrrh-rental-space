@@ -19,6 +19,7 @@ const mockReservationFindFirstTx = mock<
 >(() =>
   Promise.resolve({
     id: "res-1",
+    startTime: new Date("2027-02-01T10:00:00+09:00"),
     taxRate: 10,
     coupon: null,
   }),
@@ -172,6 +173,7 @@ describe("applyCalendarTimeChange (GCal inbound pricing)", () => {
     mockReservationFindFirstTx.mockReset();
     mockReservationFindFirstTx.mockResolvedValue({
       id: "res-1",
+      startTime: new Date("2027-02-01T10:00:00+09:00"),
       taxRate: 10,
       coupon: null,
     });

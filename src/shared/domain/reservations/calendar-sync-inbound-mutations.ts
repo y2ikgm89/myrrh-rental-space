@@ -170,6 +170,7 @@ export async function applyCalendarTimeChange(input: {
       },
       select: {
         id: true,
+        startTime: true,
         taxRate: true,
         coupon: {
           select: {
@@ -321,6 +322,10 @@ export async function applyCalendarTimeChange(input: {
         calendarSyncedAt: new Date(),
         calendarSyncError: null,
         icsSequence: { increment: 1 },
+        // 日時が変わったリマインダは無効。endTime だけの変更では触らない。
+        ...(reservation.startTime.getTime() !== input.startTime.getTime()
+          ? { reminderSentAt: null }
+          : {}),
       },
     });
 

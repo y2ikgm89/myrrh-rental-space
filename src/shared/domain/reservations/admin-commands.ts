@@ -598,6 +598,11 @@ export async function updateAdminReservationCommand(
         notes: input.notes || null,
         icsSequence: { increment: 1 },
         version: { increment: 1 },
+        // 日時が変わったリマインダは無効。startTime が同じ保存では触らない
+        // （送信失敗リトライ用の null 戻しと混線させない）。
+        ...(currentReservation.startTime.getTime() !== startDateTime.getTime()
+          ? { reminderSentAt: null }
+          : {}),
         ...(input.guestLastName !== undefined && {
           guestLastName: input.guestLastName,
         }),
