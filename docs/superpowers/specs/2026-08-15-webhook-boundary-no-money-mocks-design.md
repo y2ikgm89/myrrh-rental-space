@@ -21,6 +21,13 @@ Stripe 決済 webhook の unit（`stripe-webhook*.test.ts`）は route を叩く
 3. **他 webhook** — GCal / Resend / SwitchBot の金額・状態書込を同じ規則へ。
 4. **残りの payment unit** — webhook 以外で domain を全置換している金額書込を実 DB または注入可能な純関数テストへ移す。
 
+## 第 3 波の契約
+
+- `claimEventRegistrationAsPaid` は CONFIRMED+UNPAID を PAID にし PI を書く。既に PAID なら false。
+- `saveEventRegistrationPaymentIntentId` は PENDING だけ PI を書き、PAID は動かさない。
+- `claimEventRegistrationAsFailed` は session 一致時だけ FAILED。不一致と既 PAID は no-op。
+- routing unit は claim/save の引数 assert を削除し、分岐・呼出有無・メールを残す。
+
 ## 第 2 波の契約
 
 - `claimReservationAsPaid` は UNPAID 予約を PAID にし `stripePaymentIntentId` を書く。既に PAID なら `null` で上書きしない。
