@@ -161,7 +161,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-122](2026-08-12-codebase-audit-findings.md#f-122) | 低     | #2315                                      | bulk ステータス変更は `updateManyAndReturn` の戻り id だけを confirmed にする。並行同ステータスを誤認しない      | —                                                                                       |
 | [F-125](2026-08-12-codebase-audit-findings.md#f-125) | 低     | #2314                                      | `apple-icon` / `opengraph-image` / `twitter-image` を予約。静的単一セグメントルートの drift gate を追加          | —                                                                                       |
 | [F-124](2026-08-12-codebase-audit-findings.md#f-124) | 低     | #2317                                      | startTime が変わった 3 経路（顧客セルフ / admin / GCal inbound）で reminderSentAt を null に戻す                 | 列追加は採らず。startTime が同じ保存ではクリアしない                                    |
-| [F-129](2026-08-12-codebase-audit-findings.md#f-129) | 低     | #<PR>                                      | 領収書メールの発行日を他メールと同じ formatDateWithWeekday にした                                                | PDF / マイページ / プレビューは当初から和暦表記                                         |
+| [F-129](2026-08-12-codebase-audit-findings.md#f-129) | 低     | #2319                                      | 領収書メールの発行日を他メールと同じ formatDateWithWeekday にした                                                | PDF / マイページ / プレビューは当初から和暦表記                                         |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
 
