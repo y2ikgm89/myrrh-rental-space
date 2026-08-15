@@ -48,6 +48,17 @@ const mockUpdateMany = mock<
   }) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
 
+const mockUpdateManyAndReturn = mock<
+  (args: {
+    where: {
+      deletedAt?: null;
+      OR?: { id: string; status: InquiryStatus }[];
+    };
+    data: { status: InquiryStatus };
+    select: { id: boolean };
+  }) => Promise<{ id: string }[]>
+>(() => Promise.resolve([]));
+
 const mockStatusHistoryCreateMany = mock<
   (args: {
     data: Array<{
@@ -63,6 +74,7 @@ const mockStatusHistoryCreateMany = mock<
 const prismaInquiry = {
   findMany: mockFindMany,
   updateMany: mockUpdateMany,
+  updateManyAndReturn: mockUpdateManyAndReturn,
 };
 const prismaInquiryStatusHistory = { createMany: mockStatusHistoryCreateMany };
 
@@ -110,9 +122,16 @@ const CHANGED_BY = "99999999-9999-4999-8999-999999999999";
 
 describe("bulkSetStatusInquiriesCommand", () => {
   beforeEach(() => {
-    mockFindMany.mockClear();
-    mockUpdateMany.mockClear();
-    mockStatusHistoryCreateMany.mockClear();
+    mockFindMany.mockReset();
+    mockFindMany.mockImplementation(() => Promise.resolve([]));
+    mockUpdateMany.mockReset();
+    mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 0 }));
+    mockUpdateManyAndReturn.mockReset();
+    mockUpdateManyAndReturn.mockImplementation(() => Promise.resolve([]));
+    mockStatusHistoryCreateMany.mockReset();
+    mockStatusHistoryCreateMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
   });
 
   describe("空配列", () => {
@@ -131,6 +150,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockUpdateMany).not.toHaveBeenCalled();
+      expect(mockUpdateManyAndReturn).not.toHaveBeenCalled();
       expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
     });
   });
@@ -151,6 +171,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       expect(result.affectedIds).toEqual([]);
       expect(result.rejectedIds).toEqual([]);
       expect(mockUpdateMany).not.toHaveBeenCalled();
+      expect(mockUpdateManyAndReturn).not.toHaveBeenCalled();
       expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
     });
   });
@@ -160,7 +181,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -177,7 +198,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -193,7 +214,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.IN_PROGRESS },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -209,7 +230,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.RESOLVED },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -278,7 +299,10 @@ describe("bulkSetStatusInquiriesCommand", () => {
         { id: UUID_B, status: InquiryStatus.CLOSED },
         { id: UUID_C, status: InquiryStatus.IN_PROGRESS },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([
+        { id: UUID_A },
+        { id: UUID_C },
+      ]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A, UUID_B, UUID_C],
@@ -297,7 +321,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -313,7 +337,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -328,7 +352,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.FLAGGED },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -344,7 +368,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.FLAGGED },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -359,7 +383,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.SPAM },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -384,6 +408,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       expect(result.count).toBe(0);
       expect(result.rejectedIds).toEqual([UUID_A]);
       expect(mockUpdateMany).not.toHaveBeenCalled();
+      expect(mockUpdateManyAndReturn).not.toHaveBeenCalled();
     });
   });
 
@@ -393,7 +418,10 @@ describe("bulkSetStatusInquiriesCommand", () => {
         { id: UUID_A, status: InquiryStatus.NEW },
         { id: UUID_B, status: InquiryStatus.IN_PROGRESS },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([
+        { id: UUID_A },
+        { id: UUID_B },
+      ]);
 
       await bulkSetStatusInquiriesCommand(
         [UUID_A, UUID_B],
@@ -429,7 +457,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       await bulkSetStatusInquiriesCommand(
         [UUID_A],
@@ -473,10 +501,8 @@ describe("bulkSetStatusInquiriesCommand", () => {
         { id: UUID_A, status: InquiryStatus.NEW },
         { id: UUID_B, status: InquiryStatus.IN_PROGRESS },
       ]);
-      // 2件 claim を試みたが 1 件しか claim できなかった
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
-      // 実際に RESOLVED になっているのは UUID_A のみ
-      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }]);
+      // 2件 claim を試みたが RETURNING は UUID_A のみ
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A, UUID_B],
@@ -499,6 +525,30 @@ describe("bulkSetStatusInquiriesCommand", () => {
           ],
         }),
       );
+    });
+
+    test("claim が 0 件で全件が既に newStatus のとき StatusHistory.createMany は呼ばれない", async () => {
+      // F-122: 並行相手が同じ newStatus をセットしたあと、この actor の
+      // claim は 0 件。フォールバック findMany({ status: newStatus }) は
+      // 相手の書き込み結果を返すため、旧実装はそれらを自分の confirmed と
+      // 誤認し append-only な履歴に偽行を書く。
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+        { id: UUID_B, status: InquiryStatus.NEW },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 0 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([]);
+      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }, { id: UUID_B }]);
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A, UUID_B],
+        InquiryStatus.RESOLVED,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(0);
+      expect(result.affectedIds).toEqual([]);
+      expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -528,7 +578,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
       ]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      mockUpdateManyAndReturn.mockResolvedValueOnce([{ id: UUID_A }]);
 
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
