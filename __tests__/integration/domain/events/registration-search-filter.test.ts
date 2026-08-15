@@ -1,5 +1,5 @@
 /**
- * getEventRegistrations の search/status フィルタを実DBで検証する。
+ * getEventRegistrations の search/status フィルタと集計値を実DBで検証する。
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
@@ -228,6 +228,44 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
     try {
       const result = await getEventRegistrations(fixture.eventId, {});
       expect(result.total).toBe(1);
+    } finally {
+      await cleanupFixture(fixture.eventId);
+    }
+  });
+
+  test("confirmedCount は CONFIRMED 申込の quantity 合計（申込行数ではない）", async () => {
+    const fixture = await createFixtureEvent();
+    // 4名 + 3名 + 2名 の 3 件 = 9名。行数(3)と人数(9)が必ずずれる形にする。
+    // fixture の slot capacity は 10 なので容量 trigger には触れない。
+    for (const quantity of [4, 3, 2]) {
+      await prisma.eventRegistration.create({
+        data: {
+          eventId: fixture.eventId,
+          slotId: fixture.slotId,
+          ticketId: fixture.ticketId,
+          name: `Group ${String(quantity)}`,
+          quantity,
+          status: RegistrationStatus.CONFIRMED,
+        },
+      });
+    }
+    // CANCELLED の 5 名は見出しの人数に入らない（status 絞りが外れると 14 になる）。
+    await prisma.eventRegistration.create({
+      data: {
+        eventId: fixture.eventId,
+        slotId: fixture.slotId,
+        ticketId: fixture.ticketId,
+        name: "Cancelled Group",
+        quantity: 5,
+        status: RegistrationStatus.CANCELLED,
+        cancelledAt: new Date(),
+      },
+    });
+
+    try {
+      const result = await getEventRegistrations(fixture.eventId, {});
+      expect(result.total).toBe(4);
+      expect(result.confirmedCount).toBe(9);
     } finally {
       await cleanupFixture(fixture.eventId);
     }
