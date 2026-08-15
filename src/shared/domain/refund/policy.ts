@@ -107,7 +107,8 @@ export function calculateRefundRate(
  * Reservation の返金額を算出する。
  *
  * @param policy         RefundPolicy
- * @param chargedAmount  実 charge 額 (checkout で Stripe に送った額、`Reservation.totalPrice` 相当)
+ * @param chargedAmount  実 charge 額 (checkout で Stripe に送った額、税込
+ *                       `Reservation.totalPriceWithTax` 相当)
  * @param startTime      対象予約の `startTime`
  * @param now            算出時点
  * @returns 返金額 (円、正整数)。`chargedAmount * rate / 100` を `Math.floor` で切り捨て
@@ -123,20 +124,45 @@ export function calculateRefundAmount(
   return Math.floor((chargedAmount * rate) / 100);
 }
 
+/** `calculatePolicyRefundBreakdown` の結果。 */
+export type PolicyRefundBreakdown = {
+  /** ポリシーが認める **charge 総額に対する取り分**（円）。 */
+  readonly entitlement: number;
+  /** `entitlement - refundedSoFar`（円）。0 未満は 0 に丸める。 */
+  readonly outstanding: number;
+};
+
 /**
- * `calculateRefundAmount` の `now` を呼出時刻で確定する薄いラッパー。
+ * ポリシーの取り分と「今回返す額」を算出する。
+ * 自動返金と管理画面の推奨額はこの 1 箇所を共有する。
  *
- * `new Date()` をこの helper 内に閉じることで、Server Component の
- * `purity` ルール（render 中の `new Date()` 直呼びを禁止）に抵触せず
- * render 中に評価できる（`coupons/_lib/coupon-status.ts` の
- * `deriveCouponStatusesNow` と同型の回避パターン）。
+ * ポリシーが決めるのは **総額に対する取り分**であって「今回いくら返すか」では
+ * ない（監査 F-43）。既存の部分返金を引かずに請求すると:
+ *
+ * - 100% ポリシー: 総額 10000 / 既返金 3000 に対して 10000 を請求
+ *   → 残額 7000 を超えるので `resolveRefundAmount` が reject
+ *   → **キャンセル分の返金が 1 円も走らない**（顧客は手動対応まで回復しない）
+ * - 50% ポリシー: 5000 を請求して通り、累計 8000（80%）
+ *   → ポリシーの 50% を超えて返しすぎる
+ *
+ * なお **chargeBase から引くのは誤り**。50% ポリシーで残額 7000 に 50% を
+ * 当てると 3500 になり、累計 6500（65%）でどちらの数字とも合わない。
+ *
+ * @param chargeBase    実 charge 額（税込 `totalPriceWithTax` / `paidAmount`）
+ * @param refundedSoFar 既に返金済みの累計額（円）
  */
-export function calculateRefundAmountNow(
+export function calculatePolicyRefundBreakdown(
   policy: RefundPolicy,
-  chargedAmount: number,
+  chargeBase: number,
+  refundedSoFar: number,
   startTime: Date,
-): number {
-  return calculateRefundAmount(policy, chargedAmount, startTime, new Date());
+  now: Date,
+): PolicyRefundBreakdown {
+  const entitlement = calculateRefundAmount(policy, chargeBase, startTime, now);
+  return {
+    entitlement,
+    outstanding: Math.max(0, entitlement - refundedSoFar),
+  };
 }
 
 /**
