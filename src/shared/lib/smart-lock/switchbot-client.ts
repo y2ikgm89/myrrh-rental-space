@@ -87,6 +87,19 @@ async function request<T>(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
+    // Official spec: HTTP 401 `{"message":"Unauthorized"}` has no statusCode.
+    // Invalid Open Token and daily 10,000-request/token exhaustion both return
+    // this shape; parse it before envelopeSchema so logs are not "unexpected form".
+    // @see https://github.com/OpenWonderLabs/SwitchBotAPI#request-limit
+    if (response.status === 401) {
+      return {
+        ok: false,
+        statusCode: 401,
+        message:
+          "SwitchBot API 認証エラー（Open Token 無効または日次リクエスト上限 10,000 件超過）",
+      };
+    }
+
     const raw: unknown = await response.json();
     const parsed = envelopeSchema.safeParse(raw);
     if (!parsed.success) {

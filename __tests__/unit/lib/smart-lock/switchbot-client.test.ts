@@ -450,6 +450,22 @@ describe("switchbot-client", () => {
       });
     });
 
+    test("HTTP 401 の Unauthorized 本文は認証/日次上限エラーとして返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ message: "Unauthorized" }, 401),
+      );
+
+      const { getDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await getDeviceList(CREDENTIALS);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error("expected ok:false");
+      expect(result.statusCode).toBe(401);
+      expect(result.message).toContain("認証");
+      expect(result.message).toContain("10,000");
+    });
+
     test("レスポンス形式が envelope と一致しない場合は ok:false を返す", async () => {
       mockFetch.mockResolvedValueOnce(
         new Response(JSON.stringify({ unexpected: "shape" }), {
