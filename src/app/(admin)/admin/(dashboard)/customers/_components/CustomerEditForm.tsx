@@ -141,10 +141,6 @@ export function CustomerEditForm({
   function handleCustomerTypeChange(value: string) {
     if (!isValidCustomerType(value)) return;
     customerTypeControl.change(value);
-    if (value === CustomerType.PERSONAL) {
-      // 法人 → 個人切替時に会社名をクリア (conform は field の reset API がないため
-      // hidden な form の re-render はしない、submit 時は schema で空文字許容)
-    }
   }
 
   function handlePrefectureChange(value: string) {
@@ -348,7 +344,7 @@ export function CustomerEditForm({
           </div>
 
           {/* 会社名・団体名（法人時のみ表示） */}
-          {customerType === CustomerType.CORPORATE && (
+          {customerType === CustomerType.CORPORATE ? (
             <div className="space-y-2">
               <Label htmlFor={fields.companyName.id}>
                 会社名・団体名 <span className="text-destructive">*</span>
@@ -367,6 +363,17 @@ export function CustomerEditForm({
                 </p>
               )}
             </div>
+          ) : (
+            // 個人区分では入力欄を出さないが、name を DOM から完全に消すと
+            // FormData にキーが載らず、schema の optional を素通りして
+            // `data.companyName || null` が既存値を null で上書きする。
+            // 可視 Input と同時に出すと FormData にキーが 2 つ載り conform が
+            // 配列化して弾くため、必ず else 側にだけ置く。
+            <input
+              type="hidden"
+              name={fields.companyName.name}
+              value={customer.companyName ?? ""}
+            />
           )}
 
           {/* メールアドレス */}
