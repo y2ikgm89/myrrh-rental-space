@@ -733,10 +733,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
 
-    // fulfill が呼ばれた
-    expect(mockClaimReservationAsPaid).toHaveBeenCalledWith("res-123", {
-      stripePaymentIntentId: "pi-123",
-    });
+    // 書込引数は checkout-session-settlement が正本。ここは route 副作用だけ。
 
     // キャッシュ無効化 (3点セット)
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
@@ -917,13 +914,6 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
 
-    // PI IDのみ保存
-    expect(mockSavePaymentIntentId).toHaveBeenCalledWith(
-      "res-123",
-      "pi-456",
-      "cs_test_123",
-    );
-
     // fulfill は呼ばれない
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
 
@@ -992,9 +982,6 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockClaimReservationAsPaid).toHaveBeenCalledWith("res-456", {
-      stripePaymentIntentId: "pi-789",
-    });
     expect(mockFireAndForget).toHaveBeenCalled();
   });
 
@@ -1022,11 +1009,6 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    // session.id が第 2 引数に渡ることを assert (Codex PR #1043 P1: session 一致 gate)
-    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith(
-      "res-789",
-      "cs_test_789",
-    );
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
@@ -1056,11 +1038,6 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    // session.id が第 2 引数に渡ることを assert (Codex PR #1043 P1: session 一致 gate)
-    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith(
-      "res-exp",
-      "cs_test_expired",
-    );
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
