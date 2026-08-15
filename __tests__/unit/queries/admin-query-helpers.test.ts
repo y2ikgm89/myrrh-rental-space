@@ -5,8 +5,6 @@ import { ADMIN_USER, EDITOR_USER, VIEWER_USER } from "../../fixtures/users";
  *  旧実装の `redirect("/admin")` は streaming 下で meta タグに劣化するため廃止。 */
 let notFoundCalls = 0;
 const mockVerifyAdminSession = mock(async () => ADMIN_USER);
-const mockIsEditorRole = mock(() => false);
-const mockUserHasResourceAccess = mock(async () => true);
 const mockRecordPermissionDenied = mock(async () => {});
 const mockHeaders = mock(async () => new Headers());
 
@@ -21,40 +19,31 @@ mock.module("next/headers", () => ({
   headers: () => mockHeaders(),
 }));
 
+// `mock.module` は完全置換。session module は実モジュールを spread し、
+// 認証境界の `verifyAdminSession` だけ差し替える (.claude/rules/testing.md)。
+const actualSession = await import("@/shared/domain/admin-auth/session");
+
 mock.module("@/shared/domain/admin-auth/session", () => ({
+  ...actualSession,
   verifyAdminSession: () => mockVerifyAdminSession(),
-  getCurrentAdminUser: mock(() => Promise.resolve(null)),
-  getAdminSession: mock(() => Promise.resolve(null)),
-  getAdminSessionUser: () => null,
-  isAdmin: mock(() => Promise.resolve(false)),
-  isValidRole: () => false,
-  adminAuth: {},
-  DASHBOARD_ROLES: [],
 }));
 
-mock.module("@/shared/lib/customer-auth", () => ({
-  getCustomerSession: mock(() => Promise.resolve(null)),
-  getCurrentCustomerUser: mock(() => Promise.resolve(null)),
-  verifyCustomerSession: mock(() => Promise.resolve(null)),
-  getCustomerSessionUser: () => null,
-  isValidRole: () => false,
-  customerAuth: {},
-}));
+// `@/shared/lib/admin-permissions` / `@/shared/lib/admin-role-guards` /
+// `@/shared/domain/admin-auth/resource-access` は mock しない。predicate を
+// mock すると requireAdmin(Resource)Permission の分岐が観測できない
+// （第6次監査の残件: 旧実装は両者を mock しており deny テストが配線テスト化
+// していた）。代わりに真の DB 境界である user-page-assignments/queries だけを
+// 差し替える（export は getAssignedPageIdsForUser 1 本のみ。prisma が graph
+// から落ちる）。
+const mockGetAssignedPageIdsForUser = mock(
+  async (_userId: string): Promise<string[]> => [],
+);
 
-mock.module("@/shared/lib/admin-role-guards", () => ({
-  isEditorRole: (...args: Parameters<typeof mockIsEditorRole>) =>
-    mockIsEditorRole(...args),
+mock.module("@/shared/domain/user-page-assignments/queries", () => ({
+  getAssignedPageIdsForUser: (
+    ...args: Parameters<typeof mockGetAssignedPageIdsForUser>
+  ) => mockGetAssignedPageIdsForUser(...args),
 }));
-
-mock.module("@/shared/domain/admin-auth/resource-access", () => ({
-  userHasResourceAccess: (
-    ...args: Parameters<typeof mockUserHasResourceAccess>
-  ) => mockUserHasResourceAccess(...args),
-}));
-
-// `@/shared/lib/admin-permissions` は mock しない。`hasPermission` は
-// ROLE_PERMISSIONS だけを見る純粋関数で、mock すると
-// `requireAdminPermission` が `action` をどう使うかが観測できなくなる。
 
 mock.module("@/admin/lib/audit", () => ({
   recordPermissionDenied: (
@@ -69,16 +58,14 @@ describe("admin query helpers", () => {
   beforeEach(() => {
     notFoundCalls = 0;
     mockVerifyAdminSession.mockReset();
-    mockIsEditorRole.mockReset();
-    mockUserHasResourceAccess.mockReset();
     mockRecordPermissionDenied.mockReset();
     mockHeaders.mockReset();
+    mockGetAssignedPageIdsForUser.mockReset();
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
-    mockIsEditorRole.mockReturnValue(false);
-    mockUserHasResourceAccess.mockResolvedValue(true);
     mockRecordPermissionDenied.mockResolvedValue(undefined);
     mockHeaders.mockResolvedValue(new Headers());
+    mockGetAssignedPageIdsForUser.mockResolvedValue([]);
   });
 
   test("権限がある場合は user を返す", async () => {
@@ -121,26 +108,44 @@ describe("admin query helpers", () => {
     );
   });
 
-  test("EDITOR の resource scope が外れている場合は notFound() で拒否する", async () => {
+  test("EDITOR は割当済み page を通り、割当外は notFound() で拒否して deny を記録する", async () => {
     mockVerifyAdminSession.mockResolvedValue(EDITOR_USER);
-    mockIsEditorRole.mockReturnValue(true);
-    mockUserHasResourceAccess.mockResolvedValue(false);
+    mockGetAssignedPageIdsForUser.mockResolvedValue(["page-1"]);
+
+    const user = await requireAdminResourcePermission("page", "read", "page-1");
+    expect(user.id).toBe(EDITOR_USER.id);
+    expect(notFoundCalls).toBe(0);
 
     await expect(
-      requireAdminResourcePermission("page", "read", "page-3"),
+      requireAdminResourcePermission("page", "read", "page-2"),
     ).rejects.toThrow("NOT_FOUND");
 
-    expect(mockUserHasResourceAccess).toHaveBeenCalledWith(
-      EDITOR_USER,
-      "page",
-      "read",
-      "page-3",
-    );
+    expect(notFoundCalls).toBe(1);
     expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
       EDITOR_USER.id,
       "page",
       "read",
-      "page-3",
+      "page-2",
     );
+  });
+
+  test("EDITOR は resourceId 無しなら assignment 検査なしで許可される（list page 形）", async () => {
+    mockVerifyAdminSession.mockResolvedValue(EDITOR_USER);
+
+    const user = await requireAdminResourcePermission("page", "read");
+
+    expect(user.id).toBe(EDITOR_USER.id);
+    expect(notFoundCalls).toBe(0);
+    expect(mockGetAssignedPageIdsForUser).not.toHaveBeenCalled();
+  });
+
+  test("ADMIN は resourceId 付きでも assignment 検査にかからない", async () => {
+    mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
+
+    const user = await requireAdminResourcePermission("page", "read", "page-9");
+
+    expect(user.id).toBe(ADMIN_USER.id);
+    expect(notFoundCalls).toBe(0);
+    expect(mockGetAssignedPageIdsForUser).not.toHaveBeenCalled();
   });
 });
