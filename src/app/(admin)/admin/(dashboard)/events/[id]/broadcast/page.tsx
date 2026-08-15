@@ -47,9 +47,9 @@ export default async function EventBroadcastPage({ params }: PageProps) {
     >
       <DetailSection title="配信対象">
         <p className="text-sm text-muted-foreground">
-          確定申込 (CONFIRMED)
-          のうち、メールアドレスを登録済みの参加者に配信します。 当日参加
-          (walk-in) 由来などメールアドレス未登録の申込は配信対象外となります。
+          配信対象は、配信同意済み (marketingOptIn) かつ Customer
+          に解決できる確定申込です。配信同意なし / メール未登録 / Customer
+          未解決の申込は配信対象外です。
         </p>
         <ul className="mt-3 space-y-1 text-sm">
           <li>
@@ -60,7 +60,9 @@ export default async function EventBroadcastPage({ params }: PageProps) {
             名
           </li>
           <li>
-            <span className="font-medium">配信対象外 (メール未登録):</span>{" "}
+            <span className="font-medium">
+              配信対象外 (配信同意なし / メール未登録 / Customer 未解決):
+            </span>{" "}
             <span data-testid="broadcast-recipient-skipped">
               {counts.skipped}
             </span>{" "}
