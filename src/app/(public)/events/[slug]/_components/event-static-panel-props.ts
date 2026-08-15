@@ -6,6 +6,7 @@ import {
 import {
   formatEventVenueDisplay,
   isEventVirtualAccessible,
+  publicEventSpaceVenuePath,
 } from "@/shared/lib/events/venue";
 import { EVENT_FORMAT } from "@/shared/lib/validations/enums/prisma-types";
 import { EventInfoPanel, type EventInfoPanelVenue } from "./event-info-panel";
@@ -13,14 +14,26 @@ import type { PublishedEventDetail } from "./event-registration-context";
 
 type EventInfoPanelProps = ComponentProps<typeof EventInfoPanel>;
 
-function buildEventVenues(event: PublishedEventDetail): EventInfoPanelVenue[] {
+export function buildEventVenues(event: {
+  readonly format: PublishedEventDetail["format"];
+  readonly space: {
+    readonly name: string;
+    readonly slug: string;
+    readonly isPublished: boolean;
+    readonly isActive: boolean;
+  } | null;
+  readonly location: PublishedEventDetail["location"];
+  readonly addressDetail: PublishedEventDetail["addressDetail"];
+}): EventInfoPanelVenue[] {
   const venues: EventInfoPanelVenue[] = [];
   if (event.format !== EVENT_FORMAT.ONLINE) {
     if (event.space) {
       venues.push({
         kind: "space",
-        slug: event.space.slug,
         name: event.space.name,
+        ...(publicEventSpaceVenuePath(event.space)
+          ? { slug: event.space.slug }
+          : {}),
       });
     }
     if (event.location) {

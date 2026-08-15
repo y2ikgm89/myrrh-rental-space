@@ -20,7 +20,7 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 export type EventInfoPanelVenue =
   | {
       readonly kind: "space";
-      readonly slug: string;
+      readonly slug?: string;
       readonly name: string;
     }
   | {
@@ -388,14 +388,17 @@ function VenueItem({
 }): ReactElement {
   switch (venue.kind) {
     case "space":
-      return (
-        <Link
-          href={toAppRoute(`/spaces/${venue.slug}`)}
-          className="underline decoration-border decoration-1 underline-offset-4 transition-colors hover:decoration-foreground"
-        >
-          {venue.name}
-        </Link>
-      );
+      if (venue.slug) {
+        return (
+          <Link
+            href={toAppRoute(`/spaces/${venue.slug}`)}
+            className="underline decoration-border decoration-1 underline-offset-4 transition-colors hover:decoration-foreground"
+          >
+            {venue.name}
+          </Link>
+        );
+      }
+      return <span>{venue.name}</span>;
     case "location":
       return (
         <span className="flex flex-col gap-0.5">
