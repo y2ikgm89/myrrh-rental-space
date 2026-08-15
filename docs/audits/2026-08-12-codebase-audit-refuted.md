@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 棄却した指摘（62 件）
 
-> 未着手の一覧と計画は [2026-08-13-codebase-audit-remediation.md](../superpowers/plans/2026-08-13-codebase-audit-remediation.md)、確定した指摘は [2026-08-12-codebase-audit-findings.md](2026-08-12-codebase-audit-findings.md)、対処の記録は [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)。
+> 確定 132 件 / 棄却 62 件。確定した指摘は [2026-08-12-codebase-audit-findings.md](2026-08-12-codebase-audit-findings.md)、対処の記録は [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)。未着手の台帳は無い。
 > 検出エージェントが挙げたが、独立した反証エージェントが**成立しない**と判定したもの。
 > **ここに再着手しないために残している。**同じ仮説を再提出する前に棄却理由を読むこと。
 
@@ -8,7 +8,7 @@
 
 **syncMethod=WEBHOOK 運用では、直前同期から 10 秒以内の GCal 変更が黙って捨てられ回収経路が無い**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/reservations/reservation-calendar-inbound.ts`
 - **領域**: 外部連携
@@ -29,7 +29,7 @@
 
 **繰り上げ当選の確定時に定員再チェックで負けた offer は EXPIRED になるが、次の待機者へ再昇格しない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/events/waitlist-register-commands.ts`
 - **領域**: イベント（中核）
@@ -52,7 +52,7 @@
 
 **管理者の手動 expire が繰上げ FIFO を止め、cron でも復旧できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/events/waitlist-offer-commands.ts`
 - **領域**: イベント（決済・繰上げ）
@@ -73,7 +73,7 @@
 
 **ゲストの決済リンクは 7 日有効だが申込自体は 60 分で消え、期限はどこにも表示されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/lib/tokens/event-registration-payment-token.ts`
 - **領域**: イベント（決済・繰上げ）
@@ -100,7 +100,7 @@
 
 **ゲスト問い合わせが LINE の未検証 email だけで他人の Customer に付け替わる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/customers/link.ts`
 - **領域**: 顧客ライフサイクル
@@ -143,7 +143,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **匿名化しても receipts.recipient\_name に実名が残り、管理画面の「宛名」に出続ける**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/customers/customer-lifecycle-commands.ts`
 - **領域**: 顧客ライフサイクル
@@ -170,7 +170,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **stale REVOKE\_PENDING の CONFIRMED 巻き戻しが「再発行待ち」予約を恒久的に stall させる（旧窓のコードが生き、新時刻では入館不能）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/smart-lock/revoke-passcode.ts`
 - **領域**: スマートロック
@@ -185,7 +185,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **deleteKey webhook の keyName が不一致でも「device 上に REVOKE\_PENDING が 1 件」heuristic に落ち、無関係な鍵の削除で生きた passcode を REVOKED に焼く**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/smart-lock/webhook-commands.ts`
 - **領域**: スマートロック
@@ -210,7 +210,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **createKey の HTTP 応答喪失（transport 失敗）を確定的失敗として FAILED に倒し、実機に生成された鍵が二度と失効されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/smart-lock/issue-passcode.ts`
 - **領域**: スマートロック
@@ -234,7 +234,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **解錠番号の開示予算 3 回/時間を pending 応答も消費するため、UI が案内する「再表示」を押した顧客が扉の前で締め出される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(public)/_shared/actions/reveal-reservation-passcodes.ts`
 - **領域**: スマートロック
@@ -259,7 +259,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **送信者表示名がRFC 5322のquoteなしでFromヘッダに埋め込まれ、「Co., Ltd.」等で全メール送信が停止する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/lib/email/client.ts`
 - **領域**: 設定
@@ -287,7 +287,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **Resend 未設定・障害時にメール設定フォーム全体が保存不能になり、通知先スタッフ／宛先の変更ができない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/email.ts`
 - **領域**: 設定
@@ -302,7 +302,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **Google Calendar からの時間変更でクーポンが落ちると、couponId は null にされるのに Coupon.usageCount が戻されず永久に leak する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/reservations/calendar-sync-inbound-mutations.ts`
 - **領域**: 金額計算・クーポン
@@ -317,7 +317,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **領収書の再発行が発行日と連番の年を「今日」に付け替える（ゲスト再送信で常時発火）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/receipts/issue.ts`
 - **領域**: 領収書・PDF
@@ -342,7 +342,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **発行事業者が未設定のまま領収書が発行され、発行者名も登録番号も無い適格請求書が永久に凍結される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/receipts/issuer-snapshot.ts`
 - **領域**: 領収書・PDF
@@ -367,7 +367,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **ゴミ箱に入れたイベントの領収書 orphan を backfill が永久に見捨て、purge が入金済み申込ごと物理削除する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/receipts/backfill.ts`
 - **領域**: 領収書・PDF
@@ -392,7 +392,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **sitemap が /spaces と /events を「一覧ページ非公開」でも emit し続ける（404 を Google に提出）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/sitemap.ts`
 - **領域**: 公開面の露出
@@ -421,7 +421,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **非公開 Location の住所・座標・アクセス情報が、公開スペース経由で公開面に出る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/spaces/public-queries.ts`
 - **領域**: 公開面の露出
@@ -436,7 +436,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **在庫を解放する fail-safe cron が events だけ feature gate されている（pending-reservation-expire は明示的に非 gate）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/api/cron/unpaid-event-registration-expire/route.ts`
 - **領域**: feature フラグ
@@ -459,7 +459,7 @@ resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
 
 **scripts/e2e/ensure-admin-user.ts だけ DATABASE\_URL を TEST\_DATABASE\_URL に固定せず、ローカルでは開発 DB を書き換える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `scripts/e2e/ensure-admin-user.ts`
 - **領域**: scripts 安全装置
@@ -480,7 +480,7 @@ CI では .github/workflows/ci.yml:71 の DATABASE\_URL と :77 の TEST\_DATABA
 
 **管理画面の手動 GCal 同期だけが calendar-sync advisory lock (728349) を取らずに syncFromCalendar を呼ぶ**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts`
 - **領域**: 並行制御
@@ -505,7 +505,7 @@ CI では .github/workflows/ci.yml:71 の DATABASE\_URL と :77 の TEST\_DATABA
 
 **partial unique な slug を findUnique で引いており、ESLint の seed probe gate が findFirst しか見ないため素通りする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `prisma/seed.ts`
 - **領域**: seed
@@ -532,7 +532,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **updatePostSettings が認証前に DB を読み、executeAdminMutationResult の実行順序契約を破っている**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/post/mutations.ts`
 - **領域**: admin Server Action
@@ -547,7 +547,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **ページ編集画面が認可より前に DB 書き込みを行う（VIEWER / 未割当 EDITOR が CMS を変更できる）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/page.tsx`
 - **領域**: admin 読み取り境界
@@ -562,7 +562,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **admin 一覧の perPage に上限がなく、event:manage / terms:update で守っている PII 一括出力ゲートと EXPORT 監査証跡を読み取り側から迂回できる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/lib/pagination.ts`
 - **領域**: admin 読み取り境界
@@ -585,7 +585,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **GCal 由来の時間変更成功時に顧客通知が一通も送られず、旧パスコードだけが無効化される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/reservations/reservation-calendar-inbound.ts`
 - **領域**: 予約（未読分）
@@ -600,7 +600,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **crypto purpose 衝突 gate は手書きリストどうしの比較で、src に新設された purpose を一切見ない（docstring の「機械的に検出する」は成立していない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/crypto-purpose-registry.test.ts`
 - **領域**: gate 本体
@@ -621,7 +621,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **runbook gate が migrate Job の secret version を literal `2` で写経しており、Terraform 側が bump しても落ちない（正しく直すと逆に赤くなる）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/gcp-production-runbook.test.ts`
 - **領域**: gate（本番インフラ）
@@ -644,7 +644,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **build-time と runtime の NEXT\_SERVER\_ACTIONS\_ENCRYPTION\_KEY version 一致を主張する gate が `"\d+"` としか照合しておらず、鍵ローテーションで両者が食い違っても緑**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture-boundaries.test.ts`
 - **領域**: gate（本番インフラ）
@@ -671,7 +671,7 @@ GATE-COVERAGE FRAMING CONFLICTS WITH REPO POLICY. The real content here is "the 
 
 **リハーサルは WHERE 無し DELETE を止めるのに WHERE 無し UPDATE は run に分類し、gate がその分類を固定している**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/migration-preconditions.test.ts`
 - **領域**: gate（DB）
@@ -706,7 +706,7 @@ ALTER TABLE "t" ALTER COLUMN "x" SET NOT NULL;
 
 **interactive $transaction の Promise.all gate が src/shared/lib を走査せず、配置 gate も $transaction を検出できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/prisma-interactive-tx-no-promise-all.test.ts`
 - **領域**: gate（DB）
@@ -731,7 +731,7 @@ ALTER TABLE "t" ALTER COLUMN "x" SET NOT NULL;
 
 **共有スペースへの予約作成 gate が slug の文字列リテラルしか見ず、同ファイルが強制する `spaceFixtures.*` 参照形だと必ず素通りする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/e2e-fixture-space-ownership.test.ts`
 - **領域**: gate（seed / E2E fixture）
@@ -746,7 +746,7 @@ The finding's load-bearing claim — "同ファイルが強制する spaceFixtur
 
 **expect.poll gate の helper 追跡が `function` 宣言限定 — arrow const helper だと gate が対象の欠陥を素通りする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/e2e-poll-predicate-retries.test.ts`
 - **領域**: gate（seed / E2E fixture）
@@ -774,7 +774,7 @@ The finding's load-bearing claim — "同ファイルが強制する spaceFixtur
 
 **feature module 所有分割 gate の marker が同一ファイル内の goto 限定 — helper を別ファイルへ切り出すと所有宣言の強制が外れる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/e2e-feature-module-ownership.test.ts`
 - **領域**: gate（seed / E2E fixture）
@@ -789,7 +789,7 @@ The finding's load-bearing claim — "同ファイルが強制する spaceFixtur
 
 **animate-pulse gate が `cn()` 合成を一切見ない（src の className の主流形が母集合外）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/no-animated-opacity-on-text.test.ts`
 - **領域**: gate（UI / CSP）
@@ -812,7 +812,7 @@ The finding's load-bearing claim — "同ファイルが強制する spaceFixtur
 
 **半透明オーバーレイの AA gate が「位置指定と背景が同じ 1 リテラル」でないと見ない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/admin-overlay-surface-contrast.test.ts`
 - **領域**: gate（UI / CSP）
@@ -837,7 +837,7 @@ The quoted regex at \_\_tests\_\_/unit/architecture/admin-overlay-surface-contra
 
 **script CLI 入口 gate が `import.meta.main` の存在だけを見るので、2 つ目の module-scope exit を素通りさせる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/script-cli-entry-guard.test.ts`
 - **領域**: gate（UI / CSP）
@@ -860,7 +860,7 @@ The quoted regex at \_\_tests\_\_/unit/architecture/admin-overlay-surface-contra
 
 **turnstile.test.ts が secret 未設定時の fail-open だけを固定し、本番 fail-closed 分岐を 1 件も検証していない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/lib/turnstile.test.ts`
 - **領域**: テストの空振り（lib）
@@ -882,7 +882,7 @@ The quoted regex at \_\_tests\_\_/unit/architecture/admin-overlay-surface-contra
 
 **「全セクションタイプにデフォルト設定が存在」テストは getDefaultConfig が常に object を返すため必ず通る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/lib/validations/section.test.ts`
 - **領域**: テストの空振り（lib）
@@ -922,7 +922,7 @@ value-props-schema.test.ts:30-32、section.test.ts:131/179/219/261/617/732/792/9
 
 **async-utils の settleAllWithLogging / withTimeout は本番から 1 件も呼ばれておらず、テストだけが生かしている**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/lib/async-utils.ts`
 - **領域**: テストの空振り（app）
@@ -937,7 +937,7 @@ value-props-schema.test.ts:30-32、section.test.ts:131/179/219/261/617/732/792/9
 
 **data-portable-key を検証すると称するテストの assertion が恒真式（spanCount \>= 0）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `e2e/authenticated/admin/portable-text-editor.spec.ts`
 - **領域**: E2E spec
@@ -970,7 +970,7 @@ serialize-spans.ts:75 の `el.setAttribute(KEY_DATA_ATTR, span._key)` を削除�
 
 **Turnstile widget のマウントを検証すると称するテストの assertion が恒真式（count \>= 0）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `e2e/authenticated/customer/mypage-profile-flow.spec.ts`
 - **領域**: E2E spec
@@ -997,7 +997,7 @@ serialize-spans.ts:75 の `el.setAttribute(KEY_DATA_ATTR, span._key)` を削除�
 
 **terms 再同意の成否判定に使う toHaveURL(/\\/mypage/) が現在地にも一致して常に成立する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `e2e/authenticated/customer/inquiry-reply.spec.ts`
 - **領域**: E2E spec
@@ -1020,7 +1020,7 @@ serialize-spans.ts:75 の `el.setAttribute(KEY_DATA_ATTR, span._key)` を削除�
 
 **「マイページ系ルートに noindex」を主張するテストが /login しか開いていない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `e2e/public/mypage.spec.ts`
 - **領域**: E2E spec
@@ -1035,7 +1035,7 @@ serialize-spans.ts:75 の `el.setAttribute(KEY_DATA_ATTR, span._key)` を削除�
 
 **割引ルール配列が「長時間割引 OFF」で保存するたび \[\] に消される（RefundPolicy では同型の罠を明示的に潰しているのに Discount では潰していない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/DiscountSection.tsx`
 - **領域**: admin 設定フォーム
@@ -1056,7 +1056,7 @@ serialize-spans.ts:75 の `el.setAttribute(KEY_DATA_ATTR, span._key)` を削除�
 
 **保存後に expectedUpdatedAt が再同期されない欠陥は TaxSection 固有ではなく、楽観ロック付き conform フォーム 13 本すべてに存在する（2 回連続保存は必ず CONFLICT、CONFLICT ハンドラの router.refresh() も効かない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/settings/features/_components/FeatureModulesForm.tsx`
 - **領域**: admin 設定フォーム
@@ -1083,7 +1083,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **トラッキング方式を切り替えると、非表示になった側の計測 ID（GA4 測定 ID / GTM コンテナ ID）が黙って NULL 化される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/SeoSection.tsx`
 - **領域**: admin 設定フォーム
@@ -1108,7 +1108,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **ブロックテンプレートが常に空で保存される（node.exportJSON() は children を返さない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/BlockTemplatePlugin.tsx`
 - **領域**: Lexical プラグイン
@@ -1123,7 +1123,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **領収書発行の非 VALIDATION 例外が確認メールとスマートロック解錠パスコードを恒久的に握りつぶす**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/payment/stripe-webhook/fulfill-reservation-payment.ts`
 - **領域**: 決済 webhook テスト
@@ -1153,7 +1153,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **PAID claim が payment\_intent 欠落/展開形を null として書き込み、返金導線ごと消す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/payment/stripe-webhook/fulfill-reservation-payment.ts`
 - **領域**: 決済 webhook テスト
@@ -1178,7 +1178,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **PAID claim が stripePaymentIntentId を null で焼き、以後この申込は返金導線から完全に外れる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/payment/stripe-webhook/fulfill-event-registration-payment.ts`
 - **領域**: webhook ルーティング・Resend
@@ -1193,7 +1193,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **saveEventRegistrationPaymentIntentId に session 一致ガードが無く、docstring が主張する reservation との「同型」が成立していない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/shared/domain/events/payment-queries.ts`
 - **領域**: webhook ルーティング・Resend
@@ -1220,7 +1220,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **Cloud Scheduler 監査は job の state を取得していない — paused な cron job が全て緑で通る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `scripts/audit-gcp-production-iap.ts`
 - **領域**: 本番インフラ gate
@@ -1235,7 +1235,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **Cloud Run の max\_instance\_count が監査対象外 — MAX\_INSTANCES\_HINT との一致は誰も検査していない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `scripts/gcp-production-audit-model.ts`
 - **領域**: 本番インフラ gate
@@ -1262,7 +1262,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **Cloud Run 監査は spec.template（願望）だけを読み、実際にトラフィックを受けている revision を見ていない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `scripts/gcp-production-audit-model.ts`
 - **領域**: 本番インフラ gate
@@ -1285,7 +1285,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **IAP アクセス検査が resource-level policy しか読まず、project-level の roles/iap.httpsResourceAccessor を永久に見逃す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `scripts/audit-gcp-production-iap.ts`
 - **領域**: 本番 IAP 監査スクリプト
@@ -1300,7 +1300,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **charge.refunded の手組み fixture が、pin した Stripe API では送られてこない `refunds.data` を持っている（Refund 行書込経路が本番で丸ごと死ぬ）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/api/stripe-webhook.test.ts`
 - **領域**: 決済テストの共有 mock
@@ -1321,7 +1321,7 @@ E2E の引用も誤用。feature-module-off-gate.spec.ts の retry は各 attemp
 
 **email-mock-hygiene gate の allowlist 3 件がすべて走査範囲外で到達不能、かつ走査外に実際の違反ファイルがある**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/unit/architecture/email-mock-hygiene.test.ts`
 - **領域**: 決済テストの共有 mock
@@ -1336,7 +1336,7 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 
 **共有 email mock が 22 個の export に同一 mock インスタンスを割り当てている（呼出回数が全 export で合算される）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/support/email-lib-dispatch-mock.ts`
 - **領域**: 決済テストの共有 mock
@@ -1361,7 +1361,7 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 
 **\_\_tests\_\_/mocks/ が errors-server 以外どこからも import されておらず、`$transaction` がコールバックを実行しない prisma stub が残っている**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `__tests__/mocks/prisma.ts`
 - **領域**: 決済テストの共有 mock
@@ -1376,7 +1376,7 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 
 **設定フォームの expectedUpdatedAt が保存後に更新されず、2 回目以降の保存が必ず偽 CONFLICT になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/TaxSection.tsx:120`
 - **領域**: 設定の楽観ロック
@@ -1391,7 +1391,7 @@ The two factual sub-claims check out, but the failure scenario built on them doe
 
 **F-94 は R-03 の再掲である。管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げないのは、WAITLISTED_OFFERED 専用の意図的分離であり、独立欠陥ではない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [指摘全文](2026-08-12-codebase-audit-findings.md#f-94) ／ [R-03](#r-03)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [指摘全文](2026-08-12-codebase-audit-findings.md#f-94) ／ [R-03](#r-03)</sub>
 
 - **箇所**: `src/app/(admin)/admin/(dashboard)/_shared/actions/event-waitlist.ts`
 - **領域**: イベント（決済・繰上げ）

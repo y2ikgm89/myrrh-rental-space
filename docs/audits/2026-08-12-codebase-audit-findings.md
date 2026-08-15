@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 指摘全文（F-01〜F-133）
 
-> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、未着手の一覧と計画は [2026-08-13-codebase-audit-remediation.md](../superpowers/plans/2026-08-13-codebase-audit-remediation.md)、棄却された 62 件は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。
+> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**確定 132 件 / 棄却 62 件。どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、棄却は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。未着手の台帳は無い。
 > 本文は 2026-08-12 の監査報告からの**全項目転記**（起きること / 直し方 / 該当箇所 / 到達経路 / 既存の検査 / 反証官による訂正）。
 > **行番号は監査時点のもので、修正済みのファイルではずれている。**
 > 以前はここに状態欄を持っていたが、計画書の台帳との二重管理になって実際に食い違ったので落とした（経緯は progress 側の冒頭）。
@@ -11,7 +11,7 @@
 
 **Terraform のバイナリ plan を public リポジトリの Actions artifact に上げており、本番共有シークレット CLOUDFLARE\_ORIGIN\_HEADER\_SECRET が誰でも取得できる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                               |
 | ------ | --------------------------------------------- |
@@ -58,7 +58,7 @@ none。同 workflow の "Verify plan does not leak secret values"（L150-164）�
 
 **EventTicket.unitSize（1チケット=N名）を価格計算も定員計算も一切参照しておらず、4名枠チケットが人数分だけ多重課金される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                             |
 | ------ | --------------------------- |
@@ -99,7 +99,7 @@ none。DB 側は `prisma/baseline/invariants.sql:60` の `event_tickets_unit_siz
 
 **Server Action の既定 1MB body 上限が、5MB/50MB 前提のメディアアップロードを無言で 413 にする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                 |
 | ------ | --------------------------------------------------------------- |
@@ -170,7 +170,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/components/media-picker/tabs/UploadTa
 
 **繰返し予約は全 instance に初回分の料金をコピーするため、祝日/曜日別レートプランがある日の請求額が誤る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                              |
 | ------ | ---------------------------------------------------------------------------- |
@@ -214,7 +214,7 @@ none。\_\_tests\_\_/unit/domain/reservations/series-commands.test.ts は templa
 
 **formatZodFieldErrors が conform と違う path 表記を作り、配列アイテムのエラーが表示されないまま保存が無反応になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------ |
@@ -271,7 +271,7 @@ formatZodFieldErrors keys: buttons.0.label, buttons.0.url
 
 **当日参加(walk-in)・管理者代行の有料チケット申込を未決済期限切れ cron が 60 分後に自動キャンセルする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                |
 | ------ | ---------------------------------------------- |
@@ -325,7 +325,7 @@ src/app/(admin)/admin/(dashboard)/events/\[id\]/page.tsx:120-125 (tickets を is
 
 **konbini / 銀行振込を選ぶと有料イベント申込は必ず自動キャンセル→支払後に自動返金される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                |
 | ------ | ---------------------------------------------- |
@@ -393,7 +393,7 @@ in: [PaymentStatus.UNPAID, PaymentStatus.PENDING, PaymentStatus.FAILED],
 
 **メディア削除の参照検査が JSON 列に効かず、セクションで使用中の画像を R2 ごと消せる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                            |
 | ------ | ------------------------------------------ |
@@ -461,7 +461,7 @@ where: { config: { string_contains: url } },
 
 **GCal 逆流の時間変更が manualAdjustmentAmount を残したまま totalPrice を書き換え、CHECK 制約違反で双方向同期が永久に詰まる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                         |
 | ------ | ----------------------------------------------------------------------- |
@@ -501,7 +501,7 @@ src/app/(admin)/admin/(dashboard)/reservations/\_components/ReservationEditForm.
 
 **Stripe Checkout の idempotencyKey が予約 ID 固定のため、決済失敗後 24 時間は再決済セッションを作れない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                          |
 | ------ | -------------------------------------------------------- |
@@ -541,7 +541,7 @@ none（むしろ固定キーを固定化している）。\_\_tests\_\_/unit/dom
 
 **Google Calendar 上で予約イベントを削除しても予約がキャンセルされず、syncToken だけ進んで永久に取りこぼす**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                             |
 | ------ | ------------------------------------------- |
@@ -609,7 +609,7 @@ none。\_\_tests\_\_/unit/lib/calendar-sync/sync-token-save.test.ts は fetchCal
 
 **cross-surface import gate が `from "…"` 形しか見ず、動的 import と `@/app/(admin\|public)/…` 経路を素通しする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                    |
 | ------ | ------------------------------------------------------------------ |
@@ -649,7 +649,7 @@ ESLint の `no-restricted-imports` は `reactCompilerRestrictedImports` / prisma
 
 **inquiry\_status\_history の append-only gate が走査範囲外（scripts/e2e）を見ておらず、走査規模の下限も持たない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                             |
 | ------ | --------------------------------------------------------------------------- |
@@ -695,7 +695,7 @@ readFileSync(join(process.cwd(), rel), { encoding: "utf8" }),
 
 **use-server gate は「先頭に必ず directive がある」前提で母集合を作るため、docstring を先頭に置いた "use server" ファイルが丸ごと検査対象から消える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                             |
 | ------ | ----------------------------------------------------------- |
@@ -735,7 +735,7 @@ const head = source.trimStart().slice(0, 40);
 
 **sanitize-css.test.ts が「無効な CSS プロパティ名」を固定していて、透過ヘッダー時の main の負マージンが本番で効いていない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                         |
 | ------ | ------------------------------------------------------- |
@@ -775,7 +775,7 @@ expect(rule).toContain("marginTop:");
 
 **公開ページ E2E 4 本が全 CI ジョブで 1 テストも実行されない（surface 条件と実行 env の食い違い）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                       |
 | ------ | ------------------------------------- |
@@ -824,7 +824,7 @@ none。\_\_tests\_\_/unit/architecture/ 全 175 gate を `test.skip|describe.ski
 
 **seed の partial unique probe 検査が findFirst 限定 — 元の欠陥そのものである findUnique 形が lint を素通りする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                         |
 | ------ | ------------------------------------------------------- |
@@ -874,7 +874,7 @@ MINOR: the finding cites generated/prisma/models/FaqCategory.ts:276-291 for the 
 
 **/access とカスタムページは Cache-Tag を 1 つも出さないため、メンテナンスモード等の site-wide 無効化が CDN edge に届かない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                      |
 | ------ | -------------------- |
@@ -919,7 +919,7 @@ none。\_\_tests\_\_/unit/architecture/next-config-cache-tag-emission.test.ts �
 
 **seedProduction の再実行が SEO 設定と送信元メール設定を管理画面編集ごと上書きする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                      |
 | ------ | -------------------- |
@@ -965,7 +965,7 @@ prisma/seed.ts:6342 main() → prisma/seed.ts:6300-6310 evaluateSeedSafety({argv
 
 **本番監査の Secret Manager 検査母集合が Cloud Run runtime map 由来で、direct DB 資格情報 `DIRECT_URL` が version 検査・per-secret IAM 検査から丸ごと外れている**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                |
 | ------ | ---------------------------------------------- |
@@ -1005,7 +1005,7 @@ Facts check out; the severity framing does not. (1) This is a detective-control 
 
 **Secret Manager accessor の期待値が三者で矛盾し、audit に従うと runtime SA の唯一の grant を剥がす手順に誘導される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                            |
 | ------ | ------------------------------------------ |
@@ -1048,7 +1048,7 @@ scripts/audit-gcp-production-iap.ts:830（main → REQUIRED\_CLOUD\_RUN\_SECRET\
 
 **build service account の project 権限検査は 2 role の denylist — roles/editor や roles/owner を足しても緑**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                             |
 | ------ | ------------------------------------------- |
@@ -1088,7 +1088,7 @@ test:439-469 の落ちる見本は iap.admin / run.admin という『実装が�
 
 **`bun run setup` の migrate deploy が破壊的 DB ガードを通らず、.env.local の本番 DIRECT\_URL に当たる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                              |
 | ------ | ---------------------------- |
@@ -1140,7 +1140,7 @@ package.json:24 `"setup": "bun scripts/setup-local.ts"` → scripts/setup-local.
 
 **デバイス編集フォームから isActive=false にしてもパスコードが失効しない（トグル経路だけが失効する）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                               |
 | ------ | ----------------------------------------------------------------------------- |
@@ -1202,7 +1202,7 @@ isActive: data.isActive,
 
 **スペースの Pad 付け替えで、旧デバイスのパスコードが失効されないまま新デバイス分も発行されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                    |
 | ------ | ---------------------------------------------------------------------------------- |
@@ -1242,7 +1242,7 @@ src/app/(admin)/admin/(dashboard)/spaces/\_components/space-edit-form/SpaceSmart
 
 **ImageNode は DecoratorNode 既定の isInline()=true のまま block の \<figure\> を exportDOM する（段落内挿入で保存 HTML の段落構造が壊れる）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                              |
 | ------ | -------------------------------------------------------------------------------------------- |
@@ -1282,7 +1282,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/components/editor/lexical/plugins/Ima
 
 **TimelineContainerNode の flat state key "direction" が ElementNode の direction と衝突し、横→縦に戻せない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                 |
 | ------ | ----------------------------------------------------------------------------------------------- |
@@ -1341,7 +1341,7 @@ export const timelineDirectionState = createState("direction", {
 
 **⋮⋮ メニューの「複製」が中身のない空ブロックを作る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                            |
 | ------ | ---------------------------------------------------------------------------------------------------------- |
@@ -1381,7 +1381,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/components/editor/lexical/LexicalEdit
 
 **設備がちょうど1件のスペースは保存できず、エラーも表示されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                         |
 | ------ | ----------------------------------------------------------------------- |
@@ -1432,7 +1432,7 @@ src/app/(admin)/admin/(dashboard)/spaces/\_components/SpaceEditForm.tsx:380-387�
 
 **イベントの一括削除に確認ダイアログが無く、管理画面に復元経路も無い**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                 |
 | ------ | ------------------------------------------------------------------------------- |
@@ -1472,7 +1472,7 @@ Severity left at medium, but only the missing-confirmation half is actionable; t
 
 **参加申込の一括キャンセル／一括出席が、ページ遷移で見えなくなった過去の選択にも及ぶ**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                            |
 | ------ | ------------------------------------------------------------------------------------------ |
@@ -1519,7 +1519,7 @@ severity は high → medium に補正する。理由は緩和材料が 2 つあ
 
 **FAQ 質問の D&D 並び替えが「order は 0..N-1 で連続」を前提にしており、削除履歴のあるカテゴリの 2 ページ目以降で必ず失敗する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                   |
 | ------ | --------------------------------------------------------------------------------- |
@@ -1564,7 +1564,7 @@ order: startIndex + index,
 
 **問い合わせ添付は Next の既定 1MB body 上限に当たり、UI が約束する 5MB/10MB のアップロードが 413 で無言に失敗する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                           |
 | ------ | ----------------------------------------------------------------------------------------- |
@@ -1612,7 +1612,7 @@ next.config.ts に experimental.serverActions は無い（next.config.ts:169 の
 
 **配列アイテム追加時に select フィールドへ "" を入れるため、ボタンを1件足すとセクションが保存不能（無反応）になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                          |
 | ------ | -------------------------------------------------------------------------------------------------------- |
@@ -1660,7 +1660,7 @@ src/app/(admin)/admin/(dashboard)/pages/\[slug\]/edit/\_components/SectionEditPa
 
 **AutoGroupField を折りたたんだまま保存すると group 内の値が黙って消える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                          |
 | ------ | -------------------------------------------------------------------------------------------------------- |
@@ -1731,7 +1731,7 @@ src/app/(admin)/admin/(dashboard)/pages/\[slug\]/edit/\_components/SectionEditPa
 
 **繰返し予約の「終了日」指定が UTC 深夜で切られ、終了日当日の予約が作成されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                |
 | ------ | ------------------------------------------------------------------------------ |
@@ -1773,7 +1773,7 @@ none。\_\_tests\_\_/unit/app/admin/reservations/rrule-utils.test.ts:39 は `FRE
 
 **Instagram の VIDEO 投稿は動画 URL を next/image に渡すため公開トップのタイルが必ず壊れる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -1813,7 +1813,7 @@ src/app/api/cron/instagram-sync/route.ts:61 `fetchInstagramFeed(token, 12)` → 
 
 **メンテナンス中でもマイページ経由の予約キャンセル/変更は通り、Stripe 返金とメール送信が実行される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                              |
 | ------ | ------------------------------------------------------------ |
@@ -1859,7 +1859,7 @@ none。`grep -rn "checkPublicSiteWritable|getPublicMaintenanceBlockMutation|asse
 
 **クーポンコードの 1 打鍵ごとに料金プレビュー Server Action が飛び、公開クエリのレート上限（30回/分/IP）を食い潰して料金表示と時間枠取得が壊れる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                     |
 | ------ | ------------------------------------------------------------------- |
@@ -1901,7 +1901,7 @@ none。`fetchReservationPricingPreview` の呼び出し回数を見るテスト�
 
 **配信停止リンクの GET が副作用を実行し、メールの link scanner のプリフェッチだけで顧客が勝手に opt-out される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                 |
 | ------ | --------------------------------------------------------------- |
@@ -1944,7 +1944,7 @@ src/shared/lib/email/customer-emails.ts:51 createMarketingUnsubscribeArtifacts(c
 
 **proxy の matcher に prefetch 除外があり、`purpose: prefetch` ヘッダ 1 本で全 API の IP レート制限が無効化される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                 |
 | ------ | ------------------------------- |
@@ -2004,7 +2004,7 @@ none。proxy 系テスト（\_\_tests\_\_/unit/proxy-infra-rate-limit.test.ts:42
 
 **監査ログ CSV エクスポートが 10,000 件で無言に打ち切られ、しかも古い順なので直近の証跡が欠落する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                              |
 | ------ | -------------------------------------------- |
@@ -2049,7 +2049,7 @@ none。\_\_tests\_\_/unit/api/admin-export-audit-logs.test.ts は 403 と「no-s
 
 **キャンセル時の自動返金額を総額から計算し、既存の部分返金を差し引かないため返金が丸ごとスキップされる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                   |
 | ------ | ----------------------------------------------------------------- |
@@ -2098,7 +2098,7 @@ refund policy のテストは calculateRefundAmount / calculateRefundRate 単体
 
 **ゲスト履歴統合で会員自身のメールが恒久 suppression され、管理画面から復旧できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                  |
 | ------ | ---------------------------------------------------------------- |
@@ -2148,7 +2148,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/actions/customer.ts:822 findDuplicate
 
 **イベント一斉配信が marketingOptIn を無視するため、One-Click 配信停止を押しても次の配信が届く**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                 |
 | ------ | ----------------------------------------------- |
@@ -2195,7 +2195,7 @@ none。marketingOptIn を参照するのは src/shared/domain/customers/queries.
 
 **Google Calendar 側でイベントを消すと、公開済み・申込ありのイベントまで無条件に CANCELLED にされる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                  |
 | ------ | ---------------------------------------------------------------- |
@@ -2248,7 +2248,7 @@ none（既存テストはむしろ現状の無ガード挙動を固定してい�
 
 **EventTicket.capacity の下限検証だけがイベント全体集計で、実際の定員enforcementはスロット単位**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                            |
 | ------ | ---------------------------------------------------------- |
@@ -2288,7 +2288,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/actions/event.ts:154 updateEventActio
 
 **イベント checkout の Stripe idempotency key が申込 ID 固定で、24 時間以内の再決済が必ず失敗する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                    |
 | ------ | -------------------------------------------------- |
@@ -2328,7 +2328,7 @@ src/app/(public)/events/registrations/checkout/route.ts:57（またはログイ�
 
 **非同期返金の確定処理が AUTO\_ON\_CANCEL を「常に全額」と決め打ちし、ポリシー按分の部分返金を REFUNDED に確定させる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                   |
 | ------ | ------------------------------------------------- |
@@ -2393,7 +2393,7 @@ Net: a genuine financial-correctness defect with a verified end-to-end path and 
 
 **管理画面の返金残額が failed / canceled な Refund 行も合算し、返金再試行の導線を塞ぐ**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -2433,7 +2433,7 @@ src/app/(admin)/admin/(dashboard)/events/\[id\]/page.tsx:58 EventDetailPage → 
 
 **公開 FAQ の閲覧・投票が updatedAt を更新するため、鮮度チェック cron と管理画面の「未更新」指標が恒久的に 0 になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                  |
 | ------ | ------------------------------------------------ |
@@ -2473,7 +2473,7 @@ src/app/(public)/faq (公開ページ) → src/shared/domain/sections/queries.ts
 
 **匿名化が Inquiry.subject（自由記入 200 文字）を消さず、GDPR 相当の削除後も件名の PII が残り続ける**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -2513,7 +2513,7 @@ src/app/(admin)/admin/(dashboard)/inquiries/\[id\]/\_components/AnonymizeInquiry
 
 **システムページから削除したセクションが、編集画面を開くたび／管理サービス起動のたびに初期デモ文言つきで復活する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -2555,7 +2555,7 @@ none。\_\_tests\_\_/unit/domain/pages/system-pages-commands.test.ts は section
 
 **charge.refunded 経路の Refund 行が Stripe の実 status を記録せず既定値 "succeeded" で焼かれ、未確定・失敗返金が「返金済み」として確定する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                |
 | ------ | -------------------------------------------------------------- |
@@ -2605,7 +2605,7 @@ none。確認した対象: (a) \_\_tests\_\_/unit/architecture/refund-append-onl
 
 **charge.refunded が未確定 (pending) の返金でも paymentStatus を確定させ、返金失敗後も戻らない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                |
 | ------ | -------------------------------------------------------------- |
@@ -2671,7 +2671,7 @@ high → medium に補正。理由と事実誤認の訂正:
 
 **非ゼロ小数点通貨の部分返金で Refund.amount に小数が渡り webhook が 500 ループに入る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                |
 | ------ | -------------------------------------------------------------- |
@@ -2731,7 +2731,7 @@ stripe-webhook.test.ts:1156「charge.refunded (USD) → charge.currency が appl
 
 **refund.updated の順序前後で確定済み Refund.status が succeeded から pending へ巻き戻り、以後の返金確定判定が過小になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                        |
 | ------ | ---------------------------------------------------------------------- |
@@ -2784,7 +2784,7 @@ none。確認した対象: \_\_tests\_\_/unit/domain/payment/stripe-webhook/refu
 
 **管理者の予約編集が、消費済みクーポンを now 基準で再検証するため、クーポンが期限切れ/上限到達した瞬間にその予約が永久に編集不能になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -2824,7 +2824,7 @@ src/app/(admin)/admin/(dashboard)/reservations/\[id\]/edit/page.tsx:40 getReserv
 
 **updateAdminReservationCommand に終端ステータスのガードが無く、CANCELLED 予約の編集でクーポンの二重解放・解放されない再 claim が起きる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -2877,7 +2877,7 @@ where: { id: oldCouponId, usageCount: { gt: 0 } },
 
 **admin 予約編集の updateMany に status 述語が無く、cancel 経路は version を進めないためキャンセル済み予約が復活する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -2929,7 +2929,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/actions/reservation/admin.ts:279 upda
 
 **series instance の GCal update/delete 失敗が 3 つの retry pool すべてから漏れ、恒久的に取り残される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -2973,7 +2973,7 @@ GCAL-RETRY-04 のコメント（calendar-sync.ts:116-121）は series-child を 
 
 **paymentStatus=FAILED の予約は編集画面が開けるのに保存が必ず失敗し、誤ったエラー文言で永久に変更できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                           |
 | ------ | --------------------------------------------------------- |
@@ -3019,7 +3019,7 @@ none。\_\_tests\_\_/unit/domain/reservations/edit-eligibility.test.ts:49 が「
 
 **テンプレート必須セクションを複製できてしまい、複製後は削除も非表示もできず公開ページに二重表示が固定される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                              |
 | ------ | -------------------------------------------- |
@@ -3061,7 +3061,7 @@ none。\_\_tests\_\_/unit/domain/sections/crud-commands.test.ts の duplicatePag
 
 **公開ページの全セクションを非表示にすると、コード同梱の初期デモセクションが公開面に復帰する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                             |
 | ------ | ------------------------------------------- |
@@ -3107,7 +3107,7 @@ none。\_\_tests\_\_ 配下に getPageSectionsWithFallback / getDefaultSections 
 
 **feature toggle が公開 Cloud Run サービスに最大24時間届かない（Data Cache はサービス跨ぎで無効化されない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                     |
 | ------ | --------------------------------------------------- |
@@ -3147,7 +3147,7 @@ admin service: src/app/(admin)/admin/(dashboard)/settings/features/page.tsx → 
 
 **サイドバーの「最近の投稿／人気記事」が予約公開（未来日時）記事を公開面に露出させる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                           |
 | ------ | ----------------------------------------- |
@@ -3206,7 +3206,7 @@ deletedAt: null,
 
 **issuePasscodesAfterSpaceBound の `none: {}` が失効済み行も数え、解除→再割当した予約にパスコードが二度と発行されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                               |
 | ------ | ------------------------------------------------------------- |
@@ -3254,7 +3254,7 @@ src/app/(admin)/admin/(dashboard)/spaces/\_components/space-edit-form/SpaceSmart
 
 **スペースの拠点変更が smartLockDeviceId を無言で外すだけで、発行済みパスコードを失効させない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                            |
 | ------ | ------------------------------------------ |
@@ -3294,7 +3294,7 @@ src/app/(admin)/admin/(dashboard)/spaces/\_components/space-edit-form/SpaceEditB
 
 **必須規約の同意ゲートが DB 一時障害で fail-open し、その空結果が 'use cache' に最大1時間焼き付く**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                          |
 | ------ | ---------------------------------------- |
@@ -3358,7 +3358,7 @@ src/app/(public)/\_components/ReservationFormSection.tsx:81（描画側）また
 
 **welcome メールの唯一の CTA が /mypage/mypage を指し 404 になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                    |
 | ------ | ---------------------------------- |
@@ -3398,7 +3398,7 @@ src/app/(public)/mypage/layout.tsx:73 (MypageAuthGate、新規会員の初回 /m
 
 **bot 判定が「クライアント時計」と「サーバー時計」を引き算するため、端末の時計が進んでいる利用者は全公開フォームを送信できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                       |
 | ------ | ------------------------------------- |
@@ -3443,7 +3443,7 @@ none（本番挙動としては未検査）。`__tests__/unit/lib/action-helpers
 
 **起動時の Cloudflare canary purge が最大 10 分 × 3 回スリープしうるため、Cloud Run の startup probe 予算 90 秒を超えてコンテナが起動不能になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                     |
 | ------ | ----------------------------------- |
@@ -3486,7 +3486,7 @@ none。\_\_tests\_\_/unit/lib/cache/health.test.ts は 3 本（E2E ランタイ�
 
 **イベント slug が cancel/waitlist/registrations で始まると詳細ページの Cache-Tag が丸ごと消える（lookahead が前方一致）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                  |
 | ------ | ------------------------------------------------ |
@@ -3542,7 +3542,7 @@ none。next-config-cache-tag-emission.test.ts:75 は EVENT\_PUBLIC\_DETAIL\_HEAD
 
 **予約メールの「料金」が税抜合計。実際の請求・領収書・振込額は税込**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                  |
 | ------ | ------------------------------------------------ |
@@ -3582,7 +3582,7 @@ high は誇張。指摘の中核は正しいが、支柱の事実認識に 3 点
 
 **記事本文の contentWidth が Tailwind に存在しないクラス名として出力され、公開ページで常に無効になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                              |
 | ------ | -------------------------------------------- |
@@ -3634,7 +3634,7 @@ src/app/(public)/blog/\[slug\]/page.tsx → src/app/(public)/blog/\_components/p
 
 **module-reachability の import 抽出正規表現が JSDoc 例示コードを実 import として辺に加える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                           |
 | ------ | ----------------------------------------- |
@@ -3682,7 +3682,7 @@ module-reachability.test.ts:76-92 の sanity テストは「解決できない�
 
 **数値列の母集合が BigInt を落とし、AuditLog.sequence が実際に無制約のまま緑**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                  |
 | ------ | ------------------------------------------------ |
@@ -3732,7 +3732,7 @@ medium → low へ補正。事実は正しいが影響の見積もりが過大�
 
 **webhook 境界 mock の `latestRefund` 型が `metadata` を落としており、返金 attribution 復元に assertion が 1 つも無い**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                 |
 | ------ | ----------------------------------------------- |
@@ -3772,7 +3772,7 @@ latestRefund: { id: string; amount: number } | null;
 
 **required check の path filter gate が block 形式の `paths:` しか検出せず、事故の原型である flow 形式 `paths: [terraform/**]` を見逃す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -3812,7 +3812,7 @@ Two factual corrections to the report. (1) The chosen example is the weaker of t
 
 **import{} block 必須判定の母集合が `google_*` 決め打ち配列で、Cloudflare resource は永久に検査されない（既に 1 件が import 無しで存在）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -3852,7 +3852,7 @@ medium → low に補正。理由: (a) 発火には tfstate 消失という稀�
 
 **page-header 折り返し gate の母集合が class の並び順に依存する（並べ替えた新ページは永久に無検査）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                         |
 | ------ | ----------------------------------------------------------------------- |
@@ -3904,7 +3904,7 @@ medium → low。機構は正しいが、指摘は影響と現状カバレッジ
 
 **CSP prelude gate の「数え漏らしていない」判定が、先頭が `next build` の script を数えない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                 |
 | ------ | --------------------------------------------------------------- |
@@ -3944,7 +3944,7 @@ high は過大。実害の申告「prelude gate を一度も通さないビル�
 
 **e2e-fixture-singleton-writes gate は scripts/e2e/ しか見ず、receiver も `prisma.` 決め打ち — e2e/helpers に現存する違反を素通りさせている**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                       |
 | ------ | --------------------------------------------------------------------- |
@@ -3984,7 +3984,7 @@ return readdirSync(join(root, "scripts/e2e"));
 
 **「実行対象ゼロの dead project を禁じる」と謳う gate が、実際にはファイル一致しか見ておらず 0 テスト実行を見逃す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                            |
 | ------ | -------------------------------------------------------------------------- |
@@ -4032,7 +4032,7 @@ none。gate 自身（:90-95）とファイル存在チェック以外に、proje
 
 **prisma-delegate-arg-types は引数のどこかに Prisma. があれば通すので、手書き where が Prisma.Select と同居すると素通りする**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                     |
 | ------ | ------------------------------------------------------------------- |
@@ -4081,7 +4081,7 @@ return params.some((param) => {
 
 **navigation reconcile の列取りこぼし検査が declaredContent ブロックの平文一致 — コメントに列名があるだけで満たされる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                    |
 | ------ | ------------------------------------------------------------------ |
@@ -4121,7 +4121,7 @@ line 66-84 のこのテスト自体が唯一の検査。line 77 の `expect(colu
 
 **cron\_oidc\_failure メトリックが /api/cron/\* の 500 を無条件に数えるため、OIDC と無関係な cron 障害で「cron OIDC failure」が発火し、runbook が当直を誤誘導する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                          |
 | ------ | -------------------------------------------------------- |
@@ -4171,7 +4171,7 @@ Severity medium -\> low. There is no product-correctness, data, or user-facing i
 
 **/events とイベント詳細の Cache-Tag に space-v1 / location-v1 が無く、会場住所・スペース名の変更が edge に反映されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                     |
 | ------ | ------------------- |
@@ -4237,7 +4237,7 @@ none。next-config-cache-tag-emission.test.ts は「各 collection source に SI
 
 **seedSpaceCategories が本番再実行でスペースカテゴリーの説明・アイコン・色を宣言値へ戻す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                      |
 | ------ | -------------------- |
@@ -4292,7 +4292,7 @@ seedLocations の元欠陥は住所・電話・座標・料金レンジを架空
 
 **seedNavigation の (type, order) 一致判定が、管理画面の削除・並び替え後に別項目を指し、本番でナビゲーションが重複する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                       |
 | ------ | --------------------- |
@@ -4338,7 +4338,7 @@ where: { type_order: { type: group.type, order: item.order } },
 
 **Bun.spawnSync().exitCode is null on signal-kill, so `process.exit(run())` turns a killed `prisma migrate deploy` into exit 0**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                 |
 | ------ | ------------------------------- |
@@ -4378,7 +4378,7 @@ Real defect, but the report inflates it to medium on three inaccurate supports. 
 
 **command palette の検索が EDITOR の userPageAssignment 絞り込みを迂回し、全ページのタイトル/slug を返す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                  |
 | ------ | -------------------------------------------------------------------------------- |
@@ -4424,7 +4424,7 @@ medium は過大。影響は「認証済み内部スタッフ (EDITOR=編集者�
 
 **顧客一括メールの rate limit が認証前かつ全体で 1 バケットのため、低権限アカウントが機能を 1 時間停止できる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                          |
 | ------ | ------------------------------------------------------------------------ |
@@ -4474,7 +4474,7 @@ medium → low に補正。指摘の機序（認証前消費・グローバル 1
 
 **管理画面の手動「期限切れ」が次の WAITLISTED を繰り上げず、待機列が永久に stall する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                           |
 | ------ | ------------------------------------------------------------------------- |
@@ -4514,7 +4514,7 @@ high → low に補正。失敗シナリオの被害記述に 3 つの事実誤�
 
 **Google Calendar 設定保存が NOTIFICATION\_SETTINGS を無効化せず、.ics 添付／カレンダー追加リンクの OFF が数日反映されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                     |
 | ------ | ----------------------------------------------------------------------------------- |
@@ -4554,7 +4554,7 @@ src/app/(admin)/admin/(dashboard)/settings/\_components/sections/GoogleCalendarS
 
 **FigmaNode のラベルも公開ページで消える（data-figma-label を描画する実装が無い）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                             |
 | ------ | ------------------------------------------------------------------------------------------- |
@@ -4600,7 +4600,7 @@ medium は過大。理由: (a) データ喪失ではない。ラベルは conten
 
 **MapEmbedNode のラベルが公開ページに一切描画されない（data-map-label は書き込み専用で CSS も hydrate も無い）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                  |
 | ------ | ------------------------------------------------------------------------------------------------ |
@@ -4648,7 +4648,7 @@ data-map / data-map-label を検証するテストも CSS も存在しない（�
 
 **TabTitleNode の exportDOM が type 無しの \<button\> を出し、sanitize allowlist も type を通さないため再同意フォーム内で暗黙の submit ボタンになる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                 |
 | ------ | ----------------------------------------------------------------------------------------------- |
@@ -4688,7 +4688,7 @@ SanitizedHtml.tsx の hydrateLexicalTabs を検証するテストは見当たら
 
 **「全置換」が自己重複する検索語で余分な置換を行い本文を壊す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                         |
 | ------ | ------------------------------------------------------------------------------------------------------- |
@@ -4728,7 +4728,7 @@ findMatches / handleIconReplaceAll はコンポーネント内クロージャで
 
 **Ctrl+Shift+数字 の見出し / リスト ショートカットが一切効かない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                               |
 | ------ | ------------------------------------------------------------------------------------------------------------- |
@@ -4776,7 +4776,7 @@ e2e/authenticated/admin 配下に editor keyboard shortcut の spec は無い（
 
 **空段落への URL 単独ペースト（OGP カード / YouTube 等の自動埋め込み）が発火しない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                                                     |
 | ------ | --------------------------------------------------------------------------------------------------- |
@@ -4822,7 +4822,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/components/editor/lexical/LexicalEdit
 
 **権限拒否の監査ログが after() に登録されない裸の detached promise で、notFound() 直前に投げっぱなしにされる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                    |
 | ------ | ------------------------------------------------------------------ |
@@ -4879,7 +4879,7 @@ admin-permission-denial-mechanism.test.ts は denyAdminAccess() が notFound() �
 
 **サイトヘッダーの Reserve CTA が feature gate を持たず、reservation OFF で全公開ページから 404 へ誘導する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                   |
 | ------ | ----------------------------------------------------------------- |
@@ -4927,7 +4927,7 @@ href="/reservation"
 
 **公開面の税込表示が Space.taxRateType を無視して常に標準税率で計算するため、予約確認画面の金額と実際の請求額が食い違う**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                         |
 | ------ | ------------------------------------------------------- |
@@ -4989,7 +4989,7 @@ src/shared/domain/spaces/resolve-space-card-embeds.ts:28 の JSDoc は「既存�
 
 **post-list / news-list の archive レイアウトを /blog・/news 以外のページに置くと、検索とページ送りが恒久的に効かない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                              |
 | ------ | -------------------------------------------- |
@@ -5029,7 +5029,7 @@ none。space-list の catalog だけは section-renderer.tsx:161 catalogBasePath
 
 **繰上げ当選の残り 30 分未満クリックが「システムエラー」表示＋CRITICAL アラートになる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                         |
 | ------ | ------------------------------------------------------- |
@@ -5077,7 +5077,7 @@ src/app/(public)/events/waitlist/checkout/route.ts:67 GET（メール内「お�
 
 **顧客履歴の統合が完了しても成功メッセージが表示されない（`mergeSuccess` を描画する側が存在しない）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                 |
 | ------ | --------------------------------------------------------------- |
@@ -5121,7 +5121,7 @@ none。`mergeSuccess` を src / \_\_tests\_\_ / e2e 全体で grep したヒッ�
 
 **初回メール登録の「確認メールを送信しました」が画面に出ず、利用者は認証リンクを踏む必要に気付けない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                          |
 | ------ | -------------------------------------------------------- |
@@ -5164,7 +5164,7 @@ none。`grep -rn successMessage "src/app/(public)"` の消費側は request-merg
 
 **/mypage/merge/confirm がクエリ `error` の中身を検証せずページ自身の警告文として描画する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                      |
 | ------ | ---------------------------------------------------- |
@@ -5206,7 +5206,7 @@ none。`actionError` / この経路を検査する gate・テストは `__tests_
 
 **初回メールアドレス登録で「確認メールを送信しました」が捨てられ、「プロフィールを更新しました」と表示されるため利用者が登録を完了できない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                     |
 | ------ | ------------------------------------------------------------------- |
@@ -5246,7 +5246,7 @@ none。`successMessage` を読んでいるのは admin 側の `SeriesInfoSection
 
 **メールの .ics リンクを踏んだ直後 30 分間、ログイン済み顧客はマイページから別予約の .ics を取得できず 401 になる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                      |
 | ------ | ---------------------------------------------------- |
@@ -5288,7 +5288,7 @@ none。\_\_tests\_\_/integration/api/calendar-reservation.test.ts は「無効�
 
 **退会（匿名化）済み顧客の予約でリマインダ cron が placeholder アドレス宛に送信し、確実に hard bounce する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                     |
 | ------ | --------------------------------------------------- |
@@ -5333,7 +5333,7 @@ none。src/shared/domain/reservations/、src/shared/lib/email/、src/app/api/cro
 
 **認証さえあれば他人の serialNo の DL バケットを焼き切れる（所有者突合より前に消費）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                    |
 | ------ | -------------------------------------------------- |
@@ -5373,7 +5373,7 @@ const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
 
 **Resend webhook が data.to の全宛先を一括で suppression する（バウンスしていないアドレスまで永久抑止）**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                            |
 | ------ | ------------------------------------------ |
@@ -5442,7 +5442,7 @@ reason,
 
 **コマンドパレット検索が EDITOR の userPageAssignment スコープを無視して全 page を返す**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                 |
 | ------ | ----------------------------------------------- |
@@ -5482,7 +5482,7 @@ src/app/(admin)/admin/(dashboard)/layout.tsx:120（CommandPalette を role 無�
 
 **予約の自由記述「備考」が匿名化でもデータ保持 purge でも消えない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                                  |
 | ------ | ---------------------------------------------------------------- |
@@ -5532,7 +5532,7 @@ anonymize-covers-pii.test.ts の fixture は reservations に guestLastName / gu
 
 **管理者による「顧客の紐づけ解除」は顧客の次回ログインで自動的に巻き戻り、問い合わせ本文と添付がマイページに復帰する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                           |
 | ------ | ----------------------------------------- |
@@ -5572,7 +5572,7 @@ src/app/(admin)/admin/(dashboard)/inquiries/\[id\]/\_components/InquiryDetail.ts
 
 **論理削除されたイベントの返金が charge.refunded で無言で捨てられ、PAID のまま残る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                   |
 | ------ | ------------------------------------------------- |
@@ -5612,7 +5612,7 @@ Mechanism confirmed, but two of the three stated consequences are factually wron
 
 **非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                 |
 | ------ | ----------------------------------------------- |
@@ -5661,7 +5661,7 @@ space: { select: { id: true, name: true, slug: true } },
 
 **waitlist promote の session lock (728354) は interactive tx が timeout すると finally でも release できず、その event の繰上げが止まる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                           |
 | ------ | --------------------------------------------------------- |
@@ -5713,7 +5713,7 @@ src/app/api/cron/waitlist-expire/route.ts:41 GET → :59 findExpiredWaitlistOffe
 
 **bulkMoveFaqItems だけが lock 取得後のカテゴリ再確認を欠き、削除済みカテゴリ配下に生きた FAQ が孤児化して 30 日後に cascade で消える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                  |
 | ------ | ------------------------------------------------ |
@@ -5753,7 +5753,7 @@ src/app/(admin)/admin/(dashboard)/faq/\_components/FaqBulkMoveDialog.tsx:49 → 
 
 **bulk ステータス変更の TOCTOU フォールバックが他管理者の遷移を自分の成果と誤認し、append-only な状態履歴に偽の行を書く**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                          |
 | ------ | -------------------------------------------------------- |
@@ -5803,7 +5803,7 @@ src/app/(admin)/admin/(dashboard)/inquiries/\_components/InquiryBulkActions.tsx:
 
 **soft-delete 済み予約に対する clearReservationCalendarEvent が P2025 で落ち、成功した GCal 削除が「失敗」として記録される**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
@@ -5843,7 +5843,7 @@ src/app/(admin)/admin/(dashboard)/reservations/\_components/ReservationActionCel
 
 **reminderSentAt が日付に紐づかない永続ラッチのため、リマインダ送信後に日時変更すると新しい日のリマインダが二度と送られない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                          |
 | ------ | -------------------------------------------------------- |
@@ -5893,7 +5893,7 @@ terraform/cloud\_scheduler.tf:94-96 (schedule "0 \* \* \* \*" → GET /api/cron/
 
 **metadata ルート名（apple-icon / opengraph-image / twitter-image）が予約 slug に無く、その slug のページは作成できるのに公開 URL で永久に表示されない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                            |
 | ------ | ------------------------------------------ |
@@ -5936,7 +5936,7 @@ none。\_\_tests\_\_/unit/domain/slugs/validation.test.ts:32-223 は RESERVED\_P
 
 **アカウント削除の確認メールが「有効期限 1時間」と書くが実際は 24 時間**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -5986,7 +5986,7 @@ src/app/(public)/mypage/settings/\_components/account-linking.tsx:106 (deleteAcc
 
 **GA4 Data API の retry が実質 no-op — gRPC Status を HTTP status として読むため一時障害で即失敗する**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                               |
 | ------ | --------------------------------------------- |
@@ -6028,7 +6028,7 @@ none。\_\_tests\_\_/unit/lib/google-api/retry.test.ts は 429/500/503/400/401/4
 
 **escapeCsvField の引用判定に \\r が無く、レコード区切りが \\r\\n のため裸の CR を含むフィールドで CSV の行が割れて列がずれる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                            |
 | ------ | -------------------------- |
@@ -6093,7 +6093,7 @@ escaped.includes("\n")
 
 **領収書メールの発行日だけが機械形式 (2026-07-26)。PDF・マイページ・プレビューは和暦表記**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                             |
 | ------ | ------------------------------------------- |
@@ -6133,7 +6133,7 @@ src/shared/domain/receipts/notify-issued.ts:34 notifyReceiptIssuedForReservation
 
 **下付き・上付き文字が sanitize allowlist に無く、公開ページで書式が消える**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                        |
 | ------ | ------------------------------------------------------ |
@@ -6173,7 +6173,7 @@ src/app/(admin)/admin/(dashboard)/\_shared/components/editor/lexical/plugins/flo
 
 **R2 一括削除が 1000 件で分割されず、保持期限 purge が一度に 1000 件超の添付を消そうとすると全件が R2 に永久に残る**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                 |
 | ------ | ------------------------------- |
@@ -6223,7 +6223,7 @@ delete.ts:7-8 の JSDoc が「画像アップロードのみ」を前提に chun
 
 **page-hero の images 重複チェックが field 側に付いていて path が二重になり、エラーが誰にも届かない**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                              |
 | ------ | ------------------------------------------------------------ |
@@ -6282,7 +6282,7 @@ src/app/(admin)/admin/(dashboard)/pages/\[slug\]/edit/\_components/SectionEditPa
 
 **振込先フォールバックが業務層だけを見るため、payment ON × Stripe credentials 欠損で支払手段がゼロになる**
 
-<sub>[← 台帳](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) ／ [フェーズ計画](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#5-フェーズ計画) ／ [構造の穴](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#4-構造の穴個別修正では再発するもの) ／ [対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
+<sub>[対処の記録](2026-08-12-codebase-audit-progress.md) ／ [棄却一覧](2026-08-12-codebase-audit-refuted.md)</sub>
 
 |        |                                                       |
 | ------ | ----------------------------------------------------- |
