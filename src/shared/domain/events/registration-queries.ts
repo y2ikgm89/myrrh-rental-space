@@ -18,6 +18,7 @@ import type {
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 import { eventTicketChargeAmount } from "@/shared/lib/pricing/event-ticket-charge";
+import { getEventBroadcastPayload } from "./email-queries";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -178,35 +179,18 @@ export async function getEventCheckInAttendees(eventId: string) {
  * 管理者オーサリング型 event broadcast (T12) の宛先集計。
  *
  * compose UI (`/admin/events/[id]/broadcast`) が事前に「何人に配信するか」を
- * 表示する目的で使う。実際の送信 (`sendEventBroadcast`) は再度自分で
- * `event.findFirst` を走らせるため、この集計はあくまで UI 表示用の
- * best-effort snapshot (送信までの間に新規申込や解除があれば実際の宛先数は
- * 少しずれる可能性がある)。
+ * 表示する。送信 (`getEventBroadcastPayload` → `sendEventBroadcast`) と
+ * **同じ集合**を数える。別 Prisma count を置くと marketingOptIn / Customer
+ * 未解決が drift する。
  *
- * @returns `{eligible, skipped}` — CONFIRMED かつ email !== null の人数、
- *   および email=null で送れない申込 (walk-in 由来) の人数。
+ * @returns `{eligible, skipped}` — payload.recipients.length と payload.skipped。
  */
 export async function getEventBroadcastRecipientCounts(
   eventId: string,
 ): Promise<{ eligible: number; skipped: number }> {
-  const [eligible, total] = await Promise.all([
-    prisma.eventRegistration.count({
-      where: {
-        eventId,
-        event: { deletedAt: null },
-        status: RegistrationStatus.CONFIRMED,
-        email: { not: null },
-      },
-    }),
-    prisma.eventRegistration.count({
-      where: {
-        eventId,
-        event: { deletedAt: null },
-        status: RegistrationStatus.CONFIRMED,
-      },
-    }),
-  ]);
-  return { eligible, skipped: total - eligible };
+  const payload = await getEventBroadcastPayload(eventId);
+  if (!payload) return { eligible: 0, skipped: 0 };
+  return { eligible: payload.recipients.length, skipped: payload.skipped };
 }
 
 /**

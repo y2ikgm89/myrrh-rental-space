@@ -38,9 +38,12 @@ const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
 type PrismaModule = typeof import("@/shared/db/prisma");
 type EmailQueriesModule = typeof import("@/shared/domain/events/email-queries");
+type RegistrationQueriesModule =
+  typeof import("@/shared/domain/events/registration-queries");
 
 let prisma: PrismaModule["prisma"];
 let getEventBroadcastPayload: EmailQueriesModule["getEventBroadcastPayload"];
+let getEventBroadcastRecipientCounts: RegistrationQueriesModule["getEventBroadcastRecipientCounts"];
 
 let categoryId: string;
 let eventId: string;
@@ -92,6 +95,8 @@ describeMaybe("イベント一斉配信は配信停止を守る", () => {
     ({ prisma } = await import("@/shared/db/prisma"));
     ({ getEventBroadcastPayload } =
       await import("@/shared/domain/events/email-queries"));
+    ({ getEventBroadcastRecipientCounts } =
+      await import("@/shared/domain/events/registration-queries"));
 
     const suffix = crypto.randomUUID();
     const category = await prisma.eventCategory.create({
@@ -179,12 +184,21 @@ describeMaybe("イベント一斉配信は配信停止を守る", () => {
     });
 
     const payload = await getEventBroadcastPayload(eventId);
-    const recipientIds = payload?.recipients.map((r) => r.id) ?? [];
+    const counts = await getEventBroadcastRecipientCounts(eventId);
+
+    expect(payload).not.toBeNull();
+    if (!payload) return;
+
+    const recipientIds = payload.recipients.map((r) => r.id);
 
     expect(recipientIds).toContain(keptId);
     // ここに入るのが F-45。配信停止を押した相手に、また届く。
     expect(recipientIds).not.toContain(droppedId);
-    expect(payload?.skipped).toBe(1);
+    expect(payload.skipped).toBe(1);
+    // UI 人数は送信 payload と同じ集合。別 Prisma count だと
+    // eligible=2（CONFIRMED + email）と recipients=1（opt-in のみ）が drift する。
+    expect(counts.eligible).toBe(payload.recipients.length);
+    expect(counts.skipped).toBe(payload.skipped);
   });
 
   test("customerId が null でも email から解決して optOut を守る", async () => {
