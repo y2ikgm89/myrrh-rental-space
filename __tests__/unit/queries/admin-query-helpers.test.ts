@@ -5,7 +5,6 @@ import { ADMIN_USER, EDITOR_USER, VIEWER_USER } from "../../fixtures/users";
  *  旧実装の `redirect("/admin")` は streaming 下で meta タグに劣化するため廃止。 */
 let notFoundCalls = 0;
 const mockVerifyAdminSession = mock(async () => ADMIN_USER);
-const mockHasPermission = mock(() => true);
 const mockIsEditorRole = mock(() => false);
 const mockUserHasResourceAccess = mock(async () => true);
 const mockRecordPermissionDenied = mock(async () => {});
@@ -53,10 +52,9 @@ mock.module("@/shared/domain/admin-auth/resource-access", () => ({
   ) => mockUserHasResourceAccess(...args),
 }));
 
-mock.module("@/shared/lib/admin-permissions", () => ({
-  hasPermission: (...args: Parameters<typeof mockHasPermission>) =>
-    mockHasPermission(...args),
-}));
+// `@/shared/lib/admin-permissions` は mock しない。`hasPermission` は
+// ROLE_PERMISSIONS だけを見る純粋関数で、mock すると
+// `requireAdminPermission` が `action` をどう使うかが観測できなくなる。
 
 mock.module("@/admin/lib/audit", () => ({
   recordPermissionDenied: (
@@ -71,14 +69,12 @@ describe("admin query helpers", () => {
   beforeEach(() => {
     notFoundCalls = 0;
     mockVerifyAdminSession.mockReset();
-    mockHasPermission.mockReset();
     mockIsEditorRole.mockReset();
     mockUserHasResourceAccess.mockReset();
     mockRecordPermissionDenied.mockReset();
     mockHeaders.mockReset();
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
-    mockHasPermission.mockReturnValue(true);
     mockIsEditorRole.mockReturnValue(false);
     mockUserHasResourceAccess.mockResolvedValue(true);
     mockRecordPermissionDenied.mockResolvedValue(undefined);
@@ -91,9 +87,27 @@ describe("admin query helpers", () => {
     expect(notFoundCalls).toBe(0);
   });
 
+  test("action 引数が判定に効く — VIEWER は settings:read を通り settings:manage で拒否される", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+
+    const user = await requireAdminPermission("settings", "read");
+    expect(user.id).toBe(VIEWER_USER.id);
+    expect(notFoundCalls).toBe(0);
+
+    await expect(requireAdminPermission("settings", "manage")).rejects.toThrow(
+      "NOT_FOUND",
+    );
+
+    expect(notFoundCalls).toBe(1);
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "settings",
+      "manage",
+    );
+  });
+
   test("権限がない場合は notFound() で拒否して deny を記録する", async () => {
     mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
-    mockHasPermission.mockReturnValue(false);
 
     await expect(requireAdminPermission("auditLog", "read")).rejects.toThrow(
       "NOT_FOUND",
@@ -109,7 +123,6 @@ describe("admin query helpers", () => {
 
   test("EDITOR の resource scope が外れている場合は notFound() で拒否する", async () => {
     mockVerifyAdminSession.mockResolvedValue(EDITOR_USER);
-    mockHasPermission.mockReturnValue(true);
     mockIsEditorRole.mockReturnValue(true);
     mockUserHasResourceAccess.mockResolvedValue(false);
 
