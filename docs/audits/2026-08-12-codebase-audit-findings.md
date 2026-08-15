@@ -1,6 +1,6 @@
 # コードベース監査 2026-08-12 — 指摘全文（F-01〜F-133）
 
-> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**確定 132 件 / 棄却 62 件。どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、棄却は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。未着手の台帳は無い。F-94 本文は R-62（R-03 再掲）へ移したので見出しは 132。
+> **これは 2026-08-12 時点の事実の記録で、状態は持たない。**確定 132 件 / 棄却 62 件。どの指摘が済んだかは [2026-08-12-codebase-audit-progress.md](2026-08-12-codebase-audit-progress.md)、棄却は [2026-08-12-codebase-audit-refuted.md](2026-08-12-codebase-audit-refuted.md)。計画の終了と残件の分類は [2026-08-15-codebase-audit-closeout.md](2026-08-15-codebase-audit-closeout.md)。未着手の台帳は無い。F-94 本文は R-62（R-03 再掲）へ移したので見出しは 132。
 > 本文は 2026-08-12 の監査報告からの**全項目転記**（起きること / 直し方 / 該当箇所 / 到達経路 / 既存の検査 / 反証官による訂正）。
 > **行番号は監査時点のもので、修正済みのファイルではずれている。**
 > 以前はここに状態欄を持っていたが、計画書の台帳との二重管理になって実際に食い違ったので落とした（経緯は progress 側の冒頭）。
@@ -3636,7 +3636,7 @@ src/app/(public)/blog/\[slug\]/page.tsx → src/app/(public)/blog/\_components/p
 
 ---
 
-## 低（58 件）
+## 低（57 件）
 
 ### F-76
 
