@@ -31,12 +31,7 @@ function escapeCsvField(value: string): string {
   const needsFormulaGuard = /^[=+\-@\t\r]/.test(value);
   const escaped = needsFormulaGuard ? `'${value}` : value;
 
-  if (
-    needsFormulaGuard ||
-    escaped.includes(",") ||
-    escaped.includes('"') ||
-    escaped.includes("\n")
-  ) {
+  if (needsFormulaGuard || /[",\r\n]/.test(escaped)) {
     return `"${escaped.replace(/"/g, '""')}"`;
   }
   return escaped;
