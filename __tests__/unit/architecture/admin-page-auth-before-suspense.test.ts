@@ -84,15 +84,48 @@ import {
 
 const root = process.cwd();
 
-/** ページ本体（default export）で認可を解決する helper 群 */
-const PAGE_GUARD_NAMES = new Set([
-  "requireAdminDashboardPage",
-  "requireAdminListPage",
-  "requireAdminDetailPage",
-  "requireAdminSettingsPage",
-  "requireAdminPermission",
-  "requireAdminResourcePermission",
-]);
+/**
+ * ページ本体（default export）で認可を解決する helper 群。
+ *
+ * **名前をここに写さない。** `page-auth.ts`（`auth-gate-ssot.test.ts` が管理ページ用
+ * gate の facade SSoT として実在まで要求しているファイル）の export を AST で読んで
+ * 導出する。写すと guard を 1 つ足すたびに 2 箇所を直すことになり、片方だけ直した
+ * 状態が緑で通る。
+ *
+ * facade の export でないもの（`requireAdminPermission` 等の `_helpers` 直呼び）は
+ * ここに入らない。ページからの `_helpers` 直 import は `auth-gate-ssot.test.ts` が
+ * 別途禁止しているので、compliant と数えないほうが 2 つの gate の方針が揃う。
+ */
+const PAGE_AUTH_FACADE =
+  "src/app/(admin)/admin/(dashboard)/_shared/helpers/page-auth.ts";
+
+function collectPageGuardNames(): Set<string> {
+  const text = readFileSync(join(root, ...PAGE_AUTH_FACADE.split("/")), "utf8");
+  const source = createSourceFile(
+    "page-auth.ts",
+    text,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.TS,
+  );
+
+  const names = new Set<string>();
+  forEachChild(source, (node) => {
+    if (!isFunctionDeclaration(node) || node.name === undefined) return;
+    if (!canHaveModifiers(node)) return;
+    const modifiers = getModifiers(node) ?? [];
+    if (
+      !modifiers.some((modifier) => modifier.kind === SyntaxKind.ExportKeyword)
+    ) {
+      return;
+    }
+    names.add(node.name.text);
+  });
+
+  return names;
+}
+
+const PAGE_GUARD_NAMES = collectPageGuardNames();
 
 /** `await Promise.all([guard(), ...])` を await 済みとして認めるための combinator */
 const PROMISE_COMBINATOR_NAMES = new Set(["all", "allSettled"]);
@@ -302,6 +335,11 @@ function analyzeSnippet(code: string): boolean {
 }
 
 describe("admin ページの認可は Suspense 境界より前で await して解決する", () => {
+  test("guard 名を facade から導出できている（空振り防止）", () => {
+    expect(PAGE_GUARD_NAMES.size).toBeGreaterThan(2);
+    expect([...PAGE_GUARD_NAMES]).toContain("requireAdminDashboardPage");
+  });
+
   test("allowlist 外の新規違反が無い", () => {
     // gate 自体が空振りしていないことの sanity check
     expect(listDashboardPages().length).toBeGreaterThan(0);
@@ -384,6 +422,19 @@ describe("admin ページの認可は Suspense 境界より前で await して�
                {await requireAdminListPage("auditLog")}
              </Suspense>
            );
+         }`,
+      ),
+    ).toBe(false);
+
+    // 落ちるべき形 4: page-auth.ts の export ではない helper を直に呼ぶ形。
+    // `auth-gate-ssot.test.ts` がページからの `_helpers` 直 import を禁止しているので、
+    // この形は compliant と数えてはいけない。旧実装は `PAGE_GUARD_NAMES` に
+    // `requireAdminPermission` を写していたため true を返していた。
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           await requireAdminPermission("auditLog", "read");
+           return <div />;
          }`,
       ),
     ).toBe(false);
