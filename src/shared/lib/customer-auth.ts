@@ -133,6 +133,7 @@ function createCustomerAuth() {
       },
       deleteUser: {
         enabled: true,
+        deleteTokenExpiresIn: 60 * 60,
         // 顧客は OAuth 専用（パスワード未設定）のため、セッション鮮度チェックのみでの
         // 即時削除は session hijack / XSS / 共有端末で危険（Better Auth 公式 docs
         // "Authentication Requirements" が OAuth ユーザーに明示的にこの callback を推奨）。

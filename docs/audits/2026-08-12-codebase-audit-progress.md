@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  53 |   4 |  57 |
-| 合計   | 128 |   4 | 132 |
+| 低     |  54 |   3 |  57 |
+| 合計   | 129 |   3 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 4 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 3 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -162,6 +162,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-125](2026-08-12-codebase-audit-findings.md#f-125) | 低     | #2314                                      | `apple-icon` / `opengraph-image` / `twitter-image` を予約。静的単一セグメントルートの drift gate を追加          | —                                                                                       |
 | [F-124](2026-08-12-codebase-audit-findings.md#f-124) | 低     | #2317                                      | startTime が変わった 3 経路（顧客セルフ / admin / GCal inbound）で reminderSentAt を null に戻す                 | 列追加は採らず。startTime が同じ保存ではクリアしない                                    |
 | [F-128](2026-08-12-codebase-audit-findings.md#f-128) | 低     | #2318                                      | escapeCsvField の引用判定を /[",\\r\\n]/ にし、裸 CR で行が割れないようにした                                    | —                                                                                       |
+| [F-126](2026-08-12-codebase-audit-findings.md#f-126) | 低     | #2320                                      | Better Auth deleteUser に deleteTokenExpiresIn: 60 * 60 を明示。文面「1時間」は触らない                          | —                                                                                       |
 | [F-131](2026-08-12-codebase-audit-findings.md#f-131) | 低     | #2322                                      | DeleteObjects を 1000 件チャンクし、保持期限 purge の一括削除が上限で落ちないようにした                          | 呼び出し側の件数制限は正本にしない                                                      |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
