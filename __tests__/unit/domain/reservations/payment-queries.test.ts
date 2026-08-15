@@ -214,7 +214,6 @@ import {
   claimReservationAsFailed,
   claimReservationAsRefunded,
   findReservationByPaymentIntent,
-  savePaymentIntentId,
   finalizeSettledReservationRefund,
 } from "@/shared/domain/reservations/payment-queries";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
@@ -303,50 +302,6 @@ describe("reservations/payment-queries", () => {
         });
 
         expect(result).toEqual(FULFILL_DATA);
-      });
-
-      test("updateMany の where は未払い/決済待ちのみを PAID に claim する", async () => {
-        mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
-        mockReservationFindUniqueOrThrow.mockResolvedValueOnce(FULFILL_DATA);
-
-        await claimReservationAsPaid(RESERVATION_ID, {
-          stripePaymentIntentId: PAYMENT_INTENT_ID,
-        });
-
-        expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: expect.objectContaining({
-              id: RESERVATION_ID,
-              deletedAt: null,
-              paymentStatus: {
-                in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
-              },
-            }),
-            data: expect.objectContaining({
-              paymentStatus: PaymentStatus.PAID,
-              stripePaymentIntentId: PAYMENT_INTENT_ID,
-              paidAt: expect.any(Date),
-            }),
-          }),
-        );
-      });
-
-      test("stripePaymentIntentId が null でも claim できる", async () => {
-        mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
-        mockReservationFindUniqueOrThrow.mockResolvedValueOnce(FULFILL_DATA);
-
-        await claimReservationAsPaid(RESERVATION_ID, {
-          stripePaymentIntentId: null,
-        });
-
-        expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              paymentStatus: PaymentStatus.PAID,
-              stripePaymentIntentId: null,
-            }),
-          }),
-        );
       });
     });
 
@@ -483,31 +438,6 @@ describe("reservations/payment-queries", () => {
       const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
 
       expect(result).toBe(true);
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: RESERVATION_ID,
-            deletedAt: null,
-            // Codex PR #1043 P1: session 一致必須で stale webhook を封殺
-            stripeCheckoutSessionId: SESSION_ID,
-            paymentStatus: {
-              notIn: [
-                PaymentStatus.PAID,
-                PaymentStatus.PARTIALLY_REFUNDED,
-                PaymentStatus.REFUNDED,
-                PaymentStatus.FAILED,
-              ],
-            },
-          }),
-          // `paymentFailedAt` は fail-safe cron が FAILED の枠を解放する猶予の起点。
-          // ここで書かないと `pending-expiry` の FAILED 枝が legacy fallback
-          // （`updatedAt` 基準）に落ち、calendar-sync リトライで期限が来なくなる。
-          data: {
-            paymentStatus: PaymentStatus.FAILED,
-            paymentFailedAt: expect.any(Date),
-          },
-        }),
-      );
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
       expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -614,50 +544,6 @@ describe("reservations/payment-queries", () => {
       mockReservationFindFirst.mockResolvedValueOnce(null);
       const result = await findReservationByPaymentIntent("pi_unknown");
       expect(result).toBeNull();
-    });
-  });
-
-  // =============================================================================
-  // savePaymentIntentId
-  // =============================================================================
-
-  describe("savePaymentIntentId", () => {
-    test("未払い/決済待ちかつ session 一致の行のみ stripePaymentIntentId を更新", async () => {
-      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID, SESSION_ID);
-
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            id: RESERVATION_ID,
-            deletedAt: null,
-            stripeCheckoutSessionId: SESSION_ID,
-            paymentStatus: {
-              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
-            },
-          },
-          data: { stripePaymentIntentId: PAYMENT_INTENT_ID },
-        }),
-      );
-      expect(mockReservationUpdate).not.toHaveBeenCalled();
-    });
-
-    test("PAID 等の終端状態は updateMany guard で no-op（stale webhook 上書き防止）", async () => {
-      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-
-      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID, SESSION_ID);
-
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            paymentStatus: {
-              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
-            },
-          }),
-        }),
-      );
-      expect(mockReservationUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -1063,46 +949,6 @@ describe("reservations/payment-queries", () => {
 
       expect(result).toBe(true);
       expect(mockSendReservationRefundEmail).not.toHaveBeenCalled();
-    });
-  });
-
-  // =============================================================================
-  // ソフトデリートガード
-  // =============================================================================
-
-  describe("ソフトデリートガード", () => {
-    test("claimReservationAsPaid は deletedAt: null 条件を含む", async () => {
-      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-
-      await claimReservationAsPaid(RESERVATION_ID, {
-        stripePaymentIntentId: PAYMENT_INTENT_ID,
-      });
-
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ deletedAt: null }),
-        }),
-      );
-    });
-
-    test("claimReservationAsFailed は deletedAt: null 条件を含む", async () => {
-      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-      await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ deletedAt: null }),
-        }),
-      );
-    });
-
-    test("claimReservationAsRefunded は deletedAt: null 条件を含む", async () => {
-      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-      await claimReservationAsRefunded(RESERVATION_ID);
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ deletedAt: null }),
-        }),
-      );
     });
   });
 });

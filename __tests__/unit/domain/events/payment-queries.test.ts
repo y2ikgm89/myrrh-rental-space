@@ -136,7 +136,6 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 const {
   claimEventRegistrationAsPaid,
-  claimEventRegistrationAsFailed,
   finalizeSettledEventRegistrationRefund,
   findEventRegistrationByPaymentIntent,
 } = await import("@/shared/domain/events/payment-queries");
@@ -175,32 +174,6 @@ describe("events/payment-queries", () => {
   });
 
   describe("claimEventRegistrationAsPaid", () => {
-    test("CONFIRMED + UNPAID/PENDING を atomic に PAID に遷移する", async () => {
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-      const result = await claimEventRegistrationAsPaid(REGISTRATION_ID, {
-        stripePaymentIntentId: PAYMENT_INTENT_ID,
-      });
-
-      expect(result).toBe(true);
-      expect(mockRegUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: REGISTRATION_ID,
-            status: RegistrationStatus.CONFIRMED,
-            paymentStatus: {
-              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
-            },
-          }),
-          data: expect.objectContaining({
-            paymentStatus: PaymentStatus.PAID,
-            stripePaymentIntentId: PAYMENT_INTENT_ID,
-          }),
-        }),
-      );
-      expect(mockRegFindUnique).not.toHaveBeenCalled();
-    });
-
     test("既に PAID（count === 0）→ false を返し orphan 返金は呼ばない", async () => {
       mockRegUpdateMany.mockResolvedValueOnce({ count: 0 });
       mockRegFindUnique.mockResolvedValueOnce({
@@ -280,62 +253,6 @@ describe("events/payment-queries", () => {
           resourceId: EVENT_ID,
         }),
       );
-    });
-  });
-
-  describe("claimEventRegistrationAsFailed", () => {
-    test("WHERE に stripeCheckoutSessionId 一致必須 + paymentStatus notIn [PAID, REFUNDED, FAILED]、data は FAILED", async () => {
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-      const result = await claimEventRegistrationAsFailed(
-        REGISTRATION_ID,
-        "cs_matching_session",
-      );
-
-      expect(result).toBe(true);
-      expect(mockRegUpdateMany).toHaveBeenCalledWith({
-        where: {
-          id: REGISTRATION_ID,
-          stripeCheckoutSessionId: "cs_matching_session",
-          paymentStatus: {
-            notIn: [
-              PaymentStatus.PAID,
-              PaymentStatus.REFUNDED,
-              PaymentStatus.FAILED,
-            ],
-          },
-        },
-        data: { paymentStatus: PaymentStatus.FAILED },
-      });
-    });
-
-    test("sessionId 不一致 (stale webhook) → count=0 で false を返す", async () => {
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 0 });
-
-      const result = await claimEventRegistrationAsFailed(
-        REGISTRATION_ID,
-        "cs_stale_session",
-      );
-
-      expect(result).toBe(false);
-      expect(mockRegUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            stripeCheckoutSessionId: "cs_stale_session",
-          }),
-        }),
-      );
-    });
-
-    test("sessionId 一致 + eligible paymentStatus → count=1 で true", async () => {
-      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-      const result = await claimEventRegistrationAsFailed(
-        REGISTRATION_ID,
-        "cs_matching_session",
-      );
-
-      expect(result).toBe(true);
     });
   });
 

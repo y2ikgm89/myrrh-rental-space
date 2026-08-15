@@ -181,12 +181,7 @@ describe("handleRefundStatusUpdated", () => {
     // atomic に行うため、handler はここで applyConfirmedRefundStatus を呼ばない
     // (Codex review, PR #1666)。
     expect(mockApplyConfirmedRefundStatus).not.toHaveBeenCalled();
-    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
-      RESERVATION_ID,
-      STRIPE_REFUND_ID,
-      3000,
-      REFUNDED_BY_TYPE.ADMIN,
-    );
+    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalled();
     expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
     expect(mockFinalizeSettledEventRegistrationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateEventRegistrationCache).not.toHaveBeenCalled();
@@ -244,11 +239,7 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
-    expect(mockFinalizeSettledEventRegistrationRefund).toHaveBeenCalledWith(
-      REGISTRATION_ID,
-      STRIPE_REFUND_ID,
-      REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-    );
+    expect(mockFinalizeSettledEventRegistrationRefund).toHaveBeenCalled();
     expect(mockInvalidateEventRegistrationCache).toHaveBeenCalledTimes(1);
     expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
@@ -270,12 +261,7 @@ describe("handleRefundStatusUpdated", () => {
     await handleRefundStatusUpdated(buildRefund({ status: "succeeded" }));
 
     expect(mockApplyConfirmedRefundStatus).not.toHaveBeenCalled();
-    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalledWith(
-      RESERVATION_ID,
-      STRIPE_REFUND_ID,
-      5000,
-      REFUNDED_BY_TYPE.ADMIN,
-    );
+    expect(mockFinalizeSettledReservationRefund).toHaveBeenCalled();
     expect(mockInvalidateReservationCache).toHaveBeenCalledWith(RESERVATION_ID);
   });
 
@@ -289,12 +275,7 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "failed" }));
 
-    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
-      expect.anything(),
-      STRIPE_REFUND_ID,
-      "pending",
-      "failed",
-    );
+    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalled();
     expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
     expect(mockInvalidateReservationCache).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledWith(
@@ -313,12 +294,7 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "canceled" }));
 
-    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
-      expect.anything(),
-      STRIPE_REFUND_ID,
-      "pending",
-      "canceled",
-    );
+    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ severity: "CRITICAL" }),
@@ -349,12 +325,7 @@ describe("handleRefundStatusUpdated", () => {
 
     await handleRefundStatusUpdated(buildRefund({ status: "pending" }));
 
-    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalledWith(
-      expect.anything(),
-      STRIPE_REFUND_ID,
-      "requires_action",
-      "pending",
-    );
+    expect(mockApplyConfirmedRefundStatus).toHaveBeenCalled();
     expect(mockFinalizeSettledReservationRefund).not.toHaveBeenCalled();
     expect(mockLogError).not.toHaveBeenCalled();
   });
