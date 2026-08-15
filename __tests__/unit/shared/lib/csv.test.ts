@@ -54,6 +54,18 @@ describe("generateCsv", () => {
     expect(csv).toContain('"Line1\nLine2"');
   });
 
+  test("quotes fields that contain a bare CR so the record stays one row", () => {
+    const rows = [{ note: "当日10:00着\r駐車場利用", amount: 100 }];
+    const columns = [
+      { header: "備考", accessor: (r: (typeof rows)[number]) => r.note },
+      { header: "金額", accessor: (r: (typeof rows)[number]) => r.amount },
+    ];
+    const csv = generateCsv(rows, columns);
+    const records = csv.replace("\uFEFF", "").split("\r\n");
+    expect(records).toHaveLength(2);
+    expect(records[1]).toBe('"当日10:00着\r駐車場利用",100');
+  });
+
   test("handles null and undefined accessor values", () => {
     type NullableRow = { name: string | null; value: number | undefined };
     const rows: NullableRow[] = [{ name: null, value: undefined }];
