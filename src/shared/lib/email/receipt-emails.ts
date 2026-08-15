@@ -12,7 +12,7 @@ import "server-only";
 import { ReceiptIssuedEmail } from "@/shared/emails/receipt-issued";
 import { ReceiptResendEmail } from "@/shared/emails/receipt-resend";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import { formatJstDateString } from "@/shared/lib/date-format";
+import { formatDateWithWeekday } from "@/shared/lib/date-format";
 import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import { getAppUrl } from "../constants";
 import { omitUndefined } from "../serialize";
@@ -58,7 +58,7 @@ export async function sendReceiptIssuedEmail(
         react: ReceiptIssuedEmail({
           recipientName: input.recipientName,
           subject: input.subject,
-          issuedAt: formatJstDateString(input.issuedAt),
+          issuedAt: formatDateWithWeekday(input.issuedAt),
           amount: formatAmountLabel(input.amount, input.taxAmount),
           serialNo: input.serialNo,
           detailUrl: input.detailUrl,
@@ -122,7 +122,7 @@ export async function sendReceiptResendEmail(
           omitUndefined({
             recipientName: input.recipientName,
             subject: input.subject,
-            issuedAt: formatJstDateString(input.issuedAt),
+            issuedAt: formatDateWithWeekday(input.issuedAt),
             amount: formatAmountLabel(input.amount, input.taxAmount),
             serialNo: input.serialNo,
             previousSerialNo: input.previousSerialNo,
