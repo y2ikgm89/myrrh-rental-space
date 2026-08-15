@@ -46,6 +46,26 @@ describe("isRetryableGoogleApiError", () => {
     });
   });
 
+  describe("gRPC Status ベースの retry 判定", () => {
+    test("UNAVAILABLE (14) は retry 対象", () => {
+      expect(isRetryableGoogleApiError({ code: 14 })).toBe(true);
+    });
+
+    test("DEADLINE_EXCEEDED (4) / RESOURCE_EXHAUSTED (8) / INTERNAL (13) は retry 対象", () => {
+      expect(isRetryableGoogleApiError({ code: 4 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 8 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 13 })).toBe(true);
+    });
+
+    test("HTTP 400 は gRPC 分岐でも retry 対象外のまま", () => {
+      expect(isRetryableGoogleApiError({ code: 400 })).toBe(false);
+    });
+
+    test("HTTP 429 は gRPC 分岐を足しても retry 対象のまま", () => {
+      expect(isRetryableGoogleApiError({ code: 429 })).toBe(true);
+    });
+  });
+
   describe("403 + reason ベースの retry 判定（公式推奨）", () => {
     test("403 + rateLimitExceeded は retry 対象", () => {
       const error = {
@@ -211,6 +231,20 @@ describe("withGoogleApiRetry", () => {
       }),
     ).rejects.toMatchObject({ code: 404 });
     expect(calls).toBe(1);
+  });
+
+  test("gRPC UNAVAILABLE (14) は retry される", async () => {
+    let calls = 0;
+    const result = await withGoogleApiRetry(
+      async () => {
+        calls++;
+        if (calls < 2) throw { code: 14 };
+        return "ok";
+      },
+      { maxRetries: 2 },
+    );
+    expect(result).toBe("ok");
+    expect(calls).toBe(2);
   });
 
   test("403 rateLimitExceeded は retry される", async () => {
