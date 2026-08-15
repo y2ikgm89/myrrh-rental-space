@@ -94,6 +94,9 @@ describe("checkPermission", () => {
       VIEWER_USER.id,
       "customer",
       "manage",
+      // authorizeAdmin（RBAC 判定の単一サイト）は resourceId 無しでも
+      // 4 引数で記録する。第 4 引数は undefined で、監査内容は 3 引数と同じ。
+      undefined,
     );
 
     mockGetAdminSession.mockResolvedValue({ user: ADMIN_USER });

@@ -3,8 +3,8 @@ import "server-only";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { recordPermissionDenied } from "@/admin/lib/audit";
+import { authorizeAdmin } from "@/admin/lib/authorize";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import {
   verifyAdminSession,
@@ -63,8 +63,7 @@ export async function requireAdminPermission(
   await headers();
   const user = await verifyAdminSession();
 
-  if (!hasPermission(user.role, resource, action)) {
-    recordPermissionDenied(user.id, resource, action);
+  if (!authorizeAdmin(user, resource, action)) {
     denyAdminAccess();
   }
 
