@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import type { Action } from "@/shared/lib/admin-resources";
 import type { AdminSession } from "@/shared/domain/admin-auth/session";
-import { ADMIN_USER, VIEWER_USER } from "../../../fixtures/users";
+import { ADMIN_USER, EDITOR_USER, VIEWER_USER } from "../../../fixtures/users";
 
 const mockLogUserAction = mock();
 const mockRecordPermissionDenied = mock();
@@ -32,7 +32,20 @@ mock.module("@/shared/domain/admin-auth/session", () => ({
     mockGetAdminSession(...args),
 }));
 
-const { checkPermission, logAction } = await import("@/admin/lib/action-auth");
+const mockGetAssignedPageIdsForUser = mock(
+  async (_userId: string): Promise<string[]> => [],
+);
+
+// user-page-assignments/queries の export はこの 1 本だけなので完全置換で安全。
+// これで `@/shared/db/prisma` が module graph から落ちる。
+mock.module("@/shared/domain/user-page-assignments/queries", () => ({
+  getAssignedPageIdsForUser: (
+    ...args: Parameters<typeof mockGetAssignedPageIdsForUser>
+  ) => mockGetAssignedPageIdsForUser(...args),
+}));
+
+const { checkPermission, checkResourceAccess, logAction } =
+  await import("@/admin/lib/action-auth");
 
 describe("logAction", () => {
   beforeEach(() => {
@@ -90,6 +103,40 @@ describe("checkPermission", () => {
     expect(allowed.success).toBe(true);
     if (allowed.success) {
       expect(allowed.user.id).toBe(ADMIN_USER.id);
+    }
+  });
+});
+
+describe("checkResourceAccess", () => {
+  beforeEach(() => {
+    mockGetAdminSession.mockReset();
+    mockRecordPermissionDenied.mockReset();
+    mockGetAssignedPageIdsForUser.mockReset();
+    mockGetAssignedPageIdsForUser.mockResolvedValue([]);
+  });
+
+  test("EDITOR は割当外の page を拒否され、割当済みの page は通る", async () => {
+    mockGetAdminSession.mockResolvedValue({ user: EDITOR_USER });
+    mockGetAssignedPageIdsForUser.mockResolvedValue(["page-1"]);
+
+    const denied = await checkResourceAccess("page", "update", "page-2");
+
+    expect(denied).toEqual({
+      success: false,
+      error: { error: "このリソースへのアクセス権がありません" },
+    });
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      EDITOR_USER.id,
+      "page",
+      "update",
+      "page-2",
+    );
+
+    const allowed = await checkResourceAccess("page", "update", "page-1");
+
+    expect(allowed.success).toBe(true);
+    if (allowed.success) {
+      expect(allowed.user.id).toBe(EDITOR_USER.id);
     }
   });
 });
