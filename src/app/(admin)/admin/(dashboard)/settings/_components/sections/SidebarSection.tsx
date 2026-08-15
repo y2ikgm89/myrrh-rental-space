@@ -91,6 +91,11 @@ export function SidebarSection({
     settings.sidebarPopularCount,
   );
   const [tocEnabled, setTocEnabled] = useState(settings.sidebarTocEnabled);
+  // 楽観ロックの CAS token。編集内容は上の useState 初期化子で mount 時に凍結
+  // されるので、token も同じ時点で凍結する。submit 時に prop を読むと、
+  // CONFLICT → router.refresh() で prop だけが新しくなったとき
+  // 「mount 時の入力 + 新しい token」で CAS が通り、他人の変更を上書きする。
+  const [expectedUpdatedAt] = useState(settings.sidebarUpdatedAt);
   const [isPending, startTransition] = useTransition();
   const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
@@ -230,7 +235,7 @@ export function SidebarSection({
         sidebarRecentCount: recentCount,
         sidebarPopularCount: popularCount,
         sidebarTocEnabled: tocEnabled,
-        expectedUpdatedAt: settings.sidebarUpdatedAt,
+        expectedUpdatedAt,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
