@@ -311,4 +311,48 @@ describe("broadcastEventAction", () => {
       },
     });
   });
+
+  test("宛先があるのに 1 通も送れなかったら成功にしない (transport は ok)", async () => {
+    mockGetEventBroadcastPayload.mockResolvedValue({
+      eventId: VALID_EVENT_ID,
+      title: "Test Event",
+      slug: "test-event",
+      recipients: [
+        { id: "reg-1", email: "sato@example.com", customerId: "cus-1" },
+      ],
+      skipped: 0,
+      customerIdByEmail: new Map(),
+    });
+    // fan-out 後に transport は成功したが 1 通も届いていない
+    mockSendEventBroadcast.mockResolvedValue({
+      ok: true,
+      sent: 0,
+      skipped: 0,
+    });
+    mockExecuteAdminMutationResult.mockImplementation(async (options) => {
+      try {
+        return await options.execute();
+      } catch (error) {
+        if (isDomainError(error)) {
+          return { error: error.message, code: error.code };
+        }
+        throw error;
+      }
+    });
+
+    const result = await broadcastEventAction(
+      VALID_EVENT_ID,
+      undefined,
+      buildFormData("件名", "本文"),
+    );
+
+    expect(result).toMatchObject({
+      status: "error",
+      error: {
+        "": [
+          "一斉配信メールを 1 通も送信できませんでした。時間をおいて再度お試しください。",
+        ],
+      },
+    });
+  });
 });
