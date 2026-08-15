@@ -37,7 +37,15 @@ const publicEventSelect = {
   // 向けクエリのみ開示。architecture-boundaries gate で回帰防止）。
   format: true,
   location: { select: { id: true, name: true, address: true } },
-  space: { select: { id: true, name: true, slug: true } },
+  space: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      isPublished: true,
+      isActive: true,
+    },
+  },
   category: { select: { id: true, name: true, color: true } },
   slots: {
     select: { id: true, startAt: true, endAt: true, capacity: true },
