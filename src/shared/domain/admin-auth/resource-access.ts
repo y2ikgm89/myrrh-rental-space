@@ -24,6 +24,10 @@ import { isEditorRole } from "@/shared/lib/admin-role-guards";
  * admin dashboard の mutation 経路（`executeAdminMutationResult`）と、
  * `src/app/(public)/preview/*` の閲覧専用プレビュールートの双方から参照される
  * （`(public)` tree は `@/admin/*` を import しない）。
+ *
+ * 呼び出し側で `isEditorRole` や `resourceId` の有無による事前分岐を置かないこと。
+ * それらはすべて本関数が内包しており、前段分岐は変異検査で検出不能な
+ * 振る舞い中立の死に分岐を生むだけである。
  */
 export async function userHasResourceAccess(
   user: AdminAuthUser,

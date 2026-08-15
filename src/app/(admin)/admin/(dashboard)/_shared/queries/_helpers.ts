@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { recordPermissionDenied } from "@/admin/lib/audit";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import {
@@ -79,10 +78,6 @@ export async function requireAdminResourcePermission(
 ): Promise<AdminAuthUser> {
   await headers();
   const user = await requireAdminPermission(resource, action);
-
-  if (!resourceId || !isEditorRole(user.role)) {
-    return user;
-  }
 
   if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
     recordPermissionDenied(user.id, resource, action, resourceId);
