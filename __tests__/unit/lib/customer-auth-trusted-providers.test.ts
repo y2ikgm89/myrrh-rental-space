@@ -11,7 +11,10 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { CUSTOMER_TRUSTED_PROVIDERS } from "@/shared/lib/customer-auth";
+import {
+  CUSTOMER_TRUSTED_PROVIDERS,
+  customerAuth,
+} from "@/shared/lib/customer-auth";
 
 describe("CUSTOMER_TRUSTED_PROVIDERS (CRITIC-1)", () => {
   test("LINE は含まない（upstream email 検証がないため）", () => {
@@ -23,5 +26,13 @@ describe("CUSTOMER_TRUSTED_PROVIDERS (CRITIC-1)", () => {
     // trusted で安全。他 provider を追加する場合は upstream の email 検証仕様を
     // 個別に確認してから列挙すること。
     expect([...CUSTOMER_TRUSTED_PROVIDERS]).toStrictEqual(["google"]);
+  });
+});
+
+describe("customerAuth deleteUser token TTL (F-126)", () => {
+  test("deleteTokenExpiresIn is 1 hour to match email copy", () => {
+    expect(customerAuth.options.user?.deleteUser?.deleteTokenExpiresIn).toBe(
+      60 * 60,
+    );
   });
 });
