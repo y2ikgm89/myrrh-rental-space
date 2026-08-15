@@ -92,7 +92,7 @@ const PERSONAL_CUSTOMER_WITH_COMPANY = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   reservations: [],
-} as never;
+};
 
 describe("CustomerEditForm", () => {
   let root: Root | undefined;
@@ -116,7 +116,7 @@ describe("CustomerEditForm", () => {
   test("PERSONAL の顧客を編集しても companyName が FormData に 1 件だけ載る", async () => {
     await act(async () => {
       root?.render(
-        <CustomerEditForm customer={PERSONAL_CUSTOMER_WITH_COMPANY} />,
+        <CustomerEditForm customer={PERSONAL_CUSTOMER_WITH_COMPANY as never} />,
       );
     });
 
@@ -126,5 +126,25 @@ describe("CustomerEditForm", () => {
     const formData = new window.FormData(formElement as HTMLFormElement);
 
     expect(formData.getAll("companyName")).toEqual(["株式会社ミルラ"]);
+  });
+
+  test("CORPORATE の顧客を編集しても companyName が FormData に 1 件だけ載る", async () => {
+    await act(async () => {
+      root?.render(
+        <CustomerEditForm
+          customer={
+            {
+              ...PERSONAL_CUSTOMER_WITH_COMPANY,
+              customerType: "CORPORATE",
+            } as never
+          }
+        />,
+      );
+    });
+
+    const formElement = container?.querySelector("form");
+    const formData = new window.FormData(formElement as HTMLFormElement);
+
+    expect(formData.getAll("companyName")).toHaveLength(1);
   });
 });
