@@ -6,7 +6,7 @@ import { Badge } from "@/public/components/design-system/badge";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import { isImageUrl } from "@/shared/lib/media/detect-media-type";
@@ -19,6 +19,7 @@ interface SpaceCardProps {
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly mainImageUrl: string;
   readonly gallery?: readonly GalleryItem[] | undefined;
   readonly categoryName?: string | null | undefined;
@@ -59,6 +60,7 @@ export async function SpaceCard({
   capacity,
   area,
   hourlyPrice,
+  taxRateType,
   mainImageUrl,
   gallery,
   categoryName,
@@ -83,7 +85,7 @@ export async function SpaceCard({
     : [mainImageUrl];
 
   const tax = await getPublicTaxSettings();
-  const taxRate = getTaxRate(TaxRateType.STANDARD, tax);
+  const taxRate = getTaxRate(taxRateType, tax);
   const hourlyPriceLabel =
     hourlyPrice != null
       ? formatUnitPriceWithTax(

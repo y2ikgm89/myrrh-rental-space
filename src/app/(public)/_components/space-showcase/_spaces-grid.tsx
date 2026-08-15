@@ -79,6 +79,7 @@ export function SpacesGrid({
               capacity={featured.capacity}
               area={featured.area}
               hourlyPrice={featured.hourlyPrice}
+              taxRateType={featured.taxRateType}
               mainImageUrl={featured.mainImageUrl}
               gallery={featured.gallery}
               categoryName={featured.categoryName}
@@ -107,6 +108,7 @@ export function SpacesGrid({
                 capacity={space.capacity}
                 area={space.area}
                 hourlyPrice={space.hourlyPrice}
+                taxRateType={space.taxRateType}
                 mainImageUrl={space.mainImageUrl}
                 gallery={space.gallery}
                 categoryName={space.categoryName}

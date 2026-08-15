@@ -13,7 +13,6 @@ import {
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Lexical 本文中のスペースカード埋め込みプレースホルダーを公開描画時に解決する SSoT。
@@ -24,8 +23,7 @@ import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
  * spaces Feature Module OFF なら placeholder ごと除去する（404 カードを防ぐ）。
  *
  * `resolveInternalLinkCards` と同じく regex ベースの純粋 HTML 後処理として実装する。
- * 税率は既存の公開 SpaceCard コンポーネント（`(public)/_components/space-list/space-card.tsx`）
- * と同じ簡略化で `TaxRateType.STANDARD` 固定（`Space.taxRateType` による分岐はしない）。
+ * 税率は `Space.taxRateType` を使う（公開 SpaceCard / useFormatPrice と同じ）。
  */
 
 const PLACEHOLDER_RE = /<a\b[^>]*\bdata-space-card-embed\b[^>]*>\s*<\/a>/gi;
@@ -84,8 +82,6 @@ export async function resolveSpaceCardEmbeds(html: string): Promise<string> {
       resolveSpaceCardEmbedData(Array.from(ids)),
       getPublicTaxSettings(),
     ]);
-    const taxRate = getTaxRate(TaxRateType.STANDARD, tax);
-
     return html.replace(PLACEHOLDER_RE, (tag) => {
       const id = extractAttr(tag, "data-space-id");
       if (!id) return "";
@@ -93,7 +89,7 @@ export async function resolveSpaceCardEmbeds(html: string): Promise<string> {
       if (!card) return "";
       const priceLabel = formatUnitPriceWithTax(
         card.hourlyPrice,
-        taxRate,
+        getTaxRate(card.taxRateType, tax),
         tax.displayModePublic,
         "/h",
       );
