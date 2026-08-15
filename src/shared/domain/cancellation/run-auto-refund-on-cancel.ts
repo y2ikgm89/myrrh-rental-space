@@ -11,7 +11,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import {
-  calculateRefundAmount,
+  calculatePolicyRefundBreakdown,
   resolveRefundPolicy,
   type RefundPolicyResolution,
 } from "@/shared/domain/refund/policy";
@@ -172,24 +172,17 @@ export async function runAutoRefundOnCancel(
     let refundAmount: number | undefined;
     let policyEntitlement: number | undefined;
     if (resolution.status === "configured" && chargeBase !== null) {
-      // ポリシーが決めるのは**総額に対する取り分**であって「今回いくら返すか」
-      // ではない（監査 F-43）。既存の部分返金を引かずに請求すると:
-      //
-      // - 100% ポリシー: 総額 10000 / 既返金 3000 に対して 10000 を請求
-      //   → 残額 7000 を超えるので `resolveRefundAmount` が reject
-      //   → **キャンセル分の返金が 1 円も走らない**（顧客は手動対応まで回復しない）
-      // - 50% ポリシー: 5000 を請求して通り、累計 8000（80%）
-      //   → ポリシーの 50% を超えて返しすぎる
-      //
-      // なお **chargeBase から引くのは誤り**。50% ポリシーで残額 7000 に 50% を
-      // 当てると 3500 になり、累計 6500（65%）でどちらの数字とも合わない。
-      policyEntitlement = calculateRefundAmount(
+      // 取り分（entitlement）と今回返す額（outstanding）の算出は
+      // `calculatePolicyRefundBreakdown` が SSoT。管理画面の推奨額も同じ関数を使う。
+      const breakdown = calculatePolicyRefundBreakdown(
         resolution.policy,
         chargeBase,
+        refundedSoFar,
         startTime,
         new Date(),
       );
-      refundAmount = policyEntitlement - refundedSoFar;
+      policyEntitlement = breakdown.entitlement;
+      refundAmount = breakdown.outstanding;
     }
     // status === "unset" → refundAmount 未指定のまま残額全額自動返金
 

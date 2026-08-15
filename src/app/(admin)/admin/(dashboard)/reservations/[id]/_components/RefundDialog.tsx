@@ -49,15 +49,11 @@ interface RefundDialogProps {
    * 返金上限の基準額（実際に課金された額。金額 input の placeholder + 超過
    * client validation に使う）。
    *
-   * Round-5 audit Finding #20: このプロパティは以前 `totalPriceWithTax`
-   * という名前で、呼出元 (ReservationDetail.tsx) は税込合計を渡していた。
-   * しかしサーバー側の権威ある返金上限
-   * (`refundReservationPaymentCommand`) は Stripe への実 charge 額である
-   * 税抜 `totalPrice` を基準にしている（税込額を基準にすると税額分だけ
-   * Stripe が「refund > charge」で reject する）。events 側の呼出元は元々
-   * 税込/税抜の区別を持たない `paidAmount`（実 charge 額）を渡しており
-   * 問題なかった。プロパティ名を「税込」を含意しない中立な名前に変え、
-   * 呼出元には常に実際の課金基準額を渡すよう統一する。
+   * 呼出元は常に **Stripe への実 charge 額** を渡す — reservation なら税込
+   * `totalPriceWithTax`（`refundReservationPaymentCommand` が
+   * `resolveRefundAmount` に渡す `chargeTotal` と同じ列）、events なら
+   * 税込 / 税抜の区別を持たない `paidAmount`。プロパティ名が「税込」を
+   * 含意しないのは events 側と共用するため。
    */
   readonly refundableTotal: number;
   /** 部分返金既発生時の累積額 (未指定なら 0)。残額 = refundableTotal - cumulativeRefunded */
