@@ -38,11 +38,26 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
-import { deleteFile, deleteFiles } from "@/shared/lib/r2/delete";
+import {
+  deleteFile,
+  deleteFiles,
+  deleteObjectsFromBucket,
+} from "@/shared/lib/r2/delete";
 
 beforeEach(() => {
   sendMock.mockClear();
 });
+
+function keysOf(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `k${i}.jpg`);
+}
+
+function objectsInCall(callIndex: number): { Key: string }[] {
+  const command = sendMock.mock.calls[callIndex]?.[0] as {
+    input: { Delete: { Objects: { Key: string }[] } };
+  };
+  return command.input.Delete.Objects;
+}
 
 describe("deleteFile", () => {
   test("成功時は success:true", async () => {
@@ -74,6 +89,21 @@ describe("deleteFiles", () => {
     expect(sendMock).toHaveBeenCalledTimes(1);
   });
 
+  test("1000 keys は 1 回で送る", async () => {
+    const result = await deleteFiles(keysOf(1000));
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(objectsInCall(0)).toHaveLength(1000);
+  });
+
+  test("1001 keys は 1000 + 1 の 2 回に分割して送る", async () => {
+    const result = await deleteFiles(keysOf(1001));
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(objectsInCall(0)).toHaveLength(1000);
+    expect(objectsInCall(1)).toHaveLength(1);
+  });
+
   test("send が throw したら success:false", async () => {
     sendMock.mockImplementationOnce(() => {
       throw new Error("network error");
@@ -81,5 +111,34 @@ describe("deleteFiles", () => {
     const result = await deleteFiles(["a.jpg"]);
     expect(result.success).toBe(false);
     expect(result.error).toContain("削除に失敗");
+  });
+});
+
+describe("deleteObjectsFromBucket", () => {
+  test("空配列は send せず success:true", async () => {
+    const result = await deleteObjectsFromBucket("private-bucket", []);
+    expect(result.success).toBe(true);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  test("1000 keys は 1 回で送る", async () => {
+    const result = await deleteObjectsFromBucket(
+      "private-bucket",
+      keysOf(1000),
+    );
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(objectsInCall(0)).toHaveLength(1000);
+  });
+
+  test("1001 keys は 1000 + 1 の 2 回に分割して送る", async () => {
+    const result = await deleteObjectsFromBucket(
+      "private-bucket",
+      keysOf(1001),
+    );
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(objectsInCall(0)).toHaveLength(1000);
+    expect(objectsInCall(1)).toHaveLength(1);
   });
 });
