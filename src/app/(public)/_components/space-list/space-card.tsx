@@ -6,7 +6,7 @@ import { Badge } from "@/public/components/design-system/badge";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import { isImageUrl } from "@/shared/lib/media/detect-media-type";

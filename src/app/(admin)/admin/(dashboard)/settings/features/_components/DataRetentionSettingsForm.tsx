@@ -10,7 +10,6 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { FieldMetadata } from "@conform-to/react";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -135,8 +134,24 @@ export function DataRetentionSettingsForm({
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {RETENTION_FIELDS.map(({ key, label, hint }) => {
-              const field = fields[key] as FieldMetadata<string> | undefined;
-              if (!field) return null;
+              const field = (() => {
+                switch (key) {
+                  case "sessionMonths":
+                    return fields.sessionMonths;
+                  case "verificationMonths":
+                    return fields.verificationMonths;
+                  case "reservationGuestMonths":
+                    return fields.reservationGuestMonths;
+                  case "inquiryMonths":
+                    return fields.inquiryMonths;
+                  case "customerInactiveMonths":
+                    return fields.customerInactiveMonths;
+                  default: {
+                    const _exhaustive: never = key;
+                    return _exhaustive;
+                  }
+                }
+              })();
               return (
                 <div key={key} className="space-y-1.5">
                   <label
