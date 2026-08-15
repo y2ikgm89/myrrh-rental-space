@@ -80,7 +80,7 @@ export interface GuestTokenMutationConfig<TMemberContext = void> {
     entityId: string;
     token: string;
     sessionUserId: string | null;
-    memberContext: TMemberContext;
+    memberContext: TMemberContext | undefined;
   }) => Promise<MutationResult<null>>;
 }
 
@@ -181,7 +181,7 @@ export async function runGuestTokenMutation<TMemberContext = void>(
 
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;
-  let memberContext = undefined as TMemberContext;
+  let memberContext: TMemberContext | undefined;
 
   const runPerEntityRateLimit =
     async (): Promise<MutationResult<null> | null> => {

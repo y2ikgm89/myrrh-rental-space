@@ -19,7 +19,7 @@ import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { formatSerializedDate } from "@/shared/lib/serialize";
-import { formatPrice } from "@/shared/lib/pricing/format";
+import { formatReservationListTotal } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   publicQueryRateLimiter,
@@ -219,7 +219,7 @@ export default async function GuestCancelPage(): Promise<ReactElement> {
             })}
           </DetailRow>
           <DetailRow label="合計金額">
-            {formatPrice(reservation.totalPrice, "未定")}
+            {formatReservationListTotal(reservation.totalPriceWithTax)}
           </DetailRow>
         </dl>
 

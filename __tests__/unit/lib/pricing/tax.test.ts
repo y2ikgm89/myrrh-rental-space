@@ -439,7 +439,7 @@ describe("calculateTaxAmount", () => {
 describe("resolvePublicDisplayPrice", () => {
   test("tax_included では税込価格を返す", () => {
     expect(
-      resolvePublicDisplayPrice(1000, {
+      resolvePublicDisplayPrice(1000, "STANDARD", {
         ...DEFAULT_TAX_SETTINGS,
         displayModePublic: "TAX_INCLUDED",
       }),
@@ -448,7 +448,7 @@ describe("resolvePublicDisplayPrice", () => {
 
   test("both でも UI と同様に税込価格を返す", () => {
     expect(
-      resolvePublicDisplayPrice(1000, {
+      resolvePublicDisplayPrice(1000, "STANDARD", {
         ...DEFAULT_TAX_SETTINGS,
         displayModePublic: "BOTH",
       }),
@@ -457,11 +457,20 @@ describe("resolvePublicDisplayPrice", () => {
 
   test("tax_excluded では税抜価格をそのまま返す", () => {
     expect(
-      resolvePublicDisplayPrice(1000, {
+      resolvePublicDisplayPrice(1000, "STANDARD", {
         ...DEFAULT_TAX_SETTINGS,
         displayModePublic: "TAX_EXCLUDED",
       }),
     ).toBe(1000);
+  });
+
+  test("REDUCED の税込は軽減税率で計算する（STANDARD 固定にしない）", () => {
+    expect(
+      resolvePublicDisplayPrice(1000, "REDUCED", {
+        ...DEFAULT_TAX_SETTINGS,
+        displayModePublic: "TAX_INCLUDED",
+      }),
+    ).toBe(1080);
   });
 });
 

@@ -24,9 +24,16 @@ export function getTaxRate(
   taxRateType: TaxRateType,
   settings: TaxSettings = DEFAULT_TAX_SETTINGS,
 ): number {
-  return taxRateType === TaxRateType.REDUCED
-    ? settings.reducedRate
-    : settings.standardRate;
+  switch (taxRateType) {
+    case TaxRateType.STANDARD:
+      return settings.standardRate;
+    case TaxRateType.REDUCED:
+      return settings.reducedRate;
+    default: {
+      const _exhaustive: never = taxRateType;
+      return _exhaustive;
+    }
+  }
 }
 
 /**
@@ -68,9 +75,10 @@ export function calculateTaxAmount(
  */
 export function resolvePublicDisplayPrice(
   taxExcludedPrice: number,
+  taxRateType: TaxRateType,
   settings: TaxSettings = DEFAULT_TAX_SETTINGS,
 ): number {
-  const taxRate = getTaxRate(TaxRateType.STANDARD, settings);
+  const taxRate = getTaxRate(taxRateType, settings);
   switch (settings.displayModePublic) {
     case TaxDisplayMode.TAX_EXCLUDED:
       return taxExcludedPrice;

@@ -6,6 +6,7 @@ import {
   applyConfirmedRefundStatus,
   findRefundEntityByStripeRefundId,
   isRefundSettledSuccess,
+  isStripeRefundStatus,
 } from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
   isNonIntegerAppAmountError,
@@ -43,7 +44,7 @@ import {
 export async function handleRefundStatusUpdated(
   refund: Stripe.Refund,
 ): Promise<void> {
-  if (refund.status === null) return;
+  if (!isStripeRefundStatus(refund.status)) return;
 
   const entity = await findRefundEntityByStripeRefundId(refund.id);
   if (!entity) {

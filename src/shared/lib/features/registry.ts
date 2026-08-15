@@ -307,11 +307,19 @@ export function normalizeFeatureModules(
     if (!removed) break;
   }
 
-  const normalized = {} as Record<FeatureModule, boolean>;
-  for (const id of FEATURE_MODULES_LIST) {
-    normalized[id] = enabled.has(id);
-  }
-  return normalized;
+  return {
+    spaces: enabled.has("spaces"),
+    reservation: enabled.has("reservation"),
+    events: enabled.has("events"),
+    posts: enabled.has("posts"),
+    news: enabled.has("news"),
+    faq: enabled.has("faq"),
+    access: enabled.has("access"),
+    contact: enabled.has("contact"),
+    reviews: enabled.has("reviews"),
+    payment: enabled.has("payment"),
+    "data-retention": enabled.has("data-retention"),
+  } satisfies Record<FeatureModule, boolean>;
 }
 
 /** Page.slug から feature module を逆引き（一覧ページ SEO gate 用）。 */

@@ -69,6 +69,54 @@ describe("applyStripeChargeRefundIdempotent persist amount", () => {
     expect(updatePaymentStatus).toHaveBeenCalled();
   });
 
+  test("Refund.status が null なら pending に落とさず行も書かない", async () => {
+    await applyStripeChargeRefundIdempotent({
+      chargeAmount: 5000,
+      amountRefunded: 5000,
+      currency: "jpy",
+      latestRefund: {
+        id: "re_no_status",
+        amount: 5000,
+        status: null,
+        metadata: null,
+      },
+      createRefundRecord,
+      updatePaymentStatus,
+      logContext: {
+        operation: "applyChargeRefundIdempotent",
+        entityId: "res_1",
+      },
+    });
+
+    expect(createRefundRecord).not.toHaveBeenCalled();
+    expect(updatePaymentStatus).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalled();
+  });
+
+  test("Refund.status が公式集合外なら行も書かない", async () => {
+    await applyStripeChargeRefundIdempotent({
+      chargeAmount: 5000,
+      amountRefunded: 5000,
+      currency: "jpy",
+      latestRefund: {
+        id: "re_bad_status",
+        amount: 5000,
+        status: "not-a-stripe-status",
+        metadata: null,
+      },
+      createRefundRecord,
+      updatePaymentStatus,
+      logContext: {
+        operation: "applyChargeRefundIdempotent",
+        entityId: "res_1",
+      },
+    });
+
+    expect(createRefundRecord).not.toHaveBeenCalled();
+    expect(updatePaymentStatus).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalled();
+  });
+
   test("USD 1250 cents は float を書かず throw もしない (CRITICAL + 管理者通知)", async () => {
     await applyStripeChargeRefundIdempotent({
       chargeAmount: 5000,

@@ -96,7 +96,10 @@ export async function permanentlyDeleteExpiredFaqTrash(
     where: { deletedAt: { not: null, lt: threshold } },
   });
   const categoriesResult = await prisma.faqCategory.deleteMany({
-    where: { deletedAt: { not: null, lt: threshold } },
+    where: {
+      deletedAt: { not: null, lt: threshold },
+      items: { none: { deletedAt: null } },
+    },
   });
   return {
     categoriesDeleted: categoriesResult.count,

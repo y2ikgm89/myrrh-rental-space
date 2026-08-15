@@ -111,6 +111,48 @@ type RefundTransactionClient = {
 };
 
 /**
+ * Stripe Refund.status の公式集合。
+ *
+ * @see https://docs.stripe.com/api/refunds/object#refund_object-status
+ */
+export const STRIPE_REFUND_STATUSES = [
+  "pending",
+  "requires_action",
+  "succeeded",
+  "failed",
+  "canceled",
+] as const;
+
+export type StripeRefundStatus = (typeof STRIPE_REFUND_STATUSES)[number];
+
+const STRIPE_REFUND_STATUS_SET: ReadonlySet<string> = new Set(
+  STRIPE_REFUND_STATUSES,
+);
+
+export function isStripeRefundStatus(
+  value: unknown,
+): value is StripeRefundStatus {
+  return typeof value === "string" && STRIPE_REFUND_STATUS_SET.has(value);
+}
+
+/**
+ * Stripe が返した status だけを通す。欠落・未知値を "pending" に落とさない。
+ *
+ * admin / auto-cancel 経路は `refunds.create` のあとこの関数で確定してから
+ * Refund 行を書く。create は idempotency key 付きなので、ここで throw しても
+ * 再実行は同じ Refund を取り直す。
+ */
+export function requireStripeRefundStatus(
+  status: string | null | undefined,
+): StripeRefundStatus {
+  if (isStripeRefundStatus(status)) return status;
+  throw new DomainError(
+    "Stripe refund status is missing or unknown",
+    "UNEXPECTED",
+  );
+}
+
+/**
  * Stripe Refund.status のうち、返金が確定的に完了したとみなせる値。
  *
  * カード等の同期的な決済手段は `refunds.create()` のレスポンス時点で既に
@@ -134,14 +176,18 @@ export function isRefundSettledSuccess(status: string | null): boolean {
  * ここを SSoT にする。片方だけ書き換えると、確定済みの返金が再 claim 可能な
  * 状態に戻る。
  */
-export const TERMINAL_REFUND_STATUSES: readonly string[] = [
+export const TERMINAL_REFUND_STATUSES = [
   "succeeded",
   "failed",
   "canceled",
-];
+] as const satisfies readonly StripeRefundStatus[];
+
+const TERMINAL_REFUND_STATUS_SET: ReadonlySet<string> = new Set(
+  TERMINAL_REFUND_STATUSES,
+);
 
 export function isTerminalRefundStatus(status: string): boolean {
-  return TERMINAL_REFUND_STATUSES.includes(status);
+  return TERMINAL_REFUND_STATUS_SET.has(status);
 }
 
 type RefundStatusUpdateClient = {
@@ -278,7 +324,7 @@ export async function createStripeRefundOrThrow(input: {
   logContext: Record<string, string>;
   userMessage: string;
   severity?: ErrorSeverityType;
-}): Promise<{ id: string; status: string | null }> {
+}): Promise<{ id: string; status: StripeRefundStatus }> {
   try {
     const refund = await input.client.refunds.create(
       {
@@ -288,7 +334,10 @@ export async function createStripeRefundOrThrow(input: {
       },
       { idempotencyKey: input.idempotencyKey },
     );
-    return { id: refund.id, status: refund.status ?? null };
+    return {
+      id: refund.id,
+      status: requireStripeRefundStatus(refund.status),
+    };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -312,7 +361,7 @@ export async function createStripeRefundOrThrow(input: {
 export async function createRefundRecordIdempotent(
   tx: RefundTransactionClient,
   savepointName: string,
-  data: Prisma.RefundUncheckedCreateInput & { status: string },
+  data: Prisma.RefundUncheckedCreateInput & { status: StripeRefundStatus },
 ): Promise<void> {
   const validatedSavepoint = assertValidSavepointName(savepointName);
   try {

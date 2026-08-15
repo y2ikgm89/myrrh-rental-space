@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { formatReservationConfirmTotal } from "@/app/(public)/reservation/_components/format-reservation-confirm-total";
+import { formatReservationListTotal } from "@/shared/lib/pricing/format";
 import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { formatPrice, formatPriceWithTax } from "@/shared/lib/pricing/format";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
@@ -46,12 +47,32 @@ describe("formatReservationConfirmTotal", () => {
     });
     expect(standardRetaxed).toBe("¥11,000（税込）");
 
-    const label = formatReservationConfirmTotal(reducedPreview);
+    const label = formatReservationConfirmTotal(
+      reducedPreview,
+      TaxDisplayMode.TAX_INCLUDED,
+    );
     expect(label).toBe(
       `${formatPrice(reducedPreview.totalPriceWithTax)}（税込）`,
     );
     expect(label).toBe("¥10,800（税込）");
     expect(label).not.toBe(standardRetaxed);
     expect(label).not.toContain("11,000");
+  });
+
+  test("TAX_EXCLUDED draws persisted totalPrice, not a re-taxed inclusive", () => {
+    const label = formatReservationConfirmTotal(
+      reducedPreview,
+      TaxDisplayMode.TAX_EXCLUDED,
+    );
+    expect(label).toBe(`${formatPrice(reducedPreview.totalPrice)}（税抜）`);
+    expect(label).toBe("¥10,000（税抜）");
+    expect(label).not.toContain("10,800");
+    expect(label).not.toContain("11,000");
+  });
+
+  test("list total draws persisted totalPriceWithTax without re-tax", () => {
+    expect(formatReservationListTotal(10_800)).toBe("¥10,800");
+    expect(formatReservationListTotal(10_800)).not.toBe("¥11,000");
+    expect(formatReservationListTotal(null)).toBe("未定");
   });
 });

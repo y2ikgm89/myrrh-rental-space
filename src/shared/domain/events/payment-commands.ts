@@ -585,7 +585,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
         cancel_url: `${appUrl}/events/${authoritative.event.slug}`,
       },
       {
-        idempotencyKey: `checkout/waitlist-offer/${registrationId}/pending-claim`,
+        idempotencyKey: `checkout/waitlist-offer/${registrationId}/${String(expiresAt)}`,
       },
     );
     createdSessionId = session.id;
@@ -915,7 +915,7 @@ export async function refundEventRegistrationPaymentCommand(
     );
 
     const registration = await tx.eventRegistration.findFirst({
-      where: { id: registrationId, event: { deletedAt: null } },
+      where: { id: registrationId },
       select: {
         id: true,
         paymentStatus: true,
@@ -1020,7 +1020,7 @@ export async function refundEventRegistrationPaymentCommand(
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
@@ -1126,7 +1126,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     );
 
     const registration = await tx.eventRegistration.findFirst({
-      where: { id: registrationId, event: { deletedAt: null } },
+      where: { id: registrationId },
       select: {
         status: true,
         paymentStatus: true,
@@ -1247,7 +1247,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
         reason,
         stripeRefundId: refund.id,
         refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-        status: refund.status ?? "pending",
+        status: refund.status,
       },
     );
 
@@ -1340,7 +1340,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
     );
 
     const registration = await tx.eventRegistration.findFirst({
-      where: { id: registrationId, event: { deletedAt: null } },
+      where: { id: registrationId },
       select: {
         id: true,
         status: true,
@@ -1407,7 +1407,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
@@ -1495,7 +1495,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
     );
 
     const registration = await tx.eventRegistration.findFirst({
-      where: { id: registrationId, event: { deletedAt: null } },
+      where: { id: registrationId },
       select: {
         id: true,
         status: true,
@@ -1565,7 +1565,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を

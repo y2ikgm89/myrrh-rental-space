@@ -167,7 +167,7 @@ function PriceBreakdown({
         )}
         <div className="flex items-baseline justify-between py-2">
           <dt className={hasTax ? "text-muted-foreground" : "font-medium"}>
-            合計金額
+            {hasTax ? "小計（税抜）" : "合計金額"}
           </dt>
           <dd className={hasTax ? "" : "text-base font-medium"}>
             {formatPrice(totalPrice)}

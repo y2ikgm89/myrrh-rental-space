@@ -7,31 +7,33 @@ import {
   formatPrice,
 } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
+import type { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ用の税設定対応料金フォーマットフック
  *
  * TaxSettingsProvider 配下で使用。
  * Settings の taxDisplayModePublic に従って自動的に税込/税抜表示を切り替える。
+ * 税率は呼び出しごとに `space.taxRateType`（または予約に焼いた taxRateType）を渡す。
  */
 export function useFormatPrice() {
   const tax = useTaxSettings();
-  const taxRate = getTaxRate(TaxRateType.STANDARD, {
+  const taxSettings = {
     standardRate: tax.standardRate,
     reducedRate: tax.reducedRate,
     displayModePublic: tax.displayMode,
-  });
+  };
 
   /** 合計金額のフォーマット（税抜価格を渡す） */
   function formatTotal(
     taxExcludedPrice: number | null | undefined,
+    taxRateType: TaxRateType,
     fallback = "要問合せ",
   ): string {
     if (taxExcludedPrice == null) return fallback;
     return formatPriceWithTax({
       taxExcludedPrice,
-      taxRate,
+      taxRate: getTaxRate(taxRateType, taxSettings),
       displayMode: tax.displayMode,
     });
   }
@@ -40,12 +42,13 @@ export function useFormatPrice() {
   function formatUnit(
     taxExcludedPrice: number | null | undefined,
     unit: string,
+    taxRateType: TaxRateType,
     fallback = "要問合せ",
   ): string {
     if (taxExcludedPrice == null) return fallback;
     return formatUnitPriceWithTax(
       taxExcludedPrice,
-      taxRate,
+      getTaxRate(taxRateType, taxSettings),
       tax.displayMode,
       unit,
     );
@@ -63,7 +66,6 @@ export function useFormatPrice() {
     formatTotal,
     formatUnit,
     formatRaw,
-    taxRate,
     displayMode: tax.displayMode,
   };
 }

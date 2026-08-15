@@ -27,9 +27,10 @@ import {
  * Waitlist offer（`WAITLISTED_OFFERED`）の 24h TTL 期限切れ cron。hourly 実行。
  *
  * 期限切れになった申込を `EXPIRED` にし、空いた (slotId, ticketId) 枠に次の
- * `WAITLISTED` を FIFO で繰り上げる。event 単位で advisory session lock
- * (728354、`waitlist-locks.ts`) を握ってから処理するため、同一 event を 2
- * プロセスが同時に走査しても updateMany claim の順序が非決定にならない。
+ * `WAITLISTED` を FIFO で繰り上げる。event 単位で
+ * `waitlist_promote_leased_until` 行リースを握ってから処理するため、同一
+ * event を 2 プロセスが同時に走査しても updateMany claim の順序が非決定に
+ * ならない。`728354` は旧 session lock の採番で、再利用しない。
  *
  * 実際の transaction 開始・lock acquire/release・状態遷移は
  * `expireAndPromoteWaitlistForEventCommand`（server-only ドメイン層）に集約する。
