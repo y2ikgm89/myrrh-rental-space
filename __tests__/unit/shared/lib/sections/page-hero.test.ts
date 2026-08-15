@@ -77,6 +77,9 @@ describe("pageHeroConfigSchema", () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
+        const issue = result.error.issues[0];
+        expect(issue).toBeDefined();
+        expect(issue?.path).toEqual(["images"]);
         const message = result.error.issues.map((i) => i.message).join(" / ");
         expect(message).toContain("同じ画像を複数登録することはできません");
       }

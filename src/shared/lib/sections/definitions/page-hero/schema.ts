@@ -32,35 +32,39 @@ const HERO_TRANSITIONS = [
   "scale-fade",
 ] as const;
 
-const editorialSplitSchema = z.object({
-  variant: z.literal("editorial-split"),
-  label: field.portableTextInline("ラベル", { subGroup: "text" }),
-  title: field.portableTextInline("タイトル", { subGroup: "text" }),
-  description: field.portableTextBlock("説明", {
-    subGroup: "text",
-    maxBlocks: 100,
-  }),
-  images: field
-    .array("ヒーロー画像", {
+const editorialSplitSchema = z
+  .object({
+    variant: z.literal("editorial-split"),
+    label: field.portableTextInline("ラベル", { subGroup: "text" }),
+    title: field.portableTextInline("タイトル", { subGroup: "text" }),
+    description: field.portableTextBlock("説明", {
+      subGroup: "text",
+      maxBlocks: 100,
+    }),
+    images: field.array("ヒーロー画像", {
       subGroup: "media",
       fields: {
         url: field.image("画像"),
         alt: field.text("代替テキスト"),
       },
-    })
-    .refine((arr) => new Set(arr.map((i) => i.url)).size === arr.length, {
+    }),
+    transition: field.select("トランジション", {
+      subGroup: "media",
+      options: HERO_TRANSITIONS,
+      default: "crossfade",
+      helpText: "複数画像表示時の切り替え演出",
+    }),
+    buttons: createButtonsArraySchema(),
+    layout: sectionLayoutSchema,
+  })
+  .refine(
+    (data) =>
+      new Set(data.images.map((i) => i.url)).size === data.images.length,
+    {
       error: "同じ画像を複数登録することはできません",
       path: ["images"],
-    }),
-  transition: field.select("トランジション", {
-    subGroup: "media",
-    options: HERO_TRANSITIONS,
-    default: "crossfade",
-    helpText: "複数画像表示時の切り替え演出",
-  }),
-  buttons: createButtonsArraySchema(),
-  layout: sectionLayoutSchema,
-});
+    },
+  );
 
 const compactSchema = z.object({
   variant: z.literal("compact"),
