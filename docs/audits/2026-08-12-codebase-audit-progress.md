@@ -23,7 +23,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 低     |  57 |   0 |  57 |
 | 合計   | 132 |   0 | 132 |
 
-**高 11 件・中 64 件・低 57 件は全件クローズ。**未着手は無い。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。webhook 境界の配線 mock（構造の穴 A）は本監査の §6 対象外。第 1 波（`charge.refunded` attribution）と第 2 波（reservation checkout 書込の実 DB 固定）は済。event checkout / 他 webhook / 残りの payment unit は未着手。
+**高 11 件・中 64 件・低 57 件は全件クローズ。**未着手は無い。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。webhook 境界の配線 mock（構造の穴 A）は本監査の §6 対象外。第 1–3 波（refund attribution / reservation checkout / event checkout の実 DB 固定）は済。他 webhook / 残りの payment unit は未着手。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数から導く。この監査の未着手台帳は無い。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
