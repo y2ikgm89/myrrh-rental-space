@@ -20,7 +20,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 import { useEditorCore } from "./shared";
-import { collectFormDataFromContainer } from "./shared/collect-form-data";
+import { buildTermsSettingsFormData } from "./terms-settings-form-data";
 
 type UseTermsEditorOptions = {
   terms?: AdminTermsDetail | undefined;
@@ -189,36 +189,16 @@ export function useTermsEditor({
     const settingsContainer = document.querySelector<HTMLElement>(
       `[data-settings-form-container="${settingsForm.id}"]`,
     );
-    const formData =
-      settingsContainer instanceof HTMLElement
-        ? collectFormDataFromContainer(settingsContainer)
-        : new FormData();
 
-    if (!(settingsContainer instanceof HTMLElement)) {
-      for (const [key, field] of Object.entries(settingsFields)) {
-        const fieldValue = field.value;
-        if (Array.isArray(fieldValue)) {
-          for (const v of fieldValue) {
-            formData.append(key, String(v));
-          }
-        } else if (typeof fieldValue === "boolean") {
-          formData.append(key, fieldValue ? "on" : "");
-        } else if (fieldValue != null) {
-          formData.append(key, String(fieldValue));
-        }
-      }
-    }
-
-    // 外部 state (Switch / multi-checkbox / Textarea) を上書き反映。form.update
-    // が dirty 連動しないケースで信頼できる SSoT として外部値を最終的に勝たせる。
-    formData.set("type", typeValue);
-    formData.delete("scopes");
-    for (const s of scopesValue) {
-      formData.append("scopes", String(s));
-    }
-    formData.set("changelog", changelogValue);
-    formData.set("isPublished", isPublishedValue ? "on" : "");
-    formData.set("showInFooter", showInFooterValue ? "on" : "");
+    const formData = buildTermsSettingsFormData(settingsContainer, {
+      type: typeValue,
+      slug,
+      title,
+      isPublished: isPublishedValue,
+      scopes: [...scopesValue],
+      changelog: changelogValue,
+      showInFooter: showInFooterValue,
+    });
 
     const submission = parseWithZod(formData, {
       schema: termsSettingsFormSchema,
