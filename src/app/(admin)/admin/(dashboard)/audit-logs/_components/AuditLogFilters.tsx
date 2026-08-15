@@ -94,6 +94,7 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
   if (params.search) exportParams.set("search", params.search);
   if (params.ipAddress) exportParams.set("ipAddress", params.ipAddress);
   if (params.securityOnly) exportParams.set("securityOnly", "1");
+  const canExportCsv = Boolean(params.dateFrom && params.dateTo);
   const exportHref = `/api/admin/export/audit-logs${
     exportParams.size > 0 ? `?${exportParams.toString()}` : ""
   }`;
@@ -227,12 +228,24 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
         </Button>
       )}
 
-      <Button asChild variant="outline">
-        <a href={exportHref}>
+      {canExportCsv ? (
+        <Button asChild variant="outline">
+          <a href={exportHref}>
+            <IconDownload aria-hidden="true" />
+            CSV
+          </a>
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          disabled
+          title="期間（開始日と終了日）を指定してください"
+        >
           <IconDownload aria-hidden="true" />
           CSV
-        </a>
-      </Button>
+        </Button>
+      )}
 
       <Button asChild variant="outline">
         <Link href="/api/admin/audit-logs/integrity" prefetch={false}>
