@@ -12,6 +12,39 @@ export type ImperativeStyleValues = Record<
   string | number | undefined | null
 >;
 
+export function isImperativeStyleValues(
+  value: unknown,
+): value is ImperativeStyleValues {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Object.values(value).every(
+    (entry) =>
+      entry === undefined ||
+      entry === null ||
+      typeof entry === "string" ||
+      typeof entry === "number",
+  );
+}
+
+export function pickImperativeStyleValues(
+  style: object,
+): ImperativeStyleValues {
+  const out: ImperativeStyleValues = {};
+  for (const key of Object.keys(style)) {
+    const value: unknown = Reflect.get(style, key);
+    if (
+      value === undefined ||
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number"
+    ) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 /** Merge an internal ref with an optional external ref callback/object. */
 export function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
   if (typeof ref === "function") {
@@ -57,10 +90,9 @@ export function useImperativeStyle<T extends HTMLElement>(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    applyImperativeStyleValues(
-      el,
-      JSON.parse(serialized) as ImperativeStyleValues,
-    );
+    const parsed: unknown = JSON.parse(serialized);
+    if (!isImperativeStyleValues(parsed)) return;
+    applyImperativeStyleValues(el, parsed);
   }, [ref, serialized]);
 }
 

@@ -38,6 +38,7 @@ export async function RelatedSpaces({
                 capacity={space.capacity}
                 area={null}
                 hourlyPrice={space.hourlyPrice}
+                taxRateType={space.taxRateType}
                 mainImageUrl={space.mainImageUrl}
                 gallery={space.gallery}
               />
