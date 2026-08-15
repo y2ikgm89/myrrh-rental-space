@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { requireAdminListPage } from "@/admin/helpers/page-auth";
+import { requireStaffListPage } from "@/admin/helpers/page-auth";
 import { getUsers } from "@/admin/queries/user";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
 import { getRoleFilterOrAll } from "@/shared/lib/validations/enums/helpers";
@@ -81,7 +81,7 @@ async function StaffList({ searchParams }: PageProps) {
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
-  await requireAdminListPage("user");
+  await requireStaffListPage();
 
   return (
     <div className="space-y-6">

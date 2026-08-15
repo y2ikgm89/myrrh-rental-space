@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import Link from "next/link";
-import { requireAdminDetailPage } from "@/admin/helpers/page-auth";
+import { requireStaffDetailPage } from "@/admin/helpers/page-auth";
 import { getUser } from "@/admin/queries/user";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
@@ -45,7 +45,7 @@ export default async function StaffDetailPage({ params }: Props) {
 
   const { id } = await params;
   const [currentUser, user] = await Promise.all([
-    requireAdminDetailPage("user", id),
+    requireStaffDetailPage(id),
     getUser(id),
   ]);
 

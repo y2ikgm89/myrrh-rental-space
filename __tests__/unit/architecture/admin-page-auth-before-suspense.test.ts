@@ -373,7 +373,7 @@ describe("admin ページの認可は Suspense 境界より前で await して�
     expect(
       analyzeSnippet(
         `export default async function P() {
-           await requireAdminListPage("auditLog");
+           await requireAuditLogListPage();
            return <div />;
          }`,
       ),
@@ -385,7 +385,7 @@ describe("admin ページの認可は Suspense 境界より前で await して�
       analyzeSnippet(
         `export default async function P() {
            const [currentUser, user] = await Promise.all([
-             requireAdminDetailPage("user", id),
+             requireStaffDetailPage(id),
              getUser(id),
            ]);
            return <div />;
@@ -397,7 +397,7 @@ describe("admin ページの認可は Suspense 境界より前で await して�
     expect(
       analyzeSnippet(
         `export default async function P() {
-           void requireAdminListPage("auditLog");
+           void requireAuditLogListPage();
            return <div />;
          }`,
       ),
@@ -407,7 +407,7 @@ describe("admin ページの認可は Suspense 境界より前で await して�
     expect(
       analyzeSnippet(
         `export default async function P() {
-           requireAdminListPage("auditLog");
+           requireAuditLogListPage();
            return <div />;
          }`,
       ),
@@ -419,7 +419,7 @@ describe("admin ページの認可は Suspense 境界より前で await して�
         `export default async function P() {
            return (
              <Suspense fallback={null}>
-               {await requireAdminListPage("auditLog")}
+               {await requireAuditLogListPage()}
              </Suspense>
            );
          }`,
