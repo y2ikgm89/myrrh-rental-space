@@ -53,10 +53,10 @@ function keysOf(count: number): string[] {
 }
 
 function objectsInCall(callIndex: number): { Key: string }[] {
-  const command = sendMock.mock.calls[callIndex]?.[0] as {
-    input: { Delete: { Objects: { Key: string }[] } };
-  };
-  return command.input.Delete.Objects;
+  const calls = sendMock.mock.calls as unknown as Array<
+    [{ input: { Delete: { Objects: { Key: string }[] } } }]
+  >;
+  return calls[callIndex][0].input.Delete.Objects;
 }
 
 describe("deleteFile", () => {
