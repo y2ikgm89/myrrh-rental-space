@@ -641,7 +641,7 @@ export function ReservationDetail({
             {reservation.cancelledAt && (
               <DetailField
                 label="キャンセル日時"
-                value={reservation.cancelledAt}
+                value={formatDateTimeFull(reservation.cancelledAt)}
               />
             )}
           </div>

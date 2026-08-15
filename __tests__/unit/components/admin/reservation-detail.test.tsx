@@ -303,4 +303,19 @@ describe("ReservationDetail payment actions", () => {
     const labels = buttonLabels(container);
     expect(labels.some((label) => label.includes("手動入金記録"))).toBe(false);
   });
+
+  test("CANCELLED: キャンセル日時を JST 整形で表示する（UTC 生 ISO を出さない）", async () => {
+    // UTC 2026-08-15 20:00 → JST 2026-08-16 05:00（日跨ぎするので UTC 表示なら 08/15 のまま）
+    await renderDetail(
+      makeReservation({
+        status: ReservationStatus.CANCELLED,
+        cancelledAt: "2026-08-15T20:00:00.000Z",
+      }),
+      false,
+    );
+
+    const text = container?.textContent ?? "";
+    expect(text).toContain("2026/08/16");
+    expect(text).not.toContain("2026-08-15T20:00:00.000Z");
+  });
 });
