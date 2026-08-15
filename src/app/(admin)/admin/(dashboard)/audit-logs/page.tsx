@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getAuditLogResources, getAuditLogs } from "@/admin/queries/audit-log";
-import { requireAdminListPage } from "@/admin/helpers/page-auth";
+import { requireAuditLogListPage } from "@/admin/helpers/page-auth";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -67,7 +67,7 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
   // `meta-refresh` critical (WCAG 2.2.1 / 2.2.4) に当たる。
   //
   // `auditLog:read` は SUPER_ADMIN のみが持つため、他ロールは必ずこの経路を通る。
-  await requireAdminListPage("auditLog");
+  await requireAuditLogListPage();
 
   return (
     <div className="space-y-6">
