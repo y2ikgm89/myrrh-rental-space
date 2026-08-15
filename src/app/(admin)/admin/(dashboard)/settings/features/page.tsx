@@ -16,7 +16,7 @@ import {
   getSettings,
   getDataRetentionSettings,
 } from "@/admin/queries/settings";
-import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
+import { requireSettingsManagePage } from "@/admin/helpers/page-auth";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { parseFeatureModules } from "@/shared/lib/json-validators";
 import {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export default async function FeaturesSettingsPage() {
-  await requireAdminSettingsPage("manage");
+  await requireSettingsManagePage();
   await connection();
 
   const settings = await getSettings();

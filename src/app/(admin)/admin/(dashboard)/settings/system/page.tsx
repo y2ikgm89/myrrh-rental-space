@@ -6,7 +6,7 @@
 
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
+import { requireSettingsManagePage } from "@/admin/helpers/page-auth";
 import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -78,7 +78,7 @@ function SystemSettingsLoading(): ReactElement {
 // =============================================================================
 
 export default async function SystemSettingsPage(): Promise<ReactElement> {
-  await requireAdminSettingsPage("manage");
+  await requireSettingsManagePage();
 
   return (
     <SettingsLayout

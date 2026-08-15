@@ -55,6 +55,8 @@ mock.module("@/admin/lib/audit", () => ({
 const {
   requireAuditLogListPage,
   requireCouponCreatePage,
+  requireSettingsManagePage,
+  requireSettingsPage,
   requireStaffDetailPage,
   requireStaffListPage,
 } = await import("@/admin/helpers/page-auth");
@@ -131,6 +133,33 @@ describe("page-auth の guard が要求する権限", () => {
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
     await expect(requireCouponCreatePage()).resolves.toMatchObject({
       id: ADMIN_USER.id,
+    });
+  });
+
+  // VIEWER は settings:read を持ち settings:manage を持たない
+  // （admin-permissions.ts:271）。この 2 本が read / manage を割る唯一の観測点。
+  test("requireSettingsPage は settings:read を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireSettingsPage()).resolves.toMatchObject({
+      id: VIEWER_USER.id,
+    });
+  });
+
+  test("requireSettingsManagePage は settings:manage を要求する", async () => {
+    mockVerifyAdminSession.mockResolvedValue(VIEWER_USER);
+    await expect(requireSettingsManagePage()).rejects.toThrow("NOT_FOUND");
+    expect(mockRecordPermissionDenied).toHaveBeenCalledWith(
+      VIEWER_USER.id,
+      "settings",
+      "manage",
+    );
+
+    // allow 側は SUPER_ADMIN_USER を使う — `settings:manage` は SUPER_ADMIN
+    // 専用で ADMIN は `settings:read` / `settings:update` まで
+    // （admin-permissions.ts:96, 203-204）。
+    mockVerifyAdminSession.mockResolvedValue(SUPER_ADMIN_USER);
+    await expect(requireSettingsManagePage()).resolves.toMatchObject({
+      id: SUPER_ADMIN_USER.id,
     });
   });
 });

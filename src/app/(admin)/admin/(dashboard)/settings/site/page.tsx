@@ -13,7 +13,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
-import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
+import { requireSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -28,7 +28,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
   await connection();
   const [settings, user] = await Promise.all([
     getSettings(),
-    requireAdminSettingsPage(),
+    requireSettingsPage(),
   ]);
   const canUpdate = hasPermission(user.role, "settings", "update");
   const readOnly = !canUpdate;
@@ -73,7 +73,7 @@ function SiteSettingsLoading(): ReactElement {
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminSettingsPage();
+  const user = await requireSettingsPage();
   const readOnly = !hasPermission(user.role, "settings", "update");
 
   return (
