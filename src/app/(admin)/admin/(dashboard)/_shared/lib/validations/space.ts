@@ -245,7 +245,7 @@ export const spaceFormBaseSchema = z
       DurationDiscountOverride.INHERIT,
     ),
     // 税率設定
-    taxRateType: z.enum(TaxRateType).default(TaxRateType.STANDARD),
+    taxRateType: z.enum(TaxRateType),
   })
   .extend(optionalSeoStringShape);
 

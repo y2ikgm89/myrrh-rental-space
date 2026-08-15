@@ -67,6 +67,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(minimalInput);
@@ -89,6 +90,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -106,6 +108,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -123,6 +126,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -140,6 +144,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -157,6 +162,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -174,6 +180,7 @@ describe("Space Admin Action Integration", () => {
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
+          taxRateType: "STANDARD",
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
@@ -183,7 +190,7 @@ describe("Space Admin Action Integration", () => {
         }
       });
 
-      test("taxRateTypeデフォルトはstandard", () => {
+      test("taxRateType を省略すると失敗する", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
@@ -194,10 +201,7 @@ describe("Space Admin Action Integration", () => {
           mainImageUrl: "https://example.com/image.jpg",
         };
         const result = spaceFormSchema.safeParse(input);
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.taxRateType).toBe("STANDARD");
-        }
+        expect(result.success).toBe(false);
       });
     });
 
