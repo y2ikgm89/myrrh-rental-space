@@ -9,7 +9,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { collectSourceFiles } from "../../helpers/architecture-fs";
+import {
+  collectSourceFiles,
+  resolveModuleSpecifier,
+} from "../../helpers/architecture-fs";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
@@ -46,21 +49,95 @@ function collectNonCommentOffenders(
     .map((file) => relative(ROOT, file));
 }
 
-function collectPrismaImportingFiles(): string[] {
-  const importRe = /from\s+["']@\/shared\/db\/prisma["']/u;
-  const hits = collectSourceFiles(SRC_ROOT).filter((file) => {
-    const source = readFileSync(file, "utf8");
-    return importRe.test(source);
+/** prisma facade の repo ルート相対パス（拡張子なし）。 */
+const PRISMA_FACADE = "src/shared/db/prisma";
+/** 削除済み legacy shim。同じ経路で「復活していない」ことを見る。 */
+const LEGACY_PRISMA_SHIM = "src/shared/lib/prisma";
+
+/** import / export / 動的 import / require のどれでもモジュール指定子を拾う。 */
+const MODULE_SPECIFIER =
+  /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"']+)["']/gu;
+
+function toRelPosix(absPath: string): string {
+  return relative(ROOT, absPath).replaceAll("\\", "/");
+}
+
+/**
+ * そのソースが `targets`（repo ルート相対・拡張子なし）のどれかを import して
+ * いるか。**綴りではなく解決後のパスで判定する** — `@/shared/db/prisma` と
+ * `./prisma` は同じモジュールなので、文字列一致では後者が素通りする
+ * （第6次監査 M-16。実物は src/shared/db/better-auth-adapter.ts:12）。
+ * コメント行は数えない。
+ *
+ * 限界: `@generated/` 配下は `resolveModuleSpecifier` が external として
+ * 捨てるため、この経路では判定できない。generated 系の判定は文字列一致のまま。
+ */
+function importsResolvedModule(
+  fromRelPath: string,
+  source: string,
+  targets: readonly string[],
+): boolean {
+  return source.split(/\r?\n/u).some((line) => {
+    const trimmed = line.trim();
+    if (
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("*") ||
+      trimmed.startsWith("/*")
+    ) {
+      return false;
+    }
+    for (const match of line.matchAll(MODULE_SPECIFIER)) {
+      const specifier = match[1];
+      if (specifier === undefined) continue;
+      const resolved = resolveModuleSpecifier(fromRelPath, specifier);
+      if (resolved.kind === "internal" && targets.includes(resolved.relPath)) {
+        return true;
+      }
+    }
+    return false;
   });
-  const seed = [
-    join(SRC_ROOT, "shared", "db", "prisma.ts"),
-    join(SRC_ROOT, "shared", "db", "better-auth-adapter.ts"),
-  ];
-  const set = new Set<string>([...seed, ...hits]);
+}
+
+/** 絶対パスのファイルが `targets` のどれかを import しているか。 */
+function fileImportsResolvedModule(
+  absFile: string,
+  targets: readonly string[],
+): boolean {
+  return importsResolvedModule(
+    toRelPosix(absFile),
+    readFileSync(absFile, "utf8"),
+    targets,
+  );
+}
+
+function collectPrismaImportingFiles(): string[] {
+  const hits = collectSourceFiles(SRC_ROOT).filter((file) =>
+    fileImportsResolvedModule(file, [PRISMA_FACADE]),
+  );
+  // prisma.ts 自身は import 側に現れないが、singleton 定義そのものが
+  // server-only を要求されるので母集合に固定で加える。
+  const set = new Set<string>([join(SHARED_DB_ROOT, "prisma.ts"), ...hits]);
   return [...set].sort();
 }
 
 describe("prisma import boundary", () => {
+  test("fixture: prisma facade を相対パスで import するファイルも母集合に入る", () => {
+    const files = collectPrismaImportingFiles().map((file) =>
+      relative(ROOT, file).replaceAll("\\", "/"),
+    );
+
+    // 落ちるべき形（第6次監査 M-16 の実物）:
+    // src/shared/db/better-auth-adapter.ts:12 は `import { prisma } from "./prisma";`。
+    // 綴り一致の判定では母集合から漏れ、server-only 強制が効かない。
+    expect(files).toContain("src/shared/db/better-auth-adapter.ts");
+
+    // 落ちてはいけない形: 同じディレクトリの別モジュール。
+    // src/shared/db/prisma-input-json.ts は prisma facade を import しない
+    // （`@generated/prisma/client` の型と DomainError だけ）。
+    // 解決後パスの前方一致で書くとここが誤検知になる。
+    expect(files).not.toContain("src/shared/db/prisma-input-json.ts");
+  });
+
   test("generated Prisma import は shared/db の外に残さない", () => {
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
@@ -177,13 +254,9 @@ describe("prisma import boundary", () => {
   test("public app layer は prisma facade を直接 import しない", () => {
     const sourceFiles = collectSourceFiles(PUBLIC_APP_ROOT);
     const offenders = sourceFiles
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return (
-          source.includes('from "@/shared/db/prisma"') ||
-          source.includes('from "@/shared/lib/prisma"')
-        );
-      })
+      .filter((file) =>
+        fileImportsResolvedModule(file, [PRISMA_FACADE, LEGACY_PRISMA_SHIM]),
+      )
       .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
@@ -208,13 +281,11 @@ describe("prisma import boundary", () => {
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
     const sourceFiles = collectSourceFiles(SRC_ROOT);
-    // `from "…"` だけを見ると `await import("@/shared/db/prisma")` が素通りする。
-    // 動的 import も同じ「app 層が Prisma を直に握る」形なので同じ扱いにする。
-    const DIRECT_PRISMA_IMPORT =
-      /(?:from|import\(|require\()\s*["']@\/shared\/db\/prisma["']/u;
+    // `from "…"` の文字列一致だと動的 import も相対 import も素通りする。
+    // どれも「app 層が Prisma を直に握る」形なので解決後パスで同じ扱いにする。
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_ROOT))
-      .filter((file) => DIRECT_PRISMA_IMPORT.test(readFileSync(file, "utf8")))
+      .filter((file) => fileImportsResolvedModule(file, [PRISMA_FACADE]))
       .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
@@ -244,8 +315,6 @@ describe("prisma import boundary", () => {
   test("shared/ 内の Prisma 直 import / model 呼出は domain・db 配下に限定する（placement gate）", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
     const ALLOWLIST = new Set<string>();
-    const importsPrisma = (source: string) =>
-      /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
     const containsPrismaModelCall = (source: string) =>
       /\bprisma\.\w+\.\w+/u.test(source);
 
@@ -257,7 +326,10 @@ describe("prisma import boundary", () => {
       )
       .filter((file) => {
         const source = readFileSync(file, "utf8");
-        return importsPrisma(source) && containsPrismaModelCall(source);
+        return (
+          importsResolvedModule(toRelPosix(file), source, [PRISMA_FACADE]) &&
+          containsPrismaModelCall(source)
+        );
       })
       .map((file) => relative(ROOT, file))
       .filter((rel) => !ALLOWLIST.has(rel));

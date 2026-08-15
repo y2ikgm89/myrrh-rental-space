@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { resolveModuleSpecifier } from "../../helpers/architecture-fs";
 
 const workspaceRoot = process.cwd();
 const adminRoot = path.join(workspaceRoot, "src", "app", "(admin)");
@@ -23,49 +24,56 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 /**
- * 禁止 surface を指す綴りの一覧（監査 F-12）。
+ * 禁止 surface のルート（repo ルート相対・POSIX 区切り）。
  *
- * 旧実装は `from "@/admin/…"` の 1 形だけを見ており、**同じ越境を 2 通りの書き方で
- * 素通り**させていた:
+ * 判定は**綴りではなく解決後のパス**で行う。綴りを列挙する旧実装は、同じ越境を
+ * 3 通りの書き方で素通りさせていた:
  *
- * - `await import("@/admin/lib/permissions")` — `from` を含まないので不一致
- * - `import … from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions"` —
- *   `@/*` alias（tsconfig の 4 本目）経由なので `@/admin` に一致しない
+ * - `await import("@/admin/lib/permissions")` — `from` を含まない（監査 F-12）
+ * - `import ... from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions"` —
+ *   `@/` alias 経由なので `@/admin` に前方一致しない（監査 F-12）
+ * - `import ... from "../../../(admin)/admin/(dashboard)/_shared/lib/permissions"` —
+ *   相対パスなのでどの alias 綴りにも一致しない（第6次監査 M-15）
  *
- * どちらも public surface のモジュールグラフに admin 専用コードを引き込む。
- * `.claude/rules/src-boundaries.md` はこの gate を「相互 import 禁止の強制手段」と
- * 名指ししているので、規約は守られていると読まれ続けていた。
+ * 綴りを 1 本ずつ足す方式では 4 通り目が必ず残る。`resolveModuleSpecifier` で
+ * specifier を repo ルート相対パスへ解決し、この prefix と突き合わせる
+ * （alias 表は tsconfig.json の paths と同じ longest-prefix 順で helper 側が持つ）。
+ *
+ * 直し方: 越境した import を消し、共有したい実装を `src/shared/` へ出す。
+ * 背景は `.claude/rules/src-boundaries.md`。
  */
-function forbiddenSpecifierPrefixes(
-  forbiddenAlias: "@/public" | "@/admin",
-): readonly string[] {
-  return forbiddenAlias === "@/admin"
-    ? ["@/admin", "@/app/(admin)"]
-    : ["@/public", "@/app/(public)"];
-}
+const SURFACE_ROOTS = {
+  "@/admin": "src/app/(admin)/",
+  "@/public": "src/app/(public)/",
+} as const;
+
+type ForbiddenSurface = keyof typeof SURFACE_ROOTS;
 
 /** import / export / 動的 import / require の**どれでも**モジュール指定子を拾う。 */
 const MODULE_SPECIFIER =
   /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"']+)["']/gu;
 
-/** そのソースが禁止 surface を import しているか（コメント行は数えない）。 */
-export function importsForbiddenAlias(
+/**
+ * そのソースが禁止 surface のモジュールを import しているか。
+ * `fromRelPath` は相対 specifier を解決する基点（repo ルート相対・POSIX 区切り）。
+ * コメント行は数えない。
+ */
+export function importsForbiddenSurface(
+  fromRelPath: string,
   source: string,
-  forbiddenAlias: "@/public" | "@/admin",
+  forbiddenSurface: ForbiddenSurface,
 ): boolean {
-  const prefixes = forbiddenSpecifierPrefixes(forbiddenAlias);
+  const forbiddenRoot = SURFACE_ROOTS[forbiddenSurface];
   return source.split("\n").some((line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false;
     for (const match of line.matchAll(MODULE_SPECIFIER)) {
       const specifier = match[1];
       if (specifier === undefined) continue;
-      // 前方一致するだけの別 alias（`@/publicity/…`）は拾わない。
+      const resolved = resolveModuleSpecifier(fromRelPath, specifier);
       if (
-        prefixes.some(
-          (prefix) =>
-            specifier === prefix || specifier.startsWith(`${prefix}/`),
-        )
+        resolved.kind === "internal" &&
+        resolved.relPath.startsWith(forbiddenRoot)
       ) {
         return true;
       }
@@ -74,67 +82,131 @@ export function importsForbiddenAlias(
   });
 }
 
+function toRelPosix(absPath: string): string {
+  return path.relative(workspaceRoot, absPath).replaceAll("\\", "/");
+}
+
 function collectCrossSurfaceImports(
   files: readonly string[],
-  forbiddenAlias: "@/public" | "@/admin",
+  forbiddenSurface: ForbiddenSurface,
 ): string[] {
   return files.filter((file) =>
-    importsForbiddenAlias(readFileSync(file, "utf8"), forbiddenAlias),
+    importsForbiddenSurface(
+      toRelPosix(file),
+      readFileSync(file, "utf8"),
+      forbiddenSurface,
+    ),
   );
 }
 
 describe("cross-surface import gate", () => {
   test("検出できる形・できない形（fixture）", () => {
+    const PUBLIC_FILE = "src/app/(public)/_shared/lib/format-event-date.ts";
+    const ADMIN_FILE =
+      "src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts";
+
     expect(
-      importsForbiddenAlias('import { X } from "@/public/lib/x";', "@/public"),
+      importsForbiddenSurface(
+        ADMIN_FILE,
+        'import { X } from "@/public/lib/x";',
+        "@/public",
+      ),
     ).toBe(true);
     expect(
-      importsForbiddenAlias('export { Y } from "@/admin/lib/y";', "@/admin"),
+      importsForbiddenSurface(
+        PUBLIC_FILE,
+        'export { Y } from "@/admin/lib/y";',
+        "@/admin",
+      ),
     ).toBe(true);
     // コメント内の言及は違反にしない。
     expect(
-      importsForbiddenAlias('// from "@/public/lib/x" は禁止', "@/public"),
+      importsForbiddenSurface(
+        ADMIN_FILE,
+        '// from "@/public/lib/x" は禁止',
+        "@/public",
+      ),
     ).toBe(false);
     expect(
-      importsForbiddenAlias(' * from "@/admin/lib/y" を参照', "@/admin"),
+      importsForbiddenSurface(
+        PUBLIC_FILE,
+        ' * from "@/admin/lib/y" を参照',
+        "@/admin",
+      ),
     ).toBe(false);
-    // 前方一致するだけの別 alias は拾わない。
+    // 前方一致するだけの別 alias は拾わない（`@/publicity/z` → `src/publicity/z`）。
     expect(
-      importsForbiddenAlias('import { Z } from "@/publicity/z";', "@/public"),
+      importsForbiddenSurface(
+        ADMIN_FILE,
+        'import { Z } from "@/publicity/z";',
+        "@/public",
+      ),
     ).toBe(false);
     // 相手側の alias は各テストの対象外。
     expect(
-      importsForbiddenAlias('import { W } from "@/shared/lib/w";', "@/public"),
+      importsForbiddenSurface(
+        ADMIN_FILE,
+        'import { W } from "@/shared/lib/w";',
+        "@/public",
+      ),
     ).toBe(false);
 
     // --- 監査 F-12 で素通りしていた 2 形 ---
     // 動的 import（`from` を含まない）。
     expect(
-      importsForbiddenAlias(
+      importsForbiddenSurface(
+        PUBLIC_FILE,
         'const { hasPermission } = await import("@/admin/lib/permissions");',
         "@/admin",
       ),
     ).toBe(true);
-    expect(importsForbiddenAlias('require("@/public/lib/x")', "@/public")).toBe(
-      true,
-    );
-    // `@/*` alias 経由の直書き（`@/admin` に一致しない綴り）。
     expect(
-      importsForbiddenAlias(
+      importsForbiddenSurface(
+        ADMIN_FILE,
+        'require("@/public/lib/x")',
+        "@/public",
+      ),
+    ).toBe(true);
+    // `@/` alias 経由の直書き。
+    expect(
+      importsForbiddenSurface(
+        PUBLIC_FILE,
         'import { ROLE_PERMISSIONS } from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions";',
         "@/admin",
       ),
     ).toBe(true);
     expect(
-      importsForbiddenAlias(
+      importsForbiddenSurface(
+        ADMIN_FILE,
         'const m = await import("@/app/(public)/_shared/lib/y");',
         "@/public",
       ),
     ).toBe(true);
     // 広げても、無関係な surface は拾わない。
     expect(
-      importsForbiddenAlias(
+      importsForbiddenSurface(
+        PUBLIC_FILE,
         'import { Z } from "@/app/(public)/_shared/lib/z";',
+        "@/admin",
+      ),
+    ).toBe(false);
+
+    // --- 第6次監査 M-15: 3 通り目（相対パス綴り）---
+    // 落ちるべき形: (public) から (admin) へ相対で抜ける。
+    // → src/app/(admin)/admin/(dashboard)/_shared/lib/permissions
+    expect(
+      importsForbiddenSurface(
+        PUBLIC_FILE,
+        'import { ROLE_PERMISSIONS } from "../../../(admin)/admin/(dashboard)/_shared/lib/permissions";',
+        "@/admin",
+      ),
+    ).toBe(true);
+    // 落ちてはいけない形: 同じ `..` 記法でも surface 内に留まる。
+    // → src/app/(public)/reservation/_components/guest-stepper
+    expect(
+      importsForbiddenSurface(
+        PUBLIC_FILE,
+        'import { GuestStepper } from "../../reservation/_components/guest-stepper";',
         "@/admin",
       ),
     ).toBe(false);
