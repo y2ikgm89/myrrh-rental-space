@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  49 |   8 |  57 |
-| 合計   | 124 |   8 | 132 |
+| 低     |  50 |   7 |  57 |
+| 合計   | 125 |   7 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 8 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 7 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -158,6 +158,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-110](2026-08-12-codebase-audit-findings.md#f-110) | 低     | #2311                                      | 同上（固定文言「プロフィールを更新しました」で successMessage を捨てない）                                       | —                                                                                       |
 | [F-121](2026-08-12-codebase-audit-findings.md#f-121) | 低     | #2313                                      | bulkMoveFaqItems のカテゴリ再確認を lock 取得直後へ移し、削除済みカテゴリ配下への移動を止めた                    | trash-cleanup の WHERE は足していない                                                   |
 | [F-119](2026-08-12-codebase-audit-findings.md#f-119) | 低     | #2316                                      | 非公開 / 非アクティブな Space は会場名だけ出し、`/spaces/<slug>` リンクと JSON-LD `venue.url` を出さない         | createEvent/updateEvent の spaceId 製品判断は未変更                                     |
+| [F-122](2026-08-12-codebase-audit-findings.md#f-122) | 低     | #2315                                      | bulk ステータス変更は `updateManyAndReturn` の戻り id だけを confirmed にする。並行同ステータスを誤認しない      | —                                                                                       |
 | [F-125](2026-08-12-codebase-audit-findings.md#f-125) | 低     | #2314                                      | `apple-icon` / `opengraph-image` / `twitter-image` を予約。静的単一セグメントルートの drift gate を追加          | —                                                                                       |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
