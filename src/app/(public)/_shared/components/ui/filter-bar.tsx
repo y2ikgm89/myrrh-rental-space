@@ -16,6 +16,7 @@ import {
 } from "@/public/components/design-system/dialog";
 import {
   SPACE_SORT_VALUES,
+  isSpaceSort,
   spaceSearchParamsParsers,
   type SpaceSort,
 } from "@/public/lib/search-params";
@@ -133,8 +134,9 @@ export function FilterBar({
   }
 
   function setSort(value: string) {
+    if (!isSpaceSort(value)) return;
     startTransition(() => {
-      void setParams({ sort: value as SpaceSort, page: 1 });
+      void setParams({ sort: value, page: 1 });
     });
   }
 

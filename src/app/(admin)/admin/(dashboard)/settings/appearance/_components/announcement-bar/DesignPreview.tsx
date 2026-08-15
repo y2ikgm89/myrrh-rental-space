@@ -7,8 +7,8 @@ import {
 } from "@/shared/lib/announcement-bar-utils";
 import { cn } from "@/shared/lib/cn";
 import {
+  pickImperativeStyleValues,
   useImperativeStyle,
-  type ImperativeStyleValues,
 } from "@/shared/lib/csp/use-imperative-style";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import type { DesignPreviewProps } from "./types";
@@ -101,7 +101,7 @@ export function DesignPreview({
   }
 
   const previewRef = useRef<HTMLDivElement>(null);
-  useImperativeStyle(previewRef, customStyles as ImperativeStyleValues);
+  useImperativeStyle(previewRef, pickImperativeStyleValues(customStyles));
 
   return (
     <div

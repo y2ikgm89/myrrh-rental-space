@@ -54,10 +54,8 @@ export async function DashboardRecentSection() {
     const [recentReservations, recentInquiries] = await Promise.all([
       canReservation
         ? getRecentReservations(5)
-        : Promise.resolve([] as RecentReservation[]),
-      canInquiry
-        ? getRecentInquiries(5)
-        : Promise.resolve([] as RecentInquiry[]),
+        : Promise.resolve<RecentReservation[]>([]),
+      canInquiry ? getRecentInquiries(5) : Promise.resolve<RecentInquiry[]>([]),
     ]);
 
     return {
