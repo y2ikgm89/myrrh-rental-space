@@ -46,7 +46,7 @@ import {
   toNullableString,
 } from "./shared";
 import type { CategoryOption, TagOption } from "./shared";
-import { collectFormDataFromContainer } from "./shared/collect-form-data";
+import { buildPostSettingsFormData } from "./post-settings-form-data";
 
 type UsePostEditorOptions = {
   post?: PostData | undefined;
@@ -114,6 +114,27 @@ function toSettingsFormData(data?: PostData): PostSettingsFormState {
     contentWidth: toFormContentWidth(data.contentWidth),
     contentWidthCustom: toFormNumberString(data.contentWidthCustom),
   };
+}
+
+function asFormString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function asFormTagIds(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((id): id is string => typeof id === "string");
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((id): id is string => typeof id === "string");
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 type ParsedPostSettingsFormData = z.output<typeof postSettingsFormSchema>;
@@ -250,23 +271,25 @@ export function usePostEditor({
     const settingsContainer = document.querySelector<HTMLElement>(
       `[data-settings-form-container="${settingsForm.id}"]`,
     );
-    const formData =
-      settingsContainer instanceof HTMLElement
-        ? collectFormDataFromContainer(settingsContainer)
-        : new FormData();
 
-    if (!(settingsContainer instanceof HTMLElement)) {
-      for (const [key, field] of Object.entries(settingsFields)) {
-        const fieldValue = field.value;
-        if (Array.isArray(fieldValue)) {
-          formData.append(key, JSON.stringify(fieldValue));
-        } else if (fieldValue != null) {
-          formData.append(key, String(fieldValue));
-        }
-      }
-    }
+    const formData = buildPostSettingsFormData(settingsContainer, {
+      title,
+      slug,
+      excerpt: asFormString(settingsFields.excerpt.value),
+      thumbnailUrl: asFormString(settingsFields.thumbnailUrl.value),
+      ogpImageUrl: asFormString(settingsFields.ogpImageUrl.value),
+      categoryId: asFormString(settingsFields.categoryId.value),
+      tags: asFormTagIds(settingsFields.tags.value),
+      metaDescription: asFormString(settingsFields.metaDescription.value),
+      metaKeywords: asFormString(settingsFields.metaKeywords.value),
+      ogpTitle: asFormString(settingsFields.ogpTitle.value),
+      ogpDescription: asFormString(settingsFields.ogpDescription.value),
+      status: statusValue,
+      publishedAt: asFormString(settingsFields.publishedAt.value),
+      contentWidth: asFormString(settingsFields.contentWidth.value),
+      contentWidthCustom: asFormString(settingsFields.contentWidthCustom.value),
+    });
 
-    formData.set("status", statusValue);
     const submission = parseWithZod(formData, {
       schema: postSettingsFormSchema,
     });
