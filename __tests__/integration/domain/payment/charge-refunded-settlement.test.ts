@@ -34,6 +34,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
@@ -175,6 +176,15 @@ async function paymentStatusOf(reservationId: string): Promise<string> {
     select: { paymentStatus: true },
   });
   return row.paymentStatus;
+}
+
+async function refundedByTypeOf(reservationId: string): Promise<string> {
+  const row = await prisma.refund.findFirstOrThrow({
+    where: { reservationId },
+    select: { refundedByType: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return row.refundedByType;
 }
 
 describeMaybe("charge.refunded は Stripe の実 status で確定を判断する", () => {
@@ -353,6 +363,76 @@ describeMaybe("charge.refunded は Stripe の実 status で確定を判断する
       expect(await paymentStatusOf(reservationId)).toBe(PaymentStatus.PAID);
     } finally {
       await cleanup();
+    }
+  });
+
+  test("metadata.initiator が ADMIN なら refundedByType を ADMIN で書く", async () => {
+    const { reservationId, cleanup } = await createPaidReservationFixture();
+    const stripeRefundId = `re_attr_admin_${crypto.randomUUID()}`;
+
+    try {
+      await applyChargeRefundIdempotent({
+        reservationId,
+        chargeAmount: TOTAL_WITH_TAX,
+        amountRefunded: TOTAL_WITH_TAX,
+        currency: "jpy",
+        latestRefund: {
+          id: stripeRefundId,
+          amount: TOTAL_WITH_TAX,
+          status: "succeeded",
+          metadata: { initiator: REFUNDED_BY_TYPE.ADMIN },
+        },
+      });
+
+      expect(await refundedByTypeOf(reservationId)).toBe(
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("initiator が無い / 未知なら refundedByType は STRIPE_DASHBOARD", async () => {
+    const { reservationId: missingId, cleanup: cleanupMissing } =
+      await createPaidReservationFixture();
+    const { reservationId: unknownId, cleanup: cleanupUnknown } =
+      await createPaidReservationFixture();
+
+    try {
+      await applyChargeRefundIdempotent({
+        reservationId: missingId,
+        chargeAmount: TOTAL_WITH_TAX,
+        amountRefunded: TOTAL_WITH_TAX,
+        currency: "jpy",
+        latestRefund: {
+          id: `re_attr_missing_${crypto.randomUUID()}`,
+          amount: TOTAL_WITH_TAX,
+          status: "succeeded",
+          metadata: null,
+        },
+      });
+      await applyChargeRefundIdempotent({
+        reservationId: unknownId,
+        chargeAmount: TOTAL_WITH_TAX,
+        amountRefunded: TOTAL_WITH_TAX,
+        currency: "jpy",
+        latestRefund: {
+          id: `re_attr_unknown_${crypto.randomUUID()}`,
+          amount: TOTAL_WITH_TAX,
+          status: "succeeded",
+          metadata: { initiator: "NOT_A_REAL_ACTOR" },
+        },
+      });
+
+      expect(await refundedByTypeOf(missingId)).toBe(
+        REFUNDED_BY_TYPE.STRIPE_DASHBOARD,
+      );
+      expect(await refundedByTypeOf(unknownId)).toBe(
+        REFUNDED_BY_TYPE.STRIPE_DASHBOARD,
+      );
+    } finally {
+      await cleanupMissing();
+      await cleanupUnknown();
     }
   });
 });
