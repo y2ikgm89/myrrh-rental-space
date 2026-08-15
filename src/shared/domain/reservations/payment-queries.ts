@@ -287,6 +287,7 @@ export async function findReservationByPaymentIntent(paymentIntentId: string) {
  * - `paymentStatus` が UNPAID / PENDING の行のみ更新（PAID 等への stale webhook 上書き防止）
  * - `stripeCheckoutSessionId` 一致必須（`claimReservationAsFailed` と同型。OLD session の
  *   `checkout.session.completed` が NEW session へ PI を書き込む race を封殺）
+ * - `deletedAt` は見ない。webhook の決済主体同定であり公開可否ではない。
  *
  * 該当行なし（race / 既処理 / session 不一致）は count=0 の no-op。webhook 全体を 500 化しない。
  */
@@ -298,7 +299,6 @@ export async function savePaymentIntentId(
   await prisma.reservation.updateMany({
     where: {
       id: reservationId,
-      deletedAt: null,
       stripeCheckoutSessionId: sessionId,
       paymentStatus: { in: [...PAYMENT_STATUSES_SAVE_PAYMENT_INTENT] },
     },

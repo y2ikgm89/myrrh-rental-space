@@ -214,6 +214,7 @@ import {
   claimReservationAsFailed,
   claimReservationAsRefunded,
   findReservationByPaymentIntent,
+  savePaymentIntentId,
   finalizeSettledReservationRefund,
 } from "@/shared/domain/reservations/payment-queries";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
@@ -465,6 +466,34 @@ describe("reservations/payment-queries", () => {
         "cs_test_STALE_session_id",
       );
       expect(result).toBe(false);
+    });
+  });
+
+  // =============================================================================
+  // savePaymentIntentId
+  // =============================================================================
+
+  describe("savePaymentIntentId", () => {
+    test("未払い/決済待ちかつ session 一致の行のみ更新し、deletedAt は見ない", async () => {
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
+      await savePaymentIntentId(RESERVATION_ID, PAYMENT_INTENT_ID, SESSION_ID);
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: RESERVATION_ID,
+            stripeCheckoutSessionId: SESSION_ID,
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+            },
+          },
+          data: { stripePaymentIntentId: PAYMENT_INTENT_ID },
+        }),
+      );
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({ deletedAt: null }),
+        }),
+      );
     });
   });
 
