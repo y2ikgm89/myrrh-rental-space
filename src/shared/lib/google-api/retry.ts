@@ -12,6 +12,8 @@
  *   （公式: "rateLimitExceeded errors can return either 403 or 429 error codes
  *    —functionally similar and should be responded to in the same way"）
  * - それ以外の 400 / 401 / 403 / 404 / 410 は即時失敗（回復不能 or 意味が異なる）
+ * - gRPC GoogleError の一時障害（DEADLINE_EXCEEDED=4 / RESOURCE_EXHAUSTED=8 /
+ *   INTERNAL=13 / UNAVAILABLE=14）も再試行。`code` 1–16 は HTTP status ではない
  * - ネットワーク層の一時エラー (`ECONNRESET` 等) も再試行対象
  *
  * @see https://developers.google.com/calendar/api/guides/errors
@@ -36,6 +38,27 @@ function isUnknownArray(value: unknown): value is unknown[] {
 
 /** 再試行対象の HTTP ステータスコード（reason に関わらず常に retry） */
 const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([429, 500, 503]);
+
+/**
+ * google-gax `GoogleError.code` は HTTP ではなく gRPC Status enum（0–16）。
+ * 1–16 を HTTP 14 / 4 / 8 / 13 と読まないための範囲。
+ *
+ * @see https://grpc.io/docs/guides/status-codes/
+ */
+const GRPC_STATUS_CODE_MIN = 1;
+const GRPC_STATUS_CODE_MAX = 16;
+
+/** 再試行対象の一時的 gRPC Status（UNAVAILABLE / DEADLINE_EXCEEDED / RESOURCE_EXHAUSTED / INTERNAL） */
+const RETRYABLE_GRPC_STATUS_CODES: ReadonlySet<number> = new Set([
+  4, // DEADLINE_EXCEEDED
+  8, // RESOURCE_EXHAUSTED
+  13, // INTERNAL
+  14, // UNAVAILABLE
+]);
+
+function isGrpcStatusCode(code: number): boolean {
+  return code >= GRPC_STATUS_CODE_MIN && code <= GRPC_STATUS_CODE_MAX;
+}
 
 /**
  * 403 で retry 対象となる Google API エラー reason。
@@ -80,11 +103,12 @@ const FULL_SYNC_REQUIRED_REASON = "fullSyncRequired";
  *
  * GaxiosError は `code` プロパティ（number or string）または `response.status` を持つ。
  * `error.code` は string の場合がある（ネットワークエラー時）ので型を丁寧に判定する。
+ * google-gax の `GoogleError.code` は gRPC Status enum（1–16）なので HTTP として読まない。
  */
 export function extractStatusCode(error: unknown): number | null {
   if (!isRecord(error)) return null;
   const code = error["code"];
-  if (typeof code === "number") return code;
+  if (typeof code === "number" && !isGrpcStatusCode(code)) return code;
   const status = error["status"];
   if (typeof status === "number") return status;
   const response = error["response"];
@@ -92,6 +116,16 @@ export function extractStatusCode(error: unknown): number | null {
     return response["status"];
   }
   return null;
+}
+
+/**
+ * google-gax `GoogleError` から gRPC Status enum を抽出する。
+ * `code` が 1–16 のときだけ返し、HTTP 429/500/503 等と混同しない。
+ */
+function extractGrpcStatusCode(error: unknown): number | null {
+  if (!isRecord(error)) return null;
+  const code = error["code"];
+  return typeof code === "number" && isGrpcStatusCode(code) ? code : null;
 }
 
 /**
@@ -141,11 +175,17 @@ export function extractFirstErrorReason(error: unknown): string | null {
  * エラーが retry 対象かを判定する。
  *
  * 判定順:
- * 1. HTTP status が 429 / 500 / 503 → retry
- * 2. HTTP status が 403 かつ reason が usageLimits 系 → retry（公式推奨）
- * 3. system error code が一時的な network エラー → retry
+ * 1. gRPC Status が UNAVAILABLE / DEADLINE_EXCEEDED / RESOURCE_EXHAUSTED / INTERNAL → retry
+ * 2. HTTP status が 429 / 500 / 503 → retry
+ * 3. HTTP status が 403 かつ reason が usageLimits 系 → retry（公式推奨）
+ * 4. system error code が一時的な network エラー → retry
  */
 export function isRetryableGoogleApiError(error: unknown): boolean {
+  const grpcCode = extractGrpcStatusCode(error);
+  if (grpcCode !== null && RETRYABLE_GRPC_STATUS_CODES.has(grpcCode)) {
+    return true;
+  }
+
   const status = extractStatusCode(error);
   if (status !== null && RETRYABLE_STATUS_CODES.has(status)) return true;
 
