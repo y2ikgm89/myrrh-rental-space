@@ -40,10 +40,12 @@ export async function GET(request: Request) {
 
     const now = new Date();
 
-    // Stale PENDING の救済は SwitchBot 連携 ON/OFF に関わらず実施する
-    // (DB 読み書きのみで完結、外部 API 呼び出しなし)。webhook 待ち PENDING が
-    // 30 分経っても届かなかった行を FAILED へ倒し、`@@unique([reservationId, deviceId])`
-    // 下で再発行不可の orphan を残さない。詳細は revoke-passcode.ts の JSDoc 参照。
+    // Stale PENDING / REVOKE_PENDING の救済は SwitchBot 連携 ON/OFF に関わらず実施する。
+    // 資格情報が復号できれば Device List 照合と deleteKey を外部 API で試み、
+    // 復号できない（または物理 key が無い）PENDING を FAILED へ倒して
+    // `@@unique([reservationId, deviceId])` 下の orphan を残さない。
+    // stale REVOKE_PENDING は DB のみで CONFIRMED に戻し、deleteKey を再試行可能にする。
+    // 詳細は revoke-passcode.ts の JSDoc 参照。
     const stalePendingExpired = await expireStalePendingSmartLockPasscodes(now);
     const staleRevokePendingReverted =
       await expireStaleRevokePendingSmartLockPasscodes(now);
