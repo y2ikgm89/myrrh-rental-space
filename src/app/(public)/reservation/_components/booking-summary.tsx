@@ -94,7 +94,7 @@ export function BookingSummary({
   showOriginalPrice = false,
   onEdit,
 }: BookingSummaryProps): ReactElement {
-  const { formatTotal, formatRaw } = useFormatPrice();
+  const { formatRaw, displayMode } = useFormatPrice();
   const durationLabel = formatDurationLabel(startTime, endTime);
 
   const totalDiscount = spaceDiscountAmount + durationDiscountAmount;
@@ -104,7 +104,7 @@ export function BookingSummary({
     hasDiscount && showOriginalPrice && originalPrice !== exclusiveTotal;
   const confirmTotalLabel =
     confirmPricing != null
-      ? formatReservationConfirmTotal(confirmPricing)
+      ? formatReservationConfirmTotal(confirmPricing, displayMode)
       : formatRaw(price);
 
   return (
@@ -118,7 +118,7 @@ export function BookingSummary({
           <div className="flex flex-col items-end gap-0.5">
             {showStrikeThrough && originalPrice !== null ? (
               <p className="text-sm text-muted-foreground line-through">
-                {formatTotal(originalPrice)}
+                {formatRaw(originalPrice)}
               </p>
             ) : null}
             <p className="text-xl font-light text-accent">
@@ -133,14 +133,14 @@ export function BookingSummary({
       {hasDiscount ? (
         <div className="mt-2 space-y-0.5 text-right text-sm text-accent">
           {spaceDiscountAmount > 0 ? (
-            <p>スペース割引（-{formatTotal(spaceDiscountAmount)}）</p>
+            <p>スペース割引（-{formatRaw(spaceDiscountAmount)}）</p>
           ) : null}
           {durationDiscountAmount > 0 ? (
             <p>
               {appliedDurationRate != null
                 ? `長時間割引 ${appliedDurationRate}% OFF`
                 : "長時間割引適用"}
-              （-{formatTotal(durationDiscountAmount)}）
+              （-{formatRaw(durationDiscountAmount)}）
             </p>
           ) : null}
         </div>

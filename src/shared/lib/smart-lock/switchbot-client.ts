@@ -74,11 +74,15 @@ function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
   };
 }
 
-async function request<T>(
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function request(
   credentials: SwitchBotCredentials,
   path: string,
   init?: { readonly method?: "GET" | "POST"; readonly body?: unknown },
-): Promise<SwitchBotApiResult<T>> {
+): Promise<SwitchBotApiResult<unknown>> {
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       method: init?.method ?? "GET",
@@ -105,7 +109,7 @@ async function request<T>(
       };
     }
 
-    return { ok: true, body: parsed.data.body as T };
+    return { ok: true, body: parsed.data.body };
   } catch (error) {
     return {
       ok: false,
@@ -145,13 +149,53 @@ export type SwitchBotDeviceListItem = {
  * 登録済みデバイス一覧を取得する。Open Token / Secret Key の疎通確認、および
  * 管理画面でのデバイス選択UIに使う。
  */
+function isSwitchBotDeviceListItem(
+  value: unknown,
+): value is SwitchBotDeviceListItem {
+  return (
+    isRecord(value) &&
+    typeof value["deviceId"] === "string" &&
+    typeof value["deviceName"] === "string" &&
+    typeof value["deviceType"] === "string" &&
+    typeof value["enableCloudService"] === "boolean" &&
+    typeof value["hubDeviceId"] === "string"
+  );
+}
+
+function parseDeviceListBody(value: unknown): {
+  deviceList: SwitchBotDeviceListItem[];
+  infraredRemoteList: unknown[];
+} | null {
+  if (!isRecord(value) || !Array.isArray(value["deviceList"])) return null;
+  const deviceList: SwitchBotDeviceListItem[] = [];
+  for (const item of value["deviceList"]) {
+    if (!isSwitchBotDeviceListItem(item)) return null;
+    deviceList.push(item);
+  }
+  const infrared = value["infraredRemoteList"];
+  return {
+    deviceList,
+    infraredRemoteList: Array.isArray(infrared) ? infrared : [],
+  };
+}
+
 export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
   SwitchBotApiResult<{
     deviceList: SwitchBotDeviceListItem[];
     infraredRemoteList: unknown[];
   }>
 > {
-  return request(credentials, "/devices");
+  const result = await request(credentials, "/devices");
+  if (!result.ok) return result;
+  const body = parseDeviceListBody(result.body);
+  if (body === null) {
+    return {
+      ok: false,
+      statusCode: 0,
+      message: "SwitchBot API から予期しない形式の応答が返されました",
+    };
+  }
+  return { ok: true, body };
 }
 
 /**
@@ -287,10 +331,23 @@ export async function createPasscode(
   credentials: SwitchBotCredentials,
   { deviceId, ...parameter }: CreatePasscodeParams,
 ): Promise<SwitchBotApiResult<{ commandId: string }>> {
-  return request(credentials, `/devices/${deviceId}/commands`, {
+  const result = await request(credentials, `/devices/${deviceId}/commands`, {
     method: "POST",
     body: { commandType: "command", command: "createKey", parameter },
   });
+  if (!result.ok) return result;
+  const commandId =
+    isRecord(result.body) && typeof result.body["commandId"] === "string"
+      ? result.body["commandId"]
+      : undefined;
+  if (commandId === undefined) {
+    return {
+      ok: false,
+      statusCode: 0,
+      message: "SwitchBot API から commandId が返りませんでした",
+    };
+  }
+  return { ok: true, body: { commandId } };
 }
 
 export type SwitchBotLockDeviceStatus = {
@@ -309,15 +366,12 @@ export async function getLockDeviceStatus(
   credentials: SwitchBotCredentials,
   deviceId: string,
 ): Promise<SwitchBotApiResult<SwitchBotLockDeviceStatus>> {
-  const result = await request<Record<string, unknown>>(
-    credentials,
-    `/devices/${deviceId}/status`,
-  );
+  const result = await request(credentials, `/devices/${deviceId}/status`);
   if (!result.ok) {
     return result;
   }
 
-  const body = result.body;
+  const body = isRecord(result.body) ? result.body : {};
   const lockState = body["lockState"];
   const doorState = body["doorState"];
   const battery = body["battery"];
@@ -342,18 +396,14 @@ export async function deletePasscode(
   deviceId: string,
   keyId: string,
 ): Promise<SwitchBotApiResult<{ commandId?: string }>> {
-  const result = await request<{ commandId?: string } | Record<string, never>>(
-    credentials,
-    `/devices/${deviceId}/commands`,
-    {
-      method: "POST",
-      body: {
-        commandType: "command",
-        command: "deleteKey",
-        parameter: { id: keyId },
-      },
+  const result = await request(credentials, `/devices/${deviceId}/commands`, {
+    method: "POST",
+    body: {
+      commandType: "command",
+      command: "deleteKey",
+      parameter: { id: keyId },
     },
-  );
+  });
   if (!result.ok) {
     return result;
   }
@@ -377,20 +427,28 @@ export async function setupWebhook(
   credentials: SwitchBotCredentials,
   url: string,
 ): Promise<SwitchBotApiResult<Record<string, never>>> {
-  return request(credentials, "/webhook/setupWebhook", {
+  const result = await request(credentials, "/webhook/setupWebhook", {
     method: "POST",
     body: { action: "setupWebhook", url, deviceList: "ALL" },
   });
+  if (!result.ok) return result;
+  return { ok: true, body: {} };
 }
 
 /** 登録済みWebhook URLの一覧を取得する。 */
 export async function queryWebhookUrls(
   credentials: SwitchBotCredentials,
 ): Promise<SwitchBotApiResult<{ urls: string[] }>> {
-  return request(credentials, "/webhook/queryWebhook", {
+  const result = await request(credentials, "/webhook/queryWebhook", {
     method: "POST",
     body: { action: "queryUrl" },
   });
+  if (!result.ok) return result;
+  const urls =
+    isRecord(result.body) && Array.isArray(result.body["urls"])
+      ? result.body["urls"].filter((entry) => typeof entry === "string")
+      : [];
+  return { ok: true, body: { urls } };
 }
 
 /** Webhook登録を解除する。 */
@@ -398,8 +456,10 @@ export async function deleteWebhook(
   credentials: SwitchBotCredentials,
   url: string,
 ): Promise<SwitchBotApiResult<Record<string, never>>> {
-  return request(credentials, "/webhook/deleteWebhook", {
+  const result = await request(credentials, "/webhook/deleteWebhook", {
     method: "POST",
     body: { action: "deleteWebhook", url },
   });
+  if (!result.ok) return result;
+  return { ok: true, body: {} };
 }

@@ -17,7 +17,7 @@ import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards"
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
-import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { formatReservationListTotal } from "@/shared/lib/pricing/format";
 import type {
   PaymentStatus,
   ReservationStatus,
@@ -32,7 +32,7 @@ interface Reservation {
   readonly startTime: string;
   readonly endTime: string;
   readonly status: ReservationStatus;
-  readonly totalPrice: number | null;
+  readonly totalPriceWithTax: number | null;
   readonly paymentStatus: PaymentStatus;
   readonly notes: string | null;
   readonly createdAt: string;
@@ -64,8 +64,7 @@ export function ReservationCard({
   canCancel,
   showPastDeadlineMessage,
 }: ReservationCardProps) {
-  const { formatTotal } = useFormatPrice();
-  const { space, totalPrice, startTime, endTime, id } = reservation;
+  const { space, totalPriceWithTax, startTime, endTime, id } = reservation;
   const statusLabel = isValidReservationStatus(reservation.status)
     ? RESERVATION_STATUS_LABELS[reservation.status]
     : reservation.status;
@@ -132,7 +131,7 @@ export function ReservationCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-foreground">
-              {formatTotal(totalPrice, "未定")}
+              {formatReservationListTotal(totalPriceWithTax)}
             </p>
             {paymentStatusEnum !== "PAID" &&
               paymentStatusEnum !== "PARTIALLY_REFUNDED" &&

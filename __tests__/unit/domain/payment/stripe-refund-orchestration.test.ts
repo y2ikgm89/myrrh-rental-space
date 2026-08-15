@@ -14,7 +14,7 @@ const mockRefundsCreate = mock<
   (
     params: Record<string, unknown>,
     options: { idempotencyKey: string },
-  ) => Promise<{ id: string; status: string }>
+  ) => Promise<{ id: string; status: string | null }>
 >(() => Promise.resolve({ id: "re_test_1", status: "succeeded" }));
 
 mock.module("server-only", () => ({}));
@@ -86,6 +86,60 @@ describe("stripe-refund-orchestration kernel", () => {
         userMessage: "返金処理に失敗しました",
       }),
     ).resolves.toEqual({ id: "re_test_1", status: "succeeded" });
+  });
+
+  test("createStripeRefundOrThrow refuses a missing Stripe refund status", async () => {
+    mockRefundsCreate.mockResolvedValueOnce({
+      id: "re_no_status",
+      status: null,
+    });
+    const client = {
+      refunds: { create: mockRefundsCreate },
+    } as unknown as AsyncOnlyStripe;
+
+    await expect(
+      createStripeRefundOrThrow({
+        client,
+        paymentIntentId: "pi_test",
+        amount: 1000,
+        stripeCurrency: "jpy",
+        metadata: { initiator: "ADMIN" },
+        idempotencyKey: "reservation-refund-res-1-null",
+        operation: "refundReservationPayment",
+        logContext: { reservationId: "res-1" },
+        userMessage: "返金処理に失敗しました",
+      }),
+    ).rejects.toMatchObject({
+      name: "DomainError",
+      message: "返金処理に失敗しました",
+    });
+  });
+
+  test("createStripeRefundOrThrow refuses an unknown Stripe refund status", async () => {
+    mockRefundsCreate.mockResolvedValueOnce({
+      id: "re_bad_status",
+      status: "not-a-stripe-status",
+    });
+    const client = {
+      refunds: { create: mockRefundsCreate },
+    } as unknown as AsyncOnlyStripe;
+
+    await expect(
+      createStripeRefundOrThrow({
+        client,
+        paymentIntentId: "pi_test",
+        amount: 1000,
+        stripeCurrency: "jpy",
+        metadata: { initiator: "ADMIN" },
+        idempotencyKey: "reservation-refund-res-1-unknown",
+        operation: "refundReservationPayment",
+        logContext: { reservationId: "res-1" },
+        userMessage: "返金処理に失敗しました",
+      }),
+    ).rejects.toMatchObject({
+      name: "DomainError",
+      message: "返金処理に失敗しました",
+    });
   });
 
   test("createRefundRecordIdempotent rolls back savepoint on stripeRefundId race", async () => {

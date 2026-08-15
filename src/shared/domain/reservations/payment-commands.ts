@@ -798,7 +798,7 @@ export async function refundReservationPaymentCommand(
       ...(reason ? { reason } : {}),
       stripeRefundId: refund.id,
       refundedByType: actorType,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定 (isSettled=false) の間は
@@ -1016,7 +1016,7 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を
@@ -1166,7 +1166,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
       reason,
       stripeRefundId: refund.id,
       refundedByType: REFUNDED_BY_TYPE.AUTO_AMOUNT_MISMATCH,
-      status: refund.status ?? "pending",
+      status: refund.status,
     });
 
     // konbini / customer_balance 等の非同期返金が未確定の間は paymentStatus を

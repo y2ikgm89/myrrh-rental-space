@@ -33,7 +33,11 @@ import {
   PAYMENT_STATUSES_REFUNDABLE_FOR_CHARGE_WEBHOOK,
   resolveRefundStatusFromChargeAmounts,
 } from "@/shared/domain/payment/payment-status-guards";
-import { isRefundSettledSuccess } from "@/shared/domain/payment/stripe-refund-orchestration";
+import {
+  isRefundSettledSuccess,
+  isStripeRefundStatus,
+  type StripeRefundStatus,
+} from "@/shared/domain/payment/stripe-refund-orchestration";
 
 export type PaidClaimMissCurrentState = {
   status: ReservationStatus | RegistrationStatus;
@@ -231,8 +235,8 @@ export type ChargeRefundLatestRefund = {
   /**
    * Stripe `Refund.status`。`"succeeded"` 以外は未確定で、この値のまま
    * paymentStatus を終端状態へ動かしてはいけない。
-   * 型上 nullable なのは Stripe の型定義がそうであるためで、実運用では
-   * 常に値が来る。null は `"pending"`（＝未確定側）として扱う。
+   * 型上 nullable なのは Stripe の型定義がそうであるため。
+   * null は pending に落とさず、行を書かずに `refund.updated` へ委ねる。
    */
   readonly status: string | null;
   readonly metadata?: Record<string, string | undefined> | null | undefined;
@@ -264,7 +268,7 @@ export async function applyStripeChargeRefundIdempotent(input: {
     amount: number;
     stripeRefundId: string;
     refundedByType: RefundedByType;
-    status: string;
+    status: StripeRefundStatus;
   }) => Promise<void>;
   updatePaymentStatus: (
     newStatus:
@@ -291,7 +295,20 @@ export async function applyStripeChargeRefundIdempotent(input: {
   const refundedByType = isValidRefundedByType(initiatorMeta)
     ? initiatorMeta
     : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
-  const refundStatus = latestRefund.status ?? "pending";
+  const refundStatus = latestRefund.status;
+  if (!isStripeRefundStatus(refundStatus)) {
+    logError(new Error("charge.refunded arrived without refund status"), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        ...input.logContext,
+        stripeRefundId: latestRefund.id,
+        chargeAmount,
+        amountRefunded,
+      },
+    });
+    return;
+  }
 
   let persistAmount: number;
   try {

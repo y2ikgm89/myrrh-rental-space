@@ -20,7 +20,7 @@ import { DetailRow } from "@/public/components/detail-row";
 import { resolveOptionalCustomerSession } from "@/shared/lib/customer-auth/gates";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { formatSerializedDate } from "@/shared/lib/serialize";
-import { formatPrice } from "@/shared/lib/pricing/format";
+import { formatReservationListTotal } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -171,7 +171,7 @@ export default async function ReservationCompletePage(): Promise<ReactElement> {
               })}
             </DetailRow>
             <DetailRow label="合計金額">
-              {formatPrice(reservation.totalPrice, "未定")}
+              {formatReservationListTotal(reservation.totalPriceWithTax)}
             </DetailRow>
           </dl>
         </div>

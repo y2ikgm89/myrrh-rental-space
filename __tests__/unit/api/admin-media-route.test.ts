@@ -1,15 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
-import { DomainError } from "@/shared/domain/domain-error";
 
 const mockCheckPermission = mock();
 const mockGetMediaListQuery = mock();
-const mockUploadMediaCommand = mock();
-const mockLogAction = mock(() => Promise.resolve());
-const mockFinalizeMediaMutation = mock();
-const mockFireAndForget = mock((promise: Promise<unknown>, _opts?: unknown) => {
-  void promise;
-});
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -18,31 +11,12 @@ mock.module("next/server", () => ({
 mock.module("@/admin/lib/action-auth", () => ({
   checkPermission: (...args: Parameters<typeof mockCheckPermission>) =>
     mockCheckPermission(...args),
-  logAction: (...args: Parameters<typeof mockLogAction>) =>
-    mockLogAction(...args),
+  logAction: mock(() => Promise.resolve()),
 }));
 
 mock.module("@/shared/domain/media/queries", () => ({
   getMediaListQuery: (...args: Parameters<typeof mockGetMediaListQuery>) =>
     mockGetMediaListQuery(...args),
-}));
-
-mock.module("@/shared/domain/media/commands", () => ({
-  uploadMediaCommand: (...args: Parameters<typeof mockUploadMediaCommand>) =>
-    mockUploadMediaCommand(...args),
-}));
-
-mock.module("@/shared/domain/media/cache", () => ({
-  finalizeMediaMutation: (
-    ...args: Parameters<typeof mockFinalizeMediaMutation>
-  ) => mockFinalizeMediaMutation(...args),
-  revalidateMedia: mock(),
-  purgeMediaUrls: mock(),
-}));
-
-mock.module("@/shared/lib/async-utils", () => ({
-  fireAndForget: (...args: Parameters<typeof mockFireAndForget>) =>
-    mockFireAndForget(...args),
 }));
 
 mock.module("@/shared/lib/env/server", () => ({
@@ -56,37 +30,16 @@ mock.module("@/shared/lib/constants/urls", () => ({
   getAppUrl: () => "http://localhost:3000",
 }));
 
-const { GET, POST } = await import("@/app/(admin)/admin/api/media/route");
-
-const ADMIN_ORIGIN = "http://localhost:3000";
-
-function adminMediaPostRequest(
-  url: string,
-  init?: Omit<RequestInit, "method">,
-): Request {
-  return new Request(url, {
-    ...init,
-    method: "POST",
-    headers: {
-      origin: ADMIN_ORIGIN,
-      ...(init?.headers ?? {}),
-    },
-  });
-}
+const mediaRoute = await import("@/app/(admin)/admin/api/media/route");
+const { GET } = mediaRoute;
 
 describe("admin media route", () => {
   beforeEach(() => {
     mockCheckPermission.mockReset();
     mockGetMediaListQuery.mockReset();
-    mockUploadMediaCommand.mockReset();
-    mockLogAction.mockReset();
-    mockFinalizeMediaMutation.mockReset();
-    mockFireAndForget.mockReset();
-    mockLogAction.mockResolvedValue(undefined);
   });
 
   test("GET のバリデーションエラーは最初の error だけを返す", async () => {
-    // 認証成功後にバリデーションを実行する（セキュア順序）
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "admin-user" },
@@ -117,102 +70,7 @@ describe("admin media route", () => {
     expect(body).toEqual({ error: "mediaのread権限がありません" });
   });
 
-  test("POST 成功時は raw payload を返す", async () => {
-    mockCheckPermission.mockResolvedValue({
-      success: true,
-      user: { id: "admin-user" },
-    });
-    mockUploadMediaCommand.mockResolvedValue({
-      id: "media-1",
-      url: "https://example.com/media.jpg",
-    });
-
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new File(["image"], "photo.jpg", { type: "image/jpeg" }),
-    );
-    formData.append("usage", "GENERAL");
-    formData.append("tags", JSON.stringify(["hero"]));
-
-    const response = await POST(
-      adminMediaPostRequest("http://localhost/admin/api/media", {
-        body: formData,
-      }),
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      id: "media-1",
-      url: "https://example.com/media.jpg",
-    });
-    expect(mockFinalizeMediaMutation).toHaveBeenCalledWith(["media-1"]);
-    expect(mockFireAndForget).toHaveBeenCalled();
-    expect(mockLogAction).toHaveBeenCalledWith(
-      "admin-user",
-      "create",
-      "media",
-      "media-1",
-    );
-  });
-
-  test("POST の DomainError CONFLICT は 409 を返す", async () => {
-    mockCheckPermission.mockResolvedValue({
-      success: true,
-      user: { id: "admin-user" },
-    });
-    mockUploadMediaCommand.mockRejectedValue(
-      new DomainError("競合しました", "CONFLICT"),
-    );
-
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new File(["image"], "photo.jpg", { type: "image/jpeg" }),
-    );
-
-    const response = await POST(
-      adminMediaPostRequest("http://localhost/admin/api/media", {
-        body: formData,
-      }),
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(409);
-    expect(body).toEqual({ error: "競合しました" });
-    expect(mockFinalizeMediaMutation).not.toHaveBeenCalled();
-  });
-
-  test("POST は same-origin 不一致を 403 で拒否する", async () => {
-    const response = await POST(
-      new Request("http://localhost/admin/api/media", {
-        method: "POST",
-        headers: { origin: "https://evil.example.com" },
-        body: new FormData(),
-      }),
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body).toEqual({ error: "Forbidden" });
-    expect(mockCheckPermission).not.toHaveBeenCalled();
-  });
-
-  test("POST の権限エラーは { error } で返す", async () => {
-    mockCheckPermission.mockResolvedValue({
-      success: false,
-      error: { success: false, error: "mediaのcreate権限がありません" },
-    });
-
-    const response = await POST(
-      adminMediaPostRequest("http://localhost/admin/api/media", {
-        body: new FormData(),
-      }),
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body).toEqual({ error: "mediaのcreate権限がありません" });
+  test("アップロード POST は export しない（Server Action に一本化）", () => {
+    expect("POST" in mediaRoute).toBe(false);
   });
 });

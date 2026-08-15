@@ -89,13 +89,18 @@ export function checkBotHeuristics(params: {
     return { success: false, error: BOT_DETECTED_ERROR };
   }
 
-  if (params.formRenderToken !== undefined) {
-    const elapsedMs = readFormRenderElapsedMs(params.formRenderToken);
-    // `null` は復号失敗・期限切れ・形式不正＝**判定不能**。bot 扱いにはしない。
-    // 時間トラップの目的は速すぎる送信を弾くことで、遅い送信ではない。
-    if (elapsedMs !== null && elapsedMs < MIN_FORM_FILL_TIME_MS) {
-      return { success: false, error: BOT_DETECTED_ERROR };
-    }
+  if (
+    params.formRenderToken === undefined ||
+    params.formRenderToken.length === 0
+  ) {
+    return { success: false, error: BOT_DETECTED_ERROR };
+  }
+
+  const elapsedMs = readFormRenderElapsedMs(params.formRenderToken);
+  // `null` は復号失敗・期限切れ・形式不正＝**判定不能**。bot 扱いにはしない。
+  // 時間トラップの目的は速すぎる送信を弾くことで、遅い送信ではない。
+  if (elapsedMs !== null && elapsedMs < MIN_FORM_FILL_TIME_MS) {
+    return { success: false, error: BOT_DETECTED_ERROR };
   }
 
   return { success: true };

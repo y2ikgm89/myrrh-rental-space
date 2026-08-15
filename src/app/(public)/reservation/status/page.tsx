@@ -28,7 +28,7 @@ import {
   GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
 } from "@/shared/lib/guest-status-member-ownership";
 import { formatSerializedDate } from "@/shared/lib/serialize";
-import { formatPrice } from "@/shared/lib/pricing/format";
+import { formatReservationListTotal } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   getValidPaymentStatus,
@@ -269,7 +269,7 @@ export default async function GuestReservationStatusPage({
             })}
           </DetailRow>
           <DetailRow label="合計金額">
-            {formatPrice(reservation.totalPrice, "未定")}
+            {formatReservationListTotal(reservation.totalPriceWithTax)}
           </DetailRow>
           <DetailRow label="予約状態">{reservationStatusLabel}</DetailRow>
           <DetailRow label="お支払い">

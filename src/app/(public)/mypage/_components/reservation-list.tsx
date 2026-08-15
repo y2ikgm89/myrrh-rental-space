@@ -11,7 +11,7 @@ interface Reservation {
   readonly startTime: string;
   readonly endTime: string;
   readonly status: ReservationStatus;
-  readonly totalPrice: number | null;
+  readonly totalPriceWithTax: number | null;
   readonly paymentStatus: PaymentStatus;
   readonly notes: string | null;
   readonly createdAt: string;
