@@ -2,6 +2,27 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, sep } from "node:path";
 import { Glob } from "bun";
+import {
+  ScriptKind,
+  ScriptTarget,
+  SyntaxKind,
+  canHaveModifiers,
+  createSourceFile,
+  forEachChild,
+  getModifiers,
+  isArrayLiteralExpression,
+  isAwaitExpression,
+  isCallExpression,
+  isFunctionDeclaration,
+  isIdentifier,
+  isJsxOpeningElement,
+  isJsxSelfClosingElement,
+  isParenthesizedExpression,
+  isPropertyAccessExpression,
+  type CallExpression,
+  type FunctionDeclaration,
+  type Node,
+} from "typescript";
 
 /**
  * 管理ページの認可はデータ取得より前（ページ本体）で解決する（ratchet）。
@@ -31,6 +52,29 @@ import { Glob } from "bun";
  * **`experimental.authInterrupts` 必須の experimental で「本番非推奨」**と
  * 公式に明記され、authentication / data-security ガイドも一切言及しない。
  *
+ * ## 何を見るか（2026-08-15 に判定を AST へ移した）
+ *
+ * 旧版は `require(AdminListPage|...)\s*\(` の文字列一致だった。呼出が残ってさえ
+ * いれば通るため、`await` を `void` に変えるだけで認可の Promise が待たれない
+ * ページを緑で通していた（第6次監査 M-13 の変異検査で実証）。`void` は
+ * `@typescript-eslint/no-floating-promises` の公式エスケープで、`require-await` は
+ * eslint.config.mjs の Next.js 契約 exempt で page.tsx に対して off なので、
+ * ESLint 側にも受け皿が無い。
+ *
+ * いまは TypeScript AST で次を見る:
+ *
+ * - default export の `export default async function` 本体の中にある
+ * - `PAGE_GUARD_NAMES` の識別子呼出で
+ * - 最初の `<Suspense>` より前の位置にあり
+ * - かつ **await されている**（素の `await` / `await Promise.all([...])` の要素 /
+ *   括弧で包んだ形を認める）
+ *
+ * ものが 1 つ以上あること。`void x()` / 呼び捨て / `.catch()` チェーンは落ちる。
+ *
+ * **見ないこと**: どの resource を要求しているか（引数は検査しない）。
+ * 認可 helper が resource:action を正しく解決すること自体は page-auth.ts の
+ * 呼び先 `requireAdminPermission` の担当。
+ *
  * ## ratchet 運用
  *
  * 既存違反は `PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST` に凍結する。新規追加は fail。
@@ -41,8 +85,17 @@ import { Glob } from "bun";
 const root = process.cwd();
 
 /** ページ本体（default export）で認可を解決する helper 群 */
-const PAGE_GUARD_PATTERN =
-  /require(AdminDashboardPage|AdminListPage|AdminDetailPage|AdminSettingsPage|AdminPermission|AdminResourcePermission)\s*\(/u;
+const PAGE_GUARD_NAMES = new Set([
+  "requireAdminDashboardPage",
+  "requireAdminListPage",
+  "requireAdminDetailPage",
+  "requireAdminSettingsPage",
+  "requireAdminPermission",
+  "requireAdminResourcePermission",
+]);
+
+/** `await Promise.all([guard(), ...])` を await 済みとして認めるための combinator */
+const PROMISE_COMBINATOR_NAMES = new Set(["all", "allSettled"]);
 
 /**
  * 未解消の既存違反（凍結）。減らす方向にのみ更新する。
@@ -101,14 +154,129 @@ const PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST: readonly string[] = [
   "src/app/(admin)/admin/(dashboard)/terms/trash/page.tsx",
 ];
 
-/** default export の本体のうち、最初の `<Suspense` より前の部分を返す */
-function pageBodyBeforeSuspense(source: string): string {
-  const match =
-    /export default async function \w+\([\s\S]*?\)\s*(?::[^{]*)?\{([\s\S]*)$/u.exec(
-      source,
-    );
-  const body = match?.[1] ?? "";
-  return body.split("<Suspense")[0] ?? "";
+/** `Promise.all(...)` / `Promise.allSettled(...)` の呼出か。 */
+function isPromiseCombinatorCall(node: CallExpression): boolean {
+  const callee = node.expression;
+  return (
+    isPropertyAccessExpression(callee) &&
+    isIdentifier(callee.expression) &&
+    callee.expression.text === "Promise" &&
+    PROMISE_COMBINATOR_NAMES.has(callee.name.text)
+  );
+}
+
+/**
+ * その呼出が await されているか。
+ *
+ * 親を辿って `await` に到達すれば true。途中で通ってよいのは
+ * 括弧 / 配列リテラル / `Promise.all` 系の引数だけで、それ以外
+ * （`void` / `ExpressionStatement` / `.catch()` チェーン / `return`）は false。
+ */
+function isAwaited(call: CallExpression): boolean {
+  let current: Node = call;
+  let parent: Node | undefined = call.parent;
+
+  while (parent !== undefined) {
+    if (isAwaitExpression(parent)) return parent.expression === current;
+
+    if (isParenthesizedExpression(parent) || isArrayLiteralExpression(parent)) {
+      current = parent;
+      parent = parent.parent;
+      continue;
+    }
+
+    if (
+      isCallExpression(parent) &&
+      isPromiseCombinatorCall(parent) &&
+      parent.arguments.some((arg) => arg === current)
+    ) {
+      current = parent;
+      parent = parent.parent;
+      continue;
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
+/** `export default async function ...` の宣言（無ければ undefined）。 */
+function defaultExportAsyncFunction(
+  source: Node,
+): FunctionDeclaration | undefined {
+  let found: FunctionDeclaration | undefined;
+  forEachChild(source, (node) => {
+    if (found !== undefined) return;
+    if (!isFunctionDeclaration(node) || node.body === undefined) return;
+    if (!canHaveModifiers(node)) return;
+    const modifiers = getModifiers(node) ?? [];
+    const has = (kind: SyntaxKind): boolean =>
+      modifiers.some((modifier) => modifier.kind === kind);
+    if (
+      has(SyntaxKind.ExportKeyword) &&
+      has(SyntaxKind.DefaultKeyword) &&
+      has(SyntaxKind.AsyncKeyword)
+    ) {
+      found = node;
+    }
+  });
+  return found;
+}
+
+/** 本体内で最初に現れる `<Suspense>` の開始位置（無ければ +Infinity）。 */
+function firstSuspenseStart(fn: FunctionDeclaration): number {
+  let earliest = Number.POSITIVE_INFINITY;
+  const walk = (node: Node): void => {
+    if (
+      (isJsxOpeningElement(node) || isJsxSelfClosingElement(node)) &&
+      isIdentifier(node.tagName) &&
+      node.tagName.text === "Suspense"
+    ) {
+      earliest = Math.min(earliest, node.getStart());
+    }
+    forEachChild(node, walk);
+  };
+  walk(fn);
+  return earliest;
+}
+
+/**
+ * default export 本体の、最初の `<Suspense>` より前の位置に
+ * **await された** 認可 helper 呼出が 1 つ以上あるか。
+ */
+function hasAwaitedPageGuard(text: string): boolean {
+  const source = createSourceFile(
+    "page.tsx",
+    text,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.TSX,
+  );
+
+  const fn = defaultExportAsyncFunction(source);
+  const body = fn?.body;
+  if (fn === undefined || body === undefined) return false;
+
+  const suspenseStart = firstSuspenseStart(fn);
+  let guarded = false;
+  const walk = (node: Node): void => {
+    if (guarded) return;
+    if (
+      isCallExpression(node) &&
+      isIdentifier(node.expression) &&
+      PAGE_GUARD_NAMES.has(node.expression.text) &&
+      node.getStart() < suspenseStart &&
+      isAwaited(node)
+    ) {
+      guarded = true;
+      return;
+    }
+    forEachChild(node, walk);
+  };
+  walk(body);
+
+  return guarded;
 }
 
 function listDashboardPages(): string[] {
@@ -121,11 +289,19 @@ function listDashboardPages(): string[] {
 function findViolations(): string[] {
   return listDashboardPages().filter((rel) => {
     const source = readFileSync(join(root, ...rel.split("/")), "utf8");
-    return !PAGE_GUARD_PATTERN.test(pageBodyBeforeSuspense(source));
+    return !hasAwaitedPageGuard(source);
   });
 }
 
-describe("admin ページの認可は Suspense 境界より前で解決する", () => {
+/**
+ * 見本を **本番と同じ判定器**へ通す。別実装で確かめると、判定器が壊れても
+ * 見本だけ緑になる。
+ */
+function analyzeSnippet(code: string): boolean {
+  return hasAwaitedPageGuard(code);
+}
+
+describe("admin ページの認可は Suspense 境界より前で await して解決する", () => {
   test("allowlist 外の新規違反が無い", () => {
     // gate 自体が空振りしていないことの sanity check
     expect(listDashboardPages().length).toBeGreaterThan(0);
@@ -152,5 +328,64 @@ describe("admin ページの認可は Suspense 境界より前で解決する", 
 
     expect(PAGE_AUTH_AFTER_SUSPENSE_ALLOWLIST).not.toContain(rel);
     expect(findViolations()).not.toContain(rel);
+  });
+
+  test("guard 呼出が await されている形だけを compliant と判定する（見本）", () => {
+    // 落ちてはいけない形 1: 素の await（audit-logs/page.tsx:70 の実際の形）
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           await requireAdminListPage("auditLog");
+           return <div />;
+         }`,
+      ),
+    ).toBe(true);
+
+    // 落ちてはいけない形 2: await Promise.all の要素
+    // （staff/[id]/page.tsx:47-50 の実際の形。ここを落とすと既存ページが壊れる）
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           const [currentUser, user] = await Promise.all([
+             requireAdminDetailPage("user", id),
+             getUser(id),
+           ]);
+           return <div />;
+         }`,
+      ),
+    ).toBe(true);
+
+    // 落ちるべき形 1: void（第6次監査 M-13 の変異。呼出は残るが認可は待たれない）
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           void requireAdminListPage("auditLog");
+           return <div />;
+         }`,
+      ),
+    ).toBe(false);
+
+    // 落ちるべき形 2: 素の呼び捨て
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           requireAdminListPage("auditLog");
+           return <div />;
+         }`,
+      ),
+    ).toBe(false);
+
+    // 落ちるべき形 3: Suspense 境界の内側でしか認可していない
+    expect(
+      analyzeSnippet(
+        `export default async function P() {
+           return (
+             <Suspense fallback={null}>
+               {await requireAdminListPage("auditLog")}
+             </Suspense>
+           );
+         }`,
+      ),
+    ).toBe(false);
   });
 });
