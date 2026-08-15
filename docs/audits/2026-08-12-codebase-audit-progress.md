@@ -21,10 +21,10 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | 重大   |   — |   — |   0 |
 | 高     |  11 |   0 |  11 |
 | 中     |  64 |   0 |  64 |
-| 低     |  56 |   1 |  57 |
-| 合計   | 131 |   1 | 132 |
+| 低     |  57 |   0 |  57 |
+| 合計   | 132 |   0 | 132 |
 
-**高 11 件・中 64 件は全件クローズ。**残りは低 1 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
+**高 11 件・中 64 件は全件クローズ。**残りは低 0 件で、[計画書 §6](../superpowers/plans/2026-08-13-codebase-audit-remediation.md#6-未着手の指摘台帳) の台帳に載っている。F-94 は R-03 の再掲として棄却へ移した（§2 には入れない）。
 
 > **手で数え直さない。** 済の件数は下の §2 の行数、未の件数は計画書 §6 の行数から導く。
 > 以前この表は台帳より 2 件多く「済」を数えており、進捗を過大に申告していた。
@@ -165,6 +165,7 @@ F-11 は #2235 でマージ済なのに findings.md では「未着手」、F-48
 | [F-126](2026-08-12-codebase-audit-findings.md#f-126) | 低     | #2320                                      | Better Auth deleteUser に deleteTokenExpiresIn: 60 * 60 を明示。文面「1時間」は触らない                          | —                                                                                       |
 | [F-127](2026-08-12-codebase-audit-findings.md#f-127) | 低     | #2321                                      | retry.ts に gRPC Status (1–16) 分岐を足し、code 14 等の一時障害を再試行する                                      | Calendar / GBP の HTTP 経路は未変更                                                     |
 | [F-129](2026-08-12-codebase-audit-findings.md#f-129) | 低     | #2319                                      | 領収書メールの発行日を他メールと同じ formatDateWithWeekday にした                                                | PDF / マイページ / プレビューは当初から和暦表記                                         |
+| [F-131](2026-08-12-codebase-audit-findings.md#f-131) | 低     | #2322                                      | DeleteObjects を 1000 件チャンクし、保持期限 purge の一括削除が上限で落ちないようにした                          | 呼び出し側の件数制限は正本にしない                                                      |
 | [F-132](2026-08-12-codebase-audit-findings.md#f-132) | 低     | #2323                                      | page-hero images の重複 refine を object 側へ移し、issue.path === ["images"] にした                              | gallery / hero と同型                                                                   |
 
 ### 台帳外の修正（監査を起点に入ったが、指摘 ID を持たないもの）
