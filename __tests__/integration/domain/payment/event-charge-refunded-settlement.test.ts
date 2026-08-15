@@ -11,6 +11,7 @@
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { EventScheduleMode, EventStatus } from "@generated/prisma/enums";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
@@ -148,6 +149,15 @@ async function paymentStatusOf(registrationId: string): Promise<string> {
   return row.paymentStatus;
 }
 
+async function refundedByTypeOf(registrationId: string): Promise<string> {
+  const row = await prisma.refund.findFirstOrThrow({
+    where: { eventRegistrationId: registrationId },
+    select: { refundedByType: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return row.refundedByType;
+}
+
 describeMaybe("event charge.refunded は実 DB に Refund 行を書く", () => {
   beforeAll(async () => {
     ({ prisma } = await import("@/shared/db/prisma"));
@@ -230,6 +240,76 @@ describeMaybe("event charge.refunded は実 DB に Refund 行を書く", () => {
       );
     } finally {
       await cleanup();
+    }
+  });
+
+  test("metadata.initiator が ADMIN なら refundedByType を ADMIN で書く", async () => {
+    const { registrationId, cleanup } = await createPaidRegistration();
+    const stripeRefundId = `re_event_attr_admin_${crypto.randomUUID()}`;
+
+    try {
+      await applyEventChargeRefundIdempotent({
+        registrationId,
+        chargeAmount: PAID_AMOUNT,
+        amountRefunded: PAID_AMOUNT,
+        currency: "jpy",
+        latestRefund: {
+          id: stripeRefundId,
+          amount: PAID_AMOUNT,
+          status: "succeeded",
+          metadata: { initiator: REFUNDED_BY_TYPE.ADMIN },
+        },
+      });
+
+      expect(await refundedByTypeOf(registrationId)).toBe(
+        REFUNDED_BY_TYPE.ADMIN,
+      );
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("initiator が無い / 未知なら refundedByType は STRIPE_DASHBOARD", async () => {
+    const { registrationId: missingId, cleanup: cleanupMissing } =
+      await createPaidRegistration();
+    const { registrationId: unknownId, cleanup: cleanupUnknown } =
+      await createPaidRegistration();
+
+    try {
+      await applyEventChargeRefundIdempotent({
+        registrationId: missingId,
+        chargeAmount: PAID_AMOUNT,
+        amountRefunded: PAID_AMOUNT,
+        currency: "jpy",
+        latestRefund: {
+          id: `re_event_attr_missing_${crypto.randomUUID()}`,
+          amount: PAID_AMOUNT,
+          status: "succeeded",
+          metadata: null,
+        },
+      });
+      await applyEventChargeRefundIdempotent({
+        registrationId: unknownId,
+        chargeAmount: PAID_AMOUNT,
+        amountRefunded: PAID_AMOUNT,
+        currency: "jpy",
+        latestRefund: {
+          id: `re_event_attr_unknown_${crypto.randomUUID()}`,
+          amount: PAID_AMOUNT,
+          status: "succeeded",
+          metadata: { initiator: "NOT_A_REAL_ACTOR" },
+        },
+      });
+
+      expect(await refundedByTypeOf(missingId)).toBe(
+        REFUNDED_BY_TYPE.STRIPE_DASHBOARD,
+      );
+      expect(await refundedByTypeOf(unknownId)).toBe(
+        REFUNDED_BY_TYPE.STRIPE_DASHBOARD,
+      );
+    } finally {
+      await cleanupMissing();
+      await cleanupUnknown();
     }
   });
 });
