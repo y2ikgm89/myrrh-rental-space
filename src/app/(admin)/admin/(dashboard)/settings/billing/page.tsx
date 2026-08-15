@@ -18,7 +18,7 @@ import {
   getRefundPolicySettings,
   getStripeEnvSecretOverrideActive,
 } from "@/admin/queries/settings";
-import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
+import { requireSettingsManagePage } from "@/admin/helpers/page-auth";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -177,7 +177,7 @@ function BillingSettingsLoading(): ReactElement {
 }
 
 export default async function BillingSettingsPage(): Promise<ReactElement> {
-  await requireAdminSettingsPage("manage");
+  await requireSettingsManagePage();
 
   return (
     <SettingsLayout

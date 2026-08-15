@@ -17,7 +17,7 @@ import {
   getNotificationStaffCandidates,
 } from "@/admin/queries/settings";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
+import { requireSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { isEmailEnabled } from "@/shared/domain/settings/queries/email-render-context";
 import { isFeatureEnabled } from "@/shared/domain/features/check";
@@ -146,7 +146,7 @@ function NotificationsSettingsLoading(): ReactElement {
 
 export default async function NotificationsSettingsPage(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminSettingsPage();
+  const user = await requireSettingsPage();
   const readOnly = !hasPermission(user.role, "settings", "update");
 
   return (

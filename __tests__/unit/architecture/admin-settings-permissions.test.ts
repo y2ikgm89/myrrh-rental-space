@@ -32,7 +32,13 @@ describe("admin settings permission boundaries", () => {
 
     for (const pagePath of manageOnlyPages) {
       const source = readAdminFile(...pagePath);
-      expect(source).toContain('requireAdminSettingsPage("manage")');
+      // 引数ではなく関数名で照合する。要求権限の実体は page-auth.ts の
+      // `requireSettingsManagePage` 1 箇所にあり、それが settings:manage を
+      // 要求することは __tests__/unit/admin/helpers/page-auth.test.ts が
+      // 実 hasPermission で固定している。ここが見るのは「このページがどちらの
+      // guard を呼ぶか」だけ（DAL に寄せられない方針なので、この照合は消せない）。
+      expect(source).toContain("requireSettingsManagePage()");
+      expect(source).not.toContain("requireSettingsPage()");
       expect(source).toContain("@/admin/helpers/page-auth");
     }
   });
@@ -41,7 +47,7 @@ describe("admin settings permission boundaries", () => {
     const source = readAdminFile("settings", "page.tsx");
 
     expect(source).toContain(
-      'const currentUser = await requireAdminSettingsPage("read");',
+      "const currentUser = await requireSettingsPage();",
     );
     expect(source).toContain("@/admin/helpers/page-auth");
     expect(

@@ -13,7 +13,8 @@
  * | `requireStaffListPage()` | `user:read` | スタッフ一覧 |
  * | `requireStaffDetailPage(userId)` | `user:read` + editor scope | スタッフ詳細 |
  * | `requireCouponCreatePage()` | `coupon:create` | クーポン新規作成フォーム |
- * | `requireAdminSettingsPage(action?)` | `settings:read` or `settings:manage` | Settings hub and subpages |
+ * | `requireSettingsPage()` | `settings:read` | 設定ハブと閲覧系サブページ |
+ * | `requireSettingsManagePage()` | `settings:manage` | 高リスク設定ページ |
  *
  * Data loaders in `@/admin/queries/*` continue to enforce resource permissions at
  * fetch time; pair `requireAdminDashboardPage()` with those loaders on list/detail
@@ -28,7 +29,6 @@ import {
   requireAdminResourcePermission,
 } from "@/admin/queries/_helpers";
 import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
-import type { Action } from "@/shared/lib/admin-resources";
 
 /** Dashboard shell: IAP session + dashboard role only. */
 export async function requireAdminDashboardPage(): Promise<AdminAuthUser> {
@@ -70,9 +70,19 @@ export async function requireCouponCreatePage(): Promise<AdminAuthUser> {
   return requireAdminPermission("coupon", "create");
 }
 
-/** Settings hub (`read`) and mutation subpages (`manage`). */
-export async function requireAdminSettingsPage(
-  action: Extract<Action, "read" | "manage"> = "read",
-): Promise<AdminAuthUser> {
-  return requireAdminPermission("settings", action);
+/** 設定ハブと閲覧系サブページ（`settings:read`）。 */
+export async function requireSettingsPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("settings", "read");
+}
+
+/**
+ * 高リスク設定ページ（`settings:manage`）。
+ *
+ * これらのページが読むデータは全て `settings:read` で取れるため、`manage` 要求は
+ * ページ側にしか存在しない（DAL に寄せられない。とくに system は `getSettings` しか
+ * 読まない）。したがって「どのページが manage を要求するか」は
+ * `__tests__/unit/architecture/admin-settings-permissions.test.ts` が別途固定する。
+ */
+export async function requireSettingsManagePage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("settings", "manage");
 }
