@@ -554,5 +554,7 @@ export function useTermsEditor({
 
     isDeleteDialogOpen: core.isDeleteDialogOpen,
     setIsDeleteDialogOpen: core.setIsDeleteDialogOpen,
+
+    _test: { validateSettings },
   };
 }
