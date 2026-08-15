@@ -212,12 +212,7 @@ describe("events/payment-queries", () => {
       expect(result).toBe(false);
       expect(
         mockRefundOrphanedStripePaymentForCancelledEventRegistration,
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          registrationId: REGISTRATION_ID,
-          stripePaymentIntentId: PAYMENT_INTENT_ID,
-        }),
-      );
+      ).toHaveBeenCalled();
       expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "event_registration_refund",

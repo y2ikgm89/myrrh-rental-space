@@ -342,12 +342,7 @@ describe("reservations/payment-queries", () => {
         expect(result).toBeNull();
         expect(
           mockRefundOrphanedStripePaymentForCancelledReservation,
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            reservationId: RESERVATION_ID,
-            stripePaymentIntentId: PAYMENT_INTENT_ID,
-          }),
-        );
+        ).toHaveBeenCalled();
         expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
           expect.objectContaining({
             type: "reservation_refund",

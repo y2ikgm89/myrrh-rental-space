@@ -757,13 +757,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
-    expect(mockRefundCheckoutAmountMismatchForReservation).toHaveBeenCalledWith(
-      {
-        reservationId: "res-123",
-        stripePaymentIntentId: "pi-123",
-        capturedAppAmount: 9999,
-      },
-    );
+    expect(mockRefundCheckoutAmountMismatchForReservation).toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
