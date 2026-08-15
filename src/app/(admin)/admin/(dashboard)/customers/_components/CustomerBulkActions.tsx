@@ -133,7 +133,7 @@ export function CustomerBulkActions({
       const parts: string[] = [];
       if (result.sent > 0) parts.push(`${result.sent}件送信`);
       if (result.excluded > 0)
-        parts.push(`${result.excluded}件除外(配信停止済み)`);
+        parts.push(`${result.excluded}件除外(配信同意なし)`);
       toast.success(
         parts.length > 0 ? parts.join("、") : "対象者がいませんでした",
       );

@@ -161,4 +161,22 @@ describe("broadcastCustomersAction", () => {
       expect.objectContaining({ subject: "お知らせ", body: "本文です" }),
     );
   });
+
+  test("メール配信が無効なら成功扱いにせず MutationError を返す", async () => {
+    mockSendCustomerBroadcast.mockResolvedValue({
+      ok: false,
+      reason: "disabled",
+    });
+
+    const result = await broadcastCustomersAction(
+      [CUSTOMER_ID_1, CUSTOMER_ID_2],
+      "お知らせ",
+      "本文です",
+    );
+
+    expect(isMutationError(result)).toBe(true);
+    if (isMutationError(result)) {
+      expect(result.error).toContain("メール送信が無効です");
+    }
+  });
 });
