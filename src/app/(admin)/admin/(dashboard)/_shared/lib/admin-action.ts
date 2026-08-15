@@ -2,7 +2,7 @@ import "server-only";
 
 import type { AdminAuthUser } from "@/shared/domain/admin-auth/session";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { hasPermission } from "@/shared/lib/admin-permissions";
+import { authorizeAdmin } from "@/admin/lib/authorize";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";
 import { recordPermissionDenied } from "@/admin/lib/audit";
@@ -57,7 +57,7 @@ export type ExecuteAdminMutationResultOptions<TData> =
  * **実行順序契約**（不変）:
  *   1. `checkAdminAuth()` — 認証（DB lookup より前に必ず）
  *   2. `resolveResourceId(user)` — 認証後に resourceId を解決（指定時のみ）
- *   3. `hasPermission()` — RBAC ロールベース認可
+ *   3. `authorizeAdmin()` — RBAC ロールベース認可（拒否時の監査記録を含む）
  *   4. `userHasResourceAccess()` — EDITOR の `userPageAssignment` チェック（`checkResourceAccess: true` 時のみ）
  *   5. `execute(user)` — DB mutation（DomainError は `MutationError` に自動変換）
  *   6. `await afterSuccess(data)` — クリティカル副作用（cache invalidation 等）
@@ -91,13 +91,7 @@ export async function executeAdminMutationResult<TData>(
   }
 
   // 3. RBAC 権限チェック
-  if (!hasPermission(user.role, options.resource, options.action)) {
-    recordPermissionDenied(
-      user.id,
-      options.resource,
-      options.action,
-      resourceId,
-    );
+  if (!authorizeAdmin(user, options.resource, options.action, resourceId)) {
     return {
       error: `${options.resource}の${options.action}権限がありません`,
     };

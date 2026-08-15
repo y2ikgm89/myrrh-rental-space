@@ -17,7 +17,7 @@ import {
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { canAccessAdmin } from "@/admin/lib/permissions";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
-import { hasPermission } from "@/shared/lib/admin-permissions";
+import { authorizeAdmin } from "@/admin/lib/authorize";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { logUserAction, recordPermissionDenied } from "@/admin/lib/audit";
 import type { MutationError } from "@/shared/lib/mutation-result";
@@ -91,8 +91,7 @@ export async function checkPermission(
 
   const { user } = auth;
 
-  if (!hasPermission(user.role, resource, action)) {
-    recordPermissionDenied(user.id, resource, action);
+  if (!authorizeAdmin(user, resource, action)) {
     return {
       success: false,
       error: { error: `${resource}の${action}権限がありません` },

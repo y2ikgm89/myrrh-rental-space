@@ -81,6 +81,9 @@ describe("page-auth の guard が要求する権限", () => {
       VIEWER_USER.id,
       "auditLog",
       "read",
+      // authorizeAdmin（RBAC 判定の単一サイト）は resourceId 無しでも
+      // 4 引数で記録する。第 4 引数は undefined で、監査内容は 3 引数と同じ。
+      undefined,
     );
 
     mockVerifyAdminSession.mockResolvedValue(SUPER_ADMIN_USER);
@@ -97,6 +100,7 @@ describe("page-auth の guard が要求する権限", () => {
       VIEWER_USER.id,
       "user",
       "read",
+      undefined,
     );
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
@@ -128,6 +132,7 @@ describe("page-auth の guard が要求する権限", () => {
       VIEWER_USER.id,
       "coupon",
       "create",
+      undefined,
     );
 
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
@@ -152,6 +157,7 @@ describe("page-auth の guard が要求する権限", () => {
       VIEWER_USER.id,
       "settings",
       "manage",
+      undefined,
     );
 
     // allow 側は SUPER_ADMIN_USER を使う — `settings:manage` は SUPER_ADMIN
