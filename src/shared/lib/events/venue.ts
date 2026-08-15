@@ -93,3 +93,21 @@ export function isEventVirtualAccessible(event: {
 }): boolean {
   return event.format === "ONLINE" || event.format === "HYBRID";
 }
+
+/**
+ * 公開イベントからスペース詳細へ張ってよい path。
+ * 非公開 / 非アクティブな Space は 404（soft-404）になるので返さない。
+ */
+export function publicEventSpaceVenuePath(
+  space:
+    | {
+        readonly slug: string;
+        readonly isPublished: boolean;
+        readonly isActive: boolean;
+      }
+    | null
+    | undefined,
+): `/spaces/${string}` | undefined {
+  if (!space?.isPublished || !space.isActive) return undefined;
+  return `/spaces/${space.slug}`;
+}

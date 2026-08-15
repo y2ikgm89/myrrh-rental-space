@@ -236,7 +236,7 @@ advisory lock namespace が 728350(イベント定員) / 728351(スペース) / 
 
 ## 5. フェーズ計画
 
-影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 10 件
+影響と不可逆性が大きい順。**高 11 件・中 64 件は全件クローズ済み。**残りは低 9 件
 （§6）。済んだ経緯は [対処の記録](../../audits/2026-08-12-codebase-audit-progress.md)。
 
 ### フェーズ 1 — 鍵ローテーション（完了）
@@ -307,7 +307,6 @@ ID をクリックすると全文（起きること / 直し方 / 該当箇所 /
 
 | ID                                                                | 深刻度 | 箇所                                                         | 内容                                                                                                                                                 |
 | ----------------------------------------------------------------- | ------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [F-119](../../audits/2026-08-12-codebase-audit-findings.md#f-119) | 低     | `src/shared/domain/events/public-queries.ts:40`              | 非公開スペースの名前と slug が公開イベントページにリンク付きで出て、リンク先が 404                                                                   |
 | [F-122](../../audits/2026-08-12-codebase-audit-findings.md#f-122) | 低     | `src/shared/domain/inquiries/bulk-status-commands.ts:74`     | bulk ステータス変更の TOCTOU フォールバックが他管理者の遷移を自分の成果と誤認し、append-only な状態履歴に偽の行を書く                                |
 | [F-124](../../audits/2026-08-12-codebase-audit-findings.md#f-124) | 低     | `src/shared/domain/reservations/reminder-commands.ts:39`     | reminderSentAt が日付に紐づかない永続ラッチのため、リマインダ送信後に日時変更すると新しい日のリマインダが二度と送られない                            |
 | [F-125](../../audits/2026-08-12-codebase-audit-findings.md#f-125) | 低     | `src/shared/domain/slugs/validation.ts:82`                   | metadata ルート名（apple-icon / opengraph-image / twitter-image）が予約 slug に無く、その slug のページは作成できるのに公開 URL で永久に表示されない |

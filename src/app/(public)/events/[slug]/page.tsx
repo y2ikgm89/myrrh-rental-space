@@ -16,6 +16,7 @@ import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import {
   formatEventAddress,
   formatEventVenue,
+  publicEventSpaceVenuePath,
 } from "@/shared/lib/events/venue";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
@@ -122,6 +123,7 @@ export default async function EventDetailPage({
     location: event.location,
     addressDetail: event.addressDetail,
   });
+  const spaceVenuePath = publicEventSpaceVenuePath(event.space);
 
   const linkCardsResolvedDescriptionHtml = await resolveInternalLinkCards(
     event.descriptionHtml,
@@ -180,9 +182,9 @@ export default async function EventDetailPage({
                   venue: {
                     name: venueName,
                     ...(venueAddress ? { address: venueAddress } : {}),
-                    ...(event.space?.slug
+                    ...(spaceVenuePath
                       ? {
-                          url: `${baseUrl}${toAppRoute(`/spaces/${event.space.slug}`)}`,
+                          url: `${baseUrl}${toAppRoute(spaceVenuePath)}`,
                         }
                       : {}),
                   },
