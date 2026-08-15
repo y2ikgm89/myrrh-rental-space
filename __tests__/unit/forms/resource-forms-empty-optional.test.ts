@@ -363,6 +363,7 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         capacity: "10",
         area: "",
         hourlyPrice: "0",
+        taxRateType: "STANDARD",
         mainImageUrl: "https://example.com/a.jpg",
         facilities: "",
         locationId: UUID,

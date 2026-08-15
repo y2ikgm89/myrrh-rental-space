@@ -151,6 +151,7 @@ const VALID_INPUT = {
   isPublished: false,
   reviewsEnabled: true,
   locationId: LOCATION_ID,
+  taxRateType: "STANDARD" as const,
 };
 
 const ACTIVE_SPACE = {

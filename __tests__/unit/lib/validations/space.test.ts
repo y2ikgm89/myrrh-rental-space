@@ -22,6 +22,7 @@ const VALID_SPACE_INPUT = {
   capacity: 10,
   area: 50.5,
   hourlyPrice: 1000,
+  taxRateType: "STANDARD",
   mainImageUrl: "https://example.com/images/main.jpg",
   gallery: [
     { url: "https://example.com/images/1.jpg", alt: "", caption: "" },
@@ -44,6 +45,20 @@ describe("spaceFormSchema", () => {
       expect(result.success).toBe(true);
     });
 
+    test("taxRateType を省略すると失敗する", () => {
+      const input = {
+        slug: "test-space",
+        name: "テストスペース",
+        descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        locationId: TEST_LOCATION_ID,
+        capacity: 1,
+        hourlyPrice: 0,
+        mainImageUrl: "https://example.com/images/main.jpg",
+      };
+      const result = spaceFormSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
     test("オプショナルフィールドを省略可能", () => {
       const minimalInput = {
         slug: "test-space",
@@ -52,6 +67,7 @@ describe("spaceFormSchema", () => {
         locationId: TEST_LOCATION_ID,
         capacity: 1,
         hourlyPrice: 0,
+        taxRateType: "STANDARD",
         mainImageUrl: "https://example.com/images/main.jpg",
       };
       const result = spaceFormSchema.safeParse(minimalInput);
@@ -66,6 +82,7 @@ describe("spaceFormSchema", () => {
         locationId: TEST_LOCATION_ID,
         capacity: 1,
         hourlyPrice: 0,
+        taxRateType: "STANDARD",
         mainImageUrl: "https://example.com/images/main.jpg",
       };
       const result = spaceFormSchema.safeParse(input);
