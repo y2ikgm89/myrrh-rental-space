@@ -19,6 +19,7 @@ interface SpaceCardProps {
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
+  readonly taxRateType: TaxRateType;
   readonly mainImageUrl: string;
   readonly gallery?: readonly GalleryItem[] | undefined;
   readonly categoryName?: string | null | undefined;
@@ -59,6 +60,7 @@ export async function SpaceCard({
   capacity,
   area,
   hourlyPrice,
+  taxRateType,
   mainImageUrl,
   gallery,
   categoryName,
@@ -83,7 +85,7 @@ export async function SpaceCard({
     : [mainImageUrl];
 
   const tax = await getPublicTaxSettings();
-  const taxRate = getTaxRate(TaxRateType.STANDARD, tax);
+  const taxRate = getTaxRate(taxRateType, tax);
   const hourlyPriceLabel =
     hourlyPrice != null
       ? formatUnitPriceWithTax(
