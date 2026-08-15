@@ -288,6 +288,15 @@ export async function broadcastCustomersAction(
         body: parsed.data.body,
         broadcastNonce,
       });
+      // transport 無効は「全員が配信停止」ではない。ここで握りつぶすと 0 件送信が
+      // 成功 toast になるため DomainError に落とす（文言と code は
+      // settings/template-test-send.ts の disabled 分岐と揃える）。
+      if (!result.ok) {
+        throw new DomainError(
+          "メール送信が無効です。連携設定（/admin/settings/integrations?tab=resend）で Resend API キーを設定するか、環境変数 RESEND_API_KEY を設定してください。",
+          "VALIDATION",
+        );
+      }
       return { sent: result.sent, excluded: result.excluded };
     },
     // cache invalidation は不要 (customer レコード自体は変わらない)。
