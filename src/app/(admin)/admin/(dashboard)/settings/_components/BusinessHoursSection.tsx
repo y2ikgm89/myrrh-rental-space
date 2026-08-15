@@ -105,6 +105,12 @@ export function BusinessHoursSection({
   const [isPending, startTransition] = useTransition();
   const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
+  // 楽観ロックの CAS token。編集内容は下の useState 初期化子で mount 時に凍結
+  // されるので、token も同じ時点で凍結する。submit 時に prop を読むと、
+  // CONFLICT → router.refresh() で prop だけが新しくなったとき
+  // 「mount 時の入力 + 新しい token」で CAS が通り、他人の変更を上書きする。
+  const [expectedUpdatedAt] = useState(settings.organizationUpdatedAt);
+
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
 
   const [businessHours, setBusinessHours] =
@@ -337,7 +343,7 @@ export function BusinessHoursSection({
           monthlyClosures: monthlyClosures.length > 0 ? monthlyClosures : [],
         },
         holidayNotice: holidayNotice || null,
-        expectedUpdatedAt: settings.organizationUpdatedAt,
+        expectedUpdatedAt,
       });
 
       if (isMutationError(result)) {
