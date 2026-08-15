@@ -83,6 +83,10 @@ const RESERVED_PATHS: ReadonlySet<string> = new Set([
   "icon",
   "icon-192",
   "icon-512",
+  // 既定 brand 画像の Route Handler（src/app/(public)/{apple-icon,opengraph-image,twitter-image}）
+  "apple-icon",
+  "opengraph-image",
+  "twitter-image",
 ]);
 
 /**
