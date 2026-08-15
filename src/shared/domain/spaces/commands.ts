@@ -57,7 +57,7 @@ type SpaceCommandInput = {
   discountType?: DiscountType | null | undefined;
   discountValue?: number | null | undefined;
   durationDiscountOverride?: DurationDiscountOverride | null | undefined;
-  taxRateType?: TaxRateType | null | undefined;
+  taxRateType: TaxRateType;
   metaDescription?: string | null | undefined;
   metaKeywords?: string | null | undefined;
   ogpTitle?: string | null | undefined;
@@ -98,7 +98,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     discountValue: input.discountValue ?? null,
     durationDiscountOverride:
       input.durationDiscountOverride ?? DurationDiscountOverride.INHERIT,
-    taxRateType: input.taxRateType ?? TaxRateType.STANDARD,
+    taxRateType: input.taxRateType,
     metaDescription: normalizeNullableString(input.metaDescription),
     metaKeywords: normalizeNullableString(input.metaKeywords),
     ogpTitle: normalizeNullableString(input.ogpTitle),

@@ -88,6 +88,7 @@ function baseInput(locationId: string) {
     reviewsEnabled: false,
     locationId,
     categoryId: null,
+    taxRateType: "STANDARD" as const,
   };
 }
 

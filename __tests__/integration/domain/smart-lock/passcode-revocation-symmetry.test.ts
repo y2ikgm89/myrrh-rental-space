@@ -391,6 +391,7 @@ describeMaybe("スマートロック: 発行と失効の対称性", () => {
         isPublished: false,
         reviewsEnabled: false,
         locationId: f.otherLocationId,
+        taxRateType: "STANDARD",
       });
 
       expect(result.smartLockUnbound).toBe(true);
