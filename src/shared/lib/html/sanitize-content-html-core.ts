@@ -191,6 +191,15 @@ export function sanitizeRawEmbedHtml(html: string): string {
     allowProtocolRelative: false,
     exclusiveFilter: (frame) =>
       frame.tag === "iframe" && frame.attribs["src"] === undefined,
+    transformTags: {
+      button: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          type: "button",
+        },
+      }),
+    },
     disallowedTagsMode: "discard",
     enforceHtmlBoundary: true,
   });

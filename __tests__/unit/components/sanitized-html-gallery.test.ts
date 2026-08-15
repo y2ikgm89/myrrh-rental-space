@@ -90,6 +90,12 @@ describe("sanitizeRawEmbedHtml (CustomSection / EmbedSection)", () => {
     expect(clean).toBe("<p>ok</p>");
   });
 
+  test("button の type は submit にせず button に固定する", () => {
+    const clean = sanitizeRawEmbedHtml('<button type="submit">go</button>');
+    expect(clean).toContain('type="button"');
+    expect(clean).not.toContain('type="submit"');
+  });
+
   test("イベントハンドラ属性は落とす", () => {
     expect(
       sanitizeRawEmbedHtml('<img src="x" onerror="alert(1)"/>'),
