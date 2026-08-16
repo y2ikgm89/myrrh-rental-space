@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  startTransition,
   useActionState,
   useEffect,
   useEffectEvent,
@@ -59,7 +60,6 @@ import { SpaceEditMediaTab } from "./space-edit-form/SpaceEditMediaTab";
 import { SpaceEditDetailsTab } from "./space-edit-form/SpaceEditDetailsTab";
 import { SpaceEditPublishTab } from "./space-edit-form/SpaceEditPublishTab";
 import { SpaceEditBlockedDatesTab } from "./space-edit-form/SpaceEditBlockedDatesTab";
-import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { applyPersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
 import type { LexicalEditor } from "lexical";
 
@@ -214,14 +214,18 @@ export function SpaceEditForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: spaceFormSchema });
     },
-    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
-    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
-    onSubmit: (event, context) => {
-      applyPersistableEditorJson(context.formData, "descriptionJson", {
+    // React 19 の form auto-reset を止める。editorRef を submit 時に読む必要が
+    // あり helper に載せると render 中の ref 渡しと判定されるため inline
+    // （conform-form-pattern gate の documented fallback）。
+    onSubmit(event, { formData }) {
+      event.preventDefault();
+      applyPersistableEditorJson(formData, "descriptionJson", {
         editor: editorRef.current,
         reactJson: descriptionJson,
       });
-      dispatchWithoutFormReset(action)(event, context);
+      startTransition(() => {
+        action(formData);
+      });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
