@@ -19,9 +19,11 @@ import { describe, expect, test } from "bun:test";
 
 import nextConfig from "../../../next.config";
 import {
+  CDN_CACHE_TAGS,
   SITE_WIDE_CDN_TAGS,
   PRIVATE_NO_TAG_PREFIXES,
   EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
+  NEXTJS_TAG_TO_CDN_TAG,
 } from "@/shared/lib/constants/cdn-cache-tags";
 
 type HeaderEntry = { key: string; value: string };
@@ -152,6 +154,42 @@ describe("next.config Cache-Tag emission contract", () => {
         tag.value.split(","),
         `${entry.source} must NOT contain SITEMAP tag`,
       ).not.toContain(SITEMAP_TAG);
+    }
+  });
+
+  test("every NEXTJS_TAG_TO_CDN_TAG value except INTEGRATION_SETTINGS is emitted by some headers() Cache-Tag", async () => {
+    const headers = await getHeaders();
+    const emitted = new Set<string>();
+    for (const entry of headers) {
+      const tag = entry.headers.find((h) => h.key === "Cache-Tag");
+      if (!tag) continue;
+      for (const value of tag.value.split(",")) {
+        emitted.add(value);
+      }
+    }
+    for (const cdnTag of Object.values(NEXTJS_TAG_TO_CDN_TAG)) {
+      if (cdnTag === CDN_CACHE_TAGS.INTEGRATION_SETTINGS) continue;
+      expect(
+        emitted.has(cdnTag),
+        `mapped CDN tag ${cdnTag} is not emitted by any headers() Cache-Tag`,
+      ).toBe(true);
+    }
+    expect(emitted.has(CDN_CACHE_TAGS.INTEGRATION_SETTINGS)).toBe(false);
+  });
+
+  test("/access emits a Cache-Tag header that includes the site-wide set", async () => {
+    const headers = await getHeaders();
+    const entry = expectSourceEntry(headers, "/access");
+    const tagHeader = expectHeader(
+      entry,
+      "Cache-Tag",
+      "/access must have Cache-Tag",
+    );
+    const tags = tagHeader.value.split(",");
+    for (const siteWide of SITE_WIDE_CDN_TAGS) {
+      expect(tags, `/access missing site-wide tag ${siteWide}`).toContain(
+        siteWide,
+      );
     }
   });
 
