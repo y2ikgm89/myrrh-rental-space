@@ -32,6 +32,8 @@ describe("inquiry_status_history append-only boundary", () => {
     expect(body).not.toContain("myrrh.audit_log_mutation_bypass");
     expect(body).not.toContain("myrrh.terms_agreement_mutation_bypass");
     expect(body).not.toContain("myrrh.refund_mutation_bypass");
+    expect(body).toContain("RAISE EXCEPTION");
+    expect(body).toContain("integrity_constraint_violation");
   });
 
   test("E2E helper が inquiry_status_history を mutate しない", () => {

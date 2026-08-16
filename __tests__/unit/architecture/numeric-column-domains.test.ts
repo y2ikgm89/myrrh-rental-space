@@ -28,11 +28,11 @@
  * ## この gate が証明すること / しないこと
  *
  * **証明する**: すべての数値列が CHECK に覆われているか、覆わない理由が宣言されている。
+ * 宣言した値域の CHECK 式は kind から導いた比較（`>= 0` / `> 0` 等）を含む。
+ * 制約名は invariants.sql に実際に書かれている識別子が 63 バイトに収まる。
  *
- * **証明しない**: 述語が正しいこと。CHECK は名前だけ合っていて中身が
- * `1 = 1` でもここは通る。**述語は
- * `__tests__/integration/prisma/numeric-column-domains.test.ts` が実 DB の
- * 制約定義を写し取って境界値で確かめる。**片方だけでは不十分なので、両方要る。
+ * **証明しない**: 境界値を実 DB に INSERT したときの拒否。それは
+ * `__tests__/integration/prisma/numeric-column-domains.test.ts` の担当。
  */
 
 import { readFileSync } from "node:fs";
@@ -40,6 +40,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { readDatabaseInvariants } from "../../support/prisma-sources";
 import {
   NUMERIC_COLUMN_DOMAINS,
   POSTGRES_IDENTIFIER_MAX_BYTES,
@@ -53,6 +54,7 @@ import {
   readChecksByTable,
   readNumericColumns,
   type NumericColumn,
+  type NumericDomain,
 } from "../../support/numeric-column-domains";
 
 const COLUMNS = readNumericColumns();
@@ -67,11 +69,13 @@ const REORDER_COMMAND_FILES: readonly string[] = [
   "src/shared/domain/events/event-slot-sync-commands.ts",
   "src/shared/domain/faq/category-commands.ts",
   "src/shared/domain/faq/item-commands.ts",
+  "src/shared/domain/instagram/commands.ts",
   "src/shared/domain/locations/commands.ts",
   "src/shared/domain/navigation/commands.ts",
   "src/shared/domain/posts/category-commands.ts",
   "src/shared/domain/sections/commands.ts",
   "src/shared/domain/settings/announcement-bar.ts",
+  "src/shared/domain/settings/transfer-account-commands.ts",
   "src/shared/domain/space-categories/commands.ts",
   "src/shared/domain/terms/commands.ts",
 ];
@@ -85,6 +89,103 @@ function isCoveredByDedicatedCheck(c: NumericColumn): boolean {
 }
 
 const key = (c: NumericColumn): string => columnKey(c);
+
+function mentionsColumn(expression: string, column: string): boolean {
+  return new RegExp(`(?:^|[^a-z_"])"?${column}"?(?:$|[^a-z_"])`, "u").test(
+    expression,
+  );
+}
+
+function columnIdent(column: string): string {
+  return `(?:"${column}"|${column})`;
+}
+
+function hasNumericComparison(expression: string, column: string): boolean {
+  return new RegExp(`${columnIdent(column)}\\s*(?:>=|<=|>|<)`, "u").test(
+    expression,
+  );
+}
+
+/** kind から導いた比較が `pg_get_constraintdef` 正規形の式に含まれるか。 */
+function hasKindPredicate(
+  expression: string,
+  column: string,
+  domain: NumericDomain,
+): boolean {
+  const col = columnIdent(column);
+  switch (domain.kind) {
+    case "nonNegative":
+      return new RegExp(`${col}\\s*>=\\s*0\\b`, "u").test(expression);
+    case "positive":
+      return new RegExp(`${col}\\s*(?:>\\s*0|>=\\s*1)\\b`, "u").test(
+        expression,
+      );
+    case "range": {
+      const bound = (value: number) =>
+        value < 0 ? `(?:'-${-value}'|-\\s*${-value})` : String(value);
+      const ge = new RegExp(
+        `${col}[\\s\\S]{0,48}>=[\\s\\S]{0,48}${bound(domain.min)}`,
+        "u",
+      );
+      const le = new RegExp(
+        `${col}[\\s\\S]{0,48}<=[\\s\\S]{0,48}${bound(domain.max)}`,
+        "u",
+      );
+      return ge.test(expression) && le.test(expression);
+    }
+    case "position": {
+      const min =
+        domain.min === 0 ? `${col}\\s*>=\\s*0\\b` : `${col}\\s*>=\\s*'-1'`;
+      return (
+        new RegExp(min, "u").test(expression) &&
+        new RegExp(`${col}\\s*<=\\s*'-1000000'`, "u").test(expression)
+      );
+    }
+  }
+}
+
+function expressionsForColumn(
+  column: NumericColumn,
+  domain: NumericDomain,
+): string[] {
+  const bucket = CHECKS.get(column.table);
+  if (!bucket) return [];
+  const named = constraintNameFor(column, domain);
+  const out: string[] = [];
+  const namedExpr = bucket.get(named);
+  if (namedExpr !== undefined) out.push(namedExpr);
+  for (const [name, expr] of bucket) {
+    if (name === named) continue;
+    if (mentionsColumn(expr, column.column)) out.push(expr);
+  }
+  return out;
+}
+
+function collectReorderedColumns(files: readonly string[]): Set<string> {
+  const out = new Set<string>();
+  for (const file of files) {
+    const source = readFileSync(join(process.cwd(), file), "utf8");
+    for (const m of source.matchAll(
+      /UPDATE\s+"?(\w+)"?[\s\S]{0,120}?SET\s+"?(\w+)"?/gu,
+    )) {
+      if (m[1] && m[2]) out.add(`${m[1]}.${m[2]}`);
+    }
+    for (const c of COLUMNS) {
+      if (NUMERIC_COLUMN_DOMAINS[key(c)]?.kind !== "position") continue;
+      const delegate = `${c.model[0]?.toLowerCase() ?? ""}${c.model.slice(1)}`;
+      if (
+        new RegExp(
+          `\\b${delegate}\\.(?:create|createMany|update|updateMany|upsert)\\b`,
+          "u",
+        ).test(source) &&
+        new RegExp(`\\b${c.field}\\b`, "u").test(source)
+      ) {
+        out.add(`${c.table}.${c.column}`);
+      }
+    }
+  }
+  return out;
+}
 
 describe("数値列の値域", () => {
   test("gate が空振りしていない（前提の自己検査）", () => {
@@ -132,6 +233,29 @@ describe("数値列の値域", () => {
     expect(missing).toEqual([]);
   });
 
+  test("宣言した値域の CHECK 式は kind から導いた比較を含む", () => {
+    const wrong = Object.entries(NUMERIC_COLUMN_DOMAINS).flatMap(
+      ([k, domain]) => {
+        const column = COLUMNS.find((c) => key(c) === k);
+        if (!column) return [];
+        const exprs = expressionsForColumn(column, domain);
+        const mustPin =
+          hasDedicatedNumericCheck(column) ||
+          exprs.some((expr) => hasNumericComparison(expr, column.column));
+        if (!mustPin) return [];
+        return exprs.some((expr) =>
+          hasKindPredicate(expr, column.column, domain),
+        )
+          ? []
+          : [
+              `${k}: 制約式に ${domain.kind} の比較が無い — ${exprs.join(" / ")}`,
+            ];
+      },
+    );
+
+    expect(wrong).toEqual([]);
+  });
+
   test("値域を持たせない宣言は実在する列に対してだけ書かれている", () => {
     const known = new Set(COLUMNS.map(key));
     const stale = Object.keys(UNBOUNDED_NUMERIC_COLUMNS).filter(
@@ -144,7 +268,9 @@ describe("数値列の値域", () => {
   test("制約名が PostgreSQL の識別子上限に収まっている", () => {
     // 超えた分は **黙って切り捨てられる**。付けたつもりの名前と実際の名前が
     // 食い違い、名前で引く検査が「別の制約を見ている」状態になる。
-    const tooLong = Object.entries(NUMERIC_COLUMN_DOMAINS).flatMap(
+    // 宣言から導出した名前だけでなく、invariants.sql に実際に書かれている
+    // 識別子も測る（76 バイト名を SQL に足す変異を宣言側だけでは見逃す）。
+    const derived = Object.entries(NUMERIC_COLUMN_DOMAINS).flatMap(
       ([k, domain]) => {
         const column = COLUMNS.find((c) => key(c) === k);
         if (!column) return [];
@@ -157,8 +283,23 @@ describe("数値列の値域", () => {
             ];
       },
     );
+    const written = new Set<string>();
+    for (const bucket of CHECKS.values()) {
+      for (const name of bucket.keys()) written.add(name);
+    }
+    for (const m of readDatabaseInvariants().matchAll(
+      /ADD CONSTRAINT "([^"]+)"/gu,
+    )) {
+      if (m[1]) written.add(m[1]);
+    }
+    const actual = [...written].flatMap((name) => {
+      const bytes = Buffer.byteLength(name, "utf8");
+      return bytes <= POSTGRES_IDENTIFIER_MAX_BYTES
+        ? []
+        : [`${name}: ${bytes} バイト（上限 ${POSTGRES_IDENTIFIER_MAX_BYTES}）`];
+    });
 
-    expect(tooLong).toEqual([]);
+    expect([...derived, ...actual]).toEqual([]);
   });
 
   test("短縮名の override は本当に必要なものだけ", () => {
@@ -223,15 +364,7 @@ describe("数値列の値域", () => {
     // `position` は `nonNegative` より緩い。緩めてよいのは reorder の
     // 退避先になる列だけなので、その根拠（reorder コマンドの UPDATE 対象）を
     // ソースから確かめる。根拠の無い緩和は落とす。
-    const reorderedColumns = new Set<string>();
-    for (const file of REORDER_COMMAND_FILES) {
-      const source = readFileSync(join(process.cwd(), file), "utf8");
-      for (const m of source.matchAll(
-        /UPDATE\s+"?(\w+)"?[\s\S]{0,120}?SET\s+"?(\w+)"?/gu,
-      )) {
-        if (m[1] && m[2]) reorderedColumns.add(`${m[1]}.${m[2]}`);
-      }
-    }
+    const reorderedColumns = collectReorderedColumns(REORDER_COMMAND_FILES);
     // 走査が壊れたら以降が vacuous に通る。
     expect(reorderedColumns.size).toBeGreaterThan(5);
 
@@ -240,11 +373,7 @@ describe("数値列の値域", () => {
       .flatMap(([k]) => {
         const column = COLUMNS.find((c) => key(c) === k);
         if (!column) return [];
-        // 同名の位置列は reorder 対象と同じ役割なので、列名一致で足りる。
-        const anyTableReorders = [...reorderedColumns].some((entry) =>
-          entry.endsWith(`.${column.column}`),
-        );
-        return anyTableReorders
+        return reorderedColumns.has(`${column.table}.${column.column}`)
           ? []
           : [`${k}: reorder が書き換えない列を position にしている`];
       });
