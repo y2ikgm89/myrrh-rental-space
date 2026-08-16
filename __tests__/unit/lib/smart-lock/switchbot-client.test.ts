@@ -286,6 +286,53 @@ describe("switchbot-client", () => {
 
       expect(result).toEqual({ ok: true, body: { commandId: "cmd-1" } });
     });
+
+    test("createKey の body が空でも ok:true で commandId は undefined（実機 Keypad Touch）", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          message: "success",
+          body: {},
+        }),
+      );
+
+      const { createPasscode } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await createPasscode(CREDENTIALS, {
+        deviceId: "device-mac-1",
+        name: "res-12345678-abcdefgh",
+        type: "timeLimit",
+        password: "123456",
+        startTime: 1_700_000_000,
+        endTime: 1_700_003_600,
+      });
+
+      expect(result).toEqual({ ok: true, body: {} });
+      if (!result.ok) throw new Error("expected ok:true");
+      expect(result.body.commandId).toBeUndefined();
+    });
+
+    test("createKey は string の commandId だけを残し、他フィールドは落とす", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: { commandId: "cmd-keep", extra: "drop-me" },
+        }),
+      );
+
+      const { createPasscode } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await createPasscode(CREDENTIALS, {
+        deviceId: "device-mac-1",
+        name: "res-12345678-abcdefgh",
+        type: "timeLimit",
+        password: "123456",
+        startTime: 1_700_000_000,
+        endTime: 1_700_003_600,
+      });
+
+      expect(result).toEqual({ ok: true, body: { commandId: "cmd-keep" } });
+    });
   });
 
   describe("getLockDeviceStatus", () => {

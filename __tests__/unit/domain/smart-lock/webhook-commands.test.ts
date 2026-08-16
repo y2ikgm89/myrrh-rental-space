@@ -283,6 +283,11 @@ describe("processSwitchBotChangeReport createKey", () => {
 
   test("createKey failed は PENDING を FAILED に倒す", async () => {
     mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindFirstPasscode.mockResolvedValue({
+      id: PASSCODE_ROW.id,
+      reservationId: PASSCODE_ROW.reservationId,
+      switchbotKeyId: null,
+    });
     mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
 
     const result = await processSwitchBotChangeReport({
@@ -296,6 +301,89 @@ describe("processSwitchBotChangeReport createKey", () => {
     expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ status: "PENDING" }),
+        data: expect.objectContaining({ status: "FAILED" }),
+      }),
+    );
+  });
+
+  test("createKey success は commandId 無しでも単一 PENDING を keyId 物質化して CONFIRMED にする", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindManyPasscode.mockResolvedValue([
+      {
+        id: PASSCODE_ROW.id,
+        reservationId: PASSCODE_ROW.reservationId,
+        switchbotKeyId: null,
+      },
+    ]);
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: {
+        id: "key-from-device-list",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1,
+      },
+    });
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "createKey",
+      result: "success",
+    });
+
+    expect(result).toBe(true);
+    expect(mockFindKeyInDeviceList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        openToken: "open-token",
+        secretKey: "secret-key",
+      }),
+      DEVICE.deviceId,
+      expectedName,
+    );
+    expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: PASSCODE_ROW.id,
+          status: "PENDING",
+        }),
+        data: expect.objectContaining({
+          status: "CONFIRMED",
+          switchbotKeyId: "key-from-device-list",
+        }),
+      }),
+    );
+  });
+
+  test("createKey failed は commandId 無しでも単一 PENDING を FAILED にする", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindManyPasscode.mockResolvedValue([
+      {
+        id: PASSCODE_ROW.id,
+        reservationId: PASSCODE_ROW.reservationId,
+        switchbotKeyId: null,
+      },
+    ]);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "createKey",
+      result: "failed",
+    });
+
+    expect(result).toBe(true);
+    expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
+    expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: PASSCODE_ROW.id,
+          status: "PENDING",
+        }),
         data: expect.objectContaining({ status: "FAILED" }),
       }),
     );

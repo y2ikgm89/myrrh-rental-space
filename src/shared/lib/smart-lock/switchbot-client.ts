@@ -293,17 +293,37 @@ export type CreatePasscodeParams = {
  * 正本として採用する（v1.1 APIの一般コマンド送信エンドポイントの標準形式のため）。
  * 実機での動作確認を推奨する。
  *
- * レスポンスの `commandId` は webhook 相関用。コマンド成否は webhook を正本とする。
+ * 公式ドキュメントは一部の例でのみ `commandId` を示しており、応答に含まれることは
+ * 保証されない。実機 Keypad Touch の createKey は httpStatus 200 / statusCode 100 /
+ * message "success" で `body: {}` を返す。`commandId` は存在するときだけ抽出する
+ * （webhook 相関用。無ければ undefined）。コマンド成否は webhook を正本とする。
  * keyId は Device List の `keyList` から `name` で突合して取得する。
  */
 export async function createPasscode(
   credentials: SwitchBotCredentials,
   { deviceId, ...parameter }: CreatePasscodeParams,
-): Promise<SwitchBotApiResult<{ commandId: string }>> {
-  return request(credentials, `/devices/${deviceId}/commands`, {
-    method: "POST",
-    body: { commandType: "command", command: "createKey", parameter },
-  });
+): Promise<SwitchBotApiResult<{ commandId?: string }>> {
+  const result = await request<{ commandId?: string } | Record<string, never>>(
+    credentials,
+    `/devices/${deviceId}/commands`,
+    {
+      method: "POST",
+      body: { commandType: "command", command: "createKey", parameter },
+    },
+  );
+  if (!result.ok) {
+    return result;
+  }
+
+  const commandId =
+    typeof result.body === "object" &&
+    result.body !== null &&
+    "commandId" in result.body &&
+    typeof result.body.commandId === "string"
+      ? result.body.commandId
+      : undefined;
+
+  return { ok: true, body: commandId !== undefined ? { commandId } : {} };
 }
 
 export type SwitchBotLockDeviceStatus = {
