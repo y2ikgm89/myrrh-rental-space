@@ -163,7 +163,7 @@ describe("GCP production setup runbook", () => {
   test("production audit runbook verifies Cloud Scheduler OIDC posture", () => {
     expect(runbook).toContain('CRON_SERVICE_ACCOUNT_EMAIL="$SCHEDULER_SA"');
     expect(runbook).toContain(
-      "Cloud Scheduler cron jobs use Google OIDC tokens only",
+      "Cloud Scheduler cron jobs are ENABLED and use Google OIDC tokens only",
     );
     expect(runbook).toContain(
       "scheduler service account has no user-managed keys",

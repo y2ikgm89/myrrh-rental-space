@@ -1407,8 +1407,9 @@ Expected results:
 - `.github/workflows/deploy-production.yml` runs only via `workflow_dispatch`
   on `main`, and the Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
-- Cloud Scheduler cron jobs use Google OIDC tokens only. They must use
-  `$SCHEDULER_SA` as `oidcToken.serviceAccountEmail`, `$PUBLIC_DOMAIN` as
+- Cloud Scheduler cron jobs are ENABLED and use Google OIDC tokens only.
+  Expected cron jobs must be ENABLED (PAUSED/DISABLED/missing FAIL). They must
+  use `$SCHEDULER_SA` as `oidcToken.serviceAccountEmail`, `$PUBLIC_DOMAIN` as
   `oidcToken.audience`, and no old `Authorization: Bearer` cron secrets.
 - The audit checks `public Cloud Run runtime env is canonical` and
   `admin Cloud Run runtime env is canonical`. In particular, `BETTER_AUTH_URL`

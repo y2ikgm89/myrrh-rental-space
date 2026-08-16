@@ -1492,7 +1492,7 @@ async function main(): Promise<void> {
     projectId,
     "--location",
     region,
-    "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken)",
+    "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state)",
   ]);
   const cloudSchedulerOidcJobErrors = cloudSchedulerJobs.ok
     ? readCloudSchedulerOidcJobErrors(cloudSchedulerJobs.value, {
@@ -1501,7 +1501,7 @@ async function main(): Promise<void> {
       })
     : [];
   addCheck(
-    "Cloud Scheduler cron jobs use Google OIDC tokens only",
+    "Cloud Scheduler cron jobs are ENABLED and use Google OIDC tokens only",
     cloudSchedulerJobs.ok && cloudSchedulerOidcJobErrors.length === 0,
     detailForResult(
       cloudSchedulerJobs,
