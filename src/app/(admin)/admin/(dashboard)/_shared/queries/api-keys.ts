@@ -22,21 +22,21 @@ export type {
 };
 
 export async function getResendConfig(): Promise<ResendConfig> {
-  await requireAdminPermission("settings", "read");
+  await requireAdminPermission("settings", "manage");
   return getResendConfigQuery();
 }
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
-  await requireAdminPermission("settings", "read");
+  await requireAdminPermission("settings", "manage");
   return getTurnstileConfigQuery();
 }
 
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  await requireAdminPermission("settings", "read");
+  await requireAdminPermission("settings", "manage");
   return getGoogleMapsConfigQuery();
 }
 
 export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
-  await requireAdminPermission("settings", "read");
+  await requireAdminPermission("settings", "manage");
   return getSwitchBotConfigQuery();
 }
