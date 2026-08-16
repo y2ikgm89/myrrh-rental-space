@@ -32,7 +32,7 @@
 | `executeAdminMutationResult` step 4（`checkResourceAccess: true`）未実行                            | どのテストも実行していない                                                                                                                | 実実行済み                    | #2364。integration テストで EDITOR deny/allow を実測                                                                                                                      |
 | session mock の drift（実在しない export）                                                          | 手書き列挙が実物と乖離                                                                                                                    | 除去                          | #2364。spread-actual 化                                                                                                                                                   |
 | RBAC 判定サイトの 3 箇所重複                                                                        | 1 箇所の変異が他 2 箇所に残る                                                                                                             | 一本化                        | #2371。`authorizeAdmin`。1 変異で 3 層すべて赤を実測                                                                                                                      |
-| M-05 / M-07 / M-10 / M-32 / M-33 / M-34 / M-37                                                      | integration には guard がある（unit は無い）                                                                                              | **分割**                      | M-05 は this wave で unit 側にピン。M-07 / M-10 は下記「据え置き」。M-32 / M-33 / M-34 / M-37 は integration guard 継続                                                   |
+| M-05 / M-07 / M-10 / M-32 / M-33 / M-34 / M-37                                                      | integration には guard がある（unit は無い）                                                                                              | **対応済み**                  | M-05 #2383。M-07 / M-10 #2389。M-32 / M-33 / M-34 / M-37 は #2399 で unit gate が述語/本体を見る（integration は継続）                                                    |
 | M-04 / M-05 / M-09                                                                                  | claimRefundSettlement 冪等 / Refund insert の非 P2002 throw / 返金集計の entity スコープ                                                  | **対応済み（#2383）**         | 台帳 M-04 / M-05 / M-09。M-04/M-05 は unit、M-09 は integration で WHERE / catch の両方向を固定                                                                           |
 | M-07 / M-10                                                                                         | `TERMINAL_REFUND_STATUSES` の 3 値 / 返金集計から failed・canceled 除外                                                                   | **対応済み（#2389）**         | unit で両配列をリテラルピン。integration は継続                                                                                                                           |
 | M-21                                                                                                | `requireAdminDetailPage` の EDITOR assignment スコープ                                                                                    | **対応済み（#2387）**         | `page-auth.test.ts` が `userHasResourceAccess(..., userId)` 転送を振る舞いピン。権限表は変えない                                                                          |
@@ -41,7 +41,7 @@
 | M-25 / M-26（旧記載 M-27 / M-28）                                                                   | `branch-protection.json` の paths filter / contexts 検査                                                                                  | **分割**                      | M-26 は #2390 で対応済み。M-25（paths filter）は既存 gate 継続                                                                                                            |
 | M-42 / M-44 / M-45 / M-46 / M-47                                                                    | cacheTag 3 点セット / TAGGED_PUBLIC_FIRST_SEGMENTS / NEXTJS→CDN emit 逆引き / purgeMarketingHomeTag / `/access` Cache-Tag                 | **対応済み（#2385）**         | 既存 unit に assertion を追加。新 architecture gate は作らない                                                                                                            |
 | M-60                                                                                                | 顧客 PII 匿名化の監査ログ                                                                                                                 | **対応済み（#2382）**         | 台帳 M-60。cron / command 経路の AuditLog を固定                                                                                                                          |
-| 無名の残り（約 45 件とされたもの）                                                                  | 素通り 61 件から上記で名指しされた分を除いた残り                                                                                          | **一覧化済み・方針据え置き**  | [`2026-08-15-round6-mutation-ledger.md`](2026-08-15-round6-mutation-ledger.md) に M-01〜M-61 の全明細。方針は変わらず「実害が出た時点で個別に拾う」                       |
+| 無名の残り（約 45 件とされたもの）                                                                  | 素通り 61 件から上記で名指しされた分を除いた残り                                                                                          | **対応済み（#2395–#2400）**   | 名指し GREEN の残りを根本原因別 5 PR で閉じた。台帳索引に未 close の「あり（#なし）」GREEN は残らない                                                                     |
 
 ## 母数の変化
 
@@ -92,17 +92,22 @@ integration の `refund-duplicate-detection.test.ts` は引き続き P2002 握�
 
 ## this wave クローズ（2026-08-16）
 
-| クラス                           | 現況              |
-| -------------------------------- | ----------------- |
-| M-11                             | 対応済み（#2384） |
-| M-04 / M-05 / M-09               | 対応済み（#2383） |
-| M-60                             | 対応済み（#2382） |
-| M-42 / M-44 / M-45 / M-46 / M-47 | 対応済み（#2385） |
-| M-07 / M-10                      | 対応済み（#2389） |
-| M-21                             | 対応済み（#2387） |
-| M-22                             | 対応済み（#2388） |
-| M-26                             | 対応済み（#2390） |
-| M-27 / M-28                      | 対応済み（#2392） |
+| クラス                                         | 現況              |
+| ---------------------------------------------- | ----------------- |
+| M-11                                           | 対応済み（#2384） |
+| M-04 / M-05 / M-09                             | 対応済み（#2383） |
+| M-60                                           | 対応済み（#2382） |
+| M-42 / M-44 / M-45 / M-46 / M-47               | 対応済み（#2385） |
+| M-07 / M-10                                    | 対応済み（#2389） |
+| M-21                                           | 対応済み（#2387） |
+| M-22                                           | 対応済み（#2388） |
+| M-26                                           | 対応済み（#2390） |
+| M-27 / M-28                                    | 対応済み（#2392） |
+| M-01 / M-02 / M-03 / M-06 / M-08               | 対応済み（#2396） |
+| M-29 / M-30 / M-31 / M-35 / M-40               | 対応済み（#2400） |
+| M-32 / M-33 / M-34 / M-36 / M-37 / M-39 / M-41 | 対応済み（#2399） |
+| M-38 / M-43 / M-48                             | 対応済み（#2397） |
+| M-50〜M-59 / M-61                              | 対応済み（#2395） |
 
 ## この文書を更新するとき
 
