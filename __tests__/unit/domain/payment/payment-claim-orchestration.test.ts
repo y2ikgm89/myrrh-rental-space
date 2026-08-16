@@ -69,6 +69,38 @@ describe("applyStripeChargeRefundIdempotent persist amount", () => {
     expect(updatePaymentStatus).toHaveBeenCalled();
   });
 
+  test.each(["pending", "requires_action"] as const)(
+    "Refund.status=%s は行を書くが updatePaymentStatus は呼ばない",
+    async (status) => {
+      await applyStripeChargeRefundIdempotent({
+        chargeAmount: 5000,
+        amountRefunded: 5000,
+        currency: "jpy",
+        latestRefund: {
+          id: `re_${status}`,
+          amount: 5000,
+          status,
+          metadata: null,
+        },
+        createRefundRecord,
+        updatePaymentStatus,
+        logContext: {
+          operation: "applyChargeRefundIdempotent",
+          entityId: "res_1",
+        },
+      });
+
+      expect(createRefundRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 5000,
+          stripeRefundId: `re_${status}`,
+          status,
+        }),
+      );
+      expect(updatePaymentStatus).not.toHaveBeenCalled();
+    },
+  );
+
   test("Refund.status が null なら pending に落とさず行も書かない", async () => {
     await applyStripeChargeRefundIdempotent({
       chargeAmount: 5000,

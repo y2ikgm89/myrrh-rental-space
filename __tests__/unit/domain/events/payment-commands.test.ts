@@ -1007,6 +1007,30 @@ describe("events/payment-commands", () => {
       );
     });
 
+    test("refundEventRegistrationPaymentCommand: Stripe idempotency key includes newCumulative", async () => {
+      mockTxEventRegistrationFindFirst.mockResolvedValue({
+        id: REGISTRATION_ID,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: REFUND_PAYMENT_INTENT_ID,
+        paidAmount: 5000,
+      });
+      mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: 2000 } });
+      mockRefundsCreate.mockResolvedValueOnce({
+        id: "re_test_partial",
+        status: "succeeded",
+      });
+
+      await refundEventRegistrationPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        amount: 1000,
+      });
+
+      expect(mockRefundsCreate).toHaveBeenCalledWith(expect.any(Object), {
+        idempotencyKey: `event-registration-refund-${REGISTRATION_ID}-3000`,
+      });
+    });
+
     test("refundOrphanedStripePaymentForCancelledEventRegistration: status=pending なら updateMany 未呼出", async () => {
       mockTxEventRegistrationFindFirst.mockResolvedValue({
         status: RegistrationStatus.CANCELLED,
