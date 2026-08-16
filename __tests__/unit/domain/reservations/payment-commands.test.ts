@@ -868,6 +868,31 @@ describe("reservations/payment-commands", () => {
       );
     });
 
+    test("refundReservationPaymentCommand: Stripe idempotency key includes newCumulative", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        id: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        totalPriceWithTax: 5000,
+      });
+      mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: 2000 } });
+      mockRefundCreate.mockResolvedValueOnce({
+        id: "re_test_partial",
+        status: "succeeded",
+      });
+
+      await refundReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        amount: 1000,
+      });
+
+      expect(mockRefundCreate).toHaveBeenCalledWith(expect.any(Object), {
+        idempotencyKey: `reservation-refund-${RESERVATION_ID}-3000`,
+      });
+    });
+
     test("refundOrphanedStripePaymentForCancelledReservation: status=pending なら reservation.updateMany 未呼出", async () => {
       mockTxReservationFindUnique.mockResolvedValue({
         status: ReservationStatus.CANCELLED,

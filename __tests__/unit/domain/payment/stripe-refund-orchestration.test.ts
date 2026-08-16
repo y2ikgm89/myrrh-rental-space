@@ -44,6 +44,7 @@ const {
   REFUND_AGGREGATE_EXCLUDED_STATUSES,
   TERMINAL_REFUND_STATUSES,
   acquirePaymentRefundAdvisoryLock,
+  applyConfirmedRefundStatus,
   claimRefundSettlement,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
@@ -249,5 +250,28 @@ describe("stripe-refund-orchestration kernel", () => {
         fullyRefundedMessage: "全額返金済み",
       }),
     ).toThrow("残額を超えています");
+  });
+
+  test("resolveRefundAmount rejects remaining-exceeded even when under chargeTotal", () => {
+    expect(() =>
+      resolveRefundAmount({
+        chargeTotal: 5000,
+        cumulativeSoFar: 2000,
+        requestedAmount: 4000,
+        fullyRefundedMessage: "全額返金済み",
+      }),
+    ).toThrow("残額を超えています");
+  });
+
+  test("applyConfirmedRefundStatus does not updateMany on terminal to non-terminal", async () => {
+    const count = await applyConfirmedRefundStatus(
+      tx,
+      "re_1",
+      "succeeded",
+      "pending",
+    );
+
+    expect(count).toBe(0);
+    expect(mockRefundUpdateMany).not.toHaveBeenCalled();
   });
 });
