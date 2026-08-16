@@ -1,13 +1,18 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { anonymizeCustomerCommand } from "@/shared/domain/customers/customer-lifecycle-commands";
 import { DomainError } from "@/shared/domain/domain-error";
+import { ANONYMIZED_CUSTOMER_FIELDS } from "@/shared/lib/constants/anonymized-customer-fields";
 import {
   parseDataRetentionConfig,
   type DataRetentionConfig,
 } from "@/shared/lib/json-validators";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  CustomerStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { getR2InquiriesBucketName } from "@/shared/lib/r2/client";
 import { deleteObjectsFromBucket } from "@/shared/lib/r2/delete";
 import {
@@ -338,9 +343,23 @@ export async function anonymizeInactiveCustomers(
   let updated = 0;
   for (const target of targets) {
     try {
-      await anonymizeCustomerCommand({
+      const anonymized = await anonymizeCustomerCommand({
         customerId: target.id,
         reason: "data-retention",
+      });
+      await createAuditLogRecord({
+        action: AuditAction.UPDATE,
+        resource: "customer.anonymization",
+        resourceId: anonymized.customerId,
+        newValue: {
+          reason: anonymized.reason,
+          anonymizedAt: anonymized.anonymizedAt.toISOString(),
+          hadUserId: anonymized.hadUserId,
+          preservedSuppression: anonymized.preservedSuppression,
+          anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+          anonymizedInquiryIds: anonymized.anonymizedInquiryIds,
+        },
+        metadata: { triggeredBy: "data-retention-cron" },
       });
       updated += 1;
     } catch (error) {

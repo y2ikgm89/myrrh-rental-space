@@ -3,6 +3,8 @@ import {
   parseDataRetentionConfig,
   DEFAULT_DATA_RETENTION_CONFIG,
 } from "@/shared/lib/json-validators";
+import { ANONYMIZED_CUSTOMER_FIELDS } from "@/shared/lib/constants/anonymized-customer-fields";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 
 // Prisma を mock で切り離す。domain 関数が呼び出す method の contract を interface で満たす。
 // mock 関数は WHERE 節を capture するため、args を pass-through で受け取る。
@@ -88,15 +90,51 @@ mock.module("@/shared/lib/r2/delete", () => ({
 // 匿名化の実装は 1 本（`anonymizeCustomerCommand`）。ここでは「委譲していること」
 // だけを見る。何が消えるかは
 // `__tests__/integration/domain/customers/anonymize-covers-pii.test.ts` が実 DB で確かめる。
+type AnonymizeCustomerResult = {
+  customerId: string;
+  anonymizedAt: Date;
+  reason: string;
+  hadUserId: boolean;
+  preservedSuppression: boolean;
+  anonymizedInquiryIds: string[];
+};
+
+const ANONYMIZED_AT = new Date("2027-01-15T12:00:00.000Z");
+
+function anonymizeCustomerResult(
+  customerId: string,
+  overrides: Partial<AnonymizeCustomerResult> = {},
+): AnonymizeCustomerResult {
+  return {
+    customerId,
+    anonymizedAt: ANONYMIZED_AT,
+    reason: "data-retention",
+    hadUserId: true,
+    preservedSuppression: false,
+    anonymizedInquiryIds: [`inq-${customerId}`],
+    ...overrides,
+  };
+}
+
 const mockAnonymizeCustomerCommand = mock<
   (input: {
     customerId: string;
     reason: string;
-  }) => Promise<{ customerId: string }>
->((input) => Promise.resolve({ customerId: input.customerId }));
+  }) => Promise<AnonymizeCustomerResult>
+>((input) => Promise.resolve(anonymizeCustomerResult(input.customerId)));
 
 mock.module("@/shared/domain/customers/customer-lifecycle-commands", () => ({
   anonymizeCustomerCommand: mockAnonymizeCustomerCommand,
+}));
+
+const mockCreateAuditLogRecord = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+const actualAuditLogCommands =
+  await import("@/shared/domain/audit-log/commands");
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  ...actualAuditLogCommands,
+  createAuditLogRecord: mockCreateAuditLogRecord,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -188,9 +226,11 @@ describe("parseDataRetentionConfig", () => {
 
 describe("purge commands", () => {
   beforeEach(() => {
+    mockCreateAuditLogRecord.mockClear();
+    mockCreateAuditLogRecord.mockImplementation(() => Promise.resolve());
     mockAnonymizeCustomerCommand.mockClear();
     mockAnonymizeCustomerCommand.mockImplementation((input) =>
-      Promise.resolve({ customerId: input.customerId }),
+      Promise.resolve(anonymizeCustomerResult(input.customerId)),
     );
     mockSessionDeleteMany.mockClear();
     mockSessionDeleteMany.mockImplementation(() =>
@@ -347,7 +387,7 @@ describe("purge commands", () => {
           new DomainError("この顧客は既に匿名化済みです", "CONFLICT"),
         );
       }
-      return Promise.resolve({ customerId: input.customerId });
+      return Promise.resolve(anonymizeCustomerResult(input.customerId));
     });
 
     expect(await anonymizeInactiveCustomers(NOW, 84)).toBe(1);
@@ -425,9 +465,11 @@ function extractCutoffFromCall(
 
 describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
   beforeEach(() => {
+    mockCreateAuditLogRecord.mockClear();
+    mockCreateAuditLogRecord.mockImplementation(() => Promise.resolve());
     mockAnonymizeCustomerCommand.mockClear();
     mockAnonymizeCustomerCommand.mockImplementation((input) =>
-      Promise.resolve({ customerId: input.customerId }),
+      Promise.resolve(anonymizeCustomerResult(input.customerId)),
     );
     mockSessionDeleteMany.mockClear();
     mockSessionDeleteMany.mockImplementation(() =>
@@ -486,9 +528,11 @@ describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
 
 describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564883654 → #3564905126)", () => {
   beforeEach(() => {
+    mockCreateAuditLogRecord.mockClear();
+    mockCreateAuditLogRecord.mockImplementation(() => Promise.resolve());
     mockAnonymizeCustomerCommand.mockClear();
     mockAnonymizeCustomerCommand.mockImplementation((input) =>
-      Promise.resolve({ customerId: input.customerId }),
+      Promise.resolve(anonymizeCustomerResult(input.customerId)),
     );
     mockCustomerFindMany.mockClear();
     mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
@@ -545,6 +589,92 @@ describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564
     };
     expect(args.where.createdAt.lt.toISOString()).toBe(
       "2020-01-15T00:00:00.000Z",
+    );
+  });
+});
+
+describe("anonymizeInactiveCustomers audit log (M-60)", () => {
+  beforeEach(() => {
+    mockCreateAuditLogRecord.mockClear();
+    mockCreateAuditLogRecord.mockImplementation(() => Promise.resolve());
+    mockAnonymizeCustomerCommand.mockClear();
+    mockAnonymizeCustomerCommand.mockImplementation((input) =>
+      Promise.resolve(anonymizeCustomerResult(input.customerId)),
+    );
+    mockCustomerFindMany.mockClear();
+    mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
+  });
+
+  function expectedAuditInput(customerId: string) {
+    const result = anonymizeCustomerResult(customerId);
+    return {
+      action: AuditAction.UPDATE,
+      resource: "customer.anonymization",
+      resourceId: customerId,
+      newValue: {
+        reason: result.reason,
+        anonymizedAt: result.anonymizedAt.toISOString(),
+        hadUserId: result.hadUserId,
+        preservedSuppression: result.preservedSuppression,
+        anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+        anonymizedInquiryIds: result.anonymizedInquiryIds,
+      },
+      metadata: { triggeredBy: "data-retention-cron" },
+    };
+  }
+
+  test("成功した顧客ごとに system actor の AuditLog を 1 件書く", async () => {
+    mockCustomerFindMany.mockImplementation(() =>
+      Promise.resolve([{ id: "cust-1" }, { id: "cust-2" }]),
+    );
+
+    await anonymizeInactiveCustomers(NOW, 84);
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(2);
+    const payloads = mockCreateAuditLogRecord.mock.calls.map((call) => call[0]);
+    expect(payloads).toEqual([
+      expectedAuditInput("cust-1"),
+      expectedAuditInput("cust-2"),
+    ]);
+    for (const payload of payloads) {
+      expect(payload).not.toHaveProperty("userId");
+    }
+  });
+
+  test("findMany が空なら AuditLog を書かない", async () => {
+    await anonymizeInactiveCustomers(NOW, 84);
+    expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+  });
+
+  test("months<=0 なら AuditLog を書かない", async () => {
+    mockCustomerFindMany.mockImplementation(() =>
+      Promise.resolve([{ id: "cust-1" }]),
+    );
+    await anonymizeInactiveCustomers(NOW, 0);
+    expect(mockCustomerFindMany).not.toHaveBeenCalled();
+    expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+  });
+
+  test("CONFLICT の顧客は AuditLog を書かず、他の顧客は書く", async () => {
+    mockCustomerFindMany.mockImplementation(() =>
+      Promise.resolve([{ id: "cust-1" }, { id: "cust-2" }]),
+    );
+    mockAnonymizeCustomerCommand.mockImplementation((input) => {
+      if (input.customerId === "cust-1") {
+        return Promise.reject(
+          new DomainError("この顧客は既に匿名化済みです", "CONFLICT"),
+        );
+      }
+      return Promise.resolve(anonymizeCustomerResult(input.customerId));
+    });
+
+    expect(await anonymizeInactiveCustomers(NOW, 84)).toBe(1);
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    expect(mockCreateAuditLogRecord.mock.calls[0]?.[0]).toEqual(
+      expectedAuditInput("cust-2"),
+    );
+    expect(mockCreateAuditLogRecord.mock.calls[0]?.[0]).not.toHaveProperty(
+      "userId",
     );
   });
 });
