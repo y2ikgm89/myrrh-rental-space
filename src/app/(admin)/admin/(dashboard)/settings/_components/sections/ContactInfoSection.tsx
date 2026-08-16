@@ -33,6 +33,8 @@ import {
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface ContactInfoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
@@ -68,6 +70,7 @@ export function ContactInfoSection({
       city: settings.city ?? "",
       streetAddress: settings.streetAddress ?? "",
       buildingName: settings.buildingName ?? "",
+      expectedUpdatedAt: settings.organizationUpdatedAt,
     },
   });
 
@@ -75,6 +78,17 @@ export function ContactInfoSection({
     if (lastResult && lastResult.initialValue === null) {
       toast.success("連絡先情報を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -101,6 +115,9 @@ export function ContactInfoSection({
             disabled={readOnly}
             className="space-y-4 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor={fields.phoneNumber.id}>電話番号</Label>

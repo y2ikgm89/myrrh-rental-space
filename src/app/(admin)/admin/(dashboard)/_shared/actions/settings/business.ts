@@ -115,6 +115,7 @@ export async function updateContactInfo(
             city: emptyToNull(data.city),
             streetAddress: emptyToNull(data.streetAddress),
             buildingName: emptyToNull(data.buildingName),
+            expectedUpdatedAt: data.expectedUpdatedAt,
           });
           return null;
         },

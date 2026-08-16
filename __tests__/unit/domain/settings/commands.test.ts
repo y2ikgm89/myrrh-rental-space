@@ -1013,46 +1013,62 @@ describe("updateLayoutSettings", () => {
 });
 
 // =============================================================================
-// updateContactInfo（normalizeNullableString の動作確認）
+// updateContactInfo（normalizeNullableString + CAS）
 // =============================================================================
+
+const CONTACT_INFO_INPUT = {
+  phoneNumber: "03-1234-5678",
+  faxNumber: null as string | null,
+  email: "contact@example.com",
+  postalCode: "150-0001",
+  prefecture: "東京都",
+  city: "渋谷区",
+  streetAddress: "1-1-1",
+  buildingName: null as string | null,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
+};
 
 describe("updateContactInfo", () => {
   beforeEach(() => {
-    mockSettingsOrganizationUpsert.mockReset();
-    mockSettingsOrganizationUpsert.mockResolvedValue({ id: "singleton" });
+    mockTransaction.mockClear();
+    mockSettingsOrganizationUpdateMany.mockReset();
+    mockSettingsOrganizationFindUnique.mockReset();
+    mockSettingsOrganizationCreate.mockReset();
+    mockSettingsOrganizationUpdateMany.mockResolvedValue({ count: 1 });
+    mockSettingsOrganizationFindUnique.mockResolvedValue({ id: "singleton" });
+    mockSettingsOrganizationCreate.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
-    test("有効な連絡先情報でアップサートが実行される", async () => {
-      await updateContactInfo({
-        phoneNumber: "03-1234-5678",
-        faxNumber: null,
-        email: "contact@example.com",
-        postalCode: "150-0001",
-        prefecture: "東京都",
-        city: "渋谷区",
-        streetAddress: "1-1-1",
-        buildingName: null,
-      });
+    test("CAS updateMany が expectedUpdatedAt 付きで実行される", async () => {
+      await updateContactInfo(CONTACT_INFO_INPUT);
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+          data: expect.objectContaining({
+            phoneNumber: "03-1234-5678",
+            email: "contact@example.com",
+          }),
+        }),
+      );
     });
 
     test("空文字のメールアドレスが null に正規化される", async () => {
       await updateContactInfo({
+        ...CONTACT_INFO_INPUT,
         phoneNumber: null,
-        faxNumber: null,
         email: "",
         postalCode: null,
         prefecture: null,
         city: null,
         streetAddress: null,
-        buildingName: null,
       });
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             email: null,
           }),
         }),
@@ -1061,22 +1077,37 @@ describe("updateContactInfo", () => {
 
     test("有効なメールアドレスはそのまま保持される", async () => {
       await updateContactInfo({
+        ...CONTACT_INFO_INPUT,
         phoneNumber: null,
-        faxNumber: null,
         email: "test@example.com",
         postalCode: null,
         prefecture: null,
         city: null,
         streetAddress: null,
-        buildingName: null,
       });
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             email: "test@example.com",
           }),
         }),
+      );
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("古い token（updateMany count=0 かつ行は存在）で保存すると DomainError CONFLICT", async () => {
+      mockSettingsOrganizationUpdateMany.mockResolvedValueOnce({ count: 0 });
+      mockSettingsOrganizationFindUnique.mockResolvedValueOnce({
+        id: "singleton",
+      });
+
+      await expect(updateContactInfo(CONTACT_INFO_INPUT)).rejects.toMatchObject(
+        {
+          message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+          code: "CONFLICT",
+        },
       );
     });
   });

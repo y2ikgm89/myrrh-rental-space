@@ -76,6 +76,9 @@ export const contactInfoFormSchema = z.object({
     .trim()
     .max(100, { error: "100文字以内で入力してください" })
     .optional(),
+  expectedUpdatedAt: z.iso.datetime({
+    error: "更新バージョンが不正です。ページを再読み込みしてください",
+  }),
 });
 
 export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;
