@@ -551,6 +551,16 @@ jobs:
       # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
       # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
 
+      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
+      # smoke-e2e と同じ variant（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` +
+      # `build:skip-env:prepared`）なので `nextjs-smoke-` キーを共有する。
+      # main push の smoke が書いたエントリを nightly / dispatch が restore できる。
+      - name: Cache Turbopack build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-smoke-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
+
       - name: Build application
         run: bun run build:skip-env:prepared
         env:
@@ -899,6 +909,16 @@ jobs:
       # build は LHCI の startServerReadyPattern 監視窓の外に置く。
       # scripts/lhci-start.ts は next start と readiness poll のみを担当する
       # （build 出力が ready 判定に混ざる構造を排除）。
+
+      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
+      # E2E_LOGIN 無しの `build:skip-env:prepared` なので smoke とは別 variant。
+      # visual-regression と同じ `nextjs-start-` キーを共有する。
+      - name: Cache Turbopack build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-start-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
+
       - name: Build application
         run: bun run build:skip-env:prepared
         env:
@@ -981,6 +1001,15 @@ jobs:
       # (`prisma db seed` は引数なし = dev モードで、chain の `--dev` と同一経路)。
       # build は DB を要求しない (`generateStaticParams` は 0 件・静的 prelude は空。
       # 実測: 0 テーブルの空 DB に対して `build:skip-env:prepared` が exit 0)。
+
+      # Turbopack build キャッシュ。設計と実測は build job の同名 step を見ること。
+      # E2E_LOGIN 無しの `build:skip-env:prepared` なので smoke とは別 variant。
+      # lighthouse-ci と同じ `nextjs-start-` キーを共有する。
+      - name: Cache Turbopack build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-start-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts', 'package.json') }}
 
       - name: Build application
         run: bun run build:skip-env:prepared

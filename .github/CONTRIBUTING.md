@@ -140,7 +140,7 @@ bun run test:integration
 bun scripts/run-tests.ts __tests__/unit/domain/reservations/commands.test.ts
 bun run test -- __tests__/unit/domain/reservations/commands.test.ts
 
-# E2E（dev サーバー自動起動）
+# E2E（production `next start`。既存サーバーは再利用しない）
 bun run e2e
 
 # E2E（特定 project）
@@ -153,6 +153,8 @@ bunx playwright test --project=chromium-customer
 - 親ディレクトリ指定（例: `__tests__/unit/domain/reservations`）は `mock.module` グローバル干渉のため禁止。単一ファイル指定か `bun run test:unit` / `test:integration` を使う
 - フル実行を毎回行う必要はない。lefthook pre-push と CI が自動で守る
 - Coverage は per-directory batch と非互換のため CI ゲートなし
+- `bun run e2e` は既存サーバーを再利用しない。手動起動中の `bun run dev` が 3000 を占有していると必ず落ちる
+- 既定の `APP_SURFACE` は `admin`。公開 root / mobile は `APP_SURFACE=public` で再実行する（CI と同じ）
 
 ### 4. PR 作成
 
