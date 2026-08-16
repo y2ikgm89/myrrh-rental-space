@@ -1418,6 +1418,9 @@ Expected results:
   The audit checks `Cloud Run service ingress is canonical`; Terraform must keep
   the public service at ingress `all` and the admin service at
   `internal-and-cloud-load-balancing`. The audit also checks
+  `Cloud Run max instance count is 1` (`RATE_LIMIT_BACKEND=in-memory` and the
+  Neon `pool_max × 2 services × max_instances ≤ 30` cap) and
+  `Cloud Run traffic targets latest ready revision 100%`. The audit also checks
   `admin Cloud Run default run.app URL is disabled`; Terraform must keep
   `default_uri_disabled = true` (Cloud Build must not reintroduce a run.app URL).
   The audit also checks `Cloud Run service identities are dedicated`,

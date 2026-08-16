@@ -27,6 +27,8 @@ import {
   readCloudRunDefaultUrlErrors,
   readCloudRunContainerCommandErrors,
   readCloudRunIngressErrors,
+  readCloudRunMaxInstanceCountErrors,
+  readCloudRunTrafficLatestErrors,
   readCloudRunJobExecutionConfigErrors,
   readCloudRunRevisionHealthErrors,
   readCloudRunRuntimeEnvErrors,
@@ -672,6 +674,32 @@ async function main(): Promise<void> {
     "Cloud Run service ingress is canonical",
     serviceIngressErrors.length === 0,
     `errors=${serviceIngressErrors.join(",") || "none"}`,
+  );
+  const maxInstanceCountErrors = [
+    ...readCloudRunMaxInstanceCountErrors(publicServiceDescription, {
+      serviceName: publicService,
+    }),
+    ...readCloudRunMaxInstanceCountErrors(adminServiceDescription, {
+      serviceName: adminService,
+    }),
+  ];
+  addCheck(
+    "Cloud Run max instance count is 1",
+    maxInstanceCountErrors.length === 0,
+    `errors=${maxInstanceCountErrors.join(",") || "none"}`,
+  );
+  const trafficLatestErrors = [
+    ...readCloudRunTrafficLatestErrors(publicServiceDescription, {
+      serviceName: publicService,
+    }),
+    ...readCloudRunTrafficLatestErrors(adminServiceDescription, {
+      serviceName: adminService,
+    }),
+  ];
+  addCheck(
+    "Cloud Run traffic targets latest ready revision 100%",
+    trafficLatestErrors.length === 0,
+    `errors=${trafficLatestErrors.join(",") || "none"}`,
   );
   const adminDefaultUrlErrors = readCloudRunDefaultUrlErrors(
     adminServiceDescription,
