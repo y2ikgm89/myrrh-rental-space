@@ -16,10 +16,12 @@
  *   $env:SWITCHBOT_OPEN_TOKEN="..."; $env:SWITCHBOT_SECRET_KEY="..."
  *   bun scripts/switchbot-live-probe.ts --list-only        # 認証 + デバイス列挙のみ
  *   bun scripts/switchbot-live-probe.ts --device <MAC>     # createKey/deleteKey 実機検証
+ *   bun scripts/switchbot-live-probe.ts --cleanup --device <MAC>  # 残置 probe- key の一括削除
  *
  * 安全設計:
  *   - `probe-` 接頭辞の key のみ作成・削除する。既存 key には触れない
  *   - createKey した key は finally で必ず deleteKey する（冪等後始末）
+ *   - keyList 反映が遅れて keyId を取得できず残置した場合は `--cleanup` で回収する
  *   - トークンは環境変数でのみ受け取り、ログにも出さない
  *
  * 注意: 日次 10,000 req/token の公式上限を消費する（1 回の実行で十数回程度）。
@@ -168,6 +170,7 @@ async function getDeviceList(
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const listOnly = args.includes("--list-only");
+  const cleanupOnly = args.includes("--cleanup");
   const deviceFlagIndex = args.indexOf("--device");
   const targetDeviceId =
     deviceFlagIndex >= 0 ? args[deviceFlagIndex + 1] : undefined;
@@ -198,6 +201,40 @@ async function main(): Promise<void> {
       `--device に Keypad の deviceId を指定してください。候補: ${keypads.map((d) => d.deviceId).join(", ") || "(Keypad なし)"}`,
     );
     process.exit(1);
+  }
+
+  if (cleanupOnly) {
+    // 残置した probe- key の回収（keyList 反映遅延で本検証が削除できなかった分）
+    const leftovers = (target.keyList ?? []).filter((k) =>
+      k.name.startsWith("probe-"),
+    );
+    if (leftovers.length === 0) {
+      report("cleanup.none", { deviceId: target.deviceId });
+      return;
+    }
+    for (const key of leftovers) {
+      const result = await callApi(
+        token,
+        secret,
+        `/devices/${target.deviceId}/commands`,
+        {
+          method: "POST",
+          body: {
+            commandType: "command",
+            command: "deleteKey",
+            parameter: { id: key.id },
+          },
+        },
+      );
+      report("cleanup.deleteKey", {
+        keyId: key.id,
+        name: key.name,
+        httpStatus: result.httpStatus,
+        statusCode: readStatusCode(result.envelope) ?? null,
+        message: readMessage(result.envelope),
+      });
+    }
+    return;
   }
 
   // 2. createKey
