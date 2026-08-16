@@ -317,6 +317,8 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockEventRegistrationUpdateMany.mockReset();
     mockInquiryReplyUpdateMany.mockReset();
     mockInquiryAttachmentUpdateMany.mockReset();
+    mockPendingEmailChangeDeleteMany.mockReset();
+    mockPendingMergeDeleteMany.mockReset();
 
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
@@ -328,6 +330,8 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockEventRegistrationUpdateMany.mockResolvedValue({ count: 0 });
     mockInquiryReplyUpdateMany.mockResolvedValue({ count: 0 });
     mockInquiryAttachmentUpdateMany.mockResolvedValue({ count: 0 });
+    mockPendingEmailChangeDeleteMany.mockResolvedValue({ count: 0 });
+    mockPendingMergeDeleteMany.mockResolvedValue({ count: 0 });
   });
 
   test("HARD_BOUNCED の Customer を anonymize すると suppressedEmailHash に 元 emailCanonical hash が保存される", async () => {
@@ -463,6 +467,45 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     expect(savedHash).toBe(
       hashSuppressedEmailCandidate(ORIGINAL_EMAIL_CANONICAL),
     );
+  });
+
+  test("anonymize は phoneNumber を null 化する (M-53)", async () => {
+    mockCustomerFindUnique.mockResolvedValueOnce({
+      id: CUSTOMER_ID,
+      userId: null,
+      anonymizedAt: null,
+      emailCanonical: ORIGINAL_EMAIL_CANONICAL,
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      suppressedEmailHash: null,
+    });
+
+    await anonymizeCustomerCommand({
+      customerId: CUSTOMER_ID,
+      reason: "customer-requested",
+    });
+
+    const data = extractUpdateCallData(mockCustomerUpdate);
+    expect(data).toHaveProperty("phoneNumber", null);
+  });
+
+  test("anonymize は PendingCustomerEmailChange を customerId で削除する (M-59)", async () => {
+    mockCustomerFindUnique.mockResolvedValueOnce({
+      id: CUSTOMER_ID,
+      userId: null,
+      anonymizedAt: null,
+      emailCanonical: ORIGINAL_EMAIL_CANONICAL,
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      suppressedEmailHash: null,
+    });
+
+    await anonymizeCustomerCommand({
+      customerId: CUSTOMER_ID,
+      reason: "customer-requested",
+    });
+
+    expect(mockPendingEmailChangeDeleteMany).toHaveBeenCalledWith({
+      where: { customerId: CUSTOMER_ID },
+    });
   });
 });
 

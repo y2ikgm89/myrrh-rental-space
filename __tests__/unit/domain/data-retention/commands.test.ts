@@ -434,6 +434,61 @@ describe("purge commands", () => {
       customersAnonymized: 1,
     });
   });
+
+  test("anonymizeExpiredGuestReservations の updateMany data は guestEmail と notes を null 化する (M-50/51)", async () => {
+    await anonymizeExpiredGuestReservations(NOW, 12);
+    const call = mockReservationUpdateMany.mock.calls[0]?.[0] as
+      { data?: Record<string, unknown> } | undefined;
+    expect(call?.data).toBeDefined();
+    expect(call?.data).toHaveProperty("guestEmail", null);
+    expect(call?.data).toHaveProperty("notes", null);
+  });
+
+  test("guest 匿名化の WHERE は endTime.lt で cutoff より古い予約だけを対象にする (M-52)", async () => {
+    await anonymizeExpiredGuestReservations(NOW, 12);
+    const cutoff = extractCutoffFromCall(mockReservationUpdateMany.mock.calls, [
+      "where",
+      "endTime",
+      "lt",
+    ]);
+    expect(cutoff.toISOString()).toBe("2026-01-15T00:00:00.000Z");
+    const call = mockReservationUpdateMany.mock.calls[0]?.[0] as
+      { where?: { endTime?: Record<string, unknown> } } | undefined;
+    expect(call?.where?.endTime).not.toHaveProperty("gt");
+  });
+
+  test("purgeExpiredInquiries の WHERE は deletedAt の OR 分岐を持つ (M-57)", async () => {
+    await purgeExpiredInquiries(NOW, 36);
+    const call = mockInquiryDeleteMany.mock.calls[0]?.[0] as
+      { where?: { OR?: Array<Record<string, unknown>> } } | undefined;
+    const createdAtCutoff = extractCutoffFromCall(
+      mockInquiryDeleteMany.mock.calls,
+      ["where", "OR", "0", "createdAt", "lt"],
+    );
+    const deletedAtCutoff = extractCutoffFromCall(
+      mockInquiryDeleteMany.mock.calls,
+      ["where", "OR", "1", "deletedAt", "lt"],
+    );
+    expect(call?.where?.OR).toHaveLength(2);
+    expect(createdAtCutoff.toISOString()).toBe("2024-01-15T00:00:00.000Z");
+    expect(deletedAtCutoff.toISOString()).toBe(createdAtCutoff.toISOString());
+  });
+
+  test("runDataRetentionPurge の guest 匿名化は reservationGuestMonths を使う (M-58)", async () => {
+    // reservationGuestMonths と inquiryMonths が食い違う fixture。
+    // inquiryMonths を渡す変異では cutoff が 36mo 前になる。
+    await runDataRetentionPurge(NOW, {
+      ...DEFAULT_DATA_RETENTION_CONFIG,
+      reservationGuestMonths: 6,
+      inquiryMonths: 36,
+    });
+    const cutoff = extractCutoffFromCall(mockReservationUpdateMany.mock.calls, [
+      "where",
+      "endTime",
+      "lt",
+    ]);
+    expect(cutoff.toISOString()).toBe("2026-07-15T00:00:00.000Z");
+  });
 });
 
 // -----------------------------------------------------------------------------

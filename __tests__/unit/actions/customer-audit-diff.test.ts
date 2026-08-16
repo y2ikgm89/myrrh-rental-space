@@ -342,9 +342,26 @@ describe("anonymizeCustomer の AuditLog 記録 (customer.anonymization、生PII
     expect(record["hadUserId"]).toBe(true);
     expect(record["preservedSuppression"]).toBe(true);
     expect(record["anonymizedInquiryIds"]).toEqual(["inquiry-1", "inquiry-2"]);
-    expect(Array.isArray(record["anonymizedFields"])).toBe(true);
-    expect(record["anonymizedFields"]).toContain("email");
-    expect(record["anonymizedFields"]).toContain("phoneNumber");
+    expect(record["anonymizedFields"]).toEqual([
+      "email",
+      "emailCanonical",
+      "lastName",
+      "firstName",
+      "lastNameKana",
+      "firstNameKana",
+      "phoneNumber",
+      "companyName",
+      "postalCode",
+      "prefecture",
+      "city",
+      "streetAddress",
+      "building",
+      "notes",
+      "isActive",
+      "marketingOptIn",
+      "phoneContactOptIn",
+      "userId",
+    ]);
     // 生 PII の値そのもの（例: 旧メールアドレス文字列）は一切含まれないこと
     expect(JSON.stringify(record)).not.toContain("tanaka@example.com");
   });
