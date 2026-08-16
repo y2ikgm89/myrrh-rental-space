@@ -40,14 +40,14 @@
 
 | M-ID | 重大度 | 守り手       | 不変条件                                                                                                                      |
 | ---- | ------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| M-01 | 高     | あり         | 返金累計は charge 総額を超えられない（既存の部分返金を引いた「残額」が上限）                                                  |
-| M-02 | 高     | あり         | 部分返金の Stripe idempotency key は返金ごとに動く（累積額 newCumulative を含む）。固定すると 2 回…                           |
-| M-03 | 高     | あり         | 終端状態（succeeded/failed/canceled）から非終端（pending 等）への巻き戻しを拒否する。Stripe は re…                            |
+| M-01 | 高     | あり (#2396) | 返金累計は charge 総額を超えられない（既存の部分返金を引いた「残額」が上限）                                                  |
+| M-02 | 高     | あり (#2396) | 部分返金の Stripe idempotency key は返金ごとに動く（累積額 newCumulative を含む）。固定すると 2 回…                           |
+| M-03 | 高     | あり (#2396) | 終端状態（succeeded/failed/canceled）から非終端（pending 等）への巻き戻しを拒否する。Stripe は re…                            |
 | M-04 | 高     | あり (#2383) | claimRefundSettlement は非終端状態からのみ "succeeded" へ遷移できる（webhook の at-least…                                     |
 | M-05 | 高     | あり (#2383) | Refund 行 insert の catch が握りつぶしてよいのは stripeRefundId の unique 衝突（webhook…                                      |
-| M-06 | 高     | あり         | （M2 の event 側対称）部分返金の Stripe idempotency key は累積額を含んで返金ごとに動く                                        |
+| M-06 | 高     | あり (#2396) | （M2 の event 側対称）部分返金の Stripe idempotency key は累積額を含んで返金ごとに動く                                        |
 | M-07 | 高     | あり (#2389) | TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claim…                                                  |
-| M-08 | 高     | あり         | charge.refunded webhook は "succeeded" 確定の返金でしか paymentStatus を終端へ動かさない…                                     |
+| M-08 | 高     | あり (#2396) | charge.refunded webhook は "succeeded" 確定の返金でしか paymentStatus を終端へ動かさない…                                     |
 | M-09 | 高     | あり (#2383) | 返金累計の集計は対象 entity にスコープされる（tx.refund.aggregate の WHERE に reservationId…                                  |
 | M-10 | 中     | あり (#2389) | 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex revie…               |
 | M-11 | 高     | あり (#2384) | 公開フォームの mutation Server Action は 4 段 guard pipeline を通る（新設 action も含む）                                     |
@@ -68,39 +68,39 @@
 | M-26 | 中     | あり (#2390) | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
 | M-27 | 中     | あり (#2392) | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
 | M-28 | 中     | あり (#2392) | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
-| M-29 | 低     | あり         | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
-| M-30 | 低     | あり         | expected list に無い job が /api/cron/* を叩いていたら不正 job として報告すること                                             |
-| M-31 | 低     | あり         | cron job の schedule / timeZone が宣言どおりであること                                                                        |
-| M-32 | 高     | あり         | 期間の列は開始 <= 終了を DB が強制する（逆転した行は「保存できるのに一度も効かない」）                                        |
-| M-33 | 高     | あり         | 同一スペースの PENDING / CONFIRMED 予約は時間帯が重複できない（EXCLUDE 制約 reservations_no_a…                                |
-| M-34 | 高     | あり         | audit_logs は append-only（UPDATE / DELETE を trigger が例外で止め、hash chain の…                                            |
-| M-35 | 高     | あり         | 破壊的 DDL を含む migration は squawk に検出され、計画ダウンタイム付きでしかデプロイされない                                  |
-| M-36 | 高     | あり         | SINGLE_OCCURRENCE のイベントは EventTimeSlot をちょうど 1 本持つ（CONSTRAINT TRIGGER …                                        |
-| M-37 | 中     | あり         | customers.total_spent は負値を取れない（total_spent >= 0）                                                                    |
-| M-38 | 中     | あり         | （同上）除外に載っているファイルでも、そこに新しく増える DB 列射影の string 宣言は防げる — gate の docstring …                |
-| M-39 | 中     | あり         | 制約名は PostgreSQL の識別子上限 63 バイトに収まっている（超えた分は黙って切り捨てられ、付けたつもりの名前と実際の名前が食い… |
-| M-40 | 中     | あり         | migration の 14 桁 timestamp は適用順を正しく表す                                                                             |
-| M-41 | 低     | あり         | 退避領域を許す（position）列は、reorder が実際に UPDATE する列だけである（根拠を reorder コマンド 11 フ…                      |
+| M-29 | 低     | あり (#2400) | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
+| M-30 | 低     | あり (#2400) | expected list に無い job が /api/cron/* を叩いていたら不正 job として報告すること                                             |
+| M-31 | 低     | あり (#2400) | cron job の schedule / timeZone が宣言どおりであること                                                                        |
+| M-32 | 高     | あり (#2399) | 期間の列は開始 <= 終了を DB が強制する（逆転した行は「保存できるのに一度も効かない」）                                        |
+| M-33 | 高     | あり (#2399) | 同一スペースの PENDING / CONFIRMED 予約は時間帯が重複できない（EXCLUDE 制約 reservations_no_a…                                |
+| M-34 | 高     | あり (#2399) | audit_logs は append-only（UPDATE / DELETE を trigger が例外で止め、hash chain の…                                            |
+| M-35 | 高     | あり (#2400) | 破壊的 DDL を含む migration は squawk に検出され、計画ダウンタイム付きでしかデプロイされない                                  |
+| M-36 | 高     | あり (#2399) | SINGLE_OCCURRENCE のイベントは EventTimeSlot をちょうど 1 本持つ（CONSTRAINT TRIGGER …                                        |
+| M-37 | 中     | あり (#2399) | customers.total_spent は負値を取れない（total_spent >= 0）                                                                    |
+| M-38 | 中     | あり (#2397) | （同上）除外に載っているファイルでも、そこに新しく増える DB 列射影の string 宣言は防げる — gate の docstring …                |
+| M-39 | 中     | あり (#2399) | 制約名は PostgreSQL の識別子上限 63 バイトに収まっている（超えた分は黙って切り捨てられ、付けたつもりの名前と実際の名前が食い… |
+| M-40 | 中     | あり (#2400) | migration の 14 桁 timestamp は適用順を正しく表す                                                                             |
+| M-41 | 低     | あり (#2399) | 退避領域を許す（position）列は、reorder が実際に UPDATE する列だけである（根拠を reorder コマンド 11 フ…                      |
 | M-42 | 高     | あり (#2385) | "use cache" の producer は 3 点セット（"use cache" → cacheLife(CACHE_LIFE.X) …                                                |
-| M-43 | 中     | あり         | PRIVATE_NO_TAG_PREFIXES に載っている prefix は catch-all の CUSTOM_PAGE_HEADER…                                               |
+| M-43 | 中     | あり (#2397) | PRIVATE_NO_TAG_PREFIXES に載っている prefix は catch-all の CUSTOM_PAGE_HEADER…                                               |
 | M-44 | 中     | あり (#2385) | 個別に Cache-Tag を emit している公開ルートの第1セグメントは TAGGED_PUBLIC_FIRST_SEGMENTS に…                                 |
 | M-45 | 中     | あり (#2385) | NEXTJS_TAG_TO_CDN_TAG に載っている CDN tag は、実際にどれかの header source が emit して…                                     |
 | M-46 | 中     | あり (#2385) | purgeMarketingHomeTag() は HOME_MARKETING（/ と /about だけが載せるタグ）を purge す…                                         |
 | M-47 | 中     | あり (#2385) | 個別に列挙された公開ルート（/access 等）は Cache-Tag header を持ち、site-wide purge が edge …                                 |
-| M-48 | 中     | あり         | admin 専用コードは public surface のモジュールグラフに入らない（cross-surface-import-gate.t…                                  |
+| M-48 | 中     | あり (#2397) | admin 専用コードは public surface のモジュールグラフに入らない（cross-surface-import-gate.t…                                  |
 | M-49 | 低     | あり         | CDN cache tag はコンマ・空白を含めない（Cloudflare は Cache-Tag ヘッダ内のコンマをタグ区切りとして扱う）                      |
-| M-50 | 高     | あり         | 保持期限を過ぎた予約の guest メールアドレスは NULL 化される                                                                   |
-| M-51 | 高     | あり         | 保持期限を過ぎた予約の自由記入「備考」（第三者を含む PII、監査 F-116）は NULL 化される                                        |
-| M-52 | 高     | あり         | guest 情報の匿名化対象は endTime が cutoff より古い予約だけ（未来予約・進行中予約は触らない）                                 |
-| M-53 | 高     | あり         | 顧客匿名化は電話番号を NULL 化する（ANONYMIZED_CUSTOMER_FIELDS が phoneNumber を含むと申告して…                               |
-| M-54 | 高     | あり         | 送信側は recipient を canonical 化（trim + lowercase）してから hash し、suppression …                                         |
-| M-55 | 高     | あり         | 問い合わせ匿名化は件名（subject）も placeholder に置換する（件名に氏名が書かれ、admin 検索が subject を …                     |
-| M-56 | 高     | あり         | bounce/complaint で抑止された宛先の hash 集合が、実際に sendEmail へ渡る（suppression の唯一の…                               |
-| M-57 | 中     | あり         | soft-delete された問い合わせは deletedAt から N ヶ月後に hard delete される（createdAt が新…                                  |
-| M-58 | 中     | あり         | 各テーブルの保持月数は自分の config フィールドから取る（reservationGuestMonths は予約 guest 用）                              |
-| M-59 | 中     | あり         | 顧客匿名化は短命トークン台帳 PendingCustomerEmailChange を行ごと削除する（customerId で JOIN す…                              |
+| M-50 | 高     | あり (#2395) | 保持期限を過ぎた予約の guest メールアドレスは NULL 化される                                                                   |
+| M-51 | 高     | あり (#2395) | 保持期限を過ぎた予約の自由記入「備考」（第三者を含む PII、監査 F-116）は NULL 化される                                        |
+| M-52 | 高     | あり (#2395) | guest 情報の匿名化対象は endTime が cutoff より古い予約だけ（未来予約・進行中予約は触らない）                                 |
+| M-53 | 高     | あり (#2395) | 顧客匿名化は電話番号を NULL 化する（ANONYMIZED_CUSTOMER_FIELDS が phoneNumber を含むと申告して…                               |
+| M-54 | 高     | あり (#2395) | 送信側は recipient を canonical 化（trim + lowercase）してから hash し、suppression …                                         |
+| M-55 | 高     | あり (#2395) | 問い合わせ匿名化は件名（subject）も placeholder に置換する（件名に氏名が書かれ、admin 検索が subject を …                     |
+| M-56 | 高     | あり (#2395) | bounce/complaint で抑止された宛先の hash 集合が、実際に sendEmail へ渡る（suppression の唯一の…                               |
+| M-57 | 中     | あり (#2395) | soft-delete された問い合わせは deletedAt から N ヶ月後に hard delete される（createdAt が新…                                  |
+| M-58 | 中     | あり (#2395) | 各テーブルの保持月数は自分の config フィールドから取る（reservationGuestMonths は予約 guest 用）                              |
+| M-59 | 中     | あり (#2395) | 顧客匿名化は短命トークン台帳 PendingCustomerEmailChange を行ごと削除する（customerId で JOIN す…                              |
 | M-60 | 中     | あり (#2382) | 顧客 PII の匿名化は監査ログに残る（誰が/いつ/何を消したか）                                                                   |
-| M-61 | 低     | あり         | 匿名化イベントの AuditLog に記録する anonymizedFields は、実際に匿名化される列と一致する（forensic 記録…                      |
+| M-61 | 低     | あり (#2395) | 匿名化イベントの AuditLog に記録する anonymizedFields は、実際に匿名化される列と一致する（forensic 記録…                      |
 
 ## 明細
 
@@ -114,6 +114,7 @@
 - 注入した欠陥: resolveRefundAmount の上限判定を if (amount > remaining) → if (amount > input.chargeTotal) に変更（既存返金額を上限計算から落とす）
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:81
 - 実行: `bun run test -- __tests__/unit/domain/payment/stripe-refund-orchestration.test.ts`
+- 2026-08-16 close: 対応済み（#2396）。`resolveRefundAmount` の残額超過（cumulativeSoFar=2000 / chargeTotal=5000 / requestedAmount=4000）を unit で固定。
 
 #### M-02（高）
 
@@ -123,6 +124,7 @@
 - 注入した欠陥: reservation-refund-${reservationId}-${resolved.newCumulative} → reservation-refund-${reservationId}（可変部分を削除して entity id 単独に）
 - 書き換えた箇所: src/shared/domain/reservations/payment-commands.ts:756
 - 実行: `bun run test -- __tests__/unit/domain/reservations/payment-commands.test.ts __tests__/unit/architecture/refund-append-only.test.ts __tests__/unit/architecture/reservation-email-idempotency.test.ts`
+- 2026-08-16 close: 対応済み（#2396）。Stripe idempotency key が `reservation-refund-<id>-<newCumulative>` であることを unit で固定。
 
 #### M-03（高）
 
@@ -133,6 +135,7 @@
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:239-244
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/domain/reservations/payment-commands.test.ts __tests__/unit/architecture/refund-append-only.test.ts __tests__/unit/api/stripe-webhook.test.ts`
 - 素通りの理由: 唯一の unit 呼出元 refund-status-updated.test.ts:64-79 が mock.module でこの関数ごと差し替えているため、実装を壊しても到達しない。
+- 2026-08-16 close: 対応済み（#2396）。`applyConfirmedRefundStatus` を直接呼び、終端→非終端で updateMany が走らないことを unit で固定。
 
 #### M-04（高） — 守り手なし
 
@@ -163,6 +166,7 @@
 - 注入した欠陥: event-registration-refund-${registrationId}-${resolved.newCumulative} → event-registration-refund-${registrationId}
 - 書き換えた箇所: src/shared/domain/events/payment-commands.ts:974
 - 実行: `bun run test -- __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/architecture/refund-append-only.test.ts __tests__/unit/architecture/reservation-email-idempotency.test.ts __tests__/unit/shared/domain/events`
+- 2026-08-16 close: 対応済み（#2396）。event 側 idempotency key が `event-registration-refund-<id>-<newCumulative>` であることを unit で固定。
 
 #### M-07（高）
 
@@ -184,6 +188,7 @@
 - 書き換えた箇所: src/shared/domain/payment/payment-claim-orchestration.ts:343
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/api/stripe-webhook.test.ts __tests__/unit/api/stripe-webhook-orphan-refund.test.ts __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts`
 - 素通りの理由: payment-claim-orchestration.test.ts の 4 本は「Refund 行を書くか / 書かないか」だけを見ており、updatePaymentStatus が呼ばれたかを検査していないため素通りする。
+- 2026-08-16 close: 対応済み（#2396）。pending / requires_action では `updatePaymentStatus` が呼ばれないことを unit で固定。
 
 #### M-09（高） — 守り手なし
 
@@ -389,6 +394,7 @@
 - 注入した欠陥: headerNames.includes("x-cron-secret") の if ブロックを丸ごと削除
 - 書き換えた箇所: scripts/gcp-production-audit-model.ts:1481-1483
 - 実行: `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts __tests__/unit/architecture/gcp-production-audit.test.ts __tests__/unit/architecture/gcp-production-audit-terraform-sync.test.ts __tests__/unit/architecture/gcp-production-runbook.test.ts __tests__/unit/architecture/cron-oidc-clean-break.test.ts __tests__/unit/architecture/cron-scheduler-path-sync.test.ts __tests__/unit/architecture/deploy-packaging-contract.test.ts __tests__/unit/architecture/deploy-production-workflow.test.ts`
+- 2026-08-16 close: 対応済み（#2400）。`x-cron-secret` header 付き job の fixture で分岐を固定。
 
 #### M-30（低）
 
@@ -398,6 +404,7 @@
 - 注入した欠陥: if (!isExpectedJob && isPublicCronJob) → if (!isExpectedJob && isPublicCronJob && false)
 - 書き換えた箇所: scripts/gcp-production-audit-model.ts:1451-1453
 - 実行: `（M1-retest と同一の8ファイル一括）bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts __tests__/unit/architecture/gcp-production-audit.test.ts ... __tests__/unit/architecture/deploy-production-workflow.test.ts`
+- 2026-08-16 close: 対応済み（#2400）。expected list に無い `/api/cron/*` job の fixture で不正 job 報告を固定。
 
 #### M-31（低）
 
@@ -407,6 +414,7 @@
 - 注入した欠陥: schedule="* * * * *"（毎分）／timeZone="UTC"（宣言は Asia/Tokyo）の job を流した
 - 書き換えた箇所: （変異不要）
 - 実行: `bun C:/Users/.../scratchpad/probe-b.ts`
+- 2026-08-16 close: 対応済み（#2400）。expected job の schedule / timeZone を terraform `local.cron_jobs` と突き合わせ、gcloud projection に `schedule,timeZone` を追加。
 
 ### DB 不変条件・migration
 
@@ -419,6 +427,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:44
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 190 件全緑。gate は制約名の実在と参照列名しか見ない。integration 側は **tests**/integration/prisma/value-domain-constraints.test.ts:416 で `for (const [pair, constraint] of Object.entries(ORDER_CONSTRAINTS))` と全 9 組を回しており逆転行を実際に INSERT する（未実行）。破れた場合の実害は gate の docstring どおり「全社休業日を入れてもその日に予約が入る」。
+- 2026-08-16 close: 対応済み（#2399）。`ORDER_CONSTRAINTS` 各式が開始列 <= 終了列の向きを含むことを unit gate で固定。
 
 #### M-33（高）
 
@@ -429,6 +438,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:649
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 事前調査: `grep -rn "no_active_time_overlap" __tests__/unit/` は e2e-fixture-space-ownership.test.ts / seed-*.test.ts の JSDoc コメント内の言及のみで assertion は 0 件。integration 側は restore-status-overlap.test.ts:7 が `status IN (PENDING, CONFIRMED)` を前提に書かれている（未実行）。破れると PENDING 予約が同一枠に二重で入る。
+- 2026-08-16 close: 対応済み（#2399）。`reservations_no_active_time_overlap_excl` の WHERE が PENDING と CONFIRMED の両方を含むことを固定。
 
 #### M-34（高）
 
@@ -439,6 +449,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:574
 - 実行: `bun run test -- __tests__/unit/architecture / bun run test -- __tests__/unit/domain/audit-log`
 - 素通りの理由: gate の assertion は `toContain("prevent_audit_logs_mutation")` / `toContain("BEFORE UPDATE ON public.audit_logs ")` / `toContain("BEFORE DELETE ON public.audit_logs ")` / `toContain("audit_logs is append-only")` の 4 本だけ。最後の文言はコメントに残したので全部通る。実測 guard は **tests**/integration/prisma/append-only-enforcement.test.ts:245（`UPDATE "audit_logs" SET "action" = &#x27;UPDATE&#x27;`）＝未実行。破れると監査ログが黙って書き換え・削除可能になり hash chain の tamper-evidence が消える。
+- 2026-08-16 close: 対応済み（#2399）。append-only 関数本体が `RAISE EXCEPTION` と `integrity_constraint_violation` を含むことを固定。
 
 #### M-35（高）
 
@@ -449,6 +460,7 @@
 - 書き換えた箇所: prisma/migrations/20260816120000_drop_review_title/migration.sql:1（新規ディレクトリ）
 - 実行: `bun run test -- __tests__/unit/architecture / bun scripts/lint-migrations.ts <file>`
 - 素通りの理由: pre-push（type-check + **tests**/unit/architecture）は破壊的 migration を一切見ない。防いでいるのは CI の squawk step だけで、しかも `changes` filter の migrations_files 出力に依存する。
+- 2026-08-16 close: 対応済み（#2400）。lefthook pre-push が branch-diff の新規 migration を squawk に通す。CI required check は現状維持。
 
 #### M-36（高）
 
@@ -459,6 +471,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:318
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: gate の assertion は `toContain(&#x27;CONSTRAINT "event_time_slots_capacity_positive"&#x27;)` 等の名前と `toContain("CREATE CONSTRAINT TRIGGER events_schedule_integrity_check")` / `toContain("DEFERRABLE INITIALLY DEFERRED")` のみ。関数本体は 1 バイトも見ていない。破れるとスロット 0 本または複数本の SINGLE_OCCURRENCE イベントが作成でき、スロット前提の予約・定員計算が壊れる。
+- 2026-08-16 close: 対応済み（#2399）。`check_event_schedule_integrity` 本体が `slot_count <> 1` と `slot_count < 2` を含むことを固定。
 
 #### M-37（中）
 
@@ -469,6 +482,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:52
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 190 gate 全件が緑のまま。名前一致（hasDedicatedNumericCheck は `<表>_<列>_` 前置一致のみ）しか見ていないため。integration 側の boundaryValues は nonNegative で rejected=[-1] を probe するので実 DB では捕まるが、pre-push は integration を走らせない（lefthook.yml pre-push = type-check + **tests**/unit/architecture のみ）。
+- 2026-08-16 close: 対応済み（#2399）。宣言済み各列の CHECK 式が kind 由来の比較（`>= 0` / `> 0` 等）を含むことを固定。
 
 #### M-38（中）
 
@@ -479,6 +493,7 @@
 - 書き換えた箇所: src/shared/domain/pages/admin-queries.ts:19
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 除外は `<path>::<field>` 単位の wholesale。main assertion は `[...currentViolations()].filter(([key]) => !NOT_A_DB_COLUMN.has(key)).filter(([key]) => !FORM_OR_URL_VALUE.has(key))` で、count は分割代入されるだけでメッセージ本文にしか使われない。docstring が正当化している「件数で数える」防御は主 assertion では死んでおり、count を消費しているのは stale 検査（`(current.get(key) ?? 0) === 0`）のみ。NOT_A_DB_COLUMN 32 件 + FORM_OR_URL_VALUE 13 件 = 45 の file::field で、この gate が作られた原因の欠陥（ConnectionStatus）と同じ形が黙って通る。
+- 2026-08-16 close: 対応済み（#2397）。除外 entry の現行件数をベースラインとしてピンし、超過で FAIL。
 
 #### M-39（中）
 
@@ -489,6 +504,7 @@
 - 書き換えた箇所: prisma/baseline/invariants.sql:52（直後に 1 行挿入）
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 長さ検査は NUMERIC_COLUMN_DOMAINS から **導出した** 名前にしか掛かっておらず、invariants.sql に実際に書かれている識別子は一度も測っていない。readChecksByTable の正規表現も制約名を `[a-z_]+` で拾うため 76 文字を素通りさせる。docstring 自身が「値域 CHECK を入れた migration の初版が 2 本これを踏んだ」と実害を記録している経路が、そのまま無検査で残っている。
+- 2026-08-16 close: 対応済み（#2399）。制約名の 63 バイト上限を `readChecksByTable()` / invariants.sql に実在する全制約名へ適用。
 
 #### M-40（中）
 
@@ -499,6 +515,7 @@
 - 書き換えた箇所: prisma/migrations/20260101000000_backdated_typo/migration.sql:1（新規ディレクトリ）
 - 実行: `bun run test -- __tests__/unit/architecture`
 - 素通りの理由: 対照実験: 同じ内容を既存と同一の timestamp（20260815034446_duplicate_stamp）で置くと [run-tests] (108/190) FAIL **tests**/unit/architecture/migration-timestamp-monotonic.test.ts (248ms, exit=1) (fail) prisma migration directory structure > 14-digit timestamp が重複していない（壁時計の厳密な単調増加は検証しない） つまり検出できるのは完全重複だけで、書き間違えの過去日付は無検出。gate はこれを docstring で正直に申告している。加えてこの migration が足す数値列には CHECK が無いが、numeric gate は schema.prisma しか読まないので migration 側からの侵入も見えない。
+- 2026-08-16 close: 対応済み（#2400）。新規 migration の 14 桁 timestamp は CI base の最大より後であることを lint-migrations で固定。
 
 #### M-41（低）
 
@@ -511,6 +528,8 @@
 - 素通りの理由: 突き合わせが `entry.endsWith(&#x27;.&#x27;+column)` の列名一致（表をまたぐ）なので、sort_order / order / display_order の 3 名前をどれか 1 ファイルが書いていれば全 position 列が「根拠あり」になる。ungrounded の assertion は一度も発火せず、実際の防御は `expect(reorderedColumns.size).toBeGreaterThan(5)` だけ。
 
 ### キャッシュ・CDN タグ
+
+- 2026-08-16 close: 対応済み（#2399）。reorder 根拠を `table.column` 完全一致に変更。`REORDER_COMMAND_FILES` 脱落で赤。
 
 #### M-42（高） — 守り手なし
 
@@ -530,6 +549,7 @@
 - 注入した欠陥: PRIVATE_NO_TAG_PREFIXES から "/contact" を 1 要素削除
 - 書き換えた箇所: src/shared/lib/constants/cdn-cache-tags.ts:253
 - 実行: `bun run test -- __tests__/unit/architecture/next-config-cache-tag-emission.test.ts __tests__/unit/architecture/public-cache-tag-header-pairing.test.ts __tests__/unit/architecture/cdn-header-source-matching.test.ts __tests__/unit/lib/cdn-cache-tags.test.ts __tests__/unit/architecture/cache-tag-literals.test.ts __tests__/unit/architecture/eslint-cdn-mapped-tag-rule.test.ts → その後 bun run probe-mutation.ts "/contact"`
+- 2026-08-16 close: 対応済み（#2397）。`PRIVATE_NO_TAG_PREFIXES` をリテラル列挙と `toEqual` で固定。
 
 #### M-44（中） — 守り手なし
 
@@ -579,6 +599,7 @@
 - 注入した欠陥: import { ACTION_LABELS } from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions"; を src/shared 側に足し、purgeMarketingHomeTag 内で参照
 - 書き換えた箇所: src/shared/lib/cache/site-wide.ts:33（import 追加）+ :120（参照）
 - 実行: `bun run test -- __tests__/unit/architecture/cross-surface-import-gate.test.ts __tests__/unit/lib/cache-invalidation.test.ts → bun scripts/run-tests.ts __tests__/unit/architecture → bun run lint:files -- src/shared/lib/cache/site-wide.ts`
+- 2026-08-16 close: 対応済み（#2397）。走査根に `src/shared` を追加し、shared→admin 越境を検出。
 
 #### M-49（低）
 
@@ -599,6 +620,7 @@
 - 注入した欠陥: anonymizeExpiredGuestReservations の updateMany data から guestEmail: null を削除（前: guestLastName/guestFirstName/guestEmail/guestPhone/guestCompanyName/notes の 6 列 → 後: guestEmail を除く 5 列）
 - 書き換えた箇所: src/shared/domain/data-retention/commands.ts:169
 - 実行: `bun run test -- __tests__/unit/domain/data-retention/commands.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。`updateMany` data が `guestEmail: null` を含むことを固定。
 
 #### M-51（高）
 
@@ -608,6 +630,7 @@
 - 注入した欠陥: anonymizeExpiredGuestReservations の updateMany data から notes: null を削除
 - 書き換えた箇所: src/shared/domain/data-retention/commands.ts:173
 - 実行: `bun run test -- __tests__/unit/domain/data-retention/commands.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。`updateMany` data が `notes: null` を含むことを固定。
 
 #### M-52（高）
 
@@ -617,6 +640,7 @@
 - 注入した欠陥: WHERE の endTime: { lt: cutoff } を endTime: { gt: cutoff } に反転（対象集合が「期限切れ予約」から「未来・進行中の予約」へ丸ごと入れ替わる）
 - 書き換えた箇所: src/shared/domain/data-retention/commands.ts:157
 - 実行: `bun run test -- __tests__/unit/domain/data-retention/commands.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。WHERE が `endTime: { lt: cutoff }` であることを固定。
 
 #### M-53（高）
 
@@ -626,6 +650,7 @@
 - 注入した欠陥: anonymizeCustomerCommand の tx.customer.update data から phoneNumber: null を削除（監査ログ側の申告リストはそのまま = 「消したと記録するが消していない」状態）
 - 書き換えた箇所: src/shared/domain/customers/customer-lifecycle-commands.ts:149
 - 実行: `bun run test -- __tests__/unit/domain/customers/anonymize-preserves-suppression.test.ts __tests__/unit/actions/customer-audit-diff.test.ts __tests__/unit/domain/data-retention/commands.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。`tx.customer.update` data が `phoneNumber: null` を含むことを固定。
 
 #### M-54（高）
 
@@ -635,6 +660,7 @@
 - 注入した欠陥: hashSuppressedEmailCandidate(normalizeEmailForIdentity(recipient)) → hashSuppressedEmailCandidate(recipient)（canonical 化を外し、normalizeEmailForIdentity は suppressedRecipients への push 側に移して lint clean を維持）。テストの宛先は全て小文字なので差が出ない
 - 書き換えた箇所: src/shared/lib/email/send.ts:98-100
 - 実行: `bun run test -- __tests__/unit/shared/lib/email/send.test.ts __tests__/unit/email/send-result.test.ts ; bun run lint:files -- src/shared/lib/email/send.ts`
+- 2026-08-16 close: 対応済み（#2395）。大文字・前後空白の宛先でも canonical hash で suppression 照合することを固定。
 
 #### M-55（高）
 
@@ -644,6 +670,7 @@
 - 注入した欠陥: anonymizeInquiryInTx の update data から subject: INQUIRY_ANONYMIZE_PLACEHOLDER_SUBJECT を削除し、未使用になった定数宣言も削除（lint clean を維持）。テストの assertion は expect.objectContaining で subject を含まない
 - 書き換えた箇所: src/shared/domain/inquiries/anonymize-commands.ts:55,86
 - 実行: `bun run test -- __tests__/unit/domain/inquiries/anonymize-commands.test.ts __tests__/unit/domain/customers/anonymize-preserves-suppression.test.ts ; bun run lint:files -- src/shared/domain/inquiries/anonymize-commands.ts`
+- 2026-08-16 close: 対応済み（#2395）。inquiry update data の `subject` placeholder を明示キーで固定。
 
 #### M-56（高）
 
@@ -653,6 +680,7 @@
 - 注入した欠陥: resolveEmailSendContext の戻り値を suppressedEmailHashes → new Set([...suppressedEmailHashes].slice(0, 0))（getSuppressedEmailSet は呼ぶが中身を捨てる。全 suppression が無効化される）
 - 書き換えた箇所: src/shared/domain/settings/queries/email-render-context.ts:83
 - 実行: `bun run test -- __tests__/unit/domain __tests__/unit/shared/lib/email __tests__/unit/api __tests__/unit/email ; bun run lint:files -- src/shared/domain/settings/queries/email-render-context.ts`
+- 2026-08-16 close: 対応済み（#2395）。`suppressedEmailHashes` の件数と中身が取得集合と一致することを固定。
 
 #### M-57（中）
 
@@ -662,6 +690,7 @@
 - 注入した欠陥: purgeExpiredInquiries の purgeWhere から { deletedAt: { lt: cutoff } } 分岐を削除（前: OR 2 分岐 → 後: createdAt 1 分岐のみ）
 - 書き換えた箇所: src/shared/domain/data-retention/commands.ts:222
 - 実行: `bun run test -- __tests__/unit/domain/data-retention/commands.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。purge WHERE の `deletedAt` OR 分岐を固定。
 
 #### M-58（中）
 
@@ -671,6 +700,7 @@
 - 注入した欠陥: runDataRetentionPurge の anonymizeExpiredGuestReservations(now, config.reservationGuestMonths) を config.inquiryMonths に差し替え（既定値 12 → 36 ヶ月）
 - 書き換えた箇所: src/shared/domain/data-retention/commands.ts:375
 - 実行: `bun run test -- __tests__/unit/domain/data-retention/commands.test.ts __tests__/unit/api/cron-data-retention.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。guest 匿名化が `config.reservationGuestMonths` を使うことを固定。
 
 #### M-59（中）
 
@@ -680,6 +710,7 @@
 - 注入した欠陥: await tx.pendingCustomerEmailChange.deleteMany({ where: { customerId: existing.id } }) を丸ごと削除（PendingCustomerMerge 側は残す）。テストは mockPendingEmailChangeDeleteMany を定義しているが一度も assert していない
 - 書き換えた箇所: src/shared/domain/customers/customer-lifecycle-commands.ts:218-220
 - 実行: `bun run test -- __tests__/unit/domain/customers/anonymize-preserves-suppression.test.ts __tests__/unit/actions/customer-audit-diff.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。`pendingCustomerEmailChange.deleteMany` の呼出を固定。
 
 #### M-60（中） — 守り手なし
 
@@ -699,6 +730,7 @@
 - 注入した欠陥: ANONYMIZED_CUSTOMER_FIELDS 配列から "notes" を削除（実装は notes を消すのに監査記録は消したと申告しない）
 - 書き換えた箇所: src/shared/lib/constants/anonymized-customer-fields.ts:30
 - 実行: `bun run test -- __tests__/unit/actions/customer-audit-diff.test.ts __tests__/unit/architecture/use-server-exports.test.ts __tests__/unit/architecture/audit-log-append-only.test.ts`
+- 2026-08-16 close: 対応済み（#2395）。`ANONYMIZED_CUSTOMER_FIELDS` をリテラル全件で固定。
 
 ## 出典
 
