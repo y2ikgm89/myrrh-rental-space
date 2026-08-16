@@ -29,7 +29,7 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { CharacterLimitPlugin } from "@lexical/react/LexicalCharacterLimitPlugin";
-import type { EditorState, LexicalEditor as LexicalEditorType } from "lexical";
+import type { EditorState } from "lexical";
 import { IconAlertCircle } from "@tabler/icons-react";
 
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
@@ -40,6 +40,7 @@ import { EDITOR_NODES } from "./config/nodes";
 import { findUnregisteredLexicalNodeTypes } from "./config/registered-node-types";
 import { MATCHERS, validateUrl } from "./config/url-matchers";
 import { DisablePlugin } from "./internal-plugins/DisablePlugin";
+import { EditorRefPlugin } from "./internal-plugins/EditorRefPlugin";
 import { useDialogManager } from "./dialogs/use-dialog-manager";
 import { DialogRenderer } from "./dialogs/DialogRenderer";
 import {
@@ -102,6 +103,7 @@ function EditorInner({
   autoSaveKey,
   characterLimit,
   trailingPanel,
+  editorRef,
 }: Omit<LexicalEditorProps, "contentJson">) {
   const [contentWrapperRef, setContentWrapperRef] =
     useState<HTMLDivElement | null>(null);
@@ -141,13 +143,10 @@ function EditorInner({
   };
 
   // コンテンツ変更ハンドラ（JSON出力）
-  const handleChange = (
-    editorState: EditorState,
-    editor: LexicalEditorType,
-  ) => {
+  const handleChange = (editorState: EditorState) => {
     if (!onChange) return;
     const json = JSON.stringify(editorState.toJSON());
-    onChange(json, editor);
+    onChange(json);
   };
 
   const inspectorEnabled = showInspector !== false;
@@ -267,6 +266,7 @@ function EditorInner({
 
             {/* カスタムプラグイン */}
             <DisablePlugin disabled={disabled} />
+            {editorRef ? <EditorRefPlugin editorRef={editorRef} /> : null}
             <DraggableBlockPlugin anchorElem={contentWidthRef} />
             <TableActionMenuPlugin anchorElem={contentWidthRef} />
             {contentWidthRef && (

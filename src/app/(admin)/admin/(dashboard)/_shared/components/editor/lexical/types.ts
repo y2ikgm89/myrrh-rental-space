@@ -4,6 +4,7 @@
  * @description エディタコンポーネントの型定義
  */
 
+import type { ReactNode, RefObject } from "react";
 import type { LexicalEditor } from "lexical";
 import type { MediaUsage } from "@/admin/lib/validations/media";
 
@@ -24,8 +25,13 @@ export type AddCommentPayload = {
 export type LexicalEditorProps = {
   /** EditorState JSON 文字列（必須・プライマリ） */
   contentJson: string;
-  /** コンテンツ変更時のコールバック。persist は第 2 引数の editor から live state を読む。 */
-  onChange?: ((json: string, editor?: LexicalEditor) => void) | undefined;
+  /** コンテンツ変更時のコールバック（JSON文字列を返す） */
+  onChange?: ((json: string) => void) | undefined;
+  /**
+   * persist / submit 用の editor 束縛。EditorRefPlugin が mount 時にセットし
+   * unmount 時に null にする。OnChange 駆動ではない。
+   */
+  editorRef?: RefObject<LexicalEditor | null> | undefined;
   /** エディタを無効化するかどうか */
   disabled?: boolean | undefined;
   /** エディタのCSSクラス */
@@ -94,7 +100,7 @@ export type LexicalEditorProps = {
    * LexicalEditor の flex 行（ツールバーの下）に配置されるため、
    * InspectorSidebar と同じ高さ位置から始まる。
    */
-  trailingPanel?: import("react").ReactNode;
+  trailingPanel?: ReactNode;
   /**
    * 画像/音声/ファイルの挿入・アップロード時に付与する MediaUsage。
    * 省略時は既存挙動と互換の既定値（"POST"）にフォールバックする

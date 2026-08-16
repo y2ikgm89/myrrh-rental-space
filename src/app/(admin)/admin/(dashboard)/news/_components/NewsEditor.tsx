@@ -166,6 +166,7 @@ export function NewsEditor({
         <LazyLexicalEditor
           key={`${news?.id ?? "new"}-${editor.editorResetKey}`}
           contentJson={editor.contentJson}
+          editorRef={editor.editorRef}
           onChange={editor.handleContentChange}
           disabled={editor.isPending}
           className={EDITOR_PROSE_CLASSES}

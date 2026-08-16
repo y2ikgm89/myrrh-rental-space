@@ -187,8 +187,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       reactJson: contentJson,
     });
 
-  const handleContentChange = (json: string, editor?: LexicalEditor) => {
-    if (editor) editorRef.current = editor;
+  const handleContentChange = (json: string) => {
     setContentJson(json);
   };
 
@@ -529,6 +528,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
     autoSaveKey,
     editorResetKey,
+    editorRef,
     draftRecovery,
 
     isSettingsDialogOpen,

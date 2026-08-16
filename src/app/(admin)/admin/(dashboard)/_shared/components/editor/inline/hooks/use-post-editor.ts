@@ -246,8 +246,7 @@ export function usePostEditor({
       reactJson: contentJson,
     });
 
-  const handleContentChange = (json: string, editor?: LexicalEditor) => {
-    if (editor) editorRef.current = editor;
+  const handleContentChange = (json: string) => {
     setContentJson(json);
   };
 
@@ -589,6 +588,7 @@ export function usePostEditor({
 
     autoSaveKey,
     editorResetKey,
+    editorRef,
     draftRecovery,
 
     isSettingsDialogOpen,

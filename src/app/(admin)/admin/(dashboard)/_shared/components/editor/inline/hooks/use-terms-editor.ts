@@ -190,8 +190,7 @@ export function useTermsEditor({
       reactJson: contentJson,
     });
 
-  const handleContentChange = (json: string, editor?: LexicalEditor) => {
-    if (editor) editorRef.current = editor;
+  const handleContentChange = (json: string) => {
     setContentJson(json);
   };
 
@@ -542,6 +541,7 @@ export function useTermsEditor({
 
     autoSaveKey,
     editorResetKey,
+    editorRef,
     draftRecovery,
 
     isSettingsDialogOpen,
