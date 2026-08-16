@@ -39,6 +39,8 @@ import {
   FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES,
   REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
   REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
+  REQUIRED_CLOUD_SCHEDULER_CRON_JOBS,
+  REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
 } from "../../../scripts/gcp-production-audit-model";
 
 const ROOT = process.cwd();
@@ -183,6 +185,85 @@ variable "cloud_run_secret_versions" {
     // 禁止 env が Terraform 側に復活していないこと（旧 DB を指す形への差し戻し）。
     for (const forbidden of FORBIDDEN_CLOUD_RUN_MIGRATE_JOB_ENV_NAMES) {
       expect(jobRefs.map((ref) => ref.name)).not.toContain(forbidden);
+    }
+  });
+});
+
+/**
+ * `local.cron_jobs` の name / schedule を読む。
+ * コメント行は落とす。`imported_cron_jobs` は name だけの list なので対象外。
+ */
+export function readTerraformCronJobSchedules(
+  schedulerTf: string,
+): Map<string, string> {
+  const block = /cron_jobs\s*=\s*\[([\s\S]*?)^\s*\]/mu.exec(schedulerTf);
+  const schedules = new Map<string, string>();
+  if (!block?.[1]) return schedules;
+
+  for (const entry of stripLineComments(block[1]).split("{").slice(1)) {
+    const name = /name\s*=\s*"([^"]+)"/u.exec(entry)?.[1];
+    const schedule = /schedule\s*=\s*"([^"]+)"/u.exec(entry)?.[1];
+    if (name && schedule) schedules.set(name, schedule);
+  }
+  return schedules;
+}
+
+export function readTerraformSchedulerTimeZone(
+  schedulerTf: string,
+): string | null {
+  return /time_zone\s*=\s*"([^"]+)"/u.exec(schedulerTf)?.[1] ?? null;
+}
+
+describe("本番監査モデルの cron schedule は Terraform と一致する", () => {
+  test("parser が cron_jobs の schedule と time_zone を読める", () => {
+    const schedules = readTerraformCronJobSchedules(
+      readTerraform("cloud_scheduler.tf"),
+    );
+    expect(schedules.size).toBe(REQUIRED_CLOUD_SCHEDULER_CRON_JOBS.length);
+    expect(schedules.get("reservation-reminder")).toBe("0 * * * *");
+    expect(
+      readTerraformSchedulerTimeZone(readTerraform("cloud_scheduler.tf")),
+    ).toBe("Asia/Tokyo");
+  });
+
+  test("parser は cron schedule の drift を検出できる（見本）", () => {
+    const drifted = readTerraformCronJobSchedules(`
+locals {
+  cron_jobs = [
+    {
+      name     = "reservation-reminder"
+      schedule = "* * * * *"
+    },
+  ]
+}
+`);
+    expect([...drifted]).toEqual([["reservation-reminder", "* * * * *"]]);
+    expect(
+      readTerraformSchedulerTimeZone(`
+  schedule    = each.value.schedule
+  time_zone   = "UTC"
+`),
+    ).toBe("UTC");
+  });
+
+  test("expected cron schedule / timeZone が Terraform と一致する", () => {
+    const schedules = readTerraformCronJobSchedules(
+      readTerraform("cloud_scheduler.tf"),
+    );
+    const timeZone = readTerraformSchedulerTimeZone(
+      readTerraform("cloud_scheduler.tf"),
+    );
+
+    expect(timeZone).toBe(REQUIRED_CLOUD_SCHEDULER_TIME_ZONE);
+    expect(
+      Object.fromEntries(
+        REQUIRED_CLOUD_SCHEDULER_CRON_JOBS.map((job): [string, string] => {
+          return [job.id, job.schedule];
+        }),
+      ),
+    ).toEqual(Object.fromEntries(schedules));
+    for (const job of REQUIRED_CLOUD_SCHEDULER_CRON_JOBS) {
+      expect(job.timeZone).toBe(REQUIRED_CLOUD_SCHEDULER_TIME_ZONE);
     }
   });
 });

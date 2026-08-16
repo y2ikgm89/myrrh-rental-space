@@ -169,6 +169,10 @@ describe("GCP production setup runbook", () => {
       "scheduler service account has no user-managed keys",
     );
     expect(runbook).toContain("old `Authorization: Bearer` cron secrets");
+    expect(runbook).toContain(
+      "schedule and timeZone must match `local.cron_jobs`",
+    );
+    expect(runbook).toContain('time_zone = "Asia/Tokyo"');
   });
 
   test("production audit runbook verifies canonical Cloud Run runtime env", () => {

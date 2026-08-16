@@ -1520,7 +1520,7 @@ async function main(): Promise<void> {
     projectId,
     "--location",
     region,
-    "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state)",
+    "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state,schedule,timeZone)",
   ]);
   const cloudSchedulerOidcJobErrors = cloudSchedulerJobs.ok
     ? readCloudSchedulerOidcJobErrors(cloudSchedulerJobs.value, {

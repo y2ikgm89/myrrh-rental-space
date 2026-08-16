@@ -9,6 +9,7 @@
  *
  * 使い方:
  *   bun scripts/lint-migrations.ts <file.sql> [<file2.sql> ...]  # 指定ファイルを lint
+ *   bun scripts/lint-migrations.ts --branch-diff                 # CI base との差分を lint
  *   bun scripts/lint-migrations.ts --selftest                    # fixture でゲート自体を検証
  *
  * squawk バイナリは環境変数 SQUAWK_BIN（既定 "squawk"）。CI は公式リリースの
@@ -34,7 +35,7 @@
  * （**「安全である」と散文で主張するだけでは通らない**）。
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const SQUAWK_BIN = process.env["SQUAWK_BIN"] ?? "squawk";
@@ -66,6 +67,114 @@ const BASELINE_MIGRATION =
 
 function isBaseline(file: string): boolean {
   return file.replaceAll("\\", "/") === BASELINE_MIGRATION;
+}
+
+const MIGRATION_STAMP = /prisma\/migrations\/(\d{14})_/u;
+const MIGRATIONS_DIR = join(import.meta.dir, "..", "prisma", "migrations");
+
+/**
+ * CI / ローカルで比較する base ref。
+ * PR では `GITHUB_BASE_REF`（例: main）を `origin/<name>` に解決する。
+ */
+export function resolveCiBaseRef(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const baseRef = env["GITHUB_BASE_REF"]?.trim();
+  if (baseRef) return `origin/${baseRef}`;
+  return "origin/main";
+}
+
+export function readMigrationTimestampFromPath(file: string): string | null {
+  return MIGRATION_STAMP.exec(file.replaceAll("\\", "/"))?.[1] ?? null;
+}
+
+export function maxMigrationTimestamp(
+  stamps: readonly string[],
+): string | null {
+  if (stamps.length === 0) return null;
+  return stamps.reduce((max, stamp) => (stamp > max ? stamp : max));
+}
+
+/**
+ * 新規 migration の 14 桁 timestamp が base 上の最大より後であること。
+ * base に既にある timestamp（既存 migration の修正）は対象外。
+ */
+export function readBackdatedMigrationErrors(
+  files: readonly string[],
+  baseTimestamps: readonly string[],
+): string[] {
+  const maxOnBase = maxMigrationTimestamp(baseTimestamps);
+  if (maxOnBase === null) return [];
+  const onBase = new Set(baseTimestamps);
+  return files.flatMap((file) => {
+    const stamp = readMigrationTimestampFromPath(file);
+    if (stamp === null || onBase.has(stamp)) return [];
+    if (stamp > maxOnBase) return [];
+    return [
+      `${file.replaceAll("\\", "/")} timestamp ${stamp} must be after max timestamp on base ${maxOnBase}`,
+    ];
+  });
+}
+
+function listMigrationTimestampsOnRef(ref: string): string[] | null {
+  const result = spawnSync(
+    "git",
+    ["ls-tree", "-d", "--name-only", `${ref}:prisma/migrations`],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) return null;
+  return result.stdout.split(/\r?\n/u).flatMap((name) => {
+    const stamp = /^(\d{14})_/u.exec(name.trim())?.[1];
+    return stamp ? [stamp] : [];
+  });
+}
+
+function listLocalMigrationTimestamps(): string[] {
+  try {
+    return readdirSync(MIGRATIONS_DIR).flatMap((name) => {
+      const stamp = /^(\d{14})_/u.exec(name)?.[1];
+      return stamp ? [stamp] : [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function listBranchDiffMigrations(base: string): string[] {
+  const result = spawnSync(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--diff-filter=AM",
+      `${base}...HEAD`,
+      "--",
+      "prisma/migrations",
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) return [];
+  return result.stdout
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => MIGRATION_PATH.test(line));
+}
+
+export function readNewMigrationTimestampErrors(
+  files: readonly string[],
+  env: Record<string, string | undefined> = process.env,
+): string[] {
+  const base = resolveCiBaseRef(env);
+  const fromGit = listMigrationTimestampsOnRef(base);
+  const excluded = new Set(
+    files
+      .map((file) => readMigrationTimestampFromPath(file))
+      .filter((stamp): stamp is string => stamp !== null),
+  );
+  const baseStamps =
+    fromGit ??
+    listLocalMigrationTimestamps().filter((stamp) => !excluded.has(stamp));
+  return readBackdatedMigrationErrors(files, baseStamps);
 }
 
 /** squawk を実行し exit code を返す。違反検出時は非ゼロ（squawk 本体仕様）。 */
@@ -113,6 +222,39 @@ function selfTest(): number {
     );
     if (!ok) failed = true;
   }
+  const backdatedPaths = readFileSync(
+    join(FIXTURE_DIR, "backdated-paths.txt"),
+    "utf8",
+  )
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const newerThanMax = readBackdatedMigrationErrors(backdatedPaths, [
+    "99999999999997",
+  ]);
+  const olderThanMax = readBackdatedMigrationErrors(backdatedPaths, [
+    "99999999999999",
+  ]);
+  const newerOk = newerThanMax.length === 0;
+  const olderOk = olderThanMax.length > 0;
+  console.error(
+    `[selftest] ${newerOk ? "OK" : "NG"} backdated-paths.txt newer-than-max (errors=${newerThanMax.length}) — 新しい timestamp は通る`,
+  );
+  console.error(
+    `[selftest] ${olderOk ? "OK" : "NG"} backdated-paths.txt older-than-max (errors=${olderThanMax.length}) — main より古い timestamp を検出する`,
+  );
+  if (!newerOk || !olderOk) failed = true;
+
+  const ciBase = resolveCiBaseRef({ GITHUB_BASE_REF: "main" });
+  const localBase = resolveCiBaseRef({});
+  const baseOk =
+    ciBase === "origin/main" &&
+    (localBase === "origin/main" || localBase === "main");
+  console.error(
+    `[selftest] ${baseOk ? "OK" : "NG"} CI base resolution (ci=${ciBase}, local=${localBase})`,
+  );
+  if (!baseOk) failed = true;
+
   if (failed) {
     console.error(
       "[migration-safety] self-test 失敗: ゲート挙動が想定と不一致",
@@ -152,7 +294,11 @@ export function partitionMigrationArgs(
 function run(args: readonly string[]): number {
   if (args.includes("--selftest")) return selfTest();
 
-  const { present, missing, notMigrations } = partitionMigrationArgs(args);
+  const useBranchDiff = args.includes("--branch-diff");
+  const requested = useBranchDiff
+    ? listBranchDiffMigrations(resolveCiBaseRef())
+    : args.filter((arg) => arg !== "--branch-diff");
+  const { present, missing, notMigrations } = partitionMigrationArgs(requested);
 
   if (notMigrations.length > 0) {
     console.error(
@@ -190,7 +336,13 @@ function run(args: readonly string[]): number {
 
   console.error(`[migration-safety] lint 対象 ${toLint.length} 件:`);
   for (const f of toLint) console.error(`  - ${f}`);
-  return runSquawk(toLint);
+
+  const timestampErrors = readNewMigrationTimestampErrors(toLint);
+  for (const error of timestampErrors) {
+    console.error(`[migration-safety] ${error}`);
+  }
+  const squawkCode = runSquawk(toLint);
+  return timestampErrors.length > 0 ? 1 : squawkCode;
 }
 
 if (import.meta.main) {

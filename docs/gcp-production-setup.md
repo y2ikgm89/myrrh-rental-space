@@ -1411,6 +1411,8 @@ Expected results:
   Expected cron jobs must be ENABLED (PAUSED/DISABLED/missing FAIL). They must
   use `$SCHEDULER_SA` as `oidcToken.serviceAccountEmail`, `$PUBLIC_DOMAIN` as
   `oidcToken.audience`, and no old `Authorization: Bearer` cron secrets.
+  Their schedule and timeZone must match `local.cron_jobs` in
+  `terraform/cloud_scheduler.tf` (`time_zone = "Asia/Tokyo"`).
 - The audit checks `public Cloud Run runtime env is canonical` and
   `admin Cloud Run runtime env is canonical`. In particular, `BETTER_AUTH_URL`
   must be the canonical public origin on the public service and the canonical

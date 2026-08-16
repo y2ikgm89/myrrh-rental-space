@@ -510,6 +510,8 @@ describe("GCP production audit model", () => {
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
             state: "ENABLED",
+            schedule: "0 * * * *",
+            timeZone: "Asia/Tokyo",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
               oidcToken: {
@@ -536,6 +538,8 @@ describe("GCP production audit model", () => {
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
             state: "ENABLED",
+            schedule: "0 * * * *",
+            timeZone: "Asia/Tokyo",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
               headers: {
@@ -546,6 +550,8 @@ describe("GCP production audit model", () => {
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/instagram-sync",
             state: "ENABLED",
+            schedule: "*/30 * * * *",
+            timeZone: "Asia/Tokyo",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/instagram-sync",
               oidcToken: {
@@ -607,6 +613,18 @@ describe("GCP production audit model", () => {
       },
       headers: {},
     };
+    const tokyoHourly = {
+      schedule: "0 * * * *",
+      timeZone: "Asia/Tokyo",
+    };
+    const tokyoEveryTen = {
+      schedule: "*/10 * * * *",
+      timeZone: "Asia/Tokyo",
+    };
+    const tokyoEveryThirty = {
+      schedule: "*/30 * * * *",
+      timeZone: "Asia/Tokyo",
+    };
 
     expect(
       readCloudSchedulerOidcJobErrors(
@@ -614,6 +632,7 @@ describe("GCP production audit model", () => {
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
             state: "PAUSED",
+            ...tokyoHourly,
             httpTarget: validOidcTarget,
           },
         ],
@@ -632,6 +651,7 @@ describe("GCP production audit model", () => {
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/instagram-sync",
             state: "DISABLED",
+            ...tokyoEveryThirty,
             httpTarget: {
               ...validOidcTarget,
               uri: "https://rental-space.myrrh-jp.com/api/cron/instagram-sync",
@@ -650,6 +670,7 @@ describe("GCP production audit model", () => {
         [
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/calendar-sync",
+            ...tokyoEveryTen,
             httpTarget: {
               ...validOidcTarget,
               uri: "https://rental-space.myrrh-jp.com/api/cron/calendar-sync",
@@ -679,6 +700,114 @@ describe("GCP production audit model", () => {
     ).toEqual([
       "missing-http-target scheduler job must be ENABLED, got PAUSED",
       "missing-http-target missing httpTarget",
+    ]);
+  });
+
+  test("reports expected Cloud Scheduler jobs that still set X-Cron-Secret", () => {
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "ENABLED",
+            schedule: "0 * * * *",
+            timeZone: "Asia/Tokyo",
+            httpTarget: {
+              uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
+              oidcToken: {
+                serviceAccountEmail:
+                  "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+                audience: "https://rental-space.myrrh-jp.com",
+              },
+              headers: {
+                "X-Cron-Secret": "legacy-shared-secret",
+              },
+            },
+          },
+        ],
+        {
+          publicDomain: "https://rental-space.myrrh-jp.com",
+          schedulerServiceAccount:
+            "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+          expectedJobIds: ["reservation-reminder"],
+        },
+      ),
+    ).toEqual(["reservation-reminder must not set X-Cron-Secret header"]);
+  });
+
+  test("reports unexpected /api/cron jobs that are not on the expected list", () => {
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "ENABLED",
+            schedule: "0 * * * *",
+            timeZone: "Asia/Tokyo",
+            httpTarget: {
+              uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
+              oidcToken: {
+                serviceAccountEmail:
+                  "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+                audience: "https://rental-space.myrrh-jp.com",
+              },
+              headers: {},
+            },
+          },
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/shadow-cron",
+            state: "ENABLED",
+            httpTarget: {
+              uri: "https://rental-space.myrrh-jp.com/api/cron/shadow-cron",
+              oidcToken: {
+                serviceAccountEmail:
+                  "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+                audience: "https://rental-space.myrrh-jp.com",
+              },
+              headers: {},
+            },
+          },
+        ],
+        {
+          publicDomain: "https://rental-space.myrrh-jp.com",
+          schedulerServiceAccount:
+            "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+          expectedJobIds: ["reservation-reminder"],
+        },
+      ),
+    ).toEqual(["shadow-cron is not an expected Cloud Scheduler cron job"]);
+  });
+
+  test("reports expected Cloud Scheduler jobs whose schedule or timeZone drifted", () => {
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "ENABLED",
+            schedule: "* * * * *",
+            timeZone: "UTC",
+            httpTarget: {
+              uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
+              oidcToken: {
+                serviceAccountEmail:
+                  "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+                audience: "https://rental-space.myrrh-jp.com",
+              },
+              headers: {},
+            },
+          },
+        ],
+        {
+          publicDomain: "https://rental-space.myrrh-jp.com",
+          schedulerServiceAccount:
+            "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+          expectedJobIds: ["reservation-reminder"],
+        },
+      ),
+    ).toEqual([
+      "reservation-reminder schedule must be 0 * * * *, got * * * * *",
+      "reservation-reminder timeZone must be Asia/Tokyo, got UTC",
     ]);
   });
 
@@ -2054,7 +2183,7 @@ describe("GCP production audit model", () => {
     expect(auditScript).toContain("schedulerServiceAccountKeys");
     expect(auditScript).toContain('"--managed-by=user"');
     expect(auditScript).toContain(
-      "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state)",
+      "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state,schedule,timeZone)",
     );
     expect(auditScript).toContain(
       "Cloud Scheduler cron jobs are ENABLED and use Google OIDC tokens only",

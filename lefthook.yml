@@ -76,6 +76,16 @@ pre-push:
       run: bun run type-check
       tags: slow
 
+    # 破壊的 DDL のローカル捕捉。CI の required check
+    # `Migration Safety (squawk)` は残す。ここは migrations が push に含まれる
+    # ときだけ、CI base（origin/main）との branch-diff を lint する。
+    # 第 2 の CI job / allowlist は作らない。
+    - name: lint-migrations
+      glob:
+        - "prisma/migrations/**/migration.sql"
+      run: bun scripts/lint-migrations.ts --branch-diff
+      tags: slow
+
     # architecture-boundaries test（Prisma gateway 規約等の違反検出）と、
     # __tests__/unit/architecture/ 配下の派生 gate（migration timestamp / cron OIDC /
     # feature module drift / next.config Cache-Tag 契約 / type-safety cast gate 等の
