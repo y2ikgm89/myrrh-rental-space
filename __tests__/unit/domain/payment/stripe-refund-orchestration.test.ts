@@ -41,6 +41,8 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 const {
   PAYMENT_REFUND_LOCK_NAMESPACE,
+  REFUND_AGGREGATE_EXCLUDED_STATUSES,
+  TERMINAL_REFUND_STATUSES,
   acquirePaymentRefundAdvisoryLock,
   claimRefundSettlement,
   createRefundRecordIdempotent,
@@ -66,6 +68,21 @@ describe("stripe-refund-orchestration kernel", () => {
   test("PAYMENT_REFUND_LOCK_NAMESPACE matches db-domain registry", () => {
     expect(PAYMENT_REFUND_LOCK_NAMESPACE.reservation).toBe(728355);
     expect(PAYMENT_REFUND_LOCK_NAMESPACE["event-registration"]).toBe(728356);
+  });
+
+  test("TERMINAL_REFUND_STATUSES is the Stripe terminal set", () => {
+    expect([...TERMINAL_REFUND_STATUSES]).toEqual([
+      "succeeded",
+      "failed",
+      "canceled",
+    ]);
+  });
+
+  test("REFUND_AGGREGATE_EXCLUDED_STATUSES excludes only non-movement statuses", () => {
+    expect([...REFUND_AGGREGATE_EXCLUDED_STATUSES]).toEqual([
+      "failed",
+      "canceled",
+    ]);
   });
 
   test("acquirePaymentRefundAdvisoryLock uses entity-specific namespace", async () => {
