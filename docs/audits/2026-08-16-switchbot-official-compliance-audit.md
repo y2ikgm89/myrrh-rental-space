@@ -24,7 +24,7 @@
 
 ## Findings
 
-### S-1（実機確定・修正）createKey 応答の commandId 必須仮定
+### S-1（修正済み PR #2378）createKey 応答の commandId 必須仮定
 
 |        |                                                                                                                                                         |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,7 +52,7 @@ Keypad Touch 実機は createKey 応答に `commandId` を**返さない**（`bo
 
 実害: `switchbotCommandId` 列は常に null のまま保存され、**公式が正本とする webhook 確定経路が実機では事実上機能しない**。S-7 の通り keyList 反映は 120 秒超で現行 poll 上限 45 秒では確定できないため、45 秒超で PENDING 残存 → 確認メールは issuanceFailed 付きで送出され、webhook（到着していれば）または stale cron 頼みになる。
 
-**修正方針（別 PR で実施）:**
+**修正方針（PR #2378 でマージ済み）:**
 
 1. `createPasscode` を `{ commandId?: string }` に（deleteKey と対称）
 2. `issue-passcode.ts` は commandId があるときだけ保存
