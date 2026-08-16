@@ -4,6 +4,7 @@ import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import {
   CUSTOM_PAGE_HEADER_SOURCE,
   EVENT_PUBLIC_DETAIL_HEADER_SOURCE,
+  TAGGED_PUBLIC_FIRST_SEGMENTS,
 } from "@/shared/lib/constants/cdn-cache-tags";
 
 /**
@@ -93,6 +94,31 @@ describe("CDN header source matching", () => {
       { path: "/company/sub", matches: false },
       // home は専用 source
       { path: "/", matches: false },
+    ]);
+  });
+
+  test("TAGGED_PUBLIC_FIRST_SEGMENTS pins remaining collection segments as literals", () => {
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("faq");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("terms");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("news");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("spaces");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("category");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("tag");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("about");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("access");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("blog");
+    expect(TAGGED_PUBLIC_FIRST_SEGMENTS).toContain("events");
+  });
+
+  test("カスタムページ source は残りの tagged 公開ルートも外す", () => {
+    assertCases(CUSTOM_PAGE_HEADER_SOURCE, [
+      { path: "/faq", matches: false },
+      { path: "/terms", matches: false },
+      { path: "/news", matches: false },
+      { path: "/spaces", matches: false },
+      { path: "/category", matches: false },
+      { path: "/tag", matches: false },
+      { path: "/about", matches: false },
     ]);
   });
 });

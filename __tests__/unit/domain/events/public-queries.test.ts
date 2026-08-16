@@ -40,14 +40,17 @@ await installErrorsServerMock({
   },
 });
 
-const { getPublishedEventsPaginated } =
+const { getPublishedEvents, getPublishedEventsPaginated } =
   await import("@/shared/domain/events/public-queries");
+const { CACHE_TAGS } = await import("@/shared/lib/constants");
 
 function resetAllMocks() {
   eventFindMany.mockReset();
   eventCount.mockReset();
   eventFindMany.mockResolvedValue([]);
   eventCount.mockResolvedValue(0);
+  cacheTagMock.mockReset();
+  cacheLifeMock.mockReset();
 }
 
 interface FindManyCall {
@@ -162,5 +165,18 @@ describe("getPublishedEventsPaginated where clause", () => {
     const { skip, take } = lastFindManyArg();
     expect(skip).toBe(10);
     expect(take).toBe(5);
+  });
+});
+
+describe("getPublishedEvents cacheTag contract", () => {
+  beforeEach(resetAllMocks);
+
+  test("calls cacheTag with EVENTS, LOCATIONS, and SPACES", async () => {
+    await getPublishedEvents();
+    expect(cacheTagMock).toHaveBeenCalledWith(
+      CACHE_TAGS.EVENTS,
+      CACHE_TAGS.LOCATIONS,
+      CACHE_TAGS.SPACES,
+    );
   });
 });

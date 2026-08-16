@@ -41,10 +41,15 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
 
-const { invalidateSiteWideCache, invalidateSiteWideCacheFromRouteHandler } =
-  await import("@/shared/lib/cache/site-wide");
+const {
+  invalidateSiteWideCache,
+  invalidateSiteWideCacheFromRouteHandler,
+  purgeMarketingHomeTag,
+} = await import("@/shared/lib/cache/site-wide");
 const { firePurgeAsync } = await import("@/shared/lib/cache/fire-purge");
 const { CACHE_TAGS } = await import("@/shared/lib/constants");
+const { CDN_CACHE_TAGS } =
+  await import("@/shared/lib/constants/cdn-cache-tags");
 
 beforeEach(() => {
   mockUpdateTag.mockClear();
@@ -129,6 +134,17 @@ describe("invalidateSiteWideCacheFromRouteHandler", () => {
     expect(mockPurgeByTags).not.toHaveBeenCalled();
     expect(mockFireAndForget).not.toHaveBeenCalled();
     expect(mockQueueTagPurge).not.toHaveBeenCalled();
+  });
+});
+
+describe("purgeMarketingHomeTag", () => {
+  test("queues HOME_MARKETING (home-marketing-v1), not FAQ", () => {
+    purgeMarketingHomeTag();
+    expect(CDN_CACHE_TAGS.HOME_MARKETING).toBe("home-marketing-v1");
+    expect(mockQueueTagPurge).toHaveBeenCalledTimes(1);
+    expect(mockQueueTagPurge).toHaveBeenCalledWith(
+      CDN_CACHE_TAGS.HOME_MARKETING,
+    );
   });
 });
 
