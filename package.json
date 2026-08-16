@@ -84,7 +84,7 @@
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tabler/icons-react": "^3.46.0",
     "@tailwindcss/typography": "^0.5.20",
-    "better-auth": "^1.6.28",
+    "better-auth": "^1.6.29",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
