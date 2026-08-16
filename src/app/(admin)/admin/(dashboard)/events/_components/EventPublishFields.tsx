@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { ReactElement } from "react";
+import type { ReactElement, RefObject } from "react";
 import { getInputProps } from "@conform-to/react";
 import { IconPhotoPlus, IconX } from "@tabler/icons-react";
 import {
@@ -27,6 +27,7 @@ import {
   EVENT_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import type { LexicalEditor } from "lexical";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import type { EventFormFields } from "./event-form-fields-types";
 
@@ -46,6 +47,7 @@ type EventPublishFieldsProps = {
   onRegistrationOpenChange: (open: boolean) => void;
   contentJson: string;
   onContentJsonChange: (json: string) => void;
+  editorRef: RefObject<LexicalEditor | null>;
   thumbnailUrl: string | null;
   onThumbnailUrlChange: (url: string | null) => void;
 };
@@ -60,6 +62,7 @@ export function EventPublishFields({
   onRegistrationOpenChange,
   contentJson,
   onContentJsonChange,
+  editorRef,
   thumbnailUrl,
   onThumbnailUrlChange,
 }: EventPublishFieldsProps): ReactElement {
@@ -251,6 +254,7 @@ export function EventPublishFields({
         <CardContent>
           <LazyLexicalEditor
             contentJson={contentJson}
+            editorRef={editorRef}
             onChange={onContentJsonChange}
             disabled={isPending}
             className={EDITOR_PROSE_CLASSES}

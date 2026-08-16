@@ -10,7 +10,10 @@ import { describe, expect, test } from "bun:test";
 import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
 
 import { createProjectHeadlessEditor } from "@/admin/components/editor/lexical/create-headless-lexical-editor";
-import { resolvePersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
+import {
+  applyPersistableEditorJson,
+  resolvePersistableEditorJson,
+} from "@/admin/components/editor/lexical/read-latest-editor-json";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const TYPED_BODY = "E2E 投稿本文プレビュー live";
@@ -57,5 +60,43 @@ describe("resolvePersistableEditorJson", () => {
     expect(resolvePersistableEditorJson({ editor: null, reactJson })).toBe(
       reactJson,
     );
+  });
+});
+
+describe("applyPersistableEditorJson", () => {
+  test("formData の対象フィールドを live editor state で上書きする", () => {
+    const editor = createProjectHeadlessEditor();
+    editor.update(
+      () => {
+        const root = $getRoot();
+        root.clear();
+        root.append($createParagraphNode().append($createTextNode(TYPED_BODY)));
+      },
+      { discrete: true },
+    );
+    const formData = new FormData();
+    formData.set("descriptionJson", editorJsonWithText(STALE_BODY));
+
+    applyPersistableEditorJson(formData, "descriptionJson", {
+      editor,
+      reactJson: editorJsonWithText(STALE_BODY),
+    });
+
+    const persisted = String(formData.get("descriptionJson"));
+    expect(persisted).toContain(TYPED_BODY);
+    expect(persisted).not.toContain(STALE_BODY);
+  });
+
+  test("editor が無いときは React snapshot で上書きする", () => {
+    const reactJson = EMPTY_LEXICAL_EDITOR_STATE_JSON;
+    const formData = new FormData();
+    formData.set("descriptionJson", editorJsonWithText(STALE_BODY));
+
+    applyPersistableEditorJson(formData, "descriptionJson", {
+      editor: null,
+      reactJson,
+    });
+
+    expect(formData.get("descriptionJson")).toBe(reactJson);
   });
 });

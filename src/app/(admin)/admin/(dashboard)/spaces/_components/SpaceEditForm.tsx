@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useEffectEvent, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -54,6 +60,8 @@ import { SpaceEditDetailsTab } from "./space-edit-form/SpaceEditDetailsTab";
 import { SpaceEditPublishTab } from "./space-edit-form/SpaceEditPublishTab";
 import { SpaceEditBlockedDatesTab } from "./space-edit-form/SpaceEditBlockedDatesTab";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { applyPersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
+import type { LexicalEditor } from "lexical";
 
 export type { SpaceEditCategoryOption, SpaceEditLocationOption };
 
@@ -97,6 +105,7 @@ export function SpaceEditForm({
   const [descriptionJson, setDescriptionJson] = useState<string>(() =>
     getInitialDescriptionJson(space),
   );
+  const editorRef = useRef<LexicalEditor | null>(null);
 
   const [editorResetKey, setEditorResetKey] = useState(0);
   const draftRecovery = useDraftRecovery({
@@ -207,7 +216,13 @@ export function SpaceEditForm({
     },
     // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
     // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
-    onSubmit: dispatchWithoutFormReset(action),
+    onSubmit: (event, context) => {
+      applyPersistableEditorJson(context.formData, "descriptionJson", {
+        editor: editorRef.current,
+        reactJson: descriptionJson,
+      });
+      dispatchWithoutFormReset(action)(event, context);
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
@@ -516,6 +531,7 @@ export function SpaceEditForm({
           onSlugChange={setSlug}
           descriptionJson={descriptionJson}
           onDescriptionJsonChange={setDescriptionJson}
+          editorRef={editorRef}
           editorResetKey={editorResetKey}
           autoSaveKey={autoSaveKey}
           locationId={locationId}

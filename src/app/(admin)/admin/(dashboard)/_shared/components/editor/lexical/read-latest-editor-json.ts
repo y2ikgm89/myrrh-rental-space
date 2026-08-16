@@ -19,3 +19,16 @@ export function resolvePersistableEditorJson(options: {
   }
   return JSON.stringify(editor.getEditorState().toJSON());
 }
+
+/**
+ * conform が DOM（hidden input）から組み立てた FormData の対象フィールドを
+ * persist 時点の live editor state で上書きする。hidden input は
+ * hydration 前 / no-JS fallback として残す。
+ */
+export function applyPersistableEditorJson(
+  formData: FormData,
+  fieldName: string,
+  options: { editor: LexicalEditor | null; reactJson: string },
+): void {
+  formData.set(fieldName, resolvePersistableEditorJson(options));
+}
