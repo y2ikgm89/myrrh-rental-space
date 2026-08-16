@@ -38,69 +38,69 @@
 
 ## 索引
 
-| M-ID | 重大度 | 守り手   | 不変条件                                                                                                                      |
-| ---- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| M-01 | 高     | あり     | 返金累計は charge 総額を超えられない（既存の部分返金を引いた「残額」が上限）                                                  |
-| M-02 | 高     | あり     | 部分返金の Stripe idempotency key は返金ごとに動く（累積額 newCumulative を含む）。固定すると 2 回…                           |
-| M-03 | 高     | あり     | 終端状態（succeeded/failed/canceled）から非終端（pending 等）への巻き戻しを拒否する。Stripe は re…                            |
-| M-04 | 高     | **なし** | claimRefundSettlement は非終端状態からのみ "succeeded" へ遷移できる（webhook の at-least…                                     |
-| M-05 | 高     | あり     | Refund 行 insert の catch が握りつぶしてよいのは stripeRefundId の unique 衝突（webhook…                                      |
-| M-06 | 高     | あり     | （M2 の event 側対称）部分返金の Stripe idempotency key は累積額を含んで返金ごとに動く                                        |
-| M-07 | 高     | **なし** | TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claim…                                                  |
-| M-08 | 高     | あり     | charge.refunded webhook は "succeeded" 確定の返金でしか paymentStatus を終端へ動かさない…                                     |
-| M-09 | 高     | **なし** | 返金累計の集計は対象 entity にスコープされる（tx.refund.aggregate の WHERE に reservationId…                                  |
-| M-10 | 中     | **なし** | 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex revie…               |
-| M-11 | 高     | あり     | 公開フォームの mutation Server Action は 4 段 guard pipeline を通る（新設 action も含む）                                     |
-| M-12 | 高     | あり     | page 本体に置かれた requireAdmin*Page が実際に認可を強制する（拒否時にページ描画を止める）                                    |
-| M-13 | 高     | あり     | requireAdminPermission(resource, action) は要求された action を検査する（read 権限が …                                        |
-| M-14 | 高     | あり     | checkPermission は role が権限を持たないとき失敗を返す（admin API route / Server Action…                                      |
-| M-15 | 高     | あり     | 同上（綴りを問わず (public)→(admin) の越境を禁止する）                                                                        |
-| M-16 | 高     | あり     | 同上（綴りを問わず public 層に Prisma を持ち込ませない）                                                                      |
-| M-17 | 高     | あり     | 同上（gate が主張しているのは「全 export が gate される」ことであって「gate の総数が export 数と一致する」こ…                 |
-| M-18 | 中     | あり     | admin ページの認可 helper は、そのページが本当に要求する permission を要求する（auditLog:read は S…                           |
-| M-19 | 中     | あり     | VIEWER（閲覧専用ロール）の read 対象集合が固定されている                                                                      |
-| M-20 | 中     | あり     | 同上 — assertCustomerActive が実際に実行される（存在するだけでなく）                                                          |
-| M-21 | 低     | **なし** | requireAdminDetailPage は EDITOR の userPageAssignment スコープ（resourceId 単…                                               |
-| M-22 | 高     | **なし** | Cloud Scheduler の cron job が PAUSED 状態になっていないこと（23本のcronが停止していないこと）                                |
-| M-23 | 高     | あり     | 監査スクリプトの各 check が違反を検出したとき、実際に監査を FAIL させること（build SA の project-level …                      |
-| M-24 | 高     | あり     | 同上（project IAM の想定外 Secret Manager accessor grant 検出）が監査を FAIL させること                                       |
-| M-25 | 中     | あり     | branch-protection.json の required contexts に対応する workflow が paths filt…                                                |
-| M-26 | 中     | **なし** | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
-| M-27 | 中     | あり     | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
-| M-28 | 中     | あり     | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
-| M-29 | 低     | あり     | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
-| M-30 | 低     | あり     | expected list に無い job が /api/cron/* を叩いていたら不正 job として報告すること                                             |
-| M-31 | 低     | あり     | cron job の schedule / timeZone が宣言どおりであること                                                                        |
-| M-32 | 高     | あり     | 期間の列は開始 <= 終了を DB が強制する（逆転した行は「保存できるのに一度も効かない」）                                        |
-| M-33 | 高     | あり     | 同一スペースの PENDING / CONFIRMED 予約は時間帯が重複できない（EXCLUDE 制約 reservations_no_a…                                |
-| M-34 | 高     | あり     | audit_logs は append-only（UPDATE / DELETE を trigger が例外で止め、hash chain の…                                            |
-| M-35 | 高     | あり     | 破壊的 DDL を含む migration は squawk に検出され、計画ダウンタイム付きでしかデプロイされない                                  |
-| M-36 | 高     | あり     | SINGLE_OCCURRENCE のイベントは EventTimeSlot をちょうど 1 本持つ（CONSTRAINT TRIGGER …                                        |
-| M-37 | 中     | あり     | customers.total_spent は負値を取れない（total_spent >= 0）                                                                    |
-| M-38 | 中     | あり     | （同上）除外に載っているファイルでも、そこに新しく増える DB 列射影の string 宣言は防げる — gate の docstring …                |
-| M-39 | 中     | あり     | 制約名は PostgreSQL の識別子上限 63 バイトに収まっている（超えた分は黙って切り捨てられ、付けたつもりの名前と実際の名前が食い… |
-| M-40 | 中     | あり     | migration の 14 桁 timestamp は適用順を正しく表す                                                                             |
-| M-41 | 低     | あり     | 退避領域を許す（position）列は、reorder が実際に UPDATE する列だけである（根拠を reorder コマンド 11 フ…                      |
-| M-42 | 高     | **なし** | "use cache" の producer は 3 点セット（"use cache" → cacheLife(CACHE_LIFE.X) …                                                |
-| M-43 | 中     | あり     | PRIVATE_NO_TAG_PREFIXES に載っている prefix は catch-all の CUSTOM_PAGE_HEADER…                                               |
-| M-44 | 中     | **なし** | 個別に Cache-Tag を emit している公開ルートの第1セグメントは TAGGED_PUBLIC_FIRST_SEGMENTS に…                                 |
-| M-45 | 中     | **なし** | NEXTJS_TAG_TO_CDN_TAG に載っている CDN tag は、実際にどれかの header source が emit して…                                     |
-| M-46 | 中     | **なし** | purgeMarketingHomeTag() は HOME_MARKETING（/ と /about だけが載せるタグ）を purge す…                                         |
-| M-47 | 中     | **なし** | 個別に列挙された公開ルート（/access 等）は Cache-Tag header を持ち、site-wide purge が edge …                                 |
-| M-48 | 中     | あり     | admin 専用コードは public surface のモジュールグラフに入らない（cross-surface-import-gate.t…                                  |
-| M-49 | 低     | あり     | CDN cache tag はコンマ・空白を含めない（Cloudflare は Cache-Tag ヘッダ内のコンマをタグ区切りとして扱う）                      |
-| M-50 | 高     | あり     | 保持期限を過ぎた予約の guest メールアドレスは NULL 化される                                                                   |
-| M-51 | 高     | あり     | 保持期限を過ぎた予約の自由記入「備考」（第三者を含む PII、監査 F-116）は NULL 化される                                        |
-| M-52 | 高     | あり     | guest 情報の匿名化対象は endTime が cutoff より古い予約だけ（未来予約・進行中予約は触らない）                                 |
-| M-53 | 高     | あり     | 顧客匿名化は電話番号を NULL 化する（ANONYMIZED_CUSTOMER_FIELDS が phoneNumber を含むと申告して…                               |
-| M-54 | 高     | あり     | 送信側は recipient を canonical 化（trim + lowercase）してから hash し、suppression …                                         |
-| M-55 | 高     | あり     | 問い合わせ匿名化は件名（subject）も placeholder に置換する（件名に氏名が書かれ、admin 検索が subject を …                     |
-| M-56 | 高     | あり     | bounce/complaint で抑止された宛先の hash 集合が、実際に sendEmail へ渡る（suppression の唯一の…                               |
-| M-57 | 中     | あり     | soft-delete された問い合わせは deletedAt から N ヶ月後に hard delete される（createdAt が新…                                  |
-| M-58 | 中     | あり     | 各テーブルの保持月数は自分の config フィールドから取る（reservationGuestMonths は予約 guest 用）                              |
-| M-59 | 中     | あり     | 顧客匿名化は短命トークン台帳 PendingCustomerEmailChange を行ごと削除する（customerId で JOIN す…                              |
-| M-60 | 中     | **なし** | 顧客 PII の匿名化は監査ログに残る（誰が/いつ/何を消したか）                                                                   |
-| M-61 | 低     | あり     | 匿名化イベントの AuditLog に記録する anonymizedFields は、実際に匿名化される列と一致する（forensic 記録…                      |
+| M-ID | 重大度 | 守り手           | 不変条件                                                                                                                      |
+| ---- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| M-01 | 高     | あり             | 返金累計は charge 総額を超えられない（既存の部分返金を引いた「残額」が上限）                                                  |
+| M-02 | 高     | あり             | 部分返金の Stripe idempotency key は返金ごとに動く（累積額 newCumulative を含む）。固定すると 2 回…                           |
+| M-03 | 高     | あり             | 終端状態（succeeded/failed/canceled）から非終端（pending 等）への巻き戻しを拒否する。Stripe は re…                            |
+| M-04 | 高     | あり (this wave) | claimRefundSettlement は非終端状態からのみ "succeeded" へ遷移できる（webhook の at-least…                                     |
+| M-05 | 高     | あり (this wave) | Refund 行 insert の catch が握りつぶしてよいのは stripeRefundId の unique 衝突（webhook…                                      |
+| M-06 | 高     | あり             | （M2 の event 側対称）部分返金の Stripe idempotency key は累積額を含んで返金ごとに動く                                        |
+| M-07 | 高     | **なし**         | TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claim…                                                  |
+| M-08 | 高     | あり             | charge.refunded webhook は "succeeded" 確定の返金でしか paymentStatus を終端へ動かさない…                                     |
+| M-09 | 高     | あり (this wave) | 返金累計の集計は対象 entity にスコープされる（tx.refund.aggregate の WHERE に reservationId…                                  |
+| M-10 | 中     | **なし**         | 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex revie…               |
+| M-11 | 高     | あり (this wave) | 公開フォームの mutation Server Action は 4 段 guard pipeline を通る（新設 action も含む）                                     |
+| M-12 | 高     | あり             | page 本体に置かれた requireAdmin*Page が実際に認可を強制する（拒否時にページ描画を止める）                                    |
+| M-13 | 高     | あり             | requireAdminPermission(resource, action) は要求された action を検査する（read 権限が …                                        |
+| M-14 | 高     | あり             | checkPermission は role が権限を持たないとき失敗を返す（admin API route / Server Action…                                      |
+| M-15 | 高     | あり             | 同上（綴りを問わず (public)→(admin) の越境を禁止する）                                                                        |
+| M-16 | 高     | あり             | 同上（綴りを問わず public 層に Prisma を持ち込ませない）                                                                      |
+| M-17 | 高     | あり             | 同上（gate が主張しているのは「全 export が gate される」ことであって「gate の総数が export 数と一致する」こ…                 |
+| M-18 | 中     | あり             | admin ページの認可 helper は、そのページが本当に要求する permission を要求する（auditLog:read は S…                           |
+| M-19 | 中     | あり             | VIEWER（閲覧専用ロール）の read 対象集合が固定されている                                                                      |
+| M-20 | 中     | あり             | 同上 — assertCustomerActive が実際に実行される（存在するだけでなく）                                                          |
+| M-21 | 低     | **なし**         | requireAdminDetailPage は EDITOR の userPageAssignment スコープ（resourceId 単…                                               |
+| M-22 | 高     | **なし**         | Cloud Scheduler の cron job が PAUSED 状態になっていないこと（23本のcronが停止していないこと）                                |
+| M-23 | 高     | あり             | 監査スクリプトの各 check が違反を検出したとき、実際に監査を FAIL させること（build SA の project-level …                      |
+| M-24 | 高     | あり             | 同上（project IAM の想定外 Secret Manager accessor grant 検出）が監査を FAIL させること                                       |
+| M-25 | 中     | あり             | branch-protection.json の required contexts に対応する workflow が paths filt…                                                |
+| M-26 | 中     | **なし**         | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
+| M-27 | 中     | あり             | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
+| M-28 | 中     | あり             | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
+| M-29 | 低     | あり             | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
+| M-30 | 低     | あり             | expected list に無い job が /api/cron/* を叩いていたら不正 job として報告すること                                             |
+| M-31 | 低     | あり             | cron job の schedule / timeZone が宣言どおりであること                                                                        |
+| M-32 | 高     | あり             | 期間の列は開始 <= 終了を DB が強制する（逆転した行は「保存できるのに一度も効かない」）                                        |
+| M-33 | 高     | あり             | 同一スペースの PENDING / CONFIRMED 予約は時間帯が重複できない（EXCLUDE 制約 reservations_no_a…                                |
+| M-34 | 高     | あり             | audit_logs は append-only（UPDATE / DELETE を trigger が例外で止め、hash chain の…                                            |
+| M-35 | 高     | あり             | 破壊的 DDL を含む migration は squawk に検出され、計画ダウンタイム付きでしかデプロイされない                                  |
+| M-36 | 高     | あり             | SINGLE_OCCURRENCE のイベントは EventTimeSlot をちょうど 1 本持つ（CONSTRAINT TRIGGER …                                        |
+| M-37 | 中     | あり             | customers.total_spent は負値を取れない（total_spent >= 0）                                                                    |
+| M-38 | 中     | あり             | （同上）除外に載っているファイルでも、そこに新しく増える DB 列射影の string 宣言は防げる — gate の docstring …                |
+| M-39 | 中     | あり             | 制約名は PostgreSQL の識別子上限 63 バイトに収まっている（超えた分は黙って切り捨てられ、付けたつもりの名前と実際の名前が食い… |
+| M-40 | 中     | あり             | migration の 14 桁 timestamp は適用順を正しく表す                                                                             |
+| M-41 | 低     | あり             | 退避領域を許す（position）列は、reorder が実際に UPDATE する列だけである（根拠を reorder コマンド 11 フ…                      |
+| M-42 | 高     | あり (this wave) | "use cache" の producer は 3 点セット（"use cache" → cacheLife(CACHE_LIFE.X) …                                                |
+| M-43 | 中     | あり             | PRIVATE_NO_TAG_PREFIXES に載っている prefix は catch-all の CUSTOM_PAGE_HEADER…                                               |
+| M-44 | 中     | あり (this wave) | 個別に Cache-Tag を emit している公開ルートの第1セグメントは TAGGED_PUBLIC_FIRST_SEGMENTS に…                                 |
+| M-45 | 中     | あり (this wave) | NEXTJS_TAG_TO_CDN_TAG に載っている CDN tag は、実際にどれかの header source が emit して…                                     |
+| M-46 | 中     | あり (this wave) | purgeMarketingHomeTag() は HOME_MARKETING（/ と /about だけが載せるタグ）を purge す…                                         |
+| M-47 | 中     | あり (this wave) | 個別に列挙された公開ルート（/access 等）は Cache-Tag header を持ち、site-wide purge が edge …                                 |
+| M-48 | 中     | あり             | admin 専用コードは public surface のモジュールグラフに入らない（cross-surface-import-gate.t…                                  |
+| M-49 | 低     | あり             | CDN cache tag はコンマ・空白を含めない（Cloudflare は Cache-Tag ヘッダ内のコンマをタグ区切りとして扱う）                      |
+| M-50 | 高     | あり             | 保持期限を過ぎた予約の guest メールアドレスは NULL 化される                                                                   |
+| M-51 | 高     | あり             | 保持期限を過ぎた予約の自由記入「備考」（第三者を含む PII、監査 F-116）は NULL 化される                                        |
+| M-52 | 高     | あり             | guest 情報の匿名化対象は endTime が cutoff より古い予約だけ（未来予約・進行中予約は触らない）                                 |
+| M-53 | 高     | あり             | 顧客匿名化は電話番号を NULL 化する（ANONYMIZED_CUSTOMER_FIELDS が phoneNumber を含むと申告して…                               |
+| M-54 | 高     | あり             | 送信側は recipient を canonical 化（trim + lowercase）してから hash し、suppression …                                         |
+| M-55 | 高     | あり             | 問い合わせ匿名化は件名（subject）も placeholder に置換する（件名に氏名が書かれ、admin 検索が subject を …                     |
+| M-56 | 高     | あり             | bounce/complaint で抑止された宛先の hash 集合が、実際に sendEmail へ渡る（suppression の唯一の…                               |
+| M-57 | 中     | あり             | soft-delete された問い合わせは deletedAt から N ヶ月後に hard delete される（createdAt が新…                                  |
+| M-58 | 中     | あり             | 各テーブルの保持月数は自分の config フィールドから取る（reservationGuestMonths は予約 guest 用）                              |
+| M-59 | 中     | あり             | 顧客匿名化は短命トークン台帳 PendingCustomerEmailChange を行ごと削除する（customerId で JOIN す…                              |
+| M-60 | 中     | あり (this wave) | 顧客 PII の匿名化は監査ログに残る（誰が/いつ/何を消したか）                                                                   |
+| M-61 | 低     | あり             | 匿名化イベントの AuditLog に記録する anonymizedFields は、実際に匿名化される列と一致する（forensic 記録…                      |
 
 ## 明細
 
@@ -142,6 +142,7 @@
 - 注入した欠陥: status: { notIn: [...TERMINAL_REFUND_STATUSES] } → status: { notIn: [] }（WHERE の除外述語を空にして確定済み行も再 claim 可能にする）
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:293
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts __tests__/unit/api/stripe-webhook.test.ts`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。非終端からのみ succeeded へ遷移する WHERE を unit で固定。
 
 #### M-05（高）
 
@@ -152,6 +153,7 @@
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:372
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/domain/reservations/payment-commands.test.ts`
 - 素通りの理由: 既存テストは P2002 を注入した 1 ケースしか無く、「P2002 以外は throw する」側の見本が無いので変異を検出できない。
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。非 P2002 は throw する方向を unit で固定。
 
 #### M-06（高）
 
@@ -170,6 +172,7 @@
 - 注入した欠陥: TERMINAL_REFUND_STATUSES = ["succeeded", "failed", "canceled"] → ["succeeded", "canceled"]（配列要素 "failed" を落とす）
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:179-183
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts __tests__/unit/api/stripe-webhook.test.ts __tests__/unit/api/stripe-webhook-orphan-refund.test.ts`
+- 2026-08-16: 据え置き。integration `refund-status-terminal-guard.test.ts` が既にあり、CI `test:all` が強制する。
 
 #### M-08（高）
 
@@ -189,6 +192,7 @@
 - 注入した欠陥: refundReservationPaymentCommand の集計 WHERE から述語 reservationId を削除（where: { status: { notIn: [...] } } だけにして全予約の返金を合算させる）
 - 書き換えた箇所: src/shared/domain/reservations/payment-commands.ts:733-737
 - 実行: `bun run test -- __tests__/unit/domain/reservations __tests__/unit/domain/payment __tests__/unit/shared/domain/reservations __tests__/unit/shared/domain/cancellation __tests__/unit/actions/admin-reservation-payment.test.ts`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。aggregate WHERE の entity スコープを unit で固定。
 
 #### M-10（中） — 守り手なし
 
@@ -198,6 +202,7 @@
 - 注入した欠陥: REFUND_AGGREGATE_EXCLUDED_STATUSES = ["failed", "canceled"] → ["failed"]（許可リストから配列要素を 1 つ落とす）
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:420-423
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/domain/reservations/payment-commands.test.ts __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts __tests__/unit/shared/domain/cancellation`
+- 2026-08-16: 据え置き。integration `admin-refund-aggregate-excludes-failed.test.ts` が既にあり、CI `test:all` が強制する。
 
 ### 認可・RBAC・surface 分離
 
@@ -209,6 +214,7 @@
 - 注入した欠陥: SSoT 配列 PUBLIC_MUTATION_GUARD_PIPELINES に載っていない新規 export submitReservationExpress を追加。guard を 1 つも通さず executeConformMutation → createPublicReservationCommand で予約を作成する
 - 書き換えた箇所: src/app/(public)/_shared/actions/reservation.ts:304（fetchReservationPricingPreview の直前に挿入）
 - 実行: `bun run test -- __tests__/unit/architecture/public-mutation-guard-order.test.ts __tests__/unit/architecture/assert-customer-active-server-actions.test.ts`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。SSoT を実 handler 集合に広げ、新設 export の pipeline 抜けを検出する。
 
 #### M-12（高）
 
@@ -299,6 +305,7 @@
 - 注入した欠陥: requireAdminResourcePermission(resource, "read", resourceId) → requireAdminResourcePermission(resource, "read")。resourceId が消えるため _helpers.ts:83 の if (!resourceId || ...) で早期 return し、EDITOR のスコープ判定が完全に skip される
 - 書き換えた箇所: src/app/(admin)/admin/(dashboard)/_shared/helpers/page-auth.ts:48
 - 実行: `bun run test -- __tests__/unit/architecture/admin-page-auth-before-suspense.test.ts __tests__/unit/architecture/auth-gate-ssot.test.ts __tests__/unit/architecture/admin-settings-permissions.test.ts __tests__/unit/queries/admin-query-helpers.test.ts __tests__/unit/architecture/admin-read-boundaries.test.ts`
+- 2026-08-16: 据え置き。#2369 以降スタッフ詳細は `requireStaffDetailPage(userId)` が必須で、EDITOR は `user:read` を持たないため assignment スコープ経路に到達しない。
 
 ### GCP 本番監査・CI・デプロイ
 
@@ -310,6 +317,7 @@
 - 注入した欠陥: 実装を壊すまでもなく無防備。fixture 側に本番で起こりうる異常値 state:"PAUSED" を持つ job を投入して実装に流した（probe-b.ts B1/B2）
 - 書き換えた箇所: （変異不要）scripts/gcp-production-audit-model.ts:1415-1490 readCloudSchedulerOidcJobErrors
 - 実行: `bun C:/Users/.../scratchpad/probe-b.ts（readCloudSchedulerOidcJobErrors に state:"PAUSED" の job を直接渡す）`
+- 2026-08-16: 据え置き。運用監査でありプロダクト欠陥ではない（round6 plan B）。
 
 #### M-23（高）
 
@@ -346,6 +354,7 @@
 - 注入した欠陥: required contexts から "Unit Tests" の1行を削除
 - 書き換えた箇所: .github/branch-protection.json:9
 - 実行: `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts __tests__/unit/architecture/deploy-production-workflow.test.ts __tests__/unit/architecture/ci-workflow-contract.test.ts __tests__/unit/architecture/ci-workflow.test.ts __tests__/unit/architecture/deploy-packaging-contract.test.ts __tests__/unit/architecture/workflow-shell-pipefail.test.ts __tests__/unit/architecture/deploy-breaking-base-resolution.test.ts`
+- 2026-08-16: 据え置き。運用監査でありプロダクト欠陥ではない（round6 plan B）。
 
 #### M-27（中）
 
@@ -504,6 +513,7 @@
 - 注入した欠陥: getPublishedEvents() から cacheTag(CACHE_TAGS.EVENTS, CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES); の 1 行を削除（"use cache" と cacheLife は残す）
 - 書き換えた箇所: src/shared/domain/events/public-queries.ts:105
 - 実行: `bun run test -- __tests__/unit/architecture/public-cache-tag-header-pairing.test.ts __tests__/unit/architecture/type-safety-cast-and-cache-tag-drift.test.ts __tests__/unit/domain/events/public-queries.test.ts __tests__/unit/architecture/cache-tag-literals.test.ts __tests__/unit/architecture/event-category-cache-invalidation.test.ts → その後 bun scripts/run-tests.ts __tests__/unit/architecture`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。`getPublishedEvents()` の `cacheTag(EVENTS, LOCATIONS, SPACES)` を unit で固定。
 
 #### M-43（中）
 
@@ -522,6 +532,7 @@
 - 注入した欠陥: TAGGED_PUBLIC_FIRST_SEGMENTS から "faq" を 1 要素削除
 - 書き換えた箇所: src/shared/lib/constants/cdn-cache-tags.ts:242
 - 実行: `bun run test -- __tests__/unit/architecture/next-config-cache-tag-emission.test.ts __tests__/unit/architecture/public-cache-tag-header-pairing.test.ts __tests__/unit/architecture/cdn-header-source-matching.test.ts __tests__/unit/lib/cdn-cache-tags.test.ts → その後 bun run probe-mutation.ts "/faq,/faq/cancellation"`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。`"faq"` 等をリテラルでピンし、CUSTOM_PAGE_HEADER_SOURCE の非マッチも固定。
 
 #### M-45（中） — 守り手なし
 
@@ -531,6 +542,7 @@
 - 注入した欠陥: EVENTS_CACHE_TAG から CDN_CACHE_TAGS.EVENT_WAITLIST を 1 要素削除
 - 書き換えた箇所: next.config.ts:90（EVENTS_CACHE_TAG）
 - 実行: `bun run test -- __tests__/unit/architecture/next-config-cache-tag-emission.test.ts __tests__/unit/architecture/public-cache-tag-header-pairing.test.ts __tests__/unit/architecture/cdn-header-source-matching.test.ts __tests__/unit/lib/cdn-cache-tags.test.ts __tests__/unit/architecture/eslint-cdn-mapped-tag-rule.test.ts __tests__/unit/architecture/type-safety-cast-and-cache-tag-drift.test.ts __tests__/unit/architecture/event-category-cache-invalidation.test.ts → その後 bun run probe-tagcoverage.ts`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。NEXTJS_TAG_TO_CDN_TAG の逆引き（INTEGRATION_SETTINGS 除外）を headers() に対して固定。EVENT_WAITLIST 脱落を検出。
 
 #### M-46（中） — 守り手なし
 
@@ -540,6 +552,7 @@
 - 注入した欠陥: queueTagPurge(CDN_CACHE_TAGS.HOME_MARKETING) → queueTagPurge(CDN_CACHE_TAGS.FAQ)
 - 書き換えた箇所: src/shared/lib/cache/site-wide.ts:120
 - 実行: `bun run test -- __tests__/unit/lib/cache-invalidation.test.ts __tests__/unit/shared/lib/cache/invalidate-timing.test.ts __tests__/unit/lib/cdn-cache-tags.test.ts __tests__/unit/lib/cache/event-cache.test.ts __tests__/unit/lib/cache/review-cache.test.ts → その後 bun scripts/run-tests.ts __tests__/unit/architecture`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。`purgeMarketingHomeTag()` が `home-marketing-v1` を queue することを固定。
 
 #### M-47（中） — 守り手なし
 
@@ -549,6 +562,7 @@
 - 注入した欠陥: { source: "/access", headers: [{ key: "Cache-Tag", value: SITE_WIDE_ONLY_CACHE_TAG }] } のエントリを丸ごと削除
 - 書き換えた箇所: next.config.ts:341-344（/access の header エントリ）
 - 実行: `bun run test -- __tests__/unit/architecture/next-config-cache-tag-emission.test.ts __tests__/unit/architecture/public-cache-tag-header-pairing.test.ts __tests__/unit/architecture/cdn-header-source-matching.test.ts __tests__/unit/lib/cdn-cache-tags.test.ts → その後 bun scripts/run-tests.ts __tests__/unit/architecture → bun run probe-mutation.ts "/access"`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。`headers()` の `source: "/access"` が Cache-Tag（site-wide）を持つことを固定。
 
 #### M-48（中）
 
@@ -668,6 +682,7 @@
 - 注入した欠陥: —（無防備を grep で確認）
 - 書き換えた箇所: 変異なし（守り手が存在しないため注入不要）。該当箇所: src/app/api/cron/data-retention/route.ts:55-59（logger.info のみ）、src/shared/domain/customers/customer-lifecycle-commands.ts:106-270（AuditLog 書き込みなし）
 - 実行: `grep -n "auditLog\\|createAuditLog\\|logAction" src/shared/domain/customers/customer-lifecycle-commands.ts src/shared/domain/data-retention/commands.ts src/shared/domain/inquiries/anonymize-commands.ts`
+- 2026-08-16 close: 対応済み（this wave; `PR-NUMBER-TBD`）。顧客 PII 匿名化の監査ログを固定。
 
 #### M-61（低）
 
