@@ -827,6 +827,25 @@ describe("sendEmail()", () => {
       expect(mockLogError).toHaveBeenCalledTimes(1);
     });
 
+    test("uppercase + 前後空白の宛先も canonical hash で suppression 判定する (M-54)", async () => {
+      const result = await sendEmail(
+        {
+          ...BASE_PARAMS,
+          payload: { ...VALID_PAYLOAD, to: "  Customer@Example.COM  " },
+        },
+        sendContext({
+          suppressedEmailHashes: new Set([hashForTest("customer@example.com")]),
+        }),
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        reason: "suppressed",
+        suppressedRecipients: ["  Customer@Example.COM  "],
+      });
+      expect(mockResendSend).not.toHaveBeenCalled();
+    });
+
     test("複数宛先が全て OK なら送信続行", async () => {
       const result = await sendEmail(
         {

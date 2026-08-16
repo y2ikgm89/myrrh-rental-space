@@ -70,8 +70,11 @@ mock.module("@/shared/domain/terms/queries", () => ({
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getDecryptedResendApiKey: () => Promise.resolve("re_test_key"),
 }));
+const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
+  Promise.resolve(new Set<string>()),
+);
 mock.module("@/shared/domain/customers/queries", () => ({
-  getSuppressedEmailSet: () => Promise.resolve(new Set<string>()),
+  getSuppressedEmailSet: () => mockGetSuppressedEmailSet(),
 }));
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
@@ -133,6 +136,8 @@ beforeEach(() => {
   mockGetPublishedTermsByType.mockResolvedValue({
     slug: "cancellation-policy",
   });
+  mockGetSuppressedEmailSet.mockReset();
+  mockGetSuppressedEmailSet.mockResolvedValue(new Set<string>());
 });
 
 describe("getEventEmailRenderContext()", () => {
@@ -376,11 +381,16 @@ describe("resolveEmailTransportContext()", () => {
 
 describe("resolveEmailSendContext()", () => {
   test("transport / delivery / suppression をまとめて返す", async () => {
+    const fetchedHashes = new Set(["hash-a", "hash-b"]);
+    mockGetSuppressedEmailSet.mockResolvedValue(fetchedHashes);
+
     const context = await resolveEmailSendContext();
     expect(context).not.toBeNull();
     expect(context?.transport.resendApiKey).toBeTruthy();
     expect(context?.delivery).toBeDefined();
     expect(context?.suppressedEmailHashes).toBeInstanceOf(Set);
+    expect(context?.suppressedEmailHashes.size).toBe(fetchedHashes.size);
+    expect(context?.suppressedEmailHashes).toEqual(fetchedHashes);
   });
 });
 

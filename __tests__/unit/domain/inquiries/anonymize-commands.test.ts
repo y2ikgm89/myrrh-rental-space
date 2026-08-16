@@ -142,6 +142,12 @@ describe("inquiries/anonymize-commands", () => {
         }),
       );
 
+      const updateCall = mockInquiryUpdate.mock.calls[0]?.[0];
+      expect(updateCall?.data).toHaveProperty(
+        "subject",
+        "この内容は匿名化されました",
+      );
+
       expect(mockInquiryReplyUpdateMany).toHaveBeenCalledWith({
         where: { inquiryId: INQUIRY_ID },
         data: { body: "この内容は匿名化されました" },
