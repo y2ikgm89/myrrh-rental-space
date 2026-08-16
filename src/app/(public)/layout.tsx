@@ -178,6 +178,12 @@ export async function generateMetadata(): Promise<Metadata> {
 // `<html>` を `<Suspense>` で包む → route 全体が ƒ 化 / framework script に nonce 注入。
 // 公式: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
 // admin PR #604 / project_admin-auth-csp-nonce-connection-2026-06-16 と同型。
+// Next.js 16.3 Instant Navigations の static-shell 検証は connection() を
+// E1440 として診断する。nonce CSP のため意図的に完全動的なので blocking
+// route を宣言する（ページ単位の暗黙検証 E1438 は next.config.ts の
+// instantInsights.validationLevel: 'manual-warning' が止める）。
+export const instant = false;
+
 export async function generateViewport(): Promise<Viewport> {
   await connection();
   const footerSettings = await getFooterSettings();

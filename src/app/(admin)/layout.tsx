@@ -41,6 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
 // component 本体で connection() を呼ぶと、子ページの uncached read が cacheComponents の
 // "blocking route" でビルドを落とすため、副作用のない head 生成側で動的化する
 // （公開側も layout の generateViewport / page の generateMetadata が動的）。
+// Next.js 16.3 Instant Navigations の static-shell 検証は connection() を
+// E1440 として診断する。nonce CSP のため意図的に完全動的なので blocking
+// route を宣言する（ページ単位の暗黙検証 E1438 は next.config.ts の
+// instantInsights.validationLevel: 'manual-warning' が止める）。
+export const instant = false;
+
 export async function generateViewport(): Promise<Viewport> {
   await connection();
   return {
