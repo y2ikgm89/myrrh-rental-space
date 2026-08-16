@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { LexicalEditor } from "lexical";
 import { useForm } from "@conform-to/react";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import type { z } from "zod";
@@ -14,6 +15,7 @@ import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
+import { resolvePersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
 import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -100,6 +102,7 @@ export function useTermsEditor({
 
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+  const editorRef = useRef<LexicalEditor | null>(null);
 
   // Lexical エディタは非制御コンポーネント（初期値のみ使用）のため、下書き復元を
   // 画面に反映するには key 変更によるアンマウント/リマウントが必要
@@ -181,7 +184,14 @@ export function useTermsEditor({
       ? settingsFields.slug.value
       : "");
 
-  const handleContentChange = (json: string) => {
+  const persistableContentJson = () =>
+    resolvePersistableEditorJson({
+      editor: editorRef.current,
+      reactJson: contentJson,
+    });
+
+  const handleContentChange = (json: string, editor?: LexicalEditor) => {
+    if (editor) editorRef.current = editor;
     setContentJson(json);
   };
 
@@ -228,7 +238,7 @@ export function useTermsEditor({
     type: typeValue,
     slug: settingsData.slug,
     title: settingsData.title,
-    contentJson,
+    contentJson: persistableContentJson(),
     isPublished:
       publishOverride !== undefined ? publishOverride : isPublishedValue,
     scopes: [...scopesValue],
@@ -300,7 +310,7 @@ export function useTermsEditor({
           return;
         }
         setSettingsSnapshot(settingsData);
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistableContentJson());
         clearDraft(autoSaveKey);
         router.refresh();
         toast.success("規約を保存しました");
@@ -372,7 +382,7 @@ export function useTermsEditor({
           isPublished: publishOverride,
         };
         setSettingsSnapshot(nextSettings);
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistableContentJson());
         clearDraft(autoSaveKey);
         setIsPublishedValue(publishOverride);
         settingsForm.update({
@@ -450,7 +460,7 @@ export function useTermsEditor({
           return;
         }
         setSettingsSnapshot(settingsData);
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistableContentJson());
         router.refresh();
         openPreviewTab(getTermsPreviewHref(terms.id));
       } catch (error) {

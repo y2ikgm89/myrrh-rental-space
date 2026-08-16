@@ -8,8 +8,9 @@
  * (boolean) を status の代わりに使う。
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { LexicalEditor } from "lexical";
 import { useForm } from "@conform-to/react";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import type { z } from "zod";
@@ -24,6 +25,7 @@ import {
 } from "@/admin/actions/news";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
+import { resolvePersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
 import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
 import { getNewsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
@@ -126,6 +128,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+  const editorRef = useRef<LexicalEditor | null>(null);
   const [isPublishedValue, setIsPublishedValue] = useState<boolean>(
     news?.isPublished ?? false,
   );
@@ -178,7 +181,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       ? settingsFields.slug.value
       : "");
 
-  const handleContentChange = (json: string) => {
+  const persistableContentJson = () =>
+    resolvePersistableEditorJson({
+      editor: editorRef.current,
+      reactJson: contentJson,
+    });
+
+  const handleContentChange = (json: string, editor?: LexicalEditor) => {
+    if (editor) editorRef.current = editor;
     setContentJson(json);
   };
 
@@ -186,15 +196,16 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     if (!news) return;
     core.startTransition(async () => {
       try {
+        const persistedContentJson = persistableContentJson();
         const result = await updateNewsBody(news.id, {
-          contentJson,
+          contentJson: persistedContentJson,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
           return;
         }
 
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistedContentJson);
         clearDraft(autoSaveKey);
         router.refresh();
         toast.success("本文を保存しました");
@@ -313,7 +324,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       const result = await createNews({
         slug: settingsPayload.slug,
         title: settingsPayload.title,
-        contentJson,
+        contentJson: persistableContentJson(),
         isPublished: forceDraft ? false : settingsPayload.isPublished,
         publishedAt: forceDraft ? null : settingsPayload.publishedAt,
         contentWidth: settingsPayload.contentWidth,
@@ -471,14 +482,15 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
           return;
         }
 
+        const persistedContentJson = persistableContentJson();
         const bodyResult = await updateNewsBody(news.id, {
-          contentJson,
+          contentJson: persistedContentJson,
         });
         if (isMutationError(bodyResult)) {
           toast.error(bodyResult.error);
           return;
         }
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistedContentJson);
         clearDraft(autoSaveKey);
         router.refresh();
         openPreviewTab(getNewsPreviewHref(news.id));
