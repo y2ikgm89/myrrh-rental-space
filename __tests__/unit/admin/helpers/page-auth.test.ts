@@ -38,6 +38,18 @@ mock.module("@/shared/domain/admin-auth/session", () => ({
   verifyAdminSession: () => mockVerifyAdminSession(),
 }));
 
+const actualResourceAccess =
+  await import("@/shared/domain/admin-auth/resource-access");
+const actualUserHasResourceAccess = actualResourceAccess.userHasResourceAccess;
+const mockUserHasResourceAccess = mock(
+  (...args: Parameters<typeof actualUserHasResourceAccess>) =>
+    actualUserHasResourceAccess(...args),
+);
+mock.module("@/shared/domain/admin-auth/resource-access", () => ({
+  ...actualResourceAccess,
+  userHasResourceAccess: mockUserHasResourceAccess,
+}));
+
 // `@/shared/lib/admin-permissions` は mock しない。mock すると各 guard が
 // どの resource:action を渡しているかが観測できなくなり、このファイルの目的が消える。
 mock.module("@/shared/domain/user-page-assignments/queries", () => ({
@@ -66,6 +78,7 @@ describe("page-auth の guard が要求する権限", () => {
     mockVerifyAdminSession.mockReset();
     mockRecordPermissionDenied.mockReset();
     mockGetAssignedPageIdsForUser.mockReset();
+    mockUserHasResourceAccess.mockClear();
     mockVerifyAdminSession.mockResolvedValue(ADMIN_USER);
     mockGetAssignedPageIdsForUser.mockResolvedValue([]);
   });
@@ -119,6 +132,16 @@ describe("page-auth の guard が要求する権限", () => {
     await expect(requireStaffDetailPage("staff-1")).resolves.toMatchObject({
       id: ADMIN_USER.id,
     });
+  });
+
+  test("requireStaffDetailPage は userId を resource scope 検査へ渡す", async () => {
+    await requireStaffDetailPage("staff-1");
+    expect(mockUserHasResourceAccess).toHaveBeenCalledWith(
+      ADMIN_USER,
+      "user",
+      "read",
+      "staff-1",
+    );
   });
 
   // 作成フォームなので read ではなく create。VIEWER は coupon を 1 つも持たない
