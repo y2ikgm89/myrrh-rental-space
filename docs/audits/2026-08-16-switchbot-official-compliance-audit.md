@@ -24,26 +24,41 @@
 
 ## Findings
 
-### S-1（要実機確定 → 条件付き修正）createKey 応答の commandId 必須仮定
+### S-1（実機確定・修正）createKey 応答の commandId 必須仮定
 
 |        |                                                                                                                                                         |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 深刻度 | 中（発生時）                                                                                                                                            |
+| 深刻度 | 高（webhook 正本経路が実機で機能しない）                                                                                                                |
 | 箇所   | `src/shared/lib/smart-lock/switchbot-client.ts` `createPasscode` / `src/shared/domain/smart-lock/issue-passcode.ts:278-281` / `webhook-commands.ts:167` |
 
-公式は Keypad の createKey 応答例で `body.commandId` を返すが、**全コマンドで commandId が返るとは文書上保証されていない**（Bot の例は `body: {}`）。現行は:
+**実機検証結果（2026-08-16、Keypad Touch 実機 + 本番 API、`scripts/switchbot-live-probe.ts`）:**
 
-- `createPasscode` の戻り型が `{ commandId: string }` 必須（ランタイムでは undefined になりうる型の嘘）
+```json
+{
+  "step": "createKey.response",
+  "httpStatus": 200,
+  "statusCode": 100,
+  "message": "success",
+  "body": {},
+  "hasCommandId": false
+}
+```
+
+Keypad Touch 実機は createKey 応答に `commandId` を**返さない**（`body: {}`）。公式は Keypad の createKey 応答例で `body.commandId` を示すが、全コマンドで返るとは文書上保証されていない（Bot の例も `body: {}`）。現行は:
+
+- `createPasscode` の戻り型が `{ commandId: string }` 必須（ランタイムでは常に undefined になる型の嘘）
 - deleteKey 側は `{ commandId?: string }` で防御済み（非対称）
 - webhook createKey 相関は `if (!payload.commandId) return false` で commandId 必須
 
-commandId が返らない機種・ケースがあると、webhook 確定経路が死に Device List poll だけが頼りになる。**修正方針:** 実機検証（Phase B-1）で Keypad Touch の応答を確認。欠落が確認された場合、または確認に関わらず型を正直にするため:
+実害: `switchbotCommandId` 列は常に null のまま保存され、**公式が正本とする webhook 確定経路が実機では事実上機能しない**。S-7 の通り keyList 反映は 120 秒超で現行 poll 上限 45 秒では確定できないため、45 秒超で PENDING 残存 → 確認メールは issuanceFailed 付きで送出され、webhook（到着していれば）または stale cron 頼みになる。
+
+**修正方針（別 PR で実施）:**
 
 1. `createPasscode` を `{ commandId?: string }` に（deleteKey と対称）
 2. `issue-passcode.ts` は commandId があるときだけ保存
-3. webhook createKey 相関に `buildPasscodeName` ベースの name フォールバックを追加（deleteKey の keyName フォールバックと対称）
+3. webhook createKey 相関にフォールバック追加（commandId → keyName/`buildPasscodeName` 突合 → デバイス上の PENDING 1 件帰属。deleteKey の tier 構造と対称）
 
-### S-2（確定・修正）cron route コメントが実装と矛盾
+### S-2（修正済み PR #2365）cron route コメントが実装と矛盾
 
 |        |                                                      |
 | ------ | ---------------------------------------------------- |
@@ -52,7 +67,7 @@ commandId が返らない機種・ケースがあると、webhook 確定経路�
 
 「DB 読み書きのみで完結、外部 API 呼び出しなし」とあるが、`expireStalePendingSmartLockPasscodes` は credentials があれば `recoverPendingPasscodeViaDeviceList` で Device List を呼ぶ（[revoke-passcode.ts:498-507](../../src/shared/domain/smart-lock/revoke-passcode.ts)）。運用者がコメントを信じると誤診断する。**修正:** コメントを実装に合わせる。
 
-### S-3（確定・修正）HTTP 401 の誤分類
+### S-3（修正済み PR #2366）HTTP 401 の誤分類
 
 |        |                                                             |
 | ------ | ----------------------------------------------------------- |
@@ -69,17 +84,18 @@ commandId が返らない機種・ケースがあると、webhook 確定経路�
 
 2026-07-24 spec §7 / §4b で承認済みの非ゴール: webhook での doorState 更新なし（公式 webhook payload に doorState が無いため正しい）、遠隔 lock/unlock なし、パスコード 6 桁（6→12 の変更は非ゴール）。
 
-### S-6（確定・修正）2026-07-26 hardening 計画書のチェックボックス未更新
+### S-6（修正済み PR #2367）2026-07-26 hardening 計画書のチェックボックス未更新
 
 実装済み（`getDecryptedSwitchBotCredentialsForRevocation`、keyName 相関、timeOfSample 単調性、assignment-side-effects 等）なのに `[ ]` のまま。本 PR で現状化する。
 
-### S-7（要実機確定）Keypad Touch 実機挙動の確認項目
+### S-7（実機確定）Keypad Touch 実機挙動の確認結果
 
-公式ドキュメントの機種間の揺れが防御範囲内か、Phase B-1 の実機検証で確定する:
+Phase B-1 の実機検証（2026-08-16、`scripts/switchbot-live-probe.ts`、Keypad Touch 実機 + 本番トークン）で確定:
 
-1. createKey 応答 body の `commandId` 有無（S-1 の確定）
-2. createKey → Device List `keyList` 出現までの遅延（疎 poll 45s 設計の妥当性）
-3. deleteKey 応答 body の形式
+1. 認証署名は受理される（`GET /devices` statusCode 100、非大文字 Base64 で通る）
+2. createKey 応答 body に `commandId` は**含まれない**（S-1 へ）
+3. **createKey → Device List `keyList` 出現は 120 秒超**（poll 0/5/15/30/45/60/90/120s で未出現。一方 key 自体は SwitchBot アプリ上で即座に存在を確認 = 物理作成は成功）。現行の疎 poll 上限 45 秒では keyId 物質化は間に合わず、webhook 正本経路（S-1 修正後）と stale cron が実質の確定経路になる
+4. （probe は keyId 未取得のため deleteKey 未到達。残置 key は `--cleanup` モードで回収可能）
 
 webhook 実配信の検証（`eventName` 末尾スペース、commandId/keyName 有無、timeOfSample 型）は公開 URL が必要なため、**本番導入時チェックリスト**（下記）に回す。
 
