@@ -160,17 +160,76 @@ async function processDeleteKeyChangeReport(
   return true;
 }
 
+async function findPendingPasscodeForCreateWebhook(input: {
+  readonly deviceRowId: string;
+  readonly commandId?: string;
+  readonly keyName?: string;
+}): Promise<{
+  readonly id: string;
+  readonly reservationId: string;
+  readonly switchbotKeyId: string | null;
+} | null> {
+  if (input.commandId) {
+    const byCommand = await prisma.smartLockPasscode.findFirst({
+      where: {
+        deviceId: input.deviceRowId,
+        status: SmartLockPasscodeStatus.PENDING,
+        switchbotCommandId: input.commandId,
+      },
+      select: { id: true, reservationId: true, switchbotKeyId: true },
+    });
+    if (byCommand) return byCommand;
+  }
+
+  if (input.keyName) {
+    const candidates = await prisma.smartLockPasscode.findMany({
+      where: {
+        deviceId: input.deviceRowId,
+        status: SmartLockPasscodeStatus.PENDING,
+      },
+      select: { id: true, reservationId: true, switchbotKeyId: true },
+    });
+    for (const row of candidates) {
+      const expectedName = buildPasscodeName(
+        row.reservationId,
+        input.deviceRowId,
+      );
+      if (expectedName === input.keyName) {
+        return row;
+      }
+    }
+  }
+
+  const pendingOnDevice = await prisma.smartLockPasscode.findMany({
+    where: {
+      deviceId: input.deviceRowId,
+      status: SmartLockPasscodeStatus.PENDING,
+    },
+    select: { id: true, reservationId: true, switchbotKeyId: true },
+  });
+  if (pendingOnDevice.length === 1) {
+    return pendingOnDevice[0] ?? null;
+  }
+  return null;
+}
+
 async function processCreateKeyChangeReport(
   device: { readonly id: string; readonly deviceId: string },
   payload: SwitchBotChangeReportPayload,
 ): Promise<boolean> {
-  if (!payload.commandId) return false;
+  const passcodeRow = await findPendingPasscodeForCreateWebhook({
+    deviceRowId: device.id,
+    ...(payload.commandId !== undefined
+      ? { commandId: payload.commandId }
+      : {}),
+    ...(payload.keyName !== undefined ? { keyName: payload.keyName } : {}),
+  });
+  if (!passcodeRow) return false;
 
   if (payload.result === "failed" || payload.result === "timeout") {
     const updated = await prisma.smartLockPasscode.updateMany({
       where: {
-        switchbotCommandId: payload.commandId,
-        deviceId: device.id,
+        id: passcodeRow.id,
         status: SmartLockPasscodeStatus.PENDING,
       },
       data: {
@@ -180,15 +239,6 @@ async function processCreateKeyChangeReport(
     });
     return updated.count > 0;
   }
-
-  const passcodeRow = await prisma.smartLockPasscode.findFirst({
-    where: {
-      switchbotCommandId: payload.commandId,
-      deviceId: device.id,
-      status: SmartLockPasscodeStatus.PENDING,
-    },
-  });
-  if (!passcodeRow) return false;
 
   const credentials = await getDecryptedSwitchBotCredentials();
   if (!credentials) return false;

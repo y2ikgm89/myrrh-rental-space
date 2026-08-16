@@ -88,7 +88,7 @@ const mockCreatePasscodeApi = mock<
   (
     ...args: unknown[]
   ) => Promise<
-    | { ok: true; body: { commandId: string } }
+    | { ok: true; body: { commandId?: string } }
     | { ok: false; statusCode: number; message: string }
   >
 >(() => Promise.resolve({ ok: true, body: { commandId: "cmd-default" } }));
@@ -329,6 +329,39 @@ describe("issueSmartLockPasscodes", () => {
       }),
     );
     expect(mockLogError).toHaveBeenCalledTimes(1);
+  });
+
+  test("createKey が commandId を返さない場合は switchbotCommandId を書かない", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue(null);
+    mockCreatePasscodeApi.mockResolvedValue({
+      ok: true,
+      body: {},
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: {
+        id: "key-1",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1_700_000_000,
+      },
+    });
+
+    await issueSmartLockPasscodes(makeInput());
+
+    const commandIdWrites = mockUpdatePasscodeRow.mock.calls.filter((call) => {
+      const args = call[0] as
+        { data?: { switchbotCommandId?: string } } | undefined;
+      return (
+        args?.data !== undefined && "switchbotCommandId" in (args.data ?? {})
+      );
+    });
+    expect(commandIdWrites).toHaveLength(0);
   });
 
   test("findKeyInDeviceListが即座に一致するkeyを返す場合はCONFIRMEDになり結果に含まれる", async () => {

@@ -275,9 +275,12 @@ async function issueForDevice(
     return null;
   }
 
+  const commandId = createResult.body.commandId;
   await prisma.smartLockPasscode.update({
     where: { id: passcodeRow.id },
-    data: { switchbotCommandId: createResult.body.commandId },
+    data: {
+      ...(commandId !== undefined && { switchbotCommandId: commandId }),
+    },
   });
 
   for (
