@@ -29,6 +29,22 @@ import {
 type HeaderEntry = { key: string; value: string };
 type SourceEntry = { source: string; headers: HeaderEntry[] };
 
+/** 本番配列を回すと欠落が自己免疫するので、検査側でリテラル列挙する。 */
+const PINNED_PRIVATE_NO_TAG_PREFIXES = [
+  "/admin",
+  "/reservation",
+  "/mypage",
+  "/login",
+  "/preview",
+  "/contact",
+  "/receipts",
+  "/claim",
+  "/api",
+  "/events/registrations",
+  "/events/waitlist",
+  "/events/cancel",
+] as const;
+
 async function getHeaders(): Promise<SourceEntry[]> {
   // next.config.ts exports default the config object; headers() is an async fn.
   return (await nextConfig.headers?.()) ?? [];
@@ -103,14 +119,15 @@ describe("next.config Cache-Tag emission contract", () => {
     }
   });
 
-  test("PRIVATE_NO_TAG_PREFIXES includes guest token PII paths /receipts and /claim", () => {
-    expect(PRIVATE_NO_TAG_PREFIXES).toContain("/receipts");
-    expect(PRIVATE_NO_TAG_PREFIXES).toContain("/claim");
+  test("PRIVATE_NO_TAG_PREFIXES is the pinned private prefix set", () => {
+    expect([...PRIVATE_NO_TAG_PREFIXES]).toEqual([
+      ...PINNED_PRIVATE_NO_TAG_PREFIXES,
+    ]);
   });
 
   test("private blocklist sources NEVER emit Cache-Tag", async () => {
     const headers = await getHeaders();
-    for (const prefix of PRIVATE_NO_TAG_PREFIXES) {
+    for (const prefix of PINNED_PRIVATE_NO_TAG_PREFIXES) {
       const source = `${prefix}/:path*`;
       const entry = expectSourceEntry(headers, source);
       const tagHeader = entry.headers.find((h) => h.key === "Cache-Tag");

@@ -26,6 +26,8 @@
  *
  * field 名そのものの wholesale 除外はしない。同名・別概念や未 narrow の入力層は
  * `<path>::<field>` 粒度の `NOT_A_DB_COLUMN` / `FORM_OR_URL_VALUE` だけで除外する。
+ * 各 entry は件数ベースラインを持ち、`currentViolations()` がそれを超えたら落とす
+ * （有無フィルタだけだと、除外ファイルへ 2 つ目の `string` 宣言を足しても緑のまま）。
  * 消えた entry は stale 検査で落とす。
  *
  * ## 既存分は ratchet で扱う
@@ -40,136 +42,255 @@ import { join } from "node:path";
 
 import { readPrismaSchema } from "../../support/prisma-sources";
 
+/** 除外 1 件。`count` は `currentViolations()` の件数ピン（超過は FAIL）。 */
+type Exclusion = {
+  readonly reason: string;
+  readonly count: number;
+};
+
 /**
  * **DB 列ではない**もの。名前がたまたま enum 列と一致しているだけ。
  *
  * ratchet ではなく恒久的な除外なので、**別の一覧にする**。混ぜると「いつか直る」
  * ように見えて、実際には永遠に減らない entry がベースラインに居座る。
  */
-const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
+const NOT_A_DB_COLUMN: ReadonlyMap<string, Exclusion> = new Map([
   [
     "src/shared/db/prisma.ts::source",
-    "`logPoolError(source: string)` の引数。pool エラーの発生元を表す自由文字列で、EventRegistration.source（申込の作成経路）とは無関係",
+    {
+      count: 1,
+      reason:
+        "`logPoolError(source: string)` の引数。pool エラーの発生元を表す自由文字列で、EventRegistration.source（申込の作成経路）とは無関係",
+    },
   ],
   [
     "src/shared/lib/turnstile.ts::action",
-    "Cloudflare Turnstile の検証応答（`VerifyTurnstileResult`）。値域は Cloudflare が決めるので AuditAction とは無関係",
+    {
+      count: 1,
+      reason:
+        "Cloudflare Turnstile の検証応答（`VerifyTurnstileResult`）。値域は Cloudflare が決めるので AuditAction とは無関係",
+    },
   ],
   [
     "src/shared/domain/instagram/types.ts::accountType",
-    "Instagram Graph API のアカウント種別（`InstagramConfig`）。TransferAccount.accountType（口座種別）とは無関係",
+    {
+      count: 1,
+      reason:
+        "Instagram Graph API のアカウント種別（`InstagramConfig`）。TransferAccount.accountType（口座種別）とは無関係",
+    },
   ],
   [
     "src/shared/lib/instagram/index.ts::accountType",
-    "同上（`InstagramUserInfo`）。Instagram が返す値",
+    {
+      count: 1,
+      reason: "同上（`InstagramUserInfo`）。Instagram が返す値",
+    },
   ],
   [
     "src/shared/domain/instagram/commands.ts::accountType",
-    "同上。API のテスト結果 metadata から取り出した値",
+    {
+      count: 1,
+      reason: "同上。API のテスト結果 metadata から取り出した値",
+    },
   ],
   [
     "src/shared/lib/smart-lock/switchbot-client.ts::deviceType",
-    "SwitchBot API のデバイス一覧応答（`SwitchBotDeviceListItem`）。SwitchBot が返す任意のデバイス種別で、こちらの SmartLockDeviceType は取り扱う分だけを列挙した狭い集合",
+    {
+      count: 1,
+      reason:
+        "SwitchBot API のデバイス一覧応答（`SwitchBotDeviceListItem`）。SwitchBot が返す任意のデバイス種別で、こちらの SmartLockDeviceType は取り扱う分だけを列挙した狭い集合",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts::type",
-    "Section.type は String 列（Prisma enum ではない）。ページビルダーのセクション種別",
+    {
+      count: 1,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。ページビルダーのセクション種別",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-terms-editor.ts::type",
-    "Terms.type は String 列（旧 TermsType enum 廃止）。規約種別のフォーム値",
+    {
+      count: 1,
+      reason:
+        "Terms.type は String 列（旧 TermsType enum 廃止）。規約種別のフォーム値",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/lib/notification-helpers.ts::type",
-    "Notification.type は String 列（Prisma enum ではない）。通知テンプレ種別",
+    {
+      count: 1,
+      reason:
+        "Notification.type は String 列（Prisma enum ではない）。通知テンプレ種別",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/queries/notification.ts::type",
-    "Notification.type は String 列（Prisma enum ではない）。通知クエリの絞り込み",
+    {
+      count: 1,
+      reason:
+        "Notification.type は String 列（Prisma enum ではない）。通知クエリの絞り込み",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/SectionTypeIcon.tsx::type",
-    "Section.type は String 列（Prisma enum ではない）。UI アイコンの判別子",
+    {
+      count: 1,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。UI アイコンの判別子",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/AddSectionDialog.tsx::type",
-    "Section.type は String 列（Prisma enum ではない）。追加ダイアログの種別",
+    {
+      count: 1,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。追加ダイアログの種別",
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionTypePicker.tsx::type",
-    "Section.type は String 列（Prisma enum ではない）。ピッカーの種別",
+    {
+      count: 2,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。ピッカーの種別",
+    },
   ],
   [
     "src/shared/domain/events/payment-commands.ts::status",
-    "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
+    {
+      count: 1,
+      reason:
+        "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
+    },
   ],
   [
     "src/shared/domain/notifications/admin-queries.ts::type",
-    "Notification.type は String 列（Prisma enum ではない）。管理クエリの通知種別",
+    {
+      count: 2,
+      reason:
+        "Notification.type は String 列（Prisma enum ではない）。管理クエリの通知種別",
+    },
   ],
   [
     "src/shared/domain/order-sql.ts::scope",
-    "advisory lock の scope キー文字列。BlockedDate.scope 等の Prisma enum とは無関係",
+    {
+      count: 1,
+      reason:
+        "advisory lock の scope キー文字列。BlockedDate.scope 等の Prisma enum とは無関係",
+    },
   ],
   [
     "src/shared/domain/payment/payment-claim-orchestration.ts::status",
-    "`charge.refunded` が運ぶ Stripe Refund.status。Refund.status 列は VARCHAR で Prisma enum ではない",
+    {
+      count: 1,
+      reason:
+        "`charge.refunded` が運ぶ Stripe Refund.status。Refund.status 列は VARCHAR で Prisma enum ではない",
+    },
   ],
   [
     "src/shared/types/next-path-to-regexp.d.ts::source",
-    "path-to-regexp の `source` は URL パターン文字列。EventRegistration.source（申込の作成経路）とは無関係",
+    {
+      count: 1,
+      reason:
+        "path-to-regexp の `source` は URL パターン文字列。EventRegistration.source（申込の作成経路）とは無関係",
+    },
   ],
   [
     "src/shared/domain/payment/stripe-refund-orchestration.ts::status",
-    "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
+    {
+      count: 7,
+      reason:
+        "Refund.status は Stripe Refund.status を格納する VARCHAR。Prisma enum ではない",
+    },
   ],
   [
     "src/shared/domain/reservations/payment-commands.ts::status",
-    "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
+    {
+      count: 1,
+      reason:
+        "Stripe Refund.status を返す API 結果。Refund.status 列は VARCHAR で Prisma enum ではない",
+    },
   ],
   [
     "src/shared/domain/sections/admin-queries.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 2,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
   [
     "src/shared/domain/sections/commands.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 2,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
   [
     "src/shared/domain/sections/queries.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 1,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
   [
     "src/shared/domain/terms/admin-queries.ts::type",
-    "Terms.type は String 列（旧 TermsType enum 廃止）",
+    {
+      count: 3,
+      reason: "Terms.type は String 列（旧 TermsType enum 廃止）",
+    },
   ],
   [
     "src/shared/domain/terms/queries.ts::type",
-    "Terms.type は String 列（旧 TermsType enum 廃止）",
+    {
+      count: 3,
+      reason: "Terms.type は String 列（旧 TermsType enum 廃止）",
+    },
   ],
   [
     "src/shared/lib/announcement-bar-utils.ts::type",
-    "告知バー UI の色・スタイルキー。DB の enum 列ではない",
+    {
+      count: 2,
+      reason: "告知バー UI の色・スタイルキー。DB の enum 列ではない",
+    },
   ],
   [
     "src/shared/lib/constants/default-page-sections.ts::type",
-    "Section.type は String 列（Prisma enum ではない）。デフォルト構成の種別",
+    {
+      count: 1,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。デフォルト構成の種別",
+    },
   ],
   [
     "src/shared/lib/sections/registry.ts::type",
-    "Section.type は String 列（Prisma enum ではない）。レジストリの判別子",
+    {
+      count: 4,
+      reason:
+        "Section.type は String 列（Prisma enum ではない）。レジストリの判別子",
+    },
   ],
   [
     "src/shared/lib/sections/types.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 1,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
   [
     "src/shared/lib/validations/section-defaults.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 1,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
   [
     "src/shared/lib/validations/section.ts::type",
-    "Section.type は String 列（Prisma enum ではない）",
+    {
+      count: 1,
+      reason: "Section.type は String 列（Prisma enum ではない）",
+    },
   ],
 ]);
 
@@ -184,58 +305,74 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, string> = new Map([
  * 「同じ概念だが、まだ narrow されていない層にいる」。narrow は入力の境界
  * （schema / searchParams のパース）で行い、その先は enum 型で流す。
  */
-const FORM_OR_URL_VALUE: ReadonlyMap<string, string> = new Map([
+const FORM_OR_URL_VALUE: ReadonlyMap<string, Exclusion> = new Map([
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/types.ts::contentWidth",
-    'サイドパネルのフォーム値。未選択が ""',
+    { count: 1, reason: 'サイドパネルのフォーム値。未選択が ""' },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-news-editor.ts::contentWidth",
-    '同上。フォーム初期値を "" で組む',
+    { count: 1, reason: '同上。フォーム初期値を "" で組む' },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/hooks/use-post-editor.ts::contentWidth",
-    "同上",
+    { count: 1, reason: "同上" },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/LayoutFields.tsx::contentWidth",
-    '同上。`DEFAULT` を "" に読み替えて <select> に渡す',
+    { count: 1, reason: '同上。`DEFAULT` を "" に読み替えて <select> に渡す' },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/types/media-picker.ts::usage",
-    'メディアピッカーの絞り込み。未指定が ""',
+    { count: 1, reason: 'メディアピッカーの絞り込み。未指定が ""' },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaDetailDialog.tsx::usage",
-    "同上（表示用の props）",
+    { count: 1, reason: "同上（表示用の props）" },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx::usage",
-    "同上（searchParams 由来）",
+    { count: 1, reason: "同上（searchParams 由来）" },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/_shared/hooks/use-filter-params.ts::status",
-    'nuqs / searchParams のフィルタ値。未選択・"all" を含むので enum 直当て不可',
+    {
+      count: 1,
+      reason:
+        'nuqs / searchParams のフィルタ値。未選択・"all" を含むので enum 直当て不可',
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/media/_components/MediaListWrapper.tsx::type",
-    'searchParams 由来のメディア種別フィルタ。未指定が ""',
+    {
+      count: 1,
+      reason: 'searchParams 由来のメディア種別フィルタ。未指定が ""',
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/notifications/page.tsx::type",
-    'searchParams 由来の通知種別フィルタ。未指定・"all" を含む',
+    {
+      count: 1,
+      reason: 'searchParams 由来の通知種別フィルタ。未指定・"all" を含む',
+    },
   ],
   [
     "src/app/(admin)/admin/(dashboard)/terms/new/page.tsx::type",
-    'searchParams 由来の規約種別。未指定が ""',
+    { count: 1, reason: 'searchParams 由来の規約種別。未指定が ""' },
   ],
   [
     "src/shared/domain/pages/admin-queries.ts::status",
-    '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
+    {
+      count: 1,
+      reason: '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
+    },
   ],
   [
     "src/shared/domain/pages/admin-queries.ts::type",
-    '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
+    {
+      count: 1,
+      reason: '管理一覧フィルタ。未指定・"all" を含むので enum 直当て不可',
+    },
   ],
 ]);
 
@@ -341,6 +478,18 @@ describe("DB enum の列を string で宣言していない", () => {
           `enum 型で受ければ値域が動いたとき型検査が止める`,
       );
     expect(added).toEqual([]);
+  });
+
+  test("除外 entry の件数はベースラインを超えない", () => {
+    const current = currentViolations();
+    const exceeded = [...NOT_A_DB_COLUMN, ...FORM_OR_URL_VALUE]
+      .filter(([key, { count }]) => (current.get(key) ?? 0) > count)
+      .map(
+        ([key, { count }]) =>
+          `${key}: ${current.get(key)} 件（ベースライン ${count}）。` +
+          `除外は件数ピン。新しい string 宣言は enum 型で受けるか、件数を理由つきで更新する`,
+      );
+    expect(exceeded).toEqual([]);
   });
 
   test("フォーム値の宣言が実在する箇所を指している", () => {
