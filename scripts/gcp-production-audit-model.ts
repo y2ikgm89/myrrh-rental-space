@@ -20,10 +20,17 @@ type ProductionDomainConfig = {
   adminDomain: string;
 };
 
+export type CloudSchedulerExpectedJob = {
+  id: string;
+  schedule: string;
+  timeZone: string;
+};
+
 type CloudSchedulerOidcAuditConfig = {
   publicDomain: string;
   schedulerServiceAccount: string;
   expectedJobIds?: readonly string[];
+  expectedJobs?: readonly CloudSchedulerExpectedJob[];
 };
 
 type CloudRunRuntimeEnvAuditConfig = {
@@ -182,6 +189,132 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "waitlist-expire",
   "unpaid-event-registration-expire",
 ] as const;
+
+/** SSoT: `terraform/cloud_scheduler.tf` `time_zone`（全 job 共通）。 */
+export const REQUIRED_CLOUD_SCHEDULER_TIME_ZONE = "Asia/Tokyo";
+
+/**
+ * SSoT: `terraform/cloud_scheduler.tf` `local.cron_jobs` の name + schedule。
+ * timeZone は resource の `time_zone`（全 job 共通）。
+ * IDs 配列は architecture-boundaries が literal を読むので別に置く。
+ */
+export const REQUIRED_CLOUD_SCHEDULER_CRON_JOBS = [
+  {
+    id: "audit-log-integrity",
+    schedule: "30 4 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "calendar-sync",
+    schedule: "*/10 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "calendar-sync-retry",
+    schedule: "*/15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "customer-duplicate-scan",
+    schedule: "0 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "customer-risk-scan",
+    schedule: "0 9 * * 1",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "data-retention",
+    schedule: "30 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "event-import",
+    schedule: "0 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "event-reminder",
+    schedule: "0 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "faq-stale-check",
+    schedule: "0 9 * * 1",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "faq-trash-cleanup",
+    schedule: "0 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "blog-trash-cleanup",
+    schedule: "0 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "instagram-refresh",
+    schedule: "0 2 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "instagram-sync",
+    schedule: "*/30 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "news-scheduled-publish",
+    schedule: "*/10 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "blog-scheduled-publish",
+    schedule: "*/10 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "notification-cleanup",
+    schedule: "0 4 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "pending-reservation-expire",
+    schedule: "*/15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "receipt-backfill",
+    schedule: "15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "reservation-reminder",
+    schedule: "0 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "smart-lock-cleanup",
+    schedule: "*/15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "stripe-event-cleanup",
+    schedule: "0 3 * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "waitlist-expire",
+    schedule: "0 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+  {
+    id: "unpaid-event-registration-expire",
+    schedule: "*/15 * * * *",
+    timeZone: REQUIRED_CLOUD_SCHEDULER_TIME_ZONE,
+  },
+] as const satisfies readonly CloudSchedulerExpectedJob[];
 
 export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   // Neon pooled runtime URL。version は `terraform/variables.tf` の
@@ -1534,8 +1667,13 @@ export function readCloudSchedulerOidcJobErrors(
   config: CloudSchedulerOidcAuditConfig,
 ): string[] {
   const cronUriPrefix = `${config.publicDomain}/api/cron/`;
+  const expectedJobs =
+    config.expectedJobs ?? REQUIRED_CLOUD_SCHEDULER_CRON_JOBS;
+  const expectedJobById = new Map(
+    expectedJobs.map((job) => [job.id, job] as const),
+  );
   const expectedJobIds =
-    config.expectedJobIds ?? REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS;
+    config.expectedJobIds ?? expectedJobs.map((job) => job.id);
   const expectedJobIdSet = new Set(expectedJobIds);
   const records = readRecords(value);
   const jobsByName = new Map(
@@ -1573,6 +1711,21 @@ export function readCloudSchedulerOidcJobErrors(
     const expectedUri = `${cronUriPrefix}${jobName}`;
     if (isExpectedJob && uri !== expectedUri) {
       errors.push(`${jobName} uri must be ${expectedUri}`);
+    }
+    const expectedJob = expectedJobById.get(jobName);
+    if (isExpectedJob && expectedJob) {
+      const schedule = record["schedule"];
+      const timeZone = record["timeZone"];
+      if (schedule !== expectedJob.schedule) {
+        errors.push(
+          `${jobName} schedule must be ${expectedJob.schedule}, got ${describeUnknown(schedule, "missing")}`,
+        );
+      }
+      if (timeZone !== expectedJob.timeZone) {
+        errors.push(
+          `${jobName} timeZone must be ${expectedJob.timeZone}, got ${describeUnknown(timeZone, "missing")}`,
+        );
+      }
     }
     if (!isExpectedJob && isPublicCronJob) {
       errors.push(`${jobName} is not an expected Cloud Scheduler cron job`);
