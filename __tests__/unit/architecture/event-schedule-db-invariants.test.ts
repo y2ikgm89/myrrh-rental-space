@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   readAllMigrationSql,
   readDatabaseInvariants,
+  readPlpgsqlFunction,
 } from "../../support/prisma-sources";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -70,5 +71,24 @@ describe("event schedule DB invariants", () => {
     );
     // 遅延させないと「Event を作ってから slot を足す」通常の書込順が必ず落ちる。
     expect(invariants).toContain("DEFERRABLE INITIALLY DEFERRED");
+  });
+
+  test("同一スペースの PENDING / CONFIRMED 予約は時間帯が重複できない", () => {
+    const invariants = readDatabaseInvariants();
+    const where =
+      /CONSTRAINT "reservations_no_active_time_overlap_excl" EXCLUDE[\s\S]*?WHERE \((.*)\);/u.exec(
+        invariants,
+      )?.[1];
+
+    expect(where).toBeDefined();
+    expect(where).toContain("'PENDING'::reservation_status");
+    expect(where).toContain("'CONFIRMED'::reservation_status");
+  });
+
+  test("SINGLE_OCCURRENCE は slot ちょうど 1 本、TIMED_ENTRY は 2 本以上", () => {
+    const body = readPlpgsqlFunction("check_event_schedule_integrity");
+
+    expect(body).toContain("slot_count <> 1");
+    expect(body).toContain("slot_count < 2");
   });
 });

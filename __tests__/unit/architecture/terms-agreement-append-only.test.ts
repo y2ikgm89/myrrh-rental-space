@@ -28,6 +28,8 @@ describe("terms_agreements append-only boundary", () => {
     expect(body).not.toContain("myrrh.audit_log_mutation_bypass");
     expect(body).not.toContain("myrrh.refund_mutation_bypass");
     expect(body).not.toContain("myrrh.inquiry_status_history_mutation_bypass");
+    expect(body).toContain("RAISE EXCEPTION");
+    expect(body).toContain("integrity_constraint_violation");
   });
 
   test("TermsAgreement schema にビジネスロジックが update/delete を呼び出す痕跡がない", () => {

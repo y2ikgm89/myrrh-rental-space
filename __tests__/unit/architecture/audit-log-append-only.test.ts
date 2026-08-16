@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-import { readDatabaseInvariants } from "../../support/prisma-sources";
+import {
+  readDatabaseInvariants,
+  readPlpgsqlFunction,
+} from "../../support/prisma-sources";
 
 describe("audit log append-only boundary", () => {
   test("audit_logs UPDATE/DELETE は DB trigger で拒否する", () => {
@@ -12,6 +15,10 @@ describe("audit log append-only boundary", () => {
     expect(invariants).toContain("BEFORE UPDATE ON public.audit_logs ");
     expect(invariants).toContain("BEFORE DELETE ON public.audit_logs ");
     expect(invariants).toContain("audit_logs is append-only");
+
+    const body = readPlpgsqlFunction("prevent_audit_logs_mutation");
+    expect(body).toContain("RAISE EXCEPTION");
+    expect(body).toContain("integrity_constraint_violation");
   });
 
   test("seed は audit_logs を削除しない", () => {

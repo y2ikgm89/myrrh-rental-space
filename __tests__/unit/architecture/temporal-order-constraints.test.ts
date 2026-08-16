@@ -35,15 +35,14 @@
  * ## この gate が証明すること / しないこと
  *
  * **証明する**: 対になっている列の組がすべて分類され、順序制約を持つと宣言した組は
- * その制約が invariants.sql に実在し、両方の列を参照している。
+ * その制約が invariants.sql に実在し、両方の列を参照している。式は
+ * `pg_get_constraintdef` の正規形で、開始列が終了列より前（`<=` / `<`）である。
  *
- * **証明しない**: 述語の向き（`<=` か `>=` か）。名前と参照列までしか見ない。
- * 向きは `__tests__/integration/prisma/value-domain-constraints.test.ts` が
- * 逆転した行を実際に INSERT して確かめる。**宣言と実測は同じ定数
- * （`__tests__/support/temporal-order-constraints.ts`）を読む**ので、ここに 1 行
- * 足して probe を書かないと tsc:test がコンパイルエラーで落ちる
- * （前は宣言 8 本に対して probe が 4 本しか無く、残り 4 本は述語を恒真式に
- * 書き換えても全部緑のまま通っていた）。
+ * **証明しない**: 逆転行を実際に INSERT したときの拒否。それは
+ * `__tests__/integration/prisma/value-domain-constraints.test.ts` の担当。
+ * **宣言と実測は同じ定数（`__tests__/support/temporal-order-constraints.ts`）
+ * を読む**ので、ここに 1 行足して probe を書かないと tsc:test が
+ * コンパイルエラーで落ちる。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -181,6 +180,24 @@ function key(p: Pair): string {
   return `${p.model}.${p.startColumn}`;
 }
 
+/**
+ * `pg_get_constraintdef` の正規形で、開始列が終了列より前（`<=` / `<`）。
+ * キャスト（`(start_time)::text`）と引用（`"order"`）を許す。
+ * nullable の `IS NULL OR` は開始<=終了の断片だけを見る。
+ */
+function hasStartBeforeEndOrientation(
+  expression: string,
+  startColumn: string,
+  endColumn: string,
+): boolean {
+  const ident = (col: string) =>
+    `(?:\\(\\s*)?(?:"${col}"|${col})(?:\\s*\\)::\\w+)?`;
+  return new RegExp(
+    `${ident(startColumn)}\\s*(?:<=|<)\\s*${ident(endColumn)}`,
+    "u",
+  ).test(expression);
+}
+
 describe("期間の列は順序が DB で強制されている", () => {
   test("gate が空振りしていない（前提の自己検査）", () => {
     // 対を 1 組も拾えていないと以降が全部 vacuous に通る。
@@ -227,5 +244,25 @@ describe("期間の列は順序が DB で強制されている", () => {
     const stale = Object.keys(ORDER_CONSTRAINTS).filter((k) => !known.has(k));
 
     expect(stale).toEqual([]);
+  });
+
+  test("宣言した順序制約は開始列が終了列より前である", () => {
+    const reversed = PAIRS.flatMap((p) => {
+      const name = DECLARED.get(key(p));
+      if (name === undefined) return [];
+      const definition = CHECKS.get(name);
+      if (definition === undefined) return [];
+      return hasStartBeforeEndOrientation(
+        definition,
+        p.startColumn,
+        p.endColumn,
+      )
+        ? []
+        : [
+            `${name}: ${p.startColumn} <= ${p.endColumn} の向きが無い — ${definition}`,
+          ];
+    });
+
+    expect(reversed).toEqual([]);
   });
 });
