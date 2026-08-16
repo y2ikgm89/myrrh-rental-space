@@ -308,6 +308,7 @@ export function BusinessHoursSection({
           };
         }
       }
+      setSlotErrors(validateSlots(updated));
       return updated;
     });
   };
@@ -323,6 +324,7 @@ export function BusinessHoursSection({
           slots: source.slots.map((s) => ({ ...s })),
         };
       }
+      setSlotErrors(validateSlots(updated));
       return updated;
     });
   };
