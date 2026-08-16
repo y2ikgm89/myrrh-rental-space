@@ -197,20 +197,37 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
-  test("連絡先情報: 全項目空欄でも success", () => {
+  test("連絡先情報: 全項目空欄でも success（expectedUpdatedAt は必須）", () => {
     expectSuccess(
       contactInfoFormSchema,
-      emptyKeys([
-        "phoneNumber",
-        "faxNumber",
-        "email",
-        "postalCode",
-        "prefecture",
-        "city",
-        "streetAddress",
-        "buildingName",
-      ]),
+      form({
+        phoneNumber: "",
+        faxNumber: "",
+        email: "",
+        postalCode: "",
+        prefecture: "",
+        city: "",
+        streetAddress: "",
+        buildingName: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
       "contactInfo",
+    );
+  });
+
+  test("連絡先情報: expectedUpdatedAt 欠落は error", () => {
+    const fd = emptyKeys([
+      "phoneNumber",
+      "faxNumber",
+      "email",
+      "postalCode",
+      "prefecture",
+      "city",
+      "streetAddress",
+      "buildingName",
+    ]);
+    expect(parseWithZod(fd, { schema: contactInfoFormSchema }).status).toBe(
+      "error",
     );
   });
 

@@ -32,6 +32,8 @@ export type ContactInfoInput = {
   streetAddress: string | null;
   buildingName: string | null;
   // 交通案内・駐車場案内は Location 単位で管理（Settings からは廃止済）
+  /** 楽観的 concurrency: 読み込み時の SettingsOrganization.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type BusinessHoursSettingsInput = {
@@ -102,15 +104,27 @@ export async function updateBusinessInfo(
 }
 
 export async function updateContactInfo(data: ContactInfoInput): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const updateData = {
-    ...data,
+    phoneNumber: data.phoneNumber,
+    faxNumber: data.faxNumber,
     email: normalizeNullableString(data.email),
+    postalCode: data.postalCode,
+    prefecture: data.prefecture,
+    city: data.city,
+    streetAddress: data.streetAddress,
+    buildingName: data.buildingName,
   };
 
-  await prisma.settingsOrganization.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    await casUpdateOrCreateSingleton({
+      updateMany: (args) => tx.settingsOrganization.updateMany(args),
+      findUnique: (args) => tx.settingsOrganization.findUnique(args),
+      create: (args) => tx.settingsOrganization.create(args),
+      expectedUpdatedAt,
+      updateData,
+      createData: { id: "singleton", ...updateData },
+    });
   });
 }
 
