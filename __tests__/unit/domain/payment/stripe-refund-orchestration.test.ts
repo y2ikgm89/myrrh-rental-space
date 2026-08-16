@@ -10,6 +10,9 @@ const mockExecuteRawUnsafe = mock<(query: string) => Promise<unknown>>(() =>
 const mockRefundCreate = mock<(args: { data: unknown }) => Promise<unknown>>(
   () => Promise.resolve({ id: "refund-row-1" }),
 );
+const mockRefundUpdateMany = mock<
+  (args: { where: unknown; data: unknown }) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockRefundsCreate = mock<
   (
     params: Record<string, unknown>,
@@ -39,6 +42,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 const {
   PAYMENT_REFUND_LOCK_NAMESPACE,
   acquirePaymentRefundAdvisoryLock,
+  claimRefundSettlement,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
   resolveRefundAmount,
@@ -47,7 +51,7 @@ const {
 const tx = {
   $executeRaw: mockExecuteRaw,
   $executeRawUnsafe: mockExecuteRawUnsafe,
-  refund: { create: mockRefundCreate },
+  refund: { create: mockRefundCreate, updateMany: mockRefundUpdateMany },
 };
 
 describe("stripe-refund-orchestration kernel", () => {
@@ -55,6 +59,7 @@ describe("stripe-refund-orchestration kernel", () => {
     mockExecuteRaw.mockClear();
     mockExecuteRawUnsafe.mockClear();
     mockRefundCreate.mockClear();
+    mockRefundUpdateMany.mockClear();
     mockRefundsCreate.mockClear();
   });
 
@@ -159,6 +164,38 @@ describe("stripe-refund-orchestration kernel", () => {
       "SAVEPOINT refund_create_reservation",
     );
     expect(mockExecuteRawUnsafe).toHaveBeenCalledWith(
+      "ROLLBACK TO SAVEPOINT refund_create_reservation",
+    );
+  });
+
+  test("claimRefundSettlement excludes terminal refund statuses from the claim WHERE", async () => {
+    await claimRefundSettlement(tx, "re_1");
+
+    expect(mockRefundUpdateMany).toHaveBeenCalledTimes(1);
+    const args = mockRefundUpdateMany.mock.calls[0]?.[0] as {
+      where: { stripeRefundId: string; status: { notIn: string[] } };
+    };
+    expect(args.where.stripeRefundId).toBe("re_1");
+    const notIn = args.where.status.notIn;
+    expect(notIn).toContain("succeeded");
+    expect(notIn).toContain("failed");
+    expect(notIn).toContain("canceled");
+  });
+
+  test("createRefundRecordIdempotent rethrows non-unique errors without savepoint rollback", async () => {
+    mockRefundCreate.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      createRefundRecordIdempotent(tx, "refund_create_reservation", {
+        reservationId: "res-1",
+        amount: 1000,
+        stripeRefundId: "re_test_1",
+        refundedByType: "ADMIN",
+        status: "succeeded",
+      }),
+    ).rejects.toThrow("boom");
+
+    expect(mockExecuteRawUnsafe).not.toHaveBeenCalledWith(
       "ROLLBACK TO SAVEPOINT refund_create_reservation",
     );
   });
