@@ -323,7 +323,7 @@ jobs:
     needs: [changes]
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d
+        image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -364,7 +364,7 @@ jobs:
     # branch protection required status checks に含める。
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d
+        image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -515,7 +515,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d
+        image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -873,7 +873,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d
+        image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -969,7 +969,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:18@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d
+        image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
