@@ -46,10 +46,10 @@
 | M-04 | 高     | あり (#2383) | claimRefundSettlement は非終端状態からのみ "succeeded" へ遷移できる（webhook の at-least…                                     |
 | M-05 | 高     | あり (#2383) | Refund 行 insert の catch が握りつぶしてよいのは stripeRefundId の unique 衝突（webhook…                                      |
 | M-06 | 高     | あり         | （M2 の event 側対称）部分返金の Stripe idempotency key は累積額を含んで返金ごとに動く                                        |
-| M-07 | 高     | **なし**     | TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claim…                                                  |
+| M-07 | 高     | あり (#2389) | TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claim…                                                  |
 | M-08 | 高     | あり         | charge.refunded webhook は "succeeded" 確定の返金でしか paymentStatus を終端へ動かさない…                                     |
 | M-09 | 高     | あり (#2383) | 返金累計の集計は対象 entity にスコープされる（tx.refund.aggregate の WHERE に reservationId…                                  |
-| M-10 | 中     | **なし**     | 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex revie…               |
+| M-10 | 中     | あり (#2389) | 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex revie…               |
 | M-11 | 高     | あり (#2384) | 公開フォームの mutation Server Action は 4 段 guard pipeline を通る（新設 action も含む）                                     |
 | M-12 | 高     | あり         | page 本体に置かれた requireAdmin*Page が実際に認可を強制する（拒否時にページ描画を止める）                                    |
 | M-13 | 高     | あり         | requireAdminPermission(resource, action) は要求された action を検査する（read 権限が …                                        |
@@ -60,12 +60,12 @@
 | M-18 | 中     | あり         | admin ページの認可 helper は、そのページが本当に要求する permission を要求する（auditLog:read は S…                           |
 | M-19 | 中     | あり         | VIEWER（閲覧専用ロール）の read 対象集合が固定されている                                                                      |
 | M-20 | 中     | あり         | 同上 — assertCustomerActive が実際に実行される（存在するだけでなく）                                                          |
-| M-21 | 低     | **なし**     | requireAdminDetailPage は EDITOR の userPageAssignment スコープ（resourceId 単…                                               |
-| M-22 | 高     | **なし**     | Cloud Scheduler の cron job が PAUSED 状態になっていないこと（23本のcronが停止していないこと）                                |
+| M-21 | 低     | あり (#2387) | requireAdminDetailPage は EDITOR の userPageAssignment スコープ（resourceId 単…                                               |
+| M-22 | 高     | あり (#2388) | Cloud Scheduler の cron job が PAUSED 状態になっていないこと（23本のcronが停止していないこと）                                |
 | M-23 | 高     | あり         | 監査スクリプトの各 check が違反を検出したとき、実際に監査を FAIL させること（build SA の project-level …                      |
 | M-24 | 高     | あり         | 同上（project IAM の想定外 Secret Manager accessor grant 検出）が監査を FAIL させること                                       |
 | M-25 | 中     | あり         | branch-protection.json の required contexts に対応する workflow が paths filt…                                                |
-| M-26 | 中     | **なし**     | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
+| M-26 | 中     | あり (#2390) | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
 | M-27 | 中     | あり         | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
 | M-28 | 中     | あり         | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
 | M-29 | 低     | あり         | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
@@ -164,7 +164,7 @@
 - 書き換えた箇所: src/shared/domain/events/payment-commands.ts:974
 - 実行: `bun run test -- __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/architecture/refund-append-only.test.ts __tests__/unit/architecture/reservation-email-idempotency.test.ts __tests__/unit/shared/domain/events`
 
-#### M-07（高） — 守り手なし
+#### M-07（高）
 
 **不変条件**: TERMINAL_REFUND_STATUSES は succeeded/failed/canceled の 3 値が SSoT（claimRefundSettlement と applyConfirmedRefundStatus が同じ集合を見る必要がある。実装 JSDoc が「片方だけ書き換えると確定済みの返金が再 claim 可能な状態に戻る」と明記）
 
@@ -173,6 +173,7 @@
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:179-183
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts __tests__/unit/api/stripe-webhook.test.ts __tests__/unit/api/stripe-webhook-orphan-refund.test.ts`
 - 2026-08-16: 据え置き。integration `refund-status-terminal-guard.test.ts` が既にあり、CI `test:all` が強制する。
+- 2026-08-16 close: 対応済み（#2389）。unit で TERMINAL_REFUND_STATUSES をリテラル 3 値にピン。
 
 #### M-08（高）
 
@@ -194,7 +195,7 @@
 - 実行: `bun run test -- __tests__/unit/domain/reservations __tests__/unit/domain/payment __tests__/unit/shared/domain/reservations __tests__/unit/shared/domain/cancellation __tests__/unit/actions/admin-reservation-payment.test.ts`
 - 2026-08-16 close: 対応済み（#2383）。aggregate WHERE の entity スコープを integration で固定。
 
-#### M-10（中） — 守り手なし
+#### M-10（中）
 
 **不変条件**: 返金可能残額の集計から failed / canceled を除外する（実際に資金移動しなかった試行を累積に含めない。Codex review PR #1665）
 
@@ -203,6 +204,7 @@
 - 書き換えた箇所: src/shared/domain/payment/stripe-refund-orchestration.ts:420-423
 - 実行: `bun run test -- __tests__/unit/domain/payment __tests__/unit/domain/events/payment-commands.test.ts __tests__/unit/domain/reservations/payment-commands.test.ts __tests__/unit/domain/events/payment-queries.test.ts __tests__/unit/domain/reservations/payment-queries.test.ts __tests__/unit/shared/domain/cancellation`
 - 2026-08-16: 据え置き。integration `admin-refund-aggregate-excludes-failed.test.ts` が既にあり、CI `test:all` が強制する。
+- 2026-08-16 close: 対応済み（#2389）。unit で REFUND_AGGREGATE_EXCLUDED_STATUSES を failed/canceled にピン。
 
 ### 認可・RBAC・surface 分離
 
@@ -297,7 +299,7 @@
 - 書き換えた箇所: src/app/(public)/_shared/actions/reservation.ts:149
 - 実行: `bun run test -- __tests__/unit/architecture/assert-customer-active-server-actions.test.ts __tests__/unit/architecture/public-mutation-guard-order.test.ts ; bun run lint:files -- "src/app/(public)/_shared/actions/reservation.ts"`
 
-#### M-21（低） — 守り手なし
+#### M-21（低）
 
 **不変条件**: requireAdminDetailPage は EDITOR の userPageAssignment スコープ（resourceId 単位のアクセス制御）を適用する
 
@@ -306,10 +308,11 @@
 - 書き換えた箇所: src/app/(admin)/admin/(dashboard)/_shared/helpers/page-auth.ts:48
 - 実行: `bun run test -- __tests__/unit/architecture/admin-page-auth-before-suspense.test.ts __tests__/unit/architecture/auth-gate-ssot.test.ts __tests__/unit/architecture/admin-settings-permissions.test.ts __tests__/unit/queries/admin-query-helpers.test.ts __tests__/unit/architecture/admin-read-boundaries.test.ts`
 - 2026-08-16: 据え置き。#2369 以降スタッフ詳細は `requireStaffDetailPage(userId)` が必須で、EDITOR は `user:read` を持たないため assignment スコープ経路に到達しない。
+- 2026-08-16 close: 対応済み（#2387）。`userHasResourceAccess` 委譲スパイで userId 転送を振る舞いピン。権限表は変えない。
 
 ### GCP 本番監査・CI・デプロイ
 
-#### M-22（高） — 守り手なし
+#### M-22（高）
 
 **不変条件**: Cloud Scheduler の cron job が PAUSED 状態になっていないこと（23本のcronが停止していないこと）
 
@@ -318,6 +321,7 @@
 - 書き換えた箇所: （変異不要）scripts/gcp-production-audit-model.ts:1415-1490 readCloudSchedulerOidcJobErrors
 - 実行: `bun C:/Users/.../scratchpad/probe-b.ts（readCloudSchedulerOidcJobErrors に state:"PAUSED" の job を直接渡す）`
 - 2026-08-16: 据え置き。運用監査でありプロダクト欠陥ではない（round6 plan B）。
+- 2026-08-16 close: 対応済み（#2388）。expected job は state===ENABLED 必須。gcloud projection に state を追加。check 名を契約拡大に合わせて改名。
 
 #### M-23（高）
 
@@ -346,7 +350,7 @@
 - 書き換えた箇所: 複合変異: .github/branch-protection.json:12 と .github/workflows/terraform.yml:19-20
 - 実行: `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts`
 
-#### M-26（中） — 守り手なし
+#### M-26（中）
 
 **不変条件**: branch-protection.json の required_status_checks.contexts が必要な check を列挙し続けていること
 
@@ -355,6 +359,7 @@
 - 書き換えた箇所: .github/branch-protection.json:9
 - 実行: `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts __tests__/unit/architecture/deploy-production-workflow.test.ts __tests__/unit/architecture/ci-workflow-contract.test.ts __tests__/unit/architecture/ci-workflow.test.ts __tests__/unit/architecture/deploy-packaging-contract.test.ts __tests__/unit/architecture/workflow-shell-pipefail.test.ts __tests__/unit/architecture/deploy-breaking-base-resolution.test.ts`
 - 2026-08-16: 据え置き。運用監査でありプロダクト欠陥ではない（round6 plan B）。
+- 2026-08-16 close: 対応済み（#2390）。required contexts をリテラルピンし、ci.yml の branch-protection.json 除外を除去。
 
 #### M-27（中）
 
