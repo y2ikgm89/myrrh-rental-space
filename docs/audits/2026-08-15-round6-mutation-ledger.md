@@ -66,8 +66,8 @@
 | M-24 | 高     | あり         | 同上（project IAM の想定外 Secret Manager accessor grant 検出）が監査を FAIL させること                                       |
 | M-25 | 中     | あり         | branch-protection.json の required contexts に対応する workflow が paths filt…                                                |
 | M-26 | 中     | あり (#2390) | branch-protection.json の required_status_checks.contexts が必要な check を列…                                                |
-| M-27 | 中     | あり         | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
-| M-28 | 中     | あり         | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
+| M-27 | 中     | あり (#2392) | Cloud Run の max_instance_count が 1 であること（RATE_LIMIT_BACKEND=in-memory …                                               |
+| M-28 | 中     | あり (#2392) | Cloud Run の traffic が最新リビジョンに 100% 向いていること（デプロイが実際に反映されていること）                             |
 | M-29 | 低     | あり         | cron job が legacy な X-Cron-Secret ヘッダを設定していないこと                                                                |
 | M-30 | 低     | あり         | expected list に無い job が /api/cron/* を叩いていたら不正 job として報告すること                                             |
 | M-31 | 低     | あり         | cron job の schedule / timeZone が宣言どおりであること                                                                        |
@@ -369,6 +369,7 @@
 - 注入した欠陥: autoscaling.knative.dev/maxScale annotation を一切持たない Cloud Run service オブジェクトを ingress / runtime env の両検査に流した（probe-b.ts B5/B5b）
 - 書き換えた箇所: （変異不要）scripts/gcp-production-audit-model.ts の Cloud Run 検査群
 - 実行: `bun C:/Users/.../scratchpad/probe-b.ts`
+- 2026-08-16 close: 対応済み（#2392）。Knative v1 `autoscaling.knative.dev/maxScale` が 1 でないと FAIL。欠落も FAIL。
 
 #### M-28（中）
 
@@ -378,6 +379,7 @@
 - 注入した欠陥: status.traffic が古いリビジョンに 100%、latestReadyRevisionName は新リビジョン、という service オブジェクトを流した（probe-b.ts B6/B6b/B7）
 - 書き換えた箇所: （変異不要）scripts/gcp-production-audit-model.ts の Cloud Run 検査群
 - 実行: `bun C:/Users/.../scratchpad/probe-b.ts`
+- 2026-08-16 close: 対応済み（#2392）。`status.traffic` は latest ready に 100% のみ。split / pin / 欠落は FAIL。
 
 #### M-29（低）
 
