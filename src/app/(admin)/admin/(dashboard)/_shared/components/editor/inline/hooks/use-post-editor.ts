@@ -11,8 +11,9 @@
  * - create モードでは保存時に `createPost` を呼ぶ
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { LexicalEditor } from "lexical";
 import { useForm } from "@conform-to/react";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import type { z } from "zod";
@@ -29,6 +30,7 @@ import {
 } from "@/admin/actions/post/mutations";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
+import { resolvePersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
 import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
 import { getPostPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
@@ -185,6 +187,7 @@ export function usePostEditor({
 
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+  const editorRef = useRef<LexicalEditor | null>(null);
   const [statusValue, setStatusValue] = useState<PostStatus>(
     post?.status ?? PostStatus.DRAFT,
   );
@@ -237,7 +240,14 @@ export function usePostEditor({
       ? settingsFields.slug.value
       : "");
 
-  const handleContentChange = (json: string) => {
+  const persistableContentJson = () =>
+    resolvePersistableEditorJson({
+      editor: editorRef.current,
+      reactJson: contentJson,
+    });
+
+  const handleContentChange = (json: string, editor?: LexicalEditor) => {
+    if (editor) editorRef.current = editor;
     setContentJson(json);
   };
 
@@ -245,15 +255,16 @@ export function usePostEditor({
     if (!post) return;
     core.startTransition(async () => {
       try {
+        const persistedContentJson = persistableContentJson();
         const result = await updatePostBody(post.id, {
-          contentJson,
+          contentJson: persistedContentJson,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
           return;
         }
 
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistedContentJson);
         clearDraft(autoSaveKey);
         router.refresh();
         toast.success("本文を保存しました");
@@ -352,7 +363,7 @@ export function usePostEditor({
         title: settingsPayload.title,
         slug: settingsPayload.slug,
         excerpt: settingsPayload.excerpt,
-        contentJson,
+        contentJson: persistableContentJson(),
         thumbnailUrl: settingsPayload.thumbnailUrl,
         categoryId: settingsPayload.categoryId,
         tags: settingsPayload.tags,
@@ -517,14 +528,15 @@ export function usePostEditor({
           return;
         }
 
+        const persistedContentJson = persistableContentJson();
         const bodyResult = await updatePostBody(post.id, {
-          contentJson,
+          contentJson: persistedContentJson,
         });
         if (isMutationError(bodyResult)) {
           toast.error(bodyResult.error);
           return;
         }
-        setSavedContentJson(contentJson);
+        setSavedContentJson(persistedContentJson);
         clearDraft(autoSaveKey);
         router.refresh();
         openPreviewTab(getPostPreviewHref(post.id));

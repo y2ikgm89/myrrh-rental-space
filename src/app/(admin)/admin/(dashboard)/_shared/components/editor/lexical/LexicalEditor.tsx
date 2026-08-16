@@ -143,11 +143,11 @@ function EditorInner({
   // コンテンツ変更ハンドラ（JSON出力）
   const handleChange = (
     editorState: EditorState,
-    _editor: LexicalEditorType,
+    editor: LexicalEditorType,
   ) => {
     if (!onChange) return;
     const json = JSON.stringify(editorState.toJSON());
-    onChange(json);
+    onChange(json, editor);
   };
 
   const inspectorEnabled = showInspector !== false;

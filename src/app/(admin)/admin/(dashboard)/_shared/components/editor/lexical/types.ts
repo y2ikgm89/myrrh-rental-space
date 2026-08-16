@@ -4,6 +4,7 @@
  * @description エディタコンポーネントの型定義
  */
 
+import type { LexicalEditor } from "lexical";
 import type { MediaUsage } from "@/admin/lib/validations/media";
 
 /**
@@ -23,8 +24,8 @@ export type AddCommentPayload = {
 export type LexicalEditorProps = {
   /** EditorState JSON 文字列（必須・プライマリ） */
   contentJson: string;
-  /** コンテンツ変更時のコールバック（JSON文字列を返す） */
-  onChange?: ((json: string) => void) | undefined;
+  /** コンテンツ変更時のコールバック。persist は第 2 引数の editor から live state を読む。 */
+  onChange?: ((json: string, editor?: LexicalEditor) => void) | undefined;
   /** エディタを無効化するかどうか */
   disabled?: boolean | undefined;
   /** エディタのCSSクラス */
