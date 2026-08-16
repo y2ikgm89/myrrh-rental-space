@@ -3,8 +3,36 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+const REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW = {
+  ci: [
+    "Dependency Audit (bun audit)",
+    "Migration Safety (squawk)",
+    "Lint & Format",
+    "Type Check",
+    "Unit Tests",
+    "Smoke E2E (critical path)",
+    "Build (env validation)",
+  ],
+  terraform: ["Terraform / validate"],
+  actionlint: ["Validate GitHub Actions workflows"],
+} as const;
+
+const REQUIRED_STATUS_CONTEXTS = [
+  ...REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.ci,
+  ...REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.terraform,
+  ...REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.actionlint,
+];
+
 const ciWorkflow = readFileSync(
   join(process.cwd(), ".github", "workflows", "ci.yml"),
+  "utf8",
+);
+const terraformWorkflow = readFileSync(
+  join(process.cwd(), ".github", "workflows", "terraform.yml"),
+  "utf8",
+);
+const actionlintWorkflow = readFileSync(
+  join(process.cwd(), ".github", "workflows", "actionlint.yml"),
   "utf8",
 );
 const migrationLintScript = readFileSync(
@@ -36,6 +64,30 @@ function extractJob(jobName: string): string {
 }
 
 describe("CI workflow contract", () => {
+  test("branch-protection required contexts pin the merge-blocking checks", () => {
+    const bp = JSON.parse(
+      readFileSync(
+        join(process.cwd(), ".github/branch-protection.json"),
+        "utf8",
+      ),
+    ) as { required_status_checks: { contexts: string[] } };
+    expect(bp.required_status_checks.contexts).toEqual([
+      ...REQUIRED_STATUS_CONTEXTS,
+    ]);
+  });
+
+  test("required status contexts exist as workflow job names", () => {
+    for (const context of REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.ci) {
+      expect(ciWorkflow).toContain(`name: ${context}`);
+    }
+    for (const context of REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.terraform) {
+      expect(terraformWorkflow).toContain(`name: ${context}`);
+    }
+    for (const context of REQUIRED_STATUS_CONTEXTS_BY_WORKFLOW.actionlint) {
+      expect(actionlintWorkflow).toContain(`name: ${context}`);
+    }
+  });
+
   test("uses split lint and type-check checks without legacy compatibility shims", () => {
     expect(ciWorkflow).toContain("lint-format:");
     expect(ciWorkflow).toContain("name: Lint & Format");

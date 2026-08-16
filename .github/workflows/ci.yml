@@ -131,6 +131,9 @@ jobs:
           predicate-quantifier: "every"
           # Runtime に影響しない project docs / エージェント設定は重い app CI を回さない。
           # .github/workflows/** と .github/actions/** は意図的に除外しない。
+          # .github/branch-protection.json は required-contexts pin で守るので
+          # code フィルタから除外してはいけない。contexts だけの PR だと
+          # `if: needs.changes.outputs.code == 'true'` により unit-tests が skip される。
           filters: |
             code:
               - '!**/*.md'
@@ -139,7 +142,6 @@ jobs:
               - '!.serena/memories/**'
               - '!.github/CODEOWNERS'
               - '!.github/ISSUE_TEMPLATE/**'
-              - '!.github/branch-protection.json'
               - '!.github/codecov.yml'
               - '!.github/labeler.yml'
               - '!.github/renovate.json5'
