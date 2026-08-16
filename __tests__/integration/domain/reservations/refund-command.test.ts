@@ -767,4 +767,32 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       await cleanup();
     }
   }, 30_000);
+
+  test("他予約の返金累積は混ざらない (aggregate WHERE は reservationId で絞る)", async () => {
+    const fixtureA = await createPaidReservationFixture(5000);
+    let fixtureB: ReservationFixture | undefined;
+    try {
+      fixtureB = await createPaidReservationFixture(3000);
+
+      const partialA = await refundReservationPaymentCommand({
+        reservationId: fixtureA.reservationId,
+        amount: 2000,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+      });
+      expect(partialA.refundAmount).toBe(2000);
+      expect(partialA.cumulativeAmount).toBe(2000);
+
+      const fullB = await refundReservationPaymentCommand({
+        reservationId: fixtureB.reservationId,
+        amount: 3000,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+      });
+      expect(fullB.newPaymentStatus).toBe(PaymentStatus.REFUNDED);
+      expect(fullB.refundAmount).toBe(3000);
+      expect(fullB.cumulativeAmount).toBe(3000);
+    } finally {
+      await fixtureB?.cleanup();
+      await fixtureA.cleanup();
+    }
+  }, 30_000);
 });
