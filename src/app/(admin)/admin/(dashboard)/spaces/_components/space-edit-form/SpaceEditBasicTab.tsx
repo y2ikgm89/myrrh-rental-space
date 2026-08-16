@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import type { FieldMetadata } from "@conform-to/react";
 import {
   Card,
@@ -16,6 +17,7 @@ import {
   TabsContent,
 } from "@/admin/components/ui";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import type { LexicalEditor } from "lexical";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import type { SpaceEditLocationOption } from "./types";
 
@@ -28,6 +30,7 @@ type SpaceEditBasicTabProps = {
   onSlugChange: (value: string) => void;
   descriptionJson: string;
   onDescriptionJsonChange: (value: string) => void;
+  editorRef: RefObject<LexicalEditor | null>;
   editorResetKey: number;
   autoSaveKey: string;
   locationId: string;
@@ -59,6 +62,7 @@ export function SpaceEditBasicTab({
   onSlugChange,
   descriptionJson,
   onDescriptionJsonChange,
+  editorRef,
   editorResetKey,
   autoSaveKey,
   locationId,
@@ -134,6 +138,7 @@ export function SpaceEditBasicTab({
               <LazyLexicalEditor
                 key={`${space?.id ?? "new"}-${editorResetKey}`}
                 contentJson={descriptionJson}
+                editorRef={editorRef}
                 onChange={onDescriptionJsonChange}
                 height="560px"
                 placeholder="スペースの説明を入力..."

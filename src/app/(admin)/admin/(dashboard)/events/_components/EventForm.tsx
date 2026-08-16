@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -49,7 +49,8 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
-import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import { applyPersistableEditorJson } from "@/admin/components/editor/lexical/read-latest-editor-json";
+import type { LexicalEditor } from "lexical";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -139,6 +140,7 @@ export function EventForm({
   const [contentJson, setContentJson] = useState<string>(() =>
     serializeDescriptionJson(event?.descriptionJson),
   );
+  const editorRef = useRef<LexicalEditor | null>(null);
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
     event?.thumbnailUrl ?? null,
@@ -212,9 +214,19 @@ export function EventForm({
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: eventFormSchema });
     },
-    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
-    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
-    onSubmit: dispatchWithoutFormReset(action),
+    // React 19 の form auto-reset を止める。editorRef を submit 時に読む必要が
+    // あり helper に載せると render 中の ref 渡しと判定されるため inline
+    // （conform-form-pattern gate の documented fallback）。
+    onSubmit(event, { formData }) {
+      event.preventDefault();
+      applyPersistableEditorJson(formData, "descriptionJson", {
+        editor: editorRef.current,
+        reactJson: contentJson,
+      });
+      startTransition(() => {
+        action(formData);
+      });
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: event
@@ -439,6 +451,7 @@ export function EventForm({
             onRegistrationOpenChange={setRegistrationOpen}
             contentJson={contentJson}
             onContentJsonChange={setContentJson}
+            editorRef={editorRef}
             thumbnailUrl={thumbnailUrl}
             onThumbnailUrlChange={setThumbnailUrl}
           />
