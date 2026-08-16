@@ -26,6 +26,8 @@ import {
   readUnhealthyCloudRunRevisionNames,
   readCloudRunContainerCommandErrors,
   readCloudRunIngressErrors,
+  readCloudRunMaxInstanceCountErrors,
+  readCloudRunTrafficLatestErrors,
   readCloudRunJobExecutionConfigErrors,
   readCloudRunRuntimeEnvErrors,
   readCloudRunServiceIdentityErrors,
@@ -1036,6 +1038,118 @@ describe("GCP production audit model", () => {
     ]);
   });
 
+  test("requires Cloud Run max instance count to stay 1", () => {
+    expect(
+      readCloudRunMaxInstanceCountErrors(
+        {
+          spec: {
+            template: {
+              metadata: {
+                annotations: {
+                  "autoscaling.knative.dev/maxScale": "1",
+                },
+              },
+            },
+          },
+        },
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual([]);
+
+    expect(
+      readCloudRunMaxInstanceCountErrors(
+        {
+          spec: {
+            template: {
+              metadata: {
+                annotations: {
+                  "autoscaling.knative.dev/maxScale": "2",
+                },
+              },
+            },
+          },
+        },
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual(["myrrh-rental-space maxScale must be 1, got 2"]);
+
+    expect(
+      readCloudRunMaxInstanceCountErrors(
+        {},
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual(["myrrh-rental-space maxScale must be 1, got missing"]);
+  });
+
+  test("requires Cloud Run traffic to target the latest ready revision at 100%", () => {
+    const latestReady = "myrrh-rental-space-00042-abc";
+    expect(
+      readCloudRunTrafficLatestErrors(
+        {
+          status: {
+            latestReadyRevisionName: latestReady,
+            traffic: [
+              {
+                latestRevision: true,
+                percent: 100,
+                revisionName: latestReady,
+              },
+            ],
+          },
+        },
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual([]);
+
+    expect(
+      readCloudRunTrafficLatestErrors(
+        {
+          status: {
+            latestReadyRevisionName: latestReady,
+            traffic: [
+              {
+                latestRevision: true,
+                percent: 80,
+                revisionName: latestReady,
+              },
+            ],
+          },
+        },
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual(["myrrh-rental-space traffic percent must be 100, got 80"]);
+
+    expect(
+      readCloudRunTrafficLatestErrors(
+        {
+          status: {
+            latestReadyRevisionName: latestReady,
+            traffic: [
+              {
+                latestRevision: false,
+                percent: 100,
+                revisionName: "myrrh-rental-space-00001-old",
+              },
+            ],
+          },
+        },
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual([
+      "myrrh-rental-space traffic latestRevision must be true, got false",
+      "myrrh-rental-space traffic revisionName must be myrrh-rental-space-00042-abc, got myrrh-rental-space-00001-old",
+    ]);
+
+    expect(
+      readCloudRunTrafficLatestErrors(
+        {},
+        { serviceName: "myrrh-rental-space" },
+      ),
+    ).toEqual([
+      "myrrh-rental-space traffic must target latest ready revision 100%, got missing",
+    ]);
+  });
+
   test("requires the admin Cloud Run default run.app URL to be disabled", () => {
     expect(
       readCloudRunDefaultUrlErrors(
@@ -1954,6 +2068,12 @@ describe("GCP production audit model", () => {
     expect(auditScript).toContain("admin Cloud Run runtime env is canonical");
     expect(auditScript).toContain("Cloud Run service ingress is canonical");
     expect(auditScript).toContain("readCloudRunIngressErrors");
+    expect(auditScript).toContain("Cloud Run max instance count is 1");
+    expect(auditScript).toContain("readCloudRunMaxInstanceCountErrors");
+    expect(auditScript).toContain(
+      "Cloud Run traffic targets latest ready revision 100%",
+    );
+    expect(auditScript).toContain("readCloudRunTrafficLatestErrors");
     expect(auditScript).toContain("readCloudRunDefaultUrlErrors");
     expect(auditScript).toContain(
       "admin Cloud Run default run.app URL is disabled",

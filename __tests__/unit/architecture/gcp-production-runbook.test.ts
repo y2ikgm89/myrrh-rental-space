@@ -175,6 +175,10 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("public Cloud Run runtime env is canonical");
     expect(runbook).toContain("admin Cloud Run runtime env is canonical");
     expect(runbook).toContain("Cloud Run service ingress is canonical");
+    expect(runbook).toContain("Cloud Run max instance count is 1");
+    expect(runbook).toContain(
+      "Cloud Run traffic targets latest ready revision 100%",
+    );
     expect(runbook).toContain("`--ingress=all`");
     expect(runbook).toContain("`--ingress=internal-and-cloud-load-balancing`");
     expect(runbook).toContain("`--no-default-url`");

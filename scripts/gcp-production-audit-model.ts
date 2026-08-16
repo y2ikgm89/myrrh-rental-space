@@ -1191,6 +1191,117 @@ export function readCloudRunIngressErrors(
   ];
 }
 
+const CLOUD_RUN_MAX_INSTANCE_COUNT = 1;
+const CLOUD_RUN_MAX_SCALE_ANNOTATION = "autoscaling.knative.dev/maxScale";
+
+function readCloudRunTemplateAnnotation(
+  value: unknown,
+  annotationName: string,
+): string | null {
+  const annotations = readValueAtPath(value, [
+    "spec",
+    "template",
+    "metadata",
+    "annotations",
+  ]);
+  if (!isRecord(annotations)) return null;
+  const annotationValue = annotations[annotationName];
+  return typeof annotationValue === "string" && annotationValue.length > 0
+    ? annotationValue
+    : null;
+}
+
+/**
+ * Cloud Run max instance count must stay 1.
+ *
+ * Terraform sets `scaling.max_instance_count = 1`. `gcloud run services
+ * describe --format=json` returns the Knative serving v1 Service; the official
+ * equivalent is `spec.template.metadata.annotations["autoscaling.knative.dev/maxScale"]`.
+ * Missing or any value other than 1 fails — RATE_LIMIT_BACKEND=in-memory and
+ * Neon `pool_max × 2 services × max_instances ≤ 30` both assume this cap.
+ *
+ * @see https://cloud.google.com/run/docs/configuring/max-instances
+ */
+export function readCloudRunMaxInstanceCountErrors(
+  value: unknown,
+  config: { serviceName: string },
+): string[] {
+  const maxScale = readCloudRunTemplateAnnotation(
+    value,
+    CLOUD_RUN_MAX_SCALE_ANNOTATION,
+  );
+  const actual =
+    maxScale !== null && /^\d+$/u.test(maxScale) ? Number(maxScale) : null;
+  return formatExpectedActualNumberError(
+    config.serviceName,
+    "maxScale",
+    CLOUD_RUN_MAX_INSTANCE_COUNT,
+    actual,
+  );
+}
+
+/**
+ * All serving traffic must target the latest ready revision at 100%.
+ *
+ * Terraform sets `type = TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST` and
+ * `percent = 100`. `gcloud describe` JSON is Knative v1 TrafficTarget
+ * (`latestRevision`, `percent`, `revisionName`) resolved against
+ * `status.latestReadyRevisionName`. Split traffic, pinned revisions, and
+ * missing status all fail.
+ *
+ * @see https://cloud.google.com/run/docs/reference/rest/v1/namespaces.services#TrafficTarget
+ */
+export function readCloudRunTrafficLatestErrors(
+  value: unknown,
+  config: { serviceName: string },
+): string[] {
+  const latestReady = readValueAtPath(value, [
+    "status",
+    "latestReadyRevisionName",
+  ]);
+  const traffic = readValueAtPath(value, ["status", "traffic"]);
+  if (!Array.isArray(traffic) || traffic.length === 0) {
+    return [
+      `${config.serviceName} traffic must target latest ready revision 100%, got missing`,
+    ];
+  }
+  if (traffic.length !== 1) {
+    return [
+      `${config.serviceName} traffic must target latest ready revision 100%, got ${String(traffic.length)} targets`,
+    ];
+  }
+  const targetUnknown: unknown = traffic[0];
+  if (!isRecord(targetUnknown)) {
+    return [
+      `${config.serviceName} traffic must target latest ready revision 100%, got missing`,
+    ];
+  }
+  const target = targetUnknown;
+
+  const errors: string[] = [];
+  if (target["latestRevision"] !== true) {
+    errors.push(
+      `${config.serviceName} traffic latestRevision must be true, got ${describeUnknown(target["latestRevision"], "missing")}`,
+    );
+  }
+  const percent = target["percent"];
+  if (percent !== 100) {
+    errors.push(
+      `${config.serviceName} traffic percent must be 100, got ${describeUnknown(percent, "missing")}`,
+    );
+  }
+  if (typeof latestReady !== "string" || latestReady.length === 0) {
+    errors.push(
+      `${config.serviceName} latestReadyRevisionName must be present, got ${describeUnknown(latestReady, "missing")}`,
+    );
+  } else if (target["revisionName"] !== latestReady) {
+    errors.push(
+      `${config.serviceName} traffic revisionName must be ${latestReady}, got ${describeUnknown(target["revisionName"], "missing")}`,
+    );
+  }
+  return errors;
+}
+
 export function readCloudRunDefaultUrlErrors(
   value: unknown,
   config: CloudRunDefaultUrlAuditConfig,
