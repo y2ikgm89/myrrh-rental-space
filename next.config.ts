@@ -219,6 +219,26 @@ const nextConfig: NextConfig = {
     // 上流が修正したら、消すのではなく true にして再評価する。
     // 解決後の値は `__tests__/unit/architecture/next-config-cached-navigations-off.test.ts` が見る。
     cachedNavigations: false,
+    // Instant Navigations 検証の既定 (`validationLevel: 'warning'`) は Page /
+    // Default セグメント全てを暗黙に検証する。このアプリは nonce CSP
+    // (`strict-dynamic`) のため root layout の `generateViewport()` で
+    // `await connection()` して全 route を意図的に完全動的化しており、instant
+    // navigation は構造的に成立しない。暗黙検証は root の動的 viewport を
+    // E1438 (`blocking-prerender-viewport-dynamic`) として診断し続ける。
+    //
+    // root layout の `export const instant = false` はセグメント自身と
+    // static-shell 検証しか免除しない（公式:
+    // https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config/instant ）。
+    // ページ単位の暗黙検証は止められない。公式の根本解決は
+    // `'manual-warning'`（明示的に `instant` を export したセグメントだけ検証）。
+    // リポジトリに `instant = true` は無いので、この pin で検証は停止する。
+    // 既定値が将来変わっても散文では止まらないので明示値にする。
+    // 解決後の値は
+    // `__tests__/unit/architecture/next-config-instant-insights-manual-warning.test.ts`
+    // が見る。
+    instantInsights: {
+      validationLevel: "manual-warning",
+    },
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
     // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
     globalNotFound: true,
