@@ -6,6 +6,7 @@ import { resolveModuleSpecifier } from "../../helpers/architecture-fs";
 const workspaceRoot = process.cwd();
 const adminRoot = path.join(workspaceRoot, "src", "app", "(admin)");
 const publicRoot = path.join(workspaceRoot, "src", "app", "(public)");
+const sharedRoot = path.join(workspaceRoot, "src", "shared");
 
 function collectSourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -210,11 +211,31 @@ describe("cross-surface import gate", () => {
         "@/admin",
       ),
     ).toBe(false);
+
+    // --- src/shared を走査根に含める（第6次監査 M-48）---
+    const SHARED_FILE = "src/shared/lib/cache/site-wide.ts";
+    // 落ちるべき形: shared から (admin) へ。
+    expect(
+      importsForbiddenSurface(
+        SHARED_FILE,
+        'import { ACTION_LABELS } from "@/app/(admin)/admin/(dashboard)/_shared/lib/permissions";',
+        "@/admin",
+      ),
+    ).toBe(true);
+    // 落ちてはいけない形: shared 内の import。
+    expect(
+      importsForbiddenSurface(
+        SHARED_FILE,
+        'import { queueTagPurge } from "@/shared/lib/cache/batcher";',
+        "@/admin",
+      ),
+    ).toBe(false);
   });
 
   test("走査対象が実在する（gate が空振りしていない）", () => {
     expect(collectSourceFiles(adminRoot).length).toBeGreaterThan(50);
     expect(collectSourceFiles(publicRoot).length).toBeGreaterThan(50);
+    expect(collectSourceFiles(sharedRoot).length).toBeGreaterThan(50);
   });
 
   test("(admin) は @/public を import しない", () => {
@@ -229,6 +250,22 @@ describe("cross-surface import gate", () => {
     const offenders = collectCrossSurfaceImports(
       collectSourceFiles(publicRoot),
       "@/admin",
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("src/shared は @/admin を import しない", () => {
+    const offenders = collectCrossSurfaceImports(
+      collectSourceFiles(sharedRoot),
+      "@/admin",
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("src/shared は @/public を import しない", () => {
+    const offenders = collectCrossSurfaceImports(
+      collectSourceFiles(sharedRoot),
+      "@/public",
     );
     expect(offenders).toEqual([]);
   });
