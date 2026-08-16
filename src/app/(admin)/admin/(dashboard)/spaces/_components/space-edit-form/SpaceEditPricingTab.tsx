@@ -82,21 +82,22 @@ export function SpaceEditPricingTab({
 }: SpaceEditPricingTabProps) {
   const hourlyPriceNum = Number(hourlyPrice) || 0;
   const discountValueNum = discountValue === "" ? null : Number(discountValue);
-
-  const calculateDiscountedPrice = (price: number): number => {
-    if (!price || discountType === DiscountType.NONE || !discountValueNum)
-      return price;
-    if (discountType === DiscountType.PERCENTAGE)
-      return Math.max(0, Math.round(price * (1 - discountValueNum / 100)));
-    if (discountType === DiscountType.FIXED)
-      return Math.max(0, price - discountValueNum);
-    return price;
-  };
-  const discountedHourlyPrice = calculateDiscountedPrice(hourlyPriceNum);
   const hasDiscount =
     discountType !== DiscountType.NONE &&
     discountValueNum !== null &&
     discountValueNum > 0;
+  // 定額割引（FIXED）は予約合計から一律で引かれるため時間単価には按分しない
+  // （請求側の SSoT: src/shared/lib/pricing/discount.ts calculateSpaceDiscount。
+  // 公開予約フローは合計の行項目「スペース割引」で表示する）。
+  // パーセント割引は時間に線形スケールするため単価への反映は正確。
+  const isPercentageDiscount =
+    hasDiscount && discountType === DiscountType.PERCENTAGE;
+  const discountedHourlyPrice = isPercentageDiscount
+    ? Math.max(
+        0,
+        Math.round(hourlyPriceNum * (1 - (discountValueNum ?? 0) / 100)),
+      )
+    : hourlyPriceNum;
   const currentTaxRate = getTaxRate(taxRateType, taxSettings);
   const taxIncludedHourlyPrice = calculateTaxIncludedPrice(
     hourlyPriceNum,
@@ -329,20 +330,22 @@ export function SpaceEditPricingTab({
                   <div className="flex items-center justify-between">
                     <span className="text-sm">時間料金</span>
                     <div className="space-y-0.5 text-right">
-                      {hasDiscount && (
+                      {isPercentageDiscount && (
                         <div className="text-xs text-muted-foreground line-through">
                           {formatCurrency(hourlyPriceNum)}（税抜）
                         </div>
                       )}
                       <div className="text-sm">
                         {formatCurrency(
-                          hasDiscount ? discountedHourlyPrice : hourlyPriceNum,
+                          isPercentageDiscount
+                            ? discountedHourlyPrice
+                            : hourlyPriceNum,
                         )}
                         （税抜）
                       </div>
                       <div className="text-sm font-semibold text-primary">
                         {formatCurrency(
-                          hasDiscount
+                          isPercentageDiscount
                             ? discountedTaxIncludedHourlyPrice
                             : taxIncludedHourlyPrice,
                         )}
@@ -355,7 +358,7 @@ export function SpaceEditPricingTab({
                       割引:{" "}
                       {discountType === DiscountType.PERCENTAGE
                         ? `${discountValueNum ?? 0}% OFF`
-                        : `${formatCurrency(discountValueNum ?? 0)}引`}
+                        : `${formatCurrency(discountValueNum ?? 0)}引（予約合計に適用）`}
                     </p>
                   )}
                 </div>
