@@ -507,6 +507,7 @@ describe("GCP production audit model", () => {
         [
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "ENABLED",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
               oidcToken: {
@@ -532,6 +533,7 @@ describe("GCP production audit model", () => {
         [
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "ENABLED",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
               headers: {
@@ -541,6 +543,7 @@ describe("GCP production audit model", () => {
           },
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/instagram-sync",
+            state: "ENABLED",
             httpTarget: {
               uri: "https://rental-space.myrrh-jp.com/api/cron/instagram-sync",
               oidcToken: {
@@ -552,6 +555,7 @@ describe("GCP production audit model", () => {
           },
           {
             name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/not-cron",
+            state: "PAUSED",
             httpTarget: {
               uri: "https://example.com/not-cron",
               headers: {
@@ -577,6 +581,102 @@ describe("GCP production audit model", () => {
       "reservation-reminder must not set HTTP Authorization header directly",
       "instagram-sync oidc serviceAccountEmail must be myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
       "instagram-sync oidc audience must be https://rental-space.myrrh-jp.com",
+    ]);
+  });
+
+  test("fails expected Cloud Scheduler jobs that are not ENABLED", () => {
+    const schedulerConfig = {
+      publicDomain: "https://rental-space.myrrh-jp.com",
+      schedulerServiceAccount:
+        "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+      expectedJobIds: [
+        "reservation-reminder",
+        "instagram-sync",
+        "calendar-sync",
+        "missing-http-target",
+      ],
+    };
+    const validOidcTarget = {
+      uri: "https://rental-space.myrrh-jp.com/api/cron/reservation-reminder",
+      oidcToken: {
+        serviceAccountEmail:
+          "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com",
+        audience: "https://rental-space.myrrh-jp.com",
+      },
+      headers: {},
+    };
+
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/reservation-reminder",
+            state: "PAUSED",
+            httpTarget: validOidcTarget,
+          },
+        ],
+        {
+          ...schedulerConfig,
+          expectedJobIds: ["reservation-reminder"],
+        },
+      ),
+    ).toEqual([
+      "reservation-reminder scheduler job must be ENABLED, got PAUSED",
+    ]);
+
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/instagram-sync",
+            state: "DISABLED",
+            httpTarget: {
+              ...validOidcTarget,
+              uri: "https://rental-space.myrrh-jp.com/api/cron/instagram-sync",
+            },
+          },
+        ],
+        {
+          ...schedulerConfig,
+          expectedJobIds: ["instagram-sync"],
+        },
+      ),
+    ).toEqual(["instagram-sync scheduler job must be ENABLED, got DISABLED"]);
+
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/calendar-sync",
+            httpTarget: {
+              ...validOidcTarget,
+              uri: "https://rental-space.myrrh-jp.com/api/cron/calendar-sync",
+            },
+          },
+        ],
+        {
+          ...schedulerConfig,
+          expectedJobIds: ["calendar-sync"],
+        },
+      ),
+    ).toEqual(["calendar-sync scheduler job must be ENABLED, got missing"]);
+
+    expect(
+      readCloudSchedulerOidcJobErrors(
+        [
+          {
+            name: "projects/myrrh-rental-space/locations/asia-northeast1/jobs/missing-http-target",
+            state: "PAUSED",
+          },
+        ],
+        {
+          ...schedulerConfig,
+          expectedJobIds: ["missing-http-target"],
+        },
+      ),
+    ).toEqual([
+      "missing-http-target scheduler job must be ENABLED, got PAUSED",
+      "missing-http-target missing httpTarget",
     ]);
   });
 
@@ -1839,6 +1939,12 @@ describe("GCP production audit model", () => {
     );
     expect(auditScript).toContain("schedulerServiceAccountKeys");
     expect(auditScript).toContain('"--managed-by=user"');
+    expect(auditScript).toContain(
+      "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken,state)",
+    );
+    expect(auditScript).toContain(
+      "Cloud Scheduler cron jobs are ENABLED and use Google OIDC tokens only",
+    );
   });
 
   test("production audit script checks canonical Cloud Run runtime env", () => {

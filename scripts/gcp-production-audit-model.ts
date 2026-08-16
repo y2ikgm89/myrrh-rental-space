@@ -1412,6 +1412,12 @@ function readCloudSchedulerJobDisplayName(
   return "unknown-job";
 }
 
+/**
+ * Inspects Cloud Scheduler jobs for expected cron OIDC posture.
+ * Expected jobs must also be `ENABLED` (`state !== "ENABLED"` fails, including
+ * missing state). Official Job.State:
+ * https://cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs#Job.State
+ */
 export function readCloudSchedulerOidcJobErrors(
   value: unknown,
   config: CloudSchedulerOidcAuditConfig,
@@ -1433,8 +1439,17 @@ export function readCloudSchedulerOidcJobErrors(
     const httpTarget = record["httpTarget"];
     const jobName = readCloudSchedulerJobDisplayName(record);
     const isExpectedJob = expectedJobIdSet.has(jobName);
+    const state = record["state"];
+    const stateErrors =
+      isExpectedJob && state !== "ENABLED"
+        ? [
+            `${jobName} scheduler job must be ENABLED, got ${describeUnknown(state, "missing")}`,
+          ]
+        : [];
     if (!isRecord(httpTarget)) {
-      return isExpectedJob ? [`${jobName} missing httpTarget`] : [];
+      return isExpectedJob
+        ? [...stateErrors, `${jobName} missing httpTarget`]
+        : [];
     }
     const uri = httpTarget["uri"];
     const isPublicCronJob =
@@ -1483,7 +1498,7 @@ export function readCloudSchedulerOidcJobErrors(
       }
     }
 
-    return errors;
+    return [...stateErrors, ...errors];
   });
 
   return [...missingJobErrors, ...jobConfigErrors];
