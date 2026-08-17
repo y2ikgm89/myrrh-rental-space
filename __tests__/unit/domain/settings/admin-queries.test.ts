@@ -23,8 +23,6 @@ const mockStripeUpsert = mock(() =>
     stripeAccountId: null,
     stripeCurrency: "jpy",
     stripePaymentMethodTypes: ["card"],
-    stripeLastTestedAt: null,
-    stripeConnectionStatus: null,
   }),
 );
 
@@ -34,8 +32,6 @@ const mockGoogleCalendarUpsert = mock(() =>
     googleCalendarEnabled: false,
     googleCalendarServiceAccountJson: "encrypted-service-account-json",
     googleCalendarId: null,
-    googleCalendarLastTestedAt: null,
-    googleCalendarConnectionStatus: null,
     googleCalendarReminderMinutes: null,
     icalAttachmentEnabled: true,
     addToCalendarLinksEnabled: true,
@@ -65,8 +61,6 @@ const mockResendUpsert = mock(() =>
     ...singletonTimestamps,
     resendApiKey: "encrypted-resend-api-key",
     resendWebhookSecret: null,
-    resendLastTestedAt: null,
-    resendConnectionStatus: null,
   }),
 );
 
@@ -75,8 +69,6 @@ const mockTurnstileUpsert = mock(() =>
     ...singletonTimestamps,
     turnstileSiteKey: null,
     turnstileSecretKey: "encrypted-turnstile-secret-key",
-    turnstileLastTestedAt: null,
-    turnstileConnectionStatus: null,
   }),
 );
 
@@ -84,8 +76,6 @@ const mockGoogleMapsUpsert = mock(() =>
   Promise.resolve({
     ...singletonTimestamps,
     googleMapsApiKey: "encrypted-google-maps-api-key",
-    googleMapsLastTestedAt: null,
-    googleMapsConnectionStatus: null,
   }),
 );
 
@@ -106,8 +96,6 @@ const mockSwitchbotUpsert = mock(() =>
     switchbotEnabled: false,
     switchbotOpenToken: null,
     switchbotSecretKey: null,
-    switchbotConnectionStatus: null,
-    switchbotLastTestedAt: null,
     switchbotPasscodeBufferMinutes: 15,
     switchbotWebhookPathToken: null,
   }),
@@ -354,6 +342,10 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsSwitchbot: {
       upsert: mockSwitchbotUpsert,
+    },
+    integrationHealth: {
+      findMany: mock(() => Promise.resolve([])),
+      findUnique: mock(() => Promise.resolve(null)),
     },
   },
 }));

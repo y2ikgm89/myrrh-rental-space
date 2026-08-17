@@ -31,6 +31,8 @@ import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 const instagramOAuthCallbackQuerySchema = z.object({
@@ -169,6 +171,10 @@ export async function GET(request: NextRequest) {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "instagramOAuthCallback" },
+    });
+    await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+      success: false,
+      error,
     });
 
     return redirectToSettings({

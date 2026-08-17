@@ -17,6 +17,8 @@
 import "server-only";
 import { createHmac, randomUUID } from "crypto";
 import { z } from "zod";
+import { notifyConnectionApiResult } from "@/shared/lib/integration-health-port";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 const API_BASE = "https://api.switch-bot.com/v1.1";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -92,40 +94,56 @@ async function request<T>(
     // this shape; parse it before envelopeSchema so logs are not "unexpected form".
     // @see https://github.com/OpenWonderLabs/SwitchBotAPI#request-limit
     if (response.status === 401) {
-      return {
+      return recordSwitchBotHealth({
         ok: false,
         statusCode: 401,
         message:
           "SwitchBot API 認証エラー（Open Token 無効または日次リクエスト上限 10,000 件超過）",
-      };
+      });
     }
 
     const raw: unknown = await response.json();
     const parsed = envelopeSchema.safeParse(raw);
     if (!parsed.success) {
-      return {
+      return recordSwitchBotHealth({
         ok: false,
         statusCode: response.status,
         message: "SwitchBot API から予期しない形式の応答が返されました",
-      };
+      });
     }
 
     if (parsed.data.statusCode !== 100) {
-      return {
+      return recordSwitchBotHealth({
         ok: false,
         statusCode: parsed.data.statusCode,
         message: parsed.data.message || "SwitchBot API がエラーを返しました",
-      };
+      });
     }
 
-    return { ok: true, body: parsed.data.body as T };
+    return recordSwitchBotHealth({ ok: true, body: parsed.data.body as T });
   } catch (error) {
-    return {
+    return recordSwitchBotHealth({
       ok: false,
       statusCode: 0,
       message: error instanceof Error ? error.message : "接続エラー",
-    };
+    });
   }
+}
+
+async function recordSwitchBotHealth<T>(
+  result: SwitchBotApiResult<T>,
+): Promise<SwitchBotApiResult<T>> {
+  if (result.ok) {
+    await notifyConnectionApiResult(IntegrationKey.SWITCHBOT, {
+      success: true,
+    });
+    return result;
+  }
+  await notifyConnectionApiResult(IntegrationKey.SWITCHBOT, {
+    success: false,
+    error: { status: result.statusCode, message: result.message },
+  });
+  return result;
 }
 
 export type SwitchBotPasscodeType =

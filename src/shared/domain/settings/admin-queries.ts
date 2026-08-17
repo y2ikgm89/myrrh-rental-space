@@ -6,7 +6,13 @@ import {
   DiscountCombinationMode,
   TaxDisplayMode,
   ConnectionStatus,
+  IntegrationKey,
 } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  getConnectionHealth,
+  getConnectionHealthMap,
+  type ConnectionHealthSnapshot,
+} from "@/shared/domain/settings/connection-health";
 import type {
   AdminTaxSettings,
   DiscountSettingsData,
@@ -146,6 +152,7 @@ function toSettingsData(
     stripeWebhookSecretMasked: string | null;
     googleCalendarServiceAccountEmailMasked: string | null;
     googleCalendarServiceAccountConfigured: boolean;
+    health: Record<IntegrationKey, ConnectionHealthSnapshot>;
   },
 ): Serialized<SettingsData> {
   return toPlainObject({
@@ -228,8 +235,8 @@ function toSettingsData(
     stripeAccountId: stripe.stripeAccountId,
     stripeCurrency: stripe.stripeCurrency,
     stripePaymentMethodTypes: stripe.stripePaymentMethodTypes,
-    stripeLastTestedAt: stripe.stripeLastTestedAt,
-    stripeConnectionStatus: stripe.stripeConnectionStatus,
+    stripeLastTestedAt: options.health[IntegrationKey.STRIPE].lastCheckedAt,
+    stripeConnectionStatus: options.health[IntegrationKey.STRIPE].status,
     cookieConsentEnabled: system.cookieConsentEnabled,
     cookieConsentMessage: system.cookieConsentMessage,
     cookieConsentAcceptText: system.cookieConsentAcceptText,
@@ -250,9 +257,10 @@ function toSettingsData(
     announcementBarGlassAnimation: carousel.glassAnimation,
     googleCalendarEnabled: googleCalendar.googleCalendarEnabled,
     googleCalendarId: googleCalendar.googleCalendarId,
-    googleCalendarLastTestedAt: googleCalendar.googleCalendarLastTestedAt,
+    googleCalendarLastTestedAt:
+      options.health[IntegrationKey.GOOGLE_CALENDAR].lastCheckedAt,
     googleCalendarConnectionStatus:
-      googleCalendar.googleCalendarConnectionStatus,
+      options.health[IntegrationKey.GOOGLE_CALENDAR].status,
     googleBusinessProfileEnabled:
       googleBusinessProfile.googleBusinessProfileEnabled,
     googleCalendarReminderMinutes: googleCalendar.googleCalendarReminderMinutes,
@@ -342,22 +350,28 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
 }
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
-  const {
-    features,
-    carousel,
-    system,
-    seo,
-    analytics,
-    layout,
-    sidebar,
-    organization,
-    commerce,
-    notification,
-    reservation,
-    stripe,
-    googleCalendar,
-    googleBusinessProfile,
-  } = await getOrCreateSettingsBundle();
+  const [
+    {
+      features,
+      carousel,
+      system,
+      seo,
+      analytics,
+      layout,
+      sidebar,
+      organization,
+      commerce,
+      notification,
+      reservation,
+      stripe,
+      googleCalendar,
+      googleBusinessProfile,
+    },
+    health,
+  ] = await Promise.all([
+    getOrCreateSettingsBundle(),
+    getConnectionHealthMap(),
+  ]);
 
   return toSettingsData(
     features,
@@ -379,27 +393,34 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
       stripeWebhookSecretMasked: null,
       googleCalendarServiceAccountEmailMasked: null,
       googleCalendarServiceAccountConfigured: false,
+      health,
     },
   );
 }
 
 export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
-  const {
-    features,
-    carousel,
-    system,
-    seo,
-    analytics,
-    layout,
-    sidebar,
-    organization,
-    commerce,
-    notification,
-    reservation,
-    stripe,
-    googleCalendar,
-    googleBusinessProfile,
-  } = await getOrCreateSettingsBundle();
+  const [
+    {
+      features,
+      carousel,
+      system,
+      seo,
+      analytics,
+      layout,
+      sidebar,
+      organization,
+      commerce,
+      notification,
+      reservation,
+      stripe,
+      googleCalendar,
+      googleBusinessProfile,
+    },
+    health,
+  ] = await Promise.all([
+    getOrCreateSettingsBundle(),
+    getConnectionHealthMap(),
+  ]);
 
   const stripeSecretKeyMasked = stripe.stripeSecretKey
     ? maskSecretKey(
@@ -455,29 +476,29 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
       googleCalendarServiceAccountConfigured: Boolean(
         googleCalendar.googleCalendarServiceAccountJson,
       ),
+      health,
     },
   );
 }
 
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData> {
-  const settings = await prisma.settingsGoogleCalendar.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarEnabled: true,
-      googleCalendarId: true,
-      googleCalendarConnectionStatus: true,
-      googleCalendarLastTestedAt: true,
-      googleCalendarReminderMinutes: true,
-    },
-  });
+  const [settings, calendarHealth] = await Promise.all([
+    prisma.settingsGoogleCalendar.findUnique({
+      where: { id: "singleton" },
+      select: {
+        googleCalendarEnabled: true,
+        googleCalendarId: true,
+        googleCalendarReminderMinutes: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.GOOGLE_CALENDAR),
+  ]);
 
   return {
     enabled: settings?.googleCalendarEnabled ?? false,
     calendarId: settings?.googleCalendarId ?? null,
-    connectionStatus: parseCalendarConnectionStatus(
-      settings?.googleCalendarConnectionStatus ?? null,
-    ),
-    lastTestedAt: settings?.googleCalendarLastTestedAt ?? null,
+    connectionStatus: parseCalendarConnectionStatus(calendarHealth.status),
+    lastTestedAt: calendarHealth.lastCheckedAt,
     reminderMinutes: settings?.googleCalendarReminderMinutes ?? null,
   };
 }

@@ -105,6 +105,11 @@ mock.module("@/shared/db/prisma", () => ({
     },
   },
 }));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  clearConnectionHealth: mock(() => Promise.resolve()),
+  recordConnectionApiResult: mock(() => Promise.resolve()),
+  recordConnectionTestResult: mock(() => Promise.resolve()),
+}));
 mock.module("@/shared/lib/crypto", () => ({
   encrypt: (v: string) => `enc:${v}`,
   safeDecrypt: (v: string) => v,

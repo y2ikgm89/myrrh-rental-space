@@ -35,6 +35,12 @@ export async function register(): Promise<void> {
     const { assertCloudflareCredentials } =
       await import("@/shared/lib/cache/health");
     void assertCloudflareCredentials();
+
+    const { recordConnectionApiResult } =
+      await import("@/shared/domain/settings/connection-health");
+    const { bindConnectionHealthRecorder } =
+      await import("@/shared/lib/integration-health-port");
+    bindConnectionHealthRecorder(recordConnectionApiResult);
   }
 }
 

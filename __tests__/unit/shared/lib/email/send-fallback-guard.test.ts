@@ -57,6 +57,10 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: mockNormalizeError,
 }));
 
+mock.module("@/shared/lib/integration-health-port", () => ({
+  notifyConnectionApiResult: mock(() => Promise.resolve()),
+}));
+
 import { EMAIL_SEND_CONTEXT } from "./_email-test-fixtures";
 
 import { sendEmail } from "@/shared/lib/email/send";

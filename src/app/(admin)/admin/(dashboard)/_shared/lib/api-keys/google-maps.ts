@@ -8,6 +8,8 @@ import { z } from "zod";
 
 import type { ApiKeyTestResult } from "@/admin/types/api-keys";
 import { isValidGoogleMapsApiKey } from "@/admin/lib/validations/api-keys";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Geocoding API レスポンスのうち接続テストで参照するフィールドのみを検証する schema。
@@ -48,6 +50,10 @@ export async function testGoogleMapsConnection(
     const rawData: unknown = await response.json();
     const parsed = geocodeResponseSchema.safeParse(rawData);
     if (!parsed.success) {
+      await recordConnectionApiResult(IntegrationKey.GOOGLE_MAPS, {
+        success: false,
+        error: new Error("Google Maps API returned an unexpected response"),
+      });
       return {
         success: false,
         error: "Google Maps API から予期しない形式の応答が返されました",
@@ -55,13 +61,22 @@ export async function testGoogleMapsConnection(
     }
     const data = parsed.data;
 
-    switch (data.status) {
-      case "OK":
-        return {
-          success: true,
-          message: "Google Maps APIへの接続に成功しました",
-        };
+    if (data.status === "OK") {
+      await recordConnectionApiResult(IntegrationKey.GOOGLE_MAPS, {
+        success: true,
+      });
+      return {
+        success: true,
+        message: "Google Maps APIへの接続に成功しました",
+      };
+    }
 
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_MAPS, {
+      success: false,
+      error: { status: data.status, message: data.error_message },
+    });
+
+    switch (data.status) {
       case "REQUEST_DENIED":
         return {
           success: false,
@@ -88,6 +103,10 @@ export async function testGoogleMapsConnection(
         };
     }
   } catch (error) {
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_MAPS, {
+      success: false,
+      error,
+    });
     if (error instanceof Error && error.name === "TimeoutError") {
       return {
         success: false,

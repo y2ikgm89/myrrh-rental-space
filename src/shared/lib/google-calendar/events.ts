@@ -15,7 +15,45 @@ import type {
 } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
+import {
+  extractStatusCode,
+  withGoogleApiRetry,
+} from "@/shared/lib/google-api/retry";
+
+const CALENDAR_EVENT_ID_PREFIX = {
+  reservation: "r",
+  reservationSeries: "s",
+  eventSlot: "t",
+} as const;
+
+const UUID_HEX_RE = /^[0-9a-f]{32}$/;
+
+export type GoogleCalendarEventIdKind = keyof typeof CALENDAR_EVENT_ID_PREFIX;
+
+/**
+ * 予約 / 定期予約 / イベント枠の UUID から、Calendar `events.insert` 用の
+ * 決定論的 event ID を作る。
+ *
+ * 公式: 文字は base32hex（a-v / 0-9）、長さ 5–1024。UUID hex は部分集合。
+ * プレフィックスは g–v 帯（hex 外）で種別を区別する。
+ *
+ * @see https://developers.google.com/calendar/api/v3/reference/events/insert
+ */
+export function buildGoogleCalendarEventId(
+  kind: GoogleCalendarEventIdKind,
+  sourceId: string,
+): string {
+  const stripped = sourceId.replaceAll("-", "").toLowerCase();
+  const hex = UUID_HEX_RE.test(stripped)
+    ? stripped
+    : Buffer.from(sourceId, "utf8").toString("hex");
+  if (hex.length < 4) {
+    throw new Error(
+      `Invalid source id for Google Calendar event id: ${sourceId}`,
+    );
+  }
+  return `${CALENDAR_EVENT_ID_PREFIX[kind]}${hex}`;
+}
 
 /**
  * `reminderMinutes` を Google Calendar `reminders` オブジェクトに変換する。
@@ -53,11 +91,9 @@ export function buildEventBody(
   options: { withMeet?: boolean },
 ): calendar_v3.Schema$Event {
   const withMeet = options.withMeet === true && params.startTime;
-  const conferenceRequestId = withMeet
-    ? `myrrh-${params.startTime.getTime()}-${Math.random().toString(36).slice(2, 10)}`
-    : undefined;
 
   return omitUndefined({
+    id: params.id,
     summary: params.summary,
     description: params.description,
     location: params.location,
@@ -79,7 +115,7 @@ export function buildEventBody(
     conferenceData: withMeet
       ? {
           createRequest: {
-            requestId: conferenceRequestId ?? "myrrh-fallback",
+            requestId: params.id,
             conferenceSolutionKey: { type: "hangoutsMeet" },
           },
         }
@@ -119,6 +155,17 @@ export async function createCalendarEvent(
       event: response.data,
     });
   } catch (error) {
+    if (extractStatusCode(error) === 409) {
+      const existing = await getCalendarEvent(ctx, params.id);
+      if (existing.success && existing.event) {
+        return omitUndefined({
+          success: true,
+          eventId: existing.event.id ?? params.id,
+          eventUrl: existing.event.htmlLink ?? undefined,
+          event: existing.event,
+        });
+      }
+    }
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
@@ -277,7 +324,7 @@ export async function addMeetConferenceToCalendarEvent(
     const requestBody: calendar_v3.Schema$Event = {
       conferenceData: {
         createRequest: {
-          requestId: `myrrh-retry-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          requestId: eventId,
           conferenceSolutionKey: { type: "hangoutsMeet" },
         },
       },

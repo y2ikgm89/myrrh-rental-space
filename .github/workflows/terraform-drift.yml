@@ -126,6 +126,7 @@ jobs:
           # error で plan abort)。drift 検知の base として GH Secret 側 value と
           # Cloudflare API 現行 value が一致することを毎夜確認する意味も持つ。
           TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
+          TF_VAR_monitoring_alert_email: ${{ secrets.MONITORING_ALERT_EMAIL_TF }}
         run: |
           set +e
           terraform plan -detailed-exitcode -lock=false -no-color -out=drift.plan

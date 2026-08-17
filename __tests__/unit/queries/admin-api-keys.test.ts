@@ -66,6 +66,8 @@ mock.module("@/shared/domain/instagram/queries", () => ({
     tokenExpiresAt: null,
     tokenExpiryDays: null,
     shouldRefreshToken: false,
+    connectionStatus: null,
+    lastTestedAt: null,
   }),
 }));
 

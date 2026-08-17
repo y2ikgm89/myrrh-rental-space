@@ -42,7 +42,10 @@ import {
 import { omitUndefined } from "@/shared/lib/serialize";
 import { MEETING_PROVIDER } from "@/shared/lib/validations/enums/prisma-types";
 import { OUTBOUND_EVENT_MARKER } from "@/shared/lib/calendar-sync/loop-prevention";
-import type { CalendarEventParams } from "@/shared/lib/google-calendar";
+import {
+  buildGoogleCalendarEventId,
+  type CalendarEventParams,
+} from "@/shared/lib/google-calendar";
 import type {
   EventSyncData,
   SyncResult,
@@ -81,6 +84,7 @@ function formatEventCalendarEvent(data: EventSyncData): CalendarEventParams {
   ];
 
   return omitUndefined({
+    id: buildGoogleCalendarEventId("eventSlot", data.slotId),
     summary: data.title,
     description: descriptionLines.join("\n"),
     location: data.location ?? undefined,

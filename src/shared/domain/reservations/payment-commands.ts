@@ -26,6 +26,7 @@ import {
   settleCheckoutSessionWrite,
 } from "@/shared/domain/payment/checkout-session-write-orchestration";
 import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
+import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
@@ -288,46 +289,48 @@ export async function createCheckoutSessionCommand(input: {
       Math.floor(claimedAt.getTime() / 1000) +
       PENDING_RESERVATION_EXPIRY_MINUTES * 60;
 
-    const session = await client.checkout.sessions.create(
-      {
-        mode: "payment",
-        payment_method_types: paymentMethodTypes,
-        line_items: [
-          {
-            price_data: {
-              currency,
-              product_data: {
-                name: `予約: ${authoritative.space.name}`,
-              },
-              unit_amount: toStripeUnitAmount(
-                authoritative.totalPriceWithTax,
+    const session = await withStripeConnectionHealth(() =>
+      client.checkout.sessions.create(
+        {
+          mode: "payment",
+          payment_method_types: paymentMethodTypes,
+          line_items: [
+            {
+              price_data: {
                 currency,
-              ),
+                product_data: {
+                  name: `予約: ${authoritative.space.name}`,
+                },
+                unit_amount: toStripeUnitAmount(
+                  authoritative.totalPriceWithTax,
+                  currency,
+                ),
+              },
+              quantity: 1,
             },
-            quantity: 1,
+          ],
+          metadata: {
+            reservationId,
           },
-        ],
-        metadata: {
-          reservationId,
+          customer_email:
+            authoritative.guestEmail ?? authoritative.customer.email,
+          expires_at: expiresAt,
+          success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
+          cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
         },
-        customer_email:
-          authoritative.guestEmail ?? authoritative.customer.email,
-        expires_at: expiresAt,
-        success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
-        cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
-      },
-      {
-        // **key は payload と一緒に動かす。** `expires_at` は claim 時刻由来なので
-        // 再 checkout のたびに変わる。key を予約 ID で固定すると、24 時間以内の
-        // 再試行で Stripe が「同じ key に違う parameters」として 400
-        // (`idempotency_error`) を返し、**顧客が支払えなくなる**。
-        // 逆に偶然 `expires_at` まで一致した場合は初回の session がそのまま返り、
-        // 既に期限切れの URL を掴ませる。どちらに転んでも壊れる。
-        //
-        // key の役目は「1 回の呼び出しのリトライで session を二重に作らない」こと。
-        // `expiresAt` は 1 回の呼び出しの中では不変なので、その役目は保たれる。
-        idempotencyKey: `checkout/reservation/${reservationId}/${String(expiresAt)}`,
-      },
+        {
+          // **key は payload と一緒に動かす。** `expires_at` は claim 時刻由来なので
+          // 再 checkout のたびに変わる。key を予約 ID で固定すると、24 時間以内の
+          // 再試行で Stripe が「同じ key に違う parameters」として 400
+          // (`idempotency_error`) を返し、**顧客が支払えなくなる**。
+          // 逆に偶然 `expires_at` まで一致した場合は初回の session がそのまま返り、
+          // 既に期限切れの URL を掴ませる。どちらに転んでも壊れる。
+          //
+          // key の役目は「1 回の呼び出しのリトライで session を二重に作らない」こと。
+          // `expiresAt` は 1 回の呼び出しの中では不変なので、その役目は保たれる。
+          idempotencyKey: `checkout/reservation/${reservationId}/${String(expiresAt)}`,
+        },
+      ),
     );
     createdSessionId = session.id;
 

@@ -28,6 +28,8 @@ import {
   GBP_OAUTH_STATE_COOKIE,
 } from "@/shared/lib/google-business-profile/oauth";
 import { saveGbpAuthState } from "@/shared/domain/google-business-profile/settings";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -112,6 +114,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       accountId: firstAccount.accountId,
       accountName: firstAccount.accountName,
     });
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_BUSINESS_PROFILE, {
+      success: true,
+    });
 
     invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INTEGRATION_SETTINGS, {
       skipCdnPurge: true,
@@ -126,6 +131,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "gbpOauthCallback" },
+    });
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_BUSINESS_PROFILE, {
+      success: false,
+      error: caughtError,
     });
     return redirectToIntegrationsError(request, "callback_failed");
   }

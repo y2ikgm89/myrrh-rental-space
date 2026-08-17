@@ -254,6 +254,11 @@ mock.module("@/shared/lib/reservation-status-token", () => ({
   createStatusToken: mockCreateStatusToken,
   STATUS_TOKEN_LIFETIME_MS: 90 * 24 * 60 * 60 * 1000,
 }));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  withStripeConnectionHealth: async <T>(run: () => Promise<T>) => run(),
+  recordConnectionSuccess: mock(() => Promise.resolve()),
+  recordConnectionFailure: mock(() => Promise.resolve()),
+}));
 
 const {
   createCheckoutSessionCommand,

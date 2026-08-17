@@ -17,7 +17,7 @@ import {
 import { requireSettingsManagePage } from "@/admin/helpers/page-auth";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
-import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
+import { getGbpSettings } from "@/shared/domain/google-business-profile/settings";
 import { hasGbpOAuthCredentials } from "@/shared/lib/google-business-profile/client";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { getAllSmartLockDevices } from "@/shared/domain/smart-lock/queries";
@@ -73,7 +73,7 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     googleMapsConfig,
     settings,
     instagramConfig,
-    gbpAuthState,
+    gbpSettings,
     smartLockDevices,
     smartLockLocations,
   ] = await Promise.all([
@@ -83,13 +83,13 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     getGoogleMapsConfig(),
     getSettings(),
     getInstagramConfig(),
-    getGbpAuthState(),
+    getGbpSettings(),
     getAllSmartLockDevices(),
     getActiveLocationsForSelect(),
   ]);
 
-  const gbpAuthInfo = gbpAuthState
-    ? { accountName: gbpAuthState.accountName }
+  const gbpAuthInfo = gbpSettings.auth
+    ? { accountName: gbpSettings.auth.accountName }
     : null;
 
   const tabs = [
@@ -130,6 +130,8 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
                 <GoogleBusinessProfileSection
                   oauthConfigured={hasGbpOAuthCredentials()}
                   authInfo={gbpAuthInfo}
+                  connectionStatus={gbpSettings.connectionStatus}
+                  lastTestedAt={gbpSettings.lastTestedAt?.toISOString() ?? null}
                 />
                 <TwoWaySyncSection settings={settings} />
               </div>

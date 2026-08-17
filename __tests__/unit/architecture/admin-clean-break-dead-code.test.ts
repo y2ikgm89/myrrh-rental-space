@@ -279,8 +279,6 @@ describe("admin clean-break dead code boundaries", () => {
     for (const gcalCommand of [
       "clearGoogleCalendarServiceAccount",
       "clearGoogleCalendarWebhook",
-      "recordGoogleCalendarConnectionError",
-      "recordGoogleCalendarConnectionSuccess",
       "saveGoogleCalendarWebhook",
       "updateEventImportEnabled",
       "updateGoogleCalendarSettings",

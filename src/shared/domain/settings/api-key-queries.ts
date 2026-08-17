@@ -23,19 +23,23 @@ import type {
   SwitchBotConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";
-import { parseConnectionStatus } from "@/shared/domain/settings/api-key-helpers";
-import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getConnectionHealth } from "@/shared/domain/settings/connection-health";
+import {
+  ConnectionStatus,
+  IntegrationKey,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 export async function getResendConfig(): Promise<ResendConfig> {
-  const settings = await prisma.settingsResend.findUnique({
-    where: { id: "singleton" },
-    select: {
-      resendApiKey: true,
-      resendWebhookSecret: true,
-      resendLastTestedAt: true,
-      resendConnectionStatus: true,
-    },
-  });
+  const [settings, health] = await Promise.all([
+    prisma.settingsResend.findUnique({
+      where: { id: "singleton" },
+      select: {
+        resendApiKey: true,
+        resendWebhookSecret: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.RESEND),
+  ]);
 
   const decryptedApiKey = settings?.resendApiKey
     ? safeDecryptToString(settings.resendApiKey, {
@@ -54,8 +58,8 @@ export async function getResendConfig(): Promise<ResendConfig> {
           }) || "****",
         )
       : null,
-    lastTestedAt: settings?.resendLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
+    lastTestedAt: health.lastCheckedAt,
+    connectionStatus: health.status,
     envFallbackActive: !decryptedApiKey && Boolean(serverEnv.RESEND_API_KEY),
   };
 }
@@ -115,15 +119,16 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
-  const settings = await prisma.settingsTurnstile.findUnique({
-    where: { id: "singleton" },
-    select: {
-      turnstileSiteKey: true,
-      turnstileSecretKey: true,
-      turnstileLastTestedAt: true,
-      turnstileConnectionStatus: true,
-    },
-  });
+  const [settings, health] = await Promise.all([
+    prisma.settingsTurnstile.findUnique({
+      where: { id: "singleton" },
+      select: {
+        turnstileSiteKey: true,
+        turnstileSecretKey: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.TURNSTILE),
+  ]);
 
   const decryptedSecretKey = settings?.turnstileSecretKey
     ? safeDecryptToString(settings.turnstileSecretKey, {
@@ -136,10 +141,8 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
     secretKeyMasked: settings?.turnstileSecretKey
       ? maskTurnstileKey(decryptedSecretKey || "****")
       : null,
-    lastTestedAt: settings?.turnstileLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.turnstileConnectionStatus,
-    ),
+    lastTestedAt: health.lastCheckedAt,
+    connectionStatus: health.status,
     envFallbackActive:
       !decryptedSecretKey && Boolean(serverEnv.TURNSTILE_SECRET_KEY),
   };
@@ -174,14 +177,15 @@ export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
 }
 
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  const settings = await prisma.settingsGoogleMaps.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleMapsApiKey: true,
-      googleMapsLastTestedAt: true,
-      googleMapsConnectionStatus: true,
-    },
-  });
+  const [settings, health] = await Promise.all([
+    prisma.settingsGoogleMaps.findUnique({
+      where: { id: "singleton" },
+      select: {
+        googleMapsApiKey: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.GOOGLE_MAPS),
+  ]);
 
   return {
     apiKeyMasked: settings?.googleMapsApiKey
@@ -191,10 +195,8 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
           }) || "****",
         )
       : null,
-    lastTestedAt: settings?.googleMapsLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.googleMapsConnectionStatus,
-    ),
+    lastTestedAt: health.lastCheckedAt,
+    connectionStatus: health.status,
   };
 }
 
@@ -239,17 +241,18 @@ export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
-  const settings = await prisma.settingsSwitchbot.findUnique({
-    where: { id: "singleton" },
-    select: {
-      switchbotEnabled: true,
-      switchbotOpenToken: true,
-      switchbotSecretKey: true,
-      switchbotPasscodeBufferMinutes: true,
-      switchbotLastTestedAt: true,
-      switchbotConnectionStatus: true,
-    },
-  });
+  const [settings, health] = await Promise.all([
+    prisma.settingsSwitchbot.findUnique({
+      where: { id: "singleton" },
+      select: {
+        switchbotEnabled: true,
+        switchbotOpenToken: true,
+        switchbotSecretKey: true,
+        switchbotPasscodeBufferMinutes: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.SWITCHBOT),
+  ]);
 
   return {
     enabled: settings?.switchbotEnabled ?? false,
@@ -268,10 +271,8 @@ export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
         )
       : null,
     passcodeBufferMinutes: settings?.switchbotPasscodeBufferMinutes ?? 15,
-    lastTestedAt: settings?.switchbotLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.switchbotConnectionStatus,
-    ),
+    lastTestedAt: health.lastCheckedAt,
+    connectionStatus: health.status,
   };
 }
 
@@ -407,7 +408,7 @@ export async function getIntegrationHealthSummary(): Promise<{
   readonly turnstile: boolean;
   readonly switchbot: boolean;
 }> {
-  const [resend, stripe, googleCalendar, turnstile, switchbot] =
+  const [resend, stripe, googleCalendar, turnstile, switchbot, calendarHealth] =
     await Promise.all([
       prisma.settingsResend.findUnique({
         where: { id: "singleton" },
@@ -421,7 +422,6 @@ export async function getIntegrationHealthSummary(): Promise<{
         where: { id: "singleton" },
         select: {
           googleCalendarEnabled: true,
-          googleCalendarConnectionStatus: true,
         },
       }),
       prisma.settingsTurnstile.findUnique({
@@ -436,6 +436,7 @@ export async function getIntegrationHealthSummary(): Promise<{
           switchbotSecretKey: true,
         },
       }),
+      getConnectionHealth(IntegrationKey.GOOGLE_CALENDAR),
     ]);
 
   return {
@@ -456,8 +457,7 @@ export async function getIntegrationHealthSummary(): Promise<{
     ),
     googleCalendar: Boolean(
       googleCalendar?.googleCalendarEnabled &&
-      googleCalendar?.googleCalendarConnectionStatus ===
-        ConnectionStatus.CONNECTED,
+      calendarHealth.status === ConnectionStatus.CONNECTED,
     ),
     turnstile: Boolean(
       safeDecryptToString(turnstile?.turnstileSecretKey, {

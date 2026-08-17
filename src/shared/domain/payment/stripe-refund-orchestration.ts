@@ -18,6 +18,7 @@ import {
   EVENT_REGISTRATION_REFUND_LOCK_NAMESPACE,
   RESERVATION_REFUND_LOCK_NAMESPACE,
 } from "@/shared/domain/advisory-lock-namespaces";
+import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 
 /**
  * Payment refund advisory lock namespaces.
@@ -326,13 +327,15 @@ export async function createStripeRefundOrThrow(input: {
   severity?: ErrorSeverityType;
 }): Promise<{ id: string; status: StripeRefundStatus }> {
   try {
-    const refund = await input.client.refunds.create(
-      {
-        payment_intent: input.paymentIntentId,
-        amount: toStripeUnitAmount(input.amount, input.stripeCurrency),
-        metadata: input.metadata,
-      },
-      { idempotencyKey: input.idempotencyKey },
+    const refund = await withStripeConnectionHealth(() =>
+      input.client.refunds.create(
+        {
+          payment_intent: input.paymentIntentId,
+          amount: toStripeUnitAmount(input.amount, input.stripeCurrency),
+          metadata: input.metadata,
+        },
+        { idempotencyKey: input.idempotencyKey },
+      ),
     );
     return {
       id: refund.id,

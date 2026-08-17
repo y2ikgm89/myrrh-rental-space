@@ -2,9 +2,12 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
-import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
-import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  IntegrationKey,
+  type CalendarSyncMethod,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import { clearConnectionHealth } from "@/shared/domain/settings/connection-health";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
@@ -81,8 +84,6 @@ export async function updateGoogleCalendarSettings(
     updateData.googleCalendarServiceAccountJson = encryptServiceAccountJson(
       data.serviceAccountJson,
     );
-    updateData.googleCalendarConnectionStatus = null;
-    updateData.googleCalendarLastTestedAt = null;
   }
 
   if (data.googleCalendarEnabled) {
@@ -112,40 +113,10 @@ export async function updateGoogleCalendarSettings(
     create: { id: "singleton", ...updateData },
     update: updateData,
   });
-}
 
-export async function recordGoogleCalendarConnectionSuccess(): Promise<void> {
-  const testedAt = new Date();
-
-  await prisma.settingsGoogleCalendar.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: ConnectionStatus.CONNECTED,
-    },
-    update: {
-      googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: ConnectionStatus.CONNECTED,
-    },
-  });
-}
-
-export async function recordGoogleCalendarConnectionError(): Promise<void> {
-  const testedAt = new Date();
-
-  await prisma.settingsGoogleCalendar.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: ConnectionStatus.ERROR,
-    },
-    update: {
-      googleCalendarLastTestedAt: testedAt,
-      googleCalendarConnectionStatus: ConnectionStatus.ERROR,
-    },
-  });
+  if (data.serviceAccountJson) {
+    await clearConnectionHealth(IntegrationKey.GOOGLE_CALENDAR);
+  }
 }
 
 export async function clearGoogleCalendarServiceAccount(): Promise<void> {
@@ -199,17 +170,14 @@ export async function clearGoogleCalendarServiceAccount(): Promise<void> {
       googleCalendarEnabled: false,
       googleCalendarTwoWaySyncEnabled: false,
       googleCalendarServiceAccountJson: null,
-      googleCalendarConnectionStatus: null,
-      googleCalendarLastTestedAt: null,
     },
     update: {
       googleCalendarEnabled: false,
       googleCalendarTwoWaySyncEnabled: false,
       googleCalendarServiceAccountJson: null,
-      googleCalendarConnectionStatus: null,
-      googleCalendarLastTestedAt: null,
     },
   });
+  await clearConnectionHealth(IntegrationKey.GOOGLE_CALENDAR);
 }
 
 export async function updateTwoWaySyncSettings(

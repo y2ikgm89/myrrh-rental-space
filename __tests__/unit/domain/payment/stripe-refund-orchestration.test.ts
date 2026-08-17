@@ -39,6 +39,12 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { HIGH: "HIGH", CRITICAL: "CRITICAL" },
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  withStripeConnectionHealth: async <T>(run: () => Promise<T>) => run(),
+  recordConnectionSuccess: mock(() => Promise.resolve()),
+  recordConnectionFailure: mock(() => Promise.resolve()),
+}));
+
 const {
   PAYMENT_REFUND_LOCK_NAMESPACE,
   REFUND_AGGREGATE_EXCLUDED_STATUSES,

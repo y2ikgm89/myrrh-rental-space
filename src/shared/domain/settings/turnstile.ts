@@ -18,6 +18,7 @@ import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import { isE2ESecurityBypassAllowedFromHeaders } from "@/shared/lib/e2e-runtime";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
 import {
   isTurnstileEnabled as isTurnstileEnabledLib,
   verifyTurnstileToken as verifyTurnstileTokenLib,
@@ -26,6 +27,7 @@ import {
   type VerifyTurnstileResult,
 } from "@/shared/lib/turnstile";
 import type { TurnstileAction } from "@/shared/lib/turnstile-actions";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 export type {
   TurnstileVerifyContext,
@@ -71,7 +73,48 @@ export async function isTurnstileEnabled(): Promise<boolean> {
 export async function verifyTurnstileToken(
   params: VerifyTurnstileParams,
 ): Promise<VerifyTurnstileResult> {
-  return verifyTurnstileTokenLib(await resolveTurnstileVerifyContext(), params);
+  return verifyTurnstileTokenWithHealth(
+    await resolveTurnstileVerifyContext(),
+    params,
+  );
+}
+
+const TURNSTILE_CONNECTION_ERROR_CODES: ReadonlySet<string> = new Set([
+  "invalid-input-secret",
+  "invalid-response",
+  "network-error",
+]);
+
+function isTurnstileConnectionSignal(errorCodes: readonly string[]): boolean {
+  return errorCodes.some(
+    (code) =>
+      TURNSTILE_CONNECTION_ERROR_CODES.has(code) || code.startsWith("http-"),
+  );
+}
+
+async function recordTurnstileSiteverify(
+  result: VerifyTurnstileResult,
+): Promise<void> {
+  if (result.success) {
+    await recordConnectionApiResult(IntegrationKey.TURNSTILE, {
+      success: true,
+    });
+    return;
+  }
+  if (!isTurnstileConnectionSignal(result.errorCodes)) return;
+  await recordConnectionApiResult(IntegrationKey.TURNSTILE, {
+    success: false,
+    error: { "error-codes": result.errorCodes },
+  });
+}
+
+async function verifyTurnstileTokenWithHealth(
+  context: TurnstileVerifyContext,
+  params: VerifyTurnstileParams,
+): Promise<VerifyTurnstileResult> {
+  const result = await verifyTurnstileTokenLib(context, params);
+  await recordTurnstileSiteverify(result);
+  return result;
 }
 
 /**
@@ -115,7 +158,7 @@ export async function validateTurnstile(
     };
   }
 
-  const result = await verifyTurnstileTokenLib(context, {
+  const result = await verifyTurnstileTokenWithHealth(context, {
     token: params.token,
     expectedAction: params.expectedAction,
     remoteip: await getClientIpFromHeaders(),

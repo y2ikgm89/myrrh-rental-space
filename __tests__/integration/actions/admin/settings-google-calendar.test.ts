@@ -38,8 +38,7 @@ const mockTestServiceAccountConnection = mock(
     accountEmail: "sa@test.iam.gserviceaccount.com",
   }),
 );
-const mockRecordGoogleCalendarConnectionSuccess = mock(async () => undefined);
-const mockRecordGoogleCalendarConnectionError = mock(async () => undefined);
+const mockRecordConnectionTestResult = mock(async () => undefined);
 
 mock.module("server-only", () => ({}));
 mock.module("next/cache", () => ({
@@ -102,14 +101,13 @@ mock.module("@/shared/lib/google-calendar", () => ({
 mock.module("@/shared/domain/settings/google-calendar-commands", () => ({
   clearGoogleCalendarServiceAccount: async () => undefined,
   clearGoogleCalendarWebhook: async () => undefined,
-  recordGoogleCalendarConnectionError: () =>
-    mockRecordGoogleCalendarConnectionError(),
-  recordGoogleCalendarConnectionSuccess: () =>
-    mockRecordGoogleCalendarConnectionSuccess(),
   saveGoogleCalendarWebhook: async () => undefined,
   updateEventImportEnabled: async () => undefined,
   updateGoogleCalendarSettings: async () => undefined,
   updateTwoWaySyncSettings: async () => undefined,
+}));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionTestResult: mockRecordConnectionTestResult,
 }));
 mock.module("@/shared/domain/settings/google-calendar", () => ({
   getServiceAccountClient: async () => null,
@@ -142,8 +140,7 @@ beforeEach(() => {
   mockGetGoogleCalendarServiceAccountConfig.mockReset();
   mockSafeDecryptToString.mockReset();
   mockTestServiceAccountConnection.mockReset();
-  mockRecordGoogleCalendarConnectionSuccess.mockReset();
-  mockRecordGoogleCalendarConnectionError.mockReset();
+  mockRecordConnectionTestResult.mockReset();
 
   mockGetGoogleCalendarSettings.mockResolvedValue({
     enabled: false,
@@ -174,7 +171,7 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         code: "VALIDATION",
       });
       expect(mockTestServiceAccountConnection).not.toHaveBeenCalled();
-      expect(mockRecordGoogleCalendarConnectionSuccess).not.toHaveBeenCalled();
+      expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
     });
 
     test("無効または欠落した保存済みカレンダーIDでは成功しない", async () => {
@@ -197,7 +194,7 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         error: expect.any(String),
       });
       expect("calendarName" in result).toBe(false);
-      expect(mockRecordGoogleCalendarConnectionSuccess).not.toHaveBeenCalled();
+      expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
     });
 
     test("保存済み資格情報で testServiceAccountConnection を実行し結果を記録する", async () => {
@@ -224,7 +221,7 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         serviceAccountJson: validServiceAccountJson,
         calendarId: "primary",
       });
-      expect(mockRecordGoogleCalendarConnectionSuccess).toHaveBeenCalled();
+      expect(mockRecordConnectionTestResult).toHaveBeenCalled();
     });
   });
 

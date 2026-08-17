@@ -43,10 +43,11 @@ import {
   deleteCalendarEvent,
   fetchEventInstances,
 } from "@/shared/domain/settings/google-calendar-api";
-import type {
-  CalendarEventInstance,
-  CalendarEventParams,
-  CalendarEventResult,
+import {
+  buildGoogleCalendarEventId,
+  type CalendarEventInstance,
+  type CalendarEventParams,
+  type CalendarEventResult,
 } from "@/shared/lib/google-calendar";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -90,6 +91,7 @@ function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
   }
 
   return omitUndefined({
+    id: buildGoogleCalendarEventId("reservation", data.reservationId),
     summary: `【予約】${data.spaceName} - ${data.customerName}様`,
     description: descriptionLines.join("\n"),
     location: data.location,
@@ -748,6 +750,7 @@ export async function syncReservationSeriesToCalendar(
     );
 
     const eventParams: CalendarEventParams = omitUndefined({
+      id: buildGoogleCalendarEventId("reservationSeries", series.id),
       summary: `【定期予約】${series.spaceName} - ${customerName}様`,
       description: [
         `${OUTBOUND_RESERVATION_MARKER} ${series.id.slice(0, 8).toUpperCase()}`,

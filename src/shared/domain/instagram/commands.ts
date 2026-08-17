@@ -8,6 +8,11 @@ import { buildOrderScopeLockSql } from "@/shared/domain/order-sql";
 import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { InstagramMediaItem } from "@/shared/lib/instagram";
 import type { SaveInstagramTokenResult } from "@/shared/domain/instagram/types";
+import {
+  clearConnectionHealth,
+  recordConnectionApiResult,
+} from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 function getMetadataString(
   metadata: Record<string, unknown> | undefined,
@@ -61,6 +66,7 @@ export async function saveInstagramToken(
       instagramAccountType: accountType ?? null,
     },
   });
+  await recordConnectionApiResult(IntegrationKey.INSTAGRAM, { success: true });
 
   return { username };
 }
@@ -93,6 +99,7 @@ export async function connectInstagramOAuthAccount(input: {
       instagramAccountType: input.accountType,
     },
   });
+  await recordConnectionApiResult(IntegrationKey.INSTAGRAM, { success: true });
 }
 
 export async function refreshInstagramAccessToken(input: {
@@ -135,6 +142,7 @@ export async function disconnectInstagram(): Promise<void> {
 
     await tx.instagramPost.deleteMany({});
   });
+  await clearConnectionHealth(IntegrationKey.INSTAGRAM);
 }
 
 /**

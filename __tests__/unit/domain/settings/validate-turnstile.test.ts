@@ -71,6 +71,10 @@ mock.module("@/shared/lib/turnstile", () => ({
   verifyTurnstileToken: mockVerifyTurnstileTokenLib,
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionApiResult: mock(() => Promise.resolve()),
+}));
+
 const { validateTurnstile } =
   await import("@/shared/domain/settings/turnstile");
 

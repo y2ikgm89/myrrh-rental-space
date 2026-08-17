@@ -4,10 +4,9 @@ const mockSettingsResendFindUnique = mock<
   () => Promise<{
     resendApiKey: string | null;
     resendWebhookSecret: string | null;
-    resendLastTestedAt: Date | null;
-    resendConnectionStatus: string | null;
   } | null>
 >(() => Promise.resolve(null));
+const mockIntegrationHealthFindUnique = mock(() => Promise.resolve(null));
 const mockSettingsStripeFindUnique = mock<
   () => Promise<{
     stripeSecretKey: string | null;
@@ -58,6 +57,7 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsTurnstile: { findUnique: mockSettingsTurnstileFindUnique },
     settingsSwitchbot: { findUnique: mockSettingsSwitchbotFindUnique },
+    integrationHealth: { findUnique: mockIntegrationHealthFindUnique },
   },
 }));
 
@@ -117,8 +117,6 @@ describe("getResendConfig envFallbackActive", () => {
     mockSettingsResendFindUnique.mockResolvedValue({
       resendApiKey: "re_db_usable_key_value",
       resendWebhookSecret: null,
-      resendLastTestedAt: null,
-      resendConnectionStatus: null,
     });
 
     const config = await getResendConfig();

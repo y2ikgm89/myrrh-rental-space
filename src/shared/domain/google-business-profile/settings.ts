@@ -23,6 +23,14 @@ import {
 import { isRecord } from "@/shared/lib/serialize";
 
 import type { GbpAuthState } from "@/shared/lib/google-business-profile/types";
+import {
+  clearConnectionHealth,
+  getConnectionHealth,
+} from "@/shared/domain/settings/connection-health";
+import {
+  IntegrationKey,
+  type ConnectionStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 const GBP_AUTH_PURPOSE = SETTINGS_CRYPTO_PURPOSES.googleBusinessProfileAuth;
 
@@ -131,4 +139,21 @@ export async function clearGbpAuthState(): Promise<void> {
       googleBusinessProfileEnabled: false,
     },
   });
+  await clearConnectionHealth(IntegrationKey.GOOGLE_BUSINESS_PROFILE);
+}
+
+export async function getGbpSettings(): Promise<{
+  auth: GbpAuthState | null;
+  connectionStatus: ConnectionStatus | null;
+  lastTestedAt: Date | null;
+}> {
+  const [auth, health] = await Promise.all([
+    getGbpAuthState(),
+    getConnectionHealth(IntegrationKey.GOOGLE_BUSINESS_PROFILE),
+  ]);
+  return {
+    auth,
+    connectionStatus: health.status,
+    lastTestedAt: health.lastCheckedAt,
+  };
 }

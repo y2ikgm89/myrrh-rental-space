@@ -7,11 +7,11 @@ import {
   SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
   toExpectedUpdatedAt,
 } from "@/shared/domain/settings/commands/optimistic";
-import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { keysHaveMatchingMode } from "@/shared/lib/stripe-shared";
-import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
+import { clearConnectionHealth } from "@/shared/domain/settings/connection-health";
 
 export type StripeSettingsInput = {
   stripePublishableKey?: string | null | undefined;
@@ -105,25 +105,10 @@ export async function updateStripeSettings(
       throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
     }
   });
-}
 
-export async function recordStripeConnectionSuccess(
-  accountId: string | undefined,
-): Promise<void> {
-  await prisma.settingsStripe.upsert({
-    where: { id: "singleton" },
-    create: omitUndefined({
-      id: "singleton",
-      stripeLastTestedAt: new Date(),
-      stripeConnectionStatus: ConnectionStatus.CONNECTED,
-      stripeAccountId: accountId,
-    }),
-    update: omitUndefined({
-      stripeLastTestedAt: new Date(),
-      stripeConnectionStatus: ConnectionStatus.CONNECTED,
-      stripeAccountId: accountId,
-    }),
-  });
+  if (data.stripeSecretKey) {
+    await clearConnectionHealth(IntegrationKey.STRIPE);
+  }
 }
 
 export async function clearStripeKeys(): Promise<void> {
@@ -135,16 +120,13 @@ export async function clearStripeKeys(): Promise<void> {
       stripeWebhookSecret: null,
       stripePublishableKey: null,
       stripeAccountId: null,
-      stripeConnectionStatus: null,
-      stripeLastTestedAt: null,
     },
     update: {
       stripeSecretKey: null,
       stripeWebhookSecret: null,
       stripePublishableKey: null,
       stripeAccountId: null,
-      stripeConnectionStatus: null,
-      stripeLastTestedAt: null,
     },
   });
+  await clearConnectionHealth(IntegrationKey.STRIPE);
 }

@@ -1,5 +1,8 @@
 import type { Serialized } from "@/shared/lib/serialize";
-import type { InstagramMediaType } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  ConnectionStatus,
+  InstagramMediaType,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 type InstagramPostRecord = {
   id: string;
@@ -24,6 +27,8 @@ export type InstagramConfig = {
   tokenExpiresAt: string | null;
   tokenExpiryDays: number | null;
   shouldRefreshToken: boolean;
+  connectionStatus: ConnectionStatus | null;
+  lastTestedAt: string | null;
 };
 
 export type InstagramPostData = Serialized<InstagramPostRecord>;

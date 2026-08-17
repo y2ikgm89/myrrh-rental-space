@@ -20,6 +20,8 @@ import {
   logError,
   normalizeError,
 } from "../errors/server";
+import { notifyConnectionApiResult } from "@/shared/lib/integration-health-port";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import { getFromAddress, getResendClientForApiKey } from "./client";
 import { normalizeEmailForIdentity } from "./normalize-email";
 import { hashSuppressedEmailCandidate } from "./suppression-hash";
@@ -184,6 +186,7 @@ export async function sendEmail(
 
       if (!error) {
         const messageId = data?.id ?? "";
+        await recordResendHealth({ ok: true });
         return { ok: true, messageId };
       }
 
@@ -201,6 +204,7 @@ export async function sendEmail(
           attempt: attempt + 1,
         },
       });
+      await recordResendHealth({ ok: false, reason: "error" }, error);
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     } catch (error) {
       if (attempt < maxRetries) {
@@ -216,11 +220,28 @@ export async function sendEmail(
           attempt: attempt + 1,
         },
       });
+      await recordResendHealth({ ok: false, reason: "error" }, error);
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     }
   }
 
+  await recordResendHealth({ ok: false, reason: "error" });
   return { ok: false, reason: "error", error: "メール送信に失敗しました" };
+}
+
+async function recordResendHealth(
+  result: { ok: boolean; reason?: string },
+  error?: unknown,
+): Promise<void> {
+  if (result.ok) {
+    await notifyConnectionApiResult(IntegrationKey.RESEND, { success: true });
+    return;
+  }
+  if (result.reason !== "error") return;
+  await notifyConnectionApiResult(IntegrationKey.RESEND, {
+    success: false,
+    error: error ?? new Error("Resend send failed"),
+  });
 }
 
 /**

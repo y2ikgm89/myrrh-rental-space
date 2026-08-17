@@ -38,11 +38,19 @@ describe("isRetryableGoogleApiError", () => {
       expect(isRetryableGoogleApiError({ code: 503 })).toBe(true);
     });
 
-    test("400 / 401 / 404 / 410 は即時失敗", () => {
+    test("408 / 502 / 504 は retry 対象（Calendar 公式 + gaxios 既定）", () => {
+      expect(isRetryableGoogleApiError({ code: 408 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 502 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 504 })).toBe(true);
+    });
+
+    test("400 / 401 / 404 / 409 / 410 / 412 は即時失敗", () => {
       expect(isRetryableGoogleApiError({ code: 400 })).toBe(false);
       expect(isRetryableGoogleApiError({ code: 401 })).toBe(false);
       expect(isRetryableGoogleApiError({ code: 404 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 409 })).toBe(false);
       expect(isRetryableGoogleApiError({ code: 410 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 412 })).toBe(false);
     });
   });
 

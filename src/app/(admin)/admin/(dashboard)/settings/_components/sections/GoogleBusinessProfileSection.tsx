@@ -22,6 +22,9 @@ import {
 } from "@/admin/components/ui";
 import { initiateGbpAuth, revokeGbpAuth } from "@/admin/actions/settings";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { StatusBanner } from "../shared/StatusBanner";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Types
@@ -34,6 +37,8 @@ type GbpAuthInfo = {
 type GoogleBusinessProfileSectionProps = {
   oauthConfigured: boolean;
   authInfo: GbpAuthInfo | null;
+  connectionStatus: ConnectionStatus | null;
+  lastTestedAt: string | null;
 };
 
 const GBP_SECTION_TITLE_ID = "google-business-profile-section-title";
@@ -45,6 +50,8 @@ const GBP_SECTION_TITLE_ID = "google-business-profile-section-title";
 export function GoogleBusinessProfileSection({
   oauthConfigured,
   authInfo,
+  connectionStatus,
+  lastTestedAt,
 }: GoogleBusinessProfileSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -124,9 +131,46 @@ export function GoogleBusinessProfileSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* 連携状態 */}
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
-          <div className="flex items-center gap-3">
+        {connectionStatus ? (
+          <StatusBanner
+            success={connectionStatus === ConnectionStatus.CONNECTED}
+          >
+            <div className="flex items-center gap-2">
+              {connectionStatus === ConnectionStatus.CONNECTED ? (
+                <>
+                  <span
+                    className="h-2 w-2 rounded-full bg-success"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-medium text-success">
+                    接続済み
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="h-2 w-2 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-medium text-destructive">
+                    エラー
+                  </span>
+                </>
+              )}
+            </div>
+            {isConnected && authInfo ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {authInfo.accountName}
+              </p>
+            ) : null}
+            {lastTestedAt ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                最終テスト: {formatDateTimeShort(lastTestedAt)}
+              </p>
+            ) : null}
+          </StatusBanner>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
             <span className="text-sm font-medium">連携状態:</span>
             {isConnected ? (
               <Badge variant="success">連携済み</Badge>
@@ -139,7 +183,9 @@ export function GoogleBusinessProfileSection({
               </span>
             ) : null}
           </div>
+        )}
 
+        <div className="flex flex-wrap items-center justify-end gap-4">
           {/* 接続 / 解除ボタン */}
           {isConnected ? (
             <Button

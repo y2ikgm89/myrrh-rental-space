@@ -15,18 +15,23 @@ import type {
   InstagramConfig,
   InstagramPostData,
 } from "@/shared/domain/instagram/types";
+import { getConnectionHealth } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function getInstagramConfig(): Promise<InstagramConfig> {
-  const settings = await prisma.settingsInstagram.findUnique({
-    where: { id: "singleton" },
-    select: {
-      instagramAccessToken: true,
-      instagramTokenExpiresAt: true,
-      instagramUserId: true,
-      instagramUsername: true,
-      instagramAccountType: true,
-    },
-  });
+  const [settings, health] = await Promise.all([
+    prisma.settingsInstagram.findUnique({
+      where: { id: "singleton" },
+      select: {
+        instagramAccessToken: true,
+        instagramTokenExpiresAt: true,
+        instagramUserId: true,
+        instagramUsername: true,
+        instagramAccountType: true,
+      },
+    }),
+    getConnectionHealth(IntegrationKey.INSTAGRAM),
+  ]);
 
   const isConnected = Boolean(
     settings?.instagramAccessToken && settings?.instagramUserId,
@@ -47,6 +52,8 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
     tokenExpiresAt: tokenExpiresAt?.toISOString() ?? null,
     tokenExpiryDays,
     shouldRefreshToken: needsRefresh,
+    connectionStatus: health.status,
+    lastTestedAt: health.lastCheckedAt?.toISOString() ?? null,
   };
 }
 
