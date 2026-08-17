@@ -73,6 +73,14 @@ export type SmartLockDeviceWithLocation = SmartLockDeviceData & {
   readonly locationName: string;
 };
 
+/** 登録済みスマートロックデバイスが1件でもあれば true（ヘルスアラート用）。 */
+export async function hasRegisteredSmartLockDevice(): Promise<boolean> {
+  const row = await prisma.smartLockDevice.findFirst({
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 /** 全拠点横断のスマートロックデバイス一覧（設定ページの登録簿管理用、拠点名付き） */
 export async function getAllSmartLockDevices(): Promise<
   SmartLockDeviceWithLocation[]

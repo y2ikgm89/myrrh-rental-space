@@ -31,6 +31,11 @@ export type GetGbpClientOptions = {
   readonly onTokens?: GbpTokenPersistHandler;
 };
 
+/** OAuth env が揃っているか。secret 値は返さない。 */
+export function hasGbpOAuthCredentials(): boolean {
+  return Boolean(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET);
+}
+
 /**
  * GBP OAuth 用の OAuth2Client を生成する。
  * `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` が未設定なら null を返す。
@@ -38,7 +43,7 @@ export type GetGbpClientOptions = {
 export function createOAuth2Client(): InstanceType<
   typeof google.auth.OAuth2
 > | null {
-  if (!serverEnv.GOOGLE_CLIENT_ID || !serverEnv.GOOGLE_CLIENT_SECRET) {
+  if (!hasGbpOAuthCredentials()) {
     return null;
   }
 

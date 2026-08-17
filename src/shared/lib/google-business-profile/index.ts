@@ -20,7 +20,12 @@ export {
   GBP_OAUTH_STATE_COOKIE,
   GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
 } from "./oauth";
-export { createOAuth2Client, getGbpClient, GBP_SCOPES } from "./client";
+export {
+  createOAuth2Client,
+  getGbpClient,
+  hasGbpOAuthCredentials,
+  GBP_SCOPES,
+} from "./client";
 export type { GbpTokenPersistHandler, GetGbpClientOptions } from "./client";
 export type {
   GbpAuthState,

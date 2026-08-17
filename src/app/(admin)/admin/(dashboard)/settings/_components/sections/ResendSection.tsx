@@ -182,6 +182,11 @@ export function ResendSection({ config }: ResendSectionProps) {
           <CardDescription>メール配信サービスのAPI設定</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {config.envFallbackActive ? (
+            <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+              環境変数で稼働中
+            </p>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor={fields.resendApiKey.id}>APIキー</Label>
             {config.apiKeyMasked && !showKeyInput ? (

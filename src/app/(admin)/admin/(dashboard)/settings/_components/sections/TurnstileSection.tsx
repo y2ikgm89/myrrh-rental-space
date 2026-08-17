@@ -140,7 +140,8 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
   const handleClearKeys = async () => {
     const confirmed = await confirmDialog({
       title: "キーをクリアしますか？",
-      description: "Turnstileキーをクリアしますか？",
+      description:
+        "本番では Turnstile 未設定は fail-closed（validateTurnstile）です。キーをクリアすると公開フォームがすべて停止します。",
       confirmLabel: "クリア",
       variant: "destructive",
     });
@@ -180,6 +181,11 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
           <CardDescription>Bot対策・CAPTCHA設定</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {config.envFallbackActive ? (
+            <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+              環境変数で稼働中
+            </p>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor={fields.turnstileSiteKey.id}>Site Key</Label>
             {config.siteKey && !showSiteKeyInput ? (

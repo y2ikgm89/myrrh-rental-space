@@ -32,7 +32,7 @@ type GbpAuthInfo = {
 };
 
 type GoogleBusinessProfileSectionProps = {
-  enabled: boolean;
+  oauthConfigured: boolean;
   authInfo: GbpAuthInfo | null;
 };
 
@@ -43,7 +43,7 @@ const GBP_SECTION_TITLE_ID = "google-business-profile-section-title";
 // =============================================================================
 
 export function GoogleBusinessProfileSection({
-  enabled,
+  oauthConfigured,
   authInfo,
 }: GoogleBusinessProfileSectionProps) {
   const router = useRouter();
@@ -164,11 +164,10 @@ export function GoogleBusinessProfileSection({
           )}
         </div>
 
-        {/* グローバル無効化警告 */}
-        {!enabled ? (
+        {!oauthConfigured ? (
           <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-            Google Business Profile 機能はグローバル設定で無効化されています。
-            機能を有効化するには `GBP_*` 環境変数を設定してください。
+            Google で連携するには `GOOGLE_CLIENT_ID` と `GOOGLE_CLIENT_SECRET`
+            の環境変数が必要です。
           </p>
         ) : null}
       </CardContent>

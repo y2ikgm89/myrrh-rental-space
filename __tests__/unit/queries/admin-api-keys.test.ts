@@ -34,12 +34,14 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
     webhookSecretMasked: null,
     lastTestedAt: null,
     connectionStatus: null,
+    envFallbackActive: false,
   }),
   getTurnstileConfig: async () => ({
     siteKey: null,
     secretKeyMasked: null,
     lastTestedAt: null,
     connectionStatus: null,
+    envFallbackActive: false,
   }),
   getGoogleMapsConfig: async () => ({
     apiKeyMasked: null,

@@ -16,6 +16,7 @@ export type IntegrationHealthAlertItem = {
     | "/admin/settings/integrations?tab=resend"
     | "/admin/settings/integrations?tab=turnstile"
     | "/admin/settings/integrations?tab=calendar"
+    | "/admin/settings/integrations?tab=switchbot"
     | "/admin/settings/billing?tab=payment";
 };
 
