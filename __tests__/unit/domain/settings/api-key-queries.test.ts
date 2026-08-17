@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-const mockSettingsResendFindUnique = mock(() => Promise.resolve(null));
+const mockSettingsResendFindUnique = mock<
+  () => Promise<{
+    resendApiKey: string | null;
+    resendWebhookSecret: string | null;
+    resendLastTestedAt: Date | null;
+    resendConnectionStatus: string | null;
+  } | null>
+>(() => Promise.resolve(null));
 const mockSettingsStripeFindUnique = mock<
   () => Promise<{
     stripeSecretKey: string | null;
