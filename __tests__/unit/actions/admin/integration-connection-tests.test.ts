@@ -53,10 +53,18 @@ const mockTestSwitchBotConnection = mock(
   }),
 );
 
-const mockRecordResendConnectionStatus = mock(async () => undefined);
-const mockRecordTurnstileConnectionStatus = mock(async () => undefined);
-const mockRecordGoogleMapsConnectionStatus = mock(async () => undefined);
-const mockRecordSwitchBotConnectionStatus = mock(async () => undefined);
+const mockRecordResendConnectionStatus = mock(
+  async (_status: ConnectionStatus) => undefined,
+);
+const mockRecordTurnstileConnectionStatus = mock(
+  async (_status: ConnectionStatus) => undefined,
+);
+const mockRecordGoogleMapsConnectionStatus = mock(
+  async (_status: ConnectionStatus) => undefined,
+);
+const mockRecordSwitchBotConnectionStatus = mock(
+  async (_status: ConnectionStatus) => undefined,
+);
 
 mock.module("server-only", () => ({}));
 mock.module("next/cache", () => ({
