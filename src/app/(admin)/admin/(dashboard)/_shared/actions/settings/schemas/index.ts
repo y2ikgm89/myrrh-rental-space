@@ -27,11 +27,6 @@ export {
 } from "./discount";
 
 export {
-  googleCalendarConnectionTestSchema,
-  type GoogleCalendarConnectionTestInput,
-} from "./google-calendar";
-
-export {
   announcementBarCarouselSettingsSchema,
   type AnnouncementBarCarouselSettingsInput,
 } from "./announcement-bar";

@@ -35,6 +35,7 @@ import {
   type SettingsData,
 } from "@/admin/actions/settings";
 import { googleCalendarFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
+import { canTestGoogleCalendarConnection } from "./can-test-saved-credentials";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -131,21 +132,10 @@ export function GoogleCalendarSection({
   const formErrors = form.errors;
 
   const handleConnectionTest = () => {
-    if (!serviceAccountJson || !calendarId) {
-      setTestResult({
-        success: false,
-        message: "サービスアカウントJSONとカレンダーIDを入力してください",
-      });
-      return;
-    }
-
     startTestTransition(async () => {
       setTestResult(null);
       try {
-        const result = await testGoogleCalendarConnectionAction({
-          serviceAccountJson,
-          calendarId,
-        });
+        const result = await testGoogleCalendarConnectionAction();
         if (!isMutationError(result)) {
           setTestResult({
             success: true,
@@ -625,7 +615,10 @@ export function GoogleCalendarSection({
                 認証情報をクリア
               </Button>
             )}
-            {serviceAccountJson && calendarId && (
+            {canTestGoogleCalendarConnection(
+              settings.googleCalendarServiceAccountConfigured,
+              settings.googleCalendarId,
+            ) && (
               <Button
                 type="button"
                 variant="outline"

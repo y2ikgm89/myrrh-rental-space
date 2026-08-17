@@ -36,7 +36,14 @@ import {
   updateTurnstileSettings as updateTurnstileSettingsCommand,
   type SwitchBotWebhookRegistrationStatus,
 } from "@/shared/domain/settings/api-key-commands";
-import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
+import {
+  getDecryptedGoogleMapsApiKey,
+  getDecryptedResendApiKey,
+  getDecryptedSwitchBotCredentials,
+  getDecryptedSwitchBotCredentialsForRevocation,
+  getDecryptedTurnstileSecretKey,
+  getTurnstileSiteKeyUncached,
+} from "@/shared/domain/settings/api-key-queries";
 import { setupWebhook } from "@/shared/lib/smart-lock/switchbot-client";
 import { DomainError } from "@/shared/domain/domain-error";
 // CACHE-DRIFT-SETTLE: INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness
@@ -85,13 +92,16 @@ export async function updateResendSettings(
   });
 }
 
-export async function testResendConnectionAction(
-  apiKey: string,
-): Promise<MutationResult> {
+export async function testResendConnectionAction(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
     execute: async () => {
+      const apiKey = await getDecryptedResendApiKey();
+      if (!apiKey) {
+        throw new DomainError("先に保存してください", "VALIDATION");
+      }
+
       const result = await testResendConnection(apiKey);
       await recordResendConnectionStatus(
         result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
@@ -151,14 +161,21 @@ export async function updateTurnstileSettings(
   });
 }
 
-export async function testTurnstileConnectionAction(
-  siteKey: string,
-  secretKey: string,
-): Promise<MutationResult<{ note?: string }>> {
+export async function testTurnstileConnectionAction(): Promise<
+  MutationResult<{ note?: string }>
+> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
     execute: async () => {
+      const [siteKey, secretKey] = await Promise.all([
+        getTurnstileSiteKeyUncached(),
+        getDecryptedTurnstileSecretKey(),
+      ]);
+      if (!siteKey || !secretKey) {
+        throw new DomainError("先に保存してください", "VALIDATION");
+      }
+
       const result = testTurnstileConnection(siteKey, secretKey);
       await recordTurnstileConnectionStatus(
         result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
@@ -226,13 +243,16 @@ export async function updateGoogleMapsSettings(
   );
 }
 
-export async function testGoogleMapsConnectionAction(
-  apiKey: string,
-): Promise<MutationResult> {
+export async function testGoogleMapsConnectionAction(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
     execute: async () => {
+      const apiKey = await getDecryptedGoogleMapsApiKey();
+      if (!apiKey) {
+        throw new DomainError("先に保存してください", "VALIDATION");
+      }
+
       const result = await testGoogleMapsConnection(apiKey);
       await recordGoogleMapsConnectionStatus(
         result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
@@ -294,15 +314,22 @@ export async function updateSwitchBotSettings(
   });
 }
 
-export async function testSwitchBotConnectionAction(
-  openToken: string,
-  secretKey: string,
-): Promise<MutationResult<{ note?: string }>> {
+export async function testSwitchBotConnectionAction(): Promise<
+  MutationResult<{ note?: string }>
+> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const result = await testSwitchBotConnection(openToken, secretKey);
+      const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
+      if (!credentials) {
+        throw new DomainError("先に保存してください", "VALIDATION");
+      }
+
+      const result = await testSwitchBotConnection(
+        credentials.openToken,
+        credentials.secretKey,
+      );
       await recordSwitchBotConnectionStatus(
         result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
       );

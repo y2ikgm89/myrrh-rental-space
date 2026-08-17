@@ -37,6 +37,7 @@ import {
 } from "@/admin/actions/api-keys";
 import { googleMapsFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { GoogleMapsConfig } from "@/admin/types/api-keys";
+import { canTestGoogleMapsConnection } from "./can-test-saved-credentials";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -107,14 +108,10 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
   }, [isSuccess]);
 
   const handleConnectionTest = () => {
-    if (!apiKey) {
-      setTestResult({ success: false, message: "APIキーを入力してください" });
-      return;
-    }
     startTestTransition(async () => {
       setTestResult(null);
       try {
-        const result = await testGoogleMapsConnectionAction(apiKey);
+        const result = await testGoogleMapsConnectionAction();
         if (!isMutationError(result)) {
           setTestResult({ success: true, message: "接続成功" });
           router.refresh();
@@ -296,7 +293,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
                 {clearPending ? "クリア中..." : "クリア"}
               </Button>
             )}
-            {apiKey && (
+            {canTestGoogleMapsConnection(config.apiKeyMasked) && (
               <Button
                 type="button"
                 variant="outline"

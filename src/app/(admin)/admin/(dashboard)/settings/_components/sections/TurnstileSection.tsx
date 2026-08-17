@@ -38,6 +38,7 @@ import {
 } from "@/admin/actions/api-keys";
 import { turnstileFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { TurnstileConfig } from "@/admin/types/api-keys";
+import { canTestTurnstileConnection } from "./can-test-saved-credentials";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -114,21 +115,14 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
   }, [isSuccess]);
 
   const handleConnectionTest = () => {
-    if (!siteKey || !secretKey) {
-      setTestResult({
-        success: false,
-        message: "Site KeyとSecret Keyの両方を入力してください",
-      });
-      return;
-    }
     startTestTransition(async () => {
       setTestResult(null);
       try {
-        const result = await testTurnstileConnectionAction(siteKey, secretKey);
+        const result = await testTurnstileConnectionAction();
         if (!isMutationError(result)) {
           setTestResult({
             success: true,
-            message: "検証成功",
+            message: "形式検証済み",
             ...(result.note !== undefined && { note: result.note }),
           });
         } else {
@@ -367,7 +361,10 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
                 {clearPending ? "クリア中..." : "クリア"}
               </Button>
             )}
-            {siteKey && secretKey && (
+            {canTestTurnstileConnection(
+              config.siteKey,
+              config.secretKeyMasked,
+            ) && (
               <Button
                 type="button"
                 variant="outline"

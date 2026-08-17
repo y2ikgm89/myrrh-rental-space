@@ -138,6 +138,17 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   };
 }
 
+/**
+ * 接続テスト用の Turnstile Site Key。`getTurnstileConfig` は `"use cache"` のため使わない。
+ */
+export async function getTurnstileSiteKeyUncached(): Promise<string | null> {
+  const settings = await prisma.settingsTurnstile.findUnique({
+    where: { id: "singleton" },
+    select: { turnstileSiteKey: true },
+  });
+  return settings?.turnstileSiteKey || null;
+}
+
 export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
   const settings = await prisma.settingsTurnstile.findUnique({
     where: { id: "singleton" },
@@ -303,12 +314,13 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
 }
 
 /**
- * revoke / clear / cleanup 専用の SwitchBot 資格情報復号。
+ * revoke / clear / cleanup / 接続テスト専用の SwitchBot 資格情報復号。
  *
  * `getDecryptedSwitchBotCredentials` は createKey（issue）経路用で
- * `switchbotEnabled=true` を要求する。連携 OFF 後も物理 key の deleteKey には
- * 暗号化済み資格情報が必要なため、本関数は `switchbotEnabled` を見ず、
- * 暗号文が残っていれば復号する。issue / webhook createKey 確定には使わないこと。
+ * `switchbotEnabled=true` を要求する。連携 OFF 後も物理 key の deleteKey と
+ * 接続テストには暗号化済み資格情報が必要なため、本関数は `switchbotEnabled`
+ * を見ず、暗号文が残っていれば復号する。issue / webhook createKey 確定には
+ * 使わないこと。接続テストは本関数を使ってよい。
  */
 export async function getDecryptedSwitchBotCredentialsForRevocation(): Promise<{
   openToken: string;
