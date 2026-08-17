@@ -22,16 +22,20 @@
  *
  * ## 設計
  *
- * - **fail open**: 入力が壊れていたら何も言わずに通す。ガードの誤爆で作業が
- *   止まる方が、稀な取りこぼしより高くつく。
+ * - **fail open**: 入力が壊れていたら allow する。ガードの誤爆で作業が止まる
+ *   方が、稀な取りこぼしより高くつく。
+ * - **stdout は常に 1 個の JSON オブジェクト。** Cursor は空 stdout や bun の
+ *   usage バナーを "not valid JSON" として **action ごと block** する。
+ *   allow でも黙って exit してはいけない。
  * - 判定は生のコマンド文字列に対して行う。permissions の Bash glob は
  *   引数位置の制約に弱い（公式が "fragile" と明記）ため、ここで見る。
  * - このファイルは `.claude/**` にあるので ESLint 対象外・tsconfig 対象外。
  *   依存を持たない単一ファイルに保つこと。
  *
- * 実行形式は settings.json の exec form。`bash` は使わない — この開発機では
- * PATH 上の `bash` が `C:\WINDOWS\system32\bash.exe`（WSL ランチャ）に解決され、
- * Windows パスを渡すと壊れる。
+ * 起動は bun（このリポジトリのランタイム）。`command` にスクリプトパスまで
+ * 含める — Cursor は `args` を渡さず `command` だけを実行することがあり、
+ * 素の `bun` は usage を stdout に出して JSON を壊す。`shell: powershell` は
+ * PATH 上の `bash` が WSL ランチャのため。
  */
 
 import { readFileSync } from "node:fs";
@@ -75,32 +79,50 @@ function readStdin() {
   }
 }
 
+function writeDecision(decision, reason) {
+  const hookSpecificOutput = {
+    hookEventName: "PreToolUse",
+    permissionDecision: decision,
+  };
+  if (reason !== undefined) {
+    hookSpecificOutput.permissionDecisionReason = reason;
+  }
+  /** Cursor preToolUse は `permission`、Claude Code は `hookSpecificOutput`。 */
+  const payload = { permission: decision, hookSpecificOutput };
+  if (reason !== undefined) {
+    payload.agent_message = reason;
+  }
+  process.stdout.write(JSON.stringify(payload));
+}
+
 function main() {
   const raw = readStdin();
-  if (raw.trim() === "") return;
+  if (raw.trim() === "") {
+    writeDecision("allow");
+    return;
+  }
 
   let input;
   try {
     input = JSON.parse(raw);
   } catch {
-    return; // fail open
+    writeDecision("allow");
+    return;
   }
 
   const command = input?.tool_input?.command;
-  if (typeof command !== "string" || command === "") return;
+  if (typeof command !== "string" || command === "") {
+    writeDecision("allow");
+    return;
+  }
 
   const hit = GUARDS.find((guard) => guard.pattern.test(command));
-  if (hit === undefined) return;
+  if (hit === undefined) {
+    writeDecision("allow");
+    return;
+  }
 
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: hit.reason,
-      },
-    }),
-  );
+  writeDecision("deny", hit.reason);
 }
 
 main();

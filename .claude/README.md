@@ -52,9 +52,9 @@ Claude Code のプロジェクト設定。**人間向けの説明**で、セッ�
   `settings.json` や `hooks/*.mjs` を触った PR は重い job が全部走る。
   逆に `*.md` だけの PR は `code=false` になり、CI では gate が 1 つも走らない
   （ローカルの pre-push は走るので、**push 前に必ず通すこと**）。
-- hook の exec form が `bash` ではなく `bun` なのは、この開発機の PATH 上の `bash` が
-  WSL ランチャ（`C:\WINDOWS\system32\bash.exe`）に解決され、Windows パスを渡すと
-  壊れるため。`bun` はこのリポジトリの必須ツールで PATH にある。
+- hook の起動は `bun --silent <hooks/*.mjs>`（`shell: powershell`、`args` 無し）。
+  PATH 上の `bash` は WSL ランチャで Windows パスを壊す。素の `command: bun` は
+  Cursor が usage を stdout に出し、"not valid JSON" で action を止める。
 
 ## `agents/` に 1 本だけある理由
 

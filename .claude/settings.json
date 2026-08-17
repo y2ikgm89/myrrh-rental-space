@@ -29,10 +29,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-verification-bypass.mjs"
-            ],
+            "command": "bun --silent \"${CLAUDE_PROJECT_DIR}/.claude/hooks/block-verification-bypass.mjs\"",
+            "shell": "powershell",
             "timeout": 15
           }
         ]
