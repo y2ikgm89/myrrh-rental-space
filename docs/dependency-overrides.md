@@ -64,6 +64,7 @@ pin 表。この表は required status check **`Dependency Audit (bun audit)`**
 | `socket.io-parser`    | `socket.io` → `react-email`                                                 |
 | `@babel/core`         | `eslint-plugin-react-hooks`                                                 |
 | `@puppeteer/browsers` | `puppeteer-core` → `lighthouse` → `@lhci/cli`                               |
+| `deepmerge-ts`        | `@prisma/config` → `prisma`                                                 |
 
 ## 誤解しやすい 3 件
 
