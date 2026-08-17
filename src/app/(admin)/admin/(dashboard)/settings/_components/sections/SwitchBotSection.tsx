@@ -48,6 +48,7 @@ import {
 } from "@/admin/actions/api-keys";
 import { switchbotFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { SwitchBotConfig } from "@/admin/types/api-keys";
+import { canTestSwitchBotConnection } from "./can-test-saved-credentials";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -147,20 +148,10 @@ export function SwitchBotSection({
   }, [isSuccess]);
 
   const handleConnectionTest = () => {
-    if (!openToken || !secretKey) {
-      setTestResult({
-        success: false,
-        message: "Open TokenとSecret Keyの両方を入力してください",
-      });
-      return;
-    }
     startTestTransition(async () => {
       setTestResult(null);
       try {
-        const result = await testSwitchBotConnectionAction(
-          openToken,
-          secretKey,
-        );
+        const result = await testSwitchBotConnectionAction();
         if (!isMutationError(result)) {
           setTestResult({
             success: true,
@@ -630,7 +621,10 @@ export function SwitchBotSection({
                   {clearPending ? "クリア中..." : "クリア"}
                 </Button>
               )}
-              {openToken && secretKey && (
+              {canTestSwitchBotConnection(
+                config.openTokenMasked,
+                config.secretKeyMasked,
+              ) && (
                 <Button
                   type="button"
                   variant="outline"

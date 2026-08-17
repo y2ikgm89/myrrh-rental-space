@@ -43,6 +43,7 @@ import {
 } from "@/admin/actions/api-keys";
 import type { ResendConfig } from "@/admin/types/api-keys";
 import { resendFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
+import { canTestResendConnection } from "./can-test-saved-credentials";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -117,14 +118,10 @@ export function ResendSection({ config }: ResendSectionProps) {
   }, [isSuccess]);
 
   const handleConnectionTest = () => {
-    if (!apiKey) {
-      setTestResult({ success: false, message: "APIキーを入力してください" });
-      return;
-    }
     startTestTransition(async () => {
       setTestResult(null);
       try {
-        const result = await testResendConnectionAction(apiKey);
+        const result = await testResendConnectionAction();
         if (!isMutationError(result)) {
           setTestResult({ success: true, message: "接続成功" });
           router.refresh();
@@ -361,7 +358,7 @@ export function ResendSection({ config }: ResendSectionProps) {
                 {clearPending ? "クリア中..." : "クリア"}
               </Button>
             )}
-            {apiKey && (
+            {canTestResendConnection(config.apiKeyMasked) && (
               <Button
                 type="button"
                 variant="outline"

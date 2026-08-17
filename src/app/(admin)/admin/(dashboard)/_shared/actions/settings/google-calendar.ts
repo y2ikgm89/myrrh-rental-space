@@ -9,7 +9,6 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 // CACHE-DRIFT-SETTLE: INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness
@@ -19,7 +18,11 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 // cache-tag drift gate を通過させる。
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
+import {
+  getGoogleCalendarServiceAccountConfig,
+  getGoogleCalendarSettings,
+  getGoogleCalendarWebhookState,
+} from "@/shared/domain/settings/admin-queries";
 import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
@@ -38,7 +41,10 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { safeDecryptToString } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
+  isValidCalendarId,
   setupWebhookWatch,
   stopWebhookWatch,
   testServiceAccountConnection,
@@ -48,10 +54,6 @@ import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-import {
-  googleCalendarConnectionTestSchema,
-  type GoogleCalendarConnectionTestInput,
-} from "./schemas";
 import {
   googleCalendarFormSchema,
   twoWaySyncFormSchema,
@@ -118,19 +120,35 @@ export async function updateGoogleCalendarSettings(
   );
 }
 
-export async function testGoogleCalendarConnectionAction(
-  params: GoogleCalendarConnectionTestInput,
-): Promise<MutationResult<{ calendarName: string; accountEmail: string }>> {
-  const parsed = googleCalendarConnectionTestSchema.safeParse(params);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
+export async function testGoogleCalendarConnectionAction(): Promise<
+  MutationResult<{ calendarName: string; accountEmail: string }>
+> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
     execute: async () => {
-      const result = await testServiceAccountConnection(parsed.data);
+      const [settings, serviceAccount] = await Promise.all([
+        getGoogleCalendarSettings(),
+        getGoogleCalendarServiceAccountConfig(),
+      ]);
+      const serviceAccountJson = serviceAccount.encryptedServiceAccountJson
+        ? safeDecryptToString(serviceAccount.encryptedServiceAccountJson, {
+            expectedPurpose:
+              SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
+          })
+        : null;
+      if (
+        !settings.calendarId ||
+        !serviceAccountJson ||
+        !isValidCalendarId(settings.calendarId)
+      ) {
+        throw new DomainError("先に保存してください", "VALIDATION");
+      }
+
+      const result = await testServiceAccountConnection({
+        serviceAccountJson,
+        calendarId: settings.calendarId,
+      });
       if (!result.success) {
         try {
           await recordGoogleCalendarConnectionError();
