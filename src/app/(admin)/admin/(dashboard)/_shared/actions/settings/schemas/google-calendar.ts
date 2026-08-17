@@ -8,20 +8,19 @@
  */
 
 import { z } from "zod";
+import { isValidCalendarId } from "@/shared/lib/google-calendar/calendar-id";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
 // Google Calendar Schemas
 // =============================================================================
 
-const CALENDAR_ID_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const requiredCalendarIdSchema = z
   .string()
   .trim()
   .min(1, { error: "カレンダーIDを入力してください" })
   .max(200)
-  .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {
+  .refine((value) => isValidCalendarId(value), {
     error: "カレンダーIDの形式が無効です",
   });
 

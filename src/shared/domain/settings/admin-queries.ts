@@ -145,6 +145,7 @@ function toSettingsData(
     stripeSecretKeyMasked: string | null;
     stripeWebhookSecretMasked: string | null;
     googleCalendarServiceAccountEmailMasked: string | null;
+    googleCalendarServiceAccountConfigured: boolean;
   },
 ): Serialized<SettingsData> {
   return toPlainObject({
@@ -262,6 +263,8 @@ function toSettingsData(
     stripeWebhookSecretMasked: options.stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked:
       options.googleCalendarServiceAccountEmailMasked,
+    googleCalendarServiceAccountConfigured:
+      options.googleCalendarServiceAccountConfigured,
     googleCalendarTwoWaySyncEnabled:
       googleCalendar.googleCalendarTwoWaySyncEnabled,
     googleCalendarSyncMethod: googleCalendar.googleCalendarSyncMethod,
@@ -375,6 +378,7 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
       stripeSecretKeyMasked: null,
       stripeWebhookSecretMasked: null,
       googleCalendarServiceAccountEmailMasked: null,
+      googleCalendarServiceAccountConfigured: false,
     },
   );
 }
@@ -448,6 +452,9 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
       stripeSecretKeyMasked,
       stripeWebhookSecretMasked,
       googleCalendarServiceAccountEmailMasked,
+      googleCalendarServiceAccountConfigured: Boolean(
+        googleCalendar.googleCalendarServiceAccountJson,
+      ),
     },
   );
 }

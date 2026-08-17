@@ -22,6 +22,12 @@ const mockSettingsStripeUpsert = mock<
 const mockSettingsStripeUpdateMany = mock<
   (args: UpdateManyArgs) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
+const mockSettingsGoogleCalendarFindUnique = mock<
+  () => Promise<{
+    googleCalendarId: string | null;
+    googleCalendarServiceAccountJson: string | null;
+  } | null>
+>(() => Promise.resolve(null));
 const mockSettingsGoogleCalendarUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -48,6 +54,7 @@ mock.module("@/shared/db/prisma", () => ({
       updateMany: mockSettingsStripeUpdateMany,
     },
     settingsGoogleCalendar: {
+      findUnique: mockSettingsGoogleCalendarFindUnique,
       upsert: mockSettingsGoogleCalendarUpsert,
     },
     $transaction: mockStripeTransaction,
@@ -59,6 +66,54 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
   encryptServiceAccountJson: mock<(json: string) => string>(
     (json) => `encrypted:${json}`,
   ),
+}));
+
+const mockGetServiceAccountClient = mock<
+  (options?: { ignoreEnabledToggle?: boolean }) => Promise<object | null>
+>(() => Promise.resolve(null));
+const mockGetGoogleCalendarWebhookState = mock<
+  () => Promise<{
+    calendarId: string | null;
+    channelId: string | null;
+    resourceId: string | null;
+    token: string | null;
+    expiration: Date | null;
+  }>
+>(() =>
+  Promise.resolve({
+    calendarId: null,
+    channelId: null,
+    resourceId: null,
+    token: null,
+    expiration: null,
+  }),
+);
+const mockStopWebhookWatch = mock<
+  (
+    client: object,
+    channelId: string,
+    resourceId: string,
+  ) => Promise<{ success: true } | { success: false; error: string }>
+>(() => Promise.resolve({ success: true }));
+const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
+
+mock.module("@/shared/domain/settings/google-calendar", () => ({
+  getServiceAccountClient: (options?: { ignoreEnabledToggle?: boolean }) =>
+    mockGetServiceAccountClient(options),
+}));
+mock.module("@/shared/domain/settings/admin-queries", () => ({
+  getGoogleCalendarWebhookState: () => mockGetGoogleCalendarWebhookState(),
+}));
+mock.module("@/shared/lib/google-calendar", () => ({
+  stopWebhookWatch: (client: object, channelId: string, resourceId: string) =>
+    mockStopWebhookWatch(client, channelId, resourceId),
+}));
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: (...args: unknown[]) => mockLogError(...args),
+  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
+  ErrorSeverity: { MEDIUM: "MEDIUM" },
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
 }));
 
 // encryption helper は setup.ts でグローバル mock 済 (固定 kid + hex)。
@@ -441,12 +496,19 @@ describe("clearStripeKeys", () => {
 
 describe("updateGoogleCalendarSettings", () => {
   beforeEach(() => {
+    mockSettingsGoogleCalendarFindUnique.mockReset();
+    mockSettingsGoogleCalendarFindUnique.mockResolvedValue(null);
     mockSettingsGoogleCalendarUpsert.mockReset();
     mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("サービスアカウントJSONなしで基本設定を保存できる", async () => {
+      mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+        googleCalendarId: "test@group.calendar.google.com",
+        googleCalendarServiceAccountJson: "encrypted-existing-sa",
+      });
+
       await updateGoogleCalendarSettings({
         googleCalendarEnabled: true,
         googleCalendarId: "test@group.calendar.google.com",
@@ -505,6 +567,10 @@ describe("updateGoogleCalendarSettings", () => {
     });
 
     test("有効な googleCalendarId はそのまま保持される", async () => {
+      mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+        googleCalendarId: null,
+        googleCalendarServiceAccountJson: "encrypted-existing-sa",
+      });
       const calendarId = "calendar@group.calendar.google.com";
       await updateGoogleCalendarSettings({
         googleCalendarEnabled: true,
@@ -525,6 +591,10 @@ describe("updateGoogleCalendarSettings", () => {
     });
 
     test("primary は有効な googleCalendarId として保存できる", async () => {
+      mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+        googleCalendarId: null,
+        googleCalendarServiceAccountJson: "encrypted-existing-sa",
+      });
       await updateGoogleCalendarSettings({
         googleCalendarEnabled: true,
         googleCalendarId: "primary",
@@ -544,6 +614,10 @@ describe("updateGoogleCalendarSettings", () => {
     });
 
     test("前後空白は trim して保存される", async () => {
+      mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+        googleCalendarId: null,
+        googleCalendarServiceAccountJson: "encrypted-existing-sa",
+      });
       await updateGoogleCalendarSettings({
         googleCalendarEnabled: true,
         googleCalendarId: "  calendar@group.calendar.google.com  ",
@@ -726,16 +800,31 @@ describe("clearGoogleCalendarServiceAccount", () => {
   beforeEach(() => {
     mockSettingsGoogleCalendarUpsert.mockReset();
     mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
+    mockGetServiceAccountClient.mockReset();
+    mockGetServiceAccountClient.mockResolvedValue(null);
+    mockGetGoogleCalendarWebhookState.mockReset();
+    mockGetGoogleCalendarWebhookState.mockResolvedValue({
+      calendarId: null,
+      channelId: null,
+      resourceId: null,
+      token: null,
+      expiration: null,
+    });
+    mockStopWebhookWatch.mockReset();
+    mockStopWebhookWatch.mockResolvedValue({ success: true });
+    mockLogError.mockReset();
   });
 
   describe("正常系", () => {
     test("サービスアカウント関連情報をすべて null にして保存できる", async () => {
       await clearGoogleCalendarServiceAccount();
 
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(2);
       expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
+            googleCalendarEnabled: false,
+            googleCalendarTwoWaySyncEnabled: false,
             googleCalendarServiceAccountJson: null,
             googleCalendarConnectionStatus: null,
             googleCalendarLastTestedAt: null,

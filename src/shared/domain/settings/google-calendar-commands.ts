@@ -5,8 +5,16 @@ import type { Prisma } from "@generated/prisma/client";
 import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
+import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
 import { encrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import { stopWebhookWatch } from "@/shared/lib/google-calendar";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
 import { isValidCalendarId } from "@/shared/lib/google-calendar/settings";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
@@ -52,14 +60,12 @@ export async function updateGoogleCalendarSettings(
     googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
   };
 
-  if (data.googleCalendarId) {
-    const trimmedCalendarId = data.googleCalendarId.trim();
-    if (trimmedCalendarId !== "") {
-      if (!isValidCalendarId(trimmedCalendarId)) {
-        throw new DomainError("カレンダーIDの形式が無効です", "VALIDATION");
-      }
-      updateData.googleCalendarId = trimmedCalendarId;
+  const trimmedCalendarId = data.googleCalendarId?.trim() ?? "";
+  if (trimmedCalendarId !== "") {
+    if (!isValidCalendarId(trimmedCalendarId)) {
+      throw new DomainError("カレンダーIDの形式が無効です", "VALIDATION");
     }
+    updateData.googleCalendarId = trimmedCalendarId;
   }
 
   if (data.serviceAccountJson) {
@@ -75,6 +81,28 @@ export async function updateGoogleCalendarSettings(
     );
     updateData.googleCalendarConnectionStatus = null;
     updateData.googleCalendarLastTestedAt = null;
+  }
+
+  if (data.googleCalendarEnabled) {
+    const existing = await prisma.settingsGoogleCalendar.findUnique({
+      where: { id: "singleton" },
+      select: {
+        googleCalendarId: true,
+        googleCalendarServiceAccountJson: true,
+      },
+    });
+    const nextCalendarId =
+      updateData.googleCalendarId ?? existing?.googleCalendarId ?? null;
+    const nextServiceAccount =
+      updateData.googleCalendarServiceAccountJson ??
+      existing?.googleCalendarServiceAccountJson ??
+      null;
+    if (!nextCalendarId || !nextServiceAccount) {
+      throw new DomainError(
+        "Google Calendarを有効にするにはカレンダーIDとサービスアカウントが必要です",
+        "VALIDATION",
+      );
+    }
   }
 
   await prisma.settingsGoogleCalendar.upsert({
@@ -119,15 +147,47 @@ export async function recordGoogleCalendarConnectionError(): Promise<void> {
 }
 
 export async function clearGoogleCalendarServiceAccount(): Promise<void> {
+  const webhookState = await getGoogleCalendarWebhookState();
+  if (webhookState.channelId && webhookState.resourceId) {
+    // 資格情報が失われた後は二度と stop できないため、クリア前にベストエフォートで解除する。
+    // 失敗してもクリア自体はブロックしない（SwitchBot deleteWebhook と同じ）。
+    const client = await getServiceAccountClient({
+      ignoreEnabledToggle: true,
+    });
+    if (client) {
+      const result = await stopWebhookWatch(
+        client,
+        webhookState.channelId,
+        webhookState.resourceId,
+      );
+      if (!result.success) {
+        logError(new Error("Google Calendar webhook解除に失敗しました"), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "clearGoogleCalendarServiceAccount",
+            message: result.error,
+          },
+        });
+      }
+    }
+  }
+
+  await clearGoogleCalendarWebhook();
+
   await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
+      googleCalendarEnabled: false,
+      googleCalendarTwoWaySyncEnabled: false,
       googleCalendarServiceAccountJson: null,
       googleCalendarConnectionStatus: null,
       googleCalendarLastTestedAt: null,
     },
     update: {
+      googleCalendarEnabled: false,
+      googleCalendarTwoWaySyncEnabled: false,
       googleCalendarServiceAccountJson: null,
       googleCalendarConnectionStatus: null,
       googleCalendarLastTestedAt: null,

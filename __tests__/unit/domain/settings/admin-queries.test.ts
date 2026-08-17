@@ -433,5 +433,7 @@ describe("getAdminSettings", () => {
     expect(settings.googleCalendarWebhookExpiration).toBe(
       "2026-02-01T00:00:00.000Z",
     );
+    expect(settings.googleCalendarServiceAccountConfigured).toBe(true);
+    expect(settings.googleCalendarServiceAccountEmailMasked).toBeNull();
   });
 });
