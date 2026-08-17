@@ -46,6 +46,18 @@ describe("security-integration forms: ロック中保存の受理", () => {
       expect(r.status).toBe("success");
     });
 
+    test("Cloudflare 公式テストキーは保存できる", () => {
+      expect(
+        parseWithZod(
+          fd({
+            turnstileSiteKey: "1x00000000000000000000AA",
+            turnstileSecretKey: "1x0000000000000000000000000000000AA",
+          }),
+          { schema: turnstileFormSchema },
+        ).status,
+      ).toBe("success");
+    });
+
     test("無効なプレフィックスのキーは拒否される", () => {
       expect(
         parseWithZod(

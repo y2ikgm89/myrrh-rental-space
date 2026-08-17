@@ -40,11 +40,17 @@ import {
 export const turnstileFormSchema = z.object({
   turnstileSiteKey: optionalText(500).refine(
     (val) => !val || isValidTurnstileKey(val),
-    { error: "サイトキーは 0x で始まる必要があります" },
+    {
+      error:
+        "サイトキーは 0x または Cloudflare テストキー（1x / 2x / 3x）で始まる必要があります",
+    },
   ),
   turnstileSecretKey: optionalText(500).refine(
     (val) => !val || isValidTurnstileKey(val),
-    { error: "シークレットキーは 0x で始まる必要があります" },
+    {
+      error:
+        "シークレットキーは 0x または Cloudflare テストキー（1x / 2x / 3x）で始まる必要があります",
+    },
   ),
 });
 
