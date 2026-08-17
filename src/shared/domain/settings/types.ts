@@ -143,6 +143,8 @@ export type SettingsData = {
   googleCalendarEnabled: boolean;
   googleCalendarId: string | null;
   googleCalendarServiceAccountEmailMasked: string | null;
+  /** ciphertext の有無。復号成否とは独立（復号失敗時もクリアできるようにする） */
+  googleCalendarServiceAccountConfigured: boolean;
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: ConnectionStatus | null;
   googleBusinessProfileEnabled: boolean;

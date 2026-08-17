@@ -231,7 +231,7 @@ export async function setupCalendarWebhook(): Promise<
       const client = await getServiceAccountClient();
       if (!client) {
         throw new DomainError(
-          "Google Calendar is not configured",
+          "Google Calendarが設定されていません",
           "VALIDATION",
         );
       }
@@ -276,7 +276,7 @@ export async function stopCalendarWebhook(): Promise<MutationResult> {
       const client = await getServiceAccountClient();
       if (!client) {
         throw new DomainError(
-          "Google Calendar is not configured",
+          "Google Calendarが設定されていません",
           "VALIDATION",
         );
       }

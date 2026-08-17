@@ -322,12 +322,15 @@ export function GoogleCalendarSection({
               <Label htmlFor={fields.serviceAccountJson.id}>
                 サービスアカウント認証情報（JSON）
               </Label>
-              {settings.googleCalendarServiceAccountEmailMasked &&
+              {settings.googleCalendarServiceAccountConfigured &&
               !showServiceAccountInput ? (
                 <div className="flex items-center gap-2">
                   <Input
                     type="text"
-                    value={settings.googleCalendarServiceAccountEmailMasked}
+                    value={
+                      settings.googleCalendarServiceAccountEmailMasked ??
+                      "設定あり（復号不可）"
+                    }
                     disabled
                     className="font-mono"
                   />
@@ -612,7 +615,7 @@ export function GoogleCalendarSection({
 
           {/* アクションボタン */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {settings.googleCalendarServiceAccountEmailMasked && (
+            {settings.googleCalendarServiceAccountConfigured && (
               <Button
                 type="button"
                 variant="destructive"

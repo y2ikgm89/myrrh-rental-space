@@ -46,6 +46,21 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         "サービスアカウントJSONの形式が無効です",
       );
     });
+
+    test("接続テストで無効なカレンダーIDは isValidCalendarId と同じ基準で拒否する", () => {
+      const result = googleCalendarConnectionTestSchema.safeParse({
+        serviceAccountJson: validServiceAccountJson,
+        calendarId: "not-a-valid-id",
+      });
+
+      expect(result.success).toBe(false);
+      if (result.success) {
+        throw new Error("Should have failed");
+      }
+      expect(result.error.issues[0]?.message).toBe(
+        "カレンダーIDの形式が無効です",
+      );
+    });
   });
 
   describe("googleCalendarFormSchema バリデーション", () => {
