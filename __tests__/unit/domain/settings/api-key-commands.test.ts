@@ -18,7 +18,7 @@ const mockSettingsSwitchbotUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 const mockSettingsSwitchbotFindUnique = mock<
-  (args: unknown) => Promise<{
+  (...args: unknown[]) => Promise<{
     switchbotEnabled?: boolean;
     switchbotOpenToken?: string | null;
     switchbotSecretKey?: string | null;
