@@ -22,6 +22,7 @@ import {
 } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   deleteWebhook,
+  queryWebhookUrls,
   setupWebhook,
 } from "@/shared/lib/smart-lock/switchbot-client";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -209,6 +210,44 @@ export async function updateSwitchBotSettings(data: {
   switchbotSecretKey?: string | null;
   switchbotPasscodeBufferMinutes?: number;
 }): Promise<void> {
+  const existing = await prisma.settingsSwitchbot.findUnique({
+    where: { id: "singleton" },
+    select: {
+      switchbotEnabled: true,
+      switchbotOpenToken: true,
+      switchbotSecretKey: true,
+    },
+  });
+
+  const supplyingOpenToken = Boolean(data.switchbotOpenToken);
+  const supplyingSecretKey = Boolean(data.switchbotSecretKey);
+  if (supplyingOpenToken !== supplyingSecretKey) {
+    const otherExists = supplyingOpenToken
+      ? Boolean(existing?.switchbotSecretKey)
+      : Boolean(existing?.switchbotOpenToken);
+    if (!otherExists) {
+      throw new DomainError(
+        "Open TokenとSecret Keyは両方揃えて保存してください",
+        "VALIDATION",
+      );
+    }
+  }
+
+  const willBeEnabled =
+    data.switchbotEnabled !== undefined
+      ? data.switchbotEnabled
+      : (existing?.switchbotEnabled ?? false);
+  const hasOpenToken =
+    supplyingOpenToken || Boolean(existing?.switchbotOpenToken);
+  const hasSecretKey =
+    supplyingSecretKey || Boolean(existing?.switchbotSecretKey);
+  if (willBeEnabled && (!hasOpenToken || !hasSecretKey)) {
+    throw new DomainError(
+      "SwitchBot連携を有効にするには、Open TokenとSecret Keyの両方を保存してください",
+      "VALIDATION",
+    );
+  }
+
   const updateData: Omit<Prisma.SettingsSwitchbotCreateInput, "id"> = {};
 
   if (data.switchbotEnabled !== undefined) {
@@ -432,6 +471,37 @@ async function persistSwitchBotWebhookPathToken(token: string): Promise<void> {
       SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
     ),
   });
+}
+
+export type SwitchBotWebhookRegistrationStatus =
+  "registered" | "not_registered" | "token_not_issued";
+
+export async function getSwitchBotWebhookRegistrationStatus(): Promise<SwitchBotWebhookRegistrationStatus> {
+  const credentials = await getDecryptedSwitchBotCredentials();
+  if (!credentials) {
+    throw new DomainError(
+      "SwitchBot連携が未設定です。先にOpen Token/Secret Keyを保存してください",
+      "VALIDATION",
+    );
+  }
+
+  const { pathToken } = await getSwitchBotWebhookAuth();
+  if (!pathToken) {
+    return "token_not_issued";
+  }
+
+  const expectedUrl = `${getAppUrl()}/api/webhooks/switchbot/${pathToken}`;
+  const result = await queryWebhookUrls(credentials);
+  if (!result.ok) {
+    throw new DomainError(
+      `Webhook登録状態の確認に失敗しました: ${result.message}`,
+      "UNEXPECTED",
+    );
+  }
+
+  return result.body.urls.includes(expectedUrl)
+    ? "registered"
+    : "not_registered";
 }
 
 export async function ensureSwitchBotWebhookPathToken(): Promise<string> {

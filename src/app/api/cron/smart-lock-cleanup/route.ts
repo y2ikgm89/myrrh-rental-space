@@ -11,7 +11,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { getSwitchBotConfig } from "@/shared/domain/settings/api-key-queries";
+import { getSwitchBotEnabled } from "@/shared/domain/settings/api-key-queries";
 import {
   expireStalePendingSmartLockPasscodes,
   expireStaleRevokePendingSmartLockPasscodes,
@@ -50,8 +50,8 @@ export async function GET(request: Request) {
     const staleRevokePendingReverted =
       await expireStaleRevokePendingSmartLockPasscodes(now);
 
-    const config = await getSwitchBotConfig();
-    if (!config.enabled) {
+    const enabled = await getSwitchBotEnabled();
+    if (!enabled) {
       // SwitchBot連携が無効でも、失効すべき CONFIRMED / REVOKE_PENDING パスコードの
       // 蓄積は DB のみの読取(外部API呼出無し)で検知できる。
       const stuck =
@@ -98,6 +98,7 @@ export async function GET(request: Request) {
           staleRevokePendingReverted,
         },
       });
+      return jsonError("Some SwitchBot passcodes failed to revoke", 500);
     }
 
     return jsonSuccess({

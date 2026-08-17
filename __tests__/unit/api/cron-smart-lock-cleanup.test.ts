@@ -8,8 +8,8 @@ import { NextResponse } from "next/server";
 const mockAuthorizeCronRequest = mock<() => Promise<Response | null>>(() =>
   Promise.resolve(null),
 );
-const mockGetSwitchBotConfig = mock<() => Promise<{ enabled: boolean }>>(() =>
-  Promise.resolve({ enabled: true }),
+const mockGetSwitchBotEnabled = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
 );
 const mockRevokeExpiredSmartLockPasscodes = mock<
   (now: Date) => Promise<{ revoked: number; failed: number }>
@@ -47,7 +47,7 @@ mock.module("@/shared/lib/cron-auth", () => ({
 }));
 
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  getSwitchBotConfig: () => mockGetSwitchBotConfig(),
+  getSwitchBotEnabled: () => mockGetSwitchBotEnabled(),
 }));
 
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
@@ -101,7 +101,7 @@ function makeSchedulerRequest(): Request {
 describe("GET /api/cron/smart-lock-cleanup", () => {
   beforeEach(() => {
     mockAuthorizeCronRequest.mockReset();
-    mockGetSwitchBotConfig.mockReset();
+    mockGetSwitchBotEnabled.mockReset();
     mockRevokeExpiredSmartLockPasscodes.mockReset();
     mockFindStuckSmartLockPasscodesWhenIntegrationDisabled.mockReset();
     mockExpireStalePendingSmartLockPasscodes.mockReset();
@@ -113,7 +113,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
 
     mockConnection.mockResolvedValue(undefined);
     mockAuthorizeCronRequest.mockResolvedValue(null);
-    mockGetSwitchBotConfig.mockResolvedValue({ enabled: true });
+    mockGetSwitchBotEnabled.mockResolvedValue(true);
     mockRevokeExpiredSmartLockPasscodes.mockResolvedValue({
       revoked: 0,
       failed: 0,
@@ -130,7 +130,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
   });
 
   test("SwitchBot連携がOFF → stale revoke も含めて早期return", async () => {
-    mockGetSwitchBotConfig.mockResolvedValue({ enabled: false });
+    mockGetSwitchBotEnabled.mockResolvedValue(false);
     mockExpireStalePendingSmartLockPasscodes.mockResolvedValue(1);
     mockExpireStaleRevokePendingSmartLockPasscodes.mockResolvedValue(2);
 
@@ -152,7 +152,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
   });
 
   test("SwitchBot連携がOFFで stuck (CONFIRMED + REVOKE_PENDING) → logError", async () => {
-    mockGetSwitchBotConfig.mockResolvedValue({ enabled: false });
+    mockGetSwitchBotEnabled.mockResolvedValue(false);
     mockFindStuckSmartLockPasscodesWhenIntegrationDisabled.mockResolvedValue([
       { id: "p1" },
       { id: "p2" },
@@ -190,6 +190,19 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(500);
-    expect(mockGetSwitchBotConfig).not.toHaveBeenCalled();
+    expect(mockGetSwitchBotEnabled).not.toHaveBeenCalled();
+  });
+
+  test("failed > 0 → status 500", async () => {
+    mockRevokeExpiredSmartLockPasscodes.mockResolvedValue({
+      revoked: 1,
+      failed: 2,
+    });
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(500);
+    expect(mockLogError).toHaveBeenCalled();
+    expect(mockProcessPendingSmartLockReissues).toHaveBeenCalled();
   });
 });
