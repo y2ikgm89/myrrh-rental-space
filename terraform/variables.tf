@@ -278,6 +278,16 @@ variable "cloudflare_account_id" {
 # rate-limit が効く（＝ `"unknown"` に落ちていない）ことを確認してから次へ進む。
 # -----------------------------------------------------------------------------
 
+variable "monitoring_alert_email" {
+  description = "Cloud Monitoring alert notification email. Set via TF_VAR_monitoring_alert_email from GH Secret MONITORING_ALERT_EMAIL_TF. Not committed."
+  type        = string
+  sensitive   = true
+  validation {
+    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.monitoring_alert_email))
+    error_message = "monitoring_alert_email must be a valid email address. Set TF_VAR_monitoring_alert_email from GH Secret MONITORING_ALERT_EMAIL_TF."
+  }
+}
+
 variable "cloudflare_origin_header_secret" {
   description = "Shared secret injected into `x-cloudflare-origin-secret` header by Cloudflare Transform Rule; must equal Cloud Run runtime `CLOUDFLARE_ORIGIN_HEADER_SECRET` Secret Manager value. Set via TF_VAR from GH Secret CLOUDFLARE_ORIGIN_HEADER_SECRET_TF."
   type        = string

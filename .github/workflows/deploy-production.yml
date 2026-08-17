@@ -147,6 +147,7 @@ jobs:
           # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
           # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
           TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
+          TF_VAR_monitoring_alert_email: ${{ secrets.MONITORING_ALERT_EMAIL_TF }}
 
       - name: Render plan to text
         working-directory: terraform
@@ -213,6 +214,7 @@ jobs:
           # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
           # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
           TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
+          TF_VAR_monitoring_alert_email: ${{ secrets.MONITORING_ALERT_EMAIL_TF }}
 
   deploy:
     name: Cloud Build Deploy

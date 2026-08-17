@@ -11,8 +11,10 @@ import "server-only";
 
 import { clearCalendarSyncToken } from "@/shared/domain/reservations/calendar-sync";
 import { resolveGoogleCalendarWriteContext } from "@/shared/domain/settings/google-calendar-api";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
 import { fetchCalendarChanges as fetchCalendarChangesApi } from "@/shared/lib/google-calendar/sync";
 import type { SyncChangesResult } from "@/shared/lib/google-calendar/types";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * カレンダーの変更を取得（増分同期）。
@@ -31,7 +33,12 @@ export async function fetchCalendarChanges(
     };
   }
 
-  return fetchCalendarChangesApi(resolved.ctx, syncToken, {
+  const result = await fetchCalendarChangesApi(resolved.ctx, syncToken, {
     onFullSyncRequired: clearCalendarSyncToken,
   });
+  await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+    success: result.success,
+    error: result.error ? new Error(result.error) : undefined,
+  });
+  return result;
 }

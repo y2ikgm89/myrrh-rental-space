@@ -33,6 +33,8 @@ import {
 } from "@/shared/lib/errors/server";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { isGoogleCalendarFullSyncRequired } from "@/shared/lib/google-api/retry";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
 import { createCalendarClientFromServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
 
@@ -119,6 +121,9 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
       calendarSettings.calendarId,
       eventImportSyncToken,
     );
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+      success: true,
+    });
 
     for (const event of fetchResult.events) {
       try {
@@ -195,6 +200,10 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "importCalendarEvents" },
+    });
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+      success: false,
+      error,
     });
     return {
       ...result,

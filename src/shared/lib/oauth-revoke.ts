@@ -21,6 +21,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
 import { serverEnv } from "@/shared/lib/env/server";
 
@@ -40,24 +41,22 @@ export async function revokeGoogleOAuthGrant(token: string): Promise<void> {
   if (!token) return;
   try {
     const body = new URLSearchParams({ token });
-    const response = await fetchPublicHttpResource(GOOGLE_REVOKE_ENDPOINT, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-      signal: AbortSignal.timeout(REVOKE_TIMEOUT_MS),
+    await withGoogleApiRetry(async () => {
+      const response = await fetchPublicHttpResource(GOOGLE_REVOKE_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+        signal: AbortSignal.timeout(REVOKE_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        throw Object.assign(
+          new Error(
+            `Google revoke returned non-2xx status: ${String(response.status)}`,
+          ),
+          { status: response.status },
+        );
+      }
     });
-    if (!response.ok) {
-      logError(
-        new Error(
-          `Google revoke returned non-2xx status: ${String(response.status)}`,
-        ),
-        {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: { operation: "revokeGoogleOAuthGrant" },
-        },
-      );
-    }
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

@@ -368,29 +368,26 @@ describe("値域 CHECK 制約", () => {
   });
 
   test("接続ステータスに未知の値を入れられない", async () => {
-    // singleton 行は seed が作る。migration 履歴を 1 本の baseline へ畳んだ結果、
-    // baseline には INSERT が 1 つも無くなったので、**このテストが自分で用意する**。
-    // migration が入れてくれたデータに依存していると、畳んだ瞬間に静かに 0 行になる。
+    // 接続状態は settings_* ではなく IntegrationHealth 1 表。migration の
+    // backfill は旧列に値がある行だけ入れるので、CI の未 seed DB では 0 行になりうる。
     // `updatedAt` は Prisma の `@updatedAt`（クライアント側で埋める）なので DB 既定値が
     // 無い。生 SQL で入れるときは明示しないと NOT NULL 違反になる。
     await client.query(
-      `INSERT INTO "settings_stripe" ("id", updated_at) VALUES ('singleton', now())
-       ON CONFLICT ("id") DO NOTHING`,
+      `INSERT INTO "integration_healths" ("integration", "updated_at")
+       VALUES ('STRIPE', now())
+       ON CONFLICT ("integration") DO NOTHING`,
     );
 
     // 行が無いと 0 行更新で例外が出ず「拒否された」と読み違えるため、行数を確かめる。
     const rows = await client.query<{ readonly n: number }>(
-      `SELECT count(*)::int AS n FROM "settings_stripe"`,
+      `SELECT count(*)::int AS n FROM "integration_healths"`,
     );
     expect(rows.rows[0]?.n ?? 0).toBeGreaterThan(0);
 
-    // 以前は 6 つの設定表に同じ値域の CHECK を手書きしていた。今は
-    // `connection_status` enum 型へ寄せてあるので、**拒否するのは CHECK ではなく型**。
-    // 制約名ではなく型名で照合する（保護は弱まっていない — 型は 6 表で共有される
-    // 1 つの定義なので、値を足すときに 1 箇所しか触れない）。
+    // 拒否するのは CHECK ではなく `connection_status` 型。制約名ではなく型名で照合する。
     await expectRejectedBy(
       "invalid input value for enum connection_status",
-      `UPDATE "settings_stripe" SET stripe_connection_status = 'typo'`,
+      `UPDATE "integration_healths" SET status = 'typo'`,
     );
   });
 

@@ -21,6 +21,7 @@ import type {
 // -----------------------------------------------------------------------------
 
 const BASE_PARAMS: CalendarEventParams = {
+  id: "r0123456789ab7cde89ab0123456789ab",
   summary: "test event",
   description: "desc",
   startTime: new Date("2027-05-04T10:00:00.000Z"),

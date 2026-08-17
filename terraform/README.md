@@ -50,6 +50,7 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloudflare_rulesets.tf`      | Phase 8 Phase 2b: Cache Rules + Transform Rules (x-cloudflare-origin-secret 注入、rate-limit trust chain) を import       |
 | `cloudflare_r2.tf`            | Phase 8 Phase 2b: R2 bucket `myrrh-rental-space` を import (location は import で state 追従)                             |
 | `cloudflare_turnstile.tf`     | Phase 8 Phase 2b: Turnstile widget `Myrrh Rental Space` (sitekey=0x4AAA..、mode=managed) を import                        |
+| `monitoring.tf`               | Cloud Monitoring: log metric × 3 + email notification channel + alert policy × 5（`TF_VAR_monitoring_alert_email`）       |
 
 **削除済** (2026-07-14 F1 refactor):
 

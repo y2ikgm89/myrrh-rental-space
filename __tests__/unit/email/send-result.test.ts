@@ -20,6 +20,10 @@ mock.module("@/shared/lib/email/client", () => ({
   getFromAddress: mockGetFromAddress,
 }));
 
+mock.module("@/shared/lib/integration-health-port", () => ({
+  notifyConnectionApiResult: mock(() => Promise.resolve()),
+}));
+
 import { EMAIL_SEND_CONTEXT } from "../shared/lib/email/_email-test-fixtures";
 
 const { sendEmail } = await import("@/shared/lib/email/send");

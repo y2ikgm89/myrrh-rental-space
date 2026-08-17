@@ -7,9 +7,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
-  ConnectionStatus,
+  IntegrationKey,
   SmartLockPasscodeStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { clearConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   getDecryptedSwitchBotCredentials,
   getDecryptedSwitchBotCredentialsForRevocation,
@@ -109,24 +110,17 @@ export async function updateResendSettings(data: {
   }
 
   await upsertResendSettings(updateData);
-}
-
-export async function recordResendConnectionStatus(
-  status: ConnectionStatus,
-): Promise<void> {
-  await upsertResendSettings({
-    resendLastTestedAt: new Date(),
-    resendConnectionStatus: status,
-  });
+  if (data.resendApiKey) {
+    await clearConnectionHealth(IntegrationKey.RESEND);
+  }
 }
 
 export async function clearResendSettings(): Promise<void> {
   await upsertResendSettings({
     resendApiKey: null,
     resendWebhookSecret: null,
-    resendLastTestedAt: null,
-    resendConnectionStatus: null,
   });
+  await clearConnectionHealth(IntegrationKey.RESEND);
 }
 
 export async function updateTurnstileSettings(data: {
@@ -151,24 +145,17 @@ export async function updateTurnstileSettings(data: {
   }
 
   await upsertTurnstileSettings(updateData);
-}
-
-export async function recordTurnstileConnectionStatus(
-  status: ConnectionStatus,
-): Promise<void> {
-  await upsertTurnstileSettings({
-    turnstileLastTestedAt: new Date(),
-    turnstileConnectionStatus: status,
-  });
+  if (data.turnstileSecretKey) {
+    await clearConnectionHealth(IntegrationKey.TURNSTILE);
+  }
 }
 
 export async function clearTurnstileSettings(): Promise<void> {
   await upsertTurnstileSettings({
     turnstileSiteKey: null,
     turnstileSecretKey: null,
-    turnstileLastTestedAt: null,
-    turnstileConnectionStatus: null,
   });
+  await clearConnectionHealth(IntegrationKey.TURNSTILE);
 }
 
 export async function updateGoogleMapsSettings(data: {
@@ -185,23 +172,16 @@ export async function updateGoogleMapsSettings(data: {
   }
 
   await upsertGoogleMapsSettings(updateData);
-}
-
-export async function recordGoogleMapsConnectionStatus(
-  status: ConnectionStatus,
-): Promise<void> {
-  await upsertGoogleMapsSettings({
-    googleMapsLastTestedAt: new Date(),
-    googleMapsConnectionStatus: status,
-  });
+  if (data.googleMapsApiKey) {
+    await clearConnectionHealth(IntegrationKey.GOOGLE_MAPS);
+  }
 }
 
 export async function clearGoogleMapsSettings(): Promise<void> {
   await upsertGoogleMapsSettings({
     googleMapsApiKey: null,
-    googleMapsLastTestedAt: null,
-    googleMapsConnectionStatus: null,
   });
+  await clearConnectionHealth(IntegrationKey.GOOGLE_MAPS);
 }
 
 export async function updateSwitchBotSettings(data: {
@@ -276,15 +256,9 @@ export async function updateSwitchBotSettings(data: {
   }
 
   await upsertSwitchbotSettings(updateData);
-}
-
-export async function recordSwitchBotConnectionStatus(
-  status: ConnectionStatus,
-): Promise<void> {
-  await upsertSwitchbotSettings({
-    switchbotLastTestedAt: new Date(),
-    switchbotConnectionStatus: status,
-  });
+  if (data.switchbotOpenToken || data.switchbotSecretKey) {
+    await clearConnectionHealth(IntegrationKey.SWITCHBOT);
+  }
 }
 
 /**
@@ -450,9 +424,8 @@ export async function clearSwitchBotSettings(): Promise<void> {
     switchbotOpenToken: null,
     switchbotSecretKey: null,
     switchbotWebhookPathToken: null,
-    switchbotLastTestedAt: null,
-    switchbotConnectionStatus: null,
   });
+  await clearConnectionHealth(IntegrationKey.SWITCHBOT);
 }
 
 /**

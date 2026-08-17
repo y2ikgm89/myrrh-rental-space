@@ -27,6 +27,19 @@ import type {
   CalendarEventResult,
   GoogleCalendarEventWriteContext,
 } from "@/shared/lib/google-calendar/types";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
+
+async function withCalendarHealth<
+  T extends { success: boolean; error?: string },
+>(run: () => Promise<T>): Promise<T> {
+  const result = await run();
+  await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+    success: result.success,
+    error: result.error ? new Error(result.error) : undefined,
+  });
+  return result;
+}
 
 export type { GoogleCalendarEventWriteContext };
 
@@ -71,7 +84,9 @@ export async function createCalendarEvent(
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return createCalendarEventApi(resolved.ctx, params, options);
+  return withCalendarHealth(() =>
+    createCalendarEventApi(resolved.ctx, params, options),
+  );
 }
 
 /**
@@ -85,7 +100,9 @@ export async function updateCalendarEvent(
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return updateCalendarEventApi(resolved.ctx, eventId, params);
+  return withCalendarHealth(() =>
+    updateCalendarEventApi(resolved.ctx, eventId, params),
+  );
 }
 
 /**
@@ -109,7 +126,9 @@ export async function patchCalendarEvent(
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return patchCalendarEventApi(resolved.ctx, eventId, patch);
+  return withCalendarHealth(() =>
+    patchCalendarEventApi(resolved.ctx, eventId, patch),
+  );
 }
 
 /**
@@ -126,7 +145,9 @@ export async function deleteCalendarEvent(
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return deleteCalendarEventApi(resolved.ctx, eventId);
+  return withCalendarHealth(() =>
+    deleteCalendarEventApi(resolved.ctx, eventId),
+  );
 }
 
 /**
@@ -139,7 +160,9 @@ export async function addMeetConferenceToCalendarEvent(
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return addMeetConferenceToCalendarEventApi(resolved.ctx, eventId);
+  return withCalendarHealth(() =>
+    addMeetConferenceToCalendarEventApi(resolved.ctx, eventId),
+  );
 }
 
 /**
@@ -154,7 +177,7 @@ export async function getCalendarEvent(eventId: string): Promise<{
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return getCalendarEventApi(resolved.ctx, eventId);
+  return withCalendarHealth(() => getCalendarEventApi(resolved.ctx, eventId));
 }
 
 /**
@@ -169,5 +192,7 @@ export async function fetchEventInstances(masterEventId: string): Promise<{
   if (!resolved.ok) {
     return { success: false, error: resolved.error };
   }
-  return fetchEventInstancesApi(resolved.ctx, masterEventId);
+  return withCalendarHealth(() =>
+    fetchEventInstancesApi(resolved.ctx, masterEventId),
+  );
 }

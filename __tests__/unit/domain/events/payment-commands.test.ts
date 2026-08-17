@@ -229,6 +229,11 @@ mock.module("@/shared/domain/receipts/notify-issued", () => ({
 mock.module("@/shared/lib/receipt-download-token", () => ({
   createReceiptDownloadToken: () => "RECEIPT_TOKEN",
 }));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  withStripeConnectionHealth: async <T>(run: () => Promise<T>) => run(),
+  recordConnectionSuccess: mock(() => Promise.resolve()),
+  recordConnectionFailure: mock(() => Promise.resolve()),
+}));
 
 const {
   createEventCheckoutSessionCommand,

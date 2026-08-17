@@ -1,13 +1,11 @@
 /**
- * testStripeConnectionAction — 未保存キーの接続テストが DB に書き込まないことを検証。
+ * testStripeConnectionAction — 接続テスト結果を IntegrationHealth に書く。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
-const mockRecordStripeConnectionSuccess = mock<
-  (accountId?: string) => Promise<void>
->(() => Promise.resolve());
 const mockTestStripeConnection = mock<
   (secretKey: string) => Promise<{
     success: boolean;
@@ -23,6 +21,11 @@ const mockTestStripeConnection = mock<
   }),
 );
 
+const mockRecordConnectionTestResult = mock(
+  async (_key: unknown, _result: { success: boolean; error?: string }) =>
+    undefined,
+);
+
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: async <T>(options: {
     execute: () => Promise<T>;
@@ -34,9 +37,29 @@ mock.module("@/shared/lib/stripe", () => ({
 }));
 
 mock.module("@/shared/domain/settings/stripe-commands", () => ({
-  recordStripeConnectionSuccess: mockRecordStripeConnectionSuccess,
   updateStripeSettings: mock(() => Promise.resolve()),
   clearStripeKeys: mock(() => Promise.resolve()),
+}));
+
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionTestResult: (
+    key: unknown,
+    result: { success: boolean; error?: string },
+  ) => mockRecordConnectionTestResult(key, result),
+  getConnectionHealth: mock(() =>
+    Promise.resolve({
+      status: null,
+      lastCheckedAt: null,
+      lastErrorMessage: null,
+      consecutiveFailures: 0,
+    }),
+  ),
+  getConnectionHealthMap: mock(() => Promise.resolve({})),
+  clearConnectionHealth: mock(() => Promise.resolve()),
+  recordConnectionApiResult: mock(() => Promise.resolve()),
+  recordConnectionSuccess: mock(() => Promise.resolve()),
+  recordConnectionFailure: mock(() => Promise.resolve()),
+  withStripeConnectionHealth: async <T>(run: () => Promise<T>) => run(),
 }));
 
 const { testStripeConnectionAction } =
@@ -44,8 +67,8 @@ const { testStripeConnectionAction } =
 
 describe("testStripeConnectionAction", () => {
   beforeEach(() => {
-    mockRecordStripeConnectionSuccess.mockReset();
     mockTestStripeConnection.mockReset();
+    mockRecordConnectionTestResult.mockReset();
     mockTestStripeConnection.mockResolvedValue({
       success: true,
       accountId: "acct_test123",
@@ -53,13 +76,17 @@ describe("testStripeConnectionAction", () => {
     });
   });
 
-  test("接続成功時も recordStripeConnectionSuccess を呼ばない", async () => {
+  test("接続成功時は CONNECTED を記録し検証結果を返す", async () => {
     const result = await testStripeConnectionAction("sk_test_abc123");
 
     expect(result).toEqual({
       accountId: "acct_test123",
       mode: "test",
     });
-    expect(mockRecordStripeConnectionSuccess).not.toHaveBeenCalled();
+    expect(mockTestStripeConnection).toHaveBeenCalledWith("sk_test_abc123");
+    expect(mockRecordConnectionTestResult).toHaveBeenCalledWith(
+      IntegrationKey.STRIPE,
+      expect.objectContaining({ success: true }),
+    );
   });
 });

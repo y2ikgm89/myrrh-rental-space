@@ -62,6 +62,18 @@ mock.module("@generated/prisma/client", () => ({
   Prisma: { JsonNull: { __jsonNull: true }, DbNull: { __dbNull: true } },
 }));
 
+const mockClearConnectionHealth = mock(async () => undefined);
+const mockGetConnectionHealth = mock(async () => ({
+  status: null,
+  lastCheckedAt: null,
+  lastErrorMessage: null,
+  consecutiveFailures: 0,
+}));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  clearConnectionHealth: mockClearConnectionHealth,
+  getConnectionHealth: mockGetConnectionHealth,
+}));
+
 const { getGbpAuthState, saveGbpAuthState, clearGbpAuthState } =
   await import("@/shared/domain/google-business-profile/settings");
 

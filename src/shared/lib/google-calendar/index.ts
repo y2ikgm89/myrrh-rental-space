@@ -21,14 +21,16 @@ export {
 } from "./service-account";
 
 export {
-  createCalendarEvent,
-  updateCalendarEvent,
-  patchCalendarEvent,
-  deleteCalendarEvent,
   addMeetConferenceToCalendarEvent,
+  buildGoogleCalendarEventId,
+  createCalendarEvent,
+  deleteCalendarEvent,
   fetchEventInstances,
   getCalendarEvent,
+  patchCalendarEvent,
+  updateCalendarEvent,
 } from "./events";
+export type { GoogleCalendarEventIdKind } from "./events";
 
 export { fetchCalendarChanges } from "./sync";
 export type { FetchCalendarChangesOptions } from "./sync";

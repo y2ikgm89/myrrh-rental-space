@@ -126,6 +126,11 @@ mock.module("@/shared/lib/instagram", () => ({
   testInstagramConnection: mockTestInstagramConnection,
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  clearConnectionHealth: mock(async () => undefined),
+  recordConnectionApiResult: mock(async () => undefined),
+}));
+
 // validations/instagram モック
 mock.module("@/shared/lib/validations/instagram", () => ({
   extractInstagramShortcode: (url: string) => {

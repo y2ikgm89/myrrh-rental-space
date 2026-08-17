@@ -19,6 +19,8 @@ import * as stripeLib from "@/shared/lib/stripe";
 import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
 import { emptyToNull } from "./schemas/form-schema-helpers";
 import { DomainError } from "@/shared/domain/domain-error";
+import { recordConnectionTestResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import {
   clearStripeKeys as clearStripeKeysCommand,
   updateStripeSettings as updateStripeSettingsCommand,
@@ -133,7 +135,7 @@ export async function updateStripeSettings(
 }
 
 /**
- * Stripe接続テスト — 未保存キーでの検証のみ。DB への接続状態書込は行わない。
+ * Stripe接続テスト。他連携と同じく結果を IntegrationHealth に書く。
  */
 export async function testStripeConnectionAction(
   secretKey: string,
@@ -143,6 +145,7 @@ export async function testStripeConnectionAction(
     action: "manage",
     execute: async () => {
       const result = await stripeLib.testStripeConnection(secretKey);
+      await recordConnectionTestResult(IntegrationKey.STRIPE, result);
       if (!result.success) {
         throw new DomainError(
           result.error ?? "接続テストに失敗しました",

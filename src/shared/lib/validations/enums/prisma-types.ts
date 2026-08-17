@@ -49,6 +49,7 @@ export {
   CalendarSyncMethod,
   AnalyticsType,
   ConnectionStatus,
+  IntegrationKey,
   BlockedDateScope,
   BlockedDateType,
   RefundedByType,

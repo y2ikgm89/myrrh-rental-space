@@ -29,6 +29,7 @@ import type { InstagramConfig } from "@/shared/domain/instagram/types";
 import { StatusBanner } from "../../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Types & Constants
@@ -153,12 +154,33 @@ export function ConnectionCard({
           <CardDescription>アカウント接続状況</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <StatusBanner success>
+          <StatusBanner
+            success={config.connectionStatus !== ConnectionStatus.ERROR}
+          >
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-success" />
-              <span className="text-sm font-medium text-success">連携済み</span>
+              {config.connectionStatus === ConnectionStatus.ERROR ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-sm font-medium text-destructive">
+                    エラー
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  <span className="text-sm font-medium text-success">
+                    連携済み
+                  </span>
+                </>
+              )}
             </div>
-            <p className="mt-1 text-sm text-success">
+            <p
+              className={
+                config.connectionStatus === ConnectionStatus.ERROR
+                  ? "mt-1 text-sm text-destructive"
+                  : "mt-1 text-sm text-success"
+              }
+            >
               @{config.username || "unknown"}
               {config.accountType && (
                 <span className="ml-2 text-xs text-muted-foreground">
@@ -166,6 +188,11 @@ export function ConnectionCard({
                 </span>
               )}
             </p>
+            {config.lastTestedAt && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                最終テスト: {formatDateTimeShort(config.lastTestedAt)}
+              </p>
+            )}
             {config.tokenExpiresAt && (
               <p className="mt-1 text-xs text-muted-foreground">
                 トークン有効期限: {formatDateTimeShort(config.tokenExpiresAt)}

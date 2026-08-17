@@ -63,6 +63,8 @@ const EXTERNAL_ID_MODELS: Readonly<Record<string, string>> = {
 const NATURAL_KEY_MODELS: Readonly<Record<string, string>> = {
   ReceiptSequence:
     "年そのものが主キー（年ごとの連番）。実体ではなくカウンタなので ID を持たない",
+  IntegrationHealth:
+    "主キーは IntegrationKey enum（連携あたり 1 行）。実体 ID ではなくレジストリ行なので uuid を持たない",
 };
 
 /**
@@ -170,6 +172,7 @@ describe("ID 形式は 1 つに統一されている", () => {
 
     expect(contradictions).toEqual([
       { model: "ReceiptSequence", idType: "Int" },
+      { model: "IntegrationHealth", idType: "IntegrationKey" },
     ]);
   });
 

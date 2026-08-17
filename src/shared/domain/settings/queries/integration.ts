@@ -9,6 +9,8 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
+import { getConnectionHealth } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Stripe の公開設定（publishable key / 通貨 / 接続状態など）を返す。
@@ -19,26 +21,35 @@ export async function getStripeSettings() {
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settingsStripe.findUnique({
-        where: { id: "singleton" },
-        select: {
-          stripePublishableKey: true,
-          stripeAccountId: true,
-          stripeCurrency: true,
-          stripePaymentMethodTypes: true,
-          stripeLastTestedAt: true,
-          stripeConnectionStatus: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getStripeSettings",
-  });
+  const [result, health] = await Promise.all([
+    safeFetch({
+      fetch: () =>
+        prisma.settingsStripe.findUnique({
+          where: { id: "singleton" },
+          select: {
+            stripePublishableKey: true,
+            stripeAccountId: true,
+            stripeCurrency: true,
+            stripePaymentMethodTypes: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getStripeSettings",
+    }),
+    getConnectionHealth(IntegrationKey.STRIPE),
+  ]);
 
-  return toPlainObject(result);
+  return toPlainObject(
+    result
+      ? {
+          ...result,
+          stripeLastTestedAt: health.lastCheckedAt,
+          stripeConnectionStatus: health.status,
+        }
+      : null,
+  );
 }
 
 /**

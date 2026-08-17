@@ -108,6 +108,10 @@ mock.module("@/shared/lib/google-calendar", () => ({
   stopWebhookWatch: (client: object, channelId: string, resourceId: string) =>
     mockStopWebhookWatch(client, channelId, resourceId),
 }));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  clearConnectionHealth: mock(async () => undefined),
+}));
+
 mock.module("@/shared/lib/errors/server", () => ({
   logError: (...args: unknown[]) => mockLogError(...args),
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
@@ -152,13 +156,10 @@ await installPrismaEnumsMock({
 
 import {
   updateStripeSettings,
-  recordStripeConnectionSuccess,
   clearStripeKeys,
 } from "@/shared/domain/settings/stripe-commands";
 import {
   updateGoogleCalendarSettings,
-  recordGoogleCalendarConnectionSuccess,
-  recordGoogleCalendarConnectionError,
   clearGoogleCalendarServiceAccount,
   updateTwoWaySyncSettings,
   saveGoogleCalendarWebhook,
@@ -393,68 +394,6 @@ describe("updateStripeSettings", () => {
 });
 
 // =============================================================================
-// recordStripeConnectionSuccess
-// =============================================================================
-
-describe("recordStripeConnectionSuccess", () => {
-  beforeEach(() => {
-    mockSettingsStripeUpsert.mockReset();
-    mockSettingsStripeUpsert.mockResolvedValue({ id: "singleton" });
-  });
-
-  describe("正常系", () => {
-    test("accountId を指定して接続成功を記録できる", async () => {
-      await recordStripeConnectionSuccess("acct_test123");
-
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            stripeConnectionStatus: "CONNECTED",
-            stripeAccountId: "acct_test123",
-          }),
-        }),
-      );
-    });
-
-    test("accountId を undefined にしても記録できる", async () => {
-      await recordStripeConnectionSuccess(undefined);
-
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            stripeConnectionStatus: "CONNECTED",
-          }),
-        }),
-      );
-    });
-
-    test("stripeLastTestedAt が Date として設定される", async () => {
-      await recordStripeConnectionSuccess("acct_test");
-
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            stripeLastTestedAt: expect.any(Date),
-          }),
-        }),
-      );
-    });
-
-    test("singleton ID で upsert が呼ばれる", async () => {
-      await recordStripeConnectionSuccess("acct_test");
-
-      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "singleton" },
-        }),
-      );
-    });
-  });
-});
-
-// =============================================================================
 // clearStripeKeys
 // =============================================================================
 
@@ -476,8 +415,6 @@ describe("clearStripeKeys", () => {
             stripeWebhookSecret: null,
             stripePublishableKey: null,
             stripeAccountId: null,
-            stripeConnectionStatus: null,
-            stripeLastTestedAt: null,
           }),
         }),
       );
@@ -542,9 +479,6 @@ describe("updateGoogleCalendarSettings", () => {
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarServiceAccountJson: expect.any(String),
-            // 新しいサービスアカウントJSONを設定した場合、接続状態がリセットされる
-            googleCalendarConnectionStatus: null,
-            googleCalendarLastTestedAt: null,
           }),
         }),
       );
@@ -717,82 +651,6 @@ describe("updateGoogleCalendarSettings", () => {
 });
 
 // =============================================================================
-// recordGoogleCalendarConnectionSuccess
-// =============================================================================
-
-describe("recordGoogleCalendarConnectionSuccess", () => {
-  beforeEach(() => {
-    mockSettingsGoogleCalendarUpsert.mockReset();
-    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
-  });
-
-  describe("正常系", () => {
-    test("Google Calendar 接続成功を記録できる", async () => {
-      await recordGoogleCalendarConnectionSuccess();
-
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            googleCalendarConnectionStatus: "CONNECTED",
-          }),
-        }),
-      );
-    });
-
-    test("googleCalendarLastTestedAt が Date として設定される", async () => {
-      await recordGoogleCalendarConnectionSuccess();
-
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            googleCalendarLastTestedAt: expect.any(Date),
-          }),
-        }),
-      );
-    });
-  });
-});
-
-// =============================================================================
-// recordGoogleCalendarConnectionError
-// =============================================================================
-
-describe("recordGoogleCalendarConnectionError", () => {
-  beforeEach(() => {
-    mockSettingsGoogleCalendarUpsert.mockReset();
-    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
-  });
-
-  describe("正常系", () => {
-    test("Google Calendar 接続エラーを記録できる", async () => {
-      await recordGoogleCalendarConnectionError();
-
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            googleCalendarConnectionStatus: "ERROR",
-          }),
-        }),
-      );
-    });
-
-    test("googleCalendarLastTestedAt が Date として設定される", async () => {
-      await recordGoogleCalendarConnectionError();
-
-      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            googleCalendarLastTestedAt: expect.any(Date),
-          }),
-        }),
-      );
-    });
-  });
-});
-
-// =============================================================================
 // clearGoogleCalendarServiceAccount
 // =============================================================================
 
@@ -826,8 +684,6 @@ describe("clearGoogleCalendarServiceAccount", () => {
             googleCalendarEnabled: false,
             googleCalendarTwoWaySyncEnabled: false,
             googleCalendarServiceAccountJson: null,
-            googleCalendarConnectionStatus: null,
-            googleCalendarLastTestedAt: null,
           }),
         }),
       );

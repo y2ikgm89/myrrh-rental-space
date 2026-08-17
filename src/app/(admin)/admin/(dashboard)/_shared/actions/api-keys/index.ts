@@ -25,10 +25,6 @@ import {
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   ensureSwitchBotWebhookPathToken,
   getSwitchBotWebhookRegistrationStatus,
-  recordGoogleMapsConnectionStatus,
-  recordResendConnectionStatus,
-  recordSwitchBotConnectionStatus,
-  recordTurnstileConnectionStatus,
   rotateSwitchBotWebhookPathToken as rotateSwitchBotWebhookPathTokenCommand,
   updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
   updateResendSettings as updateResendSettingsCommand,
@@ -53,7 +49,8 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { recordConnectionTestResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 function refreshSettingsCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
@@ -103,9 +100,7 @@ export async function testResendConnectionAction(): Promise<MutationResult> {
       }
 
       const result = await testResendConnection(apiKey);
-      await recordResendConnectionStatus(
-        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
-      );
+      await recordConnectionTestResult(IntegrationKey.RESEND, result);
       refreshSettingsCache();
 
       if (!result.success) {
@@ -177,9 +172,7 @@ export async function testTurnstileConnectionAction(): Promise<
       }
 
       const result = testTurnstileConnection(siteKey, secretKey);
-      await recordTurnstileConnectionStatus(
-        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
-      );
+      await recordConnectionTestResult(IntegrationKey.TURNSTILE, result);
       refreshSettingsCache();
 
       if (!result.success) {
@@ -254,9 +247,7 @@ export async function testGoogleMapsConnectionAction(): Promise<MutationResult> 
       }
 
       const result = await testGoogleMapsConnection(apiKey);
-      await recordGoogleMapsConnectionStatus(
-        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
-      );
+      await recordConnectionTestResult(IntegrationKey.GOOGLE_MAPS, result);
       refreshSettingsCache();
 
       if (!result.success) {
@@ -330,9 +321,7 @@ export async function testSwitchBotConnectionAction(): Promise<
         credentials.openToken,
         credentials.secretKey,
       );
-      await recordSwitchBotConnectionStatus(
-        result.success ? ConnectionStatus.CONNECTED : ConnectionStatus.ERROR,
-      );
+      await recordConnectionTestResult(IntegrationKey.SWITCHBOT, result);
       refreshSettingsCache();
 
       if (!result.success) {

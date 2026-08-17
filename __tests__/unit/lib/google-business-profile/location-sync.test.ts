@@ -91,6 +91,10 @@ mock.module("@/shared/lib/google-business-profile/stub", () => ({
     mockSyncLocationStub(input),
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionApiResult: mock(async () => undefined),
+}));
+
 const { syncLocationToGbpCommand } =
   await import("@/shared/domain/locations/gbp-sync-commands");
 

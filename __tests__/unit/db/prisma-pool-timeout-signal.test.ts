@@ -3,7 +3,8 @@
  *
  * ## なぜ
  *
- * `infra/monitoring/log-metrics/prisma-pool-timeout.yaml` は当初
+ * `terraform/monitoring.tf` の `google_logging_metric.prisma_pool_timeout` は当初
+ * （YAML 時代の `infra/monitoring/log-metrics/prisma-pool-timeout.yaml` を含む）
  * `"Timed out fetching a new connection from the connection pool"` と
  * `P2024` / `P2028` を見ていた。これは Prisma の **Rust query engine** が持つ
  * プールのエラーで、この app の構成（Prisma 7 + `@prisma/adapter-pg`）では
@@ -36,17 +37,14 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { PrismaClient } from "@generated/prisma/client";
 
-const METRIC_PATH = join(
-  process.cwd(),
-  "infra",
-  "monitoring",
-  "log-metrics",
-  "prisma-pool-timeout.yaml",
-);
+const METRIC_PATH = join(process.cwd(), "terraform", "monitoring.tf");
 
-/** filter 本体（`filter: |-` ブロック）から `"..."` を全部拾う。 */
-export function readFilterMatchStrings(metricYaml: string): string[] {
-  const block = /\nfilter:\s*\|-\n([\s\S]*?)\n\n/u.exec(metricYaml)?.[1] ?? "";
+/** `prisma_pool_timeout` の filter heredoc から `"..."` を全部拾う。 */
+export function readFilterMatchStrings(metricHcl: string): string[] {
+  const block =
+    /resource\s+"google_logging_metric"\s+"prisma_pool_timeout"\s+\{[\s\S]*?filter\s*=\s*<<-EOT\n([\s\S]*?)\n\s*EOT/u.exec(
+      metricHcl,
+    )?.[1] ?? "";
   return [...block.matchAll(/"([^"]+)"/gu)].map((match) => match[1] ?? "");
 }
 

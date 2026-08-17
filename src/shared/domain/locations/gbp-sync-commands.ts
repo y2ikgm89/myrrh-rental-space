@@ -31,6 +31,8 @@ import {
   saveGbpAuthState,
 } from "@/shared/domain/google-business-profile/settings";
 import { ensureLocationExists } from "@/shared/domain/locations/commands";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 const GBP_NOT_CONFIGURED_MESSAGE = "GBP 連携未設定";
 
@@ -121,10 +123,17 @@ export async function syncLocationToGbpCommand(
         gbpSyncError: null,
       },
     });
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_BUSINESS_PROFILE, {
+      success: true,
+    });
 
     return { locationId: location.id, syncedAt };
   } catch (error) {
     const message = formatGbpError(error);
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_BUSINESS_PROFILE, {
+      success: false,
+      error,
+    });
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,

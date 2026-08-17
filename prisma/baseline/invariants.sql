@@ -28,7 +28,7 @@ ALTER TABLE "settings_notification" ALTER COLUMN "notification_email_addresses" 
 ALTER TABLE "settings_notification" ALTER COLUMN "notification_staff_ids" SET NOT NULL;
 ALTER TABLE "settings_stripe" ALTER COLUMN "stripe_payment_method_types" SET NOT NULL;
 
--- ===== CHECK 制約 (156) =====
+-- ===== CHECK 制約 (157) =====
 
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_display_order_position_check" CHECK (((display_order >= 0) OR (display_order <= '-1000000'::integer)));
 ALTER TABLE "announcement_bars" ADD CONSTRAINT "announcement_bars_message_array_check" CHECK (((message IS NULL) OR (jsonb_typeof(message) = 'array'::text)));
@@ -74,6 +74,7 @@ ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_size_bytes
 ALTER TABLE "inquiry_attachments" ADD CONSTRAINT "inquiry_attachments_uploader_side_check" CHECK ((((uploaded_by_id IS NOT NULL) AND (uploaded_by_customer_id IS NULL)) OR ((uploaded_by_customer_id IS NOT NULL) AND (uploaded_by_id IS NULL))));
 ALTER TABLE "inquiry_replies" ADD CONSTRAINT "inquiry_replies_author_side_check" CHECK ((((author_type = 'STAFF'::inquiry_reply_author_type) AND (author_id IS NOT NULL) AND (author_customer_id IS NULL)) OR ((author_type = 'CUSTOMER'::inquiry_reply_author_type) AND (author_customer_id IS NOT NULL) AND (author_id IS NULL))));
 ALTER TABLE "instagram_posts" ADD CONSTRAINT "instagram_posts_sort_order_position_check" CHECK (((sort_order >= 0) OR (sort_order <= '-1000000'::integer)));
+ALTER TABLE "integration_healths" ADD CONSTRAINT "integration_healths_consecutive_failures_non_negative_check" CHECK ((consecutive_failures >= 0));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_access_lines_array_check" CHECK (((access_lines IS NULL) OR (jsonb_typeof(access_lines) = 'array'::text)));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_amenities_object_check" CHECK ((jsonb_typeof(amenities) = 'object'::text));
 ALTER TABLE "locations" ADD CONSTRAINT "locations_business_hours_object_check" CHECK (((business_hours IS NULL) OR (jsonb_typeof(business_hours) = 'object'::text)));

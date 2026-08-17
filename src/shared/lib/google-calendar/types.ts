@@ -28,6 +28,12 @@ export type GoogleCalendarEventWriteContext = GoogleCalendarClientContext & {
 };
 
 export interface CalendarEventParams {
+  /**
+   * Client-specified Google Calendar event ID。
+   * `buildGoogleCalendarEventId` が作る base32hex 適合の決定論値。
+   * insert の冪等キー。patch では無視される。
+   */
+  id: string;
   summary: string;
   description: string;
   location?: string;

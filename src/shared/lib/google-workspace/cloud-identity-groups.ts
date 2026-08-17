@@ -2,6 +2,8 @@ import "server-only";
 
 import { google, type cloudidentity_v1 } from "googleapis";
 
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
+
 const CLOUD_IDENTITY_GROUPS_READONLY_SCOPE =
   "https://www.googleapis.com/auth/cloud-identity.groups.readonly";
 
@@ -30,9 +32,11 @@ async function lookupGroupNameByEmail(groupEmail: string): Promise<string> {
   if (cached) return cached;
 
   const cloudIdentity = await getCloudIdentityClient();
-  const result = await cloudIdentity.groups.lookup({
-    "groupKey.id": groupEmail,
-  });
+  const result = await withGoogleApiRetry(() =>
+    cloudIdentity.groups.lookup({
+      "groupKey.id": groupEmail,
+    }),
+  );
   const groupName = result.data.name;
   if (!groupName) {
     throw new Error(`Google Cloud Identity group not found: ${groupEmail}`);
@@ -55,11 +59,12 @@ export async function isGoogleWorkspaceGroupMember({
 }): Promise<boolean> {
   const cloudIdentity = await getCloudIdentityClient();
   const groupName = await lookupGroupNameByEmail(groupEmail);
-  const result =
-    await cloudIdentity.groups.memberships.checkTransitiveMembership({
+  const result = await withGoogleApiRetry(() =>
+    cloudIdentity.groups.memberships.checkTransitiveMembership({
       parent: groupName,
       query: `member_key_id == '${escapeCelString(memberEmail)}'`,
-    });
+    }),
+  );
   return result.data.hasMembership === true;
 }
 

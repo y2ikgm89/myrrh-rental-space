@@ -336,7 +336,7 @@ gcloud services enable \
 
 `compute` is required by the admin load balancer (global address, serverless
 NEG, managed certificate) documented below; `logging` / `monitoring` by the
-alert policies in `infra/monitoring/`. `scripts/bootstrap-terraform.sh` keeps
+alert policies in `terraform/monitoring.tf`. `scripts/bootstrap-terraform.sh` keeps
 its own `REQUIRED_APIS` list and the two are **not** identical — this list
 additionally has `sts` (WIF token exchange), `cloudidentity` (Google Groups
 reads) and `runapps`. Enabling is idempotent, so run this block even when
@@ -1594,7 +1594,7 @@ above as the desired target state, not as proof of the current project state.
 ## Alerting
 
 Cloud Monitoring alert policies and their supporting log-based metrics live
-under `infra/monitoring/`. The signals, thresholds, apply commands, and the
+in `terraform/monitoring.tf`. The signals, thresholds, apply path, and the
 runtime coupling rules are documented in
 [`docs/observability/alerting.md`](observability/alerting.md) — that file is the
 SSoT, so it is not summarised here.

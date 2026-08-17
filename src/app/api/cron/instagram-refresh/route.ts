@@ -30,6 +30,8 @@ import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /** トークン更新を開始する残り日数（10日） */
 const REFRESH_THRESHOLD_DAYS = 10;
@@ -82,10 +84,17 @@ export async function GET(request: Request) {
       expectedPurpose: "instagram",
     });
     if (!decryptedToken) {
-      logError(new Error("Failed to decrypt Instagram access token"), {
+      const decryptError = new Error(
+        "Failed to decrypt Instagram access token",
+      );
+      logError(decryptError, {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.HIGH,
         context: { operation: "instagramTokenRefreshCron" },
+      });
+      await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+        success: false,
+        error: decryptError,
       });
       return jsonError("Failed to decrypt access token", 503);
     }
@@ -100,6 +109,10 @@ export async function GET(request: Request) {
     await refreshInstagramAccessToken({
       accessToken: refreshResult.accessToken,
       expiresAt: newExpiresAt,
+    });
+
+    await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+      success: true,
     });
 
     invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INTEGRATION_SETTINGS, {
@@ -120,6 +133,10 @@ export async function GET(request: Request) {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "instagramTokenRefreshCron" },
+    });
+    await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+      success: false,
+      error,
     });
     return jsonError("Instagram token refresh failed", 500);
   }

@@ -79,8 +79,9 @@ export function readNumericColumns(): NumericColumn[] {
     }
     if (!model) continue;
 
+    // `\b` が無いと IntegrationKey が Int 列に誤認される
     const decl =
-      /^\s*(\w+)\s+(Int|BigInt|Float|Decimal)(\[\])?\??\s*(.*)$/u.exec(line);
+      /^\s*(\w+)\s+(Int|BigInt|Float|Decimal)\b(\[\])?\??\s*(.*)$/u.exec(line);
     if (!decl?.[1]) continue;
     // スカラー配列は要素ごとの値域を CHECK で書けないので対象外
     // （現状 schema に数値配列は 1 本も無い。増えたら自己検査が気づく）。
@@ -411,6 +412,7 @@ export const NUMERIC_COLUMN_DOMAINS: Readonly<Record<string, NumericDomain>> = {
   "FaqItem.notHelpfulCount": nonNegative,
   "SettingsGoogleCalendar.googleCalendarReminderMinutes": nonNegative,
   "SettingsSwitchbot.switchbotPasscodeBufferMinutes": nonNegative,
+  "IntegrationHealth.consecutiveFailures": nonNegative,
   "Media.size": nonNegative,
   "Media.width": nonNegative, // 画像以外（PDF 等）は 0
   "Media.height": nonNegative,

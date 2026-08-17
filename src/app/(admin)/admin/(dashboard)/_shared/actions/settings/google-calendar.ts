@@ -27,20 +27,14 @@ import { getServiceAccountClient } from "@/shared/domain/settings/google-calenda
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
   clearGoogleCalendarWebhook,
-  recordGoogleCalendarConnectionError,
-  recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
   updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
 } from "@/shared/domain/settings/google-calendar-commands";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-  normalizeError,
-} from "@/shared/lib/errors/server";
+import { recordConnectionTestResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import { safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
@@ -149,33 +143,12 @@ export async function testGoogleCalendarConnectionAction(): Promise<
         serviceAccountJson,
         calendarId: settings.calendarId,
       });
+      await recordConnectionTestResult(IntegrationKey.GOOGLE_CALENDAR, result);
       if (!result.success) {
-        try {
-          await recordGoogleCalendarConnectionError();
-        } catch (error) {
-          logError(normalizeError(error), {
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.MEDIUM,
-            context: { operation: "testGoogleCalendarConnectionAction:error" },
-          });
-        }
-
         throw new DomainError(
           result.error ?? "接続テストに失敗しました",
           "VALIDATION",
         );
-      }
-
-      try {
-        await recordGoogleCalendarConnectionSuccess();
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.MEDIUM,
-          context: {
-            operation: "testGoogleCalendarConnectionAction:success",
-          },
-        });
       }
 
       return {

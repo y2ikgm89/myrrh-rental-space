@@ -12,6 +12,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 
 import { GBP_SCOPES, createOAuth2Client } from "./client";
 
@@ -70,7 +71,9 @@ export async function exchangeGbpAuthCode(
     throw new Error("Google OAuth client credentials not configured");
   }
 
-  const { tokens } = await oauth2Client.getToken(code);
+  const { tokens } = await withGoogleApiRetry(() =>
+    oauth2Client.getToken(code),
+  );
 
   if (!tokens.access_token) {
     throw new Error("Google did not return an access token");
@@ -103,7 +106,7 @@ export async function revokeGbpToken(refreshToken: string): Promise<void> {
   }
 
   try {
-    await oauth2Client.revokeToken(refreshToken);
+    await withGoogleApiRetry(() => oauth2Client.revokeToken(refreshToken));
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

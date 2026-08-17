@@ -22,6 +22,7 @@ import {
   settleCheckoutSessionWrite,
 } from "@/shared/domain/payment/checkout-session-write-orchestration";
 import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
+import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
@@ -263,53 +264,57 @@ export async function createEventCheckoutSessionCommand(input: {
       Math.floor(claimedAt.getTime() / 1000) +
       UNPAID_EVENT_REGISTRATION_EXPIRY_MINUTES * 60;
 
-    const session = await client.checkout.sessions.create(
-      {
-        mode: "payment",
-        payment_method_types: paymentMethodTypes,
-        line_items: [
-          {
-            price_data: {
-              currency,
-              product_data: {
-                name: `${authoritative.event.title} — ${authoritative.ticket.name}`,
-              },
-              unit_amount: toStripeUnitAmount(
-                authoritative.ticket.price,
+    const session = await withStripeConnectionHealth(() =>
+      client.checkout.sessions.create(
+        {
+          mode: "payment",
+          payment_method_types: paymentMethodTypes,
+          line_items: [
+            {
+              price_data: {
                 currency,
+                product_data: {
+                  name: `${authoritative.event.title} — ${authoritative.ticket.name}`,
+                },
+                unit_amount: toStripeUnitAmount(
+                  authoritative.ticket.price,
+                  currency,
+                ),
+              },
+              // Stripe に渡すのは **チケット枚数**。`unit_amount` が
+              // `unitSize` 名分の単価なので、ここに参加人数を入れると
+              // unitSize 倍の請求になる。
+              quantity: eventTicketUnitCount(
+                authoritative.quantity,
+                authoritative.ticket.unitSize,
               ),
             },
-            // Stripe に渡すのは **チケット枚数**。`unit_amount` が
-            // `unitSize` 名分の単価なので、ここに参加人数を入れると
-            // unitSize 倍の請求になる。
-            quantity: eventTicketUnitCount(
-              authoritative.quantity,
-              authoritative.ticket.unitSize,
-            ),
+          ],
+          metadata: {
+            // webhook で「event-registration」経路を識別するための discriminator。
+            // Reservation は metadata.reservationId のみで判定される既存契約なので
+            // ここでは type + registrationId を明示して衝突を防ぐ。
+            type: "event-registration",
+            registrationId,
           },
-        ],
-        metadata: {
-          // webhook で「event-registration」経路を識別するための discriminator。
-          // Reservation は metadata.reservationId のみで判定される既存契約なので
-          // ここでは type + registrationId を明示して衝突を防ぐ。
-          type: "event-registration",
-          registrationId,
+          ...(authoritative.email
+            ? { customer_email: authoritative.email }
+            : {}),
+          expires_at: expiresAt,
+          // Codex P1 (PR#1026, comment 3567019753): 旧実装の `/events/registrations/{id}`
+          // は存在しないルートで Stripe returnee が 404 していた。既存の公開イベント詳細
+          // `/events/[slug]` にリダイレクトし、`registration` クエリで status バナー用に
+          // 後続 PR がキーできるようにしておく。
+          success_url: `${appUrl}/events/registrations/payment-result?payment=success&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
+          cancel_url: `${appUrl}/events/registrations/payment-result?payment=cancelled&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
         },
-        ...(authoritative.email ? { customer_email: authoritative.email } : {}),
-        expires_at: expiresAt,
-        // Codex P1 (PR#1026, comment 3567019753): 旧実装の `/events/registrations/{id}`
-        // は存在しないルートで Stripe returnee が 404 していた。既存の公開イベント詳細
-        // `/events/[slug]` にリダイレクトし、`registration` クエリで status バナー用に
-        // 後続 PR がキーできるようにしておく。
-        success_url: `${appUrl}/events/registrations/payment-result?payment=success&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
-        cancel_url: `${appUrl}/events/registrations/payment-result?payment=cancelled&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
-      },
-      {
-        // key は payload と一緒に動かす（理由は予約側 `reservations/payment-commands.ts`
-        // の同項コメント）。`expires_at` は claim 時刻由来で毎回変わるため、
-        // 固定 key だと 24 時間以内の再 checkout が Stripe の 400 で弾かれる。
-        idempotencyKey: `checkout/event-registration/${registrationId}/${String(expiresAt)}`,
-      },
+        {
+          // key は payload と一緒に動かす（理由は予約側 `reservations/payment-commands.ts`
+          // の同項コメント）。`expires_at` は claim 時刻由来で毎回変わるため、
+          // 固定 key だと 24 時間以内の再 checkout が Stripe の 400 で弾かれる。
+          idempotencyKey: `checkout/event-registration/${registrationId}/${String(expiresAt)}`,
+        },
+      ),
     );
     createdSessionId = session.id;
 
@@ -544,49 +549,53 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     // payment-commands.ts`、Codex P1: PR#1042 の silent orphan 予防）と同じ設計。
     const expiresAt = Math.floor(authoritative.expiresAt.getTime() / 1000);
 
-    const session = await client.checkout.sessions.create(
-      {
-        mode: "payment",
-        payment_method_types: paymentMethodTypes,
-        line_items: [
-          {
-            price_data: {
-              currency,
-              product_data: {
-                name: `${authoritative.event.title} — ${authoritative.ticket.name}`,
-              },
-              unit_amount: toStripeUnitAmount(
-                authoritative.ticket.price,
+    const session = await withStripeConnectionHealth(() =>
+      client.checkout.sessions.create(
+        {
+          mode: "payment",
+          payment_method_types: paymentMethodTypes,
+          line_items: [
+            {
+              price_data: {
                 currency,
+                product_data: {
+                  name: `${authoritative.event.title} — ${authoritative.ticket.name}`,
+                },
+                unit_amount: toStripeUnitAmount(
+                  authoritative.ticket.price,
+                  currency,
+                ),
+              },
+              // Stripe に渡すのは **チケット枚数**。`unit_amount` が
+              // `unitSize` 名分の単価なので、ここに参加人数を入れると
+              // unitSize 倍の請求になる。
+              quantity: eventTicketUnitCount(
+                authoritative.quantity,
+                authoritative.ticket.unitSize,
               ),
             },
-            // Stripe に渡すのは **チケット枚数**。`unit_amount` が
-            // `unitSize` 名分の単価なので、ここに参加人数を入れると
-            // unitSize 倍の請求になる。
-            quantity: eventTicketUnitCount(
-              authoritative.quantity,
-              authoritative.ticket.unitSize,
-            ),
+          ],
+          metadata: {
+            // webhook で「waitlist offer 経由の event-registration」経路を識別するための
+            // discriminator。`source` の有無で `createEventCheckoutSessionCommand`
+            // （直接購入、source なし）と区別する — 直接購入は登録時点で既に
+            // status: CONFIRMED のため `confirmWaitlistOfferCommand` を呼んではいけない
+            // （常に NOT_FOUND 例外になる）。webhook 側の分岐条件はこの契約に依存する。
+            type: "event-registration",
+            registrationId,
+            source: "waitlist-offer",
           },
-        ],
-        metadata: {
-          // webhook で「waitlist offer 経由の event-registration」経路を識別するための
-          // discriminator。`source` の有無で `createEventCheckoutSessionCommand`
-          // （直接購入、source なし）と区別する — 直接購入は登録時点で既に
-          // status: CONFIRMED のため `confirmWaitlistOfferCommand` を呼んではいけない
-          // （常に NOT_FOUND 例外になる）。webhook 側の分岐条件はこの契約に依存する。
-          type: "event-registration",
-          registrationId,
-          source: "waitlist-offer",
+          ...(authoritative.email
+            ? { customer_email: authoritative.email }
+            : {}),
+          expires_at: expiresAt,
+          success_url: `${appUrl}/events/waitlist/confirm?token=${offerToken}`,
+          cancel_url: `${appUrl}/events/${authoritative.event.slug}`,
         },
-        ...(authoritative.email ? { customer_email: authoritative.email } : {}),
-        expires_at: expiresAt,
-        success_url: `${appUrl}/events/waitlist/confirm?token=${offerToken}`,
-        cancel_url: `${appUrl}/events/${authoritative.event.slug}`,
-      },
-      {
-        idempotencyKey: `checkout/waitlist-offer/${registrationId}/${String(expiresAt)}`,
-      },
+        {
+          idempotencyKey: `checkout/waitlist-offer/${registrationId}/${String(expiresAt)}`,
+        },
+      ),
     );
     createdSessionId = session.id;
 

@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { isDomainError } from "@/shared/domain/domain-error";
-import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 const mockGetDecryptedResendApiKey = mock<() => Promise<string | null>>(() =>
   Promise.resolve(null),
@@ -53,17 +53,9 @@ const mockTestSwitchBotConnection = mock(
   }),
 );
 
-const mockRecordResendConnectionStatus = mock(
-  async (_status: ConnectionStatus) => undefined,
-);
-const mockRecordTurnstileConnectionStatus = mock(
-  async (_status: ConnectionStatus) => undefined,
-);
-const mockRecordGoogleMapsConnectionStatus = mock(
-  async (_status: ConnectionStatus) => undefined,
-);
-const mockRecordSwitchBotConnectionStatus = mock(
-  async (_status: ConnectionStatus) => undefined,
+const mockRecordConnectionTestResult = mock(
+  async (_key: unknown, _result: { success: boolean; error?: string }) =>
+    undefined,
 );
 
 mock.module("server-only", () => ({}));
@@ -121,19 +113,17 @@ mock.module("@/shared/domain/settings/api-key-commands", () => ({
   clearTurnstileSettings: async () => undefined,
   ensureSwitchBotWebhookPathToken: async () => "token",
   getSwitchBotWebhookRegistrationStatus: async () => "registered",
-  recordGoogleMapsConnectionStatus: (status: ConnectionStatus) =>
-    mockRecordGoogleMapsConnectionStatus(status),
-  recordResendConnectionStatus: (status: ConnectionStatus) =>
-    mockRecordResendConnectionStatus(status),
-  recordSwitchBotConnectionStatus: (status: ConnectionStatus) =>
-    mockRecordSwitchBotConnectionStatus(status),
-  recordTurnstileConnectionStatus: (status: ConnectionStatus) =>
-    mockRecordTurnstileConnectionStatus(status),
   rotateSwitchBotWebhookPathToken: async () => undefined,
   updateGoogleMapsSettings: async () => undefined,
   updateResendSettings: async () => undefined,
   updateSwitchBotSettings: async () => undefined,
   updateTurnstileSettings: async () => undefined,
+}));
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionTestResult: (
+    key: unknown,
+    result: { success: boolean; error?: string },
+  ) => mockRecordConnectionTestResult(key, result),
 }));
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   setupWebhook: async () => ({ ok: true }),
@@ -162,10 +152,7 @@ beforeEach(() => {
   mockTestTurnstileConnection.mockReset();
   mockTestGoogleMapsConnection.mockReset();
   mockTestSwitchBotConnection.mockReset();
-  mockRecordResendConnectionStatus.mockReset();
-  mockRecordTurnstileConnectionStatus.mockReset();
-  mockRecordGoogleMapsConnectionStatus.mockReset();
-  mockRecordSwitchBotConnectionStatus.mockReset();
+  mockRecordConnectionTestResult.mockReset();
 
   mockGetDecryptedResendApiKey.mockResolvedValue(null);
   mockGetTurnstileSiteKeyUncached.mockResolvedValue(null);
@@ -199,7 +186,7 @@ describe("testResendConnectionAction", () => {
       code: "VALIDATION",
     });
     expect(mockTestResendConnection).not.toHaveBeenCalled();
-    expect(mockRecordResendConnectionStatus).not.toHaveBeenCalled();
+    expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
   });
 
   test("保存済み資格情報で testResendConnection を実行し結果を記録する", async () => {
@@ -209,8 +196,9 @@ describe("testResendConnectionAction", () => {
 
     expect(result).toBeNull();
     expect(mockTestResendConnection).toHaveBeenCalledWith("re_saved_key");
-    expect(mockRecordResendConnectionStatus).toHaveBeenCalledWith(
-      ConnectionStatus.CONNECTED,
+    expect(mockRecordConnectionTestResult).toHaveBeenCalledWith(
+      IntegrationKey.RESEND,
+      expect.objectContaining({ success: true }),
     );
   });
 });
@@ -224,7 +212,7 @@ describe("testTurnstileConnectionAction", () => {
       code: "VALIDATION",
     });
     expect(mockTestTurnstileConnection).not.toHaveBeenCalled();
-    expect(mockRecordTurnstileConnectionStatus).not.toHaveBeenCalled();
+    expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
   });
 
   test("保存済み資格情報で testTurnstileConnection を実行し結果を記録する", async () => {
@@ -238,8 +226,9 @@ describe("testTurnstileConnectionAction", () => {
       "0xSITE",
       "0xSECRET",
     );
-    expect(mockRecordTurnstileConnectionStatus).toHaveBeenCalledWith(
-      ConnectionStatus.CONNECTED,
+    expect(mockRecordConnectionTestResult).toHaveBeenCalledWith(
+      IntegrationKey.TURNSTILE,
+      expect.objectContaining({ success: true }),
     );
   });
 });
@@ -253,7 +242,7 @@ describe("testGoogleMapsConnectionAction", () => {
       code: "VALIDATION",
     });
     expect(mockTestGoogleMapsConnection).not.toHaveBeenCalled();
-    expect(mockRecordGoogleMapsConnectionStatus).not.toHaveBeenCalled();
+    expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
   });
 
   test("保存済み資格情報で testGoogleMapsConnection を実行し結果を記録する", async () => {
@@ -263,8 +252,9 @@ describe("testGoogleMapsConnectionAction", () => {
 
     expect(result).toBeNull();
     expect(mockTestGoogleMapsConnection).toHaveBeenCalledWith("AIzaSaved");
-    expect(mockRecordGoogleMapsConnectionStatus).toHaveBeenCalledWith(
-      ConnectionStatus.CONNECTED,
+    expect(mockRecordConnectionTestResult).toHaveBeenCalledWith(
+      IntegrationKey.GOOGLE_MAPS,
+      expect.objectContaining({ success: true }),
     );
   });
 });
@@ -278,7 +268,7 @@ describe("testSwitchBotConnectionAction", () => {
       code: "VALIDATION",
     });
     expect(mockTestSwitchBotConnection).not.toHaveBeenCalled();
-    expect(mockRecordSwitchBotConnectionStatus).not.toHaveBeenCalled();
+    expect(mockRecordConnectionTestResult).not.toHaveBeenCalled();
   });
 
   test("enabled が false でも revocation helper の保存済み資格情報で接続テストする", async () => {
@@ -296,8 +286,9 @@ describe("testSwitchBotConnectionAction", () => {
       "saved-secret",
     );
     expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
-    expect(mockRecordSwitchBotConnectionStatus).toHaveBeenCalledWith(
-      ConnectionStatus.CONNECTED,
+    expect(mockRecordConnectionTestResult).toHaveBeenCalledWith(
+      IntegrationKey.SWITCHBOT,
+      expect.objectContaining({ success: true }),
     );
   });
 });

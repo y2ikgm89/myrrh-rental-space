@@ -73,6 +73,10 @@ mock.module("@/shared/domain/google-business-profile/settings", () => ({
   saveGbpAuthState: mockSaveGbpAuthState,
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionApiResult: mock(async () => undefined),
+}));
+
 import { GET } from "@/app/api/google-business-profile/oauth/callback/route";
 
 function createCallbackRequest(): NextRequest {

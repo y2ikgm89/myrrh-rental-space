@@ -5,13 +5,16 @@
  * `@google-analytics/data` 等の周辺クライアントに共通で適用する。
  *
  * ## Google 公式準拠
- * - 429 (rate limit) / 500 (internal error) / 503 (unavailable) は
- *   exponential backoff + jitter で再試行
+ * - HTTP 408 / 429 / 500 / 502 / 503 / 504 は exponential backoff + jitter で再試行
+ *   （Calendar errors guide の 5xx + gaxios 既定の 408/429/5xx）
  * - 403 でも `reason` が `rateLimitExceeded` / `userRateLimitExceeded` /
  *   `quotaExceeded` の場合は 429 と機能的に同等で同じく再試行
  *   （公式: "rateLimitExceeded errors can return either 403 or 429 error codes
  *    —functionally similar and should be responded to in the same way"）
- * - それ以外の 400 / 401 / 403 / 404 / 410 は即時失敗（回復不能 or 意味が異なる）
+ * - 400 / 401 / 403（非 quota）/ 404 / 409 / 410 / 412 は即時失敗
+ *   （回復不能、または 410 フルシンク等の別ハンドラが担当）
+ * - 404 は公式が backoff を勧める eventual consistency 向けだが、既知 ID 操作が
+ *   主の本コードでは一律 retry しない。呼び出し側は `shouldRetry` で opt-in
  * - gRPC GoogleError の一時障害（DEADLINE_EXCEEDED=4 / RESOURCE_EXHAUSTED=8 /
  *   INTERNAL=13 / UNAVAILABLE=14）も再試行。`code` 1–16 は HTTP status ではない
  * - ネットワーク層の一時エラー (`ECONNRESET` 等) も再試行対象
@@ -37,7 +40,9 @@ function isUnknownArray(value: unknown): value is unknown[] {
 }
 
 /** 再試行対象の HTTP ステータスコード（reason に関わらず常に retry） */
-const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([429, 500, 503]);
+const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([
+  408, 429, 500, 502, 503, 504,
+]);
 
 /**
  * google-gax `GoogleError.code` は HTTP ではなく gRPC Status enum（0–16）。
@@ -176,7 +181,7 @@ export function extractFirstErrorReason(error: unknown): string | null {
  *
  * 判定順:
  * 1. gRPC Status が UNAVAILABLE / DEADLINE_EXCEEDED / RESOURCE_EXHAUSTED / INTERNAL → retry
- * 2. HTTP status が 429 / 500 / 503 → retry
+ * 2. HTTP status が 408 / 429 / 500 / 502 / 503 / 504 → retry
  * 3. HTTP status が 403 かつ reason が usageLimits 系 → retry（公式推奨）
  * 4. system error code が一時的な network エラー → retry
  */

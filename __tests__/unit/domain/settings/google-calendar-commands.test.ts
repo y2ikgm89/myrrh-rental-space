@@ -77,6 +77,10 @@ mock.module("@/shared/domain/settings/admin-queries", () => ({
   getGoogleCalendarWebhookState: () => mockGetGoogleCalendarWebhookState(),
 }));
 
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  clearConnectionHealth: mock(async () => undefined),
+}));
+
 mock.module("@/shared/lib/google-calendar", () => ({
   stopWebhookWatch: (client: object, channelId: string, resourceId: string) =>
     mockStopWebhookWatch(client, channelId, resourceId),
@@ -239,8 +243,6 @@ describe("clearGoogleCalendarServiceAccount", () => {
       googleCalendarEnabled: false,
       googleCalendarTwoWaySyncEnabled: false,
       googleCalendarServiceAccountJson: null,
-      googleCalendarConnectionStatus: null,
-      googleCalendarLastTestedAt: null,
     });
     expect(updates.every((update) => update["googleCalendarId"] !== null)).toBe(
       true,

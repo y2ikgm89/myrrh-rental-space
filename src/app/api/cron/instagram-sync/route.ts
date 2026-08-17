@@ -26,6 +26,8 @@ import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Instagram Feed Sync Cronエンドポイント
@@ -62,6 +64,9 @@ export async function GET(request: Request) {
 
     // DBに同期（全件入れ替え）
     await syncInstagramFeed(items);
+    await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+      success: true,
+    });
 
     // cron / Route Handler では `{expire:0}` の blocking immediate-expire を使う
     // canonical pattern (`invalidateSiteWideCacheFromRouteHandler` 経由)。
@@ -78,6 +83,10 @@ export async function GET(request: Request) {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "instagramFeedSyncCron" },
+    });
+    await recordConnectionApiResult(IntegrationKey.INSTAGRAM, {
+      success: false,
+      error,
     });
     return jsonError("Instagram feed sync failed", 500);
   }

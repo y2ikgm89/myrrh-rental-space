@@ -17,6 +17,8 @@ import {
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
 import { saveGoogleCalendarWebhook } from "@/shared/domain/settings/google-calendar-commands";
+import { recordConnectionApiResult } from "@/shared/domain/settings/connection-health";
+import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import { getAppUrl } from "@/shared/lib/constants";
 import { safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
@@ -192,6 +194,10 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     const baseUrl = getAppUrl();
     const webhookUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`;
     const result = await setupWebhookWatch(client, webhookState, webhookUrl);
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+      success: result.success,
+      error: result.error ? new Error(result.error) : undefined,
+    });
 
     if (!result.success) {
       return omitUndefined({
@@ -226,6 +232,10 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "renewWebhookIfNeeded" },
+    });
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+      success: false,
+      error,
     });
     return {
       success: false,

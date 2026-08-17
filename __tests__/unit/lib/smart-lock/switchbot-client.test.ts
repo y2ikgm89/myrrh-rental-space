@@ -16,6 +16,10 @@ import type {
   CreatePasscodeParams,
 } from "@/shared/lib/smart-lock/switchbot-client";
 
+mock.module("@/shared/lib/integration-health-port", () => ({
+  notifyConnectionApiResult: mock(() => Promise.resolve()),
+}));
+
 const CREDENTIALS: SwitchBotCredentials = {
   openToken: "test-open-token",
   secretKey: "test-secret-key",
