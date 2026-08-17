@@ -427,5 +427,6 @@ describe("getAdminSettings", () => {
     );
     expect(settings.googleCalendarServiceAccountConfigured).toBe(true);
     expect(settings.googleCalendarServiceAccountEmailMasked).toBeNull();
+    expect(settings.googleCalendarLastErrorMessage).toBeNull();
   });
 });

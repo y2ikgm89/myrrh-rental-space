@@ -1,7 +1,7 @@
 # Alerting
 
 This project treats Cloud Monitoring alert policies in
-`terraform/monitoring.tf` as version-controlled infrastructure. The five
+`terraform/monitoring.tf` as version-controlled infrastructure. The six
 signals below are the ones the runtime knows how to emit; anything not in
 this list either has no upstream signal today or is monitored by another
 surface (Cloudflare WAF, GitHub, etc).
@@ -11,13 +11,14 @@ merge runs `terraform apply` via `deploy-production.yml`.
 
 ## Signals
 
-| Signal                      | Terraform resource                                    | Threshold    | Rationale                                                                                                       |
-| --------------------------- | ----------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| ReportedErrorEvent burst    | `google_monitoring_alert_policy.reported_error_burst` | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state                                              |
-| Log severity CRITICAL       | `google_monitoring_alert_policy.severity_critical`    | any 1 log    | Mostly hand-picked failures, but `criticalFetch` also promotes any settings-read error (see Runtime coupling)   |
-| `/api/health` 5xx           | `google_monitoring_alert_policy.health_probe_5xx`     | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404                                   |
-| Cron OIDC / config failure  | `google_monitoring_alert_policy.cron_oidc_failure`    | > 3 / 15 min | 401 on `/api/cron/*`, or authorizeCronRequest CRITICAL+AUTHORIZATION config-missing 500 — not generic cron 500s |
-| Prisma pool acquire-timeout | `google_monitoring_alert_policy.prisma_pool_timeout`  | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load                                                 |
+| Signal                            | Terraform resource                                            | Threshold    | Rationale                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`         | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state                                              |
+| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`            | any 1 log    | Mostly hand-picked failures, but `criticalFetch` also promotes any settings-read error (see Runtime coupling)   |
+| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404                                   |
+| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | 401 on `/api/cron/*`, or authorizeCronRequest CRITICAL+AUTHORIZATION config-missing 500 — not generic cron 500s |
+| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load                                                 |
+| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Verified GCal push is acked 200 (retry-storm prevention); MEDIUM `Webhook sync failed` is otherwise invisible   |
 
 `/api/live` is intentionally excluded — it is the Cloud Run startup / liveness
 probe and is contracted to be DB-free. Alerting on it would create a feedback
@@ -33,7 +34,7 @@ The address is **not** committed. Set GitHub Actions secret
 Notification channels themselves are free. Metric-threshold policies are in
 the Cloud Monitoring pricing change that starts 2027-09-01; the two
 log-match policies (`severity-critical`, `health-probe-5xx`) are out of
-that charge. The three metric-referencing policies are about $1 / month at
+that charge. The four metric-referencing policies are about $1 / month at
 current scale.
 
 ## Runtime coupling
@@ -74,6 +75,15 @@ current scale.
   appear. `__tests__/unit/db/prisma-pool-timeout-signal.test.ts` reproduces the
   exhaustion (no database required) and fails if the wording drifts away from
   the log metric filter.
+- Google Calendar webhook sync failures after a verified token ack at
+  MEDIUM (`src/app/api/webhooks/google-calendar/route.ts`, message
+  `"Webhook sync failed"`, `context.operation="googleCalendarWebhook"`).
+  The route returns 200 so Google does not retry; the HTTP status is
+  therefore not a signal. The `google_calendar_sync_failure` log metric
+  matches that emit site only. HIGH catch-path failures
+  (`processing: "failed"`) already reach `reported_error_events`.
+  `__tests__/unit/observability/google-calendar-sync-failure-signal.test.ts`
+  reads the route and the metric filter and fails if they drift.
 
 If any of the above emit sites changes, update `terraform/monitoring.tf` in
 the same PR so the alert wiring stays honest.

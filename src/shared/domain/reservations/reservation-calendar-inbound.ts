@@ -31,7 +31,11 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { fetchCalendarChanges } from "@/shared/domain/reservations/calendar-sync-fetch";
 import type { CalendarChange } from "@/shared/lib/google-calendar";
 import { sendCalendarSyncRejectionEmail } from "@/shared/domain/email/dispatch";
-import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { recordConnectionFailure } from "@/shared/domain/settings/connection-health";
+import {
+  IntegrationKey,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { TwoWaySyncResult } from "@/shared/lib/calendar-sync/types";
 
 /**
@@ -121,6 +125,13 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
       if (changesResult.newSyncToken) {
         await saveCalendarSyncToken(changesResult.newSyncToken);
       }
+    } else {
+      // fetch 成功後の per-event 失敗。fetch 側は success を記録済みなので
+      // ここで failure を積む。fetch 失敗は calendar-sync-fetch が記録する。
+      await recordConnectionFailure(
+        IntegrationKey.GOOGLE_CALENDAR,
+        new Error(result.errors.join("; ")),
+      );
     }
 
     result.success = result.errors.length === 0;
@@ -131,6 +142,7 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
       severity: ErrorSeverity.HIGH,
       context: { operation: "syncFromCalendar" },
     });
+    await recordConnectionFailure(IntegrationKey.GOOGLE_CALENDAR, error);
     return {
       ...result,
       success: false,

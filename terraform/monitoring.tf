@@ -367,3 +367,92 @@ resource "google_monitoring_alert_policy" "prisma_pool_timeout" {
 
   depends_on = [google_logging_metric.prisma_pool_timeout]
 }
+
+resource "google_logging_metric" "google_calendar_sync_failure" {
+  name        = "google_calendar_sync_failure"
+  description = "Count of Google Calendar webhook sync failures that ack 200 (re-delivery suppression) and log MEDIUM. Feeds the google-calendar-sync-failure alert policy. HIGH catch-path failures already reach reported_error_events."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+    jsonPayload.context.operation="googleCalendarWebhook"
+    jsonPayload.message:"Webhook sync failed"
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Google Calendar webhook sync failures (myrrh-rental-space)"
+    labels {
+      key         = "service_name"
+      value_type  = "STRING"
+      description = "Cloud Run service name that produced the error"
+    }
+  }
+
+  label_extractors = {
+    service_name = "EXTRACT(resource.labels.service_name)"
+  }
+}
+
+resource "google_monitoring_alert_policy" "google_calendar_sync_failure" {
+  display_name = "myrrh-rental-space: Google Calendar webhook sync failure"
+  combiner     = "OR"
+  enabled      = true
+  notification_channels = [
+    google_monitoring_notification_channel.oncall_email.name,
+  ]
+
+  documentation {
+    content   = <<-EOT
+      `/api/webhooks/google-calendar` acknowledged a verified Google push
+      (HTTP 200) but `syncFromCalendar` failed. The 200 is intentional —
+      Google retries on non-2xx and a retry storm would amplify the
+      failure. The sync itself did not apply.
+
+      Investigate:
+
+      1. Cloud Logging: `resource.type="cloud_run_revision"` and
+         `jsonPayload.context.operation="googleCalendarWebhook"` and
+         `jsonPayload.message:"Webhook sync failed"`.
+      2. Admin settings → Integrations → Calendar: connection status and
+         last error message (`IntegrationHealth` for GOOGLE_CALENDAR).
+      3. Recovery: cron `/api/cron/calendar-sync` (or a manual sync from
+         the two-way-sync section) re-runs the same `syncFromCalendar`.
+         Auth / config failures become IntegrationHealth ERROR immediately;
+         transient failures need 3 consecutive records.
+
+      This alert does **not** fire on ignored / lock-skipped notifications
+      (`ignored`, `skipped: lock_unavailable`). Those are ack-and-defer
+      by design.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "google calendar webhook sync failures > 3 / 15 min"
+    condition_threshold {
+      filter          = <<-EOT
+        metric.type="logging.googleapis.com/user/google_calendar_sync_failure"
+        resource.type="cloud_run_revision"
+      EOT
+      comparison      = "COMPARISON_GT"
+      threshold_value = 3
+      duration        = "0s"
+      aggregations {
+        alignment_period     = "900s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "3600s"
+  }
+
+  depends_on = [google_logging_metric.google_calendar_sync_failure]
+}
