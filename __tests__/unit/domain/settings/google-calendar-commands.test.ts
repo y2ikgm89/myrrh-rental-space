@@ -14,9 +14,12 @@ const mockSettingsGoogleCalendarUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 
-const mockGetServiceAccountClient = mock<
-  (options?: { ignoreEnabledToggle?: boolean }) => Promise<object | null>
->(() => Promise.resolve(null));
+const mockSafeDecryptToString = mock<
+  (ciphertext: string | null | undefined) => string | null
+>(() => null);
+const mockCreateCalendarClientFromServiceAccountJson = mock<
+  (json: string, context?: string) => object | null
+>(() => null);
 const mockGetGoogleCalendarWebhookState = mock<
   () => Promise<{
     calendarId: string | null;
@@ -58,11 +61,16 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
   encryptServiceAccountJson: mock<(json: string) => string>(
     (json) => `encrypted:${json}`,
   ),
+  createCalendarClientFromServiceAccountJson: (
+    json: string,
+    context?: string,
+  ) => mockCreateCalendarClientFromServiceAccountJson(json, context),
 }));
 
-mock.module("@/shared/domain/settings/google-calendar", () => ({
-  getServiceAccountClient: (options?: { ignoreEnabledToggle?: boolean }) =>
-    mockGetServiceAccountClient(options),
+mock.module("@/shared/lib/crypto", () => ({
+  encrypt: (value: string) => `encrypted:${value}`,
+  safeDecryptToString: (ciphertext: string | null | undefined) =>
+    mockSafeDecryptToString(ciphertext),
 }));
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({
@@ -118,8 +126,10 @@ beforeEach(() => {
   mockSettingsGoogleCalendarFindUnique.mockResolvedValue(null);
   mockSettingsGoogleCalendarUpsert.mockReset();
   mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
-  mockGetServiceAccountClient.mockReset();
-  mockGetServiceAccountClient.mockResolvedValue(null);
+  mockSafeDecryptToString.mockReset();
+  mockSafeDecryptToString.mockReturnValue(null);
+  mockCreateCalendarClientFromServiceAccountJson.mockReset();
+  mockCreateCalendarClientFromServiceAccountJson.mockReturnValue(null);
   mockGetGoogleCalendarWebhookState.mockReset();
   mockGetGoogleCalendarWebhookState.mockResolvedValue({
     calendarId: null,
@@ -194,7 +204,14 @@ describe("clearGoogleCalendarServiceAccount", () => {
       token: "token",
       expiration: new Date("2026-03-01T00:00:00Z"),
     });
-    mockGetServiceAccountClient.mockResolvedValue({ kind: "calendar-client" });
+    mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+      googleCalendarId: "keep@group.calendar.google.com",
+      googleCalendarServiceAccountJson: "encrypted-existing-sa",
+    });
+    mockSafeDecryptToString.mockReturnValue('{"type":"service_account"}');
+    mockCreateCalendarClientFromServiceAccountJson.mockReturnValue({
+      kind: "calendar-client",
+    });
 
     await clearGoogleCalendarServiceAccount();
 
@@ -235,7 +252,14 @@ describe("clearGoogleCalendarServiceAccount", () => {
       token: "token",
       expiration: null,
     });
-    mockGetServiceAccountClient.mockResolvedValue({ kind: "calendar-client" });
+    mockSettingsGoogleCalendarFindUnique.mockResolvedValue({
+      googleCalendarId: "keep@group.calendar.google.com",
+      googleCalendarServiceAccountJson: "encrypted-existing-sa",
+    });
+    mockSafeDecryptToString.mockReturnValue('{"type":"service_account"}');
+    mockCreateCalendarClientFromServiceAccountJson.mockReturnValue({
+      kind: "calendar-client",
+    });
     mockStopWebhookWatch.mockResolvedValue({
       success: false,
       error: "network error",

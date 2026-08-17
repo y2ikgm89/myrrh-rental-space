@@ -6,8 +6,7 @@ import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-t
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
-import { getServiceAccountClient } from "@/shared/domain/settings/google-calendar";
-import { encrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
   logError,
@@ -15,7 +14,10 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { stopWebhookWatch } from "@/shared/lib/google-calendar";
-import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
+import {
+  createCalendarClientFromServiceAccountJson,
+  encryptServiceAccountJson,
+} from "@/shared/lib/google-calendar/service-account";
 import { isValidCalendarId } from "@/shared/lib/google-calendar/settings";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
@@ -151,9 +153,24 @@ export async function clearGoogleCalendarServiceAccount(): Promise<void> {
   if (webhookState.channelId && webhookState.resourceId) {
     // 資格情報が失われた後は二度と stop できないため、クリア前にベストエフォートで解除する。
     // 失敗してもクリア自体はブロックしない（SwitchBot deleteWebhook と同じ）。
-    const client = await getServiceAccountClient({
-      ignoreEnabledToggle: true,
+    // getServiceAccountClient は本モジュールを import するためここでは呼ばない
+    // （commands → google-calendar → commands の循環を避ける）。
+    const existing = await prisma.settingsGoogleCalendar.findUnique({
+      where: { id: "singleton" },
+      select: { googleCalendarServiceAccountJson: true },
     });
+    const decryptedJson = safeDecryptToString(
+      existing?.googleCalendarServiceAccountJson,
+      {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
+      },
+    );
+    const client = decryptedJson
+      ? createCalendarClientFromServiceAccountJson(
+          decryptedJson,
+          "clearGoogleCalendarServiceAccount",
+        )
+      : null;
     if (client) {
       const result = await stopWebhookWatch(
         client,
