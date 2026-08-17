@@ -18,6 +18,7 @@ import { requireSettingsManagePage } from "@/admin/helpers/page-auth";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
 import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
+import { hasGbpOAuthCredentials } from "@/shared/lib/google-business-profile/client";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { getAllSmartLockDevices } from "@/shared/domain/smart-lock/queries";
 import { getActiveLocationsForSelect } from "@/shared/domain/locations/queries";
@@ -127,7 +128,7 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
               <div className="space-y-6">
                 <GoogleCalendarSection settings={settings} />
                 <GoogleBusinessProfileSection
-                  enabled={settings.googleBusinessProfileEnabled}
+                  oauthConfigured={hasGbpOAuthCredentials()}
                   authInfo={gbpAuthInfo}
                 />
                 <TwoWaySyncSection settings={settings} />

@@ -15,6 +15,7 @@ const mockGetTurnstileConfig = mock(() =>
     secretKeyMasked: null as string | null,
     lastTestedAt: null as Date | null,
     connectionStatus: null as string | null,
+    envFallbackActive: false,
   }),
 );
 
@@ -48,6 +49,7 @@ beforeEach(() => {
     secretKeyMasked: null,
     lastTestedAt: null,
     connectionStatus: null,
+    envFallbackActive: false,
   });
   mockServerEnv["TURNSTILE_SECRET_KEY"] = undefined;
   mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = undefined;
@@ -61,6 +63,7 @@ describe("resolveTurnstileVerifyContext", () => {
       secretKeyMasked: "***",
       lastTestedAt: null,
       connectionStatus: null,
+      envFallbackActive: false,
     });
 
     const { resolveTurnstileVerifyContext } =
@@ -80,6 +83,7 @@ describe("resolveTurnstileVerifyContext", () => {
       secretKeyMasked: null,
       lastTestedAt: null,
       connectionStatus: null,
+      envFallbackActive: true,
     });
 
     const { resolveTurnstileVerifyContext } =
@@ -97,6 +101,7 @@ describe("resolveTurnstileVerifyContext", () => {
       secretKeyMasked: "***",
       lastTestedAt: null,
       connectionStatus: null,
+      envFallbackActive: false,
     });
 
     const { resolveTurnstileVerifyContext } =

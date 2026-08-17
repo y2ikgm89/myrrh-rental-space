@@ -2,37 +2,11 @@ import "server-only";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { getIntegrationHealthSummary } from "@/shared/domain/settings/api-key-queries";
-import {
-  IntegrationHealthAlertClient,
-  type IntegrationHealthAlertItem,
-} from "./IntegrationHealthAlertClient";
+import { hasRegisteredSmartLockDevice } from "@/shared/domain/smart-lock/queries";
+import { IntegrationHealthAlertClient } from "./IntegrationHealthAlertClient";
+import { selectIntegrationHealthAlertItems } from "./select-integration-health-alert-items";
 
-type IntegrationKey = "resend" | "stripe" | "googleCalendar" | "turnstile";
-
-const INTEGRATIONS: ReadonlyArray<
-  IntegrationHealthAlertItem & { readonly key: IntegrationKey }
-> = [
-  {
-    key: "resend",
-    label: "Resend（メール送信）",
-    href: "/admin/settings/integrations?tab=resend",
-  },
-  {
-    key: "stripe",
-    label: "Stripe（決済）",
-    href: "/admin/settings/billing?tab=payment",
-  },
-  {
-    key: "googleCalendar",
-    label: "Google Calendar（予約同期）",
-    href: "/admin/settings/integrations?tab=calendar",
-  },
-  {
-    key: "turnstile",
-    label: "Cloudflare Turnstile（フォーム保護）",
-    href: "/admin/settings/integrations?tab=turnstile",
-  },
-];
+export { selectIntegrationHealthAlertItems } from "./select-integration-health-alert-items";
 
 /**
  * 主要外部連携の未設定状況を通知する alert（Server Component）。
@@ -45,8 +19,13 @@ const INTEGRATIONS: ReadonlyArray<
 export async function IntegrationHealthAlert(): Promise<ReactElement | null> {
   await connection();
 
-  const health = await getIntegrationHealthSummary();
-  const disconnected = INTEGRATIONS.filter((i) => !health[i.key]);
+  const [health, hasSmartLockDevices] = await Promise.all([
+    getIntegrationHealthSummary(),
+    hasRegisteredSmartLockDevice(),
+  ]);
+  const disconnected = selectIntegrationHealthAlertItems(health, {
+    hasSmartLockDevices,
+  });
   if (disconnected.length === 0) return null;
 
   return <IntegrationHealthAlertClient items={disconnected} />;

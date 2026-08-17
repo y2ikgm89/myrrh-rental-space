@@ -21,6 +21,7 @@ const mockGetTurnstileConfig = mock(() =>
     secretKeyMasked: null as string | null,
     lastTestedAt: null as Date | null,
     connectionStatus: null as string | null,
+    envFallbackActive: false,
   }),
 );
 
@@ -86,6 +87,7 @@ afterEach(() => {
     secretKeyMasked: null,
     lastTestedAt: null,
     connectionStatus: null,
+    envFallbackActive: false,
   });
 });
 

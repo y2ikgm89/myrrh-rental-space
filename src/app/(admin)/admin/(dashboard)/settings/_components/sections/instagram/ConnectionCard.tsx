@@ -178,7 +178,7 @@ export function ConnectionCard({
             )}
             {config.shouldRefreshToken && (
               <p className="mt-2 text-xs text-warning">
-                トークンの有効期限が近づいています。再認証することで更新できます。
+                トークンの有効期限が近づいています。自動更新に失敗している場合は再認証してください。
               </p>
             )}
           </StatusBanner>

@@ -35,6 +35,7 @@ export type ResendConfig = {
   webhookSecretMasked: string | null;
   lastTestedAt: Date | null;
   connectionStatus: ConnectionStatus;
+  envFallbackActive: boolean;
 };
 
 /**
@@ -45,6 +46,7 @@ export type TurnstileConfig = {
   secretKeyMasked: string | null;
   lastTestedAt: Date | null;
   connectionStatus: ConnectionStatus;
+  envFallbackActive: boolean;
 };
 
 /**

@@ -37,13 +37,15 @@ export async function getResendConfig(): Promise<ResendConfig> {
     },
   });
 
+  const decryptedApiKey = settings?.resendApiKey
+    ? safeDecryptToString(settings.resendApiKey, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.resendApiKey,
+      })
+    : null;
+
   return {
     apiKeyMasked: settings?.resendApiKey
-      ? maskResendKey(
-          safeDecryptToString(settings.resendApiKey, {
-            expectedPurpose: SETTINGS_CRYPTO_PURPOSES.resendApiKey,
-          }) || "****",
-        )
+      ? maskResendKey(decryptedApiKey || "****")
       : null,
     webhookSecretMasked: settings?.resendWebhookSecret
       ? maskResendKey(
@@ -54,6 +56,7 @@ export async function getResendConfig(): Promise<ResendConfig> {
       : null,
     lastTestedAt: settings?.resendLastTestedAt || null,
     connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
+    envFallbackActive: !decryptedApiKey && Boolean(serverEnv.RESEND_API_KEY),
   };
 }
 
@@ -122,19 +125,23 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
     },
   });
 
+  const decryptedSecretKey = settings?.turnstileSecretKey
+    ? safeDecryptToString(settings.turnstileSecretKey, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
+      })
+    : null;
+
   return {
     siteKey: settings?.turnstileSiteKey || null,
     secretKeyMasked: settings?.turnstileSecretKey
-      ? maskTurnstileKey(
-          safeDecryptToString(settings.turnstileSecretKey, {
-            expectedPurpose: SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
-          }) || "****",
-        )
+      ? maskTurnstileKey(decryptedSecretKey || "****")
       : null,
     lastTestedAt: settings?.turnstileLastTestedAt || null,
     connectionStatus: parseConnectionStatus(
       settings?.turnstileConnectionStatus,
     ),
+    envFallbackActive:
+      !decryptedSecretKey && Boolean(serverEnv.TURNSTILE_SECRET_KEY),
   };
 }
 
