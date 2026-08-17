@@ -218,16 +218,22 @@ describe("clearGoogleCalendarServiceAccount", () => {
     const updates = allGoogleCalendarUpdates();
     expect(updates.length).toBeGreaterThanOrEqual(2);
     expect(
-      updates.some((update) => update.googleCalendarWebhookChannelId === null),
+      updates.some(
+        (update) => update["googleCalendarWebhookChannelId"] === null,
+      ),
     ).toBe(true);
     expect(
-      updates.some((update) => update.googleCalendarWebhookResourceId === null),
+      updates.some(
+        (update) => update["googleCalendarWebhookResourceId"] === null,
+      ),
     ).toBe(true);
     expect(
-      updates.some((update) => update.googleCalendarWebhookToken === null),
+      updates.some((update) => update["googleCalendarWebhookToken"] === null),
     ).toBe(true);
     expect(
-      updates.some((update) => update.googleCalendarWebhookExpiration === null),
+      updates.some(
+        (update) => update["googleCalendarWebhookExpiration"] === null,
+      ),
     ).toBe(true);
     expect(lastGoogleCalendarUpdate()).toMatchObject({
       googleCalendarEnabled: false,
@@ -236,7 +242,7 @@ describe("clearGoogleCalendarServiceAccount", () => {
       googleCalendarConnectionStatus: null,
       googleCalendarLastTestedAt: null,
     });
-    expect(updates.every((update) => update.googleCalendarId !== null)).toBe(
+    expect(updates.every((update) => update["googleCalendarId"] !== null)).toBe(
       true,
     );
     expect(Object.keys(lastGoogleCalendarUpdate())).not.toContain(
