@@ -43,11 +43,17 @@ export const turnstileSettingsSchema = z.object({
 export type TurnstileSettingsInput = z.infer<typeof turnstileSettingsSchema>;
 
 /**
- * Turnstileキーの形式検証
- * Turnstileキーは0xで始まる16進数形式
+ * Turnstileキーの形式検証。
+ * 本番キーは `0x`。Cloudflare 公式テストキーは `1x` / `2x` / `3x`
+ * （https://developers.cloudflare.com/turnstile/troubleshooting/testing）。
  */
+const TURNSTILE_KEY_PREFIXES = ["0x", "1x", "2x", "3x"] as const;
+
 export function isValidTurnstileKey(key: string): boolean {
-  return key.startsWith("0x") && key.length >= 10;
+  return (
+    TURNSTILE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix)) &&
+    key.length >= 10
+  );
 }
 
 // =============================================================================

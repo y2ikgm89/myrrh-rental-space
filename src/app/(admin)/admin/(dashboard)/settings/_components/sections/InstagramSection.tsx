@@ -4,8 +4,9 @@
  * Instagram設定セクション
  *
  * Instagram連携の設定と管理:
- * - OAuth連携 / 手動トークン入力
- * - フィード表示設定
+ * - 接続方法（OAuth / 手動トークン）
+ * - 連携
+ * - 連携解除
  */
 
 import { useTransition } from "react";

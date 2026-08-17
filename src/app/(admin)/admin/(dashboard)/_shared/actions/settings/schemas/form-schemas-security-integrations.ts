@@ -27,14 +27,31 @@ import {
   settingsExpectedUpdatedAtSchema,
 } from "./form-schema-helpers";
 import { isValidCalendarId } from "@/shared/lib/google-calendar/calendar-id";
+import {
+  isValidGoogleMapsApiKey,
+  isValidResendApiKey,
+  isValidTurnstileKey,
+} from "@/admin/lib/validations/api-keys";
 
 // =============================================================================
 // Site > Security > Turnstile
 // =============================================================================
 
 export const turnstileFormSchema = z.object({
-  turnstileSiteKey: optionalText(500),
-  turnstileSecretKey: optionalText(500),
+  turnstileSiteKey: optionalText(500).refine(
+    (val) => !val || isValidTurnstileKey(val),
+    {
+      error:
+        "サイトキーは 0x または Cloudflare テストキー（1x / 2x / 3x）で始まる必要があります",
+    },
+  ),
+  turnstileSecretKey: optionalText(500).refine(
+    (val) => !val || isValidTurnstileKey(val),
+    {
+      error:
+        "シークレットキーは 0x または Cloudflare テストキー（1x / 2x / 3x）で始まる必要があります",
+    },
+  ),
 });
 
 export type TurnstileFormInput = z.infer<typeof turnstileFormSchema>;
@@ -44,7 +61,10 @@ export type TurnstileFormInput = z.infer<typeof turnstileFormSchema>;
 // =============================================================================
 
 export const googleMapsFormSchema = z.object({
-  googleMapsApiKey: optionalText(500),
+  googleMapsApiKey: optionalText(500).refine(
+    (val) => !val || isValidGoogleMapsApiKey(val),
+    { error: "Google Maps APIキーは AIza で始まる必要があります" },
+  ),
 });
 
 export type GoogleMapsFormInput = z.infer<typeof googleMapsFormSchema>;
@@ -164,7 +184,14 @@ export type StripeFormInput = z.infer<typeof stripeFormSchema>;
 // =============================================================================
 
 export const resendFormSchema = z.object({
-  resendApiKey: z.string().optional(),
+  resendApiKey: z
+    .string()
+    .trim()
+    .max(200, { error: "APIキーは200文字以内で入力してください" })
+    .refine((val) => !val || isValidResendApiKey(val), {
+      error: "APIキーは re_ で始まる必要があります",
+    })
+    .optional(),
   // Resend Webhook 署名秘密 (svix `whsec_...`)。Tier 2 (DB canonical + admin UI 管理)。
   // stripeWebhookSecret と同じ posture: 200 文字上限 + 前置詞 refine + optional。
   resendWebhookSecret: z

@@ -41,6 +41,7 @@ const mockTransaction = mock<
           $executeRaw: typeof mockExecuteRaw;
           settingsInstagram: {
             update: typeof mockSettingsUpdate;
+            upsert: typeof mockSettingsUpsert;
           };
           instagramPost: {
             deleteMany: typeof mockInstagramPostDeleteMany;
@@ -54,6 +55,7 @@ const mockTransaction = mock<
       $executeRaw: mockExecuteRaw,
       settingsInstagram: {
         update: mockSettingsUpdate,
+        upsert: mockSettingsUpsert,
       },
       instagramPost: {
         deleteMany: mockInstagramPostDeleteMany,
@@ -298,6 +300,7 @@ describe("disconnectInstagram", () => {
           $executeRaw: mockExecuteRaw,
           settingsInstagram: {
             update: mockSettingsUpdate,
+            upsert: mockSettingsUpsert,
           },
           instagramPost: {
             deleteMany: mockInstagramPostDeleteMany,
@@ -311,8 +314,10 @@ describe("disconnectInstagram", () => {
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
     mockSettingsUpdate.mockReset();
+    mockSettingsUpsert.mockReset();
     mockInstagramPostDeleteMany.mockReset();
     mockSettingsUpdate.mockResolvedValue(undefined);
+    mockSettingsUpsert.mockResolvedValue(undefined);
     mockInstagramPostDeleteMany.mockResolvedValue(undefined);
   });
 
@@ -322,10 +327,18 @@ describe("disconnectInstagram", () => {
 
       expect(mockTransaction).toHaveBeenCalledTimes(1);
       expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpdate).toHaveBeenCalledWith(
+      expect(mockSettingsUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
-          data: {
+          create: {
+            id: "singleton",
+            instagramAccessToken: null,
+            instagramTokenExpiresAt: null,
+            instagramUserId: null,
+            instagramUsername: null,
+            instagramAccountType: null,
+          },
+          update: {
             instagramAccessToken: null,
             instagramTokenExpiresAt: null,
             instagramUserId: null,
@@ -334,6 +347,7 @@ describe("disconnectInstagram", () => {
           },
         }),
       );
+      expect(mockSettingsUpdate).not.toHaveBeenCalled();
       expect(mockInstagramPostDeleteMany).toHaveBeenCalledTimes(1);
     });
   });
@@ -348,6 +362,7 @@ describe("syncInstagramFeed", () => {
           $executeRaw: mockExecuteRaw,
           settingsInstagram: {
             update: mockSettingsUpdate,
+            upsert: mockSettingsUpsert,
           },
           instagramPost: {
             deleteMany: mockInstagramPostDeleteMany,

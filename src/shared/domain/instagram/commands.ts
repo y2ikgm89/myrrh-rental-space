@@ -114,9 +114,17 @@ export async function disconnectInstagram(): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql("instagram_posts:all"));
 
-    await tx.settingsInstagram.update({
+    await tx.settingsInstagram.upsert({
       where: { id: "singleton" },
-      data: {
+      create: {
+        id: "singleton",
+        instagramAccessToken: null,
+        instagramTokenExpiresAt: null,
+        instagramUserId: null,
+        instagramUsername: null,
+        instagramAccountType: null,
+      },
+      update: {
         instagramAccessToken: null,
         instagramTokenExpiresAt: null,
         instagramUserId: null,
@@ -172,7 +180,9 @@ function mapMediaType(mediaType: InstagramMediaType): InstagramMediaType {
       return InstagramMediaType.VIDEO;
     case "CAROUSEL_ALBUM":
       return InstagramMediaType.CAROUSEL_ALBUM;
-    default:
-      return InstagramMediaType.IMAGE;
+    default: {
+      const _exhaustive: never = mediaType;
+      return _exhaustive;
+    }
   }
 }

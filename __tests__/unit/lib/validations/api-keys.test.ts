@@ -108,6 +108,15 @@ describe("isValidTurnstileKey", () => {
   test("0x で始まらない場合 false を返す", () => {
     expect(isValidTurnstileKey("invalid_key")).toBe(false);
   });
+
+  test("Cloudflare 公式テストキーは true を返す", () => {
+    expect(isValidTurnstileKey("1x00000000000000000000AA")).toBe(true);
+    expect(isValidTurnstileKey("2x00000000000000000000AB")).toBe(true);
+    expect(isValidTurnstileKey("3x00000000000000000000FF")).toBe(true);
+    expect(isValidTurnstileKey("1x0000000000000000000000000000000AA")).toBe(
+      true,
+    );
+  });
 });
 
 describe("googleMapsSettingsSchema", () => {

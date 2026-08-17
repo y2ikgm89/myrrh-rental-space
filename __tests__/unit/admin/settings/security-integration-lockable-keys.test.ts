@@ -45,6 +45,36 @@ describe("security-integration forms: ロック中保存の受理", () => {
       );
       expect(r.status).toBe("success");
     });
+
+    test("Cloudflare 公式テストキーは保存できる", () => {
+      expect(
+        parseWithZod(
+          fd({
+            turnstileSiteKey: "1x00000000000000000000AA",
+            turnstileSecretKey: "1x0000000000000000000000000000000AA",
+          }),
+          { schema: turnstileFormSchema },
+        ).status,
+      ).toBe("success");
+    });
+
+    test("無効なプレフィックスのキーは拒否される", () => {
+      expect(
+        parseWithZod(
+          fd({ turnstileSiteKey: "invalid_site_key", turnstileSecretKey: "" }),
+          { schema: turnstileFormSchema },
+        ).status,
+      ).toBe("error");
+      expect(
+        parseWithZod(
+          fd({
+            turnstileSiteKey: "",
+            turnstileSecretKey: "invalid_secret_key",
+          }),
+          { schema: turnstileFormSchema },
+        ).status,
+      ).toBe("error");
+    });
   });
 
   describe("google maps / resend（単一キー）", () => {
@@ -58,6 +88,19 @@ describe("security-integration forms: ロック中保存の受理", () => {
         parseWithZod(fd({ resendApiKey: "" }), { schema: resendFormSchema })
           .status,
       ).toBe("success");
+    });
+
+    test("無効なプレフィックスのキーは拒否される", () => {
+      expect(
+        parseWithZod(fd({ googleMapsApiKey: "invalid_key" }), {
+          schema: googleMapsFormSchema,
+        }).status,
+      ).toBe("error");
+      expect(
+        parseWithZod(fd({ resendApiKey: "invalid_key" }), {
+          schema: resendFormSchema,
+        }).status,
+      ).toBe("error");
     });
   });
 
