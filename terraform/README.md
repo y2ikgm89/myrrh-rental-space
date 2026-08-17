@@ -130,6 +130,9 @@ runner に付与される predefined roles (F1 structural closure の後):
 | 7   | `roles/compute.securityAdmin`                                 | Phase 7: SSL cert                                                                           |
 | 8   | `roles/iap.admin`                                             | Phase 7: IAP OAuth client + resource IAM                                                    |
 | 9   | `roles/serviceusage.serviceUsageAdmin`                        | `google_project_service` (API enablement)                                                   |
+| 10  | `roles/logging.configWriter`                                  | `google_logging_metric`（`logging.logMetrics.create`）                                      |
+| 11  | `roles/monitoring.notificationChannelEditor`                  | `google_monitoring_notification_channel`                                                    |
+| 12  | `roles/monitoring.alertPolicyEditor`                          | `google_monitoring_alert_policy`                                                            |
 | —   | (`projects/…/roles/terraformRunnerSecretManagerNoPolicyMgmt`) | custom role D1 (Secret Manager metadata / version CRUD、setIamPolicy / getIamPolicy を除外) |
 
 **削除済** (F1 structural closure):
