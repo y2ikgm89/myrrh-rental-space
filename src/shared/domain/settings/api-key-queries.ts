@@ -340,6 +340,19 @@ export async function getDecryptedSwitchBotCredentialsForRevocation(): Promise<{
 }
 
 /**
+ * SwitchBot 連携の有効状態だけを返す（cron の kill switch 用）。
+ * `getSwitchBotConfig` は `"use cache"` + STATIC_SETTINGS のため、admin の
+ * `updateTag` が public Cloud Run に届かない。ここはキャッシュせず DB を読む。
+ */
+export async function getSwitchBotEnabled(): Promise<boolean> {
+  const settings = await prisma.settingsSwitchbot.findUnique({
+    where: { id: "singleton" },
+    select: { switchbotEnabled: true },
+  });
+  return settings?.switchbotEnabled ?? false;
+}
+
+/**
  * Webhook URL難読化用トークンと連携の有効状態を返す（webhook route の認可用）。
  * `switchbotEnabled: false` の間は、正しいトークンでも常に無効として扱う
  * （設定画面のトグルOFFがwebhook経路も含めた実効的なkill switchになるように）。

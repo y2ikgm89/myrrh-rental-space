@@ -17,6 +17,14 @@ const mockSettingsTurnstileUpsert = mock<
 const mockSettingsSwitchbotUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsSwitchbotFindUnique = mock<
+  (...args: unknown[]) => Promise<{
+    switchbotEnabled?: boolean;
+    switchbotOpenToken?: string | null;
+    switchbotSecretKey?: string | null;
+    switchbotWebhookPathToken?: string | null;
+  } | null>
+>(() => Promise.resolve(null));
 
 const mockCountPasscodes = mock<(...args: unknown[]) => Promise<number>>(() =>
   Promise.resolve(0),
@@ -63,6 +71,15 @@ const mockSetupWebhook = mock<
   (...args: unknown[]) => Promise<{ ok: boolean; message?: string }>
 >(() => Promise.resolve({ ok: true }));
 
+const mockQueryWebhookUrls = mock<
+  (
+    ...args: unknown[]
+  ) => Promise<
+    | { ok: true; body: { urls: string[] } }
+    | { ok: false; statusCode: number; message: string }
+  >
+>(() => Promise.resolve({ ok: true, body: { urls: [] } }));
+
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
 const GENERATED_WEBHOOK_TOKEN = "generated-token";
@@ -77,7 +94,11 @@ mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settingsTurnstile: { upsert: mockSettingsTurnstileUpsert },
-    settingsSwitchbot: { upsert: mockSettingsSwitchbotUpsert },
+    settingsSwitchbot: {
+      upsert: mockSettingsSwitchbotUpsert,
+      findUnique: (...args: unknown[]) =>
+        mockSettingsSwitchbotFindUnique(...args),
+    },
     smartLockPasscode: {
       findMany: (...args: unknown[]) => mockFindManyPasscodes(...args),
       count: (...args: unknown[]) => mockCountPasscodes(...args),
@@ -108,6 +129,7 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
   setupWebhook: (...args: unknown[]) => mockSetupWebhook(...args),
+  queryWebhookUrls: (...args: unknown[]) => mockQueryWebhookUrls(...args),
 }));
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
@@ -118,10 +140,13 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { MEDIUM: "MEDIUM" },
 }));
 
+import { DomainError } from "@/shared/domain/domain-error";
 import {
   updateTurnstileSettings,
+  updateSwitchBotSettings,
   clearSwitchBotSettings,
   rotateSwitchBotWebhookPathToken,
+  getSwitchBotWebhookRegistrationStatus,
 } from "@/shared/domain/settings/api-key-commands";
 
 const CREDENTIALS = {
@@ -143,6 +168,7 @@ function lastSwitchbotUpdate(): Record<string, unknown> {
 beforeEach(() => {
   mockSettingsTurnstileUpsert.mockClear();
   mockSettingsSwitchbotUpsert.mockClear();
+  mockSettingsSwitchbotFindUnique.mockReset();
   mockFindManyPasscodes.mockReset();
   mockCountPasscodes.mockReset();
   mockGetDecryptedSwitchBotCredentialsForRevocation.mockReset();
@@ -152,7 +178,10 @@ beforeEach(() => {
   mockGetSwitchBotWebhookAuth.mockReset();
   mockDeleteWebhook.mockReset();
   mockSetupWebhook.mockReset();
+  mockQueryWebhookUrls.mockReset();
   mockLogError.mockReset();
+
+  mockSettingsSwitchbotFindUnique.mockResolvedValue(null);
 
   mockFindManyPasscodes.mockResolvedValue([]);
   mockCountPasscodes.mockResolvedValue(0);
@@ -169,6 +198,7 @@ beforeEach(() => {
   });
   mockDeleteWebhook.mockResolvedValue({ ok: true });
   mockSetupWebhook.mockResolvedValue({ ok: true });
+  mockQueryWebhookUrls.mockResolvedValue({ ok: true, body: { urls: [] } });
 });
 
 describe("updateTurnstileSettings", () => {
@@ -396,5 +426,114 @@ describe("rotateSwitchBotWebhookPathToken", () => {
     expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
       `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
+  });
+});
+
+describe("getSwitchBotWebhookRegistrationStatus", () => {
+  test("資格情報が無い場合は VALIDATION で失敗する", async () => {
+    mockGetDecryptedSwitchBotCredentialsForRevocation.mockResolvedValue(null);
+
+    const error = await getSwitchBotWebhookRegistrationStatus().catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
+      code: "VALIDATION",
+      message:
+        "SwitchBot連携が未設定です。先にOpen Token/Secret Keyを保存してください",
+    });
+    expect(mockQueryWebhookUrls).not.toHaveBeenCalled();
+  });
+
+  test("pathToken 未発行なら token_not_issued を返す", async () => {
+    mockGetSwitchBotWebhookAuth.mockResolvedValue({
+      enabled: true,
+      pathToken: null,
+    });
+
+    await expect(getSwitchBotWebhookRegistrationStatus()).resolves.toBe(
+      "token_not_issued",
+    );
+    expect(mockQueryWebhookUrls).not.toHaveBeenCalled();
+  });
+
+  test("期待URLが登録済みなら registered を返す", async () => {
+    mockQueryWebhookUrls.mockResolvedValue({
+      ok: true,
+      body: {
+        urls: [
+          "https://other.example/webhook",
+          "https://example.com/api/webhooks/switchbot/path-token-123",
+        ],
+      },
+    });
+
+    await expect(getSwitchBotWebhookRegistrationStatus()).resolves.toBe(
+      "registered",
+    );
+    expect(mockQueryWebhookUrls).toHaveBeenCalledWith(CREDENTIALS);
+  });
+
+  test("期待URLが未登録なら not_registered を返す", async () => {
+    mockQueryWebhookUrls.mockResolvedValue({
+      ok: true,
+      body: { urls: ["https://other.example/webhook"] },
+    });
+
+    await expect(getSwitchBotWebhookRegistrationStatus()).resolves.toBe(
+      "not_registered",
+    );
+  });
+
+  test("SwitchBot API 失敗は UNEXPECTED で失敗する", async () => {
+    mockQueryWebhookUrls.mockResolvedValue({
+      ok: false,
+      statusCode: 500,
+      message: "network error",
+    });
+
+    const error = await getSwitchBotWebhookRegistrationStatus().catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
+      code: "UNEXPECTED",
+    });
+    expect(error).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("Webhook登録状態の確認に失敗しました"),
+      }),
+    );
+  });
+});
+
+describe("updateSwitchBotSettings", () => {
+  test("キー未保存のまま有効化すると VALIDATION で失敗する", async () => {
+    const error = await updateSwitchBotSettings({
+      switchbotEnabled: true,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
+      code: "VALIDATION",
+      message:
+        "SwitchBot連携を有効にするには、Open TokenとSecret Keyの両方を保存してください",
+    });
+    expect(mockSettingsSwitchbotUpsert).not.toHaveBeenCalled();
+  });
+
+  test("片方のキーだけ保存し、もう一方が未保存なら VALIDATION で失敗する", async () => {
+    const error = await updateSwitchBotSettings({
+      switchbotOpenToken: "token-only",
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
+      code: "VALIDATION",
+      message: "Open TokenとSecret Keyは両方揃えて保存してください",
+    });
+    expect(mockSettingsSwitchbotUpsert).not.toHaveBeenCalled();
   });
 });

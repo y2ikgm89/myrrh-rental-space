@@ -43,6 +43,7 @@ import {
   testSwitchBotConnectionAction,
   clearSwitchBotKeys,
   registerSwitchBotWebhookAction,
+  checkSwitchBotWebhookRegistrationAction,
   rotateSwitchBotWebhookPathTokenAction,
 } from "@/admin/actions/api-keys";
 import { switchbotFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
@@ -74,6 +75,7 @@ export function SwitchBotSection({
   const [testPending, startTestTransition] = useTransition();
   const [clearPending, startClearTransition] = useTransition();
   const [webhookPending, startWebhookTransition] = useTransition();
+  const [checkPending, startCheckTransition] = useTransition();
   const [rotatePending, startRotateTransition] = useTransition();
   const [testResult, setTestResult] = useState<{
     success: boolean;
@@ -223,6 +225,45 @@ export function SwitchBotSection({
     });
   };
 
+  const handleCheckWebhookRegistration = () => {
+    startCheckTransition(async () => {
+      setWebhookResult(null);
+      try {
+        const result = await checkSwitchBotWebhookRegistrationAction();
+        if (!isMutationError(result)) {
+          let message: string;
+          switch (result.status) {
+            case "registered":
+              message = "Webhookは登録済みです";
+              break;
+            case "not_registered":
+              message = "Webhookは未登録です";
+              break;
+            case "token_not_issued":
+              message =
+                "Webhook URLトークンが未発行です。「Webhookを登録」を実行してください";
+              break;
+            default: {
+              const _exhaustive: never = result.status;
+              throw new Error(`unexpected status: ${String(_exhaustive)}`);
+            }
+          }
+          setWebhookResult({
+            success: result.status === "registered",
+            message,
+          });
+        } else {
+          setWebhookResult({ success: false, message: result.error });
+        }
+      } catch {
+        setWebhookResult({
+          success: false,
+          message: "Webhook登録状態の確認でエラーが発生しました",
+        });
+      }
+    });
+  };
+
   const handleRotateWebhookToken = async () => {
     const confirmed = await confirmDialog({
       title: "Webhook URLトークンを更新しますか？",
@@ -256,7 +297,12 @@ export function SwitchBotSection({
   };
 
   const isBusy =
-    isPending || testPending || clearPending || webhookPending || rotatePending;
+    isPending ||
+    testPending ||
+    clearPending ||
+    webhookPending ||
+    checkPending ||
+    rotatePending;
   const formErrors = form.errors;
 
   return (
@@ -525,6 +571,15 @@ export function SwitchBotSection({
                         disabled={isBusy}
                       >
                         {webhookPending ? "登録中..." : "Webhookを登録"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCheckWebhookRegistration}
+                        disabled={isBusy}
+                      >
+                        {checkPending ? "確認中..." : "登録状態を確認"}
                       </Button>
                       <Button
                         type="button"

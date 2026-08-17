@@ -16,7 +16,7 @@ Implementation:
 - Route: `src/app/api/webhooks/switchbot/[token]/route.ts`
 - Domain: `src/shared/domain/smart-lock/webhook-commands.ts`
 - Settings commands: `src/shared/domain/settings/api-key-commands.ts`
-- Admin UI: Settings → SwitchBot → **Webhookを登録** / **URLトークンを更新**
+- Admin UI: Settings → SwitchBot → **Webhookを登録** / **登録状態を確認** / **URLトークンを更新**
 
 ## What the webhook handles
 
@@ -88,11 +88,12 @@ poll is a secondary path.
    PENDING は 30 分 (`STALE_PENDING_THRESHOLD_MINUTES`) 経過で FAILED、
    REVOKE_PENDING は 30 分経過で CONFIRMED へ戻る。cron 間隔が 15 分なので確定は
    最大 45 分後。
-4. SwitchBot 側の登録 URL は**アプリからは確認できない**（`queryWebhookUrls` は
-   クライアントに実装だけあって未配線、path token も UI 非表示）。同一 URL の再登録は
-   冪等なので、判断がつかないならまず **Webhookを登録** を実行する。どうしても現状を
-   見たい場合は SwitchBot アプリ、または Open Token / Secret Key で
-   `POST https://api.switch-bot.com/v1.1/webhook/queryWebhook` を手動実行する。
+4. SwitchBot 側の登録状態は管理画面の **登録状態を確認**
+   （`checkSwitchBotWebhookRegistrationAction` → `queryWebhookUrls`）で確認する。
+   結果は「登録済み / 未登録 / トークン未発行」のみ表示し、webhook URL と path token
+   は出さない。未登録なら **Webhookを登録** を実行する。SwitchBot アプリや
+   `POST https://api.switch-bot.com/v1.1/webhook/queryWebhook` の手動実行は、
+   アプリ側の確認が失敗したときの補助手段。
 
 ### Webhook returns 404
 

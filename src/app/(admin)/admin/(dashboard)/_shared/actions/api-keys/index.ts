@@ -24,6 +24,7 @@ import {
   clearSwitchBotSettings as clearSwitchBotSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   ensureSwitchBotWebhookPathToken,
+  getSwitchBotWebhookRegistrationStatus,
   recordGoogleMapsConnectionStatus,
   recordResendConnectionStatus,
   recordSwitchBotConnectionStatus,
@@ -33,6 +34,7 @@ import {
   updateResendSettings as updateResendSettingsCommand,
   updateSwitchBotSettings as updateSwitchBotSettingsCommand,
   updateTurnstileSettings as updateTurnstileSettingsCommand,
+  type SwitchBotWebhookRegistrationStatus,
 } from "@/shared/domain/settings/api-key-commands";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { setupWebhook } from "@/shared/lib/smart-lock/switchbot-client";
@@ -365,6 +367,19 @@ export async function registerSwitchBotWebhookAction(): Promise<MutationResult> 
       }
 
       return null;
+    },
+  });
+}
+
+export async function checkSwitchBotWebhookRegistrationAction(): Promise<
+  MutationResult<{ status: SwitchBotWebhookRegistrationStatus }>
+> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => {
+      const status = await getSwitchBotWebhookRegistrationStatus();
+      return { status };
     },
   });
 }
