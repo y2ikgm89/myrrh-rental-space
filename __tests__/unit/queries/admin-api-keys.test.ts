@@ -14,6 +14,12 @@ mock.module("next/navigation", () => ({
 }));
 mock.module("next/headers", () => ({ headers: () => mockHeaders() }));
 
+const actualNextServer = await import("next/server");
+mock.module("next/server", () => ({
+  ...actualNextServer,
+  connection: async () => undefined,
+}));
+
 // session は実モジュールを spread し、認証境界の verifyAdminSession だけ差し替える
 const actualSession = await import("@/shared/domain/admin-auth/session");
 mock.module("@/shared/domain/admin-auth/session", () => ({
