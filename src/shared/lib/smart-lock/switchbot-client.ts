@@ -19,6 +19,11 @@ import { createHmac, randomUUID } from "crypto";
 import { z } from "zod";
 import { notifyConnectionApiResult } from "@/shared/lib/integration-health-port";
 import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 const API_BASE = "https://api.switch-bot.com/v1.1";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -43,10 +48,32 @@ const envelopeSchema = z.object({
   message: z.string().optional(),
 });
 
-type DeviceListBody = {
-  deviceList: SwitchBotDeviceListItem[];
-  infraredRemoteList: unknown[];
-};
+const keyListItemSchema = z.object({
+  id: z.union([z.number().int(), z.string()]).transform(String),
+  name: z.string(),
+  type: z.enum(["permanent", "timeLimit", "disposable", "urgent"]),
+  password: z.string(),
+  iv: z.string(),
+  status: z.enum(["normal", "expired"]),
+  createTime: z.number(),
+});
+
+const deviceListItemSchema = z.object({
+  deviceId: z.string(),
+  deviceName: z.string(),
+  deviceType: z.string(),
+  enableCloudService: z.boolean(),
+  hubDeviceId: z.string(),
+  keyList: z.array(keyListItemSchema).optional(),
+  lockDeviceId: z.string().optional(),
+});
+
+const deviceListBodySchema = z.object({
+  deviceList: z.array(deviceListItemSchema),
+  infraredRemoteList: z.array(z.unknown()).default([]),
+});
+
+type DeviceListBody = z.infer<typeof deviceListBodySchema>;
 
 type DeviceListCacheEntry = {
   readonly expiresAt: number;
@@ -182,7 +209,24 @@ export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
     infraredRemoteList: unknown[];
   }>
 > {
-  return request(credentials, "/devices");
+  const result = await request<unknown>(credentials, "/devices");
+  if (!result.ok) return result;
+
+  const parsed = deviceListBodySchema.safeParse(result.body);
+  if (!parsed.success) {
+    logError(new Error("SwitchBot Device List body failed schema parse"), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "getDeviceList" },
+    });
+    return recordSwitchBotHealth({
+      ok: false,
+      statusCode: 0,
+      message: "Device List の形式が不正です",
+    });
+  }
+
+  return { ok: true, body: parsed.data };
 }
 
 /**
