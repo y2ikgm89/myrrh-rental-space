@@ -44,9 +44,10 @@ bun run dev                      # http://localhost:3000
 
 ### Environment notes
 
-- Copy `.env.example` to `.env.local`. **Production-only secrets** (e.g.
-  `ENCRYPTION_KEY`, `AUDIT_LOG_HMAC_KEY`, Cloudflare production tokens) can stay
-  empty locally — local dev does not require them.
+- Copy `.env.example` to `.env.local`. `ENCRYPTION_KEY` is required for
+  encrypted settings storage; `bun run setup` generates it if empty.
+  `AUDIT_LOG_HMAC_KEY` and Cloudflare production tokens can stay empty
+  locally.
 - If `BETTER_AUTH_SECRET` is still a placeholder, generate one:
   `openssl rand -base64 32`
 - `APP_SURFACE` in `.env.example` selects which surface this process serves:
