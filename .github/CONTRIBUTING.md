@@ -35,7 +35,8 @@ docker compose up -d db
 # docker compose up -d db test-db   # integration test 用
 
 cp .env.example .env.local
-# 本番専用 secret（ENCRYPTION_KEY, AUDIT_LOG_HMAC_KEY, Cloudflare 本番トークン等）は
+# ENCRYPTION_KEY は管理画面のシークレット保存（暗号化）に必要。空なら
+# `bun run setup` が自動生成する。AUDIT_LOG_HMAC_KEY と Cloudflare 本番トークンは
 # ローカルでは空のままでよい
 # BETTER_AUTH_SECRET が placeholder のままなら:
 #   openssl rand -base64 32
