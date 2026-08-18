@@ -6,12 +6,15 @@
  * `.env.local`, values are applied to `process.env` before child processes run.
  */
 
-import { copyFileSync, existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
 const envExamplePath = join(root, ".env.example");
 const envLocalPath = join(root, ".env.local");
+const ENV_ASSIGNMENT = /^([A-Z_][A-Z0-9_]*)="([^"]*)"/u;
+const ENCRYPTION_KEY = "ENCRYPTION_KEY";
 
 type CommandRunner = (
   command: readonly string[],
@@ -24,7 +27,7 @@ function applyEnvFile(path: string): void {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
 
-    const match = /^([A-Z_][A-Z0-9_]*)="([^"]*)"/u.exec(trimmed);
+    const match = ENV_ASSIGNMENT.exec(trimmed);
     if (!match) continue;
 
     const [, key, value] = match;
@@ -32,6 +35,51 @@ function applyEnvFile(path: string): void {
       process.env[key] = value;
     }
   }
+}
+
+/**
+ * `.env.local` の空 `ENCRYPTION_KEY` を埋める。I/O は呼び出し側。
+ *
+ * `.env.example` 由来の `ENCRYPTION_KEY=""` は `serverEnv` が空文字を
+ * undefined と見なすため、秘密情報の保存が `getPrimaryEncryptionKey()` で落ちる。
+ */
+export function fillMissingEncryptionKey(
+  content: string,
+  generate: () => string,
+): { content: string; generated: boolean } {
+  const lines = content.split("\n");
+  let encryptionKeyIndex: number | undefined;
+  let encryptionKeyEmpty = false;
+
+  for (const [index, line] of lines.entries()) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const match = ENV_ASSIGNMENT.exec(trimmed);
+    if (match?.[1] === ENCRYPTION_KEY) {
+      encryptionKeyIndex = index;
+      encryptionKeyEmpty = match[2] === "";
+      break;
+    }
+    if (trimmed === `${ENCRYPTION_KEY}=`) {
+      encryptionKeyIndex = index;
+      encryptionKeyEmpty = true;
+      break;
+    }
+  }
+
+  if (encryptionKeyIndex !== undefined && !encryptionKeyEmpty) {
+    return { content, generated: false };
+  }
+
+  const assignment = `${ENCRYPTION_KEY}="${generate()}"`;
+  if (encryptionKeyIndex !== undefined) {
+    const next = [...lines];
+    next[encryptionKeyIndex] = assignment;
+    return { content: next.join("\n"), generated: true };
+  }
+
+  return { content: `${content}\n${assignment}`, generated: true };
 }
 
 export function ensureEnvLocal(): "created" | "exists" {
@@ -258,6 +306,16 @@ if (import.meta.main) {
   // Existing .env.local is auto-loaded by Bun at process start; a file created
   // in this run was applied inside ensureEnvLocal().
   if (envState === "exists") {
+    applyEnvFile(envLocalPath);
+  }
+
+  const envLocal = readFileSync(envLocalPath, "utf8");
+  const filled = fillMissingEncryptionKey(envLocal, () =>
+    randomBytes(32).toString("hex"),
+  );
+  if (filled.generated) {
+    writeFileSync(envLocalPath, filled.content, "utf8");
+    console.info("[setup] Generated ENCRYPTION_KEY in .env.local");
     applyEnvFile(envLocalPath);
   }
 
