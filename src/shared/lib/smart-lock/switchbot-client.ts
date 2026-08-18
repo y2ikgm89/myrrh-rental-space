@@ -52,6 +52,7 @@ const keyListItemSchema = z.object({
   id: z.union([z.number().int(), z.string()]).transform(String),
   name: z.string(),
   type: z.enum(["permanent", "timeLimit", "disposable", "urgent"]),
+  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
   password: z.string(),
   iv: z.string(),
   status: z.enum(["normal", "expired"]),
@@ -64,7 +65,9 @@ const deviceListItemSchema = z.object({
   deviceType: z.string(),
   enableCloudService: z.boolean(),
   hubDeviceId: z.string(),
+  /** Keypad 系デバイスに含まれる発行済みパスコード一覧（Device List のみ） */
   keyList: z.array(keyListItemSchema).optional(),
+  /** Keypad がペアリングしている錠デバイスの MAC（Device List のみ） */
   lockDeviceId: z.string().optional(),
 });
 
@@ -73,6 +76,8 @@ const deviceListBodySchema = z.object({
   infraredRemoteList: z.array(z.unknown()).default([]),
 });
 
+export type SwitchBotKeyListItem = z.infer<typeof keyListItemSchema>;
+export type SwitchBotDeviceListItem = z.infer<typeof deviceListItemSchema>;
 type DeviceListBody = z.infer<typeof deviceListBodySchema>;
 
 type DeviceListCacheEntry = {
@@ -176,39 +181,13 @@ async function recordSwitchBotHealth<T>(
 export type SwitchBotPasscodeType =
   "permanent" | "timeLimit" | "disposable" | "urgent";
 
-export type SwitchBotKeyListItem = {
-  readonly id: string;
-  readonly name: string;
-  readonly type: SwitchBotPasscodeType;
-  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
-  readonly password: string;
-  readonly iv: string;
-  readonly status: "normal" | "expired";
-  readonly createTime: number;
-};
-
-export type SwitchBotDeviceListItem = {
-  readonly deviceId: string;
-  readonly deviceName: string;
-  readonly deviceType: string;
-  readonly enableCloudService: boolean;
-  readonly hubDeviceId: string;
-  /** Keypad 系デバイスに含まれる発行済みパスコード一覧（Device List のみ） */
-  readonly keyList?: SwitchBotKeyListItem[];
-  /** Keypad がペアリングしている錠デバイスの MAC（Device List のみ） */
-  readonly lockDeviceId?: string;
-};
-
 /**
  * 登録済みデバイス一覧を取得する。Open Token / Secret Key の疎通確認、および
  * 管理画面でのデバイス選択UIに使う。
  */
-export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
-  SwitchBotApiResult<{
-    deviceList: SwitchBotDeviceListItem[];
-    infraredRemoteList: unknown[];
-  }>
-> {
+export async function getDeviceList(
+  credentials: SwitchBotCredentials,
+): Promise<SwitchBotApiResult<DeviceListBody>> {
   const result = await request<unknown>(credentials, "/devices");
   if (!result.ok) return result;
 
@@ -236,12 +215,7 @@ export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
 export async function getDeviceListCached(
   credentials: SwitchBotCredentials,
   options?: { readonly ttlMs?: number },
-): Promise<
-  SwitchBotApiResult<{
-    deviceList: SwitchBotDeviceListItem[];
-    infraredRemoteList: unknown[];
-  }>
-> {
+): Promise<SwitchBotApiResult<DeviceListBody>> {
   const ttlMs = options?.ttlMs ?? DEFAULT_DEVICE_LIST_CACHE_TTL_MS;
   const cacheKey = deviceListCacheKey(credentials);
   const now = Date.now();
