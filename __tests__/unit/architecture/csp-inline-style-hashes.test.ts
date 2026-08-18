@@ -96,9 +96,13 @@ describe("style-src hash-source が sonner の実体と一致する", () => {
 describe("proxy の CSP directive", () => {
   const proxySource = readFileSync(join(process.cwd(), "src/proxy.ts"), "utf8");
 
-  test("style-src は nonce + hash（'unsafe-inline' は CSP3 で無視されるので置かない）", () => {
+  test("style-src は dev で 'unsafe-inline'、本番で nonce + hash（同居させない）", () => {
+    // Next.js 公式 CSP guide「Development vs Production Considerations」:
+    // next-devtools は nonce を受け取らないので、dev だけ 'unsafe-inline'。
+    // CSP3 では nonce/hash と 'unsafe-inline' が同居すると後者が無視されるため、
+    // 三項の両枝に混ぜてはいけない。
     expect(proxySource).toContain(
-      "style-src 'self' 'nonce-${nonce}' ${STYLE_ELEMENT_HASHES.join(\" \")};",
+      "style-src 'self' ${isDev ? \"'unsafe-inline'\" : `'nonce-${nonce}' ${STYLE_ELEMENT_HASHES.join(\" \")}`};",
     );
   });
 

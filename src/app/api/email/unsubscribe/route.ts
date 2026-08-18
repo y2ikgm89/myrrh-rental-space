@@ -80,7 +80,8 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-function page(title: string, bodyHtml: string): Response {
+function page(title: string, bodyHtml: string, nonce: string | null): Response {
+  const nonceAttr = nonce ? ` nonce="${escapeHtml(nonce)}"` : "";
   const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -88,7 +89,7 @@ function page(title: string, bodyHtml: string): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>${title}</title>
-  <style>
+  <style${nonceAttr}>
     body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 36rem; margin: 3rem auto; padding: 0 1.25rem; color: #1a1a1a; }
     h1 { font-size: 1.25rem; margin-bottom: 1rem; }
     p { font-size: 0.95rem; color: #333; }
@@ -113,7 +114,7 @@ function page(title: string, bodyHtml: string): Response {
 }
 
 /** GET が返す確認ページ。ここでは配信停止しない。ボタン (POST) で実行する。 */
-function confirmPage(token: string): Response {
+function confirmPage(token: string, nonce: string | null): Response {
   return page(
     "お知らせメールの配信を停止しますか？",
     `<p>下のボタンを押すと、運営からのお知らせ・キャンペーンメールの配信を停止します。予約確認などの重要なお知らせは引き続き届く場合があります。</p>
@@ -121,20 +122,23 @@ function confirmPage(token: string): Response {
     <input type="hidden" name="token" value="${escapeHtml(token)}" />
     <button type="submit">配信を停止する</button>
   </form>`,
+    nonce,
   );
 }
 
-function completedPage(): Response {
+function completedPage(nonce: string | null): Response {
   return page(
     "お知らせメールの配信を停止しました",
     `<p>今後、運営からのお知らせ・キャンペーンメールは配信されません。予約確認などの重要なお知らせは引き続き届く場合があります。<br />設定はマイページのアカウント設定からいつでも変更できます。</p>`,
+    nonce,
   );
 }
 
-function invalidPage(): Response {
+function invalidPage(nonce: string | null): Response {
   return page(
     "リンクが無効か有効期限が切れています",
     `<p>この配信停止リンクは無効か、有効期限が切れています。マイページにログインして「お知らせメール」の設定をご確認ください。</p>`,
+    nonce,
   );
 }
 
@@ -149,6 +153,7 @@ function invalidPage(): Response {
  */
 export async function POST(request: Request) {
   const fromQueryOnly = tokenFromQuery(request);
+  const nonce = request.headers.get("x-nonce");
   try {
     const token = await tokenFromRequest(request);
     const result = await processUnsubscribe(token);
@@ -156,7 +161,7 @@ export async function POST(request: Request) {
     // one-click（token が query 由来）は RFC 8058 どおり空 body の 200。
     if (fromQueryOnly !== null) return new Response(null, { status: 200 });
 
-    return result === "ok" ? completedPage() : invalidPage();
+    return result === "ok" ? completedPage(nonce) : invalidPage(nonce);
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
@@ -166,7 +171,7 @@ export async function POST(request: Request) {
     });
     // クライアント側に失敗を見せず 200（再試行ストーム防止）
     if (fromQueryOnly !== null) return new Response(null, { status: 200 });
-    return invalidPage();
+    return invalidPage(nonce);
   }
 }
 
@@ -175,11 +180,12 @@ export async function POST(request: Request) {
  * link scanner のプリフェッチで opt-out されないようにするための分離（HTTP-02）。
  */
 export function GET(request: Request): Response {
+  const nonce = request.headers.get("x-nonce");
   try {
     const token = tokenFromQuery(request);
-    if (!token) return invalidPage();
-    if (!verifyMarketingUnsubscribeToken(token)) return invalidPage();
-    return confirmPage(token);
+    if (!token) return invalidPage(nonce);
+    if (!verifyMarketingUnsubscribeToken(token)) return invalidPage(nonce);
+    return confirmPage(token, nonce);
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
@@ -187,6 +193,6 @@ export function GET(request: Request): Response {
       severity: ErrorSeverity.MEDIUM,
       context: { operation: "marketingUnsubscribeGet" },
     });
-    return invalidPage();
+    return invalidPage(nonce);
   }
 }
