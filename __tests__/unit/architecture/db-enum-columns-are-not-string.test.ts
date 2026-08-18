@@ -94,14 +94,6 @@ const NOT_A_DB_COLUMN: ReadonlyMap<string, Exclusion> = new Map([
     },
   ],
   [
-    "src/shared/lib/smart-lock/switchbot-client.ts::deviceType",
-    {
-      count: 1,
-      reason:
-        "SwitchBot API のデバイス一覧応答（`SwitchBotDeviceListItem`）。SwitchBot が返す任意のデバイス種別で、こちらの SmartLockDeviceType は取り扱う分だけを列挙した狭い集合",
-    },
-  ],
-  [
     "src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts::type",
     {
       count: 1,
