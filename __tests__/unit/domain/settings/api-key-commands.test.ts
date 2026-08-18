@@ -82,6 +82,8 @@ const mockQueryWebhookUrls = mock<
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
+const mockEncrypt = mock<(value: string) => string>((v: string) => `enc:${v}`);
+
 const GENERATED_WEBHOOK_TOKEN = "generated-token";
 
 mock.module("node:crypto", () => ({
@@ -111,7 +113,7 @@ mock.module("@/shared/domain/settings/connection-health", () => ({
   recordConnectionTestResult: mock(() => Promise.resolve()),
 }));
 mock.module("@/shared/lib/crypto", () => ({
-  encrypt: (v: string) => `enc:${v}`,
+  encrypt: (v: string) => mockEncrypt(v),
   safeDecrypt: (v: string) => v,
   safeDecryptToString: (v: string | null | undefined) => v ?? null,
 }));
@@ -153,6 +155,7 @@ import {
   rotateSwitchBotWebhookPathToken,
   getSwitchBotWebhookRegistrationStatus,
 } from "@/shared/domain/settings/api-key-commands";
+import { EncryptionKeyNotConfiguredError } from "@/shared/lib/env/encryption";
 
 const CREDENTIALS = {
   openToken: "token",
@@ -185,6 +188,8 @@ beforeEach(() => {
   mockSetupWebhook.mockReset();
   mockQueryWebhookUrls.mockReset();
   mockLogError.mockReset();
+  mockEncrypt.mockReset();
+  mockEncrypt.mockImplementation((v: string) => `enc:${v}`);
 
   mockSettingsSwitchbotFindUnique.mockResolvedValue(null);
 
@@ -540,5 +545,33 @@ describe("updateSwitchBotSettings", () => {
       message: "Open TokenとSecret Keyは両方揃えて保存してください",
     });
     expect(mockSettingsSwitchbotUpsert).not.toHaveBeenCalled();
+  });
+
+  test("ENCRYPTION_KEY 未設定で Open Token を保存すると原因をメッセージに含める", async () => {
+    mockEncrypt.mockImplementationOnce(() => {
+      throw new EncryptionKeyNotConfiguredError(
+        "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
+      );
+    });
+    mockSettingsSwitchbotFindUnique.mockResolvedValue({
+      switchbotSecretKey: "existing-secret",
+    });
+
+    const error = await updateSwitchBotSettings({
+      switchbotOpenToken: "tok",
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        code: "VALIDATION",
+        message: expect.stringContaining("ENCRYPTION_KEY が未設定"),
+      }),
+    );
+    expect(error).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("Open Tokenの暗号化に失敗しました"),
+      }),
+    );
   });
 });

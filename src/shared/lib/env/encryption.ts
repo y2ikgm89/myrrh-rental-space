@@ -34,6 +34,13 @@ export const DEFAULT_KID = "v1";
 
 export type EncryptionKey = ParsedEncryptionKey;
 
+export class EncryptionKeyNotConfiguredError extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = "EncryptionKeyNotConfiguredError";
+  }
+}
+
 /**
  * 暗号化マスター鍵（primary）を取得。新規 encrypt はこの鍵で書く。
  *
@@ -44,7 +51,7 @@ export type EncryptionKey = ParsedEncryptionKey;
 export function getPrimaryEncryptionKey(): EncryptionKey {
   const hex = serverEnv.ENCRYPTION_KEY;
   if (!hex) {
-    throw new Error(
+    throw new EncryptionKeyNotConfiguredError(
       "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
     );
   }
