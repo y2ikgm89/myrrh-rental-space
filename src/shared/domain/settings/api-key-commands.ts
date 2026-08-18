@@ -6,6 +6,7 @@ import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
+import { EncryptionKeyNotConfiguredError } from "@/shared/lib/env/encryption";
 import {
   IntegrationKey,
   SmartLockPasscodeStatus,
@@ -80,7 +81,13 @@ function encryptSecret(
 ): string {
   try {
     return encrypt(value, { purpose });
-  } catch {
+  } catch (error) {
+    if (error instanceof EncryptionKeyNotConfiguredError) {
+      throw new DomainError(
+        `${message}（原因: ENCRYPTION_KEY が未設定です。\`bun run setup\` で自動生成するか、\`openssl rand -hex 32\` で生成して .env.local に設定し、サーバーを再起動してください）`,
+        "VALIDATION",
+      );
+    }
     throw new DomainError(message, "VALIDATION");
   }
 }
