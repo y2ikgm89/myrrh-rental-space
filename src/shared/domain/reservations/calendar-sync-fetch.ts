@@ -26,6 +26,10 @@ export async function fetchCalendarChanges(
 ): Promise<SyncChangesResult> {
   const resolved = await resolveGoogleCalendarWriteContext();
   if (!resolved.ok) {
+    await recordConnectionApiResult(IntegrationKey.GOOGLE_CALENDAR, {
+      success: false,
+      error: new Error(resolved.error),
+    });
     return {
       success: false,
       changes: [],

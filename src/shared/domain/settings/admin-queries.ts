@@ -261,6 +261,8 @@ function toSettingsData(
       options.health[IntegrationKey.GOOGLE_CALENDAR].lastCheckedAt,
     googleCalendarConnectionStatus:
       options.health[IntegrationKey.GOOGLE_CALENDAR].status,
+    googleCalendarLastErrorMessage:
+      options.health[IntegrationKey.GOOGLE_CALENDAR].lastErrorMessage,
     googleBusinessProfileEnabled:
       googleBusinessProfile.googleBusinessProfileEnabled,
     googleCalendarReminderMinutes: googleCalendar.googleCalendarReminderMinutes,

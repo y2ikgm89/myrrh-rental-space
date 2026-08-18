@@ -147,6 +147,7 @@ export type SettingsData = {
   googleCalendarServiceAccountConfigured: boolean;
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: ConnectionStatus | null;
+  googleCalendarLastErrorMessage: string | null;
   googleBusinessProfileEnabled: boolean;
   googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;
