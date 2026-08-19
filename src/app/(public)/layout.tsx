@@ -55,6 +55,7 @@ import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import { CSS_VAR } from "@/shared/lib/csp/css-vars";
 import { NonceStyleBlock } from "@/shared/lib/csp/nonce-style";
 import { StyleNonceRegistrar } from "@/shared/lib/csp/style-nonce-registrar";
+import { ZodJaRegistrar } from "@/shared/lib/validations/zod-ja-registrar";
 import {
   buildDataStyleRule,
   DATA_STYLE_ID_ATTR,
@@ -434,6 +435,7 @@ export default async function PublicRootLayout({
           <Suspense fallback={null}>
             <StyleNonceRegistrar />
           </Suspense>
+          <ZodJaRegistrar />
           <MaintenanceGate>
             {/* 全公開ページ共通の構造化データ */}
             <Suspense fallback={null}>
