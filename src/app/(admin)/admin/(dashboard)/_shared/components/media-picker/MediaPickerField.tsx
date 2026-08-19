@@ -3,7 +3,7 @@
 /**
  * MediaPickerField
  *
- * form-library agnostic な単一画像選択フィールド。conform `useInputControl()` の
+ * form-library agnostic な単一画像選択フィールド。conform `useFieldControl()` の
  * `value` / `change` と接続して使う (BasicInfoSection の headerLogoUrl 等が参照実装)。
  *
  * UI パターン（業界標準: GitHub Avatar / YouTube サムネ / Notion カバー / Sanity Studio Image Field 準拠）:

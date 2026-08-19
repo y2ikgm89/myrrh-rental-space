@@ -4,17 +4,16 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import type { SubmissionResult } from "@conform-to/react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
 import { formatCurrency } from "@/shared/lib/pricing/format";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import type { z } from "zod";
@@ -118,7 +117,7 @@ export function EditReservationForm({
         date: initialValues.date,
         startTime: initialValues.startTime,
         endTime: initialValues.endTime,
-        numberOfGuests,
+        numberOfGuests: String(numberOfGuests),
         version,
       },
       onValidate({ formData }) {
@@ -134,7 +133,7 @@ export function EditReservationForm({
     },
   );
 
-  const numberOfGuestsControl = useInputControl(fields.numberOfGuests);
+  const numberOfGuestsControl = useFieldControl(fields.numberOfGuests);
 
   const selectedSpaceId =
     fields.spaceId.value ?? initialValues.spaceId ?? spaces[0]?.id ?? "";
@@ -171,7 +170,7 @@ export function EditReservationForm({
   // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
   // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 同じ lastResult に対して 1 回だけ実行する。conform の control hook を
   // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
   // 結果は ref で覚える（state だと effect 内 setState になり
   // react-hooks/set-state-in-effect に触れる）。
@@ -198,10 +197,9 @@ export function EditReservationForm({
         name={fields.reservationId.name}
         value={reservationId}
       />
-      <input
-        type="hidden"
-        name={fields.numberOfGuests.name}
-        value={String(guestCount)}
+      <HiddenControlInput
+        field={fields.numberOfGuests}
+        control={numberOfGuestsControl}
       />
       <input type="hidden" name={fields.version.name} value={String(version)} />
 

@@ -8,9 +8,9 @@
  * 受け取る。`SubmitButton` は parent dialog footer に置かれ `form={formId}` で
  * connect する。
  *
- * - icon は `IconPickerField` + `useInputControl` で hidden input sync。
+ * - icon は `IconPickerField` + `useFieldControl` で hidden input sync。
  * - color は `<input type="color">` と `<Input type="text">` の 2 入力を
- *   `useInputControl` で共通 state にバインドし、hidden input で送信値を確定。
+ *   `useFieldControl` で共通 state にバインドし、hidden input で送信値を確定。
  * - sortOrder はシステム管理（D&D 並び替えが SSoT）のためフォームに持たない。
  */
 
@@ -20,7 +20,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { Input, Textarea, Label } from "@/admin/components/ui";
@@ -30,6 +29,10 @@ import {
   type SpaceCategoryWithStats,
 } from "@/shared/lib/validations/space-category";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type CategoryFormProps = {
   readonly category?: SpaceCategoryWithStats;
@@ -72,16 +75,16 @@ export function CategoryForm({
         },
   });
 
-  const iconControl = useInputControl(fields.icon);
-  const colorControl = useInputControl(fields.color);
+  const iconControl = useFieldControl(fields.icon);
+  const colorControl = useFieldControl(fields.color);
   const iconValue = iconControl.value ?? "";
   const colorValue = colorControl.value ?? "";
   const formErrors = form.errors;
 
   return (
     <form {...getFormProps(form)} action={formAction} className="space-y-4">
-      <input type="hidden" name={fields.icon.name} value={iconValue} />
-      <input type="hidden" name={fields.color.name} value={colorValue} />
+      <HiddenControlInput field={fields.icon} control={iconControl} />
+      <HiddenControlInput field={fields.color} control={colorControl} />
 
       <div className="space-y-2">
         <Label htmlFor={fields.name.id}>カテゴリー名 *</Label>

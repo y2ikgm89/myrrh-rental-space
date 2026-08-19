@@ -13,7 +13,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -38,6 +37,10 @@ import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCouponType } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type CouponFormProps = {
   coupon?: CouponData;
@@ -108,7 +111,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
         },
   });
 
-  const typeControl = useInputControl(fields.type);
+  const typeControl = useFieldControl(fields.type);
   const [isActive, setIsActive] = useState(coupon?.isActive ?? true);
   const [canCombine, setCanCombine] = useState(
     coupon?.canCombineWithDurationDiscount ?? true,
@@ -239,11 +242,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <input
-                  type="hidden"
-                  name={fields.type.name}
-                  value={couponType}
-                />
+                <HiddenControlInput field={fields.type} control={typeControl} />
                 {fields.type.errors && (
                   <p
                     id={fields.type.errorId}

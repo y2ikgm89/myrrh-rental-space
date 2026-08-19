@@ -3,19 +3,13 @@
 /**
  * メンテナンス設定セクション
  *
- * clean break 移行。Switch は `useInputControl` で hidden input と sync する公式パターン
- * (https://conform.guide/api/react/useInputControl)。
+ * Switch は `useFieldControl` で hidden input と sync する。
  */
 
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getTextareaProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getTextareaProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -33,6 +27,10 @@ import { maintenanceFormSchema } from "@/admin/actions/settings/schemas/form-sch
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface MaintenanceSectionProps {
   settings: Serialized<SettingsData>;
@@ -61,7 +59,7 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
     },
   });
 
-  const maintenanceMode = useInputControl(fields.maintenanceMode);
+  const maintenanceMode = useFieldControl(fields.maintenanceMode);
   const isActive = maintenanceMode.value === "on";
 
   // Conform 公式仕様: resetForm: true の reply は `{ initialValue: null }` のみを返す
@@ -114,10 +112,9 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
               onBlur={maintenanceMode.blur}
               disabled={isPending}
             />
-            <input
-              type="hidden"
-              name={fields.maintenanceMode.name}
-              value={isActive ? "on" : ""}
+            <HiddenControlInput
+              field={fields.maintenanceMode}
+              control={maintenanceMode}
             />
           </div>
 

@@ -15,12 +15,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -48,6 +43,10 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface ResendSectionProps {
@@ -88,7 +87,7 @@ export function ResendSection({ config }: ResendSectionProps) {
     },
   });
 
-  const apiKeyControl = useInputControl(fields.resendApiKey);
+  const apiKeyControl = useFieldControl(fields.resendApiKey);
   const apiKey = apiKeyControl.value ?? "";
 
   const isSuccess = lastResult?.initialValue === null;
@@ -104,7 +103,7 @@ export function ResendSection({ config }: ResendSectionProps) {
     }
   }
 
-  // useEffectEvent で useInputControl 参照を effect deps から除外
+  // useEffectEvent で control 参照を effect deps から除外
   const handleSaveSuccess = useEffectEvent(() => {
     toast.success("Resend設定を保存しました");
     apiKeyControl.change("");
@@ -163,6 +162,7 @@ export function ResendSection({ config }: ResendSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
+      <HiddenControlInput field={fields.resendApiKey} control={apiKeyControl} />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -209,7 +209,6 @@ export function ResendSection({ config }: ResendSectionProps) {
             ) : (
               <Input
                 id={fields.resendApiKey.id}
-                name={fields.resendApiKey.name}
                 value={apiKey}
                 onChange={(e) => apiKeyControl.change(e.target.value)}
                 onBlur={apiKeyControl.blur}

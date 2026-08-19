@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * AutoBooleanField — conform useInputControl ベースの Switch
+ * AutoBooleanField — conform useTypedControl ベースの Switch
  *
  * boolean 値は "on" / "" 文字列で FormData 送信、schema 層の preprocess で boolean 化する。
  */
 
 import { type FieldMetadata } from "@conform-to/react";
 import { Label, Switch } from "@/admin/components/ui";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 
 interface AutoBooleanFieldProps {
   readonly field: FieldMetadata<unknown>;
@@ -27,12 +30,12 @@ export function AutoBooleanField({
   isPending,
   error,
 }: AutoBooleanFieldProps) {
-  const control = useTypedInputControl(field);
+  const control = useTypedControl(field);
   const isOn = control.value === "on" || control.value === "true";
 
   return (
     <div className="space-y-1">
-      <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+      <HiddenControlInput field={field} control={control} />
       <div className="flex items-center gap-2">
         <Switch
           id={fieldId}

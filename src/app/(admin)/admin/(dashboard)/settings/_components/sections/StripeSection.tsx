@@ -12,12 +12,7 @@ import { useConfirm } from "@/admin/contexts/confirm-context";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Alert,
@@ -67,6 +62,10 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
@@ -130,7 +129,7 @@ export function StripeSection({
 
   // 選択中の payment_method_types を state で持ち、多値 hidden input として POST。
   // conform の getInputProps は multi-checkbox に直接対応しないため、状態管理は
-  // 手動 + hidden input で fallback する (typed-input-control でも overkill)。
+  // 手動 + hidden input で fallback する (useTypedControl でも overkill)。
   //
   // Codex PR #1046 P2 (comment 3570245234): DB に既に invalid combination が
   // 保存されている場合 (例: currency=usd + methods=[card, konbini]) の初回 render で、
@@ -168,8 +167,8 @@ export function StripeSection({
     });
   };
 
-  const currencyControl = useInputControl(fields.stripeCurrency);
-  const secretKeyControl = useInputControl(fields.stripeSecretKey);
+  const currencyControl = useFieldControl(fields.stripeCurrency);
+  const secretKeyControl = useFieldControl(fields.stripeSecretKey);
 
   const currency = currencyControl.value ?? "jpy";
   const secretKeyValue = secretKeyControl.value ?? "";
@@ -292,7 +291,14 @@ export function StripeSection({
   return (
     <form {...getFormProps(form)} action={action}>
       <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
-      <input type="hidden" name={fields.stripeCurrency.name} value={currency} />
+      <HiddenControlInput
+        field={fields.stripeCurrency}
+        control={currencyControl}
+      />
+      <HiddenControlInput
+        field={fields.stripeSecretKey}
+        control={secretKeyControl}
+      />
       {/* 多値 checkbox の POST 経路: 選択した method を全て個別 hidden input で出力
         (conform は同名 name の複数値を FormData.getAll() で拾える)。名前は Zod schema の
         stripePaymentMethodTypes に一致させ、array Zod が受け取る形にする。 */}
@@ -475,7 +481,10 @@ export function StripeSection({
                 </div>
               ) : (
                 <Input
-                  {...getInputProps(fields.stripeSecretKey, { type: "text" })}
+                  id={fields.stripeSecretKey.id}
+                  value={secretKeyValue}
+                  onChange={(e) => secretKeyControl.change(e.target.value)}
+                  onBlur={secretKeyControl.blur}
                   autoComplete="off"
                   data-lpignore="true"
                   data-form-type="other"
@@ -484,6 +493,14 @@ export function StripeSection({
                     savedMode === "live" ? "sk_live_..." : "sk_test_..."
                   }
                   disabled={isPending}
+                  aria-invalid={
+                    fields.stripeSecretKey.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.stripeSecretKey.errors
+                      ? fields.stripeSecretKey.errorId
+                      : undefined
+                  }
                 />
               )}
               <p className="text-xs text-muted-foreground">

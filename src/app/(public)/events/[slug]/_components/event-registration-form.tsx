@@ -219,7 +219,7 @@ export function EventRegistrationForm({
   // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
   // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 同じ lastResult に対して 1 回だけ実行する。conform の control hook を
   // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
   // 結果は ref で覚える（state だと effect 内 setState になり
   // react-hooks/set-state-in-effect に触れる）。

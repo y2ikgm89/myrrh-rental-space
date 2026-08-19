@@ -14,7 +14,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
@@ -34,6 +33,10 @@ import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const DEFAULT_MESSAGE =
   "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
@@ -71,7 +74,7 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
     },
   });
 
-  const cookieConsentEnabled = useInputControl(fields.cookieConsentEnabled);
+  const cookieConsentEnabled = useFieldControl(fields.cookieConsentEnabled);
   const isEnabled = cookieConsentEnabled.value === "on";
 
   useEffect(() => {
@@ -114,10 +117,9 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
               onBlur={cookieConsentEnabled.blur}
               disabled={isPending}
             />
-            <input
-              type="hidden"
-              name={fields.cookieConsentEnabled.name}
-              value={isEnabled ? "on" : ""}
+            <HiddenControlInput
+              field={fields.cookieConsentEnabled}
+              control={cookieConsentEnabled}
             />
           </div>
 

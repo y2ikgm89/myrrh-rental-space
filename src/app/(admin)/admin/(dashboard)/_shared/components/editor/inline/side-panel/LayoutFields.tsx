@@ -9,7 +9,7 @@
  *
  * `FieldMetadata<T>` は invariant のため、Pure Component に値・error 文字列・
  * callback のみを渡し、Connected ラッパーで型ブリッジする。境界 cast は
- * `@/shared/lib/conform/typed-input-control` の `useTypedInputControl` helper
+ * `@/shared/lib/conform/control` の `useTypedControl` helper
  * 内に集約済。
  */
 
@@ -23,7 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 
 // =============================================================================
 // Pure Component（conform 非依存）
@@ -51,7 +54,6 @@ const CONTENT_WIDTH_OPTIONS: readonly ContentWidthOption[] = [
 export function LayoutFields({
   contentWidth,
   contentWidthCustomValue,
-  contentWidthCustomName,
   contentWidthCustomId,
   contentWidthCustomError,
   onContentWidthChange,
@@ -60,7 +62,6 @@ export function LayoutFields({
 }: {
   contentWidth: string;
   contentWidthCustomValue: string;
-  contentWidthCustomName: string;
   contentWidthCustomId: string;
   contentWidthCustomError: string | undefined;
   onContentWidthChange: (width: string | undefined) => void;
@@ -106,7 +107,6 @@ export function LayoutFields({
           <Label htmlFor={contentWidthCustomId}>カスタム幅 (px)</Label>
           <Input
             id={contentWidthCustomId}
-            name={contentWidthCustomName}
             type="number"
             min={320}
             max={1920}
@@ -137,7 +137,7 @@ export function LayoutFields({
  * LayoutFieldsConnected — conform 接続ラッパー
  *
  * `FieldMetadata<T>` の generic invariance を Pure Component に Pure 値で
- * 透過する。境界 cast は `useTypedInputControl` helper 内に集約済。
+ * 透過する。境界 cast は `useTypedControl` helper 内に集約済。
  */
 export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields,
@@ -153,10 +153,8 @@ export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
       "LayoutFieldsConnected: contentWidth / contentWidthCustom fields が見つかりません",
     );
   }
-  const contentWidthControl = useTypedInputControl(contentWidthField);
-  const contentWidthCustomControl = useTypedInputControl(
-    contentWidthCustomField,
-  );
+  const contentWidthControl = useTypedControl(contentWidthField);
+  const contentWidthCustomControl = useTypedControl(contentWidthCustomField);
 
   const contentWidth =
     typeof contentWidthControl.value === "string" && contentWidthControl.value
@@ -170,15 +168,17 @@ export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
 
   return (
     <>
-      <input
-        type="hidden"
-        name={contentWidthField.name}
-        value={contentWidth === "DEFAULT" ? "" : contentWidth}
+      <HiddenControlInput
+        field={contentWidthField}
+        control={contentWidthControl}
+      />
+      <HiddenControlInput
+        field={contentWidthCustomField}
+        control={contentWidthCustomControl}
       />
       <LayoutFields
         contentWidth={contentWidth}
         contentWidthCustomValue={contentWidthCustomValue}
-        contentWidthCustomName={contentWidthCustomField.name}
         contentWidthCustomId={contentWidthCustomField.id}
         contentWidthCustomError={contentWidthCustomField.errors?.[0]}
         onContentWidthChange={(width) => {

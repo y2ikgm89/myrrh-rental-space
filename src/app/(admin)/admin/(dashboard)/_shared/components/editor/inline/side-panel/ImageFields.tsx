@@ -9,7 +9,11 @@
 
 import Image from "next/image";
 import { IconPhotoPlus } from "@tabler/icons-react";
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import { type FieldMetadata } from "@conform-to/react";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { Button, Label } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
@@ -20,7 +24,7 @@ type ImageFieldsProps = {
 
 export function ImageFields({ thumbnailUrlField, disabled }: ImageFieldsProps) {
   const errorMessage = thumbnailUrlField.errors?.[0];
-  const control = useInputControl(thumbnailUrlField);
+  const control = useFieldControl(thumbnailUrlField);
   const thumbnailUrl = typeof control.value === "string" ? control.value : "";
 
   const thumbnailPicker = useSingleMediaPicker({
@@ -37,7 +41,7 @@ export function ImageFields({ thumbnailUrlField, disabled }: ImageFieldsProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor={thumbnailUrlField.id}>サムネイル</Label>
-      <input type="hidden" name={thumbnailUrlField.name} value={thumbnailUrl} />
+      <HiddenControlInput field={thumbnailUrlField} control={control} />
       <div className="flex items-start gap-3">
         {thumbnailUrl ? (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border">

@@ -6,7 +6,7 @@
  * - タイトルからスラッグ自動生成
  * - リアルタイムスラッグ検証（debounce 500ms）
  *
- * clean break 移行。Dialog open state は本 component 内で `useState` 管理
+ * スラッグは `useFieldControl` + `HiddenControlInput`。Dialog open state は本 component 内で `useState` 管理
  * (Variant A、PR #64 SpaceCategory pattern と同型)、controlled 親 prop も
  * オプショナル対応。success 検知 → close + navigate は render 中 sync
  * (`previousLastResult` 比較)、副作用 (`toast` / `router.push`) は useEffect。
@@ -21,12 +21,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -52,6 +47,10 @@ import { slugAvailabilityResponseSchema } from "@/admin/lib/admin-api-response-s
 import { generateSlug } from "@/shared/lib/slug";
 import { createPageSchema } from "@/shared/lib/validations/page";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type SlugStatus = "idle" | "checking" | "available" | "unavailable";
 
@@ -136,10 +135,9 @@ export function CreatePageDialog({
     },
   });
 
-  const titleControl = useInputControl(fields.title);
-  const slugControl = useInputControl(fields.slug);
+  const slugControl = useFieldControl(fields.slug);
 
-  const title = titleControl.value ?? "";
+  const title = fields.title.value ?? "";
   const slug = slugControl.value ?? "";
 
   // hydration 前の POST fallback (`action` prop) 用。hydration 後は上の
@@ -256,6 +254,7 @@ export function CreatePageDialog({
           action={wrappedFormAction}
           className="space-y-4"
         >
+          <HiddenControlInput field={fields.slug} control={slugControl} />
           <div className="space-y-2">
             <Label htmlFor={fields.title.id}>
               タイトル <span className="text-destructive">*</span>
@@ -280,10 +279,15 @@ export function CreatePageDialog({
               <span className="text-muted-foreground">/</span>
               <div className="relative flex-1">
                 <Input
-                  {...getInputProps(fields.slug, { type: "text" })}
+                  id={fields.slug.id}
+                  value={slug}
                   placeholder="about-us"
                   disabled={isPending}
                   className="pr-8"
+                  aria-invalid={fields.slug.errors ? true : undefined}
+                  aria-describedby={
+                    fields.slug.errors ? fields.slug.errorId : undefined
+                  }
                   onChange={(e) => {
                     setIsManualSlug(true);
                     slugControl.change(e.target.value);

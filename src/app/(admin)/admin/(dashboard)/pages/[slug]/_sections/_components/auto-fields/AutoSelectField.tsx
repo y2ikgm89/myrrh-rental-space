@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AutoSelectField — conform useInputControl ベースの Select
+ * AutoSelectField — conform useTypedControl ベースの Select
  *
  * static options（schema 由来）と dynamic options（DB 由来）の両方をサポート。
  * dynamicOptions が渡された場合、先頭に「（指定なし）」エントリ + DB 値を options
@@ -18,7 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 import { getSelectOptions } from "../zod-introspection";
 
 const DYNAMIC_NONE_VALUE = "__none__";
@@ -49,7 +52,7 @@ export function AutoSelectField({
   readonly error: string | undefined;
   readonly dynamicOptions?: ReadonlyArray<DynamicCategoryOption>;
 }) {
-  const control = useTypedInputControl(field);
+  const control = useTypedControl(field);
   const isDynamic = dynamicOptions !== undefined;
   const staticOptions = isDynamic ? [] : getSelectOptions(schema);
 
@@ -69,7 +72,7 @@ export function AutoSelectField({
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={field.name} value={rawValue} />
+      <HiddenControlInput field={field} control={control} />
       <Label htmlFor={fieldId}>{label}</Label>
       <Select
         {...(selectValue.length > 0 && { value: selectValue })}

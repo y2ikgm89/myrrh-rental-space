@@ -7,11 +7,11 @@
  * 文字列の簡易版、`PostTagFields` の TagInput UI を使わないケース向け)。
  */
 
+import { getInputProps, type FieldMetadata } from "@conform-to/react";
 import {
-  getInputProps,
-  useInputControl,
-  type FieldMetadata,
-} from "@conform-to/react";
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import {
   Input,
   Label,
@@ -40,7 +40,7 @@ export function CategoryTagFields({
   categories,
   disabled,
 }: CategoryTagFieldsProps) {
-  const categoryControl = useInputControl(categoryIdField);
+  const categoryControl = useFieldControl(categoryIdField);
   const categoryId =
     typeof categoryControl.value === "string" ? categoryControl.value : "";
   const categoryError = categoryIdField.errors?.[0];
@@ -49,7 +49,7 @@ export function CategoryTagFields({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor={categoryIdField.id}>カテゴリ</Label>
-        <input type="hidden" name={categoryIdField.name} value={categoryId} />
+        <HiddenControlInput field={categoryIdField} control={categoryControl} />
         <Select
           value={categoryId}
           onValueChange={(value) => categoryControl.change(value)}

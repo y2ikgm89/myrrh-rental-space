@@ -11,12 +11,7 @@
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { useRouter } from "next/navigation";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -52,6 +47,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
@@ -145,12 +144,12 @@ export function LayoutSection({
     },
   });
 
-  const containerWidthControl = useInputControl(fields.containerWidth);
-  const contentWidthControl = useInputControl(fields.contentWidth);
-  const containerWidthCustomControl = useInputControl(
+  const containerWidthControl = useFieldControl(fields.containerWidth);
+  const contentWidthControl = useFieldControl(fields.contentWidth);
+  const containerWidthCustomControl = useFieldControl(
     fields.containerWidthCustom,
   );
-  const contentWidthCustomControl = useInputControl(fields.contentWidthCustom);
+  const contentWidthCustomControl = useFieldControl(fields.contentWidthCustom);
 
   const containerWidth = getValidLayoutWidth(
     containerWidthControl.value,
@@ -201,16 +200,21 @@ export function LayoutSection({
 
   return (
     <form {...getFormProps(form)} action={action}>
-      {/* Select の hidden input */}
-      <input
-        type="hidden"
-        name={fields.containerWidth.name}
-        value={containerWidth}
+      <HiddenControlInput
+        field={fields.containerWidth}
+        control={containerWidthControl}
       />
-      <input
-        type="hidden"
-        name={fields.contentWidth.name}
-        value={contentWidth}
+      <HiddenControlInput
+        field={fields.contentWidth}
+        control={contentWidthControl}
+      />
+      <HiddenControlInput
+        field={fields.containerWidthCustom}
+        control={containerWidthCustomControl}
+      />
+      <HiddenControlInput
+        field={fields.contentWidthCustom}
+        control={contentWidthCustomControl}
       />
       <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
 
@@ -281,13 +285,25 @@ export function LayoutSection({
                       カスタム幅 (px)
                     </Label>
                     <Input
-                      {...getInputProps(fields.containerWidthCustom, {
-                        type: "number",
-                      })}
+                      id={fields.containerWidthCustom.id}
+                      type="number"
                       min={320}
                       max={2560}
                       placeholder="例: 1400"
                       disabled={isDisabled}
+                      value={containerWidthCustom}
+                      onChange={(e) =>
+                        containerWidthCustomControl.change(e.target.value)
+                      }
+                      onBlur={containerWidthCustomControl.blur}
+                      aria-invalid={
+                        fields.containerWidthCustom.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.containerWidthCustom.errors
+                          ? fields.containerWidthCustom.errorId
+                          : undefined
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       320px〜2560pxの範囲で入力
@@ -358,13 +374,25 @@ export function LayoutSection({
                       カスタム幅 (px)
                     </Label>
                     <Input
-                      {...getInputProps(fields.contentWidthCustom, {
-                        type: "number",
-                      })}
+                      id={fields.contentWidthCustom.id}
+                      type="number"
                       min={320}
                       max={1920}
                       placeholder="例: 900"
                       disabled={isDisabled}
+                      value={contentWidthCustom}
+                      onChange={(e) =>
+                        contentWidthCustomControl.change(e.target.value)
+                      }
+                      onBlur={contentWidthCustomControl.blur}
+                      aria-invalid={
+                        fields.contentWidthCustom.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.contentWidthCustom.errors
+                          ? fields.contentWidthCustom.errorId
+                          : undefined
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       320px〜1920pxの範囲で入力

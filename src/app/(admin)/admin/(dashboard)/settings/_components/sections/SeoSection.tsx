@@ -14,7 +14,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -48,6 +47,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface SeoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
@@ -98,8 +101,8 @@ function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
     },
   });
 
-  const metaDescriptionControl = useInputControl(fields.defaultMetaDescription);
-  const metaDescriptionLength = (metaDescriptionControl.value ?? "").length;
+  const metaDescriptionLength = (fields.defaultMetaDescription.value ?? "")
+    .length;
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -267,7 +270,7 @@ function AnalyticsSettingsCard({
     },
   });
 
-  const analyticsTypeControl = useInputControl(fields.analyticsType);
+  const analyticsTypeControl = useFieldControl(fields.analyticsType);
   const analyticsType = analyticsTypeControl.value ?? "none";
 
   useEffect(() => {
@@ -281,10 +284,9 @@ function AnalyticsSettingsCard({
 
   return (
     <form {...getFormProps(form)} action={action}>
-      <input
-        type="hidden"
-        name={fields.analyticsType.name}
-        value={analyticsType}
+      <HiddenControlInput
+        field={fields.analyticsType}
+        control={analyticsTypeControl}
       />
 
       <Card>

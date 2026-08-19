@@ -9,12 +9,7 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Card,
@@ -45,6 +40,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const SCROLL_BEHAVIOR_OPTIONS: SelectionBoxOption[] = [
   {
@@ -119,8 +118,8 @@ export function HeaderSection({
     },
   });
 
-  const scrollBehavior = useInputControl(fields.headerScrollBehavior);
-  const backgroundMode = useInputControl(fields.headerBackgroundMode);
+  const scrollBehavior = useFieldControl(fields.headerScrollBehavior);
+  const backgroundMode = useFieldControl(fields.headerBackgroundMode);
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -178,10 +177,9 @@ export function HeaderSection({
                 name="ヘッダー背景モード"
                 disabled={isDisabled}
               />
-              <input
-                type="hidden"
-                name={fields.headerBackgroundMode.name}
-                value={backgroundMode.value ?? ""}
+              <HiddenControlInput
+                field={fields.headerBackgroundMode}
+                control={backgroundMode}
               />
               {fields.headerBackgroundMode.errors &&
                 fields.headerBackgroundMode.errors.length > 0 && (
@@ -213,10 +211,9 @@ export function HeaderSection({
                 name="ヘッダースクロール動作"
                 disabled={isDisabled}
               />
-              <input
-                type="hidden"
-                name={fields.headerScrollBehavior.name}
-                value={scrollBehavior.value ?? ""}
+              <HiddenControlInput
+                field={fields.headerScrollBehavior}
+                control={scrollBehavior}
               />
               {fields.headerScrollBehavior.errors &&
                 fields.headerScrollBehavior.errors.length > 0 && (

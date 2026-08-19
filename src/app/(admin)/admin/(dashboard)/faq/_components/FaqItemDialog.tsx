@@ -24,7 +24,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SubmissionResult } from "@conform-to/react";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -48,6 +48,10 @@ import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 import { FaqItemTemplateSelect } from "./FaqItemTemplateSelect";
 import type { FaqItemTemplate } from "./faq-item-templates";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type FaqItemDialogProps = {
   readonly open: boolean;
@@ -253,9 +257,9 @@ function FaqItemFormBody({
     defaultValue,
   });
 
-  const questionControl = useInputControl(fields.question);
-  const answerControl = useInputControl(fields.answer);
-  const isPublishedControl = useInputControl(fields.isPublished);
+  const questionControl = useFieldControl(fields.question);
+  const answerControl = useFieldControl(fields.answer);
+  const isPublishedControl = useFieldControl(fields.isPublished);
   const isPublished = isPublishedControl.value === "on";
 
   const handleTemplateSelect = (template: FaqItemTemplate) => {
@@ -273,10 +277,9 @@ function FaqItemFormBody({
         name={fields.categoryId.name}
         value={defaultValue.categoryId}
       />
-      <input
-        type="hidden"
-        name={fields.isPublished.name}
-        value={isPublishedControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.isPublished}
+        control={isPublishedControl}
       />
 
       {mode === "create" && (

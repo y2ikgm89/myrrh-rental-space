@@ -3,12 +3,13 @@
 /**
  * ページSEO編集フォーム
  *
- * への clean break 移行。`updatePageSeo` は `page.slug` を bind で部分適用。
+ * カスタム UI は `useFieldControl` / `HiddenControlInput`。`updatePageSeo` は
+ * `page.slug` を bind で部分適用。
  *
  * - 基本SEO設定 / OGP設定 を「フォーム左 / ライブプレビュー右」で表示
  *   (Sanity Studio / Mailchimp / Stripe Dashboard / Webflow CMS 準拠)
- * - 文字数カウントは `useInputControl().value` を直接購読 (リアクティブ)
- * - OGP 画像は `useSingleMediaPicker` + `useInputControl` で sync
+ * - 文字数カウントは `fields.X.value` を直接購読 (リアクティブ)
+ * - OGP 画像は `useSingleMediaPicker` + `useFieldControl` で sync
  */
 
 import Image from "next/image";
@@ -19,7 +20,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { IconPhotoPlus, IconDeviceFloppy } from "@tabler/icons-react";
@@ -43,6 +43,10 @@ import { SEO_LIMITS } from "@/shared/lib/validations/seo";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/pages";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface PageSeoData {
   slug: string;
@@ -88,18 +92,13 @@ export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
     },
   });
 
-  const titleControl = useInputControl(fields.title);
-  const metaDescriptionControl = useInputControl(fields.metaDescription);
-  const metaKeywordsControl = useInputControl(fields.metaKeywords);
-  const ogpTitleControl = useInputControl(fields.ogpTitle);
-  const ogpDescriptionControl = useInputControl(fields.ogpDescription);
-  const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
+  const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
-  const watchedTitle = titleControl.value ?? "";
-  const watchedMetaDescription = metaDescriptionControl.value ?? "";
-  const watchedMetaKeywords = metaKeywordsControl.value ?? "";
-  const watchedOgpTitle = ogpTitleControl.value ?? "";
-  const watchedOgpDescription = ogpDescriptionControl.value ?? "";
+  const watchedTitle = fields.title.value ?? "";
+  const watchedMetaDescription = fields.metaDescription.value ?? "";
+  const watchedMetaKeywords = fields.metaKeywords.value ?? "";
+  const watchedOgpTitle = fields.ogpTitle.value ?? "";
+  const watchedOgpDescription = fields.ogpDescription.value ?? "";
   const ogpImageUrl = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -124,6 +123,10 @@ export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
+      <HiddenControlInput
+        field={fields.ogpImageUrl}
+        control={ogpImageUrlControl}
+      />
       {/* 基本SEO設定 — フォーム左 / SERP プレビュー右 */}
       <Card>
         <CardHeader>
@@ -314,11 +317,6 @@ export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
                     </Button>
                   )}
                 </div>
-                <input
-                  type="hidden"
-                  name={fields.ogpImageUrl.name}
-                  value={ogpImageUrl}
-                />
                 {ogpImageUrl && (
                   <p className="truncate text-xs text-muted-foreground">
                     {ogpImageUrl}

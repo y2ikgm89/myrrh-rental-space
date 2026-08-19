@@ -27,7 +27,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -52,6 +51,10 @@ import type { FaqCategoryData } from "@/shared/domain/faq/types";
 import { generateSlug } from "@/shared/lib/slug";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type FaqCategoryDialogProps = {
   readonly open: boolean;
@@ -256,10 +259,10 @@ function FaqCategoryFormBody({
     defaultValue,
   });
 
-  const nameControl = useInputControl(fields.name);
-  const slugControl = useInputControl(fields.slug);
-  const iconControl = useInputControl(fields.icon);
-  const isActiveControl = useInputControl(fields.isActive);
+  const nameControl = useFieldControl(fields.name);
+  const slugControl = useFieldControl(fields.slug);
+  const iconControl = useFieldControl(fields.icon);
+  const isActiveControl = useFieldControl(fields.isActive);
   const iconValue = iconControl.value ?? "";
   const isActive = isActiveControl.value === "on";
 
@@ -267,12 +270,8 @@ function FaqCategoryFormBody({
 
   return (
     <form {...getFormProps(form)} action={formAction} className="space-y-4">
-      <input
-        type="hidden"
-        name={fields.isActive.name}
-        value={isActiveControl.value ?? ""}
-      />
-      <input type="hidden" name={fields.icon.name} value={iconValue} />
+      <HiddenControlInput field={fields.isActive} control={isActiveControl} />
+      <HiddenControlInput field={fields.icon} control={iconControl} />
 
       <div className="space-y-2">
         <Label htmlFor={fields.name.id}>カテゴリ名 *</Label>
@@ -298,9 +297,17 @@ function FaqCategoryFormBody({
       <div className="space-y-2">
         <Label htmlFor={fields.slug.id}>スラッグ *</Label>
         <Input
-          {...getInputProps(fields.slug, { type: "text" })}
+          id={fields.slug.id}
+          name={fields.slug.name}
+          value={slugControl.value ?? ""}
+          onChange={(e) => slugControl.change(e.target.value)}
+          onBlur={slugControl.blur}
           placeholder="例: reservation"
           disabled={isPending}
+          aria-invalid={fields.slug.errors ? true : undefined}
+          aria-describedby={
+            fields.slug.errors ? fields.slug.errorId : undefined
+          }
         />
         <p className="text-xs text-muted-foreground">
           URL に使用される識別子です（半角英数字とハイフンのみ）

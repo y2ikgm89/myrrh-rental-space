@@ -4,7 +4,7 @@
  * 連絡先情報セクション
  *
  * 電話番号、メールアドレス、住所などの連絡先設定。
- * への clean break 移行。
+ * Switch / Select は `useFieldControl` で hidden input と sync する。
  */
 
 import { useActionState, useEffect } from "react";

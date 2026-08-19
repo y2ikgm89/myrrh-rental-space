@@ -9,10 +9,10 @@ import { PortableTextInlineEditor } from "./dynamic-imports";
 import { parsePortableTextSpans } from "./helpers";
 import type { ControlledFieldProps } from "./types";
 
-// PortableText fields は `useInputControl` を使わず local state + hidden input transit
+// PortableText fields は `useFieldControl` を使わず local state + hidden input transit
 // (BarDialog / NavigationDialog canonical pattern と同型)。
 //
-// `useInputControl<string>` は内部 sync useEffect で `change(field.value)` を呼ぶが、
+// `useFieldControl` / `useControl` は string 値前提で、
 // conform `defaultValue` に `PortableTextSpan[]` / `PortableTextBlock[]` (array of objects)
 // を渡すと `normalizeStringValues` が "Expected string or string[]" を throw する。
 // hidden input 経由で JSON 文字列を FormData に乗せ、schema 側 preprocess で復号する

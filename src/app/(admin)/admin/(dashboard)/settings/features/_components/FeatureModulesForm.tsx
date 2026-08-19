@@ -7,8 +7,9 @@
  * 11 module の boolean を一括 PATCH。`requires` 依存元が OFF の module は
  * Switch を disabled 化し、実行時 OFF として送信する（保存値が true でも UI は OFF 表示）。
  *
- * clean break 移行。11 module の boolean Switch は `useInputControl` + hidden
- * input で "on" / "" sync、`z.boolean()` で `parseWithZod` 自動 coerce。
+ * 11 module の boolean Switch は `useTypedControl` +
+ * `HiddenControlInput` で "on" / "" sync、`z.boolean()` で `parseWithZod`
+ * 自動 coerce。
  */
 
 import { useActionState, useEffect } from "react";
@@ -29,7 +30,10 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 import type { FeatureModule } from "@/shared/lib/features/registry";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 
@@ -183,62 +187,57 @@ function DataRetentionEnableConfirmSection({
   readonly initialDataRetentionEnabled: boolean;
   readonly isPending: boolean;
 }) {
-  const dataRetentionControl = useTypedInputControl(dataRetentionField);
-  const confirmControl = useTypedInputControl(confirmField);
+  const confirmControl = useTypedControl(confirmField);
   const requiresConfirm =
-    !initialDataRetentionEnabled && dataRetentionControl.value === "on";
-
-  if (!requiresConfirm) {
-    return null;
-  }
+    !initialDataRetentionEnabled && dataRetentionField.value === "on";
 
   return (
-    <div
-      role="alert"
-      className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3"
-    >
-      <p className="text-sm font-medium text-destructive">
-        データ保持ポリシーの自動適用を有効にしようとしています
-      </p>
-      <p className="text-sm text-muted-foreground">
-        次回以降の毎日 cron 実行で、保持月数設定を過ぎた Session / 認証トークン
-        / 予約ゲスト情報 / 問い合わせ /
-        非アクティブ顧客の個人情報が不可逆的に削除または匿名化される可能性があります。業務ルールと保持月数を確認してから有効化してください。
-      </p>
-      <label
-        htmlFor={confirmField.id}
-        className="flex cursor-pointer items-start gap-2 text-sm"
-      >
-        <Checkbox
-          id={confirmField.id}
-          checked={confirmControl.value === "on"}
-          onCheckedChange={(checked) =>
-            confirmControl.change(checked ? "on" : "")
-          }
-          onBlur={confirmControl.blur}
-          disabled={isPending}
-        />
-        <span>
-          上記のリスクを理解し、データ保持ポリシーの自動適用を有効にすることに同意します
-        </span>
-      </label>
-      <input
-        type="hidden"
-        name={confirmField.name}
-        value={confirmControl.value ?? ""}
-      />
-      {confirmField.errors && confirmField.errors.length > 0 && (
-        <p id={confirmField.errorId} className="text-xs text-destructive">
-          {confirmField.errors.join(", ")}
-        </p>
-      )}
-    </div>
+    <>
+      <HiddenControlInput field={confirmField} control={confirmControl} />
+      {requiresConfirm ? (
+        <div
+          role="alert"
+          className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3"
+        >
+          <p className="text-sm font-medium text-destructive">
+            データ保持ポリシーの自動適用を有効にしようとしています
+          </p>
+          <p className="text-sm text-muted-foreground">
+            次回以降の毎日 cron 実行で、保持月数設定を過ぎた Session /
+            認証トークン / 予約ゲスト情報 / 問い合わせ /
+            非アクティブ顧客の個人情報が不可逆的に削除または匿名化される可能性があります。業務ルールと保持月数を確認してから有効化してください。
+          </p>
+          <label
+            htmlFor={confirmField.id}
+            className="flex cursor-pointer items-start gap-2 text-sm"
+          >
+            <Checkbox
+              id={confirmField.id}
+              checked={confirmControl.value === "on"}
+              onCheckedChange={(checked) =>
+                confirmControl.change(checked ? "on" : "")
+              }
+              onBlur={confirmControl.blur}
+              disabled={isPending}
+            />
+            <span>
+              上記のリスクを理解し、データ保持ポリシーの自動適用を有効にすることに同意します
+            </span>
+          </label>
+          {confirmField.errors && confirmField.errors.length > 0 && (
+            <p id={confirmField.errorId} className="text-xs text-destructive">
+              {confirmField.errors.join(", ")}
+            </p>
+          )}
+        </div>
+      ) : null}
+    </>
   );
 }
 
 /**
- * 1 module 分の Switch 行 — `useInputControl` で per-module state を持つ。
- * useInputControl は Hook のため map() 内で直接呼べず、sub-component に
+ * 1 module 分の Switch 行 — `useTypedControl` で per-module state を持つ。
+ * useTypedControl は Hook のため map() 内で直接呼べず、sub-component に
  * 切り出して各行で個別に呼ぶ canonical pattern。
  */
 function ModuleSwitchRow({
@@ -254,12 +253,11 @@ function ModuleSwitchRow({
   readonly isPending: boolean;
   readonly depsMet: boolean;
 }) {
-  const control = useTypedInputControl(field);
+  const control = useTypedControl(field);
   const isOn = control.value === "on";
   const disabledDueToDeps = !depsMet;
   const switchDisabled = isPending || disabledDueToDeps;
   const effectiveOn = depsMet && isOn;
-  const submittedValue = depsMet ? (control.value ?? "") : "";
 
   return (
     <div className="flex items-start justify-between rounded-lg border p-4">
@@ -302,7 +300,7 @@ function ModuleSwitchRow({
         onBlur={control.blur}
         disabled={switchDisabled}
       />
-      <input type="hidden" name={field.name} value={submittedValue} />
+      <HiddenControlInput field={field} control={control} />
     </div>
   );
 }

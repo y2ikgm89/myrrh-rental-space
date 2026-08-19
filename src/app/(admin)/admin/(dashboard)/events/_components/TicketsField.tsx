@@ -39,7 +39,7 @@ import {
  * 追加 / 削除 / 並べ替え / preset 適用は `form.insert` / `form.remove` /
  * `form.reorder` で行う (RefundPolicySection / DiscountSection と同型パターン)。
  * isAvailable Switch は Radix `name` prop で hidden input を emit させ、
- * `switchBoolean()` schema 側で unchecked → false を吸収する (per-row `useInputControl`
+ * `switchBoolean()` schema 側で unchecked → false を吸収する (per-row `useFieldControl`
  * を避けるため — hooks-in-loop を回避しつつ hydration-safe)。
  */
 
@@ -390,7 +390,7 @@ type TicketRowProps = {
 /**
  * 1 ticket 行。React hooks を row 内部で呼ぶ必要が出た場合に備えて sub-component
  * として抽出している (現状 hooks なしだが、Switch の isAvailable を将来
- * useInputControl 化する余地を残す)。
+ * useFieldControl 化する余地を残す)。
  */
 function TicketRow({
   index,
@@ -592,7 +592,7 @@ function TicketRow({
             {/*
              * Radix Switch は `name` prop 付きで <input type="checkbox"> hidden を emit する。
              * 未チェック時は FormData に含まれず、`switchBoolean() = z.boolean().default(false)`
-             * が undefined → false を吸収する。per-row useInputControl を避けるため
+             * が undefined → false を吸収する。per-row useFieldControl を避けるため
              * uncontrolled (defaultChecked) で運用する。
              */}
             <Switch

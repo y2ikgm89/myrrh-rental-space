@@ -13,18 +13,13 @@
  * defaultValue・エラー表示を管理）。`daysOfWeek` は配列フィールドのため
  * `SpaceEditForm` の `facilities` と同じ「ローカル state + 同名 hidden input
  * を選択数だけ描画」パターンを踏襲（「全曜日」ショートカットに素の state 操作が
- * 必要なため）。`holidayMode` は `useInputControl`（`CouponForm.type` /
+ * 必要なため）。`holidayMode` は `useFieldControl`（`CouponForm.type` /
  * `SmartLockDeviceDialog.deviceType` と同型）で Radix `RadioGroup` を bind する。
  */
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -59,6 +54,10 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 export type SpaceRatePlanEditModalProps = {
   readonly spaceId: string;
@@ -120,7 +119,7 @@ export function SpaceRatePlanEditModal({
   });
 
   // daysOfWeek は配列フィールド。「全曜日」ショートカットの素の state 操作が必要なため
-  // useInputControl ではなくローカル state + 選択数だけ hidden input を描画する
+  // 選択数だけ hidden input を描画する（曜日チップは nameless）
   // （SpaceEditForm の facilities フィールドと同じ idiom）。
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(
     plan?.daysOfWeek ?? [],
@@ -133,7 +132,7 @@ export function SpaceRatePlanEditModal({
     );
   };
 
-  const holidayModeControl = useInputControl(fields.holidayMode);
+  const holidayModeControl = useFieldControl(fields.holidayMode);
   const holidayModeValue = isHolidayModeValue(holidayModeControl.value)
     ? holidayModeControl.value
     : HolidayMode.ANY;
@@ -177,10 +176,9 @@ export function SpaceRatePlanEditModal({
 
         <form {...getFormProps(form)} action={formAction} className="space-y-5">
           <input type="hidden" name={fields.spaceId.name} value={spaceId} />
-          <input
-            type="hidden"
-            name={fields.holidayMode.name}
-            value={holidayModeValue}
+          <HiddenControlInput
+            field={fields.holidayMode}
+            control={holidayModeControl}
           />
           {selectedDays.map((day) => (
             <input

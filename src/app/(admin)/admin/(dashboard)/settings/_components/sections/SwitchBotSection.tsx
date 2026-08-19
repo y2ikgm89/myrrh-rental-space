@@ -16,12 +16,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -58,6 +53,10 @@ import {
 } from "@/admin/components/SmartLockDeviceRegistry";
 import type { SmartLockDeviceWithLocation } from "@/shared/domain/smart-lock/queries";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface SwitchBotSectionProps {
@@ -114,9 +113,9 @@ export function SwitchBotSection({
     },
   });
 
-  const enabledControl = useInputControl(fields.switchbotEnabled);
-  const openTokenControl = useInputControl(fields.switchbotOpenToken);
-  const secretKeyControl = useInputControl(fields.switchbotSecretKey);
+  const enabledControl = useFieldControl(fields.switchbotEnabled);
+  const openTokenControl = useFieldControl(fields.switchbotOpenToken);
+  const secretKeyControl = useFieldControl(fields.switchbotSecretKey);
   const enabled = enabledControl.value === "on";
   const openToken = openTokenControl.value ?? "";
   const secretKey = secretKeyControl.value ?? "";
@@ -133,7 +132,7 @@ export function SwitchBotSection({
     }
   }
 
-  // useEffectEvent で useInputControl 参照を effect deps から除外
+  // useEffectEvent で control 参照を effect deps から除外
   const handleSaveSuccess = useEffectEvent(() => {
     toast.success("SwitchBot設定を保存しました");
     openTokenControl.change("");
@@ -299,10 +298,17 @@ export function SwitchBotSection({
   return (
     <div className="space-y-6">
       <form {...getFormProps(form)} action={action}>
-        <input
-          type="hidden"
-          name={fields.switchbotEnabled.name}
-          value={enabledControl.value ?? ""}
+        <HiddenControlInput
+          field={fields.switchbotEnabled}
+          control={enabledControl}
+        />
+        <HiddenControlInput
+          field={fields.switchbotOpenToken}
+          control={openTokenControl}
+        />
+        <HiddenControlInput
+          field={fields.switchbotSecretKey}
+          control={secretKeyControl}
         />
         <Card>
           <CardHeader>
@@ -366,7 +372,6 @@ export function SwitchBotSection({
               ) : (
                 <Input
                   id={fields.switchbotOpenToken.id}
-                  name={fields.switchbotOpenToken.name}
                   value={openToken}
                   onChange={(e) => openTokenControl.change(e.target.value)}
                   onBlur={openTokenControl.blur}
@@ -422,7 +427,6 @@ export function SwitchBotSection({
               ) : (
                 <Input
                   id={fields.switchbotSecretKey.id}
-                  name={fields.switchbotSecretKey.name}
                   value={secretKey}
                   onChange={(e) => secretKeyControl.change(e.target.value)}
                   onBlur={secretKeyControl.blur}
