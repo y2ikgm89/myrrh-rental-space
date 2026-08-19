@@ -1,20 +1,23 @@
 /**
- * admin Dialog / AlertDialog — portal 越しの z-index token 適用 regression test.
+ * admin Dialog / AlertDialog — Portal 層に乗ることの regression test。
  *
- * Radix の `Portal` は `useState(false)` + layout effect で mount を 1 render 遅らせる
- * (`@radix-ui/react-portal`: `container ? createPortal(...) : null`)。そのため
- * `<DialogContent>` を返すコンポーネント自身の mount effect は **ノードがまだ無い状態**で
- * 走り、`useAdminZIndexImperative` は early return する。2 render 目でノードが生えても
- * effect の deps は変わらないため再実行されず、content の `--admin-z-index` は永久に
- * 未設定 = `z-index: auto` になる。
+ * ## なぜ
  *
- * 一方 overlay は「2 render 目に初めて mount される子コンポーネント」なので自分の
- * effect が正しく走り、`--admin-z-index: 85` を得る。結果として overlay が content の
- * 上に乗り、admin の全 Dialog がクリックを受け付けなくなる（Playwright の
- * "intercepts pointer events"、run 30569714860 の content-preview /
+ * Dialog は overlay と content を**別々に** `document.body` へ Portal する。両者は
+ * 同じ root stacking context の兄弟なので、`z-index` が等しければ重なり順は
+ * DOM 順で決まる（overlay が先、content が後 = content が上）。
+ *
+ * ここが崩れると overlay が content を覆い、**ダイアログがクリックを一切受け付け
+ * なくなる**。過去に実際そうなっている: content 側の z-index を mount 後の effect で
+ * 当てていたため、Radix `Portal` の 1 render 遅れ mount（`useState(false)` +
+ * layout effect）で content だけ値が付かず `z-index: auto` に落ちていた
+ * （Playwright の "intercepts pointer events"、run 30569714860 の content-preview /
  * lexical-inline-icon / space-rate-plan-crud 失敗）。
  *
- * 本テストは content と overlay の双方に token が載ることを実 DOM で固定する。
+ * 現在は両者とも静的な `PORTAL_LAYER_CLASS` を持つだけなので、mount タイミングに
+ * 依存する経路自体が無い。本テストはその形（同一クラス・DOM 順・命令的 z-index を
+ * 持たないこと）を固定する。レイヤー設計そのものの gate は
+ * `__tests__/unit/lib/styles/z-index.test.ts`。
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -31,7 +34,7 @@ import {
   AlertDialogContent,
   AlertDialogTitle,
 } from "@/app/(admin)/admin/(dashboard)/_shared/components/ui/alert-dialog";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
@@ -58,13 +61,22 @@ async function renderNode(node: React.ReactNode): Promise<void> {
   await act(async () => root?.render(node));
 }
 
-function readZIndexVar(element: Element | null): string {
-  if (!(element instanceof HTMLElement)) return "";
-  return element.style.getPropertyValue("--admin-z-index").trim();
+function classListOf(element: Element | null): string[] {
+  return element instanceof HTMLElement ? [...element.classList] : [];
 }
 
-describe("admin dialog z-index token survives Radix portal mount", () => {
-  test("DialogContent と overlay の双方に token が載る", async () => {
+function inlineZIndexOf(element: Element | null): string {
+  if (!(element instanceof HTMLElement)) return "";
+  return [
+    element.style.zIndex,
+    element.style.getPropertyValue("--admin-z-index"),
+  ]
+    .join("")
+    .trim();
+}
+
+describe("admin dialog は Portal 層に乗る", () => {
+  test("overlay と content の双方が同じ Portal 層クラスを持つ", async () => {
     await renderNode(
       <Dialog open>
         <DialogContent>
@@ -76,14 +88,11 @@ describe("admin dialog z-index token survives Radix portal mount", () => {
     const content = window.document.querySelector('[role="dialog"]');
     const overlay = window.document.querySelector("div.bg-overlay");
 
-    expect(content).not.toBeNull();
-    expect(overlay).not.toBeNull();
-
-    expect(readZIndexVar(content)).toBe(Z_INDEX.dialog.toString());
-    expect(readZIndexVar(overlay)).toBe(Z_INDEX.dialogOverlay.toString());
+    expect(classListOf(content)).toContain(PORTAL_LAYER_CLASS);
+    expect(classListOf(overlay)).toContain(PORTAL_LAYER_CLASS);
   });
 
-  test("content は overlay より上のレイヤーに解決される", async () => {
+  test("content は overlay より DOM 順で後ろにある", async () => {
     await renderNode(
       <Dialog open>
         <DialogContent>
@@ -92,19 +101,35 @@ describe("admin dialog z-index token survives Radix portal mount", () => {
       </Dialog>,
     );
 
-    const content = Number(
-      readZIndexVar(window.document.querySelector('[role="dialog"]')),
-    );
-    const overlay = Number(
-      readZIndexVar(window.document.querySelector("div.bg-overlay")),
-    );
+    const content = window.document.querySelector('[role="dialog"]');
+    const overlay = window.document.querySelector("div.bg-overlay");
 
-    expect(Number.isNaN(content)).toBe(false);
-    expect(Number.isNaN(overlay)).toBe(false);
-    expect(content).toBeGreaterThan(overlay);
+    expect(content).not.toBeNull();
+    expect(overlay).not.toBeNull();
+
+    const position =
+      content && overlay ? overlay.compareDocumentPosition(content) : 0;
+    expect(Boolean(position & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 
-  test("AlertDialogContent にも同じ token が載る", async () => {
+  test("命令的な z-index を持たない", async () => {
+    await renderNode(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>命令的 z-index なし</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(
+      inlineZIndexOf(window.document.querySelector('[role="dialog"]')),
+    ).toBe("");
+    expect(
+      inlineZIndexOf(window.document.querySelector("div.bg-overlay")),
+    ).toBe("");
+  });
+
+  test("AlertDialogContent も同じ Portal 層クラスを持つ", async () => {
     await renderNode(
       <AlertDialog open>
         <AlertDialogContent>
@@ -113,9 +138,8 @@ describe("admin dialog z-index token survives Radix portal mount", () => {
       </AlertDialog>,
     );
 
-    const content = window.document.querySelector('[role="alertdialog"]');
-
-    expect(content).not.toBeNull();
-    expect(readZIndexVar(content)).toBe(Z_INDEX.dialog.toString());
+    expect(
+      classListOf(window.document.querySelector('[role="alertdialog"]')),
+    ).toContain(PORTAL_LAYER_CLASS);
   });
 });
