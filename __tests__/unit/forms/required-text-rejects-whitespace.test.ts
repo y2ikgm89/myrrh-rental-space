@@ -21,9 +21,16 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
+import {
+  customerInquiryReplySchema,
+  publicInquirySchema,
+} from "@/shared/lib/validations/inquiry";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
+import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
+import { receiptResendRequestSchema } from "@/shared/lib/validations/receipt-resend";
+import { reissueReceiptInputSchema } from "@/shared/lib/validations/receipt-reissue";
+import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import { facilitiesSchema } from "@/shared/lib/json-validators";
 import { field } from "@/shared/lib/sections/field-registry";
 import { getZodConstraint } from "@conform-to/zod/v4";
@@ -235,4 +242,152 @@ describe("email の HTML 制約が conform に届く", () => {
     expect(email.safeParse("nope").success).toBe(false);
     expect(email.safeParse(" a@b.com ")).toMatchObject({ data: "a@b.com" });
   });
+});
+
+/**
+ * 必須テキストの未入力（conform が畳む `undefined`）が日本語メッセージになること。
+ * `.min(1, { error })` だけでは外側 `z.string()` の invalid_type に届かない。
+ */
+function expectUndefinedJapaneseMessage(
+  schema: {
+    safeParse: (v: unknown) => {
+      success: boolean;
+      error?: {
+        issues: readonly { path: readonly PropertyKey[]; message: string }[];
+      };
+    };
+  },
+  valid: Record<string, unknown>,
+  fieldName: string,
+  message: string,
+): void {
+  test(`${fieldName} が未入力なら「${message}」`, () => {
+    expect(schema.safeParse(valid).success).toBe(true);
+    const result = schema.safeParse({ ...valid, [fieldName]: undefined });
+    expect(result.success).toBe(false);
+    const issue = result.success
+      ? undefined
+      : result.error?.issues.find((item) => item.path[0] === fieldName);
+    expect(issue?.message).toBe(message);
+  });
+}
+
+describe("公開フォーム必須欄の未入力メッセージ", () => {
+  expectUndefinedJapaneseMessage(
+    publicInquirySchema,
+    INQUIRY,
+    "lastName",
+    "姓は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    publicInquirySchema,
+    INQUIRY,
+    "firstName",
+    "名は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    publicInquirySchema,
+    INQUIRY,
+    "subject",
+    "件名は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    publicInquirySchema,
+    INQUIRY,
+    "message",
+    "お問い合わせ内容は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    customerInquiryReplySchema,
+    {
+      inquiryId: "00000000-0000-4000-8000-000000000001",
+      body: "ご連絡ありがとうございます",
+    },
+    "body",
+    "返信内容を入力してください",
+  );
+  expectUndefinedJapaneseMessage(
+    customerProfileSchema,
+    { lastName: "山田", firstName: "太郎", phoneNumber: "09012345678" },
+    "lastName",
+    "姓を入力してください",
+  );
+  expectUndefinedJapaneseMessage(
+    customerProfileSchema,
+    { lastName: "山田", firstName: "太郎", phoneNumber: "09012345678" },
+    "firstName",
+    "名を入力してください",
+  );
+  expectUndefinedJapaneseMessage(
+    publicReservationSchema,
+    RESERVATION,
+    "lastName",
+    "姓は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    publicReservationSchema,
+    RESERVATION,
+    "firstName",
+    "名は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    publicReservationSchema,
+    RESERVATION,
+    "date",
+    "日付を選択してください",
+  );
+  expectUndefinedJapaneseMessage(
+    publicReservationSchema,
+    RESERVATION,
+    "startTime",
+    "時間を選択してください",
+  );
+  expectUndefinedJapaneseMessage(
+    publicReservationSchema,
+    RESERVATION,
+    "endTime",
+    "時間を選択してください",
+  );
+  expectUndefinedJapaneseMessage(
+    publicEventRegistrationSchema,
+    {
+      eventId: "0baaa247-7a6c-4938-893c-a0a9c382b12b",
+      ticketId: "96e83639-0c13-4eb1-8de3-8e6fe7892ba9",
+      slotId: "f4becb6e-69df-4871-8998-ccc37decf00c",
+      name: "山田太郎",
+      email: "yamada@example.com",
+      quantity: 2,
+      turnstileToken: "token-abc",
+    },
+    "name",
+    "お名前は必須です",
+  );
+  expectUndefinedJapaneseMessage(
+    receiptResendRequestSchema,
+    {
+      serialNo: "R-2026-0001",
+      email: "taro@example.com",
+    },
+    "serialNo",
+    "領収書番号を入力してください",
+  );
+  expectUndefinedJapaneseMessage(
+    reissueReceiptInputSchema,
+    {
+      originalReceiptId: "00000000-0000-4000-8000-000000000001",
+      reason: "宛名の誤り",
+    },
+    "reason",
+    "再発行理由を入力してください",
+  );
+  expectUndefinedJapaneseMessage(
+    spaceReviewSchema,
+    {
+      reservationId: "00000000-0000-4000-8000-000000000001",
+      rating: 3,
+      turnstileToken: "test-token",
+    },
+    "turnstileToken",
+    "認証トークンが必要です",
+  );
 });

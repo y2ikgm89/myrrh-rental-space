@@ -8,7 +8,7 @@ const eventRegistrationBaseSchema = z.object({
   slotId: entityIdSchema("EventTimeSlot"),
   ticketId: entityIdSchema("EventTicket"),
   name: z
-    .string()
+    .string({ error: "お名前は必須です" })
     .trim()
     .min(1, { error: "お名前は必須です" })
     .max(100, { error: "お名前は100文字以内です" }),
