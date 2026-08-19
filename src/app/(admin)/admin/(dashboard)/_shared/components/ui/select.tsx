@@ -1,15 +1,9 @@
 "use client";
 
-import { useRef } from "react";
 import { Select as SelectPrimitive } from "radix-ui";
 import { IconCheck, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import {
-  assignAdminZIndex,
-  useAdminZIndexImperative,
-} from "@/admin/lib/styles/use-admin-z-index-layer";
-import { assignRef } from "@/shared/lib/csp/use-imperative-style";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 
 const Select = SelectPrimitive.Root;
 
@@ -83,28 +77,17 @@ function SelectContent({
   children,
   position = "popper",
   ref,
-  style,
-  zIndex,
   ...props
-}: React.ComponentPropsWithRef<typeof SelectPrimitive.Content> & {
-  zIndex?: number;
-}) {
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, zIndex ?? Z_INDEX.dropdown, style);
-
+}: React.ComponentPropsWithRef<typeof SelectPrimitive.Content>) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
-        ref={(node) => {
-          internalRef.current = node;
-          assignAdminZIndex(node, zIndex ?? Z_INDEX.dropdown, style);
-          assignRef(ref, node);
-        }}
+        ref={ref}
         className={cn(
           "relative max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          adminZIndexClassName(),
+          PORTAL_LAYER_CLASS,
           className,
         )}
         position={position}

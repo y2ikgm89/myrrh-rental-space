@@ -2,12 +2,7 @@
 
 import { useRef } from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
-import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import {
-  assignAdminZIndex,
-  useAdminZIndexImperative,
-} from "@/admin/lib/styles/use-admin-z-index-layer";
-import { assignRef } from "@/shared/lib/csp/use-imperative-style";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 import { cn } from "@/shared/lib/cn";
 import { buttonVariants } from "./button";
 
@@ -20,25 +15,13 @@ const AlertDialogPortal = AlertDialogPrimitive.Portal;
 function AlertDialogOverlay({
   className,
   ref,
-  style,
   ...props
 }: React.ComponentPropsWithRef<typeof AlertDialogPrimitive.Overlay>) {
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, Z_INDEX.dialogOverlay, style);
-
   return (
     <AlertDialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 bg-overlay",
-        adminZIndexClassName(),
-        className,
-      )}
+      className={cn("fixed inset-0 bg-overlay", PORTAL_LAYER_CLASS, className)}
       {...props}
-      ref={(node) => {
-        internalRef.current = node;
-        assignAdminZIndex(node, Z_INDEX.dialogOverlay, style);
-        assignRef(ref, node);
-      }}
+      ref={ref}
     />
   );
 }
@@ -48,22 +31,15 @@ function AlertDialogContent({
   onCloseAutoFocus,
   onOpenAutoFocus,
   ref,
-  style,
   ...props
 }: React.ComponentPropsWithRef<typeof AlertDialogPrimitive.Content>) {
   const restoreFocusElementRef = useRef<HTMLElement | null>(null);
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, Z_INDEX.dialog, style);
 
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
-        ref={(node) => {
-          internalRef.current = node;
-          assignAdminZIndex(node, Z_INDEX.dialog, style);
-          assignRef(ref, node);
-        }}
+        ref={ref}
         aria-modal="true"
         onOpenAutoFocus={(event) => {
           const activeElement = document.activeElement;
@@ -86,7 +62,7 @@ function AlertDialogContent({
         }}
         className={cn(
           "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-4 shadow-lg duration-200 sm:p-6",
-          adminZIndexClassName(),
+          PORTAL_LAYER_CLASS,
           className,
         )}
         {...props}
