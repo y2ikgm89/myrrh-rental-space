@@ -43,6 +43,41 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(bunCi).not.toContain("NODE_ENV=production");
   });
 
+  test("deps stage copies package.json lifecycle script files before bun ci", () => {
+    // `bun ci` は prepare / postinstall を実行する。deps 段は scripts/ を
+    // 全部 COPY していないので、lifecycle が参照するファイルが無いと
+    // Cloud Build が「Module not found」で revision 未出になる
+    //（2026-08-20: prepare → scripts/prepare-lefthook.ts）。
+    const pkg = JSON.parse(read("package.json")) as {
+      scripts?: Record<string, string>;
+    };
+    const dockerfile = read("Dockerfile");
+    const depsEnd = dockerfile.indexOf("FROM base AS builder-base");
+    const deps = dockerfile.slice(
+      dockerfile.indexOf("FROM base AS deps"),
+      depsEnd === -1 ? dockerfile.length : depsEnd,
+    );
+    const installAt = deps.indexOf("RUN sh ./scripts/bun-ci-install.sh");
+    expect(installAt).toBeGreaterThanOrEqual(0);
+
+    const lifecycle = ["preinstall", "install", "postinstall", "prepare"];
+    const referenced = new Set<string>();
+    for (const name of lifecycle) {
+      const script = pkg.scripts?.[name];
+      if (!script) continue;
+      for (const match of script.matchAll(/scripts\/[\w.-]+\.ts/g)) {
+        referenced.add(match[0] ?? "");
+      }
+    }
+    expect(referenced.size).toBeGreaterThan(0);
+
+    for (const file of referenced) {
+      const copyAt = deps.indexOf(`COPY ${file} `);
+      expect(copyAt).toBeGreaterThanOrEqual(0);
+      expect(copyAt).toBeLessThan(installAt);
+    }
+  });
+
   test("Dockerfile migrator is FROM deps and CMD uses prisma migrate deploy", () => {
     const dockerfile = read("Dockerfile");
     expect(dockerfile).toContain("FROM deps AS migrator");

@@ -14,6 +14,10 @@ RUN apk add --no-cache libc6-compat
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
 COPY scripts/bun-ci-install.sh ./scripts/bun-ci-install.sh
+# `package.json#prepare` は `bun ci` の直後に走る。ファイルが無いと
+# `Module not found "scripts/prepare-lefthook.ts"` で deps 段が落ち、
+# Cloud Build が revision を出さない（2026-08-20 Deploy Production）。
+COPY scripts/prepare-lefthook.ts ./scripts/prepare-lefthook.ts
 RUN sh ./scripts/bun-ci-install.sh && \
     bunx --bun prisma generate --schema=./prisma/schema.prisma
 
