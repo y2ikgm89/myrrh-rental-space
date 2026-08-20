@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getSocialLinks } from "@/shared/domain/navigation/queries";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
   activeOnly: z.enum(["true", "false"]).optional(),
@@ -11,7 +15,7 @@ const searchSchema = z.object({
 export async function GET(request: Request) {
   const auth = await checkPermission("navigation", "read", request.headers);
   if (!auth.success) {
-    return jsonError(auth.error.error, 403);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   const url = new URL(request.url);
