@@ -407,6 +407,9 @@ export async function getWaitlistConfirmationEmailDetails(
  * 整合と対になる二段防御。詳細は `expireAndPromoteWaitlistForEventCommand` の
  * JSDoc も参照）。
  */
+/** 1 cron 走査の上限。event 単位の ITX 上限は `WAITLIST_EXPIRE_CANDIDATE_BATCH`。 */
+export const WAITLIST_EXPIRE_SCAN_LIMIT = 200;
+
 export async function findExpiredWaitlistOfferCandidates(now: Date) {
   return prisma.eventRegistration.findMany({
     where: {
@@ -414,6 +417,8 @@ export async function findExpiredWaitlistOfferCandidates(now: Date) {
       expiresAt: { lt: now },
       paymentStatus: { not: PaymentStatus.PENDING },
     },
+    orderBy: { expiresAt: "asc" },
+    take: WAITLIST_EXPIRE_SCAN_LIMIT,
     select: {
       id: true,
       eventId: true,

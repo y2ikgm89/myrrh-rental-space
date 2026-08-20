@@ -20,6 +20,7 @@ import {
   claimCouponUsage,
   releaseCouponUsage,
 } from "./payloads";
+import { CANCELLABLE_STATUSES } from "./cancel-core";
 import { lockSpaceForTransaction } from "./space-locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
@@ -422,50 +423,60 @@ export async function deleteReservationCommand(
   }
 
   const now = new Date();
-  const needsCancellationTracking =
-    reservation.status !== ReservationStatus.CANCELLED &&
-    reservation.status !== ReservationStatus.COMPLETED &&
-    reservation.status !== ReservationStatus.NO_SHOW;
-  const resolvedCancellationReason = needsCancellationTracking
-    ? (cancellationReason ?? "管理者による削除")
-    : null;
+  const resolvedCancellationReason = cancellationReason ?? "管理者による削除";
+  let claimedCancellation = false;
 
   await prisma.$transaction(async (tx) => {
-    if (needsCancellationTracking) {
-      await lockSpaceForTransaction(tx, reservation.spaceId);
+    // Atomic claim: cancel-core と同じく status を WHERE に含める。
+    // tx 外の status 読取は TOCTOU になるため、クーポン解放と wasCancelled は
+    // この claim の count だけを正本にする（並行キャンセルとの二重解放防止）。
+    await lockSpaceForTransaction(tx, reservation.spaceId);
+
+    const claimed = await tx.reservation.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        status: { in: [...CANCELLABLE_STATUSES] },
+      },
+      data: {
+        deletedAt: now,
+        deletedById: userId ?? null,
+        icsSequence: { increment: 1 },
+        status: ReservationStatus.CANCELLED,
+        cancelledAt: now,
+        cancelledByType: CANCELLED_BY.ADMIN,
+        cancellationReason: resolvedCancellationReason,
+      },
+    });
+    claimedCancellation = claimed.count === 1;
+
+    if (claimedCancellation) {
+      if (reservation.couponId) {
+        await releaseCouponUsage(tx, { couponId: reservation.couponId });
+      }
+      return;
     }
 
-    await tx.reservation.update({
+    // 既に CANCELLED/COMPLETED/NO_SHOW、または並行キャンセルが先に claim した。
+    // キャンセル追跡はせず soft-delete だけ行う。
+    await tx.reservation.updateMany({
       where: { id, deletedAt: null },
       data: {
         deletedAt: now,
         deletedById: userId ?? null,
         icsSequence: { increment: 1 },
-        ...(needsCancellationTracking
-          ? {
-              status: ReservationStatus.CANCELLED,
-              cancelledAt: now,
-              cancelledByType: CANCELLED_BY.ADMIN,
-              cancellationReason: resolvedCancellationReason,
-            }
-          : {}),
       },
     });
-
-    if (needsCancellationTracking && reservation.couponId) {
-      await releaseCouponUsage(tx, { couponId: reservation.couponId });
-    }
   }, RESERVATION_WRITE_TX_OPTIONS);
 
   return {
     googleCalendarEventId: reservation.googleCalendarEventId,
     customerId: reservation.customerId,
     couponId: reservation.couponId,
-    // PENDING/CONFIRMED の予約を削除した場合、実質的には管理者キャンセルと同じ結果
-    // （空き解放・顧客への影響）になる。呼び出し側はこのフラグを見て
-    // applyCancellationSideEffects（返金・キャンセルメール等）を発火する。
-    wasCancelled: needsCancellationTracking,
-    cancellationReason: resolvedCancellationReason,
+    // PENDING/CONFIRMED をこの削除が claim できた場合だけ true。
+    // 呼び出し側はこのフラグを見て applyCancellationSideEffects を発火する。
+    wasCancelled: claimedCancellation,
+    cancellationReason: claimedCancellation ? resolvedCancellationReason : null,
   };
 }
 
