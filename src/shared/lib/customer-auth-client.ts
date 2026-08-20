@@ -24,6 +24,5 @@ export const {
   useSession,
   getSession,
   linkSocial,
-  unlinkAccount,
   deleteUser,
 } = customerAuthClient;

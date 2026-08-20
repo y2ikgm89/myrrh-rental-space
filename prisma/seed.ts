@@ -242,6 +242,7 @@ async function createOrUpdateUserWithCredential(
           userId: existingUser.id,
           accountId: existingUser.id,
           providerId: "credential",
+          issuer: "local:credential",
           password: hashedPassword,
         },
       });
@@ -266,6 +267,7 @@ async function createOrUpdateUserWithCredential(
         create: {
           accountId: userId,
           providerId: "credential",
+          issuer: "local:credential",
           password: hashedPassword,
         },
       },
@@ -3381,6 +3383,7 @@ async function seedDevCustomerAndReservations() {
         userId: user.id,
         providerId: "google",
         accountId: `e2e-google-${user.id}`,
+        issuer: "https://accounts.google.com",
       },
     });
   }
