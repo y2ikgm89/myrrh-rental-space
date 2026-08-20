@@ -41,6 +41,7 @@ import {
   test,
 } from "bun:test";
 
+import { calculateTaxExcludedPrice } from "@/shared/lib/pricing/tax";
 import { ensureCommerceSettings } from "../../../support/commerce-settings";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
@@ -184,7 +185,7 @@ describeMaybe("イベント参加費の領収書が根拠にする税率", () =>
 
   /** 税込 `PAID_AMOUNT` を税率 `rate` で分解したときの税額（発行側と同じ式）。 */
   function taxAmountFor(rate: number): number {
-    return PAID_AMOUNT - Math.floor((PAID_AMOUNT * 100) / (100 + rate));
+    return PAID_AMOUNT - calculateTaxExcludedPrice(PAID_AMOUNT, rate);
   }
 
   /** 設定の標準税率を `rate` にする（afterEach が元に戻す）。 */
@@ -212,7 +213,7 @@ describeMaybe("イベント参加費の領収書が根拠にする税率", () =>
         { source: "stripe-webhook" },
       );
 
-      // 税込 3,000 円・8% → 税抜 floor(3000*100/108) = 2777、税額 223。
+      // 税込 3,000 円・8% → 税抜 round(3000/1.08) = 2778、税額 222。
       // 10% のままだと税抜 2727 / 税額 273 になるので、どちらの値も食い違う。
       expect({
         taxRate: receipt.taxRate,
