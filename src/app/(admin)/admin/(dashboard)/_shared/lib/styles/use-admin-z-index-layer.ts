@@ -1,55 +1,22 @@
 "use client";
 
-import type { CSSProperties, RefObject } from "react";
+import type { RefObject } from "react";
 import { CSS_VAR } from "@/shared/lib/csp/css-vars";
-import {
-  applyImperativeStyleValues,
-  useImperativeCssVars,
-  useImperativeStyle,
-  pickImperativeStyleValues,
-} from "@/shared/lib/csp/use-imperative-style";
-import { resolveAdminZIndex, stripZIndexFromStyle } from "./z-index";
-
-/** Apply admin z-index token imperatively on a caller-owned ref (CSP-safe). */
-export function useAdminZIndexImperative<T extends HTMLElement>(
-  ref: RefObject<T | null>,
-  defaultZIndex: number,
-  style?: CSSProperties,
-): void {
-  const zIndex = resolveAdminZIndex(defaultZIndex, style);
-  const extraStyle = stripZIndexFromStyle(style);
-  useImperativeCssVars(ref, { [CSS_VAR.adminZIndex]: zIndex });
-  useImperativeStyle(ref, pickImperativeStyleValues(extraStyle ?? {}));
-}
+import { useImperativeCssVars } from "@/shared/lib/csp/use-imperative-style";
 
 /**
- * Apply the admin z-index token from a ref callback (portal-safe).
+ * ページ内レイヤーの z-index を CSS var で当てる（CSP-safe）。
  *
- * Radix の `Portal` は `useState(false)` + layout effect で mount を 1 render 遅らせる
- * （`@radix-ui/react-portal`: `container ? createPortal(...) : null`）。そのため
- * `<XContent>` を返すコンポーネント自身の mount effect は **ノードがまだ無い状態**で
- * 走り、`useAdminZIndexImperative` は early return する。2 render 目でノードが
- * 生えても effect の deps は変わらないため再実行されず、`--admin-z-index` が
- * 永久に未設定 = `z-index: auto` になる。
+ * サイドバーのように条件で値が変わるものが対象。値が固定なら Tailwind class で
+ * 済むのでこのフックは要らない。
  *
- * この結果 overlay (85) が content (auto) の上に乗り、admin の Dialog /
- * AlertDialog はクリックを一切受け付けなくなる（Playwright は
- * "intercepts pointer events" で検出）。dropdown / popover / select / tooltip も
- * 同じ形なので token 通りの重なり順にならない。
- *
- * ノード attach 時点で適用するこのヘルパーを ref callback から呼ぶことで、
- * portal の遅延 mount と再 mount の双方に追従する。
+ * body へ Portal される要素には使わない。Portal 層は `PORTAL_LAYER_CLASS` の
+ * 静的クラス 1 つで、重なり順は DOM 追加順に委ねる。理由は
+ * `./z-index.ts` の JSDoc。
  */
-export function assignAdminZIndex<T extends HTMLElement>(
-  node: T | null,
-  defaultZIndex: number,
-  style?: CSSProperties,
+export function useAdminZIndexImperative<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  zIndex: number,
 ): void {
-  if (!node) return;
-
-  const extraStyle = stripZIndexFromStyle(style);
-  applyImperativeStyleValues(node, {
-    [CSS_VAR.adminZIndex]: resolveAdminZIndex(defaultZIndex, style),
-    ...pickImperativeStyleValues(extraStyle ?? {}),
-  });
+  useImperativeCssVars(ref, { [CSS_VAR.adminZIndex]: zIndex });
 }

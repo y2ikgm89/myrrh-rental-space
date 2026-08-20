@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/shared/lib/cn";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 import { useImperativeStyle } from "@/shared/lib/csp/use-imperative-style";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -33,7 +35,10 @@ function LinkHoverPreview({ url, position }: LinkPreviewState) {
   return (
     <div
       ref={previewRef}
-      className="fixed z-50 rounded-lg border bg-popover px-3 py-2 text-sm shadow-md flex items-center gap-2 pointer-events-none"
+      className={cn(
+        "fixed rounded-lg border bg-popover px-3 py-2 text-sm shadow-md flex items-center gap-2 pointer-events-none",
+        PORTAL_LAYER_CLASS,
+      )}
     >
       {isExternal && (
         <IconExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />

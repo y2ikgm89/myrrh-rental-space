@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import {
   FAQ_ITEM_TEMPLATE_GROUPS,
   FAQ_ITEM_TEMPLATES,
@@ -52,9 +51,7 @@ export function FaqItemTemplateSelect({
         <SelectTrigger id={selectId} className="w-full">
           <SelectValue placeholder="雛形を選択..." />
         </SelectTrigger>
-        {/* SelectContent は body へ Portal されるため、既定の Z_INDEX.dropdown (25) では
-            Dialog (90) の Portal の背後に隠れる。このダイアログ内でのみ dialog より上に持ち上げる */}
-        <SelectContent zIndex={Z_INDEX.dialog + 1}>
+        <SelectContent>
           {FAQ_ITEM_TEMPLATE_GROUPS.map((group) => {
             const items = FAQ_ITEM_TEMPLATES.filter(
               (template) => template.group === group,

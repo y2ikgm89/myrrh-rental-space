@@ -21,7 +21,7 @@ import { z } from "zod";
  */
 export const receiptResendRequestSchema = z.object({
   serialNo: z
-    .string()
+    .string({ error: "領収書番号を入力してください" })
     .trim()
     .min(1, { error: "領収書番号を入力してください" })
     .max(20, { error: "領収書番号は20文字以内で入力してください" }),

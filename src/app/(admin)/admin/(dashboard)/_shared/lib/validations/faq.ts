@@ -17,12 +17,12 @@ import { z } from "zod";
 
 export const faqCategoryFormSchema = z.strictObject({
   name: z
-    .string()
+    .string({ error: "カテゴリ名を入力してください" })
     .trim()
     .min(1, { error: "カテゴリ名を入力してください" })
     .max(100, { error: "カテゴリ名は100文字以内で入力してください" }),
   slug: z
-    .string()
+    .string({ error: "スラッグを入力してください" })
     .trim()
     .min(1, { error: "スラッグを入力してください" })
     .max(100, { error: "スラッグは100文字以内で入力してください" })
@@ -71,12 +71,12 @@ export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
 export const faqItemFormSchema = z.strictObject({
   categoryId: z.uuid({ error: "カテゴリを選択してください" }),
   question: z
-    .string()
+    .string({ error: "質問を入力してください" })
     .trim()
     .min(1, { error: "質問を入力してください" })
     .max(500, { error: "質問は500文字以内で入力してください" }),
   answer: z
-    .string()
+    .string({ error: "回答を入力してください" })
     .trim()
     .min(1, { error: "回答を入力してください" })
     .max(5000, { error: "回答は5000文字以内で入力してください" }),

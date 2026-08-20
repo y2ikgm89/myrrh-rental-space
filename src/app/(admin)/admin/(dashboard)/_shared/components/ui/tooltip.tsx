@@ -1,15 +1,9 @@
 "use client";
 
-import { useRef } from "react";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
-import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import {
-  assignAdminZIndex,
-  useAdminZIndexImperative,
-} from "@/admin/lib/styles/use-admin-z-index-layer";
-import { assignRef } from "@/shared/lib/csp/use-imperative-style";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 
 const tooltipContentVariants = tv({
   base: [
@@ -34,26 +28,14 @@ function TooltipContent({
   className,
   sideOffset = 4,
   ref,
-  style,
   ...props
 }: React.ComponentPropsWithRef<typeof TooltipPrimitive.Content>) {
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, Z_INDEX.tooltip, style);
-
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
-        ref={(node) => {
-          internalRef.current = node;
-          assignAdminZIndex(node, Z_INDEX.tooltip, style);
-          assignRef(ref, node);
-        }}
+        ref={ref}
         sideOffset={sideOffset}
-        className={cn(
-          tooltipContentVariants(),
-          adminZIndexClassName(),
-          className,
-        )}
+        className={cn(tooltipContentVariants(), PORTAL_LAYER_CLASS, className)}
         {...props}
       />
     </TooltipPrimitive.Portal>

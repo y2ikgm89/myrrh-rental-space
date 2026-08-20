@@ -44,7 +44,7 @@ const isPublishedFormSchema = z.preprocess((v) => {
  * スラッグのバリデーション
  */
 export const newsSlugSchema = z
-  .string()
+  .string({ error: "スラッグを入力してください" })
   .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(100, { error: "スラッグは100文字以内で入力してください" })
@@ -59,7 +59,7 @@ export const createNewsSchema = z
   .object({
     slug: newsSlugSchema,
     title: z
-      .string()
+      .string({ error: "タイトルは必須です" })
       .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
@@ -95,7 +95,7 @@ export const updateNewsSettingsSchema = z
   .object({
     slug: newsSlugSchema,
     title: z
-      .string()
+      .string({ error: "タイトルは必須です" })
       .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
@@ -137,7 +137,7 @@ export const newsSettingsFormSchema = z
   .object({
     slug: newsSlugSchema,
     title: z
-      .string()
+      .string({ error: "タイトルは必須です" })
       .trim()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),

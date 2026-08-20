@@ -3,12 +3,7 @@
 import { useRef } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { IconX } from "@tabler/icons-react";
-import { Z_INDEX, adminZIndexClassName } from "@/admin/lib/styles/z-index";
-import {
-  assignAdminZIndex,
-  useAdminZIndexImperative,
-} from "@/admin/lib/styles/use-admin-z-index-layer";
-import { assignRef } from "@/shared/lib/csp/use-imperative-style";
+import { PORTAL_LAYER_CLASS } from "@/admin/lib/styles/z-index";
 import { cn } from "@/shared/lib/cn";
 
 const Dialog = DialogPrimitive.Root;
@@ -22,24 +17,12 @@ const DialogClose = DialogPrimitive.Close;
 function DialogOverlay({
   className,
   ref,
-  style,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Overlay>) {
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, Z_INDEX.dialogOverlay, style);
-
   return (
     <DialogPrimitive.Overlay
-      ref={(node) => {
-        internalRef.current = node;
-        assignAdminZIndex(node, Z_INDEX.dialogOverlay, style);
-        assignRef(ref, node);
-      }}
-      className={cn(
-        "fixed inset-0 bg-overlay",
-        adminZIndexClassName(),
-        className,
-      )}
+      ref={ref}
+      className={cn("fixed inset-0 bg-overlay", PORTAL_LAYER_CLASS, className)}
       {...props}
     />
   );
@@ -51,22 +34,15 @@ function DialogContent({
   onCloseAutoFocus,
   onOpenAutoFocus,
   ref,
-  style,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Content>) {
   const restoreFocusElementRef = useRef<HTMLElement | null>(null);
-  const internalRef = useRef<HTMLDivElement>(null);
-  useAdminZIndexImperative(internalRef, Z_INDEX.dialog, style);
 
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
-        ref={(node) => {
-          internalRef.current = node;
-          assignAdminZIndex(node, Z_INDEX.dialog, style);
-          assignRef(ref, node);
-        }}
+        ref={ref}
         aria-modal="true"
         onOpenAutoFocus={(event) => {
           const activeElement = document.activeElement;
@@ -89,7 +65,7 @@ function DialogContent({
         }}
         className={cn(
           "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-4 shadow-lg duration-200 sm:p-6",
-          adminZIndexClassName(),
+          PORTAL_LAYER_CLASS,
           className,
         )}
         {...props}

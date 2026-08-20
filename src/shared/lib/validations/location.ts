@@ -13,12 +13,16 @@ import {
  * BusinessTimeSlotスキーマ（openTime/closeTime）
  */
 const businessTimeSlotSchema = z.object({
-  openTime: z.string().regex(TIME_REGEX, {
-    error: "開店時刻は HH:mm 形式で入力してください",
-  }),
-  closeTime: z.string().regex(TIME_REGEX, {
-    error: "閉店時刻は HH:mm 形式で入力してください",
-  }),
+  openTime: z
+    .string({ error: "開店時刻を入力してください" })
+    .regex(TIME_REGEX, {
+      error: "開店時刻は HH:mm 形式で入力してください",
+    }),
+  closeTime: z
+    .string({ error: "閉店時刻を入力してください" })
+    .regex(TIME_REGEX, {
+      error: "閉店時刻は HH:mm 形式で入力してください",
+    }),
 });
 
 /**
@@ -59,12 +63,12 @@ const imageUrlsSchema = z
 
 export const locationFormBaseSchema = z.strictObject({
   name: z
-    .string()
+    .string({ error: "名前を入力してください" })
     .trim()
     .min(1, { error: "名前を入力してください" })
     .max(100, { error: "名前は100文字以内で入力してください" }),
   slug: z
-    .string()
+    .string({ error: "スラッグは必須です" })
     .trim()
     .min(1, { error: "スラッグは必須です" })
     .max(255, { error: "スラッグは255文字以内で入力してください" })
@@ -78,7 +82,7 @@ export const locationFormBaseSchema = z.strictObject({
     .nullable()
     .optional(),
   address: z
-    .string()
+    .string({ error: "住所を入力してください" })
     .trim()
     .min(1, { error: "住所を入力してください" })
     .max(500, { error: "住所は500文字以内で入力してください" }),
@@ -117,7 +121,7 @@ export const locationFormBaseSchema = z.strictObject({
     .array(
       z.object({
         value: z
-          .string()
+          .string({ error: "経路を入力してください" })
           .trim()
           .min(1, { error: "経路を入力してください" })
           .max(200, { error: "1 行 200 文字以内で入力してください" }),
@@ -140,7 +144,7 @@ export const locationFormBaseSchema = z.strictObject({
   // 空文字は「必須」エラーを優先する必要がある (top-level z.url() だと URL 形式
   // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
   imageUrl: z
-    .string()
+    .string({ error: "建物画像URLを入力してください" })
     .trim()
     .min(1, { error: "建物画像URLを入力してください" })
     .pipe(z.url({ error: "有効なURLを入力してください" })),
