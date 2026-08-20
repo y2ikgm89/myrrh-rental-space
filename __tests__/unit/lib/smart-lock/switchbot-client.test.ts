@@ -16,8 +16,10 @@ import type {
   CreatePasscodeParams,
 } from "@/shared/lib/smart-lock/switchbot-client";
 
+const notifyConnectionApiResultMock = mock(() => Promise.resolve());
+
 mock.module("@/shared/lib/integration-health-port", () => ({
-  notifyConnectionApiResult: mock(() => Promise.resolve()),
+  notifyConnectionApiResult: notifyConnectionApiResultMock,
 }));
 
 const CREDENTIALS: SwitchBotCredentials = {
@@ -63,6 +65,7 @@ const mockFetch = Object.assign(mock(fetchImpl), {
 beforeEach(async () => {
   globalThis.fetch = mockFetch;
   mockFetch.mockClear();
+  notifyConnectionApiResultMock.mockClear();
   const { clearDeviceListCache } =
     await import("@/shared/lib/smart-lock/switchbot-client");
   clearDeviceListCache();
@@ -161,6 +164,26 @@ describe("switchbot-client", () => {
         statusCode: 0,
         message: "Device List の形式が不正です",
       });
+    });
+
+    test("schema 不正な Device List では health success を記録せず failure だけ残す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          message: "success",
+          body: { deviceList: "not-an-array", infraredRemoteList: [] },
+        }),
+      );
+
+      const { getDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      await getDeviceList(CREDENTIALS);
+
+      const healthResults = notifyConnectionApiResultMock.mock.calls.map(
+        (call) => call[1] as { success: boolean },
+      );
+      expect(healthResults.some((result) => result.success)).toBe(false);
+      expect(healthResults.some((result) => !result.success)).toBe(true);
     });
   });
 

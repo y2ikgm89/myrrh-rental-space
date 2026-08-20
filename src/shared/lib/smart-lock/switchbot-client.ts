@@ -111,7 +111,12 @@ function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
 async function request<T>(
   credentials: SwitchBotCredentials,
   path: string,
-  init?: { readonly method?: "GET" | "POST"; readonly body?: unknown },
+  init?: {
+    readonly method?: "GET" | "POST";
+    readonly body?: unknown;
+    /** Device List は body schema 検証後に success を記録する */
+    readonly deferSuccessHealth?: boolean;
+  },
 ): Promise<SwitchBotApiResult<T>> {
   try {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -152,7 +157,11 @@ async function request<T>(
       });
     }
 
-    return recordSwitchBotHealth({ ok: true, body: parsed.data.body as T });
+    const success = { ok: true as const, body: parsed.data.body as T };
+    if (init?.deferSuccessHealth) {
+      return success;
+    }
+    return recordSwitchBotHealth(success);
   } catch (error) {
     return recordSwitchBotHealth({
       ok: false,
@@ -188,7 +197,9 @@ export type SwitchBotPasscodeType =
 export async function getDeviceList(
   credentials: SwitchBotCredentials,
 ): Promise<SwitchBotApiResult<DeviceListBody>> {
-  const result = await request<unknown>(credentials, "/devices");
+  const result = await request<unknown>(credentials, "/devices", {
+    deferSuccessHealth: true,
+  });
   if (!result.ok) return result;
 
   const parsed = deviceListBodySchema.safeParse(result.body);
@@ -205,7 +216,7 @@ export async function getDeviceList(
     });
   }
 
-  return { ok: true, body: parsed.data };
+  return recordSwitchBotHealth({ ok: true, body: parsed.data });
 }
 
 /**
