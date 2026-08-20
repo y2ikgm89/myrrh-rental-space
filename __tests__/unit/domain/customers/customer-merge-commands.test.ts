@@ -283,8 +283,44 @@ describe("customer-merge-commands", () => {
       expect(mockMergeCustomerCommand).toHaveBeenCalledWith(
         SOURCE_ID,
         TARGET_ID,
+        expect.anything(),
       );
       expect(mockPendingUpdate).toHaveBeenCalled();
+    });
+
+    test("merge 失敗時は token を消費しない", async () => {
+      const rawToken = "consume-fail-token";
+      mockPendingFindUnique
+        .mockResolvedValueOnce({
+          id: PENDING_ID,
+          targetCustomerId: TARGET_ID,
+          sourceCustomerId: SOURCE_ID,
+          guestEmail: EMAIL,
+          expiresAt: new Date(Date.now() + 60_000),
+          consumedAt: null,
+        })
+        .mockResolvedValueOnce({
+          id: PENDING_ID,
+          targetCustomerId: TARGET_ID,
+          sourceCustomerId: SOURCE_ID,
+          guestEmail: EMAIL,
+          expiresAt: new Date(Date.now() + 60_000),
+          consumedAt: null,
+        });
+
+      mockCustomerFindUnique.mockResolvedValue({
+        id: SOURCE_ID,
+        userId: null,
+        email: EMAIL,
+        emailCanonical: EMAIL,
+        anonymizedAt: null,
+      });
+      mockMergeCustomerCommand.mockRejectedValueOnce(new Error("merge failed"));
+
+      await expect(
+        consumeCustomerMergeTokenCommand(rawToken, TARGET_ID),
+      ).rejects.toThrow("merge failed");
+      expect(mockPendingUpdate).not.toHaveBeenCalled();
     });
 
     test("linked 状態変更後は VALIDATION", async () => {

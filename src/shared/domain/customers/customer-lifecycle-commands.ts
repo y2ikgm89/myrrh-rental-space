@@ -284,10 +284,13 @@ export async function anonymizeCustomerCommand(input: {
   };
 }
 
+type CustomerMergeTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /** 顧客マージ: source の全リレーションを target に移管し source を削除 */
 export async function mergeCustomerCommand(
   sourceId: string,
   targetId: string,
+  existingTx?: CustomerMergeTx,
 ): Promise<{
   transferredReservations: number;
   transferredSeries: number;
@@ -371,7 +374,45 @@ export async function mergeCustomerCommand(
     // そちらは管理画面からリセットできる。hash 側にはリセット経路が無い。
     sourceSuppressionHash !== targetOwnHash;
 
-  return prisma.$transaction(async (tx) => {
+  const runMerge = async (tx: CustomerMergeTx) => {
+    // self-serve consume は同一 TX で呼ぶ。token 発行後に source が
+    // link / anonymize / email 変更されていても移管しない。
+    if (existingTx) {
+      const sourceRow = await tx.customer.findUnique({
+        where: { id: sourceId },
+        select: {
+          userId: true,
+          anonymizedAt: true,
+          emailCanonical: true,
+        },
+      });
+      const targetRow = await tx.customer.findUnique({
+        where: { id: targetId },
+        select: { emailCanonical: true },
+      });
+      if (!sourceRow) {
+        throw new DomainError("マージ元の顧客が見つかりません", "NOT_FOUND");
+      }
+      if (!targetRow) {
+        throw new DomainError("マージ先の顧客が見つかりません", "NOT_FOUND");
+      }
+      if (sourceRow.userId !== null) {
+        throw new DomainError(
+          "統合元は未リンクのゲスト履歴のみ対象です",
+          "VALIDATION",
+        );
+      }
+      if (sourceRow.anonymizedAt !== null) {
+        throw new DomainError("匿名化済みの履歴は統合できません", "VALIDATION");
+      }
+      if (sourceRow.emailCanonical !== targetRow.emailCanonical) {
+        throw new DomainError(
+          "メールアドレスが一致しない履歴は統合できません",
+          "VALIDATION",
+        );
+      }
+    }
+
     // interactive tx は単一コネクション。Promise.all での並行発行は禁止。
     const reservations = await tx.reservation.updateMany({
       where: { customerId: sourceId },
@@ -435,5 +476,10 @@ export async function mergeCustomerCommand(
       transferredRegistrations: registrations.count,
       preservedSuppression: shouldPreserveOnTarget,
     };
-  });
+  };
+
+  if (existingTx) {
+    return runMerge(existingTx);
+  }
+  return prisma.$transaction(runMerge);
 }
