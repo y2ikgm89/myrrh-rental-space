@@ -181,41 +181,68 @@ export async function recordConnectionFailure(
 ): Promise<void> {
   const permanent =
     options?.permanent ?? isPermanentConnectionFailure(key, error);
-  const existing = await prisma.integrationHealth.findUnique({
-    where: { integration: key },
-    select: { status: true, consecutiveFailures: true },
-  });
-  const nextFailures = permanent
-    ? CONNECTION_FAILURE_THRESHOLD
-    : (existing?.consecutiveFailures ?? 0) + 1;
-  const nextStatus =
-    permanent || nextFailures >= CONNECTION_FAILURE_THRESHOLD
-      ? ConnectionStatus.ERROR
-      : (existing?.status ?? null);
-  const becameError =
-    nextStatus === ConnectionStatus.ERROR &&
-    existing?.status !== ConnectionStatus.ERROR;
   const message = truncateErrorMessage(normalizeError(error).message);
   const now = new Date();
 
-  await prisma.integrationHealth.upsert({
+  if (permanent) {
+    const existing = await prisma.integrationHealth.findUnique({
+      where: { integration: key },
+      select: { status: true },
+    });
+    await prisma.integrationHealth.upsert({
+      where: { integration: key },
+      create: {
+        integration: key,
+        status: ConnectionStatus.ERROR,
+        consecutiveFailures: CONNECTION_FAILURE_THRESHOLD,
+        lastFailureAt: now,
+        lastErrorMessage: message,
+      },
+      update: {
+        status: ConnectionStatus.ERROR,
+        consecutiveFailures: CONNECTION_FAILURE_THRESHOLD,
+        lastFailureAt: now,
+        lastErrorMessage: message,
+      },
+    });
+    if (existing?.status !== ConnectionStatus.ERROR) {
+      logError(normalizeError(error), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation: "recordConnectionFailure",
+          integration: key,
+          permanent,
+          consecutiveFailures: CONNECTION_FAILURE_THRESHOLD,
+        },
+      });
+    }
+    return;
+  }
+
+  const row = await prisma.integrationHealth.upsert({
     where: { integration: key },
     create: {
       integration: key,
-      status: nextStatus,
-      consecutiveFailures: nextFailures,
+      consecutiveFailures: 1,
       lastFailureAt: now,
       lastErrorMessage: message,
     },
     update: {
-      status: nextStatus,
-      consecutiveFailures: nextFailures,
+      consecutiveFailures: { increment: 1 },
       lastFailureAt: now,
       lastErrorMessage: message,
     },
   });
 
-  if (becameError) {
+  if (
+    row.consecutiveFailures >= CONNECTION_FAILURE_THRESHOLD &&
+    row.status !== ConnectionStatus.ERROR
+  ) {
+    await prisma.integrationHealth.update({
+      where: { integration: key },
+      data: { status: ConnectionStatus.ERROR },
+    });
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
@@ -223,7 +250,7 @@ export async function recordConnectionFailure(
         operation: "recordConnectionFailure",
         integration: key,
         permanent,
-        consecutiveFailures: nextFailures,
+        consecutiveFailures: row.consecutiveFailures,
       },
     });
   }

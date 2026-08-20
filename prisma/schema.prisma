@@ -1027,6 +1027,7 @@ model Reservation {
   // 手動上書きは例外的な操作なので大半の行が NULL。partial にして
   // `deleted_by_id` と同じ形にする（NULL を索引に載せない）。
   @@index([priceOverriddenById], map: "reservations_price_overridden_by_id_idx", where: { priceOverriddenById: { not: null } })
+  @@index([calendarSyncError], map: "reservations_calendar_sync_error_idx", where: { calendarSyncError: { not: null }, deletedAt: null })
   @@map("reservations")
 }
 
@@ -2630,6 +2631,7 @@ model Event {
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
   @@index([spaceId], map: "events_space_id_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
   @@index([deletedById], map: "events_deleted_by_id_idx", where: { deletedById: { not: null } })
+  @@index([calendarSyncError], map: "events_calendar_sync_error_idx", where: { calendarSyncError: { not: null }, deletedAt: null })
   @@map("events")
 }
 
