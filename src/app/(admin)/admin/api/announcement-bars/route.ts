@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getAnnouncementBars } from "@/shared/domain/settings/announcement-bar";
-import { jsonError } from "@/shared/lib/route-responses";
+import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {
   const auth = await checkPermission(
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     request.headers,
   );
   if (!auth.success) {
-    return jsonError(auth.error.error, 403);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   const items = await getAnnouncementBars();

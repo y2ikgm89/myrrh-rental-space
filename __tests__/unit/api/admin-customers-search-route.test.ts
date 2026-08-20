@@ -140,6 +140,22 @@ describe("GET /admin/api/customers/search", () => {
   });
 
   describe("異常系", () => {
+    test("未ログインは 401 を返す", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: false,
+        error: { success: false, error: "ログインが必要です" },
+      });
+
+      const response = await GET(
+        new Request("http://localhost/admin/api/customers/search?q=田中"),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(body).toEqual({ error: "ログインが必要です" });
+      expect(mockSearchCustomers).not.toHaveBeenCalled();
+    });
+
     test("権限エラーは 403 を返す", async () => {
       mockCheckPermission.mockResolvedValue({
         success: false,

@@ -8,9 +8,14 @@ const mockCheckPermission = mock(() =>
   }),
 );
 
-const mockCheckAdminAuth = mock(() =>
+const mockCheckAdminAuth = mock<
+  () => Promise<
+    | { success: true; user: { id: string; role: string } }
+    | { success: false; error: { error: string } }
+  >
+>(() =>
   Promise.resolve({
-    success: true as const,
+    success: true,
     user: { id: "admin-1", role: "ADMIN" },
   }),
 );
@@ -90,6 +95,10 @@ describe("POST /admin/api/ogp", () => {
       user: { id: "admin-1", role: "ADMIN" },
     });
     mockCheckAdminAuth.mockClear();
+    mockCheckAdminAuth.mockResolvedValue({
+      success: true as const,
+      user: { id: "admin-1", role: "ADMIN" },
+    });
     mockFetchPublicHttpResource.mockClear();
     mockFetchPublicHttpResource.mockImplementation(
       (url: string, _init?: RequestInit) =>
@@ -105,6 +114,40 @@ describe("POST /admin/api/ogp", () => {
 
     expect(mockCheckAdminAuth).toHaveBeenCalledWith(expect.any(Headers));
     expect(mockCheckPermission).not.toHaveBeenCalled();
+  });
+
+  test("未ログインは 401 を返す", async () => {
+    mockCheckAdminAuth.mockResolvedValue({
+      success: false as const,
+      error: { error: "ログインが必要です" },
+    });
+
+    const response = await POST(
+      createOgpRequest("https://example.com/article"),
+    );
+    const body = await response.json();
+    expectErrorResult(body);
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("ログインが必要です");
+    expect(mockFetchPublicHttpResource).not.toHaveBeenCalled();
+  });
+
+  test("管理者権限不足は 403 を返す", async () => {
+    mockCheckAdminAuth.mockResolvedValue({
+      success: false as const,
+      error: { error: "管理者権限が必要です" },
+    });
+
+    const response = await POST(
+      createOgpRequest("https://example.com/article"),
+    );
+    const body = await response.json();
+    expectErrorResult(body);
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("管理者権限が必要です");
+    expect(mockFetchPublicHttpResource).not.toHaveBeenCalled();
   });
 
   test("same-origin 不一致は 403 で拒否する", async () => {

@@ -11,7 +11,11 @@ import {
   getFaviconUrl,
   resolveUrl,
 } from "@/admin/lib/ogp-parser";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 import { isSameAdminOrigin } from "@/shared/lib/http/assert-same-origin";
 import {
   logError,
@@ -163,7 +167,7 @@ export async function POST(request: Request) {
 
   const auth = await checkAdminAuth(request.headers);
   if (!auth.success) {
-    return jsonError(auth.error.error, 401);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   let rawBody: unknown;

@@ -5,7 +5,11 @@ import {
   getEditorCommentThreadContentRef,
   getThreadDetailQuery,
 } from "@/shared/domain/editor-comments/queries";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 const paramsSchema = z.object({
   id: z.uuid({ error: "threadId は有効な UUID である必要があります" }),
@@ -33,7 +37,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     request.headers,
   );
   if (!auth.success) {
-    return jsonError(auth.error.error, 403);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   const thread = await getThreadDetailQuery(parsed.data.id);

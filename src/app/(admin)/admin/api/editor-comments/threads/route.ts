@@ -3,7 +3,11 @@ import { z } from "zod";
 import { checkEditorCommentContentAccess } from "@/admin/lib/editor-comment-auth";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { getCommentThreadsQuery } from "@/shared/domain/editor-comments/queries";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
 
 const searchSchema = z.object({
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
     request.headers,
   );
   if (!auth.success) {
-    return jsonError(auth.error.error, 403);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   const threads = await getCommentThreadsQuery(omitUndefined(parsed.data));

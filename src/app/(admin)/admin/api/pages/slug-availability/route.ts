@@ -6,7 +6,11 @@ import {
   getSlugErrorMessage,
 } from "@/shared/domain/slugs/validation";
 import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
   slug: z.string().trim().max(100).optional(),
@@ -15,7 +19,7 @@ const searchSchema = z.object({
 export async function GET(request: Request): Promise<NextResponse> {
   const auth = await checkPermission("page", "create", request.headers);
   if (!auth.success) {
-    return jsonError(auth.error.error, 403);
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   // 認証後に rate-limit 適用（slug 探索 DoS 防御、業界標準 Stripe / Linear pattern）
