@@ -289,7 +289,8 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
     expect(eventTimeSlotFindMany).not.toHaveBeenCalled();
     expect(blockedDateFindMany).not.toHaveBeenCalled();
     expect(result.totalCount).toBe(2);
-    const items = result.items as unknown as CatalogItemWithAvailability[];
+    // safeFetch fallback が items: [] と合流し、availability 付き型が落ちる
+    const items = result.items as unknown as CatalogItemWithAvailability[]; // test-double
     expect(items).toHaveLength(2);
     expect(items.every((i) => i.isAvailableForSearch === false)).toBe(true);
   });
@@ -371,7 +372,8 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
     );
 
     expect(result.totalCount).toBe(5);
-    const items = result.items as unknown as CatalogItemWithAvailability[];
+    // safeFetch fallback が items: [] と合流し、availability 付き型が落ちる
+    const items = result.items as unknown as CatalogItemWithAvailability[]; // test-double
     expect(items).toHaveLength(5);
     // 空きあり (s4, s5) が先、空きなし (s1, s2, s3) が後
     expect(
@@ -425,7 +427,8 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
     );
 
     expect(result.totalCount).toBe(3);
-    const items = result.items as unknown as CatalogItemWithAvailability[];
+    // safeFetch fallback が items: [] と合流し、availability 付き型が落ちる
+    const items = result.items as unknown as CatalogItemWithAvailability[]; // test-double
     expect(items).toHaveLength(1);
     expect(items[0]?.id).toBe("b1");
     expect(items[0]?.isAvailableForSearch).toBe(false);
@@ -487,7 +490,8 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
       { ...OPEN_WINDOW, from, to },
     );
 
-    const items = result.items as unknown as CatalogItemWithAvailability[];
+    // safeFetch fallback が items: [] と合流し、availability 付き型が落ちる
+    const items = result.items as unknown as CatalogItemWithAvailability[]; // test-double
     expect(items.every((i) => i.isAvailableForSearch === false)).toBe(true);
     expect(candidatesCall()).toBeDefined();
   });

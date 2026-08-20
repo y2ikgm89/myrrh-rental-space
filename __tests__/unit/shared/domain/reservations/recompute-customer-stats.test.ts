@@ -52,7 +52,7 @@ const tx = {
     update: (args: { where: { id: string }; data: Record<string, unknown> }) =>
       mockCustomerUpdate(args),
   },
-} as unknown as Parameters<typeof recomputeCustomerReservationStats>[0];
+} as unknown as Parameters<typeof recomputeCustomerReservationStats>[0]; // test-double
 
 describe("recomputeCustomerReservationStats", () => {
   beforeEach(() => {

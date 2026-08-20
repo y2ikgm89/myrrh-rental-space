@@ -37,6 +37,7 @@ import {
   mock,
   test,
 } from "bun:test";
+import type { Prisma } from "@generated/prisma/client";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 import { installErrorsServerMock } from "../../../mocks/errors-server";
 import { installEmailLibDispatchMock } from "../../../support/email-lib-dispatch-mock";
@@ -333,13 +334,11 @@ async function createPaidReservationFixture(
   };
 }
 
-async function setRefundPolicy(policy: unknown): Promise<void> {
+async function setRefundPolicy(policy: Prisma.InputJsonValue): Promise<void> {
   await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: shape 破損 case で unknown JSON も渡すため
-    create: { id: "singleton", refundPolicy: policy as any },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    update: { refundPolicy: policy as any },
+    create: { id: "singleton", refundPolicy: policy },
+    update: { refundPolicy: policy },
   });
 }
 

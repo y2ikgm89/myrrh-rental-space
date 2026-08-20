@@ -40,6 +40,7 @@ mock.module("@generated/prisma/client", () => ({
 
 const categoryCommands =
   (await import("@/shared/domain/faq/category-commands")) as unknown as {
+    // test-double
     updateFaqCategoryActive: (
       id: string,
       isActive: boolean,

@@ -10,7 +10,7 @@ type TestDatabaseUrlResult = {
   source: "env" | "default-local";
 };
 
-type CommandRunner = (command: readonly string[]) => number;
+type CommandRunner = (command: readonly string[]) => number | null;
 
 export function resolveTestDatabaseUrlForMigration(
   testDatabaseUrl: string | undefined,

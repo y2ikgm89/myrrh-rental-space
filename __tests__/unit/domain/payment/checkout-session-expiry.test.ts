@@ -68,7 +68,7 @@ describe("checkout-session-expiry kernel", () => {
     mockCheckoutSessionExpire.mockRejectedValue(new Error("already expired"));
     const client = {
       checkout: { sessions: { expire: mockCheckoutSessionExpire } },
-    } as unknown as AsyncOnlyStripe;
+    } as unknown as AsyncOnlyStripe; // test-double: Stripe client surface only
 
     await expect(
       expireCheckoutSessionWithClientBestEffort({

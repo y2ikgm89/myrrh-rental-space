@@ -294,6 +294,7 @@ describe("bulkAnonymizeCustomers", () => {
 
     test("無効な reason は validation error", async () => {
       const invalidReason = "invalid-reason" as unknown as Parameters<
+        // test-double
         typeof bulkAnonymizeCustomers
       >[1];
       const result = await bulkAnonymizeCustomers(

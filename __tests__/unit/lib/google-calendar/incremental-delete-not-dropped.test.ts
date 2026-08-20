@@ -42,7 +42,7 @@ function contextReturning(items: Record<string, unknown>[]) {
     ctx: {
       client: { events: { list } },
       calendarId: "primary",
-    } as unknown as Parameters<typeof fetchCalendarChanges>[0],
+    } as unknown as Parameters<typeof fetchCalendarChanges>[0], // test-double
     list,
   };
 }

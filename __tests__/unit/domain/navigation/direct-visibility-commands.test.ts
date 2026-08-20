@@ -30,6 +30,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 const navigationCommands =
   (await import("@/shared/domain/navigation/commands")) as unknown as {
+    // test-double
     updateNavigationItemActive: (
       id: string,
       isActive: boolean,

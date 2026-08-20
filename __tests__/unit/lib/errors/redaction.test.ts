@@ -288,14 +288,14 @@ describe("redactContext", () => {
   });
 
   test("truncates recursion beyond a safe depth", () => {
-    type Nested = { child?: Nested };
-    const root: Nested = {};
+    const root: Record<string, unknown> = {};
     let cursor = root;
     for (let i = 0; i < 20; i++) {
-      cursor.child = {};
-      cursor = cursor.child;
+      const child: Record<string, unknown> = {};
+      cursor["child"] = child;
+      cursor = child;
     }
-    const result = redactContext(root as unknown as Record<string, unknown>);
+    const result = redactContext(root);
     expect(JSON.stringify(result)).toContain("[REDACTED:depth-exceeded]");
   });
 

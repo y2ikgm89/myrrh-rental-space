@@ -100,7 +100,7 @@ describe("stripe-refund-orchestration kernel", () => {
   test("createStripeRefundOrThrow returns Stripe refund id", async () => {
     const client = {
       refunds: { create: mockRefundsCreate },
-    } as unknown as AsyncOnlyStripe;
+    } as unknown as AsyncOnlyStripe; // test-double: Stripe client surface only
 
     await expect(
       createStripeRefundOrThrow({
@@ -124,7 +124,7 @@ describe("stripe-refund-orchestration kernel", () => {
     });
     const client = {
       refunds: { create: mockRefundsCreate },
-    } as unknown as AsyncOnlyStripe;
+    } as unknown as AsyncOnlyStripe; // test-double: Stripe client surface only
 
     await expect(
       createStripeRefundOrThrow({
@@ -151,7 +151,7 @@ describe("stripe-refund-orchestration kernel", () => {
     });
     const client = {
       refunds: { create: mockRefundsCreate },
-    } as unknown as AsyncOnlyStripe;
+    } as unknown as AsyncOnlyStripe; // test-double: Stripe client surface only
 
     await expect(
       createStripeRefundOrThrow({
