@@ -26,6 +26,16 @@ const mockUpsert = mock<(args: unknown) => Promise<HealthRow>>(() =>
     lastErrorMessage: null,
   }),
 );
+const mockUpdate = mock<(args: unknown) => Promise<HealthRow>>(() =>
+  Promise.resolve({
+    integration: "GOOGLE_CALENDAR",
+    status: "ERROR",
+    consecutiveFailures: 3,
+    lastSuccessAt: null,
+    lastFailureAt: new Date(),
+    lastErrorMessage: "boom",
+  }),
+);
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
@@ -36,6 +46,7 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockFindUnique,
       findMany: mockFindMany,
       upsert: mockUpsert,
+      update: mockUpdate,
     },
   },
 }));
@@ -160,18 +171,19 @@ describe("recordConnectionFailure", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
     mockUpsert.mockReset();
+    mockUpdate.mockReset();
     mockLogError.mockReset();
   });
 
-  test("一時失敗は閾値未満なら ERROR にしない", async () => {
-    mockFindUnique.mockImplementation(() =>
+  test("一時失敗は increment を渡し、閾値未満なら ERROR にしない", async () => {
+    mockUpsert.mockImplementation(() =>
       Promise.resolve({
         integration: "GOOGLE_CALENDAR",
         status: ConnectionStatus.CONNECTED,
-        consecutiveFailures: 1,
+        consecutiveFailures: 2,
         lastSuccessAt: new Date(),
-        lastFailureAt: null,
-        lastErrorMessage: null,
+        lastFailureAt: new Date(),
+        lastErrorMessage: "unavailable",
       }),
     );
 
@@ -180,22 +192,28 @@ describe("recordConnectionFailure", () => {
     });
 
     const args = mockUpsert.mock.calls[0]?.[0] as {
-      update: { status: string | null; consecutiveFailures: number };
+      create: { consecutiveFailures: number };
+      update: {
+        status?: string | null;
+        consecutiveFailures: { increment: number } | number;
+      };
     };
-    expect(args.update.status).toBe(ConnectionStatus.CONNECTED);
-    expect(args.update.consecutiveFailures).toBe(2);
+    expect(args.create.consecutiveFailures).toBe(1);
+    expect(args.update.consecutiveFailures).toEqual({ increment: 1 });
+    expect(args.update.status).toBeUndefined();
+    expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockLogError).not.toHaveBeenCalled();
   });
 
   test("一時失敗が閾値に達したら ERROR になり HIGH ログする", async () => {
-    mockFindUnique.mockImplementation(() =>
+    mockUpsert.mockImplementation(() =>
       Promise.resolve({
         integration: "GOOGLE_CALENDAR",
         status: ConnectionStatus.CONNECTED,
-        consecutiveFailures: CONNECTION_FAILURE_THRESHOLD - 1,
+        consecutiveFailures: CONNECTION_FAILURE_THRESHOLD,
         lastSuccessAt: new Date(),
-        lastFailureAt: null,
-        lastErrorMessage: null,
+        lastFailureAt: new Date(),
+        lastErrorMessage: "unavailable",
       }),
     );
 
@@ -203,11 +221,14 @@ describe("recordConnectionFailure", () => {
       code: 503,
     });
 
-    const args = mockUpsert.mock.calls[0]?.[0] as {
-      update: { status: string; consecutiveFailures: number };
+    const upsertArgs = mockUpsert.mock.calls[0]?.[0] as {
+      update: { consecutiveFailures: { increment: number } | number };
     };
-    expect(args.update.status).toBe(ConnectionStatus.ERROR);
-    expect(args.update.consecutiveFailures).toBe(CONNECTION_FAILURE_THRESHOLD);
+    expect(upsertArgs.update.consecutiveFailures).toEqual({ increment: 1 });
+    const updateArgs = mockUpdate.mock.calls[0]?.[0] as {
+      data: { status: string };
+    };
+    expect(updateArgs.data.status).toBe(ConnectionStatus.ERROR);
     expect(mockLogError).toHaveBeenCalled();
   });
 
