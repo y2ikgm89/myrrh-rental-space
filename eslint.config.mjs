@@ -624,6 +624,7 @@ const eslintConfig = defineConfig([
     rules: {
       "@eslint-react/no-unnecessary-use-prefix": "off",
       "@next/next/no-img-element": "off",
+      "@typescript-eslint/no-explicit-any": "error",
     },
   },
 

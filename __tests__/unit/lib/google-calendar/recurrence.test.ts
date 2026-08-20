@@ -91,7 +91,7 @@ function makeCtx(): GoogleCalendarEventWriteContext {
   return {
     client: {
       events: { instances: mockInstances },
-    } as unknown as GoogleCalendarEventWriteContext["client"],
+    } as unknown as GoogleCalendarEventWriteContext["client"], // test-double
     calendarId: "test-calendar",
     reminderMinutes: null,
   };

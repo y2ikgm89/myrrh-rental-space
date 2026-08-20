@@ -35,7 +35,7 @@ if (typeof globalThis.InputEvent === "undefined") {
     constructor(type: string, eventInitDict?: EventInit) {
       super(type, eventInitDict);
     }
-  } as unknown as typeof InputEvent;
+  } as unknown as typeof InputEvent; // test-double
 }
 
 mock.module("next/navigation", () => ({

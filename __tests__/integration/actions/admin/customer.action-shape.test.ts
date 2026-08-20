@@ -208,6 +208,7 @@ describe("anonymizeCustomer (action shape)", () => {
     // 意図的に schema 外の値を渡して VALIDATION 分岐に到達させる。
     // enum を無効化するため runtime 側キャストで型を騙す。
     const invalidReason = "invalid-reason" as unknown as Parameters<
+      // test-double
       typeof anonymizeCustomer
     >[1];
     const r = await anonymizeCustomer(VALID_UUID, invalidReason);

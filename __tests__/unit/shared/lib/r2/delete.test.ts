@@ -54,6 +54,7 @@ function keysOf(count: number): string[] {
 
 function objectsInCall(callIndex: number): { Key: string }[] {
   const calls = sendMock.mock.calls as unknown as Array<
+    // test-double
     [{ input: { Delete: { Objects: { Key: string }[] } } }]
   >;
   return calls[callIndex][0].input.Delete.Objects;

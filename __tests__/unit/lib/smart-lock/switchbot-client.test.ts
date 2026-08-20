@@ -181,7 +181,7 @@ describe("switchbot-client", () => {
 
       const healthResults = notifyConnectionApiResultMock.mock.calls.map(
         (call) => {
-          const [, result] = call as unknown as [string, { success: boolean }];
+          const [, result] = call as unknown as [string, { success: boolean }]; // test-double
           return result;
         },
       );

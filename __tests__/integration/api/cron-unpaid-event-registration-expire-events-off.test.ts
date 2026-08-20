@@ -111,7 +111,7 @@ function paidEventRegistrationSession(
     payment_status: "paid",
     amount_total: TICKET_PRICE,
     currency: "jpy",
-  } as unknown as Stripe.Checkout.Session;
+  } as unknown as Stripe.Checkout.Session; // test-double
 }
 
 const unusedStripeClient = {} as AsyncOnlyStripe;

@@ -161,7 +161,7 @@ function buildSettings(
     businessHours: DEFAULT_BUSINESS_HOURS_WEEK,
     holidayNotice: null,
     organizationUpdatedAt,
-  } as unknown as Serialized<SettingsData>;
+  } as unknown as Serialized<SettingsData>; // test-double
 }
 
 describe("BusinessHoursSection の楽観ロック token", () => {

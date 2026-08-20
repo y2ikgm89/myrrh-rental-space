@@ -94,6 +94,7 @@ await installPrismaEnumsMock({
 
 const announcementBarCommands =
   (await import("@/shared/domain/settings/announcement-bar")) as unknown as {
+    // test-double
     announcementBarInputSchema: typeof import("@/shared/domain/settings/announcement-bar").announcementBarInputSchema;
     reorderAnnouncementBars: (
       orderedIds: readonly string[],

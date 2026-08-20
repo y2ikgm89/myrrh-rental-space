@@ -84,7 +84,7 @@ describe("migrate test DB script", () => {
     // process.exit(null) exits 0, so the injected runner must not collapse to 0.
     const exitCode = ensureDefaultLocalTestDatabase(
       "default-local",
-      () => null as unknown as number,
+      () => null,
     );
 
     expect(exitCode).not.toBe(0);

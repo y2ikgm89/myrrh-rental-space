@@ -160,7 +160,7 @@ function buildSettings(): Serialized<SettingsData> {
     businessHours: DEFAULT_BUSINESS_HOURS_WEEK,
     holidayNotice: null,
     organizationUpdatedAt: "2026-08-15T08:00:00.000Z",
-  } as unknown as Serialized<SettingsData>;
+  } as unknown as Serialized<SettingsData>; // test-double
 }
 
 const CLOSE_BEFORE_OPEN_ERROR = "終了は開始より後";

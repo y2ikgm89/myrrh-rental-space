@@ -178,7 +178,7 @@ function buildSettings(sidebarUpdatedAt: string): Serialized<SettingsData> {
     sidebarPopularCount: 5,
     sidebarTocEnabled: false,
     sidebarUpdatedAt,
-  } as unknown as Serialized<SettingsData>;
+  } as unknown as Serialized<SettingsData>; // test-double
 }
 
 describe("SidebarSection の楽観ロック token", () => {

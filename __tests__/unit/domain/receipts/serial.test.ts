@@ -92,7 +92,7 @@ function makeTx(): ReceiptTx {
         return mockCreate(...args);
       },
     },
-  } as unknown as ReceiptTx;
+  } as unknown as ReceiptTx; // test-double
 }
 
 describe("receipt serial kernel", () => {
