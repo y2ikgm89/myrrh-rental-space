@@ -197,6 +197,24 @@ describe("POST /api/webhooks/switchbot/[token]", () => {
   });
 
   describe("deviceMac 照合", () => {
+    test("result が success/failed/timeout 以外ならスキーマ不一致で handled:false", async () => {
+      const response = await post(
+        switchbotRequest({
+          eventType: "changeReport",
+          context: {
+            ...VALID_COMMAND_CONTEXT,
+            result: "pending",
+          },
+        }),
+        EXPECTED_TOKEN,
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ received: true, handled: false });
+      expect(mockIsKnownSmartLockDevice).not.toHaveBeenCalled();
+    });
+
     test("未知のdeviceMacの場合は200だがhandled:falseを返す", async () => {
       mockIsKnownSmartLockDevice.mockResolvedValue(false);
 
@@ -305,6 +323,24 @@ describe("POST /api/webhooks/switchbot/[token]", () => {
   });
 
   describe("lockState payload", () => {
+    test("未知のdeviceMacの lockState も 200 で handled:false", async () => {
+      mockIsKnownSmartLockDevice.mockResolvedValue(false);
+
+      const response = await post(
+        switchbotRequest({
+          eventType: "changeReport",
+          context: VALID_LOCK_STATE_CONTEXT,
+        }),
+        EXPECTED_TOKEN,
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ received: true, handled: false });
+      expect(mockProcessSwitchBotLockStateReport).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledTimes(1);
+    });
+
     test("lockState changeReportはprocessSwitchBotLockStateReportを呼び出す", async () => {
       mockIsKnownSmartLockDevice.mockResolvedValue(true);
       mockProcessSwitchBotLockStateReport.mockResolvedValue(true);
