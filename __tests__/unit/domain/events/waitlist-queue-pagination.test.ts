@@ -22,7 +22,7 @@ const RegistrationStatus = {
 
 mock.module("server-only", () => ({}));
 await installPrismaEnumsMock({
-  PaymentStatus: { UNPAID: "UNPAID", PAID: "PAID" },
+  PaymentStatus: { UNPAID: "UNPAID", PAID: "PAID", PENDING: "PENDING" },
   RegistrationStatus,
 });
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
@@ -62,8 +62,12 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-const { getWaitlistQueue, WAITLIST_QUEUE_PER_PAGE } =
-  await import("@/shared/domain/events/waitlist-queries");
+const {
+  getWaitlistQueue,
+  WAITLIST_QUEUE_PER_PAGE,
+  findExpiredWaitlistOfferCandidates,
+  WAITLIST_EXPIRE_SCAN_LIMIT,
+} = await import("@/shared/domain/events/waitlist-queries");
 
 describe("getWaitlistQueue pagination", () => {
   beforeEach(() => {
@@ -104,6 +108,17 @@ describe("getWaitlistQueue pagination", () => {
     expect(result.page).toBe(1);
     expect(result.perPage).toBe(20);
     expect(result.totalPages).toBe(3);
+  });
+
+  test("findExpiredWaitlistOfferCandidates は take 上限を付ける", async () => {
+    await findExpiredWaitlistOfferCandidates(new Date("2026-08-20T00:00:00Z"));
+
+    const call = mockFindMany.mock.calls[0]?.[0] as
+      { take?: number; orderBy?: { expiresAt?: string } } | undefined;
+    expect(definite(call, "findMany の引数").take).toBe(
+      WAITLIST_EXPIRE_SCAN_LIMIT,
+    );
+    expect(call?.orderBy).toEqual({ expiresAt: "asc" });
   });
 
   test("count の where に eventId + WAITLIST_ACTIVE_STATUSES が渡される", async () => {

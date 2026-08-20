@@ -15,6 +15,7 @@ export {
   offerNextWaitlistEntryCommand,
   expireWaitlistOfferCommand,
   expireAndPromoteWaitlistForEventCommand,
+  WAITLIST_EXPIRE_CANDIDATE_BATCH,
 } from "./waitlist-offer-commands";
 
 export { WAITLIST_OFFER_TTL_MS } from "./waitlist-offer-constants";

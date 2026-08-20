@@ -2249,8 +2249,15 @@ describe("deleteReservationCommand", () => {
 
       const result = await deleteReservationCommand("res-1", "user-1");
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({
+            id: "res-1",
+            deletedAt: null,
+            status: {
+              in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+            },
+          }),
           data: expect.objectContaining({
             deletedAt: expect.any(Date),
             deletedById: "user-1",
@@ -2276,23 +2283,26 @@ describe("deleteReservationCommand", () => {
           couponId: null,
         }),
       );
+      mockTxReservationUpdateMany
+        .mockResolvedValueOnce({ count: 0 })
+        .mockResolvedValueOnce({ count: 1 });
 
       const result = await deleteReservationCommand("res-1", "user-1");
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
+          where: { id: "res-1", deletedAt: null },
           data: expect.objectContaining({
             deletedAt: expect.any(Date),
             deletedById: "user-1",
           }),
         }),
       );
+      const softDeleteData = mockTxReservationUpdateMany.mock.calls[1]?.[0] as
+        { data?: { status?: unknown } } | undefined;
+      expect(softDeleteData?.data?.status).toBeUndefined();
 
-      // cancelledByType が data に含まれないことを確認
-      const callData = mockReservationUpdate.mock.calls[0];
-      expect(callData).toBeDefined();
-
-      // 既に終端ステータスなので applyCancellationSideEffects は発火しない
       expect(result.wasCancelled).toBe(false);
       expect(result.cancellationReason).toBeNull();
     });
@@ -2306,10 +2316,14 @@ describe("deleteReservationCommand", () => {
           couponId: null,
         }),
       );
+      mockTxReservationUpdateMany
+        .mockResolvedValueOnce({ count: 0 })
+        .mockResolvedValueOnce({ count: 1 });
 
       await deleteReservationCommand("res-1", "user-1");
 
       expect(mockTransaction).toHaveBeenCalled();
+      expect(mockCouponUpdateMany).not.toHaveBeenCalled();
     });
 
     test("クーポン付き PENDING/CONFIRMED 予約の削除で使用数がデクリメントされる", async () => {
@@ -2346,9 +2360,32 @@ describe("deleteReservationCommand", () => {
           couponId: "coupon-1",
         }),
       );
+      mockTxReservationUpdateMany
+        .mockResolvedValueOnce({ count: 0 })
+        .mockResolvedValueOnce({ count: 1 });
 
       await deleteReservationCommand("res-1", "user-1");
 
+      expect(mockCouponUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("並行キャンセルが先に claim した場合はクーポンを再解放せず wasCancelled=false", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          couponId: "coupon-1",
+        }),
+      );
+      mockTxReservationUpdateMany
+        .mockResolvedValueOnce({ count: 0 })
+        .mockResolvedValueOnce({ count: 1 });
+
+      const result = await deleteReservationCommand("res-1", "user-1");
+
+      expect(result.wasCancelled).toBe(false);
+      expect(result.cancellationReason).toBeNull();
       expect(mockCouponUpdateMany).not.toHaveBeenCalled();
     });
 
@@ -2394,7 +2431,7 @@ describe("deleteReservationCommand", () => {
 
       await deleteReservationCommand("res-1", undefined);
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             deletedById: null,
@@ -2419,7 +2456,7 @@ describe("deleteReservationCommand", () => {
         "テスト削除理由",
       );
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             cancellationReason: "テスト削除理由",

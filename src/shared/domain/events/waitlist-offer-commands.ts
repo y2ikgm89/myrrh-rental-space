@@ -248,6 +248,13 @@ type ExpireAndPromoteResult = {
   }[];
 };
 
+/**
+ * 1 event の ITX に載せる candidate 上限。
+ * 長時間 cron 停止後の初回で無制限に積むと 20s timeout で全件 ROLLBACK し、
+ * バックログが永久に消化されない（監査 N-07）。残りは次 cron で処理する。
+ */
+export const WAITLIST_EXPIRE_CANDIDATE_BATCH = 25;
+
 export async function expireAndPromoteWaitlistForEventCommand(args: {
   eventId: string;
   candidates: readonly {
@@ -259,6 +266,7 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
   }[];
   now: Date;
 }): Promise<ExpireAndPromoteResult> {
+  const candidates = args.candidates.slice(0, WAITLIST_EXPIRE_CANDIDATE_BATCH);
   const empty: ExpireAndPromoteResult = {
     expired: [],
     offered: [],
@@ -285,7 +293,7 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
           expiresAt: Date;
         }[] = [];
 
-        for (const candidate of args.candidates) {
+        for (const candidate of candidates) {
           // 1 candidate の処理を savepoint（Prisma のネスト $transaction）に
           // 隔離する。savepoint を使わず tx を直接 abort させると、Postgres は
           // トランザクションを aborted 状態にし、以降の candidate が 25P02 で
