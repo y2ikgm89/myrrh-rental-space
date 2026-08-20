@@ -490,7 +490,9 @@ export async function expireStalePendingSmartLockPasscodes(
       reservationId: true,
       deviceId: true,
       switchbotKeyId: true,
+      endTime: true,
       device: { select: { deviceId: true } },
+      reservation: { select: { status: true } },
     },
   });
   if (stale.length === 0) return 0;
@@ -501,14 +503,6 @@ export async function expireStalePendingSmartLockPasscodes(
 
   for (const passcode of stale) {
     if (credentials) {
-      const recovered = await recoverPendingPasscodeViaDeviceList(
-        credentials,
-        passcode,
-      );
-      if (recovered) {
-        continue;
-      }
-
       const name = buildPasscodeName(passcode.reservationId, passcode.deviceId);
       const keyResult = await findKeyInDeviceList(
         credentials,
@@ -516,6 +510,26 @@ export async function expireStalePendingSmartLockPasscodes(
         name,
       );
       if (keyResult.ok && keyResult.body !== null) {
+        const shouldRevoke =
+          passcode.reservation.status === ReservationStatus.CANCELLED ||
+          passcode.endTime.getTime() < now.getTime();
+        if (shouldRevoke) {
+          await recoverPendingPasscodeViaDeviceList(credentials, passcode);
+          continue;
+        }
+        if (passcode.reservation.status === ReservationStatus.CONFIRMED) {
+          await prisma.smartLockPasscode.updateMany({
+            where: {
+              id: passcode.id,
+              status: SmartLockPasscodeStatus.PENDING,
+            },
+            data: {
+              status: SmartLockPasscodeStatus.CONFIRMED,
+              switchbotKeyId: keyResult.body.id,
+              confirmedAt: new Date(),
+            },
+          });
+        }
         continue;
       }
     }

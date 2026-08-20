@@ -451,6 +451,21 @@ describe("switchbot-client", () => {
         },
       });
     });
+
+    test("body が欠落していても TypeError にせず空 status を返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          message: "success",
+        }),
+      );
+
+      const { getLockDeviceStatus } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await getLockDeviceStatus(CREDENTIALS, "lock-mac-1");
+
+      expect(result).toEqual({ ok: true, body: {} });
+    });
   });
 
   describe("deletePasscode", () => {

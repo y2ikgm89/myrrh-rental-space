@@ -75,6 +75,9 @@ const mockUpdateManyPasscodeRow = mock<
 const mockFindUniquePasscodeRow = mock<
   (...args: unknown[]) => Promise<unknown | null>
 >(() => Promise.resolve(null));
+const mockDeletePasscodeRow = mock<(...args: unknown[]) => Promise<unknown>>(
+  () => Promise.resolve({}),
+);
 
 const mockGetDecryptedSwitchBotCredentials = mock<
   () => Promise<{
@@ -138,6 +141,7 @@ mock.module("@/shared/db/prisma", () => ({
       update: (...args: unknown[]) => mockUpdatePasscodeRow(...args),
       updateMany: (...args: unknown[]) => mockUpdateManyPasscodeRow(...args),
       findUnique: (...args: unknown[]) => mockFindUniquePasscodeRow(...args),
+      delete: (...args: unknown[]) => mockDeletePasscodeRow(...args),
     },
   },
 }));
@@ -183,8 +187,11 @@ mock.module("@/shared/domain/notifications/commands", () => ({
     mockCreateNotificationCommand(...args),
 }));
 
-const { issueSmartLockPasscodes, buildPasscodeName } =
-  await import("@/shared/domain/smart-lock/issue-passcode");
+const {
+  issueSmartLockPasscodes,
+  buildPasscodeName,
+  DEVICE_LIST_POLL_OFFSETS_MS,
+} = await import("@/shared/domain/smart-lock/issue-passcode");
 
 const RESERVATION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 const SPACE_ID = "space-1";
@@ -217,6 +224,7 @@ beforeEach(() => {
   mockUpdatePasscodeRow.mockReset();
   mockUpdateManyPasscodeRow.mockReset();
   mockFindUniquePasscodeRow.mockReset();
+  mockDeletePasscodeRow.mockReset();
   mockGetDecryptedSwitchBotCredentials.mockReset();
   mockCreatePasscodeApi.mockReset();
   mockFindKeyInDeviceList.mockReset();
@@ -227,6 +235,7 @@ beforeEach(() => {
   mockUpdatePasscodeRow.mockResolvedValue({});
   mockUpdateManyPasscodeRow.mockResolvedValue({ count: 1 });
   mockFindUniquePasscodeRow.mockResolvedValue(null);
+  mockDeletePasscodeRow.mockResolvedValue({});
   mockGetDecryptedSwitchBotCredentials.mockResolvedValue({
     openToken: "open-token",
     secretKey: "secret-key",
@@ -491,8 +500,12 @@ describe("issueSmartLockPasscodes", () => {
     const result = await issueSmartLockPasscodes(makeInput());
 
     expect(result.passcodes).toEqual([]);
-    // DEVICE_LIST_POLL_OFFSETS_MS = 5 回 (0,5,15,30,45s — setTimeout はスパイ済みで即時)
-    expect(mockFindKeyInDeviceList).toHaveBeenCalledTimes(5);
+    expect(mockFindKeyInDeviceList).toHaveBeenCalledTimes(
+      DEVICE_LIST_POLL_OFFSETS_MS.length,
+    );
+    expect(
+      DEVICE_LIST_POLL_OFFSETS_MS[DEVICE_LIST_POLL_OFFSETS_MS.length - 1],
+    ).toBeGreaterThan(120_000);
 
     // ポーリングタイムアウト時に FAILED へは倒さない —
     // webhook（正本）が createKey success/failed/timeout を届ける余地を残す。
@@ -561,6 +574,38 @@ describe("issueSmartLockPasscodes", () => {
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
+  });
+
+  test("既存レコードがREVOKEDの場合は行を削除してから再発行する", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue({
+      id: "passcode-revoked",
+      status: "REVOKED",
+      passcodeCiphertext: "irrelevant",
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: {
+        id: "key-reissued",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1_700_000_000,
+      },
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(mockDeletePasscodeRow).toHaveBeenCalledWith({
+      where: { id: "passcode-revoked" },
+    });
+    expect(mockCreatePasscodeRow).toHaveBeenCalled();
+    expect(mockCreatePasscodeApi).toHaveBeenCalled();
+    expect(result.passcodes).toHaveLength(1);
+    expect(result.issuanceFailed).toBe(false);
   });
 
   test("既存レコードがREVOKE_PENDINGの場合はsilent no-opせずissuanceFailed=trueを返す", async () => {

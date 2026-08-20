@@ -53,7 +53,7 @@ export interface ConfirmationSideEffectInput {
  *
  * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
  * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（DB クエリ 1 回分のみ）。
- * デバイスが設定されているスペースでは SwitchBot 側の確定待ちで最大 45 秒程度
+ * デバイスが設定されているスペースでは SwitchBot 側の確定待ちで最大 150 秒程度
  * ブロックし得るが、意図した設計。
  */
 export async function applyConfirmationSideEffects(
