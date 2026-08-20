@@ -22,7 +22,17 @@ type NewsRecord = {
 };
 
 export type NewsData = Serialized<NewsRecord>;
-export type NewsListItem = NewsData & {
+
+/**
+ * 管理一覧専用の軽量投影。NewsTable が描画するのは
+ * id / title / isPublished / publishedAt(+Label) / createdAtLabel だけ。
+ * slug はテーブル未使用で、NewsListItem の他参照も無い。本文・SEO は getNewsById。
+ */
+export type NewsListItem = {
+  id: string;
+  title: string;
+  isPublished: boolean;
+  publishedAt: string | null;
   publishedAtLabel: string | null;
   createdAtLabel: string;
 };
