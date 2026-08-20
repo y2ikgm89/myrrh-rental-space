@@ -673,6 +673,7 @@ export async function mergeCustomers(
           newValue: {
             targetId: outcome.targetId,
             transferredReservations: outcome.transferredReservations,
+            transferredSeries: outcome.transferredSeries,
             transferredInquiries: outcome.transferredInquiries,
             transferredReviews: outcome.transferredReviews,
             transferredRegistrations: outcome.transferredRegistrations,

@@ -236,7 +236,9 @@ export async function consumeCustomerMergeTokenCommand(
     );
   }
 
-  await prisma.$transaction(async (tx) => {
+  // consume と merge を同一 TX にする。consumedAt は merge 成功後に立てる
+  // （先に commit すると merge throw 時に再試行不能になる）。
+  return prisma.$transaction(async (tx) => {
     const current = await tx.pendingCustomerMerge.findUnique({
       where: { id: pending.id },
       select: { consumedAt: true, expiresAt: true },
@@ -248,22 +250,23 @@ export async function consumeCustomerMergeTokenCommand(
       throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
     }
 
+    const merged = await mergeCustomerCommand(
+      pending.sourceCustomerId,
+      pending.targetCustomerId,
+      tx,
+    );
+
     await tx.pendingCustomerMerge.update({
       where: { id: pending.id },
       data: { consumedAt: new Date() },
     });
+
+    return {
+      targetCustomerId: pending.targetCustomerId,
+      sourceCustomerId: pending.sourceCustomerId,
+      ...merged,
+    };
   });
-
-  const merged = await mergeCustomerCommand(
-    pending.sourceCustomerId,
-    pending.targetCustomerId,
-  );
-
-  return {
-    targetCustomerId: pending.targetCustomerId,
-    sourceCustomerId: pending.sourceCustomerId,
-    ...merged,
-  };
 }
 
 /** guest email canonical 一致の未リンク Customer を 1 件返す。 */

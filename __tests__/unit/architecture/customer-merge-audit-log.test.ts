@@ -18,13 +18,31 @@ const ACTION_FILE = join(
   "actions",
   "customer-merge.ts",
 );
+const ADMIN_ACTION_FILE = join(
+  ROOT,
+  "src",
+  "app",
+  "(admin)",
+  "admin",
+  "(dashboard)",
+  "_shared",
+  "actions",
+  "customer.ts",
+);
 
 describe("customer-merge audit log contract", () => {
   test("confirmCustomerMergeAction records customer.merge audit log", () => {
     const source = readFileSync(ACTION_FILE, "utf8");
+    const adminSource = readFileSync(ADMIN_ACTION_FILE, "utf8");
     expect(source).toMatch(/resource:\s*"customer\.merge"/u);
     expect(source).toMatch(/fireAndForget\s*\(/u);
     expect(source).toMatch(/createAuditLogRecord\s*\(/u);
     expect(source).toMatch(/channel:\s*"customer-mypage"/u);
+    expect(source).toMatch(
+      /newValue:\s*\{[^}]*transferredSeries:\s*merged\.transferredSeries/u,
+    );
+    expect(adminSource).toMatch(
+      /newValue:\s*\{[^}]*transferredSeries:\s*outcome\.transferredSeries/u,
+    );
   });
 });

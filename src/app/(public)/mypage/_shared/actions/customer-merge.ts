@@ -217,6 +217,7 @@ export async function confirmCustomerMergeAction(
           newValue: {
             targetId: merged.targetCustomerId,
             transferredReservations: merged.transferredReservations,
+            transferredSeries: merged.transferredSeries,
             transferredInquiries: merged.transferredInquiries,
             transferredReviews: merged.transferredReviews,
             transferredRegistrations: merged.transferredRegistrations,
