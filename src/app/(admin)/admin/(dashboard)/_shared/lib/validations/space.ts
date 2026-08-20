@@ -111,7 +111,7 @@ export const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride);
  * スラッグのバリデーション
  */
 export const spaceSlugSchema = z
-  .string()
+  .string({ error: "スラッグを入力してください" })
   .trim()
   .min(1, { error: "スラッグを入力してください" })
   .max(SPACE_SLUG_MAX_LENGTH, {
@@ -155,7 +155,7 @@ export const spaceFormBaseSchema = z
   .object({
     slug: spaceSlugSchema,
     name: z
-      .string()
+      .string({ error: "名前を入力してください" })
       .trim()
       .min(1, { error: "名前を入力してください" })
       .max(SPACE_NAME_MAX_LENGTH, {
@@ -203,7 +203,7 @@ export const spaceFormBaseSchema = z
     // 空文字は「必須」エラーを優先する必要がある (top-level z.url() だと URL 形式
     // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
     mainImageUrl: z
-      .string()
+      .string({ error: "メイン画像URLを入力してください" })
       .trim()
       .min(1, { error: "メイン画像URLを入力してください" })
       .pipe(z.url({ error: "有効なURLを入力してください" })),
@@ -218,7 +218,7 @@ export const spaceFormBaseSchema = z
     }, z.boolean()),
     // eslint-disable-next-line local/require-trimmed-text -- select の値。後段の z.uuid() が形式を見る
     locationId: z
-      .string()
+      .string({ error: "拠点を選択してください" })
       .min(1, { error: "拠点を選択してください" })
       .pipe(z.uuid({ error: "拠点IDが無効です" })),
     categoryId: z
