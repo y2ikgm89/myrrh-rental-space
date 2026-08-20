@@ -8,9 +8,14 @@ const mockCheckPermission = mock(() =>
   }),
 );
 
-const mockCheckAdminAuth = mock(() =>
+const mockCheckAdminAuth = mock<
+  () => Promise<
+    | { success: true; user: { id: string; role: string } }
+    | { success: false; error: { error: string } }
+  >
+>(() =>
   Promise.resolve({
-    success: true as const,
+    success: true,
     user: { id: "admin-1", role: "ADMIN" },
   }),
 );
