@@ -6,8 +6,6 @@
  * - クライアント: useImperativeCssVars / ImperativeCssScope
  */
 
-import type { CSSProperties } from "react";
-
 /** Shared CSS custom property names */
 export const CSS_VAR = {
   containerSite: "--container-site",
@@ -67,32 +65,3 @@ export const CSS_VAR_CLASS = {
   inlineImageWidth: "w-[var(--inline-image-width)]",
   colorSwatch: "bg-[var(--color-swatch)]",
 } as const;
-
-export type CssVarRecord = Record<string, string | number | undefined | null>;
-
-/** @internal buildDataStyleRule / imperative 用。React style= には使わない。 */
-export function cssVarStyle(vars: CssVarRecord): CSSProperties | undefined {
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(vars)) {
-    if (value !== undefined && value !== null && value !== "") {
-      result[key] = String(value);
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
-/** Merge multiple css-var style objects into one. */
-export function mergeCssVarStyles(
-  ...styles: Array<CSSProperties | undefined>
-): CSSProperties | undefined {
-  const merged: Record<string, string> = {};
-  for (const style of styles) {
-    if (!style) continue;
-    for (const [key, value] of Object.entries(style)) {
-      if (value !== undefined && value !== null && value !== "") {
-        merged[key] = String(value);
-      }
-    }
-  }
-  return Object.keys(merged).length > 0 ? merged : undefined;
-}

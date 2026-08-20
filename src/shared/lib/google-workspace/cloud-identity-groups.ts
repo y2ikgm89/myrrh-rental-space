@@ -67,9 +67,3 @@ export async function isGoogleWorkspaceGroupMember({
   );
   return result.data.hasMembership === true;
 }
-
-export async function lookupGoogleWorkspaceGroupResourceName(
-  groupEmail: string,
-): Promise<string> {
-  return lookupGroupNameByEmail(groupEmail);
-}

@@ -22,7 +22,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { buildPasscodeName } from "./issue-passcode";
 import { completePendingSmartLockReissue } from "./reissue-passcode";
-import { confirmRevokeByKeyAbsence, revokeOne } from "./revoke-passcode";
+import { revokeOne } from "./revoke-passcode";
 
 export type SwitchBotWebhookCommandResult = "success" | "failed" | "timeout";
 
@@ -354,23 +354,4 @@ export async function processSwitchBotLockStateReport(
     },
   });
   return updated.count > 0;
-}
-
-/**
- * deleteKey webhook success 後、Device List で key 消失を確認して REVOKED にする。
- * Route から deleteKey 処理後にベストエフォートで呼べる補助。
- */
-export async function confirmRevokeFromWebhookSuccess(input: {
-  readonly deviceMac: string;
-  readonly passcodeId: string;
-  readonly switchbotKeyId: string;
-}): Promise<boolean> {
-  const credentials = await getDecryptedSwitchBotCredentialsForRevocation();
-  if (!credentials) return false;
-
-  return confirmRevokeByKeyAbsence(credentials, {
-    id: input.passcodeId,
-    switchbotKeyId: input.switchbotKeyId,
-    device: { deviceId: input.deviceMac },
-  });
 }

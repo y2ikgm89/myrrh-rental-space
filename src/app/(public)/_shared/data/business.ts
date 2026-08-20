@@ -10,6 +10,7 @@
 
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
+import { formatCustomerAddress } from "@/shared/lib/customer-address";
 
 export interface BusinessInfo {
   readonly name: string;
@@ -40,13 +41,16 @@ export interface BusinessInfo {
 export async function getBusinessInfo(): Promise<BusinessInfo> {
   const settings = await getPublicBusinessSettings();
 
-  const addressParts = [
-    settings?.postalCode ? `〒${settings.postalCode}` : null,
-    settings?.prefecture,
-    settings?.city,
-    settings?.streetAddress,
-    settings?.buildingName,
-  ].filter(Boolean);
+  const address = formatCustomerAddress(
+    {
+      postalCode: settings?.postalCode ?? null,
+      prefecture: settings?.prefecture ?? null,
+      city: settings?.city ?? null,
+      streetAddress: settings?.streetAddress ?? null,
+      buildingName: settings?.buildingName ?? null,
+    },
+    { separator: "" },
+  );
 
   const streetAddressLine =
     [settings?.streetAddress, settings?.buildingName]
@@ -55,7 +59,7 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
 
   return {
     name: settings?.businessName ?? settings?.siteName ?? SITE_DEFAULTS.name,
-    address: addressParts.length > 0 ? addressParts.join("") : null,
+    address: address || null,
     postalCode: settings?.postalCode ?? null,
     prefecture: settings?.prefecture ?? null,
     city: settings?.city ?? null,

@@ -82,6 +82,6 @@ describe("getBusinessInfo", () => {
     expect(info.streetAddressLine).toBe("神宮前1-1-1 本館ビル");
     expect(info.streetAddress).toBe("神宮前1-1-1");
     expect(info.buildingName).toBe("本館ビル");
-    expect(info.address).toContain("本館ビル");
+    expect(info.address).toBe("〒150-0001東京都渋谷区神宮前1-1-1本館ビル");
   });
 });

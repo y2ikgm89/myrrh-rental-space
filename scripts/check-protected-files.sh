@@ -11,7 +11,10 @@ staged_all=$(git diff --cached --name-only)
 staged_modified=$(git diff --cached --name-only --diff-filter=M)
 
 # .env* 検出（.example / .sample は除外）
-blocked_env=$(printf '%s\n' "$staged_all" | grep -E '^\.env$|^\.env\.[^.]+$' | grep -vE '\.(example|sample)$' || true)
+# Next.js は `.env.$(NODE_ENV).local` を最優先で読むため、ドット複層もブロックする。
+ENV_INCLUDE_RE='^\.env([.]|$)'
+ENV_EXCLUDE_RE='\.(example|sample)$'
+blocked_env=$(printf '%s\n' "$staged_all" | grep -E "$ENV_INCLUDE_RE" | grep -vE "$ENV_EXCLUDE_RE" || true)
 if [ -n "$blocked_env" ]; then
   echo "❌ .env* ファイルはコミット禁止です（秘密情報）: $blocked_env" >&2
   exit 1

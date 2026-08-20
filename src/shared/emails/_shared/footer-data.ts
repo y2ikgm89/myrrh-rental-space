@@ -24,6 +24,7 @@ import { getFooterTerms } from "@/shared/domain/terms/queries";
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
+import { formatCustomerAddress } from "@/shared/lib/customer-address";
 
 export interface EmailFooterLink {
   /** フッターに出すラベル（例: 「利用規約」） */
@@ -71,27 +72,6 @@ function isSafeContactEmail(email: string): boolean {
   return EMAIL_LIKE.test(email);
 }
 
-function composeAddress(parts: {
-  postalCode: string | null;
-  prefecture: string | null;
-  city: string | null;
-  streetAddress: string | null;
-  buildingName: string | null;
-}): string {
-  const segments: string[] = [];
-  if (NON_EMPTY(parts.postalCode)) segments.push(`〒${parts.postalCode}`);
-  const main = [
-    parts.prefecture,
-    parts.city,
-    parts.streetAddress,
-    parts.buildingName,
-  ]
-    .filter(NON_EMPTY)
-    .join(" ");
-  if (main.length > 0) segments.push(main);
-  return segments.join(" ");
-}
-
 /**
  * メールフッター用データを返す。送信側 `*-emails.ts` から呼び、テンプレに props で流す。
  *
@@ -116,7 +96,7 @@ export async function getEmailFooterData(): Promise<EmailFooterData> {
     (NON_EMPTY(settings?.siteName) ? settings.siteName : null) ?? businessName;
 
   const address = settings
-    ? composeAddress({
+    ? formatCustomerAddress({
         postalCode: settings.postalCode,
         prefecture: settings.prefecture,
         city: settings.city,
