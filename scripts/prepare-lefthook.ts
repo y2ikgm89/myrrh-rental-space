@@ -26,7 +26,7 @@ export async function runPrepareLefthook(options: {
 
 if (import.meta.main) {
   const exitCode = await runPrepareLefthook({
-    ci: process.env.CI,
+    ci: process.env["CI"],
     gitEntryExists: existsSync(".git"),
     install: async () => {
       const proc = Bun.spawn(["lefthook", "install"], {
