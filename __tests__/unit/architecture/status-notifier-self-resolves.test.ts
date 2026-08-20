@@ -276,7 +276,7 @@ describe("契約判定の見本", () => {
  * だけに課せる要求。下の 3 つがそれで、除外してよい job が構造的に無い。
  *
  * ci.yml は該当しない。`nightly-result` は schedule での結果を見るので、
- * schedule では走らない job（`docs` / `bundle-analysis` / `lighthouse-ci` /
+ * schedule では走らない job（`docs` / `bundle-analysis` /
  * `bundle-size-diff`）を意図的に needs から外している。一般化すると、その
  * 正しい除外を落としてしまう。
  *

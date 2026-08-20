@@ -859,16 +859,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [lint-format, type-check]
-    # Lighthouse は重く実行時間が長いため opt-in 実行にする。single-env 運用
-    # (docs/adr/0001-single-env-terraform.md) のため staging URL は存在せず、
-    # CI 内 next start (localhost:3000) で計測する。本番相当の実測は
-    # 別途 PageSpeed Insights / Web Vitals API を production URL に対して
-    # 手動で叩く。
-    # 起動は workflow_dispatch (run_full_ci=true) のみ。nightly には含めない
-    # （計測が重く、回帰検出の主目的は e2e-tests が担うため）。
+    # Lighthouse は重い。single-env 運用 (docs/adr/0001-single-env-terraform.md)
+    # のため staging URL は存在せず、CI 内 next start (localhost:3000) で測る。
+    # required check にはしない。起動は nightly schedule と
+    # workflow_dispatch (run_full_ci=true)。
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
@@ -1177,6 +1175,7 @@ jobs:
         smoke-e2e,
         e2e-tests,
         visual-regression,
+        lighthouse-ci,
         build,
       ]
     if: ${{ always() && github.event_name == 'schedule' }}

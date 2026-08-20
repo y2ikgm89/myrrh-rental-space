@@ -241,4 +241,54 @@ describe("Lighthouse CI runtime env contract", () => {
     expect(job).toContain("bun run build:skip-env:prepared");
     expect(job).toContain("bunx lhci autorun");
   });
+
+  test("nightly schedule runs Lighthouse CI with LCP/CLS/TBT budgets", () => {
+    const start = ciWorkflow.indexOf("\n  lighthouse-ci:");
+    const end = ciWorkflow.indexOf("\n  visual-regression:", start);
+    const job = ciWorkflow.slice(start, end);
+    expect(job).toContain("github.event_name == 'schedule'");
+
+    // LHCI は budgetsFile と assertions を同時に受け付けない。
+    // 閾値の正本は budget.json。autorun は同値を assertions に載せる。
+    const budget = JSON.parse(
+      readFileSync(join(process.cwd(), ".lighthouseci/budget.json"), "utf8"),
+    ) as Array<{
+      timings?: Array<{ metric: string; budget: number }>;
+    }>;
+    const timings = budget[0]?.timings ?? [];
+    const byMetric = Object.fromEntries(
+      timings.map((row) => [row.metric, row.budget]),
+    );
+    expect(byMetric["largest-contentful-paint"]).toBe(4000);
+    expect(byMetric["cumulative-layout-shift"]).toBe(0.1);
+    expect(byMetric["total-blocking-time"]).toBe(300);
+
+    const parsed = JSON.parse(lighthouserc) as {
+      ci: { assert: { assertions: Record<string, unknown> } };
+    };
+    const readMax = (name: string): number | undefined => {
+      const value = parsed.ci.assert.assertions[name];
+      if (!Array.isArray(value)) return undefined;
+      const opts = value[1];
+      if (
+        opts &&
+        typeof opts === "object" &&
+        "maxNumericValue" in opts &&
+        typeof opts.maxNumericValue === "number"
+      ) {
+        return opts.maxNumericValue;
+      }
+      return undefined;
+    };
+    expect(readMax("largest-contentful-paint")).toBe(
+      byMetric["largest-contentful-paint"],
+    );
+    expect(readMax("cumulative-layout-shift")).toBe(
+      byMetric["cumulative-layout-shift"],
+    );
+    expect(readMax("total-blocking-time")).toBe(
+      byMetric["total-blocking-time"],
+    );
+    expect(lighthouserc).not.toContain("budgetsFile");
+  });
 });
