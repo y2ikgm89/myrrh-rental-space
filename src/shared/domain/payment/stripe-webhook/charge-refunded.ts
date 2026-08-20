@@ -18,6 +18,7 @@ import {
   invalidateEventRegistrationCache,
   invalidateReservationCache,
 } from "./cache-invalidation";
+import { pickLatestChargeRefund } from "./latest-charge-refund";
 
 /**
  * charge.refunded
@@ -46,9 +47,9 @@ export async function handleChargeRefunded(
     return;
   }
 
-  // Stripe webhook payload の `charge.refunds` は default で 10 件まで含まれる (docs 参照)。
-  // 通常は 1 event = 1 新規 refund。data[0] が最新 (Stripe の list は desc order)。
-  const latestRefundData = charge.refunds?.data[0];
+  // Stripe webhook payload の `charge.refunds` は default で最新 10 件 (docs:
+  // GET /v1/refunds は most recent first)。順不同でも created 最大を取る。
+  const latestRefundData = pickLatestChargeRefund(charge.refunds);
   const latestRefund = latestRefundData
     ? {
         id: latestRefundData.id,

@@ -12,6 +12,7 @@ import type {
 } from "@/shared/domain/coupons/types";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainObject } from "@/shared/lib/serialize";
+import { numberFromBigintCount } from "@/shared/lib/sql-count";
 
 /** `$queryRaw` の戻り値型（findMany 経路の `Coupon` と 1:1 対応）。 */
 type CouponRawRow = Coupon;
@@ -277,7 +278,7 @@ export async function getCoupons(
       ${whereSql}
     `;
 
-    total = Number(countResult[0]?.count ?? 0n);
+    total = numberFromBigintCount(countResult[0]?.count);
     const rawRows = await prisma.$queryRaw<CouponRawRow[]>`
       SELECT ${COUPON_SELECT_LIST}
       FROM ${COUPONS_TABLE}
