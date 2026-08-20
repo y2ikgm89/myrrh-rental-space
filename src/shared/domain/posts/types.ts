@@ -86,7 +86,21 @@ type PostTagRecord = {
 };
 
 export type PostData = Serialized<PostRecord>;
-export type PostListData = Omit<PostData, "contentHtml" | "contentJson">;
+
+/**
+ * 管理一覧専用の軽量投影。PostTable が描画するのは
+ * id / title / slug / category.name / publishedAt / createdAt / status だけ。
+ * excerpt・サムネ・SEO・著者・タグは getPostById。
+ */
+export type PostListData = {
+  id: string;
+  title: string;
+  slug: string;
+  category: { name: string };
+  publishedAt: string | null;
+  createdAt: string;
+  status: PostStatus;
+};
 export type PostCategoryData = Serialized<PostCategoryRecord>;
 export type PostTagData = Serialized<PostTagRecord>;
 

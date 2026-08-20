@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
-import type { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import type { Prisma } from "@generated/prisma/client";
 
 type NewsWhereInput = Prisma.NewsWhereInput;
@@ -60,27 +59,16 @@ const adminDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
 
 function toNewsListItem(item: {
   id: string;
-  slug: string;
   title: string;
-  contentHtml: string;
-  contentJson: unknown;
   isPublished: boolean;
   publishedAt: Date | null;
   createdAt: Date;
-  updatedAt: Date;
-  contentWidth: LayoutWidth | null;
-  contentWidthCustom: number | null;
-  metaDescription: string | null;
-  metaKeywords: string | null;
-  ogpTitle: string | null;
-  ogpDescription: string | null;
-  ogpImageUrl: string | null;
 }): NewsListItem {
   return {
-    ...item,
+    id: item.id,
+    title: item.title,
+    isPublished: item.isPublished,
     publishedAt: item.publishedAt?.toISOString() ?? null,
-    createdAt: item.createdAt.toISOString(),
-    updatedAt: item.updatedAt.toISOString(),
     publishedAtLabel: item.publishedAt
       ? adminDateTimeFormatter.format(item.publishedAt)
       : null,
@@ -119,21 +107,10 @@ export async function getNewsList(
       where,
       select: {
         id: true,
-        slug: true,
         title: true,
-        contentHtml: true,
-        contentJson: true,
         isPublished: true,
         publishedAt: true,
         createdAt: true,
-        updatedAt: true,
-        contentWidth: true,
-        contentWidthCustom: true,
-        metaDescription: true,
-        metaKeywords: true,
-        ogpTitle: true,
-        ogpDescription: true,
-        ogpImageUrl: true,
       },
       orderBy: newsOrderBy(sortBy, sortOrder),
       skip,
