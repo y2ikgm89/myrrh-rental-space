@@ -1,18 +1,29 @@
 # Dead GCP resource cleanup
 
-Two Google Cloud resources are orphaned in `myrrh-rental-space` after upstream
-migrations landed on `main` and never re-adopted them:
+Three Google Cloud resources are orphaned in `myrrh-rental-space` after
+upstream migrations landed on `main` and never re-adopted them:
 
 - **`CRON_SECRET` (Secret Manager)** — shared bearer token for `/api/cron/*`,
   dead since the Cloud Scheduler OIDC migration.
 - **`calendar-sync@myrrh-rental-space.iam.gserviceaccount.com` (service
   account)** — impersonation identity for the retired Google Calendar OAuth
   integration.
+- **`RESEND_WEBHOOK_SECRET` (Secret Manager)** — Resend bounce/complaint
+  webhook signing secret. Production canonical is now the Settings DB
+  (`SettingsResend.resendWebhookSecret`). Terraform has already forgotten
+  the Secret Manager container (`removed { destroy = false }` in
+  `terraform/secrets.tf`). The env name remains a local-dev fallback;
+  deleting the Secret Manager container is not the same as deleting the
+  env name from code.
 
-Both resources exist only in GCP; the repository already has zero references
-(gates enforced by `__tests__/unit/architecture/cron-oidc-clean-break.test.ts`
-and `__tests__/unit/architecture/gcp-production-audit.test.ts`). Deleting
-them is the last step to drop unused attack surface.
+`CRON_SECRET` and `calendar-sync@` exist only in GCP; the repository
+already has zero runtime references (gates enforced by
+`__tests__/unit/architecture/cron-oidc-clean-break.test.ts` and
+`__tests__/unit/architecture/gcp-production-audit.test.ts`).
+`RESEND_WEBHOOK_SECRET` still appears in code as a local-dev env
+fallback — that is expected and is **not** a reason to keep the Secret
+Manager container. Deleting the orphans is the last step to drop unused
+attack surface.
 
 This runbook is a checklist for a **project owner running gcloud from their
 own workstation**. The Claude harness does not hold the IAM roles required
@@ -320,6 +331,149 @@ bun run gcp:audit-production-iap
 
 ---
 
+## 3. `RESEND_WEBHOOK_SECRET` (Secret Manager)
+
+### Background
+
+Resend webhook signature verification used to read
+`RESEND_WEBHOOK_SECRET` from Secret Manager via Cloud Run. That secret
+moved to Tier 2: the production canonical is the encrypted Settings DB
+column `SettingsResend.resendWebhookSecret`, edited from
+`/admin/settings/integrations`. Terraform already dropped state ownership
+(`moved` + `removed { destroy = false }` in `terraform/secrets.tf`) and
+does not list the name in `runtime_secrets` / `imported_secrets` /
+`cloud_run_secret_versions`. Apply will **not** recreate the container
+after this delete.
+
+The env name `RESEND_WEBHOOK_SECRET` is still a **local-dev fallback**
+(`src/shared/lib/env/server.ts`, `getResendWebhookSecret()`). Do **not**
+delete that fallback, `.env.example`, or the DB column as part of this
+cleanup. Secret Manager delete ≠ env-name delete.
+
+Do **not** confuse this container with:
+
+- `RESEND_API_KEY` — send API key (separate secret / DB field)
+- `SUPPRESSION_HASH_SECRET` — live Cloud Run secret; **do not delete**
+- DB `resendWebhookSecret` — production webhook signing secret
+
+### Pre-delete verification (in-repo)
+
+Hits in application code, tests, `.env.example`, Terraform comments, and
+this runbook are expected. They document the local-dev fallback and the
+already-applied TF forget. A hit that **binds Cloud Run or Cloud Build
+to the Secret Manager container** blocks deletion.
+
+```bash
+# Inventory (expected: docs / comments / local-dev fallback / tests / TF forget).
+rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' RESEND_WEBHOOK_SECRET
+
+# Must be empty — Cloud Build must not bind the SM container:
+rg RESEND_WEBHOOK_SECRET cloudbuild.yaml
+
+# Terraform config (prose .md excluded). Expected: comments + `moved` /
+# `removed { destroy = false }` in terraform/secrets.tf, and a "do not
+# add back" comment in terraform/variables.tf.
+# A quoted list entry (`"RESEND_WEBHOOK_SECRET"` as its own line) or a
+# `RESEND_WEBHOOK_SECRET = "<version>"` pin means TF would recreate or
+# re-bind the container — STOP.
+rg RESEND_WEBHOOK_SECRET terraform/ --glob '!**/*.md'
+```
+
+```powershell
+rg --hidden --glob '!**/node_modules/**' --glob '!**/.next/**' RESEND_WEBHOOK_SECRET
+
+rg RESEND_WEBHOOK_SECRET cloudbuild.yaml
+
+rg RESEND_WEBHOOK_SECRET terraform/ --glob '!**/*.md'
+```
+
+The Cloud Run map / TF-forget contract is also gated by
+`__tests__/unit/architecture/deploy-packaging-contract.test.ts`. If that
+test is green on the revision you are about to operate on, the in-repo
+binding side is already proven.
+
+### Pre-delete verification (Cloud Run runtime env, 0 bindings expected)
+
+`|| echo "clean"` は使わない — `gcloud` 自体が失敗しても出力が空になり、
+`grep` が空振りして `clean` が出る（fail-open）。終了コードを明示的に見る。
+
+```bash
+TMP=$(mktemp)
+
+gcloud run services describe myrrh-rental-space \
+  --project="$PROJECT_ID" \
+  --region=asia-northeast1 \
+  --format='value(spec.template.spec.containers[0].env[].name,spec.template.spec.containers[0].env[].valueFrom.secretKeyRef.name)' \
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F RESEND_WEBHOOK_SECRET "$TMP" && { echo "STILL BOUND — do not delete"; exit 1; }
+echo "clean"
+
+gcloud run services describe myrrh-rental-space-admin \
+  --project="$PROJECT_ID" \
+  --region=asia-northeast1 \
+  --format='value(spec.template.spec.containers[0].env[].name,spec.template.spec.containers[0].env[].valueFrom.secretKeyRef.name)' \
+  > "$TMP" || { echo "gcloud describe failed — do not delete"; exit 1; }
+grep -F RESEND_WEBHOOK_SECRET "$TMP" && { echo "STILL BOUND — do not delete"; exit 1; }
+echo "clean"
+```
+
+Both invocations must print `clean`.
+
+### Pre-delete verification (production webhook still uses DB)
+
+The live webhook must already authenticate with the Settings DB secret.
+If it does not, deleting Secret Manager would not break production
+(Cloud Run is unbound) but it would remove the last leftover copy of a
+value you might still need to migrate.
+
+1. Open `/admin/settings/integrations` (Resend tab) and confirm
+   「Webhook 署名秘密」is set.
+2. In the Resend Dashboard, redeliver a recent webhook event to
+   `/api/webhooks/resend`. The response must be **200**, not **503**
+   (503 means `getResendWebhookSecret()` found neither DB nor env).
+
+Do not delete until both checks pass.
+
+### Delete
+
+```bash
+gcloud secrets delete RESEND_WEBHOOK_SECRET --project="$PROJECT_ID"
+```
+
+```powershell
+gcloud secrets delete RESEND_WEBHOOK_SECRET --project=$env:PROJECT_ID
+```
+
+`gcloud secrets delete` prompts for confirmation. Confirm interactively;
+do **not** pass `--quiet` — the prompt is the last human checkpoint that
+the right project and the right secret name are targeted.
+
+### Post-delete verification
+
+```bash
+gcloud secrets list --project="$PROJECT_ID" --filter='name~RESEND_WEBHOOK_SECRET'
+# Expected: empty output (no header row when nothing matches).
+```
+
+```powershell
+gcloud secrets list --project=$env:PROJECT_ID --filter='name~RESEND_WEBHOOK_SECRET'
+```
+
+Re-run a Resend Dashboard event redelivery to `/api/webhooks/resend`.
+It must still return 200.
+
+Optionally re-run the production audit:
+
+```bash
+bun run gcp:audit-production-iap
+```
+
+After this delete lands, a follow-up PR can drop the `moved` / `removed`
+blocks in `terraform/secrets.tf` (Terraform's recommended cleanup once
+the forget apply has succeeded) and remove the deferred-table row below.
+
+---
+
 ## Rollback
 
 - **`CRON_SECRET`**: if the delete turns out to have been premature, recreate
@@ -341,13 +495,21 @@ bun run gcp:audit-production-iap
 --project="$PROJECT_ID"` — the numeric unique ID will differ, so any
   historical audit logs that reference the old ID will not chain back to
   the new SA.
+- **`RESEND_WEBHOOK_SECRET`**: the old ciphertext is not recoverable.
+  Production does not read Secret Manager for this name — the Settings DB
+  value is canonical — so recreation is usually unnecessary. If a missed
+  reader still expected the Secret Manager container, fix that reader
+  first, then `gcloud secrets create RESEND_WEBHOOK_SECRET
+--project="$PROJECT_ID" --replication-policy=automatic` and add a fresh
+  version. Do not put the name back into `runtime_secrets` /
+  `cloud_run_secret_versions`.
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                             |
-| ---------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | TF forget は merge 済（`terraform/secrets.tf` の `removed` block）。残るのは `gcloud secrets delete RESEND_WEBHOOK_SECRET` のみ   |
-| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
+| Resource                     | Status                                                                | Next action (operator / follow-up PR)                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_WEBHOOK_SECRET` (SM) | Delete procedure is §3 of this runbook. TF forget is already applied. | Operator: follow §3 (`gcloud secrets delete`). After delete, drop `moved` / `removed` in `terraform/secrets.tf` in a follow-up PR |
+| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                          | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
 
 ## Why the Claude harness cannot run the deletes
 

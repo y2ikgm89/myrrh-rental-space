@@ -2,6 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { recordPermissionDenied } from "@/admin/lib/audit";
 import { authorizeAdmin } from "@/admin/lib/authorize";
 import { userHasResourceAccess } from "@/shared/domain/admin-auth/resource-access";
@@ -51,7 +52,17 @@ function denyAdminAccess(): never {
   notFound();
 }
 
+/**
+ * page セグメントは layout と別エントリとして prerender される。
+ * `verifyAdminSession` → `recordAdminLoginSuccess` が `Date.now()` を読むため、
+ * 不安定値の前に同一実行経路で `connection()` が必要。3 関数とも先頭で呼び、
+ * 全ページ / generateMetadata / query を 1 箇所でカバーする。
+ * 既に `connection()` 済みの経路では冪等な no-op。
+ *
+ * 実発生: `/admin/settings/integrations` の blocking-prerender-current-time。
+ */
 export async function requireAdminDashboardAccess(): Promise<AdminAuthUser> {
+  await connection();
   await headers();
   return verifyAdminSession();
 }
@@ -60,6 +71,7 @@ export async function requireAdminPermission(
   resource: Resource,
   action: Action,
 ): Promise<AdminAuthUser> {
+  await connection();
   await headers();
   const user = await verifyAdminSession();
 
@@ -75,6 +87,7 @@ export async function requireAdminResourcePermission(
   action: Action,
   resourceId?: string,
 ): Promise<AdminAuthUser> {
+  await connection();
   await headers();
   const user = await requireAdminPermission(resource, action);
 

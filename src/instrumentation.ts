@@ -10,6 +10,7 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation
  */
 
+import "@/shared/lib/validations/zod-ja";
 import type { Instrumentation } from "next";
 import { isRecord } from "@/shared/lib/serialize";
 import { redactRequestUrl } from "@/shared/lib/errors/redaction";

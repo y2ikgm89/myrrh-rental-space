@@ -25,12 +25,12 @@ export const publicInquirySchema = z
       .max(20, { error: "電話番号は20文字以内で入力してください" })
       .optional(),
     subject: z
-      .string()
+      .string({ error: "件名は必須です" })
       .trim()
       .min(1, { error: "件名は必須です" })
       .max(200, { error: "件名は200文字以内で入力してください" }),
     message: z
-      .string()
+      .string({ error: "お問い合わせ内容は必須です" })
       .trim()
       .min(1, { error: "お問い合わせ内容は必須です" })
       .max(5000, {
@@ -60,7 +60,7 @@ export const customerInquiryReplySchema = z.object({
   // `.trim()` を挟まないと空白だけの返信が `.min(1)` を通り、
   // 見た目が空の返信が保存されて通知メールまで飛ぶ。
   body: z
-    .string()
+    .string({ error: "返信内容を入力してください" })
     .trim()
     .min(1, { error: "返信内容を入力してください" })
     .max(5000, { error: "返信内容は5000文字以内で入力してください" }),
