@@ -59,7 +59,7 @@ export async function getAccountLinksAction(): Promise<
  * 心証と乖離する（GDPR 第 17 条の propagation 論点）。DB row 削除の前に upstream の
  * revoke endpoint を best-effort で叩く（失敗しても unlink 自体は完了させる）。
  *
- * client の Better Auth SDK 経由（`unlinkAccount({ providerId })`）は DB row 削除
+ * client の Better Auth SDK 経由（`unlinkAccount({ accountId })`）は DB row 削除
  * だけを行うため、revoke を絡めるにはこの Server Action 経由に切り替える必要がある。
  */
 export async function unlinkAccountAction(
@@ -86,13 +86,21 @@ export async function unlinkAccountAction(
     return createMutationError("対応していない連携プロバイダーです");
   }
 
+  // Better Auth 1.7: account セレクタは local Account.id。listUserAccounts の
+  // accountId は provider-side sub なので、渡すのは必ず account.id。
+  const requestHeaders = await headers();
+  const accounts = await customerAuth.api.listUserAccounts({
+    headers: requestHeaders,
+  });
+  const account = accounts.find((linked) => linked.providerId === providerId);
+  if (!account) return createMutationError("連携が見つかりません");
+
   // 1) upstream revoke: getAccessToken は Better Auth 側で復号（`encryptOAuthTokens`）
   //    + 期限切れ auto-refresh を行うため、素の access_token が得られる。失敗しても
   //    DB unlink を止めないよう try/catch で握りつぶす（logError で MEDIUM を残す）。
   try {
-    const requestHeaders = await headers();
     const tokenResult = await customerAuth.api.getAccessToken({
-      body: { providerId, userId: session.user.id },
+      body: { accountId: account.id, userId: session.user.id },
       headers: requestHeaders,
     });
     const accessToken = tokenResult?.accessToken;
@@ -115,8 +123,8 @@ export async function unlinkAccountAction(
   //    `allowUnlinkingAll` 未有効）を通す。失敗時は MutationError を返す。
   try {
     await customerAuth.api.unlinkAccount({
-      body: { providerId },
-      headers: await headers(),
+      body: { accountId: account.id },
+      headers: requestHeaders,
     });
 
     // SEC-MYPAGE-02 系: OAuth 連携解除は資格情報の状態変更にあたるため、

@@ -511,6 +511,7 @@ model Account {
   userId                String    @map("user_id") @db.Uuid
   accountId             String    @map("account_id") @db.Text // Better Auth: ユーザーID or プロバイダーのアカウントID
   providerId            String    @map("provider_id") @db.Text // Better Auth: "credential" or "google" etc.
+  issuer                String    @db.VarChar(255) // Better Auth 1.7: trusted issuer or local:credential
   accessToken           String?   @map("access_token") @db.Text
   refreshToken          String?   @map("refresh_token") @db.Text
   idToken               String?   @map("id_token") @db.Text
@@ -523,6 +524,7 @@ model Account {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([issuer, accountId])
   @@index([userId])
   @@map("accounts")
 }

@@ -616,6 +616,10 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
     254,
     "Better Auth / Google IAP が渡す。RFC 5321 の 254 を超えない",
   ),
+  "Account.issuer": generated(
+    255,
+    "Better Auth 1.7 が書く trusted issuer / local:credential。公式例が VARCHAR(255)",
+  ),
   "Location.postalCode": validated({
     module: `${SHARED}/location`,
     exportName: "locationFormSchema",

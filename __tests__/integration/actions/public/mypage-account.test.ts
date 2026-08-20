@@ -110,6 +110,13 @@ const mockUnlinkAccountApi = mock(() => Promise.resolve(undefined));
 const mockGetAccessToken = mock((): Promise<{ accessToken: string } | null> =>
   Promise.resolve({ accessToken: "test-access-token" }),
 );
+const mockListUserAccounts = mock(
+  (): Promise<ReadonlyArray<{ id: string; providerId: string }>> =>
+    Promise.resolve([
+      { id: "acct-google-001", providerId: "google" },
+      { id: "acct-line-001", providerId: "line" },
+    ]),
+);
 const mockGetSession = mock(
   (): Promise<{ user: { id: string; name: string } } | null> =>
     Promise.resolve({
@@ -124,6 +131,7 @@ mock.module("@/shared/lib/customer-auth", () => ({
       deleteUser: mockDeleteUser,
       unlinkAccount: mockUnlinkAccountApi,
       getAccessToken: mockGetAccessToken,
+      listUserAccounts: mockListUserAccounts,
     },
   },
   getCurrentCustomerUser: mock(() => Promise.resolve(null)),
@@ -319,6 +327,7 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
     mockCheckActionRateLimit.mockClear();
     mockUnlinkAccountApi.mockClear();
     mockGetAccessToken.mockClear();
+    mockListUserAccounts.mockClear();
     mockRevokeOAuthGrantForProvider.mockClear();
     mockCreateAuditLogRecord.mockClear();
 
@@ -332,6 +341,12 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
     );
     mockGetAccessToken.mockImplementation(() =>
       Promise.resolve({ accessToken: "test-access-token" }),
+    );
+    mockListUserAccounts.mockImplementation(() =>
+      Promise.resolve([
+        { id: "acct-google-001", providerId: "google" },
+        { id: "acct-line-001", providerId: "line" },
+      ]),
     );
     mockUnlinkAccountApi.mockImplementation(() => Promise.resolve(undefined));
     mockRevokeOAuthGrantForProvider.mockImplementation(() =>
@@ -352,10 +367,15 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
         "google",
         "test-access-token",
       );
+      expect(mockGetAccessToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { accountId: "acct-google-001", userId: "user-001" },
+        }),
+      );
       expect(mockUnlinkAccountApi).toHaveBeenCalledTimes(1);
       expect(mockUnlinkAccountApi).toHaveBeenCalledWith(
         expect.objectContaining({
-          body: { providerId: "google" },
+          body: { accountId: "acct-google-001" },
         }),
       );
     });
@@ -370,6 +390,16 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
       expect(mockRevokeOAuthGrantForProvider).toHaveBeenCalledWith(
         "line",
         "test-access-token",
+      );
+      expect(mockGetAccessToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { accountId: "acct-line-001", userId: "user-001" },
+        }),
+      );
+      expect(mockUnlinkAccountApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { accountId: "acct-line-001" },
+        }),
       );
     });
 
@@ -514,6 +544,23 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
 
       expectErrorResult(result);
       expect(result.error).toBe("対応していない連携プロバイダーです");
+      expect(mockListUserAccounts).not.toHaveBeenCalled();
+      expect(mockUnlinkAccountApi).not.toHaveBeenCalled();
+    });
+
+    test("対象連携が list に無いときは MutationError を返す", async () => {
+      mockListUserAccounts.mockImplementation(() =>
+        Promise.resolve([{ id: "acct-line-001", providerId: "line" }]),
+      );
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      expectErrorResult(result);
+      expect(result.error).toBe("連携が見つかりません");
+      expect(mockGetAccessToken).not.toHaveBeenCalled();
       expect(mockUnlinkAccountApi).not.toHaveBeenCalled();
     });
 
