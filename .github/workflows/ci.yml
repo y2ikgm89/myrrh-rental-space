@@ -504,12 +504,10 @@ jobs:
     # main への push では実行しない (single-env 運用のため staging preflight は
     # 存在しない — 参照: docs/adr/0001-single-env-terraform.md)。
     #
-    # **本番デプロイ直後に走る検証は Cloud Run の startup / liveness probe だけ。**
-    # 叩き先は /api/live で、これは外部依存を持たない liveness なので
-    # 「プロセスが起動した」ことしか証明しない (terraform/cloud_run_public.tf,
-    # terraform/cloud_run_admin.tf)。公開ページの描画や DB 到達性を確認する
-    # post-deploy smoke は存在しない。ここに「デプロイ後に smoke が拾う」を
-    # 前提とした判断を積まないこと。
+    # **本番デプロイ直後の自動検証**は Cloud Run の /api/live probe に加え、
+    # `deploy-production.yml` の `post-deploy-smoke` が公開 `/` `/spaces` と
+    # admin IAP を外から叩く。ここ (nightly E2E) はその代替ではない。
+    # 読み方: docs/runbooks/post-deploy-verification.md
     if: |
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)

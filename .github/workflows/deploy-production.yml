@@ -381,6 +381,81 @@ jobs:
             --config=cloudbuild.yaml \
             --substitutions="${SUBSTITUTIONS}"
 
+  # デプロイ後の公開面 / IAP 到達性。Cloud Run の /api/live probe は
+  # 「プロセスが起動した」ことしか見ない。ここは Cloudflare 経由の公開 URL と
+  # admin IAP を外から叩く。失敗しても revision は既に出ている — workflow を
+  # 赤にして検証 NG を明示する（自動 rollback はしない）。
+  #
+  # 読み方: docs/runbooks/post-deploy-verification.md
+  post-deploy-smoke:
+    name: Post-deploy smoke
+    needs: deploy
+    if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe public pages and admin IAP
+        env:
+          PUBLIC_ORIGIN: ${{ env.PUBLIC_DOMAIN }}
+          ADMIN_ORIGIN: ${{ env.ADMIN_DOMAIN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 新 revision が CF / Cloud Run に載るまでの短い窓。curl 失敗 (000) だけ
+          # 数回待つ。HTTP 本体が期待と違うときは即 fail（誤った 200 待ちはしない）。
+          curl_headers() {
+            local url="$1"
+            local headers="$2"
+            local attempt=1
+            local code="000"
+            while [ "$attempt" -le 6 ]; do
+              code="$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              if [ "$code" != "000" ]; then
+                printf '%s' "$code"
+                return 0
+              fi
+              sleep 10
+              attempt=$((attempt + 1))
+            done
+            printf '%s' "$code"
+          }
+
+          live_headers="$(mktemp)"
+          live_code="$(curl_headers "${PUBLIC_ORIGIN}/api/live" "$live_headers")"
+          if [ "$live_code" != "200" ]; then
+            echo "::error::${PUBLIC_ORIGIN}/api/live は 200 を期待。得たのは $live_code"
+            cat "$live_headers"
+            exit 1
+          fi
+          echo "ok ${PUBLIC_ORIGIN}/api/live $live_code"
+
+          for path in "/" "/spaces"; do
+            headers="$(mktemp)"
+            code="$(curl_headers "${PUBLIC_ORIGIN}${path}" "$headers")"
+            if [ "$code" != "200" ]; then
+              echo "::error::${PUBLIC_ORIGIN}${path} は 200 を期待。得たのは $code"
+              cat "$headers"
+              exit 1
+            fi
+            if ! grep -qiE '^cf-cache-status:' "$headers"; then
+              echo "::error::${PUBLIC_ORIGIN}${path} に cf-cache-status が無い（Cloudflare 経由ではない）"
+              cat "$headers"
+              exit 1
+            fi
+            echo "ok ${PUBLIC_ORIGIN}${path} $code $(grep -iE '^cf-cache-status:' "$headers" | tr -d '\r')"
+          done
+
+          admin_headers="$(mktemp)"
+          # IAP は未認証を 302（Accounts へ）または 401 にする。リダイレクトは追わない。
+          admin_code="$(curl_headers "${ADMIN_ORIGIN}/" "$admin_headers")"
+          if [ "$admin_code" != "302" ] && [ "$admin_code" != "401" ]; then
+            echo "::error::${ADMIN_ORIGIN}/ は IAP で 302 または 401 を期待。得たのは $admin_code"
+            cat "$admin_headers"
+            exit 1
+          fi
+          echo "ok ${ADMIN_ORIGIN}/ $admin_code (IAP)"
+
   # 手動デプロイの結果を **人が見える場所へ出す** 唯一の経路。
   #
   # 旧実装は terraform-apply job の中の step (`Open apply failure issue`) で、
@@ -407,7 +482,7 @@ jobs:
     name: Deploy result notice
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [terraform-apply, deploy]
+    needs: [terraform-apply, deploy, post-deploy-smoke]
     # `always()` が無いと **緑の run で job ごと skip され、閉じる経路が消える**。
     #
     # repository / ref ガードは前段 job と同一にする。ここだけ緩めると、main
@@ -461,7 +536,11 @@ jobs:
               "- commit: \`$COMMIT_SHA\`" \
               "- 失敗した job: $failed" \
               "" \
-              "失敗している間、Cloud Run の新 revision は出ません（build / migrate も走らない）。" \
+              "失敗した job を見て切り分けること:" \
+              "" \
+              "- terraform-apply / deploy の失敗: 新 revision は出ていない（build / migrate も走らない）" \
+              "- post-deploy-smoke の失敗: デプロイは済んでいる。公開面または IAP の検証が NG" \
+              "  （読み方: docs/runbooks/post-deploy-verification.md）" \
               "" \
               "1. 上の run の log で原因を特定する" \
               "2. 修正 PR を main へ merge する" \

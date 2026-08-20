@@ -530,6 +530,25 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain("_BREAKING_MIGRATION_DEPLOY=true");
     expect(runbook).toContain("gcloud run services update SERVICE --scaling=0");
   });
+
+  test("runs post-deploy smoke against public pages and admin IAP after deploy", () => {
+    expect(workflow).toContain("post-deploy-smoke:");
+    expect(workflow).toContain("needs: deploy");
+    expect(workflow).toContain("PUBLIC_ORIGIN: ${{ env.PUBLIC_DOMAIN }}");
+    expect(workflow).toContain("ADMIN_ORIGIN: ${{ env.ADMIN_DOMAIN }}");
+    expect(workflow).toContain('"${PUBLIC_ORIGIN}/api/live"');
+    expect(workflow).toContain('for path in "/" "/spaces"');
+    expect(workflow).toContain("cf-cache-status");
+    expect(workflow).toContain('"${ADMIN_ORIGIN}/"');
+    expect(workflow).toContain('"$admin_code" != "302"');
+    expect(workflow).toContain('"$admin_code" != "401"');
+    expect(workflow).toContain(
+      "needs: [terraform-apply, deploy, post-deploy-smoke]",
+    );
+    expect(workflow).toContain(
+      "post-deploy-smoke の失敗: デプロイは済んでいる",
+    );
+  });
 });
 
 describe("Main Terraform Health gate (abolished)", () => {
