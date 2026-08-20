@@ -100,6 +100,10 @@ const mockSendCalendarSyncRejectionEmail = mock<
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
+const mockRecordConnectionFailure = mock<(...args: unknown[]) => Promise<void>>(
+  () => Promise.resolve(),
+);
+
 // -----------------------------------------------------------------------
 // モジュールモック
 // -----------------------------------------------------------------------
@@ -154,6 +158,14 @@ mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
     REFUNDED: "REFUNDED",
     FAILED: "FAILED",
   },
+  IntegrationKey: {
+    GOOGLE_CALENDAR: "GOOGLE_CALENDAR",
+  },
+}));
+
+mock.module("@/shared/domain/settings/connection-health", () => ({
+  recordConnectionFailure: (...args: unknown[]) =>
+    mockRecordConnectionFailure(...args),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -196,6 +208,8 @@ describe("syncFromCalendar — sync token 保存契約", () => {
     mockApplyCancellationSideEffects.mockReset();
     mockApplyReservationEditSideEffects.mockReset();
     mockLogError.mockReset();
+    mockRecordConnectionFailure.mockReset();
+    mockRecordConnectionFailure.mockResolvedValue();
 
     // デフォルト: 直前同期なし・2way 有効・前回 token あり
     mockGetCalendarSyncRuntimeState.mockResolvedValue({
@@ -255,6 +269,41 @@ describe("syncFromCalendar — sync token 保存契約", () => {
     expect(result.errors.length).toBeGreaterThan(0);
     // エラーがある場合はトークンを保存しない
     expect(mockSaveCalendarSyncToken).not.toHaveBeenCalled();
+  });
+
+  test("per-event 失敗時は recordConnectionFailure を呼ぶ", async () => {
+    mockFetchCalendarChanges.mockResolvedValue({
+      success: true,
+      changes: [{ eventId: "evt-throws", deleted: true }],
+      newSyncToken: "sync-token-new",
+    });
+    mockGetReservationByCalendarEventId.mockResolvedValue({
+      id: "res-1",
+      status: "CONFIRMED",
+      startTime: new Date("2027-01-01T09:00:00Z"),
+      endTime: new Date("2027-01-01T11:00:00Z"),
+      notes: null,
+      spaceId: "space-1",
+      space: { name: "テストスペース" },
+      customer: {
+        lastName: "山田",
+        firstName: "太郎",
+        email: "test@example.com",
+      },
+      guestEmail: null,
+    });
+    mockCancelReservationFromCalendar.mockImplementation(() => {
+      throw new Error("DB connection failed");
+    });
+
+    const result = await syncFromCalendar();
+
+    expect(result.success).toBe(false);
+    expect(mockRecordConnectionFailure).toHaveBeenCalledTimes(1);
+    expect(mockRecordConnectionFailure).toHaveBeenCalledWith(
+      "GOOGLE_CALENDAR",
+      expect.any(Error),
+    );
   });
 
   test("fetchCalendarChanges 自体が success:false の場合は saveCalendarSyncToken を呼ばない", async () => {
@@ -341,6 +390,8 @@ describe("syncFromCalendar — GCal 削除検知 → applyCancellationSideEffect
     mockCancelReservationFromCalendar.mockReset();
     mockApplyCancellationSideEffects.mockReset();
     mockLogError.mockReset();
+    mockRecordConnectionFailure.mockReset();
+    mockRecordConnectionFailure.mockResolvedValue();
 
     mockGetCalendarSyncRuntimeState.mockResolvedValue({
       lastSyncedAt: null,
@@ -416,6 +467,8 @@ describe("syncFromCalendar — 決済確定/保留中の予約は時間変更を
     mockApplyReservationEditSideEffects.mockReset();
     mockSendCalendarSyncRejectionEmail.mockReset();
     mockLogError.mockReset();
+    mockRecordConnectionFailure.mockReset();
+    mockRecordConnectionFailure.mockResolvedValue();
 
     mockGetCalendarSyncRuntimeState.mockResolvedValue({
       lastSyncedAt: null,

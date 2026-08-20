@@ -22,12 +22,12 @@ export const smartLockDeviceTypeSchema = z.enum(SmartLockDeviceType);
 export const smartLockDeviceFormSchema = z.object({
   locationId: z.uuid({ error: "拠点を選択してください" }),
   deviceId: z
-    .string()
+    .string({ error: "デバイスID（MACアドレス）を入力してください" })
     .trim()
     .min(1, { error: "デバイスID（MACアドレス）を入力してください" })
     .max(191, { error: "デバイスIDは191文字以内で入力してください" }),
   deviceName: z
-    .string()
+    .string({ error: "デバイス名を入力してください" })
     .trim()
     .min(1, { error: "デバイス名を入力してください" })
     .max(100, { error: "デバイス名は100文字以内で入力してください" }),

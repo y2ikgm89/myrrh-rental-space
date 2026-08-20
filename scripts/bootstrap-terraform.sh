@@ -463,6 +463,9 @@ roles/compute.networkAdmin \
 roles/compute.securityAdmin \
 roles/iap.admin \
 roles/serviceusage.serviceUsageAdmin \
+roles/logging.configWriter \
+roles/monitoring.notificationChannelEditor \
+roles/monitoring.alertPolicyEditor \
 "
 for role in ${BOOTSTRAP_RUNNER_ROLES}; do
   echo "[bootstrap] Granting runner SA ${role}"

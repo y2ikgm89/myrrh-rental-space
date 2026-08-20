@@ -400,6 +400,13 @@ export function GoogleCalendarSection({
                     {formatDateTimeShort(settings.googleCalendarLastTestedAt)}
                   </p>
                 )}
+                {settings.googleCalendarConnectionStatus ===
+                  ConnectionStatus.ERROR &&
+                  settings.googleCalendarLastErrorMessage && (
+                    <p className="text-xs text-destructive">
+                      {settings.googleCalendarLastErrorMessage}
+                    </p>
+                  )}
               </StatusBanner>
             )}
 
