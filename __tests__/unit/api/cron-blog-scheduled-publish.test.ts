@@ -10,6 +10,16 @@ const mockInvalidateSiteWideCacheFromRouteHandler = mock<
   (tags: readonly string[]) => void
 >(() => undefined);
 
+const mockPurgeDetailUrls = mock<
+  (paths: readonly string[]) => Promise<{ success: boolean }>
+>(async () => ({ success: true }));
+
+const mockFirePurgeAsync = mock(
+  async (purge: () => Promise<{ success: boolean }>) => {
+    await purge();
+  },
+);
+
 const mockLogError = mock<() => void>(() => undefined);
 
 const mockAuthorizeCronRequest = mock<() => Promise<Response | null>>(() =>
@@ -47,6 +57,14 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: (
     ...args: Parameters<typeof mockInvalidateSiteWideCacheFromRouteHandler>
   ) => mockInvalidateSiteWideCacheFromRouteHandler(...args),
+}));
+
+mock.module("@/shared/lib/cloudflare", () => ({
+  purgeCloudflareDetailUrls: mockPurgeDetailUrls,
+}));
+
+mock.module("@/shared/lib/cache", () => ({
+  firePurgeAsync: mockFirePurgeAsync,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -107,6 +125,8 @@ describe("GET /api/cron/blog-scheduled-publish", () => {
   beforeEach(() => {
     mockFindRecentlyDueScheduledPostSlugs.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
+    mockPurgeDetailUrls.mockClear();
+    mockFirePurgeAsync.mockClear();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
     mockConnection.mockReset();
@@ -161,6 +181,7 @@ describe("GET /api/cron/blog-scheduled-publish", () => {
     const body = await response.json();
     expect(body).toEqual({ revalidated: 0, slugs: [] });
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
+    expect(mockFirePurgeAsync).not.toHaveBeenCalled();
   });
 
   test("対象あり → POSTS/SIDEBAR_DATA/detail タグをまとめて revalidate する", async () => {
@@ -186,6 +207,21 @@ describe("GET /api/cron/blog-scheduled-publish", () => {
       "posts-post-a",
       "posts-post-b",
     ]);
+  });
+
+  test("対象あり → /feed.xml を URL purge する", async () => {
+    mockFindRecentlyDueScheduledPostSlugs.mockResolvedValue(["post-a"]);
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    expect(mockFirePurgeAsync).toHaveBeenCalledTimes(1);
+    expect(mockFirePurgeAsync).toHaveBeenCalledWith(expect.any(Function), {
+      operation: "purgePostFeed",
+      urls: ["/feed.xml"],
+    });
+    expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
+    expect(mockPurgeDetailUrls).toHaveBeenCalledWith(["/feed.xml"]);
   });
 
   test("findRecentlyDueScheduledPostSlugs が例外をスロー → 500 + logError", async () => {

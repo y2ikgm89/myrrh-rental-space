@@ -23,7 +23,9 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { findRecentlyDueScheduledPostSlugs } from "@/shared/domain/posts/scheduled-publish";
+import { firePurgeAsync } from "@/shared/lib/cache";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import {
@@ -57,6 +59,12 @@ export async function GET(request: Request) {
         CACHE_TAGS.SIDEBAR_DATA,
         ...slugs.map((slug) => getCacheTag.posts.detail(slug)),
       ]);
+      // /feed.xml は Cache-Tag を emit しない。CRUD は invalidatePostCollectionCaches
+      // で URL purge しているが、予約公開 cron は tag revalidate のみだった。
+      void firePurgeAsync(() => purgeCloudflareDetailUrls(["/feed.xml"]), {
+        operation: "purgePostFeed",
+        urls: ["/feed.xml"],
+      });
     }
 
     return jsonSuccess({ revalidated: slugs.length, slugs });
