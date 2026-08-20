@@ -442,10 +442,10 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
         idempotencyKey?: string;
       };
       expect(opts1.idempotencyKey).toBe(
-        `reservation-refund-${reservationId}-2000`,
+        `reservation-refund-${reservationId}-2000-0`,
       );
       expect(opts2.idempotencyKey).toBe(
-        `reservation-refund-${reservationId}-5000`,
+        `reservation-refund-${reservationId}-5000-0`,
       );
     } finally {
       await cleanup();
@@ -749,11 +749,12 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       // 説明している正常経路であり、回数を 1 に固定するとこの経路で flaky に落ちる。
       //
       // Stripe 側の実際の不変条件は「二重返金が発生しないこと」= idempotency key の
-      // 一致。key は `reservation-refund-<id>-<newCumulative>`
+      // 一致。key は `reservation-refund-<id>-<newCumulative>-<excludedAttemptCount>`
       // (payment-commands.ts の refundReservationPaymentCommand) で、Phase A を
       // 通過できるのは cumulativeSoFar=0 を読んだ tx のみ (3000 が書込済みなら
       // 残額 2000 < 要求 3000 で resolveRefundAmount が VALIDATION reject し
-      // Stripe に到達しない)。よって到達した呼出の key は必ず `...-3000` で一致し、
+      // Stripe に到達しない)。failed/canceled 行が無い初回は除外件数 0。
+      // よって到達した呼出の key は必ず `...-3000-0` で一致し、
       // Stripe 側の実返金は 1 件に収束する。
       expect(mockRefundsCreate).toHaveBeenCalled();
       const idempotencyKeys = mockRefundsCreate.mock.calls.map(
@@ -761,7 +762,7 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
           (call[1] as { idempotencyKey?: string } | undefined)?.idempotencyKey,
       );
       expect([...new Set(idempotencyKeys)]).toEqual([
-        `reservation-refund-${reservationId}-3000`,
+        `reservation-refund-${reservationId}-3000-0`,
       ]);
     } finally {
       await cleanup();

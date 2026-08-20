@@ -424,3 +424,22 @@ export const REFUND_AGGREGATE_EXCLUDED_STATUSES = [
   "failed",
   "canceled",
 ] as const;
+
+/**
+ * Stripe refunds.create の idempotency key。
+ *
+ * `newCumulative` だけだと、failed/canceled が集計から外れたあと同額再試行が
+ * 同一キーになり、Stripe が初回の失敗応答を最低 24h replay する。
+ * 除外件数を試行 discriminator にする。同一試行のネットワーク再送は件数が
+ * 増えないのでキーは据え置き。二重クリックは advisory lock + pending 集計が防ぐ。
+ *
+ * @see https://docs.stripe.com/api/idempotent_requests
+ */
+export function buildPaymentRefundIdempotencyKey(input: {
+  readonly prefix: "reservation-refund" | "event-registration-refund";
+  readonly entityId: string;
+  readonly newCumulative: number;
+  readonly excludedAttemptCount: number;
+}): string {
+  return `${input.prefix}-${input.entityId}-${input.newCumulative}-${input.excludedAttemptCount}`;
+}

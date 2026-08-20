@@ -150,6 +150,9 @@ const mockTxRefundAggregate = mock<
     args: Record<string, unknown>,
   ) => Promise<{ _sum: { amount: number | null } }>
 >(() => Promise.resolve({ _sum: { amount: null } }));
+const mockTxRefundCount = mock<
+  (args: Record<string, unknown>) => Promise<number>
+>(() => Promise.resolve(0));
 const mockTxRefundCreate = mock<
   (args: { data: Record<string, unknown> }) => Promise<unknown>
 >(() => Promise.resolve({ id: "refund-row-1" }));
@@ -163,6 +166,7 @@ const mockRefundTx = {
   },
   refund: {
     aggregate: mockTxRefundAggregate,
+    count: mockTxRefundCount,
     create: mockTxRefundCreate,
   },
 };
@@ -837,11 +841,13 @@ describe("reservations/payment-commands", () => {
       mockTxReservationFindUnique.mockReset();
       mockTxReservationUpdateMany.mockReset();
       mockTxRefundAggregate.mockReset();
+      mockTxRefundCount.mockReset();
       mockTxRefundCreate.mockReset();
       mockTransaction.mockClear();
 
       mockTxReservationUpdateMany.mockResolvedValue({ count: 1 });
       mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockTxRefundCount.mockResolvedValue(0);
       mockTxRefundCreate.mockResolvedValue({ id: "refund-row-1" });
     });
 
@@ -894,8 +900,44 @@ describe("reservations/payment-commands", () => {
       });
 
       expect(mockRefundCreate).toHaveBeenCalledWith(expect.any(Object), {
-        idempotencyKey: `reservation-refund-${RESERVATION_ID}-3000`,
+        idempotencyKey: `reservation-refund-${RESERVATION_ID}-3000-0`,
       });
+    });
+
+    test("refundReservationPaymentCommand: failed 後の同額再試行は idempotency key が変わる", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        id: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        totalPriceWithTax: 5000,
+      });
+      mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      mockTxRefundCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      mockRefundCreate
+        .mockResolvedValueOnce({
+          id: "re_test_failed",
+          status: "failed",
+        })
+        .mockResolvedValueOnce({
+          id: "re_test_retry",
+          status: "succeeded",
+        });
+
+      await refundReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        amount: 1000,
+      });
+      await refundReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        amount: 1000,
+      });
+
+      const firstKey = mockRefundCreate.mock.calls[0]?.[1]?.["idempotencyKey"];
+      const secondKey = mockRefundCreate.mock.calls[1]?.[1]?.["idempotencyKey"];
+      expect(firstKey).not.toBe(secondKey);
     });
 
     test("refundOrphanedStripePaymentForCancelledReservation: status=pending なら reservation.updateMany 未呼出", async () => {

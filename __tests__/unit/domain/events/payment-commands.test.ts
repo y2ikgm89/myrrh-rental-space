@@ -120,6 +120,9 @@ const mockTxRefundAggregate = mock<
     args: Record<string, unknown>,
   ) => Promise<{ _sum: { amount: number | null } }>
 >(() => Promise.resolve({ _sum: { amount: null } }));
+const mockTxRefundCount = mock<
+  (args: Record<string, unknown>) => Promise<number>
+>(() => Promise.resolve(0));
 const mockTxRefundCreate = mock<
   (args: { data: Record<string, unknown> }) => Promise<unknown>
 >(() => Promise.resolve({ id: "refund-row-1" }));
@@ -133,6 +136,7 @@ const mockRefundTx = {
   },
   refund: {
     aggregate: mockTxRefundAggregate,
+    count: mockTxRefundCount,
     create: mockTxRefundCreate,
   },
 };
@@ -976,12 +980,14 @@ describe("events/payment-commands", () => {
       mockTxEventRegistrationFindFirst.mockReset();
       mockTxEventRegistrationUpdateMany.mockReset();
       mockTxRefundAggregate.mockReset();
+      mockTxRefundCount.mockReset();
       mockTxRefundCreate.mockReset();
       mockTransaction.mockClear();
       mockRefundsCreate.mockReset();
 
       mockTxEventRegistrationUpdateMany.mockResolvedValue({ count: 1 });
       mockTxRefundAggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockTxRefundCount.mockResolvedValue(0);
       mockTxRefundCreate.mockResolvedValue({ id: "refund-row-1" });
       mockRefundsCreate.mockResolvedValue({
         id: "re_test_pending",
@@ -1032,7 +1038,7 @@ describe("events/payment-commands", () => {
       });
 
       expect(mockRefundsCreate).toHaveBeenCalledWith(expect.any(Object), {
-        idempotencyKey: `event-registration-refund-${REGISTRATION_ID}-3000`,
+        idempotencyKey: `event-registration-refund-${REGISTRATION_ID}-3000-0`,
       });
     });
 
