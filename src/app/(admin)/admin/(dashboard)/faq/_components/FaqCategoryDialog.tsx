@@ -272,6 +272,7 @@ function FaqCategoryFormBody({
     <form {...getFormProps(form)} action={formAction} className="space-y-4">
       <HiddenControlInput field={fields.isActive} control={isActiveControl} />
       <HiddenControlInput field={fields.icon} control={iconControl} />
+      <HiddenControlInput field={fields.slug} control={slugControl} />
 
       <div className="space-y-2">
         <Label htmlFor={fields.name.id}>カテゴリ名 *</Label>
@@ -298,7 +299,6 @@ function FaqCategoryFormBody({
         <Label htmlFor={fields.slug.id}>スラッグ *</Label>
         <Input
           id={fields.slug.id}
-          name={fields.slug.name}
           value={slugControl.value ?? ""}
           onChange={(e) => slugControl.change(e.target.value)}
           onBlur={slugControl.blur}

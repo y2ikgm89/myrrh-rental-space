@@ -40,6 +40,30 @@ export function hasBannedLegacyControlImport(source: string): boolean {
   );
 }
 
+/**
+ * `useFieldControl(fields.X)` なのに visible 要素が `name={fields.X.name}` を
+ * 持つか。hidden carrier 無しだと `change()` が Conform に届かない。
+ */
+export function visibleNamedFieldControls(source: string): string[] {
+  const controlled = new Set<string>();
+  for (const match of source.matchAll(
+    /useFieldControl\(\s*fields\.([A-Za-z_][\w]*)\s*\)/gu,
+  )) {
+    const name = match[1];
+    if (name) controlled.add(name);
+  }
+
+  const namedVisible = new Set<string>();
+  for (const match of source.matchAll(
+    /name=\{\s*fields\.([A-Za-z_][\w]*)\.name\s*\}/gu,
+  )) {
+    const name = match[1];
+    if (name) namedVisible.add(name);
+  }
+
+  return [...controlled].filter((name) => namedVisible.has(name)).sort();
+}
+
 /** `@conform-to/react` から `useControl` / `unstable_useControl` を直接 import しているか。 */
 export function hasDirectUseControlImport(source: string): boolean {
   return conformReactImportClauses(source).some(
@@ -97,6 +121,20 @@ describe("conform useControl wrapper", () => {
     expect(
       hasDirectUseControlImport('import { useForm } from "@conform-to/react";'),
     ).toBe(false);
+
+    expect(
+      visibleNamedFieldControls(
+        `const questionControl = useFieldControl(fields.question);
+<Input name={fields.question.name} />`,
+      ),
+    ).toEqual(["question"]);
+    expect(
+      visibleNamedFieldControls(
+        `const questionControl = useFieldControl(fields.question);
+<HiddenControlInput field={fields.question} control={questionControl} />
+<Input id={fields.question.id} value={questionControl.value ?? ""} />`,
+      ),
+    ).toEqual([]);
   });
 
   test("src は useInputControl / useTypedInputControl を import しない", () => {
@@ -126,5 +164,17 @@ describe("conform useControl wrapper", () => {
     expect(hasDirectUseControlImport(readFileSync(WRAPPER, "utf-8"))).toBe(
       true,
     );
+  });
+
+  test("useFieldControl の visible 要素は name を持たない", () => {
+    const files = collectSourceFiles(SRC_ROOT);
+    expect(files.length).toBeGreaterThan(300);
+
+    const offenders = files.flatMap((file) => {
+      const fields = visibleNamedFieldControls(readFileSync(file, "utf-8"));
+      if (fields.length === 0) return [];
+      return [`${relative(ROOT, file)}: ${fields.join(", ")}`];
+    });
+    expect(offenders).toEqual([]);
   });
 });

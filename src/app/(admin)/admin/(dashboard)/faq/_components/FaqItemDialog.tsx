@@ -277,6 +277,8 @@ function FaqItemFormBody({
         name={fields.categoryId.name}
         value={defaultValue.categoryId}
       />
+      <HiddenControlInput field={fields.question} control={questionControl} />
+      <HiddenControlInput field={fields.answer} control={answerControl} />
       <HiddenControlInput
         field={fields.isPublished}
         control={isPublishedControl}
@@ -293,7 +295,6 @@ function FaqItemFormBody({
         <Label htmlFor={fields.question.id}>質問 *</Label>
         <Input
           id={fields.question.id}
-          name={fields.question.name}
           type="text"
           value={questionControl.value ?? ""}
           onChange={(e) => questionControl.change(e.target.value)}
@@ -316,7 +317,6 @@ function FaqItemFormBody({
         <Label htmlFor={fields.answer.id}>回答 *</Label>
         <Textarea
           id={fields.answer.id}
-          name={fields.answer.name}
           value={answerControl.value ?? ""}
           onChange={(e) => answerControl.change(e.target.value)}
           onBlur={answerControl.blur}
