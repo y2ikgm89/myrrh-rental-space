@@ -44,7 +44,7 @@ const TARGET_KEY = IntegrationKey.GOOGLE_CALENDAR;
 const CONCURRENCY = 5;
 
 type HealthSnapshot = {
-  status: string | null;
+  status: ConnectionStatus | null;
   consecutiveFailures: number;
   lastSuccessAt: Date | null;
   lastFailureAt: Date | null;
