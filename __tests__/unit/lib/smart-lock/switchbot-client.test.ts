@@ -180,7 +180,10 @@ describe("switchbot-client", () => {
       await getDeviceList(CREDENTIALS);
 
       const healthResults = notifyConnectionApiResultMock.mock.calls.map(
-        (call) => call[1] as { success: boolean },
+        (call) => {
+          const [, result] = call as unknown as [string, { success: boolean }];
+          return result;
+        },
       );
       expect(healthResults.some((result) => result.success)).toBe(false);
       expect(healthResults.some((result) => !result.success)).toBe(true);
