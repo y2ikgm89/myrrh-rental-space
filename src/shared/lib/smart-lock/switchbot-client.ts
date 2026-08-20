@@ -468,14 +468,14 @@ export async function queryWebhookUrls(
   if (!result.ok) {
     return result;
   }
-  if (!isRecord(result.body) || !isStringArray(result.body.urls)) {
+  if (!isRecord(result.body) || !isStringArray(result.body["urls"])) {
     return {
       ok: false,
       statusCode: 0,
       message: "Webhook URL 一覧の形式が不正です",
     };
   }
-  return { ok: true, body: { urls: result.body.urls } };
+  return { ok: true, body: { urls: result.body["urls"] } };
 }
 
 function isStringArray(value: unknown): value is string[] {
