@@ -106,6 +106,18 @@ describe("POST|GET /api/email/unsubscribe", () => {
     expect(html).toContain("配信を停止する");
   });
 
+  test("GET: x-nonce があるとき <style> に nonce を付ける", async () => {
+    const response = await GET(
+      new Request(
+        "https://example.com/api/email/unsubscribe?token=valid-token",
+        { headers: { "x-nonce": "test-nonce-value" } },
+      ),
+    );
+    const html = await response.text();
+
+    expect(html).toContain('<style nonce="test-nonce-value">');
+  });
+
   test("GET: 無効トークンは無効リンク文言の HTML（form を出さない）", () => {
     verifyImpl = () => null;
     const response = GET(

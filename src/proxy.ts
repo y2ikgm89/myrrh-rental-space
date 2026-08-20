@@ -139,10 +139,18 @@ function buildCsp(
   //   許可する非対称な権限で、文字列 eval / new Function / setTimeout(string) は
   //   引き続き遮断される（'unsafe-eval' とは別物。'unsafe-eval' を本番に置かない
   //   設計 SSoT を侵害しない）。Chrome 97+ / Firefox 102+ / Safari 16+ で実装済。
-  // - style-src（= <style> 要素 / stylesheet）: nonce を維持し、nonce API を持たない
-  //   `sonner` のぶんだけ厳密な内容一致 hash を足す（SSoT: inline-style-hashes.ts）。
-  //   Radix の scroll lock は実行時計測値を含むため hash 化できないので、
-  //   `RegisterStyleNonce` が `get-nonce` の `setNonce()` に nonce を渡して通す。
+  // - style-src（= <style> 要素 / stylesheet）:
+  //   本番は nonce +、nonce API を持たない `sonner` のぶんだけ厳密な内容一致 hash
+  //   （SSoT: inline-style-hashes.ts）。Radix の scroll lock は実行時計測値を含むため
+  //   hash 化できないので、`RegisterStyleNonce` が `get-nonce` の `setNonce()` に
+  //   nonce を渡して通す。
+  //   **dev だけ `'unsafe-inline'`。** Next.js 16 の next-devtools（dev overlay）は
+  //   nonce を受け取る API が無く、style-loader で `<style>` を注入する。上流
+  //   （vercel/next.js#86188 / #87343 / discussion #83440）は未解決。公式 CSP
+  //   guide「Development vs Production Considerations」がこの分岐を推奨する。
+  //   CSP3 では nonce/hash と `'unsafe-inline'` が同居すると後者が**無視される**
+  //   ため、dev 枝に nonce/hash を残してはいけない。e2e の CSP gate は
+  //   `next start`（本番 CSP）で走るので、dev 緩和は検知力を落とさない。
   // - style-src-attr（= style 属性）: **'unsafe-inline'**。CSP3 では style 属性に
   //   nonce を付けられず、許可手段は 'unsafe-inline' か 'unsafe-hashes' + hash の 2 つしかない
   //   （W3C CSP3 §8.3 / MDN style-src-attr）。かつて next/image の 3 文字列だけを
@@ -167,7 +175,7 @@ function buildCsp(
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
-    style-src 'self' 'nonce-${nonce}' ${STYLE_ELEMENT_HASHES.join(" ")};
+    style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}' ${STYLE_ELEMENT_HASHES.join(" ")}`};
     style-src-attr 'unsafe-inline';
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';

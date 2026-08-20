@@ -42,9 +42,11 @@ import { $setBlocksType } from "@lexical/selection";
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { IconLink } from "@tabler/icons-react";
+import { getNonce } from "get-nonce";
 import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
+import { buildPrintPreviewHtml } from "@/admin/lib/build-print-preview-html";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { FontSizePlugin } from "./FontSizePlugin";
 import { HighlightPlugin } from "./HighlightPlugin";
@@ -305,10 +307,7 @@ export function ToolbarPlugin({
   const handleOpenPrintPreview = () => {
     editor.read(() => {
       const html = $generateHtmlFromNodes(editor);
-      const fullHtml =
-        `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>印刷プレビュー</title>` +
-        `<style>body{font-family:sans-serif;max-width:21cm;margin:2cm auto;padding:0 2.5cm}` +
-        `@media print{body{margin:0}}</style></head><body>${html}</body></html>`;
+      const fullHtml = buildPrintPreviewHtml(html, getNonce());
       const blob = new Blob([fullHtml], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       const printWindow = openExternalTab(url);
