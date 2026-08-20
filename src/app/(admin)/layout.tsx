@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 import { StyleNonceRegistrar } from "@/shared/lib/csp/style-nonce-registrar";
+import { ZodJaRegistrar } from "@/shared/lib/validations/zod-ja-registrar";
 import "./_styles/admin.css";
 
 // metadata は generateMetadata で runtime 評価する。`export const metadata` で
@@ -80,6 +81,7 @@ export default async function AdminRootLayout({
           <Suspense fallback={null}>
             <StyleNonceRegistrar />
           </Suspense>
+          <ZodJaRegistrar />
           {children}
         </body>
       </html>
