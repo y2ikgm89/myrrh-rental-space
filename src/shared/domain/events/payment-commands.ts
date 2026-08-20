@@ -25,6 +25,7 @@ import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/paymen
 import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   acquirePaymentRefundAdvisoryLock,
+  buildPaymentRefundIdempotencyKey,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
   isRefundSettledSuccess,
@@ -883,8 +884,9 @@ export interface RefundEventRegistrationResult {
  * - `paymentStatus` が `PAID` または `PARTIALLY_REFUNDED` の申込のみ返金可能
  * - `amount` 未指定 → 残額全額 (`paidAmount - Σ既 refunds.amount`)
  * - 累積返金額が `paidAmount` に到達したら `REFUNDED`、未満なら `PARTIALLY_REFUNDED`
- * - Stripe idempotency key = `event-registration-refund-{registrationId}-{newCumulative}` で
- *   2 回目以降の部分返金でも unique
+ * - Stripe idempotency key = `event-registration-refund-{registrationId}-{newCumulative}-{excludedAttemptCount}`。
+ *   部分返金は newCumulative で分かれ、failed/canceled 後の同額再試行は除外件数で
+ *   分かれる。同一試行の network retry は件数が増えないのでキーは据え置き。
  *
  * ## 並行制御
  * - Phase A/C: `pg_advisory_xact_lock` で同一申込の refund を直列化 (over-refund 防止)
@@ -966,6 +968,12 @@ export async function refundEventRegistrationPaymentCommand(
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    const excludedAttemptCount = await tx.refund.count({
+      where: {
+        eventRegistrationId: registrationId,
+        status: { in: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
+    });
 
     const resolved = resolveRefundAmount({
       chargeTotal: registration.paidAmount,
@@ -980,7 +988,12 @@ export async function refundEventRegistrationPaymentCommand(
       newCumulative: resolved.newCumulative,
       willBeFullyRefunded: resolved.willBeFullyRefunded,
       paymentIntentId: registration.stripePaymentIntentId,
-      idempotencyKey: `event-registration-refund-${registrationId}-${resolved.newCumulative}`,
+      idempotencyKey: buildPaymentRefundIdempotencyKey({
+        prefix: "event-registration-refund",
+        entityId: registrationId,
+        newCumulative: resolved.newCumulative,
+        excludedAttemptCount,
+      }),
     };
   }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
 

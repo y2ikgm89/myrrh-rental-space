@@ -29,6 +29,7 @@ import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/paymen
 import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   acquirePaymentRefundAdvisoryLock,
+  buildPaymentRefundIdempotencyKey,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
   isRefundSettledSuccess,
@@ -653,9 +654,9 @@ export interface RefundReservationResult {
  * - `paymentStatus` が `PAID` または `PARTIALLY_REFUNDED` の予約のみ返金可能
  * - `amount` 未指定 → 残額全額 (`totalPrice - Σ既 refunds.amount`)
  * - 累積返金額が `totalPrice` (charge 額) に到達したら `REFUNDED`、未満なら `PARTIALLY_REFUNDED`
- * - Stripe idempotency key = `reservation-refund-{reservationId}-{newCumulative}` で
- *   2 回目以降の部分返金でも unique になり、accidental retry (network glitch 等) は
- *   同一 amount + 同一 newCumulative で idempotent (safe)
+ * - Stripe idempotency key = `reservation-refund-{reservationId}-{newCumulative}-{excludedAttemptCount}`。
+ *   部分返金は newCumulative で分かれ、failed/canceled 後の同額再試行は除外件数で
+ *   分かれる。同一試行の network retry は件数が増えないのでキーは据え置き。
  *
  * ## 並行制御
  * - Phase A/C: `pg_advisory_xact_lock` で同一予約の refund を直列化 (over-refund 防止)
@@ -741,6 +742,12 @@ export async function refundReservationPaymentCommand(
       _sum: { amount: true },
     });
     const cumulativeSoFar = aggregate._sum.amount ?? 0;
+    const excludedAttemptCount = await tx.refund.count({
+      where: {
+        reservationId,
+        status: { in: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
+    });
 
     const resolved = resolveRefundAmount({
       chargeTotal: reservation.totalPriceWithTax,
@@ -756,7 +763,12 @@ export async function refundReservationPaymentCommand(
       willBeFullyRefunded: resolved.willBeFullyRefunded,
       paymentIntentId: reservation.stripePaymentIntentId,
       customerId: reservation.customerId,
-      idempotencyKey: `reservation-refund-${reservationId}-${resolved.newCumulative}`,
+      idempotencyKey: buildPaymentRefundIdempotencyKey({
+        prefix: "reservation-refund",
+        entityId: reservationId,
+        newCumulative: resolved.newCumulative,
+        excludedAttemptCount,
+      }),
     };
   }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
 
