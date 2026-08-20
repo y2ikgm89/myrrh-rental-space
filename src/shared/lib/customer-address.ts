@@ -68,30 +68,37 @@ export type CustomerAddressParts = {
   prefecture: string | null;
   city: string | null;
   streetAddress: string | null;
-  building: string | null;
+  building?: string | null;
+  /** `building` の別名（Settings.buildingName 等）。`building` が無いときだけ使う。 */
+  buildingName?: string | null;
+};
+
+export type FormatCustomerAddressOptions = {
+  /** 結合区切り。既定は空白。公開 JSON-LD 等の既存表示は空文字で維持する。 */
+  readonly separator?: string;
 };
 
 /**
  * 構造化住所を表示用の 1 行文字列にフォーマット。
  * 全フィールドが空なら空文字列を返す。
  *
- * 例: `〒150-0001 東京都渋谷区神宮前1-1-1 サンプルビル 2F`
+ * 例: `〒150-0001 東京都 渋谷区 神宮前1-1-1 サンプルビル 2F`
  */
-export function formatCustomerAddress(parts: CustomerAddressParts): string {
+export function formatCustomerAddress(
+  parts: CustomerAddressParts,
+  options?: FormatCustomerAddressOptions,
+): string {
+  const separator = options?.separator ?? " ";
+  const building = parts.building ?? parts.buildingName ?? null;
   const segments: string[] = [];
   if (parts.postalCode) {
     segments.push(`〒${parts.postalCode}`);
   }
-  const locality = [
-    parts.prefecture,
-    parts.city,
-    parts.streetAddress,
-    parts.building,
-  ]
+  const locality = [parts.prefecture, parts.city, parts.streetAddress, building]
     .filter((s): s is string => Boolean(s))
-    .join(" ");
+    .join(separator);
   if (locality) {
     segments.push(locality);
   }
-  return segments.join(" ");
+  return segments.join(separator);
 }

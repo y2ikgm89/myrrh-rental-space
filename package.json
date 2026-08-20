@@ -45,7 +45,7 @@
     "gcp:audit-production-iap": "bun scripts/audit-gcp-production-iap.ts",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "prepare": "lefthook install || true",
+    "prepare": "bun scripts/prepare-lefthook.ts",
     "postinstall": "bun run db:generate"
   },
   "dependencies": {

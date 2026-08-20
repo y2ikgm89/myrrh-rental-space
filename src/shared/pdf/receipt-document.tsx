@@ -12,6 +12,8 @@ import {
 } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 
+import { formatCustomerAddress } from "@/shared/lib/customer-address";
+
 /**
  * 適格請求書 (Receipt) PDF レンダリング用の React PDF ドキュメント。
  *
@@ -215,23 +217,18 @@ function formatJpy(amount: number): string {
   return `¥${amount.toLocaleString("ja-JP")}`;
 }
 
-function joinAddress(issuer: ReceiptDocumentInput["issuer"]): string {
-  const parts = [
-    issuer.postalCode ? `〒${issuer.postalCode}` : null,
-    issuer.prefecture,
-    issuer.city,
-    issuer.streetAddress,
-  ].filter((part): part is string => Boolean(part && part.length > 0));
-  return parts.join(" ");
-}
-
 export function ReceiptDocument({
   data,
 }: {
   readonly data: ReceiptDocumentInput;
 }): ReactElement {
   const taxExcludedAmount = data.amount - data.taxAmount;
-  const address = joinAddress(data.issuer);
+  const address = formatCustomerAddress({
+    postalCode: data.issuer.postalCode,
+    prefecture: data.issuer.prefecture,
+    city: data.issuer.city,
+    streetAddress: data.issuer.streetAddress,
+  });
 
   return (
     <Document>

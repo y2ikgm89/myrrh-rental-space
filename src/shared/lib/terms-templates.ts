@@ -42,6 +42,7 @@
  * そのまま残り、管理者への入力プロンプトとして機能する。
  */
 
+import { formatCustomerAddress } from "@/shared/lib/customer-address";
 import { type TermsTypeValue } from "@/shared/lib/validations/terms";
 
 // =============================================================================
@@ -1310,15 +1311,15 @@ export function getTemplateById(
 // =============================================================================
 
 function buildAddress(info: BusinessInfo): string {
-  const parts = [
-    info.postalCode ? `〒${info.postalCode}` : null,
-    info.prefecture,
-    info.city,
-    info.streetAddress,
-    info.buildingName,
-  ].filter((v): v is string => Boolean(v));
-
-  return parts.length > 0 ? parts.join(" ") : PLACEHOLDER.address;
+  return (
+    formatCustomerAddress({
+      postalCode: info.postalCode,
+      prefecture: info.prefecture,
+      city: info.city,
+      streetAddress: info.streetAddress,
+      buildingName: info.buildingName,
+    }) || PLACEHOLDER.address
+  );
 }
 
 function formatLastUpdatedJa(date: Date): string {

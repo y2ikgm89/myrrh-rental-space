@@ -91,30 +91,6 @@ export async function ensureSettingsStripe() {
   });
 }
 
-export async function ensureSettingsResend() {
-  return prisma.settingsResend.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
-export async function ensureSettingsTurnstile() {
-  return prisma.settingsTurnstile.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
-export async function ensureSettingsGoogleMaps() {
-  return prisma.settingsGoogleMaps.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
 export async function ensureSettingsGoogleCalendar() {
   return prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
@@ -125,22 +101,6 @@ export async function ensureSettingsGoogleCalendar() {
 
 export async function ensureSettingsGoogleBusinessProfile() {
   return prisma.settingsGoogleBusinessProfile.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
-export async function ensureSettingsInstagram() {
-  return prisma.settingsInstagram.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
-export async function ensureSettingsSwitchbot() {
-  return prisma.settingsSwitchbot.upsert({
     where: { id: "singleton" },
     update: {},
     create: { id: "singleton" },

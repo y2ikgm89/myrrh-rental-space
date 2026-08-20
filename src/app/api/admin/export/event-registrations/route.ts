@@ -1,5 +1,4 @@
 import { unstable_rethrow } from "next/navigation";
-import ExcelJS from "exceljs";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -72,6 +71,8 @@ const eventRegistrationExportColumns: CsvColumn<EventRegistrationExportRow>[] =
 async function generateEventRegistrationsWorkbook(
   registrations: EventRegistrationExportRow[],
 ): Promise<Blob> {
+  // CSV 応答では exceljs を載せず、xlsx 分岐だけ遅延 load する。
+  const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Myrrh Rental Space";
   workbook.created = new Date();

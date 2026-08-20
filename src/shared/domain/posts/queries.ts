@@ -328,30 +328,3 @@ export async function getPostTagBySlug(slug: string) {
 
   return tag ? toPlainObject(tag) : null;
 }
-
-export async function getAllPublishedTags() {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.POST_TAGS, CACHE_TAGS.POSTS);
-
-  const tags = await safeFetch({
-    fetch: () =>
-      prisma.postTag.findMany({
-        where: {
-          posts: {
-            some: {
-              post: publicPostsWhere(),
-            },
-          },
-        },
-        select: { id: true, name: true, slug: true },
-        orderBy: { name: "asc" },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getAllPublishedTags",
-  });
-
-  return toPlainArray(tags);
-}

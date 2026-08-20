@@ -12,7 +12,6 @@ import { formatCurrency } from "@/shared/lib/pricing/format";
 import {
   clearReservationCalendarEvent,
   GCAL_DELETE_FAILED_PREFIX,
-  getCalendarSyncRuntimeState,
   getFailedCalendarSyncReservations,
   markReservationCalendarSyncError,
   markReservationCalendarSyncSuccess,
@@ -906,25 +905,4 @@ export async function syncReservationSeriesToCalendar(
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
-}
-
-/**
- * 同期ステータスを取得
- */
-export async function getSyncStatus(): Promise<{
-  enabled: boolean;
-  lastSyncedAt: Date | null;
-  syncMethod: string;
-  webhookActive: boolean;
-  webhookExpiration: Date | null;
-}> {
-  const settings = await getCalendarSyncRuntimeState();
-
-  return {
-    enabled: settings.twoWaySyncEnabled,
-    lastSyncedAt: settings.lastSyncedAt,
-    syncMethod: settings.syncMethod,
-    webhookActive: !!settings.webhookChannelId,
-    webhookExpiration: settings.webhookExpiration,
-  };
 }

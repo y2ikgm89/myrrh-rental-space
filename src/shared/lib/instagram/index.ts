@@ -2,7 +2,7 @@
  * Instagram API Utilities
  *
  * Instagram Graph API / Basic Display API を使用した機能群。
- * トークン管理、フィード取得、oEmbed取得などのユーティリティ。
+ * トークン管理、フィード取得などのユーティリティ。
  *
  * ## 設計方針
  * - `InstagramApiError`（→ `./retry`）で構造化エラーを throw
@@ -79,14 +79,6 @@ const InstagramApiErrorSchema = z.object({
     .optional(),
 });
 
-const InstagramOembedApiResponseSchema = z.object({
-  html: z.string(),
-  width: z.number(),
-  height: z.number().optional(),
-  author_name: z.string().optional(),
-  provider_name: z.string(),
-});
-
 const ExchangeTokenResponseSchema = z.object({
   access_token: z.string(),
   user_id: z.number(),
@@ -121,21 +113,11 @@ export interface InstagramUserInfo {
   mediaCount?: number;
 }
 
-export interface InstagramOembedResponse {
-  html: string;
-  width: number;
-  height?: number;
-  authorName?: string;
-  providerName: string;
-}
-
 // =============================================================================
 // API Base URL
 // =============================================================================
 
 const INSTAGRAM_GRAPH_API_BASE = "https://graph.instagram.com";
-const INSTAGRAM_OEMBED_API =
-  "https://graph.facebook.com/v18.0/instagram_oembed";
 const INSTAGRAM_OAUTH_BASE = "https://api.instagram.com/oauth";
 
 // =============================================================================
@@ -217,43 +199,6 @@ export async function fetchInstagramFeed(
       timestamp: item.timestamp,
     }),
   );
-}
-
-// =============================================================================
-// oEmbed Functions
-// =============================================================================
-
-/**
- * Instagram投稿のoEmbed HTMLを取得
- *
- * @param postUrl - Instagram投稿URL
- * @param accessToken - Facebook App Access Token
- * @returns oEmbedレスポンス
- */
-export async function fetchInstagramOembed(
-  postUrl: string,
-  accessToken: string,
-): Promise<InstagramOembedResponse> {
-  const url = new URL(INSTAGRAM_OEMBED_API);
-  url.searchParams.set("url", postUrl);
-  url.searchParams.set("access_token", accessToken);
-  url.searchParams.set("omitscript", "true"); // クライアント側でscriptを制御
-
-  const data = await withInstagramApiRetry(() =>
-    callInstagramApi(
-      url.toString(),
-      undefined,
-      InstagramOembedApiResponseSchema,
-    ),
-  );
-
-  return omitUndefined({
-    html: data.html,
-    width: data.width,
-    height: data.height,
-    authorName: data.author_name,
-    providerName: data.provider_name,
-  });
 }
 
 // =============================================================================

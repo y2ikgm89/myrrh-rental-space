@@ -78,21 +78,6 @@ export function getR2Client(): S3Client {
 }
 
 /**
- * R2 が設定済みかを判定する（public URL・credentials・bucket 名の存在確認）。
- *
- * Domain / UI 層で「R2 未設定時はエラーメッセージを返す」判定に使用する。
- */
-export function isR2Configured(): boolean {
-  return Boolean(
-    serverEnv.R2_ACCOUNT_ID &&
-    serverEnv.R2_ACCESS_KEY_ID &&
-    serverEnv.R2_SECRET_ACCESS_KEY &&
-    serverEnv.R2_BUCKET_NAME &&
-    serverEnv.R2_PUBLIC_URL,
-  );
-}
-
-/**
  * R2 バケット名（env から取得、未設定時は throw）。
  * PutObjectCommand / DeleteObjectCommand の Bucket パラメータで使用する。
  */
