@@ -2,7 +2,8 @@ import { describe, expect, test, mock } from "bun:test";
 
 mock.module("server-only", () => ({}));
 
-const { sanitizeContentHtml } = await import("@/shared/lib/html/sanitize");
+const { sanitizeContentHtml, sanitizeRenderedRawEmbedHtml } =
+  await import("@/shared/lib/html/sanitize");
 
 describe("sanitizeContentHtml", () => {
   test("<script> タグを除去する", () => {
@@ -98,6 +99,25 @@ describe("sanitizeContentHtml", () => {
     expect(result).toContain("background-image");
     expect(result).toMatch(/<span style="width:120px;?">/);
     expect(result).not.toMatch(/<p style=/);
+  });
+
+  test("style の javascript: / data: / 二重 url() は除去する", () => {
+    const payloads = [
+      '<div style="background-image:url(javascript:alert(1))">x</div>',
+      '<div style="background-image:url(data:image/png;base64,abc)">x</div>',
+      '<div style="background-image:url(https://safe.example/x),url(javascript:alert(1))">x</div>',
+    ];
+    for (const sanitize of [
+      sanitizeContentHtml,
+      sanitizeRenderedRawEmbedHtml,
+    ]) {
+      for (const html of payloads) {
+        const result = sanitize(html);
+        expect(result).not.toContain("javascript:");
+        expect(result).not.toContain("data:");
+        expect(result).not.toContain("alert");
+      }
+    }
   });
 
   test("class / id 属性は保持する (装飾用)", () => {

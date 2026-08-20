@@ -69,6 +69,47 @@ const IFRAME_ATTRIBUTES = [
 ] as const;
 
 /**
+ * `style` 許可タグ向け CSS 制限。
+ *
+ * `allowedSchemes` は href/src（と raw embed の srcset）にしか効かない。
+ * `background-image:url(...)` はスキーム検査対象外なので、ここで
+ * `https?` / サイト相対の単一 `url()` だけを通す。`javascript:` / `data:` /
+ * 二重 `url()` は値全体が不一致になり落ちる。
+ *
+ * プロパティは Lexical export と既存テストが実際に書くものに限定する。
+ */
+const CSS_LENGTH = /^\d+(?:\.\d+)?(?:px|%)$/u;
+const CSS_COLOR = [
+  /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/iu,
+  /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/u,
+  /^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0(?:\.\d+)?|1(?:\.0+)?|\.\d+)\s*\)$/u,
+  /^transparent$/iu,
+  /^var\(--[a-zA-Z0-9_-]+\)$/u,
+];
+const CSS_SAFE_URL =
+  /^url\(\s*(['"]?)(?:https?:\/\/|\/(?!\/))[^'"()\\\s]+\1\s*\)$/iu;
+const CSS_FR_TRACKS = /^(?:\d+fr)(?:\s+\d+fr)*$/u;
+
+const CONTENT_ALLOWED_STYLES = {
+  "*": {
+    width: [CSS_LENGTH],
+    display: [/^block$/u],
+    color: CSS_COLOR,
+    "background-color": CSS_COLOR,
+    "background-image": [CSS_SAFE_URL],
+    "table-layout": [/^(?:fixed|auto)$/u],
+    border: [/^\d+(?:\.\d+)?px\s+solid\s+(?:#[0-9a-f]{3,8}|[a-z]+)$/iu],
+    "vertical-align": [/^(?:top|middle|bottom|baseline)$/u],
+    "text-align": [/^(?:start|end|left|right|center)$/u],
+    "grid-template-columns": [CSS_FR_TRACKS],
+    "--lexical-layout-mobile": [CSS_FR_TRACKS],
+    "--table-border-color": CSS_COLOR,
+    "--table-border-width": [/^\d+(?:\.\d+)?px$/u],
+    "--step-label": [/^(["'])[^"'\\]*\1$/u],
+  },
+};
+
+/**
  * Lexical 由来 HTML の sanitize 本体（server-only / scripts 共通）。
  */
 export function sanitizeLexicalContentHtml(html: string): string {
@@ -94,6 +135,7 @@ export function sanitizeLexicalContentHtml(html: string): string {
     },
     allowedSchemes: [...LEXICAL_ALLOWED_URL_SCHEMES],
     allowedSchemesAppliedToAttributes: ["href", "src"],
+    allowedStyles: CONTENT_ALLOWED_STYLES,
     allowedIframeHostnames: [...LEXICAL_ALLOWED_IFRAME_HOSTNAMES],
     allowProtocolRelative: false,
     transformTags: {
@@ -187,6 +229,7 @@ export function sanitizeRawEmbedHtml(html: string): string {
     },
     allowedSchemes: [...LEXICAL_ALLOWED_URL_SCHEMES],
     allowedSchemesAppliedToAttributes: ["href", "src", "srcset"],
+    allowedStyles: CONTENT_ALLOWED_STYLES,
     allowedIframeHostnames: [...LEXICAL_ALLOWED_IFRAME_HOSTNAMES],
     allowProtocolRelative: false,
     exclusiveFilter: (frame) =>
