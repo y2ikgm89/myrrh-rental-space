@@ -10,18 +10,18 @@
 
 ## 現行の手順・決定
 
-| ファイル                                                                         | 中身                                                                                     |
-| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [`gcp-production-setup.md`](gcp-production-setup.md)                             | 本番 GCP のセットアップと監査。プロジェクト作成 / WIF / IAP / Cloud Run / Secret Manager |
-| [`admin-access.md`](admin-access.md)                                             | 管理画面のアクセス経路（IAP + Google Group）とスタッフの追加・削除                       |
-| [`dependency-overrides.md`](dependency-overrides.md)                             | `package.json` の `overrides` 一覧と、`bun audit` が赤くなったときの手順                 |
-| [`adr/`](adr/README.md)                                                          | Architecture Decision Record。再 litigate を防ぐための決定記録                           |
-| [`observability/alerting.md`](observability/alerting.md)                         | Cloud Monitoring の alert policy / log metric と、それを支えるコード側の不変条件         |
-| [`runbooks/encryption-key-rotation.md`](runbooks/encryption-key-rotation.md)     | `ENCRYPTION_KEY` のローテーション（dual-read window の開閉手順）                         |
-| [`runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md) | 使われなくなった GCP リソースの安全な削除手順                                            |
-| [`runbooks/switchbot-webhook.md`](runbooks/switchbot-webhook.md)                 | SwitchBot webhook の登録・ローテーション・障害切り分け                                   |
-| [`runbooks/post-deploy-verification.md`](runbooks/post-deploy-verification.md)   | デプロイ後の実行時検証（CF `/feed.xml` / Stripe test refund / SwitchBot B-2）            |
-| [`api-conventions.md`](api-conventions.md)                                       | Route Handler のレスポンス規約（401 / 403 / 400 の切り分けと helper）                    |
+| ファイル                                                                         | 中身                                                                                                     |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [`gcp-production-setup.md`](gcp-production-setup.md)                             | 本番 GCP のセットアップと監査。プロジェクト作成 / WIF / IAP / Cloud Run / Secret Manager                 |
+| [`admin-access.md`](admin-access.md)                                             | 管理画面のアクセス経路（IAP + Google Group）とスタッフの追加・削除                                       |
+| [`dependency-overrides.md`](dependency-overrides.md)                             | `package.json` の `overrides` 一覧と、`bun audit` が赤くなったときの手順                                 |
+| [`adr/`](adr/README.md)                                                          | Architecture Decision Record。再 litigate を防ぐための決定記録                                           |
+| [`observability/alerting.md`](observability/alerting.md)                         | Cloud Monitoring の alert policy / log metric と、それを支えるコード側の不変条件                         |
+| [`runbooks/encryption-key-rotation.md`](runbooks/encryption-key-rotation.md)     | `ENCRYPTION_KEY` のローテーション（dual-read window の開閉手順）                                         |
+| [`runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md) | 使われなくなった GCP リソースの安全な削除手順                                                            |
+| [`runbooks/switchbot-webhook.md`](runbooks/switchbot-webhook.md)                 | SwitchBot webhook の登録・ローテーション・障害切り分け                                                   |
+| [`runbooks/post-deploy-verification.md`](runbooks/post-deploy-verification.md)   | デプロイ後の実行時検証（CF `/feed.xml` / Stripe test refund / SwitchBot B-2 / origin secret 旧 version） |
+| [`api-conventions.md`](api-conventions.md)                                       | Route Handler のレスポンス規約（401 / 403 / 400 の切り分けと helper）                                    |
 
 リポジトリ全体の入口は [`../README.md`](../README.md)、コントリビュータ向けの
 手順は [`../.github/CONTRIBUTING.md`](../.github/CONTRIBUTING.md)。
