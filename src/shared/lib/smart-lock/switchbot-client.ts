@@ -19,6 +19,11 @@ import { createHmac, randomUUID } from "crypto";
 import { z } from "zod";
 import { notifyConnectionApiResult } from "@/shared/lib/integration-health-port";
 import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 const API_BASE = "https://api.switch-bot.com/v1.1";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -43,10 +48,37 @@ const envelopeSchema = z.object({
   message: z.string().optional(),
 });
 
-type DeviceListBody = {
-  deviceList: SwitchBotDeviceListItem[];
-  infraredRemoteList: unknown[];
-};
+const keyListItemSchema = z.object({
+  id: z.union([z.number().int(), z.string()]).transform(String),
+  name: z.string(),
+  type: z.enum(["permanent", "timeLimit", "disposable", "urgent"]),
+  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
+  password: z.string(),
+  iv: z.string(),
+  status: z.enum(["normal", "expired"]),
+  createTime: z.number(),
+});
+
+const deviceListItemSchema = z.object({
+  deviceId: z.string(),
+  deviceName: z.string(),
+  deviceType: z.string(),
+  enableCloudService: z.boolean(),
+  hubDeviceId: z.string(),
+  /** Keypad 系デバイスに含まれる発行済みパスコード一覧（Device List のみ） */
+  keyList: z.array(keyListItemSchema).optional(),
+  /** Keypad がペアリングしている錠デバイスの MAC（Device List のみ） */
+  lockDeviceId: z.string().optional(),
+});
+
+const deviceListBodySchema = z.object({
+  deviceList: z.array(deviceListItemSchema),
+  infraredRemoteList: z.array(z.unknown()).default([]),
+});
+
+export type SwitchBotKeyListItem = z.infer<typeof keyListItemSchema>;
+export type SwitchBotDeviceListItem = z.infer<typeof deviceListItemSchema>;
+type DeviceListBody = z.infer<typeof deviceListBodySchema>;
 
 type DeviceListCacheEntry = {
   readonly expiresAt: number;
@@ -79,7 +111,12 @@ function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
 async function request<T>(
   credentials: SwitchBotCredentials,
   path: string,
-  init?: { readonly method?: "GET" | "POST"; readonly body?: unknown },
+  init?: {
+    readonly method?: "GET" | "POST";
+    readonly body?: unknown;
+    /** Device List は body schema 検証後に success を記録する */
+    readonly deferSuccessHealth?: boolean;
+  },
 ): Promise<SwitchBotApiResult<T>> {
   try {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -120,7 +157,11 @@ async function request<T>(
       });
     }
 
-    return recordSwitchBotHealth({ ok: true, body: parsed.data.body as T });
+    const success = { ok: true as const, body: parsed.data.body as T };
+    if (init?.deferSuccessHealth) {
+      return success;
+    }
+    return recordSwitchBotHealth(success);
   } catch (error) {
     return recordSwitchBotHealth({
       ok: false,
@@ -149,40 +190,33 @@ async function recordSwitchBotHealth<T>(
 export type SwitchBotPasscodeType =
   "permanent" | "timeLimit" | "disposable" | "urgent";
 
-export type SwitchBotKeyListItem = {
-  readonly id: string;
-  readonly name: string;
-  readonly type: SwitchBotPasscodeType;
-  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
-  readonly password: string;
-  readonly iv: string;
-  readonly status: "normal" | "expired";
-  readonly createTime: number;
-};
-
-export type SwitchBotDeviceListItem = {
-  readonly deviceId: string;
-  readonly deviceName: string;
-  readonly deviceType: string;
-  readonly enableCloudService: boolean;
-  readonly hubDeviceId: string;
-  /** Keypad 系デバイスに含まれる発行済みパスコード一覧（Device List のみ） */
-  readonly keyList?: SwitchBotKeyListItem[];
-  /** Keypad がペアリングしている錠デバイスの MAC（Device List のみ） */
-  readonly lockDeviceId?: string;
-};
-
 /**
  * 登録済みデバイス一覧を取得する。Open Token / Secret Key の疎通確認、および
  * 管理画面でのデバイス選択UIに使う。
  */
-export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
-  SwitchBotApiResult<{
-    deviceList: SwitchBotDeviceListItem[];
-    infraredRemoteList: unknown[];
-  }>
-> {
-  return request(credentials, "/devices");
+export async function getDeviceList(
+  credentials: SwitchBotCredentials,
+): Promise<SwitchBotApiResult<DeviceListBody>> {
+  const result = await request<unknown>(credentials, "/devices", {
+    deferSuccessHealth: true,
+  });
+  if (!result.ok) return result;
+
+  const parsed = deviceListBodySchema.safeParse(result.body);
+  if (!parsed.success) {
+    logError(new Error("SwitchBot Device List body failed schema parse"), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "getDeviceList" },
+    });
+    return recordSwitchBotHealth({
+      ok: false,
+      statusCode: 0,
+      message: "Device List の形式が不正です",
+    });
+  }
+
+  return recordSwitchBotHealth({ ok: true, body: parsed.data });
 }
 
 /**
@@ -192,12 +226,7 @@ export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
 export async function getDeviceListCached(
   credentials: SwitchBotCredentials,
   options?: { readonly ttlMs?: number },
-): Promise<
-  SwitchBotApiResult<{
-    deviceList: SwitchBotDeviceListItem[];
-    infraredRemoteList: unknown[];
-  }>
-> {
+): Promise<SwitchBotApiResult<DeviceListBody>> {
   const ttlMs = options?.ttlMs ?? DEFAULT_DEVICE_LIST_CACHE_TTL_MS;
   const cacheKey = deviceListCacheKey(credentials);
   const now = Date.now();

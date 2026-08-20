@@ -16,8 +16,10 @@ import type {
   CreatePasscodeParams,
 } from "@/shared/lib/smart-lock/switchbot-client";
 
+const notifyConnectionApiResultMock = mock(() => Promise.resolve());
+
 mock.module("@/shared/lib/integration-health-port", () => ({
-  notifyConnectionApiResult: mock(() => Promise.resolve()),
+  notifyConnectionApiResult: notifyConnectionApiResultMock,
 }));
 
 const CREDENTIALS: SwitchBotCredentials = {
@@ -63,6 +65,7 @@ const mockFetch = Object.assign(mock(fetchImpl), {
 beforeEach(async () => {
   globalThis.fetch = mockFetch;
   mockFetch.mockClear();
+  notifyConnectionApiResultMock.mockClear();
   const { clearDeviceListCache } =
     await import("@/shared/lib/smart-lock/switchbot-client");
   clearDeviceListCache();
@@ -142,6 +145,49 @@ describe("switchbot-client", () => {
         body: { deviceList: [], infraredRemoteList: [] },
       });
     });
+
+    test("body が schema と一致しない場合は ok:false を返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          message: "success",
+          body: { deviceList: "not-an-array", infraredRemoteList: [] },
+        }),
+      );
+
+      const { getDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await getDeviceList(CREDENTIALS);
+
+      expect(result).toEqual({
+        ok: false,
+        statusCode: 0,
+        message: "Device List の形式が不正です",
+      });
+    });
+
+    test("schema 不正な Device List では health success を記録せず failure だけ残す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          message: "success",
+          body: { deviceList: "not-an-array", infraredRemoteList: [] },
+        }),
+      );
+
+      const { getDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      await getDeviceList(CREDENTIALS);
+
+      const healthResults = notifyConnectionApiResultMock.mock.calls.map(
+        (call) => {
+          const [, result] = call as unknown as [string, { success: boolean }];
+          return result;
+        },
+      );
+      expect(healthResults.some((result) => result.success)).toBe(false);
+      expect(healthResults.some((result) => !result.success)).toBe(true);
+    });
   });
 
   describe("getDeviceListCached", () => {
@@ -204,6 +250,38 @@ describe("switchbot-client", () => {
       );
 
       expect(result).toEqual({ ok: true, body: null });
+    });
+
+    test("keyList.id が数値でも string に正規化して返す", async () => {
+      const device = DEVICE_LIST_WITH_KEY.deviceList[0];
+      if (!device) throw new Error("DEVICE_LIST_WITH_KEY is empty");
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: {
+            deviceList: [
+              {
+                ...device,
+                keyList: [{ ...KEY_LIST_ITEM, id: 12 }],
+              },
+            ],
+            infraredRemoteList: [],
+          },
+        }),
+      );
+
+      const { findKeyInDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await findKeyInDeviceList(
+        CREDENTIALS,
+        "device-mac-1",
+        "res-12345678-abcdefgh",
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        body: { ...KEY_LIST_ITEM, id: "12" },
+      });
     });
   });
 
