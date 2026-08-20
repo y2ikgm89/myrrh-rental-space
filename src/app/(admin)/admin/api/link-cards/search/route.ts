@@ -11,6 +11,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import {
+  getRouteErrorStatus,
   jsonError,
   jsonSuccess,
   jsonValidationError,
@@ -25,7 +26,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const auth = await checkAdminAuth(request.headers);
     if (!auth.success) {
-      return jsonError(auth.error.error, 401);
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const url = new URL(request.url);

@@ -9,7 +9,11 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+} from "@/shared/lib/route-responses";
 
 /**
  * 「サイト内」リンクカードタブで選択可能な content-type 一覧を返す。
@@ -23,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const auth = await checkAdminAuth(request.headers);
     if (!auth.success) {
-      return jsonError(auth.error.error, 401);
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const enabledModules = await getEnabledFeatures();
