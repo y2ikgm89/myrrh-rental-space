@@ -8,15 +8,14 @@ import {
   useState,
 } from "react";
 import type { ReactElement } from "react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
@@ -172,7 +171,7 @@ export function PublicInquiryFormCard({
   });
   const formProps = getFormProps(form);
 
-  const customerTypeControl = useInputControl(fields.customerType);
+  const customerTypeControl = useFieldControl(fields.customerType);
 
   const customerTypeValue = customerTypeControl.value;
   const customerType: CustomerType = isValidCustomerType(customerTypeValue)
@@ -196,7 +195,7 @@ export function PublicInquiryFormCard({
   // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
   // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 同じ lastResult に対して 1 回だけ実行する。conform の control hook を
   // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
   // 結果は ref で覚える（state だと effect 内 setState になり
   // react-hooks/set-state-in-effect に触れる）。
@@ -297,10 +296,9 @@ export function PublicInquiryFormCard({
           action={isInteractive ? formAction : undefined}
           className="mt-8"
         >
-          <input
-            type="hidden"
-            name={fields.customerType.name}
-            value={customerType}
+          <HiddenControlInput
+            field={fields.customerType}
+            control={customerTypeControl}
           />
           <input
             type="hidden"

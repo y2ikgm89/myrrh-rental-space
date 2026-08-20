@@ -14,7 +14,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
@@ -35,6 +34,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface FooterSectionProps extends SettingsReadOnlyProps {
   settings: {
@@ -89,9 +92,9 @@ export function FooterSection({
     },
   });
 
-  const showSocialLinks = useInputControl(fields.footerShowSocialLinks);
+  const showSocialLinks = useFieldControl(fields.footerShowSocialLinks);
   const isSocialOn = showSocialLinks.value === "on";
-  const themeColor = useInputControl(fields.themeColor);
+  const themeColor = useFieldControl(fields.themeColor);
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -254,10 +257,9 @@ export function FooterSection({
                 onBlur={showSocialLinks.blur}
                 disabled={isDisabled}
               />
-              <input
-                type="hidden"
-                name={fields.footerShowSocialLinks.name}
-                value={isSocialOn ? "on" : ""}
+              <HiddenControlInput
+                field={fields.footerShowSocialLinks}
+                control={showSocialLinks}
               />
             </div>
 
@@ -268,6 +270,10 @@ export function FooterSection({
               >
                 ブラウザテーマカラー
               </label>
+              <HiddenControlInput
+                field={fields.themeColor}
+                control={themeColor}
+              />
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -276,10 +282,19 @@ export function FooterSection({
                   className="h-10 w-10 cursor-pointer rounded border border-input"
                 />
                 <Input
-                  {...getInputProps(fields.themeColor, { type: "text" })}
+                  id={fields.themeColor.id}
+                  value={themeColor.value ?? ""}
+                  onChange={(e) => themeColor.change(e.target.value)}
+                  onBlur={themeColor.blur}
                   placeholder="#fafafa"
                   className="max-w-[10rem]"
                   disabled={isDisabled}
+                  aria-invalid={fields.themeColor.errors ? true : undefined}
+                  aria-describedby={
+                    fields.themeColor.errors
+                      ? fields.themeColor.errorId
+                      : undefined
+                  }
                 />
               </div>
               <p className="text-xs text-muted-foreground">

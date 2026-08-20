@@ -5,7 +5,7 @@
  * `@conform-to/zod/v4` の `parseWithZod` は `z.number()` / `z.boolean()` に対し
  * FormData 文字列を自動 coerce する（"on"→true / ""→false / "5"→5）ため、
  * schema 側で `.coerce.*` を使う必要はない（使うと input 型が `unknown` 化して
- * `useInputControl` の `Value extends string` 制約に違反する）。
+ * `useFieldControl` の string 値制約に違反する）。
  * - nullable 文字列は空文字許容（"" → null 変換は Server Action executor で実施）
  */
 

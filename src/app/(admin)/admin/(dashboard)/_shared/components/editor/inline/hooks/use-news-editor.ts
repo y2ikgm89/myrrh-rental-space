@@ -150,7 +150,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const isBodyDirty = contentJson !== savedContentJson;
 
   // 設定 — conform useForm
-  // conform generic invariance — typed-input-control SSoT helper 経由
+  // conform generic invariance — `@/shared/lib/conform/control` helper 経由
   const [settingsForm, settingsFields] = useForm<
     NewsSettingsFormState,
     ParsedNewsSettingsFormData

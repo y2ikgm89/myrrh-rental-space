@@ -9,12 +9,7 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import type { FieldMetadata } from "@conform-to/react";
 import {
@@ -35,6 +30,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
@@ -62,7 +61,7 @@ function NotificationToggle({
   disabled,
   featureDisabledHint,
 }: NotificationToggleProps) {
-  const control = useInputControl(field);
+  const control = useFieldControl(field);
   const isOn = control.value === "on";
   return (
     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -81,7 +80,7 @@ function NotificationToggle({
         onBlur={control.blur}
         disabled={disabled}
       />
-      <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+      <HiddenControlInput field={field} control={control} />
     </div>
   );
 }
@@ -127,37 +126,16 @@ export function NotificationSection({
     },
   });
 
-  const notifyNewReservation = useInputControl(fields.notifyNewReservation);
-  const notifyReservationChange = useInputControl(
-    fields.notifyReservationChange,
-  );
-  const notifyReservationCancel = useInputControl(
-    fields.notifyReservationCancel,
-  );
-  const notifyNewInquiry = useInputControl(fields.notifyNewInquiry);
-  const notifyInquiryCustomerReply = useInputControl(
-    fields.notifyInquiryCustomerReply,
-  );
-  const notifyEventRegistration = useInputControl(
-    fields.notifyEventRegistration,
-  );
-  const notifyEventWaitlistRegistration = useInputControl(
-    fields.notifyEventWaitlistRegistration,
-  );
-  const notifyEventCancellation = useInputControl(
-    fields.notifyEventCancellation,
-  );
-
   const allAdminNotifyOff = [
-    notifyNewReservation,
-    notifyReservationChange,
-    notifyReservationCancel,
-    notifyNewInquiry,
-    notifyInquiryCustomerReply,
-    notifyEventRegistration,
-    notifyEventWaitlistRegistration,
-    notifyEventCancellation,
-  ].every((control) => control.value !== "on");
+    fields.notifyNewReservation.value,
+    fields.notifyReservationChange.value,
+    fields.notifyReservationCancel.value,
+    fields.notifyNewInquiry.value,
+    fields.notifyInquiryCustomerReply.value,
+    fields.notifyEventRegistration.value,
+    fields.notifyEventWaitlistRegistration.value,
+    fields.notifyEventCancellation.value,
+  ].every((value) => value !== "on");
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {

@@ -3,7 +3,7 @@ import type { FieldMetadata } from "@conform-to/react";
 import {
   getTypedFieldList,
   getTypedFieldset,
-} from "@/shared/lib/conform/typed-input-control";
+} from "@/shared/lib/conform/control";
 
 function createFieldMetadata(
   overrides: Partial<FieldMetadata<unknown>> = {},
@@ -28,7 +28,7 @@ function createFieldMetadata(
   };
 }
 
-describe("typed-input-control helper SSoT", () => {
+describe("conform control helper SSoT", () => {
   test("getTypedFieldList は underlying field.getFieldList() を委譲する", () => {
     const expected = [createFieldMetadata({ id: "1" })];
     const field: FieldMetadata<unknown> & {

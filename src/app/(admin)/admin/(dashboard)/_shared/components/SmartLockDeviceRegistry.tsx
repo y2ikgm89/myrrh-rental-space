@@ -20,12 +20,7 @@ import {
   IconRefresh,
   IconTrash,
 } from "@tabler/icons-react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
@@ -72,6 +67,10 @@ import {
 } from "@/admin/actions/smart-lock-devices";
 import type { SmartLockDeviceWithLocation } from "@/shared/domain/smart-lock/queries";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 export interface SmartLockDeviceRegistryLocationOption {
   readonly id: string;
@@ -437,6 +436,7 @@ function SmartLockDeviceDialog({
 }: SmartLockDeviceDialogProps) {
   const router = useRouter();
   const isEdit = mode === "edit" && device !== undefined;
+  const formId = `smart-lock-device-registry-${mode}`;
   const boundAction: (
     prev: SubmissionResult | undefined,
     formData: FormData,
@@ -447,36 +447,6 @@ function SmartLockDeviceDialog({
     boundAction,
     undefined,
   );
-
-  const [form, fields] = useForm({
-    id: `smart-lock-device-registry-${mode}`,
-    lastResult,
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: smartLockDeviceFormSchema });
-    },
-    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
-    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
-    onSubmit: dispatchWithoutFormReset(action),
-    shouldValidate: "onBlur",
-    shouldRevalidate: "onInput",
-    defaultValue: {
-      locationId: device?.locationId ?? "",
-      deviceId: device?.deviceId ?? "",
-      deviceName: device?.deviceName ?? "",
-      deviceType: device?.deviceType ?? SmartLockDeviceType.KEYPAD,
-    },
-  });
-
-  const [locationId, setLocationId] = useState<string>(
-    device?.locationId ?? "",
-  );
-
-  const typeControl = useInputControl(fields.deviceType);
-  const typeValue = isValidSmartLockDeviceType(typeControl.value)
-    ? typeControl.value
-    : SmartLockDeviceType.KEYPAD;
-
-  const [isActive, setIsActive] = useState<boolean>(device?.isActive ?? true);
 
   // success → close は render 中 sync（set-state-in-effect 回避）
   const [previousResult, setPreviousResult] = useState(lastResult);
@@ -498,8 +468,6 @@ function SmartLockDeviceDialog({
     }
   }, [lastResult, router, isEdit]);
 
-  const formErrors = form.errors;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -515,157 +483,23 @@ function SmartLockDeviceDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form {...getFormProps(form)} action={action} className="space-y-4">
-          <input
-            type="hidden"
-            name={fields.locationId.name}
-            value={locationId}
-          />
-          <input
-            type="hidden"
-            name={fields.deviceType.name}
-            value={typeValue}
-          />
-          <input
-            type="hidden"
-            name={fields.isActive.name}
-            value={isActive ? "on" : ""}
-          />
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.locationId.id}>拠点</Label>
-            <Select
-              {...(locationId !== "" ? { value: locationId } : {})}
-              onValueChange={setLocationId}
-              disabled={isPending || isEdit}
-            >
-              <SelectTrigger
-                id={fields.locationId.id}
-                aria-invalid={fields.locationId.errors ? true : undefined}
-                aria-describedby={
-                  fields.locationId.errors
-                    ? fields.locationId.errorId
-                    : undefined
-                }
-              >
-                <SelectValue placeholder="拠点を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLocations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isEdit && (
-              <p className="text-xs text-muted-foreground">
-                登録後は拠点を変更できません。
-              </p>
-            )}
-            {fields.locationId.errors && (
-              <p
-                id={fields.locationId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.locationId.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.deviceName.id}>デバイス名</Label>
-            <Input
-              {...getInputProps(fields.deviceName, { type: "text" })}
-              placeholder="玄関 Keypad Touch など"
-              disabled={isPending}
-            />
-            {fields.deviceName.errors && (
-              <p
-                id={fields.deviceName.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.deviceName.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.deviceId.id}>
-              デバイスID（SwitchBot MACアドレス）
-            </Label>
-            <Input
-              {...getInputProps(fields.deviceId, { type: "text" })}
-              placeholder="AA:BB:CC:DD:EE:FF"
-              className="font-mono"
-              disabled={isPending}
-            />
-            {fields.deviceId.errors && (
-              <p
-                id={fields.deviceId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.deviceId.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.deviceType.id}>機種</Label>
-            <Select
-              value={typeValue}
-              onValueChange={(value) => {
-                if (isValidSmartLockDeviceType(value))
-                  typeControl.change(value);
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger id={fields.deviceType.id}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DEVICE_TYPE_VALUES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {SMART_LOCK_DEVICE_TYPE_LABELS[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Switch
-              id={fields.isActive.id}
-              checked={isActive}
-              onCheckedChange={setIsActive}
-              disabled={isPending}
-            />
-            <div className="space-y-1">
-              <Label
-                htmlFor={fields.isActive.id}
-                className="text-sm font-medium leading-none"
-              >
-                有効にする
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                オフにすると
-                {isSmartLockPadDeviceType(typeValue)
-                  ? "このデバイスへのパスコード発行が停止します。"
-                  : "このデバイスは状態監視の対象外として扱われます（表示は残ります）。"}
-              </p>
-            </div>
-          </div>
-
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
-            </div>
-          )}
-        </form>
+        {/* useForm は DialogContent の子で <form> と同時マウントする
+            （FaqItemDialog と同型）。 */}
+        <SmartLockDeviceFormBody
+          formId={formId}
+          isPending={isPending}
+          lastResult={lastResult}
+          formAction={action}
+          isEdit={isEdit}
+          availableLocations={availableLocations}
+          defaultValue={{
+            locationId: device?.locationId ?? "",
+            deviceId: device?.deviceId ?? "",
+            deviceName: device?.deviceName ?? "",
+            deviceType: device?.deviceType ?? SmartLockDeviceType.KEYPAD,
+            isActive: device?.isActive ?? true,
+          }}
+        />
 
         <DialogFooter>
           <Button
@@ -677,12 +511,208 @@ function SmartLockDeviceDialog({
             キャンセル
           </Button>
           <SubmitButton
-            form={form.id}
+            form={formId}
             isPending={isPending}
             label={isEdit ? "保存" : "追加"}
           />
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type SmartLockDeviceFormBodyProps = {
+  readonly formId: string;
+  readonly isPending: boolean;
+  readonly lastResult: SubmissionResult | undefined;
+  readonly formAction: (formData: FormData) => void;
+  readonly isEdit: boolean;
+  readonly availableLocations: readonly SmartLockDeviceRegistryLocationOption[];
+  readonly defaultValue: {
+    readonly locationId: string;
+    readonly deviceId: string;
+    readonly deviceName: string;
+    readonly deviceType: SmartLockDeviceType;
+    readonly isActive: boolean;
+  };
+};
+
+function SmartLockDeviceFormBody({
+  formId,
+  isPending,
+  lastResult,
+  formAction,
+  isEdit,
+  availableLocations,
+  defaultValue,
+}: SmartLockDeviceFormBodyProps) {
+  const [form, fields] = useForm({
+    id: formId,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: smartLockDeviceFormSchema });
+    },
+    // React 19 の form auto-reset がサーバーの form-level エラーと入力値を
+    // 消すのを防ぐ（理由と `action` prop を残す必要性は helper の JSDoc）。
+    onSubmit: dispatchWithoutFormReset(formAction),
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      locationId: defaultValue.locationId,
+      deviceId: defaultValue.deviceId,
+      deviceName: defaultValue.deviceName,
+      deviceType: defaultValue.deviceType,
+    },
+  });
+
+  const [locationId, setLocationId] = useState<string>(defaultValue.locationId);
+
+  const typeControl = useFieldControl(fields.deviceType);
+  const typeValue = isValidSmartLockDeviceType(typeControl.value)
+    ? typeControl.value
+    : SmartLockDeviceType.KEYPAD;
+
+  const [isActive, setIsActive] = useState<boolean>(defaultValue.isActive);
+
+  const formErrors = form.errors;
+
+  return (
+    <form {...getFormProps(form)} action={formAction} className="space-y-4">
+      <input type="hidden" name={fields.locationId.name} value={locationId} />
+      <HiddenControlInput field={fields.deviceType} control={typeControl} />
+      <input
+        type="hidden"
+        name={fields.isActive.name}
+        value={isActive ? "on" : ""}
+      />
+
+      <div className="space-y-2">
+        <Label htmlFor={fields.locationId.id}>拠点</Label>
+        <Select
+          {...(locationId !== "" ? { value: locationId } : {})}
+          onValueChange={setLocationId}
+          disabled={isPending || isEdit}
+        >
+          <SelectTrigger
+            id={fields.locationId.id}
+            aria-invalid={fields.locationId.errors ? true : undefined}
+            aria-describedby={
+              fields.locationId.errors ? fields.locationId.errorId : undefined
+            }
+          >
+            <SelectValue placeholder="拠点を選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableLocations.map((location) => (
+              <SelectItem key={location.id} value={location.id}>
+                {location.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {isEdit && (
+          <p className="text-xs text-muted-foreground">
+            登録後は拠点を変更できません。
+          </p>
+        )}
+        {fields.locationId.errors && (
+          <p
+            id={fields.locationId.errorId}
+            className="text-sm text-destructive"
+          >
+            {fields.locationId.errors.join(", ")}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={fields.deviceName.id}>デバイス名</Label>
+        <Input
+          {...getInputProps(fields.deviceName, { type: "text" })}
+          placeholder="玄関 Keypad Touch など"
+          disabled={isPending}
+        />
+        {fields.deviceName.errors && (
+          <p
+            id={fields.deviceName.errorId}
+            className="text-sm text-destructive"
+          >
+            {fields.deviceName.errors.join(", ")}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={fields.deviceId.id}>
+          デバイスID（SwitchBot MACアドレス）
+        </Label>
+        <Input
+          {...getInputProps(fields.deviceId, { type: "text" })}
+          placeholder="AA:BB:CC:DD:EE:FF"
+          className="font-mono"
+          disabled={isPending}
+        />
+        {fields.deviceId.errors && (
+          <p id={fields.deviceId.errorId} className="text-sm text-destructive">
+            {fields.deviceId.errors.join(", ")}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={fields.deviceType.id}>機種</Label>
+        <Select
+          value={typeValue}
+          onValueChange={(value) => {
+            if (isValidSmartLockDeviceType(value)) typeControl.change(value);
+          }}
+          disabled={isPending}
+        >
+          <SelectTrigger id={fields.deviceType.id}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DEVICE_TYPE_VALUES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {SMART_LOCK_DEVICE_TYPE_LABELS[value]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <Switch
+          id={fields.isActive.id}
+          checked={isActive}
+          onCheckedChange={setIsActive}
+          disabled={isPending}
+        />
+        <div className="space-y-1">
+          <Label
+            htmlFor={fields.isActive.id}
+            className="text-sm font-medium leading-none"
+          >
+            有効にする
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            オフにすると
+            {isSmartLockPadDeviceType(typeValue)
+              ? "このデバイスへのパスコード発行が停止します。"
+              : "このデバイスは状態監視の対象外として扱われます（表示は残ります）。"}
+          </p>
+        </div>
+      </div>
+
+      {formErrors && formErrors.length > 0 && (
+        <div
+          id={form.errorId}
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {formErrors.join(", ")}
+        </div>
+      )}
+    </form>
   );
 }

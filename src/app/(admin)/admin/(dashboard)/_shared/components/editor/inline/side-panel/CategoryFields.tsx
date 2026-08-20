@@ -8,7 +8,11 @@
 
 import { useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import { type FieldMetadata } from "@conform-to/react";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import {
   Label,
   Select,
@@ -58,7 +62,7 @@ export function CategoryFields({
   onCreateCategory,
   disabled,
 }: CategoryFieldsProps) {
-  const control = useInputControl(categoryIdField);
+  const control = useFieldControl(categoryIdField);
   const categoryId = typeof control.value === "string" ? control.value : "";
   const categoryError = categoryIdField.errors?.[0];
 
@@ -99,7 +103,7 @@ export function CategoryFields({
   return (
     <div className="space-y-2">
       <Label htmlFor={categoryIdField.id}>{label}</Label>
-      <input type="hidden" name={categoryIdField.name} value={categoryId} />
+      <HiddenControlInput field={categoryIdField} control={control} />
 
       <div className="flex gap-2">
         <Select

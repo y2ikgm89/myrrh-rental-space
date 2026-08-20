@@ -16,12 +16,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import type { FieldMetadata } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
@@ -45,6 +40,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
@@ -71,7 +70,7 @@ type EmailSwitchProps = {
 };
 
 function EmailSwitch({ field, label, disabled, hint }: EmailSwitchProps) {
-  const control = useInputControl(field);
+  const control = useFieldControl(field);
   const isOn = control.value === "on";
   return (
     <div className="space-y-1">
@@ -86,7 +85,7 @@ function EmailSwitch({ field, label, disabled, hint }: EmailSwitchProps) {
         <label className="text-sm font-medium" htmlFor={field.id}>
           {label}
         </label>
-        <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+        <HiddenControlInput field={field} control={control} />
       </div>
       {hint ? (
         <p className="text-xs text-muted-foreground pl-0.5">{hint}</p>

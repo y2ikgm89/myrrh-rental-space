@@ -13,7 +13,7 @@ import type { FieldMetadata } from "@conform-to/react";
 import { cn } from "@/shared/lib/cn";
 import { isRecord } from "@/shared/lib/serialize";
 import { Card, CardContent } from "@/admin/components/ui";
-import { getTypedFieldset } from "@/shared/lib/conform/typed-input-control";
+import { getTypedFieldset } from "@/shared/lib/conform/control";
 import { IconChevronDown } from "@tabler/icons-react";
 import { getZodObjectShape, extractFieldMetaDeep } from "../zod-introspection";
 import type { FieldInfo } from "../zod-introspection";

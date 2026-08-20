@@ -1,12 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import type { z } from "zod";
 import {
@@ -24,6 +19,10 @@ import {
 import type { SubmissionResult } from "@conform-to/react";
 import { walkInRegistrationSchema } from "@/shared/lib/validations/event-registration-onsite";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { useRadioGroupKeyboard } from "@/shared/lib/a11y/use-radio-group-keyboard";
 import { formatJstMonthDay, formatTimeShort } from "@/shared/lib/date-format";
 
@@ -100,10 +99,10 @@ export function WalkInDialog({
 
   // slot / ticket は button 要素の独自 radio group（WAI-ARIA APG の roving
   // tabindex）で選ぶため、conform には hidden input 経由で伝える。値の保持を
-  // `useState` ではなく `useInputControl` に寄せるのは、conform 側の
+  // `useState` ではなく `useFieldControl` に寄せるのは、conform 側の
   // defaultValue / reset と同期させるため（公式パターン）。
-  const slotIdControl = useInputControl(fields.slotId);
-  const ticketIdControl = useInputControl(fields.ticketId);
+  const slotIdControl = useFieldControl(fields.slotId);
+  const ticketIdControl = useFieldControl(fields.ticketId);
   const slotId = slotIdControl.value ?? firstSlotId;
   const ticketId = ticketIdControl.value ?? firstTicketId;
 
@@ -174,8 +173,11 @@ export function WalkInDialog({
         <form {...getFormProps(form)} action={formAction} className="space-y-4">
           <input type="hidden" name={fields.eventId.name} value={eventId} />
           {/* radio group は button 要素なので、値は hidden input で conform に渡す */}
-          <input type="hidden" name={fields.slotId.name} value={slotId} />
-          <input type="hidden" name={fields.ticketId.name} value={ticketId} />
+          <HiddenControlInput field={fields.slotId} control={slotIdControl} />
+          <HiddenControlInput
+            field={fields.ticketId}
+            control={ticketIdControl}
+          />
           {/* スロット選択 */}
           {slots.length > 1 && (
             <div className="space-y-2">

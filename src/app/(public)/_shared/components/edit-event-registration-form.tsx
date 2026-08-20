@@ -4,12 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import type { SubmissionResult } from "@conform-to/react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
@@ -22,6 +17,10 @@ import {
 import type { TurnstileAction } from "@/shared/lib/turnstile-actions";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import { eventRegistrationEditSchema } from "@/shared/lib/validations/event-registration";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -87,7 +86,7 @@ export function EditEventRegistrationForm({
       email: initialValues.email,
       phone: initialValues.phone || undefined,
       note: initialValues.note || undefined,
-      quantity: initialValues.quantity,
+      quantity: String(initialValues.quantity),
     },
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: eventRegistrationEditSchema });
@@ -99,7 +98,7 @@ export function EditEventRegistrationForm({
     shouldRevalidate: "onInput",
   });
 
-  const quantityControl = useInputControl(fields.quantity);
+  const quantityControl = useFieldControl(fields.quantity);
   const quantity = Number(quantityControl.value ?? initialValues.quantity);
 
   if (lastResult !== previousResult) {
@@ -115,7 +114,7 @@ export function EditEventRegistrationForm({
   // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
   // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 同じ lastResult に対して 1 回だけ実行する。conform の control hook を
   // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
   // 結果は ref で覚える（state だと effect 内 setState になり
   // react-hooks/set-state-in-effect に触れる）。
@@ -142,13 +141,7 @@ export function EditEventRegistrationForm({
         name={fields.registrationId.name}
         value={registrationId}
       />
-      {!quantityEditable && (
-        <input
-          type="hidden"
-          name={fields.quantity.name}
-          value={String(initialValues.quantity)}
-        />
-      )}
+      <HiddenControlInput field={fields.quantity} control={quantityControl} />
 
       {formErrorMessage !== null && (
         <div
@@ -215,10 +208,14 @@ export function EditEventRegistrationForm({
           required
           min={1}
           max={10}
+          type="number"
+          id={fields.quantity.id}
+          value={quantityControl.value ?? String(initialValues.quantity)}
+          onChange={(e) => quantityControl.change(e.target.value)}
+          onBlur={quantityControl.blur}
           {...(fields.quantity.errors?.[0] !== undefined && {
             error: fields.quantity.errors[0],
           })}
-          {...getInputProps(fields.quantity, { type: "number" })}
         />
       ) : (
         <div>

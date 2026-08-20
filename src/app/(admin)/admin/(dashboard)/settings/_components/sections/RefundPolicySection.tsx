@@ -17,12 +17,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -44,6 +39,10 @@ import { updateRefundPolicySettings } from "@/admin/actions/settings";
 import { refundPolicyFormSchema } from "@/admin/actions/settings/schemas/refund-policy";
 import type { RefundPolicyResolution } from "@/shared/domain/refund/policy";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface RefundPolicySectionProps {
   resolution: RefundPolicyResolution;
@@ -104,7 +103,7 @@ export function RefundPolicySection({
     },
   });
 
-  const enabledControl = useInputControl(fields.refundPolicyEnabled);
+  const enabledControl = useFieldControl(fields.refundPolicyEnabled);
   const enabled = enabledControl.value === "on";
   const tierFields = fields.refundPolicyTiers.getFieldList();
 
@@ -163,10 +162,9 @@ export function RefundPolicySection({
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
       <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
-      <input
-        type="hidden"
-        name={fields.refundPolicyEnabled.name}
-        value={enabledControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.refundPolicyEnabled}
+        control={enabledControl}
       />
 
       <Card>

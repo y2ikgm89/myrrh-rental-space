@@ -10,12 +10,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -44,6 +39,10 @@ import { discountFormSchema } from "@/admin/actions/settings/schemas/form-schema
 import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidDiscountCombinationMode } from "@/shared/lib/validations/enums/guards";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface DiscountSectionProps {
   settings: Serialized<DiscountSettingsData>;
@@ -85,13 +84,13 @@ export function DiscountSection({
     },
   });
 
-  const durationDiscountEnabledControl = useInputControl(
+  const durationDiscountEnabledControl = useFieldControl(
     fields.durationDiscountEnabled,
   );
-  const combinationModeControl = useInputControl(
+  const combinationModeControl = useFieldControl(
     fields.discountCombinationMode,
   );
-  const showOriginalPriceControl = useInputControl(fields.showOriginalPrice);
+  const showOriginalPriceControl = useFieldControl(fields.showOriginalPrice);
 
   const durationDiscountEnabled = durationDiscountEnabledControl.value === "on";
   const combinationMode =
@@ -135,20 +134,17 @@ export function DiscountSection({
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
       <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
-      <input
-        type="hidden"
-        name={fields.durationDiscountEnabled.name}
-        value={durationDiscountEnabledControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.durationDiscountEnabled}
+        control={durationDiscountEnabledControl}
       />
-      <input
-        type="hidden"
-        name={fields.discountCombinationMode.name}
-        value={combinationMode}
+      <HiddenControlInput
+        field={fields.discountCombinationMode}
+        control={combinationModeControl}
       />
-      <input
-        type="hidden"
-        name={fields.showOriginalPrice.name}
-        value={showOriginalPriceControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.showOriginalPrice}
+        control={showOriginalPriceControl}
       />
 
       {/* 長時間割引設定 */}

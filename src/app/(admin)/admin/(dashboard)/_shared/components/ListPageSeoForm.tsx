@@ -4,7 +4,8 @@
  * リストページ用SEO設定フォーム
  *
  * ブログ一覧・お知らせ一覧など、リストページのSEO/OGP設定を編集するフォーム。
- * への clean break 移行。`updatePageSeo` は `slug` を bind で部分適用。
+ * 文字数カウントは `fields.X.value` を購読する。`updatePageSeo` は `slug` を
+ * bind で部分適用。
  */
 
 import Image from "next/image";
@@ -14,7 +15,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { IconPhotoPlus } from "@tabler/icons-react";
@@ -36,6 +36,10 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/pages";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 /** リストページ（blog/news/faq/events）の Page.slug */
 export type ListPageSeoSlug = "blog" | "news" | "faq" | "events";
@@ -85,7 +89,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
     },
   });
 
-  const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
+  const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
   const ogpImageUrl = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -110,6 +114,10 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
+      <HiddenControlInput
+        field={fields.ogpImageUrl}
+        control={ogpImageUrlControl}
+      />
       {/* 基本情報 */}
       <Card>
         <CardHeader>
@@ -275,11 +283,6 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                 )}
               </div>
             </div>
-            <input
-              type="hidden"
-              name={fields.ogpImageUrl.name}
-              value={ogpImageUrl}
-            />
             <p className="text-xs text-muted-foreground">
               推奨サイズ: 1200x630px
             </p>

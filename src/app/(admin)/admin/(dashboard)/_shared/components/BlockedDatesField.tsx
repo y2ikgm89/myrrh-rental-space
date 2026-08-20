@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SubmissionResult } from "@conform-to/react";
 import { IconCalendarOff, IconPlus, IconTrash } from "@tabler/icons-react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
@@ -40,6 +35,10 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { scopedBlockedDateFormSchema } from "@/admin/lib/validations/blocked-date";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type CreateBlockedDateAction = (
   entityId: string,
@@ -213,7 +212,7 @@ function AddBlockedDateDialog({
     },
   });
 
-  const typeControl = useInputControl(fields.type);
+  const typeControl = useFieldControl(fields.type);
   const typeValue = isValidBlockedDateType(typeControl.value)
     ? typeControl.value
     : BLOCKED_DATE_TYPE.HOLIDAY;
@@ -247,7 +246,7 @@ function AddBlockedDateDialog({
         </DialogHeader>
 
         <form {...getFormProps(form)} action={action} className="space-y-4">
-          <input type="hidden" name={fields.type.name} value={typeValue} />
+          <HiddenControlInput field={fields.type} control={typeControl} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={fields.startDate.id}>開始日</Label>

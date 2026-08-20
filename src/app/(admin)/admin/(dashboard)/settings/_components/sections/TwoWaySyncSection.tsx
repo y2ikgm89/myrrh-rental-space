@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
@@ -53,6 +53,10 @@ import { isValidCalendarSyncMethod } from "@/shared/lib/validations/enums/guards
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface TwoWaySyncSectionProps {
   settings: Serialized<SettingsData>;
@@ -60,8 +64,8 @@ interface TwoWaySyncSectionProps {
 
 export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
   // Google Calendar が有効かつ接続済みのときだけフォーム本体をマウントする。
-  // conform の useForm / useInputControl と <form> を必ず同時にマウントさせることで、
-  // 「useInputControl is unable to find form」警告（フックは動くが <form> 未描画）を防ぐ。
+  // conform の useForm / useFieldControl と <form> を必ず同時にマウントさせることで、
+  // form 未描画のまま hook だけが先行しないようにする。
   if (
     !settings.googleCalendarEnabled ||
     settings.googleCalendarConnectionStatus !== ConnectionStatus.CONNECTED
@@ -104,8 +108,8 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
     },
   });
 
-  const enabledControl = useInputControl(fields.enabled);
-  const syncMethodControl = useInputControl(fields.syncMethod);
+  const enabledControl = useFieldControl(fields.enabled);
+  const syncMethodControl = useFieldControl(fields.syncMethod);
 
   const enabled = enabledControl.value === "on";
   const syncMethod =
@@ -182,12 +186,11 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
-      <input
-        type="hidden"
-        name={fields.enabled.name}
-        value={enabledControl.value ?? ""}
+      <HiddenControlInput field={fields.enabled} control={enabledControl} />
+      <HiddenControlInput
+        field={fields.syncMethod}
+        control={syncMethodControl}
       />
-      <input type="hidden" name={fields.syncMethod.name} value={syncMethod} />
 
       <Card>
         <CardHeader>

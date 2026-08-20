@@ -1,6 +1,9 @@
 "use client";
 
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
 
 import { AutoMediaField } from "../auto-fields/AutoMediaField";
@@ -15,12 +18,12 @@ export function AutoMediaFieldControlled({
   isPending,
   error,
 }: ControlledFieldProps & { readonly accept: MediaAcceptType }) {
-  const control = useTypedInputControl(field);
+  const control = useTypedControl(field);
   const currentValue = typeof control.value === "string" ? control.value : "";
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={field.name} value={currentValue} />
+      <HiddenControlInput field={field} control={control} />
       <AutoMediaField
         fieldId={fieldId}
         label={label}

@@ -3,8 +3,8 @@
 /**
  * 顧客新規作成フォーム
  *
- * への clean break 移行。Switch / Select は `useInputControl` で hidden input
- * と sync する公式パターン (https://conform.guide/api/react/useInputControl)。
+ * Switch / Select は `useFieldControl` で hidden input
+ * と sync する公式パターン。
  * カナ自動入力は `useKanaInput` 互換 (内部 state → 同 name の controlled input)。
  */
 
@@ -20,7 +20,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { createCustomer } from "@/admin/actions/customer";
@@ -48,6 +47,10 @@ import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 import { toast } from "sonner";
 import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
@@ -76,11 +79,10 @@ export function CustomerForm(): ReactElement {
     },
   });
 
-  const customerTypeControl = useInputControl(fields.customerType);
-  const prefectureControl = useInputControl(fields.prefecture);
-  const emailControl = useInputControl(fields.email);
-  const marketingOptInControl = useInputControl(fields.marketingOptIn);
-  const phoneContactOptInControl = useInputControl(fields.phoneContactOptIn);
+  const customerTypeControl = useFieldControl(fields.customerType);
+  const prefectureControl = useFieldControl(fields.prefecture);
+  const marketingOptInControl = useFieldControl(fields.marketingOptIn);
+  const phoneContactOptInControl = useFieldControl(fields.phoneContactOptIn);
   const {
     duplicateCandidate: emailDuplicateCandidate,
     unlinkedDuplicateCandidate: emailUnlinkedDuplicateCandidate,
@@ -115,7 +117,6 @@ export function CustomerForm(): ReactElement {
   }
 
   async function handleEmailBlur(event: FocusEvent<HTMLInputElement>) {
-    emailControl.blur();
     const email = event.target.value;
     if (!email) {
       resetEmailDuplicateCheck();
@@ -169,10 +170,9 @@ export function CustomerForm(): ReactElement {
                 ))}
               </SelectContent>
             </Select>
-            <input
-              type="hidden"
-              name={fields.customerType.name}
-              value={customerType}
+            <HiddenControlInput
+              field={fields.customerType}
+              control={customerTypeControl}
             />
             {fields.customerType.errors && (
               <p
@@ -440,10 +440,9 @@ export function CustomerForm(): ReactElement {
                     ))}
                   </SelectContent>
                 </Select>
-                <input
-                  type="hidden"
-                  name={fields.prefecture.name}
-                  value={prefecture}
+                <HiddenControlInput
+                  field={fields.prefecture}
+                  control={prefectureControl}
                 />
                 {fields.prefecture.errors && (
                   <p
@@ -534,10 +533,9 @@ export function CustomerForm(): ReactElement {
                 onBlur={marketingOptInControl.blur}
                 disabled={isPending}
               />
-              <input
-                type="hidden"
-                name={fields.marketingOptIn.name}
-                value={marketingOptIn ? "on" : ""}
+              <HiddenControlInput
+                field={fields.marketingOptIn}
+                control={marketingOptInControl}
               />
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -561,10 +559,9 @@ export function CustomerForm(): ReactElement {
                 onBlur={phoneContactOptInControl.blur}
                 disabled={isPending}
               />
-              <input
-                type="hidden"
-                name={fields.phoneContactOptIn.name}
-                value={phoneContactOptIn ? "on" : ""}
+              <HiddenControlInput
+                field={fields.phoneContactOptIn}
+                control={phoneContactOptInControl}
               />
             </div>
           </fieldset>

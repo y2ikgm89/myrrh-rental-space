@@ -9,12 +9,7 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
@@ -40,6 +35,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
@@ -116,13 +115,13 @@ export function ReservationSection({
     },
   });
 
-  const cancellationDeadline = useInputControl(
+  const cancellationDeadline = useFieldControl(
     fields.cancellationDeadlineHours,
   );
-  const modificationDeadline = useInputControl(
+  const modificationDeadline = useFieldControl(
     fields.modificationDeadlineHours,
   );
-  const customerCanCancelSeriesInFullControl = useInputControl(
+  const customerCanCancelSeriesInFullControl = useFieldControl(
     fields.customerCanCancelSeriesInFull,
   );
   const customerCanCancelSeriesInFullOn =
@@ -286,10 +285,9 @@ export function ReservationSection({
                     ))}
                   </SelectContent>
                 </Select>
-                <input
-                  type="hidden"
-                  name={fields.cancellationDeadlineHours.name}
-                  value={cancellationDeadline.value ?? ""}
+                <HiddenControlInput
+                  field={fields.cancellationDeadlineHours}
+                  control={cancellationDeadline}
                 />
               </div>
               <div className="space-y-1.5">
@@ -319,10 +317,9 @@ export function ReservationSection({
                     ))}
                   </SelectContent>
                 </Select>
-                <input
-                  type="hidden"
-                  name={fields.modificationDeadlineHours.name}
-                  value={modificationDeadline.value ?? ""}
+                <HiddenControlInput
+                  field={fields.modificationDeadlineHours}
+                  control={modificationDeadline}
                 />
               </div>
             </div>
@@ -398,10 +395,9 @@ export function ReservationSection({
                     : undefined
                 }
               />
-              <input
-                type="hidden"
-                name={fields.customerCanCancelSeriesInFull.name}
-                value={customerCanCancelSeriesInFullControl.value ?? ""}
+              <HiddenControlInput
+                field={fields.customerCanCancelSeriesInFull}
+                control={customerCanCancelSeriesInFullControl}
               />
             </div>
 

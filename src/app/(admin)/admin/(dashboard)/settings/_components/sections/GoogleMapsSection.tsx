@@ -14,7 +14,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -42,6 +42,10 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface GoogleMapsSectionProps {
@@ -80,7 +84,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
     },
   });
 
-  const apiKeyControl = useInputControl(fields.googleMapsApiKey);
+  const apiKeyControl = useFieldControl(fields.googleMapsApiKey);
   const apiKey = apiKeyControl.value ?? "";
 
   const isSuccess = lastResult?.initialValue === null;
@@ -94,7 +98,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
     }
   }
 
-  // useEffectEvent で useInputControl 参照を effect deps から除外
+  // useEffectEvent で control 参照を effect deps から除外
   const handleSaveSuccess = useEffectEvent(() => {
     toast.success("Google Maps設定を保存しました");
     apiKeyControl.change("");
@@ -153,6 +157,10 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
+      <HiddenControlInput
+        field={fields.googleMapsApiKey}
+        control={apiKeyControl}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -191,7 +199,6 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
             ) : (
               <Input
                 id={fields.googleMapsApiKey.id}
-                name={fields.googleMapsApiKey.name}
                 value={apiKey}
                 onChange={(e) => apiKeyControl.change(e.target.value)}
                 onBlur={apiKeyControl.blur}

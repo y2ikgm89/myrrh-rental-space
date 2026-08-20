@@ -2,12 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import type { ReactElement } from "react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
@@ -16,6 +11,10 @@ import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import type { z } from "zod";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
 import {
   TurnstileWidget,
@@ -78,7 +77,7 @@ export function ProfileForm({
     shouldRevalidate: "onInput",
   });
 
-  const customerTypeControl = useInputControl(fields.customerType);
+  const customerTypeControl = useFieldControl(fields.customerType);
 
   const customerTypeValue = customerTypeControl.value;
   const customerType: CustomerType = isValidCustomerType(customerTypeValue)
@@ -91,7 +90,7 @@ export function ProfileForm({
   // change() を呼ぶと再バリデーションが走り、サーバーが返した form-level エラーを
   // client 検証結果で上書きして消してしまう（詳細は turnstile-widget.tsx）。
   //
-  // 同じ lastResult に対して 1 回だけ実行する。conform の `useInputControl` を
+  // 同じ lastResult に対して 1 回だけ実行する。conform の control hook を
   // 依存に持っていた頃の無限ループ (PR #1758) の再発防止も兼ねる。処理済みの
   // 結果は ref で覚える（state だと effect 内 setState になり
   // react-hooks/set-state-in-effect に触れる）。
@@ -131,10 +130,9 @@ export function ProfileForm({
       aria-busy={isPending}
       className="space-y-6"
     >
-      <input
-        type="hidden"
-        name={fields.customerType.name}
-        value={customerType}
+      <HiddenControlInput
+        field={fields.customerType}
+        control={customerTypeControl}
       />
 
       {formErrorMessage !== null && (

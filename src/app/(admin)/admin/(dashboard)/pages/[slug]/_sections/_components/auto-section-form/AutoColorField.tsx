@@ -1,7 +1,10 @@
 "use client";
 
 import { Input, Label } from "@/admin/components/ui";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 
 import type { ControlledFieldProps } from "./types";
 
@@ -14,7 +17,7 @@ export function AutoColorField({
   isPending,
   error,
 }: ControlledFieldProps & { readonly placeholder: string | undefined }) {
-  const control = useTypedInputControl(field);
+  const control = useTypedControl(field);
   const colorValue =
     typeof control.value === "string" && control.value.length > 0
       ? control.value
@@ -23,7 +26,7 @@ export function AutoColorField({
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={field.name} value={colorValue} />
+      <HiddenControlInput field={field} control={control} />
       <Label htmlFor={fieldId}>{label}</Label>
       <div className="flex items-center gap-2">
         <input

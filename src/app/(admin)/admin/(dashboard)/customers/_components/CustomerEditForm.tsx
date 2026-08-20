@@ -3,9 +3,9 @@
 /**
  * 顧客編集フォーム
  *
- * への clean break 移行。`updateCustomer` Server Action は `customer.id` を
+ * `updateCustomer` Server Action は `customer.id` を
  * `Function.prototype.bind` で部分適用する。Switch / Select は
- * `useInputControl` で hidden input と sync する公式パターン。
+ * `useFieldControl` で hidden input と sync する公式パターン。
  *
  * Edit 固有: ① email blur 時の重複候補チェック (`/api/admin/customers/check-email`)
  * ② ソーシャル連携済み顧客のメール変更時の警告 ③ カナ自動入力の既存値 hydration。
@@ -23,7 +23,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -52,6 +51,10 @@ import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
@@ -108,15 +111,14 @@ export function CustomerEditForm({
     },
   });
 
-  const customerTypeControl = useInputControl(fields.customerType);
-  const prefectureControl = useInputControl(fields.prefecture);
-  const emailControl = useInputControl(fields.email);
-  const marketingOptInControl = useInputControl(fields.marketingOptIn);
-  const phoneContactOptInControl = useInputControl(fields.phoneContactOptIn);
+  const customerTypeControl = useFieldControl(fields.customerType);
+  const prefectureControl = useFieldControl(fields.prefecture);
+  const marketingOptInControl = useFieldControl(fields.marketingOptIn);
+  const phoneContactOptInControl = useFieldControl(fields.phoneContactOptIn);
 
   const customerType = customerTypeControl.value ?? customer.customerType;
   const prefecture = prefectureControl.value ?? customer.prefecture ?? "";
-  const watchedEmail = emailControl.value ?? customer.email;
+  const watchedEmail = fields.email.value ?? customer.email;
   const marketingOptIn = marketingOptInControl.value === "on";
   const phoneContactOptIn = phoneContactOptInControl.value === "on";
 
@@ -149,7 +151,6 @@ export function CustomerEditForm({
   }
 
   async function handleEmailBlur(event: FocusEvent<HTMLInputElement>) {
-    emailControl.blur();
     const email = event.target.value;
     if (!email || email === customer.email) {
       resetEmailDuplicateCheck();
@@ -206,10 +207,9 @@ export function CustomerEditForm({
                 ))}
               </SelectContent>
             </Select>
-            <input
-              type="hidden"
-              name={fields.customerType.name}
-              value={customerType}
+            <HiddenControlInput
+              field={fields.customerType}
+              control={customerTypeControl}
             />
             {fields.customerType.errors && (
               <p
@@ -493,10 +493,9 @@ export function CustomerEditForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <input
-                  type="hidden"
-                  name={fields.prefecture.name}
-                  value={prefecture}
+                <HiddenControlInput
+                  field={fields.prefecture}
+                  control={prefectureControl}
                 />
                 {fields.prefecture.errors && (
                   <p
@@ -587,10 +586,9 @@ export function CustomerEditForm({
                 onBlur={marketingOptInControl.blur}
                 disabled={isPending}
               />
-              <input
-                type="hidden"
-                name={fields.marketingOptIn.name}
-                value={marketingOptIn ? "on" : ""}
+              <HiddenControlInput
+                field={fields.marketingOptIn}
+                control={marketingOptInControl}
               />
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -614,10 +612,9 @@ export function CustomerEditForm({
                 onBlur={phoneContactOptInControl.blur}
                 disabled={isPending}
               />
-              <input
-                type="hidden"
-                name={fields.phoneContactOptIn.name}
-                value={phoneContactOptIn ? "on" : ""}
+              <HiddenControlInput
+                field={fields.phoneContactOptIn}
+                control={phoneContactOptInControl}
               />
             </div>
           </fieldset>

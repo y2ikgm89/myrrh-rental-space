@@ -15,7 +15,7 @@ import { Button, Card, CardContent, Label } from "@/admin/components/ui";
 import {
   getTypedFieldList,
   getTypedFieldset,
-} from "@/shared/lib/conform/typed-input-control";
+} from "@/shared/lib/conform/control";
 
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {

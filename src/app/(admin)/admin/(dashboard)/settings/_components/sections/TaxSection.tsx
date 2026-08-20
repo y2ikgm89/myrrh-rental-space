@@ -9,12 +9,7 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import type { FieldMetadata } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
@@ -37,6 +32,10 @@ import type { Serialized } from "@/shared/lib/serialize";
 import { taxSettingsSchema } from "@/admin/actions/settings/schemas/discount";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface TaxSectionProps {
   settings: Serialized<AdminTaxSettings>;
@@ -57,7 +56,7 @@ function DisplayModeSelect({
   helperText,
   disabled,
 }: DisplayModeSelectProps) {
-  const control = useInputControl(field);
+  const control = useFieldControl(field);
   return (
     <div className="space-y-1.5">
       <label
@@ -88,7 +87,7 @@ function DisplayModeSelect({
           <SelectItem value={TaxDisplayMode.BOTH}>両方表示</SelectItem>
         </SelectContent>
       </Select>
-      <input type="hidden" name={field.name} value={control.value ?? ""} />
+      <HiddenControlInput field={field} control={control} />
       {helperText && (
         <p className="text-xs text-muted-foreground">{helperText}</p>
       )}

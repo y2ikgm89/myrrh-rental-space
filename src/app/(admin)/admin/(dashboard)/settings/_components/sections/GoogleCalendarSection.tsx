@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
@@ -40,6 +40,10 @@ import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { ConnectionStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface GoogleCalendarSectionProps {
@@ -92,14 +96,14 @@ export function GoogleCalendarSection({
     },
   });
 
-  const calendarEnabledControl = useInputControl(fields.googleCalendarEnabled);
-  const icalAttachmentControl = useInputControl(fields.icalAttachmentEnabled);
-  const addToCalendarControl = useInputControl(
+  const calendarEnabledControl = useFieldControl(fields.googleCalendarEnabled);
+  const icalAttachmentControl = useFieldControl(fields.icalAttachmentEnabled);
+  const addToCalendarControl = useFieldControl(
     fields.addToCalendarLinksEnabled,
   );
-  const reminderControl = useInputControl(fields.googleCalendarReminderMinutes);
-  const serviceAccountControl = useInputControl(fields.serviceAccountJson);
-  const calendarIdControl = useInputControl(fields.googleCalendarId);
+  const reminderControl = useFieldControl(fields.googleCalendarReminderMinutes);
+  const serviceAccountControl = useFieldControl(fields.serviceAccountJson);
+  const calendarIdControl = useFieldControl(fields.googleCalendarId);
 
   const calendarEnabled = calendarEnabledControl.value === "on";
   const icalAttachment = icalAttachmentControl.value === "on";
@@ -186,20 +190,29 @@ export function GoogleCalendarSection({
 
   return (
     <form {...getFormProps(form)} action={action}>
-      <input
-        type="hidden"
-        name={fields.googleCalendarEnabled.name}
-        value={calendarEnabledControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.googleCalendarEnabled}
+        control={calendarEnabledControl}
       />
-      <input
-        type="hidden"
-        name={fields.icalAttachmentEnabled.name}
-        value={icalAttachmentControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.icalAttachmentEnabled}
+        control={icalAttachmentControl}
       />
-      <input
-        type="hidden"
-        name={fields.addToCalendarLinksEnabled.name}
-        value={addToCalendarControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.addToCalendarLinksEnabled}
+        control={addToCalendarControl}
+      />
+      <HiddenControlInput
+        field={fields.googleCalendarReminderMinutes}
+        control={reminderControl}
+      />
+      <HiddenControlInput
+        field={fields.serviceAccountJson}
+        control={serviceAccountControl}
+      />
+      <HiddenControlInput
+        field={fields.googleCalendarId}
+        control={calendarIdControl}
       />
 
       <Card>
@@ -275,7 +288,6 @@ export function GoogleCalendarSection({
               ) : (
                 <Input
                   id={fields.googleCalendarId.id}
-                  name={fields.googleCalendarId.name}
                   value={calendarId}
                   onChange={(e) => calendarIdControl.change(e.target.value)}
                   onBlur={calendarIdControl.blur}
@@ -336,7 +348,6 @@ export function GoogleCalendarSection({
               ) : (
                 <Textarea
                   id={fields.serviceAccountJson.id}
-                  name={fields.serviceAccountJson.name}
                   value={serviceAccountJson}
                   onChange={(e) => serviceAccountControl.change(e.target.value)}
                   onBlur={serviceAccountControl.blur}
@@ -506,11 +517,6 @@ export function GoogleCalendarSection({
                   </div>
                 )}
               </div>
-              <input
-                type="hidden"
-                name={fields.googleCalendarReminderMinutes.name}
-                value={reminderRaw}
-              />
               <p className="text-xs text-muted-foreground">
                 既定: Google カレンダーに設定された通知タイミングを使用 / 0
                 分で通知なし / 最大 40320 分（4 週間）

@@ -9,7 +9,10 @@
  */
 
 import type { FieldMetadata } from "@conform-to/react";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  HiddenControlInput,
+  useTypedControl,
+} from "@/shared/lib/conform/control";
 import { TagInput, type TagOption } from "./TagInput";
 
 type PostTagFieldsProps = {
@@ -48,7 +51,7 @@ export function PostTagFields({
   placeholder = "タグを入力...",
   disabled,
 }: PostTagFieldsProps) {
-  const control = useTypedInputControl(tagsField);
+  const control = useTypedControl(tagsField);
   const tagsArray = parseTagsValue(control.value);
   const tagsError = tagsField.errors?.[0];
 
@@ -58,11 +61,7 @@ export function PostTagFields({
 
   return (
     <>
-      <input
-        type="hidden"
-        name={tagsField.name}
-        value={JSON.stringify(tagsArray)}
-      />
+      <HiddenControlInput field={tagsField} control={control} />
       <TagInput
         value={tagsArray}
         onChange={handleChange}

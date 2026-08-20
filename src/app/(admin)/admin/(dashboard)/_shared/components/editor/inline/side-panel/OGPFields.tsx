@@ -11,9 +11,12 @@ import { IconPhotoPlus } from "@tabler/icons-react";
 import {
   getInputProps,
   getTextareaProps,
-  useInputControl,
   type FieldMetadata,
 } from "@conform-to/react";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 import { Button, Input, Label, Textarea } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
@@ -34,7 +37,7 @@ export function OGPFields({
   const ogpDescriptionError = ogpDescriptionField.errors?.[0];
   const ogpImageUrlError = ogpImageUrlField.errors?.[0];
 
-  const ogpImageControl = useInputControl(ogpImageUrlField);
+  const ogpImageControl = useFieldControl(ogpImageUrlField);
   const ogpImageUrlStr =
     typeof ogpImageControl.value === "string" ? ogpImageControl.value : "";
 
@@ -78,10 +81,9 @@ export function OGPFields({
 
       <div className="space-y-2">
         <Label>OGP画像</Label>
-        <input
-          type="hidden"
-          name={ogpImageUrlField.name}
-          value={ogpImageUrlStr}
+        <HiddenControlInput
+          field={ogpImageUrlField}
+          control={ogpImageControl}
         />
         <div className="flex items-start gap-3">
           {ogpImageUrlStr ? (

@@ -1,7 +1,8 @@
 /**
  * 型安全方針由来の 2 gate:
  *
- * 1. `as unknown as FieldMetadata` cast は `typed-input-control.ts` 内部だけ許可
+ * 1. `as unknown as FieldMetadata` cast は src に置かない
+   （旧 `typed-input-control.ts` の二重 cast は `useTypedControl` 化で不要になった）
  * 2. `updateTag` / `revalidateTag` に渡す `CACHE_TAGS.*` は `cacheTag` producer を
  *    持たない場合、`INVALIDATION_ONLY` allowlist に明示的に載せる（管理系リストで
  *    意図的に「無効化のみ・キャッシュ producer なし」としているタグ集合の drift 検知）
@@ -45,29 +46,19 @@ describe("type-safety casts / cache-tag drift", () => {
     ).toBe(false);
   });
 
-  test("`as unknown as FieldMetadata` cast は typed-input-control helper 内部のみ許可", () => {
+  test("`as unknown as FieldMetadata` cast は src に存在しない", () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}");
-    const allowedFile = join(
-      SRC_ROOT,
-      "shared",
-      "lib",
-      "conform",
-      "typed-input-control.ts",
-    );
     const scanned: string[] = [];
     const offenders: string[] = [];
     for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
       const abs = join(SRC_ROOT, rel);
       scanned.push(abs);
-      if (abs === allowedFile) continue;
       if (hasFieldMetadataDoubleCast(readFileSync(abs, "utf-8"))) {
         offenders.push(relative(ROOT, abs));
       }
     }
     // 走査が 0 件に落ちると違反ゼロと区別が付かない。
-    // 免除ファイルが走査対象に居ることも確かめる（改名すると免除が空を切る）。
     expect(scanned.length).toBeGreaterThan(100);
-    expect(scanned).toContain(allowedFile);
     expect(offenders).toEqual([]);
   }, 30000);
 

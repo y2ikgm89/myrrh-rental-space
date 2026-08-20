@@ -9,8 +9,8 @@
  *
  * - Server Action は `(id, prev, formData)` signature の `updatePostCategoryAction`
  *   / `updatePostTagAction` を `bind` で id 部分適用
- * - OGP 画像は `useSingleMediaPicker` + `useInputControl` で sync
- * - 文字列フィールド値の reactive preview は `useInputControl().value` で購読
+ * - OGP 画像は `useSingleMediaPicker` + `useFieldControl` で sync
+ * - 文字列フィールド値の reactive preview は `fields.X.value` で購読
  * - 成功時の toast / router.refresh は useEffect 内、`setIsDeleteDialogOpen` 等の
  *   setState は副作用と分離
  * - 削除フローは Server Action 直接呼び出し + `useTransition`（form 経由でないため
@@ -24,7 +24,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -62,6 +61,10 @@ import type { Route } from "next";
 import { categoryFormSchema, tagFormSchema } from "./taxonomy-schema";
 import { TaxonomyDeleteDialog } from "./TaxonomyDeleteDialog";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 // =============================================================================
 // Types
@@ -247,17 +250,13 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
     },
   });
 
-  const nameControl = useInputControl(fields.name);
-  const slugControl = useInputControl(fields.slug);
-  const descriptionControl = useInputControl(fields.description);
-  const metaTitleControl = useInputControl(fields.metaTitle);
-  const metaDescriptionControl = useInputControl(fields.metaDescription);
-  const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
+  const slugControl = useFieldControl(fields.slug);
+  const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
   const slugValue = slugControl.value ?? "";
-  const descriptionValue = descriptionControl.value ?? "";
-  const metaTitleValue = metaTitleControl.value ?? "";
-  const metaDescriptionValue = metaDescriptionControl.value ?? "";
+  const descriptionValue = fields.description.value ?? "";
+  const metaTitleValue = fields.metaTitle.value ?? "";
+  const metaDescriptionValue = fields.metaDescription.value ?? "";
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -272,7 +271,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
   });
 
   const handleGenerateSlug = () => {
-    const name = nameControl.value ?? "";
+    const name = fields.name.value ?? "";
     if (name) {
       slugControl.change(generateSlug(name, "category"));
     }
@@ -350,11 +349,11 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
         action={formAction}
         className="grid gap-6 lg:grid-cols-2"
       >
-        <input
-          type="hidden"
-          name={fields.ogpImageUrl.name}
-          value={ogpImageUrlValue}
+        <HiddenControlInput
+          field={fields.ogpImageUrl}
+          control={ogpImageUrlControl}
         />
+        <HiddenControlInput field={fields.slug} control={slugControl} />
 
         {/* 基本情報 */}
         <Card>
@@ -392,9 +391,16 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 </Button>
               </div>
               <Input
-                {...getInputProps(fields.slug, { type: "text" })}
+                id={fields.slug.id}
+                value={slugValue}
+                onChange={(e) => slugControl.change(e.target.value)}
+                onBlur={slugControl.blur}
                 placeholder="slug"
                 disabled={isPending}
+                aria-invalid={fields.slug.errors ? true : undefined}
+                aria-describedby={
+                  fields.slug.errors ? fields.slug.errorId : undefined
+                }
               />
               {fields.slug.errors && (
                 <p
@@ -548,17 +554,13 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
     },
   });
 
-  const nameControl = useInputControl(fields.name);
-  const slugControl = useInputControl(fields.slug);
-  const descriptionControl = useInputControl(fields.description);
-  const metaTitleControl = useInputControl(fields.metaTitle);
-  const metaDescriptionControl = useInputControl(fields.metaDescription);
-  const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
+  const slugControl = useFieldControl(fields.slug);
+  const ogpImageUrlControl = useFieldControl(fields.ogpImageUrl);
 
   const slugValue = slugControl.value ?? "";
-  const descriptionValue = descriptionControl.value ?? "";
-  const metaTitleValue = metaTitleControl.value ?? "";
-  const metaDescriptionValue = metaDescriptionControl.value ?? "";
+  const descriptionValue = fields.description.value ?? "";
+  const metaTitleValue = fields.metaTitle.value ?? "";
+  const metaDescriptionValue = fields.metaDescription.value ?? "";
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
@@ -573,7 +575,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
   });
 
   const handleGenerateSlug = () => {
-    const name = nameControl.value ?? "";
+    const name = fields.name.value ?? "";
     if (name) {
       slugControl.change(generateSlug(name, "tag"));
     }
@@ -651,11 +653,11 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
         action={formAction}
         className="grid gap-6 lg:grid-cols-2"
       >
-        <input
-          type="hidden"
-          name={fields.ogpImageUrl.name}
-          value={ogpImageUrlValue}
+        <HiddenControlInput
+          field={fields.ogpImageUrl}
+          control={ogpImageUrlControl}
         />
+        <HiddenControlInput field={fields.slug} control={slugControl} />
 
         {/* 基本情報 */}
         <Card>
@@ -693,9 +695,16 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 </Button>
               </div>
               <Input
-                {...getInputProps(fields.slug, { type: "text" })}
+                id={fields.slug.id}
+                value={slugValue}
+                onChange={(e) => slugControl.change(e.target.value)}
+                onBlur={slugControl.blur}
                 placeholder="slug"
                 disabled={isPending}
+                aria-invalid={fields.slug.errors ? true : undefined}
+                aria-describedby={
+                  fields.slug.errors ? fields.slug.errorId : undefined
+                }
               />
               {fields.slug.errors && (
                 <p

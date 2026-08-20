@@ -6,7 +6,7 @@
  * サイト名、フッターコピーライト、サイト説明（テキスト情報）と、
  * ファビコン・ロゴ・OGP画像（ブランド画像）を 1 つの保存単位で管理する。
  *
- * `useInputControl` で value / onChange を bridge、Switch も `useInputControl` + hidden input
+ * `useFieldControl` で value / onChange を bridge、Switch も `useFieldControl` + hidden input
  * 経由で "on" / "" sync。
  *
  * UI 構造:
@@ -28,7 +28,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -54,6 +53,10 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 import { dispatchWithoutFormReset } from "@/shared/lib/forms/conform-submit";
+import {
+  HiddenControlInput,
+  useFieldControl,
+} from "@/shared/lib/conform/control";
 
 interface BasicInfoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
@@ -95,12 +98,12 @@ export function BasicInfoSection({
     },
   });
 
-  const faviconUrlControl = useInputControl(fields.faviconUrl);
-  const defaultOgpImageUrlControl = useInputControl(fields.defaultOgpImageUrl);
-  const headerLogoUrlControl = useInputControl(fields.headerLogoUrl);
-  const footerLogoUrlControl = useInputControl(fields.footerLogoUrl);
-  const useHeaderLogoControl = useInputControl(fields.useHeaderLogo);
-  const useFooterLogoControl = useInputControl(fields.useFooterLogo);
+  const faviconUrlControl = useFieldControl(fields.faviconUrl);
+  const defaultOgpImageUrlControl = useFieldControl(fields.defaultOgpImageUrl);
+  const headerLogoUrlControl = useFieldControl(fields.headerLogoUrl);
+  const footerLogoUrlControl = useFieldControl(fields.footerLogoUrl);
+  const useHeaderLogoControl = useFieldControl(fields.useHeaderLogo);
+  const useFooterLogoControl = useFieldControl(fields.useFooterLogo);
 
   const faviconUrl = faviconUrlControl.value ?? "";
   const defaultOgpImageUrl = defaultOgpImageUrlControl.value ?? "";
@@ -121,31 +124,29 @@ export function BasicInfoSection({
   return (
     <form {...getFormProps(form)} action={action}>
       {/* MediaPicker / Switch の hidden input 群 */}
-      <input type="hidden" name={fields.faviconUrl.name} value={faviconUrl} />
-      <input
-        type="hidden"
-        name={fields.defaultOgpImageUrl.name}
-        value={defaultOgpImageUrl}
+      <HiddenControlInput
+        field={fields.faviconUrl}
+        control={faviconUrlControl}
       />
-      <input
-        type="hidden"
-        name={fields.headerLogoUrl.name}
-        value={headerLogoUrl}
+      <HiddenControlInput
+        field={fields.defaultOgpImageUrl}
+        control={defaultOgpImageUrlControl}
       />
-      <input
-        type="hidden"
-        name={fields.footerLogoUrl.name}
-        value={footerLogoUrl}
+      <HiddenControlInput
+        field={fields.headerLogoUrl}
+        control={headerLogoUrlControl}
       />
-      <input
-        type="hidden"
-        name={fields.useHeaderLogo.name}
-        value={useHeaderLogoControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.footerLogoUrl}
+        control={footerLogoUrlControl}
       />
-      <input
-        type="hidden"
-        name={fields.useFooterLogo.name}
-        value={useFooterLogoControl.value ?? ""}
+      <HiddenControlInput
+        field={fields.useHeaderLogo}
+        control={useHeaderLogoControl}
+      />
+      <HiddenControlInput
+        field={fields.useFooterLogo}
+        control={useFooterLogoControl}
       />
 
       <Card>
