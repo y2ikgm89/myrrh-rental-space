@@ -7,6 +7,7 @@ import {
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { formatJstDateString, MS_PER_DAY } from "@/shared/lib/date-format";
+import { numberFromBigintCount } from "@/shared/lib/sql-count";
 
 export type DashboardStats = {
   reservations: {
@@ -366,7 +367,7 @@ export async function getReservationChartData(): Promise<ReservationChartResult>
   for (const stat of dailyStats) {
     if (!dataMap.has(stat.date)) continue;
     dataMap.set(stat.date, {
-      reservations: Number(stat.reservations),
+      reservations: numberFromBigintCount(stat.reservations),
       revenue: Number(stat.revenue ?? 0),
     });
   }
