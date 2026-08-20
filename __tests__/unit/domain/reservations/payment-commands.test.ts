@@ -940,6 +940,29 @@ describe("reservations/payment-commands", () => {
       expect(firstKey).not.toBe(secondKey);
     });
 
+    test("refundOrphanedStripePaymentForCancelledReservation: Stripe idempotency key includes excludedAttemptCount", async () => {
+      mockTxReservationFindUnique.mockResolvedValue({
+        status: ReservationStatus.CANCELLED,
+        paymentStatus: PaymentStatus.PAID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+        totalPriceWithTax: 5000,
+      });
+      mockTxRefundCount.mockResolvedValue(2);
+      mockRefundCreate.mockResolvedValueOnce({
+        id: "re_test_auto",
+        status: "succeeded",
+      });
+
+      await refundOrphanedStripePaymentForCancelledReservation({
+        reservationId: RESERVATION_ID,
+        stripePaymentIntentId: PAYMENT_INTENT_ID,
+      });
+
+      expect(mockRefundCreate).toHaveBeenCalledWith(expect.any(Object), {
+        idempotencyKey: `reservation-refund-${RESERVATION_ID}-5000-2`,
+      });
+    });
+
     test("refundOrphanedStripePaymentForCancelledReservation: status=pending なら reservation.updateMany 未呼出", async () => {
       mockTxReservationFindUnique.mockResolvedValue({
         status: ReservationStatus.CANCELLED,
