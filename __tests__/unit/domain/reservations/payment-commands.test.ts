@@ -935,8 +935,8 @@ describe("reservations/payment-commands", () => {
         amount: 1000,
       });
 
-      const firstKey = mockRefundCreate.mock.calls[0]?.[1]?.idempotencyKey;
-      const secondKey = mockRefundCreate.mock.calls[1]?.[1]?.idempotencyKey;
+      const firstKey = mockRefundCreate.mock.calls[0]?.[1]?.["idempotencyKey"];
+      const secondKey = mockRefundCreate.mock.calls[1]?.[1]?.["idempotencyKey"];
       expect(firstKey).not.toBe(secondKey);
     });
 
