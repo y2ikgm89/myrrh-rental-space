@@ -345,6 +345,13 @@ describe("calculateTaxExcludedPrice", () => {
       expect(calculateTaxExcludedPrice(100, 8)).toBe(93);
     });
 
+    test("税込 3000 円は切り捨て 2777 ではなく四捨五入 2778", () => {
+      // N-12: イベント領収書が floor(3000*100/108)=2777 だと税額 223。
+      // SSoT は round(3000/1.08)=2778、税額 222。
+      expect(calculateTaxExcludedPrice(3000, 8)).toBe(2778);
+      expect(3000 - calculateTaxExcludedPrice(3000, 8)).toBe(222);
+    });
+
     test("税込価格から税抜価格への逆算（8%）", () => {
       const taxIncluded = calculateTaxIncludedPrice(5000, 8);
       const taxExcluded = calculateTaxExcludedPrice(taxIncluded, 8);

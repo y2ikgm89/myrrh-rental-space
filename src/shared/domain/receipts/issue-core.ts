@@ -9,6 +9,7 @@ import {
   claimNextSerialNo,
   type ReceiptTx,
 } from "@/shared/domain/receipts/serial";
+import { calculateTaxExcludedPrice } from "@/shared/lib/pricing/tax";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type ReceiptIssueOptions = {
@@ -182,7 +183,9 @@ async function resolveEventRegistrationIssue(
       "VALIDATION",
     );
   }
-  const taxExcludedAmount = Math.floor((amount * 100) / (100 + taxRate));
+  // 税込からの逆算も tax.ts の四捨五入 SSoT。切り捨て式は置かない
+  // （予約経路の calculateTaxAmount と ±1 円ずれないようにする）。
+  const taxExcludedAmount = calculateTaxExcludedPrice(amount, taxRate);
   const taxAmount = amount - taxExcludedAmount;
 
   const customerName = registration.customer
