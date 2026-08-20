@@ -162,6 +162,7 @@ variable "cloud_run_secret_versions" {
     R2_PUBLIC_URL                      = "1"
     CLOUDFLARE_ZONE_ID                 = "1"
     CLOUDFLARE_API_TOKEN               = "1"
+    # pin=3 ENABLED。version 1・2 は 2026-08-14 DESTROYED（disable 不可）。
     CLOUDFLARE_ORIGIN_HEADER_SECRET    = "3"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
@@ -273,6 +274,9 @@ variable "cloudflare_account_id" {
 #    b. この map を その番号へ bump して main へ push
 #    c. Deploy Production を実行。旧値は以後受理されない。
 #    旧 version の disable は運用判断（ロールバック余地を残すなら残す）。
+#    **2026-08-21 確認:** version 1・2 は 2026-08-14 に DESTROYED。
+#    DESTROYED は不可逆で `versions disable` は FAILED_PRECONDITION。
+#    触ってよい ENABLED は pin の 3 だけ。
 #
 # **各段のあとに検証する。** 本番へ `x-cloudflare-origin-secret` 無しで直接到達し、
 # rate-limit が効く（＝ `"unknown"` に落ちていない）ことを確認してから次へ進む。
