@@ -10,6 +10,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { installPrismaEnumsMock } from "../../../support/prisma-enums-mock";
 
 // -----------------------------------------------------------------------
 // tx モック関数（mock.module より前・TDZ 回避）
@@ -116,7 +117,7 @@ mock.module("@/shared/db/json", () => ({
   asPrismaInputJsonValue: (value: unknown) => value,
 }));
 
-mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
+await installPrismaEnumsMock({
   AuditAction: { CREATE: "CREATE", UPDATE: "UPDATE" },
   PaymentStatus: {
     PAID: "PAID",
@@ -124,7 +125,7 @@ mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
     UNPAID: "UNPAID",
     REFUNDED: "REFUNDED",
   },
-}));
+});
 
 mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: () => Promise.resolve(),
