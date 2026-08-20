@@ -1,7 +1,9 @@
 # Alerting
 
 This project treats Cloud Monitoring alert policies in
-`terraform/monitoring.tf` as version-controlled infrastructure. The six
+`terraform/monitoring.tf` as version-controlled infrastructure. Thresholds
+are derived from the public-surface availability SLO in
+[`slo.md`](slo.md) (99.9% / 30 days, 43.2-minute error budget). The six
 signals below are the ones the runtime knows how to emit; anything not in
 this list either has no upstream signal today or is monitored by another
 surface (Cloudflare WAF, GitHub, etc).
@@ -11,14 +13,14 @@ merge runs `terraform apply` via `deploy-production.yml`.
 
 ## Signals
 
-| Signal                            | Terraform resource                                            | Threshold    | Rationale                                                                                                       |
-| --------------------------------- | ------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`         | > 20 / 5 min | Background 4xx / retryable errors run at ~3–5 / 5 min steady state                                              |
-| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`            | any 1 log    | Mostly hand-picked failures, but `criticalFetch` also promotes any settings-read error (see Runtime coupling)   |
-| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Admin-surface DB health only (`myrrh-rental-space-admin`); public returns 404                                   |
-| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | 401 on `/api/cron/*`, or authorizeCronRequest CRITICAL+AUTHORIZATION config-missing 500 — not generic cron 500s |
-| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion is the fastest cliff we can fall off under load                                                 |
-| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Verified GCal push is acked 200 (retry-storm prevention); MEDIUM `Webhook sync failed` is otherwise invisible   |
+| Signal                            | Terraform resource                                            | Threshold    | SLO basis (`slo.md`)                                                                                  |
+| --------------------------------- | ------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| ReportedErrorEvent burst          | `google_monitoring_alert_policy.reported_error_burst`         | > 20 / 5 min | 5 min of elevated HIGH/CRITICAL burns ~12% of the 43.2 min / 30d budget. Steady state is ~3–5 / 5 min |
+| Log severity CRITICAL             | `google_monitoring_alert_policy.severity_critical`            | any 1 log    | Settings-read CRITICAL can take every page down; one event starts budget burn                         |
+| `/api/health` 5xx                 | `google_monitoring_alert_policy.health_probe_5xx`             | any 1 log    | Admin DB health leading indicator (not the public SLO probe). Public `/api/health` returns 404        |
+| Cron OIDC / config failure        | `google_monitoring_alert_policy.cron_oidc_failure`            | > 3 / 15 min | Outside availability SLO. Silent cron stop. 401 on `/api/cron/*` or AUTHORIZATION config-missing 500  |
+| Prisma pool acquire-timeout       | `google_monitoring_alert_policy.prisma_pool_timeout`          | > 5 / 5 min  | Pool exhaustion turns the public surface into 5xx and burns budget in minutes                         |
+| Google Calendar webhook sync fail | `google_monitoring_alert_policy.google_calendar_sync_failure` | > 3 / 15 min | Outside availability SLO. Push is acked 200; MEDIUM `Webhook sync failed` is otherwise invisible      |
 
 `/api/live` is intentionally excluded — it is the Cloud Run startup / liveness
 probe and is contracted to be DB-free. Alerting on it would create a feedback

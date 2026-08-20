@@ -109,6 +109,9 @@ resource "google_monitoring_notification_channel" "oncall_email" {
   }
 }
 
+# SLO: docs/observability/slo.md (public 99.9% / 30d, budget 43.2 min).
+# 20 events / 5 min is a burst: ~12% of the 30-day budget if the surface is 5xx
+# for those 5 minutes. Steady state is ~3-5 / 5 min.
 resource "google_monitoring_alert_policy" "reported_error_burst" {
   display_name = "myrrh-rental-space: reported error burst"
   combiner     = "OR"
@@ -163,6 +166,8 @@ resource "google_monitoring_alert_policy" "reported_error_burst" {
   depends_on = [google_logging_metric.reported_error_events]
 }
 
+# SLO: docs/observability/slo.md. CRITICAL settings-read failures take every
+# page down; one event starts error-budget burn, so page on the first log.
 resource "google_monitoring_alert_policy" "severity_critical" {
   display_name = "myrrh-rental-space: CRITICAL severity log"
   combiner     = "OR"
@@ -205,6 +210,8 @@ resource "google_monitoring_alert_policy" "severity_critical" {
   }
 }
 
+# SLO: docs/observability/slo.md. Admin /api/health is a leading indicator for
+# public 5xx (DB unreachable), not the public SLO probe itself. Page on any 1.
 resource "google_monitoring_alert_policy" "health_probe_5xx" {
   display_name = "myrrh-rental-space: /api/health 5xx"
   combiner     = "OR"
@@ -254,6 +261,8 @@ resource "google_monitoring_alert_policy" "health_probe_5xx" {
   }
 }
 
+# Outside the public availability SLO (docs/observability/slo.md). Silent cron
+# stop; 3 / 15 min filters a single retry from a real config/OIDC outage.
 resource "google_monitoring_alert_policy" "cron_oidc_failure" {
   display_name = "myrrh-rental-space: cron OIDC failure"
   combiner     = "OR"
@@ -315,6 +324,8 @@ resource "google_monitoring_alert_policy" "cron_oidc_failure" {
   depends_on = [google_logging_metric.cron_oidc_failure]
 }
 
+# SLO: docs/observability/slo.md. Pool exhaustion turns the public surface into
+# 5xx and burns the 43.2 min budget in minutes. 5 / 5 min is the cliff.
 resource "google_monitoring_alert_policy" "prisma_pool_timeout" {
   display_name = "myrrh-rental-space: Prisma pool acquire timeout"
   combiner     = "OR"
@@ -395,6 +406,8 @@ resource "google_logging_metric" "google_calendar_sync_failure" {
   }
 }
 
+# Outside the public availability SLO (docs/observability/slo.md). The route
+# returns 200 on purpose; 3 / 15 min is the only page for MEDIUM sync failure.
 resource "google_monitoring_alert_policy" "google_calendar_sync_failure" {
   display_name = "myrrh-rental-space: Google Calendar webhook sync failure"
   combiner     = "OR"
