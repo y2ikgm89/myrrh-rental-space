@@ -20,7 +20,10 @@ import {
 import { isSmartLockBodyDeviceType } from "@/shared/lib/validations/enums/helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { buildPasscodeName } from "./issue-passcode";
+import {
+  buildPasscodeName,
+  DEVICE_LIST_POLL_OFFSETS_MS,
+} from "./issue-passcode";
 import { completePendingSmartLockReissue } from "./reissue-passcode";
 import { confirmRevokeByKeyAbsence, revokeOne } from "./revoke-passcode";
 
@@ -54,6 +57,10 @@ export async function isKnownSmartLockDevice(
 
 function normalizeEventName(eventName: string): string {
   return eventName.trim();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function findRevokePendingPasscodeForDeleteWebhook(input: {
@@ -240,6 +247,23 @@ async function processCreateKeyChangeReport(
     return updated.count > 0;
   }
 
+  if (await confirmCreateKeyFromDeviceList(device, passcodeRow)) {
+    return true;
+  }
+
+  // keyList 反映は webhook success より遅れる（実機 120s+）。200 ack は維持し、
+  // 短周期で再試行する。見つからなければ PENDING のまま次の物質化に任せる。
+  fireAndForget(pollConfirmCreateKeyFromDeviceList(device, passcodeRow), {
+    operation: "pollConfirmCreateKeyFromDeviceList",
+    category: ErrorCategory.EXTERNAL_API,
+  });
+  return false;
+}
+
+async function confirmCreateKeyFromDeviceList(
+  device: { readonly id: string; readonly deviceId: string },
+  passcodeRow: { readonly id: string; readonly reservationId: string },
+): Promise<boolean> {
   const credentials = await getDecryptedSwitchBotCredentials();
   if (!credentials) return false;
 
@@ -283,6 +307,25 @@ async function processCreateKeyChangeReport(
   }
 
   return true;
+}
+
+async function pollConfirmCreateKeyFromDeviceList(
+  device: { readonly id: string; readonly deviceId: string },
+  passcodeRow: { readonly id: string; readonly reservationId: string },
+): Promise<boolean> {
+  for (
+    let attempt = 1;
+    attempt < DEVICE_LIST_POLL_OFFSETS_MS.length;
+    attempt++
+  ) {
+    const currentOffset = DEVICE_LIST_POLL_OFFSETS_MS[attempt] ?? 0;
+    const previousOffset = DEVICE_LIST_POLL_OFFSETS_MS[attempt - 1] ?? 0;
+    await sleep(currentOffset - previousOffset);
+    if (await confirmCreateKeyFromDeviceList(device, passcodeRow)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

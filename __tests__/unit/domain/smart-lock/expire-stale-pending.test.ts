@@ -1,7 +1,8 @@
 /**
  * `expireStalePendingSmartLockPasscodes` の contract test。
  *
- * stale PENDING は Device List に live key がある場合 deleteKey へ回収し、
+ * stale PENDING は Device List に live key がある場合:
+ * CONFIRMED 予約かつ未期限切れは confirm、CANCELLED / 期限切れのみ deleteKey。
  * key が無い場合のみ FAILED に倒す。
  */
 
@@ -20,7 +21,9 @@ const mockFindMany = mock<
       reservationId: string;
       deviceId: string;
       switchbotKeyId: string | null;
+      endTime: Date;
       device: { deviceId: string };
+      reservation: { status: string };
     }>
   >
 >(() => Promise.resolve([]));
@@ -140,7 +143,9 @@ describe("expireStalePendingSmartLockPasscodes", () => {
           reservationId: "res-1",
           deviceId: "dev-1",
           switchbotKeyId: null,
+          endTime: new Date("2027-12-31T00:00:00Z"),
           device: { deviceId: "AA:BB" },
+          reservation: { status: "CONFIRMED" },
         },
       ]),
     );
@@ -165,7 +170,43 @@ describe("expireStalePendingSmartLockPasscodes", () => {
     expect(mockCreateNotification).toHaveBeenCalledTimes(1);
   });
 
-  test("Device List に key がある場合は deleteKey 回収を試み FAILED にしない", async () => {
+  test("CONFIRMED 予約の stale PENDING は Device List に key があれば CONFIRMED し deleteKey しない", async () => {
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: { id: "live-key" },
+    });
+
+    const result = await expireStalePendingSmartLockPasscodes(
+      new Date("2027-06-15T12:00:00Z"),
+    );
+
+    expect(result).toBe(0);
+    expect(mockDeletePasscode).not.toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "PENDING", id: "pcode-1" }),
+        data: expect.objectContaining({
+          status: "CONFIRMED",
+          switchbotKeyId: "live-key",
+        }),
+      }),
+    );
+  });
+
+  test("CANCELLED 予約の stale PENDING は Device List に key があれば deleteKey する", async () => {
+    mockFindMany.mockImplementation(() =>
+      Promise.resolve([
+        {
+          id: "pcode-1",
+          reservationId: "res-1",
+          deviceId: "dev-1",
+          switchbotKeyId: null,
+          endTime: new Date("2027-12-31T00:00:00Z"),
+          device: { deviceId: "AA:BB" },
+          reservation: { status: "CANCELLED" },
+        },
+      ]),
+    );
     mockFindKeyInDeviceList.mockResolvedValue({
       ok: true,
       body: { id: "live-key" },

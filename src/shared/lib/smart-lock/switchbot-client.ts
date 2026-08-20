@@ -17,6 +17,7 @@
 import "server-only";
 import { createHmac, randomUUID } from "crypto";
 import { z } from "zod";
+import { isRecord } from "@/shared/lib/serialize";
 import { notifyConnectionApiResult } from "@/shared/lib/integration-health-port";
 import { IntegrationKey } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -108,7 +109,7 @@ function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
   };
 }
 
-async function request<T>(
+async function request(
   credentials: SwitchBotCredentials,
   path: string,
   init?: {
@@ -117,7 +118,7 @@ async function request<T>(
     /** Device List は body schema 検証後に success を記録する */
     readonly deferSuccessHealth?: boolean;
   },
-): Promise<SwitchBotApiResult<T>> {
+): Promise<SwitchBotApiResult<unknown>> {
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       method: init?.method ?? "GET",
@@ -157,7 +158,7 @@ async function request<T>(
       });
     }
 
-    const success = { ok: true as const, body: parsed.data.body as T };
+    const success = { ok: true as const, body: parsed.data.body };
     if (init?.deferSuccessHealth) {
       return success;
     }
@@ -197,7 +198,7 @@ export type SwitchBotPasscodeType =
 export async function getDeviceList(
   credentials: SwitchBotCredentials,
 ): Promise<SwitchBotApiResult<DeviceListBody>> {
-  const result = await request<unknown>(credentials, "/devices", {
+  const result = await request(credentials, "/devices", {
     deferSuccessHealth: true,
   });
   if (!result.ok) return result;
@@ -350,14 +351,10 @@ export async function createPasscode(
   credentials: SwitchBotCredentials,
   { deviceId, ...parameter }: CreatePasscodeParams,
 ): Promise<SwitchBotApiResult<{ commandId?: string }>> {
-  const result = await request<{ commandId?: string } | Record<string, never>>(
-    credentials,
-    `/devices/${deviceId}/commands`,
-    {
-      method: "POST",
-      body: { commandType: "command", command: "createKey", parameter },
-    },
-  );
+  const result = await request(credentials, `/devices/${deviceId}/commands`, {
+    method: "POST",
+    body: { commandType: "command", command: "createKey", parameter },
+  });
   if (!result.ok) {
     return result;
   }
@@ -389,15 +386,16 @@ export async function getLockDeviceStatus(
   credentials: SwitchBotCredentials,
   deviceId: string,
 ): Promise<SwitchBotApiResult<SwitchBotLockDeviceStatus>> {
-  const result = await request<Record<string, unknown>>(
-    credentials,
-    `/devices/${deviceId}/status`,
-  );
+  const result = await request(credentials, `/devices/${deviceId}/status`);
   if (!result.ok) {
     return result;
   }
 
   const body = result.body;
+  if (!isRecord(body)) {
+    return { ok: true, body: {} };
+  }
+
   const lockState = body["lockState"];
   const doorState = body["doorState"];
   const battery = body["battery"];
@@ -422,18 +420,14 @@ export async function deletePasscode(
   deviceId: string,
   keyId: string,
 ): Promise<SwitchBotApiResult<{ commandId?: string }>> {
-  const result = await request<{ commandId?: string } | Record<string, never>>(
-    credentials,
-    `/devices/${deviceId}/commands`,
-    {
-      method: "POST",
-      body: {
-        commandType: "command",
-        command: "deleteKey",
-        parameter: { id: keyId },
-      },
+  const result = await request(credentials, `/devices/${deviceId}/commands`, {
+    method: "POST",
+    body: {
+      commandType: "command",
+      command: "deleteKey",
+      parameter: { id: keyId },
     },
-  );
+  });
   if (!result.ok) {
     return result;
   }
@@ -456,7 +450,7 @@ export async function deletePasscode(
 export async function setupWebhook(
   credentials: SwitchBotCredentials,
   url: string,
-): Promise<SwitchBotApiResult<Record<string, never>>> {
+): Promise<SwitchBotApiResult<unknown>> {
   return request(credentials, "/webhook/setupWebhook", {
     method: "POST",
     body: { action: "setupWebhook", url, deviceList: "ALL" },
@@ -467,17 +461,34 @@ export async function setupWebhook(
 export async function queryWebhookUrls(
   credentials: SwitchBotCredentials,
 ): Promise<SwitchBotApiResult<{ urls: string[] }>> {
-  return request(credentials, "/webhook/queryWebhook", {
+  const result = await request(credentials, "/webhook/queryWebhook", {
     method: "POST",
     body: { action: "queryUrl" },
   });
+  if (!result.ok) {
+    return result;
+  }
+  if (!isRecord(result.body) || !isStringArray(result.body["urls"])) {
+    return {
+      ok: false,
+      statusCode: 0,
+      message: "Webhook URL 一覧の形式が不正です",
+    };
+  }
+  return { ok: true, body: { urls: result.body["urls"] } };
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
 }
 
 /** Webhook登録を解除する。 */
 export async function deleteWebhook(
   credentials: SwitchBotCredentials,
   url: string,
-): Promise<SwitchBotApiResult<Record<string, never>>> {
+): Promise<SwitchBotApiResult<unknown>> {
   return request(credentials, "/webhook/deleteWebhook", {
     method: "POST",
     body: { action: "deleteWebhook", url },

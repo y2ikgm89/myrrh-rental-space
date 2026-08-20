@@ -61,8 +61,16 @@ function notifyPasscodeFailure(input: {
 /** Settingsの暗号化フィールドとは無関係のローカルpurpose（SETTINGS_CRYPTO_PURPOSESには含めない）。 */
 export const PASSCODE_CRYPTO_PURPOSE = "switchbot-guest-passcode";
 
-/** Device List 疎 poll の開始からのオフセット（ms）。最大 5 回 / 45s。 */
-const DEVICE_LIST_POLL_OFFSETS_MS = [0, 5_000, 15_000, 30_000, 45_000] as const;
+/**
+ * Device List 疎 poll の開始からのオフセット（ms）。
+ * 実機 Keypad Touch は keyList 反映が 120s 超のため、それを超えるまで見る。
+ */
+export const DEVICE_LIST_POLL_OFFSETS_MS = [
+  0, 5_000, 15_000, 30_000, 45_000, 75_000, 120_000, 150_000,
+] as const;
+
+const DEVICE_LIST_POLL_TIMEOUT_MS =
+  DEVICE_LIST_POLL_OFFSETS_MS[DEVICE_LIST_POLL_OFFSETS_MS.length - 1] ?? 0;
 
 export type IssueSmartLockPasscodesInput = {
   readonly reservationId: string;
@@ -335,8 +343,7 @@ async function issueForDevice(
   );
   notifyPasscodeFailure({
     reservationId: input.reservationId,
-    reason:
-      "SwitchBot からの確定通知が 45 秒以内に届かず PENDING のまま (webhook 到着で自動リカバリの可能性あり)",
+    reason: `SwitchBot からの確定通知が ${DEVICE_LIST_POLL_TIMEOUT_MS / 1000} 秒以内に届かず PENDING のまま (webhook 到着で自動リカバリの可能性あり)`,
   });
   return null;
 }
@@ -412,32 +419,38 @@ export async function issueSmartLockPasscodes(
     });
 
     if (existing) {
-      if (existing.status === SmartLockPasscodeStatus.CONFIRMED) {
-        const resolved = decryptConfirmedPasscode(
-          existing.passcodeCiphertext,
-          device.deviceName,
-          input.reservationId,
-        );
-        return resolved
-          ? { passcodes: [resolved], issuanceFailed: false }
-          : { passcodes: [], issuanceFailed: true };
-      }
-      if (existing.status === SmartLockPasscodeStatus.REVOKE_PENDING) {
-        // deleteKey 受理後の失効待ち。reissue path は edit-side-effects が
-        // createKey 前に revoke 完了を待つが、ここに到達 = 新 key 未発行。
-        // silent no-op (issuanceFailed:false) は禁止 — fallback を出す。
-        return { passcodes: [], issuanceFailed: true };
-      }
-      if (existing.status === SmartLockPasscodeStatus.FAILED) {
-        await prisma.smartLockPasscode.delete({
-          where: { id: existing.id },
-        });
-      } else {
-        // PENDING = createKey 進行中。
-        return {
-          passcodes: [],
-          issuanceFailed: false,
-        };
+      switch (existing.status) {
+        case SmartLockPasscodeStatus.CONFIRMED: {
+          const resolved = decryptConfirmedPasscode(
+            existing.passcodeCiphertext,
+            device.deviceName,
+            input.reservationId,
+          );
+          return resolved
+            ? { passcodes: [resolved], issuanceFailed: false }
+            : { passcodes: [], issuanceFailed: true };
+        }
+        case SmartLockPasscodeStatus.REVOKE_PENDING:
+          // deleteKey 受理後の失効待ち。reissue path は edit-side-effects が
+          // createKey 前に revoke 完了を待つが、ここに到達 = 新 key 未発行。
+          // silent no-op (issuanceFailed:false) は禁止 — fallback を出す。
+          return { passcodes: [], issuanceFailed: true };
+        case SmartLockPasscodeStatus.FAILED:
+        case SmartLockPasscodeStatus.REVOKED:
+          await prisma.smartLockPasscode.delete({
+            where: { id: existing.id },
+          });
+          break;
+        case SmartLockPasscodeStatus.PENDING:
+          return {
+            passcodes: [],
+            issuanceFailed: false,
+          };
+        default: {
+          const _exhaustive: never = existing.status;
+          void _exhaustive;
+          return { passcodes: [], issuanceFailed: true };
+        }
       }
     }
 
