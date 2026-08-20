@@ -13,13 +13,17 @@ import {
   personNameFieldSchema,
 } from "./customer-shared-fields";
 
-const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-  error: "日付の形式が正しくありません（YYYY-MM-DD）",
-});
+const dateStringSchema = z
+  .string({ error: "日付を選択してください" })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, {
+    error: "日付の形式が正しくありません（YYYY-MM-DD）",
+  });
 
-const timeStringSchema = z.string().regex(TIME_REGEX, {
-  error: "時間の形式が正しくありません（HH:MM）",
-});
+const timeStringSchema = z
+  .string({ error: "時間を選択してください" })
+  .regex(TIME_REGEX, {
+    error: "時間の形式が正しくありません（HH:MM）",
+  });
 
 export const publicReservationSchema = z
   .object({

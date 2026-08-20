@@ -19,12 +19,12 @@ export const customerProfileSchema = z
     // 無制限長の氏名が TEXT 列に入っていた（他の全経路 — 管理画面 / 公開予約 /
     // 問い合わせ — は personNameFieldSchema の 50 文字が効く）。
     lastName: z
-      .string()
+      .string({ error: "姓を入力してください" })
       .trim()
       .min(1, { error: "姓を入力してください" })
       .max(50, { error: "姓は50文字以内で入力してください" }),
     firstName: z
-      .string()
+      .string({ error: "名を入力してください" })
       .trim()
       .min(1, { error: "名を入力してください" })
       .max(50, { error: "名は50文字以内で入力してください" }),

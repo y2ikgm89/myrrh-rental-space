@@ -48,7 +48,7 @@ export const EMAIL_MAX_LENGTH = 254;
 
 export function personNameFieldSchema(label: string) {
   return z
-    .string()
+    .string({ error: `${label}は必須です` })
     .trim()
     .min(1, { error: `${label}は必須です` })
     .max(PERSON_NAME_MAX_LENGTH, {

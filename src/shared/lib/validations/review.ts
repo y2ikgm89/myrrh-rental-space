@@ -20,7 +20,9 @@ export const spaceReviewSchema = z.object({
     .optional()
     .or(z.literal("")),
   // eslint-disable-next-line local/require-trimmed-text -- Turnstile が発行する値
-  turnstileToken: z.string().min(1, { error: "認証トークンが必要です" }),
+  turnstileToken: z
+    .string({ error: "認証トークンが必要です" })
+    .min(1, { error: "認証トークンが必要です" }),
 });
 
 export type SpaceReviewInput = z.infer<typeof spaceReviewSchema>;
