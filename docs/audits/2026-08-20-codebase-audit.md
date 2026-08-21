@@ -3,6 +3,7 @@
 > 日付入りの記録。書かれた時点の事実であり、現行の仕様書ではない（[docs/README.md](../README.md)）。
 > 前回監査（2026-08-12、F-01〜F-133 / R-01〜R-62）の続きではなく、**別監査**。
 > ID は新体系（N-01〜）を使い、前回台帳には追記しない（[closeout](2026-08-15-codebase-audit-closeout.md) §8）。
+> **消化結果**: [2026-08-20-codebase-audit-closeout.md](2026-08-20-codebase-audit-closeout.md)（N-01〜N-21 はすべてマージ済み）。
 
 ## メタ
 
