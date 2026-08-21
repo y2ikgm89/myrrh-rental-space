@@ -40,19 +40,17 @@
   // rebase しない**（PR 本文にも "Whenever PR becomes conflicted, or you tick the
   // rebase/retry checkbox" と出る）。
   //
-  // このリポジトリは branch protection の `strict` を意図的に無効化している
-  // （`.github/branch-protection.json` の `required_status_checks.strict: false`。
-  // auto-merge が永久停止する構造を避けるため）。つまり GitHub 側も
-  // 「main に追随していること」を要求しない。両方が緩いと
-  // **古い base で緑になった CI 結果のまま PR がマージできる**状態になる。
+  // branch protection は `required_status_checks.strict: true`
+  // （`.github/branch-protection.json`）。required check は base 最新で
+  // 緑である必要がある。GitHub 公式推奨。
   //
-  // 実測 2026-08-11: gate 修正 (#2130) を main に入れても Renovate PR 4 本は
-  // 古い base のまま赤で放置され、各 PR の rebase チェックボックスを手で叩くまで
-  // 回復しなかった。gate や CI を直すたびに同じことが起きる。
+  // 実測 2026-08-11: `strict: false` のまま `rebaseWhen` 既定 (`auto`) だと、
+  // gate 修正 (#2130) を main に入れても Renovate PR 4 本は古い base のまま
+  // 赤で放置され、各 PR の rebase チェックボックスを手で叩くまで回復しなかった。
   //
-  // `strict` を戻す代わりにこちらで追随させる。Renovate が自分のブランチを能動的に
-  // 作り直すだけなので、GitHub がマージをブロックする strict とは別物で、
-  // auto-merge の停止は起きない。CI が余分に回るが、このリポジトリは public のため
+  // `rebaseWhen: "behind-base-branch"` は GitHub の merge ブロックとは別物。
+  // Renovate が自分のブランチを能動的に作り直すだけなので auto-merge は
+  // 停止しない。CI が余分に回るが、このリポジトリは public のため
   // Actions 分数の課金は無い。
   rebaseWhen: "behind-base-branch",
   lockFileMaintenance: {
