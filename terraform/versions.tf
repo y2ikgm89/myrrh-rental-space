@@ -63,7 +63,7 @@ terraform {
   #     hasn't verified compatibility with.
   #   - CI (`TF_VERSION` in .github/workflows/terraform.yml and
   #     terraform-drift.yml, `terraform_version` in deploy-production.yml) still
-  #     pins the literal `1.15.8` string explicitly, so the actual installed
+  #     pins the literal `1.15.9` string explicitly, so the actual installed
   #     binary is identical everywhere regardless of this constraint's
   #     flexibility — this constraint is a guard rail for anyone running a
   #     different local patch version, not the thing that picks the CI binary.
