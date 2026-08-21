@@ -309,7 +309,7 @@ export async function runOrphanCancelRefundCommand(input: {
   logContext: Record<string, string>;
   resource: string;
   savepointName: string;
-  idempotencyKey: (chargeTotal: number) => string;
+  idempotencyKey: (chargeTotal: number, excludedAttemptCount: number) => string;
   refundFk: PaymentRefundEntityFk;
   inspectEntity: (tx: RefundCommandTx) => Promise<AutoRefundInspectResult>;
   markAlreadyRefunded: (
@@ -334,6 +334,12 @@ export async function runOrphanCancelRefundCommand(input: {
 
     const cumulativeSoFar = await sumCountableRefunds(tx, input.refundFk);
     const remaining = inspected.chargeTotal - cumulativeSoFar;
+    const excludedAttemptCount = await tx.refund.count({
+      where: {
+        ...input.refundFk,
+        status: { in: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+      },
+    });
 
     if (remaining <= 0) {
       await input.markAlreadyRefunded(tx, paymentIntentId);
@@ -345,7 +351,10 @@ export async function runOrphanCancelRefundCommand(input: {
       amount: remaining,
       cumulativeSoFar,
       paymentIntentId,
-      idempotencyKey: input.idempotencyKey(inspected.chargeTotal),
+      idempotencyKey: input.idempotencyKey(
+        inspected.chargeTotal,
+        excludedAttemptCount,
+      ),
     };
   }, PAYMENT_REFUND_PREPARE_TRANSACTION_OPTIONS);
 

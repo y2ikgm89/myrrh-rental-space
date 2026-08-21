@@ -16,6 +16,7 @@ import {
   runOrphanCancelRefundCommand,
 } from "@/shared/domain/payment/payment-refund-command-orchestration";
 import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
+import { buildPaymentRefundIdempotencyKey } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import { type RefundedByType } from "@/shared/lib/validations/enums/refund-attribution";
@@ -504,6 +505,10 @@ export async function refundReservationPaymentCommand(
  *
  * `refundReservationPaymentCommand` は PAID / PARTIALLY_REFUNDED 前提のため直接は使えない。
  * claim 前提の webhook race を想定し、`paymentStatus=PENDING/UNPAID` でも実行できる。
+ *
+ * Stripe idempotency key は `buildPaymentRefundIdempotencyKey` 経由
+ * （`reservation-refund-{id}-{totalPriceWithTax}-{excludedAttemptCount}`）。
+ * 全額残の orphan 返金なので newCumulative は charge 総額と一致する。
  */
 export async function refundOrphanedStripePaymentForCancelledReservation(input: {
   reservationId: string;
@@ -532,8 +537,13 @@ export async function refundOrphanedStripePaymentForCancelledReservation(input: 
     logContext: { reservationId },
     resource: "reservation",
     savepointName: "refund_create_auto_on_cancel",
-    idempotencyKey: (chargeTotal) =>
-      `reservation-refund-${reservationId}-${chargeTotal}`,
+    idempotencyKey: (chargeTotal, excludedAttemptCount) =>
+      buildPaymentRefundIdempotencyKey({
+        prefix: "reservation-refund",
+        entityId: reservationId,
+        newCumulative: chargeTotal,
+        excludedAttemptCount,
+      }),
     refundFk: { reservationId },
     inspectEntity: async (tx) => {
       const reservation = await tx.reservation.findUnique({

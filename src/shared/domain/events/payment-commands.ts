@@ -32,6 +32,7 @@ import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/paymen
 import { withStripeConnectionHealth } from "@/shared/domain/settings/connection-health";
 import {
   acquirePaymentRefundAdvisoryLock,
+  buildPaymentRefundIdempotencyKey,
   createRefundRecordIdempotent,
   createStripeRefundOrThrow,
   isRefundSettledSuccess,
@@ -801,8 +802,13 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     logContext: { registrationId },
     resource: "event-registration",
     savepointName: "refund_create_event_auto_on_cancel",
-    idempotencyKey: (chargeTotal) =>
-      `event-registration-cancel-orphan-refund-${registrationId}-${chargeTotal}`,
+    idempotencyKey: (chargeTotal, excludedAttemptCount) =>
+      buildPaymentRefundIdempotencyKey({
+        prefix: "event-registration-refund",
+        entityId: registrationId,
+        newCumulative: chargeTotal,
+        excludedAttemptCount,
+      }),
     refundFk: { eventRegistrationId: registrationId },
     inspectEntity: async (tx) => {
       const registration = await tx.eventRegistration.findFirst({
