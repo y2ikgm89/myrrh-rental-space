@@ -21,6 +21,9 @@ export type WebVitalReport = {
 export async function reportWebVitalAction(
   report: WebVitalReport,
 ): Promise<void> {
+  // Server Actions must be async; logging is sync via console.
+  await Promise.resolve();
+
   if (!ALLOWED_METRICS.has(report.name)) {
     return;
   }

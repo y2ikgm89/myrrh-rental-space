@@ -498,7 +498,7 @@ resource "google_monitoring_slo" "public_availability" {
 
   request_based_sli {
     good_total_ratio {
-      good_service_filter = <<-EOT
+      good_service_filter  = <<-EOT
         metric.type="run.googleapis.com/request_count"
         resource.type="cloud_run_revision"
         resource.label.service_name="myrrh-rental-space"
