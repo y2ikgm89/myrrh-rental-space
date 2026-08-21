@@ -236,8 +236,11 @@ export async function consumeCustomerMergeTokenCommand(
     );
   }
 
-  // consume と merge を同一 TX にする。consumedAt は merge 成功後に立てる
-  // （先に commit すると merge throw 時に再試行不能になる）。
+  // consume と merge を同一 TX にする。consumedAt は merge **より先に**立てる:
+  // mergeCustomerCommand は source Customer を物理削除し、PendingCustomerMerge の
+  // `onDelete: Cascade` がこの行を消すため、merge 後の update は P2025 で必ず失敗する
+  // （nightly CI run 32402401449 で実測）。同一 TX 内なので merge が throw すれば
+  // consumedAt も rollback され、再試行可能性は失われない。
   return prisma.$transaction(async (tx) => {
     const current = await tx.pendingCustomerMerge.findUnique({
       where: { id: pending.id },
@@ -250,16 +253,16 @@ export async function consumeCustomerMergeTokenCommand(
       throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
     }
 
+    await tx.pendingCustomerMerge.update({
+      where: { id: pending.id },
+      data: { consumedAt: new Date() },
+    });
+
     const merged = await mergeCustomerCommand(
       pending.sourceCustomerId,
       pending.targetCustomerId,
       tx,
     );
-
-    await tx.pendingCustomerMerge.update({
-      where: { id: pending.id },
-      data: { consumedAt: new Date() },
-    });
 
     return {
       targetCustomerId: pending.targetCustomerId,
