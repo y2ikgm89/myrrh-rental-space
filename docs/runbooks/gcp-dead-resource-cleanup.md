@@ -4,10 +4,10 @@
 
 All three orphaned resources documented below are **gone from GCP**:
 
-| Resource | Status |
-| -------- | ------ |
-| `CRON_SECRET` (Secret Manager) | Deleted (GCP `NOT_FOUND`) |
-| `calendar-sync@…` (service account) | Deleted (GCP `NOT_FOUND`) |
+| Resource                                 | Status                                                                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `CRON_SECRET` (Secret Manager)           | Deleted (GCP `NOT_FOUND`)                                                                                         |
+| `calendar-sync@…` (service account)      | Deleted (GCP `NOT_FOUND`)                                                                                         |
 | `RESEND_WEBHOOK_SECRET` (Secret Manager) | Deleted 2026-08-22 after Cloud Run unbound verification. TF `moved`/`removed` scaffolding removed in follow-up PR |
 
 Historical §1–§3 keep the exact delete procedures for audit trail. Do not recreate these resources.
@@ -515,8 +515,8 @@ the forget apply has succeeded). **Done 2026-08-22** — scaffolding removed;
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                  | Status                                       | Next action                                                                                                                         |
-| ------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Resource                  | Status                                       | Next action                                                                                                                       |
+| ------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `SUPPRESSION_HASH_SECRET` | Phase C wired (Cloud Run + imported_secrets) | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
 
 ## Why the Claude harness cannot run the deletes
