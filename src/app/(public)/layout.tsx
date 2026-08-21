@@ -446,12 +446,15 @@ export default async function PublicRootLayout({
                 {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
                 <SkipLink />
 
-                {/* AnnouncementBarWrapper も Suspense + connection() で build-time prerender に
-                    焼かれないようにする。bar が active で無ければ component が null を返すため、
-                    fallback は null (skeleton 不要)。 */}
-                <Suspense fallback={null}>
-                  <AnnouncementBarWrapper />
-                </Suspense>
+                {/* AnnouncementBarWrapper は **Suspense でラップしない**。
+                    fallback=null で streaming させると初回ペイント後に bar が挿入されて
+                    全コンテンツが押し下げられ（CLS ≈0.06）、CI のように CPU 逼迫下では
+                    hydration 中の boundary 解決が discard→再描画のちらつきになり
+                    CLS 0.24 まで跳ねる（nightly run 32402401449 の Lighthouse 失敗）。
+                    MaintenanceGate と同じく layout の初回 render で await し、bar を
+                    初期 document に含める。内部の `await connection()` + 'use cache' は
+                    そのままなので build prerender 防御と cache 契約は変わらない。 */}
+                <AnnouncementBarWrapper />
                 <Suspense
                   fallback={
                     <div
