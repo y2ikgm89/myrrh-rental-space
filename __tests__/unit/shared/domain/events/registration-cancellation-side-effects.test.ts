@@ -31,11 +31,15 @@ const mockFindUnique = mock<
 const mockSettingsCommerceFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
 >(() => Promise.resolve(null));
+const mockRefundFindMany = mock<
+  (args: Record<string, unknown>) => Promise<{ amount: number }[]>
+>(() => Promise.resolve([]));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: { findUnique: mockFindUnique },
     settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
+    refund: { findMany: mockRefundFindMany },
   },
 }));
 
@@ -245,6 +249,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
   beforeEach(() => {
     mockFindUnique.mockReset();
     mockSettingsCommerceFindUnique.mockReset();
+    mockRefundFindMany.mockReset();
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();
@@ -254,6 +259,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
 
     mockFindUnique.mockResolvedValue(null);
     mockSettingsCommerceFindUnique.mockResolvedValue(null);
+    mockRefundFindMany.mockResolvedValue([]);
     mockCreateAuditLog.mockResolvedValue(undefined);
     mockCreateNotification.mockResolvedValue(undefined);
     mockRefund.mockResolvedValue({ ok: true });
