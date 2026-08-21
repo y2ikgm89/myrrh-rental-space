@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/e2e-test";
+import { test, expect, type Page } from "../fixtures/e2e-test";
 import { urls } from "../fixtures";
 
 /**
@@ -11,6 +11,27 @@ import { urls } from "../fixtures";
  * 拠点・カテゴリ・設備・並び順・収容人数・空き時間帯はすべて単一の「検索条件」
  * モーダルの中にあり、自動では開かない。
  */
+
+/**
+ * 検索条件 Dialog を開く（hydration race 対策）。
+ *
+ * トリガーの `onClick` は client-side state のみで、hydration 完了前に click すると
+ * ハンドラ未接続で Dialog が開かない（nightly CI で 2 夜連続 flake:
+ * run 31963738476 / 32054212560）。開くまで click を retry する。
+ * トリガーは toggle ではなく `setIsDialogOpen(true)` のみなので、開いた状態での
+ * 再 click は無害（ただし modal 背後は inert なので、開いている間は click 自体を
+ * 送らない）。
+ */
+async function openFilterDialog(page: Page): Promise<void> {
+  const trigger = page.getByRole("button", { name: /検索条件/ });
+  const dialog = page.getByRole("dialog");
+  await expect(async () => {
+    if (!(await dialog.isVisible())) {
+      await trigger.click();
+    }
+    await expect(dialog).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15000 });
+}
 
 test.describe("/spaces facet filter — URL 双方向反映", () => {
   test("root で FilterBar の検索条件トリガーとリセットが描画される", async ({
@@ -28,7 +49,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(`${urls.spaces}?minCapacity=10`);
-    await page.getByRole("button", { name: /検索条件/ }).click();
+    await openFilterDialog(page);
     const capacityInput = page.getByLabel("最低収容人数");
     await expect(capacityInput).toHaveValue("10");
   });
@@ -39,7 +60,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.goto(
       `${urls.spaces}?date=2026-12-01&startTime=10:00&endTime=12:00`,
     );
-    await page.getByRole("button", { name: /検索条件/ }).click();
+    await openFilterDialog(page);
     await expect(page.getByLabel("日付")).toHaveValue("2026-12-01");
     await expect(page.getByLabel("開始時刻")).toHaveValue("10:00");
     await expect(page.getByLabel("終了時刻")).toHaveValue("12:00");
@@ -49,7 +70,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(`${urls.spaces}?sort=price-asc`);
-    await page.getByRole("button", { name: /検索条件/ }).click();
+    await openFilterDialog(page);
     await expect(page.getByLabel("並び順")).toHaveValue("price-asc");
   });
 
@@ -57,7 +78,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.goto(
       `${urls.spaces}?minCapacity=10&sort=price-asc&date=2026-12-01`,
     );
-    await page.getByRole("button", { name: /検索条件/ }).click();
+    await openFilterDialog(page);
     await expect(page.getByLabel("最低収容人数")).toHaveValue("10");
 
     // モーダルは背後を inert 化するため、閉じてからリセットボタンを操作する
@@ -66,7 +87,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
 
     await expect(page).toHaveURL(new RegExp(`${urls.spaces}(\\?page=1)?$`));
 
-    await page.getByRole("button", { name: /検索条件/ }).click();
+    await openFilterDialog(page);
     await expect(page.getByLabel("最低収容人数")).toHaveValue("");
   });
 });
