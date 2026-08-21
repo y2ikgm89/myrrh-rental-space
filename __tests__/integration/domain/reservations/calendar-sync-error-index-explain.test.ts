@@ -11,6 +11,12 @@
  * Postgres が Seq Scan を選びがちなので、公式の
  * `SET LOCAL enable_seqscan = off` で index 検討を強制する。
  *
+ * さらに planner の選択を deterministic にするため、partial index に乗らない
+ * 非マッチ行を bulk insert してから `ANALYZE` を取る。空表に近い状態だと
+ * `events_slug_active_key` 等の別 index + Filter と partial index のコストが
+ * 僅差になり、CI で選ばれる index が揺れる（実際に Unit Tests が flake した）。
+ * 非マッチ行を十分に入れると partial index 一択になり、再現性が取れる。
+ *
  * SQL は Prisma findMany の WHERE と同等（物理名は `@map`）:
  * - `src/shared/domain/reservations/calendar-sync.ts` `getFailedCalendarSyncReservations`
  * - `src/shared/domain/events/calendar-sync.ts` `getFailedCalendarSyncEventIds`
@@ -22,7 +28,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { ReservationStatus, TaxRateType } from "@generated/prisma/enums";
+import {
+  EventScheduleMode,
+  ReservationStatus,
+  TaxRateType,
+} from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -121,6 +131,12 @@ async function explainRetryPool(tx: Tx, sql: string): Promise<PlanNode> {
 function randomSortOrder(base: number): number {
   return base + Math.floor(Math.random() * 100_000_000);
 }
+
+/**
+ * partial index に乗らない非マッチ行の件数。planner のコスト差を決定的に
+ * 開けるための件数であり、テスト速度とのバランスで 200 に固定する。
+ */
+const NON_MATCHING_ROW_COUNT = 200;
 
 describeMaybe("calendar-sync-retry cron queries use partial indexes", () => {
   beforeAll(async () => {
@@ -235,6 +251,63 @@ describeMaybe("calendar-sync-retry cron queries use partial indexes", () => {
       });
       ids.eventId = event.id;
 
+      // planner のコスト見積もりを決定的にするため、partial index の述語に
+      // 乗らない行（calendar_sync_error IS NULL）を両表に bulk insert する。
+      // これがないと空表同然のコスト僅差で別 index（例: events_slug_active_key）
+      // が選ばれ、CI が flake する。
+      // reservations_no_active_time_overlap_excl（同一 space の active 予約の
+      // 時間帯重複を禁じる exclusion constraint）を避けるため、dummy 各行は
+      // 2 時間刻みの非重複スロットにする。
+      const dummyBaseMs = Date.parse("2028-01-01T00:00:00Z");
+      // 単発の implicit transaction だと adapter-pg で P2028 を踏むことがあるため、
+      // seed.ts と同じく interactive transaction に載せる。
+      // SINGLE_OCCURRENCE は EventTimeSlot ちょうど 1 件の CHECK があるため、
+      // id をこちらで採番して slot も同時に作る。
+      const dummyEvents = Array.from(
+        { length: NON_MATCHING_ROW_COUNT },
+        (_, i) => ({
+          id: crypto.randomUUID(),
+          title: `GCal Explain Dummy ${suffix} ${i}`,
+          slug: `gcal-explain-dummy-${suffix}-${i}`,
+          descriptionJson: { type: "doc" },
+          descriptionHtml: "<p>dummy</p>",
+          descriptionPlainText: "dummy",
+          scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+          categoryId: category.id,
+          startAt: new Date(dummyBaseMs + i * 2 * 3_600_000),
+          endAt: new Date(dummyBaseMs + (i * 2 + 1) * 3_600_000),
+        }),
+      );
+      await prisma.$transaction(async (tx) => {
+        await tx.reservation.createMany({
+          data: Array.from({ length: NON_MATCHING_ROW_COUNT }, (_, i) => ({
+            spaceId: space.id,
+            customerId: customer.id,
+            startTime: new Date(dummyBaseMs + i * 2 * 3_600_000),
+            endTime: new Date(dummyBaseMs + (i * 2 + 1) * 3_600_000),
+            status: ReservationStatus.CONFIRMED,
+            ...DEFAULT_RESERVATION_PRICING,
+          })),
+        });
+        await tx.event.createMany({
+          data: dummyEvents.map(
+            ({ startAt: _startAt, endAt: _endAt, ...e }) => e,
+          ),
+        });
+        await tx.eventTimeSlot.createMany({
+          data: dummyEvents.map((e) => ({
+            eventId: e.id,
+            startAt: e.startAt,
+            endAt: e.endAt,
+            capacity: 10,
+          })),
+        });
+      });
+      // 挿入直後の統計情報を planner に反映させる。EXPLAIN 側の transaction の
+      // 外で確定させる（ANALYZE は autocommit で全 session に見える）。
+      await prisma.$executeRawUnsafe('ANALYZE "reservations"');
+      await prisma.$executeRawUnsafe('ANALYZE "events"');
+
       const { reservationPlan, eventPlan } = await prisma.$transaction(
         async (tx) => {
           await tx.$executeRaw`SET LOCAL enable_seqscan = off`;
@@ -268,6 +341,14 @@ describeMaybe("calendar-sync-retry cron queries use partial indexes", () => {
       if (ids.eventId) {
         await prisma.event.deleteMany({ where: { id: ids.eventId } });
       }
+      if (ids.spaceId) {
+        await prisma.reservation.deleteMany({
+          where: { spaceId: ids.spaceId, calendarSyncError: null },
+        });
+      }
+      await prisma.event.deleteMany({
+        where: { slug: { startsWith: `gcal-explain-dummy-${suffix}-` } },
+      });
       if (ids.categoryId) {
         await prisma.eventCategory.deleteMany({
           where: { id: ids.categoryId },
