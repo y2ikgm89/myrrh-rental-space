@@ -133,7 +133,7 @@
     "@types/sanitize-html": "^2.16.1",
     "axe-core": "^4.13.0",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^10.8.1",
+    "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
