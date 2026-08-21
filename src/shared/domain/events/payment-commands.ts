@@ -802,13 +802,13 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
     logContext: { registrationId },
     resource: "event-registration",
     savepointName: "refund_create_event_auto_on_cancel",
-      idempotencyKey: (chargeTotal, excludedAttemptCount) =>
-        buildPaymentRefundIdempotencyKey({
-          prefix: "event-registration-refund",
-          entityId: registrationId,
-          newCumulative: chargeTotal,
-          excludedAttemptCount,
-        }),
+    idempotencyKey: (chargeTotal, excludedAttemptCount) =>
+      buildPaymentRefundIdempotencyKey({
+        prefix: "event-registration-refund",
+        entityId: registrationId,
+        newCumulative: chargeTotal,
+        excludedAttemptCount,
+      }),
     refundFk: { eventRegistrationId: registrationId },
     inspectEntity: async (tx) => {
       const registration = await tx.eventRegistration.findFirst({
