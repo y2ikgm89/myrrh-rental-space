@@ -28,7 +28,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { ReservationStatus, TaxRateType } from "@generated/prisma/enums";
+import {
+  EventScheduleMode,
+  ReservationStatus,
+  TaxRateType,
+} from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -268,7 +272,7 @@ describeMaybe("calendar-sync-retry cron queries use partial indexes", () => {
           descriptionJson: { type: "doc" },
           descriptionHtml: "<p>dummy</p>",
           descriptionPlainText: "dummy",
-          scheduleMode: "SINGLE_OCCURRENCE",
+          scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
           categoryId: category.id,
           startAt: new Date(dummyBaseMs + i * 2 * 3_600_000),
           endAt: new Date(dummyBaseMs + (i * 2 + 1) * 3_600_000),
