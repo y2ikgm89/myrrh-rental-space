@@ -1,5 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { extname } from "node:path";
+import { execSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { extname, join } from "node:path";
 
 /**
  * **走査対象は git に聞く。ディレクトリを列挙しない。**
@@ -91,10 +93,17 @@ export function parseTrackedFiles(stdout: Buffer): string[] {
 
 /** git が追跡しているテキストファイル（repo 相対・POSIX 区切り）。 */
 export function trackedTextFiles(root: string): string[] {
-  return parseTrackedFiles(
-    execFileSync("git", ["ls-files", "-z"], {
-      cwd: root,
-      maxBuffer: 32 * 1024 * 1024,
-    }),
-  );
+  // `execFileSync` の pipe 読み取りは bun で稀に途中で切れる（CI Unit Tests で
+  // 2026-08-10 と 2026-08-20 の 2 回観測。3,600+ 件・~150KB の出力が中腹で
+  // 切断され、parseTrackedFiles の NUL 終端検査が落ちた）。pipe を介さず、
+  // shell リダイレクトで一時ファイルへ git に直接書かせてから読む。
+  // 切断検査（parseTrackedFiles 側）はそのまま残す。
+  const dir = mkdtempSync(join(tmpdir(), "tracked-files-"));
+  try {
+    const outFile = join(dir, "ls-files.txt");
+    execSync(`git ls-files -z > "${outFile}"`, { cwd: root });
+    return parseTrackedFiles(readFileSync(outFile));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
