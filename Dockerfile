@@ -5,7 +5,7 @@
 # https://bun.sh/guides/ecosystem/docker
 # https://github.com/vercel/next.js/tree/canary/examples/with-docker
 
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.4.0-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---
