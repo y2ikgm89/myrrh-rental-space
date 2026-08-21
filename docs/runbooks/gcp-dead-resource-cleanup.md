@@ -1,6 +1,22 @@
 # Dead GCP resource cleanup
 
-Three Google Cloud resources are orphaned in `myrrh-rental-space` after
+## Status (2026-08-22)
+
+All three orphaned resources documented below are **gone from GCP**:
+
+| Resource | Status |
+| -------- | ------ |
+| `CRON_SECRET` (Secret Manager) | Deleted (GCP `NOT_FOUND`) |
+| `calendar-sync@…` (service account) | Deleted (GCP `NOT_FOUND`) |
+| `RESEND_WEBHOOK_SECRET` (Secret Manager) | Deleted 2026-08-22 after Cloud Run unbound verification. TF `moved`/`removed` scaffolding removed in follow-up PR |
+
+Historical §1–§3 keep the exact delete procedures for audit trail. Do not recreate these resources.
+
+---
+
+## Background (historical)
+
+Three Google Cloud resources were orphaned in `myrrh-rental-space` after
 upstream migrations landed on `main` and never re-adopted them:
 
 - **`CRON_SECRET` (Secret Manager)** — shared bearer token for `/api/cron/*`,
@@ -9,28 +25,20 @@ upstream migrations landed on `main` and never re-adopted them:
   account)** — impersonation identity for the retired Google Calendar OAuth
   integration.
 - **`RESEND_WEBHOOK_SECRET` (Secret Manager)** — Resend bounce/complaint
-  webhook signing secret. Production canonical is now the Settings DB
-  (`SettingsResend.resendWebhookSecret`). Terraform has already forgotten
-  the Secret Manager container (`removed { destroy = false }` in
-  `terraform/secrets.tf`). The env name remains a local-dev fallback;
-  deleting the Secret Manager container is not the same as deleting the
-  env name from code.
+  webhook signing secret. Production canonical is the Settings DB
+  (`SettingsResend.resendWebhookSecret`). The env name remains a local-dev
+  fallback; deleting the Secret Manager container is not the same as deleting
+  the env name from code.
 
-`CRON_SECRET` and `calendar-sync@` exist only in GCP; the repository
-already has zero runtime references (gates enforced by
-`__tests__/unit/architecture/cron-oidc-clean-break.test.ts` and
-`__tests__/unit/architecture/gcp-production-audit.test.ts`).
-`RESEND_WEBHOOK_SECRET` still appears in code as a local-dev env
-fallback — that is expected and is **not** a reason to keep the Secret
-Manager container. Deleting the orphans is the last step to drop unused
-attack surface.
+`CRON_SECRET` and `calendar-sync@` had zero runtime references in the
+repository (gates: `cron-oidc-clean-break.test.ts`,
+`gcp-production-audit.test.ts`). Deleting the orphans dropped unused attack
+surface.
 
-This runbook is a checklist for a **project owner running gcloud from their
+This runbook was a checklist for a **project owner running gcloud from their
 own workstation**. The Claude harness does not hold the IAM roles required
 to delete Secret Manager secrets or user-managed service accounts, so the
-delete commands below must be executed by a human. The runbook documents the
-pre-delete verification, the exact delete command, and the post-delete audit
-so nothing else drifts.
+delete commands below had to be executed by a human.
 
 ## Prerequisites
 
@@ -468,9 +476,10 @@ Optionally re-run the production audit:
 bun run gcp:audit-production-iap
 ```
 
-After this delete lands, a follow-up PR can drop the `moved` / `removed`
+After this delete lands, a follow-up PR drops the `moved` / `removed`
 blocks in `terraform/secrets.tf` (Terraform's recommended cleanup once
-the forget apply has succeeded) and remove the deferred-table row below.
+the forget apply has succeeded). **Done 2026-08-22** — scaffolding removed;
+`deploy-packaging-contract` asserts the blocks stay absent.
 
 ---
 
@@ -506,10 +515,9 @@ the forget apply has succeeded) and remove the deferred-table row below.
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                     | Status                                                                | Next action (operator / follow-up PR)                                                                                             |
-| ---------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `RESEND_WEBHOOK_SECRET` (SM) | Delete procedure is §3 of this runbook. TF forget is already applied. | Operator: follow §3 (`gcloud secrets delete`). After delete, drop `moved` / `removed` in `terraform/secrets.tf` in a follow-up PR |
-| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                          | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
+| Resource                  | Status                                       | Next action                                                                                                                         |
+| ------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPPRESSION_HASH_SECRET` | Phase C wired (Cloud Run + imported_secrets) | 対応なし。`validateProductionEnv` の fail-closed 化は merge 済み。`versions/1` を安易に rotate しないこと（ハッシュ空間が変わる） |
 
 ## Why the Claude harness cannot run the deletes
 
