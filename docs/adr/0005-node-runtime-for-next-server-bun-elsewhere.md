@@ -4,7 +4,7 @@ Status: Accepted (2026-08-12)
 
 ## Context
 
-このリポジトリは Bun 前提（`packageManager: bun@1.3.14`、`engines.bun`、`bun.lock`）で、
+このリポジトリは Bun 前提（`packageManager: bun@1.4.0`、`engines.bun`、`bun.lock`）で、
 依存解決・スクリプト・テスト・Prisma CLI をすべて Bun で走らせている。
 一方 **Next.js サーバーの実行と `next build` は Node** で、Dockerfile に
 `FROM node:24-alpine AS runner` と `COPY --from=node:24-alpine /usr/local/bin/node` の
