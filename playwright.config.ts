@@ -204,6 +204,11 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-mobile",
+      // webkit は CI 上で browser 起動・newContext が負荷時に 30s を超えることがあり、
+      // test 本体に到達する前に test timeout で落ちる（run 32402401449 の
+      // webkit-customer-mobile "Test timeout exceeded while setting up context"）。
+      // harness の待ち時間なので assertion はそのままに timeout だけ延ばす。
+      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
@@ -238,6 +243,8 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-customer-mobile",
+      // webkit-mobile と同じ harness 側の timeout 延長（理由はそちらのコメント）。
+      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
@@ -298,6 +305,8 @@ export default defineConfig<E2ETestOptions>({
     },
     {
       name: "webkit-admin-mobile",
+      // webkit-mobile と同じ harness 側の timeout 延長（理由はそちらのコメント）。
+      timeout: 60_000,
       use: {
         ...devices["iPhone 13"],
         browserName: "webkit",
