@@ -5,7 +5,12 @@ import { describe, expect, test } from "bun:test";
 
 const packageJson = JSON.parse(
   readFileSync(join(process.cwd(), "package.json"), "utf8"),
-) as { packageManager?: string; engines?: { bun?: string } };
+) as {
+  packageManager?: string;
+  engines?: { bun?: string };
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+};
 const bunCiInstallScript = readFileSync(
   join(process.cwd(), "scripts", "bun-ci-install.sh"),
   "utf8",
@@ -53,6 +58,22 @@ function readDockerfileBunVersion(): string {
   return match.groups["version"];
 }
 
+function readTypesBunVersion(): string {
+  const range =
+    packageJson.devDependencies?.["@types/bun"] ??
+    packageJson.dependencies?.["@types/bun"];
+  // packageManager / engines と同じく exact pin（^/~ は runtime とのズレを許す）。
+  const match = /^(?<version>\d+\.\d+\.\d+)$/u.exec(range ?? "");
+
+  if (!match?.groups?.["version"]) {
+    throw new Error(
+      `@types/bun must be pinned as exact x.y.z to match packageManager, got ${String(range)}`,
+    );
+  }
+
+  return match.groups["version"];
+}
+
 describe("runtime version contract", () => {
   // Bun pin の SSoT は packageManager + engines.bun の2フィールド。
   // engines.bun 単独のドリフトは他のテストで検知できていなかった（Phase C 監査で判明）。
@@ -62,6 +83,12 @@ describe("runtime version contract", () => {
 
   test("Docker Bun runtime matches packageManager", () => {
     expect(readDockerfileBunVersion()).toBe(readPackageManagerBunVersion());
+  });
+
+  // #2482 が @types/bun ^1.4.0 を単独で入れ、runtime は 1.3.14 のまま残った。
+  // types だけ先に上がると 1.4 API を誤って前提にできる。Bun bump と lockstep。
+  test("@types/bun matches packageManager", () => {
+    expect(readTypesBunVersion()).toBe(readPackageManagerBunVersion());
   });
 
   test("Bun runtime docs do not keep stale 1.3.13-only assumptions", () => {
