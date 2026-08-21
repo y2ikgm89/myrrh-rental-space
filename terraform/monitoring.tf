@@ -469,3 +469,82 @@ resource "google_monitoring_alert_policy" "google_calendar_sync_failure" {
 
   depends_on = [google_logging_metric.google_calendar_sync_failure]
 }
+
+# -----------------------------------------------------------------------------
+# Public Cloud Run availability SLO (docs/observability/slo.md)
+# request_count has no path label — /api/live may appear in the denominator.
+# -----------------------------------------------------------------------------
+
+resource "google_monitoring_service" "public_cloud_run" {
+  service_id   = "myrrh-rental-space-public"
+  display_name = "myrrh-rental-space (public Cloud Run)"
+
+  basic_service {
+    service_type = "CLOUD_RUN"
+    service_labels = {
+      service_name = "myrrh-rental-space"
+      location     = var.region
+    }
+  }
+}
+
+resource "google_monitoring_slo" "public_availability" {
+  service      = google_monitoring_service.public_cloud_run.service_id
+  slo_id       = "public-availability-999"
+  display_name = "Public availability 99.9% / 30d"
+
+  goal                = 0.999
+  rolling_period_days = 30
+
+  request_based_sli {
+    good_total_ratio {
+      good_service_filter  = <<-EOT
+        metric.type="run.googleapis.com/request_count"
+        resource.type="cloud_run_revision"
+        resource.label.service_name="myrrh-rental-space"
+        metric.label.response_code_class!="5xx"
+      EOT
+      total_service_filter = <<-EOT
+        metric.type="run.googleapis.com/request_count"
+        resource.type="cloud_run_revision"
+        resource.label.service_name="myrrh-rental-space"
+      EOT
+    }
+  }
+}
+
+# Web Vitals (consent-gated server action → structured log). No public /api/metrics.
+resource "google_logging_metric" "web_vitals" {
+  name        = "web_vitals"
+  description = "Core Web Vitals samples logged by the public surface after analytics consent (jsonPayload.message=web_vital). Labels carry metric name only — no URL/UA."
+  filter      = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="myrrh-rental-space"
+    jsonPayload.message="web_vital"
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "DISTRIBUTION"
+    unit         = "ms"
+    display_name = "Web Vitals (myrrh-rental-space)"
+    labels {
+      key         = "metric"
+      value_type  = "STRING"
+      description = "Vital name: CLS, INP, LCP, FCP, or TTFB"
+    }
+  }
+
+  value_extractor = "EXTRACT(jsonPayload.context.value)"
+  label_extractors = {
+    metric = "EXTRACT(jsonPayload.context.metric)"
+  }
+
+  bucket_options {
+    exponential_buckets {
+      num_finite_buckets = 64
+      growth_factor      = 2
+      scale              = 0.01
+    }
+  }
+}

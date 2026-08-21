@@ -466,6 +466,7 @@ roles/serviceusage.serviceUsageAdmin \
 roles/logging.configWriter \
 roles/monitoring.notificationChannelEditor \
 roles/monitoring.alertPolicyEditor \
+roles/monitoring.servicesEditor \
 "
 for role in ${BOOTSTRAP_RUNNER_ROLES}; do
   echo "[bootstrap] Granting runner SA ${role}"

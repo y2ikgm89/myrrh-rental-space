@@ -4,7 +4,8 @@
  * Web Vitals Reporter
  *
  * Core Web Vitals（CLS, INP, LCP）+ 補助指標（FCP, TTFB）を計測。
- * GA4 が有効な場合は gtag() に送信。無効な場合は開発コンソールに出力。
+ * - GA4 が有効な場合は gtag() に送信
+ * - 同意後は Server Action で構造化ログ `web_vital` も送る（Cloud Monitoring log-based metric）
  *
  * GDPR対応: cookieConsentEnabled 時は同意後のみ計測（AnalyticsProvider と同条件）
  *
@@ -14,6 +15,7 @@
 import { useEffect } from "react";
 import { useAnalyticsConsent } from "@/public/components/analytics/use-analytics-consent";
 import { logger } from "@/shared/lib/errors/logger-core";
+import { reportWebVitalAction } from "./report-web-vital-action";
 
 /**
  * gtag がグローバルに存在するか型安全にチェック
@@ -38,7 +40,6 @@ function sendMetric(metric: {
   const gtag = getGtag();
 
   if (gtag) {
-    // GA4 に送信
     gtag("event", metric.name, {
       value: metric.delta,
       metric_id: metric.id,
@@ -50,6 +51,13 @@ function sendMetric(metric: {
       value: Math.round(metric.value),
     });
   }
+
+  void reportWebVitalAction({
+    name: metric.name,
+    value: metric.value,
+  }).catch(() => {
+    // Best-effort observability; never break the page on report failure.
+  });
 }
 
 interface WebVitalsReporterProps {
@@ -74,7 +82,6 @@ export function WebVitalsReporter({
       return;
     }
 
-    // web-vitals を動的 import（コード分割）
     void import("web-vitals").then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
       onCLS(sendMetric);
       onINP(sendMetric);
