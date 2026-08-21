@@ -53,10 +53,14 @@
   // 停止しない。CI が余分に回るが、このリポジトリは public のため
   // Actions 分数の課金は無い。
   rebaseWhen: "behind-base-branch",
+  // Bun 1.3.14 時代は lockfileVersion: 1。Renovate ホストの Bun が 1.4+ だと
+  // `bun install` が bun.lock を lockfileVersion: 2 で書き直し、CI / ローカル
+  // （packageManager bun@1.3.14）が `Unknown lockfile version` で落ちる
+  // （実測 #2486）。Bun 1.4 への協調 bump（packageManager / engines / oven/bun /
+  // runtime-version-contract）が終わるまで lockFileMaintenance は止める。
+  // 個別の deps PR が bun.lock を触る経路はそのまま。
   lockFileMaintenance: {
-    enabled: true,
-    automerge: true,
-    schedule: ["before 5am on monday"],
+    enabled: false,
   },
   // major version の更新は手動対応（破壊的変更リスク）
   separateMajorMinor: true,
