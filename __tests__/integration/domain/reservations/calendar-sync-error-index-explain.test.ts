@@ -77,7 +77,6 @@ SELECT "id"
 FROM "events"
 WHERE "deleted_at" IS NULL
   AND "calendar_sync_error" IS NOT NULL
-ORDER BY "calendar_sync_error"
 LIMIT 50
 `;
 
