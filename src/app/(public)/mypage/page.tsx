@@ -12,6 +12,7 @@ import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservations } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { buildReservationListItems } from "./_lib/build-reservation-list-items";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { Heading } from "@/public/components/design-system/heading";
@@ -48,10 +49,13 @@ export default async function MypagePage({
     redirect("/login");
   }
 
-  const [reservations, deadlineSettings] = await Promise.all([
-    getCustomerReservations(customer.id),
-    getReservationDeadlineSettings(),
-  ]);
+  const [reservations, deadlineSettings, spacesEnabled, faqEnabled] =
+    await Promise.all([
+      getCustomerReservations(customer.id),
+      getReservationDeadlineSettings(),
+      isFeatureEnabled("spaces"),
+      isFeatureEnabled("faq"),
+    ]);
 
   const rawItems = buildReservationListItems(reservations, deadlineSettings);
   const reservationListItems = toPlainArray(
@@ -97,7 +101,12 @@ export default async function MypagePage({
           <p className="font-medium">{MERGE_SUCCESS_MESSAGE}</p>
         </FlashMessage>
       )}
-      <ReservationTabs activeItems={activeItems} pastItems={pastItems} />
+      <ReservationTabs
+        activeItems={activeItems}
+        pastItems={pastItems}
+        showSpacesLink={spacesEnabled}
+        showFaqLink={faqEnabled}
+      />
     </Stack>
   );
 }

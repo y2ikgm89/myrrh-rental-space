@@ -122,9 +122,7 @@ export function ReceiptDetailView({
           href: toAppRoute(`/admin/reservations/${receipt.reservationId}`),
           label: "予約詳細を開く",
         }
-      : receipt.eventRegistrationId !== null
-        ? null // event registration 詳細ページは Phase 2 時点では未実装
-        : null;
+      : null;
 
   return (
     <div className="space-y-6">

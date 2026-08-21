@@ -93,6 +93,8 @@ interface ReservationDetailProps {
    * false なら CheckoutButton は表示しない (`assertOnlinePaymentAvailable` と対称)。
    */
   readonly paymentEnabled: boolean;
+  /** Feature module `contact` — footer inquiry link (F-103). */
+  readonly showContactLink?: boolean;
   /**
    * 発行済み領収書の serialNo。未発行 (未払 / event 側の receipt 未発行状態) は null。
    * 値がある場合は「領収書ダウンロード」リンクを表示する。ダウンロード経路は
@@ -118,6 +120,7 @@ export function ReservationDetail({
   cancellationPolicyUrl,
   refundPolicyLines,
   paymentEnabled,
+  showContactLink = false,
   receiptSerialNo,
   passcodeRevealState,
   transferDisplay,
@@ -384,14 +387,16 @@ export function ReservationDetail({
         >
           予約に戻る
         </Link>
-        <Link
-          href={toAppRoute(
-            `/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`,
-          )}
-          className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
-        >
-          この予約について問い合わせる
-        </Link>
+        {showContactLink ? (
+          <Link
+            href={toAppRoute(
+              `/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`,
+            )}
+            className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
+          >
+            この予約について問い合わせる
+          </Link>
+        ) : null}
       </div>
     </div>
   );

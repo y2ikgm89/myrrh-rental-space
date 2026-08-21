@@ -31,21 +31,34 @@ export interface ReservationListItem {
 
 interface ReservationListProps {
   readonly items: readonly ReservationListItem[];
+  /** Feature module gates for empty-state CTAs (F-103). */
+  readonly showSpacesLink?: boolean;
+  readonly showFaqLink?: boolean;
 }
 
-export function ReservationList({ items }: ReservationListProps) {
+export function ReservationList({
+  items,
+  showSpacesLink = false,
+  showFaqLink = false,
+}: ReservationListProps) {
   if (items.length === 0) {
     return (
       <div className="space-y-4 py-12 text-center md:py-16">
         <p className="text-muted-foreground">予約がありません</p>
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Button variant="editorial" size="sm" href="/spaces">
-            スペースを探す
-          </Button>
-          <Button variant="editorial" size="sm" href="/faq">
-            よくある質問を見る
-          </Button>
-        </div>
+        {(showSpacesLink || showFaqLink) && (
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            {showSpacesLink ? (
+              <Button variant="editorial" size="sm" href="/spaces">
+                スペースを探す
+              </Button>
+            ) : null}
+            {showFaqLink ? (
+              <Button variant="editorial" size="sm" href="/faq">
+                よくある質問を見る
+              </Button>
+            ) : null}
+          </div>
+        )}
       </div>
     );
   }

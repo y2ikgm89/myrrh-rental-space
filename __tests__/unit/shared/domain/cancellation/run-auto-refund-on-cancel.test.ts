@@ -77,7 +77,7 @@ function baseInput(
     wasPaid: true,
     requiresRefund: true,
     chargeBase: 5000,
-    refundedSoFar: 0,
+    loadRefundedSoFar: async () => 0,
     startTime: START_TIME,
     request: REQUEST,
     executeRefund: mockExecuteRefund,
@@ -111,7 +111,7 @@ describe("runAutoRefundOnCancel", () => {
     });
 
     const outcome = await runAutoRefundOnCancel(
-      baseInput({ refundedSoFar: 2000 }),
+      baseInput({ loadRefundedSoFar: async () => 2000 }),
     );
 
     expect(outcome.status).toBe("ok");
@@ -131,7 +131,7 @@ describe("runAutoRefundOnCancel", () => {
     });
 
     const outcome = await runAutoRefundOnCancel(
-      baseInput({ refundedSoFar: 2500 }),
+      baseInput({ loadRefundedSoFar: async () => 2500 }),
     );
 
     expect(outcome).toEqual({

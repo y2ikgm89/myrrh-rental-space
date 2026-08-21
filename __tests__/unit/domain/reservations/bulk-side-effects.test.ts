@@ -30,6 +30,9 @@ const mockSeriesFindUnique = mock<
 const mockSettingsCommerceFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
 >(() => Promise.resolve(null));
+const mockRefundFindMany = mock<
+  (args: Record<string, unknown>) => Promise<{ amount: number }[]>
+>(() => Promise.resolve([]));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -39,6 +42,7 @@ mock.module("@/shared/db/prisma", () => ({
     },
     reservationSeries: { findUnique: mockSeriesFindUnique },
     settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
+    refund: { findMany: mockRefundFindMany },
   },
 }));
 
@@ -235,6 +239,7 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     mockReservationFindMany.mockReset();
     mockSeriesFindUnique.mockReset();
     mockSettingsCommerceFindUnique.mockReset();
+    mockRefundFindMany.mockReset();
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();
@@ -258,6 +263,7 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     ]);
     mockSeriesFindUnique.mockResolvedValue(baseSeries);
     mockSettingsCommerceFindUnique.mockResolvedValue(null);
+    mockRefundFindMany.mockResolvedValue([]);
     mockCreateAuditLog.mockResolvedValue(undefined);
     mockCreateNotification.mockResolvedValue(undefined);
     mockRefund.mockResolvedValue({ ok: true });

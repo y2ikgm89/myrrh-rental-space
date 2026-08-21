@@ -22,6 +22,7 @@ import {
 } from "@/shared/lib/customer-auth";
 import { maskEmail } from "@/shared/lib/email/mask-email";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { isFeatureEnabled } from "@/shared/domain/features/check";
 import { RequestMergeForm } from "./_components/request-merge-form";
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default async function MergeRequestPage(): Promise<ReactElement> {
     providers.includes(provider),
   );
   if (!hasTrustedProvider) {
+    const contactEnabled = await isFeatureEnabled("contact");
     return (
       <PageLayout variant="form">
         <Stack gap="lg" className="mx-auto max-w-2xl">
@@ -51,12 +53,16 @@ export default async function MergeRequestPage(): Promise<ReactElement> {
               履歴の自己統合は、メールアドレスが検証済みの Google
               ログインでのみ利用できます。
             </p>
-            <p className="mt-4">
-              <Link href="/contact" className="underline underline-offset-4">
-                お問い合わせ
-              </Link>
-              から運営へご連絡ください。
-            </p>
+            {contactEnabled ? (
+              <p className="mt-4">
+                <Link href="/contact" className="underline underline-offset-4">
+                  お問い合わせ
+                </Link>
+                から運営へご連絡ください。
+              </p>
+            ) : (
+              <p className="mt-4">運営へ直接ご連絡ください。</p>
+            )}
           </div>
         </Stack>
       </PageLayout>
