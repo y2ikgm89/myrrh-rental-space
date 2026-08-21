@@ -18,9 +18,10 @@ Secret Manager の list と同じ認証障害。破壊的操作はしていな�
 
 ## 再実行
 
-対話で `gcloud auth login`（`admin@myrrh-jp.com`）したあと:
+対話で `gcloud auth login --update-adc`（`admin@myrrh-jp.com`）したあと、
+`docs/admin-access.md` の環境変数をセットして:
 
-```sh
+```powershell
 bun run gcp:audit-production-iap
 ```
 
@@ -29,7 +30,7 @@ bun run gcp:audit-production-iap
 
 ## 結果（2026-08-21）
 
-`bun run gcp:audit-production-iap` を実行。全 41 項目中 41 項目 PASS。
+`bun run gcp:audit-production-iap` を実行。全項目 PASS。
 
 - 組織・Cloud Identity・Google Group 所有権: PASS
 - Cloud Run service identity / ingress / max instance / traffic / default URL: PASS
@@ -44,3 +45,13 @@ bun run gcp:audit-production-iap
 - Cloud Scheduler OIDC / legacy trigger / connection 不在: PASS
 
 出力: `PASS: production posture matches the org-backed group IAP + WIF model.`
+
+## 結果（2026-08-22）
+
+- 日時: 2026-08-22 01:58 JST
+- アカウント: `admin@myrrh-jp.com`（対話 `gcloud auth login --update-adc` 後）
+- 結果: **全項目 PASS**（チェック行 57、書き込みなし）
+- 終端: `PASS: production posture matches the org-backed group IAP + WIF model.`
+
+前回（08-21）と同様、org-backed group IAP + WIF モデルと一致。追加の repairCommands /
+deleteCommands / unexpected principals はなし。
