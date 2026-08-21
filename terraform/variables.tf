@@ -162,7 +162,6 @@ variable "cloud_run_secret_versions" {
     R2_PUBLIC_URL                      = "1"
     CLOUDFLARE_ZONE_ID                 = "1"
     CLOUDFLARE_API_TOKEN               = "1"
-    # pin=3 ENABLED。version 1・2 は 2026-08-14 DESTROYED（disable 不可）。
     CLOUDFLARE_ORIGIN_HEADER_SECRET    = "3"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
