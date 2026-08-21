@@ -5,7 +5,7 @@
 # https://bun.sh/guides/ecosystem/docker
 # https://github.com/vercel/next.js/tree/canary/examples/with-docker
 
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.4.0-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---
@@ -27,7 +27,7 @@ FROM base AS builder-base
 # `next build` を実 Node で走らせる。
 #
 # `oven/bun:*-alpine` の `node` は `/usr/local/bun-node-fallback-bin/node` で、実体は
-# Bun 本体（実測: `node -e "process.versions.bun"` が 1.3.14 を返す）。`next` の bin は
+# Bun 本体（実測: `node -e "process.versions.bun"` が 1.4.0 を返す）。`next` の bin は
 # `#!/usr/bin/env node` なので、何もしないと **本番 image の build だけ Bun ランタイム**に
 # なる。CI は ubuntu の実 Node で build しているため、緑になった build と出荷される
 # build が別ランタイムという状態だった。

@@ -6,7 +6,7 @@ services — the public storefront and the admin dashboard — split by the
 
 ## Stack
 
-- **Bun 1.3.14** (SSoT is `packageManager` in `package.json`) / TypeScript 6
+- **Bun 1.4.0** (SSoT is `packageManager` in `package.json`) / TypeScript 6
 - **Next.js 16** App Router — PPR + `"use cache"` (`cacheComponents: true`),
   React Compiler, typedRoutes
 - **React 19** / **Tailwind v4** (CSS-first, no `tailwind.config`)
