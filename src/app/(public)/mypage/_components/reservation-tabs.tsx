@@ -13,6 +13,8 @@ import type { ReservationListItem } from "./reservation-list";
 interface ReservationTabsProps {
   readonly activeItems: readonly ReservationListItem[];
   readonly pastItems: readonly ReservationListItem[];
+  readonly showSpacesLink?: boolean;
+  readonly showFaqLink?: boolean;
 }
 
 // shrink-0: 件数 3 桁になっても tab 自身が縮まず Tabs.List の overflow-x-auto に逃がす。
@@ -27,6 +29,8 @@ const TAB_TRIGGER_CLASS = cn(
 export function ReservationTabs({
   activeItems,
   pastItems,
+  showSpacesLink = false,
+  showFaqLink = false,
 }: ReservationTabsProps) {
   // タブ選択を URL に反映（共有/リロード復元/戻る進む対応）。
   // 両 Content は forceMount でクライアント常駐＝サーバ再フェッチ不要のため shallow:true。
@@ -66,14 +70,22 @@ export function ReservationTabs({
         forceMount
         className="outline-none data-[state=inactive]:hidden"
       >
-        <ReservationList items={activeItems} />
+        <ReservationList
+          items={activeItems}
+          showSpacesLink={showSpacesLink}
+          showFaqLink={showFaqLink}
+        />
       </Tabs.Content>
       <Tabs.Content
         value="past"
         forceMount
         className="outline-none data-[state=inactive]:hidden"
       >
-        <ReservationList items={pastItems} />
+        <ReservationList
+          items={pastItems}
+          showSpacesLink={showSpacesLink}
+          showFaqLink={showFaqLink}
+        />
       </Tabs.Content>
     </Tabs.Root>
   );

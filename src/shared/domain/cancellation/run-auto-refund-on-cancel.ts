@@ -64,12 +64,12 @@ export type RunAutoRefundOnCancelInput = {
   /** Policy tier 計算の charge base (totalPriceWithTax / paidAmount 等)。 */
   chargeBase: number | null;
   /**
-   * 既に返金済みの累計額（円）。
+   * 既に返金済みの累計額（円）を **policy 計算直前** に読む。
    *
-   * **返金ポリシーは「総額に対する取り分」を決める。** 既に部分返金があるなら、
-   * 今回返すのはその差分だけ（監査 F-43）。
+   * 外側で先読みした stale 値を渡さない（F-43）。payment command の
+   * advisory lock 内再検証と合わせて over-refund / 誤 skip を防ぐ。
    */
-  refundedSoFar: number;
+  loadRefundedSoFar: () => Promise<number>;
   /** Policy tier 評価の基準時刻 (reservation.startTime / slot.startAt)。 */
   startTime: Date;
   refundPolicySnapshot?: RefundPolicyResolution;
@@ -109,7 +109,7 @@ export async function runAutoRefundOnCancel(
     wasPaid,
     requiresRefund,
     chargeBase,
-    refundedSoFar,
+    loadRefundedSoFar,
     startTime,
     refundPolicySnapshot,
     request,
@@ -171,7 +171,10 @@ export async function runAutoRefundOnCancel(
 
     let refundAmount: number | undefined;
     let policyEntitlement: number | undefined;
+    let refundedSoFar = 0;
     if (resolution.status === "configured" && chargeBase !== null) {
+      // F-43: policy 計算直前に累計返金額を読み直す（外側の先行読みを廃止）。
+      refundedSoFar = await loadRefundedSoFar();
       // 取り分（entitlement）と今回返す額（outstanding）の算出は
       // `calculatePolicyRefundBreakdown` が SSoT。管理画面の推奨額も同じ関数を使う。
       const breakdown = calculatePolicyRefundBreakdown(

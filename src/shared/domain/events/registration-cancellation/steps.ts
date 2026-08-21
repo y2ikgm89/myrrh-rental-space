@@ -3,6 +3,8 @@ import "server-only";
 import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
+import { prisma } from "@/shared/db/prisma";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import {
   getEventWaitlistOfferPaymentContext,
   getWaitlistEmailRegistration,
@@ -62,10 +64,16 @@ export async function runRefundStep(args: {
     wasPaid,
     requiresRefund,
     chargeBase: registration.paidAmount,
-    refundedSoFar: registration.refunds.reduce(
-      (sum, refund) => sum + refund.amount,
-      0,
-    ),
+    loadRefundedSoFar: async () => {
+      const refunds = await prisma.refund.findMany({
+        where: {
+          eventRegistrationId: input.registrationId,
+          status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+        },
+        select: { amount: true },
+      });
+      return refunds.reduce((sum, refund) => sum + refund.amount, 0);
+    },
     startTime: registration.slot.startAt,
     ...(input.refundPolicySnapshot !== undefined
       ? { refundPolicySnapshot: input.refundPolicySnapshot }

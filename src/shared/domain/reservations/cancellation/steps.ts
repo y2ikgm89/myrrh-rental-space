@@ -2,9 +2,11 @@ import "server-only";
 
 import { runAutoRefundOnCancel } from "@/shared/domain/cancellation/run-auto-refund-on-cancel";
 import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
+import { REFUND_AGGREGATE_EXCLUDED_STATUSES } from "@/shared/domain/payment/stripe-refund-orchestration";
 import { refundReservationPaymentCommand } from "@/shared/domain/reservations/payment-commands";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { prisma } from "@/shared/db/prisma";
 import {
   channelLabel,
   mapEmailResultToOutcome,
@@ -48,10 +50,16 @@ export async function runRefundStep(args: {
     wasPaid,
     requiresRefund,
     chargeBase: reservation.totalPriceWithTax ?? reservation.totalPrice ?? null,
-    refundedSoFar: reservation.refunds.reduce(
-      (sum, refund) => sum + refund.amount,
-      0,
-    ),
+    loadRefundedSoFar: async () => {
+      const refunds = await prisma.refund.findMany({
+        where: {
+          reservationId: input.reservationId,
+          status: { notIn: [...REFUND_AGGREGATE_EXCLUDED_STATUSES] },
+        },
+        select: { amount: true },
+      });
+      return refunds.reduce((sum, refund) => sum + refund.amount, 0);
+    },
     startTime: reservation.startTime,
     ...(input.refundPolicySnapshot !== undefined
       ? { refundPolicySnapshot: input.refundPolicySnapshot }

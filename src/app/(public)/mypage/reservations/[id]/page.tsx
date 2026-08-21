@@ -153,6 +153,7 @@ export default async function ReservationDetailPage({
     turnstileSiteKey,
     reviewsEnabled,
     paymentEnabled,
+    contactEnabled,
     cancellationPolicy,
     receiptSerialNo,
     passcodeRevealState,
@@ -163,6 +164,7 @@ export default async function ReservationDetailPage({
     getTurnstileSiteKey(),
     isFeatureEnabled("reviews"),
     isOnlinePaymentAvailable(),
+    isFeatureEnabled("contact"),
     getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
     findReceiptSerialNoByReservationId(reservation.id),
     getPasscodeRevealState(
@@ -207,13 +209,19 @@ export default async function ReservationDetailPage({
             {reason === "discount" && (
               <>
                 割引が適用されているため、オンラインでは変更できません。
-                <Link
-                  href={toAppRoute("/contact")}
-                  className="ml-1 underline underline-offset-4 hover:text-foreground"
-                >
-                  お問い合わせください
-                </Link>
-                。
+                {contactEnabled ? (
+                  <>
+                    <Link
+                      href={toAppRoute("/contact")}
+                      className="ml-1 underline underline-offset-4 hover:text-foreground"
+                    >
+                      お問い合わせください
+                    </Link>
+                    。
+                  </>
+                ) : (
+                  "運営へご連絡ください。"
+                )}
               </>
             )}
             {reason === "payment" &&
@@ -238,6 +246,7 @@ export default async function ReservationDetailPage({
         cancellationPolicyUrl={cancellationPolicyUrl}
         refundPolicyLines={refundPolicyLines}
         paymentEnabled={paymentEnabled}
+        showContactLink={contactEnabled}
         receiptSerialNo={receiptSerialNo}
         passcodeRevealState={passcodeRevealState}
         transferDisplay={transferDisplay}
