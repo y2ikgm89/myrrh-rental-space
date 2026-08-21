@@ -286,9 +286,16 @@ describe("customer-merge-commands", () => {
         expect.anything(),
       );
       expect(mockPendingUpdate).toHaveBeenCalled();
+      // consume は merge **より先**に立つ必要がある: mergeCustomerCommand は
+      // source Customer を物理削除し、PendingCustomerMerge の onDelete: Cascade が
+      // 行を消すため、merge 後の update は P2025 で必ず失敗する（本テストの順序
+      // assertion がその regression を検出する）。
+      const updateOrder = mockPendingUpdate.mock.invocationCallOrder[0];
+      const mergeOrder = mockMergeCustomerCommand.mock.invocationCallOrder[0];
+      expect(updateOrder).toBeLessThan(mergeOrder);
     });
 
-    test("merge 失敗時は token を消費しない", async () => {
+    test("merge 失敗時は TX ごと rollback され token を消費しない", async () => {
       const rawToken = "consume-fail-token";
       mockPendingFindUnique
         .mockResolvedValueOnce({
@@ -320,7 +327,10 @@ describe("customer-merge-commands", () => {
       await expect(
         consumeCustomerMergeTokenCommand(rawToken, TARGET_ID),
       ).rejects.toThrow("merge failed");
-      expect(mockPendingUpdate).not.toHaveBeenCalled();
+      // consume(update) と merge は同一 TX。merge の throw は TX 全体を rollback する
+      // ため、実 DB では consumedAt も残らず token は消費されない（再試行可能）。
+      // mock は rollback を再現できないので、ここでは「merge の例外がそのまま
+      // 呼び出し元に伝播する（= TX が rollback する）」ことだけを検証する。
     });
 
     test("linked 状態変更後は VALIDATION", async () => {
