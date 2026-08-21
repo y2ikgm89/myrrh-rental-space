@@ -63,7 +63,7 @@ terraform {
   #     hasn't verified compatibility with.
   #   - CI (`TF_VERSION` in .github/workflows/terraform.yml and
   #     terraform-drift.yml, `terraform_version` in deploy-production.yml) still
-  #     pins the literal `1.15.8` string explicitly, so the actual installed
+  #     pins the literal `1.15.9` string explicitly, so the actual installed
   #     binary is identical everywhere regardless of this constraint's
   #     flexibility — this constraint is a guard rail for anyone running a
   #     different local patch version, not the thing that picks the CI binary.
@@ -76,7 +76,7 @@ terraform {
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
-  required_version = "~> 1.15.8"
+  required_version = "~> 1.15.9"
 
   required_providers {
     google = {
