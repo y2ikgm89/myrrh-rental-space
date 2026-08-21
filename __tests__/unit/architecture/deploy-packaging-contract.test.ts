@@ -214,18 +214,18 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(secrets).toMatch(/imported_secrets[\s\S]*"SUPPRESSION_HASH_SECRET"/);
   });
 
-  test("RESEND_WEBHOOK_SECRET is forgotten from TF secret ownership", () => {
+  test("RESEND_WEBHOOK_SECRET stays out of TF secret ownership after SM delete", () => {
     const secrets = read("terraform/secrets.tf");
     // Active list entries only (quoted string), not comments.
     expect(secrets).not.toMatch(/^\s*"RESEND_WEBHOOK_SECRET",?\s*$/m);
-    // for_each instance cannot be a removed target; moved → flat → removed.
-    expect(secrets).toMatch(
-      /moved\s*\{\s*from\s*=\s*google_secret_manager_secret\.secret\["RESEND_WEBHOOK_SECRET"\]\s*to\s*=\s*google_secret_manager_secret\.resend_webhook_secret_forgotten/,
+    // Forget scaffolding removed after operator deleted the GCP container (2026-08-22).
+    expect(secrets).not.toMatch(
+      /google_secret_manager_secret\.secret\["RESEND_WEBHOOK_SECRET"\]/,
     );
-    expect(secrets).toMatch(
+    expect(secrets).not.toContain("resend_webhook_secret_forgotten");
+    expect(secrets).not.toMatch(
       /removed\s*\{\s*from\s*=\s*google_secret_manager_secret\.resend_webhook_secret_forgotten/,
     );
-    expect(secrets).toMatch(/destroy\s*=\s*false/);
   });
 
   test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
