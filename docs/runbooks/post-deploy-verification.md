@@ -89,18 +89,23 @@ bun scripts/switchbot-live-probe.ts --cleanup --device <MAC>
 ## Secret Manager — `CLOUDFLARE_ORIGIN_HEADER_SECRET` 旧 version（F-01）
 
 pin は version 3（`terraform/variables.tf` の `cloud_run_secret_versions`）。
-漏洩値は既に受理対象外。残るのはロールバック用に残した version 1・2 の
-disable（destroy ではない。可逆）。
+漏洩値は受理対象外。2026-08-21 の `gcloud secrets versions list` 実測:
+
+| NAME | STATE     | DESTROYED            |
+| ---- | --------- | -------------------- |
+| 3    | enabled   | —                    |
+| 2    | destroyed | 2026-08-14T00:54:50Z |
+| 1    | destroyed | 2026-08-14T00:54:46Z |
+
+DESTROYED は不可逆。`versions disable 1` / `2` は
+`FAILED_PRECONDITION: SecretVersion.state is DESTROYED` になる（作業不要）。
+誤って 3 を disable / destroy しない。
+
+確認コマンド:
 
 ```sh
-gcloud auth login  # アカウント: admin@myrrh-jp.com
-gcloud secrets versions list CLOUDFLARE_ORIGIN_HEADER_SECRET --project=myrrh-rental-space
-gcloud secrets versions disable 1 --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET --project=myrrh-rental-space
-gcloud secrets versions disable 2 --secret=CLOUDFLARE_ORIGIN_HEADER_SECRET --project=myrrh-rental-space
 gcloud secrets versions list CLOUDFLARE_ORIGIN_HEADER_SECRET --project=myrrh-rental-space
 ```
-
-pin=3 の ENABLED を確認してから disable する。誤って 3 を触らない。
 
 ## 参照
 
