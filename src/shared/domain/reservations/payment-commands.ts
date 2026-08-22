@@ -14,6 +14,7 @@ import {
   runAdminPaymentRefundCommand,
   runAmountMismatchRefundCommand,
   runOrphanCancelRefundCommand,
+  type AmountMismatchRefundOutcome,
 } from "@/shared/domain/payment/payment-refund-command-orchestration";
 import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
 import { buildPaymentRefundIdempotencyKey } from "@/shared/domain/payment/stripe-refund-orchestration";
@@ -613,11 +614,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
   stripePaymentIntentId: string;
   capturedAppAmount: number;
   reason?: string;
-}): Promise<{
-  outcome: "refunded" | "already_refunded" | "not_applicable";
-  refundId?: string;
-  refundAmount?: number;
-}> {
+}): Promise<AmountMismatchRefundOutcome> {
   const {
     reservationId,
     stripePaymentIntentId,
@@ -643,6 +640,8 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
         select: {
           status: true,
           paymentStatus: true,
+          // 返金合計の上限（`refunds_total_within_paid_check` が見る値）。
+          totalPriceWithTax: true,
         },
       });
 
@@ -664,7 +663,7 @@ export async function refundCheckoutAmountMismatchForReservation(input: {
       ) {
         return { action: "not_applicable" };
       }
-      return { action: "continue" };
+      return { action: "continue", chargeBase: reservation.totalPriceWithTax };
     },
     persistSettledRefund: async (tx) => {
       await tx.reservation.updateMany({

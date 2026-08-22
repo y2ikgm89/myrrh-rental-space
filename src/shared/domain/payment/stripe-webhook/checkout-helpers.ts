@@ -120,6 +120,46 @@ export function sessionHasCapturedPayment(
 // （返金フローを通知送信の遅延でブロックしないための意図的な fire-and-forget。
 // fireAndForget 内部の async IIFE が実際の await を保持する）。そのため同期処理で
 // 完結し async ではない。
+/**
+ * 自動返金を**見送った**ことの管理者通知（監査 A-27）。
+ *
+ * Stripe が取った額が台帳に記録できる上限を超えているケース。返金は実行して
+ * いないので、金額はまだ Stripe 側にある。管理画面から手動で返金するか、
+ * entity の課金額を直すかは人が決める。
+ */
+function notifyAmountMismatchRefundSkipped(input: {
+  subject: PaymentSubject;
+  capturedAppAmount: number;
+  recordableAmount: number;
+}): void {
+  const { subject, capturedAppAmount, recordableAmount } = input;
+  const target =
+    subject.kind === "reservation"
+      ? { resourceType: "reservation" as const, id: subject.reservationId }
+      : { resourceType: "event" as const, id: subject.registrationId };
+
+  fireAndForget(
+    createNotificationCommand({
+      type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+      title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+      message: `${target.resourceType} ${target.id} の Checkout 金額不一致を検知しましたが、Stripe 課金 (${capturedAppAmount} 円) が記録可能な返金上限 (${recordableAmount} 円) を超えるため自動返金を見送りました。Stripe ダッシュボードで確認のうえ手動で対応してください`,
+      resourceType: target.resourceType,
+      resourceId: target.id,
+    }),
+    {
+      operation: "notifyAmountMismatchRefundSkipped",
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        resourceType: target.resourceType,
+        resourceId: target.id,
+        capturedAppAmount,
+        recordableAmount,
+      },
+    },
+  );
+}
+
 function notifyAmountMismatchAutoRefund(input: {
   subject: PaymentSubject;
   refundAmount: number;
@@ -267,6 +307,19 @@ export async function orchestrateCheckoutAmountMismatchRefund(
           stripePaymentIntentId: paymentIntentId,
           capturedAppAmount,
         });
+
+  // 台帳に記録できる上限を超えていて自動返金を見送った場合（監査 A-27）。
+  // Stripe には返金していないので、人が判断できるよう管理者へ通知する。
+  // webhook は 200 を返す（500 で返すと Stripe が最大 3 日間再送し、毎回同じ
+  // 判定で見送るだけの無限リトライになる）。
+  if (refundResult.outcome === "amount_exceeds_recordable") {
+    notifyAmountMismatchRefundSkipped({
+      subject,
+      capturedAppAmount,
+      recordableAmount: refundResult.recordableAmount,
+    });
+    return;
+  }
 
   if (refundResult.outcome === "refunded") {
     if (subject.kind === "reservation") {
