@@ -451,8 +451,13 @@ export type StatusChangeEmailData = {
   newStatus: ReservationStatus;
   location?: string;
   icsSequence: number;
-  /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
-  userId?: string | null;
+  /**
+   * 会員予約の User.id。ゲストは `null`。
+   *
+   * **optional にしない（監査 A-21）。** 呼出側が 3 箇所で手組みしており、
+   * 全部で渡し忘れていた。落ちると会員にもゲスト用の 90 日トークン URL が出る。
+   */
+  userId: string | null;
 };
 
 /**

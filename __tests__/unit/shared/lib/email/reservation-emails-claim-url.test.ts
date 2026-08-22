@@ -156,6 +156,7 @@ const STATUS_CHANGED_DATA: StatusChangeEmailData = {
   oldStatus: ReservationStatus.PENDING,
   newStatus: ReservationStatus.CONFIRMED,
   icsSequence: 1,
+  userId: null,
 };
 
 beforeEach(() => {

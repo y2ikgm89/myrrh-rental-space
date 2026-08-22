@@ -20,6 +20,7 @@ import {
 } from "@/shared/domain/reservations/lifecycle-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { applyConfirmationSideEffects } from "@/shared/domain/reservations/confirmation-side-effects";
+import { buildStatusChangeEmailData } from "@/shared/domain/reservations/payloads";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
 import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
@@ -240,23 +241,10 @@ export const updateReservationStatus = async (
           (async () => {
             const renderContext = await getReservationEmailRenderContext();
             await sendReservationStatusChangedEmail(
-              {
-                reservationId: payloadData.reservationId,
-                customerEmail: payloadData.customerEmail,
-                customerName: payloadData.customerName,
-                spaceName: payloadData.spaceName,
-                startTime: payloadData.startTime,
-                endTime: payloadData.endTime,
-                // メール本文は税込（監査 F-74）。
-
-                totalPriceWithTax: payloadData.totalPriceWithTax,
+              buildStatusChangeEmailData(payloadData, {
                 oldStatus: result.previousStatus,
                 newStatus: status,
-                icsSequence: payloadData.icsSequence,
-                ...(payloadData.location != null
-                  ? { location: payloadData.location }
-                  : {}),
-              },
+              }),
               renderContext,
             );
           })(),
@@ -343,23 +331,10 @@ export const restoreReservationStatus = async (
         }
       }
 
-      const statusChangedEmailData = {
-        reservationId: payloadData.reservationId,
-        customerEmail: payloadData.customerEmail,
-        customerName: payloadData.customerName,
-        spaceName: payloadData.spaceName,
-        startTime: payloadData.startTime,
-        endTime: payloadData.endTime,
-        // メール本文は税込（監査 F-74）。
-
-        totalPriceWithTax: payloadData.totalPriceWithTax,
+      const statusChangedEmailData = buildStatusChangeEmailData(payloadData, {
         oldStatus: result.previousStatus,
         newStatus: result.targetStatus,
-        icsSequence: payloadData.icsSequence,
-        ...(payloadData.location != null
-          ? { location: payloadData.location }
-          : {}),
-      };
+      });
 
       if (result.targetStatus === ReservationStatus.CONFIRMED) {
         fireAndForget(
