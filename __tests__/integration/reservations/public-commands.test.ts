@@ -8,13 +8,9 @@
  * describe ごと skip する（dev DB を誤って汚染しないための安全弁、
  * space-overlap-concurrency.test.ts と同型）。
  *
- * `getSpaceRatePlans`（rate-plan-queries.ts）は `"use cache"` + cacheLife/cacheTag
- * (next/cache) を使う。Next.js の cacheComponents ランタイム外（この bun test
- * プロセス）では `cacheLife()`/`cacheTag()` が必ず throw するため、next/cache を
- * no-op でモックする（rate plan の DB 読み取り自体は実 Prisma のまま — キャッシュ
- * 機構だけを無効化する）。`createSpaceRatePlan`/`updateSpaceRatePlan` が呼ぶ
- * `updateTag`（Server Action 専用、それ以外のコンテキストで throw）も同じ理由で
- * 一緒にモックする。
+ * `next/cache` のモックは不要（監査 A-02 で `getSpaceRatePlans` の `"use cache"` と
+ * `createSpaceRatePlan`/`updateSpaceRatePlan` の `updateTag` を両方落としたため、
+ * この経路は cacheComponents ランタイム外の API を 1 つも呼ばない）。
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
@@ -26,13 +22,6 @@ if (TEST_DB_URL) {
 }
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
-
-mock.module("next/cache", () => ({
-  cacheLife: () => undefined,
-  cacheTag: () => undefined,
-  updateTag: () => undefined,
-  revalidateTag: () => undefined,
-}));
 
 // createPublicReservationCommand は isFeatureEnabled("reservation") を直接呼ぶ。
 // CI seed で reservation feature が OFF の可能性を封じる。

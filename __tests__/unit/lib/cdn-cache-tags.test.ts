@@ -94,12 +94,11 @@ describe("resolveCdnTag", () => {
     const mapped = new Set<string>(Object.keys(NEXTJS_TAG_TO_CDN_TAG));
     const allowlist = new Set<string>(NEXTJS_TAGS_WITHOUT_CDN_MAPPING);
     for (const [key, value] of Object.entries(CACHE_TAGS)) {
-      // Parameterized (id-keyed) tag producers — e.g. SPACE_RATE_PLANS — are
-      // functions, not fixed string literals. A purge-by-tag Map/allowlist can
-      // only hold literal values, so there's no single string to look up here.
-      // See the SPACE_RATE_PLANS note atop NEXTJS_TAG_TO_CDN_TAG for the
-      // per-tag CDN-mapping rationale; this carve-out just keeps the iteration
-      // type-safe for future parameterized tags.
+      // Parameterized (id-keyed) tag producers are functions, not fixed string
+      // literals. A purge-by-tag Map/allowlist can only hold literal values, so
+      // there's no single string to look up here. No top-level CACHE_TAGS entry
+      // is parameterized today; this carve-out keeps the iteration type-safe if
+      // one is added.
       if (typeof value === "function") continue;
       expect(
         mapped.has(value) || allowlist.has(value),

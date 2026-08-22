@@ -251,9 +251,11 @@ describe("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タ
     expect(
       analyzeSnippet("updateTag(`${getCacheTag.spaces.detail(id)}`);"),
     ).toEqual([]);
-    // 関数呼出結果を渡す形 (SPACE_RATE_PLANS は spaceId-keyed producer)。
+    // `CACHE_TAGS.X(arg)` の形（top-level の parameterized producer）。
+    // 現在 CACHE_TAGS に該当エントリは無いが、追加されたときに analyzer が
+    // 受理する側であることをここで固定する（getCacheTag 経由とは別の分岐）。
     expect(
-      analyzeSnippet(`cacheTag(CACHE_TAGS.SPACE_RATE_PLANS(spaceId));`),
+      analyzeSnippet(`cacheTag(CACHE_TAGS.EXAMPLE_ID_KEYED(entityId));`),
     ).toEqual([]);
     // ループ変数越しに CACHE_TAGS 由来の値を渡す形（site-wide.ts の実パターン）。
     expect(

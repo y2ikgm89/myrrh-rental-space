@@ -6,13 +6,6 @@
  * Space 削除時の cascade 削除は DB の `onDelete: Cascade` 制約そのものの検証が
  * 目的のため、実 Postgres が必須（mock では再現できない）。
  *
- * `invalidateSpaceRatePlansCache`（Task 5）は内部で `next/cache` の `updateTag` を
- * 呼ぶが、`updateTag` は Server Action コンテキスト外（本ファイルのような素の
- * bun:test 実行）で呼ぶと Next.js 公式仕様により throw する
- * ("updateTag can only be called from within a Server Action")。
- * 既存の Server Action 統合テスト群（例: event-registration.test.ts）と同じ
- * パターンで `next/cache` を no-op mock する。
- *
  * `seedSpaceForTest` 共有 helper は `__tests__/integration/_helpers/` に存在しないため
  * （2026-07-14 時点で未作成）、blacklist-guard.test.ts と同型の fixture をこの
  * ファイル内にインラインする。fixture 作成・cleanup は describe 直下の
@@ -34,7 +27,7 @@
  * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -45,16 +38,6 @@ if (TEST_DB_URL) {
 }
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
-
-// rate-plan-commands.ts → space-rate-plan-cache.ts が呼ぶ `updateTag` は
-// Server Action コンテキスト外で throw するため no-op mock する
-// （import より前に配置。mock.module() は宣言後の動的 import にのみ適用される）。
-mock.module("next/cache", () => ({
-  updateTag: mock(() => undefined),
-  cacheTag: mock(() => undefined),
-  cacheLife: mock(() => undefined),
-  revalidateTag: mock(() => undefined),
-}));
 
 type PrismaModule = typeof import("@/shared/db/prisma");
 type CommandsModule =

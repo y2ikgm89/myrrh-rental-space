@@ -36,12 +36,13 @@ import { installFixedDate } from "../helpers/fixed-date";
  *
  * 解消済みの過去の既知問題（Task 16 follow-up fix）: 以前は
  * `e2e/authenticated/admin/space-rate-plan-crud.spec.ts` がこの spec と同一の
- * `coworking-space` を対象にしており、CRUD の create/update/delete が呼ぶ
- * `updateTag(SPACE_RATE_PLANS(spaceId))` とこの spec の `"use cache"` 読み取りが
- * 同一タグ上で競合し、CI `workers: 2` の並列実行時に下記の価格アサーションが
- * 15〜30 秒超まで遅延する flake（8 回中 7 回再現）が発生していた。CRUD spec の
- * 対象を別 Space（`spaceFixtures.adminRatePlanCrudTargetSlug` =
- * seminar-room。cache tag は spaceId キーのため構造的に別タグ）へ移し解消した。
+ * `coworking-space` を対象にしており、CRUD 側の `updateTag` とこの spec の
+ * キャッシュ読み取りが同一タグ上で競合して、CI `workers: 2` の並列実行時に
+ * 下記の価格アサーションが 15〜30 秒超まで遅延する flake（8 回中 7 回再現）が
+ * 起きていた。CRUD spec の対象を別 Space
+ * （`spaceFixtures.adminRatePlanCrudTargetSlug` = seminar-room）へ移して解消済み。
+ * その後、監査 A-02 で rate plan の読み取り自体がキャッシュを持たなくなったため、
+ * この競合は構造的にも起こらなくなった（Space の分離はそのまま維持する）。
  */
 
 /** 週末料金プランが適用される曜日（`ratePlanFixtures.weekendPlanName` の daysOfWeek）。 */
@@ -109,12 +110,9 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     // ¥1,300（基本料金）ではなく ¥1,430（税込）になっていることが、週末料金
     // プラン（650円/時間）が基本時間料金（500円/時間）ではなく適用された証拠。
     // この価格は `fetchReservationPricingPreview` Server Action 経由で
-    // `getSpaceRatePlans`（'use cache' + cacheTag `SPACE_RATE_PLANS(coworking-space)`）
-    // を読む。かつては `space-rate-plan-crud.spec.ts`（chromium-admin）が同じ
-    // spaceId を対象にしており、CI `workers: 2` の並列実行下でこのタグの
-    // 書込（updateTag）と読取が競合していた（ファイル冒頭コメント参照）。CRUD spec
-    // の対象を別 Space（spaceId が異なる = 別タグ）へ移して解消したため、既定の
-    // assertion timeout（5000ms）に戻している。
+    // `getSpaceRatePlans` を読む。この読み取りはキャッシュを持たない（監査 A-02）
+    // ため、admin 側の料金プラン CRUD と並列に走っても待たされない。既定の
+    // assertion timeout（5000ms）で足りる。
     const bookingSummaryHeader = page
       .getByRole("heading", { level: 3, name: "予約内容" })
       .locator("..");
