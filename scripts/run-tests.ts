@@ -2,10 +2,14 @@
 /**
  * Per-file isolation test runner (Bun native, async parallel).
  *
- * bun:test の `mock.module()` は process-global live binding を残す公式仕様。
- * 各 *.test.ts を独立した `bun test` サブプロセスで起動することで cross-file
- * 干渉を物理的に排除する。隔離境界は **process** なので、process を並列に
- * 起動する分には汚染しない（公式仕様 SSoT）。
+ * bun:test の `mock.module()` は、隔離しない既定の `bun test` では process-global
+ * live binding を残す。Bun 1.4 の `--isolate`（`--parallel` はこれを含意）は
+ * 同一プロセス内でもファイルごとに global / module registry を作り直すので、
+ * mock.module の cross-file 漏れは止まる（2026-08-22 実測）。それでもこの
+ * ランナーは **1 ファイル 1 サブプロセス** を保つ。理由は隔離ではなくオーケストレーション:
+ * ファイルごとに bunfig（JSDOM preload の有無）を切り替え、実 DB テストを serial
+ * bucket に切り、`--conditions production` で Lexical の TDZ を避ける。これらは
+ * 単一の `bun test --parallel` では表現できない。
  *
  * ## 並列実行戦略
  *

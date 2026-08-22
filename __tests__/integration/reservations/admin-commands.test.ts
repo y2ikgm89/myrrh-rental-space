@@ -675,7 +675,7 @@ describeMaybe(
 
           // 顧客の $transaction commit 直後に admin 側の最初の非 tx query
           // (prisma.reservation.findUnique) を同一 microtask chain で発行すると、
-          // この test 環境 (bun 1.3.14 + @prisma/adapter-pg) では commit 後の
+          // この test 環境 (bun 1.4.0 + @prisma/adapter-pg) では commit 後の
           // コネクション解放が完了する前に次の query が dispatch され、Postgres
           // 側 (pg_stat_activity / pg_locks) に到達すらしないまま無期限に hang する
           // ことを実機で確認した (setImmediate 1 tick 挿入のみで再現しなくなる純粋な

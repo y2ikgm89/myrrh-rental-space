@@ -15,18 +15,19 @@ Status: Accepted (2026-08-12)
 
 ### 何が Node を必要にしているか
 
-`jsdom` が **Next の require-hook の下の Bun で読めない**。最小再現（同一 `.mjs`）:
+`jsdom` が **Next の require-hook の下の Bun で読めない**。最小再現（同一スクリプト）:
 
-| runtime      | Next の require-hook | `require("jsdom")`                                         |
-| ------------ | -------------------- | ---------------------------------------------------------- |
-| BUN 1.3.14   | 読む                 | **FAIL** `Cannot find module '../data/patch.json' from ''` |
-| BUN 1.3.14   | 読まない             | OK                                                         |
-| NODE v26.6.0 | 読む                 | OK                                                         |
+| runtime                                | Next の require-hook | `require("jsdom")`                                         |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------- |
+| BUN 1.3.14（2026-08-12 当初）          | 読む                 | **FAIL** `Cannot find module '../data/patch.json' from ''` |
+| BUN 1.4.0+34cbb9a40（2026-08-22 再測） | 読む                 | **FAIL** `Cannot find module '../data/patch.json'`         |
+| BUN 1.4.0+34cbb9a40                    | 読まない             | OK                                                         |
+| NODE v26.6.0                           | 読む                 | OK                                                         |
 
 Bun 単体の問題ではない。Next の `require-hook.js` は `request` を差し替えるだけで
 `parent` はそのまま転送しており（`require-hook.js:65-70`）、`parent` を落としているのは
 Bun 側。upstream [oven-sh/bun#13076](https://github.com/oven-sh/bun/issues/13076) は
-2024-08-04 から open のまま（2026-08 時点）。
+2024-08-04 から open のまま（2026-08-22 再測でも close していない）。
 
 `bun test` で jsdom が動くのは require-hook を通さないため。
 
@@ -112,6 +113,14 @@ css-tree 3.2.1 / jsdom 30.0.1 とも最新で、バージョンを上げて逃�
 - happy-dom の更新後に `__tests__/unit/components/editor/lexical` が緑になる
   （`createHeadlessJsdom()` を 5 行差し替えて回せば 30 秒で判定できる）
 
+## Re-evaluation log
+
+- **2026-08-22 / Bun 1.4.0+34cbb9a40:** `#13076` は open のまま。repo root から
+  `require("./node_modules/next/dist/server/require-hook.js")` の直後に
+  `require("jsdom")` すると Bun は `Cannot find module '../data/patch.json'`、
+  同スクリプトを Node v26.6.0 で走らせると `JSDOM` が取れる。`css-tree` の
+  `createRequire` 相対 JSON も同様に落ちる。トリガ未達。決定は維持する。
+
 ## Related
 
 - [csstree/csstree#371](https://github.com/csstree/csstree/pull/371) — Alternatives の
@@ -123,5 +132,5 @@ css-tree 3.2.1 / jsdom 30.0.1 とも最新で、バージョンを上げて逃�
   **マージされても本 ADR の決定は変わらない**（Bun へ戻す理由が別に無いため）。
   fork のブランチ `fix/absolute-path-for-createrequire-json` は PR の head なので消さない
 - [oven-sh/bun#13076](https://github.com/oven-sh/bun/issues/13076) — 根本原因。Bun 自身が
-  `confirmed bug` とラベル付けしたまま 2024-08-04 から open で、最新の 1.3.14
-  （2026-05-13）でも再現する
+  `confirmed bug` とラベル付けしたまま 2024-08-04 から open。Bun 1.3.14
+  （2026-05-13）と Bun 1.4.0+34cbb9a40（2026-08-22）の両方で再現する

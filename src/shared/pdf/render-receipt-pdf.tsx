@@ -26,7 +26,7 @@ import { ReceiptDocument, type ReceiptDocumentInput } from "./receipt-document";
  * 対象外 (private / no-store 前提)。`'use cache'` を付けない。
  *
  * ## Bun runtime
- * `@react-pdf/renderer@4.5.1` は Bun 1.3.14 で動作確認済 (本 PR の spike)。
+ * `@react-pdf/renderer@4.5.1` は Bun 1.4.0 で動作確認済。
  * `renderToBuffer` は promise を返し、内部で React tree → PDF-lib へ変換 →
  * Buffer 化。Font.register は module load 時 (receipt-document.tsx の top-level) に
  * 1 回だけ実行される。

@@ -1,9 +1,9 @@
 import { describe, test, expect, mock } from "bun:test";
 
-// Foundation gap analysis (2026-07-15) task #3 (PoC @react-pdf/renderer × Bun 1.3.14) を
+// Foundation gap analysis (2026-07-15) task #3 (PoC @react-pdf/renderer) を
 // tak #7 receipt-full-wiring PR#3 に統合した動作確認 test。
 //
-// - Bun 1.3.14 で `@react-pdf/renderer@4.5.1` の `renderToBuffer` が正常動作すること
+// - Bun 1.4.0 で `@react-pdf/renderer@4.5.1` の `renderToBuffer` が正常動作すること
 // - Font.register で Noto Sans JP OTF (jsdelivr 経由) が fetch/embed されること
 // - PDF ヘッダー magic ("%PDF-") が正しく出力されること
 // - 日本語グリフを含むテキストが例外なくレンダリングされること
