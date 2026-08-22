@@ -199,12 +199,7 @@ describe("Google Business Profile Server Actions", () => {
 
   describe("initiateGbpAuth", () => {
     test("settings:manage 権限を確認し、state cookie 設定後 redirect をスローする", async () => {
-      let caught: unknown = null;
-      try {
-        await initiateGbpAuth();
-      } catch (error) {
-        caught = error;
-      }
+      await expect(initiateGbpAuth()).rejects.toThrow("NEXT_REDIRECT");
 
       expect(mockCheckPermission).toHaveBeenCalledWith("settings", "manage");
 
@@ -230,11 +225,6 @@ describe("Google Business Profile Server Actions", () => {
       expect(mockRedirect).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/v2/auth?test=1",
       );
-      expect(caught).toBeInstanceOf(Error);
-      if (!(caught instanceof Error)) {
-        throw new Error("redirect must throw an Error");
-      }
-      expect(caught.message).toBe("NEXT_REDIRECT");
     });
 
     test("settings:manage 権限がない場合は OAuth state を発行しない", async () => {
@@ -243,23 +233,13 @@ describe("Google Business Profile Server Actions", () => {
         error: { error: "settingsのmanage権限がありません" },
       });
 
-      let caught: unknown = null;
-      try {
-        await initiateGbpAuth();
-      } catch (error) {
-        caught = error;
-      }
+      await expect(initiateGbpAuth()).rejects.toThrow("NEXT_REDIRECT");
 
       expect(mockCookieStoreSet).not.toHaveBeenCalled();
       expect(mockGetGbpAuthorizeUrl).not.toHaveBeenCalled();
       expect(mockRedirect).toHaveBeenCalledWith(
         "/admin/settings/integrations?gbp_error=forbidden",
       );
-      expect(caught).toBeInstanceOf(Error);
-      if (!(caught instanceof Error)) {
-        throw new Error("redirect must throw an Error");
-      }
-      expect(caught.message).toBe("NEXT_REDIRECT");
     });
   });
 
