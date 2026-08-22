@@ -345,6 +345,17 @@ export const authMutationRateLimiter = createRateLimiter({
 });
 
 // 公開フォーム送信用（5リクエスト/分/IP）— スパム対策
+/**
+ * Web Vitals の報告（監査 A-49）。
+ *
+ * 1 ページビューあたり最大 5 指標（CLS/INP/LCP/FCP/TTFB）で、SPA 遷移でも
+ * 追加で数件。通常利用を妨げない緩さにしつつ、無制限の書き込みは止める。
+ */
+export const webVitalReportRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 60,
+});
+
 export const formSubmitRateLimiter = createRateLimiter({
   interval: 60 * 1000, // 1分
   maxRequests: 5,

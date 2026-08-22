@@ -83,6 +83,14 @@ const PUBLIC_MUTATION_GUARD_PIPELINES: readonly {
     handler: "revealReservationPasscodesAction",
     guards: ["checkActionRateLimit"],
   },
+  // Web Vitals は同意済みブラウザからの計測サンプル。bot 判定も Turnstile も
+  // 意味を持たない（人間の操作ではない）が、**無制限に書けてはいけない**
+  // ため rate limit だけを要求する（監査 A-49）。
+  {
+    file: actionFile("web-vital.ts"),
+    handler: "reportWebVitalAction",
+    guards: ["checkActionRateLimit"],
+  },
   // 認証済みフロー（mypage / claim callback）。公開 bot pipeline は持たない。
   {
     file: actionFile("consume-signup-terms.ts"),
