@@ -240,16 +240,9 @@ describeMaybe("claimReceiptForSingleUseTokenDownload — single-use gate", () =>
     try {
       rendererState.shouldThrow = true;
 
-      let thrown: unknown = null;
-      try {
-        await claimReceiptForSingleUseTokenDownload(
-          receiptId,
-          RENDER_INPUT_STUB,
-        );
-      } catch (error) {
-        thrown = error;
-      }
-      expect(thrown).toBeInstanceOf(Error);
+      await expect(
+        claimReceiptForSingleUseTokenDownload(receiptId, RENDER_INPUT_STUB),
+      ).rejects.toThrow();
 
       // claim は render の後なので usedAt は未刻印のまま
       const afterFail = await prisma.receipt.findUnique({

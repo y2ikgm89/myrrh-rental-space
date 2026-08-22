@@ -206,14 +206,9 @@ describeMaybe("既定セクションは復活しない", () => {
     expect(required).not.toBeNull();
     if (!required) return;
 
-    let caught: unknown;
-    try {
-      await duplicatePageSectionCommand(required.id);
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toMatchObject({ name: "DomainError", code: "CONFLICT" });
+    await expect(
+      duplicatePageSectionCommand(required.id),
+    ).rejects.toMatchObject({ name: "DomainError", code: "CONFLICT" });
 
     const count = await prisma.section.count({
       where: { pageId: contact.id, type: "contact-form" },

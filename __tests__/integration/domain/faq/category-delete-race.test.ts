@@ -113,17 +113,10 @@ describeMaybe(
           isPublished: false,
         });
 
-        let thrown: unknown = null;
-        try {
-          await deleteFaqCategory(categoryId);
-        } catch (error) {
-          thrown = error;
-        }
-
-        expect(thrown).toBeInstanceOf(DomainError);
-        expect(
-          (thrown as InstanceType<DomainErrorModule["DomainError"]>).code,
-        ).toBe("CONFLICT");
+        await expect(deleteFaqCategory(categoryId)).rejects.toMatchObject({
+          name: "DomainError",
+          code: "CONFLICT",
+        });
 
         const category = await prisma.faqCategory.findUnique({
           where: { id: categoryId },

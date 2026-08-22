@@ -188,39 +188,25 @@ describeMaybe("Event online format (integration)", () => {
       // `events_schedule_integrity_check` が commit 時に slot 数を検証するため、
       // 生の `prisma.event.create` だけでは CHECK 以前に別理由で落ちうる。
       // event + slot を同一 tx で作りつつ meetingUrl 欠落で CHECK を狙う。
-      let thrown: unknown = null;
-      try {
-        await createEventWithSlotAndTicket({
+      await expect(
+        createEventWithSlotAndTicket({
           ...baseEventData("check-violation"),
           format: EVENT_FORMAT.ONLINE,
           meetingProvider: MEETING_PROVIDER.MANUAL,
           meetingUrl: null,
-        });
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(Error);
-      expect((thrown as Error).message).toContain(
-        "event_online_meeting_url_required",
-      );
+        }),
+      ).rejects.toThrow("event_online_meeting_url_required");
     });
 
     test("CHECK: ONLINE + MANUAL + meetingUrl 空文字 → DB reject", async () => {
-      let thrown: unknown = null;
-      try {
-        await createEventWithSlotAndTicket({
+      await expect(
+        createEventWithSlotAndTicket({
           ...baseEventData("check-violation-empty-url"),
           format: EVENT_FORMAT.ONLINE,
           meetingProvider: MEETING_PROVIDER.MANUAL,
           meetingUrl: "",
-        });
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toBeInstanceOf(Error);
-      expect((thrown as Error).message).toContain(
-        "event_online_meeting_url_required",
-      );
+        }),
+      ).rejects.toThrow("event_online_meeting_url_required");
     });
 
     test("ONLINE + MANUAL + meetingUrl 指定 → 保存成功、round-trip", async () => {

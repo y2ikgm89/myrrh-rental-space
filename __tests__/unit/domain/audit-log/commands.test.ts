@@ -392,13 +392,9 @@ describe("createAuditLogRecord", () => {
         throw p2034Error;
       });
 
-      let caught: unknown;
-      try {
-        await createAuditLogRecord({ action: "CREATE", resource: "post" });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBe(p2034Error);
+      await expect(
+        createAuditLogRecord({ action: "CREATE", resource: "post" }),
+      ).rejects.toBe(p2034Error);
       // MAX_AUDIT_LOG_CHAIN_RETRIES = 3 なので $transaction が 3 回呼ばれる
       expect(mockTransaction).toHaveBeenCalledTimes(3);
     });
@@ -411,13 +407,9 @@ describe("createAuditLogRecord", () => {
         throw dbError;
       });
 
-      let caught: unknown;
-      try {
-        await createAuditLogRecord({ action: "CREATE", resource: "post" });
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBe(dbError);
+      await expect(
+        createAuditLogRecord({ action: "CREATE", resource: "post" }),
+      ).rejects.toBe(dbError);
       // リトライしないため呼出は 1 回のみ
       expect(callCount).toBe(1);
     });
