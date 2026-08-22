@@ -34,6 +34,34 @@ describe("getNavItemsForRole", () => {
     expect(items.find((i) => i.resource === "user")).toBeDefined();
   });
 
+  /**
+   * 監査 A-01。`settings:manage` は SUPER_ADMIN だけが持つ。以前は判定が一律
+   * `resource` + `"read"` だったため、この 4 件が ADMIN / VIEWER の palette に出て、
+   * 選ぶとページ側 `requireSettingsManagePage()` の `notFound()` に落ちていた。
+   * 同じ 4 件を設定ハブ（`settings/page.tsx`）は最初から隠している。
+   */
+  test("settings:manage を要する 4 件は SUPER_ADMIN だけに出る", () => {
+    const manageOnlyIds = [
+      "settings-features",
+      "settings-billing",
+      "settings-integrations",
+      "settings-system",
+    ];
+    const idsFor = (role: Role) =>
+      getNavItemsForRole(role).map((item) => item.id);
+
+    for (const id of manageOnlyIds) {
+      expect(idsFor(Role.SUPER_ADMIN)).toContain(id);
+      expect(idsFor(Role.ADMIN)).not.toContain(id);
+      expect(idsFor(Role.VIEWER)).not.toContain(id);
+    }
+
+    // 同じ settings でも read で足りるページは ADMIN / VIEWER に残る
+    // （ガードを広げすぎていないことの証明）。
+    expect(idsFor(Role.ADMIN)).toContain("settings-site");
+    expect(idsFor(Role.VIEWER)).toContain("settings-site");
+  });
+
   test("featureModule map drift gate — mapped values ⊆ FEATURE_MODULES_LIST", () => {
     const navMapped = collectMappedAdminNavFeatureModules(
       ALL_NAV_ITEMS_FOR_TEST.map((item) => item.featureModule),
