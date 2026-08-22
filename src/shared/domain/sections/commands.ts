@@ -134,14 +134,29 @@ export async function createPageSectionCommand(input: {
   const created = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql(`sections:${input.pageId}`));
 
-    // page-hero は 1 ページに 1 つ制約。ページ単位ロック内で確認する。
-    if (input.type === "page-hero") {
+    // 1 ページに 1 つだけの型は、**追加側でも**ページ単位ロック内で弾く。
+    //
+    // page-hero は元からこの制約を持つ。テンプレートの必須セクション
+    // （`requiredSectionTypes`）も同じ扱いにする（監査 A-09）: 戻す側 3 経路
+    // （削除 :189 / 複製 :228 / 表示切替 :304）はいずれも
+    // `isRequiredSectionForTemplate` で**型**を見て拒否するため、2 本目を作れて
+    // しまうと管理画面からは一切戻せなくなる（DB を直接触るしかない）。
+    // 複製経路は F-63 で既に塞いであり、追加経路だけが残っていた。
+    const isSingleInstanceType =
+      input.type === "page-hero" ||
+      isRequiredSectionForTemplate(page.template, input.type);
+    if (isSingleInstanceType) {
       const existing = await tx.section.findFirst({
-        where: { pageId: input.pageId, type: "page-hero" },
+        where: { pageId: input.pageId, type: input.type },
         select: { id: true },
       });
       if (existing) {
-        throw new DomainError("ヒーローは既に存在します", "CONFLICT");
+        throw new DomainError(
+          input.type === "page-hero"
+            ? "ヒーローは既に存在します"
+            : "このセクションはページの必須要素のため、1 ページに 1 つまでです",
+          "CONFLICT",
+        );
       }
     }
 
