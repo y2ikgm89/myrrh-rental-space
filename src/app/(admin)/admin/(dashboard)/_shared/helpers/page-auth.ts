@@ -21,6 +21,14 @@
  * | `requireReservationCreatePage()` | `reservation:create` | 予約新規作成フォーム（単発・繰り返し） |
  * | `requireSpaceCreatePage()` | `space:create` | スペース新規作成フォーム |
  * | `requireTermsCreatePage()` | `terms:create` | 規約新規作成フォーム |
+ * | `requireCouponEditPage()` | `coupon:update` | クーポン編集フォーム |
+ * | `requireCustomerEditPage()` | `customer:update` | 顧客編集フォーム |
+ * | `requireEventEditPage()` | `event:update` | イベント編集フォーム |
+ * | `requireLocationEditPage()` | `location:update` | ロケーション編集フォーム |
+ * | `requirePageEditPage()` | `page:update` | 固定ページ編集フォーム |
+ * | `requireReservationEditPage()` | `reservation:update` | 予約編集フォーム |
+ * | `requireSpaceEditPage()` | `space:update` | スペース編集フォーム |
+ * | `requireTermsEditPage()` | `terms:update` | 規約編集フォーム |
  * | `requireSettingsPage()` | `settings:read` | 設定ハブと閲覧系サブページ |
  * | `requireSettingsManagePage()` | `settings:manage` | 高リスク設定ページ |
  *
@@ -127,6 +135,54 @@ export async function requireSpaceCreatePage(): Promise<AdminAuthUser> {
 /** 規約新規作成フォーム（`terms:create`）。 */
 export async function requireTermsCreatePage(): Promise<AdminAuthUser> {
   return requireAdminPermission("terms", "create");
+}
+
+/*
+ * 編集フォーム（監査 A-13）。
+ *
+ * 以前は `[id]/edit` 系 8 ページのどれも guard を呼んでおらず、
+ * VIEWER が URL 直打ちで編集フォームに到達できた。固定ページの編集に
+ * 至っては認可より前に `ensureSystemPageCommand(slug)` が DB へ書いていた。
+ */
+
+/** クーポン編集フォーム（`coupon:update`）。 */
+export async function requireCouponEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("coupon", "update");
+}
+
+/** 顧客編集フォーム（`customer:update`）。 */
+export async function requireCustomerEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("customer", "update");
+}
+
+/** イベント編集フォーム（`event:update`）。 */
+export async function requireEventEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("event", "update");
+}
+
+/** ロケーション編集フォーム（`location:update`）。 */
+export async function requireLocationEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("location", "update");
+}
+
+/** 固定ページ編集フォーム（`page:update`）。 */
+export async function requirePageEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("page", "update");
+}
+
+/** 予約編集フォーム（`reservation:update`）。 */
+export async function requireReservationEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("reservation", "update");
+}
+
+/** スペース編集フォーム（`space:update`）。 */
+export async function requireSpaceEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("space", "update");
+}
+
+/** 規約編集フォーム（`terms:update`）。 */
+export async function requireTermsEditPage(): Promise<AdminAuthUser> {
+  return requireAdminPermission("terms", "update");
 }
 
 /** 設定ハブと閲覧系サブページ（`settings:read`）。 */

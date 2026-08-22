@@ -4,6 +4,7 @@ import { getCustomerById } from "@/admin/queries/customer";
 import { CustomerEditForm } from "../../_components/CustomerEditForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
+import { requireCustomerEditPage } from "@/admin/helpers/page-auth";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -25,6 +26,7 @@ export async function generateMetadata({
 
 export default async function CustomerEditPage({ params }: PageProps) {
   await connection();
+  await requireCustomerEditPage();
 
   const { id } = await params;
   const customer = await getCustomerById(id);

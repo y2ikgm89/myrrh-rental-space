@@ -16,6 +16,7 @@ import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
 import { SpaceEditForm } from "../../_components/SpaceEditForm";
 import type { Metadata } from "next";
+import { requireSpaceEditPage } from "@/admin/helpers/page-auth";
 
 type Params = Promise<{ id: string }>;
 type PageProps = { params: Params };
@@ -33,6 +34,7 @@ export async function generateMetadata({
 
 export default async function EditSpacePage({ params }: PageProps) {
   await connection();
+  await requireSpaceEditPage();
 
   const { id } = await params;
 

@@ -6,6 +6,7 @@ import {
   getReagreeAffectedCustomerCount,
 } from "@/admin/queries/terms";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
+import { requireTermsEditPage } from "@/admin/helpers/page-auth";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,6 +27,7 @@ export async function generateMetadata({
 
 export default async function EditTermsPage({ params }: PageProps) {
   await connection();
+  await requireTermsEditPage();
 
   const { id } = await params;
   const terms = await getAdminTermsById(id);
