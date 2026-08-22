@@ -73,6 +73,18 @@ function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
  * Settings / suppression / Resend key は domain が `EmailSendContext` に詰めて渡す。
  * transport が無効なら `{ ok: false, reason: "disabled" }` を返す。
  */
+/**
+ * 送信が最終的に失敗したときのログ文言（**固定**）。
+ *
+ * この文字列は `terraform/monitoring.tf` の `google_logging_metric.mail_send_failure`
+ * の filter が名指しで拾う。provider 由来の可変メッセージを `message` に入れると
+ * filter が当たらなくなるため、可変部分は `context.cause` へ回す
+ * （`google_calendar_sync_failure` と同型）。
+ *
+ * 突合: `__tests__/unit/observability/mail-send-failure-signal.test.ts`
+ */
+const MAIL_SEND_FAILED_MESSAGE = "Mail send failed";
+
 export async function sendEmail(
   params: SendEmailParams,
   context: EmailSendContext,
@@ -170,10 +182,14 @@ export async function sendEmail(
       ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
     });
   } catch (error) {
-    logError(normalizeError(error), {
+    logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: errorContext,
+      context: {
+        ...errorContext,
+        stage: "payload",
+        cause: normalizeError(error).message,
+      },
     });
     return { ok: false, reason: "error", error: "メール送信に失敗しました" };
   }
@@ -195,12 +211,14 @@ export async function sendEmail(
         continue;
       }
 
-      logError(new Error(error.message), {
+      logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: {
           ...errorContext,
+          stage: "provider",
           errorName: error.name,
+          cause: error.message,
           attempt: attempt + 1,
         },
       });
@@ -212,11 +230,13 @@ export async function sendEmail(
         continue;
       }
 
-      logError(normalizeError(error), {
+      logError(new Error(MAIL_SEND_FAILED_MESSAGE), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: {
           ...errorContext,
+          stage: "throw",
+          cause: normalizeError(error).message,
           attempt: attempt + 1,
         },
       });
