@@ -24,6 +24,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import { SEED_TERMS_DOCUMENTS } from "../../../prisma/seed-terms-documents";
+import { deriveLexicalContentHtmlFromJsonCore } from "@/admin/components/editor/lexical/preview/derive-lexical-content-html-core";
 
 const SEED_SOURCE = readFileSync(
   join(process.cwd(), "prisma", "seed.ts"),
@@ -66,6 +67,48 @@ describe("本番データは seed が持つ", () => {
       // `main().catch` の process.exit(1) で以降の phase が丸ごと走らなくなる。
       expect(() => JSON.parse(doc.contentJson)).not.toThrow();
     }
+  });
+
+  /**
+   * contentJson が本物の Lexical 構造であること（監査 A-11）。
+   *
+   * 管理画面は contentJson を正本として扱い、保存時に contentHtml を
+   * そこから作り直す（`actions/terms/index.ts` の `toTermsFormInput`）。
+   * 以前は 8 件すべての contentJson が「1 段落・1 テキストノード」に潰れており
+   * （root.children.length === 1、node 種別は paragraph/text のみ）、
+   * contentHtml 側にある見出し 21・表 1・箇条書き 83 といった構造が JSON には
+   * 一切無かった。運用者が事業者名を直して 1 回保存するだけで、公開中の規約本文が
+   * 壁のような 1 段落に置き換わる（元の HTML はどこにも残らない）。
+   *
+   * `JSON.parse が通る` だけでは区別できないので、構造そのものを見る。
+   */
+  test("contentJson が 1 段落に潰れていない（Lexical 構造を保っている）", () => {
+    for (const doc of SEED_TERMS_DOCUMENTS) {
+      const parsed: unknown = JSON.parse(doc.contentJson);
+      const children =
+        (parsed as { root?: { children?: unknown[] } }).root?.children ?? [];
+
+      expect({
+        slug: doc.slug,
+        rootChildren: children.length > 1,
+      }).toEqual({ slug: doc.slug, rootChildren: true });
+    }
+  });
+
+  /**
+   * contentJson と contentHtml が同じ文書を表していること（監査 A-11）。
+   *
+   * 保存経路と同じ `deriveLexicalContentHtmlFromJsonCore` を通すので、
+   * ここが一致していれば「管理画面で開いて保存しただけで本文が変わる」ことは無い。
+   */
+  test("contentHtml は contentJson から派生した値と一致する", () => {
+    const mismatched = SEED_TERMS_DOCUMENTS.filter(
+      (doc) =>
+        deriveLexicalContentHtmlFromJsonCore(doc.contentJson) !==
+        doc.contentHtml,
+    ).map((doc) => doc.slug);
+
+    expect(mismatched).toEqual([]);
   });
 
   test("同意を要求する 4 経路がいずれかの規約で覆われている", () => {
