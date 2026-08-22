@@ -95,13 +95,10 @@ describeMaybe("publishEventCommand の status 遷移ガード", () => {
   test("CANCELLED → PUBLISHED は VALIDATION で拒否される", async () => {
     const { eventId, cleanup } = await createTestEvent("CANCELLED");
     try {
-      let thrown: unknown = null;
-      try {
-        await publishEventCommand(eventId);
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toMatchObject({ name: "DomainError", code: "VALIDATION" });
+      await expect(publishEventCommand(eventId)).rejects.toMatchObject({
+        name: "DomainError",
+        code: "VALIDATION",
+      });
 
       const row = await prisma.event.findUniqueOrThrow({
         where: { id: eventId },
@@ -116,13 +113,10 @@ describeMaybe("publishEventCommand の status 遷移ガード", () => {
   test("ARCHIVED → PUBLISHED は VALIDATION で拒否される", async () => {
     const { eventId, cleanup } = await createTestEvent("ARCHIVED");
     try {
-      let thrown: unknown = null;
-      try {
-        await publishEventCommand(eventId);
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).toMatchObject({ name: "DomainError", code: "VALIDATION" });
+      await expect(publishEventCommand(eventId)).rejects.toMatchObject({
+        name: "DomainError",
+        code: "VALIDATION",
+      });
 
       const row = await prisma.event.findUniqueOrThrow({
         where: { id: eventId },

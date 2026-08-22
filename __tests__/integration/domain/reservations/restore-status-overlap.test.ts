@@ -166,14 +166,9 @@ describeMaybe("restoreReservationStatusCommand の占有チェック", () => {
         endTime,
       });
 
-      let thrown: unknown = null;
-      try {
-        await restoreReservationStatusCommand(cancelledId, "PENDING");
-      } catch (err) {
-        thrown = err;
-      }
-
-      expect(thrown).toMatchObject({ name: "DomainError", code: "VALIDATION" });
+      await expect(
+        restoreReservationStatusCommand(cancelledId, "PENDING"),
+      ).rejects.toMatchObject({ name: "DomainError", code: "VALIDATION" });
 
       const row = await prisma.reservation.findUniqueOrThrow({
         where: { id: cancelledId },
@@ -206,14 +201,9 @@ describeMaybe("restoreReservationStatusCommand の占有チェック", () => {
         endTime,
       });
 
-      let thrown: unknown = null;
-      try {
-        await restoreReservationStatusCommand(cancelledId, "CONFIRMED");
-      } catch (err) {
-        thrown = err;
-      }
-
-      expect(thrown).toMatchObject({ name: "DomainError", code: "VALIDATION" });
+      await expect(
+        restoreReservationStatusCommand(cancelledId, "CONFIRMED"),
+      ).rejects.toMatchObject({ name: "DomainError", code: "VALIDATION" });
     } finally {
       await cleanup();
     }

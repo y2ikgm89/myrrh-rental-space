@@ -113,16 +113,9 @@ describeMaybe("settings/transfer-account commands", () => {
   });
 
   test("存在しない口座への update は NOT_FOUND", async () => {
-    let thrown: unknown = null;
-    try {
-      await updateTransferAccountCommand(
-        crypto.randomUUID(),
-        sampleAccountInput,
-      );
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({
+    await expect(
+      updateTransferAccountCommand(crypto.randomUUID(), sampleAccountInput),
+    ).rejects.toMatchObject({
       name: "DomainError",
       code: "NOT_FOUND",
     } satisfies Partial<DomainError>);
@@ -155,16 +148,12 @@ describeMaybe("settings/transfer-account commands", () => {
       expectedUpdatedAt: org.updatedAt,
     });
 
-    let thrown: unknown = null;
-    try {
-      await updateTransferGuidanceCommand({
+    await expect(
+      updateTransferGuidanceCommand({
         transferGuidance: "古い expectedUpdatedAt",
         expectedUpdatedAt: org.updatedAt,
-      });
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toMatchObject({
+      }),
+    ).rejects.toMatchObject({
       name: "DomainError",
       code: "CONFLICT",
     } satisfies Partial<DomainError>);

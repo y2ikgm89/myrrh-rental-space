@@ -401,13 +401,9 @@ describe("purge commands", () => {
       Promise.reject(new DomainError("顧客が見つかりません", "NOT_FOUND")),
     );
 
-    let thrown: unknown = null;
-    try {
-      await anonymizeInactiveCustomers(NOW, 84);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toBeInstanceOf(DomainError);
+    await expect(anonymizeInactiveCustomers(NOW, 84)).rejects.toThrow(
+      DomainError,
+    );
   });
 
   test("runDataRetentionPurge は 6 purge を全て呼び、結果を集約する", async () => {

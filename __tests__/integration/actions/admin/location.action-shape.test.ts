@@ -249,21 +249,15 @@ describe("createLocationAction (conform)", () => {
   });
 
   test("有効な入力で作成し、詳細ページへ redirect する", async () => {
-    let thrown: unknown;
-    try {
-      await createLocationAction(undefined, buildLocationFormData());
-    } catch (error) {
-      thrown = error;
-    }
+    await expect(
+      createLocationAction(undefined, buildLocationFormData()),
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     expect(mockCreateLocation).toHaveBeenCalledTimes(1);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({ resource: "location", action: "create" }),
     );
     expect(mockRedirect).toHaveBeenCalledWith("/admin/locations/loc-new");
-    expect((thrown as { message?: string } | undefined)?.message).toBe(
-      "NEXT_REDIRECT",
-    );
   });
 
   test("成功後にサイト全体キャッシュを無効化し、GBP 同期を fire-and-forget する", async () => {
@@ -318,16 +312,9 @@ describe("updateLocationAction (conform)", () => {
   });
 
   test("有効な入力で更新し、一覧タブへ redirect する", async () => {
-    let thrown: unknown;
-    try {
-      await updateLocationAction(
-        VALID_UUID,
-        undefined,
-        buildLocationFormData(),
-      );
-    } catch (error) {
-      thrown = error;
-    }
+    await expect(
+      updateLocationAction(VALID_UUID, undefined, buildLocationFormData()),
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     expect(mockUpdateLocation).toHaveBeenCalledTimes(1);
     expect(mockUpdateLocation.mock.calls[0]?.[0]).toBe(VALID_UUID);
@@ -339,9 +326,6 @@ describe("updateLocationAction (conform)", () => {
       }),
     );
     expect(mockRedirect).toHaveBeenCalledWith("/admin/spaces?tab=locations");
-    expect((thrown as { message?: string } | undefined)?.message).toBe(
-      "NEXT_REDIRECT",
-    );
   });
 
   test("成功後にサイト全体キャッシュを無効化し、GBP 同期を fire-and-forget する", async () => {

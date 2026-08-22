@@ -157,16 +157,12 @@ describeMaybe("duplicateEventCommand の Space overlap 検査", () => {
     });
 
     try {
-      let thrown: unknown = null;
-      try {
-        await duplicateEventCommand(eventId);
-      } catch (err) {
-        thrown = err;
-      }
-      // overlap 検査が機能していないと duplicateEventCommand は例外を投げずに
-      // 成功してしまう（thrown が null のまま）。まずそれ自体を明示的に検証する。
-      expect(thrown).not.toBeNull();
-      expect(thrown).toMatchObject({ name: "DomainError", code: "CONFLICT" });
+      // overlap 検査が壊れると duplicateEventCommand は例外なく成功してしまう
+      // （= この rejects が落ちること自体が guard の実効証明）。
+      await expect(duplicateEventCommand(eventId)).rejects.toMatchObject({
+        name: "DomainError",
+        code: "CONFLICT",
+      });
 
       // 複製先イベントがロールバックされ DB に残っていないことを確認
       const duplicated = await prisma.event.findFirst({
@@ -190,14 +186,10 @@ describeMaybe("duplicateEventCommand の Space overlap 検査", () => {
     });
 
     try {
-      let thrown: unknown = null;
-      try {
-        await duplicateEventCommand(eventId);
-      } catch (err) {
-        thrown = err;
-      }
-      expect(thrown).not.toBeNull();
-      expect(thrown).toMatchObject({ name: "DomainError", code: "CONFLICT" });
+      await expect(duplicateEventCommand(eventId)).rejects.toMatchObject({
+        name: "DomainError",
+        code: "CONFLICT",
+      });
     } finally {
       await cleanup();
     }

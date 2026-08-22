@@ -201,16 +201,12 @@ describe("reissueReceiptCommand", () => {
   // ----------------------------------------------------------------
 
   test("reason が空文字の場合はトランザクション前に VALIDATION を throw する", async () => {
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "receipt-orig-1",
         reason: "  ",
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "VALIDATION" });
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
@@ -221,16 +217,12 @@ describe("reissueReceiptCommand", () => {
   test("originalReceiptId が存在しない場合は NOT_FOUND を throw する", async () => {
     mockTxReceiptFindUnique.mockResolvedValue(null);
 
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "nonexistent-id",
         reason: "宛名変更のため",
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "NOT_FOUND" });
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   // ----------------------------------------------------------------
@@ -242,17 +234,13 @@ describe("reissueReceiptCommand", () => {
       makeOriginalReceipt({ reservationId: "res-1" }),
     );
 
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "receipt-orig-1",
         reason: "宛名変更のため",
         expectedReservationId: "res-different", // 不一致
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "FORBIDDEN" });
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   test("expectedEventRegistrationId が元 Receipt の eventRegistrationId と不一致の場合は FORBIDDEN を throw する", async () => {
@@ -263,17 +251,13 @@ describe("reissueReceiptCommand", () => {
       }),
     );
 
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "receipt-orig-1",
         reason: "宛名変更のため",
         expectedEventRegistrationId: "reg-different", // 不一致
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "FORBIDDEN" });
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   test("expectedReservationId を指定したのに元 Receipt が eventRegistrationId を持つ場合は FORBIDDEN を throw する", async () => {
@@ -284,17 +268,13 @@ describe("reissueReceiptCommand", () => {
       }),
     );
 
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "receipt-orig-1",
         reason: "宛名変更のため",
         expectedReservationId: "res-1",
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "FORBIDDEN" });
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   // ----------------------------------------------------------------
@@ -306,16 +286,12 @@ describe("reissueReceiptCommand", () => {
       makeOriginalReceipt({ reservationId: null, eventRegistrationId: null }),
     );
 
-    let caught: unknown;
-    try {
-      await reissueReceiptCommand({
+    await expect(
+      reissueReceiptCommand({
         originalReceiptId: "receipt-orig-1",
         reason: "訂正のため",
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toMatchObject({ code: "VALIDATION" });
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   // ----------------------------------------------------------------

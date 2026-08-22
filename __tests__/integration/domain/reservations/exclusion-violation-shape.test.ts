@@ -101,22 +101,21 @@ describeMaybe("EXCLUDE 制約違反エラーの実測", () => {
         },
       });
 
-      let thrown: unknown = null;
-      try {
-        await prisma.reservation.create({
-          data: {
-            ...baseData,
-            status: "PENDING",
-            startTime: new Date("2027-05-01T11:00:00.000Z"),
-            endTime: new Date("2027-05-01T13:00:00.000Z"),
-            guestEmail: `excl-shape-b-${suffix}@example.com`,
-          },
-        });
-      } catch (err) {
-        thrown = err;
-      }
-
-      expect(thrown).not.toBeNull();
+      // PrismaPromise は thenable のため Promise.resolve で adopt してから渡す
+      // （Bun 1.4 の .rejects は native Promise 前提）。
+      await expect(
+        Promise.resolve(
+          prisma.reservation.create({
+            data: {
+              ...baseData,
+              status: "PENDING",
+              startTime: new Date("2027-05-01T11:00:00.000Z"),
+              endTime: new Date("2027-05-01T13:00:00.000Z"),
+              guestEmail: `excl-shape-b-${suffix}@example.com`,
+            },
+          }),
+        ),
+      ).rejects.toThrow();
     } finally {
       await prisma.reservation.deleteMany({ where: { spaceId: space.id } });
       await prisma.space.deleteMany({ where: { id: space.id } });

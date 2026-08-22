@@ -209,20 +209,16 @@ describeMaybe("updateEventRegistrationCommand", () => {
     await createFixtureRegistration(fixture, { quantity: 1 });
 
     try {
-      let caught: unknown = null;
-      try {
-        await updateWithPoolRetry({
+      await expect(
+        updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 3, // 既存2件で定員3を使い切っているため+1は超過
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanupFixture(fixture.eventId);
     }
@@ -236,20 +232,16 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      let caught: unknown = null;
-      try {
-        await updateWithPoolRetry({
+      await expect(
+        updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 2,
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanupFixture(fixture.eventId);
     }
@@ -284,39 +276,31 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      let caught: unknown = null;
-      try {
-        await updateWithPoolRetry({
+      await expect(
+        updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 1,
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "CONFLICT" });
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
     } finally {
       await cleanupFixture(fixture.eventId);
     }
   }, 30_000);
 
   test("存在しない registrationId は NOT_FOUND を返す", async () => {
-    let caught: unknown = null;
-    try {
-      await updateWithPoolRetry({
+    await expect(
+      updateWithPoolRetry({
         registrationId: "00000000-0000-4000-8000-00000000dead",
         name: "x",
         email: null,
         phone: null,
         note: null,
         quantity: 1,
-      });
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toMatchObject({ code: "NOT_FOUND" });
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

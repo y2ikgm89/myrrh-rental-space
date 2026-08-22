@@ -191,16 +191,12 @@ describeMaybe("recordManualEventPaymentCommand", () => {
     });
 
     try {
-      let caught: unknown = null;
-      try {
-        await recordManualEventPaymentCommand({
+      await expect(
+        recordManualEventPaymentCommand({
           registrationId,
           amount: 1000,
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "VALIDATION" });
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanupFixture(fixture.eventId);
     }
@@ -213,16 +209,12 @@ describeMaybe("recordManualEventPaymentCommand", () => {
     });
 
     try {
-      let caught: unknown = null;
-      try {
-        await recordManualEventPaymentCommand({
+      await expect(
+        recordManualEventPaymentCommand({
           registrationId,
           amount: 1000,
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "CONFLICT" });
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
     } finally {
       await cleanupFixture(fixture.eventId);
     }
@@ -235,16 +227,12 @@ describeMaybe("recordManualEventPaymentCommand", () => {
     });
 
     try {
-      let caught: unknown = null;
-      try {
-        await recordManualEventPaymentCommand({
+      await expect(
+        recordManualEventPaymentCommand({
           registrationId,
           amount: 1000,
-        });
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toMatchObject({ code: "CONFLICT" });
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
 
       // 会計整合性の直接確認: PAID に焼き付いていないこと
       const untouched = await prisma.eventRegistration.findUniqueOrThrow({
