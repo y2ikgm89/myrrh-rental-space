@@ -1,11 +1,9 @@
 /**
  * SpaceRatePlan の CRUD command。
  *
- * `getSpaceRatePlans`（rate-plan-queries.ts、Task 5）が貼る id-keyed cache tag
- * `CACHE_TAGS.SPACE_RATE_PLANS(spaceId)` を、書込の副作用として
- * `invalidateSpaceRatePlansCache` 経由で無効化する。呼び出し元は Server Action
- * 経由を想定（`updateTag` は Server Action 以外のコンテキストで throw する。
- * 詳細は space-rate-plan-cache.ts のコメント参照）。
+ * `getSpaceRatePlans`（rate-plan-queries.ts）はキャッシュしないため、書込の副作用に
+ * キャッシュ無効化は無い（監査 A-02。admin の `updateTag` は別サービスの public
+ * コンテナに届かず、金額を最大 1 時間ずらしていた）。次の読み取りが必ず DB を見る。
  *
  * `hourlyPrice` は schema 上 Int のため create/update の戻り値も number。
  */
@@ -14,7 +12,6 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import type { SpaceRatePlan } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { invalidateSpaceRatePlansCache } from "@/shared/lib/cache/space-rate-plan-cache";
 import type {
   DayOfWeek,
   HolidayMode,
@@ -65,17 +62,15 @@ async function ensureActiveSpaceExists(spaceId: string): Promise<void> {
   }
 }
 
-/** SpaceRatePlan を新規作成し、対象 Space の rate plan キャッシュを無効化する。 */
+/** SpaceRatePlan を新規作成する。 */
 export async function createSpaceRatePlan(
   input: CreateSpaceRatePlanInput,
 ): Promise<SpaceRatePlan> {
   await ensureActiveSpaceExists(input.spaceId);
 
-  const plan = await prisma.spaceRatePlan.create({
+  return prisma.spaceRatePlan.create({
     data: input,
   });
-  invalidateSpaceRatePlansCache(input.spaceId);
-  return plan;
 }
 
 /**
@@ -90,21 +85,18 @@ export async function updateSpaceRatePlan(
 ): Promise<SpaceRatePlan> {
   await ensureSpaceRatePlanExists(id);
 
-  const plan = await prisma.spaceRatePlan.update({
+  return prisma.spaceRatePlan.update({
     where: { id },
     data: input,
   });
-  invalidateSpaceRatePlansCache(plan.spaceId);
-  return plan;
 }
 
-/** SpaceRatePlan を削除し、対象 Space の rate plan キャッシュを無効化する。 */
+/** SpaceRatePlan を削除する。 */
 export async function deleteSpaceRatePlan(id: string): Promise<void> {
   await ensureSpaceRatePlanExists(id);
 
-  const plan = await prisma.spaceRatePlan.delete({
+  await prisma.spaceRatePlan.delete({
     where: { id },
-    select: { spaceId: true },
+    select: { id: true },
   });
-  invalidateSpaceRatePlansCache(plan.spaceId);
 }

@@ -50,6 +50,33 @@ const SPACE_RATE_PLAN_QUERIES_FILE = join(
   "rate-plan-queries.ts",
 );
 
+/**
+ * `"use cache"` / `cacheLife(` / `cacheTag(` の**実コードでの**出現を返す。
+ *
+ * 単純な `toContain` だと「なぜキャッシュしないか」を説明した JSDoc 自身に
+ * 引っかかる（実際に一度そうなった）。指示子はコメント行には現れないので、
+ * 行頭が `*` / `//` / `/*` の行を除いてから判定する。
+ */
+function findCacheDirectives(source: string): string[] {
+  const NEEDLES = ['"use cache";', "cacheLife(", "cacheTag("] as const;
+  const hits: string[] = [];
+  for (const raw of source.split("\n")) {
+    const line = raw.trim();
+    if (
+      line === "" ||
+      line.startsWith("*") ||
+      line.startsWith("//") ||
+      line.startsWith("/*")
+    ) {
+      continue;
+    }
+    for (const needle of NEEDLES) {
+      if (line.includes(needle)) hits.push(line);
+    }
+  }
+  return hits;
+}
+
 function expectRecordFieldArray(data: unknown, field: string): void {
   expectRecord(data);
   const value = data[field];
@@ -1854,33 +1881,58 @@ resource "cloudflare_r2_bucket" "example" {
   // __tests__/unit/architecture/cache-tag-literals.test.ts に移動（AST 化し
   // template literal / 複数行呼出も検出するよう強化。旧 regex 版は削除済み）。
 
-  test("SPACE_RATE_PLANS cache tag は cacheTag producer を持つ（rate-plan-queries.ts の getSpaceRatePlans）", () => {
+  /**
+   * rate plan の読み取りはキャッシュしない（監査 A-02 の回帰防止）。
+   *
+   * `getSpaceRatePlans` の戻り値は**実請求額**を決める。admin と public は別の
+   * Cloud Run サービスで、既定キャッシュハンドラはプロセス内メモリのため
+   * admin 側の `updateTag` は public コンテナに届かない。以前ここに
+   * `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`（revalidate 3600）が付いていて、
+   * 料金プラン変更後 最大 1 時間 旧価格で予約が確定していた。
+   *
+   * 「落ちるべき形」= `"use cache"` / `cacheLife` / `cacheTag` のいずれかが
+   * このファイルに戻ってくること。
+   */
+  test("rate plan の読み取りはキャッシュしない（金額を決める読み取り）", () => {
     const source = readFileSync(SPACE_RATE_PLAN_QUERIES_FILE, "utf8");
-    expect(source).toContain('"use cache"');
-    expect(source).toContain("cacheTag(CACHE_TAGS.SPACE_RATE_PLANS(");
+
+    // 走査対象が空でないこと（gate の空振り防止）
+    expect(source).toContain("export async function getSpaceRatePlans");
+
+    expect(findCacheDirectives(source)).toEqual([]);
   });
 
-  test("SPACE_RATE_PLANS cache tag は id-keyed producer function のため CDN mapping 対象外が明示されている", async () => {
-    // CACHE_TAGS.SPACE_RATE_PLANS は spaceId を受け取るタグ生成関数であり、他の
-    // CACHE_TAGS エントリと違って固定文字列ではない。NEXTJS_TAG_TO_CDN_TAG は
-    // `[CACHE_TAGS.X]: CDN_CACHE_TAGS.Y` の computed key で構成されるため、関数値を
-    // そのまま key にはできない。cdn-cache-tags.test.ts 側の generic drift gate
-    // ("every CACHE_TAGS value is either mapped OR on the allowlist") は
-    // `typeof value === "function"` の場合のみ scope 外にしており、SPACE_RATE_PLANS が
-    // 現状唯一の対象。ここではその前提条件（関数値である事実）と、mapping 側への
-    // 事故混入がないことを SPACE_RATE_PLANS 単体で明示的に固定する。
+  test("キャッシュ指示子の検出は、コメント中の言及と実コードを区別する（見本）", () => {
+    // 落ちるべき形: 実コードに指示子がある
+    const violating = `export async function f() {
+  "use cache";
+  cacheLife(X);
+  return 1;
+}`;
+    expect(findCacheDirectives(violating)).toEqual([
+      '"use cache";',
+      "cacheLife(X);",
+    ]);
+
+    // 落ちてはいけない形: JSDoc / 行コメントでの言及だけ
+    const documentedOnly = `/**
+ * ここに \`"use cache"\` を付けない理由。cacheTag(...) も貼らない。
+ */
+// cacheLife(CACHE_LIFE.PUBLIC_CONTENT) は使わない
+export async function f() {
+  return 1;
+}`;
+    expect(findCacheDirectives(documentedOnly)).toEqual([]);
+  });
+
+  test("rate plan には Next.js cache tag も CDN tag も存在しない", async () => {
     const { CACHE_TAGS } = await import("@/shared/lib/constants/cache");
-    const { CDN_CACHE_TAGS, NEXTJS_TAG_TO_CDN_TAG } =
+    const { CDN_CACHE_TAGS } =
       await import("@/shared/lib/constants/cdn-cache-tags");
 
-    expect(typeof CACHE_TAGS.SPACE_RATE_PLANS).toBe("function");
-
-    // 将来 CDN-cached surface を追加する際に inline できるよう CDN 側タグは予約済み
-    expect(CDN_CACHE_TAGS.SPACE_RATE_PLANS).toBe("space-rate-plans-v1");
-
-    // 現時点では NEXTJS_TAG_TO_CDN_TAG に事故的に混入していない
-    const mappedValues = Object.values(NEXTJS_TAG_TO_CDN_TAG);
-    expect(mappedValues).not.toContain(CDN_CACHE_TAGS.SPACE_RATE_PLANS);
+    // producer が無いタグを残すと、無効化していないのに「している」ように読める。
+    expect(Object.keys(CACHE_TAGS)).not.toContain("SPACE_RATE_PLANS");
+    expect(Object.keys(CDN_CACHE_TAGS)).not.toContain("SPACE_RATE_PLANS");
   });
 
   test("cron route は shared helper 経由で認証する", () => {

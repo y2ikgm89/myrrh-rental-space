@@ -22,17 +22,8 @@
  * import 時の `process.env.DATABASE_URL` を読むため、動的 import より前に上書きする。
  */
 
-import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { CouponType, ReservationStatus } from "@generated/prisma/enums";
-
-// `getSpaceRatePlans` は `"use cache"` producer なので、Next の cacheComponents
-// runtime 外（この bun test プロセス）では `cacheLife() is only available with
-// the cacheComponents config` で必ず throw する。本ファイルの検証対象は
-// キャンセル scope と coupon usage の戻しであって rate plan 解決ロジックではないため、モックして迂回する
-// （blacklist-guard.test.ts / space-overlap-concurrency.test.ts と同型）。
-mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
-  getSpaceRatePlans: () => Promise.resolve([]),
-}));
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
